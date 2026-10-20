@@ -31,7 +31,7 @@ export const defaultGroupSort = (type: PropertyType): GroupSort =>
 /** Notion's Range defaults: 0 to 1000, every 100 (research/22 §7). */
 export const DEFAULT_RANGE = { start: 0, end: 1000, size: 100 };
 
-const rangeOf = (settings: GroupSettings): { start: number; end: number; size: number } => {
+export const rangeOf = (settings: GroupSettings): { start: number; end: number; size: number } => {
   const size = typeof settings.rangeSize === 'number' && settings.rangeSize >= 1 ? settings.rangeSize : DEFAULT_RANGE.size;
   const start = typeof settings.rangeStart === 'number' && Number.isFinite(settings.rangeStart) ? settings.rangeStart : DEFAULT_RANGE.start;
   const end = typeof settings.rangeEnd === 'number' && settings.rangeEnd > start ? settings.rangeEnd : Math.max(start + size, DEFAULT_RANGE.end);

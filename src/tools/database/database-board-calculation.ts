@@ -83,10 +83,20 @@ export const groupCalculationItems = (params: GroupCalculationMenuParams): Popov
     };
   };
 
+  // research/22 §5: Notion prints this hint under the switch's name.
+  const capTitle = document.createElement('span');
+  const capHint = document.createElement('span');
+
+  capTitle.setAttribute('data-blok-database-calc-cap', '');
+  capHint.setAttribute('data-blok-database-calc-hint', '');
+  capHint.textContent = t('tools.database.calcShowLargeCountsHint');
+  capTitle.append(t('tools.database.calcShowLargeCounts'), capHint);
+
   const capToggle: PopoverItemParams = {
     type: PopoverItemType.Default,
     name: 'database-group-calc-cap-counts',
     title: t('tools.database.calcShowLargeCounts'),
+    titleEl: capTitle,
     isActive: current.capCounts,
     closeOnActivate: true,
     onActivate: () => params.onCapCounts(!current.capCounts),

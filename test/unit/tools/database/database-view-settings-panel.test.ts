@@ -529,6 +529,43 @@ describe('view settings panel', () => {
     expect([value('database-group-rangeStart'), value('database-group-rangeEnd'), value('database-group-rangeSize')]).toEqual(['0', '1000', '100']);
   });
 
+  // research/22 §7: "Group range" [0] – [1000], "Group every" [100], then "0 to 100, 100 to 200, ...".
+  it('labels the number range like Notion, with a helper line built from the values', () => {
+    const h = harness({ groupBy: 'num', groupSettings: { numberBy: 'range' } });
+
+    h.ctx.i18n = {
+      t: (key: string, params?: Record<string, string | number>) => {
+        if (key === 'tools.database.groupRangeExample') return `${String(params?.start)} to ${String(params?.middle)}, ${String(params?.middle)} to ${String(params?.end)}, ...`;
+
+        return key;
+      },
+    };
+    h.open('group');
+
+    const helper = (): string | null | undefined => document.querySelector('[data-blok-testid="database-group-range-example"]')?.textContent;
+
+    expect(helper()).toBe('0 to 100, 100 to 200, ...');
+
+    const sections = [...document.querySelectorAll('[data-blok-database-panel-section]')].map((el) => el.textContent);
+
+    expect(sections).toEqual(expect.arrayContaining(['tools.database.groupRange', 'tools.database.groupRangeEvery']));
+    expect(sections).not.toContain('tools.database.groupRangeStart');
+
+    const pair = document.querySelector('[data-blok-database-range-pair]');
+
+    expect([...(pair?.querySelectorAll('input') ?? [])].map((input) => input.getAttribute('data-blok-testid'))).toEqual(['database-group-rangeStart', 'database-group-rangeEnd']);
+    expect(pair?.querySelector('[aria-hidden="true"]')?.textContent).toBe('–');
+    expect(document.querySelector('[data-blok-testid="database-group-rangeStart"]')?.getAttribute('aria-label')).toBe('tools.database.groupRangeStart');
+
+    const size = document.querySelector<HTMLInputElement>('[data-blok-testid="database-group-rangeSize"]');
+
+    if (size === null) throw new Error('no size input');
+    size.value = '50';
+    size.dispatchEvent(new Event('input'));
+
+    expect(helper()).toBe('0 to 50, 50 to 100, ...');
+  });
+
   it('groups a status by group or by option (research/08 "Status by")', () => {
     const h = harness({ type: 'board', groupBy: 'prog' });
 

@@ -267,7 +267,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1275 + 125 + 467 + 4 closure for all 1871 keys', () => {
+  it('rebuilds a disjoint 1276 + 125 + 469 + 4 closure for all 1874 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -281,7 +281,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1871);
+    expect(lifecycle.size).toBe(1874);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -400,7 +400,8 @@ describe('current English catalog lifecycle coverage', () => {
       // -2 / +1: the feed summary's plural keys left (see below); the number range bucket calls
       // tools.database.groupRangeBucket by literal.
       // +2: the gallery's Moved to Trash toast calls its two keys by literal.
-      'executable-literal': 1275,
+      // +1: the board 99+ switch's hint calls tools.database.calcShowLargeCountsHint by literal.
+      'executable-literal': 1276,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -444,7 +445,9 @@ describe('current English catalog lifecycle coverage', () => {
       // +25 / -2: the template banner's "Duplicate every…" summary, presets, ↻ hints and Cancel recurrence
       // replace templateRepeat and templateRepeatOff, all built from a short name.
       // +2: the feed summary's tools.database.feedCommentReplies_one/_other replace feedCommentReplyOne/feedCommentReplies.
-      'registered-namespace-compatible': 467,
+      // +3 / -1: the number range's groupRange, groupRangeEvery and groupRangeExample replace groupRangeSize,
+      // all built from a short name.
+      'registered-namespace-compatible': 469,
       'catalog-only': 4,
     });
     expect(

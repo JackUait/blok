@@ -896,6 +896,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_TIMELINE_CALENDAR_LAYOUT_BYTES = 1_128;
     // research/22 §10: side peek resize handle, docked side details panel, drag transition off.
     const DATABASE_SIDE_PEEK_WIDTH_BYTES = 1973;
+    // database.css: the number range's [start] – [end] row and the 99+ switch's hint (research/22 §5, §7).
+    const DATABASE_GROUP_RANGE_TEXT_BYTES = 903;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1014,7 +1016,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_CARD_PILL_RADIUS_BYTES
       + DATABASE_TEMPLATE_REPEAT_BYTES
       + DATABASE_TIMELINE_CALENDAR_LAYOUT_BYTES
-      + DATABASE_SIDE_PEEK_WIDTH_BYTES;
+      + DATABASE_SIDE_PEEK_WIDTH_BYTES
+      + DATABASE_GROUP_RANGE_TEXT_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

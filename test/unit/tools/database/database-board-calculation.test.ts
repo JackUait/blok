@@ -119,6 +119,16 @@ describe('board column calculation', () => {
       expect(active(titled(count.children?.items, 'tools.database.calcShowLargeCounts'))).toBe(true);
     });
 
+    // research/22 §5: the switch carries "This improves performance for large databases." under its name.
+    it('shows a hint under the 99+ switch', () => {
+      const count = titled(groupCalculationItems(menu()), 'tools.database.calcCount');
+      const cap = titled(count.children?.items, 'tools.database.calcShowLargeCounts');
+      const titleEl = 'titleEl' in cap ? cap.titleEl : undefined;
+
+      expect(titleEl?.querySelector('[data-blok-database-calc-hint]')?.textContent).toBe('tools.database.calcShowLargeCountsHint');
+      expect(titleEl?.firstChild?.textContent).toBe('tools.database.calcShowLargeCounts');
+    });
+
     it('lists only number properties under Sum', () => {
       const more = titled(groupCalculationItems(menu()), 'tools.database.calcMoreOptions');
 

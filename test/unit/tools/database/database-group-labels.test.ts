@@ -20,4 +20,9 @@ describe('groupLabel', () => {
     expect(groupLabel(amount, 'range:0', i18n, { numberBy: 'range' })).toBe('tools.database.groupRangeBucket:{"start":"0","end":"100"}');
     expect(groupLabel(amount, 'range:900', i18n, { numberBy: 'range', rangeSize: 100 })).toBe('tools.database.groupRangeBucket:{"start":"900","end":"1000"}');
   });
+
+  // A size below 1 is saved as typed, but the groups fall back to 100; the names must follow.
+  it('names a bucket with the size the groups use when the saved size is invalid', () => {
+    expect(groupLabel(amount, 'range:100', i18n, { numberBy: 'range', rangeSize: 0 })).toBe('tools.database.groupRangeBucket:{"start":"100","end":"200"}');
+  });
 });

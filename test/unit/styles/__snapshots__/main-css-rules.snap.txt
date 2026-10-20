@@ -9768,6 +9768,37 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   outline: none;
 }
 
+[data-blok-database-range-pair] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  padding-inline: var(--blok-space-2);
+}
+
+[data-blok-database-range-pair] > [data-blok-database-panel-input] {
+  flex: 1 1 0;
+  min-width: 0;
+  margin-inline: 0;
+}
+
+[data-blok-item-name="database-group-calc-cap-counts"] {
+  max-height: none;
+}
+
+[data-blok-database-calc-cap] {
+  display: flex;
+  flex-direction: column;
+}
+
+[data-blok-database-calc-hint] {
+  width: 176px;
+  color: var(--blok-text-secondary);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  white-space: normal;
+}
+
 [data-blok-database-panel-switch] > [data-blok-database-switch-track] {
   margin-inline-start: auto;
 }

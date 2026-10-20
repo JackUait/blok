@@ -37,7 +37,7 @@ import {
   updateFilterRule,
   withEntryIds,
 } from './filter-tree';
-import { DEFAULT_RANGE, GROUPABLE_TYPES, defaultGroupSort } from './group-keys';
+import { DEFAULT_RANGE, GROUPABLE_TYPES, defaultGroupSort, rangeOf } from './group-keys';
 import { RELATIVE_DATE_UNITS, RELATIVE_DATE_VALUES, formatRelativeSpan, parseRelativeSpan } from './relative-dates';
 import { ME_FILTER_VALUE, THIS_PAGE_FILTER_VALUE } from './database-query';
 import { COLOR_RULE_LAYOUTS, COLOR_RULE_TYPES, isGroupHidden, withGroupFlags } from './view-data';
@@ -1644,6 +1644,17 @@ export class ViewSettingsPages {
 
         if (settings.numberBy === 'range') {
           const defaults = { rangeStart: DEFAULT_RANGE.start, rangeEnd: DEFAULT_RANGE.end, rangeSize: DEFAULT_RANGE.size };
+          const current = { ...settings };
+          // rangeOf, as the group keys and names use, so the line matches the real groups.
+          const example = (): string => {
+            const { start, size } = rangeOf(current);
+
+            return this.t('groupRangeExample', { start, middle: start + size, end: start + 2 * size });
+          };
+          const note = panelText(example());
+
+          note.setAttribute('data-blok-testid', 'database-group-range-example');
+
           const numberInput = (field: 'rangeStart' | 'rangeEnd' | 'rangeSize', labelKey: string): HTMLElement => panelInput({
             value: String(typeof settings[field] === 'number' ? settings[field] : defaults[field]),
             placeholder: this.t(labelKey),
@@ -1652,11 +1663,21 @@ export class ViewSettingsPages {
             onInput: (text) => {
               const n = Number(text);
 
-              if (text.trim() !== '' && Number.isFinite(n)) set({ [field]: n });
+              if (text.trim() === '' || !Number.isFinite(n)) return;
+              current[field] = n;
+              note.textContent = example();
+              set({ [field]: n });
             },
           });
+          const pair = document.createElement('div');
+          const dash = document.createElement('span');
 
-          rows.push(numberInput('rangeStart', 'groupRangeStart'), numberInput('rangeEnd', 'groupRangeEnd'), numberInput('rangeSize', 'groupRangeSize'));
+          pair.setAttribute('data-blok-database-range-pair', '');
+          dash.setAttribute('aria-hidden', 'true');
+          dash.textContent = '–';
+          pair.append(numberInput('rangeStart', 'groupRangeStart'), dash, numberInput('rangeEnd', 'groupRangeEnd'));
+
+          rows.push(panelLabel(this.t('groupRange')), pair, panelLabel(this.t('groupRangeEvery')), numberInput('rangeSize', 'groupRangeEvery'), note);
         }
 
         return rows;

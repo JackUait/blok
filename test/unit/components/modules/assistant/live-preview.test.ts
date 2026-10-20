@@ -706,6 +706,37 @@ describe('createLivePreview', () => {
       expect(state.layer.querySelector(PREVIEW)).toBeNull();
     });
 
+    it('a second call waits for the first call\'s rewrite of the same block, then draws over the committed text', () => {
+      const preview = make();
+      const b1 = state.holders[0];
+      const input = field(b1, 'The quick brown fox');
+      const boxes = (): number => state.layer.querySelectorAll(PREVIEW).length;
+      const hiddenWhileDrawn = (): boolean => boxes() === 0 || b1.hasAttribute(REWRITING);
+
+      preview.update('c1', execute({ name: 'text.replace', args: { id: 'b1', range: { find: 'quick' }, with: 'slow' } }));
+      vi.advanceTimersByTime(35 * 2);
+      preview.update('c2', execute({ name: 'text.replace', args: { id: 'b1', range: { find: 'brown' }, with: 'red' } }));
+
+      expect(boxes()).toBe(1);
+      expect(boxText()).toBe('The slow brown fox');
+
+      preview.settle('c1');
+      preview.update('c2', execute({ name: 'text.replace', args: { id: 'b1', range: { find: 'brown' }, with: 'red' } }));
+      expect(boxes()).toBe(1);
+
+      // c1 commits, then its overlay goes on the next frame.
+      input.textContent = 'The slow brown fox';
+      runFrames();
+      expect(hiddenWhileDrawn()).toBe(true);
+
+      preview.update('c2', execute({ name: 'text.replace', args: { id: 'b1', range: { find: 'brown' }, with: 'red' } }));
+      vi.advanceTimersByTime(35 * 2);
+
+      expect(boxes()).toBe(1);
+      expect(boxText()).toBe('The slow red fox');
+      expect(hiddenWhileDrawn()).toBe(true);
+    });
+
     it('cancel shows the original block again', () => {
       const preview = make();
       const b1 = state.holders[0];

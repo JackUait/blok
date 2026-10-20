@@ -470,6 +470,12 @@ const FIELD_TYPE = [
 
 interface RewriteTarget { id: string; holder: HTMLElement; input: HTMLElement; original: string }
 
+/**
+ * Holders under a rewrite box, across calls and previews. A second rewrite waits until the
+ * first box is gone (one frame after commit), so it reads the committed text.
+ */
+const rewriting = new WeakSet<HTMLElement>();
+
 /** One rewrite: the holder's content is hidden, and this box draws the new text over its field. */
 class RewriteBox {
   public readonly box = document.createElement('div');
@@ -483,6 +489,7 @@ class RewriteBox {
     this.box.style.boxSizing = 'border-box';
     this.box.append(root);
     target.holder.setAttribute(DATA_ATTR.aiRewriting, '');
+    rewriting.add(target.holder);
   }
 
   /** Puts the box over the field; text longer than the field holds the extra height in the gap. */
@@ -501,6 +508,7 @@ class RewriteBox {
     this.box.remove();
     releaseGap(this.target.holder, key);
     this.target.holder.removeAttribute(DATA_ATTR.aiRewriting);
+    rewriting.delete(this.target.holder);
   }
 }
 
@@ -910,10 +918,7 @@ class CallPreview {
   private target(spec: RewriteSpec): RewriteTarget | null {
     const holder = this.deps.holderOf(spec.id);
     const input = holder ? fieldInput(this.deps, holder, spec) : null;
-    // A second rewrite of one block in a call would draw over stale text.
-    const taken = [...this.items.values()].some((item) => item.frame?.target.holder === holder);
-
-    if (holder === null || input === null || taken) {
+    if (holder === null || input === null || rewriting.has(holder)) {
       return null;
     }
     // A longer box would cover shown child blocks: the old text stays until commit.

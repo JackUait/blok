@@ -247,6 +247,9 @@ describe('DatabaseBoardView', () => {
         .toBe('var(--blok-database-column-green-ring, color-mix(in srgb, var(--blok-database-option-green-bg) 49%, transparent))');
       expect(column.style.getPropertyValue('--_blok-group-accent'))
         .toBe('var(--blok-database-column-green-accent, var(--blok-database-option-green-text))');
+      // Dark Notion tints the card in a colored column (research/21 §1f); unmeasured hues keep the plain card.
+      expect(column.style.getPropertyValue('--_blok-group-card'))
+        .toBe('var(--blok-database-column-green-card-bg, var(--blok-database-card-bg))');
       expect(column.style.backgroundColor).toBe('');
     });
 
@@ -261,6 +264,7 @@ describe('DatabaseBoardView', () => {
       expect(column.style.getPropertyValue('--_blok-group-tint')).toBe('');
       expect(column.style.getPropertyValue('--_blok-group-ring')).toBe('');
       expect(column.style.getPropertyValue('--_blok-group-accent')).toBe('');
+      expect(column.style.getPropertyValue('--_blok-group-card')).toBe('');
       expect(column.hasAttribute('data-color')).toBe(false);
     });
 

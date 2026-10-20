@@ -67,3 +67,21 @@ describe('database chart and feed styles', () => {
     expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\[data-blok-database-drilldown\]\s*\{\s*animation: none;/);
   });
 });
+
+/** The token's value in the media-query dark block, then the theme-attribute copy. */
+const darkValues = (name: string): string[] =>
+  Array.from(css.matchAll(new RegExp(`${name}:\\s*([^;]+);`, 'g'))).map((m) => (m[1] ?? '').trim()).slice(1);
+
+describe('feed in dark (research/21 §1j)', () => {
+  it.each([
+    ['--blok-database-feed-card-bg', 'rgb(32, 32, 32)'],
+    ['--blok-database-feed-card-shadow', 'rgba(255, 255, 255, 0.05) 0 0 0 1px inset'],
+    ['--blok-database-feed-reaction-bg', 'rgb(32, 32, 32)'],
+  ])('%s is %s in both dark blocks', (token, value) => {
+    expect(darkValues(token)).toEqual([value, value]);
+  });
+
+  it('sets the time stamp in tertiary ink, measured rgb(161, 158, 153) light and rgb(125, 122, 117) dark', () => {
+    expect(ruleBody('[data-blok-database-feed-time]')).toContain('color: var(--blok-database-table-muted-text)');
+  });
+});

@@ -151,3 +151,56 @@ describe('board column "Load more"', () => {
     expect(ruleBody(database, '[data-blok-database-column-load-more]')).toBe(ruleBody(database, '[data-blok-database-gallery-load-more]'));
   });
 });
+
+describe('board in dark (research/21 §1f)', () => {
+  /** The token's value in the media-query dark block, then the theme-attribute copy. */
+  const dark = (name: string): string[] => tokenValues(name).slice(-2);
+
+  it('tints blue and green columns, their card rings, counts and cards as measured', () => {
+    expect(dark('--blok-database-column-blue-bg')).toEqual(Array(2).fill('rgba(41, 139, 253, 0.063)'));
+    expect(dark('--blok-database-column-green-bg')).toEqual(Array(2).fill('rgba(83, 255, 140, 0.035)'));
+    expect(dark('--blok-database-column-blue-ring')).toEqual(Array(2).fill('rgba(71, 157, 255, 0.173)'));
+    expect(dark('--blok-database-column-green-ring')).toEqual(Array(2).fill('rgba(119, 255, 179, 0.118)'));
+    expect(dark('--blok-database-column-blue-accent')).toEqual(Array(2).fill('rgb(39, 131, 222)'));
+    expect(dark('--blok-database-column-green-accent')).toEqual(Array(2).fill('rgb(70, 161, 113)'));
+    expect(dark('--blok-database-column-blue-card-bg')).toEqual(Array(2).fill('rgb(33, 48, 65)'));
+    expect(dark('--blok-database-column-green-card-bg')).toEqual(Array(2).fill('rgb(36, 52, 43)'));
+  });
+
+  it('defines the card tints in dark only, so light cards stay white', () => {
+    expect(tokenValues('--blok-database-column-blue-card-bg')).toHaveLength(2);
+    expect(tokenValues('--blok-database-column-green-card-bg')).toHaveLength(2);
+  });
+
+  it('paints a card with its column card tint, else the plain card fill', () => {
+    expect(ruleBody(database, '[data-blok-database-card]')).toContain('background-color: var(--_blok-group-card, var(--blok-database-card-bg))');
+  });
+
+  it('keeps the gray column, plain card, lift, ring and gray count measured', () => {
+    expect(dark('--blok-database-column-bg')).toEqual(Array(2).fill('rgba(252, 252, 252, 0.03)'));
+    expect(dark('--blok-database-card-bg')).toEqual(Array(2).fill('rgb(32, 32, 32)'));
+    expect(dark('--blok-database-card-lift')).toEqual(Array(2).fill('rgba(25, 25, 25, 0.08) 0 2px 4px'));
+    expect(dark('--blok-database-card-ring')).toEqual(Array(2).fill('rgba(255, 255, 243, 0.082)'));
+    expect(dark('--blok-database-column-accent')).toEqual(Array(2).fill('rgb(188, 186, 182)'));
+  });
+
+  // Notion's gray ("Not started") column measured the plain column tint, card ring and count in both themes.
+  it('draws a gray column like an uncolored one, in light and dark', () => {
+    expect(tokenValues('--blok-database-column-gray-bg')).toEqual(['var(--blok-database-column-bg)']);
+    expect(tokenValues('--blok-database-column-gray-ring')).toEqual(['var(--blok-database-card-ring)']);
+    expect(tokenValues('--blok-database-column-gray-accent')).toEqual(['var(--blok-database-column-accent)']);
+  });
+
+  it('hovers a card to rgb(38, 38, 38)', () => {
+    expect(dark('--blok-database-card-bg-hover')).toEqual(Array(2).fill('rgb(38, 38, 38)'));
+  });
+
+  it('gives the hover action pill its own measured shadow, the table OPEN shadow in light', () => {
+    expect(ruleBody(database, '[data-blok-database-card-actions]')).toContain('box-shadow: var(--blok-database-card-actions-shadow)');
+    expect(tokenValues('--blok-database-card-actions-shadow')).toEqual([
+      'var(--blok-database-table-open-shadow)',
+      'rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px',
+      'rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px',
+    ]);
+  });
+});

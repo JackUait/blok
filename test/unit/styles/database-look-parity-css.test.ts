@@ -74,7 +74,7 @@ describe('board card (research/07:132-135, 08:73, 317)', () => {
     const body = ruleBody('[data-blok-database-card-actions]');
 
     expect(body).toContain('background: var(--blok-database-card-actions-bg)');
-    expect(body).toContain('box-shadow: var(--blok-database-table-open-shadow)');
+    expect(body).toContain('box-shadow: var(--blok-database-card-actions-shadow)');
     expect(body).toContain('transition: opacity 200ms ease');
     expect(tokenValues('--blok-database-card-actions-bg')).toEqual(Array(3).fill('var(--blok-database-table-open-bg)'));
     expect(ruleBody('[data-blok-database-card-menu]')).toContain('height: 24px');
@@ -235,5 +235,16 @@ describe('row page tab bar "N more…" (research/13 §3a)', () => {
     expect(body).toContain('flex: none');
     expect(body).toContain('border: none');
     expect(body).toContain('background: none');
+  });
+});
+
+describe('list rows and form in dark (research/21 §1g, §1k)', () => {
+  it('hover a list row with the measured dark fill', () => {
+    expect(ruleBody('[data-blok-database-list-row]:hover')).toContain('background-color: var(--blok-database-add-hover-bg)');
+    expect(tokenValues('--blok-database-add-hover-bg')).toEqual(['rgba(255, 255, 255, 0.055)', 'rgba(255, 255, 255, 0.055)']);
+  });
+
+  it('fill the "Only members…" notice with the column tint, measured the same in both themes', () => {
+    expect(ruleBody('[data-blok-database-form-access]')).toContain('background-color: var(--blok-database-column-bg)');
   });
 });

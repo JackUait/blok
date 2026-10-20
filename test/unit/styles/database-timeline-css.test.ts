@@ -81,3 +81,25 @@ describe('database timeline styles', () => {
     expect(reduced).toMatch(/transition:\s*none/);
   });
 });
+
+/** The token's value in the media-query dark block, then the theme-attribute copy. */
+const darkValues = (name: string): string[] =>
+  Array.from(css.matchAll(new RegExp(`${name}:\\s*([^;]+);`, 'g'))).map((m) => (m[1] ?? '').trim()).slice(1);
+
+describe('timeline in dark (research/21 §1i)', () => {
+  it.each([
+    ['--blok-database-timeline-header-line', 'rgb(56, 56, 54)'],
+    ['--blok-database-timeline-weekend-bg', 'rgba(255, 255, 255, 0.03)'],
+    ['--blok-database-timeline-muted-text', 'rgb(125, 122, 117)'],
+    ['--blok-database-timeline-bar-bg', 'rgb(37, 37, 37)'],
+    ['--blok-database-timeline-bar-shadow', 'rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px'],
+    ['--blok-database-timeline-arrow-bg', 'rgb(173, 169, 163)'],
+  ])('%s is %s in both dark blocks', (token, value) => {
+    expect(darkValues(token)).toEqual([value, value]);
+  });
+
+  it('keeps the today chip digit white in dark', () => {
+    expect(ruleBody('[data-blok-database-timeline-today-dot]')).toContain('color: var(--blok-database-calendar-today-text)');
+    expect(darkValues('--blok-database-calendar-today-text')).toEqual(['#ffffff', '#ffffff']);
+  });
+});

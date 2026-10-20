@@ -69,6 +69,10 @@
   /* Notion's yellow and brown accents fail AA on their tint (2.2:1, 2.9:1); the measured pill text passes. */
   --blok-database-column-yellow-accent: var(--blok-database-option-yellow-text);
   --blok-database-column-brown-accent: var(--blok-database-option-brown-text);
+  /* Gray ("Not started") measured the plain column look in both themes (research/21 §1f). */
+  --blok-database-column-gray-bg: var(--blok-database-column-bg);
+  --blok-database-column-gray-ring: var(--blok-database-card-ring);
+  --blok-database-column-gray-accent: var(--blok-database-column-accent);
   --blok-database-card-lift: rgba(25, 25, 25, 0.027) 0 4px 12px, rgba(25, 25, 25, 0.02) 0 1px 2px;
   --blok-database-card-ring: rgba(42, 28, 0, 0.07);
   --blok-database-confirm-backdrop: rgba(15, 15, 15, 0.6);
@@ -155,6 +159,7 @@
   --blok-database-tab-text-active: rgb(44, 44, 43);
   /* Card hover actions: white with the menu shadow (research/07:135, 08:317); hover is Notion's menu item (08:266). */
   --blok-database-card-actions-bg: var(--blok-database-table-open-bg);
+  --blok-database-card-actions-shadow: var(--blok-database-table-open-shadow);
   --blok-database-card-actions-icon: rgb(125, 122, 117);
   --blok-database-card-menu-hover-bg: rgba(33, 27, 23, 0.05);
   /* Side peek property label (research/08:329). */
@@ -203,6 +208,7 @@
     /* Re-set here, not in colors.css, so view.css keeps the shipped values. Measured in dark (research/08). */
     --blok-database-column-bg: rgba(252, 252, 252, 0.03);
     --blok-database-card-bg: rgb(32, 32, 32);
+  --blok-database-card-bg-hover: rgb(38, 38, 38);
     /* Table view (research/07 and 08); gutter and OPEN are unmeasured. */
     --blok-database-table-bg: var(--blok-bg-primary);
     --blok-database-table-border: rgba(255, 255, 243, 0.082);
@@ -219,7 +225,7 @@
     --blok-database-table-cell-ring: rgba(255, 255, 255, 0.35);
     --blok-database-table-drop-line: rgba(35, 131, 226, 0.43);
     --blok-database-table-resize: rgba(35, 131, 226, 0.8);
-    /* Measured in dark: default, yellow and pink. Brown is unmeasured and
+    /* Measured in dark: default, yellow, pink (research/08), blue and green (research/21 §1f). Brown is unmeasured and
        derives from the dark option pill like the other hues. */
     --blok-database-column-yellow-bg: rgba(255, 232, 48, 0.043);
     --blok-database-column-brown-bg: color-mix(in srgb, var(--blok-database-option-brown-bg) 11%, transparent);
@@ -227,6 +233,15 @@
     --blok-database-column-yellow-ring: rgba(255, 225, 117, 0.13);
     --blok-database-column-accent: rgb(188, 186, 182);
     --blok-database-column-yellow-accent: rgb(216, 163, 47);
+  --blok-database-column-blue-bg: rgba(41, 139, 253, 0.063);
+  --blok-database-column-blue-ring: rgba(71, 157, 255, 0.173);
+  --blok-database-column-blue-accent: rgb(39, 131, 222);
+  --blok-database-column-green-bg: rgba(83, 255, 140, 0.035);
+  --blok-database-column-green-ring: rgba(119, 255, 179, 0.118);
+  --blok-database-column-green-accent: rgb(70, 161, 113);
+  /* Dark only: a colored column tints its cards. Light cards stay white. */
+  --blok-database-column-blue-card-bg: rgb(33, 48, 65);
+  --blok-database-column-green-card-bg: rgb(36, 52, 43);
     --blok-database-column-pink-accent: rgb(219, 105, 153);
     --blok-database-card-lift: rgba(25, 25, 25, 0.08) 0 2px 4px;
     --blok-database-card-ring: rgba(255, 255, 243, 0.082);
@@ -236,18 +251,18 @@
     --blok-database-confirm-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
     --blok-database-confirm-destructive-text: rgb(229, 100, 88);
     --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
-    /* Gallery card and empty cover are measured (research/08); the rest is unmeasured. */
+    /* Gallery card, cover, cover line and hover: research/08 and 21 §1g. Text inks are unmeasured. */
     --blok-database-gallery-card-bg: rgba(255, 255, 255, 0.055);
     --blok-database-gallery-card-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
-    --blok-database-gallery-card-hover-bg: var(--blok-item-hover-bg);
+    --blok-database-gallery-card-hover-bg: rgb(47, 47, 47);
     --blok-database-gallery-preview-bg: rgba(252, 252, 252, 0.03);
-    --blok-database-gallery-preview-border: rgba(255, 255, 243, 0.082);
+    --blok-database-gallery-preview-border: transparent;
     --blok-database-gallery-preview-text: var(--blok-text-secondary);
     --blok-database-gallery-title-text: rgb(240, 239, 237);
     --blok-database-gallery-muted-text: rgb(125, 122, 117);
-    /* Dark calendar is unmeasured: table and gallery dark values stand in. */
-    --blok-database-calendar-border: rgba(255, 255, 243, 0.082);
-    --blok-database-calendar-weekend-bg: var(--blok-bg-secondary);
+    /* Calendar: research/21 §1h. Today digit stays white; Notion's dark digit is black, a bug. */
+    --blok-database-calendar-border: rgb(56, 56, 54);
+    --blok-database-calendar-weekend-bg: rgb(32, 32, 32);
     /* Builder surfaces: research/21 §1n. Notion's frame, module ring and strip are blue; neutral here (Q6).
        The Apply chevron's split line is unmeasured in dark. */
     --blok-database-builder-backdrop: rgb(32, 32, 32);
@@ -259,20 +274,20 @@
     --blok-database-calendar-muted-text: rgb(125, 122, 117);
     --blok-database-calendar-day-text: rgb(240, 239, 237);
     --blok-database-calendar-nav-icon: rgb(173, 169, 163);
-    --blok-database-calendar-event-bg: rgba(255, 255, 255, 0.055);
-    --blok-database-calendar-event-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
-    --blok-database-calendar-event-hover-bg: var(--blok-item-hover-bg);
+    --blok-database-calendar-event-bg: rgb(47, 47, 47);
+    --blok-database-calendar-event-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 2px 4px;
+    --blok-database-calendar-event-hover-bg: rgb(55, 55, 55);
     --blok-database-calendar-today-text: #ffffff;
-    /* Dark timeline is unmeasured: the dark calendar values stand in. */
-    --blok-database-timeline-bar-bg: rgba(255, 255, 255, 0.055);
-    --blok-database-timeline-bar-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
+    /* Timeline: research/21 §1i. Grid line and arrow icon are unmeasured. */
+    --blok-database-timeline-bar-bg: rgb(37, 37, 37);
+    --blok-database-timeline-bar-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
     --blok-database-timeline-grid-line: rgba(255, 255, 243, 0.082);
-    --blok-database-timeline-header-line: rgba(255, 255, 243, 0.082);
-    --blok-database-timeline-weekend-bg: var(--blok-bg-secondary);
+    --blok-database-timeline-header-line: rgb(56, 56, 54);
+    --blok-database-timeline-weekend-bg: rgba(255, 255, 255, 0.03);
     --blok-database-timeline-muted-text: rgb(125, 122, 117);
     --blok-database-timeline-text: rgb(240, 239, 237);
     --blok-database-timeline-control-text: rgb(173, 169, 163);
-    --blok-database-timeline-arrow-bg: rgb(125, 122, 117);
+    --blok-database-timeline-arrow-bg: rgb(173, 169, 163);
     --blok-database-timeline-arrow-icon: #ffffff;
     --blok-database-fill-handle-bg: rgb(25, 25, 25);
     /* Peek panel, shadow and center backdrop: research/21 §1m. */
@@ -288,26 +303,28 @@
     --blok-database-chart-purple: #9085e9;
     --blok-database-chart-red: #e66767;
     --blok-database-chart-gray: #9b9b9b;
-    /* Unmeasured in dark: the calendar event card's dark surface. */
-    --blok-database-feed-card-bg: rgba(255, 255, 255, 0.055);
-    --blok-database-feed-card-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
-    /* Unmeasured in dark: the calendar weekend fill. */
-    --blok-database-feed-reaction-bg: var(--blok-bg-secondary);
+    /* Feed card and reactions: research/21 §1j. */
+    --blok-database-feed-card-bg: rgb(32, 32, 32);
+    --blok-database-feed-card-shadow: rgba(255, 255, 255, 0.05) 0 0 0 1px inset;
+        --blok-database-feed-reaction-bg: rgb(32, 32, 32);
     --blok-database-new-bg: rgb(30, 110, 195);
     --blok-database-new-hover-bg: rgb(24, 96, 172);
     --blok-database-new-text: rgb(243, 249, 253);
     --blok-database-new-divider: rgba(28, 19, 1, 0.11);
     --blok-database-dependency-line: rgb(125, 122, 117);
     --blok-database-dependency-conflict: rgb(229, 100, 88);
-    /* Tabs: research/07:222; hover unmeasured, as light it equals active. Card actions unmeasured: the OPEN button stands in.
+    /* Tabs: research/07:222; hover unmeasured, as light it equals active. Card actions bg and shadow: research/21 §1f.
        Peek label: research/21 §1m. Comment badge: research/21 §1o. */
     --blok-database-tab-bg-active: rgba(255, 255, 255, 0.055);
     --blok-database-tab-bg-hover: rgba(255, 255, 255, 0.055);
     --blok-database-tab-text: rgb(173, 169, 163);
     --blok-database-tab-text-active: rgb(240, 239, 237);
     --blok-database-card-actions-bg: var(--blok-database-table-open-bg);
+  --blok-database-card-actions-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
     --blok-database-card-actions-icon: rgb(173, 169, 163);
     --blok-database-card-menu-hover-bg: rgba(255, 255, 255, 0.055);
+  /* List row hover, research/21 §1g. Overrides colors.css. */
+  --blok-database-add-hover-bg: rgba(255, 255, 255, 0.055);
     --blok-database-peek-label: rgb(173, 169, 163);
     --blok-database-comment-badge-text: rgb(240, 239, 237);
     --blok-database-comment-badge-icon: rgb(173, 169, 163);
@@ -350,6 +367,7 @@
   /* Re-set here, not in colors.css, so view.css keeps the shipped values. Measured in dark (research/08). */
   --blok-database-column-bg: rgba(252, 252, 252, 0.03);
   --blok-database-card-bg: rgb(32, 32, 32);
+  --blok-database-card-bg-hover: rgb(38, 38, 38);
   /* Table view (research/07 and 08); gutter and OPEN are unmeasured. */
   --blok-database-table-bg: var(--blok-bg-primary);
   --blok-database-table-border: rgba(255, 255, 243, 0.082);
@@ -366,7 +384,7 @@
   --blok-database-table-cell-ring: rgba(255, 255, 255, 0.35);
   --blok-database-table-drop-line: rgba(35, 131, 226, 0.43);
   --blok-database-table-resize: rgba(35, 131, 226, 0.8);
-  /* Measured in dark: default, yellow and pink. Brown is unmeasured and
+  /* Measured in dark: default, yellow, pink (research/08), blue and green (research/21 §1f). Brown is unmeasured and
      derives from the dark option pill like the other hues. */
   --blok-database-column-yellow-bg: rgba(255, 232, 48, 0.043);
   --blok-database-column-brown-bg: color-mix(in srgb, var(--blok-database-option-brown-bg) 11%, transparent);
@@ -374,6 +392,15 @@
   --blok-database-column-yellow-ring: rgba(255, 225, 117, 0.13);
   --blok-database-column-accent: rgb(188, 186, 182);
   --blok-database-column-yellow-accent: rgb(216, 163, 47);
+  --blok-database-column-blue-bg: rgba(41, 139, 253, 0.063);
+  --blok-database-column-blue-ring: rgba(71, 157, 255, 0.173);
+  --blok-database-column-blue-accent: rgb(39, 131, 222);
+  --blok-database-column-green-bg: rgba(83, 255, 140, 0.035);
+  --blok-database-column-green-ring: rgba(119, 255, 179, 0.118);
+  --blok-database-column-green-accent: rgb(70, 161, 113);
+  /* Dark only: a colored column tints its cards. Light cards stay white. */
+  --blok-database-column-blue-card-bg: rgb(33, 48, 65);
+  --blok-database-column-green-card-bg: rgb(36, 52, 43);
   --blok-database-column-pink-accent: rgb(219, 105, 153);
   --blok-database-card-lift: rgba(25, 25, 25, 0.08) 0 2px 4px;
   --blok-database-card-ring: rgba(255, 255, 243, 0.082);
@@ -383,18 +410,18 @@
   --blok-database-confirm-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
   --blok-database-confirm-destructive-text: rgb(229, 100, 88);
   --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
-  /* Gallery card and empty cover are measured (research/08); the rest is unmeasured. */
+  /* Gallery card, cover, cover line and hover: research/08 and 21 §1g. Text inks are unmeasured. */
   --blok-database-gallery-card-bg: rgba(255, 255, 255, 0.055);
   --blok-database-gallery-card-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
-  --blok-database-gallery-card-hover-bg: var(--blok-item-hover-bg);
+  --blok-database-gallery-card-hover-bg: rgb(47, 47, 47);
   --blok-database-gallery-preview-bg: rgba(252, 252, 252, 0.03);
-  --blok-database-gallery-preview-border: rgba(255, 255, 243, 0.082);
+  --blok-database-gallery-preview-border: transparent;
   --blok-database-gallery-preview-text: var(--blok-text-secondary);
   --blok-database-gallery-title-text: rgb(240, 239, 237);
   --blok-database-gallery-muted-text: rgb(125, 122, 117);
-  /* Dark calendar is unmeasured: table and gallery dark values stand in. */
-  --blok-database-calendar-border: rgba(255, 255, 243, 0.082);
-  --blok-database-calendar-weekend-bg: var(--blok-bg-secondary);
+  /* Calendar: research/21 §1h. Today digit stays white; Notion's dark digit is black, a bug. */
+  --blok-database-calendar-border: rgb(56, 56, 54);
+  --blok-database-calendar-weekend-bg: rgb(32, 32, 32);
   /* Builder surfaces: research/21 §1n. Notion's frame, module ring and strip are blue; neutral here (Q6).
      The Apply chevron's split line is unmeasured in dark. */
   --blok-database-builder-backdrop: rgb(32, 32, 32);
@@ -406,20 +433,20 @@
   --blok-database-calendar-muted-text: rgb(125, 122, 117);
   --blok-database-calendar-day-text: rgb(240, 239, 237);
   --blok-database-calendar-nav-icon: rgb(173, 169, 163);
-  --blok-database-calendar-event-bg: rgba(255, 255, 255, 0.055);
-  --blok-database-calendar-event-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
-  --blok-database-calendar-event-hover-bg: var(--blok-item-hover-bg);
+  --blok-database-calendar-event-bg: rgb(47, 47, 47);
+  --blok-database-calendar-event-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 2px 4px;
+  --blok-database-calendar-event-hover-bg: rgb(55, 55, 55);
   --blok-database-calendar-today-text: #ffffff;
-  /* Dark timeline is unmeasured: the dark calendar values stand in. */
-  --blok-database-timeline-bar-bg: rgba(255, 255, 255, 0.055);
-  --blok-database-timeline-bar-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
+  /* Timeline: research/21 §1i. Grid line and arrow icon are unmeasured. */
+  --blok-database-timeline-bar-bg: rgb(37, 37, 37);
+  --blok-database-timeline-bar-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-timeline-grid-line: rgba(255, 255, 243, 0.082);
-  --blok-database-timeline-header-line: rgba(255, 255, 243, 0.082);
-  --blok-database-timeline-weekend-bg: var(--blok-bg-secondary);
+  --blok-database-timeline-header-line: rgb(56, 56, 54);
+  --blok-database-timeline-weekend-bg: rgba(255, 255, 255, 0.03);
   --blok-database-timeline-muted-text: rgb(125, 122, 117);
   --blok-database-timeline-text: rgb(240, 239, 237);
   --blok-database-timeline-control-text: rgb(173, 169, 163);
-  --blok-database-timeline-arrow-bg: rgb(125, 122, 117);
+  --blok-database-timeline-arrow-bg: rgb(173, 169, 163);
   --blok-database-timeline-arrow-icon: #ffffff;
   /* Peek panel, shadow and center backdrop: research/21 §1m. */
   --blok-database-peek-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
@@ -435,26 +462,28 @@
   --blok-database-chart-purple: #9085e9;
   --blok-database-chart-red: #e66767;
   --blok-database-chart-gray: #9b9b9b;
-  /* Unmeasured in dark: the calendar event card's dark surface. */
-  --blok-database-feed-card-bg: rgba(255, 255, 255, 0.055);
-  --blok-database-feed-card-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
-  /* Unmeasured in dark: the calendar weekend fill. */
-  --blok-database-feed-reaction-bg: var(--blok-bg-secondary);
+  /* Feed card and reactions: research/21 §1j. */
+  --blok-database-feed-card-bg: rgb(32, 32, 32);
+  --blok-database-feed-card-shadow: rgba(255, 255, 255, 0.05) 0 0 0 1px inset;
+    --blok-database-feed-reaction-bg: rgb(32, 32, 32);
   --blok-database-new-bg: rgb(30, 110, 195);
   --blok-database-new-hover-bg: rgb(24, 96, 172);
   --blok-database-new-text: rgb(243, 249, 253);
   --blok-database-new-divider: rgba(28, 19, 1, 0.11);
   --blok-database-dependency-line: rgb(125, 122, 117);
   --blok-database-dependency-conflict: rgb(229, 100, 88);
-  /* Tabs: research/07:222; hover unmeasured, as light it equals active. Card actions unmeasured: the OPEN button stands in.
+  /* Tabs: research/07:222; hover unmeasured, as light it equals active. Card actions bg and shadow: research/21 §1f.
      Peek label: research/21 §1m. Comment badge: research/21 §1o. */
   --blok-database-tab-bg-active: rgba(255, 255, 255, 0.055);
   --blok-database-tab-bg-hover: rgba(255, 255, 255, 0.055);
   --blok-database-tab-text: rgb(173, 169, 163);
   --blok-database-tab-text-active: rgb(240, 239, 237);
   --blok-database-card-actions-bg: var(--blok-database-table-open-bg);
+  --blok-database-card-actions-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-card-actions-icon: rgb(173, 169, 163);
   --blok-database-card-menu-hover-bg: rgba(255, 255, 255, 0.055);
+  /* List row hover, research/21 §1g. Overrides colors.css. */
+  --blok-database-add-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-peek-label: rgb(173, 169, 163);
   --blok-database-comment-badge-text: rgb(240, 239, 237);
   --blok-database-comment-badge-icon: rgb(173, 169, 163);
@@ -539,7 +568,7 @@
   min-height: 40px;
   margin-bottom: var(--blok-space-2);
   padding: var(--blok-space-2) var(--blok-space-2-5) var(--blok-space-1-5);
-  background-color: var(--blok-database-card-bg);
+  background-color: var(--_blok-group-card, var(--blok-database-card-bg));
   box-shadow: var(--blok-database-card-lift), var(--_blok-group-ring, var(--blok-database-card-ring)) 0 0 0 1px;
   border: none;
   border-radius: var(--blok-radius-block);
@@ -591,7 +620,7 @@
   pointer-events: none;
   transition: opacity 200ms ease;
   background: var(--blok-database-card-actions-bg);
-  box-shadow: var(--blok-database-table-open-shadow);
+  box-shadow: var(--blok-database-card-actions-shadow);
   border-radius: var(--blok-radius-control);
   --blok-radius-inner: var(--blok-radius-control);
 }
@@ -8030,8 +8059,9 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   color: var(--blok-text-primary);
 }
 
+/* Tertiary ink, research/21 §1j. */
 [data-blok-database-feed-time] {
-  color: var(--blok-database-table-header-text);
+  color: var(--blok-database-table-muted-text);
 }
 
 [data-blok-database-feed-title] {
@@ -8732,7 +8762,8 @@ button[data-blok-database-feed-reaction]:hover,
   margin-block-end: var(--blok-space-4);
   padding: var(--blok-space-2) var(--blok-space-3);
   border-radius: var(--blok-radius-control);
-  background-color: var(--blok-item-hover-bg);
+  /* Measured the column tint in both themes (research/21 §1k). */
+  background-color: var(--blok-database-column-bg);
   color: var(--blok-text-secondary);
   font-size: 14px;
 }

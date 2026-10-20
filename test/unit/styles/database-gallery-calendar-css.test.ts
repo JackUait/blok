@@ -115,3 +115,32 @@ describe('gallery drop into an empty group', () => {
     expect(ruleBody('[data-blok-database-gallery-grid][data-drop="inside"]')).toContain('var(--blok-database-table-drop-line)');
   });
 });
+
+/** The token's value in the media-query dark block, then the theme-attribute copy. */
+const darkValues = (name: string): string[] =>
+  Array.from(css.matchAll(new RegExp(`${name}:\\s*([^;]+);`, 'g'))).map((m) => (m[1] ?? '').trim()).slice(1);
+
+describe('gallery and calendar in dark (research/21 §1g, §1h)', () => {
+  it.each([
+    ['--blok-database-gallery-card-bg', 'rgba(255, 255, 255, 0.055)'],
+    ['--blok-database-gallery-card-shadow', 'rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px'],
+    ['--blok-database-gallery-card-hover-bg', 'rgb(47, 47, 47)'],
+    ['--blok-database-gallery-preview-bg', 'rgba(252, 252, 252, 0.03)'],
+    ['--blok-database-gallery-preview-border', 'transparent'],
+    ['--blok-database-calendar-border', 'rgb(56, 56, 54)'],
+    ['--blok-database-calendar-weekend-bg', 'rgb(32, 32, 32)'],
+    ['--blok-database-calendar-muted-text', 'rgb(125, 122, 117)'],
+    ['--blok-database-calendar-nav-icon', 'rgb(173, 169, 163)'],
+    ['--blok-database-calendar-event-bg', 'rgb(47, 47, 47)'],
+    ['--blok-database-calendar-event-shadow', 'rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 2px 4px'],
+    ['--blok-database-calendar-event-hover-bg', 'rgb(55, 55, 55)'],
+  ])('%s is %s in both dark blocks', (token, value) => {
+    expect(darkValues(token)).toEqual([value, value]);
+  });
+
+  // Divergence: Notion's dark today digit computes black on red (its white var does not resolve). Blok keeps it white.
+  it('keeps the today digit white on red in dark, as in light', () => {
+    expect(darkValues('--blok-database-calendar-today-text')).toEqual(['#ffffff', '#ffffff']);
+    expect(darkValues('--blok-database-today')).toEqual(['rgb(229, 100, 88)', 'rgb(229, 100, 88)']);
+  });
+});

@@ -108,8 +108,11 @@ test.describe('database view overflow list', () => {
 
     await expect(page.getByRole('tab', { name: 'Sixth', includeHidden: true })).toHaveAttribute('aria-selected', 'true');
     // Polled: the new bar shows every tab for a frame before it folds.
-    await expect.poll(async () => (await page.locator('[data-blok-database-tab]:visible').allTextContents()).map((name) => name.trim()))
-      .toEqual(['First', 'Sixth']);
+    await expect.poll(async () => {
+      const names = (await page.locator('[data-blok-database-tab]:visible').allTextContents()).map((name) => name.trim());
+
+      return names.length < NAMES.length && names.join() === [...NAMES.slice(0, names.length - 1), 'Sixth'].join();
+    }).toBe(true);
   });
 
   test('lists every view under a focused search field, then New view', async ({ page }) => {

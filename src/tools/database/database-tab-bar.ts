@@ -656,14 +656,16 @@ export class DatabaseTabBar {
     ).filter((t) => t.getAttribute('data-view-id') !== this.dragViewId);
 
     // Folded tabs can sit between shown ones (the current view stays shown):
-    // the drop lands right after the shown tab on its left.
+    // a drop between shown tabs lands right after the one on its left; past
+    // the row it goes after every view.
     const shown = tabs.filter((t) => t.style.display !== 'none');
     const dropIndex = shown.findIndex((t) => {
       const rect = t.getBoundingClientRect();
       return e.clientX < (rect.left + rect.right) / 2;
     });
-    const afterTab = dropIndex === -1 ? shown.at(-1) : shown[dropIndex - 1];
-    const beforeTab = afterTab === undefined ? tabs[0] : tabs[tabs.indexOf(afterTab) + 1];
+    const afterTab = dropIndex === -1 ? tabs.at(-1) : shown[dropIndex - 1];
+    const nextIndex = afterTab === undefined ? 0 : tabs.indexOf(afterTab) + 1;
+    const beforeTab = dropIndex === -1 ? undefined : tabs[nextIndex];
     const afterViewId = afterTab?.getAttribute('data-view-id') ?? null;
     const beforeViewId = beforeTab?.getAttribute('data-view-id') ?? null;
 

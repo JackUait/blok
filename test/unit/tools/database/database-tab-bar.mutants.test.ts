@@ -1462,6 +1462,28 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(onReorder).toHaveBeenCalledWith('v0', generateKeyBetween('a1', 'a2'));
     });
 
+    it('drops after every view when the pointer is past a folded row', () => {
+      const views = Array.from({ length: 8 }, (_, i) => makeView({ id: `v${i}`, name: `View ${i}`, position: `a${i}` }));
+      const { el } = mount(views, 'v4');
+
+      for (const tab of Array.from(el.querySelectorAll('[data-blok-database-tab]'))) {
+        Object.defineProperty(tab, 'offsetWidth', { value: 100, configurable: true });
+      }
+      Object.defineProperty(el, 'clientWidth', { value: 346, configurable: true });
+      lastResizeProbe().fire();
+      Array.from(el.querySelectorAll<HTMLElement>('[data-blok-database-tab]')).forEach((tab) => {
+        const slot = ['v0', 'v1', 'v4'].indexOf(tab.getAttribute('data-view-id') ?? '');
+
+        vi.spyOn(tab, 'getBoundingClientRect').mockReturnValue(slot === -1 ? makeRect(0, 0) : makeRect(slot * 100, slot * 100 + 100));
+      });
+
+      tabOf(el, 'v0').dispatchEvent(pointer('pointerdown', 50));
+      document.dispatchEvent(pointer('pointermove', 350));
+      document.dispatchEvent(pointer('pointerup', 350));
+
+      expect(onReorder).toHaveBeenCalledWith('v0', generateKeyBetween('a7', null));
+    });
+
     it('drops after the last tab when the pointer is past the row', () => {
       const { el } = mount(threeViews(), 'v1');
 

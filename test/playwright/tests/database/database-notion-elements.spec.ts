@@ -81,6 +81,11 @@ interface Look {
   closeBg: string;
   closeHover: string;
   closeGlyph: string;
+  closePressed: string;
+  rowHover: string;
+  rowPressed: string;
+  todayHover: string;
+  todayInk: string;
 }
 
 const LIGHT: Look = {
@@ -94,6 +99,14 @@ const LIGHT: Look = {
   closeBg: 'rgba(42, 28, 0, 0.07)',
   closeHover: 'rgba(42, 28, 0, 0.106)',
   closeGlyph: 'rgb(142, 139, 134)',
+  // research/27 §6. A light row press was not read: it keeps the hover fill.
+  // Chrome reads Notion's 0.102 and 0.051 alphas back as 0.1 and 0.05 (8-bit alpha).
+  closePressed: 'rgba(33, 27, 23, 0.1)',
+  rowHover: 'rgba(33, 27, 23, 0.05)',
+  rowPressed: 'rgba(33, 27, 23, 0.05)',
+  todayHover: 'rgba(33, 27, 23, 0.05)',
+  // Blok's secondary ink: Notion's rgb(142, 139, 134) is 3.39:1 on white.
+  todayInk: 'rgb(100, 106, 121)',
 };
 
 const DARK: Look = {
@@ -107,6 +120,11 @@ const DARK: Look = {
   closeBg: 'rgba(255, 255, 235, 0.1)',
   closeHover: 'rgba(255, 255, 235, 0.153)',
   closeGlyph: 'rgb(173, 169, 163)',
+  closePressed: 'rgba(255, 255, 255, 0.11)',
+  rowHover: 'rgba(255, 255, 255, 0.055)',
+  rowPressed: 'rgba(255, 255, 255, 0.11)',
+  todayHover: 'rgba(255, 255, 255, 0.055)',
+  todayInk: 'rgb(142, 139, 134)',
 };
 
 const paths: Array<{ name: string; look: Look; setup: (page: Page) => Promise<void> }> = [
@@ -239,5 +257,109 @@ for (const path of paths) {
       await close.click();
       await expect(panel).toBeHidden();
     });
+
+    test('view settings: a row and the × press to the measured fills (research/27 §6)', async ({ page }) => {
+      await page.getByTestId('database-toolbar-settings').click();
+      const panel = page.getByTestId('database-view-settings');
+      const row = panel.getByTestId('database-settings-filter');
+      const close = panel.getByRole('button', { name: 'Close', exact: true });
+
+      await row.hover();
+      await expect(row).toHaveCSS('background-color', look.rowHover);
+      await page.mouse.down();
+      await expect(row).toHaveCSS('background-color', look.rowPressed);
+      // Released off the row, as measured: the panel stays on its root.
+      await page.mouse.move(5, 5);
+      await page.mouse.up();
+
+      await close.hover();
+      await page.mouse.down();
+      await expect(close).toHaveCSS('background-color', look.closePressed);
+      await expect(close).toHaveCSS('box-shadow', 'none');
+      await page.mouse.move(5, 5);
+      await page.mouse.up();
+      await expect(panel).toBeVisible();
+    });
+
+    test('date picker: Today and Now keep one box and ink and hover to the measured fill (research/27 §6)', async ({ page }) => {
+      await page.getByRole('row').filter({ hasText: 'Alpha' }).getByRole('gridcell').and(page.locator('[data-property-id="p-due"]')).click();
+      const picker = page.locator('[data-blok-database-date-editor]');
+
+      if (!await picker.isVisible()) await page.keyboard.press('Enter');
+      await expect(picker).toBeVisible();
+      const today = picker.locator('[data-blok-database-date-today]');
+
+      for (const label of [ 'Today', 'Now' ]) {
+        if (label === 'Now') await picker.locator('[data-blok-database-date-time-toggle]').click();
+        await expect(today).toHaveText(label);
+        expect((await size(today)).height).toBe(20);
+        await expect(today).toHaveCSS('color', look.todayInk);
+        await expect(today).toHaveCSS('padding', '0px 8px');
+        await today.hover();
+        await expect(today).toHaveCSS('background-color', look.todayHover);
+        await page.mouse.move(5, 5);
+      }
+    });
   });
 }
+
+// research/27 §7: the Edit property submenu opens on ArrowRight or Enter, never on a click or a keyboard highlight.
+test.describe('property header menu: Edit property opens one level at a time (research/27 §7)', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 1400, height: 900 });
+    await gotoTestPage(page);
+    await page.waitForFunction(() => typeof window.Blok === 'function');
+    await page.emulateMedia({ colorScheme: 'light' });
+    await mount(page);
+  });
+
+  test('a click and a highlight do not open it; ArrowRight and Enter do; ArrowLeft and Escape close one level', async ({ page }) => {
+    const open = page.locator('[data-blok-popover-opened="true"]');
+    const edit = page.locator('[data-blok-popover-opened="true"] [data-blok-item-name="editProperty"]');
+    const formatRow = page.locator('[data-blok-popover-opened="true"] [data-blok-item-name="numberFormat"]');
+
+    await page.locator('[data-blok-database-table-column-header][data-property-id="p-amount"]').click();
+    await expect(edit).toBeVisible();
+    // Notion still showed one menu 1.4s after the click.
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 1400)));
+    await expect(open).toHaveCount(1);
+
+    for (let i = 0; i < 10 && await edit.getAttribute('data-blok-focused') !== 'true'; i++) {
+      await page.keyboard.press('ArrowDown');
+      // Human pace: the name field takes focus 50ms after the highlight lands on it.
+      await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 200)));
+    }
+    await expect(edit).toHaveAttribute('data-blok-focused', 'true');
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 700)));
+    await expect(open).toHaveCount(1);
+
+    await page.keyboard.press('ArrowRight');
+    await expect(open).toHaveCount(2);
+    await expect(formatRow).toBeVisible();
+    await page.keyboard.press('ArrowLeft');
+    await expect(open).toHaveCount(1);
+    await expect(edit).toHaveAttribute('data-blok-focused', 'true');
+
+    await page.keyboard.press('Enter');
+    await expect(open).toHaveCount(2);
+    await page.keyboard.press('Escape');
+    await expect(open).toHaveCount(1);
+    await expect(edit).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(open).toHaveCount(0);
+  });
+
+  test('the name field keeps its caret and Enter while it holds the highlight', async ({ page }) => {
+    await page.locator('[data-blok-database-table-column-header][data-property-id="p-amount"]').click();
+    const name = page.locator('[data-blok-popover-opened="true"] [data-blok-database-property-menu-name-input]');
+
+    await name.click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('ArrowLeft');
+    expect(await name.evaluate((el: HTMLInputElement) => el.selectionStart)).toBe('Amount'.length - 1);
+    await page.keyboard.type('X');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('[data-blok-popover-opened="true"]')).toHaveCount(0);
+    await expect(page.locator('[data-blok-database-table-column-header][data-property-id="p-amount"]')).toContainText('AmounXt');
+  });
+});

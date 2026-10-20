@@ -725,7 +725,13 @@ export class Flipper {
 
     const isNativeInput = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
     const isNavigationKey = event.key === 'Tab' || event.key === 'ArrowUp' || event.key === 'ArrowDown' || event.key === 'Enter' || event.key === 'ArrowRight' || event.key === 'ArrowLeft';
-    const shouldHandleNativeInput = target.getAttribute('data-blok-flipper-navigation-target') === 'true' && isNavigationKey;
+    // A field that is itself one of the items (a menu's name field) keeps its caret and Enter
+    // until the highlight moves to another item; then those keys act on that item.
+    const isFieldKey = event.key === 'ArrowLeft' || event.key === 'ArrowRight' || event.key === 'Enter';
+    const fieldOwnsKey = isFieldKey
+      && (this.iterator?.getItems().includes(target) ?? false)
+      && (this.iterator?.currentItem ?? target) === target;
+    const shouldHandleNativeInput = target.getAttribute('data-blok-flipper-navigation-target') === 'true' && isNavigationKey && !fieldOwnsKey;
     const isContentEditable = target.isContentEditable;
     const isInlineToolInput = target.closest('[data-blok-link-tool-input-opened="true"]') !== null;
 

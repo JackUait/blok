@@ -956,6 +956,26 @@ export class PopoverDesktop extends PopoverAbstract {
     this.currentItemListeners.forEach(listener => listener(current));
   }
 
+  public override closeSubmenuOnEscape(): boolean {
+    return this.escapeClosesSubmenuFirst && this.closeDeepestNested();
+  }
+
+  /**
+   * Closes the deepest open submenu. Nested levels do not carry the root's opt-in, so this does not check it.
+   * @returns true when a submenu was closed
+   */
+  private closeDeepestNested(): boolean {
+    if (this.nestedPopover === undefined || this.nestedPopover === null) {
+      return false;
+    }
+
+    if (!this.nestedPopover.closeDeepestNested()) {
+      this.destroyNestedPopoverIfExists(true);
+    }
+
+    return true;
+  }
+
   public destroy(): void {
     this.hide();
     super.destroy();

@@ -291,6 +291,20 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   }
 
   /**
+   * Opt-in, set on a root menu: Escape closes the deepest open submenu first,
+   * one level per press. Off by default, where Escape closes the whole menu.
+   */
+  public escapeClosesSubmenuFirst = false;
+
+  /**
+   * Escape's first step: closes the deepest open submenu when opted in.
+   * @returns true when a submenu was closed
+   */
+  public closeSubmenuOnEscape(): boolean {
+    return false;
+  }
+
+  /**
    * Closes popover
    */
   public hide(): void {

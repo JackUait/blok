@@ -209,6 +209,8 @@ export class DatabasePropertyMenu {
     ];
     const popover = new PopoverDesktop({ class: DATABASE_MENU_CLASS, animateClose: true, items, trigger: anchor, width: 'auto', minWidth: '240px', flippable: true, autoFocusFirstItem: false });
 
+    // research/27 §7: Escape closes the Edit property submenu only; a second Escape closes the menu.
+    popover.escapeClosesSubmenuFirst = true;
     this.popover = popover;
     popover.on(PopoverEvent.Closed, () => {
       if (this.popover === popover) {
@@ -298,6 +300,8 @@ export class DatabasePropertyMenu {
     input.value = property.name;
     input.setAttribute('data-blok-database-property-menu-name-input', '');
     input.setAttribute('aria-label', this.t('tools.database.propertyName'));
+    // research/27 §7: arrows leave the field for the items, and ArrowRight/Enter act on a highlighted item.
+    input.setAttribute('data-blok-flipper-navigation-target', 'true');
     const error = nameTakenError(input, 'data-blok-database-property-menu-name-error', this.options.i18n);
     const taken = (name: string): boolean => name !== property.name && this.options.isNameTaken?.(property.id, name) === true;
     const showError = (): void => {

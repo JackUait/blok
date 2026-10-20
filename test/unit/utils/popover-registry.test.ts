@@ -143,6 +143,25 @@ describe('PopoverRegistry', () => {
     it('should return false when stack is empty', () => {
       expect(registry.closeTopmost()).toBe(false);
     });
+
+    // research/27 §7: a menu that opts in closes an open submenu first and stays open.
+    it('closes only an open submenu when the menu says it did', () => {
+      const { popover, trigger } = createMockPopover();
+      const closeSubmenuOnEscape = vi.fn(() => true);
+
+      Object.assign(popover, { closeSubmenuOnEscape });
+      registry.register(popover, trigger);
+
+      expect(registry.closeTopmost()).toBe(true);
+      expect(closeSubmenuOnEscape).toHaveBeenCalledOnce();
+      expect(popover.hide).not.toHaveBeenCalled();
+      expect(registry.hasOpenPopovers()).toBe(true);
+
+      closeSubmenuOnEscape.mockReturnValue(false);
+      expect(registry.closeTopmost()).toBe(true);
+      expect(popover.hide).toHaveBeenCalledOnce();
+      expect(registry.hasOpenPopovers()).toBe(false);
+    });
   });
 
   describe('hasOpenPopovers', () => {

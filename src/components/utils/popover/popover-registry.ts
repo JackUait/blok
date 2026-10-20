@@ -158,6 +158,11 @@ export class PopoverRegistry {
     const topmost = this.stack[this.stack.length - 1];
     const { triggerElement } = topmost;
 
+    // A menu that opted in closes an open submenu before itself. The type check is for test mocks.
+    if (typeof topmost.popover.closeSubmenuOnEscape === 'function' && topmost.popover.closeSubmenuOnEscape()) {
+      return true;
+    }
+
     /**
      * Eagerly drop the entry so a second dismissal path cannot close it again.
      * The editor's keyboard controller and this registry's own capture-phase

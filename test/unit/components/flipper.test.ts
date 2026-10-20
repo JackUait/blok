@@ -278,6 +278,46 @@ describe('Flipper', () => {
     flipper.deactivate();
   });
 
+  // research/27 §7: a text field that is itself a menu stop (a property's name) keeps its caret
+  // and Enter while it holds the highlight, and hands them to the menu once another item does.
+  it('a navigation-target field among the items keeps Left/Right/Enter until another item is highlighted', () => {
+    const input = document.createElement('input');
+    const [ submenu ] = createItems(1);
+    const onEnter = vi.fn();
+
+    input.setAttribute('data-blok-flipper-navigation-target', 'true');
+    submenu.setAttribute('data-blok-has-children', 'true');
+    submenu.addEventListener('click', onEnter);
+    document.body.prepend(input);
+    const flipper = new Flipper({ focusedItemClass: focusedClass, items: [ input, submenu ] });
+
+    flipper.activate();
+
+    // Nothing highlighted: the field keeps the keys.
+    const left = createKeyboardEvent('ArrowLeft', { target: input });
+
+    flipper.handleExternalKeydown(left);
+    expect(left.defaultPrevented).toBe(false);
+
+    // ArrowDown from the field still moves the highlight.
+    flipper.handleExternalKeydown(createKeyboardEvent('ArrowDown', { target: input }));
+    expect(input.classList.contains(focusedClass)).toBe(true);
+    const enterOnField = createKeyboardEvent('Enter', { target: input });
+
+    flipper.handleExternalKeydown(enterOnField);
+    expect(enterOnField.defaultPrevented).toBe(false);
+
+    flipper.handleExternalKeydown(createKeyboardEvent('ArrowDown', { target: input }));
+    expect(submenu.classList.contains(focusedClass)).toBe(true);
+    const right = createKeyboardEvent('ArrowRight', { target: input });
+
+    flipper.handleExternalKeydown(right);
+    expect(right.defaultPrevented).toBe(true);
+    expect(onEnter).toHaveBeenCalledTimes(1);
+
+    flipper.deactivate();
+  });
+
   it('provides accurate activation state via getter', () => {
     const flipper = new Flipper({
       focusedItemClass: focusedClass,

@@ -938,6 +938,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // status shine, summary and Undo/Keep icons, the "Show more" panel, shimmer
     // slots, wobble, reduced motion incl. the chevron and press), minus the bottom dock: the measured overage.
     const ASSISTANT_IN_PAGE_BAR_BYTES = 4_610;
+    // assistant.css: the preview heading rules drop to heading.css's (0,1,0) via :where(), so a host's
+    // unscoped .m-0 hits both alike, plus the comment saying why (2026-10-20).
+    const ASSISTANT_PREVIEW_HEADING_SPECIFICITY_BYTES = 250;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1075,7 +1078,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + ASSISTANT_LIVE_PREVIEW_BYTES
       + ASSISTANT_REWRITE_PREVIEW_BYTES
       + ASSISTANT_FALLBACK_REVEAL_BYTES
-      + ASSISTANT_IN_PAGE_BAR_BYTES;
+      + ASSISTANT_IN_PAGE_BAR_BYTES
+      + ASSISTANT_PREVIEW_HEADING_SPECIFICITY_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

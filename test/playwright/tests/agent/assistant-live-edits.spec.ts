@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import type { Blok } from '@/types';
 import type { AgentModelRequest, AgentModelResponse, AgentModelStreamEvent } from '@/types/api';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
@@ -139,6 +139,7 @@ test.describe('Ask AI live edits', () => {
   // The shared page resets media only between files, so reduced motion would reach the next test.
   test.afterEach(async ({ page }) => {
     await page.emulateMedia({ reducedMotion: null });
+    await page.evaluate(() => document.getElementById('host-utility')?.remove());
   });
 
   test('words appear in the page before the batch commits', async ({ page }) => {
@@ -356,6 +357,57 @@ test.describe('Ask AI live edits', () => {
     ).toBe(true);
     expect(await savedTexts(page)).toEqual([...ORIGINAL, text]);
   });
+
+  // hostReset: a host page with its own unscoped `.m-0`, like the playground, which zeroes the real heading's margin.
+  for (const [level, hostReset] of [[1, false], [2, false], [3, false], [1, true], [2, true], [3, true]] as const) {
+    test(`a level ${level} heading preview sits where the heading lands${hostReset ? ' on a host with its own .m-0' : ''}, so nothing jumps at hand-off`, async ({ page }) => {
+      if (hostReset) {
+        await page.evaluate(() => {
+          const style = document.createElement('style');
+
+          style.id = 'host-utility';
+          style.textContent = '.m-0 { margin: 0; }';
+          document.head.append(style);
+        });
+      }
+      const text = 'Heading words land';
+      const input = { commands: [{ name: 'block.insert', args: { type: 'header', position: { before: 'p2' }, data: { text, level } } }] };
+      /** The top of the text itself, not its box: the preview and the block pad it differently. */
+      const textTop = (element: Locator): Promise<number> => element.evaluate((node) => {
+        const range = document.createRange();
+
+        range.selectNodeContents(node);
+
+        return range.getBoundingClientRect().top;
+      });
+      const next = page.locator('[data-blok-id="p2"]');
+
+      await ask(page, 'Second');
+      await emit(page, 0, { type: 'tool_start', index: 0, id: 'call-1', name: 'blok_execute' });
+      const json = JSON.stringify(input);
+
+      const levelEnd = `"level":${level}}`;
+
+      // Cut after `data` closes: the text is final, but the call is still open.
+      await emit(page, 0, { type: 'tool_input', index: 0, json: json.slice(0, json.indexOf(levelEnd) + levelEnd.length) });
+
+      const preview = page.getByTestId('ai-preview');
+
+      await expect(preview).toHaveText(text);
+
+      const previewTop = await textTop(preview.getByText(text));
+      const nextBefore = (await next.boundingBox())?.y ?? 0;
+
+      await emit(page, 0, { type: 'tool_input', index: 0, json: JSON.stringify(input) });
+      await emit(page, 0, { type: 'tool_end', index: 0 });
+      await expect(preview).toHaveCount(0);
+
+      const heading = page.locator(`#${HOLDER_ID} [data-blok-element]`).filter({ hasText: text }).getByText(text);
+
+      expect(Math.abs(await textTop(heading) - previewTop)).toBeLessThanOrEqual(2);
+      expect(Math.abs(((await next.boundingBox())?.y ?? 0) - nextBefore)).toBeLessThanOrEqual(2);
+    });
+  }
 
   test('an insert streams below the bar, not above it', async ({ page }) => {
     const text = 'Below the bar words';

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { stepStatusKey } from '../../../../../src/components/modules/assistant/step-status';
+import { stepStatusKey, streamStatusKey } from '../../../../../src/components/modules/assistant/step-status';
 
 const execute = (...commands: unknown[]): unknown => ({ commands });
 const noBlocks = (): string | undefined => undefined;
@@ -81,5 +81,34 @@ describe('stepStatusKey', () => {
   it.each(['toString', 'constructor', '__proto__', 'hasOwnProperty'])('treats a model-sent %s as an unknown name, never a prototype key', (name) => {
     expect(stepStatusKey('blok_execute', execute({ name: 'block.insert', args: { type: name } }), noBlocks)).toBe('assistant.status.block');
     expect(stepStatusKey('blok_execute', execute({ name, args: {} }), noBlocks)).toBe('assistant.status.edit');
+  });
+});
+
+describe('streamStatusKey', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('waits while the command name may still be cut off', () => {
+    expect(streamStatusKey('', noBlocks)).toBeNull();
+    expect(streamStatusKey('{"commands":[{"name":"block.ins', noBlocks)).toBeNull();
+  });
+
+  it('waits while the block type may still be cut off', () => {
+    expect(streamStatusKey('{"commands":[{"name":"block.insert","args":{"type":"hea', noBlocks)).toBeNull();
+  });
+
+  it('names an insert once its type is whole, while its words still stream', () => {
+    expect(streamStatusKey('{"commands":[{"name":"block.insert","args":{"type":"header","data":{"text":"Big ti', noBlocks))
+      .toBe('assistant.status.heading');
+  });
+
+  it('skips reads and names the first write', () => {
+    expect(streamStatusKey('{"commands":[{"name":"doc.read","args":{}},{"name":"markdown.insert","args":{"markdown":"# H', noBlocks))
+      .toBe('assistant.status.markdown');
   });
 });

@@ -1,3 +1,5 @@
+import { parsePartialJson } from '../../../agent/partial-json';
+
 /**
  * Picks the Ask AI status line for one step of a run, as an i18n key.
  * Tool input comes from the model, so every field is checked before use.
@@ -100,4 +102,59 @@ export const stepStatusKey = (activity: string, input: unknown, typeOf: (id: str
     default:
       return 'assistant.status.working';
   }
+};
+
+/** A key is final once a later key has started, or its command is done. */
+const settled = (record: Record<string, unknown>, key: string, done: boolean): boolean => {
+  const keys = Object.keys(record);
+
+  return done || (keys.includes(key) && keys.indexOf(key) < keys.length - 1);
+};
+
+const isWhole = (json: string): boolean => {
+  try {
+    JSON.parse(json);
+
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/** The arg that picks the line, which may still be cut off mid-stream. */
+const DECIDING_ARG: Record<string, string> = { 'block.insert': 'type', 'block.convert': 'type', 'block.update': 'id' };
+
+/**
+ * The line for a `blok_execute` call whose input is still streaming, or null
+ * while the part that picks the line may still be cut off.
+ * @param json - the call's input so far
+ * @param typeOf - the tool name of a block in the document
+ */
+export const streamStatusKey = (json: string, typeOf: (id: string) => string | undefined): string | null => {
+  const input = parsePartialJson(json);
+  const commands = isRecord(input) && Array.isArray(input.commands) ? input.commands.filter(isRecord) : [];
+  const whole = isWhole(json);
+
+  for (const [index, command] of commands.entries()) {
+    const done = whole || index < commands.length - 1;
+    const { name } = command;
+
+    if (typeof name !== 'string' || !settled(command, 'name', done)) {
+      return null;
+    }
+    if (READ_COMMANDS.has(name)) {
+      continue;
+    }
+
+    const args = isRecord(command.args) ? command.args : {};
+    const deciding = Object.hasOwn(DECIDING_ARG, name) ? DECIDING_ARG[name] : undefined;
+
+    if (deciding !== undefined && !settled(args, deciding, done)) {
+      return null;
+    }
+
+    return executeKey({ commands: [{ name, args }] }, typeOf);
+  }
+
+  return null;
 };

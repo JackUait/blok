@@ -777,6 +777,52 @@ describe('in-editor assistant bar', () => {
       expect(await texts(editor)).toEqual(['Hello']);
     });
 
+    it('names a streamed call from its first words; execute neither repeats the line nor restarts its hold', async () => {
+      const calls: Array<{ request: AgentModelRequest; finish(response: AgentModelResponse): void }> = [];
+      const model: AgentModel = (request) => new Promise((resolve, reject) => {
+        request.signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+        calls.push({ request, finish: resolve });
+      });
+      const editor = await createEditor(model);
+      const statuses: string[] = [];
+      const observer = new MutationObserver(() => {
+        const open = screen.queryByRole('dialog', { name: 'Ask AI' });
+        const text = open === null ? '' : within(open).getByRole('status').textContent ?? '';
+
+        if (text !== '' && statuses.at(-1) !== text) {
+          statuses.push(text);
+        }
+      });
+
+      fakeLayout();
+      const call = executeCall('c1', insert('A big paragraph'));
+      const emit = (event: AgentModelStreamEvent): void => calls[0].request.onStream?.(event);
+
+      editor.agent.openAssistant();
+      observer.observe(bar(), { subtree: true, childList: true, characterData: true });
+      submit('Write');
+      await waitFor(() => expect(calls).toHaveLength(1));
+
+      emit({ type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' });
+      emit({ type: 'tool_input', index: 0, json: call.json.slice(0, call.json.indexOf('A big ') + 'A big '.length) });
+      expect(within(bar()).getByRole('status')).toHaveTextContent('Writing a paragraph…');
+
+      await settle(1000);
+      emit({ type: 'tool_input', index: 0, json: call.json });
+      emit({ type: 'tool_end', index: 0 });
+      await waitFor(async () => expect(await texts(editor)).toEqual(['Hello', 'A big paragraph']));
+      calls[0].finish(call.use);
+      await waitFor(() => expect(calls).toHaveLength(2));
+
+      // The hold began with the first words, so Thinking is back 1.5s after them, not 1.5s after execute.
+      await settle(700);
+      observer.disconnect();
+      expect(within(bar()).getByRole('status')).toHaveTextContent('Thinking…');
+      expect(statuses).toEqual(['Thinking…', 'Writing a paragraph…', 'Thinking…']);
+      calls[1].finish(answer('Done.'));
+      await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+    });
+
     it('plays no reveal under reduced motion', async () => {
       vi.stubGlobal('matchMedia', (query: string) => ({
         matches: query.includes('reduce'),

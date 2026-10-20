@@ -18,7 +18,7 @@ import { prefersReducedMotion } from '../../utils/reduced-motion';
 import { AssistantBar, type AssistantBarColumn } from './assistant-bar';
 import { onGapChange } from './gap';
 import { createLivePreview, type LivePreview } from './live-preview';
-import { stepStatusKey } from './step-status';
+import { stepStatusKey, streamStatusKey } from './step-status';
 
 /** The user's place in the document when the bar opened. */
 interface ReturnPoint {
@@ -75,6 +75,8 @@ export class Assistant extends Module {
   private readonly streamed = new Set<string>();
   /** Streamed calls that ended before a frame showed any of their words (Gemini sends a call whole). */
   private readonly unseen = new Set<string>();
+  /** The streaming call the status line names, and that line, until its tool_end. */
+  private announced: { id: string; status: string } | null = null;
   /** The batch the running call applied, until that call reports done. Calls run one at a time. */
   private applied: ChangedSet | null = null;
   private readonly reveals = new Map<HTMLElement, ReturnType<typeof setTimeout>>();
@@ -265,6 +267,11 @@ export class Assistant extends Module {
       return;
     }
 
+    // Its stream already named it, and the hold runs from its first words.
+    if (activity === EXECUTE_TOOL && this.announced !== null) {
+      return;
+    }
+
     const status = this.activityStatus(activity, input);
 
     if (activity === 'thinking' && this.holdTimer !== null) {
@@ -272,19 +279,45 @@ export class Assistant extends Module {
 
       return;
     }
+    if (activity === EXECUTE_TOOL) {
+      this.showWrite(status);
+
+      return;
+    }
     this.clearHold();
     this.bar?.render({ kind: 'working', status });
-    if (activity === 'blok_execute') {
-      this.holdTimer = setTimeout(() => {
-        const held = this.heldStatus;
+  }
 
-        this.holdTimer = null;
-        this.heldStatus = null;
-        if (held !== null && this.isWorking()) {
-          this.bar?.render({ kind: 'working', status: held });
-        }
-      }, WRITE_HOLD_MS);
+  /** Shows a line naming a write, and holds it for WRITE_HOLD_MS. */
+  private showWrite(status: string): void {
+    this.clearHold();
+    this.bar?.render({ kind: 'working', status });
+    this.holdTimer = setTimeout(() => {
+      const held = this.heldStatus;
+
+      this.holdTimer = null;
+      this.heldStatus = null;
+      if (held !== null && this.isWorking()) {
+        this.bar?.render({ kind: 'working', status: held });
+      }
+    }, WRITE_HOLD_MS);
+  }
+
+  /** Names a streaming call from its first words, once the part that picks the line is whole. */
+  private announce(id: string, json: string): void {
+    const key = this.isWorking() ? streamStatusKey(json, (blockId) => this.Blok.BlockManager.getBlockById(blockId)?.name) : null;
+
+    if (key === null) {
+      return;
     }
+
+    const status = this.Blok.I18n.t(key);
+
+    if (this.announced?.id === id && this.announced.status === status) {
+      return;
+    }
+    this.announced = { id, status };
+    this.showWrite(status);
   }
 
   private activityStatus(activity: string, input?: unknown): string {
@@ -397,6 +430,7 @@ export class Assistant extends Module {
     this.streamCalls.clear();
     this.streamed.clear();
     this.unseen.clear();
+    this.announced = null;
     this.applied = null;
     this.preview?.clear();
   }
@@ -424,9 +458,14 @@ export class Assistant extends Module {
     if (event.type === 'tool_input' && id !== undefined) {
       this.streamed.add(id);
       this.ensurePreview().update(id, event.json);
+      this.announce(id, event.json);
     }
     if (event.type === 'tool_end' && id !== undefined && this.preview?.shown(id) !== true) {
       this.unseen.add(id);
+    }
+    // The loop reports the call's execute before this event, so the line stays put through it.
+    if (event.type === 'tool_end' && this.announced?.id === id) {
+      this.announced = null;
     }
   }
 

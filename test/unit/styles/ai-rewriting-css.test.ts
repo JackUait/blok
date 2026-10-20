@@ -74,3 +74,42 @@ describe('Ask AI rewrite hiding', () => {
     expect(getComputedStyle(childInput).visibility).not.toBe('hidden');
   });
 });
+
+describe('Ask AI fallback reveal', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    const style = document.createElement('style');
+
+    style.textContent = ASSISTANT_CSS;
+    document.head.appendChild(style);
+  });
+
+  afterEach(() => {
+    document.head.replaceChildren();
+    document.body.replaceChildren();
+    vi.restoreAllMocks();
+  });
+
+  /** jsdom keeps the shorthand whole: its first word is the name. */
+  const animation = (element: HTMLElement): string => getComputedStyle(element).getPropertyValue('animation').split(' ')[0];
+
+  it('fades in the block\'s own text, never its marker or a nested child block', () => {
+    const { content, marker, input, childInput } = holderWithChild();
+
+    content.classList.add('blok-ai-reveal');
+
+    expect(animation(input)).toBe('blok-ai-reveal');
+    expect(animation(marker)).not.toBe('blok-ai-reveal');
+    expect(animation(childInput)).not.toBe('blok-ai-reveal');
+  });
+
+  it('fades in a nested child block that was revealed too', () => {
+    const { content, childInput } = holderWithChild();
+    const childContent = childInput.parentElement;
+
+    content.classList.add('blok-ai-reveal');
+    childContent?.classList.add('blok-ai-reveal');
+
+    expect(animation(childInput)).toBe('blok-ai-reveal');
+  });
+});

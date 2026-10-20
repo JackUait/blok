@@ -392,6 +392,24 @@ describe('agent presence — agentCursor publish (test 25)', () => {
     presence.stop();
   });
 
+  it('show with draw:false publishes the cursor and follows, but draws nothing', () => {
+    addBlock('b1');
+    const publish = vi.fn();
+    const scrollTo = vi.fn();
+    const presence = createAgentPresence(options({ publish, scrollTo }));
+
+    presence.start(AGENT, { follow: true });
+    presence.show({ changed: { ...NONE, updated: ['b1'] }, lastRange: { blockId: 'b1', field: 'text', start: 2, end: 5 } }, { draw: false });
+
+    expect(document.querySelector(DRAWN)).toBeNull();
+    expect(holderOf('b1').classList.contains('blok-block--target')).toBe(false);
+    expect(publish).toHaveBeenCalledExactlyOnceWith({
+      actorId: 'bot', name: 'Bot', color: agentColorFor('bot'), blockId: 'b1', field: 'text', start: 2, end: 5,
+    });
+    expect(scrollTo).toHaveBeenCalledExactlyOnceWith('b1');
+    presence.stop();
+  });
+
   it('never publishes after stop, and stop without a publish sends no null', () => {
     const publish = vi.fn();
     const presence = createAgentPresence(options({ publish }));

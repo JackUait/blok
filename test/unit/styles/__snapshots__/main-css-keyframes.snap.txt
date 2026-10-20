@@ -1,3 +1,8 @@
+@keyframes blok-ai-reveal {
+  from { color: var(--blok-ai-tail); filter: blur(3px); mask-position: 0 100% }
+  to { filter: none; mask-position: 0 0 }
+}
+
 @keyframes blok-ai-shimmer {
   to { background-position: -200% 0 }
 }

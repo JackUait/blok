@@ -449,10 +449,45 @@
   }
 }
 
+/*
+  Fallback reveal: a batch that never streamed fades its committed text in from
+  the top, in the tail colour. assistant/index.ts puts the class on the content
+  column and takes it off after REVEAL_MS, which must cover this animation.
+  Own text fields only; a nested block plays only when its own content has the class.
+*/
+[data-blok-element-content].blok-ai-reveal [contenteditable]:not([contenteditable="false"]) {
+  mask-image: linear-gradient(to bottom, #000 50%, transparent);
+  mask-size: 100% 200%;
+  animation: blok-ai-reveal 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.blok-ai-reveal [data-blok-element-content]:not(.blok-ai-reveal) [contenteditable]:not([contenteditable="false"]) {
+  mask-image: none;
+  animation: none;
+}
+
+@keyframes blok-ai-reveal {
+  from {
+    color: var(--blok-ai-tail);
+    filter: blur(3px);
+    mask-position: 0 100%;
+  }
+
+  to {
+    filter: none;
+    mask-position: 0 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .blok-ai-shimmer,
-  .blok-ai-word {
+  .blok-ai-word,
+  [data-blok-element-content].blok-ai-reveal [contenteditable]:not([contenteditable="false"]) {
     animation: none;
+  }
+
+  [data-blok-element-content].blok-ai-reveal [contenteditable]:not([contenteditable="false"]) {
+    mask-image: none;
   }
 
   .blok-ai-word {

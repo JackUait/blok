@@ -2,9 +2,11 @@ import type {
   AgentAnthropicTool,
   AgentModel,
   AgentModelMessage,
+  AgentModelStreamEvent,
   AgentRun,
   AgentRunResult,
   AgentThinkingLevel,
+  AgentToolResult,
   AgentTurn,
 } from '../../../../types/api';
 import { runAssistantLoop } from '../../../agent/assistant-loop';
@@ -21,6 +23,10 @@ export interface AgentRunDeps {
   thinking(): AgentThinkingLevel | undefined;
   /** What the run does now, for the prompt bar's status line. */
   onActivity?(activity: string, input?: unknown): void;
+  /** Every model stream event, for the live preview. */
+  onStream?(event: AgentModelStreamEvent): void;
+  /** After each tool call finishes. */
+  onToolDone?(id: string, name: string, result: AgentToolResult): void;
 }
 
 const busy = (): Error => new Error('editor.agent: this run is still answering. Await `result` or call stop() first.');
@@ -59,6 +65,8 @@ export function createAgentRun(prompt: string | Promise<string>, deps: AgentRunD
           maxSteps: deps.maxSteps,
           ...(thinking === undefined ? {} : { thinking }),
           onActivity: deps.onActivity,
+          onStream: deps.onStream,
+          onToolDone: deps.onToolDone,
         });
 
         return { ...outcome, changed: deps.changed() };

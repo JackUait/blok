@@ -257,6 +257,22 @@ describe('editor.agent.ask', () => {
     run.end();
   });
 
+  it('the caret context asks the model to write after the caret block', async () => {
+    const model = scripted(answer('ok'));
+    const editor = await createEditor(model);
+
+    putCaretIn('p1');
+
+    const run = editor.agent.ask('Add a line');
+
+    await run.result;
+
+    expect(model.requests[0].messages[0].content).toEqual(expect.stringContaining(
+      '(Editor context: the user\'s caret is in block p1.) Write new content right after this block unless the request names another place.'
+    ));
+    run.end();
+  });
+
   it('reads the caret block by id when the document outline stops before it', async () => {
     const model = scripted(answer('ok'));
     const holder = document.createElement('div');

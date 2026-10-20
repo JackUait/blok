@@ -31,7 +31,8 @@ export interface AgentPresenceOptions {
 
 export interface AgentPresence {
   start(agent: AgentIdentity, options: { follow: boolean }): void;
-  show(result: { changed: ChangedSet; lastRange?: TextRangeRef }): void;
+  /** `draw: false` still publishes the cursor and follows, but draws no caret, marker or pulse here. */
+  show(result: { changed: ChangedSet; lastRange?: TextRangeRef }, showOptions?: { draw?: boolean }): void;
   stop(): void;
 }
 
@@ -169,14 +170,17 @@ export function createAgentPresence(options: AgentPresenceOptions): AgentPresenc
       }
     },
 
-    show(result): void {
+    show(result, showOptions = {}): void {
       const agent = state.agent;
+      const local = showOptions.draw !== false;
 
       if (agent === null) {
         return;
       }
 
-      pulse(result.changed, options.resolveHolder);
+      if (local) {
+        pulse(result.changed, options.resolveHolder);
+      }
 
       const target = targetOf(result);
 
@@ -186,7 +190,9 @@ export function createAgentPresence(options: AgentPresenceOptions): AgentPresenc
 
       options.publish(cursorFor(agent, target));
       state.published = true;
-      draw(agent, target);
+      if (local) {
+        draw(agent, target);
+      }
 
       if (state.following) {
         options.scrollTo(target.blockId);

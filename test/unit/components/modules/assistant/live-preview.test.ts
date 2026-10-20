@@ -322,6 +322,26 @@ describe('createLivePreview', () => {
     expect(b1.style.getPropertyValue('--blok-ai-gap')).toBe('');
   });
 
+  it('relayout re-places the boxes once, on the next frame, after the page moves', () => {
+    const preview = make();
+    const b1 = state.holders[0];
+
+    preview.update('c1', execute({ name: 'block.insert', args: { position: { after: 'b1' }, type: 'paragraph', data: { text: 'moving' } } }));
+    const box = state.layer.querySelector<HTMLElement>(PREVIEW);
+    const before = parseFloat(box?.style.top ?? '');
+
+    rects.set(b1, new DOMRect(0, -100, 600, HOLDER_HEIGHT));
+    preview.relayout();
+    preview.relayout();
+
+    expect(frames).toHaveLength(1);
+    expect(parseFloat(box?.style.top ?? '')).toBe(before);
+
+    runFrames();
+
+    expect(parseFloat(box?.style.top ?? '')).toBe(before - 100);
+  });
+
   it('cancel removes everything at once', () => {
     const preview = make();
 
@@ -552,6 +572,21 @@ describe('createLivePreview', () => {
       expect(state.layer.querySelector(PREVIEW)).toBeNull();
       expect(b1.hasAttribute(REWRITING)).toBe(false);
       expect(b1.hasAttribute('data-blok-ai-gap')).toBe(false);
+    });
+
+    it('names a rewrite it skipped, even after the call settles', () => {
+      const preview = make();
+      const b1 = state.holders[0];
+      const child = document.createElement('div');
+
+      field(b1, 'Title').after(child);
+      child.setAttribute('data-blok-element', '');
+      preview.update('c1', execute({ name: 'text.replace', args: { id: 'b1', with: 'A new title' } }));
+      preview.settle('c1');
+      runFrames();
+
+      expect(preview.skipped('c1')).toEqual(['b1']);
+      expect(preview.skipped('c2')).toEqual([]);
     });
 
     it('previews a block whose child blocks are collapsed', () => {

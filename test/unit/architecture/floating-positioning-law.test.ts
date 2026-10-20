@@ -160,6 +160,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'tools/table/table-row-col-controls.ts': 'Row and column grips convert cell rects into offsets local to their table overlay.',
   'tools/table/table-row-col-drag.ts': 'Fixed ghost follows pointer coordinates while the local drop indicator uses table offsets.',
   'tools/video/controls.ts': 'Settings menu converts the gear rect into an offset local to the video figure, re-run on open and resize.',
+  'components/modules/assistant/live-preview.ts': 'Ask AI preview boxes sit in the editor wrapper (position: relative) at the anchor holder\'s rect minus the wrapper rect; the assistant module calls relayout() on capture scroll, resize and each committed batch.',
 };
 
 /** Dynamic property setters remain exact review points, never silent escapes. */
@@ -177,6 +178,8 @@ const DYNAMIC_STYLE_ACCESS_CLASSIFICATIONS: Record<string, string> = {
   'components/utils/popover/popover-desktop.ts': 'Writes named popover CSS variables; physical top/left placement stays inventoried separately.',
   'components/utils/popover/popover-inline.ts': 'Writes named inline-popover CSS variables inside its local positioned wrapper.',
   'components/utils/tooltip.ts': 'Writes named tooltip CSS custom properties and dismisses on capture-phase scrolling.',
+  'components/modules/assistant/gap.ts': 'Writes the --blok-ai-gap / --blok-ai-gap-start custom properties on a block holder; assistant.css turns them into a holder margin, never a coordinate.',
+  'components/modules/assistant/live-preview.ts': 'Copies the anchor holder\'s font-size, font-family and color, and the rewritten field\'s type and padding properties, onto its wrapper-local preview box.',
   'tools/database/copy-ghost-radius.ts': 'Copies the board and column custom properties a drag ghost names (preview height, group tint/ring/accent) from its source onto the ghost; none set coordinates.',
 };
 

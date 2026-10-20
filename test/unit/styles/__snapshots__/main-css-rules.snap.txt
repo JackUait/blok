@@ -23782,8 +23782,23 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   color: var(--blok-ai-tail);
 }
 
-[@media (prefers-reduced-motion: reduce)] .blok-ai-shimmer, .blok-ai-word {
+[data-blok-element-content].blok-ai-reveal [contenteditable]:not([contenteditable="false"]) {
+  mask-image: linear-gradient(to bottom, #000 50%, transparent);
+  mask-size: 100% 200%;
+  animation: blok-ai-reveal 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.blok-ai-reveal [data-blok-element-content]:not(.blok-ai-reveal) [contenteditable]:not([contenteditable="false"]) {
+  mask-image: none;
   animation: none;
+}
+
+[@media (prefers-reduced-motion: reduce)] .blok-ai-shimmer, .blok-ai-word, [data-blok-element-content].blok-ai-reveal [contenteditable]:not([contenteditable="false"]) {
+  animation: none;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-element-content].blok-ai-reveal [contenteditable]:not([contenteditable="false"]) {
+  mask-image: none;
 }
 
 [@media (prefers-reduced-motion: reduce)] .blok-ai-word {

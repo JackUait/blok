@@ -932,6 +932,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const ASSISTANT_LIVE_PREVIEW_BYTES = 3_831;
     // assistant.css: a block being rewritten by Ask AI hides its text fields; nested child blocks stay visible (2026-10-20).
     const ASSISTANT_REWRITE_PREVIEW_BYTES = 594;
+    // assistant.css: the fallback reveal for an Ask AI batch that never streamed, and its reduced-motion reset (2026-10-20).
+    const ASSISTANT_FALLBACK_REVEAL_BYTES = 1_140;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1067,7 +1069,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_DARK_LEFTOVERS_BYTES + DATABASE_BACKLINK_RIGHT_PATH_BYTES
       + ASSISTANT_LIVE_PREVIEW_BYTES
       + ASSISTANT_LIVE_PREVIEW_BYTES
-      + ASSISTANT_REWRITE_PREVIEW_BYTES;
+      + ASSISTANT_REWRITE_PREVIEW_BYTES
+      + ASSISTANT_FALLBACK_REVEAL_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

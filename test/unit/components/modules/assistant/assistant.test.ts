@@ -5,7 +5,14 @@ import { Blok } from '../../../../../src/blok';
 import { getUserOS } from '../../../../../src/components/utils/browser';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import type { BlokConfig, OutputData } from '../../../../../types';
-import type { Agent, AgentAssistantConfig, AgentModel, AgentModelRequest, AgentModelResponse } from '../../../../../types/api';
+import type {
+  Agent,
+  AgentAssistantConfig,
+  AgentModel,
+  AgentModelRequest,
+  AgentModelResponse,
+  AgentModelStreamEvent,
+} from '../../../../../types/api';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -70,6 +77,62 @@ const gated = (response: AgentModelResponse): { model: AgentModel; release: () =
   };
 };
 
+/**
+ * A model whose first call streams the events the test sends, and answers once
+ * the test finishes it. Later calls answer "Done.".
+ */
+const streaming = (): {
+  model: AgentModel;
+  started(): boolean;
+  emit(event: AgentModelStreamEvent): void;
+  finish(response: AgentModelResponse): void;
+} => {
+  const state: { request: AgentModelRequest | null; response: AgentModelResponse; open: () => void } = {
+    request: null,
+    response: answer(''),
+    open: () => undefined,
+  };
+  const opened = new Promise<void>((resolve) => {
+    state.open = resolve;
+  });
+
+  return {
+    model: async (request) => {
+      if (state.request !== null) {
+        return answer('Done.');
+      }
+      state.request = request;
+      await Promise.race([
+        opened,
+        new Promise((_resolve, reject) => {
+          request.signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+        }),
+      ]);
+
+      return state.response;
+    },
+    started: () => state.request !== null,
+    emit: (event) => state.request?.onStream?.(event),
+    finish: (response) => {
+      state.response = response;
+      state.open();
+    },
+  };
+};
+
+const PREVIEW = '[data-blok-ai-preview]';
+
+const previewText = (): string => (document.querySelector(PREVIEW)?.textContent ?? '').replace(/\s+/g, ' ').trim();
+
+const executeCall = (id: string, commands: unknown[]): { json: string; use: AgentModelResponse } => ({
+  json: JSON.stringify({ commands }),
+  use: { stop_reason: 'tool_use', content: [{ type: 'tool_use', id, name: 'blok_execute', input: { commands } }] },
+});
+
+/** Texts of the blocks whose content plays the reveal now. */
+const revealed = (): string[] => [...document.querySelectorAll('[data-blok-element-content].blok-ai-reveal')]
+  .map((content) => content.textContent ?? '');
+
 const plain = (value: unknown): string => (Array.isArray(value)
   ? value.map((segment: { text?: unknown }) => (typeof segment.text === 'string' ? segment.text : '')).join('')
   : String(value));
@@ -77,7 +140,11 @@ const plain = (value: unknown): string => (Array.isArray(value)
 const texts = async (editor: TestEditor): Promise<string[]> =>
   (await editor.save()).blocks.map((block) => plain(block.data.text));
 
-const createEditor = async (model: AgentModel | null, thinking?: AgentAssistantConfig['thinking']): Promise<TestEditor> => {
+const createEditor = async (
+  model: AgentModel | null,
+  thinking?: AgentAssistantConfig['thinking'],
+  extra: Partial<BlokConfig> = {}
+): Promise<TestEditor> => {
   const holder = document.createElement('div');
 
   document.body.appendChild(holder);
@@ -87,6 +154,7 @@ const createEditor = async (model: AgentModel | null, thinking?: AgentAssistantC
     tools: { paragraph: Paragraph },
     data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'Hello' } }] },
     ...(model === null ? {} : { agent: { assistant: { model, name: 'Writer', ...(thinking === undefined ? {} : { thinking }) } } }),
+    ...extra,
   };
   const editor = new Blok(config) as unknown as TestEditor;
 
@@ -134,11 +202,14 @@ const submit = (prompt: string): void => {
 describe('in-editor assistant bar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Ask AI follows its edits; jsdom has no scrolling.
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
     editors.splice(0).forEach((editor) => editor.destroy());
     document.body.innerHTML = '';
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
@@ -422,6 +493,178 @@ describe('in-editor assistant bar', () => {
 
     expect(model.requests).toHaveLength(0);
     expect(editor.agent.state.status).toBe('idle');
+  });
+
+  describe('live edits', () => {
+    const insert = (text: string): unknown[] => [{ name: 'block.insert', args: { type: 'paragraph', position: 'end', data: { text } } }];
+
+    it('stream events drive the preview: update on tool_input, settle on success', async () => {
+      const live = streaming();
+      const editor = await createEditor(live.model);
+      const call = executeCall('c1', insert('Fresh words here'));
+
+      editor.agent.openAssistant();
+      submit('Write');
+      await waitFor(() => expect(live.started()).toBe(true));
+
+      live.emit({ type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' });
+      live.emit({ type: 'tool_input', index: 0, json: call.json.slice(0, call.json.indexOf('here')) });
+      await waitFor(() => expect(previewText()).toBe('Fresh words'));
+      expect(await texts(editor)).toEqual(['Hello']);
+
+      live.emit({ type: 'tool_input', index: 0, json: call.json });
+      live.emit({ type: 'tool_end', index: 0 });
+
+      // The call commits at its tool_end, before the model's answer, and the preview hands off.
+      await waitFor(async () => expect(await texts(editor)).toEqual(['Hello', 'Fresh words here']));
+      await waitFor(() => expect(document.querySelector(PREVIEW)).toBeNull());
+      expect(document.querySelector('[data-blok-ai-gap]')).toBeNull();
+      expect(revealed()).toEqual([]);
+
+      live.finish(call.use);
+      await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+    });
+
+    it('an error result cancels its preview', async () => {
+      const live = streaming();
+      const editor = await createEditor(live.model);
+      const call = executeCall('c1', [{ name: 'block.insert', args: { type: 'no-such-tool', position: 'end', data: { text: 'Never lands here' } } }]);
+
+      editor.agent.openAssistant();
+      submit('Write');
+      await waitFor(() => expect(live.started()).toBe(true));
+
+      live.emit({ type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' });
+      live.emit({ type: 'tool_input', index: 0, json: call.json });
+      await waitFor(() => expect(document.querySelector(PREVIEW)).not.toBeNull());
+
+      live.emit({ type: 'tool_end', index: 0 });
+
+      // Gone while the model still holds its answer: the failed call removed it.
+      await waitFor(() => expect(document.querySelector(PREVIEW)).toBeNull());
+      expect(document.querySelector('[data-blok-ai-gap]')).toBeNull();
+      expect(await texts(editor)).toEqual(['Hello']);
+      live.finish(call.use);
+    });
+
+    it('stop clears the preview and leaves no gap on any holder', async () => {
+      const live = streaming();
+      const editor = await createEditor(live.model);
+      const call = executeCall('c1', insert('Half written words'));
+
+      editor.agent.openAssistant();
+      submit('Write');
+      await waitFor(() => expect(live.started()).toBe(true));
+
+      live.emit({ type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' });
+      live.emit({ type: 'tool_input', index: 0, json: call.json.slice(0, call.json.indexOf('words')) });
+      await waitFor(() => expect(previewText()).toBe('Half written'));
+
+      within(bar()).getByRole('button', { name: 'Stop' }).click();
+
+      expect(document.querySelector(PREVIEW)).toBeNull();
+      expect(document.querySelector('[data-blok-ai-gap]')).toBeNull();
+
+      // A late event of the stopped answer draws nothing.
+      live.emit({ type: 'tool_start', index: 1, id: 'c2', name: 'blok_execute' });
+      live.emit({ type: 'tool_input', index: 1, json: executeCall('c2', insert('Too late now')).json });
+      await settle(50);
+
+      expect(document.querySelector(PREVIEW)).toBeNull();
+      expect(document.querySelector('[data-blok-ai-gap]')).toBeNull();
+      await waitFor(() => expect(within(bar()).queryByRole('button', { name: 'Stop' })).toBeNull());
+      expect(await texts(editor)).toEqual(['Hello']);
+    });
+
+    it('a call that never streamed plays the reveal on the changed blocks', async () => {
+      const onChange = vi.fn();
+      const editor = await createEditor(scripted(insertBatch('From AI'), answer('Done.')), undefined, { onChange });
+
+      editor.agent.openAssistant();
+      submit('Write');
+
+      await waitFor(() => expect(revealed()).toEqual(['From AI']));
+      await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+      await settle(50);
+      const changes = onChange.mock.calls.length;
+
+      // The class goes once the reveal has played, and the reveal itself is no edit.
+      await waitFor(() => expect(revealed()).toEqual([]), { timeout: 2000 });
+      await settle(50);
+      expect(onChange).toHaveBeenCalledTimes(changes);
+      expect(await texts(editor)).toEqual(['Hello', 'From AI']);
+    });
+
+    it('plays no reveal under reduced motion', async () => {
+      vi.stubGlobal('matchMedia', (query: string) => ({
+        matches: query.includes('reduce'),
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: () => false,
+      }));
+      const editor = await createEditor(scripted(insertBatch('From AI'), answer('Done.')));
+      const added = vi.fn();
+      const observer = new MutationObserver((records) => {
+        if (records.some((record) => record.target instanceof Element && record.target.classList.contains('blok-ai-reveal'))) {
+          added();
+        }
+      });
+
+      observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+      editor.agent.openAssistant();
+      submit('Write');
+      await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+      observer.disconnect();
+
+      expect(await texts(editor)).toEqual(['Hello', 'From AI']);
+      expect(added).not.toHaveBeenCalled();
+    });
+
+    it('re-places the preview when the page scrolls', async () => {
+      const live = streaming();
+      const editor = await createEditor(live.model);
+      const call = executeCall('c1', insert('Moving words here'));
+      const holder = document.querySelector('[data-blok-id="p1"]');
+      const page = { y: 0 };
+      const measure = HTMLElement.prototype.getBoundingClientRect;
+
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement): DOMRect {
+        return this === holder ? new DOMRect(0, page.y, 600, 24) : measure.call(this);
+      });
+      editor.agent.openAssistant();
+      submit('Write');
+      await waitFor(() => expect(live.started()).toBe(true));
+      live.emit({ type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' });
+      live.emit({ type: 'tool_input', index: 0, json: call.json.slice(0, call.json.indexOf('here')) });
+      await waitFor(() => expect(previewText()).toBe('Moving words'));
+
+      const top = (): number => parseFloat(document.querySelector<HTMLElement>(PREVIEW)?.style.top ?? '');
+      const before = top();
+
+      page.y = -100;
+      // Scroll does not bubble: the module listens in the capture phase.
+      document.dispatchEvent(new Event('scroll'));
+
+      await waitFor(() => expect(top()).toBe(before - 100));
+      live.finish(call.use);
+      await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+    });
+
+    it('Ask AI runs draw no local caret or arrival pulse', async () => {
+      const editor = await createEditor(scripted(insertBatch('From AI'), answer('Done.')));
+
+      editor.agent.openAssistant();
+      submit('Write');
+      await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+
+      expect(await texts(editor)).toEqual(['Hello', 'From AI']);
+      expect(document.querySelector('[data-blok-presence-caret], [data-blok-agent-marker]')).toBeNull();
+      expect(document.querySelector('.blok-block--target')).toBeNull();
+    });
   });
 
   describe('thinking level', () => {

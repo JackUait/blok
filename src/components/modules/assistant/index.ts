@@ -4,14 +4,18 @@
  *
  * Present only when `agent.assistant.model` is configured.
  */
-import type { AgentRun, AgentRunResult, AgentThinkingLevel } from '../../../../types/api';
+import type { ChangedSet } from '../../../../types/agent';
+import type { AgentModelStreamEvent, AgentRun, AgentRunResult, AgentThinkingLevel, AgentToolResult } from '../../../../types/api';
 import type { ThinkingChoice } from '../../../agent/thinking';
 import type { UserPlace } from '../api/agent';
 import { Module } from '../../__module';
+import { DATA_ATTR } from '../../constants/data-attributes';
 import { getUserOS } from '../../utils/browser';
 import { syncPortalDirection } from '../../utils/portal-direction';
+import { prefersReducedMotion } from '../../utils/reduced-motion';
 
 import { AssistantBar } from './assistant-bar';
+import { createLivePreview, type LivePreview } from './live-preview';
 import { stepStatusKey } from './step-status';
 
 /** The user's place in the document when the bar opened. */
@@ -22,6 +26,17 @@ interface ReturnPoint {
 
 /** How long a line naming a write stays up before "Thinking…" may replace it. */
 const WRITE_HOLD_MS = 1500;
+
+/** The reveal class and its length. Keep REVEAL_MS at least the `blok-ai-reveal` animation in assistant.css. */
+const REVEAL_CLASS = 'blok-ai-reveal';
+const REVEAL_MS = 900;
+
+const EXECUTE_TOOL = 'blok_execute';
+
+/** The holder's own content column. A tune may wrap it, and nested blocks have their own. */
+const contentOf = (holder: HTMLElement): HTMLElement | undefined =>
+  [...holder.querySelectorAll<HTMLElement>(`[${DATA_ATTR.elementContent}]`)]
+    .find((content) => content.closest(`[${DATA_ATTR.element}]`) === holder);
 
 const isOpenShortcut = (event: KeyboardEvent): boolean => {
   const mac = getUserOS().mac;
@@ -46,6 +61,16 @@ export class Assistant extends Module {
   private holdTimer: ReturnType<typeof setTimeout> | null = null;
   /** The line waiting for the hold to end. */
   private heldStatus: string | null = null;
+  private preview: LivePreview | null = null;
+  /** False once the answer is stopped or over, so late stream events draw nothing. */
+  private listening = false;
+  /** Stream index → id of the `blok_execute` call it carries, in the current model response. */
+  private readonly streamCalls = new Map<number, string>();
+  /** Calls that streamed input, so the preview drew them. */
+  private readonly streamed = new Set<string>();
+  /** The batch the running call applied, until that call reports done. Calls run one at a time. */
+  private applied: ChangedSet | null = null;
+  private readonly reveals = new Map<HTMLElement, ReturnType<typeof setTimeout>>();
 
   public get isOpen(): boolean {
     return this.bar?.isOpen === true;
@@ -66,7 +91,10 @@ export class Assistant extends Module {
       if (this.isOpen) {
         this.bar?.place(this.Blok.UI.nodes.wrapper);
       }
+      this.preview?.relayout();
     });
+    // Capture: a scrolling ancestor's scroll does not bubble to window.
+    this.listeners.on(window, 'scroll', () => this.preview?.relayout(), { capture: true, passive: true });
   }
 
   /**
@@ -95,6 +123,7 @@ export class Assistant extends Module {
   public close(options: { restoreFocus?: boolean } = {}): void {
     this.answerId += 1;
     this.clearHold();
+    this.endStream();
     this.run?.stop();
     this.run?.end();
     this.run = null;
@@ -121,6 +150,11 @@ export class Assistant extends Module {
 
   public destroy(): void {
     this.close({ restoreFocus: false });
+    this.reveals.forEach((timer, content) => {
+      clearTimeout(timer);
+      content.classList.remove(REVEAL_CLASS);
+    });
+    this.reveals.clear();
     this.bar?.element.remove();
     this.bar = null;
     this.listeners.removeAll();
@@ -129,7 +163,7 @@ export class Assistant extends Module {
   private ensureBar(): AssistantBar {
     this.bar ??= new AssistantBar((key, vars) => this.Blok.I18n.t(key, vars), {
       onSubmit: (prompt) => this.submit(prompt),
-      onStop: () => this.run?.stop(),
+      onStop: () => this.stopAnswer(),
       onKeep: () => this.close(),
       onDiscard: () => void this.discard(),
       onEscape: () => this.escape(),
@@ -153,6 +187,7 @@ export class Assistant extends Module {
 
     const id = ++this.answerId;
 
+    this.listening = true;
     this.bar?.render({ kind: 'working', status: this.activityStatus('thinking') });
     void pending.then((result) => {
       if (id === this.answerId) {
@@ -211,7 +246,12 @@ export class Assistant extends Module {
 
   private startRun(prompt: string): Promise<AgentRunResult> | null {
     try {
-      this.run = this.Blok.AgentAPI.startRun(prompt, this.context, () => this.level, (activity, input) => this.activity(activity, input));
+      this.run = this.Blok.AgentAPI.startRun(prompt, this.context, () => this.level, {
+        onActivity: (activity, input) => this.activity(activity, input),
+        onStream: (event) => this.stream(event),
+        onToolDone: (id, _name, result) => this.toolDone(id, result),
+        onExecuted: (changed) => this.executed(changed),
+      });
 
       return this.run.result;
     } catch (thrown) {
@@ -238,6 +278,7 @@ export class Assistant extends Module {
 
   private show(result: AgentRunResult): void {
     this.clearHold();
+    this.endStream();
     this.changed = this.changed || result.changed.length > 0;
 
     const messages: Record<Exclude<AgentRunResult['status'], 'done' | 'failed'>, string> = {
@@ -280,11 +321,149 @@ export class Assistant extends Module {
 
   private escape(): void {
     if (this.bar !== null && this.run !== null && this.isWorking()) {
-      this.run.stop();
+      this.stopAnswer();
 
       return;
     }
     this.close();
+  }
+
+  private stopAnswer(): void {
+    this.endStream();
+    this.run?.stop();
+  }
+
+  /** Stop drawing: whatever is still previewed will not commit from here. */
+  private endStream(): void {
+    this.listening = false;
+    this.streamCalls.clear();
+    this.streamed.clear();
+    this.applied = null;
+    this.preview?.clear();
+  }
+
+  private stream(event: AgentModelStreamEvent): void {
+    if (!this.listening) {
+      return;
+    }
+    if (event.type === 'tool_start') {
+      if (event.name === EXECUTE_TOOL) {
+        this.streamCalls.set(event.index, event.id);
+      } else {
+        this.streamCalls.delete(event.index);
+      }
+
+      return;
+    }
+
+    const id = this.streamCalls.get(event.index);
+
+    // tool_end draws nothing: the call's result settles or cancels it.
+    if (event.type === 'tool_input' && id !== undefined) {
+      this.streamed.add(id);
+      this.ensurePreview().update(id, event.json);
+    }
+  }
+
+  private executed(changed: ChangedSet): void {
+    if (!this.listening) {
+      return;
+    }
+    this.applied = changed;
+    // Block heights changed, so boxes of other calls move.
+    this.preview?.relayout();
+  }
+
+  private toolDone(id: string, result: AgentToolResult): void {
+    if (!this.listening) {
+      return;
+    }
+
+    const changed = this.applied;
+    const streamed = this.streamed.delete(id);
+
+    this.applied = null;
+    if (result.isError) {
+      this.preview?.cancel(id);
+    } else {
+      this.preview?.settle(id);
+    }
+    if (changed === null) {
+      return;
+    }
+    // A call with no stream, or a rewrite the preview had to skip, replays its words now.
+    this.reveal(streamed
+      ? this.preview?.skipped(id).filter((blockId) => changed.updated.includes(blockId)) ?? []
+      : [...changed.created, ...changed.updated]);
+  }
+
+  /** Re-plays the word fade-in over committed blocks. A class on the content column is inert to the block. */
+  private reveal(blockIds: string[]): void {
+    if (prefersReducedMotion()) {
+      return;
+    }
+    new Set(blockIds).forEach((blockId) => {
+      const holder = this.Blok.BlockManager.getBlockById(blockId)?.holder;
+      const content = holder === undefined ? undefined : contentOf(holder);
+
+      if (content === undefined) {
+        return;
+      }
+      clearTimeout(this.reveals.get(content));
+      content.classList.add(REVEAL_CLASS);
+      this.reveals.set(content, setTimeout(() => {
+        content.classList.remove(REVEAL_CLASS);
+        this.reveals.delete(content);
+      }, REVEAL_MS));
+    });
+  }
+
+  private ensurePreview(): LivePreview {
+    this.preview ??= createLivePreview({
+      layer: this.Blok.UI.nodes.wrapper,
+      holderOf: (id) => this.Blok.BlockManager.getBlockById(id)?.holder ?? null,
+      edgeHolder: (edge, parentId) => this.edgeHolder(edge, parentId),
+      anchorHolder: () => this.anchorHolder(),
+      inputOf: (id, field) => this.inputOf(id, field),
+    });
+
+    return this.preview;
+  }
+
+  /** The block the executor puts a 'start' or 'end' insert next to: first or last child of the parent, or of the page. */
+  private edgeHolder(edge: 'start' | 'end', parentId?: string): HTMLElement | null {
+    const manager = this.Blok.BlockManager;
+    const ids = parentId === undefined
+      ? manager.blocks.filter((block) => block.parentId === null).map((block) => block.id)
+      : manager.getBlockById(parentId)?.contentIds ?? [];
+    const id = edge === 'start' ? ids[0] : ids[ids.length - 1];
+
+    return id === undefined ? null : manager.getBlockById(id)?.holder ?? null;
+  }
+
+  /** The block the bar opened at, else the current one, else the last. */
+  private anchorHolder(): HTMLElement | null {
+    const manager = this.Blok.BlockManager;
+    const captured = this.context.blockIds[0];
+    const block = (captured === undefined ? undefined : manager.getBlockById(captured)) ?? manager.currentBlock ?? manager.lastBlock;
+
+    return block?.holder ?? null;
+  }
+
+  /** The input that edits `field`, from the same field map the agent caret uses. No field: the first input. */
+  private inputOf(id: string, field?: string): HTMLElement | null {
+    const block = this.Blok.BlockManager.getBlockById(id);
+
+    if (block === undefined) {
+      return null;
+    }
+    if (field === undefined) {
+      return block.inputs[0] ?? null;
+    }
+
+    const index = this.Blok.AgentAPI.inputIndexFor(id, field);
+
+    return index === null ? null : block.inputs[index] ?? null;
   }
 
   private isWorking(): boolean {

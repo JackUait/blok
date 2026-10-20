@@ -4,13 +4,16 @@ import type {
   AgentAskOptions,
   AgentRun,
   AgentIdentity,
+  AgentModelStreamEvent,
   AgentOpenAITool,
   AgentState,
   AgentThinkingLevel,
+  AgentToolResult,
   AgentToolsOptions,
   AgentTurn,
   AgentTurnOptions,
 } from '../../../../types/api';
+import type { ChangedSet } from '../../../../types/agent';
 import type { HostService } from '../../../../types/tools/tool-description';
 import { Module } from '../../__module';
 import { announce } from '../../utils/announcer';
@@ -44,6 +47,23 @@ export interface UserPlace {
 }
 
 const NOWHERE: UserPlace = { text: '', blockIds: [] };
+
+/** What the prompt bar hears from its run. */
+export interface AssistantRunHooks {
+  /** 'thinking', or the tool the model calls and its input. */
+  onActivity?(activity: string, input?: unknown): void;
+  onStream?(event: AgentModelStreamEvent): void;
+  onToolDone?(id: string, name: string, result: AgentToolResult): void;
+  /** After each applied batch. */
+  onExecuted?(changed: ChangedSet): void;
+}
+
+/** Options only Blok's own assistant passes to begin(). */
+interface InternalTurnOptions {
+  /** False: publish and follow, but draw no local caret, marker or pulse. */
+  drawLocal: boolean;
+  onExecuted?(changed: ChangedSet): void;
+}
 
 type ToolsOptions = AgentToolsOptions;
 
@@ -122,15 +142,15 @@ export class AgentAPI extends Module {
    * @param prompt - the user's request
    * @param place - from describeUserPlace()
    * @param thinking - the bar's current pick, read at each prompt
-   * @param onActivity - 'thinking', or the tool the model calls and its input
+   * @param hooks - the run's activity, stream, finished calls and applied batches
    */
   public startRun(
     prompt: string,
     place: UserPlace,
     thinking: () => AgentThinkingLevel | undefined,
-    onActivity?: (activity: string, input?: unknown) => void
+    hooks: AssistantRunHooks = {}
   ): AgentRun {
-    return this.ask(prompt, { context: false }, place, thinking, onActivity);
+    return this.ask(prompt, { context: false }, place, thinking, hooks);
   }
 
   private ask(
@@ -138,7 +158,7 @@ export class AgentAPI extends Module {
     options: AgentAskOptions = {},
     captured: UserPlace = NOWHERE,
     picked: () => AgentThinkingLevel | undefined = () => undefined,
-    onActivity?: (activity: string, input?: unknown) => void
+    hooks: AssistantRunHooks = {}
   ): AgentRun {
     const assistant = this.config.agent?.assistant;
 
@@ -157,7 +177,8 @@ export class AgentAPI extends Module {
 
     const place = options.context === false ? captured : this.editorContext();
     const name = assistant.name?.trim() || 'AI';
-    const turn = this.begin({ agent: { id: 'blok-assistant', name } });
+    // The live preview stands in for the local caret and pulse.
+    const turn = this.begin({ agent: { id: 'blok-assistant', name }, follow: true }, { drawLocal: false, onExecuted: hooks.onExecuted });
 
     return createAgentRun(composeFirstMessage(prompt, place.text, turn.read, place.blockIds), {
       turn,
@@ -170,7 +191,9 @@ export class AgentAPI extends Module {
         return { tools, system };
       },
       changed: () => [...this.turnLog.changed],
-      onActivity,
+      onActivity: hooks.onActivity,
+      onStream: hooks.onStream,
+      onToolDone: hooks.onToolDone,
     });
   }
 
@@ -194,7 +217,7 @@ export class AgentAPI extends Module {
 
     const selected = selection.isCollapsed ? '' : selection.toString();
     const text = selected === ''
-      ? `(Editor context: the user's caret is in block ${block.id}.)`
+      ? `(Editor context: the user's caret is in block ${block.id}.) Write new content right after this block unless the request names another place.`
       : `(Editor context: the user selected this text in block ${block.id}: ${JSON.stringify(selected)}. "This" in the request means that text.)`;
 
     return { text, blockIds: [block.id] };
@@ -266,7 +289,7 @@ export class AgentAPI extends Module {
     return composeGuidance(this.source().contract());
   }
 
-  private begin(options: AgentTurnOptions): AgentTurn {
+  private begin(options: AgentTurnOptions, internal: InternalTurnOptions = { drawLocal: true }): AgentTurn {
     if (this.current.turn !== null) {
       throw new AgentTurnOpenError();
     }
@@ -289,7 +312,12 @@ export class AgentAPI extends Module {
         const { created, updated, moved, removed } = result.changed;
 
         [...created, ...updated, ...moved, ...removed].forEach((id) => this.turnLog.changed.add(id));
-        this.presence().show(result);
+        this.presence().show(result, { draw: internal.drawLocal });
+        try {
+          internal.onExecuted?.(result.changed);
+        } catch {
+          // A listener must not fail an applied batch.
+        }
       },
       onClosed: () => this.closeTurn(turn),
       isEditorDestroyed: () => this.isDestroyed,

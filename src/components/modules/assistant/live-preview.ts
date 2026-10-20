@@ -32,6 +32,10 @@ export interface LivePreview {
   /** Failed, stopped or cut off. */
   cancel(callId: string): void;
   clear(): void;
+  /** Re-place every box on the next frame, after a scroll, resize or committed batch. */
+  relayout(): void;
+  /** Blocks this call would rewrite but did not draw, because their child blocks show. */
+  skipped(callId: string): string[];
 }
 
 /** Words land at least this far apart, so a burst of deltas still reads as typing. */
@@ -721,7 +725,11 @@ class CallPreview {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private lastLanded = -Infinity;
 
-  constructor(private readonly id: string, private readonly deps: LivePreviewDeps) {}
+  constructor(
+    private readonly id: string,
+    private readonly deps: LivePreviewDeps,
+    private readonly onSkip: (blockId: string) => void
+  ) {}
 
   private get key(): string {
     return `call:${this.id}`;
@@ -859,8 +867,13 @@ class CallPreview {
     // A second rewrite of one block in a call would draw over stale text.
     const taken = [...this.items.values()].some((item) => item.frame?.target.holder === holder);
 
+    if (holder === null || input === null || taken) {
+      return null;
+    }
     // A longer box would cover shown child blocks: the old text stays until commit.
-    if (holder === null || input === null || taken || showsChildren(holder)) {
+    if (showsChildren(holder)) {
+      this.onSkip(spec.id);
+
       return null;
     }
 
@@ -882,7 +895,7 @@ class CallPreview {
     }
   }
 
-  private layout(): void {
+  public layout(): void {
     const layer = this.deps.layer.getBoundingClientRect();
 
     // Rewrites first: their extra height sits right under their block, above any insert gap.
@@ -898,6 +911,11 @@ class CallPreview {
 export const createLivePreview = (deps: LivePreviewDeps): LivePreview => {
   const calls = new Map<string, CallPreview>();
   const finished = new Set<string>();
+  const skips = new Map<string, Set<string>>();
+  const frame: { id: number | null } = { id: null };
+  const skip = (callId: string) => (blockId: string): void => {
+    skips.set(callId, (skips.get(callId) ?? new Set<string>()).add(blockId));
+  };
   const end = (callId: string): CallPreview | undefined => {
     const call = calls.get(callId);
 
@@ -912,7 +930,7 @@ export const createLivePreview = (deps: LivePreviewDeps): LivePreview => {
       if (finished.has(callId)) {
         return;
       }
-      const call = calls.get(callId) ?? new CallPreview(callId, deps);
+      const call = calls.get(callId) ?? new CallPreview(callId, deps, skip(callId));
 
       calls.set(callId, call);
       call.render(readPartialCommands(json));
@@ -932,6 +950,21 @@ export const createLivePreview = (deps: LivePreviewDeps): LivePreview => {
         call.remove();
       });
       calls.clear();
+      skips.clear();
+    },
+
+    relayout() {
+      if (frame.id !== null) {
+        return;
+      }
+      frame.id = requestAnimationFrame(() => {
+        frame.id = null;
+        calls.forEach((call) => call.layout());
+      });
+    },
+
+    skipped(callId) {
+      return [...(skips.get(callId) ?? [])];
     },
   };
 };

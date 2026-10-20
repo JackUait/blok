@@ -868,7 +868,7 @@ export class DatabaseTool implements BlockTool {
     const plan = planAiSetup({ schema: this.model.getSchema(), views: this.model.getViews() }, answer, () => nanoid());
 
     if (plan === null) return false;
-    const oldTitle = this.model.getSchema().find((p) => p.type === 'title');
+    const oldSchema = this.model.getSchema();
     const oldViews = this.model.getViews();
 
     this.inOneStep(() => {
@@ -883,16 +883,27 @@ export class DatabaseTool implements BlockTool {
       }
       this.block.dispatchChange();
     });
-    const title = plan.schema.find((p) => p.type === 'title');
+    // The backend gets a diff: an echoed id is an update, never a second create.
+    const before = new Map(oldSchema.map((p) => [p.id, p]));
+    const after = new Set(plan.schema.map((p) => p.id));
 
-    if (title !== undefined && oldTitle !== undefined && title.name !== oldTitle.name) {
-      void this.sync.syncUpdateProperty({ propertyId: title.id, changes: { name: title.name } });
+    for (const p of plan.schema) {
+      const was = before.get(p.id);
+
+      if (was === undefined) {
+        void this.sync.syncCreateProperty({ id: p.id, name: p.name, type: p.type, position: p.position, ...(p.config !== undefined ? { config: p.config } : {}) });
+      } else if (JSON.stringify([was.name, was.type, was.config]) !== JSON.stringify([p.name, p.type, p.config])) {
+        void this.sync.syncUpdateProperty({ propertyId: p.id, changes: {
+          ...(was.name !== p.name ? { name: p.name } : {}),
+          ...(was.type !== p.type ? { type: p.type } : {}),
+          ...(JSON.stringify(was.config) !== JSON.stringify(p.config) ? { config: p.config } : {}),
+        } });
+      }
     }
-    for (const p of plan.schema.filter((candidate) => candidate.type !== 'title')) {
-      void this.sync.syncCreateProperty({ id: p.id, name: p.name, type: p.type, position: p.position, ...(p.config !== undefined ? { config: p.config } : {}) });
-    }
-    for (const view of oldViews) void this.sync.syncDeleteView({ viewId: view.id });
+    for (const p of oldSchema.filter((candidate) => !after.has(candidate.id))) void this.sync.syncDeleteProperty({ propertyId: p.id });
+    // New views first, so the backend never holds a database without one.
     for (const view of plan.views) void this.sync.syncCreateView(structuredClone(view));
+    for (const view of oldViews) void this.sync.syncDeleteView({ viewId: view.id });
     this.rebuildTabBar();
     this.rerenderView();
 

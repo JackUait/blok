@@ -171,6 +171,78 @@ describe('"New database" panel with the AI prompt (research/26 §2, research/20 
     expect(popovers.destroyed).toBe(1);
   });
 
+  it('the adapter hears a diff: dropped properties deleted, kept ones updated, new ones created, views swapped', async () => {
+    const adapter = {
+      // Never answers, so the backend load cannot replace the schema mid-test.
+      loadDatabase: vi.fn(() => new Promise<never>(() => undefined)),
+      createRow: vi.fn(), updateRow: vi.fn(), moveRow: vi.fn(), deleteRow: vi.fn(),
+      createProperty: vi.fn(async (p: { id: string }) => p), updateProperty: vi.fn(async () => ({})), deleteProperty: vi.fn(async (_p: { propertyId: string }) => undefined),
+      createView: vi.fn(async (v: { id: string }) => v), updateView: vi.fn(), deleteView: vi.fn(async (_v: { viewId: string }) => undefined),
+    };
+    const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }]);
+    const order: string[] = [];
+
+    adapter.createView.mockImplementation(async (v: { id: string }) => {
+      order.push('createView');
+
+      return v;
+    });
+    adapter.deleteView.mockImplementation(async () => {
+      order.push('deleteView');
+    });
+    const setup = vi.fn(async (request: DatabaseSetupRequest): Promise<DatabaseSetup> => {
+      const status = request.schema.find((p) => p.type !== 'title');
+
+      if (status === undefined) throw new Error('the seeded database has a second property');
+
+      return {
+        schema: [
+          { ...status, name: 'Stage' },
+          { id: 'when', name: 'When', type: 'date', position: 'a2' },
+        ],
+      };
+    });
+    const { tool } = buildDatabase(doc, 'db', fresh, { adapter: adapter as unknown as DatabaseConfig['adapter'], ai: { autofill: vi.fn(async () => undefined), setupDatabase: setup } }, 'user');
+
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    const before = saved(tool);
+    const statusId = before.schema.find((p) => p.type !== 'title')?.id;
+    const oldViews = before.views.map((v) => v.id);
+
+    type('Trips');
+    submit().click();
+    await vi.waitFor(() => expect(saved(tool).schema.map((p) => p.name)).toContain('When'));
+    await vi.waitFor(() => expect(adapter.deleteView).toHaveBeenCalledTimes(oldViews.length));
+
+    expect(adapter.createProperty.mock.calls.map(([p]) => p.id)).toEqual(['when']);
+    expect(adapter.updateProperty).toHaveBeenCalledWith(expect.objectContaining({ propertyId: statusId, changes: expect.objectContaining({ name: 'Stage' }) }));
+    expect(adapter.deleteProperty).not.toHaveBeenCalled();
+    expect(adapter.deleteView.mock.calls.map(([v]) => v.viewId)).toEqual(oldViews);
+    expect(order.indexOf('createView')).toBeLessThan(order.indexOf('deleteView'));
+  });
+
+  it('a property the answer leaves out is deleted on the adapter', async () => {
+    const adapter = {
+      loadDatabase: vi.fn(() => new Promise<never>(() => undefined)),
+      createRow: vi.fn(), updateRow: vi.fn(), moveRow: vi.fn(), deleteRow: vi.fn(),
+      createProperty: vi.fn(async (p: { id: string }) => p), updateProperty: vi.fn(async () => ({})), deleteProperty: vi.fn(async (_p: { propertyId: string }) => undefined),
+      createView: vi.fn(async (v: { id: string }) => v), updateView: vi.fn(), deleteView: vi.fn(async (_v: { viewId: string }) => undefined),
+    };
+    const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }]);
+    const setup = vi.fn(async (): Promise<DatabaseSetup> => ({ schema: [{ id: 'when', name: 'When', type: 'date', position: 'a1' }] }));
+    const { tool } = buildDatabase(doc, 'db', fresh, { adapter: adapter as unknown as DatabaseConfig['adapter'], ai: { autofill: vi.fn(async () => undefined), setupDatabase: setup } }, 'user');
+
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    const dropped = saved(tool).schema.filter((p) => p.type !== 'title').map((p) => p.id);
+
+    type('Trips');
+    submit().click();
+    await vi.waitFor(() => expect(adapter.deleteProperty).toHaveBeenCalled());
+
+    expect(dropped.length).toBeGreaterThan(0);
+    expect(adapter.deleteProperty.mock.calls.map(([p]) => p.propertyId)).toEqual(dropped);
+  });
+
   it('Shift+Enter does not send', async () => {
     const setup = vi.fn(async () => null);
 

@@ -122,6 +122,15 @@ test('a new database opens "New database" with the prompt focused; the host answ
 
   expect(data?.title).toBe('Trips');
   expect(data?.schema?.map((p) => [p.name, p.type])).toEqual([['Trip', 'title'], ['When', 'date']]);
+
+  // One undo takes the whole setup back, and the panel stays shut.
+  await page.evaluate(() => window.blokInstance?.history.undo());
+  await expect.poll(async () => {
+    const back = (await saved(page)).find((block) => block.type === 'database')?.data as { title?: string; schema?: Array<{ name: string }> } | undefined;
+
+    return [back?.title ?? '', back?.schema?.map((p) => p.name)];
+  }).toEqual(['', ['Title', 'Status']]);
+  await expect(page.getByTestId('database-new-database-panel')).toHaveCount(0);
 });
 
 test('without the host lever a new database opens no panel', async ({ page }) => {

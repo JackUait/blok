@@ -598,6 +598,19 @@ describe('date cell editor', () => {
       expect(ctx.onCommit).toHaveBeenCalledWith(written);
     });
 
+    it('Enter on the shown text keeps the day in a locale Date.parse cannot read', () => {
+      const ctx = makeEditorContext({ locale: 'de-DE', onDateDisplayChange: vi.fn() });
+
+      openCellEditor({ ...makeProperty('date'), date: { dateFormat: 'short' } }, '2025-03-12', makeAnchor(), ctx);
+      expect(Number.isFinite(Date.parse(field().value))).toBe(false);
+      press(field(), 'Enter');
+
+      expect(field().getAttribute('aria-invalid')).toBeNull();
+      for (const [written] of vi.mocked(ctx.onCommit).mock.calls) {
+        expect(written).toBe('2025-03-12');
+      }
+    });
+
     it('rejects a day that does not exist in the format', () => {
       const ctx = openFormat('2026-06-05', 'day_month_year');
 

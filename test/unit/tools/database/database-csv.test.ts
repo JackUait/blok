@@ -228,6 +228,11 @@ describe('database CSV', () => {
       expect(roundTrip(date, '2026-10-09/2026-10-12')).toBe('2026-10-09/2026-10-12');
       expect(roundTrip(date, '2026-10-09T15:30')).toBe('2026-10-09T15:30');
       expect(roundTrip({ ...date, date: { dateFormat: 'relative' } }, '2026-10-09')).toBe('2026-10-09');
+      // Short date drops this year's year ("Oct 9"): it would read back as another year.
+      const thisYear = `${new Date().getFullYear()}-03-04`;
+
+      expect(roundTrip({ ...date, date: { dateFormat: 'short' } }, thisYear)).toBe(thisYear);
+      expect(csvCellText({ ...date, date: { dateFormat: 'short' } }, thisYear, ctx)).toContain(String(new Date().getFullYear()));
     });
 
     it('keeps a checkbox, a url and a select', () => {

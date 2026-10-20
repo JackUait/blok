@@ -135,6 +135,17 @@ const zoneOffset = (zone: string, at: Date): string => {
   return /^GMT[+-]00:00$/.test(name) ? 'GMT' : name.replace(/([+-])0(\d)/, '$1$2');
 };
 
+const canonicalZone = (zone: string | undefined): string | undefined => {
+  if (zone === undefined) {
+    return undefined;
+  }
+  try {
+    return new Intl.DateTimeFormat('en-US', { timeZone: zone }).resolvedOptions().timeZone;
+  } catch {
+    return zone;
+  }
+};
+
 const zoneEntry = (id: string, zone: string, at: Date): ZoneEntry => {
   const city = (zone.split('/').pop() ?? zone).replace(/_/g, ' ');
   const offset = zoneOffset(zone, at);
@@ -784,9 +795,11 @@ class DateEditor {
     const search = document.createElement('input');
     const list = document.createElement('div');
     const listId = `blok-date-zones-${++zoneMenus.count}`;
-    const current = this.display.timeZone;
     const now = new Date();
     const localZone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
+    // The engine's own name, so a stored alias (Kolkata for Calcutta) or the browser zone still finds its row.
+    const stored = canonicalZone(this.display.timeZone);
+    const current = stored === localZone ? undefined : stored;
     const local = zoneEntry('local', localZone, now);
     const zones = timeZones().filter((zone) => zone !== localZone).map((zone) => zoneEntry(zone, zone, now));
     const state = { rows: [] as HTMLElement[], active: -1 };

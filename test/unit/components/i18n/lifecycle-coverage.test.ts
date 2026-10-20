@@ -403,6 +403,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the board 99+ switch's hint calls tools.database.calcShowLargeCountsHint by literal.
       // +1: the favorited row page star's hint calls tools.database.peekUnfavoriteHint by literal.
       // +1: the number range "Out of range" group calls tools.database.groupOutOfRange by literal.
+      // +4: the date picker's Now button and time zone search, current and select labels by literal.
       'executable-literal': 1284,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.

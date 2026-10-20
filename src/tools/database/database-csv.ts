@@ -145,11 +145,14 @@ export const csvCellText = (property: PropertyDefinition, value: PropertyValue |
     // The bare number: a currency or percent display would not read back.
     case 'number':
       return typeof value === 'number' ? String(value) : '';
-    // A relative date ("Today") would not read back, so it writes the full date.
+    // A relative date ("Today") or a short one ("Oct 9", no year) would not read back, so it writes the full date.
     case 'date':
     case 'createdTime':
-    case 'lastEditedTime':
-      return formatDateDisplay(value, ctx.locale, { ...property.date, ...(property.date?.dateFormat === 'relative' ? { dateFormat: 'full' } : {}) }) ?? '';
+    case 'lastEditedTime': {
+      const format = property.date?.dateFormat;
+
+      return formatDateDisplay(value, ctx.locale, { ...property.date, ...(format === 'relative' || format === 'short' ? { dateFormat: 'full' } : {}) }) ?? '';
+    }
     case 'person':
     case 'createdBy':
     case 'lastEditedBy':

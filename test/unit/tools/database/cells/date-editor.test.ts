@@ -626,6 +626,29 @@ describe('date cell editor', () => {
         expect(text(setting('timeZone'))).toBe('Time zoneYour time zone');
       });
 
+      it('a stored zone that is the browser zone checks the pinned current row', () => {
+        const real = Intl.DateTimeFormat.prototype.resolvedOptions;
+
+        vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockImplementation(function (this: Intl.DateTimeFormat) {
+          return { ...real.call(this), timeZone: 'Asia/Tokyo' };
+        });
+        openRows('2026-10-09T14:00', { timeZone: 'Asia/Tokyo' });
+        setting('timeZone').click();
+
+        expect(selected()).toEqual(['local']);
+        expect(zoneRow('Asia/Tokyo')).toBeNull();
+      });
+
+      // A zone saved in another browser can be an alias the list names differently (Kolkata, Calcutta).
+      it('a stored alias checks the listed zone it names', () => {
+        const listed = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata' }).resolvedOptions().timeZone;
+
+        openRows('2026-10-09T14:00', { timeZone: 'Asia/Kolkata' });
+        setting('timeZone').click();
+
+        expect(selected()).toEqual([listed]);
+      });
+
       it('typing filters by city, and "No results" shows when nothing matches', () => {
         openRows('2026-10-09T14:00');
         setting('timeZone').click();

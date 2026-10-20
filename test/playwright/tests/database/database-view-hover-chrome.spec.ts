@@ -98,6 +98,8 @@ const THEMES = [
     chipBorder: 'rgb(255, 255, 255)',
     questionBg: 'rgb(255, 255, 255)',
     questionRing: 'rgb(182, 212, 243) 0px 0px 0px 0.5px inset',
+    // Blok's border token; Notion's light ring rgb(240, 239, 237) is not copied.
+    answerBorder: 'rgb(224, 221, 214)',
   },
   {
     scheme: 'dark' as const,
@@ -109,6 +111,8 @@ const THEMES = [
     chipBorder: 'rgb(25, 25, 25)',
     questionBg: 'rgb(25, 25, 25)',
     questionRing: 'rgb(53, 95, 139) 0px 0px 0px 0.5px inset',
+    // research/21 §1k.
+    answerBorder: 'rgb(44, 44, 43)',
   },
 ];
 
@@ -193,6 +197,7 @@ for (const theme of THEMES) {
 
       await expect(question).toHaveCSS('background-color', theme.questionBg);
       await expect(question).toHaveCSS('box-shadow', theme.questionRing);
+      await expect(question.getByRole('textbox').first()).toHaveCSS('border-top-color', theme.answerBorder);
       await expect(question).toHaveCSS('border-top-left-radius', '12px');
       await expect(question).toHaveCSS('padding-top', '12px');
       await expect(chip).toHaveAccessibleName('Edit question');

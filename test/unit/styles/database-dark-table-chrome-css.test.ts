@@ -147,3 +147,91 @@ describe('select pills in dark (research/22 §12)', () => {
     expect(tokenValues(`--blok-database-option-${color}-text`).slice(1)).toEqual([ink, ink]);
   });
 });
+
+/** Notion's dark tertiary ink (research/21 §1a); it fails AA on Blok's dark surfaces. */
+const NOTION_DARK_TERTIARY = 'rgb(125, 122, 117)';
+const DARK_MENU = 'rgb(37, 37, 37)';
+const DARK_PAGE = 'rgb(29, 29, 28)';
+
+describe('date picker in dark (research/21 §1l, research/08)', () => {
+  it('inks the weekday header with the measured dark value, light unchanged', () => {
+    expect(ruleBody('[data-blok-database-date-weekday]')).toContain('color: var(--blok-database-date-weekday-text)');
+    expect(tokenValues('--blok-database-date-weekday-text')).toEqual(['var(--blok-text-tertiary)', 'rgb(139, 152, 152)', 'rgb(139, 152, 152)']);
+    expect(contrast('rgb(139, 152, 152)', DARK_MENU)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('sets "Today" at 12px weight 500 in secondary ink, the measured gray in dark', () => {
+    const body = ruleBody('[data-blok-database-date-today]');
+
+    expect(body).toContain('font-size: 12px');
+    expect(body).toContain('font-weight: 500');
+    expect(body).toContain('color: var(--blok-database-date-today-text)');
+    expect(tokenValues('--blok-database-date-today-text')).toEqual(['var(--blok-text-secondary)', 'rgb(142, 139, 134)', 'rgb(142, 139, 134)']);
+    expect(contrast('rgb(142, 139, 134)', DARK_MENU)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('inks the Remind and date setting values with the measured dark secondary', () => {
+    expect(ruleBody('[data-blok-database-date-remind-value]')).toContain('color: var(--blok-database-date-setting-value-text)');
+    expect(tokenValues('--blok-database-date-setting-value-text')).toEqual(['var(--blok-text-secondary)', 'rgb(173, 169, 163)', 'rgb(173, 169, 163)']);
+  });
+});
+
+describe('panels in dark (research/21 §1c, §1l)', () => {
+  it('inks row values and the rule operator with the nearest AA step of Notion\'s tertiary', () => {
+    expect(ruleBody('[data-blok-database-panel-value]')).toContain('color: var(--blok-database-panel-value-text)');
+    const [light, ...dark] = tokenValues('--blok-database-panel-value-text');
+
+    expect(light).toBe('var(--blok-text-secondary)');
+    expect(dark).toEqual(['rgb(142, 139, 134)', 'rgb(142, 139, 134)']);
+    expect(contrast(NOTION_DARK_TERTIARY, DARK_MENU)).toBeLessThan(4.5);
+    expect(contrast(dark[0], DARK_MENU)).toBeGreaterThanOrEqual(4.5);
+    // One step darker fails, so this is the nearest AA value.
+    expect(contrast('rgb(141, 138, 133)', DARK_MENU)).toBeLessThan(4.5);
+  });
+
+  it('fills a panel field with Notion\'s dark menu field fill', () => {
+    expect(ruleBody('[data-blok-database-panel-input]')).toContain('background-color: var(--blok-database-panel-input-bg)');
+    expect(tokenValues('--blok-database-panel-input-bg')).toEqual(['var(--blok-database-table-header-hover-bg)', 'rgba(252, 252, 252, 0.03)', 'rgba(252, 252, 252, 0.03)']);
+  });
+
+  it('inks "Add sort" and "Delete sort" secondary, the measured dark value in dark', () => {
+    expect(ruleBody('[data-blok-database-panel-row][data-muted]')).toContain('color: var(--blok-database-panel-muted-text)');
+    expect(tokenValues('--blok-database-panel-muted-text')).toEqual(['var(--blok-text-secondary)', 'rgb(173, 169, 163)', 'rgb(173, 169, 163)']);
+  });
+});
+
+describe('"+ Filter" in dark (research/21 §1c)', () => {
+  it('takes the nearest AA step of Notion\'s tertiary on the dark page', () => {
+    expect(ruleBody('[data-blok-database-filter-add]')).toContain('color: var(--blok-database-filter-add-text)');
+    const [light, ...dark] = tokenValues('--blok-database-filter-add-text');
+
+    expect(light).toBe('var(--blok-text-secondary)');
+    expect(dark).toEqual(['rgb(135, 132, 127)', 'rgb(135, 132, 127)']);
+    expect(contrast(NOTION_DARK_TERTIARY, DARK_PAGE)).toBeLessThan(4.5);
+    expect(contrast(dark[0], DARK_PAGE)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast('rgb(134, 131, 126)', DARK_PAGE)).toBeLessThan(4.5);
+  });
+});
+
+describe('form answer field in dark (research/21 §1k)', () => {
+  it('rings the field with the measured dark value, light unchanged', () => {
+    expect(ruleBody('[data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"]), textarea, select, [data-blok-database-form-provider-answer])'))
+      .toContain('border: 1px solid var(--blok-database-form-answer-border)');
+    expect(tokenValues('--blok-database-form-answer-border')).toEqual(['var(--blok-border-primary)', 'rgb(44, 44, 43)', 'rgb(44, 44, 43)']);
+  });
+});
+
+describe('"Empty" in the row page, dark (research/21 §1m)', () => {
+  it('takes the nearest AA step of Notion\'s tertiary on the peek', () => {
+    const peek = 'rgb(32, 32, 32)';
+
+    expect(ruleBody('[data-blok-database-cell][data-empty]')).toContain('color: var(--blok-database-cell-empty-text)');
+    const [light, ...dark] = tokenValues('--blok-database-cell-empty-text');
+
+    expect(light).toBe('var(--blok-text-tertiary)');
+    expect(dark).toEqual(['rgb(138, 135, 130)', 'rgb(138, 135, 130)']);
+    expect(contrast(NOTION_DARK_TERTIARY, peek)).toBeLessThan(4.5);
+    expect(contrast(dark[0], peek)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast('rgb(137, 134, 129)', peek)).toBeLessThan(4.5);
+  });
+});

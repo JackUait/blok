@@ -33,6 +33,7 @@ const SCHEMA = [
       ],
     },
   },
+  { id: 'p-due', name: 'Due', type: 'date', position: 'a3' },
 ];
 
 const ROWS = [ [ 'r1', 'Alpha', 3, 'o-default' ], [ 'r2', 'Bravo', 5, 'o-brown' ], [ 'r3', 'Charlie', 7, 'o-red' ] ] as const;
@@ -231,6 +232,37 @@ for (const path of paths) {
       await expect(pill('Build')).toHaveCSS('color', 'rgb(245, 237, 233)');
       await expect(pill('Ship')).toHaveCSS('background-color', 'rgba(255, 116, 105, 0.525)');
       await expect(pill('Ship')).toHaveCSS('color', 'rgb(252, 233, 231)');
+    });
+
+    test('date picker: measured weekday ink, a 12px gray "Today", dark Remind value (§1l)', async ({ page }) => {
+      await row(page).locator('[role="gridcell"][data-property-id="p-due"]').click();
+      const picker = page.locator('[data-blok-database-date-editor]');
+
+      if (!await picker.isVisible()) await page.keyboard.press('Enter');
+      await expect(picker).toBeVisible();
+      await expect(picker.locator('[data-blok-database-date-weekday]').first()).toHaveCSS('color', 'rgb(139, 152, 152)');
+      const today = picker.locator('[data-blok-database-date-today]');
+
+      await expect(today).toHaveCSS('color', 'rgb(142, 139, 134)');
+      await expect(today).toHaveCSS('font-size', '12px');
+      await expect(today).toHaveCSS('font-weight', '500');
+      await expect(picker.locator('[data-blok-database-date-remind-value]')).toHaveCSS('color', 'rgb(173, 169, 163)');
+    });
+
+    test('view settings: row values in the nearest AA gray; "Add sort" in dark secondary (§1l, §1c)', async ({ page }) => {
+      await page.getByTestId('database-toolbar-settings').click();
+      // Notion's rgb(125, 122, 117) is 3.6:1 on the menu; this is the first gray that passes.
+      await expect(page.getByTestId('database-settings-layout').locator('[data-blok-database-panel-value]')).toHaveCSS('color', 'rgb(142, 139, 134)');
+      await page.getByTestId('database-settings-sort').click();
+      await expect(page.getByTestId('database-sort-add')).toHaveCSS('color', 'rgb(173, 169, 163)');
+    });
+
+    test('filter rule editor: AA operator ink and the dark field fill; "+ Filter" AA ink (§1c)', async ({ page }) => {
+      // Notion's rgb(125, 122, 117) is 3.9:1 on the page; this is the first gray that passes.
+      await expect(page.locator('[data-blok-database-filter-add]')).toHaveCSS('color', 'rgb(135, 132, 127)');
+      await page.locator('[data-blok-database-filter-pill]').first().click();
+      await expect(page.getByTestId('database-filter-operator').locator('[data-blok-database-panel-value]')).toHaveCSS('color', 'rgb(142, 139, 134)');
+      await expect(page.getByTestId('database-filter-value')).toHaveCSS('background-color', 'rgba(252, 252, 252, 0.03)');
     });
 
     test('database menus: the dark menu fill (§1a)', async ({ page }) => {

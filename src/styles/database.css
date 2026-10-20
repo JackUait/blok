@@ -195,6 +195,16 @@
   --blok-database-select-head-bg: rgba(242, 241, 238, 0.6);
   /* Cell editor box, research/22 §4: Notion's menu shadow, light and dark. */
   --blok-database-cell-editor-shadow: var(--blok-inline-toolbar-shadow);
+  /* Panels and date picker (research/21 §1c, §1k, §1l): light uses Blok's token for the measured role. */
+  --blok-database-date-weekday-text: var(--blok-text-tertiary);
+  --blok-database-date-today-text: var(--blok-text-secondary);
+  --blok-database-date-setting-value-text: var(--blok-text-secondary);
+  --blok-database-panel-value-text: var(--blok-text-secondary);
+  --blok-database-panel-muted-text: var(--blok-text-secondary);
+  --blok-database-panel-input-bg: var(--blok-database-table-header-hover-bg);
+  --blok-database-filter-add-text: var(--blok-text-secondary);
+  --blok-database-form-answer-border: var(--blok-border-primary);
+  --blok-database-cell-empty-text: var(--blok-text-tertiary);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -374,6 +384,16 @@
     --blok-database-comment-badge-icon: rgb(173, 169, 163);
     --blok-database-select-head-bg: rgba(255, 255, 255, 0.055);
     --blok-database-cell-editor-shadow: var(--blok-database-popover-shadow);
+    /* research/21 §1c, §1k, §1l, §1m. Notion's rgb(125, 122, 117) fails AA here: values, "+ Filter" and "Empty" take the first passing step. */
+    --blok-database-date-weekday-text: rgb(139, 152, 152);
+    --blok-database-date-today-text: rgb(142, 139, 134);
+    --blok-database-date-setting-value-text: rgb(173, 169, 163);
+    --blok-database-panel-value-text: rgb(142, 139, 134);
+    --blok-database-panel-muted-text: rgb(173, 169, 163);
+    --blok-database-panel-input-bg: rgba(252, 252, 252, 0.03);
+    --blok-database-filter-add-text: rgb(135, 132, 127);
+    --blok-database-form-answer-border: rgb(44, 44, 43);
+    --blok-database-cell-empty-text: rgb(138, 135, 130);
   }
 }
 
@@ -552,6 +572,16 @@
   --blok-database-comment-badge-icon: rgb(173, 169, 163);
   --blok-database-select-head-bg: rgba(255, 255, 255, 0.055);
   --blok-database-cell-editor-shadow: var(--blok-database-popover-shadow);
+  /* research/21 §1c, §1k, §1l, §1m. Notion's rgb(125, 122, 117) fails AA here: values, "+ Filter" and "Empty" take the first passing step. */
+  --blok-database-date-weekday-text: rgb(139, 152, 152);
+  --blok-database-date-today-text: rgb(142, 139, 134);
+  --blok-database-date-setting-value-text: rgb(173, 169, 163);
+  --blok-database-panel-value-text: rgb(142, 139, 134);
+  --blok-database-panel-muted-text: rgb(173, 169, 163);
+  --blok-database-panel-input-bg: rgba(252, 252, 252, 0.03);
+  --blok-database-filter-add-text: rgb(135, 132, 127);
+  --blok-database-form-answer-border: rgb(44, 44, 43);
+  --blok-database-cell-empty-text: rgb(138, 135, 130);
 }
 
 /**
@@ -4187,7 +4217,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 }
 
 [data-blok-database-cell][data-empty] {
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-cell-empty-text);
 }
 
 [data-blok-database-option-pill] {
@@ -4923,9 +4953,13 @@ textarea[data-blok-database-cell-input] {
   padding-inline-start: var(--blok-space-1);
 }
 
+/* research/08 and 21 §1l: 12px weight 500 in both themes. */
 [data-blok-database-date-today] {
   min-height: 24px;
   padding: 0 var(--blok-space-1-5);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--blok-database-date-today-text);
 }
 
 [data-blok-database-date-prev],
@@ -4970,7 +5004,7 @@ textarea[data-blok-database-cell-input] {
   font-size: 12px;
   line-height: 24px;
   text-align: center;
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-date-weekday-text);
 }
 
 /* The base cell wraps; a card line is one line, cut at the edge. */
@@ -5104,7 +5138,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-date-remind-value],
 [data-blok-database-date-setting-value] {
   margin-inline-start: auto;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-date-setting-value-text);
 }
 
 [data-blok-database-date-remind-chevron],
@@ -6486,7 +6520,7 @@ textarea[data-blok-database-cell-input] {
   border: none;
   border-radius: var(--blok-radius-pill);
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-filter-add-text);
   font-size: 14px;
   cursor: pointer;
 }
@@ -6633,6 +6667,11 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-color-danger);
 }
 
+/* "Add sort" and "Delete sort" read secondary (research/21 §1c). */
+[data-blok-database-panel-row][data-muted] {
+  color: var(--blok-database-panel-muted-text);
+}
+
 [data-blok-database-panel-label] {
   flex: 1 1 auto;
   min-width: 0;
@@ -6656,7 +6695,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-panel-value] {
   flex: 0 1 auto;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-panel-value-text);
   white-space: nowrap;
 }
 
@@ -6720,7 +6759,7 @@ textarea[data-blok-database-cell-input] {
   padding-inline: var(--blok-space-1-5);
   border: none;
   border-radius: var(--blok-radius-control);
-  background-color: var(--blok-database-table-header-hover-bg);
+  background-color: var(--blok-database-panel-input-bg);
   color: var(--blok-text-primary);
   font: inherit;
   outline: none;
@@ -9272,7 +9311,7 @@ button[data-blok-database-feed-reaction]:hover,
 [data-blok-database-form-question] :is(input:not([type="checkbox"], [type="radio"]), textarea, select, [data-blok-database-form-provider-answer]) {
   padding-block: var(--blok-space-1);
   padding-inline: var(--blok-space-2);
-  border: 1px solid var(--blok-border-primary);
+  border: 1px solid var(--blok-database-form-answer-border);
   border-radius: var(--blok-radius-control);
   background-color: transparent;
   color: var(--blok-text-primary);

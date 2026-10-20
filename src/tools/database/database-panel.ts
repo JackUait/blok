@@ -192,6 +192,8 @@ export interface PanelRowOptions {
   /** A checkmark marks the chosen option, never a fill (no-blue law). */
   checked?: boolean;
   danger?: boolean;
+  /** Secondary ink, as Notion's "Add sort" and "Delete sort" (research/21 §1c). */
+  muted?: boolean;
   disabled?: boolean;
   onClick: () => void;
 }
@@ -204,6 +206,7 @@ export const panelRow = (options: PanelRowOptions): HTMLButtonElement => {
   row.setAttribute('data-blok-testid', options.testId);
   row.disabled = options.disabled === true;
   if (options.danger === true) row.setAttribute('data-danger', '');
+  if (options.muted === true) row.setAttribute('data-muted', '');
   if (options.checked !== undefined) {
     row.setAttribute('role', 'menuitemradio');
     row.setAttribute('aria-checked', String(options.checked));

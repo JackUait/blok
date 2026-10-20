@@ -1513,6 +1513,7 @@ export class ViewSettingsPages {
           panelRow({
             label: this.t('sortAdd'),
             testId: 'database-sort-add',
+            muted: true,
             icon: IconPlus,
             onClick: () => panel.push(this.pickProperty(this.t('sortAdd'), GROUPABLE_TYPES, (property) => {
               this.ctx.updatePersonal({ sorts: [...sorts, { id: nanoid(), propertyId: property.id, direction: 'asc' }] });
@@ -1522,6 +1523,7 @@ export class ViewSettingsPages {
           panelRow({
             label: this.t('sortDeleteAll'),
             testId: 'database-sort-delete-all',
+            muted: true,
             icon: IconTrash,
             danger: true,
             disabled: sorts.length === 0,

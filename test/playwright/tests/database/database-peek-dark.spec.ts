@@ -24,6 +24,7 @@ const blocks = (openPagesIn: 'side' | 'center'): OutputBlockData[] => [
       schema: [
         { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
         { id: 'p-notes', name: 'Notes', type: 'text', position: 'a1' },
+        { id: 'p-due', name: 'Due', type: 'date', position: 'a2' },
       ],
       views: [{ id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [], openPagesIn }],
       activeViewId: 'v1',
@@ -123,6 +124,17 @@ for (const mode of DARK_MODES) {
 
       await value(page, 'p-notes').hover();
       await expect(value(page, 'p-notes')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    });
+
+    test('side peek: "Empty" in the nearest AA step of Notion\'s tertiary', async ({ page }) => {
+      await mount(page, blocks('side'));
+      await mode.apply(page);
+      await openRow(page);
+      const empty = value(page, 'p-due').locator('[data-blok-database-cell][data-empty]');
+
+      await expect(empty).toHaveText('Empty');
+      // Notion's rgb(125, 122, 117) is 3.8:1 on the peek; this is the first gray that passes.
+      await expect(empty).toHaveCSS('color', 'rgb(138, 135, 130)');
     });
 
     test('center peek: rgb(32, 32, 32) panel, measured shadow, 0.8 backdrop', async ({ page }) => {

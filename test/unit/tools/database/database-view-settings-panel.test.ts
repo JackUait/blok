@@ -287,6 +287,18 @@ describe('view settings panel', () => {
     expect(h.state.view.sorts[0].direction).toBe('desc');
   });
 
+  it('marks "Add sort" and "Delete sort" as muted rows, and the sort itself not (research/21 §1c)', () => {
+    const h = harness({ sorts: [{ id: 's1', propertyId: 'num', direction: 'asc' }] });
+
+    h.open('sort');
+    const muted = (id: string): boolean => document.querySelector(`[data-blok-testid="${id}"]`)?.hasAttribute('data-muted') === true;
+
+    expect(muted('database-sort-add')).toBe(true);
+    expect(muted('database-sort-delete-all')).toBe(true);
+    expect(muted('database-sort-property-s1')).toBe(false);
+    expect(muted('database-sort-direction-s1')).toBe(false);
+  });
+
   it('adds a simple filter and edits its value in its own page', () => {
     const h = harness();
 

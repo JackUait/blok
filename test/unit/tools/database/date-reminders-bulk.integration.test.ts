@@ -246,6 +246,110 @@ describe('bulk edit of a date: Remind and the property default', () => {
     expect(await remindersOf('r2')).toEqual({ due: { remind: '1_day_before', timeZone: zone } });
   });
 
+  it.each([
+    ['table', {}, ''],
+    ['board', { type: 'board', groupBy: 's' }, '[data-blok-database-card]'],
+    ['list', { type: 'list' }, '[data-blok-database-list-row]'],
+  ])('%s: the bulk picker stays open after a day pick, so Remind can follow (research/21 §6)', async (_name, view, rowSelector) => {
+    await make(doc(view));
+    if (rowSelector === '') {
+      await selectTableRows('r1', 'r2');
+    } else {
+      await click(q(`${rowSelector}[data-row-id="r1"]`), { metaKey: true });
+      await click(q(`${rowSelector}[data-row-id="r2"]`), { metaKey: true });
+    }
+    await openBulkDue();
+    const day = someDay();
+
+    await pickDay(day);
+
+    expect(document.querySelector('[data-blok-database-date-editor]')?.isConnected).toBe(true);
+
+    await pick('1_day_before');
+
+    expect(await remindersOf('r1')).toEqual({ due: { remind: '1_day_before', timeZone: zone } });
+    expect(await remindersOf('r2')).toEqual({ due: { remind: '1_day_before', timeZone: zone } });
+    expect((await savedRow('r2'))?.properties?.due).toBe(day);
+    if (rowSelector === '') {
+      expect(q('[data-row-id="r2"] [role="gridcell"][data-property-id="due"] [data-blok-database-date-reminder]')).not.toBeNull();
+    }
+  });
+
+  it('table: the bulk picker keeps working across the redraw, and closing it redraws the table with the new dates', async () => {
+    await make(doc({}));
+    await selectTableRows('r1', 'r2');
+    await openBulkDue();
+    await pickDay('2026-10-20');
+    await pickDay('2026-10-21');
+
+    expect(document.querySelector('[data-blok-database-date-editor]')?.isConnected).toBe(true);
+    expect(q('[data-row-id="r2"] [role="gridcell"][data-property-id="due"]')?.textContent).toContain('21');
+
+    await escape();
+
+    expect(document.querySelector('[data-blok-database-date-editor]')).toBeNull();
+    expect((await savedRow('r1'))?.properties?.due).toBe('2026-10-21');
+    expect((await savedRow('r2'))?.properties?.due).toBe('2026-10-21');
+    expect(q('[data-row-id="r2"] [role="gridcell"][data-property-id="due"]')?.textContent).toContain('21');
+  });
+
+  it('table: after a day pick, a press on the bar\'s "…" opens its menu from the live bar', async () => {
+    await make(doc({}));
+    await selectTableRows('r1', 'r2');
+    await openBulkDue();
+    await pickDay('2026-10-20');
+    const more = q('[data-blok-database-table-selection-more]');
+
+    more?.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    more?.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
+    await click(more);
+
+    expect(more?.isConnected).toBe(true);
+    expect(document.querySelector('[data-blok-database-date-editor]')).toBeNull();
+    expect(document.querySelector('[data-blok-item-name="database-table-selection-duplicate"]')).not.toBeNull();
+    expect((await savedRow('r2'))?.properties?.due).toBe('2026-10-20');
+  });
+
+  it.each([
+    ['table', {}, ''],
+    ['board', { type: 'board', groupBy: 's' }, '[data-blok-database-card]'],
+    ['list', { type: 'list' }, '[data-blok-database-list-row]'],
+  ])('%s: the bulk picker opens on the first selected row\'s date (research/21 §6)', async (_name, view, rowSelector) => {
+    await make(doc(view));
+    if (rowSelector === '') {
+      await selectTableRows('r2', 'r1');
+    } else {
+      await click(q(`${rowSelector}[data-row-id="r2"]`), { metaKey: true });
+      await click(q(`${rowSelector}[data-row-id="r1"]`), { metaKey: true });
+    }
+    await openBulkDue();
+
+    expect(document.querySelector<HTMLInputElement>('[data-blok-database-date-input="start"]')?.value).toMatch(/27/);
+    expect(document.querySelector('[data-blok-database-date-day="2026-10-27"]')?.getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('table: the pre-filled bulk picker still shows the default, and picking that same day writes it to every row with the default', async () => {
+    await make(doc({}, { defaultReminder: '2_days_before' }));
+    await selectTableRows('r1', 'r3');
+    await openBulkDue();
+
+    expect(remindValue()).toBe('2 days before');
+
+    await pickDay('2026-10-12');
+
+    expect((await savedRow('r3'))?.properties?.due).toBe('2026-10-12');
+    expect(await remindersOf('r1')).toEqual({ due: { remind: '2_days_before', timeZone: zone } });
+    expect(await remindersOf('r3')).toEqual({ due: { remind: '2_days_before', timeZone: zone } });
+  });
+
+  it('table: a first selected row with no date opens the bulk picker empty', async () => {
+    await make(doc({}));
+    await selectTableRows('r3', 'r1');
+    await openBulkDue();
+
+    expect(document.querySelector<HTMLInputElement>('[data-blok-database-date-input="start"]')?.value).toBe('');
+  });
+
   it('table paste stays as it was (unmeasured): a pasted date brings no default reminder', async () => {
     await make(doc({}, { defaultReminder: '2_days_before' }));
     await click(q('[data-row-id="r3"] [role="gridcell"][data-property-id="due"]'));

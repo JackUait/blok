@@ -99,6 +99,12 @@ export interface CellEditorCallbacks {
    * property default (or a choice dropped because it no longer fits the time).
    */
   onReminderChange?: (reminder: DateReminderOffset | null, picked: boolean) => void;
+  /**
+   * Date: a bulk edit (research/21 §6). The value is the first selected row's;
+   * the Remind row still opens on the property default, and the first change
+   * writes even when it equals that value.
+   */
+  bulk?: boolean;
 }
 
 export type CellEditorContext = CellContext & CellEditorCallbacks;

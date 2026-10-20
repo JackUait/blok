@@ -80,8 +80,8 @@ export interface TableHandlers {
   commitCell: (rowId: string, propertyId: string, value: PropertyValue) => void;
   /** A date's Remind choice, null for None. Without it the date picker has no Remind row. */
   commitReminder?: (rowId: string, propertyId: string, reminder: DateReminderOffset | null) => void;
-  /** The bulk date picker's Remind. `picked` false: the property default, for rows with none. */
-  commitBulkReminder?: (rowIds: string[], propertyId: string, reminder: DateReminderOffset | null, picked: boolean) => void;
+  /** The bulk date picker's Remind. `picked` false: the property default, for rows with none. Returns the rows it wrote. */
+  commitBulkReminder?: (rowIds: string[], propertyId: string, reminder: DateReminderOffset | null, picked: boolean) => string[];
   /** An editor closed or a clear finished: the tool may redraw now. */
   editEnded: () => void;
   /** Adds a row to a group ('' or null when ungrouped), after `afterRowId` when given. Returns its id. */
@@ -104,8 +104,8 @@ export interface TableHandlers {
   /** A drop in a sorted view. Notion asks to remove the sort (D7); the tool decides. */
   sortedRowDrop: (result: TableRowDropResult) => void;
   bulkEdit: (rowIds: string[], anchor: HTMLElement) => void;
-  /** A paste, fill or bulk edit: cell writes, then new rows. One undo step. */
-  commitCells: (changes: CellChange[], newRows: Array<Record<string, PropertyValue>>) => void;
+  /** A paste, fill or bulk edit: cell writes, then new rows. One undo step. `whenIdle`: redraw once the view is idle. */
+  commitCells: (changes: CellChange[], newRows: Array<Record<string, PropertyValue>>, whenIdle?: boolean) => void;
   editFilters: (anchor: HTMLElement) => void;
   /** A group was folded or opened. The tool saves it in the view. */
   groupToggled?: (key: string, collapsed: boolean) => void;
@@ -291,6 +291,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
   private readonly idPrefix = `blok-database-table-${++tableIds.next}`;
   /** The menu this table opened. Its anchor dies with a redraw, so the menu must too. */
   private menu: PopoverDesktop | null = null;
+  /** A menu opened from the selection bar: a redraw would close it and replace the bar. */
+  private barMenu: PopoverDesktop | null = null;
 
   constructor(options: DatabaseTableViewOptions) {
     this.options = options;
@@ -482,8 +484,13 @@ export class DatabaseTableView implements DatabaseViewRenderer {
   }
 
   destroy(): void {
-    this.bulkEditor?.cancel();
+    const bulkEditor = this.bulkEditor;
+
+    // Its close must not ask for a redraw: this view is going.
+    this.bulkGeneration++;
     this.bulkEditor = null;
+    this.bulkEditing = false;
+    bulkEditor?.cancel();
     this.menu?.destroy();
     this.menu = null;
     this.grid?.destroy();
@@ -499,7 +506,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
    * press replaces the pressed cell, and its click never arrives.
    */
   get interacting(): boolean {
-    return this.state.editing || this.state.busy || this.pressing;
+    return this.state.editing || this.state.busy || this.pressing || this.bulkEditing
+      || (this.menu !== null && this.menu === this.barMenu);
   }
 
   private readonly handlePress = (): void => {
@@ -1241,6 +1249,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     more.innerHTML = IconDotsHorizontal;
 
     bar.append(count, ...propertyButtons, trash, more);
+    // A press here closes an open bulk picker; its redraw must wait for the click.
+    bar.addEventListener('pointerdown', this.handlePress);
     bar.addEventListener('click', (event) => {
       const target = event.target instanceof Element ? event.target : null;
       const rowIds = this.grid?.selectedRowIds() ?? [];
@@ -1268,6 +1278,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
   }
 
   private bulkEditor: CellEditorHandle | null = null;
+  private bulkEditing = false;
+  /** Bumped per bulk picker: a replaced or torn-down picker's close changes nothing. */
+  private bulkGeneration = 0;
 
   /** One property's cell editor, anchored on its bar button; the value lands on every selected row. */
   private openBulkEditor(rowIds: string[], propertyId: string, anchor: HTMLElement): void {
@@ -1277,8 +1290,18 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     if (property === undefined || handlers === undefined || rowIds.length === 0) {
       return;
     }
+    const generation = ++this.bulkGeneration;
+
+    // The table redraws only once the picker closes: a redraw would take its bar button away.
+    this.bulkEditing = true;
     this.bulkEditor?.close();
-    this.bulkEditor = openCellEditor(property, null, anchor, {
+    const written = { any: false };
+    const repaint = (): void => rowIds.forEach((rowId) => this.root
+      ?.querySelector(`[data-blok-database-table-row][data-row-id="${CSS.escape(rowId)}"] [role="gridcell"][data-property-id="${CSS.escape(propertyId)}"]`)
+      ?.dispatchEvent(new CustomEvent('blok-database-table-repaint', { bubbles: true })));
+    // A date opens on the first selected row's (research/21 §6).
+    const first = property.type === 'date' ? this.rowMap.get(rowIds[0]) : undefined;
+    const handle = openCellEditor(property, first === undefined ? null : readPropertyValue(first, property), anchor, {
       ...this.options.cellContext,
       i18n: this.options.i18n,
       readOnly: false,
@@ -1288,14 +1311,37 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         ? { onOptionsChange: (next: SelectOption[]) => handlers.optionsChange?.(propertyId, next) }
         : {}),
       ...(handlers.editProperty !== undefined ? { onEditProperty: () => handlers.editProperty?.(propertyId) } : {}),
+      ...(property.type === 'date' ? { bulk: true } : {}),
       ...(property.type === 'date' && handlers.commitBulkReminder !== undefined
-        ? { onReminderChange: (next: DateReminderOffset | null, picked: boolean) => handlers.commitBulkReminder?.(rowIds, propertyId, next, picked) }
+        ? { onReminderChange: (next: DateReminderOffset | null, picked: boolean) => {
+          (handlers.commitBulkReminder?.(rowIds, propertyId, next, picked) ?? []).forEach((rowId) => {
+            const row = this.rowMap.get(rowId);
+            const { [propertyId]: _old, ...others } = row?.reminders ?? {};
+
+            if (row !== undefined) this.rowMap.set(rowId, { ...row, reminders: next === null ? others : { ...others, [propertyId]: { remind: next } } });
+          });
+          repaint();
+        } }
         : {}),
-      onCommit: (value) => handlers.commitCells(rowIds.map((rowId) => ({ rowId, propertyId, value })), []),
+      onCommit: (value) => {
+        written.any = true;
+        rowIds.forEach((rowId) => {
+          const row = this.rowMap.get(rowId);
+
+          if (row !== undefined) this.rowMap.set(rowId, { ...row, properties: { ...row.properties, [propertyId]: value } });
+        });
+        handlers.commitCells(rowIds.map((rowId) => ({ rowId, propertyId, value })), [], true);
+        repaint();
+      },
       onClose: () => {
+        if (generation !== this.bulkGeneration) return;
+        this.bulkEditing = false;
         this.bulkEditor = null;
+        if (written.any) handlers.editEnded();
       },
     });
+
+    this.bulkEditor = handle.isOpen ? handle : null;
   }
 
   /** Cmd/Ctrl+/: the properties to edit on every selected row. */
@@ -1316,6 +1362,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         this.openBulkEditor(rowIds, property.id, button ?? anchor);
       },
     })), { searchable: true });
+    this.barMenu = this.menu;
   }
 
   /** The bar's "…": Duplicate and Move to Trash. */
@@ -1345,6 +1392,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         },
       },
     ]);
+    this.barMenu = this.menu;
   }
 
   // ─── Clicks ───

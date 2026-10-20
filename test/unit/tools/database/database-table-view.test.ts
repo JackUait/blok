@@ -720,7 +720,7 @@ describe('DatabaseTableView', () => {
         { rowId: 'r1', propertyId: 'p-owner', value: [{ id: 'sam' }] },
         { rowId: 'r2', propertyId: 'p-owner', value: [{ id: 'sam' }] },
         { rowId: 'r3', propertyId: 'p-owner', value: [{ id: 'sam' }] },
-      ], []);
+      ], [], true);
     });
 
     it('bulk relation editing uses the configured related rows', () => {
@@ -739,7 +739,7 @@ describe('DatabaseTableView', () => {
         { rowId: 'r1', propertyId: 'p-related', value: [{ id: 'linked' }] },
         { rowId: 'r2', propertyId: 'p-related', value: [{ id: 'linked' }] },
         { rowId: 'r3', propertyId: 'p-related', value: [{ id: 'linked' }] },
-      ], []);
+      ], [], true);
     });
 
     it('bulk status editing can open its property settings', () => {

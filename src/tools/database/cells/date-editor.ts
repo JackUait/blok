@@ -115,7 +115,8 @@ class DateEditor {
   private viewYear: number;
   private viewMonth: number;
   private focusedDay: string;
-  private lastValue: string | null;
+  /** undefined: nothing written yet in a bulk edit, so any value writes. */
+  private lastValue: string | null | undefined;
   /** The Remind row's choice. On an empty cell it can wait for the first date. */
   private remind: DateReminderOffset | null;
   private storedRemind: DateReminderOffset | null;
@@ -142,10 +143,11 @@ class DateEditor {
     this.end = parsed?.end === undefined ? null : toPart(parsed.end);
     this.rangeOn = this.end !== null;
     this.timeOn = parsed?.hasTime ?? false;
-    this.lastValue = this.serialize();
+    this.lastValue = ctx.bulk === true ? undefined : this.serialize();
     this.storedRemind = ctx.reminder ?? null;
     // The property default fills only an empty cell: existing dates keep their own reminder.
-    this.remind = this.storedRemind ?? (parsed === null ? property.date?.defaultReminder ?? null : null);
+    // A bulk edit gives it to every row without one, dated or not.
+    this.remind = this.storedRemind ?? (parsed === null || ctx.bulk === true ? property.date?.defaultReminder ?? null : null);
 
     const shown = toLocalDate(this.start?.day ?? toIsoDay(new Date()));
 
@@ -239,7 +241,8 @@ class DateEditor {
     this.remind = choice;
     this.remindPicked = true;
     this.closeRemindMenu(false);
-    if (this.start !== null && choice !== this.storedRemind) {
+    // A bulk pick waits for the first date write, as on an empty cell: rows may have no date.
+    if (this.start !== null && this.lastValue !== undefined && choice !== this.storedRemind) {
       this.storedRemind = choice;
       this.ctx.onReminderChange?.(choice, true);
     }

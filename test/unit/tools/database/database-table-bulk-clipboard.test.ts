@@ -669,7 +669,7 @@ describe('table bulk actions and clipboard', () => {
       expect(commitsOf(handlers)[0]).toEqual([[
         { rowId: 'r1', propertyId: 'p-done', value: true },
         { rowId: 'r3', propertyId: 'p-done', value: true },
-      ], []]);
+      ], [], true]);
     });
 
     it('the … menu duplicates and moves the selection to the trash', () => {

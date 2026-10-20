@@ -5341,7 +5341,7 @@ export class DatabaseTool implements BlockTool {
     return {
       commitCell: (rowId, propertyId, value) => { if (writable()) this.commitTableCell(rowId, propertyId, value); },
       commitReminder: (rowId, propertyId, reminder) => { if (writable()) this.commitReminder(rowId, propertyId, reminder); },
-      commitBulkReminder: (rowIds, propertyId, reminder, picked) => { if (writable()) this.commitBulkReminder(rowIds, propertyId, reminder, picked); },
+      commitBulkReminder: (rowIds, propertyId, reminder, picked) => writable() ? this.commitBulkReminder(rowIds, propertyId, reminder, picked) : [],
       editEnded: () => context === undefined ? this.redrawWhenIdle() : context.redraw(),
       addRow: (groupKey, afterRowId) => this.addTableRow(groupKey, afterRowId, context),
       deleteRows: (rowIds) => { if (writable()) this.deleteTableRows(rowIds); },
@@ -5365,7 +5365,7 @@ export class DatabaseTool implements BlockTool {
       moveRow: (result) => this.handleTableRowDrop(result, context),
       sortedRowDrop: (result) => this.onSortedRowDrop(result, context),
       bulkEdit: () => undefined,
-      commitCells: (changes, newRows) => this.commitTableCells(changes, newRows, context),
+      commitCells: (changes, newRows, whenIdle) => this.commitTableCells(changes, newRows, context, whenIdle),
       editFilters: (anchor) => { if (writable()) (context?.controls ?? this.controls).openSettings(anchor, 'filter'); },
       groupToggled: (key, collapsed) => { if (writable()) (context?.owner ?? this).saveGroupCollapse(context?.viewId ?? this.activeViewId, key, collapsed); },
       rerender: () => context === undefined ? this.rerenderView({ keepDrawer: true }) : context.redraw(),
@@ -5469,10 +5469,12 @@ export class DatabaseTool implements BlockTool {
    * their own, dated or not, as Notion did; a default that stopped fitting the
    * time changes nothing.
    */
-  private commitBulkReminder(rowIds: string[], propertyId: string, reminder: DateReminderOffset | null, picked: boolean): void {
-    rowIds
-      .filter((rowId) => picked || (reminder !== null && this.rowOrTemplate(rowId)?.reminders?.[propertyId] === undefined))
-      .forEach((rowId) => this.commitReminder(rowId, propertyId, reminder));
+  private commitBulkReminder(rowIds: string[], propertyId: string, reminder: DateReminderOffset | null, picked: boolean): string[] {
+    const targets = rowIds.filter((rowId) => picked || (reminder !== null && this.rowOrTemplate(rowId)?.reminders?.[propertyId] === undefined));
+
+    targets.forEach((rowId) => this.commitReminder(rowId, propertyId, reminder));
+
+    return targets;
   }
 
   /**
@@ -5480,7 +5482,8 @@ export class DatabaseTool implements BlockTool {
    * the end, with the values the view's filters give a new row under the
    * pasted ones.
    */
-  private commitTableCells(changes: CellChange[], newRows: Array<Record<string, PropertyValue>>, context?: NativeWidgetContext): void {
+  /** `whenIdle`: an open bulk picker made it; the redraw waits for it to close. */
+  private commitTableCells(changes: CellChange[], newRows: Array<Record<string, PropertyValue>>, context?: NativeWidgetContext, whenIdle = false): void {
     if (this.readOnly || this.destroyed || (context !== undefined && !context.writable()) || (changes.length === 0 && newRows.length === 0)) return;
     const run = (): void => {
       changes.forEach(({ rowId, propertyId, value }) => this.commitTableCell(rowId, propertyId, value));
@@ -5504,8 +5507,9 @@ export class DatabaseTool implements BlockTool {
     } else {
       run();
     }
-    if (context === undefined) this.rerenderView({ keepDrawer: true });
-    else context.redraw();
+    if (context !== undefined) context.redraw();
+    else if (whenIdle) this.redrawWhenIdle();
+    else this.rerenderView({ keepDrawer: true });
   }
 
   /** Inserts a row block at the end, or right after `afterRowId`. */
@@ -8002,12 +8006,15 @@ export class DatabaseTool implements BlockTool {
       return;
     }
     this.bulkEditor?.close();
-    this.bulkEditor = openCellEditor(property, null, anchor, {
+    // A date opens on the first selected row's (research/21 §6).
+    const first = property.type === 'date' ? this.model.getRow(rowIds[0]) : undefined;
+
+    this.bulkEditor = openCellEditor(property, first === undefined ? null : readPropertyValue(first, property), anchor, {
       ...this.cellContext(),
       i18n: this.api.i18n,
       readOnly: false,
       ...(property.type === 'date'
-        ? { onReminderChange: (next: DateReminderOffset | null, picked: boolean) => this.commitBulkReminder(rowIds, propertyId, next, picked) }
+        ? { bulk: true, onReminderChange: (next: DateReminderOffset | null, picked: boolean) => { this.commitBulkReminder(rowIds, propertyId, next, picked); } }
         : {}),
       onCommit: (value) => this.commitTableCells(rowIds.map((rowId) => ({ rowId, propertyId, value })), []),
       onClose: () => {

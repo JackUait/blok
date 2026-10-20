@@ -111,7 +111,7 @@
   "assistant.label": "ถาม AI",
   "assistant.prompt": "AI ควรเขียนหรือเปลี่ยนอะไร",
   "assistant.placeholder": "ขอให้ AI เขียนหรือแก้ไข…",
-  "assistant.followUp": "บอก AI ว่าจะเปลี่ยนอะไรต่อ…",
+  "assistant.followUp": "ถามคำถามหรือขอให้แก้ไข…",
   "assistant.send": "ส่ง",
   "assistant.stop": "หยุด",
   "assistant.keep": "เก็บไว้",

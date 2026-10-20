@@ -36,6 +36,9 @@ const ATTR = {
   status: 'data-blok-assistant-status',
   summary: 'data-blok-assistant-summary',
   alert: 'data-blok-assistant-alert',
+  head: 'data-blok-assistant-head',
+  answer: 'data-blok-assistant-answer',
+  followUp: 'data-blok-assistant-follow-up',
   row: 'data-blok-assistant-row',
   field: 'data-blok-assistant-field',
   icon: 'data-blok-assistant-icon',
@@ -47,7 +50,6 @@ const ATTR = {
   keep: 'data-blok-assistant-keep',
   slots: 'data-blok-assistant-slots',
   working: 'data-blok-assistant-working',
-  covered: 'data-blok-assistant-covered',
 } as const;
 
 /** Gap keys on the anchor holder: the bar, then the shimmer slots under it. */
@@ -135,6 +137,7 @@ export class AssistantBar {
   public readonly element: HTMLElement;
 
   private readonly field: HTMLTextAreaElement;
+  private readonly head: HTMLElement;
   private readonly summary: HTMLElement;
   private readonly reply: HTMLElement;
   private readonly more: HTMLButtonElement;
@@ -166,10 +169,16 @@ export class AssistantBar {
     // Scopes Blok's preflight and utilities to the bar in a host page; Find skips it too.
     this.element.setAttribute('data-blok-interface', 'assistant');
 
+    // The answer and its actions sit on top, the field at the bottom: reading order is
+    // visual order, and the field never moves, so focus and IME composition survive.
+    this.head = build('div', { [ATTR.head]: '' });
+    const headIcon = build('span', { [ATTR.icon]: '', 'aria-hidden': 'true' });
+    const answer = build('div', { [ATTR.answer]: '' });
     const row = build('div', { [ATTR.row]: '' });
     const icon = build('span', { [ATTR.icon]: '', 'aria-hidden': 'true' });
     const field = build('div', { [ATTR.field]: '' });
 
+    headIcon.innerHTML = IconEmojiSparkles;
     icon.innerHTML = IconEmojiSparkles;
     this.field = build('textarea', {
       'data-blok-field': 'text',
@@ -177,11 +186,12 @@ export class AssistantBar {
       'aria-label': t('assistant.prompt'),
       placeholder: t('assistant.placeholder'),
     });
-    // These lie over the empty field, so focus stays in it and a follow-up is one keystroke away.
+    // The step line lies over the read-only field while the model works.
     this.status = build('p', { [ATTR.status]: '', role: 'status' });
     this.summary = build('p', { [ATTR.summary]: '' });
     this.alert = build('p', { [ATTR.alert]: '', role: 'alert' });
-    field.append(this.field, this.status, this.summary, this.alert);
+    field.append(this.field, this.status);
+    answer.append(this.summary, this.alert);
 
     this.send = build('button', { type: 'button', [ATTR.send]: '', 'aria-label': t('assistant.send') });
     this.send.innerHTML = IconArrowUp;
@@ -198,7 +208,8 @@ export class AssistantBar {
     this.thinking.hidden = true;
     this.undo = this.iconButton(ATTR.undo, IconUndo, t('assistant.discard'));
     this.keep = this.iconButton(ATTR.keep, IconCheck, t('assistant.keep'));
-    row.append(icon, field, this.thinking, this.send, this.stop, this.undo, this.keep);
+    this.head.append(headIcon, answer, this.undo, this.keep);
+    row.append(icon, field, this.thinking, this.send, this.stop);
 
     this.reply = build('div', { [ATTR.reply]: '', id: `blok-assistant-reply-${Math.random().toString(36).slice(2)}` });
     // The database's "Show more" string: the same words, so no new key in every locale.
@@ -215,7 +226,7 @@ export class AssistantBar {
     this.slots.append(...['', 'short'].map((size) => build('div', { [DATA_ATTR.aiSlot]: size, class: 'blok-ai-shimmer' })));
     this.slots.hidden = true;
 
-    this.element.append(row, this.more, this.reply, this.slots);
+    this.element.append(this.head, this.more, this.reply, row, this.slots);
 
     this.field.addEventListener('keydown', (event) => this.onKeydown(event));
     this.field.addEventListener('input', () => this.sync());
@@ -450,27 +461,23 @@ export class AssistantBar {
     this.more.setAttribute('aria-expanded', String(expanded));
   }
 
-  /** Show what fits the view and the field: a typed follow-up hides the summary and its actions. */
+  /** Show what fits the view: after an answer, the answer and its actions on top, the follow-up field under them. */
   private sync(): void {
     const { kind } = this.view;
     const working = kind === 'working';
-    const empty = this.field.value.trim() === '';
-    const typing = this.field.value !== '';
-    const changed = this.view.kind === 'answered' || this.view.kind === 'error' ? this.view.changed : false;
-    const actions = changed && !typing;
+    const actions = this.view.kind === 'answered' || this.view.kind === 'error' ? this.view.changed : false;
 
-    this.summary.hidden = kind !== 'answered' || typing || this.summary.textContent === '';
-    this.alert.hidden = kind !== 'error' || typing || this.alert.textContent === '';
-    this.element.toggleAttribute(ATTR.covered, working || !this.summary.hidden || !this.alert.hidden);
-    this.field.placeholder = working || !this.summary.hidden || !this.alert.hidden
-      ? ''
-      : this.t(kind === 'prompt' ? 'assistant.placeholder' : 'assistant.followUp');
+    this.summary.hidden = kind !== 'answered' || this.summary.textContent === '';
+    this.alert.hidden = kind !== 'error' || this.alert.textContent === '';
+    this.head.hidden = this.summary.hidden && this.alert.hidden && !actions;
+    this.element.toggleAttribute(ATTR.followUp, !this.head.hidden);
+    this.field.placeholder = working ? '' : this.t(kind === 'prompt' ? 'assistant.placeholder' : 'assistant.followUp');
     this.stop.hidden = !working;
     this.undo.hidden = !actions;
     this.keep.hidden = !actions;
-    this.send.hidden = working || actions;
-    this.send.disabled = empty;
-    this.thinking.hidden = working || actions || this.thinkingView === null;
+    this.send.hidden = working;
+    this.send.disabled = this.field.value.trim() === '';
+    this.thinking.hidden = working || this.thinkingView === null;
   }
 
   /** Drop the gap the bar holds. */

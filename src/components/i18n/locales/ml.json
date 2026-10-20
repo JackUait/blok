@@ -141,7 +141,7 @@
   "assistant.label": "AI-യോട് ചോദിക്കുക",
   "assistant.prompt": "AI എന്ത് എഴുതണം അല്ലെങ്കിൽ മാറ്റണം?",
   "assistant.placeholder": "എഴുതാനോ എഡിറ്റ് ചെയ്യാനോ AI-യോട് ആവശ്യപ്പെടുക…",
-  "assistant.followUp": "അടുത്തതായി എന്ത് മാറ്റണമെന്ന് AI-യോട് പറയുക…",
+  "assistant.followUp": "ഒരു ചോദ്യം ചോദിക്കുക അല്ലെങ്കിൽ മാറ്റം ആവശ്യപ്പെടുക…",
   "assistant.send": "അയയ്ക്കുക",
   "assistant.stop": "നിർത്തുക",
   "assistant.keep": "നിലനിർത്തുക",

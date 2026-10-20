@@ -144,7 +144,7 @@
   "assistant.label": "Spørg AI",
   "assistant.prompt": "Hvad skal AI skrive eller ændre?",
   "assistant.placeholder": "Bed AI om at skrive eller redigere…",
-  "assistant.followUp": "Fortæl AI, hvad der skal ændres nu…",
+  "assistant.followUp": "Stil et spørgsmål eller bed om en ændring…",
   "assistant.send": "Afsend",
   "assistant.stop": "Stands",
   "assistant.keep": "Behold",

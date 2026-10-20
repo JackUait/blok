@@ -111,7 +111,7 @@
   "assistant.label": "Întreabă AI",
   "assistant.prompt": "Ce ar trebui să scrie sau să schimbe AI?",
   "assistant.placeholder": "Cere AI să scrie sau să editeze…",
-  "assistant.followUp": "Spune-i AI ce să schimbe în continuare…",
+  "assistant.followUp": "Pune o întrebare sau cere o modificare…",
   "assistant.send": "Trimite",
   "assistant.stop": "Oprește",
   "assistant.keep": "Păstrează",

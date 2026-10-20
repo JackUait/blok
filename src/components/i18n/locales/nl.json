@@ -116,7 +116,7 @@
   "assistant.label": "AI vragen",
   "assistant.prompt": "Wat moet AI schrijven of wijzigen?",
   "assistant.placeholder": "Vraag AI om te schrijven of te bewerken…",
-  "assistant.followUp": "Vertel AI wat er nu moet veranderen…",
+  "assistant.followUp": "Stel een vraag of vraag een wijziging aan…",
   "assistant.send": "Verzenden",
   "assistant.stop": "Stoppen",
   "assistant.keep": "Behouden",

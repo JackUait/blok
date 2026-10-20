@@ -116,7 +116,7 @@
   "assistant.label": "Kysy tekoälyltä",
   "assistant.prompt": "Mitä tekoälyn pitäisi kirjoittaa tai muuttaa?",
   "assistant.placeholder": "Pyydä tekoälyä kirjoittamaan tai muokkaamaan…",
-  "assistant.followUp": "Kerro tekoälylle, mitä muuttaa seuraavaksi…",
+  "assistant.followUp": "Esitä kysymys tai pyydä muutosta…",
   "assistant.send": "Lähetä",
   "assistant.stop": "Pysäytä",
   "assistant.keep": "Säilytä",

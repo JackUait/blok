@@ -141,7 +141,7 @@
   "assistant.label": "Süni intellektdən soruş",
   "assistant.prompt": "Süni intellekt nə yazmalı və ya dəyişməlidir?",
   "assistant.placeholder": "Süni intellektdən yazmağı və ya redaktə etməyi istəyin…",
-  "assistant.followUp": "Süni intellektə növbəti dəyişikliyi deyin…",
+  "assistant.followUp": "Sual verin və ya dəyişiklik istəyin…",
   "assistant.send": "Göndər",
   "assistant.stop": "Dayandır",
   "assistant.keep": "Saxla",

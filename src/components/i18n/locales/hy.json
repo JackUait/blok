@@ -116,7 +116,7 @@
   "assistant.label": "Հարցնել ԱԲ-ին",
   "assistant.prompt": "Ի՞նչ պետք է գրի կամ փոխի ԱԲ-ն",
   "assistant.placeholder": "Խնդրեք ԱԲ-ին գրել կամ խմբագրել…",
-  "assistant.followUp": "Ասեք ԱԲ-ին, թե ինչ փոխել հետո…",
+  "assistant.followUp": "Տվեք հարց կամ խնդրեք փոփոխություն…",
   "assistant.send": "Ուղարկել",
   "assistant.stop": "Կանգնեցնել",
   "assistant.keep": "Պահել",

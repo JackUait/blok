@@ -363,6 +363,44 @@ test.describe('in-editor assistant', () => {
     await expect(bar.locator('[data-blok-ai-slot]').first()).toBeHidden();
   });
 
+  test('after an answer, a follow-up field under it takes a question with a visible caret', async ({ page }) => {
+    await setup(page, [
+      insertCall('Draft one'),
+      reply('Wrote a draft.\n\nIt sits at the end of the page.'),
+      reply('It has three words.'),
+    ]);
+
+    await page.getByText('Second').click();
+    await page.keyboard.press(`${MOD}+j`);
+
+    const bar = page.getByRole('dialog', { name: 'Ask AI' });
+    const field = bar.getByRole('textbox');
+    const summary = bar.getByText('Wrote a draft.');
+
+    await field.fill('Write a draft');
+    await page.keyboard.press('Enter');
+    await expect(summary).toBeVisible();
+
+    await expect(field).toBeVisible();
+    await expect(field).toBeFocused();
+    await expect(field).toHaveAttribute('placeholder', 'Ask a question or request a change…');
+    expect(await field.evaluate((element) => getComputedStyle(element).caretColor)).not.toBe('rgba(0, 0, 0, 0)');
+
+    const summaryBox = await summary.boundingBox();
+    const fieldBox = await field.boundingBox();
+
+    expect(fieldBox?.y ?? 0).toBeGreaterThan((summaryBox?.y ?? 0) + (summaryBox?.height ?? 0));
+
+    await field.pressSequentially('How long is it?');
+    await expect(summary).toBeVisible();
+    await expect(bar.getByRole('button', { name: 'Keep' })).toBeVisible();
+    await page.keyboard.press('Enter');
+
+    await expect(bar.getByText('It has three words.')).toBeVisible();
+    await expect(field).toBeVisible();
+    expect(await savedTexts(page)).toEqual(['The quick brown fox', 'Second', 'Draft one']);
+  });
+
   test('Discard removes what the assistant wrote', async ({ page }) => {
     await setup(page, [insertCall('Draft one'), insertCall('Draft two'), reply('Wrote two drafts.')]);
 

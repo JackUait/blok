@@ -116,7 +116,7 @@
   "assistant.label": "AI से पूछें",
   "assistant.prompt": "AI को क्या लिखना या बदलना चाहिए?",
   "assistant.placeholder": "AI से लिखने या संपादित करने के लिए कहें…",
-  "assistant.followUp": "AI को बताएं कि आगे क्या बदलना है…",
+  "assistant.followUp": "प्रश्न पूछें या बदलाव का अनुरोध करें…",
   "assistant.send": "भेजें",
   "assistant.stop": "रोकें",
   "assistant.keep": "रखें",

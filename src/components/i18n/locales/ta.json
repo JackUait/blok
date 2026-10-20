@@ -141,7 +141,7 @@
   "assistant.label": "AI-இடம் கேளுங்கள்",
   "assistant.prompt": "AI என்ன எழுத வேண்டும் அல்லது மாற்ற வேண்டும்?",
   "assistant.placeholder": "எழுத அல்லது திருத்த AI-இடம் கேளுங்கள்…",
-  "assistant.followUp": "அடுத்து என்ன மாற்ற வேண்டும் என்று AI-இடம் சொல்லுங்கள்…",
+  "assistant.followUp": "கேள்வி கேளுங்கள் அல்லது மாற்றத்தைக் கோருங்கள்…",
   "assistant.send": "அனுப்பு",
   "assistant.stop": "நிறுத்து",
   "assistant.keep": "வைத்திரு",

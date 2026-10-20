@@ -575,6 +575,60 @@ describe('in-editor assistant bar', () => {
     expect(editor.agent.state.status).toBe('working');
   });
 
+  it('keeps a follow-up field under the answer, next to Discard and Keep', async () => {
+    const editor = await createEditor(scripted(insertBatch('From AI'), answer('Added a paragraph.\n\nIt says hello back.')));
+
+    editor.agent.openAssistant();
+    submit('Add a line');
+    await waitFor(() => expect(within(bar()).getByText('Added a paragraph.')).toBeVisible());
+
+    const field = within(bar()).getByRole('textbox');
+    const summary = within(bar()).getByText('Added a paragraph.');
+
+    expect(field).toBeVisible();
+    expect(field).toHaveAttribute('placeholder', 'Ask a question or request a change…');
+    expect(field).toHaveFocus();
+    expect(within(bar()).getByRole('button', { name: 'Send' })).toBeVisible();
+    expect(within(bar()).getByRole('button', { name: 'Discard' })).toBeVisible();
+    expect(within(bar()).getByRole('button', { name: 'Keep' })).toBeVisible();
+    // Read top to bottom: the answer, its rest, then the field.
+    expect(summary.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(bar()).getByRole('button', { name: 'Show more' }).compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    fireEvent.input(field, { target: { value: 'Make it shorter' } });
+
+    expect(summary).toBeVisible();
+    expect(within(bar()).getByRole('button', { name: 'Discard' })).toBeVisible();
+    expect(within(bar()).getByRole('button', { name: 'Keep' })).toBeVisible();
+    expect(within(bar()).getByRole('button', { name: 'Send' })).toBeEnabled();
+  });
+
+  it('keeps the follow-up field after an answer that changed nothing', async () => {
+    const editor = await createEditor(scripted(answer('The page has one paragraph.')));
+
+    editor.agent.openAssistant();
+    submit('How long is this page?');
+    await waitFor(() => expect(within(bar()).getByText('The page has one paragraph.')).toBeVisible());
+
+    expect(within(bar()).getByRole('textbox')).toBeVisible();
+    expect(within(bar()).getByRole('textbox')).toHaveAttribute('placeholder', 'Ask a question or request a change…');
+    expect(within(bar()).queryByRole('button', { name: 'Discard' })).toBeNull();
+    expect(within(bar()).queryByRole('button', { name: 'Keep' })).toBeNull();
+  });
+
+  it('keeps the follow-up field under a failed call\'s alert', async () => {
+    const editor = await createEditor(async () => {
+      throw new Error('No API key');
+    });
+
+    editor.agent.openAssistant();
+    submit('Write');
+    await waitFor(() => expect(within(bar()).getByRole('alert')).toHaveTextContent('No API key'));
+
+    expect(within(bar()).getByRole('textbox')).toBeVisible();
+    expect(within(bar()).getByRole('textbox')).toHaveAttribute('placeholder', 'Ask a question or request a change…');
+  });
+
   it('shows a failed model call as an alert', async () => {
     const editor = await createEditor(async () => {
       throw new Error('No API key');
@@ -1271,30 +1325,6 @@ describe('in-editor assistant bar', () => {
       expect(within(bar()).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['one', 'two']);
       // The summary is not repeated in the panel.
       expect(within(bar()).getAllByText('Added two lines.')).toHaveLength(1);
-    });
-
-    it('typing a follow-up hides the summary and shows send', async () => {
-      await createEditor(scripted(insertBatch('From AI'), answer('Added a paragraph.')));
-
-      pressModJ(paragraphInput());
-      submit('Add a line');
-      await waitFor(() => expect(within(bar()).getByText('Added a paragraph.')).toBeVisible());
-
-      const field = within(bar()).getByRole('textbox');
-
-      if (!(field instanceof HTMLTextAreaElement)) {
-        throw new Error('prompt field is not a textarea');
-      }
-      field.value = 'Shorter';
-      field.dispatchEvent(new Event('input', { bubbles: true }));
-
-      expect(within(bar()).getByText('Added a paragraph.')).not.toBeVisible();
-      expect(within(bar()).getByRole('button', { name: 'Send' })).toBeVisible();
-
-      field.value = '';
-      field.dispatchEvent(new Event('input', { bubbles: true }));
-
-      expect(within(bar()).getByText('Added a paragraph.')).toBeVisible();
     });
 
     it('moves down when a block above its anchor grows', async () => {

@@ -144,7 +144,7 @@
   "assistant.label": "Zapytaj AI",
   "assistant.prompt": "Co AI ma napisać lub zmienić?",
   "assistant.placeholder": "Poproś AI o napisanie lub edycję…",
-  "assistant.followUp": "Powiedz AI, co zmienić dalej…",
+  "assistant.followUp": "Zadaj pytanie lub poproś o zmianę…",
   "assistant.send": "Wyślij",
   "assistant.stop": "Zatrzymaj",
   "assistant.keep": "Zachowaj",

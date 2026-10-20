@@ -141,7 +141,7 @@
   "assistant.label": "AI ကို မေးရန်",
   "assistant.prompt": "AI က ဘာရေးရမလဲ သို့မဟုတ် ဘာပြောင်းရမလဲ။",
   "assistant.placeholder": "ရေးရန် သို့မဟုတ် တည်းဖြတ်ရန် AI ကို တောင်းဆိုပါ…",
-  "assistant.followUp": "နောက်ထပ် ဘာပြောင်းရမလဲ AI ကို ပြောပါ…",
+  "assistant.followUp": "မေးခွန်းမေးပါ သို့မဟုတ် ပြောင်းလဲမှု တောင်းဆိုပါ…",
   "assistant.send": "ပို့ရန်",
   "assistant.stop": "ရပ်ရန်",
   "assistant.keep": "ထားရှိရန်",

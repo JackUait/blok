@@ -144,7 +144,7 @@
   "assistant.label": "Pitaj AI",
   "assistant.prompt": "Što AI treba napisati ili promijeniti?",
   "assistant.placeholder": "Zatražite od AI-ja da piše ili uređuje…",
-  "assistant.followUp": "Recite AI-ju što sljedeće promijeniti…",
+  "assistant.followUp": "Postavite pitanje ili zatražite izmjenu…",
   "assistant.send": "Pošalji",
   "assistant.stop": "Zaustavi",
   "assistant.keep": "Zadrži",

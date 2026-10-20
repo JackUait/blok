@@ -113,7 +113,7 @@
   "assistant.label": "AI-কে জিজ্ঞাসা করুন",
   "assistant.prompt": "AI কী লিখবে বা পরিবর্তন করবে?",
   "assistant.placeholder": "AI-কে লিখতে বা সম্পাদনা করতে বলুন…",
-  "assistant.followUp": "এরপর কী পরিবর্তন করতে হবে AI-কে বলুন…",
+  "assistant.followUp": "প্রশ্ন করুন বা পরিবর্তনের অনুরোধ করুন…",
   "assistant.send": "পাঠান",
   "assistant.stop": "থামান",
   "assistant.keep": "রাখুন",

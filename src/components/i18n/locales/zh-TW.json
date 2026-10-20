@@ -155,7 +155,7 @@
   "assistant.label": "詢問 AI",
   "assistant.prompt": "AI 應該撰寫或修改什麼？",
   "assistant.placeholder": "請 AI 撰寫或編輯…",
-  "assistant.followUp": "告訴 AI 接下來要修改什麼…",
+  "assistant.followUp": "提出問題或要求修改…",
   "assistant.send": "傳送",
   "assistant.stop": "停止",
   "assistant.keep": "保留",

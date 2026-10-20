@@ -42,7 +42,9 @@
   }
 }
 
-/* Sparkle, field, then the buttons: one line, like Notion's "Edit with AI". */
+/* Sparkle, field, then the buttons: one line, like Notion's "Edit with AI".
+   After an answer the head (sparkle, answer, Undo, Keep) sits on top with the same shape. */
+[data-blok-assistant-head],
 [data-blok-assistant-row] {
   display: flex;
   align-items: center;
@@ -50,6 +52,21 @@
   min-height: 44px;
   padding-block: var(--blok-space-1-5);
   padding-inline: var(--blok-space-3) var(--blok-space-2);
+}
+
+/* The follow-up field, under the answer: no second sparkle, lined up with the answer text. */
+[data-blok-assistant-follow-up] [data-blok-assistant-row] {
+  padding-inline-start: calc(var(--blok-space-3) + var(--_blok-assistant-dot) + var(--blok-space-2-5));
+  border-top: 1px solid var(--blok-popover-border);
+}
+
+[data-blok-assistant-follow-up] [data-blok-assistant-row] [data-blok-assistant-icon] {
+  display: none;
+}
+
+[data-blok-assistant-answer] {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 [data-blok-assistant-icon] {
@@ -117,7 +134,7 @@
   line-height: inherit;
 }
 
-[data-blok-assistant-covered] [data-blok-assistant-field] textarea[data-blok-field] {
+[data-blok-assistant-working] [data-blok-assistant-field] textarea[data-blok-field] {
   caret-color: transparent;
 }
 
@@ -126,6 +143,9 @@
 [data-blok-assistant-alert] {
   margin: 0;
   overflow-wrap: anywhere;
+}
+
+[data-blok-assistant-status] {
   pointer-events: none;
 }
 

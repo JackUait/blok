@@ -113,7 +113,7 @@
   "assistant.label": "AIን ጠይቅ",
   "assistant.prompt": "AI ምን መጻፍ ወይም መቀየር አለበት?",
   "assistant.placeholder": "እንዲጽፍ ወይም እንዲያርትዕ AIን ጠይቅ…",
-  "assistant.followUp": "ቀጥሎ ምን እንደሚቀየር ለAI ንገር…",
+  "assistant.followUp": "ጥያቄ ጠይቅ ወይም ለውጥ ጠይቅ…",
   "assistant.send": "ላክ",
   "assistant.stop": "አቁም",
   "assistant.keep": "አቆይ",

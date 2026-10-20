@@ -144,7 +144,7 @@
   "assistant.label": "KI fragen",
   "assistant.prompt": "Was soll die KI schreiben oder ändern?",
   "assistant.placeholder": "KI bitten, zu schreiben oder zu bearbeiten…",
-  "assistant.followUp": "Sag der KI, was sie als Nächstes ändern soll…",
+  "assistant.followUp": "Stell eine Frage oder bitte um eine Änderung…",
   "assistant.send": "Senden",
   "assistant.stop": "Stoppen",
   "assistant.keep": "Behalten",

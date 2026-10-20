@@ -116,7 +116,7 @@
   "assistant.label": "Demander à l’IA",
   "assistant.prompt": "Que doit écrire ou modifier l’IA ?",
   "assistant.placeholder": "Demandez à l’IA d’écrire ou de modifier…",
-  "assistant.followUp": "Dites à l’IA quoi modifier ensuite…",
+  "assistant.followUp": "Posez une question ou demandez une modification…",
   "assistant.send": "Envoyer",
   "assistant.stop": "Arrêter",
   "assistant.keep": "Conserver",

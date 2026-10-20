@@ -155,7 +155,7 @@
   "assistant.label": "Ask AI",
   "assistant.prompt": "What should AI write or change?",
   "assistant.placeholder": "Ask AI to write or edit…",
-  "assistant.followUp": "Tell AI what to change next…",
+  "assistant.followUp": "Ask a question or request a change…",
   "assistant.send": "Send",
   "assistant.stop": "Stop",
   "assistant.keep": "Keep",

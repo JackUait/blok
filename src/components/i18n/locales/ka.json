@@ -111,7 +111,7 @@
   "assistant.label": "ჰკითხეთ AI-ს",
   "assistant.prompt": "რა უნდა დაწეროს ან შეცვალოს AI-მ?",
   "assistant.placeholder": "სთხოვეთ AI-ს დაწერა ან რედაქტირება…",
-  "assistant.followUp": "უთხარით AI-ს, რა შეცვალოს შემდეგ…",
+  "assistant.followUp": "დასვით კითხვა ან მოითხოვეთ ცვლილება…",
   "assistant.send": "გაგზავნა",
   "assistant.stop": "შეჩერება",
   "assistant.keep": "შენახვა",

@@ -144,7 +144,7 @@
   "assistant.label": "Zeptat se AI",
   "assistant.prompt": "Co má AI napsat nebo změnit?",
   "assistant.placeholder": "Požádejte AI o napsání nebo úpravu…",
-  "assistant.followUp": "Řekněte AI, co má změnit dál…",
+  "assistant.followUp": "Položte otázku nebo požádejte o změnu…",
   "assistant.send": "Odeslat",
   "assistant.stop": "Zastavit",
   "assistant.keep": "Ponechat",

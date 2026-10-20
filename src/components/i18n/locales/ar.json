@@ -144,7 +144,7 @@
   "assistant.label": "اسأل الذكاء الاصطناعي",
   "assistant.prompt": "ما الذي يجب أن يكتبه الذكاء الاصطناعي أو يغيّره؟",
   "assistant.placeholder": "اطلب من الذكاء الاصطناعي الكتابة أو التعديل…",
-  "assistant.followUp": "أخبر الذكاء الاصطناعي بما يغيّره بعد ذلك…",
+  "assistant.followUp": "اطرح سؤالًا أو اطلب تعديلًا…",
   "assistant.send": "إرسال",
   "assistant.stop": "إيقاف",
   "assistant.keep": "الاحتفاظ",

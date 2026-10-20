@@ -144,7 +144,7 @@
   "assistant.label": "Pyet AI-në",
   "assistant.prompt": "Çfarë duhet të shkruajë ose të ndryshojë AI?",
   "assistant.placeholder": "Kërkoji AI-së të shkruajë ose të redaktojë…",
-  "assistant.followUp": "Thuaji AI-së çfarë të ndryshojë më pas…",
+  "assistant.followUp": "Bëj një pyetje ose kërko një ndryshim…",
   "assistant.send": "Dërgo",
   "assistant.stop": "Ndalo",
   "assistant.keep": "Mbaj",

@@ -111,7 +111,7 @@
   "assistant.label": "Yapay zekâya sor",
   "assistant.prompt": "Yapay zekâ ne yazmalı veya değiştirmeli?",
   "assistant.placeholder": "Yapay zekâdan yazmasını veya düzenlemesini isteyin…",
-  "assistant.followUp": "Yapay zekâya sırada neyi değiştireceğini söyleyin…",
+  "assistant.followUp": "Bir soru sorun veya değişiklik isteyin…",
   "assistant.send": "Gönder",
   "assistant.stop": "Durdur",
   "assistant.keep": "Koru",

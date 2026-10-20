@@ -144,7 +144,7 @@
   "assistant.label": "Fråga AI",
   "assistant.prompt": "Vad ska AI skriva eller ändra?",
   "assistant.placeholder": "Be AI att skriva eller redigera…",
-  "assistant.followUp": "Berätta för AI vad som ska ändras härnäst…",
+  "assistant.followUp": "Ställ en fråga eller be om en ändring…",
   "assistant.send": "Skicka",
   "assistant.stop": "Stoppa",
   "assistant.keep": "Behåll",

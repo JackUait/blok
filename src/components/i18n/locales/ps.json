@@ -144,7 +144,7 @@
   "assistant.label": "له AI څخه وپوښتئ",
   "assistant.prompt": "AI باید څه ولیکي یا بدل کړي؟",
   "assistant.placeholder": "له AI څخه وغواړئ چې ولیکي یا سم یې کړي…",
-  "assistant.followUp": "AI ته ووایاست چې بیا څه بدل کړي…",
+  "assistant.followUp": "پوښتنه وکړئ یا د بدلون غوښتنه وکړئ…",
   "assistant.send": "لېږل",
   "assistant.stop": "درول",
   "assistant.keep": "ساتل",

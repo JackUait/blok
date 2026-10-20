@@ -144,7 +144,7 @@
   "assistant.label": "Попитай ИИ",
   "assistant.prompt": "Какво да напише или промени ИИ?",
   "assistant.placeholder": "Помолете ИИ да напише или редактира…",
-  "assistant.followUp": "Кажете на ИИ какво да промени след това…",
+  "assistant.followUp": "Задайте въпрос или поискайте промяна…",
   "assistant.send": "Изпрати",
   "assistant.stop": "Спри",
   "assistant.keep": "Запази",

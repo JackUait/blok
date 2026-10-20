@@ -111,7 +111,7 @@
   "assistant.label": "Klausti DI",
   "assistant.prompt": "Ką DI turėtų parašyti ar pakeisti?",
   "assistant.placeholder": "Paprašykite DI parašyti ar redaguoti…",
-  "assistant.followUp": "Pasakykite DI, ką keisti toliau…",
+  "assistant.followUp": "Užduokite klausimą arba paprašykite pakeitimo…",
   "assistant.send": "Siųsti",
   "assistant.stop": "Sustabdyti",
   "assistant.keep": "Palikti",

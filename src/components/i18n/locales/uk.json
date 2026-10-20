@@ -111,7 +111,7 @@
   "assistant.label": "Запитати ШІ",
   "assistant.prompt": "Що ШІ має написати або змінити?",
   "assistant.placeholder": "Попросіть ШІ написати або відредагувати…",
-  "assistant.followUp": "Скажіть ШІ, що змінити далі…",
+  "assistant.followUp": "Поставте запитання або попросіть щось змінити…",
   "assistant.send": "Надіслати",
   "assistant.stop": "Зупинити",
   "assistant.keep": "Залишити",

@@ -116,7 +116,7 @@
   "assistant.label": "询问 AI",
   "assistant.prompt": "AI 应该写什么或改什么？",
   "assistant.placeholder": "让 AI 撰写或编辑…",
-  "assistant.followUp": "告诉 AI 接下来要改什么…",
+  "assistant.followUp": "提问或要求修改…",
   "assistant.send": "发送",
   "assistant.stop": "停止",
   "assistant.keep": "保留",

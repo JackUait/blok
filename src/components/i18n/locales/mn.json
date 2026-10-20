@@ -144,7 +144,7 @@
   "assistant.label": "AI-аас асуух",
   "assistant.prompt": "AI юу бичих эсвэл өөрчлөх вэ?",
   "assistant.placeholder": "AI-аас бичих эсвэл засахыг хүсэх…",
-  "assistant.followUp": "Дараа нь юуг өөрчлөхийг AI-д хэлэх…",
+  "assistant.followUp": "Асуулт асуух эсвэл өөрчлөлт хүсэх…",
   "assistant.send": "Илгээх",
   "assistant.stop": "Зогсоох",
   "assistant.keep": "Хадгалах",

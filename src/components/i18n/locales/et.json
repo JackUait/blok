@@ -144,7 +144,7 @@
   "assistant.label": "Küsi tehisintellektilt",
   "assistant.prompt": "Mida peaks tehisintellekt kirjutama või muutma?",
   "assistant.placeholder": "Palu tehisintellektil kirjutada või muuta…",
-  "assistant.followUp": "Ütle tehisintellektile, mida järgmiseks muuta…",
+  "assistant.followUp": "Esita küsimus või palu muudatust…",
   "assistant.send": "Saada",
   "assistant.stop": "Peata",
   "assistant.keep": "Säilita",

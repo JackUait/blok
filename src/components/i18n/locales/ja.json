@@ -144,7 +144,7 @@
   "assistant.label": "AIに質問",
   "assistant.prompt": "AIに何を書かせますか、または変更させますか？",
   "assistant.placeholder": "AIに執筆や編集を依頼…",
-  "assistant.followUp": "次に変更する内容をAIに伝える…",
+  "assistant.followUp": "質問するか、変更を依頼…",
   "assistant.send": "送信",
   "assistant.stop": "停止",
   "assistant.keep": "保持",

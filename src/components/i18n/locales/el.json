@@ -116,7 +116,7 @@
   "assistant.label": "Ρωτήστε την ΤΝ",
   "assistant.prompt": "Τι να γράψει ή να αλλάξει η ΤΝ;",
   "assistant.placeholder": "Ζητήστε από την ΤΝ να γράψει ή να επεξεργαστεί…",
-  "assistant.followUp": "Πείτε στην ΤΝ τι να αλλάξει στη συνέχεια…",
+  "assistant.followUp": "Κάντε μια ερώτηση ή ζητήστε μια αλλαγή…",
   "assistant.send": "Αποστολή",
   "assistant.stop": "Διακοπή",
   "assistant.keep": "Διατήρηση",

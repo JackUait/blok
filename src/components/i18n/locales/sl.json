@@ -144,7 +144,7 @@
   "assistant.label": "Vprašaj UI",
   "assistant.prompt": "Kaj naj UI napiše ali spremeni?",
   "assistant.placeholder": "Prosite UI, naj piše ali ureja…",
-  "assistant.followUp": "Povejte UI, kaj naj spremeni naslednje…",
+  "assistant.followUp": "Postavite vprašanje ali prosite za spremembo…",
   "assistant.send": "Pošlji",
   "assistant.stop": "Ustavi",
   "assistant.keep": "Obdrži",

@@ -108,7 +108,7 @@
   "assistant.label": "AI ला विचारा",
   "assistant.prompt": "AI ने काय लिहावे किंवा बदलावे?",
   "assistant.placeholder": "AI ला लिहायला किंवा संपादित करायला सांगा…",
-  "assistant.followUp": "पुढे काय बदलायचे ते AI ला सांगा…",
+  "assistant.followUp": "प्रश्न विचारा किंवा बदल करायला सांगा…",
   "assistant.send": "पाठवा",
   "assistant.stop": "थांबवा",
   "assistant.keep": "ठेवा",

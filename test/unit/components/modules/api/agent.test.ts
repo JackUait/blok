@@ -63,6 +63,7 @@ const GUIDANCE = [
   '- Change only the blocks the request is about. To add something, insert a new block; do not convert or rewrite a nearby block to get it.',
   '- Put related edits in one blok_execute call. The user can undo your work with Cmd+Z.',
   '- You cannot move the user\'s caret, selection or scroll.',
+  '- When the user asks a question, answer it in your reply. Edit the document only when they ask for a change.',
 ].join('\n');
 
 const fakeSession = (id = 'turn-1', actor: AgentActor = ACTOR) => ({

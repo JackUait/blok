@@ -144,7 +144,7 @@
   "assistant.label": "Spør KI",
   "assistant.prompt": "Hva skal KI skrive eller endre?",
   "assistant.placeholder": "Be KI om å skrive eller redigere…",
-  "assistant.followUp": "Fortell KI hva som skal endres nå…",
+  "assistant.followUp": "Still et spørsmål eller be om en endring…",
   "assistant.send": "Send inn",
   "assistant.stop": "Stopp",
   "assistant.keep": "Behold",

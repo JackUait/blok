@@ -108,7 +108,7 @@
   "assistant.label": "AIని అడగండి",
   "assistant.prompt": "AI ఏమి రాయాలి లేదా మార్చాలి?",
   "assistant.placeholder": "రాయమని లేదా సవరించమని AIని అడగండి…",
-  "assistant.followUp": "తర్వాత ఏమి మార్చాలో AIకి చెప్పండి…",
+  "assistant.followUp": "ప్రశ్న అడగండి లేదా మార్పును అభ్యర్థించండి…",
   "assistant.send": "పంపు",
   "assistant.stop": "ఆపు",
   "assistant.keep": "ఉంచు",

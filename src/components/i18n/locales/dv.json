@@ -116,7 +116,7 @@
   "assistant.label": "AI އާ ސުވާލުކުރޭ",
   "assistant.prompt": "AI ލިޔަންވީ ނުވަތަ ބަދަލުކުރަންވީ ކޮންއެއްޗެއް؟",
   "assistant.placeholder": "ލިޔުމަށް ނުވަތަ އެޑިޓްކުރުމަށް AI އަށް އެދޭ…",
-  "assistant.followUp": "ދެން ބަދަލުކުރަންވީ ކޮންއެއްޗެއްކަން AI އަށް ބުނޭ…",
+  "assistant.followUp": "ސުވާލެއް ކުރޭ ނުވަތަ ބަދަލެއް ގެނައުމަށް އެދޭ…",
   "assistant.send": "ފޮނުވާ",
   "assistant.stop": "ހުއްޓާ",
   "assistant.keep": "ބަހައްޓާ",

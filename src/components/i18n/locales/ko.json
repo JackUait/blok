@@ -144,7 +144,7 @@
   "assistant.label": "AI에게 묻기",
   "assistant.prompt": "AI가 무엇을 쓰거나 바꿔야 하나요?",
   "assistant.placeholder": "AI에게 작성이나 편집을 요청하세요…",
-  "assistant.followUp": "다음에 바꿀 내용을 AI에게 알려 주세요…",
+  "assistant.followUp": "질문하거나 변경을 요청하세요…",
   "assistant.send": "보내기",
   "assistant.stop": "중지",
   "assistant.keep": "유지",

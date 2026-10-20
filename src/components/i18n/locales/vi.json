@@ -144,7 +144,7 @@
   "assistant.label": "Hỏi AI",
   "assistant.prompt": "AI nên viết hoặc thay đổi gì?",
   "assistant.placeholder": "Yêu cầu AI viết hoặc chỉnh sửa…",
-  "assistant.followUp": "Cho AI biết cần thay đổi gì tiếp theo…",
+  "assistant.followUp": "Đặt câu hỏi hoặc yêu cầu thay đổi…",
   "assistant.send": "Gửi",
   "assistant.stop": "Dừng",
   "assistant.keep": "Giữ lại",

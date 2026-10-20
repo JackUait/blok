@@ -144,7 +144,7 @@
   "assistant.label": "Kérdezd az MI-t",
   "assistant.prompt": "Mit írjon vagy módosítson az MI?",
   "assistant.placeholder": "Kérd meg az MI-t, hogy írjon vagy szerkesszen…",
-  "assistant.followUp": "Mondd meg az MI-nek, mit módosítson ezután…",
+  "assistant.followUp": "Tegyél fel egy kérdést, vagy kérj módosítást…",
   "assistant.send": "Küldés",
   "assistant.stop": "Leállítás",
   "assistant.keep": "Megtartás",

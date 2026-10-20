@@ -108,7 +108,7 @@
   "assistant.label": "AI ගෙන් අසන්න",
   "assistant.prompt": "AI ලිවිය යුත්තේ හෝ වෙනස් කළ යුත්තේ කුමක්ද?",
   "assistant.placeholder": "ලිවීමට හෝ සංස්කරණය කිරීමට AI ගෙන් ඉල්ලන්න…",
-  "assistant.followUp": "ඊළඟට වෙනස් කළ යුත්තේ කුමක්දැයි AI ට කියන්න…",
+  "assistant.followUp": "ප්‍රශ්නයක් අසන්න හෝ වෙනසක් ඉල්ලන්න…",
   "assistant.send": "යවන්න",
   "assistant.stop": "නවත්වන්න",
   "assistant.keep": "තබාගන්න",

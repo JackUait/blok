@@ -144,7 +144,7 @@
   "assistant.label": "Perguntar à IA",
   "assistant.prompt": "O que a IA deve escrever ou alterar?",
   "assistant.placeholder": "Peça à IA para escrever ou editar…",
-  "assistant.followUp": "Diga à IA o que alterar a seguir…",
+  "assistant.followUp": "Faça uma pergunta ou peça uma alteração…",
   "assistant.send": "Enviar",
   "assistant.stop": "Parar",
   "assistant.keep": "Manter",

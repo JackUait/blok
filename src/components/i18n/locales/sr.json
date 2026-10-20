@@ -144,7 +144,7 @@
   "assistant.label": "Питај ВИ",
   "assistant.prompt": "Шта ВИ треба да напише или промени?",
   "assistant.placeholder": "Затражите од ВИ да пише или уређује…",
-  "assistant.followUp": "Реците ВИ шта следеће да промени…",
+  "assistant.followUp": "Поставите питање или затражите измену…",
   "assistant.send": "Пошаљи",
   "assistant.stop": "Заустави",
   "assistant.keep": "Задржи",

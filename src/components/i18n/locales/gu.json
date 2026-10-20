@@ -113,7 +113,7 @@
   "assistant.label": "AIને પૂછો",
   "assistant.prompt": "AIએ શું લખવું કે બદલવું જોઈએ?",
   "assistant.placeholder": "AIને લખવા કે સંપાદિત કરવા કહો…",
-  "assistant.followUp": "હવે શું બદલવું તે AIને કહો…",
+  "assistant.followUp": "પ્રશ્ન પૂછો અથવા ફેરફારની વિનંતી કરો…",
   "assistant.send": "મોકલો",
   "assistant.stop": "રોકો",
   "assistant.keep": "રાખો",

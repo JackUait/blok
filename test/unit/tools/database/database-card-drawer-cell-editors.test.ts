@@ -217,3 +217,140 @@ describe('DatabaseCardDrawer — cell editors', () => {
     expect(valueOf(options, 'prop-score').textContent).toBe('tools.database.cellEmpty');
   });
 });
+
+// research/22 §3: url, email and phone on the row page.
+describe('DatabaseCardDrawer — link values', () => {
+  const LINK_SCHEMA: PropertyDefinition[] = [
+    { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
+    { id: 'prop-link', name: 'Link', type: 'url', position: 'a1' },
+    { id: 'prop-mail', name: 'Mail', type: 'email', position: 'a2' },
+    { id: 'prop-tel', name: 'Tel', type: 'phone', position: 'a3' },
+  ];
+  const filled = { 'prop-link': 'https://example.com', 'prop-mail': 'a@b.co', 'prop-tel': '+1 555 0100' };
+  const linkIn = (options: CardDrawerOptions, propertyId: string): HTMLAnchorElement => {
+    const el = valueOf(options, propertyId).querySelector<HTMLAnchorElement>('a[data-blok-database-cell-link]');
+
+    if (el === null) throw new Error(`no link in ${propertyId}`);
+
+    return el;
+  };
+  const actionIn = (options: CardDrawerOptions, propertyId: string, label: string): HTMLButtonElement | null =>
+    valueOf(options, propertyId).querySelector<HTMLButtonElement>(`[data-blok-database-drawer-prop-actions] button[aria-label="${label}"]`);
+  const clickOn = (target: Element): MouseEvent => {
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+
+    target.dispatchEvent(event);
+
+    return event;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    PopoverRegistry.resetForTests();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+  });
+
+  it.each([
+    ['prop-link', 'https://example.com/'],
+    ['prop-mail', 'mailto:a@b.co'],
+    ['prop-tel', 'tel:+15550100'],
+  ])('%s: a click on the link follows it in a new tab and opens no editor', (propertyId, href) => {
+    const options = createOptions({ schema: LINK_SCHEMA });
+
+    new DatabaseCardDrawer(options).open(makeRow(filled));
+    const link = linkIn(options, propertyId);
+    const event = clickOn(link);
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(editor()).toBeNull();
+    expect(link.href).toBe(href);
+    expect(link.target).toBe('_blank');
+    expect(link.hasAttribute('data-blok-link-owner')).toBe(true);
+  });
+
+  it('a click beside the link opens the editor holding the full value', () => {
+    const options = createOptions({ schema: LINK_SCHEMA });
+
+    new DatabaseCardDrawer(options).open(makeRow(filled));
+    clickOn(valueOf(options, 'prop-link'));
+
+    expect(editor()?.querySelector<HTMLInputElement>('[data-blok-database-cell-input="url"]')?.value).toBe('https://example.com');
+  });
+
+  it('a filled link value offers Comment and Copy to Clipboard, and no pencil', () => {
+    const options = createOptions({ schema: LINK_SCHEMA, onCommentProperty: vi.fn() });
+
+    new DatabaseCardDrawer(options).open(makeRow(filled));
+
+    for (const propertyId of ['prop-link', 'prop-mail', 'prop-tel']) {
+      expect(actionIn(options, propertyId, 'tools.database.tableComment')).not.toBeNull();
+      expect(actionIn(options, propertyId, 'tools.database.cellCopy')).not.toBeNull();
+      expect(valueOf(options, propertyId).querySelectorAll('[data-blok-database-drawer-prop-actions] button')).toHaveLength(2);
+      expect(valueOf(options, propertyId).hasAttribute('data-link')).toBe(true);
+    }
+  });
+
+  it('an empty link value has no buttons, and Comment needs the host hook', () => {
+    const options = createOptions({ schema: LINK_SCHEMA });
+
+    new DatabaseCardDrawer(options).open(makeRow({ 'prop-link': 'https://example.com' }));
+
+    expect(valueOf(options, 'prop-mail').querySelector('[data-blok-database-drawer-prop-actions]')).toBeNull();
+    expect(valueOf(options, 'prop-mail').hasAttribute('data-link')).toBe(false);
+    expect(actionIn(options, 'prop-link', 'tools.database.tableComment')).toBeNull();
+    expect(actionIn(options, 'prop-link', 'tools.database.cellCopy')).not.toBeNull();
+  });
+
+  it('Copy writes the full value, toasts, and opens no editor', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const notify = vi.fn();
+
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+    const options = createOptions({ schema: LINK_SCHEMA, notify });
+
+    new DatabaseCardDrawer(options).open(makeRow(filled));
+    const copy = actionIn(options, 'prop-tel', 'tools.database.cellCopy');
+
+    if (copy === null) throw new Error('no copy button');
+    clickOn(copy);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(writeText).toHaveBeenCalledWith('+1 555 0100');
+    expect(notify).toHaveBeenCalledWith('tools.database.cellCopied');
+    expect(editor()).toBeNull();
+  });
+
+  it('Comment hands the row, the property and the value to the host', () => {
+    const onCommentProperty = vi.fn();
+    const options = createOptions({ schema: LINK_SCHEMA, onCommentProperty });
+
+    new DatabaseCardDrawer(options).open(makeRow(filled));
+    const comment = actionIn(options, 'prop-mail', 'tools.database.tableComment');
+
+    if (comment === null) throw new Error('no comment button');
+    clickOn(comment);
+
+    expect(onCommentProperty).toHaveBeenCalledWith('row-1', 'prop-mail', valueOf(options, 'prop-mail'));
+    expect(editor()).toBeNull();
+  });
+
+  it('the buttons survive a commit that repaints the value', () => {
+    const options = createOptions({ schema: LINK_SCHEMA });
+
+    new DatabaseCardDrawer(options).open(makeRow(filled));
+    clickOn(valueOf(options, 'prop-link'));
+    const input = editor()?.querySelector<HTMLInputElement>('input');
+
+    if (input === null || input === undefined) throw new Error('no input');
+    input.value = 'https://example.org';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+
+    expect(actionIn(options, 'prop-link', 'tools.database.cellCopy')).not.toBeNull();
+  });
+});

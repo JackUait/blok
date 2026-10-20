@@ -75,6 +75,7 @@ const SELECTED_ATTR = 'data-blok-database-row-selected';
 const CARD = '[data-blok-database-gallery-card]';
 /** The card's hover buttons; the tool opens the row menu from "•••". */
 const CARD_ACTIONS = '[data-blok-database-card-actions]';
+const CELL_LINK = 'a[data-blok-database-cell-link]';
 
 /** Pixels the pointer must travel before a press becomes a drag. */
 const DRAG_THRESHOLD = 4;
@@ -373,8 +374,8 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
       return;
     }
 
-    // The buttons act on their own; the click goes on to the tool for "•••".
-    if (target.closest(CARD_ACTIONS) !== null) {
+    // The buttons act on their own; the click goes on to the tool for "•••". A link is followed (research/22 §3).
+    if (target.closest(CARD_ACTIONS) !== null || target.closest(CELL_LINK) !== null) {
       return;
     }
 

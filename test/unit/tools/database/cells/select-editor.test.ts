@@ -218,6 +218,48 @@ describe('select cell editor', () => {
       expect(ctx.onCommit).toHaveBeenLastCalledWith(['o1', created?.id]);
       expect(search().value).toBe('');
     });
+
+    // research/22 §13: Enter on a new name keeps the editor open and focused, and highlights the new option.
+    it('Enter creates two options in a row, keeps both, and stays open on the new one', () => {
+      const ctx = openSelect([], {}, true);
+
+      typeSearch('T1');
+      press(search(), 'Enter');
+      typeSearch('T2');
+      press(search(), 'Enter');
+
+      const t1 = lastOptions(ctx).find((option) => option.label === 'T1');
+      const t2 = lastOptions(ctx).find((option) => option.label === 'T2');
+
+      expect(ctx.onCommit).toHaveBeenLastCalledWith([t1?.id, t2?.id]);
+      expect(editorRoot()).not.toBeNull();
+      expect(ctx.onClose).not.toHaveBeenCalled();
+      expect(search()).toHaveFocus();
+      expect(row(t2?.id ?? '').hasAttribute('data-active')).toBe(true);
+    });
+
+    it('Enter on a typed, unselected option adds it, clears the search and stays open', () => {
+      const ctx = openSelect(['o1'], {}, true);
+
+      typeSearch('Done');
+      press(search(), 'Enter');
+
+      expect(ctx.onCommit).toHaveBeenLastCalledWith(['o1', 'o3']);
+      expect(search().value).toBe('');
+      expect(editorRoot()).not.toBeNull();
+    });
+
+    it('Enter on a typed option that is already selected does nothing', () => {
+      const ctx = openSelect(['o1'], {}, true);
+
+      typeSearch('Todo');
+      press(search(), 'Enter');
+
+      expect(ctx.onCommit).not.toHaveBeenCalled();
+      expect(search().value).toBe('Todo');
+      expect(q('[data-blok-database-select-chip="o1"]')).not.toBeNull();
+      expect(editorRoot()).not.toBeNull();
+    });
   });
 
   describe('option menu', () => {

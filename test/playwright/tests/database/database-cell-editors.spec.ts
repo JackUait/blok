@@ -185,3 +185,39 @@ test('multi-select: each toggle saves and the editor stays open', async ({ page 
   await expect(page.locator('[data-blok-database-drawer]')).toBeVisible();
   expect((await saved(page)).properties['prop-tags']).toEqual(['tag-x']);
 });
+
+// research/22 §13: Enter creates or adds, clears the search and stays open; Enter on a selected match does nothing.
+test('multi-select: Enter creates or adds, clears and stays open; a selected match does nothing', async ({ page }) => {
+  await value(page, 'prop-tags').click();
+  const search = editor(page).locator('[data-blok-database-select-search]');
+
+  await expect(search).toBeFocused();
+  await page.keyboard.type('T1');
+  await page.keyboard.press('Enter');
+  await expect(search).toHaveValue('');
+  await expect(search).toBeFocused();
+  await page.keyboard.type('T2');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('X');
+  await page.keyboard.press('Enter');
+  await expect(search).toHaveValue('');
+
+  await page.keyboard.type('T1');
+  await page.keyboard.press('Enter');
+  await expect(search).toHaveValue('T1');
+  await expect(editor(page)).toBeVisible();
+
+  const output = await page.evaluate(async () => {
+    const data = await window.blokInstance?.save();
+    const db = data?.blocks.find((block) => block.id === 'db-1');
+    const schema = (db?.data as { schema: Array<{ id: string; config?: { options: Array<{ id: string; label: string }> } }> }).schema;
+
+    return {
+      tags: (data?.blocks.find((block) => block.id === 'row-1')?.data as { properties: Record<string, unknown> }).properties['prop-tags'],
+      options: schema.find((p) => p.id === 'prop-tags')?.config?.options ?? [],
+    };
+  });
+  const id = (label: string): string | undefined => output.options.find((option) => option.label === label)?.id;
+
+  expect(output.tags).toEqual([id('T1'), id('T2'), 'tag-x']);
+});

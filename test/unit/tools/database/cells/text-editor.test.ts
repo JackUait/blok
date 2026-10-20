@@ -86,6 +86,36 @@ describe('cell text editors', () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
+  // research/22 §3: Notion saves a url, email or phone on Escape.
+  it.each([
+    ['url', '', 'example.com'],
+    ['url', 'example.com', 'example.org'],
+    ['email', '', 'a@b.co'],
+    ['phone', '', '+1 555 0100'],
+  ] as const)('Escape in a %s editor saves the typed value (%j → %j)', (kind, before, typed) => {
+    const ctx = makeEditorContext();
+    const handle = openCellEditor(makeProperty(kind), before, makeAnchor(), ctx);
+
+    type(typed);
+    press(field(), 'Escape');
+
+    expect(ctx.onCommit).toHaveBeenCalledWith(typed);
+    expect(handle.isOpen).toBe(false);
+    expect(ctx.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  // Unmeasured in research/22 §3, so Blok's cancel stays.
+  it.each(['email', 'phone'] as const)('Escape after editing an existing %s still cancels', (kind) => {
+    const ctx = makeEditorContext();
+
+    openCellEditor(makeProperty(kind), 'old', makeAnchor(), ctx);
+    type('new');
+    press(field(), 'Escape');
+
+    expect(ctx.onCommit).not.toHaveBeenCalled();
+    expect(ctx.onCancel).toHaveBeenCalledTimes(1);
+  });
+
   it('one Escape closes only the editor: a document listener below never sees it', () => {
     const below = vi.fn();
 

@@ -902,6 +902,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_GROUP_RANGE_TEXT_BYTES = 903;
     // database.css: the table cell editor box, 6px with the menu shadow, its 8px 9px inputs and token (research/22 §4).
     const DATABASE_CELL_EDITOR_LOOK_BYTES = 1_164;
+    // database.css: url, email and phone underline line + its token, and the row page link value's Comment and Copy (research/22 §3).
+    const DATABASE_LINK_CELL_UNDERLINE_BYTES = 1_055;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1023,7 +1025,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_TIMELINE_CALENDAR_LAYOUT_BYTES
       + DATABASE_SIDE_PEEK_WIDTH_BYTES
       + DATABASE_GROUP_RANGE_TEXT_BYTES
-      + DATABASE_CELL_EDITOR_LOOK_BYTES;
+      + DATABASE_CELL_EDITOR_LOOK_BYTES
+      + DATABASE_LINK_CELL_UNDERLINE_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

@@ -861,6 +861,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       i18n: this.options.i18n,
       readOnly: this.options.readOnly,
       followLinks: true,
+      shortUrls: true,
       ...reminderContext(row, column.property.id),
       ...(this.options.locale !== undefined ? { locale: this.options.locale } : {}),
     });

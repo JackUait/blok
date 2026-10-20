@@ -112,6 +112,26 @@ describe('table cells (research/07:69-75, 98; 08:279-280, 380)', () => {
     expect(body).toContain('white-space: pre-wrap');
   });
 
+  // research/22 §3: a 1px rgba(28, 19, 1, 0.11) line drawn as a background, not text-decoration.
+  it('underline URL, email and phone with a 1px background line', () => {
+    const body = ruleBody('[data-blok-database-cell] [data-blok-database-cell-link]');
+
+    expect(body).toContain('background-image: linear-gradient(var(--blok-database-cell-link-underline), var(--blok-database-cell-link-underline))');
+    expect(body).toContain('background-size: 100% 1px');
+    expect(body).toContain('background-position: 0 100%');
+    expect(body).toContain('background-repeat: no-repeat');
+    expect(tokenValues('--blok-database-cell-link-underline')[0]).toBe('rgba(28, 19, 1, 0.11)');
+    expect(tokenValues('--blok-database-cell-link-underline')).toHaveLength(3);
+  });
+
+  // research/22 §3: on the row page a link value has no hover fill; Comment and Copy show at its end.
+  it('show a row page link value\'s buttons on hover, with no fill', () => {
+    expect(ruleBody('[data-blok-database-drawer-prop-actions]')).toContain('display: none');
+    expect(ruleBody('[data-blok-database-drawer-prop-actions]')).toContain('margin-inline-start: auto');
+    expect(ruleBody('[data-blok-database-drawer-prop-value]:hover > [data-blok-database-drawer-prop-actions]')).toContain('display: flex');
+    expect(ruleBody('[data-blok-database-drawer-prop-value][data-link][role="button"]:hover')).toContain('background-color: transparent');
+  });
+
   it('keep an unwrapped table cell on one line', () => {
     expect(ruleBody('[data-blok-database-table-cell]:not([data-wrap]) [data-blok-database-cell-link]')).toContain('white-space: inherit');
   });

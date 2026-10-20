@@ -1,7 +1,7 @@
 import { IconAlarm, IconCheck } from '../../../components/icons';
 import { DATA_ATTR } from '../../../components/constants/data-attributes';
 import { onHover } from '../../../components/utils/tooltip';
-import { safeHref, safeImageSrc } from '../../../components/utils/sanitize-url';
+import { safeHref, safeImageSrc, urlScheme } from '../../../components/utils/sanitize-url';
 import type { PlaceValue, PropertyDefinition, PropertyValue, SelectOption } from '../types';
 import { filesOf, personIdsOf, statusGroupOf } from '../property-values';
 import { relationIdsOf } from '../relation-values';
@@ -62,10 +62,14 @@ const renderCheckState = (cell: HTMLElement, checked: boolean, ctx: CellContext)
 /** `https://example.com/` shows as `example.com`; a deeper path keeps its slashes. */
 const shortUrl = (url: string): string => url.replace(/^https?:\/\//i, '').replace(/^([^/?#]+)\/$/, '$1');
 
-const renderUrl = (cell: HTMLElement, url: string, ctx: CellContext): void => {
-  const href = safeHref(url);
+/** research/22 §3: Notion links a typed "example.org" to http://example.org/. Without it the href resolves against the page. */
+const urlHref = (url: string): string | null =>
+  safeHref(urlScheme(url) === null && /^[^/#?.\s]+\.[^\s]/.test(url.trim()) ? `http://${url.trim()}` : url);
 
-  renderLink(cell, href !== null && ctx.followLinks === true ? shortUrl(url) : url, href, ctx, ctx.followLinks);
+const renderUrl = (cell: HTMLElement, url: string, ctx: CellContext): void => {
+  const href = urlHref(url);
+
+  renderLink(cell, href !== null && ctx.shortUrls === true ? shortUrl(url) : url, href, ctx, ctx.followLinks);
 };
 
 /** `?` and `&` are encoded, so an address cannot add `?bcc=` or other headers. */
@@ -93,7 +97,7 @@ const renderLink = (cell: HTMLElement, text: string, href: string | null, ctx: C
   link.rel = 'noopener noreferrer';
   link.textContent = text;
   link.setAttribute('data-blok-database-cell-link', '');
-  if (follow) {
+  if (follow || ctx.readOnly) {
     // Core's own link click would window.open the href without noopener; the browser follows target and rel.
     link.setAttribute(DATA_ATTR.linkOwner, '');
   }

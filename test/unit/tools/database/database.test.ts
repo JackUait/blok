@@ -6027,6 +6027,7 @@ describe('DatabaseTool — board card parity', () => {
       { id: 'team-a', label: 'A', position: 'a0' },
       { id: 'team-b', label: 'B', position: 'a1' },
     ] } },
+    { id: 'prop-link', name: 'Link', type: 'url', position: 'a4' },
   ];
   const board: DatabaseViewConfig = {
     id: 'view-board', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [],
@@ -6075,6 +6076,26 @@ describe('DatabaseTool — board card parity', () => {
     expect(vi.mocked(children[1].call).mock.calls.filter(([method]) => method === 'updateProperties'))
       .toEqual([['updateProperties', { 'prop-done': false }]]);
     expect(internals.cardDrawer?.openRowId ?? null).toBeNull();
+
+    tool.destroy();
+  });
+
+  // research/22 §3: a link on a card is followed; the card neither edits nor opens.
+  it('a click on a card\'s url link follows it and opens no row page', () => {
+    const children = [
+      createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'One', 'prop-status': 'opt-todo', 'prop-link': 'https://example.com' }, position: 'a0' }),
+    ];
+    const { tool, element } = mount({ properties: [{ id: 'prop-link', visible: true }] }, children);
+    const internals = tool as unknown as { cardDrawer: { openRowId: string | null } | null };
+    const link = element.querySelector<HTMLAnchorElement>('[data-blok-database-card] a[data-blok-database-cell-link]');
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+
+    link?.dispatchEvent(event);
+
+    expect(link).not.toBeNull();
+    expect(event.defaultPrevented).toBe(false);
+    expect(internals.cardDrawer?.openRowId ?? null).toBeNull();
+    expect(document.querySelector('[data-blok-database-cell-editor]')).toBeNull();
 
     tool.destroy();
   });

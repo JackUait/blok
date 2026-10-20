@@ -250,6 +250,8 @@ const ROW_CONTROL_SELECTOR = [
   '[data-blok-database-delete-row]',
   '[data-blok-database-list-row-property][data-editable]',
   '[data-blok-database-list-title-input]',
+  // research/22 §3: a url, email or phone link is followed, not the card.
+  'a[data-blok-database-cell-link]',
 ].join(', ');
 
 /**
@@ -7090,6 +7092,8 @@ export class DatabaseTool implements BlockTool {
         && !session.readOnly && !this.readOnly && !this.destroyed
         && (origin === undefined || origin.writable());
 
+      const commentProperty = this.commentLever().comment;
+
       this.cardDrawerSession = session;
       this.cardDrawer = new DatabaseCardDrawer({
         wrapper: this.element,
@@ -7097,6 +7101,8 @@ export class DatabaseTool implements BlockTool {
         databaseId: this.block.id,
         backlinks: (rowId) => this.backlinksFor(rowId),
         comments: (rowId) => (this.config.comments === undefined && this.builtInComments.enabled() ? this.builtInComments.section(rowId) : null),
+        ...(commentProperty !== undefined ? { onCommentProperty: commentProperty } : {}),
+        notify: (message) => this.api.notifier.show({ message }),
         i18n: this.api.i18n,
         events: this.api.events,
         toolsConfig: this.api.tools.getToolsConfig(),

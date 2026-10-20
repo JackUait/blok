@@ -171,6 +171,21 @@ describe('renderCellValue', () => {
       expect(click.defaultPrevented).toBe(false);
     });
 
+    // research/22 §3: Notion links a typed "example.org" to http://example.org/.
+    it('links an address typed without a scheme over http', () => {
+      const link = renderCellValue(prop('url'), 'example.org', ctx()).querySelector('a');
+
+      expect(link?.href).toBe('http://example.org/');
+      expect(link?.textContent).toBe('example.org');
+    });
+
+    // A board or gallery card draws read-only: the browser follows the link, not core.
+    it('a read-only link owns its clicks', () => {
+      const link = renderCellValue(prop('url'), 'https://example.com', ctx({ readOnly: true })).querySelector('a');
+
+      expect(link?.hasAttribute('data-blok-link-owner')).toBe(true);
+    });
+
     it('a plain click follows the link when read-only', () => {
       const link = renderCellValue(prop('url'), 'https://example.com', ctx({ readOnly: true })).querySelector('a');
       const click = new MouseEvent('click', { bubbles: true, cancelable: true });
@@ -217,10 +232,17 @@ describe('renderCellValue', () => {
       ['http://example.com', 'example.com'],
       ['https://example.com/a/b?q=1', 'example.com/a/b?q=1'],
     ])('shows %s as %s, and the href keeps the full address', (value, shown) => {
-      const link = renderCellValue(prop('url'), value, ctx({ followLinks: true })).querySelector('a');
+      const link = renderCellValue(prop('url'), value, ctx({ followLinks: true, shortUrls: true })).querySelector('a');
 
       expect(link?.textContent).toBe(shown);
       expect(link?.getAttribute('href')).toBe(value);
+    });
+
+    // research/22 §3 measured the row page link, not a shortened address.
+    it('shows the full address unless shortUrls is set', () => {
+      const link = renderCellValue(prop('url'), 'https://example.com', ctx({ followLinks: true, shortUrls: false })).querySelector('a');
+
+      expect(link?.textContent).toBe('https://example.com');
     });
 
     it('never links an unsafe scheme, and shows it as typed', () => {

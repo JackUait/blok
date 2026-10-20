@@ -234,6 +234,23 @@ describe('DatabaseGalleryView', () => {
     expect(handlers.openRow).toHaveBeenNthCalledWith(2, 'r1');
   });
 
+  // research/22 §3: a link on a card is followed; the card does not open.
+  it('a click on a url link follows it and does not open the card', () => {
+    const properties = [{ id: 'p-title', visible: true }, { id: 'p-link', visible: true }];
+    const { root, handlers } = mount({
+      view: galleryView({ properties }),
+      groups: single([row('r1', 'Alpha', { 'p-link': 'https://example.com' })]),
+    });
+    const link = cards(root)[0].querySelector<HTMLAnchorElement>('a[data-blok-database-cell-link]');
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+
+    link?.dispatchEvent(event);
+
+    expect(link?.href).toBe('https://example.com/');
+    expect(event.defaultPrevented).toBe(false);
+    expect(handlers.openRow).not.toHaveBeenCalled();
+  });
+
   it('adds a row from the trailing "+ New" card', () => {
     const { root, handlers } = mount();
     const add = root.querySelector<HTMLElement>('[data-blok-database-gallery-new]');

@@ -6,7 +6,8 @@ import type { DatabaseRow, DatabaseRowPages, DateReminderOffset, OpenPagesIn, Pa
 import { openCellEditor, renderCellValue } from './cells';
 import type { CellContext , CellEditorHandle } from './cells';
 import { isReadOnlyType, readPropertyValue } from './property-values';
-import { IconArrowDiagonal, IconCheck, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconEmojiStar, IconExpandFullscreen, IconLink, IconPage, IconPageLayout, IconPlayerTheater, IconPreview, IconSidebarRight, IconSplitView } from '../../components/icons';
+import { cellText } from './database-table-clipboard';
+import { IconArrowDiagonal, IconCheck, IconCopy, IconMessage, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconEmojiStar, IconExpandFullscreen, IconLink, IconPage, IconPageLayout, IconPlayerTheater, IconPreview, IconSidebarRight, IconSplitView } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -177,6 +178,8 @@ export interface LayoutTabsHost {
   notify(message: string): void;
 }
 
+const LINK_TYPES: ReadonlySet<string> = new Set(['url', 'email', 'phone']);
+
 /** View tab edits of the open draft. `made` are the blocks Discard deletes; `fresh` every tab made now. */
 class PageLayoutTabEdits {
   made: string[] = [];
@@ -308,6 +311,10 @@ export interface CardDrawerOptions {
   backlinks?: (rowId: string) => readonly DrawerBacklink[];
   /** The row's built-in "Comments" section under the properties, or null when comments are the host's or off. */
   comments?: (rowId: string) => HTMLElement | null;
+  /** A url, email or phone value's Comment button (research/22 §3). Without it the button is not drawn. */
+  onCommentProperty?: (rowId: string, propertyId: string, anchor: HTMLElement) => void;
+  /** Shows a toast, such as "Copied property to clipboard". */
+  notify?: (message: string) => void;
 }
 
 /** A page that mentions the open row (research/17 §2). */
@@ -442,6 +449,8 @@ export class DatabaseCardDrawer {
   private readonly onIconChange: CardDrawerOptions['onIconChange'];
   private readonly backlinks: CardDrawerOptions['backlinks'];
   private readonly comments: CardDrawerOptions['comments'];
+  private readonly onCommentProperty: CardDrawerOptions['onCommentProperty'];
+  private readonly notify: CardDrawerOptions['notify'];
   /** The open "Linked to this page" list; it shares the mode menu's slot. */
   private backlinksMenu: PopoverDesktop | null = null;
   /** What the drawn "N backlinks" lists, to skip a redraw that changes nothing. */
@@ -554,6 +563,8 @@ export class DatabaseCardDrawer {
     this.onIconChange = options.onIconChange;
     this.backlinks = options.backlinks;
     this.comments = options.comments;
+    this.onCommentProperty = options.onCommentProperty;
+    this.notify = options.notify;
     this.rowActions = options.rowActions;
     this.favorite = options.favorite;
     this.onFullWidthChange = options.onFullWidthChange;
@@ -3012,7 +3023,7 @@ export class DatabaseCardDrawer {
 
   /** Draws a value into its slot. The drawer pill attribute shipped in v1.16.1, so it stays. */
   private paintValue(slot: HTMLElement, def: PropertyDefinition, value: PropertyValue | undefined): void {
-    const cell = renderCellValue(def, value, { ...this.cellContext(), i18n: { t: (key) => this.t(key) }, readOnly: this.readOnly });
+    const cell = renderCellValue(def, value, { ...this.cellContext(), i18n: { t: (key) => this.t(key) }, readOnly: this.readOnly, followLinks: true });
 
     cell.querySelectorAll('[data-blok-database-option-pill]').forEach((pill) => pill.setAttribute('data-blok-database-drawer-prop-pill', ''));
     if (cell.hasAttribute('data-empty')) {
@@ -3028,6 +3039,59 @@ export class DatabaseCardDrawer {
       cell.replaceChildren(placeholder);
     }
     slot.replaceChildren(cell);
+    const link = LINK_TYPES.has(def.type) && !cell.hasAttribute('data-empty');
+
+    slot.toggleAttribute('data-link', link);
+    if (link) {
+      slot.appendChild(this.createLinkActions(def));
+    }
+  }
+
+  /** research/22 §3: a filled url, email or phone value's Comment and Copy to Clipboard, as in the table. */
+  private createLinkActions(def: PropertyDefinition): HTMLElement {
+    const actions = document.createElement('span');
+    const entries: Array<[action: string, key: string, icon: string]> = [['copy', 'tools.database.cellCopy', IconCopy]];
+
+    if (this.onCommentProperty !== undefined) {
+      entries.unshift(['comment', 'tools.database.tableComment', IconMessage]);
+    }
+    actions.setAttribute('data-blok-database-drawer-prop-actions', '');
+    for (const [action, key, icon] of entries) {
+      const button = document.createElement('button');
+
+      button.type = 'button';
+      button.tabIndex = -1;
+      button.setAttribute('data-blok-database-table-cell-action', action);
+      button.setAttribute('aria-label', this.t(key));
+      button.innerHTML = icon;
+      onHover(button, this.t(key));
+      button.addEventListener('click', (event) => {
+        // The value under it would open its editor.
+        event.stopPropagation();
+        this.runLinkAction(action, def, actions.parentElement);
+      });
+      actions.appendChild(button);
+    }
+
+    return actions;
+  }
+
+  private runLinkAction(action: string, def: PropertyDefinition, slot: HTMLElement | null): void {
+    const row = this.currentRow;
+
+    if (row === null || slot === null) return;
+    if (action === 'comment') {
+      this.onCommentProperty?.(row.id, def.id, slot);
+
+      return;
+    }
+    const text = cellText(def, readPropertyValue(row, def), this.cellContext());
+
+    if (text === '') return;
+    void navigator.clipboard?.writeText(text).then(
+      () => this.notify?.(this.t('tools.database.cellCopied')),
+      () => undefined
+    );
   }
 
   private propertyIcon(def: PropertyDefinition): HTMLElement {
@@ -3209,8 +3273,10 @@ export class DatabaseCardDrawer {
       valueEl.tabIndex = 0;
       valueEl.setAttribute('aria-label', def.name);
       valueEl.addEventListener('click', (event) => {
-        // Cmd/Ctrl-click on a url follows the link instead.
-        if (event.target instanceof Element && event.target.closest('a') !== null && (event.metaKey || event.ctrlKey)) {
+        // research/22 §3: a click on a url, email or phone link follows it; beside it, edits. Cmd/Ctrl follows any link.
+        const anchor = event.target instanceof Element ? event.target.closest('a') : null;
+
+        if (anchor !== null && (anchor.hasAttribute('data-blok-database-cell-link') || event.metaKey || event.ctrlKey)) {
           return;
         }
         this.openValueEditor(valueEl, def.id);

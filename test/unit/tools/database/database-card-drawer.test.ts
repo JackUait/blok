@@ -820,7 +820,7 @@ describe('DatabaseCardDrawer', () => {
       expect(pill!.textContent).toBe('Done');
     });
 
-    it('renders url property value as plain text', () => {
+    it('renders a url value as its full address', () => {
       const schema: PropertyDefinition[] = [
         makePropertyDef({ id: 'prop-url', name: 'Website', type: 'url', position: 'a1' }),
       ];
@@ -833,7 +833,7 @@ describe('DatabaseCardDrawer', () => {
       const propValue = options.wrapper.querySelector('[data-blok-database-drawer-prop-value]');
 
       expect(propValue).not.toBeNull();
-      expect(propValue!.textContent).toBe('https://example.com');
+      expect(propValue!.querySelector('[data-blok-database-cell]')?.textContent).toBe('https://example.com');
     });
 
     it('renders a date property value as a long date', () => {

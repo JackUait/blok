@@ -54,6 +54,8 @@
   --blok-database-table-calc-value: rgb(125, 122, 117);
   --blok-database-table-gutter-icon: rgb(173, 169, 163);
   --blok-database-table-control-border: rgba(28, 19, 1, 0.11);
+  /* research/22 §3. Dark is unmeasured: the table control border's dark value. */
+  --blok-database-cell-link-underline: rgba(28, 19, 1, 0.11);
   --blok-database-table-open-bg: #ffffff;
   --blok-database-table-open-shadow: rgba(25, 25, 25, 0.027) 0 8px 12px, rgba(25, 25, 25, 0.027) 0 2px 6px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   --blok-database-table-selection-shadow: var(--blok-database-table-open-shadow);
@@ -242,6 +244,7 @@
     --blok-database-table-calc-value: rgb(173, 169, 163);
     --blok-database-table-gutter-icon: rgb(125, 122, 117);
     --blok-database-table-control-border: rgba(255, 255, 235, 0.1);
+    --blok-database-cell-link-underline: rgba(255, 255, 235, 0.1);
     --blok-database-table-open-bg: rgb(37, 37, 37);
     --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
     /* Measured in dark (research/21 §1e): the selection bar and the database menus (§1a). */
@@ -419,6 +422,7 @@
   --blok-database-table-calc-value: rgb(173, 169, 163);
   --blok-database-table-gutter-icon: rgb(125, 122, 117);
   --blok-database-table-control-border: rgba(255, 255, 235, 0.1);
+  --blok-database-cell-link-underline: rgba(255, 255, 235, 0.1);
   --blok-database-table-open-bg: rgb(37, 37, 37);
   --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
   /* Measured in dark (research/21 §1e): the selection bar and the database menus (§1a). */
@@ -4237,12 +4241,17 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   white-space: nowrap;
 }
 
-/* Ink, no underline, pre-wrap (research/08:279). Two attributes outrank the
-   holder's [&_a]:text-link utility. An unwrapped table cell stays on one line. */
+/* Ink, pre-wrap (research/08:279). The underline is a 1px background line, not
+   text-decoration (research/22 §3). Two attributes outrank the holder's
+   [&_a]:text-link utility. An unwrapped table cell stays on one line. */
 [data-blok-database-cell] [data-blok-database-cell-link] {
   color: inherit;
   text-decoration: none;
   white-space: pre-wrap;
+  background-image: linear-gradient(var(--blok-database-cell-link-underline), var(--blok-database-cell-link-underline));
+  background-size: 100% 1px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
 }
 
 [data-blok-database-table-cell]:not([data-wrap]) [data-blok-database-cell-link] {
@@ -4452,6 +4461,22 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   [data-blok-database-drawer-prop-value][role="button"]:hover {
     background-color: var(--blok-database-peek-value-hover-bg);
   }
+
+  /* research/22 §3: a filled url, email or phone value has no hover fill. */
+  [data-blok-database-drawer-prop-value][data-link][role="button"]:hover {
+    background-color: transparent;
+  }
+}
+
+/* research/22 §3: its Comment and Copy show at the row's right end on hover. */
+[data-blok-database-drawer-prop-actions] {
+  display: none;
+  margin-inline-start: auto;
+  flex-shrink: 0;
+}
+
+[data-blok-database-drawer-prop-value]:hover > [data-blok-database-drawer-prop-actions] {
+  display: flex;
 }
 
 /* Editors. The box is research/22 §4: radius 6px, Notion's menu shadow, no padding.

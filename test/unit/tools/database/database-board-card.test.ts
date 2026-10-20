@@ -10,6 +10,7 @@ const schema: PropertyDefinition[] = [
   { id: 'status', name: 'Status', type: 'select', position: 'a1', config: { options: [] } },
   { id: 'notes', name: 'Notes', type: 'text', position: 'a2' },
   { id: 'files', name: 'Files', type: 'files', position: 'a3' },
+  { id: 'link', name: 'Link', type: 'url', position: 'a4' },
 ];
 
 const boardView = (overrides: Partial<DatabaseViewConfig> = {}): DatabaseViewConfig => ({
@@ -23,7 +24,7 @@ const options: SelectOption[] = [
 
 const rows: Record<string, DatabaseRow[]> = {
   o1: [
-    { id: 'r1', position: 'a0', properties: { title: 'One', notes: 'First note' } },
+    { id: 'r1', position: 'a0', properties: { title: 'One', notes: 'First note', link: 'https://example.com' } },
     { id: 'r2', position: 'a1', properties: { title: 'Two', notes: '' } },
   ],
   o2: [{ id: 'r3', position: 'a2', properties: { title: 'Three', files: [{ id: 'f1', url: 'https://example.com/a.png', name: 'a.png' }] } }],
@@ -185,6 +186,20 @@ describe('DatabaseBoardView card parity', () => {
 
       expect(onPropertyEdit).toHaveBeenCalledWith('r1', 'notes', property);
       expect(opened).not.toHaveBeenCalled();
+    });
+
+    // research/22 §3: a link on a card is followed; the card neither edits nor opens.
+    it('a click on a url link follows it and edits nothing', () => {
+      const onPropertyEdit = vi.fn();
+      const board = mount({ view: boardView({ properties: [{ id: 'link', visible: true }] }), onPropertyEdit });
+      const link = card(board, 'r1').querySelector<HTMLAnchorElement>('a[data-blok-database-cell-link]');
+      const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+
+      link?.dispatchEvent(event);
+
+      expect(link?.href).toBe('https://example.com/');
+      expect(event.defaultPrevented).toBe(false);
+      expect(onPropertyEdit).not.toHaveBeenCalled();
     });
 
     it('opens the card instead when read-only', () => {

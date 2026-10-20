@@ -28,28 +28,31 @@ const SCHEMA = [
   { id: 'p-mail', name: 'Mail', type: 'email', position: 'a2' },
   { id: 'p-tel', name: 'Tel', type: 'phone', position: 'a3' },
   { id: 'p-points', name: 'Points', type: 'number', position: 'a4' },
+  { id: 'p-stage', name: 'Stage', type: 'select', position: 'a5', config: { options: [{ id: 'o-idea', label: 'Idea', position: 'a0' }] } },
 ];
 
 const ROWS = [
-  { id: 'r1', properties: { 'p-title': 'Alpha', 'p-link': 'https://example.com', 'p-mail': 'test@example.com', 'p-tel': '+1 555 0100', 'p-points': 3 } },
+  { id: 'r1', properties: { 'p-title': 'Alpha', 'p-link': 'https://example.com', 'p-mail': 'test@example.com', 'p-tel': '+1 555 0100', 'p-points': 3, 'p-stage': 'o-idea' } },
   { id: 'r2', properties: { 'p-title': 'Beta', 'p-points': 5 } },
 ];
 
-const blocks = (): OutputBlockData[] => [
+const TABLE_VIEW = { id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] };
+
+const blocks = (view: Record<string, unknown> = TABLE_VIEW): OutputBlockData[] => [
   {
     id: 'db-1',
     type: 'database',
     data: {
       schema: SCHEMA,
-      views: [{ id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
-      activeViewId: 'v1',
+      views: [view],
+      activeViewId: view.id,
     },
     content: ROWS.map((row) => row.id),
   },
   ...ROWS.map((row, i) => ({ id: row.id, type: 'database-row', parent: 'db-1', data: { position: `a${i}`, properties: row.properties } })),
 ];
 
-const mount = async (page: Page, options: { comments: boolean; readOnly?: boolean; denyComments?: boolean }): Promise<void> => {
+const mount = async (page: Page, options: { comments: boolean; readOnly?: boolean; denyComments?: boolean; view?: Record<string, unknown> }): Promise<void> => {
   await page.evaluate(async ({ input, comments, readOnly, denyComments }) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
@@ -97,9 +100,19 @@ const mount = async (page: Page, options: { comments: boolean; readOnly?: boolea
       },
     });
     await window.blokInstance.isReady;
-  }, { input: blocks(), comments: options.comments, readOnly: options.readOnly ?? false, denyComments: options.denyComments ?? false });
-  await expect(page.getByRole('grid')).toBeVisible();
+  }, { input: blocks(options.view), comments: options.comments, readOnly: options.readOnly ?? false, denyComments: options.denyComments ?? false });
+  if (options.view === undefined) await expect(page.getByRole('grid')).toBeVisible();
 };
+
+const savedProperties = (page: Page, rowId: string): Promise<Record<string, unknown>> => page.evaluate(async (id) => {
+  const output = await window.blokInstance?.save();
+
+  return (output?.blocks.find((block) => block.id === id)?.data as { properties: Record<string, unknown> }).properties;
+}, rowId);
+
+const peek = (page: Page): Locator => page.locator('[data-blok-database-drawer]');
+const peekValue = (page: Page, propertyId: string): Locator =>
+  peek(page).locator(`[data-blok-database-drawer-prop-value][data-property-id="${propertyId}"]`);
 
 const cell = (page: Page, rowId: string, propertyId: string): Locator =>
   page.locator(`[data-blok-database-table-row][data-row-id="${rowId}"] [role="gridcell"][data-property-id="${propertyId}"]`);
@@ -279,3 +292,134 @@ test('read-only: the link follows, nothing edits, Copy still copies', async ({ p
   await cell(page, 'r1', 'p-link').getByRole('button', { name: 'Copy to clipboard' }).click();
   await expect(page.getByTestId('notification-message-text')).toHaveText('Copied property to clipboard');
 });
+
+// research/22 §3: Escape saves what was typed into a url, email or phone editor.
+test('Escape saves a value typed into an empty url, email or phone cell', async ({ page }) => {
+  await mount(page, { comments: false });
+  const cases = [
+    { propertyId: 'p-link', name: 'Link', typed: 'example.org' },
+    { propertyId: 'p-mail', name: 'Mail', typed: 'a@b.co' },
+    { propertyId: 'p-tel', name: 'Tel', typed: '+1 555 0100' },
+  ];
+
+  for (const { propertyId, name, typed } of cases) {
+    await cell(page, 'r2', propertyId).click();
+    await page.getByRole('textbox', { name }).fill(typed);
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('textbox')).toHaveCount(0);
+  }
+
+  expect(await savedProperties(page, 'r2')).toMatchObject({ 'p-link': 'example.org', 'p-mail': 'a@b.co', 'p-tel': '+1 555 0100' });
+  // Notion links a typed "example.org" over http.
+  await expect(cell(page, 'r2', 'p-link').getByRole('link')).toHaveJSProperty('href', 'http://example.org/');
+  await expect(cell(page, 'r2', 'p-mail').getByRole('link')).toHaveAttribute('href', 'mailto:a@b.co');
+  await expect(cell(page, 'r2', 'p-tel').getByRole('link')).toHaveAttribute('href', 'tel:+15550100');
+});
+
+test('Escape saves an edited url', async ({ page }) => {
+  await mount(page, { comments: false });
+  await clickBlank(page, cell(page, 'r1', 'p-link'));
+  await page.getByRole('textbox', { name: 'Link' }).fill('https://example.org');
+  await page.keyboard.press('Escape');
+
+  await expect(page.getByRole('textbox')).toHaveCount(0);
+  expect((await savedProperties(page, 'r1'))['p-link']).toBe('https://example.org');
+});
+
+// research/22 §3: a 1px rgba(28, 19, 1, 0.11) line drawn as a background, no text-decoration.
+test('the link underline is a 1px background line', async ({ page }) => {
+  await mount(page, { comments: false });
+
+  for (const propertyId of ['p-link', 'p-mail', 'p-tel']) {
+    const look = await cell(page, 'r1', propertyId).getByRole('link').evaluate((el) => {
+      const style = getComputedStyle(el);
+
+      return { image: style.backgroundImage, size: style.backgroundSize, decoration: style.textDecorationLine };
+    });
+
+    expect(look).toEqual({ image: 'linear-gradient(rgba(28, 19, 1, 0.11), rgba(28, 19, 1, 0.11))', size: '100% 1px', decoration: 'none' });
+  }
+});
+
+test.describe('row page', () => {
+  test.beforeEach(async ({ page }) => {
+    await mount(page, { comments: true });
+    const row = page.locator('[data-blok-database-table-row][data-row-id="r1"]');
+
+    await row.hover();
+    await row.getByRole('button', { name: 'Open', exact: true }).click();
+    await expect(peek(page)).toBeVisible();
+  });
+
+  test('a click on the link follows it in a new tab and opens no editor', async ({ page }) => {
+    const hrefs = ['https://example.com/', 'mailto:test@example.com', 'tel:+15550100'];
+
+    for (const [index, propertyId] of ['p-link', 'p-mail', 'p-tel'].entries()) {
+      await peekValue(page, propertyId).getByRole('link').click();
+
+      expect(await follows(page)).toEqual(hrefs.slice(0, index + 1).map((href) => ({ href, target: '_blank', prevented: false })));
+      await expect(page.locator('[data-blok-database-cell-editor]')).toHaveCount(0);
+    }
+  });
+
+  test('a click beside the link opens the editor with the full value', async ({ page }) => {
+    const value = peekValue(page, 'p-link');
+
+    await value.hover();
+    const point = await value.evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      const textEnd = el.querySelector('a')?.getBoundingClientRect().right ?? box.left;
+      const pill = el.querySelector('[data-blok-database-drawer-prop-actions]')?.getBoundingClientRect();
+
+      return { x: (textEnd + (pill?.left ?? box.right)) / 2, y: box.top + box.height / 2 };
+    });
+
+    await page.mouse.click(point.x, point.y);
+
+    await expect(page.getByRole('textbox', { name: 'Link' })).toHaveValue('https://example.com');
+    expect(await follows(page)).toEqual([]);
+  });
+
+  test('hover shows Comment and Copy at the row end, no pencil and no fill', async ({ page }) => {
+    const value = peekValue(page, 'p-tel');
+    const copy = value.getByRole('button', { name: 'Copy to clipboard' });
+
+    await expect(copy).toBeHidden();
+    await value.hover();
+    await expect(value.getByRole('button', { name: 'Comment' })).toBeVisible();
+    await expect(copy).toBeVisible();
+    await expect(value.getByRole('button')).toHaveCount(2);
+    await expect(value).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+
+    const valueBox = await value.boundingBox();
+    const copyBox = await copy.boundingBox();
+
+    expect([copyBox?.width, copyBox?.height]).toEqual([24, 20]);
+    expect((copyBox?.x ?? 0) + (copyBox?.width ?? 0)).toBeGreaterThan((valueBox?.x ?? 0) + (valueBox?.width ?? 0) - 16);
+
+    await copy.click();
+    await expect(page.getByTestId('notification-message-text')).toHaveText('Copied property to clipboard');
+    expect(await page.evaluate(() => window.linkLog?.copied)).toEqual(['+1 555 0100']);
+
+    await value.getByRole('button', { name: 'Comment' }).click();
+    expect(await page.evaluate(() => window.linkLog?.comments)).toEqual([{ databaseId: 'db-1', rowId: 'r1', propertyId: 'p-tel' }]);
+    await expect(page.locator('[data-blok-database-cell-editor]')).toHaveCount(0);
+  });
+});
+
+// research/22 §3: on a card a link click follows the link; the card does not open.
+for (const type of ['board', 'gallery'] as const) {
+  test(`${type}: a click on a card's link follows it and does not open the card`, async ({ page }) => {
+    await mount(page, {
+      comments: false,
+      view: { id: 'v1', name: type, type, position: 'a0', groupBy: 'p-stage', sorts: [], filters: [], visibleProperties: [], properties: [{ id: 'p-link', visible: true }] },
+    });
+    const link = page.locator('[data-row-id="r1"]').getByRole('link', { name: 'https://example.com' });
+
+    await link.click();
+
+    expect(await follows(page)).toEqual([{ href: 'https://example.com/', target: '_blank', prevented: false }]);
+    await expect(peek(page)).toHaveCount(0);
+    await expect(page.locator('[data-blok-database-cell-editor]')).toHaveCount(0);
+  });
+}

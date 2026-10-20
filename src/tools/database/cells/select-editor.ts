@@ -221,6 +221,11 @@ class SelectEditor {
 
     this.setOptions([...this.options, option]);
     this.pick(option.id);
+    if (this.multi) {
+      // research/22 §13: the new option stays highlighted while the editor stays open.
+      this.activeIndex = this.options.findIndex((o) => o.id === option.id);
+      this.renderList();
+    }
   }
 
   private remove(id: string): void {
@@ -275,6 +280,9 @@ class SelectEditor {
         }
         if (target.kind === 'create') {
           this.create(target.label);
+        } else if (this.multi && this.query.trim() !== '' && this.selected.includes(target.id)) {
+          // research/22 §13: Enter on a typed, already selected option does nothing (no toggle-off).
+          return;
         } else {
           this.pick(target.id);
         }

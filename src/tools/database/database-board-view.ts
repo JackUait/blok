@@ -65,6 +65,7 @@ export interface BoardLane {
 const CARD_WIDTH: Record<CardSize, number> = { small: 220, medium: 260, large: 320 };
 /** The column's 8px padding on each side (research/07). */
 const COLUMN_PADDING = 16;
+const CELL_LINK = 'a[data-blok-database-cell-link]';
 
 /**
  * DOM rendering layer for the kanban board.
@@ -236,6 +237,10 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     const rowId = property?.closest('[data-blok-database-card]')?.getAttribute('data-row-id');
     const propertyId = property?.getAttribute('data-property-id');
 
+    // research/22 §3: a link on a card is followed; it does not edit.
+    if (target !== null && target.closest(CELL_LINK) !== null) {
+      return;
+    }
     if (this.readOnly || this.settings.onPropertyEdit === undefined || property === null || property === undefined
       || rowId === null || rowId === undefined || propertyId === null || propertyId === undefined) {
       return;

@@ -60,13 +60,15 @@ export interface CellContext {
    */
   relationScope?: (property: PropertyDefinition) => string;
   /**
-   * The table (research/16 §4): a plain click on a url, email or phone link
-   * follows it, and a url shows without its http(s) scheme. Elsewhere a plain
-   * click is left to the host, which edits the value.
+   * The table and the row page (research/16 §4, research/22 §3): a plain click
+   * on a url, email or phone link follows it. Elsewhere a plain click is left
+   * to the host, which edits the value.
    */
   followLinks?: boolean;
   /** The table (research/22 §4): an editor opens over its cell, not below it. */
   coverCell?: boolean;
+  /** The table (research/16 §4): a url shows without its http(s) scheme. */
+  shortUrls?: boolean;
   /** Date: the cell's stored reminder. The cell shows an alarm and the date in the accent. */
   reminder?: DateReminderOffset;
   /** The host's small map (`config.map.renderPlace`) for a place's hover card. Without it the card has no map. */

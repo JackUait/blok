@@ -330,6 +330,34 @@ test.describe('in-editor assistant', () => {
     }).toBe(true);
   });
 
+  test('a model that does not stream shows slots under the bar, then reveals the written block', async ({ page }) => {
+    await setup(page, [insertCall('Revealed line'), reply('Done.')], { hold: true });
+
+    await page.getByText('Second').click();
+    await page.keyboard.press(`${MOD}+j`);
+
+    const bar = page.getByRole('dialog', { name: 'Ask AI' });
+
+    await bar.getByRole('textbox').fill('Add a line');
+    await page.keyboard.press('Enter');
+    await expect.poll(() => page.evaluate(() => window.assistantPrompts?.length)).toBe(1);
+    // Blok cannot see where the edit lands, so it shows placeholder lines under the bar.
+    await expect(bar.locator('[data-blok-ai-slot]').first()).toBeVisible();
+
+    await page.evaluate(() => window.assistantRelease?.());
+
+    const written = page.locator(`#${HOLDER_ID} [data-blok-element]`).filter({ hasText: 'Revealed line' });
+
+    await expect(written).toBeVisible();
+    // The words replay over the committed block.
+    expect(await written.evaluate((holder) => holder.getAnimations({ subtree: true }).length)).toBeGreaterThan(0);
+    await expect(bar.locator('[data-blok-ai-slot]').first()).toBeHidden();
+
+    await expect.poll(() => page.evaluate(() => window.assistantPrompts?.length)).toBe(2);
+    await page.evaluate(() => window.assistantRelease?.());
+    await expect(bar.getByText('Done.')).toBeVisible();
+  });
+
   test('Discard removes what the assistant wrote', async ({ page }) => {
     await setup(page, [insertCall('Draft one'), insertCall('Draft two'), reply('Wrote two drafts.')]);
 

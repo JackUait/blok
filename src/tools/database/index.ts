@@ -3587,16 +3587,35 @@ export class DatabaseTool implements BlockTool {
       title: fileName.replace(/\.(csv|tsv|txt)$/i, ''),
     });
 
+    // The source keeps its title property: its backend already has it.
+    const oldTitle = source.model.getSchema().find((p) => p.type === 'title');
+    const newTitle = built.data.schema.find((p) => p.type === 'title');
+    const titleId = oldTitle?.id ?? newTitle?.id;
+    const remap = (id: string): string => (newTitle !== undefined && id === newTitle.id && titleId !== undefined ? titleId : id);
+    const schema = built.data.schema.map((p) => ({ ...p, id: remap(p.id) }));
+    const views = built.data.views.map((view) => ({ ...view, visibleProperties: view.visibleProperties.map(remap) }));
+    const rows = built.rows.map((row) => ({
+      ...row,
+      data: { ...row.data, properties: Object.fromEntries(Object.entries(row.data.properties).map(([id, value]) => [remap(id), value])) },
+    }));
+
     this.inOneStep(() => {
-      source.model.replaceDefinition({ schema: built.data.schema, views: built.data.views });
+      source.model.replaceDefinition({ schema, views });
       source.activeViewId = built.data.activeViewId;
       source.renameAsSource(built.data.title ?? '');
       // Before the rows: a change dispatched inside a row insert's sync window is dropped as an echo.
       source.block.dispatchChange();
-      for (const row of built.rows) {
+      for (const row of rows) {
         this.api.blocks.insertAt('database-row', row.data, { parentId: sourceId, position: 'end', id: row.id });
       }
     });
+    const renamed = schema.find((p) => p.id === oldTitle?.id && p.name !== oldTitle.name);
+
+    if (renamed !== undefined) void source.sync.syncUpdateProperty({ propertyId: renamed.id, changes: { name: renamed.name } });
+    for (const p of schema.filter((candidate) => candidate.id !== oldTitle?.id)) {
+      void source.sync.syncCreateProperty({ id: p.id, name: p.name, type: p.type, position: p.position, ...(p.config !== undefined ? { config: p.config } : {}) });
+    }
+    for (const row of rows) void source.sync.syncCreateRow({ id: row.id, properties: row.data.properties, position: row.data.position });
     this.paintLinkedTitle();
     this.rerenderView();
     this.api.notifier.show({ message: this.api.i18n.t('tools.database.csvImported', { count: built.rows.length }) });

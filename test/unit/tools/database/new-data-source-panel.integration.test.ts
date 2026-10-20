@@ -6,7 +6,7 @@ import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
 import type { API, OutputBlockData, OutputData } from '../../../../types';
-import type { DatabaseData, DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
+import type { DatabaseConfig, DatabaseData, DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -69,7 +69,7 @@ const twoSourceDoc = (): OutputBlockData[] => {
   ];
 };
 
-const make = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
+const make = async (blocks: OutputBlockData[], database: typeof DatabaseTool = DatabaseTool): Promise<TestEditor> => {
   if (holder === undefined) throw new Error('missing editor holder');
   let ready: TestEditor | undefined;
 
@@ -77,7 +77,7 @@ const make = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
     holder, dataModel: 'hierarchical',
     tools: {
       paragraph: Paragraph,
-      database: { class: DatabaseTool },
+      database: { class: database },
       'database-row': DatabaseRowTool,
     },
     data: { blocks },
@@ -226,6 +226,46 @@ describe('"New data source" side panel (research/23 §10, research/20 §1a)', ()
     expect((await dataOf(api, 'db'))?.schema).toEqual(parentSchema);
   });
 
+  it('"Import CSV" sends the new columns and rows to the source\'s backend, as "New" on that source does', async () => {
+    const adapter = {
+      // Never answers: a load would replace the source's schema mid-test.
+      loadDatabase: vi.fn(() => new Promise<never>(() => undefined)),
+      createRow: vi.fn(async (params: { id: string }) => ({ ...params })),
+      updateRow: vi.fn(async () => undefined),
+      moveRow: vi.fn(async () => undefined),
+      deleteRow: vi.fn(async () => undefined),
+      createProperty: vi.fn(async (params: { id: string }) => ({ ...params })),
+      updateProperty: vi.fn(async () => undefined),
+      deleteProperty: vi.fn(async () => undefined),
+      createView: vi.fn(async (params: { id: string }) => ({ ...params })),
+      updateView: vi.fn(async () => undefined),
+      deleteView: vi.fn(async () => undefined),
+    };
+
+    /** The backend belongs to the new source only. */
+    class SourceBackedDatabase extends DatabaseTool {
+      constructor(options: ConstructorParameters<typeof DatabaseTool>[0]) {
+        const own = options.block.id === 'db' || options.block.id === 'other';
+
+        super(own ? options : { ...options, config: { ...options.config, adapter: adapter as unknown as NonNullable<DatabaseConfig['adapter']> } });
+      }
+    }
+    const api = await make(pageDoc(), SourceBackedDatabase);
+
+    await newDataSourceFromAddView();
+    const [sourceId] = sources(api);
+
+    byTestId('database-new-source-csv')?.click();
+    await quiet();
+    await pickCsv('Name,Size\nAlpha,3\nBeta,5', 'stock.csv');
+    const rowIds = api.blocks.getChildren(sourceId).filter((b) => b.name === 'database-row').map((b) => b.id);
+    const size = (await dataOf(api, sourceId))?.schema.find((p) => p.name === 'Size');
+
+    expect(adapter.createRow.mock.calls.map(([params]) => params.id)).toEqual(rowIds);
+    expect(adapter.createProperty.mock.calls.map(([params]) => params.id)).toEqual([size?.id]);
+    expect(adapter.deleteProperty).not.toHaveBeenCalled();
+  });
+
   it('undo after "Import CSV" empties the source again; a second undo removes the source and its view', async () => {
     const api = await make(pageDoc());
 
@@ -308,6 +348,73 @@ describe('"New data source" side panel (research/23 §10, research/20 §1a)', ()
     expect(parent?.views.find((v) => v.id === parent.activeViewId)?.dataSourceId).toBe(sourceId);
     expect(shownArea().textContent).not.toContain('Other row');
     expect(api.blocks.getById('other')?.id).toBe('other');
+  });
+
+  const linkOther = async (): Promise<void> => {
+    await newDataSourceFromAddView();
+    byTestId('database-new-source-link')?.click();
+    await quiet();
+    byTestId('database-new-source-existing-other')?.click();
+    await quiet();
+  };
+
+  const otherRoot = (): HTMLElement => {
+    const found = holder?.querySelector<HTMLElement>('[data-blok-element][data-blok-id="other"]');
+
+    if (found === null || found === undefined) throw new Error('missing other database');
+
+    return found;
+  };
+
+  it('the other database still draws its own rows on the page after a view here shows it', async () => {
+    await make(pageDoc());
+    await linkOther();
+    const area = [...otherRoot().querySelectorAll<HTMLElement>('[data-blok-database-board-container]')]
+      .find((el) => el.closest('[data-blok-element]') === otherRoot());
+
+    expect(otherRoot().hidden).toBe(false);
+    expect(otherRoot().closest('[hidden]')).toBeNull();
+    expect(area?.textContent).toContain('Other row');
+  });
+
+  it('opening the other database\'s row from the view here keeps the row under that database', async () => {
+    const api = await make(pageDoc());
+
+    await linkOther();
+    const open = shownArea().querySelector<HTMLElement>('[data-row-id="o1"] [data-blok-database-table-open]');
+
+    expect(open).not.toBeNull();
+    open?.click();
+    await quiet();
+    expect(document.querySelector('[data-blok-database-drawer]')).not.toBeNull();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await quiet();
+
+    expect(api.blocks.getById('o1')?.parentId).toBe('other');
+    expect((await api.save()).blocks.find((b) => b.id === 'o1')?.parent).toBe('other');
+  });
+
+  it('a duplicate of this database keeps its view on the other database', async () => {
+    const api = await make(pageDoc());
+
+    await linkOther();
+    const internal = editor as unknown as {
+      module: {
+        blockManager: { blocks: Array<{ id: string }> };
+        dragManager: { duplicateBlocksInPlace: (block: unknown) => Promise<unknown[]> };
+      };
+    };
+    const block = internal.module.blockManager.blocks.find((b) => b.id === 'db');
+
+    if (block === undefined) throw new Error('no db block');
+    await internal.module.dragManager.duplicateBlocksInPlace(block);
+    await quiet();
+    const saved = (await api.save()).blocks;
+    const copy = saved.find((b) => b.type === 'database' && b.id !== 'db' && b.id !== 'other' && b.parent === undefined);
+
+    expect(copy).toBeDefined();
+    expect((copy?.data as DatabaseData).views.some((v) => v.dataSourceId === 'other')).toBe(true);
+    expect(saved.filter((b) => b.type === 'database' && (b.data as DatabaseData).title === 'Stock')).toHaveLength(1);
   });
 
   it('a view on another database shows its title read-only: typing there cannot rename it', async () => {

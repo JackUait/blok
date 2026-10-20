@@ -477,11 +477,20 @@ describe('New data source: a view bound to a second source in the same block', (
     expect(byTestId('database-settings-source')).toBeNull();
   });
 
-  it('a board view cannot move onto a second source: the source draws only table and list', async () => {
-    await make(doc('vboard', { views: [table('v1', 'a0'), { ...table('vboard', 'a1'), type: 'board', name: 'Board' }, table('vb', 'a2', { dataSourceId: 'src-b' })] }));
+  it('a gallery view moves onto a second source: a second source draws every layout', async () => {
+    const api = await make(doc('vgallery', { views: [table('v1', 'a0'), { ...table('vgallery', 'a1'), type: 'gallery', name: 'Gallery' }, table('vb', 'a2', { dataSourceId: 'src-b' })] }));
+
     await openSettings();
 
-    expect((byTestId('database-settings-source') as HTMLButtonElement | null)?.disabled).toBe(true);
+    expect((byTestId('database-settings-source') as HTMLButtonElement | null)?.disabled).toBe(false);
+    byTestId('database-settings-source')?.click();
+    await quiet();
+    byTestId('database-source-option-src-b')?.click();
+    await quiet();
+
+    expect((await dataOf(api, 'db'))?.views.find((v) => v.id === 'vgallery')?.dataSourceId).toBe('src-b');
+    expect(shownArea().textContent).toContain('Source row');
+    expect(shownArea().textContent).not.toContain('Parent row');
   });
 
   it('deleting the only view on a source keeps the source and its rows, still reachable from "Source"', async () => {

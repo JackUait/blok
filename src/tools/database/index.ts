@@ -3717,7 +3717,7 @@ export class DatabaseTool implements BlockTool {
   /** This block's own data, then its second sources: the child database blocks, whether a view shows them or not. */
   private dataSourceChoices(): DataSourceChoice[] {
     const type = this.model.getView(this.activeViewId)?.type;
-    const fits = type !== undefined && SOURCE_LAYOUTS.includes(type);
+    const fits = type !== undefined && RENDERED_LAYOUTS.includes(type);
     const titleOf = (tool: DatabaseTool): string => tool.titleElement?.textContent ?? tool.title;
     const sources = this.api.blocks.getChildren(this.dataId).flatMap((child): DataSourceChoice[] => {
       const tool = child.name === 'database' ? this.dashboardOwner(child.id) : undefined;

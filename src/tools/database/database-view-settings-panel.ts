@@ -138,7 +138,7 @@ export interface DataSourceChoice {
   id: string;
   /** Empty when untitled. */
   title: string;
-  /** A second source draws only some layouts: false when it cannot draw this view. */
+  /** False when a second source cannot draw this view's layout (a dashboard). */
   fits: boolean;
 }
 

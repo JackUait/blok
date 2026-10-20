@@ -274,6 +274,8 @@ describe('New data source between peers', { timeout: 60000 }, () => {
     expect(ownTabs(b)).toHaveLength(3);
     expect(holder?.closest('[hidden]')).not.toBeNull();
     expect(holder?.querySelector('[data-blok-database-tab-bar], [data-blok-database-title]')).toBeNull();
+    // Only the peer that clicked gets the "New data source" panel.
+    expect(document.querySelectorAll('[data-blok-testid="database-new-source-panel"]')).toHaveLength(1);
   });
 
   it('a view moved back to the database\'s own data shows its rows on a peer too', async () => {

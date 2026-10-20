@@ -140,6 +140,8 @@ export interface DataSourceChoice {
   title: string;
   /** False when a second source cannot draw this view's layout (a dashboard). */
   fits: boolean;
+  /** Another database: the page it sits on. */
+  parent?: string;
 }
 
 /** View settings "Source" (research/23 §10, 125-source-menu.png). */
@@ -149,6 +151,8 @@ export interface DataSourceSettings {
   /** The id of the source the view shows. */
   current: () => string;
   pick: (id: string) => void;
+  /** Other databases of the document, under "Existing data sources". They do not make Source active. */
+  existing?: () => DataSourceChoice[];
 }
 
 export interface AutofillPanelSettings {
@@ -323,8 +327,10 @@ export class ViewSettingsPages {
         const sources = this.ctx.dataSources;
         const choices = sources?.list() ?? [];
 
+        const sourceGroupAt = rows.length;
+
         if (sources !== undefined && choices.length > 0) {
-          const current = choices.find((choice) => choice.id === sources.current());
+          const current = choices.find((choice) => choice.id === sources.current()) ?? sources.existing?.().find((choice) => choice.id === sources.current());
           const others = choices.filter((choice) => choice !== current && choice.fits);
 
           rows.push(panelRow({
@@ -373,6 +379,8 @@ export class ViewSettingsPages {
             onClick: () => panel.push(this.moreSettings()),
           }));
         }
+        // research/09 §1: Source, Automations, AI Autofill and More settings sit under "Data source settings".
+        if (rows.length > sourceGroupAt) rows.splice(sourceGroupAt, 0, panelLabel(this.t('settingsDataSourceSettings')));
         for (const action of this.ctx.actions?.() ?? []) {
           const page = action.page;
 
@@ -447,18 +455,24 @@ export class ViewSettingsPages {
       const matches = sources.list()
         .filter((choice) => choice.id !== sources.current() && choice.fits)
         .filter((choice) => this.sourceName(choice).toLowerCase().includes(query));
-      const rows: HTMLElement[] = matches.length === 0 ? [] : [panelLabel(this.t('linkedSuggested'))];
-
-      matches.forEach((choice) => rows.push(panelRow({
+      const existing = (sources.existing?.() ?? [])
+        .filter((choice) => choice.id !== sources.current() && choice.fits)
+        .filter((choice) => this.sourceName(choice).toLowerCase().includes(query));
+      const row = (choice: DataSourceChoice): HTMLElement => panelRow({
         label: this.sourceName(choice),
+        ...(choice.parent === undefined ? {} : { description: choice.parent }),
         testId: `database-source-option-${choice.id}`,
         icon: IconDatabase,
         onClick: () => {
           panel.close();
           sources.pick(choice.id);
         },
-      })));
-      list.replaceChildren(...rows);
+      });
+
+      list.replaceChildren(
+        ...(matches.length === 0 ? [] : [panelLabel(this.t('linkedSuggested')), ...matches.map(row)]),
+        ...(existing.length === 0 ? [] : [panelLabel(this.t('layoutExistingDataSources')), ...existing.map(row)])
+      );
     };
 
     return {

@@ -237,4 +237,94 @@ test.describe('database New data source', () => {
 
     expect(views.views.find((view) => view.id === 'v0')?.dataSourceId).toBeUndefined();
   });
+
+  test.describe('the "New data source" panel', () => {
+    const withOther: OutputBlockData[] = [
+      ...initial,
+      {
+        id: 'db-2', type: 'database', content: ['o1'],
+        data: {
+          title: 'Stock',
+          schema: [{ id: 'o-title', name: 'Name', type: 'title', position: 'a0' }],
+          views: [{ id: 'ov', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+          activeViewId: 'ov',
+        },
+      },
+      { id: 'o1', type: 'database-row', parent: 'db-2', data: { position: 'a0', properties: { 'o-title': 'Omega' } } },
+    ];
+    const firstGrid = (page: Page) => page.locator('[data-blok-id="db-1"]').getByRole('grid').first();
+    const panel = (page: Page) => page.getByTestId('database-new-source-panel');
+
+    const openPanel = async (page: Page): Promise<void> => {
+      await openList(page);
+      await page.getByRole('option', { name: 'New data source' }).click();
+      await expect(panel(page)).toBeVisible();
+    };
+
+    test('opens with the measured rows, and Import CSV fills the new source', async ({ page }) => {
+      await mount(page, initial);
+      await openPanel(page);
+
+      await expect(page.getByTestId('database-new-source-search')).toHaveAttribute('placeholder', 'Search…');
+      await expect(page.getByTestId('database-new-source-search')).toBeFocused();
+      await expect(panel(page)).toContainText('New empty data source');
+      await expect(panel(page)).not.toContainText('Suggested');
+
+      const chooser = page.waitForEvent('filechooser');
+
+      await page.getByTestId('database-new-source-csv').click();
+      await (await chooser).setFiles({ name: 'stock.csv', mimeType: 'text/csv', buffer: Buffer.from('Name,Size\nNut,3\nBolt,5') });
+
+      await expect(grid(page)).toContainText('Nut');
+      await expect(grid(page)).toContainText('Bolt');
+      await expect(grid(page)).not.toContainText('Alpha');
+      await expect(grid(page).getByRole('columnheader')).toHaveCount(2);
+      await expect(page.locator('[data-blok-database-source-title]')).toHaveText('stock');
+      const saved = await save(page);
+      const source = saved.find((block) => block.type === 'database' && block.parent === 'db-1');
+
+      expect(saved.filter((block) => block.type === 'database-row' && block.parent === source?.id)).toHaveLength(2);
+    });
+
+    test('New empty data source closes it and keeps the empty source', async ({ page }) => {
+      await mount(page, initial);
+      await openPanel(page);
+      await page.getByTestId('database-new-source-empty').click();
+
+      await expect(panel(page)).toBeHidden();
+      await expect(grid(page).getByRole('columnheader')).toHaveCount(1);
+      expect((await save(page)).filter((block) => block.type === 'database' && block.parent === 'db-1')).toHaveLength(1);
+    });
+
+    test('Link to existing data source puts the new view on another database of the page', async ({ page }) => {
+      await page.evaluate(async ({ data }) => {
+        if (window.blokInstance) {
+          await window.blokInstance.destroy?.();
+          window.blokInstance = undefined;
+        }
+        document.getElementById('blok')?.remove();
+        const holder = document.createElement('div');
+
+        holder.id = 'blok';
+        holder.style.cssText = 'max-width:520px;margin:40px auto 0';
+        document.body.appendChild(holder);
+        window.blokInstance = new window.Blok({ holder, data: { blocks: data } });
+        await window.blokInstance.isReady;
+      }, { data: withOther });
+      await expect(firstGrid(page)).toContainText('Alpha');
+      await openPanel(page);
+      await page.getByTestId('database-new-source-link').click();
+      await expect(panel(page)).toContainText('Existing data sources');
+      await page.getByTestId('database-new-source-existing-db-2').click();
+
+      await expect(panel(page)).toBeHidden();
+      await expect(firstGrid(page)).toContainText('Omega');
+      await expect(firstGrid(page)).not.toContainText('Alpha');
+      const saved = await save(page);
+      const views = saved.find((block) => block.id === 'db-1')?.data as { views: Array<{ dataSourceId?: string }>; activeViewId: string };
+
+      expect(saved.filter((block) => block.type === 'database' && block.parent === 'db-1')).toHaveLength(0);
+      expect(views.views.some((view) => view.dataSourceId === 'db-2')).toBe(true);
+    });
+  });
 });

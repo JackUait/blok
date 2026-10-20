@@ -43,6 +43,7 @@ import { DatabasePropertyMenu } from './database-property-menu';
 import { propertyTypeMeta } from './database-property-types';
 import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
 import { openLinkedAddView, openLinkedPicker } from './database-linked-picker';
+import { openNewSourcePanel } from './database-new-source-panel';
 import type { LinkedPickerSource } from './database-linked-picker';
 import { newRowValues, rowOrderKey, sortRows } from './database-query';
 import { openDatabaseConfirm } from './database-confirm-dialog';
@@ -1017,8 +1018,11 @@ export class DatabaseTool implements BlockTool {
 
     el.setAttribute('data-placeholder', placeholder);
     if (el.hasAttribute('aria-placeholder')) el.setAttribute('aria-placeholder', placeholder);
-    if (!source.titleEditable()) el.removeAttribute('contenteditable');
-    el.addEventListener('input', () => source.renameAsSource(el.textContent ?? ''));
+    // Another database's name is renamed there, never from a view here.
+    const ownSource = this.api.blocks.getById(source.block.id)?.parentId === this.block.id;
+
+    if (!ownSource || !source.titleEditable()) el.removeAttribute('contenteditable');
+    if (ownSource) el.addEventListener('input', () => source.renameAsSource(el.textContent ?? ''));
 
     return el;
   }
@@ -3494,8 +3498,8 @@ export class DatabaseTool implements BlockTool {
    * title property, and a Table view of this block bound to it, selected.
    * One undo step removes both.
    */
-  private addDataSource(): void {
-    if (this.readOnly || this.linked || this.structureLocked()) return;
+  private addDataSource(): { sourceId: string; viewId: string } | undefined {
+    if (this.readOnly || this.linked || this.structureLocked()) return undefined;
     const sourceId = nanoid();
     const sourceView: DatabaseViewConfig = {
       id: nanoid(), name: DATABASE_DEFAULT_TEXT.viewTypeTable, type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [],
@@ -3517,6 +3521,103 @@ export class DatabaseTool implements BlockTool {
     void this.sync.syncCreateView(structuredClone({ ...view, dataSourceId: sourceId }));
     this.mountRows();
     this.switchView(view.id);
+
+    return { sourceId, viewId: view.id };
+  }
+
+  /**
+   * The menu's "New data source": the source and tab come at once, then the
+   * panel on the new tab (research/23 §10). Only a click opens it, so undo,
+   * redo and peers never do. Closing it keeps the empty source (UNMEASURED).
+   */
+  private newDataSourceWithPanel(): void {
+    const made = this.addDataSource();
+
+    if (made === undefined) return;
+    const anchor = this.element?.querySelector<HTMLElement>(`[data-blok-database-tab][data-view-id="${CSS.escape(made.viewId)}"]`)
+      ?? this.titleRowElement ?? this.element;
+
+    if (anchor === null) return;
+    this.sourcePicker?.close();
+    const panel = openNewSourcePanel({
+      anchor,
+      t: (key, vars) => this.api.i18n.t(key, vars),
+      sources: () => this.linkableSources(),
+      importCsv: () => this.pickCsvFile((file) => this.importCsvIntoSource(made.sourceId, file.text, file.name)),
+      linkExisting: (id) => this.linkNewSourceView(made, id),
+      onClose: () => {
+        if (this.sourcePicker === panel) this.sourcePicker = null;
+      },
+    });
+
+    this.sourcePicker = panel;
+  }
+
+  /** Other databases of the document a view here may show: never this block, its own sources or a linked view. */
+  private linkableSources(): LinkedPickerSource[] {
+    const own = new Set(this.api.blocks.getChildren(this.block.id).map((child) => child.id));
+
+    return this.pickerSources().filter((source) => !own.has(source.id) && this.dashboardOwner(source.id) !== undefined);
+  }
+
+  /** "Existing data sources" in View settings "Source". */
+  private existingSources(): DataSourceChoice[] {
+    const type = this.model.getView(this.activeViewId)?.type;
+    const fits = type !== undefined && RENDERED_LAYOUTS.includes(type);
+
+    return this.linkableSources().map((source) => ({ id: source.id, title: source.title, parent: source.parent, fits }));
+  }
+
+  /** "Import CSV" from the panel: the new source takes the file's columns, title and rows. One undo empties it again. */
+  private importCsvIntoSource(sourceId: string, text: string, fileName: string): void {
+    const source = this.dashboardOwner(sourceId);
+
+    if (this.readOnly || source === undefined || source === this || source.readOnly) return;
+    const table = parseCsv(text);
+
+    if (table.length === 0) {
+      this.api.notifier.show({ message: this.api.i18n.t('tools.database.csvEmpty') });
+
+      return;
+    }
+    const built = csvDatabaseBlocks(table, {
+      newId: () => nanoid(),
+      untitled: this.api.i18n.t('tools.database.csvUntitledColumn'),
+      viewName: DATABASE_DEFAULT_TEXT.viewTypeTable,
+      title: fileName.replace(/\.(csv|tsv|txt)$/i, ''),
+    });
+
+    this.inOneStep(() => {
+      source.model.replaceDefinition({ schema: built.data.schema, views: built.data.views });
+      source.activeViewId = built.data.activeViewId;
+      source.renameAsSource(built.data.title ?? '');
+      // Before the rows: a change dispatched inside a row insert's sync window is dropped as an echo.
+      source.block.dispatchChange();
+      for (const row of built.rows) {
+        this.api.blocks.insertAt('database-row', row.data, { parentId: sourceId, position: 'end', id: row.id });
+      }
+    });
+    this.paintLinkedTitle();
+    this.rerenderView();
+    this.api.notifier.show({ message: this.api.i18n.t('tools.database.csvImported', { count: built.rows.length }) });
+  }
+
+  /** "Link to existing data source": the new view shows that database, and the empty source it got goes. */
+  private linkNewSourceView(made: { sourceId: string; viewId: string }, databaseId: string): void {
+    if (this.readOnly || this.structureLocked() || this.model.getView(made.viewId) === undefined) return;
+    if (this.dashboardOwner(databaseId) === undefined) return;
+    const index = this.api.blocks.getBlockIndex(made.sourceId);
+
+    this.inOneStep(() => {
+      this.model.updateView(made.viewId, { dataSourceId: databaseId });
+      this.block.dispatchChange();
+      if (index !== undefined) void this.api.blocks.delete(index, false);
+    });
+    void this.sync.syncUpdateView({ viewId: made.viewId, changes: { dataSourceId: databaseId } });
+    this.mountRows();
+    this.switchView(made.viewId);
+    this.paintLinkedTitle();
+    this.controls.refresh();
   }
 
   /** research 20 §2b: after the new tab shows, pick the source, then a fresh view or one to copy into it. */
@@ -3750,7 +3851,7 @@ export class DatabaseTool implements BlockTool {
       dataSourceTitlesHidden: this.dataSourceTitlesHidden,
       ...(this.readOnly || this.structureLocked() ? {} : { onDataSourceTitlesToggle: () => this.toggleDataSourceTitles() }),
       // The bar hides it while read-only or locked; it flips in place (setReadOnly), so this is not gated here.
-      ...(this.linked ? {} : { onNewDataSource: () => this.addDataSource() }),
+      ...(this.linked ? {} : { onNewDataSource: () => this.newDataSourceWithPanel() }),
       api: this.api,
       // A locked database keeps its views: no add, rename, delete or reorder.
       readOnly: this.readOnly || this.structureLocked(),
@@ -3895,7 +3996,7 @@ export class DatabaseTool implements BlockTool {
    */
   private pickDataSource(id: string): void {
     const view = this.model.getView(this.activeViewId);
-    const choice = this.dataSourceChoices().find((option) => option.id === id);
+    const choice = [...this.dataSourceChoices(), ...this.existingSources()].find((option) => option.id === id);
 
     if (view === undefined || choice === undefined || !choice.fits || id === this.activeSource().dataId) return;
     this.updateActiveView({ dataSourceId: id === this.dataId ? undefined : id });
@@ -5180,6 +5281,7 @@ export class DatabaseTool implements BlockTool {
           list: () => this.dataSourceChoices(),
           current: () => data().dataId,
           pick: (id: string) => this.pickDataSource(id),
+          existing: () => this.existingSources(),
         },
       } : {}),
       newRow: () => {

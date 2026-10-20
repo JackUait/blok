@@ -1,0 +1,395 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { Blok } from '../../../../src/blok';
+import { Paragraph } from '../../../../src/tools/paragraph';
+import { DatabaseTool } from '../../../../src/tools/database';
+import { DatabaseRowTool } from '../../../../src/tools/database-row';
+import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
+import type { API, OutputBlockData, OutputData } from '../../../../types';
+import type { DatabaseData, DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
+
+interface TestEditor {
+  isReady: Promise<unknown>;
+  save(): Promise<OutputData>;
+  destroy(): void;
+  blocks: API['blocks'];
+  history: API['history'];
+}
+
+let editor: Blok | undefined;
+let holder: HTMLDivElement | undefined;
+
+const quiet = async (): Promise<void> => {
+  await new Promise<void>((resolve) => { setTimeout(resolve, 0); });
+  for (let frame = 0; frame < 3; frame++) {
+    await new Promise<void>((resolve) => { requestAnimationFrame(() => resolve()); });
+  }
+  await new Promise<void>((resolve) => { setTimeout(resolve, 0); });
+};
+
+const table = (id: string, position: string, extra: Partial<DatabaseViewConfig> = {}): DatabaseViewConfig => ({
+  id, name: 'Table', type: 'table', position, filters: [], sorts: [], visibleProperties: [], ...extra,
+});
+
+const parentSchema: PropertyDefinition[] = [
+  { id: 't', name: 'Name', type: 'title', position: 'a0' },
+  { id: 'notes', name: 'Notes', type: 'text', position: 'a1' },
+];
+
+const otherSchema: PropertyDefinition[] = [
+  { id: 'ot', name: 'Name', type: 'title', position: 'a0' },
+  { id: 'qty', name: 'Qty', type: 'number', position: 'a1' },
+];
+
+/** "db" and, below it on the page, a second database "other". */
+const pageDoc = (): OutputBlockData[] => [
+  {
+    id: 'db', type: 'database', content: ['r1'],
+    data: { title: 'Projects', schema: parentSchema, views: [table('v1', 'a0'), table('v2', 'a1')], activeViewId: 'v1' },
+  },
+  { id: 'r1', type: 'database-row', parent: 'db', data: { properties: { t: 'Parent row', notes: 'n' }, position: 'a0' } },
+  {
+    id: 'other', type: 'database', content: ['o1'],
+    data: { title: 'Stock', schema: otherSchema, views: [table('ov', 'a0')], activeViewId: 'ov' },
+  },
+  { id: 'o1', type: 'database-row', parent: 'other', data: { properties: { ot: 'Other row', qty: 7 }, position: 'a0' } },
+];
+
+/** pageDoc, with a second source "src-b" inside "db", so Source is active (research/23 §10). */
+const twoSourceDoc = (): OutputBlockData[] => {
+  const [db, ...rest] = pageDoc();
+
+  return [
+    { ...db, content: ['r1', 'src-b'], data: { ...db.data, views: [...(db.data as DatabaseData).views, table('vb', 'a2', { dataSourceId: 'src-b' })] } },
+    ...rest,
+    {
+      id: 'src-b', type: 'database', parent: 'db',
+      data: { title: 'Src B', schema: [{ id: 'bt', name: 'Name', type: 'title', position: 'a0' }], views: [table('bv', 'a0')], activeViewId: 'bv' },
+    },
+  ];
+};
+
+const make = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
+  if (holder === undefined) throw new Error('missing editor holder');
+  let ready: TestEditor | undefined;
+
+  editor = new Blok({
+    holder, dataModel: 'hierarchical',
+    tools: {
+      paragraph: Paragraph,
+      database: { class: DatabaseTool },
+      'database-row': DatabaseRowTool,
+    },
+    data: { blocks },
+    onReady: (api) => { ready = api; },
+  });
+  await editor.isReady;
+  await quiet();
+  if (ready === undefined) throw new Error('editor did not expose its ready API');
+
+  return ready;
+};
+
+const parentRoot = (): HTMLElement => {
+  const found = holder?.querySelector<HTMLElement>('[data-blok-element][data-blok-id="db"]');
+
+  if (found === null || found === undefined) throw new Error('missing parent database');
+
+  return found;
+};
+
+const own = (selector: string): HTMLElement => {
+  const root = parentRoot();
+  const found = [...root.querySelectorAll<HTMLElement>(selector)].find((el) => el.closest('[data-blok-element]') === root);
+
+  if (found === undefined) throw new Error('missing ' + selector);
+
+  return found;
+};
+
+const shownArea = (): HTMLElement => own('[data-blok-database-board-container]');
+
+const byTestId = (id: string): HTMLElement | null => document.querySelector<HTMLElement>(`[data-blok-testid="${id}"]`);
+
+const panel = (): HTMLElement | null => byTestId('database-new-source-panel');
+
+const sources = (api: TestEditor): string[] => api.blocks.getChildren('db').filter((b) => b.name === 'database').map((b) => b.id);
+
+const dataOf = async (api: TestEditor, id: string): Promise<DatabaseData | undefined> =>
+  (await api.save()).blocks.find((b) => b.id === id)?.data as DatabaseData | undefined;
+
+const stopCapturing = (): void => {
+  (editor as unknown as { module: { yjsManager: { stopCapturing: () => void } } }).module.yjsManager.stopCapturing();
+};
+
+const newDataSourceFromAddView = async (): Promise<void> => {
+  own('[data-blok-database-add-view]').click();
+  await quiet();
+  const item = document.querySelector<HTMLElement>('[data-blok-database-view-new-source]');
+
+  if (item === null) throw new Error('no "New data source" in the add-view menu');
+  item.click();
+  await quiet();
+};
+
+const pickCsv = async (text: string, name: string): Promise<void> => {
+  const input = document.querySelector<HTMLInputElement>('[data-blok-database-csv-input]');
+
+  if (input === null) throw new Error('no file input');
+  Object.defineProperty(input, 'files', { value: [new File([text], name, { type: 'text/csv' })] });
+  input.dispatchEvent(new Event('change'));
+  await quiet();
+};
+
+const rowLabels = (): string[] => [...(panel()?.querySelectorAll<HTMLElement>('[data-blok-testid]') ?? [])]
+  .map((el) => el.getAttribute('data-blok-testid') ?? '');
+
+describe('"New data source" side panel (research/23 §10, research/20 §1a)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    holder = document.createElement('div');
+    document.body.appendChild(holder);
+  });
+
+  afterEach(() => {
+    editor?.destroy();
+    editor = undefined;
+    holder?.remove();
+    holder = undefined;
+    PopoverRegistry.resetForTests();
+    vi.restoreAllMocks();
+  });
+
+  it('opens on the new tab after the source is made, with the measured rows in order', async () => {
+    const api = await make(pageDoc());
+
+    await newDataSourceFromAddView();
+
+    expect(sources(api)).toHaveLength(1);
+    expect(panel()).not.toBeNull();
+    expect(panel()?.textContent).toContain('New data source');
+    expect(byTestId('database-new-source-search')?.getAttribute('placeholder')).toBe('Search…');
+    expect(rowLabels().filter((id) => id.startsWith('database-new-source-') && id !== 'database-new-source-panel' && id !== 'database-new-source-search'))
+      .toEqual(['database-new-source-empty', 'database-new-source-csv', 'database-new-source-link']);
+    // Blok has no database templates and no database-setup AI lever: no "Suggested", no prompt field.
+    expect(panel()?.textContent).not.toContain('Suggested');
+    expect(panel()?.querySelectorAll('input')).toHaveLength(1);
+  });
+
+  it('"New empty data source" closes the panel and keeps the empty source', async () => {
+    const api = await make(pageDoc());
+
+    await newDataSourceFromAddView();
+    byTestId('database-new-source-empty')?.click();
+    await quiet();
+
+    expect(panel()).toBeNull();
+    expect(sources(api)).toHaveLength(1);
+    expect((await dataOf(api, 'db'))?.views.some((v) => v.dataSourceId === sources(api)[0])).toBe(true);
+  });
+
+  it('the search narrows the rows by name', async () => {
+    await make(pageDoc());
+    await newDataSourceFromAddView();
+    const search = byTestId('database-new-source-search');
+
+    if (!(search instanceof HTMLInputElement)) throw new Error('no search');
+    search.value = 'csv';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+    await quiet();
+
+    expect(byTestId('database-new-source-csv')).not.toBeNull();
+    expect(byTestId('database-new-source-empty')).toBeNull();
+    expect(byTestId('database-new-source-link')).toBeNull();
+  });
+
+  it('"Import CSV" fills the new source with the file\'s columns and rows; the view stays on it', async () => {
+    const api = await make(pageDoc());
+
+    await newDataSourceFromAddView();
+    const [sourceId] = sources(api);
+
+    byTestId('database-new-source-csv')?.click();
+    await quiet();
+    await pickCsv('Name,Size\nAlpha,3\nBeta,5', 'stock.csv');
+
+    expect(sources(api)).toEqual([sourceId]);
+    const source = await dataOf(api, sourceId);
+
+    expect(source?.schema.map((p) => p.name)).toEqual(['Name', 'Size']);
+    expect(source?.title).toBe('stock');
+    expect(api.blocks.getChildren(sourceId).filter((b) => b.name === 'database-row')).toHaveLength(2);
+    expect(shownArea().textContent).toContain('Alpha');
+    expect(shownArea().textContent).toContain('Beta');
+    expect(shownArea().textContent).not.toContain('Parent row');
+    // The holder's own data is untouched.
+    expect((await dataOf(api, 'db'))?.schema).toEqual(parentSchema);
+  });
+
+  it('undo after "Import CSV" empties the source again; a second undo removes the source and its view', async () => {
+    const api = await make(pageDoc());
+
+    stopCapturing();
+    await newDataSourceFromAddView();
+    stopCapturing();
+    const [sourceId] = sources(api);
+
+    byTestId('database-new-source-csv')?.click();
+    await quiet();
+    await pickCsv('Name,Size\nAlpha,3', 'stock.csv');
+    stopCapturing();
+
+    api.history.undo();
+    await quiet();
+    expect(sources(api)).toEqual([sourceId]);
+    expect(api.blocks.getChildren(sourceId).filter((b) => b.name === 'database-row')).toHaveLength(0);
+    expect((await dataOf(api, sourceId))?.schema.map((p) => p.type)).toEqual(['title']);
+
+    api.history.undo();
+    await quiet();
+    expect(sources(api)).toHaveLength(0);
+    expect((await dataOf(api, 'db'))?.views.some((v) => v.dataSourceId !== undefined)).toBe(false);
+  });
+
+  it('"Link to existing data source" lists the page\'s other databases, not this one or its own source', async () => {
+    const api = await make(pageDoc());
+
+    await newDataSourceFromAddView();
+    byTestId('database-new-source-link')?.click();
+    await quiet();
+
+    expect(panel()?.textContent).toContain('Link to existing data source');
+    expect(panel()?.textContent).toContain('Existing data sources');
+    expect(byTestId('database-new-source-existing-other')?.textContent).toContain('Stock');
+    expect(byTestId('database-new-source-existing-db')).toBeNull();
+    expect(byTestId(`database-new-source-existing-${sources(api)[0]}`)).toBeNull();
+  });
+
+  it('picking an existing database puts the new view on it and drops the empty source', async () => {
+    const api = await make(pageDoc());
+
+    await newDataSourceFromAddView();
+    byTestId('database-new-source-link')?.click();
+    await quiet();
+    byTestId('database-new-source-existing-other')?.click();
+    await quiet();
+
+    expect(panel()).toBeNull();
+    expect(sources(api)).toHaveLength(0);
+    const parent = await dataOf(api, 'db');
+
+    expect(parent?.views.find((v) => v.id === parent.activeViewId)?.dataSourceId).toBe('other');
+    expect(shownArea().textContent).toContain('Other row');
+    expect(shownArea().textContent).not.toContain('Parent row');
+    // The other database stays where it was, with its own data.
+    expect((await dataOf(api, 'other'))?.schema).toEqual(otherSchema);
+    expect(api.blocks.getById('other')?.parentId ?? null).toBeNull();
+  });
+
+  it('undo after linking an existing database brings the empty source back under the view, in one step', async () => {
+    const api = await make(pageDoc());
+
+    stopCapturing();
+    await newDataSourceFromAddView();
+    stopCapturing();
+    const [sourceId] = sources(api);
+
+    byTestId('database-new-source-link')?.click();
+    await quiet();
+    byTestId('database-new-source-existing-other')?.click();
+    await quiet();
+    stopCapturing();
+    api.history.undo();
+    await quiet();
+
+    expect(sources(api)).toEqual([sourceId]);
+    const parent = await dataOf(api, 'db');
+
+    expect(parent?.views.find((v) => v.id === parent.activeViewId)?.dataSourceId).toBe(sourceId);
+    expect(shownArea().textContent).not.toContain('Other row');
+    expect(api.blocks.getById('other')?.id).toBe('other');
+  });
+
+  it('a view on another database shows its title read-only: typing there cannot rename it', async () => {
+    const api = await make(pageDoc());
+
+    await newDataSourceFromAddView();
+    byTestId('database-new-source-link')?.click();
+    await quiet();
+    byTestId('database-new-source-existing-other')?.click();
+    await quiet();
+    const title = own('[data-blok-database-source-title]');
+
+    expect(title.textContent).toBe('Stock');
+    expect(title.getAttribute('contenteditable')).toBeNull();
+    title.textContent = 'Renamed';
+    title.dispatchEvent(new Event('input', { bubbles: true }));
+    await quiet();
+
+    expect((await dataOf(api, 'other'))?.title).toBe('Stock');
+  });
+
+  it('undo and redo of "New data source" never open the panel', async () => {
+    const api = await make(pageDoc());
+
+    stopCapturing();
+    await newDataSourceFromAddView();
+    stopCapturing();
+    byTestId('database-new-source-empty')?.click();
+    await quiet();
+    api.history.undo();
+    await quiet();
+    api.history.redo();
+    await quiet();
+
+    expect(sources(api)).toHaveLength(1);
+    expect(panel()).toBeNull();
+  });
+});
+
+describe('View settings "Source": existing data sources and the "Data source settings" label (research/23 §10)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    holder = document.createElement('div');
+    document.body.appendChild(holder);
+  });
+
+  afterEach(() => {
+    editor?.destroy();
+    editor = undefined;
+    holder?.remove();
+    holder = undefined;
+    PopoverRegistry.resetForTests();
+    vi.restoreAllMocks();
+  });
+
+  const openSettings = async (): Promise<void> => {
+    own('[data-blok-testid="database-toolbar-settings"]').click();
+    await quiet();
+  };
+
+  it('labels the Source group "Data source settings", right before Source', async () => {
+    await make(pageDoc());
+    await openSettings();
+    const source = byTestId('database-settings-source');
+
+    expect(source?.previousElementSibling?.textContent).toBe('Data source settings');
+  });
+
+  it('the Source picker lists the page\'s other databases under "Existing data sources"; picking one shows its rows', async () => {
+    const api = await make(twoSourceDoc());
+
+    await openSettings();
+    byTestId('database-settings-source')?.click();
+    await quiet();
+    const option = byTestId('database-source-option-other');
+
+    expect(option?.textContent).toContain('Stock');
+    expect(option?.closest('[data-blok-database-panel]')?.textContent).toContain('Existing data sources');
+    option?.click();
+    await quiet();
+
+    expect((await dataOf(api, 'db'))?.views.find((v) => v.id === 'v1')?.dataSourceId).toBe('other');
+    expect(shownArea().textContent).toContain('Other row');
+  });
+});

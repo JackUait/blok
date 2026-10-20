@@ -3,7 +3,7 @@ import type { PopoverItemParams } from '../../../types/utils/popover/popover-ite
 import { IconCopy, IconPage, IconPencil, IconPlayerLoop, IconPlus, IconTrash } from '../../components/icons';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { onHover } from '../../components/utils/tooltip';
-import { resolveLocale } from './cells/date-format';
+import { resolveLocale, timeZones } from './cells/date-format';
 import { wallTime, zonedToEpoch } from './formula/dates';
 import { nextRun, repeatWeekdays, repeatZone } from './templates';
 import type { TemplateRepeat, TemplateRepeatFrequency } from './types';
@@ -151,19 +151,63 @@ const occurrenceText = (at: number, zone: string, c: CadenceContext): string => 
 const zoneOffset = (zone: string, c: CadenceContext): string =>
   new Intl.DateTimeFormat(c.locale, { timeZone: zone, timeZoneName: 'shortOffset' }).formatToParts(c.now()).find((part) => part.type === 'timeZoneName')?.value ?? zone;
 
+/** "Starting" reads Today / Tomorrow / "Nov 1" (shot 61 shows "Tomorrow"); another year adds it. */
+const dayText = (at: number, zone: string, c: CadenceContext): string => {
+  const today = wallTime(c.now().getTime(), zone);
+  const day = wallTime(at, zone);
+  const ahead = (Date.UTC(day.year, day.month - 1, day.day) - Date.UTC(today.year, today.month - 1, today.day)) / 86_400_000;
+
+  if (ahead === 0) return c.t('filterDateToday');
+  if (ahead === 1) return c.t('filterDateTomorrow');
+
+  return new Intl.DateTimeFormat(c.locale, { month: 'short', day: 'numeric', ...(day.year === today.year ? {} : { year: 'numeric' }), timeZone: zone }).format(at);
+};
+
+const ORDINAL_KEYS: Partial<Record<Intl.LDMLPluralRule, string>> = { one: 'One', two: 'Two', few: 'Few' };
+
+/** "1st", "2nd", "3rd", "4th": the locale's ordinal category picks the key. */
+const ordinalText = (day: number, c: CadenceContext): string =>
+  c.t(`templateRepeatOrdinal${ORDINAL_KEYS[new Intl.PluralRules(c.locale, { type: 'ordinal' }).select(day)] ?? 'Other'}`, { day });
+
+const daysInMonth = (year: number, month: number): number => new Date(Date.UTC(year, month, 0)).getUTCDate();
+
+/** A "Label  value ›" row of Edit cadence that opens a submenu. */
+const settingTitle = (name: string, label: string, valueEl: HTMLElement): HTMLElement => {
+  const line = el('span');
+
+  line.setAttribute('data-blok-database-template-cadence-setting', name);
+  line.append(el('span', 'data-blok-database-template-cadence-label', label), valueEl);
+
+  return line;
+};
+
+/** A field in a row's submenu. It owns its keys, so typing does not move the menu. */
+const fieldItem = (name: string, ...controls: Node[]): PopoverItemParams => {
+  const wrap = el('div', 'data-blok-database-template-cadence-field');
+
+  wrap.setAttribute('data-blok-database-template-cadence-field', name);
+  wrap.setAttribute('data-blok-keyboard-owner', '');
+  wrap.append(...controls);
+
+  return { type: PopoverItemType.Html, element: wrap, name: `template-repeat-${name}-field` };
+};
+
 /**
  * Notion's "Edit cadence" (research/21 shots 61, 64, 73): a draft that only
- * Save stores. At, Starting, Ending and Timezone open submenus in Notion that
- * were not measured, so At and Starting keep Blok's time and date fields and
- * Ending and Timezone only show their value.
+ * Save stores. At, Starting, Ending and Timezone are "Label  value ›" rows
+ * with submenus, as in shot 61. What Notion's submenus hold was not measured,
+ * so they hold Blok's controls: a time field, a date field, Never or a date,
+ * and a searchable zone list.
  */
-const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: CadenceContext): { panel: HTMLElement; next: HTMLElement } => {
+const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: CadenceContext): { panel: HTMLElement; settings: PopoverItemParams[]; next: HTMLElement } => {
   const { t } = c;
-  const zone = initial.timeZone === undefined ? c.viewerZone : repeatZone(initial);
+  // The Timezone submenu changes it.
+  const live = { zone: initial.timeZone === undefined ? c.viewerZone : repeatZone(initial) };
   // The repeat comes from the document: a start that does not parse opens as a preset would.
-  const draft: TemplateRepeat = Number.isNaN(Date.parse(initial.start)) ? { ...initial, start: tomorrowMidnight(c.now(), zone) } : { ...initial };
+  const draft: TemplateRepeat = Number.isNaN(Date.parse(initial.start)) ? { ...initial, start: tomorrowMidnight(c.now(), live.zone) } : { ...initial };
 
   if (repeatWeekdays({ frequency: 'weekly', weekdays: draft.weekdays }) === null) delete draft.weekdays;
+  if (typeof draft.end !== 'string' || Number.isNaN(Date.parse(draft.end))) delete draft.end;
   const panel = el('div', 'data-blok-database-template-cadence');
   const next = el('div', 'data-blok-database-template-cadence-next');
   const save = el('button', 'data-blok-database-template-cadence-save', t('templateRepeatSave'));
@@ -171,14 +215,30 @@ const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: Cade
   const every = el('input');
   const unit = el('select');
   const days = el('div', 'data-blok-database-template-cadence-days');
-  const startWall = wallTime(new Date(draft.start).getTime(), zone);
+  const ordinal = el('select', 'data-blok-database-template-cadence-ordinal');
+  const dayKind = el('select', 'data-blok-database-template-cadence-day-kind');
   const date = el('input');
   const time = el('input');
+  const endDate = el('input');
+  /** The whole last day counts: a run on it is still made. */
+  const endOfDay = (w: { year: number; month: number; day: number }): string =>
+    new Date(zonedToEpoch({ year: w.year, month: w.month, day: w.day, hour: 23, minute: 59, second: 59, ms: 999 }, live.zone)).toISOString();
+  const value = (): HTMLElement => el('span', 'data-blok-database-template-cadence-value');
+  const atValue = value();
+  const startValue = value();
+  const endValue = value();
+  const zoneValue = value();
   const longDay = new Intl.DateTimeFormat(c.locale, { weekday: 'long', timeZone: 'UTC' });
   const shortDay = new Intl.DateTimeFormat(c.locale, { weekday: 'short', timeZone: 'UTC' });
   // Jan 5 2026 was a Monday.
   const dayName = (format: Intl.DateTimeFormat, weekday: number): string => format.format(Date.UTC(2026, 0, 4 + weekday));
-  const shownDays = (): number[] => repeatWeekdays({ frequency: 'weekly', weekdays: draft.weekdays }) ?? [isoWeekday(new Date(draft.start).getTime(), zone)];
+  const shownDays = (): number[] => repeatWeekdays({ frequency: 'weekly', weekdays: draft.weekdays }) ?? [isoWeekday(new Date(draft.start).getTime(), live.zone)];
+  const startWall = (): ReturnType<typeof wallTime> => wallTime(new Date(draft.start).getTime(), live.zone);
+  const isoDay = (w: { year: number; month: number; day: number }): string => `${pad(w.year, 4)}-${pad(w.month)}-${pad(w.day)}`;
+  const setStart = (w: { year: number; month: number; day: number; hour: number; minute: number }): void => {
+    draft.start = new Date(zonedToEpoch({ ...w, second: 0, ms: 0 }, live.zone)).toISOString();
+    draft.timeZone = live.zone;
+  };
   const chips = Array.from({ length: 7 }, (_, i) => {
     const weekday = i + 1;
     const chip = el('button', undefined, chipLabel(dayName(shortDay, weekday)));
@@ -198,8 +258,12 @@ const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: Cade
 
     return chip;
   });
+  // Notion's months row (r21:233). Only "Day" is measured for its second list, so it has no other choice.
+  const monthDay = row('month-day', t('templateRepeatOnThe'), ordinal, dayKind);
   const refresh = (): void => {
     const count = draft.interval ?? 1;
+    const w = startWall();
+    const startAt = new Date(draft.start).getTime();
 
     FREQUENCIES.forEach((frequency, i) => {
       const option = unit.options[i];
@@ -207,27 +271,43 @@ const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: Cade
       if (option !== undefined) option.textContent = t(`templateRepeatUnit${UNIT_NAMES[frequency]}`, { count });
     });
     unit.value = draft.frequency;
+    days.remove();
+    monthDay.remove();
     if (draft.frequency === 'weekly') {
       const on = shownDays();
 
       chips.forEach((chip, i) => chip.setAttribute('aria-pressed', String(on.includes(i + 1))));
-      if (days.parentElement !== panel) everyRow.after(days);
-    } else {
-      days.remove();
+      everyRow.after(days);
+    } else if (draft.frequency === 'monthly') {
+      ordinal.value = String(w.day);
+      everyRow.after(monthDay);
     }
+    const fields: Array<[HTMLInputElement, string]> = [
+      [date, isoDay(w)],
+      [time, `${pad(w.hour)}:${pad(w.minute)}`],
+      [endDate, draft.end === undefined ? '' : isoDay(wallTime(Date.parse(draft.end), live.zone))],
+    ];
+
+    // Only on change: rewriting the field being typed in can reset the browser's date or time segment.
+    for (const [input, text] of fields) {
+      if (input.value !== text) input.value = text;
+    }
+    atValue.textContent = new Intl.DateTimeFormat(c.locale, { hour: 'numeric', minute: '2-digit', timeZone: live.zone }).format(startAt);
+    startValue.textContent = dayText(startAt, live.zone, c);
+    endValue.textContent = draft.end === undefined
+      ? t('templateRepeatNever')
+      : new Intl.DateTimeFormat(c.locale, { month: 'short', day: 'numeric', year: 'numeric', timeZone: live.zone }).format(Date.parse(draft.end));
+    zoneValue.textContent = zoneOffset(live.zone, c);
     const at = nextRun(draft, c.now());
 
-    next.replaceChildren(el('div', undefined, t('templateRepeatNextOccurrence')), el('div', undefined, at === null ? '' : occurrenceText(at, zone, c)));
+    next.replaceChildren(el('div', undefined, t('templateRepeatNextOccurrence')), el('div', undefined, at === null ? '' : occurrenceText(at, live.zone, c)));
   };
   const retime = (): void => {
     const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date.value);
     const h = /^(\d{2}):(\d{2})/.exec(time.value);
 
     if (d === null || h === null) return;
-    const ms = zonedToEpoch({ year: Number(d[1]), month: Number(d[2]), day: Number(d[3]), hour: Number(h[1]), minute: Number(h[2]), second: 0, ms: 0 }, zone);
-
-    draft.start = new Date(ms).toISOString();
-    draft.timeZone = zone;
+    setStart({ year: Number(d[1]), month: Number(d[2]), day: Number(d[3]), hour: Number(h[1]), minute: Number(h[2]) });
     refresh();
   };
 
@@ -276,34 +356,100 @@ const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: Cade
   });
   days.append(...chips);
 
+  ordinal.setAttribute('aria-label', t('templateRepeatOnThe'));
+  ordinal.append(...Array.from({ length: 31 }, (_, i) => {
+    const option = el('option', undefined, ordinalText(i + 1, c));
+
+    option.value = String(i + 1);
+
+    return option;
+  }));
+  // Monthly runs keep the start's day of the month, so the day moves the start: to the first such day on or after it.
+  ordinal.addEventListener('change', () => {
+    const day = Number(ordinal.value);
+    const w = startWall();
+
+    if (!Number.isInteger(day) || day === w.day) return;
+    const month = Array.from({ length: 13 }, (_, i) => new Date(Date.UTC(w.year, w.month - 1 + i, 1)))
+      .find((first, i) => day <= daysInMonth(first.getUTCFullYear(), first.getUTCMonth() + 1) && (i > 0 || day > w.day));
+
+    if (month === undefined) return;
+    setStart({ year: month.getUTCFullYear(), month: month.getUTCMonth() + 1, day, hour: w.hour, minute: w.minute });
+    refresh();
+  });
+  dayKind.setAttribute('aria-label', t('templateRepeatDayOfMonth'));
+  dayKind.append(el('option', undefined, t('templateRepeatDayOfMonth')));
+
   date.type = 'date';
-  date.value = `${pad(startWall.year, 4)}-${pad(startWall.month)}-${pad(startWall.day)}`;
   date.setAttribute('aria-label', t('templateRepeatStarting'));
   date.addEventListener('input', retime);
   time.type = 'time';
-  time.value = `${pad(startWall.hour)}:${pad(startWall.minute)}`;
   time.setAttribute('aria-label', t('templateRepeatAt'));
   time.addEventListener('input', retime);
+  endDate.type = 'date';
+  endDate.setAttribute('aria-label', t('templateRepeatEnding'));
+  endDate.addEventListener('input', () => {
+    const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(endDate.value);
 
-  const value = (text: string): HTMLElement => el('span', 'data-blok-database-template-cadence-value', text);
-  const end = typeof draft.end === 'string' && !Number.isNaN(Date.parse(draft.end))
-    ? new Intl.DateTimeFormat(c.locale, { month: 'short', day: 'numeric', year: 'numeric', timeZone: zone }).format(Date.parse(draft.end))
-    : t('templateRepeatNever');
+    if (d === null) return;
+    draft.end = endOfDay({ year: Number(d[1]), month: Number(d[2]), day: Number(d[3]) });
+    refresh();
+  });
+
+  const zones = timeZones();
+  const zoneItem = (id: string): PopoverItemParams => {
+    const city = (id.split('/').pop() ?? id).replace(/_/g, ' ');
+    const titleEl = el('span', 'data-blok-database-template-cadence-zone', city);
+
+    titleEl.append(el('span', 'data-blok-database-template-cadence-zone-offset', zoneOffset(id, c)));
+
+    return {
+      name: `template-repeat-zone-${id}`,
+      title: city,
+      titleEl,
+      searchTerms: [id],
+      isActive: () => live.zone === id,
+      onActivate: () => {
+        // A new zone keeps the start's wall time and the end's last day, and moves the instants.
+        const w = startWall();
+        const endDay = draft.end === undefined ? undefined : wallTime(Date.parse(draft.end), live.zone);
+
+        live.zone = id;
+        setStart(w);
+        if (endDay !== undefined) draft.end = endOfDay(endDay);
+        refresh();
+      },
+    };
+  };
   const everyRow = row('every', t('templateRepeatEvery'), every, unit);
+  const settings: PopoverItemParams[] = [
+    { name: 'template-repeat-at', title: t('templateRepeatAt'), titleEl: settingTitle('at', t('templateRepeatAt'), atValue), children: { items: [fieldItem('at', time)] } },
+    { type: PopoverItemType.Separator },
+    { name: 'template-repeat-starting', title: t('templateRepeatStarting'), titleEl: settingTitle('starting', t('templateRepeatStarting'), startValue), children: { items: [fieldItem('starting', date)] } },
+    {
+      name: 'template-repeat-ending',
+      title: t('templateRepeatEnding'),
+      titleEl: settingTitle('ending', t('templateRepeatEnding'), endValue),
+      children: {
+        items: [
+          { name: 'template-repeat-ending-never', title: t('templateRepeatNever'), isActive: () => draft.end === undefined, onActivate: () => { delete draft.end; refresh(); } },
+          fieldItem('ending', endDate),
+        ],
+      },
+    },
+    {
+      name: 'template-repeat-timezone',
+      title: t('templateRepeatTimezone'),
+      titleEl: settingTitle('timezone', t('templateRepeatTimezone'), zoneValue),
+      children: { searchable: true, items: (zones.includes(live.zone) ? zones : [live.zone, ...zones]).map(zoneItem) },
+    },
+  ];
 
   panel.setAttribute('data-blok-keyboard-owner', '');
-  panel.append(
-    header,
-    everyRow,
-    row('at', t('templateRepeatAt'), time),
-    el('hr'),
-    row('starting', t('templateRepeatStarting'), date),
-    row('ending', t('templateRepeatEnding'), value(end)),
-    row('timezone', t('templateRepeatTimezone'), value(zoneOffset(zone, c))),
-  );
+  panel.append(header, everyRow);
   refresh();
 
-  return { panel, next };
+  return { panel, settings, next };
 };
 
 /**
@@ -334,10 +480,11 @@ export const templateRepeatItems = (host: TemplateRepeatHost, draft?: TemplateRe
       }),
     }));
   }
-  const { panel, next } = cadencePanel(host, editing, c);
+  const { panel, settings, next } = cadencePanel(host, editing, c);
 
   return [
     { type: PopoverItemType.Html, element: panel, name: 'template-repeat-cadence' },
+    ...settings,
     { type: PopoverItemType.Separator },
     { name: 'template-repeat-cancel', title: c.t('templateRepeatCancel'), closeOnActivate: true, onActivate: () => host.setRepeat(null) },
     { type: PopoverItemType.Separator },

@@ -270,7 +270,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1400 + 126 + 480 + 4 closure for all 2010 keys', () => {
+  it('rebuilds a disjoint 1400 + 126 + 486 + 4 closure for all 2016 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -284,7 +284,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2010);
+    expect(lifecycle.size).toBe(2016);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -469,7 +469,8 @@ describe('current English catalog lifecycle coverage', () => {
       // Every-N plurals and Daily/Weekly/Monthly/Yearly, all built from a short name.
       // +2: the gallery trash toast's screen-reader plural tools.database.blocksDeleted_one/_other.
       // +1: the view settings "Source" row, tools.database.settingsSource.
-      'registered-namespace-compatible': 480,
+      // +6: Edit cadence's months row, "On the", the ordinals (templateRepeatOrdinal<Category>) and "Day", all built from a short name.
+      'registered-namespace-compatible': 486,
       'catalog-only': 4,
     });
     expect(

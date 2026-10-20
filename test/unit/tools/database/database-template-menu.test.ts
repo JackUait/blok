@@ -7,7 +7,7 @@ import { LightweightI18n } from '../../../../src/components/i18n/lightweight-i18
 
 vi.mock('../../../../src/components/utils/tooltip', () => ({ onHover: vi.fn() }));
 
-interface Item { name?: string; title?: string; titleEl?: HTMLElement; isActive?: boolean; element?: HTMLElement; onActivate?: () => void; children?: { items?: Item[] } }
+interface Item { name?: string; title?: string; titleEl?: HTMLElement; isActive?: boolean | (() => boolean); element?: HTMLElement; onActivate?: () => void; children?: { items?: Item[]; searchable?: boolean } }
 
 const host = (patch: Partial<TemplateMenuHost> = {}): TemplateMenuHost => ({
   i18n: { t: (key: string) => key },
@@ -131,7 +131,12 @@ describe('template menu', () => {
         .map((chip) => `${chip.textContent ?? ''}${chip.getAttribute('aria-pressed') === 'true' ? '*' : ''}`);
     const chip = (q: ReturnType<typeof panel>['q'], day: number): HTMLButtonElement | null => q<HTMLButtonElement>(`[data-blok-database-template-cadence-days] button[data-weekday="${day}"]`);
     const save = (q: ReturnType<typeof panel>['q']): void => q<HTMLButtonElement>('[data-blok-database-template-cadence-save]')?.click();
-    const value = (q: ReturnType<typeof panel>['q'], row: string): string => q(`[data-blok-database-template-cadence-row="${row}"] [data-blok-database-template-cadence-value]`)?.textContent ?? '';
+    /** The value text on a "Label  value ›" row. */
+    const value = (items: Item[], row: string): string => find(items, `template-repeat-${row}`)?.titleEl?.querySelector('[data-blok-database-template-cadence-value]')?.textContent ?? '';
+    /** A control in a row's submenu. */
+    const field = <T extends Element = HTMLInputElement>(items: Item[], row: string, selector = 'input'): T | null =>
+      find(items, `template-repeat-${row}`)?.children?.items?.map((entry) => entry.element?.querySelector<T>(selector) ?? null).find((node) => node !== null) ?? null;
+    const active = (entry: Item | undefined): boolean => (typeof entry?.isActive === 'function' ? entry.isActive() : entry?.isActive === true);
 
     it('sums the schedule up with its interval, and drops 1', () => {
       const summary = (repeat: TemplateRepeat | undefined): string => templateRepeatSummary(english, repeat);
@@ -186,15 +191,126 @@ describe('template menu', () => {
     });
 
     it('lays the panel out as measured: Every, days, At, Starting, Ending, Timezone', () => {
-      const { q, el } = panel(repeatHost(), { frequency: 'weekly', interval: 2, weekdays: [1], start: tomorrowMidnight, timeZone: 'Europe/Berlin' });
+      const { q, el, items } = panel(repeatHost(), { frequency: 'weekly', interval: 2, weekdays: [1], start: tomorrowMidnight, timeZone: 'Europe/Berlin' });
 
       expect(Array.from(el.querySelectorAll('[data-blok-database-template-cadence-row]')).map((row) => row.getAttribute('data-blok-database-template-cadence-row')))
-        .toEqual(['every', 'at', 'starting', 'ending', 'timezone']);
+        .toEqual(['every']);
+      // Shot 61: At, a line, Starting / Ending / Timezone, a line, Cancel recurrence, a line, Next occurrence.
+      expect(items.map((entry) => entry.name ?? '-'))
+        .toEqual(['template-repeat-cadence', 'template-repeat-at', '-', 'template-repeat-starting', 'template-repeat-ending', 'template-repeat-timezone', '-', 'template-repeat-cancel', '-', 'template-repeat-next']);
       expect(q<HTMLInputElement>('[data-blok-database-template-cadence-row="every"] input')?.value).toBe('2');
       expect(chips(q)).toEqual(['Mo*', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']);
       expect(chip(q, 1)?.getAttribute('aria-label')).toBe('Monday');
-      expect(value(q, 'ending')).toBe('Never');
-      expect(value(q, 'timezone')).toBe('GMT+2');
+      // Blok runs at the exact time, so At reads a time, not Notion's "Around midnight" window.
+      expect(value(items, 'at')).toBe('12:00 AM');
+      expect(value(items, 'starting')).toBe('Tomorrow');
+      expect(value(items, 'ending')).toBe('Never');
+      expect(value(items, 'timezone')).toBe('GMT+2');
+    });
+
+    it('opens a submenu from each of At, Starting, Ending and Timezone', () => {
+      const { items } = panel(repeatHost(), { frequency: 'weekly', start: tomorrowMidnight, timeZone: 'Europe/Berlin' });
+
+      ['at', 'starting', 'ending', 'timezone'].forEach((row) => {
+        const entry = find(items, `template-repeat-${row}`);
+
+        expect(entry?.children?.items?.length ?? 0).toBeGreaterThan(0);
+        expect(entry?.titleEl?.querySelector('[data-blok-database-template-cadence-label]')?.textContent).toBe(entry?.title);
+      });
+      expect(field(items, 'at')?.type).toBe('time');
+      expect(field(items, 'starting')?.type).toBe('date');
+      expect(field(items, 'ending')?.type).toBe('date');
+      expect(find(items, 'template-repeat-timezone')?.children?.searchable).toBe(true);
+    });
+
+    it('sets an end from the Ending submenu, and Never takes it off again', () => {
+      const h = repeatHost();
+      const { items, q } = panel(h, { frequency: 'daily', start: tomorrowMidnight, timeZone: 'Europe/Berlin' });
+      const never = find(items, 'template-repeat-ending', 'template-repeat-ending-never');
+
+      expect(never?.title).toBe('Never');
+      expect(active(never)).toBe(true);
+      type(field(items, 'ending'), '2026-12-31');
+      expect(value(items, 'ending')).toBe('Dec 31, 2026');
+      expect(active(never)).toBe(false);
+      save(q);
+      // The whole last day counts, on the schedule's wall clock (Berlin is UTC+1 in December).
+      expect(h.setRepeat).toHaveBeenLastCalledWith(expect.objectContaining({ end: '2026-12-31T22:59:59.999Z' }));
+    });
+
+    it('Never in the Ending submenu drops a stored end', () => {
+      const h = repeatHost({ repeat: () => ({ ...weekly, end: '2026-12-31T12:00:00.000Z' }) });
+      const { items, q } = panel(h);
+
+      find(items, 'template-repeat-ending', 'template-repeat-ending-never')?.onActivate?.();
+      expect(value(items, 'ending')).toBe('Never');
+      expect(field(items, 'ending')?.value).toBe('');
+      save(q);
+      expect(h.setRepeat).toHaveBeenCalledWith(weekly);
+    });
+
+    it('picks a zone from the Timezone submenu and keeps the wall time', () => {
+      const h = repeatHost({ repeat: () => weekly });
+      const { items, q } = panel(h);
+      const zones = find(items, 'template-repeat-timezone')?.children?.items ?? [];
+      const tokyo = zones.find((entry) => entry.name === 'template-repeat-zone-Asia/Tokyo');
+
+      expect(active(zones.find((entry) => entry.name === 'template-repeat-zone-Europe/Berlin'))).toBe(true);
+      expect(tokyo?.title).toBe('Tokyo');
+      tokyo?.onActivate?.();
+      expect(active(tokyo)).toBe(true);
+      expect(value(items, 'timezone')).toBe('GMT+9');
+      expect(field(items, 'at')?.value).toBe('09:30');
+      save(q);
+      // 09:30 in Tokyo on Oct 5 is 00:30Z.
+      expect(h.setRepeat).toHaveBeenCalledWith({ ...weekly, start: '2026-10-05T00:30:00.000Z', timeZone: 'Asia/Tokyo' });
+    });
+
+    it('a zone pick keeps the end on the same last day', () => {
+      const h = repeatHost({ repeat: () => ({ ...weekly, end: '2026-12-31T22:59:59.999Z' }) });
+      const { items, q } = panel(h);
+
+      find(items, 'template-repeat-timezone', 'template-repeat-zone-Asia/Tokyo')?.onActivate?.();
+      expect(value(items, 'ending')).toBe('Dec 31, 2026');
+      expect(field(items, 'ending')?.value).toBe('2026-12-31');
+      save(q);
+      expect(h.setRepeat).toHaveBeenCalledWith({ ...weekly, start: '2026-10-05T00:30:00.000Z', timeZone: 'Asia/Tokyo', end: '2026-12-31T14:59:59.999Z' });
+    });
+
+    it('shows "On the [Nth] [Day]" for months only, from the start\'s day', () => {
+      const { q } = panel(repeatHost(), { frequency: 'monthly', start: tomorrowMidnight, timeZone: 'Europe/Berlin' });
+      const ordinal = (): HTMLSelectElement | null => q<HTMLSelectElement>('[data-blok-database-template-cadence-row="month-day"] select[data-blok-database-template-cadence-ordinal]');
+      const labels = Array.from(ordinal()?.options ?? []).map((option) => option.textContent ?? '');
+
+      expect(q('[data-blok-database-template-cadence-row="month-day"] [data-blok-database-template-cadence-label]')?.textContent).toBe('On the');
+      expect(labels).toHaveLength(31);
+      expect([labels[0], labels[1], labels[2], labels[3], labels[10], labels[11], labels[12], labels[20], labels[21], labels[22], labels[30]])
+        .toEqual(['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '23rd', '31st']);
+      // Tomorrow is Oct 21.
+      expect(ordinal()?.value).toBe('21');
+      expect(Array.from(q<HTMLSelectElement>('[data-blok-database-template-cadence-row="month-day"] select[data-blok-database-template-cadence-day-kind]')?.options ?? []).map((option) => option.textContent))
+        .toEqual(['Day']);
+      expect(q('[data-blok-database-template-cadence-days]')).toBeNull();
+      type(q<HTMLSelectElement>('[data-blok-database-template-cadence-row="every"] select'), 'weekly');
+      expect(ordinal()).toBeNull();
+      type(q<HTMLSelectElement>('[data-blok-database-template-cadence-row="every"] select'), 'monthly');
+      expect(ordinal()?.value).toBe('21');
+    });
+
+    it('moves the start to the first such day on or after it, keeping the time', () => {
+      const h = repeatHost();
+      const { q, items } = panel(h, { frequency: 'monthly', start: tomorrowMidnight, timeZone: 'Europe/Berlin' });
+      const ordinal = q<HTMLSelectElement>('[data-blok-database-template-cadence-row="month-day"] select[data-blok-database-template-cadence-ordinal]');
+      const next = (): string => q('[data-blok-database-template-cadence-next]')?.textContent ?? '';
+
+      type(ordinal, '1');
+      expect(value(items, 'starting')).toBe('Nov 1');
+      expect(next()).toBe('Next occurrence:Nov 1, 12:00 AM');
+      type(ordinal, '31');
+      // Nov has no 31st: the first one after Nov 1 is in December.
+      expect(value(items, 'starting')).toBe('Dec 31');
+      save(q);
+      expect(h.setRepeat).toHaveBeenCalledWith({ frequency: 'monthly', start: '2026-12-30T23:00:00.000Z', timeZone: 'Europe/Berlin' });
     });
 
     it('names the units in Notion\'s list, singular for 1, and relabels as the number is typed', () => {
@@ -279,9 +395,9 @@ describe('template menu', () => {
 
     it('edits At and Starting on the schedule\'s own wall clock', () => {
       const h = repeatHost({ repeat: () => weekly, timeZone: 'America/New_York' });
-      const { q } = panel(h);
-      const time = q<HTMLInputElement>('[data-blok-database-template-cadence-row="at"] input[type="time"]');
-      const date = q<HTMLInputElement>('[data-blok-database-template-cadence-row="starting"] input[type="date"]');
+      const { q, items } = panel(h);
+      const time = field(items, 'at');
+      const date = field(items, 'starting');
 
       // 07:30Z is 09:30 in Berlin (CEST).
       expect(date?.value).toBe('2026-10-05');
@@ -298,8 +414,8 @@ describe('template menu', () => {
     it('stamps the viewer\'s zone on a zone-less schedule', () => {
       const legacy: TemplateRepeat = { frequency: 'daily', start: '2026-10-05T07:30:00.000Z' };
       const h = repeatHost({ repeat: () => legacy, timeZone: 'Asia/Tokyo' });
-      const { q } = panel(h);
-      const time = q<HTMLInputElement>('[data-blok-database-template-cadence-row="at"] input[type="time"]');
+      const { q, items } = panel(h);
+      const time = field(items, 'at');
 
       // 07:30Z is 16:30 in Tokyo.
       expect(time?.value).toBe('16:30');
@@ -310,9 +426,10 @@ describe('template menu', () => {
     });
 
     it('shows an end that the document holds', () => {
-      const { q } = panel(repeatHost({ repeat: () => ({ ...weekly, end: '2026-12-31T12:00:00.000Z' }) }));
+      const { items } = panel(repeatHost({ repeat: () => ({ ...weekly, end: '2026-12-31T12:00:00.000Z' }) }));
 
-      expect(value(q, 'ending')).toBe('Dec 31, 2026');
+      expect(value(items, 'ending')).toBe('Dec 31, 2026');
+      expect(field(items, 'ending')?.value).toBe('2026-12-31');
     });
 
     it('reads out the next occurrence and follows the draft', () => {
@@ -358,9 +475,9 @@ describe('template menu', () => {
 
     it('a start that does not parse opens on tomorrow at midnight', () => {
       const h = repeatHost({ repeat: () => ({ ...weekly, start: 'soon' }) });
-      const { q } = panel(h);
+      const { q, items } = panel(h);
 
-      expect(q<HTMLInputElement>('[data-blok-database-template-cadence-row="starting"] input')?.value).toBe('2026-10-21');
+      expect(field(items, 'starting')?.value).toBe('2026-10-21');
       save(q);
       expect(h.setRepeat).toHaveBeenCalledWith({ ...weekly, start: tomorrowMidnight });
     });
@@ -377,6 +494,12 @@ describe('template menu', () => {
       const { q } = panel(repeatHost({ repeat: () => weekly }));
 
       expect(q('[data-blok-database-template-cadence]')?.hasAttribute('data-blok-keyboard-owner')).toBe(true);
+    });
+
+    it('lets each submenu field own its keys', () => {
+      const { items } = panel(repeatHost({ repeat: () => weekly }));
+
+      ['at', 'starting', 'ending'].forEach((row) => expect(field(items, row)?.closest('[data-blok-keyboard-owner]')).not.toBeNull());
     });
   });
 

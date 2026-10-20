@@ -32,8 +32,8 @@ const blocks = (repeat?: Record<string, unknown>): OutputBlockData[] => [
   { id: 'tpl', type: 'database-row', parent: 'db-1', data: { position: 'a0', properties: { 'p-title': 'Standup' }, template: true, ...(repeat === undefined ? {} : { repeat }) } },
 ];
 
-const mount = async (page: Page, repeat?: Record<string, unknown>): Promise<void> => {
-  await page.evaluate(async (input) => {
+const mount = async (page: Page, repeat?: Record<string, unknown>, width?: string): Promise<void> => {
+  await page.evaluate(async ({ input, width: holderWidth }) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
       window.blokInstance = undefined;
@@ -42,6 +42,7 @@ const mount = async (page: Page, repeat?: Record<string, unknown>): Promise<void
     const holder = document.createElement('div');
 
     holder.id = 'blok';
+    if (holderWidth !== undefined) holder.style.width = holderWidth;
     document.body.appendChild(holder);
     window.blokInstance = new window.Blok({
       holder,
@@ -49,7 +50,7 @@ const mount = async (page: Page, repeat?: Record<string, unknown>): Promise<void
       tools: { database: { class: (window as unknown as Record<string, unknown>).BlokDatabase } },
     });
     await window.blokInstance.isReady;
-  }, blocks(repeat));
+  }, { input: blocks(repeat), width });
 };
 
 const repeatOf = async (page: Page): Promise<Record<string, unknown> | undefined> => page.evaluate(async () => {
@@ -102,12 +103,16 @@ test('sets the interval and the start date and time of a schedule', async ({ pag
   await expect(every).toHaveValue('1');
   // One week reads "Week", not "Weeks"; the unit follows the typed number.
   await expect(unit.getByRole('option', { selected: true })).toHaveText('Week');
-  await expect(page.getByLabel('At', { exact: true })).toHaveValue('09:30');
   await every.fill('2');
   await expect(unit.getByRole('option', { selected: true })).toHaveText('Weeks');
 
+  // At and Starting are "Label  value ›" rows; their fields sit in submenus.
+  await page.getByRole('menuitem', { name: /^Starting/ }).click();
   await page.getByLabel('Starting', { exact: true }).fill('2026-11-02');
+  await page.getByRole('menuitem', { name: /^At/ }).click();
+  await expect(page.getByLabel('At', { exact: true })).toHaveValue('09:30');
   await page.getByLabel('At', { exact: true }).fill('18:00');
+  await expect(page.getByRole('menuitem', { name: /^At/ })).toContainText('6:00');
   // Nothing is stored until Save.
   expect(await repeatOf(page)).toEqual({ frequency: 'weekly', start: '2026-10-05T07:30:00.000Z', timeZone: 'Europe/Berlin' });
   await page.getByRole('button', { name: 'Save' }).click();
@@ -116,3 +121,55 @@ test('sets the interval and the start date and time of a schedule', async ({ pag
   await expect.poll(() => repeatOf(page)).toEqual({ frequency: 'weekly', interval: 2, start: '2026-11-02T17:00:00.000Z', timeZone: 'Europe/Berlin' });
   await expect(page.getByRole('button', { name: 'Duplicate every 2 weeks' })).toBeVisible();
 });
+
+test('the ↻ hint in the templates list names the unit only, after the hint delay', async ({ page }) => {
+  // Narrow on purpose: with the database at the window's right edge, the template's
+  // submenu opens over ↻ and the hint never shows (a known gap, not pinned here).
+  await mount(page, { frequency: 'weekly', interval: 2, start: '2026-10-05T07:30:00.000Z', timeZone: 'Europe/Berlin' }, '900px');
+  await page.getByTestId('database-toolbar-new-menu').click();
+  await page.getByRole('img', { name: 'Duplicate weekly' }).hover();
+
+  await expect(page.getByRole('tooltip')).toHaveCount(0);
+  await expect(page.getByRole('tooltip')).toHaveText('Duplicate weekly', { timeout: 2000 });
+});
+
+test('a monthly schedule picks its day from "On the [Nth] [Day]"', async ({ page }) => {
+  await mount(page, { frequency: 'monthly', start: '2026-10-05T07:30:00.000Z', timeZone: 'Europe/Berlin' });
+  await openBanner(page);
+  await page.getByRole('button', { name: 'Duplicate every month' }).click();
+  const ordinal = page.getByRole('combobox', { name: 'On the' });
+
+  await expect(ordinal.getByRole('option', { selected: true })).toHaveText('5th');
+  await expect(page.getByRole('combobox', { name: 'Day', exact: true }).getByRole('option')).toHaveText(['Day']);
+  await ordinal.selectOption('1');
+  await expect(page.getByRole('menuitem', { name: /^Starting/ })).toContainText('Nov 1');
+  await page.getByRole('button', { name: 'Save' }).click();
+
+  // 09:30 in Berlin on Nov 1 (CET) is 08:30Z.
+  await expect.poll(() => repeatOf(page)).toEqual({ frequency: 'monthly', start: '2026-11-01T08:30:00.000Z', timeZone: 'Europe/Berlin' });
+});
+
+test('Ending and Timezone set the end and the zone from their submenus', async ({ page }) => {
+  test.setTimeout(30_000);
+  await mount(page, { frequency: 'daily', start: '2026-10-05T07:30:00.000Z', timeZone: 'Europe/Berlin' });
+  await openBanner(page);
+  await page.getByRole('button', { name: 'Duplicate every day' }).click();
+  await expect(page.getByRole('menuitem', { name: /^Ending/ })).toContainText('Never');
+  await page.getByRole('menuitem', { name: /^Ending/ }).click();
+  await expect(page.getByRole('menuitem', { name: 'Never' })).toBeVisible();
+  await page.getByLabel('Ending', { exact: true }).fill('2026-12-31');
+  await expect(page.getByRole('menuitem', { name: /^Ending/ })).toContainText('Dec 31, 2026');
+
+  await page.getByRole('menuitem', { name: /^Timezone/ }).click();
+  await page.getByPlaceholder('Search').last().fill('Tokyo');
+  await page.getByRole('menuitemcheckbox', { name: /^Tokyo/ }).click();
+  await expect(page.getByRole('menuitem', { name: /^Timezone/ })).toContainText('GMT+9');
+
+  // The new zone keeps the wall clock: 09:30 and the end of Dec 31, both now in Tokyo.
+  await expect(page.getByRole('menuitem', { name: /^Ending/ })).toContainText('Dec 31, 2026');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect.poll(() => repeatOf(page)).toEqual({
+    frequency: 'daily', start: '2026-10-05T00:30:00.000Z', timeZone: 'Asia/Tokyo', end: '2026-12-31T14:59:59.999Z',
+  });
+});
+

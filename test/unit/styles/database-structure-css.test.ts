@@ -72,6 +72,13 @@ describe('database structure styles', () => {
     expect(ruleBody('[data-blok-database-template-repeat-icon]')).toContain('--blok-text-secondary');
   });
 
+  it('puts a cadence row\'s value at its right end, in secondary ink (shot 61: "At  Around midnight ›")', () => {
+    expect(ruleBody('[data-blok-popover-item-title]:has(> [data-blok-database-template-cadence-setting])')).toContain('flex: 1');
+    expect(ruleBody('[data-blok-database-template-cadence-setting]')).toContain('justify-content: space-between');
+    expect(ruleBody('[data-blok-database-template-cadence-value]')).toContain('--blok-text-secondary');
+    expect(ruleBody('[data-blok-database-template-cadence-zone-offset]')).toContain('--blok-text-secondary');
+  });
+
   it('lays out Edit cadence as measured: 260px, 28px round day chips with 12px text, a chevron on the banner button', () => {
     expect(ruleBody('[data-blok-database-template-cadence]')).toContain('width: 260px');
     const chip = ruleBody('[data-blok-database-template-cadence-days] button');

@@ -12764,7 +12764,32 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   color: var(--blok-text-secondary);
 }
 
-[data-blok-database-template-cadence-row] input, [data-blok-database-template-cadence-row] select {
+[data-blok-database-template-cadence-row="every"] input {
+  width: 36px;
+  margin-inline-start: auto;
+}
+
+[data-blok-popover-item-title]:has(> [data-blok-database-template-cadence-setting]) {
+  flex: 1;
+  min-width: 0;
+}
+
+[data-blok-database-template-cadence-setting], [data-blok-database-template-cadence-zone] {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--blok-space-2);
+  font-weight: 400;
+}
+
+[data-blok-database-template-cadence-zone-offset] {
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-database-template-cadence-field] {
+  padding: var(--blok-space-1) var(--blok-space-2);
+}
+
+[data-blok-database-template-cadence-row] input, [data-blok-database-template-cadence-row] select, [data-blok-database-template-cadence-field] input {
   border: 1px solid var(--blok-popover-border);
   border-radius: var(--blok-radius-control);
   background: transparent;
@@ -12772,15 +12797,8 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   font: inherit;
 }
 
-[data-blok-database-template-cadence-row="every"] input {
-  width: 36px;
+[data-blok-database-template-cadence-ordinal] {
   margin-inline-start: auto;
-}
-
-[data-blok-database-template-cadence] hr {
-  margin: var(--blok-space-1) var(--blok-space-2);
-  border: none;
-  border-top: 1px solid var(--blok-popover-border);
 }
 
 [data-blok-database-template-cadence-days] {

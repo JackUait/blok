@@ -368,6 +368,8 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/template-*': cmds(['database.addRow', 'database.setDefaultTemplate', 'block.duplicate', 'block.delete'], 'Templates are template rows: use one, set the default, duplicate or delete it.'),
   'menu:database/template-repeat-*': cmd('database.setTemplateRepeat'),
   'menu:database/template-repeat-cancel': cmd('database.setTemplateRepeat'),
+  'menu:database/template-repeat-zone-*': cmd('database.setTemplateRepeat'),
+  'menu:database/template-repeat-ending-never': cmd('database.setTemplateRepeat'),
   'action:database/editProperty': cmd('database.setRowValues'),
   'action:database/addPage': cmd('database.addRow'),
   'action:database/editPages': cmd('database.setRowValues'),

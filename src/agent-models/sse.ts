@@ -1,4 +1,4 @@
-import { httpError, isRecord, parseJson } from './shared';
+import { errorOf, httpError, isRecord, parseJson } from './shared';
 
 export interface SseEvent {
   event?: string;
@@ -79,13 +79,19 @@ const takeLines = (buffer: string, final: boolean): { lines: string[]; rest: str
   return final ? { lines: [...lines, rest, ''], rest: '' } : { lines, rest: rest + held };
 };
 
+/** Text kept from lines that are not SSE fields: a provider's JSON error sent as a bare stream. */
+const STRAY_LIMIT = 64_000;
+
+const isStray = (line: string): boolean => line !== '' && !line.startsWith(':') && !/^(data|event|id|retry)(:|$)/.test(line);
+
 /**
  * Reads server-sent events from a streaming response. Ends at `data: [DONE]`, at the end of
  * the stream, or when `signal` aborts (the read is cancelled then).
  * @param source - the response, or its body
  * @param signal - the run's signal
+ * @param stray - receives lines that are not SSE fields
  */
-export async function* readSse(source: Response | ReadableStream<Uint8Array>, signal: AbortSignal): AsyncGenerator<SseEvent> {
+export async function* readSse(source: Response | ReadableStream<Uint8Array>, signal: AbortSignal, stray?: string[]): AsyncGenerator<SseEvent> {
   // Duck-typed: a stream from another realm (Node fetch under jsdom) fails instanceof.
   const stream = 'getReader' in source ? source : source.body;
 
@@ -108,6 +114,10 @@ export async function* readSse(source: Response | ReadableStream<Uint8Array>, si
       const text = state.buffer + (chunk.done ? decoder.decode() : decoder.decode(chunk.value, { stream: true }));
       const { lines, rest } = takeLines(text, chunk.done);
       const read = eventsOf(lines, state.pending);
+
+      if (stray !== undefined && stray.join('\n').length < STRAY_LIMIT) {
+        stray.push(...lines.filter(isStray));
+      }
 
       state.buffer = rest;
       state.pending = read.pending;
@@ -139,11 +149,21 @@ export async function* readJsonEvents(
     throw failed;
   }
 
-  for await (const { data } of readSse(source, signal)) {
+  const stray: string[] = [];
+  const seen = { events: 0 };
+
+  for await (const { data } of readSse(source, signal, stray)) {
+    seen.events += 1;
+
     const event = parseJson(data);
 
     if (isRecord(event)) {
       yield event;
     }
+  }
+
+  // A bare stream has no HTTP status, so its error body is all there is to report.
+  if (seen.events === 0 && stray.length > 0 && !signal.aborted) {
+    throw errorOf(parseJson(stray.join('\n')), provider) ?? new Error(`${provider}: the reply was not an event stream.`);
   }
 }

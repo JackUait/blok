@@ -127,6 +127,20 @@ describe('readJsonEvents', () => {
     await expect(collectJson(new Response('<html>', { status: 502 }))).rejects.toThrow('P: HTTP 502.');
   });
 
+  it('throws the provider\'s message when a bare stream holds a JSON error instead of events', async () => {
+    await expect(collectJson(streamOf('{\n  "error": {\n    "message": "Bad key"\n', '  }\n}\n'))).rejects.toThrow('P: Bad key');
+  });
+
+  it('says the reply was not an event stream when a bare stream holds text with no events', async () => {
+    const read = collectJson(streamOf('<html>Bad gateway</html>'));
+
+    await expect(read).rejects.toThrow('P: the reply was not an event stream.');
+  });
+
+  it('yields nothing and does not throw for an empty stream; the adapter decides', async () => {
+    expect(await collectJson(streamOf(''))).toEqual([]);
+  });
+
   it('reads an ok Response body', async () => {
     expect(await collectJson(new Response('data: {"a":1}\n\n'))).toEqual([{ a: 1 }]);
   });

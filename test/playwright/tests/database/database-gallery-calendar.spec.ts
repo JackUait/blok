@@ -486,10 +486,11 @@ test.describe('gallery', () => {
       await page.keyboard.press('Backspace');
 
       await expect(card(page, 'r2')).toHaveCount(0);
+      await expect(page.locator('[data-blok-announcer][aria-live="polite"]')).toHaveText('1 block deleted');
       await expect(page.getByRole('dialog')).toHaveCount(0);
       await expect.poll(async () => (await savedRows(page)).map((row) => row.id)).toEqual(['r1', 'r3']);
 
-      const toast = page.getByRole('status').filter({ hasText: 'Moved to Trash' });
+      const toast = page.getByTestId('notification').filter({ hasText: 'Moved to Trash' });
 
       await expect(toast).toBeVisible();
       await toast.getByRole('button', { name: 'Restore' }).click();
@@ -519,7 +520,7 @@ test.describe('gallery', () => {
       await page.keyboard.type(' typed');
       await expect(page.getByText('Note typed')).toBeVisible();
 
-      await page.getByRole('status').filter({ hasText: 'Moved to Trash' }).getByRole('button', { name: 'Restore' }).click();
+      await page.getByTestId('notification').filter({ hasText: 'Moved to Trash' }).getByRole('button', { name: 'Restore' }).click();
 
       const saved = async (): Promise<{ note: string; rows: string[] }> => page.evaluate(async () => {
         const output = await window.blokInstance?.save();
@@ -543,9 +544,12 @@ test.describe('gallery', () => {
       await card(page, 'r3').click({ modifiers: ['ControlOrMeta'] });
       await page.keyboard.press('Delete');
 
-      const toast = page.getByRole('status').filter({ hasText: 'Moved to Trash' });
+      const toast = page.getByTestId('notification').filter({ hasText: 'Moved to Trash' });
 
+      // The toast is not a live region: screen readers hear the count, not the visible text.
+      await expect(page.locator('[data-blok-announcer][aria-live="polite"]')).toHaveText('2 blocks deleted');
       await expect(toast).toHaveCount(1);
+      await expect(toast).not.toHaveAttribute('role', 'status');
       await expect(page.getByRole('dialog')).toHaveCount(0);
       await expect(page.locator('[data-blok-database-gallery-card]')).toHaveCount(1);
       await expect.poll(async () => (await savedRows(page)).map((row) => row.id)).toEqual(['r2']);

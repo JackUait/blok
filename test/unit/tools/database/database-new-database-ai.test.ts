@@ -300,6 +300,26 @@ describe('"New database" panel with the AI prompt (research/26 §2, research/20 
     expect(box().value).toBe('Trips');
   });
 
+  // research/26 §2: from a new database the link page has "Existing data sources" only.
+  it('"Link to existing data source" lists other databases with no "Suggested" section', async () => {
+    await insert(vi.fn(async () => null));
+    panel()?.querySelector<HTMLElement>('[data-blok-testid="database-new-source-link"]')?.click();
+
+    expect(panel()?.textContent).not.toContain('tools.database.linkedSuggested');
+    expect(panel()?.querySelector('[data-blok-testid^="database-new-source-suggested-"]')).toBeNull();
+    expect(panel()?.textContent).toContain('tools.database.layoutExistingDataSources');
+    expect(panel()?.querySelector('[data-blok-testid="database-new-source-existing-other"]')).not.toBeNull();
+  });
+
+  it('has no Import CSV and no named row', async () => {
+    await insert(vi.fn(async () => null));
+    type('Trips');
+
+    expect(panel()?.querySelector('[data-blok-testid="database-new-source-csv"]')).toBeNull();
+    expect(panel()?.querySelector('[data-blok-testid="database-new-source-named"]')).toBeNull();
+    expect(rowLabels()).toEqual(['tools.database.linkedNewEmpty', 'tools.database.linkedLinkExisting']);
+  });
+
   it('"Link to existing data source" turns the block into a view of that database', async () => {
     const { tool } = await insert(vi.fn(async () => null));
 

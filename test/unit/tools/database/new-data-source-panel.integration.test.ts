@@ -171,7 +171,7 @@ describe('"New data source" side panel (research/23 §10, research/20 §1a)', ()
     expect(byTestId('database-new-source-search')?.getAttribute('placeholder')).toBe('Search…');
     expect(rowLabels().filter((id) => id.startsWith('database-new-source-') && id !== 'database-new-source-panel' && id !== 'database-new-source-search'))
       .toEqual(['database-new-source-empty', 'database-new-source-csv', 'database-new-source-link']);
-    // Blok has no database templates and no database-setup AI lever: no "Suggested", no prompt field.
+    // No templates, so no "Suggested" here; the AI prompt box is only on a new database.
     expect(panel()?.textContent).not.toContain('Suggested');
     expect(panel()?.querySelectorAll('input')).toHaveLength(1);
   });

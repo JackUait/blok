@@ -951,6 +951,10 @@ export const createLivePreview = (deps: LivePreviewDeps): LivePreview => {
       });
       calls.clear();
       skips.clear();
+      if (frame.id !== null) {
+        cancelAnimationFrame(frame.id);
+        frame.id = null;
+      }
     },
 
     relayout() {

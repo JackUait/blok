@@ -199,11 +199,13 @@ const submit = (prompt: string): void => {
   field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
 };
 
+const scrolls = { spy: vi.fn() };
+
 describe('in-editor assistant bar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Ask AI follows its edits; jsdom has no scrolling.
-    vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    scrolls.spy = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -538,6 +540,8 @@ describe('in-editor assistant bar', () => {
       live.emit({ type: 'tool_input', index: 0, json: call.json });
       await waitFor(() => expect(document.querySelector(PREVIEW)).not.toBeNull());
 
+      // Settle waits a frame to hand off; with no frames, only cancel can remove the box.
+      vi.stubGlobal('requestAnimationFrame', () => 0);
       live.emit({ type: 'tool_end', index: 0 });
 
       // Gone while the model still holds its answer: the failed call removed it.
@@ -652,6 +656,44 @@ describe('in-editor assistant bar', () => {
       await waitFor(() => expect(top()).toBe(before - 100));
       live.finish(call.use);
       await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+    });
+
+    /** Puts every block holder below the viewport, or inside it. */
+    const holdersAt = (top: number): void => {
+      const measure = HTMLElement.prototype.getBoundingClientRect;
+
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement): DOMRect {
+        return this.hasAttribute('data-blok-element') ? new DOMRect(0, top, 600, 24) : measure.call(this);
+      });
+    };
+
+    it('follows an out-of-view edit, and typing in the bar keeps following on', async () => {
+      const editor = await createEditor(scripted(insertBatch('One'), answer('Done one.'), insertBatch('Two'), answer('Done two.')));
+
+      holdersAt(2000);
+      editor.agent.openAssistant();
+      submit('Write one');
+      await waitFor(() => expect(within(bar()).getByText('Done one.')).toBeVisible());
+      expect(scrolls.spy).toHaveBeenCalledTimes(1);
+
+      // submit() types Enter in the bar's field: user intent, but inside the bar.
+      submit('Write two');
+      await waitFor(() => expect(within(bar()).getByText('Done two.')).toBeVisible());
+
+      expect(await texts(editor)).toEqual(['Hello', 'One', 'Two']);
+      expect(scrolls.spy).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not scroll to an edit already in view', async () => {
+      const editor = await createEditor(scripted(insertBatch('One'), answer('Done.')));
+
+      holdersAt(100);
+      editor.agent.openAssistant();
+      submit('Write');
+      await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+
+      expect(await texts(editor)).toEqual(['Hello', 'One']);
+      expect(scrolls.spy).not.toHaveBeenCalled();
     });
 
     it('Ask AI runs draw no local caret or arrival pulse', async () => {

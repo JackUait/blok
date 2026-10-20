@@ -113,8 +113,12 @@ const texts = async (editor: TestEditor): Promise<string[]> =>
   (await editor.save()).blocks.map((block) => plain(block.data.text));
 
 describe('editor.agent.ask', () => {
+  const scrolls = { spy: vi.fn() };
+
   beforeEach(() => {
     vi.clearAllMocks();
+    // jsdom has no scrolling.
+    scrolls.spy = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -136,6 +140,18 @@ describe('editor.agent.ask', () => {
     expect(model.requests[0].tools.map((tool) => tool.name)).toEqual([...CORE_TOOL_NAMES]);
     expect(model.requests[0].system).toContain('blok_read');
     expect(model.requests[0].messages[0]).toEqual({ role: 'user', content: expect.stringContaining('Add a sentence') });
+    run.end();
+  });
+
+  it('draws the local agent marker as before, and does not follow', async () => {
+    const editor = await createEditor(scripted(insertBatch('Written by the model'), answer('Done.')));
+
+    const run = editor.agent.ask('Add a sentence');
+
+    await run.result;
+
+    expect(document.querySelector('[data-blok-presence-caret], [data-blok-agent-marker]')).not.toBeNull();
+    expect(scrolls.spy).not.toHaveBeenCalled();
     run.end();
   });
 

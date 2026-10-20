@@ -76,6 +76,11 @@ export class Assistant extends Module {
     return this.bar?.isOpen === true;
   }
 
+  /** Whether an event target is inside the prompt bar. */
+  public contains(target: EventTarget | null): boolean {
+    return target instanceof Node && this.bar?.element.contains(target) === true;
+  }
+
   public prepare(): void {
     if (!this.Blok.AgentAPI.hasAssistant) {
       return;

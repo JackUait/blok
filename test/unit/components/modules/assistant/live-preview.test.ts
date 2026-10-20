@@ -342,6 +342,21 @@ describe('createLivePreview', () => {
     expect(parseFloat(box?.style.top ?? '')).toBe(before - 100);
   });
 
+  it('clear cancels a pending relayout frame', () => {
+    const cancelFrame = vi.fn();
+
+    vi.stubGlobal('cancelAnimationFrame', cancelFrame);
+    const preview = make();
+
+    preview.relayout();
+    preview.clear();
+
+    expect(cancelFrame).toHaveBeenCalledExactlyOnceWith(1);
+
+    preview.relayout();
+    expect(frames).toHaveLength(2);
+  });
+
   it('cancel removes everything at once', () => {
     const preview = make();
 

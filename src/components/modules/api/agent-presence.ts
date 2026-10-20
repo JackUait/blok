@@ -29,8 +29,16 @@ export interface AgentPresenceOptions {
   scrollTo(blockId: string): void;
 }
 
+export interface AgentFollowOptions {
+  follow: boolean;
+  /** Scroll only when the agent's block is not fully in the viewport. */
+  outOfViewOnly?: boolean;
+  /** An intent event on such a target does not end following (the Ask AI bar). */
+  exemptIntent?(target: EventTarget | null): boolean;
+}
+
 export interface AgentPresence {
-  start(agent: AgentIdentity, options: { follow: boolean }): void;
+  start(agent: AgentIdentity, options: AgentFollowOptions): void;
   /** `draw: false` still publishes the cursor and follows, but draws no caret, marker or pulse here. */
   show(result: { changed: ChangedSet; lastRange?: TextRangeRef }, showOptions?: { draw?: boolean }): void;
   stop(): void;
@@ -62,6 +70,16 @@ const cursorFor = (agent: { id: string; name: string; color: string }, target: A
 
 const lastOf = (ids: string[]): string | undefined => ids[ids.length - 1];
 
+/** Whether the block's holder sits fully inside the viewport, top to bottom. */
+const isInView = (holder: HTMLElement | null): boolean => {
+  if (holder === null) {
+    return false;
+  }
+  const rect = holder.getBoundingClientRect();
+
+  return rect.top >= 0 && rect.bottom <= window.innerHeight;
+};
+
 /** lastRange when the batch wrote text, else the last created, moved or updated block. */
 const targetOf = (result: { changed: ChangedSet; lastRange?: TextRangeRef }): AgentTarget | null => {
   if (result.lastRange !== undefined) {
@@ -89,13 +107,18 @@ export function createAgentPresence(options: AgentPresenceOptions): AgentPresenc
     reflow: ResizeObserver | null;
     onInput: (() => void) | null;
     following: boolean;
+    outOfViewOnly: boolean;
     stopFollowing: (() => void) | null;
     published: boolean;
-  } = { agent: null, reflow: null, onInput: null, following: false, stopFollowing: null, published: false };
+  } = { agent: null, reflow: null, onInput: null, following: false, outOfViewOnly: false, stopFollowing: null, published: false };
 
-  const follow = (): void => {
-    const stop = (): void => {
-      state.following = false;
+  const inView = (blockId: string): boolean => isInView(options.resolveHolder(blockId));
+
+  const follow = (exempt: AgentFollowOptions['exemptIntent']): void => {
+    const stop = (event: Event): void => {
+      if (exempt?.(event.target) !== true) {
+        state.following = false;
+      }
     };
 
     state.following = true;
@@ -156,7 +179,7 @@ export function createAgentPresence(options: AgentPresenceOptions): AgentPresenc
   };
 
   return {
-    start(agent: AgentIdentity, startOptions: { follow: boolean }): void {
+    start(agent: AgentIdentity, startOptions: AgentFollowOptions): void {
       unfollow();
       state.agent = {
         id: agent.id,
@@ -164,9 +187,10 @@ export function createAgentPresence(options: AgentPresenceOptions): AgentPresenc
         color: isPresenceColor(agent.color) ? agent.color : agentColorFor(agent.id),
       };
       watch();
+      state.outOfViewOnly = startOptions.outOfViewOnly === true;
 
       if (startOptions.follow) {
-        follow();
+        follow(startOptions.exemptIntent);
       }
     },
 
@@ -194,7 +218,7 @@ export function createAgentPresence(options: AgentPresenceOptions): AgentPresenc
         draw(agent, target);
       }
 
-      if (state.following) {
+      if (state.following && !(state.outOfViewOnly && inView(target.blockId))) {
         options.scrollTo(target.blockId);
       }
     },

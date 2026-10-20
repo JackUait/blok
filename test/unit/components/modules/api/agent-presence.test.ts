@@ -317,6 +317,61 @@ describe('agent presence — follow', () => {
     presence.stop();
   });
 
+  /** Puts a holder at a viewport top; jsdom's window is 768px tall. */
+  const placeAt = (id: string, top: number): void => {
+    const holder = holderOf(id);
+    const measure = HTMLElement.prototype.getBoundingClientRect;
+
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement): DOMRect {
+      return this === holder ? new DOMRect(0, top, 600, 24) : measure.call(this);
+    });
+  };
+
+  it('outOfViewOnly: an in-view batch does not scroll', () => {
+    addBlock('b1');
+    placeAt('b1', 100);
+    const scrollTo = vi.fn();
+    const presence = createAgentPresence(options({ scrollTo }));
+
+    presence.start(AGENT, { follow: true, outOfViewOnly: true });
+    presence.show(batch('b1'));
+
+    expect(scrollTo).not.toHaveBeenCalled();
+    presence.stop();
+  });
+
+  it('outOfViewOnly: an out-of-view batch scrolls', () => {
+    addBlock('b1');
+    placeAt('b1', 2000);
+    const scrollTo = vi.fn();
+    const presence = createAgentPresence(options({ scrollTo }));
+
+    presence.start(AGENT, { follow: true, outOfViewOnly: true });
+    presence.show(batch('b1'));
+
+    expect(scrollTo).toHaveBeenCalledExactlyOnceWith('b1');
+    presence.stop();
+  });
+
+  it('an intent event the turn exempts keeps follow on', () => {
+    addBlock('b1');
+    addBlock('b2');
+    const bar = document.createElement('textarea');
+
+    document.body.appendChild(bar);
+    const scrollTo = vi.fn();
+    const presence = createAgentPresence(options({ scrollTo }));
+
+    presence.start(AGENT, { follow: true, exemptIntent: (target) => target === bar });
+    presence.show(batch('b1'));
+    bar.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+    bar.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    presence.show(batch('b2'));
+
+    expect(scrollTo.mock.calls).toEqual([['b1'], ['b2']]);
+    presence.stop();
+  });
+
   it('a new turn follows again after a stopped one', () => {
     addBlock('b1');
     const scrollTo = vi.fn();

@@ -58,10 +58,12 @@ export interface AssistantRunHooks {
   onExecuted?(changed: ChangedSet): void;
 }
 
-/** Options only Blok's own assistant passes to begin(). */
+/** Options only Blok's own assistant bar passes to begin(). */
 interface InternalTurnOptions {
   /** False: publish and follow, but draw no local caret, marker or pulse. */
   drawLocal: boolean;
+  /** Follow only edits outside the viewport, and keep following through input in the bar. */
+  barFollow?: boolean;
   onExecuted?(changed: ChangedSet): void;
 }
 
@@ -150,7 +152,8 @@ export class AgentAPI extends Module {
     thinking: () => AgentThinkingLevel | undefined,
     hooks: AssistantRunHooks = {}
   ): AgentRun {
-    return this.ask(prompt, { context: false }, place, thinking, hooks);
+    // The live preview stands in for the local caret and pulse.
+    return this.ask(prompt, { context: false }, place, thinking, hooks, { drawLocal: false, barFollow: true, onExecuted: hooks.onExecuted });
   }
 
   private ask(
@@ -158,7 +161,8 @@ export class AgentAPI extends Module {
     options: AgentAskOptions = {},
     captured: UserPlace = NOWHERE,
     picked: () => AgentThinkingLevel | undefined = () => undefined,
-    hooks: AssistantRunHooks = {}
+    hooks: AssistantRunHooks = {},
+    internal?: InternalTurnOptions
   ): AgentRun {
     const assistant = this.config.agent?.assistant;
 
@@ -177,8 +181,8 @@ export class AgentAPI extends Module {
 
     const place = options.context === false ? captured : this.editorContext();
     const name = assistant.name?.trim() || 'AI';
-    // The live preview stands in for the local caret and pulse.
-    const turn = this.begin({ agent: { id: 'blok-assistant', name }, follow: true }, { drawLocal: false, onExecuted: hooks.onExecuted });
+    const agent = { id: 'blok-assistant', name };
+    const turn = internal === undefined ? this.begin({ agent }) : this.begin({ agent, follow: internal.barFollow === true }, internal);
 
     return createAgentRun(composeFirstMessage(prompt, place.text, turn.read, place.blockIds), {
       turn,
@@ -325,7 +329,12 @@ export class AgentAPI extends Module {
 
     this.current.turn = turn;
     this.setState({ status: 'working', turn: { id: turn.id, agent: identity } });
-    this.presence().start(identity, { follow: options.follow === true });
+    this.presence().start(identity, {
+      follow: options.follow === true,
+      ...(internal.barFollow === true
+        ? { outOfViewOnly: true, exemptIntent: (target: EventTarget | null) => this.Blok.Assistant.contains(target) }
+        : {}),
+    });
 
     return turn;
   }

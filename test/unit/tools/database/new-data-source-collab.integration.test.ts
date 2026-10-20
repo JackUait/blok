@@ -228,7 +228,8 @@ const ownTabs = (client: LiveClient): HTMLElement[] => {
 };
 
 const sourceIds = (client: LiveClient): string[] => client.core.moduleInstances.YjsManager.toJSON()
-  .filter((block) => block.type === 'database' && block.parent === 'db-1').map((block) => block.id);
+  .filter((block) => block.type === 'database' && block.parent === 'db-1').map((block) => block.id)
+  .filter((id): id is string => id !== undefined);
 
 describe('New data source between peers', { timeout: 60000 }, () => {
   beforeEach(() => {

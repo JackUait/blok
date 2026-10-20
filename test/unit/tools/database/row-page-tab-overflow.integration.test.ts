@@ -120,9 +120,16 @@ const openRowPage = async (): Promise<void> => {
   await click(holder?.querySelector('[data-row-id="r1"] [data-blok-database-table-open]') ?? null);
 };
 
+let elementFromPointDescriptor: PropertyDescriptor | undefined;
+
 beforeEach(() => {
   vi.clearAllMocks();
   observers.length = 0;
+  // jsdom has no elementFromPoint; rectangle selection calls it on every body mousedown.
+  elementFromPointDescriptor = Object.getOwnPropertyDescriptor(document, 'elementFromPoint');
+  if (typeof document.elementFromPoint !== 'function') {
+    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => null });
+  }
   layout.bar = 330;
   vi.stubGlobal('ResizeObserver', class {
     private readonly entry: { callback: ResizeObserverCallback; targets: Set<Element> };
@@ -170,6 +177,11 @@ afterEach(() => {
   holder?.remove();
   holder = undefined;
   document.querySelectorAll('[data-blok-database-tab-overflow-dropdown]').forEach(element => element.remove());
+  if (elementFromPointDescriptor === undefined) {
+    Reflect.deleteProperty(document, 'elementFromPoint');
+  } else {
+    Object.defineProperty(document, 'elementFromPoint', elementFromPointDescriptor);
+  }
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });

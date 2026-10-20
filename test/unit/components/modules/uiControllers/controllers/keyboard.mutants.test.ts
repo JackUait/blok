@@ -1641,15 +1641,14 @@ describe('KeyboardController — mutation coverage', () => {
       expect(reachedTarget).toBe(false);
     });
 
-    it('undoes once when one physical press emits two keydowns', () => {
+    it('undoes once when the same keydown reaches the handler twice', () => {
       const harness = enabledHarness();
+      const { event } = harness.press(harness.outside, { key: 'z', ctrlKey: true });
 
-      harness.press(harness.outside, { key: 'z', ctrlKey: true });
-
-      const repeat = harness.press(harness.outside, { key: 'z', ctrlKey: true });
+      harness.outside.dispatchEvent(event);
 
       expect(harness.blok.YjsManager.undo).toHaveBeenCalledTimes(1);
-      expect(repeat.event.defaultPrevented).toBe(true);
+      expect(event.defaultPrevented).toBe(true);
     });
 
     it('still redoes when Ctrl+Shift+Z immediately follows Ctrl+Z', () => {
@@ -1662,13 +1661,10 @@ describe('KeyboardController — mutation coverage', () => {
       expect(harness.blok.YjsManager.redo).toHaveBeenCalledTimes(1);
     });
 
-    it('undoes again once the dedup window has fully elapsed', () => {
-      vi.useFakeTimers();
-
+    it('undoes twice for two Ctrl+Z presses with no time between them', () => {
       const harness = enabledHarness();
 
       harness.press(harness.outside, { key: 'z', ctrlKey: true });
-      vi.advanceTimersByTime(50);
       harness.press(harness.outside, { key: 'z', ctrlKey: true });
 
       expect(harness.blok.YjsManager.undo).toHaveBeenCalledTimes(2);
@@ -1737,15 +1733,14 @@ describe('KeyboardController — mutation coverage', () => {
       expect(reachedTarget).toBe(false);
     });
 
-    it('redoes once when one physical Ctrl+Y press emits two keydowns', () => {
+    it('redoes once when the same Ctrl+Y keydown reaches the handler twice', () => {
       const harness = enabledHarness();
+      const { event } = harness.press(harness.outside, { key: 'y', code: 'KeyY', ctrlKey: true });
 
-      harness.press(harness.outside, { key: 'y', code: 'KeyY', ctrlKey: true });
-
-      const repeat = harness.press(harness.outside, { key: 'y', code: 'KeyY', ctrlKey: true });
+      harness.outside.dispatchEvent(event);
 
       expect(harness.blok.YjsManager.redo).toHaveBeenCalledTimes(1);
-      expect(repeat.event.defaultPrevented).toBe(true);
+      expect(event.defaultPrevented).toBe(true);
     });
 
     it('still redoes when Ctrl+Y immediately follows an undo', () => {
@@ -1757,13 +1752,10 @@ describe('KeyboardController — mutation coverage', () => {
       expect(harness.blok.YjsManager.redo).toHaveBeenCalledTimes(1);
     });
 
-    it('redoes again once the Ctrl+Y dedup window has fully elapsed', () => {
-      vi.useFakeTimers();
-
+    it('redoes twice for two Ctrl+Y presses with no time between them', () => {
       const harness = enabledHarness();
 
       harness.press(harness.outside, { key: 'y', code: 'KeyY', ctrlKey: true });
-      vi.advanceTimersByTime(50);
       harness.press(harness.outside, { key: 'y', code: 'KeyY', ctrlKey: true });
 
       expect(harness.blok.YjsManager.redo).toHaveBeenCalledTimes(2);

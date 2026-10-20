@@ -86,7 +86,7 @@ const isHistoryKey = (event: KeyboardEvent, letter: string): boolean =>
  *
  * Responsibilities:
  * - Route keypress to appropriate handler (Enter, Backspace, Escape, Tab, Z)
- * - Manage keyboard-specific state (lastUndoRedoTime)
+ * - Manage keyboard-specific state (lastHistoryEvent)
  * - Coordinate with BlockManager, BlockSelection, Caret, Toolbar
  */
 export class KeyboardController extends Controller {
@@ -104,13 +104,10 @@ export class KeyboardController extends Controller {
   private someToolbarOpened: () => boolean;
 
   /**
-   * Timestamp and identity of the last undo/redo dispatched, used to dedupe a
-   * single physical keypress that emits duplicate keydown events. Keyed by
-   * action so the guard only ever swallows an IDENTICAL repeat — a genuinely
-   * distinct follow-up (e.g. redo right after undo) is never debounced.
+   * The last keydown that ran undo or redo. One event runs history once.
+   * Not a time window: two presses close together are two steps.
    */
-  private lastUndoRedoTime = 0;
-  private lastUndoRedoAction: 'undo' | 'redo' | null = null;
+  private lastHistoryEvent: KeyboardEvent | null = null;
 
   /**
    * Timestamp and digit of the last "Turn into" conversion dispatched, used to
@@ -1160,28 +1157,17 @@ export class KeyboardController extends Controller {
       return;
     }
 
-    // Dedupe a single physical keypress that emits duplicate keydown events,
-    // but ONLY when the SAME action repeats inside the window. Duplicates of one
-    // press always share the same modifiers, so an undo followed by a redo (Shift
-    // toggled) is a genuinely distinct gesture and must never be swallowed —
-    // sharing one timestamp across both wrongly dropped a redo issued right after
-    // an undo (e.g. redoing a just-undone column creation did nothing).
-    const now = Date.now();
-    const action: 'undo' | 'redo' = event.shiftKey ? 'redo' : 'undo';
-
-    // A held key's auto-repeats are real presses, not duplicates.
-    if (!event.repeat && action === this.lastUndoRedoAction && now - this.lastUndoRedoTime < 50) {
+    if (event === this.lastHistoryEvent) {
       event.preventDefault();
 
       return;
     }
-    this.lastUndoRedoTime = now;
-    this.lastUndoRedoAction = action;
+    this.lastHistoryEvent = event;
 
     event.preventDefault();
     event.stopPropagation();
 
-    if (action === 'redo') {
+    if (event.shiftKey) {
       this.Blok.YjsManager.redo();
     } else {
       this.Blok.YjsManager.undo();
@@ -1214,15 +1200,12 @@ export class KeyboardController extends Controller {
       return;
     }
 
-    const now = Date.now();
-
-    if (!event.repeat && this.lastUndoRedoAction === 'redo' && now - this.lastUndoRedoTime < 50) {
+    if (event === this.lastHistoryEvent) {
       event.preventDefault();
 
       return;
     }
-    this.lastUndoRedoTime = now;
-    this.lastUndoRedoAction = 'redo';
+    this.lastHistoryEvent = event;
 
     event.preventDefault();
     event.stopPropagation();

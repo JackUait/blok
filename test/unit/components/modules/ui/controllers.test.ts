@@ -668,30 +668,46 @@ describe('KeyboardController', () => {
       expect(blok.YjsManager.redo).toHaveBeenCalledTimes(1);
     });
 
-    it('prevents double-firing within 50ms', () => {
+    it('undoes twice for two Ctrl+Z presses in quick succession', () => {
+      // Each press is its own keydown event: two presses, two undo steps.
       const { controller, blok } = createKeyboardController();
 
       (controller as unknown as { enable: () => void }).enable();
 
-      const event1 = new KeyboardEvent('keydown', { key: 'z', ctrlKey: true });
-      const event2 = new KeyboardEvent('keydown', { key: 'z', ctrlKey: true });
-      const preventDefaultSpy1 = vi.fn().mockImplementation(() => {
-        Object.defineProperty(event1, 'defaultPrevented', { value: true, configurable: true });
-      });
-      const preventDefaultSpy2 = vi.fn().mockImplementation(() => {
-        Object.defineProperty(event2, 'defaultPrevented', { value: true, configurable: true });
-      });
-      Object.defineProperty(event1, 'preventDefault', { value: preventDefaultSpy1 });
-      Object.defineProperty(event2, 'preventDefault', { value: preventDefaultSpy2 });
+      const event1 = new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, cancelable: true });
+      const event2 = new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, cancelable: true });
 
       document.dispatchEvent(event1);
       document.dispatchEvent(event2);
 
-      expect(blok.YjsManager.undo).toHaveBeenCalledTimes(1);
-      expect(preventDefaultSpy1).toHaveBeenCalled();
-      expect(preventDefaultSpy2).toHaveBeenCalled();
+      expect(blok.YjsManager.undo).toHaveBeenCalledTimes(2);
       expect(event1.defaultPrevented).toBe(true);
       expect(event2.defaultPrevented).toBe(true);
+    });
+
+    it('redoes twice for two Ctrl+Y presses in quick succession', () => {
+      const { controller, blok } = createKeyboardController();
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'y', ctrlKey: true, cancelable: true }));
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'y', ctrlKey: true, cancelable: true }));
+
+      expect(blok.YjsManager.redo).toHaveBeenCalledTimes(2);
+    });
+
+    it('undoes once when the same keydown is delivered twice', () => {
+      const { controller, blok } = createKeyboardController();
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      const event = new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, cancelable: true });
+
+      document.dispatchEvent(event);
+      document.dispatchEvent(event);
+
+      expect(blok.YjsManager.undo).toHaveBeenCalledTimes(1);
+      expect(event.defaultPrevented).toBe(true);
     });
   });
 

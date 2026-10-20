@@ -5,7 +5,7 @@ import { PopoverItemType } from '../../components/utils/popover/components/popov
 import { onHover } from '../../components/utils/tooltip';
 import { resolveLocale } from './cells/date-format';
 import { wallTime, zonedToEpoch } from './formula/dates';
-import { nextRun, repeatZone } from './templates';
+import { nextRun, repeatWeekdays, repeatZone } from './templates';
 import type { TemplateRepeat, TemplateRepeatFrequency } from './types';
 
 /** What the "New" dropdown asks of the database tool. */
@@ -63,8 +63,7 @@ const PRESETS: ReadonlyArray<{ id: string; key: string; frequency: TemplateRepea
 ];
 
 const isWorkweek = (repeat: TemplateRepeat): boolean =>
-  repeat.frequency === 'weekly' && (repeat.interval ?? 1) === 1 && Array.isArray(repeat.weekdays)
-  && [...new Set(repeat.weekdays)].sort((a, b) => a - b).join() === WORKWEEK.join();
+  (repeat.interval ?? 1) === 1 && repeatWeekdays(repeat)?.join() === WORKWEEK.join();
 
 /**
  * The banner's label: "Duplicate every 2 weeks", "Duplicate every day", "Duplicate every weekday".
@@ -161,7 +160,10 @@ const zoneOffset = (zone: string, c: CadenceContext): string =>
 const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: CadenceContext): { panel: HTMLElement; next: HTMLElement } => {
   const { t } = c;
   const zone = initial.timeZone === undefined ? c.viewerZone : repeatZone(initial);
-  const draft: TemplateRepeat = { ...initial };
+  // The repeat comes from the document: a start that does not parse opens as a preset would.
+  const draft: TemplateRepeat = Number.isNaN(Date.parse(initial.start)) ? { ...initial, start: tomorrowMidnight(c.now(), zone) } : { ...initial };
+
+  if (repeatWeekdays({ frequency: 'weekly', weekdays: draft.weekdays }) === null) delete draft.weekdays;
   const panel = el('div', 'data-blok-database-template-cadence');
   const next = el('div', 'data-blok-database-template-cadence-next');
   const save = el('button', 'data-blok-database-template-cadence-save', t('templateRepeatSave'));
@@ -169,18 +171,14 @@ const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: Cade
   const every = el('input');
   const unit = el('select');
   const days = el('div', 'data-blok-database-template-cadence-days');
-  const startWall = wallTime(new Date(initial.start).getTime(), zone);
+  const startWall = wallTime(new Date(draft.start).getTime(), zone);
   const date = el('input');
   const time = el('input');
   const longDay = new Intl.DateTimeFormat(c.locale, { weekday: 'long', timeZone: 'UTC' });
   const shortDay = new Intl.DateTimeFormat(c.locale, { weekday: 'short', timeZone: 'UTC' });
   // Jan 5 2026 was a Monday.
   const dayName = (format: Intl.DateTimeFormat, weekday: number): string => format.format(Date.UTC(2026, 0, 4 + weekday));
-  const shownDays = (): number[] => {
-    const set = Array.isArray(draft.weekdays) ? draft.weekdays.filter((d) => Number.isInteger(d) && d >= 1 && d <= 7) : [];
-
-    return set.length > 0 ? set : [isoWeekday(new Date(draft.start).getTime(), zone)];
-  };
+  const shownDays = (): number[] => repeatWeekdays({ frequency: 'weekly', weekdays: draft.weekdays }) ?? [isoWeekday(new Date(draft.start).getTime(), zone)];
   const chips = Array.from({ length: 7 }, (_, i) => {
     const weekday = i + 1;
     const chip = el('button', undefined, chipLabel(dayName(shortDay, weekday)));

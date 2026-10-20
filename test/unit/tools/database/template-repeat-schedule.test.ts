@@ -233,6 +233,8 @@ describe('repeating template schedule', () => {
       ['a text day', ['1']],
       ['a huge sparse list', new Array(1_000_000_000)],
       ['a list-like object', { length: 1_000_000_000 }],
+      ['a list with a hole', [1, , 3]],
+      ['a short list of holes', new Array(3)],
     ];
 
     it.each(weekdays)('weekdays as %s give no runs and allocate nothing per day', (_, value) => {

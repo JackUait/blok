@@ -36,16 +36,23 @@ const roughIndex = (start: Date, now: Date, repeat: TemplateRepeat): number => {
   return Math.max(0, Math.floor(days / (perRun[repeat.frequency] * interval)));
 };
 
-/** A weekly schedule's days, deduped and sorted, or undefined when it steps whole weeks. Null: malformed. */
-const weekdaySet = (repeat: TemplateRepeat): number[] | undefined | null => {
+/**
+ * A weekly schedule's days, deduped and sorted, or undefined when it steps whole weeks
+ * (or is not weekly). Null: malformed.
+ */
+export const repeatWeekdays = (repeat: Pick<TemplateRepeat, 'frequency' | 'weekdays'>): number[] | undefined | null => {
   const days: unknown = repeat.weekdays;
 
   if (repeat.frequency !== 'weekly' || days === undefined) return undefined;
   // Length first: a sparse list of any length costs nothing until it is walked.
   if (!Array.isArray(days) || days.length > 7) return null;
-  if (!days.every((day) => Number.isInteger(day) && day >= 1 && day <= 7)) return null;
+  // Array.from visits holes as undefined (at most 7 slots), so a hole fails the check.
+  const slots: unknown[] = Array.from(days);
 
-  return days.length === 0 ? undefined : [...new Set(days as number[])].sort((a, b) => a - b);
+  if (!slots.every((day) => typeof day === 'number' && Number.isInteger(day) && day >= 1 && day <= 7)) return null;
+  const set = new Set(slots as number[]);
+
+  return set.size === 0 ? undefined : [...set].sort((a, b) => a - b);
 };
 
 /** The end in ms, Infinity when there is none, null when it is malformed. */
@@ -69,7 +76,7 @@ const validRepeat = (repeat: TemplateRepeat | undefined): repeat is TemplateRepe
   && Object.hasOwn(UNITS, repeat.frequency)
   && (repeat.interval === undefined || (Number.isInteger(repeat.interval) && repeat.interval >= 1))
   && inDateRange(new Date(repeat.start).getUTCFullYear())
-  && weekdaySet(repeat) !== null
+  && repeatWeekdays(repeat) !== null
   && endOf(repeat) !== null;
 
 // Date math throws near the edge of the JS date range and reads years 0-99 as 19xx, so those starts have no runs.
@@ -147,7 +154,7 @@ const nextWeekdayRun = (plan: WeekdayPlan, now: number): number | null => {
 /** The last run at or before `now`, or null before the first run. */
 const lastRunBy = (repeat: TemplateRepeat, now: Date): number | null => {
   const start = new Date(repeat.start);
-  const days = weekdaySet(repeat);
+  const days = repeatWeekdays(repeat);
 
   if (days !== undefined && days !== null) return lastWeekdayRun(weekdayPlan(start, repeat, days), now.getTime());
   if (start.getTime() > now.getTime()) return null;
@@ -173,7 +180,7 @@ export const dueRun = (repeat: TemplateRepeat | undefined, now: Date): string | 
 export const nextRun = (repeat: TemplateRepeat | undefined, now: Date): number | null => {
   if (!validRepeat(repeat)) return null;
   const start = new Date(repeat.start);
-  const days = weekdaySet(repeat);
+  const days = repeatWeekdays(repeat);
   const end = endOf(repeat) ?? Number.NaN;
   const upcoming = ((): number | null => {
     if (days !== undefined && days !== null) return nextWeekdayRun(weekdayPlan(start, repeat, days), now.getTime());

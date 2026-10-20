@@ -14,7 +14,7 @@ export interface I18n {
    *
    * @example
    * api.i18n.t('tools.image.emptyMaxSize', { size: '10 MB' })
-   * api.i18n.t('tools.database.templateRepeatEveryWeek', { count: 2 }) // "Every 2 weeks"
+   * api.i18n.t('tools.database.templateRepeatSummaryWeeks', { count: 2 }) // "Duplicate every 2 weeks"
    */
   t(
     dictKey: string,

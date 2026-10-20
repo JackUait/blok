@@ -339,6 +339,40 @@ describe('template menu', () => {
       expect(h.setRepeat).toHaveBeenCalledWith(null);
     });
 
+    it('opens on malformed document data without walking it or throwing', () => {
+      const bad: unknown[] = [
+        { ...weekly, interval: 1, weekdays: new Array(1_000_000_000) },
+        { ...weekly, weekdays: [1, , 3] },
+        { ...weekly, weekdays: '1,2' },
+        { ...weekly, end: 42 },
+        { ...weekly, start: 'soon' },
+      ];
+
+      for (const repeat of bad as TemplateRepeat[]) {
+        expect(() => templateRepeatSummary(english, repeat)).not.toThrow();
+        const { q } = panel(repeatHost({ repeat: () => repeat }));
+
+        expect(q('[data-blok-database-template-cadence-title]')?.textContent).toBe('Edit cadence');
+      }
+    });
+
+    it('a start that does not parse opens on tomorrow at midnight', () => {
+      const h = repeatHost({ repeat: () => ({ ...weekly, start: 'soon' }) });
+      const { q } = panel(h);
+
+      expect(q<HTMLInputElement>('[data-blok-database-template-cadence-row="starting"] input')?.value).toBe('2026-10-21');
+      save(q);
+      expect(h.setRepeat).toHaveBeenCalledWith({ ...weekly, start: tomorrowMidnight });
+    });
+
+    it('drops weekdays it cannot read on Save, showing the start\'s weekday', () => {
+      const h = repeatHost({ repeat: () => ({ ...weekly, weekdays: '1,2' } as unknown as TemplateRepeat) });
+      const { q } = panel(h);
+
+      save(q);
+      expect(h.setRepeat).toHaveBeenCalledWith(weekly);
+    });
+
     it('lets the panel own its keys', () => {
       const { q } = panel(repeatHost({ repeat: () => weekly }));
 

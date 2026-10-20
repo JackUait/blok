@@ -172,7 +172,7 @@ test.describe('templates', () => {
     await expect.poll(async () => (await saved(page)).filter((block) => (block.data as { template?: boolean }).template === true).length).toBe(2);
   });
 
-  test('the template banner sets a repeat; the templates list shows ↻ with its hint', async ({ page }) => {
+  test('the template banner sets a repeat through Edit cadence; the templates list shows ↻ with its hint', async ({ page }) => {
     await mount(page, blocks());
     await page.getByTestId('database-toolbar-new-menu').click();
     await page.getByRole('menuitem', { name: 'Bug report' }).click();
@@ -181,10 +181,28 @@ test.describe('templates', () => {
     const repeat = page.getByRole('button', { name: 'Duplicate every…' });
 
     await repeat.click();
-    await page.getByRole('menuitem', { name: '2 Weeks' }).click();
+    await page.getByRole('menuitem', { name: 'Weekday' }).click();
 
-    await expect(page.getByRole('button', { name: 'Duplicate every 2 weeks' })).toBeVisible();
-    await expect.poll(async () => (await savedRow(page, 'tpl')).repeat).toMatchObject({ frequency: 'weekly', interval: 2 });
+    // A preset opens Edit cadence; nothing is stored until Save.
+    await expect(page.getByText('Edit cadence')).toBeVisible();
+    for (const day of ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']) {
+      await expect(page.getByRole('button', { name: day })).toHaveAttribute('aria-pressed', 'true');
+    }
+    await expect(page.getByRole('button', { name: 'Saturday' })).toHaveAttribute('aria-pressed', 'false');
+    await expect(repeat).toBeVisible();
+    expect((await savedRow(page, 'tpl')).repeat).toBeUndefined();
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByText('Edit cadence')).toHaveCount(0);
+
+    await expect(page.getByRole('button', { name: 'Duplicate every weekday' })).toBeVisible();
+    await expect.poll(async () => (await savedRow(page, 'tpl')).repeat).toMatchObject({ frequency: 'weekly', weekdays: [1, 2, 3, 4, 5] });
+
+    // Once set, the button opens Edit cadence straight away.
+    await page.getByRole('button', { name: 'Duplicate every weekday' }).click();
+    await expect(page.getByText('Edit cadence')).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Weekday' })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(page.getByText('Edit cadence')).toHaveCount(0);
 
     await page.keyboard.press('Escape');
     await page.getByTestId('database-toolbar-new-menu').click();

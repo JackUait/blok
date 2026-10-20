@@ -79,6 +79,8 @@ export interface TableHandlers {
   commitCell: (rowId: string, propertyId: string, value: PropertyValue) => void;
   /** A date's Remind choice, null for None. Without it the date picker has no Remind row. */
   commitReminder?: (rowId: string, propertyId: string, reminder: DateReminderOffset | null) => void;
+  /** The bulk date picker's Remind. `picked` false: the property default, for rows with none. */
+  commitBulkReminder?: (rowIds: string[], propertyId: string, reminder: DateReminderOffset | null, picked: boolean) => void;
   /** An editor closed or a clear finished: the tool may redraw now. */
   editEnded: () => void;
   /** Adds a row to a group ('' or null when ungrouped), after `afterRowId` when given. Returns its id. */
@@ -1286,6 +1288,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         ? { onOptionsChange: (next: SelectOption[]) => handlers.optionsChange?.(propertyId, next) }
         : {}),
       ...(handlers.editProperty !== undefined ? { onEditProperty: () => handlers.editProperty?.(propertyId) } : {}),
+      ...(property.type === 'date' && handlers.commitBulkReminder !== undefined
+        ? { onReminderChange: (next: DateReminderOffset | null, picked: boolean) => handlers.commitBulkReminder?.(rowIds, propertyId, next, picked) }
+        : {}),
       onCommit: (value) => handlers.commitCells(rowIds.map((rowId) => ({ rowId, propertyId, value })), []),
       onClose: () => {
         this.bulkEditor = null;

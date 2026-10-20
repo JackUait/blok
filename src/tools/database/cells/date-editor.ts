@@ -119,6 +119,8 @@ class DateEditor {
   /** The Remind row's choice. On an empty cell it can wait for the first date. */
   private remind: DateReminderOffset | null;
   private storedRemind: DateReminderOffset | null;
+  /** The Remind menu was used: the choice is the user's, not the default. */
+  private remindPicked = false;
   private remindMenu: HTMLElement | null = null;
   private open = true;
   private readonly locale: string;
@@ -229,16 +231,17 @@ class DateEditor {
     }
     if (this.remind !== this.storedRemind) {
       this.storedRemind = this.remind;
-      this.ctx.onReminderChange(this.remind);
+      this.ctx.onReminderChange(this.remind, this.remindPicked);
     }
   }
 
   private pickRemind(choice: DateReminderOffset | null): void {
     this.remind = choice;
+    this.remindPicked = true;
     this.closeRemindMenu(false);
     if (this.start !== null && choice !== this.storedRemind) {
       this.storedRemind = choice;
-      this.ctx.onReminderChange?.(choice);
+      this.ctx.onReminderChange?.(choice, true);
     }
     this.render();
     this.root.querySelector<HTMLElement>('[data-blok-database-date-remind]')?.focus();

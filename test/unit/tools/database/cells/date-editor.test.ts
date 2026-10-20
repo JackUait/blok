@@ -361,7 +361,7 @@ describe('date cell editor', () => {
       remindRow().click();
       pick('1 day before (9:00 AM)');
 
-      expect(ctx.onReminderChange).toHaveBeenCalledWith('1_day_before');
+      expect(ctx.onReminderChange).toHaveBeenCalledWith('1_day_before', true);
       expect(menu()).toBeNull();
       expect(rowText()).toBe('Remind1 day before');
       expect(ctx.onCommit).not.toHaveBeenCalled();
@@ -373,7 +373,7 @@ describe('date cell editor', () => {
       remindRow().click();
       pick('None');
 
-      expect(ctx.onReminderChange).toHaveBeenCalledWith(null);
+      expect(ctx.onReminderChange).toHaveBeenCalledWith(null, true);
     });
 
     it('Escape closes the menu first, then the picker', () => {
@@ -403,7 +403,7 @@ describe('date cell editor', () => {
 
       q('[data-blok-database-date-time-toggle]').click();
 
-      expect(ctx.onReminderChange).toHaveBeenCalledWith(null);
+      expect(ctx.onReminderChange).toHaveBeenCalledWith(null, false);
       expect(rowText()).toBe('RemindNone');
     });
 
@@ -426,7 +426,18 @@ describe('date cell editor', () => {
         day('2026-10-20').click();
 
         expect(ctx.onCommit).toHaveBeenCalledWith('2026-10-20');
-        expect(ctx.onReminderChange).toHaveBeenCalledWith('1_week_before');
+        expect(ctx.onReminderChange).toHaveBeenCalledWith('1_week_before', false);
+      });
+
+      it('a pick made before the first date arrives with it as the user\'s pick', () => {
+        const ctx = openRemind(null, undefined, {}, withDefault());
+
+        remindRow().click();
+        pick('1 day before (9:00 AM)');
+        expect(ctx.onReminderChange).not.toHaveBeenCalled();
+        day('2026-10-20').click();
+
+        expect(ctx.onReminderChange).toHaveBeenCalledWith('1_day_before', true);
       });
 
       it('leaves a date that already has a value alone', () => {

@@ -5334,6 +5334,7 @@ export class DatabaseTool implements BlockTool {
     return {
       commitCell: (rowId, propertyId, value) => { if (writable()) this.commitTableCell(rowId, propertyId, value); },
       commitReminder: (rowId, propertyId, reminder) => { if (writable()) this.commitReminder(rowId, propertyId, reminder); },
+      commitBulkReminder: (rowIds, propertyId, reminder, picked) => { if (writable()) this.commitBulkReminder(rowIds, propertyId, reminder, picked); },
       editEnded: () => context === undefined ? this.redrawWhenIdle() : context.redraw(),
       addRow: (groupKey, afterRowId) => this.addTableRow(groupKey, afterRowId, context),
       deleteRows: (rowIds) => { if (writable()) this.deleteTableRows(rowIds); },
@@ -5453,6 +5454,18 @@ export class DatabaseTool implements BlockTool {
     if (!fromPage && this.cardDrawer?.openRowId === rowId) {
       this.cardDrawer.syncOpenRow(this.rowOrTemplate(rowId));
     }
+  }
+
+  /**
+   * A bulk date picker's Remind (research/21 §6). A pick goes on every
+   * selected row. The property default goes on the rows with no reminder of
+   * their own, dated or not, as Notion did; a default that stopped fitting the
+   * time changes nothing.
+   */
+  private commitBulkReminder(rowIds: string[], propertyId: string, reminder: DateReminderOffset | null, picked: boolean): void {
+    rowIds
+      .filter((rowId) => picked || (reminder !== null && this.rowOrTemplate(rowId)?.reminders?.[propertyId] === undefined))
+      .forEach((rowId) => this.commitReminder(rowId, propertyId, reminder));
   }
 
   /**
@@ -7984,6 +7997,9 @@ export class DatabaseTool implements BlockTool {
       ...this.cellContext(),
       i18n: this.api.i18n,
       readOnly: false,
+      ...(property.type === 'date'
+        ? { onReminderChange: (next: DateReminderOffset | null, picked: boolean) => this.commitBulkReminder(rowIds, propertyId, next, picked) }
+        : {}),
       onCommit: (value) => this.commitTableCells(rowIds.map((rowId) => ({ rowId, propertyId, value })), []),
       onClose: () => {
         this.bulkEditor = null;

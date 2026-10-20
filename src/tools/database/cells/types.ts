@@ -95,8 +95,10 @@ export interface CellEditorCallbacks {
   /**
    * Date: the Remind row's new choice, null for None. Without it the picker has
    * no Remind row. Not called on Clear: the host drops the reminder with the value.
+   * `picked`: the user chose it in the Remind menu; false when it is the
+   * property default (or a choice dropped because it no longer fits the time).
    */
-  onReminderChange?: (reminder: DateReminderOffset | null) => void;
+  onReminderChange?: (reminder: DateReminderOffset | null, picked: boolean) => void;
 }
 
 export type CellEditorContext = CellContext & CellEditorCallbacks;

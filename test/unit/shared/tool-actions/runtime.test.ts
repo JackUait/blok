@@ -7,7 +7,7 @@ import { BUILT_IN_RUNTIME_PARTS, BUILT_IN_TOOL_RUNTIMES } from '../../../../src/
 import { COLUMN_DEFAULT_CHILDREN, COLUMN_LIST_ACTION_HANDLERS, COLUMN_LIST_DEFAULT_CHILDREN } from '../../../../src/shared/tool-actions/columns';
 import { DATABASE_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/database';
 import { IMAGE_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/image';
-import { LINK_ACTION_HANDLERS, normalizeEmbed } from '../../../../src/shared/tool-actions/link';
+import { LINK_ACTION_HANDLERS, normalizeEmbed, rejectEmbedWrite } from '../../../../src/shared/tool-actions/link';
 import { MEDIA_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/media';
 import { PAGE_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/page';
 import { buildToolRuntimes, composeToolSanitize } from '../../../../src/shared/tool-actions/runtime';
@@ -295,7 +295,7 @@ describe('BUILT_IN_TOOL_RUNTIMES', () => {
       video: { actions: MEDIA_ACTION_HANDLERS.video },
       audio: { actions: MEDIA_ACTION_HANDLERS.audio },
       file: { actions: MEDIA_ACTION_HANDLERS.file },
-      embed: { normalize: normalizeEmbed, actions: LINK_ACTION_HANDLERS.embed },
+      embed: { normalize: normalizeEmbed, rejectWrite: rejectEmbedWrite, actions: LINK_ACTION_HANDLERS.embed },
       bookmark: { actions: LINK_ACTION_HANDLERS.bookmark },
       database: { actions: DATABASE_ACTION_HANDLERS },
       list: { conversion: { export: 'text', import: 'text' } },

@@ -4,7 +4,7 @@ import { BUILT_IN_INLINE_SANITIZE } from '../tool-descriptions/sanitize/inline';
 import { COLUMN_DEFAULT_CHILDREN, COLUMN_LIST_ACTION_HANDLERS, COLUMN_LIST_DEFAULT_CHILDREN } from './columns';
 import { DATABASE_ACTION_HANDLERS } from './database';
 import { IMAGE_ACTION_HANDLERS } from './image';
-import { LINK_ACTION_HANDLERS, normalizeEmbed } from './link';
+import { LINK_ACTION_HANDLERS, normalizeEmbed, rejectEmbedWrite } from './link';
 import { MEDIA_ACTION_HANDLERS } from './media';
 import { PAGE_ACTION_HANDLERS } from './page';
 import { buildToolRuntimes } from './runtime';
@@ -13,7 +13,7 @@ import { TABS_ACTION_HANDLERS, TABS_DEFAULT_CHILDREN } from './tabs';
 
 import type { RuntimeBlockInput, ToolRuntimeRegistry } from './runtime';
 
-export const BUILT_IN_RUNTIME_PARTS: Readonly<Record<string, Pick<RuntimeBlockInput, 'normalize' | 'defaultChildren' | 'actions' | 'conversion'>>> = {
+export const BUILT_IN_RUNTIME_PARTS: Readonly<Record<string, Pick<RuntimeBlockInput, 'normalize' | 'rejectWrite' | 'defaultChildren' | 'actions' | 'conversion'>>> = {
   table: { normalize: (data) => normalizeTable(data), actions: TABLE_ACTION_HANDLERS },
   callout: { defaultChildren: [{ type: 'paragraph', data: { text: [] } }] },
   column_list: { defaultChildren: COLUMN_LIST_DEFAULT_CHILDREN, actions: COLUMN_LIST_ACTION_HANDLERS },
@@ -24,7 +24,7 @@ export const BUILT_IN_RUNTIME_PARTS: Readonly<Record<string, Pick<RuntimeBlockIn
   video: { actions: MEDIA_ACTION_HANDLERS.video },
   audio: { actions: MEDIA_ACTION_HANDLERS.audio },
   file: { actions: MEDIA_ACTION_HANDLERS.file },
-  embed: { normalize: normalizeEmbed, actions: LINK_ACTION_HANDLERS.embed },
+  embed: { normalize: normalizeEmbed, rejectWrite: rejectEmbedWrite, actions: LINK_ACTION_HANDLERS.embed },
   bookmark: { actions: LINK_ACTION_HANDLERS.bookmark },
   database: { actions: DATABASE_ACTION_HANDLERS },
   // The list's conversionConfig is functions (they carry a to-do's checked state in the editor).

@@ -75,6 +75,17 @@ describe.each(sessions)('agent embed writes (%s session)', (_label, open) => {
     await session.close();
   });
 
+  it('still lets the agent edit around an embed the user left empty', async () => {
+    const session = open({ blocks: [
+      { id: 'tg', type: 'toggle', data: { text: [] }, content: ['e'] },
+      { id: 'e', type: 'embed', data: { service: '', source: '', embed: '' }, parent: 'tg' },
+    ] });
+
+    expect((await run(session, 'block.update', { id: 'e', data: { caption: 'Later' } })).ok).toBe(true);
+    expect((await run(session, 'block.duplicate', { id: 'tg' })).ok).toBe(true);
+    await session.close();
+  });
+
   it('creates a working embed from a URL in one step', async () => {
     const session = open({ blocks: [] });
     const result = await run(session, 'embed.create', { url: WATCH });

@@ -40,6 +40,7 @@ export type PlannerActionImpl = ToolActionImpl;
 
 export interface PlannerToolRuntime {
   normalize?(data: Record<string, unknown>): Record<string, unknown>;
+  rejectWrite?(data: Record<string, unknown>, written: readonly string[]): string | undefined;
   defaultChildren?: InsertSpec[];
   actions: Readonly<Record<string, ToolActionImpl>>;
   /** Text fields for block.convert when the manifest entry has none. */

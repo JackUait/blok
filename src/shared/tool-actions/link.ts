@@ -1,4 +1,3 @@
-import { failure } from '../agent/errors';
 import { EMBED_SERVICES, matchEmbedService } from '../embed-registry';
 
 import type { EmbedMatch } from '../embed-registry';
@@ -58,26 +57,34 @@ const createEmbed: ToolActionImpl<CreateArgs, undefined, { id: string; childIds:
   },
 };
 
-/**
- * Agent writes only. The editor renders registry data whose source does not match as the empty
- * "Paste a link" state (src/tools/link/embed/index.ts resolveEmbedRender), so such data is refused
- * here, and a matching source decides service, embed and kind.
- */
-export const normalizeEmbed = (data: Record<string, unknown>): Record<string, unknown> => {
-  const source = typeof data.source === 'string' ? data.source : '';
-  const match = matchEmbedService(source);
+const sourceOf = (data: Record<string, unknown>): string => typeof data.source === 'string' ? data.source : '';
 
-  if (match !== null) {
-    return { ...data, ...providerFields(match) };
+/** Agent writes only: a source the registry knows decides service, embed and kind. */
+export const normalizeEmbed = (data: Record<string, unknown>): Record<string, unknown> => {
+  const match = matchEmbedService(sourceOf(data));
+
+  return match === null ? data : { ...data, ...providerFields(match) };
+};
+
+const URL_FIELDS = ['service', 'source', 'embed'];
+
+/**
+ * The editor renders registry data whose source does not match as the empty "Paste a link" state
+ * (src/tools/link/embed/index.ts resolveEmbedRender). Only a write that sets a URL field is checked,
+ * so edits to an embed a person left empty still work.
+ */
+export const rejectEmbedWrite = (data: Record<string, unknown>, written: readonly string[]): string | undefined => {
+  const source = sourceOf(data);
+
+  if (!written.some(field => URL_FIELDS.includes(field)) || matchEmbedService(source) !== null) {
+    return undefined;
   }
   const service = typeof data.service === 'string' ? data.service : '';
 
   // An unknown service with an http source still renders, as a link card or a host-allowed frame.
-  if (Object.hasOwn(EMBED_SERVICES, service) || !/^https?:\/\//i.test(source)) {
-    throw failure('DATA_REJECTED', `Embed source ${JSON.stringify(source)}: ${NO_PROVIDER} Create one with embed.create, or change its URL with embed.setUrl.`, { path: '/data/source' });
-  }
-
-  return data;
+  return Object.hasOwn(EMBED_SERVICES, service) || !/^https?:\/\//i.test(source)
+    ? `Embed source ${JSON.stringify(source)}: ${NO_PROVIDER} Create one with embed.create, or change its URL with embed.setUrl.`
+    : undefined;
 };
 
 const PREVIEW_FIELDS = ['title', 'description', 'image', 'favicon', 'domain'] as const;

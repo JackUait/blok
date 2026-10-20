@@ -29,7 +29,7 @@ import { destroy as destroyTooltip } from '../../../../src/components/utils/tool
 import { BUILT_IN_RUNTIME_PARTS } from '../../../../src/shared/tool-actions';
 import { describeTable } from '../../../../src/shared/tool-descriptions/table';
 import { buildToolManifest } from '../../../../src/shared/tool-manifest';
-import { Callout, Header, List, Paragraph, Table, TabsTool, TabTool } from '../../../../src/tools';
+import { Callout, Embed, Header, List, Paragraph, Table, TabsTool, TabTool } from '../../../../src/tools';
 
 const hasMarkDestroyed = (value: unknown): value is { markDestroyed(): void } =>
   typeof value === 'object' && value !== null &&
@@ -690,6 +690,20 @@ describe('browser tool registry snapshot', () => {
     }
 
     expect(runtimesFromTools(instance.moduleInstances.Tools).get('tabs')?.defaultChildren).toBe(tabsParts.defaultChildren);
+  });
+
+  it('gives the embed tool its write checks, so the in-editor agent cannot leave an empty embed', async () => {
+    const instance = await boot({ tools: { paragraph: Paragraph, embed: Embed } });
+    const embedParts = BUILT_IN_RUNTIME_PARTS.embed;
+
+    if (embedParts?.normalize === undefined || embedParts.rejectWrite === undefined) {
+      throw new Error('Embed runtime parts are missing.');
+    }
+
+    const runtime = runtimesFromTools(instance.moduleInstances.Tools).get('embed');
+
+    expect(runtime?.rejectWrite).toBe(embedParts.rejectWrite);
+    expect(runtime?.normalize).toBe(embedParts.normalize);
   });
 
   it('gives the list tool its text conversion, so the agent can turn a paragraph into a list in the editor', async () => {

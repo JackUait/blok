@@ -396,6 +396,16 @@ export const buildPlannedBlock = (
   return buildBlock(state, parsed, parent, path, demote, false, state.ctx.prepared.get(state.index) === PREPARE_PENDING, extra, options);
 };
 
+// Inserted data is the agent's own; a copy (block.duplicate) is not checked.
+const rejectWrites = (state: PlanState, block: PlannedBlock, path: string): void => {
+  const reason = state.tool(block.type)?.runtime.rejectWrite?.(block.data, Object.keys(block.data));
+
+  if (reason !== undefined) {
+    state.fail('DATA_REJECTED', reason, `${path}/data`);
+  }
+  block.children.forEach((child, index) => rejectWrites(state, child, `${path}/children/${index}`));
+};
+
 export const planInsert = (state: PlanState, args: Record<string, unknown>): unknown => {
   const placement = state.place(args.parentId, args.position ?? 'end');
   const spec = readInsertSpec(state, Object.fromEntries(Object.entries(args).filter(([key]) => SPEC_KEYS.has(key))), '');
@@ -418,6 +428,7 @@ export const planInsert = (state: PlanState, args: Record<string, unknown>): unk
 
   const planned = buildBlock(state, spec, { id: placement.parentId }, '', args.demote === true, true, pending, isRecord(prepared) ? prepared : undefined);
 
+  rejectWrites(state, planned, '');
   state.emit({ op: 'insert', block: planned, parentId: placement.parentId, afterId: placement.afterId });
 
   return { id: planned.id, childIds: planned.children.map(child => child.id) };
@@ -502,6 +513,12 @@ export const emitPatch = (
   }
   // Explicit removals must survive normalizer defaults.
   removed.forEach(key => Reflect.deleteProperty(normalized, key));
+
+  const reason = tool.runtime.rejectWrite?.(normalized, Object.keys(patch));
+
+  if (reason !== undefined) {
+    state.fail('DATA_REJECTED', reason, '/data');
+  }
 
   const rich = tool.entry.richTextFields;
   const produced: Record<string, unknown> = Object.fromEntries(rich

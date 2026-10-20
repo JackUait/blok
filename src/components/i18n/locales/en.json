@@ -229,6 +229,8 @@
   "toolNames.database": "Database",
   "toolNames.board": "Board",
   "toolNames.linkedDatabase": "Linked view of data source",
+  "toolNames.tableView": "Table view",
+  "toolNames.mapView": "Map view",
   "toolNames.divider": "Divider",
   "toolNames.spacer": "Spacer",
   "toolNames.tableOfContents": "Table of contents",

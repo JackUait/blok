@@ -60,6 +60,8 @@
   "toolNames.toggleList": "토글 목록",
   "toolNames.board": "보드",
   "toolNames.linkedDatabase": "데이터 소스의 링크된 보기",
+  "toolNames.tableView": "표 보기",
+  "toolNames.mapView": "지도 보기",
   "toolNames.database": "데이터베이스",
   "tools.link.addLink": "링크 추가",
   "tools.link.invalidLink": "잘못된 링크",

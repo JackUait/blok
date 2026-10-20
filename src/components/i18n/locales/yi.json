@@ -60,6 +60,8 @@
   "toolNames.toggleList": "אויפֿקלאַפּ ליסטע",
   "toolNames.board": "טאָוול",
   "toolNames.linkedDatabase": "פֿאַרבונדענער אויסשטעל פֿון דאַטן־מקור",
+  "toolNames.tableView": "טאַבעלע־אויסשטעל",
+  "toolNames.mapView": "מאַפּע־אויסשטעל",
   "toolNames.database": "דאַטאַבאַנק",
   "tools.link.addLink": "צולייגן לינק",
   "tools.link.invalidLink": "אומגילטיקער לינק",

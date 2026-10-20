@@ -219,6 +219,8 @@
   "toolNames.database": "ຖານຂໍ້ມູນ",
   "toolNames.board": "ກະດານ",
   "toolNames.linkedDatabase": "ມຸມມອງທີ່ເຊື່ອມໂຍງຂອງແຫຼ່ງຂໍ້ມູນ",
+  "toolNames.tableView": "ມຸມມອງຕາຕະລາງ",
+  "toolNames.mapView": "ມຸມມອງແຜນທີ່",
   "toolNames.divider": "ເສັ້ນແບ່ງ",
   "toolNames.spacer": "ຊ່ອງຫວ່າງ",
   "toolNames.tableOfContents": "ສາລະບານ",

@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Orodha inayokunjuka",
   "toolNames.board": "Bodi",
   "toolNames.linkedDatabase": "Mwonekano uliounganishwa wa chanzo cha data",
+  "toolNames.tableView": "Mwonekano wa jedwali",
+  "toolNames.mapView": "Mwonekano wa ramani",
   "toolNames.database": "Hifadhidata",
   "tools.link.addLink": "Ongeza kiungo",
   "tools.link.invalidLink": "Kiungo batili",

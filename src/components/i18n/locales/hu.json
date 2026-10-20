@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Összecsukható lista",
   "toolNames.board": "Tábla",
   "toolNames.linkedDatabase": "Adatforrás csatolt nézete",
+  "toolNames.tableView": "Táblázatnézet",
+  "toolNames.mapView": "Térképnézet",
   "toolNames.database": "Adatbázis",
   "tools.link.addLink": "Hivatkozás hozzáadása",
   "tools.link.invalidLink": "Érvénytelen hivatkozás",

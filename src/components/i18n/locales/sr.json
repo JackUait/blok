@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Склопива листа",
   "toolNames.board": "Табла",
   "toolNames.linkedDatabase": "Повезани приказ извора података",
+  "toolNames.tableView": "Приказ табеле",
+  "toolNames.mapView": "Приказ мапе",
   "toolNames.database": "База података",
   "tools.link.addLink": "Додај везу",
   "tools.link.invalidLink": "Неважећа веза",

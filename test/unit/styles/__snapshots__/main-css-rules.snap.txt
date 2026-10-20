@@ -23353,6 +23353,91 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   pointer-events: none;
 }
 
+[data-blok-interface='block-preview'] [data-blok-preview='database'] [data-map] {
+  position: relative;
+  height: 104px;
+  overflow: hidden;
+  border-radius: var(--blok-radius-block);
+  background: var(--blok-color-blue-bg);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='database'] [data-land] {
+  position: absolute;
+  background: var(--blok-bg-primary);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='database'] [data-land='west'] {
+  inset: 34px auto -20px -24px;
+  width: 92px;
+  border-radius: var(--blok-radius-pill);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='database'] [data-land='east'] {
+  inset: -18px -20px 40px auto;
+  width: 70px;
+  border-radius: var(--blok-radius-pill);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='database'] [data-add-pin] {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--blok-radius-control-sm);
+  background: var(--blok-bg-primary);
+  box-shadow: var(--blok-database-popover-shadow);
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='database'] [data-add-pin] [data-icon] {
+  width: 12px;
+  height: 12px;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='database'] [data-pin] {
+  position: absolute;
+  width: 16px;
+  height: 19px;
+  filter: drop-shadow(var(--blok-database-map-pin-shadow) 0 0 3px);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='database'] [data-pin]::before, [data-blok-interface='block-preview'] [data-blok-preview='database'] [data-pin]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='database'] [data-pin]::before {
+  background: var(--blok-bg-primary);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 26'%3E%3Cpath d='M11 0C4.9 0 0 4.8 0 10.8c0 7.6 9.4 14.4 10.2 15a1.3 1.3 0 0 0 1.6 0C12.6 25.2 22 18.4 22 10.8 22 4.8 17.1 0 11 0z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 26'%3E%3Cpath d='M11 0C4.9 0 0 4.8 0 10.8c0 7.6 9.4 14.4 10.2 15a1.3 1.3 0 0 0 1.6 0C12.6 25.2 22 18.4 22 10.8 22 4.8 17.1 0 11 0z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='database'] [data-pin]::after {
+  background: var(--blok-color-accent);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 26'%3E%3Cpath fill-rule='evenodd' d='M11 2C6 2 2 6 2 10.8c0 6 7.2 11.8 9 13.1 1.8-1.3 9-7.1 9-13.1C20 6 16 2 11 2zm0 5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 26'%3E%3Cpath fill-rule='evenodd' d='M11 2C6 2 2 6 2 10.8c0 6 7.2 11.8 9 13.1 1.8-1.3 9-7.1 9-13.1C20 6 16 2 11 2zm0 5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='database'] [data-pin='a'] {
+  top: 58px;
+  left: 30px;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='database'] [data-pin='b'] {
+  top: 20px;
+  left: 150px;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='database'] [data-pin='new'] {
+  top: 52px;
+  left: 96px;
+}
+
 [@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='database'] [data-new] {
   animation: blok-preview-database-row-in 3.2s var(--blok-preview-ease-out) infinite;
 }
@@ -23365,6 +23450,10 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   background: var(--blok-database-add-hover-bg);
   opacity: 0;
   animation: blok-preview-database-row-wash 3.2s ease-out infinite;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='database'] [data-pin='new'] {
+  animation: blok-preview-database-pin-drop 3.2s var(--blok-preview-ease-out) infinite;
 }
 
 [@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='board'] [data-moving] {

@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Sakļaujams saraksts",
   "toolNames.board": "Tāfele",
   "toolNames.linkedDatabase": "Saistīts datu avota skats",
+  "toolNames.tableView": "Tabulas skats",
+  "toolNames.mapView": "Kartes skats",
   "toolNames.database": "Datubāze",
   "tools.link.addLink": "Pievienot saiti",
   "tools.link.invalidLink": "Nederīga saite",

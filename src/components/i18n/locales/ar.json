@@ -60,6 +60,8 @@
   "toolNames.toggleList": "قائمة قابلة للطي",
   "toolNames.board": "لوحة",
   "toolNames.linkedDatabase": "عرض مرتبط لمصدر بيانات",
+  "toolNames.tableView": "عرض الجدول",
+  "toolNames.mapView": "عرض الخريطة",
   "toolNames.database": "قاعدة بيانات",
   "tools.link.addLink": "إضافة رابط",
   "tools.link.invalidLink": "رابط غير صالح",

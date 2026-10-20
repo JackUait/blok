@@ -60,6 +60,8 @@
   "toolNames.toggleList": "ޓޮގަލް ލިސްޓް",
   "toolNames.board": "ބޯޑު",
   "toolNames.linkedDatabase": "ގުޅުވާފައިވާ ޑޭޓާ ސޯސް ވިއު",
+  "toolNames.tableView": "ޓޭބަލް ވިއު",
+  "toolNames.mapView": "މެޕް ވިއު",
   "toolNames.database": "ޑޭޓާބޭސް",
   "tools.link.addLink": "ލިންކް އިތުރުކުރޭ",
   "tools.link.invalidLink": "ރަނގަޅު ނޫން ލިންކެއް",

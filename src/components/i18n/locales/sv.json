@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Vikbar lista",
   "toolNames.board": "Tavla",
   "toolNames.linkedDatabase": "Länkad vy av datakälla",
+  "toolNames.tableView": "Tabellvy",
+  "toolNames.mapView": "Kartvy",
   "toolNames.database": "Databas",
   "tools.link.addLink": "Lägg till länk",
   "tools.link.invalidLink": "Ogiltig länk",

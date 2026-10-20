@@ -60,6 +60,8 @@
   "toolNames.toggleList": "折叠列表",
   "toolNames.board": "看板",
   "toolNames.linkedDatabase": "数据源的链接视图",
+  "toolNames.tableView": "表格视图",
+  "toolNames.mapView": "地图视图",
   "toolNames.database": "数据库",
   "tools.link.addLink": "添加链接",
   "tools.link.invalidLink": "链接无效",

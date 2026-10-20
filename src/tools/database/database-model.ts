@@ -94,7 +94,7 @@ export class DatabaseModel {
     if (data?.schema !== undefined && data.schema.length > 0) {
       this.schema = data.schema.map((p) => ({ ...p }));
     } else {
-      this.schema = DatabaseModel.createDefaultSchema(DatabaseModel.idMinter(options.idSeed));
+      this.schema = createDefaultSchema(DatabaseModel.idMinter(options.idSeed), options.defaultViewType);
     }
 
     if (data?.views !== undefined && data.views.length > 0) {
@@ -616,10 +616,6 @@ export class DatabaseModel {
 
   private static idMinter(seed: string | undefined): (name: string) => string {
     return seed === undefined ? () => nanoid() : (name) => `${seed}-${name}`;
-  }
-
-  private static createDefaultSchema(mintId: (name: string) => string): PropertyDefinition[] {
-    return createDefaultSchema(mintId);
   }
 
   private createDefaultView(type: ViewType, mintId: (name: string) => string): DatabaseViewConfig {

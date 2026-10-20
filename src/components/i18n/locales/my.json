@@ -219,6 +219,8 @@
   "toolNames.database": "ဒေတာဘေ့စ်",
   "toolNames.board": "ဘုတ်",
   "toolNames.linkedDatabase": "ဒေတာရင်းမြစ်၏ ချိတ်ဆက်ထားသော မြင်ကွင်း",
+  "toolNames.tableView": "ဇယားမြင်ကွင်း",
+  "toolNames.mapView": "မြေပုံမြင်ကွင်း",
   "toolNames.divider": "ပိုင်းခြားမျဉ်း",
   "toolNames.spacer": "နေရာလွတ်",
   "toolNames.tableOfContents": "မာတိကာ",

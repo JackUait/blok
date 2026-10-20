@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Lista zwijana",
   "toolNames.board": "Tablica",
   "toolNames.linkedDatabase": "Połączony widok źródła danych",
+  "toolNames.tableView": "Widok tabeli",
+  "toolNames.mapView": "Widok mapy",
   "toolNames.database": "Baza danych",
   "tools.link.addLink": "Dodaj link",
   "tools.link.invalidLink": "Nieprawidłowy link",

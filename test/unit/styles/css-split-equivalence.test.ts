@@ -830,6 +830,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_COMMENT_BADGE_BYTES = 1_131;
     // database.css: the CSV import dialog, its Setup CSV columns step and type picker heading (research/27 §2).
     const DATABASE_CSV_IMPORT_BYTES = 4_875;
+    // block-preview/database.css: the Map view toolbox preview (map, land, Add pin, the real pin masks).
+    const DATABASE_MAP_VIEW_PREVIEW_BYTES = 3_828;
     // database.css: a calendar event title gives way to its comment badge (research/22 §11).
     const DATABASE_CALENDAR_EVENT_BADGE_BYTES = 218;
     // database.css: the view overflow list's search, row handle and "•••", and New view (research/13 §3a).
@@ -1101,7 +1103,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_MANAGE_CALENDAR_BYTES
       + DATABASE_STARTER_TEMPLATES_BYTES
       + DATABASE_PRESSED_FILLS_BYTES
-      + DATABASE_CSV_IMPORT_BYTES;
+      + DATABASE_CSV_IMPORT_BYTES
+      + DATABASE_MAP_VIEW_PREVIEW_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

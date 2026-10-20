@@ -4,6 +4,7 @@ import type { BlockOrigin } from '../../../../types';
 import { DatabaseTool } from '../../../../src/tools/database';
 import type { ToolboxConfigEntry } from '../../../../types';
 import { buildDatabase, makeDoc } from './structure-harness';
+import { IconMap, IconTable } from '../../../../src/components/icons';
 
 vi.mock('../../../../src/blok', () => ({
   Blok: class MockBlok {
@@ -426,11 +427,17 @@ describe('"New database" panel for every database toolbox entry', () => {
     return data.views.find((view) => view.id === data.activeViewId)?.type;
   };
 
-  it('the entries are Database, Board and Linked view', () => {
-    expect(entries().map((item) => item.name)).toEqual(['database', 'board', 'linkedDatabase']);
+  it('the entries are Database, Board, Table view, Map view and Linked view', () => {
+    expect(entries().map((item) => item.name)).toEqual(['database', 'board', 'tableView', 'mapView', 'linkedDatabase']);
   });
 
-  it.each([['database', 'table'], ['board', 'board']] as const)('a user insert of the %s entry opens the panel, and New empty keeps its %s layout', async (name, layout) => {
+  // research/26 §2 dump "Table view · Database", research/20 §1a "Map view · Database".
+  it('Table view and Map view are named as Notion names them, with the view-type icons', () => {
+    expect(entry('tableView')).toMatchObject({ titleKey: 'tableView', icon: IconTable, section: 'database', data: { initialView: 'table' } });
+    expect(entry('mapView')).toMatchObject({ titleKey: 'mapView', icon: IconMap, section: 'database', data: { initialView: 'map' } });
+  });
+
+  it.each([['database', 'table'], ['board', 'board'], ['tableView', 'table'], ['mapView', 'map']] as const)('a user insert of the %s entry opens the panel, and New empty keeps its %s layout', async (name, layout) => {
     const { tool } = await insert(undefined, 'user', dataOf(name));
 
     expect(panel()?.querySelector('[data-blok-database-panel-header]')?.textContent).toBe('tools.database.linkedPanelTitle');
@@ -462,5 +469,29 @@ describe('"New database" panel for every database toolbox entry', () => {
     };
 
     expect(await ids()).toEqual(await ids());
+  });
+
+  // research/20 §1a: "/map" makes a database whose first view is "Map view" and adds a "Place" property.
+  it('the Map view entry starts a "Map view" map with a Place property', async () => {
+    const { tool } = await insert(undefined, 'user', dataOf('mapView'));
+
+    panel()?.querySelector<HTMLElement>('[data-blok-database-panel-row]')?.click();
+    const data = saved(tool);
+
+    expect(data.views.map((view) => [view.type, view.name])).toEqual([['map', 'Map view']]);
+    expect(data.schema.filter((p) => p.type === 'place').map((p) => p.name)).toEqual(['Place']);
+  });
+
+  it('two clients that render the same Map view seed save the same ids, the Place id too', async () => {
+    const ids = async (): Promise<string[]> => {
+      const { tool } = await insert(undefined, 'replay', dataOf('mapView'));
+      const data = saved(tool);
+
+      return [...data.schema.map((p) => p.id), ...data.views.map((v) => v.id)];
+    };
+    const first = await ids();
+
+    expect(first).toEqual(await ids());
+    expect(first).toContain('db-place');
   });
 });

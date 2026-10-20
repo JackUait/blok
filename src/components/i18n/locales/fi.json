@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Avattava lista",
   "toolNames.board": "Taulu",
   "toolNames.linkedDatabase": "Tietolähteen linkitetty näkymä",
+  "toolNames.tableView": "Taulukkonäkymä",
+  "toolNames.mapView": "Karttanäkymä",
   "toolNames.database": "Tietokanta",
   "tools.link.addLink": "Lisää linkki",
   "tools.link.invalidLink": "Virheellinen linkki",

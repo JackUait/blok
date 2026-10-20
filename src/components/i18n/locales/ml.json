@@ -219,6 +219,8 @@
   "toolNames.database": "ഡാറ്റാബേസ്",
   "toolNames.board": "ബോർഡ്",
   "toolNames.linkedDatabase": "ഡാറ്റാ ഉറവിടത്തിന്റെ ലിങ്ക് ചെയ്ത കാഴ്ച",
+  "toolNames.tableView": "പട്ടിക കാഴ്ച",
+  "toolNames.mapView": "മാപ്പ് കാഴ്ച",
   "toolNames.divider": "വിഭജനരേഖ",
   "toolNames.spacer": "അകലം",
   "toolNames.tableOfContents": "ഉള്ളടക്കപ്പട്ടിക",

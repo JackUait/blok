@@ -60,6 +60,8 @@
   "toolNames.toggleList": "トグルリスト",
   "toolNames.board": "ボード",
   "toolNames.linkedDatabase": "データソースのリンクドビュー",
+  "toolNames.tableView": "テーブルビュー",
+  "toolNames.mapView": "マップビュー",
   "toolNames.database": "データベース",
   "tools.link.addLink": "リンクを追加",
   "tools.link.invalidLink": "無効なリンク",

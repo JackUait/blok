@@ -208,6 +208,8 @@
   "toolNames.database": "ডেটাবেস",
   "toolNames.board": "বোর্ড",
   "toolNames.linkedDatabase": "ডেটা সোর্সের লিঙ্কড ভিউ",
+  "toolNames.tableView": "টেবিল ভিউ",
+  "toolNames.mapView": "মানচিত্র ভিউ",
   "toolNames.divider": "বিভাজক",
   "toolNames.spacer": "ফাঁকা স্থান",
   "toolNames.tableOfContents": "সূচিপত্র",

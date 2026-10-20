@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Sammenleggbar liste",
   "toolNames.board": "Tavle",
   "toolNames.linkedDatabase": "Koblet visning av datakilde",
+  "toolNames.tableView": "Tabellvisning",
+  "toolNames.mapView": "Kartvisning",
   "toolNames.database": "Database",
   "tools.link.addLink": "Legg til en lenke",
   "tools.link.invalidLink": "Ugyldig lenke",

@@ -60,6 +60,8 @@
   "toolNames.toggleList": "سمٽيل لسٽ",
   "toolNames.board": "بورڊ",
   "toolNames.linkedDatabase": "ڊيٽا ماخذ جو ڳنڍيل ويو",
+  "toolNames.tableView": "ٽيبل وارو ڏيک",
+  "toolNames.mapView": "نقشي وارو ڏيک",
   "toolNames.database": "ڊيٽابيس",
   "tools.link.addLink": "لنڪ شامل ڪريو",
   "tools.link.invalidLink": "غلط لنڪ",

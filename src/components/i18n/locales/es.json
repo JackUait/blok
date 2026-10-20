@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Lista desplegable",
   "toolNames.board": "Tablero",
   "toolNames.linkedDatabase": "Vista vinculada de fuente de datos",
+  "toolNames.tableView": "Vista de tabla",
+  "toolNames.mapView": "Vista de mapa",
   "toolNames.database": "Base de datos",
   "tools.link.addLink": "Añadir enlace",
   "tools.link.invalidLink": "Enlace inválido",

@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Inklaplijst",
   "toolNames.board": "Bord",
   "toolNames.linkedDatabase": "Gekoppelde weergave van gegevensbron",
+  "toolNames.tableView": "Tabelweergave",
+  "toolNames.mapView": "Kaartweergave",
   "toolNames.database": "Database",
   "tools.link.addLink": "Link toevoegen",
   "tools.link.invalidLink": "Ongeldige link",

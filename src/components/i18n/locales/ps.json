@@ -60,6 +60,8 @@
   "toolNames.toggleList": "راټولېدونکی لیست",
   "toolNames.board": "بورډ",
   "toolNames.linkedDatabase": "د ډیټا سرچینې تړلی لید",
+  "toolNames.tableView": "د جدول لید",
+  "toolNames.mapView": "د نقشې لید",
   "toolNames.database": "ډیټابیس",
   "tools.link.addLink": "لینک اضافه کړئ",
   "tools.link.invalidLink": "ناسم لینک",

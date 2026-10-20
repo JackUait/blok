@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Згортний список",
   "toolNames.board": "Дошка",
   "toolNames.linkedDatabase": "Пов’язане подання джерела даних",
+  "toolNames.tableView": "Подання таблиці",
+  "toolNames.mapView": "Подання карти",
   "toolNames.database": "База даних",
   "tools.link.addLink": "Додати посилання",
   "tools.link.invalidLink": "Недійсне посилання",

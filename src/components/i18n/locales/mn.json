@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Эвхдэг жагсаалт",
   "toolNames.board": "Самбар",
   "toolNames.linkedDatabase": "Өгөгдлийн эх сурвалжийн холбосон харагдац",
+  "toolNames.tableView": "Хүснэгтийн харагдац",
+  "toolNames.mapView": "Газрын зургийн харагдац",
   "toolNames.database": "Мэдээллийн сан",
   "tools.link.addLink": "Холбоос нэмэх",
   "tools.link.invalidLink": "Буруу холбоос",

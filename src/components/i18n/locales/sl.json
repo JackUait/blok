@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Preklopni seznam",
   "toolNames.board": "Tabla",
   "toolNames.linkedDatabase": "Povezan pogled vira podatkov",
+  "toolNames.tableView": "Pogled tabele",
+  "toolNames.mapView": "Pogled zemljevida",
   "toolNames.database": "Podatkovna baza",
   "tools.link.addLink": "Dodaj povezavo",
   "tools.link.invalidLink": "Neveljavna povezava",

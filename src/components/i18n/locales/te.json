@@ -208,6 +208,8 @@
   "toolNames.database": "డేటాబేస్",
   "toolNames.board": "బోర్డ్",
   "toolNames.linkedDatabase": "డేటా మూలం యొక్క లింక్ చేసిన వీక్షణ",
+  "toolNames.tableView": "పట్టిక వీక్షణ",
+  "toolNames.mapView": "మ్యాప్ వీక్షణ",
   "toolNames.divider": "విభజకం",
   "toolNames.spacer": "ఖాళీ స్థలం",
   "toolNames.tableOfContents": "విషయ సూచిక",

@@ -60,6 +60,8 @@
   "toolNames.toggleList": "ჩაკეცვადი სია",
   "toolNames.board": "დაფა",
   "toolNames.linkedDatabase": "მონაცემთა წყაროს დაკავშირებული ხედი",
+  "toolNames.tableView": "ცხრილის ხედი",
+  "toolNames.mapView": "რუკის ხედი",
   "toolNames.database": "მონაცემთა ბაზა",
   "tools.link.addLink": "ბმულის დამატება",
   "tools.link.invalidLink": "არასწორი ბმული",

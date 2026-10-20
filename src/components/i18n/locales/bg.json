@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Сгъваем списък",
   "toolNames.board": "Табло",
   "toolNames.linkedDatabase": "Свързан изглед на източник на данни",
+  "toolNames.tableView": "Табличен изглед",
+  "toolNames.mapView": "Изглед с карта",
   "toolNames.database": "База данни",
   "tools.link.addLink": "Добавяне на връзка",
   "tools.link.invalidLink": "Невалидна връзка",

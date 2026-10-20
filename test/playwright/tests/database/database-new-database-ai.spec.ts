@@ -221,3 +221,35 @@ test('the "/" Board entry opens "New database" too; New empty data source keeps 
   expect(data?.views?.map((view) => view.type)).toEqual(['board']);
   expect(data).not.toHaveProperty('initialView');
 });
+
+// research/26 §2 (`/table view` › Enter) and research/20 §1a (`/map` › "Map view · Database"): each opens the panel and keeps its layout.
+const VIEW_ENTRIES = [
+  { query: '/table view', name: 'tableView', label: 'Table view', views: [['table', 'Table']], place: false },
+  { query: '/map', name: 'mapView', label: 'Map view', views: [['map', 'Map view']], place: true },
+] as const;
+
+for (const entry of VIEW_ENTRIES) {
+  test(`"${entry.query}" + Enter inserts a database whose first view is ${entry.views[0][0]}, with the "New database" panel`, async ({ page }) => {
+    await mount(page, false);
+    await page.locator('[data-blok-id="p0"] [contenteditable]').focus();
+    await page.keyboard.type(entry.query);
+    const first = page.getByTestId('toolbox-popover').locator('[data-blok-item-name]:visible').first();
+
+    await expect(first).toHaveAttribute('data-blok-item-name', entry.name);
+    await expect(first).toContainText(entry.label);
+    await page.keyboard.press('Enter');
+
+    const panel = page.getByTestId('database-new-database-panel');
+
+    await expect(panel).toBeVisible();
+    await panel.getByTestId('database-new-source-empty').click();
+    await expect(panel).toBeHidden();
+
+    const blocks = await saved(page);
+    const data = blocks.find((block) => block.type === 'database')?.data as { views?: Array<{ type: string; name: string }>; schema?: Array<{ name: string; type: string }> } | undefined;
+
+    expect(data?.views?.map((view) => [view.type, view.name])).toEqual(entry.views);
+    expect(data?.schema?.some((p) => p.type === 'place' && p.name === 'Place')).toBe(entry.place);
+    expect(data).not.toHaveProperty('initialView');
+  });
+}

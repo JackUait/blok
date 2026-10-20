@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Ծալվող ցուցակ",
   "toolNames.board": "Տախտակ",
   "toolNames.linkedDatabase": "Տվյալների աղբյուրի կապված տեսք",
+  "toolNames.tableView": "Աղյուսակի տեսք",
+  "toolNames.mapView": "Քարտեզի տեսք",
   "toolNames.database": "Տվյալների բազա",
   "tools.link.addLink": "Ավելացնել հղում",
   "tools.link.invalidLink": "Սխալ հղում",

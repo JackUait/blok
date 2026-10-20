@@ -60,6 +60,8 @@
   "toolNames.toggleList": "لیست بازشو",
   "toolNames.board": "تابلو",
   "toolNames.linkedDatabase": "نمای پیوندی منبع داده",
+  "toolNames.tableView": "نمای جدول",
+  "toolNames.mapView": "نمای نقشه",
   "toolNames.database": "پایگاه داده",
   "tools.link.addLink": "افزودن پیوند",
   "tools.link.invalidLink": "پیوند نامعتبر",

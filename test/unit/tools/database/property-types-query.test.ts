@@ -10,6 +10,7 @@ import { DatabaseModel, NO_VALUE_GROUP_KEY } from '../../../../src/tools/databas
 import { createDefaultStatusSettings, createDefaultStatusOptions } from '../../../../src/tools/database/property-values';
 import type {
   DatabaseRow,
+  DatabaseViewConfig,
   DatabaseRowMeta,
   FilterConfig,
   PropertyDefinition,
@@ -482,5 +483,24 @@ describe('status group localization', () => {
     expect(source.name).toBe('«tools.database.defaultSourceTitleProperty»');
     expect(primary.name).toBe('«tools.database.defaultTitleProperty»');
     expect(renamed.name).toBe('Task');
+  });
+  // The Map view seed writes English names so every client saves the same ones; they show in the editor language.
+  it('localizes the Map view seed\'s "Place" property and "Map view" view, and keeps renamed ones', async () => {
+    const { localizeDatabaseSchema, localizeDatabaseViews } = await import('../../../../src/tools/database/database-localization');
+    const i18n = { t: (key: string) => `«${key}»` } as never;
+    const [place, renamedPlace] = localizeDatabaseSchema([
+      { id: 'p', name: 'Place', type: 'place', position: 'a2' },
+      { id: 'q', name: 'Office', type: 'place', position: 'a3' },
+    ], i18n);
+    const view: Omit<DatabaseViewConfig, 'name'> = { id: 'v', type: 'map', position: 'a0', sorts: [], filters: [], visibleProperties: [] };
+    const [seeded, added, renamedView] = localizeDatabaseViews([
+      { ...view, name: 'Map view' },
+      { ...view, name: 'Map' },
+      { ...view, name: 'Offices' },
+    ], i18n);
+
+    expect(place.name).toBe('«tools.database.propertyTypePlace»');
+    expect(renamedPlace.name).toBe('Office');
+    expect([seeded.name, added.name, renamedView.name]).toEqual(['«toolNames.mapView»', '«tools.database.viewTypeMap»', 'Offices']);
   });
 });

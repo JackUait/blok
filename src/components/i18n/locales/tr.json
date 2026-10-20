@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Açılır liste",
   "toolNames.board": "Pano",
   "toolNames.linkedDatabase": "Veri kaynağının bağlı görünümü",
+  "toolNames.tableView": "Tablo görünümü",
+  "toolNames.mapView": "Harita görünümü",
   "toolNames.database": "Veritabanı",
   "tools.link.addLink": "Bağlantı ekle",
   "tools.link.invalidLink": "Geçersiz bağlantı",

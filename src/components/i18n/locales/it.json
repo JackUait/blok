@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Elenco a scomparsa",
   "toolNames.board": "Bacheca",
   "toolNames.linkedDatabase": "Vista collegata dell’origine dati",
+  "toolNames.tableView": "Vista tabella",
+  "toolNames.mapView": "Vista mappa",
   "toolNames.database": "Database",
   "tools.link.addLink": "Aggiungi link",
   "tools.link.invalidLink": "Link non valido",

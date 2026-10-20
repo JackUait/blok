@@ -208,6 +208,8 @@
   "toolNames.database": "የውሂብ ጎታ",
   "toolNames.board": "ሰሌዳ",
   "toolNames.linkedDatabase": "የተገናኘ የውሂብ ምንጭ ዕይታ",
+  "toolNames.tableView": "የሰንጠረዥ ዕይታ",
+  "toolNames.mapView": "የካርታ ዕይታ",
   "toolNames.divider": "መለያያ መስመር",
   "toolNames.spacer": "ክፍተት",
   "toolNames.tableOfContents": "ማውጫ",

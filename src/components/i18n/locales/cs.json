@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Rozbalovací seznam",
   "toolNames.board": "Tabule",
   "toolNames.linkedDatabase": "Propojené zobrazení zdroje dat",
+  "toolNames.tableView": "Zobrazení tabulky",
+  "toolNames.mapView": "Zobrazení mapy",
   "toolNames.database": "Databáze",
   "tools.link.addLink": "Přidat odkaz",
   "tools.link.invalidLink": "Neplatný odkaz",

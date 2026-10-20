@@ -208,6 +208,8 @@
   "toolNames.database": "មូលដ្ឋានទិន្នន័យ",
   "toolNames.board": "ក្ដារ",
   "toolNames.linkedDatabase": "ទិដ្ឋភាពដែលបានភ្ជាប់នៃប្រភពទិន្នន័យ",
+  "toolNames.tableView": "ទិដ្ឋភាពតារាង",
+  "toolNames.mapView": "ទិដ្ឋភាពផែនទី",
   "toolNames.divider": "បន្ទាត់បែងចែក",
   "toolNames.spacer": "ចន្លោះ",
   "toolNames.tableOfContents": "តារាងមាតិកា",

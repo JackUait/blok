@@ -267,7 +267,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1374 + 125 + 480 + 4 closure for all 1983 keys', () => {
+  it('rebuilds a disjoint 1375 + 126 + 480 + 4 closure for all 1985 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -281,7 +281,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1983);
+    expect(lifecycle.size).toBe(1985);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -411,7 +411,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +60: the Suggested database templates (names, chips, views, options, sample rows) call their keys by literal.
       // +13: the CSV import dialog calls its keys by literal.
       // +1: the Priority and Effort level "Medium" options got a key each.
-      'executable-literal': 1374,
+      // +1: toolNames.mapView, which also names the Map view entry's first view.
+      'executable-literal': 1375,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -420,7 +421,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the "Linked view of data source" toolbox entry's toolNames.linkedDatabase.
       // +1: toolNames.askAi, the Ask AI inline tool's titleKey.
       // +6: the thinking menu's assistant.thinking.<level> labels.
-      'finite-dynamic': 125,
+      // +1: the Table view toolbox entry's toolNames.tableView (toolNames.mapView is a literal: the seeded map view's name).
+      'finite-dynamic': 126,
       // 12 of the 20 image darkroom keys are called by literal. The 8 filter
       // names stay here: filter-strip.ts builds them from the preset name.
       // +9: the markup tool names; markup-panel.ts builds them from a short key.

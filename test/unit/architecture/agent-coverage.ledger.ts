@@ -275,6 +275,8 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
 
   // database surfaces added after the 2026-10-08 audit
   'insert:database/linkedDatabase': cmd('database.create'),
+  'insert:database/tableView': cmd('database.create'),
+  'insert:database/mapView': cmds(['database.create', 'database.addProperty', 'database.addView'], 'database.create makes no map; an agent adds a place property and a map view.'),
   'menu:database/*@src/tools/database/chart-layout-items.ts': exempt('cut-v1', VIEW_LAYOUT_CUT),
   'menu:database/*@src/tools/database/database-layout-items.ts': exempt('cut-v1', VIEW_LAYOUT_CUT),
   'menu:database/buttonAction-*': cmd('database.updateProperty'),

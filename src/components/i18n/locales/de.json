@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Aufklappliste",
   "toolNames.board": "Board",
   "toolNames.linkedDatabase": "Verknüpfte Ansicht einer Datenquelle",
+  "toolNames.tableView": "Tabellenansicht",
+  "toolNames.mapView": "Kartenansicht",
   "toolNames.database": "Datenbank",
   "tools.link.addLink": "Link hinzufügen",
   "tools.link.invalidLink": "Ungültiger Link",

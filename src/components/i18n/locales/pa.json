@@ -208,6 +208,8 @@
   "toolNames.database": "ਡਾਟਾਬੇਸ",
   "toolNames.board": "ਬੋਰਡ",
   "toolNames.linkedDatabase": "ਡਾਟਾ ਸਰੋਤ ਦਾ ਲਿੰਕ ਕੀਤਾ ਦ੍ਰਿਸ਼",
+  "toolNames.tableView": "ਟੇਬਲ ਦ੍ਰਿਸ਼",
+  "toolNames.mapView": "ਨਕਸ਼ਾ ਦ੍ਰਿਸ਼",
   "toolNames.divider": "ਵੰਡਣ ਵਾਲਾ",
   "toolNames.spacer": "ਖਾਲੀ ਥਾਂ",
   "toolNames.tableOfContents": "ਤਤਕਰਾ",

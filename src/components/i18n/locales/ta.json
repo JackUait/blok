@@ -208,6 +208,8 @@
   "toolNames.database": "தரவுத்தளம்",
   "toolNames.board": "பலகை",
   "toolNames.linkedDatabase": "தரவு மூலத்தின் இணைக்கப்பட்ட காட்சி",
+  "toolNames.tableView": "அட்டவணைக் காட்சி",
+  "toolNames.mapView": "வரைபடக் காட்சி",
   "toolNames.divider": "பிரிப்பான்",
   "toolNames.spacer": "இடைவெளி",
   "toolNames.tableOfContents": "பொருளடக்கம்",

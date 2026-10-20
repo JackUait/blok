@@ -208,6 +208,8 @@
   "toolNames.database": "දත්ත සමුදාය",
   "toolNames.board": "පුවරුව",
   "toolNames.linkedDatabase": "දත්ත මූලාශ්‍රයේ සම්බන්ධිත දසුන",
+  "toolNames.tableView": "වගු දසුන",
+  "toolNames.mapView": "සිතියම් දසුන",
   "toolNames.divider": "බෙදුම්කරු",
   "toolNames.spacer": "හිස් ඉඩ",
   "toolNames.tableOfContents": "පටුන",

@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Listă reductibilă",
   "toolNames.board": "Panou",
   "toolNames.linkedDatabase": "Vizualizare legată a sursei de date",
+  "toolNames.tableView": "Vizualizare tabel",
+  "toolNames.mapView": "Vizualizare hartă",
   "toolNames.database": "Bază de date",
   "tools.link.addLink": "Adaugă un link",
   "tools.link.invalidLink": "Link invalid",

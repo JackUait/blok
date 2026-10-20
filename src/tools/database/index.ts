@@ -121,7 +121,7 @@ import type { DrawerBacklink, LayoutTab, LayoutTabsDraft, LayoutTabsHost } from 
 import { relatedTabSources, thisPageFilter } from './layout-tab-relations';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar } from './database-tab-bar';
-import { IconArrowDiagonal, IconDatabase, IconBoard, IconTrash, IconCheck, IconChevronRight, IconCopy, IconDownload, IconImage, IconListChecklist, IconMergeCells, IconPageLayout, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
+import { IconArrowDiagonal, IconDatabase, IconBoard, IconTrash, IconCheck, IconChevronRight, IconCopy, IconDownload, IconImage, IconListChecklist, IconMap, IconMergeCells, IconPageLayout, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -138,7 +138,7 @@ import {
   localizeDatabaseSelectOptions,
   localizeDatabaseViews,
 } from './database-localization';
-import { renderBoardPreview, renderDatabasePreview, renderLinkedDatabasePreview } from './preview';
+import { renderBoardPreview, renderDatabasePreview, renderLinkedDatabasePreview, renderMapViewPreview, renderTableViewPreview } from './preview';
 import { DatabaseViewControls } from './database-view-controls';
 import type { ViewControlsHost } from './database-view-controls';
 import type { ViewStateFallback } from './database-view-state';
@@ -1647,6 +1647,26 @@ export class DatabaseTool implements BlockTool {
         preview: { render: renderBoardPreview, descriptionKey: 'toolbox.preview.board' },
         // The seed makes a user insert open the "New database" panel, as Notion's view entries do (research/20 §1a).
         data: { [INITIAL_VIEW_KEY]: 'board' },
+      },
+      // Notion's "Table view · Database" (research/26 §2 `/table view`). It inserts what Database does.
+      {
+        icon: IconTable,
+        titleKey: 'tableView',
+        name: 'tableView',
+        searchTerms: ['table view', 'table', 'database', 'view'],
+        section: 'database',
+        preview: { render: renderTableViewPreview, descriptionKey: 'tools.database.viewTypeTableDescription' },
+        data: { [INITIAL_VIEW_KEY]: 'table' },
+      },
+      // Notion's "Map view · Database" (research/20 §1a): a map first view and a Place property.
+      {
+        icon: IconMap,
+        titleKey: 'mapView',
+        name: 'mapView',
+        searchTerms: ['map view', 'map', 'place', 'location', 'database', 'view'],
+        section: 'database',
+        preview: { render: renderMapViewPreview, descriptionKey: 'tools.database.viewTypeMapDescription' },
+        data: { [INITIAL_VIEW_KEY]: 'map' },
       },
       {
         icon: IconDatabase,

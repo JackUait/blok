@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Listë e palosshme",
   "toolNames.board": "Bord",
   "toolNames.linkedDatabase": "Pamje e lidhur e burimit të të dhënave",
+  "toolNames.tableView": "Pamja e tabelës",
+  "toolNames.mapView": "Pamja e hartës",
   "toolNames.database": "Baza e të dhënave",
   "tools.link.addLink": "Shto lidhje",
   "tools.link.invalidLink": "Lidhje e pavlefshme",

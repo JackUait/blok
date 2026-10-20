@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Avatav loend",
   "toolNames.board": "Tahvel",
   "toolNames.linkedDatabase": "Andmeallika lingitud vaade",
+  "toolNames.tableView": "Tabelivaade",
+  "toolNames.mapView": "Kaardivaade",
   "toolNames.database": "Andmebaas",
   "tools.link.addLink": "Lisa link",
   "tools.link.invalidLink": "Vigane link",

@@ -24,5 +24,9 @@ export const DATABASE_DEFAULT_TEXT = {
   viewTypeFeed: 'Feed',
   viewTypeForm: 'Form',
   viewTypeMap: 'Map',
+  /** The view the "Map view" toolbox entry starts with (research/20 §1a); Add view names a map "Map". */
+  viewMapSeed: 'Map view',
+  /** The place property a new map adds (research/20 §1a). */
+  placeProperty: 'Place',
   duplicatePropertyName: '{name} (copy)',
 } as const;

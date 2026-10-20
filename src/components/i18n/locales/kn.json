@@ -219,6 +219,8 @@
   "toolNames.database": "ಡೇಟಾಬೇಸ್",
   "toolNames.board": "ಬೋರ್ಡ್",
   "toolNames.linkedDatabase": "ಡೇಟಾ ಮೂಲದ ಲಿಂಕ್ ಮಾಡಿದ ವೀಕ್ಷಣೆ",
+  "toolNames.tableView": "ಕೋಷ್ಟಕ ವೀಕ್ಷಣೆ",
+  "toolNames.mapView": "ನಕ್ಷೆ ವೀಕ್ಷಣೆ",
   "toolNames.divider": "ವಿಭಜಕ",
   "toolNames.spacer": "ಖಾಲಿ ಜಾಗ",
   "toolNames.tableOfContents": "ಪರಿವಿಡಿ",

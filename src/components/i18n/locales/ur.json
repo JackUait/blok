@@ -60,6 +60,8 @@
   "toolNames.toggleList": "ٹوگل فہرست",
   "toolNames.board": "بورڈ",
   "toolNames.linkedDatabase": "ڈیٹا ماخذ کا منسلک ویو",
+  "toolNames.tableView": "ٹیبل ویو",
+  "toolNames.mapView": "نقشہ ویو",
   "toolNames.database": "ڈیٹابیس",
   "tools.link.addLink": "لنک شامل کریں",
   "tools.link.invalidLink": "غلط لنک",

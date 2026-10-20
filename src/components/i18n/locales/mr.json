@@ -219,6 +219,8 @@
   "toolNames.database": "डेटाबेस",
   "toolNames.board": "बोर्ड",
   "toolNames.linkedDatabase": "डेटा स्रोताचे लिंक केलेले दृश्य",
+  "toolNames.tableView": "तक्ता दृश्य",
+  "toolNames.mapView": "नकाशा दृश्य",
   "toolNames.divider": "विभाजक",
   "toolNames.spacer": "रिकामी जागा",
   "toolNames.tableOfContents": "अनुक्रमणिका",

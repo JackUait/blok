@@ -60,6 +60,8 @@
   "toolNames.toggleList": "يىغىلما تىزىملىك",
   "toolNames.board": "تاختا",
   "toolNames.linkedDatabase": "سانلىق مەلۇمات مەنبەسىنىڭ ئۇلانغان كۆرۈنۈشى",
+  "toolNames.tableView": "جەدۋەل كۆرۈنۈشى",
+  "toolNames.mapView": "خەرىتە كۆرۈنۈشى",
   "toolNames.database": "ساندان",
   "tools.link.addLink": "ئۇلانما قوشۇش",
   "tools.link.invalidLink": "ئىناۋەتسىز ئۇلانما",

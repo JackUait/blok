@@ -24,6 +24,8 @@ const DEFAULT_KEYS = {
   viewTypeFeed: 'tools.database.viewTypeFeed',
   viewTypeForm: 'tools.database.viewTypeForm',
   viewTypeMap: 'tools.database.viewTypeMap',
+  viewMapSeed: 'toolNames.mapView',
+  placeProperty: 'tools.database.propertyTypePlace',
 } as const;
 
 type DefaultKey = typeof DEFAULT_KEYS[keyof typeof DEFAULT_KEYS];
@@ -61,6 +63,10 @@ const localizePropertyName = (property: PropertyDefinition, i18n: I18n): string 
       DEFAULT_KEYS.statusProperty,
       i18n
     );
+  }
+
+  if (property.type === 'place') {
+    return localizeCanonicalValue(property.name, DATABASE_DEFAULT_TEXT.placeProperty, DEFAULT_KEYS.placeProperty, i18n);
   }
 
   return property.name;
@@ -165,6 +171,10 @@ const localizeViewName = (view: DatabaseViewConfig, i18n: I18n): string => {
 
   if (view.type === 'form') {
     return localizeCanonicalValue(view.name, DATABASE_DEFAULT_TEXT.viewTypeForm, DEFAULT_KEYS.viewTypeForm, i18n);
+  }
+
+  if (view.type === 'map' && view.name === DATABASE_DEFAULT_TEXT.viewMapSeed) {
+    return i18n.t(DEFAULT_KEYS.viewMapSeed);
   }
 
   if (view.type === 'map') {

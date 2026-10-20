@@ -208,6 +208,8 @@
   "toolNames.database": "ડેટાબેઝ",
   "toolNames.board": "બોર્ડ",
   "toolNames.linkedDatabase": "ડેટા સ્રોતનું લિંક કરેલું દૃશ્ય",
+  "toolNames.tableView": "કોષ્ટક દૃશ્ય",
+  "toolNames.mapView": "નકશો દૃશ્ય",
   "toolNames.divider": "વિભાજક",
   "toolNames.spacer": "ખાલી જગ્યા",
   "toolNames.tableOfContents": "અનુક્રમણિકા",

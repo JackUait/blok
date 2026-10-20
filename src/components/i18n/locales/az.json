@@ -208,6 +208,8 @@
   "toolNames.database": "Verilənlər bazası",
   "toolNames.board": "Lövhə",
   "toolNames.linkedDatabase": "Verilənlər mənbəyinin əlaqəli görünüşü",
+  "toolNames.tableView": "Cədvəl görünüşü",
+  "toolNames.mapView": "Xəritə görünüşü",
   "toolNames.divider": "Bölücü",
   "toolNames.spacer": "Boşluq",
   "toolNames.tableOfContents": "Mündəricat",

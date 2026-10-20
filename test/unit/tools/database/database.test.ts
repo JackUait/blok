@@ -219,17 +219,14 @@ describe('DatabaseTool', () => {
   });
 
   describe('static getters', () => {
-    it('toolbox returns database, board and linked view entries', () => {
+    it('toolbox returns database, board, table view, map view and linked view entries', () => {
       const toolbox = DatabaseTool.toolbox;
 
       expect(Array.isArray(toolbox)).toBe(true);
 
       const entries = toolbox as Array<{ name: string; title: string; titleKey: string; searchTerms: string[] }>;
 
-      expect(entries).toHaveLength(3);
-      expect(entries[0].name).toBe('database');
-      expect(entries[1].name).toBe('board');
-      expect(entries[2].name).toBe('linkedDatabase');
+      expect(entries.map((entry) => entry.name)).toEqual(['database', 'board', 'tableView', 'mapView', 'linkedDatabase']);
       expect(entries[0].titleKey).toBeDefined();
       expect(entries[1].titleKey).toBeDefined();
       expect(entries[0].searchTerms).toBeDefined();

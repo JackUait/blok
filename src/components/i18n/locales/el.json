@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Αναδιπλούμενη λίστα",
   "toolNames.board": "Πίνακας",
   "toolNames.linkedDatabase": "Συνδεδεμένη προβολή πηγής δεδομένων",
+  "toolNames.tableView": "Προβολή πίνακα",
+  "toolNames.mapView": "Προβολή χάρτη",
   "toolNames.database": "Βάση δεδομένων",
   "tools.link.addLink": "Προσθήκη συνδέσμου",
   "tools.link.invalidLink": "Μη έγκυρος σύνδεσμος",

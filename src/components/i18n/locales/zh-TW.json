@@ -229,6 +229,8 @@
   "toolNames.database": "資料庫",
   "toolNames.board": "看板",
   "toolNames.linkedDatabase": "連結資料來源",
+  "toolNames.tableView": "表格檢視",
+  "toolNames.mapView": "地圖檢視",
   "toolNames.divider": "分隔線",
   "toolNames.spacer": "空白間距",
   "toolNames.tableOfContents": "目錄",

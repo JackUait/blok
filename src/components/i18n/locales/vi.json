@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Danh sách thu gọn",
   "toolNames.board": "Bảng",
   "toolNames.linkedDatabase": "Chế độ xem liên kết của nguồn dữ liệu",
+  "toolNames.tableView": "Chế độ xem bảng",
+  "toolNames.mapView": "Chế độ xem bản đồ",
   "toolNames.database": "Cơ sở dữ liệu",
   "tools.link.addLink": "Thêm liên kết",
   "tools.link.invalidLink": "Liên kết không hợp lệ",

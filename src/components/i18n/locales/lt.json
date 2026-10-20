@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Sutraukiamas sąrašas",
   "toolNames.board": "Lenta",
   "toolNames.linkedDatabase": "Susietas duomenų šaltinio rodinys",
+  "toolNames.tableView": "Lentelės rodinys",
+  "toolNames.mapView": "Žemėlapio rodinys",
   "toolNames.database": "Duomenų bazė",
   "tools.link.addLink": "Pridėti nuorodą",
   "tools.link.invalidLink": "Netinkama nuoroda",

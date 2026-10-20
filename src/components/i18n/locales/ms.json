@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Senarai togol",
   "toolNames.board": "Papan",
   "toolNames.linkedDatabase": "Paparan terpaut sumber data",
+  "toolNames.tableView": "Paparan jadual",
+  "toolNames.mapView": "Paparan peta",
   "toolNames.database": "Pangkalan data",
   "tools.link.addLink": "Tambah pautan",
   "tools.link.invalidLink": "Pautan tidak sah",

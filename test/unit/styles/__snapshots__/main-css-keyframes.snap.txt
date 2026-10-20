@@ -518,6 +518,12 @@
   96%, 100% { opacity: 1 }
 }
 
+@keyframes blok-preview-database-pin-drop {
+  0%, 14% { opacity: 0; transform: translateY(-10px) }
+  32%, 88% { opacity: 1; transform: none }
+  100% { opacity: 0; transform: none }
+}
+
 @keyframes blok-preview-database-row-in {
   0%, 14% { opacity: 0; transform: translateY(8px) }
   32%, 88% { opacity: 1; transform: none }

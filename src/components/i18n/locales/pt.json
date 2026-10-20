@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Lista recolhível",
   "toolNames.board": "Quadro",
   "toolNames.linkedDatabase": "Visualização vinculada da fonte de dados",
+  "toolNames.tableView": "Visualização em tabela",
+  "toolNames.mapView": "Visualização em mapa",
   "toolNames.database": "Banco de dados",
   "tools.link.addLink": "Adicionar link",
   "tools.link.invalidLink": "Link inválido",

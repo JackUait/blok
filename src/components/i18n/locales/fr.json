@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Liste dépliante",
   "toolNames.board": "Tableau",
   "toolNames.linkedDatabase": "Vue liée d’une source de données",
+  "toolNames.tableView": "Vue tableau",
+  "toolNames.mapView": "Vue carte",
   "toolNames.database": "Base de données",
   "tools.link.addLink": "Ajouter un lien",
   "tools.link.invalidLink": "Lien invalide",

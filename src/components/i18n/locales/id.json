@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Daftar lipat",
   "toolNames.board": "Papan",
   "toolNames.linkedDatabase": "Tampilan tertaut sumber data",
+  "toolNames.tableView": "Tampilan tabel",
+  "toolNames.mapView": "Tampilan peta",
   "toolNames.database": "Basis data",
   "tools.link.addLink": "Tambahkan tautan",
   "tools.link.invalidLink": "Tautan tidak valid",

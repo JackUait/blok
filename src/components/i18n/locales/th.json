@@ -60,6 +60,8 @@
   "toolNames.toggleList": "รายการพับได้",
   "toolNames.board": "บอร์ด",
   "toolNames.linkedDatabase": "มุมมองที่ลิงก์ของแหล่งข้อมูล",
+  "toolNames.tableView": "มุมมองตาราง",
+  "toolNames.mapView": "มุมมองแผนที่",
   "toolNames.database": "ฐานข้อมูล",
   "tools.link.addLink": "เพิ่มลิงก์",
   "tools.link.invalidLink": "ลิงก์ไม่ถูกต้อง",

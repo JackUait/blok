@@ -1,4 +1,4 @@
-import { IconArrowDiagonal, IconBoard, IconCalendar, IconSelect, IconTable, IconText } from '../../components/icons';
+import { IconArrowDiagonal, IconBoard, IconCalendar, IconMap, IconSelect, IconTable, IconText } from '../../components/icons';
 import { createPreview, h } from '../../components/utils/block-preview';
 
 type Color = 'gray' | 'yellow' | 'green' | 'purple';
@@ -45,6 +45,45 @@ export const renderDatabasePreview = (): HTMLElement =>
       row('Pick a name', 'yellow', 'Doing', 'Sep 18'),
       row('Book venue', 'gray', 'To do', 'Oct 2'),
       row('Throw party', 'purple', 'Idea', 'Oct 9', true)
+    )
+  );
+
+/** Table view entry: the one Table view it inserts (no Board tab); a new row slides in. */
+export const renderTableViewPreview = (): HTMLElement =>
+  createPreview(
+    'database',
+    h('div', { 'data-tabs': '' }, tab(IconTable, 'Table', true)),
+    h(
+      'div',
+      { 'data-table': '' },
+      h(
+        'div',
+        { 'data-head': '' },
+        h('span', { 'data-cell': 'title' }, icon(IconText), 'Name'),
+        h('span', { 'data-cell': 'status' }, icon(IconSelect), 'Status'),
+        h('span', { 'data-cell': 'date' }, icon(IconCalendar), 'Date')
+      ),
+      row('Plan trip', 'green', 'Done', 'Sep 3'),
+      row('Book flights', 'yellow', 'Doing', 'Sep 9'),
+      row('Find a hotel', 'gray', 'To do', 'Sep 14'),
+      row('Pack bags', 'purple', 'Idea', 'Sep 20', true)
+    )
+  );
+
+/** Map view entry: the "Map view" tab, pins on the map and the Add pin button; a new pin drops in. */
+export const renderMapViewPreview = (): HTMLElement =>
+  createPreview(
+    'database',
+    h('div', { 'data-tabs': '' }, tab(IconMap, 'Map view', true)),
+    h(
+      'div',
+      { 'data-map': '' },
+      h('span', { 'data-land': 'west' }),
+      h('span', { 'data-land': 'east' }),
+      h('span', { 'data-add-pin': '' }, icon(IconMap)),
+      h('span', { 'data-pin': 'a' }),
+      h('span', { 'data-pin': 'b' }),
+      h('span', { 'data-pin': 'new' })
     )
   );
 

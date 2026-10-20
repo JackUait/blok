@@ -208,6 +208,8 @@
   "toolNames.database": "Baza podataka",
   "toolNames.board": "Tabla",
   "toolNames.linkedDatabase": "Povezani prikaz izvora podataka",
+  "toolNames.tableView": "Prikaz tabele",
+  "toolNames.mapView": "Prikaz mape",
   "toolNames.divider": "Razdjelnik",
   "toolNames.spacer": "Razmak",
   "toolNames.tableOfContents": "Sadržaj",

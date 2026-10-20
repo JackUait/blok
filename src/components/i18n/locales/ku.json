@@ -60,6 +60,8 @@
   "toolNames.toggleList": "لیستی داشکاندن",
   "toolNames.board": "تەختە",
   "toolNames.linkedDatabase": "بینینی بەستراوی سەرچاوەی داتا",
+  "toolNames.tableView": "بینینی خشتە",
+  "toolNames.mapView": "بینینی نەخشە",
   "toolNames.database": "داتابەیس",
   "tools.link.addLink": "لینک زیاد بکە",
   "tools.link.invalidLink": "لینکی نادروست",

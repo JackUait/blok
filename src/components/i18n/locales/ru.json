@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Сворачиваемый список",
   "toolNames.board": "Доска",
   "toolNames.linkedDatabase": "Связанное представление источника данных",
+  "toolNames.tableView": "Представление таблицы",
+  "toolNames.mapView": "Представление карты",
   "toolNames.database": "База данных",
   "tools.link.addLink": "Добавить ссылку",
   "tools.link.invalidLink": "Некорректная ссылка",

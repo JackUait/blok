@@ -208,6 +208,8 @@
   "toolNames.database": "Database",
   "toolNames.board": "Board",
   "toolNames.linkedDatabase": "Naka-link na view ng data source",
+  "toolNames.tableView": "View ng talahanayan",
+  "toolNames.mapView": "View ng mapa",
   "toolNames.divider": "Panghati",
   "toolNames.spacer": "Espasyo",
   "toolNames.tableOfContents": "Talaan ng mga nilalaman",

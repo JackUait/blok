@@ -60,6 +60,8 @@
   "toolNames.toggleList": "רשימה מתקפלת",
   "toolNames.board": "לוח",
   "toolNames.linkedDatabase": "תצוגה מקושרת של מקור נתונים",
+  "toolNames.tableView": "תצוגת טבלה",
+  "toolNames.mapView": "תצוגת מפה",
   "toolNames.database": "מסד נתונים",
   "tools.link.addLink": "הוסף קישור",
   "tools.link.invalidLink": "קישור לא תקין",

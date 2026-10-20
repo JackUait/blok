@@ -60,6 +60,8 @@
   "toolNames.toggleList": "Zbaliteľný zoznam",
   "toolNames.board": "Tabuľa",
   "toolNames.linkedDatabase": "Prepojené zobrazenie zdroja údajov",
+  "toolNames.tableView": "Zobrazenie tabuľky",
+  "toolNames.mapView": "Zobrazenie mapy",
   "toolNames.database": "Databáza",
   "tools.link.addLink": "Pridať odkaz",
   "tools.link.invalidLink": "Neplatný odkaz",

@@ -60,6 +60,8 @@
   "toolNames.toggleList": "टॉगल सूची",
   "toolNames.board": "बोर्ड",
   "toolNames.linkedDatabase": "डेटा स्रोत का लिंक्ड दृश्य",
+  "toolNames.tableView": "तालिका दृश्य",
+  "toolNames.mapView": "मानचित्र दृश्य",
   "toolNames.database": "डेटाबेस",
   "tools.link.addLink": "लिंक जोड़ें",
   "tools.link.invalidLink": "अमान्य लिंक",

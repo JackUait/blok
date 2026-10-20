@@ -6,6 +6,7 @@ import { releaseGap, reserveGap } from '../../../../../src/components/modules/as
 import { getUserOS } from '../../../../../src/components/utils/browser';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import { Column } from '../../../../../src/tools/column';
+import { ToggleItem } from '../../../../../src/tools/toggle';
 import { ColumnList } from '../../../../../src/tools/column-list';
 import type { BlokConfig, OutputData } from '../../../../../types';
 import type {
@@ -219,7 +220,11 @@ const BAR_GAP = BAR_HEIGHT + 16;
 /** Moves every holder by `y`, as a page scroll would. */
 const pageShift = { y: 0 };
 
-const fakeLayout = (): void => {
+/**
+ * @param holders - holder rects by block id, for side-by-side layouts (columns);
+ *   their content columns sit 40px in from the holder's left
+ */
+const fakeLayout = (holders: Record<string, DOMRect> = {}): void => {
   pageShift.y = 0;
 
   const measure = HTMLElement.prototype.getBoundingClientRect;
@@ -242,6 +247,12 @@ const fakeLayout = (): void => {
     }
 
     const top = 100 + 100 * [...document.querySelectorAll('[data-blok-element]')].indexOf(holder) + pageShift.y;
+
+    const placed = holders[holder.getAttribute('data-blok-id') ?? ''];
+
+    if (placed !== undefined) {
+      return this === holder ? placed : new DOMRect(placed.x + 40, placed.y, placed.width - 80, placed.height);
+    }
 
     return this === holder ? new DOMRect(100, top, 600, 24) : new DOMRect(140, top, 520, 24);
   });
@@ -1018,9 +1029,40 @@ describe('in-editor assistant bar', () => {
       expect(scrollBy).not.toHaveBeenCalled();
     });
 
-    it('opens under the whole container when the caret is in a nested block', async () => {
+    const NESTING_TOOLS = { paragraph: Paragraph, column_list: ColumnList, column: Column, toggle: ToggleItem };
+
+    /** Two columns at the same height, side by side. */
+    const sideBySide = (top: number): Record<string, DOMRect> => ({
+      c1: new DOMRect(100, top, 290, 60),
+      c2: new DOMRect(410, top, 290, 60),
+    });
+
+    it('a caret in a toggle child: the bar sits under the child', async () => {
       await createEditor(scripted(), undefined, {
-        tools: { paragraph: Paragraph, column_list: ColumnList, column: Column },
+        tools: NESTING_TOOLS,
+        data: {
+          blocks: [
+            { id: 'p1', type: 'paragraph', data: { text: 'Hello' } },
+            { id: 'tg', type: 'toggle', data: { text: 'Toggle', isOpen: true }, content: ['k'] },
+            { id: 'k', type: 'paragraph', data: { text: 'Inside' }, parent: 'tg' },
+            { id: 'p3', type: 'paragraph', data: { text: 'Third' } },
+          ],
+        },
+      });
+      fakeLayout();
+
+      expect(holderOf('k').parentElement?.closest('[data-blok-id="tg"]')).not.toBeNull();
+      select('k', 1, 'k', 1);
+      pressModJ(inputOf('k'));
+
+      // Holders in document order: p1, tg, k (top 300), p3. A stacked container opens space under the child.
+      expect(gapped()).toEqual(['k']);
+      expect(barStyle().top).toBe('330px');
+    });
+
+    it('a caret in a column: the bar sits under the column list', async () => {
+      await createEditor(scripted(), undefined, {
+        tools: NESTING_TOOLS,
         data: {
           blocks: [
             { id: 'p1', type: 'paragraph', data: { text: 'Hello' } },
@@ -1033,16 +1075,42 @@ describe('in-editor assistant bar', () => {
           ],
         },
       });
-      fakeLayout();
+      fakeLayout(sideBySide(200));
 
-      // The fixture really nests: the right column's paragraph sits inside the column list.
       expect(holderOf('right').parentElement?.closest('[data-blok-id="cl"]')).not.toBeNull();
       select('right', 1, 'right', 1);
       pressModJ(inputOf('right'));
 
-      // Holders in document order: p1, cl, ... The gap and the bar go under the whole list (top 200).
+      // The list is the second holder (top 200): a gap on a column would leave the other column under the bar.
       expect(gapped()).toEqual(['cl']);
       expect(barStyle().top).toBe('230px');
+    });
+
+    it('a caret in a column inside a toggle: the bar sits under the column list, not the toggle', async () => {
+      await createEditor(scripted(), undefined, {
+        tools: NESTING_TOOLS,
+        data: {
+          blocks: [
+            { id: 'p1', type: 'paragraph', data: { text: 'Hello' } },
+            { id: 'tg', type: 'toggle', data: { text: 'Toggle', isOpen: true }, content: ['cl'] },
+            { id: 'cl', type: 'column_list', data: {}, parent: 'tg', content: ['c1', 'c2'] },
+            { id: 'c1', type: 'column', data: {}, parent: 'cl', content: ['left'] },
+            { id: 'left', type: 'paragraph', data: { text: 'Left' }, parent: 'c1' },
+            { id: 'c2', type: 'column', data: {}, parent: 'cl', content: ['right'] },
+            { id: 'right', type: 'paragraph', data: { text: 'Right' }, parent: 'c2' },
+            { id: 'p3', type: 'paragraph', data: { text: 'Third' } },
+          ],
+        },
+      });
+      fakeLayout(sideBySide(300));
+
+      expect(holderOf('cl').parentElement?.closest('[data-blok-id="tg"]')).not.toBeNull();
+      select('right', 1, 'right', 1);
+      pressModJ(inputOf('right'));
+
+      // Holders: p1, tg, cl (top 300), ...
+      expect(gapped()).toEqual(['cl']);
+      expect(barStyle().top).toBe('330px');
     });
 
     it('keeps its block when the block re-renders under the same id', async () => {

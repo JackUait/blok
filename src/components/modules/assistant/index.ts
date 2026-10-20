@@ -43,13 +43,6 @@ const contentOf = (holder: HTMLElement): HTMLElement | undefined =>
   [...holder.querySelectorAll<HTMLElement>(`[${DATA_ATTR.elementContent}]`)]
     .find((content) => content.closest(`[${DATA_ATTR.element}]`) === holder);
 
-/** The top-level holder around a (maybe nested) holder. */
-const outermost = (holder: HTMLElement): HTMLElement => {
-  const parent = holder.parentElement?.closest<HTMLElement>(`[${DATA_ATTR.element}]`);
-
-  return parent ? outermost(parent) : holder;
-};
-
 const isOpenShortcut = (event: KeyboardEvent): boolean => {
   const mac = getUserOS().mac;
 
@@ -137,8 +130,7 @@ export class Assistant extends Module {
       const caret = (id === undefined ? undefined : this.Blok.BlockManager.getBlockById(id))
         ?? this.Blok.BlockManager.currentBlock
         ?? this.Blok.BlockManager.lastBlock;
-      // Under the whole container: a gap on a column or cell would leave its neighbours under the bar.
-      const block = caret === undefined ? undefined : this.Blok.BlockManager.getBlockByChildNode(outermost(caret.holder)) ?? caret;
+      const block = caret === undefined ? undefined : this.anchorFor(caret);
 
       this.anchor = block === undefined ? null : { id: block.id };
     }
@@ -571,10 +563,45 @@ export class Assistant extends Module {
     this.anchor = { id: block.id, next: manager.blocks[index + 1]?.id, prev: manager.blocks[index - 1]?.id };
   }
 
-  /** The page's content column at the anchor: a nested block's bar still spans the page column. */
+  /**
+   * Where the bar goes for a caret block. A gap under a block that shares its
+   * row (a column, a table cell) leaves the neighbours under the bar, so the bar
+   * goes under the container of the outermost such block. A stacked container
+   * (toggle, callout, list) opens space lawfully, so the caret's block keeps it.
+   */
+  private anchorFor(caret: Block): Block {
+    const manager = this.Blok.BlockManager;
+    const parentOf = (block: Block): Block | undefined =>
+      block.parentId === null ? undefined : manager.getBlockById(block.parentId);
+    const up = (block: Block | undefined): Block[] => (block === undefined ? [] : [block, ...up(parentOf(block))]);
+    const chain = up(caret);
+    const outermostInRow = chain.map((block) => this.sharesRow(block)).lastIndexOf(true);
+
+    return outermostInRow === -1 ? caret : chain[outermostInRow + 1] ?? caret;
+  }
+
+  /** Side by side, from layout: a sibling overlaps it vertically and not horizontally. */
+  private sharesRow(block: Block): boolean {
+    if (block.parentId === null) {
+      return false;
+    }
+
+    const rect = block.holder.getBoundingClientRect();
+
+    return this.Blok.BlockManager.blocks.some((other) => {
+      if (other === block || other.parentId !== block.parentId) {
+        return false;
+      }
+
+      const near = other.holder.getBoundingClientRect();
+
+      return near.top < rect.bottom && rect.top < near.bottom && (near.right <= rect.left || rect.right <= near.left);
+    });
+  }
+
+  /** The anchor's own content column: inside a stacked container the bar lines up with its indented text. */
   private columnOf(holder: HTMLElement): AssistantBarColumn {
-    const top = outermost(holder);
-    const rect = (contentOf(top) ?? top).getBoundingClientRect();
+    const rect = (contentOf(holder) ?? holder).getBoundingClientRect();
 
     return { left: rect.left, width: rect.width };
   }

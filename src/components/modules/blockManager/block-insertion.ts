@@ -497,11 +497,16 @@ export class BlockInsertion {
      * Enter key and the toolbox, which must always produce a block.
      */
     if (!forceTopLevel && neighborBlock !== undefined && neighborBlock.parentId !== null) {
-      return resolveChildTool(
-        this.repository.getBlockById(neighborBlock.parentId),
-        name,
-        this.dependencies.config.defaultBlock ?? 'paragraph'
-      );
+      const neighborParent = this.repository.getBlockById(neighborBlock.parentId);
+
+      // A database inserts its rows with a named parent: an index insert after
+      // its last row does not join it, so its childTools must not turn a
+      // paragraph into a row. A table cell's blocks do join the table.
+      if (neighborParent !== undefined && SELF_PLACING_PARENTS.has(neighborParent.name) && !isInsideTableCell(neighborBlock)) {
+        return name;
+      }
+
+      return resolveChildTool(neighborParent, name, this.dependencies.config.defaultBlock ?? 'paragraph');
     }
 
     return name;

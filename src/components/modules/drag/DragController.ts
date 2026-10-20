@@ -26,7 +26,7 @@ import { findScrollableAncestor } from './utils/findScrollableAncestor';
 import { ListItemDescendants } from './utils/ListItemDescendants';
 import { getListItemDepth } from './utils/depthUtils';
 import { resolveStructuralParent } from './utils/structuralParent';
-import { acceptsChildren } from '../../utils/child-tools';
+import { isChildToolAllowed } from '../../utils/child-tools';
 import { findOwn } from '../../utils/own-element';
 import { linkToBlock } from '../../utils/copy-as-link';
 import { isPagePointer } from '../../../shared/page-pointer';
@@ -1220,7 +1220,7 @@ export class DragController extends Module {
       .map(candidate => ({
         id: candidate.id,
         isList: candidate.name === 'list',
-        acceptsChildren: acceptsChildren(candidate) && !isBlockReadOnly(candidate, (id) => this.Blok.BlockManager.getBlockById(id)),
+        acceptsChildren: isChildToolAllowed(candidate, movedBlock.name) && !isBlockReadOnly(candidate, (id) => this.Blok.BlockManager.getBlockById(id)),
         depth: this.Blok.BlockManager.getBlockDepth(candidate),
       }));
 

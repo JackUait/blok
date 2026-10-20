@@ -1,6 +1,6 @@
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 import type { Block } from '../../../block';
-import { acceptsChildren, isChildToolAllowed } from '../../../utils/child-tools';
+import { isChildToolAllowed } from '../../../utils/child-tools';
 import { carriesReadOnly, isBlockReadOnly } from '../../../utils/read-only-blocks';
 
 type BlockManager = BlokModules['BlockManager'];
@@ -55,7 +55,7 @@ export const getIndentTarget = (BlockManager: BlockManager, block: Block): Block
   const precedingSibling = getPrecedingSibling(BlockManager, block);
   const getById = (id: string): Block | undefined => BlockManager.getBlockById(id);
 
-  if (precedingSibling === null || precedingSibling.tool.ownsChildren || !acceptsChildren(precedingSibling)) {
+  if (precedingSibling === null || precedingSibling.tool.ownsChildren || !isChildToolAllowed(precedingSibling, block.name)) {
     return null;
   }
 
@@ -94,7 +94,7 @@ export const canOutdent = (BlockManager: BlockManager, block: Block): boolean =>
   const grandparent = parent.parentId === null ? null : BlockManager.getBlockById(parent.parentId);
   const getById = (id: string): Block | undefined => BlockManager.getBlockById(id);
   // The outdented block adopts its following siblings, so none of them may be read-only either.
-  const moving = [block, ...(acceptsChildren(block) ? getFollowingSiblings(BlockManager, block) : [])];
+  const moving = [block, ...getAdoptedSiblings(BlockManager, block)];
 
   return isChildToolAllowed(grandparent, block.name)
     && !moving.some((member) => carriesReadOnly(member, getById));
@@ -127,4 +127,17 @@ export const getFollowingSiblings = (BlockManager: BlockManager, block: Block): 
     .slice(position + 1)
     .map((id) => BlockManager.getBlockById(id))
     .filter((sibling): sibling is Block => sibling !== undefined);
+};
+
+/**
+ * The following siblings an outdented block adopts: all of them, or none when
+ * the block may not hold one of them (`acceptsChildren`/`childTools`). None
+ * leaves them where they are, as a block that takes no children always did.
+ * @param BlockManager - the BlockManager module
+ * @param block - the block being outdented
+ */
+export const getAdoptedSiblings = (BlockManager: BlockManager, block: Block): Block[] => {
+  const siblings = getFollowingSiblings(BlockManager, block);
+
+  return siblings.every((sibling) => isChildToolAllowed(block, sibling.name)) ? siblings : [];
 };

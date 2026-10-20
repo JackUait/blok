@@ -125,4 +125,12 @@ describe('drop indicator depth is limited to depths the drop can actually apply'
 
     expect(previewedDepth([item, paragraph], 0, source, 1)).toBe(0);
   });
+
+  it('never previews a dragged list item nested under a block whose childTools refuse it', () => {
+    const database = { ...otherBlock('db', 'database'), tool: { childTools: { allow: ['database-row'] } } } as unknown as Block;
+    const trailing = otherBlock('trailing');
+    const source = listBlock('source', 0);
+
+    expect(previewedDepth([database, trailing], 0, source, 1)).toBe(0);
+  });
 });

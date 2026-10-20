@@ -363,6 +363,14 @@ export class DatabaseTool implements BlockTool {
     'database-comment': DatabaseCommentTool,
   };
 
+  /**
+   * Rows, a second data source and the page layout's tabs block. Rows come
+   * first: core demotes a disallowed insert to allow[0].
+   */
+  public static get childTools(): { allow: string[] } {
+    return { allow: ['database-row', 'database', 'tabs', 'database-comment'] };
+  }
+
   private readonly api: API;
   private readonly block: BlockAPI;
   /** Linked views also check their source's permission. */

@@ -12,8 +12,7 @@ import { horizontalArrowIntent, keyCodeFromEvent } from '../utils/keyboard';
 import { findAllOwn, findOwn } from '../../../utils/own-element';
 
 import { BlockEventComposer } from './__base';
-import { canOutdent, getIndentTarget, getFollowingSiblings } from './structural-siblings';
-import { acceptsChildren } from '../../../utils/child-tools';
+import { canOutdent, getAdoptedSiblings, getIndentTarget } from './structural-siblings';
 import { carriesReadOnly } from '../../../utils/read-only-blocks';
 
 /**
@@ -317,8 +316,7 @@ export class KeyboardNavigation extends BlockEventComposer {
      * the parent's contentIds), then adopt them under the outdented block so the
      * content that used to sit below it stays nested beneath it.
      */
-    // A block that takes no children leaves its following siblings where they are.
-    const followingSiblings = acceptsChildren(currentBlock) ? getFollowingSiblings(BlockManager, currentBlock) : [];
+    const followingSiblings = getAdoptedSiblings(BlockManager, currentBlock);
 
     for (const sibling of followingSiblings) {
       BlockManager.setBlockParent(sibling, currentBlock.id);

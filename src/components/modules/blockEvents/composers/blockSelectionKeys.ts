@@ -8,8 +8,8 @@ import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../
 import { LIST_TOOL_NAME } from '../constants';
 
 import { BlockEventComposer } from './__base';
-import { canOutdent, getIndentTarget, getFollowingSiblings } from './structural-siblings';
-import { acceptsChildren } from '../../../utils/child-tools';
+import { canOutdent, getAdoptedSiblings, getIndentTarget } from './structural-siblings';
+import { isChildToolAllowed } from '../../../utils/child-tools';
 import { carriesReadOnly } from '../../../utils/read-only-blocks';
 
 /**
@@ -217,7 +217,11 @@ export class BlockSelectionKeys extends BlockEventComposer {
     const anchor = indentTarget ?? first;
     const originalParentId = first.parentId;
 
-    if (!acceptsChildren(anchor) || blocks.some((block) => carriesReadOnly(block, (id) => BlockManager.getBlockById(id)))) {
+    if (blocks.some((block) => carriesReadOnly(block, (id) => BlockManager.getBlockById(id)))) {
+      return;
+    }
+    // All or nothing: the blocks that would nest under the anchor must all be allowed there.
+    if (blocks.some((block) => block !== anchor && block.parentId === originalParentId && !isChildToolAllowed(anchor, block.name))) {
       return;
     }
 
@@ -267,7 +271,7 @@ export class BlockSelectionKeys extends BlockEventComposer {
      * mutates the parent's contentIds) so the content below the selection stays
      * nested beneath the outdented group.
      */
-    const adopted = acceptsChildren(last) ? getFollowingSiblings(BlockManager, last) : [];
+    const adopted = getAdoptedSiblings(BlockManager, last);
 
     for (const sibling of adopted) {
       BlockManager.setBlockParent(sibling, last.id);

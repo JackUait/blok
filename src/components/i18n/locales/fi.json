@@ -717,6 +717,7 @@
   "tools.database.peekFavoriteHint": "Lisää suosikkeihin",
   "tools.database.peekUnfavoriteHint": "Poista suosikeista",
   "tools.database.defaultTitleProperty": "Otsikko",
+  "tools.database.defaultSourceTitleProperty": "Nimi",
   "tools.database.defaultStatusProperty": "Tila",
   "tools.database.defaultStatusNotStarted": "Aloittamatta",
   "tools.database.defaultStatusInProgress": "Käynnissä",

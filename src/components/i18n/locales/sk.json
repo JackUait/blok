@@ -719,6 +719,7 @@
   "tools.database.peekFavoriteHint": "Pridať do obľúbených",
   "tools.database.peekUnfavoriteHint": "Odstrániť z obľúbených",
   "tools.database.defaultTitleProperty": "Názov",
+  "tools.database.defaultSourceTitleProperty": "Názov",
   "tools.database.defaultStatusProperty": "Stav",
   "tools.database.defaultStatusNotStarted": "Nezačaté",
   "tools.database.defaultStatusInProgress": "Prebieha",

@@ -717,6 +717,7 @@
   "tools.database.peekFavoriteHint": "ਮਨਪਸੰਦ ਵਿੱਚ ਸ਼ਾਮਲ ਕਰੋ",
   "tools.database.peekUnfavoriteHint": "ਮਨਪਸੰਦ ਵਿੱਚੋਂ ਹਟਾਓ",
   "tools.database.defaultTitleProperty": "ਸਿਰਲੇਖ",
+  "tools.database.defaultSourceTitleProperty": "ਨਾਮ",
   "tools.database.defaultStatusProperty": "ਸਥਿਤੀ",
   "tools.database.defaultStatusNotStarted": "ਸ਼ੁਰੂ ਨਹੀਂ ਹੋਇਆ",
   "tools.database.defaultStatusInProgress": "ਚੱਲ ਰਿਹਾ",

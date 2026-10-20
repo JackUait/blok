@@ -717,6 +717,7 @@
   "tools.database.peekFavoriteHint": "Thêm vào mục yêu thích",
   "tools.database.peekUnfavoriteHint": "Xóa khỏi mục yêu thích",
   "tools.database.defaultTitleProperty": "Tiêu đề",
+  "tools.database.defaultSourceTitleProperty": "Tên",
   "tools.database.defaultStatusProperty": "Trạng thái",
   "tools.database.defaultStatusNotStarted": "Chưa bắt đầu",
   "tools.database.defaultStatusInProgress": "Đang thực hiện",

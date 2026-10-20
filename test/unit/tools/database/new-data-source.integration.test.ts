@@ -303,6 +303,8 @@ describe('New data source: a view bound to a second source in the same block', (
 
     expect(sourceId).toBeDefined();
     expect(created?.schema.map((p) => p.type)).toEqual(['title']);
+    // Notion names a new source's title property "Name" (research/23 §10).
+    expect(created?.schema.map((p) => p.name)).toEqual(['Name']);
     expect(view?.type).toBe('table');
     expect(parent?.activeViewId).toBe(view?.id);
     expect(parent?.schema).toEqual(parentSchema);

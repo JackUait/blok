@@ -717,6 +717,7 @@
   "tools.database.peekFavoriteHint": "הוספה למועדפים",
   "tools.database.peekUnfavoriteHint": "הסרה מהמועדפים",
   "tools.database.defaultTitleProperty": "כותרת",
+  "tools.database.defaultSourceTitleProperty": "שם",
   "tools.database.defaultStatusProperty": "סטטוס",
   "tools.database.defaultStatusNotStarted": "לא התחיל",
   "tools.database.defaultStatusInProgress": "בתהליך",

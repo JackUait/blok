@@ -717,6 +717,7 @@
   "tools.database.peekFavoriteHint": "Lisa lemmikutesse",
   "tools.database.peekUnfavoriteHint": "Eemalda lemmikutest",
   "tools.database.defaultTitleProperty": "Pealkiri",
+  "tools.database.defaultSourceTitleProperty": "Nimi",
   "tools.database.defaultStatusProperty": "Olek",
   "tools.database.defaultStatusNotStarted": "Alustamata",
   "tools.database.defaultStatusInProgress": "Pooleli",

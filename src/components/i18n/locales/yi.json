@@ -717,6 +717,7 @@
   "tools.database.peekFavoriteHint": "צולייגן צו פֿאַוואָריטן",
   "tools.database.peekUnfavoriteHint": "אַראָפּנעמען פֿון פֿאַוואָריטן",
   "tools.database.defaultTitleProperty": "טיטל",
+  "tools.database.defaultSourceTitleProperty": "נאָמען",
   "tools.database.defaultStatusProperty": "סטאטוס",
   "tools.database.defaultStatusNotStarted": "נישט אנגעהויבן",
   "tools.database.defaultStatusInProgress": "אין פארשריט",

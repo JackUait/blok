@@ -707,7 +707,7 @@ for (const [locale, keys] of Object.entries(DATABASE_LAYOUT_FORM_COGNATE_RETENTI
  */
 const DATABASE_BUTTON_COGNATE_RETENTIONS: Record<string, string[]> = {
   cs: ['tools.database.buttonBlockText'],
-  de: ['tools.database.buttonBlockText', 'tools.database.buttonVariableName'],
+  de: ['tools.database.buttonBlockText', 'tools.database.buttonVariableName', 'tools.database.defaultSourceTitleProperty'],
   es: ['tools.database.buttonVariableName'],
   fr: ['tools.database.buttonActionUnknown', 'tools.database.buttonVariableName', 'tools.database.buttonMessage'],
   ro: ['tools.database.buttonBlockText'],

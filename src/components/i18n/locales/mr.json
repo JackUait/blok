@@ -728,6 +728,7 @@
   "tools.database.peekFavoriteHint": "आवडींमध्ये जोडा",
   "tools.database.peekUnfavoriteHint": "आवडींमधून काढा",
   "tools.database.defaultTitleProperty": "शीर्षक",
+  "tools.database.defaultSourceTitleProperty": "नाव",
   "tools.database.defaultStatusProperty": "स्थिती",
   "tools.database.defaultStatusNotStarted": "सुरू झाले नाही",
   "tools.database.defaultStatusInProgress": "प्रगतीपथावर",

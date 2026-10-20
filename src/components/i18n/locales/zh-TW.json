@@ -835,6 +835,7 @@
   "tools.database.peekFavoriteHint": "加入我的最愛",
   "tools.database.peekUnfavoriteHint": "從我的最愛移除",
   "tools.database.defaultTitleProperty": "標題",
+  "tools.database.defaultSourceTitleProperty": "名稱",
   "tools.database.defaultStatusProperty": "狀態",
   "tools.database.defaultStatusNotStarted": "尚未開始",
   "tools.database.defaultStatusInProgress": "進行中",

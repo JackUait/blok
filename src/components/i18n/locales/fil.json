@@ -717,6 +717,7 @@
   "tools.database.peekFavoriteHint": "Idagdag sa Mga Paborito",
   "tools.database.peekUnfavoriteHint": "Alisin sa Mga Paborito",
   "tools.database.defaultTitleProperty": "Pamagat",
+  "tools.database.defaultSourceTitleProperty": "Pangalan",
   "tools.database.defaultStatusProperty": "Katayuan",
   "tools.database.defaultStatusNotStarted": "Hindi pa nasisimulan",
   "tools.database.defaultStatusInProgress": "Ginagawa",

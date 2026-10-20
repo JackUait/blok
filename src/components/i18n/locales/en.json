@@ -835,6 +835,7 @@
   "tools.database.peekFavoriteHint": "Add to your favorites",
   "tools.database.peekUnfavoriteHint": "Remove from your favorites",
   "tools.database.defaultTitleProperty": "Title",
+  "tools.database.defaultSourceTitleProperty": "Name",
   "tools.database.defaultStatusProperty": "Status",
   "tools.database.defaultStatusNotStarted": "Not started",
   "tools.database.defaultStatusInProgress": "In progress",

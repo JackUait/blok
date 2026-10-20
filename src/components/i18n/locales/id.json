@@ -719,6 +719,7 @@
   "tools.database.peekFavoriteHint": "Tambahkan ke Favorit",
   "tools.database.peekUnfavoriteHint": "Hapus dari Favorit",
   "tools.database.defaultTitleProperty": "Judul",
+  "tools.database.defaultSourceTitleProperty": "Nama",
   "tools.database.defaultStatusProperty": "Status",
   "tools.database.defaultStatusNotStarted": "Belum dimulai",
   "tools.database.defaultStatusInProgress": "Sedang berlangsung",

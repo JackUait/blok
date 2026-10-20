@@ -728,6 +728,7 @@
   "tools.database.peekFavoriteHint": "Tambah ke Kegemaran",
   "tools.database.peekUnfavoriteHint": "Alih keluar daripada Kegemaran",
   "tools.database.defaultTitleProperty": "Tajuk",
+  "tools.database.defaultSourceTitleProperty": "Nama",
   "tools.database.defaultStatusProperty": "Status",
   "tools.database.defaultStatusNotStarted": "Belum bermula",
   "tools.database.defaultStatusInProgress": "Dalam proses",

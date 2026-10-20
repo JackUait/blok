@@ -719,6 +719,7 @@
   "tools.database.peekFavoriteHint": "რჩეულებში დამატება",
   "tools.database.peekUnfavoriteHint": "რჩეულებიდან წაშლა",
   "tools.database.defaultTitleProperty": "სათაური",
+  "tools.database.defaultSourceTitleProperty": "სახელი",
   "tools.database.defaultStatusProperty": "სტატუსი",
   "tools.database.defaultStatusNotStarted": "არ დაწყებულა",
   "tools.database.defaultStatusInProgress": "მიმდინარეობს",

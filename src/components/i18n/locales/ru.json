@@ -719,6 +719,7 @@
   "tools.database.peekFavoriteHint": "Добавить в избранное",
   "tools.database.peekUnfavoriteHint": "Удалить из избранного",
   "tools.database.defaultTitleProperty": "Название",
+  "tools.database.defaultSourceTitleProperty": "Название",
   "tools.database.defaultStatusProperty": "Статус",
   "tools.database.defaultStatusNotStarted": "Не начато",
   "tools.database.defaultStatusInProgress": "В работе",

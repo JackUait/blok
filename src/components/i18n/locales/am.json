@@ -719,6 +719,7 @@
   "tools.database.peekFavoriteHint": "ወደ ተወዳጆች አክል",
   "tools.database.peekUnfavoriteHint": "ከተወዳጆች አስወግድ",
   "tools.database.defaultTitleProperty": "ርዕስ",
+  "tools.database.defaultSourceTitleProperty": "ስም",
   "tools.database.defaultStatusProperty": "ሁኔታ",
   "tools.database.defaultStatusNotStarted": "አልተጀመረም",
   "tools.database.defaultStatusInProgress": "በሂደት ላይ",

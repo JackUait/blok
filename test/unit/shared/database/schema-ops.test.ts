@@ -9,6 +9,7 @@ import { DatabaseModel } from '../../../../src/tools/database/database-model';
 
 const KEYS: Record<keyof typeof DATABASE_DEFAULT_TEXT, string> = {
   titleProperty: 'tools.database.defaultTitleProperty',
+  sourceTitleProperty: 'tools.database.defaultSourceTitleProperty',
   statusProperty: 'tools.database.defaultStatusProperty',
   statusNotStarted: 'tools.database.defaultStatusNotStarted',
   statusInProgress: 'tools.database.defaultStatusInProgress',

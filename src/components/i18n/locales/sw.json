@@ -717,6 +717,7 @@
   "tools.database.peekFavoriteHint": "Ongeza kwenye Vipendwa",
   "tools.database.peekUnfavoriteHint": "Ondoa kwenye Vipendwa",
   "tools.database.defaultTitleProperty": "Kichwa",
+  "tools.database.defaultSourceTitleProperty": "Jina",
   "tools.database.defaultStatusProperty": "Hali",
   "tools.database.defaultStatusNotStarted": "Haijaanza",
   "tools.database.defaultStatusInProgress": "Inaendelea",

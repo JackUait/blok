@@ -719,6 +719,7 @@
   "tools.database.peekFavoriteHint": "Adicionar aos favoritos",
   "tools.database.peekUnfavoriteHint": "Remover dos favoritos",
   "tools.database.defaultTitleProperty": "Título",
+  "tools.database.defaultSourceTitleProperty": "Nome",
   "tools.database.defaultStatusProperty": "Status",
   "tools.database.defaultStatusNotStarted": "Não iniciado",
   "tools.database.defaultStatusInProgress": "Em andamento",

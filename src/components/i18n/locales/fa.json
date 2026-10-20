@@ -717,6 +717,7 @@
   "tools.database.peekFavoriteHint": "افزودن به علاقه‌مندی‌ها",
   "tools.database.peekUnfavoriteHint": "حذف از علاقه‌مندی‌ها",
   "tools.database.defaultTitleProperty": "عنوان",
+  "tools.database.defaultSourceTitleProperty": "نام",
   "tools.database.defaultStatusProperty": "وضعیت",
   "tools.database.defaultStatusNotStarted": "شروع نشده",
   "tools.database.defaultStatusInProgress": "در حال انجام",

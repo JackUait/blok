@@ -719,6 +719,7 @@
   "tools.database.peekFavoriteHint": "Ավելացնել ընտրյալներում",
   "tools.database.peekUnfavoriteHint": "Հեռացնել ընտրյալներից",
   "tools.database.defaultTitleProperty": "Վերնագիր",
+  "tools.database.defaultSourceTitleProperty": "Անուն",
   "tools.database.defaultStatusProperty": "Կարգավիճակ",
   "tools.database.defaultStatusNotStarted": "Չի սկսվել",
   "tools.database.defaultStatusInProgress": "Ընթացքում",

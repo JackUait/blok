@@ -719,6 +719,7 @@
   "tools.database.peekFavoriteHint": "پسنديده ۾ شامل ڪريو",
   "tools.database.peekUnfavoriteHint": "پسنديده مان هٽايو",
   "tools.database.defaultTitleProperty": "عنوان",
+  "tools.database.defaultSourceTitleProperty": "نالو",
   "tools.database.defaultStatusProperty": "حالت",
   "tools.database.defaultStatusNotStarted": "شروع نه ٿيو",
   "tools.database.defaultStatusInProgress": "جاري",

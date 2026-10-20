@@ -4,6 +4,8 @@
  */
 export const DATABASE_DEFAULT_TEXT = {
   titleProperty: 'Title',
+  /** A second data source's title property (research/23 §10). */
+  sourceTitleProperty: 'Name',
   statusProperty: 'Status',
   statusNotStarted: 'Not started',
   statusInProgress: 'In progress',

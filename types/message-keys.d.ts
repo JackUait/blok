@@ -713,6 +713,7 @@ export type BlokMessageKey =
   | 'tools.database.dateToday'
   | 'tools.database.decimalPlaces'
   | 'tools.database.decimalPlacesDefault'
+  | 'tools.database.defaultSourceTitleProperty'
   | 'tools.database.defaultStatusDone'
   | 'tools.database.defaultStatusInProgress'
   | 'tools.database.defaultStatusNotStarted'

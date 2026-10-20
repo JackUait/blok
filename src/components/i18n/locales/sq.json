@@ -719,6 +719,7 @@
   "tools.database.peekFavoriteHint": "Shto te të preferuarat",
   "tools.database.peekUnfavoriteHint": "Hiq nga të preferuarat",
   "tools.database.defaultTitleProperty": "Titull",
+  "tools.database.defaultSourceTitleProperty": "Emri",
   "tools.database.defaultStatusProperty": "Statusi",
   "tools.database.defaultStatusNotStarted": "E pafilluar",
   "tools.database.defaultStatusInProgress": "Në progres",

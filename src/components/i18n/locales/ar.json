@@ -719,6 +719,7 @@
   "tools.database.peekFavoriteHint": "إضافة إلى المفضلة",
   "tools.database.peekUnfavoriteHint": "إزالة من المفضلة",
   "tools.database.defaultTitleProperty": "العنوان",
+  "tools.database.defaultSourceTitleProperty": "الاسم",
   "tools.database.defaultStatusProperty": "الحالة",
   "tools.database.defaultStatusNotStarted": "لم يبدأ",
   "tools.database.defaultStatusInProgress": "قيد التنفيذ",

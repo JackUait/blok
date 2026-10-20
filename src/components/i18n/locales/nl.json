@@ -717,6 +717,7 @@
   "tools.database.peekFavoriteHint": "Toevoegen aan favorieten",
   "tools.database.peekUnfavoriteHint": "Verwijderen uit favorieten",
   "tools.database.defaultTitleProperty": "Titel",
+  "tools.database.defaultSourceTitleProperty": "Naam",
   "tools.database.defaultStatusProperty": "Status",
   "tools.database.defaultStatusNotStarted": "Niet gestart",
   "tools.database.defaultStatusInProgress": "Bezig",

@@ -717,6 +717,7 @@
   "tools.database.peekFavoriteHint": "ياقتۇرغانلارغا قوشۇش",
   "tools.database.peekUnfavoriteHint": "ياقتۇرغانلاردىن چىقىرىۋېتىش",
   "tools.database.defaultTitleProperty": "ماۋزۇ",
+  "tools.database.defaultSourceTitleProperty": "ئىسىم",
   "tools.database.defaultStatusProperty": "ھالەت",
   "tools.database.defaultStatusNotStarted": "باشلانمىدى",
   "tools.database.defaultStatusInProgress": "داۋاملىشىۋاتىدۇ",

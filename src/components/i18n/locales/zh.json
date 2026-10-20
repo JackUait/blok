@@ -717,6 +717,7 @@
   "tools.database.peekFavoriteHint": "添加到收藏",
   "tools.database.peekUnfavoriteHint": "从收藏中移除",
   "tools.database.defaultTitleProperty": "标题",
+  "tools.database.defaultSourceTitleProperty": "名称",
   "tools.database.defaultStatusProperty": "状态",
   "tools.database.defaultStatusNotStarted": "未开始",
   "tools.database.defaultStatusInProgress": "进行中",

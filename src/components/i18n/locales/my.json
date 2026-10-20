@@ -728,6 +728,7 @@
   "tools.database.peekFavoriteHint": "အကြိုက်ဆုံးများသို့ ထည့်ရန်",
   "tools.database.peekUnfavoriteHint": "အကြိုက်ဆုံးများမှ ဖယ်ရှားရန်",
   "tools.database.defaultTitleProperty": "ခေါင်းစဉ်",
+  "tools.database.defaultSourceTitleProperty": "အမည်",
   "tools.database.defaultStatusProperty": "အခြေအနေ",
   "tools.database.defaultStatusNotStarted": "မစတင်ရသေး",
   "tools.database.defaultStatusInProgress": "ဆောင်ရွက်ဆဲ",

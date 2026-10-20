@@ -719,6 +719,7 @@
   "tools.database.peekFavoriteHint": "Føj til favoritter",
   "tools.database.peekUnfavoriteHint": "Fjern fra favoritter",
   "tools.database.defaultTitleProperty": "Titel",
+  "tools.database.defaultSourceTitleProperty": "Navn",
   "tools.database.defaultStatusProperty": "Status",
   "tools.database.defaultStatusNotStarted": "Ikke startet",
   "tools.database.defaultStatusInProgress": "I gang",

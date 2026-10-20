@@ -719,6 +719,7 @@
   "tools.database.peekFavoriteHint": "Добавяне към любими",
   "tools.database.peekUnfavoriteHint": "Премахване от любими",
   "tools.database.defaultTitleProperty": "Заглавие",
+  "tools.database.defaultSourceTitleProperty": "Име",
   "tools.database.defaultStatusProperty": "Статус",
   "tools.database.defaultStatusNotStarted": "Не е започнато",
   "tools.database.defaultStatusInProgress": "В процес",

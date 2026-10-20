@@ -717,6 +717,7 @@
   "tools.database.peekFavoriteHint": "पसंदीदा में जोड़ें",
   "tools.database.peekUnfavoriteHint": "पसंदीदा से हटाएं",
   "tools.database.defaultTitleProperty": "शीर्षक",
+  "tools.database.defaultSourceTitleProperty": "नाम",
   "tools.database.defaultStatusProperty": "स्थिति",
   "tools.database.defaultStatusNotStarted": "प्रारंभ नहीं हुआ",
   "tools.database.defaultStatusInProgress": "प्रगति पर",

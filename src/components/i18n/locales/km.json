@@ -719,6 +719,7 @@
   "tools.database.peekFavoriteHint": "បន្ថែមទៅចំណូលចិត្ត",
   "tools.database.peekUnfavoriteHint": "ដកចេញពីចំណូលចិត្ត",
   "tools.database.defaultTitleProperty": "ចំណងជើង",
+  "tools.database.defaultSourceTitleProperty": "ឈ្មោះ",
   "tools.database.defaultStatusProperty": "ស្ថានភាព",
   "tools.database.defaultStatusNotStarted": "មិនទាន់ចាប់ផ្ដើម",
   "tools.database.defaultStatusInProgress": "កំពុងដំណើរការ",

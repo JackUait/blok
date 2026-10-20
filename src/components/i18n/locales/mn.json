@@ -728,6 +728,7 @@
   "tools.database.peekFavoriteHint": "Дуртай зүйлд нэмэх",
   "tools.database.peekUnfavoriteHint": "Дуртай зүйлээс хасах",
   "tools.database.defaultTitleProperty": "Гарчиг",
+  "tools.database.defaultSourceTitleProperty": "Нэр",
   "tools.database.defaultStatusProperty": "Төлөв",
   "tools.database.defaultStatusNotStarted": "Эхлээгүй",
   "tools.database.defaultStatusInProgress": "Хийгдэж байна",

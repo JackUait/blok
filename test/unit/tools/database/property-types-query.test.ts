@@ -469,4 +469,18 @@ describe('status group localization', () => {
 
     expect(localized.status?.groups.map((g) => g.name)).toEqual(['«tools.database.statusGroupTodo»', '«tools.database.statusGroupInProgress»', 'Shipped']);
   });
+
+  it('localizes a title named "Name" (a new data source\'s default) by its own key', async () => {
+    const { localizeDatabaseSchema } = await import('../../../../src/tools/database/database-localization');
+    const i18n = { t: (key: string) => `«${key}»` } as never;
+    const [source, primary, renamed] = localizeDatabaseSchema([
+      { id: 'a', name: 'Name', type: 'title', position: 'a0' },
+      { id: 'b', name: 'Title', type: 'title', position: 'a0' },
+      { id: 'c', name: 'Task', type: 'title', position: 'a0' },
+    ], i18n);
+
+    expect(source.name).toBe('«tools.database.defaultSourceTitleProperty»');
+    expect(primary.name).toBe('«tools.database.defaultTitleProperty»');
+    expect(renamed.name).toBe('Task');
+  });
 });

@@ -5,6 +5,7 @@ import { DATABASE_DEFAULT_TEXT } from '../../shared/database/default-text';
 
 const DEFAULT_KEYS = {
   titleProperty: 'tools.database.defaultTitleProperty',
+  sourceTitleProperty: 'tools.database.defaultSourceTitleProperty',
   statusProperty: 'tools.database.defaultStatusProperty',
   statusNotStarted: 'tools.database.defaultStatusNotStarted',
   statusInProgress: 'tools.database.defaultStatusInProgress',
@@ -40,6 +41,10 @@ const localizeCanonicalValue = (
 ): string => value === canonicalValue ? i18n.t(key) : value;
 
 const localizePropertyName = (property: PropertyDefinition, i18n: I18n): string => {
+  if (property.type === 'title' && property.name === DATABASE_DEFAULT_TEXT.sourceTitleProperty) {
+    return i18n.t(DEFAULT_KEYS.sourceTitleProperty);
+  }
+
   if (property.type === 'title') {
     return localizeCanonicalValue(
       property.name,

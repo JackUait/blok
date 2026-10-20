@@ -717,6 +717,7 @@
   "tools.database.peekFavoriteHint": "Lägg till i favoriter",
   "tools.database.peekUnfavoriteHint": "Ta bort från favoriter",
   "tools.database.defaultTitleProperty": "Titel",
+  "tools.database.defaultSourceTitleProperty": "Namn",
   "tools.database.defaultStatusProperty": "Status",
   "tools.database.defaultStatusNotStarted": "Ej påbörjad",
   "tools.database.defaultStatusInProgress": "Pågår",

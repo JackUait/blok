@@ -719,6 +719,7 @@
   "tools.database.peekFavoriteHint": "お気に入りに追加",
   "tools.database.peekUnfavoriteHint": "お気に入りから削除",
   "tools.database.defaultTitleProperty": "タイトル",
+  "tools.database.defaultSourceTitleProperty": "名前",
   "tools.database.defaultStatusProperty": "ステータス",
   "tools.database.defaultStatusNotStarted": "未着手",
   "tools.database.defaultStatusInProgress": "進行中",

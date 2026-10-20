@@ -719,6 +719,7 @@
   "tools.database.peekFavoriteHint": "Προσθήκη στα αγαπημένα",
   "tools.database.peekUnfavoriteHint": "Αφαίρεση από τα αγαπημένα",
   "tools.database.defaultTitleProperty": "Τίτλος",
+  "tools.database.defaultSourceTitleProperty": "Όνομα",
   "tools.database.defaultStatusProperty": "Κατάσταση",
   "tools.database.defaultStatusNotStarted": "Δεν ξεκίνησε",
   "tools.database.defaultStatusInProgress": "Σε εξέλιξη",

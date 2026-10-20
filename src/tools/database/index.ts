@@ -3382,7 +3382,7 @@ export class DatabaseTool implements BlockTool {
     };
     const data: DatabaseData = {
       title: '',
-      schema: [{ id: nanoid(), name: DATABASE_DEFAULT_TEXT.titleProperty, type: 'title', position: 'a0' }],
+      schema: [{ id: nanoid(), name: DATABASE_DEFAULT_TEXT.sourceTitleProperty, type: 'title', position: 'a0' }],
       views: [sourceView],
       activeViewId: sourceView.id,
     };

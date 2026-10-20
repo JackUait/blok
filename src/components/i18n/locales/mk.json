@@ -728,6 +728,7 @@
   "tools.database.peekFavoriteHint": "Додај во омилени",
   "tools.database.peekUnfavoriteHint": "Отстрани од омилени",
   "tools.database.defaultTitleProperty": "Наслов",
+  "tools.database.defaultSourceTitleProperty": "Име",
   "tools.database.defaultStatusProperty": "Статус",
   "tools.database.defaultStatusNotStarted": "Не е започнато",
   "tools.database.defaultStatusInProgress": "Во тек",

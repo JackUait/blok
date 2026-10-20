@@ -717,6 +717,7 @@
   "tools.database.peekFavoriteHint": "ఇష్టమైనవాటికి జోడించు",
   "tools.database.peekUnfavoriteHint": "ఇష్టమైనవాటి నుండి తీసివేయి",
   "tools.database.defaultTitleProperty": "శీర్షిక",
+  "tools.database.defaultSourceTitleProperty": "పేరు",
   "tools.database.defaultStatusProperty": "స్థితి",
   "tools.database.defaultStatusNotStarted": "ప్రారంభం కాలేదు",
   "tools.database.defaultStatusInProgress": "ప్రగతిలో",

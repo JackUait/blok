@@ -717,6 +717,7 @@
   "tools.database.peekFavoriteHint": "பிடித்தவையில் சேர்",
   "tools.database.peekUnfavoriteHint": "பிடித்தவையிலிருந்து அகற்று",
   "tools.database.defaultTitleProperty": "தலைப்பு",
+  "tools.database.defaultSourceTitleProperty": "பெயர்",
   "tools.database.defaultStatusProperty": "நிலை",
   "tools.database.defaultStatusNotStarted": "தொடங்கவில்லை",
   "tools.database.defaultStatusInProgress": "செயலில்",

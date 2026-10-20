@@ -717,6 +717,7 @@
   "tools.database.peekFavoriteHint": "Hozzáadás a kedvencekhez",
   "tools.database.peekUnfavoriteHint": "Eltávolítás a kedvencek közül",
   "tools.database.defaultTitleProperty": "Cím",
+  "tools.database.defaultSourceTitleProperty": "Név",
   "tools.database.defaultStatusProperty": "Állapot",
   "tools.database.defaultStatusNotStarted": "Nem kezdődött el",
   "tools.database.defaultStatusInProgress": "Folyamatban",

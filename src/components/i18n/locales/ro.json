@@ -719,6 +719,7 @@
   "tools.database.peekFavoriteHint": "Adaugă la favorite",
   "tools.database.peekUnfavoriteHint": "Elimină din favorite",
   "tools.database.defaultTitleProperty": "Titlu",
+  "tools.database.defaultSourceTitleProperty": "Nume",
   "tools.database.defaultStatusProperty": "Stare",
   "tools.database.defaultStatusNotStarted": "Neînceput",
   "tools.database.defaultStatusInProgress": "În lucru",

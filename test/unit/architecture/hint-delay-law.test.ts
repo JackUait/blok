@@ -26,6 +26,7 @@ const SRC_ROOT = join(__dirname, '../../../src');
 const TOOLTIP_MODULE = join(SRC_ROOT, 'components/utils/tooltip.ts');
 
 const READOUT_USERS: Record<string, string> = {
+  'tools/database/database-timeline-view.ts': 'Live date-time readout ("Oct 20, 2:45 AM") beside a bar edge while resizing at Hours zoom (research/22 §9).',
   'tools/table/table-add-controls.ts': 'Live "cols×rows" size readout while dragging the add-row/add-column button.',
   'tools/table/table-corner-drag.ts': 'Live "cols×rows" size readout while dragging the table corner.',
   'tools/table/table-row-col-controls.ts': 'Says why a drag of a merge-locked row/column was refused, at the moment it is refused.',

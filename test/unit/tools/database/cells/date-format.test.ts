@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { resolveHourCycle, resolveWeekStart, toIsoDay, toLocalDate } from '../../../../../src/tools/database/cells/date-format';
+import { formatShortDatePart, resolveHourCycle, resolveWeekStart, toIsoDay, toLocalDate } from '../../../../../src/tools/database/cells/date-format';
 
 describe('date-format', () => {
   beforeEach(() => {
@@ -50,5 +50,17 @@ describe('date-format', () => {
     const date = toLocalDate('2026-10-09T14:05');
 
     expect([date.getHours(), date.getMinutes()]).toEqual([14, 5]);
+  });
+
+  describe('formatShortDatePart: the timeline resize readout (research/22 §9)', () => {
+    it('writes a timed part as a short month, day and time in the locale', () => {
+      expect(formatShortDatePart('2026-10-20T02:45', 'en-US')).toBe('Oct 20, 2:45 AM');
+      expect(formatShortDatePart('2026-10-20T14:05', 'en-US', 'h23')).toBe('Oct 20, 14:05');
+      expect(formatShortDatePart('2026-10-20T02:45', 'de-DE')).toBe(new Intl.DateTimeFormat('de-DE', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(2026, 9, 20, 2, 45)));
+    });
+
+    it('writes a part with no time as the short month and day', () => {
+      expect(formatShortDatePart('2026-10-20', 'en-US')).toBe('Oct 20');
+    });
   });
 });

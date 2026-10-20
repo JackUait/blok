@@ -316,3 +316,76 @@ describe('DatabaseTool — comments on cards and list rows', () => {
     expect(() => tool.destroy()).not.toThrow();
   });
 });
+
+const TIMELINE_SCHEMA = [
+  ...SCHEMA,
+  { id: 'due', name: 'Due', type: 'date' as const, position: 'a3' },
+];
+
+/** research/22 §11: Notion's timeline bar menu has no Comment; the table panel's rows do, with the badge. */
+describe('DatabaseTool — comments on the timeline', () => {
+  const timelineDoc = (): Doc => makeDoc([
+    fakeRow('a', 'db', { title: 'Alpha', due: '2026-10-09' }, 'a0'),
+    fakeRow('b', 'db', { title: 'Beta', due: '2026-10-10' }, 'a1'),
+  ]);
+  const timelineData = (): DatabaseData => tableData(TIMELINE_SCHEMA, { type: 'timeline', showTimelineTable: true });
+  const barOf = (el: HTMLElement, rowId: string): HTMLElement => {
+    const found = el.querySelector<HTMLElement>(`[data-blok-database-timeline-bar][data-row-id="${rowId}"]`);
+
+    if (found === null) throw new Error('no bar');
+
+    return found;
+  };
+  const tableRowOf = (el: HTMLElement, rowId: string): HTMLElement => {
+    const found = el.querySelector<HTMLElement>(`[data-blok-database-timeline-table-row][data-row-id="${rowId}"]`);
+
+    if (found === null) throw new Error('no table panel row');
+
+    return found;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('a right-click on a bar opens the row menu with no Comment, instead of the block menu', () => {
+    const { el } = buildTool(timelineDoc(), { comments: { open: vi.fn() } }, timelineData());
+    const event = rightClick(barOf(el, 'a'));
+
+    expect(menuItem('database-row-comment')).toBeNull();
+    expect(event.defaultPrevented).toBe(true);
+    expect(menuItem('database-row-copy-link')).not.toBeNull();
+    expect(menuItem('database-row-delete')).not.toBeNull();
+  });
+
+  it('a right-click on a table panel row opens the row menu with Comment, which opens that row\'s comments', () => {
+    const open = vi.fn();
+    const { el } = buildTool(timelineDoc(), { comments: { open } }, timelineData());
+    const line = tableRowOf(el, 'a');
+    const event = rightClick(line.firstElementChild ?? line);
+
+    expect(event.defaultPrevented).toBe(true);
+    menuItem('database-row-comment')?.click();
+    expect(open).toHaveBeenCalledWith({ databaseId: 'db', rowId: 'a' }, line);
+  });
+
+  it('a table panel row with comments shows the badge; a bar never does', () => {
+    const open = vi.fn();
+    const count = vi.fn((target: { rowId: string }) => (target.rowId === 'a' ? 2 : 0));
+    const { el } = buildTool(timelineDoc(), { comments: { open, count } }, timelineData());
+    const badge = badgeIn(tableRowOf(el, 'a'));
+
+    expect(badge?.textContent?.trim()).toBe('2');
+    expect(badgeIn(tableRowOf(el, 'b'))).toBeNull();
+    expect(badgeIn(barOf(el, 'a'))).toBeNull();
+
+    badge?.click();
+    expect(open).toHaveBeenCalledWith({ databaseId: 'db', rowId: 'a' }, badge);
+    expect(document.querySelector('[data-blok-database-drawer]')).toBeNull();
+  });
+});

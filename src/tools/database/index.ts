@@ -4347,6 +4347,7 @@ export class DatabaseTool implements BlockTool {
       today,
       locale: resolveLocale(undefined),
       cellContext: this.cellContext(),
+      ...this.commentBadgeLever(),
       handlers: {
         openRow: (rowId) => this.handleRowClick(rowId),
         ...(this.readOnly ? {} : { pickRow: (rowId: string, range: boolean) => this.pickRow(rowId, range) }),
@@ -6575,7 +6576,8 @@ export class DatabaseTool implements BlockTool {
     // Notion: a right-click on a card or list row opens its row menu.
     boardEl.addEventListener('contextmenu', (event) => {
       const target = event.target instanceof Element ? event.target : null;
-      const rowEl = target?.closest<HTMLElement>('[data-blok-database-card], [data-blok-database-gallery-card], [data-blok-database-list-row]');
+      const rowEl = target?.closest<HTMLElement>('[data-blok-database-card], [data-blok-database-gallery-card], [data-blok-database-list-row], '
+        + '[data-blok-database-timeline-bar], [data-blok-database-timeline-table-row]');
       const rowId = rowEl?.getAttribute('data-row-id');
 
       // A field being edited keeps the native menu, for copy and paste.
@@ -6636,11 +6638,17 @@ export class DatabaseTool implements BlockTool {
     return keyboard;
   }
 
-  /** Board and gallery carry Layout and Property visibility; a list row does not (research/12 §3). */
+  /**
+   * Board and gallery carry Layout and Property visibility; a list row does not (research/12 §3).
+   * A timeline bar has no Comment; its table panel row does (research/22 §11).
+   */
   private openCardMenu(anchor: HTMLElement, cardEl: HTMLElement, rowId: string): void {
     const type = this.model.getView(this.activeViewId)?.type;
 
-    this.openRowMenu(rowId, anchor, cardEl, { viewSettings: type === 'board' || type === 'gallery' });
+    this.openRowMenu(rowId, anchor, cardEl, {
+      viewSettings: type === 'board' || type === 'gallery',
+      comment: !cardEl.hasAttribute('data-blok-database-timeline-bar'),
+    });
   }
 
   /**
@@ -6648,8 +6656,8 @@ export class DatabaseTool implements BlockTool {
    * `rowMenuItems` as the table's ⋮⋮ so they cannot drift. `card` keeps its
    * hover buttons while the menu is up.
    */
-  private openRowMenu(rowId: string, anchor: HTMLElement, card: HTMLElement, options: { viewSettings: boolean }): void {
-    const { comment } = this.commentLever();
+  private openRowMenu(rowId: string, anchor: HTMLElement, card: HTMLElement, options: { viewSettings: boolean; comment?: boolean }): void {
+    const comment = options.comment === false ? undefined : this.commentLever().comment;
     const writable = (): boolean => !this.readOnly && !this.destroyed;
     const listTargets = (): Array<{ id: string; title: string }> => this.moveTargets();
     const view = this.model.getView(this.activeViewId);

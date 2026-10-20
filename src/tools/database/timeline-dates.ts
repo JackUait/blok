@@ -157,15 +157,15 @@ const minutesFrom = (windowStart: string, part: string): number | null => {
   return daysBetween(windowStart, match[1]) * DAY_MINUTES + Number(match[2]) * HOUR_MINUTES + Number(match[3]);
 };
 
-/** Shifts a timed part by whole hours as wall time; text after `HH:mm` (seconds, zone) stays. */
-const shiftPartByHours = (part: string, hours: number): string => {
+/** Shifts a timed part by minutes as wall time; text after `HH:mm` (seconds, zone) stays. */
+const shiftPartByMinutes = (part: string, minutes: number): string => {
   const match = TIMED_PART.exec(part);
 
   if (match === null) {
     return part;
   }
 
-  const total = Number(match[2]) * HOUR_MINUTES + Number(match[3]) + hours * HOUR_MINUTES;
+  const total = Number(match[2]) * HOUR_MINUTES + Number(match[3]) + minutes;
   const dayShift = Math.floor(total / DAY_MINUTES);
   const inDay = total - dayShift * DAY_MINUTES;
   const pad = (n: number): string => String(n).padStart(2, '0');
@@ -173,17 +173,24 @@ const shiftPartByHours = (part: string, hours: number): string => {
   return `${addDays(match[1], dayShift)}T${pad(Math.floor(inDay / HOUR_MINUTES))}:${pad(inDay % HOUR_MINUTES)}${part.slice(match[0].length)}`;
 };
 
+/** Hours zoom drags snap to this many minutes (research/22 §9). */
+export const SNAP_MINUTES = 15;
+
+/** Rounds a drag to the nearest step; half a step rounds away from zero. `+ 0` turns -0 into 0. */
+export const snapMinutes = (minutes: number): number =>
+  Math.sign(minutes) * Math.round(Math.abs(minutes) / SNAP_MINUTES) * SNAP_MINUTES + 0;
+
 /**
- * Moves a bar by whole days, times and lengths kept. With `deltaHours`
- * (hours zoom), a value that has a time moves by hours instead.
+ * Moves a bar by whole days, times and lengths kept. With `deltaMinutes`
+ * (hours zoom), a value that has a time moves by minutes instead.
  */
-export const moveBar = (values: BarValues, deltaDays: number, deltaHours?: number): BarWrite => {
+export const moveBar = (values: BarValues, deltaDays: number, deltaMinutes?: number): BarWrite => {
   const shift = (value: PropertyValue | undefined): string | null => {
     const parsed = parseDateValue(value);
 
-    if (parsed !== null && parsed.hasTime && deltaHours !== undefined) {
+    if (parsed !== null && parsed.hasTime && deltaMinutes !== undefined) {
       return [parsed.start, parsed.end].filter((part): part is string => part !== undefined)
-        .map((part) => shiftPartByHours(part, deltaHours))
+        .map((part) => shiftPartByMinutes(part, deltaMinutes))
         .join('/');
     }
 
@@ -195,6 +202,50 @@ export const moveBar = (values: BarValues, deltaDays: number, deltaHours?: numbe
   const end = values.end === undefined ? null : shift(values.end);
 
   return { ...(start !== null ? { start } : {}), ...(end !== null ? { end } : {}) };
+};
+
+/** Both timed edges of a bar. A value with no end ends an hour later, as drawn. Null when an edge has no time. */
+export const timedEdges = (values: BarValues): { start: string; end: string } | null => {
+  const start = parseDateValue(values.start);
+  const endPart = values.end === undefined ? start?.end : parseDateValue(values.end)?.start;
+
+  if (start === null || !TIMED_PART.test(start.start) || (endPart !== undefined && !TIMED_PART.test(endPart))) {
+    return null;
+  }
+
+  return { start: start.start, end: endPart ?? shiftPartByMinutes(start.start, HOUR_MINUTES) };
+};
+
+/**
+ * Hours zoom: drags one edge of a timed bar by minutes. The edge stops one
+ * step before the other edge. Null when an edge has no time, so the day
+ * resize applies.
+ */
+export const resizeBarByMinutes = (values: BarValues, edge: 'start' | 'end', deltaMinutes: number): BarWrite | null => {
+  const edges = timedEdges(values);
+
+  if (edges === null) {
+    return null;
+  }
+
+  const day = edges.start.slice(0, 10);
+  const length = (minutesFrom(day, edges.end) ?? 0) - (minutesFrom(day, edges.start) ?? 0);
+  const delta = edge === 'start'
+    ? Math.min(deltaMinutes, Math.max(length - SNAP_MINUTES, 0))
+    : Math.max(deltaMinutes, Math.min(SNAP_MINUTES - length, 0));
+
+  if (delta === 0) {
+    return {};
+  }
+
+  const start = edge === 'start' ? shiftPartByMinutes(edges.start, delta) : edges.start;
+  const end = edge === 'end' ? shiftPartByMinutes(edges.end, delta) : edges.end;
+
+  if (values.end === undefined) {
+    return { start: `${start}/${end}` };
+  }
+
+  return edge === 'start' ? { start } : { end };
 };
 
 /** Drags one edge to `toDay`. The edge stops at the other edge. */

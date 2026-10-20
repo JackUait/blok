@@ -211,6 +211,73 @@ test.describe('timeline', () => {
     await expect.poll(async () => savedRow(page, 'r1')).toMatchObject({ 'p-due': '2026-10-07', 'p-end': '2026-10-09' });
   });
 
+  test.describe('hours zoom (research/22 §9)', () => {
+    const timed = [{ id: 'r1', properties: { 'p-title': 'Call', 'p-due': '2026-10-09T03:00/2026-10-09T04:00' } }];
+    const mountHours = async (page: Page): Promise<{ x: number; y: number; width: number }> => {
+      await mount(page, blocks({ type: 'timeline', timelineZoom: 'hours' }, timed));
+      await bar(page, 'r1').scrollIntoViewIfNeeded();
+      const box = await bar(page, 'r1').boundingBox();
+
+      if (box === null) throw new Error('no bar');
+
+      return { x: box.x, y: box.y + box.height / 2, width: box.width };
+    };
+
+    test('a move follows the pointer as a ghost and rounds to the nearest 15 minutes on drop', async ({ page }) => {
+      const box = await mountHours(page);
+
+      // Hours zoom draws one pixel per minute.
+      expect(box.width).toBeCloseTo(60, 0);
+      await page.mouse.move(box.x + 30, box.y);
+      await page.mouse.down();
+      await page.mouse.move(box.x + 40, box.y, { steps: 5 });
+      expect((await bar(page, 'r1').boundingBox())?.x).toBeCloseTo(box.x + 10, 0);
+      await expect(page.getByRole('tooltip')).toBeHidden();
+      await page.mouse.up();
+
+      await expect.poll(async () => (await savedRow(page, 'r1'))['p-due']).toBe('2026-10-09T03:15/2026-10-09T04:15');
+    });
+
+    test('a left-edge resize snaps live and reads the new start', async ({ page }) => {
+      const box = await mountHours(page);
+
+      await page.mouse.move(box.x + 2, box.y);
+      await page.mouse.down();
+      await page.mouse.move(box.x - 8, box.y, { steps: 5 });
+      await expect(page.getByRole('tooltip')).toHaveText('Oct 9, 2:45 AM');
+      expect((await bar(page, 'r1').boundingBox())?.x).toBeCloseTo(box.x - 15, 0);
+      await page.mouse.up();
+
+      await expect.poll(async () => (await savedRow(page, 'r1'))['p-due']).toBe('2026-10-09T02:45/2026-10-09T04:00');
+      await expect(page.getByRole('tooltip')).toBeHidden();
+    });
+
+    test('a right-edge resize snaps the same way and reads the new end', async ({ page }) => {
+      const box = await mountHours(page);
+
+      await page.mouse.move(box.x + box.width - 2, box.y);
+      await page.mouse.down();
+      await page.mouse.move(box.x + box.width + 8, box.y, { steps: 5 });
+      await expect(page.getByRole('tooltip')).toHaveText('Oct 9, 4:15 AM');
+      await page.mouse.up();
+
+      await expect.poll(async () => (await savedRow(page, 'r1'))['p-due']).toBe('2026-10-09T03:00/2026-10-09T04:15');
+    });
+  });
+
+  test('a bar\'s right-click menu has no Comment; a table panel row\'s does (research/22 §11)', async ({ page }) => {
+    await mount(page, blocks({ type: 'timeline', showTimelineTable: true }));
+
+    await bar(page, 'r1').click({ button: 'right' });
+    await expect(page.getByRole('menuitem', { name: /Copy link/ })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: /Comment/ })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('menuitem', { name: /Copy link/ })).toHaveCount(0);
+
+    await page.locator('[data-blok-database-timeline-table-row][data-row-id="r1"]').click({ button: 'right' });
+    await expect(page.getByRole('menuitem', { name: /Comment/ })).toBeVisible();
+  });
+
   test('the zoom menu, + and - keys change the zoom', async ({ page }) => {
     await mount(page, blocks({ type: 'timeline' }));
 

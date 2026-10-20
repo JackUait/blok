@@ -4,7 +4,15 @@ import { DatabaseTimelineView } from '../../../../src/tools/database/database-ti
 import type { DatabaseTimelineViewOptions, TimelineGroup, TimelineHandlers } from '../../../../src/tools/database/database-timeline-view';
 import { TIMELINE_DAY_WIDTH, timelineWindow } from '../../../../src/tools/database/timeline-dates';
 import { daysBetween } from '../../../../src/tools/database/calendar-dates';
+import { hide, showReadout } from '../../../../src/components/utils/tooltip';
+import type * as Tooltip from '../../../../src/components/utils/tooltip';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption } from '../../../../src/tools/database/types';
+
+vi.mock('../../../../src/components/utils/tooltip', async (importOriginal) => ({
+  ...await importOriginal<typeof Tooltip>(),
+  showReadout: vi.fn(),
+  hide: vi.fn(),
+}));
 
 const schema: PropertyDefinition[] = [
   { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
@@ -279,6 +287,19 @@ describe('DatabaseTimelineView', () => {
       root.querySelector<HTMLElement>('[data-blok-database-timeline-table-row][data-row-id="r2"] [data-blok-database-timeline-table-title]')?.click();
       expect(handlers.openRow).toHaveBeenCalledWith('r2');
     });
+
+    it('opens a row from anywhere in its title cell, and renames it without dropping its comment badge', () => {
+      const commentBadges = { databaseId: 'db', count: (rowId: string) => (rowId === 'r2' ? 1 : 0), open: vi.fn() };
+      const { root, handlers, view } = mount({ view: timelineView({ showTimelineTable: true }), commentBadges });
+      const cell = root.querySelector<HTMLElement>('[data-blok-database-timeline-table-row][data-row-id="r2"] [data-property-id="p-title"]');
+
+      cell?.click();
+      expect(handlers.openRow).toHaveBeenCalledWith('r2');
+
+      view.updateRowTitle(root, 'r2', 'Holiday');
+      expect(cell?.textContent).toContain('Holiday');
+      expect(cell?.querySelector('[data-blok-database-comment-badge]')).not.toBeNull();
+    });
   });
 
   describe('toolbar', () => {
@@ -522,6 +543,136 @@ describe('DatabaseTimelineView', () => {
       pointer('pointermove', document, xOf('2026-10-12'), 50);
       pointer('pointerup', document, xOf('2026-10-12'), 50);
       expect(handlers.writeDates).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('hours zoom: 15-minute snap (research/22 §9)', () => {
+    const hoursStart = timelineWindow(CENTER, 'hours').start;
+    /** Canvas pixels to midnight of CENTER; hours zoom draws one pixel per minute. */
+    const midnight = daysBetween(hoursStart, CENTER) * TIMELINE_DAY_WIDTH.hours;
+    const at = (minutes: number): number => midnight + minutes;
+    const mountHours = (overrides: Partial<DatabaseTimelineViewOptions> = {}): Mounted => {
+      const mounted = mount({
+        view: timelineView({ timelineZoom: 'hours' }),
+        groups: single([row('r1', 'Call', '2026-10-09T03:00/2026-10-09T04:00')]),
+        ...overrides,
+      });
+
+      rect(canvas(mounted.root), 0, 0, timelineWindow(CENTER, 'hours').days * TIMELINE_DAY_WIDTH.hours, 400);
+
+      return mounted;
+    };
+    const handleOf = (root: HTMLElement, edge: 'start' | 'end'): HTMLElement => {
+      const handle = bar(root, 'r1').querySelector<HTMLElement>(`[data-blok-database-timeline-resize="${edge}"]`);
+
+      if (handle === null) throw new Error('no handle');
+
+      return handle;
+    };
+
+    it('rounds a move to the nearest 15 minutes on drop', () => {
+      const { root, handlers } = mountHours();
+
+      pointer('pointerdown', bar(root, 'r1'), at(200), 50);
+      pointer('pointermove', document, at(208), 50);
+      pointer('pointerup', document, at(208), 50);
+
+      expect(handlers.writeDates).toHaveBeenCalledWith('r1', { start: '2026-10-09T03:15/2026-10-09T04:15' });
+    });
+
+    it('writes nothing for a move under half a step, and moves back a step past half', () => {
+      const { root, handlers } = mountHours();
+
+      pointer('pointerdown', bar(root, 'r1'), at(200), 50);
+      pointer('pointermove', document, at(194), 50);
+      pointer('pointerup', document, at(194), 50);
+      expect(handlers.writeDates).not.toHaveBeenCalled();
+
+      pointer('pointerdown', bar(root, 'r1'), at(200), 50);
+      pointer('pointermove', document, at(179), 50);
+      pointer('pointerup', document, at(179), 50);
+      expect(handlers.writeDates).toHaveBeenCalledWith('r1', { start: '2026-10-09T02:45/2026-10-09T03:45' });
+    });
+
+    it('drags a move as a ghost that follows the pointer unsnapped, with no readout', () => {
+      const { root } = mountHours();
+
+      pointer('pointerdown', bar(root, 'r1'), at(200), 50);
+      pointer('pointermove', document, at(208), 50);
+
+      expect(bar(root, 'r1').style.insetInlineStart).toBe(`${at(188)}px`);
+      expect(bar(root, 'r1').style.width).toBe('60px');
+      expect(bar(root, 'r1').hasAttribute('data-dragging')).toBe(true);
+      expect(showReadout).not.toHaveBeenCalled();
+    });
+
+    it('snaps a left-edge resize live and shows the new start beside the edge', () => {
+      const { root, handlers } = mountHours();
+      const handle = handleOf(root, 'start');
+
+      pointer('pointerdown', handle, at(181), 50);
+      pointer('pointermove', document, at(173), 50);
+
+      expect(bar(root, 'r1').style.insetInlineStart).toBe(`${at(165)}px`);
+      expect(bar(root, 'r1').style.width).toBe('75px');
+      expect(showReadout).toHaveBeenLastCalledWith(handle, 'Oct 9, 2:45 AM', expect.objectContaining({ placement: 'left' }));
+
+      pointer('pointerup', document, at(173), 50);
+
+      expect(handlers.writeDates).toHaveBeenCalledWith('r1', { start: '2026-10-09T02:45/2026-10-09T04:00' });
+      expect(hide).toHaveBeenCalled();
+    });
+
+    it('reads the unchanged start while a left-edge resize is under half a step', () => {
+      const { root, handlers } = mountHours();
+      const handle = handleOf(root, 'start');
+
+      pointer('pointerdown', handle, at(181), 50);
+      pointer('pointermove', document, at(176), 50);
+
+      expect(showReadout).toHaveBeenLastCalledWith(handle, 'Oct 9, 3:00 AM', expect.anything());
+      pointer('pointerup', document, at(176), 50);
+      expect(handlers.writeDates).not.toHaveBeenCalled();
+    });
+
+    it('snaps a right-edge resize the same way and reads the new end', () => {
+      const { root, handlers } = mountHours();
+      const handle = handleOf(root, 'end');
+
+      pointer('pointerdown', handle, at(239), 50);
+      pointer('pointermove', document, at(247), 50);
+
+      expect(bar(root, 'r1').style.width).toBe('75px');
+      expect(showReadout).toHaveBeenLastCalledWith(handle, 'Oct 9, 4:15 AM', expect.objectContaining({ placement: 'right' }));
+      pointer('pointerup', document, at(247), 50);
+
+      expect(handlers.writeDates).toHaveBeenCalledWith('r1', { start: '2026-10-09T03:00/2026-10-09T04:15' });
+    });
+
+    it('puts the bar back and hides the readout on Escape', () => {
+      const { root, handlers } = mountHours();
+
+      pointer('pointerdown', handleOf(root, 'start'), at(181), 50);
+      pointer('pointermove', document, at(150), 50);
+      key(document, 'Escape');
+
+      expect(bar(root, 'r1').style.insetInlineStart).toBe(`${at(180)}px`);
+      expect(bar(root, 'r1').style.width).toBe('60px');
+      expect(hide).toHaveBeenCalled();
+      expect(handlers.writeDates).not.toHaveBeenCalled();
+    });
+
+    it('shows no readout for a resize at other zooms', () => {
+      const { root } = mount();
+      const handle = bar(root, 'r1').querySelector<HTMLElement>('[data-blok-database-timeline-resize="end"]');
+
+      rect(canvas(root), 0, 0, timelineWindow(CENTER, 'month').days * 40, 400);
+      if (handle === null) throw new Error('no handle');
+      pointer('pointerdown', handle, px('2026-10-09') + 20, 50);
+      pointer('pointermove', document, px('2026-10-11') + 20, 50);
+      pointer('pointerup', document, px('2026-10-11') + 20, 50);
+
+      expect(showReadout).not.toHaveBeenCalled();
     });
   });
 

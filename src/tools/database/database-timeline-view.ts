@@ -8,7 +8,8 @@ import { reminderContext } from './reminders';
 import type { CellContext } from './cells';
 import { readPropertyValue } from './property-values';
 import { addDays, daysBetween, isWeekend } from './calendar-dates';
-import { toLocalDate } from './cells/date-format';
+import { formatShortDatePart, resolveLocale, toLocalDate } from './cells/date-format';
+import { hide as hideReadout, showReadout } from '../../components/utils/tooltip';
 import type { EventSpan } from './calendar-dates';
 import {
   TIMELINE_DAY_WIDTH,
@@ -18,6 +19,9 @@ import {
   moveBar,
   offscreenSide,
   resizeBar,
+  resizeBarByMinutes,
+  snapMinutes,
+  timedEdges,
   timelineSpan,
   timelineWindow,
   visibleRange,
@@ -28,6 +32,8 @@ import { resolveCalculations, resolveCountCaps, resolveShowTimelineTable, resolv
 import { fillCalculationCell } from './database-table-view';
 import { isHistoryKey } from './database-keyboard';
 import { getElementDirection } from '../../components/utils/direction';
+import { syncCommentBadge } from './database-comment-badge';
+import type { CommentBadges } from './database-comment-badge';
 import { IconChevronLeft, IconChevronRight, IconMenu, IconPlus } from '../../components/icons';
 
 export interface TimelineGroup {
@@ -86,9 +92,12 @@ export interface DatabaseTimelineViewOptions {
   arrows?: Array<{ from: string; to: string }>;
   /** Sub-item depth of a row, for the indent of nested rows. */
   depthOf?: (rowId: string) => number;
+  /** Comment counts. Only the table panel rows show a badge; bars never do (research/22 §11). */
+  commentBadges?: CommentBadges;
 }
 
 const DRAG_THRESHOLD = 4;
+const DAY_MINUTES = 24 * 60;
 const PAN_PX = 160;
 /** Within this share of either canvas end, a scroll redraws around a new centre. */
 const EDGE_SHARE = 0.1;
@@ -113,13 +122,13 @@ interface BarDrag {
   rowId: string;
   mode: 'move' | 'start' | 'end';
   grabDay: string;
-  /** Hours from the canvas start; only read at hours zoom. */
-  grabHour: number;
+  /** Pixels from the canvas start; hours zoom reads minutes from them. */
+  grabPx: number;
   startX: number;
   startY: number;
   active: boolean;
   overDay: string;
-  overHour: number;
+  overPx: number;
 }
 
 interface LinkDrag {
@@ -358,8 +367,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
       cell.setAttribute('data-property-id', property.id);
       if (property.id === this.options.titlePropertyId) {
-        cell.setAttribute('data-blok-database-timeline-table-title', '');
-        cell.textContent = this.titleOf(row);
+        this.fillTitleCell(cell, row);
       } else {
         cell.appendChild(renderCellValue(property, readPropertyValue(row, property), {
           ...this.options.cellContext,
@@ -373,6 +381,19 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
 
     return line;
+  }
+
+  /** The whole cell opens the row; the text span anchors the comment badge. */
+  private fillTitleCell(cell: HTMLElement, row: DatabaseRow): void {
+    const title = document.createElement('span');
+
+    cell.setAttribute('data-blok-database-timeline-table-title', '');
+    title.setAttribute('data-blok-database-timeline-table-title-text', '');
+    title.textContent = this.titleOf(row);
+    cell.appendChild(title);
+    if (this.options.commentBadges !== undefined) {
+      syncCommentBadge(title, row.id, this.options.commentBadges, this.options.i18n);
+    }
   }
 
   private createSpacer(): HTMLElement {
@@ -936,10 +957,6 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     return addDays(this.window.start, Math.floor(this.canvasOffset(x) / this.dayWidth));
   }
 
-  /** The hour under a pointer, counted from the canvas start. */
-  private hourAt(x: number): number {
-    return Math.floor(this.canvasOffset(x) / (this.dayWidth / 24));
-  }
 
   /** Hours zoom places a timed value by its time; every other case by whole days. */
   private geometryOf(span: EventSpan, values: BarValues): { offset: number; width: number } {
@@ -992,19 +1009,19 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
     const edge = event.target.closest('[data-blok-database-timeline-resize]')?.getAttribute('data-blok-database-timeline-resize');
     const grabDay = this.dayAt(event.clientX);
-    const grabHour = this.hourAt(event.clientX);
+    const grabPx = this.canvasOffset(event.clientX);
 
     this.drag = {
       kind: 'bar',
       rowId,
       mode: edge === 'start' || edge === 'end' ? edge : 'move',
       grabDay,
-      grabHour,
+      grabPx,
       startX: event.clientX,
       startY: event.clientY,
       active: false,
       overDay: grabDay,
-      overHour: grabHour,
+      overPx: grabPx,
     };
     this.listen();
   };
@@ -1034,7 +1051,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
     if (drag.kind === 'bar') {
       drag.overDay = this.dayAt(event.clientX);
-      drag.overHour = this.hourAt(event.clientX);
+      drag.overPx = this.canvasOffset(event.clientX);
       this.previewBar(drag);
 
       return;
@@ -1053,10 +1070,16 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       .filter((el) => el.getAttribute('data-row-id') === rowId);
   }
 
-  /** Writes the bar's would-be place on the bar itself while dragging. */
+  /**
+   * Writes the bar's would-be place on the bar itself while dragging. At
+   * hours zoom a move is a ghost that follows the pointer and snaps only on
+   * drop, and a resize snaps live with a readout of the dragged edge
+   * (research/22 §9).
+   */
   private previewBar(drag: BarDrag): void {
-    const span = this.spanAfter(drag);
-    const values = this.valuesAfter(drag);
+    const ghost = this.zoom === 'hours' && drag.mode === 'move';
+    const values = ghost ? this.barValues(drag.rowId) : this.valuesAfter(drag);
+    const span = values === null ? null : timelineSpan(values.start, values.end);
     const barEl = this.rowsOf('[data-blok-database-timeline-bar]').find((el) => el.getAttribute('data-row-id') === drag.rowId);
 
     if (span === null || values === null || barEl === undefined) {
@@ -1065,8 +1088,24 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
     const { offset, width } = this.geometryOf(span, values);
 
-    barEl.style.insetInlineStart = `${offset}px`;
+    barEl.style.insetInlineStart = `${ghost ? offset + drag.overPx - drag.grabPx : offset}px`;
     barEl.style.width = `${width}px`;
+    if (this.zoom === 'hours' && drag.mode !== 'move' && drag.active) {
+      this.showEdgeReadout(barEl, drag.mode, values, span);
+    }
+  }
+
+  private showEdgeReadout(barEl: HTMLElement, edge: 'start' | 'end', values: BarValues, span: EventSpan): void {
+    const handle = barEl.querySelector<HTMLElement>(`[data-blok-database-timeline-resize="${edge}"]`);
+
+    if (handle === null) {
+      return;
+    }
+    // The physical side of the dragged edge, so the text sits outside the bar.
+    const before = (edge === 'start') !== this.rtl;
+    const part = timedEdges(values)?.[edge] ?? span[edge];
+
+    showReadout(handle, formatShortDatePart(part, resolveLocale(this.options.locale)), { placement: before ? 'left' : 'right' });
   }
 
   private barValues(rowId: string): { start: DatabaseRow['properties'][string] | undefined; end: DatabaseRow['properties'][string] | undefined } | null {
@@ -1088,9 +1127,17 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       return {};
     }
 
+    const deltaDays = daysBetween(drag.grabDay, drag.overDay);
+
+    if (this.zoom !== 'hours') {
+      return drag.mode === 'move' ? moveBar(values, deltaDays) : resizeBar(values, drag.mode, drag.overDay);
+    }
+
+    const deltaMinutes = snapMinutes((drag.overPx - drag.grabPx) / (this.dayWidth / DAY_MINUTES));
+
     return drag.mode === 'move'
-      ? moveBar(values, daysBetween(drag.grabDay, drag.overDay), this.zoom === 'hours' ? drag.overHour - drag.grabHour : undefined)
-      : resizeBar(values, drag.mode, drag.overDay);
+      ? moveBar(values, deltaDays, deltaMinutes)
+      : resizeBarByMinutes(values, drag.mode, deltaMinutes) ?? resizeBar(values, drag.mode, drag.overDay);
   }
 
   private valuesAfter(drag: BarDrag): BarValues | null {
@@ -1102,12 +1149,6 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
 
     return { start: write.start ?? values.start, end: values.end === undefined ? undefined : write.end ?? values.end };
-  }
-
-  private spanAfter(drag: BarDrag): EventSpan | null {
-    const values = this.valuesAfter(drag);
-
-    return values === null ? null : timelineSpan(values.start, values.end);
   }
 
   private rowTargetAt(drag: RowDrag, y: number): RowDrag['target'] {
@@ -1218,7 +1259,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       const span = values === null ? null : timelineSpan(values.start, values.end);
 
       if (span !== null) {
-        this.previewBar({ ...drag, mode: 'move', overDay: drag.grabDay, overHour: drag.grabHour });
+        this.previewBar({ ...drag, mode: 'move', active: false, overDay: drag.grabDay, overPx: drag.grabPx });
       }
     }
     this.guardNextClick(wasActive);
@@ -1234,6 +1275,9 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       }
       if (drag.kind === 'row') {
         drag.target?.row.removeAttribute('data-drop');
+      }
+      if (drag.kind === 'bar' && drag.active && drag.mode !== 'move') {
+        hideReadout();
       }
     }
     this.root?.removeAttribute('data-dragging');
@@ -1276,7 +1320,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   }
 
   updateRowTitle(wrapper: HTMLElement, rowId: string, title: string): void {
-    const titles = [...wrapper.querySelectorAll('[data-blok-database-timeline-bar-title], [data-blok-database-timeline-table-title]')]
+    const titles = [...wrapper.querySelectorAll('[data-blok-database-timeline-bar-title], [data-blok-database-timeline-table-title-text]')]
       .filter((el) => el.closest('[data-row-id]')?.getAttribute('data-row-id') === rowId);
 
     for (const titleEl of titles) {

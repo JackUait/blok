@@ -39,6 +39,14 @@ export const formatDatePart = (part: string, locale: string, hourCycle?: 'h12' |
   return `${day} ${time}`;
 };
 
+/** A stored part as short text: "Oct 20, 2:45 AM", or "Oct 20" when it has no time. */
+export const formatShortDatePart = (part: string, locale: string, hourCycle?: 'h12' | 'h23'): string =>
+  new Intl.DateTimeFormat(locale, {
+    month: 'short',
+    day: 'numeric',
+    ...(part.includes('T') ? { hour: 'numeric', minute: '2-digit', ...(hourCycle !== undefined ? { hourCycle } : {}) } : {}),
+  }).format(toLocalDate(part));
+
 /** Display text of a stored date value, or null when the value is not a date. */
 export const formatDateText = (value: unknown, locale: string, hourCycle?: 'h12' | 'h23'): string | null => {
   const parsed = parseDateValue(value);

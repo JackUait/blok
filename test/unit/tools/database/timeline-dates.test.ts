@@ -8,6 +8,9 @@ import {
   moveBar,
   offscreenSide,
   resizeBar,
+  resizeBarByMinutes,
+  snapMinutes,
+  timedEdges,
   timelineSpan,
   timelineWindow,
   visibleRange,
@@ -128,17 +131,19 @@ describe('timeline-dates', () => {
     });
   });
 
-  describe('hours zoom: bars move and sit by the hour', () => {
-    it('moves a timed value by whole hours', () => {
-      expect(moveBar({ start: '2026-10-05T09:30', end: undefined }, 0, 5)).toEqual({ start: '2026-10-05T14:30' });
+  describe('hours zoom: bars move by minutes and sit by the time', () => {
+    it('moves a timed value by minutes', () => {
+      expect(moveBar({ start: '2026-10-05T09:30', end: undefined }, 0, 5 * 60)).toEqual({ start: '2026-10-05T14:30' });
+      expect(moveBar({ start: '2026-10-05T09:30', end: undefined }, 0, 15)).toEqual({ start: '2026-10-05T09:45' });
     });
 
     it('carries a timed range across midnight and keeps its length', () => {
-      expect(moveBar({ start: '2026-10-05T22:00/2026-10-05T23:15', end: undefined }, 0, 3)).toEqual({ start: '2026-10-06T01:00/2026-10-06T02:15' });
+      expect(moveBar({ start: '2026-10-05T22:00/2026-10-05T23:15', end: undefined }, 0, 3 * 60)).toEqual({ start: '2026-10-06T01:00/2026-10-06T02:15' });
     });
 
-    it('moves both timed properties of a two-property bar back by hours', () => {
-      expect(moveBar({ start: '2026-10-05T01:00', end: '2026-10-05T04:00' }, -1, -2)).toEqual({ start: '2026-10-04T23:00', end: '2026-10-05T02:00' });
+    it('moves both timed properties of a two-property bar back by minutes', () => {
+      expect(moveBar({ start: '2026-10-05T01:00', end: '2026-10-05T04:00' }, -1, -2 * 60)).toEqual({ start: '2026-10-04T23:00', end: '2026-10-05T02:00' });
+      expect(moveBar({ start: '2026-10-05T00:00', end: '2026-10-05T01:00' }, 0, -15)).toEqual({ start: '2026-10-04T23:45', end: '2026-10-05T00:45' });
     });
 
     it('moves a value with no time by the day count only', () => {
@@ -146,7 +151,7 @@ describe('timeline-dates', () => {
     });
 
     it('keeps the zone text of an older full timestamp', () => {
-      expect(moveBar({ start: '2026-10-05T15:00:00.000Z', end: undefined }, 0, 2)).toEqual({ start: '2026-10-05T17:00:00.000Z' });
+      expect(moveBar({ start: '2026-10-05T15:00:00.000Z', end: undefined }, 0, 2 * 60)).toEqual({ start: '2026-10-05T17:00:00.000Z' });
     });
 
     it('places a timed bar at its hour, one hour wide when it has no end time', () => {
@@ -177,6 +182,80 @@ describe('timeline-dates', () => {
       expect(resizeBar({ start: '2026-10-05', end: '2026-10-09' }, 'start', '2026-10-01')).toEqual({ start: '2026-10-01' });
       expect(resizeBar({ start: '2026-10-05', end: null }, 'end', '2026-10-07')).toEqual({ end: '2026-10-07' });
       expect(resizeBar({ start: '2026-10-05', end: '2026-10-09' }, 'start', '2026-10-30')).toEqual({ start: '2026-10-09' });
+    });
+  });
+
+  describe('snapMinutes: research/22 §9, Notion rounds a drag to the nearest 15 minutes', () => {
+    it('keeps a drag under half a step and rounds a longer one, both ways', () => {
+      expect(snapMinutes(4)).toBe(0);
+      expect(snapMinutes(8)).toBe(15);
+      expect(snapMinutes(-6)).toBe(0);
+      expect(snapMinutes(-21)).toBe(-15);
+      expect(snapMinutes(-8)).toBe(-15);
+      expect(snapMinutes(52)).toBe(45);
+    });
+
+    it('rounds half a step away from zero on both sides', () => {
+      expect(snapMinutes(7.5)).toBe(15);
+      expect(snapMinutes(-7.5)).toBe(-15);
+    });
+  });
+
+  describe('timedEdges', () => {
+    it('reads both timed edges, giving a value with no end the hour it is drawn with', () => {
+      expect(timedEdges({ start: '2026-10-20T03:00/2026-10-20T04:30', end: undefined })).toEqual({ start: '2026-10-20T03:00', end: '2026-10-20T04:30' });
+      expect(timedEdges({ start: '2026-10-20T23:30', end: undefined })).toEqual({ start: '2026-10-20T23:30', end: '2026-10-21T00:30' });
+      expect(timedEdges({ start: '2026-10-20T03:00', end: '2026-10-20T05:00' })).toEqual({ start: '2026-10-20T03:00', end: '2026-10-20T05:00' });
+      expect(timedEdges({ start: '2026-10-20T03:00', end: null })).toEqual({ start: '2026-10-20T03:00', end: '2026-10-20T04:00' });
+    });
+
+    it('is null when an edge has no time', () => {
+      expect(timedEdges({ start: '2026-10-20', end: undefined })).toBeNull();
+      expect(timedEdges({ start: '2026-10-20T03:00', end: '2026-10-21' })).toBeNull();
+    });
+  });
+
+  describe('resizeBarByMinutes', () => {
+    it('drags the start edge of a timed range by minutes and keeps the end', () => {
+      expect(resizeBarByMinutes({ start: '2026-10-20T03:00/2026-10-20T04:00', end: undefined }, 'start', -15)).toEqual({ start: '2026-10-20T02:45/2026-10-20T04:00' });
+    });
+
+    it('drags the end edge of a timed range by minutes and keeps the start', () => {
+      expect(resizeBarByMinutes({ start: '2026-10-20T03:00/2026-10-20T04:00', end: undefined }, 'end', 15)).toEqual({ start: '2026-10-20T03:00/2026-10-20T04:15' });
+    });
+
+    it('gives a timed value with no end the hour it is drawn with, then moves the dragged edge', () => {
+      expect(resizeBarByMinutes({ start: '2026-10-20T03:00', end: undefined }, 'start', -15)).toEqual({ start: '2026-10-20T02:45/2026-10-20T04:00' });
+      expect(resizeBarByMinutes({ start: '2026-10-20T03:00', end: undefined }, 'end', 30)).toEqual({ start: '2026-10-20T03:00/2026-10-20T04:30' });
+    });
+
+    it('stops an edge one step before the other edge', () => {
+      expect(resizeBarByMinutes({ start: '2026-10-20T03:00/2026-10-20T04:00', end: undefined }, 'start', 120)).toEqual({ start: '2026-10-20T03:45/2026-10-20T04:00' });
+      expect(resizeBarByMinutes({ start: '2026-10-20T03:00/2026-10-20T04:00', end: undefined }, 'end', -120)).toEqual({ start: '2026-10-20T03:00/2026-10-20T03:15' });
+    });
+
+    it('never pushes an edge outward on its own when the bar is shorter than a step', () => {
+      expect(resizeBarByMinutes({ start: '2026-10-20T03:00/2026-10-20T03:10', end: undefined }, 'end', -15)).toEqual({});
+    });
+
+    it('writes only the dragged property of a two-property bar', () => {
+      expect(resizeBarByMinutes({ start: '2026-10-20T03:00', end: '2026-10-20T04:00' }, 'start', -15)).toEqual({ start: '2026-10-20T02:45' });
+      expect(resizeBarByMinutes({ start: '2026-10-20T03:00', end: '2026-10-20T04:00' }, 'end', 30)).toEqual({ end: '2026-10-20T04:30' });
+      expect(resizeBarByMinutes({ start: '2026-10-20T03:00', end: null }, 'end', 15)).toEqual({ end: '2026-10-20T04:15' });
+    });
+
+    it('writes nothing when the edge does not move, so an unchanged bar keeps its stored value', () => {
+      expect(resizeBarByMinutes({ start: '2026-10-20T03:00', end: undefined }, 'end', 0)).toEqual({});
+      expect(resizeBarByMinutes({ start: '2026-10-20T03:00/2026-10-20T03:10', end: undefined }, 'start', 15)).toEqual({});
+    });
+
+    it('crosses midnight', () => {
+      expect(resizeBarByMinutes({ start: '2026-10-20T00:00/2026-10-20T01:00', end: undefined }, 'start', -15)).toEqual({ start: '2026-10-19T23:45/2026-10-20T01:00' });
+    });
+
+    it('leaves a value with no time to the day resize', () => {
+      expect(resizeBarByMinutes({ start: '2026-10-20', end: undefined }, 'start', -15)).toBeNull();
+      expect(resizeBarByMinutes({ start: '2026-10-20T03:00', end: '2026-10-21' }, 'end', 15)).toBeNull();
     });
   });
 

@@ -77,14 +77,15 @@ export class EventsDispatcher<EventMap> {
       return;
     }
 
-    this.subscribers[eventName].reduce<EventMap[Name] | undefined>((previousData, currentHandler) => {
-      const newData = currentHandler(previousData as EventMap[Name]);
-
-      return newData !== undefined ? newData : previousData;
-    }, data);
+    // Every listener gets the original payload. A listener's return value is
+    // ignored: hosts subscribe through api.events, and `(p) => list.push(p)`
+    // must not change what the next listener sees.
+    for (const callback of this.subscribers[eventName]) {
+      callback(data as EventMap[Name]);
+    }
   }
 
-  /** A listener's Promise must not become the next listener's payload. */
+  /** Like emit, but a throwing subscriber is logged and the rest still run. */
   public emitNotification<Name extends keyof EventMap>(eventName: Name, data: EventMap[Name]): void {
     for (const callback of this.subscribers[eventName] ?? []) {
       try {

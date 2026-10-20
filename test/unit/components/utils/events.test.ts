@@ -34,17 +34,30 @@ describe('EventsDispatcher', () => {
       expect(secondHandler).toHaveBeenCalledWith('payload');
     });
 
-    it('pipes returned data between listeners', () => {
+    it('gives every listener the emitted payload, whatever an earlier listener returns', () => {
+      const seen: number[] = [];
+      const firstHandler = vi.fn((value: number) => seen.push(value));
+      const secondHandler = vi.fn();
+
+      dispatcher.on('numeric', firstHandler);
+      dispatcher.on('numeric', secondHandler);
+
+      dispatcher.emit('numeric', 42);
+
+      expect(secondHandler).toHaveBeenCalledWith(42);
+      expect(firstHandler).toHaveBeenCalledWith(42);
+    });
+
+    it('gives a once listener the emitted payload after a listener that returns a value', () => {
       const firstHandler = vi.fn((value: string) => `${value} -> first`);
-      const secondHandler = vi.fn((value: string) => `${value} -> second`);
+      const onceHandler = vi.fn();
 
       dispatcher.on('simple', firstHandler);
-      dispatcher.on('simple', secondHandler);
+      dispatcher.once('simple', onceHandler);
 
       dispatcher.emit('simple', 'start');
 
-      expect(firstHandler).toHaveBeenCalledWith('start');
-      expect(secondHandler).toHaveBeenCalledWith('start -> first');
+      expect(onceHandler).toHaveBeenCalledWith('start');
     });
 
     it('retains previous data when listener returns undefined', () => {

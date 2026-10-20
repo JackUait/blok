@@ -87,8 +87,6 @@ export class Assistant extends Module {
   private placing = false;
   /** Watches the bar and its anchor for size changes, and the page for removed blocks, while open. */
   private watchers: { resize: ResizeObserver | null; mutations: MutationObserver; gaps: () => void } | null = null;
-  /** Set by the first stream event ever seen: from then on the model streams, so the bar shows no slots. */
-  private streams = false;
   /** The pending re-place frame, if any. */
   private frame: number | null = null;
 
@@ -232,11 +230,6 @@ export class Assistant extends Module {
   }
 
   private submit(prompt: string): void {
-    if (this.run === null) {
-      // Each run learns again whether its model streams.
-      this.streams = false;
-    }
-
     const pending = this.run === null
       ? this.startRun(prompt)
       : this.run.followUp(prompt);
@@ -250,7 +243,8 @@ export class Assistant extends Module {
     this.listening = true;
     this.edited = false;
     this.bar?.render({ kind: 'working', status: this.activityStatus('thinking') });
-    this.setSlots(!this.streams);
+    // Until the preview draws: a model that does not stream never does.
+    this.setSlots(true);
     void pending.then((result) => {
       if (id === this.answerId) {
         this.show(result);
@@ -444,9 +438,6 @@ export class Assistant extends Module {
     if (!this.listening) {
       return;
     }
-    // The model streams: the preview shows where edits land, so the slots go.
-    this.streams = true;
-    this.setSlots(false);
     if (event.type === 'tool_start') {
       if (event.name === EXECUTE_TOOL) {
         this.streamCalls.set(event.index, event.id);
@@ -541,6 +532,9 @@ export class Assistant extends Module {
       anchorHolder: () => this.anchorHolder(),
       inputOf: (id, field) => this.inputOf(id, field),
       onWord: (word) => this.Blok.AgentAPI.followLive(word),
+      // The preview shows where edits land, so the slots go. No re-place here: the
+      // layout's gap writes re-place the bar once, which drops the slots' gap too.
+      onDraw: () => this.bar?.setSlots(false),
     });
 
     return this.preview;

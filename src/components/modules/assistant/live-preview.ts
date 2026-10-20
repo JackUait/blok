@@ -24,6 +24,8 @@ export interface LivePreviewDeps {
   inputOf?(id: string, field?: string): HTMLElement | null;
   /** A word just landed and is placed: the page may follow it. */
   onWord?(word: HTMLElement): void;
+  /** A layout is about to place boxes, before its gap writes: the preview now shows where edits land. */
+  onDraw?(): void;
 }
 
 export interface LivePreview {
@@ -1020,12 +1022,13 @@ class CallPreview {
  * read sizes, write gaps, read positions, write styles. A gap moves the holders below it, so positions wait for all gaps.
  * Gap listeners (the bar) hear once, at the end.
  */
-const layoutAll = (calls: CallPreview[]): void => {
+const layoutAll = (calls: CallPreview[], onDraw?: () => void): void => {
   const boxes = calls.flatMap((call) => call.placed());
 
   if (boxes.length === 0) {
     return;
   }
+  onDraw?.();
   holdGapChanges(() => {
     boxes.forEach(([box]) => box.measure());
     boxes.forEach(([box, key]) => box.reserve(key));
@@ -1050,7 +1053,7 @@ export const createLivePreview = (deps: LivePreviewDeps): LivePreview => {
     }
     frame.id = requestAnimationFrame(() => {
       frame.id = null;
-      layoutAll([...calls.values()]);
+      layoutAll([...calls.values()], deps.onDraw);
     });
   };
   const end = (callId: string): CallPreview | undefined => {

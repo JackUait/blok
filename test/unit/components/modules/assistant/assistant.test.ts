@@ -864,6 +864,8 @@ describe('in-editor assistant bar', () => {
       live.emit({ type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' });
       live.emit({ type: 'tool_input', index: 0, json: call.json });
       await waitFor(() => expect(document.querySelector(PREVIEW)).not.toBeNull());
+      // Drawn: the bar's slots hand over to the box.
+      await waitFor(() => expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).toBeNull());
 
       // Settle waits a frame to hand off; with no frames, only cancel can remove the box.
       vi.stubGlobal('requestAnimationFrame', () => 0);
@@ -1756,22 +1758,49 @@ describe('in-editor assistant bar', () => {
       expect(gapOf('p2')).toBe(`${BAR_GAP}px`);
     });
 
-    it('a streaming model drops the slots at its first stream event', async () => {
+    it('a streaming model keeps the slots until the preview draws its first write', async () => {
       const live = streaming();
+      const call = executeCall('c1', [{ name: 'block.insert', args: { type: 'paragraph', position: 'end', data: { text: 'Fresh words here' } } }]);
 
       await createEditor(live.model);
       fakeLayout();
       pressModJ(paragraphInput());
       submit('Write');
       await waitFor(() => expect(live.started()).toBe(true));
+
+      // A read streams too, but draws nothing: the slots stay.
+      live.emit({ type: 'tool_start', index: 0, id: 'r1', name: 'blok_read' });
+      live.emit({ type: 'tool_input', index: 0, json: '{"ids":["p1"]}' });
+      live.emit({ type: 'tool_end', index: 0 });
+      live.emit({ type: 'tool_start', index: 1, id: 'c1', name: 'blok_execute' });
+      await settle(50);
       expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).not.toBeNull();
 
-      live.emit({ type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' });
-
-      expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).toBeNull();
-      expect(gapOf('p1')).toBe(`${BAR_GAP}px`);
+      live.emit({ type: 'tool_input', index: 1, json: call.json.slice(0, call.json.indexOf('here')) });
+      await waitFor(() => expect(previewText()).toBe('Fresh words'));
+      await waitFor(() => expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).toBeNull());
       live.finish(answer('Done.'));
       await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+    });
+
+    it('a follow-up on a streaming model shows the slots again while it thinks', async () => {
+      const runs = liveRuns();
+      const editor = await createEditor(runs.model);
+
+      fakeLayout();
+      editor.agent.openAssistant();
+      submit('One');
+      await waitFor(() => expect(runs.calls).toHaveLength(1));
+      runs.calls[0].request.onStream?.({ type: 'tool_start', index: 0, id: 'r1', name: 'blok_read' });
+      runs.calls[0].finish(answer('First.'));
+      await waitFor(() => expect(within(bar()).getByText('First.')).toBeVisible());
+
+      submit('Two');
+      await waitFor(() => expect(runs.calls).toHaveLength(2));
+
+      expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).not.toBeNull();
+      runs.calls[1].finish(answer('Second.'));
+      await waitFor(() => expect(within(bar()).getByText('Second.')).toBeVisible());
     });
 
     it('picking a thinking level in the bar\'s menu keeps following on', async () => {

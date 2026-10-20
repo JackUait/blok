@@ -508,6 +508,26 @@ test.describe('Ask AI live edits', () => {
     });
   }
 
+  test('a block.update written in rich-text segments streams its plain text over the block', async ({ page }) => {
+    const input = {
+      commands: [{ name: 'block.update', args: { id: 'p1', data: { text: [{ text: 'Calm ' }, { text: 'bold <b> words', marks: { bold: true } }, { text: ' keep arriving here' }] } } }],
+    };
+    const p1 = page.locator('[data-blok-id="p1"]');
+
+    await ask(page, 'The quick brown fox');
+    await emit(page, 0, { type: 'tool_start', index: 0, id: 'call-1', name: 'blok_execute' });
+    await emit(page, 0, { type: 'tool_input', index: 0, json: prefix(input, ' keep arriving here', ' keep '.length) });
+
+    await expect(p1).toHaveAttribute('data-blok-ai-rewriting', '');
+    await expect(page.getByTestId('ai-preview')).toContainText('Calm bold <b> words keep');
+    expect(await savedTexts(page)).toEqual(ORIGINAL);
+
+    await emit(page, 0, { type: 'tool_input', index: 0, json: JSON.stringify(input) });
+    await emit(page, 0, { type: 'tool_end', index: 0 });
+    await expect.poll(async () => (await savedTexts(page))[0]).toBe('Calm bold <b> words keep arriving here');
+    await finish(page, 0, toolUse('call-1', input));
+  });
+
   test('onChange stays silent while the preview holds a gap and a rewrite mark', async ({ page }) => {
     const input = {
       commands: [

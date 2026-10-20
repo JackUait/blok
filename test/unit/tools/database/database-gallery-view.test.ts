@@ -776,6 +776,79 @@ describe('DatabaseGalleryView', () => {
       expect(handlers.openRow).not.toHaveBeenCalled();
     });
 
+    describe('closing a peek (research/23 §8)', () => {
+      const openFromPick = (): ReturnType<typeof mountSelectable> => {
+        const mounted = mountSelectable();
+
+        mounted.pickRow.mockImplementation((rowId) => {
+          cards(mounted.root).forEach((card) => card.toggleAttribute(SELECTED, card.getAttribute('data-row-id') === rowId));
+        });
+        cards(mounted.root)[1].dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }));
+        press(mounted.root, 'Enter');
+        // The peek takes focus.
+        document.body.focus();
+        mounted.root.blur();
+
+        return mounted;
+      };
+
+      it('a peek opened from a selection gives focus back to the gallery, so the first Down moves on', () => {
+        const { root, view, handlers } = openFromPick();
+
+        expect(handlers.openRow).toHaveBeenCalledExactlyOnceWith('r2');
+        view.rowPageClosed();
+
+        expect(root).toHaveFocus();
+        expect(selected(root)).toEqual(['r2']);
+        press(root, 'ArrowDown');
+        expect(selected(root)).toEqual(['r3']);
+        view.destroy();
+        root.remove();
+      });
+
+      it('selects the cards again when the selection was cleared while the peek was open', () => {
+        const { root, view, selectRows } = openFromPick();
+
+        cards(root).forEach((card) => card.removeAttribute(SELECTED));
+        view.rowPageClosed();
+
+        expect(selectRows).toHaveBeenLastCalledWith(['r2']);
+        expect(selected(root)).toEqual(['r2']);
+        expect(root).toHaveFocus();
+        view.destroy();
+        root.remove();
+      });
+
+      it('a peek opened by a plain click selects nothing and takes no focus when it closes', () => {
+        const { root, view, handlers, selectRows } = mountSelectable();
+
+        cards(root)[1].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        expect(handlers.openRow).toHaveBeenCalledExactlyOnceWith('r2');
+        view.rowPageClosed();
+
+        expect(selectRows).not.toHaveBeenCalled();
+        expect(selected(root)).toEqual([]);
+        expect(root).not.toHaveFocus();
+        view.destroy();
+        root.remove();
+      });
+
+      it('a plain click after a keyboard open forgets the selection it came from', () => {
+        const { root, view, handlers, selectRows } = openFromPick();
+
+        cards(root).forEach((card) => card.removeAttribute(SELECTED));
+        selectRows.mockClear();
+        cards(root)[2].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        expect(handlers.openRow).toHaveBeenLastCalledWith('r3');
+        view.rowPageClosed();
+
+        expect(selectRows).not.toHaveBeenCalled();
+        expect(root).not.toHaveFocus();
+        view.destroy();
+        root.remove();
+      });
+    });
+
     it('selects nothing without the selection handlers (read-only)', () => {
       const { root } = mount({ readOnly: true });
 

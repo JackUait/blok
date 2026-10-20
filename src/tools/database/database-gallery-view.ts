@@ -108,6 +108,8 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
   private anchor: string | null = null;
   /** The cursor came from a click pick, not the arrows: Enter opens it instead of renaming (research/23 §8). */
   private clickPicked = false;
+  /** The selection Enter opened a peek from; it comes back with focus when the peek closes (research/23 §8). */
+  private peekFrom: string[] | null = null;
 
   constructor(options: DatabaseGalleryViewOptions) {
     this.options = options;
@@ -407,6 +409,7 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
 
       return;
     }
+    this.peekFrom = null;
     handlers.openRow(rowId);
   };
 
@@ -450,12 +453,28 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
 
       if ((this.clickPicked || selected.length > 1) && open !== undefined) {
         event.preventDefault();
+        this.peekFrom = selected;
         this.options.handlers?.openRow(open);
       } else if (rowId !== undefined && this.startRename(rowId)) {
         event.preventDefault();
       }
     }
   };
+
+  /** The tool calls it when the row's peek closes. */
+  rowPageClosed(): void {
+    const from = this.peekFrom;
+
+    this.peekFrom = null;
+    if (from === null || this.root?.isConnected !== true) return;
+    const present = from.filter((id) => this.cardIds().includes(id));
+
+    if (this.selectedIds().length === 0 && present.length > 0) {
+      this.options.handlers?.selectRows?.(present);
+    }
+    // Notion leaves focus on the body, so its first ArrowDown only scrolls; here it moves.
+    this.root.focus({ preventScroll: true });
+  }
 
   private cardIds(): string[] {
     return [...(this.root?.querySelectorAll<HTMLElement>(CARD) ?? [])].map((card) => card.getAttribute('data-row-id') ?? '');

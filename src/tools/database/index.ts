@@ -8472,7 +8472,7 @@ export class DatabaseTool implements BlockTool {
           this.openedRowLink = null;
           // The next open asks the host again.
           this.hostBacklinks = null;
-          if (this.view instanceof DatabaseMapView) this.view.rowPageClosed();
+          this.view?.rowPageClosed?.();
         },
         onCopyViewLink: (rowId, tabId) => this.copyRowLink(rowId, tabId),
         onAddProperty: (type, name) => {

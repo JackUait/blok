@@ -26,6 +26,9 @@ export interface DatabaseViewRenderer {
   /** Drops document listeners. The tool calls it before it replaces or removes the view. */
   destroy?(): void;
 
+  /** The row's peek closed. */
+  rowPageClosed?(): void;
+
   /** True while a drag or edit runs, so the tool holds off a redraw. */
   readonly interacting?: boolean;
 }

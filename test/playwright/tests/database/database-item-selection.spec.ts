@@ -217,3 +217,36 @@ test.describe('a lasso from the page margin', () => {
     expect(await picked(page)).toEqual([]);
   });
 });
+
+test.describe('gallery: closing a peek (research/23 §8)', () => {
+  const card = (page: Page, rowId: string): Locator => item(page, '[data-blok-database-gallery-card]', rowId);
+  const peek = (page: Page): Locator => page.locator('[data-blok-database-drawer]');
+
+  test('a peek opened from a selection gives the selection and the keys back when it closes', async ({ page }) => {
+    await mount(page, blocks({ type: 'gallery' }));
+
+    await card(page, 'r2').click({ modifiers: ['Shift'] });
+    await page.keyboard.press('Enter');
+    await expect(peek(page)).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(peek(page)).toHaveCount(0);
+
+    expect(await picked(page)).toEqual(['r2']);
+    // The first ArrowDown moves on; Notion loses it to a page scroll.
+    await page.keyboard.press('ArrowDown');
+    expect(await picked(page)).toEqual(['r3']);
+  });
+
+  test('a peek opened by a plain click leaves nothing selected when it closes', async ({ page }) => {
+    await mount(page, blocks({ type: 'gallery' }));
+
+    await card(page, 'r2').click();
+    await expect(peek(page)).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(peek(page)).toHaveCount(0);
+
+    expect(await picked(page)).toEqual([]);
+  });
+});

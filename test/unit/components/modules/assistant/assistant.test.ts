@@ -125,6 +125,19 @@ const streaming = (): {
   };
 };
 
+/** A model that streams on every call: the test emits into, and answers, each call it holds. */
+const liveRuns = (): { model: AgentModel; calls: Array<{ request: AgentModelRequest; finish(response: AgentModelResponse): void }> } => {
+  const calls: Array<{ request: AgentModelRequest; finish(response: AgentModelResponse): void }> = [];
+
+  return {
+    calls,
+    model: (request) => new Promise<AgentModelResponse>((resolve, reject) => {
+      request.signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+      calls.push({ request, finish: resolve });
+    }),
+  };
+};
+
 const PREVIEW = '[data-blok-ai-preview]';
 
 const previewText = (): string => (document.querySelector(PREVIEW)?.textContent ?? '').replace(/\s+/g, ' ').trim();
@@ -645,6 +658,37 @@ describe('in-editor assistant bar', () => {
 
       live.finish(call.use);
       await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+    });
+
+    it('a call id the model used in an earlier run streams live words again', async () => {
+      const runs = liveRuns();
+      const editor = await createEditor(runs.model);
+
+      fakeLayout();
+      editor.agent.openAssistant();
+
+      const streamRun = async (call: number, text: string): Promise<void> => {
+        const { json, use } = executeCall('call-1-0', insert(text));
+        const emit = (event: AgentModelStreamEvent): void => runs.calls[call].request.onStream?.(event);
+
+        await waitFor(() => expect(runs.calls).toHaveLength(call + 1));
+        emit({ type: 'tool_start', index: 0, id: 'call-1-0', name: 'blok_execute' });
+        emit({ type: 'tool_input', index: 0, json: json.slice(0, json.indexOf('here')) });
+        await waitFor(() => expect(previewText()).toBe(text.replace(' here', '')));
+        emit({ type: 'tool_input', index: 0, json });
+        emit({ type: 'tool_end', index: 0 });
+        runs.calls[call].finish(use);
+        await waitFor(() => expect(runs.calls).toHaveLength(call + 2));
+        runs.calls[call + 1].finish(answer('Done.'));
+        await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+      };
+
+      submit('One');
+      await streamRun(0, 'First words here');
+      submit('Two');
+      await streamRun(2, 'Second words here');
+
+      expect(await texts(editor)).toEqual(['Hello', 'First words here', 'Second words here']);
     });
 
     it('an error result cancels its preview', async () => {

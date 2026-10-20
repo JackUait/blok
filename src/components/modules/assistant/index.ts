@@ -433,6 +433,8 @@ export class Assistant extends Module {
     this.announced = null;
     this.applied = null;
     this.preview?.clear();
+    // Models reuse call ids across runs (call-1-0), so each run starts a fresh preview.
+    this.preview = null;
   }
 
   private stream(event: AgentModelStreamEvent): void {

@@ -96,6 +96,7 @@
   "tools.header.toggleHeading6": "Toggle heading 6",
   "tools.list.placeholder": "List",
   "tools.paragraph.placeholder": "Write something or press / to select a tool",
+  "tools.paragraph.placeholderAi": "Press ‘space’ for AI or ‘/’ for commands",
   "tools.toggle.placeholder": "Toggle",
   "tools.toggle.bodyPlaceholder": "Empty toggle. Click to add a block, or drag blocks here.",
   "tools.toggle.ariaLabelCollapse": "Collapse",

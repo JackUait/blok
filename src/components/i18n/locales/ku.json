@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "سەردێڕی داشکاندن ٦",
   "tools.list.placeholder": "لیست",
   "tools.paragraph.placeholder": "شتێک بنووسە یان / دابگرە بۆ هەڵبژاردنی ئامرازێک",
+  "tools.paragraph.placeholderAi": "بۆ AI «بۆشایی» یان بۆ فەرمانەکان «/» دابگرە",
   "tools.toggle.placeholder": "داشکاندن",
   "tools.toggle.bodyPlaceholder": "داشکاندنی بەتاڵ. کلیک بکە بۆ زیادکردنی بلۆکێک یان بلۆکەکان ڕاکێشە بۆ ئێرە.",
   "tools.toggle.ariaLabelCollapse": "قەپاتکردن",

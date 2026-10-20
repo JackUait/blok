@@ -1888,6 +1888,7 @@ export type BlokMessageKey =
   | 'tools.page.unresolved'
   | 'tools.page.untitled'
   | 'tools.paragraph.placeholder'
+  | 'tools.paragraph.placeholderAi'
   | 'tools.quote.defaultSize'
   | 'tools.quote.largeSize'
   | 'tools.quote.placeholder'

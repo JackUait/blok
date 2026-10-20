@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Расклоплив наслов 6",
   "tools.list.placeholder": "Список",
   "tools.paragraph.placeholder": "Напишете нешто или притиснете / за да изберете алатка",
+  "tools.paragraph.placeholderAi": "Притиснете „празно место“ за ВИ или „/“ за команди",
   "tools.toggle.placeholder": "Расклоплив список",
   "tools.toggle.bodyPlaceholder": "Празен расклоплив блок. Кликнете за да додадете блок или повлечете блокови овде.",
   "tools.toggle.ariaLabelCollapse": "Собери",

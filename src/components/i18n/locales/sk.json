@@ -171,6 +171,7 @@
   "a11y.textFormatting": "Formátovanie textu",
   "a11y.loadingContent": "Načítava sa obsah…",
   "tools.paragraph.placeholder": "Napíšte niečo alebo stlačte /, aby ste vybrali nástroj",
+  "tools.paragraph.placeholderAi": "Stlačte „medzerník“ pre AI alebo „/“ pre príkazy",
   "tools.toggle.placeholder": "Zbaliteľný zoznam",
   "tools.toggle.bodyPlaceholder": "Prázdny zbaliteľný blok. Kliknutím pridáte blok alebo sem presuňte bloky.",
   "tools.toggle.ariaLabelCollapse": "Zbaliť",

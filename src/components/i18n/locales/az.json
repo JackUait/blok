@@ -92,6 +92,7 @@
   "tools.header.toggleHeading6": "Açılan başlıq 6",
   "tools.list.placeholder": "Siyahı",
   "tools.paragraph.placeholder": "Nəsə yazın və ya alət seçmək üçün / basın",
+  "tools.paragraph.placeholderAi": "Süni intellekt üçün “Boşluq”, əmrlər üçün “/” düyməsini basın",
   "tools.toggle.placeholder": "Açılan siyahı",
   "tools.toggle.bodyPlaceholder": "Boş açılan blok. Blok əlavə etmək üçün klikləyin və ya blokları buraya dartın.",
   "tools.toggle.ariaLabelCollapse": "Yığ",

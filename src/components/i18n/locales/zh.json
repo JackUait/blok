@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "折叠六级标题",
   "tools.list.placeholder": "列表",
   "tools.paragraph.placeholder": "输入内容或按 / 选择工具",
+  "tools.paragraph.placeholderAi": "按“空格”使用 AI，或按“/”使用命令",
   "tools.toggle.placeholder": "折叠",
   "tools.toggle.bodyPlaceholder": "空折叠块。点击添加内容块，或将内容块拖到此处。",
   "tools.toggle.ariaLabelCollapse": "折叠",

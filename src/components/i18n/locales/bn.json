@@ -92,6 +92,7 @@
   "tools.header.toggleHeading6": "টগল শিরোনাম ৬",
   "tools.list.placeholder": "তালিকা",
   "tools.paragraph.placeholder": "কিছু লিখুন বা টুল নির্বাচন করতে / চাপুন",
+  "tools.paragraph.placeholderAi": "AI-এর জন্য “স্পেস” বা কমান্ডের জন্য “/” চাপুন",
   "tools.toggle.placeholder": "টগল",
   "tools.toggle.bodyPlaceholder": "খালি টগল। ব্লক যোগ করতে ক্লিক করুন অথবা এখানে ব্লক টেনে আনুন।",
   "tools.toggle.ariaLabelCollapse": "সংকুচিত করুন",

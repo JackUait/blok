@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Inklapbare kop 6",
   "tools.list.placeholder": "Lijst",
   "tools.paragraph.placeholder": "Schrijf iets of druk op / om een blok te kiezen",
+  "tools.paragraph.placeholderAi": "Druk op ‘spatie’ voor AI of ‘/’ voor opdrachten",
   "tools.toggle.placeholder": "Inklaplijst",
   "tools.toggle.bodyPlaceholder": "Lege inklaplijst. Klik om een blok toe te voegen of sleep blokken hierheen.",
   "tools.toggle.ariaLabelCollapse": "Inklappen",

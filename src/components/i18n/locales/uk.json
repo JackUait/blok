@@ -171,6 +171,7 @@
   "a11y.textFormatting": "Форматування тексту",
   "a11y.loadingContent": "Завантаження вмісту…",
   "tools.paragraph.placeholder": "Напишіть щось або натисніть /, щоб вибрати інструмент",
+  "tools.paragraph.placeholderAi": "Натисніть «пробіл» для ШІ або «/» для команд",
   "tools.toggle.placeholder": "Згортний",
   "tools.toggle.bodyPlaceholder": "Порожній згортний блок. Натисніть, щоб додати блок, або перетягніть блоки сюди.",
   "tools.toggle.ariaLabelCollapse": "Згорнути",

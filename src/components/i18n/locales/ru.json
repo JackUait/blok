@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Сворачиваемый заголовок 6",
   "tools.list.placeholder": "Список",
   "tools.paragraph.placeholder": "Напишите что-нибудь или нажмите /, чтобы выбрать инструмент",
+  "tools.paragraph.placeholderAi": "Нажмите «пробел» для ИИ или «/» для команд",
   "tools.toggle.placeholder": "Сворачиваемый список",
   "tools.toggle.bodyPlaceholder": "Пустой сворачиваемый блок. Нажмите, чтобы добавить блок, или перетащите блоки сюда.",
   "tools.toggle.ariaLabelCollapse": "Свернуть",

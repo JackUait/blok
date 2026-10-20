@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "トグル見出し6",
   "tools.list.placeholder": "リスト",
   "tools.paragraph.placeholder": "何か入力するか、/キーを押してツールを選択",
+  "tools.paragraph.placeholderAi": "スペースキーでAIを呼び出し、/キーでコマンドを表示",
   "tools.toggle.placeholder": "トグルリスト",
   "tools.toggle.bodyPlaceholder": "空のトグルリストです。クリックしてブロックを追加するか、ここにブロックをドラッグしてください。",
   "tools.toggle.ariaLabelCollapse": "折りたたむ",

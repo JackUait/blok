@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "راټولېدونکی سرلیک ۶",
   "tools.list.placeholder": "لیست",
   "tools.paragraph.placeholder": "یو څه ولیکئ یا د وسیلې د غوره کولو لپاره / کېکاږئ",
+  "tools.paragraph.placeholderAi": "د AI لپاره «سپېس» یا د امرونو لپاره «/» کېکاږئ",
   "tools.toggle.placeholder": "راټولېدونکی",
   "tools.toggle.bodyPlaceholder": "خالي راټولېدونکی. د یوه بلاک د اضافه کولو لپاره کلیک وکړئ یا بلاکونه دلته کش کړئ.",
   "tools.toggle.ariaLabelCollapse": "راټول کړئ",

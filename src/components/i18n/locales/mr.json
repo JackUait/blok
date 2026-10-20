@@ -177,6 +177,7 @@
   "blockSettings.orConjunction": " किंवा ",
   "blockSettings.openMenuAction": " दाबा",
   "tools.paragraph.placeholder": "काहीतरी लिहा किंवा साधन निवडण्यासाठी / दाबा",
+  "tools.paragraph.placeholderAi": "AI साठी “स्पेस” किंवा कमांडसाठी “/” दाबा",
   "tools.toggle.placeholder": "टॉगल",
   "tools.toggle.bodyPlaceholder": "रिकामा टॉगल. ब्लॉक जोडण्यासाठी क्लिक करा किंवा ब्लॉक येथे ओढा.",
   "tools.toggle.ariaLabelCollapse": "संकुचित करा",

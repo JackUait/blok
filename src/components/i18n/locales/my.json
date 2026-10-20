@@ -92,6 +92,7 @@
   "tools.header.toggleHeading6": "ခေါက်ခေါင်းစဉ် ၆",
   "tools.list.placeholder": "စာရင်း",
   "tools.paragraph.placeholder": "တစ်ခုခုရေးပါ သို့မဟုတ် / ကိုနှိပ်၍ ကိရိယာရွေးပါ",
+  "tools.paragraph.placeholderAi": "AI အတွက် “စပေ့စ်” သို့မဟုတ် ညွှန်ကြားချက်များအတွက် “/” ကိုနှိပ်ပါ",
   "tools.toggle.placeholder": "ခေါက်",
   "tools.toggle.bodyPlaceholder": "ဗလာ ခေါက်စာ။ ဘလောက်တစ်ခုထည့်ရန် နှိပ်ပါ သို့မဟုတ် ဘလောက်များကို ဤနေရာသို့ ဆွဲယူပါ။",
   "tools.toggle.ariaLabelCollapse": "ခေါက်သိမ်းရန်",

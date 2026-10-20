@@ -171,6 +171,7 @@
   "a11y.textFormatting": "การจัดรูปแบบข้อความ",
   "a11y.loadingContent": "กำลังโหลดเนื้อหา…",
   "tools.paragraph.placeholder": "เขียนอะไรสักอย่าง หรือกด / เพื่อเลือกเครื่องมือ",
+  "tools.paragraph.placeholderAi": "กด “เว้นวรรค” เพื่อใช้ AI หรือ “/” เพื่อดูคำสั่ง",
   "tools.toggle.placeholder": "พับได้",
   "tools.toggle.bodyPlaceholder": "ส่วนที่พับได้นี้ว่างเปล่า คลิกเพื่อเพิ่มบล็อก หรือลากบล็อกมาที่นี่",
   "tools.toggle.ariaLabelCollapse": "ยุบ",

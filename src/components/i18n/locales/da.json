@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Sammenklappelig overskrift 6",
   "tools.list.placeholder": "Liste",
   "tools.paragraph.placeholder": "Skriv noget, eller tryk på / for at vælge et værktøj",
+  "tools.paragraph.placeholderAi": "Tryk på »mellemrum« for AI eller »/« for kommandoer",
   "tools.toggle.placeholder": "Sammenklappelig liste",
   "tools.toggle.bodyPlaceholder": "Tom sammenklappelig blok. Klik for at tilføje en blok, eller træk blokke hertil.",
   "tools.toggle.ariaLabelCollapse": "Skjul",

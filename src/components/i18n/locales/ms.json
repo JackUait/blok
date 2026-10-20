@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Tajuk togol 6",
   "tools.list.placeholder": "Senarai",
   "tools.paragraph.placeholder": "Tulis sesuatu atau tekan / untuk memilih alat",
+  "tools.paragraph.placeholderAi": "Tekan “ruang” untuk AI atau “/” untuk arahan",
   "tools.toggle.placeholder": "Togol",
   "tools.toggle.bodyPlaceholder": "Togol kosong. Klik untuk tambah satu blok atau seret blok ke sini.",
   "tools.toggle.ariaLabelCollapse": "Runtuhkan",

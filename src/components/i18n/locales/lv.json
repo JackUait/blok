@@ -182,6 +182,7 @@
   "blockSettings.orConjunction": " vai nospiediet ",
   "blockSettings.openMenuAction": ", lai atvērtu izvēlni",
   "tools.paragraph.placeholder": "Rakstiet kaut ko vai nospiediet /, lai izvēlētos rīku",
+  "tools.paragraph.placeholderAi": "Nospiediet „atstarpi“ MI vai „/“ komandām",
   "tools.toggle.placeholder": "Sakļaujams saraksts",
   "tools.toggle.bodyPlaceholder": "Tukšs sakļaujams bloks. Noklikšķiniet, lai pievienotu bloku, vai velciet blokus šeit.",
   "tools.toggle.ariaLabelCollapse": "Sakļaut",

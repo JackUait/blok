@@ -1345,7 +1345,8 @@ export interface BlokMountOptions {
     overrides?: ManifestOverrides;
     /**
      * Turns on the in-editor AI assistant: `editor.agent.ask()`, the Mod+J
-     * prompt bar and "Ask AI" in the inline toolbar. Off when absent.
+     * prompt bar (also Space in an empty paragraph, whose placeholder says so
+     * unless `placeholder` is set) and "Ask AI" in the inline toolbar. Off when absent.
      */
     assistant?: AgentAssistantConfig;
   };

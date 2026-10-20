@@ -92,6 +92,7 @@
   "tools.header.toggleHeading6": "Toggle na pamagat 6",
   "tools.list.placeholder": "Listahan",
   "tools.paragraph.placeholder": "Sumulat ng kahit ano o pindutin ang / para pumili ng tool",
+  "tools.paragraph.placeholderAi": "Pindutin ang “space” para sa AI o “/” para sa mga command",
   "tools.toggle.placeholder": "Toggle",
   "tools.toggle.bodyPlaceholder": "Walang laman na toggle. I-click para magdagdag ng block o i-drag ang mga block dito.",
   "tools.toggle.ariaLabelCollapse": "I-collapse",

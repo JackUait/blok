@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Sammenleggbar overskrift 6",
   "tools.list.placeholder": "Liste",
   "tools.paragraph.placeholder": "Skriv noe, eller trykk på / for å velge et verktøy",
+  "tools.paragraph.placeholderAi": "Trykk på «mellomrom» for KI eller «/» for kommandoer",
   "tools.toggle.placeholder": "Sammenleggbar liste",
   "tools.toggle.bodyPlaceholder": "Tom sammenleggbar blokk. Klikk for å legge til en blokk, eller dra blokker hit.",
   "tools.toggle.ariaLabelCollapse": "Skjul",

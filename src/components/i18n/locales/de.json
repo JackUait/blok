@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Aufklappbare Überschrift 6",
   "tools.list.placeholder": "Liste",
   "tools.paragraph.placeholder": "Schreiben Sie etwas oder drücken Sie /, um ein Werkzeug auszuwählen",
+  "tools.paragraph.placeholderAi": "Drücken Sie „Leertaste“ für die KI oder „/“ für Befehle",
   "tools.toggle.placeholder": "Aufklappliste",
   "tools.toggle.bodyPlaceholder": "Leeres Aufklappelement. Klicken Sie, um einen Block hinzuzufügen, oder ziehen Sie Blöcke hierher.",
   "tools.toggle.ariaLabelCollapse": "Einklappen",

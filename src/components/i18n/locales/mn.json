@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Эвхдэг гарчиг 6",
   "tools.list.placeholder": "Жагсаалт",
   "tools.paragraph.placeholder": "Ямар нэг зүйл бичнэ үү эсвэл хэрэгсэл сонгохын тулд / товчийг дарна уу",
+  "tools.paragraph.placeholderAi": "AI-д «зай», командад «/» товчийг дарна уу",
   "tools.toggle.placeholder": "Эвхмэл",
   "tools.toggle.bodyPlaceholder": "Хоосон эвхмэл хэсэг. Блок нэмэхийн тулд дарна уу эсвэл блокуудыг энд чирнэ үү.",
   "tools.toggle.ariaLabelCollapse": "Эвхэх",

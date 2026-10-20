@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Kichwa kinachokunjuka 6",
   "tools.list.placeholder": "Orodha",
   "tools.paragraph.placeholder": "Andika kitu au bonyeza / ili kuchagua zana",
+  "tools.paragraph.placeholderAi": "Bonyeza “nafasi” kwa AI au “/” kwa amri",
   "tools.toggle.placeholder": "Kinachokunjuka",
   "tools.toggle.bodyPlaceholder": "Kinachokunjuka ni kitupu. Bofya ili kuongeza kizuizi au buruta vizuizi hapa.",
   "tools.toggle.ariaLabelCollapse": "Kunja",

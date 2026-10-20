@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "عنوان قابل للطي 6",
   "tools.list.placeholder": "قائمة",
   "tools.paragraph.placeholder": "اكتب شيئاً أو اضغط / لاختيار أداة",
+  "tools.paragraph.placeholderAi": "اضغط «مسافة» للذكاء الاصطناعي أو «/» للأوامر",
   "tools.toggle.placeholder": "قابل للطي",
   "tools.toggle.bodyPlaceholder": "كتلة قابلة للطي فارغة. انقر لإضافة كتلة، أو اسحب الكتل إلى هنا.",
   "tools.toggle.ariaLabelCollapse": "طي",

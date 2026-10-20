@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Nagłówek zwijany 6",
   "tools.list.placeholder": "Lista",
   "tools.paragraph.placeholder": "Napisz coś lub naciśnij /, aby wybrać narzędzie",
+  "tools.paragraph.placeholderAi": "Naciśnij „spację”, aby użyć AI, lub „/”, aby wyświetlić polecenia",
   "tools.toggle.placeholder": "Blok zwijany",
   "tools.toggle.bodyPlaceholder": "Pusty blok zwijany. Kliknij, aby dodać blok, lub przeciągnij tutaj bloki.",
   "tools.toggle.ariaLabelCollapse": "Zwiń",

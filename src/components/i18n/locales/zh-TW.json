@@ -96,6 +96,7 @@
   "tools.header.toggleHeading6": "收合標題 6",
   "tools.list.placeholder": "清單",
   "tools.paragraph.placeholder": "輸入內容，或按 / 選擇工具",
+  "tools.paragraph.placeholderAi": "按「空白鍵」使用 AI，或按「/」使用指令",
   "tools.toggle.placeholder": "收合區塊",
   "tools.toggle.bodyPlaceholder": "空白收合區塊。按一下以新增區塊，或將區塊拖曳至此。",
   "tools.toggle.ariaLabelCollapse": "收合",

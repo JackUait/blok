@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "عنوان بازشو ۶",
   "tools.list.placeholder": "لیست",
   "tools.paragraph.placeholder": "چیزی بنویسید یا برای انتخاب ابزار، کلید / را فشار دهید",
+  "tools.paragraph.placeholderAi": "برای هوش مصنوعی «فاصله» یا برای فرمان‌ها «/» را فشار دهید",
   "tools.toggle.placeholder": "بازشو",
   "tools.toggle.bodyPlaceholder": "بازشوی خالی. برای افزودن یک بلوک کلیک کنید یا بلوک‌ها را اینجا بکشید.",
   "tools.toggle.ariaLabelCollapse": "جمع کردن",

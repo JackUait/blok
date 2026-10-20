@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Сгъваемо заглавие 6",
   "tools.list.placeholder": "Списък",
   "tools.paragraph.placeholder": "Напишете нещо или натиснете /, за да изберете инструмент",
+  "tools.paragraph.placeholderAi": "Натиснете „интервал“ за ИИ или „/“ за команди",
   "tools.toggle.placeholder": "Сгъваем списък",
   "tools.toggle.bodyPlaceholder": "Празен сгъваем блок. Щракнете, за да добавите блок, или плъзнете блокове тук.",
   "tools.toggle.ariaLabelCollapse": "Свий",

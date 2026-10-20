@@ -105,7 +105,7 @@ export class ToolsFactory {
       config,
       api: this.createToolApi(name),
       isDefault: name === this.blokConfig.defaultBlock,
-      defaultPlaceholder: this.blokConfig.placeholder,
+      defaultPlaceholder: this.blokConfig.placeholder || this.assistantPlaceholder(),
       isInternal,
     };
 
@@ -117,6 +117,11 @@ export class ToolsFactory {
     }
 
     return new BlockToolAdapter({ ...options, constructable });
+  }
+
+  /** With an assistant, an empty default block says Space opens it (see the Assistant module). */
+  private assistantPlaceholder(): string | undefined {
+    return typeof this.blokConfig.agent?.assistant?.model === 'function' ? 'tools.paragraph.placeholderAi' : undefined;
   }
 
   /**

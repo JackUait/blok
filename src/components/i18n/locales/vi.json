@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Tiêu đề thu gọn 6",
   "tools.list.placeholder": "Danh sách",
   "tools.paragraph.placeholder": "Viết gì đó hoặc nhấn / để chọn công cụ",
+  "tools.paragraph.placeholderAi": "Nhấn “dấu cách” để dùng AI hoặc “/” để mở lệnh",
   "tools.toggle.placeholder": "Thu gọn",
   "tools.toggle.bodyPlaceholder": "Khối thu gọn trống. Nhấp để thêm một khối hoặc kéo các khối vào đây.",
   "tools.toggle.ariaLabelCollapse": "Thu gọn",

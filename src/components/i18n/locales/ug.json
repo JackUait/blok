@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "يىغىلما ماۋزۇ 6",
   "tools.list.placeholder": "تىزىملىك",
   "tools.paragraph.placeholder": "بىر نەرسە يېزىڭ ياكى / نى بېسىپ قورال تاللاڭ",
+  "tools.paragraph.placeholderAi": "AI ئۈچۈن «بوشلۇق» نى، بۇيرۇقلار ئۈچۈن «/» نى بېسىڭ",
   "tools.toggle.placeholder": "يىغىلما",
   "tools.toggle.bodyPlaceholder": "بوش يىغىلما. بىر بۆلەك قوشۇش ئۈچۈن چېكىڭ ياكى بۆلەكلەرنى بۇ يەرگە سۆرەڭ.",
   "tools.toggle.ariaLabelCollapse": "يىغىش",

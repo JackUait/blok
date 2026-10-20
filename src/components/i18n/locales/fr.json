@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Titre dépliant 6",
   "tools.list.placeholder": "Liste",
   "tools.paragraph.placeholder": "Écrivez quelque chose ou appuyez sur / pour choisir un outil",
+  "tools.paragraph.placeholderAi": "Appuyez sur « espace » pour l’IA ou « / » pour les commandes",
   "tools.toggle.placeholder": "Liste dépliante",
   "tools.toggle.bodyPlaceholder": "Liste dépliante vide. Cliquez pour ajouter un bloc ou faites glisser des blocs ici.",
   "tools.toggle.ariaLabelCollapse": "Réduire",

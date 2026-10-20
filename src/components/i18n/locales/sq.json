@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Titull i palosshëm 6",
   "tools.list.placeholder": "Listë",
   "tools.paragraph.placeholder": "Shkruaj diçka ose shtyp / për të zgjedhur një vegël",
+  "tools.paragraph.placeholderAi": "Shtyp “hapësirë” për AI ose “/” për komandat",
   "tools.toggle.placeholder": "Palosje",
   "tools.toggle.bodyPlaceholder": "Palosje bosh. Klikoni për të shtuar një bllok ose tërhiqni blloqe këtu.",
   "tools.toggle.ariaLabelCollapse": "Mbyll",

@@ -267,7 +267,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1375 + 126 + 480 + 4 closure for all 1985 keys', () => {
+  it('rebuilds a disjoint 1376 + 126 + 480 + 4 closure for all 1986 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -281,7 +281,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1985);
+    expect(lifecycle.size).toBe(1986);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -412,7 +412,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +13: the CSV import dialog calls its keys by literal.
       // +1: the Priority and Effort level "Medium" options got a key each.
       // +1: toolNames.mapView, which also names the Map view entry's first view.
-      'executable-literal': 1375,
+      // +1: the paragraph's AI placeholder calls tools.paragraph.placeholderAi by literal.
+      'executable-literal': 1376,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

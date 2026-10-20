@@ -105,7 +105,7 @@ export class Assistant extends Module {
     }
 
     this.listeners.on(this.Blok.UI.nodes.wrapper, 'keydown', (event: Event) => {
-      if (event instanceof KeyboardEvent && isOpenShortcut(event)) {
+      if (event instanceof KeyboardEvent && (isOpenShortcut(event) || this.isSpaceInEmptyBlock(event))) {
         event.preventDefault();
         this.open();
       }
@@ -113,6 +113,20 @@ export class Assistant extends Module {
     this.listeners.on(window, 'resize', () => this.scheduleRelayout());
     // Capture: a scrolling ancestor's scroll does not bubble to window.
     this.listeners.on(window, 'scroll', () => this.scheduleRelayout(), { capture: true, passive: true });
+  }
+
+  /** Space in an empty default block opens the bar, as its placeholder says (tools/factory.ts). */
+  private isSpaceInEmptyBlock(event: KeyboardEvent): boolean {
+    if (event.key !== ' ' || event.isComposing || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) {
+      return false;
+    }
+    if (!this.Blok.AgentAPI.hasAssistant || this.Blok.ReadOnly.isEnabled || !(event.target instanceof HTMLElement)) {
+      return false;
+    }
+
+    const block = this.Blok.BlockManager.getBlock(event.target);
+
+    return block !== undefined && block.tool.isDefault && block.isEmpty;
   }
 
   /**

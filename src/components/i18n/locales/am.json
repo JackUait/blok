@@ -92,6 +92,7 @@
   "tools.header.toggleHeading6": "የሚሰበሰብ ርዕስ 6",
   "tools.list.placeholder": "ዝርዝር",
   "tools.paragraph.placeholder": "የሆነ ነገር ይጻፉ ወይም መሳሪያ ለመምረጥ / ይጫኑ",
+  "tools.paragraph.placeholderAi": "ለAI «ክፍተት»ን ወይም ለትዕዛዞች «/»ን ይጫኑ",
   "tools.toggle.placeholder": "የሚሰበሰብ ዝርዝር",
   "tools.toggle.bodyPlaceholder": "ባዶ የሚሰበሰብ ክፍል። ብሎክ ለመጨመር ጠቅ ያድርጉ ወይም ብሎኮችን ወደዚህ ይጎትቱ።",
   "tools.toggle.ariaLabelCollapse": "ሰብስብ",

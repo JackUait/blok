@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Preklopni naslov 6",
   "tools.list.placeholder": "Seznam",
   "tools.paragraph.placeholder": "Napišite nekaj ali pritisnite / za izbiro orodja",
+  "tools.paragraph.placeholderAi": "Pritisnite „preslednico“ za UI ali „/“ za ukaze",
   "tools.toggle.placeholder": "Preklop",
   "tools.toggle.bodyPlaceholder": "Prazen preklopni blok. Kliknite za dodajanje bloka ali povlecite bloke sem.",
   "tools.toggle.ariaLabelCollapse": "Strni",

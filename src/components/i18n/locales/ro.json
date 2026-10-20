@@ -171,6 +171,7 @@
   "a11y.textFormatting": "Formatarea textului",
   "a11y.loadingContent": "Se încarcă conținutul…",
   "tools.paragraph.placeholder": "Scrieți ceva sau apăsați / pentru a selecta un instrument",
+  "tools.paragraph.placeholderAi": "Apăsați „spațiu” pentru AI sau „/” pentru comenzi",
   "tools.toggle.placeholder": "Listă reductibilă",
   "tools.toggle.bodyPlaceholder": "Bloc reductibil gol. Faceți clic pentru a adăuga un bloc sau trageți blocuri aici.",
   "tools.toggle.ariaLabelCollapse": "Restrânge",

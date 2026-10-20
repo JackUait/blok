@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Encabezado desplegable 6",
   "tools.list.placeholder": "Lista",
   "tools.paragraph.placeholder": "Escribe algo o pulsa / para elegir una herramienta",
+  "tools.paragraph.placeholderAi": "Pulsa «espacio» para la IA o «/» para comandos",
   "tools.toggle.placeholder": "Desplegable",
   "tools.toggle.bodyPlaceholder": "Desplegable vacío. Haz clic para añadir un bloque o arrastra bloques aquí.",
   "tools.toggle.ariaLabelCollapse": "Contraer",

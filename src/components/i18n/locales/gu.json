@@ -92,6 +92,7 @@
   "tools.header.toggleHeading6": "ટૉગલ શીર્ષક 6",
   "tools.list.placeholder": "યાદી",
   "tools.paragraph.placeholder": "કંઈક લખો અથવા ટૂલ પસંદ કરવા માટે / કી દબાવો",
+  "tools.paragraph.placeholderAi": "AI માટે “સ્પેસ” અથવા કમાન્ડ માટે “/” દબાવો",
   "tools.toggle.placeholder": "ટૉગલ",
   "tools.toggle.bodyPlaceholder": "ખાલી ટૉગલ. બ્લૉક ઉમેરવા માટે ક્લિક કરો અથવા બ્લૉક્સને અહીં ખેંચો.",
   "tools.toggle.ariaLabelCollapse": "સંકોચો",

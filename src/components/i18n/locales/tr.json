@@ -171,6 +171,7 @@
   "a11y.textFormatting": "Metin biçimlendirme",
   "a11y.loadingContent": "İçerik yükleniyor…",
   "tools.paragraph.placeholder": "Bir şeyler yazın veya bir araç seçmek için / tuşuna basın",
+  "tools.paragraph.placeholderAi": "Yapay zekâ için “boşluk”, komutlar için “/” tuşuna basın",
   "tools.toggle.placeholder": "Açılır",
   "tools.toggle.bodyPlaceholder": "Boş açılır blok. Blok eklemek için tıklayın veya blokları buraya sürükleyin.",
   "tools.toggle.ariaLabelCollapse": "Daralt",

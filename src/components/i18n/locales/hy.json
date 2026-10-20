@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Ծալվող վերնագիր 6",
   "tools.list.placeholder": "Ցուցակ",
   "tools.paragraph.placeholder": "Գրեք ինչ-որ բան կամ սեղմեք / գործիք ընտրելու համար",
+  "tools.paragraph.placeholderAi": "Սեղմեք «բացատ»՝ ԱԲ-ի համար, կամ «/»՝ հրամանների համար",
   "tools.toggle.placeholder": "Ծալվող",
   "tools.toggle.bodyPlaceholder": "Դատարկ ծալվող բլոկ։ Սեղմեք՝ բլոկ ավելացնելու համար կամ քաշեք բլոկներն այստեղ։",
   "tools.toggle.ariaLabelCollapse": "Ծալել",

@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Rozbalovací nadpis 6",
   "tools.list.placeholder": "Seznam",
   "tools.paragraph.placeholder": "Napište něco nebo stiskněte / a vyberte nástroj",
+  "tools.paragraph.placeholderAi": "Stiskněte „mezerník“ pro AI nebo „/“ pro příkazy",
   "tools.toggle.placeholder": "Rozbalovací blok",
   "tools.toggle.bodyPlaceholder": "Prázdný rozbalovací blok. Kliknutím přidejte blok nebo sem přetáhněte bloky.",
   "tools.toggle.ariaLabelCollapse": "Sbalit",

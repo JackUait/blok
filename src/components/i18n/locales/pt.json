@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Título recolhível 6",
   "tools.list.placeholder": "Lista",
   "tools.paragraph.placeholder": "Escreva algo ou pressione / para selecionar uma ferramenta",
+  "tools.paragraph.placeholderAi": "Pressione “espaço” para a IA ou “/” para comandos",
   "tools.toggle.placeholder": "Lista recolhível",
   "tools.toggle.bodyPlaceholder": "Bloco recolhível vazio. Clique para adicionar um bloco ou arraste blocos para cá.",
   "tools.toggle.ariaLabelCollapse": "Recolher",

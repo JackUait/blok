@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Avatav pealkiri 6",
   "tools.list.placeholder": "Loend",
   "tools.paragraph.placeholder": "Kirjuta midagi või vajuta tööriista valimiseks klahvi /",
+  "tools.paragraph.placeholderAi": "Vajuta tehisintellekti jaoks „tühikut“ või käskude jaoks „/“",
   "tools.toggle.placeholder": "Avatav",
   "tools.toggle.bodyPlaceholder": "Tühi avatav plokk. Klõpsa ploki lisamiseks või lohista plokid siia.",
   "tools.toggle.ariaLabelCollapse": "Ahenda",

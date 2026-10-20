@@ -92,6 +92,7 @@
   "tools.header.toggleHeading6": "Sklopivi naslov 6",
   "tools.list.placeholder": "Lista",
   "tools.paragraph.placeholder": "Napišite nešto ili pritisnite / za odabir alata",
+  "tools.paragraph.placeholderAi": "Pritisnite „razmak“ za AI ili „/“ za naredbe",
   "tools.toggle.placeholder": "Sklopiva lista",
   "tools.toggle.bodyPlaceholder": "Prazan sklopivi odjeljak. Kliknite da dodate blok ili prevucite blokove ovdje.",
   "tools.toggle.ariaLabelCollapse": "Sažmi",

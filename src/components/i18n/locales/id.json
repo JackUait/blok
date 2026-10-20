@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Judul lipat 6",
   "tools.list.placeholder": "Daftar",
   "tools.paragraph.placeholder": "Tulis sesuatu atau tekan / untuk memilih alat",
+  "tools.paragraph.placeholderAi": "Tekan “spasi” untuk AI atau “/” untuk perintah",
   "tools.toggle.placeholder": "Lipat",
   "tools.toggle.bodyPlaceholder": "Lipatan kosong. Klik untuk menambahkan blok atau seret blok ke sini.",
   "tools.toggle.ariaLabelCollapse": "Ciutkan",

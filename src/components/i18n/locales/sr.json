@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Склопиви наслов 6",
   "tools.list.placeholder": "Листа",
   "tools.paragraph.placeholder": "Напишите нешто или притисните / да бисте изабрали алатку",
+  "tools.paragraph.placeholderAi": "Притисните „размак“ за ВИ или „/“ за команде",
   "tools.toggle.placeholder": "Склопива листа",
   "tools.toggle.bodyPlaceholder": "Празан склопиви блок. Кликните за додавање блока или превуците блокове овде.",
   "tools.toggle.ariaLabelCollapse": "Сажми",

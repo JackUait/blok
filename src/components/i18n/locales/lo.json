@@ -177,6 +177,7 @@
   "blockSettings.orConjunction": " ຫຼືກົດ ",
   "blockSettings.openMenuAction": " ເພື່ອເປີດເມນູ",
   "tools.paragraph.placeholder": "ຂຽນບາງສິ່ງ ຫຼື ກົດ / ເພື່ອເລືອກເຄື່ອງມື",
+  "tools.paragraph.placeholderAi": "ກົດ “ຍະຫວ່າງ” ສຳລັບ AI ຫຼື “/” ສຳລັບຄຳສັ່ງ",
   "tools.toggle.placeholder": "ພັບ",
   "tools.toggle.bodyPlaceholder": "ພັບເປົ່າ. ຄລິກເພື່ອເພີ່ມບລັອກ ຫຼື ລາກບລັອກເຂົ້າມາ.",
   "tools.toggle.ariaLabelCollapse": "ຍຸບ",

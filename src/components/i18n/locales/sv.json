@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Vikbar rubrik 6",
   "tools.list.placeholder": "Lista",
   "tools.paragraph.placeholder": "Skriv något eller tryck / för att välja ett verktyg",
+  "tools.paragraph.placeholderAi": "Tryck på ”blanksteg” för AI eller ”/” för kommandon",
   "tools.toggle.placeholder": "Vikbar lista",
   "tools.toggle.bodyPlaceholder": "Tomt vikbart block. Klicka för att lägga till ett block eller dra block hit.",
   "tools.toggle.ariaLabelCollapse": "Fäll ihop",

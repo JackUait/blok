@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Avattava otsikko 6",
   "tools.list.placeholder": "Lista",
   "tools.paragraph.placeholder": "Kirjoita jotain tai paina / valitaksesi työkalun",
+  "tools.paragraph.placeholderAi": "Paina ”välilyöntiä” tekoälyä varten tai ”/” komentoja varten",
   "tools.toggle.placeholder": "Avattava lista",
   "tools.toggle.bodyPlaceholder": "Tyhjä avattava lohko. Napsauta lisätäksesi lohkon tai vedä lohkoja tähän.",
   "tools.toggle.ariaLabelCollapse": "Kutista",

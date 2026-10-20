@@ -92,6 +92,7 @@
   "tools.header.toggleHeading6": "ចំណងជើងបត់បាន ៦",
   "tools.list.placeholder": "បញ្ជី",
   "tools.paragraph.placeholder": "សរសេរអ្វីមួយ ឬចុច / ដើម្បីជ្រើសរើសឧបករណ៍",
+  "tools.paragraph.placeholderAi": "ចុច “ដកឃ្លា” សម្រាប់ AI ឬ “/” សម្រាប់ពាក្យបញ្ជា",
   "tools.toggle.placeholder": "បត់បាន",
   "tools.toggle.bodyPlaceholder": "បត់បានទទេ។ ចុចដើម្បីបន្ថែមប្លុកមួយ ឬអូសប្លុកមកទីនេះ។",
   "tools.toggle.ariaLabelCollapse": "បង្រួម",

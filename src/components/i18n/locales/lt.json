@@ -182,6 +182,7 @@
   "blockSettings.orConjunction": " arba paspauskite ",
   "blockSettings.openMenuAction": " norėdami atidaryti meniu",
   "tools.paragraph.placeholder": "Rašykite ką nors arba spauskite /, kad pasirinktumėte įrankį",
+  "tools.paragraph.placeholderAi": "Spauskite „tarpą“, kad iškviestumėte DI, arba „/“ – komandoms",
   "tools.toggle.placeholder": "Sutraukiamas",
   "tools.toggle.bodyPlaceholder": "Tuščias sutraukiamas blokas. Spustelėkite, kad pridėtumėte bloką, arba nuvilkite blokus į vidų.",
   "tools.toggle.ariaLabelCollapse": "Sutraukti",

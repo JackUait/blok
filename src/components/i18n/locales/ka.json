@@ -171,6 +171,7 @@
   "a11y.textFormatting": "ტექსტის ფორმატირება",
   "a11y.loadingContent": "შიგთავსი იტვირთება…",
   "tools.paragraph.placeholder": "დაწერეთ რამე ან ხელსაწყოს ასარჩევად დააჭირეთ „/“-ს",
+  "tools.paragraph.placeholderAi": "AI-სთვის დააჭირეთ „ჰარს“, ბრძანებებისთვის კი — „/“-ს",
   "tools.toggle.placeholder": "ჩაკეცვადი ბლოკი",
   "tools.toggle.bodyPlaceholder": "ცარიელი ჩაკეცვადი ბლოკი. დააწკაპუნეთ ბლოკის დასამატებლად ან ჩავლებით გადაიტანეთ ბლოკები აქ.",
   "tools.toggle.ariaLabelCollapse": "ჩაკეცვა",

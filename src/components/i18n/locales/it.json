@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Titolo a scomparsa 6",
   "tools.list.placeholder": "Elenco",
   "tools.paragraph.placeholder": "Scrivi qualcosa o premi / per selezionare uno strumento",
+  "tools.paragraph.placeholderAi": "Premi «spazio» per l’IA o «/» per i comandi",
   "tools.toggle.placeholder": "Elenco a scomparsa",
   "tools.toggle.bodyPlaceholder": "Blocco a scomparsa vuoto. Clicca per aggiungere un blocco oppure trascina qui dei blocchi.",
   "tools.toggle.ariaLabelCollapse": "Comprimi",

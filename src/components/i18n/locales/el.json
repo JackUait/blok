@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "Αναδιπλούμενη επικεφαλίδα 6",
   "tools.list.placeholder": "Λίστα",
   "tools.paragraph.placeholder": "Γράψτε κάτι ή πατήστε / για επιλογή εργαλείου",
+  "tools.paragraph.placeholderAi": "Πατήστε «διάστημα» για την ΤΝ ή «/» για εντολές",
   "tools.toggle.placeholder": "Αναδιπλούμενη λίστα",
   "tools.toggle.bodyPlaceholder": "Κενή αναδιπλούμενη λίστα. Κάντε κλικ για να προσθέσετε ένα μπλοκ ή σύρετε μπλοκ εδώ.",
   "tools.toggle.ariaLabelCollapse": "Σύμπτυξη",

@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "כותרת מתקפלת 6",
   "tools.list.placeholder": "רשימה",
   "tools.paragraph.placeholder": "כתוב משהו או הקש על / כדי לבחור כלי",
+  "tools.paragraph.placeholderAi": "הקש על ”רווח” עבור ה-AI או על ”/” עבור פקודות",
   "tools.toggle.placeholder": "מקטע מתקפל",
   "tools.toggle.bodyPlaceholder": "מקטע מתקפל ריק. לחץ להוספת בלוק או גרור בלוקים לכאן.",
   "tools.toggle.ariaLabelCollapse": "כווץ",

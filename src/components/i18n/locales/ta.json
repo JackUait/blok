@@ -92,6 +92,7 @@
   "tools.header.toggleHeading6": "மடிப்பு தலைப்பு 6",
   "tools.list.placeholder": "பட்டியல்",
   "tools.paragraph.placeholder": "ஏதாவது எழுதவும் அல்லது கருவியைத் தேர்ந்தெடுக்க / விசையை அழுத்தவும்",
+  "tools.paragraph.placeholderAi": "AI-க்கு “ஸ்பேஸ்” அல்லது கட்டளைகளுக்கு “/” விசையை அழுத்தவும்",
   "tools.toggle.placeholder": "மடிப்பு",
   "tools.toggle.bodyPlaceholder": "காலி மடிப்பு. ஒரு தொகுதியைச் சேர்க்க கிளிக் செய்யவும் அல்லது தொகுதிகளை இங்கே இழுக்கவும்.",
   "tools.toggle.ariaLabelCollapse": "சுருக்கு",

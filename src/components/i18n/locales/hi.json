@@ -97,6 +97,7 @@
   "tools.header.toggleHeading6": "टॉगल शीर्षक 6",
   "tools.list.placeholder": "सूची",
   "tools.paragraph.placeholder": "कुछ लिखें या कोई टूल चुनने के लिए / दबाएं",
+  "tools.paragraph.placeholderAi": "AI के लिए “स्पेस” या कमांड के लिए “/” दबाएं",
   "tools.toggle.placeholder": "टॉगल",
   "tools.toggle.bodyPlaceholder": "खाली टॉगल। ब्लॉक जोड़ने के लिए क्लिक करें या ब्लॉक यहां खींचें।",
   "tools.toggle.ariaLabelCollapse": "संकुचित करें",

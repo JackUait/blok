@@ -80,18 +80,33 @@ export class EventsDispatcher<EventMap> {
     // Every listener gets the original payload. A listener's return value is
     // ignored: hosts subscribe through api.events, and `(p) => list.push(p)`
     // must not change what the next listener sees.
-    for (const callback of this.subscribers[eventName]) {
+    for (const callback of this.listenersToInvoke(eventName)) {
       callback(data as EventMap[Name]);
     }
   }
 
   /** Like emit, but a throwing subscriber is logged and the rest still run. */
   public emitNotification<Name extends keyof EventMap>(eventName: Name, data: EventMap[Name]): void {
-    for (const callback of this.subscribers[eventName] ?? []) {
+    for (const callback of this.listenersToInvoke(eventName)) {
       try {
         callback(data);
       } catch (error) {
         logLabeled('A notification subscriber threw.', 'error', error);
+      }
+    }
+  }
+
+  /**
+   * Walks a copy of the list, like DOM EventTarget dispatch: a `once` listener
+   * removing itself must not skip the next one, a listener added during the
+   * emit waits for the next emit, and one removed during it is skipped.
+   * https://dom.spec.whatwg.org/#concept-event-listener-inner-invoke
+   */
+  private *listenersToInvoke<Name extends keyof EventMap>(eventName: Name): Generator<Listener<EventMap[Name]>> {
+    for (const callback of [...(this.subscribers[eventName] ?? [])]) {
+      // Re-read the field: destroy() replaces the whole map mid-emit.
+      if (this.subscribers[eventName]?.includes(callback)) {
+        yield callback;
       }
     }
   }

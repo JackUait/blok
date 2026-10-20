@@ -117,6 +117,90 @@ describe('EventsDispatcher', () => {
     });
   });
 
+  // Matches DOM EventTarget dispatch: the listener list is cloned at the
+  // start, and a listener removed mid-dispatch is skipped (its "removed" flag).
+  // https://dom.spec.whatwg.org/#concept-event-listener-inner-invoke
+  describe('listener list changes during emit', () => {
+    it('runs the listener after a once listener on the same emit', () => {
+      const calls: string[] = [];
+
+      dispatcher.once('simple', () => calls.push('once'));
+      dispatcher.on('simple', () => calls.push('next'));
+
+      dispatcher.emit('simple', 'payload');
+
+      expect(calls).toEqual(['once', 'next']);
+    });
+
+    it('runs the listener after a once listener in emitNotification', () => {
+      const calls: string[] = [];
+
+      dispatcher.once('simple', () => calls.push('once'));
+      dispatcher.on('simple', () => calls.push('next'));
+
+      dispatcher.emitNotification('simple', 'payload');
+
+      expect(calls).toEqual(['once', 'next']);
+    });
+
+    it('skips a later listener that an earlier one removed', () => {
+      const later = vi.fn();
+
+      dispatcher.on('simple', () => dispatcher.off('simple', later));
+      dispatcher.on('simple', later);
+
+      dispatcher.emit('simple', 'payload');
+
+      expect(later).not.toHaveBeenCalled();
+    });
+
+    it('skips a later listener removed during emitNotification', () => {
+      const later = vi.fn();
+
+      dispatcher.on('simple', () => dispatcher.off('simple', later));
+      dispatcher.on('simple', later);
+
+      dispatcher.emitNotification('simple', 'payload');
+
+      expect(later).not.toHaveBeenCalled();
+    });
+
+    it('does not run a listener added during the same emit', () => {
+      const added = vi.fn();
+
+      dispatcher.on('simple', () => dispatcher.on('simple', added));
+
+      dispatcher.emit('simple', 'payload');
+
+      expect(added).not.toHaveBeenCalled();
+
+      dispatcher.emit('simple', 'again');
+
+      expect(added).toHaveBeenCalledWith('again');
+    });
+
+    it('skips the remaining listeners after destroy during emit', () => {
+      const later = vi.fn();
+
+      dispatcher.on('simple', () => dispatcher.destroy());
+      dispatcher.on('simple', later);
+
+      dispatcher.emit('simple', 'payload');
+
+      expect(later).not.toHaveBeenCalled();
+    });
+
+    it('does not run a listener added during the same emitNotification', () => {
+      const added = vi.fn();
+
+      dispatcher.on('simple', () => dispatcher.on('simple', added));
+
+      dispatcher.emitNotification('simple', 'payload');
+
+      expect(added).not.toHaveBeenCalled();
+    });
+  });
+
   describe('destroy', () => {
     it('clears all subscribers', () => {
       const handler = vi.fn();

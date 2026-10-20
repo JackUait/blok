@@ -3,7 +3,7 @@ import { DATABASE_ACTION_HANDLERS } from '../../shared/tool-actions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolData, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
-import type { AutofillSettings, DatabaseData, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, FilterRule, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue } from './types';
+import type { AutofillSettings, DatabaseData, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, FilterRule, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue } from './types';
 import { countFilterRules } from './filter-tree';
 import { adapterRowValues, assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, readPropertyValue, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
 import { isOutputData, isPlaceValue } from './tier3-values';
@@ -409,8 +409,11 @@ export class DatabaseTool implements BlockTool {
   private readonly computedValues: ComputedProperties;
   private view!: DatabaseViewRenderer;
   private sync!: DatabaseBackendSync;
-  /** Form views showing their confirmation. Session only, so a redraw keeps it. */
-  private readonly submittedForms = new Set<string>();
+  /**
+   * Form views showing their confirmation, with the answer behind it. Session
+   * only, so a redraw keeps it.
+   */
+  private readonly submittedForms = new Map<string, DatabaseFormSubmission | null>();
   private formQuestionEdit = false;
   private formPromptAbort: AbortController | null = null;
   /** Automations and AI autofill. Made once: every view switch makes a new sync with it. */
@@ -1659,7 +1662,7 @@ export class DatabaseTool implements BlockTool {
           }
         }
 
-        const meta = rowMetaOf(child);
+        const meta: DatabaseRowMeta = { ...rowMetaOf(child), ...(rowData?.anonymous === true ? { anonymous: true } : {}) };
         const reactions = rowReactions(rowData);
 
         if (isTemplateData(rowData)) {
@@ -2883,16 +2886,18 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** A new row at the end with these values. Undefined when writes are refused. */
-  private insertRow(properties: Record<string, PropertyValue>, options: { rerender: boolean }): string | undefined {
+  /** `anonymous`: an anonymous form answer, stored with no author (research/23 §6). */
+  private insertRow(properties: Record<string, PropertyValue>, options: { rerender: boolean; anonymous?: boolean }): string | undefined {
     if (this.readOnly || this.destroyed) return undefined;
     const titlePropId = this.titlePropertyId();
-    const rowData = this.model.createRowData(properties);
+    const anonymous = options.anonymous === true;
+    const rowData = this.model.createRowData(properties, { anonymous });
     const title = rowData.properties[titlePropId];
 
     this.api.blocks.insertAt(
       'database-row',
-      { properties: rowData.properties, position: rowData.position, title: typeof title === 'string' ? title : '' },
-      { parentId: this.dataId, position: 'end', id: rowData.id },
+      { properties: rowData.properties, position: rowData.position, title: typeof title === 'string' ? title : '', ...(anonymous ? { anonymous: true } : {}) },
+      { parentId: this.dataId, position: 'end', id: rowData.id, ...(anonymous ? { anonymous: true } : {}) },
     );
     void this.sync.syncCreateRow({ id: rowData.id, properties: rowData.properties, position: rowData.position });
     if (options.rerender) {
@@ -3517,7 +3522,11 @@ export class DatabaseTool implements BlockTool {
           if (this.redrawWhenIdleRetry !== null) this.redrawWhenIdle();
         },
         submitted: this.submittedForms.has(viewId),
-        onSubmittedChange: (submitted) => (submitted ? this.submittedForms.add(viewId) : this.submittedForms.delete(viewId)),
+        onSubmittedChange: (submitted) => {
+          if (!submitted) this.submittedForms.delete(viewId);
+          else if (!this.submittedForms.has(viewId)) this.submittedForms.set(viewId, null);
+        },
+        responseActions: () => this.formResponseActions(viewId),
         onSubmit: (values) => this.submitForm(viewId, values),
         ...(this.readOnly || this.structureLocked() ? {} : {
           share: {
@@ -3637,21 +3646,52 @@ export class DatabaseTool implements BlockTool {
     const view = this.model.getView(viewId);
 
     if (this.destroyed || this.activeViewId !== viewId || view?.type !== 'form' || view.form?.closed === true) return;
-    const rowId = this.readOnly ? undefined : this.insertRow(values, { rerender: false });
-    const forms = this.config.forms;
-
-    if (forms === undefined) return;
-    try {
-      const sharing = {
+    const rowId = this.readOnly ? undefined : this.insertRow(values, { rerender: false, anonymous: view.form?.anonymous === true });
+    const submission: DatabaseFormSubmission = {
+      databaseId: this.block.id,
+      viewId,
+      values,
+      ...(rowId !== undefined ? { rowId } : {}),
+      sharing: {
         public: view.form?.public === true,
         anonymous: view.form?.anonymous === true,
         submissionAccess: view.form?.submissionAccess ?? 'none',
-      };
+      },
+    };
+    const forms = this.config.forms;
 
-      void Promise.resolve(forms.onSubmit({ databaseId: this.block.id, viewId, values, ...(rowId !== undefined ? { rowId } : {}), sharing })).catch(() => undefined);
+    this.submittedForms.set(viewId, submission);
+    if (forms === undefined) return;
+    try {
+      void Promise.resolve(forms.onSubmit(submission)).catch(() => undefined);
     } catch {
       // The row is already saved; a failing host must not undo it.
     }
+  }
+
+  /**
+   * The thank-you screen's buttons (research/23 §6): "View my response" while
+   * the row the answer became is there, "Email me a copy" when the host sends it.
+   */
+  private formResponseActions(viewId: string): { view?: () => void; email?: () => void } {
+    const submission = this.submittedForms.get(viewId);
+    const rowId = submission?.rowId;
+    const emailCopy = this.config.forms?.emailCopy;
+
+    if (submission === undefined || submission === null) return {};
+
+    return {
+      ...(rowId !== undefined && this.model.getRow(rowId) !== undefined ? { view: () => this.handleRowClick(rowId) } : {}),
+      ...(emailCopy === undefined ? {} : {
+        email: () => {
+          try {
+            void Promise.resolve(emailCopy.call(this.config.forms, submission)).catch(() => undefined);
+          } catch {
+            // A failing host leaves the thank-you screen as it is.
+          }
+        },
+      }),
+    };
   }
 
   /** Conditional color: a data attribute on each matching row, card or (table) cell. */

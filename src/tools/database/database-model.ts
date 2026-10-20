@@ -312,12 +312,15 @@ export class DatabaseModel {
       .reduce<string | null>((last, key) => (last === null || comparePositions(key, last) > 0 ? key : last), null);
   }
 
-  createRowData(properties?: Record<string, PropertyValue>): DatabaseRow {
+  /** `anonymous`: an anonymous form answer, so no person property starts with the current user. */
+  createRowData(properties?: Record<string, PropertyValue>, options: { anonymous?: boolean } = {}): DatabaseRow {
     const lastPosition = this.lastRowKey();
+    const given = properties ?? {};
+
     return {
       id: nanoid(),
       position: DatabaseModel.positionBetween(lastPosition, null),
-      properties: withEmptyLists(this.schema, this.withCreatedByDefaults(properties ?? {})),
+      properties: withEmptyLists(this.schema, options.anonymous === true ? { ...given } : this.withCreatedByDefaults(given)),
     };
   }
 

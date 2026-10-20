@@ -89,6 +89,9 @@ export class YjsManager extends Module {
    */
   private writeBuffer = new BlockWriteBuffer(modificationsObserverBatchTimeout);
 
+  /** Above zero inside `withoutAuthor`: new blocks get no `createdBy`. */
+  private anonymousDepth = 0;
+
   /**
    * One token per `block.save()` round-trip in flight between a DOM mutation
    * and the `enqueueBlockDataWrite` it will produce. The flush barrier cannot
@@ -421,13 +424,27 @@ export class YjsManager extends Module {
    * @returns the block with `createdAt`, and `createdBy` when a user is configured
    */
   private withCreationStamp(blockData: YjsOutputBlockData): YjsOutputBlockData {
-    const userId = this.config.user?.id;
+    const userId = this.anonymousDepth > 0 ? undefined : this.config.user?.id;
 
     return {
       ...blockData,
       createdAt: blockData.createdAt ?? Date.now(),
       ...(blockData.createdBy === undefined && typeof userId === 'string' && userId !== '' ? { createdBy: userId } : {}),
     };
+  }
+
+  /**
+   * Runs `fn` with no author on the blocks it adds: they get no `createdBy`.
+   * @param fn - the insert
+   * @returns what `fn` returns
+   */
+  public withoutAuthor<T>(fn: () => T): T {
+    this.anonymousDepth += 1;
+    try {
+      return fn();
+    } finally {
+      this.anonymousDepth -= 1;
+    }
   }
 
   /**

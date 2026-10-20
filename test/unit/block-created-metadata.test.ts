@@ -75,6 +75,25 @@ describe('block creation metadata', () => {
     expect(inserted.createdBy).toBe('u-ada');
   });
 
+  // An anonymous form answer (research/23 §6) is stored with no author.
+  it('leaves createdBy out of a block inserted with anonymous, even with a configured user', async () => {
+    const instance = await createEditor([{ id: 'a1', type: 'paragraph', data: { text: 'Hello' } }], { id: 'u-ada' });
+    const inserted = instance.blocks.insertAt('paragraph', { text: 'New' }, { anonymous: true });
+
+    await flush();
+    const saved = (await instance.save()).blocks.find((block) => block.id === inserted.id);
+
+    expect(saved).toBeDefined();
+    expect(saved?.createdBy).toBeUndefined();
+    expect(inserted.createdBy).toBeUndefined();
+    expect(saved?.createdAt).toBe(NOW);
+
+    const next = instance.blocks.insertAt('paragraph', { text: 'Signed' });
+
+    await flush();
+    expect((await instance.save()).blocks.find((block) => block.id === next.id)?.createdBy).toBe('u-ada');
+  });
+
   it('leaves createdBy out without a configured user', async () => {
     const instance = await createEditor([{ id: 'a1', type: 'paragraph', data: { text: 'Hello' } }]);
     const inserted = instance.blocks.insert('paragraph', { text: 'New' });

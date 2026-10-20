@@ -4,7 +4,7 @@ import type { DatabaseRow, PropertyDefinition, PropertyValue, SelectOption } fro
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { readPropertyValue } from './property-values';
 import { renderCellValue } from './cells';
-import { reminderContext } from './reminders';
+import { rowCellContext } from './reminders';
 import type { CellContext } from './cells';
 import { IconChevronDown, IconMenu } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
@@ -572,7 +572,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
       ...this.settings.cellContext,
       i18n: this.i18n,
       readOnly: true,
-      ...reminderContext(row, propDef.id),
+      ...rowCellContext(row, propDef.id),
       ...(this.settings.locale !== undefined ? { locale: this.settings.locale } : {}),
     });
 

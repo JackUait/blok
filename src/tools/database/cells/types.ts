@@ -72,6 +72,8 @@ export interface CellContext {
   shortUrls?: boolean;
   /** Date: the cell's stored reminder. The cell shows an alarm and the date in the accent. */
   reminder?: DateReminderOffset;
+  /** Created by: the row is an anonymous form answer, shown as "Anonymous". */
+  anonymous?: boolean;
   /** The host's small map (`config.map.renderPlace`) for a place's hover card. Without it the card has no map. */
   renderPlace?: DatabaseMap['renderPlace'];
   /** The host's place search (`config.map.geocode`). Without it the Place editor is a plain address field. */

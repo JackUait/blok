@@ -54,8 +54,8 @@ const blocks = (view: Record<string, unknown>): OutputBlockData[] => [
 type Lever = 'none' | 'forms' | 'map' | 'readOnlyGate' | 'comments';
 
 /** Levers are functions, so they are built inside the page. */
-const mount = async (page: Page, data: OutputBlockData[], lever: Lever): Promise<void> => {
-  await page.evaluate(async ({ input, which }) => {
+const mount = async (page: Page, data: OutputBlockData[], lever: Lever, extra: { user?: string; readOnly?: boolean } = {}): Promise<void> => {
+  await page.evaluate(async ({ input, which, user, readOnly }) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
       window.blokInstance = undefined;
@@ -76,6 +76,7 @@ const mount = async (page: Page, data: OutputBlockData[], lever: Lever): Promise
         onSubmit: (submission: unknown) => log.push(submission),
         workspaceName: 'Personal',
         link: () => 'https://forms.example.test/f/1',
+        emailCopy: (submission: unknown) => log.push({ emailCopy: submission }),
       };
     }
     if (which === 'map') {
@@ -119,13 +120,15 @@ const mount = async (page: Page, data: OutputBlockData[], lever: Lever): Promise
     window.blokInstance = new window.Blok({
       holder,
       data: { blocks: input },
+      ...(user === undefined ? {} : { user: { id: user } }),
+      ...(readOnly === true ? { readOnly: true } : {}),
       tools: {
         database: { class: window.BlokDatabase, config },
         'database-row': { class: window.BlokDatabaseRow },
       },
     });
     await window.blokInstance.isReady;
-  }, { input: data, which: lever });
+  }, { input: data, which: lever, user: extra.user, readOnly: extra.readOnly });
   await expect(page.locator('[data-blok-database-wrapper]')).toBeVisible();
 };
 
@@ -181,6 +184,46 @@ test.describe('form view', () => {
     await expect(question(page, 'p-email').getByRole('textbox')).toBeFocused();
     expect(await savedRows(page)).toHaveLength(1);
     expect(await page.evaluate(() => window.tier3Log)).toEqual([]);
+  });
+});
+
+// research/23 §6: anonymous responses and the thank-you screen.
+test.describe('form view, research/23 §6', () => {
+  const anonymous = (): OutputBlockData[] => blocks({ type: 'form', form: { anonymous: true } });
+
+  test('a respondent of an anonymous form sees "Submitting response anonymously" above the questions', async ({ page }) => {
+    await mount(page, anonymous(), 'forms', { readOnly: true });
+
+    const pill = page.getByText('Submitting response anonymously');
+
+    await expect(pill).toBeVisible();
+    const pillBox = await pill.boundingBox();
+    const questionBox = await question(page, 'p-title').boundingBox();
+
+    expect(pillBox !== null && questionBox !== null && pillBox.y < questionBox.y).toBe(true);
+  });
+
+  test('an anonymous answer is a row with no author, and the thank-you screen opens it and emails a copy', async ({ page }) => {
+    await mount(page, anonymous(), 'forms', { user: 'u-ada' });
+
+    await question(page, 'p-title').getByRole('textbox').fill('FormResp1');
+    await page.getByRole('button', { name: 'Submit' }).click();
+    await page.getByRole('button', { name: 'Email me a copy' }).click();
+
+    const log = await page.evaluate(() => window.tier3Log);
+
+    expect(log).toEqual([
+      expect.objectContaining({ values: { 'p-title': 'FormResp1' } }),
+      { emailCopy: expect.objectContaining({ values: { 'p-title': 'FormResp1' }, sharing: { public: false, anonymous: true, submissionAccess: 'none' } }) },
+    ]);
+    const saved = await page.evaluate(async () => (await window.blokInstance?.save())?.blocks.filter((block) => block.type === 'database-row'));
+    const added = saved?.find((block) => (block.data as { properties: Record<string, unknown> }).properties['p-title'] === 'FormResp1');
+
+    expect(added?.createdBy).toBeUndefined();
+    expect(added?.data).toMatchObject({ anonymous: true });
+
+    await page.getByRole('button', { name: 'View my response' }).click();
+    await expect(page.locator('[data-blok-database-drawer] [data-blok-database-drawer-title]')).toHaveValue('FormResp1');
   });
 });
 

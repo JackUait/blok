@@ -4,7 +4,7 @@ import type { SelectOption, DatabaseRow, DatabaseViewConfig, PropertyDefinition,
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { NO_VALUE_GROUP_KEY } from './database-model';
 import { createOptionPill, renderCellValue } from './cells';
-import { reminderContext } from './reminders';
+import { rowCellContext } from './reminders';
 import type { CellContext } from './cells';
 import { readPropertyValue } from './property-values';
 import { createCardPreview } from './database-card-preview';
@@ -662,7 +662,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       }
 
       const cell = renderCellValue(property, readPropertyValue(row, property), {
-        ...this.settings.cellContext, i18n: this.i18n, readOnly: true, locale: this.settings.locale, ...reminderContext(row, property.id),
+        ...this.settings.cellContext, i18n: this.i18n, readOnly: true, locale: this.settings.locale, ...rowCellContext(row, property.id),
       });
 
       if (cell.hasAttribute('data-empty')) {

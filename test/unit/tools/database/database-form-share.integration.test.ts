@@ -39,16 +39,22 @@ const blocks = (form?: FormSettings): OutputBlockData[] => [{
   } satisfies DatabaseData,
 }];
 
-const mount = async (data: OutputBlockData[], forms?: DatabaseConfig['forms'], readOnly = false): Promise<void> => {
+const mount = async (
+  data: OutputBlockData[],
+  forms?: DatabaseConfig['forms'],
+  readOnly = false,
+  extra: { user?: { id: string }; config?: DatabaseConfig } = {},
+): Promise<void> => {
   editor?.destroy();
   class ConfiguredDatabase extends DatabaseTool {
     constructor(options: ConstructorParameters<typeof DatabaseTool>[0]) {
-      super({ ...options, config: forms === undefined ? {} : { forms } });
+      super({ ...options, config: { ...extra.config, ...(forms === undefined ? {} : { forms }) } });
     }
   }
 
   editor = new Blok({
     holder, readOnly, dataModel: 'hierarchical',
+    ...(extra.user === undefined ? {} : { user: extra.user }),
     tools: { database: ConfiguredDatabase, 'database-row': DatabaseRowTool },
     data: { blocks: data },
   }) as unknown as PublicBlok;
@@ -213,6 +219,144 @@ describe('form Share panel (research/19 §3d)', () => {
 
     expect(q('[data-blok-database-form-access]')).toBeNull();
     expect(shareShown()).toBe(false);
+  });
+
+  // research/23 §6: the respondent's form starts with the pill; the builder does not change.
+  it('a respondent sees "Submitting response anonymously" first when answers are anonymous', async () => {
+    await mount(blocks({ anonymous: true }), host(), true);
+
+    const pill = need('[data-blok-database-form-anonymous]');
+
+    expect(pill.textContent).toBe('Submitting response anonymously');
+    expect(need('[data-blok-database-form]').firstElementChild).toBe(pill);
+    need('[data-blok-database-form-submit]').click();
+    expect(q('[data-blok-database-form-done]')).not.toBeNull();
+    expect(q('[data-blok-database-form-anonymous]')).toBeNull();
+  });
+
+  // research/23 §6: the thank-you screen offers "View my response" and "Email me a copy".
+  describe('thank-you screen', () => {
+    const submitAs = (name: string): void => {
+      need<HTMLInputElement>('[id="blok-form-form-title"]').value = name;
+      need('[data-blok-database-form-submit]').click();
+    };
+    const viewResponse = (): HTMLButtonElement | null => q<HTMLButtonElement>(byTestId('database-form-view-response'));
+    const emailCopy = (): HTMLButtonElement | null => q<HTMLButtonElement>(byTestId('database-form-email-copy'));
+
+    it('"View my response" opens the row the answer became', async () => {
+      await mount(blocks(), host());
+      submitAs('Ada');
+
+      expect(viewResponse()?.textContent).toBe('View my response');
+      viewResponse()?.click();
+      await vi.waitFor(() => expect(q('[data-blok-database-drawer][data-open]')).not.toBeNull());
+      expect(need<HTMLTextAreaElement>('[data-blok-database-drawer] [data-blok-database-drawer-title]').value).toBe('Ada');
+    });
+
+    it('offers no "View my response" in read-only, where Blok stores no row', async () => {
+      await mount(blocks(), host(), true);
+      submitAs('Ada');
+
+      expect(q('[data-blok-database-form-done]')).not.toBeNull();
+      expect(viewResponse()).toBeNull();
+    });
+
+    it('"Email me a copy" hands the submission to the host\'s emailCopy', async () => {
+      const emailCopyHook = vi.fn();
+
+      await mount(blocks({ anonymous: true }), host({ emailCopy: emailCopyHook }), true);
+      submitAs('Ada');
+
+      expect(emailCopy()?.textContent).toBe('Email me a copy');
+      emailCopy()?.click();
+      expect(emailCopyHook).toHaveBeenCalledWith(expect.objectContaining({
+        databaseId: 'db',
+        viewId: 'form',
+        values: { title: 'Ada' },
+        sharing: { public: false, anonymous: true, submissionAccess: 'none' },
+      }));
+    });
+
+    it('offers no "Email me a copy" without the host\'s emailCopy', async () => {
+      await mount(blocks(), host());
+      submitAs('Ada');
+
+      expect(q('[data-blok-database-form-done]')).not.toBeNull();
+      expect(emailCopy()).toBeNull();
+    });
+
+    it('drops both after "Submit another response"', async () => {
+      await mount(blocks(), host({ emailCopy: vi.fn() }));
+      submitAs('Ada');
+      need('[data-blok-database-form-again]').click();
+
+      expect(viewResponse()).toBeNull();
+      expect(emailCopy()).toBeNull();
+    });
+  });
+
+  // research/23 §6: an anonymous answer is a row with no author; Created by reads "Anonymous".
+  describe('anonymous answers', () => {
+    const withAuthorColumns = (form?: FormSettings): OutputBlockData[] => blocks(form).map((block) => ({
+      ...block,
+      data: {
+        ...(block.data as DatabaseData),
+        schema: [
+          ...schema,
+          { id: 'who', name: 'Who', type: 'createdBy', position: 'a1' },
+          { id: 'owner', name: 'Owner', type: 'person', position: 'a2', person: { default: 'createdBy' } },
+        ],
+      },
+    }));
+    const people = { list: async () => [{ id: 'u-ada', name: 'Ada' }], me: () => 'u-ada' };
+    const submitAndSave = async (form?: FormSettings): Promise<OutputBlockData | undefined> => {
+      await mount(withAuthorColumns(form), host(), false, { user: { id: 'u-ada' }, config: { people } });
+      need<HTMLInputElement>('[id="blok-form-form-title"]').value = 'Resp';
+      need('[data-blok-database-form-submit]').click();
+      const saved = await editor?.save();
+
+      return saved?.blocks.find((block) => block.type === 'database-row');
+    };
+
+    it('stores the row with no author and marks it anonymous', async () => {
+      const row = await submitAndSave({ anonymous: true });
+
+      expect(row?.createdBy).toBeUndefined();
+      expect(row?.data).toEqual(expect.objectContaining({ anonymous: true }));
+      expect((row?.data as { properties: Record<string, unknown> }).properties.owner ?? []).toEqual([]);
+    });
+
+    it('keeps the author of an answer that is not anonymous', async () => {
+      const row = await submitAndSave();
+
+      expect(row?.createdBy).toBe('u-ada');
+      expect(row?.data).not.toHaveProperty('anonymous');
+      expect((row?.data as { properties: Record<string, unknown> }).properties.owner).toEqual([{ id: 'u-ada' }]);
+    });
+
+    it('shows "Anonymous" in the row\'s Created by cell', async () => {
+      await submitAndSave({ anonymous: true });
+      need('[data-blok-database-tab][data-view-id="table"]').click();
+
+      await vi.waitFor(() => expect(q('[data-blok-database-cell="createdBy"]')).not.toBeNull());
+      const cell = need('[data-blok-database-cell="createdBy"]');
+
+      expect(cell.textContent).toBe('Anonymous');
+      expect(cell.querySelector('[data-blok-database-person-chip][data-anonymous]')).not.toBeNull();
+    });
+  });
+
+  it('shows no anonymous pill to a respondent of a form that is not anonymous', async () => {
+    await mount(blocks(), host(), true);
+
+    expect(q('[data-blok-database-form-anonymous]')).toBeNull();
+  });
+
+  it('keeps the builder free of the anonymous pill', async () => {
+    await mount(blocks({ anonymous: true }), host());
+
+    expect(q('[data-blok-database-form-access]')).not.toBeNull();
+    expect(q('[data-blok-database-form-anonymous]')).toBeNull();
   });
 
   it('Escape leaves an option page first, then closes the panel', async () => {

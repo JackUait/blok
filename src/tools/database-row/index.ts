@@ -15,7 +15,7 @@ interface RowPagePrompt {
   list: Array<{ id: string; title: string }>;
 }
 
-const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId', 'bodyBlocks', 'icon', 'cover', 'fullWidth', 'template', 'repeat', 'reminders']);
+const KNOWN_KEYS: ReadonlySet<string> = new Set(['properties', 'position', 'title', 'pageId', 'bodyBlocks', 'icon', 'cover', 'fullWidth', 'template', 'repeat', 'reminders', 'anonymous']);
 
 /**
  * Top-level keys this version does not know, kept as they came. A full save
@@ -54,6 +54,9 @@ const toRowData = (data: DatabaseRowData): DatabaseRowData => {
   }
   if (data.template === true) {
     row.template = true;
+  }
+  if (data.anonymous === true) {
+    row.anonymous = true;
   }
   if (typeof data.repeat === 'object' && data.repeat !== null) {
     row.repeat = structuredClone(data.repeat);
@@ -375,6 +378,9 @@ export class DatabaseRowTool implements BlockTool {
     }
     if (this._data.template === true) {
       saved.template = true;
+    }
+    if (this._data.anonymous === true) {
+      saved.anonymous = true;
     }
     if (this._data.repeat !== undefined) {
       saved.repeat = structuredClone(this._data.repeat);

@@ -76,11 +76,17 @@ export const reminderDueAt = (value: PropertyValue | undefined, remind: DateRemi
   return zonedToEpoch({ ...day, hour: REMINDER_HOUR, minute: 0, second: 0, ms: 0 }, zone);
 };
 
-/** The display context for a row's date: with a reminder the date shows the alarm in every view. */
-export const reminderContext = (row: DatabaseRow | undefined, propertyId: string): { reminder?: DateReminderOffset } => {
+/**
+ * A row's own display context for one cell: with a reminder the date shows the
+ * alarm in every view; an anonymous form answer's Created by reads "Anonymous".
+ */
+export const rowCellContext = (row: DatabaseRow | undefined, propertyId: string): { reminder?: DateReminderOffset; anonymous?: boolean } => {
   const remind = row?.reminders?.[propertyId]?.remind;
 
-  return remind === undefined ? {} : { reminder: remind };
+  return {
+    ...(remind === undefined ? {} : { reminder: remind }),
+    ...(row?.meta?.anonymous === true ? { anonymous: true } : {}),
+  };
 };
 
 /** The viewer's IANA zone, read on each call: a reminder records it when set. */

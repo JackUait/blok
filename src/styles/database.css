@@ -9348,6 +9348,18 @@ button[data-blok-database-feed-reaction]:hover,
   background-color: var(--blok-item-hover-bg);
 }
 
+/* The respondent's "Submitting response anonymously" pill (research/23 §6, 96-form-respondent.png): 14px/21px, 6px radius. */
+[data-blok-database-form-anonymous] {
+  inline-size: fit-content;
+  margin-block: 0 var(--blok-space-4);
+  padding: var(--blok-space-1-5) var(--blok-space-2-5);
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-column-bg);
+  color: var(--blok-text-secondary);
+  font-size: 14px;
+  line-height: 21px;
+}
+
 [data-blok-database-form-share-badge] {
   margin-inline-start: var(--blok-space-1-5);
   padding: 0 var(--blok-space-1);
@@ -9404,6 +9416,36 @@ button[data-blok-database-feed-reaction]:hover,
   display: flex;
   flex-direction: column;
   gap: var(--blok-space-3);
+}
+
+/* The thank-you screen's "View my response" (filled) and "Email me a copy" (outlined), research/23 §6, 98-form-submitted.png. */
+[data-blok-database-form-response-actions] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--blok-space-3);
+}
+
+[data-blok-database-form-response-action] {
+  block-size: 32px;
+  padding-inline: var(--blok-space-3);
+  border: 1px solid var(--blok-popover-border);
+  border-radius: var(--blok-radius-control);
+  background-color: transparent;
+  color: var(--blok-text-primary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+[data-blok-database-form-response-action="view"] {
+  border-color: transparent;
+  background-color: var(--blok-database-table-cell-text);
+  color: var(--blok-bg-primary);
+}
+
+[data-blok-database-form-response-action="email"]:hover {
+  background-color: var(--blok-item-hover-bg);
 }
 
 /* The block sets the canvas height inline: the view's Height, 300 to 800px (research/20 §1f). */

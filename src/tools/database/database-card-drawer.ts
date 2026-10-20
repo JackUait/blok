@@ -3041,7 +3041,13 @@ export class DatabaseCardDrawer {
 
   /** Draws a value into its slot. The drawer pill attribute shipped in v1.16.1, so it stays. */
   private paintValue(slot: HTMLElement, def: PropertyDefinition, value: PropertyValue | undefined): void {
-    const cell = renderCellValue(def, value, { ...this.cellContext(), i18n: { t: (key) => this.t(key) }, readOnly: this.readOnly, followLinks: true });
+    const cell = renderCellValue(def, value, {
+      ...this.cellContext(),
+      i18n: { t: (key) => this.t(key) },
+      readOnly: this.readOnly,
+      followLinks: true,
+      ...(this.currentRow?.meta?.anonymous === true ? { anonymous: true } : {}),
+    });
 
     cell.querySelectorAll('[data-blok-database-option-pill]').forEach((pill) => pill.setAttribute('data-blok-database-drawer-prop-pill', ''));
     if (cell.hasAttribute('data-empty')) {

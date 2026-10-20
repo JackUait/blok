@@ -39,6 +39,8 @@ export interface DatabaseFormViewOptions {
   onInteractionEnd?: () => void;
   submitted?: boolean;
   onSubmittedChange?: (submitted: boolean) => void;
+  /** The thank-you screen's "View my response" and "Email me a copy", read when it draws. Absent ones are not offered. */
+  responseActions?: () => { view?: () => void; email?: () => void };
   /** The Share panel and the builder's access line. Only for someone who may edit the form. */
   share?: {
     /** Absent without `config.forms`: only closing the form is offered. */
@@ -191,7 +193,9 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     root.replaceChildren();
     this.fields.clear();
     this.answers.clear();
-    if (this.options.share !== undefined && !this.options.readOnly) root.appendChild(this.accessBar());
+    const builder = this.options.share !== undefined && !this.options.readOnly;
+
+    if (builder) root.appendChild(this.accessBar());
     if (view.form?.closed === true) {
       // Detached fields keep draft transfer's schema checks while closed.
       this.questions();
@@ -209,6 +213,8 @@ export class DatabaseFormView implements DatabaseViewRenderer {
       return;
     }
 
+    // research/23 §6: above the questions, for the respondent only; the builder does not change.
+    if (!builder && view.form?.anonymous === true) root.appendChild(this.anonymousPill());
     const form = document.createElement('form');
 
     form.noValidate = true;
@@ -256,6 +262,15 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     return bar;
   }
 
+  private anonymousPill(): HTMLElement {
+    const pill = document.createElement('p');
+
+    pill.setAttribute('data-blok-database-form-anonymous', '');
+    pill.textContent = this.options.i18n.t('tools.database.formAnonymousPill');
+
+    return pill;
+  }
+
   /** Opens the Share panel; the toolbar's "Share form" and the access line's "Change" both land here. */
   openShare(anchor: HTMLElement): void {
     const share = this.options.share;
@@ -294,9 +309,35 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     again.setAttribute('data-blok-database-form-again', '');
     again.textContent = this.options.i18n.t('tools.database.formSubmitAnother');
     again.addEventListener('click', () => this.setSubmitted(false));
-    done.append(text, again);
+    done.append(text);
+    const actions = this.options.responseActions?.() ?? {};
+    const buttons = [
+      actions.view === undefined ? null : this.responseButton('view', 'database-form-view-response', 'tools.database.formViewResponse', actions.view),
+      actions.email === undefined ? null : this.responseButton('email', 'database-form-email-copy', 'tools.database.formEmailCopy', actions.email),
+    ].filter((button): button is HTMLButtonElement => button !== null);
+
+    if (buttons.length > 0) {
+      const row = document.createElement('div');
+
+      row.setAttribute('data-blok-database-form-response-actions', '');
+      row.append(...buttons);
+      done.append(row);
+    }
+    done.append(again);
 
     return done;
+  }
+
+  private responseButton(kind: 'view' | 'email', testId: string, key: string, onClick: () => void): HTMLButtonElement {
+    const button = document.createElement('button');
+
+    button.type = 'button';
+    button.setAttribute('data-blok-database-form-response-action', kind);
+    button.setAttribute('data-blok-testid', testId);
+    button.textContent = this.options.i18n.t(key);
+    button.addEventListener('click', onClick);
+
+    return button;
   }
 
   private setSubmitted(submitted: boolean): void {

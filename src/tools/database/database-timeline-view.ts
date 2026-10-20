@@ -4,7 +4,7 @@ import { pageIconElement, showsPageIcon } from './page-icon';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption, TimelineZoom } from './types';
 import type { GalleryDropResult } from './database-gallery-view';
 import { createOptionPill, renderCellValue } from './cells';
-import { reminderContext } from './reminders';
+import { rowCellContext } from './reminders';
 import type { CellContext } from './cells';
 import { readPropertyValue } from './property-values';
 import { addDays, daysBetween, isWeekend } from './calendar-dates';
@@ -374,7 +374,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
           i18n: this.options.i18n,
           readOnly: true,
           locale: this.options.locale,
-          ...reminderContext(row, property.id),
+          ...rowCellContext(row, property.id),
         }));
       }
       line.appendChild(cell);
@@ -702,7 +702,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
         i18n: this.options.i18n,
         readOnly: true,
         locale: this.options.locale,
-        ...reminderContext(row, property.id),
+        ...rowCellContext(row, property.id),
       });
 
       if (!cell.hasAttribute('data-empty')) {

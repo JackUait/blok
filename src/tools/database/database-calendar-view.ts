@@ -3,7 +3,7 @@ import type { DatabaseViewRenderer } from './database-view-renderer';
 import { pageIconElement, showsPageIcon } from './page-icon';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition } from './types';
 import { renderCellValue } from './cells';
-import { reminderContext } from './reminders';
+import { rowCellContext } from './reminders';
 import type { CellContext } from './cells';
 import { readPropertyValue } from './property-values';
 import { resolveLocale, toLocalDate } from './cells/date-format';
@@ -420,7 +420,7 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
         i18n: this.options.i18n,
         readOnly: true,
         locale: this.options.locale,
-        ...reminderContext(row, property.id),
+        ...rowCellContext(row, property.id),
       });
 
       if (!cell.hasAttribute('data-empty')) {

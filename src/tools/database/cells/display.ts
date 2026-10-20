@@ -196,6 +196,19 @@ const renderPeople = (cell: HTMLElement, value: PropertyValue | undefined, ctx: 
   }
 };
 
+/** An anonymous form answer's author (research/23 §6): a blank round avatar and "Anonymous". */
+const renderAnonymous = (cell: HTMLElement, ctx: CellContext): void => {
+  const chip = document.createElement('span');
+  const avatar = document.createElement('span');
+
+  chip.setAttribute('data-blok-database-person-chip', '');
+  chip.setAttribute('data-anonymous', '');
+  avatar.setAttribute('data-blok-database-person-initial', '');
+  avatar.setAttribute('aria-hidden', 'true');
+  chip.append(avatar, ctx.i18n.t('tools.database.personAnonymous'));
+  cell.appendChild(chip);
+};
+
 const renderFiles = (cell: HTMLElement, value: PropertyValue | undefined, ctx: CellContext): void => {
   for (const file of filesOf(value)) {
     const chip = document.createElement('span');
@@ -368,8 +381,15 @@ export const renderCellValue = (property: PropertyDefinition, value: PropertyVal
     case 'number':
       renderNumber(cell, property, value, ctx);
       break;
-    case 'person':
     case 'createdBy':
+      if (ctx.anonymous === true && personIdsOf(value).length === 0) {
+        cell.removeAttribute('data-empty');
+        renderAnonymous(cell, ctx);
+      } else {
+        renderPeople(cell, value, ctx);
+      }
+      break;
+    case 'person':
     case 'lastEditedBy':
       renderPeople(cell, value, ctx);
       break;

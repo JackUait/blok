@@ -568,6 +568,8 @@ export type RowReactions = Record<string, Record<string, number>>;
 export interface DatabaseRowMeta {
   createdAt?: number;
   createdBy?: string;
+  /** An anonymous form answer: no author, and Created by reads "Anonymous". */
+  anonymous?: true;
   lastEditedAt?: number;
   lastEditedBy?: string;
 }
@@ -642,6 +644,8 @@ export interface DatabaseRowData extends BlockToolData {
   repeat?: TemplateRepeat;
   /** Date reminders by date property id. A map, so reminders on two date properties merge. */
   reminders?: Record<string, DateReminder>;
+  /** An anonymous form answer (Share form › Anonymous responses): saved with no `createdBy`; Created by reads "Anonymous". */
+  anonymous?: boolean;
   /**
    * Feed reactions, one key per person: `reactions:<user id>` to that
    * person's emoji and reaction times. Absent for someone with no reaction.
@@ -1157,6 +1161,11 @@ export interface DatabaseForms {
   workspaceName?: string;
   /** The form's link, shown and copied by the Share panel. Absent or undefined: no link row. */
   link?(ctx: { databaseId: string; viewId: string }): string | undefined;
+  /**
+   * "Email me a copy" on the thank-you screen. Present: the button shows and
+   * hands over the answer it was pressed for. Blok sends no mail itself.
+   */
+  emailCopy?(submission: DatabaseFormSubmission): void | Promise<void>;
 }
 
 export interface DatabaseMapItem {

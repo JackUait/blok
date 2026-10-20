@@ -15,7 +15,9 @@ export interface SendContext {
 
 export interface AdapterOptions {
   model: string;
-  send(body: Body, context: SendContext): Promise<unknown>;
+  send?(body: Body, context: SendContext): Promise<unknown>;
+  /** When set, every request streams. */
+  stream?(body: Body, context: SendContext): Promise<Response | ReadableStream<Uint8Array>>;
   maxTokens?: number;
   levels?: Partial<Record<AgentThinkingLevel, Body>>;
 }
@@ -107,8 +109,29 @@ export const stepOf = (request: AgentModelRequest): number =>
  * Hands send its own copy of the body: the body shares objects with the run's history,
  * tools and the level tables, and the docs invite hosts to edit it.
  */
-export const post = (body: Body, request: AgentModelRequest, options: AdapterOptions): Promise<unknown> =>
-  options.send(structuredClone(body), sendContext(request, options));
+export const post = (body: Body, request: AgentModelRequest, options: AdapterOptions): Promise<unknown> => {
+  if (options.send === undefined) {
+    return Promise.reject(new TypeError('This adapter cannot stream yet. Pass send.'));
+  }
+
+  return options.send(structuredClone(body), sendContext(request, options));
+};
+
+/** As post, for the host's stream. */
+export const postStream = (body: Body, request: AgentModelRequest, options: AdapterOptions): Promise<Response | ReadableStream<Uint8Array>> => {
+  if (options.stream === undefined) {
+    return Promise.reject(new TypeError('Pass stream.'));
+  }
+
+  return options.stream(structuredClone(body), sendContext(request, options));
+};
+
+/** Thrown when the adapter is made, so a missing transport shows at setup, not at the first prompt. */
+export const requireTransport = (options: AdapterOptions, provider: string): void => {
+  if (options.send === undefined && options.stream === undefined) {
+    throw new TypeError(`${provider}: pass send or stream.`);
+  }
+};
 
 const errorMessage = (error: unknown): string => {
   if (isRecord(error) && typeof error.message === 'string') {

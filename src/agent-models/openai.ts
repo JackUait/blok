@@ -4,7 +4,7 @@ import type {
 
 import {
   DEFAULT_MAX_TOKENS, blocksOf, errorOf, isRecord, isText, isToolResult, isToolUse, parseArguments,
-  callId, providerBlock, rawTurn, post, stepOf, withLevel, type AdapterOptions, type Body,
+  callId, providerBlock, rawTurn, post, requireTransport, stepOf, withLevel, type AdapterOptions, type Body,
 } from './shared';
 
 const FORMAT = 'openai-responses';
@@ -110,6 +110,8 @@ const readReply = (reply: unknown, step: number): AgentModelResponse => {
  * @param options - model id, the host's send, and optional level overrides
  */
 export function openaiModel(options: AdapterOptions): AgentModel {
+  requireTransport(options, 'OpenAI');
+
   return async (request) => {
     const body = withLevel({
       model: options.model,

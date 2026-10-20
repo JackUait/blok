@@ -109,7 +109,8 @@ const streamStep = (options: AssistantLoopOptions): { early: Early; handle(event
       return;
     }
 
-    const input = parse(entry.json);
+    // An arg-less call streams no input at all.
+    const input = parse(entry.json === '' ? '{}' : entry.json);
 
     if (!input.ok) {
       // Later calls wait for the final response too, so calls keep stream order.

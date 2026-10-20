@@ -4,7 +4,7 @@ import type {
 
 import {
   DEFAULT_MAX_TOKENS, blocksOf, errorOf, isRecord, isText, isToolResult, isToolUse,
-  callId, providerBlock, rawTurn, post, stepOf, toolNames, withLevel, type AdapterOptions, type Body,
+  callId, providerBlock, rawTurn, post, requireTransport, stepOf, toolNames, withLevel, type AdapterOptions, type Body,
 } from './shared';
 
 const FORMAT = 'gemini';
@@ -116,6 +116,8 @@ const readReply = (reply: unknown, step: number): AgentModelResponse => {
  * @param options - model id, the host's send, and optional level overrides
  */
 export function geminiModel(options: AdapterOptions): AgentModel {
+  requireTransport(options, 'Gemini');
+
   return async (request) => {
     const names = toolNames(request.messages);
     const step = stepOf(request);

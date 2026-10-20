@@ -461,6 +461,28 @@ describe('runAssistantLoop', () => {
       await run;
     });
 
+    it('runs an arg-less streamed call with {} and keeps running later calls early', async () => {
+      const call = vi.fn(async (_name: string, _input: unknown) => ok());
+      // An arg-less call streams no input_json_delta, so its input is ''.
+      const model = streaming(
+        [{ type: 'tool_start', index: 0, id: 't0', name: 'blok_read' }, { type: 'tool_end', index: 0 }, ...streamOf(1, 't1', 'blok_execute', insert)],
+        reply([
+          { type: 'tool_use', id: 't0', name: 'blok_read', input: {} },
+          { type: 'tool_use', id: 't1', name: 'blok_execute', input: insert },
+        ], 'end_turn')
+      );
+      const run = runAssistantLoop({
+        model, system: '', tools: [], messages: [{ role: 'user', content: 'x' }], call, signal: new AbortController().signal, maxSteps: 1,
+      });
+
+      await vi.waitFor(() => expect(call).toHaveBeenCalledWith('blok_execute', insert));
+      expect(call.mock.calls).toEqual([['blok_read', {}], ['blok_execute', insert]]);
+
+      model.open();
+      await run;
+      expect(call).toHaveBeenCalledTimes(2);
+    });
+
     it('does not run a streamed call twice when the response arrives', async () => {
       const call = vi.fn(async (_name: string, _input: unknown) => ok('{"applied":1}'));
       const model = streaming(

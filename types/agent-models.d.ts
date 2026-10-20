@@ -18,7 +18,13 @@ export interface AgentModelAdapterOptions {
    * Return the provider's JSON reply. Change the body here for provider extras (caching, store, …).
    * Each call gets a fresh copy, so edits never reach the run's history.
    */
-  send(body: Record<string, unknown>, context: AgentModelSendContext): Promise<unknown>;
+  send?(body: Record<string, unknown>, context: AgentModelSendContext): Promise<unknown>;
+  /**
+   * Post `body` to your backend and return the streaming response (SSE) unchanged.
+   * The adapter already set the provider's stream flag. With it, Ask AI shows edits live.
+   * When set, every request streams. Pass `send`, `stream` or both; the adapter throws a TypeError with neither.
+   */
+  stream?(body: Record<string, unknown>, context: AgentModelSendContext): Promise<Response | ReadableStream<Uint8Array>>;
   /** Output token cap. Default 16000. */
   maxTokens?: number;
   /** Replace a level's default body fragment. It is deep-merged into the request body. */

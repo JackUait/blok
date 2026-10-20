@@ -274,6 +274,13 @@ export {
   AgentTurnOptions,
   AgentToolResult,
   AgentState,
+  AgentModel,
+  AgentModelRequest,
+  AgentModelResponse,
+  AgentModelStreamEvent,
+  AgentModelMessage,
+  AgentModelContentBlock,
+  AgentThinkingLevel,
 } from './api';
 export const BlockReplayed: 'block replayed';
 

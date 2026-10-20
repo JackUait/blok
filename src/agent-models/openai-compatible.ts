@@ -4,7 +4,7 @@ import type {
 
 import {
   DEFAULT_MAX_TOKENS, blocksOf, errorOf, isRecord, isText, isToolResult, isToolUse, parseArguments,
-  callId, providerBlock, rawTurn, post, stepOf, toolNames, withLevel, type AdapterOptions, type Body,
+  callId, providerBlock, rawTurn, post, requireTransport, stepOf, toolNames, withLevel, type AdapterOptions, type Body,
 } from './shared';
 
 const FORMAT = 'openai-chat';
@@ -106,6 +106,8 @@ const readReply = (reply: unknown, step: number): AgentModelResponse => {
  * @param options - model id, the host's send, and optional level overrides
  */
 export function openaiCompatibleModel(options: AdapterOptions): AgentModel {
+  requireTransport(options, 'OpenAI-compatible');
+
   return async (request) => {
     const names = toolNames(request.messages);
     const body = withLevel({

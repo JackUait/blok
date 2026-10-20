@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { geminiModel } from '../../../src/agent-models/gemini';
+import { openaiModel } from '../../../src/agent-models/openai';
+import { openaiCompatibleModel } from '../../../src/agent-models/openai-compatible';
 import {
   errorOf, merge, parseArguments, providerBlock, rawTurn, toolNames, withLevel, type AdapterOptions,
 } from '../../../src/agent-models/shared';
@@ -68,5 +71,11 @@ describe('adapter helpers', () => {
     expect(errorOf({ error: { message: 'bad key' } }, 'OpenAI')?.message).toBe('OpenAI: bad key');
     expect(errorOf({ error: 'down' }, 'Gemini')?.message).toBe('Gemini: down');
     expect(errorOf({ output: [] }, 'OpenAI')).toBeNull();
+  });
+
+  it('every adapter needs send or stream when it is made', () => {
+    expect(() => openaiModel({ model: 'm' })).toThrow(new TypeError('OpenAI: pass send or stream.'));
+    expect(() => openaiCompatibleModel({ model: 'm' })).toThrow(new TypeError('OpenAI-compatible: pass send or stream.'));
+    expect(() => geminiModel({ model: 'm' })).toThrow(new TypeError('Gemini: pass send or stream.'));
   });
 });

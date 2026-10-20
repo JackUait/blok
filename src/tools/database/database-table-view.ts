@@ -509,11 +509,6 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     this.removeSelectionBar();
   }
 
-  /** Closes an open cell editor without writing its draft. */
-  cancelEditing(): void {
-    this.grid?.cancelEditor();
-  }
-
   /**
    * True while an editor, a resize, a drag or a press runs. A redraw during a
    * press replaces the pressed cell, and its click never arrives.

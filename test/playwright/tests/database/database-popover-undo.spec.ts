@@ -37,21 +37,31 @@ const SCHEMA = [
   { id: 'p-due', name: 'Due', type: 'text', position: 'a3' },
 ];
 
+const TABLE_VIEW = { id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] };
+const ROW_PROPERTIES = { 'p-title': 'Alpha', 'p-stage': 'o-idea', 'p-due': 'Friday' };
+
 const BLOCKS: OutputBlockData[] = [
   {
     id: 'db-1',
     type: 'database',
     data: {
       schema: SCHEMA,
-      views: [{ id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+      views: [TABLE_VIEW],
       activeViewId: 'v1',
     },
     content: ['r1'],
   },
-  { id: 'r1', type: 'database-row', parent: 'db-1', data: { position: 'a0', properties: { 'p-title': 'Alpha', 'p-stage': 'o-idea', 'p-due': 'Friday' } } },
+  { id: 'r1', type: 'database-row', parent: 'db-1', data: { position: 'a0', properties: ROW_PROPERTIES } },
 ];
 
-const mount = async (page: Page): Promise<void> => {
+const mount = async (page: Page, view: Record<string, unknown> = {}): Promise<void> => {
+  const [database, row] = BLOCKS;
+  const blocks: OutputBlockData[] = [
+    { ...database, data: { ...database.data, views: [{ ...TABLE_VIEW, ...view }] } },
+    // A card and a list row hide an empty property.
+    view.type === undefined ? row : { ...row, data: { ...row.data, properties: { ...ROW_PROPERTIES, 'p-tags': ['t-y'] } } },
+  ];
+
   await page.evaluate(async ({ data: input }) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
@@ -65,8 +75,8 @@ const mount = async (page: Page): Promise<void> => {
     document.body.appendChild(holder);
     window.blokInstance = new window.Blok({ holder, data: { blocks: input } });
     await window.blokInstance.isReady;
-  }, { data: BLOCKS });
-  await expect(page.getByRole('grid').first()).toBeVisible();
+  }, { data: blocks });
+  if (view.type === undefined) await expect(page.getByRole('grid').first()).toBeVisible();
 };
 
 const optionLabels = async (page: Page, propertyId: string): Promise<string[]> => page.evaluate(async (id) => {
@@ -76,6 +86,13 @@ const optionLabels = async (page: Page, propertyId: string): Promise<string[]> =
 
   return (schema.find((p) => p.id === id)?.config?.options ?? []).map((o) => o.label);
 }, propertyId);
+
+const savedTags = async (page: Page): Promise<unknown> => page.evaluate(async () => {
+  const output = await window.blokInstance?.save();
+  const row = output?.blocks.find((block) => block.id === 'r1');
+
+  return (row?.data as { properties: Record<string, unknown> }).properties['p-tags'];
+});
 
 const header = (page: Page, propertyId: string): Locator => page.locator(`[role="columnheader"][data-property-id="${propertyId}"]`);
 const tableRow = (page: Page, rowId: string): Locator => page.locator(`[data-blok-database-table-row][data-row-id="${rowId}"]`);
@@ -147,6 +164,28 @@ test.describe('undo with a database popover open', () => {
 
     await expect(cellEditor(page)).toHaveCount(0);
     await expect.poll(() => optionLabels(page, 'p-tags')).toEqual(['X', 'Y']);
+  });
+
+  test.describe('the same holds on a board card and a list row', () => {
+    for (const [name, view, target] of [
+      ['board card', { type: 'board', groupBy: 'p-stage', visibleProperties: ['p-tags'] }, '[data-blok-database-card][data-row-id="r1"] [data-blok-database-card-property][data-property-id="p-tags"]'],
+      ['list row', { type: 'list', visibleProperties: ['p-tags'] }, '[data-blok-database-list-row][data-row-id="r1"] [data-blok-database-list-row-property][data-property-id="p-tags"]'],
+    ] as const) {
+      test(`undo closes the multi-select editor on a ${name} and shows the undone value`, async ({ page }) => {
+        await mount(page, view);
+        await page.locator(target).click();
+        await createThenFocusDeleteConfirm(page);
+        // The open editor holds off the card's redraw, so read the saved row.
+        await expect.poll(() => savedTags(page)).toHaveLength(2);
+
+        await page.keyboard.press('ControlOrMeta+z');
+
+        await expect(cellEditor(page)).toHaveCount(0);
+        await expect.poll(() => optionLabels(page, 'p-tags')).toEqual(['X', 'Y']);
+        await expect.poll(() => savedTags(page)).toEqual(['t-y']);
+        await expect(page.locator(target)).toHaveText('Y');
+      });
+    }
   });
 
   test('undo and redo close the multi-select editor in the row peek', async ({ page }) => {

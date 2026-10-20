@@ -444,6 +444,8 @@ export class DatabaseTool implements BlockTool {
   private cardDragFromOptionId: string | null = null;
   private cardDragFromSubGroup: string | null = null;
   private cardCellEditor: CellEditorHandle | null = null;
+  /** Every cell editor open over this database's rows, on any surface. Filled by `openCellEditor` via `cellContext()`. */
+  private readonly openCellEditors = new Set<CellEditorHandle>();
   private columnDrag: DatabaseColumnDrag | null = null;
   private columnControls: DatabaseColumnControls | null = null;
   private listRowDrag: DatabaseListRowDrag | null = null;
@@ -1464,6 +1466,7 @@ export class DatabaseTool implements BlockTool {
     this.hostLevers.destroy();
     document.removeEventListener('keydown', this.handleSelectionKeys, true);
     this.bulkEditor?.close();
+    this.openCellEditors.clear();
     this.api.events.off('block changed', this.handleBlockChanged);
     this.api.events.off('block replayed', this.handleBlockReplayed);
     this.api.events.off('block changed', this.handleBodyEdit);
@@ -1796,16 +1799,20 @@ export class DatabaseTool implements BlockTool {
   }
 
   /**
-   * An undo or redo of this database closes its open cell editor, so the editor
-   * cannot write an undone value back (a multi-select's delete prompt would
-   * bring an undone option back). Undo moves no focus, so focus-out cannot do it.
+   * An undo or redo of this database closes every cell editor open over it,
+   * without its draft, so no editor shows or writes back a value the undo
+   * changed (a multi-select's delete prompt would bring an undone option back).
+   * Undo moves no focus, so focus-out cannot do it.
    */
   private closeEditorsOnHistory(capture: BlockReplayCapture): void {
     if (
       this.destroyed || (capture.origin !== 'undo' && capture.origin !== 'redo') ||
       (capture.blockId !== this.block.id && capture.blockId !== this.dataId && this.model.getRow(capture.blockId) === undefined)
     ) return;
-    if (this.view instanceof DatabaseTableView) this.view.cancelEditing();
+    const open = [...this.openCellEditors];
+
+    this.openCellEditors.clear();
+    open.forEach((editor) => editor.cancel());
   }
 
   private readonly handleBlockReplayed = (capture: BlockReplayCapture): void => {
@@ -3535,7 +3542,8 @@ export class DatabaseTool implements BlockTool {
         schema,
         readOnly: this.readOnly,
         source: this.source,
-        cellContext: { ...this.cellContext(), relationScope: (property: PropertyDefinition) => this.relatedDatabaseName(property) },
+        // A form answer is no row value: an undo must not drop its draft.
+        cellContext: { ...this.cellContext(), openEditors: undefined, relationScope: (property: PropertyDefinition) => this.relatedDatabaseName(property) },
         hasPeople: this.hasPeople,
         onInteractionEnd: () => {
           if (this.redrawWhenIdleRetry !== null) this.redrawWhenIdle();
@@ -8897,6 +8905,7 @@ export class DatabaseTool implements BlockTool {
     const me = this.config.people?.me?.();
 
     return {
+      openEditors: this.openCellEditors,
       valueProperty: (property) => this.computedValues.valueProperty(property),
       relationTitle: (property, rowId) => this.relatedTitle(property, rowId),
       relationCandidates: (property) => this.relationCandidates(property),

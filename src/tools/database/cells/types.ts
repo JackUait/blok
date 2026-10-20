@@ -80,6 +80,8 @@ export interface CellContext {
   geocode?: DatabaseMap['geocode'];
   /** The host's "Current Location" (`config.map.currentLocation`). Without it the row is hidden. */
   currentLocation?: DatabaseMap['currentLocation'];
+  /** Every editor `openCellEditor` opens joins this set while open, so the host can close them all at once. */
+  openEditors?: Set<CellEditorHandle>;
 }
 
 /**

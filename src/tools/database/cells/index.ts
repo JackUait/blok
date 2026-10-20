@@ -217,11 +217,7 @@ const openPlaceEditor = (
 
 const CLOSED: CellEditorHandle = { isOpen: false, close: () => undefined, cancel: () => undefined };
 
-/**
- * Opens the editor for one cell under `anchor`. Read-only does nothing.
- * Checkbox has no editor: it commits the flipped value at once.
- */
-export const openCellEditor = (
+const openEditorFor = (
   property: PropertyDefinition,
   value: PropertyValue | undefined,
   anchor: HTMLElement,
@@ -280,4 +276,27 @@ export const openCellEditor = (
       // A type from a newer client has no editor.
       return CLOSED;
   }
+};
+
+/**
+ * Opens the editor for one cell under `anchor`. Read-only does nothing.
+ * Checkbox has no editor: it commits the flipped value at once.
+ */
+export const openCellEditor = (
+  property: PropertyDefinition,
+  value: PropertyValue | undefined,
+  anchor: HTMLElement,
+  ctx: CellEditorContext
+): CellEditorHandle => {
+  const handle = openEditorFor(property, value, anchor, ctx);
+  const open = ctx.openEditors;
+
+  if (open !== undefined) {
+    open.forEach((other) => {
+      if (!other.isOpen) open.delete(other);
+    });
+    if (handle.isOpen) open.add(handle);
+  }
+
+  return handle;
 };

@@ -89,7 +89,8 @@ describe('webTools', () => {
     await expect(webTools({ fetch, lookup })('web_fetch', { url: 'https://example.com/missing.jpg' }, signal())).rejects.toThrow(/404/);
   });
 
-  it.each(['http://localhost:3000/', 'http://127.0.0.1/', 'http://10.0.0.5/', 'http://192.168.1.1/', 'http://169.254.169.254/', 'http://[::1]/', 'file:///etc/passwd'])(
+  it.each(['http://localhost:3000/', 'http://127.0.0.1/', 'http://10.0.0.5/', 'http://192.168.1.1/', 'http://169.254.169.254/', 'http://[::1]/', 'file:///etc/passwd',
+    'http://[::ffff:127.0.0.1]/', 'http://[::ffff:7f00:1]/', 'http://198.18.0.1/', 'http://[64:ff9b::7f00:1]/', 'http://[2002:7f00:1::]/', 'http://[fe80::1]/'])(
     'web_fetch refuses %s, so the model cannot reach this machine or its network',
     async (url) => {
       const fetch = vi.fn();
@@ -112,6 +113,23 @@ describe('webTools', () => {
 
     await expect(webTools({ fetch, lookup })('web_fetch', { url: 'https://example.com/' }, signal())).rejects.toThrow();
     expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('web_fetch stops reading a huge page at a byte cap', async () => {
+    const chunk = new TextEncoder().encode(`<p>${'a'.repeat(65_536)}</p>`);
+    const endless = new ReadableStream<Uint8Array>({ pull: (controller) => controller.enqueue(chunk) });
+    const fetch = vi.fn(async () => new Response(endless, { status: 200, headers: { 'Content-Type': 'text/html' } }));
+
+    const text = await webTools({ fetch, lookup })('web_fetch', { url: 'https://example.com/' }, signal());
+
+    expect(text.length).toBeLessThan(25_000);
+  });
+
+  it('web_fetch checks the address it connects to, so a name that re-resolves inward is refused', async () => {
+    const answers = ['93.184.215.14', '127.0.0.1'];
+    const rebinding = async (): Promise<Array<{ address: string }>> => [{ address: answers.shift() ?? '127.0.0.1' }];
+
+    await expect(webTools({ lookup: rebinding })('web_fetch', { url: 'http://rebind.example:1/' }, signal())).rejects.toThrow(/private/);
   });
 
   it('throws on an unknown tool', async () => {

@@ -4,11 +4,15 @@
  * `POST /web`; src/playground/ai-model.ts offers them to the model.
  */
 import { lookup as dnsLookup } from 'node:dns/promises';
-import { isIP } from 'node:net';
+import { request as httpRequest } from 'node:http';
+import { request as httpsRequest } from 'node:https';
+import { BlockList, isIP } from 'node:net';
+import { Readable } from 'node:stream';
 
 // Wikimedia blocks requests without a descriptive User-Agent.
 const USER_AGENT = 'BlokPlayground/1.0 (https://github.com/JackUait/blok; dev Ask AI)';
 const MAX_TEXT = 20_000;
+const MAX_BYTES = 2 * 1024 * 1024;
 const MAX_REDIRECTS = 5;
 const TIMEOUT_MS = 15_000;
 
@@ -24,27 +28,21 @@ const stripTags = (html) => html
   .replace(/\s+/g, ' ')
   .trim();
 
-const isPrivateV4 = (address) => {
-  const [a, b] = address.split('.').map(Number);
+// Every address that is not plain public unicast. BlockList also matches an
+// IPv4-mapped IPv6 address (::ffff:7f00:1) against the IPv4 rules.
+const BLOCKED = new BlockList();
 
-  return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254)
-    || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || a >= 224;
-};
+[
+  ['0.0.0.0', 8], ['10.0.0.0', 8], ['100.64.0.0', 10], ['127.0.0.0', 8], ['169.254.0.0', 16], ['172.16.0.0', 12],
+  ['192.0.0.0', 24], ['192.0.2.0', 24], ['192.168.0.0', 16], ['198.18.0.0', 15], ['198.51.100.0', 24],
+  ['203.0.113.0', 24], ['224.0.0.0', 4], ['240.0.0.0', 4],
+].forEach(([network, prefix]) => BLOCKED.addSubnet(network, prefix, 'ipv4'));
+// ::/96 and 64:ff9b::/96 and 2002::/16 embed an IPv4 address; blocking them whole is simpler than unpacking it.
+[
+  ['::', 96], ['64:ff9b::', 96], ['100::', 64], ['2002::', 16], ['fc00::', 7], ['fe80::', 10], ['ff00::', 8],
+].forEach(([network, prefix]) => BLOCKED.addSubnet(network, prefix, 'ipv6'));
 
-const isPrivateAddress = (address) => {
-  if (isIP(address) === 4) {
-    return isPrivateV4(address);
-  }
-
-  const lower = address.toLowerCase();
-  const mapped = lower.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-
-  if (mapped !== null) {
-    return isPrivateV4(mapped[1]);
-  }
-
-  return lower === '::' || lower === '::1' || /^f[cd]/.test(lower) || /^fe[89ab]/.test(lower);
-};
+const isPrivateAddress = (address) => BLOCKED.check(address, isIP(address) === 6 ? 'ipv6' : 'ipv4');
 
 /** Throws unless `raw` is an http(s) URL whose host resolves only to public addresses. */
 const checkPublic = async (raw, lookup) => {
@@ -67,6 +65,82 @@ const checkPublic = async (raw, lookup) => {
   }
 
   return url;
+};
+
+/**
+ * A fetch whose socket connects only to addresses the guard passed, so a name
+ * cannot resolve public for the check and private for the connection.
+ * Handles what web_fetch sends: GET, manual redirects, a signal.
+ */
+const pinnedFetch = (lookup) => (url, init) => new Promise((resolve, reject) => {
+  const target = new URL(url);
+  const request = target.protocol === 'https:' ? httpsRequest : httpRequest;
+  const guardedLookup = (host, options, callback) => {
+    lookup(host, { all: true }).then((entries) => {
+      const bad = entries.find((entry) => isPrivateAddress(entry.address));
+
+      if (entries.length === 0 || bad !== undefined) {
+        callback(new Error(`${host} resolves to a private network and cannot be fetched.`));
+
+        return;
+      }
+      if (options.all === true) {
+        callback(null, entries.map((entry) => ({ address: entry.address, family: isIP(entry.address) })));
+      } else {
+        callback(null, entries[0].address, isIP(entries[0].address));
+      }
+    }, callback);
+  };
+  const outgoing = request(target, { method: 'GET', headers: init?.headers, lookup: guardedLookup, signal: init?.signal }, (incoming) => {
+    const headers = new Headers();
+
+    Object.entries(incoming.headers).forEach(([name, value]) => {
+      [value].flat().forEach((entry) => entry !== undefined && headers.append(name, entry));
+    });
+
+    const status = incoming.statusCode ?? 502;
+    const empty = status === 204 || status === 304 || (status >= 300 && status < 400);
+
+    if (empty) {
+      incoming.resume();
+    }
+    resolve(new Response(empty ? null : Readable.toWeb(incoming), { status, headers }));
+  });
+
+  outgoing.on('error', reject);
+  outgoing.end();
+});
+
+/** At most MAX_BYTES of the body, decoded; the rest is never downloaded. */
+const readCapped = async (response) => {
+  const reader = response.body?.getReader();
+  const chunks = [];
+  const state = { size: 0 };
+
+  if (reader === undefined) {
+    return '';
+  }
+
+  while (state.size < MAX_BYTES) {
+    const { value, done } = await reader.read();
+
+    if (done) {
+      break;
+    }
+    chunks.push(value);
+    state.size += value.byteLength;
+  }
+  await reader.cancel().catch(() => {});
+
+  const bytes = new Uint8Array(state.size);
+
+  chunks.reduce((offset, chunk) => {
+    bytes.set(chunk, offset);
+
+    return offset + chunk.byteLength;
+  }, 0);
+
+  return new TextDecoder().decode(bytes.subarray(0, MAX_BYTES));
 };
 
 const getJson = async (fetch, url, signal) => {
@@ -182,7 +256,7 @@ const webFetch = async (fetch, lookup, input, signal) => {
       return `${state.url} loads: HTTP ${response.status}, ${type}.`;
     }
 
-    const body = await response.text();
+    const body = await readCapped(response);
     const title = body.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1];
     const text = /html/.test(type) ? stripTags(body.replace(/<title[^>]*>[\s\S]*?<\/title>/i, '')) : body;
 
@@ -197,18 +271,19 @@ const webFetch = async (fetch, lookup, input, signal) => {
 
 /**
  * @param {{ fetch?: typeof fetch, lookup?: (host: string, options: { all: true }) => Promise<Array<{ address: string }>> }} [deps]
- *   Tests pass both, so nothing reaches the network.
+ *   Tests pass both, so nothing reaches the network. Without `fetch`, web_fetch
+ *   connects only to addresses `lookup` gave and the guard passed.
  * @returns {(tool: string, input: unknown, signal: AbortSignal) => Promise<string>}
  */
-export function webTools({ fetch = globalThis.fetch, lookup = dnsLookup } = {}) {
+export function webTools({ fetch, lookup = dnsLookup } = {}) {
   return async (tool, input, signal) => {
     switch (tool) {
       case 'web_search':
-        return webSearch(fetch, input, signal);
+        return webSearch(fetch ?? globalThis.fetch, input, signal);
       case 'image_search':
-        return imageSearch(fetch, input, signal);
+        return imageSearch(fetch ?? globalThis.fetch, input, signal);
       case 'web_fetch':
-        return webFetch(fetch, lookup, input, signal);
+        return webFetch(fetch ?? pinnedFetch(lookup), lookup, input, signal);
       default:
         throw new Error(`Unknown web tool: ${tool}`);
     }

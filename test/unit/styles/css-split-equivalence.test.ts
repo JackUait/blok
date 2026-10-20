@@ -930,8 +930,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // assistant.css + colors.css: the Ask AI live preview's holder gap, overlay box, heading parity rules,
     // shimmer slots, word blur-in and violet tail, plus their light and dark tokens (2026-10-20).
     const ASSISTANT_LIVE_PREVIEW_BYTES = 3_831;
-    // assistant.css: a block being rewritten by Ask AI hides its content; nested child blocks stay visible (2026-10-20).
-    const ASSISTANT_REWRITE_PREVIEW_BYTES = 486;
+    // assistant.css: a block being rewritten by Ask AI hides its text fields; nested child blocks stay visible (2026-10-20).
+    const ASSISTANT_REWRITE_PREVIEW_BYTES = 532;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

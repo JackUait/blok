@@ -524,6 +524,75 @@ describe('createLivePreview', () => {
       expect(state.holders.some((holder) => holder.hasAttribute('data-blok-ai-gap'))).toBe(false);
     });
 
+    it('shows the text after a range that settles once words have landed', () => {
+      const preview = make();
+
+      field(state.holders[0], 'abc def');
+      // `range` after `with`: words land as a whole replace first.
+      preview.update('c1', '{"commands":[{"name":"text.replace","args":{"id":"b1","with":"one two"');
+      vi.advanceTimersByTime(35 * 3);
+      expect(words(state.layer)).toEqual(['one']);
+
+      preview.update('c1', execute({ name: 'text.replace', args: { id: 'b1', with: 'one two', range: { start: 0, end: 3 } } }));
+      vi.advanceTimersByTime(35 * 3);
+
+      expect(boxText()).toBe('one two def');
+    });
+
+    it('skips a block whose child blocks show, so nothing draws over them', () => {
+      const preview = make();
+      const b1 = state.holders[0];
+      const input = field(b1, 'Title');
+      const child = document.createElement('div');
+
+      child.setAttribute('data-blok-element', '');
+      input.after(child);
+      preview.update('c1', execute({ name: 'text.replace', args: { id: 'b1', with: 'A new title' } }));
+
+      expect(state.layer.querySelector(PREVIEW)).toBeNull();
+      expect(b1.hasAttribute(REWRITING)).toBe(false);
+      expect(b1.hasAttribute('data-blok-ai-gap')).toBe(false);
+    });
+
+    it('previews a block whose child blocks are collapsed', () => {
+      const preview = make();
+      const b1 = state.holders[0];
+      const input = field(b1, 'Title');
+      const child = document.createElement('div');
+
+      child.setAttribute('data-blok-element', '');
+      child.classList.add('hidden');
+      input.after(child);
+      preview.update('c1', execute({ name: 'text.replace', args: { id: 'b1', with: 'A new title' } }));
+
+      expect(b1.hasAttribute(REWRITING)).toBe(true);
+    });
+
+    it.each([
+      ['a fractional offset', { start: 0.5, end: 2 }],
+      ['occurrence 0', { find: 'cat', occurrence: 0 }],
+      ['a fractional occurrence', { find: 'cat', occurrence: 1.5 }],
+    ])('shows no preview for a range the executor rejects: %s', (_label, range) => {
+      const preview = make();
+      const b1 = state.holders[0];
+
+      field(b1, 'one cat');
+      preview.update('c1', execute({ name: 'text.replace', args: { id: 'b1', range, with: 'dog' } }));
+
+      expect(b1.hasAttribute(REWRITING)).toBe(false);
+      expect(state.layer.querySelector(PREVIEW)).toBeNull();
+    });
+
+    it('block.update with rich segments in data.text leaves the block alone', () => {
+      const preview = make();
+      const b2 = state.holders[1];
+
+      field(b2, 'Before');
+      preview.update('c1', execute({ name: 'block.update', args: { id: 'b2', data: { text: [{ text: 'After' }] } } }));
+
+      expect(b2.hasAttribute(REWRITING)).toBe(false);
+    });
+
     it('block.update with data.text previews like a whole replace', () => {
       const preview = make();
       const b2 = state.holders[1];

@@ -314,7 +314,7 @@ class Line {
   }
 
   private draw(): void {
-    const shape = `${this.spec.kind}:${this.spec.level}:${this.spec.style}:${this.ordinal}:${this.spec.before ?? ''}`;
+    const shape = `${this.spec.kind}:${this.spec.level}:${this.spec.style}:${this.ordinal}:${this.spec.before ?? ''}:${this.spec.after ?? ''}`;
     // A range rewrite shows the text around the range at once.
     const framed = this.spans.length > 0 || Boolean(this.spec.before) || Boolean(this.spec.after);
 
@@ -403,6 +403,7 @@ const markPreviewBox = (box: HTMLElement): void => {
 /** The items of one call that sit in one gap, drawn in one overlay box. */
 class Group {
   public readonly box = document.createElement('div');
+  private column: HTMLElement | null = null;
 
   constructor(public readonly holder: HTMLElement, public readonly side: GapSide) {
     const computed = getComputedStyle(holder);
@@ -431,7 +432,9 @@ class Group {
     const offset = reserveGap(this.holder, key, height, this.side);
     const rect = this.holder.getBoundingClientRect();
     // The real column: the alignment rules move it inside a wider holder.
-    const column = contentColumn(this.holder).getBoundingClientRect();
+    this.column ??= contentColumn(this.holder);
+
+    const column = this.column.getBoundingClientRect();
     const top = this.side === 'end'
       ? rect.bottom - layer.top + offset
       : rect.top - layer.top - gapSize(this.holder, 'start') + offset;
@@ -500,11 +503,14 @@ const rangeOf = (value: unknown): RewriteRange | null => {
   if (!isRecord(value)) {
     return null;
   }
-  if (typeof value.start === 'number' && typeof value.end === 'number') {
-    return { start: value.start, end: value.end };
+  if (Number.isInteger(value.start) && Number.isInteger(value.end)) {
+    return { start: Number(value.start), end: Number(value.end) };
   }
-  if (typeof value.find === 'string' && value.find.trim() !== '') {
-    return { find: value.find, occurrence: typeof value.occurrence === 'number' ? value.occurrence : 1 };
+  // The executor rejects an occurrence that is not a whole number from 1.
+  const occurrence = value.occurrence ?? 1;
+
+  if (typeof value.find === 'string' && value.find.trim() !== '' && Number.isInteger(occurrence) && Number(occurrence) >= 1) {
+    return { find: value.find, occurrence: Number(occurrence) };
   }
 
   return null;
@@ -551,7 +557,7 @@ const rewriteOf = (command: PartialCommand): RewriteSpec | null => {
 
     return { id: args.id, field, strictField: field !== undefined, range, text: richText(args.with, complete), complete };
   }
-  if (name === 'block.update' && isRecord(args.data) && 'text' in args.data) {
+  if (name === 'block.update' && isRecord(args.data) && typeof args.data.text === 'string') {
     const complete = settled(args, 'data', done) || settled(args.data, 'text', done);
 
     // Only `text`: another string field (a list style, a url) is not shown text.
@@ -562,6 +568,14 @@ const rewriteOf = (command: PartialCommand): RewriteSpec | null => {
 };
 
 const EDITABLE = '[contenteditable]:not([contenteditable="false"])';
+
+/** A collapsed toggle hides its child holders with the `hidden` class. */
+const showsChildren = (holder: HTMLElement): boolean =>
+  [...holder.querySelectorAll<HTMLElement>(`[${DATA_ATTR.element}]`)].some((child) =>
+    child.parentElement?.closest(`[${DATA_ATTR.element}]`) === holder
+    && !child.hidden
+    && !child.classList.contains('hidden')
+    && (typeof child.checkVisibility !== 'function' || child.checkVisibility()));
 
 const fieldInput = (deps: LivePreviewDeps, holder: HTMLElement, spec: RewriteSpec): HTMLElement | null => {
   if (deps.inputOf) {
@@ -845,7 +859,8 @@ class CallPreview {
     // A second rewrite of one block in a call would draw over stale text.
     const taken = [...this.items.values()].some((item) => item.frame?.target.holder === holder);
 
-    if (holder === null || input === null || taken) {
+    // A longer box would cover shown child blocks: the old text stays until commit.
+    if (holder === null || input === null || taken || showsChildren(holder)) {
       return null;
     }
 

@@ -143,13 +143,6 @@ export class AgentAPI extends Module {
   }
 
   /**
-   * Start an assistant run with editor context captured earlier.
-   * @param prompt - the user's request
-   * @param place - from describeUserPlace()
-   * @param thinking - the bar's current pick, read at each prompt
-   * @param hooks - the run's activity, stream, finished calls and applied batches
-   */
-  /**
    * The Ask AI preview drew a word: while the run follows, scroll it into view.
    * @param element - the word just drawn
    */
@@ -159,6 +152,13 @@ export class AgentAPI extends Module {
     }
   }
 
+  /**
+   * Start an assistant run with editor context captured earlier.
+   * @param prompt - the user's request
+   * @param place - from describeUserPlace()
+   * @param thinking - the bar's current pick, read at each prompt
+   * @param hooks - the run's activity, stream, finished calls and applied batches
+   */
   public startRun(
     prompt: string,
     place: UserPlace,

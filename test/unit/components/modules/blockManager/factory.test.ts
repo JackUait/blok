@@ -181,6 +181,8 @@ const createMockAPIMethods = (): APIInterface => ({
     canRedo: vi.fn(() => false),
     clear: vi.fn(),
     track: vi.fn(() => ({ get: vi.fn(), set: vi.fn() })),
+    latestStep: vi.fn(() => undefined),
+    undoStep: vi.fn(() => false),
   },
   ui: {
     isMobile: false,

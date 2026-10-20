@@ -1653,7 +1653,7 @@ export class DatabaseTool implements BlockTool {
         icon: IconTable,
         titleKey: 'tableView',
         name: 'tableView',
-        searchTerms: ['table view', 'table', 'database', 'view'],
+        searchTerms: ['table view', 'database', 'view'],
         section: 'database',
         preview: { render: renderTableViewPreview, descriptionKey: 'tools.database.viewTypeTableDescription' },
         data: { [INITIAL_VIEW_KEY]: 'table' },

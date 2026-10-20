@@ -253,3 +253,14 @@ for (const entry of VIEW_ENTRIES) {
     expect(data).not.toHaveProperty('initialView');
   });
 }
+
+// Notion's bare `/table` was never measured: the grid Table tool keeps the first row.
+test('"/table" still puts the Table block first, with Table view after it', async ({ page }) => {
+  await mount(page, false);
+  await page.locator('[data-blok-id="p0"] [contenteditable]').focus();
+  await page.keyboard.type('/table');
+  const names = page.getByTestId('toolbox-popover').locator('[data-blok-item-name]:visible');
+
+  await expect(names.first()).toHaveAttribute('data-blok-item-name', 'table');
+  await expect(page.getByTestId('toolbox-popover').locator('[data-blok-item-name="tableView"]:visible')).toBeVisible();
+});

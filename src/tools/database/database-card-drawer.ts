@@ -22,7 +22,7 @@ import { openCoverPicker, validateCoverFile } from '../audio/cover-picker';
 import type { CoverPickerHandle } from '../audio/cover-picker';
 import { safeImageSrc } from '../../components/utils/sanitize-url';
 import { isEscapeConsumed } from '../../components/utils/consumed-escape';
-import { getElementDirection } from '../../components/utils/direction';
+import { getElementDirection, logicalArrow } from '../../components/utils/direction';
 import { prefersReducedMotion } from '../../components/utils/reduced-motion';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { DatabasePropertyTypePopover } from './database-property-type-popover';
@@ -58,6 +58,16 @@ const DRAWER_TRANSITION_FALLBACK_MS = 300;
 const DETAILS_DOCK_WIDTH = 385;
 /** Space between the narrowed full page and the panel. Blok's; Notion's page padding was 96px. */
 const DETAILS_DOCK_GAP = 24;
+/** Side peek width and drag limits (research/22 §10). */
+const PEEK_WIDTH = 756;
+const PEEK_MIN_WIDTH = 564;
+const PEEK_MAX_WIDTH = 1008;
+/** The side peek's details panel. It widens the peek by its own width. Must match database.css. */
+const PEEK_DETAILS_WIDTH = 280;
+/** Arrow-key step. The column resizer's. */
+const PEEK_RESIZE_STEP = 16;
+/** Notion's persistence was not measured: Blok keeps it per viewer, for every database. */
+const PEEK_WIDTH_KEY = 'blok:database-peek-width';
 /** Notion's pin arrows scroll 400px per click (research/09 §4). */
 const PIN_SCROLL_STEP = 400;
 
@@ -335,6 +345,14 @@ const readStorage = (key: string | null): string | null => {
   }
 };
 
+const clampPeekWidth = (width: number): number => Math.round(Math.min(PEEK_MAX_WIDTH, Math.max(PEEK_MIN_WIDTH, width)));
+
+const storedPeekWidth = (): number => {
+  const stored = Number.parseFloat(readStorage(PEEK_WIDTH_KEY) ?? '');
+
+  return Number.isFinite(stored) ? clampPeekWidth(stored) : PEEK_WIDTH;
+};
+
 const isEmptyValue = (value: PropertyValue): boolean =>
   value === null || value === '' || (Array.isArray(value) && value.length === 0);
 
@@ -456,6 +474,9 @@ export class DatabaseCardDrawer {
   private propertyLabels = true;
   /** "View details". Closed on every open, as in Notion (research/09 §9). */
   private detailsOpen = false;
+  /** The side peek's width, with the panel's 280px while it widens the peek. */
+  private peekWidth = PEEK_WIDTH;
+  private peekWidened = false;
   /** Folds of this session. Local storage holds them across reloads when it can (plan Q3). */
   private readonly collapsedSections = new Set<string>();
   private readonly databaseId: string | undefined;
@@ -610,6 +631,8 @@ export class DatabaseCardDrawer {
     exiting?.remove();
 
     this.detailsOpen = false;
+    this.peekWidth = storedPeekWidth();
+    this.peekWidened = false;
     this.currentRowId = row.id;
     this.currentRow = row;
     this.updateActiveCard(row.id);
@@ -698,8 +721,10 @@ export class DatabaseCardDrawer {
     content.appendChild(editorHolder);
 
     drawer.appendChild(content);
+    drawer.appendChild(this.buildPeekResizeHandle(drawer));
     this.wrapper.appendChild(drawer);
     this.drawer = drawer;
+    this.setPeekWidth(this.peekWidth);
     this.renderRegions(row);
     this.applyMode(mode);
 
@@ -939,9 +964,102 @@ export class DatabaseCardDrawer {
     this.currentRow = null;
   }
 
+  /** The 12px col-resize handle on the side peek's inner edge (research/22 §10). */
+  private buildPeekResizeHandle(drawer: HTMLElement): HTMLElement {
+    const handle = document.createElement('div');
+
+    handle.setAttribute('data-blok-database-peek-resize', '');
+    handle.setAttribute('role', 'separator');
+    handle.setAttribute('aria-orientation', 'vertical');
+    // A window splitter is named after the pane it sizes (WAI-ARIA APG).
+    handle.setAttribute('aria-label', this.label('tools.database.openPagesSide'));
+    handle.setAttribute('aria-valuemin', String(PEEK_MIN_WIDTH));
+    handle.setAttribute('aria-valuemax', String(PEEK_MAX_WIDTH));
+    handle.tabIndex = 0;
+
+    handle.addEventListener('keydown', (event) => {
+      const arrow = logicalArrow(event.key, getElementDirection(drawer));
+      const next = ({ Home: PEEK_MIN_WIDTH, End: PEEK_MAX_WIDTH } as Record<string, number | undefined>)[event.key]
+        ?? (arrow === null ? null : this.peekWidth + (arrow === 'backward' ? PEEK_RESIZE_STEP : -PEEK_RESIZE_STEP));
+
+      if (next === null) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      this.setPeekWidth(next, true);
+    });
+
+    handle.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0) {
+        return;
+      }
+      event.preventDefault();
+      if (typeof handle.setPointerCapture === 'function') {
+        handle.setPointerCapture(event.pointerId);
+      }
+      // The page beside the peek follows the pointer at once, not over its 200ms ease.
+      this.peekHost?.setAttribute('data-blok-database-peek-resizing', '');
+      const onMove = (move: PointerEvent): void => {
+        const rect = drawer.getBoundingClientRect();
+
+        this.setPeekWidth(getElementDirection(drawer) === 'rtl' ? move.clientX - rect.left : rect.right - move.clientX);
+      };
+      const onEnd = (): void => {
+        handle.removeEventListener('pointermove', onMove);
+        handle.removeEventListener('pointerup', onEnd);
+        handle.removeEventListener('pointercancel', onEnd);
+        this.peekHost?.removeAttribute('data-blok-database-peek-resizing');
+        this.savePeekWidth();
+      };
+
+      handle.addEventListener('pointermove', onMove);
+      handle.addEventListener('pointerup', onEnd);
+      handle.addEventListener('pointercancel', onEnd);
+    });
+
+    return handle;
+  }
+
+  private setPeekWidth(width: number, save = false): void {
+    this.peekWidth = clampPeekWidth(width);
+    this.drawer?.style.setProperty('--_blok-peek-width', `${this.peekWidth}px`);
+    this.drawer?.querySelector('[data-blok-database-peek-resize]')?.setAttribute('aria-valuenow', String(this.peekWidth));
+    if (this.mode === 'side' && this.drawer?.hasAttribute('data-open') === true) {
+      this.narrowPeekHost();
+    }
+    if (save) {
+      this.savePeekWidth();
+    }
+  }
+
+  /** Saves the width the peek has with the panel closed, so a reopened peek is not left wide. */
+  private savePeekWidth(): void {
+    const width = this.peekWidened ? clampPeekWidth(this.peekWidth - PEEK_DETAILS_WIDTH) : this.peekWidth;
+
+    try {
+      window.localStorage.setItem(PEEK_WIDTH_KEY, String(width));
+    } catch {
+      // Blocked storage: the width holds for this session only.
+    }
+  }
+
   /**
-   * Insets the page by the part the drawer (half the viewport, at the inline
-   * end) covers. database.css turns the inset into padding that eases with the slide.
+   * An open details panel widens the side peek by its 280px, up to the max.
+   * Closing takes 280px back, down to the min: from 756 it lands on 728, as measured (research/22 §10).
+   */
+  private syncPeekWidening(drawer: HTMLElement): void {
+    const widen = this.mode === 'side' && drawer.hasAttribute('data-details-open');
+
+    if (widen === this.peekWidened) {
+      return;
+    }
+    this.peekWidened = widen;
+    this.setPeekWidth(this.peekWidth + (widen ? PEEK_DETAILS_WIDTH : -PEEK_DETAILS_WIDTH), !widen);
+  }
+
+  /**
+   * Insets the page by the part the drawer (at the inline end) covers. database.css turns the inset into padding that eases with the slide.
    */
   private narrowPeekHost(): void {
     const host = this.findPeekHost?.() ?? null;
@@ -949,9 +1067,9 @@ export class DatabaseCardDrawer {
     if (host === null) {
       return;
     }
-    const half = window.innerWidth / 2;
+    const width = Math.min(this.peekWidth, window.innerWidth);
     const rect = host.getBoundingClientRect();
-    const covered = getElementDirection(this.wrapper) === 'rtl' ? half - rect.left : rect.right - half;
+    const covered = getElementDirection(this.wrapper) === 'rtl' ? width - rect.left : rect.right - (window.innerWidth - width);
 
     this.peekHost = host;
     host.setAttribute('data-blok-database-peek', '');
@@ -960,6 +1078,7 @@ export class DatabaseCardDrawer {
 
   private releasePeekHost(): void {
     this.peekHost?.removeAttribute('data-blok-database-peek');
+    this.peekHost?.removeAttribute('data-blok-database-peek-resizing');
     this.peekHost?.style.removeProperty('--_blok-peek-inset');
     this.peekHost = null;
   }
@@ -1615,6 +1734,7 @@ export class DatabaseCardDrawer {
       close.setAttribute('aria-label', this.label(mode === 'full' ? 'tools.database.peekBack' : 'tools.database.close'));
     }
     drawer.querySelector<HTMLElement>('[data-blok-database-peek-expand]')?.toggleAttribute('hidden', mode === 'full');
+    drawer.querySelector<HTMLElement>('[data-blok-database-peek-resize]')?.toggleAttribute('hidden', mode !== 'side');
     this.syncStepButtons();
     this.syncActionsButton();
     this.syncFavoriteButton();
@@ -2252,6 +2372,7 @@ export class DatabaseCardDrawer {
     if (drawer === null) {
       return;
     }
+    this.syncPeekWidening(drawer);
     drawer.style.removeProperty('padding-inline-end');
     const toolbar = drawer.querySelector<HTMLElement>('[data-blok-database-drawer-toolbar]');
 

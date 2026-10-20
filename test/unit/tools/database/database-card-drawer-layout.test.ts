@@ -303,6 +303,51 @@ describe('DatabaseCardDrawer — page layout', () => {
     expect(q('[data-blok-database-drawer]')?.hasAttribute('data-details-open')).toBe(false);
   });
 
+  // research/22 §10: opening the panel widens the side peek by 280px up to 1008; closing takes 280px back, down to 564.
+  it('widens the side peek by the 280px panel while it is open', () => {
+    window.localStorage.removeItem('blok:database-peek-width');
+    const options = createOptions({ schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-due', place: 'panel' }] }) });
+    const drawer = new DatabaseCardDrawer(options);
+    const width = (): string => q('[data-blok-database-drawer]')?.style.getPropertyValue('--_blok-peek-width') ?? '';
+    const handle = (): HTMLElement | null => q('[data-blok-database-peek-resize]');
+
+    drawer.open(ROW);
+    handle()?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+    expect(width()).toBe('564px');
+    q('[data-blok-database-drawer-details-toggle]')?.click();
+    expect(width()).toBe('844px');
+    expect(handle()?.getAttribute('aria-valuenow')).toBe('844');
+    q('[data-blok-database-peek-page-info]')?.click();
+    expect(width()).toBe('564px');
+
+    // From 756 the peek stops at 1008, and closing settles at 728 (as measured).
+    for (let i = 0; i < 12; i++) handle()?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect(width()).toBe('756px');
+    q('[data-blok-database-drawer-details-toggle]')?.click();
+    expect(width()).toBe('1008px');
+    q('[data-blok-database-drawer-details-toggle]')?.click();
+    expect(width()).toBe('728px');
+    expect(window.localStorage.getItem('blok:database-peek-width')).toBe('728');
+    drawer.destroy();
+    window.localStorage.removeItem('blok:database-peek-width');
+  });
+
+  it('gives the 280px back when another page opens with the panel closed', () => {
+    window.localStorage.removeItem('blok:database-peek-width');
+    const options = createOptions({ schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-due', place: 'panel' }] }) });
+    const drawer = new DatabaseCardDrawer(options);
+    const width = (): string => q('[data-blok-database-drawer]')?.style.getPropertyValue('--_blok-peek-width') ?? '';
+
+    drawer.open(ROW);
+    q('[data-blok-database-drawer-details-toggle]')?.click();
+    expect(width()).toBe('1008px');
+    drawer.open({ ...ROW, id: 'row-2' });
+    expect(q('[data-blok-database-drawer-details]')?.hidden).toBe(true);
+    expect(width()).toBe('728px');
+    drawer.destroy();
+    window.localStorage.removeItem('blok:database-peek-width');
+  });
+
   // research/09 §9: closed on every navigation measured; it does not persist.
   // research/09 §9: the saved Full width widens the full page; a draft does not (the builder canvas never changes).
   it('marks the page full width from the saved layout only, and follows Apply', () => {

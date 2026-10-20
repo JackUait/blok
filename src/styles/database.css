@@ -935,16 +935,16 @@
 }
 
 /**
- * Side peek: half the viewport at the inline end, sliding in with translateX
- * over 200ms ease (research/08). database-card-drawer.ts sets data-open a
- * frame after mount and waits for this transition before removing it.
+ * Side peek: 756px at the inline end (research/22 §10), sliding in with translateX
+ * over 200ms ease (research/08). database-card-drawer.ts sets the width and data-open
+ * a frame after mount, and waits for this transition before removing it.
  */
 [data-blok-database-drawer] {
   position: fixed;
   top: 0;
   inset-inline-end: 0;
   height: 100%;
-  width: 50vw;
+  width: min(var(--_blok-peek-width, 756px), 100vw);
   z-index: var(--blok-z-drawer);
   overflow: hidden;
   display: flex;
@@ -962,6 +962,33 @@
 
 [data-blok-database-drawer][data-open] {
   transform: none;
+}
+
+/* research/22 §10: a 12px col-resize handle on the inner edge. Its hover look was not measured. */
+[data-blok-database-peek-resize] {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  z-index: 1;
+  inline-size: 12px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+[data-blok-database-peek-resize][hidden] {
+  display: none;
+}
+
+[data-blok-database-peek-resize]:focus-visible {
+  outline: none;
+}
+
+[data-blok-database-peek-resize]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
+  box-shadow: inset 2px 0 0 var(--blok-focus-ring);
+}
+
+[dir="rtl"] [data-blok-database-peek-resize]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
+  box-shadow: inset -2px 0 0 var(--blok-focus-ring);
 }
 
 /* Center peek: a 960px modal, 12px radius, 72px from the top, no open animation (research/08). */
@@ -1125,6 +1152,10 @@
 [data-blok-interface=blok][data-blok-database-peek] {
   padding-inline-end: var(--_blok-peek-inset, 0px) !important;
   transition: padding-inline-end 200ms ease !important;
+}
+
+[data-blok-interface=blok][data-blok-database-peek][data-blok-database-peek-resizing] {
+  transition: none !important;
 }
 
 /**
@@ -3529,9 +3560,36 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   background-color: var(--blok-popover-bg);
 }
 
-/* 60px is the content's own inline padding. */
+/* The panel plus the content's own 60px inline padding. */
+[data-blok-database-drawer] {
+  --_blok-peek-details-inset: calc(280px + 60px);
+}
+
 [data-blok-database-drawer][data-peek-mode="center"][data-details-open] [data-blok-database-drawer-content] {
-  padding-inline-end: calc(280px + 60px);
+  padding-inline-end: var(--_blok-peek-details-inset);
+}
+
+/*
+  research/22 §10, side peek: a 280px column at the inline end, under the toolbar.
+  The drawer widens by 280px (PEEK_DETAILS_WIDTH), so the content keeps its width.
+  844px = the 564px minimum plus the panel. Notion's breakpoint was not measured;
+  below it Blok keeps the panel beside or under the group.
+*/
+@media (min-width: 844px) {
+  [data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-details] {
+    position: absolute;
+    inset-block-start: var(--_blok-peek-toolbar-size, 0px);
+    inset-block-end: 0;
+    inset-inline-end: 0;
+    inline-size: 280px;
+    margin: 0;
+    overflow-y: auto;
+    border-inline-start: 1px solid var(--blok-database-drawer-border);
+    border-radius: 0;
+    background-color: var(--blok-database-peek-bg);
+  }
+
+  [data-blok-database-drawer][data-peek-mode="side"][data-details-open] [data-blok-database-drawer-content] { padding-inline-end: var(--_blok-peek-details-inset); }
 }
 
 /* research/10 §10: Close panel at the top, then "Properties" 13px/500 grey. */

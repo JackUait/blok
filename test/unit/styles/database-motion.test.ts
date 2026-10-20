@@ -81,10 +81,10 @@ describe('view tab switch', () => {
 });
 
 describe('side peek', () => {
-  it('is half the viewport and slides with translateX over 200ms ease', () => {
+  it('takes the width the drawer sets, 756px by default, and slides with translateX over 200ms ease', () => {
     const drawer = body(outsideReducedMotion, '[data-blok-database-drawer]');
 
-    expect(drawer).toContain('width: 50vw');
+    expect(drawer).toContain('width: min(var(--_blok-peek-width, 756px), 100vw)');
     expect(drawer).toContain('transform: translateX(100%)');
     expect(drawer).toContain('transition: transform 200ms ease');
     expect(drawer).not.toMatch(/transition: width/);
@@ -101,6 +101,11 @@ describe('side peek', () => {
 
     expect(host).toContain('padding-inline-end: var(--_blok-peek-inset, 0px) !important');
     expect(host).toContain('transition: padding-inline-end 200ms ease !important');
+  });
+
+  it('lets the page follow a resize drag at once', () => {
+    expect(body(outsideReducedMotion, '[data-blok-interface=blok][data-blok-database-peek][data-blok-database-peek-resizing]'))
+      .toContain('transition: none !important');
   });
 
   it('neither slides nor narrows gradually under reduced motion', () => {

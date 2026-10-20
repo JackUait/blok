@@ -453,8 +453,8 @@ describe('Accessibility Law', () => {
           .map(() => rel)
       );
 
-      // The spacer grip and the column resizer — both drag handles with keyboard nudging.
-      expect(new Set(focusable)).toEqual(new Set(['tools/spacer/index.ts', 'tools/columns-shared.ts']));
+      // The spacer grip, the column resizer and the side peek's edge — drag handles with keyboard nudging.
+      expect(new Set(focusable)).toEqual(new Set(['tools/spacer/index.ts', 'tools/columns-shared.ts', 'tools/database/database-card-drawer.ts']));
     });
   });
 

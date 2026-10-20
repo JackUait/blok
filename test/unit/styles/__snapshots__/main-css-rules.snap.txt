@@ -4727,7 +4727,7 @@ span[data-blok-slash-search] {
   top: 0;
   inset-inline-end: 0;
   height: 100%;
-  width: 50vw;
+  width: min(var(--_blok-peek-width, 756px), 100vw);
   z-index: var(--blok-z-drawer);
   overflow: hidden;
   display: flex;
@@ -4744,6 +4744,32 @@ span[data-blok-slash-search] {
 
 [data-blok-database-drawer][data-open] {
   transform: none;
+}
+
+[data-blok-database-peek-resize] {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  z-index: 1;
+  inline-size: 12px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+[data-blok-database-peek-resize][hidden] {
+  display: none;
+}
+
+[data-blok-database-peek-resize]:focus-visible {
+  outline: none;
+}
+
+[data-blok-database-peek-resize]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
+  box-shadow: inset 2px 0 0 var(--blok-focus-ring);
+}
+
+[dir="rtl"] [data-blok-database-peek-resize]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
+  box-shadow: inset -2px 0 0 var(--blok-focus-ring);
 }
 
 [data-blok-database-drawer][data-peek-mode="center"] {
@@ -4864,6 +4890,10 @@ span[data-blok-slash-search] {
 [data-blok-interface=blok][data-blok-database-peek] {
   padding-inline-end: var(--_blok-peek-inset, 0px) !important;
   transition: padding-inline-end 200ms ease !important;
+}
+
+[data-blok-interface=blok][data-blok-database-peek][data-blok-database-peek-resizing] {
+  transition: none !important;
 }
 
 [data-blok-database-drawer-toolbar] {
@@ -6975,8 +7005,29 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   background-color: var(--blok-popover-bg);
 }
 
+[data-blok-database-drawer] {
+  --_blok-peek-details-inset: calc(280px + 60px);
+}
+
 [data-blok-database-drawer][data-peek-mode="center"][data-details-open] [data-blok-database-drawer-content] {
-  padding-inline-end: calc(280px + 60px);
+  padding-inline-end: var(--_blok-peek-details-inset);
+}
+
+[@media (min-width: 844px)] [data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-details] {
+  position: absolute;
+  inset-block-start: var(--_blok-peek-toolbar-size, 0px);
+  inset-block-end: 0;
+  inset-inline-end: 0;
+  inline-size: 280px;
+  margin: 0;
+  overflow-y: auto;
+  border-inline-start: 1px solid var(--blok-database-drawer-border);
+  border-radius: 0;
+  background-color: var(--blok-database-peek-bg);
+}
+
+[@media (min-width: 844px)] [data-blok-database-drawer][data-peek-mode="side"][data-details-open] [data-blok-database-drawer-content] {
+  padding-inline-end: var(--_blok-peek-details-inset);
 }
 
 [data-blok-database-drawer-details-header] {

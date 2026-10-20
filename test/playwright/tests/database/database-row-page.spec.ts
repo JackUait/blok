@@ -231,11 +231,12 @@ test.describe('page body as child blocks', () => {
 });
 
 test.describe('peek modes', () => {
-  test('a table opens a side peek half the viewport wide', async ({ page }) => {
+  // research/22 §10: 756px by default.
+  test('a table opens a 756px side peek', async ({ page }) => {
     await mount(page, blocks());
     await openRow(page, 'r1');
     await expect(peek(page)).toHaveAttribute('data-peek-mode', 'side');
-    await expect.poll(async () => Math.round((await peek(page).boundingBox())?.width ?? 0)).toBe(700);
+    await expect.poll(async () => Math.round((await peek(page).boundingBox())?.width ?? 0)).toBe(756);
   });
 
   test('a center peek is a 960px modal over a 60% backdrop, with no slide', async ({ page }) => {
@@ -302,6 +303,79 @@ test.describe('peek modes', () => {
 
     await page.keyboard.press(await stepKey(page, 'previous'));
     await expect(peekTitle(page)).toHaveValue('Bravo');
+  });
+});
+
+// research/22 §10: the inner edge resizes the side peek between 564 and 1008px; labels stay 160px.
+test.describe('side peek width', () => {
+  const peekWidth = async (page: Page): Promise<number> => Math.round((await peek(page).boundingBox())?.width ?? 0);
+  const labelWidth = async (page: Page): Promise<number> =>
+    Math.round((await peek(page).locator('[data-blok-database-drawer-prop-head]').first().boundingBox())?.width ?? 0);
+  const dragEdgeTo = async (page: Page, x: number): Promise<void> => {
+    const handle = await peek(page).getByRole('separator', { name: 'Side peek' }).boundingBox();
+
+    if (handle === null) throw new Error('no resize handle');
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + 200);
+    await page.mouse.down();
+    await page.mouse.move(x, handle.y + 200, { steps: 8 });
+    await page.mouse.up();
+  };
+
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 1512, height: 900 });
+  });
+
+  test('drags between 564 and 1008px, keeps the label column at 160px, and reopens at the last width', async ({ page }) => {
+    await mount(page, blocks());
+    await openRow(page, 'r1');
+    await expect.poll(() => peekWidth(page)).toBe(756);
+    // The width is set at once; wait for the slide-in before aiming at the edge.
+    await expect.poll(async () => Math.round((await peek(page).boundingBox())?.x ?? 0)).toBe(1512 - 756);
+    const handle = peek(page).getByRole('separator', { name: 'Side peek' });
+
+    await expect(handle).toHaveAttribute('aria-valuenow', '756');
+    expect(await handle.evaluate((el) => getComputedStyle(el).cursor)).toBe('col-resize');
+    expect(Math.round((await handle.boundingBox())?.width ?? 0)).toBe(12);
+    expect(await labelWidth(page)).toBe(160);
+
+    await dragEdgeTo(page, 1300);
+    await expect.poll(() => peekWidth(page)).toBe(564);
+    await expect(handle).toHaveAttribute('aria-valuenow', '564');
+    expect(await labelWidth(page)).toBe(160);
+
+    await dragEdgeTo(page, 100);
+    await expect.poll(() => peekWidth(page)).toBe(1008);
+    expect(await labelWidth(page)).toBe(160);
+
+    await dragEdgeTo(page, 1512 - 800);
+    await expect.poll(() => peekWidth(page)).toBe(800);
+    await page.keyboard.press('Escape');
+    await expect(peek(page)).toHaveCount(0);
+    await openRow(page, 'r2');
+    await expect.poll(() => peekWidth(page)).toBe(800);
+  });
+
+  test('resizes from the keyboard', async ({ page }) => {
+    await mount(page, blocks());
+    await openRow(page, 'r1');
+    const handle = peek(page).getByRole('separator', { name: 'Side peek' });
+
+    await handle.focus();
+    await page.keyboard.press('ArrowLeft');
+    await expect.poll(() => peekWidth(page)).toBe(772);
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await expect.poll(() => peekWidth(page)).toBe(740);
+    await page.keyboard.press('End');
+    await expect(handle).toHaveAttribute('aria-valuenow', '1008');
+    await expect.poll(() => peekWidth(page)).toBe(1008);
+  });
+
+  test('has no resize handle in the center peek', async ({ page }) => {
+    await mount(page, blocks({ openPagesIn: 'center' }));
+    await openRow(page, 'r1');
+    await expect(peek(page)).toHaveAttribute('data-peek-mode', 'center');
+    await expect(peek(page).getByRole('separator', { name: 'Side peek' })).toBeHidden();
   });
 });
 

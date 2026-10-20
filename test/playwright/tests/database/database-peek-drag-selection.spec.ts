@@ -178,10 +178,11 @@ test.describe('side peek', () => {
     await mount(page, blocks());
     const database = page.locator('[data-blok-database-wrapper]');
     const before = await database.boundingBox();
-    const half = 700;
+    // The 756px peek's inner edge at a 1400px window (research/22 §10).
+    const edge = 1400 - 756;
 
-    expect(before?.x).toBeLessThan(half);
-    expect((before?.x ?? 0) + (before?.width ?? 0)).toBeGreaterThan(half);
+    expect(before?.x).toBeLessThan(edge);
+    expect((before?.x ?? 0) + (before?.width ?? 0)).toBeGreaterThan(edge);
 
     await tableRow(page, 'r1').hover();
     await tableRow(page, 'r1').locator('[data-blok-database-table-open]').click();
@@ -191,9 +192,9 @@ test.describe('side peek', () => {
       const box = await database.boundingBox();
 
       return box === null ? Infinity : Math.round(box.x + box.width);
-    }).toBeLessThanOrEqual(half + 1);
+    }).toBeLessThanOrEqual(edge + 1);
     expect((await database.boundingBox())?.width).toBeLessThan(before?.width ?? 0);
-    expect(Math.round((await page.locator('[data-blok-database-drawer]').boundingBox())?.width ?? 0)).toBe(half);
+    expect(Math.round((await page.locator('[data-blok-database-drawer]').boundingBox())?.width ?? 0)).toBe(756);
 
     await page.keyboard.press('Escape');
     await expect.poll(async () => Math.round((await database.boundingBox())?.width ?? 0)).toBe(Math.round(before?.width ?? 0));

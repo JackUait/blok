@@ -85,7 +85,36 @@ describe('database row page layout css', () => {
     expect(panel).toContain('inline-size: 280px');
     expect(panel).toContain('border-inline-start: 1px solid');
     expect(ruleBody('[data-blok-database-drawer][data-peek-mode="center"][data-details-open] [data-blok-database-drawer-content]'))
-      .toContain('padding-inline-end: calc(280px + 60px)');
+      .toContain('padding-inline-end: var(--_blok-peek-details-inset)');
+    expect(database).toContain('--_blok-peek-details-inset: calc(280px + 60px)');
+  });
+
+  // research/22 §10: side peek, a 280px panel at the inline end under the toolbar; the content keeps its width.
+  it('docks the details panel inside the side peek', () => {
+    const wide = database.match(/@media \(min-width: 844px\) \{([\s\S]*?\}) \}/)?.[1] ?? '';
+    const panel = wide.match(/\[data-blok-database-drawer\]\[data-peek-mode="side"\] \[data-blok-database-drawer-details\] \{([^}]*)\}/)?.[1] ?? '';
+
+    expect(panel).toContain('position: absolute');
+    expect(panel).toContain('inset-block-start: var(--_blok-peek-toolbar-size, 0px)');
+    expect(panel).toContain('inset-inline-end: 0');
+    expect(panel).toContain('inline-size: 280px');
+    expect(panel).toContain('border-inline-start: 1px solid');
+    expect(panel).toContain('background-color: var(--blok-database-peek-bg)');
+    expect(wide).toContain('[data-blok-database-drawer][data-peek-mode="side"][data-details-open] [data-blok-database-drawer-content] { padding-inline-end: var(--_blok-peek-details-inset); }');
+  });
+
+  // research/22 §10: a 12px col-resize handle on the inner edge; a ring only after keyboard use.
+  it('draws the side peek resize handle on its inner edge', () => {
+    const handle = ruleBody('[data-blok-database-peek-resize]');
+
+    expect(handle).toContain('position: absolute');
+    expect(handle).toContain('inset-inline-start: 0');
+    expect(handle).toContain('inline-size: 12px');
+    expect(handle).toContain('cursor: col-resize');
+    expect(ruleBody('[data-blok-database-peek-resize][hidden]')).toContain('display: none');
+    expect(ruleBody('[data-blok-database-peek-resize]:focus-visible')).toContain('outline: none');
+    expect(ruleBody('[data-blok-database-peek-resize]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *)'))
+      .toContain('var(--blok-focus-ring)');
   });
 
   it('puts the icon in the label column, which keeps the label width', () => {

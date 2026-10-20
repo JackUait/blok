@@ -238,18 +238,18 @@ describe('DatabaseCardDrawer', () => {
       document.body.innerHTML = '';
     });
 
-    it('insets the page by the part the half-viewport drawer covers', () => {
+    it('insets the page by the part the 756px drawer covers', () => {
       const { host, drawer } = openWithHost({ left: 100, right: 900 });
 
-      // The drawer covers x 500..1000; the page reaches 900, so 400px is under it.
+      // The drawer covers x 244..1000; the page reaches 900, so 656px is under it.
       expect(host.hasAttribute('data-blok-database-peek')).toBe(true);
-      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('400px');
+      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('656px');
 
       drawer.destroy();
     });
 
     it('insets nothing when the page ends before the drawer starts', () => {
-      const { host, drawer } = openWithHost({ left: 0, right: 450 });
+      const { host, drawer } = openWithHost({ left: 0, right: 200 });
 
       expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('0px');
 
@@ -263,8 +263,8 @@ describe('DatabaseCardDrawer', () => {
       options.wrapper.setAttribute('dir', 'rtl');
       drawer.open(makeRow());
 
-      // The drawer covers x 0..500; the page starts at 100, so 400px is under it.
-      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('400px');
+      // The drawer covers x 0..756; the page starts at 100, so 656px is under it.
+      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('656px');
 
       drawer.destroy();
     });
@@ -290,6 +290,156 @@ describe('DatabaseCardDrawer', () => {
 
       expect(host.hasAttribute('data-blok-database-peek')).toBe(false);
       expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('');
+    });
+  });
+
+  // research/22 §10: 756px by default, resizable between 564 and 1008px from its inner edge.
+  describe('side peek width', () => {
+    const KEY = 'blok:database-peek-width';
+
+    const openSide = (wrapper: HTMLElement = document.createElement('div')): { drawer: DatabaseCardDrawer; el: HTMLElement; handle: HTMLElement } => {
+      document.body.appendChild(wrapper);
+      const drawer = new DatabaseCardDrawer(createOptions({ wrapper }));
+
+      drawer.open(makeRow());
+      const el = wrapper.querySelector<HTMLElement>('[data-blok-database-drawer]');
+      const handle = wrapper.querySelector<HTMLElement>('[data-blok-database-peek-resize]');
+
+      if (el === null || handle === null) throw new Error('no drawer or resize handle');
+
+      return { drawer, el, handle };
+    };
+    const width = (el: HTMLElement): string => el.style.getPropertyValue('--_blok-peek-width');
+    const key = (handle: HTMLElement, name: string): void => {
+      handle.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true }));
+    };
+
+    beforeEach(() => {
+      window.localStorage.removeItem(KEY);
+    });
+
+    afterEach(() => {
+      window.localStorage.removeItem(KEY);
+      document.body.innerHTML = '';
+    });
+
+    it('opens at 756px with a focusable vertical separator on its inner edge', () => {
+      const { el, handle, drawer } = openSide();
+
+      expect(width(el)).toBe('756px');
+      expect(handle.getAttribute('role')).toBe('separator');
+      expect(handle.getAttribute('aria-orientation')).toBe('vertical');
+      expect(handle.getAttribute('aria-valuenow')).toBe('756');
+      expect(handle.getAttribute('aria-valuemin')).toBe('564');
+      expect(handle.getAttribute('aria-valuemax')).toBe('1008');
+      expect(handle.getAttribute('aria-label')).toBe('Side peek');
+      expect(handle.tabIndex).toBe(0);
+      drawer.destroy();
+    });
+
+    it('widens with ArrowLeft and narrows with ArrowRight, clamped by Home and End', () => {
+      const { el, handle, drawer } = openSide();
+
+      key(handle, 'ArrowLeft');
+      expect(width(el)).toBe('772px');
+      expect(handle.getAttribute('aria-valuenow')).toBe('772');
+      key(handle, 'ArrowRight');
+      key(handle, 'ArrowRight');
+      expect(width(el)).toBe('740px');
+      key(handle, 'Home');
+      expect(width(el)).toBe('564px');
+      key(handle, 'ArrowRight');
+      expect(width(el)).toBe('564px');
+      key(handle, 'End');
+      expect(width(el)).toBe('1008px');
+      key(handle, 'ArrowLeft');
+      expect(width(el)).toBe('1008px');
+      drawer.destroy();
+    });
+
+    it('flips the arrows in RTL, where the inner edge is on the right', () => {
+      const wrapper = document.createElement('div');
+
+      wrapper.setAttribute('dir', 'rtl');
+      const { el, handle, drawer } = openSide(wrapper);
+
+      key(handle, 'ArrowRight');
+      expect(width(el)).toBe('772px');
+      key(handle, 'ArrowLeft');
+      key(handle, 'ArrowLeft');
+      expect(width(el)).toBe('740px');
+      drawer.destroy();
+    });
+
+    it('follows the pointer from the inner edge, LTR and RTL', () => {
+      vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1512);
+      const { el, handle, drawer } = openSide();
+
+      vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(new DOMRect(756, 0, 756, 800));
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 756, pointerId: 1, button: 0, bubbles: true }));
+      handle.dispatchEvent(new PointerEvent('pointermove', { clientX: 600, pointerId: 1, bubbles: true }));
+      expect(width(el)).toBe('912px');
+      handle.dispatchEvent(new PointerEvent('pointermove', { clientX: 100, pointerId: 1, bubbles: true }));
+      expect(width(el)).toBe('1008px');
+      handle.dispatchEvent(new PointerEvent('pointerup', { clientX: 100, pointerId: 1, bubbles: true }));
+      expect(window.localStorage.getItem(KEY)).toBe('1008');
+      drawer.destroy();
+
+      const wrapper = document.createElement('div');
+
+      wrapper.setAttribute('dir', 'rtl');
+      window.localStorage.removeItem(KEY);
+      const rtl = openSide(wrapper);
+
+      vi.spyOn(rtl.el, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 756, 800));
+      rtl.handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 756, pointerId: 1, button: 0, bubbles: true }));
+      rtl.handle.dispatchEvent(new PointerEvent('pointermove', { clientX: 600, pointerId: 1, bubbles: true }));
+      expect(width(rtl.el)).toBe('600px');
+      rtl.drawer.destroy();
+    });
+
+    it('keeps the width per viewer and reopens at it', () => {
+      const first = openSide();
+
+      key(first.handle, 'ArrowLeft');
+      expect(window.localStorage.getItem(KEY)).toBe('772');
+      first.drawer.destroy();
+
+      expect(width(openSide().el)).toBe('772px');
+    });
+
+    it('falls back to 756px for a broken value and clamps one out of range', () => {
+      window.localStorage.setItem(KEY, 'wide');
+      expect(width(openSide().el)).toBe('756px');
+      document.body.innerHTML = '';
+      window.localStorage.setItem(KEY, '2000');
+      expect(width(openSide().el)).toBe('1008px');
+    });
+
+    it('still opens at 756px when storage throws', () => {
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('blocked');
+      });
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new Error('blocked');
+      });
+      const { el, handle } = openSide();
+
+      expect(width(el)).toBe('756px');
+      key(handle, 'ArrowLeft');
+      expect(width(el)).toBe('772px');
+    });
+
+    it('hides the handle in the center peek and on a full page', () => {
+      const { drawer, handle } = openSide();
+
+      drawer.open(makeRow(), 'center');
+      expect(handle.hidden).toBe(true);
+      drawer.open(makeRow(), 'full');
+      expect(handle.hidden).toBe(true);
+      drawer.open(makeRow(), 'side');
+      expect(handle.hidden).toBe(false);
+      drawer.destroy();
     });
   });
 

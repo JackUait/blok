@@ -630,38 +630,58 @@ test.describe('row page layout', () => {
     expect(await details.evaluate((el) => getComputedStyle(el).borderInlineStartWidth)).toBe('1px');
   });
 
-  // Side peek geometry was not measured in research/09; Blok keeps the panel beside the group.
-  test('places the details panel to the right of the page properties', async ({ page }) => {
+  // research/22 §10: side peek, a 280px panel at the inline end under the top bar; the peek grows by 280px up to 1008.
+  test('docks the details panel in the side peek and widens the peek by its width', async ({ page }) => {
+    await page.setViewportSize({ width: 1512, height: 900 });
     await mount(page, blocks({ pageLayoutPlacements: [{ id: 'p-owner', place: 'panel' }] }));
     await openRow(page, 'r1');
     const details = peek(page).getByRole('region', { name: 'Details' });
-    const properties = peek(page).locator('[data-blok-database-drawer-props]');
+    const width = async (): Promise<number> => Math.round((await peek(page).boundingBox())?.width ?? 0);
 
+    await expect(details).toBeHidden();
+    await expect.poll(width).toBe(756);
     await peek(page).getByRole('button', { name: 'View details' }).click();
     await expect(details).toBeVisible();
-    await expect(properties).toBeVisible();
-    const bounds = await layoutBounds(page);
+    await expect.poll(width).toBe(1008);
+    const [panel, drawer, toolbar, title] = await Promise.all([
+      details.boundingBox(),
+      peek(page).boundingBox(),
+      peek(page).locator('[data-blok-database-drawer-toolbar]').boundingBox(),
+      peek(page).locator('[data-blok-database-drawer-title]').boundingBox(),
+    ]);
 
-    expect(bounds.panelLeft).toBeGreaterThanOrEqual(bounds.groupRight - 1);
-    expect(bounds.panelTop).toBeLessThan(bounds.groupBottom);
-    await peek(page).getByRole('button', { name: 'Hide details' }).click();
+    expect(panel?.width).toBeCloseTo(280, 0);
+    expect((panel?.x ?? 0) + (panel?.width ?? 0)).toBeCloseTo((drawer?.x ?? 0) + (drawer?.width ?? 0), 0);
+    expect(panel?.y).toBeCloseTo((toolbar?.y ?? 0) + (toolbar?.height ?? 0), 0);
+    expect((title?.x ?? 0) + (title?.width ?? 0)).toBeLessThanOrEqual(panel?.x ?? 0);
+    expect(await details.evaluate((el) => getComputedStyle(el).borderInlineStartWidth)).toBe('1px');
+
+    // From 756 the measured close settles at 728.
+    await peek(page).getByRole('button', { name: 'Page info' }).click();
     await expect(details).toBeHidden();
+    await expect.poll(width).toBe(728);
   });
 
-  test('mirrors the details panel to the left of the page properties in RTL', async ({ page }) => {
+  test('docks the side peek details panel at the left edge in RTL', async ({ page }) => {
+    await page.setViewportSize({ width: 1512, height: 900 });
     await mount(page, blocks({ pageLayoutPlacements: [{ id: 'p-owner', place: 'panel' }] }), 'rtl');
     await openRow(page, 'r1');
     await peek(page).getByRole('button', { name: 'View details' }).click();
-    await expect(peek(page).getByRole('region', { name: 'Details' })).toBeVisible();
-    const bounds = await layoutBounds(page);
+    const details = peek(page).getByRole('region', { name: 'Details' });
 
-    expect(bounds.panelRight).toBeLessThanOrEqual(bounds.groupLeft + 1);
-    expect(bounds.panelTop).toBeLessThan(bounds.groupBottom);
+    await expect(details).toBeVisible();
+    await expect.poll(async () => Math.round((await peek(page).boundingBox())?.width ?? 0)).toBe(1008);
+    const [panel, drawer] = await Promise.all([details.boundingBox(), peek(page).boundingBox()]);
+
+    expect(panel?.x).toBeCloseTo(drawer?.x ?? 0, 0);
+    expect(drawer?.x).toBeCloseTo(0, 0);
+    expect(panel?.width).toBeCloseTo(280, 0);
   });
 
-  // Notion's narrow-width behaviour was not measured; Blok stacks the panel below.
+  // Notion's narrow-width behaviour was not measured; below 844px Blok stacks the panel below.
+  // A peek narrower than its 564px minimum fills the window.
   test('stacks the details panel below the page properties when the page is narrow', async ({ page }) => {
-    await page.setViewportSize({ width: 700, height: 900 });
+    await page.setViewportSize({ width: 560, height: 900 });
     await mount(page, blocks({ pageLayoutPlacements: [{ id: 'p-owner', place: 'panel' }] }));
     await openRow(page, 'r1');
     await peek(page).getByRole('button', { name: 'View details' }).click();

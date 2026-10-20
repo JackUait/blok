@@ -80,13 +80,15 @@ export class EventsDispatcher<EventMap> {
     // A listener that returns a value replaces the payload for the next one.
     // Public api.events behaviour since editor.js; pinned by row-move-to's
     // "replacement-payload forwarding" test. Internal listeners must return nothing.
-    let payload = data;
-
-    for (const callback of this.listenersToInvoke(eventName)) {
+    // The "still subscribed" check runs per listener, so one removed mid-emit is skipped.
+    [...(this.subscribers[eventName] ?? [])].reduce<EventMap[Name] | undefined>((payload, callback) => {
+      if (!this.subscribers[eventName]?.includes(callback)) {
+        return payload;
+      }
       const next = callback(payload as EventMap[Name]);
 
-      payload = next !== undefined ? next : payload;
-    }
+      return next !== undefined ? next : payload;
+    }, data);
   }
 
   /** Like emit, but a throwing subscriber is logged and the rest still run. */

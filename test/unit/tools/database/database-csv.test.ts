@@ -233,6 +233,9 @@ describe('database CSV', () => {
 
       expect(roundTrip({ ...date, date: { dateFormat: 'short' } }, thisYear)).toBe(thisYear);
       expect(csvCellText({ ...date, date: { dateFormat: 'short' } }, thisYear, ctx)).toContain(String(new Date().getFullYear()));
+      // A past year shows no year either (research/26 §5e).
+      expect(roundTrip({ ...date, date: { dateFormat: 'short' } }, '2025-03-04')).toBe('2025-03-04');
+      expect(roundTrip({ ...date, date: { dateFormat: 'short' } }, '2025-03-04T15:30')).toBe('2025-03-04T15:30');
     });
 
     it('keeps a checkbox, a url and a select', () => {

@@ -199,6 +199,74 @@ describe('date cell editor', () => {
       expect(ctx.onCommit).toHaveBeenLastCalledWith('2026-10-09T09:00');
     });
 
+    // research/26 §5d: a set date on another day gets 9:00 AM.
+    it('Include time gives a set date on another day 9:00', () => {
+      vi.setSystemTime(new Date(2026, 9, 20, 13, 58));
+      const ctx = openDate('2026-10-12');
+
+      q('[data-blok-database-date-time-toggle]').click();
+
+      expect(ctx.onCommit).toHaveBeenLastCalledWith('2026-10-12T09:00');
+    });
+
+    // research/26 §5d: an empty cell gets the next whole hour (1:58 PM gave 2:00 PM, 5:49 AM gave 6:00 AM).
+    it('Include time on an empty cell takes the next whole hour', () => {
+      vi.setSystemTime(new Date(2026, 9, 20, 13, 58));
+      const ctx = openDate(null, { hourCycle: 'h23' });
+
+      q('[data-blok-database-date-time-toggle]').click();
+      day('2026-10-20').click();
+
+      expect(ctx.onCommit).toHaveBeenLastCalledWith('2026-10-20T14:00');
+      expect(q<HTMLInputElement>('[data-blok-database-date-time="start"]').value).toBe('14:00');
+    });
+
+    it('Include time on an empty cell at 5:49 takes 6:00', () => {
+      vi.setSystemTime(new Date(2026, 9, 20, 5, 49));
+      const ctx = openDate(null);
+
+      q('[data-blok-database-date-time-toggle]').click();
+      day('2026-10-22').click();
+
+      expect(ctx.onCommit).toHaveBeenLastCalledWith('2026-10-22T06:00');
+    });
+
+    // Unmeasured edges: on the hour still moves to the next one; after 23:00 it wraps to 00:00 on the picked day.
+    it('the next whole hour after 14:00 is 15:00, and after 23:30 is 00:00 on the picked day', () => {
+      vi.setSystemTime(new Date(2026, 9, 20, 14, 0));
+      const onHour = openDate(null);
+
+      q('[data-blok-database-date-time-toggle]').click();
+      day('2026-10-20').click();
+      expect(onHour.onCommit).toHaveBeenLastCalledWith('2026-10-20T15:00');
+
+      document.body.innerHTML = '';
+      PopoverRegistry.resetForTests();
+      vi.setSystemTime(new Date(2026, 9, 20, 23, 30));
+      const late = openDate(null);
+
+      q('[data-blok-database-date-time-toggle]').click();
+      day('2026-10-20').click();
+      expect(late.onCommit).toHaveBeenLastCalledWith('2026-10-20T00:00');
+    });
+
+    // The bulk picker opens on the first selected row's value: an empty one takes the next hour, a set one 9:00.
+    it('the bulk picker follows the first row: empty takes the next hour, a set date 9:00', () => {
+      vi.setSystemTime(new Date(2026, 9, 20, 13, 58));
+      const empty = openDate(null, { bulk: true });
+
+      q('[data-blok-database-date-time-toggle]').click();
+      day('2026-10-21').click();
+      expect(empty.onCommit).toHaveBeenLastCalledWith('2026-10-21T14:00');
+
+      document.body.innerHTML = '';
+      PopoverRegistry.resetForTests();
+      const set = openDate('2026-10-12', { bulk: true });
+
+      q('[data-blok-database-date-time-toggle]').click();
+      expect(set.onCommit).toHaveBeenLastCalledWith('2026-10-12T09:00');
+    });
+
     it('a typed 24-hour time commits', () => {
       const ctx = openDate('2026-10-09T09:00', { hourCycle: 'h23' });
       const time = q<HTMLInputElement>('[data-blok-database-date-time="start"]');

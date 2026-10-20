@@ -136,12 +136,12 @@ const formatDay = (part: string, locale: string, display: DateDisplay, now: Date
     case 'month_day_year': return [pad(month), pad(day), String(year)].join('/');
     case 'day_month_year': return [pad(day), pad(month), String(year)].join('/');
     case 'year_month_day': return [String(year), pad(month), pad(day)].join('/');
-    // research/23 §1: "Oct 20" for this year. Another year was not measured; it keeps the year.
+    // research/23 §1, 26 §5e: "Oct 20" with no year, for this year or a past one. A future year was not measured; it keeps the year.
     case 'short':
       return new Intl.DateTimeFormat(locale, {
         month: 'short',
         day: 'numeric',
-        ...(year === now.getFullYear() ? {} : { year: 'numeric' }),
+        ...(year <= now.getFullYear() ? {} : { year: 'numeric' }),
         ...zoneOption(part, display.timeZone),
       }).format(toLocalDate(part));
     case 'relative': {

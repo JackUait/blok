@@ -22,8 +22,11 @@ import type { DateDisplayChange } from './date-format';
 import { formatDateValue, parseDateValue } from './date-value';
 import type { CellEditorContext, CellEditorHandle } from './types';
 
-/** Time a value takes when "Include time" turns on. Notion's choice here is unverified. */
+/** Time a set date takes when "Include time" turns on (research/26 §5d). */
 const DEFAULT_TIME = '09:00';
+
+/** The next whole hour, for an empty cell (research/26 §5d). Past 23:00 it wraps to 00:00 and leaves the day alone. */
+const nextWholeHour = (): string => `${String((new Date().getHours() + 1) % 24).padStart(2, '0')}:00`;
 
 const DAYS_SHOWN = 42;
 
@@ -175,6 +178,8 @@ class DateEditor {
   private end: Part | null;
   private rangeOn: boolean;
   private timeOn: boolean;
+  // Set when Include time turns on; a part with no time of its own shows and saves it.
+  private defaultTime = DEFAULT_TIME;
   private rangeTarget: 'start' | 'end' = 'start';
   private viewYear: number;
   private viewMonth: number;
@@ -273,7 +278,7 @@ class DateEditor {
     if (this.start === null) {
       return null;
     }
-    const text = (part: Part): string => (this.timeOn ? `${part.day}T${part.time ?? DEFAULT_TIME}` : part.day);
+    const text = (part: Part): string => (this.timeOn ? `${part.day}T${part.time ?? this.defaultTime}` : part.day);
 
     return formatDateValue({
       start: text(this.start),
@@ -437,7 +442,7 @@ class DateEditor {
     input.inputMode = 'numeric';
     input.setAttribute('data-blok-database-date-time', which);
     input.setAttribute('aria-label', this.t('tools.database.dateTime'));
-    input.value = formatTime(part.time ?? DEFAULT_TIME, this.hourCycle);
+    input.value = formatTime(part.time ?? this.defaultTime, this.hourCycle);
     const apply = (): void => {
       const time = parseTypedTime(input.value);
 
@@ -605,7 +610,9 @@ class DateEditor {
     }
     options.appendChild(createSwitch('data-blok-database-date-time-toggle', this.t('tools.database.dateIncludeTime'), this.timeOn, () => {
       this.timeOn = !this.timeOn;
-      if (!this.timeOn) {
+      if (this.timeOn) {
+        this.defaultTime = this.start === null ? nextWholeHour() : DEFAULT_TIME;
+      } else {
         this.start = this.start === null ? null : { ...this.start, time: null };
         this.end = this.end === null ? null : { ...this.end, time: null };
       }

@@ -113,9 +113,17 @@ test('a count above 99 reads 99+ until "Show large counts as 99+" is turned off'
 
   await expect(count(page, 'o-todo')).toHaveText('99+');
   const box = await count(page, 'o-todo').boundingBox();
+  // The width follows the glyphs, so it depends on the installed font.
+  const textWidth = await count(page, 'o-todo').evaluate((button) => {
+    const range = document.createRange();
 
-  // Notion's 38 holds 6px padding a side; the glyphs differ by a fraction of a pixel with the font.
-  expect(Math.abs((box?.width ?? 0) - 38)).toBeLessThan(1);
+    range.selectNodeContents(button);
+
+    return range.getBoundingClientRect().width;
+  });
+
+  // Notion's 38 is the glyphs plus 6px padding a side.
+  expect(Math.abs((box?.width ?? 0) - (textWidth + 12))).toBeLessThan(0.5);
   expect(box?.height).toBe(20);
 
   await count(page, 'o-todo').click();

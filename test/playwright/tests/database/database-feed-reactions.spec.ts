@@ -131,10 +131,13 @@ test('the hint names who reacted, only after a hover delay', async ({ page }) =>
 test('hovering a card shows React and More actions; More actions lists the row actions', async ({ page }) => {
   await mount(page);
   const react = card(page).getByRole('button', { name: 'React', exact: true });
+  // The whole pill fades, not each button (research/21 §1j).
+  const pill = card(page).locator('[data-blok-database-feed-card-actions]');
 
-  await expect(react).toHaveCSS('opacity', '0');
+  await expect(pill).toHaveCSS('opacity', '0');
   await card(page).hover();
-  await expect(react).toHaveCSS('opacity', '1');
+  await expect(pill).toHaveCSS('opacity', '1');
+  await expect(react).toBeVisible();
   await card(page).getByRole('button', { name: 'More actions' }).click();
 
   await expect(page.getByPlaceholder('Search actions…')).toBeVisible();

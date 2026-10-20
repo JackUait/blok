@@ -928,6 +928,7 @@
   "tools.database.moreViews": "އިތުރު {count}…",
   "tools.database.searchViews": "ވިއުއެއް ހޯދާ…",
   "tools.database.newView": "އައު ވިއު",
+  "tools.database.newDataSource": "އާ ޑޭޓާ ސޯސެއް",
   "tools.database.cellEmpty": "ހުސް",
   "tools.database.selectSearchPlaceholder": "އިޚްތިޔާރެއް ހޯދާ…",
   "tools.database.selectHint": "އިޚްތިޔާރެއް ހޮވާ ނުވަތަ އައު އެއްޗެއް ހަދާ",

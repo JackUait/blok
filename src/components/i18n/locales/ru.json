@@ -928,6 +928,7 @@
   "tools.database.moreViews": "Ещё: {count}…",
   "tools.database.searchViews": "Найти представление…",
   "tools.database.newView": "Новое представление",
+  "tools.database.newDataSource": "Новый источник данных",
   "tools.database.cellEmpty": "Пусто",
   "tools.database.selectSearchPlaceholder": "Найти вариант…",
   "tools.database.selectHint": "Выберите вариант или создайте новый",

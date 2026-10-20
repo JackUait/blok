@@ -928,6 +928,7 @@
   "tools.database.moreViews": "{count} lagi…",
   "tools.database.searchViews": "Cari paparan…",
   "tools.database.newView": "Paparan baharu",
+  "tools.database.newDataSource": "Sumber data baharu",
   "tools.database.cellEmpty": "Kosong",
   "tools.database.selectSearchPlaceholder": "Cari pilihan…",
   "tools.database.selectHint": "Pilih atau cipta pilihan",

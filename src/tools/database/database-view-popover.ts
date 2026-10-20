@@ -1,4 +1,4 @@
-import { IconBoard, IconCalendar, IconChart, IconGallery, IconList, IconMessage, IconTable, IconTimeline, IconListChecklist, IconMap } from '../../components/icons';
+import { IconBoard, IconCalendar, IconChart, IconGallery, IconList, IconMessage, IconTable, IconTimeline, IconListChecklist, IconMap, IconDatabase } from '../../components/icons';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
@@ -34,6 +34,8 @@ export interface ViewPopoverOptions {
   api?: API;
   /** Layouts to leave out. */
   hidden?: readonly ViewType[];
+  /** "New data source", the last item (research/08:113, research/23 §10). */
+  onNewSource?: () => void;
 }
 
 export class DatabaseViewPopover {
@@ -41,6 +43,7 @@ export class DatabaseViewPopover {
   private readonly onClose: (() => void) | undefined;
   private readonly api: API | undefined;
   private readonly hidden: readonly ViewType[];
+  private readonly onNewSource: (() => void) | undefined;
   private popover: PopoverDesktop | null = null;
 
   constructor(options: ViewPopoverOptions) {
@@ -48,6 +51,7 @@ export class DatabaseViewPopover {
     this.onClose = options.onClose;
     this.api = options.api;
     this.hidden = options.hidden ?? [];
+    this.onNewSource = options.onNewSource;
   }
 
   private translate(key: string, fallback: string): string {
@@ -78,6 +82,11 @@ export class DatabaseViewPopover {
           closeOnActivate: true,
         };
       }),
+      ...(this.onNewSource === undefined ? [] : [{
+        type: PopoverItemType.Html as const,
+        element: this.createNewSourceItem(this.onNewSource),
+        closeOnActivate: true,
+      }]),
     ];
 
     this.popover = new PopoverDesktop({
@@ -135,6 +144,27 @@ export class DatabaseViewPopover {
     item.addEventListener('click', () => {
       this.onSelect(option.type);
     });
+
+    return item;
+  }
+
+  private createNewSourceItem(onNewSource: () => void): HTMLElement {
+    const item = document.createElement('div');
+    const iconEl = document.createElement('div');
+    const textEl = document.createElement('div');
+    const labelEl = document.createElement('span');
+
+    // Shares the layout rows' look.
+    item.setAttribute('data-blok-database-view-option', 'new-source');
+    item.setAttribute('data-blok-database-view-new-source', '');
+    iconEl.setAttribute('data-blok-database-view-option-icon', '');
+    iconEl.innerHTML = IconDatabase;
+    textEl.setAttribute('data-blok-database-view-option-text', '');
+    labelEl.setAttribute('data-blok-database-view-option-label', '');
+    labelEl.textContent = this.translate('tools.database.newDataSource', 'New data source');
+    textEl.appendChild(labelEl);
+    item.append(iconEl, textEl);
+    item.addEventListener('click', () => onNewSource());
 
     return item;
   }

@@ -928,6 +928,7 @@
   "tools.database.moreViews": "נאָך: {count}…",
   "tools.database.searchViews": "זוכן אַן אויסשטעל…",
   "tools.database.newView": "נײַער אויסשטעל",
+  "tools.database.newDataSource": "נײַער דאַטן־מקור",
   "tools.database.cellEmpty": "ליידיק",
   "tools.database.selectSearchPlaceholder": "זוכן אַן אָפּציע…",
   "tools.database.selectHint": "קלײַב אויס אַן אָפּציע אָדער שאַף אַ נײַע",

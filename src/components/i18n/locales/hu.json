@@ -928,6 +928,7 @@
   "tools.database.moreViews": "További {count}…",
   "tools.database.searchViews": "Nézet keresése…",
   "tools.database.newView": "Új nézet",
+  "tools.database.newDataSource": "Új adatforrás",
   "tools.database.cellEmpty": "Üres",
   "tools.database.selectSearchPlaceholder": "Lehetőség keresése…",
   "tools.database.selectHint": "Válasszon egy lehetőséget, vagy hozzon létre egyet",

@@ -928,6 +928,7 @@
   "tools.database.moreViews": "Încă: {count}…",
   "tools.database.searchViews": "Căutați o vizualizare…",
   "tools.database.newView": "Vizualizare nouă",
+  "tools.database.newDataSource": "Sursă de date nouă",
   "tools.database.cellEmpty": "Gol",
   "tools.database.selectSearchPlaceholder": "Căutați o opțiune…",
   "tools.database.selectHint": "Selectați o opțiune sau creați una",

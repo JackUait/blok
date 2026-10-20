@@ -1107,6 +1107,7 @@ export type BlokMessageKey =
   | 'tools.database.mapNoWebgl'
   | 'tools.database.moreViews'
   | 'tools.database.movedToTrash'
+  | 'tools.database.newDataSource'
   | 'tools.database.newPage'
   | 'tools.database.newRow'
   | 'tools.database.newView'

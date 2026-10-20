@@ -928,6 +928,7 @@
   "tools.database.moreViews": "외 {count}개…",
   "tools.database.searchViews": "뷰 검색…",
   "tools.database.newView": "새 뷰",
+  "tools.database.newDataSource": "새 데이터 소스",
   "tools.database.cellEmpty": "비어 있음",
   "tools.database.selectSearchPlaceholder": "옵션 검색…",
   "tools.database.selectHint": "옵션을 선택하거나 새로 만드세요",

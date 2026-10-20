@@ -928,6 +928,7 @@
   "tools.database.moreViews": "Եվս {count}…",
   "tools.database.searchViews": "Որոնել տեսք…",
   "tools.database.newView": "Նոր տեսք",
+  "tools.database.newDataSource": "Տվյալների նոր աղբյուր",
   "tools.database.cellEmpty": "Դատարկ",
   "tools.database.selectSearchPlaceholder": "Որոնել տարբերակ…",
   "tools.database.selectHint": "Ընտրեք տարբերակ կամ ստեղծեք նորը",

@@ -1,5 +1,5 @@
 import { generateKeyBetween } from 'fractional-indexing';
-import { IconBoard, IconCalendar, IconChart, IconGallery, IconList, IconMessage, IconTable, IconTimeline, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconColumns, IconListChecklist, IconMap, IconTabs, IconPreview } from '../../components/icons';
+import { IconBoard, IconCalendar, IconChart, IconGallery, IconList, IconMessage, IconTable, IconTimeline, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconColumns, IconListChecklist, IconMap, IconTabs, IconPreview, IconDatabase } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
@@ -73,6 +73,8 @@ export interface TabBarOptions {
   dataSourceTitlesHidden?: boolean;
   /** Offers "Hide / Show data source titles" in the tab menu. */
   onDataSourceTitlesToggle?: () => void;
+  /** Offers "New data source" last in the add-view menu and the "N more…" list (research/23 §10). */
+  onNewDataSource?: () => void;
 }
 
 export class DatabaseTabBar {
@@ -516,6 +518,7 @@ export class DatabaseTabBar {
       },
       api: this.options.api,
       ...(this.options.hiddenViewTypes !== undefined ? { hidden: this.options.hiddenViewTypes } : {}),
+      ...(this.options.onNewDataSource !== undefined && !this.readOnly ? { onNewSource: this.options.onNewDataSource } : {}),
     });
     this.viewPopover.open(anchor);
   }
@@ -627,6 +630,9 @@ export class DatabaseTabBar {
           this.openViewPopover(addBtn);
         }
       },
+      ...(this.readOnly || this.options.onNewDataSource === undefined ? {} : {
+        onNewSecond: { label: this.t('tools.database.newDataSource', 'New data source'), icon: IconDatabase, activate: this.options.onNewDataSource },
+      }),
       // The row menu mounts in <body>, outside the list, but belongs to it.
       ownsNode: (target) => this.contextPopover?.hasNode(target) === true,
       closeLayer: () => {

@@ -928,6 +928,7 @@
   "tools.database.moreViews": "နောက်ထပ် {count} ခု…",
   "tools.database.searchViews": "မြင်ကွင်းကို ရှာပါ…",
   "tools.database.newView": "မြင်ကွင်းအသစ်",
+  "tools.database.newDataSource": "ဒေတာရင်းမြစ် အသစ်",
   "tools.database.cellEmpty": "ဗလာ",
   "tools.database.selectSearchPlaceholder": "ရွေးချယ်စရာကို ရှာပါ…",
   "tools.database.selectHint": "ရွေးချယ်စရာတစ်ခုကို ရွေးပါ သို့မဟုတ် ဖန်တီးပါ",

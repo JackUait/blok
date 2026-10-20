@@ -928,6 +928,7 @@
   "tools.database.moreViews": "وڌيڪ: {count}…",
   "tools.database.searchViews": "ڪو ويو ڳوليو…",
   "tools.database.newView": "نئون ويو",
+  "tools.database.newDataSource": "نئون ڊيٽا ماخذ",
   "tools.database.cellEmpty": "خالي",
   "tools.database.selectSearchPlaceholder": "ڪو اختيار ڳوليو…",
   "tools.database.selectHint": "ڪو اختيار چونڊيو يا نئون ٺاهيو",

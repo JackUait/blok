@@ -928,6 +928,7 @@
   "tools.database.moreViews": "Още {count}…",
   "tools.database.searchViews": "Търсене на изглед…",
   "tools.database.newView": "Нов изглед",
+  "tools.database.newDataSource": "Нов източник на данни",
   "tools.database.cellEmpty": "Празно",
   "tools.database.selectSearchPlaceholder": "Търсене на опция…",
   "tools.database.selectHint": "Изберете опция или създайте нова",

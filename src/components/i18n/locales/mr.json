@@ -928,6 +928,7 @@
   "tools.database.moreViews": "आणखी: {count}…",
   "tools.database.searchViews": "दृश्य शोधा…",
   "tools.database.newView": "नवीन दृश्य",
+  "tools.database.newDataSource": "नवीन डेटा स्रोत",
   "tools.database.cellEmpty": "रिक्त",
   "tools.database.selectSearchPlaceholder": "पर्याय शोधा…",
   "tools.database.selectHint": "पर्याय निवडा किंवा नवीन तयार करा",

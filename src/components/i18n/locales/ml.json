@@ -928,6 +928,7 @@
   "tools.database.moreViews": "{count} എണ്ണം കൂടി…",
   "tools.database.searchViews": "ഒരു കാഴ്ച തിരയുക…",
   "tools.database.newView": "പുതിയ കാഴ്ച",
+  "tools.database.newDataSource": "പുതിയ ഡാറ്റാ ഉറവിടം",
   "tools.database.cellEmpty": "ശൂന്യം",
   "tools.database.selectSearchPlaceholder": "ഒരു ഓപ്ഷൻ തിരയുക…",
   "tools.database.selectHint": "ഒരു ഓപ്ഷൻ തിരഞ്ഞെടുക്കുക അല്ലെങ്കിൽ പുതിയത് സൃഷ്ടിക്കുക",

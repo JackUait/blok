@@ -928,6 +928,7 @@
   "tools.database.moreViews": "{count} ទៀត…",
   "tools.database.searchViews": "ស្វែងរកទិដ្ឋភាព…",
   "tools.database.newView": "ទិដ្ឋភាពថ្មី",
+  "tools.database.newDataSource": "ប្រភពទិន្នន័យថ្មី",
   "tools.database.cellEmpty": "ទទេ",
   "tools.database.selectSearchPlaceholder": "ស្វែងរកជម្រើស…",
   "tools.database.selectHint": "ជ្រើសរើស ឬបង្កើតជម្រើសមួយ",

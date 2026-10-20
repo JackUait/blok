@@ -928,6 +928,7 @@
   "tools.database.moreViews": "Flere: {count}…",
   "tools.database.searchViews": "Søk etter en visning…",
   "tools.database.newView": "Ny visning",
+  "tools.database.newDataSource": "Ny datakilde",
   "tools.database.cellEmpty": "Tom",
   "tools.database.selectSearchPlaceholder": "Søk etter et alternativ…",
   "tools.database.selectHint": "Velg et alternativ eller opprett et",

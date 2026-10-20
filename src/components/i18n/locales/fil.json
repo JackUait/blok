@@ -928,6 +928,7 @@
   "tools.database.moreViews": "{count} pa…",
   "tools.database.searchViews": "Maghanap ng view…",
   "tools.database.newView": "Bagong view",
+  "tools.database.newDataSource": "Bagong data source",
   "tools.database.cellEmpty": "Walang laman",
   "tools.database.selectSearchPlaceholder": "Maghanap ng opsyon…",
   "tools.database.selectHint": "Pumili ng opsyon o gumawa ng bago",

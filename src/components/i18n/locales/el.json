@@ -928,6 +928,7 @@
   "tools.database.moreViews": "Ακόμη {count}…",
   "tools.database.searchViews": "Αναζήτηση προβολής…",
   "tools.database.newView": "Νέα προβολή",
+  "tools.database.newDataSource": "Νέα πηγή δεδομένων",
   "tools.database.cellEmpty": "Κενό",
   "tools.database.selectSearchPlaceholder": "Αναζήτηση επιλογής…",
   "tools.database.selectHint": "Επιλέξτε ή δημιουργήστε μια επιλογή",

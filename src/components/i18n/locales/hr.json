@@ -928,6 +928,7 @@
   "tools.database.moreViews": "Još {count}…",
   "tools.database.searchViews": "Pretraži prikaze…",
   "tools.database.newView": "Novi prikaz",
+  "tools.database.newDataSource": "Novi izvor podataka",
   "tools.database.cellEmpty": "Prazno",
   "tools.database.selectSearchPlaceholder": "Pretraži opcije…",
   "tools.database.selectHint": "Odaberi opciju ili izradi novu",

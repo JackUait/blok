@@ -928,6 +928,7 @@
   "tools.database.moreViews": "{count} till…",
   "tools.database.searchViews": "Sök efter en vy…",
   "tools.database.newView": "Ny vy",
+  "tools.database.newDataSource": "Ny datakälla",
   "tools.database.cellEmpty": "Tom",
   "tools.database.selectSearchPlaceholder": "Sök efter ett alternativ…",
   "tools.database.selectHint": "Välj ett alternativ eller skapa ett",

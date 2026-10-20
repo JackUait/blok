@@ -928,6 +928,7 @@
   "tools.database.moreViews": "更多：{count}…",
   "tools.database.searchViews": "搜索视图…",
   "tools.database.newView": "新视图",
+  "tools.database.newDataSource": "新数据源",
   "tools.database.cellEmpty": "空",
   "tools.database.selectSearchPlaceholder": "搜索选项…",
   "tools.database.selectHint": "选择或创建一个选项",

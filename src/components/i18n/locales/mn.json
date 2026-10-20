@@ -928,6 +928,7 @@
   "tools.database.moreViews": "Бусад: {count}…",
   "tools.database.searchViews": "Харагдац хайх…",
   "tools.database.newView": "Шинэ харагдац",
+  "tools.database.newDataSource": "Шинэ өгөгдлийн эх сурвалж",
   "tools.database.cellEmpty": "Хоосон",
   "tools.database.selectSearchPlaceholder": "Сонголт хайх…",
   "tools.database.selectHint": "Сонголт сонгох эсвэл шинээр үүсгэх",

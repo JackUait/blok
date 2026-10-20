@@ -928,6 +928,7 @@
   "tools.database.moreViews": "更多：{count}…",
   "tools.database.searchViews": "搜尋檢視…",
   "tools.database.newView": "新檢視",
+  "tools.database.newDataSource": "新資料來源",
   "tools.database.cellEmpty": "空白",
   "tools.database.selectSearchPlaceholder": "搜尋選項…",
   "tools.database.selectHint": "選取或建立一個選項",

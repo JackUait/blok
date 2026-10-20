@@ -928,6 +928,7 @@
   "tools.database.moreViews": "{count} ਹੋਰ…",
   "tools.database.searchViews": "ਕੋਈ ਦ੍ਰਿਸ਼ ਲੱਭੋ…",
   "tools.database.newView": "ਨਵਾਂ ਦ੍ਰਿਸ਼",
+  "tools.database.newDataSource": "ਨਵਾਂ ਡਾਟਾ ਸਰੋਤ",
   "tools.database.cellEmpty": "ਖਾਲੀ",
   "tools.database.selectSearchPlaceholder": "ਕੋਈ ਵਿਕਲਪ ਲੱਭੋ…",
   "tools.database.selectHint": "ਕੋਈ ਵਿਕਲਪ ਚੁਣੋ ਜਾਂ ਨਵਾਂ ਬਣਾਓ",

@@ -928,6 +928,7 @@
   "tools.database.moreViews": "Dar {count}…",
   "tools.database.searchViews": "Ieškoti rodinio…",
   "tools.database.newView": "Naujas rodinys",
+  "tools.database.newDataSource": "Naujas duomenų šaltinis",
   "tools.database.cellEmpty": "Tuščia",
   "tools.database.selectSearchPlaceholder": "Ieškoti parinkties…",
   "tools.database.selectHint": "Pasirinkite parinktį arba sukurkite naują",

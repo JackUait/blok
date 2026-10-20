@@ -163,3 +163,71 @@ describe('tabsThatFit', () => {
     expect(tabsThatFit([100, 100, 400], 2, 250, 10)).toEqual([2]);
   });
 });
+
+describe('OverflowList second new-item row ("New data source", research/23 §10)', () => {
+  let anchor: HTMLElement;
+  let list: OverflowList;
+  const onNewSource = vi.fn();
+
+  const input = (): HTMLInputElement => document.querySelector(`[${P}-dropdown] input`) as HTMLInputElement;
+  const press = (key: string): void => {
+    input().dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+  };
+  const options = (): string[] => [...document.querySelectorAll<HTMLElement>(`[${P}-dropdown] [role="option"]`)]
+    .filter((el) => !el.hidden).map((el) => el.textContent?.trim() ?? '');
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    anchor = document.createElement('button');
+    document.body.appendChild(anchor);
+    list = new OverflowList({
+      anchor,
+      prefix: P,
+      idAttribute: 'data-id',
+      rows: ROWS,
+      labels: { search: 'Search', handle: 'Drag', menu: 'More', newItem: 'New view', noResults: 'No results' },
+      readOnly: false,
+      onSelect: vi.fn(),
+      onNew: vi.fn(),
+      onNewSecond: { label: 'New data source', icon: '<svg></svg>', activate: onNewSource },
+      ownsNode: () => false,
+      closeLayer: () => false,
+      ownsEscape: () => false,
+    });
+    list.open();
+  });
+
+  afterEach(() => {
+    list.close();
+    anchor.remove();
+    vi.restoreAllMocks();
+  });
+
+  it('is the last row, below New view', () => {
+    expect(options().slice(-2)).toEqual(['New view', 'New data source']);
+  });
+
+  it('stays when typing filters the views', () => {
+    input().value = 'ca';
+    input().dispatchEvent(new Event('input'));
+
+    expect(options()).toEqual(['Calendar', 'New view', 'New data source']);
+  });
+
+  it('Up from the first row lands on it; Down from it wraps to the first row', () => {
+    press('ArrowUp');
+    press('ArrowUp');
+    expect(document.querySelector(`[${P}-dropdown] [data-highlighted]`)?.textContent).toBe('New data source');
+    press('ArrowDown');
+    expect(document.querySelector(`[${P}-dropdown] [data-highlighted]`)?.getAttribute('data-id')).toBe('a');
+  });
+
+  it('Enter on it runs its action and closes the list', () => {
+    press('ArrowUp');
+    press('ArrowUp');
+    press('Enter');
+
+    expect(onNewSource).toHaveBeenCalledTimes(1);
+    expect(list.isOpen).toBe(false);
+  });
+});

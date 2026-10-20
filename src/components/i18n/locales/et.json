@@ -928,6 +928,7 @@
   "tools.database.moreViews": "Veel {count}…",
   "tools.database.searchViews": "Otsi vaadet…",
   "tools.database.newView": "Uus vaade",
+  "tools.database.newDataSource": "Uus andmeallikas",
   "tools.database.cellEmpty": "Tühi",
   "tools.database.selectSearchPlaceholder": "Otsi valikut…",
   "tools.database.selectHint": "Vali valik või loo uus",

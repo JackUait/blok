@@ -928,6 +928,7 @@
   "tools.database.moreViews": "మరిన్ని: {count}…",
   "tools.database.searchViews": "వీక్షణ కోసం వెతకండి…",
   "tools.database.newView": "కొత్త వీక్షణ",
+  "tools.database.newDataSource": "కొత్త డేటా మూలం",
   "tools.database.cellEmpty": "ఖాళీ",
   "tools.database.selectSearchPlaceholder": "ఎంపికను వెతకండి…",
   "tools.database.selectHint": "ఎంపికను ఎంచుకోండి లేదా కొత్తది సృష్టించండి",

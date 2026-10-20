@@ -928,6 +928,7 @@
   "tools.database.moreViews": "{count} और…",
   "tools.database.searchViews": "कोई दृश्य खोजें…",
   "tools.database.newView": "नया दृश्य",
+  "tools.database.newDataSource": "नया डेटा स्रोत",
   "tools.database.cellEmpty": "खाली",
   "tools.database.selectSearchPlaceholder": "कोई विकल्प खोजें…",
   "tools.database.selectHint": "कोई विकल्प चुनें या नया बनाएं",

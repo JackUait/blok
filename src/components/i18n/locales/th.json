@@ -928,6 +928,7 @@
   "tools.database.moreViews": "เพิ่มเติม: {count}…",
   "tools.database.searchViews": "ค้นหามุมมอง…",
   "tools.database.newView": "มุมมองใหม่",
+  "tools.database.newDataSource": "แหล่งข้อมูลใหม่",
   "tools.database.cellEmpty": "ว่าง",
   "tools.database.selectSearchPlaceholder": "ค้นหาตัวเลือก…",
   "tools.database.selectHint": "เลือกหรือสร้างตัวเลือก",

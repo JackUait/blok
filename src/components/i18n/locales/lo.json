@@ -928,6 +928,7 @@
   "tools.database.moreViews": "ອີກ {count}…",
   "tools.database.searchViews": "ຄົ້ນຫາມຸມມອງ…",
   "tools.database.newView": "ມຸມມອງໃໝ່",
+  "tools.database.newDataSource": "ແຫຼ່ງຂໍ້ມູນໃໝ່",
   "tools.database.cellEmpty": "ຫວ່າງເປົ່າ",
   "tools.database.selectSearchPlaceholder": "ຄົ້ນຫາຕົວເລືອກ…",
   "tools.database.selectHint": "ເລືອກ ຫຼື ສ້າງຕົວເລືອກ",

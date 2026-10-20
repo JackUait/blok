@@ -928,6 +928,7 @@
   "tools.database.moreViews": "المزيد: {count}…",
   "tools.database.searchViews": "البحث عن عرض…",
   "tools.database.newView": "عرض جديد",
+  "tools.database.newDataSource": "مصدر بيانات جديد",
   "tools.database.cellEmpty": "فارغ",
   "tools.database.selectSearchPlaceholder": "البحث عن خيار…",
   "tools.database.selectHint": "اختر خيارًا أو أنشئ خيارًا جديدًا",

@@ -928,6 +928,7 @@
   "tools.database.moreViews": "Ještě {count}…",
   "tools.database.searchViews": "Hledat zobrazení…",
   "tools.database.newView": "Nové zobrazení",
+  "tools.database.newDataSource": "Nový zdroj dat",
   "tools.database.cellEmpty": "Prázdné",
   "tools.database.selectSearchPlaceholder": "Hledat možnost…",
   "tools.database.selectHint": "Vyberte možnost nebo vytvořte novou",

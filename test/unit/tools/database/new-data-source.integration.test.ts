@@ -1,0 +1,388 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { Blok } from '../../../../src/blok';
+import { Paragraph } from '../../../../src/tools/paragraph';
+import { DatabaseTool } from '../../../../src/tools/database';
+import { DatabaseRowTool } from '../../../../src/tools/database-row';
+import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
+import type { API, OutputBlockData, OutputData } from '../../../../types';
+import type { DatabaseData, DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
+
+interface TestEditor {
+  isReady: Promise<unknown>;
+  save(): Promise<OutputData>;
+  destroy(): void;
+  blocks: API['blocks'];
+  history: API['history'];
+}
+
+let editor: Blok | undefined;
+let holder: HTMLDivElement | undefined;
+
+const quiet = async (): Promise<void> => {
+  await new Promise<void>((resolve) => { setTimeout(resolve, 0); });
+  for (let frame = 0; frame < 3; frame++) {
+    await new Promise<void>((resolve) => { requestAnimationFrame(() => resolve()); });
+  }
+  await new Promise<void>((resolve) => { setTimeout(resolve, 0); });
+};
+
+const table = (id: string, position: string, extra: Partial<DatabaseViewConfig> = {}): DatabaseViewConfig => ({
+  id, name: 'Table', type: 'table', position, filters: [], sorts: [], visibleProperties: [], ...extra,
+});
+
+const parentSchema: PropertyDefinition[] = [
+  { id: 't', name: 'Name', type: 'title', position: 'a0' },
+  { id: 'notes', name: 'Notes', type: 'text', position: 'a1' },
+];
+
+const sourceSchema: PropertyDefinition[] = [
+  { id: 'bt', name: 'Name', type: 'title', position: 'a0' },
+  { id: 'size', name: 'Size', type: 'number', position: 'a1' },
+];
+
+const doc = (active: string, parentExtra: Partial<DatabaseData> = {}): OutputBlockData[] => [
+  {
+    id: 'db', type: 'database', content: ['r1', 'src-b'],
+    data: {
+      title: 'Projects',
+      schema: parentSchema,
+      views: [table('v1', 'a0'), table('vb', 'a1', { dataSourceId: 'src-b' })],
+      activeViewId: active,
+      ...parentExtra,
+    },
+  },
+  { id: 'r1', type: 'database-row', parent: 'db', data: { properties: { t: 'Parent row', notes: 'n' }, position: 'a0' } },
+  {
+    id: 'src-b', type: 'database', parent: 'db', content: ['b1'],
+    data: { title: 'Src B', schema: sourceSchema, views: [table('bv', 'a0')], activeViewId: 'bv' },
+  },
+  { id: 'b1', type: 'database-row', parent: 'src-b', data: { properties: { bt: 'Source row', size: 3 }, position: 'a0' } },
+];
+
+const make = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
+  if (holder === undefined) throw new Error('missing editor holder');
+  let ready: TestEditor | undefined;
+
+  editor = new Blok({
+    holder, dataModel: 'hierarchical',
+    tools: {
+      paragraph: Paragraph,
+      database: { class: DatabaseTool },
+      'database-row': DatabaseRowTool,
+    },
+    data: { blocks },
+    onReady: (api) => { ready = api; },
+  });
+  await editor.isReady;
+  await quiet();
+  if (ready === undefined) throw new Error('editor did not expose its ready API');
+
+  return ready;
+};
+
+const parentRoot = (): HTMLElement => {
+  const found = holder?.querySelector<HTMLElement>('[data-blok-element][data-blok-id="db"]');
+
+  if (found === null || found === undefined) throw new Error('missing parent database');
+
+  return found;
+};
+
+/** The parent's visible view area: not the hidden pool where B itself lives. */
+const shownArea = (): HTMLElement => {
+  return own('[data-blok-database-board-container]');
+};
+
+/** An element of the parent's own chrome, never one inside the hidden source block. */
+const own = (selector: string): HTMLElement => {
+  const root = parentRoot();
+  const found = [...root.querySelectorAll<HTMLElement>(selector)].find((el) => el.closest('[data-blok-element]') === root);
+
+  if (found === undefined) throw new Error('missing ' + selector);
+
+  return found;
+};
+
+const headers = (root: ParentNode): string[] =>
+  [...root.querySelectorAll<HTMLElement>('[role="columnheader"][data-property-id]')].map((h) => h.getAttribute('data-property-id') ?? '');
+
+describe('New data source: a view bound to a second source in the same block', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    holder = document.createElement('div');
+    document.body.appendChild(holder);
+  });
+
+  afterEach(() => {
+    editor?.destroy();
+    editor = undefined;
+    holder?.remove();
+    holder = undefined;
+    PopoverRegistry.resetForTests();
+    vi.restoreAllMocks();
+  });
+
+  it('shows the source block\'s columns and rows, not the parent\'s', async () => {
+    await make(doc('vb'));
+    const area = shownArea();
+
+    expect(headers(area)).toContain('size');
+    expect(headers(area)).not.toContain('notes');
+    expect(area.textContent).toContain('Source row');
+    expect(area.textContent).not.toContain('Parent row');
+  });
+
+  it('keeps the parent\'s own view on the parent\'s data', async () => {
+    await make(doc('v1'));
+    const area = shownArea();
+
+    expect(headers(area)).toContain('notes');
+    expect(area.textContent).toContain('Parent row');
+    expect(area.textContent).not.toContain('Source row');
+  });
+
+  it('the toolbar Filter lists the source\'s properties', async () => {
+    await make(doc('vb'));
+    own('[data-blok-testid="database-toolbar-filter"]').click();
+    await quiet();
+    const popover = [...document.querySelectorAll<HTMLElement>('[data-blok-popover]')].at(-1);
+
+    expect(popover?.textContent).toContain('Size');
+    expect(popover?.textContent).not.toContain('Notes');
+  });
+
+  it('the toolbar New adds a row to the source, not the parent', async () => {
+    const api = await make(doc('vb'));
+
+    own('[data-blok-testid="database-toolbar-new"]').click();
+    await quiet();
+
+    expect(api.blocks.getChildren('src-b').filter((b) => b.name === 'database-row')).toHaveLength(2);
+    expect(api.blocks.getChildren('db').filter((b) => b.name === 'database-row')).toHaveLength(1);
+  });
+
+  it('the grid add-row adds a row to the source and shows it', async () => {
+    const api = await make(doc('vb'));
+
+    const add = shownArea().querySelector<HTMLElement>('[data-blok-database-table-add-row]');
+
+    expect(add).not.toBeNull();
+    add?.click();
+    await quiet();
+
+    expect(api.blocks.getChildren('src-b').filter((b) => b.name === 'database-row')).toHaveLength(2);
+    expect(api.blocks.getChildren('db').filter((b) => b.name === 'database-row')).toHaveLength(1);
+    expect(shownArea().querySelectorAll('[data-row-id]').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('keeps the source block hidden inside the parent', async () => {
+    await make(doc('vb'));
+    const sourceHolder = parentRoot().querySelector<HTMLElement>('[data-blok-id="src-b"]');
+    expect(sourceHolder).not.toBeNull();
+    expect(sourceHolder?.closest('[hidden]')).not.toBeNull();
+  });
+
+  const schemaOf = async (api: TestEditor, id: string): Promise<PropertyDefinition[]> => {
+    const saved = await api.save();
+    const data = saved.blocks.find((b) => b.id === id)?.data as DatabaseData | undefined;
+
+    return data?.schema ?? [];
+  };
+
+  const addTextProperty = async (): Promise<void> => {
+    shownArea().querySelector<HTMLElement>('[data-blok-database-table-add-property]')?.click();
+    await quiet();
+    document.querySelector<HTMLElement>('[data-blok-database-property-type-option="text"]')?.click();
+    await quiet();
+  };
+
+  it('"Add property" on the source\'s view adds it to the source, not the parent', async () => {
+    const api = await make(doc('vb'));
+
+    await addTextProperty();
+
+    expect(await schemaOf(api, 'src-b')).toHaveLength(3);
+    expect(await schemaOf(api, 'db')).toEqual(parentSchema);
+    expect(headers(shownArea())).toHaveLength(3);
+  });
+
+  it('a locked parent refuses a new property on its second source', async () => {
+    const locked = parentSchema.map((p) => (p.type === 'title' ? { ...p, databaseLocked: true } : p));
+    const api = await make(doc('vb', { schema: locked }));
+
+    await addTextProperty();
+
+    expect(await schemaOf(api, 'src-b')).toHaveLength(2);
+  });
+
+  /** The title line the person sees: the one title element of the parent that is not hidden. */
+  const shownTitle = (): HTMLElement | undefined => {
+    const root = parentRoot();
+
+    return [...root.querySelectorAll<HTMLElement>('[data-blok-database-title]')]
+      .find((el) => el.closest('[data-blok-element]') === root && !el.hidden);
+  };
+
+  const dataOf = async (api: TestEditor, id: string): Promise<DatabaseData | undefined> =>
+    (await api.save()).blocks.find((b) => b.id === id)?.data as DatabaseData | undefined;
+
+  it('the title line shows the selected view\'s source title', async () => {
+    await make(doc('vb'));
+
+    expect(shownTitle()?.textContent).toBe('Src B');
+  });
+
+  it('the title line shows the parent\'s own title on its own view', async () => {
+    await make(doc('v1'));
+
+    expect(shownTitle()?.textContent).toBe('Projects');
+  });
+
+  it('typing in the source title renames the source, not the parent', async () => {
+    const api = await make(doc('vb'));
+    const title = shownTitle();
+
+    if (title === undefined) throw new Error('no title line');
+    title.textContent = 'Inventory';
+    title.dispatchEvent(new InputEvent('input', { bubbles: true }));
+    await quiet();
+
+    expect((await dataOf(api, 'src-b'))?.title).toBe('Inventory');
+    expect((await dataOf(api, 'db'))?.title).toBe('Projects');
+  });
+
+  it('"Hide data source titles" hides the source title too', async () => {
+    await make(doc('vb', { hideDataSourceTitles: true }));
+
+    expect(shownTitle()).toBeUndefined();
+  });
+
+  const plainDoc = (): OutputBlockData[] => [
+    {
+      id: 'db', type: 'database', content: ['r1'],
+      data: { title: 'Projects', schema: parentSchema, views: [table('v1', 'a0'), table('v2', 'a1')], activeViewId: 'v1' },
+    },
+    { id: 'r1', type: 'database-row', parent: 'db', data: { properties: { t: 'Parent row', notes: 'n' }, position: 'a0' } },
+  ];
+
+  const sources = (api: TestEditor): string[] => api.blocks.getChildren('db').filter((b) => b.name === 'database').map((b) => b.id);
+
+  const stopCapturing = (): void => {
+    (editor as unknown as { module: { yjsManager: { stopCapturing: () => void } } }).module.yjsManager.stopCapturing();
+  };
+
+  const newDataSourceFromAddView = async (): Promise<void> => {
+    own('[data-blok-database-add-view]').click();
+    await quiet();
+    const item = document.querySelector<HTMLElement>('[data-blok-database-view-new-source]');
+
+    if (item === null) throw new Error('no "New data source" in the add-view menu');
+    item.click();
+    await quiet();
+  };
+
+  it('"New data source" ends the add-view menu', async () => {
+    await make(plainDoc());
+    own('[data-blok-database-add-view]').click();
+    await quiet();
+    const options = [...document.querySelectorAll<HTMLElement>('[data-blok-database-view-option], [data-blok-database-view-new-source]')];
+
+    expect(options.at(-1)?.hasAttribute('data-blok-database-view-new-source')).toBe(true);
+    expect(options.at(-1)?.textContent).toContain('New data source');
+  });
+
+  it('"New data source" adds a source with only a title and a selected Table view on it', async () => {
+    const api = await make(plainDoc());
+
+    await newDataSourceFromAddView();
+    const [sourceId] = sources(api);
+    const parent = await dataOf(api, 'db');
+    const created = sourceId === undefined ? undefined : await dataOf(api, sourceId);
+    const view = parent?.views.find((v) => v.dataSourceId === sourceId);
+
+    expect(sourceId).toBeDefined();
+    expect(created?.schema.map((p) => p.type)).toEqual(['title']);
+    expect(view?.type).toBe('table');
+    expect(parent?.activeViewId).toBe(view?.id);
+    expect(parent?.schema).toEqual(parentSchema);
+    expect(headers(shownArea())).toHaveLength(1);
+  });
+
+  it('one undo removes the new source and its view; redo brings both back', async () => {
+    const api = await make(plainDoc());
+
+    stopCapturing();
+    await newDataSourceFromAddView();
+    stopCapturing();
+    expect(sources(api)).toHaveLength(1);
+
+    api.history.undo();
+    await quiet();
+    expect(sources(api)).toHaveLength(0);
+    expect((await dataOf(api, 'db'))?.views).toHaveLength(2);
+    expect(headers(shownArea())).toContain('notes');
+    expect(shownArea().textContent).toContain('Parent row');
+
+    api.history.redo();
+    await quiet();
+    expect(sources(api)).toHaveLength(1);
+    expect((await dataOf(api, 'db'))?.views).toHaveLength(3);
+    const root = parentRoot();
+
+    expect([...root.querySelectorAll('[role="tab"]')].filter((tab) => tab.closest('[data-blok-element]') === root)).toHaveLength(3);
+    expect(root.querySelector(`[data-blok-id="${sources(api)[0]}"] :is([data-blok-database-tab-bar], [data-blok-database-title])`)).toBeNull();
+  });
+
+  it('undo after "New data source" is one step: it does not leave the view without its source', async () => {
+    const api = await make(plainDoc());
+
+    stopCapturing();
+    await newDataSourceFromAddView();
+    api.history.undo();
+    await quiet();
+
+    expect(sources(api)).toHaveLength(0);
+    expect((await dataOf(api, 'db'))?.views.some((v) => v.dataSourceId !== undefined)).toBe(false);
+  });
+
+  it('a locked database does not offer "New data source"', async () => {
+    const locked = parentSchema.map((p) => (p.type === 'title' ? { ...p, databaseLocked: true } : p));
+
+    await make([{ ...plainDoc()[0], data: { ...plainDoc()[0].data, schema: locked } }, plainDoc()[1]]);
+
+    expect(document.querySelector('[data-blok-database-view-new-source]')).toBeNull();
+    expect(() => own('[data-blok-database-add-view]')).toThrow();
+  });
+
+  it('after "New data source" the parent\'s own tab bar selects the new Table tab', async () => {
+    await make(plainDoc());
+    await newDataSourceFromAddView();
+    const root = parentRoot();
+    const tabs = [...root.querySelectorAll<HTMLElement>('[role="tab"]')].filter((tab) => tab.closest('[data-blok-element]') === root);
+
+    expect(tabs).toHaveLength(3);
+    expect(tabs.find((tab) => tab.getAttribute('aria-selected') === 'true')?.textContent).toContain('Table');
+  });
+
+  it('the source block draws no chrome of its own inside the parent', async () => {
+    await make(doc('vb'));
+    const sourceHolder = parentRoot().querySelector<HTMLElement>('[data-blok-id="src-b"]');
+
+    expect(sourceHolder?.querySelector('[data-blok-database-tab-bar], [data-blok-database-view-toolbar], [data-blok-database-title]')).toBeNull();
+  });
+
+  it('opening a source row shows its page in the parent, not inside the hidden source', async () => {
+    await make(doc('vb'));
+    const open = shownArea().querySelector<HTMLElement>('[data-row-id="b1"] [data-blok-database-table-open]');
+
+    expect(open).not.toBeNull();
+    open?.click();
+    await quiet();
+    const drawer = document.querySelector<HTMLElement>('[data-blok-database-drawer]');
+
+    expect(drawer).not.toBeNull();
+    expect(drawer?.closest('[hidden], .hidden')).toBeNull();
+    expect(drawer?.closest('[data-blok-element]')).toBe(parentRoot());
+  });
+});

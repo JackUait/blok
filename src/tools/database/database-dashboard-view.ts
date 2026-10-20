@@ -14,6 +14,8 @@ export class DatabaseDashboardView implements DatabaseViewRenderer {
 
   constructor(private readonly options: {
     rows: DashboardRow[];
+    /** One view bound to a second source: no grid, the view scrolls itself. */
+    single?: boolean;
     mount: (widget: DashboardWidget, host: HTMLElement) => DashboardMount | { error: string };
   }) {}
 
@@ -21,6 +23,7 @@ export class DatabaseDashboardView implements DatabaseViewRenderer {
     const root = document.createElement('div');
 
     root.setAttribute('data-blok-database-dashboard', '');
+    if (this.options.single === true) root.setAttribute('data-blok-database-source-view', '');
     for (const row of this.options.rows) {
       const rowEl = document.createElement('div');
 
@@ -43,7 +46,7 @@ export class DatabaseDashboardView implements DatabaseViewRenderer {
     host.setAttribute('data-blok-database-dashboard-widget', widget.id);
     host.style.gridColumn = `span ${widget.width}`;
     host.style.minWidth = '0';
-    host.style.overflow = 'auto';
+    if (this.options.single !== true) host.style.overflow = 'auto';
     const mount = this.options.mount(widget, host);
 
     if ('error' in mount) {

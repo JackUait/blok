@@ -30,6 +30,8 @@ export interface OverflowListOptions {
   onMenu?: (button: HTMLElement, id: string, row: HTMLElement) => void;
   /** Omitted: no new-item row. */
   onNew?: () => void;
+  /** A second new-item row below the first ("New data source"). */
+  onNewSecond?: { label: string; icon: string; activate: () => void };
   /** A node outside the list that still belongs to it (the row menu). */
   ownsNode: (target: Node) => boolean;
   /** Escape closes the caller's top layer first; true when it closed one. */
@@ -130,6 +132,11 @@ export class OverflowList {
 
     if (onNew !== undefined) {
       listbox.appendChild(this.createNewRow(onNew));
+    }
+    if (this.options.onNewSecond !== undefined) {
+      const second = this.options.onNewSecond;
+
+      listbox.appendChild(this.createNewRow(second.activate, { label: second.label, icon: second.icon, suffix: 'new-second' }));
     }
     // Outside the listbox: only options belong in it.
     dropdown.append(search.getElement(), empty, listbox);
@@ -305,7 +312,7 @@ export class OverflowList {
     return item;
   }
 
-  private createNewRow(onNew: () => void): DocumentFragment {
+  private createNewRow(onNew: () => void, second?: { label: string; icon: string; suffix: string }): DocumentFragment {
     const { prefix, labels } = this.options;
     const fragment = document.createDocumentFragment();
     const separator = document.createElement('div');
@@ -319,14 +326,16 @@ export class OverflowList {
 
     separator.setAttribute(`${prefix}-separator`, '');
     separator.setAttribute('role', 'presentation');
-    button.id = `${this.listId}-new`;
+    button.id = `${this.listId}-${second?.suffix ?? 'new'}`;
+    // The second row shares the first one's look.
     button.setAttribute(`${prefix}-new`, '');
+    if (second !== undefined) button.setAttribute(`${prefix}-${second.suffix}`, '');
     button.setAttribute('role', 'option');
     button.setAttribute('aria-selected', 'false');
     button.setAttribute('tabindex', '0');
     icon.setAttribute('aria-hidden', 'true');
-    icon.innerHTML = IconPlus;
-    label.textContent = labels.newItem;
+    icon.innerHTML = second?.icon ?? IconPlus;
+    label.textContent = second?.label ?? labels.newItem;
     button.append(icon, label);
     button.addEventListener('click', activate);
     button.addEventListener('keydown', (event) => {
@@ -335,7 +344,9 @@ export class OverflowList {
         activate();
       }
     });
-    fragment.append(separator, button);
+    // The second row shares the first one's separator.
+    if (second === undefined) fragment.append(separator);
+    fragment.append(button);
 
     return fragment;
   }

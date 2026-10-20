@@ -233,6 +233,9 @@ const BOARD_GROUP_PAGE = 10;
 /** Layouts Blok draws; gallery is in the type but falls back to a board. */
 const RENDERED_LAYOUTS: readonly ViewType[] = ['table', 'board', 'gallery', 'list', 'chart', 'timeline', 'feed', 'calendar', 'form', 'map'];
 
+/** Layouts a view on a second data source can take: the native table and list. */
+const SOURCE_LAYOUTS: readonly ViewType[] = ['table', 'list'];
+
 /** Select-like groups: their columns are options (or status groups) the user can rename and move. */
 const OPTION_GROUP_TYPES: readonly PropertyType[] = ['select', 'multiSelect', 'status'];
 
@@ -426,6 +429,8 @@ export class DatabaseTool implements BlockTool {
   private element: HTMLDivElement | null = null;
   private titleElement: HTMLElement | null = null;
   private titleRowElement: HTMLDivElement | null = null;
+  /** The title line of a view on a second source; null on this block's own views. */
+  private sourceTitleElement: HTMLElement | null = null;
   private boardContainer: HTMLDivElement | null = null;
   /**
    * A dashboard can populate this model after render() drew no rows. Only
@@ -855,8 +860,12 @@ export class DatabaseTool implements BlockTool {
     const saved = this.model.getView(this.activeViewId);
 
     // "Show data source title" (research/20 §1f, R-2022-03-15). The title row stays: it can hold the add-view "+".
-    titleEl.hidden = this.dataSourceTitlesHidden
+    const hidden = this.dataSourceTitlesHidden
       || (this.linked && saved !== undefined && this.controls.effective(saved).showDataSourceTitle === false);
+    const source = this.linked ? this : this.activeSource();
+
+    titleEl.hidden = hidden || source !== this;
+    this.paintSourceTitle(source === this ? undefined : source, hidden);
     if (!this.linked || this.source === undefined) return;
     const missing = this.sourceMissing();
     const live = missing || this.source.documentId !== undefined ? undefined : this.databaseTitleOf(this.source.databaseId);
@@ -902,6 +911,62 @@ export class DatabaseTool implements BlockTool {
     }
     titleEl.replaceChildren(label);
     DatabaseTool.syncTitleDirection(titleEl);
+  }
+
+  /**
+   * A view on a second source shows that source's title (research/23 §10).
+   * Its own element: save() reads this block's title from titleElement.
+   */
+  private paintSourceTitle(source: DatabaseTool | undefined, hidden: boolean): void {
+    const titleEl = this.titleElement;
+
+    if (source === undefined || titleEl === null) {
+      this.sourceTitleElement?.remove();
+      this.sourceTitleElement = null;
+
+      return;
+    }
+    const name = source.titleElement?.textContent ?? source.title;
+    const shown = this.sourceTitleElement?.getAttribute('data-database-id') === source.block.id ? this.sourceTitleElement : null;
+    const el = shown ?? this.createSourceTitle(source);
+
+    if (shown === null) {
+      this.sourceTitleElement?.remove();
+      this.sourceTitleElement = el;
+      titleEl.after(el);
+    }
+    // Never under the caret: a redraw while typing would move it.
+    if (el.textContent !== name && document.activeElement !== el) {
+      el.textContent = name;
+      DatabaseTool.syncTitleDirection(el);
+    }
+    el.hidden = hidden;
+  }
+
+  private createSourceTitle(source: DatabaseTool): HTMLElement {
+    const el = this.createTitleElement();
+
+    el.setAttribute('data-blok-database-source-title', '');
+    el.setAttribute('data-database-id', source.block.id);
+    const placeholder = this.api.i18n.t('tools.database.newDataSource');
+
+    el.setAttribute('data-placeholder', placeholder);
+    if (el.hasAttribute('aria-placeholder')) el.setAttribute('aria-placeholder', placeholder);
+    if (!source.titleEditable()) el.removeAttribute('contenteditable');
+    el.addEventListener('input', () => source.renameAsSource(el.textContent ?? ''));
+
+    return el;
+  }
+
+  /** The title typed on a view of this source in the database that holds it. */
+  private renameAsSource(title: string): void {
+    if (this.destroyed || !this.titleEditable()) return;
+    this.title = title;
+    if (this.titleElement !== null) {
+      this.titleElement.textContent = title;
+      DatabaseTool.syncTitleDirection(this.titleElement);
+    }
+    this.block.dispatchChange();
   }
 
   private isLinkedBlock(blockId: string): boolean {
@@ -1166,7 +1231,46 @@ export class DatabaseTool implements BlockTool {
 
   /** Locked by the document, or by the host's permissions. A linked view also by its own "Lock views". */
   private structureLocked(): boolean {
-    return this.structureDenied || this.model.isDatabaseLocked() || this.viewsLocked();
+    return this.structureDenied || this.model.isDatabaseLocked() || this.viewsLocked() || this.holderLocked();
+  }
+
+  /** A second data source (a child database) follows the lock of the database that holds it. */
+  private holderLocked(): boolean {
+    const holder = this.isHeldSource() ? this.dashboardOwner(this.block.parentId ?? '') : undefined;
+
+    return holder !== undefined && holder !== this && holder.structureLocked();
+  }
+
+  /** Leaves only the pools: a second data source shows through its holder. */
+  private dropChrome(): void {
+    this.cardDrag?.destroy();
+    this.columnDrag?.destroy();
+    this.columnControls?.destroy();
+    this.listRowDrag?.destroy();
+    this.keyboard?.destroy();
+    this.cardDrag = null;
+    this.columnDrag = null;
+    this.columnControls = null;
+    this.listRowDrag = null;
+    this.keyboard = null;
+    this.destroyView();
+    this.tabBar?.destroy();
+    this.tabBar = null;
+    this.unregisterGroupToggle?.();
+    this.unregisterGroupToggle = null;
+    this.titleElement = null;
+    this.titleRowElement = null;
+    this.boardContainer = null;
+    [...this.element?.children ?? []].forEach((child) => {
+      if (child !== this.rowPool && child !== this.layoutPool) child.remove();
+    });
+  }
+
+  /** A second data source: a database block whose parent is a database (research/23 §10). */
+  private isHeldSource(): boolean {
+    const parentId = this.block.parentId;
+
+    return typeof parentId === 'string' && this.api.blocks.getById(parentId)?.name === 'database';
   }
 
   /** A linked view's own lock, kept on its stand-in title property. Never the source's. */
@@ -1248,6 +1352,14 @@ export class DatabaseTool implements BlockTool {
     layoutPool.hidden = true;
     this.layoutPool = layoutPool;
     wrapper.appendChild(layoutPool);
+
+    // A second data source draws no chrome: the database holding it shows its
+    // views, and a hidden copy would answer that database's DOM lookups.
+    if (this.isHeldSource()) {
+      this.syncRowsFromBlocks();
+
+      return wrapper;
+    }
 
     const titleEl = this.createTitleElement();
     this.titleElement = titleEl;
@@ -1350,6 +1462,8 @@ export class DatabaseTool implements BlockTool {
 
   rendered(): void {
     this.block.stretched = true;
+    // On load the holder is not known at render time.
+    if (this.isHeldSource() && this.boardContainer !== null) this.dropChrome();
     this.mountRows();
 
     // The insert wrote the raw seed into the shared document; one save
@@ -1633,7 +1747,7 @@ export class DatabaseTool implements BlockTool {
    * database title line rather than on the outer wrapper's top edge.
    */
   getToolbarAnchorElement(): HTMLElement | undefined {
-    return this.titleElement ?? undefined;
+    return this.sourceTitleElement ?? this.titleElement ?? undefined;
   }
 
   // ---------------------------------------------------------------------------
@@ -1905,9 +2019,12 @@ export class DatabaseTool implements BlockTool {
     const openRowId = this.cardDrawer?.bodyRowId ?? null;
     const children = this.api.blocks.getChildren(this.dataId);
     const rows = children.filter((child) => child.name === 'database-row');
+    // A second data source (a child database, research/23 §10) lives hidden in the pool too.
+    const pooled = children.filter((child) => (child.name === 'database-row' && child.id !== openRowId) || child.name === 'database');
 
-    mountChildBlocks(this.rowPool, rows.filter((row) => row.id !== openRowId));
+    mountChildBlocks(this.rowPool, pooled);
     rows.forEach((row) => row.holder.classList.toggle('hidden', row.id !== openRowId));
+    pooled.filter((child) => child.name === 'database').forEach((source) => source.holder.classList.add('hidden'));
     this.mountLayoutTabs(children);
   }
 
@@ -3204,6 +3321,41 @@ export class DatabaseTool implements BlockTool {
     else if (this.linked && type !== 'dashboard') this.openLinkedAddView(newView.id, type);
   }
 
+  /**
+   * "New data source" (research/23 §10): a child database block with only a
+   * title property, and a Table view of this block bound to it, selected.
+   * One undo step removes both.
+   */
+  private addDataSource(): void {
+    if (this.readOnly || this.linked || this.structureLocked()) return;
+    const sourceId = nanoid();
+    const sourceView: DatabaseViewConfig = {
+      id: nanoid(), name: DATABASE_DEFAULT_TEXT.viewTypeTable, type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [],
+    };
+    const data: DatabaseData = {
+      title: '',
+      schema: [{ id: nanoid(), name: DATABASE_DEFAULT_TEXT.titleProperty, type: 'title', position: 'a0' }],
+      views: [sourceView],
+      activeViewId: sourceView.id,
+    };
+    const view = this.model.addView(DATABASE_DEFAULT_TEXT.viewTypeTable, 'table');
+
+    this.model.updateView(view.id, { dataSourceId: sourceId });
+    this.inOneStep(() => {
+      // Before the insert: a change dispatched inside its sync window is dropped as an echo.
+      this.block.dispatchChange();
+      this.api.blocks.insertAt('database', data, { parentId: this.block.id, position: 'end', id: sourceId });
+    });
+    void this.sync.syncCreateView(structuredClone({ ...view, dataSourceId: sourceId }));
+    // Its render could not see this block yet: drop its chrome now, before
+    // this block's tab bar lookup can find the source's bar first.
+    const source = this.dashboardOwner(sourceId);
+
+    if (source !== undefined && source.boardContainer !== null) source.dropChrome();
+    this.mountRows();
+    this.switchView(view.id);
+  }
+
   /** research 20 §2b: after the new tab shows, pick the source, then a fresh view or one to copy into it. */
   private openLinkedAddView(viewId: string, type: Exclude<ViewType, 'form' | 'dashboard'>): void {
     const source = this.source;
@@ -3429,6 +3581,8 @@ export class DatabaseTool implements BlockTool {
       },
       dataSourceTitlesHidden: this.dataSourceTitlesHidden,
       ...(this.readOnly || this.structureLocked() ? {} : { onDataSourceTitlesToggle: () => this.toggleDataSourceTitles() }),
+      // The bar hides it while read-only or locked; it flips in place (setReadOnly), so this is not gated here.
+      ...(this.linked ? {} : { onNewDataSource: () => this.addDataSource() }),
       api: this.api,
       // A locked database keeps its views: no add, rename, delete or reorder.
       readOnly: this.readOnly || this.structureLocked(),
@@ -3462,6 +3616,10 @@ export class DatabaseTool implements BlockTool {
       return missing;
     }
     const saved = this.model.getView(this.activeViewId);
+
+    if (saved !== undefined && this.otherSourceId(saved) !== undefined) {
+      return this.renderSourceView(saved.id);
+    }
     const viewConfig = saved === undefined ? undefined : this.controls.effective(saved);
     const titleProp = this.model.getSchema().find((p) => p.type === 'title');
     const titlePropId = titleProp?.id ?? '';
@@ -3503,6 +3661,39 @@ export class DatabaseTool implements BlockTool {
     }
 
     return viewEl;
+  }
+
+  /** The tool whose rows and schema the active view shows: this one, or a second source. */
+  private activeSource(): DatabaseTool {
+    const saved = this.model.getView(this.activeViewId);
+    const id = saved === undefined ? undefined : this.otherSourceId(saved);
+
+    return (id === undefined ? undefined : this.dashboardOwner(id)) ?? this;
+  }
+
+  /** A second data source of this block that the view shows (research/23 §10), else undefined. */
+  private otherSourceId(view: DatabaseViewConfig): string | undefined {
+    const id = view.dataSourceId;
+
+    return id === undefined || id === this.dataId ? undefined : id;
+  }
+
+  /**
+   * A view bound to a second source: drawn by the dashboard's native path,
+   * with the source's rows and schema and this block's view and toolbar.
+   */
+  private renderSourceView(viewId: string): HTMLDivElement {
+    this.dashboardSources.clear();
+    this.view = new DatabaseDashboardView({
+      rows: [{ id: viewId, widgets: [{ id: viewId, viewId, width: 12 }] }],
+      single: true,
+      mount: (widget) => this.mountDashboardWidget(viewId, widget, {
+        controls: this.controls,
+        placed: () => this.model.getView(viewId)?.dataSourceId !== undefined,
+      }),
+    });
+
+    return this.view.createView();
   }
 
   /** Form, map and dashboard (D6): the host levers do the work. */
@@ -4688,6 +4879,9 @@ export class DatabaseTool implements BlockTool {
   /** What the toolbar, filter bar and settings panel ask of the tool. */
   private controlsHost(context?: NativeWidgetContext): ViewControlsHost {
     const owner = context?.owner ?? this;
+    // The main toolbar follows the active view's data source; a widget's host is already its source.
+    const data = (): DatabaseTool => (context === undefined ? this.activeSource() : this);
+    const bound = (): boolean => data() !== this;
 
     return {
       i18n: this.api.i18n,
@@ -4696,15 +4890,16 @@ export class DatabaseTool implements BlockTool {
       fallback: context?.fallback ?? this.viewStateFallback(),
       savedView: () => owner.model.getView(context?.viewId ?? this.activeViewId),
       // Filters and sorts read a formula or rollup as its result type.
-      schema: () => localizeDatabaseSchema(this.model.getValueSchema(), this.api.i18n),
-      rowCount: () => this.model.getOrderedRows().length,
+      schema: () => localizeDatabaseSchema(data().model.getValueSchema(), this.api.i18n),
+      rowCount: () => data().model.getOrderedRows().length,
       locked: () => owner.structureLocked(),
       readOnly: () => context === undefined ? this.readOnly : !context.authority.writable(),
       viewCount: () => owner.model.getViews().length,
-      layouts: RENDERED_LAYOUTS,
+      // A second source draws through the native table and list only.
+      get layouts() { return bound() ? SOURCE_LAYOUTS : RENDERED_LAYOUTS; },
       me: () => this.config.people?.me?.() ?? null,
       people: () => this.people ?? [],
-      relatedRows: (property) => this.relationCandidates(property),
+      relatedRows: (property) => data().relationCandidates(property),
       thisPageDatabase: () => (this.thisPage === null ? null : this.api.blocks.getById(this.thisPage)?.parentId ?? null),
       updateView: (changes) => this.updateActiveView(changes, context),
       setLayout: (type) => this.setActiveLayout(type),
@@ -4720,9 +4915,10 @@ export class DatabaseTool implements BlockTool {
       } : {}),
       groups: (sub) => this.groupEntries(sub),
       rerender: () => context === undefined ? this.rerenderView({ keepDrawer: true }) : context.redraw(),
-      layoutItems: () => this.layoutItems(),
-      actions: () => this.csvActions(),
-      ...(context === undefined ? { customizeLayout: () => this.customizeLayoutAction() } : {}),
+      // CSV, chart export and the row page layout act on this block's own source.
+      layoutItems: () => (bound() ? [] : this.layoutItems()),
+      actions: () => (bound() ? [] : this.csvActions()),
+      ...(context === undefined ? { customizeLayout: () => (bound() ? undefined : this.customizeLayoutAction()) } : {}),
       automations: {
         read: () => owner.savedAutomations,
         schema: () => owner.model.getSchema(),
@@ -4739,35 +4935,35 @@ export class DatabaseTool implements BlockTool {
       },
       ...(this.config.ai === undefined ? {} : {
         autofill: {
-          properties: () => localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
-          writable: () => !this.destroyed && !this.readOnly && !this.structureLocked() && (context === undefined || context.writable()),
+          properties: () => localizeDatabaseSchema(data().model.getSchema(), this.api.i18n),
+          writable: () => !data().destroyed && !data().readOnly && !data().structureLocked() && (context === undefined || context.writable()),
           open: (propertyId: string) => {
-            const property = this.model.getProperty(propertyId);
+            const property = data().model.getProperty(propertyId);
 
             if (property !== undefined && this.element !== null) {
-              this.openAutofillSetup(propertyId, localizeDatabaseSchema([property], this.api.i18n)[0]?.name ?? property.name, this.element, context);
+              data().openAutofillSetup(propertyId, localizeDatabaseSchema([property], this.api.i18n)[0]?.name ?? property.name, this.element, context);
             }
           },
         },
       }),
       newRow: () => {
-        this.newRow();
+        data().newRow();
       },
-      openNewMenu: (anchor) => this.openTemplateMenu(anchor),
+      openNewMenu: (anchor) => data().openTemplateMenu(anchor),
       structure: {
-        subItems: () => this.model.subItemPair() !== undefined,
-        setSubItems: (on) => this.setSubItemsEnabled(on),
+        subItems: () => data().model.subItemPair() !== undefined,
+        setSubItems: (on) => data().setSubItemsEnabled(on),
         dependencies: () => {
-          const pair = this.dependencyPair();
+          const pair = data().dependencyPair();
 
-          return pair === undefined ? undefined : (this.model.getProperty(pair.forward)?.dependency ?? {});
+          return pair === undefined ? undefined : (data().model.getProperty(pair.forward)?.dependency ?? {});
         },
-        setDependencies: (on) => this.setDependenciesEnabled(on),
+        setDependencies: (on) => data().setDependenciesEnabled(on),
         updateDependency: (patch) => {
-          const pair = this.dependencyPair();
+          const pair = data().dependencyPair();
 
           if (pair === undefined) return;
-          this.updatePropertySettings(pair.forward, { dependency: { ...(this.model.getProperty(pair.forward)?.dependency ?? {}), ...patch } });
+          data().updatePropertySettings(pair.forward, { dependency: { ...(data().model.getProperty(pair.forward)?.dependency ?? {}), ...patch } });
         },
       },
     };
@@ -4801,12 +4997,13 @@ export class DatabaseTool implements BlockTool {
     if (saved === undefined) return [];
     const view = this.controls.effective(saved);
     const groupBy = sub ? view.subGroupBy : view.groupBy;
+    const data = this.activeSource();
 
     if (groupBy === undefined) return [];
     const grouped = sub ? { ...view, groupBy, groupSettings: view.subGroupSettings } : view;
-    const counts = new Map(this.model.queryGroups(grouped, { search: this.controls.search }).map((g) => [g.key, g.count]));
+    const counts = new Map(data.model.queryGroups(grouped, { search: this.controls.search }).map((g) => [g.key, g.count]));
 
-    return this.groupOptions(groupBy, grouped).map((option) => ({ key: option.id, label: option.label, count: counts.get(option.id) ?? 0 }));
+    return data.groupOptions(groupBy, grouped, this.controls.search).map((option) => ({ key: option.id, label: option.label, count: counts.get(option.id) ?? 0 }));
   }
 
   /** A board needs a grouping: the first select-like property, else the first property it can group by. */
@@ -4814,6 +5011,7 @@ export class DatabaseTool implements BlockTool {
     const view = this.model.getView(this.activeViewId);
 
     if (view === undefined || view.type === type) return;
+    if (this.otherSourceId(view) !== undefined && !SOURCE_LAYOUTS.includes(type)) return;
     const schema = this.model.getSchema();
     const groupable = (p: PropertyDefinition): boolean => p.type !== 'title' && GROUPABLE_TYPES.includes(p.type);
     const groupBy = type === 'board' && view.groupBy === undefined
@@ -5075,7 +5273,14 @@ export class DatabaseTool implements BlockTool {
     }
   }
 
-  private mountDashboardWidget(dashboardId: string, widget: DashboardWidget): DashboardMount | { error: string } {
+  /**
+   * `bound`: a view bound to a second source. It is placed by its own
+   * `dataSourceId`, not a dashboard row, and uses this block's toolbar.
+   */
+  private mountDashboardWidget(
+    dashboardId: string, widget: DashboardWidget,
+    bound?: { controls: DatabaseViewControls; placed: () => boolean }
+  ): DashboardMount | { error: string } {
     const ownerId = widget.databaseId ?? this.block.id;
 
     this.dashboardSources.add(ownerId);
@@ -5100,8 +5305,8 @@ export class DatabaseTool implements BlockTool {
       return !this.destroyed && !owner.destroyed && !source.destroyed
         && this.activeViewId === dashboardId && (selected?.type === 'table' || selected?.type === 'list')
         && (selected.dataSourceId ?? owner.dataId) === sourceId
-        && this.model.getView(dashboardId)?.dashboard?.rows.some((row) => row.widgets.some((entry) =>
-          entry.id === widget.id && entry.viewId === saved.id && (entry.databaseId ?? this.block.id) === ownerId)) === true;
+        && (bound !== undefined ? bound.placed() : this.model.getView(dashboardId)?.dashboard?.rows.some((row) => row.widgets.some((entry) =>
+          entry.id === widget.id && entry.viewId === saved.id && (entry.databaseId ?? this.block.id) === ownerId)) === true);
     };
     const storedState = this.dashboardStates.get(key);
     const state: DashboardWidgetState = storedState ?? {
@@ -5148,9 +5353,9 @@ export class DatabaseTool implements BlockTool {
         source.handleRowClick(rowId, mode, resolveOpenPagesIn(context.view), state.authority);
       },
     };
-    const controls = state.controls ?? new DatabaseViewControls(source.controlsHost(context));
+    const controls = bound?.controls ?? state.controls ?? new DatabaseViewControls(source.controlsHost(context));
 
-    if (state.controls === undefined) {
+    if (bound === undefined && state.controls === undefined) {
       state.controls = controls;
       controls.load([saved.id]);
     }
@@ -5212,7 +5417,8 @@ export class DatabaseTool implements BlockTool {
       if (context.writable() && typeof rowId === 'string' && propertyId !== null) source.pressButton(rowId, propertyId);
     };
 
-    native.root.prepend(controls.filterBar);
+    // A bound view's filter bar is this block's own, already under the tabs.
+    if (bound === undefined) native.root.prepend(controls.filterBar);
     if (renderer instanceof DatabaseListView && state.pendingTitle !== null) {
       const rowId = state.pendingTitle;
 
@@ -5238,7 +5444,7 @@ export class DatabaseTool implements BlockTool {
       destroy: () => {
         lifetime.disposed = true;
         cancellations.forEach((cancel) => cancel());
-        if (!state.authority.writable()) controls.destroy();
+        if (bound === undefined && !state.authority.writable()) controls.destroy();
         source.revokeCardDrawer(state.authority);
         keyboard.destroy();
         native.root.removeEventListener('click', click);
@@ -7255,7 +7461,8 @@ export class DatabaseTool implements BlockTool {
 
       this.cardDrawerSession = session;
       this.cardDrawer = new DatabaseCardDrawer({
-        wrapper: this.element,
+        // A second source's own wrapper is hidden: its pages open in its holder's.
+        wrapper: (this.isHeldSource() ? this.dashboardOwner(this.block.parentId ?? '')?.element : undefined) ?? this.element,
         readOnly: session.readOnly,
         databaseId: this.block.id,
         backlinks: (rowId) => this.backlinksFor(rowId),

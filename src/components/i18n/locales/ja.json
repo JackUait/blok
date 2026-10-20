@@ -928,6 +928,7 @@
   "tools.database.moreViews": "ほか {count} 件…",
   "tools.database.searchViews": "ビューを検索…",
   "tools.database.newView": "新しいビュー",
+  "tools.database.newDataSource": "新しいデータソース",
   "tools.database.cellEmpty": "空",
   "tools.database.selectSearchPlaceholder": "オプションを検索…",
   "tools.database.selectHint": "オプションを選択または作成",

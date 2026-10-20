@@ -928,6 +928,7 @@
   "tools.database.moreViews": "Daha {count}…",
   "tools.database.searchViews": "Görünüş axtar…",
   "tools.database.newView": "Yeni görünüş",
+  "tools.database.newDataSource": "Yeni verilənlər mənbəyi",
   "tools.database.cellEmpty": "Boş",
   "tools.database.selectSearchPlaceholder": "Seçim axtar…",
   "tools.database.selectHint": "Seçim edin və ya yenisini yaradın",

@@ -928,6 +928,7 @@
   "tools.database.moreViews": "තවත්: {count}…",
   "tools.database.searchViews": "දසුනක් සොයන්න…",
   "tools.database.newView": "නව දසුන",
+  "tools.database.newDataSource": "නව දත්ත මූලාශ්‍රය",
   "tools.database.cellEmpty": "හිස්",
   "tools.database.selectSearchPlaceholder": "විකල්පයක් සොයන්න…",
   "tools.database.selectHint": "විකල්පයක් තෝරන්න හෝ අලුතින් සාදන්න",

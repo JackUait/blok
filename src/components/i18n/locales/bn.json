@@ -928,6 +928,7 @@
   "tools.database.moreViews": "আরও {count}টি…",
   "tools.database.searchViews": "একটি ভিউ খুঁজুন…",
   "tools.database.newView": "নতুন ভিউ",
+  "tools.database.newDataSource": "নতুন ডেটা সোর্স",
   "tools.database.cellEmpty": "খালি",
   "tools.database.selectSearchPlaceholder": "একটি বিকল্প খুঁজুন…",
   "tools.database.selectHint": "একটি বিকল্প বেছে নিন বা নতুন তৈরি করুন",

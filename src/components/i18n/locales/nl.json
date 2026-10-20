@@ -928,6 +928,7 @@
   "tools.database.moreViews": "Nog {count}…",
   "tools.database.searchViews": "Zoek een weergave…",
   "tools.database.newView": "Nieuwe weergave",
+  "tools.database.newDataSource": "Nieuwe gegevensbron",
   "tools.database.cellEmpty": "Leeg",
   "tools.database.selectSearchPlaceholder": "Zoek een optie…",
   "tools.database.selectHint": "Selecteer een optie of maak er een",

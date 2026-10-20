@@ -203,7 +203,8 @@ test.describe('database view overflow list', () => {
     await expect(list.getByRole('option', { name: 'New view' })).toBeVisible();
   });
 
-  test('arrows move a highlight from the current view through New view, wrapping both ways', async ({ page }) => {
+  // research/21 §2: the highlight runs through "New view" and "New data source" and wraps.
+  test('arrows move a highlight from the current view through New view and New data source, wrapping both ways', async ({ page }) => {
     await mount(page, 'v6');
     const list = await openList(page);
     const search = list.getByPlaceholder('Search for a view...');
@@ -217,9 +218,11 @@ test.describe('database view overflow list', () => {
     await search.press('ArrowDown');
     await expect(highlighted).toHaveText('New view');
     await search.press('ArrowDown');
+    await expect(highlighted).toHaveText('New data source');
+    await search.press('ArrowDown');
     await expect(highlighted).toHaveText('First');
     await search.press('ArrowUp');
-    await expect(highlighted).toHaveText('New view');
+    await expect(highlighted).toHaveText('New data source');
     await expect(search).toBeFocused();
   });
 
@@ -256,6 +259,7 @@ test.describe('database view overflow list', () => {
     const list = await openList(page);
     const search = list.getByPlaceholder('Search for a view...');
 
+    await search.press('ArrowUp');
     await search.press('ArrowUp');
     await expect(list.locator('[data-highlighted]')).toHaveText('New view');
     await search.press('Enter');

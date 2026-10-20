@@ -928,6 +928,7 @@
   "tools.database.moreViews": "Więcej: {count}…",
   "tools.database.searchViews": "Wyszukaj widok…",
   "tools.database.newView": "Nowy widok",
+  "tools.database.newDataSource": "Nowe źródło danych",
   "tools.database.cellEmpty": "Puste",
   "tools.database.selectSearchPlaceholder": "Wyszukaj opcję…",
   "tools.database.selectHint": "Wybierz opcję lub utwórz nową",

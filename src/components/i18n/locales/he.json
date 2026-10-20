@@ -928,6 +928,7 @@
   "tools.database.moreViews": "עוד {count}…",
   "tools.database.searchViews": "חיפוש תצוגה…",
   "tools.database.newView": "תצוגה חדשה",
+  "tools.database.newDataSource": "מקור נתונים חדש",
   "tools.database.cellEmpty": "ריק",
   "tools.database.selectSearchPlaceholder": "חיפוש אפשרות…",
   "tools.database.selectHint": "בחר אפשרות או צור אפשרות חדשה",

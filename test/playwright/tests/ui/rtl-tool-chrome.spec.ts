@@ -193,13 +193,19 @@ for (const direction of DIRECTIONS) {
         return {
           borderLeft: style.borderLeftWidth,
           borderRight: style.borderRightWidth,
+          boxShadow: style.boxShadow,
           iconTransforms: icons.map(icon => getComputedStyle(icon).transform),
         };
       });
 
-      // The hairline faces the page, on the drawer's inline-start side.
-      expect(direction === 'rtl' ? geometry.borderRight : geometry.borderLeft).toBe('1px');
-      expect(direction === 'rtl' ? geometry.borderLeft : geometry.borderRight).toBe('0px');
+      // The hairline is a 0 0 0 1px ring in the shadow, not a side border.
+      expect(geometry.borderLeft).toBe('0px');
+      expect(geometry.borderRight).toBe('0px');
+      expect(geometry.boxShadow).toMatch(/0px 0px 0px 1px/);
+      // No layer leans to a physical side, so the shadow reads the same in both directions.
+      geometry.boxShadow.split(/,(?![^(]*\))/).forEach((layer) => {
+        expect(layer.replace(/rgba?\([^)]*\)/, '').trim().split(/\s+/)[0]).toBe('0px');
+      });
       // The » close chevrons point toward the inline end.
       geometry.iconTransforms.forEach((transform) => {
         expect(transform).toBe(direction === 'rtl' ? 'matrix(-1, 0, 0, 1, 0, 0)' : 'none');

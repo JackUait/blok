@@ -1,7 +1,8 @@
 /**
- * A repeating template's schedule: frequency, "Every N <unit>", start date
- * and time (research/05 §7, Notion help "database templates"). Checks the
- * saved JSON, not only the DOM.
+ * A repeating template's schedule, set from the template banner's
+ * "Duplicate every…" menu and its Edit cadence panel (research/21 §3):
+ * frequency, "Every N <unit>", start date and time. Checks the saved JSON,
+ * not only the DOM.
  */
 
 import type { Page } from '@playwright/test';
@@ -57,10 +58,10 @@ const repeatOf = async (page: Page): Promise<Record<string, unknown> | undefined
   return (saved?.blocks.find((block) => block.id === 'tpl')?.data as { repeat?: Record<string, unknown> }).repeat;
 });
 
-const openRepeat = async (page: Page): Promise<void> => {
+const openBanner = async (page: Page): Promise<void> => {
   await page.getByTestId('database-toolbar-new-menu').click();
   await page.getByRole('menuitem', { name: 'Standup' }).click();
-  await page.getByRole('menuitem', { name: 'Repeat' }).click();
+  await page.getByRole('menuitem', { name: 'Edit' }).click();
 };
 
 test.beforeAll(ensureBlokBundleBuilt);
@@ -73,34 +74,45 @@ test.beforeEach(async ({ page }) => {
 
 test('a new weekly repeat keeps the viewer\'s zone and closes the whole menu', async ({ page }) => {
   await mount(page);
-  await openRepeat(page);
+  await openBanner(page);
+  await page.getByRole('button', { name: 'Duplicate every…' }).click();
   await expect(page.getByRole('spinbutton')).toHaveCount(0);
-  await page.getByRole('menuitemcheckbox', { name: 'Weekly' }).click();
+  // "Weekday" and "2 Weeks" also contain "Week".
+  await page.getByRole('menuitem', { name: 'Week', exact: true }).click();
+  await page.getByRole('button', { name: 'Save' }).click();
 
   const zone = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
 
   await expect.poll(() => repeatOf(page)).toMatchObject({ frequency: 'weekly', timeZone: zone });
-  await expect(page.getByRole('menuitem', { name: 'Standup' })).toBeHidden();
+  await expect(page.getByText('Edit cadence')).toHaveCount(0);
+  await expect(page.getByRole('menuitem', { name: 'Week', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('menuitem', { name: 'Cancel recurrence' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Duplicate every week' })).toBeVisible();
 });
 
 // The page is shared between tests, so its time zone is not ours to set: the
 // schedule carries its own zone, and the fields read and write in that zone.
 test('sets the interval and the start date and time of a schedule', async ({ page }) => {
   await mount(page, { frequency: 'weekly', start: '2026-10-05T07:30:00.000Z', timeZone: 'Europe/Berlin' });
-  await openRepeat(page);
-  const every = page.getByRole('spinbutton');
+  await openBanner(page);
+  await page.getByRole('button', { name: 'Duplicate every week' }).click();
+  const every = page.getByRole('spinbutton', { name: 'Every' });
+  const unit = page.getByRole('combobox', { name: 'Every' });
 
   await expect(every).toHaveValue('1');
-  // One week reads "week", not "weeks"; the unit follows the typed number.
-  await expect(every).toHaveAccessibleName(/^Every.*week$/);
-  await expect(page.getByLabel('Time')).toHaveValue('09:30');
+  // One week reads "Week", not "Weeks"; the unit follows the typed number.
+  await expect(unit.getByRole('option', { selected: true })).toHaveText('Week');
+  await expect(page.getByLabel('At', { exact: true })).toHaveValue('09:30');
   await every.fill('2');
-  await expect(every).toHaveAccessibleName(/^Every.*weeks$/);
-  await expect.poll(() => repeatOf(page)).toMatchObject({ frequency: 'weekly', interval: 2 });
+  await expect(unit.getByRole('option', { selected: true })).toHaveText('Weeks');
 
-  await page.getByLabel('Start date').fill('2026-11-02');
-  await page.getByLabel('Time').fill('18:00');
+  await page.getByLabel('Starting', { exact: true }).fill('2026-11-02');
+  await page.getByLabel('At', { exact: true }).fill('18:00');
+  // Nothing is stored until Save.
+  expect(await repeatOf(page)).toEqual({ frequency: 'weekly', start: '2026-10-05T07:30:00.000Z', timeZone: 'Europe/Berlin' });
+  await page.getByRole('button', { name: 'Save' }).click();
 
   // Berlin is on CET (UTC+1) on Nov 2.
   await expect.poll(() => repeatOf(page)).toEqual({ frequency: 'weekly', interval: 2, start: '2026-11-02T17:00:00.000Z', timeZone: 'Europe/Berlin' });
+  await expect(page.getByRole('button', { name: 'Duplicate every 2 weeks' })).toBeVisible();
 });

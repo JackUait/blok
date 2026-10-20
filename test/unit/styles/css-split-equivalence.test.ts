@@ -831,7 +831,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_CALENDAR_EVENT_BADGE_BYTES = 218;
     // database.css: the view overflow list's search, row handle and "•••", and New view (research/13 §3a).
     // +292: its keyboard highlight (moved off the current row) and the "No results" line (research/21 §2).
-    const DATABASE_VIEW_OVERFLOW_LIST_BYTES = 1_352 + 292;
+    // +210: its width and padding again once it opens in the top layer, above Customize layout.
+    const DATABASE_VIEW_OVERFLOW_LIST_BYTES = 1_352 + 292 + 210;
     // database.css: the property menu's taken-name error line (research/14 §3).
     const DATABASE_PROPERTY_NAME_CLASH_BYTES = 233;
     // database.css: the form question's taken-name error line (research/14 §3).

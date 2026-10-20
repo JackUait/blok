@@ -269,7 +269,7 @@ describe('row page tab bar "N more…" (research/13 §3a)', () => {
     expect(selected()).toBe('Content');
   });
 
-  it('in the builder, a row\'s "•••" opens the tab menu and New view opens Add tab; there is no drag handle', async () => {
+  it('in the builder, a row\'s "•••" opens the tab menu and New view opens Add tab', async () => {
     await make();
     await openRowPage();
     await click(holder?.querySelector('[data-blok-database-drawer-customize]') ?? null);
@@ -281,7 +281,7 @@ describe('row page tab bar "N more…" (research/13 §3a)', () => {
     await click(more());
 
     expect(rows().map(rowName)).toEqual(['Content', ...VIEWS]);
-    expect(list()?.querySelector('[data-blok-database-tab-overflow-handle]')).toBeNull();
+    expect(row('V3')?.querySelector('[data-blok-database-tab-overflow-handle]')).not.toBeNull();
     expect(row('V3')?.querySelector('[data-blok-database-tab-overflow-menu]')).not.toBeNull();
 
     await click(row('V3')?.querySelector('[data-blok-database-tab-overflow-menu]') ?? null);

@@ -44,6 +44,7 @@ import {
   resetPageLayout,
   resolvePageLayout,
   sectionFirst,
+  inTabOrder,
 } from './page-layout';
 import type { PageLayoutData, PageLayoutDraft, PageLayoutOp, ResolvedPageLayout } from './page-layout';
 import { nanoid } from 'nanoid';
@@ -132,6 +133,8 @@ export interface LayoutTabsDraft {
   removed: string[];
   /** Saved tabs renamed while customizing. */
   titles: ReadonlyMap<string, string>;
+  /** The view tabs as reordered while customizing, by id. */
+  order?: string[];
   /** Reset: the view tabs go with the rest of the layout. */
   reset?: boolean;
 }
@@ -189,13 +192,15 @@ class PageLayoutTabEdits {
   readonly titles = new Map<string, string>();
   /** Relations "Add new relation" made: Discard deletes them, like other builder-made properties. */
   readonly relations: string[] = [];
+  /** The view tabs dragged in "N more…", by id. Null: not reordered. */
+  order: string[] | null = null;
 
   static empty(): PageLayoutTabEdits {
     return new PageLayoutTabEdits();
   }
 
   get isEmpty(): boolean {
-    return this.made.length === 0 && this.removed.size === 0 && this.titles.size === 0;
+    return this.made.length === 0 && this.removed.size === 0 && this.titles.size === 0 && this.order === null;
   }
 }
 
@@ -2441,11 +2446,15 @@ export class DatabaseCardDrawer {
     const first = all.find((tab) => !tab.view);
     const title = (tab: LayoutTab): string => this.tabDraft.titles.get(tab.id) ?? tab.title;
     const content = first === undefined ? '' : title(first);
+    const views = all.filter((tab) => tab.view && !this.tabDraft.removed.has(tab.id));
+    const byId = new Map(views.map((tab) => [tab.id, tab]));
+    const order = this.tabDraft.order;
+    const ordered = order === null ? views : inTabOrder(views.map((tab) => tab.id), order).flatMap((id) => byId.get(id) ?? []);
 
     return {
       contentId: first?.id ?? null,
       content: content !== '' ? content : this.label('tools.database.layoutContentTab'),
-      views: all.filter((tab) => tab.view && !this.tabDraft.removed.has(tab.id)).map((tab) => ({ ...tab, title: title(tab) })),
+      views: ordered.map((tab) => ({ ...tab, title: title(tab) })),
     };
   }
 
@@ -2571,6 +2580,19 @@ export class DatabaseCardDrawer {
         this.layoutTabs?.notify(this.label('tools.database.layoutViewDeleted').replace('{name}', () => name));
       },
     };
+  }
+
+  /** A view tab dropped between two others in "N more…"; it waits for Apply like a rename. */
+  private reorderTab(id: string, afterId: string | null, beforeId: string | null): void {
+    const order = this.viewTabs().views.map((tab) => tab.id).filter((each) => each !== id);
+    const before = beforeId === null ? 0 : order.indexOf(beforeId);
+    const at = afterId === null ? before : order.indexOf(afterId) + 1;
+
+    order.splice(Math.max(0, at), 0, id);
+    // The saved order again: no edit, so Cancel does not ask.
+    const saved = (this.layoutTabs?.list() ?? []).filter((tab) => tab.view && !this.tabDraft.removed.has(tab.id)).map((tab) => tab.id);
+
+    this.tabDraft.order = order.join('\n') === saved.join('\n') ? null : order;
   }
 
   /** A tab made in the draft: Discard deletes it, and it is selected (research/10 §2). */
@@ -2713,11 +2735,13 @@ export class DatabaseCardDrawer {
     const builder = this.builder;
     const add = anchor.parentElement?.querySelector<HTMLElement>('[data-blok-database-layout-add-tab]') ?? null;
     const titles = new Map(tabs.map((tab) => [tab.getAttribute('data-tab-id') ?? '', tab.textContent ?? '']));
+    const state = { reordered: false };
     const overflow: OverflowList = new OverflowList({
       anchor,
       prefix: 'data-blok-database-tab-overflow',
       idAttribute: 'data-view-id',
-      rows: [...titles].map(([id, name]) => ({ id, name, icon: { text: '' }, active: id === this.shownTab })),
+      // Blok draws Content first, so it stays there (Notion shows a handle on it too).
+      rows: [...titles].map(([id, name]) => ({ id, name, icon: { text: '' }, active: id === this.shownTab, fixed: id === 'content' })),
       labels: {
         search: this.label('tools.database.searchViews'),
         handle: this.label('tools.database.settingsDragToReorder'),
@@ -2731,6 +2755,11 @@ export class DatabaseCardDrawer {
         this.activeTab = id;
         this.rerender();
       },
+      // The list shows the new order at once; the bar follows when it closes.
+      onReorder: (id, afterId, beforeId) => {
+        state.reordered = true;
+        this.reorderTab(id, afterId === 'content' ? null : afterId, beforeId);
+      },
       // The tab is hidden, so its menu hangs from "N more…".
       onMenu: (_button, id) => {
         overflow.close();
@@ -2743,6 +2772,7 @@ export class DatabaseCardDrawer {
       onClose: () => {
         anchor.removeAttribute('aria-expanded');
         if (this.tabsOverflow === overflow) this.tabsOverflow = null;
+        if (state.reordered && this.draft !== null) this.rerender();
       },
     });
 
@@ -2910,7 +2940,13 @@ export class DatabaseCardDrawer {
   }
 
   private tabsDraftOf(tabs: PageLayoutTabEdits, reset = false): LayoutTabsDraft {
-    return { made: [...tabs.made], removed: [...tabs.removed], titles: new Map(tabs.titles), ...(reset ? { reset } : {}) };
+    return {
+      made: [...tabs.made],
+      removed: [...tabs.removed],
+      titles: new Map(tabs.titles),
+      ...(tabs.order === null || reset ? {} : { order: [...tabs.order] }),
+      ...(reset ? { reset } : {}),
+    };
   }
 
   /** Discard drops the draft and deletes the properties made meanwhile (research/09 §3b). */

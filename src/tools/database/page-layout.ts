@@ -316,6 +316,17 @@ export const setTabsId = (tabsId: string | undefined): PageLayoutOp => (layout) 
   return tabsId === undefined ? rest : { ...rest, tabsId };
 };
 
+/**
+ * `live` with the ids of `order` put in that order, in the slots they hold.
+ * Ids not in `order` (Content, a peer's new tab) keep their slot.
+ */
+export const inTabOrder = (live: readonly string[], order: readonly string[]): string[] => {
+  const ordered = new Set(order);
+  const queue = order.filter((id) => live.includes(id));
+
+  return live.map((id) => (ordered.has(id) ? queue.shift() ?? id : id));
+};
+
 export const setGroupIn = (groupIn: PageLayoutData['groupIn']): PageLayoutOp => (layout) => ({ ...layout, groupIn });
 
 export const setPropertyIcons = (propertyIcons: boolean): PageLayoutOp => (layout) => ({ ...layout, propertyIcons });

@@ -1013,6 +1013,71 @@ test.describe('row page layout', () => {
     await expect(peek(page)).toBeVisible();
   });
 
+  // research/13 §3a: in the builder each view row of "N more…" has a drag handle; Apply saves the order.
+  test('reorders the layout tabs by dragging a row of the builder\'s "N more…" list', async ({ page }) => {
+    const names = Array.from({ length: 10 }, (_, i) => `Roadmap view ${i + 1}`);
+    const data = blocks({ pageLayoutStructure: 'tabbed', pageLayoutTabsId: 'lt' });
+
+    (data[0] as { content: string[] }).content.push('lt');
+    data.push(
+      { id: 'lt', type: 'tabs', parent: 'db-1', data: {}, content: ['tc', ...names.map((_, i) => `tv${i}`)] },
+      { id: 'tc', type: 'tab', parent: 'lt', data: { title: '' } },
+      ...names.flatMap((name, i): OutputBlockData[] => [
+        { id: `tv${i}`, type: 'tab', parent: 'lt', data: { title: name }, content: [`lv${i}`] },
+        {
+          id: `lv${i}`,
+          type: 'database',
+          parent: `tv${i}`,
+          data: {
+            title: '',
+            schema: [{ id: 'p-title', name: 'Name', type: 'title', position: 'a0' }],
+            views: [{ id: `lvv${i}`, name, type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+            activeViewId: `lvv${i}`,
+            source: { databaseId: 'db-1' },
+          },
+        },
+      ]),
+    );
+    await mount(page, data);
+    // The linked views draw the rows too: open the one on screen.
+    const row = page.locator('[data-blok-database-table-row][data-row-id="r1"]').filter({ visible: true });
+
+    await row.hover();
+    await row.locator('[data-blok-database-table-open]').click();
+    await peek(page).hover();
+    await peek(page).getByRole('button', { name: 'Customize layout' }).click();
+    await builder(page).getByRole('button', { name: /^\d+ more…$/ }).click();
+    const list = page.locator('[data-blok-database-tab-overflow-dropdown]');
+
+    // research/13 §3a: 290px wide, in the top layer above the builder.
+    expect((await list.boundingBox())?.width).toBe(290);
+    await expect(list).toHaveCSS('padding-top', '4px');
+    // A row's accessible name holds its buttons' labels too, so match the name text.
+    const option = (name: string): Locator => list.getByRole('option').filter({ has: page.getByText(name, { exact: true }) });
+    const handle = option('Roadmap view 10').getByRole('button', { name: 'Drag to reorder' });
+    const target = await option('Roadmap view 1').boundingBox();
+    const from = await handle.boundingBox();
+
+    if (target === null || from === null) throw new Error('no list rows');
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(from.x + from.width / 2, target.y + 4, { steps: 8 });
+    await page.mouse.up();
+
+    const order = async (): Promise<string[]> => list.locator('[data-blok-database-tab-overflow-name]').allTextContents();
+
+    expect((await order()).slice(0, 3)).toEqual(['Content', 'Roadmap view 10', 'Roadmap view 1']);
+    await page.keyboard.press('Escape');
+    await expect(list).toHaveCount(0);
+    await builder(page).getByRole('button', { name: 'Apply to all pages' }).click();
+    await expect(builder(page)).toBeHidden();
+
+    const saved = await page.evaluate(async () => (await window.blokInstance?.save())?.blocks.find((block) => block.id === 'lt')?.content);
+
+    expect(saved).toEqual(['tc', 'tv9', ...names.slice(0, 9).map((_, i) => `tv${i}`)]);
+    await expect(peek(page).locator('[data-blok-database-drawer-tabs]').getByRole('tab').nth(1)).toHaveText('Roadmap view 10');
+  });
+
   // research/09 §2: the Preview switch swaps the canvas; unapplied edits survive.
   // research/13 §1b-1c: a relation is a one-click tab of the related database, filtered to the row page shown.
   test('adds a Related to tab that lists each row page\'s own related rows', async ({ page }) => {

@@ -226,6 +226,28 @@ const draftViewTab = async (client: LiveClient, name: string): Promise<void> => 
   await click(byTestId('database-layout-add-view'));
 };
 
+/** One peer, on a layout that is Tabbed already: add a view tab named `name`, Apply, close the page. */
+const addViewTabOn = async (client: LiveClient, name: string): Promise<void> => {
+  const holder = client.core.moduleInstances.BlockManager.getBlockById('db-1')?.holder;
+
+  await click(holder?.querySelector('[data-row-id="row-1"] [data-blok-database-table-open]'));
+  await click(client.core.moduleInstances.UI.nodes.wrapper.querySelector('[data-blok-database-drawer-customize]'));
+  const bar = document.querySelector(`${BUILDER} [data-blok-database-drawer-tabs]`);
+
+  bar?.dispatchEvent(new MouseEvent('pointerenter'));
+  await click(bar?.querySelector('[data-blok-database-layout-add-tab]'));
+  await click(byTestId('database-layout-link-data-source'));
+  await click(byTestId('database-layout-source-db-1'));
+  const field = byTestId('database-layout-view-name') as HTMLInputElement | null;
+
+  if (field === null) throw new Error('no View name field');
+  field.value = name;
+  field.dispatchEvent(new Event('input', { bubbles: true }));
+  await click(byTestId('database-layout-add-view'));
+  await click(document.querySelector(`${BUILDER} [data-blok-database-layout-apply]`));
+  await click(client.core.moduleInstances.UI.nodes.wrapper.querySelector('[data-blok-database-drawer-close]'));
+};
+
 /** One peer: add a view tab named `name`, Apply, close the page. */
 const addFirstViewTab = async (client: LiveClient, name: string): Promise<void> => {
   await draftViewTab(client, name);
@@ -279,6 +301,7 @@ describe('concurrent row page view tabs', { timeout: 60000 }, () => {
     booted.splice(0).forEach(destroyCore);
     holders.splice(0).forEach((holder) => holder.remove());
     server.destroy();
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
@@ -376,6 +399,94 @@ describe('concurrent row page view tabs', { timeout: 60000 }, () => {
       }
     });
   }
+
+  // research/13 §3a: a reorder applied while a peer added a tab keeps that tab.
+  it('applies a reorder from "N more…" on both peers, and keeps a tab a peer added meanwhile', async () => {
+    const views = ['V1', 'V2', 'V3'];
+
+    server.destroy();
+    server = new DocumentStore(new YBlockSerializer());
+    server.fromJSON([
+      {
+        id: 'db-1',
+        type: 'database',
+        data: {
+          ...seedBlocks[0].data,
+          schema: [{ id: 'prop-title', name: 'Title', type: 'title', position: 'a0', pageLayoutPlacements: [], pageLayoutSections: [], pageLayoutStructure: 'tabbed', pageLayoutTabsId: 'lt' }],
+        },
+        content: ['row-1', 'lt'],
+      },
+      { id: 'row-1', type: 'database-row', data: seedBlocks[1].data, parent: 'db-1' },
+      { id: 'lt', type: 'tabs', data: {}, parent: 'db-1', content: ['tc', ...views.map((_, i) => `tv${i}`)] },
+      { id: 'tc', type: 'tab', data: { title: '' }, parent: 'lt' },
+      ...views.flatMap((name, i) => [
+        { id: `tv${i}`, type: 'tab', data: { title: name }, parent: 'lt', content: [`lv${i}`] },
+        {
+          id: `lv${i}`,
+          type: 'database',
+          parent: `tv${i}`,
+          data: {
+            title: '',
+            schema: [{ id: 'prop-title', name: 'Title', type: 'title', position: 'a0' }],
+            views: [{ id: `lvv${i}`, name, type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+            activeViewId: `lvv${i}`,
+            source: { databaseId: 'db-1' },
+          },
+        },
+      ]),
+    ]);
+    // jsdom lays nothing out: a 330px bar holds Content, one 100px tab, Add tab and "N more…".
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private readonly callback: ResizeObserverCallback) {}
+
+      public observe(): void {
+        queueMicrotask(() => this.callback([], this));
+      }
+
+      public unobserve(): void {}
+
+      public disconnect(): void {}
+    });
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      if (this.hidden || this.closest('[data-blok-database-drawer-tabs]') === null) return 0;
+      if (this.getAttribute('role') === 'tab') return 100;
+
+      return this.hasAttribute('data-blok-database-tab-more') ? 60 : 28;
+    });
+    vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(function (this: Element) {
+      return this.matches('[data-blok-database-drawer-tabs]') ? 330 : 0;
+    });
+    const a = await bootLive();
+    const b = await bootLive();
+
+    await addViewTabOn(b, 'From B');
+    const holder = a.core.moduleInstances.BlockManager.getBlockById('db-1')?.holder;
+
+    await click(holder?.querySelector('[data-row-id="row-1"] [data-blok-database-table-open]'));
+    await click(a.core.moduleInstances.UI.nodes.wrapper.querySelector('[data-blok-database-drawer-customize]'));
+    await click(document.querySelector(`${BUILDER} [data-blok-database-tab-more]`));
+    const rows = [...document.querySelectorAll<HTMLElement>('[data-blok-database-tab-overflow-item]')];
+
+    rows.forEach((row, index) => {
+      vi.spyOn(row, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, index * 28, 290, 28));
+    });
+    // V3 (row 3) above V1's middle (row 1).
+    rows[3]?.querySelector('[data-blok-database-tab-overflow-handle]')?.dispatchEvent(new PointerEvent('pointerdown', { button: 0, bubbles: true }));
+    document.dispatchEvent(new PointerEvent('pointermove', { clientY: 30 }));
+    document.dispatchEvent(new PointerEvent('pointerup', { clientY: 30 }));
+    document.querySelector('[data-blok-database-tab-overflow-dropdown] input')
+      ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await settle();
+
+    // B's tab arrives while A's draft is open.
+    await pump([a, b]);
+    await click(document.querySelector(`${BUILDER} [data-blok-database-layout-apply]`));
+    await pump([a, b]);
+
+    for (const client of [a, b]) {
+      expect(layoutOf(client).tabTitles).toEqual(['', 'V3', 'V1', 'V2', 'From B']);
+    }
+  });
 
   // research/11 §1: Discard removes tabs made in the session, even after a peer's tabs block won.
   it('Discard removes a drafted tab after a peer applied the first view tab meanwhile', async () => {

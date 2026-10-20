@@ -3,6 +3,7 @@ import { DATA_ATTR } from '../constants/data-attributes';
 import { syncPortalDirection } from './portal-direction';
 import { SearchInput, SearchInputEvent } from './popover/components/search-input';
 import { createPositionTracker, positionFixedAnchored, type PositionTracker } from './popover/anchored-position';
+import { promoteToTopLayer, removeFromTopLayer } from './top-layer';
 
 export interface OverflowListRow {
   id: string;
@@ -10,6 +11,8 @@ export interface OverflowListRow {
   /** Drawn before the name: a trusted SVG string, or plain text such as an emoji. */
   icon: { svg: string } | { text: string };
   active: boolean;
+  /** Stays where it is: no handle, and no row drops above it. */
+  fixed?: boolean;
 }
 
 export interface OverflowListOptions {
@@ -142,6 +145,8 @@ export class OverflowList {
     dropdown.append(search.getElement(), empty, listbox);
 
     document.body.appendChild(dropdown);
+    // Above Customize layout, which is in the top layer too.
+    promoteToTopLayer(dropdown);
     const reposition = (): void => {
       positionFixedAnchored(dropdown, anchor, { side: 'bottom', offset: 4 });
     };
@@ -174,6 +179,7 @@ export class OverflowList {
     this.highlighted = null;
     window.removeEventListener('keydown', this.handleKeyDown, true);
     document.removeEventListener('mousedown', this.handleOutsideMouseDown);
+    removeFromTopLayer(this.element);
     this.element.remove();
     this.element = null;
     this.options.onClose?.();
@@ -286,7 +292,15 @@ export class OverflowList {
 
     const { onReorder, onMenu, readOnly } = this.options;
 
-    if (!readOnly && onReorder !== undefined) {
+    if (!readOnly && onReorder !== undefined && row.fixed === true) {
+      const space = document.createElement('span');
+
+      space.setAttribute(`${prefix}-handle-space`, '');
+      space.setAttribute('aria-hidden', 'true');
+      // The handle's width, so names line up with the rows that have one.
+      space.style.width = '20px';
+      item.append(space);
+    } else if (!readOnly && onReorder !== undefined) {
       const handle = this.rowButton(`${prefix}-handle`, IconMenu, labels.handle);
 
       handle.addEventListener('pointerdown', (event) => this.startDrag(event, row.id, item));
@@ -395,12 +409,16 @@ export class OverflowList {
     if (drag === null) {
       return;
     }
+    const fixed = new Set(this.options.rows.filter((row) => row.fixed === true).map((row) => row.id));
     const others = this.rowElements().filter((row) => row !== drag.row && !row.hidden);
-    const before = others.find((row) => {
+    const pointed = others.findIndex((row) => {
       const rect = row.getBoundingClientRect();
 
       return event.clientY < (rect.top + rect.bottom) / 2;
     });
+    // A fixed row keeps its place: a drop above it lands below it.
+    const free = others.findIndex((row, index) => index >= pointed && !fixed.has(row.getAttribute(this.options.idAttribute) ?? ''));
+    const before = pointed === -1 || free === -1 ? undefined : others[free];
     const last = others.at(-1);
 
     if (before !== undefined) {
@@ -421,6 +439,13 @@ export class OverflowList {
     if (drag === null || !drag.moved) {
       return;
     }
+    // The browser's click after the drop lands on the row and would open it.
+    const swallow = (event: MouseEvent): void => {
+      event.stopImmediatePropagation();
+    };
+
+    drag.row.addEventListener('click', swallow, { capture: true, once: true });
+    setTimeout(() => drag.row.removeEventListener('click', swallow, { capture: true }), 0);
     const { prefix, idAttribute } = this.options;
     const neighbour = (step: 'previousElementSibling' | 'nextElementSibling'): string | null => {
       const next = drag.row[step];

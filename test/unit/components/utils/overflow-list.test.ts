@@ -61,6 +61,11 @@ describe('OverflowList keyboard (research/21 §2)', () => {
     vi.restoreAllMocks();
   });
 
+  // Customize layout sits in the top layer: a list below it could not be reached.
+  it('opens in the top layer, above a builder that is there already', () => {
+    expect(document.querySelector(`[${P}-dropdown]`)?.getAttribute('data-blok-top-layer')).toBe('true');
+  });
+
   it('focuses the search and highlights the current view, not the first row', () => {
     expect(input()).toHaveFocus();
     expect(highlighted()).toBe('b');
@@ -229,5 +234,73 @@ describe('OverflowList second new-item row ("New data source", research/23 §10)
 
     expect(onNewSource).toHaveBeenCalledTimes(1);
     expect(list.isOpen).toBe(false);
+  });
+});
+
+describe('OverflowList fixed rows', () => {
+  let anchor: HTMLElement;
+  let list: OverflowList;
+  const onReorder = vi.fn();
+  const onSelect = vi.fn();
+  const row = (id: string): HTMLElement => document.querySelector(`[${P}-item][data-id="${id}"]`) as HTMLElement;
+  const order = (): Array<string | null> => [...document.querySelectorAll(`[${P}-item]`)].map((el) => el.getAttribute('data-id'));
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    anchor = document.createElement('button');
+    document.body.appendChild(anchor);
+    list = new OverflowList({
+      anchor,
+      prefix: P,
+      idAttribute: 'data-id',
+      rows: [{ ...ROWS[0], fixed: true }, ROWS[1], ROWS[2]],
+      labels: { search: 'Search', handle: 'Drag', menu: 'More', newItem: 'New view', noResults: 'No results' },
+      readOnly: false,
+      onSelect,
+      onReorder,
+      ownsNode: () => false,
+      closeLayer: () => false,
+      ownsEscape: () => false,
+    });
+    list.open();
+    ['a', 'b', 'c'].forEach((id, index) => {
+      vi.spyOn(row(id), 'getBoundingClientRect').mockReturnValue(new DOMRect(0, index * 28, 290, 28));
+    });
+  });
+
+  afterEach(() => {
+    list.close();
+    anchor.remove();
+    vi.restoreAllMocks();
+  });
+
+  it('gives a fixed row no handle, but keeps the handle\'s room so names line up', () => {
+    expect(row('a').querySelector(`[${P}-handle]`)).toBeNull();
+    expect(row('a').querySelector(`[${P}-handle-space]`)).not.toBeNull();
+    expect(row('b').querySelector(`[${P}-handle]`)).not.toBeNull();
+  });
+
+  it('drops a row dragged above a leading fixed row right after it', () => {
+    row('c').querySelector(`[${P}-handle]`)?.dispatchEvent(new PointerEvent('pointerdown', { button: 0, bubbles: true }));
+    document.dispatchEvent(new PointerEvent('pointermove', { clientY: 2 }));
+    document.dispatchEvent(new PointerEvent('pointerup', { clientY: 2 }));
+
+    expect(order()).toEqual(['a', 'c', 'b']);
+    expect(onReorder).toHaveBeenCalledWith('c', 'a', 'b');
+  });
+
+  it('the click a browser fires after a drop does not open the row or close the list', () => {
+    row('c').querySelector(`[${P}-handle]`)?.dispatchEvent(new PointerEvent('pointerdown', { button: 0, bubbles: true }));
+    document.dispatchEvent(new PointerEvent('pointermove', { clientY: 30 }));
+    document.dispatchEvent(new PointerEvent('pointerup', { clientY: 30 }));
+    // Down and up landed on different nodes: the click goes to the row.
+    row('c').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(list.isOpen).toBe(true);
+
+    row('c').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(onSelect).toHaveBeenCalledWith('c');
   });
 });

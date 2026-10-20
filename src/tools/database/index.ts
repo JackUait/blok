@@ -73,7 +73,7 @@ import { DatabasePropertyTypePopover } from './database-property-type-popover';
 import type { ViewChanges } from './database-model';
 import type { ViewPropertyPatch } from './view-settings';
 import type { PageLayoutOp } from './page-layout';
-import { setTabsId } from './page-layout';
+import { inTabOrder, setTabsId } from './page-layout';
 import {
   TIMELINE_ZOOMS,
   resolveArrowsBy,
@@ -2664,6 +2664,8 @@ export class DatabaseTool implements BlockTool {
       }
       this.putBackTabs(subtrees);
       for (const id of tabs?.removed ?? []) this.removeBlock(id);
+      // After putBackTabs: tabs made now come back at the end.
+      if (tabs?.order !== undefined && block !== undefined) this.reorderLayoutTabs(block, tabs.order);
       for (const [id, title] of tabs?.titles ?? []) {
         const tab = this.api.blocks.getById(id);
 
@@ -2675,6 +2677,22 @@ export class DatabaseTool implements BlockTool {
     this.mountRows();
     // A peer's tabs block may have won while this draft was open.
     this.queueMergeLayoutTabs();
+  }
+
+  /**
+   * Puts the view tabs in `order` with the tabs block's own move. Read from
+   * the live children: a peer's tab, or one this draft never saw, keeps its slot.
+   */
+  private reorderLayoutTabs(block: BlockAPI, order: string[]): void {
+    const children = (): string[] => this.api.blocks.getChildren(block.id).map((child) => child.id);
+    const target = inTabOrder(children(), order);
+
+    // From the end: each tab lands before the one already placed after it.
+    target.map((id, i) => ({ id, next: target[i + 1] })).reverse().forEach(({ id, next }) => {
+      const live = children();
+
+      if (live[live.indexOf(id) + 1] !== next) block.call('moveTab', next === undefined ? { id } : { id, before: next });
+    });
   }
 
   /**

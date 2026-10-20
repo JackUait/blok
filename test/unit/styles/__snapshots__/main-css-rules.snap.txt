@@ -6170,6 +6170,11 @@ button[data-blok-database-column-count]:hover {
   height: 16px;
 }
 
+[data-blok-database-backlink] > [data-blok-popover-item-title] {
+  flex: 1;
+  min-width: 0;
+}
+
 [data-blok-database-backlink-line] {
   display: flex;
   align-items: baseline;

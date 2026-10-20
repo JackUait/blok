@@ -251,3 +251,25 @@ test('shortens a long path to the first page, "...", then the parent', async ({ 
   expect(widths).toEqual([177, 130]);
   expect(await first.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
 });
+
+// research/23 72-backlinks-5.png: the breadcrumb sits at the row's right end, not after the title.
+test('puts the breadcrumb at the right end of the row', async ({ page }) => {
+  await mount(page, blocks());
+  await openRow(page, 'r1');
+  await page.locator('[data-blok-database-drawer-title]').hover();
+  await backlinks(page).click();
+
+  const bravo = page.locator('[data-blok-item-name="backlink-r2"]');
+  const path = bravo.locator('[data-blok-database-backlink-path]');
+
+  await expect(path).toHaveText('Tasks');
+  const row = await bravo.boundingBox();
+  const title = await bravo.locator('[data-blok-database-backlink-title]').boundingBox();
+  const crumb = await path.boundingBox();
+
+  if (row === null || title === null || crumb === null) {
+    throw new Error('no box');
+  }
+  expect(row.x + row.width - (crumb.x + crumb.width)).toBeLessThanOrEqual(24);
+  expect(crumb.x - (title.x + title.width)).toBeGreaterThan(100);
+});

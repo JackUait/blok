@@ -1252,6 +1252,7 @@ export class DatabaseCardDrawer {
         ...items.map((item): PopoverItemParams => ({
           type: PopoverItemType.Default,
           name: `backlink-${item.key}`,
+          dataset: { 'blok-database-backlink': '' },
           title: item.title,
           // Not secondaryLabel: that draws a keyboard shortcut from markup.
           titleEl: this.backlinkTitle(item),

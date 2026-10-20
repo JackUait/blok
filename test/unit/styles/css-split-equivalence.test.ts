@@ -925,6 +925,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_BACKLINK_CRUMBS_BYTES = 331;
     // database.css: dark panel, date picker, "+ Filter", "Empty" and form field inks (research/21 §1c, §1k, §1l, §1m).
     const DATABASE_DARK_LEFTOVERS_BYTES = 2_429;
+    // database.css: the backlink title fills its row so the path sits at the right end (research/23 §4).
+    const DATABASE_BACKLINK_RIGHT_PATH_BYTES = 192;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1057,7 +1059,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_TIME_ZONE_MENU_BYTES
       + DATABASE_TIMELINE_HANDLE_MAP_PIN_BYTES
       + DATABASE_BACKLINK_CRUMBS_BYTES
-      + DATABASE_DARK_LEFTOVERS_BYTES;
+      + DATABASE_DARK_LEFTOVERS_BYTES + DATABASE_BACKLINK_RIGHT_PATH_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

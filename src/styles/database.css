@@ -2620,6 +2620,12 @@ button[data-blok-database-column-count]:hover {
   height: 16px;
 }
 
+/* The popover title hugs its text; let it fill the row so the path can sit at the right end. */
+[data-blok-database-backlink] > [data-blok-popover-item-title] {
+  flex: 1;
+  min-width: 0;
+}
+
 [data-blok-database-backlink-line] {
   display: flex;
   align-items: baseline;

@@ -4,7 +4,7 @@ import { geminiModel } from '../../../src/agent-models/gemini';
 import { openaiModel } from '../../../src/agent-models/openai';
 import { openaiCompatibleModel } from '../../../src/agent-models/openai-compatible';
 import {
-  errorOf, merge, parseArguments, providerBlock, rawTurn, toolNames, withLevel, type AdapterOptions,
+  endOfStream, errorOf, merge, parseArguments, providerBlock, rawTurn, toolNames, withLevel, type AdapterOptions,
 } from '../../../src/agent-models/shared';
 import type { AgentModelRequest } from '../../../types/api';
 
@@ -83,5 +83,15 @@ describe('adapter helpers', () => {
     const stream = async (): Promise<Response> => new Response('');
 
     await expect(geminiModel({ model: 'm', stream })(request())).rejects.toThrow('Gemini: this adapter cannot stream yet. Pass send.');
+  });
+
+  it('ends a stream: an abort, then a missing terminal event, both throw; a finished stream passes', () => {
+    const aborted = new AbortController();
+
+    aborted.abort();
+
+    expect(() => endOfStream(aborted.signal, true, 'P')).toThrow('P: the run stopped mid-stream.');
+    expect(() => endOfStream(new AbortController().signal, false, 'P')).toThrow('P: the stream ended early.');
+    expect(() => endOfStream(new AbortController().signal, true, 'P')).not.toThrow();
   });
 });

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { readSse } from '../../../src/agent-models/sse';
+import { readJsonEvents, readSse } from '../../../src/agent-models/sse';
 
 const streamOf = (...chunks: string[]): ReadableStream<Uint8Array> => {
   const encoder = new TextEncoder();
@@ -95,5 +95,47 @@ describe('readSse', () => {
     controller.abort();
 
     expect(await collect(streamOf('data: 1\n\n'), controller.signal)).toEqual([]);
+  });
+});
+
+describe('readJsonEvents', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const collectJson = async (source: Response | ReadableStream<Uint8Array>, signal = new AbortController().signal): Promise<unknown[]> => {
+    const events: unknown[] = [];
+
+    for await (const event of readJsonEvents(source, signal, 'P')) {
+      events.push(event);
+    }
+
+    return events;
+  };
+
+  it('yields each JSON object event and skips data that is not a JSON object', async () => {
+    expect(await collectJson(streamOf('data: {"a":1}\n\n', 'data: not json\n\n', 'data: [1]\n\n', 'data: 3\n\n', 'data: {"b":', '2}\n\n')))
+      .toEqual([{ a: 1 }, { b: 2 }]);
+  });
+
+  it('throws the provider\'s message for an HTTP error response, and its status when the body is not JSON', async () => {
+    await expect(collectJson(new Response('{"error":{"message":"Bad key"}}', { status: 401 }))).rejects.toThrow('P: Bad key');
+    await expect(collectJson(new Response('<html>', { status: 502 }))).rejects.toThrow('P: HTTP 502.');
+  });
+
+  it('reads an ok Response body', async () => {
+    expect(await collectJson(new Response('data: {"a":1}\n\n'))).toEqual([{ a: 1 }]);
+  });
+
+  it('yields nothing when the signal is already aborted', async () => {
+    const controller = new AbortController();
+
+    controller.abort();
+
+    expect(await collectJson(streamOf('data: {"a":1}\n\n'), controller.signal)).toEqual([]);
   });
 });

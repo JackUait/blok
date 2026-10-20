@@ -3,10 +3,10 @@ import type {
 } from '../../types/api';
 
 import {
-  DEFAULT_MAX_TOKENS, callId, errorOf, httpError, isRecord, parseArguments, post, postStream, requireTransport, stepOf, withLevel,
+  DEFAULT_MAX_TOKENS, callId, endOfStream, errorOf, isRecord, parseArguments, post, postStream, requireTransport, stepOf, withLevel,
   type AdapterOptions, type Body,
 } from './shared';
-import { readSse } from './sse';
+import { readJsonEvents } from './sse';
 
 // Claude Opus 5.5 rejects disabled thinking, so "off" is the lowest effort.
 const LEVELS: Record<AgentThinkingLevel, Body> = {
@@ -52,14 +52,6 @@ interface Building {
   call?: number;
 }
 
-const parseEvent = (data: string): unknown => {
-  try {
-    return JSON.parse(data) as unknown;
-  } catch {
-    return undefined;
-  }
-};
-
 // The next request is a 400 if a thinking block lost its signature.
 const DELTA_FIELDS: Record<string, string> = { text_delta: 'text', thinking_delta: 'thinking', signature_delta: 'signature' };
 
@@ -86,12 +78,6 @@ const finished = ({ block, json }: Building): AgentModelContentBlock => ('input'
 
 /** Builds the same response readReply gives for the JSON reply, and reports tool calls as they stream. */
 const readStream = async (source: Response | ReadableStream<Uint8Array>, request: AgentModelRequest, step: number): Promise<AgentModelResponse> => {
-  const failed = await httpError(source, 'Anthropic');
-
-  if (failed !== null) {
-    throw failed;
-  }
-
   const blocks = new Map<number, Building>();
   const state: { stopped: boolean; stop: string | null; calls: number } = { stopped: false, stop: null, calls: 0 };
 
@@ -136,21 +122,11 @@ const readStream = async (source: Response | ReadableStream<Uint8Array>, request
     }
   };
 
-  for await (const { data } of readSse(source, request.signal)) {
-    const event = parseEvent(data);
-
-    if (isRecord(event)) {
-      onEvent(event);
-    }
+  for await (const event of readJsonEvents(source, request.signal, 'Anthropic')) {
+    onEvent(event);
   }
 
-  if (request.signal.aborted) {
-    throw new Error('Anthropic: the run stopped mid-stream.');
-  }
-  // A dropped connection ends the stream too; its half message must not pass as a reply.
-  if (!state.stopped) {
-    throw new Error('Anthropic: the stream ended early.');
-  }
+  endOfStream(request.signal, state.stopped, 'Anthropic');
 
   const content = [...blocks.entries()].sort(([a], [b]) => a - b).map(([, entry]) => finished(entry));
 

@@ -6,43 +6,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { anthropicModel } from '../../../src/agent-models/anthropic';
 import type { AdapterOptions } from '../../../src/agent-models/shared';
 import { runAssistantLoop } from '../../../src/agent/assistant-loop';
-import type { AgentModelMessage, AgentModelRequest, AgentModelStreamEvent } from '../../../types/api';
+import type { AgentModelMessage, AgentModelStreamEvent } from '../../../types/api';
+
+import { fakeStream, request, sseStream } from './stream-helpers';
 
 const FIXTURE = readFileSync(resolve(__dirname, 'fixtures/anthropic-stream.sse'), 'utf8');
 
-/** Small chunks, so lines and JSON tokens split across reads. */
-const sseStream = (text: string, size = 7): ReadableStream<Uint8Array> => {
-  const bytes = new TextEncoder().encode(text);
-
-  return new ReadableStream({
-    start: (controller) => {
-      for (let offset = 0; offset < bytes.length; offset += size) {
-        controller.enqueue(bytes.slice(offset, offset + size));
-      }
-      controller.close();
-    },
-  });
-};
-
 const sse = (...events: Array<Record<string, unknown>>): string => events
   .map((event) => `event: ${String(event.type)}\ndata: ${JSON.stringify(event)}\n\n`).join('');
-
-const fakeStream = (...texts: string[]): { stream: NonNullable<AdapterOptions['stream']>; bodies: Record<string, unknown>[] } => {
-  const bodies: Record<string, unknown>[] = [];
-
-  return {
-    bodies,
-    stream: async (body) => {
-      bodies.push(structuredClone(body));
-
-      return sseStream(texts.shift() ?? '');
-    },
-  };
-};
-
-const request = (onStream?: (event: AgentModelStreamEvent) => void, signal = new AbortController().signal): AgentModelRequest => ({
-  system: 'sys', messages: [{ role: 'user', content: 'Go' }], tools: [], signal, ...(onStream === undefined ? {} : { onStream }),
-});
 
 const heading = { commands: [{ name: 'block.insert', args: { type: 'header' } }] };
 

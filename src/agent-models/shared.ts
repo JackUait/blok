@@ -140,6 +140,15 @@ const errorMessage = (error: unknown): string => {
   return typeof error === 'string' ? error : JSON.stringify(error);
 };
 
+/** undefined when the text is not JSON. */
+export const parseJson = (text: string): unknown => {
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return undefined;
+  }
+};
+
 export const errorOf = (reply: unknown, provider: string): Error | null => {
   if (!isRecord(reply) || reply.error === undefined || reply.error === null) {
     return null;
@@ -155,13 +164,19 @@ export const httpError = async (source: Response | ReadableStream<Uint8Array>, p
   }
 
   const text = await source.text().catch(() => '');
-  const body = ((): unknown => {
-    try {
-      return JSON.parse(text) as unknown;
-    } catch {
-      return undefined;
-    }
-  })();
 
-  return errorOf(body, provider) ?? new Error(`${provider}: HTTP ${source.status}.`);
+  return errorOf(parseJson(text), provider) ?? new Error(`${provider}: HTTP ${source.status}.`);
+};
+
+/**
+ * Throws unless the stream reached its terminal event. A dropped connection ends the
+ * stream too, and its half reply must not pass as one.
+ */
+export const endOfStream = (signal: AbortSignal, finished: boolean, provider: string): void => {
+  if (signal.aborted) {
+    throw new Error(`${provider}: the run stopped mid-stream.`);
+  }
+  if (!finished) {
+    throw new Error(`${provider}: the stream ended early.`);
+  }
 };

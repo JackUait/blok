@@ -3,10 +3,10 @@ import type {
 } from '../../types/api';
 
 import {
-  DEFAULT_MAX_TOKENS, blocksOf, errorOf, httpError, isRecord, isText, isToolResult, isToolUse, parseArguments,
+  DEFAULT_MAX_TOKENS, blocksOf, endOfStream, errorOf, isRecord, isText, isToolResult, isToolUse, parseArguments,
   callId, providerBlock, rawTurn, post, postStream, requireTransport, stepOf, toolNames, withLevel, type AdapterOptions, type Body,
 } from './shared';
-import { readSse } from './sse';
+import { readJsonEvents } from './sse';
 
 const FORMAT = 'openai-chat';
 
@@ -101,14 +101,6 @@ const readReply = (reply: unknown, step: number): AgentModelResponse => {
   return { content, stop_reason: stop };
 };
 
-const parseChunk = (data: string): unknown => {
-  try {
-    return JSON.parse(data) as unknown;
-  } catch {
-    return undefined;
-  }
-};
-
 /** A tool call while it streams. Id and name come from its first chunk only, so its events and the reply agree. */
 interface StreamingCall {
   id: unknown;
@@ -146,12 +138,6 @@ const messageOf = (state: Assembly): Record<string, unknown> => {
 
 /** Reports tool calls as they stream, then reads the assembled message through readReply. */
 const readStream = async (source: Response | ReadableStream<Uint8Array>, request: AgentModelRequest, step: number): Promise<AgentModelResponse> => {
-  const failed = await httpError(source, 'OpenAI-compatible');
-
-  if (failed !== null) {
-    throw failed;
-  }
-
   const state: Assembly = { calls: new Map() };
   const endOpenCalls = (): void => {
     [...state.calls.entries()].forEach(([key, call], index) => {
@@ -180,7 +166,11 @@ const readStream = async (source: Response | ReadableStream<Uint8Array>, request
 
     if (call !== undefined && typeof fn.arguments === 'string' && fn.arguments !== '') {
       call.arguments += fn.arguments;
-      request.onStream?.({ type: 'tool_input', index, json: call.arguments });
+
+      // The loop may have run an ended call already; late pieces still reach the reply.
+      if (call.open) {
+        request.onStream?.({ type: 'tool_input', index, json: call.arguments });
+      }
     }
   };
 
@@ -218,21 +208,11 @@ const readStream = async (source: Response | ReadableStream<Uint8Array>, request
     }
   };
 
-  for await (const { data } of readSse(source, request.signal)) {
-    const chunk = parseChunk(data);
-
-    if (isRecord(chunk)) {
-      onChunk(chunk);
-    }
+  for await (const chunk of readJsonEvents(source, request.signal, 'OpenAI-compatible')) {
+    onChunk(chunk);
   }
 
-  if (request.signal.aborted) {
-    throw new Error('OpenAI-compatible: the run stopped mid-stream.');
-  }
-  // A dropped connection ends the stream too; its half message must not pass as a reply.
-  if (state.finish === undefined) {
-    throw new Error('OpenAI-compatible: the stream ended early.');
-  }
+  endOfStream(request.signal, state.finish !== undefined, 'OpenAI-compatible');
 
   return readReply({ choices: [{ message: messageOf(state), finish_reason: state.finish }] }, step);
 };

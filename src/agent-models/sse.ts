@@ -1,3 +1,5 @@
+import { httpError, isRecord, parseJson } from './shared';
+
 export interface SseEvent {
   event?: string;
   data: string;
@@ -116,5 +118,32 @@ export async function* readSse(source: Response | ReadableStream<Uint8Array>, si
   } finally {
     signal.removeEventListener('abort', cancel);
     cancel();
+  }
+}
+
+/**
+ * The JSON object events of a streaming response, after checking it is not an HTTP error.
+ * Data that is not a JSON object is skipped.
+ * @param source - the response, or its body
+ * @param signal - the run's signal
+ * @param provider - names the provider in errors
+ */
+export async function* readJsonEvents(
+  source: Response | ReadableStream<Uint8Array>,
+  signal: AbortSignal,
+  provider: string
+): AsyncGenerator<Record<string, unknown>> {
+  const failed = await httpError(source, provider);
+
+  if (failed !== null) {
+    throw failed;
+  }
+
+  for await (const { data } of readSse(source, signal)) {
+    const event = parseJson(data);
+
+    if (isRecord(event)) {
+      yield event;
+    }
   }
 }

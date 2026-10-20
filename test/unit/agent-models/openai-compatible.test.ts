@@ -4,25 +4,12 @@ import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openaiCompatibleModel } from '../../../src/agent-models/openai-compatible';
-import type { AdapterOptions } from '../../../src/agent-models/shared';
 import { runAssistantLoop } from '../../../src/agent/assistant-loop';
-import type { AgentModelMessage, AgentModelRequest, AgentModelStreamEvent } from '../../../types/api';
+import type { AgentModelMessage, AgentModelStreamEvent } from '../../../types/api';
+
+import { fakeStream, request } from './stream-helpers';
 
 const FIXTURE = readFileSync(resolve(__dirname, 'fixtures/chat-stream.sse'), 'utf8');
-
-/** Small chunks, so lines and JSON tokens split across reads. */
-const sseStream = (text: string, size = 7): ReadableStream<Uint8Array> => {
-  const bytes = new TextEncoder().encode(text);
-
-  return new ReadableStream({
-    start: (controller) => {
-      for (let offset = 0; offset < bytes.length; offset += size) {
-        controller.enqueue(bytes.slice(offset, offset + size));
-      }
-      controller.close();
-    },
-  });
-};
 
 /** One chunk per delta; a string entry is sent as raw data, e.g. '[DONE]'. */
 const chunks = (...entries: Array<Record<string, unknown> | string>): string => entries
@@ -30,23 +17,6 @@ const chunks = (...entries: Array<Record<string, unknown> | string>): string => 
 
 const delta = (value: Record<string, unknown>, finish: string | null = null): Record<string, unknown> => ({
   choices: [{ index: 0, delta: value, finish_reason: finish }],
-});
-
-const fakeStream = (...texts: string[]): { stream: NonNullable<AdapterOptions['stream']>; bodies: Record<string, unknown>[] } => {
-  const bodies: Record<string, unknown>[] = [];
-
-  return {
-    bodies,
-    stream: async (body) => {
-      bodies.push(structuredClone(body));
-
-      return sseStream(texts.shift() ?? '');
-    },
-  };
-};
-
-const request = (onStream?: (event: AgentModelStreamEvent) => void, signal = new AbortController().signal): AgentModelRequest => ({
-  system: 'sys', messages: [{ role: 'user', content: 'Go' }], tools: [], signal, ...(onStream === undefined ? {} : { onStream }),
 });
 
 const heading = { commands: [{ name: 'block.insert', args: { type: 'header' } }] };
@@ -208,6 +178,7 @@ describe('openaiCompatibleModel', () => {
     expect(await run(openaiCompatibleModel({ model: 'm', send }), [{ role: 'user', content: 'a' }]))
       .toEqual({ status: 'failed', reply: '', error: 'OpenAI-compatible: Rate limited' });
   });
+
   describe('streaming', () => {
     // What DeepSeek returns without stream for the fixture's content.
     const twinMessage = {
@@ -292,6 +263,28 @@ describe('openaiCompatibleModel', () => {
           ],
         } },
       ]);
+    });
+
+    it('reports no input for a call that already ended, but keeps it for the reply', async () => {
+      const text = chunks(
+        delta({ tool_calls: [{ index: 0, id: 'call_a', type: 'function', function: { name: 'blok_read', arguments: '{"a"' } }] }),
+        delta({ tool_calls: [{ index: 1, id: 'call_b', type: 'function', function: { name: 'blok_read', arguments: '{}' } }] }),
+        delta({ tool_calls: [{ index: 0, function: { arguments: ':1}' } }] }, 'tool_calls'),
+        '[DONE]'
+      );
+      const events: AgentModelStreamEvent[] = [];
+
+      const response = await openaiCompatibleModel({ model: 'm', stream: fakeStream(text).stream })(request((event) => events.push(event)));
+
+      expect(events).toEqual([
+        { type: 'tool_start', index: 0, id: 'call_a', name: 'blok_read' },
+        { type: 'tool_input', index: 0, json: '{"a"' },
+        { type: 'tool_end', index: 0 },
+        { type: 'tool_start', index: 1, id: 'call_b', name: 'blok_read' },
+        { type: 'tool_input', index: 1, json: '{}' },
+        { type: 'tool_end', index: 1 },
+      ]);
+      expect(response.content[0]).toEqual({ type: 'tool_use', id: 'call_a', name: 'blok_read', input: { a: 1 } });
     });
 
     it('reads several calls carried in one chunk', async () => {

@@ -3,10 +3,10 @@ import type {
 } from '../../types/api';
 
 import {
-  DEFAULT_MAX_TOKENS, blocksOf, errorOf, httpError, isRecord, isText, isToolResult, isToolUse, parseArguments,
+  DEFAULT_MAX_TOKENS, blocksOf, endOfStream, errorOf, isRecord, isText, isToolResult, isToolUse, parseArguments,
   callId, providerBlock, rawTurn, post, postStream, requireTransport, stepOf, withLevel, type AdapterOptions, type Body,
 } from './shared';
-import { readSse } from './sse';
+import { readJsonEvents } from './sse';
 
 const FORMAT = 'openai-responses';
 
@@ -106,14 +106,6 @@ const readReply = (reply: unknown, step: number): AgentModelResponse => {
   return { content, stop_reason: stop };
 };
 
-const parseEvent = (data: string): unknown => {
-  try {
-    return JSON.parse(data) as unknown;
-  } catch {
-    return undefined;
-  }
-};
-
 /** A function call while it streams; `call` is its position among this response's calls. */
 interface Streaming {
   call: number;
@@ -122,12 +114,6 @@ interface Streaming {
 
 /** Reports tool calls as they stream, then reads the final response through readReply. */
 const readStream = async (source: Response | ReadableStream<Uint8Array>, request: AgentModelRequest, step: number): Promise<AgentModelResponse> => {
-  const failed = await httpError(source, 'OpenAI');
-
-  if (failed !== null) {
-    throw failed;
-  }
-
   const calls = new Map<number, Streaming>();
   const state: { final: unknown } = { final: undefined };
 
@@ -165,21 +151,11 @@ const readStream = async (source: Response | ReadableStream<Uint8Array>, request
     }
   };
 
-  for await (const { data } of readSse(source, request.signal)) {
-    const event = parseEvent(data);
-
-    if (isRecord(event)) {
-      onEvent(event);
-    }
+  for await (const event of readJsonEvents(source, request.signal, 'OpenAI')) {
+    onEvent(event);
   }
 
-  if (request.signal.aborted) {
-    throw new Error('OpenAI: the run stopped mid-stream.');
-  }
-  // A dropped connection ends the stream too; its half response must not pass as a reply.
-  if (state.final === undefined) {
-    throw new Error('OpenAI: the stream ended early.');
-  }
+  endOfStream(request.signal, state.final !== undefined, 'OpenAI');
 
   return readReply(state.final, step);
 };

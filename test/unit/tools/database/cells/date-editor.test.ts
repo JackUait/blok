@@ -537,6 +537,88 @@ describe('date cell editor', () => {
 
   // research/22 §4, notion-measure12/17-date-edit and notion-measure8/16-time-on: Notion's picker
   // rows top to bottom are End date, Date format, Include time, [Time format, Timezone], Remind, Clear.
+  // research/26 §5e: the field shows the date in the property's Date format ("Oct 12" for Short date).
+  describe('field follows the Date format', () => {
+    const openFormat = (value: string, dateFormat: NonNullable<PropertyDefinition['date']>['dateFormat']): CellEditorContext => {
+      const ctx = makeEditorContext({ onDateDisplayChange: vi.fn() });
+
+      openCellEditor({ ...makeProperty('date'), date: { dateFormat } }, value, makeAnchor(), ctx);
+
+      return ctx;
+    };
+    const field = (): HTMLInputElement => q<HTMLInputElement>('[data-blok-database-date-input="start"]');
+
+    it.each([
+      ['full', '2026-06-05', 'June 5, 2026'],
+      ['short', '2026-06-05', 'Jun 5'],
+      ['short', '2025-10-12', 'Oct 12'],
+      ['month_day_year', '2026-06-05', '06/05/2026'],
+      ['day_month_year', '2026-06-05', '05/06/2026'],
+      ['year_month_day', '2026-06-05', '2026/06/05'],
+      ['relative', '2026-10-10', 'Tomorrow'],
+      ['relative', '2026-06-05', 'June 5, 2026'],
+    ] as const)('%s shows %s as %s', (format, value, shown) => {
+      openFormat(value, format);
+
+      expect(field().value).toBe(shown);
+    });
+
+    it.each([
+      ['full', '2026-06-05'],
+      ['short', '2025-10-12'],
+      ['short', '2026-06-05'],
+      ['month_day_year', '2026-06-05'],
+      ['day_month_year', '2026-06-05'],
+      ['year_month_day', '2026-06-05'],
+      ['relative', '2026-10-08'],
+    ] as const)('%s: Enter on the shown text keeps %s', (format, value) => {
+      const ctx = openFormat(value, format);
+
+      press(field(), 'Enter');
+
+      expect(field().getAttribute('aria-invalid')).toBeNull();
+      for (const [written] of vi.mocked(ctx.onCommit).mock.calls) {
+        expect(written).toBe(value);
+      }
+    });
+
+    it.each([
+      ['short', '2025-10-12', 'Oct 20', '2025-10-20'],
+      ['month_day_year', '2026-06-05', '07/04/2026', '2026-07-04'],
+      ['day_month_year', '2026-06-05', '04/07/2026', '2026-07-04'],
+      ['year_month_day', '2026-06-05', '2026/07/04', '2026-07-04'],
+      ['relative', '2026-06-05', 'Yesterday', '2026-10-08'],
+      ['day_month_year', '2026-06-05', '2026-07-04', '2026-07-04'],
+    ] as const)('%s: typing %s back reads it in that format', (format, value, typed, written) => {
+      const ctx = openFormat(value, format);
+
+      typeInto(field(), typed);
+      press(field(), 'Enter');
+
+      expect(ctx.onCommit).toHaveBeenCalledWith(written);
+    });
+
+    it('rejects a day that does not exist in the format', () => {
+      const ctx = openFormat('2026-06-05', 'day_month_year');
+
+      typeInto(field(), '31/02/2026');
+      press(field(), 'Enter');
+
+      expect(ctx.onCommit).not.toHaveBeenCalled();
+      expect(field().getAttribute('aria-invalid')).toBe('true');
+    });
+
+    it('a Date format pick in the picker redraws the field at once', () => {
+      openFormat('2026-06-05', 'full');
+
+      q('[data-blok-database-date-setting="dateFormat"]').click();
+      [...document.querySelectorAll<HTMLElement>('[data-blok-database-date-setting-menu] [role="menuitemradio"]')]
+        .find((item) => item.textContent?.trim() === 'tools.database.dateFormat.year_month_day')?.click();
+
+      expect(field().value).toBe('2026/06/05');
+    });
+  });
+
   describe('format rows', () => {
     const dict = en as Record<string, string>;
     const i18n = { t: (key: string, vars?: Record<string, string | number>): string =>

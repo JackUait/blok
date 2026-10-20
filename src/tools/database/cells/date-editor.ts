@@ -10,6 +10,8 @@ import {
   TIME_FORMATS,
   applyDateDisplayChange,
   formatDatePart,
+  formatDayField,
+  parseDayField,
   resolveHourCycle,
   resolveLocale,
   resolveWeekStart,
@@ -30,27 +32,10 @@ const nextWholeHour = (): string => `${String((new Date().getHours() + 1) % 24).
 
 const DAYS_SHOWN = 42;
 
-const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
-
 const addDays = (iso: string, days: number): string => {
   const date = toLocalDate(iso);
 
   return toIsoDay(new Date(date.getFullYear(), date.getMonth(), date.getDate() + days));
-};
-
-/** A typed day: `YYYY-MM-DD`, or any text the engine's Date.parse reads ("Oct 9, 2026"). */
-const parseTypedDay = (text: string): string | null => {
-  const trimmed = text.trim();
-  const iso = ISO_DAY.exec(trimmed);
-
-  if (iso !== null) {
-    const day = toIsoDay(new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3])));
-
-    return day === trimmed ? day : null;
-  }
-  const ms = Date.parse(trimmed);
-
-  return trimmed !== '' && Number.isFinite(ms) ? toIsoDay(new Date(ms)) : null;
 };
 
 /** A typed time, 24-hour ("17:45") or 12-hour ("5:45 pm"), as `HH:mm`. */
@@ -392,9 +377,14 @@ class DateEditor {
     input.type = 'text';
     input.setAttribute('data-blok-database-date-input', which);
     input.setAttribute('aria-label', this.t(which === 'start' ? 'tools.database.dateStart' : 'tools.database.dateEnd'));
-    input.value = part === null ? '' : formatDatePart(part.day, this.locale);
+    const shown = part === null ? '' : formatDayField(part.day, this.locale, this.display);
+
+    input.value = shown;
     const apply = (): void => {
-      const day = parseTypedDay(input.value);
+      // The shown text always reads back as its own day, in any locale.
+      const day = part !== null && input.value.trim() === shown
+        ? part.day
+        : parseDayField(input.value, this.locale, this.display, toLocalDate(part?.day ?? toIsoDay(new Date())).getFullYear());
 
       if (day === null) {
         input.setAttribute('aria-invalid', 'true');

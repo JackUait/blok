@@ -162,6 +162,58 @@ const formatDay = (part: string, locale: string, display: DateDisplay, now: Date
   }
 };
 
+/** A bare `YYYY-MM-DD` day as the date picker's field shows it: the property's Date format, no time. */
+export const formatDayField = (day: string, locale: string, display: DateDisplay, now: Date = new Date()): string =>
+  formatDay(day, locale, display, now);
+
+const NUMERIC_ORDER: Partial<Record<DateFormat, ReadonlyArray<'y' | 'm' | 'd'>>> = {
+  month_day_year: ['m', 'd', 'y'],
+  day_month_year: ['d', 'm', 'y'],
+  year_month_day: ['y', 'm', 'd'],
+};
+
+/** A day from its numbers, or null when it is not on the calendar (31/02). */
+const dayFrom = (year: number, month: number, day: number): string | null => {
+  const date = new Date(year, month - 1, day);
+
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day ? toIsoDay(date) : null;
+};
+
+/**
+ * Text typed in the date picker's field as `YYYY-MM-DD`, or null. Reads the
+ * property's Date format, then ISO, then what the engine's Date.parse reads.
+ * `yearOf` is the year a Short date without one belongs to.
+ */
+export const parseDayField = (text: string, locale: string, display: DateDisplay, yearOf: number, now: Date = new Date()): string | null => {
+  const trimmed = text.trim();
+
+  if (trimmed === '') return null;
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+
+  if (iso !== null) return dayFrom(Number(iso[1]), Number(iso[2]), Number(iso[3]));
+  const format = display.dateFormat ?? 'full';
+  const order = NUMERIC_ORDER[format];
+  const numbers = /^(\d{1,4})\s*[/.-]\s*(\d{1,2})\s*[/.-]\s*(\d{1,4})$/.exec(trimmed);
+
+  if (order !== undefined && numbers !== null) {
+    const value = (key: 'y' | 'm' | 'd'): number => Number(numbers[order.indexOf(key) + 1]);
+
+    return dayFrom(value('y'), value('m'), value('d'));
+  }
+  // The words the field shows for days near today ("Yesterday", "In 3 days").
+  const near = format === 'relative'
+    ? Array.from({ length: RELATIVE_DAY_LIMIT * 2 + 1 }, (_, i) => toIsoDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() + i - RELATIVE_DAY_LIMIT)))
+      .find((day) => formatDay(day, locale, display, now).toLocaleLowerCase(locale) === trimmed.toLocaleLowerCase(locale))
+    : undefined;
+
+  if (near !== undefined) return near;
+  // Date.parse reads a yearless "Oct 12" as 2001.
+  const withYear = format === 'short' && !/\d{4}/.test(trimmed) ? `${trimmed} ${yearOf}` : trimmed;
+  const ms = Date.parse(withYear);
+
+  return Number.isFinite(ms) ? toIsoDay(new Date(ms)) : null;
+};
+
 export const HOUR_CYCLES: Partial<Record<string, 'h12' | 'h23'>> = { '12_hour': 'h12', '24_hour': 'h23' };
 
 /** The choices of Date format and Time format, shared by the property menu and the date picker. */

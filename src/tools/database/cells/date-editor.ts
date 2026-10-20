@@ -131,7 +131,8 @@ const zoneOffset = (zone: string, at: Date): string => {
   offsetFormats.set(zone, format);
   const name = format.formatToParts(at).find((p) => p.type === 'timeZoneName')?.value ?? 'GMT';
 
-  return name.replace(/([+-])0(\d)/, '$1$2');
+  // Chromium writes a zero offset as "GMT+00:00"; Notion shows "GMT".
+  return /^GMT[+-]00:00$/.test(name) ? 'GMT' : name.replace(/([+-])0(\d)/, '$1$2');
 };
 
 const zoneEntry = (id: string, zone: string, at: Date): ZoneEntry => {

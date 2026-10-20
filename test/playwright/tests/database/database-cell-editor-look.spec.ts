@@ -57,10 +57,10 @@ const BG = { light: 'rgb(255, 255, 255)', dark: 'rgb(37, 37, 37)' };
 
 const ORDER = ['p-title', 'p-notes', 'p-amount', 'p-link', 'p-stage', 'p-due'];
 
-const mount = async (page: Page, order = ORDER): Promise<void> => {
+const mount = async (page: Page, order = ORDER, direction: 'ltr' | 'rtl' = 'ltr'): Promise<void> => {
   await gotoTestPage(page);
   await page.waitForFunction(() => typeof window.Blok === 'function');
-  await page.evaluate(async (data) => {
+  await page.evaluate(async ({ data, direction: dir }) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
       window.blokInstance = undefined;
@@ -71,9 +71,9 @@ const mount = async (page: Page, order = ORDER): Promise<void> => {
     holder.id = 'blok';
     holder.style.cssText = 'max-width:1400px;margin:40px auto 0';
     document.body.appendChild(holder);
-    window.blokInstance = new window.Blok({ holder, data: { blocks: data } });
+    window.blokInstance = new window.Blok({ holder, data: { blocks: data }, i18n: { direction: dir } });
     await window.blokInstance.isReady;
-  }, blocks(order));
+  }, { data: blocks(order), direction });
   await expect(page.getByRole('grid').first()).toBeVisible();
 };
 
@@ -377,6 +377,9 @@ test.describe('date picker submenus', () => {
     await openZones(page);
     await page.keyboard.type('zzqx');
     await expect(zoneMenu(page).locator('[data-blok-database-date-zone-empty]')).toHaveText('No results');
+    // research/23 §1: a zero offset reads "GMT" (Chromium's longOffset says "GMT+00:00").
+    await zoneSearch(page).fill('abidjan');
+    await expect(zoneMenu(page).locator('[data-blok-database-date-setting-option="Africa/Abidjan"] [data-blok-database-date-zone-offset]')).toHaveText('GMT');
     await zoneSearch(page).fill('');
     await page.keyboard.type('tokyo');
     await page.keyboard.press('ArrowDown');
@@ -390,7 +393,7 @@ test.describe('date picker submenus', () => {
   });
 
   test('Time zone in RTL opens on the right of the picker', async ({ page }) => {
-    await page.evaluate(() => document.getElementById('blok')?.setAttribute('dir', 'rtl'));
+    await mount(page, ORDER, 'rtl');
     await openZones(page);
     const menuBox = await zoneMenu(page).boundingBox();
     const pickerBox = await picker(page).boundingBox();

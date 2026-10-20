@@ -9,7 +9,7 @@ import { Column, ColumnList, TabsTool, TabTool, Toggle } from '../../../../src/t
 import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import { DatabaseCommentTool } from '../../../../src/tools/database-comment';
-import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
+import type { DatabaseAdapter, DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
 import { encode } from '../../../../src/components/modules/collaboration/sync-wire';
 import type { SyncWireFrame } from '../../../../src/components/modules/collaboration/types';
 import { DocumentStore } from '../../../../src/components/modules/yjs/document-store';
@@ -55,6 +55,41 @@ const doc = (): OutputBlockData[] => [
   { id: 'p1', type: 'paragraph', data: { text: 'After' } },
 ];
 
+/** Every row write each database's backend got, as `database:call:row`. */
+let backendCalls: string[] = [];
+
+/** A backend per database that logs row writes. */
+const spyAdapter = (databaseId: string, blocks: OutputBlockData[] = doc()): DatabaseAdapter => {
+  const fixture = blocks.find((saved) => saved.id === databaseId);
+  const { schema: savedSchema, views } = (fixture?.data ?? {}) as { schema: PropertyDefinition[]; views: DatabaseViewConfig[] };
+  const log = (call: string, rowId: string): void => void backendCalls.push(`${databaseId}:${call}:${rowId}`);
+
+  return {
+    loadDatabase: async () => structuredClone({ schema: savedSchema, views }),
+    createRow: async (params) => { log('createRow', params.id); return { ...params }; },
+    updateRow: async ({ rowId, properties }) => ({ id: rowId, properties, position: 'a0' }),
+    moveRow: async ({ rowId, position }) => ({ id: rowId, properties: {}, position }),
+    deleteRow: async ({ rowId }) => { log('deleteRow', rowId); },
+    createProperty: async (params) => ({ ...params }),
+    updateProperty: async ({ propertyId }) => ({ id: propertyId, name: '', type: 'text', position: 'a0' }),
+    deleteProperty: async () => undefined,
+    createView: async (params) => ({ sorts: [], filters: [], visibleProperties: [], ...params }),
+    updateView: async ({ viewId }) => table(viewId),
+    deleteView: async () => undefined,
+  };
+};
+
+/** With a backend per database id; any other database has none. */
+let backends: Record<string, DatabaseAdapter> = {};
+
+class BackedDatabase extends DatabaseTool {
+  constructor(options: ConstructorParameters<typeof DatabaseTool>[0]) {
+    const adapter = backends[options.block.id] ?? backends['*'];
+
+    super({ ...options, config: adapter === undefined ? options.config : { ...options.config, adapter } });
+  }
+}
+
 const boot = async (blocks: OutputBlockData[], live = false): Promise<Core> => {
   holder = document.createElement('div');
   document.body.appendChild(holder);
@@ -63,7 +98,7 @@ const boot = async (blocks: OutputBlockData[], live = false): Promise<Core> => {
     ...(live ? { server: 'https://sync.test/api/', collaboration: { doc: 'database-delete-peer' } } : {}),
     tools: {
       paragraph: Paragraph, bookmark: Bookmark, toggle: Toggle, column_list: ColumnList, column: Column, tabs: TabsTool, tab: TabTool,
-      database: DatabaseTool, 'database-row': DatabaseRowTool, 'database-comment': DatabaseCommentTool,
+      database: BackedDatabase, 'database-row': DatabaseRowTool, 'database-comment': DatabaseCommentTool,
     },
     ...(live ? {} : { data: { blocks } }),
   });
@@ -144,6 +179,8 @@ describe('deleting a database deletes its rows, sources and comments', () => {
     holder = undefined;
     destroyTooltip();
     PopoverRegistry.resetForTests();
+    backends = {};
+    backendCalls = [];
     vi.restoreAllMocks();
   });
 
@@ -384,18 +421,322 @@ describe('deleting a database deletes its rows, sources and comments', () => {
     expect(instance.moduleInstances.YjsManager.toJSON().map((entry) => entry.type)).toEqual(['paragraph']);
   });
 
-  // Open: insert-replace re-homes a replaced container's children (block-insertion reparentChildrenTo) and ignores deletesChildren.
-  it.fails('replacing a database with another block leaves none of its rows behind', async () => {
-    const instance = await boot(doc());
+  const replaceWithParagraph = async (instance: Core, id: string): Promise<void> => {
     const { blocks } = instance.moduleInstances.API.methods;
-    const index = blocks.getBlockIndex('db');
+    const index = blocks.getBlockIndex(id);
 
-    if (index === undefined) throw new Error('no index for db');
+    if (index === undefined) throw new Error(`no index for ${id}`);
+    instance.moduleInstances.YjsManager.stopCapturing();
     blocks.insert('paragraph', { text: 'Instead' }, undefined, index, false, true, 'np');
     await quiet();
+  };
+
+  it('replacing a database with another block leaves none of its rows behind', async () => {
+    const instance = await boot(doc());
+
+    await replaceWithParagraph(instance, 'db');
 
     expect(await savedShape(instance)).toEqual(['p0<root', 'np<root', 'p1<root']);
     expect(yjsShape(instance)).toEqual(['p0<root', 'np<root', 'p1<root']);
+    expect(liveShape(instance)).toEqual(['p0<root', 'np<root', 'p1<root']);
+    expect(holderIds()).toEqual(['p0', 'np', 'p1']);
+  });
+
+  it('one undo of a database replace brings the database back with everything under it', async () => {
+    const instance = await boot(doc());
+
+    await replaceWithParagraph(instance, 'db');
+    await undo(instance);
+
+    expect(await savedShape(instance)).toEqual(original());
+    expect(yjsShape(instance)).toEqual(original());
+  });
+
+  it('replacing a row takes its page body with it', async () => {
+    const instance = await boot(doc());
+
+    await replaceWithParagraph(instance, 'r1');
+
+    const shape = await savedShape(instance);
+
+    expect(shape.filter((entry) => entry.startsWith('body1') || entry.startsWith('r1'))).toEqual([]);
+    expect(yjsShape(instance).filter((entry) => entry.startsWith('body1'))).toEqual([]);
+  });
+
+  it('replacing a tabs block keeps its tabs, under the new block (v1.16.1 behaviour)', async () => {
+    const instance = await boot([
+      { id: 'p0', type: 'paragraph', data: { text: 'Before' } },
+      { id: 'tabs', type: 'tabs', data: {}, content: ['t1'] },
+      { id: 't1', type: 'tab', data: { title: 'Alpha' }, parent: 'tabs', content: ['tp'] },
+      { id: 'tp', type: 'paragraph', data: { text: 'one' }, parent: 't1' },
+      { id: 'p1', type: 'paragraph', data: { text: 'After' } },
+    ]);
+
+    await replaceWithParagraph(instance, 'tabs');
+
+    expect(await savedShape(instance)).toEqual(['p0<root', 'np<root', 't1<np', 'tp<t1', 'p1<root']);
+    expect(yjsShape(instance)).toEqual(['p0<root', 'np<root', 't1<np', 'tp<t1', 'p1<root']);
+  });
+
+  it('replacing a toggle still keeps its children, under the new block', async () => {
+    const instance = await boot([
+      { id: 'tg', type: 'toggle', data: { text: 'toggle', isOpen: true }, content: ['inside'] },
+      { id: 'inside', type: 'paragraph', data: { text: 'inside' }, parent: 'tg' },
+    ]);
+
+    await replaceWithParagraph(instance, 'tg');
+
+    expect(await savedShape(instance)).toEqual(['np<root', 'inside<np']);
+    expect(yjsShape(instance)).toEqual(['np<root', 'inside<np']);
+  });
+
+  describe('a local delete tells the backend', () => {
+    const backed = async (blocks: OutputBlockData[] = doc()): Promise<Core> => {
+      backends = Object.fromEntries(blocks.filter((saved) => saved.type === 'database').map((saved) => [saved.id ?? '', spyAdapter(saved.id ?? '', blocks)]));
+      const instance = await boot(blocks);
+
+      backendCalls = [];
+
+      return instance;
+    };
+    const deletes = (): string[] => backendCalls.filter((call) => call.includes(':deleteRow:')).sort();
+    const creates = (): string[] => backendCalls.filter((call) => call.includes(':createRow:')).sort();
+
+    it('deleting one row block deletes that row', async () => {
+      const instance = await backed();
+
+      await deleteViaApi(instance, 'r1');
+
+      expect(backendCalls).toEqual(['db:deleteRow:r1']);
+    });
+
+    it('undo of a row delete creates the row again; redo deletes it again', async () => {
+      const instance = await backed();
+
+      await deleteViaApi(instance, 'r1');
+      backendCalls = [];
+      await undo(instance);
+
+      expect(creates()).toEqual(['db:createRow:r1']);
+      expect(deletes()).toEqual([]);
+
+      backendCalls = [];
+      await redo(instance);
+
+      expect(deletes()).toEqual(['db:deleteRow:r1']);
+      expect(creates()).toEqual([]);
+    });
+
+    it('deleting a database deletes its rows and its source\'s rows, each in its own backend', async () => {
+      const instance = await backed();
+
+      await deleteViaApi(instance, 'db');
+
+      expect(deletes()).toEqual(['db:deleteRow:r1', 'src-b:deleteRow:b1']);
+      expect(creates()).toEqual([]);
+    });
+
+    it('undo of a database delete creates every row again; redo deletes them again', async () => {
+      const instance = await backed();
+
+      await deleteViaApi(instance, 'db');
+      backendCalls = [];
+      await undo(instance);
+
+      expect(creates()).toEqual(['db:createRow:r1', 'src-b:createRow:b1']);
+      expect(deletes()).toEqual([]);
+
+      backendCalls = [];
+      await redo(instance);
+
+      expect(deletes()).toEqual(['db:deleteRow:r1', 'src-b:deleteRow:b1']);
+      expect(creates()).toEqual([]);
+    });
+
+    it('Backspace on a selected database deletes its rows', async () => {
+      const instance = await backed();
+      const { BlockSelection, BlockEvents } = instance.moduleInstances;
+
+      BlockSelection.selectBlock(block(instance, 'db'));
+      BlockEvents.keydown(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
+      await quiet();
+
+      expect(deletes()).toEqual(['db:deleteRow:r1', 'src-b:deleteRow:b1']);
+    });
+
+    it('deleting a selection that spans a database deletes its rows', async () => {
+      const instance = await backed();
+      const { BlockSelection, BlockManager } = instance.moduleInstances;
+
+      ['p0', 'db', 'p1'].forEach((id) => BlockSelection.selectBlock(block(instance, id)));
+      BlockManager.deleteSelectedBlocksAndInsertReplacement();
+      await quiet();
+
+      expect(deletes()).toEqual(['db:deleteRow:r1', 'src-b:deleteRow:b1']);
+    });
+
+    it('cutting a selected database deletes its rows', async () => {
+      const instance = await backed();
+      const { BlockSelection, BlockEvents } = instance.moduleInstances;
+
+      BlockSelection.selectBlock(block(instance, 'db'));
+      BlockEvents.handleCommandX({
+        preventDefault: () => undefined,
+        clipboardData: { setData: (): void => undefined },
+      } as unknown as ClipboardEvent);
+      await quiet();
+
+      expect(deletes()).toEqual(['db:deleteRow:r1', 'src-b:deleteRow:b1']);
+    });
+
+    it('undo creates a deleted row again even when it carries page keys the backend does not store', async () => {
+      const instance = await backed(doc().map((saved) => saved.id === 'r1'
+        ? { ...saved, data: { ...saved.data, icon: 'x', pageId: 'page-1', cover: 'https://example.test/c.png' } }
+        : saved));
+
+      await deleteViaApi(instance, 'r1');
+      backendCalls = [];
+      await undo(instance);
+
+      expect(creates()).toEqual(['db:createRow:r1']);
+    });
+
+    /** One adapter for every database, as a host configures it; it never answers loadDatabase. */
+    const sharedBackend = (): Set<string> => {
+      const held = new Set(doc().filter((saved) => saved.type === 'database-row').map((saved) => saved.id ?? ''));
+      const adapter = spyAdapter('db');
+
+      backends = {
+        '*': {
+          ...adapter,
+          loadDatabase: () => new Promise(() => undefined),
+          createRow: async (params) => { held.add(params.id); return adapter.createRow(params); },
+          deleteRow: async (params) => { held.delete(params.rowId); return adapter.deleteRow(params); },
+        },
+      };
+
+      return held;
+    };
+    const savedRows = async (instance: Core): Promise<string[]> =>
+      ((await instance.moduleInstances.Saver.save())?.blocks ?? []).filter((saved) => saved.type === 'database-row').map((saved) => saved.id ?? '').sort();
+
+    it('cutting a database and pasting it back leaves its pasted rows in the backend', async () => {
+      const held = sharedBackend();
+      const instance = await boot(doc());
+      const { BlockSelection, BlockEvents, Paste, BlockManager, Caret } = instance.moduleInstances;
+      const written = new Map<string, string>();
+
+      BlockSelection.selectBlock(block(instance, 'db'));
+      BlockEvents.handleCommandX({
+        preventDefault: () => undefined,
+        clipboardData: { setData: (type: string, value: string): void => void written.set(type, value) },
+      } as unknown as ClipboardEvent);
+      await quiet();
+      BlockManager.setCurrentBlockByChildNode(block(instance, 'p1').holder);
+      Caret.setToBlock(block(instance, 'p1'), Caret.positions.END);
+      await Paste.processDataTransfer({
+        types: [...written.keys()], getData: (type: string) => written.get(type) ?? '', files: [] as unknown as FileList, items: [],
+      } as unknown as DataTransfer);
+      await quiet();
+      await quiet();
+
+      const pasted = await savedRows(instance);
+
+      expect(pasted).toHaveLength(2);
+      expect([...held].sort()).toEqual(pasted);
+    });
+
+    it('duplicating a database creates its copied rows in the backend', async () => {
+      const held = sharedBackend();
+      const instance = await boot(doc());
+      const before = new Set(held);
+
+      await instance.moduleInstances.DragManager.duplicateBlocksInPlace(block(instance, 'db'));
+      await quiet();
+      await quiet();
+
+      const copies = (await savedRows(instance)).filter((id) => !before.has(id));
+
+      expect(copies).toHaveLength(2);
+      expect([...held].filter((id) => !before.has(id)).sort()).toEqual(copies);
+      expect(creates().length).toBe(2);
+    });
+
+    it('deleting a source deletes only its own rows', async () => {
+      const instance = await backed();
+
+      await deleteViaApi(instance, 'src-b');
+
+      expect(backendCalls).toEqual(['src-b:deleteRow:b1']);
+    });
+
+    it('undo of a source delete creates its rows again; redo deletes them again', async () => {
+      const instance = await backed();
+
+      await deleteViaApi(instance, 'src-b');
+      backendCalls = [];
+      await undo(instance);
+
+      expect(creates()).toEqual(['src-b:createRow:b1']);
+      expect(deletes()).toEqual([]);
+
+      backendCalls = [];
+      await redo(instance);
+
+      expect(deletes()).toEqual(['src-b:deleteRow:b1']);
+    });
+
+    it('replacing a database deletes its rows', async () => {
+      const instance = await backed();
+      const { blocks } = instance.moduleInstances.API.methods;
+      const index = blocks.getBlockIndex('db');
+
+      if (index === undefined) throw new Error('no index for db');
+      blocks.insert('paragraph', { text: 'Instead' }, undefined, index, false, true, 'np');
+      await quiet();
+
+      expect(deletes()).toEqual(['db:deleteRow:r1', 'src-b:deleteRow:b1']);
+    });
+
+    it('a database whose view shows another database deletes none of that one\'s rows', async () => {
+      const instance = await backed([
+        { id: 'other', type: 'database', content: ['o1'], data: { title: 'Other', schema, views: [table('ov')], activeViewId: 'ov' } },
+        { id: 'o1', type: 'database-row', parent: 'other', data: { properties: { t: 'Other row' }, position: 'a0' } },
+        {
+          id: 'holder', type: 'database', content: ['h1'],
+          data: { title: 'Holder', schema, views: [table('hv'), table('hv2', { position: 'a1', dataSourceId: 'other' })], activeViewId: 'hv2' },
+        },
+        { id: 'h1', type: 'database-row', parent: 'holder', data: { properties: { t: 'Holder row' }, position: 'a0' } },
+      ]);
+
+      await deleteViaApi(instance, 'holder');
+
+      expect(backendCalls).toEqual(['holder:deleteRow:h1']);
+    });
+
+    it('destroying the editor deletes nothing', async () => {
+      const instance = await backed();
+
+      await destroyCore(instance);
+      core = undefined;
+      await quiet();
+
+      expect(backendCalls).toEqual([]);
+    });
+
+    it('clearing or rendering the editor deletes nothing', async () => {
+      const instance = await backed();
+      const { blocks } = instance.moduleInstances.API.methods;
+
+      await blocks.render({ blocks: [{ id: 'fresh', type: 'paragraph', data: { text: 'fresh' } }] });
+      await quiet();
+      await blocks.render({ blocks: doc() });
+      await quiet();
+      await blocks.clear();
+      await quiet();
+
+      expect(deletes()).toEqual([]);
+    });
   });
 
   describe('a peer deletes a database', () => {
@@ -462,6 +803,20 @@ describe('deleting a database deletes its rows, sources and comments', () => {
 
       return { instance, send: () => socket.deliver({ type: 'update', update: peer.encodeStateAsUpdate() }) };
     };
+
+    it('a peer that removes the database and its rows sends nothing to the backend here', async () => {
+      backends = { db: spyAdapter('db'), 'src-b': spyAdapter('src-b') };
+      const { instance, send } = await bootWithPeer();
+
+      backendCalls = [];
+      ['c1', 'b1', 'src-b', 'body1', 'r1', 'db'].forEach((id) => peer.removeBlock(id));
+      send();
+      await quiet();
+
+      await vi.waitFor(() => expect(liveShape(instance)).toEqual(['p0<root', 'p1<root']));
+      await quiet();
+      expect(backendCalls.filter((call) => call.includes(':deleteRow:'))).toEqual([]);
+    });
 
     it('a peer that removes the source and its rows leaves no orphan here', async () => {
       const { instance, send } = await bootWithPeer();

@@ -178,13 +178,25 @@ export class DatabaseBackendSync {
   private readonly pendingPropertyTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly pendingPropertyUpdates = new Map<string, Parameters<DatabaseAdapter['updateProperty']>[0]>();
   private readonly heldRows: Set<string>;
+  private readonly deletedRows: Set<string>;
 
-  /** `heldRows` outlives this sync: the tool builds a new sync on every view switch. */
-  constructor(adapter?: DatabaseAdapter, onError?: (error: unknown) => void, observer?: RowWriteObserver, heldRows = new Set<string>()) {
+  /**
+   * `heldRows` outlives this sync: the tool builds a new sync on every view switch.
+   * `deletedRows` (rows this client deleted from the backend) also outlives the
+   * tool: an undo that brings the database back must create them again.
+   */
+  constructor(
+    adapter?: DatabaseAdapter,
+    onError?: (error: unknown) => void,
+    observer?: RowWriteObserver,
+    heldRows = new Set<string>(),
+    deletedRows = new Set<string>(),
+  ) {
     this.adapter = adapter;
     this.onError = onError;
     this.observer = observer;
     this.heldRows = heldRows;
+    this.deletedRows = deletedRows;
   }
 
   private async safeCall<T>(
@@ -207,6 +219,7 @@ export class DatabaseBackendSync {
   async syncCreateRow(params: Parameters<DatabaseAdapter['createRow']>[0]): Promise<ReturnType<DatabaseAdapter['createRow']> extends Promise<infer R> ? R | undefined : never> {
     this.observer?.created(params);
     this.heldRows.add(params.id);
+    this.deletedRows.delete(params.id);
     return this.sendRowWrite(params.id, () => this.safeCall((a) => a.createRow(params), (error) => {
       this.heldRows.delete(params.id);
       this.onError?.(error);
@@ -320,6 +333,7 @@ export class DatabaseBackendSync {
       const params = { ...captured, properties: adapterRowValues(captured.properties, schema).properties };
 
       this.cancelRow(rowId);
+      this.deletedRows.delete(rowId);
       void this.sendRowWrite(
         rowId,
         () => this.safeCall((adapter) => adapter.createRow(params)),
@@ -392,9 +406,13 @@ export class DatabaseBackendSync {
     };
   }
 
-  /** Creates a relocated row without telling the observer, so pageAdded does not fire. */
+  /**
+   * Creates a relocated row, or one this client deleted that is back, without
+   * telling the observer, so pageAdded does not fire.
+   */
   createRelocatedRow(params: Parameters<DatabaseAdapter['createRow']>[0]): void {
     this.heldRows.add(params.id);
+    this.deletedRows.delete(params.id);
     this.cancelRow(params.id);
     void this.sendRowWrite(params.id, () => this.safeCall((adapter) => adapter.createRow(params), (error) => {
       this.heldRows.delete(params.id);
@@ -404,6 +422,11 @@ export class DatabaseBackendSync {
 
   holdsRow(rowId: string): boolean {
     return this.heldRows.has(rowId);
+  }
+
+  /** True when this client deleted the row from the backend and has not created it since. */
+  deletedRow(rowId: string): boolean {
+    return this.deletedRows.has(rowId);
   }
 
   private pruneReplayRow(
@@ -430,9 +453,15 @@ export class DatabaseBackendSync {
     else this.pendingUpdates.set(rowId, { ...pending, properties: remaining });
   }
 
-  async syncDeleteRow(params: Parameters<DatabaseAdapter['deleteRow']>[0]): Promise<void> {
+  /**
+   * Once per row until it is created again: a tool delete and core's removal both land here.
+   * A relocated row lives on in another database, so it is not remembered for re-creation.
+   */
+  async syncDeleteRow(params: Parameters<DatabaseAdapter['deleteRow']>[0], relocated = false): Promise<void> {
     const { rowId } = params;
 
+    if (!relocated && this.deletedRows.has(rowId)) return;
+    if (!relocated && this.adapter !== undefined) this.deletedRows.add(rowId);
     this.heldRows.delete(rowId);
     this.cancelRow(rowId);
     this.deletingRows.set(rowId, (this.deletingRows.get(rowId) ?? 0) + 1);
@@ -442,6 +471,7 @@ export class DatabaseBackendSync {
         rowId,
         () => this.safeCall((adapter) => adapter.deleteRow(params), (error) => {
           this.heldRows.add(rowId);
+          this.deletedRows.delete(rowId);
           this.onError?.(error);
         }),
         true,

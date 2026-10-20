@@ -107,6 +107,14 @@ export class DatabaseRowTool implements BlockTool {
     this.readOnly = readOnly;
   }
 
+  /** A row deleted on its own tells its database; a deleted database sends its rows itself. */
+  public removed(removal?: { deleted: boolean }): void {
+    const parentId = this.block?.parentId;
+
+    if (removal?.deleted !== true || parentId === null || parentId === undefined || this.block === undefined) return;
+    this.api?.blocks.getById(parentId)?.call('rowDeleted', { rowId: this.block.id });
+  }
+
   public render(): HTMLDivElement {
     const el = document.createElement('div');
 

@@ -3,7 +3,7 @@ import { DATABASE_ACTION_HANDLERS } from '../../shared/tool-actions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolData, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
-import type { AutofillSettings, DatabaseData, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, DatabaseLinkedSourceSnapshot, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, FilterRule, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue } from './types';
+import type { AutofillSettings, DatabaseAdapter, DatabaseData, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, DatabaseLinkedSourceSnapshot, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, FilterRule, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue } from './types';
 import { countFilterRules } from './filter-tree';
 import { adapterRowValues, assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, readPropertyValue, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
 import { isOutputData, isPlaceValue } from './tier3-values';
@@ -307,6 +307,20 @@ const LINKED_NEW_VIEW_KEYS: Readonly<Record<Exclude<ViewType, 'form' | 'dashboar
 /** Emitted on the editor's own event bus when a database block's tool goes away. */
 const DATABASE_GONE_EVENT = 'database gone';
 
+/** Rows each database deleted from its backend, kept past the tool so an undo can create them again. */
+const deletedBackendRows = new WeakMap<DatabaseAdapter, Map<string, Set<string>>>();
+
+const deletedBackendRowsOf = (adapter: DatabaseAdapter | undefined, databaseId: string): Set<string> => {
+  if (adapter === undefined) return new Set();
+  const byDatabase = deletedBackendRows.get(adapter) ?? new Map<string, Set<string>>();
+  const rows = byDatabase.get(databaseId) ?? new Set<string>();
+
+  byDatabase.set(databaseId, rows);
+  deletedBackendRows.set(adapter, byDatabase);
+
+  return rows;
+};
+
 /** Backlinks are counted again this long after the last block change, so typing never scans per keystroke. */
 const BACKLINKS_SETTLE_MS = 300;
 
@@ -415,6 +429,8 @@ export class DatabaseTool implements BlockTool {
    * seeded from the document: a row here can be missing from the backend.
    */
   private readonly backendRows = new Set<string>();
+  /** True until the paste or duplicate that made this copy has placed its rows. */
+  private copiedRowsPending = false;
   private readonly config: DatabaseConfig;
 
   private title: string;
@@ -587,6 +603,8 @@ export class DatabaseTool implements BlockTool {
     this.linkPicker = this.source === undefined && (data as Record<string, unknown> | undefined)?.[LINK_PICKER_KEY] === true;
     // Only a user's insert: a load, undo, redo or a peer's insert never opens it.
     this.offerNewDatabasePanel = origin === 'user' && this.seeded && !this.linkPicker;
+    // A pasted or duplicated copy brings rows with new ids that no backend has yet.
+    this.copiedRowsPending = origin === 'paste';
     // An adapter that does not store a view's own order keeps the shared one.
     const viewRowOrder = this.config.adapter === undefined || this.config.adapter.viewRowOrder === true;
 
@@ -1788,8 +1806,54 @@ export class DatabaseTool implements BlockTool {
     }
   }
 
+  /** A local delete of this database (or of a block that takes it along) deletes its rows from the backend. */
+  removed(removal?: { deleted: boolean }): void {
+    if (removal?.deleted !== true || this.linked || this.readOnly) return;
+    [...this.model.getOrderedRows(), ...this.templates].forEach((row) => void this.sync.syncDeleteRow({ rowId: row.id }));
+  }
+
+  /** Called by a row this client deleted on its own; the row's backend copy goes too. */
+  rowDeleted({ rowId }: { rowId: string }): void {
+    if (this.destroyed || this.linked || this.readOnly) return;
+    void this.sync.syncDeleteRow({ rowId });
+  }
+
+  /** A row this client deleted from the backend is back (undo): create it there again. */
+  private recreateDeletedRows(): void {
+    if (this.destroyed || this.linked || this.readOnly) return;
+    const schema = this.model.getSchema();
+
+    this.model.getOrderedRows().filter((row) => this.sync.deletedRow(row.id)).forEach((row) => this.sync.createRelocatedRow({
+      id: row.id, properties: adapterRowValues(row.properties, schema).properties, position: row.position,
+    }));
+    this.templates.filter((row) => this.sync.deletedRow(row.id)).forEach((row) => this.sync.createRelocatedRow({
+      id: row.id, properties: adapterRowValues(row.properties, schema).properties, position: row.position, template: true,
+    }));
+  }
+
+  /** Creates a pasted or duplicated copy's rows in the backend, once each. */
+  private createCopiedRows(): void {
+    if (!this.copiedRowsPending || this.destroyed || this.linked || this.readOnly) return;
+    const schema = this.model.getSchema();
+    const fresh = (row: DatabaseRow): boolean => !this.sync.holdsRow(row.id) && !this.sync.deletedRow(row.id);
+
+    this.model.getOrderedRows().filter(fresh).forEach((row) => this.sync.createRelocatedRow({
+      id: row.id, properties: adapterRowValues(row.properties, schema).properties, position: row.position,
+    }));
+    this.templates.filter(fresh).forEach((row) => this.sync.createRelocatedRow({
+      id: row.id, properties: adapterRowValues(row.properties, schema).properties, position: row.position, template: true,
+    }));
+  }
+
   rendered(): void {
     this.block.stretched = true;
+    // Paste and duplicate place every row in the same task; rows added later are not part of the copy.
+    if (this.copiedRowsPending) {
+      setTimeout(() => {
+        this.createCopiedRows();
+        this.copiedRowsPending = false;
+      }, 0);
+    }
     // On load the holder is not known at render time.
     if (this.isHeldSource() && this.boardContainer !== null) this.dropChrome();
     this.mountRows();
@@ -2231,6 +2295,8 @@ export class DatabaseTool implements BlockTool {
     const openId = this.cardDrawer?.openRowId;
 
     if (openId !== undefined && openId !== null && templateIds.has(openId)) this.showTemplateBanner(openId);
+    this.recreateDeletedRows();
+    this.createCopiedRows();
   }
 
   /**
@@ -2362,6 +2428,8 @@ export class DatabaseTool implements BlockTool {
       return;
     }
     if (!native.parent.present || native.parent.value !== this.block.id) return;
+    // recreateDeletedRows sends it once the row is back in the model.
+    if (capture.type === 'add' && this.sync.deletedRow(capture.blockId)) return;
 
     // A redone row add replays before this block's own setData, so a create
     // reads the schema a microtask later: an option the same step brings back
@@ -3655,7 +3723,10 @@ export class DatabaseTool implements BlockTool {
     }
 
     this.activeViewId = viewId;
-    this.sync = new DatabaseBackendSync(this.config.adapter, (error) => this.showBackendError(error), this.hostLevers, this.backendRows);
+    this.sync = new DatabaseBackendSync(
+      this.config.adapter, (error) => this.showBackendError(error), this.hostLevers, this.backendRows,
+      deletedBackendRowsOf(this.config.adapter, this.block.id),
+    );
   }
 
   private switchView(viewId: string): void {
@@ -4049,7 +4120,7 @@ export class DatabaseTool implements BlockTool {
       this.inOneStep(() => {
         this.deleteView(viewId);
         this.block.dispatchChange();
-        // A database block does not take its children with it: its rows would move up into this block.
+        // Rows first, then the source. Each delete tells the backend once.
         const doomed = [...this.api.blocks.getChildren(sourceId).map((child) => child.id).reverse(), sourceId];
 
         for (const id of doomed) {
@@ -9710,7 +9781,7 @@ export class DatabaseTool implements BlockTool {
 
       return;
     }
-    void this.sync.syncDeleteRow({ rowId: param.rowId });
+    void this.sync.syncDeleteRow({ rowId: param.rowId }, true);
     param.receive(true);
   }
 
@@ -10293,7 +10364,7 @@ export class DatabaseTool implements BlockTool {
     this.syncRowsFromBlocks();
     this.rerenderView({ keepDrawer: true });
     for (const { row } of moved) {
-      void this.sync.syncDeleteRow({ rowId: row.id });
+      void this.sync.syncDeleteRow({ rowId: row.id }, true);
       this.api.blocks.getById(databaseId)?.call('adoptMovedRow', { rowId: row.id });
     }
   }

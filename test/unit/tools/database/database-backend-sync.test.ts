@@ -200,6 +200,49 @@ describe('DatabaseBackendSync', () => {
       expect(adapter.deleteRow).toHaveBeenCalledWith({ rowId: 'r1' });
     });
 
+    it('deletes a row from the backend once, until it is created again', async () => {
+      const adapter = createMockAdapter();
+      const sync = new DatabaseBackendSync(adapter);
+
+      await sync.syncDeleteRow({ rowId: 'r1' });
+      await sync.syncDeleteRow({ rowId: 'r1' });
+
+      expect(adapter.deleteRow).toHaveBeenCalledTimes(1);
+      expect(sync.deletedRow('r1')).toBe(true);
+
+      await sync.syncCreateRow({ id: 'r1', properties: {}, position: 'a0' });
+      await sync.syncDeleteRow({ rowId: 'r1' });
+
+      expect(adapter.deleteRow).toHaveBeenCalledTimes(2);
+    });
+
+    it('a failed delete leaves the row free to delete again', async () => {
+      const adapter = createMockAdapter();
+      const sync = new DatabaseBackendSync(adapter);
+
+      vi.mocked(adapter.deleteRow).mockRejectedValueOnce(new Error('offline'));
+      await sync.syncDeleteRow({ rowId: 'r1' });
+
+      expect(sync.deletedRow('r1')).toBe(false);
+
+      await sync.syncDeleteRow({ rowId: 'r1' });
+
+      expect(adapter.deleteRow).toHaveBeenCalledTimes(2);
+    });
+
+    it('a relocated or recreated row is no longer marked deleted', async () => {
+      const deleted = new Set<string>();
+      const adapter = createMockAdapter();
+      const sync = new DatabaseBackendSync(adapter, undefined, undefined, undefined, deleted);
+
+      await sync.syncDeleteRow({ rowId: 'r1' });
+      expect(deleted.has('r1')).toBe(true);
+
+      sync.createRelocatedRow({ id: 'r1', properties: {}, position: 'a0' });
+
+      expect(deleted.has('r1')).toBe(false);
+    });
+
     it('does not send a debounced update queued during deletion', async () => {
       const adapter = createMockAdapter();
       const rows = new Set(['r1']);

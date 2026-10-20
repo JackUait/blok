@@ -1906,7 +1906,9 @@ describe('row ⋮⋮ menu with a real editor', () => {
       expect(source.rows.get('q1')?.properties).toEqual({
         name: 'Existing', n2: 'Source note', done: 'Source done',
       });
-      expect(local.rows.get('r1')?.properties.notes).toBe('short');
+      // Deleting the dashboard database deletes its own rows from its backend.
+      if (loss === 'remove-dashboard') expect(local.rows.has('r1')).toBe(false);
+      else expect(local.rows.get('r1')?.properties.notes).toBe('short');
       expect(blocked?.parent).toBe('db2');
       expect(current.blocks.getById('db2')).not.toBeNull();
       expect(current.blocks.getChildren('db2').map((row) => row.id)).toEqual(['q1', 'q2']);
@@ -1990,7 +1992,9 @@ describe('row ⋮⋮ menu with a real editor', () => {
         name: 'Existing', n2: 'Source note', done: 'Source done',
       });
       expect(source.rows.get('q1')?.properties.n2).toBe('Source note');
-      expect(local.rows.get('r1')?.properties.notes).toBe('short');
+      // Deleting the dashboard database deletes its own rows from its backend.
+      if (loss === 'remove-dashboard') expect(local.rows.has('r1')).toBe(false);
+      else expect(local.rows.get('r1')?.properties.notes).toBe('short');
       expect(opened.drawer.isConnected).toBe(true);
       expect(opened.title.readOnly).toBe(false);
       expect(current.blocks.getById('db2')).not.toBeNull();

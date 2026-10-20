@@ -209,14 +209,37 @@ describe('date cell editor', () => {
       expect(ctx.onCommit).toHaveBeenLastCalledWith('2026-10-20T20:00');
     });
 
-    it('Include time on an empty cell at 19:01 takes 20:00', () => {
+    // research/27 §4b (a): Notion fills today with the next whole hour at once, before any day is picked.
+    it('Include time on an empty cell at 19:01 saves today at 20:00 in one write', () => {
+      vi.setSystemTime(new Date(2026, 9, 20, 19, 1, 31));
+      const ctx = openDate(null, { hourCycle: 'h23' });
+
+      q('[data-blok-database-date-time-toggle]').click();
+
+      expect(ctx.onCommit).toHaveBeenCalledTimes(1);
+      expect(ctx.onCommit).toHaveBeenCalledWith('2026-10-20T20:00');
+      expect(q<HTMLInputElement>('[data-blok-database-date-time="start"]').value).toBe('20:00');
+      expect(day('2026-10-20').getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('a day picked after Include time filled today keeps the filled time', () => {
       vi.setSystemTime(new Date(2026, 9, 20, 19, 1, 31));
       const ctx = openDate(null);
 
       q('[data-blok-database-date-time-toggle]').click();
-      day('2026-10-20').click();
+      day('2026-10-22').click();
 
-      expect(ctx.onCommit).toHaveBeenLastCalledWith('2026-10-20T20:00');
+      expect(ctx.onCommit).toHaveBeenLastCalledWith('2026-10-22T20:00');
+    });
+
+    it('Include time on an empty cell with End date on fills today for both ends', () => {
+      vi.setSystemTime(new Date(2026, 9, 20, 19, 1, 31));
+      const ctx = openDate(null);
+
+      q('[data-blok-database-date-end-toggle]').click();
+      q('[data-blok-database-date-time-toggle]').click();
+
+      expect(ctx.onCommit).toHaveBeenLastCalledWith('2026-10-20T20:00/2026-10-20T20:00');
     });
 
     // research/26 §5d, 27 §4b: a set date on another day gets 9:00 AM.
@@ -283,6 +306,8 @@ describe('date cell editor', () => {
       const empty = openDate(null, { bulk: true });
 
       q('[data-blok-database-date-time-toggle]').click();
+      expect(empty.onCommit).toHaveBeenCalledTimes(1);
+      expect(empty.onCommit).toHaveBeenCalledWith('2026-10-20T14:00');
       day('2026-10-21').click();
       expect(empty.onCommit).toHaveBeenLastCalledWith('2026-10-21T14:00');
 
@@ -549,6 +574,27 @@ describe('date cell editor', () => {
         day('2026-10-20').click();
 
         expect(ctx.onReminderChange).toHaveBeenCalledWith('1_day_before', true);
+      });
+
+      it('Include time filling an empty cell stores a default that fits a timed date', () => {
+        vi.setSystemTime(new Date(2026, 9, 20, 19, 1, 31));
+        const ctx = openRemind(null, undefined, {}, { ...makeProperty('date'), date: { defaultReminder: '1_day_before' } });
+
+        q('[data-blok-database-date-time-toggle]').click();
+
+        expect(ctx.onCommit).toHaveBeenCalledWith('2026-10-20T20:00');
+        expect(ctx.onReminderChange).toHaveBeenCalledTimes(1);
+        expect(ctx.onReminderChange).toHaveBeenCalledWith('1_day_before', false);
+      });
+
+      it('Include time filling an empty cell drops a date-only default', () => {
+        vi.setSystemTime(new Date(2026, 9, 20, 19, 1, 31));
+        const ctx = openRemind(null, undefined, {}, withDefault());
+
+        q('[data-blok-database-date-time-toggle]').click();
+
+        expect(ctx.onCommit).toHaveBeenCalledWith('2026-10-20T20:00');
+        expect(ctx.onReminderChange).not.toHaveBeenCalled();
       });
 
       it('leaves a date that already has a value alone', () => {

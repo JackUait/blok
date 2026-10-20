@@ -342,6 +342,59 @@ describe('bulk edit of a date: Remind and the property default', () => {
     expect(await remindersOf('r3')).toEqual({ due: { remind: '2_days_before', timeZone: zone } });
   });
 
+  describe('Include time on an empty date fills today and the next hour (research/27 §4b)', () => {
+    const toggleTime = async (): Promise<void> => {
+      await click(document.querySelector('[data-blok-database-date-time-toggle]'));
+    };
+
+    beforeEach(() => {
+      // Only Date: quiet() waits on real timers and frames.
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2026, 9, 20, 19, 1, 31));
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('table cell: saves today 20:00 with the default reminder, and one undo takes both back', async () => {
+      await make(doc({}, { defaultReminder: '1_day_before' }));
+      await click(q('[data-row-id="r3"] [role="gridcell"][data-property-id="due"]'));
+      await toggleTime();
+
+      expect((await savedRow('r3'))?.properties?.due).toBe('2026-10-20T20:00');
+      expect(await remindersOf('r3')).toEqual({ due: { remind: '1_day_before', timeZone: zone } });
+
+      await escape();
+      editor?.history.undo();
+      await quiet();
+
+      expect((await savedRow('r3'))?.properties?.due).toBeNull();
+      expect(await remindersOf('r3')).toBeUndefined();
+    });
+
+    it('bulk: an empty first row writes today 20:00 to every selected row, and one undo takes it back', async () => {
+      await make(doc({}, { defaultReminder: '1_day_before' }));
+      await selectTableRows('r3', 'r1');
+      await openBulkDue();
+      await toggleTime();
+
+      expect((await savedRow('r3'))?.properties?.due).toBe('2026-10-20T20:00');
+      expect((await savedRow('r1'))?.properties?.due).toBe('2026-10-20T20:00');
+      expect(await remindersOf('r3')).toEqual({ due: { remind: '1_day_before', timeZone: zone } });
+      expect(await remindersOf('r1')).toEqual({ due: { remind: '1_day_before', timeZone: zone } });
+      expect((await savedRow('r2'))?.properties?.due).toBe('2026-10-27');
+
+      await escape();
+      editor?.history.undo();
+      await quiet();
+
+      expect((await savedRow('r3'))?.properties?.due).toBeNull();
+      expect((await savedRow('r1'))?.properties?.due).toBe('2026-10-12');
+      expect(await remindersOf('r1')).toBeUndefined();
+    });
+  });
+
   it('table: a first selected row with no date opens the bulk picker empty', async () => {
     await make(doc({}));
     await selectTableRows('r3', 'r1');

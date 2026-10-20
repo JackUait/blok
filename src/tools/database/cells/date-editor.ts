@@ -607,6 +607,8 @@ class DateEditor {
         const today = toIsoDay(new Date());
 
         this.defaultTime = (this.start?.day ?? today) === today ? nextWholeHour() : DEFAULT_TIME;
+        // research/27 §4b (a): an empty cell gets today at once, in this one write.
+        this.start ??= { day: today, time: null };
       } else {
         this.start = this.start === null ? null : { ...this.start, time: null };
         this.end = this.end === null ? null : { ...this.end, time: null };

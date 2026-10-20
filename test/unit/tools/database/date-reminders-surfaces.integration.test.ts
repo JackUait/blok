@@ -208,4 +208,23 @@ describe('date reminders outside the table', () => {
 
     expect(await remindersOf('r2')).toEqual({ due: { remind: '1_week_before', timeZone: zone } });
   });
+
+  // research/27 §4b: Include time on an empty date fills today with the next whole hour.
+  it('the row page: Include time on an empty date saves today 20:00 with the default reminder', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 20, 19, 1, 31));
+    try {
+      await make(doc({ openPagesIn: 'side' }, { defaultReminder: '1_day_before' }));
+      await click(q('[data-row-id="r2"] [data-blok-database-table-open]'));
+      await click(q('[data-blok-database-drawer] [data-blok-database-drawer-prop-value][data-property-id="due"]'));
+      await click(document.querySelector('[data-blok-database-date-time-toggle]'));
+      const saved = await editor?.save();
+
+      expect((saved?.blocks.find((block) => block.id === 'r2')?.data as { properties?: Record<string, unknown> } | undefined)?.properties?.due)
+        .toBe('2026-10-20T20:00');
+      expect(await remindersOf('r2')).toEqual({ due: { remind: '1_day_before', timeZone: zone } });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

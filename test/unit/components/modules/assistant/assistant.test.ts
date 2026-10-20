@@ -729,6 +729,28 @@ describe('in-editor assistant bar', () => {
       expect(await texts(editor)).toEqual(['Hello', 'From AI']);
     });
 
+    it('a call whose events all arrive in one tick plays the reveal, like a call that never streamed', async () => {
+      const live = streaming();
+      const editor = await createEditor(live.model);
+
+      fakeLayout();
+      const call = executeCall('c1', insert('All at once'));
+
+      editor.agent.openAssistant();
+      submit('Write');
+      await waitFor(() => expect(live.started()).toBe(true));
+
+      // Gemini sends a whole call at the end of its stream.
+      live.emit({ type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' });
+      live.emit({ type: 'tool_input', index: 0, json: call.json });
+      live.emit({ type: 'tool_end', index: 0 });
+
+      await waitFor(() => expect(revealed()).toEqual(['All at once']));
+      expect(document.querySelector(PREVIEW)).toBeNull();
+      live.finish(call.use);
+      await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+    });
+
     it('plays no reveal under reduced motion', async () => {
       vi.stubGlobal('matchMedia', (query: string) => ({
         matches: query.includes('reduce'),

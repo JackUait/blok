@@ -136,6 +136,11 @@ test.describe('Ask AI live edits', () => {
     await setup(page);
   });
 
+  // The shared page resets media only between files, so reduced motion would reach the next test.
+  test.afterEach(async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: null });
+  });
+
   test('words appear in the page before the batch commits', async ({ page }) => {
     const text = 'Live words land here';
     const input = insertInput(text);
@@ -292,7 +297,15 @@ test.describe('Ask AI live edits', () => {
 
     await ask(page, 'Second');
     await emit(page, 0, { type: 'tool_start', index: 0, id: 'call-1', name: 'blok_execute' });
-    await emit(page, 0, { type: 'tool_input', index: 0, json: prefix(input, text, 'Calm words with '.length) });
+
+    // No pacing: every word that has arrived shows in the same tick.
+    const sameTick = await page.evaluate((json) => {
+      window.liveCalls?.[0]?.emit({ type: 'tool_input', index: 0, json });
+
+      return document.querySelector('[data-blok-testid="ai-preview"]')?.textContent?.replace(/\s+/g, ' ').trim();
+    }, prefix(input, text, 'Calm words with '.length));
+
+    expect(sameTick).toBe('Calm words with');
 
     const preview = page.getByTestId('ai-preview');
 
@@ -307,6 +320,31 @@ test.describe('Ask AI live edits', () => {
 
     await expect(written).toBeVisible();
     expect(await written.evaluate((holder) => holder.getAnimations({ subtree: true }).length)).toBe(0);
+  });
+
+  test('a call sent whole in one tick plays the fallback reveal', async ({ page }) => {
+    const text = 'Whole call at once';
+    const input = insertInput(text);
+
+    await ask(page, 'Second');
+    // Gemini sends a call's events together at the end of its stream.
+    await page.evaluate((json) => {
+      const call = window.liveCalls?.[0];
+
+      call?.emit({ type: 'tool_start', index: 0, id: 'call-1', name: 'blok_execute' });
+      call?.emit({ type: 'tool_input', index: 0, json });
+      call?.emit({ type: 'tool_end', index: 0 });
+    }, JSON.stringify(input));
+
+    const written = page.locator(`#${HOLDER_ID} [data-blok-element]`).filter({ hasText: text });
+
+    // The reveal lasts under a second, so poll fast.
+    await expect.poll(
+      () => written.evaluate((holder) => holder.getAnimations({ subtree: true })
+        .some((animation) => animation instanceof CSSAnimation && animation.animationName === 'blok-ai-reveal')),
+      { intervals: [20] }
+    ).toBe(true);
+    expect(await savedTexts(page)).toEqual([...ORIGINAL, text]);
   });
 
   test('an insert streams below the bar, not above it', async ({ page }) => {

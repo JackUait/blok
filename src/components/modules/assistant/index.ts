@@ -73,6 +73,8 @@ export class Assistant extends Module {
   private readonly streamCalls = new Map<number, string>();
   /** Calls that streamed input, so the preview drew them. */
   private readonly streamed = new Set<string>();
+  /** Streamed calls that ended before a frame showed any of their words (Gemini sends a call whole). */
+  private readonly unseen = new Set<string>();
   /** The batch the running call applied, until that call reports done. Calls run one at a time. */
   private applied: ChangedSet | null = null;
   private readonly reveals = new Map<HTMLElement, ReturnType<typeof setTimeout>>();
@@ -394,6 +396,7 @@ export class Assistant extends Module {
     this.listening = false;
     this.streamCalls.clear();
     this.streamed.clear();
+    this.unseen.clear();
     this.applied = null;
     this.preview?.clear();
   }
@@ -422,6 +425,9 @@ export class Assistant extends Module {
       this.streamed.add(id);
       this.ensurePreview().update(id, event.json);
     }
+    if (event.type === 'tool_end' && id !== undefined && this.preview?.shown(id) !== true) {
+      this.unseen.add(id);
+    }
   }
 
   private executed(changed: ChangedSet): void {
@@ -440,10 +446,13 @@ export class Assistant extends Module {
     }
 
     const changed = this.applied;
-    const streamed = this.streamed.delete(id);
+    // A call the user never saw stream gets the fallback reveal, like one that did not stream.
+    const unseen = this.unseen.delete(id);
+    const streamed = this.streamed.delete(id) && !unseen;
 
     this.applied = null;
-    if (result.isError) {
+    // Unseen: the reveal plays over the real block, so the overlay goes at once.
+    if (result.isError || unseen) {
       this.preview?.cancel(id);
     } else {
       this.preview?.settle(id);

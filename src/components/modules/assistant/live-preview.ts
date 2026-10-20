@@ -36,9 +36,11 @@ export interface LivePreview {
   relayout(): void;
   /** Blocks this call would rewrite but did not draw, because their child blocks show. */
   skipped(callId: string): string[];
+  /** Whether a frame has painted one of this call's words. A call sent whole in one tick never is. */
+  shown(callId: string): boolean;
 }
 
-/** Words land at least this far apart, so a burst of deltas still reads as typing. */
+/** Words land at least this far apart, so a burst of deltas still reads as typing. Reduced motion skips it. */
 const WORD_GAP_MS = 35;
 
 const INSERTS = new Set(['block.insert', 'markdown.insert']);
@@ -724,6 +726,11 @@ class CallPreview {
   private groups: Group[] = [];
   private timer: ReturnType<typeof setTimeout> | null = null;
   private lastLanded = -Infinity;
+  private painted: 'no' | 'waiting' | 'yes' = 'no';
+
+  public get shown(): boolean {
+    return this.painted === 'yes';
+  }
 
   constructor(
     private readonly id: string,
@@ -780,15 +787,26 @@ class CallPreview {
     this.pump();
   }
 
-  /** Lands the next word, at most one per WORD_GAP_MS. */
+  /** Lands the next word, at most one per WORD_GAP_MS; under reduced motion, every word that has arrived. */
   public pump(): void {
     if (this.timer !== null) {
       return;
     }
-    const line = this.ordered().flatMap((item) => (item.group || item.frame ? item.lines : [])).find((known) => known.pending);
+    const lines = this.ordered().flatMap((item) => (item.group || item.frame ? item.lines : [])).filter((known) => known.pending);
+    const line = lines[0];
 
     if (line === undefined) {
       this.items.forEach((item) => item.lines.forEach((known) => known.tails()));
+
+      return;
+    }
+    if (prefersReducedMotion()) {
+      lines.forEach((known) => {
+        while (known.pending) {
+          known.land();
+        }
+      });
+      this.landed();
 
       return;
     }
@@ -797,13 +815,24 @@ class CallPreview {
     if (wait <= 0) {
       line.land();
       this.lastLanded = Date.now();
-      this.items.forEach((item) => item.lines.forEach((known) => known.tails()));
-      this.layout();
+      this.landed();
     }
     this.timer = setTimeout(() => {
       this.timer = null;
       this.pump();
     }, wait > 0 ? wait : WORD_GAP_MS);
+  }
+
+  /** After a word lands: tails, layout, and a frame to mark the call shown. */
+  private landed(): void {
+    this.items.forEach((item) => item.lines.forEach((known) => known.tails()));
+    this.layout();
+    if (this.painted === 'no') {
+      this.painted = 'waiting';
+      requestAnimationFrame(() => {
+        this.painted = 'yes';
+      });
+    }
   }
 
   public settle(): void {
@@ -969,6 +998,10 @@ export const createLivePreview = (deps: LivePreviewDeps): LivePreview => {
 
     skipped(callId) {
       return [...(skips.get(callId) ?? [])];
+    },
+
+    shown(callId) {
+      return calls.get(callId)?.shown === true;
     },
   };
 };

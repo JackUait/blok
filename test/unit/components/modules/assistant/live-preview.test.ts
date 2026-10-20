@@ -331,10 +331,13 @@ describe('createLivePreview', () => {
     const before = parseFloat(box?.style.top ?? '');
 
     rects.set(b1, new DOMRect(0, -100, 600, HOLDER_HEIGHT));
+    // A landed word asks for a frame of its own.
+    const queued = frames.length;
+
     preview.relayout();
     preview.relayout();
 
-    expect(frames).toHaveLength(1);
+    expect(frames).toHaveLength(queued + 1);
     expect(parseFloat(box?.style.top ?? '')).toBe(before);
 
     runFrames();
@@ -742,6 +745,36 @@ describe('createLivePreview', () => {
       runFrames();
       expect(b1.hasAttribute('data-blok-ai-gap')).toBe(false);
     });
+  });
+
+  it('reduced motion lands every word that has arrived at once, with no pacing', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduce'), media: query }));
+    const json = execute({ name: 'block.insert', args: { position: { after: 'b1' }, type: 'paragraph', data: { text: 'One two three four five' } } });
+
+    make().update('c1', open(json, 'four '));
+
+    expect(words(state.layer)).toEqual(['One', 'two', 'three', 'four']);
+  });
+
+  it('a call counts as shown only after a frame has painted one of its words', () => {
+    const preview = make();
+    const json = execute({ name: 'block.insert', args: { position: { after: 'b1' }, type: 'paragraph', data: { text: 'All at once' } } });
+
+    preview.update('c1', json);
+    expect(preview.shown('c1')).toBe(false);
+
+    runFrames();
+    expect(preview.shown('c1')).toBe(true);
+  });
+
+  it('a call with only slots drawn is never shown', () => {
+    const preview = make();
+    const json = execute({ name: 'block.insert', args: { position: { after: 'b1' }, type: 'paragraph', data: { text: '' } } });
+
+    preview.update('c1', open(json, '"text":"'));
+    runFrames();
+
+    expect(preview.shown('c1')).toBe(false);
   });
 
   it('reduced motion skips the shimmer class', () => {

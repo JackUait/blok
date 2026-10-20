@@ -77,11 +77,15 @@ export class EventsDispatcher<EventMap> {
       return;
     }
 
-    // Every listener gets the original payload. A listener's return value is
-    // ignored: hosts subscribe through api.events, and `(p) => list.push(p)`
-    // must not change what the next listener sees.
+    // A listener that returns a value replaces the payload for the next one.
+    // Public api.events behaviour since editor.js; pinned by row-move-to's
+    // "replacement-payload forwarding" test. Internal listeners must return nothing.
+    let payload = data;
+
     for (const callback of this.listenersToInvoke(eventName)) {
-      callback(data as EventMap[Name]);
+      const next = callback(payload as EventMap[Name]);
+
+      payload = next !== undefined ? next : payload;
     }
   }
 

@@ -5,6 +5,8 @@ import { Blok } from '../../../../../src/blok';
 import { releaseGap, reserveGap } from '../../../../../src/components/modules/assistant/gap';
 import { getUserOS } from '../../../../../src/components/utils/browser';
 import { Paragraph } from '../../../../../src/tools/paragraph';
+import { Column } from '../../../../../src/tools/column';
+import { ColumnList } from '../../../../../src/tools/column-list';
 import type { BlokConfig, OutputData } from '../../../../../types';
 import type {
   Agent,
@@ -21,7 +23,7 @@ interface TestEditor {
   save: () => Promise<OutputData>;
   agent: Agent;
   readOnly: { toggle(state?: boolean): Promise<boolean> };
-  blocks: { delete(index?: number): Promise<void> };
+  blocks: { delete(index?: number): Promise<void>; update(id: string, data: Record<string, unknown>): Promise<unknown> };
 }
 
 const settle = (ms = 0): Promise<void> => new Promise((resolve) => {
@@ -214,12 +216,17 @@ const BAR_GAP = BAR_HEIGHT + 16;
  * with its content column and fields at x 140..660. The bar is 46px tall, a preview
  * box 40px, the bar's shimmer slots 60px.
  */
+/** Moves every holder by `y`, as a page scroll would. */
+const pageShift = { y: 0 };
+
 const fakeLayout = (): void => {
+  pageShift.y = 0;
+
   const measure = HTMLElement.prototype.getBoundingClientRect;
 
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement): DOMRect {
     if (this.getAttribute('data-blok-testid') === 'assistant-bar') {
-      return new DOMRect(0, 0, 600, BAR_HEIGHT);
+      return new DOMRect(0, parseFloat(this.style.top) || 0, 600, BAR_HEIGHT);
     }
     if (this.hasAttribute('data-blok-assistant-slots')) {
       return new DOMRect(0, 0, 600, SLOTS_HEIGHT);
@@ -234,7 +241,7 @@ const fakeLayout = (): void => {
       return measure.call(this);
     }
 
-    const top = 100 + 100 * [...document.querySelectorAll('[data-blok-element]')].indexOf(holder);
+    const top = 100 + 100 * [...document.querySelectorAll('[data-blok-element]')].indexOf(holder) + pageShift.y;
 
     return this === holder ? new DOMRect(100, top, 600, 24) : new DOMRect(140, top, 520, 24);
   });
@@ -979,6 +986,149 @@ describe('in-editor assistant bar', () => {
       expect(barStyle().top).toBe('270px');
       releaseGap(holderOf('p1'), 'insert:test');
       expect(barStyle().top).toBe('230px');
+    });
+
+    it('scrolls a bar that opens below the window into view, once', async () => {
+      await createEditor(scripted(), undefined, THREE_BLOCKS);
+      fakeLayout();
+      vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(250);
+      const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => undefined);
+
+      select('p2', 0, 'p2', 0);
+      pressModJ(inputOf('p2'));
+
+      // The bar runs from 230 to 276: up by its overflow plus 16px of room.
+      expect(scrollBy).toHaveBeenCalledTimes(1);
+      expect(scrollBy).toHaveBeenCalledWith({ top: 276 - 250 + 16, behavior: 'smooth' });
+
+      // Later scrolls are the user's: the bar does not pull the page back.
+      document.dispatchEvent(new Event('scroll'));
+      await settle(50);
+      expect(scrollBy).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not scroll when the bar opens inside the window', async () => {
+      await createEditor(scripted(), undefined, THREE_BLOCKS);
+      fakeLayout();
+      const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => undefined);
+
+      select('p2', 0, 'p2', 0);
+      pressModJ(inputOf('p2'));
+
+      expect(scrollBy).not.toHaveBeenCalled();
+    });
+
+    it('opens under the whole container when the caret is in a nested block', async () => {
+      await createEditor(scripted(), undefined, {
+        tools: { paragraph: Paragraph, column_list: ColumnList, column: Column },
+        data: {
+          blocks: [
+            { id: 'p1', type: 'paragraph', data: { text: 'Hello' } },
+            { id: 'cl', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+            { id: 'c1', type: 'column', data: {}, parent: 'cl', content: ['left'] },
+            { id: 'left', type: 'paragraph', data: { text: 'Left' }, parent: 'c1' },
+            { id: 'c2', type: 'column', data: {}, parent: 'cl', content: ['right'] },
+            { id: 'right', type: 'paragraph', data: { text: 'Right' }, parent: 'c2' },
+            { id: 'p3', type: 'paragraph', data: { text: 'Third' } },
+          ],
+        },
+      });
+      fakeLayout();
+
+      // The fixture really nests: the right column's paragraph sits inside the column list.
+      expect(holderOf('right').parentElement?.closest('[data-blok-id="cl"]')).not.toBeNull();
+      select('right', 1, 'right', 1);
+      pressModJ(inputOf('right'));
+
+      // Holders in document order: p1, cl, ... The gap and the bar go under the whole list (top 200).
+      expect(gapped()).toEqual(['cl']);
+      expect(barStyle().top).toBe('230px');
+    });
+
+    it('keeps its block when the block re-renders under the same id', async () => {
+      const editor = await createEditor(scripted(), undefined, THREE_BLOCKS);
+
+      fakeLayout();
+      select('p2', 0, 'p2', 0);
+      pressModJ(inputOf('p2'));
+
+      const before = holderOf('p2');
+
+      await editor.blocks.update('p2', { text: 'Changed' });
+
+      expect(holderOf('p2')).not.toBe(before);
+      await waitFor(() => expect(gapped()).toEqual(['p2']));
+      expect(barStyle().top).toBe('230px');
+    });
+
+    it('stays inside the page width, not the window width with its scrollbar', async () => {
+      await createEditor(scripted(), undefined, THREE_BLOCKS);
+      fakeLayout();
+      vi.spyOn(document.documentElement, 'clientWidth', 'get').mockReturnValue(400);
+
+      select('p2', 0, 'p2', 0);
+      pressModJ(inputOf('p2'));
+
+      // 400 minus 16px a side.
+      expect(barStyle().width).toBe('368px');
+      expect(barStyle().left).toBe('16px');
+    });
+
+    it('a new run on a model that stopped streaming shows the slots again', async () => {
+      const gate = { open: (): void => undefined };
+      const opened = new Promise<void>((resolve) => {
+        gate.open = resolve;
+      });
+      const calls = { count: 0 };
+
+      await createEditor(async (request) => {
+        calls.count += 1;
+        if (calls.count === 1) {
+          request.onStream?.({ type: 'tool_start', index: 0, id: 'r0', name: 'blok_read' });
+
+          return answer('First.');
+        }
+        await opened;
+
+        return answer('Second.');
+      });
+      pressModJ(paragraphInput());
+      submit('One');
+      await waitFor(() => expect(within(bar()).getByText('First.')).toBeVisible());
+      within(bar()).getByRole('textbox').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      expect(screen.queryByRole('dialog', { name: 'Ask AI' })).toBeNull();
+
+      pressModJ(paragraphInput());
+      submit('Two');
+      await settle();
+
+      expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).not.toBeNull();
+      gate.open();
+      await waitFor(() => expect(within(bar()).getByText('Second.')).toBeVisible());
+    });
+
+    it('re-places once per frame when the page scrolls, not once per event', async () => {
+      await createEditor(scripted(), undefined, THREE_BLOCKS);
+      fakeLayout();
+      select('p2', 0, 'p2', 0);
+      pressModJ(inputOf('p2'));
+      expect(barStyle().top).toBe('230px');
+
+      const writes = { count: 0 };
+      const observer = new MutationObserver(() => {
+        writes.count += 1;
+      });
+
+      observer.observe(bar(), { attributes: true, attributeFilter: ['style'] });
+      pageShift.y = -50;
+      Array.from({ length: 5 }).forEach(() => document.dispatchEvent(new Event('scroll')));
+
+      // Nothing yet: the frame has not come.
+      expect(barStyle().top).toBe('230px');
+      await waitFor(() => expect(barStyle().top).toBe('180px'));
+      await settle(50);
+      observer.disconnect();
+      expect(writes.count).toBe(1);
     });
 
     it('close releases the gap', async () => {

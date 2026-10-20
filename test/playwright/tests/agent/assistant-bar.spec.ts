@@ -40,11 +40,13 @@ const reply = (text: string): ScriptedResponse => ({ stop_reason: 'end_turn', co
 
 interface SetupOptions {
   hold?: boolean;
+  /** The document; two paragraphs, p1 and p2, by default. */
+  blocks?: Array<Record<string, unknown>>;
   thinking?: { levels: string[]; default?: string };
 }
 
 const setup = async (page: Page, script: ScriptedResponse[], options: SetupOptions = {}): Promise<void> => {
-  await page.evaluate(async ({ holder, responses, hold, thinking }) => {
+  await page.evaluate(async ({ holder, responses, hold, thinking, blocks }) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
       window.blokInstance = undefined;
@@ -61,7 +63,7 @@ const setup = async (page: Page, script: ScriptedResponse[], options: SetupOptio
 
     const blok = new window.Blok({
       holder,
-      data: { blocks: [
+      data: { blocks: blocks ?? [
         { id: 'p1', type: 'paragraph', data: { text: 'The quick brown fox' } },
         { id: 'p2', type: 'paragraph', data: { text: 'Second' } },
       ] },
@@ -93,7 +95,7 @@ const setup = async (page: Page, script: ScriptedResponse[], options: SetupOptio
 
     window.blokInstance = blok;
     await blok.isReady;
-  }, { holder: HOLDER_ID, responses: script, hold: options.hold === true, thinking: options.thinking });
+  }, { holder: HOLDER_ID, responses: script, hold: options.hold === true, thinking: options.thinking, blocks: options.blocks });
 };
 
 const savedTexts = (page: Page): Promise<string[]> => page.evaluate(async () => {
@@ -247,6 +249,85 @@ test.describe('in-editor assistant', () => {
     await expect(bar.getByText('Done.')).toBeVisible();
 
     expect(String((await page.evaluate(() => window.assistantPrompts))?.[0])).toContain('"The quick brown fox"');
+  });
+
+  test('Ask AI in the inline toolbar, on a selection across two blocks, opens under the block where it ends', async ({ page }) => {
+    await setup(page, []);
+
+    const from = await page.locator('[data-blok-id="p1"] [contenteditable]').boundingBox();
+    const to = await page.getByText('Second').boundingBox();
+
+    if (from === null || to === null) {
+      throw new Error('no layout');
+    }
+    await page.mouse.move(from.x + 40, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x + 20, to.y + to.height / 2, { steps: 10 });
+    await page.mouse.up();
+    await page.getByRole('menuitem', { name: 'Ask AI' }).click();
+
+    const bar = page.getByRole('dialog', { name: 'Ask AI' });
+
+    await expect(bar.getByRole('textbox')).toBeFocused();
+    await bar.evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished)));
+
+    const box = await bar.boundingBox();
+    const second = await page.locator('[data-blok-id="p2"]').boundingBox();
+
+    if (box === null || second === null) {
+      throw new Error('no layout');
+    }
+    expect(box.y).toBeGreaterThanOrEqual(second.y + second.height);
+  });
+
+  test('opens below a whole column layout, not over the next column', async ({ page }) => {
+    await setup(page, [], {
+      blocks: [
+        { id: 'p1', type: 'paragraph', data: { text: 'Before' } },
+        { id: 'cl', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl', content: ['l1', 'l2', 'l3'] },
+        { id: 'l1', type: 'paragraph', data: { text: 'Left one' }, parent: 'c1' },
+        { id: 'l2', type: 'paragraph', data: { text: 'Left two' }, parent: 'c1' },
+        { id: 'l3', type: 'paragraph', data: { text: 'Left three' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl', content: ['r1'] },
+        { id: 'r1', type: 'paragraph', data: { text: 'Right one' }, parent: 'c2' },
+        { id: 'p3', type: 'paragraph', data: { text: 'After' } },
+      ],
+    });
+    await page.getByText('Right one').click();
+    await page.keyboard.press(`${MOD}+j`);
+
+    const bar = page.getByRole('dialog', { name: 'Ask AI' });
+
+    await expect(bar.getByRole('textbox')).toBeFocused();
+    await bar.evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished)));
+
+    const box = await bar.boundingBox();
+    const left = await page.getByText('Left three').boundingBox();
+    const after = await page.getByText('After').boundingBox();
+
+    if (box === null || left === null || after === null) {
+      throw new Error('no layout');
+    }
+    // Below the tallest column's last line, and the next block moves down past the bar.
+    expect(box.y).toBeGreaterThanOrEqual(left.y + left.height);
+    expect(after.y).toBeGreaterThanOrEqual(box.y + box.height);
+  });
+
+  test('a bar that opens below the window scrolls into view', async ({ page }) => {
+    await page.setViewportSize({ width: 900, height: 200 });
+    await setup(page, []);
+    await page.getByText('Second').click();
+    await page.keyboard.press(`${MOD}+j`);
+
+    const bar = page.getByRole('dialog', { name: 'Ask AI' });
+
+    await expect(bar.getByRole('textbox')).toBeFocused();
+    await expect.poll(async () => {
+      const box = await bar.boundingBox();
+
+      return box !== null && box.y >= 0 && box.y + box.height <= 200;
+    }).toBe(true);
   });
 
   test('Discard removes what the assistant wrote', async ({ page }) => {

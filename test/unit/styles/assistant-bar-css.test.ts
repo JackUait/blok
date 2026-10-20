@@ -108,6 +108,21 @@ describe('Ask AI bar colours', () => {
     expect(empty?.[1]).toMatch(/background:\s*var\(--blok-border-subtle\)/);
   });
 
+  it('under reduced motion the chevron does not turn and buttons do not press in', () => {
+    const reduced = [...ASSISTANT_CSS.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/@media \(prefers-reduced-motion: reduce\)\s*\{((?:[^{}]*\{[^{}]*\})*)\s*\}/g)]
+      .map((match) => match[1])
+      .join('\n');
+    const rule = (selector: string): string => {
+      const found = [...reduced.matchAll(/([^{}]+)\{([^{}]*)\}/g)].find(([, selectors]) => selectors.split(',').map((part) => part.trim()).includes(selector));
+
+      return found?.[2] ?? '';
+    };
+
+    expect(rule('[data-blok-assistant-more] svg')).toMatch(/transition:\s*none/);
+    ['[data-blok-assistant-send]:active:not(:disabled)', '[data-blok-assistant-undo]:active', '[data-blok-assistant-keep]:active', '[data-blok-assistant-button]:active']
+      .forEach((selector) => expect(rule(selector), selector).toMatch(/transform:\s*none/));
+  });
+
   it('the bar is not docked to the bottom of the window', () => {
     const bar = rulesFor('[data-blok-assistant]').filter(([selector]) => /^\[data-blok-assistant\](?:,|\[|$)/.test(selector));
 

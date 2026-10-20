@@ -291,8 +291,10 @@ export class AssistantBar {
     }
     this.element.style.top = `${anchor.getBoundingClientRect().bottom + offset + SPACE_BEFORE}px`;
     // Centred on the column; a narrow window trims the overhang first, then the column.
-    const width = Math.max(0, Math.min(column.width + 2 * OVERHANG, window.innerWidth - 2 * WINDOW_EDGE));
-    const left = Math.min(Math.max(column.left + column.width / 2 - width / 2, WINDOW_EDGE), window.innerWidth - WINDOW_EDGE - width);
+    // clientWidth leaves out a classic scrollbar; it is 0 only with no layout (jsdom).
+    const page = document.documentElement.clientWidth || window.innerWidth;
+    const width = Math.max(0, Math.min(column.width + 2 * OVERHANG, page - 2 * WINDOW_EDGE));
+    const left = Math.min(Math.max(column.left + column.width / 2 - width / 2, WINDOW_EDGE), page - WINDOW_EDGE - width);
 
     this.element.style.left = `${left}px`;
     this.element.style.width = `${width}px`;

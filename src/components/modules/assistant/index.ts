@@ -35,6 +35,9 @@ const REVEAL_MS = 900;
 
 const EXECUTE_TOOL = 'blok_execute';
 
+/** Room kept between a bar scrolled into view and the window's edge. */
+const REVEAL_ROOM = 16;
+
 /** The holder's own content column. A tune may wrap it, and nested blocks have their own. */
 const contentOf = (holder: HTMLElement): HTMLElement | undefined =>
   [...holder.querySelectorAll<HTMLElement>(`[${DATA_ATTR.elementContent}]`)]
@@ -87,6 +90,8 @@ export class Assistant extends Module {
   private watchers: { resize: ResizeObserver | null; mutations: MutationObserver; gaps: () => void } | null = null;
   /** Set by the first stream event ever seen: from then on the model streams, so the bar shows no slots. */
   private streams = false;
+  /** The pending re-place frame, if any. */
+  private frame: number | null = null;
 
   public get isOpen(): boolean {
     return this.bar?.isOpen === true;
@@ -108,9 +113,9 @@ export class Assistant extends Module {
         this.open();
       }
     });
-    this.listeners.on(window, 'resize', () => this.relayout());
+    this.listeners.on(window, 'resize', () => this.scheduleRelayout());
     // Capture: a scrolling ancestor's scroll does not bubble to window.
-    this.listeners.on(window, 'scroll', () => this.relayout(), { capture: true, passive: true });
+    this.listeners.on(window, 'scroll', () => this.scheduleRelayout(), { capture: true, passive: true });
   }
 
   /**
@@ -122,15 +127,18 @@ export class Assistant extends Module {
     }
 
     const bar = this.ensureBar();
+    const opening = !bar.isOpen;
 
-    if (!bar.isOpen) {
+    if (opening) {
       this.context = this.Blok.AgentAPI.describeUserPlace();
       this.returnPoint = this.captureReturnPoint();
 
       const id = this.selectionEndBlockId() ?? this.context.blockIds[0];
-      const block = (id === undefined ? undefined : this.Blok.BlockManager.getBlockById(id))
+      const caret = (id === undefined ? undefined : this.Blok.BlockManager.getBlockById(id))
         ?? this.Blok.BlockManager.currentBlock
         ?? this.Blok.BlockManager.lastBlock;
+      // Under the whole container: a gap on a column or cell would leave its neighbours under the bar.
+      const block = caret === undefined ? undefined : this.Blok.BlockManager.getBlockByChildNode(outermost(caret.holder)) ?? caret;
 
       this.anchor = block === undefined ? null : { id: block.id };
     }
@@ -145,6 +153,21 @@ export class Assistant extends Module {
     bar.open(block.holder, this.columnOf(block.holder));
     this.remember(block);
     this.watch();
+    if (opening) {
+      this.revealBar(bar.element);
+    }
+  }
+
+  /** Once, on open: bring a bar placed past the window's edge into view. Later scrolls are the user's. */
+  private revealBar(element: HTMLElement): void {
+    const rect = element.getBoundingClientRect();
+    const below = rect.bottom + REVEAL_ROOM - window.innerHeight;
+    const above = rect.top - REVEAL_ROOM;
+    const top = below > 0 ? below : Math.min(above, 0);
+
+    if (top !== 0) {
+      window.scrollBy({ top, behavior: prefersReducedMotion() ? 'instant' : 'smooth' });
+    }
   }
 
   /**
@@ -211,6 +234,11 @@ export class Assistant extends Module {
   }
 
   private submit(prompt: string): void {
+    if (this.run === null) {
+      // Each run learns again whether its model streams.
+      this.streams = false;
+    }
+
     const pending = this.run === null
       ? this.startRun(prompt)
       : this.run.followUp(prompt);
@@ -584,6 +612,17 @@ export class Assistant extends Module {
     }
   }
 
+  /** Scroll, resize and mutations come many to a frame: re-place once, on the next one. */
+  private scheduleRelayout(): void {
+    if (this.frame !== null) {
+      return;
+    }
+    this.frame = requestAnimationFrame(() => {
+      this.frame = null;
+      this.relayout();
+    });
+  }
+
   /** The page moved or resized: the bar and the preview follow. */
   private relayout(): void {
     this.placeBar();
@@ -605,9 +644,9 @@ export class Assistant extends Module {
       return;
     }
 
-    const resize = typeof ResizeObserver === 'function' ? new ResizeObserver(() => this.relayout()) : null;
+    const resize = typeof ResizeObserver === 'function' ? new ResizeObserver(() => this.scheduleRelayout()) : null;
     // childList only: the bar's own gap writes are attributes, and would loop.
-    const mutations = new MutationObserver(() => this.placeBar());
+    const mutations = new MutationObserver(() => this.scheduleRelayout());
     const redactor = this.Blok.UI.nodes.redactor;
     // Any gap in this editor: one above the anchor moves it too.
     const gaps = onGapChange((holder) => {
@@ -627,6 +666,10 @@ export class Assistant extends Module {
   }
 
   private unwatch(): void {
+    if (this.frame !== null) {
+      cancelAnimationFrame(this.frame);
+      this.frame = null;
+    }
     this.watchers?.resize?.disconnect();
     this.watchers?.mutations.disconnect();
     this.watchers?.gaps();

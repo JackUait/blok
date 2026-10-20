@@ -23778,6 +23778,14 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   animation: none;
 }
 
+[@media (prefers-reduced-motion: reduce)] [data-blok-assistant-more] svg, [data-blok-assistant-send], [data-blok-assistant-thinking], [data-blok-assistant-undo], [data-blok-assistant-keep], [data-blok-assistant-button] {
+  transition: none;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-assistant-send]:active:not(:disabled), [data-blok-assistant-undo]:active, [data-blok-assistant-keep]:active, [data-blok-assistant-button]:active {
+  transform: none;
+}
+
 [@media (prefers-reduced-motion: reduce)] [data-blok-assistant-status] {
   animation: none;
   background: none;

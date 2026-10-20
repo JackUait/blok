@@ -10290,9 +10290,18 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-calendar-grid] {
+  position: relative;
   display: flex;
   flex-direction: column;
   border-inline-start: 1px solid var(--blok-database-calendar-border);
+}
+
+[data-blok-database-calendar-lasso] {
+  position: absolute;
+  z-index: 2;
+  border: 1px solid transparent;
+  background-color: var(--blok-selection-highlight);
+  pointer-events: none;
 }
 
 [data-blok-database-calendar-weekdays], [data-blok-database-calendar-week] {

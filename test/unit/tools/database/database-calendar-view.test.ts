@@ -282,6 +282,81 @@ describe('DatabaseCalendarView', () => {
       });
     });
 
+    describe('a drag box started inside the grid (research/23 §2c)', () => {
+      const band = (root: HTMLElement): HTMLElement | null => root.querySelector('[data-blok-database-calendar-lasso]');
+      const setUp = (): Mounted & { lassoRows: ReturnType<typeof vi.fn> } => {
+        const lassoRows = vi.fn();
+        const mounted = mount({ handlers: { ...makeHandlers(), lassoRows } });
+
+        layOut(mounted.root);
+        rect(events(mounted.root, 'r1')[0], 505, 175, 90, 20);
+        events(mounted.root, 'r2').forEach((el) => rect(el, 105, 230, 290, 20));
+
+        return { ...mounted, lassoRows };
+      };
+
+      it('picks every event it touches across days, creates nothing, and the click after it opens nothing', () => {
+        const { root, handlers, lassoRows } = setUp();
+        const start = day(root, '2026-10-10');
+
+        pointer('pointerdown', start, 650, 180);
+        pointer('pointermove', document, 400, 200);
+        expect(band(root)).not.toBeNull();
+        pointer('pointermove', document, 150, 240);
+        pointer('pointerup', document, 150, 240);
+        start.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        expect([...(lassoRows.mock.lastCall?.[0] ?? [])].sort()).toEqual(['r1', 'r2']);
+        expect(band(root)).toBeNull();
+        expect(handlers.addRow).not.toHaveBeenCalled();
+        expect(handlers.openRow).not.toHaveBeenCalled();
+        expect(handlers.setDate).not.toHaveBeenCalled();
+      });
+
+      it('stops the text selection a drag in the grid would start', () => {
+        const { root } = setUp();
+
+        pointer('pointerdown', day(root, '2026-10-10'), 650, 180);
+        const selectStart = new Event('selectstart', { bubbles: true, cancelable: true });
+
+        day(root, '2026-10-10').dispatchEvent(selectStart);
+        pointer('pointerup', document, 650, 180);
+
+        expect(selectStart.defaultPrevented).toBe(true);
+      });
+
+      it('a box that touches no event replaces the picks with nothing', () => {
+        const { root, lassoRows } = setUp();
+
+        pointer('pointerdown', day(root, '2026-10-24'), 650, 380);
+        pointer('pointermove', document, 620, 360);
+        pointer('pointerup', document, 620, 360);
+
+        expect(lassoRows).toHaveBeenCalledExactlyOnceWith([]);
+      });
+
+      it('a press without a drag picks nothing', () => {
+        const { root, lassoRows } = setUp();
+
+        pointer('pointerdown', day(root, '2026-10-10'), 650, 180);
+        pointer('pointerup', document, 651, 181);
+
+        expect(lassoRows).not.toHaveBeenCalled();
+        expect(band(root)).toBeNull();
+      });
+
+      it('read-only: draws no box', () => {
+        const { root } = mount({ readOnly: true });
+
+        layOut(root);
+        pointer('pointerdown', day(root, '2026-10-10'), 650, 180);
+        pointer('pointermove', document, 150, 240);
+
+        expect(band(root)).toBeNull();
+        pointer('pointerup', document, 150, 240);
+      });
+    });
+
     it('shows a comment badge after the title, out of the tab order', () => {
       const { root } = mount({ commentBadges: { databaseId: 'db', count: (rowId) => (rowId === 'r1' ? 3 : 0), open: vi.fn() } });
       const badge = events(root, 'r1')[0].querySelector<HTMLElement>('[data-blok-database-calendar-event-title] + [data-blok-database-comment-badge]');

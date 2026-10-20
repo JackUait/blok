@@ -433,6 +433,18 @@ test.describe('gallery', () => {
       });
     }
 
+    for (const modifier of ['Shift', 'ControlOrMeta'] as const) {
+      test(`Enter after a single ${modifier}-click opens that card in the peek and never renames it (research/23 §8)`, async ({ page }) => {
+        await mount(page, blocks({ type: 'gallery' }));
+        await card(page, 'r2').click({ modifiers: [modifier] });
+        await page.keyboard.press('Enter');
+
+        await expect(drawer(page)).toBeVisible();
+        await expect(drawer(page).locator('[data-blok-database-drawer-title]')).toHaveValue('Trip');
+        await expect(page.locator('[data-blok-database-gallery-card] input')).toHaveCount(0);
+      });
+    }
+
     test('Home, End, PageUp and PageDown leave the selection where it is (research/22 §2)', async ({ page }) => {
       await mount(page, blocks({ type: 'gallery' }));
       await clickBlank(page);
@@ -525,15 +537,23 @@ test.describe('gallery', () => {
       await expect(card(page, 'r1')).toHaveCount(0);
     });
 
-    test('Delete on several selected cards trashes them all at once, as before (research/22 §2: unmeasured)', async ({ page }) => {
+    test('Delete on several selected cards trashes them all at once with one "Moved to Trash" toast; one Restore brings them all back (research/23 §2b)', async ({ page }) => {
       await mount(page, blocks({ type: 'gallery' }));
       await card(page, 'r1').click({ modifiers: ['ControlOrMeta'] });
       await card(page, 'r3').click({ modifiers: ['ControlOrMeta'] });
       await page.keyboard.press('Delete');
 
+      const toast = page.getByRole('status').filter({ hasText: 'Moved to Trash' });
+
+      await expect(toast).toHaveCount(1);
+      await expect(page.getByRole('dialog')).toHaveCount(0);
       await expect(page.locator('[data-blok-database-gallery-card]')).toHaveCount(1);
       await expect.poll(async () => (await savedRows(page)).map((row) => row.id)).toEqual(['r2']);
-      await expect(page.getByRole('status').filter({ hasText: 'Moved to Trash' })).toHaveCount(0);
+      expect(await selectedIds(page)).toEqual([]);
+
+      await toast.getByRole('button', { name: 'Restore' }).click();
+      await expect.poll(async () => (await savedRows(page)).map((row) => row.id)).toEqual(['r1', 'r2', 'r3']);
+      await expect(page.locator('[data-blok-database-gallery-card]')).toHaveCount(3);
     });
 
     test('read-only: arrows select nothing', async ({ page }) => {

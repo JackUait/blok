@@ -106,6 +106,8 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
   private cursor: string | null = null;
   /** Where a Shift+arrow range starts. */
   private anchor: string | null = null;
+  /** The cursor came from a click pick, not the arrows: Enter opens it instead of renaming (research/23 §8). */
+  private clickPicked = false;
 
   constructor(options: DatabaseGalleryViewOptions) {
     this.options = options;
@@ -399,6 +401,7 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
       handlers.pickRow(rowId, event.shiftKey, this.cardIds());
       this.cursor = rowId;
       this.anchor = rowId;
+      this.clickPicked = true;
       // Core blocks the Shift-click focus (selection owner), so the arrows would miss the gallery.
       this.root?.focus({ preventScroll: true });
 
@@ -409,8 +412,8 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
 
   /**
    * Notion's gallery keys (research/16 §3a): arrows select cards with focus
-   * on the root, Enter on a selected card renames it, Enter on a Tab-focused
-   * card opens it. Escape is the tool's selection handler.
+   * on the root, Enter on an arrow-picked card renames it, Enter on a
+   * click-picked or Tab-focused card opens it. Escape is the tool's selection handler.
    */
   private readonly onKeyDown = (event: KeyboardEvent): void => {
     const target = event.target instanceof HTMLElement ? event.target : null;
@@ -441,10 +444,13 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
       const selected = this.selectedIds();
       const rowId = this.cursor !== null && selected.includes(this.cursor) ? this.cursor : selected[0];
 
-      // Several picked: opens the last one clicked (research/22 §2). One: renames it (research/16 §3a).
-      if (selected.length > 1 && rowId !== undefined) {
+      // A click pick or several picked: opens the last one clicked (research/22 §2, research/23 §8).
+      // One picked with the arrows: renames it (research/16 §3a).
+      const open = this.clickPicked && this.cursor !== null ? this.cursor : rowId;
+
+      if ((this.clickPicked || selected.length > 1) && open !== undefined) {
         event.preventDefault();
-        this.options.handlers?.openRow(rowId);
+        this.options.handlers?.openRow(open);
       } else if (rowId !== undefined && this.startRename(rowId)) {
         event.preventDefault();
       }
@@ -503,6 +509,7 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
 
   private select(rowIds: string[], cursor: string): void {
     this.cursor = cursor;
+    this.clickPicked = false;
     this.options.handlers?.selectRows?.(rowIds);
     this.root?.querySelector<HTMLElement>(`${CARD}[data-row-id="${CSS.escape(cursor)}"]`)?.scrollIntoView?.({ block: 'nearest' });
     if (document.activeElement !== this.root) {

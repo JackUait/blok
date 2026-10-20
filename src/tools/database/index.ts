@@ -8249,15 +8249,16 @@ export class DatabaseTool implements BlockTool {
   }
 
   /**
-   * One gallery card trashed by key gets a "Moved to Trash" toast whose Restore
-   * undoes the delete (research/22 §2). Several cards: unmeasured, no toast.
+   * Gallery cards trashed by key get one "Moved to Trash" toast whose Restore
+   * undoes the delete (research/22 §2, research/23 §2b for several cards).
    */
   private trashSelectionFromKeys(): void {
-    const rowIds = [...this.rowSelection];
-    const toast = rowIds.length === 1 && this.model.getView(this.activeViewId)?.type === 'gallery';
+    const toast = this.model.getView(this.activeViewId)?.type === 'gallery';
     const before = this.api.history.latestStep();
 
-    this.trashSelection();
+    // One undo step, so Restore brings every card back.
+    if (this.api.blocks.transact !== undefined) this.api.blocks.transact(() => this.trashSelection());
+    else this.trashSelection();
     if (!toast) {
       return;
     }

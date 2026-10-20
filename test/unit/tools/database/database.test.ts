@@ -5944,13 +5944,31 @@ describe('DatabaseTool', () => {
         tool.destroy();
       });
 
-      it('several cards: trashes them all at once, with no toast (unmeasured, kept as it was)', () => {
-        const { tool, element, show } = trashTool();
+      it('several cards: trashes them all in one step, with one toast whose Restore undoes that step (research/23 §2b)', () => {
+        const { tool, element, options, show, history, deleteStep } = trashTool();
+        const scope = { open: false, deletedInside: [] as boolean[] };
+        const recordStep = vi.mocked(options.api.blocks.delete).getMockImplementation();
 
+        Object.assign(options.api.blocks, {
+          transact: (fn: () => void): void => {
+            const outer = scope.open;
+
+            scope.open = true;
+            fn();
+            scope.open = outer;
+          },
+        });
+        vi.mocked(options.api.blocks.delete).mockImplementation(async (...args) => {
+          scope.deletedInside.push(scope.open);
+          await recordStep?.(...args);
+        });
         select(element, ['row-1', 'row-2']);
         pressDelete('Delete');
 
-        expect(trashToast(show)).toBeUndefined();
+        expect(scope.deletedInside).toEqual([true, true]);
+        expect(show.mock.calls.filter(([o]) => (o as Toast).message === 'tools.database.movedToTrash')).toHaveLength(1);
+        trashToast(show)?.actions?.[0].onClick();
+        expect(history.undoStep).toHaveBeenCalledExactlyOnceWith(deleteStep);
 
         tool.destroy();
       });

@@ -91,6 +91,8 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
   private readonly options: DatabaseCalendarViewOptions;
   private root: HTMLElement | null = null;
   private drag: DragState | null = null;
+  /** A drag box started on empty grid space (research/23 §2c). */
+  private box: { startX: number; startY: number; el: HTMLElement | null; picked: string | null } | null = null;
   private suppressClick = false;
   /** Days in grid order, for arrow keys. */
   private shownDays: string[] = [];
@@ -542,20 +544,11 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     }
     const detail: unknown = event.detail;
     const band = typeof detail === 'object' && detail !== null && 'rect' in detail ? detail.rect : null;
-    const touched = new Set<string>();
 
     if (isBand(band)) {
-      this.root?.querySelectorAll<HTMLElement>('[data-blok-database-calendar-event]').forEach((el) => {
-        const r = el.getBoundingClientRect();
-        const rowId = el.getAttribute('data-row-id');
-
-        if (rowId !== null && r.right > band.left && r.left < band.right && r.bottom > band.top && r.top < band.bottom) {
-          touched.add(rowId);
-        }
-      });
       event.preventDefault();
     }
-    lassoRows([...touched]);
+    lassoRows(isBand(band) ? this.eventsIn(band) : []);
   };
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
@@ -656,6 +649,13 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
 
     const eventEl = event.target.closest('[data-blok-database-calendar-event]');
     const rowId = eventEl?.getAttribute('data-row-id');
+
+    if (eventEl === null && this.options.handlers?.lassoRows !== undefined && event.target.closest('[data-blok-database-calendar-day]') !== null && event.target.closest('button, a, input, [role="button"]') === null) {
+      this.startBox(event);
+
+      return;
+    }
+
     const edge = event.target.closest('[data-blok-database-calendar-resize]')?.getAttribute('data-blok-database-calendar-resize');
     const grabDay = this.dayAt(event.clientX, event.clientY);
 
@@ -674,6 +674,90 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     };
     this.listenForDrag();
   };
+
+  private startBox(event: PointerEvent): void {
+    this.box = { startX: event.clientX, startY: event.clientY, el: null, picked: null };
+    document.addEventListener('pointermove', this.onBoxMove);
+    document.addEventListener('pointerup', this.endBox);
+    document.addEventListener('pointercancel', this.endBox);
+    // Keeps the drag from selecting the day numbers' text.
+    document.addEventListener('selectstart', this.preventDefault);
+  }
+
+  private readonly preventDefault = (event: Event): void => {
+    event.preventDefault();
+  };
+
+  private readonly onBoxMove = (event: PointerEvent): void => {
+    const box = this.box;
+    const grid = this.root?.querySelector<HTMLElement>('[data-blok-database-calendar-grid]');
+
+    if (box === null || grid === null || grid === undefined) {
+      return;
+    }
+    if (box.el === null) {
+      if (Math.hypot(event.clientX - box.startX, event.clientY - box.startY) < DRAG_THRESHOLD) {
+        return;
+      }
+      box.el = document.createElement('div');
+      box.el.setAttribute('data-blok-database-calendar-lasso', '');
+      box.el.setAttribute('aria-hidden', 'true');
+      grid.appendChild(box.el);
+    }
+
+    const band = {
+      left: Math.min(box.startX, event.clientX),
+      top: Math.min(box.startY, event.clientY),
+      right: Math.max(box.startX, event.clientX),
+      bottom: Math.max(box.startY, event.clientY),
+    };
+    const origin = grid.getBoundingClientRect();
+
+    Object.assign(box.el.style, {
+      left: `${band.left - origin.left}px`,
+      top: `${band.top - origin.top}px`,
+      width: `${band.right - band.left}px`,
+      height: `${band.bottom - band.top}px`,
+    });
+
+    const touched = this.eventsIn(band);
+    const key = touched.join(' ');
+
+    if (key !== box.picked) {
+      box.picked = key;
+      this.options.handlers?.lassoRows?.(touched);
+    }
+  };
+
+  private readonly endBox = (): void => {
+    const drew = this.box !== null && this.box.el !== null;
+
+    this.box?.el?.remove();
+    this.box = null;
+    document.removeEventListener('pointermove', this.onBoxMove);
+    document.removeEventListener('pointerup', this.endBox);
+    document.removeEventListener('pointercancel', this.endBox);
+    document.removeEventListener('selectstart', this.preventDefault);
+    if (drew) {
+      this.guardNextClick(true);
+    }
+  };
+
+  /** Row ids of the events a client-coordinate band touches, in grid order. */
+  private eventsIn(band: { left: number; top: number; right: number; bottom: number }): string[] {
+    const touched = new Set<string>();
+
+    this.root?.querySelectorAll<HTMLElement>('[data-blok-database-calendar-event]').forEach((el) => {
+      const r = el.getBoundingClientRect();
+      const rowId = el.getAttribute('data-row-id');
+
+      if (rowId !== null && r.right > band.left && r.left < band.right && r.bottom > band.top && r.top < band.bottom) {
+        touched.add(rowId);
+      }
+    });
+
+    return [...touched];
+  }
 
   private listenForDrag(): void {
     document.addEventListener('pointermove', this.onPointerMove);
@@ -816,6 +900,7 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
 
   destroy(): void {
     this.endDrag();
+    this.endBox();
   }
 
   appendRow(): void {

@@ -744,16 +744,35 @@ describe('DatabaseGalleryView', () => {
       }
     });
 
-    it('Enter after a single Cmd-click pick renames that card, as Enter on an arrow-selected card does', () => {
+    it('Enter after a single Shift, Cmd or Ctrl-click opens that card and never renames it (research/23 §8)', () => {
+      for (const init of [{ shiftKey: true }, { metaKey: true }, { ctrlKey: true }]) {
+        const { root, view, handlers, pickRow } = mountSelectable();
+
+        pickRow.mockImplementation((rowId) => {
+          cards(root).forEach((card) => card.toggleAttribute(SELECTED, card.getAttribute('data-row-id') === rowId));
+        });
+        cards(root)[1].dispatchEvent(new MouseEvent('click', { bubbles: true, ...init }));
+        const enter = press(document.activeElement instanceof HTMLElement ? document.activeElement : document.body, 'Enter');
+
+        expect(root.querySelector('input')).toBeNull();
+        expect(handlers.openRow).toHaveBeenCalledExactlyOnceWith('r2');
+        expect(enter.defaultPrevented).toBe(true);
+        view.destroy();
+        root.remove();
+      }
+    });
+
+    it('a Cmd-click pick moved on with the arrows is an arrow pick: Enter renames (research/16 §3a)', () => {
       const { root, handlers, pickRow } = mountSelectable();
 
       pickRow.mockImplementation((rowId) => {
         cards(root).forEach((card) => card.toggleAttribute(SELECTED, card.getAttribute('data-row-id') === rowId));
       });
       cards(root)[1].dispatchEvent(new MouseEvent('click', { bubbles: true, metaKey: true }));
-      press(document.activeElement instanceof HTMLElement ? document.activeElement : document.body, 'Enter');
+      press(root, 'ArrowDown');
+      press(root, 'Enter');
 
-      expect(cards(root)[1].querySelector('input')).not.toBeNull();
+      expect(cards(root)[2].querySelector('input')).not.toBeNull();
       expect(handlers.openRow).not.toHaveBeenCalled();
     });
 

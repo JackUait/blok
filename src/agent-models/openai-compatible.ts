@@ -242,7 +242,7 @@ export function openaiCompatibleModel(options: AdapterOptions): AgentModel {
     const { stream } = options;
 
     if (stream !== undefined) {
-      const streaming = { ...body, stream: true, stream_options: { include_usage: true } };
+      const streaming = { ...body, stream: true };
 
       return readStream(await postStream(stream, streaming, request, options), request, stepOf(request));
     }

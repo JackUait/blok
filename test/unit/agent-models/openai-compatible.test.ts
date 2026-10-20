@@ -218,14 +218,15 @@ describe('openaiCompatibleModel', () => {
       expect(response.content[2]).toEqual({ type: 'provider', format: 'openai-chat', raw: twinMessage });
     });
 
-    it('sends stream: true with usage, and only when streaming', async () => {
+    it('sends stream: true without stream_options, and only when streaming', async () => {
       const streaming = fakeStream(FIXTURE);
       const plain = fakeSend(choice({ role: 'assistant', content: 'Hi' }, 'stop'));
 
       await openaiCompatibleModel({ model: 'm', stream: streaming.stream, send: plain.send })(request());
       await openaiCompatibleModel({ model: 'm', send: plain.send })(request());
 
-      expect(streaming.bodies[0]).toMatchObject({ stream: true, stream_options: { include_usage: true }, model: 'm', max_tokens: 16000 });
+      expect(streaming.bodies[0].stream_options).toBeUndefined();
+      expect(streaming.bodies[0]).toMatchObject({ stream: true, model: 'm', max_tokens: 16000 });
       expect(plain.bodies).toHaveLength(1);
       expect(plain.bodies[0].stream).toBeUndefined();
       expect(plain.bodies[0].stream_options).toBeUndefined();

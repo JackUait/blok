@@ -1101,6 +1101,8 @@
   "tools.database.settingsVerticalLines": "Показувати вертикальні лінії",
   "tools.database.settingsShowPageIcon": "Показувати іконку сторінки",
   "tools.database.settingsShowDataSourceTitle": "Показувати назву джерела даних",
+  "tools.database.hideDataSourceTitles": "Сховати назви джерел даних",
+  "tools.database.showDataSourceTitles": "Показувати назви джерел даних",
   "tools.database.settingsOpenPagesIn": "Відкривати сторінки в",
   "tools.database.settingsLoadLimit": "Ліміт завантаження",
   "tools.database.settingsLoadLimitPages": "{count} сторінок",

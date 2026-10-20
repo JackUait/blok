@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "Босоо шугам харуулах",
   "tools.database.settingsShowPageIcon": "Хуудасны дүрс харуулах",
   "tools.database.settingsShowDataSourceTitle": "Өгөгдлийн эх сурвалжийн гарчиг харуулах",
+  "tools.database.hideDataSourceTitles": "Өгөгдлийн эх сурвалжуудын гарчгийг нуух",
+  "tools.database.showDataSourceTitles": "Өгөгдлийн эх сурвалжуудын гарчгийг харуулах",
   "tools.database.settingsOpenPagesIn": "Хуудас нээх хэлбэр",
   "tools.database.settingsLoadLimit": "Ачаалах хязгаар",
   "tools.database.settingsLoadLimitPages": "{count} хуудас",

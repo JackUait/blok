@@ -1101,6 +1101,8 @@
   "tools.database.settingsVerticalLines": "Zobrazit svislé čáry",
   "tools.database.settingsShowPageIcon": "Zobrazit ikonu stránky",
   "tools.database.settingsShowDataSourceTitle": "Zobrazit název zdroje dat",
+  "tools.database.hideDataSourceTitles": "Skrýt názvy zdrojů dat",
+  "tools.database.showDataSourceTitles": "Zobrazit názvy zdrojů dat",
   "tools.database.settingsOpenPagesIn": "Otevírat stránky v",
   "tools.database.settingsLoadLimit": "Limit načítání",
   "tools.database.settingsLoadLimitPages": "{count} stránek",

@@ -1100,6 +1100,8 @@
   "tools.database.settingsVerticalLines": "Afișează liniile verticale",
   "tools.database.settingsShowPageIcon": "Afișează pictograma paginii",
   "tools.database.settingsShowDataSourceTitle": "Afișează titlul sursei de date",
+  "tools.database.hideDataSourceTitles": "Ascunde titlurile surselor de date",
+  "tools.database.showDataSourceTitles": "Afișează titlurile surselor de date",
   "tools.database.settingsOpenPagesIn": "Deschide paginile în",
   "tools.database.settingsLoadLimit": "Limită de încărcare",
   "tools.database.settingsLoadLimitPages": "Pagini: {count}",

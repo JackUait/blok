@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "ވަޓިކަލް ލައިންތައް ދައްކާ",
   "tools.database.settingsShowPageIcon": "ޞަފްޙާގެ އައިކަން ދައްކާ",
   "tools.database.settingsShowDataSourceTitle": "ޑޭޓާ ސޯހުގެ ސުރުޚީ ދައްކާ",
+  "tools.database.hideDataSourceTitles": "ޑޭޓާ ސޯހުތަކުގެ ސުރުޚީތައް ފޮރުވާ",
+  "tools.database.showDataSourceTitles": "ޑޭޓާ ސޯހުތަކުގެ ސުރުޚީތައް ދައްކާ",
   "tools.database.settingsOpenPagesIn": "ޞަފްޙާތައް ހުޅުވާނީ",
   "tools.database.settingsLoadLimit": "ލޯޑް ލިމިޓް",
   "tools.database.settingsLoadLimitPages": "{count} ޞަފްޙާ",

@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "Dikey çizgileri göster",
   "tools.database.settingsShowPageIcon": "Sayfa simgesini göster",
   "tools.database.settingsShowDataSourceTitle": "Veri kaynağı başlığını göster",
+  "tools.database.hideDataSourceTitles": "Veri kaynağı başlıklarını gizle",
+  "tools.database.showDataSourceTitles": "Veri kaynağı başlıklarını göster",
   "tools.database.settingsOpenPagesIn": "Sayfaları şurada aç",
   "tools.database.settingsLoadLimit": "Yükleme sınırı",
   "tools.database.settingsLoadLimitPages": "{count} sayfa",

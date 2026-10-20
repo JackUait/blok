@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "Tunjukkan garis menegak",
   "tools.database.settingsShowPageIcon": "Tunjukkan ikon halaman",
   "tools.database.settingsShowDataSourceTitle": "Tunjukkan tajuk sumber data",
+  "tools.database.hideDataSourceTitles": "Sembunyikan tajuk sumber data",
+  "tools.database.showDataSourceTitles": "Tunjukkan tajuk sumber data",
   "tools.database.settingsOpenPagesIn": "Buka halaman dalam",
   "tools.database.settingsLoadLimit": "Had muatan",
   "tools.database.settingsLoadLimitPages": "{count} halaman",

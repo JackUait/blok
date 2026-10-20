@@ -1101,6 +1101,8 @@
   "tools.database.settingsVerticalLines": "Prikaži navpične črte",
   "tools.database.settingsShowPageIcon": "Prikaži ikono strani",
   "tools.database.settingsShowDataSourceTitle": "Prikaži naslov vira podatkov",
+  "tools.database.hideDataSourceTitles": "Skrij naslove virov podatkov",
+  "tools.database.showDataSourceTitles": "Prikaži naslove virov podatkov",
   "tools.database.settingsOpenPagesIn": "Odpiraj strani v",
   "tools.database.settingsLoadLimit": "Omejitev nalaganja",
   "tools.database.settingsLoadLimitPages": "{count} strani",

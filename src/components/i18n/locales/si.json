@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "සිරස් රේඛා පෙන්වන්න",
   "tools.database.settingsShowPageIcon": "පිටු නිරූපකය පෙන්වන්න",
   "tools.database.settingsShowDataSourceTitle": "දත්ත මූලාශ්‍රයේ මාතෘකාව පෙන්වන්න",
+  "tools.database.hideDataSourceTitles": "දත්ත මූලාශ්‍රවල මාතෘකා සඟවන්න",
+  "tools.database.showDataSourceTitles": "දත්ත මූලාශ්‍රවල මාතෘකා පෙන්වන්න",
   "tools.database.settingsOpenPagesIn": "පිටු විවෘත වන ස්ථානය",
   "tools.database.settingsLoadLimit": "පූරණ සීමාව",
   "tools.database.settingsLoadLimitPages": "පිටු {count}",

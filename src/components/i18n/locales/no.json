@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "Vis loddrette linjer",
   "tools.database.settingsShowPageIcon": "Vis sideikon",
   "tools.database.settingsShowDataSourceTitle": "Vis datakildens tittel",
+  "tools.database.hideDataSourceTitles": "Skjul datakildenes titler",
+  "tools.database.showDataSourceTitles": "Vis datakildenes titler",
   "tools.database.settingsOpenPagesIn": "Åpne sider i",
   "tools.database.settingsLoadLimit": "Lastegrense",
   "tools.database.settingsLoadLimitPages": "{count} sider",

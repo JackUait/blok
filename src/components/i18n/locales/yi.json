@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "ווײַזן ווערטיקאַלע ליניעס",
   "tools.database.settingsShowPageIcon": "ווײַזן בלאט־איקאָן",
   "tools.database.settingsShowDataSourceTitle": "ווײַזן דעם טיטל פֿונעם דאַטן־מקור",
+  "tools.database.hideDataSourceTitles": "באַהאַלטן די טיטלען פֿון די דאַטן־מקורים",
+  "tools.database.showDataSourceTitles": "ווײַזן די טיטלען פֿון די דאַטן־מקורים",
   "tools.database.settingsOpenPagesIn": "עפֿענען בלעטער אין",
   "tools.database.settingsLoadLimit": "לאָד־גרענעץ",
   "tools.database.settingsLoadLimitPages": "{count} בלעטער",

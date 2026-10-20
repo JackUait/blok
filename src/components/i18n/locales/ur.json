@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "عمودی لکیریں دکھائیں",
   "tools.database.settingsShowPageIcon": "صفحے کا آئیکن دکھائیں",
   "tools.database.settingsShowDataSourceTitle": "ڈیٹا ماخذ کا عنوان دکھائیں",
+  "tools.database.hideDataSourceTitles": "ڈیٹا ماخذ کے عنوانات چھپائیں",
+  "tools.database.showDataSourceTitles": "ڈیٹا ماخذ کے عنوانات دکھائیں",
   "tools.database.settingsOpenPagesIn": "صفحات کہاں کھولیں",
   "tools.database.settingsLoadLimit": "لوڈ کی حد",
   "tools.database.settingsLoadLimitPages": "{count} صفحات",

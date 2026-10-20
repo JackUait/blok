@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "Verticale lijnen tonen",
   "tools.database.settingsShowPageIcon": "Paginapictogram tonen",
   "tools.database.settingsShowDataSourceTitle": "Titel van gegevensbron tonen",
+  "tools.database.hideDataSourceTitles": "Titels van gegevensbronnen verbergen",
+  "tools.database.showDataSourceTitles": "Titels van gegevensbronnen tonen",
   "tools.database.settingsOpenPagesIn": "Pagina's openen in",
   "tools.database.settingsLoadLimit": "Laadlimiet",
   "tools.database.settingsLoadLimitPages": "{count} pagina's",

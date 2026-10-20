@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "縦線を表示",
   "tools.database.settingsShowPageIcon": "ページアイコンを表示",
   "tools.database.settingsShowDataSourceTitle": "データソースのタイトルを表示",
+  "tools.database.hideDataSourceTitles": "データソースのタイトルを非表示",
+  "tools.database.showDataSourceTitles": "データソースのタイトルを表示",
   "tools.database.settingsOpenPagesIn": "ページの開き方",
   "tools.database.settingsLoadLimit": "読み込み上限",
   "tools.database.settingsLoadLimitPages": "{count}ページ",

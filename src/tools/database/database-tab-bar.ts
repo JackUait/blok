@@ -1,5 +1,5 @@
 import { generateKeyBetween } from 'fractional-indexing';
-import { IconBoard, IconCalendar, IconChart, IconGallery, IconList, IconMessage, IconTable, IconTimeline, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconColumns, IconListChecklist, IconMap, IconTabs } from '../../components/icons';
+import { IconBoard, IconCalendar, IconChart, IconGallery, IconList, IconMessage, IconTable, IconTimeline, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconColumns, IconListChecklist, IconMap, IconTabs, IconPreview } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
@@ -69,6 +69,10 @@ export interface TabBarOptions {
   readOnly?: boolean;
   /** Layouts the add-view menu leaves out. */
   hiddenViewTypes?: readonly ViewType[];
+  /** The title line above the tabs is hidden. One setting for the whole database. */
+  dataSourceTitlesHidden?: boolean;
+  /** Offers "Hide / Show data source titles" in the tab menu. */
+  onDataSourceTitlesToggle?: () => void;
 }
 
 export class DatabaseTabBar {
@@ -326,8 +330,9 @@ export class DatabaseTabBar {
   }
 
   /**
-   * The view menu, shared by a tab and its overflow row. "Display as" is the
-   * bar's setting, not the view's, so the overflow row leaves it out.
+   * The view menu, shared by a tab and its overflow row. "Display as" and the
+   * data source titles are the bar's settings, not the view's, so the overflow
+   * row leaves them out.
    */
   private showViewMenu(
     trigger: HTMLElement,
@@ -358,6 +363,7 @@ export class DatabaseTabBar {
         closeOnActivate: true,
         onActivate: menu.rename,
       },
+      ...(menu.withDisplay ? this.dataSourceTitleItems() : []),
       {
         icon: IconCopy,
         name: 'database-view-duplicate',
@@ -405,6 +411,24 @@ export class DatabaseTabBar {
     });
 
     this.contextPopover.show();
+  }
+
+  /** "Hide data source titles" (research/23 §10). The item stays with one source too. */
+  private dataSourceTitleItems(): PopoverItemParams[] {
+    const onToggle = this.options.onDataSourceTitlesToggle;
+
+    if (onToggle === undefined) return [];
+    const hidden = this.options.dataSourceTitlesHidden === true;
+
+    return [{
+      icon: IconPreview,
+      name: 'database-view-data-source-titles',
+      title: hidden
+        ? this.t('tools.database.showDataSourceTitles', 'Show data source titles')
+        : this.t('tools.database.hideDataSourceTitles', 'Hide data source titles'),
+      closeOnActivate: true,
+      onActivate: onToggle,
+    }];
   }
 
   /** "Display as" (research/03 §1.2). */

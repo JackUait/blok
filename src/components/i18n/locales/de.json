@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "Vertikale Linien anzeigen",
   "tools.database.settingsShowPageIcon": "Seitensymbol anzeigen",
   "tools.database.settingsShowDataSourceTitle": "Titel der Datenquelle anzeigen",
+  "tools.database.hideDataSourceTitles": "Titel der Datenquellen ausblenden",
+  "tools.database.showDataSourceTitles": "Titel der Datenquellen anzeigen",
   "tools.database.settingsOpenPagesIn": "Seiten öffnen in",
   "tools.database.settingsLoadLimit": "Ladelimit",
   "tools.database.settingsLoadLimitPages": "{count} Seiten",

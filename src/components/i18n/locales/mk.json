@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "Прикажи вертикални линии",
   "tools.database.settingsShowPageIcon": "Прикажи икона на страницата",
   "tools.database.settingsShowDataSourceTitle": "Прикажи наслов на изворот на податоци",
+  "tools.database.hideDataSourceTitles": "Скриј ги насловите на изворите на податоци",
+  "tools.database.showDataSourceTitles": "Прикажи ги насловите на изворите на податоци",
   "tools.database.settingsOpenPagesIn": "Отворај страници во",
   "tools.database.settingsLoadLimit": "Ограничување на вчитување",
   "tools.database.settingsLoadLimitPages": "{count} страници",

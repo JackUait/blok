@@ -1100,6 +1100,8 @@
   "tools.database.settingsVerticalLines": "Prikaži okomite linije",
   "tools.database.settingsShowPageIcon": "Prikaži ikonu stranice",
   "tools.database.settingsShowDataSourceTitle": "Prikaži naslov izvora podataka",
+  "tools.database.hideDataSourceTitles": "Sakrij naslove izvora podataka",
+  "tools.database.showDataSourceTitles": "Prikaži naslove izvora podataka",
   "tools.database.settingsOpenPagesIn": "Otvaraj stranice u",
   "tools.database.settingsLoadLimit": "Ograničenje učitavanja",
   "tools.database.settingsLoadLimitPages": "{count} stranica",

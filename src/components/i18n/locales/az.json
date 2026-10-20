@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "Şaquli xətləri göstər",
   "tools.database.settingsShowPageIcon": "Səhifə ikonunu göstər",
   "tools.database.settingsShowDataSourceTitle": "Verilənlər mənbəyinin başlığını göstər",
+  "tools.database.hideDataSourceTitles": "Verilənlər mənbələrinin başlıqlarını gizlət",
+  "tools.database.showDataSourceTitles": "Verilənlər mənbələrinin başlıqlarını göstər",
   "tools.database.settingsOpenPagesIn": "Səhifələri burada aç",
   "tools.database.settingsLoadLimit": "Yükləmə limiti",
   "tools.database.settingsLoadLimitPages": "{count} səhifə",

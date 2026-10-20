@@ -182,6 +182,7 @@ const savedData: Record<string, Record<string, unknown>> = {
     activeViewId: 'v1',
     automations: { version: 1 as const, definitions: [] },
     source: { databaseId: 'db-source' },
+    hideDataSourceTitles: true,
   })).save(contentElement('')),
 
   // A row as the tool writes one today: a top-level `title` beside the

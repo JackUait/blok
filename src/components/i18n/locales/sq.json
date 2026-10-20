@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "Shfaq vijat vertikale",
   "tools.database.settingsShowPageIcon": "Shfaq ikonën e faqes",
   "tools.database.settingsShowDataSourceTitle": "Shfaq titullin e burimit të të dhënave",
+  "tools.database.hideDataSourceTitles": "Fshih titujt e burimeve të të dhënave",
+  "tools.database.showDataSourceTitles": "Shfaq titujt e burimeve të të dhënave",
   "tools.database.settingsOpenPagesIn": "Hap faqet në",
   "tools.database.settingsLoadLimit": "Kufiri i ngarkimit",
   "tools.database.settingsLoadLimitPages": "{count} faqe",

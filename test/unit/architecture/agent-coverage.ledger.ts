@@ -313,6 +313,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/decimals-*': cmd('database.updateProperty'),
   'menu:database/showAs-*': cmd('database.updateProperty'),
   'menu:database/database-view-edit': exempt('chrome', 'Opens the view settings panel; each setting in it has its own ledger row.'),
+  'menu:database/database-view-data-source-titles': fld('database.hideDataSourceTitles'),
   'menu:database/database-tab-display-*': exempt('chrome', 'Display as (text, icon or both) is a per-person tab bar preference; the document does not change.'),
   'menu:database/database-autofill-summary-paragraph': cmd('database.updateProperty'),
   'menu:database/database-autofill-trigger-onCreate-*': cmd('database.updateProperty'),

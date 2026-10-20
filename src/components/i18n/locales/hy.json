@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "Ցուցադրել ուղղահայաց գծերը",
   "tools.database.settingsShowPageIcon": "Ցուցադրել էջի պատկերակը",
   "tools.database.settingsShowDataSourceTitle": "Ցուցադրել տվյալների աղբյուրի վերնագիրը",
+  "tools.database.hideDataSourceTitles": "Թաքցնել տվյալների աղբյուրների վերնագրերը",
+  "tools.database.showDataSourceTitles": "Ցուցադրել տվյալների աղբյուրների վերնագրերը",
   "tools.database.settingsOpenPagesIn": "Էջերի բացման վայր",
   "tools.database.settingsLoadLimit": "Բեռնման սահմանաչափ",
   "tools.database.settingsLoadLimitPages": "{count} էջ",

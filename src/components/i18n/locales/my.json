@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "ဒေါင်လိုက်မျဉ်းများ ပြရန်",
   "tools.database.settingsShowPageIcon": "စာမျက်နှာ အိုင်ကွန် ပြရန်",
   "tools.database.settingsShowDataSourceTitle": "ဒေတာရင်းမြစ် ခေါင်းစဉ် ပြရန်",
+  "tools.database.hideDataSourceTitles": "ဒေတာရင်းမြစ် ခေါင်းစဉ်များ ဝှက်ရန်",
+  "tools.database.showDataSourceTitles": "ဒေတာရင်းမြစ် ခေါင်းစဉ်များ ပြရန်",
   "tools.database.settingsOpenPagesIn": "စာမျက်နှာများ ဖွင့်မည့်ပုံစံ",
   "tools.database.settingsLoadLimit": "တင်မည့် အရေအတွက်",
   "tools.database.settingsLoadLimitPages": "စာမျက်နှာ {count} ခု",

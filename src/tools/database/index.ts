@@ -282,7 +282,7 @@ const DATABASE_GONE_EVENT = 'database gone';
 /** Backlinks are counted again this long after the last block change, so typing never scans per keystroke. */
 const BACKLINKS_SETTLE_MS = 300;
 
-const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'schema', 'views', 'activeViewId', 'source', 'automations', INITIAL_VIEW_KEY, LINK_PICKER_KEY]);
+const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'schema', 'views', 'activeViewId', 'source', 'automations', 'hideDataSourceTitles', INITIAL_VIEW_KEY, LINK_PICKER_KEY]);
 
 const sourceRefOf = (data: DatabaseData | undefined): DatabaseSourceRef | undefined => {
   const source = data?.source as unknown;
@@ -395,6 +395,8 @@ export class DatabaseTool implements BlockTool {
   private linkPicker: boolean;
   /** The open "New database" / "New view" panel of a linked view. */
   private sourcePicker: DatabasePanel | null = null;
+  /** "Hide data source titles": one setting for the whole block (per view is unmeasured). */
+  private dataSourceTitlesHidden: boolean;
   /** The source's name as last read: a deleted source still shows it. */
   private lastSourceTitle = '';
   /** Rows whose sub-item toggle is open. This person's, for this session. */
@@ -502,6 +504,7 @@ export class DatabaseTool implements BlockTool {
 
     this.title = (data as DatabaseData | undefined)?.title ?? '';
     this.unknown = unknownKeys(data);
+    this.dataSourceTitlesHidden = data?.hideDataSourceTitles === true;
     this.savedAutomations = structuredClone(data?.automations);
     const initialView = (data as Record<string, unknown> | undefined)?.[INITIAL_VIEW_KEY];
 
@@ -830,7 +833,8 @@ export class DatabaseTool implements BlockTool {
     const saved = this.model.getView(this.activeViewId);
 
     // "Show data source title" (research/20 §1f, R-2022-03-15). The title row stays: it can hold the add-view "+".
-    titleEl.hidden = this.linked && saved !== undefined && this.controls.effective(saved).showDataSourceTitle === false;
+    titleEl.hidden = this.dataSourceTitlesHidden
+      || (this.linked && saved !== undefined && this.controls.effective(saved).showDataSourceTitle === false);
     if (!this.linked || this.source === undefined) return;
     const missing = this.sourceMissing();
     const live = missing || this.source.documentId !== undefined ? undefined : this.databaseTitleOf(this.source.databaseId);
@@ -1413,6 +1417,7 @@ export class DatabaseTool implements BlockTool {
       automations: structuredClone(this.savedAutomations ?? { version: 1, definitions: [] }),
       // Linked: a reference, never a copy of the source's schema.
       ...(this.source !== undefined ? { schema: structuredClone(this.stubSchema), source: { ...this.source } } : {}),
+      ...(this.dataSourceTitlesHidden ? { hideDataSourceTitles: true } : {}),
       title: currentTitle,
       activeViewId: this.activeViewId,
     };
@@ -1553,6 +1558,7 @@ export class DatabaseTool implements BlockTool {
       : undefined;
 
     this.unknown = unknownKeys(data);
+    this.dataSourceTitlesHidden = data.hideDataSourceTitles === true;
     this.savedAutomations = structuredClone(data.automations);
     this.title = typeof data.title === 'string' ? data.title : '';
 
@@ -3353,6 +3359,14 @@ export class DatabaseTool implements BlockTool {
     }
   }
 
+  private toggleDataSourceTitles(): void {
+    if (this.readOnly || this.structureLocked()) return;
+    this.dataSourceTitlesHidden = !this.dataSourceTitlesHidden;
+    this.block.dispatchChange();
+    this.paintLinkedTitle();
+    this.rebuildTabBar();
+  }
+
   private createTabBar(): DatabaseTabBar {
     return new DatabaseTabBar({
       views: localizeDatabaseViews(this.model.getViews(), this.api.i18n),
@@ -3369,6 +3383,8 @@ export class DatabaseTool implements BlockTool {
         this.tabDisplay.set(display);
         this.rebuildTabBar();
       },
+      dataSourceTitlesHidden: this.dataSourceTitlesHidden,
+      ...(this.readOnly || this.structureLocked() ? {} : { onDataSourceTitlesToggle: () => this.toggleDataSourceTitles() }),
       api: this.api,
       // A locked database keeps its views: no add, rename, delete or reorder.
       readOnly: this.readOnly || this.structureLocked(),

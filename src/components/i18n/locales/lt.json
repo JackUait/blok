@@ -1101,6 +1101,8 @@
   "tools.database.settingsVerticalLines": "Rodyti vertikalias linijas",
   "tools.database.settingsShowPageIcon": "Rodyti puslapio piktogramą",
   "tools.database.settingsShowDataSourceTitle": "Rodyti duomenų šaltinio pavadinimą",
+  "tools.database.hideDataSourceTitles": "Slėpti duomenų šaltinių pavadinimus",
+  "tools.database.showDataSourceTitles": "Rodyti duomenų šaltinių pavadinimus",
   "tools.database.settingsOpenPagesIn": "Atidaryti puslapius",
   "tools.database.settingsLoadLimit": "Įkėlimo riba",
   "tools.database.settingsLoadLimitPages": "Puslapių: {count}",

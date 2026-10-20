@@ -951,6 +951,8 @@ export interface DatabaseData extends BlockToolData {
    * rows of its own. Its views stay its own.
    */
   source?: DatabaseSourceRef;
+  /** "Hide data source titles": the title line above the tabs is hidden for every view. */
+  hideDataSourceTitles?: boolean;
 }
 
 // ─── View data (kanban board) ───

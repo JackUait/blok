@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "Visa lodräta linjer",
   "tools.database.settingsShowPageIcon": "Visa sidikon",
   "tools.database.settingsShowDataSourceTitle": "Visa datakällans titel",
+  "tools.database.hideDataSourceTitles": "Dölj datakällornas titlar",
+  "tools.database.showDataSourceTitles": "Visa datakällornas titlar",
   "tools.database.settingsOpenPagesIn": "Öppna sidor i",
   "tools.database.settingsLoadLimit": "Inläsningsgräns",
   "tools.database.settingsLoadLimitPages": "{count} sidor",

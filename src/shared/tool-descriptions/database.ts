@@ -418,6 +418,7 @@ export const DATABASE_DATA = {
       },
     },
     activeViewId: { type: 'string', description: 'Id of the view shown by default.' },
+    hideDataSourceTitles: { type: 'boolean', description: 'Hides the title line above the tabs for every view. Default false.' },
     automations: {
       type: 'object',
       required: ['version', 'definitions'],

@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "लंबवत रेखाएँ दिखाएँ",
   "tools.database.settingsShowPageIcon": "पृष्ठ आइकन दिखाएँ",
   "tools.database.settingsShowDataSourceTitle": "डेटा स्रोत का शीर्षक दिखाएँ",
+  "tools.database.hideDataSourceTitles": "डेटा स्रोतों के शीर्षक छिपाएँ",
+  "tools.database.showDataSourceTitles": "डेटा स्रोतों के शीर्षक दिखाएँ",
   "tools.database.settingsOpenPagesIn": "पृष्ठ इसमें खोलें",
   "tools.database.settingsLoadLimit": "लोड सीमा",
   "tools.database.settingsLoadLimitPages": "{count} पृष्ठ",

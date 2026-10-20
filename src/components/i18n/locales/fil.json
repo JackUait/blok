@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "Ipakita ang mga patayong linya",
   "tools.database.settingsShowPageIcon": "Ipakita ang icon ng pahina",
   "tools.database.settingsShowDataSourceTitle": "Ipakita ang pamagat ng data source",
+  "tools.database.hideDataSourceTitles": "Itago ang mga pamagat ng data source",
+  "tools.database.showDataSourceTitles": "Ipakita ang mga pamagat ng data source",
   "tools.database.settingsOpenPagesIn": "Buksan ang mga pahina sa",
   "tools.database.settingsLoadLimit": "Limitasyon sa pag-load",
   "tools.database.settingsLoadLimitPages": "{count} pahina",

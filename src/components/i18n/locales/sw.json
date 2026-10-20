@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "Onyesha mistari wima",
   "tools.database.settingsShowPageIcon": "Onyesha aikoni ya ukurasa",
   "tools.database.settingsShowDataSourceTitle": "Onyesha kichwa cha chanzo cha data",
+  "tools.database.hideDataSourceTitles": "Ficha vichwa vya vyanzo vya data",
+  "tools.database.showDataSourceTitles": "Onyesha vichwa vya vyanzo vya data",
   "tools.database.settingsOpenPagesIn": "Fungua kurasa kwenye",
   "tools.database.settingsLoadLimit": "Kikomo cha kupakia",
   "tools.database.settingsLoadLimitPages": "Kurasa {count}",

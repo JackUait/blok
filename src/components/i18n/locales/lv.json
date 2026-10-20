@@ -1100,6 +1100,8 @@
   "tools.database.settingsVerticalLines": "Rādīt vertikālās līnijas",
   "tools.database.settingsShowPageIcon": "Rādīt lapas ikonu",
   "tools.database.settingsShowDataSourceTitle": "Rādīt datu avota nosaukumu",
+  "tools.database.hideDataSourceTitles": "Slēpt datu avotu nosaukumus",
+  "tools.database.showDataSourceTitles": "Rādīt datu avotu nosaukumus",
   "tools.database.settingsOpenPagesIn": "Atvērt lapas",
   "tools.database.settingsLoadLimit": "Ielādes ierobežojums",
   "tools.database.settingsLoadLimitPages": "{count} lapas",

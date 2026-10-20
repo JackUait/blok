@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "Hiện đường kẻ dọc",
   "tools.database.settingsShowPageIcon": "Hiện biểu tượng trang",
   "tools.database.settingsShowDataSourceTitle": "Hiện tiêu đề nguồn dữ liệu",
+  "tools.database.hideDataSourceTitles": "Ẩn tiêu đề nguồn dữ liệu",
+  "tools.database.showDataSourceTitles": "Hiện tiêu đề nguồn dữ liệu",
   "tools.database.settingsOpenPagesIn": "Mở trang trong",
   "tools.database.settingsLoadLimit": "Giới hạn tải",
   "tools.database.settingsLoadLimitPages": "{count} trang",

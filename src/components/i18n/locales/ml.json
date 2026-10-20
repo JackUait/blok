@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "ലംബ വരകൾ കാണിക്കുക",
   "tools.database.settingsShowPageIcon": "പേജ് ഐക്കൺ കാണിക്കുക",
   "tools.database.settingsShowDataSourceTitle": "ഡാറ്റാ ഉറവിടത്തിന്റെ ശീർഷകം കാണിക്കുക",
+  "tools.database.hideDataSourceTitles": "ഡാറ്റാ ഉറവിടങ്ങളുടെ ശീർഷകങ്ങൾ മറയ്ക്കുക",
+  "tools.database.showDataSourceTitles": "ഡാറ്റാ ഉറവിടങ്ങളുടെ ശീർഷകങ്ങൾ കാണിക്കുക",
   "tools.database.settingsOpenPagesIn": "പേജുകൾ തുറക്കേണ്ടത്",
   "tools.database.settingsLoadLimit": "ലോഡ് പരിധി",
   "tools.database.settingsLoadLimitPages": "{count} പേജുകൾ",

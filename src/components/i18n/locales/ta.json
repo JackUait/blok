@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "செங்குத்துக் கோடுகளைக் காட்டு",
   "tools.database.settingsShowPageIcon": "பக்க ஐகானைக் காட்டு",
   "tools.database.settingsShowDataSourceTitle": "தரவு மூலத்தின் தலைப்பைக் காட்டு",
+  "tools.database.hideDataSourceTitles": "தரவு மூலங்களின் தலைப்புகளை மறை",
+  "tools.database.showDataSourceTitles": "தரவு மூலங்களின் தலைப்புகளைக் காட்டு",
   "tools.database.settingsOpenPagesIn": "பக்கங்களைத் திறக்கும் இடம்",
   "tools.database.settingsLoadLimit": "ஏற்ற வரம்பு",
   "tools.database.settingsLoadLimitPages": "{count} பக்கங்கள்",

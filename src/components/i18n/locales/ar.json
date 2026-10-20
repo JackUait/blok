@@ -1103,6 +1103,8 @@
   "tools.database.settingsVerticalLines": "إظهار الخطوط العمودية",
   "tools.database.settingsShowPageIcon": "إظهار أيقونة الصفحة",
   "tools.database.settingsShowDataSourceTitle": "إظهار عنوان مصدر البيانات",
+  "tools.database.hideDataSourceTitles": "إخفاء عناوين مصادر البيانات",
+  "tools.database.showDataSourceTitles": "إظهار عناوين مصادر البيانات",
   "tools.database.settingsOpenPagesIn": "فتح الصفحات في",
   "tools.database.settingsLoadLimit": "حد التحميل",
   "tools.database.settingsLoadLimitPages": "{count} صفحة",

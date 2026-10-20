@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "Показвай вертикални линии",
   "tools.database.settingsShowPageIcon": "Показвай иконата на страницата",
   "tools.database.settingsShowDataSourceTitle": "Показвай заглавието на източника на данни",
+  "tools.database.hideDataSourceTitles": "Скрий заглавията на източниците на данни",
+  "tools.database.showDataSourceTitles": "Показвай заглавията на източниците на данни",
   "tools.database.settingsOpenPagesIn": "Отваряй страниците в",
   "tools.database.settingsLoadLimit": "Лимит на зареждане",
   "tools.database.settingsLoadLimitPages": "{count} страници",

@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "ਖੜ੍ਹੀਆਂ ਲਕੀਰਾਂ ਦਿਖਾਓ",
   "tools.database.settingsShowPageIcon": "ਪੰਨੇ ਦਾ ਆਈਕਨ ਦਿਖਾਓ",
   "tools.database.settingsShowDataSourceTitle": "ਡਾਟਾ ਸਰੋਤ ਦਾ ਸਿਰਲੇਖ ਦਿਖਾਓ",
+  "tools.database.hideDataSourceTitles": "ਡਾਟਾ ਸਰੋਤਾਂ ਦੇ ਸਿਰਲੇਖ ਲੁਕਾਓ",
+  "tools.database.showDataSourceTitles": "ਡਾਟਾ ਸਰੋਤਾਂ ਦੇ ਸਿਰਲੇਖ ਦਿਖਾਓ",
   "tools.database.settingsOpenPagesIn": "ਪੰਨੇ ਇਸ ਵਿੱਚ ਖੋਲ੍ਹੋ",
   "tools.database.settingsLoadLimit": "ਲੋਡ ਸੀਮਾ",
   "tools.database.settingsLoadLimitPages": "{count} ਪੰਨੇ",

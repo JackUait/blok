@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "Kuva vertikaalsed jooned",
   "tools.database.settingsShowPageIcon": "Kuva lehe ikoon",
   "tools.database.settingsShowDataSourceTitle": "Kuva andmeallika pealkiri",
+  "tools.database.hideDataSourceTitles": "Peida andmeallikate pealkirjad",
+  "tools.database.showDataSourceTitles": "Kuva andmeallikate pealkirjad",
   "tools.database.settingsOpenPagesIn": "Ava lehed",
   "tools.database.settingsLoadLimit": "Laadimispiirang",
   "tools.database.settingsLoadLimitPages": "{count} lehte",

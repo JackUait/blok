@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "উল্লম্ব রেখা দেখান",
   "tools.database.settingsShowPageIcon": "পৃষ্ঠার আইকন দেখান",
   "tools.database.settingsShowDataSourceTitle": "ডেটা সোর্সের শিরোনাম দেখান",
+  "tools.database.hideDataSourceTitles": "ডেটা সোর্সের শিরোনাম লুকান",
+  "tools.database.showDataSourceTitles": "ডেটা সোর্সের শিরোনাম দেখান",
   "tools.database.settingsOpenPagesIn": "পৃষ্ঠা যেখানে খুলবে",
   "tools.database.settingsLoadLimit": "লোড সীমা",
   "tools.database.settingsLoadLimitPages": "{count}টি পৃষ্ঠা",

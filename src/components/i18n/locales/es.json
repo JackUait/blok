@@ -1100,6 +1100,8 @@
   "tools.database.settingsVerticalLines": "Mostrar líneas verticales",
   "tools.database.settingsShowPageIcon": "Mostrar icono de página",
   "tools.database.settingsShowDataSourceTitle": "Mostrar título de la fuente de datos",
+  "tools.database.hideDataSourceTitles": "Ocultar títulos de las fuentes de datos",
+  "tools.database.showDataSourceTitles": "Mostrar títulos de las fuentes de datos",
   "tools.database.settingsOpenPagesIn": "Abrir páginas en",
   "tools.database.settingsLoadLimit": "Límite de carga",
   "tools.database.settingsLoadLimitPages": "{count} páginas",

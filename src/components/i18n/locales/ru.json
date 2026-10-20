@@ -1101,6 +1101,8 @@
   "tools.database.settingsVerticalLines": "Показывать вертикальные линии",
   "tools.database.settingsShowPageIcon": "Показывать значок страницы",
   "tools.database.settingsShowDataSourceTitle": "Показывать название источника данных",
+  "tools.database.hideDataSourceTitles": "Скрыть названия источников данных",
+  "tools.database.showDataSourceTitles": "Показывать названия источников данных",
   "tools.database.settingsOpenPagesIn": "Открывать страницы в",
   "tools.database.settingsLoadLimit": "Лимит загрузки",
   "tools.database.settingsLoadLimitPages": "{count} страниц",

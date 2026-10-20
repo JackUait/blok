@@ -940,6 +940,8 @@ export interface DatabaseData extends BlockToolData {
   automations?: DatabaseSavedAutomations;
   /** A linked database: it shows this database's rows and schema and has no rows of its own. Its views stay its own. */
   source?: DatabaseSourceRef;
+  /** "Hide data source titles": the title line above the tabs is hidden for every view. */
+  hideDataSourceTitles?: boolean;
 }
 
 // ─── Tier 3 (D6): data slots and host levers ───

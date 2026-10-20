@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "Näytä pystyviivat",
   "tools.database.settingsShowPageIcon": "Näytä sivun kuvake",
   "tools.database.settingsShowDataSourceTitle": "Näytä tietolähteen otsikko",
+  "tools.database.hideDataSourceTitles": "Piilota tietolähteiden otsikot",
+  "tools.database.showDataSourceTitles": "Näytä tietolähteiden otsikot",
   "tools.database.settingsOpenPagesIn": "Avaa sivut",
   "tools.database.settingsLoadLimit": "Latausraja",
   "tools.database.settingsLoadLimitPages": "{count} sivua",

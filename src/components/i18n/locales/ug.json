@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "تىك سىزىقلارنى كۆرسىتىش",
   "tools.database.settingsShowPageIcon": "بەت سىنبەلگىسىنى كۆرسىتىش",
   "tools.database.settingsShowDataSourceTitle": "سانلىق مەلۇمات مەنبەسىنىڭ ماۋزۇسىنى كۆرسىتىش",
+  "tools.database.hideDataSourceTitles": "سانلىق مەلۇمات مەنبەلىرىنىڭ ماۋزۇلىرىنى يوشۇرۇش",
+  "tools.database.showDataSourceTitles": "سانلىق مەلۇمات مەنبەلىرىنىڭ ماۋزۇلىرىنى كۆرسىتىش",
   "tools.database.settingsOpenPagesIn": "بەتلەرنى ئېچىش ئورنى",
   "tools.database.settingsLoadLimit": "يۈكلەش چېكى",
   "tools.database.settingsLoadLimitPages": "{count} بەت",

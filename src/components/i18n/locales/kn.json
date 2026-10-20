@@ -1099,6 +1099,8 @@
   "tools.database.settingsVerticalLines": "ಲಂಬ ರೇಖೆಗಳನ್ನು ತೋರಿಸಿ",
   "tools.database.settingsShowPageIcon": "ಪುಟದ ಐಕಾನ್ ತೋರಿಸಿ",
   "tools.database.settingsShowDataSourceTitle": "ಡೇಟಾ ಮೂಲದ ಶೀರ್ಷಿಕೆ ತೋರಿಸಿ",
+  "tools.database.hideDataSourceTitles": "ಡೇಟಾ ಮೂಲಗಳ ಶೀರ್ಷಿಕೆಗಳನ್ನು ಮರೆಮಾಡಿ",
+  "tools.database.showDataSourceTitles": "ಡೇಟಾ ಮೂಲಗಳ ಶೀರ್ಷಿಕೆಗಳನ್ನು ತೋರಿಸಿ",
   "tools.database.settingsOpenPagesIn": "ಪುಟಗಳನ್ನು ಇಲ್ಲಿ ತೆರೆಯಿರಿ",
   "tools.database.settingsLoadLimit": "ಲೋಡ್ ಮಿತಿ",
   "tools.database.settingsLoadLimitPages": "{count} ಪುಟಗಳು",

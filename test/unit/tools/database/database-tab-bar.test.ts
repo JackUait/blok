@@ -409,6 +409,43 @@ describe('DatabaseTabBar', () => {
       el.remove();
     });
 
+    describe('"Hide data source titles" (research/23 §10)', () => {
+      const menuTitles = (): Array<string | null> => Array.from(
+        document.querySelector('[data-blok-database-tab-context]')?.children ?? []
+      ).map((item) => item.textContent);
+
+      it('sits before Duplicate and calls onDataSourceTitlesToggle', () => {
+        const onDataSourceTitlesToggle = vi.fn();
+        const bar = new DatabaseTabBar({
+          views: [makeView({ id: 'v1' })], activeViewId: 'v1', onTabClick, onAddView, onRename, onDuplicate, onDelete, onReorder,
+          dataSourceTitlesHidden: false, onDataSourceTitlesToggle,
+        });
+        const el = bar.render();
+
+        document.body.appendChild(el);
+        el.querySelector('[data-view-id="v1"]')?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+
+        expect(menuTitles()).toStrictEqual(['Rename', 'Hide data source titles', 'Duplicate']);
+        document.querySelector<HTMLElement>('[data-blok-database-tab-action="hide data source titles"]')?.click();
+        expect(onDataSourceTitlesToggle).toHaveBeenCalledTimes(1);
+        el.remove();
+      });
+
+      it('reads "Show data source titles" while they are hidden', () => {
+        const bar = new DatabaseTabBar({
+          views: [makeView({ id: 'v1' })], activeViewId: 'v1', onTabClick, onAddView, onRename, onDuplicate, onDelete, onReorder,
+          dataSourceTitlesHidden: true, onDataSourceTitlesToggle: vi.fn(),
+        });
+        const el = bar.render();
+
+        document.body.appendChild(el);
+        el.querySelector('[data-view-id="v1"]')?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+
+        expect(menuTitles()).toStrictEqual(['Rename', 'Show data source titles', 'Duplicate']);
+        el.remove();
+      });
+    });
+
     it('hides Delete option when only one view exists', () => {
       const bar = createTabBar([makeView({ id: 'v1' })], 'v1');
       const el = bar.render();

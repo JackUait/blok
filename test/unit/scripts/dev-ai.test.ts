@@ -294,3 +294,87 @@ describe('anthropicCreateMessage', () => {
     expect(deltas).toEqual([[0, 'Reading '], [0, 'the table.'], [1, 'Trans'], [1, 'lating.']]);
   });
 });
+
+const typeOf = (line: unknown): unknown => (typeof line === 'object' && line !== null && 'type' in line ? line.type : null);
+
+describe('dev route tool streaming', () => {
+  const lines = async (events: StreamEvent[]): Promise<unknown[]> => {
+    const createMessage = await anthropicCreateMessage({ apiKey: 'k', baseURL: 'http://model.test', fetch: sseFetch(events) });
+
+    return linesOf(await call({ createMessage }));
+  };
+
+  it('dev route forwards tool input deltas', async () => {
+    const first = ['{"commands": [', '{"name": "block.delete", ', '"args": {"id": "a"}}]}'];
+    const events = [
+      messageStart,
+      ...textBlock(0, ['Plan']),
+      ...textBlock(1, ['ning.']),
+      ...toolBlock(2, 'toolu_1', first),
+      ...toolBlock(3, 'toolu_2', []),
+      ...messageEnd('tool_use'),
+    ];
+
+    const sent = await lines(events);
+
+    expect(sent.filter((line) => typeOf(line) !== 'delta')).toEqual([
+      { type: 'tool_start', index: 0, id: 'toolu_1', name: 'blok_execute' },
+      { type: 'tool_input', index: 0, json: first[0] },
+      { type: 'tool_input', index: 0, json: first[0] + first[1] },
+      { type: 'tool_input', index: 0, json: first.join('') },
+      { type: 'tool_end', index: 0 },
+      { type: 'tool_start', index: 1, id: 'toolu_2', name: 'blok_execute' },
+      { type: 'tool_end', index: 1 },
+      {
+        type: 'message',
+        content: [
+          { type: 'text', text: 'Plan' },
+          { type: 'text', text: 'ning.' },
+          { type: 'tool_use', id: 'toolu_1', name: 'blok_execute', input: JSON.parse(first.join('')) },
+          { type: 'tool_use', id: 'toolu_2', name: 'blok_execute', input: {} },
+        ],
+        stop_reason: 'tool_use',
+        usage: expect.objectContaining({ output_tokens: 42 }),
+      },
+    ]);
+  });
+
+  // The loop runs a call at tool_end with the last input it saw; it must match the final block.
+  it('ends a call whose input is not an object with the same invalidJson the message carries', async () => {
+    const sent = await lines([messageStart, ...toolBlock(0, 'toolu_1', ['[', ']']), ...messageEnd('tool_use')]);
+
+    expect(sent.slice(0, 5)).toEqual([
+      { type: 'tool_start', index: 0, id: 'toolu_1', name: 'blok_execute' },
+      { type: 'tool_input', index: 0, json: '[' },
+      { type: 'tool_input', index: 0, json: '[]' },
+      { type: 'tool_input', index: 0, json: JSON.stringify({ invalidJson: '[]' }) },
+      { type: 'tool_end', index: 0 },
+    ]);
+    expect(sent[5]).toMatchObject({ type: 'message', content: [{ type: 'tool_use', id: 'toolu_1', input: { invalidJson: '[]' } }] });
+  });
+
+  it('gives a tool block the stream never stops no tool_end, so the final message runs it', async () => {
+    const sent = await lines([
+      messageStart,
+      { type: 'content_block_start', index: 0, content_block: { type: 'tool_use', id: 'toolu_1', name: 'blok_execute', input: {} } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'input_json_delta', partial_json: '{"commands": []}' } },
+      ...messageEnd('tool_use'),
+    ]);
+
+    expect(sent.map(typeOf)).toEqual(['tool_start', 'tool_input', 'message']);
+  });
+
+  it('counts calls per answer, so a second answer starts at index 0 again', async () => {
+    const fetch = sseFetch([messageStart, ...toolBlock(1, 'toolu_1', ['{}']), ...messageEnd('tool_use')]);
+    const create = await anthropicCreateMessage({ apiKey: 'k', baseURL: 'http://model.test', fetch });
+    const seen: unknown[] = [];
+
+    await create(PARAMS, new AbortController().signal, () => {}, (event) => seen.push(event));
+    await create(PARAMS, new AbortController().signal, () => {}, (event) => seen.push(event));
+
+    expect(seen.filter((event) => typeOf(event) === 'tool_start')).toEqual([
+      { type: 'tool_start', index: 0, id: 'toolu_1', name: 'blok_execute' },
+      { type: 'tool_start', index: 0, id: 'toolu_1', name: 'blok_execute' },
+    ]);
+  });
+});

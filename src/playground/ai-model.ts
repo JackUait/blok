@@ -1,9 +1,10 @@
-import type { AgentModel, AgentModelContentBlock, AgentModelResponse } from '../../types/api';
+import type { AgentModel, AgentModelContentBlock, AgentModelResponse, AgentModelStreamEvent } from '../../types/api';
 
 type Line =
   | { type: 'delta'; index: number; text: string }
   | { type: 'message'; content: AgentModelContentBlock[]; stop_reason: string | null }
-  | { type: 'error'; error: string };
+  | { type: 'error'; error: string }
+  | AgentModelStreamEvent;
 
 const errorOf = async (response: Response): Promise<string> => {
   const body: unknown = await response.json().catch(() => null);
@@ -17,7 +18,7 @@ const errorOf = async (response: Response): Promise<string> => {
  * scripts/dev-ai.mjs streams and returns its final message.
  * @param url - the dev endpoint `yarn serve` starts
  */
-export const playgroundModel = (url: string): AgentModel => async ({ system, messages, tools, signal }) => {
+export const playgroundModel = (url: string): AgentModel => async ({ system, messages, tools, signal, onStream }) => {
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -35,6 +36,9 @@ export const playgroundModel = (url: string): AgentModel => async ({ system, mes
   const handle = (line: Line): AgentModelResponse | null => {
     if (line.type === 'error') {
       throw new Error(line.error);
+    }
+    if (line.type === 'tool_start' || line.type === 'tool_input' || line.type === 'tool_end') {
+      onStream?.(line);
     }
     // Deltas are skipped: the bar shows a status line, not the text in flight.
     return line.type === 'message' ? { content: line.content, stop_reason: line.stop_reason } : null;

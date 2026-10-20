@@ -3,8 +3,10 @@
  * backend route that calls the LLM for the in-editor assistant.
  * `POST /ai` takes `{ system, messages, tools }` (what `agent.assistant.model`
  * receives) and streams NDJSON: `{ type: 'delta', index, text }` while the model
- * writes, then `{ type: 'message', content, stop_reason, usage }` or
- * `{ type: 'error', error }`. src/playground/ai-model.ts reads it.
+ * writes, the tool call lines `tool_start`, `tool_input` and `tool_end`
+ * (AgentModelStreamEvent) while it writes a call, then
+ * `{ type: 'message', content, stop_reason, usage }` or `{ type: 'error', error }`.
+ * src/playground/ai-model.ts reads it.
  *
  * The key never reaches the page. It comes from the shell, or from
  * ~/.config/blok/ai.env, which lives outside the repo so it cannot be committed.
@@ -141,7 +143,7 @@ export async function handleAiRequest({ origins, hosts, host, origin, method, ur
       const send = (value) => write(`${JSON.stringify(value)}\n`);
 
       try {
-        const message = await createMessage(messageParams(model, parsed), signal, (index, text) => send({ type: 'delta', index, text }));
+        const message = await createMessage(messageParams(model, parsed), signal, (index, text) => send({ type: 'delta', index, text }), send);
 
         send({ type: 'message', content: message.content, stop_reason: message.stop_reason, ...(message.usage === undefined ? {} : { usage: message.usage }) });
       } catch (error) {
@@ -152,8 +154,15 @@ export async function handleAiRequest({ origins, hosts, host, origin, method, ur
 }
 
 /**
- * @typedef {(params: Record<string, unknown>, signal: AbortSignal, onDelta: (index: number, text: string) => void)
- *   => Promise<{ content: unknown[], stop_reason: string | null, usage?: unknown }>} CreateMessage
+ * @typedef {{ type: 'tool_start', index: number, id: string, name: string }
+ *   | { type: 'tool_input', index: number, json: string }
+ *   | { type: 'tool_end', index: number }} ToolEvent
+ *   AgentModelStreamEvent: `index` counts calls in one answer, `json` is all input so far.
+ */
+
+/**
+ * @typedef {(params: Record<string, unknown>, signal: AbortSignal, onDelta: (index: number, text: string) => void,
+ *   onTool?: (event: ToolEvent) => void) => Promise<{ content: unknown[], stop_reason: string | null, usage?: unknown }>} CreateMessage
  */
 
 /**
@@ -190,13 +199,33 @@ export async function anthropicCreateMessage({ apiKey, baseURL, fetch }) {
     type: 'content_block_delta', index, delta: { type: 'input_json_delta', partial_json: text === '' ? text : safeArguments(text) },
   });
 
-  async function* withSafeToolInput(events) {
+  // Tool events come from the raw stream, before input is held. The id is the
+  // block's own, so the loop matches the early call to the final block.
+  async function* withSafeToolInput(events, onTool) {
     const held = new Map();
+    const calls = new Map();
 
     for await (const event of events) {
+      if (event.type === 'content_block_start' && event.content_block.type === 'tool_use') {
+        calls.set(event.index, calls.size);
+        onTool({ type: 'tool_start', index: calls.get(event.index), id: event.content_block.id, name: event.content_block.name });
+      }
       if (event.type === 'content_block_delta' && event.delta.type === 'input_json_delta') {
         held.set(event.index, (held.get(event.index) ?? '') + event.delta.partial_json);
+        if (calls.has(event.index) && event.delta.partial_json !== '') {
+          onTool({ type: 'tool_input', index: calls.get(event.index), json: held.get(event.index) });
+        }
         continue;
+      }
+      if (event.type === 'content_block_stop' && calls.has(event.index)) {
+        const text = held.get(event.index) ?? '';
+        const safe = text === '' ? text : safeArguments(text);
+
+        // The loop runs the call with the last input it saw: make it the one the message carries.
+        if (safe !== text) {
+          onTool({ type: 'tool_input', index: calls.get(event.index), json: safe });
+        }
+        onTool({ type: 'tool_end', index: calls.get(event.index) });
       }
       if (event.type === 'content_block_stop' && held.has(event.index)) {
         yield release(event.index, held.get(event.index));
@@ -231,14 +260,14 @@ export async function anthropicCreateMessage({ apiKey, baseURL, fetch }) {
     });
   };
 
-  return async (params, signal, onDelta) => {
+  return async (params, signal, onDelta, onTool = () => {}) => {
     // Built on first use: a missing key then shows in the bar, not at startup.
     // Undefined fields fall back to the SDK's own lookup (env, then `ant auth login`).
     state.client ??= new Anthropic({ apiKey, baseURL, fetch });
 
     // The SDK still builds the message, so thinking blocks come back exactly as sent.
     const raw = await state.client.beta.messages.create({ ...params, stream: true }, { signal });
-    const stream = BetaMessageStream.fromReadableStream(toReadable(withSafeToolInput(raw)));
+    const stream = BetaMessageStream.fromReadableStream(toReadable(withSafeToolInput(raw, onTool)));
 
     for await (const event of stream) {
       if (event.type === 'content_block_delta') {

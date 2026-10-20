@@ -38,6 +38,28 @@ describe('playgroundModel', () => {
     expect(response).toEqual({ content: [{ type: 'text', text: 'Done.' }], stop_reason: 'end_turn' });
   });
 
+  it('playground model calls onStream for tool lines and ignores text deltas', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(streamed(
+      '{"type":"delta","index":0,"text":"Plan"}\n{"type":"tool_start","index":0,"id":"toolu_1","name":"blok_execute"}\n{"type":"tool_in',
+      'put","index":0,"json":"{\\"commands\\""}\n{"type":"tool_input","index":0,"json":"{\\"commands\\":[]}"}\n',
+      '{"type":"delta","index":1,"text":"ning."}\n{"type":"tool_end","index":0}\n',
+      '{"type":"message","content":[{"type":"tool_use","id":"toolu_1","name":"blok_execute","input":{"commands":[]}}],"stop_reason":"tool_use"}\n'
+    ));
+    const onStream = vi.fn();
+
+    const response = await playgroundModel('http://127.0.0.1:4800/ai')({
+      system: 'sys', messages: [], tools: [], signal: new AbortController().signal, onStream,
+    });
+
+    expect(onStream.mock.calls.map(([event]: unknown[]) => event)).toEqual([
+      { type: 'tool_start', index: 0, id: 'toolu_1', name: 'blok_execute' },
+      { type: 'tool_input', index: 0, json: '{"commands"' },
+      { type: 'tool_input', index: 0, json: '{"commands":[]}' },
+      { type: 'tool_end', index: 0 },
+    ]);
+    expect(response).toEqual({ content: [{ type: 'tool_use', id: 'toolu_1', name: 'blok_execute', input: { commands: [] } }], stop_reason: 'tool_use' });
+  });
+
   it('throws the error line, so the bar shows why', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(streamed('{"type":"error","error":"401 invalid x-api-key"}\n'));
 

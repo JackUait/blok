@@ -129,6 +129,10 @@ const ask = async (page: Page, block: string, prompt = 'Write more'): Promise<vo
   await waitForCall(page, 1);
 };
 
+const waitInPage = (page: Page, ms: number): Promise<void> => page.evaluate((timeout) => new Promise<void>((resolve) => {
+  window.setTimeout(resolve, timeout);
+}), ms);
+
 const settledBar = async (page: Page): Promise<void> => {
   await page.getByRole('dialog', { name: 'Ask AI' })
     .evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished)));
@@ -461,7 +465,7 @@ test.describe('Ask AI live edits', () => {
     await ask(page, 'The quick brown fox');
     await settledBar(page);
     // Opening the bar is not an edit either, but let any earlier delivery land first.
-    await page.waitForTimeout(500);
+    await waitInPage(page, 500);
 
     const before = await changes();
     const gap = (): Promise<number> => p1.evaluate((holder) => parseFloat(holder.style.getPropertyValue('--blok-ai-gap')) || 0);
@@ -476,8 +480,8 @@ test.describe('Ask AI live edits', () => {
     await expect(p1).toHaveAttribute('data-blok-ai-rewriting', '');
     // The bar's own gap, plus the preview's share.
     await expect.poll(gap).toBeGreaterThan(barGap);
-    // Longer than onChange's 400ms batch window.
-    await page.waitForTimeout(600);
+    // Silence has no event to wait for: wait out onChange's 400ms batch window.
+    await waitInPage(page, 600);
 
     expect(await changes()).toBe(before);
 

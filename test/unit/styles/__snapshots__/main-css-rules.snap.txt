@@ -10685,9 +10685,16 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 
 [data-blok-database-timeline-bar-property] {
   flex: none;
-  margin-inline-start: var(--blok-space-1);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 18px;
+}
+
+[data-blok-database-timeline-bar-title] + [data-blok-database-timeline-bar-property] {
+  margin-inline-start: var(--blok-space-1);
+}
+
+[data-blok-database-timeline-bar-property] > [data-blok-database-cell="date"] {
+  font-size: 12px;
 }
 
 [data-blok-database-timeline-bar-property] > [data-blok-database-cell] {

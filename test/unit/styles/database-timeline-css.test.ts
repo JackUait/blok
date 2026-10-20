@@ -70,8 +70,11 @@ describe('database timeline styles', () => {
     expect(ruleBody('[data-blok-database-page-icon] + [data-blok-database-timeline-bar-title]')).toBe('');
     expect(property).toMatch(/flex:\s*none/);
     expect(property).not.toMatch(/text-overflow/);
-    expect(property).toMatch(/font-size:\s*12px/);
-    expect(property).toContain('margin-inline-start: var(--blok-space-1)');
+    // Only the date's 12px and the title-to-first-property gap are measured.
+    expect(property).toMatch(/font-size:\s*13px/);
+    expect(property).not.toContain('margin-inline-start');
+    expect(ruleBody('[data-blok-database-timeline-bar-property] > [data-blok-database-cell="date"]')).toMatch(/font-size:\s*12px/);
+    expect(ruleBody('[data-blok-database-timeline-bar-title] + [data-blok-database-timeline-bar-property]')).toContain('margin-inline-start: var(--blok-space-1)');
     expect(ruleBody('[data-blok-database-timeline-bar-property] > [data-blok-database-cell]')).toMatch(/white-space:\s*nowrap/);
     expect(ruleBody('[data-blok-database-timeline-bar-property] > [data-blok-database-cell]')).toMatch(/flex-wrap:\s*nowrap/);
   });

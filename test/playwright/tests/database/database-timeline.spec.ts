@@ -154,6 +154,7 @@ test.describe('timeline', () => {
         titleEnd: titleBox?.right ?? 0,
         barEnd: box.right,
         propStarts: props.map((p) => p.left),
+        firstPropEnd: props[0]?.right ?? 0,
         sameLine: props.every((p) => Math.abs(p.top + p.height / 2 - (box.top + box.height / 2)) < 4),
       };
     });
@@ -163,9 +164,10 @@ test.describe('timeline', () => {
     expect(layout.titleEnd).toBeGreaterThan(layout.barEnd);
     expect(layout.propStarts).toHaveLength(2);
     expect(layout.propStarts[0] - layout.titleEnd).toBeCloseTo(10, 0);
-    expect(layout.propStarts[1]).toBeGreaterThan(layout.propStarts[0]);
+    expect(layout.propStarts[1] - layout.firstPropEnd).toBeCloseTo(6, 0);
     expect(layout.sameLine).toBe(true);
-    await expect(bar(page, 'r1').locator('[data-blok-database-timeline-bar-property]').first()).toHaveCSS('font-size', '12px');
+    await expect(bar(page, 'r1').locator('[data-blok-database-cell="date"]')).toHaveCSS('font-size', '12px');
+    await expect(bar(page, 'r1').locator('[data-blok-database-timeline-bar-property]').last()).toHaveCSS('font-size', '13px');
     await expect(bar(page, 'r1').locator('[data-blok-database-cell="date"][data-reminder]')).toHaveCSS('color', 'rgb(39, 131, 222)');
   });
 

@@ -7507,12 +7507,20 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   color: var(--blok-database-timeline-muted-text);
 }
 
-/* Measured: 12px date text, about 11px after the title (6px gap + 4px). Option pills set their own size. */
 [data-blok-database-timeline-bar-property] {
   flex: none;
-  margin-inline-start: var(--blok-space-1);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 18px;
+}
+
+/* Measured: the first property sits about 11px after the title (6px gap + 4px). */
+[data-blok-database-timeline-bar-title] + [data-blok-database-timeline-bar-property] {
+  margin-inline-start: var(--blok-space-1);
+}
+
+/* Measured: 12px date text. Other property text is unmeasured. */
+[data-blok-database-timeline-bar-property] > [data-blok-database-cell="date"] {
+  font-size: 12px;
 }
 
 [data-blok-database-timeline-bar-property] > [data-blok-database-cell] {

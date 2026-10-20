@@ -75,7 +75,7 @@ test.beforeEach(async ({ page }) => {
   await page.waitForFunction(() => typeof window.Blok === 'function');
 });
 
-test('Remind sits above Clear, lists the date-only reminders, and a pick shows an alarm in the accent', async ({ page }) => {
+test('Remind sits above Clear, lists the date-only reminders, and a pick shows an alarm in the reminder blue', async ({ page }) => {
   await mount(page);
   const cell = dueCell(page, 'Alpha');
 
@@ -112,7 +112,7 @@ test('Remind sits above Clear, lists the date-only reminders, and a pick shows a
   const accent = await cell.evaluate((el) => {
     const probe = document.createElement('span');
 
-    probe.style.color = 'var(--blok-color-accent)';
+    probe.style.color = 'var(--blok-database-reminder-text)';
     el.appendChild(probe);
     const value = getComputedStyle(probe).color;
 

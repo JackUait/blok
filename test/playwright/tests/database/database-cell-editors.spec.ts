@@ -221,3 +221,97 @@ test('multi-select: Enter creates or adds, clears and stays open; a selected mat
 
   expect(output.tags).toEqual([id('T1'), id('T2'), 'tag-x']);
 });
+
+// research/22 §3: Escape saves a number or text, as Enter does, and one undo takes it back.
+test.describe('Escape saves a number or text', () => {
+  const notes = { id: 'prop-notes', name: 'Notes', type: 'text', position: 'a6' };
+  const remount = async (page: Page, view: Record<string, unknown>): Promise<void> => {
+    await page.evaluate(async ({ data, extra, nextView }) => {
+      await window.blokInstance?.destroy?.();
+      const holder = document.getElementById('blok');
+      const [db, row] = data;
+      const dbData = db.data as { schema: unknown[]; views: Array<Record<string, unknown>> };
+      const rowData = row.data as { properties: Record<string, unknown> };
+
+      if (holder === null) throw new Error('no holder');
+      holder.innerHTML = '';
+      window.blokInstance = new window.Blok({
+        holder,
+        data: {
+          blocks: [
+            { ...db, data: { ...dbData, schema: [...dbData.schema, extra], views: [{ ...dbData.views[0], ...nextView }] } },
+            { ...row, data: { ...rowData, properties: { ...rowData.properties, 'prop-notes': 'old note' } } },
+          ],
+        },
+      });
+      await window.blokInstance.isReady;
+    }, { data: BLOCKS, extra: notes, nextView: view });
+  };
+  const undo = async (page: Page): Promise<void> => {
+    await page.keyboard.press('ControlOrMeta+z');
+  };
+
+  test('row page: Escape saves a typed number, closes only the editor, and one undo restores it', async ({ page }) => {
+    await value(page, 'prop-score').click();
+    const input = editor(page).locator('[data-blok-database-cell-input="number"]');
+
+    await input.fill('401');
+    await input.press('Escape');
+
+    await expect.poll(async () => (await saved(page)).properties['prop-score']).toBe(401);
+    await expect(editor(page)).toHaveCount(0);
+    await expect(page.locator('[data-blok-database-drawer]')).toBeVisible();
+    await expect(value(page, 'prop-score')).toHaveText('401');
+
+    await undo(page);
+    await expect.poll(async () => (await saved(page)).properties['prop-score']).toBe(5);
+  });
+
+  test.describe('table', () => {
+    const cell = (page: Page, propertyId: string): ReturnType<Page['locator']> =>
+      page.locator(`[data-blok-database-table-row][data-row-id="row-1"] [role="gridcell"][data-property-id="${propertyId}"]`);
+
+    test.beforeEach(async ({ page }) => {
+      await remount(page, { type: 'table', groupBy: undefined, visibleProperties: [] });
+    });
+
+    test('Escape saves a typed text, and one undo restores it', async ({ page }) => {
+      await cell(page, 'prop-notes').click();
+      await editor(page).locator('[data-blok-database-cell-input="text"]').fill('new note');
+      await page.keyboard.press('Escape');
+
+      await expect.poll(async () => (await saved(page)).properties['prop-notes']).toBe('new note');
+      await expect(editor(page)).toHaveCount(0);
+      await expect(cell(page, 'prop-notes')).toHaveText('new note');
+
+      await undo(page);
+      await expect.poll(async () => (await saved(page)).properties['prop-notes']).toBe('old note');
+    });
+
+    test('Escape saves a typed number, and one undo restores it', async ({ page }) => {
+      await cell(page, 'prop-score').click();
+      await editor(page).locator('[data-blok-database-cell-input="number"]').fill('401');
+      await page.keyboard.press('Escape');
+
+      await expect.poll(async () => (await saved(page)).properties['prop-score']).toBe(401);
+      await expect(editor(page)).toHaveCount(0);
+      await expect(cell(page, 'prop-score')).toHaveText('401');
+
+      await undo(page);
+      await expect.poll(async () => (await saved(page)).properties['prop-score']).toBe(5);
+    });
+  });
+
+  test('board card: Escape saves a typed number in place', async ({ page }) => {
+    await remount(page, { visibleProperties: ['prop-title', 'prop-score'] });
+    const property = page.locator('[data-blok-database-card] [data-blok-database-card-property][data-property-id="prop-score"]');
+
+    await property.click();
+    await editor(page).locator('[data-blok-database-cell-input="number"]').fill('401');
+    await page.keyboard.press('Escape');
+
+    await expect(editor(page)).toHaveCount(0);
+    await expect.poll(async () => (await saved(page)).properties['prop-score']).toBe(401);
+    await expect(page.locator('[data-blok-database-drawer]')).toHaveCount(0);
+  });
+});

@@ -73,9 +73,10 @@ describe('cell text editors', () => {
     expect(ctx.onCommit).not.toHaveBeenCalled();
   });
 
-  it('Escape cancels: nothing is written', () => {
+  // Escape on the title is unmeasured in research/22 §3, so Blok's cancel stays.
+  it('Escape on a title cancels: nothing is written', () => {
     const ctx = makeEditorContext();
-    const handle = openCellEditor(makeProperty('text'), 'a', makeAnchor(), ctx);
+    const handle = openCellEditor(makeProperty('title'), 'a', makeAnchor(), ctx);
 
     type('changed');
     const event = press(field(), 'Escape');
@@ -102,6 +103,61 @@ describe('cell text editors', () => {
     expect(ctx.onCommit).toHaveBeenCalledWith(typed);
     expect(handle.isOpen).toBe(false);
     expect(ctx.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  // research/22 §3: Notion saves a text or number on Escape too.
+  it.each([
+    ['text', 'a', 'changed', 'changed'],
+    ['richText', 'a', 'changed', 'changed'],
+    ['number', 40, '401', 401],
+  ] as const)('Escape in a %s editor saves the typed value (%j → %j)', (kind, before, typed, saved) => {
+    const ctx = makeEditorContext();
+    const handle = openCellEditor(makeProperty(kind), before, makeAnchor(), ctx);
+
+    type(typed);
+    const event = press(field(), 'Escape');
+
+    expect(ctx.onCommit).toHaveBeenCalledTimes(1);
+    expect(ctx.onCommit).toHaveBeenCalledWith(saved);
+    expect(handle.isOpen).toBe(false);
+    expect(editorRoot()).toBeNull();
+    expect(event.defaultPrevented).toBe(true);
+    expect(ctx.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('Escape with an unchanged text writes nothing and closes', () => {
+    const ctx = makeEditorContext();
+    const handle = openCellEditor(makeProperty('text'), 'a', makeAnchor(), ctx);
+
+    press(field(), 'Escape');
+
+    expect(ctx.onCommit).not.toHaveBeenCalled();
+    expect(ctx.onCancel).toHaveBeenCalledTimes(1);
+    expect(handle.isOpen).toBe(false);
+  });
+
+  it('Escape on a number that does not parse cancels and still closes', () => {
+    const ctx = makeEditorContext();
+    const handle = openCellEditor(makeProperty('number'), 40, makeAnchor(), ctx);
+
+    type('abc');
+    const event = press(field(), 'Escape');
+
+    expect(ctx.onCommit).not.toHaveBeenCalled();
+    expect(ctx.onCancel).toHaveBeenCalledTimes(1);
+    expect(handle.isOpen).toBe(false);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  // Place is unmeasured: its address field (a text editor inside) still cancels on Escape.
+  it('Escape in a place editor writes nothing', () => {
+    const ctx = makeEditorContext();
+
+    openCellEditor(makeProperty('place'), { address: 'Old St 1' }, makeAnchor(), ctx);
+    type('New St 2');
+    press(field(), 'Escape');
+
+    expect(ctx.onCommit).not.toHaveBeenCalled();
   });
 
   // Unmeasured in research/22 §3, so Blok's cancel stays.

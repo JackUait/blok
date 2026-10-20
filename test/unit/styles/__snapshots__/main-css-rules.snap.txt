@@ -7864,6 +7864,10 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   border-radius: var(--blok-radius-control);
 }
 
+[data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-value] {
+  min-height: 34px;
+}
+
 [data-blok-database-drawer-prop-value][role="button"] {
   cursor: pointer;
 }

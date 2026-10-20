@@ -20,20 +20,21 @@ const parseNumberEntry = (text: string): Outcome | null => {
 const INPUT_TYPES: Partial<Record<PropertyDefinition['type'], string>> = { url: 'url', email: 'email', phone: 'tel' };
 
 /**
- * research/22 §3: Escape saves a url, and an email or phone typed into an empty
- * cell. Escape after editing a stored email or phone was not measured: it cancels.
+ * research/22 §3: Escape saves a text, number or url, and an email or phone typed
+ * into an empty cell. Unmeasured, so Escape cancels: the title, and editing a
+ * stored email or phone.
  */
 const escapeCommits = (type: PropertyDefinition['type'], original: string): boolean =>
-  type === 'url' || ((type === 'email' || type === 'phone') && original === '');
+  type === 'text' || type === 'richText' || type === 'number' || type === 'url'
+  || ((type === 'email' || type === 'phone') && original === '');
 
 const initialText = (value: PropertyValue | undefined): string =>
   typeof value === 'string' || typeof value === 'number' ? String(value) : '';
 
 /**
  * Inline editor for title, text, url, number and rich text read as text.
- * Enter commits, Escape cancels (url, email and phone: see escapeCommits),
- * a press outside commits. Text takes
- * Shift+Enter as a newline.
+ * Enter and a press outside commit. Escape commits or cancels by type (see
+ * escapeCommits). Text takes Shift+Enter as a newline.
  */
 export const openTextEditor = (
   property: PropertyDefinition,
@@ -41,7 +42,8 @@ export const openTextEditor = (
   anchor: HTMLElement,
   ctx: CellEditorContext,
   footer?: HTMLElement,
-  header?: HTMLElement
+  header?: HTMLElement,
+  escapeCancels = false
 ): CellEditorHandle => {
   const multiline = property.type === 'text' || property.type === 'richText';
   const field = document.createElement(multiline ? 'textarea' : 'input');
@@ -81,7 +83,7 @@ export const openTextEditor = (
     cover: ctx.coverCell === true,
     content,
     minWidth: `${Math.max(anchor.getBoundingClientRect().width, 240)}px`,
-    onEscape: () => finish(escapeCommits(property.type, original) ? resolve() ?? { kind: 'cancel' } : { kind: 'cancel' }),
+    onEscape: () => finish(!escapeCancels && escapeCommits(property.type, original) ? resolve() ?? { kind: 'cancel' } : { kind: 'cancel' }),
     onDismiss: () => finish(resolve() ?? { kind: 'cancel' }, false),
   });
 

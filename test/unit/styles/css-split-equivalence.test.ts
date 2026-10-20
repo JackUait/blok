@@ -906,6 +906,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_LINK_CELL_UNDERLINE_BYTES = 1_055;
     // database.css: Edit cadence, its day chips and the banner button's chevron (research/21 §3).
     const DATABASE_TEMPLATE_CADENCE_BYTES = 2_807;
+    // database.css: the row page's 34px property value row (research/22 §3).
+    const DATABASE_PEEK_VALUE_ROW_BYTES = 253;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1029,7 +1031,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_GROUP_RANGE_TEXT_BYTES
       + DATABASE_CELL_EDITOR_LOOK_BYTES
       + DATABASE_LINK_CELL_UNDERLINE_BYTES
-      + DATABASE_TEMPLATE_CADENCE_BYTES;
+      + DATABASE_TEMPLATE_CADENCE_BYTES
+      + DATABASE_PEEK_VALUE_ROW_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

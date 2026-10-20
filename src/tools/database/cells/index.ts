@@ -166,6 +166,7 @@ const openPlaceEditor = (
   const footer = search === undefined ? link : document.createElement('div');
 
   if (search !== undefined && footer !== undefined) footer.append(...[search.list, link].filter((part): part is HTMLElement => part !== undefined));
+  // Escape on a place is unmeasured: it cancels, unlike a text.
   const handle = openTextEditor({ ...property, type: 'text' }, address, anchor, {
     ...ctx,
     onCommit: (text) => {
@@ -182,7 +183,7 @@ const openPlaceEditor = (
       else if (state.cleared) ctx.onCommit(null);
       else ctx.onCancel?.();
     },
-  }, footer, header);
+  }, footer, header, true);
   const field = footer?.parentElement?.querySelector<HTMLInputElement | HTMLTextAreaElement>('[data-blok-database-cell-input]');
 
   if (search !== undefined && field !== null && field !== undefined) search.attach(field, () => handle.isOpen);

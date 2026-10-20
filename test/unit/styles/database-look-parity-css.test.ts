@@ -220,6 +220,14 @@ describe('row page peek in dark (research/21 §1m)', () => {
     expect(ruleBody(`${head} > [data-blok-database-drawer-prop-label][role="button"]::before`)).toContain('inset: 0');
   });
 
+  // research/22 §3: the row page value row is 538x34, level with the 160x34 label cell.
+  it('makes a property value 34px tall like its label cell, and leaves pins at 30px', () => {
+    const value = ruleBody('[data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-value]');
+
+    expect(value).toContain('min-height: 34px');
+    expect(ruleBody('[data-blok-database-drawer-prop-value]')).toContain('min-height: 30px');
+  });
+
   it('inks labels and the "Comments" heading rgb(173, 169, 163) in dark', () => {
     expect(tokenValues('--blok-database-peek-label').slice(1)).toEqual(['rgb(173, 169, 163)', 'rgb(173, 169, 163)']);
     expect(ruleBody('[data-blok-database-comments-label]')).toContain('color: var(--blok-database-peek-label)');

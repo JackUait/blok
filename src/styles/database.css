@@ -4453,6 +4453,11 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   border-radius: var(--blok-radius-control);
 }
 
+/* research/22 §3: a 34px value row, level with the label cell. Label-less pins stay 30px (research/10 §4). */
+[data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-value] {
+  min-height: 34px;
+}
+
 [data-blok-database-drawer-prop-value][role="button"] {
   cursor: pointer;
 }

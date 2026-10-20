@@ -90,7 +90,7 @@ export interface CellEditorCallbacks {
    * editor is open; each call carries the whole new value, not a delta.
    */
   onCommit: (value: PropertyValue) => void;
-  /** The editor closed with nothing committed (Escape, or an invalid number). */
+  /** The editor closed with nothing committed (Escape where it cancels, no change, or an invalid number). */
   onCancel?: () => void;
   /** The editor closed, after any commit or cancel. Hosts restore focus here. */
   onClose?: () => void;

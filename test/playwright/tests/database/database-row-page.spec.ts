@@ -407,3 +407,37 @@ test.describe('read-only', () => {
     await expect(peek(page).locator('[data-blok-database-drawer-add-prop]')).toHaveCount(0);
   });
 });
+
+// research/22 §3: the value row is 34px, level with the 160x34 label cell; Escape saves a text.
+test.describe('property rows', () => {
+  const valueOf = (page: Page): Locator => peek(page).locator('[data-blok-database-drawer-prop-value][data-property-id="p-notes"]');
+  const headOf = (page: Page): Locator => valueOf(page).locator('xpath=..').locator('[data-blok-database-drawer-prop-head]');
+
+  test('a value row is 34px tall and lines up with its label cell', async ({ page }) => {
+    await mount(page, blocks());
+    await openRow(page, 'r1');
+    const value = await valueOf(page).boundingBox();
+    const head = await headOf(page).boundingBox();
+
+    expect(value?.height).toBe(34);
+    expect(head?.height).toBe(34);
+    expect(value?.y).toBe(head?.y);
+  });
+
+  test('Escape saves a typed note, closes only the editor, and one undo takes it back', async ({ page }) => {
+    const notes = async (): Promise<unknown> => ((await saved(page)).find((b) => b.id === 'r1')?.data.properties as Record<string, unknown>)['p-notes'];
+
+    await mount(page, blocks());
+    await openRow(page, 'r1');
+    await valueOf(page).click();
+    await page.locator('[data-blok-database-cell-input="text"]').fill('A note');
+    await page.keyboard.press('Escape');
+
+    await expect.poll(notes).toBe('A note');
+    await expect(page.locator('[data-blok-database-cell-editor]')).toHaveCount(0);
+    await expect(peek(page)).toBeVisible();
+
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect.poll(notes).toBeUndefined();
+  });
+});

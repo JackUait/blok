@@ -138,6 +138,27 @@ describe('DatabaseCardDrawer — cell editors', () => {
     expect(drawer.isOpen).toBe(true);
   });
 
+  // research/22 §3: Escape saves a typed number, and closes only the editor.
+  it('Escape saves a typed number in place and leaves the drawer open', () => {
+    const options = createOptions();
+    const drawer = new DatabaseCardDrawer(options);
+
+    drawer.open(makeRow({ 'prop-score': 40 }));
+    valueOf(options, 'prop-score').click();
+    const input = editor()?.querySelector<HTMLInputElement>('input');
+
+    if (input === null || input === undefined) {
+      throw new Error('no input');
+    }
+    input.value = '401';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+    expect(options.onPropertyValueChange).toHaveBeenCalledWith('row-1', 'prop-score', 401);
+    expect(valueOf(options, 'prop-score').textContent).toBe('401');
+    expect(editor()?.isConnected ?? false).toBe(false);
+    expect(drawer.isOpen).toBe(true);
+  });
+
   it('pressing inside the editor does not close the drawer', () => {
     const options = createOptions();
     const drawer = new DatabaseCardDrawer(options);

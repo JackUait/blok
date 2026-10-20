@@ -863,6 +863,50 @@ describe('DatabaseTableView', () => {
       expect(handlers.deleteRows).toHaveBeenCalledWith(['r-new']);
     });
 
+    // research/22 §3: Escape saves a text, so the typed note keeps the new row.
+    it('Escape in a note of a new row saves the note and keeps the row', async () => {
+      const state = createTableState();
+
+      state.freshRowId = 'r-new';
+      state.pendingEdit = { rowId: 'r-new', propertyId: 'p-notes' };
+      const { root, handlers } = mount({ state, rows: [...rows(), row('r-new', '')] });
+
+      await Promise.resolve();
+      editorField().value = 'kept';
+      press(editorField(), 'Escape');
+
+      expect(handlers.commitCell).toHaveBeenCalledWith('r-new', 'p-notes', 'kept');
+      expect(handlers.deleteRows).not.toHaveBeenCalled();
+      expect(editor()).toBeNull();
+      expect(anchorCell(root)).toBe('r-new/p-notes');
+    });
+
+    it('Escape in an untouched note of a new empty row still deletes the row', async () => {
+      const state = createTableState();
+
+      state.freshRowId = 'r-new';
+      state.pendingEdit = { rowId: 'r-new', propertyId: 'p-notes' };
+      const { handlers } = mount({ state, rows: [...rows(), row('r-new', '')] });
+
+      await Promise.resolve();
+      press(editorField(), 'Escape');
+
+      expect(handlers.commitCell).not.toHaveBeenCalled();
+      expect(handlers.deleteRows).toHaveBeenCalledWith(['r-new']);
+    });
+
+    it('Escape in a number cell saves the typed number and keeps the cell selected', () => {
+      const { root, handlers } = mount();
+
+      cell(root, 'r1', 'p-amount').click();
+      editorField().value = '401';
+      press(editorField(), 'Escape');
+
+      expect(handlers.commitCell).toHaveBeenCalledWith('r1', 'p-amount', 401);
+      expect(editor()).toBeNull();
+      expect(anchorCell(root)).toBe('r1/p-amount');
+    });
+
     it('Enter in the select editor picks the option and moves the selection down', () => {
       const { root, handlers } = mount();
 

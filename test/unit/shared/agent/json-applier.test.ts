@@ -192,6 +192,38 @@ describe('applyEdits supplied scenarios', () => {
 });
 
 describe('applyEdits attribution', () => {
+  // An anonymous form answer (research/23 §6) and its page body never carry an editor id.
+  describe('inside an anonymous form answer', () => {
+    const anonymous = (): DocSnapshot => DocSnapshot.fromOutput({ blocks: [
+      { id: 'r', type: 'database-row', data: { properties: {}, anonymous: true }, content: ['p'] },
+      { id: 'p', type: 'paragraph', data: { text: [{ text: 'Body' }] }, parent: 'r' },
+      { id: 'q', type: 'database-row', data: { properties: {} } },
+    ] });
+
+    it('stamps the time but no editor on the row, its body, and a block added under it', () => {
+      const snap = anonymous();
+
+      applyEdits(snap, [
+        { op: 'setData', id: 'r', patch: { properties: { note: 'x' } } },
+        { op: 'setData', id: 'p', patch: { keep: 1 } },
+        { op: 'insert', parentId: 'r', afterId: 'p', block: { id: 'n', type: 'paragraph', data: {}, children: [] } },
+        { op: 'move', id: 'q', parentId: 'r', afterId: 'n' },
+      ], stamp);
+
+      for (const id of ['r', 'p', 'n', 'q']) {
+        expect(requireBlock(snap, id).rest, id).toEqual({ lastEditedAt: 42 });
+      }
+    });
+
+    it('still names the editor of a row that is not anonymous', () => {
+      const snap = anonymous();
+
+      applyEdits(snap, [{ op: 'setData', id: 'q', patch: { keep: 1 } }], stamp);
+
+      expect(requireBlock(snap, 'q').rest).toEqual({ lastEditedBy: 'agent-1', lastEditedAt: 42 });
+    });
+  });
+
   it.each(contentEdits)('stamps only the block changed by $name and preserves its other metadata', ({ edit, expected }) => {
     const snap = attributedBase();
     const before = snap.toOutput();

@@ -412,7 +412,7 @@ export class YjsManager extends Module {
     this.flushPendingBlockWrites();
     this.undoHistory.markCaretBeforeChange();
 
-    return this.documentStore.addBlock(this.withCreationStamp(blockData), index);
+    return this.documentStore.addBlock(this.withCreationStamp(blockData, blockData.parent), index);
   }
 
   /**
@@ -420,10 +420,21 @@ export class YjsManager extends Module {
    * the transaction that adds the block, so the stamp rides that undo step and
    * a peer or a reload reads it rather than minting its own. A stamp the data
    * already carries (a host's saved block) wins.
+   * An anonymous form answer and every block under it get no user id at all.
    * @param blockData - the new block
+   * @param parentId - where it goes
    * @returns the block with `createdAt`, and `createdBy` when a user is configured
    */
-  private withCreationStamp(blockData: YjsOutputBlockData): YjsOutputBlockData {
+  private withCreationStamp(blockData: YjsOutputBlockData, parentId: string | null | undefined): YjsOutputBlockData {
+    // `data` may be null in a wire DTO.
+    const isAnonymousAnswer = blockData.type === 'database-row' && (blockData.data as Record<string, unknown> | null)?.anonymous === true;
+
+    if (isAnonymousAnswer || this.documentStore.isInAnonymousAnswer(undefined, parentId)) {
+      const { createdBy: _createdBy, lastEditedBy: _lastEditedBy, ...unsigned } = blockData;
+
+      return { ...unsigned, createdAt: blockData.createdAt ?? Date.now() };
+    }
+
     const userId = this.anonymousDepth > 0 ? undefined : this.config.user?.id;
 
     return {
@@ -431,6 +442,15 @@ export class YjsManager extends Module {
       createdAt: blockData.createdAt ?? Date.now(),
       ...(blockData.createdBy === undefined && typeof userId === 'string' && userId !== '' ? { createdBy: userId } : {}),
     };
+  }
+
+  /**
+   * Whether a block is an anonymous form answer or sits under one.
+   * @param id - Block id
+   * @returns true when no user id may be stamped on it
+   */
+  public isInAnonymousAnswer(id: string): boolean {
+    return this.documentStore.isInAnonymousAnswer(id);
   }
 
   /**
@@ -466,7 +486,7 @@ export class YjsManager extends Module {
     this.flushPendingBlockWrites();
     this.undoHistory.markCaretBeforeChange();
 
-    return this.documentStore.addBlockAt(this.withCreationStamp(blockData), placement);
+    return this.documentStore.addBlockAt(this.withCreationStamp(blockData, placement.parentId), placement);
   }
 
   /**

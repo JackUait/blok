@@ -91,7 +91,8 @@ export class BlockManager extends Module {
     const agentId = this.agentScope?.stampLastEditedBy === false ? undefined : this.agentFor(editedBlock.id)?.id;
 
     editedBlock.lastEditedAt = at;
-    editedBlock.lastEditedBy = agentId ?? this.config.user?.id ?? null;
+    // The saver reads this copy, not the document, so it must drop the id too.
+    editedBlock.lastEditedBy = this.Blok.YjsManager.isInAnonymousAnswer(editedBlock.id) ? null : agentId ?? this.config.user?.id ?? null;
     this.Blok.YjsManager.updateBlockMetadata(editedBlock.id, editedBlock.lastEditedAt, editedBlock.lastEditedBy);
   }
 

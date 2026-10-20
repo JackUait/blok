@@ -345,6 +345,33 @@ describe('form Share panel (research/19 §3d)', () => {
       expect(cell.textContent).toBe('Anonymous');
       expect(cell.querySelector('[data-blok-database-person-chip][data-anonymous]')).not.toBeNull();
     });
+
+    // A row saved before edits were kept unsigned may still carry ids: they are not shown.
+    it('names nobody on an anonymous row that carries stray author ids', async () => {
+      const [database] = withAuthorColumns();
+      const data = database.data as DatabaseData;
+
+      await mount([
+        {
+          ...database,
+          content: ['r1'],
+          data: {
+            ...data,
+            schema: [...data.schema, { id: 'edited', name: 'Edited', type: 'lastEditedBy', position: 'a3' }],
+          },
+        },
+        {
+          id: 'r1', type: 'database-row', parent: 'db', createdBy: 'u-ada', lastEditedBy: 'u-ada',
+          data: { properties: { title: 'Resp' }, position: 'a0', title: 'Resp', anonymous: true },
+        },
+      ], host(), false, { user: { id: 'u-ada' }, config: { people } });
+      need('[data-blok-database-tab][data-view-id="table"]').click();
+
+      await vi.waitFor(() => expect(q('[data-blok-database-cell="lastEditedBy"]')).not.toBeNull());
+
+      expect(need('[data-blok-database-cell="createdBy"]').textContent).toBe('Anonymous');
+      expect(need('[data-blok-database-cell="lastEditedBy"]').textContent).toBe('');
+    });
   });
 
   it('shows no anonymous pill to a respondent of a form that is not anonymous', async () => {

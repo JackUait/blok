@@ -236,6 +236,7 @@ const createBlockManager = (
       // Reports "nothing pruned" so these tests keep asserting only the writes.
       pruneBlockData: vi.fn(() => false),
       updateBlockMetadata: vi.fn(() => true),
+      isInAnonymousAnswer: vi.fn(() => false),
       // The real in-flight token registration: BlockManager calls this around
       // every data sync, so a mock without it would silently disable that path.
       beginPendingBlockDataWrite: vi.fn(() => vi.fn()),
@@ -1725,6 +1726,7 @@ describe('BlockManager', () => {
           updateBlockData: vi.fn(() => true),
           pruneBlockData: vi.fn(() => false),
           updateBlockMetadata: vi.fn(() => true),
+          isInAnonymousAnswer: vi.fn(() => false),
           beginPendingBlockDataWrite: vi.fn(() => vi.fn()),
           // Immediate flush reproduces pre-coalescing write timing.
           enqueueBlockDataWrite: vi.fn(
@@ -1847,6 +1849,7 @@ describe('BlockManager', () => {
           updateBlockData: updateBlockDataMock,
           pruneBlockData: vi.fn(() => false),
           updateBlockMetadata: updateBlockMetadataMock,
+          isInAnonymousAnswer: vi.fn(() => false),
           beginPendingBlockDataWrite: vi.fn(() => vi.fn()),
           // Immediate flush reproduces pre-coalescing write timing.
           enqueueBlockDataWrite: vi.fn(

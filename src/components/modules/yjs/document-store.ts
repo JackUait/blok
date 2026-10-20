@@ -332,6 +332,41 @@ export class DocumentStore {
   }
 
   /**
+   * Whether this block is an anonymous form answer (a `database-row` with
+   * `data.anonymous === true`) or sits anywhere under one. Such blocks carry
+   * no user id, so a later edit cannot name who answered.
+   * @param id - Block id
+   * @param parentId - Used for a block not in the document yet
+   * @returns true when the block or an ancestor is an anonymous answer
+   */
+  public isInAnonymousAnswer(id: string | undefined, parentId?: string | null): boolean {
+    const start = id === undefined ? undefined : this.getBlockById(id);
+
+    if (start !== undefined && this.isAnonymousAnswerBlock(start)) {
+      return true;
+    }
+
+    return this.isAnonymousAncestor(start === undefined ? parentId : start.get('parentId'), new Set());
+  }
+
+  private isAnonymousAncestor(parentId: unknown, seen: Set<string>): boolean {
+    const yblock = typeof parentId === 'string' && !seen.has(parentId) ? this.getBlockById(parentId) : undefined;
+
+    if (yblock === undefined || typeof parentId !== 'string') {
+      return false;
+    }
+    seen.add(parentId);
+
+    return this.isAnonymousAnswerBlock(yblock) || this.isAnonymousAncestor(yblock.get('parentId'), seen);
+  }
+
+  private isAnonymousAnswerBlock(yblock: Y.Map<unknown>): boolean {
+    const data = yblock.get('data');
+
+    return yblock.get('type') === 'database-row' && data instanceof Y.Map && data.get('anonymous') === true;
+  }
+
+  /**
    * A block's creation stamp as the document holds it.
    * @param id - Block id
    * @returns the stamp; fields the block lacks are undefined
@@ -2274,14 +2309,16 @@ export class DocumentStore {
    * Update a block's edit metadata fields directly on the Y.Map.
    * @param id - Block id
    * @param lastEditedAt - Timestamp in milliseconds
-   * @param lastEditedBy - User ID, or null
+   * @param editor - User ID, or null; dropped inside an anonymous answer
    */
-  public updateBlockMetadata(id: string, lastEditedAt: number, lastEditedBy: string | null): boolean {
+  public updateBlockMetadata(id: string, lastEditedAt: number, editor: string | null): boolean {
     const yblock = this.getBlockById(id);
 
     if (yblock === undefined) {
       return false;
     }
+
+    const lastEditedBy = this.isInAnonymousAnswer(id) ? null : editor;
 
     // Defensive equality guard — if both fields already match, skip the write to avoid
     // adding an empty/no-op entry to the Yjs undo stack.

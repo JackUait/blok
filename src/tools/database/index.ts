@@ -317,6 +317,10 @@ const rowMetaOf = (child: BlockAPI): DatabaseRowMeta => ({
   ...(typeof child.lastEditedBy === 'string' ? { lastEditedBy: child.lastEditedBy } : {}),
 });
 
+/** An anonymous answer's metadata: no author ids, even ones an older save left behind. */
+const anonymousRowMeta = ({ createdBy: _createdBy, lastEditedBy: _lastEditedBy, ...meta }: DatabaseRowMeta): DatabaseRowMeta =>
+  ({ ...meta, anonymous: true });
+
 /** The `#rowId` link whose page the user closed in this page load. */
 const rowLink: { closed: string | null } = { closed: null };
 
@@ -1662,7 +1666,7 @@ export class DatabaseTool implements BlockTool {
           }
         }
 
-        const meta: DatabaseRowMeta = { ...rowMetaOf(child), ...(rowData?.anonymous === true ? { anonymous: true } : {}) };
+        const meta: DatabaseRowMeta = rowData?.anonymous === true ? anonymousRowMeta(rowMetaOf(child)) : rowMetaOf(child);
         const reactions = rowReactions(rowData);
 
         if (isTemplateData(rowData)) {

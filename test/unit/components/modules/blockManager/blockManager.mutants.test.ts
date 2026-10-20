@@ -108,6 +108,7 @@ type YjsStub = {
   updateBlockData: Mock;
   pruneBlockData: Mock;
   updateBlockMetadata: Mock;
+  isInAnonymousAnswer: Mock;
   enqueueBlockDataWrite: Mock;
   beginPendingBlockDataWrite: Mock;
   onPendingBlockWritesSettled: Mock;
@@ -196,6 +197,7 @@ const createHarness = (options: HarnessOptions): Harness => {
     updateBlockData: vi.fn(() => true),
     pruneBlockData: vi.fn(() => false),
     updateBlockMetadata: vi.fn(),
+    isInAnonymousAnswer: vi.fn(() => false),
     enqueueBlockDataWrite: vi.fn(),
     // The real in-flight token registration: BlockManager calls this around
     // every data sync, so a mock without it would silently disable that path.

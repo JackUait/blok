@@ -25,10 +25,30 @@ const copyValue = (value: unknown): unknown => {
 const copyRecord = (value: Record<string, unknown>): Record<string, unknown> =>
   Object.fromEntries(Object.entries(value).map(([key, item]): [string, unknown] => [key, copyValue(item)]));
 
-const stampOn = (block: SnapBlock | undefined, stamp: EditStamp | null): void => {
-  if (block !== undefined && stamp !== null) {
-    Object.assign(block.rest, { lastEditedAt: stamp.at, lastEditedBy: stamp.actorId });
+const isAnonymousAnswer = (block: SnapBlock): boolean =>
+  block.type === 'database-row' && block.data.anonymous === true;
+
+// Same rule as DocumentStore.isInAnonymousAnswer, so both appliers save the same metadata.
+const inAnonymousAnswer = (snap: DocSnapshot, block: SnapBlock | undefined, seen = new Set<string>()): boolean => {
+  if (block === undefined || seen.has(block.id)) {
+    return false;
   }
+  seen.add(block.id);
+
+  return isAnonymousAnswer(block) || (block.parent !== null && inAnonymousAnswer(snap, snap.get(block.parent), seen));
+};
+
+const stampOn = (snap: DocSnapshot, block: SnapBlock | undefined, stamp: EditStamp | null): void => {
+  if (block === undefined || stamp === null) {
+    return;
+  }
+  if (inAnonymousAnswer(snap, block)) {
+    Reflect.deleteProperty(block.rest, 'lastEditedBy');
+    Object.assign(block.rest, { lastEditedAt: stamp.at });
+
+    return;
+  }
+  Object.assign(block.rest, { lastEditedAt: stamp.at, lastEditedBy: stamp.actorId });
 };
 
 const insertTree = (snap: DocSnapshot, planned: PlannedBlock, parentId: string | null, afterId: string | null, stamp: EditStamp | null): void => {
@@ -42,9 +62,9 @@ const insertTree = (snap: DocSnapshot, planned: PlannedBlock, parentId: string |
     rest: {},
   };
 
-  stampOn(block, stamp);
   snap.put(block);
   snap.link(block.id, parentId, afterId);
+  stampOn(snap, block, stamp);
   planned.children.reduce<string | null>((previous, child) => {
     insertTree(snap, child, planned.id, previous, stamp);
 
@@ -72,7 +92,7 @@ const removeBlock = (snap: DocSnapshot, edit: Extract<Edit, { op: 'remove' }>, s
   [...block.content].reduce<string | null>((after, child) => {
     snap.unlink(child);
     snap.link(child, parentId, after);
-    stampOn(snap.get(child), stamp);
+    stampOn(snap, snap.get(child), stamp);
 
     return child;
   }, previous);
@@ -97,7 +117,7 @@ const setData = (snap: DocSnapshot, edit: Extract<Edit, { op: 'setData' }>, stam
       });
     }
   }
-  stampOn(block, stamp);
+  stampOn(snap, block, stamp);
 };
 
 const setRichText = (snap: DocSnapshot, edit: Extract<Edit, { op: 'setRichText' }>, stamp: EditStamp | null): void => {
@@ -110,7 +130,7 @@ const setRichText = (snap: DocSnapshot, edit: Extract<Edit, { op: 'setRichText' 
       writable: true,
       configurable: true,
     });
-    stampOn(block, stamp);
+    stampOn(snap, block, stamp);
   }
 };
 
@@ -135,7 +155,7 @@ const setTunes = (snap: DocSnapshot, edit: Extract<Edit, { op: 'setTunes' }>, st
     }
   }
   block.tunes = Object.keys(tunes).length > 0 ? tunes : undefined;
-  stampOn(block, stamp);
+  stampOn(snap, block, stamp);
 };
 
 const replaceType = (snap: DocSnapshot, edit: Extract<Edit, { op: 'replaceType' }>, stamp: EditStamp | null): void => {
@@ -144,7 +164,7 @@ const replaceType = (snap: DocSnapshot, edit: Extract<Edit, { op: 'replaceType' 
   if (block !== undefined) {
     block.type = edit.type;
     block.data = copyRecord(edit.data);
-    stampOn(block, stamp);
+    stampOn(snap, block, stamp);
   }
 };
 
@@ -175,7 +195,7 @@ export const applyEdits = (snap: DocSnapshot, edits: readonly Edit[], stamp: Edi
       case 'move':
         snap.unlink(edit.id);
         snap.link(edit.id, edit.parentId, edit.afterId);
-        stampOn(snap.get(edit.id), stamp);
+        stampOn(snap, snap.get(edit.id), stamp);
         break;
       case 'setData':
         setData(snap, edit, stamp);

@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "ბმული დაკოპირდა",
   "tools.database.tableDuplicate": "დუბლირება",
   "tools.database.tableMoveToTrash": "ნაგავში გადატანა",
+  "tools.database.movedToTrash": "გადატანილია ნაგავში",
+  "tools.database.restore": "აღდგენა",
   "tools.database.tableCollapseGroup": "ჯგუფის ჩაკეცვა",
   "tools.database.tableExpandGroup": "ჯგუფის გაშლა",
   "tools.database.calcNone": "არცერთი",

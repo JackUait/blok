@@ -1030,6 +1030,8 @@
   "tools.database.tableLinkCopied": "Веза копирана",
   "tools.database.tableDuplicate": "Дуплирај",
   "tools.database.tableMoveToTrash": "Премести у отпад",
+  "tools.database.movedToTrash": "Премештено у отпад",
+  "tools.database.restore": "Врати",
   "tools.database.tableCollapseGroup": "Сажми групу",
   "tools.database.tableExpandGroup": "Прошири групу",
   "tools.database.calcNone": "Ништа",

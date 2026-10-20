@@ -1030,6 +1030,8 @@
   "tools.database.tableLinkCopied": "Lien copié",
   "tools.database.tableDuplicate": "Dupliquer",
   "tools.database.tableMoveToTrash": "Mettre à la corbeille",
+  "tools.database.movedToTrash": "Mis à la corbeille",
+  "tools.database.restore": "Restaurer",
   "tools.database.tableCollapseGroup": "Réduire le groupe",
   "tools.database.tableExpandGroup": "Développer le groupe",
   "tools.database.calcNone": "Aucun",

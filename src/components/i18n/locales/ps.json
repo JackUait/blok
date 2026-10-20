@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "لینک کاپي شو",
   "tools.database.tableDuplicate": "کاپي جوړه کړئ",
   "tools.database.tableMoveToTrash": "کثافاتو ته ولېږدوئ",
+  "tools.database.movedToTrash": "کثافاتو ته ولېږدول شو",
+  "tools.database.restore": "بېرته راوړئ",
   "tools.database.tableCollapseGroup": "ګروپ راټول کړئ",
   "tools.database.tableExpandGroup": "ګروپ پراخ کړئ",
   "tools.database.calcNone": "هېڅ",

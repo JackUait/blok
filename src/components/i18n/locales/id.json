@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "Tautan disalin",
   "tools.database.tableDuplicate": "Gandakan",
   "tools.database.tableMoveToTrash": "Pindahkan ke sampah",
+  "tools.database.movedToTrash": "Dipindahkan ke sampah",
+  "tools.database.restore": "Pulihkan",
   "tools.database.tableCollapseGroup": "Ciutkan grup",
   "tools.database.tableExpandGroup": "Perluas grup",
   "tools.database.calcNone": "Tidak ada",

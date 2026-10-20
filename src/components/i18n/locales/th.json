@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "คัดลอกลิงก์แล้ว",
   "tools.database.tableDuplicate": "ทำซ้ำ",
   "tools.database.tableMoveToTrash": "ย้ายไปถังขยะ",
+  "tools.database.movedToTrash": "ย้ายไปถังขยะแล้ว",
+  "tools.database.restore": "กู้คืน",
   "tools.database.tableCollapseGroup": "ยุบกลุ่ม",
   "tools.database.tableExpandGroup": "ขยายกลุ่ม",
   "tools.database.calcNone": "ไม่มี",

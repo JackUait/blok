@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "已複製連結",
   "tools.database.tableDuplicate": "建立副本",
   "tools.database.tableMoveToTrash": "移至垃圾桶",
+  "tools.database.movedToTrash": "已移至垃圾桶",
+  "tools.database.restore": "還原",
   "tools.database.tableCollapseGroup": "收合群組",
   "tools.database.tableExpandGroup": "展開群組",
   "tools.database.calcNone": "無",

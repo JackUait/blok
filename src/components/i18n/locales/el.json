@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "Ο σύνδεσμος αντιγράφηκε",
   "tools.database.tableDuplicate": "Διπλότυπο",
   "tools.database.tableMoveToTrash": "Μετακίνηση στον κάδο",
+  "tools.database.movedToTrash": "Μετακινήθηκε στον κάδο",
+  "tools.database.restore": "Επαναφορά",
   "tools.database.tableCollapseGroup": "Σύμπτυξη ομάδας",
   "tools.database.tableExpandGroup": "Ανάπτυξη ομάδας",
   "tools.database.calcNone": "Κανένα",

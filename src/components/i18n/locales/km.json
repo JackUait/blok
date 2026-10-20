@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "បានចម្លងតំណ",
   "tools.database.tableDuplicate": "ស្ទួន",
   "tools.database.tableMoveToTrash": "ផ្លាស់ទីទៅធុងសំរាម",
+  "tools.database.movedToTrash": "បានផ្លាស់ទីទៅធុងសំរាម",
+  "tools.database.restore": "ស្ដារឡើងវិញ",
   "tools.database.tableCollapseGroup": "បង្រួមក្រុម",
   "tools.database.tableExpandGroup": "ពង្រីកក្រុម",
   "tools.database.calcNone": "គ្មាន",

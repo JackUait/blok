@@ -1030,6 +1030,8 @@
   "tools.database.tableLinkCopied": "הקישור הועתק",
   "tools.database.tableDuplicate": "שכפל",
   "tools.database.tableMoveToTrash": "העבר לאשפה",
+  "tools.database.movedToTrash": "הועבר לאשפה",
+  "tools.database.restore": "שחזר",
   "tools.database.tableCollapseGroup": "כווץ קבוצה",
   "tools.database.tableExpandGroup": "הרחב קבוצה",
   "tools.database.calcNone": "ללא",

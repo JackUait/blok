@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "Länken kopierades",
   "tools.database.tableDuplicate": "Duplicera",
   "tools.database.tableMoveToTrash": "Flytta till papperskorgen",
+  "tools.database.movedToTrash": "Flyttad till papperskorgen",
+  "tools.database.restore": "Återställ",
   "tools.database.tableCollapseGroup": "Fäll ihop grupp",
   "tools.database.tableExpandGroup": "Fäll ut grupp",
   "tools.database.calcNone": "Ingen",

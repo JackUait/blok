@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "ലിങ്ക് പകർത്തി",
   "tools.database.tableDuplicate": "പകർപ്പുണ്ടാക്കുക",
   "tools.database.tableMoveToTrash": "ട്രാഷിലേക്ക് നീക്കുക",
+  "tools.database.movedToTrash": "ട്രാഷിലേക്ക് നീക്കി",
+  "tools.database.restore": "പുനഃസ്ഥാപിക്കുക",
   "tools.database.tableCollapseGroup": "ഗ്രൂപ്പ് ചുരുക്കുക",
   "tools.database.tableExpandGroup": "ഗ്രൂപ്പ് വിപുലീകരിക്കുക",
   "tools.database.calcNone": "ഒന്നുമില്ല",

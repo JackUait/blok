@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "لنڪ ڪاپي ٿي ويو",
   "tools.database.tableDuplicate": "نقل ٺاهيو",
   "tools.database.tableMoveToTrash": "ڪچري ۾ منتقل ڪريو",
+  "tools.database.movedToTrash": "ڪچري ۾ منتقل ٿي ويو",
+  "tools.database.restore": "بحال ڪريو",
   "tools.database.tableCollapseGroup": "گروپ سميٽيو",
   "tools.database.tableExpandGroup": "گروپ وڌايو",
   "tools.database.calcNone": "ڪجهه به نه",

@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "بەستەر کۆپی کرا",
   "tools.database.tableDuplicate": "دووبارەکردنەوە",
   "tools.database.tableMoveToTrash": "گواستنەوە بۆ زبڵدان",
+  "tools.database.movedToTrash": "گوازرایەوە بۆ زبڵدان",
+  "tools.database.restore": "گەڕاندنەوە",
   "tools.database.tableCollapseGroup": "قەپاتکردنی گرووپ",
   "tools.database.tableExpandGroup": "کردنەوەی گرووپ",
   "tools.database.calcNone": "هیچ",

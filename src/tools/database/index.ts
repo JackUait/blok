@@ -8085,6 +8085,32 @@ export class DatabaseTool implements BlockTool {
   }
 
   /**
+   * One gallery card trashed by key gets a "Moved to Trash" toast whose Restore
+   * undoes the delete (research/22 §2). Several cards: unmeasured, no toast.
+   */
+  private trashSelectionFromKeys(): void {
+    const rowIds = [...this.rowSelection];
+    const toast = rowIds.length === 1 && this.model.getView(this.activeViewId)?.type === 'gallery';
+
+    this.trashSelection();
+    if (!toast) {
+      return;
+    }
+    // The toast stays until closed; once the card is back (Cmd+Z), Restore must not undo something else.
+    this.api.notifier.show({
+      message: this.api.i18n.t('tools.database.movedToTrash'),
+      actions: [{
+        label: this.api.i18n.t('tools.database.restore'),
+        onClick: () => {
+          if (!this.api.blocks.getChildren(this.dataId).some((child) => child.id === rowIds[0])) {
+            this.api.history.undo();
+          }
+        },
+      }],
+    });
+  }
+
+  /**
    * While board or list rows are picked: Escape clears, Cmd/Ctrl+D
    * duplicates, Delete or Backspace trashes, Cmd/Ctrl+/ edits them all.
    * A key typed into a field keeps its own meaning.
@@ -8110,7 +8136,7 @@ export class DatabaseTool implements BlockTool {
     } else if (mod && key === 'd') {
       act(() => this.duplicateSelection());
     } else if (!mod && (key === 'backspace' || key === 'delete')) {
-      act(() => this.trashSelection());
+      act(() => this.trashSelectionFromKeys());
     } else if (mod && key === '/') {
       act(() => {
         const bar = (this.selectionBarSlot() ?? this.boardContainer)?.querySelector<HTMLElement>(':scope > [data-blok-database-table-selection-bar]');

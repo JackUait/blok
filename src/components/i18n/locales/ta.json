@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "இணைப்பு நகலெடுக்கப்பட்டது",
   "tools.database.tableDuplicate": "நகலெடு",
   "tools.database.tableMoveToTrash": "குப்பைக்கு நகர்த்து",
+  "tools.database.movedToTrash": "குப்பைக்கு நகர்த்தப்பட்டது",
+  "tools.database.restore": "மீட்டமை",
   "tools.database.tableCollapseGroup": "குழுவைச் சுருக்கு",
   "tools.database.tableExpandGroup": "குழுவை விரிவாக்கு",
   "tools.database.calcNone": "எதுவுமில்லை",

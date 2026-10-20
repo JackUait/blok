@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "Linkki kopioitu",
   "tools.database.tableDuplicate": "Monista",
   "tools.database.tableMoveToTrash": "Siirrä roskakoriin",
+  "tools.database.movedToTrash": "Siirretty roskakoriin",
+  "tools.database.restore": "Palauta",
   "tools.database.tableCollapseGroup": "Kutista ryhmä",
   "tools.database.tableExpandGroup": "Laajenna ryhmä",
   "tools.database.calcNone": "Ei mitään",

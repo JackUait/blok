@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "Link kopieret",
   "tools.database.tableDuplicate": "Dupliker",
   "tools.database.tableMoveToTrash": "Flyt til papirkurven",
+  "tools.database.movedToTrash": "Flyttet til papirkurven",
+  "tools.database.restore": "Gendan",
   "tools.database.tableCollapseGroup": "Skjul gruppe",
   "tools.database.tableExpandGroup": "Udvid gruppe",
   "tools.database.calcNone": "Ingen",

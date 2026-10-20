@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "Link copied",
   "tools.database.tableDuplicate": "Duplicate",
   "tools.database.tableMoveToTrash": "Move to Trash",
+  "tools.database.movedToTrash": "Moved to Trash",
+  "tools.database.restore": "Restore",
   "tools.database.tableCollapseGroup": "Collapse group",
   "tools.database.tableExpandGroup": "Expand group",
   "tools.database.calcNone": "None",

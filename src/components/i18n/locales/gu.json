@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "લિંક કૉપિ થઈ",
   "tools.database.tableDuplicate": "નકલ બનાવો",
   "tools.database.tableMoveToTrash": "કચરાપેટીમાં ખસેડો",
+  "tools.database.movedToTrash": "કચરાપેટીમાં ખસેડ્યું",
+  "tools.database.restore": "પુનઃસ્થાપિત કરો",
   "tools.database.tableCollapseGroup": "જૂથ સંકોચો",
   "tools.database.tableExpandGroup": "જૂથ વિસ્તૃત કરો",
   "tools.database.calcNone": "કંઈ નહીં",

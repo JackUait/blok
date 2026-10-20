@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "Врската е копирана",
   "tools.database.tableDuplicate": "Дуплирај",
   "tools.database.tableMoveToTrash": "Премести во корпа",
+  "tools.database.movedToTrash": "Преместено во корпа",
+  "tools.database.restore": "Врати",
   "tools.database.tableCollapseGroup": "Собери група",
   "tools.database.tableExpandGroup": "Прошири група",
   "tools.database.calcNone": "Ништо",

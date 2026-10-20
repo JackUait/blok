@@ -600,6 +600,46 @@ describe('DatabaseGalleryView', () => {
       expect(root).toHaveFocus();
     });
 
+    it('Enter with several cards selected opens the last one clicked, with no rename (research/22 §2)', () => {
+      for (const [first, last] of [['r3', 'r1'], ['r1', 'r3']]) {
+        const { root, view, handlers, pickRow } = mountSelectable();
+        const click = (rowId: string): void => {
+          cards(root).find((card) => card.getAttribute('data-row-id') === rowId)?.dispatchEvent(new MouseEvent('click', { bubbles: true, metaKey: true }));
+        };
+
+        pickRow.mockImplementation((rowId) => {
+          const ids = new Set(selected(root));
+
+          ids.add(rowId);
+          cards(root).forEach((card) => card.toggleAttribute(SELECTED, ids.has(card.getAttribute('data-row-id') ?? '')));
+        });
+        click(first);
+        click(last);
+        const enter = press(root, 'Enter');
+
+        expect(handlers.openRow).toHaveBeenCalledWith(last);
+        expect(handlers.openRow).toHaveBeenCalledTimes(1);
+        expect(enter.defaultPrevented).toBe(true);
+        expect(root.querySelector('input')).toBeNull();
+        view.destroy();
+        root.remove();
+      }
+    });
+
+    it('Home, End, PageUp and PageDown are left to the page scroll and keep the selection (research/22 §2)', () => {
+      const { root, selectRows } = mountSelectable();
+
+      press(root, 'ArrowDown');
+      press(root, 'ArrowDown');
+      selectRows.mockClear();
+
+      for (const key of ['Home', 'End', 'PageUp', 'PageDown']) {
+        expect(press(root, key).defaultPrevented).toBe(false);
+      }
+      expect(selectRows).not.toHaveBeenCalled();
+      expect(selected(root)).toEqual(['r2']);
+    });
+
     it('Enter does nothing while the card name is hidden', () => {
       const { root, handlers } = mountSelectable({ view: galleryView({ properties: [{ id: 'p-title', visible: false }] }) });
 

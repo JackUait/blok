@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "አገናኝ ተቀድቷል",
   "tools.database.tableDuplicate": "አባዛ",
   "tools.database.tableMoveToTrash": "ወደ መጣያ ውሰድ",
+  "tools.database.movedToTrash": "ወደ መጣያ ተወስዷል",
+  "tools.database.restore": "መልስ",
   "tools.database.tableCollapseGroup": "ቡድኑን ሰብስብ",
   "tools.database.tableExpandGroup": "ቡድኑን ዘርጋ",
   "tools.database.calcNone": "ምንም",

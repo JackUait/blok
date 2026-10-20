@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "ލިންކް ކޮޕީ ކުރެވިއްޖެ",
   "tools.database.tableDuplicate": "ކޮޕީ ހަދާ",
   "tools.database.tableMoveToTrash": "ކުނިފޮށިއަށް ބަދަލުކުރޭ",
+  "tools.database.movedToTrash": "ކުނިފޮށިއަށް ބަދަލުކުރެވިއްޖެ",
+  "tools.database.restore": "އަނބުރާ ގެންނަވާ",
   "tools.database.tableCollapseGroup": "ގްރޫޕް ތިރިކުރޭ",
   "tools.database.tableExpandGroup": "ގްރޫޕް ފުޅާ ކުރޭ",
   "tools.database.calcNone": "އެއްވެސް ނޫން",

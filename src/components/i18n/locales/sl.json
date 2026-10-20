@@ -1031,6 +1031,8 @@
   "tools.database.tableLinkCopied": "Povezava kopirana",
   "tools.database.tableDuplicate": "Podvoji",
   "tools.database.tableMoveToTrash": "Premakni v koš",
+  "tools.database.movedToTrash": "Premaknjeno v koš",
+  "tools.database.restore": "Obnovi",
   "tools.database.tableCollapseGroup": "Strni skupino",
   "tools.database.tableExpandGroup": "Razširi skupino",
   "tools.database.calcNone": "Brez",

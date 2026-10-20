@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "Bağlantı kopyalandı",
   "tools.database.tableDuplicate": "Çoğalt",
   "tools.database.tableMoveToTrash": "Çöp kutusuna taşı",
+  "tools.database.movedToTrash": "Çöp kutusuna taşındı",
+  "tools.database.restore": "Geri yükle",
   "tools.database.tableCollapseGroup": "Grubu daralt",
   "tools.database.tableExpandGroup": "Grubu genişlet",
   "tools.database.calcNone": "Yok",

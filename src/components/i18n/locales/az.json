@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "Keçid kopyalandı",
   "tools.database.tableDuplicate": "Dublikatını çıxar",
   "tools.database.tableMoveToTrash": "Zibil qutusuna köçür",
+  "tools.database.movedToTrash": "Zibil qutusuna köçürüldü",
+  "tools.database.restore": "Bərpa et",
   "tools.database.tableCollapseGroup": "Qrupu yığ",
   "tools.database.tableExpandGroup": "Qrupu aç",
   "tools.database.calcNone": "Heç biri",

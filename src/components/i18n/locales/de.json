@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "Link kopiert",
   "tools.database.tableDuplicate": "Duplizieren",
   "tools.database.tableMoveToTrash": "In den Papierkorb verschieben",
+  "tools.database.movedToTrash": "In den Papierkorb verschoben",
+  "tools.database.restore": "Wiederherstellen",
   "tools.database.tableCollapseGroup": "Gruppe einklappen",
   "tools.database.tableExpandGroup": "Gruppe ausklappen",
   "tools.database.calcNone": "Keine",

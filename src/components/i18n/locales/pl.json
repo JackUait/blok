@@ -1031,6 +1031,8 @@
   "tools.database.tableLinkCopied": "Skopiowano link",
   "tools.database.tableDuplicate": "Duplikuj",
   "tools.database.tableMoveToTrash": "Przenieś do kosza",
+  "tools.database.movedToTrash": "Przeniesiono do kosza",
+  "tools.database.restore": "Przywróć",
   "tools.database.tableCollapseGroup": "Zwiń grupę",
   "tools.database.tableExpandGroup": "Rozwiń grupę",
   "tools.database.calcNone": "Brak",

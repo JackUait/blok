@@ -1030,6 +1030,8 @@
   "tools.database.tableLinkCopied": "Enlace copiado",
   "tools.database.tableDuplicate": "Duplicar",
   "tools.database.tableMoveToTrash": "Mover a la papelera",
+  "tools.database.movedToTrash": "Movido a la papelera",
+  "tools.database.restore": "Restaurar",
   "tools.database.tableCollapseGroup": "Contraer grupo",
   "tools.database.tableExpandGroup": "Expandir grupo",
   "tools.database.calcNone": "Ninguno",

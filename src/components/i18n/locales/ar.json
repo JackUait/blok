@@ -1033,6 +1033,8 @@
   "tools.database.tableLinkCopied": "تم نسخ الرابط",
   "tools.database.tableDuplicate": "تكرار",
   "tools.database.tableMoveToTrash": "نقل إلى سلة المهملات",
+  "tools.database.movedToTrash": "نُقل إلى سلة المهملات",
+  "tools.database.restore": "استعادة",
   "tools.database.tableCollapseGroup": "طي المجموعة",
   "tools.database.tableExpandGroup": "توسيع المجموعة",
   "tools.database.calcNone": "بلا",

@@ -416,6 +416,79 @@ test.describe('gallery', () => {
       await expect(drawer(page)).toHaveCount(0);
     });
 
+    test('Home, End, PageUp and PageDown leave the selection where it is (research/22 §2)', async ({ page }) => {
+      await mount(page, blocks({ type: 'gallery' }));
+      await clickBlank(page);
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+
+      for (const key of ['End', 'Home', 'PageDown', 'PageUp']) {
+        await page.keyboard.press(key);
+        expect(await selectedIds(page)).toEqual(['r2']);
+      }
+    });
+
+    for (const [first, last, title] of [['r3', 'r1', 'Launch'], ['r1', 'r3', 'Someday']]) {
+      test(`Enter with several cards selected opens the last one clicked (${first} then ${last}); the selection is back when the peek closes`, async ({ page }) => {
+        await mount(page, blocks({ type: 'gallery' }));
+        await card(page, first).click({ modifiers: ['ControlOrMeta'] });
+        await card(page, last).click({ modifiers: ['ControlOrMeta'] });
+        await page.keyboard.press('Enter');
+
+        await expect(drawer(page)).toBeVisible();
+        await expect(drawer(page).locator('[data-blok-database-drawer-title]')).toHaveValue(title);
+        await expect(page.locator('[data-blok-database-gallery-card] input')).toHaveCount(0);
+
+        await page.keyboard.press('Escape');
+        await expect(drawer(page)).toHaveCount(0);
+        expect(await selectedIds(page)).toEqual(['r1', 'r3']);
+      });
+    }
+
+    test('Backspace on one selected card trashes it at once with a "Moved to Trash" toast; Restore brings it back with its page', async ({ page }) => {
+      const data = blocks({ type: 'gallery' });
+
+      data[2] = { ...data[2], content: ['b2'] };
+      data.push({ id: 'b2', type: 'paragraph', parent: 'r2', data: { text: 'Trip body' } });
+      await mount(page, data);
+      await clickBlank(page);
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('Backspace');
+
+      await expect(card(page, 'r2')).toHaveCount(0);
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await expect.poll(async () => (await savedRows(page)).map((row) => row.id)).toEqual(['r1', 'r3']);
+
+      const toast = page.getByRole('status').filter({ hasText: 'Moved to Trash' });
+
+      await expect(toast).toBeVisible();
+      await toast.getByRole('button', { name: 'Restore' }).click();
+
+      await expect(card(page, 'r2')).toBeVisible();
+      await expect.poll(async () => (await savedRows(page)).map((row) => row.id)).toEqual(['r1', 'r2', 'r3']);
+      await expect.poll(async () => page.evaluate(async () => {
+        const output = await window.blokInstance?.save();
+
+        return output?.blocks.find((block) => block.id === 'b2')?.parent ?? null;
+      })).toBe('r2');
+
+      // The toast stays until closed; a second Restore must not undo anything else.
+      await toast.getByRole('button', { name: 'Restore' }).click();
+      await expect.poll(async () => (await savedRows(page)).map((row) => row.id)).toEqual(['r1', 'r2', 'r3']);
+    });
+
+    test('Delete on several selected cards trashes them all at once, as before (research/22 §2: unmeasured)', async ({ page }) => {
+      await mount(page, blocks({ type: 'gallery' }));
+      await card(page, 'r1').click({ modifiers: ['ControlOrMeta'] });
+      await card(page, 'r3').click({ modifiers: ['ControlOrMeta'] });
+      await page.keyboard.press('Delete');
+
+      await expect(page.locator('[data-blok-database-gallery-card]')).toHaveCount(1);
+      await expect.poll(async () => (await savedRows(page)).map((row) => row.id)).toEqual(['r2']);
+      await expect(page.getByRole('status').filter({ hasText: 'Moved to Trash' })).toHaveCount(0);
+    });
+
     test('read-only: arrows select nothing', async ({ page }) => {
       await mount(page, blocks({ type: 'gallery' }), true);
       await clickBlank(page);

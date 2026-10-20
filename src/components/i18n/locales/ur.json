@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "لنک کاپی ہو گیا",
   "tools.database.tableDuplicate": "نقل بنائیں",
   "tools.database.tableMoveToTrash": "ردی کی ٹوکری میں منتقل کریں",
+  "tools.database.movedToTrash": "ردی کی ٹوکری میں منتقل کر دیا گیا",
+  "tools.database.restore": "بحال کریں",
   "tools.database.tableCollapseGroup": "گروپ سمیٹیں",
   "tools.database.tableExpandGroup": "گروپ پھیلائیں",
   "tools.database.calcNone": "کوئی نہیں",

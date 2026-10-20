@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "Hivatkozás másolva",
   "tools.database.tableDuplicate": "Megkettőzés",
   "tools.database.tableMoveToTrash": "Áthelyezés a kukába",
+  "tools.database.movedToTrash": "Áthelyezve a kukába",
+  "tools.database.restore": "Visszaállítás",
   "tools.database.tableCollapseGroup": "Csoport összecsukása",
   "tools.database.tableExpandGroup": "Csoport kibontása",
   "tools.database.calcNone": "Nincs",

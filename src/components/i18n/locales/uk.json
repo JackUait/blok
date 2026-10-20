@@ -1031,6 +1031,8 @@
   "tools.database.tableLinkCopied": "Посилання скопійовано",
   "tools.database.tableDuplicate": "Дублювати",
   "tools.database.tableMoveToTrash": "Перемістити в кошик",
+  "tools.database.movedToTrash": "Переміщено в кошик",
+  "tools.database.restore": "Відновити",
   "tools.database.tableCollapseGroup": "Згорнути групу",
   "tools.database.tableExpandGroup": "Розгорнути групу",
   "tools.database.calcNone": "Немає",

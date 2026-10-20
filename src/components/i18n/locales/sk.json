@@ -1031,6 +1031,8 @@
   "tools.database.tableLinkCopied": "Odkaz skopírovaný",
   "tools.database.tableDuplicate": "Duplikovať",
   "tools.database.tableMoveToTrash": "Presunúť do koša",
+  "tools.database.movedToTrash": "Presunuté do koša",
+  "tools.database.restore": "Obnoviť",
   "tools.database.tableCollapseGroup": "Zbaliť skupinu",
   "tools.database.tableExpandGroup": "Rozbaliť skupinu",
   "tools.database.calcNone": "Žiadne",

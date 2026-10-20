@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "リンクをコピーしました",
   "tools.database.tableDuplicate": "複製",
   "tools.database.tableMoveToTrash": "ゴミ箱に移動",
+  "tools.database.movedToTrash": "ゴミ箱に移動しました",
+  "tools.database.restore": "復元",
   "tools.database.tableCollapseGroup": "グループを折りたたむ",
   "tools.database.tableExpandGroup": "グループを展開する",
   "tools.database.calcNone": "なし",

@@ -1031,6 +1031,8 @@
   "tools.database.tableLinkCopied": "Nuoroda nukopijuota",
   "tools.database.tableDuplicate": "Dubliuoti",
   "tools.database.tableMoveToTrash": "Perkelti į šiukšlinę",
+  "tools.database.movedToTrash": "Perkelta į šiukšlinę",
+  "tools.database.restore": "Atkurti",
   "tools.database.tableCollapseGroup": "Sutraukti grupę",
   "tools.database.tableExpandGroup": "Išskleisti grupę",
   "tools.database.calcNone": "Nėra",

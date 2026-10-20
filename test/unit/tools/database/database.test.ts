@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { Mock } from 'vitest';
 import { fireEvent, queryAllByAttribute } from '@testing-library/dom';
 import type { API, BlockAPI, BlockToolConstructorOptions, OutputData } from '../../../../types';
 import type { DatabaseAdapter, DatabaseData, DatabaseConfig, DatabaseRow, DatabaseRowData, DatabaseViewConfig, PropertyDefinition, PropertyValue } from '../../../../src/tools/database/types';
@@ -5639,6 +5640,87 @@ describe('DatabaseTool', () => {
       })).layoutItems()).toEqual([]);
 
       tool.destroy();
+    });
+
+    describe('Delete on selected cards (research/22 §2)', () => {
+      type Toast = { message: string; actions?: Array<{ label: string; onClick: () => void }> };
+
+      const trashTool = (): { tool: DatabaseTool; element: HTMLElement; show: Mock<(options: unknown) => void>; undo: Mock<() => void>; removeRow: () => void } => {
+        const rows = rowsWithDates();
+        const live = { rows };
+        const { tool, element, options } = galleryTool({}, rows);
+        const undo = vi.fn<() => void>(() => {
+          live.rows = rows;
+        });
+
+        vi.mocked(options.api.blocks.getChildren).mockImplementation((parentId: string) => (parentId === 'test-block-id' ? live.rows : []));
+        Object.assign(options.api, { history: { undo, redo: vi.fn() } });
+
+        return {
+          tool,
+          element,
+          show: vi.mocked(options.api.notifier.show) as Mock<(options: unknown) => void>,
+          undo,
+          removeRow: () => {
+            live.rows = rows.slice(1);
+          },
+        };
+      };
+      const select = (element: HTMLElement, rowIds: string[]): void => {
+        rowIds.forEach((rowId) => {
+          queryAllByData(element, 'data-blok-database-gallery-card')
+            .find((card) => card.getAttribute('data-row-id') === rowId)
+            ?.dispatchEvent(new MouseEvent('click', { bubbles: true, metaKey: true }));
+        });
+      };
+      const pressDelete = (key: string): void => {
+        document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+      };
+
+      it('one card: trashes it at once and shows "Moved to Trash" with Restore, which undoes the delete', () => {
+        const { tool, element, show, undo, removeRow } = trashTool();
+
+        select(element, ['row-1']);
+        removeRow();
+        pressDelete('Backspace');
+
+        const toast = show.mock.calls.map(([options]) => options as Toast).find((options) => options.message === 'tools.database.movedToTrash');
+
+        expect(toast?.actions?.map((action) => action.label)).toEqual(['tools.database.restore']);
+        toast?.actions?.[0].onClick();
+        expect(undo).toHaveBeenCalledTimes(1);
+
+        tool.destroy();
+      });
+
+      it('Restore does nothing once the card is back already', () => {
+        const { tool, element, show, undo, removeRow } = trashTool();
+
+        select(element, ['row-1']);
+        removeRow();
+        pressDelete('Delete');
+        undo();
+        undo.mockClear();
+
+        const toast = show.mock.calls.map(([options]) => options as Toast).find((options) => options.message === 'tools.database.movedToTrash');
+
+        toast?.actions?.[0].onClick();
+        expect(toast).toBeDefined();
+        expect(undo).not.toHaveBeenCalled();
+
+        tool.destroy();
+      });
+
+      it('several cards: trashes them all at once, with no toast (unmeasured, kept as it was)', () => {
+        const { tool, element, show } = trashTool();
+
+        select(element, ['row-1', 'row-2']);
+        pressDelete('Delete');
+
+        expect(show.mock.calls.some(([options]) => (options as Toast).message === 'tools.database.movedToTrash')).toBe(false);
+
+        tool.destroy();
+      });
     });
 
     describe('calendar', () => {

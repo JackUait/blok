@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "සබැඳිය පිටපත් කරන ලදී",
   "tools.database.tableDuplicate": "අනුපිටපත",
   "tools.database.tableMoveToTrash": "කුණු බඳුනට ගෙන යන්න",
+  "tools.database.movedToTrash": "කුණු බඳුනට ගෙන ගියා",
+  "tools.database.restore": "ප්‍රතිසාධනය කරන්න",
   "tools.database.tableCollapseGroup": "සමූහය හකුළන්න",
   "tools.database.tableExpandGroup": "සමූහය පුළුල් කරන්න",
   "tools.database.calcNone": "කිසිවක් නැත",

@@ -1030,6 +1030,8 @@
   "tools.database.tableLinkCopied": "Poveznica kopirana",
   "tools.database.tableDuplicate": "Dupliciraj",
   "tools.database.tableMoveToTrash": "Premjesti u smeće",
+  "tools.database.movedToTrash": "Premješteno u smeće",
+  "tools.database.restore": "Vrati",
   "tools.database.tableCollapseGroup": "Sažmi grupu",
   "tools.database.tableExpandGroup": "Proširi grupu",
   "tools.database.calcNone": "Ništa",

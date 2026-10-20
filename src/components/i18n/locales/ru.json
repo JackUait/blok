@@ -1031,6 +1031,8 @@
   "tools.database.tableLinkCopied": "Ссылка скопирована",
   "tools.database.tableDuplicate": "Дублировать",
   "tools.database.tableMoveToTrash": "Переместить в корзину",
+  "tools.database.movedToTrash": "Перемещено в корзину",
+  "tools.database.restore": "Восстановить",
   "tools.database.tableCollapseGroup": "Свернуть группу",
   "tools.database.tableExpandGroup": "Развернуть группу",
   "tools.database.calcNone": "Нет",

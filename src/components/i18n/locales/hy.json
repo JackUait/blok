@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "Հղումը պատճենվեց",
   "tools.database.tableDuplicate": "Կրկնօրինակել",
   "tools.database.tableMoveToTrash": "Տեղափոխել աղբարկղ",
+  "tools.database.movedToTrash": "Տեղափոխվեց աղբարկղ",
+  "tools.database.restore": "Վերականգնել",
   "tools.database.tableCollapseGroup": "Ծալել խումբը",
   "tools.database.tableExpandGroup": "Ծավալել խումբը",
   "tools.database.calcNone": "Ոչ մեկը",

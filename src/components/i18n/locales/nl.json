@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "Link gekopieerd",
   "tools.database.tableDuplicate": "Dupliceren",
   "tools.database.tableMoveToTrash": "Naar prullenbak verplaatsen",
+  "tools.database.movedToTrash": "Naar prullenbak verplaatst",
+  "tools.database.restore": "Herstellen",
   "tools.database.tableCollapseGroup": "Groep inklappen",
   "tools.database.tableExpandGroup": "Groep uitklappen",
   "tools.database.calcNone": "Geen",

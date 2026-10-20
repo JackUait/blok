@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "Kiungo kimenakiliwa",
   "tools.database.tableDuplicate": "Rudufu",
   "tools.database.tableMoveToTrash": "Hamishia kwenye tupio",
+  "tools.database.movedToTrash": "Imehamishiwa kwenye tupio",
+  "tools.database.restore": "Rejesha",
   "tools.database.tableCollapseGroup": "Kunja kikundi",
   "tools.database.tableExpandGroup": "Panua kikundi",
   "tools.database.calcNone": "Hakuna",

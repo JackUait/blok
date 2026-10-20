@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "दुवा कॉपी केला",
   "tools.database.tableDuplicate": "प्रत बनवा",
   "tools.database.tableMoveToTrash": "कचरापेटीत हलवा",
+  "tools.database.movedToTrash": "कचरापेटीत हलवले",
+  "tools.database.restore": "पुनर्संचयित करा",
   "tools.database.tableCollapseGroup": "गट संकुचित करा",
   "tools.database.tableExpandGroup": "गट विस्तृत करा",
   "tools.database.calcNone": "काहीही नाही",

@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "Nakopya ang link",
   "tools.database.tableDuplicate": "Gumawa ng kopya",
   "tools.database.tableMoveToTrash": "Ilipat sa basurahan",
+  "tools.database.movedToTrash": "Inilipat sa basurahan",
+  "tools.database.restore": "Ibalik",
   "tools.database.tableCollapseGroup": "I-collapse ang grupo",
   "tools.database.tableExpandGroup": "I-expand ang grupo",
   "tools.database.calcNone": "Wala",

@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "링크 복사됨",
   "tools.database.tableDuplicate": "복제",
   "tools.database.tableMoveToTrash": "휴지통으로 이동",
+  "tools.database.movedToTrash": "휴지통으로 이동됨",
+  "tools.database.restore": "복원",
   "tools.database.tableCollapseGroup": "그룹 접기",
   "tools.database.tableExpandGroup": "그룹 펼치기",
   "tools.database.calcNone": "없음",

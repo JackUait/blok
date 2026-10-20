@@ -436,7 +436,11 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
       const selected = this.selectedIds();
       const rowId = this.cursor !== null && selected.includes(this.cursor) ? this.cursor : selected[0];
 
-      if (rowId !== undefined && this.startRename(rowId)) {
+      // Several picked: opens the last one clicked (research/22 §2). One: renames it (research/16 §3a).
+      if (selected.length > 1 && rowId !== undefined) {
+        event.preventDefault();
+        this.options.handlers?.openRow(rowId);
+      } else if (rowId !== undefined && this.startRename(rowId)) {
         event.preventDefault();
       }
     }

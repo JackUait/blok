@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "লিঙ্ক কপি হয়েছে",
   "tools.database.tableDuplicate": "প্রতিলিপি",
   "tools.database.tableMoveToTrash": "ট্র্যাশে সরান",
+  "tools.database.movedToTrash": "ট্র্যাশে সরানো হয়েছে",
+  "tools.database.restore": "পুনরুদ্ধার করুন",
   "tools.database.tableCollapseGroup": "গোষ্ঠী সংকুচিত করুন",
   "tools.database.tableExpandGroup": "গোষ্ঠী প্রসারিত করুন",
   "tools.database.calcNone": "কিছু না",

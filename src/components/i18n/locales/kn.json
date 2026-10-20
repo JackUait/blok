@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "ಲಿಂಕ್ ನಕಲಾಗಿದೆ",
   "tools.database.tableDuplicate": "ನಕಲು ಮಾಡಿ",
   "tools.database.tableMoveToTrash": "ಅನುಪಯುಕ್ತಕ್ಕೆ ಸರಿಸಿ",
+  "tools.database.movedToTrash": "ಅನುಪಯುಕ್ತಕ್ಕೆ ಸರಿಸಲಾಗಿದೆ",
+  "tools.database.restore": "ಮರುಸ್ಥಾಪಿಸಿ",
   "tools.database.tableCollapseGroup": "ಗುಂಪನ್ನು ಕುಗ್ಗಿಸಿ",
   "tools.database.tableExpandGroup": "ಗುಂಪನ್ನು ವಿಸ್ತರಿಸಿ",
   "tools.database.calcNone": "ಯಾವುದೂ ಇಲ್ಲ",

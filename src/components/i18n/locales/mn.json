@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "Холбоосыг хуулав",
   "tools.database.tableDuplicate": "Хувилах",
   "tools.database.tableMoveToTrash": "Хогийн сав руу зөөх",
+  "tools.database.movedToTrash": "Хогийн сав руу зөөгдлөө",
+  "tools.database.restore": "Сэргээх",
   "tools.database.tableCollapseGroup": "Бүлгийг эвхэх",
   "tools.database.tableExpandGroup": "Бүлгийг дэлгэх",
   "tools.database.calcNone": "Байхгүй",

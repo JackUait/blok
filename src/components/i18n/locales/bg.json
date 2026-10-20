@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "Връзката е копирана",
   "tools.database.tableDuplicate": "Дублирай",
   "tools.database.tableMoveToTrash": "Премести в кошчето",
+  "tools.database.movedToTrash": "Преместено в кошчето",
+  "tools.database.restore": "Възстанови",
   "tools.database.tableCollapseGroup": "Свий групата",
   "tools.database.tableExpandGroup": "Разгъни групата",
   "tools.database.calcNone": "Няма",

@@ -1029,6 +1029,8 @@
   "tools.database.tableLinkCopied": "Link kopeeriti",
   "tools.database.tableDuplicate": "Dubleeri",
   "tools.database.tableMoveToTrash": "Teisalda prügikasti",
+  "tools.database.movedToTrash": "Teisaldatud prügikasti",
+  "tools.database.restore": "Taasta",
   "tools.database.tableCollapseGroup": "Ahenda rühm",
   "tools.database.tableExpandGroup": "Laienda rühm",
   "tools.database.calcNone": "Puudub",

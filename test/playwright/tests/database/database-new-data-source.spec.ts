@@ -399,19 +399,26 @@ test.describe('database New data source', () => {
     });
   });
 
-  // research/26 §5b.
-  test('picking another source drops a sort that source cannot use', async ({ page }) => {
+  // research/26 §5b, 27 §5: every filter goes; the title sort stays, on the new source's title.
+  test('picking another source drops every filter and keeps only the title sort', async ({ page }) => {
+    const rules = {
+      sorts: [{ id: 's1', propertyId: 'p-title', direction: 'desc' }],
+      filters: [{ id: 'f1', propertyId: 'p-title', operator: 'contains', value: 'zzz' }],
+    };
     const sortedBound = bound.map((block) => (block.id === 'db-1'
-      ? { ...block, data: { ...block.data, activeViewId: 'v0', views: (block.data as { views: Array<Record<string, unknown>> }).views.map((view) => (view.id === 'v0' ? { ...view, sorts: [{ id: 's1', propertyId: 'p-title', direction: 'desc' }] } : view)) } }
+      ? { ...block, data: { ...block.data, activeViewId: 'v0', views: (block.data as { views: Array<Record<string, unknown>> }).views.map((view) => (view.id === 'v0' ? { ...view, ...rules } : view)) } }
       : block));
 
     await mount(page, sortedBound);
     await page.getByTestId('database-toolbar-settings').click();
     await page.getByTestId('database-settings-source').click();
     await page.getByTestId('database-source-option-src-b').click();
+    // "zzz" matches no row: Gamma shows only once the filter is gone.
     await expect(grid(page)).toContainText('Gamma');
-    const views = (await save(page)).find((block) => block.id === 'db-1')?.data as { views: Array<{ id: string; sorts: unknown[] }> };
+    const views = (await save(page)).find((block) => block.id === 'db-1')?.data as { views: Array<{ id: string; sorts: unknown[]; filters: unknown[] }> };
+    const moved = views.views.find((view) => view.id === 'v0');
 
-    expect(views.views.find((view) => view.id === 'v0')?.sorts).toEqual([]);
+    expect(moved?.filters).toEqual([]);
+    expect(moved?.sorts).toEqual([{ id: 's1', propertyId: 'b-title', direction: 'desc' }]);
   });
 });

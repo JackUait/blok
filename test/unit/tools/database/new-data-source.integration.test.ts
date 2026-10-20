@@ -459,9 +459,19 @@ describe('New data source: a view bound to a second source in the same block', (
     expect(JSON.stringify((await dataOf(api, 'db'))?.views.find((v) => v.id === 'vb'))).not.toContain('dataSourceId');
   });
 
-  // research/26 §5b: the sort went blank, and switching back did not bring it back.
-  it('picking another source drops sorts on properties that source lacks; switching back does not restore them', async () => {
-    const sorted = { sorts: [{ id: 's1', propertyId: 'notes', direction: 'asc' as const }], filters: [{ id: 'f1', propertyId: 'notes', operator: 'is_not_empty', value: null }] };
+  // research/26 §5b, 27 §5: every filter goes, only a sort on the title stays, and nothing comes back on the way back.
+  it('picking another source drops every filter and every sort but the title one; switching back restores nothing', async () => {
+    const sorted = {
+      sorts: [
+        { id: 's0', propertyId: 'notes', direction: 'asc' as const },
+        { id: 's1', propertyId: 't', direction: 'desc' as const },
+      ],
+      filters: [
+        { id: 'f1', propertyId: 'notes', operator: 'is_not_empty', value: null },
+        { id: 'f2', propertyId: 't', operator: 'contains', value: 'a' },
+      ],
+      filterTree: { id: 'tree', conjunction: 'and' as const, filterRules: [{ id: 'r1', propertyId: 't', operator: 'contains', value: 'b' }] },
+    };
     const api = await make(doc('v1', { views: [table('v1', 'a0', sorted), table('vb', 'a1', { dataSourceId: 'src-b' })] }));
 
     await openSourcePicker();
@@ -469,26 +479,35 @@ describe('New data source: a view bound to a second source in the same block', (
     await quiet();
     const moved = (await dataOf(api, 'db'))?.views.find((v) => v.id === 'v1');
 
-    expect(moved?.sorts).toEqual([]);
-    // Filters on a switch are UNMEASURED: they stay.
-    expect(moved?.filters.map((f) => f.id)).toEqual(['f1']);
+    expect(moved?.filters).toEqual([]);
+    expect(moved?.filterTree?.filterRules ?? []).toEqual([]);
+    // The title sort now names the new source's title.
+    expect(moved?.sorts).toEqual([{ id: 's1', propertyId: 'bt', direction: 'desc' }]);
+    expect(shownArea().textContent).toContain('Source row');
 
     await openSourcePicker();
     byTestId('database-source-option-db')?.click();
     await quiet();
+    const back = (await dataOf(api, 'db'))?.views.find((v) => v.id === 'v1');
 
-    expect((await dataOf(api, 'db'))?.views.find((v) => v.id === 'v1')?.sorts).toEqual([]);
+    expect(back?.filters).toEqual([]);
+    expect(back?.sorts).toEqual([{ id: 's1', propertyId: 't', direction: 'desc' }]);
   });
 
-  it('picking another source keeps a sort on a property that source has', async () => {
-    const sorted = { sorts: [{ id: 's1', propertyId: 'size', direction: 'desc' as const }, { id: 's2', propertyId: 'notes', direction: 'asc' as const }] };
-    const api = await make(doc('v1', { views: [table('v1', 'a0', sorted), table('vb', 'a1', { dataSourceId: 'src-b' })] }));
+  // research/27 §5: a sort on a property with the same name and type in both sources goes too.
+  it('picking another source drops a sort on a property both sources have', async () => {
+    const sorted = { sorts: [{ id: 's1', propertyId: 'size', direction: 'desc' as const }] };
+    const shared: PropertyDefinition = { id: 'size', name: 'Size', type: 'number', position: 'a2' };
+    const api = await make(doc('v1', {
+      schema: [...parentSchema, shared],
+      views: [table('v1', 'a0', sorted), table('vb', 'a1', { dataSourceId: 'src-b' })],
+    }));
 
     await openSourcePicker();
     byTestId('database-source-option-src-b')?.click();
     await quiet();
 
-    expect((await dataOf(api, 'db'))?.views.find((v) => v.id === 'v1')?.sorts.map((s) => s.id)).toEqual(['s1']);
+    expect((await dataOf(api, 'db'))?.views.find((v) => v.id === 'v1')?.sorts).toEqual([]);
   });
 
   it('the search narrows the sources by name', async () => {

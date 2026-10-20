@@ -4274,21 +4274,25 @@ export class DatabaseTool implements BlockTool {
 
   /**
    * View settings "Source": the view shows another source of this block.
-   * Sorts on properties the new source lacks go and do not come back
-   * (research/26 §5b). Filters are UNMEASURED: they stay, and ids the new
-   * schema lacks match nothing.
+   * Every filter goes, and every sort but one on the title, which moves to
+   * the new source's title (research/26 §5b, 27 §5). Nothing comes back.
    */
   private pickDataSource(id: string): void {
     const view = this.model.getView(this.activeViewId);
     const choice = [...this.dataSourceChoices(), ...this.existingSources()].find((option) => option.id === id);
+    const from = this.activeSource();
 
-    if (view === undefined || choice === undefined || !choice.fits || id === this.activeSource().dataId) return;
-    const schema = (id === this.dataId ? this : this.dashboardOwner(id))?.model.getSchema() ?? [];
-    const sorts = view.sorts.filter((sort) => schema.some((p) => p.id === sort.propertyId));
+    if (view === undefined || choice === undefined || !choice.fits || id === from.dataId) return;
+    const titleOf = (tool: DatabaseTool | undefined): string | undefined => tool?.model.getSchema().find((p) => p.type === 'title')?.id;
+    const oldTitle = titleOf(from);
+    const newTitle = titleOf(id === this.dataId ? this : this.dashboardOwner(id));
+    const sorts = newTitle === undefined ? [] : view.sorts.filter((sort) => sort.propertyId === oldTitle).map((sort) => ({ ...sort, propertyId: newTitle }));
 
     this.updateActiveView({
       dataSourceId: id === this.dataId ? undefined : id,
-      ...(sorts.length === view.sorts.length ? {} : { sorts }),
+      sorts,
+      filters: [],
+      ...(view.filterTree === undefined ? {} : { filterTree: { ...view.filterTree, filterRules: [] } }),
     });
     this.paintLinkedTitle();
     this.controls.refresh();

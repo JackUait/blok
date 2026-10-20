@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Core } from '../../../../src/components/core';
 import { destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { Paragraph } from '../../../../src/tools/paragraph';
-import { Toggle } from '../../../../src/tools';
+import { Column, ColumnList, Toggle } from '../../../../src/tools';
 import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import type { DatabasePermissionAction, DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
@@ -44,6 +44,8 @@ const boot = async (denied: DatabasePermissionAction[], locked = false, blocks =
     tools: {
       paragraph: Paragraph,
       toggle: Toggle,
+      column_list: ColumnList,
+      column: Column,
       database: { class: DatabaseTool, config: { permissions: { can: (action: DatabasePermissionAction) => !denied.includes(action) } } },
       'database-row': DatabaseRowTool,
     },
@@ -95,20 +97,28 @@ const destroyCore = async (instance: Core): Promise<void> => {
   await Promise.all(modules.filter(hasDestroy).map((module) => module.destroy()));
 };
 
-const run = async (instance: Core, batch: AgentBatch): Promise<string | null> => {
+/** Each batch's error code, or null when it wrote. All batches run in one turn. */
+const runAll = async (instance: Core, batches: AgentBatch[]): Promise<Array<string | null>> => {
   const agent = instance.moduleInstances.API.methods.agent;
 
   if (agent === undefined) throw new Error('agent API is missing');
   const turn = agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+  const codes: Array<string | null> = [];
 
   try {
-    const result = await turn.execute(batch);
+    for (const batch of batches) {
+      const result = await turn.execute(batch);
 
-    return result.ok ? null : result.error.code;
+      codes.push(result.ok ? null : result.error.code);
+    }
+
+    return codes;
   } finally {
     turn.end();
   }
 };
+
+const run = async (instance: Core, batch: AgentBatch): Promise<string | null> => (await runAll(instance, [batch]))[0] ?? null;
 
 const ids = async (instance: Core): Promise<string[]> =>
   (await instance.moduleInstances.Saver.save())?.blocks.map((saved) => saved.id ?? '') ?? [];
@@ -180,26 +190,67 @@ describe('database permissions reach core block actions', () => {
     it('the agent cannot delete the database, edit a row or edit a row body block', async () => {
       const instance = await boot(['editContent']);
 
-      expect(await run(instance, { commands: [{ name: 'block.delete', args: { id: 'db' } }] })).toBe('READ_ONLY');
-      expect(await run(instance, { commands: [{ name: 'block.update', args: { id: 'body1', data: { text: 'agent' } } }] })).toBe('READ_ONLY');
-      expect(await run(instance, { commands: [{ name: 'block.insert', args: { type: 'paragraph', data: { text: 'x' }, parentId: 'r1', position: 'end' } }] })).toBe('READ_ONLY');
+      expect(await run(instance, { commands: [{ name: 'block.delete', args: { id: 'db' } }] })).toBe('PRECONDITION_FAILED');
+      expect(await run(instance, { commands: [{ name: 'block.update', args: { id: 'body1', data: { text: 'agent' } } }] })).toBe('PRECONDITION_FAILED');
+      expect(await run(instance, { commands: [{ name: 'block.insert', args: { type: 'paragraph', data: { text: 'x' }, parentId: 'r1', position: 'end' } }] })).toBe('PRECONDITION_FAILED');
+      expect(await run(instance, { commands: [{ name: 'database.addRow', args: { id: 'db', values: { t: 'Agent row' } } }] })).toBe('PRECONDITION_FAILED');
       expect(await ids(instance)).toEqual(expect.arrayContaining(['db', 'r1', 'body1']));
     });
 
-    it('deleting a block that holds the database keeps it, by selection or by the agent', async () => {
-      const nested: OutputBlockData[] = [
-        { id: 'tg', type: 'toggle', data: { text: 'holder' }, content: ['db'] },
-        ...doc().filter((b) => b.id !== 'p0').map((b) => b.id === 'db' ? { ...b, parent: 'tg' } : b),
-      ];
-      const instance = await boot(['editContent'], false, nested);
+    /** A column list whose delete takes its columns and their blocks along (deletesChildren). */
+    const inColumns = (): OutputBlockData[] => [
+      { id: 'p0', type: 'paragraph', data: { text: 'before' } },
+      { id: 'cl', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+      { id: 'c1', type: 'column', data: {}, parent: 'cl', content: ['db'] },
+      ...doc().filter((b) => b.id !== 'p0').map((b) => b.id === 'db' ? { ...b, parent: 'c1' } : b),
+      { id: 'c2', type: 'column', data: {}, parent: 'cl', content: ['q'] },
+      { id: 'q', type: 'paragraph', parent: 'c2', data: { text: 'side' } },
+    ];
+
+    it('the agent cannot delete a block that would take the database along', async () => {
+      const instance = await boot(['editContent'], false, inColumns());
+
+      expect(await run(instance, { commands: [{ name: 'block.delete', args: { id: 'cl' } }] })).toBe('PRECONDITION_FAILED');
+      expect(await ids(instance)).toEqual(expect.arrayContaining(['cl', 'c1', 'db', 'r1', 'body1']));
+    });
+
+    it('a selection delete keeps a block that would take the database along', async () => {
+      const instance = await boot(['editContent'], false, inColumns());
       const { BlockSelection, BlockManager } = instance.moduleInstances;
 
-      expect(await run(instance, { commands: [{ name: 'block.delete', args: { id: 'tg' } }] })).toBe('READ_ONLY');
-      BlockSelection.selectBlock(block(instance, 'tg'));
+      BlockSelection.selectBlock(block(instance, 'cl'));
       BlockManager.deleteSelectedBlocksAndInsertReplacement();
       await quiet();
 
-      expect(await ids(instance)).toEqual(expect.arrayContaining(['tg', 'db', 'r1', 'body1']));
+      expect(await ids(instance)).toEqual(expect.arrayContaining(['cl', 'c1', 'db', 'r1', 'body1']));
+    });
+
+    it('the agent cannot move a block that holds the database', async () => {
+      const instance = await boot(['editContent'], false, inColumns());
+
+      expect(await run(instance, { commands: [{ name: 'block.move', args: { id: 'cl', position: 'start' } }] })).toBe('PRECONDITION_FAILED');
+      expect((await ids(instance))[0]).toBe('p0');
+    });
+
+    it('one plan cannot move a block into the database and then edit it', async () => {
+      const instance = await boot(['editContent']);
+
+      expect(await run(instance, { commands: [
+        { name: 'block.move', args: { id: 'p0', parentId: 'r1', position: 'end' } },
+        { name: 'block.update', args: { id: 'p0', data: { text: 'agent' } } },
+      ] })).toBe('PRECONDITION_FAILED');
+      expect(block(instance, 'p0').parentId).toBeNull();
+    });
+
+    it('one plan cannot insert a block and then move it into the database', async () => {
+      const instance = await boot(['editContent']);
+
+      expect(await run(instance, { commands: [
+        { name: 'block.insert', args: { type: 'paragraph', data: { text: 'new' }, position: 'end' }, ref: 'fresh' },
+        { name: 'block.move', args: { id: '$fresh', parentId: 'r1', position: 'end' } },
+        { name: 'block.update', args: { id: '$fresh', data: { text: 'agent' } } },
+      ] })).toBe('PRECONDITION_FAILED');
+      expect(block(instance, 'r1').contentIds).toEqual(['body1']);
     });
 
     it('Cmd+D does not duplicate the database', async () => {
@@ -244,10 +295,13 @@ describe('database permissions reach core block actions', () => {
       cleanup();
     });
 
-    it('the agent can still edit blocks outside the database', async () => {
+    it('in the same turn, a refused batch does not stop edits outside the database', async () => {
       const instance = await boot(['editContent']);
 
-      expect(await run(instance, { commands: [{ name: 'block.update', args: { id: 'p0', data: { text: 'agent' } } }] })).toBeNull();
+      expect(await runAll(instance, [
+        { commands: [{ name: 'block.delete', args: { id: 'db' } }] },
+        { commands: [{ name: 'block.update', args: { id: 'p0', data: { text: 'agent' } } }] },
+      ])).toEqual(['PRECONDITION_FAILED', null]);
     });
 
     it('the host API still writes rows: the host owns both the gate and the API', async () => {
@@ -314,6 +368,14 @@ describe('database permissions reach core block actions', () => {
 
       expect(denied).toEqual(locked);
       expect(denied).toContain('delete');
+    });
+
+    it('the agent cannot add a property or a view, like on a locked database', async () => {
+      const instance = await boot(['editStructure']);
+
+      expect(await run(instance, { commands: [{ name: 'database.addProperty', args: { id: 'db', name: 'Size', type: 'number' } }] })).toBe('PRECONDITION_FAILED');
+      expect(await run(instance, { commands: [{ name: 'database.addView', args: { id: 'db', type: 'board' } }] })).toBe('PRECONDITION_FAILED');
+      expect(await run(instance, { commands: [{ name: 'database.addRow', args: { id: 'db', values: { t: 'Agent row' } } }] })).toBeNull();
     });
 
     it('the agent can still edit a row body block', async () => {

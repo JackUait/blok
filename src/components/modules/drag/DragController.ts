@@ -30,7 +30,7 @@ import { acceptsChildren } from '../../utils/child-tools';
 import { findOwn } from '../../utils/own-element';
 import { linkToBlock } from '../../utils/copy-as-link';
 import { isPagePointer } from '../../../shared/page-pointer';
-import { isBlockReadOnly } from '../../utils/read-only-blocks';
+import { carriesReadOnly } from '../../utils/read-only-blocks';
 import {
   areSourceRootsChildrenOf,
   isCollapsedToggleBlock,
@@ -1571,9 +1571,9 @@ export class DragController extends Module {
    * @param block - the block the shortcut fired on (or a selected block)
    * @returns the duplicated blocks (empty when nothing was duplicated)
    */
-  /** A block that acts read-only (BlockTool.isReadOnly) is never dragged or duplicated, like in a read-only editor. */
+  /** A block that acts read-only (BlockTool.isReadOnly), or holds one, is never dragged or duplicated, like in a read-only editor. */
   private anyReadOnly(blocks: Block[]): boolean {
-    return blocks.some((member) => isBlockReadOnly(member, (id) => this.Blok.BlockManager.getBlockById(id)));
+    return blocks.some((member) => carriesReadOnly(member, (id) => this.Blok.BlockManager.getBlockById(id)));
   }
 
   public async duplicateBlocksInPlace(block: Block): Promise<Block[]> {

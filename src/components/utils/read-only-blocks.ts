@@ -31,10 +31,10 @@ const holdsReadOnly = (block: Block | undefined, getById: Lookup, seen: Set<stri
   });
 
 /**
- * Whether deleting a block would take a read-only block with it: the block
- * itself, a block above it, or any block below it.
- * @param block - the block to delete
+ * Whether deleting, moving or copying a block would take a read-only block
+ * with it: the block itself, a block above it, or any block below it.
+ * @param block - the block to delete, move or copy
  * @param getById - looks up a block by id
  */
-export const removalTouchesReadOnly = (block: Block | undefined, getById: Lookup): boolean =>
+export const carriesReadOnly = (block: Block | undefined, getById: Lookup): boolean =>
   isBlockReadOnly(block, getById) || holdsReadOnly(block, getById, new Set());

@@ -1040,11 +1040,23 @@ export class Block extends EventsDispatcher<BlockEvents> {
 
   /** The tool's own read-only answer (BlockTool.isReadOnly). Ancestors are not asked here. */
   public get toolReadOnly(): boolean {
-    if (!isFunction(this.toolInstance.isReadOnly)) {
+    return this.askTool('isReadOnly');
+  }
+
+  /** The tool's answer for its own data only (BlockTool.isDataReadOnly). */
+  public get toolDataReadOnly(): boolean {
+    return this.askTool('isDataReadOnly');
+  }
+
+  /** A missing answer is false, a throw is true. */
+  private askTool(method: 'isReadOnly' | 'isDataReadOnly'): boolean {
+    const answer = this.toolInstance[method];
+
+    if (!isFunction(answer)) {
       return false;
     }
     try {
-      return this.toolInstance.isReadOnly();
+      return answer.call(this.toolInstance);
     } catch {
       return true;
     }

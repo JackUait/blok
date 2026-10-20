@@ -42,7 +42,7 @@ import { BlockRepository } from './repository';
 import { BlockShortcuts } from './shortcuts';
 import type { BlocksStore, BlockMutationEventDetailWithoutTarget, ComposeBlockOptions, DerivedSource, InsertBlockOptions, InsertInsideParentOptions } from './types';
 import { BlockYjsSync } from './yjs-sync';
-import { removalTouchesReadOnly } from '../../utils/read-only-blocks';
+import { carriesReadOnly } from '../../utils/read-only-blocks';
 import { captureDataKeySnapshot, type DataKeySnapshot } from '../yjs/document-store';
 
 type BlocksStoreProxy = BlocksStore & {
@@ -1079,7 +1079,7 @@ export class BlockManager extends Module {
     // followers (Notion deletes a Tab-nested parent together with its children),
     // then attach indices sorted descending for safe removal.
     const expandedBlocks = this.withFlatIndentFollowers(this.blocks.filter((block) => block.selected))
-      .filter((block) => !removalTouchesReadOnly(block, (id) => this.getBlockById(id)));
+      .filter((block) => !carriesReadOnly(block, (id) => this.getBlockById(id)));
     const selectedBlockEntries = expandedBlocks
       .map((block) => ({ block, index: this.blocks.indexOf(block) }))
       .sort((a, b) => b.index - a.index);

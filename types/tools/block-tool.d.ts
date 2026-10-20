@@ -155,6 +155,15 @@ export interface BlockTool extends BaseTool {
    * Asked on each gesture, so it may change at any time. A throw counts as true.
    */
   isReadOnly?(): boolean;
+
+  /**
+   * True when only this block's own data is frozen: its children stay open.
+   * For example a database whose host denies editing its structure, while
+   * its rows stay editable. Agent writes to this block's data or type fail
+   * with `PRECONDITION_FAILED`; inserts under it still work. Direct
+   * `api.blocks` calls still write. A throw counts as true.
+   */
+  isDataReadOnly?(): boolean;
 }
 
 /**

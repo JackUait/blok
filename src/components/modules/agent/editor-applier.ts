@@ -14,7 +14,7 @@ import { adjustCaretOffset, captureCaretAcrossRewrite } from '../blockManager/re
 import { readCaretPosition, resolveCaretRange } from '../collaboration/caret-position';
 import type { CaretHistoryEntry } from '../yjs/types';
 import { createRevisionCounter, editorSnapshot } from './editor-snapshot';
-import { isBlockReadOnly, removalTouchesReadOnly } from '../../utils/read-only-blocks';
+import { isBlockReadOnly, carriesReadOnly } from '../../utils/read-only-blocks';
 
 // A peer edit can make the rollback refuse. Partial writes stay, so the
 // error must not promise an unchanged document (no retryable code).
@@ -122,8 +122,6 @@ export class EditorApplier implements AgentApplier {
     if (plan.edits.length === 0) {
       return;
     }
-    // Before any write, so a refused plan leaves nothing to roll back.
-    this.refuseReadOnlyTargets(plan.edits);
 
     const { BlockManager, YjsManager } = this.Blok;
     const tag = { actorId: this.options.actor.id, sessionId: this.options.sessionId };
@@ -171,31 +169,40 @@ export class EditorApplier implements AgentApplier {
     }
   }
 
-  /** Agent writes stop at a block that acts read-only (BlockTool.isReadOnly), and a delete at one it would take along. */
-  private refuseReadOnlyTargets(edits: readonly Edit[]): void {
+  /**
+   * Agent writes stop at a block that acts read-only (BlockTool.isReadOnly).
+   * A delete, a type change or a move also stops when it would carry one along.
+   * A block whose own data is frozen (BlockTool.isDataReadOnly) takes no data or type write.
+   */
+  private refuseReadOnlyTarget(edit: Edit): void {
+    if (edit.op === 'setPageField') {
+      return;
+    }
     const getById = (id: string): Block | undefined => this.Blok.BlockManager.getBlockById(id);
-    const checks = (edit: Exclude<Edit, { op: 'setPageField' }>): Array<[string | null, typeof isBlockReadOnly]> => {
+    const inside = (id: string | null): boolean => id !== null && isBlockReadOnly(getById(id), getById);
+    const carried = (id: string): boolean => carriesReadOnly(getById(id), getById);
+    const locked = ((): string | null | undefined => {
       switch (edit.op) {
         case 'insert':
-          return [[edit.parentId, isBlockReadOnly]];
+          return inside(edit.parentId) ? edit.parentId : undefined;
         case 'move':
-          return [[edit.id, isBlockReadOnly], [edit.parentId, isBlockReadOnly]];
+          if (carried(edit.id)) return edit.id;
+
+          return inside(edit.parentId) ? edit.parentId : undefined;
         case 'remove':
+          return carried(edit.id) ? edit.id : undefined;
         case 'replaceType':
-          return [[edit.id, removalTouchesReadOnly]];
+          return carried(edit.id) || getById(edit.id)?.toolDataReadOnly === true ? edit.id : undefined;
         case 'setData':
         case 'setRichText':
+          return inside(edit.id) || getById(edit.id)?.toolDataReadOnly === true ? edit.id : undefined;
         case 'setTunes':
-          return [[edit.id, isBlockReadOnly]];
+          return inside(edit.id) ? edit.id : undefined;
       }
-    };
-    const locked = edits
-      .filter((edit): edit is Exclude<Edit, { op: 'setPageField' }> => edit.op !== 'setPageField')
-      .flatMap(checks)
-      .find(([id, check]) => id !== null && check(getById(id), getById));
+    })();
 
-    if (locked !== undefined) {
-      throw failure('READ_ONLY', `Block "${locked[0] ?? ''}" is read-only here. Reads still work.`);
+    if (locked !== undefined && locked !== null) {
+      throw failure('PRECONDITION_FAILED', `Block "${locked}" is read-only here: the host does not allow editing it. Other blocks can still change.`);
     }
   }
 
@@ -224,6 +231,8 @@ export class EditorApplier implements AgentApplier {
         (edit.op === 'insert' || edit.op === 'move') && edit.parentId !== null ? [edit.parentId] : []));
 
       for (const edit of plan.edits) {
+        // Checked live, edit by edit: an earlier edit can move a block into or out of a read-only subtree.
+        this.refuseReadOnlyTarget(edit);
         await this.applyOne(edit, filled);
       }
 

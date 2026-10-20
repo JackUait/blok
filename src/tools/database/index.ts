@@ -1148,6 +1148,11 @@ export class DatabaseTool implements BlockTool {
     return !this.permits('editContent');
   }
 
+  /** Without editStructure the database block's own data (schema, views, title) is frozen; its rows are not. */
+  isDataReadOnly(): boolean {
+    return !this.permits('editStructure');
+  }
+
   /** The host's comments for a row or a cell, else the built-in ones, unless permissions deny `comment`. */
   private commentLever(): { comment?: (rowId: string, propertyId: string | undefined, anchor: HTMLElement) => void; commentBadges?: CommentBadges } {
     const comments = this.config.comments;

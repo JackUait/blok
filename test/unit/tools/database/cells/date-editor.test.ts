@@ -229,6 +229,22 @@ describe('date cell editor', () => {
       expect(ctx.onCommit).toHaveBeenLastCalledWith('2026-10-10T14:30');
     });
 
+    // research/23 §1: with Include time on, the calendar's "Today" reads "Now".
+    it('with a time, Today reads Now and sets the current time', () => {
+      const dict = en as Record<string, string>;
+      const ctx = openDate('2025-05-01T14:30', { i18n: { t: (key: string) => dict[key] ?? key } });
+      const button = q('[data-blok-database-date-today]');
+
+      expect(button.textContent).toBe('Now');
+      button.click();
+
+      expect(ctx.onCommit).toHaveBeenLastCalledWith('2026-10-09T10:30');
+      expect(monthLabel()).toBe('October 2026');
+      expect(q<HTMLInputElement>('[data-blok-database-date-time="start"]').value).toBe('10:30');
+      q('[data-blok-database-date-time-toggle]').click();
+      expect(q('[data-blok-database-date-today]').textContent).toBe('Today');
+    });
+
     it('turning Include time off drops the time', () => {
       const ctx = openDate('2026-10-09T14:30');
 
@@ -538,7 +554,7 @@ describe('date cell editor', () => {
 
       expect(q<HTMLInputElement>('[data-blok-database-date-time="start"]').value).toBe('2:00 PM');
       setting('timeFormat').click();
-      expect(menuLabels()).toEqual(['12 hour', '24 hour', 'Hidden']);
+      expect(menuLabels()).toEqual(['Hidden', '12 hour', '24 hour']);
       pick('24 hour');
 
       expect(ctx.onDateDisplayChange).toHaveBeenCalledWith({ timeFormat: '24_hour' });
@@ -554,20 +570,109 @@ describe('date cell editor', () => {
       expect(text(setting('timeFormat'))).toBe('Time format24 hour');
     });
 
-    it('Time zone starts with your zone; a zone pick stores it, your zone removes it', () => {
-      const ctx = openRows('2026-10-09T14:00', { timeZone: 'Europe/Berlin' });
+    describe('Time zone menu (research/23 §1)', () => {
+      const localZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const zoneMenu = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-blok-database-date-setting-menu="timeZone"]');
+      const search = (): HTMLInputElement => {
+        const el = zoneMenu()?.querySelector<HTMLInputElement>('[data-blok-database-date-zone-search]');
 
-      expect(text(setting('timeZone'))).toBe('Time zoneEurope/Berlin');
-      setting('timeZone').click();
-      expect(menuLabels()[0]).toBe('Your time zone');
-      expect(menuLabels()).toContain('Asia/Tokyo');
-      expect(checked()).toEqual(['Europe/Berlin']);
-      pick('Asia/Tokyo');
-      expect(ctx.onDateDisplayChange).toHaveBeenLastCalledWith({ timeZone: 'Asia/Tokyo' });
-      setting('timeZone').click();
-      pick('Your time zone');
-      expect(ctx.onDateDisplayChange).toHaveBeenLastCalledWith({ timeZone: null });
-      expect(text(setting('timeZone'))).toBe('Time zoneYour time zone');
+        if (el === null || el === undefined) {
+          throw new Error('missing zone search');
+        }
+
+        return el;
+      };
+      const zoneRow = (id: string): HTMLElement | null => zoneMenu()?.querySelector<HTMLElement>(`[data-blok-database-date-setting-option="${id}"]`) ?? null;
+      const headings = (): string[] => [...(zoneMenu()?.querySelectorAll('[data-blok-database-date-zone-heading]') ?? [])].map((h) => text(h));
+      const active = (): string | null => zoneMenu()?.querySelector('[data-active]')?.getAttribute('data-blok-database-date-setting-option') ?? null;
+      const selected = (): string[] => [...(zoneMenu()?.querySelectorAll('[aria-selected="true"]') ?? [])]
+        .map((row) => row.getAttribute('data-blok-database-date-setting-option') ?? '');
+
+      it('opens with a focused search field, the current timezone pinned on top, then every other zone', () => {
+        openRows('2026-10-09T14:00');
+        setting('timeZone').click();
+
+        expect(search()).toHaveFocus();
+        expect(search().placeholder).toBe('Search cities, timezones…');
+        expect(headings()).toEqual(['Current timezone', 'Select a timezone']);
+        expect(selected()).toEqual(['local']);
+        expect(text(zoneRow('local')?.querySelector('[data-blok-database-date-zone-city]'))).toBe(localZone.split('/').pop()?.replace(/_/g, ' '));
+        expect(zoneRow(localZone)).toBeNull();
+        expect(zoneRow('Asia/Tokyo')).not.toBeNull();
+      });
+
+      it('each zone row has the city on the first line and its GMT offset on the second', () => {
+        openRows('2026-10-09T14:00');
+        setting('timeZone').click();
+
+        expect(text(zoneRow('Asia/Tokyo')?.querySelector('[data-blok-database-date-zone-city]'))).toBe('Tokyo');
+        expect(text(zoneRow('Asia/Tokyo')?.querySelector('[data-blok-database-date-zone-offset]'))).toBe('GMT+9:00');
+        expect(text(zoneRow('Asia/Colombo')?.querySelector('[data-blok-database-date-zone-offset]'))).toBe('GMT+5:30');
+        expect(text(zoneRow('America/Los_Angeles')?.querySelector('[data-blok-database-date-zone-city]'))).toBe('Los Angeles');
+      });
+
+      it('the stored zone carries the check; picking a zone stores it, the current timezone removes it', () => {
+        const ctx = openRows('2026-10-09T14:00', { timeZone: 'Asia/Tokyo' });
+
+        setting('timeZone').click();
+        expect(selected()).toEqual(['Asia/Tokyo']);
+        expect(zoneRow('Asia/Tokyo')?.querySelector('[data-blok-database-date-remind-check] svg')).not.toBeNull();
+        zoneRow('Europe/Paris')?.click();
+        expect(ctx.onDateDisplayChange).toHaveBeenLastCalledWith({ timeZone: 'Europe/Paris' });
+        expect(zoneMenu()).toBeNull();
+        setting('timeZone').click();
+        zoneRow('local')?.click();
+        expect(ctx.onDateDisplayChange).toHaveBeenLastCalledWith({ timeZone: null });
+        expect(text(setting('timeZone'))).toBe('Time zoneYour time zone');
+      });
+
+      it('typing filters by city, and "No results" shows when nothing matches', () => {
+        openRows('2026-10-09T14:00');
+        setting('timeZone').click();
+        typeInto(search(), 'tokyo');
+
+        expect(zoneRow('Asia/Tokyo')).not.toBeNull();
+        expect(zoneRow('Europe/Paris')).toBeNull();
+        typeInto(search(), 'zzqx');
+        expect(zoneMenu()?.querySelectorAll('[data-blok-database-date-setting-option]')).toHaveLength(0);
+        expect(text(zoneMenu()?.querySelector('[data-blok-database-date-zone-empty]'))).toBe('No results');
+      });
+
+      it('arrows move through the list while focus stays in the search, and Enter picks', () => {
+        const ctx = openRows('2026-10-09T14:00');
+
+        setting('timeZone').click();
+        typeInto(search(), 'tokyo');
+        expect(active()).toBe('Asia/Tokyo');
+        press(search(), 'ArrowDown');
+        press(search(), 'ArrowUp');
+        expect(active()).toBe('Asia/Tokyo');
+        expect(search()).toHaveFocus();
+        expect(search().getAttribute('aria-activedescendant')).toBe(zoneMenu()?.querySelector('[data-active]')?.id);
+        press(search(), 'Enter');
+
+        expect(ctx.onDateDisplayChange).toHaveBeenLastCalledWith({ timeZone: 'Asia/Tokyo' });
+        expect(zoneMenu()).toBeNull();
+      });
+
+      it('ArrowDown from the search starts on the current timezone', () => {
+        openRows('2026-10-09T14:00');
+        setting('timeZone').click();
+        press(search(), 'ArrowDown');
+
+        expect(active()).toBe('local');
+      });
+
+      it('Escape in the search closes only the menu', () => {
+        const ctx = openRows('2026-10-09T14:00');
+
+        setting('timeZone').click();
+        press(search(), 'Escape');
+
+        expect(zoneMenu()).toBeNull();
+        expect(ctx.onClose).not.toHaveBeenCalled();
+        expect(setting('timeZone')).toHaveFocus();
+      });
     });
 
     it('Escape closes the format menu first, then the picker', () => {

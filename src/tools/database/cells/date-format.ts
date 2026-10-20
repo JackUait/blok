@@ -136,13 +136,22 @@ const formatDay = (part: string, locale: string, display: DateDisplay, now: Date
     case 'month_day_year': return [pad(month), pad(day), String(year)].join('/');
     case 'day_month_year': return [pad(day), pad(month), String(year)].join('/');
     case 'year_month_day': return [String(year), pad(month), pad(day)].join('/');
+    // research/23 §1: "Oct 20" for this year. Another year was not measured; it keeps the year.
     case 'short':
-      return new Intl.DateTimeFormat(locale, { year: 'numeric', month: '2-digit', day: '2-digit', ...zoneOption(part, display.timeZone) }).format(toLocalDate(part));
+      return new Intl.DateTimeFormat(locale, {
+        month: 'short',
+        day: 'numeric',
+        ...(year === now.getFullYear() ? {} : { year: 'numeric' }),
+        ...zoneOption(part, display.timeZone),
+      }).format(toLocalDate(part));
     case 'relative': {
       const diff = Math.round((Date.UTC(year, month - 1, day) - Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) / DAY_MS);
 
       if (Math.abs(diff) <= RELATIVE_DAY_LIMIT) {
-        return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(diff, 'day');
+        const text = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(diff, 'day');
+
+        // research/23 §1: Notion writes "Today".
+        return text.charAt(0).toLocaleUpperCase(locale) + text.slice(1);
       }
 
       return formatDay(part, locale, { ...display, dateFormat: 'full' }, now);
@@ -157,7 +166,7 @@ export const HOUR_CYCLES: Partial<Record<string, 'h12' | 'h23'>> = { '12_hour': 
 
 /** The choices of Date format and Time format, shared by the property menu and the date picker. */
 export const DATE_FORMATS: readonly DateFormat[] = ['full', 'short', 'month_day_year', 'day_month_year', 'year_month_day', 'relative'];
-export const TIME_FORMATS: readonly TimeFormat[] = ['12_hour', '24_hour', 'hidden'];
+export const TIME_FORMATS: readonly TimeFormat[] = ['hidden', '12_hour', '24_hour'];
 
 export const timeZones = (): string[] => {
   const intl = Intl as typeof Intl & { supportedValuesOf?: (key: 'timeZone') => string[] };
@@ -190,12 +199,17 @@ const formatPart = (part: string, locale: string, display: DateDisplay, now: Dat
   }
 
   const cycle = (display.timeFormat !== undefined ? HOUR_CYCLES[display.timeFormat] : undefined) ?? hourCycle;
-  const time = new Intl.DateTimeFormat(locale, {
+  const formatter = new Intl.DateTimeFormat(locale, {
     hour: 'numeric',
     minute: '2-digit',
     ...(cycle !== undefined ? { hourCycle: cycle } : {}),
     ...zoneOption(part, display.timeZone),
-  }).format(toLocalDate(part));
+  });
+  // research/23 §1: Notion writes 24 hour time as "6:00"; en-US pads the hour to "06".
+  // Only 24 hour goes through parts: their AM/PM gap is U+202F, where format() gives a plain space.
+  const time = cycle === 'h23'
+    ? formatter.formatToParts(toLocalDate(part)).map((p) => (p.type === 'hour' ? p.value.replace(/^0(?=\d)/, '') : p.value)).join('')
+    : formatter.format(toLocalDate(part));
 
   return `${day} ${time}`;
 };

@@ -112,6 +112,35 @@ const createSwitch = (attribute: string, label: string, checked: boolean, onTogg
   return button;
 };
 
+const zoneMenus = { count: 0 };
+
+interface ZoneEntry {
+  id: string;
+  city: string;
+  offset: string;
+  /** Lower-case city, zone id and offset: what the search matches. */
+  search: string;
+}
+
+const offsetFormats = new Map<string, Intl.DateTimeFormat>();
+
+/** "GMT+2:00", "GMT+5:30", "GMT" (research/23 §1: Notion drops the hour's leading zero). */
+const zoneOffset = (zone: string, at: Date): string => {
+  const format = offsetFormats.get(zone) ?? new Intl.DateTimeFormat('en-US', { timeZone: zone, timeZoneName: 'longOffset' });
+
+  offsetFormats.set(zone, format);
+  const name = format.formatToParts(at).find((p) => p.type === 'timeZoneName')?.value ?? 'GMT';
+
+  return name.replace(/([+-])0(\d)/, '$1$2');
+};
+
+const zoneEntry = (id: string, zone: string, at: Date): ZoneEntry => {
+  const city = (zone.split('/').pop() ?? zone).replace(/_/g, ' ');
+  const offset = zoneOffset(zone, at);
+
+  return { id, city, offset, search: `${city} ${zone} ${offset}`.toLocaleLowerCase() };
+};
+
 /** Gap between the picker and its submenus. */
 const MENU_GAP = 4;
 
@@ -295,12 +324,13 @@ class DateEditor {
     this.focusedDay = day;
   }
 
-  private pickDay(day: string): void {
+  /** `time` replaces the picked part's time ("Now"); without it the part keeps its own. */
+  private pickDay(day: string, time?: string): void {
     if (this.rangeOn && this.rangeTarget === 'end' && this.start !== null && day >= this.start.day) {
-      this.end = { day, time: this.end?.time ?? null };
+      this.end = { day, time: time ?? this.end?.time ?? null };
       this.rangeTarget = 'start';
     } else {
-      this.start = { day, time: this.start?.time ?? null };
+      this.start = { day, time: time ?? this.start?.time ?? null };
       if (this.end !== null && this.end.day < day) {
         this.end = { day, time: this.end.time };
       }
@@ -438,8 +468,13 @@ class DateEditor {
 
     today.type = 'button';
     today.setAttribute('data-blok-database-date-today', '');
-    today.textContent = this.t('tools.database.dateToday');
-    today.addEventListener('click', () => this.pickDay(toIsoDay(new Date())));
+    // research/23 §1: with a time it reads "Now" and sets the time too.
+    today.textContent = this.t(this.timeOn ? 'tools.database.dateNow' : 'tools.database.dateToday');
+    today.addEventListener('click', () => {
+      const now = new Date();
+
+      this.pickDay(toIsoDay(now), this.timeOn ? toIsoTime(now) : undefined);
+    });
 
     header.append(
       label,
@@ -603,58 +638,50 @@ class DateEditor {
     chevron.setAttribute('data-blok-database-date-remind-chevron', '');
     chevron.innerHTML = IconChevronRight;
     row.append(label, value, chevron);
-    row.addEventListener('click', () => this.toggleMenu(row, 'remind', [null, ...remindersFor(this.timeOn)].map((choice) => ({
+    row.addEventListener('click', () => this.toggleMenu('remind', () => this.openMenu(row, 'remind', [null, ...remindersFor(this.timeOn)].map((choice) => ({
       id: choice ?? 'none',
       label: this.remindLabel(choice, true),
       checked: choice === this.remind,
       pick: () => this.pickRemind(choice),
-    }))));
+    })))));
 
     return row;
   }
 
-  // Notion's Date format submenu was never opened in a measurement: it lists the property menu's formats.
+  // research/23 §1: the same formats, in the same order, as the property menu.
   private renderDateFormatRow(): HTMLButtonElement {
     const current = this.display.dateFormat ?? 'full';
     const label = (format: string): string => this.t(`tools.database.dateFormat.${format}`);
 
-    return this.renderSettingRow('dateFormat', 'tools.database.dateFormat', label(current), () => DATE_FORMATS.map((format) => ({
+    return this.renderSettingRow('dateFormat', 'tools.database.dateFormat', label(current), (row) => this.openMenu(row, 'dateFormat', DATE_FORMATS.map((format) => ({
       id: format,
       label: label(format),
       checked: format === current,
       pick: () => this.pickSetting('dateFormat', { dateFormat: format }),
-    })));
+    }))));
   }
 
   private renderTimeFormatRow(): HTMLButtonElement {
     const current = this.display.timeFormat ?? (this.hostHourCycle === 'h23' ? '24_hour' : '12_hour');
     const label = (format: string): string => this.t(`tools.database.timeFormat.${format}`);
 
-    return this.renderSettingRow('timeFormat', 'tools.database.timeFormat', label(current), () => TIME_FORMATS.map((format) => ({
+    return this.renderSettingRow('timeFormat', 'tools.database.timeFormat', label(current), (row) => this.openMenu(row, 'timeFormat', TIME_FORMATS.map((format) => ({
       id: format,
       label: label(format),
       checked: format === current,
       pick: () => this.pickSetting('timeFormat', { timeFormat: format }),
-    })));
+    }))));
   }
 
   private renderTimeZoneRow(): HTMLButtonElement {
     const current = this.display.timeZone;
     const local = this.t('tools.database.timeZoneLocal');
 
-    return this.renderSettingRow('timeZone', 'tools.database.timeZone', current ?? local, () => [
-      { id: 'local', label: local, checked: current === undefined, pick: () => this.pickSetting('timeZone', { timeZone: null }) },
-      ...timeZones().map((zone) => ({
-        id: zone,
-        label: zone,
-        checked: zone === current,
-        pick: () => this.pickSetting('timeZone', { timeZone: zone }),
-      })),
-    ]);
+    return this.renderSettingRow('timeZone', 'tools.database.timeZone', current ?? local, (row) => this.openZoneMenu(row));
   }
 
   /** A "Label  value ›" row that opens its submenu, like Remind. */
-  private renderSettingRow(kind: MenuKind, labelKey: string, valueText: string, choices: () => MenuChoice[]): HTMLButtonElement {
+  private renderSettingRow(kind: MenuKind, labelKey: string, valueText: string, open: (row: HTMLElement) => void): HTMLButtonElement {
     const row = document.createElement('button');
     const label = document.createElement('span');
     const value = document.createElement('span');
@@ -670,7 +697,7 @@ class DateEditor {
     chevron.setAttribute('data-blok-database-date-remind-chevron', '');
     chevron.innerHTML = IconChevronRight;
     row.append(label, value, chevron);
-    row.addEventListener('click', () => this.toggleMenu(row, kind, choices()));
+    row.addEventListener('click', () => this.toggleMenu(kind, () => open(row)));
 
     return row;
   }
@@ -688,12 +715,12 @@ class DateEditor {
     this.root.querySelector<HTMLElement>(`[data-blok-database-date-setting="${kind}"]`)?.focus();
   }
 
-  private toggleMenu(row: HTMLElement, kind: MenuKind, choices: MenuChoice[]): void {
+  private toggleMenu(kind: MenuKind, open: () => void): void {
     const same = this.menu?.kind === kind;
 
     this.closeMenu(false);
     if (!same) {
-      this.openMenu(row, kind, choices);
+      open();
     }
   }
 
@@ -746,19 +773,163 @@ class DateEditor {
     current?.focus();
   }
 
-  private placeMenu(row: HTMLElement, menu: HTMLElement): void {
+  /**
+   * The time zone menu (research/23 §1): a focused search, the current zone
+   * pinned on top, then every other zone as "city / GMT offset". Focus stays in
+   * the search; arrows move the active row and Enter picks it, as in the select editor.
+   */
+  private openZoneMenu(row: HTMLElement): void {
+    const menu = document.createElement('div');
+    const search = document.createElement('input');
+    const list = document.createElement('div');
+    const listId = `blok-date-zones-${++zoneMenus.count}`;
+    const current = this.display.timeZone;
+    const now = new Date();
+    const localZone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const local = zoneEntry('local', localZone, now);
+    const zones = timeZones().filter((zone) => zone !== localZone).map((zone) => zoneEntry(zone, zone, now));
+    const state = { rows: [] as HTMLElement[], active: -1 };
+    const pick = (id: string): void => this.pickSetting('timeZone', { timeZone: id === 'local' ? null : id });
+
+    const setActive = (index: number): void => {
+      state.active = index;
+      search.removeAttribute('aria-activedescendant');
+      state.rows.forEach((option, i) => {
+        if (i === index) {
+          option.setAttribute('data-active', '');
+          search.setAttribute('aria-activedescendant', option.id);
+          option.scrollIntoView?.({ block: 'nearest' });
+        } else {
+          option.removeAttribute('data-active');
+        }
+      });
+    };
+
+    const renderRows = (): void => {
+      const query = search.value.trim().toLocaleLowerCase();
+      const matches = (entry: ZoneEntry): boolean => query === '' || entry.search.includes(query);
+      const heading = (key: string): HTMLElement => {
+        const el = document.createElement('div');
+
+        el.setAttribute('data-blok-database-date-zone-heading', '');
+        el.setAttribute('role', 'presentation');
+        el.textContent = this.t(key);
+
+        return el;
+      };
+      const option = (entry: ZoneEntry): HTMLElement => {
+        const el = document.createElement('div');
+        const lines = document.createElement('span');
+        const city = document.createElement('span');
+        const offset = document.createElement('span');
+        const checked = entry.id === 'local' ? current === undefined : entry.id === current;
+
+        el.id = `${listId}-${state.rows.length}`;
+        el.setAttribute('role', 'option');
+        el.setAttribute('aria-selected', String(checked));
+        el.setAttribute('data-blok-database-date-setting-option', entry.id);
+        lines.setAttribute('data-blok-database-date-zone-lines', '');
+        city.setAttribute('data-blok-database-date-zone-city', '');
+        offset.setAttribute('data-blok-database-date-zone-offset', '');
+        city.textContent = entry.city;
+        offset.textContent = entry.offset;
+        lines.append(city, offset);
+        el.appendChild(lines);
+        if (checked) {
+          const check = document.createElement('span');
+
+          check.setAttribute('data-blok-database-date-remind-check', '');
+          check.innerHTML = IconCheck;
+          el.appendChild(check);
+        }
+        el.addEventListener('click', () => pick(entry.id));
+        state.rows.push(el);
+
+        return el;
+      };
+      const shown = zones.filter(matches);
+
+      state.rows = [];
+      list.replaceChildren(
+        ...(matches(local) ? [heading('tools.database.timeZoneCurrent'), option(local)] : []),
+        heading('tools.database.timeZoneSelect'),
+        ...shown.map(option)
+      );
+      if (shown.length === 0) {
+        const empty = document.createElement('div');
+
+        empty.setAttribute('data-blok-database-date-zone-empty', '');
+        empty.textContent = this.t('find.noResults');
+        list.appendChild(empty);
+      }
+      setActive(query === '' ? -1 : 0);
+    };
+
+    menu.setAttribute('data-blok-database-date-setting-menu', 'timeZone');
+    menu.setAttribute('data-blok-database-date-zone-menu', '');
+    search.type = 'text';
+    search.setAttribute('data-blok-database-date-zone-search', '');
+    search.setAttribute('data-blok-field', 'text');
+    search.setAttribute('role', 'combobox');
+    search.setAttribute('aria-expanded', 'true');
+    search.setAttribute('aria-autocomplete', 'list');
+    search.setAttribute('aria-controls', listId);
+    search.setAttribute('aria-label', this.t('tools.database.timeZone'));
+    search.placeholder = this.t('tools.database.timeZoneSearch');
+    list.id = listId;
+    list.setAttribute('role', 'listbox');
+    list.setAttribute('aria-label', this.t('tools.database.timeZone'));
+    list.setAttribute('data-blok-database-date-zone-list', '');
+    search.addEventListener('input', renderRows);
+    search.addEventListener('keydown', (event) => {
+      if (event.isComposing || state.rows.length === 0) {
+        return;
+      }
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        const step = event.key === 'ArrowDown' ? 1 : -1;
+        const from = state.active < 0 && step < 0 ? 0 : state.active;
+
+        setActive((from + step + state.rows.length) % state.rows.length);
+      } else if (event.key === 'Enter') {
+        event.preventDefault();
+        const id = state.rows[Math.max(state.active, 0)]?.getAttribute('data-blok-database-date-setting-option');
+
+        if (id !== null && id !== undefined) {
+          pick(id);
+        }
+      }
+    });
+    // A press on a row keeps focus in the search, so the keys keep working.
+    menu.addEventListener('mousedown', (event) => {
+      if (event.target !== search) {
+        event.preventDefault();
+      }
+    });
+    menu.append(search, list);
+    renderRows();
+    this.root.appendChild(menu);
+    this.menu = { element: menu, kind: 'timeZone' };
+    row.setAttribute('aria-expanded', 'true');
+    promoteToTopLayer(menu);
+    this.placeMenu(row, menu, true);
+    search.focus();
+  }
+
+  /** Beside the picker on its end side; `preferStart` tries the start side first (the time zone menu). */
+  private placeMenu(row: HTMLElement, menu: HTMLElement, preferStart = false): void {
     const box = this.root.getBoundingClientRect();
     const rowBox = row.getBoundingClientRect();
     const width = menu.offsetWidth;
     const height = menu.offsetHeight;
     const rtl = getElementDirection(this.anchor) === 'rtl';
-    const after = rtl ? box.left - MENU_GAP - width : box.right + MENU_GAP;
-    const before = rtl ? box.right + MENU_GAP : box.left - MENU_GAP - width;
-    const fits = rtl ? after >= 0 : after + width <= window.innerWidth;
-    const left = fits ? after : before;
+    const right = box.right + MENU_GAP;
+    const left = box.left - MENU_GAP - width;
+    const sides = (rtl !== preferStart) ? [left, right] : [right, left];
+    const x = sides.find((side) => side >= 0 && side + width <= window.innerWidth) ?? sides[1];
     const top = Math.max(0, Math.min(rowBox.top, window.innerHeight - height - MENU_GAP));
 
-    Object.assign(menu.style, { position: 'fixed', left: `${Math.max(0, left)}px`, top: `${top}px` });
+    Object.assign(menu.style, { position: 'fixed', left: `${Math.max(0, x)}px`, top: `${top}px` });
   }
 
   private closeMenu(focusRow: boolean): void {

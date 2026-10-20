@@ -8452,9 +8452,61 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-item-focus-bg);
 }
 
-[data-blok-database-date-setting-menu="timeZone"][data-blok-top-layer][popover] {
-  max-height: min(320px, calc(100vh - var(--blok-space-4)));
+[data-blok-database-date-zone-menu], [data-blok-database-date-zone-menu][data-blok-top-layer][popover] {
+  width: 342px;
+  max-height: min(595px, calc(100vh - var(--blok-space-4)));
+  gap: var(--blok-space-1);
+}
+
+[data-blok-database-date-zone-search][data-blok-field] {
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+[data-blok-database-date-zone-list] {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   overflow-y: auto;
+}
+
+[data-blok-database-date-zone-heading], [data-blok-database-date-zone-empty] {
+  padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
+  font-size: 12px;
+  line-height: 14.4px;
+  font-weight: 500;
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-database-date-zone-empty] {
+  font-weight: 400;
+}
+
+[data-blok-database-date-zone-list] > [data-blok-database-date-setting-option] {
+  flex-shrink: 0;
+  min-height: 45px;
+}
+
+[data-blok-database-date-zone-lines] {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+[data-blok-database-date-zone-city] {
+  font-size: 14px;
+  line-height: 16.8px;
+}
+
+[data-blok-database-date-zone-offset] {
+  font-size: 12px;
+  line-height: 16.8px;
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-database-date-setting-option][data-active] {
+  background-color: var(--blok-item-hover-bg);
 }
 
 [data-blok-database-cell="date"][data-reminder] {

@@ -6,7 +6,7 @@ import {
   formatNumberValue,
   numberFill,
 } from '../../../../../src/tools/database/cells/number-format';
-import { formatDateDisplay } from '../../../../../src/tools/database/cells/date-format';
+import { TIME_FORMATS, formatDateDisplay } from '../../../../../src/tools/database/cells/date-format';
 
 const nf = (options: Intl.NumberFormatOptions, value: number): string => new Intl.NumberFormat('en-US', options).format(value);
 
@@ -99,15 +99,28 @@ describe('formatDateDisplay', () => {
     expect(formatDateDisplay(day, 'en-US', { dateFormat: 'year_month_day' }, now)).toBe('2026/10/09');
   });
 
-  it('writes the short format through the locale', () => {
-    expect(formatDateDisplay(day, 'de-DE', { dateFormat: 'short' }, now))
-      .toBe(new Intl.DateTimeFormat('de-DE', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(2026, 9, 9)));
+  // research/23 §1: Notion's Short date for Oct 20 2026 (this year) is "Oct 20".
+  it('writes the short format as month and day in the current year', () => {
+    expect(formatDateDisplay(day, 'en-US', { dateFormat: 'short' }, now)).toBe('Oct 9');
+    expect(formatDateDisplay('2025-10-09', 'en-US', { dateFormat: 'short' }, now)).toBe('Oct 9, 2025');
+  });
+
+  it('writes Relative today as "Today", as Notion does', () => {
+    expect(formatDateDisplay(day, 'en-US', { dateFormat: 'relative' }, now)).toBe('Today');
+  });
+
+  it('writes 24 hour time without a leading zero, as Notion does', () => {
+    expect(formatDateDisplay('2026-10-09T06:00', 'en-US', { timeFormat: '24_hour' }, now)).toBe('October 9, 2026 6:00');
+    expect(formatDateDisplay('2026-10-09T06:00', 'en-US', { timeFormat: '12_hour' }, now)).toBe('October 9, 2026 6:00 AM');
+  });
+
+  it('lists the time formats in Notion\'s order', () => {
+    expect(TIME_FORMATS).toEqual(['hidden', '12_hour', '24_hour']);
   });
 
   it('writes relative days near today and the full date further away', () => {
     const rtf = new Intl.RelativeTimeFormat('en-US', { numeric: 'auto' });
 
-    expect(formatDateDisplay(day, 'en-US', { dateFormat: 'relative' }, now)).toBe(rtf.format(0, 'day'));
     expect(formatDateDisplay('2026-10-07', 'en-US', { dateFormat: 'relative' }, now)).toBe(rtf.format(-2, 'day'));
     expect(formatDateDisplay('2026-12-25', 'en-US', { dateFormat: 'relative' }, now))
       .toBe(formatDateDisplay('2026-12-25', 'en-US', { dateFormat: 'full' }, now));

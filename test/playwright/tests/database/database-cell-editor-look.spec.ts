@@ -295,6 +295,118 @@ test.describe('date picker rows', () => {
   });
 });
 
+// research/23 §1: the submenus, the checked look, "Now", and the time zone menu.
+test.describe('date picker submenus', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 1512, height: 717 });
+    await mount(page);
+  });
+
+  const picker = (page: Page): Locator => page.locator('[data-blok-database-date-editor]');
+  const zoneMenu = (page: Page): Locator => page.locator('[data-blok-database-date-setting-menu="timeZone"]');
+  const zoneSearch = (page: Page): Locator => zoneMenu(page).locator('[data-blok-database-date-zone-search]');
+  const openZones = async (page: Page): Promise<void> => {
+    await open(page, 'p-due');
+    await page.locator('[data-blok-database-date-time-toggle]').click();
+    await page.locator('[data-blok-database-date-setting="timeZone"]').click();
+    await expect(zoneMenu(page)).toBeVisible();
+  };
+
+  test('Time format lists Hidden, 12 hour, 24 hour, in that order', async ({ page }) => {
+    await open(page, 'p-due');
+    await page.locator('[data-blok-database-date-time-toggle]').click();
+    await page.locator('[data-blok-database-date-setting="timeFormat"]').click();
+
+    await expect(page.getByRole('menuitemradio')).toHaveText(['Hidden', '12 hour', '24 hour']);
+  });
+
+  test('the checked option: a 16px check in primary ink at the end, and no fill', async ({ page }) => {
+    await open(page, 'p-due');
+    await page.locator('[data-blok-database-date-setting="dateFormat"]').click();
+    await page.mouse.move(0, 0);
+    const checked = page.getByRole('menuitemradio', { name: 'Full date' });
+    const other = page.getByRole('menuitemradio', { name: 'Short date' });
+    const look = await checked.evaluate((row) => {
+      const svg = row.querySelector('svg');
+      const rowBox = row.getBoundingClientRect();
+      const svgBox = svg?.getBoundingClientRect();
+
+      return {
+        size: [svgBox?.width, svgBox?.height],
+        endGap: rowBox.right - (svgBox?.right ?? 0),
+        ink: svg === null ? '' : getComputedStyle(svg).color,
+        bg: getComputedStyle(row).backgroundColor,
+      };
+    });
+    const plain = await other.evaluate((row) => ({ ink: getComputedStyle(row).color, bg: getComputedStyle(row).backgroundColor }));
+
+    expect(look.size).toEqual([16, 16]);
+    expect(look.endGap).toBeLessThanOrEqual(12);
+    expect(look.ink).toBe(plain.ink);
+    expect(look.bg).toBe(plain.bg);
+  });
+
+  test('with Include time on, Today reads Now', async ({ page }) => {
+    await open(page, 'p-due');
+    await expect(page.locator('[data-blok-database-date-today]')).toHaveText('Today');
+    await page.locator('[data-blok-database-date-time-toggle]').click();
+    await expect(page.locator('[data-blok-database-date-today]')).toHaveText('Now');
+  });
+
+  test('Time zone: a 342px menu left of the picker, a focused search, the current zone pinned on top', async ({ page }) => {
+    await openZones(page);
+    const menuBox = await zoneMenu(page).boundingBox();
+    const pickerBox = await picker(page).boundingBox();
+
+    expect(menuBox?.width).toBe(342);
+    expect((menuBox?.x ?? Infinity) + (menuBox?.width ?? 0)).toBeLessThanOrEqual(pickerBox?.x ?? 0);
+    await expect(zoneSearch(page)).toBeFocused();
+    await expect(zoneSearch(page)).toHaveAttribute('placeholder', 'Search cities, timezones…');
+    await expect(zoneMenu(page).locator('[data-blok-database-date-zone-heading]')).toHaveText(['Current timezone', 'Select a timezone']);
+    const current = zoneMenu(page).locator('[data-blok-database-date-setting-option="local"]');
+
+    await expect(current).toHaveAttribute('aria-selected', 'true');
+    await expect(current.locator('[data-blok-database-date-zone-offset]')).toHaveText(/^GMT/);
+    expect((await current.boundingBox())?.height).toBe(45);
+    // The list scrolls; the search stays put.
+    await zoneMenu(page).locator('[data-blok-database-date-zone-list]').evaluate((el) => el.scrollTo({ top: 400 }));
+    await expect(zoneSearch(page)).toBeInViewport();
+  });
+
+  test('Time zone: typing filters, "No results" when nothing matches, arrows and Enter pick', async ({ page }) => {
+    await openZones(page);
+    await page.keyboard.type('zzqx');
+    await expect(zoneMenu(page).locator('[data-blok-database-date-zone-empty]')).toHaveText('No results');
+    await zoneSearch(page).fill('');
+    await page.keyboard.type('tokyo');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowUp');
+    await expect(zoneMenu(page).locator('[data-active]')).toHaveAttribute('data-blok-database-date-setting-option', 'Asia/Tokyo');
+    await page.keyboard.press('Enter');
+
+    await expect(zoneMenu(page)).toHaveCount(0);
+    await expect(picker(page)).toHaveCount(1);
+    await expect(page.locator('[data-blok-database-date-setting="timeZone"]')).toHaveText(/Asia\/Tokyo/);
+  });
+
+  test('Time zone in RTL opens on the right of the picker', async ({ page }) => {
+    await page.evaluate(() => document.getElementById('blok')?.setAttribute('dir', 'rtl'));
+    await openZones(page);
+    const menuBox = await zoneMenu(page).boundingBox();
+    const pickerBox = await picker(page).boundingBox();
+
+    expect(menuBox?.x ?? 0).toBeGreaterThanOrEqual((pickerBox?.x ?? Infinity) + (pickerBox?.width ?? 0));
+  });
+
+  test('Escape closes only the time zone menu', async ({ page }) => {
+    await openZones(page);
+    await page.keyboard.press('Escape');
+
+    await expect(zoneMenu(page)).toHaveCount(0);
+    await expect(picker(page)).toHaveCount(1);
+  });
+});
+
 test('near the right edge the box slides left to stay on screen', async ({ page }) => {
   await page.setViewportSize({ width: 1000, height: 717 });
   await mount(page, ['p-title', 'p-amount', 'p-link', 'p-stage', 'p-notes']);

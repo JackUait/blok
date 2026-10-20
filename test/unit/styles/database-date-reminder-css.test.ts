@@ -33,4 +33,23 @@ describe('database date reminder css', () => {
 
     expect(values).toEqual(['rgb(39, 131, 222)', 'var(--blok-color-accent)', 'var(--blok-color-accent)']);
   });
+
+  // research/23 §1: 342 wide; the search stays put while the list scrolls; two-line rows.
+  it('the time zone menu is 342 wide and scrolls its list under a fixed search', () => {
+    expect(rulesFor('[data-blok-database-date-zone-menu][data-blok-top-layer][popover]')).toContain('width: 342px');
+    expect(rulesFor('[data-blok-database-date-zone-list]')).toContain('overflow-y: auto');
+    expect(rulesFor('[data-blok-database-date-setting-menu="timeZone"][data-blok-top-layer][popover]')).not.toContain('overflow-y');
+    expect(rulesFor('[data-blok-database-date-zone-search][data-blok-field]')).toContain('font-size: 14px');
+    expect(rulesFor('[data-blok-database-date-zone-heading]')).toContain('font-weight: 500');
+    expect(rulesFor('[data-blok-database-date-zone-offset]')).toContain('color: var(--blok-text-secondary)');
+    expect(rulesFor('[data-blok-database-date-setting-option][data-active]')).toContain('background-color: var(--blok-item-hover-bg)');
+  });
+
+  // research/23 §1: a 16px check in primary ink at the row's end; the checked row has no fill.
+  it('the checked option shows a 16px primary-ink check and no fill', () => {
+    expect(rulesFor('[data-blok-database-date-remind-check] > svg')).toContain('width: 16px');
+    expect(rulesFor('[data-blok-database-date-remind-check]')).toContain('color: var(--blok-text-primary)');
+    expect(rulesFor('[data-blok-database-date-remind-check]')).toContain('margin-inline-start: auto');
+    expect(database).not.toMatch(/\[data-blok-database-date-(setting|remind)-option\]\[aria-(checked|selected)="true"\]/);
+  });
 });

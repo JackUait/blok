@@ -951,6 +951,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_LAST_VIEW_CHOICE_BYTES = 1_844;
     // database.css: the bordered timeline "Manage in Calendar" button and the panel's "leaves this app" arrow (research/26 §3d, §4d).
     const DATABASE_MANAGE_CALENDAR_BYTES = 510;
+    // database.css: the Suggested template tiles and the Customize modal (research/27 §1).
+    const DATABASE_STARTER_TEMPLATES_BYTES = 6_886;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1092,7 +1094,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + ASSISTANT_IN_PAGE_BAR_BYTES
       + ASSISTANT_PREVIEW_HEADING_SPECIFICITY_BYTES
       + DATABASE_LAST_VIEW_CHOICE_BYTES
-      + DATABASE_MANAGE_CALENDAR_BYTES;
+      + DATABASE_MANAGE_CALENDAR_BYTES
+      + DATABASE_STARTER_TEMPLATES_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

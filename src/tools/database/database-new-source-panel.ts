@@ -23,6 +23,8 @@ export interface NewSourcePanelOptions {
    * when the database was set up, which closes the panel.
    */
   prompt?: { submit: (text: string) => Promise<boolean> };
+  /** A new database's "Suggested" templates (research/27 §1), under Import CSV. */
+  starters?: { list: Array<{ id: string; label: string; icon: string; tint: string }>; pick: (id: string) => void };
   onClose?: () => void;
 }
 
@@ -98,7 +100,7 @@ const promptBox = (
  * The panel "New data source" opens on its new tab (research/23 §10, shot 121).
  * The source already exists, so "New empty data source" only closes it.
  * With `prompt` it is the "New database" panel of a fresh insert instead.
- * Not built: "Suggested" templates (Blok has no database templates).
+ * Not built: "More templates" (only the three Suggested templates were measured).
  */
 export const openNewSourcePanel = (options: NewSourcePanelOptions): DatabasePanel => {
   const { t } = options;
@@ -186,6 +188,25 @@ export const openNewSourcePanel = (options: NewSourcePanelOptions): DatabasePane
           panel.close();
           importCsv();
         },
+      }));
+    }
+    const starters = options.starters;
+
+    if (starters !== undefined && starters.list.length > 0 && query === '') {
+      rows.push(panelLabel(t('tools.database.linkedSuggested')), ...starters.list.map((starter) => {
+        const row = panelRow({
+          label: starter.label,
+          testId: `database-new-database-starter-${starter.id}`,
+          icon: starter.icon,
+          onClick: () => {
+            panel.close();
+            starters.pick(starter.id);
+          },
+        });
+
+        row.querySelector('[data-blok-database-panel-icon]')?.setAttribute('data-blok-database-starter-tile', starter.tint);
+
+        return row;
       }));
     }
     if (matches(link, state.query)) {

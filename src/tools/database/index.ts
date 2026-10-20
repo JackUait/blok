@@ -45,6 +45,10 @@ import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
 import { openLinkedAddView, openLinkedPicker } from './database-linked-picker';
 import { openNewSourcePanel } from './database-new-source-panel';
 import { planAiSetup } from './database-ai-setup';
+import { DATABASE_STARTERS, buildStarter } from './database-starters';
+import type { StarterId } from './database-starters';
+import { openStarterCustomize } from './database-starter-modal';
+import type { StarterPicks } from './database-starter-modal';
 import type { LinkedPickerSource } from './database-linked-picker';
 import { newRowValues, rowOrderKey, sortRows } from './database-query';
 import { openDatabaseChoice, openDatabaseConfirm } from './database-confirm-dialog';
@@ -117,7 +121,7 @@ import type { DrawerBacklink, LayoutTab, LayoutTabsDraft, LayoutTabsHost } from 
 import { relatedTabSources, thisPageFilter } from './layout-tab-relations';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar } from './database-tab-bar';
-import { IconArrowDiagonal, IconDatabase, IconBoard, IconTrash, IconCheck, IconChevronRight, IconCopy, IconDownload, IconImage, IconListChecklist, IconMergeCells, IconPageLayout, IconTable, IconUpload } from '../../components/icons';
+import { IconArrowDiagonal, IconDatabase, IconBoard, IconTrash, IconCheck, IconChevronRight, IconCopy, IconDownload, IconImage, IconListChecklist, IconMergeCells, IconPageLayout, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -228,6 +232,9 @@ const INTERACTION_END_EVENTS = ['focusout', 'pointerup', 'pointercancel', 'keyup
  * by the constructor and never saved.
  */
 const INITIAL_VIEW_KEY = 'initialView';
+
+/** Panel tile glyphs for the Suggested templates: Notion's are checkmark, iterate and magic wand. */
+const STARTER_ICONS: Record<StarterId, string> = { tasks: IconCheck, projects: IconTimeline, skills: IconWand };
 
 /**
  * The toolbox merges the saved data of an empty block (a board) under its
@@ -857,6 +864,15 @@ export class DatabaseTool implements BlockTool {
       sources: () => this.pickerSources(),
       linkExisting: (id) => this.linkTo(id),
       prompt: { submit: (text) => this.setupFromPrompt(text) },
+      starters: {
+        list: DATABASE_STARTERS.map((starter) => ({
+          id: starter.id,
+          label: this.api.i18n.t(starter.nameKey),
+          icon: STARTER_ICONS[starter.id],
+          tint: starter.tint,
+        })),
+        pick: (id) => this.pickStarter(id),
+      },
       onClose: () => {
         if (this.sourcePicker === panel) this.sourcePicker = null;
       },
@@ -888,19 +904,75 @@ export class DatabaseTool implements BlockTool {
     const oldSchema = this.model.getSchema();
     const oldViews = this.model.getViews();
 
+    this.inOneStep(() => this.writeDefinition(plan));
+    this.syncDefinition(oldSchema, oldViews, plan.schema, plan.views);
+    this.rebuildTabBar();
+    this.rerenderView();
+
+    return true;
+  }
+
+  /** A new definition and title, written into the block. */
+  private writeDefinition(plan: { schema: PropertyDefinition[]; views: DatabaseViewConfig[]; activeViewId: string; title?: string }): void {
+    this.model.replaceDefinition({ schema: plan.schema, views: plan.views });
+    this.activeViewId = plan.activeViewId;
+    if (plan.title !== undefined) {
+      this.title = plan.title;
+      if (this.titleElement !== null) {
+        this.titleElement.textContent = plan.title;
+        DatabaseTool.syncTitleDirection(this.titleElement);
+      }
+    }
+    this.block.dispatchChange();
+  }
+
+  /** A Suggested template picked in the "New database" panel (research/27 §1). Skills has no Customize step. */
+  private pickStarter(id: string): void {
+    const meta = DATABASE_STARTERS.find((starter) => starter.id === id);
+
+    if (meta === undefined) return;
+    if (meta.features.length === 0) {
+      this.createFromStarter(meta.id);
+
+      return;
+    }
+    void openStarterCustomize({
+      meta,
+      t: (key, vars) => this.api.i18n.t(key, vars),
+      preview: (picks) => buildStarter(meta.id, { t: (key, vars) => this.api.i18n.t(key, vars), newId: () => nanoid(), titleId: this.titlePropertyId(), ...picks }),
+      directionSource: this.element,
+    }).then((picks) => {
+      if (picks !== null) this.createFromStarter(meta.id, picks);
+    });
+  }
+
+  /** The template's schema, views, rows and row bodies, as one undo step. */
+  private createFromStarter(id: StarterId, picks?: StarterPicks): void {
+    if (this.destroyed || this.readOnly || this.structureLocked()) return;
+    const made = buildStarter(id, { t: (key, vars) => this.api.i18n.t(key, vars), newId: () => nanoid(), titleId: this.titlePropertyId(), ...picks });
+    const oldSchema = this.model.getSchema();
+    const oldViews = this.model.getViews();
+
     this.inOneStep(() => {
-      this.model.replaceDefinition({ schema: plan.schema, views: plan.views });
-      this.activeViewId = plan.activeViewId;
-      if (plan.title !== undefined) {
-        this.title = plan.title;
-        if (this.titleElement !== null) {
-          this.titleElement.textContent = plan.title;
-          DatabaseTool.syncTitleDirection(this.titleElement);
+      // The definition first: a database write inside a row insert's sync window reads as an echo.
+      this.writeDefinition(made);
+      for (const row of made.rows) {
+        this.api.blocks.insertAt('database-row', row.data, { parentId: this.dataId, position: 'end', id: row.id });
+        for (const block of row.body.filter((b) => this.api.tools.isInstalled(b.tool))) {
+          this.api.blocks.insertAt(block.tool, block.data, { parentId: row.id, position: 'end' });
         }
       }
-      this.block.dispatchChange();
     });
-    // The backend gets a diff: an echoed id is an update, never a second create.
+    this.syncDefinition(oldSchema, oldViews, made.schema, made.views);
+    for (const row of made.rows) void this.sync.syncCreateRow({ id: row.id, properties: row.data.properties, position: row.data.position });
+    this.syncRowsFromBlocks();
+    this.rebuildTabBar();
+    this.rerenderView();
+  }
+
+  /** The backend gets a diff: an echoed id is an update, never a second create. */
+  private syncDefinition(oldSchema: PropertyDefinition[], oldViews: DatabaseViewConfig[], schema: PropertyDefinition[], views: DatabaseViewConfig[]): void {
+    const plan = { schema, views };
     const before = new Map(oldSchema.map((p) => [p.id, p]));
     const after = new Set(plan.schema.map((p) => p.id));
 
@@ -921,10 +993,6 @@ export class DatabaseTool implements BlockTool {
     // New views first, so the backend never holds a database without one.
     for (const view of plan.views) void this.sync.syncCreateView(structuredClone(view));
     for (const view of oldViews) void this.sync.syncDeleteView({ viewId: view.id });
-    this.rebuildTabBar();
-    this.rerenderView();
-
-    return true;
   }
 
   /** The host's databases in other documents, for the picker. */

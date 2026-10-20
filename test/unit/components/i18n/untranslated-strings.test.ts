@@ -744,6 +744,31 @@ for (const [locale, keys] of Object.entries(DATABASE_PERSON_COGNATE_RETENTIONS))
   for (const key of keys) set.add(key);
 }
 
+/**
+ * Suggested database template loanwords (Team, Budget, Bug, Gantt…). Each entry needs a matching ledger retention row.
+ */
+const DATABASE_STARTER_COGNATE_RETENTIONS: Record<string, string[]> = {
+  da: ['tools.database.starterTeam', 'tools.database.starterBudget', 'tools.database.starterTags'],
+  de: ['tools.database.starterTeam', 'tools.database.starterBudget'],
+  fil: ['tools.database.starterOptionBug', 'tools.database.starterViewChecklist'],
+  fr: ['tools.database.starterOptionBug', 'tools.database.starterBudget', 'tools.database.starterDocuments'],
+  id: ['tools.database.starterOptionBug'],
+  it: ['tools.database.starterOptionBug', 'tools.database.starterTeam', 'tools.database.starterBudget'],
+  km: ['tools.database.starterViewGantt'],
+  lo: ['tools.database.starterViewGantt'],
+  lv: ['tools.database.starterProgress'],
+  my: ['tools.database.starterViewGantt'],
+  nl: ['tools.database.starterOptionBug', 'tools.database.starterViewChecklist', 'tools.database.starterTeam', 'tools.database.starterBudget', 'tools.database.starterTags'],
+  no: ['tools.database.starterTeam'],
+  pt: ['tools.database.starterOptionBug'],
+  sv: ['tools.database.starterTeam', 'tools.database.starterBudget'],
+};
+
+for (const [locale, keys] of Object.entries(DATABASE_STARTER_COGNATE_RETENTIONS)) {
+  const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
+  for (const key of keys) set.add(key);
+}
+
 describe('locale values are translated (identical-to-en only when cognate)', () => {
   const english = loadLocaleMessages('en');
   const nonEnglish = listLocaleCodes().filter(code => code !== 'en');

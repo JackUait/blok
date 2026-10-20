@@ -4030,6 +4030,12 @@ span[data-blok-slash-search] {
   --blok-database-card-ring: rgba(42, 28, 0, 0.07);
   --blok-database-confirm-backdrop: rgba(15, 15, 15, 0.6);
   --blok-database-confirm-bg: #ffffff;
+  --blok-database-starter-tile-green-bg: rgb(232, 241, 236);
+  --blok-database-starter-tile-green-ink: rgb(68, 131, 97);
+  --blok-database-starter-tile-blue-bg: rgb(229, 242, 252);
+  --blok-database-starter-tile-blue-ink: rgb(51, 126, 169);
+  --blok-database-starter-tile-gray-bg: rgb(240, 239, 237);
+  --blok-database-starter-tile-gray-ink: rgb(85, 83, 78);
   --blok-database-confirm-shadow: rgba(25, 25, 25, 0.24) 0 24px 48px, rgba(25, 25, 25, 0.14) 0 4px 12px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   --blok-database-confirm-destructive-text: rgb(229, 100, 88);
   --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
@@ -4209,6 +4215,12 @@ span[data-blok-slash-search] {
   --blok-database-card-ring: rgba(255, 255, 243, 0.082);
   --blok-database-confirm-backdrop: rgba(15, 15, 15, 0.6);
   --blok-database-confirm-bg: rgb(37, 37, 37);
+  --blok-database-starter-tile-green-bg: rgb(38, 61, 48);
+  --blok-database-starter-tile-green-ink: var(--blok-database-option-green-text);
+  --blok-database-starter-tile-blue-bg: rgb(35, 56, 80);
+  --blok-database-starter-tile-blue-ink: var(--blok-database-option-blue-text);
+  --blok-database-starter-tile-gray-bg: rgb(56, 56, 54);
+  --blok-database-starter-tile-gray-ink: var(--blok-database-option-gray-text);
   --blok-database-confirm-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
   --blok-database-confirm-destructive-text: rgb(229, 100, 88);
   --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
@@ -4386,6 +4398,12 @@ span[data-blok-slash-search] {
   --blok-database-card-ring: rgba(255, 255, 243, 0.082);
   --blok-database-confirm-backdrop: rgba(15, 15, 15, 0.6);
   --blok-database-confirm-bg: rgb(37, 37, 37);
+  --blok-database-starter-tile-green-bg: rgb(38, 61, 48);
+  --blok-database-starter-tile-green-ink: var(--blok-database-option-green-text);
+  --blok-database-starter-tile-blue-bg: rgb(35, 56, 80);
+  --blok-database-starter-tile-blue-ink: var(--blok-database-option-blue-text);
+  --blok-database-starter-tile-gray-bg: rgb(56, 56, 54);
+  --blok-database-starter-tile-gray-ink: var(--blok-database-option-gray-text);
   --blok-database-confirm-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
   --blok-database-confirm-destructive-text: rgb(229, 100, 88);
   --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
@@ -10062,6 +10080,220 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-ai-prompt] > button svg {
   width: 14px;
   height: 14px;
+}
+
+[data-blok-database-starter-tile] {
+  inline-size: 32px;
+  block-size: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--blok-radius-control);
+}
+
+[data-blok-database-starter-tile="green"] {
+  background-color: var(--blok-database-starter-tile-green-bg);
+  color: var(--blok-database-starter-tile-green-ink);
+}
+
+[data-blok-database-starter-tile="blue"] {
+  background-color: var(--blok-database-starter-tile-blue-bg);
+  color: var(--blok-database-starter-tile-blue-ink);
+}
+
+[data-blok-database-starter-tile="gray"] {
+  background-color: var(--blok-database-starter-tile-gray-bg);
+  color: var(--blok-database-starter-tile-gray-ink);
+}
+
+[data-blok-database-starter-backdrop] {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--blok-database-confirm-backdrop);
+}
+
+[data-blok-database-starter-backdrop][data-blok-top-layer][popover] {
+  inset: 0;
+  background-color: var(--blok-database-confirm-backdrop);
+}
+
+[data-blok-database-starter-modal] {
+  display: flex;
+  gap: var(--blok-space-6);
+  box-sizing: border-box;
+  inline-size: min(1000px, calc(100vw - 32px));
+  block-size: min(637px, calc(100vh - 32px));
+  padding: var(--blok-space-6);
+  border-radius: var(--blok-radius-dialog);
+  background-color: var(--blok-database-confirm-bg);
+  box-shadow: var(--blok-database-confirm-shadow);
+}
+
+[data-blok-database-starter-form] {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 320px;
+  min-inline-size: 0;
+}
+
+[data-blok-database-starter-nav] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  inline-size: 26px;
+  block-size: 26px;
+  margin-block-end: 56px;
+  border: 0;
+  border-radius: var(--blok-radius-control);
+  background: none;
+  color: var(--blok-text-secondary);
+  cursor: pointer;
+}
+
+[data-blok-database-starter-nav]:hover {
+  background-color: var(--blok-item-hover-bg);
+}
+
+[data-blok-database-starter-nav] svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+[dir="rtl"] [data-blok-database-starter-nav] svg {
+  transform: scaleX(-1);
+}
+
+[data-blok-database-starter-heading] {
+  font-size: 20px;
+  line-height: 26px;
+  font-weight: 600;
+  color: var(--blok-text-primary);
+}
+
+[data-blok-database-starter-hint] {
+  margin-block: var(--blok-space-1) var(--blok-space-3);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-database-starter-choices] {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: var(--blok-space-3) var(--blok-space-2);
+  flex: 1 1 auto;
+}
+
+[data-blok-database-starter-choices][data-step="views"] {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: var(--blok-space-3);
+}
+
+[data-blok-database-starter-chip], [data-blok-database-starter-card] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+  border: 0;
+  background: none;
+  color: var(--blok-text-primary);
+  box-shadow: inset 0 0 0 1px var(--blok-border-primary);
+  cursor: pointer;
+}
+
+[data-blok-database-starter-chip] {
+  block-size: 28px;
+  padding: 0 var(--blok-space-3);
+  border-radius: var(--blok-radius-pill);
+  font-size: 14px;
+  line-height: 16.8px;
+  font-weight: 400;
+}
+
+[data-blok-database-starter-card] {
+  gap: var(--blok-space-2);
+  block-size: 52px;
+  padding: var(--blok-space-4);
+  border-radius: var(--blok-radius-dialog);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+}
+
+[data-blok-database-starter-chip][aria-pressed="true"] {
+  box-shadow: inset 0 0 0 1.5px var(--blok-text-primary);
+}
+
+[data-blok-database-starter-card][aria-pressed="true"] {
+  box-shadow: inset 0 0 0 1.5px var(--blok-text-primary);
+}
+
+[data-blok-database-starter-chip] svg, [data-blok-database-starter-card] svg {
+  inline-size: 16px;
+  block-size: 16px;
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-database-starter-primary] {
+  block-size: 32px;
+  border: 0;
+  border-radius: var(--blok-radius-control-lg);
+  background-color: var(--blok-accent);
+  color: var(--blok-text-on-dark);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+[data-blok-database-starter-preview] {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  padding: var(--blok-space-10);
+  border: 1px solid var(--blok-border-primary);
+  border-radius: var(--blok-radius-dialog);
+  color: var(--blok-text-primary);
+}
+
+[data-blok-database-starter-preview-title] {
+  font-size: 24px;
+  line-height: 30px;
+  font-weight: 700;
+}
+
+[data-blok-database-starter-preview-tabs] {
+  display: flex;
+  gap: var(--blok-space-4);
+  margin-block: var(--blok-space-3);
+  font-size: 14px;
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-database-starter-preview-row] {
+  display: flex;
+  border-block-end: 1px solid var(--blok-border-primary);
+  font-size: 14px;
+  line-height: 36px;
+}
+
+[data-blok-database-starter-preview-row="header"] {
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-database-starter-preview-row] > span {
+  flex: 0 0 160px;
+  overflow: hidden;
+  padding-inline: var(--blok-space-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-blok-database-starter-preview-row] > span:first-child {
+  flex-basis: 240px;
 }
 
 [data-blok-database-panel-close] svg {

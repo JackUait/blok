@@ -111,7 +111,11 @@ describe('"New database" panel with the AI prompt (research/26 §2, research/20 
     expect(box().placeholder).toBe('tools.database.aiSetupPlaceholder');
     expect(box().getAttribute('aria-label')).toBe('tools.database.aiSetupPlaceholder');
     expect(submit().getAttribute('aria-disabled')).toBe('true');
-    expect(rowLabels()).toEqual(['tools.database.linkedNewEmpty', 'tools.database.linkedLinkExisting']);
+    expect(rowLabels()).toEqual([
+      'tools.database.linkedNewEmpty',
+      'tools.database.starterTasks', 'tools.database.starterProjects', 'tools.database.starterSkills',
+      'tools.database.linkedLinkExisting',
+    ]);
   });
 
   it('opens nothing without the lever', async () => {
@@ -317,7 +321,11 @@ describe('"New database" panel with the AI prompt (research/26 §2, research/20 
 
     expect(panel()?.querySelector('[data-blok-testid="database-new-source-csv"]')).toBeNull();
     expect(panel()?.querySelector('[data-blok-testid="database-new-source-named"]')).toBeNull();
-    expect(rowLabels()).toEqual(['tools.database.linkedNewEmpty', 'tools.database.linkedLinkExisting']);
+    expect(rowLabels()).toEqual([
+      'tools.database.linkedNewEmpty',
+      'tools.database.starterTasks', 'tools.database.starterProjects', 'tools.database.starterSkills',
+      'tools.database.linkedLinkExisting',
+    ]);
   });
 
   it('"Link to existing data source" turns the block into a view of that database', async () => {

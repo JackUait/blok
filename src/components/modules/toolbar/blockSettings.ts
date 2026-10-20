@@ -782,7 +782,8 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
     label.setAttribute('data-edit-meta-label', '');
 
-    const editorId = block.lastEditedBy;
+    // Matches the row's empty "Last edited by" cell.
+    const editorId = block.lastEditedBy != null && !this.Blok.YjsManager.isInAnonymousAnswer(block.id) ? block.lastEditedBy : null;
     const directory = this.Blok.UserDirectory;
     const paint = (userInfo: UserInfo | null): void => {
       label.textContent = userInfo === null

@@ -26,7 +26,7 @@ const createSaver = (config: BlokConfig = {}, blocks: Block[] = []): Saver => {
       blockTools: new Map([ [ 'stub', { sanitizeConfig: {} } ] ]),
       stubTool: 'stub',
     },
-    YjsManager: { getPageFields: () => ({}), getBlockCreation: () => ({}) },
+    YjsManager: { getPageFields: () => ({}), getBlockCreation: () => ({}), isInAnonymousAnswer: () => false },
     MediaFailures: { onSave: vi.fn() },
   };
 

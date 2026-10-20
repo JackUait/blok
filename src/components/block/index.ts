@@ -196,6 +196,12 @@ export class Block extends EventsDispatcher<BlockEvents> {
    */
   public readonly creation: { createdAt?: number; createdBy?: string };
 
+  /** Forget who made and last edited this block (it is now inside an anonymous answer). */
+  public unsign(): void {
+    this.lastEditedBy = null;
+    Reflect.deleteProperty(this.creation, 'createdBy');
+  }
+
   /**
    * Block Tool`s name
    */

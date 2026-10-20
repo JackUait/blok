@@ -38,6 +38,25 @@ const inAnonymousAnswer = (snap: DocSnapshot, block: SnapBlock | undefined, seen
   return isAnonymousAnswer(block) || (block.parent !== null && inAnonymousAnswer(snap, snap.get(block.parent), seen));
 };
 
+// A block moved into an anonymous answer drops the ids it was made with, as DocumentStore.applyPlacement does.
+const unsignTree = (snap: DocSnapshot, id: string, seen = new Set<string>()): void => {
+  const block = seen.has(id) ? undefined : snap.get(id);
+
+  if (block === undefined) {
+    return;
+  }
+  seen.add(id);
+  Reflect.deleteProperty(block.rest, 'createdBy');
+  Reflect.deleteProperty(block.rest, 'lastEditedBy');
+  block.content.forEach((child) => unsignTree(snap, child, seen));
+};
+
+const unsignIfAnonymous = (snap: DocSnapshot, id: string): void => {
+  if (inAnonymousAnswer(snap, snap.get(id))) {
+    unsignTree(snap, id);
+  }
+};
+
 const stampOn = (snap: DocSnapshot, block: SnapBlock | undefined, stamp: EditStamp | null): void => {
   if (block === undefined || stamp === null) {
     return;
@@ -195,6 +214,7 @@ export const applyEdits = (snap: DocSnapshot, edits: readonly Edit[], stamp: Edi
       case 'move':
         snap.unlink(edit.id);
         snap.link(edit.id, edit.parentId, edit.afterId);
+        unsignIfAnonymous(snap, edit.id);
         stampOn(snap, snap.get(edit.id), stamp);
         break;
       case 'setData':

@@ -139,8 +139,9 @@ const BlockAPIConstructor = function BlockAPI(
       return api.blockCreation(block.id).createdAt ?? block.creation.createdAt;
     },
 
+    // An anonymous answer names nobody, even with an id an older save or a move left in memory.
     get createdBy(): string | undefined {
-      return api.blockCreation(block.id).createdBy ?? block.creation.createdBy;
+      return api.isInAnonymousAnswer(block.id) ? undefined : api.blockCreation(block.id).createdBy ?? block.creation.createdBy;
     },
 
     get lastEditedAt(): number | undefined {
@@ -148,7 +149,7 @@ const BlockAPIConstructor = function BlockAPI(
     },
 
     get lastEditedBy(): string | undefined {
-      return block.lastEditedBy ?? undefined;
+      return api.isInAnonymousAnswer(block.id) ? undefined : block.lastEditedBy ?? undefined;
     },
 
     /**

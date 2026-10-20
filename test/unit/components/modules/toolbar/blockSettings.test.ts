@@ -236,6 +236,7 @@ type BlokMock = {
     getLocale: Mock<() => string>;
   };
   UserDirectory: UserDirectory;
+  YjsManager: { isInAnonymousAnswer: Mock<(id: string) => boolean> };
 };
 
 const createBlokMock = (config: Partial<BlokConfig> = {}): BlokMock => {
@@ -316,6 +317,7 @@ const createBlokMock = (config: Partial<BlokConfig> = {}): BlokMock => {
       config: config,
       eventsDispatcher: { on: vi.fn(), off: vi.fn(), emit: vi.fn() } as unknown as EventsDispatcher<BlokEventMap>,
     }),
+    YjsManager: { isInAnonymousAnswer: vi.fn(() => false) },
   } satisfies BlokMock;
 };
 
@@ -1544,6 +1546,31 @@ describe('BlockSettings', () => {
       const element = (items[items.length - 1] as { element: HTMLElement }).element;
 
       expect(element.querySelector('[data-edit-meta-label]')?.textContent).toBe('blockSettings.lastEdited');
+    });
+
+    it('names nobody on a block inside an anonymous form answer, even with a stored id', async () => {
+      blokMock = createBlokMock();
+      blokMock.UserDirectory.learn('user-123', 'Grace Hopper');
+      blokMock.YjsManager.isInAnonymousAnswer.mockImplementation((id) => id === 'anon-body');
+      const resolve = vi.spyOn(blokMock.UserDirectory, 'resolve');
+
+      blockSettings.state = blokMock as unknown as BlokModules;
+
+      const block = Object.assign(createBlock(), { id: 'anon-body' });
+
+      block.lastEditedAt = 1712700720000;
+      block.lastEditedBy = 'user-123';
+
+      getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
+
+      const items = await (blockSettings as unknown as {
+        getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+      }).getTunesItems(block, []);
+
+      const element = (items[items.length - 1] as { element: HTMLElement }).element;
+
+      expect(element.querySelector('[data-edit-meta-label]')?.textContent).toBe('blockSettings.lastEdited');
+      expect(resolve).not.toHaveBeenCalled();
     });
 
     it('uses a peer-published name when there is no host directory', async () => {

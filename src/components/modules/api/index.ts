@@ -34,6 +34,14 @@ export class API extends Module {
   }
 
   /**
+   * Whether a block is an anonymous form answer or sits under one.
+   * @param id - the block id
+   */
+  public isInAnonymousAnswer(id: string): boolean {
+    return this.Blok.YjsManager.isInAnonymousAnswer(id);
+  }
+
+  /**
    * Host block data the way the tool reads it: segment fields become HTML.
    * @param tool - the block's tool
    * @param data - block data as a host passes it

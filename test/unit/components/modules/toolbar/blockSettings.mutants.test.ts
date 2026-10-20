@@ -258,6 +258,7 @@ type BlokMock = {
     getEnglishTranslation: Mock<(key: string) => string>;
   };
   UserDirectory: UserDirectory;
+  YjsManager: { isInAnonymousAnswer: () => boolean };
 };
 
 const createBlokMock = (config: BlokConfig): BlokMock => ({
@@ -306,6 +307,7 @@ const createBlokMock = (config: BlokConfig): BlokMock => ({
     config,
     eventsDispatcher: { on: vi.fn(), off: vi.fn(), emit: vi.fn() } as unknown as ConstructorParameters<typeof UserDirectory>[0]['eventsDispatcher'],
   }),
+  YjsManager: { isInAnonymousAnswer: () => false },
 });
 
 /* ---------------------------------------------------------------- helpers */

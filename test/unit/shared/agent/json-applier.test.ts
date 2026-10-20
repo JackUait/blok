@@ -215,6 +215,19 @@ describe('applyEdits attribution', () => {
       }
     });
 
+    it('drops both ids from a signed block and its child moved under it', () => {
+      const snap = DocSnapshot.fromOutput({ blocks: [
+        { id: 'r', type: 'database-row', data: { properties: {}, anonymous: true } },
+        { id: 'x', type: 'paragraph', data: {}, content: ['x1'], createdBy: 'u-bob', lastEditedBy: 'u-bob', createdAt: 1 },
+        { id: 'x1', type: 'paragraph', data: {}, parent: 'x', createdBy: 'u-bob', lastEditedBy: 'u-bob', createdAt: 1 },
+      ] });
+
+      applyEdits(snap, [{ op: 'move', id: 'x', parentId: 'r', afterId: null }], stamp);
+
+      expect(requireBlock(snap, 'x').rest).toEqual({ createdAt: 1, lastEditedAt: 42 });
+      expect(requireBlock(snap, 'x1').rest).toEqual({ createdAt: 1 });
+    });
+
     it('still names the editor of a row that is not anonymous', () => {
       const snap = anonymous();
 

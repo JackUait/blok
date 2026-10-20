@@ -184,6 +184,8 @@ export class YjsManager extends Module {
       richTextFieldsFor: (type) => this.Blok?.Tools?.blockTools?.get(type)?.richTextFields ?? [],
     });
     this.documentStore = new DocumentStore(this.serializer);
+    // Lazy: BlockManager is not ready at construct time, and test stubs may lack it.
+    this.documentStore.onUnsigned = (ids) => ids.forEach((id) => this.Blok?.BlockManager?.getBlockById(id)?.unsign());
     this.blockObserver = new BlockObserver(this.serializer);
     this.undoHistory = new UndoHistory(
       this.documentStore.undoScope,

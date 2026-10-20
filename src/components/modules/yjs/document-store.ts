@@ -274,7 +274,20 @@ export class DocumentStore {
       // Spliced, not cleared and re-pushed: an id that stays keeps its item, so
       // a peer's concurrent insert next to it lands where they put it.
       this.assignKeySequence(this.yRootOrder, topLevelIds);
+      this.unsignAnonymousAnswers();
     }, 'load');
+  }
+
+  /** Drop the user ids an older save left in any anonymous answer. */
+  private unsignAnonymousAnswers(): void {
+    const rows = Array.from(this.yBlocksMap.entries()).flatMap(([id, yblock]) => this.isAnonymousAnswerBlock(yblock) ? [id] : []);
+
+    if (rows.length === 0) {
+      return;
+    }
+    const children = this.childIndex();
+
+    rows.forEach((id) => this.unsignSubtree(id, children));
   }
 
   /**
@@ -346,18 +359,24 @@ export class DocumentStore {
       return true;
     }
 
-    return this.isAnonymousAncestor(start === undefined ? parentId : start.get('parentId'), new Set());
-  }
+    const seen = new Set<string>();
+    // A loop, not recursion: a parent chain can be as deep as a peer made it.
+    const cursor: { id: unknown } = { id: start === undefined ? parentId : start.get('parentId') };
 
-  private isAnonymousAncestor(parentId: unknown, seen: Set<string>): boolean {
-    const yblock = typeof parentId === 'string' && !seen.has(parentId) ? this.getBlockById(parentId) : undefined;
+    while (typeof cursor.id === 'string' && !seen.has(cursor.id)) {
+      const yblock = this.getBlockById(cursor.id);
 
-    if (yblock === undefined || typeof parentId !== 'string') {
-      return false;
+      if (yblock === undefined) {
+        return false;
+      }
+      if (this.isAnonymousAnswerBlock(yblock)) {
+        return true;
+      }
+      seen.add(cursor.id);
+      cursor.id = yblock.get('parentId');
     }
-    seen.add(parentId);
 
-    return this.isAnonymousAnswerBlock(yblock) || this.isAnonymousAncestor(yblock.get('parentId'), seen);
+    return false;
   }
 
   private isAnonymousAnswerBlock(yblock: Y.Map<unknown>): boolean {
@@ -966,8 +985,52 @@ export class DocumentStore {
       }
 
       target.insert(this.placementSlot(target, placement.afterId), [id]);
+
+      // A replay must stay a pure 'move'; the keys went on the first move in.
+      if (origin !== 'move-undo' && origin !== 'move-redo' && this.isInAnonymousAnswer(id)) {
+        this.unsignSubtree(id);
+      }
     }, origin);
   }
+
+  /** Each block's children, by their parentId. */
+  private childIndex(): Map<string, string[]> {
+    const children = new Map<string, string[]>();
+
+    this.yBlocksMap.forEach((_yblock, childId) => {
+      const parentId = this.rawParentId(childId);
+
+      if (parentId !== null) {
+        children.set(parentId, children.get(parentId) ?? []);
+        children.get(parentId)?.push(childId);
+      }
+    });
+
+    return children;
+  }
+
+  /**
+   * Drop the user ids from a block and every block under it.
+   * @param id - the subtree root
+   * @param children - from childIndex
+   */
+  private unsignSubtree(id: string, children = this.childIndex()): void {
+    const seen = new Set<string>();
+    const queue = [id];
+
+    for (const next of queue) {
+      const yblock = seen.has(next) ? undefined : this.yBlocksMap.get(next);
+
+      seen.add(next);
+      yblock?.delete('createdBy');
+      yblock?.delete('lastEditedBy');
+      queue.push(...(children.get(next) ?? []).filter((child) => !seen.has(child)));
+    }
+    this.onUnsigned?.(queue);
+  }
+
+  /** Told which blocks lost their user ids, so the editor's copies can drop them too. */
+  public onUnsigned: ((ids: readonly string[]) => void) | null = null;
 
   /**
    * Whether parenting `id` under `targetParentId` would close a parent cycle:

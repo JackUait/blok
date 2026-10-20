@@ -1048,7 +1048,7 @@ export class Saver extends Module {
     derivedContentIds: string[],
     effectiveParentId: string | null
   ): SaverValidatedData {
-    return {
+    const validated = {
       ...savedData,
       isValid,
       parentId: effectiveParentId,
@@ -1058,6 +1058,15 @@ export class Saver extends Module {
       ...block.creation,
       ...this.Blok.YjsManager.getBlockCreation(block.id),
     };
+
+    if (!this.Blok.YjsManager.isInAnonymousAnswer(block.id)) {
+      return validated;
+    }
+
+    // The in-memory copy may still hold an id from an older save or a move in.
+    const { createdBy: _createdBy, ...unsigned } = validated;
+
+    return { ...unsigned, lastEditedBy: null };
   }
 
   /**

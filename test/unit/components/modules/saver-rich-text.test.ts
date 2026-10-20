@@ -80,7 +80,7 @@ const createModuleSaver = (config: Partial<BlokConfig>, collaborating: boolean):
       ]),
       stubTool: 'stub',
     },
-    YjsManager: { getPageFields: () => ({}), getBlockCreation: () => ({}) },
+    YjsManager: { getPageFields: () => ({}), getBlockCreation: () => ({}), isInAnonymousAnswer: () => false },
     MediaFailures: { onSave: vi.fn() },
     ...(collaborating ? { Collaboration: { isEnabled: true } } : {}),
   };

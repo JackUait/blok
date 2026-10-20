@@ -43,6 +43,8 @@ export const DATABASE_ROW_DATA = {
         timeZone: { type: 'string', description: 'IANA zone whose wall clock the runs keep across DST. Absent: UTC.' },
         start: { type: 'string', description: 'ISO date-time of the first run.' },
         lastRunAt: { type: 'string' },
+        weekdays: { type: 'array', maxItems: 7, items: { type: 'integer', minimum: 1, maximum: 7 }, description: 'Weekly only: days it runs on, 1 = Monday … 7 = Sunday, each at the start\'s time. Absent: the start\'s weekday.' },
+        end: { type: 'string', description: 'ISO date-time after which it makes no more rows. Absent: never.' },
       },
     },
     reminders: {

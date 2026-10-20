@@ -109,6 +109,105 @@ describe('repeating template schedule', () => {
     });
   });
 
+  describe('weekdays', () => {
+    const next = (repeat: TemplateRepeat, now: string): string | null => {
+      const at = nextRun(repeat, new Date(now));
+
+      return at === null ? null : new Date(at).toISOString();
+    };
+
+    it('every 2 weeks on Monday from a Wednesday start skips the start\'s week (research/21 shot 61: Nov 2)', () => {
+      // Tomorrow, Wed Oct 21, around midnight in Berlin; the Monday of that week is before the start.
+      const repeat: TemplateRepeat = { frequency: 'weekly', interval: 2, weekdays: [1], start: '2026-10-20T22:00:00.000Z', timeZone: 'Europe/Berlin' };
+
+      // Berlin leaves summer time on Oct 25: midnight Nov 2 is 23:00Z.
+      expect(next(repeat, '2026-10-20T12:00:00.000Z')).toBe('2026-11-01T23:00:00.000Z');
+    });
+
+    it('Monday to Friday from a Wednesday start runs on the start (research/21 shot 73: Tomorrow)', () => {
+      const repeat: TemplateRepeat = { frequency: 'weekly', weekdays: [1, 2, 3, 4, 5], start: '2026-10-20T22:00:00.000Z', timeZone: 'Europe/Berlin' };
+
+      expect(next(repeat, '2026-10-20T12:00:00.000Z')).toBe('2026-10-20T22:00:00.000Z');
+    });
+
+    it('has nothing due before the first day in the set', () => {
+      const repeat: TemplateRepeat = { frequency: 'weekly', weekdays: [1], start: '2026-10-21T09:00:00.000Z', timeZone: 'UTC' };
+
+      expect(due(repeat, '2026-10-23T12:00:00.000Z')).toBeNull();
+      expect(due(repeat, '2026-10-26T12:00:00.000Z')).toBe('2026-10-26T09:00:00.000Z');
+    });
+
+    it('runs on each day in the set, every other week', () => {
+      const repeat: TemplateRepeat = { frequency: 'weekly', interval: 2, weekdays: [4, 1], start: '2026-10-05T09:00:00.000Z', timeZone: 'UTC' };
+
+      expect(due(repeat, '2026-10-07T12:00:00.000Z')).toBe('2026-10-05T09:00:00.000Z');
+      expect(due(repeat, '2026-10-15T12:00:00.000Z')).toBe('2026-10-08T09:00:00.000Z');
+      expect(next(repeat, '2026-10-09T12:00:00.000Z')).toBe('2026-10-19T09:00:00.000Z');
+      expect(next(repeat, '2026-10-19T09:00:00.000Z')).toBe('2026-10-22T09:00:00.000Z');
+    });
+
+    it('reads the weekday on the stored zone\'s calendar, not the UTC one', () => {
+      // 08:00 in Tokyo is 23:00Z the day before: Monday in Tokyo is Sunday in UTC.
+      const repeat: TemplateRepeat = { frequency: 'weekly', weekdays: [1, 2, 3, 4, 5], start: '2026-10-18T23:00:00.000Z', timeZone: 'Asia/Tokyo' };
+
+      expect(due(repeat, '2026-10-19T00:00:00.000Z')).toBe('2026-10-18T23:00:00.000Z');
+      // Saturday 10:00 in Tokyo: the last run was Friday.
+      expect(due(repeat, '2026-10-24T01:00:00.000Z')).toBe('2026-10-22T23:00:00.000Z');
+      expect(next(repeat, '2026-10-23T00:00:00.000Z')).toBe('2026-10-25T23:00:00.000Z');
+    });
+
+    it('keeps 9:00 on the wall clock across both DST changes', () => {
+      const fall: TemplateRepeat = { frequency: 'weekly', weekdays: [1, 2, 3, 4, 5], start: '2026-10-26T13:00:00.000Z', timeZone: 'America/New_York' };
+      const spring: TemplateRepeat = { ...fall, start: '2027-03-08T14:00:00.000Z' };
+
+      expect(next(fall, '2026-10-30T15:00:00.000Z')).toBe('2026-11-02T14:00:00.000Z');
+      expect(due({ ...fall, lastRunAt: '2026-10-30T13:00:00.000Z' }, '2026-11-02T15:00:00.000Z')).toBe('2026-11-02T14:00:00.000Z');
+      expect(next(spring, '2027-03-12T15:00:00.000Z')).toBe('2027-03-15T13:00:00.000Z');
+    });
+
+    it('with no days set steps whole weeks from the start, as before', () => {
+      const wednesday: TemplateRepeat = { frequency: 'weekly', start: '2026-10-21T09:00:00.000Z', timeZone: 'UTC' };
+
+      expect(next({ ...wednesday, weekdays: [] }, '2026-10-21T10:00:00.000Z')).toBe('2026-10-28T09:00:00.000Z');
+      expect(next(wednesday, '2026-10-21T10:00:00.000Z')).toBe('2026-10-28T09:00:00.000Z');
+    });
+
+    it('only counts for weekly schedules', () => {
+      expect(next({ frequency: 'daily', weekdays: [1], start: '2026-10-21T09:00:00.000Z' }, '2026-10-21T10:00:00.000Z')).toBe('2026-10-22T09:00:00.000Z');
+    });
+
+    it('finds the run in a set started 1000 years ago without walking the weeks', () => {
+      const fromSpy = vi.spyOn(Array, 'from');
+      const repeat: TemplateRepeat = { frequency: 'weekly', weekdays: [1, 3], start: '1026-01-05T09:00:00.000Z', timeZone: 'UTC' };
+
+      expect(due(repeat, '2026-10-09T12:00:00.000Z')).toBe('2026-10-07T09:00:00.000Z');
+      expect(next(repeat, '2026-10-09T12:00:00.000Z')).toBe('2026-10-12T09:00:00.000Z');
+      expect(fromSpy.mock.calls.every(([source]) => (source as ArrayLike<unknown>).length <= 16)).toBe(true);
+    });
+  });
+
+  describe('ending', () => {
+    const daily: TemplateRepeat = { frequency: 'daily', start: '2026-10-01T09:00:00.000Z', end: '2026-10-05T12:00:00.000Z' };
+
+    it('makes no run after the end', () => {
+      expect(due(daily, '2026-10-09T12:00:00.000Z')).toBe('2026-10-05T09:00:00.000Z');
+      expect(due({ ...daily, lastRunAt: '2026-10-05T09:00:00.000Z' }, '2026-10-09T12:00:00.000Z')).toBeNull();
+      expect(nextRun(daily, new Date('2026-10-05T10:00:00.000Z'))).toBeNull();
+    });
+
+    it('runs as before until the end', () => {
+      expect(due(daily, '2026-10-03T12:00:00.000Z')).toBe('2026-10-03T09:00:00.000Z');
+      expect(nextRun(daily, new Date('2026-10-03T12:00:00.000Z'))).toBe(Date.parse('2026-10-04T09:00:00.000Z'));
+    });
+
+    it('ends weekday runs too', () => {
+      const repeat: TemplateRepeat = { frequency: 'weekly', weekdays: [1, 5], start: '2026-10-05T09:00:00.000Z', end: '2026-10-12T00:00:00.000Z', timeZone: 'UTC' };
+
+      expect(due(repeat, '2026-10-20T12:00:00.000Z')).toBe('2026-10-09T09:00:00.000Z');
+      expect(nextRun(repeat, new Date('2026-10-10T12:00:00.000Z'))).toBeNull();
+    });
+  });
+
   describe('a malformed repeat from the document', () => {
     const now = new Date('2026-10-09T12:00:00.000Z');
     const bad: Array<[string, TemplateRepeat]> = [
@@ -119,6 +218,42 @@ describe('repeating template schedule', () => {
     ];
 
     it.each(bad)('%s has no due run and no next run', (_, repeat) => {
+      expect(dueRun(repeat, now)).toBeNull();
+      expect(nextRun(repeat, now)).toBeNull();
+    });
+
+    const weekly = { frequency: 'weekly' as const, start: '2026-10-01T09:00:00.000Z' };
+    const weekdays: Array<[string, unknown]> = [
+      ['not a list', '1,2'],
+      ['more than seven days', [1, 2, 3, 4, 5, 6, 7, 1]],
+      ['a day 0', [0]],
+      ['a day 8', [8]],
+      ['a fraction', [1.5]],
+      ['NaN', [Number.NaN]],
+      ['a text day', ['1']],
+      ['a huge sparse list', new Array(1_000_000_000)],
+      ['a list-like object', { length: 1_000_000_000 }],
+    ];
+
+    it.each(weekdays)('weekdays as %s give no runs and allocate nothing per day', (_, value) => {
+      const fromSpy = vi.spyOn(Array, 'from');
+      const repeat = { ...weekly, weekdays: value } as TemplateRepeat;
+
+      expect(dueRun(repeat, now)).toBeNull();
+      expect(nextRun(repeat, now)).toBeNull();
+      expect(fromSpy.mock.calls.every(([source]) => (source as ArrayLike<unknown>).length <= 16)).toBe(true);
+    });
+
+    const ends: Array<[string, unknown]> = [
+      ['not a date', 'soon'],
+      ['a number', 42],
+      ['outside years 100-9999', '-271000-01-01T00:00:00.000Z'],
+      ['an object', { at: '2026-10-05' }],
+    ];
+
+    it.each(ends)('an end that is %s gives no runs', (_, value) => {
+      const repeat = { ...weekly, end: value } as TemplateRepeat;
+
       expect(dueRun(repeat, now)).toBeNull();
       expect(nextRun(repeat, now)).toBeNull();
     });

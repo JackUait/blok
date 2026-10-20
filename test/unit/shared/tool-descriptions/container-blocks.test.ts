@@ -348,6 +348,11 @@ const VALID_SAVED_SHAPES: Array<{ name: ContainerName; scenario: string; data: R
   },
   {
     name: 'database-row',
+    scenario: 'a template repeating on weekdays until an end',
+    data: { properties: { name: 'Standup' }, position: 'a0', template: true, repeat: { frequency: 'weekly', weekdays: [1, 2, 3, 4, 5], start: '2026-10-12T09:00:00.000Z', end: '2026-12-31T00:00:00.000Z' } },
+  },
+  {
+    name: 'database-row',
     scenario: 'relation values are row id objects',
     data: { properties: { rel: [{ id: 'row-2' }, { id: 'row-3' }] }, position: 'a0' },
   },
@@ -713,7 +718,7 @@ describe('container self-description schema and metadata', () => {
     const snapshot = readFileSync(resolve(__dirname, '../../view/__snapshots__/document-schema.json'), 'utf8');
 
     expect(createHash('sha256').update(snapshot).digest('hex'))
-      .toBe('2fab3c0cddd3e7ea012463a5c5832eea4329225007879baea310e125f8f8e3b8');
+      .toBe('749ccdd3155c267ae10a52c409b78b3c987403bd087b886df3c0cc1be15c8208');
 
     const published: unknown = JSON.parse(snapshot);
 

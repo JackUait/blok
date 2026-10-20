@@ -366,6 +366,14 @@ export interface TemplateRepeat {
   timeZone?: string;
   /** ISO date-time the host last made a row from it. */
   lastRunAt?: string;
+  /**
+   * Weekly only: the days it runs on, 1 = Monday … 7 = Sunday, on the wall
+   * calendar of `timeZone`. Each run keeps the start's time of day. Weeks
+   * start on Monday and count from the start's week. Absent or empty: the start's weekday.
+   */
+  weekdays?: number[];
+  /** ISO date-time after which it makes no more rows. Absent: it never ends. */
+  end?: string;
 }
 
 /** Host lever for repeating templates. Blok tells the host when a run is due; the host makes it. */

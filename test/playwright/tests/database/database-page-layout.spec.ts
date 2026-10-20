@@ -436,6 +436,33 @@ test.describe('row page layout', () => {
     await expect(peek(page)).toBeVisible();
   });
 
+  // research/23 §7: a page load with a draft gets the browser's "Leave site?"; without one it goes.
+  test('holds a page load only while the layout draft has edits', async ({ page }) => {
+    const leaveHeld = async (): Promise<boolean> => page.evaluate(() => {
+      const event = new Event('beforeunload', { cancelable: true });
+
+      window.dispatchEvent(event);
+
+      return event.defaultPrevented;
+    });
+
+    await mount(page, blocks());
+    await openRow(page, 'r1');
+    await peek(page).hover();
+    await peek(page).getByRole('button', { name: 'Customize layout' }).click();
+    await expect(builder(page)).toBeVisible();
+    expect(await leaveHeld()).toBe(false);
+
+    await pinFromHeadingMenu(page, 'Due');
+    await expect(pins(page).locator('[data-property-id="p-due"]').first()).toBeVisible();
+    expect(await leaveHeld()).toBe(true);
+
+    await builder(page).getByRole('button', { name: 'Cancel', exact: true }).click();
+    await page.getByRole('alertdialog', { name: 'Discard all layout changes?' }).getByRole('button', { name: 'Discard' }).click();
+    await expect(builder(page)).toBeHidden();
+    expect(await leaveHeld()).toBe(false);
+  });
+
   test('keeps the discard question above the docked full-page details panel', async ({ page }) => {
     await page.setViewportSize({ width: 756, height: 717 });
     await mount(page, withView(blocks({ pageLayoutPlacements: [{ id: 'p-owner', place: 'panel' }] }), { openPagesIn: 'full' }));

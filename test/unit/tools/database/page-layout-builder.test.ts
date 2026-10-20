@@ -1683,6 +1683,46 @@ describe('PageLayoutBuilder', () => {
     drawer.destroy();
   });
 
+  // research/23 §7: a page load with a draft asks the browser's "Leave site?".
+  describe('leaving the page while customizing', () => {
+    const leave = (): Event => {
+      const event = new Event('beforeunload', { cancelable: true });
+
+      window.dispatchEvent(event);
+
+      return event;
+    };
+
+    it('holds the page load while the draft has edits', () => {
+      const { drawer } = customize();
+
+      expect(leave().defaultPrevented).toBe(false);
+      pinDue();
+      expect(leave().defaultPrevented).toBe(true);
+      drawer.destroy();
+    });
+
+    it('lets the page load go once the builder closes', () => {
+      const { drawer } = customize();
+
+      pinDue();
+      builder().querySelector<HTMLElement>('[data-blok-database-layout-apply]')?.click();
+
+      expect(q(BUILDER)).toBeNull();
+      expect(leave().defaultPrevented).toBe(false);
+      drawer.destroy();
+    });
+
+    it('lets the page load go once the drawer is destroyed mid-draft', () => {
+      const { drawer } = customize();
+
+      pinDue();
+      drawer.destroy();
+
+      expect(leave().defaultPrevented).toBe(false);
+    });
+  });
+
   // The peek closes on a press outside it; the builder is outside it.
   it('keeps the page open on a press inside the builder', () => {
     const { drawer } = customize();

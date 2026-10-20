@@ -186,6 +186,10 @@ export class PageLayoutBuilder {
   private confirm: AbortController | null = null;
   /** Page settings controls, built once and updated in place so focus stays put. */
   private readonly settings: Array<{ control: HTMLElement; state: 'aria-pressed' | 'aria-checked'; on: (layout: PageLayoutData) => boolean }> = [];
+  /** A page load with a draft asks "Leave site?" (research/23 §7). Each builder checks only its own draft. */
+  private readonly holdLeave = (event: BeforeUnloadEvent): void => {
+    if (this.options.hasEdits()) event.preventDefault();
+  };
 
   constructor(options: PageLayoutBuilderOptions) {
     this.options = options;
@@ -266,6 +270,7 @@ export class PageLayoutBuilder {
       outside: false,
       onDismiss: () => undefined,
     });
+    window.addEventListener('beforeunload', this.holdLeave);
   }
 
   /** The database's name. Empty shows the new-database placeholder. */
@@ -298,6 +303,7 @@ export class PageLayoutBuilder {
   }
 
   close(): void {
+    window.removeEventListener('beforeunload', this.holdLeave);
     this.confirm?.abort();
     this.confirm = null;
     this.unwatchNarrow();

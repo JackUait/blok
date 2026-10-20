@@ -210,6 +210,8 @@ export {
   RowReactions,
   DatabaseSourceRef,
   DatabaseLinkedSources,
+  DatabaseLinkedSourceHit,
+  DatabaseLinkedSourceSnapshot,
   DatabaseBacklink,
   DatabaseBacklinks,
   DatabaseFavorites,

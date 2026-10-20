@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { DatabaseData, PropertyDefinition } from '../../../../src/tools/database/types';
+import type { DatabaseData, DatabaseLinkedSourceSnapshot, PropertyDefinition } from '../../../../src/tools/database/types';
 import { buildDatabase, makeDoc, rowSeed } from './structure-harness';
 
 vi.mock('../../../../src/blok', () => ({
@@ -585,5 +585,262 @@ describe('DatabaseTool — linked view, research 20 §2', () => {
     expect(el.querySelector('[data-blok-database-source-missing]')).toBeNull();
     expect(rowIds(el)).toEqual(['r2', 'r1']);
     expect(tool.save(document.createElement('div')).views[0].sorts).toHaveLength(1);
+  });
+});
+
+describe('DatabaseTool — linked view of a database in another document (config.linkedSources)', () => {
+  type Ref = { documentId: string; databaseId: string };
+  type Snapshot = DatabaseLinkedSourceSnapshot;
+
+  const far = (title = 'Far away'): Snapshot => ({
+    title: 'Roadmap',
+    schema: structuredClone(sourceSchema),
+    rows: [{ id: 'far', position: 'a0', properties: { title, status: 'x' } }],
+    views: [{ id: 'rv', name: 'Remote board', type: 'board', position: 'a0', sorts: [], filters: [], visibleProperties: [], groupBy: 'status' }],
+  });
+
+  const remoteHit = { documentId: 'doc-2', databaseId: 'remote-db', title: 'Roadmap', path: 'Planning' };
+
+  const remoteLinked = (): DatabaseData => ({ ...linkedData('remote-db'), source: { databaseId: 'remote-db', documentId: 'doc-2' } });
+
+  const flush = async (): Promise<void> => {
+    for (let i = 0; i < 5; i++) await Promise.resolve();
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    popovers.items.length = 0;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('lists the host\'s sources after this document\'s, under the same "Existing data sources" label, with their path', async () => {
+    const doc = docWithSource();
+    const search = vi.fn(async () => [remoteHit]);
+
+    buildDatabase(doc, 'db', sourceData());
+    buildDatabase(doc, 'linked', { initialView: 'table', linkPicker: true } as unknown as DatabaseData, { linkedSources: { search, resolve: vi.fn(async () => far()) } });
+    const panel = panelById('database-linked-picker');
+
+    await vi.waitFor(() => expect(rowLabels(panel)).toEqual(['tools.database.linkedNewEmpty', 'Tasks', 'Roadmap']));
+    expect(search).toHaveBeenCalledWith({ query: '' });
+    expect(panel?.querySelectorAll('[data-blok-database-panel-section]')).toHaveLength(1);
+    expect(panel?.querySelector('[data-blok-testid="database-linked-source-remote-db"] [data-blok-database-panel-description]')?.textContent).toBe('Planning');
+  });
+
+  it('asks the host again on each query and drops an answer to an older one', async () => {
+    const doc = docWithSource();
+    const answers: Array<(hits: typeof remoteHit[]) => void> = [];
+    const search = vi.fn(() => new Promise<typeof remoteHit[]>((resolve) => answers.push(resolve)));
+
+    buildDatabase(doc, 'db', sourceData());
+    buildDatabase(doc, 'linked', { initialView: 'table', linkPicker: true } as unknown as DatabaseData, { linkedSources: { search, resolve: vi.fn(async () => far()) } });
+    const panel = panelById('database-linked-picker');
+    const input = panel?.querySelector('input');
+
+    if (input === null || input === undefined) throw new Error('no search field');
+    input.value = 'road';
+    input.dispatchEvent(new Event('input'));
+    expect(search).toHaveBeenLastCalledWith({ query: 'road' });
+
+    answers[1]([remoteHit]);
+    await flush();
+    answers[0]([{ ...remoteHit, databaseId: 'stale', title: 'Stale' }]);
+    await flush();
+
+    expect(rowLabels(panel)).toEqual(['Roadmap', 'tools.database.linkedNewNamed {"name":"road"}']);
+  });
+
+  it('a host search that throws lists this document\'s databases only', async () => {
+    const doc = docWithSource();
+
+    buildDatabase(doc, 'db', sourceData());
+    buildDatabase(doc, 'linked', { initialView: 'table', linkPicker: true } as unknown as DatabaseData, { linkedSources: { search: async () => { throw new Error('offline'); }, resolve: vi.fn(async () => far()) } });
+    await flush();
+
+    expect(rowLabels(panelById('database-linked-picker'))).toEqual(['tools.database.linkedNewEmpty', 'Tasks']);
+  });
+
+  it('picking a host source shows its rows read-only and saves only the pointer', async () => {
+    const doc = docWithSource();
+    const resolve = vi.fn(async () => far());
+
+    buildDatabase(doc, 'db', sourceData());
+    const { tool, el } = buildDatabase(doc, 'linked', { initialView: 'table', linkPicker: true } as unknown as DatabaseData, { linkedSources: { search: async () => [remoteHit], resolve } });
+
+    await vi.waitFor(() => expect(panelById('database-linked-picker')?.querySelector('[data-blok-testid="database-linked-source-remote-db"]')).not.toBeNull());
+    panelById('database-linked-picker')?.querySelector<HTMLElement>('[data-blok-testid="database-linked-source-remote-db"]')?.click();
+
+    // far()'s first view is a board: the pick copies it, as a local pick copies the first view.
+    await vi.waitFor(() => expect(el.querySelector('[data-blok-database-board]')?.textContent).toContain('Far away'));
+    expect(el.querySelector('[data-blok-database-tab]')?.textContent).toContain('Remote board');
+    expect(resolve).toHaveBeenCalledWith({ documentId: 'doc-2', databaseId: 'remote-db' });
+    const page = panelById('database-linked-picker');
+
+    expect(page?.querySelector('[data-blok-database-panel-section]')?.textContent).toBe('tools.database.linkedViewsOn {"name":"Roadmap"}');
+    expect(rowLabels(page)).toEqual(['tools.database.linkedNewTableView', 'Remote board']);
+    page?.querySelector<HTMLElement>('[data-blok-testid="database-linked-view-rv"]')?.click();
+
+    const saved = tool.save(document.createElement('div'));
+
+    expect(saved.source).toEqual({ databaseId: 'remote-db', documentId: 'doc-2' });
+    expect(saved.schema.map((p) => p.type)).toEqual(['title']);
+    expect(JSON.stringify(saved)).not.toContain('Far away');
+    expect(saved.views).toHaveLength(1);
+    expect(saved.views[0]).toMatchObject({ type: 'board', name: 'Remote board' });
+    expect(saved.views[0].id).not.toBe('rv');
+    expect(el.querySelector('[data-blok-database-title] [data-blok-database-linked-title]')?.textContent?.trim()).toBe('Roadmap');
+  });
+
+  it('a host source picked and left without a view copies its first table view, as a local pick does', async () => {
+    const doc = docWithSource();
+    const snapshot = far();
+
+    snapshot.views?.push({ id: 'rt', name: 'Remote table', type: 'table', position: 'a1', sorts: [{ id: 's1', propertyId: 'status', direction: 'asc' }], filters: [], visibleProperties: ['status'] });
+    buildDatabase(doc, 'db', sourceData());
+    const { tool } = buildDatabase(doc, 'linked', { initialView: 'table', linkPicker: true } as unknown as DatabaseData, { linkedSources: { search: async () => [remoteHit], resolve: async () => structuredClone(snapshot) } });
+
+    await vi.waitFor(() => expect(panelById('database-linked-picker')?.querySelector('[data-blok-testid="database-linked-source-remote-db"]')).not.toBeNull());
+    panelById('database-linked-picker')?.querySelector<HTMLElement>('[data-blok-testid="database-linked-source-remote-db"]')?.click();
+    await vi.waitFor(() => expect(panelById('database-linked-picker')?.querySelector('[data-blok-testid="database-linked-view-rt"]')).not.toBeNull());
+
+    const saved = tool.save(document.createElement('div'));
+
+    expect(saved.views).toHaveLength(1);
+    expect(saved.views[0]).toMatchObject({ type: 'table', name: 'Remote table', visibleProperties: ['status'], sorts: [{ propertyId: 'status', direction: 'asc' }] });
+    expect(saved.views[0].id).not.toBe('rt');
+    expect(saved.activeViewId).toBe(saved.views[0].id);
+  });
+
+  it('a later host answer never replaces a view the person picked', async () => {
+    const doc = docWithSource();
+    const listeners: Array<() => void> = [];
+    const snapshot = far();
+
+    snapshot.views?.push({ id: 'rt', name: 'Remote table', type: 'table', position: 'a1', sorts: [], filters: [], visibleProperties: ['status'] });
+    buildDatabase(doc, 'db', sourceData());
+    const { tool } = buildDatabase(doc, 'linked', { initialView: 'table', linkPicker: true } as unknown as DatabaseData, { linkedSources: {
+      search: async () => [remoteHit],
+      resolve: async () => structuredClone(snapshot),
+      subscribe: (_ref: Ref, onChange: () => void) => { listeners.push(onChange); },
+    } });
+
+    await vi.waitFor(() => expect(panelById('database-linked-picker')?.querySelector('[data-blok-testid="database-linked-source-remote-db"]')).not.toBeNull());
+    panelById('database-linked-picker')?.querySelector<HTMLElement>('[data-blok-testid="database-linked-source-remote-db"]')?.click();
+    await vi.waitFor(() => expect(panelById('database-linked-picker')?.querySelector('[data-blok-testid="database-linked-view-rv"]')).not.toBeNull());
+    panelById('database-linked-picker')?.querySelector<HTMLElement>('[data-blok-testid="database-linked-view-rv"]')?.click();
+    listeners[0]();
+    await flush();
+
+    expect(tool.save(document.createElement('div')).views[0]).toMatchObject({ type: 'board', name: 'Remote board' });
+  });
+
+  it('"New table view" on a host source keeps the pick and shows its rows read-only', async () => {
+    const doc = docWithSource();
+
+    buildDatabase(doc, 'db', sourceData());
+    const { tool, el } = buildDatabase(doc, 'linked', { initialView: 'table', linkPicker: true } as unknown as DatabaseData, { linkedSources: { search: async () => [remoteHit], resolve: async () => far() } });
+
+    await vi.waitFor(() => expect(panelById('database-linked-picker')?.querySelector('[data-blok-testid="database-linked-source-remote-db"]')).not.toBeNull());
+    panelById('database-linked-picker')?.querySelector<HTMLElement>('[data-blok-testid="database-linked-source-remote-db"]')?.click();
+    await vi.waitFor(() => expect(panelById('database-linked-picker')?.querySelector('[data-blok-testid="database-linked-new-table-view"]')).not.toBeNull());
+    panelById('database-linked-picker')?.querySelector<HTMLElement>('[data-blok-testid="database-linked-new-table-view"]')?.click();
+
+    const saved = tool.save(document.createElement('div'));
+
+    expect(saved.views).toHaveLength(1);
+    expect(saved.views[0]).toMatchObject({ type: 'table' });
+    await flush();
+    expect(rowIds(el)).toEqual(['far']);
+    expect(el.querySelector('[data-blok-database-table-grid]')?.getAttribute('aria-readonly')).toBe('true');
+    expect(el.querySelector('[data-blok-database-add-view]')).toBeNull();
+  });
+
+  it('shows the source\'s name from the host after a reload', async () => {
+    const doc = makeDoc([{ id: 'linked', name: 'database', parentId: null, data: {} }]);
+    const { el } = buildDatabase(doc, 'linked', remoteLinked(), { linkedSources: { resolve: async () => far() } });
+
+    await vi.waitFor(() => expect(el.querySelector('[data-blok-database-linked-title]')?.textContent?.trim()).toBe('Roadmap'));
+  });
+
+  it('the host answering null shows the deleted-source banner', async () => {
+    const doc = makeDoc([{ id: 'linked', name: 'database', parentId: null, data: {} }]);
+    const { el } = buildDatabase(doc, 'linked', remoteLinked(), { linkedSources: { resolve: async () => null } });
+
+    await vi.waitFor(() => expect(el.querySelector('[data-blok-database-source-missing]')?.textContent).toContain('tools.database.linkedSourceMissing'));
+    expect(el.querySelector('[data-blok-database-table]')).toBeNull();
+  });
+
+  it('a host that throws does not show the deleted-source banner', async () => {
+    const doc = makeDoc([{ id: 'linked', name: 'database', parentId: null, data: {} }]);
+    const { el } = buildDatabase(doc, 'linked', remoteLinked(), { linkedSources: { resolve: async () => { throw new Error('offline'); } } });
+
+    await flush();
+
+    expect(el.querySelector('[data-blok-database-source-missing]')).toBeNull();
+  });
+
+  it('subscribe: each change reads the source again; null shows the banner, data brings the rows back; destroy stops it', async () => {
+    const doc = makeDoc([{ id: 'linked', name: 'database', parentId: null, data: {} }]);
+    const answers: Array<Snapshot | null> = [far('First'), far('Second'), null, far('Back')];
+    const resolve = vi.fn(async () => answers.shift() ?? null);
+    const stop = vi.fn();
+    const listeners: Array<() => void> = [];
+    const subscribe = vi.fn((_ref: Ref, onChange: () => void) => {
+      listeners.push(onChange);
+
+      return stop;
+    });
+    const titleOf = (el: HTMLElement): string => el.querySelector('[data-blok-database-table-row]')?.textContent ?? '';
+    const { tool, el } = buildDatabase(doc, 'linked', remoteLinked(), { linkedSources: { resolve, subscribe } });
+
+    await vi.waitFor(() => expect(titleOf(el)).toContain('First'));
+    expect(subscribe).toHaveBeenCalledTimes(1);
+    expect(subscribe.mock.calls[0][0]).toEqual({ documentId: 'doc-2', databaseId: 'remote-db' });
+
+    listeners[0]();
+    await vi.waitFor(() => expect(titleOf(el)).toContain('Second'));
+
+    listeners[0]();
+    await vi.waitFor(() => expect(el.querySelector('[data-blok-database-source-missing]')).not.toBeNull());
+
+    listeners[0]();
+    await vi.waitFor(() => expect(titleOf(el)).toContain('Back'));
+    expect(el.querySelector('[data-blok-database-source-missing]')).toBeNull();
+
+    tool.destroy();
+    expect(stop).toHaveBeenCalledTimes(1);
+  });
+
+  it('an older answer never overwrites a newer one', async () => {
+    const doc = makeDoc([{ id: 'linked', name: 'database', parentId: null, data: {} }]);
+    const pending: Array<(value: Snapshot) => void> = [];
+    const resolve = vi.fn(() => new Promise<Snapshot>((done) => pending.push(done)));
+    const listeners: Array<() => void> = [];
+    const { el } = buildDatabase(doc, 'linked', remoteLinked(), { linkedSources: { resolve, subscribe: (_ref: Ref, onChange: () => void) => { listeners.push(onChange); } } });
+
+    await vi.waitFor(() => expect(pending).toHaveLength(1));
+    listeners[0]();
+    pending[1](far('Newer'));
+    await flush();
+    pending[0](far('Older'));
+    await flush();
+
+    expect(el.querySelector('[data-blok-database-table-row]')?.textContent).toContain('Newer');
+  });
+
+  it('host rows stay when another block changes', async () => {
+    const doc = makeDoc([{ id: 'linked', name: 'database', parentId: null, data: {} }]);
+    const { tool, el } = buildDatabase(doc, 'linked', remoteLinked(), { linkedSources: { resolve: async () => far() } });
+
+    await vi.waitFor(() => expect(rowIds(el)).toEqual(['far']));
+    (tool as unknown as { rerenderView: () => void }).rerenderView();
+    doc.api.events.emit('block changed', { event: { type: 'block-changed', detail: { target: { id: 'other' } } } });
+    await flush();
+
+    expect(rowIds(el)).toEqual(['far']);
   });
 });

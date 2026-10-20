@@ -408,9 +408,48 @@ export interface DatabaseSourceRef {
   documentId?: string;
 }
 
-/** Host lever for a linked database whose source is in another document. */
+/** A database in another document, as the host's `search` lists it. */
+export interface DatabaseLinkedSourceHit {
+  documentId: string;
+  databaseId: string;
+  title: string;
+  /** The page it sits on: shown under its name. */
+  path?: string;
+}
+
+/** A database in another document, as the host's `resolve` hands it over. */
+export interface DatabaseLinkedSourceSnapshot {
+  schema: PropertyDefinition[];
+  rows: DatabaseRow[];
+  /** Its name, for the "↗ <name>" title. */
+  title?: string;
+  /** Its views: the "New view" page offers them to copy. */
+  views?: DatabaseViewConfig[];
+}
+
+/**
+ * Host lever for a linked database whose source is in another document.
+ * Blok saves only the pointer (`source.documentId` + `source.databaseId`);
+ * the rows stay in the other document and show read-only.
+ */
 export interface DatabaseLinkedSources {
-  resolve(input: { documentId: string; databaseId: string }): Promise<{ schema: PropertyDefinition[]; rows: DatabaseRow[] } | null>;
+  /**
+   * Return `null` when the source is gone: the view shows the "deleted"
+   * banner. A throw shows the backend error instead.
+   */
+  resolve(input: { documentId: string; databaseId: string }): Promise<DatabaseLinkedSourceSnapshot | null>;
+  /**
+   * The linked view picker lists these under "Existing data sources", after
+   * this document's databases. Called with `''` when the picker opens, then
+   * on each change of its search; the host does the matching. A throw lists none.
+   * Leave out this document's databases: Blok lists those itself.
+   */
+  search?(input: { query: string }): Promise<DatabaseLinkedSourceHit[]>;
+  /**
+   * Hears about changes to the source. Call `onChange` and Blok calls
+   * `resolve` again. Return a function that stops it when the block goes away.
+   */
+  subscribe?(input: { documentId: string; databaseId: string }, onChange: () => void): (() => void) | void;
 }
 
 /**

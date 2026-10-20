@@ -10,16 +10,21 @@ export interface LinkedPickerSource {
   title: string;
   /** The page it sits on: shown under its name. */
   parent: string;
+  /** Set for a database in another document, listed by the host. */
+  documentId?: string;
 }
 
 export interface LinkedPickerOptions {
   anchor: HTMLElement;
   t: (key: string, vars?: Record<string, string>) => string;
   sources: () => LinkedPickerSource[];
+  /** Databases in other documents, listed after this document's. The host does the matching. */
+  remoteSources?: (query: string) => Promise<LinkedPickerSource[]>;
   /** The source's views that a linked view may copy. */
-  views: (sourceId: string) => DatabaseViewConfig[];
+  views: (source: LinkedPickerSource) => DatabaseViewConfig[];
   newEmpty: (title: string) => void;
-  pickSource: (id: string) => void;
+  /** A source in another document loads first; the "New view" page waits for it. */
+  pickSource: (source: LinkedPickerSource) => void | Promise<void>;
   newTableView: () => void;
   copyView: (view: DatabaseViewConfig) => void;
   onClose?: () => void;
@@ -73,16 +78,34 @@ export const openLinkedPicker = (options: LinkedPickerOptions): DatabasePanel =>
     t,
     source,
     { label: t('tools.database.linkedNewTableView'), testId: 'database-linked-new-table-view', onClick: options.newTableView },
-    options.views(source.id),
+    options.views(source),
     options.copyView
   );
 
-  const state = { query: '', expanded: false };
+  const state = { query: '', expanded: false, closed: false, remote: [] as LinkedPickerSource[], remoteQuery: '', asked: false };
   const list = document.createElement('div');
+
+  const askHost = (panel: DatabasePanel): void => {
+    const query = state.query.trim();
+
+    if (options.remoteSources === undefined) return;
+    state.asked = true;
+    void options.remoteSources(query).catch((): LinkedPickerSource[] => []).then((found) => {
+      // An answer to an older query, or to a closed panel, is dropped.
+      if (state.closed || state.query.trim() !== query) return;
+      state.remote = found;
+      state.remoteQuery = query;
+      fillList(panel);
+    });
+  };
 
   const fillList = (panel: DatabasePanel): void => {
     const query = state.query.trim();
-    const matches = options.sources().filter((source) => (source.title === '' ? untitled : source.title).toLowerCase().includes(query.toLowerCase()));
+    const remote = state.remoteQuery === query ? state.remote : [];
+    const matches = [
+      ...options.sources().filter((source) => (source.title === '' ? untitled : source.title).toLowerCase().includes(query.toLowerCase())),
+      ...remote,
+    ];
     const shown = state.expanded ? matches : matches.slice(0, FIRST_ROWS);
     const rows: HTMLElement[] = [];
 
@@ -100,8 +123,16 @@ export const openLinkedPicker = (options: LinkedPickerOptions): DatabasePanel =>
         testId: `database-linked-source-${source.id}`,
         icon: IconDatabase,
         onClick: () => {
-          options.pickSource(source.id);
-          panel.push(viewPage(source));
+          const picked = options.pickSource(source);
+
+          if (picked === undefined) {
+            panel.push(viewPage(source));
+
+            return;
+          }
+          void picked.then(() => {
+            if (!state.closed) panel.push(viewPage(source));
+          });
         },
       }));
     }
@@ -132,10 +163,13 @@ export const openLinkedPicker = (options: LinkedPickerOptions): DatabasePanel =>
         onInput: (value) => {
           state.query = value;
           fillList(panel);
+          askHost(panel);
         },
       });
 
       fillList(panel);
+      // Back from "New view" rebuilds this page: the host's answer is kept.
+      if (!state.asked) askHost(panel);
 
       return [search, list];
     },
@@ -147,7 +181,10 @@ export const openLinkedPicker = (options: LinkedPickerOptions): DatabasePanel =>
     testId: 'database-linked-picker',
     width: 290,
     backLabel: t('tools.database.peekBack'),
-    ...(options.onClose !== undefined ? { onClose: options.onClose } : {}),
+    onClose: () => {
+      state.closed = true;
+      options.onClose?.();
+    },
   });
 
   panel.open();

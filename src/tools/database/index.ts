@@ -3,7 +3,7 @@ import { DATABASE_ACTION_HANDLERS } from '../../shared/tool-actions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolData, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
-import type { AutofillSettings, DatabaseData, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, FilterRule, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue } from './types';
+import type { AutofillSettings, DatabaseData, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, DatabaseLinkedSourceSnapshot, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, FilterRule, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue } from './types';
 import { countFilterRules } from './filter-tree';
 import { adapterRowValues, assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, readPropertyValue, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
 import { isOutputData, isPlaceValue } from './tier3-values';
@@ -414,6 +414,14 @@ export class DatabaseTool implements BlockTool {
   private dataSourceTitlesHidden: boolean;
   /** The source's name as last read: a deleted source still shows it. */
   private lastSourceTitle = '';
+  /** A source in another document, as the host last answered: `null` when it is gone. */
+  private remoteSnapshot: DatabaseLinkedSourceSnapshot | null | undefined;
+  /** Each host read gets the next number; only the newest one lands. */
+  private remoteReads = 0;
+  /** The source the host subscription listens to, and how to stop it. */
+  private remoteWatch: { key: string; stop: () => void } | null = null;
+  /** The blank view a remote pick shows until the host answers; then it copies the source's first table view. */
+  private remotePlaceholderView: string | null = null;
   /** Rows whose sub-item toggle is open. This person's, for this session. */
   private readonly expandedSubItems = new Set<string>();
   /** Template rows, by position. Kept out of the model's rows. */
@@ -526,8 +534,7 @@ export class DatabaseTool implements BlockTool {
     this.api = api;
     this.block = block;
     this.config = config ?? {};
-    // A source in another document has no row blocks here to write to.
-    this.editorReadOnly = readOnly || sourceRefOf(data)?.documentId !== undefined;
+    this.editorReadOnly = readOnly;
     this.ownReadOnly = this.editorReadOnly;
     this.refreshPermissions();
 
@@ -563,7 +570,8 @@ export class DatabaseTool implements BlockTool {
       me: () => this.config.people?.me?.() ?? null,
       personName: (id) => this.people?.find((person) => person.id === id)?.name,
       permitted: () => this.config.comments === undefined && this.permits('comment'),
-      readOnly: () => this.editorReadOnly,
+      // A source in another document has no row blocks here to write to.
+      readOnly: () => this.editorReadOnly || this.source?.documentId !== undefined,
       onChange: () => {
         const lever = this.commentBadgeLever().commentBadges;
 
@@ -793,9 +801,11 @@ export class DatabaseTool implements BlockTool {
       anchor,
       t: (key, vars) => this.api.i18n.t(key, vars),
       sources: () => this.pickerSources(),
-      views: (sourceId) => this.sourceViews(sourceId).filter((view) => view.type !== 'form' && view.type !== 'dashboard'),
+      ...(this.config.linkedSources?.search !== undefined ? { remoteSources: (query: string) => this.remotePickerSources(query) } : {}),
+      views: (source) => (source.documentId === undefined ? this.sourceViews(source.id) : this.remoteSnapshot?.views ?? [])
+        .filter((view) => view.type !== 'form' && view.type !== 'dashboard'),
       newEmpty: (title) => this.unlinkPicker(title),
-      pickSource: (databaseId) => this.linkTo(databaseId),
+      pickSource: (source) => (source.documentId === undefined ? this.linkTo(source.id) : this.linkToRemote(source.documentId, source)),
       newTableView: () => {
         const view = this.model.addView(DATABASE_DEFAULT_TEXT.viewTypeTable, 'table');
 
@@ -806,6 +816,44 @@ export class DatabaseTool implements BlockTool {
         this.sourcePicker = null;
       },
     });
+  }
+
+  /** The host's databases in other documents, for the picker. */
+  private async remotePickerSources(query: string): Promise<LinkedPickerSource[]> {
+    const search = this.config.linkedSources?.search;
+    const hits = search === undefined ? [] : await search({ query });
+    const untitled = this.api.i18n.t('tools.database.relationUntitled');
+
+    return hits.map((hit) => ({
+      id: hit.databaseId,
+      documentId: hit.documentId,
+      title: hit.title,
+      parent: hit.path === undefined || hit.path.trim() === '' ? untitled : hit.path,
+    }));
+  }
+
+  /**
+   * Turns this block into a linked view of a database in another document.
+   * Only the pointer is saved: the host's `resolve` hands the rows over.
+   */
+  private async linkToRemote(documentId: string, picked: LinkedPickerSource): Promise<void> {
+    if (this.readOnly) return;
+    const title = this.model.getSchema().find((p) => p.type === 'title');
+
+    this.stubSchema = title === undefined ? [] : [structuredClone(title)];
+    this.source = { databaseId: picked.id, documentId };
+    this.linkPicker = false;
+    this.lastSourceTitle = picked.title;
+    const view: DatabaseViewConfig = { id: nanoid(), name: this.api.i18n.t('tools.database.viewTypeTable'), type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] };
+
+    this.model.replaceDefinition({ schema: this.model.getSchema(), views: [view] });
+    this.model.setRows([]);
+    this.activeViewId = view.id;
+    this.remotePlaceholderView = view.id;
+    this.block.dispatchChange();
+    this.rebuildTabBar();
+    this.rerenderView();
+    await this.watchRemoteSource();
   }
 
   /** The databases a linked view can show, each with the page it sits on. */
@@ -856,7 +904,9 @@ export class DatabaseTool implements BlockTool {
 
   /** The linked view's one view, picked on the "New view" page. */
   private replaceLinkedView(view: DatabaseViewConfig): void {
-    if (this.readOnly || !this.linked) return;
+    // A source in another document always reads read-only; the block's own views are still its own.
+    if ((this.source?.documentId === undefined ? this.readOnly : this.ownReadOnly) || !this.linked) return;
+    this.remotePlaceholderView = null;
     this.model.replaceDefinition({ schema: this.model.getSchema(), views: [view] });
     this.activeViewId = view.id;
     this.block.dispatchChange();
@@ -1081,7 +1131,9 @@ export class DatabaseTool implements BlockTool {
 
   /** A linked source in this document that no longer exists. */
   private sourceMissing(): boolean {
-    return this.source !== undefined && this.source.documentId === undefined && this.api.blocks.getById(this.source.databaseId)?.name !== 'database';
+    if (this.source?.documentId !== undefined) return this.remoteSnapshot === null;
+
+    return this.source !== undefined && this.api.blocks.getById(this.source.databaseId)?.name !== 'database';
   }
 
   /** Linked: the model takes the source's live schema. Views stay this block's own. */
@@ -1529,29 +1581,94 @@ export class DatabaseTool implements BlockTool {
     if (this.config.adapter !== undefined && !this.linked) {
       void this.loadFromBackend();
     }
-    if (this.source?.documentId !== undefined) {
-      void this.loadRemoteSource(this.source.documentId, this.source.databaseId);
+    void this.watchRemoteSource();
+  }
+
+  /**
+   * Loads a source in another document and keeps listening to it, once per
+   * source: a new source stops the old subscription, no source stops it.
+   */
+  private async watchRemoteSource(): Promise<void> {
+    const source = this.source?.documentId === undefined ? undefined : { documentId: this.source.documentId, databaseId: this.source.databaseId };
+    const key = source === undefined ? '' : `${source.documentId}\u0000${source.databaseId}`;
+
+    if (this.remoteWatch?.key === key) return;
+    this.remoteWatch?.stop();
+    this.remoteWatch = null;
+    this.remoteSnapshot = undefined;
+    if (source === undefined || this.destroyed) return;
+    const watch = { key, stop: (): void => undefined };
+
+    this.remoteWatch = watch;
+    try {
+      const stop = this.config.linkedSources?.subscribe?.(source, () => {
+        if (this.remoteWatch === watch) void this.loadRemoteSource(source.documentId, source.databaseId);
+      });
+
+      if (typeof stop === 'function') watch.stop = stop;
+    } catch {
+      // The view just stops updating, like `comments.subscribe`.
     }
+    await this.loadRemoteSource(source.documentId, source.databaseId);
   }
 
   /**
    * A linked source in another document: Blok cannot read it, so the host's
    * `config.linkedSources.resolve` lever hands its schema and rows over. The
-   * view stays read-only: there is no row block to write to.
+   * view stays read-only: there is no row block to write to. `null` means
+   * the source is gone; a throw is a backend error and changes nothing.
    */
+  /**
+   * As `linkedFirstView` for a local pick (R:2021-12-23): the blank view of
+   * a fresh remote pick becomes a copy of the source's first table view.
+   */
+  private adoptRemoteFirstView(sourceViews: DatabaseViewConfig[]): DatabaseViewConfig[] {
+    const views = this.model.getViews();
+    const placeholder = this.remotePlaceholderView;
+
+    this.remotePlaceholderView = null;
+    if (placeholder === null || views.length !== 1 || views[0].id !== placeholder) return views;
+    const listed = sourceViews.filter((view) => view.type !== 'form' && view.type !== 'dashboard');
+    const first = listed.find((view) => view.type === 'table') ?? listed[0];
+
+    if (first === undefined) return views;
+    const copy = { ...structuredClone(first), id: nanoid(), position: 'a0' };
+
+    if (this.activeViewId === placeholder) this.activeViewId = copy.id;
+    this.block.dispatchChange();
+
+    return [copy];
+  }
+
   private async loadRemoteSource(documentId: string, databaseId: string): Promise<void> {
     const resolve = this.config.linkedSources?.resolve;
 
     if (resolve === undefined) return;
-    const found = await resolve({ documentId, databaseId }).catch((error: unknown) => {
-      this.showBackendError(error);
+    const read = ++this.remoteReads;
+    const found = await resolve({ documentId, databaseId }).then(
+      (snapshot) => ({ snapshot }),
+      (error: unknown) => {
+        this.showBackendError(error);
 
-      return null;
-    });
+        return undefined;
+      }
+    );
 
-    if (found === null || this.destroyed) return;
-    this.model.replaceDefinition({ schema: structuredClone(found.schema), views: this.model.getViews() });
-    this.model.setRows(structuredClone(found.rows));
+    if (found === undefined || this.destroyed || read !== this.remoteReads) return;
+    if (this.source?.documentId !== documentId || this.source.databaseId !== databaseId) return;
+    const wasMissing = this.sourceMissing();
+    const viewsBefore = this.model.getViews();
+
+    this.remoteSnapshot = found.snapshot === null ? null : structuredClone(found.snapshot);
+    if (found.snapshot === null) {
+      this.model.setRows([]);
+    } else {
+      if (found.snapshot.title !== undefined) this.lastSourceTitle = found.snapshot.title;
+      this.model.replaceDefinition({ schema: structuredClone(found.snapshot.schema), views: this.adoptRemoteFirstView(found.snapshot.views ?? []) });
+      this.model.setRows(structuredClone(found.snapshot.rows));
+    }
+    // The banner hides the add-view "+"; an adopted first view is a new tab.
+    if (wasMissing !== this.sourceMissing() || this.model.getViews()[0]?.id !== viewsBefore[0]?.id) this.rebuildTabBar();
     this.rerenderView();
   }
 
@@ -1642,6 +1759,8 @@ export class DatabaseTool implements BlockTool {
     this.reactionPicker?.getElement().remove();
     this.reactionPicker = null;
     this.stopComments?.();
+    this.remoteWatch?.stop();
+    this.remoteWatch = null;
     this.builtInComments.destroy();
     this.destroyView();
     this.groupMenuPopover?.destroy();
@@ -1680,11 +1799,9 @@ export class DatabaseTool implements BlockTool {
    *   - Re-renders the active view in edit mode (which re-inits subsystems)
    */
   setReadOnly(requested: boolean): void {
-    // A source in another document has no row blocks here to write to.
-    const state = requested || this.source?.documentId !== undefined;
     const before = { readOnly: this.readOnly, structureDenied: this.structureDenied };
 
-    this.editorReadOnly = state;
+    this.editorReadOnly = requested;
     this.refreshPermissions();
     if (before.readOnly === this.readOnly && before.structureDenied === this.structureDenied) {
       return;
@@ -1742,6 +1859,7 @@ export class DatabaseTool implements BlockTool {
     } else {
       this.model.replaceDefinition(data);
     }
+    void this.watchRemoteSource();
 
     const views = this.model.getViews();
     const activeViewId = [data.activeViewId, this.activeViewId].find((id) => views.some((view) => view.id === id)) ?? views[0].id;

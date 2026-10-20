@@ -24397,40 +24397,10 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   outline-offset: 2px;
 }
 
-[data-blok-assistant-more] {
-  display: flex;
-  align-items: center;
-  gap: var(--blok-space-1);
-  margin: 0;
-  padding-block: var(--blok-space-1-5);
-  padding-inline: calc(var(--blok-space-3) + var(--_blok-assistant-dot) + var(--blok-space-2-5)) var(--blok-space-3);
-  border: 0;
-  border-top: 1px solid var(--blok-popover-border);
-  background: transparent;
-  color: var(--blok-text-secondary);
-  font-size: var(--blok-font-size-ui-compact);
-  text-align: start;
-  cursor: pointer;
-}
-
-[data-blok-assistant-more]:hover {
-  color: var(--blok-text-primary);
-}
-
-[data-blok-assistant-more] svg {
-  width: 16px;
-  height: 16px;
-  transition: rotate var(--blok-duration-base) var(--blok-ease-standard);
-}
-
-[data-blok-assistant-more][aria-expanded='true'] svg {
-  rotate: 180deg;
-}
-
 [data-blok-assistant-reply] {
   max-height: 40vh;
   margin: 0;
-  padding-block: 0 var(--blok-space-3);
+  padding-block: var(--blok-space-1) var(--blok-space-3);
   padding-inline: calc(var(--blok-space-3) + var(--_blok-assistant-dot) + var(--blok-space-2-5)) var(--blok-space-3);
   overflow-y: auto;
   overflow-wrap: anywhere;
@@ -24540,7 +24510,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   animation: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-assistant-more] svg, [data-blok-assistant-send], [data-blok-assistant-thinking], [data-blok-assistant-undo], [data-blok-assistant-keep], [data-blok-assistant-button] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-assistant-send], [data-blok-assistant-thinking], [data-blok-assistant-undo], [data-blok-assistant-keep], [data-blok-assistant-button] {
   transition: none;
 }
 

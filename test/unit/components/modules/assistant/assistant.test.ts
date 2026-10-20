@@ -402,9 +402,6 @@ describe('in-editor assistant bar', () => {
 
     editor.agent.openAssistant();
     submit('Add a table');
-    // The first line is the summary; the rest waits in the collapsed panel.
-    await waitFor(() => expect(within(bar()).getByRole('button', { name: 'Show more' })).toBeVisible());
-    within(bar()).getByRole('button', { name: 'Show more' }).click();
     await waitFor(() => expect(within(bar()).getByRole('table')).toBeVisible());
 
     const table = within(bar()).getByRole('table');
@@ -593,7 +590,7 @@ describe('in-editor assistant bar', () => {
     expect(within(bar()).getByRole('button', { name: 'Keep' })).toBeVisible();
     // Read top to bottom: the answer, its rest, then the field.
     expect(summary.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(within(bar()).getByRole('button', { name: 'Show more' }).compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(bar()).getByText('It says hello back.').compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     fireEvent.input(field, { target: { value: 'Make it shorter' } });
 
@@ -1299,28 +1296,18 @@ describe('in-editor assistant bar', () => {
         expect(button.textContent?.trim()).toBe('');
         expect(button.querySelector('svg')).not.toBeNull();
       });
-      // One line: nothing more to show.
-      expect(within(bar()).queryByRole('button', { name: 'Show more' })).toBeNull();
       // The field still takes a follow-up.
       expect(within(bar()).getByRole('textbox')).toHaveFocus();
     });
 
-    it('a long reply opens in a collapsed panel', async () => {
+    it('shows a long reply in full under its first line, with no Show more toggle', async () => {
       await createEditor(scripted(answer('Added two lines.\n\nThe first one says hello.\n\n- one\n- two')));
 
       pressModJ(paragraphInput());
       submit('Write');
-      await waitFor(() => expect(within(bar()).getByText('Added two lines.')).toBeVisible());
+      await waitFor(() => expect(within(bar()).getAllByRole('listitem')).toHaveLength(2));
 
-      const more = within(bar()).getByRole('button', { name: 'Show more' });
-
-      expect(more).toHaveAttribute('aria-expanded', 'false');
-      await waitFor(() => expect(within(bar()).getByText('The first one says hello.', { ignore: false })).not.toBeVisible());
-      expect(within(bar()).queryByRole('listitem')).toBeNull();
-
-      more.click();
-
-      expect(more).toHaveAttribute('aria-expanded', 'true');
+      expect(within(bar()).queryByRole('button', { name: 'Show more' })).toBeNull();
       expect(within(bar()).getByText('The first one says hello.')).toBeVisible();
       expect(within(bar()).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['one', 'two']);
       // The summary is not repeated in the panel.

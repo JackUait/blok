@@ -1,7 +1,7 @@
 import type { AgentThinkingLevel } from '../../../../types/api';
 import { PopoverEvent } from '../../../../types/utils/popover/popover-event';
 import { DATA_ATTR } from '../../constants/data-attributes';
-import { IconArrowUp, IconCheck, IconChevronDown, IconEmojiSparkles, IconPlayerSpeed, IconUndo } from '../../icons';
+import { IconArrowUp, IconCheck, IconEmojiSparkles, IconPlayerSpeed, IconUndo } from '../../icons';
 import { PopoverDesktop } from '../../utils/popover';
 import { onHover } from '../../utils/tooltip';
 import { promoteToTopLayer, removeFromTopLayer } from '../../utils/top-layer';
@@ -32,7 +32,6 @@ export type AssistantBarView =
 const ATTR = {
   dock: 'data-blok-assistant',
   reply: 'data-blok-assistant-reply',
-  more: 'data-blok-assistant-more',
   status: 'data-blok-assistant-status',
   summary: 'data-blok-assistant-summary',
   alert: 'data-blok-assistant-alert',
@@ -140,7 +139,6 @@ export class AssistantBar {
   private readonly head: HTMLElement;
   private readonly summary: HTMLElement;
   private readonly reply: HTMLElement;
-  private readonly more: HTMLButtonElement;
   private readonly status: HTMLElement;
   private readonly alert: HTMLElement;
   private readonly send: HTMLButtonElement;
@@ -211,22 +209,13 @@ export class AssistantBar {
     this.head.append(headIcon, answer, this.undo, this.keep);
     row.append(icon, field, this.thinking, this.send, this.stop);
 
-    this.reply = build('div', { [ATTR.reply]: '', id: `blok-assistant-reply-${Math.random().toString(36).slice(2)}` });
-    // The database's "Show more" string: the same words, so no new key in every locale.
-    this.more = build('button', {
-      type: 'button',
-      [ATTR.more]: '',
-      'aria-expanded': 'false',
-      'aria-controls': this.reply.id,
-    });
-    this.more.textContent = t('tools.database.linkedShowMore');
-    this.more.insertAdjacentHTML('beforeend', IconChevronDown);
+    this.reply = build('div', { [ATTR.reply]: '' });
 
     this.slots = build('div', { [ATTR.slots]: '', 'aria-hidden': 'true' });
     this.slots.append(...['', 'short'].map((size) => build('div', { [DATA_ATTR.aiSlot]: size, class: 'blok-ai-shimmer' })));
     this.slots.hidden = true;
 
-    this.element.append(this.head, this.more, this.reply, row, this.slots);
+    this.element.append(this.head, this.reply, row, this.slots);
 
     this.field.addEventListener('keydown', (event) => this.onKeydown(event));
     this.field.addEventListener('input', () => this.sync());
@@ -235,7 +224,6 @@ export class AssistantBar {
     this.stop.addEventListener('click', () => callbacks.onStop());
     this.keep.addEventListener('click', () => callbacks.onKeep());
     this.undo.addEventListener('click', () => callbacks.onDiscard());
-    this.more.addEventListener('click', () => this.setExpanded(this.more.getAttribute('aria-expanded') !== 'true'));
 
     this.element.hidden = true;
     this.render({ kind: 'prompt' });
@@ -424,8 +412,8 @@ export class AssistantBar {
   }
 
   /**
-   * Show the reply's first line as the summary and the rest in the collapsed
-   * panel: plain text at once, then the markdown rendering. The renderer is
+   * Show the reply's first line as the summary and the rest under it:
+   * plain text at once, then the markdown rendering. The renderer is
    * imported lazily so the core bundle does not carry it.
    * @param reply - the model's final message, in markdown
    */
@@ -436,8 +424,7 @@ export class AssistantBar {
     this.replyToken = token;
     this.summary.textContent = summary;
     this.reply.textContent = rest;
-    this.more.hidden = rest === '';
-    this.setExpanded(false);
+    this.reply.hidden = rest === '';
     if (reply.trim() === '') {
       return;
     }
@@ -454,11 +441,6 @@ export class AssistantBar {
         }
       })
       .catch(() => undefined);
-  }
-
-  private setExpanded(expanded: boolean): void {
-    this.reply.hidden = !expanded;
-    this.more.setAttribute('aria-expanded', String(expanded));
   }
 
   /** Show what fits the view: after an answer, the answer and its actions on top, the follow-up field under them. */

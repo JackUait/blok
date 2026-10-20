@@ -957,8 +957,6 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_STARTER_TEMPLATES_BYTES = 6_886;
     // database.css: pressed View settings row and ×, Today/Now hover, light and dark (research/27 §6).
     const DATABASE_PRESSED_FILLS_BYTES = 1_106;
-    // assistant.css: the answer head over a follow-up field that stays visible (2026-10-20).
-    const ASSISTANT_FOLLOW_UP_FIELD_BYTES = 642;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1103,8 +1101,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_MANAGE_CALENDAR_BYTES
       + DATABASE_STARTER_TEMPLATES_BYTES
       + DATABASE_PRESSED_FILLS_BYTES
-      + DATABASE_CSV_IMPORT_BYTES
-      + ASSISTANT_FOLLOW_UP_FIELD_BYTES;
+      + DATABASE_CSV_IMPORT_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

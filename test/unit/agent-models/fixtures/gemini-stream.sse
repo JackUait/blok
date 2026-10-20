@@ -1,0 +1,12 @@
+data: {"candidates":[{"content":{"role":"model","parts":[{"text":"Plan ","thought":true}]},"index":0}],"modelVersion":"gemini-3.8-flash"}
+
+data: {"candidates":[{"content":{"role":"model","parts":[{"text":"it.","thought":true}]},"index":0}],"modelVersion":"gemini-3.8-flash"}
+
+data: {"candidates":[{"content":{"role":"model","parts":[{"text":"Adding a "}]},"index":0}],"modelVersion":"gemini-3.8-flash"}
+
+data: {"candidates":[{"content":{"role":"model","parts":[{"text":"heading.","thoughtSignature":"sigT"}]},"index":0}],"modelVersion":"gemini-3.8-flash"}
+
+data: {"candidates":[{"content":{"role":"model","parts":[{"functionCall":{"name":"blok_execute","args":{"commands":[{"name":"block.insert","args":{"type":"header"}}]}},"thoughtSignature":"sig1"}]},"index":0}],"modelVersion":"gemini-3.8-flash"}
+
+data: {"candidates":[{"content":{"role":"model","parts":[{"functionCall":{"id":"fc_2","name":"blok_read","args":{}}}]},"finishReason":"STOP","index":0}],"usageMetadata":{"promptTokenCount":12,"candidatesTokenCount":40,"totalTokenCount":52},"modelVersion":"gemini-3.8-flash"}
+

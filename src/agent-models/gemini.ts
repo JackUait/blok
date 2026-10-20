@@ -1,11 +1,12 @@
 import type {
-  AgentModel, AgentModelContentBlock, AgentModelMessage, AgentModelResponse, AgentThinkingLevel,
+  AgentModel, AgentModelContentBlock, AgentModelMessage, AgentModelRequest, AgentModelResponse, AgentThinkingLevel,
 } from '../../types/api';
 
 import {
-  DEFAULT_MAX_TOKENS, blocksOf, errorOf, isRecord, isText, isToolResult, isToolUse,
-  callId, providerBlock, rawTurn, post, requireTransport, stepOf, toolNames, withLevel, type AdapterOptions, type Body,
+  DEFAULT_MAX_TOKENS, blocksOf, endOfStream, errorOf, isRecord, isText, isToolResult, isToolUse,
+  callId, providerBlock, rawTurn, post, postStream, requireTransport, stepOf, toolNames, withLevel, type AdapterOptions, type Body,
 } from './shared';
+import { readJsonEvents } from './sse';
 
 const FORMAT = 'gemini';
 
@@ -111,9 +112,81 @@ const readReply = (reply: unknown, step: number): AgentModelResponse => {
   return { content, stop_reason: stop };
 };
 
+type Part = Record<string, unknown>;
+
+/** Text continues the last text part of the same kind, so the parts match the JSON reply. */
+const withPart = (parts: Part[], part: Part): Part[] => {
+  const last = parts[parts.length - 1];
+
+  if (last !== undefined && typeof last.text === 'string' && typeof part.text === 'string' && last.thought === part.thought) {
+    // Spread keeps a thoughtSignature that arrives on a later chunk.
+    return [...parts.slice(0, -1), { ...last, ...part, text: last.text + part.text }];
+  }
+
+  return [...parts, part];
+};
+
+const emitCall = (request: AgentModelRequest, index: number, id: string, call: Part): void => {
+  request.onStream?.({ type: 'tool_start', index, id, name: String(call.name) });
+  request.onStream?.({ type: 'tool_input', index, json: JSON.stringify(call.args ?? {}) });
+  request.onStream?.({ type: 'tool_end', index });
+};
+
 /**
- * Gemini generateContent (v1beta). The model id goes in the URL, so `send` gets it as `context.model`.
- * @param options - model id, the host's send, and optional level overrides
+ * Merges the chunks into the JSON reply readReply reads, and reports each call as it arrives.
+ * Gemini sends a functionCall whole, so its events go out at once.
+ */
+const readStream = async (source: Response | ReadableStream<Uint8Array>, request: AgentModelRequest, step: number): Promise<unknown> => {
+  const state: { parts: Part[]; calls: number; candidate: Part; promptFeedback?: unknown; finished: boolean } = {
+    parts: [], calls: 0, candidate: {}, finished: false,
+  };
+
+  for await (const chunk of readJsonEvents(source, request.signal, 'Gemini')) {
+    const error = errorOf(chunk, 'Gemini');
+
+    if (error !== null) {
+      throw error;
+    }
+    if (isRecord(chunk.promptFeedback)) {
+      state.promptFeedback = chunk.promptFeedback;
+      state.finished ||= chunk.promptFeedback.blockReason !== undefined;
+    }
+
+    const first: unknown = Array.isArray(chunk.candidates) ? chunk.candidates[0] : undefined;
+
+    if (!isRecord(first)) {
+      continue;
+    }
+
+    const { content, ...rest } = first;
+    const parts = isRecord(content) && Array.isArray(content.parts) ? content.parts.filter(isRecord) : [];
+    // A malformed call is retried, and its events must not reach the editor.
+    const emits = first.finishReason !== 'MALFORMED_FUNCTION_CALL';
+
+    state.candidate = { ...state.candidate, ...rest };
+    state.finished ||= first.finishReason !== undefined;
+
+    parts.forEach((part) => {
+      state.parts = withPart(state.parts, part);
+
+      if (emits && isRecord(part.functionCall)) {
+        // Same id readReply gives the call: its position among the merged parts.
+        emitCall(request, state.calls++, callId(part.functionCall.id, step, state.parts.length - 1), part.functionCall);
+      }
+    });
+  }
+
+  endOfStream(request.signal, state.finished, 'Gemini');
+
+  return {
+    candidates: [{ ...state.candidate, content: { role: 'model', parts: state.parts } }],
+    ...(state.promptFeedback === undefined ? {} : { promptFeedback: state.promptFeedback }),
+  };
+};
+
+/**
+ * Gemini generateContent (v1beta). The model id goes in the URL, so `send` and `stream` get it as `context.model`.
+ * @param options - model id, the host's send or stream, and optional level overrides
  */
 export function geminiModel(options: AdapterOptions): AgentModel {
   requireTransport(options, 'Gemini');
@@ -130,8 +203,13 @@ export function geminiModel(options: AdapterOptions): AgentModel {
       generationConfig: { maxOutputTokens: options.maxTokens ?? DEFAULT_MAX_TOKENS },
     }, request, LEVELS, options);
 
+    const { stream } = options;
+
+    // The body is the same for both; Gemini picks streaming by URL.
     const ask = async (tries: number): Promise<AgentModelResponse> => {
-      const reply = await post(body, request, options, 'Gemini');
+      const reply = stream === undefined
+        ? await post(body, request, options, 'Gemini')
+        : await readStream(await postStream(stream, body, request, options), request, step);
 
       try {
         return readReply(reply, step);

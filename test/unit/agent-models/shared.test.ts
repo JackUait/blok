@@ -4,7 +4,7 @@ import { geminiModel } from '../../../src/agent-models/gemini';
 import { openaiModel } from '../../../src/agent-models/openai';
 import { openaiCompatibleModel } from '../../../src/agent-models/openai-compatible';
 import {
-  endOfStream, errorOf, merge, parseArguments, providerBlock, rawTurn, toolNames, withLevel, type AdapterOptions,
+  endOfStream, errorOf, merge, parseArguments, post, providerBlock, rawTurn, toolNames, withLevel, type AdapterOptions,
 } from '../../../src/agent-models/shared';
 import type { AgentModelRequest } from '../../../types/api';
 
@@ -79,10 +79,8 @@ describe('adapter helpers', () => {
     expect(() => geminiModel({ model: 'm' })).toThrow(new TypeError('Gemini: pass send or stream.'));
   });
 
-  it('names the provider when an adapter that cannot stream yet gets only stream', async () => {
-    const stream = async (): Promise<Response> => new Response('');
-
-    await expect(geminiModel({ model: 'm', stream })(request())).rejects.toThrow('Gemini: this adapter cannot stream yet. Pass send.');
+  it('post without send asks for send or stream, since every adapter streams', async () => {
+    await expect(post({}, request(), { model: 'm' }, 'P')).rejects.toThrow(new TypeError('P: pass send or stream.'));
   });
 
   it('ends a stream: an abort, then a missing terminal event, both throw; a finished stream passes', () => {

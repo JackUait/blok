@@ -1,8 +1,19 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { geminiModel } from '../../../src/agent-models/gemini';
 import { runAssistantLoop } from '../../../src/agent/assistant-loop';
-import type { AgentModelMessage } from '../../../types/api';
+import type { AgentModelMessage, AgentModelStreamEvent } from '../../../types/api';
+
+import { fakeStream, request, sseStream } from './stream-helpers';
+
+const FIXTURE = readFileSync(resolve(__dirname, 'fixtures/gemini-stream.sse'), 'utf8');
+
+const sse = (...chunks: unknown[]): string => chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\r\n\r\n`).join('');
+
+const heading = { commands: [{ name: 'block.insert', args: { type: 'header' } }] };
 
 const fakeSend = (...replies: unknown[]): { send: (body: Record<string, unknown>) => Promise<unknown>; bodies: Record<string, unknown>[] } => {
   const bodies: Record<string, unknown>[] = [];
@@ -191,5 +202,130 @@ describe('geminiModel', () => {
       { role: 'model', parts: [{ text: 'b' }, { functionCall: { id: 'u1', name: 'blok_read', args: { x: 1 } } }] },
       { role: 'user', parts: [{ functionResponse: { id: 'u1', name: 'blok_read', response: { result: '{"ok":true}' } } }] },
     ]);
+  });
+  describe('streaming', () => {
+    it('emits each whole functionCall as tool_start, one tool_input and tool_end', async () => {
+      const events: AgentModelStreamEvent[] = [];
+
+      await geminiModel({ model: 'm', stream: fakeStream(FIXTURE).stream })(request((event) => events.push(event)));
+
+      expect(events).toEqual([
+        { type: 'tool_start', index: 0, id: 'call-1-2', name: 'blok_execute' },
+        { type: 'tool_input', index: 0, json: JSON.stringify(heading) },
+        { type: 'tool_end', index: 0 },
+        { type: 'tool_start', index: 1, id: 'fc_2', name: 'blok_read' },
+        { type: 'tool_input', index: 1, json: '{}' },
+        { type: 'tool_end', index: 1 },
+      ]);
+    });
+
+    it('the streamed response equals the non-streamed one for the same content', async () => {
+      const twin = {
+        candidates: [{
+          content: { role: 'model', parts: [
+            { text: 'Plan it.', thought: true },
+            { text: 'Adding a heading.', thoughtSignature: 'sigT' },
+            { functionCall: { name: 'blok_execute', args: heading }, thoughtSignature: 'sig1' },
+            { functionCall: { id: 'fc_2', name: 'blok_read', args: {} } },
+          ] },
+          finishReason: 'STOP',
+          index: 0,
+        }],
+        usageMetadata: { promptTokenCount: 12, candidatesTokenCount: 40, totalTokenCount: 52 },
+      };
+      const streamed = await geminiModel({ model: 'm', stream: fakeStream(FIXTURE).stream })(request(() => undefined));
+      const sent = await geminiModel({ model: 'm', send: fakeSend(twin).send })(request());
+
+      expect(streamed).toEqual(sent);
+      expect(streamed.stop_reason).toBe('tool_use');
+      expect(streamed.content.slice(0, 3)).toEqual([
+        { type: 'text', text: 'Adding a heading.' },
+        { type: 'tool_use', id: 'call-1-2', name: 'blok_execute', input: heading },
+        { type: 'tool_use', id: 'fc_2', name: 'blok_read', input: {} },
+      ]);
+    });
+
+    it('sends the same body as send, and passes the model id to stream', async () => {
+      const streaming = fakeStream(FIXTURE);
+      const plain = fakeSend(candidate([{ text: 'ok' }]));
+      const models: string[] = [];
+
+      await geminiModel({ model: 'gemini-3.8-flash', stream: async (body, context) => {
+        models.push(context.model);
+
+        return streaming.stream(body, context);
+      } })(request());
+      await geminiModel({ model: 'gemini-3.8-flash', send: plain.send })(request());
+
+      expect(streaming.bodies[0]).toEqual(plain.bodies[0]);
+      expect(models).toEqual(['gemini-3.8-flash']);
+    });
+
+    it('retries a malformed streamed call without emitting its events', async () => {
+      const malformed = sse(
+        { candidates: [{ content: { role: 'model', parts: [{ text: 'Trying' }] } }] },
+        { candidates: [{ content: { role: 'model', parts: [{ functionCall: { name: 'blok_execute', args: { bad: true } } }] }, finishReason: 'MALFORMED_FUNCTION_CALL' }] }
+      );
+      const { stream, bodies } = fakeStream(malformed, FIXTURE);
+      const events: AgentModelStreamEvent[] = [];
+
+      const response = await geminiModel({ model: 'm', stream })(request((event) => events.push(event)));
+
+      expect(events.filter((event) => event.type === 'tool_start')).toEqual([
+        { type: 'tool_start', index: 0, id: 'call-1-2', name: 'blok_execute' },
+        { type: 'tool_start', index: 1, id: 'fc_2', name: 'blok_read' },
+      ]);
+      expect(bodies).toHaveLength(2);
+      expect(bodies[1]).toEqual(bodies[0]);
+      expect(response.stop_reason).toBe('tool_use');
+    });
+
+    it('runs a whole streamed turn through the loop', async () => {
+      const done = sse({ candidates: [{ content: { role: 'model', parts: [{ text: 'Done.' }] }, finishReason: 'STOP' }] });
+      const { stream } = fakeStream(FIXTURE, done);
+
+      expect(await run(geminiModel({ model: 'm', stream }), [{ role: 'user', content: 'Go' }])).toEqual({ status: 'done', reply: 'Done.' });
+    });
+
+    it('maps a blocked prompt in the stream to a refusal', async () => {
+      const blocked = sse({ promptFeedback: { blockReason: 'SAFETY' } });
+
+      expect(await geminiModel({ model: 'm', stream: fakeStream(blocked).stream })(request())).toEqual({ content: [], stop_reason: 'refusal' });
+    });
+
+    it('throws on an error chunk', async () => {
+      const text = sse({ candidates: [{ content: { parts: [{ text: 'a' }] } }] }, { error: { code: 503, message: 'Overloaded' } });
+
+      await expect(geminiModel({ model: 'm', stream: fakeStream(text).stream })(request())).rejects.toThrow('Gemini: Overloaded');
+    });
+
+    it('throws the provider\'s message for an HTTP error response', async () => {
+      const stream = async (): Promise<Response> => new Response('{"error":{"code":400,"message":"API key not valid"}}', { status: 400 });
+
+      await expect(geminiModel({ model: 'm', stream })(request())).rejects.toThrow('Gemini: API key not valid');
+    });
+
+    it('throws when the stream ends before a finishReason', async () => {
+      const cut = FIXTURE.slice(0, FIXTURE.lastIndexOf('data: '));
+
+      await expect(geminiModel({ model: 'm', stream: fakeStream(cut).stream })(request())).rejects.toThrow('Gemini: the stream ended early.');
+    });
+
+    it('throws instead of returning half a reply when the run stops mid-stream', async () => {
+      const controller = new AbortController();
+      const stream = async (): Promise<ReadableStream<Uint8Array>> => new ReadableStream({
+        start: (source) => source.enqueue(new TextEncoder().encode(FIXTURE.slice(0, FIXTURE.lastIndexOf('data: ')))),
+      });
+
+      await expect(geminiModel({ model: 'm', stream })(request(() => controller.abort(), controller.signal)))
+        .rejects.toThrow('Gemini: the run stopped mid-stream.');
+    });
+
+    it('reads a stream split into one-byte chunks', async () => {
+      const stream = async (): Promise<ReadableStream<Uint8Array>> => sseStream(FIXTURE, 1);
+      const response = await geminiModel({ model: 'm', stream })(request());
+
+      expect(response.stop_reason).toBe('tool_use');
+    });
   });
 });

@@ -44,5 +44,8 @@ export declare function openaiModel(options: AgentModelAdapterOptions): AgentMod
 /** Chat Completions: DeepSeek, Mistral, Groq, Ollama, OpenRouter and others. Levels set `reasoning_effort`. */
 export declare function openaiCompatibleModel(options: AgentModelAdapterOptions): AgentModel;
 
-/** Gemini generateContent (v1beta). Levels set `generationConfig.thinkingConfig.thinkingLevel`. */
+/**
+ * Gemini generateContent (v1beta). Levels set `generationConfig.thinkingConfig.thinkingLevel`.
+ * The body is the same for both transports. With `stream`, call `:streamGenerateContent?alt=sse`.
+ */
 export declare function geminiModel(options: AgentModelAdapterOptions): AgentModel;

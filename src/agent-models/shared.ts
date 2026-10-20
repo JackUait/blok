@@ -111,7 +111,7 @@ export const stepOf = (request: AgentModelRequest): number =>
  */
 export const post = (body: Body, request: AgentModelRequest, options: AdapterOptions, provider: string): Promise<unknown> => {
   if (options.send === undefined) {
-    return Promise.reject(new TypeError(`${provider}: this adapter cannot stream yet. Pass send.`));
+    return Promise.reject(new TypeError(`${provider}: pass send or stream.`));
   }
 
   return options.send(structuredClone(body), sendContext(request, options));

@@ -549,14 +549,17 @@ describe('date cell editor', () => {
     const field = (): HTMLInputElement => q<HTMLInputElement>('[data-blok-database-date-input="start"]');
 
     it.each([
-      ['full', '2026-06-05', 'June 5, 2026'],
+      // research/27 §4a: the field writes Full date with the short month; the cell keeps the long one.
+      ['full', '2026-06-05', 'Jun 5, 2026'],
+      ['full', '2027-03-04', 'Mar 4, 2027'],
       ['short', '2026-06-05', 'Jun 5'],
       ['short', '2025-10-12', 'Oct 12'],
+      ['short', '2027-03-04', 'Mar 4'],
       ['month_day_year', '2026-06-05', '06/05/2026'],
       ['day_month_year', '2026-06-05', '05/06/2026'],
       ['year_month_day', '2026-06-05', '2026/06/05'],
       ['relative', '2026-10-10', 'Tomorrow'],
-      ['relative', '2026-06-05', 'June 5, 2026'],
+      ['relative', '2026-06-05', 'Jun 5, 2026'],
     ] as const)('%s shows %s as %s', (format, value, shown) => {
       openFormat(value, format);
 
@@ -567,6 +570,8 @@ describe('date cell editor', () => {
       ['full', '2026-06-05'],
       ['short', '2025-10-12'],
       ['short', '2026-06-05'],
+      ['short', '2027-03-04'],
+      ['relative', '2026-06-05'],
       ['month_day_year', '2026-06-05'],
       ['day_month_year', '2026-06-05'],
       ['year_month_day', '2026-06-05'],

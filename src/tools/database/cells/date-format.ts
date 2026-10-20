@@ -129,21 +129,17 @@ const dayPartsOf = (part: string, timeZone: string | undefined): DayParts => {
 const zoneOption = (part: string, timeZone: string | undefined): Intl.DateTimeFormatOptions =>
   isInstant(part) && timeZone !== undefined ? { timeZone } : {};
 
-const formatDay = (part: string, locale: string, display: DateDisplay, now: Date): string => {
+/** `field`: the date picker's field, which writes Full date with the short month (research/27 §4a). */
+const formatDay = (part: string, locale: string, display: DateDisplay, now: Date, field = false): string => {
   const { year, month, day } = dayPartsOf(part, display.timeZone);
 
   switch (display.dateFormat ?? 'full') {
     case 'month_day_year': return [pad(month), pad(day), String(year)].join('/');
     case 'day_month_year': return [pad(day), pad(month), String(year)].join('/');
     case 'year_month_day': return [String(year), pad(month), pad(day)].join('/');
-    // research/23 §1, 26 §5e: "Oct 20" with no year, for this year or a past one. A future year was not measured; it keeps the year.
+    // research/23 §1, 26 §5e, 27 §4a: "Oct 20" with no year, for any year. CSV export writes the full date.
     case 'short':
-      return new Intl.DateTimeFormat(locale, {
-        month: 'short',
-        day: 'numeric',
-        ...(year <= now.getFullYear() ? {} : { year: 'numeric' }),
-        ...zoneOption(part, display.timeZone),
-      }).format(toLocalDate(part));
+      return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', ...zoneOption(part, display.timeZone) }).format(toLocalDate(part));
     case 'relative': {
       const diff = Math.round((Date.UTC(year, month - 1, day) - Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) / DAY_MS);
 
@@ -154,17 +150,17 @@ const formatDay = (part: string, locale: string, display: DateDisplay, now: Date
         return text.charAt(0).toLocaleUpperCase(locale) + text.slice(1);
       }
 
-      return formatDay(part, locale, { ...display, dateFormat: 'full' }, now);
+      return formatDay(part, locale, { ...display, dateFormat: 'full' }, now, field);
     }
     case 'full':
     default:
-      return new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'long', day: 'numeric', ...zoneOption(part, display.timeZone) }).format(toLocalDate(part));
+      return new Intl.DateTimeFormat(locale, { year: 'numeric', month: field ? 'short' : 'long', day: 'numeric', ...zoneOption(part, display.timeZone) }).format(toLocalDate(part));
   }
 };
 
 /** A bare `YYYY-MM-DD` day as the date picker's field shows it: the property's Date format, no time. */
 export const formatDayField = (day: string, locale: string, display: DateDisplay, now: Date = new Date()): string =>
-  formatDay(day, locale, display, now);
+  formatDay(day, locale, display, now, true);
 
 const NUMERIC_ORDER: Partial<Record<DateFormat, ReadonlyArray<'y' | 'm' | 'd'>>> = {
   month_day_year: ['m', 'd', 'y'],

@@ -236,6 +236,9 @@ describe('database CSV', () => {
       // A past year shows no year either (research/26 §5e).
       expect(roundTrip({ ...date, date: { dateFormat: 'short' } }, '2025-03-04')).toBe('2025-03-04');
       expect(roundTrip({ ...date, date: { dateFormat: 'short' } }, '2025-03-04T15:30')).toBe('2025-03-04T15:30');
+      // And a future one (research/27 §4a).
+      expect(roundTrip({ ...date, date: { dateFormat: 'short' } }, '2027-03-04')).toBe('2027-03-04');
+      expect(roundTrip({ ...date, date: { dateFormat: 'short' } }, '2027-03-04T15:30')).toBe('2027-03-04T15:30');
     });
 
     it('keeps a checkbox, a url and a select', () => {

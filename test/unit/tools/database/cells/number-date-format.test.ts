@@ -109,9 +109,9 @@ describe('formatDateDisplay', () => {
     expect(formatDateDisplay('2025-10-09', 'en-US', { dateFormat: 'short' }, now)).toBe('Oct 9');
   });
 
-  // A future year was not measured: it keeps its year.
-  it('writes the short format of a future year with its year', () => {
-    expect(formatDateDisplay('2027-10-09', 'en-US', { dateFormat: 'short' }, now)).toBe('Oct 9, 2027');
+  // research/27 §4a: a future year reads "Mar 4" too. Short date never shows a year.
+  it('writes the short format of a future year with no year', () => {
+    expect(formatDateDisplay('2027-10-09', 'en-US', { dateFormat: 'short' }, now)).toBe('Oct 9');
   });
 
   it('writes Relative today as "Today", as Notion does', () => {

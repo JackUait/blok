@@ -1,8 +1,50 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openaiModel } from '../../../src/agent-models/openai';
+import type { AdapterOptions } from '../../../src/agent-models/shared';
 import { runAssistantLoop } from '../../../src/agent/assistant-loop';
-import type { AgentModelMessage } from '../../../types/api';
+import type { AgentModelMessage, AgentModelRequest, AgentModelStreamEvent } from '../../../types/api';
+
+const FIXTURE = readFileSync(resolve(__dirname, 'fixtures/openai-stream.sse'), 'utf8');
+
+/** Small chunks, so lines and JSON tokens split across reads. */
+const sseStream = (text: string, size = 7): ReadableStream<Uint8Array> => {
+  const bytes = new TextEncoder().encode(text);
+
+  return new ReadableStream({
+    start: (controller) => {
+      for (let offset = 0; offset < bytes.length; offset += size) {
+        controller.enqueue(bytes.slice(offset, offset + size));
+      }
+      controller.close();
+    },
+  });
+};
+
+const sse = (...events: Array<Record<string, unknown>>): string => events
+  .map((event) => `event: ${String(event.type)}\ndata: ${JSON.stringify(event)}\n\n`).join('');
+
+const fakeStream = (...texts: string[]): { stream: NonNullable<AdapterOptions['stream']>; bodies: Record<string, unknown>[] } => {
+  const bodies: Record<string, unknown>[] = [];
+
+  return {
+    bodies,
+    stream: async (body) => {
+      bodies.push(structuredClone(body));
+
+      return sseStream(texts.shift() ?? '');
+    },
+  };
+};
+
+const request = (onStream?: (event: AgentModelStreamEvent) => void, signal = new AbortController().signal): AgentModelRequest => ({
+  system: 'sys', messages: [{ role: 'user', content: 'Go' }], tools: [], signal, ...(onStream === undefined ? {} : { onStream }),
+});
+
+const heading = { commands: [{ name: 'block.insert', args: { type: 'header' } }] };
 
 const fakeSend = (...replies: unknown[]): { send: (body: Record<string, unknown>) => Promise<unknown>; bodies: Record<string, unknown>[] } => {
   const bodies: Record<string, unknown>[] = [];
@@ -174,5 +216,126 @@ describe('openaiModel', () => {
 
     expect(await run(openaiModel({ model: 'm', send }), [{ role: 'user', content: 'a' }]))
       .toEqual({ status: 'failed', reply: '', error: 'OpenAI: Invalid model' });
+  });
+  describe('streaming', () => {
+    const headingCall = {
+      type: 'function_call', id: 'fc_1', call_id: 'call_1', name: 'blok_execute', arguments: JSON.stringify(heading), status: 'completed',
+    };
+    const twin = {
+      id: 'resp_1', object: 'response', status: 'completed', usage: { input_tokens: 12, output_tokens: 40 },
+      output: [
+        { type: 'reasoning', id: 'rs_1', summary: [], encrypted_content: 'enc' },
+        { type: 'message', id: 'msg_1', status: 'completed', role: 'assistant', content: [{ type: 'output_text', text: 'Adding a heading.', annotations: [] }] },
+        headingCall,
+      ],
+    };
+
+    it('streams tool input as tool_start/tool_input/tool_end with the accumulated json', async () => {
+      const events: AgentModelStreamEvent[] = [];
+
+      await openaiModel({ model: 'm', stream: fakeStream(FIXTURE).stream })(request((event) => events.push(event)));
+
+      expect(events).toEqual([
+        { type: 'tool_start', index: 0, id: 'call_1', name: 'blok_execute' },
+        { type: 'tool_input', index: 0, json: '{"commands":[{"na' },
+        { type: 'tool_input', index: 0, json: '{"commands":[{"name":"block.insert","args":{"type":"head' },
+        { type: 'tool_input', index: 0, json: JSON.stringify(heading) },
+        { type: 'tool_end', index: 0 },
+      ]);
+    });
+
+    it('the streamed response equals the non-streamed one for the same content', async () => {
+      const streamed = await openaiModel({ model: 'm', stream: fakeStream(FIXTURE).stream })(request(() => undefined));
+      const sent = await openaiModel({ model: 'm', send: fakeSend(twin).send })(request());
+
+      expect(streamed).toEqual(sent);
+      expect(streamed.stop_reason).toBe('tool_use');
+      expect(streamed.content[1]).toEqual({ type: 'tool_use', id: 'call_1', name: 'blok_execute', input: heading });
+    });
+
+    it('still streams and assembles when the request has no onStream', async () => {
+      const response = await openaiModel({ model: 'm', stream: fakeStream(FIXTURE).stream })(request());
+
+      expect(response.content.slice(0, 2)).toEqual([
+        { type: 'text', text: 'Adding a heading.' },
+        { type: 'tool_use', id: 'call_1', name: 'blok_execute', input: heading },
+      ]);
+    });
+
+    it('sends stream: true, and only when streaming', async () => {
+      const streaming = fakeStream(FIXTURE);
+      const plain = fakeSend({ status: 'completed', output: [] });
+
+      await openaiModel({ model: 'm', stream: streaming.stream, send: plain.send })(request());
+      await openaiModel({ model: 'm', send: plain.send })(request());
+
+      expect(streaming.bodies[0]).toMatchObject({ stream: true, store: false, model: 'm', max_output_tokens: 16000 });
+      expect(plain.bodies).toHaveLength(1);
+      expect(plain.bodies[0].stream).toBeUndefined();
+    });
+
+    it('gives a streamed call without a call_id the same id in its events and in the response', async () => {
+      const bare = { type: 'function_call', id: 'fc_2', name: 'blok_read', arguments: '' };
+      const message = { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Hi', annotations: [] }] };
+      const text = sse(
+        { type: 'response.output_item.added', output_index: 0, item: message },
+        { type: 'response.output_item.done', output_index: 0, item: message },
+        { type: 'response.output_item.added', output_index: 1, item: bare },
+        { type: 'response.output_item.done', output_index: 1, item: { ...bare, arguments: '{}' } },
+        { type: 'response.completed', response: { status: 'completed', output: [message, { ...bare, arguments: '{}' }] } }
+      );
+      const events: AgentModelStreamEvent[] = [];
+
+      const response = await openaiModel({ model: 'm', stream: fakeStream(text).stream })(request((event) => events.push(event)));
+
+      expect(events).toEqual([{ type: 'tool_start', index: 0, id: 'call-1-1', name: 'blok_read' }, { type: 'tool_end', index: 0 }]);
+      expect(response.content[1]).toEqual({ type: 'tool_use', id: 'call-1-1', name: 'blok_read', input: {} });
+    });
+
+    it('maps a truncated stream, which ends with response.incomplete, as send does', async () => {
+      const truncated = { status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' }, output: [] };
+      const streamed = await openaiModel({ model: 'm', stream: fakeStream(sse({ type: 'response.incomplete', response: truncated })).stream })(request());
+
+      expect(streamed).toEqual(await openaiModel({ model: 'm', send: fakeSend(truncated).send })(request()));
+      expect(streamed.stop_reason).toBe('max_tokens');
+    });
+
+    it('throws when the response fails', async () => {
+      const failed = sse({ type: 'response.failed', response: { status: 'failed', error: { code: 'server_error', message: 'Server is busy' }, output: [] } });
+      const bare = sse({ type: 'response.failed', response: { status: 'failed', output: [] } });
+
+      await expect(openaiModel({ model: 'm', stream: fakeStream(failed).stream })(request())).rejects.toThrow('OpenAI: Server is busy');
+      await expect(openaiModel({ model: 'm', stream: fakeStream(bare).stream })(request())).rejects.toThrow('OpenAI: the response failed.');
+    });
+
+    it('throws on an SSE error event, whose message is at the top level', async () => {
+      const text = sse({ type: 'error', code: 'rate_limit_exceeded', message: 'Slow down', param: null });
+
+      await expect(openaiModel({ model: 'm', stream: fakeStream(text).stream })(request())).rejects.toThrow('OpenAI: Slow down');
+    });
+
+    it('throws the provider\'s message for an HTTP error response', async () => {
+      const stream = async (): Promise<Response> => new Response('{"error":{"message":"Incorrect API key"}}', { status: 401 });
+
+      await expect(openaiModel({ model: 'm', stream })(request())).rejects.toThrow('OpenAI: Incorrect API key');
+    });
+
+    it('throws when the connection drops before response.completed', async () => {
+      const cut = FIXTURE.slice(0, FIXTURE.indexOf('event: response.completed'));
+      const mid = FIXTURE.slice(0, FIXTURE.lastIndexOf('event: response.function_call_arguments.delta'));
+
+      await expect(openaiModel({ model: 'm', stream: fakeStream(cut).stream })(request())).rejects.toThrow('OpenAI: the stream ended early.');
+      await expect(openaiModel({ model: 'm', stream: fakeStream(mid).stream })(request())).rejects.toThrow('OpenAI: the stream ended early.');
+    });
+
+    it('throws instead of returning half a response when the run stops mid-stream', async () => {
+      const controller = new AbortController();
+      const stream = async (): Promise<ReadableStream<Uint8Array>> => new ReadableStream({
+        start: (source) => source.enqueue(new TextEncoder().encode(FIXTURE.slice(0, FIXTURE.lastIndexOf('event: response.output_item.done')))),
+      });
+
+      await expect(openaiModel({ model: 'm', stream })(request(() => controller.abort(), controller.signal)))
+        .rejects.toThrow('OpenAI: the run stopped mid-stream.');
+    });
   });
 });

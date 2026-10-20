@@ -1,0 +1,39 @@
+event: response.created
+data: {"type":"response.created","sequence_number":0,"response":{"id":"resp_1","object":"response","status":"in_progress","output":[]}}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":1,"output_index":0,"item":{"type":"reasoning","id":"rs_1","summary":[]}}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","sequence_number":2,"output_index":0,"item":{"type":"reasoning","id":"rs_1","summary":[],"encrypted_content":"enc"}}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":3,"output_index":1,"item":{"type":"message","id":"msg_1","status":"in_progress","role":"assistant","content":[]}}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","sequence_number":4,"item_id":"msg_1","output_index":1,"content_index":0,"delta":"Adding a heading."}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","sequence_number":5,"output_index":1,"item":{"type":"message","id":"msg_1","status":"completed","role":"assistant","content":[{"type":"output_text","text":"Adding a heading.","annotations":[]}]}}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":6,"output_index":2,"item":{"type":"function_call","id":"fc_1","call_id":"call_1","name":"blok_execute","arguments":"","status":"in_progress"}}
+
+event: response.function_call_arguments.delta
+data: {"type":"response.function_call_arguments.delta","sequence_number":7,"item_id":"fc_1","output_index":2,"delta":"{\"commands\":[{\"na"}
+
+event: response.function_call_arguments.delta
+data: {"type":"response.function_call_arguments.delta","sequence_number":8,"item_id":"fc_1","output_index":2,"delta":"me\":\"block.insert\",\"args\":{\"type\":\"head"}
+
+event: response.function_call_arguments.delta
+data: {"type":"response.function_call_arguments.delta","sequence_number":9,"item_id":"fc_1","output_index":2,"delta":"er\"}}]}"}
+
+event: response.function_call_arguments.done
+data: {"type":"response.function_call_arguments.done","sequence_number":10,"item_id":"fc_1","output_index":2,"arguments":"{\"commands\":[{\"name\":\"block.insert\",\"args\":{\"type\":\"header\"}}]}"}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","sequence_number":11,"output_index":2,"item":{"type":"function_call","id":"fc_1","call_id":"call_1","name":"blok_execute","arguments":"{\"commands\":[{\"name\":\"block.insert\",\"args\":{\"type\":\"header\"}}]}","status":"completed"}}
+
+event: response.completed
+data: {"type":"response.completed","sequence_number":12,"response":{"id":"resp_1","object":"response","status":"completed","output":[{"type":"reasoning","id":"rs_1","summary":[],"encrypted_content":"enc"},{"type":"message","id":"msg_1","status":"completed","role":"assistant","content":[{"type":"output_text","text":"Adding a heading.","annotations":[]}]},{"type":"function_call","id":"fc_1","call_id":"call_1","name":"blok_execute","arguments":"{\"commands\":[{\"name\":\"block.insert\",\"args\":{\"type\":\"header\"}}]}","status":"completed"}],"usage":{"input_tokens":12,"output_tokens":40}}}
+

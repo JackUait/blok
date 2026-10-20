@@ -82,6 +82,6 @@ describe('adapter helpers', () => {
   it('names the provider when an adapter that cannot stream yet gets only stream', async () => {
     const stream = async (): Promise<Response> => new Response('');
 
-    await expect(openaiModel({ model: 'm', stream })(request())).rejects.toThrow('OpenAI: this adapter cannot stream yet. Pass send.');
+    await expect(geminiModel({ model: 'm', stream })(request())).rejects.toThrow('Gemini: this adapter cannot stream yet. Pass send.');
   });
 });

@@ -1,11 +1,12 @@
 import type {
-  AgentModel, AgentModelContentBlock, AgentModelMessage, AgentModelResponse, AgentThinkingLevel,
+  AgentModel, AgentModelContentBlock, AgentModelMessage, AgentModelRequest, AgentModelResponse, AgentThinkingLevel,
 } from '../../types/api';
 
 import {
-  DEFAULT_MAX_TOKENS, blocksOf, errorOf, isRecord, isText, isToolResult, isToolUse, parseArguments,
-  callId, providerBlock, rawTurn, post, requireTransport, stepOf, withLevel, type AdapterOptions, type Body,
+  DEFAULT_MAX_TOKENS, blocksOf, errorOf, httpError, isRecord, isText, isToolResult, isToolUse, parseArguments,
+  callId, providerBlock, rawTurn, post, postStream, requireTransport, stepOf, withLevel, type AdapterOptions, type Body,
 } from './shared';
+import { readSse } from './sse';
 
 const FORMAT = 'openai-responses';
 
@@ -105,9 +106,87 @@ const readReply = (reply: unknown, step: number): AgentModelResponse => {
   return { content, stop_reason: stop };
 };
 
+const parseEvent = (data: string): unknown => {
+  try {
+    return JSON.parse(data) as unknown;
+  } catch {
+    return undefined;
+  }
+};
+
+/** A function call while it streams; `call` is its position among this response's calls. */
+interface Streaming {
+  call: number;
+  json: string;
+}
+
+/** Reports tool calls as they stream, then reads the final response through readReply. */
+const readStream = async (source: Response | ReadableStream<Uint8Array>, request: AgentModelRequest, step: number): Promise<AgentModelResponse> => {
+  const failed = await httpError(source, 'OpenAI');
+
+  if (failed !== null) {
+    throw failed;
+  }
+
+  const calls = new Map<number, Streaming>();
+  const state: { final: unknown } = { final: undefined };
+
+  const onEvent = (event: Record<string, unknown>): void => {
+    // The error event carries its message at the top level, not under `error`.
+    if (event.type === 'error') {
+      throw new Error(`OpenAI: ${typeof event.message === 'string' ? event.message : 'the stream failed.'}`);
+    }
+    if (event.type === 'response.failed') {
+      throw errorOf(event.response, 'OpenAI') ?? new Error('OpenAI: the response failed.');
+    }
+    // A truncated reply ends with response.incomplete; readReply maps it like a sent one.
+    if (event.type === 'response.completed' || event.type === 'response.incomplete') {
+      state.final = event.response;
+    }
+
+    const index = typeof event.output_index === 'number' ? event.output_index : -1;
+    const streaming = calls.get(index);
+
+    if (event.type === 'response.output_item.added' && isRecord(event.item) && event.item.type === 'function_call') {
+      const call = calls.size;
+
+      calls.set(index, { call, json: '' });
+      // Same id as readReply gives the final call, so the loop matches the early call.
+      request.onStream?.({ type: 'tool_start', index: call, id: callId(event.item.call_id, step, index), name: typeof event.item.name === 'string' ? event.item.name : '' });
+    }
+    if (event.type === 'response.function_call_arguments.delta' && streaming !== undefined && typeof event.delta === 'string' && event.delta !== '') {
+      const json = streaming.json + event.delta;
+
+      calls.set(index, { ...streaming, json });
+      request.onStream?.({ type: 'tool_input', index: streaming.call, json });
+    }
+    if (event.type === 'response.output_item.done' && streaming !== undefined) {
+      request.onStream?.({ type: 'tool_end', index: streaming.call });
+    }
+  };
+
+  for await (const { data } of readSse(source, request.signal)) {
+    const event = parseEvent(data);
+
+    if (isRecord(event)) {
+      onEvent(event);
+    }
+  }
+
+  if (request.signal.aborted) {
+    throw new Error('OpenAI: the run stopped mid-stream.');
+  }
+  // A dropped connection ends the stream too; its half response must not pass as a reply.
+  if (state.final === undefined) {
+    throw new Error('OpenAI: the stream ended early.');
+  }
+
+  return readReply(state.final, step);
+};
+
 /**
  * The OpenAI Responses API, stateless (`store: false`).
- * @param options - model id, the host's send, and optional level overrides
+ * @param options - model id, the host's send or stream, and optional level overrides
  */
 export function openaiModel(options: AdapterOptions): AgentModel {
   requireTransport(options, 'OpenAI');
@@ -124,6 +203,12 @@ export function openaiModel(options: AdapterOptions): AgentModel {
         type: 'function', name: tool.name, description: tool.description, parameters: tool.input_schema, strict: false,
       })),
     }, request, LEVELS, options);
+
+    const { stream } = options;
+
+    if (stream !== undefined) {
+      return readStream(await postStream(stream, { ...body, stream: true }, request, options), request, stepOf(request));
+    }
 
     return readReply(await post(body, request, options, 'OpenAI'), stepOf(request));
   };

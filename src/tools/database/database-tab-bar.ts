@@ -554,6 +554,7 @@ export class DatabaseTabBar {
         handle: this.t('tools.database.settingsDragToReorder', 'Drag to reorder'),
         menu: this.t('tools.database.tableMoreActions', 'More actions'),
         newItem: this.t('tools.database.newView', 'New view'),
+        noResults: this.t('find.noResults', 'No results'),
       },
       readOnly: this.readOnly,
       onSelect: (viewId) => {

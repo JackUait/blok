@@ -828,7 +828,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // database.css: the comment count badge after a row title (research/12 §3).
     const DATABASE_COMMENT_BADGE_BYTES = 1_131;
     // database.css: the view overflow list's search, row handle and "•••", and New view (research/13 §3a).
-    const DATABASE_VIEW_OVERFLOW_LIST_BYTES = 1_352;
+    // +292: its keyboard highlight (moved off the current row) and the "No results" line (research/21 §2).
+    const DATABASE_VIEW_OVERFLOW_LIST_BYTES = 1_352 + 292;
     // database.css: the property menu's taken-name error line (research/14 §3).
     const DATABASE_PROPERTY_NAME_CLASH_BYTES = 233;
     // database.css: the form question's taken-name error line (research/14 §3).

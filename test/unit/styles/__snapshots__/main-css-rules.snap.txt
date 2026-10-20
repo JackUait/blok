@@ -5561,8 +5561,14 @@ button[data-blok-database-column-count]:hover {
   background-color: var(--blok-database-popover-hover);
 }
 
-[data-blok-database-tab-overflow-item][data-active] {
+[data-blok-database-tab-overflow-item][data-highlighted], [data-blok-database-tab-overflow-new][data-highlighted] {
   background-color: var(--blok-database-tab-bg-active);
+}
+
+[data-blok-database-tab-overflow-empty] {
+  padding: var(--blok-space-1) var(--blok-space-1-5);
+  font-size: 12px;
+  color: var(--blok-text-secondary);
 }
 
 [data-blok-database-tab-overflow-new] {

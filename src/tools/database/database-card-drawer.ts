@@ -2494,6 +2494,7 @@ export class DatabaseCardDrawer {
         handle: this.label('tools.database.settingsDragToReorder'),
         menu: this.label('tools.database.tableMoreActions'),
         newItem: this.label('tools.database.newView'),
+        noResults: this.label('find.noResults'),
       },
       readOnly: !editable || builder === null,
       onSelect: (id) => {

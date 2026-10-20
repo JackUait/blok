@@ -1118,12 +1118,13 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(separator.nextElementSibling).toBe(queryOne(dropdown, '[data-blok-database-tab-overflow-new]'));
     });
 
-    it('describes the new-view action as a focusable button', () => {
+    it('describes the new-view action as a focusable option of the list (research/21 §2: arrows reach it)', () => {
       const { dropdown } = openDropdown(threeViews(), 'v1');
       const newBtn = queryOne(dropdown, '[data-blok-database-tab-overflow-new]');
 
       expect(newBtn.getAttribute('data-blok-database-tab-overflow-new')).toBe('');
-      expect(newBtn.getAttribute('role')).toBe('button');
+      expect(newBtn.getAttribute('role')).toBe('option');
+      expect(newBtn.parentElement?.getAttribute('role')).toBe('listbox');
       expect(newBtn.getAttribute('tabindex')).toBe('0');
       expect(newBtn.textContent?.trim()).toBe('New view');
     });

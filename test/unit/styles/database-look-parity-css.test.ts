@@ -196,8 +196,11 @@ describe('view overflow list (research/13:81, notion-measure5/51-one-more.json)'
     return Math.max(r, g, b) - Math.min(r, g, b) <= 10;
   };
 
-  it('marks the current view gray with the same primary ink as every other row', () => {
-    const active = ruleBody('[data-blok-database-tab-overflow-item][data-active]');
+  it('fills the keyboard highlight gray (research/21 §2) with the same primary ink as every other row', () => {
+    const active = ruleBody('[data-blok-database-tab-overflow-item][data-highlighted]');
+
+    expect(ruleBody('[data-blok-database-tab-overflow-new][data-highlighted]')).toBe(active);
+    expect(ruleBody('[data-blok-database-tab-overflow-item][data-active]')).toBe('');
     const fill = active.match(/background-color: var\((--[\w-]+)\)/)?.[1];
 
     expect(fill).toBeDefined();

@@ -15,12 +15,12 @@ export interface OverflowListRow {
 export interface OverflowListOptions {
   /** The "N more…" button; the list hangs below it. */
   anchor: HTMLElement;
-  /** Attribute prefix: `<prefix>-dropdown`, `-item`, `-name`, `-handle`, `-menu`, `-separator`, `-new`. */
+  /** Attribute prefix: `<prefix>-dropdown`, `-item`, `-name`, `-handle`, `-menu`, `-separator`, `-new`, `-empty`. */
   prefix: string;
   /** The row attribute that carries its id. */
   idAttribute: string;
   rows: OverflowListRow[];
-  labels: { search: string; handle: string; menu: string; newItem: string };
+  labels: { search: string; handle: string; menu: string; newItem: string; noResults: string };
   /** Read-only rows only open their item: no handle, no "•••". */
   readOnly: boolean;
   onSelect: (id: string) => void;
@@ -44,12 +44,16 @@ export interface OverflowListOptions {
  * with a drag handle and "•••", then a new-item row. Shared by the database
  * view tabs and the tabs block.
  */
+const listIds = { next: 0 };
+
 export class OverflowList {
   private readonly options: OverflowListOptions;
   private element: HTMLElement | null = null;
   private search: SearchInput | null = null;
   private tracker: PositionTracker | null = null;
   private drag: { id: string; row: HTMLElement; moved: boolean } | null = null;
+  private highlighted: HTMLElement | null = null;
+  private readonly listId = `blok-overflow-list-${++listIds.next}`;
 
   constructor(options: OverflowListOptions) {
     this.options = options;
@@ -74,23 +78,38 @@ export class OverflowList {
     dropdown.style.zIndex = '1000';
 
     const searchItems = rows.map((row) => ({ title: row.name }));
-    const search = new SearchInput({ items: searchItems, placeholder: labels.search });
-    const rowElements = rows.map((row) => this.createRow(row));
+    const search = new SearchInput({ items: searchItems, placeholder: labels.search, controlsId: this.listId });
+    const rowElements = rows.map((row, index) => this.createRow(row, index));
+    const listbox = document.createElement('div');
+    const empty = document.createElement('div');
+
+    listbox.id = this.listId;
+    listbox.setAttribute('role', 'listbox');
+    listbox.setAttribute('aria-label', labels.search);
+    empty.setAttribute(`${prefix}-empty`, '');
+    empty.hidden = true;
+    empty.textContent = labels.noResults;
 
     // Matches stay in order; the shared search only decides which match.
     search.on(SearchInputEvent.Search, ({ query, items }) => {
       rowElements.forEach((row, index) => {
         row.toggleAttribute('hidden', query !== '' && !items.includes(searchItems[index]));
       });
+      const shown = rowElements.filter((row) => !row.hidden);
+
+      empty.hidden = shown.length > 0;
+      this.highlight(query === '' ? this.currentRow() : shown[0] ?? null);
     });
-    dropdown.append(search.getElement(), ...rowElements);
+    listbox.append(...rowElements);
     this.search = search;
 
     const onNew = this.options.onNew;
 
     if (onNew !== undefined) {
-      dropdown.appendChild(this.createNewRow(onNew));
+      listbox.appendChild(this.createNewRow(onNew));
     }
+    // Outside the listbox: only options belong in it.
+    dropdown.append(search.getElement(), empty, listbox);
 
     document.body.appendChild(dropdown);
     const reposition = (): void => {
@@ -110,6 +129,7 @@ export class OverflowList {
     // Escape, so one press peels only the top layer.
     window.addEventListener('keydown', this.handleKeyDown, true);
     search.focus();
+    this.highlight(this.currentRow());
   }
 
   public close(): void {
@@ -121,6 +141,7 @@ export class OverflowList {
     this.endDrag();
     this.search?.destroy();
     this.search = null;
+    this.highlighted = null;
     window.removeEventListener('keydown', this.handleKeyDown, true);
     document.removeEventListener('mousedown', this.handleOutsideMouseDown);
     this.element.remove();
@@ -140,6 +161,15 @@ export class OverflowList {
   };
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
+    const input = this.search?.getInput();
+
+    // Only the search field steers the highlight: a rename field or a row menu keeps its own keys.
+    if (input !== undefined && event.target === input && !event.isComposing && this.handleNavigation(event)) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      return;
+    }
     if (event.key !== 'Escape' || event.isComposing || this.options.ownsEscape(event.target)) {
       return;
     }
@@ -157,10 +187,56 @@ export class OverflowList {
     this.close();
   };
 
-  private createRow(row: OverflowListRow): HTMLElement {
+  /** True when the key moved or activated the highlight. */
+  private handleNavigation(event: KeyboardEvent): boolean {
+    if (event.key === 'Enter') {
+      this.highlighted?.click();
+
+      return this.highlighted !== null;
+    }
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') {
+      return false;
+    }
+    const targets = Array.from(this.element?.querySelectorAll<HTMLElement>('[role="option"]') ?? []).filter((el) => !el.hidden);
+
+    if (targets.length === 0) {
+      return true;
+    }
+    const step = event.key === 'ArrowDown' ? 1 : -1;
+    const index = this.highlighted === null ? -1 : targets.indexOf(this.highlighted);
+    // Nothing highlighted: Down starts at the top, Up at the bottom.
+    const start = step === 1 ? -1 : 0;
+    const from = index === -1 ? start : index;
+
+    this.highlight(targets[(from + step + targets.length) % targets.length]);
+
+    return true;
+  }
+
+  private currentRow(): HTMLElement | null {
+    return this.rowElements().find((row) => row.hasAttribute('data-active')) ?? this.rowElements()[0] ?? null;
+  }
+
+  private highlight(target: HTMLElement | null): void {
+    const input = this.search?.getInput();
+
+    this.highlighted?.removeAttribute('data-highlighted');
+    this.highlighted = target;
+    target?.setAttribute('data-highlighted', '');
+    if (target === null) {
+      input?.removeAttribute('aria-activedescendant');
+    } else {
+      input?.setAttribute('aria-activedescendant', target.id);
+    }
+  }
+
+  private createRow(row: OverflowListRow, index: number): HTMLElement {
     const { prefix, idAttribute, labels } = this.options;
     const item = document.createElement('div');
 
+    item.id = `${this.listId}-${index}`;
+    item.setAttribute('role', 'option');
+    item.setAttribute('aria-selected', String(row.active));
     item.setAttribute(`${prefix}-item`, '');
     item.setAttribute(idAttribute, row.id);
     item.toggleAttribute('data-active', row.active);
@@ -219,8 +295,11 @@ export class OverflowList {
     };
 
     separator.setAttribute(`${prefix}-separator`, '');
+    separator.setAttribute('role', 'presentation');
+    button.id = `${this.listId}-new`;
     button.setAttribute(`${prefix}-new`, '');
-    button.setAttribute('role', 'button');
+    button.setAttribute('role', 'option');
+    button.setAttribute('aria-selected', 'false');
     button.setAttribute('tabindex', '0');
     icon.setAttribute('aria-hidden', 'true');
     icon.innerHTML = IconPlus;
@@ -257,10 +336,9 @@ export class OverflowList {
   private restoreOrder(): void {
     const order = this.options.rows.map((row) => row.id);
     const rows = this.rowElements();
-    const anchor = rows[0]?.previousElementSibling ?? null;
 
     rows.sort((a, b) => order.indexOf(a.getAttribute(this.options.idAttribute) ?? '') - order.indexOf(b.getAttribute(this.options.idAttribute) ?? ''));
-    anchor?.after(...rows);
+    rows[0]?.parentElement?.prepend(...rows);
   }
 
   /** The row follows the pointer through the list; the drop commits the order the list shows. */

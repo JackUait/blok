@@ -19,7 +19,7 @@ declare global {
 
 const NAMES = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth'];
 
-const BLOCKS: OutputBlockData[] = [
+const blocks = (activeViewId: string): OutputBlockData[] => [
   {
     id: 'db-1',
     type: 'database',
@@ -28,14 +28,14 @@ const BLOCKS: OutputBlockData[] = [
       views: NAMES.map((name, i) => ({
         id: `v${i}`, name, type: 'table', position: `a${i}`, sorts: [], filters: [], visibleProperties: [],
       })),
-      activeViewId: 'v0',
+      activeViewId,
     },
     content: ['r1'],
   },
   { id: 'r1', type: 'database-row', data: { position: 'a0', properties: { 'p-title': 'Alpha' } } },
 ];
 
-const mount = async (page: Page): Promise<void> => {
+const mount = async (page: Page, activeViewId = 'v0'): Promise<void> => {
   await page.evaluate(async ({ data }) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
@@ -49,7 +49,7 @@ const mount = async (page: Page): Promise<void> => {
     document.body.appendChild(holder);
     window.blokInstance = new window.Blok({ holder, data: { blocks: data } });
     await window.blokInstance.isReady;
-  }, { data: BLOCKS });
+  }, { data: blocks(activeViewId) });
   await expect(page.getByRole('grid')).toBeVisible();
 };
 
@@ -92,7 +92,79 @@ test.describe('database view overflow list', () => {
     }
     await expect(list.getByRole('button', { name: 'Drag to reorder' })).toHaveCount(NAMES.length);
     await expect(list.getByRole('button', { name: 'More actions' })).toHaveCount(NAMES.length);
-    await expect(list.getByRole('button', { name: 'New view' })).toBeVisible();
+    await expect(list.getByRole('option', { name: 'New view' })).toBeVisible();
+  });
+
+  test('arrows move a highlight from the current view through New view, wrapping both ways', async ({ page }) => {
+    await mount(page, 'v6');
+    const list = await openList(page);
+    const search = list.getByPlaceholder('Search for a view...');
+    const highlighted = list.locator('[data-highlighted]');
+
+    await expect(highlighted).toHaveText('Seventh');
+    await expect(search).toHaveAttribute('aria-activedescendant', await rowOf(list, 'Seventh').getAttribute('id') ?? '');
+
+    await search.press('ArrowDown');
+    await expect(highlighted).toHaveText('Eighth');
+    await search.press('ArrowDown');
+    await expect(highlighted).toHaveText('New view');
+    await search.press('ArrowDown');
+    await expect(highlighted).toHaveText('First');
+    await search.press('ArrowUp');
+    await expect(highlighted).toHaveText('New view');
+    await expect(search).toBeFocused();
+  });
+
+  test('typing highlights the first match and Enter opens it', async ({ page }) => {
+    await mount(page);
+    const list = await openList(page);
+    const search = list.getByPlaceholder('Search for a view...');
+
+    await search.fill('fif');
+    await expect(list.locator('[data-highlighted]')).toHaveText('Fifth');
+    await search.press('Enter');
+
+    await expect(list).toBeHidden();
+    await expect.poll(() => page.evaluate(async () => {
+      const saved = await window.blokInstance?.save();
+
+      return (saved?.blocks.find((block) => block.type === 'database')?.data as { activeViewId: string }).activeViewId;
+    })).toBe('v4');
+  });
+
+  test('no match shows "No results" and highlights nothing', async ({ page }) => {
+    await mount(page);
+    const list = await openList(page);
+
+    await list.getByPlaceholder('Search for a view...').fill('zzz');
+
+    await expect(list.getByText('No results', { exact: true })).toBeVisible();
+    await expect(list.locator('[data-highlighted]')).toHaveCount(0);
+    await expect(list.getByRole('option', { name: 'New view' })).toBeVisible();
+  });
+
+  test('Enter on New view opens the add-view menu', async ({ page }) => {
+    await mount(page);
+    const list = await openList(page);
+    const search = list.getByPlaceholder('Search for a view...');
+
+    await search.press('ArrowUp');
+    await expect(list.locator('[data-highlighted]')).toHaveText('New view');
+    await search.press('Enter');
+
+    await expect(list).toBeHidden();
+    await expect(page.locator('[data-blok-database-view-option="board"]')).toBeVisible();
+  });
+
+  test('arrows inside an open row menu do not move the list highlight', async ({ page }) => {
+    await mount(page);
+    const list = await openList(page);
+
+    await rowOf(list, 'Third').getByRole('button', { name: 'More actions' }).click();
+    await expect(page.getByRole('menuitem', { name: 'Rename' })).toBeVisible();
+    await page.keyboard.press('ArrowDown');
+
+    await expect(list.locator('[data-highlighted]')).toHaveText('First');
   });
 
   test('search narrows the rows by name', async ({ page }) => {
@@ -104,7 +176,7 @@ test.describe('database view overflow list', () => {
     await expect(rowOf(list, 'Seventh')).toBeVisible();
     await expect(rowOf(list, 'First')).toBeHidden();
     await expect(rowOf(list, 'Eighth')).toBeHidden();
-    await expect(list.getByRole('button', { name: 'New view' })).toBeVisible();
+    await expect(list.getByRole('option', { name: 'New view' })).toBeVisible();
   });
 
   test('"•••" opens the view menu and Rename renames the view in its row', async ({ page }) => {

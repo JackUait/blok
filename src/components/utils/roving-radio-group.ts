@@ -68,32 +68,36 @@ export function rovingRadioGroup(options: RovingRadioGroupOptions): RovingRadioG
     });
   };
 
-  const move = (index: number): void => {
-    if (radios.length === 0) return;
-    const target = ((index % radios.length) + radios.length) % radios.length;
+  // A folded tab is hidden or display:none; inline checks only, since jsdom has no layout.
+  const shown = (): HTMLElement[] => radios.filter((radio) => !radio.hidden && radio.style.display !== 'none');
+
+  const move = (pool: HTMLElement[], index: number): void => {
+    if (pool.length === 0) return;
+    const target = radios.indexOf(pool[((index % pool.length) + pool.length) % pool.length]);
     onSelect(target);
     applyTabStop();
     radios[target].focus();
   };
 
   const onKeyDown = (event: KeyboardEvent): void => {
-    const current = radios.indexOf(event.currentTarget as HTMLElement);
+    const pool = shown();
+    const current = pool.indexOf(event.currentTarget as HTMLElement);
     if (current < 0) return;
 
-    const step = verticalStep(event.key) ?? horizontalStep(event.key, radios[current]);
+    const step = verticalStep(event.key) ?? horizontalStep(event.key, pool[current]);
 
     if (step === 'forward') {
       event.preventDefault();
-      move(current + 1);
+      move(pool, current + 1);
     } else if (step === 'backward') {
       event.preventDefault();
-      move(current - 1);
+      move(pool, current - 1);
     } else if (event.key === 'Home') {
       event.preventDefault();
-      move(0);
+      move(pool, 0);
     } else if (event.key === 'End') {
       event.preventDefault();
-      move(radios.length - 1);
+      move(pool, pool.length - 1);
     }
   };
 

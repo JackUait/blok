@@ -151,6 +151,47 @@ describe('rovingRadioGroup', () => {
     expect(radios[3]).toHaveFocus();
   });
 
+  describe('skips radios that are not shown (folded tabs)', () => {
+    const folded = (): { radios: HTMLElement[]; onSelect: ReturnType<typeof vi.fn> } => {
+      const { radios } = makeGroup(5, 2);
+      let selected = 2;
+      const onSelect = vi.fn((i: number) => { selected = i; });
+
+      radios[1].style.display = 'none';
+      radios[3].hidden = true;
+      cleanup = rovingRadioGroup({ radios, getSelectedIndex: () => selected, onSelect }).destroy;
+
+      return { radios, onSelect };
+    };
+
+    it('arrows step over a hidden radio', () => {
+      const { radios, onSelect } = folded();
+
+      press(radios[2], 'ArrowRight');
+      expect(onSelect).toHaveBeenLastCalledWith(4);
+      expect(radios[4]).toHaveFocus();
+
+      press(radios[4], 'ArrowRight');
+      expect(onSelect).toHaveBeenLastCalledWith(0);
+
+      press(radios[0], 'ArrowRight');
+      expect(onSelect).toHaveBeenLastCalledWith(2);
+    });
+
+    it('Home and End land on the first and last shown radio', () => {
+      const { radios, onSelect } = folded();
+
+      radios[0].hidden = true;
+      radios[4].style.display = 'none';
+
+      press(radios[2], 'Home');
+      expect(onSelect).toHaveBeenLastCalledWith(2);
+      press(radios[2], 'End');
+      expect(onSelect).toHaveBeenLastCalledWith(2);
+      expect(radios[2]).toHaveFocus();
+    });
+  });
+
   it('supports vertical orientation via ArrowDown/ArrowUp', () => {
     const { radios } = makeGroup(3, 0);
     let selected = 0;

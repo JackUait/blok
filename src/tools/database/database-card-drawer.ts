@@ -2455,7 +2455,8 @@ export class DatabaseCardDrawer {
 
         if (step === undefined) return;
         event.preventDefault();
-        const all = [...bar.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+        // Tabs folded into "N more…" are hidden and out of the arrow order.
+        const all = [...bar.querySelectorAll<HTMLButtonElement>('[role="tab"]')].filter((tab) => !tab.hidden);
         const rtl = getElementDirection(bar) === 'rtl' ? -1 : 1;
 
         all[(all.indexOf(el) + step * rtl + all.length) % all.length]?.click();

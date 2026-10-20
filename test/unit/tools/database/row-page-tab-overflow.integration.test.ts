@@ -241,6 +241,22 @@ describe('row page tab bar "N more…" (research/13 §3a)', () => {
     expect(row('V4')?.hasAttribute('data-active')).toBe(true);
   });
 
+  it('arrows skip the tabs folded into "N more…"', async () => {
+    await make();
+    await openRowPage();
+    await resize(330);
+    await click(more());
+    await click(row('V4'));
+    await resize(330);
+    expect(shown()).toEqual(['Content', 'V4']);
+
+    tabs().find(tab => tab.textContent?.trim() === 'V4')
+      ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+    await quiet();
+
+    expect(selected()).toBe('Content');
+  });
+
   it('in the builder, a row\'s "•••" opens the tab menu and New view opens Add tab; there is no drag handle', async () => {
     await make();
     await openRowPage();

@@ -53,6 +53,14 @@ const mount = async (page: Page, activeViewId = 'v0'): Promise<void> => {
   await expect(page.getByRole('grid')).toBeVisible();
 };
 
+const setWidth = (page: Page, width: number): Promise<void> => page.evaluate((w) => {
+  const holder = document.getElementById('blok');
+
+  if (holder !== null) {
+    holder.style.maxWidth = `${w}px`;
+  }
+}, width);
+
 const savedViewNames = (page: Page): Promise<string[]> => page.evaluate(async () => {
   const saved = await window.blokInstance?.save();
   const views = (saved?.blocks.find((block) => block.type === 'database')?.data as { views: Array<{ name: string; position: string }> }).views;
@@ -83,12 +91,16 @@ test.beforeEach(async ({ page }) => {
 test.describe('database view overflow list', () => {
   test('the current view stays a tab, after the leading ones, and the list still marks it (research/21 §2)', async ({ page }) => {
     await mount(page, 'v6');
+    await setWidth(page, 700);
     const shownTabs = page.locator('[data-blok-database-tab]:visible');
-    const names = await shownTabs.allTextContents();
 
-    // The 520px bar holds a few tabs, never all eight.
-    expect(names.length).toBeGreaterThan(1);
-    expect(names.length).toBeLessThan(NAMES.length);
+    // The 700px holder holds a few tabs, never all eight. Polled: the bar refolds after the resize.
+    await expect.poll(async () => {
+      const count = await shownTabs.count();
+
+      return count > 1 && count < NAMES.length;
+    }).toBe(true);
+    const names = await shownTabs.allTextContents();
     expect(names.map((name) => name.trim())).toEqual([...NAMES.slice(0, names.length - 1), 'Seventh']);
     await expect(page.getByRole('tab', { name: 'Seventh' })).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByRole('button', { name: /more…$/ })).toHaveText(`${NAMES.length - names.length} more…`);
@@ -98,6 +110,68 @@ test.describe('database view overflow list', () => {
     await expect(list.locator('[data-blok-database-tab-overflow-item]')).toHaveCount(NAMES.length);
     await expect(rowOf(list, 'Seventh')).toHaveAttribute('data-active', '');
     await expect(list.locator('[data-highlighted]')).toHaveText('Seventh');
+  });
+
+  test('"N more…" keeps its own room: no tab runs into it at any width', async ({ page }) => {
+    await mount(page);
+    const overlaps: string[] = [];
+
+    for (let width = 360; width <= 900; width += 15) {
+      await setWidth(page, width);
+      // Two frames: the bar's ResizeObserver runs, then layout settles.
+      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      const problem = await page.evaluate(() => {
+        const bar = document.querySelector<HTMLElement>('[data-blok-database-tab-bar]');
+        const more = bar?.querySelector<HTMLElement>('[data-blok-database-tab-more]');
+
+        if (bar === null || bar === undefined || more === null || more === undefined) {
+          return null;
+        }
+        const tabs = [...bar.querySelectorAll<HTMLElement>('[data-blok-database-tab]')].filter((tab) => tab.style.display !== 'none');
+        const last = tabs.at(-1)?.getBoundingClientRect();
+        const moreBox = more.getBoundingClientRect();
+        const barRight = bar.getBoundingClientRect().right;
+        const add = bar.querySelector<HTMLElement>('[data-blok-database-add-view]')?.getBoundingClientRect();
+        const end = add?.left ?? barRight;
+        const clipped = tabs.some((tab) => tab.scrollWidth > tab.clientWidth + 1) || more.scrollWidth > more.clientWidth + 1;
+        // A crowded row squeezes the 32px add button and pushes it past the bar.
+        // Only the current tab left: nothing more can fold, so it may still crowd.
+        const squeezed = tabs.length > 1 && add !== undefined && (add.width < 31.5 || add.right > barRight + 0.5);
+
+        if ((last !== undefined && last.right > moreBox.left + 0.5) || moreBox.right > end + 0.5 || clipped || squeezed) {
+          return `tab right ${last?.right}, more ${moreBox.left}-${moreBox.right}, add ${add?.left}-${add?.right}, bar ${barRight}, clipped ${clipped}`;
+        }
+
+        return null;
+      });
+
+      if (problem !== null) {
+        overlaps.push(`${width}px: ${problem}`);
+      }
+    }
+
+    expect(overlaps).toEqual([]);
+  });
+
+  test('arrow keys skip the tabs folded into "N more…"', async ({ page }) => {
+    await mount(page, 'v6');
+    await setWidth(page, 700);
+    const visibleNames = async (): Promise<string[]> =>
+      (await page.locator('[data-blok-database-tab]:visible').allTextContents()).map((name) => name.trim());
+
+    // Polled: the bar refolds after the resize; wait for a shown tab left of Seventh with some folded.
+    await expect.poll(async () => {
+      const names = await visibleNames();
+
+      return names.length < NAMES.length && names.indexOf('Seventh') > 0;
+    }).toBe(true);
+    const shown = await visibleNames();
+    const leftOfSeventh = shown[shown.indexOf('Seventh') - 1];
+    await page.getByRole('tab', { name: 'Seventh' }).focus();
+    await page.keyboard.press('ArrowLeft');
+
+    await expect(page.getByRole('tab', { name: leftOfSeventh })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: leftOfSeventh })).toBeFocused();
   });
 
   test('picking a folded view from the list brings its tab into the bar', async ({ page }) => {

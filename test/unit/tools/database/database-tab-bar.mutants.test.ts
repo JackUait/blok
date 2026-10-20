@@ -940,6 +940,48 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
         expect(queryOne(el, '[data-blok-database-tab-more]').textContent).toBe('5 more…');
       });
 
+      it('leaves room for "N more…" itself', () => {
+        const moreWidth = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+          return this.hasAttribute('data-blok-database-tab-more') ? 80 : 0;
+        });
+        const { el } = mount(eightViews(), 'v1');
+
+        // 346 − 40 (add) − 80 ("N more…") = 226: two 102px tabs.
+        layOutForOverflow(el, 346);
+        lastResizeProbe().fire();
+
+        expect(shownIds(el)).toEqual(['v0', 'v1']);
+        expect(el.querySelectorAll('[data-blok-database-tab-more]')).toHaveLength(1);
+        expect(queryOne(el, '[data-blok-database-tab-more]').textContent).toBe('6 more…');
+        moreWidth.mockRestore();
+      });
+
+      it('does not count the centring padding of the bar as room for tabs', () => {
+        const { el } = mount(eightViews(), 'v1');
+
+        // 546 − 200 padding = 346: three 102px tabs, as with a 346px bar.
+        layOutForOverflow(el, 546);
+        el.style.paddingLeft = '200px';
+        lastResizeProbe().fire();
+
+        expect(shownIds(el)).toEqual(['v0', 'v1', 'v2']);
+      });
+
+      it('arrows and Home/End move only through the tabs that are shown', () => {
+        const { el } = mount(eightViews(), 'v4');
+
+        layOutForOverflow(el, 346);
+        lastResizeProbe().fire();
+        expect(shownIds(el)).toEqual(['v0', 'v1', 'v4']);
+
+        tabOf(el, 'v4').dispatchEvent(key('ArrowLeft'));
+        expect(onTabClick).toHaveBeenLastCalledWith('v1');
+        tabOf(el, 'v4').dispatchEvent(key('ArrowRight'));
+        expect(onTabClick).toHaveBeenLastCalledWith('v0');
+        tabOf(el, 'v4').dispatchEvent(key('End'));
+        expect(onTabClick).not.toHaveBeenCalledWith('v7');
+      });
+
       it('pushes out as many leading tabs as a wide current tab needs', () => {
         const { el } = mount(eightViews(), 'v6');
 

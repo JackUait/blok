@@ -233,11 +233,20 @@ export class DatabaseTabBar {
 
         const addBtnWidth = 40;
         const active = tabs.findIndex((tab) => tab.getAttribute('data-view-id') === this.options.activeViewId);
-        const shown = tabsThatFit(tabs.map((tab) => tab.offsetWidth + 2), active, this.element.clientWidth - addBtnWidth, 0);
+        const widths = tabs.map((tab) => tab.offsetWidth + 2);
+        // clientWidth counts the padding that centres the bar on a wide page.
+        const style = getComputedStyle(this.element);
+        const padding = (Number.parseFloat(style.paddingLeft) || 0) + (Number.parseFloat(style.paddingRight) || 0);
+        const budget = this.element.clientWidth - padding - addBtnWidth;
 
-        if (shown.length < tabs.length) {
-          this.foldTabs(shown);
+        if (tabsThatFit(widths, active, budget, 0).length === tabs.length) {
+          return;
         }
+        // Once a tab folds, "N more…" takes room too; measured with the widest count it can show.
+        // The +2 on each tab already pays the gap before it.
+        const more = this.placeMoreButton(tabs.length);
+
+        this.foldTabs(tabsThatFit(widths, active, budget - more.offsetWidth, 0));
       });
 
       ro.observe(bar);
@@ -510,7 +519,13 @@ export class DatabaseTabBar {
       }
     }
 
-    // Add the localized overflow-count button before the + button.
+    this.placeMoreButton(hiddenCount);
+  }
+
+  /** Puts the localized "N more…" button before the + button, replacing any earlier one. */
+  private placeMoreButton(hiddenCount: number): HTMLElement {
+    this.moreBtnEl?.remove();
+
     const moreBtn = document.createElement('div');
     moreBtn.setAttribute('data-blok-database-tab-more', '');
     moreBtn.setAttribute('role', 'button');
@@ -526,13 +541,15 @@ export class DatabaseTabBar {
       this.openOverflowDropdown(moreBtn);
     });
 
-    const addBtn = this.element.querySelector('[data-blok-database-add-view]');
+    const addBtn = this.element?.querySelector('[data-blok-database-add-view]') ?? null;
     if (addBtn !== null) {
-      this.element.insertBefore(moreBtn, addBtn);
+      this.element?.insertBefore(moreBtn, addBtn);
     } else {
-      this.element.appendChild(moreBtn);
+      this.element?.appendChild(moreBtn);
     }
     this.moreBtnEl = moreBtn;
+
+    return moreBtn;
   }
 
   /** research/13 §3a: the shared "N more…" list over this bar's views. */

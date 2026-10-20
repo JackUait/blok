@@ -401,8 +401,10 @@ test.describe('CSV', () => {
     await mount(page, blocks({ type: 'table' }));
     await openSettingsAction(page, 'database-settings-csv-import');
     const dialog = page.getByRole('dialog');
+    const chooser = page.waitForEvent('filechooser');
 
-    await dialog.locator('[data-blok-database-csv-input]').setInputFiles({ name: 'plan.csv', mimeType: 'text/csv', buffer: Buffer.from('Step,Hours,Due\nDraft,2,10/09/2026\nReview,1.5,2026-10-12\n') });
+    await dialog.getByTestId('database-csv-choose-file').click();
+    await (await chooser).setFiles({ name: 'plan.csv', mimeType: 'text/csv', buffer: Buffer.from('Step,Hours,Due\nDraft,2,10/09/2026\nReview,1.5,2026-10-12\n') });
     await dialog.getByTestId('database-csv-map').click();
     await dialog.getByTestId('database-csv-import').click();
 

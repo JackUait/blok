@@ -1004,8 +1004,26 @@ describe('in-editor assistant bar', () => {
       await waitFor(() => expect(previewText()).toBe('Far away words land'));
     };
 
-    it('follows a streamed word drawn below the window before its batch commits', async () => {
+    it('follows a streamed word drawn below the window before its batch commits, with one glide for one place', async () => {
       const live = streaming();
+      const editor = await createEditor(live.model);
+
+      // Within one window of the view: a glide.
+      wordsAt(1000);
+      editor.agent.openAssistant();
+      submit('Write');
+      await streamWords(live);
+
+      expect(await texts(editor)).toEqual(['Hello']);
+      // The word's bottom (1024) sits 16px above the window's bottom edge.
+      expect(scrolls.spy).toHaveBeenLastCalledWith({ top: 1024 - window.innerHeight + 16, behavior: 'smooth' });
+      // Four words landed at the same place: the glide on its way is not restarted.
+      expect(scrolls.spy).toHaveBeenCalledTimes(1);
+    });
+
+    it('jumps at once to a streamed word more than a window away', async () => {
+      const live = streaming();
+
       const editor = await createEditor(live.model);
 
       wordsAt(2000);
@@ -1013,10 +1031,25 @@ describe('in-editor assistant bar', () => {
       submit('Write');
       await streamWords(live);
 
-      expect(await texts(editor)).toEqual(['Hello']);
-      expect(scrolls.spy).toHaveBeenCalled();
-      // The word's bottom (2024) sits 16px above the window's bottom edge.
-      expect(scrolls.spy).toHaveBeenLastCalledWith({ top: 2024 - window.innerHeight + 16, behavior: 'smooth' });
+      expect(scrolls.spy).toHaveBeenNthCalledWith(1, { top: 2024 - window.innerHeight + 16, behavior: 'instant' });
+    });
+
+    it('glides again to the same place once the last glide has ended', async () => {
+      const live = streaming();
+
+      const editor = await createEditor(live.model);
+
+      wordsAt(1000);
+      editor.agent.openAssistant();
+      submit('Write');
+      await streamWords(live);
+      expect(scrolls.spy).toHaveBeenCalledTimes(1);
+
+      window.dispatchEvent(new Event('scrollend'));
+      live.emit({ type: 'tool_input', index: 0, json: executeCall('c1', insert('Far away words land here and more')).json });
+      await waitFor(() => expect(previewText()).toContain('here'));
+
+      expect(scrolls.spy).toHaveBeenCalledTimes(2);
     });
 
     it('follows a streamed word at once under reduced motion', async () => {

@@ -28,6 +28,7 @@ import { createAgentPresence, type AgentPresence } from './agent-presence';
 import { createEditorServices } from './agent-services';
 import { createAgentRun } from './agent-run';
 import { createAgentTurn } from './agent-turn';
+import { createLiveFollow } from './live-follow';
 
 export class AgentTurnOpenError extends Error {
   public constructor() {
@@ -35,9 +36,6 @@ export class AgentTurnOpenError extends Error {
     this.name = 'AgentTurnOpenError';
   }
 }
-
-/** Room kept between a followed streamed word and the window's edge. */
-const LIVE_ROOM = 16;
 
 const IDLE: AgentState = { status: 'idle' };
 
@@ -284,13 +282,7 @@ export class AgentAPI extends Module {
 
         window.scrollTo({ top, behavior: prefersReducedMotion() ? 'instant' : 'smooth' });
       },
-      scrollIntoView: (element) => {
-        const rect = element.getBoundingClientRect();
-        const above = rect.top - (this.config.scrollToBlock?.topOffset ?? 0) - LIVE_ROOM;
-        const delta = above < 0 ? above : Math.max(0, rect.bottom + LIVE_ROOM - window.innerHeight);
-
-        window.scrollTo({ top: window.scrollY + delta, behavior: prefersReducedMotion() ? 'instant' : 'smooth' });
-      },
+      scrollIntoView: createLiveFollow(() => this.config.scrollToBlock?.topOffset ?? 0),
     });
 
     return this.presenceLayer;

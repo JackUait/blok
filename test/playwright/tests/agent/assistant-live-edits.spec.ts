@@ -452,6 +452,62 @@ test.describe('Ask AI live edits', () => {
     await expect.poll(async () => (await savedTexts(page)).at(-1)).toBe(text);
   });
 
+  for (const reducedMotion of [false, true]) {
+    test(`a far streamed word is reached with one jump, and one place gets one glide${reducedMotion ? ', all instant under reduced motion' : ''}`, async ({ page }) => {
+      const tail = Array.from({ length: 90 }, (_unused, index) => ({ id: `t${index}`, type: 'paragraph', data: { text: `Filler line ${index}` } }));
+      const text = 'Far below the window these words keep arriving one by one';
+      const input = insertInput(text, { after: 't89' });
+
+      if (reducedMotion) {
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+      }
+      await setup(page, tail);
+      // Records every follow scroll the page asks for.
+      await page.evaluate(() => {
+        const calls: Array<{ top: number; behavior: string }> = [];
+        const original = window.scrollTo.bind(window);
+
+        Object.assign(window, { followScrolls: calls });
+        window.scrollTo = ((options: ScrollToOptions) => {
+          calls.push({ top: options.top ?? 0, behavior: options.behavior ?? 'auto' });
+          original(options);
+        }) as typeof window.scrollTo;
+      });
+      await ask(page, 'The quick brown fox');
+
+      const far = await page.evaluate(() => {
+        const last = document.querySelector('[data-blok-id="t89"]')?.getBoundingClientRect();
+
+        return last === undefined ? 0 : last.bottom - window.innerHeight;
+      });
+
+      // The page is more than two windows long, so the edit is more than one window away.
+      expect(far).toBeGreaterThan(page.viewportSize()?.height ?? Infinity);
+
+      await page.evaluate(() => {
+        (window as unknown as { followScrolls: unknown[] }).followScrolls.length = 0;
+      });
+      await emit(page, 0, { type: 'tool_start', index: 0, id: 'call-1', name: 'blok_execute' });
+      for (let chars = 4; chars < text.length; chars += 6) {
+        await emit(page, 0, { type: 'tool_input', index: 0, json: prefix(input, text, chars) });
+      }
+      await expect(page.getByTestId('ai-preview')).toContainText('arriving one');
+
+      const calls = await page.evaluate(() => (window as unknown as { followScrolls: Array<{ top: number; behavior: string }> }).followScrolls);
+
+      expect(calls.length).toBeGreaterThan(0);
+      const glides = calls.filter((call) => call.behavior === 'smooth').map((call) => Math.round(call.top));
+
+      expect(calls[0].behavior).toBe('instant');
+      // No glide is re-issued to the place one already heads to; reduced motion never glides.
+      expect(glides).toEqual(reducedMotion ? [] : [...new Set(glides)]);
+
+      await emit(page, 0, { type: 'tool_input', index: 0, json: JSON.stringify(input) });
+      await emit(page, 0, { type: 'tool_end', index: 0 });
+      await expect.poll(async () => (await savedTexts(page)).at(-1)).toBe(text);
+    });
+  }
+
   test('onChange stays silent while the preview holds a gap and a rewrite mark', async ({ page }) => {
     const input = {
       commands: [

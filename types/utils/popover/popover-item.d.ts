@@ -186,6 +186,12 @@ export interface PopoverItemDefaultBaseParams {
   secondaryLabel?: string;
 
   /**
+   * Grey text after the title, shown as "· <text>" only in search results.
+   * Not searched and not part of the title.
+   */
+  searchSuffix?: string;
+
+  /**
    * True if item should be highlighted as active
    */
   isActive?: boolean | (() => boolean);

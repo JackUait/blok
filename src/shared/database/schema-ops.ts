@@ -63,7 +63,7 @@ export const positionBetween = (after: string | null, before: string | null): st
   }
 };
 
-export const createDefaultSchema = (mintId: (name: string) => string, viewType?: ViewType): PropertyDefinition[] => [
+export const createDefaultSchema = (mintId: (name: string) => string): PropertyDefinition[] => [
   {
     id: mintId('title'),
     name: DATABASE_DEFAULT_TEXT.titleProperty,
@@ -83,7 +83,6 @@ export const createDefaultSchema = (mintId: (name: string) => string, viewType?:
       ],
     },
   },
-  ...(viewType === 'map' ? [{ id: mintId('place'), name: DATABASE_DEFAULT_TEXT.placeProperty, type: 'place' as const, position: 'a2' }] : []),
 ];
 
 /**
@@ -118,12 +117,10 @@ export const newView = (
   return { ...base, properties, visibleProperties: visibleRowPropertyIds({ ...base, properties }, schema) };
 };
 
-const SEED_VIEW_NAMES: Partial<Record<ViewType, string>> = { table: DATABASE_DEFAULT_TEXT.viewTypeTable, map: DATABASE_DEFAULT_TEXT.viewMapSeed };
-
 export const createDefaultView = (type: ViewType, schema: PropertyDefinition[], mintId: (name: string) => string): DatabaseViewConfig =>
   newView({
     id: mintId('view'),
-    name: SEED_VIEW_NAMES[type] ?? DATABASE_DEFAULT_TEXT.viewBoard,
+    name: type === 'table' ? DATABASE_DEFAULT_TEXT.viewTypeTable : DATABASE_DEFAULT_TEXT.viewBoard,
     type,
     position: 'a0',
     ...(type === 'board' ? { groupBy: schema.find((p) => p.type === 'select')?.id } : {}),

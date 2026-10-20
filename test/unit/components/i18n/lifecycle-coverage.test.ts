@@ -204,6 +204,9 @@ const deriveLifecycle = (): {
   // The tab block has no toolbox entry. Its name is read as toolNames.<block.name>
   // by translateToolName (blockSelection.ts, inline-tool-convert.ts).
   addDynamic('toolNames.tab');
+  // The database block's toolbox entries no longer use it (research/28 renamed them), but
+  // its name is still read as toolNames.database the same way.
+  addDynamic('toolNames.database');
 
   for (const key of literal) dynamic.delete(key);
 
@@ -267,7 +270,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1376 + 126 + 480 + 4 closure for all 1986 keys', () => {
+  it('rebuilds a disjoint 1400 + 126 + 480 + 4 closure for all 2010 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -281,7 +284,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1986);
+    expect(lifecycle.size).toBe(2010);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -413,7 +416,9 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the Priority and Effort level "Medium" options got a key each.
       // +1: toolNames.mapView, which also names the Map view entry's first view.
       // +1: the paragraph's AI placeholder calls tools.paragraph.placeholderAi by literal.
-      'executable-literal': 1376,
+      // +24: research/28's "/" Database entries: their toolNames.* labels, toolbox.preview.* hints and
+      // tools.database.seed* names are called by literal.
+      'executable-literal': 1400,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

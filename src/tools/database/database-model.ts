@@ -24,6 +24,7 @@ import { NO_VALUE_GROUP_KEY, groupKeysFor, orderGroupKeys } from './group-keys';
 import { parentMap, relationPair } from './sub-items';
 import { comparePositions } from './positions';
 import { createDefaultSchema, createDefaultView, freePropertyName, newView, positionBetween } from '../../shared/database/schema-ops';
+import { createSeedDefinition } from '../../shared/database/seed-layouts';
 import type { ViewCreateConfig } from '../../shared/database/schema-ops';
 
 export type { ViewCreateConfig };
@@ -91,15 +92,23 @@ export class DatabaseModel {
     this.page = options.page ?? ((): null => null);
     this.databaseId = options.databaseId;
     this.viewRowOrder = options.viewRowOrder ?? true;
-    if (data?.schema !== undefined && data.schema.length > 0) {
-      this.schema = data.schema.map((p) => ({ ...p }));
+    // A toolbox seed builds its entry's definition (research/28 §3); no seed keeps the old default.
+    const seed = options.defaultViewType === undefined ? undefined : createSeedDefinition(options.defaultViewType, DatabaseModel.idMinter(options.idSeed));
+
+    const savedSchema = data?.schema !== undefined && data.schema.length > 0 ? data.schema : undefined;
+
+    if (savedSchema !== undefined) {
+      this.schema = savedSchema.map((p) => ({ ...p }));
     } else {
-      this.schema = createDefaultSchema(DatabaseModel.idMinter(options.idSeed), options.defaultViewType);
+      this.schema = seed?.schema ?? createDefaultSchema(DatabaseModel.idMinter(options.idSeed));
     }
 
     if (data?.views !== undefined && data.views.length > 0) {
       this.views = structuredClone(data.views);
+    } else if (seed !== undefined && savedSchema === undefined) {
+      this.views = seed.views;
     } else {
+      // The seed's views name the seed's properties; a saved schema gets a plain view.
       this.views = [this.createDefaultView(options.defaultViewType ?? 'board', DatabaseModel.idMinter(options.idSeed))];
     }
 

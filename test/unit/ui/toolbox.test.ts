@@ -2950,6 +2950,25 @@ describe('Toolbox', () => {
       expect(items[4].type).toBe('html');
     });
 
+    it('gives Database section entries the section name as a search suffix, and other sections none (research/28 §1b)', () => {
+      const tools = createToolsCollection([
+        ['paragraph', makeTool('paragraph', { title: 'Text', icon: svg, section: 'basic' })],
+        ['image', makeTool('image', { title: 'Image', icon: svg, section: 'media' })],
+        ['database', makeTool('database', [
+          { title: 'Table view', icon: svg, name: 'tableView', section: 'database' },
+        ])],
+      ]);
+
+      new Toolbox({ api: mocks.api, tools, i18nLabels, i18n: mockI18n });
+
+      const items = lastPopoverItems.value as Array<{ name?: string; searchSuffix?: string }>;
+      const byName = (name: string): { searchSuffix?: string } | undefined => items.find((item) => item.name === name);
+
+      expect(byName('tableView')?.searchSuffix).toBe('toolbox.sectionDatabase');
+      expect(byName('paragraph')?.searchSuffix).toBeUndefined();
+      expect(byName('image')?.searchSuffix).toBeUndefined();
+    });
+
     it('renders header labels through i18n and marks headers with a testid', () => {
       const tools = createToolsCollection([
         ['paragraph', makeTool('paragraph', { title: 'Text', icon: svg, section: 'basic' })],

@@ -124,7 +124,7 @@ test('Tasks Tracker: Customize, then the measured schema, views and rows; one un
     const back = await read(page);
 
     return [back.db.title ?? '', back.db.schema.map((p) => p.name), back.rows.length];
-  }).toEqual(['', ['Title', 'Status'], 0]);
+  }).toEqual(['', ['Name'], 0]);
 });
 
 test('Projects: Gantt is a timeline grouped by Status at Month zoom with the table shown', async ({ page }) => {

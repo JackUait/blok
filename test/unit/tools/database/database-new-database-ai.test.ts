@@ -78,6 +78,8 @@ const rowLabels = (): string[] =>
 const saved = (tool: DatabaseTool): DatabaseData => tool.save(document.createElement('div'));
 
 const fresh = { initialView: 'table' } as unknown as DatabaseData;
+// A seed with one property beside the title (Place): the table seed has only Name (research/28 §3).
+const mapSeed = { initialView: 'map' } as unknown as DatabaseData;
 
 const insert = async (setupDatabase?: (request: DatabaseSetupRequest) => Promise<DatabaseSetup | null | undefined>, origin: BlockOrigin = 'user', data: DatabaseData = fresh): Promise<ReturnType<typeof buildDatabase> & { doc: ReturnType<typeof makeDoc> }> => {
   const doc = makeDoc([
@@ -231,7 +233,7 @@ describe('"New database" panel with the AI prompt (research/26 §2, research/20 
         ],
       };
     });
-    const { tool } = buildDatabase(doc, 'db', fresh, { adapter: adapter as unknown as DatabaseConfig['adapter'], ai: { autofill: vi.fn(async () => undefined), setupDatabase: setup } }, 'user');
+    const { tool } = buildDatabase(doc, 'db', mapSeed, { adapter: adapter as unknown as DatabaseConfig['adapter'], ai: { autofill: vi.fn(async () => undefined), setupDatabase: setup } }, 'user');
 
     await new Promise((resolve) => requestAnimationFrame(resolve));
     const before = saved(tool);
@@ -259,7 +261,7 @@ describe('"New database" panel with the AI prompt (research/26 §2, research/20 
     };
     const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }]);
     const setup = vi.fn(async (): Promise<DatabaseSetup> => ({ schema: [{ id: 'when', name: 'When', type: 'date', position: 'a1' }] }));
-    const { tool } = buildDatabase(doc, 'db', fresh, { adapter: adapter as unknown as DatabaseConfig['adapter'], ai: { autofill: vi.fn(async () => undefined), setupDatabase: setup } }, 'user');
+    const { tool } = buildDatabase(doc, 'db', mapSeed, { adapter: adapter as unknown as DatabaseConfig['adapter'], ai: { autofill: vi.fn(async () => undefined), setupDatabase: setup } }, 'user');
 
     await new Promise((resolve) => requestAnimationFrame(resolve));
     const dropped = saved(tool).schema.filter((p) => p.type !== 'title').map((p) => p.id);
@@ -427,8 +429,10 @@ describe('"New database" panel for every database toolbox entry', () => {
     return data.views.find((view) => view.id === data.activeViewId)?.type;
   };
 
-  it('the entries are Database, Board, Table view, Map view and Linked view', () => {
-    expect(entries().map((item) => item.name)).toEqual(['database', 'board', 'tableView', 'mapView', 'linkedDatabase']);
+  it('the entries are Notion\'s Database section, in order (research/28 §1a)', () => {
+    expect(entries().map((item) => item.name)).toEqual([
+      'tableView', 'board', 'galleryView', 'listView', 'feedView', 'calendarView', 'timelineView', 'mapView', 'databaseForm', 'database', 'linkedDatabase',
+    ]);
   });
 
   // research/26 §2 dump "Table view · Database", research/20 §1a "Map view · Database".
@@ -437,13 +441,58 @@ describe('"New database" panel for every database toolbox entry', () => {
     expect(entry('mapView')).toMatchObject({ titleKey: 'mapView', icon: IconMap, section: 'database', data: { initialView: 'map' } });
   });
 
-  it.each([['database', 'table'], ['board', 'board'], ['tableView', 'table'], ['mapView', 'map']] as const)('a user insert of the %s entry opens the panel, and New empty keeps its %s layout', async (name, layout) => {
+  // research/28 §3: every entry but Form and Linked view opens the panel.
+  it.each([
+    ['database', 'table'], ['board', 'board'], ['tableView', 'table'], ['mapView', 'map'],
+    ['galleryView', 'gallery'], ['listView', 'list'], ['feedView', 'feed'], ['calendarView', 'calendar'], ['timelineView', 'timeline'],
+  ] as const)('a user insert of the %s entry opens the panel, and New empty keeps its %s layout', async (name, layout) => {
     const { tool } = await insert(undefined, 'user', dataOf(name));
 
     expect(panel()?.querySelector('[data-blok-database-panel-header]')?.textContent).toBe('tools.database.linkedPanelTitle');
     expect(rowLabels()[0]).toBe('tools.database.linkedNewEmpty');
     panel()?.querySelector<HTMLElement>('[data-blok-database-panel-row]')?.click();
     expect(activeType(tool)).toBe(layout);
+  });
+
+  // research/28 §3: Form opens no panel; its title is real text "New form"; it opens on its Form builder.
+  it('a user insert of the Form entry opens no panel, titles it "New form" and shows the Form builder', async () => {
+    const { tool } = await insert(undefined, 'user', dataOf('databaseForm'));
+    const data = saved(tool);
+
+    expect(panel()).toBeUndefined();
+    expect(data.title).toBe('tools.database.seedNewForm');
+    expect(data.views.map((view) => [view.type, view.name])).toEqual([['form', 'Form builder'], ['table', 'Responses']]);
+    expect(activeType(tool)).toBe('form');
+  });
+
+  it('a Form seed from a peer or a replay writes no title', async () => {
+    const { tool } = await insert(undefined, 'replay', dataOf('databaseForm'));
+
+    expect(saved(tool).title ?? '').toBe('');
+  });
+
+  // research/28 §3: Timeline gets "Card 1-3", Oct 15–19, 17–21 and 19–23 with today Oct 20.
+  it('a user insert of the Timeline entry adds three sample cards spanning days around today', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 20, 12));
+    try {
+      const { doc } = await insert(undefined, 'user', dataOf('timelineView'));
+      const rows = doc.childrenOf('db').map((id) => doc.row(id));
+
+      expect(rows.map((row) => Object.values(row.properties).filter((v) => typeof v === 'string'))).toEqual([
+        [`tools.database.seedCard {"number":1}`, '2026-10-15/2026-10-19'],
+        [`tools.database.seedCard {"number":2}`, '2026-10-17/2026-10-21'],
+        [`tools.database.seedCard {"number":3}`, '2026-10-19/2026-10-23'],
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a Timeline seed from a peer or a replay adds no rows', async () => {
+    const { doc } = await insert(undefined, 'replay', dataOf('timelineView'));
+
+    expect(doc.childrenOf('db')).toEqual([]);
   });
 
   it('a user insert of the Linked view entry opens the source picker, not the panel', async () => {

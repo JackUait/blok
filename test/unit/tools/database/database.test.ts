@@ -219,38 +219,56 @@ describe('DatabaseTool', () => {
   });
 
   describe('static getters', () => {
-    it('toolbox returns database, board, table view, map view and linked view entries', () => {
-      const toolbox = DatabaseTool.toolbox;
+    // research/28 §1a: Notion's Database section, in order (Dashboard, the charts and Full page are not built).
+    it('toolbox lists the measured Database entries in Notion\'s order, with their labels', () => {
+      const entries = DatabaseTool.toolbox as Array<{ name: string; titleKey: string; section: string; data?: Record<string, unknown> }>;
 
-      expect(Array.isArray(toolbox)).toBe(true);
-
-      const entries = toolbox as Array<{ name: string; title: string; titleKey: string; searchTerms: string[] }>;
-
-      expect(entries.map((entry) => entry.name)).toEqual(['database', 'board', 'tableView', 'mapView', 'linkedDatabase']);
-      expect(entries[0].titleKey).toBeDefined();
-      expect(entries[1].titleKey).toBeDefined();
-      expect(entries[0].searchTerms).toBeDefined();
-      expect(entries[1].searchTerms).toBeDefined();
+      expect(entries.map((entry) => [entry.name, entry.titleKey])).toEqual([
+        ['tableView', 'tableView'],
+        ['board', 'board'],
+        ['galleryView', 'galleryView'],
+        ['listView', 'listView'],
+        ['feedView', 'feedView'],
+        ['calendarView', 'calendarView'],
+        ['timelineView', 'timelineView'],
+        ['mapView', 'mapView'],
+        ['databaseForm', 'tools.database.viewTypeForm'],
+        ['database', 'databaseInline'],
+        ['linkedDatabase', 'linkedDatabase'],
+      ]);
+      expect(entries.every((entry) => entry.section === 'database')).toBe(true);
+      expect(entries.map((entry) => entry.data?.initialView)).toEqual([
+        'table', 'board', 'gallery', 'list', 'feed', 'calendar', 'timeline', 'map', 'form', 'table', 'table',
+      ]);
     });
 
-    it('toolbox entries include titleKey field for i18n', () => {
-      const toolbox = DatabaseTool.toolbox;
+    // research/28 §1c: Notion's hover hint text is each entry's preview caption.
+    it('each entry has a preview whose caption is Notion\'s hint', () => {
+      const entries = DatabaseTool.toolbox as Array<{ name: string; preview?: { render: () => HTMLElement; descriptionKey?: string } }>;
 
-      const entries = toolbox as Array<{ titleKey?: string }>;
-
-      expect(entries[0].titleKey).toBe('database');
-      expect(entries[1].titleKey).toBe('board');
+      expect(entries.map((entry) => [entry.name, entry.preview?.descriptionKey])).toEqual([
+        ['tableView', 'toolbox.preview.tableView'],
+        ['board', 'toolbox.preview.board'],
+        ['galleryView', 'toolbox.preview.galleryView'],
+        ['listView', 'toolbox.preview.listView'],
+        ['feedView', 'toolbox.preview.feedView'],
+        ['calendarView', 'toolbox.preview.calendarView'],
+        ['timelineView', 'toolbox.preview.timelineView'],
+        ['mapView', 'toolbox.preview.mapView'],
+        ['databaseForm', 'toolbox.preview.form'],
+        ['database', 'toolbox.preview.database'],
+        ['linkedDatabase', 'toolbox.preview.linkedDatabase'],
+      ]);
+      expect(entries.every((entry) => typeof entry.preview?.render === 'function')).toBe(true);
     });
 
-    it('database toolbox entry includes cards and columns in searchTerms', () => {
-      const toolbox = DatabaseTool.toolbox;
+    it('the Inline entry no longer answers to board words: it makes a table', () => {
+      const entries = DatabaseTool.toolbox as Array<{ name: string; searchTerms: string[] }>;
+      const inline = entries.find((entry) => entry.name === 'database');
 
-      const entries = toolbox as Array<{ searchTerms: string[] }>;
-
-      expect(entries[0].searchTerms).toContain('cards');
-      expect(entries[0].searchTerms).toContain('columns');
-      expect(entries[1].searchTerms).toContain('cards');
-      expect(entries[1].searchTerms).toContain('columns');
+      expect(inline?.searchTerms).toEqual(expect.arrayContaining(['database', 'inline']));
+      expect(inline?.searchTerms).not.toContain('kanban');
+      expect(inline?.searchTerms).not.toContain('board');
     });
 
     it('isReadOnlySupported returns true', () => {
@@ -5269,23 +5287,29 @@ describe('DatabaseTool', () => {
       createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Second' }, position: 'a1' }),
     ];
 
-    it('seeds a table from the Database toolbox entry and a board from the Board entry', () => {
-      const [database, board] = DatabaseTool.toolbox as Array<{ data?: Record<string, unknown> }>;
+    it('seeds a table from the Database - Inline entry and a board from the Board entry', () => {
+      const entries = DatabaseTool.toolbox as Array<{ name: string; data?: Record<string, unknown> }>;
 
-      expect(database.data).toEqual({ initialView: 'table' });
-      expect(board.data).toEqual({ initialView: 'board' });
+      expect(entries.find((entry) => entry.name === 'database')?.data).toEqual({ initialView: 'table' });
+      expect(entries.find((entry) => entry.name === 'board')?.data).toEqual({ initialView: 'board' });
     });
 
-    it('a database from the Board seed saves the same board as an empty one, with no seed key', () => {
-      const shape = (data: DatabaseData): unknown => {
-        const tool = new DatabaseTool({ ...createDatabaseOptions(), data });
-        const saved = tool.save(tool.render());
+    // research/28 §3: Board view = Name, Assign (Person), Status (Status), grouped by Status.
+    it('a database from the Board seed saves the measured board, with no seed key', () => {
+      const tool = new DatabaseTool({ ...createDatabaseOptions(), data: { initialView: 'board' } as unknown as DatabaseData });
+      const saved = tool.save(tool.render());
+      const status = saved.schema.find((p) => p.type === 'status');
 
-        return { names: saved.schema.map((p) => [p.name, p.type]), views: saved.views.map((v) => [v.type, v.groupBy !== undefined]), seed: 'initialView' in saved };
-      };
+      expect(saved.schema.map((p) => [p.name, p.type])).toEqual([['Name', 'title'], ['Assign', 'person'], ['Status', 'status']]);
+      expect(saved.views.map((v) => [v.type, v.name, v.groupBy])).toEqual([['board', 'Board view', status?.id]]);
+      expect(saved).not.toHaveProperty('initialView');
+    });
 
-      expect(shape({ initialView: 'board' } as unknown as DatabaseData)).toEqual(shape({} as DatabaseData));
-      expect(shape({ initialView: 'board' } as unknown as DatabaseData)).toMatchObject({ views: [['board', true]], seed: false });
+    it('an empty database with no seed keeps the old default board', () => {
+      const tool = new DatabaseTool({ ...createDatabaseOptions(), data: {} as DatabaseData });
+      const saved = tool.save(tool.render());
+
+      expect(saved.schema.map((p) => p.type)).toEqual(['title', 'select']);
     });
 
     it('starts a database inserted from the Database entry with a table view, and saves no seed key', () => {

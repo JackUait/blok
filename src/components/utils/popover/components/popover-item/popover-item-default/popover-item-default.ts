@@ -91,12 +91,14 @@ export class PopoverItemDefault extends PopoverItem {
     icon: null | HTMLElement;
     titleEl: null | HTMLElement;
     secondaryLabelEl: null | HTMLElement;
+    searchSuffixEl: null | HTMLElement;
     chevron: null | HTMLElement;
   } = {
       root: null,
       icon: null,
       titleEl: null,
       secondaryLabelEl: null,
+      searchSuffixEl: null,
       chevron: null,
     };
 
@@ -185,6 +187,16 @@ export class PopoverItemDefault extends PopoverItem {
    */
   public override toggleHidden(isHidden: boolean): void {
     this.setHidden(isHidden);
+  }
+
+  /**
+   * Shows the search suffix in search results only.
+   * @param shown - true while a query filters the list
+   */
+  public toggleSearchSuffix(shown: boolean): void {
+    if (this.nodes.searchSuffixEl !== null) {
+      this.nodes.searchSuffixEl.hidden = !shown;
+    }
   }
 
   /**
@@ -336,6 +348,20 @@ export class PopoverItemDefault extends PopoverItem {
 
       root.appendChild(titleEl);
       this.nodes.titleEl = titleEl;
+
+      if (params.searchSuffix !== undefined && params.searchSuffix !== '') {
+        const suffixEl = document.createElement('div');
+
+        // The title gives up me-auto so the suffix sits right after it.
+        titleEl.classList.remove('me-auto');
+        suffixEl.className = 'me-auto ps-[5px] whitespace-nowrap text-[13px] leading-5 [color:var(--blok-text-tertiary)]';
+        suffixEl.setAttribute(DATA_ATTR.popoverItemSearchSuffix, '');
+        suffixEl.setAttribute('aria-hidden', 'true');
+        suffixEl.textContent = `· ${params.searchSuffix}`;
+        suffixEl.hidden = true;
+        root.appendChild(suffixEl);
+        this.nodes.searchSuffixEl = suffixEl;
+      }
     } else if (params.hint?.title !== undefined) {
       /**
        * An icon-only item (the whole inline toolbar renders this way) has no

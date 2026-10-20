@@ -110,6 +110,7 @@ vi.mock('../../../src/components/utils/popover/components/search-input', async (
   const actual = await importOriginal() as {
     matchesSearchQuery: (item: unknown, query: string) => boolean;
     scoreSearchMatch: (item: unknown, query: string) => number;
+    scoreTitleMatch: (item: unknown, query: string) => number;
   };
 
   const SearchInputEvent = {
@@ -175,6 +176,7 @@ vi.mock('../../../src/components/utils/popover/components/search-input', async (
     SearchInputEvent,
     matchesSearchQuery: actual.matchesSearchQuery,
     scoreSearchMatch: actual.scoreSearchMatch,
+    scoreTitleMatch: actual.scoreTitleMatch,
   };
 });
 

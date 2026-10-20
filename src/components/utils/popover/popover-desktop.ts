@@ -10,7 +10,7 @@ import { PopoverItemSeparator, css as popoverItemCls, PopoverItemDefault, Popove
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
 import type { SearchableItem } from './components/search-input';
-import { SearchInput, SearchInputEvent, scoreSearchMatch } from './components/search-input';
+import { SearchInput, SearchInputEvent, scoreSearchMatch, scoreTitleMatch } from './components/search-input';
 import { PopoverAbstract } from './popover-abstract';
 import { CSSVariables, css as popoverCss } from './popover.const';
 import { clampNestedPopoverTop, NESTED_POPOVER_VIEWPORT_MARGIN, resolveNestedPopoverBelowPlacement } from './popover-nested-position';
@@ -2121,9 +2121,9 @@ export class PopoverDesktop extends PopoverAbstract {
 
     // Score top-level items
     const topLevelScored = this.itemsDefault
-      .map(item => ({ item, score: scoreSearchMatch(item, query) }))
+      .map(item => ({ item, score: scoreSearchMatch(item, query), title: scoreTitleMatch(item, query) }))
       .filter(({ score }) => score > 0)
-      .sort((a, b) => b.score - a.score);
+      .sort((a, b) => b.score - a.score || b.title - a.title);
 
     // Score promoted items from cache
     const { parentChains: chains } = this.promotedItemCache;
@@ -2191,6 +2191,7 @@ export class PopoverDesktop extends PopoverAbstract {
           : (isSeparatorOrHtml && (isNothingFound || !isEmptyQuery)) || isPermanentlyHidden;
 
         item.toggleHidden(isHidden);
+        if (isDefaultItem) item.toggleSearchSuffix(!isEmptyQuery);
       });
 
     // Invalidate size cache since item visibility changed

@@ -503,4 +503,34 @@ describe('status group localization', () => {
     expect(renamedPlace.name).toBe('Office');
     expect([seeded.name, added.name, renamedView.name]).toEqual(['«toolNames.mapView»', '«tools.database.viewTypeMap»', 'Offices']);
   });
+
+  // research/28 §3: the "/" Database entries' seeds save English names; they show in the editor language.
+  it('localizes every seeded property, option and view name, and keeps a renamed one', async () => {
+    const { localizeDatabaseSchema, localizeDatabaseViews } = await import('../../../../src/tools/database/database-localization');
+    const { createSeedDefinition } = await import('../../../../src/shared/database/seed-layouts');
+    const i18n = { t: (key: string, vars?: Record<string, string | number>) => `«${key}${vars?.number === undefined ? '' : `:${vars.number}`}»` } as never;
+    const mint = (name: string): string => name;
+    const names = (layout: 'board' | 'gallery' | 'calendar' | 'timeline' | 'form'): string[] =>
+      localizeDatabaseSchema(createSeedDefinition(layout, mint).schema, i18n).map((p) => p.name);
+
+    expect(names('board')).toEqual(['«tools.database.defaultSourceTitleProperty»', '«tools.database.seedAssign»', '«tools.database.defaultStatusProperty»']);
+    expect(names('gallery')).toEqual(['«tools.database.defaultSourceTitleProperty»', '«tools.database.seedCreated»', '«tools.database.starterTags»']);
+    expect(names('calendar')).toEqual(['«tools.database.defaultSourceTitleProperty»', '«tools.database.propertyTypeDate»', '«tools.database.starterTags»']);
+    expect(names('form')).toEqual(['«tools.database.seedQuestion:1»', '«tools.database.seedRespondent»', '«tools.database.seedQuestion:2»', '«tools.database.seedSubmissionTime»']);
+    const form = createSeedDefinition('form', mint);
+
+    expect(localizeDatabaseSchema(form.schema, i18n)[2].config?.options.map((o) => o.label)).toEqual(['«tools.database.seedOption:1»', '«tools.database.seedOption:2»', '«tools.database.seedOption:3»']);
+    expect(localizeDatabaseViews(form.views, i18n).map((v) => v.name)).toEqual(['«tools.database.seedFormBuilder»', '«tools.database.seedResponses»']);
+    const seededViews = (['board', 'gallery', 'list', 'feed', 'calendar', 'timeline'] as const).map((layout) => createSeedDefinition(layout, mint).views[0]);
+
+    expect(localizeDatabaseViews(seededViews, i18n).map((v) => v.name)).toEqual([
+      '«toolNames.board»', '«toolNames.galleryView»', '«toolNames.listView»', '«toolNames.feedView»', '«toolNames.calendarView»', '«toolNames.timelineView»',
+    ]);
+    // Same name on another type, or a renamed one, stays as written.
+    expect(localizeDatabaseSchema([
+      { id: 'a', name: 'Assign', type: 'text', position: 'a0' },
+      { id: 'b', name: 'Owner', type: 'person', position: 'a1' },
+      { id: 'c', name: 'Question 3', type: 'title', position: 'a2' },
+    ], i18n).map((p) => p.name)).toEqual(['Assign', 'Owner', 'Question 3']);
+  });
 });

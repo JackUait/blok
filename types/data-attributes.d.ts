@@ -236,6 +236,7 @@ export const DATA_ATTR: {
   readonly popoverItemTitle: 'data-blok-popover-item-title';
   /** Item secondary title */
   readonly popoverItemSecondaryTitle: 'data-blok-popover-item-secondary-title';
+  readonly popoverItemSearchSuffix: 'data-blok-popover-item-search-suffix';
   /** Item is active/selected */
   readonly popoverItemActive: 'data-blok-popover-item-active';
   /** Item's child menu is currently open — keeps the trigger looking selected */

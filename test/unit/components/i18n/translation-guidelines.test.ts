@@ -302,7 +302,7 @@ const KHMER_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.video.toggleTimeDisplay':
     'ប្ដូររវាងពេលវេលាដែលបានកន្លងផុត និងពេលវេលាដែលនៅសល់',
   'tools.callout.emojiSearchResults': 'រូបអារម្មណ៍ដែលត្រូវគ្នា៖ {count}',
-  'toolNames.board': 'ក្ដារ',
+  'toolNames.board': 'ទិដ្ឋភាពក្ដារ',
   'searchTerms.accordion': 'ផ្ទាំងបិទបើក',
   'searchTerms.grid': 'ក្រឡាចត្រង្គ',
   'tools.callout.emojiCategoryPeople': 'មុខញញឹម និងមនុស្ស',
@@ -2477,7 +2477,7 @@ const ROMANIAN_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'a11y.navigationModeEntered': 'Mod de navigare. Folosiți tastele săgeată pentru a vă deplasa între blocuri, Enter pentru editare și Escape pentru ieșire.',
   'a11y.navigatedToBlock': 'Ați navigat la bloc',
   'toolNames.strikethrough': 'Tăiat cu o linie',
-  'toolNames.board': 'Panou',
+  'toolNames.board': 'Vizualizare panou',
   'searchTerms.number': 'numerotare',
   'searchTerms.checkbox': 'casetă de selectare',
   'tools.callout.addEmoji': 'Adaugă o pictogramă',

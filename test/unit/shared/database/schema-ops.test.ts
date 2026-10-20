@@ -30,6 +30,22 @@ const KEYS: Record<keyof typeof DATABASE_DEFAULT_TEXT, string> = {
   viewTypeMap: 'tools.database.viewTypeMap',
   viewMapSeed: 'toolNames.mapView',
   placeProperty: 'tools.database.propertyTypePlace',
+  viewBoardSeed: 'toolNames.board',
+  viewGallerySeed: 'toolNames.galleryView',
+  viewListSeed: 'toolNames.listView',
+  viewFeedSeed: 'toolNames.feedView',
+  viewCalendarSeed: 'toolNames.calendarView',
+  viewTimelineSeed: 'toolNames.timelineView',
+  viewFormBuilder: 'tools.database.seedFormBuilder',
+  viewResponses: 'tools.database.seedResponses',
+  assignProperty: 'tools.database.seedAssign',
+  createdProperty: 'tools.database.seedCreated',
+  tagsProperty: 'tools.database.starterTags',
+  dateProperty: 'tools.database.propertyTypeDate',
+  questionProperty: 'tools.database.seedQuestion',
+  respondentProperty: 'tools.database.seedRespondent',
+  submissionTimeProperty: 'tools.database.seedSubmissionTime',
+  optionLabel: 'tools.database.seedOption',
   duplicatePropertyName: 'tools.database.duplicatePropertyName',
 };
 
@@ -60,24 +76,14 @@ describe('shared database building blocks', () => {
     expect(DatabaseModel.positionBetween('!x', null)).toBe(positionBetween('!x', null));
   });
 
-  it.each(['board', 'table', 'list', 'map'] as const)('default schema and a %s view equal what the editor model builds', type => {
+  it('the unseeded default schema and board view equal what the editor model builds', () => {
     const mint = (name: string): string => `s-${name}`;
-    const model = new DatabaseModel(undefined, { idSeed: 's', defaultViewType: type });
-    const schema = createDefaultSchema(mint, type);
+    const model = new DatabaseModel(undefined, { idSeed: 's' });
+    const schema = createDefaultSchema(mint);
 
     expect(schema).toEqual(model.getSchema());
-    expect([createDefaultView(type, schema, mint)]).toEqual(model.getViews());
+    expect([createDefaultView('board', schema, mint)]).toEqual(model.getViews());
   });
-});
-
-// research/20 §1a: "/map" names its view "Map view" and adds a "Place" property.
-it('a map default has a Place property with a seeded id and a "Map view" view; other layouts have none', () => {
-  const mint = (name: string): string => `s-${name}`;
-  const schema = createDefaultSchema(mint, 'map');
-
-  expect(schema.filter(p => p.type === 'place')).toEqual([{ id: 's-place', name: 'Place', type: 'place', position: 'a2' }]);
-  expect(createDefaultView('map', schema, mint).name).toBe('Map view');
-  expect(createDefaultSchema(mint, 'table').some(p => p.type === 'place')).toBe(false);
 });
 
 // research/14 §1, §2a, §4: a taken name gets " N", the lowest free N from 1, on an exact match.

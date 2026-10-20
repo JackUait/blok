@@ -181,6 +181,21 @@ export const scoreSearchMatch = (item: SearchableItem, query: string): number =>
 };
 
 /**
+ * The best score of the title alone. Breaks a tie in scoreSearchMatch: a
+ * title match ranks above an alias match ("/list": List view over
+ * Bulleted list, whose alias is "list").
+ * @param item - item to score
+ * @param query - search query (case-insensitive)
+ */
+export const scoreTitleMatch = (item: SearchableItem, query: string): number => {
+  const lowerQuery = query.toLowerCase();
+
+  return Math.max(0, ...[item.title, item.englishTitle]
+    .filter((title): title is string => title !== undefined)
+    .map((title) => scoreString(title.toLowerCase(), lowerQuery)));
+};
+
+/**
  * Checks if an item matches a search query.
  * Uses fuzzy matching: exact, prefix, substring, subsequence, and typo-tolerant (Levenshtein).
  * Matches against: displayed title, English title, and search term aliases.

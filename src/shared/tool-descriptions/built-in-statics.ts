@@ -144,14 +144,21 @@ export const BUILT_IN_BLOCK_STATICS: Readonly<Record<string, {
     tunes,
   },
   database: {
-    title: 'Database',
+    // The first toolbox entry names the tool, as for every multi-entry tool (research/28 §1a order).
+    title: 'Table view',
     statics: {
       toolbox: [
-        { name: 'database', title: 'Database', previewCaption: 'Organize pages in a table with properties', data: { initialView: 'table' } },
-        { name: 'board', title: 'Board', previewCaption: 'Track work on a board of cards', data: { initialView: 'board' } },
-        { name: 'tableView', title: 'Table view', previewCaption: 'Show items in rows and columns', data: { initialView: 'table' } },
-        { name: 'mapView', title: 'Map view', previewCaption: 'Show places on a map', data: { initialView: 'map' } },
-        { name: 'linkedDatabase', title: 'Linked view of data source', previewCaption: 'Show a database from this page with views of its own', data: { initialView: 'table', linkPicker: true } },
+        { name: 'tableView', title: 'Table view', previewCaption: 'Add a table view for a new or existing data source', data: { initialView: 'table' } },
+        { name: 'board', title: 'Board view', previewCaption: 'Create a kanban board database view', data: { initialView: 'board' } },
+        { name: 'galleryView', title: 'Gallery view', previewCaption: 'Create a gallery database view', data: { initialView: 'gallery' } },
+        { name: 'listView', title: 'List view', previewCaption: 'Create a list database view', data: { initialView: 'list' } },
+        { name: 'feedView', title: 'Feed view', previewCaption: 'Create a feed database view', data: { initialView: 'feed' } },
+        { name: 'calendarView', title: 'Calendar view', previewCaption: 'Create a calendar database view', data: { initialView: 'calendar' } },
+        { name: 'timelineView', title: 'Timeline view', previewCaption: 'Create a timeline database view', data: { initialView: 'timeline' } },
+        { name: 'mapView', title: 'Map view', previewCaption: 'Create a map database view', data: { initialView: 'map' } },
+        { name: 'databaseForm', title: 'Form', previewCaption: 'Create a form from scratch', data: { initialView: 'form' } },
+        { name: 'database', title: 'Database - Inline', previewCaption: 'Add a new inline database to this page', data: { initialView: 'table' } },
+        { name: 'linkedDatabase', title: 'Linked view of data source', previewCaption: 'Add a view of an existing data source to this page', data: { initialView: 'table', linkPicker: true } },
       ],
       richTextFields: [],
       acceptsChildren: true,

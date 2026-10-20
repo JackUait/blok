@@ -121,11 +121,11 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.colorPicker.colorSwatchLabel',
   ]),
   de: new Set([
+    // "Option" is the German UI word (groupStatusOption).
+    'tools.database.seedOption',
     'tools.colorPicker.color.orange',
     'tools.callout.colorOrange',
     'toolNames.code',
-    // Microsoft Planner's German UI uses "Board" and "Boardansicht".
-    'toolNames.board',
     // "Link" is the standard loanword for a hyperlink in German UIs.
     'toolNames.link',
     'tools.code.codeTab',
@@ -184,7 +184,6 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     // English loanwords in Filipino (Tagalog) product UIs.
     'toolNames.file',
     'toolNames.link',
-    'toolNames.board',
     'toolNames.embed',
     'tools.code.previewTab',
     'tools.toggle.placeholder',
@@ -222,6 +221,9 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'notifier.ok',
   ]),
   fr: new Set([
+    // "Question" and "Option" are native French words.
+    'tools.database.seedQuestion',
+    'tools.database.seedOption',
     'tools.database.formQuestionName',
     'tools.database.formQuestionDescription',
     'tools.colorPicker.color.orange',

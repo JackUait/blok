@@ -17,6 +17,7 @@ import { ToolboxPreview } from './toolbox-preview';
 import { getBlockColorToolboxEntries, type BlockColorData } from '../shared/block-color';
 
 import type { API, BlockToolData, ToolboxConfigEntry, ToolboxPreviewConfig, PopoverItemParams, BlockAPI } from '@/types';
+import type { PopoverItemDefaultBaseParams } from '@/types/utils/popover/popover-item';
 import type { PopoverPositionUpdate } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
@@ -970,7 +971,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     /**
      * Maps tool data to popover item structure
      */
-    const toPopoverItem = (toolboxItem: ToolboxConfigEntry, tool: BlockToolAdapter, displaySecondaryLabel = true): PopoverItemParams => {
+    const toPopoverItem = (toolboxItem: ToolboxConfigEntry, tool: BlockToolAdapter, displaySecondaryLabel = true): PopoverItemDefaultBaseParams => {
       // Get English title for search fallback
       const titleKey = toolboxItem.titleKey;
       const resolvedTitleKey = titleKey?.includes('.') ? titleKey : `toolNames.${titleKey}`;
@@ -1028,12 +1029,17 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
         const items = Array.isArray(toolbox) ? toolbox : [ toolbox ];
 
         items.forEach((item, index) => {
+          // Unknown section values (possible from untyped JS configs) fall
+          // back to the trailing unlabeled group instead of breaking order.
+          const section = item.section !== undefined && Toolbox.SECTION_ORDER.includes(item.section) ? item.section : undefined;
+          const params = toPopoverItem(item, tool, index === 0);
+
           acc.push({
-            params: toPopoverItem(item, tool, index === 0),
+            params: section !== undefined && Toolbox.SEARCH_SUFFIX_SECTIONS.has(section)
+              ? { ...params, searchSuffix: this.i18n.t(Toolbox.SECTION_TITLE_KEYS[section]) }
+              : params,
             name: item.name ?? tool.name,
-            // Unknown section values (possible from untyped JS configs) fall
-            // back to the trailing unlabeled group instead of breaking order.
-            section: item.section !== undefined && Toolbox.SECTION_ORDER.includes(item.section) ? item.section : undefined,
+            section,
           });
         });
 
@@ -1096,6 +1102,12 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * Fixed render order of the labeled toolbox sections.
    */
   private static readonly SECTION_ORDER: string[] = ['basic', 'media', 'database', 'advanced'];
+
+  /**
+   * Sections whose entries read "· <section>" in search results. Notion
+   * suffixes its Database rows but not Basic blocks or Media (research/28 §1b, §2).
+   */
+  private static readonly SEARCH_SUFFIX_SECTIONS: ReadonlySet<string> = new Set(['database']);
 
   /**
    * i18n keys of the section header labels. 'color' is toolbox-internal: it

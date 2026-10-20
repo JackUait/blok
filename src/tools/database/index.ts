@@ -1,7 +1,7 @@
 import { describeDatabase } from '../../shared/tool-descriptions/database';
 import { DATABASE_ACTION_HANDLERS } from '../../shared/tool-actions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
-import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolData, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
+import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolData, OutputData, ToolboxConfig, ToolboxConfigEntry, SanitizerConfig } from '../../../types';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
 import type { AutofillSettings, DatabaseAdapter, DatabaseData, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, DatabaseLinkedSourceSnapshot, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, FilterRule, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue } from './types';
 import { countFilterRules } from './filter-tree';
@@ -63,7 +63,8 @@ import { DatabaseTableView, createTableState } from './database-table-view';
 import { DatabaseGalleryView } from './database-gallery-view';
 import type { GalleryGroup } from './database-gallery-view';
 import { DatabaseCalendarView } from './database-calendar-view';
-import { eventSpan } from './calendar-dates';
+import { addDays, eventSpan } from './calendar-dates';
+import { formatDateValue } from '../../shared/database/date-value';
 import { DatabaseTimelineView, timelineZoomLabelKey } from './database-timeline-view';
 import type { TimelineGroup } from './database-timeline-view';
 import type { BarWrite } from './timeline-dates';
@@ -120,8 +121,8 @@ import { DatabaseCardDrawer } from './database-card-drawer';
 import type { DrawerBacklink, LayoutTab, LayoutTabsDraft, LayoutTabsHost } from './database-card-drawer';
 import { relatedTabSources, thisPageFilter } from './layout-tab-relations';
 import { DatabaseKeyboard } from './database-keyboard';
-import { DatabaseTabBar } from './database-tab-bar';
-import { IconArrowDiagonal, IconDatabase, IconBoard, IconTrash, IconCheck, IconChevronRight, IconCopy, IconDownload, IconImage, IconListChecklist, IconMap, IconMergeCells, IconPageLayout, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
+import { DatabaseTabBar, VIEW_ICONS } from './database-tab-bar';
+import { IconArrowDiagonal, IconDatabase, IconTrash, IconCheck, IconChevronRight, IconCopy, IconDownload, IconImage, IconListChecklist, IconMergeCells, IconPageLayout, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -138,7 +139,19 @@ import {
   localizeDatabaseSelectOptions,
   localizeDatabaseViews,
 } from './database-localization';
-import { renderBoardPreview, renderDatabasePreview, renderLinkedDatabasePreview, renderMapViewPreview, renderTableViewPreview } from './preview';
+import {
+  renderBoardPreview,
+  renderCalendarViewPreview,
+  renderDatabasePreview,
+  renderFeedViewPreview,
+  renderFormPreview,
+  renderGalleryViewPreview,
+  renderLinkedDatabasePreview,
+  renderListViewPreview,
+  renderMapViewPreview,
+  renderTableViewPreview,
+  renderTimelineViewPreview,
+} from './preview';
 import { DatabaseViewControls } from './database-view-controls';
 import type { ViewControlsHost } from './database-view-controls';
 import type { ViewStateFallback } from './database-view-state';
@@ -448,6 +461,8 @@ export class DatabaseTool implements BlockTool {
   private seeded: boolean;
   /** A user just inserted this database: rendered() opens the "New database" panel once. */
   private offerNewDatabasePanel: boolean;
+  /** A user just inserted a Timeline view: rendered() adds "Card 1-3" once. */
+  private sampleCardsPending: boolean;
   private activeViewId: string;
   private model: DatabaseModel;
   /** Linked database: the block whose rows and schema this one shows. */
@@ -601,8 +616,11 @@ export class DatabaseTool implements BlockTool {
     this.source = sourceRefOf(data);
     this.stubSchema = Array.isArray(data?.schema) ? structuredClone(data.schema) : [];
     this.linkPicker = this.source === undefined && (data as Record<string, unknown> | undefined)?.[LINK_PICKER_KEY] === true;
-    // Only a user's insert: a load, undo, redo or a peer's insert never opens it.
-    this.offerNewDatabasePanel = origin === 'user' && this.seeded && !this.linkPicker;
+    // Only a user's insert: a load, undo, redo or a peer's insert never opens it. Form opens none (research/28 §3).
+    this.offerNewDatabasePanel = origin === 'user' && this.seeded && !this.linkPicker && initialView !== 'form';
+    // research/28 §3: written once, by the inserting client only, so peers never add a second set.
+    this.sampleCardsPending = origin === 'user' && initialView === 'timeline';
+    if (origin === 'user' && initialView === 'form' && this.title === '') this.title = this.api.i18n.t('tools.database.seedNewForm');
     // A pasted or duplicated copy brings rows with new ids that no backend has yet.
     this.copiedRowsPending = origin === 'paste';
     // An adapter that does not store a view's own order keeps the shared one.
@@ -1035,6 +1053,34 @@ export class DatabaseTool implements BlockTool {
     for (const row of made.rows) void this.sync.syncCreateRow({ id: row.id, properties: row.data.properties, position: row.data.position });
     this.syncRowsFromBlocks();
     this.rebuildTabBar();
+    this.rerenderView();
+  }
+
+  /**
+   * research/28 §3: a new timeline shows "Card 1" to "Card 3". Measured with
+   * today on Oct 20: Oct 15–19, 17–21 and 19–23. Status and Assign stay empty
+   * (their values were not read).
+   */
+  private addSampleCards(): void {
+    const date = this.model.getSchema().find((p) => p.type === 'date');
+    const titleId = this.titlePropertyId();
+
+    if (this.readOnly || date === undefined || titleId === '') return;
+    const today = toIsoDay(new Date());
+    const rows = [[-5, -1], [-3, 1], [-1, 3]].map(([from, to], index) => {
+      const title = this.api.i18n.t('tools.database.seedCard', { number: index + 1 });
+      const properties: Record<string, PropertyValue> = { [titleId]: title, [date.id]: formatDateValue({ start: addDays(today, from), end: addDays(today, to) }) };
+
+      for (const p of this.model.getSchema()) if (isListValueType(p.type)) properties[p.id] = [];
+
+      return { id: nanoid(), data: { properties, title, position: `a${index}` } };
+    });
+
+    this.inOneStep(() => {
+      for (const row of rows) this.api.blocks.insertAt('database-row', row.data, { parentId: this.dataId, position: 'end', id: row.id });
+    });
+    for (const row of rows) void this.sync.syncCreateRow({ id: row.id, properties: row.data.properties, position: row.data.position });
+    this.syncRowsFromBlocks();
     this.rerenderView();
   }
 
@@ -1626,47 +1672,43 @@ export class DatabaseTool implements BlockTool {
     return !this.readOnly && !this.structureDenied && !this.linked;
   }
 
+  /**
+   * Notion's "/" Database section, in its order (research/28 §1a). Not built:
+   * Dashboard view (paid), the five charts (insert unmeasured) and
+   * Database - Full page (a page block's body is host-owned). Each caption is
+   * Notion's hover hint (§1c); Blok shows it under a preview card.
+   */
   static get toolbox(): ToolboxConfig {
+    // titleKey and descriptionKey stay literals: the i18n lifecycle test reads them from source.
+    const view = (entry: { name: string; titleKey: string; layout: ViewType; searchTerms: string[]; render: () => HTMLElement; descriptionKey: string }): ToolboxConfigEntry => ({
+      icon: VIEW_ICONS[entry.layout],
+      titleKey: entry.titleKey,
+      name: entry.name,
+      searchTerms: entry.searchTerms,
+      section: 'database',
+      preview: { render: entry.render, descriptionKey: entry.descriptionKey },
+      data: { [INITIAL_VIEW_KEY]: entry.layout },
+    });
+
     return [
+      view({ name: 'tableView', titleKey: 'tableView', layout: 'table', searchTerms: ['table view', 'database', 'view'], render: renderTableViewPreview, descriptionKey: 'toolbox.preview.tableView' }),
+      view({ name: 'board', titleKey: 'board', layout: 'board', searchTerms: ['board view', 'board', 'kanban', 'database', 'view'], render: renderBoardPreview, descriptionKey: 'toolbox.preview.board' }),
+      view({ name: 'galleryView', titleKey: 'galleryView', layout: 'gallery', searchTerms: ['gallery view', 'gallery', 'database', 'view'], render: renderGalleryViewPreview, descriptionKey: 'toolbox.preview.galleryView' }),
+      view({ name: 'listView', titleKey: 'listView', layout: 'list', searchTerms: ['list view', 'list', 'database', 'view'], render: renderListViewPreview, descriptionKey: 'toolbox.preview.listView' }),
+      view({ name: 'feedView', titleKey: 'feedView', layout: 'feed', searchTerms: ['feed view', 'feed', 'database', 'view'], render: renderFeedViewPreview, descriptionKey: 'toolbox.preview.feedView' }),
+      view({ name: 'calendarView', titleKey: 'calendarView', layout: 'calendar', searchTerms: ['calendar view', 'calendar', 'database', 'view'], render: renderCalendarViewPreview, descriptionKey: 'toolbox.preview.calendarView' }),
+      view({ name: 'timelineView', titleKey: 'timelineView', layout: 'timeline', searchTerms: ['timeline view', 'timeline', 'gantt', 'database', 'view'], render: renderTimelineViewPreview, descriptionKey: 'toolbox.preview.timelineView' }),
+      view({ name: 'mapView', titleKey: 'mapView', layout: 'map', searchTerms: ['map view', 'map', 'place', 'location', 'database', 'view'], render: renderMapViewPreview, descriptionKey: 'toolbox.preview.mapView' }),
+      // No "New database" panel (§3): the form opens on its builder.
+      view({ name: 'databaseForm', titleKey: 'tools.database.viewTypeForm', layout: 'form', searchTerms: ['form', 'survey', 'database'], render: renderFormPreview, descriptionKey: 'toolbox.preview.form' }),
       {
         icon: IconDatabase,
-        titleKey: 'database',
+        titleKey: 'databaseInline',
         name: 'database',
-        searchTerms: ['database', 'kanban', 'board', 'cards', 'columns'],
+        searchTerms: ['database', 'inline', 'database inline'],
         section: 'database',
         preview: { render: renderDatabasePreview, descriptionKey: 'toolbox.preview.database' },
-        // Notion starts a new database as a table (research/26 §2 `/table view`, research/03 §1).
         data: { [INITIAL_VIEW_KEY]: 'table' },
-      },
-      {
-        icon: IconBoard,
-        titleKey: 'board',
-        name: 'board',
-        searchTerms: ['board', 'kanban', 'cards', 'columns', 'database'],
-        section: 'database',
-        preview: { render: renderBoardPreview, descriptionKey: 'toolbox.preview.board' },
-        // The seed makes a user insert open the "New database" panel, as Notion's view entries do (research/20 §1a).
-        data: { [INITIAL_VIEW_KEY]: 'board' },
-      },
-      // Notion's "Table view · Database" (research/26 §2 `/table view`). It inserts what Database does.
-      {
-        icon: IconTable,
-        titleKey: 'tableView',
-        name: 'tableView',
-        searchTerms: ['table view', 'database', 'view'],
-        section: 'database',
-        preview: { render: renderTableViewPreview, descriptionKey: 'tools.database.viewTypeTableDescription' },
-        data: { [INITIAL_VIEW_KEY]: 'table' },
-      },
-      // Notion's "Map view · Database" (research/20 §1a): a map first view and a Place property.
-      {
-        icon: IconMap,
-        titleKey: 'mapView',
-        name: 'mapView',
-        searchTerms: ['map view', 'map', 'place', 'location', 'database', 'view'],
-        section: 'database',
-        preview: { render: renderMapViewPreview, descriptionKey: 'tools.database.viewTypeMapDescription' },
-        data: { [INITIAL_VIEW_KEY]: 'map' },
       },
       {
         icon: IconDatabase,
@@ -1901,6 +1943,10 @@ export class DatabaseTool implements BlockTool {
     document.addEventListener('visibilitychange', this.handleDueVisibility);
     this.offerDue();
     this.openLinkedRow();
+    if (this.sampleCardsPending) {
+      this.sampleCardsPending = false;
+      this.addSampleCards();
+    }
     if (this.linkPicker) this.openSourcePicker();
     if (this.offerNewDatabasePanel) {
       this.offerNewDatabasePanel = false;

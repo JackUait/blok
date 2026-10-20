@@ -28,5 +28,23 @@ export const DATABASE_DEFAULT_TEXT = {
   viewMapSeed: 'Map view',
   /** The place property a new map adds (research/20 §1a). */
   placeProperty: 'Place',
+  /** First views of the "/" Database entries (research/28 §3). */
+  viewBoardSeed: 'Board view',
+  viewGallerySeed: 'Gallery view',
+  viewListSeed: 'List view',
+  viewFeedSeed: 'Feed view',
+  viewCalendarSeed: 'Calendar view',
+  viewTimelineSeed: 'Timeline view',
+  viewFormBuilder: 'Form builder',
+  viewResponses: 'Responses',
+  /** Properties those entries add (research/28 §3). */
+  assignProperty: 'Assign',
+  createdProperty: 'Created',
+  tagsProperty: 'Tags',
+  dateProperty: 'Date',
+  questionProperty: 'Question {number}',
+  respondentProperty: 'Respondent',
+  submissionTimeProperty: 'Submission time',
+  optionLabel: 'Option {number}',
   duplicatePropertyName: '{name} (copy)',
 } as const;

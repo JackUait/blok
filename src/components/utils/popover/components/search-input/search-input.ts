@@ -4,7 +4,7 @@ import { Listeners } from '../../../listeners';
 
 import { css } from './search-input.const';
 import type { SearchInputEventMap, SearchableItem } from './search-input.types';
-import { SearchInputEvent, scoreSearchMatch } from './search-input.types';
+import { SearchInputEvent, scoreSearchMatch, scoreTitleMatch } from './search-input.types';
 
 
 /**
@@ -178,9 +178,9 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
    */
   private get foundItems(): SearchableItem[] {
     return this.items
-      .map(item => ({ item, score: scoreSearchMatch(item, this.searchQuery) }))
+      .map(item => ({ item, score: scoreSearchMatch(item, this.searchQuery), title: scoreTitleMatch(item, this.searchQuery) }))
       .filter(({ score }) => score > 0)
-      .sort((a, b) => b.score - a.score)
+      .sort((a, b) => b.score - a.score || b.title - a.title)
       .map(({ item }) => item);
   }
 }

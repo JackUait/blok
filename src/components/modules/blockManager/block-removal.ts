@@ -8,9 +8,43 @@ import { BlockRemovedMutationType } from '../../../../types/events/block/BlockRe
 import type { Block } from '../../block';
 import { moveElementBefore } from '../../utils/html';
 import { SELF_PLACING_PARENTS, withSlotlessDescendants } from '../../../tools/nested-blocks';
+import { markDeletedLocally } from '../../utils/local-delete';
 import type { BlockRepository } from './repository';
 import type { BlockDidMutated, BlockOperationsDependencies, OperationsContext } from './operations-context';
 import type { BlocksStore } from './types';
+
+/**
+ * Every block beneath `block` (excluded), through the live `contentIds` links.
+ * Cycle-safe.
+ * @param block - root of the subtree
+ * @param repository - where the child ids resolve
+ */
+export const collectDescendants = (block: Block, repository: BlockRepository): Block[] => {
+  const result: Block[] = [];
+  const visited = new Set<string>([block.id]);
+  const stack = [...block.contentIds];
+
+  while (stack.length > 0) {
+    const childId = stack.pop();
+
+    if (childId === undefined || visited.has(childId)) {
+      continue;
+    }
+
+    visited.add(childId);
+
+    const childBlock = repository.getBlockById(childId);
+
+    if (childBlock === undefined) {
+      continue;
+    }
+
+    result.push(childBlock);
+    stack.push(...childBlock.contentIds);
+  }
+
+  return result;
+};
 
 /**
  * Handles block removal, including the columns-subtree teardown and the
@@ -84,7 +118,7 @@ export class BlockRemoval {
        * Other containers (toggle, callout) promote their children one level.
        */
       const deletesSubtree = block.tool.deletesChildren;
-      const descendants = deletesSubtree ? this.collectDescendants(block) : [];
+      const descendants = deletesSubtree ? collectDescendants(block, this.repository) : [];
       const promotedIds: string[] = [];
 
       if (deletesSubtree) {
@@ -94,6 +128,7 @@ export class BlockRemoval {
         for (const descendant of descendants) {
           descendant.parentId = null;
           descendant.contentIds = [];
+          markDeletedLocally(descendant);
         }
       } else {
         // Promote children ONE level — to the removed block's own parent (the
@@ -102,6 +137,7 @@ export class BlockRemoval {
         promotedIds.push(...this.promoteChildrenToParent(block, block.contentIds, parentBlock, indexInParent));
       }
 
+      markDeletedLocally(block);
       blocksStore.remove(index);
 
       // Splice the deleted subtree's descendants out of the flat array + Yjs.
@@ -213,40 +249,6 @@ export class BlockRemoval {
 
       resolve();
     });
-  }
-
-  /**
-   * Depth-first collection of every descendant block beneath `block`,
-   * resolved through the live `contentIds` links. Cycle-safe via a visited
-   * set. Used to drop a whole columns subtree (column / column_list) on
-   * removal so no descendant is left orphaned in the flat blocks array.
-   * @param block - root of the subtree (excluded from the result)
-   */
-  private collectDescendants(block: Block): Block[] {
-    const result: Block[] = [];
-    const visited = new Set<string>([block.id]);
-    const stack = [...block.contentIds];
-
-    while (stack.length > 0) {
-      const childId = stack.pop();
-
-      if (childId === undefined || visited.has(childId)) {
-        continue;
-      }
-
-      visited.add(childId);
-
-      const childBlock = this.repository.getBlockById(childId);
-
-      if (childBlock === undefined) {
-        continue;
-      }
-
-      result.push(childBlock);
-      stack.push(...childBlock.contentIds);
-    }
-
-    return result;
   }
 
   /**

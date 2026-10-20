@@ -43,4 +43,21 @@ describe('core BlockTool hooks reach every framework adapter', () => {
   it.each(PUBLISHED_SPECS.flatMap((path) => HOOKS.map((hook) => [path, hook])))('%s publishes %s', (path, hook) => {
     expect(read(path), `${path} does not publish ${hook}`).toMatch(new RegExp(`\\n\\s+${hook}\\?: \\(`));
   });
+
+  // removed() maps to the spec's onRemoved; a database block needs its { deleted } argument.
+  it('core passes removed() a { deleted } argument', () => {
+    expect(read('types/tools/block-tool.d.ts')).toMatch(/\n\s+removed\?\(removal\?: \{ deleted: boolean \}\)/);
+  });
+
+  it.each(FACTORIES)('%s forwards removed()\'s argument to onRemoved', (path) => {
+    const source = read(path);
+
+    expect(source).toMatch(/public removed\(removal\?: \{ deleted: boolean \}\)/);
+    expect(source).toMatch(/spec\.onRemoved\?\.\(this\.blockApi, removal\)/);
+    expect(source).toMatch(/\n\s+onRemoved\?: \(block: BlockAPI, removal\?: \{ deleted: boolean \}\) => void/);
+  });
+
+  it.each(PUBLISHED_SPECS)('%s publishes onRemoved with the removal argument', (path) => {
+    expect(read(path)).toMatch(/\n\s+onRemoved\?: \(block: BlockAPI, removal\?: \{ deleted: boolean \}\) => void/);
+  });
 });

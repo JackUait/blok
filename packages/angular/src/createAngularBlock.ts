@@ -218,7 +218,8 @@ export interface CreateAngularBlockSpec<Data = BlockToolData> {
    */
   onCreated?: (block: BlockAPI, context: AngularBlockMountedContext) => void;
   onMoved?: (block: BlockAPI) => void;
-  onRemoved?: (block: BlockAPI) => void;
+  /** `removal.deleted` is true when a local edit deleted the block (see BlockTool.removed). */
+  onRemoved?: (block: BlockAPI, removal?: { deleted: boolean }) => void;
 }
 
 /**
@@ -250,7 +251,7 @@ export function createAngularBlock<Data = BlockToolData>(
   isDataReadOnly(): boolean;
   rendered(): void;
   moved(): void;
-  removed(): void;
+  removed(removal?: { deleted: boolean }): void;
   destroy(): void;
 }) & BlockToolStatics & {
   readonly __isBlokAngularBlock: true;
@@ -488,12 +489,12 @@ export function createAngularBlock<Data = BlockToolData>(
       spec.onMoved?.(this.blockApi);
     }
 
-    public removed(): void {
+    public removed(removal?: { deleted: boolean }): void {
       // Ownership-scoped: core composes a REPLACEMENT block (which mounts under
       // the SAME id) before it tears this one down, so an unqualified unregister
       // here would destroy the live componentRef and blank the block.
       this.registry?.unregister(this.blockApi.id, this.hostEl ?? undefined);
-      spec.onRemoved?.(this.blockApi);
+      spec.onRemoved?.(this.blockApi, removal);
     }
 
     public destroy(): void {

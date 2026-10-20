@@ -345,7 +345,7 @@ describe('Blocks (mutation coverage)', () => {
       blocks.insert(1, fresh, true);
 
       expect(b.destroy).toHaveBeenCalledTimes(1);
-      expect(b.call).toHaveBeenCalledWith(BlockToolAPI.REMOVED);
+      expect(b.call).toHaveBeenCalledWith(BlockToolAPI.REMOVED, { deleted: false });
       expect(fresh.call).toHaveBeenCalledWith(BlockToolAPI.RENDERED);
       expect(workingArea.children[1]).toBe(fresh.holder);
       expect(arrayOrder(blocks)).toEqual(['a', 'fresh']);
@@ -615,7 +615,7 @@ describe('Blocks (mutation coverage)', () => {
 
       blocks.remove(1);
 
-      expect(b.call).toHaveBeenCalledWith(BlockToolAPI.REMOVED);
+      expect(b.call).toHaveBeenCalledWith(BlockToolAPI.REMOVED, { deleted: false });
       expect(b.destroy).toHaveBeenCalledTimes(1);
       expect(arrayOrder(blocks)).toEqual(['a']);
       expect(domOrder(workingArea)).toEqual(['a']);
@@ -712,7 +712,7 @@ describe('Blocks (mutation coverage)', () => {
 
       blocks.removeAll();
 
-      expect(a.call).toHaveBeenCalledWith(BlockToolAPI.REMOVED);
+      expect(a.call).toHaveBeenCalledWith(BlockToolAPI.REMOVED, { deleted: false });
       expect(a.destroy).toHaveBeenCalledTimes(1);
       expect(blocks.length).toBe(0);
       expect(domOrder(workingArea)).toEqual([]);

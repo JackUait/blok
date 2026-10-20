@@ -407,7 +407,8 @@ export interface CreateReactBlockSpec<Data = BlockToolData, Config = Record<stri
    */
   onCreated?: (block: BlockAPI, context: ReactBlockMountedContext) => void;
   onMoved?: (block: BlockAPI) => void;
-  onRemoved?: (block: BlockAPI) => void;
+  /** `removal.deleted` is true when a local edit deleted the block (see BlockTool.removed). */
+  onRemoved?: (block: BlockAPI, removal?: { deleted: boolean }) => void;
 }
 
 /**
@@ -441,7 +442,7 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
   isDataReadOnly(): boolean;
   rendered(): void;
   moved(): void;
-  removed(): void;
+  removed(removal?: { deleted: boolean }): void;
   destroy(): void;
 }) & BlockToolStatics & {
   readonly __isBlokReactBlock: true;
@@ -961,12 +962,12 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
       spec.onMoved?.(this.blockApi);
     }
 
-    public removed(): void {
+    public removed(removal?: { deleted: boolean }): void {
       // Ownership-scoped: core composes a REPLACEMENT block (which registers
       // under the SAME id) before it tears this one down, so an unqualified
       // unregister here would delete the live entry and blank the block.
       this.registry?.unregister(this.blockApi.id, this.hostEl ?? undefined);
-      spec.onRemoved?.(this.blockApi);
+      spec.onRemoved?.(this.blockApi, removal);
     }
 
     public destroy(): void {

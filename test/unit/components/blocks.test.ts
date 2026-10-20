@@ -5,6 +5,7 @@ import { BlockToolAPI } from '../../../src/components/block';
 import { BlockRendered } from '../../../src/components/events';
 import type { BlokEventMap } from '../../../src/components/events';
 import type { EventsDispatcher } from '../../../src/components/utils/events';
+import { markDeletedLocally } from '../../../src/components/utils/local-delete';
 
 /**
  * Unit tests for Blocks class
@@ -853,7 +854,7 @@ describe('Blocks', () => {
       expect(blocks.blocks[0]).toBe(block2);
       expect(blocks.length).toBe(1);
       expect(replaceWithSpy).toHaveBeenCalledWith(block2.holder);
-      expect(block1.call).toHaveBeenCalledWith(BlockToolAPI.REMOVED);
+      expect(block1.call).toHaveBeenCalledWith(BlockToolAPI.REMOVED, { deleted: false });
       expect(block2.call).toHaveBeenCalledWith(BlockToolAPI.RENDERED);
     });
 
@@ -1328,7 +1329,18 @@ describe('Blocks', () => {
 
       blocks.remove(0);
 
-      expect(block.call).toHaveBeenCalledWith(BlockToolAPI.REMOVED);
+      expect(block.call).toHaveBeenCalledWith(BlockToolAPI.REMOVED, { deleted: false });
+    });
+
+    it('tells REMOVED a block a local edit deleted', () => {
+      const blocks = createBlocks();
+      const block = createMockBlock('block-1');
+
+      blocks.push(block);
+      markDeletedLocally(block);
+      blocks.remove(0);
+
+      expect(block.call).toHaveBeenCalledWith(BlockToolAPI.REMOVED, { deleted: true });
     });
 
     describe('invalid index guard (regression: wrong-block-dropped family)', () => {
@@ -1356,8 +1368,8 @@ describe('Blocks', () => {
         expect(blocks.length).toBe(2);
         expect(blocks.blocks[0]).toBe(block1);
         expect(blocks.blocks[1]).toBe(block2);
-        expect(block1.call).not.toHaveBeenCalledWith(BlockToolAPI.REMOVED);
-        expect(block2.call).not.toHaveBeenCalledWith(BlockToolAPI.REMOVED);
+        expect(block1.call).not.toHaveBeenCalledWith(BlockToolAPI.REMOVED, expect.anything());
+        expect(block2.call).not.toHaveBeenCalledWith(BlockToolAPI.REMOVED, expect.anything());
       });
 
       it('should be a no-op when index is past the end', () => {
@@ -1370,7 +1382,7 @@ describe('Blocks', () => {
 
         expect(blocks.length).toBe(1);
         expect(blocks.blocks[0]).toBe(block1);
-        expect(block1.call).not.toHaveBeenCalledWith(BlockToolAPI.REMOVED);
+        expect(block1.call).not.toHaveBeenCalledWith(BlockToolAPI.REMOVED, expect.anything());
       });
     });
   });
@@ -1415,8 +1427,8 @@ describe('Blocks', () => {
 
       blocks.removeAll();
 
-      expect(block1.call).toHaveBeenCalledWith(BlockToolAPI.REMOVED);
-      expect(block2.call).toHaveBeenCalledWith(BlockToolAPI.REMOVED);
+      expect(block1.call).toHaveBeenCalledWith(BlockToolAPI.REMOVED, { deleted: false });
+      expect(block2.call).toHaveBeenCalledWith(BlockToolAPI.REMOVED, { deleted: false });
     });
 
     it('should handle empty blocks array', () => {

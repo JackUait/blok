@@ -23,10 +23,15 @@ import { BlockPlacementError, lastChildBefore } from '../api/block-placement';
 import type { BlockFactory } from './factory';
 import { hideUnderCollapsedParent, isSelfPlacedParent } from './new-block-placement';
 import type { BlockHierarchy } from './hierarchy';
+import { collectDescendants } from './block-removal';
+import { markDeletedLocally } from '../../utils/local-delete';
 import type { BlockRepository } from './repository';
 import type { BlockDidMutated, BlockOperationsDependencies, OperationsContext } from './operations-context';
 import type { InsertBlockOptions, InsertInsideParentOptions, BlocksStore } from './types';
 import type { BlockYjsSync } from './yjs-sync';
+
+/** Tools whose replace deletes the replaced block's subtree. */
+const REPLACE_DELETES_SUBTREE: ReadonlySet<string> = new Set(['database', 'database-row']);
 
 /**
  * Internal widening of the public options. The released `insertInsideParent`
@@ -240,7 +245,14 @@ export class BlockInsertion {
      * on the generic insert-replace path (toolbox/shortcut turn-into and
      * useBlocks.insert({ replace })).
      */
-    const replacedContentIds = blockToReplace !== undefined ? [...blockToReplace.contentIds] : [];
+    // A database or row takes its subtree with it, as on delete. Other
+    // deletesChildren tools keep v1.16.1's re-homing on replace. A same-id
+    // replace re-renders the block, so its children stay.
+    const deletedDescendants = blockToReplace !== undefined && replacedBlockId !== block.id
+      && blockToReplace.tool.deletesChildren && REPLACE_DELETES_SUBTREE.has(blockToReplace.name)
+      ? collectDescendants(blockToReplace, this.repository)
+      : [];
+    const replacedContentIds = blockToReplace !== undefined && deletedDescendants.length === 0 ? [...blockToReplace.contentIds] : [];
 
     if (replace && blockToReplace !== undefined) {
       this.blockDidMutated(BlockRemovedMutationType, blockToReplace, {
@@ -265,7 +277,27 @@ export class BlockInsertion {
       this.reparentChildrenTo([...replacedContentIds].reverse(), replacedParentId);
     }
 
+    // Detached first, so a column descendant's removed() hook finds nothing to unwrap.
+    for (const descendant of deletedDescendants) {
+      descendant.parentId = null;
+      descendant.contentIds = [];
+      markDeletedLocally(descendant);
+    }
+
+    // A same-id replace is a re-render, not a delete.
+    if (blockToReplace !== undefined && replacedBlockId !== block.id) {
+      markDeletedLocally(blockToReplace);
+    }
+
     blocksStore.insert(targetIndex, block, replace, appendToWorkingArea, forceTopLevel || mountAtRoot || exited !== undefined);
+
+    for (const descendant of deletedDescendants) {
+      const descendantIndex = this.repository.getBlockIndex(descendant);
+
+      if (descendantIndex >= 0) {
+        blocksStore.remove(descendantIndex);
+      }
+    }
 
     /**
      * Transfer the parent link to the new block BEFORE Yjs sync so
@@ -403,6 +435,8 @@ export class BlockInsertion {
           this.dependencies.YjsManager.removeBlock(replacedIdToRemove);
         }
 
+        deletedDescendants.forEach(descendant => this.dependencies.YjsManager.removeBlock(descendant.id));
+
         this.addToDocumentWhereTreeHasIt({ id: block.id, type: block.name, data: block.preservedData }, block, targetIndex);
 
         // The doc still points the children at the removed id.
@@ -412,6 +446,9 @@ export class BlockInsertion {
 
         this.writeRenderedChildPlacements(block, replacedContentIds);
       });
+    } else if (skipYjsSync) {
+      // A caller that writes Yjs itself does not know this cascade.
+      deletedDescendants.forEach(descendant => this.dependencies.YjsManager.removeBlock(descendant.id));
     }
 
     /**

@@ -4,6 +4,7 @@ import { BlockRendered } from './events';
 import type { BlokEventMap } from './events';
 import type { EventsDispatcher } from './utils/events';
 import { moveElementBefore, moveElementToEnd } from './utils/html';
+import { isDeletedLocally } from './utils/local-delete';
 
 
 /**
@@ -252,7 +253,7 @@ export class Blocks {
        * the new block from being misplaced when the previous block in the
        * array is nested inside another element (e.g., a table cell).
        */
-      blockToReplace.call(BlockToolAPI.REMOVED);
+      blockToReplace.call(BlockToolAPI.REMOVED, { deleted: isDeletedLocally(blockToReplace) });
       blockToReplace.destroy();
       blockToReplace.holder.replaceWith(block.holder);
 
@@ -486,7 +487,7 @@ export class Blocks {
      * mutation events, then remove DOM element. This prevents spurious
      * 'block-changed' events from being fired when the DOM element is removed.
      */
-    blockToRemove.call(BlockToolAPI.REMOVED);
+    blockToRemove.call(BlockToolAPI.REMOVED, { deleted: isDeletedLocally(blockToRemove) });
     blockToRemove.destroy();
     blockToRemove.holder.remove();
 
@@ -503,7 +504,7 @@ export class Blocks {
     // mousedown handlers on the shared toggler, which later fire for whichever
     // block is hovered and drags the wrong block.
     this.blocks.forEach((block) => {
-      block.call(BlockToolAPI.REMOVED);
+      block.call(BlockToolAPI.REMOVED, { deleted: false });
       block.destroy();
     });
 

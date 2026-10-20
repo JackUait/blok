@@ -782,7 +782,8 @@ export interface CreateVueBlockSpec<Data extends BlockToolData = BlockToolData> 
    */
   onCreated?: (block: BlockAPI, context: VueBlockMountedContext) => void;
   onMoved?: (block: BlockAPI) => void;
-  onRemoved?: (block: BlockAPI) => void;
+  /** `removal.deleted` is true when a local edit deleted the block (see BlockTool.removed). */
+  onRemoved?: (block: BlockAPI, removal?: { deleted: boolean }) => void;
 }
 
 /**

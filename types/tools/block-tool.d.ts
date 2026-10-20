@@ -91,8 +91,11 @@ export interface BlockTool extends BaseTool {
 
   /**
    * Called after block removed from the page but before instance is deleted
+   * @param removal - `deleted` is true when a local edit deleted the block or
+   *   an ancestor that takes it along (delete, cut, replace). It is false for
+   *   undo/redo, a peer's change, `clear()`, `render()` and teardown.
    */
-  removed?(): void;
+  removed?(removal?: { deleted: boolean }): void;
 
   /**
    * Called after block was moved

@@ -87,6 +87,21 @@ describe('database timeline styles', () => {
     expect(ruleBody('[data-blok-database-timeline-offscreen]')).toContain('border-radius: var(--blok-radius-control-sm)');
   });
 
+  // research/23 §3b: an 8px col-resize handle per edge, 2px inside the bar and 6px outside.
+  it('puts each resize handle 2px inside the bar edge and 6px outside', () => {
+    expect(ruleBody('[data-blok-database-timeline-resize]')).toMatch(/inline-size:\s*8px/);
+    expect(ruleBody('[data-blok-database-timeline-resize]')).toMatch(/cursor:\s*col-resize/);
+    expect(ruleBody('[data-blok-database-timeline-resize="start"]')).toMatch(/inset-inline-start:\s*-6px/);
+    expect(ruleBody('[data-blok-database-timeline-resize="end"]')).toMatch(/inset-inline-end:\s*-6px/);
+  });
+
+  // The link dot sits past the end handle, so the two never overlap.
+  it('keeps the link handle clear of the end resize zone', () => {
+    const offset = /inset-inline-end:\s*-(\d+)px/.exec(ruleBody('[data-blok-database-timeline-link-handle]'));
+
+    expect(Number(offset?.[1]) - 10).toBeGreaterThanOrEqual(6);
+  });
+
   it('hides an off-screen arrow that the view marks hidden', () => {
     expect(ruleBody('[data-blok-database-timeline-offscreen][hidden]')).toMatch(/display:\s*none/);
   });

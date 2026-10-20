@@ -152,6 +152,41 @@ describe('row page backlinks', () => {
     drawer.destroy();
   });
 
+  // research/23 §4: "7 backlinks" over 6 rows: the count is per mention, the list per page.
+  it('counts every mention but lists each page once', () => {
+    const items: DrawerBacklink[] = [{ ...link('bl1', 'BL1'), mentions: 2 }, link('bl5', 'BL5')];
+    const drawer = new DatabaseCardDrawer(createOptions({ backlinks: () => items }));
+
+    drawer.open(ROW);
+
+    expect(button()?.textContent).toBe('3 backlinks');
+    button()?.click();
+    expect(document.querySelectorAll('[data-blok-popover-item][data-blok-item-name^="backlink-"]')).toHaveLength(2);
+    drawer.destroy();
+  });
+
+  it('redraws the count when a page gains a second mention', () => {
+    const items: DrawerBacklink[] = [link('bl1', 'BL1')];
+    const drawer = new DatabaseCardDrawer(createOptions({ backlinks: () => items }));
+
+    drawer.open(ROW);
+    items[0] = { ...link('bl1', 'BL1'), mentions: 2 };
+    drawer.refreshBacklinks();
+
+    expect(button()?.textContent).toBe('2 backlinks');
+    drawer.destroy();
+  });
+
+  it('counts mentions in Customize layout too', () => {
+    const drawer = new DatabaseCardDrawer(createOptions({ backlinks: () => [{ ...link('bl1', 'BL1'), mentions: 2 }], onPageLayoutChange: vi.fn(), onPageLayoutBirth: vi.fn() }));
+
+    drawer.open(ROW);
+    drawer.startCustomizing();
+
+    expect(q('[data-blok-database-layout-backlinks]')?.textContent).toBe('2 backlinks');
+    drawer.destroy();
+  });
+
   it('puts a new count after the cover for a reader whose head holds only the cover', () => {
     const items: DrawerBacklink[] = [];
     const drawer = new DatabaseCardDrawer(createOptions({ readOnly: true, backlinks: () => items }));

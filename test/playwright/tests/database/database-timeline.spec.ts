@@ -193,7 +193,7 @@ test.describe('timeline', () => {
     const box = await bar(page, 'r1').boundingBox();
 
     if (box === null) throw new Error('no bar');
-    await drag(page, { x: box.x + box.width - 3, y: box.y + box.height / 2 }, { x: box.x + box.width - 3 + 80, y: box.y + box.height / 2 });
+    await drag(page, { x: box.x + box.width - 1, y: box.y + box.height / 2 }, { x: box.x + box.width - 1 + 80, y: box.y + box.height / 2 });
 
     await expect.poll(async () => (await savedRow(page, 'r1'))['p-due']).toBe('2026-10-09/2026-10-11');
   });
@@ -241,9 +241,10 @@ test.describe('timeline', () => {
     test('a left-edge resize snaps live and reads the new start', async ({ page }) => {
       const box = await mountHours(page);
 
-      await page.mouse.move(box.x + 2, box.y);
+      // research/23 §3b: the handle reaches 6px outside the bar.
+      await page.mouse.move(box.x - 4, box.y);
       await page.mouse.down();
-      await page.mouse.move(box.x - 8, box.y, { steps: 5 });
+      await page.mouse.move(box.x - 14, box.y, { steps: 5 });
       await expect(page.getByRole('tooltip')).toHaveText('Oct 9, 2:45 AM');
       expect((await bar(page, 'r1').boundingBox())?.x).toBeCloseTo(box.x - 15, 0);
       await page.mouse.up();
@@ -255,10 +256,16 @@ test.describe('timeline', () => {
     test('a right-edge resize snaps the same way and reads the new end', async ({ page }) => {
       const box = await mountHours(page);
 
-      await page.mouse.move(box.x + box.width - 2, box.y);
+      // research/23 §3b: the handle reaches 6px outside the bar.
+      await page.mouse.move(box.x + box.width + 4, box.y);
       await page.mouse.down();
-      await page.mouse.move(box.x + box.width + 8, box.y, { steps: 5 });
+      await page.mouse.move(box.x + box.width + 14, box.y, { steps: 5 });
       await expect(page.getByRole('tooltip')).toHaveText('Oct 9, 4:15 AM');
+      // The readout sits to the right of the dragged end edge.
+      const edge = await bar(page, 'r1').boundingBox();
+      const readout = await page.getByRole('tooltip').boundingBox();
+
+      expect(readout?.x ?? 0).toBeGreaterThanOrEqual((edge?.x ?? 0) + (edge?.width ?? 0));
       await page.mouse.up();
 
       await expect.poll(async () => (await savedRow(page, 'r1'))['p-due']).toBe('2026-10-09T03:00/2026-10-09T04:15');

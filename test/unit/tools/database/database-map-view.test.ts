@@ -215,6 +215,64 @@ describe('DatabaseMapView', () => {
     expect(open).toHaveBeenCalledWith('r3');
   });
 
+  // research/23 §5c: the list stays open under the row page; Escape closes the page, then the list.
+  it('keeps the "No place" list under an opened row page and shows it again, query kept, when the page closes', async () => {
+    const extra: DatabaseRow[] = [...rows, { id: 'r3', position: 'a2', properties: { title: 'Cid' } }];
+    const { root, open, mapView } = mount({ render: vi.fn(), rows: extra, writable: true });
+    const search = (): HTMLInputElement | null => document.querySelector<HTMLInputElement>('[data-blok-database-map-no-place-search]');
+
+    await flush();
+    root.querySelector<HTMLButtonElement>('[data-blok-database-map-no-place]')?.click();
+    const field = search();
+
+    if (field === null) throw new Error('no search');
+    field.value = 'ci';
+    field.dispatchEvent(new Event('input'));
+    document.querySelector<HTMLElement>('[data-blok-database-map-no-place-row]')?.click();
+
+    expect(open).toHaveBeenCalledWith('r3');
+    // Under the page: not drawn over it.
+    expect(search()).toBeNull();
+
+    mapView.rowPageClosed();
+    await flush();
+
+    expect(search()?.value).toBe('ci');
+    expect(search()).toHaveFocus();
+    expect([...document.querySelectorAll('[data-blok-database-map-no-place-row]')].map((row) => row.textContent)).toEqual(['Cid']);
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(search()).toBeNull();
+    mapView.rowPageClosed();
+    await flush();
+    expect(search()).toBeNull();
+  });
+
+  it('a row page closing with no list under it opens nothing', async () => {
+    const { mapView } = mount({ render: vi.fn(), writable: true });
+
+    await flush();
+    mapView.rowPageClosed();
+    await flush();
+
+    expect(document.querySelector('[data-blok-database-map-no-place-search]')).toBeNull();
+  });
+
+  it('lists the rows without a place newest first (research/23 §5c)', async () => {
+    const unplaced: DatabaseRow[] = [
+      rows[0],
+      { id: 'old', position: 'a1', properties: { title: 'Old' }, meta: { createdAt: 1 } },
+      { id: 'new', position: 'a2', properties: { title: 'New' }, meta: { createdAt: 3 } },
+      { id: 'mid', position: 'a3', properties: { title: 'Mid' }, meta: { createdAt: 2 } },
+    ];
+    const { root } = mount({ render: vi.fn(), rows: unplaced, writable: true });
+
+    await flush();
+    root.querySelector<HTMLButtonElement>('[data-blok-database-map-no-place]')?.click();
+
+    expect([...document.querySelectorAll('[data-blok-database-map-no-place-row]')].map((row) => row.textContent)).toEqual(['New', 'Mid', 'Old']);
+  });
+
   it('every row placed: no chip', async () => {
     const { root } = mount({ render: vi.fn(), rows: [rows[0]], writable: true });
 

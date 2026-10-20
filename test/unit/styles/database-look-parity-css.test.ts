@@ -310,3 +310,11 @@ describe('list rows and form in dark (research/21 §1g, §1k)', () => {
     expect(ruleBody('[data-blok-database-form-access]')).toContain('background-color: var(--blok-database-column-bg)');
   });
 });
+
+describe('map pins (research/23 §5b)', () => {
+  it('paint a green rule\'s pin rgb(70, 161, 113) in both themes, and keep the rest Notion blue', () => {
+    expect(ruleBody('[data-blok-database-map-pin][data-color="green"]')).toContain('--_blok-database-map-pin: var(--blok-database-status-dot-green)');
+    expect(tokenValues('--blok-database-status-dot-green')).toStrictEqual(['rgb(70, 161, 113)', 'rgb(70, 161, 113)', 'rgb(70, 161, 113)']);
+    expect(ruleBody('[data-blok-database-map-pin]')).toContain('--_blok-database-map-pin: var(--blok-color-accent)');
+  });
+});

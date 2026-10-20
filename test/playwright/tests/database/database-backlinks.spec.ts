@@ -43,8 +43,10 @@ const blocks = (extra: { top?: boolean; bravo?: boolean } = {}): OutputBlockData
   { id: 'b2', type: 'paragraph', parent: 'r2', data: { text: extra.bravo === false ? 'Bravo body' : [{ text: 'Bravo body ' }, mention('r1')] } },
 ] as OutputBlockData[];
 
-const mount = async (page: Page, data: OutputBlockData[], host = false): Promise<void> => {
-  await page.evaluate(async ({ data: input, host: withHost }) => {
+const FAR = [{ pageId: 'far', title: 'Roadmap', path: ['Team'], blockId: 'x9' }];
+
+const mount = async (page: Page, data: OutputBlockData[], host = false, hostItems: unknown[] = FAR): Promise<void> => {
+  await page.evaluate(async ({ data: input, host: withHost, hostItems: listed }) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
       window.blokInstance = undefined;
@@ -61,7 +63,7 @@ const mount = async (page: Page, data: OutputBlockData[], host = false): Promise
       list: async () => {
         window.hostAsked = (window.hostAsked ?? 0) + 1;
 
-        return [{ pageId: 'far', title: 'Roadmap', path: ['Team'], blockId: 'x9' }];
+        return listed;
       },
       open: (link: unknown) => window.hostOpened?.push(link),
     };
@@ -72,7 +74,7 @@ const mount = async (page: Page, data: OutputBlockData[], host = false): Promise
       ...(withHost ? { tools: { database: { class: window.BlokDatabase, config: { backlinks } }, 'database-row': { class: window.BlokDatabaseRow } } } : {}),
     });
     await window.blokInstance.isReady;
-  }, { data, host });
+  }, { data, host, hostItems });
   await expect(page.getByRole('grid')).toBeVisible();
 };
 
@@ -191,6 +193,31 @@ test('adds the host\'s pages from other documents and opens them through the hos
   await far.click();
 
   expect(await page.evaluate(() => window.hostOpened)).toEqual([{ pageId: 'far', title: 'Roadmap', path: ['Team'], blockId: 'x9' }]);
+});
+
+// research/23 §4: "7 backlinks" over 6 rows. The count is per mention, the list one row per page.
+test('counts every mention and lists each page once, here and from the host', async ({ page }) => {
+  const data = blocks({ top: false });
+  const b2 = data.find((block) => block.id === 'b2');
+
+  if (b2 === undefined) throw new Error('no b2');
+  b2.data = { text: [{ text: 'Bravo ' }, mention('r1'), { text: ' and ' }, mention('r1')] };
+  await mount(page, data, true, [
+    { pageId: 'far', title: 'Roadmap', blockId: 'x9' },
+    { pageId: 'near', title: 'Notes' },
+    { pageId: 'far', title: 'Roadmap', blockId: 'x1' },
+  ]);
+  await openRow(page, 'r1');
+
+  await expect(backlinks(page)).toHaveText('5 backlinks');
+  await page.locator('[data-blok-database-drawer-title]').hover();
+  await backlinks(page).click();
+  const items = page.locator('[data-blok-item-name^="backlink-"]');
+
+  await expect(items).toHaveCount(3);
+  expect(await items.evaluateAll((els) => els.map((el) => el.getAttribute('data-blok-item-name')))).toEqual(['backlink-r2', 'backlink-host-far', 'backlink-host-near']);
+  await page.locator('[data-blok-item-name="backlink-host-far"]').click();
+  expect(await page.evaluate(() => window.hostOpened)).toEqual([{ pageId: 'far', title: 'Roadmap', blockId: 'x9' }]);
 });
 
 test('asks the host again each time the row page opens', async ({ page }) => {

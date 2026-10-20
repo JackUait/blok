@@ -1,7 +1,7 @@
 import type { I18n } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { IconPage } from '../../components/icons';
-import { onHover } from '../../components/utils/tooltip';
+import { MIN_HINT_DELAY, onHover } from '../../components/utils/tooltip';
 import { loadMapLibre, supportsWebGL } from './maplibre-loader';
 import type { MapLibreModule } from './maplibre-loader';
 import type { DatabaseMapContext, DatabaseMapItem, PlaceValue } from './types';
@@ -188,7 +188,8 @@ export const drawMapLibreMap = (
         event.stopPropagation();
         ctx.open(item.rowId);
       });
-      onHover(pin, pinCard(item, options.breadcrumb));
+      // Notion waits ≈160ms (research/23 §5a); the hint-delay law makes 300ms the floor.
+      onHover(pin, pinCard(item, options.breadcrumb), { delay: MIN_HINT_DELAY });
       new maplibre.Marker({ element: pin, anchor: 'bottom' }).setLngLat(point).addTo(map);
     });
 

@@ -413,14 +413,18 @@ export interface DatabaseLinkedSources {
   resolve(input: { documentId: string; databaseId: string }): Promise<{ schema: PropertyDefinition[]; rows: DatabaseRow[] } | null>;
 }
 
-/** A page in another document that mentions a row. */
+/**
+ * One mention of a row in another document. A page with two mentions is two
+ * entries: the button counts entries, the list shows one row per `pageId`, at
+ * that page's first entry.
+ */
 export interface DatabaseBacklink {
   /** The page holding the mention. */
   pageId: string;
   title?: string;
   /** Titles of the pages above it, top first. Shown in grey after the title. */
   path?: string[];
-  /** The block holding the mention. */
+  /** The block holding the mention. Absent for a mention in a row property: open goes to the page itself. */
   blockId?: string;
 }
 
@@ -430,7 +434,10 @@ export interface DatabaseBacklink {
  * this document only.
  */
 export interface DatabaseBacklinks {
-  /** Pages in other documents that mention the row. `pageId` is the row's page, when it has one. Asked when the row's page opens. */
+  /**
+   * Mentions of the row in other documents, one entry per mention, newest first.
+   * `pageId` is the row's page, when it has one. Asked when the row's page opens.
+   */
   list(input: { databaseId: string; rowId: string; pageId?: string }): Promise<DatabaseBacklink[]>;
   /** Opens a page from the list at its mention. */
   open(backlink: DatabaseBacklink): void;

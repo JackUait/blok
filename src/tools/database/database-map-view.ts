@@ -58,6 +58,8 @@ export class DatabaseMapView implements DatabaseViewRenderer {
   private addingPin = false;
   private syncAddPin: (() => void) | null = null;
   private noPlacePopover: CellPopover | null = null;
+  /** The "No place" list a row page opened over, shown again when that page closes. */
+  private underPage: { anchor: HTMLElement; unplaced: DatabaseRow[]; query: string } | null = null;
 
   constructor(private readonly options: DatabaseMapViewOptions) {}
 
@@ -81,7 +83,9 @@ export class DatabaseMapView implements DatabaseViewRenderer {
     const frame = document.createElement('div');
     const canvas = document.createElement('div');
     const height = MAP_HEIGHT_PX[resolveMapHeight(this.options.view)];
-    const unplaced = this.options.rows.filter((row) => !hasPlace(row.properties[placeBy.id]));
+    // Newest first, not the view's order (research/23 §5c).
+    const unplaced = this.options.rows.filter((row) => !hasPlace(row.properties[placeBy.id]))
+      .sort((a, b) => (b.meta?.createdAt ?? 0) - (a.meta?.createdAt ?? 0));
 
     if (this.options.writable === true && unplaced.length > 0) {
       root.appendChild(this.noPlaceChip(unplaced));
@@ -124,8 +128,24 @@ export class DatabaseMapView implements DatabaseViewRenderer {
 
   updateRowTitle(_wrapper: HTMLElement, _rowId: string, _title: string): void {}
 
+  /**
+   * The row page closed. A "No place" list it opened over comes back (research/23
+   * §5c: it stays open under the page, so a second Escape closes it).
+   */
+  rowPageClosed(): void {
+    const under = this.underPage;
+
+    this.underPage = null;
+    if (under === null) return;
+    // After the page's own focus return, which would close the list again.
+    queueMicrotask(() => {
+      if (!this.destroyed && under.anchor.isConnected) this.openNoPlaceList(under.anchor, under.unplaced, under.query);
+    });
+  }
+
   destroy(): void {
     this.destroyed = true;
+    this.underPage = null;
     this.noPlacePopover?.close();
     this.noPlacePopover = null;
     this.handle?.destroy();
@@ -205,8 +225,9 @@ export class DatabaseMapView implements DatabaseViewRenderer {
     return chip;
   }
 
-  private openNoPlaceList(anchor: HTMLElement, unplaced: DatabaseRow[]): void {
+  private openNoPlaceList(anchor: HTMLElement, unplaced: DatabaseRow[], query = ''): void {
     this.noPlacePopover?.close();
+    this.underPage = null;
     const content = document.createElement('div');
     const search = document.createElement('input');
     const list = document.createElement('div');
@@ -239,9 +260,11 @@ export class DatabaseMapView implements DatabaseViewRenderer {
         item.setAttribute('data-blok-database-map-no-place-row', '');
         item.textContent = titleOf(row);
         item.addEventListener('click', () => {
+          // A top-layer popover would draw over the page, so it waits under it closed.
           popover.close();
           this.noPlacePopover = null;
           this.options.open(row.id);
+          this.underPage = { anchor, unplaced, query: search.value };
         });
 
         return item;
@@ -253,6 +276,7 @@ export class DatabaseMapView implements DatabaseViewRenderer {
     search.placeholder = placeholder;
     search.setAttribute('aria-label', placeholder);
     search.setAttribute('data-blok-database-map-no-place-search', '');
+    search.value = query;
     search.addEventListener('input', fill);
     content.append(search, list);
     fill();

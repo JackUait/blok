@@ -90,6 +90,7 @@ vi.mock('../../../../src/tools/database/maplibre-loader', () => ({
 const hover = vi.fn();
 
 vi.mock('../../../../src/components/utils/tooltip', () => ({
+  MIN_HINT_DELAY: 300,
   onHover: (...args: unknown[]): void => {
     hover(...args);
   },
@@ -231,6 +232,14 @@ describe('Blok\'s own map (MapLibre)', () => {
     expect(element).toBe(env.markers[0].element);
     expect(card.querySelector('[data-blok-database-map-pin-card-crumb]')?.textContent).toBe('Trips');
     expect(card.querySelector('[data-blok-database-map-pin-card-title]')?.textContent).toBe('Eiffel Tower');
+  });
+
+  // research/23 §5a: Notion shows the card ≈160ms after hover. The hint law keeps 300ms as the floor.
+  it('shows the pin card after the shortest hint delay', async () => {
+    draw();
+    await settle();
+
+    expect(hover.mock.calls[0]?.[2]).toStrictEqual({ delay: 300 });
   });
 
   it('fits every pin once, at the first real size, not while hidden', async () => {

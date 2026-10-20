@@ -916,6 +916,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_CALENDAR_BOX_BYTES = 289;
     // database.css: the time zone menu's search, headings and two-line rows (research/23 §1).
     const DATABASE_TIME_ZONE_MENU_BYTES = 1_231;
+    // database.css: timeline resize handles 6px outside the bar, and the measured green map pin (research/23 §3b, §5b).
+    const DATABASE_TIMELINE_HANDLE_MAP_PIN_BYTES = 218;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1044,7 +1046,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_DATE_PICKER_ROWS_BYTES
       + DATABASE_DARK_GAPS_STAR_BYTES
       + DATABASE_CALENDAR_BOX_BYTES
-      + DATABASE_TIME_ZONE_MENU_BYTES;
+      + DATABASE_TIME_ZONE_MENU_BYTES
+      + DATABASE_TIMELINE_HANDLE_MAP_PIN_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

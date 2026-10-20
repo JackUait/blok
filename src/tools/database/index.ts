@@ -619,19 +619,31 @@ export class DatabaseTool implements BlockTool {
       block: (id) => {
         const block = this.api.blocks.getById(id);
 
-        return block === null || block === undefined ? undefined : { id: block.id, name: block.name, parentId: block.parentId ?? null };
+        if (block === null || block === undefined) return undefined;
+        const editedAt = block.lastEditedAt ?? block.createdAt;
+
+        return { id: block.id, name: block.name, parentId: block.parentId ?? null, ...(editedAt === undefined ? {} : { editedAt }) };
       },
     });
     const local = sources.map((source) => this.documentBacklink(source, root));
     const seen = new Set(local.flatMap((link) => link.pageIds));
-    const hosted = (this.hostBacklinks?.rowId === rowId ? this.hostBacklinks.items : [])
-      .filter((link) => !seen.has(link.pageId))
-      .map((link): DrawerBacklink => ({
-        key: `host-${link.pageId}`,
-        title: link.title !== undefined && link.title.trim() !== '' ? link.title : this.api.i18n.t('tools.database.relationUntitled'),
-        path: link.path ?? [],
-        open: () => this.config.backlinks?.open(link),
-      }));
+    // The host gives one entry per mention, newest first: one row per page, at its first (newest) entry.
+    const hostPages = new Map<string, { link: DatabaseBacklink; mentions: number }>();
+
+    for (const link of this.hostBacklinks?.rowId === rowId ? this.hostBacklinks.items : []) {
+      const page = hostPages.get(link.pageId);
+
+      if (seen.has(link.pageId)) continue;
+      if (page === undefined) hostPages.set(link.pageId, { link, mentions: 1 });
+      else page.mentions += 1;
+    }
+    const hosted = [...hostPages.values()].map(({ link, mentions }): DrawerBacklink => ({
+      key: `host-${link.pageId}`,
+      title: link.title !== undefined && link.title.trim() !== '' ? link.title : this.api.i18n.t('tools.database.relationUntitled'),
+      path: link.path ?? [],
+      mentions,
+      open: () => this.config.backlinks?.open(link),
+    }));
 
     if (this.hostBacklinks?.rowId !== rowId) void this.loadHostBacklinks(rowId, row.pageId);
 
@@ -672,7 +684,7 @@ export class DatabaseTool implements BlockTool {
       const title = root.querySelector(`[${DATA_ATTR.pageTitle}]`)?.textContent?.trim() ?? '';
 
       return {
-        item: { key: 'document', title: title === '' ? untitled : title, path: [], open: () => { this.cardDrawer?.close(); go(); } },
+        item: { key: 'document', title: title === '' ? untitled : title, path: [], mentions: source.mentions, open: () => { this.cardDrawer?.close(); go(); } },
         pageIds: [],
       };
     }
@@ -691,6 +703,7 @@ export class DatabaseTool implements BlockTool {
       item: {
         key: rowId,
         title,
+        mentions: source.mentions,
         path: [typeof databaseTitle === 'string' && databaseTitle.trim() !== '' ? databaseTitle : this.api.i18n.t('tools.database.relationUntitledDatabase')],
         ...(typeof data?.icon === 'string' && data.icon !== '' ? { icon: data.icon } : {}),
         open: () => {
@@ -7263,6 +7276,7 @@ export class DatabaseTool implements BlockTool {
           this.openedRowLink = null;
           // The next open asks the host again.
           this.hostBacklinks = null;
+          if (this.view instanceof DatabaseMapView) this.view.rowPageClosed();
         },
         onCopyViewLink: (rowId, tabId) => this.copyRowLink(rowId, tabId),
         onAddProperty: (type, name) => {

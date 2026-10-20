@@ -10920,15 +10920,15 @@ textarea[data-blok-database-cell-input] {
   position: absolute;
   inset-block: 0;
   inline-size: 8px;
-  cursor: ew-resize;
+  cursor: col-resize;
 }
 
 [data-blok-database-timeline-resize="start"] {
-  inset-inline-start: 0;
+  inset-inline-start: -6px;
 }
 
 [data-blok-database-timeline-resize="end"] {
-  inset-inline-end: 0;
+  inset-inline-end: -6px;
 }
 
 [data-blok-database-timeline-new] {
@@ -12129,7 +12129,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 [data-blok-database-timeline-link-handle] {
   position: absolute;
   inset-block-start: 50%;
-  inset-inline-end: -14px;
+  inset-inline-end: -16px;
   inline-size: 10px;
   block-size: 10px;
   translate: 0 -50%;
@@ -12502,7 +12502,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-database-map-pin][data-color="green"] {
-  --_blok-database-map-pin: var(--blok-color-green-text);
+  --_blok-database-map-pin: var(--blok-database-status-dot-green);
 }
 
 [data-blok-database-map-pin][data-color="blue"] {

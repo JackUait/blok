@@ -329,12 +329,17 @@ export interface DrawerBacklink {
   path: readonly string[];
   /** The page's emoji. */
   icon?: string;
+  /** Mentions on this page, 1 when absent. The button counts mentions, the list pages (research/23 §4). */
+  mentions?: number;
   /** Goes to the block holding the mention. */
   open(): void;
 }
 
 const backlinksKey = (rowId: string, items: readonly DrawerBacklink[]): string =>
-  JSON.stringify([rowId, items.map((item) => [item.key, item.title, item.path, item.icon ?? ''])]);
+  JSON.stringify([rowId, items.map((item) => [item.key, item.title, item.path, item.icon ?? '', item.mentions ?? 1])]);
+
+const mentionCount = (items: readonly DrawerBacklink[]): number =>
+  items.reduce((sum, item) => sum + (item.mentions ?? 1), 0);
 
 /** An icon constant as a node. Its indent text would join the label's text. */
 const iconNode = (markup: string): Element => {
@@ -1182,7 +1187,7 @@ export class DatabaseCardDrawer {
     button.setAttribute('aria-expanded', 'false');
     icon.setAttribute('data-blok-database-backlinks-icon', '');
     icon.append(iconNode(IconArrowDiagonal));
-    button.append(icon, this.backlinksLabel(items.length));
+    button.append(icon, this.backlinksLabel(mentionCount(items)));
     button.addEventListener('click', () => this.openBacklinks(button, rowId));
 
     return button;
@@ -2360,7 +2365,7 @@ export class DatabaseCardDrawer {
     backlinks.setAttribute('data-blok-database-layout-backlinks', '');
     icon.setAttribute('data-blok-database-backlinks-icon', '');
     icon.append(iconNode(IconArrowDiagonal));
-    backlinks.append(icon, this.backlinksLabel(this.placeholder === null ? this.backlinks?.(row.id).length ?? 0 : 0));
+    backlinks.append(icon, this.backlinksLabel(this.placeholder === null ? mentionCount(this.backlinks?.(row.id) ?? []) : 0));
     heading.unshift(backlinks);
     title.setAttribute('data-blok-database-layout-canvas-title', '');
     title.textContent = name.trim() !== '' ? name : this.label('tools.database.layoutNewPage');

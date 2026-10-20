@@ -29,6 +29,25 @@ const build = (id: 'tasks' | 'projects' | 'skills', choices: { features?: string
     ...(choices.views === undefined ? {} : { views: new Set(choices.views) }),
   });
 
+// Priority and Effort level each get their own "Medium": the word agrees with a different noun in es and others.
+describe('the two "Medium" options', () => {
+  it('Priority and Effort level read different keys', () => {
+    const keys = (id: 'tasks' | 'projects', name: string): string[] => {
+      const made = buildStarter(id, { t: (key) => key, newId, titleId: 'old-title' });
+
+      return (made.schema.find((p) => p.name === name)?.config?.options ?? []).map((o) => o.label);
+    };
+
+    expect(keys('tasks', 'tools.database.starterPriority')).toEqual([
+      'tools.database.starterOptionHigh', 'tools.database.starterOptionMediumPriority', 'tools.database.starterOptionLow',
+    ]);
+    expect(keys('tasks', 'tools.database.starterEffortLevel')).toEqual([
+      'tools.database.starterOptionSmall', 'tools.database.starterOptionMediumEffort', 'tools.database.starterOptionLarge',
+    ]);
+    expect(keys('projects', 'tools.database.starterPriority')[1]).toBe('tools.database.starterOptionMediumPriority');
+  });
+});
+
 const prop = (made: StarterBuild, name: string): PropertyDefinition => {
   const found = made.schema.find((p) => p.name === name);
 

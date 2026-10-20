@@ -68,7 +68,8 @@ const installed = new Set(['header', 'paragraph', 'list']);
 
 const insert = async (): Promise<{ doc: Doc; tool: DatabaseTool }> => {
   const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }]);
-  const config: DatabaseConfig = { ai: { setupDatabase: vi.fn(async () => null) } };
+  // No AI lever: the templates do not need one.
+  const config: DatabaseConfig = {};
 
   Object.assign(doc.api.tools, { isInstalled: (name: string) => installed.has(name) });
   const { tool } = buildDatabase(doc, 'db', { initialView: 'table' } as unknown as DatabaseData, config, 'user');
@@ -100,6 +101,7 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
 
     expect(rowLabels()).toEqual([
       'tools.database.linkedNewEmpty',
+      'tools.database.csvImport',
       'tools.database.starterTasks', 'tools.database.starterProjects', 'tools.database.starterSkills',
       'tools.database.linkedLinkExisting',
     ]);

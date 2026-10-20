@@ -139,7 +139,7 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
     status: createDefaultStatusSettings(),
   });
   const priority = (): PropertyDefinition => add(t('tools.database.starterPriority'), 'select',
-    optionsOf([[t('tools.database.starterOptionHigh'), 'red'], [t('tools.database.starterOptionMedium'), 'yellow'], [t('tools.database.starterOptionLow'), 'green']]));
+    optionsOf([[t('tools.database.starterOptionHigh'), 'red'], [t('tools.database.starterOptionMediumPriority'), 'yellow'], [t('tools.database.starterOptionLow'), 'green']]));
   const option = (property: PropertyDefinition | undefined, index: number): string | undefined => property?.config?.options[index]?.id;
   const viewList: DatabaseViewConfig[] = [];
   const view = (name: string, type: ViewType, shown: Array<PropertyDefinition | undefined>, extra: ViewCreateConfig = {}): void => {
@@ -198,7 +198,7 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
     ])) : undefined;
     const description = features.has('description') ? add(t('tools.database.formQuestionDescription'), 'text') : undefined;
     const effort = features.has('effort') ? add(t('tools.database.starterEffortLevel'), 'select',
-      optionsOf([[t('tools.database.starterOptionSmall'), 'green'], [t('tools.database.starterOptionMedium'), 'yellow'], [t('tools.database.starterOptionLarge'), 'red']])) : undefined;
+      optionsOf([[t('tools.database.starterOptionSmall'), 'green'], [t('tools.database.starterOptionMediumEffort'), 'yellow'], [t('tools.database.starterOptionLarge'), 'red']])) : undefined;
 
     if (features.has('updatedAt')) add(t('tools.database.starterUpdatedAt'), 'lastEditedTime');
     if (features.has('pastDue')) add(t('tools.database.starterPastDue'), 'checkbox');

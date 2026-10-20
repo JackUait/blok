@@ -1,7 +1,7 @@
 /**
  * The "New database" panel's Suggested templates (research/27 §1): Tasks
  * Tracker and Projects through the Customize modal, Skills at once. The panel
- * opens only with the host's `ai.setupDatabase` lever, so a stub stands in.
+ * opens on every user insert, so no AI lever is given.
  */
 
 import type { Page } from '@playwright/test';
@@ -39,7 +39,6 @@ const mount = async (page: Page): Promise<void> => {
       tools: {
         database: {
           class: (window as unknown as Record<string, unknown>).BlokDatabase,
-          config: { ai: { autofill: () => Promise.resolve(undefined), setupDatabase: () => Promise.resolve(null) } },
         },
         'database-row': { class: (window as unknown as Record<string, unknown>).BlokDatabaseRow },
       },
@@ -84,7 +83,7 @@ test('the panel lists the three Suggested templates; More templates is not there
   const panel = page.getByTestId('database-new-database-panel');
 
   await expect(panel.getByText('Suggested', { exact: true })).toBeVisible();
-  await expect(panel.locator('[data-blok-database-panel-row]')).toHaveText(['New empty data source', 'Tasks Tracker', 'Projects', 'Skills', 'Link to existing data source']);
+  await expect(panel.locator('[data-blok-database-panel-row]')).toHaveText(['New empty data source', 'Import CSV', 'Tasks Tracker', 'Projects', 'Skills', 'Link to existing data source']);
 });
 
 test('Tasks Tracker: Customize, then the measured schema, views and rows; one undo takes it all back', async ({ page }) => {

@@ -430,8 +430,8 @@ export class DatabaseTool implements BlockTool {
   private savedAutomations: DatabaseSavedAutomations | undefined;
   /** Set when the insert data carried the toolbox seed, which the document still holds. */
   private seeded: boolean;
-  /** A user just inserted this database and the host can set it up from a prompt: rendered() opens the "New database" panel once. */
-  private offerAiSetup: boolean;
+  /** A user just inserted this database: rendered() opens the "New database" panel once. */
+  private offerNewDatabasePanel: boolean;
   private activeViewId: string;
   private model: DatabaseModel;
   /** Linked database: the block whose rows and schema this one shows. */
@@ -586,7 +586,7 @@ export class DatabaseTool implements BlockTool {
     this.stubSchema = Array.isArray(data?.schema) ? structuredClone(data.schema) : [];
     this.linkPicker = this.source === undefined && (data as Record<string, unknown> | undefined)?.[LINK_PICKER_KEY] === true;
     // Only a user's insert: a load, undo, redo or a peer's insert never opens it.
-    this.offerAiSetup = origin === 'user' && this.seeded && !this.linkPicker && this.config.ai?.setupDatabase !== undefined;
+    this.offerNewDatabasePanel = origin === 'user' && this.seeded && !this.linkPicker;
     // An adapter that does not store a view's own order keeps the shared one.
     const viewRowOrder = this.config.adapter === undefined || this.config.adapter.viewRowOrder === true;
 
@@ -854,7 +854,10 @@ export class DatabaseTool implements BlockTool {
     });
   }
 
-  /** research/26 §2: a new database's panel, with the AI prompt box on top. Closing it keeps the empty database. */
+  /**
+   * research/26 §2, research/20 §1a: a new database's panel. The AI prompt box
+   * is on top only with the host's ai.setupDatabase. Closing it keeps the empty database.
+   */
   private openNewDatabasePanel(): void {
     const anchor = this.titleRowElement ?? this.element;
 
@@ -864,7 +867,9 @@ export class DatabaseTool implements BlockTool {
       t: (key, vars) => this.api.i18n.t(key, vars),
       sources: () => this.pickerSources(),
       linkExisting: (id) => this.linkTo(id),
-      prompt: { submit: (text) => this.setupFromPrompt(text) },
+      newDatabase: true,
+      ...(this.config.ai?.setupDatabase !== undefined ? { prompt: { submit: (text: string) => this.setupFromPrompt(text) } } : {}),
+      importCsv: () => this.openCsvImport((file, targets) => this.importCsvHere(file.text, targets)),
       starters: {
         list: DATABASE_STARTERS.map((starter) => ({
           id: starter.id,
@@ -880,6 +885,48 @@ export class DatabaseTool implements BlockTool {
     });
 
     this.sourcePicker = panel;
+  }
+
+  /**
+   * "Import CSV" in the "New database" panel: this database takes the file's
+   * columns and rows, in one undo step. research/27 §2: the title stays as it was.
+   */
+  private importCsvHere(text: string, targets?: CsvColumnTarget[]): void {
+    if (this.destroyed || this.readOnly || this.structureLocked()) return;
+    const table = parseCsv(text);
+
+    if (table.length === 0) {
+      this.api.notifier.show({ message: this.api.i18n.t('tools.database.csvEmpty') });
+
+      return;
+    }
+    const built = this.csvBlocks(table, targets);
+    // The title property keeps its id: a backend already has it.
+    const titleId = this.titlePropertyId();
+    const newTitle = built.data.schema.find((p) => p.type === 'title')?.id;
+    const remap = (id: string): string => (id === newTitle && titleId !== '' ? titleId : id);
+    const schema = built.data.schema.map((p) => ({ ...p, id: remap(p.id) }));
+    const views = built.data.views.map((view) => ({ ...view, visibleProperties: view.visibleProperties.map(remap) }));
+    const rows = built.rows.map((row) => ({
+      ...row,
+      data: { ...row.data, properties: Object.fromEntries(Object.entries(row.data.properties).map(([id, value]) => [remap(id), value])) },
+    }));
+    const oldSchema = this.model.getSchema();
+    const oldViews = this.model.getViews();
+
+    this.inOneStep(() => {
+      // The definition first: a database write inside a row insert's sync window reads as an echo.
+      this.writeDefinition({ schema, views, activeViewId: built.data.activeViewId });
+      for (const row of rows) {
+        this.api.blocks.insertAt('database-row', row.data, { parentId: this.dataId, position: 'end', id: row.id });
+      }
+    });
+    this.syncDefinition(oldSchema, oldViews, schema, views);
+    for (const row of rows) void this.sync.syncCreateRow({ id: row.id, properties: row.data.properties, position: row.data.position });
+    this.syncRowsFromBlocks();
+    this.rebuildTabBar();
+    this.rerenderView();
+    this.api.notifier.show({ message: this.api.i18n.t('tools.database.csvImported', { count: rows.length }) });
   }
 
   /** Asks the host to set this database up. True when it did. */
@@ -1767,9 +1814,9 @@ export class DatabaseTool implements BlockTool {
     this.offerDue();
     this.openLinkedRow();
     if (this.linkPicker) this.openSourcePicker();
-    if (this.offerAiSetup) {
-      this.offerAiSetup = false;
-      // The insert puts the caret in the title after rendered(); the prompt box takes focus after it.
+    if (this.offerNewDatabasePanel) {
+      this.offerNewDatabasePanel = false;
+      // The insert puts the caret in the title after rendered(); the panel takes focus after it.
       requestAnimationFrame(() => {
         if (!this.destroyed) this.openNewDatabasePanel();
       });

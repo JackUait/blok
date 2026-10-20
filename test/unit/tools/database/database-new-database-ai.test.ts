@@ -113,19 +113,42 @@ describe('"New database" panel with the AI prompt (research/26 §2, research/20 
     expect(submit().getAttribute('aria-disabled')).toBe('true');
     expect(rowLabels()).toEqual([
       'tools.database.linkedNewEmpty',
+      'tools.database.csvImport',
       'tools.database.starterTasks', 'tools.database.starterProjects', 'tools.database.starterSkills',
       'tools.database.linkedLinkExisting',
     ]);
   });
 
-  it('opens nothing without the lever', async () => {
+  // research/20 §1a: Notion always opens it. Its top without AI was never measured, so the rows show with no box.
+  it('without the lever the same panel opens with no prompt box', async () => {
     await insert(undefined);
 
-    expect(panel()).toBeUndefined();
+    expect(panel()?.querySelector('[data-blok-database-panel-header]')?.textContent).toBe('tools.database.linkedPanelTitle');
+    expect(panel()?.querySelector('textarea')).toBeNull();
+    expect(panel()?.querySelector('[data-blok-database-ai-prompt]')).toBeNull();
+    expect(panel()?.querySelector('[data-blok-testid="database-new-database-ai-submit"]')).toBeNull();
+    expect(rowLabels()).toEqual([
+      'tools.database.linkedNewEmpty',
+      'tools.database.csvImport',
+      'tools.database.starterTasks', 'tools.database.starterProjects', 'tools.database.starterSkills',
+      'tools.database.linkedLinkExisting',
+    ]);
   });
 
   it.each(['load', 'replay', 'api', 'paste'] as const)('opens nothing for a %s origin', async (origin) => {
     await insert(vi.fn(async () => null), origin);
+
+    expect(panel()).toBeUndefined();
+  });
+
+  it.each(['load', 'replay', 'api', 'paste', 'convert', 'probe'] as const)('opens nothing for a %s origin without the lever either', async (origin) => {
+    await insert(undefined, origin);
+
+    expect(panel()).toBeUndefined();
+  });
+
+  it('opens nothing for a linked view', async () => {
+    await insert(undefined, 'user', { initialView: 'table', linkPicker: true } as unknown as DatabaseData);
 
     expect(panel()).toBeUndefined();
   });
@@ -315,14 +338,15 @@ describe('"New database" panel with the AI prompt (research/26 §2, research/20 
     expect(panel()?.querySelector('[data-blok-testid="database-new-source-existing-other"]')).not.toBeNull();
   });
 
-  it('has no Import CSV and no named row', async () => {
+  it('has Import CSV and no named row', async () => {
     await insert(vi.fn(async () => null));
     type('Trips');
 
-    expect(panel()?.querySelector('[data-blok-testid="database-new-source-csv"]')).toBeNull();
+    expect(panel()?.querySelector('[data-blok-testid="database-new-source-csv"]')).not.toBeNull();
     expect(panel()?.querySelector('[data-blok-testid="database-new-source-named"]')).toBeNull();
     expect(rowLabels()).toEqual([
       'tools.database.linkedNewEmpty',
+      'tools.database.csvImport',
       'tools.database.starterTasks', 'tools.database.starterProjects', 'tools.database.starterSkills',
       'tools.database.linkedLinkExisting',
     ]);
@@ -335,5 +359,35 @@ describe('"New database" panel with the AI prompt (research/26 §2, research/20 
     panel()?.querySelector<HTMLElement>('[data-blok-testid="database-new-source-existing-other"]')?.click();
 
     expect(saved(tool).source).toEqual({ databaseId: 'other' });
+  });
+
+  // research/27 §2: the data goes into the database the panel came from; its title stays as it was.
+  it('Import CSV opens the import dialog and fills this database with the file\'s columns and rows in one step; no second database', async () => {
+    const { doc, tool } = await insert(undefined);
+    const titleId = saved(tool).schema.find((p) => p.type === 'title')?.id;
+
+    panel()?.querySelector<HTMLElement>('[data-blok-testid="database-new-source-csv"]')?.click();
+    expect(document.querySelector('[data-blok-testid="database-csv-import-dialog"]')).not.toBeNull();
+    document.querySelector<HTMLElement>('[data-blok-testid="database-csv-choose-file"]')?.click();
+    const input = document.querySelector<HTMLInputElement>('[data-blok-database-csv-input]');
+
+    if (input === null) throw new Error('no file input');
+    Object.defineProperty(input, 'files', { value: [new File(['Name,Size\nAlpha,3\nBeta,5'], 'stock.csv', { type: 'text/csv' })] });
+    doc.transact.mockClear();
+    input.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(document.querySelector('[data-blok-testid="database-csv-map"]')?.getAttribute('aria-disabled')).not.toBe('true'));
+    document.querySelector<HTMLElement>('[data-blok-testid="database-csv-map"]')?.click();
+    document.querySelector<HTMLElement>('[data-blok-testid="database-csv-import"]')?.click();
+    await vi.waitFor(() => expect(saved(tool).schema.map((p) => p.name)).toEqual(['Name', 'Size']));
+    expect(saved(tool).schema.map((p) => p.type)).toEqual(['title', 'number']);
+
+    const data = saved(tool);
+    const rows = doc.childrenOf('db').filter((id) => doc.blocks.get(id)?.name === 'database-row');
+
+    expect(data.schema[0].id).toBe(titleId);
+    expect(data.title ?? '').toBe('');
+    expect(rows.map((id) => doc.row(id).properties[data.schema[0].id])).toEqual(['Alpha', 'Beta']);
+    expect([...doc.blocks.values()].filter((b) => b.name === 'database').map((b) => b.block.id).sort()).toEqual(['db', 'other']);
+    expect(doc.transact).toHaveBeenCalledTimes(1);
   });
 });

@@ -1319,7 +1319,7 @@ export interface DatabaseAI {
   autofill?(request: DatabaseAutofillRequest): Promise<PropertyValue | null | undefined>;
   /**
    * Sets up a database the person just inserted from their prompt. With it,
-   * the insert opens the "New database" panel with a prompt box. Null or
+   * the "New database" panel an insert opens has a prompt box. Null or
    * undefined changes nothing; a rejection shows its message.
    */
   setupDatabase?(request: DatabaseSetupRequest): Promise<DatabaseSetup | null | undefined>;

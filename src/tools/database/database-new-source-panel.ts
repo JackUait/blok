@@ -17,9 +17,10 @@ export interface NewSourcePanelOptions {
   /** `New “<query>” data source`: the new source takes the query as its title. Only the search variant has a query. */
   nameSource?: (title: string) => void;
   linkExisting: (id: string) => void;
+  /** A new database (research/26 §2): the title is "New database" and there is no search. */
+  newDatabase?: boolean;
   /**
-   * A new database (research/26 §2): the top slot is an AI prompt box instead
-   * of the search, and the title is "New database". `submit` resolves true
+   * A new database's AI prompt box in the top slot. `submit` resolves true
    * when the database was set up, which closes the panel.
    */
   prompt?: { submit: (text: string) => Promise<boolean> };
@@ -99,7 +100,7 @@ const promptBox = (
 /**
  * The panel "New data source" opens on its new tab (research/23 §10, shot 121).
  * The source already exists, so "New empty data source" only closes it.
- * With `prompt` it is the "New database" panel of a fresh insert instead.
+ * With `newDatabase` it is the "New database" panel of a fresh insert instead.
  * Not built: "More templates" (only the three Suggested templates were measured).
  */
 export const openNewSourcePanel = (options: NewSourcePanelOptions): DatabasePanel => {
@@ -217,13 +218,21 @@ export const openNewSourcePanel = (options: NewSourcePanelOptions): DatabasePane
   };
 
   const prompt = options.prompt;
+  const newDatabase = options.newDatabase === true;
   const panel = new DatabasePanel({
     anchor: options.anchor,
     root: {
-      title: t(prompt === undefined ? 'tools.database.newDataSource' : 'tools.database.linkedPanelTitle'),
+      title: t(newDatabase ? 'tools.database.linkedPanelTitle' : 'tools.database.newDataSource'),
       build: (current) => {
-        const top = prompt === undefined
-          ? panelInput({
+        fill(current);
+        if (newDatabase) {
+          return prompt === undefined
+            ? [list]
+            : [promptBox(t, { read: () => state.prompt, write: (value) => { state.prompt = value; } }, prompt.submit, () => current.close()), list];
+        }
+
+        return [
+          panelInput({
             value: state.query,
             placeholder: t('tools.database.newDataSourceSearch'),
             label: t('tools.database.newDataSourceSearch'),
@@ -233,15 +242,12 @@ export const openNewSourcePanel = (options: NewSourcePanelOptions): DatabasePane
               state.query = value;
               fill(current);
             },
-          })
-          : promptBox(t, { read: () => state.prompt, write: (value) => { state.prompt = value; } }, prompt.submit, () => current.close());
-
-        fill(current);
-
-        return [top, list];
+          }),
+          list,
+        ];
       },
     },
-    testId: prompt === undefined ? 'database-new-source-panel' : 'database-new-database-panel',
+    testId: newDatabase ? 'database-new-database-panel' : 'database-new-source-panel',
     width: 290,
     backLabel: t('tools.database.peekBack'),
     ...(options.onClose !== undefined ? { onClose: options.onClose } : {}),

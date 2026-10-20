@@ -1,7 +1,8 @@
 /**
- * Keyless web tools for the playground's Ask AI: Wikipedia search, Wikimedia
- * Commons image search and a page fetch. scripts/dev-ai.mjs serves them on
- * `POST /web`; src/playground/ai-model.ts offers them to the model.
+ * Keyless web tools for the playground's Ask AI: Wikimedia Commons image search
+ * and a page fetch. scripts/dev-ai.mjs serves them on `POST /web`;
+ * src/playground/ai-model.ts offers them to the model. Web search is the
+ * provider's own, added in messageParams (dev-ai.mjs).
  */
 import { lookup as dnsLookup } from 'node:dns/promises';
 import { request as httpRequest } from 'node:http';
@@ -163,27 +164,6 @@ const queryOf = (input) => {
   return query;
 };
 
-const langOf = (input) => (typeof input?.lang === 'string' && /^[a-z-]{2,12}$/.test(input.lang) ? input.lang : 'en');
-
-const webSearch = async (fetch, input, signal) => {
-  const lang = langOf(input);
-  const url = new URL(`https://${lang}.wikipedia.org/w/api.php`);
-
-  url.search = new URLSearchParams({ action: 'query', list: 'search', srsearch: queryOf(input), srlimit: '8', format: 'json', utf8: '1' }).toString();
-
-  const results = (await getJson(fetch, url, signal))?.query?.search ?? [];
-
-  if (results.length === 0) {
-    return 'No results.';
-  }
-
-  return results.map((result) => [
-    result.title,
-    `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(result.title.replace(/ /g, '_'))}`,
-    stripTags(result.snippet ?? ''),
-  ].join('\n')).join('\n\n');
-};
-
 const imageSearch = async (fetch, input, signal) => {
   const url = new URL('https://commons.wikimedia.org/w/api.php');
 
@@ -278,8 +258,6 @@ const webFetch = async (fetch, lookup, input, signal) => {
 export function webTools({ fetch, lookup = dnsLookup } = {}) {
   return async (tool, input, signal) => {
     switch (tool) {
-      case 'web_search':
-        return webSearch(fetch ?? globalThis.fetch, input, signal);
       case 'image_search':
         return imageSearch(fetch ?? globalThis.fetch, input, signal);
       case 'web_fetch':

@@ -20,7 +20,18 @@ export interface AdapterOptions {
   stream?(body: Body, context: SendContext): Promise<Response | ReadableStream<Uint8Array>>;
   maxTokens?: number;
   levels?: Partial<Record<AgentThinkingLevel, Body>>;
+  /** The provider's own web search. An object is merged into its tool entry. */
+  webSearch?: boolean | Body;
 }
+
+/** The provider's search tool entry, or none when the host did not ask for it. */
+export const webSearchTool = (options: AdapterOptions, entry: Body): Body[] => {
+  if (options.webSearch === undefined || options.webSearch === false) {
+    return [];
+  }
+
+  return [options.webSearch === true ? entry : { ...entry, ...options.webSearch }];
+};
 
 export const DEFAULT_MAX_TOKENS = 16_000;
 

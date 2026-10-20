@@ -320,4 +320,90 @@ describe('anthropicModel', () => {
       expect(() => anthropicModel(options)).toThrow(new TypeError('Anthropic: pass send or stream.'));
     });
   });
+
+  describe('webSearch', () => {
+    const search = { type: 'server_tool_use', id: 'srv_1', name: 'web_search', input: { query: 'nobel 2026' } };
+    const results = {
+      type: 'web_search_tool_result', tool_use_id: 'srv_1',
+      content: [{ type: 'web_search_result', url: 'https://example.org/a', title: 'A', encrypted_content: 'enc-1', page_age: null }],
+    };
+    const citation = { type: 'web_search_result_location', url: 'https://example.org/a', title: 'A', encrypted_index: 'idx-1', cited_text: 'won' };
+
+    it('offers the provider\'s search tool after the Blok tools, and only when asked', async () => {
+      const on = fakeSend({ stop_reason: 'end_turn', content: [] });
+      const off = fakeSend({ stop_reason: 'end_turn', content: [] });
+
+      await run(anthropicModel({ model: 'm', send: on.send, webSearch: true }), [{ role: 'user', content: 'Go' }]);
+      await run(anthropicModel({ model: 'm', send: off.send }), [{ role: 'user', content: 'Go' }]);
+
+      expect(on.bodies[0].tools).toEqual([
+        { name: 'blok_read', description: 'd', input_schema: { type: 'object' } },
+        { type: 'web_search_20250305', name: 'web_search' },
+      ]);
+      expect(off.bodies[0].tools).toEqual([{ name: 'blok_read', description: 'd', input_schema: { type: 'object' } }]);
+    });
+
+    it('merges an options object into the search tool entry', async () => {
+      const { send, bodies } = fakeSend({ stop_reason: 'end_turn', content: [] });
+
+      await run(anthropicModel({ model: 'm', send, webSearch: { max_uses: 3, allowed_domains: ['example.org'] } }), [{ role: 'user', content: 'Go' }]);
+
+      expect((bodies[0].tools as unknown[])[1]).toEqual({ type: 'web_search_20250305', name: 'web_search', max_uses: 3, allowed_domains: ['example.org'] });
+    });
+
+    it('refuses a host tool with the search tool\'s name, since the provider rejects duplicate names', async () => {
+      const model = anthropicModel({ model: 'm', send: fakeSend().send, webSearch: true });
+
+      await expect(model({ ...request(), tools: [{ name: 'web_search', description: 'd', input_schema: { type: 'object' } }] }))
+        .rejects.toThrow('Anthropic: a host tool is named "web_search", the same as webSearch\'s tool. Rename one.');
+    });
+
+    it('sends the search blocks and cited text back unchanged, and does not run the search as a Blok tool', async () => {
+      const cited = { type: 'text', text: 'Halzen won.', citations: [citation] };
+      const { send, bodies } = fakeSend(
+        { stop_reason: 'tool_use', content: [search, results, cited, { type: 'tool_use', id: 'u1', name: 'blok_read', input: {} }] },
+        { stop_reason: 'end_turn', content: [{ type: 'text', text: 'Done.' }] }
+      );
+      const calls: string[] = [];
+
+      const result = await runAssistantLoop({
+        model: anthropicModel({ model: 'm', send, webSearch: true }), system: 'sys',
+        tools: [{ name: 'blok_read', description: 'd', input_schema: { type: 'object' } }],
+        messages: [{ role: 'user', content: 'Go' }],
+        call: async (name) => {
+          calls.push(name);
+
+          return { content: '{"ok":true}', isError: false };
+        },
+        signal: new AbortController().signal, maxSteps: 5,
+      });
+
+      expect((bodies[1].messages as AgentModelMessage[])[1].content).toEqual([search, results, cited, { type: 'tool_use', id: 'u1', name: 'blok_read', input: {} }]);
+      expect(calls).toEqual(['blok_read']);
+      expect(result).toEqual({ status: 'done', reply: 'Done.' });
+    });
+
+    it('streams a search without tool events, and keeps the results and citations', async () => {
+      const events: AgentModelStreamEvent[] = [];
+      const text = sse(
+        { type: 'message_start', message: { content: [], stop_reason: null } },
+        { type: 'content_block_start', index: 0, content_block: { type: 'server_tool_use', id: 'srv_1', name: 'web_search', input: {} } },
+        { type: 'content_block_delta', index: 0, delta: { type: 'input_json_delta', partial_json: '{"query": "nobel 2026"}' } },
+        { type: 'content_block_stop', index: 0 },
+        { type: 'content_block_start', index: 1, content_block: results },
+        { type: 'content_block_stop', index: 1 },
+        { type: 'content_block_start', index: 2, content_block: { type: 'text', text: '', citations: [] } },
+        { type: 'content_block_delta', index: 2, delta: { type: 'citations_delta', citation } },
+        { type: 'content_block_delta', index: 2, delta: { type: 'text_delta', text: 'Halzen won.' } },
+        { type: 'content_block_stop', index: 2 },
+        { type: 'message_delta', delta: { stop_reason: 'end_turn' } },
+        { type: 'message_stop' }
+      );
+
+      const response = await anthropicModel({ model: 'm', stream: fakeStream(text).stream, webSearch: true })(request((event) => events.push(event)));
+
+      expect(response.content).toEqual([search, results, { type: 'text', text: 'Halzen won.', citations: [citation] }]);
+      expect(events).toEqual([]);
+    });
+  });
 });

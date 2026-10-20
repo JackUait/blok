@@ -416,4 +416,38 @@ describe('geminiModel', () => {
       expect(response.stop_reason).toBe('tool_use');
     });
   });
+
+  describe('webSearch', () => {
+    const declarations = { functionDeclarations: [{ name: 'blok_read', description: 'd', parametersJsonSchema: { type: 'object' } }] };
+
+    it('offers Google Search as its own tool entry, and only when asked', async () => {
+      const on = fakeSend(candidate([{ text: 'ok' }]));
+      const off = fakeSend(candidate([{ text: 'ok' }]));
+
+      await run(geminiModel({ model: 'm', send: on.send, webSearch: true }), [{ role: 'user', content: 'Go' }]);
+      await run(geminiModel({ model: 'm', send: off.send }), [{ role: 'user', content: 'Go' }]);
+
+      expect(on.bodies[0].tools).toEqual([declarations, { googleSearch: {} }]);
+      expect(off.bodies[0].tools).toEqual([declarations]);
+    });
+
+    it('merges an options object into the search tool entry', async () => {
+      const { send, bodies } = fakeSend(candidate([{ text: 'ok' }]));
+      const range = { timeRangeFilter: { startTime: '2026-01-01T00:00:00Z' } };
+
+      await run(geminiModel({ model: 'm', send, webSearch: { googleSearch: range } }), [{ role: 'user', content: 'Go' }]);
+
+      expect((bodies[0].tools as unknown[])[1]).toEqual({ googleSearch: range });
+    });
+
+    it('sends server-side search parts back unchanged', async () => {
+      const toolCall = { toolCall: { id: 's1', toolType: 'GOOGLE_SEARCH_WEB', args: { queries: ['nobel 2026'] } }, thoughtSignature: 'sig-s' };
+      const toolResponse = { toolResponse: { id: 's1', toolType: 'GOOGLE_SEARCH_WEB', response: { search_suggestions: '' } } };
+      const { send, bodies } = fakeSend(candidate([toolCall, toolResponse, signedCall]), candidate([{ text: 'Halzen won.' }]));
+
+      expect(await run(geminiModel({ model: 'm', send, webSearch: true }), [{ role: 'user', content: 'Go' }]))
+        .toEqual({ status: 'done', reply: 'Halzen won.' });
+      expect((bodies[1].contents as unknown[])[1]).toEqual({ role: 'model', parts: [toolCall, toolResponse, signedCall] });
+    });
+  });
 });

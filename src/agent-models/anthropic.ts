@@ -3,7 +3,7 @@ import type {
 } from '../../types/api';
 
 import {
-  DEFAULT_MAX_TOKENS, callId, endOfStream, errorOf, isRecord, parseArguments, post, postStream, requireTransport, stepOf, withLevel,
+  DEFAULT_MAX_TOKENS, callId, endOfStream, errorOf, isRecord, parseArguments, post, postStream, requireTransport, stepOf, webSearchTool, withLevel,
   type AdapterOptions, type Body,
 } from './shared';
 import { readJsonEvents } from './sse';
@@ -58,6 +58,13 @@ const DELTA_FIELDS: Record<string, string> = { text_delta: 'text', thinking_delt
 const withDelta = (building: Building, delta: Record<string, unknown>): Building => {
   if (delta.type === 'input_json_delta') {
     return typeof delta.partial_json === 'string' ? { ...building, json: building.json + delta.partial_json } : building;
+  }
+  // Web search answers cite their sources one delta at a time.
+  if (delta.type === 'citations_delta') {
+    const { citations } = building.block;
+    const before: unknown[] = Array.isArray(citations) ? citations : [];
+
+    return { ...building, block: { ...building.block, citations: [...before, delta.citation] } };
   }
 
   const key = typeof delta.type === 'string' ? DELTA_FIELDS[delta.type] : undefined;
@@ -140,14 +147,23 @@ const readStream = async (source: Response | ReadableStream<Uint8Array>, request
 export function anthropicModel(options: AdapterOptions): AgentModel {
   requireTransport(options, 'Anthropic');
 
+  // 20260209 and later search from code execution, which Anthropic-compatible APIs (DeepSeek) do not run.
+  const search = webSearchTool(options, { type: 'web_search_20250305', name: 'web_search' });
+
   return async (request) => {
+    const name = search[0]?.name;
+
+    if (request.tools.some((tool) => tool.name === name)) {
+      throw new Error(`Anthropic: a host tool is named "${String(name)}", the same as webSearch's tool. Rename one.`);
+    }
+
     const body = withLevel({
       model: options.model,
       max_tokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
       // Tools render before system, so this mark caches both for every prompt. An empty text block is a 400.
       system: request.system === '' ? '' : [{ type: 'text', text: request.system, cache_control: { type: 'ephemeral' } }],
       messages: request.messages.map(withoutProviderBlocks),
-      tools: request.tools,
+      tools: [...request.tools, ...search],
       // Moves to the last block on each call, so a step reads the steps before it.
       cache_control: { type: 'ephemeral' },
     }, request, LEVELS, options);

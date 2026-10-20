@@ -97,8 +97,8 @@ describe('playgroundWebTools', () => {
     vi.restoreAllMocks();
   });
 
-  it('offers web search, image search and fetch', () => {
-    expect(playgroundWebTools('http://127.0.0.1:4800/ai').map((tool) => tool.name)).toEqual(['web_search', 'image_search', 'web_fetch']);
+  it('offers image search and fetch; web search is the provider\'s, added by the dev route', () => {
+    expect(playgroundWebTools('http://127.0.0.1:4800/ai').map((tool) => tool.name)).toEqual(['image_search', 'web_fetch']);
   });
 
   it('runs a tool on the dev route\'s /web endpoint and returns its text', async () => {
@@ -109,12 +109,12 @@ describe('playgroundWebTools', () => {
     expect(fetch.mock.calls[0][0]).toBe('http://127.0.0.1:4800/web');
     const body = fetch.mock.calls[0][1]?.body;
 
-    expect(typeof body === 'string' ? JSON.parse(body) : body).toEqual({ tool: 'web_search', input: { query: 'red panda' } });
+    expect(typeof body === 'string' ? JSON.parse(body) : body).toEqual({ tool: 'image_search', input: { query: 'red panda' } });
   });
 
   it('throws the endpoint\'s error, so the model reads why', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ error: 'HTTP 404' }), { status: 502 }));
-    const [, , fetchTool] = playgroundWebTools('http://127.0.0.1:4800/ai');
+    const [, fetchTool] = playgroundWebTools('http://127.0.0.1:4800/ai');
 
     await expect(fetchTool.run({ url: 'https://x.example/a.jpg' })).rejects.toThrow('HTTP 404');
   });

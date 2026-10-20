@@ -4,7 +4,7 @@ import type {
 
 import {
   DEFAULT_MAX_TOKENS, blocksOf, endOfStream, errorOf, isRecord, isText, isToolResult, isToolUse, parseArguments,
-  callId, providerBlock, rawTurn, post, postStream, requireTransport, stepOf, withLevel, type AdapterOptions, type Body,
+  callId, providerBlock, rawTurn, post, postStream, requireTransport, stepOf, webSearchTool, withLevel, type AdapterOptions, type Body,
 } from './shared';
 import { readJsonEvents } from './sse';
 
@@ -167,6 +167,8 @@ const readStream = async (source: Response | ReadableStream<Uint8Array>, request
 export function openaiModel(options: AdapterOptions): AgentModel {
   requireTransport(options, 'OpenAI');
 
+  const search = webSearchTool(options, { type: 'web_search' });
+
   return async (request) => {
     const body = withLevel({
       model: options.model,
@@ -175,9 +177,12 @@ export function openaiModel(options: AdapterOptions): AgentModel {
       max_output_tokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
       input: request.messages.flatMap((message) => (message.role === 'user' ? userItems(message) : assistantItems(message))),
       // strict: our blok_execute schema is not closed, and leaving strict out makes OpenAI try strict mode.
-      tools: request.tools.map((tool) => ({
-        type: 'function', name: tool.name, description: tool.description, parameters: tool.input_schema, strict: false,
-      })),
+      tools: [
+        ...request.tools.map((tool) => ({
+          type: 'function', name: tool.name, description: tool.description, parameters: tool.input_schema, strict: false,
+        })),
+        ...search,
+      ],
     }, request, LEVELS, options);
 
     const { stream } = options;

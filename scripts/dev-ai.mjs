@@ -62,7 +62,9 @@ export function messageParams(model, { system, messages, tools }) {
     // for a whole run (agent-run.ts), and every step after the first reads them.
     system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
     messages,
-    tools,
+    // The provider runs the search. 20250305, since later versions search from code execution,
+    // which DeepSeek's Anthropic API does not run.
+    tools: [...tools, { type: 'web_search_20250305', name: 'web_search' }],
     // Moves to the last block on each call, so a step reads the steps before it.
     cache_control: { type: 'ephemeral' },
     output_config: { effort: 'medium' },

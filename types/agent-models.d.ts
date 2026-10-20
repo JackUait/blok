@@ -31,21 +31,35 @@ export interface AgentModelAdapterOptions {
   levels?: Partial<Record<AgentThinkingLevel, Record<string, unknown>>>;
 }
 
+/** Options of the adapters whose provider runs its own web search. */
+export interface AgentModelSearchAdapterOptions extends AgentModelAdapterOptions {
+  /**
+   * Let the model search the web on the provider's side. The provider bills each search.
+   * An object is shallow-merged into the provider's tool entry:
+   * Anthropic `{ type: 'web_search_20250305', name: 'web_search' }`, OpenAI `{ type: 'web_search' }`,
+   * Gemini `{ googleSearch: {} }`. Default off.
+   */
+  webSearch?: boolean | Record<string, unknown>;
+}
+
 /**
  * Anthropic Messages API. `off` sends the lowest effort, since some Claude models cannot turn thinking off.
  * Caches by default: a mark on the system block and top-level `cache_control`. A platform that rejects
  * top-level `cache_control` (the legacy Bedrock integration) deletes it from the body in `send`.
  */
-export declare function anthropicModel(options: AgentModelAdapterOptions): AgentModel;
+export declare function anthropicModel(options: AgentModelSearchAdapterOptions): AgentModel;
 
 /** OpenAI Responses API, stateless (`store: false`). Levels set `reasoning.effort`; `off` sends `low`, since some models reject `none`. */
-export declare function openaiModel(options: AgentModelAdapterOptions): AgentModel;
+export declare function openaiModel(options: AgentModelSearchAdapterOptions): AgentModel;
 
-/** Chat Completions: DeepSeek, Mistral, Groq, Ollama, OpenRouter and others. Levels set `reasoning_effort`. */
+/**
+ * Chat Completions: DeepSeek, Mistral, Groq, Ollama, OpenRouter and others. Levels set `reasoning_effort`.
+ * No `webSearch`: these APIs share no search tool. Add your provider's search to the body in `send`, or pass a search tool in `agent.assistant.tools`.
+ */
 export declare function openaiCompatibleModel(options: AgentModelAdapterOptions): AgentModel;
 
 /**
  * Gemini generateContent (v1beta). Levels set `generationConfig.thinkingConfig.thinkingLevel`.
  * The body is the same for both transports. With `stream`, call `:streamGenerateContent?alt=sse`.
  */
-export declare function geminiModel(options: AgentModelAdapterOptions): AgentModel;
+export declare function geminiModel(options: AgentModelSearchAdapterOptions): AgentModel;

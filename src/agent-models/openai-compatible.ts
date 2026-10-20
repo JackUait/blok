@@ -225,6 +225,11 @@ const readStream = async (source: Response | ReadableStream<Uint8Array>, request
 export function openaiCompatibleModel(options: AdapterOptions): AgentModel {
   requireTransport(options, 'OpenAI-compatible');
 
+  // Types leave webSearch out here; this catches plain JS callers.
+  if (options.webSearch !== undefined && options.webSearch !== false) {
+    throw new TypeError('OpenAI-compatible: webSearch is not supported. Add your provider\'s search in send, or give the assistant a search tool.');
+  }
+
   return async (request) => {
     const names = toolNames(request.messages);
     const body = withLevel({

@@ -70,18 +70,6 @@ export const playgroundModel = (url: string): AgentModel => async ({ system, mes
 
 const WEB_TOOLS: Array<Omit<AgentHostTool, 'run'>> = [
   {
-    name: 'web_search',
-    description: 'Search Wikipedia. Returns article titles, links and snippets. Use web_fetch on a link to read the article.',
-    input_schema: {
-      type: 'object',
-      required: ['query'],
-      properties: {
-        query: { type: 'string' },
-        lang: { type: 'string', description: 'Wikipedia language code, e.g. "en" or "ru". Default "en".' },
-      },
-    },
-  },
-  {
     name: 'image_search',
     description: 'Search Wikimedia Commons for real photos and pictures. Returns direct image URLs that load, with author and license. Use these URLs for image blocks; never make one up.',
     input_schema: { type: 'object', required: ['query'], properties: { query: { type: 'string', description: 'Best in English.' } } },

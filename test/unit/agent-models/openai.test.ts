@@ -309,4 +309,61 @@ describe('openaiModel', () => {
         .rejects.toThrow('OpenAI: the run stopped mid-stream.');
     });
   });
+
+  describe('webSearch', () => {
+    const searched = { type: 'web_search_call', id: 'ws_1', status: 'completed', action: { type: 'search', query: 'nobel 2026' } };
+    const cited = {
+      type: 'message', role: 'assistant',
+      content: [{ type: 'output_text', text: 'Halzen won.', annotations: [{ type: 'url_citation', url: 'https://example.org/a', title: 'A', start_index: 0, end_index: 11 }] }],
+    };
+
+    it('offers the provider\'s search tool after the Blok tools, and only when asked', async () => {
+      const on = fakeSend({ status: 'completed', output: [] });
+      const off = fakeSend({ status: 'completed', output: [] });
+
+      await run(openaiModel({ model: 'm', send: on.send, webSearch: true }), [{ role: 'user', content: 'Go' }]);
+      await run(openaiModel({ model: 'm', send: off.send }), [{ role: 'user', content: 'Go' }]);
+
+      expect(on.bodies[0].tools).toEqual([
+        { type: 'function', name: 'blok_read', description: 'd', parameters: { type: 'object' }, strict: false },
+        { type: 'web_search' },
+      ]);
+      expect(off.bodies[0].tools).toHaveLength(1);
+    });
+
+    it('merges an options object into the search tool entry', async () => {
+      const { send, bodies } = fakeSend({ status: 'completed', output: [] });
+
+      await run(openaiModel({ model: 'm', send, webSearch: { search_context_size: 'low' } }), [{ role: 'user', content: 'Go' }]);
+
+      expect((bodies[0].tools as unknown[])[1]).toEqual({ type: 'web_search', search_context_size: 'low' });
+    });
+
+    it('reads the cited answer, and sends the search items back unchanged', async () => {
+      const { send, bodies } = fakeSend(
+        { status: 'completed', output: [searched, call] },
+        { status: 'completed', output: [cited] }
+      );
+
+      const result = await run(openaiModel({ model: 'm', send, webSearch: true }), [{ role: 'user', content: 'Go' }]);
+
+      expect(result).toEqual({ status: 'done', reply: 'Halzen won.' });
+      expect((bodies[1].input as unknown[]).slice(1, 3)).toEqual([searched, call]);
+    });
+
+    it('streams a search without tool events', async () => {
+      const events: AgentModelStreamEvent[] = [];
+      const text = sse(
+        { type: 'response.output_item.added', output_index: 0, item: { ...searched, status: 'in_progress' } },
+        { type: 'response.web_search_call.completed', output_index: 0, item_id: 'ws_1' },
+        { type: 'response.output_item.done', output_index: 0, item: searched },
+        { type: 'response.completed', response: { status: 'completed', output: [searched, cited] } }
+      );
+
+      const response = await openaiModel({ model: 'm', stream: fakeStream(text).stream, webSearch: true })(request((event) => events.push(event)));
+
+      expect(events).toEqual([]);
+      expect(response.content[0]).toEqual({ type: 'text', text: 'Halzen won.' });
+    });
+  });
 });

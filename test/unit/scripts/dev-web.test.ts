@@ -13,21 +13,6 @@ const urlOf = (input: RequestInfo | URL): URL => new URL(input instanceof Reques
 const signal = (): AbortSignal => new AbortController().signal;
 
 describe('webTools', () => {
-  it('web_search asks Wikipedia in the given language and lists titles, links and plain snippets', async () => {
-    const fetch = vi.fn(async (_url: RequestInfo | URL, _init?: RequestInit) => json({ query: { search: [
-      { title: 'Red panda', snippet: 'The <span class="searchmatch">red panda</span> is a small mammal' },
-    ] } }));
-    const text = await webTools({ fetch, lookup })('web_search', { query: 'red panda', lang: 'ru' }, signal());
-    const url = urlOf(fetch.mock.calls[0][0]);
-
-    expect(url.host).toBe('ru.wikipedia.org');
-    expect(url.searchParams.get('srsearch')).toBe('red panda');
-    expect(text).toContain('Red panda');
-    expect(text).toContain('https://ru.wikipedia.org/wiki/Red_panda');
-    expect(text).toContain('The red panda is a small mammal');
-    expect(text).not.toContain('<span');
-  });
-
   it('image_search returns direct file URLs from Wikimedia Commons, with author and license', async () => {
     const fetch = vi.fn(async (_url: RequestInfo | URL, _init?: RequestInit) => json({ query: { pages: { 1: {
       title: 'File:Red Panda.jpg',
@@ -134,5 +119,9 @@ describe('webTools', () => {
 
   it('throws on an unknown tool', async () => {
     await expect(webTools({ fetch: vi.fn(), lookup })('web_nope', {}, signal())).rejects.toThrow(/web_nope/);
+  });
+
+  it('leaves web_search to the provider', async () => {
+    await expect(webTools({ fetch: vi.fn(), lookup })('web_search', { query: 'x' }, signal())).rejects.toThrow('Unknown web tool: web_search');
   });
 });

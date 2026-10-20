@@ -178,6 +178,13 @@ describe('messageParams', () => {
     expect(params.thinking).toEqual({ type: 'adaptive', display: 'updates' });
     expect(params.betas).toContain('thinking-display-updates-2026-08-18');
   });
+
+  it('adds the provider\'s web search after the page\'s tools', () => {
+    const tool = { name: 'image_search', description: 'd', input_schema: { type: 'object' } };
+    const params = messageParams(AI_MODEL, { system: 'sys', messages: [{ role: 'user', content: 'hi' }], tools: [tool] });
+
+    expect(params.tools).toEqual([tool, { type: 'web_search_20250305', name: 'web_search' }]);
+  });
 });
 
 describe('messageParams caching', () => {

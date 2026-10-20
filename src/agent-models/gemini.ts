@@ -4,7 +4,7 @@ import type {
 
 import {
   DEFAULT_MAX_TOKENS, blocksOf, endOfStream, errorOf, isRecord, isText, isToolResult, isToolUse,
-  callId, providerBlock, rawTurn, post, postStream, requireTransport, stepOf, toolNames, withLevel, type AdapterOptions, type Body,
+  callId, providerBlock, rawTurn, post, postStream, requireTransport, stepOf, toolNames, webSearchTool, withLevel, type AdapterOptions, type Body,
 } from './shared';
 import { readJsonEvents } from './sse';
 
@@ -195,15 +195,20 @@ const readStream = async (source: Response | ReadableStream<Uint8Array>, request
 export function geminiModel(options: AdapterOptions): AgentModel {
   requireTransport(options, 'Gemini');
 
+  const search = webSearchTool(options, { googleSearch: {} });
+
   return async (request) => {
     const names = toolNames(request.messages);
     const step = stepOf(request);
     const body = withLevel({
       systemInstruction: { parts: [{ text: request.system }] },
       contents: request.messages.map((message) => (message.role === 'user' ? userContent(message, names) : modelContent(message))),
-      tools: [{ functionDeclarations: request.tools.map((tool) => ({
-        name: tool.name, description: tool.description, parametersJsonSchema: tool.input_schema,
-      })) }],
+      tools: [
+        { functionDeclarations: request.tools.map((tool) => ({
+          name: tool.name, description: tool.description, parametersJsonSchema: tool.input_schema,
+        })) },
+        ...search,
+      ],
       generationConfig: { maxOutputTokens: options.maxTokens ?? DEFAULT_MAX_TOKENS },
     }, request, LEVELS, options);
 

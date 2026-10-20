@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openaiCompatibleModel } from '../../../src/agent-models/openai-compatible';
+import type { AdapterOptions } from '../../../src/agent-models/shared';
 import { runAssistantLoop } from '../../../src/agent/assistant-loop';
 import type { AgentModelMessage, AgentModelStreamEvent } from '../../../types/api';
 
@@ -375,5 +376,14 @@ describe('openaiCompatibleModel', () => {
       await expect(openaiCompatibleModel({ model: 'm', stream })(request(() => controller.abort(), controller.signal)))
         .rejects.toThrow('OpenAI-compatible: the run stopped mid-stream.');
     });
+  });
+
+  it('refuses webSearch at setup, since Chat Completions has no common search tool', () => {
+    const options: AdapterOptions = { model: 'm', send: async () => ({}), webSearch: true };
+
+    expect(() => openaiCompatibleModel(options)).toThrow(new TypeError(
+      'OpenAI-compatible: webSearch is not supported. Add your provider\'s search in send, or give the assistant a search tool.'
+    ));
+    expect(() => openaiCompatibleModel({ ...options, webSearch: false })).not.toThrow();
   });
 });

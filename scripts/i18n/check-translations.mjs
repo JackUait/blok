@@ -111,6 +111,21 @@ function getAvailableLocales() {
 }
 
 /**
+ * The source key a plural form is checked against. A locale may carry plural
+ * forms English lacks (`key_few`); they belong to the group of `key_other`.
+ *
+ * @param {Record<string, unknown>} sourceTranslation - Source key-values
+ * @param {string} key - Target key
+ * @returns {string | undefined} Source key, or undefined when there is none
+ */
+export function sourceKeyFor(sourceTranslation, key) {
+  if (key in sourceTranslation) return key;
+  const plural = /^(.+)_(?:zero|one|two|few|many|other)$/u.exec(key);
+
+  return plural !== null && `${plural[1]}_other` in sourceTranslation ? `${plural[1]}_other` : undefined;
+}
+
+/**
  * Extracts a sorted multiset of curly-brace placeholders from a message.
  *
  * @param {string} value - Translation message
@@ -193,7 +208,8 @@ export function findLocaleIntegrityIssues(sourceTranslation, translation, option
     trailing: value.match(/\s*$/u)?.[0] ?? '',
   });
   for (const key of Object.keys(translation)) {
-    const sourceValue = sourceTranslation[key];
+    const sourceKey = sourceKeyFor(sourceTranslation, key);
+    const sourceValue = sourceKey === undefined ? undefined : sourceTranslation[sourceKey];
     const value = translation[key];
 
     if (typeof value !== 'string') {
@@ -570,7 +586,7 @@ function main() {
     const translationKeys = extractKeys(translation);
 
     const missingKeys = [...sourceKeys].filter((key) => !translationKeys.has(key));
-    const extraKeys = [...translationKeys].filter((key) => !sourceKeys.has(key));
+    const extraKeys = [...translationKeys].filter((key) => sourceKeyFor(sourceTranslation, key) === undefined);
 
     if (missingKeys.length === 0 && extraKeys.length === 0) {
       console.log(`${colors.green}✓${colors.reset} ${locale}: All ${sourceKeys.size} keys present`);

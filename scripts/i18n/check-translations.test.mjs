@@ -96,6 +96,33 @@ describe('translation checker CLI integrity reporting', () => {
     assert.match(output, /Locale integrity check passed!/);
   });
 
+  it('takes a plural form the source does not have as part of its plural group', () => {
+    const sourceRaw = `{
+      "message.weeks_one": "Every {count} week",
+      "message.weeks_other": "Every {count} weeks"
+    }`;
+    const localeRaw = `{
+      "message.weeks_one": "Chaque {count} semaine",
+      "message.weeks_many": "Toutes les {count} de semaines",
+      "message.weeks_other": "Toutes les {count} semaines"
+    }`;
+
+    const result = runCheckerFixture(sourceRaw, localeRaw);
+    const output = `${result.stdout}${result.stderr}`;
+
+    assert.equal(result.status, 0);
+    assert.doesNotMatch(output, /extra key/);
+  });
+
+  it('checks the placeholders of an extra plural form against the source plural', () => {
+    const issues = findLocaleIntegrityIssues(
+      { 'message.weeks_one': 'Every {count} week', 'message.weeks_other': 'Every {count} weeks' },
+      { 'message.weeks_one': 'Chaque {count} semaine', 'message.weeks_many': 'Toutes les semaines', 'message.weeks_other': 'Toutes les {count} semaines' }
+    );
+
+    assert.deepEqual(issues.map((issue) => `${issue.key}: ${issue.kind}`), ['message.weeks_many: placeholder-mismatch']);
+  });
+
   it('reports non-string source values without crashing on later locales', () => {
     const sourceRaw = `{
       "message.value": ["é", 42]

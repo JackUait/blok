@@ -29,7 +29,10 @@ const FREQUENCIES: readonly TemplateRepeatFrequency[] = ['daily', 'weekly', 'mon
 
 const capital = (word: string): string => `${word.charAt(0).toUpperCase()}${word.slice(1)}`;
 
-const UNIT_KEYS: Record<TemplateRepeatFrequency, string> = { daily: 'filterUnitDay', weekly: 'filterUnitWeek', monthly: 'filterUnitMonth', yearly: 'filterUnitYear' };
+type Translate = (key: string, vars?: Record<string, string | number>) => string;
+
+/** Plural keys: `_one` / `_other` and whatever forms each language adds. */
+const EVERY_KEYS: Record<TemplateRepeatFrequency, string> = { daily: 'templateRepeatEveryDay', weekly: 'templateRepeatEveryWeek', monthly: 'templateRepeatEveryMonth', yearly: 'templateRepeatEveryYear' };
 
 const pad = (n: number, width = 2): string => String(n).padStart(width, '0');
 
@@ -54,16 +57,31 @@ const input = (type: string, value: string, onInput: (value: string) => void): H
   return el;
 };
 
-/** "Every [N] weeks": a whole number of at least 1; anything else keeps the stored one. */
-const intervalField = (name: string, t: (key: string) => string, repeat: TemplateRepeat, save: (patch: Partial<TemplateRepeat>) => void): PopoverItemParams => {
+/** "Every [N] weeks", worded by the plural form the language picks for N. */
+const intervalField = (name: string, t: Translate, repeat: TemplateRepeat, save: (patch: Partial<TemplateRepeat>) => void): PopoverItemParams => {
   const row = fieldRow('label', name);
+  const before = document.createTextNode('');
+  const after = document.createTextNode('');
+  // Every plural form holds {count} once and no other digit (plural-forms.test.ts), so the first run of N's digits is the slot.
+  const word = (count: number): void => {
+    const text = t(EVERY_KEYS[repeat.frequency], { count });
+    const at = text.indexOf(String(count));
 
-  row.append(t('templateRepeatEvery'), input('number', String(repeat.interval ?? 1), (text) => {
+    before.data = at < 0 ? text : text.slice(0, at);
+    after.data = at < 0 ? '' : text.slice(at + String(count).length);
+  };
+  const field = input('number', String(repeat.interval ?? 1), (text) => {
     const interval = Number(text);
 
-    if (text !== '' && Number.isInteger(interval) && interval >= 1) save({ interval });
-  }), t(UNIT_KEYS[repeat.frequency]));
-  row.querySelector('input')?.setAttribute('min', '1');
+    if (text !== '' && Number.isInteger(interval) && interval >= 1) {
+      word(interval);
+      save({ interval });
+    }
+  });
+
+  field.setAttribute('min', '1');
+  word(repeat.interval ?? 1);
+  row.append(before, field, after);
 
   return { type: PopoverItemType.Html, element: row, name };
 };
@@ -72,7 +90,7 @@ const intervalField = (name: string, t: (key: string) => string, repeat: Templat
  * Start date and time, on the wall clock of the schedule's zone. A schedule
  * with no zone is shown in the viewer's and takes it on its first edit.
  */
-const startField = (name: string, t: (key: string) => string, repeat: TemplateRepeat, viewerZone: string, save: (patch: Partial<TemplateRepeat>) => void): PopoverItemParams => {
+const startField = (name: string, t: Translate, repeat: TemplateRepeat, viewerZone: string, save: (patch: Partial<TemplateRepeat>) => void): PopoverItemParams => {
   const zone = repeat.timeZone === undefined ? viewerZone : repeatZone(repeat);
   const w = wallTime(new Date(repeat.start).getTime(), zone);
   const row = fieldRow('div', name);
@@ -101,7 +119,7 @@ const startField = (name: string, t: (key: string) => string, repeat: TemplateRe
  * puts behind its "•••": use, edit, set as default, repeat, duplicate, delete.
  */
 export const templateMenuItems = (host: TemplateMenuHost): PopoverItemParams[] => {
-  const t = (key: string): string => host.i18n.t(`tools.database.${key}`);
+  const t: Translate = (key, vars) => host.i18n.t(`tools.database.${key}`, vars);
   const current = host.defaultTemplateId();
   const viewerZone = host.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const entry = (id: string, title: string): PopoverItemParams => {

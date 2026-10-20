@@ -2,6 +2,8 @@ import type { I18nDictionary } from '../../../types/configs/i18n-dictionary';
 
 import enMessages from './locales/en.json';
 
+const englishPlural = new Intl.PluralRules('en');
+
 /**
  * Lightweight i18n implementation for English-only usage.
  * Provides simple string interpolation without the overhead of i18next.
@@ -33,6 +35,15 @@ export class LightweightI18n {
    * @returns Translated string, or the key if not found
    */
   public t(key: string, vars?: Record<string, string | number>): string {
+    const count = vars?.count;
+
+    // i18next's plural keys: `key_one`, `key_other`, picked by `count`.
+    if (typeof count === 'number' && this.has(`${key}_other`)) {
+      const form = `${key}_${englishPlural.select(count)}`;
+
+      return this.t(this.has(form) ? form : `${key}_other`, vars);
+    }
+
     // Check overrides first, then fall back to base dictionary
     const value = this.overrides?.[key] ?? this.dictionary[key];
 

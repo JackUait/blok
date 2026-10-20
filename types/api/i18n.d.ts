@@ -7,11 +7,14 @@ export interface I18n {
    * Keys should be fully qualified (e.g., 'tools.link.addLink', 'blockSettings.delete').
    *
    * @param dictKey - Full translation key to look up
-   * @param vars - Optional string or number values to interpolate into placeholders
+   * @param vars - Optional string or number values to interpolate into placeholders.
+   *   A number `count` picks the plural form: `key_one`, `key_few`, `key_other`, … as the
+   *   locale's plural rules say. Falls back to `key_other`.
    * @returns Translated string, or the key itself if translation is missing
    *
    * @example
    * api.i18n.t('tools.image.emptyMaxSize', { size: '10 MB' })
+   * api.i18n.t('tools.database.templateRepeatEveryWeek', { count: 2 }) // "Every 2 weeks"
    */
   t(
     dictKey: string,

@@ -91,9 +91,11 @@ test('sets the interval and the start date and time of a schedule', async ({ pag
   const every = page.getByRole('spinbutton');
 
   await expect(every).toHaveValue('1');
-  await expect(every).toHaveAccessibleName(/^Every.*weeks$/);
+  // One week reads "week", not "weeks"; the unit follows the typed number.
+  await expect(every).toHaveAccessibleName(/^Every.*week$/);
   await expect(page.getByLabel('Time')).toHaveValue('09:30');
   await every.fill('2');
+  await expect(every).toHaveAccessibleName(/^Every.*weeks$/);
   await expect.poll(() => repeatOf(page)).toMatchObject({ frequency: 'weekly', interval: 2 });
 
   await page.getByLabel('Start date').fill('2026-11-02');

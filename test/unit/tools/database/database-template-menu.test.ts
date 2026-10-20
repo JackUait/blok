@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { templateMenuItems } from '../../../../src/tools/database/database-template-menu';
 import type { TemplateMenuHost } from '../../../../src/tools/database/database-template-menu';
 import type { TemplateRepeat } from '../../../../src/tools/database/types';
+import { LightweightI18n } from '../../../../src/components/i18n/lightweight-i18n';
 
 interface Item { name?: string; title?: string; isActive?: boolean; element?: HTMLElement; onActivate?: () => void; children?: { items?: Item[] } }
 
@@ -20,6 +21,9 @@ const host = (patch: Partial<TemplateMenuHost> = {}): TemplateMenuHost => ({
   remove: vi.fn(),
   ...patch,
 });
+
+const englishI18n = new LightweightI18n();
+const english = { t: (key: string, vars?: Record<string, string | number>) => englishI18n.t(key, vars) };
 
 const find = (items: Item[] | undefined, ...path: string[]): Item | undefined => {
   let level = items;
@@ -114,12 +118,16 @@ describe('template menu', () => {
       expect(field(host(), 'start')).toBeUndefined();
     });
 
+    /** The field as a reader sees it: the number box shows its value. */
+    const shown = (el: HTMLElement | undefined): string =>
+      Array.from(el?.childNodes ?? []).map((node) => (node instanceof HTMLInputElement ? node.value : node.textContent)).join('');
+
     it('reads "Every N weeks" and stores a whole number of at least 1', () => {
-      const h = host({ repeatOf: () => weekly });
+      const h = host({ repeatOf: () => weekly, i18n: english });
       const el = field(h, 'interval');
       const input = el?.querySelector<HTMLInputElement>('input');
 
-      expect(el?.textContent).toBe('tools.database.templateRepeatEverytools.database.filterUnitWeek');
+      expect(shown(el)).toBe('Every 2 weeks');
       expect(input?.value).toBe('2');
       type(input, '0');
       type(input, '1.5');
@@ -130,9 +138,38 @@ describe('template menu', () => {
       expect(h.setRepeat).toHaveBeenCalledWith('t1', { ...weekly, interval: 3 });
     });
 
+    it('says "Every 1 week", not "Every 1 weeks"', () => {
+      expect(shown(field(host({ repeatOf: () => ({ ...weekly, interval: 1 }), i18n: english }), 'interval'))).toBe('Every 1 week');
+      expect(shown(field(host({ repeatOf: () => ({ ...weekly, interval: undefined }), i18n: english }), 'interval'))).toBe('Every 1 week');
+    });
+
+    it('rewords the unit as the number is typed', () => {
+      const el = field(host({ repeatOf: () => weekly, i18n: english }), 'interval');
+      const input = el?.querySelector<HTMLInputElement>('input');
+
+      type(input, '1');
+      expect(shown(el)).toBe('Every 1 week');
+      type(input, '5');
+      expect(shown(el)).toBe('Every 5 weeks');
+      expect(el?.querySelector('input')).toBe(input);
+    });
+
     it('names the unit after the frequency', () => {
-      expect(field(host({ repeatOf: () => ({ ...weekly, frequency: 'daily' }) }), 'interval')?.textContent).toContain('tools.database.filterUnitDay');
-      expect(field(host({ repeatOf: () => ({ ...weekly, frequency: 'yearly' }) }), 'interval')?.textContent).toContain('tools.database.filterUnitYear');
+      const interval = (frequency: TemplateRepeat['frequency'], n: number): string =>
+        shown(field(host({ repeatOf: () => ({ ...weekly, frequency, interval: n }), i18n: english }), 'interval'));
+
+      expect([interval('daily', 1), interval('daily', 3)]).toEqual(['Every 1 day', 'Every 3 days']);
+      expect([interval('monthly', 1), interval('monthly', 2)]).toEqual(['Every 1 month', 'Every 2 months']);
+      expect([interval('yearly', 1), interval('yearly', 2)]).toEqual(['Every 1 year', 'Every 2 years']);
+    });
+
+    it('puts the number box where the language puts the number', () => {
+      const japanese = { t: (key: string, vars?: Record<string, string | number>) => `${String(vars?.count)}週間ごと` };
+      const el = field(host({ repeatOf: () => weekly, i18n: japanese }), 'interval');
+
+      expect(shown(el)).toBe('2週間ごと');
+      expect(el?.firstChild?.textContent).toBe('');
+      expect(el?.childNodes[1]).toBeInstanceOf(HTMLInputElement);
     });
 
     it('shows the start on the schedule\'s own wall clock and stores an edit in that zone', () => {

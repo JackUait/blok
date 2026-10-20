@@ -267,7 +267,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1271 + 125 + 435 + 4 closure for all 1835 keys', () => {
+  it('rebuilds a disjoint 1271 + 125 + 442 + 4 closure for all 1842 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -281,7 +281,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(1835);
+    expect(lifecycle.size).toBe(1842);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -435,7 +435,9 @@ describe('current English catalog lifecycle coverage', () => {
       // -2: settingsLayout and settingsPropertyVisibility, now also called by literal (see above).
       // +2: the map settings' Style section and Map by row, called through the panel's namespaced t().
       // +1: the view settings panel builds tools.database.settingsLockViews from a short name.
-      'registered-namespace-compatible': 435,
+      // +8 / -1: the repeat interval's plural keys (templateRepeatEvery<Unit>_one/_other) replace templateRepeatEvery,
+      // all built from a short name.
+      'registered-namespace-compatible': 442,
       'catalog-only': 4,
     });
     expect(

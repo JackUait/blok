@@ -77,6 +77,15 @@ const readLocale = (
 
 const english = readLocale('en').messages as EnglishMessages;
 const englishKeys = Object.keys(english).sort();
+/** English keys plus the plural forms the locale's own plural rules add (`key_few`). */
+const expectedLocaleKeys = (locale: string): string[] => {
+  const categories = new Intl.PluralRules(locale).resolvedOptions().pluralCategories;
+  const extraForms = englishKeys
+    .filter(key => key.endsWith('_other'))
+    .flatMap(key => categories.map(category => `${key.slice(0, -'other'.length)}${category}`));
+
+  return [...new Set([...englishKeys, ...extraForms])].sort();
+};
 const auditLedger = readFileSync(AUDIT_LEDGER_PATH, 'utf-8');
 const translationGuidelines = readFileSync(
   TRANSLATION_GUIDELINES_PATH,
@@ -5421,7 +5430,7 @@ describe('translation guideline corpus integrity', () => {
       `${locale} has duplicate decoded JSON keys`
     ).toEqual([]);
     expect(localeKeys, `${locale} keys differ from English`).toEqual(
-      englishKeys
+      expectedLocaleKeys(locale)
     );
     expect(
       integrityIssues,

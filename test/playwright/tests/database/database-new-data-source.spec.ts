@@ -3,6 +3,8 @@
  * block, with its own schema and rows, and a Table view bound to it.
  */
 
+import { readFileSync } from 'node:fs';
+
 import type { Page } from '@playwright/test';
 
 import type { Blok, OutputBlockData } from '@/types';
@@ -33,6 +35,43 @@ const initial: OutputBlockData[] = [
     content: ['r1'],
   },
   { id: 'r1', type: 'database-row', parent: 'db-1', data: { position: 'a0', properties: { 'p-title': 'Alpha' } } },
+];
+
+const bound: OutputBlockData[] = [
+  {
+    id: 'db-1',
+    type: 'database',
+    data: {
+      title: 'Projects',
+      schema: [{ id: 'p-title', name: 'Name', type: 'title', position: 'a0' }],
+      views: [
+        { id: 'v0', name: 'Own', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] },
+        { id: 'vb', name: 'Second', type: 'table', position: 'a1', sorts: [], filters: [], visibleProperties: [], dataSourceId: 'src-b' },
+      ],
+      activeViewId: 'vb',
+    },
+    content: ['r1', 'src-b'],
+  },
+  { id: 'r1', type: 'database-row', parent: 'db-1', data: { position: 'a0', properties: { 'p-title': 'Alpha' } } },
+  {
+    id: 'src-b',
+    type: 'database',
+    parent: 'db-1',
+    data: {
+      title: 'Inventory',
+      schema: [
+        { id: 'b-title', name: 'Name', type: 'title', position: 'a0' },
+        { id: 'b-stage', name: 'Stage', type: 'select', position: 'a1', config: { options: [
+          { id: 'todo', label: 'Todo', color: 'gray', position: 'a0' },
+          { id: 'done', label: 'Done', color: 'green', position: 'a1' },
+        ] } },
+      ],
+      views: [{ id: 'bv', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+      activeViewId: 'bv',
+    },
+    content: ['b1'],
+  },
+  { id: 'b1', type: 'database-row', parent: 'src-b', data: { position: 'a0', properties: { 'b-title': 'Gamma', 'b-stage': 'todo' } } },
 ];
 
 const mount = async (page: Page, blocks: OutputBlockData[]): Promise<void> => {
@@ -118,5 +157,44 @@ test.describe('database New data source', () => {
     await expect(grid(page)).toContainText('Beta');
     await expect(grid(page)).not.toContainText('Alpha');
     await expect(grid(page).getByRole('columnheader')).toHaveCount(2);
+  });
+
+  test('Layout switches a second source\'s view to a board of its rows, and CSV exports them', async ({ page }) => {
+    await mount(page, bound);
+    const settings = page.getByTestId('database-toolbar-settings');
+
+    await settings.click();
+    await page.getByTestId('database-settings-layout').click();
+    await page.getByTestId('database-layout-board').click();
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+
+    const board = page.locator('[data-blok-database-board]');
+
+    await expect(board).toBeVisible();
+    await expect(board).toContainText('Gamma');
+    await expect(board).toContainText('Todo');
+    await expect(board).not.toContainText('Alpha');
+
+    // A card added in Done lands in the second source, in Done.
+    await board.locator('[data-blok-database-add-card][data-option-id="done"]').click();
+    await expect.poll(async () => {
+      const saved = await save(page);
+
+      return saved.filter((block) => block.type === 'database-row' && block.parent === 'src-b')
+        .map((block) => (block.data as { properties: Record<string, unknown> }).properties['b-stage']);
+    }).toEqual(['todo', 'done']);
+    const views = (await save(page)).find((block) => block.id === 'db-1')?.data as { views: Array<{ id: string; type: string; groupBy?: string }> };
+
+    expect(views.views.find((view) => view.id === 'vb')).toMatchObject({ type: 'board', groupBy: 'b-stage' });
+
+    await settings.click();
+    const download = page.waitForEvent('download');
+
+    await page.getByTestId('database-settings-csv-export').click();
+    const csv = readFileSync(await (await download).path(), 'utf8');
+
+    expect(csv).toContain('Gamma');
+    expect(csv).not.toContain('Alpha');
   });
 });

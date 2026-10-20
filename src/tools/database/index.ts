@@ -233,8 +233,8 @@ const BOARD_GROUP_PAGE = 10;
 /** Layouts Blok draws; gallery is in the type but falls back to a board. */
 const RENDERED_LAYOUTS: readonly ViewType[] = ['table', 'board', 'gallery', 'list', 'chart', 'timeline', 'feed', 'calendar', 'form', 'map'];
 
-/** Layouts a view on a second data source can take: the native table and list. */
-const SOURCE_LAYOUTS: readonly ViewType[] = ['table', 'list'];
+/** Layouts a dashboard widget draws natively, with its own toolbar. */
+const WIDGET_LAYOUTS: readonly ViewType[] = ['table', 'list'];
 
 /** Select-like groups: their columns are options (or status groups) the user can rename and move. */
 const OPTION_GROUP_TYPES: readonly PropertyType[] = ['select', 'multiSelect', 'status'];
@@ -475,6 +475,11 @@ export class DatabaseTool implements BlockTool {
   private readonly tableStates = new Map<string, TableState>();
   private readonly dashboardStates = new Map<string, DashboardWidgetState>();
   private readonly dashboardSources = new Set<string>();
+  /**
+   * Set while this block is a second data source drawn by the database that
+   * holds it: the view, its toolbar and its redraws are that database's.
+   */
+  private binding: NativeWidgetContext | null = null;
   private groupMenuPopover: PopoverDesktop | null = null;
   /** Per gallery view and group: how many cards "Load more" has revealed. Session only. */
   private readonly galleryShown = new Map<string, Map<string, number>>();
@@ -857,7 +862,7 @@ export class DatabaseTool implements BlockTool {
     const titleEl = this.titleElement;
 
     if (titleEl === null) return;
-    const saved = this.model.getView(this.activeViewId);
+    const saved = this.shownView();
 
     // "Show data source title" (research/20 §1f, R-2022-03-15). The title row stays: it can hold the add-view "+".
     const hidden = this.dataSourceTitlesHidden
@@ -1092,6 +1097,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   private get controls(): DatabaseViewControls {
+    if (this.binding !== null) return this.binding.controls;
     if (this.viewControls === null) {
       this.viewControls = new DatabaseViewControls(this.controlsHost());
       this.viewControls.load(this.model.getViews().map((v) => v.id));
@@ -1381,7 +1387,7 @@ export class DatabaseTool implements BlockTool {
       // A locked database cannot save its folds, so it must not vote in the toggle.
       hasGroups: () => !this.structureLocked() && this.activeGroupKeys().length > 0,
       anyExpanded: () => {
-        const view = this.model.getView(this.activeViewId);
+        const view = this.shownView();
 
         return view !== undefined && this.activeGroupKeys().some((key) => !hasGroup(view.collapsedGroups, key));
       },
@@ -1690,7 +1696,7 @@ export class DatabaseTool implements BlockTool {
         readOnly: this.readOnly,
         structureLocked: this.structureLocked(),
         source: this.source,
-        closed: this.model.getView(this.activeViewId)?.form?.closed === true,
+        closed: this.shownView()?.form?.closed === true,
       }
       : undefined;
 
@@ -1727,8 +1733,8 @@ export class DatabaseTool implements BlockTool {
     this.refreshRowPrompts();
     if (formState !== undefined && (
       formState.id !== this.activeViewId ||
-      this.model.getView(this.activeViewId)?.type !== 'form' ||
-      formState.closed !== (this.model.getView(this.activeViewId)?.form?.closed === true) ||
+      this.shownView()?.type !== 'form' ||
+      formState.closed !== (this.shownView()?.form?.closed === true) ||
       formState.source?.databaseId !== this.source?.databaseId ||
       formState.source?.documentId !== this.source?.documentId ||
       formState.readOnly !== this.readOnly ||
@@ -2867,7 +2873,7 @@ export class DatabaseTool implements BlockTool {
 
   /** True when the active view sorts or filters by the property, so a new value can move or hide a row. */
   private activeViewQueries(propertyId: string): boolean {
-    const saved = this.model.getView(this.activeViewId);
+    const saved = this.shownView();
     const view = saved === undefined ? undefined : this.controls.effective(saved);
 
     return view !== undefined && (
@@ -3615,12 +3621,18 @@ export class DatabaseTool implements BlockTool {
 
       return missing;
     }
-    const saved = this.model.getView(this.activeViewId);
+    const saved = this.shownView();
 
     if (saved !== undefined && this.otherSourceId(saved) !== undefined) {
       return this.renderSourceView(saved.id);
     }
     const viewConfig = saved === undefined ? undefined : this.controls.effective(saved);
+
+    return this.renderLayout(viewConfig);
+  }
+
+  /** Draws one view of this block's rows and schema in its layout. */
+  private renderLayout(viewConfig: DatabaseViewConfig | undefined): HTMLDivElement {
     const titleProp = this.model.getSchema().find((p) => p.type === 'title');
     const titlePropId = titleProp?.id ?? '';
     const groupByPropId = viewConfig?.groupBy;
@@ -3663,9 +3675,38 @@ export class DatabaseTool implements BlockTool {
     return viewEl;
   }
 
+  /** The block whose views are on show: this one, or the holder while bound. */
+  private viewOwner(): DatabaseTool {
+    return this.binding?.owner ?? this;
+  }
+
+  private viewOf(viewId: string): DatabaseViewConfig | undefined {
+    return this.viewOwner().model.getView(viewId);
+  }
+
+  /** Writes a view setting where the view lives: this block, or the holder while bound. */
+  private writeView(viewId: string, changes: ViewChanges): void {
+    const owner = this.viewOwner();
+
+    owner.model.updateView(viewId, changes);
+    owner.block.dispatchChange();
+    void owner.sync.syncUpdateView({ viewId, changes: structuredClone(changes) });
+  }
+
+  private shows(viewId: string): boolean {
+    return (this.binding?.viewId ?? this.activeViewId) === viewId;
+  }
+
+  /** The saved view on show: this block's active one, or the holder's view while bound. */
+  private shownView(): DatabaseViewConfig | undefined {
+    const binding = this.binding;
+
+    return binding === null ? this.model.getView(this.activeViewId) : binding.owner.model.getView(binding.viewId);
+  }
+
   /** The tool whose rows and schema the active view shows: this one, or a second source. */
   private activeSource(): DatabaseTool {
-    const saved = this.model.getView(this.activeViewId);
+    const saved = this.shownView();
     const id = saved === undefined ? undefined : this.otherSourceId(saved);
 
     return (id === undefined ? undefined : this.dashboardOwner(id)) ?? this;
@@ -3703,7 +3744,7 @@ export class DatabaseTool implements BlockTool {
     if (viewConfig.type === 'form') {
       const viewId = viewConfig.id;
       const editQuestion = <T>(edit: () => T, fallback: T): T => {
-        if (this.destroyed || this.activeViewId !== viewId || this.readOnly || this.structureLocked() || this.model.getView(viewId)?.type !== 'form') return fallback;
+        if (this.destroyed || !this.shows(viewId) || this.readOnly || this.structureLocked() || this.viewOf(viewId)?.type !== 'form') return fallback;
         const previous = this.formQuestionEdit;
 
         this.formQuestionEdit = true;
@@ -3714,7 +3755,7 @@ export class DatabaseTool implements BlockTool {
         }
       };
       const setQuestionSetting = (propertyId: string, changes: ViewPropertyPatch): void => editQuestion(() => {
-        const current = this.model.getView(viewId);
+        const current = this.viewOf(viewId);
 
         if (current === undefined) return;
         const properties = withPropertySetting(current, this.model.getSchema(), propertyId, changes);
@@ -3754,9 +3795,9 @@ export class DatabaseTool implements BlockTool {
                 ...this.formLink(viewId),
               },
             }),
-            settings: () => this.model.getView(viewId)?.form ?? {},
+            settings: () => this.viewOf(viewId)?.form ?? {},
             update: (patch: Partial<FormSettings>) => editQuestion(() => {
-              const merged: FormSettings = { ...this.model.getView(viewId)?.form, ...patch };
+              const merged: FormSettings = { ...this.viewOf(viewId)?.form, ...patch };
               const form: FormSettings = Object.fromEntries(Object.entries(merged).filter(([, value]) => value !== undefined));
 
               this.updateActiveView({ form });
@@ -3776,7 +3817,7 @@ export class DatabaseTool implements BlockTool {
             setQuestionSetting,
             addQuestion: (type: PropertyType) => editQuestion(() => this.addProperty({ name: '', type }), null),
             showQuestion: (propertyId: string) => editQuestion(() => {
-              const current = this.model.getView(viewId);
+              const current = this.viewOf(viewId);
 
               if (current === undefined) return;
               const shown = { ...current, properties: withPropertySetting(current, this.model.getSchema(), propertyId, { visible: true }) };
@@ -3831,7 +3872,7 @@ export class DatabaseTool implements BlockTool {
     const lookup = async (): Promise<PlaceValue | null | undefined> => map?.reverseGeocode?.(lngLat);
 
     void lookup().catch(() => undefined).then((found) => {
-      const view = this.model.getView(viewId);
+      const view = this.viewOf(viewId);
       const placeBy = view === undefined ? undefined : resolveMapBy(view, this.model.getSchema());
 
       if (this.destroyed || this.readOnly || placeBy === undefined) return;
@@ -3843,7 +3884,7 @@ export class DatabaseTool implements BlockTool {
       const rowId = this.insertRow({ [placeBy.id]: place, ...(title !== undefined ? { [this.titlePropertyId()]: title } : {}) }, { rerender: false });
 
       if (rowId === undefined) return;
-      if (this.activeViewId === viewId) this.rerenderView({ keepDrawer: true });
+      if (this.shows(viewId)) this.rerenderView({ keepDrawer: true });
       this.handleRowClick(rowId);
     });
   }
@@ -3851,7 +3892,7 @@ export class DatabaseTool implements BlockTool {
   /** The host's link for a form, for the Share panel. A throwing host gives none. */
   private formLink(viewId: string): { link?: string } {
     try {
-      const link = this.config.forms?.link?.({ databaseId: this.block.id, viewId });
+      const link = this.config.forms?.link?.({ databaseId: this.viewOwner().block.id, viewId });
 
       return typeof link === 'string' && link !== '' ? { link } : {};
     } catch {
@@ -3861,12 +3902,12 @@ export class DatabaseTool implements BlockTool {
 
   /** A form answer becomes a row (Notion: responses land in the database). Read-only only tells the host. */
   private submitForm(viewId: string, values: Record<string, PropertyValue>): void {
-    const view = this.model.getView(viewId);
+    const view = this.viewOf(viewId);
 
-    if (this.destroyed || this.activeViewId !== viewId || view?.type !== 'form' || view.form?.closed === true) return;
+    if (this.destroyed || !this.shows(viewId) || view?.type !== 'form' || view.form?.closed === true) return;
     const rowId = this.readOnly ? undefined : this.insertRow(values, { rerender: false, anonymous: view.form?.anonymous === true });
     const submission: DatabaseFormSubmission = {
-      databaseId: this.block.id,
+      databaseId: this.viewOwner().block.id,
       viewId,
       values,
       ...(rowId !== undefined ? { rowId } : {}),
@@ -4236,7 +4277,7 @@ export class DatabaseTool implements BlockTool {
 
   /** The active view as CSV, the way this person sees it: filters, sorts, search and visible properties. */
   exportCsv(): string {
-    const saved = this.model.getView(this.activeViewId);
+    const saved = this.shownView();
 
     if (saved === undefined) return serializeCsv([]);
     const view = this.controls.effective(saved);
@@ -4335,7 +4376,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   private fileBase(): string {
-    const name = this.title.trim() !== '' ? this.title.trim() : this.model.getView(this.activeViewId)?.name ?? '';
+    const name = this.title.trim() !== '' ? this.title.trim() : this.shownView()?.name ?? '';
 
     return name.replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'database';
   }
@@ -4429,7 +4470,7 @@ export class DatabaseTool implements BlockTool {
   /** "…" panel actions: save the chart, export the view, import or merge a CSV. */
   private csvActions(): ViewSettingsAction[] {
     const t = (key: string): string => this.api.i18n.t(`tools.database.${key}`);
-    const view = this.model.getView(this.activeViewId);
+    const view = this.shownView();
     const actions: ViewSettingsAction[] = [];
 
     if (view?.type === 'chart' && resolveChartSettings(view, this.chartSchema()).type !== 'number') {
@@ -4447,7 +4488,8 @@ export class DatabaseTool implements BlockTool {
     actions.push({ testId: 'database-settings-csv-export', label: t('csvExport'), icon: IconDownload, onClick: () => this.downloadCsv() });
     if (!this.readOnly) {
       actions.push(
-        { testId: 'database-settings-csv-import', label: t('csvImport'), icon: IconUpload, onClick: () => this.pickCsvFile((file) => this.importCsv(file.text, file.name)) },
+        // A new database goes beside the block on the page, never inside a holder as a stray source.
+        { testId: 'database-settings-csv-import', label: t('csvImport'), icon: IconUpload, onClick: () => this.pickCsvFile((file) => this.viewOwner().importCsv(file.text, file.name)) },
         {
           testId: 'database-settings-csv-merge',
           label: t('csvMerge'),
@@ -4463,7 +4505,7 @@ export class DatabaseTool implements BlockTool {
 
   /** The active view's own layout rows (board, gallery, timeline, calendar, chart), for the view settings panel. */
   layoutItems(): PopoverItemParams[] {
-    const view = this.model.getView(this.activeViewId);
+    const view = this.shownView();
     const schema = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n);
     const update = (changes: ViewChanges): void => this.updateActiveView(changes);
 
@@ -4584,7 +4626,7 @@ export class DatabaseTool implements BlockTool {
       // Blocked storage: fall back to this session's value.
     }
 
-    return this.timelineCenters.get(viewId) ?? this.model.getView(viewId)?.timelineCenter ?? today;
+    return this.timelineCenters.get(viewId) ?? this.viewOf(viewId)?.timelineCenter ?? today;
   }
 
   /**
@@ -4593,10 +4635,12 @@ export class DatabaseTool implements BlockTool {
    */
   private setTimelineCenter(viewId: string, day: string): void {
     this.timelineCenters.set(viewId, day);
-    if (!this.readOnly && this.model.getView(viewId)?.timelineCenter !== day) {
-      this.model.updateView(viewId, { timelineCenter: day });
-      this.block.dispatchChange({ derived: true });
-      void this.sync.syncUpdateView({ viewId, changes: { timelineCenter: day } });
+    const owner = this.viewOwner();
+
+    if (!this.readOnly && owner.model.getView(viewId)?.timelineCenter !== day) {
+      owner.model.updateView(viewId, { timelineCenter: day });
+      owner.block.dispatchChange({ derived: true });
+      void owner.sync.syncUpdateView({ viewId, changes: { timelineCenter: day } });
     }
     try {
       window.localStorage.setItem(this.timelineStorageKey(viewId), day);
@@ -4695,7 +4739,7 @@ export class DatabaseTool implements BlockTool {
   private addTimelineRow(groupKey: string | null, startId: string | undefined, today: string): void {
     if (this.readOnly) return;
     const titlePropId = this.titlePropertyId();
-    const groupBy = groupKey === null ? undefined : this.model.getView(this.activeViewId)?.groupBy;
+    const groupBy = groupKey === null ? undefined : this.shownView()?.groupBy;
     const properties = this.newRowProperties(titlePropId, groupBy, groupKey ?? NO_VALUE_GROUP_KEY);
     const rowData = this.model.createRowData(startId === undefined ? properties : { ...properties, [startId]: today });
 
@@ -4834,9 +4878,7 @@ export class DatabaseTool implements BlockTool {
     if (view.noValueGroupPosition === position) {
       return;
     }
-    this.model.updateView(view.id, { noValueGroupPosition: position });
-    this.block.dispatchChange();
-    void this.sync.syncUpdateView({ viewId: view.id, changes: { noValueGroupPosition: position } });
+    this.writeView(view.id, { noValueGroupPosition: position });
   }
 
   /** Each group's rows, queried once per render. */
@@ -4846,7 +4888,7 @@ export class DatabaseTool implements BlockTool {
 
   /** Group keys the active view draws; empty when it is not grouped. */
   private activeGroupKeys(): string[] {
-    const saved = this.model.getView(this.activeViewId);
+    const saved = this.shownView();
 
     if (saved?.groupBy === undefined) return [];
 
@@ -4855,16 +4897,14 @@ export class DatabaseTool implements BlockTool {
 
   /** Cmd/Ctrl+Alt+T: collapse or open every group of the active view, and keep it in the view. */
   private setAllGroupsCollapsed(collapsed: boolean): void {
-    const view = this.model.getView(this.activeViewId);
+    const view = this.shownView();
 
     if (view === undefined || this.readOnly || this.structureLocked()) return;
     const keys = this.activeGroupKeys();
     const others = (view.collapsedGroups ?? []).filter((group) => !keys.includes(group.id));
     const collapsedGroups = collapsed ? [...others, ...keys.map((id) => ({ id }))] : others;
 
-    this.model.updateView(view.id, { collapsedGroups });
-    this.block.dispatchChange();
-    void this.sync.syncUpdateView({ viewId: view.id, changes: { collapsedGroups } });
+    this.writeView(view.id, { collapsedGroups });
     this.rerenderView({ keepDrawer: true });
   }
 
@@ -4881,7 +4921,6 @@ export class DatabaseTool implements BlockTool {
     const owner = context?.owner ?? this;
     // The main toolbar follows the active view's data source; a widget's host is already its source.
     const data = (): DatabaseTool => (context === undefined ? this.activeSource() : this);
-    const bound = (): boolean => data() !== this;
 
     return {
       i18n: this.api.i18n,
@@ -4895,8 +4934,7 @@ export class DatabaseTool implements BlockTool {
       locked: () => owner.structureLocked(),
       readOnly: () => context === undefined ? this.readOnly : !context.authority.writable(),
       viewCount: () => owner.model.getViews().length,
-      // A second source draws through the native table and list only.
-      get layouts() { return bound() ? SOURCE_LAYOUTS : RENDERED_LAYOUTS; },
+      layouts: RENDERED_LAYOUTS,
       me: () => this.config.people?.me?.() ?? null,
       people: () => this.people ?? [],
       relatedRows: (property) => data().relationCandidates(property),
@@ -4915,10 +4953,10 @@ export class DatabaseTool implements BlockTool {
       } : {}),
       groups: (sub) => this.groupEntries(sub),
       rerender: () => context === undefined ? this.rerenderView({ keepDrawer: true }) : context.redraw(),
-      // CSV, chart export and the row page layout act on this block's own source.
-      layoutItems: () => (bound() ? [] : this.layoutItems()),
-      actions: () => (bound() ? [] : this.csvActions()),
-      ...(context === undefined ? { customizeLayout: () => (bound() ? undefined : this.customizeLayoutAction()) } : {}),
+      // The source draws the view, so it holds the layout rows, the export and the row page layout.
+      layoutItems: () => data().layoutItems(),
+      actions: () => data().csvActions(),
+      ...(context === undefined ? { customizeLayout: () => data().customizeLayoutAction() } : {}),
       automations: {
         read: () => owner.savedAutomations,
         schema: () => owner.model.getSchema(),
@@ -4992,7 +5030,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   private groupEntries(sub: boolean): ViewGroupEntry[] {
-    const saved = this.model.getView(this.activeViewId);
+    const saved = this.shownView();
 
     if (saved === undefined) return [];
     const view = this.controls.effective(saved);
@@ -5008,18 +5046,19 @@ export class DatabaseTool implements BlockTool {
 
   /** A board needs a grouping: the first select-like property, else the first property it can group by. */
   private setActiveLayout(type: ViewType): void {
-    const view = this.model.getView(this.activeViewId);
+    const view = this.shownView();
 
     if (view === undefined || view.type === type) return;
-    if (this.otherSourceId(view) !== undefined && !SOURCE_LAYOUTS.includes(type)) return;
-    const schema = this.model.getSchema();
+    // The grouping and the place property come from the rows the view shows.
+    const data = this.activeSource();
+    const schema = data.model.getSchema();
     const groupable = (p: PropertyDefinition): boolean => p.type !== 'title' && GROUPABLE_TYPES.includes(p.type);
     const groupBy = type === 'board' && view.groupBy === undefined
       ? (schema.find((p) => OPTION_GROUP_TYPES.includes(p.type)) ?? schema.find(groupable))?.id
       : undefined;
 
     if (type === 'board' && view.groupBy === undefined && groupBy === undefined) return;
-    if (type === 'map') this.ensurePlaceProperty();
+    if (type === 'map') data.ensurePlaceProperty();
     // Born empty with the switch: two peers adding the first column would race to create the key.
     const tableProperties = type === 'timeline' && !Array.isArray(view.tableProperties) ? { tableProperties: [] } : {};
 
@@ -5290,7 +5329,9 @@ export class DatabaseTool implements BlockTool {
     if (owner === undefined) return { error: 'missing-database' };
     if (saved === undefined) return { error: 'missing-view' };
     if (saved.type === 'dashboard') return { error: 'dashboard-view' };
-    if (saved.type !== 'table' && saved.type !== 'list') return { error: 'unsupported-view' };
+    const layouts = bound === undefined ? WIDGET_LAYOUTS : RENDERED_LAYOUTS;
+
+    if (!layouts.includes(saved.type)) return { error: 'unsupported-view' };
     const sourceId = saved.dataSourceId ?? owner.dataId;
 
     this.dashboardSources.add(sourceId);
@@ -5303,7 +5344,7 @@ export class DatabaseTool implements BlockTool {
       const selected = owner.model.getView(saved.id);
 
       return !this.destroyed && !owner.destroyed && !source.destroyed
-        && this.activeViewId === dashboardId && (selected?.type === 'table' || selected?.type === 'list')
+        && this.activeViewId === dashboardId && selected !== undefined && layouts.includes(selected.type)
         && (selected.dataSourceId ?? owner.dataId) === sourceId
         && (bound !== undefined ? bound.placed() : this.model.getView(dashboardId)?.dashboard?.rows.some((row) => row.widgets.some((entry) =>
           entry.id === widget.id && entry.viewId === saved.id && (entry.databaseId ?? this.block.id) === ownerId)) === true);
@@ -5360,6 +5401,18 @@ export class DatabaseTool implements BlockTool {
       controls.load([saved.id]);
     }
     controls.refresh();
+    // A bound source reads the holder's view for its own new rows, exports and menus.
+    if (bound !== undefined) source.binding = context;
+    if (bound !== undefined && !WIDGET_LAYOUTS.includes(saved.type)) {
+      return source.mountBound(context, {
+        revoke: () => { lifetime.disposed = true; },
+        dispose: () => {
+          lifetime.disposed = true;
+          cancellations.forEach((cancel) => cancel());
+          source.revokeCardDrawer(state.authority);
+        },
+      });
+    }
     const native = saved.type === 'table'
       ? source.createNativeTableView(source.titlePropertyId(), context.view, context)
       : source.createNativeListView(source.titlePropertyId(), context.view.groupBy, context.view, context);
@@ -5450,8 +5503,56 @@ export class DatabaseTool implements BlockTool {
         native.root.removeEventListener('click', click);
         native.root.removeEventListener('click', buttonClick, true);
         renderer.destroy?.();
+        if (source.binding === context) source.binding = null;
       },
     };
+  }
+
+  /**
+   * A layout other than table and list on a second source: this block draws
+   * and wires it as its own view, with the holder's view, toolbar and redraws.
+   */
+  private mountBound(context: NativeWidgetContext, end: { revoke: () => void; dispose: () => void }): DashboardMount {
+    const root = this.renderLayout(context.view);
+    const renderer = this.view;
+    const drags = (): Array<{ active: boolean } | null> => [this.cardDrag, this.columnDrag, this.listRowDrag];
+    const cardEditor = (): boolean => this.cardCellEditor?.isOpen === true;
+
+    this.wireView(root);
+
+    return {
+      renderer,
+      root,
+      // A drag, a card editor or a focused field in it holds the holder's redraw too.
+      get interacting() {
+        const focused = document.activeElement;
+
+        return renderer.interacting === true || (focused instanceof HTMLInputElement && root.contains(focused)) || cardEditor()
+          || drags().some((drag) => drag?.active === true);
+      },
+      revoke: end.revoke,
+      destroy: () => {
+        end.dispose();
+        this.unwireView();
+        // Its teardown may still commit through the holder's view.
+        renderer.destroy?.();
+        if (this.binding === context) this.binding = null;
+      },
+    };
+  }
+
+  /** Drops what {@link wireView} attached. */
+  private unwireView(): void {
+    this.cardDrag?.destroy();
+    this.columnDrag?.destroy();
+    this.columnControls?.destroy();
+    this.listRowDrag?.destroy();
+    this.keyboard?.destroy();
+    this.cardDrag = null;
+    this.columnDrag = null;
+    this.columnControls = null;
+    this.listRowDrag = null;
+    this.keyboard = null;
   }
 
   private renderTableView(titlePropId: string, viewConfig: DatabaseViewConfig): HTMLDivElement {
@@ -5717,7 +5818,7 @@ export class DatabaseTool implements BlockTool {
    */
   protected onSortedRowDrop(result: TableRowDropResult, context?: NativeWidgetContext): void {
     const { rowId, beforeRowId, afterRowId, groupKey, fromGroupKey } = result;
-    const view = context?.view ?? this.model.getView(this.activeViewId);
+    const view = context?.view ?? this.shownView();
     const groupBy = view?.groupBy;
 
     if (this.readOnly || (context !== undefined && !context.writable())) return;
@@ -5840,7 +5941,7 @@ export class DatabaseTool implements BlockTool {
   private addTableRow(groupKey: string | null, afterRowId?: string, context?: NativeWidgetContext): string | null {
     if (this.readOnly || (context !== undefined && !context.writable())) return null;
     const titlePropId = this.titlePropertyId();
-    const groupBy = groupKey === null ? undefined : (context?.view ?? this.model.getView(this.activeViewId))?.groupBy;
+    const groupBy = groupKey === null ? undefined : (context?.view ?? this.shownView())?.groupBy;
     const rowData = this.model.createRowData(this.newRowProperties(titlePropId, groupBy, groupKey ?? NO_VALUE_GROUP_KEY, undefined, context?.view));
     const ordered = this.model.getOrderedRows();
     const afterIndex = afterRowId === undefined ? -1 : ordered.findIndex((row) => row.id === afterRowId);
@@ -5848,7 +5949,7 @@ export class DatabaseTool implements BlockTool {
       ? rowData.position
       : DatabaseModel.positionBetween(ordered[afterIndex].position, ordered[afterIndex + 1]?.position ?? null);
     const owner = context?.owner ?? this;
-    const view = context?.view ?? this.model.getView(this.activeViewId);
+    const view = context?.view ?? this.shownView();
     const ownOrder = afterRowId === undefined || owner.structureDenied || view === undefined ? undefined : owner.model.rowOrderOf(view);
 
     if (view !== undefined && ownOrder !== undefined) {
@@ -5918,7 +6019,7 @@ export class DatabaseTool implements BlockTool {
    * hide the row, and the page is where the rest gets filled in (research/08).
    */
   private openIfFiltered(rowId: string, context?: NativeWidgetContext): boolean {
-    const saved = this.model.getView(this.activeViewId);
+    const saved = this.shownView();
     const view = context?.view ?? (saved === undefined ? undefined : this.controls.effective(saved));
 
     if (view === undefined || (view.filters.length === 0 && countFilterRules(view.filterTree) === 0)) {
@@ -5996,7 +6097,7 @@ export class DatabaseTool implements BlockTool {
     });
 
     const grandparent = pair === undefined ? undefined : relationIdsOf(row.properties[pair.forward]).pop();
-    const view = this.model.getView(this.activeViewId);
+    const view = this.shownView();
     const viewOrder = this.structureDenied || view === undefined ? undefined : this.model.rowOrderOf(view);
     // In a view with its own order the shared keys above place the copies by the original in the shared order only.
     const placed = ((): Record<string, string> | undefined => {
@@ -6020,8 +6121,8 @@ export class DatabaseTool implements BlockTool {
     this.inOneStep(() => {
       // The view write goes first: an insert opens a sync window that would read it as an echo.
       if (view !== undefined && placed !== undefined) {
-        this.model.updateView(view.id, { rowOrder: placed });
-        this.block.dispatchChange();
+        this.viewOwner().model.updateView(view.id, { rowOrder: placed });
+        this.viewOwner().block.dispatchChange();
       }
       write();
       const copy = copies.get(rowId);
@@ -6032,7 +6133,7 @@ export class DatabaseTool implements BlockTool {
       }
     });
     created.forEach((copy) => void this.sync.syncCreateRow({ ...copy, properties: adapterRowValues(copy.properties, this.model.getSchema()).properties }));
-    if (view !== undefined && placed !== undefined) void this.sync.syncUpdateView({ viewId: view.id, changes: { rowOrder: structuredClone(placed) } });
+    if (view !== undefined && placed !== undefined) void this.viewOwner().sync.syncUpdateView({ viewId: view.id, changes: { rowOrder: structuredClone(placed) } });
     this.syncRowsFromBlocks();
     this.rerenderView({ keepDrawer: true });
   }
@@ -6652,7 +6753,8 @@ export class DatabaseTool implements BlockTool {
     );
   }
 
-  private updateActiveView(changes: ViewChanges, context?: NativeWidgetContext): void {
+  private updateActiveView(changes: ViewChanges, explicit?: NativeWidgetContext): void {
+    const context = explicit ?? this.binding ?? undefined;
     const owner = context?.owner ?? this;
     const viewId = context?.viewId ?? this.activeViewId;
 
@@ -6666,7 +6768,7 @@ export class DatabaseTool implements BlockTool {
 
   private handleTableRowDrop(result: TableRowDropResult, context?: NativeWidgetContext): void {
     const { rowId, beforeRowId, afterRowId, groupKey, fromGroupKey } = result;
-    const view = context?.view ?? this.model.getView(this.activeViewId);
+    const view = context?.view ?? this.shownView();
     const groupBy = view?.groupBy;
 
     if (this.readOnly || (context !== undefined && !context.writable())) return;
@@ -7013,7 +7115,7 @@ export class DatabaseTool implements BlockTool {
    * A timeline bar has no Comment; its table panel row does (research/22 §11).
    */
   private openCardMenu(anchor: HTMLElement, cardEl: HTMLElement, rowId: string): void {
-    const type = this.model.getView(this.activeViewId)?.type;
+    const type = this.shownView()?.type;
 
     this.openRowMenu(rowId, anchor, cardEl, {
       viewSettings: type === 'board' || type === 'gallery',
@@ -7030,7 +7132,7 @@ export class DatabaseTool implements BlockTool {
     const comment = options.comment === false ? undefined : this.commentLever().comment;
     const writable = (): boolean => !this.readOnly && !this.destroyed;
     const listTargets = (): Array<{ id: string; title: string }> => this.moveTargets();
-    const view = this.model.getView(this.activeViewId);
+    const view = this.shownView();
     const visible = view === undefined ? [] : visibleRowPropertyIds(view, this.model.getSchema());
     const properties = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).filter((p) => p.type !== 'title' && visible.includes(p.id));
     const edits = !writable() ? {} : {
@@ -7094,7 +7196,7 @@ export class DatabaseTool implements BlockTool {
 
   /** Every group of the active board, hidden ones included, in board order. */
   private boardGroups(): Array<{ id: string; label: string; hidden: boolean; color: OptionColor | undefined }> {
-    const view = this.model.getView(this.activeViewId);
+    const view = this.shownView();
 
     if (view?.groupBy === undefined) {
       return [];
@@ -7128,7 +7230,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   private openGroupMenu(anchor: HTMLElement, groupId: string): void {
-    const view = this.model.getView(this.activeViewId);
+    const view = this.shownView();
     const groups = this.boardGroups();
     const group = groups.find((g) => g.id === groupId);
 
@@ -7155,7 +7257,7 @@ export class DatabaseTool implements BlockTool {
 
   /** The count's calculation menu. The pick is the view's, so every column shows it. */
   private openGroupCalculationMenu(anchor: HTMLElement): void {
-    const view = this.model.getView(this.activeViewId);
+    const view = this.shownView();
 
     if (view === undefined) {
       return;
@@ -7195,20 +7297,18 @@ export class DatabaseTool implements BlockTool {
 
   /** Kept on the view without a redraw, so the caret's turn plays out. Read-only keeps it on screen only. */
   private saveGroupCollapse(viewId: string, groupId: string, collapsed: boolean): void {
-    const current = this.model.getView(viewId)?.collapsedGroups ?? [];
+    const current = this.viewOf(viewId)?.collapsedGroups ?? [];
 
     if (this.readOnly || this.destroyed || this.structureLocked() || current.some((group) => group.id === groupId) === collapsed) {
       return;
     }
     const collapsedGroups = collapsed ? [...current, { id: groupId }] : current.filter((group) => group.id !== groupId);
 
-    this.model.updateView(viewId, { collapsedGroups });
-    this.block.dispatchChange();
-    void this.sync.syncUpdateView({ viewId, changes: { collapsedGroups } });
+    this.writeView(viewId, { collapsedGroups });
   }
 
   private toggleGroupHidden(groupId: string): void {
-    const current = this.model.getView(this.activeViewId)?.hiddenGroups ?? [];
+    const current = this.shownView()?.hiddenGroups ?? [];
     const hiddenGroups = current.some((group) => group.id === groupId)
       ? current.filter((group) => group.id !== groupId)
       : [...current, { id: groupId }];
@@ -7217,7 +7317,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   private recolorGroup(optionId: string, color: OptionColor): void {
-    const groupBy = this.model.getView(this.activeViewId)?.groupBy;
+    const groupBy = this.shownView()?.groupBy;
     const options = groupBy === undefined ? undefined : this.model.getProperty(groupBy)?.config?.options;
 
     if (this.readOnly || groupBy === undefined || options === undefined) {
@@ -7267,7 +7367,7 @@ export class DatabaseTool implements BlockTool {
     if (context !== undefined && !context.writable()) return;
     const titleProp = this.model.getSchema().find((p) => p.type === 'title');
     const titlePropId = titleProp?.id ?? '';
-    const viewConfig = context?.view ?? this.model.getView(this.activeViewId);
+    const viewConfig = context?.view ?? this.shownView();
     const groupByPropId = viewConfig?.groupBy;
 
     const groupProp = optionId === null ? undefined : groupByPropId;
@@ -7293,7 +7393,7 @@ export class DatabaseTool implements BlockTool {
 
   /** The clicked group's value wins over a filter on the same property. */
   private newRowProperties(titlePropId: string, groupByPropId: string | undefined, optionId: string, subGroupBy?: string, selected?: DatabaseViewConfig): Record<string, PropertyValue> {
-    const saved = this.model.getView(this.activeViewId);
+    const saved = this.shownView();
     const effective = selected ?? (saved === undefined ? undefined : this.controls.effective(saved));
     // An AND tree's top-level rules must all hold, so they prefill like simple filters.
     const treeRules = effective?.filterTree?.conjunction === 'and'
@@ -7311,7 +7411,7 @@ export class DatabaseTool implements BlockTool {
   /** The value a row takes in a group, or `undefined` when the group is a bucket (a date range, a number range). */
   private groupValueFor(groupByPropId: string, optionId: string, selected?: DatabaseViewConfig): PropertyValue | undefined {
     const property = this.model.getProperty(groupByPropId);
-    const view = selected ?? this.model.getView(this.activeViewId);
+    const view = selected ?? this.shownView();
 
     if (property?.type === 'status' && view?.groupByStatus === 'group') {
       return this.model.statusValueForGroup(groupByPropId, optionId, undefined) ?? undefined;
@@ -7322,7 +7422,7 @@ export class DatabaseTool implements BlockTool {
 
   /** `subKey` is the lane clicked in, on a sub-grouped board. */
   private handleAddRow(optionId: string, boardEl: HTMLDivElement, subKey?: string): void {
-    const viewConfig = this.model.getView(this.activeViewId);
+    const viewConfig = this.shownView();
     const groupByPropId = viewConfig?.groupBy;
 
     if (groupByPropId === undefined) {
@@ -7374,7 +7474,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   private handleAddColumn(boardEl: HTMLDivElement): void {
-    const viewConfig = this.model.getView(this.activeViewId);
+    const viewConfig = this.shownView();
     const groupByPropId = viewConfig?.groupBy;
 
     if (groupByPropId === undefined || this.structureLocked()) {
@@ -7696,7 +7796,7 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
-    const savedView = this.model.getView(this.activeViewId);
+    const savedView = this.shownView();
     const viewConfig = savedView === undefined ? undefined : this.controls.effective(savedView);
     const isList = viewConfig?.type === 'list';
     // Table, gallery, calendar, timeline, chart and feed own their gestures. Unknown types render as a board.
@@ -7745,7 +7845,7 @@ export class DatabaseTool implements BlockTool {
         },
         onRenameCommit: (optionId, label) => {
           // Debounced backend persist
-          const viewConfig = this.model.getView(this.activeViewId);
+          const viewConfig = this.shownView();
           const groupByPropId = viewConfig?.groupBy;
           if (groupByPropId === undefined) return;
           const prop = this.model.getProperty(groupByPropId);
@@ -7840,13 +7940,13 @@ export class DatabaseTool implements BlockTool {
   private handleListRowDrop(result: ListRowDragResult): void {
     const { rowId, beforeRowId, afterRowId } = result;
 
-    if (this.sortsShown(this.model.getView(this.activeViewId)).length > 0) {
+    if (this.sortsShown(this.shownView()).length > 0) {
       this.askToRemoveSorting(rowId, beforeRowId, afterRowId);
 
       return;
     }
 
-    this.placeRow(this.model.getView(this.activeViewId), rowId, afterRowId, beforeRowId);
+    this.placeRow(this.shownView(), rowId, afterRowId, beforeRowId);
     this.rerenderView();
   }
 
@@ -7873,7 +7973,7 @@ export class DatabaseTool implements BlockTool {
    */
   private placeRow(
     view: DatabaseViewConfig | undefined, rowId: string, afterRowId: string | null, beforeRowId: string | null,
-    owner: DatabaseTool = this, also: { write?: () => void; sync?: () => void } = {}
+    owner: DatabaseTool = this.viewOwner(), also: { write?: () => void; sync?: () => void } = {}
   ): void {
     const order = view === undefined ? undefined : owner.model.rowOrderOf(view);
     const keyOf = (id: string | null): string | null => {
@@ -7916,7 +8016,7 @@ export class DatabaseTool implements BlockTool {
 
   private handleRowDrop(result: CardDragResult): void {
     const { rowId, toOptionId, beforeRowId, afterRowId } = result;
-    const viewConfig = this.model.getView(this.activeViewId);
+    const viewConfig = this.shownView();
     const groupByPropId = viewConfig?.groupBy;
 
     if (groupByPropId === undefined) {
@@ -8101,7 +8201,7 @@ export class DatabaseTool implements BlockTool {
 
     if (property === undefined) return current ?? null;
     if (!this.isOptionGroup(propertyId)) {
-      return groupValueForKey(property, toKey, this.model.getView(this.activeViewId)?.subGroupSettings ?? {}) ?? current ?? null;
+      return groupValueForKey(property, toKey, this.shownView()?.subGroupSettings ?? {}) ?? current ?? null;
     }
     if (property.type !== 'multiSelect') {
       return target;
@@ -8118,7 +8218,7 @@ export class DatabaseTool implements BlockTool {
     const property = this.model.getProperty(groupByPropId);
     const type = property?.type;
     const current = this.model.getRow(rowId)?.properties[groupByPropId];
-    const view = selected ?? this.model.getView(this.activeViewId);
+    const view = selected ?? this.shownView();
 
     if (property !== undefined && !this.isOptionGroup(groupByPropId)) {
       // A bucket names no single value: the row keeps the one it has.
@@ -8145,7 +8245,7 @@ export class DatabaseTool implements BlockTool {
 
   private handleGroupDrop(result: GroupDragResult): void {
     const { optionId, beforeOptionId, afterOptionId } = result;
-    const viewConfig = this.model.getView(this.activeViewId);
+    const viewConfig = this.shownView();
     const groupByPropId = viewConfig?.groupBy;
 
     if (groupByPropId === undefined) {
@@ -8232,7 +8332,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   private handleOptionRename(optionId: string, label: string): void {
-    const viewConfig = this.model.getView(this.activeViewId);
+    const viewConfig = this.shownView();
     const groupByPropId = viewConfig?.groupBy;
 
     if (groupByPropId === undefined || this.structureLocked()) {
@@ -8251,7 +8351,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   private handleOptionDelete(optionId: string): void {
-    const viewConfig = this.model.getView(this.activeViewId);
+    const viewConfig = this.shownView();
     const groupByPropId = viewConfig?.groupBy;
 
     if (groupByPropId === undefined || this.structureLocked()) {
@@ -8311,7 +8411,7 @@ export class DatabaseTool implements BlockTool {
    */
   private handleRowClick(rowId: string, explicit?: OpenPagesIn, openIn?: OpenPagesIn, origin?: DrawerAuthority): void {
     if (this.source !== undefined) {
-      const linkedView = this.model.getView(this.activeViewId);
+      const linkedView = this.shownView();
       const viewMode = linkedView === undefined ? {} : { mode: resolveOpenPagesIn(linkedView) };
 
       if (origin !== undefined) {
@@ -8357,7 +8457,7 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
-    const view = this.model.getView(this.activeViewId);
+    const view = this.shownView();
     const viewMode = openIn ?? (view === undefined ? 'side' : resolveOpenPagesIn(view));
     const mode = explicit ?? (this.cardDrawer?.isOpen === true ? this.cardDrawer.openMode : viewMode);
 
@@ -8461,7 +8561,7 @@ export class DatabaseTool implements BlockTool {
       return;
     }
     document.addEventListener('keydown', this.handleSelectionKeys, true);
-    const view = this.model.getView(this.activeViewId);
+    const view = this.shownView();
 
     // research/22 §1: Notion shows no bulk bar for picked calendar events.
     if (view?.type === 'calendar') {
@@ -8557,7 +8657,7 @@ export class DatabaseTool implements BlockTool {
    * undoes the delete (research/22 §2, research/23 §2b for several cards).
    */
   private trashSelectionFromKeys(): void {
-    const toast = this.model.getView(this.activeViewId)?.type === 'gallery';
+    const toast = this.shownView()?.type === 'gallery';
     const before = this.api.history.latestStep();
     const count = this.rowSelection.size;
 
@@ -8620,7 +8720,7 @@ export class DatabaseTool implements BlockTool {
         return;
       }
       act(() => {
-        const view = this.model.getView(this.activeViewId);
+        const view = this.shownView();
         const visible = view === undefined ? [] : visibleRowPropertyIds(view, this.model.getSchema());
         const properties = bulkEditableProperties(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).filter((p) => visible.includes(p.id)));
 
@@ -8640,7 +8740,7 @@ export class DatabaseTool implements BlockTool {
 
   /** The active view's rows in the order it shows them, groups in board order. */
   private viewRowOrder(): DatabaseRow[] {
-    const view = this.model.getView(this.activeViewId);
+    const view = this.shownView();
 
     if (view === undefined) {
       return [];
@@ -9969,6 +10069,11 @@ export class DatabaseTool implements BlockTool {
 
 
   private rerenderView(options: { keepDrawer?: boolean } = {}): void {
+    if (this.binding !== null) {
+      this.binding.redraw();
+
+      return;
+    }
     if (this.boardContainer === null) {
       return;
     }

@@ -23,7 +23,7 @@ Input: research/26 §6 (UNMEASURED) and the task list for this round.
 | after Projects was used | **Skills, Document Hub, Brainstorm Session** |
 | after Skills was used | **Document Hub, Brainstorm Session, Meeting Notes** |
 
-So the panel always shows three templates the user has not used yet, taken in order from the gallery list (§1e). No row showed a badge, lock or tooltip (`guard.sh`, hover).
+The sequence (Tasks Tracker, Projects, Skills, Document Hub, Brainstorm Session, Meeting Notes) is research/26's gallery order. Inference, not verified: the panel shows the first three templates not used yet. No row showed a badge, lock or tooltip (`guard.sh`, hover).
 
 ### 1b. Tasks Tracker: a two-step "Customize" modal, then the database
 
@@ -59,7 +59,7 @@ The three "off" features (Updated at, Past due, Attach file) were not created.
 | View | Layout | Shown properties | Filter / Sort / Group | Layout switches |
 |---|---|---|---|---|
 | **All Tasks** | Table | all 8 | none / none / none | Show page icon **off**, Wrap all content off, vertical lines on; Load limit 50; Side peek |
-| **By Status** | Board | Task name, Assignee, Priority, Task type (Description, Due date, Effort level, Status hidden) | Group by **Status**, Sub-group none | Show page icon on, Wrap all content on, Color columns on; Load limit 25; Card preview None, Card size Medium, Card layout Compact |
+| **By Status** | Board | Task name, Assignee, Priority, Task type (Description, Due date, Effort level, Status hidden) | Group by **Status**, Sub-group none | Show page icon on, Wrap all content on, Color columns on; Load limit 25; Card preview None, Card size Medium; Card layout row read "Compact | List" (which one is selected: not read) |
 | **My Tasks** | Table | Task name, Assignee, Due date, Status | **Filter "Assignee: Contains Me"** | Show page icon on, Wrap all content off; Load limit 50 |
 
 Sample rows (3):
@@ -121,10 +121,10 @@ Clicking **Skills** created the database at once (no Customize modal):
 
 The modal (research/26 §2) lists "Empty database", then "Existing data sources" (4 cards + "Show more"; this time the three new databases came first, newest first), then "Templates":
 
-- First view (6): **Document Hub** "Collaborate on docs in one hub.", **Brainstorm Session** "Spark new ideas together.", **Meeting Notes** "Turn meetings into action.", **Goals Tracker** "Set team goals, achieve together.", **Tasks Tracker** "Stay organized with tasks, your way.", **Projects** "Manage projects start to finish." Research/26 saw Skills in this set; after Skills was used it dropped down the list.
+- First view (6): **Document Hub** "Collaborate on docs in one hub.", **Brainstorm Session** "Spark new ideas together.", **Meeting Notes** "Turn meetings into action.", **Goals Tracker** "Set team goals, achieve together.", **Tasks Tracker** "Stay organized with tasks, your way.", **Projects** "Manage projects start to finish." Research/26's first six were Tasks Tracker, Projects, Skills, Document Hub, Brainstorm Session, Meeting Notes. Now Tasks Tracker and Projects sit 5th and 6th, and Skills is 7th (below). Inference, not verified: templates already used move behind unused ones.
 - The **"More templates"** button (a `div role=button`, no `href`; `window.open` was patched and stayed unused) **expands the list in place**. Full list after it, in order: Document Hub, Brainstorm Session, Meeting Notes, Goals Tracker, Tasks Tracker, Projects, **Skills** "Save reusable instructions for agents.", **Campaign Management** "Plan and deliver winning campaigns.", **Content Calendar** "Streamline content creation.", **Event Management** "Plan and manage your events.", **Social Media Planner** "Organize and schedule social posts.", **Issue Tracking** "Resolve issues and feedback fast.", **Feature Requests** "Manage feature requests end-to-end.", **Engineering Docs** "Organize knowledge with your team.", **Fundraising Tracker** "Track investor deals and progress.", **Pipeline Tracking** "Track your sales pipeline.", **Account Management** "One hub to manage clients.", **Creative Projects** "Keep creative projects on track.", **Inventory Management** "Manage inventory efficiently.", **Product Roadmap** "Take products from idea to launch.", **Asset Library** "Create shared design assets." (21 templates).
 - Then a **"More in Marketplace"** button (`notionTemplate` icon + right arrow). **Not clicked** (it leads to the template marketplace).
-- Escape inside the modal did not close it (focus was in its Search field). The × at the top left did.
+- Escape inside the modal did not close it (the focused element was not read). The × at the top left did.
 
 **Blok should:** if it offers starter templates, treat each as a full schema + views + sample rows + a row-page body, and keep the Suggested list to unused ones. A "Customize" step with feature chips and view cards is Notion's pattern for the bigger ones; a small one (Skills) is created directly and empty.
 
@@ -250,11 +250,24 @@ View settings › Source › S2 (the "Suggested" row):
 | Sort row | "3" | **"Name"**; Sort page: **Name, Sort A → Z** only | **"Name"** (Name A → Z only); rows Alpha, Bravo, Charlie |
 | Property visibility | 7 | 2 (Name, Stage) | 7 |
 
-- **Every filter is dropped on a source switch, even the one on the title (Name), which both sources have.** Filters do not come back when the view returns to S1.
-- **Sorts: only the sort on the title survives.** A sort on a property that only S1 has (Amount) is dropped, and so is a sort on a property that has the same name and type in S2 (Stage). Matching is by property id, not by name; the title is the one shared property. Dropped sorts do not come back.
+- All three filters were dropped, and they did not come back when the view returned to S1. This run cannot tell "every filter is dropped" from "the set is dropped because one filter (Amount) points at a missing property", so it was re-run (§5b).
+- **Sorts: only the sort on the title survives.** A sort on a property that only S1 has (Amount) is dropped, and so is a sort on a property that has the same name and type in S2 (Stage). Dropped sorts do not come back. Hypothesis (not measured): sorts match by property id, and the title is the one property both sources share by id.
 - This extends research/26 §5b (a sort on a missing property is dropped for good).
 
-**Blok should:** on a source switch, keep a sort on the title, drop sorts on other properties, and drop all filters. Blok today keeps them and lets unknown ids match nothing (34f20350). Notion's filter behaviour is stricter than "drop what's missing". Copy it or not: product call.
+### 5b. Re-run: one filter at a time
+
+Fresh scratch page (same name), a new database with two empty-titled sources **S1** and **S2**, each with Name + a "Stage" property. After the first switch, a row "Marker" was added in the switched view; it also showed in S2's own view, which confirms that view now pointed at S2. After the second switch, "Marker" showing again confirms the switch to S2.
+
+| View on S1 had | Switched to S2 | Result |
+|---|---|---|
+| **only** filter `Name contains a` (the title) | View settings › Source › the Suggested row | **Filter row blank: the title filter was dropped.** |
+| **only** filter `Stage contains x` + **only** sort `Stage`, with Stage = **Text in both sources** (S1's Stage was changed from Select to Text first) | same | **Filter row blank and Sort row blank: both dropped.** "Marker" showed. |
+
+- So **a filter is dropped on a switch even when it names the title**, which every source has. One sample.
+- A filter and a sort on a property with the **same name and same type** in both sources are dropped too. One sample.
+- With §5's run: the **title sort is the only rule seen to survive** a switch (one sample).
+
+**Blok should:** on a source switch, keep a sort on the title, drop sorts on other properties, and drop all filters. Blok today keeps them and lets unknown ids match nothing (34f20350). Copy it or not: product call.
 
 ## 6. Dark leftovers and the "Now" button
 
@@ -264,6 +277,8 @@ Theme set Settings › Preferences › Theme from "Use system setting" to **Dark
 |---|---|---|
 | View settings root row, hover | ≈ rgba(33, 27, 23, 0.051) (research/26) | **rgba(255, 255, 255, 0.055)** (`color(srgb 1 1 1 / 0.0549)`) |
 | View settings root row, **active** (mouse held down, `:active` true) | not read | **rgba(255, 255, 255, 0.11)** (`color(srgb 1 1 1 / 0.1098)`) |
+| View settings **× close**, hover | rgba(42, 28, 0, 0.106) (`color(srgb 0.165 0.110 0 / 0.106)`), as research/26 | rgba(255, 255, 235, 0.153), as research/26 |
+| View settings **× close, pressed** (`:active` true, pointer moved off before release so the panel stayed open) | **rgba(33, 27, 23, 0.102)** (`color(srgb 0.129 0.106 0.090 / 0.102)`) | **rgba(255, 255, 255, 0.11)** (`color(srgb 1 1 1 / 0.1098)`); no box-shadow in either |
 | View settings root row ink | rgb(44, 44, 43) | rgb(240, 239, 237); rows 274x28, radius 6px |
 | View settings panel | white | rgb(37, 37, 37) |
 | Date picker **"Today"** box | 51x20, radius 3px, padding 0 8px, 12px/14.4px/500, ink rgb(142, 139, 134) | **same box and same ink rgb(142, 139, 134)** |
@@ -271,15 +286,16 @@ Theme set Settings › Preferences › Theme from "Use system setting" to **Dark
 | **"Now"** box | 43x20, same as Today | 43x20, ink rgb(142, 139, 134) |
 | **"Now" hover** | **rgba(33, 27, 23, 0.051)** (`color(srgb 0.129 0.106 0.090 / 0.051)`) | **rgba(255, 255, 255, 0.055)** |
 
-- Neither Today nor Now has a tooltip (dark, hover 1.5s).
-- Releasing the mouse off the row did not open the Filter page (the panel stayed on its root).
+- "Today": no tooltip after a 1.5s hover (dark, read from the DOM). "Now": none in a screenshot taken about 1s into the hover (`24-now-hover-dark.png`); not read from the DOM.
+- That screenshot also shows, with Include time on, a **Timezone** row ("GMT+2") below Time format, and the Tasks Tracker row "Improve website copy" (02/03/2025, another day) given **9:00 AM** at about 19:10: one more sample for §4b.
+- Releasing the mouse off the row did not open the Filter page (the panel stayed on its root). Same for the ×: released off it, the panel stayed open.
 
 ## 7. Property header menu: the "Edit property" submenu does not open by itself
 
 On a Number property ("Amount"), clicked the header; the pointer stayed on the header (above the menu, `elementsFromPoint` = the header cell).
 
 - After the click, and 1.4s later: **only the 220x498 menu is open; no submenu.** Research/26's open submenu came from the pointer resting on the row (hover).
-- Keyboard: ArrowDown/ArrowUp move the highlight (bg ≈ rgba(33, 27, 23, 0.051)) through the items and wrap at the ends. **Highlighting "Edit property" with the keys does not open the submenu.**
+- Keyboard: ArrowDown/ArrowUp move the highlight (bg ≈ rgba(33, 27, 23, 0.051)) through the items. The trace suggests the name input at the top is part of the cycle (one ArrowDown from the input reached nothing visible, the next reached Edit property); wrapping was not checked cleanly. **Highlighting "Edit property" with the keys does not open the submenu.**
 - **ArrowRight** on "Edit property" opens the 300-wide submenu (Number format / Decimal places / Show as …) and moves focus into it. **ArrowLeft** closes it and returns to "Edit property". **Enter** opens it too. **Escape** closes the submenu only; a second Escape closes the menu.
 
 **Blok should:** open the Edit property submenu on hover, ArrowRight or Enter, never on keyboard highlight alone; ArrowLeft / Escape close one level.
@@ -292,13 +308,15 @@ On a Number property ("Amount"), clicked the header; the pointer stayed on the h
 - Templates used: Tasks Tracker, Projects, Skills (Notion's own). Import CSV: one file, one import.
 - Page-side patches (CSV file hook; `window.open` stub and anchor-click blocker) were removed by reloading the page after each.
 - Two CSV attempts were lost (an Escape, then a click on the panel's "Import CSV" row behind the modal). The third went through. This left an extra empty inline database on the scratch page, which was trashed with it.
-- The scratch page "Blok measure scratch 15 2026-10-20" was moved to Trash (page Actions › Move to Trash; toast "Moved to Trash"). Its five inline databases (Tasks Tracker, Projects, Skills, one empty, one imported with two sources) went with it. Right after Tasks Tracker was created, a leaf with the text "My Tasks" was found in the sidebar (DOM text only, not looked at). After the reload the sidebar had a different layout and no leaf matching Task/Project/Skill except Recents entries for the scratch page's own databases. Whether the template added a sidebar entry is unverified. Trashing navigated the tab to another recent page; nothing was clicked there.
+- Re-run for §5b / §6: a second private page with the same name, made and trashed the same way (one database, two sources, one row). Theme again "Use system setting" → Dark → back to "Use system setting" (read back; body rgb(255, 255, 255)).
+- The first scratch page "Blok measure scratch 15 2026-10-20" was moved to Trash (page Actions › Move to Trash; toast "Moved to Trash"). Its five inline databases (Tasks Tracker, Projects, Skills, one empty, one imported with two sources) went with it. Right after Tasks Tracker was created, a leaf with the text "My Tasks" was found in the sidebar (DOM text only, not looked at). After the reload the sidebar had a different layout and no leaf matching Task/Project/Skill except Recents entries for the scratch page's own databases. Whether the template added a sidebar entry is unverified. Trashing navigated the tab to another recent page; nothing was clicked there.
 - After the first reload, Notion showed a different sidebar layout ("Search or ask", Home, Library, Recents). This is Notion's UI, not a setting changed here.
 - `.playwright-cli/` auto-snapshots were deleted. Lines naming one of the user's pages were removed from `more-templates*.txt`. The session `notion-measure15` was closed; no other session was touched.
 
 ## 9. UNMEASURED (this round)
 
 - CSV: the Date type's date-format submenu in the Map step (hover/click on its `›` did nothing); what "Use first row as headers" off does; Phone / Person / Status detection; merging a CSV into an existing database.
+- Which Board "Card layout" option the templates select (Compact or List).
 - Colour names of the CSV-created Select options (matched by pill colour only); the Status "Not started" colour (no colour row was checked in its menu).
 - Default time at exactly hh:00 and during 23:xx.
 - Customize modal: what turning a feature chip on/off or a view card on/off changes (defaults kept).

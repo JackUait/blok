@@ -195,6 +195,38 @@ test.describe('database view settings', () => {
     expect((await savedView(page)).hiddenGroups).toEqual([{ id: 'o-build' }]);
   });
 
+  // research/22 §7, Notion shots 37/38: the Range fields live on the "Number by" page.
+  test('sets a number Range on the Number by page, not the Group page', async ({ page }) => {
+    await mount(page, blocks({ groupBy: 'p-amount' }));
+    await byTestId(page, 'database-toolbar-settings').click();
+    await byTestId(page, 'database-settings-group').click();
+    await byTestId(page, 'database-group-number-by').click();
+    await byTestId(page, 'database-group-number-by-range').click();
+
+    const panel = byTestId(page, 'database-view-settings');
+
+    await expect(panel.locator('[data-blok-database-panel-header]')).toHaveText('Number by');
+    await expect(byTestId(page, 'database-group-number-by-range')).toHaveAttribute('aria-checked', 'true');
+    await expect(byTestId(page, 'database-group-rangeStart')).toHaveValue('0');
+    await expect(byTestId(page, 'database-group-rangeEnd')).toHaveValue('1000');
+
+    const size = byTestId(page, 'database-group-rangeSize');
+
+    await size.fill('');
+    await size.pressSequentially('50');
+
+    await expect(size).toHaveValue('50');
+    await expect(byTestId(page, 'database-group-range-example')).toHaveText('0 to 50, 50 to 100, ...');
+    await expect.poll(async () => (await savedView(page)).groupSettings).toMatchObject({ numberBy: 'range', rangeSize: 50 });
+
+    await byTestId(page, 'database-panel-back').click();
+
+    await expect(panel.locator('[data-blok-database-panel-header]')).toHaveText('Group');
+    await expect(byTestId(page, 'database-group-number-by')).toContainText('Range');
+    await expect(byTestId(page, 'database-group-rangeStart')).toHaveCount(0);
+    await expect(byTestId(page, 'database-group-range-example')).toHaveCount(0);
+  });
+
   test('colors rows that match a rule', async ({ page }) => {
     await mount(page, blocks());
     await byTestId(page, 'database-toolbar-settings').click();

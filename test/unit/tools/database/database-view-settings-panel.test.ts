@@ -529,6 +529,59 @@ describe('view settings panel', () => {
     expect([value('database-group-rangeStart'), value('database-group-rangeEnd'), value('database-group-rangeSize')]).toEqual(['0', '1000', '100']);
   });
 
+  // research/22 §7, shots 37/38: the Range fields live on the "Number by" sub-page, not the Group page.
+  it('keeps the Range fields off the Group page and shows them on the Number by page', () => {
+    const h = harness({ groupBy: 'num', groupSettings: { numberBy: 'range' } });
+    const title = (): string | null | undefined => document.querySelector('[data-blok-database-panel-header] span')?.textContent;
+    const checked = (id: string): string | null | undefined => document.querySelector(`[data-blok-testid="${id}"]`)?.getAttribute('aria-checked');
+
+    h.open('group');
+
+    expect(exists('database-group-rangeStart')).toBe(false);
+    expect(exists('database-group-range-example')).toBe(false);
+    expect(document.querySelector('[data-blok-testid="database-group-number-by"] [data-blok-database-panel-value]')?.textContent)
+      .toBe('tools.database.groupNumberRange');
+
+    click('database-group-number-by');
+
+    expect(title()).toBe('tools.database.groupNumberBy');
+    expect(checked('database-group-number-by-range')).toBe('true');
+    expect(checked('database-group-number-by-unique')).toBe('false');
+    expect(exists('database-group-rangeStart')).toBe(true);
+    expect(exists('database-group-rangeEnd')).toBe(true);
+    expect(exists('database-group-rangeSize')).toBe(true);
+    expect(exists('database-group-range-example')).toBe(true);
+
+    click('database-group-number-by-unique');
+
+    expect(h.state.view.groupSettings?.numberBy).toBe('unique');
+    expect(title()).toBe('tools.database.groupNumberBy');
+    expect(checked('database-group-number-by-unique')).toBe('true');
+    expect(exists('database-group-rangeStart')).toBe(false);
+
+    click('database-group-number-by-range');
+
+    expect(exists('database-group-rangeStart')).toBe(true);
+
+    click('database-panel-back');
+
+    expect(exists('database-group-rangeStart')).toBe(false);
+    expect(document.activeElement?.getAttribute('data-blok-testid')).toBe('database-group-number-by');
+  });
+
+  it('puts the sub-group Range fields on its own Number by page', () => {
+    const h = harness({ type: 'board', groupBy: 'stage', subGroupBy: 'num' });
+
+    h.open('root');
+    click('database-settings-subgroup');
+    click('database-group-number-by');
+    click('database-group-number-by-range');
+
+    expect(h.state.view.subGroupSettings?.numberBy).toBe('range');
+    expect(h.state.view.groupSettings?.numberBy).toBeUndefined();
+    expect(exists('database-group-rangeSize')).toBe(true);
+  });
+
   // research/22 §7: "Group range" [0] – [1000], "Group every" [100], then "0 to 100, 100 to 200, ...".
   it('labels the number range like Notion, with a helper line built from the values', () => {
     const h = harness({ groupBy: 'num', groupSettings: { numberBy: 'range' } });
@@ -541,6 +594,7 @@ describe('view settings panel', () => {
       },
     };
     h.open('group');
+    click('database-group-number-by');
 
     const helper = (): string | null | undefined => document.querySelector('[data-blok-testid="database-group-range-example"]')?.textContent;
 

@@ -1592,7 +1592,7 @@ export class ViewSettingsPages {
             }),
           }));
         }
-        rows.push(...this.groupTypeRows(panel, property, settings(), setSettings, disabled));
+        rows.push(...this.groupTypeRows(panel, property, settings, setSettings, disabled));
         const sortChoices = groupSortChoices(property.type);
 
         if (sortChoices.length > 0) {
@@ -1680,13 +1680,95 @@ export class ViewSettingsPages {
     };
   }
 
+  /**
+   * research/22 §7, shots 37/38: "Number by" opens its own page, and the Range
+   * fields sit there, never on the Group page. Notion's Range page shows no
+   * Unique/Range rows; how it switches back is unmeasured, so Blok keeps them.
+   */
+  private numberByRow(
+    panel: DatabasePanel,
+    settings: () => GroupSettings,
+    set: (patch: Partial<GroupSettings>) => void,
+    disabled: boolean
+  ): HTMLElement {
+    const choices = [['unique', 'groupNumberUnique'], ['range', 'groupNumberRange']] as const;
+    const numberBy = (): 'unique' | 'range' => settings().numberBy ?? 'unique';
+
+    return panelRow({
+      label: this.t('groupNumberBy'),
+      testId: 'database-group-number-by',
+      value: this.t(numberBy() === 'range' ? 'groupNumberRange' : 'groupNumberUnique'),
+      opensPage: true,
+      disabled,
+      onClick: () => panel.push({
+        title: this.t('groupNumberBy'),
+        returnFocus: 'database-group-number-by',
+        build: (inner) => {
+          const rows: HTMLElement[] = choices.map(([value, key]) => panelRow({
+            label: this.t(key),
+            testId: `database-group-number-by-${value}`,
+            checked: numberBy() === value,
+            disabled,
+            onClick: () => {
+              set({ numberBy: value });
+              inner.refresh();
+            },
+          }));
+
+          if (numberBy() === 'range') rows.push(...this.rangeFields(settings(), set));
+
+          return rows;
+        },
+      }),
+    });
+  }
+
+  private rangeFields(settings: GroupSettings, set: (patch: Partial<GroupSettings>) => void): HTMLElement[] {
+    const defaults = { rangeStart: DEFAULT_RANGE.start, rangeEnd: DEFAULT_RANGE.end, rangeSize: DEFAULT_RANGE.size };
+    const current = { ...settings };
+    // rangeOf, as the group keys and names use, so the line matches the real groups.
+    const example = (): string => {
+      const { start, size } = rangeOf(current);
+
+      return this.t('groupRangeExample', { start, middle: start + size, end: start + 2 * size });
+    };
+    const note = panelText(example());
+
+    note.setAttribute('data-blok-testid', 'database-group-range-example');
+
+    const numberInput = (field: 'rangeStart' | 'rangeEnd' | 'rangeSize', labelKey: string): HTMLElement => panelInput({
+      value: String(typeof settings[field] === 'number' ? settings[field] : defaults[field]),
+      placeholder: this.t(labelKey),
+      label: this.t(labelKey),
+      testId: `database-group-${field}`,
+      onInput: (text) => {
+        const n = Number(text);
+
+        if (text.trim() === '' || !Number.isFinite(n)) return;
+        current[field] = n;
+        note.textContent = example();
+        set({ [field]: n });
+      },
+    });
+    const pair = document.createElement('div');
+    const dash = document.createElement('span');
+
+    pair.setAttribute('data-blok-database-range-pair', '');
+    dash.setAttribute('aria-hidden', 'true');
+    dash.textContent = '–';
+    pair.append(numberInput('rangeStart', 'groupRangeStart'), dash, numberInput('rangeEnd', 'groupRangeEnd'));
+
+    return [panelLabel(this.t('groupRange')), pair, panelLabel(this.t('groupRangeEvery')), numberInput('rangeSize', 'groupRangeEvery'), note];
+  }
+
   private groupTypeRows(
     panel: DatabasePanel,
     property: PropertyDefinition,
-    settings: GroupSettings,
+    liveSettings: () => GroupSettings,
     set: (patch: Partial<GroupSettings>) => void,
     disabled: boolean
   ): HTMLElement[] {
+    const settings = liveSettings();
     const choice = <K extends keyof GroupSettings>(
       testId: string,
       labelKey: string,
@@ -1725,49 +1807,8 @@ export class ViewSettingsPages {
           ], 'relative'),
           choice('database-group-week-start', 'groupWeekStart', 'weekStart', [[0, 'groupWeekSunday'], [1, 'groupWeekMonday']], 0),
         ];
-      case 'number': {
-        const rows = [choice('database-group-number-by', 'groupNumberBy', 'numberBy', [['unique', 'groupNumberUnique'], ['range', 'groupNumberRange']], 'unique')];
-
-        if (settings.numberBy === 'range') {
-          const defaults = { rangeStart: DEFAULT_RANGE.start, rangeEnd: DEFAULT_RANGE.end, rangeSize: DEFAULT_RANGE.size };
-          const current = { ...settings };
-          // rangeOf, as the group keys and names use, so the line matches the real groups.
-          const example = (): string => {
-            const { start, size } = rangeOf(current);
-
-            return this.t('groupRangeExample', { start, middle: start + size, end: start + 2 * size });
-          };
-          const note = panelText(example());
-
-          note.setAttribute('data-blok-testid', 'database-group-range-example');
-
-          const numberInput = (field: 'rangeStart' | 'rangeEnd' | 'rangeSize', labelKey: string): HTMLElement => panelInput({
-            value: String(typeof settings[field] === 'number' ? settings[field] : defaults[field]),
-            placeholder: this.t(labelKey),
-            label: this.t(labelKey),
-            testId: `database-group-${field}`,
-            onInput: (text) => {
-              const n = Number(text);
-
-              if (text.trim() === '' || !Number.isFinite(n)) return;
-              current[field] = n;
-              note.textContent = example();
-              set({ [field]: n });
-            },
-          });
-          const pair = document.createElement('div');
-          const dash = document.createElement('span');
-
-          pair.setAttribute('data-blok-database-range-pair', '');
-          dash.setAttribute('aria-hidden', 'true');
-          dash.textContent = '–';
-          pair.append(numberInput('rangeStart', 'groupRangeStart'), dash, numberInput('rangeEnd', 'groupRangeEnd'));
-
-          rows.push(panelLabel(this.t('groupRange')), pair, panelLabel(this.t('groupRangeEvery')), numberInput('rangeSize', 'groupRangeEvery'), note);
-        }
-
-        return rows;
-      }
+      case 'number':
+        return [this.numberByRow(panel, liveSettings, set, disabled)];
       case 'title':
       case 'text':
       case 'url':

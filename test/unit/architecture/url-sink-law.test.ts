@@ -93,6 +93,8 @@ const EXEMPT_SINKS: Record<string, string> = {
     'anchor href, but the markdown-link composer returns early on hasUnsafeScheme(url)',
   'components/utils/resolve-link-attributes.ts » resolved.href':
     'host-supplied transformHref result applied to an already-gated anchor href (config is trusted, not stored data)',
+  'tools/database/database-help-link.ts » href':
+    'helpLink assigns the result of safeHref(url) and returns null first when safeHref refuses the scheme',
   'components/modules/pageReferences.ts » href':
     'PageReferences.href() passes the host URL through safeHref() and returns null for unsafe schemes before paint assigns this anchor href',
 };

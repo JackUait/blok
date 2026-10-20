@@ -301,25 +301,29 @@ export interface CsvImport {
 
 const position = (index: number): string => `a${String(index).padStart(4, '0')}`;
 
+/**
+ * Repeated headers become "Tag", "Tag 1", "Tag 2", as Notion's import does
+ * (research/21 §4). Merge numbers them the same way, so a file merges back
+ * into the database it made.
+ */
+const numberedHeaders = (headers: string[]): string[] =>
+  headers.reduce<string[]>((names, header) => [...names, freePropertyName(names, header)], []);
+
 /** A new database from a CSV: the first row names the columns, the first column is the title. */
 export const buildCsvImport = (table: string[][], options: CsvImportOptions): CsvImport => {
   const [header = [], ...body] = table;
   const width = Math.max(header.length, ...body.map((row) => row.length), 1);
-  const names: string[] = [];
-  const schema: PropertyDefinition[] = Array.from({ length: width }, (_, column) => {
+  const names = numberedHeaders(Array.from({ length: width }, (_, column) => {
     const typed = (header[column] ?? '').trim();
-    // Repeated headers become "Tag", "Tag 1", "Tag 2", as Notion does (research/21 §4).
-    const name = freePropertyName(names, typed === '' ? `${options.untitled} ${column + 1}` : typed);
 
-    names.push(name);
-
-    return {
-      id: options.newId(),
-      name,
-      type: column === 0 ? 'title' : inferColumnType(body.map((row) => row[column] ?? '')),
-      position: position(column),
-    };
-  });
+    return typed === '' ? `${options.untitled} ${column + 1}` : typed;
+  }));
+  const schema: PropertyDefinition[] = names.map((name, column) => ({
+    id: options.newId(),
+    name,
+    type: column === 0 ? 'title' : inferColumnType(body.map((row) => row[column] ?? '')),
+    position: position(column),
+  }));
   const rows = body.map((row) => Object.fromEntries(schema.map((property, column) =>
     [property.id, parseCell(property, row[column] ?? '') ?? null])));
 
@@ -368,7 +372,7 @@ export const planCsvMerge = (
 ): CsvMergePlan => {
   const [header = [], ...body] = table;
   const shown = (property: PropertyDefinition): PropertyDefinition | undefined => options.localized?.find((p) => p.id === property.id);
-  const columns = header.map((name) => schema.find((property) => property.name === name || shown(property)?.name === name));
+  const columns = numberedHeaders(header).map((name) => schema.find((property) => property.name === name || shown(property)?.name === name));
   const newOptions: CsvMergePlan['newOptions'] = {};
   const knownOption = (property: PropertyDefinition, label: string): SelectOption | undefined => {
     const localizedLabel = (id: string): string | undefined => shown(property)?.config?.options.find((option) => option.id === id)?.label;

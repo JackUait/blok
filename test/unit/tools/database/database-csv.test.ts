@@ -169,6 +169,21 @@ describe('database CSV', () => {
       expect(plan.skippedColumns).toEqual(['points', 'Extra']);
     });
 
+    // Not measured in Notion: repeated headers are numbered as on import, so a file merges into the database it made.
+    it('matches repeated headers to the numbered properties an import makes, keeping every column', () => {
+      const tags: PropertyDefinition[] = [
+        { id: 'p-name', name: 'Name', type: 'title', position: 'a0' },
+        { id: 'p-t', name: 'Tag', type: 'text', position: 'a1' },
+        { id: 'p-t1', name: 'Tag 1', type: 'text', position: 'a2' },
+        { id: 'p-t2', name: 'Tag 2', type: 'text', position: 'a3' },
+      ];
+
+      expect(planCsvMerge([['Name', 'Tag', 'Tag', 'Tag'], ['C', 'c1', 'c2', 'c3']], tags, { newId: () => 'o-new' }).rows)
+        .toEqual([{ 'p-name': 'C', 'p-t': 'c1', 'p-t1': 'c2', 'p-t2': 'c3' }]);
+      expect(planCsvMerge([['Name', 'Tag 1', 'Tag'], ['C', 'x', 'y']], tags, { newId: () => 'o-new' }).rows)
+        .toEqual([{ 'p-name': 'C', 'p-t1': 'x', 'p-t': 'y' }]);
+    });
+
     it('reuses select options by label and adds the missing ones', () => {
       const plan = planCsvMerge([['Name', 'Tag'], ['A', 'Red'], ['B', 'Green'], ['C', 'Green']], schema, { newId: () => 'o-new' });
 

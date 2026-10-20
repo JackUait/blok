@@ -7,7 +7,7 @@ import { createMarker } from '../../../tools/list/dom-builder';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { prefersReducedMotion } from '../../utils/reduced-motion';
 
-import { gapSize, releaseGap, reserveGap } from './gap';
+import { gapSize, holdGapChanges, releaseGap, reserveGap } from './gap';
 import type { GapSide } from './gap';
 
 export interface LivePreviewDeps {
@@ -412,10 +412,31 @@ const markPreviewBox = (box: HTMLElement): void => {
   box.setAttribute('inert', '');
 };
 
+interface Spot { top: number; left: number; width: number }
+
+const placeBox = (box: HTMLElement, spot: Spot): void => {
+  const { style } = box;
+
+  style.setProperty('top', `${spot.top}px`);
+  style.setProperty('left', `${spot.left}px`);
+  style.setProperty('width', `${spot.width}px`);
+};
+
+/** A box's layout, in the four steps one frame runs for every box: sizes, gaps, positions, styles. */
+interface Placed {
+  measure(): void;
+  reserve(key: string): void;
+  locate(layer: DOMRect): void;
+  apply(): void;
+}
+
 /** The items of one call that sit in one gap, drawn in one overlay box. */
-class Group {
+class Group implements Placed {
   public readonly box = document.createElement('div');
   private column: HTMLElement | null = null;
+  private height = 0;
+  private offset = 0;
+  private spot: Spot = { top: 0, left: 0, width: 0 };
 
   constructor(public readonly holder: HTMLElement, public readonly side: GapSide) {
     const computed = getComputedStyle(holder);
@@ -438,22 +459,31 @@ class Group {
     });
   }
 
-  /** Sizes the gap to the box and puts the box in it. */
-  public place(key: string, layer: DOMRect): void {
-    const height = this.box.getBoundingClientRect().height;
-    const offset = reserveGap(this.holder, key, height, this.side);
+  public measure(): void {
+    this.height = this.box.getBoundingClientRect().height;
+  }
+
+  /** Sizes the gap to the box. */
+  public reserve(key: string): void {
+    this.offset = reserveGap(this.holder, key, this.height, this.side);
+  }
+
+  public locate(layer: DOMRect): void {
     const rect = this.holder.getBoundingClientRect();
     // The real column: the alignment rules move it inside a wider holder.
     this.column ??= contentColumn(this.holder);
 
     const column = this.column.getBoundingClientRect();
     const top = this.side === 'end'
-      ? rect.bottom - layer.top + offset
-      : rect.top - layer.top - gapSize(this.holder, 'start') + offset;
+      ? rect.bottom - layer.top + this.offset
+      : rect.top - layer.top - gapSize(this.holder, 'start') + this.offset;
 
-    this.box.style.top = `${top}px`;
-    this.box.style.left = `${column.left - layer.left}px`;
-    this.box.style.width = `${column.width}px`;
+    this.spot = { top, left: column.left - layer.left, width: column.width };
+  }
+
+  /** Puts the box in its gap. */
+  public apply(): void {
+    placeBox(this.box, this.spot);
   }
 
   public remove(key: string): void {
@@ -477,8 +507,10 @@ interface RewriteTarget { id: string; holder: HTMLElement; input: HTMLElement; o
 const rewriting = new WeakSet<HTMLElement>();
 
 /** One rewrite: the holder's content is hidden, and this box draws the new text over its field. */
-class RewriteBox {
+class RewriteBox implements Placed {
   public readonly box = document.createElement('div');
+  private extra = 0;
+  private spot: Spot = { top: 0, left: 0, width: 0 };
 
   constructor(public readonly target: RewriteTarget, root: HTMLElement) {
     const computed = getComputedStyle(target.input);
@@ -492,16 +524,25 @@ class RewriteBox {
     rewriting.add(target.holder);
   }
 
-  /** Puts the box over the field; text longer than the field holds the extra height in the gap. */
-  public place(key: string, layer: DOMRect): void {
-    const field = this.target.input.getBoundingClientRect();
-    const height = this.box.getBoundingClientRect().height;
+  public measure(): void {
+    this.extra = this.box.getBoundingClientRect().height - this.target.input.getBoundingClientRect().height;
+  }
 
+  /** Text longer than the field holds the extra height in the gap. */
+  public reserve(key: string): void {
     // Nearest the holder: the box grows down from the field, so the bar and inserts must sit below it.
-    reserveGap(this.target.holder, key, height - field.height, 'end', true);
-    this.box.style.top = `${field.top - layer.top}px`;
-    this.box.style.left = `${field.left - layer.left}px`;
-    this.box.style.width = `${field.width}px`;
+    reserveGap(this.target.holder, key, this.extra, 'end', true);
+  }
+
+  public locate(layer: DOMRect): void {
+    const field = this.target.input.getBoundingClientRect();
+
+    this.spot = { top: field.top - layer.top, left: field.left - layer.left, width: field.width };
+  }
+
+  /** Puts the box over the field. */
+  public apply(): void {
+    placeBox(this.box, this.spot);
   }
 
   public remove(key: string): void {
@@ -752,13 +793,21 @@ class CallPreview {
     return this.painted === 'yes';
   }
 
+  /** The newest word landed since the last layout: the page may follow it once it is placed. */
+  private word: HTMLElement | null = null;
+
   constructor(
     private readonly id: string,
-    private readonly deps: LivePreviewDeps
+    private readonly deps: LivePreviewDeps,
+    private readonly requestLayout: () => void
   ) {}
 
   private get key(): string {
     return `call:${this.id}`;
+  }
+
+  public get layer(): HTMLElement {
+    return this.deps.layer;
   }
 
   public render(commands: PartialCommand[]): void {
@@ -802,7 +851,7 @@ class CallPreview {
     this.groups.filter((group) => !groups.includes(group)).forEach((group) => group.remove(this.key));
     this.items.forEach((item) => item.keepIn(groups));
     this.groups = groups;
-    this.layout();
+    this.requestLayout();
     this.pump();
   }
 
@@ -842,20 +891,25 @@ class CallPreview {
     }, wait > 0 ? wait : WORD_GAP_MS);
   }
 
-  /** After a word lands: tails, layout, a frame to mark the call shown, then the page may follow it. */
+  /** After a word lands: tails, a layout, a frame to mark the call shown. The page follows the word once it is placed. */
   private landed(line: Line): void {
     this.items.forEach((item) => item.lines.forEach((known) => known.tails()));
-    this.layout();
+    this.word = line.newest ?? this.word;
+    this.requestLayout();
     if (this.painted === 'no') {
       this.painted = 'waiting';
       requestAnimationFrame(() => {
         this.painted = 'yes';
       });
     }
+  }
 
-    const word = line.newest;
+  /** After a layout: the newest word is placed, so the page may follow it. */
+  public followWord(): void {
+    const word = this.word;
 
-    if (word !== undefined) {
+    this.word = null;
+    if (word !== null) {
       this.deps.onWord?.(word);
     }
   }
@@ -863,7 +917,7 @@ class CallPreview {
   public settle(): void {
     this.stop();
     this.items.forEach((item) => item.lines.forEach((line) => line.finish()));
-    this.layout();
+    layoutAll([this]);
     // One frame, so the real blocks have rendered before the overlay goes.
     requestAnimationFrame(() => this.remove());
   }
@@ -948,12 +1002,12 @@ class CallPreview {
     }
   }
 
-  public layout(): void {
-    const layer = this.deps.layer.getBoundingClientRect();
-
-    // Rewrites first: their extra height sits right under their block, above any insert gap.
-    this.items.forEach((item) => item.frame?.place(this.frameKey(item), layer));
-    this.groups.forEach((group) => group.place(this.key, layer));
+  /** Each box with its gap key. Rewrites first: their extra height sits right under their block, above any insert gap. */
+  public placed(): Array<[Placed, string]> {
+    return [
+      ...[...this.items.values()].flatMap((item): Array<[Placed, string]> => (item.frame === null ? [] : [[item.frame, this.frameKey(item)]])),
+      ...this.groups.map((group): [Placed, string] => [group, this.key]),
+    ];
   }
 
   private ordered(): Item[] {
@@ -961,11 +1015,44 @@ class CallPreview {
   }
 }
 
+/**
+ * Lays out every box in four steps, so a frame forces at most two reflows however many boxes there are:
+ * read sizes, write gaps, read positions, write styles. A gap moves the holders below it, so positions wait for all gaps.
+ * Gap listeners (the bar) hear once, at the end.
+ */
+const layoutAll = (calls: CallPreview[]): void => {
+  const boxes = calls.flatMap((call) => call.placed());
+
+  if (boxes.length === 0) {
+    return;
+  }
+  holdGapChanges(() => {
+    boxes.forEach(([box]) => box.measure());
+    boxes.forEach(([box, key]) => box.reserve(key));
+
+    const layer = calls[0].layer.getBoundingClientRect();
+
+    boxes.forEach(([box]) => box.locate(layer));
+    boxes.forEach(([box]) => box.apply());
+  });
+  // Last: following reads the placed word, after the bar has moved too.
+  calls.forEach((call) => call.followWord());
+};
+
 export const createLivePreview = (deps: LivePreviewDeps): LivePreview => {
   const calls = new Map<string, CallPreview>();
   const finished = new Set<string>();
   const framed = new Map<string, string[]>();
   const frame: { id: number | null } = { id: null };
+  const schedule = (): void => {
+    if (frame.id !== null) {
+      return;
+    }
+    frame.id = requestAnimationFrame(() => {
+      frame.id = null;
+      layoutAll([...calls.values()]);
+    });
+  };
   const end = (callId: string): CallPreview | undefined => {
     const call = calls.get(callId);
 
@@ -983,7 +1070,7 @@ export const createLivePreview = (deps: LivePreviewDeps): LivePreview => {
       if (finished.has(callId)) {
         return;
       }
-      const call = calls.get(callId) ?? new CallPreview(callId, deps);
+      const call = calls.get(callId) ?? new CallPreview(callId, deps, schedule);
 
       calls.set(callId, call);
       call.render(readPartialCommands(json));
@@ -1011,13 +1098,7 @@ export const createLivePreview = (deps: LivePreviewDeps): LivePreview => {
     },
 
     relayout() {
-      if (frame.id !== null) {
-        return;
-      }
-      frame.id = requestAnimationFrame(() => {
-        frame.id = null;
-        calls.forEach((call) => call.layout());
-      });
+      schedule();
     },
 
     framed(callId) {

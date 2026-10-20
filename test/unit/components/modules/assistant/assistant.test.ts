@@ -720,6 +720,51 @@ describe('in-editor assistant bar', () => {
       await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
     });
 
+    it('lays out two streaming calls in one frame and re-places the bar once for both gaps', async () => {
+      const live = streaming();
+      const editor = await createEditor(live.model, undefined, THREE_BLOCKS);
+
+      fakeLayout();
+      editor.agent.openAssistant();
+      submit('Write');
+      await waitFor(() => expect(live.started()).toBe(true));
+      live.emit({ type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' });
+      live.emit({ type: 'tool_start', index: 1, id: 'c2', name: 'blok_execute' });
+      await settle(50);
+
+      const frames: FrameRequestCallback[] = [];
+      const barReads = { count: 0 };
+      const measure = vi.mocked(HTMLElement.prototype.getBoundingClientRect).getMockImplementation();
+
+      vi.stubGlobal('requestAnimationFrame', (frame: FrameRequestCallback): number => frames.push(frame));
+      vi.mocked(HTMLElement.prototype.getBoundingClientRect).mockImplementation(function (this: HTMLElement): DOMRect {
+        if (this.getAttribute('data-blok-testid') === 'assistant-bar') {
+          barReads.count += 1;
+        }
+
+        return measure === undefined ? new DOMRect() : measure.call(this);
+      });
+
+      const first = executeCall('c1', [{ name: 'block.insert', args: { type: 'paragraph', position: { after: 'p1' }, data: { text: 'Alpha beta here' } } }]);
+      const second = executeCall('c2', [{ name: 'block.insert', args: { type: 'paragraph', position: { after: 'p2' }, data: { text: 'Gamma delta here' } } }]);
+
+      live.emit({ type: 'tool_input', index: 0, json: first.json.slice(0, first.json.indexOf('beta')) });
+      live.emit({ type: 'tool_input', index: 1, json: second.json.slice(0, second.json.indexOf('delta')) });
+      live.emit({ type: 'tool_input', index: 0, json: first.json.slice(0, first.json.indexOf('here')) });
+
+      // Nothing is laid out, and the bar (under p3) is not re-placed, until the frame.
+      expect(gapped()).toEqual(['p3']);
+      expect(barReads.count).toBe(0);
+
+      frames.splice(0).forEach((frame) => frame(0));
+
+      expect(gapped()).toEqual(['p1', 'p2', 'p3']);
+      expect(barReads.count).toBe(1);
+      vi.unstubAllGlobals();
+      live.finish(answer('Done.'));
+      await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+    });
+
     it('an error result cancels its preview', async () => {
       const live = streaming();
       const editor = await createEditor(live.model);
@@ -1071,7 +1116,8 @@ describe('in-editor assistant bar', () => {
       submit('Write');
       await streamWords(live);
 
-      expect(scrolls.spy).toHaveBeenLastCalledWith({ top: 2024 - window.innerHeight + 16, behavior: 'instant' });
+      // The page follows a word once it is placed, on the next frame.
+      await waitFor(() => expect(scrolls.spy).toHaveBeenLastCalledWith({ top: 2024 - window.innerHeight + 16, behavior: 'instant' }));
     });
 
     it('a user scroll ends following, so later streamed words do not scroll', async () => {

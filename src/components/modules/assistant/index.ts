@@ -733,8 +733,8 @@ export class Assistant extends Module {
     const mutations = new MutationObserver(() => this.scheduleRelayout());
     const redactor = this.Blok.UI.nodes.redactor;
     // Any gap in this editor: one above the anchor moves it too.
-    const gaps = onGapChange((holder) => {
-      if (redactor.contains(holder)) {
+    const gaps = onGapChange((holders) => {
+      if (holders.some((holder) => redactor.contains(holder))) {
         this.placeBar();
       }
     });

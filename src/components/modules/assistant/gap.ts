@@ -28,15 +28,38 @@ const keysOf = (holder: HTMLElement): Record<GapSide, Map<string, number>> => {
 };
 
 /** Shared by every editor on the page; a listener filters by holder. */
-const listeners = new Set<(holder: HTMLElement) => void>();
+const listeners = new Set<(holders: HTMLElement[]) => void>();
 
-/** Calls `listener` after any holder's gap changes size or order. Returns the unsubscribe. */
-export const onGapChange = (listener: (holder: HTMLElement) => void): (() => void) => {
+/** Holders changed inside holdGapChanges, told to listeners once it ends. */
+const held: { depth: number; holders: Set<HTMLElement> } = { depth: 0, holders: new Set() };
+
+/** Calls `listener` after gaps change size or order, with the holders that changed. Returns the unsubscribe. */
+export const onGapChange = (listener: (holders: HTMLElement[]) => void): (() => void) => {
   listeners.add(listener);
 
   return () => {
     listeners.delete(listener);
   };
+};
+
+const notify = (holders: HTMLElement[]): void => {
+  listeners.forEach((listener) => listener(holders));
+};
+
+/** Runs `write`, then tells listeners once: a listener reads layout, and must not do it between writes. */
+export const holdGapChanges = (write: () => void): void => {
+  held.depth += 1;
+  try {
+    write();
+  } finally {
+    held.depth -= 1;
+    if (held.depth === 0 && held.holders.size > 0) {
+      const holders = [...held.holders];
+
+      held.holders.clear();
+      notify(holders);
+    }
+  }
 };
 
 const sum = (keys: Map<string, number>): number => [...keys.values()].reduce((total, px) => total + px, 0);
@@ -58,7 +81,11 @@ const paint = (holder: HTMLElement): void => {
   } else {
     holder.removeAttribute(DATA_ATTR.aiGap);
   }
-  listeners.forEach((listener) => listener(holder));
+  if (held.depth > 0) {
+    held.holders.add(holder);
+  } else {
+    notify([holder]);
+  }
 };
 
 /** Total px held on one side of a holder. */

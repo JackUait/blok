@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { reserveGap, releaseGap } from '../../../../../src/components/modules/assistant/gap';
+import { onGapChange, reserveGap, releaseGap } from '../../../../../src/components/modules/assistant/gap';
 import { createLivePreview } from '../../../../../src/components/modules/assistant/live-preview';
 import type { LivePreview } from '../../../../../src/components/modules/assistant/live-preview';
 
@@ -99,11 +99,81 @@ describe('createLivePreview', () => {
     vi.restoreAllMocks();
   });
 
+  describe('layout per frame', () => {
+    const insertAfter = (id: string, text: string): string =>
+      execute({ name: 'block.insert', args: { position: { after: id }, type: 'paragraph', data: { text } } });
+
+    it('writes no gap or box position until the frame, however many deltas arrive', () => {
+      const preview = make();
+      const b1 = state.holders[0];
+      const json = insertAfter('b1', 'One two three four five');
+
+      preview.update('c1', open(json, 'One '));
+      preview.update('c1', open(json, 'two '));
+      preview.update('c1', open(json, 'three '));
+
+      const box = state.layer.querySelector<HTMLElement>(PREVIEW);
+
+      expect(b1.hasAttribute('data-blok-ai-gap')).toBe(false);
+      expect(box?.style.top).toBe('');
+
+      runFrames();
+
+      expect(gapOf(b1)).toBe(BOX_HEIGHT);
+      expect(box?.style.top).toBe(`${HOLDER_HEIGHT}px`);
+    });
+
+    it('reads every size before it writes a gap, then reads positions once', () => {
+      const preview = make();
+      const log: string[] = [];
+      const rect = vi.mocked(HTMLElement.prototype.getBoundingClientRect);
+      const layout = rect.getMockImplementation();
+
+      rect.mockImplementation(function (this: HTMLElement): DOMRect {
+        log.push('read');
+
+        return layout === undefined ? new DOMRect() : layout.call(this);
+      });
+      const unsubscribe = onGapChange(() => log.push('gap'));
+      const setProperty = CSSStyleDeclaration.prototype.setProperty;
+
+      vi.spyOn(CSSStyleDeclaration.prototype, 'setProperty').mockImplementation(function (this: CSSStyleDeclaration, name: string, value: string | null, priority?: string): void {
+        if (name.startsWith('--blok-ai-gap')) {
+          log.push('write');
+        }
+        setProperty.call(this, name, value, priority);
+      });
+
+      preview.update('c1', insertAfter('b1', 'One two '));
+      preview.update('c2', insertAfter('b2', 'Three four '));
+      log.length = 0;
+      runFrames();
+      unsubscribe();
+
+      // Sizes, then both gaps, then positions; listeners hear once, at the end.
+      expect(log.join(' ')).toMatch(/^(read )+(write )+(read )+gap$/);
+    });
+
+    it('tells gap listeners once per frame, with every holder whose gap changed', () => {
+      const preview = make();
+      const heard: HTMLElement[][] = [];
+      const unsubscribe = onGapChange((holders) => heard.push(holders));
+
+      preview.update('c1', insertAfter('b1', 'One two '));
+      preview.update('c2', insertAfter('b2', 'Three four '));
+      runFrames();
+      unsubscribe();
+
+      expect(heard).toEqual([[state.holders[0], state.holders[1]]]);
+    });
+  });
+
   it('opens slots after the target holder and grows the gap', () => {
     const preview = make();
     const json = execute({ name: 'block.insert', args: { position: { after: 'b1' }, type: 'paragraph', data: { text: '' } } });
 
     preview.update('c1', open(json, '"text":"'));
+    runFrames();
 
     const slots = [...state.layer.querySelectorAll(SLOT)];
     const b1 = state.holders[0];
@@ -199,6 +269,7 @@ describe('createLivePreview', () => {
     rects.set(content, new DOMRect(66, 0, 650, HOLDER_HEIGHT));
 
     preview.update('c1', execute({ name: 'block.insert', args: { position: { after: 'b1' }, type: 'paragraph', data: { text: 'x' } } }));
+    runFrames();
 
     const box = state.layer.querySelector<HTMLElement>(PREVIEW);
 
@@ -257,6 +328,7 @@ describe('createLivePreview', () => {
     reserveGap(bar, 'bar', barPx);
     // No position yet: while the call streams, the slots wait under the bar.
     preview.update('c1', open(execute({ name: 'block.insert', args: { type: 'paragraph', data: { text: 'Hi' } } }), 'Hi'));
+    runFrames();
 
     const box = state.layer.querySelector<HTMLElement>(PREVIEW);
     const barBottom = 2 * HOLDER_HEIGHT;
@@ -271,6 +343,7 @@ describe('createLivePreview', () => {
     const preview = make();
 
     preview.update('c1', execute({ name: 'block.insert', args: { type: 'paragraph', data: { text: 'Hi' } } }));
+    runFrames();
 
     expect(state.holders[1].hasAttribute('data-blok-ai-gap')).toBe(false);
     expect(gapOf(state.holders[2])).toBe(BOX_HEIGHT);
@@ -295,6 +368,7 @@ describe('createLivePreview', () => {
     const preview = make();
 
     preview.update('c1', execute({ name: 'block.insert', args: { position: { before: 'b1' }, type: 'paragraph', data: { text: '' } } }));
+    runFrames();
 
     const b1 = state.holders[0];
 
@@ -327,6 +401,7 @@ describe('createLivePreview', () => {
     const b1 = state.holders[0];
 
     preview.update('c1', execute({ name: 'block.insert', args: { position: { after: 'b1' }, type: 'paragraph', data: { text: 'moving' } } }));
+    runFrames();
     const box = state.layer.querySelector<HTMLElement>(PREVIEW);
     const before = parseFloat(box?.style.top ?? '');
 
@@ -418,6 +493,7 @@ describe('createLivePreview', () => {
     rects.set(content, new DOMRect(66, 0, 650, HOLDER_HEIGHT));
 
     preview.update('c1', execute({ name: 'block.insert', args: { position: { after: 'b1' }, type: 'paragraph', data: { text: 'x' } } }));
+    runFrames();
 
     const box = state.layer.querySelector<HTMLElement>(PREVIEW);
 
@@ -440,6 +516,7 @@ describe('createLivePreview', () => {
     rects.set(childContent, new DOMRect(100, 0, 300, HOLDER_HEIGHT));
 
     preview.update('c1', execute({ name: 'block.insert', args: { position: { after: 'b1' }, type: 'paragraph', data: { text: 'x' } } }));
+    runFrames();
 
     const box = state.layer.querySelector<HTMLElement>(PREVIEW);
 
@@ -477,6 +554,7 @@ describe('createLivePreview', () => {
 
       preview.update('c1', open(json, 'land'));
       vi.advanceTimersByTime(35 * 5);
+      runFrames();
 
       const box = state.layer.querySelector<HTMLElement>(PREVIEW);
 
@@ -769,6 +847,7 @@ describe('createLivePreview', () => {
       reserveGap(b1, 'bar', 40);
       rects.set(input, new DOMRect(0, 0, 600, HOLDER_HEIGHT));
       preview.update('c1', execute({ name: 'text.replace', args: { id: 'b1', with: 'A much longer text' } }));
+      runFrames();
 
       // The bar re-reads its spot: it now sits under the rewrite's extra height.
       expect(reserveGap(b1, 'bar', 40)).toBe(BOX_HEIGHT - HOLDER_HEIGHT);
@@ -806,6 +885,7 @@ describe('createLivePreview', () => {
 
       rects.set(input, new DOMRect(0, 0, 600, HOLDER_HEIGHT));
       preview.update('c1', execute({ name: 'text.replace', args: { id: 'b1', with: 'A much longer text' } }));
+      runFrames();
 
       expect(gapOf(b1)).toBe(BOX_HEIGHT - HOLDER_HEIGHT);
 

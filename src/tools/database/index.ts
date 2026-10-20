@@ -8091,19 +8091,23 @@ export class DatabaseTool implements BlockTool {
   private trashSelectionFromKeys(): void {
     const rowIds = [...this.rowSelection];
     const toast = rowIds.length === 1 && this.model.getView(this.activeViewId)?.type === 'gallery';
+    const before = this.api.history.latestStep();
 
     this.trashSelection();
     if (!toast) {
       return;
     }
-    // The toast stays until closed; once the card is back (Cmd+Z), Restore must not undo something else.
+    const after = this.api.history.latestStep();
+    // Only the delete's own step: the toast stays open, so a later edit may sit on top by then.
+    const step = after !== before ? after : undefined;
+
     this.api.notifier.show({
       message: this.api.i18n.t('tools.database.movedToTrash'),
       actions: [{
         label: this.api.i18n.t('tools.database.restore'),
         onClick: () => {
-          if (!this.api.blocks.getChildren(this.dataId).some((child) => child.id === rowIds[0])) {
-            this.api.history.undo();
+          if (step !== undefined) {
+            this.api.history.undoStep(step);
           }
         },
       }],

@@ -478,6 +478,36 @@ test.describe('gallery', () => {
       await expect.poll(async () => (await savedRows(page)).map((row) => row.id)).toEqual(['r1', 'r2', 'r3']);
     });
 
+    test('Restore after a later edit does nothing: the edit survives and the card stays in the trash', async ({ page }) => {
+      await mount(page, [{ id: 'note', type: 'paragraph', data: { text: 'Note' } }, ...blocks({ type: 'gallery' })]);
+      await clickBlank(page);
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('Backspace');
+      await expect(card(page, 'r1')).toHaveCount(0);
+
+      await page.getByText('Note', { exact: true }).click();
+      await page.keyboard.press('End');
+      await page.keyboard.type(' typed');
+      await expect(page.getByText('Note typed')).toBeVisible();
+
+      await page.getByRole('status').filter({ hasText: 'Moved to Trash' }).getByRole('button', { name: 'Restore' }).click();
+
+      const saved = async (): Promise<{ note: string; rows: string[] }> => page.evaluate(async () => {
+        const output = await window.blokInstance?.save();
+        const blocks = output?.blocks ?? [];
+        const note = blocks.find((block) => block.id === 'note')?.data as { text?: unknown } | undefined;
+
+        return {
+          note: JSON.stringify(note?.text ?? ''),
+          rows: blocks.filter((block) => block.type === 'database-row').map((block) => block.id ?? ''),
+        };
+      });
+
+      await expect.poll(async () => (await saved()).note).toContain('Note typed');
+      expect((await saved()).rows).toEqual(['r2', 'r3']);
+      await expect(card(page, 'r1')).toHaveCount(0);
+    });
+
     test('Delete on several selected cards trashes them all at once, as before (research/22 §2: unmeasured)', async ({ page }) => {
       await mount(page, blocks({ type: 'gallery' }));
       await card(page, 'r1').click({ modifiers: ['ControlOrMeta'] });

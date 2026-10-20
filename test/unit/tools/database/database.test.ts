@@ -5644,27 +5644,27 @@ describe('DatabaseTool', () => {
 
     describe('Delete on selected cards (research/22 §2)', () => {
       type Toast = { message: string; actions?: Array<{ label: string; onClick: () => void }> };
+      type Step = API['history'] extends { latestStep: () => infer S } ? NonNullable<S> : never;
 
-      const trashTool = (): { tool: DatabaseTool; element: HTMLElement; show: Mock<(options: unknown) => void>; undo: Mock<() => void>; removeRow: () => void } => {
+      const trashTool = (): { tool: DatabaseTool; element: HTMLElement; show: Mock<(options: unknown) => void>; history: { undo: Mock<() => void>; latestStep: Mock<() => Step | undefined>; undoStep: Mock<(step: Step) => boolean> }; deleteStep: Step } => {
         const rows = rowsWithDates();
-        const live = { rows };
         const { tool, element, options } = galleryTool({}, rows);
-        const undo = vi.fn<() => void>(() => {
-          live.rows = rows;
-        });
-
-        vi.mocked(options.api.blocks.getChildren).mockImplementation((parentId: string) => (parentId === 'test-block-id' ? live.rows : []));
-        Object.assign(options.api, { history: { undo, redo: vi.fn() } });
-
-        return {
-          tool,
-          element,
-          show: vi.mocked(options.api.notifier.show) as Mock<(options: unknown) => void>,
-          undo,
-          removeRow: () => {
-            live.rows = rows.slice(1);
-          },
+        const before = Object.freeze({}) as Step;
+        const deleteStep = Object.freeze({}) as Step;
+        const state = { top: before };
+        const history = {
+          undo: vi.fn<() => void>(),
+          redo: vi.fn(),
+          latestStep: vi.fn<() => Step | undefined>(() => state.top),
+          undoStep: vi.fn<(step: Step) => boolean>(() => true),
         };
+
+        vi.mocked(options.api.blocks.delete).mockImplementation(async () => {
+          state.top = deleteStep;
+        });
+        Object.assign(options.api, { history });
+
+        return { tool, element, show: vi.mocked(options.api.notifier.show) as Mock<(options: unknown) => void>, history, deleteStep };
       };
       const select = (element: HTMLElement, rowIds: string[]): void => {
         rowIds.forEach((rowId) => {
@@ -5676,37 +5676,36 @@ describe('DatabaseTool', () => {
       const pressDelete = (key: string): void => {
         document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
       };
+      const trashToast = (show: Mock<(options: unknown) => void>): Toast | undefined =>
+        show.mock.calls.map(([options]) => options as Toast).find((options) => options.message === 'tools.database.movedToTrash');
 
-      it('one card: trashes it at once and shows "Moved to Trash" with Restore, which undoes the delete', () => {
-        const { tool, element, show, undo, removeRow } = trashTool();
+      it('one card: trashes it at once and shows "Moved to Trash" with Restore, which undoes exactly that delete', () => {
+        const { tool, element, show, history, deleteStep } = trashTool();
 
         select(element, ['row-1']);
-        removeRow();
         pressDelete('Backspace');
 
-        const toast = show.mock.calls.map(([options]) => options as Toast).find((options) => options.message === 'tools.database.movedToTrash');
+        const toast = trashToast(show);
 
         expect(toast?.actions?.map((action) => action.label)).toEqual(['tools.database.restore']);
         toast?.actions?.[0].onClick();
-        expect(undo).toHaveBeenCalledTimes(1);
+        expect(history.undoStep).toHaveBeenCalledExactlyOnceWith(deleteStep);
+        expect(history.undo).not.toHaveBeenCalled();
 
         tool.destroy();
       });
 
-      it('Restore does nothing once the card is back already', () => {
-        const { tool, element, show, undo, removeRow } = trashTool();
+      it('Restore never falls back to a plain undo when the delete left no step of its own', () => {
+        const { tool, element, show, history } = trashTool();
 
+        vi.mocked(history.latestStep).mockReturnValue(undefined);
         select(element, ['row-1']);
-        removeRow();
         pressDelete('Delete');
-        undo();
-        undo.mockClear();
+        trashToast(show)?.actions?.[0].onClick();
 
-        const toast = show.mock.calls.map(([options]) => options as Toast).find((options) => options.message === 'tools.database.movedToTrash');
-
-        toast?.actions?.[0].onClick();
-        expect(toast).toBeDefined();
-        expect(undo).not.toHaveBeenCalled();
+        expect(trashToast(show)).toBeDefined();
+        expect(history.undoStep).not.toHaveBeenCalled();
+        expect(history.undo).not.toHaveBeenCalled();
 
         tool.destroy();
       });
@@ -5717,7 +5716,7 @@ describe('DatabaseTool', () => {
         select(element, ['row-1', 'row-2']);
         pressDelete('Delete');
 
-        expect(show.mock.calls.some(([options]) => (options as Toast).message === 'tools.database.movedToTrash')).toBe(false);
+        expect(trashToast(show)).toBeUndefined();
 
         tool.destroy();
       });

@@ -4,13 +4,18 @@
  *
  * Provides public methods for undo/redo operations
  */
-import type { History, HistoryValue, HistoryValueChange, HistoryValueData } from '../../../../types/api';
+import type { History, HistoryStep, HistoryValue, HistoryValueChange, HistoryValueData } from '../../../../types/api';
 import { Module } from '../../__module';
+import type { CaretHistoryEntry } from '../yjs/types';
 
 /**
  * @class HistoryAPI
  */
 export class HistoryAPI extends Module {
+  /** One handle per entry, so a step taken twice compares equal. */
+  private readonly handles = new WeakMap<CaretHistoryEntry, HistoryStep>();
+  private readonly entries = new WeakMap<HistoryStep, CaretHistoryEntry>();
+
   /**
    * Available methods
    * @returns {History}
@@ -22,6 +27,8 @@ export class HistoryAPI extends Module {
       canUndo: (): boolean => this.canUndo(),
       canRedo: (): boolean => this.canRedo(),
       clear: (): void => this.clear(),
+      latestStep: (): HistoryStep | undefined => this.latestStep(),
+      undoStep: (step: HistoryStep): boolean => this.undoStep(step),
       track: <T extends HistoryValueData>(key: string, onChange: (value: T | undefined, change: HistoryValueChange) => void): HistoryValue<T> =>
         this.track(key, onChange),
     };
@@ -87,5 +94,48 @@ export class HistoryAPI extends Module {
    */
   public clear(): void {
     this.Blok.YjsManager.clear();
+  }
+
+  /**
+   * @returns a handle on the newest undo step, or undefined when there is none
+   */
+  public latestStep(): HistoryStep | undefined {
+    const { YjsManager } = this.Blok;
+
+    // Buffered typing joins the step it belongs to before we look.
+    YjsManager.flushPendingBlockWrites();
+    const entry = YjsManager.topUndoToken();
+
+    if (entry === undefined) {
+      return undefined;
+    }
+    const known = this.handles.get(entry);
+
+    if (known !== undefined) {
+      return known;
+    }
+    // The brand exists only in the published type; the handle is an empty object.
+    const handle = Object.freeze({}) as HistoryStep;
+
+    this.handles.set(entry, handle);
+    this.entries.set(handle, entry);
+
+    return handle;
+  }
+
+  /**
+   * Undo this step only while it is still the newest. Does nothing while read-only.
+   * @param step - a handle from {@link latestStep}
+   * @returns true when the step was undone
+   */
+  public undoStep(step: HistoryStep): boolean {
+    const entry = this.entries.get(step);
+
+    if (entry === undefined || this.Blok.ReadOnly.isEnabled) {
+      return false;
+    }
+    this.Blok.YjsManager.flushPendingBlockWrites();
+
+    return this.Blok.YjsManager.undoStep(entry);
   }
 }

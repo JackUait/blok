@@ -1,3 +1,12 @@
+declare const historyStepBrand: unique symbol;
+
+/**
+ * An undo step from `history.latestStep()`. Opaque.
+ */
+export interface HistoryStep {
+  readonly [historyStepBrand]: true;
+}
+
 /**
  * Describes Blok's history API
  */
@@ -30,6 +39,21 @@ export interface History {
    * Clear all history
    */
   clear(): void;
+
+  /**
+   * The newest undo step, to undo later with `undoStep`. Take it right after
+   * your change. Undefined when there is nothing to undo.
+   */
+  latestStep(): HistoryStep | undefined;
+
+  /**
+   * Undo this step only while it is still the newest one. Once another change
+   * lands on top, nothing happens, so a late "Undo" button cannot undo
+   * someone else's edit.
+   *
+   * @returns true when the step was undone
+   */
+  undoStep(step: HistoryStep): boolean;
 
   /**
    * Keep a value the host owns, like a page title outside the editor, in the

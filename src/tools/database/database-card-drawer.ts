@@ -2934,6 +2934,7 @@ export class DatabaseCardDrawer {
       i18n: this.i18n,
       title: this.databaseTitle(),
       directionSource: this.drawer ?? this.wrapper,
+      anchor: this.wrapper,
       hasEdits: () => this.draft !== null && (!isDraftEmpty(this.draft) || !this.tabDraft.isEmpty),
       onApply: () => this.finishCustomizing(true),
       onDiscard: () => this.discardCustomizing(),

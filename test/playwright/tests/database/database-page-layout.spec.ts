@@ -463,6 +463,61 @@ test.describe('row page layout', () => {
     expect(await leaveHeld()).toBe(false);
   });
 
+  // research/23 §7: an in-app route change with a draft asks "Discard all layout changes?".
+  test('asks before an in-app route change through blok.confirmLeave()', async ({ page }) => {
+    const confirmLeave = (): Promise<boolean | undefined> => page.evaluate(() => window.blokInstance?.confirmLeave());
+    const question = page.getByRole('alertdialog', { name: 'Discard all layout changes?' });
+
+    await mount(page, blocks());
+    await openRow(page, 'r1');
+    await peek(page).hover();
+    await peek(page).getByRole('button', { name: 'Customize layout' }).click();
+    await expect(builder(page)).toBeVisible();
+    expect(await confirmLeave()).toBe(true);
+    await expect(question).toHaveCount(0);
+
+    await pinFromHeadingMenu(page, 'Due');
+    const stay = confirmLeave();
+
+    await question.getByRole('button', { name: 'Cancel' }).click();
+    expect(await stay).toBe(false);
+    await expect(builder(page)).toBeVisible();
+    await expect(pins(page).locator('[data-property-id="p-due"]').first()).toBeVisible();
+
+    const leave = confirmLeave();
+
+    await question.getByRole('button', { name: 'Discard' }).click();
+    expect(await leave).toBe(true);
+    await expect(builder(page)).toBeHidden();
+    await expect(pins(page).locator('[data-property-id="p-due"]')).toHaveCount(0);
+  });
+
+  // Navigation API (Chromium): a same-document Back is held until the user answers.
+  test('holds a same-document Back while the layout draft has edits', async ({ page }) => {
+    const path = (): Promise<string> => page.evaluate(() => location.pathname + location.search + location.hash);
+    const question = page.getByRole('alertdialog', { name: 'Discard all layout changes?' });
+
+    await mount(page, blocks());
+    const before = await path();
+
+    await page.evaluate(() => history.pushState({}, '', '#row-page'));
+    await openRow(page, 'r1');
+    await peek(page).hover();
+    await peek(page).getByRole('button', { name: 'Customize layout' }).click();
+    await pinFromHeadingMenu(page, 'Due');
+
+    await page.evaluate(() => history.back());
+    await expect(question).toBeVisible();
+    await question.getByRole('button', { name: 'Cancel' }).click();
+    await expect(builder(page)).toBeVisible();
+    expect(await path()).toBe(`${before}#row-page`);
+
+    await page.evaluate(() => history.back());
+    await question.getByRole('button', { name: 'Discard' }).click();
+    await expect(builder(page)).toBeHidden();
+    await expect.poll(path).toBe(before);
+  });
+
   test('keeps the discard question above the docked full-page details panel', async ({ page }) => {
     await page.setViewportSize({ width: 756, height: 717 });
     await mount(page, withView(blocks({ pageLayoutPlacements: [{ id: 'p-owner', place: 'panel' }] }), { openPagesIn: 'full' }));

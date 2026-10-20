@@ -3,6 +3,7 @@ import type { I18n } from '../../../types';
 import { englishDictionary } from '../../components/i18n/lightweight-i18n';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { IconArrowDiagonal, IconArrowUp, IconCheck, IconCopy, IconChevronDown, IconChevronLeft, IconChevronRight, IconCross, IconDatabase, IconDotsHorizontal, IconEyeClosed, IconEyeSlash, IconInfo, IconMenu, IconMinus, IconMoveDown, IconPage, IconPencil, IconPin, IconPinFilled, IconPlus, IconPreview, IconSplitView, IconTabs, IconTrash } from '../../components/icons';
+import { holdLeave } from '../../components/utils/leave-guards';
 import { openModalDialog } from '../../components/utils/modal-dialog';
 import { onHover } from '../../components/utils/tooltip';
 import type { ModalDialogHandle } from '../../components/utils/modal-dialog';
@@ -75,6 +76,8 @@ export interface PageLayoutBuilderOptions {
   title: string;
   /** The live element whose direction the builder takes: it mounts outside the editor. */
   directionSource: Element | null;
+  /** An element inside the editor: `blok.confirmLeave()` asks this builder only from that editor. */
+  anchor: Element;
   /** Whether the open draft holds any edit. Cancel asks first when it does. */
   hasEdits: () => boolean;
   onApply: () => void;
@@ -125,6 +128,9 @@ export interface PageLayoutRegions {
 
 /** The canvas modules (research/09 anatomy L39). Page discussions is skipped (plan §2.4). */
 export type PageLayoutModule = 'heading' | 'group' | 'content';
+
+/** `window.navigation`, where the browser has the Navigation API. */
+const navigationOf = (): Navigation | undefined => ('navigation' in window ? window.navigation : undefined);
 
 const MODULE_NAMES: Record<PageLayoutModule, string> = {
   heading: 'tools.database.layoutModuleHeading',
@@ -189,6 +195,28 @@ export class PageLayoutBuilder {
   /** A page load with a draft asks "Leave site?" (research/23 §7). Each builder checks only its own draft. */
   private readonly holdLeave = (event: BeforeUnloadEvent): void => {
     if (this.options.hasEdits()) event.preventDefault();
+  };
+  private readonly releaseLeave: () => void;
+  /**
+   * Holds a same-document Back while the draft has edits, then asks.
+   * The spec makes a traversal cancelable only in a top-level page, same-document,
+   * and (for the browser's own Back) after a user gesture; `cancelable` says which.
+   */
+  private readonly holdTraverse = (event: NavigateEvent): void => {
+    if (event.navigationType !== 'traverse' || !event.cancelable || !event.destination.sameDocument || !this.options.hasEdits()) return;
+    const key = event.destination.key;
+
+    event.preventDefault();
+    void this.askDiscard().then((discard) => {
+      const navigation = navigationOf();
+
+      if (!discard || navigation === undefined) return;
+      const result = navigation.traverseTo(key);
+
+      // Both reject when the host aborts the traversal; that is not an error here.
+      result.committed?.catch(() => undefined);
+      result.finished?.catch(() => undefined);
+    });
   };
 
   constructor(options: PageLayoutBuilderOptions) {
@@ -271,6 +299,8 @@ export class PageLayoutBuilder {
       onDismiss: () => undefined,
     });
     window.addEventListener('beforeunload', this.holdLeave);
+    navigationOf()?.addEventListener('navigate', this.holdTraverse);
+    this.releaseLeave = holdLeave(options.anchor, () => (this.options.hasEdits() ? this.askDiscard() : Promise.resolve(true)));
   }
 
   /** The database's name. Empty shows the new-database placeholder. */
@@ -304,6 +334,8 @@ export class PageLayoutBuilder {
 
   close(): void {
     window.removeEventListener('beforeunload', this.holdLeave);
+    navigationOf()?.removeEventListener('navigate', this.holdTraverse);
+    this.releaseLeave();
     this.confirm?.abort();
     this.confirm = null;
     this.unwatchNarrow();
@@ -1444,12 +1476,23 @@ export class PageLayoutBuilder {
 
       return;
     }
+    void this.askDiscard();
+  }
+
+  /**
+   * "Discard all layout changes?"; Discard drops the draft.
+   * @returns true when the user discarded; false on Cancel, or when the question was replaced or the builder closed
+   */
+  private askDiscard(): Promise<boolean> {
     const confirm = new AbortController();
 
     this.closeMenu();
     this.closeModuleMenu();
+    // A second ask replaces the open question; the first resolves false.
+    this.confirm?.abort();
     this.confirm = confirm;
-    void openDatabaseConfirm({
+
+    return openDatabaseConfirm({
       title: this.label('tools.database.layoutDiscardTitle'),
       confirmLabel: this.label('tools.database.layoutDiscard'),
       cancelLabel: this.label('tools.database.layoutCancel'),
@@ -1459,9 +1502,11 @@ export class PageLayoutBuilder {
       container: this.root,
       signal: confirm.signal,
     }).then((discard) => {
-      if (this.confirm !== confirm) return;
+      if (this.confirm !== confirm) return false;
       this.confirm = null;
       if (discard) this.options.onDiscard();
+
+      return discard;
     });
   }
 

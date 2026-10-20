@@ -7,6 +7,7 @@ import { getTabbables } from '../../../../src/components/utils/modal-dialog';
 import { registerLayer } from '../../../../src/components/utils/dismissable-layer';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { pageLayoutOf } from '../../../../src/tools/database/page-layout';
+import { askLeave } from '../../../../src/components/utils/leave-guards';
 import type { PageLayoutData } from '../../../../src/tools/database/page-layout';
 import type { DatabaseRow, PageLayoutFields, PropertyDefinition } from '../../../../src/tools/database/types';
 
@@ -1720,6 +1721,148 @@ describe('PageLayoutBuilder', () => {
       drawer.destroy();
 
       expect(leave().defaultPrevented).toBe(false);
+    });
+  });
+
+  // research/23 §7: an in-app route change with a draft asks "Discard all layout changes?".
+  describe('asking before an in-app route change', () => {
+    const title = (): string | null | undefined => q('[data-blok-database-confirm-title]')?.textContent;
+    const answer = async (name: 'confirm' | 'cancel'): Promise<void> => {
+      q(`[data-blok-database-confirm-action="${name}"]`)?.click();
+      await Promise.resolve();
+    };
+
+    it('lets the route change go without asking while the draft is empty', async () => {
+      const { drawer, options } = customize();
+
+      await expect(askLeave(options.wrapper)).resolves.toBe(true);
+      expect(q('[data-blok-database-confirm-dialog]')).toBeNull();
+      drawer.destroy();
+    });
+
+    it('stays, keeping the builder and its draft, when the user cancels', async () => {
+      const { drawer, options } = customize();
+
+      pinDue();
+      const leaving = askLeave(options.wrapper);
+
+      expect(title()).toBe('Discard all layout changes?');
+      await answer('cancel');
+
+      await expect(leaving).resolves.toBe(false);
+      expect(q(BUILDER)).not.toBeNull();
+      // The draft still has its edit, so a second try asks again.
+      const again = askLeave(options.wrapper);
+
+      expect(title()).toBe('Discard all layout changes?');
+      await answer('cancel');
+      await expect(again).resolves.toBe(false);
+      drawer.destroy();
+    });
+
+    it('discards the draft and leaves when the user confirms', async () => {
+      const { drawer, options } = customize();
+
+      pinDue();
+      const leaving = askLeave(options.wrapper);
+
+      await answer('confirm');
+
+      await expect(leaving).resolves.toBe(true);
+      expect(q(BUILDER)).toBeNull();
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+      drawer.destroy();
+    });
+
+    it('answers only for the editor that holds the database', async () => {
+      const { drawer } = customize();
+      const otherEditor = document.createElement('div');
+
+      document.body.appendChild(otherEditor);
+      pinDue();
+
+      await expect(askLeave(otherEditor)).resolves.toBe(true);
+      expect(q('[data-blok-database-confirm-dialog]')).toBeNull();
+      otherEditor.remove();
+      drawer.destroy();
+    });
+
+    it('stops asking once the drawer is destroyed mid-draft', async () => {
+      const { drawer, options } = customize();
+
+      pinDue();
+      drawer.destroy();
+
+      await expect(askLeave(options.wrapper)).resolves.toBe(true);
+    });
+  });
+
+  // Navigation API: a cancelable same-document Back is held while the draft has edits.
+  describe('browser Back while customizing', () => {
+    const traverseTo = vi.fn(() => ({ committed: Promise.resolve(), finished: Promise.resolve() }));
+    let navigation: EventTarget & { traverseTo: typeof traverseTo };
+
+    const back = (init: { cancelable?: boolean; sameDocument?: boolean; type?: string } = {}): Event => {
+      const event = Object.assign(new Event('navigate', { cancelable: init.cancelable ?? true }), {
+        navigationType: init.type ?? 'traverse',
+        destination: { sameDocument: init.sameDocument ?? true, key: 'entry-1' },
+      });
+
+      navigation.dispatchEvent(event);
+
+      return event;
+    };
+
+    beforeEach(() => {
+      navigation = Object.assign(new EventTarget(), { traverseTo });
+      Object.defineProperty(window, 'navigation', { value: navigation, configurable: true });
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(window, 'navigation');
+    });
+
+    it('holds Back and asks; Discard goes back to the same entry', async () => {
+      const { drawer } = customize();
+
+      pinDue();
+
+      expect(back().defaultPrevented).toBe(true);
+      expect(q('[data-blok-database-confirm-title]')?.textContent).toBe('Discard all layout changes?');
+      q('[data-blok-database-confirm-action="confirm"]')?.click();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(q(BUILDER)).toBeNull();
+      expect(traverseTo).toHaveBeenCalledWith('entry-1');
+      expect(back().defaultPrevented).toBe(false);
+      drawer.destroy();
+    });
+
+    it('stays on Cancel without moving history', async () => {
+      const { drawer } = customize();
+
+      pinDue();
+      back();
+      q('[data-blok-database-confirm-action="cancel"]')?.click();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(q(BUILDER)).not.toBeNull();
+      expect(traverseTo).not.toHaveBeenCalled();
+      drawer.destroy();
+    });
+
+    it('leaves Back alone without edits, when the browser will not let it be canceled, and for pushes', () => {
+      const { drawer } = customize();
+
+      expect(back().defaultPrevented).toBe(false);
+      pinDue();
+      expect(back({ cancelable: false }).defaultPrevented).toBe(false);
+      expect(back({ sameDocument: false, cancelable: true }).defaultPrevented).toBe(false);
+      expect(back({ type: 'push' }).defaultPrevented).toBe(false);
+      expect(q('[data-blok-database-confirm-dialog]')).toBeNull();
+      drawer.destroy();
     });
   });
 

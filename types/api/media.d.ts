@@ -41,7 +41,15 @@ export interface Media {
   clearFailure(blockId: string, options?: { recovered?: boolean }): void;
 
   /**
-   * Ask before an in-app navigation. Shows a banner while images are failed.
+   * Ask before an in-app navigation. Call it from your router's leave guard.
+   *
+   * - While the row-page layout builder has unsaved edits, it asks
+   *   "Discard all layout changes?". Discard drops the draft; Cancel stays.
+   * - Then, while images are failed, it shows a banner.
+   *
+   * Resolves `true` at once when there is nothing to ask.
+   * Blok itself only holds a same-document browser Back (Navigation API,
+   * where the browser lets it be canceled) and full page loads (`beforeunload`).
    * @returns true to leave, false to stay
    */
   confirmLeave(): Promise<boolean>;

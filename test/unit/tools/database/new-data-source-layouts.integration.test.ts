@@ -67,12 +67,12 @@ const doc = (active: string, parentExtra: Partial<DatabaseData> = {}, bound: Par
   { id: 'b1', type: 'database-row', parent: 'src-b', data: { properties: { bt: 'Source row', size: 3, stage: 'todo', due: TODAY, spot: { name: 'Berlin', lat: 52.5, lon: 13.4 } }, position: 'a0' } },
 ];
 
-const make = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
+const make = async (blocks: OutputBlockData[], readOnly = false): Promise<TestEditor> => {
   if (holder === undefined) throw new Error('missing editor holder');
   let ready: TestEditor | undefined;
 
   editor = new Blok({
-    holder, dataModel: 'hierarchical',
+    holder, dataModel: 'hierarchical', readOnly,
     tools: {
       paragraph: Paragraph,
       database: { class: DatabaseTool },
@@ -183,7 +183,7 @@ describe('New data source: every layout on a second source', () => {
     expect(root.querySelector('[data-blok-database-form-question="notes"]')).toBeNull();
   });
 
-  it('a map view places the source\'s rows by the source\'s place property', async () => {
+  it('a map view draws on a second source', async () => {
     await make(doc('vb', {}, { type: 'map' }));
 
     expect(layoutRoot('[data-blok-database-map]')).not.toBeNull();
@@ -396,5 +396,44 @@ describe('New data source: every layout on a second source', () => {
 
     expect(saved.map((b) => b.id).filter((id) => id !== 'db' && id !== 'src-b')).toHaveLength(1);
     expect(api.blocks.getChildren('db').filter((b) => b.name === 'database').map((b) => b.id)).toEqual(['src-b']);
+  });
+
+  it('Cmd-click on a second source\'s gallery card selects it and shows the selection bar', async () => {
+    await make(doc('vb', {}, { type: 'gallery' }));
+    const card = layoutRoot('[data-blok-database-gallery]').querySelector<HTMLElement>('[data-blok-database-gallery-card][data-row-id="b1"]');
+
+    if (card === null) throw new Error('no card');
+    card.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, metaKey: true }));
+    await quiet();
+
+    expect(layoutRoot('[data-blok-database-gallery]').querySelector('[data-row-id="b1"]')?.hasAttribute('data-blok-database-row-selected')).toBe(true);
+    expect(own('[data-blok-database-table-selection-bar]')).not.toBeNull();
+  });
+
+  it('the Today button of a second source\'s timeline keeps its centre on the holder\'s view', async () => {
+    const api = await make(doc('vb', {}, { type: 'timeline', timelineBy: 'due', timelineCenter: '2020-01-01' }));
+
+    await click(layoutRoot('[data-blok-database-timeline]').querySelector('[data-blok-database-timeline-today]'));
+
+    expect((await dataOf(api, 'db'))?.views.find((v) => v.id === 'vb')?.timelineCenter).toBe(TODAY);
+    expect((await dataOf(api, 'src-b'))?.views[0]?.timelineCenter).toBeUndefined();
+  });
+
+  it('a read-only second source\'s board offers no add-card or add-group', async () => {
+    await make(doc('vb', {}, { type: 'board', groupBy: 'stage' }), true);
+    const board = layoutRoot('[data-blok-database-board]');
+
+    expect(board.textContent).toContain(SOURCE_ROW);
+    expect(board.querySelector('[data-blok-database-add-card], [data-blok-database-add-column]')).toBeNull();
+  });
+
+  it('turning read-only on in place drops a second source\'s board add controls', async () => {
+    await make(doc('vb', {}, { type: 'board', groupBy: 'stage' }));
+    expect(layoutRoot('[data-blok-database-board]').querySelector('[data-blok-database-add-card]')).not.toBeNull();
+
+    await (editor as unknown as { readOnly: { toggle: (state?: boolean) => Promise<boolean> } }).readOnly.toggle(true);
+    await quiet();
+
+    expect(layoutRoot('[data-blok-database-board]').querySelector('[data-blok-database-add-card], [data-blok-database-add-column]')).toBeNull();
   });
 });

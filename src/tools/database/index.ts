@@ -480,6 +480,8 @@ export class DatabaseTool implements BlockTool {
    * holds it: the view, its toolbar and its redraws are that database's.
    */
   private binding: NativeWidgetContext | null = null;
+  /** The layout this block draws while bound; its own board container is gone. */
+  private boundRoot: HTMLElement | null = null;
   private groupMenuPopover: PopoverDesktop | null = null;
   /** Per gallery view and group: how many cards "Load more" has revealed. Session only. */
   private readonly galleryShown = new Map<string, Map<string, number>>();
@@ -2889,7 +2891,7 @@ export class DatabaseTool implements BlockTool {
   private isInteracting(): boolean {
     const focused = document.activeElement;
 
-    if (focused instanceof HTMLInputElement && this.boardContainer?.contains(focused) === true) {
+    if (focused instanceof HTMLInputElement && this.viewRoot()?.contains(focused) === true) {
       return true;
     }
 
@@ -5518,6 +5520,8 @@ export class DatabaseTool implements BlockTool {
     const drags = (): Array<{ active: boolean } | null> => [this.cardDrag, this.columnDrag, this.listRowDrag];
     const cardEditor = (): boolean => this.cardCellEditor?.isOpen === true;
 
+    this.boundRoot = root;
+
     this.wireView(root);
 
     return {
@@ -5537,6 +5541,7 @@ export class DatabaseTool implements BlockTool {
         // Its teardown may still commit through the holder's view.
         renderer.destroy?.();
         if (this.binding === context) this.binding = null;
+        if (this.boundRoot === root) this.boundRoot = null;
       },
     };
   }
@@ -7579,12 +7584,12 @@ export class DatabaseTool implements BlockTool {
         onTitleChange: (rowId, title) => {
           if (!writable()) return;
           this.updateRowTitleBlock(rowId, titlePropId, title);
-          const currentView = this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-board]')
-            ?? this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-list]')
-            ?? this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-table]')
-            ?? this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-gallery]')
-            ?? this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-calendar]')
-            ?? this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-timeline]');
+          const currentView = this.viewRoot()?.querySelector<HTMLElement>('[data-blok-database-board]')
+            ?? this.viewRoot()?.querySelector<HTMLElement>('[data-blok-database-list]')
+            ?? this.viewRoot()?.querySelector<HTMLElement>('[data-blok-database-table]')
+            ?? this.viewRoot()?.querySelector<HTMLElement>('[data-blok-database-gallery]')
+            ?? this.viewRoot()?.querySelector<HTMLElement>('[data-blok-database-calendar]')
+            ?? this.viewRoot()?.querySelector<HTMLElement>('[data-blok-database-timeline]');
 
           if (currentView !== null && currentView !== undefined) {
             this.view.updateRowTitle(currentView, rowId, title);
@@ -8295,7 +8300,7 @@ export class DatabaseTool implements BlockTool {
    * Moves a column element to a new position in the DOM without full re-render.
    */
   private moveColumnInDom(optionId: string, beforeOptionId: string | null): void {
-    const boardEl = this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-board]');
+    const boardEl = this.viewRoot()?.querySelector<HTMLElement>('[data-blok-database-board]');
 
     if (boardEl === null || boardEl === undefined) {
       return;
@@ -8528,12 +8533,19 @@ export class DatabaseTool implements BlockTool {
 
   /** The view toolbar row: the selection bar takes its place (research/08). */
   private selectionBarSlot(): HTMLElement | null {
-    return this.element?.querySelector<HTMLElement>(':scope > [data-blok-database-view-bar]') ?? null;
+    const owner = this.viewOwner();
+
+    return owner.element?.querySelector<HTMLElement>(':scope > [data-blok-database-view-bar]') ?? null;
+  }
+
+  /** Where this block's shown view is drawn. */
+  private viewRoot(): HTMLElement | null {
+    return this.boundRoot ?? this.boardContainer;
   }
 
   /** Gray halo on each picked row (D3) and the selection bar above the view. */
   private paintRowSelection(): void {
-    const container = this.boardContainer;
+    const container = this.viewRoot();
 
     if (container === null) {
       return;
@@ -8623,7 +8635,7 @@ export class DatabaseTool implements BlockTool {
   /** ⌘⇧M and ⌘⇧P on one picked card, list row or calendar event: its Comment and its Move to, as the row menu shows. */
   private rowShortcut(rowId: string, command: 'comment' | 'moveTo', act: (run: () => void) => void): void {
     const id = CSS.escape(rowId);
-    const rowEl = this.boardContainer?.querySelector<HTMLElement>(`:is([data-blok-database-card], [data-blok-database-list-row], [data-blok-database-calendar-event])[data-row-id="${id}"]`);
+    const rowEl = this.viewRoot()?.querySelector<HTMLElement>(`:is([data-blok-database-card], [data-blok-database-list-row], [data-blok-database-calendar-event])[data-row-id="${id}"]`);
     const { comment } = this.commentLever();
 
     if (rowEl === null || rowEl === undefined) return;
@@ -8714,7 +8726,7 @@ export class DatabaseTool implements BlockTool {
       act(() => this.trashSelectionFromKeys());
     } else if (mod && key === '/') {
       // A calendar pick has no bar; the key keeps its own meaning then.
-      const bar = (this.selectionBarSlot() ?? this.boardContainer)?.querySelector<HTMLElement>(':scope > [data-blok-database-table-selection-bar]');
+      const bar = (this.selectionBarSlot() ?? this.viewRoot())?.querySelector<HTMLElement>(':scope > [data-blok-database-table-selection-bar]');
 
       if (bar === null || bar === undefined) {
         return;

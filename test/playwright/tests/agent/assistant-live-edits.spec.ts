@@ -255,8 +255,23 @@ test.describe('Ask AI live edits', () => {
   test('stop mid-stream keeps applied batches and leaves no gap', async ({ page }) => {
     const applied = insertInput('Applied line');
     const cut = insertInput('Never finished words');
+    const bar = page.getByRole('dialog', { name: 'Ask AI' });
+    const anchor = page.locator('[data-blok-id="p1"]');
+    /** The anchor's space beyond the bar's own height: the bar's margins around it. */
+    const spareGap = async (): Promise<number> =>
+      parseFloat(await anchor.evaluate((holder) => getComputedStyle(holder).marginBlockEnd)) - ((await bar.boundingBox())?.height ?? 0);
 
-    await ask(page, 'Second');
+    await page.getByText('The quick brown fox').click();
+    await page.keyboard.press(`${MOD}+j`);
+    await expect(bar.getByRole('textbox')).toBeFocused();
+    await settledBar(page);
+
+    const barOnly = await spareGap();
+
+    await bar.getByRole('textbox').fill('Write more');
+    await page.keyboard.press('Enter');
+    await waitForCall(page, 1);
+
     await emit(page, 0, { type: 'tool_start', index: 0, id: 'call-1', name: 'blok_execute' });
     await emit(page, 0, { type: 'tool_input', index: 0, json: JSON.stringify(applied) });
     await emit(page, 0, { type: 'tool_end', index: 0 });
@@ -266,27 +281,22 @@ test.describe('Ask AI live edits', () => {
     await emit(page, 0, { type: 'tool_input', index: 1, json: prefix(cut, 'Never finished words', 'Never finished '.length) });
     await expect(page.getByTestId('ai-preview')).toContainText('Never finished');
 
-    const bar = page.getByRole('dialog', { name: 'Ask AI' });
-
     await bar.getByRole('button', { name: 'Stop' }).click();
     await expect(bar.getByRole('alert')).toHaveText('Stopped. What was already written stays.');
-    // A late event after Stop draws nothing.
+    // A late event after Stop draws nothing, not even on the next frame.
     await emit(page, 0, { type: 'tool_input', index: 1, json: JSON.stringify(cut) });
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
     await expect(page.getByTestId('ai-preview')).toHaveCount(0);
     await expect(page.locator('[data-blok-ai-rewriting]')).toHaveCount(0);
     expect(await savedTexts(page)).toEqual([...ORIGINAL, 'Applied line']);
     await settledBar(page);
 
-    const gaps = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>('[data-blok-ai-gap]')].map((holder) => ({
-      id: holder.getAttribute('data-blok-id'),
-      px: parseFloat(holder.style.getPropertyValue('--blok-ai-gap')),
-    })));
-    const barHeight = (await bar.boundingBox())?.height ?? 0;
+    const gapped = await page.evaluate(() => [...document.querySelectorAll('[data-blok-ai-gap]')].map((holder) => holder.getAttribute('data-blok-id')));
 
-    // Only the bar's own space is left: its height plus 6px above and 10px below.
-    expect(gaps.map((gap) => gap.id)).toEqual(['p2']);
-    expect(Math.abs(gaps[0].px - (barHeight + 16))).toBeLessThanOrEqual(1);
+    // Only the bar's own space is left, the same as before the run.
+    expect(gapped).toEqual(['p1']);
+    expect(Math.abs(await spareGap() - barOnly)).toBeLessThanOrEqual(1);
   });
 
   test('reduced motion shows the final text with no animation', async ({ page }) => {

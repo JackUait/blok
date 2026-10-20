@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/dom';
+import { fireEvent, screen, waitFor, within } from '@testing-library/dom';
 
 import { Blok } from '../../../../../src/blok';
 import { releaseGap, reserveGap } from '../../../../../src/components/modules/assistant/gap';
@@ -749,6 +749,32 @@ describe('in-editor assistant bar', () => {
       expect(document.querySelector(PREVIEW)).toBeNull();
       live.finish(call.use);
       await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+    });
+
+    it('Stop between a one-tick call\'s tool_end and its result clears the preview and plays no reveal', async () => {
+      const live = streaming();
+      const editor = await createEditor(live.model);
+
+      fakeLayout();
+      const call = executeCall('c1', insert('Stopped call'));
+
+      editor.agent.openAssistant();
+      submit('Write');
+      await waitFor(() => expect(live.started()).toBe(true));
+
+      live.emit({ type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' });
+      live.emit({ type: 'tool_input', index: 0, json: call.json });
+      live.emit({ type: 'tool_end', index: 0 });
+      // The call is unseen and its result has not come back yet.
+      fireEvent.click(within(bar()).getByRole('button', { name: 'Stop' }));
+
+      expect(previewText()).toBe('');
+      await waitFor(() => expect(within(bar()).getByRole('alert')).toHaveTextContent('Stopped.'));
+      await settle(50);
+      expect(revealed()).toEqual([]);
+      expect(gapped()).toEqual(['p1']);
+      // The loop starts a call a microtask after its tool_end, so this Stop came first.
+      expect(await texts(editor)).toEqual(['Hello']);
     });
 
     it('plays no reveal under reduced motion', async () => {

@@ -187,6 +187,13 @@ export class AgentAPI extends Module {
       throw new TypeError(`editor.agent.ask() got an unknown thinking level: ${String(options.thinking)}.`);
     }
 
+    const hostTools = assistant.tools ?? [];
+    const taken = hostTools.find((tool) => tool.name.startsWith('blok_'));
+
+    if (taken !== undefined) {
+      throw new TypeError(`agent.assistant.tools: "${taken.name}" is taken. Names starting with blok_ belong to Blok.`);
+    }
+
     const choice = this.thinkingChoice();
     const thinking = (): AgentThinkingLevel | undefined => options.thinking ?? picked() ?? choice?.initial;
 
@@ -200,10 +207,12 @@ export class AgentAPI extends Module {
       model: assistant.model,
       maxSteps: assistant.maxSteps ?? DEFAULT_MAX_STEPS,
       thinking,
+      hostTools,
       prepare: async () => {
         const [tools, system] = await Promise.all([this.tools({ format: 'anthropic', schema: 'mixed' }), this.guidance()]);
+        const offered = hostTools.map(({ name, description, input_schema }) => ({ name, description, input_schema }));
 
-        return { tools, system };
+        return { tools: [...tools, ...offered], system };
       },
       changed: () => [...this.turnLog.changed],
       onActivity: hooks.onActivity,

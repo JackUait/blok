@@ -1,8 +1,9 @@
 import type {
-  AgentAnthropicTool,
   AgentModel,
   AgentModelMessage,
   AgentModelStreamEvent,
+  AgentModelTool,
+  AgentHostTool,
   AgentRun,
   AgentRunResult,
   AgentThinkingLevel,
@@ -15,8 +16,10 @@ export interface AgentRunDeps {
   turn: AgentTurn;
   model: AgentModel;
   maxSteps: number;
+  /** The host's own tools. A call to one runs here, not on the turn. */
+  hostTools?: AgentHostTool[];
   /** Loaded once per run: the same tools and system prompt for every request keep the prompt cache warm. */
-  prepare(): Promise<{ system: string; tools: AgentAnthropicTool[] }>;
+  prepare(): Promise<{ system: string; tools: AgentModelTool[] }>;
   /** Ids the turn changed so far. */
   changed(): string[];
   /** Read once per prompt, so a run already answering keeps its level. */
@@ -28,6 +31,14 @@ export interface AgentRunDeps {
   /** After each tool call finishes. */
   onToolDone?(id: string, name: string, result: AgentToolResult): void;
 }
+
+const runHostTool = async (tool: AgentHostTool, input: unknown): Promise<AgentToolResult> => {
+  try {
+    return { content: await tool.run(input), isError: false };
+  } catch (thrown) {
+    return { content: thrown instanceof Error ? thrown.message : String(thrown), isError: true };
+  }
+};
 
 const busy = (): Error => new Error('editor.agent: this run is still answering. Await `result` or call stop() first.');
 
@@ -60,7 +71,11 @@ export function createAgentRun(prompt: string | Promise<string>, deps: AgentRunD
           system,
           tools,
           messages,
-          call: (name, input) => deps.turn.call(name, input),
+          call: (name, input) => {
+            const host = deps.hostTools?.find((tool) => tool.name === name);
+
+            return host === undefined ? deps.turn.call(name, input) : runHostTool(host, input);
+          },
           signal: controller.signal,
           maxSteps: deps.maxSteps,
           ...(thinking === undefined ? {} : { thinking }),

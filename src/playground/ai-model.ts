@@ -1,4 +1,4 @@
-import type { AgentModel, AgentModelContentBlock, AgentModelResponse, AgentModelStreamEvent } from '../../types/api';
+import type { AgentHostTool, AgentModel, AgentModelContentBlock, AgentModelResponse, AgentModelStreamEvent } from '../../types/api';
 
 type Line =
   | { type: 'delta'; index: number; text: string }
@@ -67,3 +67,55 @@ export const playgroundModel = (url: string): AgentModel => async ({ system, mes
     }
   }
 };
+
+const WEB_TOOLS: Array<Omit<AgentHostTool, 'run'>> = [
+  {
+    name: 'web_search',
+    description: 'Search Wikipedia. Returns article titles, links and snippets. Use web_fetch on a link to read the article.',
+    input_schema: {
+      type: 'object',
+      required: ['query'],
+      properties: {
+        query: { type: 'string' },
+        lang: { type: 'string', description: 'Wikipedia language code, e.g. "en" or "ru". Default "en".' },
+      },
+    },
+  },
+  {
+    name: 'image_search',
+    description: 'Search Wikimedia Commons for real photos and pictures. Returns direct image URLs that load, with author and license. Use these URLs for image blocks; never make one up.',
+    input_schema: { type: 'object', required: ['query'], properties: { query: { type: 'string', description: 'Best in English.' } } },
+  },
+  {
+    name: 'web_fetch',
+    description: 'Fetch a public http(s) URL. Returns a page as plain text, or says whether an image or file loads.',
+    input_schema: { type: 'object', required: ['url'], properties: { url: { type: 'string' } } },
+  },
+];
+
+/**
+ * agent.assistant.tools for the playground: keyless web tools that
+ * scripts/dev-web.mjs runs behind the dev route's `/web`.
+ * @param url - the dev endpoint `yarn serve` starts
+ */
+export const playgroundWebTools = (url: string): AgentHostTool[] => WEB_TOOLS.map((tool) => ({
+  ...tool,
+  run: async (input) => {
+    const response = await fetch(new URL('/web', url).toString(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tool: tool.name, input }),
+    });
+    const body: unknown = await response.json().catch(() => null);
+    const field = (key: string): unknown => (typeof body === 'object' && body !== null && key in body ? (body as Record<string, unknown>)[key] : undefined);
+    const text = field('text');
+
+    if (response.ok && typeof text === 'string') {
+      return text;
+    }
+
+    const error = field('error');
+
+    throw new Error(typeof error === 'string' ? error : `The web endpoint answered ${response.status}.`);
+  },
+}));

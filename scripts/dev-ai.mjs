@@ -6,7 +6,8 @@
  * writes, the tool call lines `tool_start`, `tool_input` and `tool_end`
  * (AgentModelStreamEvent) while it writes a call, then
  * `{ type: 'message', content, stop_reason, usage }` or `{ type: 'error', error }`.
- * src/playground/ai-model.ts reads it.
+ * src/playground/ai-model.ts reads it. `POST /web` takes `{ tool, input }` and
+ * runs one keyless web tool from scripts/dev-web.mjs for the model.
  *
  * The key never reaches the page. It comes from the shell, or from
  * ~/.config/blok/ai.env, which lives outside the repo so it cannot be committed.
@@ -19,6 +20,8 @@ import { createServer } from 'node:http';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { parseEnv } from 'node:util';
+
+import { webTools } from './dev-web.mjs';
 
 export const AI_MODEL = 'claude-opus-5-5';
 
@@ -100,18 +103,21 @@ const errorText = (error) => {
  * @param {string} options.body
  * @param {AbortSignal} options.signal Aborted when the page drops the request.
  * @param {CreateMessage} options.createMessage
+ * @param {(tool: string, input: unknown, signal: AbortSignal) => Promise<string>} [options.runWebTool] Serves `POST /web`.
  * @param {string} [options.model]
  * @returns {Promise<{ status: number, headers: Record<string, string>, body?: string, pipe?: (write: (chunk: string) => void) => Promise<void> }>}
  *   `pipe` is set on the streamed answer. Headers are sent before it runs, so a model error is its last line.
  */
-export async function handleAiRequest({ origins, hosts, host, origin, method, url, body, signal, createMessage, model = AI_MODEL }) {
+export async function handleAiRequest({ origins, hosts, host, origin, method, url, body, signal, createMessage, runWebTool, model = AI_MODEL }) {
   const allowed = origin !== undefined && origins.includes(origin);
   const headers = allowed ? { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' } : { Vary: 'Origin' };
 
   if (host === undefined || !hosts.includes(host.toLowerCase()) || !allowed) {
     return { status: 403, headers };
   }
-  if (new URL(url, 'http://127.0.0.1').pathname !== '/ai') {
+  const path = new URL(url, 'http://127.0.0.1').pathname;
+
+  if (path !== '/ai' && (path !== '/web' || runWebTool === undefined)) {
     return { status: 404, headers };
   }
   if (method === 'OPTIONS') {
@@ -131,6 +137,18 @@ export async function handleAiRequest({ origins, hosts, host, origin, method, ur
       return null;
     }
   })();
+
+  if (path === '/web') {
+    if (typeof parsed?.tool !== 'string') {
+      return json(400, headers, { error: 'Send { tool, input }.' });
+    }
+
+    try {
+      return json(200, headers, { text: await runWebTool(parsed.tool, parsed.input, signal) });
+    } catch (error) {
+      return json(502, headers, { error: error instanceof Error ? error.message : String(error) });
+    }
+  }
 
   if (!isModelRequest(parsed)) {
     return json(400, headers, { error: 'Send { system, messages, tools }.' });
@@ -321,6 +339,7 @@ export async function startAiEndpoint({ port, origins }) {
   })();
   const settings = aiSettings(process.env, fileText);
   const createMessage = await anthropicCreateMessage(settings);
+  const runWebTool = webTools();
   const hosts = [];
   const server = createServer((request, response) => {
     const controller = new AbortController();
@@ -343,6 +362,7 @@ export async function startAiEndpoint({ port, origins }) {
         body,
         signal: controller.signal,
         createMessage,
+        runWebTool,
         model: settings.model,
       }))
       .then(async ({ status, headers, body, pipe }) => {

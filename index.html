@@ -1822,7 +1822,7 @@
     import { PAGES_STORAGE_KEY, ROOT_STORAGE_KEY, PageRegistry, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, holdPageHeight, pagePath, renderPageHeader, runPageTransition, PAGE_CONTENT_WAIT_MS, flashArrivalRow, pageNavMorphs, waitForPageContent } from './src/playground/page-host.ts';
     import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
     import { mountPageTree } from './src/playground/page-tree.ts';
-    import { playgroundModel } from './src/playground/ai-model.ts';
+    import { playgroundModel, playgroundWebTools } from './src/playground/ai-model.ts';
     import { attachCreatedPageSeed, pushRecord, titleCallbacks, titleData } from './src/playground/page-title-wiring.ts';
     import { remotePagePlayground } from './src/playground/remote-page-host.ts';
     import { mountNavIndicator } from './src/playground/nav-indicator.ts';
@@ -2070,7 +2070,7 @@
         toolbarPosition: state.toolbarPosition,
         hideToolbar: state.hideToolbar,
         user: userConfig(),
-        ...(DEV_AI_URL !== null && { agent: { assistant: { model: playgroundModel(DEV_AI_URL), name: 'Claude' } } }),
+        ...(DEV_AI_URL !== null && { agent: { assistant: { model: playgroundModel(DEV_AI_URL), tools: playgroundWebTools(DEV_AI_URL), name: 'Claude' } } }),
         // Destroying an editor clears the theme attribute on <html>, so every
         // rebuild must say which theme the page is in (setDarkMode's rule).
         theme: state.darkMode ? 'dark' : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'auto'),

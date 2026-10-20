@@ -275,6 +275,8 @@ export {
   AgentTurn,
   AgentToolsOptions,
   AgentAnthropicTool,
+  AgentHostTool,
+  AgentModelTool,
   AgentOpenAITool,
   AgentToolName,
   AgentIdentity,

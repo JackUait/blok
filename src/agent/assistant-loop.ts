@@ -1,10 +1,10 @@
 import type {
-  AgentAnthropicTool,
   AgentModel,
   AgentModelContentBlock,
   AgentModelMessage,
   AgentModelResponse,
   AgentModelStreamEvent,
+  AgentModelTool,
   AgentThinkingLevel,
   AgentToolResult,
 } from '../../types/api';
@@ -21,7 +21,7 @@ export interface AssistantLoopResult {
 export interface AssistantLoopOptions {
   model: AgentModel;
   system: string;
-  tools: AgentAnthropicTool[];
+  tools: AgentModelTool[];
   /** The conversation. The loop appends to it, so a follow-up continues it. */
   messages: AgentModelMessage[];
   call(name: string, input: unknown): Promise<AgentToolResult>;

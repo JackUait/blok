@@ -120,6 +120,45 @@ describe('handleAiRequest', () => {
   });
 });
 
+describe('handleAiRequest /web', () => {
+  const web = (body: unknown, runWebTool = vi.fn(async () => 'results')): ReturnType<typeof handleAiRequest> =>
+    call({ url: '/web', body: JSON.stringify(body), runWebTool });
+
+  it('runs the named web tool with its input and answers its text', async () => {
+    const runWebTool = vi.fn(async () => 'Red panda: a small mammal');
+    const response = await web({ tool: 'web_search', input: { query: 'red panda' } }, runWebTool);
+
+    expect(response.status).toBe(200);
+    expect(JSON.parse(response.body ?? '')).toEqual({ text: 'Red panda: a small mammal' });
+    expect(runWebTool).toHaveBeenCalledWith('web_search', { query: 'red panda' }, expect.any(AbortSignal));
+  });
+
+  it('answers a failed tool with its error, so the model reads why', async () => {
+    const response = await web({ tool: 'web_fetch', input: { url: 'https://x.example' } }, vi.fn(async () => {
+      throw new Error('fetch failed');
+    }));
+
+    expect(response.status).toBe(502);
+    expect(JSON.parse(response.body ?? '')).toEqual({ error: 'fetch failed' });
+  });
+
+  it('rejects a body without a tool name', async () => {
+    const runWebTool = vi.fn();
+    const response = await web({ input: {} }, runWebTool);
+
+    expect(response.status).toBe(400);
+    expect(runWebTool).not.toHaveBeenCalled();
+  });
+
+  it('refuses a page from another origin', async () => {
+    const runWebTool = vi.fn();
+    const response = await call({ url: '/web', origin: 'https://evil.example', body: '{"tool":"web_search","input":{}}', runWebTool });
+
+    expect(response.status).toBe(403);
+    expect(runWebTool).not.toHaveBeenCalled();
+  });
+});
+
 describe('messageParams', () => {
   it('asks the current Opus with streaming-size output and the refusal fallback', () => {
     const params = messageParams(AI_MODEL, { system: 'sys', messages: [{ role: 'user', content: 'hi' }], tools: [] });

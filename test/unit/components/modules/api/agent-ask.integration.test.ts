@@ -461,4 +461,56 @@ describe('editor.agent.ask', () => {
 
     expect(inner.requests.map((request) => request.thinking)).toEqual(['high', 'high', 'low']);
   });
+
+  describe('host tools', () => {
+    const search = {
+      name: 'web_search',
+      description: 'Searches the web.',
+      input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] },
+    };
+    const searchCall: AgentModelResponse = {
+      stop_reason: 'tool_use',
+      content: [{ type: 'tool_use', id: 'use-search', name: 'web_search', input: { query: 'red panda' } }],
+    };
+
+    it('offers a host tool to the model next to the Blok tools, and runs it with the model\'s input', async () => {
+      const run = vi.fn(async (input: unknown) => `found ${JSON.stringify(input)}`);
+      const model = scripted(searchCall, answer('Red pandas live in the Himalayas.'));
+      const editor = await createEditor(model, { tools: [{ ...search, run }] });
+
+      const ask = editor.agent.ask('What is a red panda?');
+      const result = await ask.result;
+
+      expect(model.requests[0].tools.map((tool) => tool.name)).toEqual([...CORE_TOOL_NAMES, 'web_search']);
+      expect(model.requests[0].tools.at(-1)).toEqual(search);
+      expect(run).toHaveBeenCalledWith({ query: 'red panda' });
+      expect(model.requests[1].messages.at(-1)).toEqual({
+        role: 'user',
+        content: [{ type: 'tool_result', tool_use_id: 'use-search', content: 'found {"query":"red panda"}', is_error: false }],
+      });
+      expect(result).toMatchObject({ status: 'done', reply: 'Red pandas live in the Himalayas.' });
+      ask.end();
+    });
+
+    it('gives a host tool that throws back to the model as an error, and the run goes on', async () => {
+      const model = scripted(searchCall, answer('Search is down.'));
+      const editor = await createEditor(model, { tools: [{ ...search, run: () => Promise.reject(new Error('offline')) }] });
+
+      const ask = editor.agent.ask('What is a red panda?');
+      const result = await ask.result;
+
+      expect(model.requests[1].messages.at(-1)).toEqual({
+        role: 'user',
+        content: [{ type: 'tool_result', tool_use_id: 'use-search', content: 'offline', is_error: true }],
+      });
+      expect(result.status).toBe('done');
+      ask.end();
+    });
+
+    it('throws when a host tool takes a Blok tool\'s name', async () => {
+      const editor = await createEditor(scripted(), { tools: [{ ...search, name: 'blok_read', run: async () => '' }] });
+
+      expect(() => editor.agent.ask('Hi')).toThrow(/blok_read/);
+    });
+  });
 });

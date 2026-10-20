@@ -22,6 +22,19 @@ export interface AgentAnthropicTool {
   strict?: boolean;
 }
 
+/** A tool the host adds to the assistant, such as web search. */
+export interface AgentHostTool {
+  /** Must not start with `blok_`. */
+  name: string;
+  description: string;
+  input_schema: Record<string, unknown>;
+  /** Runs one call. The text goes back to the model. A throw goes back as an error, and the run goes on. */
+  run(input: unknown): Promise<string>;
+}
+
+/** A tool as the model sees it: a Blok tool, or a host tool without `run`. */
+export type AgentModelTool = AgentAnthropicTool | Omit<AgentHostTool, 'run'>;
+
 export interface AgentOpenAITool {
   type: 'function';
   name: AgentToolName;
@@ -113,7 +126,7 @@ export type AgentModelStreamEvent =
 export interface AgentModelRequest {
   system: string;
   messages: AgentModelMessage[];
-  tools: AgentAnthropicTool[];
+  tools: AgentModelTool[];
   /** Aborted when the user stops the run. Pass it to the HTTP request. */
   signal: AbortSignal;
   /** The level for this prompt. Absent when the host set no `thinking` and the caller passed none. */
@@ -138,6 +151,8 @@ export interface AgentAssistantConfig {
   name?: string;
   /** Model calls allowed per prompt. Default 30. */
   maxSteps?: number;
+  /** Extra tools the model may call, after the Blok tools. The host runs them. */
+  tools?: AgentHostTool[];
   /** Levels the user may pick in the Ask AI bar. The picker shows only with two or more. */
   thinking?: {
     levels: AgentThinkingLevel[];

@@ -1511,6 +1511,7 @@
   "tools.database.statusDisplayAs.checkbox": "Žymimasis langelis",
   "tools.database.propertyDescription": "Savybės aprašas",
   "tools.database.propertyDescriptionPlaceholder": "Pridėti aprašą…",
+  "tools.database.addPropertyDescription": "Pridėti savybės aprašą",
   "tools.database.pageVisibility": "Savybės matomumas",
   "tools.database.pageVisibility.always": "Visada rodyti",
   "tools.database.pageVisibility.hideWhenEmpty": "Slėpti, kai tuščia",

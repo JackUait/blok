@@ -1511,6 +1511,7 @@
   "tools.database.statusDisplayAs.checkbox": "Прапорець",
   "tools.database.propertyDescription": "Опис властивості",
   "tools.database.propertyDescriptionPlaceholder": "Додати опис…",
+  "tools.database.addPropertyDescription": "Додати опис властивості",
   "tools.database.pageVisibility": "Видимість властивості",
   "tools.database.pageVisibility.always": "Завжди показувати",
   "tools.database.pageVisibility.hideWhenEmpty": "Приховувати, якщо порожньо",

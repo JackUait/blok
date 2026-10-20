@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "Valintaruutu",
   "tools.database.propertyDescription": "Ominaisuuden kuvaus",
   "tools.database.propertyDescriptionPlaceholder": "Lisää kuvaus…",
+  "tools.database.addPropertyDescription": "Lisää ominaisuuden kuvaus",
   "tools.database.pageVisibility": "Ominaisuuden näkyvyys",
   "tools.database.pageVisibility.always": "Näytä aina",
   "tools.database.pageVisibility.hideWhenEmpty": "Piilota, kun tyhjä",

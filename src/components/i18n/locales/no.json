@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "Avmerkingsboks",
   "tools.database.propertyDescription": "Egenskapsbeskrivelse",
   "tools.database.propertyDescriptionPlaceholder": "Legg til en beskrivelse…",
+  "tools.database.addPropertyDescription": "Legg til egenskapsbeskrivelse",
   "tools.database.pageVisibility": "Egenskapens synlighet",
   "tools.database.pageVisibility.always": "Vis alltid",
   "tools.database.pageVisibility.hideWhenEmpty": "Skjul når tom",

@@ -1511,6 +1511,7 @@
   "tools.database.statusDisplayAs.checkbox": "Zaškrtávací políčko",
   "tools.database.propertyDescription": "Popis vlastnosti",
   "tools.database.propertyDescriptionPlaceholder": "Přidat popis…",
+  "tools.database.addPropertyDescription": "Přidat popis vlastnosti",
   "tools.database.pageVisibility": "Viditelnost vlastnosti",
   "tools.database.pageVisibility.always": "Vždy zobrazit",
   "tools.database.pageVisibility.hideWhenEmpty": "Skrýt, když je prázdné",

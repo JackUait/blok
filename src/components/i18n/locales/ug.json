@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "تاللاش قۇتىسى",
   "tools.database.propertyDescription": "خاسلىق چۈشەندۈرۈشى",
   "tools.database.propertyDescriptionPlaceholder": "چۈشەندۈرۈش قوشۇش…",
+  "tools.database.addPropertyDescription": "خاسلىق چۈشەندۈرۈشى قوشۇش",
   "tools.database.pageVisibility": "خاسلىقنىڭ كۆرۈنۈشى",
   "tools.database.pageVisibility.always": "ھەمىشە كۆرسىتىش",
   "tools.database.pageVisibility.hideWhenEmpty": "بوش بولسا يوشۇرۇش",

@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "ប្រអប់ធីក",
   "tools.database.propertyDescription": "ការពិពណ៌នាលក្ខណៈ",
   "tools.database.propertyDescriptionPlaceholder": "បន្ថែមការពិពណ៌នា…",
+  "tools.database.addPropertyDescription": "បន្ថែមការពិពណ៌នាលក្ខណៈ",
   "tools.database.pageVisibility": "ភាពមើលឃើញលក្ខណៈ",
   "tools.database.pageVisibility.always": "បង្ហាញជានិច្ច",
   "tools.database.pageVisibility.hideWhenEmpty": "លាក់ពេលទទេ",

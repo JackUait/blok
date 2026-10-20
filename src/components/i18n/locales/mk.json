@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "Поле за потврда",
   "tools.database.propertyDescription": "Опис на својството",
   "tools.database.propertyDescriptionPlaceholder": "Додајте опис…",
+  "tools.database.addPropertyDescription": "Додајте опис на својството",
   "tools.database.pageVisibility": "Видливост на својството",
   "tools.database.pageVisibility.always": "Секогаш прикажувај",
   "tools.database.pageVisibility.hideWhenEmpty": "Сокриј кога е празно",

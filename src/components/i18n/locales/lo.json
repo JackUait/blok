@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "ກ່ອງໝາຍຖືກ",
   "tools.database.propertyDescription": "ຄຳອະທິບາຍຄຸນສົມບັດ",
   "tools.database.propertyDescriptionPlaceholder": "ເພີ່ມຄຳອະທິບາຍ…",
+  "tools.database.addPropertyDescription": "ເພີ່ມຄຳອະທິບາຍຄຸນສົມບັດ",
   "tools.database.pageVisibility": "ການສະແດງຄຸນສົມບັດ",
   "tools.database.pageVisibility.always": "ສະແດງສະເໝີ",
   "tools.database.pageVisibility.hideWhenEmpty": "ເຊື່ອງເມື່ອຫວ່າງເປົ່າ",

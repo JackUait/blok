@@ -154,6 +154,21 @@ test('without the host lever a new database still opens "New database", with no 
   await expect(page.locator('[data-blok-tool="database"]').first().getByRole('grid')).toBeVisible();
 });
 
+// research/26 §1b: "New database" closes with the same round × as View settings.
+test('the "New database" × closes the panel and keeps the empty database', async ({ page }) => {
+  await mount(page, false);
+  await insertDatabase(page);
+
+  const panel = page.getByTestId('database-new-database-panel');
+  const close = panel.getByRole('button', { name: 'Close', exact: true });
+
+  await expect(close).toBeVisible();
+  await expect(close).toHaveCSS('background-color', 'rgba(42, 28, 0, 0.07)');
+  await close.click();
+  await expect(panel).toBeHidden();
+  await expect(page.locator('[data-blok-tool="database"]').first().getByRole('grid')).toBeVisible();
+});
+
 // research/27 §2: the data goes into the database the panel came from, and its title stays.
 test('Import CSV from the panel opens the import dialog and fills the new database itself; one undo empties it', async ({ page }) => {
   await mount(page, false);

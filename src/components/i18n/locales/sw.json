@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "Kisanduku tiki",
   "tools.database.propertyDescription": "Maelezo ya sifa",
   "tools.database.propertyDescriptionPlaceholder": "Ongeza maelezo…",
+  "tools.database.addPropertyDescription": "Ongeza maelezo ya sifa",
   "tools.database.pageVisibility": "Mwonekano wa sifa",
   "tools.database.pageVisibility.always": "Onyesha kila wakati",
   "tools.database.pageVisibility.hideWhenEmpty": "Ficha ikiwa tupu",

@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "체크박스",
   "tools.database.propertyDescription": "속성 설명",
   "tools.database.propertyDescriptionPlaceholder": "설명 추가…",
+  "tools.database.addPropertyDescription": "속성 설명 추가",
   "tools.database.pageVisibility": "속성 표시 여부",
   "tools.database.pageVisibility.always": "항상 표시",
   "tools.database.pageVisibility.hideWhenEmpty": "비어 있으면 숨기기",

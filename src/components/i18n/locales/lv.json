@@ -1509,6 +1509,7 @@
   "tools.database.statusDisplayAs.checkbox": "Izvēles rūtiņa",
   "tools.database.propertyDescription": "Rekvizīta apraksts",
   "tools.database.propertyDescriptionPlaceholder": "Pievienot aprakstu…",
+  "tools.database.addPropertyDescription": "Pievienot rekvizīta aprakstu",
   "tools.database.pageVisibility": "Rekvizīta redzamība",
   "tools.database.pageVisibility.always": "Vienmēr rādīt",
   "tools.database.pageVisibility.hideWhenEmpty": "Slēpt, ja tukšs",

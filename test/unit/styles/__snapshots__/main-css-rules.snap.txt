@@ -8242,6 +8242,25 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   background-color: var(--blok-database-property-icon-button-hover-bg);
 }
 
+[data-blok-database-property-menu-description-button] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--blok-database-table-header-icon);
+  cursor: pointer;
+}
+
+[data-blok-database-property-menu-description-button] svg {
+  width: 15px;
+  height: 15px;
+}
+
 [data-blok-database-property-description] {
   min-height: 60px;
   padding: var(--blok-space-1-5) var(--blok-space-2);

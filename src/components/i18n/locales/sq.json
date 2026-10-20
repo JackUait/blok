@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "Kuti kontrolli",
   "tools.database.propertyDescription": "Përshkrimi i vetisë",
   "tools.database.propertyDescriptionPlaceholder": "Shto një përshkrim…",
+  "tools.database.addPropertyDescription": "Shto përshkrim të vetisë",
   "tools.database.pageVisibility": "Dukshmëria e vetisë",
   "tools.database.pageVisibility.always": "Shfaq gjithmonë",
   "tools.database.pageVisibility.hideWhenEmpty": "Fshih kur është bosh",

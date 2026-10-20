@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "چیک باکس",
   "tools.database.propertyDescription": "پراپرٹی کی تفصیل",
   "tools.database.propertyDescriptionPlaceholder": "تفصیل شامل کریں…",
+  "tools.database.addPropertyDescription": "پراپرٹی کی تفصیل شامل کریں",
   "tools.database.pageVisibility": "پراپرٹی کی مرئیت",
   "tools.database.pageVisibility.always": "ہمیشہ دکھائیں",
   "tools.database.pageVisibility.hideWhenEmpty": "خالی ہونے پر چھپائیں",

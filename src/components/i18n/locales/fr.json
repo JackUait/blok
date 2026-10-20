@@ -1509,6 +1509,7 @@
   "tools.database.statusDisplayAs.checkbox": "Case à cocher",
   "tools.database.propertyDescription": "Description de la propriété",
   "tools.database.propertyDescriptionPlaceholder": "Ajouter une description…",
+  "tools.database.addPropertyDescription": "Ajouter une description de la propriété",
   "tools.database.pageVisibility": "Visibilité de la propriété",
   "tools.database.pageVisibility.always": "Toujours afficher",
   "tools.database.pageVisibility.hideWhenEmpty": "Masquer si vide",

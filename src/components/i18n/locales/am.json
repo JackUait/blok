@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "የማመልከቻ ሳጥን",
   "tools.database.propertyDescription": "የንብረት መግለጫ",
   "tools.database.propertyDescriptionPlaceholder": "መግለጫ ጨምር…",
+  "tools.database.addPropertyDescription": "የንብረት መግለጫ ጨምር",
   "tools.database.pageVisibility": "የንብረት ታይነት",
   "tools.database.pageVisibility.always": "ሁልጊዜ አሳይ",
   "tools.database.pageVisibility.hideWhenEmpty": "ባዶ ሲሆን ደብቅ",

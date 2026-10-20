@@ -238,6 +238,17 @@ for (const path of paths) {
       await expect(icon).toHaveCSS('background-color', look.iconHover);
     });
 
+    // Dark ink unmeasured for the (i): it borrows the × glyph ink (§4a).
+    test('property menu: a 15x20 (i) at the name field\'s end with no fill, in the × glyph ink (§3c)', async ({ page }) => {
+      await page.locator('[data-blok-database-table-column-header][data-property-id="p-due"]').click();
+      const info = page.locator('[data-blok-popover-opened="true"]').getByRole('button', { name: 'Add property description', exact: true });
+
+      await expect(info).toBeVisible();
+      expect(await size(info)).toEqual({ width: 15, height: 20 });
+      await expect(info).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+      await expect(info).toHaveCSS('color', look.closeGlyph);
+    });
+
     test('view settings: a 20px round Close × with the measured fills, no hint, and it closes (§1b)', async ({ page }) => {
       await page.getByTestId('database-toolbar-settings').click();
       const panel = page.getByTestId('database-view-settings');
@@ -347,6 +358,31 @@ test.describe('property header menu: Edit property opens one level at a time (re
     await expect(edit).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(open).toHaveCount(0);
+  });
+
+  // research/26 §3c. What Notion's click opens was not measured: it opens Blok's description editor.
+  test('the (i) opens the description editor with the caret in it, and the text saves', async ({ page }) => {
+    const open = page.locator('[data-blok-popover-opened="true"]');
+
+    await page.locator('[data-blok-database-table-column-header][data-property-id="p-amount"]').click();
+    await open.getByRole('button', { name: 'Add property description', exact: true }).click();
+    const area = page.locator('[data-blok-database-property-description]');
+
+    await expect(area).toBeFocused();
+    // The pointer rests on the name row: the submenu must not close under it.
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 800)));
+    await expect(area).toBeVisible();
+    await page.keyboard.type('What we spend');
+    await area.blur();
+
+    const description = await page.evaluate(async () => {
+      const saved = await window.blokInstance?.save();
+      const data = saved?.blocks.find((block) => block.id === 'db-1')?.data as { schema: Array<{ id: string; description?: string }> } | undefined;
+
+      return data?.schema.find((p) => p.id === 'p-amount')?.description;
+    });
+
+    expect(description).toBe('What we spend');
   });
 
   test('the name field keeps its caret and Enter while it holds the highlight', async ({ page }) => {

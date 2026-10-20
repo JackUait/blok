@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "Checkbox",
   "tools.database.propertyDescription": "Paglalarawan ng property",
   "tools.database.propertyDescriptionPlaceholder": "Magdagdag ng paglalarawan…",
+  "tools.database.addPropertyDescription": "Magdagdag ng paglalarawan ng property",
   "tools.database.pageVisibility": "Visibility ng property",
   "tools.database.pageVisibility.always": "Palaging ipakita",
   "tools.database.pageVisibility.hideWhenEmpty": "Itago kapag walang laman",

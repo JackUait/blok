@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "தேர்வுப்பெட்டி",
   "tools.database.propertyDescription": "பண்பு விளக்கம்",
   "tools.database.propertyDescriptionPlaceholder": "விளக்கத்தைச் சேர்…",
+  "tools.database.addPropertyDescription": "பண்பு விளக்கத்தைச் சேர்",
   "tools.database.pageVisibility": "பண்பின் தெரிவுநிலை",
   "tools.database.pageVisibility.always": "எப்போதும் காட்டு",
   "tools.database.pageVisibility.hideWhenEmpty": "காலியாக இருக்கும்போது மறை",

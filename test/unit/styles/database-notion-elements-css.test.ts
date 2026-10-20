@@ -66,6 +66,19 @@ describe('property menu "Change icon" button (research/26 §3c, §4a)', () => {
   });
 });
 
+describe('property menu "Add property description" (i) button (research/26 §3c)', () => {
+  it('is 15x20 with no fill and draws its glyph in the measured ink', () => {
+    const body = ruleBody('[data-blok-database-property-menu-description-button]');
+
+    expect(body).toContain('width: 15px');
+    expect(body).toContain('height: 20px');
+    expect(body).toContain('background: transparent');
+    expect(body).toContain('color: var(--blok-database-table-header-icon)');
+    // Light is measured; dark borrows the View settings × glyph ink (r26:174).
+    expect(tokenValues('--blok-database-table-header-icon')).toEqual([ 'rgb(142, 139, 134)', 'rgb(173, 169, 163)', 'rgb(173, 169, 163)' ]);
+  });
+});
+
 describe('view settings Close × (research/26 §1b, §4a)', () => {
   it('is a 20px round button on the measured fills', () => {
     const body = ruleBody('[data-blok-database-panel-close]');

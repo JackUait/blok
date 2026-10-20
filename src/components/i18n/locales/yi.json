@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "טשעקבאָקס",
   "tools.database.propertyDescription": "אייגנשאפט באַשרײַבונג",
   "tools.database.propertyDescriptionPlaceholder": "צולייגן אַ באַשרײַבונג…",
+  "tools.database.addPropertyDescription": "צולייגן אַן אייגנשאפט באַשרײַבונג",
   "tools.database.pageVisibility": "אייגנשאפט זעבאַרקייט",
   "tools.database.pageVisibility.always": "שטענדיק ווײַזן",
   "tools.database.pageVisibility.hideWhenEmpty": "באַהאַלטן ווען ליידיק",

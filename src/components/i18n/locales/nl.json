@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "Selectievakje",
   "tools.database.propertyDescription": "Beschrijving van eigenschap",
   "tools.database.propertyDescriptionPlaceholder": "Voeg een beschrijving toe…",
+  "tools.database.addPropertyDescription": "Beschrijving van eigenschap toevoegen",
   "tools.database.pageVisibility": "Zichtbaarheid van eigenschap",
   "tools.database.pageVisibility.always": "Altijd tonen",
   "tools.database.pageVisibility.hideWhenEmpty": "Verbergen als leeg",

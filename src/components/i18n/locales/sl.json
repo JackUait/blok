@@ -1511,6 +1511,7 @@
   "tools.database.statusDisplayAs.checkbox": "Potrditveno polje",
   "tools.database.propertyDescription": "Opis lastnosti",
   "tools.database.propertyDescriptionPlaceholder": "Dodajte opis…",
+  "tools.database.addPropertyDescription": "Dodajte opis lastnosti",
   "tools.database.pageVisibility": "Vidnost lastnosti",
   "tools.database.pageVisibility.always": "Vedno prikaži",
   "tools.database.pageVisibility.hideWhenEmpty": "Skrij, ko je prazno",

@@ -1,5 +1,5 @@
 import { IconArrowDiagonal, IconArrowUp, IconDatabase, IconEmojiSparkles, IconPlus, IconUpload } from '../../components/icons';
-import { DatabasePanel, panelInput, panelLabel, panelRow, panelSeparator } from './database-panel';
+import { DatabasePanel, panelCloseButton, panelInput, panelLabel, panelRow, panelSeparator } from './database-panel';
 import type { LinkedPickerSource } from './database-linked-picker';
 
 export interface NewSourcePanelOptions {
@@ -136,8 +136,12 @@ export const openNewSourcePanel = (options: NewSourcePanelOptions): DatabasePane
     })));
   };
 
+  // research/26 §1b: the same round × as View settings, on every page of this panel.
+  const closeButton = (panel: DatabasePanel): HTMLElement => panelCloseButton(panel, t('tools.database.close'));
+
   const linkPage = {
     title: t('tools.database.linkedLinkExisting'),
+    headerAction: closeButton,
     build: (panel: DatabasePanel): HTMLElement[] => {
       const search = panelInput({
         value: state.linkQuery,
@@ -223,6 +227,7 @@ export const openNewSourcePanel = (options: NewSourcePanelOptions): DatabasePane
     anchor: options.anchor,
     root: {
       title: t(newDatabase ? 'tools.database.linkedPanelTitle' : 'tools.database.newDataSource'),
+      headerAction: closeButton,
       build: (current) => {
         fill(current);
         if (newDatabase) {

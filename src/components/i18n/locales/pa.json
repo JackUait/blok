@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "ਚੈੱਕਬਾਕਸ",
   "tools.database.propertyDescription": "ਵਿਸ਼ੇਸ਼ਤਾ ਦਾ ਵੇਰਵਾ",
   "tools.database.propertyDescriptionPlaceholder": "ਵੇਰਵਾ ਜੋੜੋ…",
+  "tools.database.addPropertyDescription": "ਵਿਸ਼ੇਸ਼ਤਾ ਦਾ ਵੇਰਵਾ ਜੋੜੋ",
   "tools.database.pageVisibility": "ਵਿਸ਼ੇਸ਼ਤਾ ਦੀ ਦਿੱਖ",
   "tools.database.pageVisibility.always": "ਹਮੇਸ਼ਾ ਦਿਖਾਓ",
   "tools.database.pageVisibility.hideWhenEmpty": "ਖਾਲੀ ਹੋਣ 'ਤੇ ਲੁਕਾਓ",

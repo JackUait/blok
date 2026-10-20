@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "အမှတ်ခြစ်ကွက်",
   "tools.database.propertyDescription": "ဂုဏ်သတ္တိ ဖော်ပြချက်",
   "tools.database.propertyDescriptionPlaceholder": "ဖော်ပြချက် ထည့်ပါ…",
+  "tools.database.addPropertyDescription": "ဂုဏ်သတ္တိ ဖော်ပြချက် ထည့်ပါ",
   "tools.database.pageVisibility": "ဂုဏ်သတ္တိ မြင်နိုင်မှု",
   "tools.database.pageVisibility.always": "အမြဲ ပြရန်",
   "tools.database.pageVisibility.hideWhenEmpty": "ဗလာဖြစ်လျှင် ဖျောက်ရန်",

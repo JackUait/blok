@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "Πλαίσιο ελέγχου",
   "tools.database.propertyDescription": "Περιγραφή ιδιότητας",
   "tools.database.propertyDescriptionPlaceholder": "Προσθήκη περιγραφής…",
+  "tools.database.addPropertyDescription": "Προσθήκη περιγραφής ιδιότητας",
   "tools.database.pageVisibility": "Ορατότητα ιδιότητας",
   "tools.database.pageVisibility.always": "Πάντα εμφάνιση",
   "tools.database.pageVisibility.hideWhenEmpty": "Απόκρυψη όταν είναι κενή",

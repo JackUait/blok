@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "Onay kutusu",
   "tools.database.propertyDescription": "Özellik açıklaması",
   "tools.database.propertyDescriptionPlaceholder": "Açıklama ekleyin…",
+  "tools.database.addPropertyDescription": "Özellik açıklaması ekleyin",
   "tools.database.pageVisibility": "Özellik görünürlüğü",
   "tools.database.pageVisibility.always": "Her zaman göster",
   "tools.database.pageVisibility.hideWhenEmpty": "Boşken gizle",

@@ -438,6 +438,7 @@ export type BlokMessageKey =
   | 'tools.database.addIcon'
   | 'tools.database.addOption'
   | 'tools.database.addProperty'
+  | 'tools.database.addPropertyDescription'
   | 'tools.database.addRow'
   | 'tools.database.addView'
   | 'tools.database.aiAutofill'

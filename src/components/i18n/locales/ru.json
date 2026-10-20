@@ -1511,6 +1511,7 @@
   "tools.database.statusDisplayAs.checkbox": "Флажок",
   "tools.database.propertyDescription": "Описание свойства",
   "tools.database.propertyDescriptionPlaceholder": "Добавить описание…",
+  "tools.database.addPropertyDescription": "Добавить описание свойства",
   "tools.database.pageVisibility": "Видимость свойства",
   "tools.database.pageVisibility.always": "Всегда показывать",
   "tools.database.pageVisibility.hideWhenEmpty": "Скрывать, если пусто",

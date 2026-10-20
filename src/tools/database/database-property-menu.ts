@@ -1,4 +1,4 @@
-import { IconCalendar, IconCopy, IconEmojiSmile, IconPencil, IconTrash, IconEmojiSparkles, IconMessage, IconPageLayout, IconWand } from '../../components/icons';
+import { IconCalendar, IconCopy, IconEmojiSmile, IconInfo, IconPencil, IconTrash, IconEmojiSparkles, IconMessage, IconPageLayout, IconWand } from '../../components/icons';
 import { nameTakenError } from './database-name-taken-error';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
@@ -160,6 +160,8 @@ export class DatabasePropertyMenu {
   /** The open property with localized option and group names, for display only. Patches come from the saved one. */
   private shown: PropertyDefinition | null = null;
   private emojiPicker: EmojiPicker | null = null;
+  /** The open menu's description textarea, focused by the (i) button. */
+  private descriptionArea: HTMLTextAreaElement | null = null;
 
   constructor(private readonly options: PropertyMenuOptions) {}
 
@@ -198,7 +200,7 @@ export class DatabasePropertyMenu {
     const lead = viewItems.filter((item) => item.type === PopoverItemType.Default && item.name === SHOW_PAGE_ICON_ITEM);
     const rest = viewItems.filter((item) => !lead.includes(item));
     const items: PopoverItemParams[] = [
-      { type: PopoverItemType.Html, element: this.nameField(property), name: 'name' },
+      { type: PopoverItemType.Html, element: this.nameField(property, entries.includes('description')), name: 'name' },
       { type: PopoverItemType.Separator },
       ...head.map((entry) => this.entry(entry, property)),
       ...lead,
@@ -280,7 +282,7 @@ export class DatabasePropertyMenu {
     this.emojiPicker = null;
   }
 
-  private nameField(property: PropertyDefinition): HTMLElement {
+  private nameField(property: PropertyDefinition, describable: boolean): HTMLElement {
     const row = document.createElement('div');
     const icon = document.createElement('button');
     const input = document.createElement('input');
@@ -327,9 +329,30 @@ export class DatabasePropertyMenu {
         this.close();
       }
     });
-    row.append(icon, input, error.element);
+    row.append(icon, input);
+    if (describable) row.append(this.descriptionButton());
+    row.append(error.element);
 
     return row;
+  }
+
+  /**
+   * research/26 §3c: the (i) at the name field's end. It opens the "Property
+   * description" submenu, so that menu item must stay in the popover.
+   */
+  private descriptionButton(): HTMLButtonElement {
+    const button = document.createElement('button');
+
+    button.type = 'button';
+    button.setAttribute('data-blok-database-property-menu-description-button', '');
+    button.setAttribute('aria-label', this.t('tools.database.addPropertyDescription'));
+    button.innerHTML = IconInfo;
+    button.addEventListener('click', () => {
+      this.popover?.activateItemByName('description');
+      this.descriptionArea?.focus();
+    });
+
+    return button;
   }
 
   private openIconPicker(property: PropertyDefinition, anchor: HTMLElement): void {
@@ -587,6 +610,7 @@ export class DatabasePropertyMenu {
     area.placeholder = this.t('tools.database.propertyDescriptionPlaceholder');
     area.value = property.description ?? '';
     area.rows = 3;
+    this.descriptionArea = area;
     area.addEventListener('change', () => update({ description: area.value.trim() === '' ? undefined : area.value }));
 
     const wrap = document.createElement('div');

@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "チェックボックス",
   "tools.database.propertyDescription": "プロパティの説明",
   "tools.database.propertyDescriptionPlaceholder": "説明を追加…",
+  "tools.database.addPropertyDescription": "プロパティの説明を追加",
   "tools.database.pageVisibility": "プロパティの表示",
   "tools.database.pageVisibility.always": "常に表示",
   "tools.database.pageVisibility.hideWhenEmpty": "空のときは非表示",

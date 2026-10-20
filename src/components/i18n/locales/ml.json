@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "ചെക്ക്ബോക്സ്",
   "tools.database.propertyDescription": "പ്രോപ്പർട്ടി വിവരണം",
   "tools.database.propertyDescriptionPlaceholder": "ഒരു വിവരണം ചേർക്കുക…",
+  "tools.database.addPropertyDescription": "പ്രോപ്പർട്ടി വിവരണം ചേർക്കുക",
   "tools.database.pageVisibility": "പ്രോപ്പർട്ടി ദൃശ്യത",
   "tools.database.pageVisibility.always": "എപ്പോഴും കാണിക്കുക",
   "tools.database.pageVisibility.hideWhenEmpty": "ശൂന്യമാകുമ്പോൾ മറയ്ക്കുക",

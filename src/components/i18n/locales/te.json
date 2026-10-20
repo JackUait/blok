@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "చెక్‌బాక్స్",
   "tools.database.propertyDescription": "ప్రాపర్టీ వివరణ",
   "tools.database.propertyDescriptionPlaceholder": "వివరణను జోడించండి…",
+  "tools.database.addPropertyDescription": "ప్రాపర్టీ వివరణను జోడించండి",
   "tools.database.pageVisibility": "ప్రాపర్టీ దృశ్యమానత",
   "tools.database.pageVisibility.always": "ఎల్లప్పుడూ చూపు",
   "tools.database.pageVisibility.hideWhenEmpty": "ఖాళీగా ఉన్నప్పుడు దాచు",

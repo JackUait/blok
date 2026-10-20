@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "Kontrollkästchen",
   "tools.database.propertyDescription": "Beschreibung der Eigenschaft",
   "tools.database.propertyDescriptionPlaceholder": "Beschreibung hinzufügen…",
+  "tools.database.addPropertyDescription": "Beschreibung der Eigenschaft hinzufügen",
   "tools.database.pageVisibility": "Sichtbarkeit der Eigenschaft",
   "tools.database.pageVisibility.always": "Immer anzeigen",
   "tools.database.pageVisibility.hideWhenEmpty": "Ausblenden, wenn leer",

@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "ช่องทำเครื่องหมาย",
   "tools.database.propertyDescription": "คำอธิบายคุณสมบัติ",
   "tools.database.propertyDescriptionPlaceholder": "เพิ่มคำอธิบาย…",
+  "tools.database.addPropertyDescription": "เพิ่มคำอธิบายคุณสมบัติ",
   "tools.database.pageVisibility": "การแสดงคุณสมบัติ",
   "tools.database.pageVisibility.always": "แสดงเสมอ",
   "tools.database.pageVisibility.hideWhenEmpty": "ซ่อนเมื่อว่าง",

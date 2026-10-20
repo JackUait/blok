@@ -252,6 +252,39 @@ describe('"New data source" side panel (research/23 §10, research/20 §1a)', ()
     expect((await dataOf(api, 'db'))?.views.some((v) => v.dataSourceId === sources(api)[0])).toBe(true);
   });
 
+  // research/26 §1b, r26:116: the round × closes the panel and keeps the empty source.
+  it('the header × closes the panel and keeps the new view and its empty source', async () => {
+    const api = await make(pageDoc());
+
+    await newDataSourceFromAddView();
+    const close = panel()?.querySelector<HTMLElement>('[data-blok-database-panel-header] [data-blok-testid="database-panel-close"]');
+
+    expect(close?.getAttribute('aria-label')).toBe('Close');
+    close?.click();
+    await quiet();
+
+    expect(panel()).toBeNull();
+    expect(sources(api)).toHaveLength(1);
+    expect((await dataOf(api, 'db'))?.views.some((v) => v.dataSourceId === sources(api)[0])).toBe(true);
+  });
+
+  it('"Link to existing data source" has the same header ×, and it closes the panel', async () => {
+    const api = await make(pageDoc());
+
+    await newDataSourceFromAddView();
+    byTestId('database-new-source-link')?.click();
+    await quiet();
+    const close = panel()?.querySelector<HTMLElement>('[data-blok-database-panel-header] [data-blok-testid="database-panel-close"]');
+
+    expect(close).not.toBeNull();
+    expect(close).not.toHaveFocus();
+    close?.click();
+    await quiet();
+
+    expect(panel()).toBeNull();
+    expect(sources(api)).toHaveLength(1);
+  });
+
   it('"Import CSV" fills the new source with the file\'s columns and rows; the view stays on it', async () => {
     const api = await make(pageDoc());
 

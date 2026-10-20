@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "ચેકબૉક્સ",
   "tools.database.propertyDescription": "ગુણધર્મનું વર્ણન",
   "tools.database.propertyDescriptionPlaceholder": "વર્ણન ઉમેરો…",
+  "tools.database.addPropertyDescription": "ગુણધર્મનું વર્ણન ઉમેરો",
   "tools.database.pageVisibility": "ગુણધર્મની દૃશ્યતા",
   "tools.database.pageVisibility.always": "હંમેશાં બતાવો",
   "tools.database.pageVisibility.hideWhenEmpty": "ખાલી હોય ત્યારે છુપાવો",

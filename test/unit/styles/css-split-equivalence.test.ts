@@ -836,6 +836,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_SLASH_VIEW_PREVIEWS_BYTES = 10_765;
     // database.css: Edit cadence's "Label  value ›" rows, their submenu fields and zone rows (research/21 §3).
     const DATABASE_CADENCE_SETTINGS_BYTES = 606;
+    // database.css: the property menu (i) "Add property description" button (research/26 §3c).
+    const DATABASE_PROPERTY_DESCRIPTION_BUTTON_BYTES = 555;
     // database.css: a calendar event title gives way to its comment badge (research/22 §11).
     const DATABASE_CALENDAR_EVENT_BADGE_BYTES = 218;
     // database.css: the view overflow list's search, row handle and "•••", and New view (research/13 §3a).
@@ -1120,7 +1122,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_SLASH_VIEW_PREVIEWS_BYTES
       + DATABASE_CADENCE_SETTINGS_BYTES
       + DATABASE_STARTER_ICON_BYTES
-      + DATABASE_HELP_LINKS_BYTES;
+      + DATABASE_HELP_LINKS_BYTES
+      + DATABASE_PROPERTY_DESCRIPTION_BUTTON_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

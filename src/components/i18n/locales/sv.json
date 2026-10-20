@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "Kryssruta",
   "tools.database.propertyDescription": "Egenskapsbeskrivning",
   "tools.database.propertyDescriptionPlaceholder": "Lägg till en beskrivning…",
+  "tools.database.addPropertyDescription": "Lägg till egenskapsbeskrivning",
   "tools.database.pageVisibility": "Egenskapens synlighet",
   "tools.database.pageVisibility.always": "Visa alltid",
   "tools.database.pageVisibility.hideWhenEmpty": "Dölj när tom",

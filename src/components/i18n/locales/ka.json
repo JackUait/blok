@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "მოსანიშნი უჯრა",
   "tools.database.propertyDescription": "თვისების აღწერა",
   "tools.database.propertyDescriptionPlaceholder": "აღწერის დამატება…",
+  "tools.database.addPropertyDescription": "თვისების აღწერის დამატება",
   "tools.database.pageVisibility": "თვისების ხილვადობა",
   "tools.database.pageVisibility.always": "ყოველთვის ჩვენება",
   "tools.database.pageVisibility.hideWhenEmpty": "დამალვა, როცა ცარიელია",

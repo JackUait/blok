@@ -1509,6 +1509,7 @@
   "tools.database.statusDisplayAs.checkbox": "Potvrdni okvir",
   "tools.database.propertyDescription": "Opis svojstva",
   "tools.database.propertyDescriptionPlaceholder": "Dodajte opis…",
+  "tools.database.addPropertyDescription": "Dodajte opis svojstva",
   "tools.database.pageVisibility": "Vidljivost svojstva",
   "tools.database.pageVisibility.always": "Uvijek prikaži",
   "tools.database.pageVisibility.hideWhenEmpty": "Sakrij kada je prazno",

@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "चेकबक्स",
   "tools.database.propertyDescription": "गुणको विवरण",
   "tools.database.propertyDescriptionPlaceholder": "विवरण थप्नुहोस्…",
+  "tools.database.addPropertyDescription": "गुणको विवरण थप्नुहोस्",
   "tools.database.pageVisibility": "गुणको दृश्यता",
   "tools.database.pageVisibility.always": "सधैँ देखाउनुहोस्",
   "tools.database.pageVisibility.hideWhenEmpty": "खाली हुँदा लुकाउनुहोस्",

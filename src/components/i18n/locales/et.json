@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "Märkeruut",
   "tools.database.propertyDescription": "Omaduse kirjeldus",
   "tools.database.propertyDescriptionPlaceholder": "Lisa kirjeldus…",
+  "tools.database.addPropertyDescription": "Lisa omaduse kirjeldus",
   "tools.database.pageVisibility": "Omaduse nähtavus",
   "tools.database.pageVisibility.always": "Kuva alati",
   "tools.database.pageVisibility.hideWhenEmpty": "Peida, kui on tühi",

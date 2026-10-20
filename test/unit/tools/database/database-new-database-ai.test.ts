@@ -111,7 +111,7 @@ describe('"New database" panel with the AI prompt (research/26 §2, research/20 
   it('a database the user inserts opens it when the host gives ai.setupDatabase', async () => {
     await insert(vi.fn(async () => null));
 
-    expect(panel()?.querySelector('[data-blok-database-panel-header]')?.textContent).toBe('tools.database.linkedPanelTitle');
+    expect(panel()?.querySelector('[data-blok-database-panel-header]')?.textContent?.trim()).toBe('tools.database.linkedPanelTitle');
     expect(box().placeholder).toBe('tools.database.aiSetupPlaceholder');
     expect(box().getAttribute('aria-label')).toBe('tools.database.aiSetupPlaceholder');
     expect(submit().getAttribute('aria-disabled')).toBe('true');
@@ -123,11 +123,21 @@ describe('"New database" panel with the AI prompt (research/26 §2, research/20 
     ]);
   });
 
+  // research/26 §1b: the "New database" panel closes with the same round × as View settings.
+  it('puts the round × at the header\'s end', async () => {
+    await insert(undefined);
+
+    const close = panel()?.querySelector('[data-blok-database-panel-header] [data-blok-testid="database-panel-close"]');
+
+    expect(close?.getAttribute('aria-label')).toBe('tools.database.close');
+    expect(close?.hasAttribute('data-blok-database-panel-close')).toBe(true);
+  });
+
   // research/20 §1a: Notion always opens it. Its top without AI was never measured, so the rows show with no box.
   it('without the lever the same panel opens with no prompt box', async () => {
     await insert(undefined);
 
-    expect(panel()?.querySelector('[data-blok-database-panel-header]')?.textContent).toBe('tools.database.linkedPanelTitle');
+    expect(panel()?.querySelector('[data-blok-database-panel-header]')?.textContent?.trim()).toBe('tools.database.linkedPanelTitle');
     expect(panel()?.querySelector('textarea')).toBeNull();
     expect(panel()?.querySelector('[data-blok-database-ai-prompt]')).toBeNull();
     expect(panel()?.querySelector('[data-blok-testid="database-new-database-ai-submit"]')).toBeNull();
@@ -448,7 +458,7 @@ describe('"New database" panel for every database toolbox entry', () => {
   ] as const)('a user insert of the %s entry opens the panel, and New empty keeps its %s layout', async (name, layout) => {
     const { tool } = await insert(undefined, 'user', dataOf(name));
 
-    expect(panel()?.querySelector('[data-blok-database-panel-header]')?.textContent).toBe('tools.database.linkedPanelTitle');
+    expect(panel()?.querySelector('[data-blok-database-panel-header]')?.textContent?.trim()).toBe('tools.database.linkedPanelTitle');
     expect(rowLabels()[0]).toBe('tools.database.linkedNewEmpty');
     panel()?.querySelector<HTMLElement>('[data-blok-database-panel-row]')?.click();
     expect(activeType(tool)).toBe(layout);

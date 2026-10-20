@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "Afkrydsningsfelt",
   "tools.database.propertyDescription": "Egenskabsbeskrivelse",
   "tools.database.propertyDescriptionPlaceholder": "Tilføj en beskrivelse…",
+  "tools.database.addPropertyDescription": "Tilføj egenskabsbeskrivelse",
   "tools.database.pageVisibility": "Egenskabens synlighed",
   "tools.database.pageVisibility.always": "Vis altid",
   "tools.database.pageVisibility.hideWhenEmpty": "Skjul, når tom",

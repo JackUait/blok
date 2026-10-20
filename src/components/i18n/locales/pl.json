@@ -1511,6 +1511,7 @@
   "tools.database.statusDisplayAs.checkbox": "Pole wyboru",
   "tools.database.propertyDescription": "Opis właściwości",
   "tools.database.propertyDescriptionPlaceholder": "Dodaj opis…",
+  "tools.database.addPropertyDescription": "Dodaj opis właściwości",
   "tools.database.pageVisibility": "Widoczność właściwości",
   "tools.database.pageVisibility.always": "Zawsze pokazuj",
   "tools.database.pageVisibility.hideWhenEmpty": "Ukryj, gdy puste",

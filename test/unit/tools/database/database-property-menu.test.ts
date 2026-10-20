@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import type { PropertyDefinition, PropertyType } from '../../../../src/tools/database/types';
 import { createDefaultStatusSettings } from '../../../../src/tools/database/property-values';
-import { IconPageLayout } from '../../../../src/components/icons';
+import { IconInfo, IconPageLayout } from '../../../../src/components/icons';
 
 interface CapturedItem {
   name?: string;
@@ -18,15 +18,19 @@ interface CapturedItem {
   children?: { items: CapturedItem[]; searchable?: boolean };
 }
 
-const captured = vi.hoisted((): { popovers: Array<{ items: CapturedItem[]; destroyed: boolean; params: Record<string, unknown> }> } => ({ popovers: [] }));
+const captured = vi.hoisted((): { popovers: Array<{ items: CapturedItem[]; destroyed: boolean; params: Record<string, unknown>; activated: string[] }> } => ({ popovers: [] }));
 
 vi.mock('../../../../src/components/utils/popover', () => ({
   PopoverDesktop: class {
-    readonly record: { items: CapturedItem[]; destroyed: boolean; params: Record<string, unknown> };
+    readonly record: { items: CapturedItem[]; destroyed: boolean; params: Record<string, unknown>; activated: string[] };
 
     constructor(params: { items: CapturedItem[] }) {
-      this.record = { items: params.items, destroyed: false, params };
+      this.record = { items: params.items, destroyed: false, params, activated: [] };
       captured.popovers.push(this.record);
+    }
+
+    activateItemByName(name: string): void {
+      this.record.activated.push(name);
     }
 
     show(): void {}
@@ -263,6 +267,38 @@ describe('DatabasePropertyMenu', () => {
     area.dispatchEvent(new Event('change'));
 
     expect(cb.onUpdate).toHaveBeenCalledWith('p', { description: 'What we spend' });
+  });
+
+  // research/26 §3c: an (i) "Add property description" button at the name field's right end.
+  it('the (i) button at the name field\'s end opens the description editor and focuses it', () => {
+    open(prop('text'));
+    const items = lastItems();
+    const row = byName(items, 'name').element;
+    const info = row?.querySelector<HTMLButtonElement>('[data-blok-database-property-menu-description-button]');
+
+    if (info === null || info === undefined) throw new Error('no (i) button');
+    expect(info.getAttribute('aria-label')).toBe('tools.database.addPropertyDescription');
+    expect(info.type).toBe('button');
+    const glyph = document.createElement('span');
+
+    glyph.innerHTML = IconInfo;
+    expect(info.innerHTML).toBe(glyph.innerHTML);
+    // It sits after the name input.
+    expect(info.previousElementSibling?.hasAttribute('data-blok-database-property-menu-name-input')).toBe(true);
+    const area = byName(items, 'description').children?.items[0]?.element?.querySelector('textarea');
+
+    if (area === null || area === undefined) throw new Error('no description field');
+    document.body.appendChild(area);
+    info.click();
+
+    expect(captured.popovers.at(-1)?.activated).toEqual(['description']);
+    expect(area).toHaveFocus();
+  });
+
+  it('the title has no description, so its name field has no (i) button', () => {
+    open(prop('title'));
+
+    expect(byName(lastItems(), 'name').element?.querySelector('[data-blok-database-property-menu-description-button]')).toBeNull();
   });
 
   it('labels a button column edit entry "Edit automation", like Notion (research/08)', () => {

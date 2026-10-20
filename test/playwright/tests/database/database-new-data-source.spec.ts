@@ -299,6 +299,27 @@ test.describe('database New data source', () => {
       expect((await save(page)).filter((block) => block.type === 'database' && block.parent === 'db-1')).toHaveLength(1);
     });
 
+    // research/26 §1b, r26:116: the round × of View settings; closing keeps the empty source.
+    test('a 20px round × closes it from the panel and from Link to existing, keeping the empty source', async ({ page }) => {
+      await mount(page, initial);
+      await openPanel(page);
+      const close = panel(page).getByRole('button', { name: 'Close', exact: true });
+
+      await expect(close).toBeVisible();
+      expect(await close.evaluate((el: HTMLElement) => ({ width: el.offsetWidth, height: el.offsetHeight }))).toEqual({ width: 20, height: 20 });
+      await expect(close).toHaveCSS('border-radius', '50%');
+      await expect(close).toHaveCSS('background-color', 'rgba(42, 28, 0, 0.07)');
+      await close.hover();
+      await expect(close).toHaveCSS('background-color', 'rgba(42, 28, 0, 0.106)');
+
+      await page.getByTestId('database-new-source-link').click();
+      await expect(panel(page)).toContainText('Link to existing data source');
+      await panel(page).getByRole('button', { name: 'Close', exact: true }).click();
+
+      await expect(panel(page)).toBeHidden();
+      expect((await save(page)).filter((block) => block.type === 'database' && block.parent === 'db-1')).toHaveLength(1);
+    });
+
     test('Link to existing data source puts the new view on another database of the page', async ({ page }) => {
       await page.evaluate(async ({ data }) => {
         if (window.blokInstance) {

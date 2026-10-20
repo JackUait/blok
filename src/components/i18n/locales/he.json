@@ -1509,6 +1509,7 @@
   "tools.database.statusDisplayAs.checkbox": "תיבת סימון",
   "tools.database.propertyDescription": "תיאור המאפיין",
   "tools.database.propertyDescriptionPlaceholder": "הוסף תיאור…",
+  "tools.database.addPropertyDescription": "הוסף תיאור למאפיין",
   "tools.database.pageVisibility": "נראות המאפיין",
   "tools.database.pageVisibility.always": "הצג תמיד",
   "tools.database.pageVisibility.hideWhenEmpty": "הסתר כשריק",

@@ -1515,6 +1515,7 @@
   "tools.database.statusDisplayAs.checkbox": "مربع اختيار",
   "tools.database.propertyDescription": "وصف الخاصية",
   "tools.database.propertyDescriptionPlaceholder": "إضافة وصف…",
+  "tools.database.addPropertyDescription": "إضافة وصف للخاصية",
   "tools.database.pageVisibility": "ظهور الخاصية",
   "tools.database.pageVisibility.always": "إظهار دائمًا",
   "tools.database.pageVisibility.hideWhenEmpty": "إخفاء عندما تكون فارغة",

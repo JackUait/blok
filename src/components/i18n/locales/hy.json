@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "Նշատուփ",
   "tools.database.propertyDescription": "Հատկության նկարագրություն",
   "tools.database.propertyDescriptionPlaceholder": "Ավելացնել նկարագրություն…",
+  "tools.database.addPropertyDescription": "Ավելացնել հատկության նկարագրություն",
   "tools.database.pageVisibility": "Հատկության տեսանելիություն",
   "tools.database.pageVisibility.always": "Միշտ ցուցադրել",
   "tools.database.pageVisibility.hideWhenEmpty": "Թաքցնել, երբ դատարկ է",

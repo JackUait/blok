@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "复选框",
   "tools.database.propertyDescription": "属性描述",
   "tools.database.propertyDescriptionPlaceholder": "添加描述…",
+  "tools.database.addPropertyDescription": "添加属性描述",
   "tools.database.pageVisibility": "属性可见性",
   "tools.database.pageVisibility.always": "始终显示",
   "tools.database.pageVisibility.hideWhenEmpty": "为空时隐藏",

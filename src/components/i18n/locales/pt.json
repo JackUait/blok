@@ -1509,6 +1509,7 @@
   "tools.database.statusDisplayAs.checkbox": "Caixa de seleção",
   "tools.database.propertyDescription": "Descrição da propriedade",
   "tools.database.propertyDescriptionPlaceholder": "Adicione uma descrição…",
+  "tools.database.addPropertyDescription": "Adicionar descrição da propriedade",
   "tools.database.pageVisibility": "Visibilidade da propriedade",
   "tools.database.pageVisibility.always": "Mostrar sempre",
   "tools.database.pageVisibility.hideWhenEmpty": "Ocultar quando vazia",

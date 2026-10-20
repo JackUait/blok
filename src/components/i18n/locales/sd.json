@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "چيڪ باڪس",
   "tools.database.propertyDescription": "پراپرٽي جي وضاحت",
   "tools.database.propertyDescriptionPlaceholder": "وضاحت شامل ڪريو…",
+  "tools.database.addPropertyDescription": "پراپرٽي جي وضاحت شامل ڪريو",
   "tools.database.pageVisibility": "پراپرٽي جي نمائش",
   "tools.database.pageVisibility.always": "هميشه ڏيکاريو",
   "tools.database.pageVisibility.hideWhenEmpty": "خالي هجڻ تي لڪايو",

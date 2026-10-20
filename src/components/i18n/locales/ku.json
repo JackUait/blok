@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "چێکبۆکس",
   "tools.database.propertyDescription": "وەسفی تایبەتمەندی",
   "tools.database.propertyDescriptionPlaceholder": "وەسفێک زیاد بکە…",
+  "tools.database.addPropertyDescription": "وەسفی تایبەتمەندی زیاد بکە",
   "tools.database.pageVisibility": "دەرکەوتنی تایبەتمەندی",
   "tools.database.pageVisibility.always": "هەمیشە پیشاندان",
   "tools.database.pageVisibility.hideWhenEmpty": "شاردنەوە کاتێک بەتاڵە",

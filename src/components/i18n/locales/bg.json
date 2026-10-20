@@ -1507,6 +1507,7 @@
   "tools.database.statusDisplayAs.checkbox": "Квадратче за отметка",
   "tools.database.propertyDescription": "Описание на свойството",
   "tools.database.propertyDescriptionPlaceholder": "Добавете описание…",
+  "tools.database.addPropertyDescription": "Добавете описание на свойството",
   "tools.database.pageVisibility": "Видимост на свойството",
   "tools.database.pageVisibility.always": "Винаги показвай",
   "tools.database.pageVisibility.hideWhenEmpty": "Скрий, когато е празно",

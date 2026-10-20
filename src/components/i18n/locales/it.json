@@ -1509,6 +1509,7 @@
   "tools.database.statusDisplayAs.checkbox": "Casella di controllo",
   "tools.database.propertyDescription": "Descrizione della proprietà",
   "tools.database.propertyDescriptionPlaceholder": "Aggiungi una descrizione…",
+  "tools.database.addPropertyDescription": "Aggiungi descrizione della proprietà",
   "tools.database.pageVisibility": "Visibilità della proprietà",
   "tools.database.pageVisibility.always": "Mostra sempre",
   "tools.database.pageVisibility.hideWhenEmpty": "Nascondi se vuota",

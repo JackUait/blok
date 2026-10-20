@@ -4856,6 +4856,27 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   background-color: var(--blok-database-property-icon-button-hover-bg);
 }
 
+/* research/26 §3c: the (i) at the name field's end. Dark ink and glyph size unmeasured:
+   the View settings × glyph ink (§4a) and the button's width. */
+[data-blok-database-property-menu-description-button] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--blok-database-table-header-icon);
+  cursor: pointer;
+}
+
+[data-blok-database-property-menu-description-button] svg {
+  width: 15px;
+  height: 15px;
+}
+
 [data-blok-database-property-description] {
   min-height: 60px;
   padding: var(--blok-space-1-5) var(--blok-space-2);

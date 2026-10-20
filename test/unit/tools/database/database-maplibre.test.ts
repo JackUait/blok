@@ -234,12 +234,12 @@ describe('Blok\'s own map (MapLibre)', () => {
     expect(card.querySelector('[data-blok-database-map-pin-card-title]')?.textContent).toBe('Eiffel Tower');
   });
 
-  // research/23 §5a: Notion shows the card ≈160ms after hover. The hint law keeps 300ms as the floor.
-  it('shows the pin card after the shortest hint delay', async () => {
+  // research/23 §5a: Notion shows the card ≈160ms after hover and hides it ≈55ms after leaving. The hint law keeps 300ms as the show floor.
+  it('shows the pin card after the shortest hint delay and hides it 55ms after the pointer leaves', async () => {
     draw();
     await settle();
 
-    expect(hover.mock.calls[0]?.[2]).toStrictEqual({ delay: 300 });
+    expect(hover.mock.calls[0]?.[2]).toStrictEqual({ delay: 300, hideDelay: 55 });
   });
 
   it('fits every pin once, at the first real size, not while hidden', async () => {

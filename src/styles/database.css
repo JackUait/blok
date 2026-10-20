@@ -2598,13 +2598,27 @@ button[data-blok-database-column-count]:hover {
   white-space: nowrap;
 }
 
+/* Widths read off research/23 72-backlinks-5.png pixels (first page 130, whole path 177), not computed style. */
 [data-blok-database-backlink-path] {
+  display: flex;
+  max-width: 177px;
+  min-width: 0;
   margin-inline-start: auto;
   overflow: hidden;
   color: var(--blok-database-add-text);
   font-size: 12px;
+  white-space: pre;
+}
+
+[data-blok-database-backlink-path] > span {
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+[data-blok-database-backlink-path-first] {
+  flex-shrink: 0;
+  max-width: 130px;
 }
 
 /*

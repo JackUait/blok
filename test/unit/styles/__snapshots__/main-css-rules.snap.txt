@@ -6153,12 +6153,25 @@ button[data-blok-database-column-count]:hover {
 }
 
 [data-blok-database-backlink-path] {
+  display: flex;
+  max-width: 177px;
+  min-width: 0;
   margin-inline-start: auto;
   overflow: hidden;
   color: var(--blok-database-add-text);
   font-size: 12px;
+  white-space: pre;
+}
+
+[data-blok-database-backlink-path] > span {
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+[data-blok-database-backlink-path-first] {
+  flex-shrink: 0;
+  max-width: 130px;
 }
 
 [data-blok-database-layout-builder] {

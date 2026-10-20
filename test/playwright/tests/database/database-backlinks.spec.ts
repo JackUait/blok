@@ -232,3 +232,22 @@ test('asks the host again each time the row page opens', async ({ page }) => {
   await expect.poll(() => page.evaluate(() => window.hostAsked)).toBe(2);
   await expect(backlinks(page)).toHaveText('1 backlink');
 });
+
+// research/23 §4: "first / ... / parent", the first page cut at its own width and the whole path capped.
+test('shortens a long path to the first page, "...", then the parent', async ({ page }) => {
+  const deep = [{ pageId: 'bl5', title: 'BL5', path: ['Blok measure scratch 13 2026-10-20', 'BL1', 'BL2', 'BL3', 'BL4 with a much longer page name'], blockId: 'x1' }];
+
+  await mount(page, blocks({ top: false, bravo: false }), true, deep);
+  await openRow(page, 'r1');
+  await page.locator('[data-blok-database-drawer-title]').hover();
+  await backlinks(page).click();
+  const path = page.locator('[data-blok-item-name="backlink-host-bl5"] [data-blok-database-backlink-path]');
+
+  await expect(path).toHaveText('Blok measure scratch 13 2026-10-20 / ... / BL4 with a much longer page name');
+  const first = path.locator('[data-blok-database-backlink-path-first]');
+  // Layout widths: the popover's entrance scale would skew a bounding box.
+  const widths = await Promise.all([path, first].map((part) => part.evaluate((el) => el instanceof HTMLElement ? el.offsetWidth : 0)));
+
+  expect(widths).toEqual([177, 130]);
+  expect(await first.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+});

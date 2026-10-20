@@ -123,6 +123,32 @@ describe('row page backlinks', () => {
     drawer.destroy();
   });
 
+  // research/23 §4: "scratch…" alone, "scratch… / BL1", "scratch… / ... / BL4". Pixel pitch shows the middle is three periods.
+  it('shortens the path to the first page, "...", then the parent', () => {
+    const items = [
+      link('bl1', 'BL1', ['Scratch']),
+      link('bl2', 'BL2', ['Scratch', 'BL1']),
+      link('bl3', 'BL3', ['Scratch', 'BL1', 'BL2']),
+      link('bl5', 'BL5', ['Scratch', 'BL1', 'BL2', 'BL3', 'BL4']),
+    ];
+    const drawer = new DatabaseCardDrawer(createOptions({ backlinks: () => items }));
+
+    drawer.open(ROW);
+    button()?.click();
+    const path = (key: string): Element | null => q(`[data-blok-item-name="backlink-${key}"] [data-blok-database-backlink-path]`);
+
+    expect(['bl1', 'bl2', 'bl3', 'bl5'].map((key) => path(key)?.textContent)).toEqual([
+      'Scratch',
+      'Scratch / BL1',
+      'Scratch / ... / BL2',
+      'Scratch / ... / BL4',
+    ]);
+    // The first page is cut by width on its own, so the parent stays readable.
+    expect(path('bl5')?.querySelector('[data-blok-database-backlink-path-first]')?.textContent).toBe('Scratch');
+    expect(path('bl5')?.hasAttribute('title')).toBe(false);
+    drawer.destroy();
+  });
+
   it('reads "No backlinks" or the count above the title in Customize layout (research/09 §6)', () => {
     const items: DrawerBacklink[] = [];
     const drawer = new DatabaseCardDrawer(createOptions({ backlinks: () => items, onPageLayoutChange: vi.fn(), onPageLayoutBirth: vi.fn() }));

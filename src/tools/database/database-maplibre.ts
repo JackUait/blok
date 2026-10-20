@@ -188,8 +188,8 @@ export const drawMapLibreMap = (
         event.stopPropagation();
         ctx.open(item.rowId);
       });
-      // Notion waits ≈160ms (research/23 §5a); the hint-delay law makes 300ms the floor.
-      onHover(pin, pinCard(item, options.breadcrumb), { delay: MIN_HINT_DELAY });
+      // Notion shows after ≈160ms and hides ≈55ms after leaving (research/23 §5a); the hint-delay law makes 300ms the show floor.
+      onHover(pin, pinCard(item, options.breadcrumb), { delay: MIN_HINT_DELAY, hideDelay: 55 });
       new maplibre.Marker({ element: pin, anchor: 'bottom' }).setLngLat(point).addTo(map);
     });
 

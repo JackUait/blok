@@ -920,6 +920,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_TIME_ZONE_MENU_BYTES = 1_231;
     // database.css: timeline resize handles 6px outside the bar, and the measured green map pin (research/23 §3b, §5b).
     const DATABASE_TIMELINE_HANDLE_MAP_PIN_BYTES = 218;
+    // database.css: backlink paths shortened to "first / ... / parent", each part cut by width (research/23 §4).
+    const DATABASE_BACKLINK_CRUMBS_BYTES = 331;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1050,7 +1052,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_DARK_GAPS_STAR_BYTES
       + DATABASE_CALENDAR_BOX_BYTES
       + DATABASE_TIME_ZONE_MENU_BYTES
-      + DATABASE_TIMELINE_HANDLE_MAP_PIN_BYTES;
+      + DATABASE_TIMELINE_HANDLE_MAP_PIN_BYTES
+      + DATABASE_BACKLINK_CRUMBS_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

@@ -41,6 +41,11 @@ export interface TooltipOptions {
    * Values below 300 are raised to 300: a hint never shows instantly.
    */
   delay?: number;
+
+  /**
+   * Milliseconds the hint stays after the pointer leaves its trigger. Defaults to 100.
+   */
+  hideDelay?: number;
 }
 
 export interface Tooltip {

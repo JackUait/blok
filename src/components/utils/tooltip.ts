@@ -494,11 +494,11 @@ class Tooltip {
   }
 
   /**
-   * Arm the grace timer that hides the tooltip after {@link GRACE_HIDE_DURATION}.
+   * Arm the grace timer that hides the tooltip after `delay` ({@link GRACE_HIDE_DURATION} by default).
    * Called when the pointer leaves the trigger; a re-show within the window
    * cancels it so brief exits do not flicker the bubble.
    */
-  private scheduleGraceHide(): void {
+  private scheduleGraceHide(delay = GRACE_HIDE_DURATION): void {
     // A delayed reveal would cancel this hide after the pointer has left.
     if (this.showingTimeout) {
       clearTimeout(this.showingTimeout);
@@ -510,7 +510,7 @@ class Tooltip {
     this.graceHideTimeout = setTimeout(() => {
       this.graceHideTimeout = null;
       this.hide();
-    }, GRACE_HIDE_DURATION);
+    }, delay);
   }
 
   /**
@@ -580,7 +580,7 @@ class Tooltip {
       this.show(element, content, options);
     };
     // Defer the hide so brief trigger exits/re-entries do not flicker.
-    const handleMouseLeave = (): void => this.scheduleGraceHide();
+    const handleMouseLeave = (): void => this.scheduleGraceHide(options.hideDelay);
 
     // No focus listener on purpose: hints show on hover only, so a click that focuses the trigger shows nothing.
     element.addEventListener('pointerenter', handlePointerEnter);

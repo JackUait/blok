@@ -1283,8 +1283,20 @@ export class DatabaseCardDrawer {
     if (item.path.length > 0) {
       const path = document.createElement('span');
 
+      const [first, ...rest] = item.path;
+      const head = document.createElement('span');
+
       path.setAttribute('data-blok-database-backlink-path', '');
-      path.textContent = item.path.join(' / ');
+      head.setAttribute('data-blok-database-backlink-path-first', '');
+      head.textContent = first;
+      path.appendChild(head);
+      if (rest.length > 0) {
+        const tail = document.createElement('span');
+
+        // Notion keeps only the parent after the first page: "first / ... / parent" (research/23 §4).
+        tail.textContent = rest.length > 1 ? ` / ... / ${rest[rest.length - 1]}` : ` / ${rest[0]}`;
+        path.appendChild(tail);
+      }
       line.appendChild(path);
     }
 

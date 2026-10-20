@@ -1059,6 +1059,29 @@ describe('Tooltip utility', () => {
     expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
   });
 
+  it.each([
+    { hideDelay: 55, wait: 55 },
+    { hideDelay: undefined, wait: 100 },
+  ])('hides $wait ms after the pointer leaves when hideDelay is $hideDelay', ({ hideDelay, wait }) => {
+    vi.useFakeTimers();
+
+    const target = createTargetElement();
+
+    onHover(target, 'hide-delay', hideDelay === undefined ? {} : { hideDelay });
+    target.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse',
+      bubbles: true }));
+    target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    vi.advanceTimersByTime(HINT_DELAY);
+    target.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+
+    const wrapper = getTooltipWrapper();
+
+    vi.advanceTimersByTime(wait - 1);
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
+    vi.advanceTimersByTime(1);
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
+  });
+
   it('cancels a pending grace hide when a new delayed show starts (stale grace timer must not kill the delayed show)', () => {
     vi.useFakeTimers();
 

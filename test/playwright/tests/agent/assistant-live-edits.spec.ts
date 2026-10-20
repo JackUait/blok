@@ -18,6 +18,8 @@ declare global {
     blokInstance?: Blok;
     /** Every model call so far, in order. */
     liveCalls?: LiveCall[];
+    /** onChange deliveries so far. */
+    liveChanges?: number;
   }
 }
 
@@ -35,6 +37,7 @@ const setup = async (page: Page, more: Array<Record<string, unknown>> = []): Pro
     container.id = holder;
     document.body.append(container);
     window.liveCalls = [];
+    window.liveChanges = 0;
 
     const blok = new window.Blok({
       holder,
@@ -43,6 +46,9 @@ const setup = async (page: Page, more: Array<Record<string, unknown>> = []): Pro
         { id: 'p2', type: 'paragraph', data: { text: 'Second' } },
         ...extra,
       ] },
+      onChange: () => {
+        window.liveChanges = (window.liveChanges ?? 0) + 1;
+      },
       agent: {
         assistant: {
           name: 'Claude',
@@ -440,6 +446,46 @@ test.describe('Ask AI live edits', () => {
     await emit(page, 0, { type: 'tool_input', index: 0, json: JSON.stringify(input) });
     await emit(page, 0, { type: 'tool_end', index: 0 });
     await expect.poll(async () => (await savedTexts(page)).at(-1)).toBe(text);
+  });
+
+  test('onChange stays silent while the preview holds a gap and a rewrite mark', async ({ page }) => {
+    const input = {
+      commands: [
+        { name: 'text.replace', args: { id: 'p1', range: { find: 'quick' }, with: 'slow and steady' } },
+        { name: 'block.insert', args: { type: 'paragraph', position: { after: 'p1' }, data: { text: 'Quiet words land here' } } },
+      ],
+    };
+    const changes = (): Promise<number> => page.evaluate(() => window.liveChanges ?? 0);
+    const p1 = page.locator('[data-blok-id="p1"]');
+
+    await ask(page, 'The quick brown fox');
+    await settledBar(page);
+    // Opening the bar is not an edit either, but let any earlier delivery land first.
+    await page.waitForTimeout(500);
+
+    const before = await changes();
+    const gap = (): Promise<number> => p1.evaluate((holder) => parseFloat(holder.style.getPropertyValue('--blok-ai-gap')) || 0);
+
+    // The first stream event drops the shimmer slots, so the bar's own gap is read after it.
+    await emit(page, 0, { type: 'tool_start', index: 0, id: 'call-1', name: 'blok_execute' });
+
+    const barGap = await gap();
+
+    await emit(page, 0, { type: 'tool_input', index: 0, json: prefix(input, 'Quiet words land here', 'Quiet words '.length) });
+    await expect(page.getByTestId('ai-preview').filter({ hasText: 'Quiet words' })).toBeVisible();
+    await expect(p1).toHaveAttribute('data-blok-ai-rewriting', '');
+    // The bar's own gap, plus the preview's share.
+    await expect.poll(gap).toBeGreaterThan(barGap);
+    // Longer than onChange's 400ms batch window.
+    await page.waitForTimeout(600);
+
+    expect(await changes()).toBe(before);
+
+    await emit(page, 0, { type: 'tool_input', index: 0, json: JSON.stringify(input) });
+    await emit(page, 0, { type: 'tool_end', index: 0 });
+    // The same listener does hear the committed batch.
+    await expect.poll(changes).toBeGreaterThan(before);
+    await finish(page, 0, toolUse('call-1', input));
   });
 
   test('an insert streams below the bar, not above it', async ({ page }) => {

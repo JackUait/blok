@@ -25,13 +25,33 @@ export interface DatabaseConfirmOptions {
   dismissAs?: boolean;
 }
 
+export interface DatabaseChoice {
+  label: string;
+  description: string;
+}
+
 const counter = { next: 0 };
 
 /**
  * Asks a yes/no question in a centred modal (research/08 "Modal dialog").
  * Resolves true on confirm; false on cancel, Escape or a press outside.
  */
-export const openDatabaseConfirm = (options: DatabaseConfirmOptions): Promise<boolean> => new Promise((resolve) => {
+export const openDatabaseConfirm = (options: DatabaseConfirmOptions): Promise<boolean> => buildConfirm(options, []);
+
+/**
+ * The confirm dialog with radio cards above its buttons, the first picked
+ * (research/26 §5a). Resolves the picked card's index, or null when not confirmed.
+ */
+export const openDatabaseChoice = async (options: DatabaseConfirmOptions & { choices: DatabaseChoice[] }): Promise<number | null> => {
+  const answer = { index: 0 };
+  const confirmed = await buildConfirm(options, options.choices, (index) => {
+    answer.index = index;
+  });
+
+  return confirmed ? answer.index : null;
+};
+
+const buildConfirm = (options: DatabaseConfirmOptions, choices: DatabaseChoice[], onPick?: (index: number) => void): Promise<boolean> => new Promise((resolve) => {
   const backdrop = document.createElement('div');
   const panel = document.createElement('div');
   const title = document.createElement('div');
@@ -60,6 +80,46 @@ export const openDatabaseConfirm = (options: DatabaseConfirmOptions): Promise<bo
     description.id = `blok-database-confirm-description-${counter.next}`;
     description.textContent = options.description ?? '';
     panel.appendChild(description);
+  }
+
+  if (choices.length > 0) {
+    const picked = { index: 0 };
+    const group = document.createElement('div');
+    const cards = choices.map((choice, index) => {
+      const card = document.createElement('button');
+      const text = document.createElement('span');
+      const label = document.createElement('span');
+      const hint = document.createElement('span');
+      const dot = document.createElement('span');
+
+      card.type = 'button';
+      card.setAttribute('role', 'radio');
+      card.setAttribute('data-blok-database-confirm-choice', '');
+      label.setAttribute('data-blok-database-confirm-choice-label', '');
+      label.textContent = choice.label;
+      hint.setAttribute('data-blok-database-confirm-choice-description', '');
+      hint.textContent = choice.description;
+      dot.setAttribute('data-blok-database-confirm-choice-dot', '');
+      dot.setAttribute('aria-hidden', 'true');
+      text.append(label, hint);
+      card.append(text, dot);
+      card.addEventListener('click', () => {
+        picked.index = index;
+        onPick?.(index);
+        paint();
+      });
+
+      return card;
+    });
+    const paint = (): void => cards.forEach((card, index) => card.setAttribute('aria-checked', String(index === picked.index)));
+
+    panel.setAttribute('data-wide', '');
+    group.setAttribute('role', 'radiogroup');
+    group.setAttribute('aria-labelledby', title.id);
+    group.setAttribute('data-blok-database-confirm-choices', '');
+    group.append(...cards);
+    paint();
+    panel.appendChild(group);
   }
 
   const button = (name: 'confirm' | 'cancel', label: string): HTMLButtonElement => {

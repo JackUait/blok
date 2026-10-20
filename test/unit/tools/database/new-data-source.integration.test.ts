@@ -459,6 +459,38 @@ describe('New data source: a view bound to a second source in the same block', (
     expect(JSON.stringify((await dataOf(api, 'db'))?.views.find((v) => v.id === 'vb'))).not.toContain('dataSourceId');
   });
 
+  // research/26 §5b: the sort went blank, and switching back did not bring it back.
+  it('picking another source drops sorts on properties that source lacks; switching back does not restore them', async () => {
+    const sorted = { sorts: [{ id: 's1', propertyId: 'notes', direction: 'asc' as const }], filters: [{ id: 'f1', propertyId: 'notes', operator: 'is_not_empty', value: null }] };
+    const api = await make(doc('v1', { views: [table('v1', 'a0', sorted), table('vb', 'a1', { dataSourceId: 'src-b' })] }));
+
+    await openSourcePicker();
+    byTestId('database-source-option-src-b')?.click();
+    await quiet();
+    const moved = (await dataOf(api, 'db'))?.views.find((v) => v.id === 'v1');
+
+    expect(moved?.sorts).toEqual([]);
+    // Filters on a switch are UNMEASURED: they stay.
+    expect(moved?.filters.map((f) => f.id)).toEqual(['f1']);
+
+    await openSourcePicker();
+    byTestId('database-source-option-db')?.click();
+    await quiet();
+
+    expect((await dataOf(api, 'db'))?.views.find((v) => v.id === 'v1')?.sorts).toEqual([]);
+  });
+
+  it('picking another source keeps a sort on a property that source has', async () => {
+    const sorted = { sorts: [{ id: 's1', propertyId: 'size', direction: 'desc' as const }, { id: 's2', propertyId: 'notes', direction: 'asc' as const }] };
+    const api = await make(doc('v1', { views: [table('v1', 'a0', sorted), table('vb', 'a1', { dataSourceId: 'src-b' })] }));
+
+    await openSourcePicker();
+    byTestId('database-source-option-src-b')?.click();
+    await quiet();
+
+    expect((await dataOf(api, 'db'))?.views.find((v) => v.id === 'v1')?.sorts.map((s) => s.id)).toEqual(['s1']);
+  });
+
   it('the search narrows the sources by name', async () => {
     await make(doc('v1'));
     await openSourcePicker();
@@ -499,11 +531,112 @@ describe('New data source: a view bound to a second source in the same block', (
     expect(shownArea().textContent).not.toContain('Parent row');
   });
 
+  const confirmAction = (name: 'confirm' | 'cancel'): HTMLButtonElement | null =>
+    document.querySelector<HTMLButtonElement>(`[data-blok-database-confirm-action="${name}"]`);
+  const choiceCards = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>('[data-blok-database-confirm-choice]')];
+
+  const deleteFromSettings = async (): Promise<void> => {
+    await openSettings();
+    byTestId('database-settings-delete')?.click();
+    await quiet();
+  };
+
+  // research/26 §5a.
+  it('deleting the only view on a source asks first, with "Delete view only" picked', async () => {
+    const api = await make(doc('vb'));
+
+    await deleteFromSettings();
+
+    expect(document.querySelector('[data-blok-database-confirm-title]')?.textContent).toBe('Delete the last view for this data source?');
+    expect(choiceCards().map((card) => card.querySelector('[data-blok-database-confirm-choice-label]')?.textContent)).toEqual(['Delete view only', 'Delete view and data source']);
+    expect(choiceCards().map((card) => card.querySelector('[data-blok-database-confirm-choice-description]')?.textContent)).toEqual([
+      'The data source and all of its pages will be kept in this database',
+      'The data source and all of its pages will be deleted',
+    ]);
+    expect(choiceCards().map((card) => card.getAttribute('aria-checked'))).toEqual(['true', 'false']);
+    expect(confirmAction('confirm')?.textContent).toBe('Delete view');
+    expect(confirmAction('cancel')?.textContent).toBe('Cancel');
+    // Nothing is deleted before the answer.
+    expect((await dataOf(api, 'db'))?.views.some((v) => v.id === 'vb')).toBe(true);    confirmAction('cancel')?.click();
+  });
+
+  it('Cancel on the last-view question deletes nothing', async () => {
+    const api = await make(doc('vb'));
+
+    await deleteFromSettings();
+    confirmAction('cancel')?.click();
+    await quiet();
+
+    expect((await dataOf(api, 'db'))?.views.some((v) => v.id === 'vb')).toBe(true);
+    expect((await api.save()).blocks.some((b) => b.id === 'src-b')).toBe(true);
+  });
+
+  it('"Delete view and data source" removes the view, the source and its rows, and keeps the database\'s own rows', async () => {
+    const api = await make(doc('vb'));
+
+    stopCapturing();
+    await deleteFromSettings();
+    choiceCards()[1]?.click();
+    confirmAction('confirm')?.click();
+    await quiet();
+    const saved = await api.save();
+
+    expect((saved.blocks.find((b) => b.id === 'db')?.data as DatabaseData | undefined)?.views.map((v) => v.id)).toEqual(['v1']);
+    expect(saved.blocks.some((b) => b.id === 'src-b')).toBe(false);
+    expect(saved.blocks.some((b) => b.id === 'b1')).toBe(false);
+    expect(saved.blocks.filter((b) => b.type === 'database-row').map((b) => b.id)).toEqual(['r1']);
+    expect(api.blocks.getChildren('db').map((b) => b.id)).toEqual(['r1']);
+    expect(shownArea().textContent).toContain('Parent row');
+  });
+
+  it('one undo after "Delete view and data source" brings back the view, the source and its rows', async () => {
+    const api = await make(doc('vb'));
+
+    stopCapturing();
+    await deleteFromSettings();
+    choiceCards()[1]?.click();
+    confirmAction('confirm')?.click();
+    await quiet();
+    stopCapturing();
+    api.history.undo();
+    await quiet();
+    const saved = await api.save();
+
+    expect((saved.blocks.find((b) => b.id === 'db')?.data as DatabaseData | undefined)?.views.map((v) => v.id)).toEqual(['v1', 'vb']);
+    expect(saved.blocks.find((b) => b.id === 'src-b')?.parent).toBe('db');
+    expect(saved.blocks.find((b) => b.id === 'b1')?.parent).toBe('src-b');
+  });
+
+  it('the tab menu\'s Delete asks the same question on the last view of a source', async () => {
+    await make(doc('vb'));
+    const tab = own('[data-blok-database-tab][data-view-id="vb"]');
+
+    tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    await quiet();
+    const item = [...document.querySelectorAll<HTMLElement>('[data-blok-popover-item], [role="menuitem"]')].find((el) => el.textContent?.trim() === 'Delete');
+
+    if (item === undefined) throw new Error('no Delete in the tab menu');
+    item.click();
+    await quiet();
+
+    expect(document.querySelector('[data-blok-database-confirm-title]')?.textContent).toBe('Delete the last view for this data source?');
+    confirmAction('cancel')?.click();
+  });
+
+  it('deleting a source view while another view still shows the source asks nothing', async () => {
+    const api = await make(doc('vb', { views: [table('v1', 'a0'), table('vb', 'a1', { dataSourceId: 'src-b' }), table('vb2', 'a2', { dataSourceId: 'src-b' })] }));
+
+    await deleteFromSettings();
+
+    expect(document.querySelector('[data-blok-database-confirm-dialog]')).toBeNull();
+    expect((await dataOf(api, 'db'))?.views.map((v) => v.id)).toEqual(['v1', 'vb2']);
+  });
+
   it('deleting the only view on a source keeps the source and its rows, still reachable from "Source"', async () => {
     const api = await make(doc('vb'));
 
-    await openSettings();
-    byTestId('database-settings-delete')?.click();
+    await deleteFromSettings();
+    confirmAction('confirm')?.click();
     await quiet();
     const saved = await api.save();
 

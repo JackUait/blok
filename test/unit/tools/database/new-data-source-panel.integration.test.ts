@@ -188,19 +188,64 @@ describe('"New data source" side panel (research/23 §10, research/20 §1a)', ()
     expect((await dataOf(api, 'db'))?.views.some((v) => v.dataSourceId === sources(api)[0])).toBe(true);
   });
 
-  it('the search narrows the rows by name', async () => {
-    await make(pageDoc());
-    await newDataSourceFromAddView();
+  const typeSearch = async (value: string): Promise<void> => {
     const search = byTestId('database-new-source-search');
 
     if (!(search instanceof HTMLInputElement)) throw new Error('no search');
-    search.value = 'csv';
+    search.value = value;
     search.dispatchEvent(new Event('input', { bubbles: true }));
     await quiet();
+  };
 
-    expect(byTestId('database-new-source-csv')).not.toBeNull();
-    expect(byTestId('database-new-source-empty')).toBeNull();
-    expect(byTestId('database-new-source-link')).toBeNull();
+  const panelRows = (): string[] => rowLabels().filter((id) => id.startsWith('database-new-source-') && id !== 'database-new-source-panel' && id !== 'database-new-source-search');
+
+  // research/26 §2: "csv" and "csvzzqx" both gave exactly these two rows.
+  it('typing turns the first row into New “<query>” data source, with Import CSV below', async () => {
+    await make(pageDoc());
+    await newDataSourceFromAddView();
+    await typeSearch('csvzzqx');
+
+    expect(panelRows()).toEqual(['database-new-source-named', 'database-new-source-csv']);
+    expect(byTestId('database-new-source-named')?.textContent?.trim()).toBe('New “csvzzqx” data source');
+
+    await typeSearch('');
+
+    expect(panelRows()).toEqual(['database-new-source-empty', 'database-new-source-csv', 'database-new-source-link']);
+  });
+
+  it('the typed query still finds "Link to existing data source" by name', async () => {
+    await make(pageDoc());
+    await newDataSourceFromAddView();
+    await typeSearch('link');
+
+    expect(panelRows()).toEqual(['database-new-source-named', 'database-new-source-csv', 'database-new-source-link']);
+  });
+
+  it('New “<query>” data source names the new source after the query and closes the panel', async () => {
+    const api = await make(pageDoc());
+
+    await newDataSourceFromAddView();
+    await typeSearch('  Stock  ');
+    byTestId('database-new-source-named')?.click();
+    await quiet();
+
+    expect(panel()).toBeNull();
+    expect(sources(api)).toHaveLength(1);
+    expect((await dataOf(api, sources(api)[0]))?.title).toBe('Stock');
+    expect((await dataOf(api, 'db'))?.title).toBe('Projects');
+  });
+
+  // research/26 §2: closing with × keeps the new tab and its empty source. Blok's panel closes with Escape.
+  it('closing the panel with Escape keeps the new view and its empty source', async () => {
+    const api = await make(pageDoc());
+
+    await newDataSourceFromAddView();
+    byTestId('database-new-source-search')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await quiet();
+
+    expect(panel()).toBeNull();
+    expect(sources(api)).toHaveLength(1);
+    expect((await dataOf(api, 'db'))?.views.some((v) => v.dataSourceId === sources(api)[0])).toBe(true);
   });
 
   it('"Import CSV" fills the new source with the file\'s columns and rows; the view stays on it', async () => {
@@ -303,6 +348,73 @@ describe('"New data source" side panel (research/23 §10, research/20 §1a)', ()
     expect(byTestId('database-new-source-existing-other')?.textContent).toContain('Stock');
     expect(byTestId('database-new-source-existing-db')).toBeNull();
     expect(byTestId(`database-new-source-existing-${sources(api)[0]}`)).toBeNull();
+  });
+
+  // research/26 §2: "Suggested" holds this database's sources, then "Existing data sources".
+  it('"Link to existing data source" lists this database\'s other sources under "Suggested", above the existing ones', async () => {
+    const api = await make(twoSourceDoc());
+
+    await newDataSourceFromAddView();
+    const fresh = sources(api).find((id) => id !== 'src-b') ?? '';
+
+    byTestId('database-new-source-link')?.click();
+    await quiet();
+    const text = panel()?.textContent ?? '';
+
+    expect(text.indexOf('Suggested')).toBeGreaterThan(-1);
+    expect(text.indexOf('Suggested')).toBeLessThan(text.indexOf('Existing data sources'));
+    expect(byTestId('database-new-source-suggested-db')?.textContent).toContain('Projects');
+    expect(byTestId('database-new-source-suggested-src-b')?.textContent).toContain('Src B');
+    // The new view's own source is never offered: linking to it would delete it.
+    expect(byTestId(`database-new-source-suggested-${fresh}`)).toBeNull();
+    expect(byTestId('database-new-source-existing-src-b')).toBeNull();
+  });
+
+  it('picking a suggested source puts the new view on it and drops the empty source', async () => {
+    const api = await make(twoSourceDoc());
+
+    await newDataSourceFromAddView();
+    byTestId('database-new-source-link')?.click();
+    await quiet();
+    byTestId('database-new-source-suggested-src-b')?.click();
+    await quiet();
+
+    expect(panel()).toBeNull();
+    expect(sources(api)).toEqual(['src-b']);
+    const parent = await dataOf(api, 'db');
+
+    expect(parent?.views.find((v) => v.id === parent.activeViewId)?.dataSourceId).toBe('src-b');
+  });
+
+  it('picking the database\'s own data as a suggested source puts the new view back on it', async () => {
+    const api = await make(pageDoc());
+
+    await newDataSourceFromAddView();
+    byTestId('database-new-source-link')?.click();
+    await quiet();
+    byTestId('database-new-source-suggested-db')?.click();
+    await quiet();
+
+    expect(sources(api)).toHaveLength(0);
+    const parent = await dataOf(api, 'db');
+    const active = parent?.views.find((v) => v.id === parent.activeViewId);
+
+    expect(active).toBeDefined();
+    expect(JSON.stringify(active)).not.toContain('dataSourceId');
+    expect(shownArea().textContent).toContain('Parent row');
+  });
+
+  // Notion's Back went to the AI-box variant; Blok has no AI setup lever and keeps the search.
+  it('Back from "Link to existing data source" returns to the panel with its search', async () => {
+    await make(pageDoc());
+    await newDataSourceFromAddView();
+    byTestId('database-new-source-link')?.click();
+    await quiet();
+    byTestId('database-panel-back')?.click();
+    await quiet();
+
+    expect(byTestId('database-new-source-search')).not.toBeNull();
+    expect(byTestId('database-new-source-empty')).not.toBeNull();
   });
 
   it('picking an existing database puts the new view on it and drops the empty source', async () => {

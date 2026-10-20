@@ -46,7 +46,7 @@ import { openLinkedAddView, openLinkedPicker } from './database-linked-picker';
 import { openNewSourcePanel } from './database-new-source-panel';
 import type { LinkedPickerSource } from './database-linked-picker';
 import { newRowValues, rowOrderKey, sortRows } from './database-query';
-import { openDatabaseConfirm } from './database-confirm-dialog';
+import { openDatabaseChoice, openDatabaseConfirm } from './database-confirm-dialog';
 import { openAutofillSetup } from './database-autofill-setup';
 import type { AutofillDraft } from './database-autofill-setup';
 import { DATABASE_MENU_CLASS, groupMenuItems } from './database-group-menu';
@@ -3528,7 +3528,7 @@ export class DatabaseTool implements BlockTool {
   /**
    * The menu's "New data source": the source and tab come at once, then the
    * panel on the new tab (research/23 §10). Only a click opens it, so undo,
-   * redo and peers never do. Closing it keeps the empty source (UNMEASURED).
+   * redo and peers never do. Closing it keeps the empty source (research/26 §2).
    */
   private newDataSourceWithPanel(): void {
     const made = this.addDataSource();
@@ -3543,7 +3543,9 @@ export class DatabaseTool implements BlockTool {
       anchor,
       t: (key, vars) => this.api.i18n.t(key, vars),
       sources: () => this.linkableSources(),
+      suggested: () => this.dataSourceChoices().filter((choice) => choice.id !== made.sourceId && choice.fits),
       importCsv: () => this.pickCsvFile((file) => this.importCsvIntoSource(made.sourceId, file.text, file.name)),
+      nameSource: (title) => this.nameNewSource(made.sourceId, title),
       linkExisting: (id) => this.linkNewSourceView(made, id),
       onClose: () => {
         if (this.sourcePicker === panel) this.sourcePicker = null;
@@ -3621,18 +3623,32 @@ export class DatabaseTool implements BlockTool {
     this.api.notifier.show({ message: this.api.i18n.t('tools.database.csvImported', { count: built.rows.length }) });
   }
 
-  /** "Link to existing data source": the new view shows that database, and the empty source it got goes. */
+  /** `New “<query>” data source` (research/26 §2): the new source takes the typed title. */
+  private nameNewSource(sourceId: string, title: string): void {
+    const source = this.dashboardOwner(sourceId);
+
+    if (this.readOnly || source === undefined || source === this) return;
+    source.renameAsSource(title);
+    this.paintLinkedTitle();
+  }
+
+  /**
+   * "Link to existing data source": the new view shows that database (or this
+   * block's own data, or another of its sources), and the empty source it got goes.
+   */
   private linkNewSourceView(made: { sourceId: string; viewId: string }, databaseId: string): void {
     if (this.readOnly || this.structureLocked() || this.model.getView(made.viewId) === undefined) return;
-    if (this.dashboardOwner(databaseId) === undefined) return;
+    const target = databaseId === this.dataId ? undefined : databaseId;
+
+    if (target === made.sourceId || (target !== undefined && this.dashboardOwner(target) === undefined)) return;
     const index = this.api.blocks.getBlockIndex(made.sourceId);
 
     this.inOneStep(() => {
-      this.model.updateView(made.viewId, { dataSourceId: databaseId });
+      this.model.updateView(made.viewId, { dataSourceId: target });
       this.block.dispatchChange();
       if (index !== undefined) void this.api.blocks.delete(index, false);
     });
-    void this.sync.syncUpdateView({ viewId: made.viewId, changes: { dataSourceId: databaseId } });
+    void this.sync.syncUpdateView({ viewId: made.viewId, changes: { dataSourceId: target } });
     this.mountRows();
     this.switchView(made.viewId);
     this.paintLinkedTitle();
@@ -3751,6 +3767,57 @@ export class DatabaseTool implements BlockTool {
     this.switchView(newView.id);
   }
 
+  /**
+   * Delete from the tab menu or View settings. The last view of a second
+   * source asks first, "Delete view only" picked (research/26 §5a). Only a
+   * click gets here: agents, undo and peers call deleteView.
+   */
+  private requestDeleteView(viewId: string): void {
+    const view = this.model.getView(viewId);
+    const sourceId = view === undefined ? undefined : this.otherSourceId(view);
+    const ownSource = sourceId !== undefined && this.api.blocks.getChildren(this.dataId).some((child) => child.id === sourceId && child.name === 'database');
+    const last = ownSource && !this.model.getViews().some((other) => other.id !== viewId && other.dataSourceId === sourceId);
+
+    if (!last || sourceId === undefined || this.model.getViews().length <= 1 || this.structureLocked()) {
+      this.deleteView(viewId);
+
+      return;
+    }
+    const t = (key: string): string => this.api.i18n.t(key);
+
+    void openDatabaseChoice({
+      title: t('tools.database.deleteLastViewTitle'),
+      confirmLabel: t('tools.database.layoutDeleteView'),
+      cancelLabel: t('tools.database.layoutCancel'),
+      destructive: true,
+      art: [IconTrash],
+      directionSource: this.element,
+      choices: [
+        { label: t('tools.database.deleteLastViewOnly'), description: t('tools.database.deleteLastViewOnlyDescription') },
+        { label: t('tools.database.deleteLastViewAndSource'), description: t('tools.database.deleteLastViewAndSourceDescription') },
+      ],
+    }).then((choice) => {
+      if (choice === null || this.destroyed || this.model.getView(viewId) === undefined) return;
+      if (choice === 0) {
+        this.deleteView(viewId);
+
+        return;
+      }
+      this.inOneStep(() => {
+        this.deleteView(viewId);
+        this.block.dispatchChange();
+        // A database block does not take its children with it: its rows would move up into this block.
+        const doomed = [...this.api.blocks.getChildren(sourceId).map((child) => child.id).reverse(), sourceId];
+
+        for (const id of doomed) {
+          const index = this.api.blocks.getBlockIndex(id);
+
+          if (index !== undefined) void this.api.blocks.delete(index, false);
+        }
+      });
+    });
+  }
+
   deleteView(viewId: string): void {
     const views = this.model.getViews();
 
@@ -3859,7 +3926,7 @@ export class DatabaseTool implements BlockTool {
       onAddView: (type) => this.addView(type),
       onRename: (viewId, name) => this.renameView(viewId, name),
       onDuplicate: (viewId) => this.duplicateView(viewId),
-      onDelete: (viewId) => this.deleteView(viewId),
+      onDelete: (viewId) => this.requestDeleteView(viewId),
       onReorder: (viewId, newPosition) => this.reorderView(viewId, newPosition),
       onEditView: (viewId, anchor) => this.editView(viewId, anchor),
       display: this.tabDisplay.get(),
@@ -4010,15 +4077,22 @@ export class DatabaseTool implements BlockTool {
 
   /**
    * View settings "Source": the view shows another source of this block.
-   * What Notion does to the view's filters and sorts is UNMEASURED: they stay,
-   * and ids the new schema lacks match nothing.
+   * Sorts on properties the new source lacks go and do not come back
+   * (research/26 §5b). Filters are UNMEASURED: they stay, and ids the new
+   * schema lacks match nothing.
    */
   private pickDataSource(id: string): void {
     const view = this.model.getView(this.activeViewId);
     const choice = [...this.dataSourceChoices(), ...this.existingSources()].find((option) => option.id === id);
 
     if (view === undefined || choice === undefined || !choice.fits || id === this.activeSource().dataId) return;
-    this.updateActiveView({ dataSourceId: id === this.dataId ? undefined : id });
+    const schema = (id === this.dataId ? this : this.dashboardOwner(id))?.model.getSchema() ?? [];
+    const sorts = view.sorts.filter((sort) => schema.some((p) => p.id === sort.propertyId));
+
+    this.updateActiveView({
+      dataSourceId: id === this.dataId ? undefined : id,
+      ...(sorts.length === view.sorts.length ? {} : { sorts }),
+    });
     this.paintLinkedTitle();
     this.controls.refresh();
   }
@@ -5255,7 +5329,7 @@ export class DatabaseTool implements BlockTool {
       setLocked: (locked) => this.setDatabaseLocked(locked),
       linked: () => owner.linked,
       duplicateView: () => this.duplicateView(this.activeViewId),
-      deleteView: () => this.deleteView(this.activeViewId),
+      deleteView: () => this.requestDeleteView(this.activeViewId),
       copyViewLink: () => this.copyViewLink(),
       ...(context === undefined ? {
         shareForm: (anchor: HTMLElement) => {

@@ -326,5 +326,92 @@ test.describe('database New data source', () => {
       expect(saved.filter((block) => block.type === 'database' && block.parent === 'db-1')).toHaveLength(0);
       expect(views.views.some((view) => view.dataSourceId === 'db-2')).toBe(true);
     });
+
+    // research/26 §2.
+    test('a typed query becomes New “<query>” data source, which names the new source', async ({ page }) => {
+      await mount(page, initial);
+      await openPanel(page);
+      await page.getByTestId('database-new-source-search').fill('Stock');
+
+      await expect(page.getByTestId('database-new-source-named')).toHaveText('New \u201CStock\u201D data source');
+      await expect(page.getByTestId('database-new-source-csv')).toBeVisible();
+      await expect(page.getByTestId('database-new-source-empty')).toHaveCount(0);
+      await page.getByTestId('database-new-source-named').click();
+
+      await expect(panel(page)).toBeHidden();
+      await expect(page.locator('[data-blok-database-source-title]')).toHaveText('Stock');
+      const source = (await save(page)).find((block) => block.type === 'database' && block.parent === 'db-1');
+
+      expect((source?.data as { title?: string } | undefined)?.title).toBe('Stock');
+    });
+
+    test('Link to existing data source suggests this database\'s own data first', async ({ page }) => {
+      await mount(page, initial);
+      await openPanel(page);
+      await page.getByTestId('database-new-source-link').click();
+      await expect(panel(page)).toContainText('Suggested');
+      await page.getByTestId('database-new-source-suggested-db-1').click();
+
+      await expect(panel(page)).toBeHidden();
+      await expect(firstGrid(page)).toContainText('Alpha');
+      expect((await save(page)).filter((block) => block.type === 'database' && block.parent === 'db-1')).toHaveLength(0);
+    });
+  });
+
+  // research/26 §5a.
+  test.describe('deleting the last view of a source', () => {
+    const deleteFromSettings = async (page: Page): Promise<void> => {
+      await page.getByTestId('database-toolbar-settings').click();
+      await page.getByTestId('database-settings-delete').click();
+      await expect(page.getByRole('alertdialog')).toContainText('Delete the last view for this data source?');
+    };
+
+    test('"Delete view only" is picked and keeps the source and its rows', async ({ page }) => {
+      await mount(page, bound);
+      await deleteFromSettings(page);
+      const dialog = page.getByRole('alertdialog');
+
+      await expect(dialog.getByRole('radio', { name: /Delete view only/ })).toHaveAttribute('aria-checked', 'true');
+      await dialog.getByRole('button', { name: 'Delete view', exact: true }).click();
+      await expect(dialog).toBeHidden();
+      const saved = await save(page);
+
+      expect(saved.some((block) => block.id === 'src-b')).toBe(true);
+      expect(saved.some((block) => block.id === 'b1')).toBe(true);
+    });
+
+    test('"Delete view and data source" removes the source and its rows; undo brings them back', async ({ page }) => {
+      await mount(page, bound);
+      await deleteFromSettings(page);
+      const dialog = page.getByRole('alertdialog');
+
+      await dialog.getByRole('radio', { name: /Delete view and data source/ }).click();
+      await dialog.getByRole('button', { name: 'Delete view', exact: true }).click();
+      await expect(dialog).toBeHidden();
+      await expect(grid(page)).toContainText('Alpha');
+      const saved = await save(page);
+
+      expect(saved.some((block) => block.id === 'src-b' || block.id === 'b1')).toBe(false);
+      expect(saved.filter((block) => block.type === 'database-row').map((block) => block.id)).toEqual(['r1']);
+
+      await page.evaluate(() => window.blokInstance?.history.undo());
+      await expect.poll(async () => (await save(page)).find((block) => block.id === 'b1')?.parent).toBe('src-b');
+    });
+  });
+
+  // research/26 §5b.
+  test('picking another source drops a sort that source cannot use', async ({ page }) => {
+    const sortedBound = bound.map((block) => (block.id === 'db-1'
+      ? { ...block, data: { ...block.data, activeViewId: 'v0', views: (block.data as { views: Array<Record<string, unknown>> }).views.map((view) => (view.id === 'v0' ? { ...view, sorts: [{ id: 's1', propertyId: 'p-title', direction: 'desc' }] } : view)) } }
+      : block));
+
+    await mount(page, sortedBound);
+    await page.getByTestId('database-toolbar-settings').click();
+    await page.getByTestId('database-settings-source').click();
+    await page.getByTestId('database-source-option-src-b').click();
+    await expect(grid(page)).toContainText('Gamma');
+    const views = (await save(page)).find((block) => block.id === 'db-1')?.data as { views: Array<{ id: string; sorts: unknown[] }> };
+
+    expect(views.views.find((view) => view.id === 'v0')?.sorts).toEqual([]);
   });
 });

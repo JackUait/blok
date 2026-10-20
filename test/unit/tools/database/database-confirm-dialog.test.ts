@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { openDatabaseConfirm } from '../../../../src/tools/database/database-confirm-dialog';
+import { openDatabaseChoice, openDatabaseConfirm } from '../../../../src/tools/database/database-confirm-dialog';
+import { readMainCss } from '../../styles/helpers/read-main-css';
 
 const dialog = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-blok-database-confirm-dialog]');
 const action = (name: 'confirm' | 'cancel'): HTMLButtonElement | null =>
@@ -103,5 +104,56 @@ describe('openDatabaseConfirm', () => {
     void openDatabaseConfirm({ title: 'Delete?', confirmLabel: 'Delete', cancelLabel: 'Cancel', destructive: true });
 
     expect(action('confirm')?.hasAttribute('data-destructive')).toBe(true);
+  });
+
+  // research/26 §5a: "Delete the last view for this data source?" with two radio cards.
+  describe('radio cards', () => {
+    const choices = [
+      { label: 'Delete view only', description: 'Kept' },
+      { label: 'Delete view and data source', description: 'Deleted' },
+    ];
+    const cards = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>('[data-blok-database-confirm-choice]')];
+    const openChoice = (): Promise<number | null> => openDatabaseChoice({ title: 'Delete?', confirmLabel: 'Delete view', cancelLabel: 'Cancel', destructive: true, choices });
+
+    it('draws the cards as a radio group between the title and the buttons, the first picked', () => {
+      void openChoice();
+      const group = document.querySelector('[role="radiogroup"]');
+
+      expect(cards().map((card) => card.getAttribute('role'))).toEqual(['radio', 'radio']);
+      expect(cards().map((card) => card.getAttribute('aria-checked'))).toEqual(['true', 'false']);
+      expect(cards()[0].textContent).toContain('Delete view only');
+      expect(cards()[0].textContent).toContain('Kept');
+      expect(group?.compareDocumentPosition(action('confirm') ?? document.body)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+
+    it('resolves the picked card\'s index on confirm', async () => {
+      const answer = openChoice();
+
+      cards()[1].click();
+      expect(cards().map((card) => card.getAttribute('aria-checked'))).toEqual(['false', 'true']);
+      action('confirm')?.click();
+
+      await expect(answer).resolves.toBe(1);
+    });
+
+    it('resolves null on cancel', async () => {
+      const answer = openChoice();
+
+      cards()[1].click();
+      action('cancel')?.click();
+
+      await expect(answer).resolves.toBeNull();
+    });
+
+    // CLAUDE.md "No blue selected states": a picked card has no fill and the same ink as the others.
+    it('paints a picked card with no fill and the same ink as an unpicked one', () => {
+      const css = readMainCss();
+      const picked = [...css.matchAll(/\[data-blok-database-confirm-choice\]\[aria-checked="true"\][^{]*\{([^}]*)\}/g)].map((m) => m[1]);
+
+      expect(picked.length).toBeGreaterThan(0);
+      for (const body of picked) {
+        expect(body).not.toMatch(/background|(^|[^-])color\s*:/);
+      }
+    });
   });
 });

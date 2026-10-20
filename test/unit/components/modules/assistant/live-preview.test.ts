@@ -571,6 +571,44 @@ describe('createLivePreview', () => {
       expect(state.layer.querySelector(PREVIEW)).toBeNull();
     });
 
+    it('a longer rewrite of the bar\'s block pushes the bar down, not over the new text', () => {
+      const preview = make();
+      const b1 = state.holders[0];
+      const input = field(b1, 'Short');
+
+      reserveGap(b1, 'bar', 40);
+      rects.set(input, new DOMRect(0, 0, 600, HOLDER_HEIGHT));
+      preview.update('c1', execute({ name: 'text.replace', args: { id: 'b1', with: 'A much longer text' } }));
+
+      // The bar re-reads its spot: it now sits under the rewrite's extra height.
+      expect(reserveGap(b1, 'bar', 40)).toBe(BOX_HEIGHT - HOLDER_HEIGHT);
+
+      releaseGap(b1, 'bar');
+    });
+
+    it('sizes the rewrite box like the field, padding included', () => {
+      const preview = make();
+      const input = field(state.holders[0], 'Old');
+
+      input.style.whiteSpace = 'pre-wrap';
+      preview.update('c1', execute({ name: 'text.replace', args: { id: 'b1', with: 'New' } }));
+
+      const box = state.layer.querySelector<HTMLElement>(PREVIEW);
+
+      expect(box?.style.boxSizing).toBe('border-box');
+      expect(box?.style.whiteSpace).toBe('pre-wrap');
+    });
+
+    it('keeps a space the new text starts with', () => {
+      const preview = make();
+
+      field(state.holders[0], 'Hello brave world');
+      preview.update('c1', execute({ name: 'text.replace', args: { id: 'b1', range: { start: 5, end: 11 }, with: ' kind' } }));
+      vi.advanceTimersByTime(35 * 3);
+
+      expect(boxText()).toBe('Hello kind world');
+    });
+
     it('holds the extra height of a longer rewrite in the gap, and frees it', () => {
       const preview = make();
       const b1 = state.holders[0];

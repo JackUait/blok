@@ -314,7 +314,7 @@ class Line {
   }
 
   private draw(): void {
-    const shape = `${this.spec.kind}:${this.spec.level}:${this.spec.style}:${this.ordinal}`;
+    const shape = `${this.spec.kind}:${this.spec.level}:${this.spec.style}:${this.ordinal}:${this.spec.before ?? ''}`;
     // A range rewrite shows the text around the range at once.
     const framed = this.spans.length > 0 || Boolean(this.spec.before) || Boolean(this.spec.after);
 
@@ -450,7 +450,7 @@ class Group {
 /** Copied from the field, so the overlay text sits exactly over the hidden text. */
 const FIELD_TYPE = [
   'font-size', 'font-family', 'font-weight', 'font-style', 'line-height', 'letter-spacing', 'color', 'text-align',
-  'padding-block-start', 'padding-block-end', 'padding-inline-start', 'padding-inline-end',
+  'padding-block-start', 'padding-block-end', 'padding-inline-start', 'padding-inline-end', 'white-space', 'overflow-wrap',
 ];
 
 interface RewriteTarget { id: string; holder: HTMLElement; input: HTMLElement; original: string }
@@ -464,6 +464,8 @@ class RewriteBox {
 
     markPreviewBox(this.box);
     FIELD_TYPE.forEach((property) => this.box.style.setProperty(property, computed.getPropertyValue(property)));
+    // The width below is the field's border box, padding included.
+    this.box.style.boxSizing = 'border-box';
     this.box.append(root);
     target.holder.setAttribute(DATA_ATTR.aiRewriting, '');
   }
@@ -473,7 +475,8 @@ class RewriteBox {
     const field = this.target.input.getBoundingClientRect();
     const height = this.box.getBoundingClientRect().height;
 
-    reserveGap(this.target.holder, key, height - field.height);
+    // Nearest the holder: the box grows down from the field, so the bar and inserts must sit below it.
+    reserveGap(this.target.holder, key, height - field.height, 'end', true);
     this.box.style.top = `${field.top - layer.top}px`;
     this.box.style.left = `${field.left - layer.left}px`;
     this.box.style.width = `${field.width}px`;
@@ -829,7 +832,8 @@ class CallPreview {
       style: 'unordered',
       text: spec.text,
       complete: spec.complete,
-      before: target.original.slice(0, at.start),
+      // Words drop leading space, so a reply that starts with one keeps it here.
+      before: target.original.slice(0, at.start) + (/^\s*/.exec(spec.text)?.[0] ?? ''),
       after: target.original.slice(at.end),
     }]);
   }

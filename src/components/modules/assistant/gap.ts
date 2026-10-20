@@ -54,10 +54,14 @@ export const gapSize = (holder: HTMLElement, side: GapSide = 'end'): number => s
 /**
  * Hold `px` for `key` next to `holder`. Returns the key's offset inside the gap:
  * keys stack in the order they were first reserved, and a repeat call only resizes.
+ * `first` puts a new key nearest the holder, above the keys already there.
  */
-export const reserveGap = (holder: HTMLElement, key: string, px: number, side: GapSide = 'end'): number => {
-  const keys = keysOf(holder)[side];
+export const reserveGap = (holder: HTMLElement, key: string, px: number, side: GapSide = 'end', first = false): number => {
+  const all = keysOf(holder);
+  const known = all[side];
+  const keys = first && !known.has(key) ? new Map([[key, 0], ...known]) : known;
 
+  all[side] = keys;
   keys.set(key, Math.max(0, px));
   paint(holder);
 

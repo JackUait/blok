@@ -40,6 +40,29 @@ export interface OverflowListOptions {
 }
 
 /**
+ * The tabs a bar keeps, in order: the leading ones that fit in `budget`. The
+ * current tab always stays (research/21 §2); when it is past them it takes the
+ * place of the last ones, so the strip keeps view order. -1: no current tab.
+ */
+export const tabsThatFit = (widths: readonly number[], current: number, budget: number, gap: number): number[] => {
+  const leading = (count: number): number[] => Array.from({ length: count }, (_, i) => i);
+  const fits = (indices: number[]): boolean =>
+    indices.reduce((sum, i) => sum + widths[i], 0) + gap * Math.max(0, indices.length - 1) <= budget;
+  const longestRun = (limit: number, then: number[]): number => {
+    const miss = leading(limit).findIndex((i) => !fits([...leading(i + 1), ...then]));
+
+    return miss === -1 ? limit : miss;
+  };
+  const kept = longestRun(widths.length, []);
+
+  if (current < kept || current >= widths.length) {
+    return leading(kept);
+  }
+
+  return [...leading(longestRun(current, [current])), current];
+};
+
+/**
  * The "N more…" list (research/13 §3a): a search field, every item in order
  * with a drag handle and "•••", then a new-item row. Shared by the database
  * view tabs and the tabs block.

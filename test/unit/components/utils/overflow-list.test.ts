@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { OverflowList, type OverflowListOptions } from '../../../../src/components/utils/overflow-list';
+import { OverflowList, tabsThatFit, type OverflowListOptions } from '../../../../src/components/utils/overflow-list';
 
 const P = 'data-test-overflow';
 
@@ -143,5 +143,23 @@ describe('OverflowList keyboard (research/21 §2)', () => {
     expect(highlighted()).toBe('b');
     expect(onSelect).not.toHaveBeenCalled();
     expect(list.isOpen).toBe(true);
+  });
+});
+
+describe('tabsThatFit', () => {
+  it('keeps the leading tabs that fit when the current one is among them', () => {
+    expect(tabsThatFit([100, 100, 100, 100], 1, 250, 10)).toEqual([0, 1]);
+  });
+
+  it('puts the current tab in place of the last ones that fit, in order', () => {
+    expect(tabsThatFit([100, 100, 100, 100], 3, 250, 10)).toEqual([0, 3]);
+  });
+
+  it('keeps every tab when all fit', () => {
+    expect(tabsThatFit([100, 100], 1, 210, 10)).toEqual([0, 1]);
+  });
+
+  it('shows the current tab even when it does not fit alone', () => {
+    expect(tabsThatFit([100, 100, 400], 2, 250, 10)).toEqual([2]);
   });
 });

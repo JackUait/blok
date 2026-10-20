@@ -81,6 +81,37 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('database view overflow list', () => {
+  test('the current view stays a tab, after the leading ones, and the list still marks it (research/21 §2)', async ({ page }) => {
+    await mount(page, 'v6');
+    const shownTabs = page.locator('[data-blok-database-tab]:visible');
+    const names = await shownTabs.allTextContents();
+
+    // The 520px bar holds a few tabs, never all eight.
+    expect(names.length).toBeGreaterThan(1);
+    expect(names.length).toBeLessThan(NAMES.length);
+    expect(names.map((name) => name.trim())).toEqual([...NAMES.slice(0, names.length - 1), 'Seventh']);
+    await expect(page.getByRole('tab', { name: 'Seventh' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('button', { name: /more…$/ })).toHaveText(`${NAMES.length - names.length} more…`);
+
+    const list = await openList(page);
+
+    await expect(list.locator('[data-blok-database-tab-overflow-item]')).toHaveCount(NAMES.length);
+    await expect(rowOf(list, 'Seventh')).toHaveAttribute('data-active', '');
+    await expect(list.locator('[data-highlighted]')).toHaveText('Seventh');
+  });
+
+  test('picking a folded view from the list brings its tab into the bar', async ({ page }) => {
+    await mount(page);
+    const list = await openList(page);
+
+    await rowOf(list, 'Sixth').click();
+
+    await expect(page.getByRole('tab', { name: 'Sixth', includeHidden: true })).toHaveAttribute('aria-selected', 'true');
+    // Polled: the new bar shows every tab for a frame before it folds.
+    await expect.poll(async () => (await page.locator('[data-blok-database-tab]:visible').allTextContents()).map((name) => name.trim()))
+      .toEqual(['First', 'Sixth']);
+  });
+
   test('lists every view under a focused search field, then New view', async ({ page }) => {
     await mount(page);
     const list = await openList(page);

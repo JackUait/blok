@@ -223,6 +223,24 @@ describe('row page tab bar "N more…" (research/13 §3a)', () => {
     expect(list()).toBeNull();
   });
 
+  it('keeps the open tab in the bar in place of the last tab that fits (research/21 §2)', async () => {
+    await make();
+    await openRowPage();
+    await resize(330);
+    await click(more());
+    await click(row('V4'));
+    await resize(330);
+
+    // 330 - 60 ("more") holds two tabs: Content, then the open V4.
+    expect(shown()).toEqual(['Content', 'V4']);
+    expect(more()?.textContent).toBe('3 more…');
+
+    await click(more());
+
+    expect(rows().map(rowName)).toEqual(['Content', ...VIEWS]);
+    expect(row('V4')?.hasAttribute('data-active')).toBe(true);
+  });
+
   it('in the builder, a row\'s "•••" opens the tab menu and New view opens Add tab; there is no drag handle', async () => {
     await make();
     await openRowPage();

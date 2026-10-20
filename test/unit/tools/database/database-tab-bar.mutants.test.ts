@@ -910,6 +910,48 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(tabOf(el, 'v3').style.display).toBe('');
     });
 
+    describe('the current view always stays a tab (research/21 §2)', () => {
+      const eightViews = (): DatabaseViewConfig[] =>
+        Array.from({ length: 8 }, (_, i) => makeView({ id: `v${i}`, name: `View ${i}`, position: `a${i}` }));
+
+      const shownIds = (el: HTMLElement): string[] =>
+        Array.from(el.querySelectorAll<HTMLElement>('[data-blok-database-tab]'))
+          .filter((tab) => tab.style.display !== 'none')
+          .map((tab) => tab.getAttribute('data-view-id') ?? '');
+
+      it('takes the place of the last tab that fits, keeping view order', () => {
+        const { el } = mount(eightViews(), 'v4');
+
+        // 40 (add) + 3 × 102 fills 346 exactly: three tabs fit.
+        layOutForOverflow(el, 346);
+        lastResizeProbe().fire();
+
+        expect(shownIds(el)).toEqual(['v0', 'v1', 'v4']);
+        expect(queryOne(el, '[data-blok-database-tab-more]').textContent).toBe('5 more…');
+      });
+
+      it('changes nothing when the current view already fits', () => {
+        const { el } = mount(eightViews(), 'v1');
+
+        layOutForOverflow(el, 346);
+        lastResizeProbe().fire();
+
+        expect(shownIds(el)).toEqual(['v0', 'v1', 'v2']);
+        expect(queryOne(el, '[data-blok-database-tab-more]').textContent).toBe('5 more…');
+      });
+
+      it('pushes out as many leading tabs as a wide current tab needs', () => {
+        const { el } = mount(eightViews(), 'v6');
+
+        layOutForOverflow(el, 448);
+        Object.defineProperty(tabOf(el, 'v6'), 'offsetWidth', { value: 250, configurable: true });
+        lastResizeProbe().fire();
+
+        expect(shownIds(el)).toEqual(['v0', 'v6']);
+        expect(queryOne(el, '[data-blok-database-tab-more]').textContent).toBe('6 more…');
+      });
+    });
+
     it('observes the bar it just built', () => {
       const { el } = mount(threeViews(), 'v1');
 
@@ -1395,6 +1437,29 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       document.dispatchEvent(pointer('pointerup', 220));
 
       expect(onReorder).toHaveBeenCalledWith('v1', generateKeyBetween('a1', 'a2'));
+    });
+
+    it('drops right after the shown tab on its left when folded tabs sit between', () => {
+      const views = Array.from({ length: 8 }, (_, i) => makeView({ id: `v${i}`, name: `View ${i}`, position: `a${i}` }));
+      const { el } = mount(views, 'v4');
+
+      // Shown: v0, v1, then the current v4; v2 and v3 are folded between them.
+      for (const tab of Array.from(el.querySelectorAll('[data-blok-database-tab]'))) {
+        Object.defineProperty(tab, 'offsetWidth', { value: 100, configurable: true });
+      }
+      Object.defineProperty(el, 'clientWidth', { value: 346, configurable: true });
+      lastResizeProbe().fire();
+      Array.from(el.querySelectorAll<HTMLElement>('[data-blok-database-tab]')).forEach((tab) => {
+        const slot = ['v0', 'v1', 'v4'].indexOf(tab.getAttribute('data-view-id') ?? '');
+
+        vi.spyOn(tab, 'getBoundingClientRect').mockReturnValue(slot === -1 ? makeRect(0, 0) : makeRect(slot * 100, slot * 100 + 100));
+      });
+
+      tabOf(el, 'v0').dispatchEvent(pointer('pointerdown', 50));
+      document.dispatchEvent(pointer('pointermove', 220));
+      document.dispatchEvent(pointer('pointerup', 220));
+
+      expect(onReorder).toHaveBeenCalledWith('v0', generateKeyBetween('a1', 'a2'));
     });
 
     it('drops after the last tab when the pointer is past the row', () => {

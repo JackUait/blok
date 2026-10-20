@@ -46,7 +46,7 @@ import {
 import type { PageLayoutData, PageLayoutDraft, PageLayoutOp, ResolvedPageLayout } from './page-layout';
 import { nanoid } from 'nanoid';
 import { PageLayoutBuilder } from './page-layout-builder';
-import { OverflowList } from '../../components/utils/overflow-list';
+import { OverflowList, tabsThatFit } from '../../components/utils/overflow-list';
 import type { BuilderTabs, PageLayoutModuleEntry } from './page-layout-builder';
 
 /** Where a property made from a builder menu goes. */
@@ -2468,7 +2468,8 @@ export class DatabaseCardDrawer {
 
   /**
    * research/13 §3a: tabs that do not fit leave the bar for a "N more…"
-   * list. As in the database view tabs, the trailing ones go.
+   * list. As in the database view tabs, the trailing ones go, but the open
+   * tab stays.
    */
   private fitTabs(bar: HTMLElement, list: HTMLElement, editable: boolean): void {
     const all = [...list.querySelectorAll<HTMLElement>('[role="tab"]')];
@@ -2483,10 +2484,10 @@ export class DatabaseCardDrawer {
     const add = bar.querySelector<HTMLElement>('[data-blok-database-layout-add-tab]');
     const reserved = add === null ? 0 : add.offsetWidth + barGap;
     const widths = all.map((tab) => tab.offsetWidth);
-    const span = (count: number): number => widths.slice(0, count).reduce((sum, w) => sum + w, 0) + gap * Math.max(0, count - 1);
+    const current = all.findIndex((tab) => tab.getAttribute('data-tab-id') === this.shownTab);
 
     // Zero: a bar that mounts hidden measures nothing yet.
-    if (width === 0 || reserved + span(all.length) <= width) {
+    if (width === 0 || tabsThatFit(widths, current, width - reserved, gap).length === all.length) {
       return;
     }
 
@@ -2499,11 +2500,10 @@ export class DatabaseCardDrawer {
     more.textContent = this.label('tools.database.moreViews').replace('{count}', () => String(all.length));
     list.after(more);
 
-    const budget = width - reserved - more.offsetWidth - barGap;
-    const kept = widths.filter((_, index) => span(index + 1) <= budget).length;
+    const shown = tabsThatFit(widths, current, width - reserved - more.offsetWidth - barGap, gap);
 
-    all.slice(kept).forEach((tab) => tab.toggleAttribute('hidden', true));
-    more.textContent = this.label('tools.database.moreViews').replace('{count}', () => String(all.length - kept));
+    all.forEach((tab, index) => tab.toggleAttribute('hidden', !shown.includes(index)));
+    more.textContent = this.label('tools.database.moreViews').replace('{count}', () => String(all.length - shown.length));
     more.addEventListener('click', () => {
       if (this.tabsOverflow === null) {
         this.openTabsOverflow(more, all, editable);

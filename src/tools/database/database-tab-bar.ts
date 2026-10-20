@@ -4,7 +4,7 @@ import { DatabaseViewPopover } from './database-view-popover';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
-import { OverflowList } from '../../components/utils/overflow-list';
+import { OverflowList, tabsThatFit } from '../../components/utils/overflow-list';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { startInlineRename } from '../../components/utils/inline-rename';
@@ -231,17 +231,12 @@ export class DatabaseTabBar {
         this.moreBtnEl?.remove();
         this.moreBtnEl = null;
 
-        const barWidth = this.element.clientWidth;
         const addBtnWidth = 40;
-        const visibleCount = tabs.findIndex((_tab, i) => {
-          const consumed = addBtnWidth + tabs.slice(0, i + 1).reduce((w, t) => w + t.offsetWidth + 2, 0);
+        const active = tabs.findIndex((tab) => tab.getAttribute('data-view-id') === this.options.activeViewId);
+        const shown = tabsThatFit(tabs.map((tab) => tab.offsetWidth + 2), active, this.element.clientWidth - addBtnWidth, 0);
 
-          return consumed > barWidth;
-        });
-        const resolved = visibleCount === -1 ? tabs.length : visibleCount;
-
-        if (resolved < tabs.length) {
-          this.handleOverflow(resolved);
+        if (shown.length < tabs.length) {
+          this.foldTabs(shown);
         }
       });
 
@@ -492,21 +487,27 @@ export class DatabaseTabBar {
     this.viewPopover.open(anchor);
   }
 
+  /** Keeps the first `visibleCount` tabs and folds the rest. */
   handleOverflow(visibleCount: number): void {
+    this.foldTabs(Array.from({ length: visibleCount }, (_, i) => i));
+  }
+
+  /** Keeps the tabs at `shown` (indices in view order) and folds the rest behind "N more…". */
+  private foldTabs(shown: readonly number[]): void {
     if (this.element === null) return;
 
     // Remove existing more button
     this.moreBtnEl?.remove();
 
-    const orderedViews = [...this.views].sort((a, b) => (a.position < b.position ? -1 : 1));
-    const hiddenCount = orderedViews.length - visibleCount;
+    const hiddenCount = this.views.length - shown.length;
     if (hiddenCount <= 0) return;
 
-    // Hide overflow tabs
     const tabs = Array.from(this.element.querySelectorAll<HTMLElement>('[data-blok-database-tab]'));
 
-    for (const tab of tabs.slice(visibleCount)) {
-      tab.style.display = 'none';
+    for (const [index, tab] of tabs.entries()) {
+      if (!shown.includes(index)) {
+        tab.style.display = 'none';
+      }
     }
 
     // Add the localized overflow-count button before the + button.
@@ -654,17 +655,17 @@ export class DatabaseTabBar {
       this.element?.querySelectorAll<HTMLElement>('[data-blok-database-tab]') ?? []
     ).filter((t) => t.getAttribute('data-view-id') !== this.dragViewId);
 
-    const dropIndex = tabs.findIndex((t) => {
+    // Folded tabs can sit between shown ones (the current view stays shown):
+    // the drop lands right after the shown tab on its left.
+    const shown = tabs.filter((t) => t.style.display !== 'none');
+    const dropIndex = shown.findIndex((t) => {
       const rect = t.getBoundingClientRect();
       return e.clientX < (rect.left + rect.right) / 2;
     });
-
-    const beforeViewId = dropIndex >= 0 ? tabs[dropIndex].getAttribute('data-view-id') : null;
-    const afterViewId = ((): string | null => {
-      if (dropIndex > 0) return tabs[dropIndex - 1].getAttribute('data-view-id');
-      if (dropIndex === -1 && tabs.length > 0) return tabs[tabs.length - 1].getAttribute('data-view-id');
-      return null;
-    })();
+    const afterTab = dropIndex === -1 ? shown.at(-1) : shown[dropIndex - 1];
+    const beforeTab = afterTab === undefined ? tabs[0] : tabs[tabs.indexOf(afterTab) + 1];
+    const afterViewId = afterTab?.getAttribute('data-view-id') ?? null;
+    const beforeViewId = beforeTab?.getAttribute('data-view-id') ?? null;
 
     const viewId = this.dragViewId;
 

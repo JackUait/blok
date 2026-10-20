@@ -906,6 +906,8 @@ test.describe('row page layout', () => {
     await expect(page.getByPlaceholder('Search for a view...')).toHaveCount(0);
     // The lent tabs block keeps its own (hidden) pills, so look in the row page's bar.
     await expect(peek(page).locator('[data-blok-database-drawer-tabs]').getByRole('tab', { name: 'Roadmap view 10', includeHidden: true })).toHaveAttribute('aria-selected', 'true');
+    // research/21 §2: the open tab stays in the bar, even one from the list.
+    await expect(peek(page).locator('[data-blok-database-drawer-tabs]').getByRole('tab', { name: 'Roadmap view 10' })).toBeVisible();
     await expect(peek(page)).toBeVisible();
   });
 

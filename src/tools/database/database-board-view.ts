@@ -194,7 +194,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     return heads;
   }
 
-  /** One sub-group: its label and count, then a row of every column holding only its cards. */
+  /** One sub-group: its label (no count, research/31 §3), then a row of every column holding only its cards. */
   private createLane(lane: BoardLane): HTMLElement {
     const section = document.createElement('section');
     const header = document.createElement('div');
@@ -206,8 +206,6 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
 
       return columnEl;
     });
-    const count = document.createElement('span');
-
     section.setAttribute('data-blok-database-board-lane', '');
     section.setAttribute('data-sub-group', lane.key);
     section.setAttribute('aria-label', lane.label);
@@ -221,10 +219,6 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       label.textContent = lane.label;
       header.appendChild(label);
     }
-    count.setAttribute('data-blok-database-board-lane-count', '');
-    count.textContent = String(columnEls.reduce((sum, el) => sum + el.querySelectorAll('[data-blok-database-card]').length, 0));
-    count.hidden = this.hideCounts;
-    header.appendChild(count);
     columns.setAttribute('data-blok-database-board-lane-columns', '');
     columns.append(...columnEls);
     section.append(header, columns);

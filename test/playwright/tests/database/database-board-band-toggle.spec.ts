@@ -116,3 +116,13 @@ test('Enter on the focused toggle opens a folded band again', async ({ page }) =
   await expect(toggle(page, 'Ann')).toHaveAccessibleName('Close');
   await expect.poll(() => iconTransform(page, 'Ann')).toBe('none');
 });
+
+test('a band header shows its pill and no card count, open or folded (research/31 §3)', async ({ page }) => {
+  await mount(page, blocks());
+
+  const header = band(page, 'Ann').locator('[data-blok-database-board-lane-header]');
+
+  await expect(header).toHaveText('Ann');
+  await toggle(page, 'Ann').click();
+  await expect(header).toHaveText('Ann');
+});

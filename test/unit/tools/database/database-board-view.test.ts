@@ -79,6 +79,15 @@ describe('DatabaseBoardView', () => {
       expect(toggleOf(board, 'l1')?.getAttribute('aria-label')).toBe('tools.database.tableOpen');
     });
 
+    it('shows no card count in a band header, open or folded (research/31 §3)', () => {
+      const board = lanesView([{ key: 'l1', label: 'High' }]);
+      const header = laneOf(board, 'l1')?.querySelector<HTMLElement>('[data-blok-database-board-lane-header]');
+
+      expect(header?.textContent?.trim()).toBe('High');
+      toggleOf(board, 'l1')?.click();
+      expect(header?.textContent?.trim()).toBe('High');
+    });
+
     it('still folds a band in read-only mode', () => {
       const board = lanesView([{ key: 'l1', label: 'High' }], undefined, true);
 

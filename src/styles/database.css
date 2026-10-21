@@ -9578,11 +9578,6 @@ textarea[data-blok-database-cell-input] {
   font-weight: 500;
 }
 
-[data-blok-database-board-lane-count] {
-  color: var(--blok-database-table-header-text);
-  font-weight: 400;
-}
-
 [data-blok-database-board-lane-columns] {
   display: flex;
   align-items: flex-start;

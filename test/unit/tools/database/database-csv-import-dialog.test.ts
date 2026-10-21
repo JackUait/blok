@@ -3,7 +3,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { openCsvImportDialog } from '../../../../src/tools/database/database-csv-import-dialog';
 import type { CsvColumnTarget, CsvImportSettings, CsvMergeTarget } from '../../../../src/tools/database/database-csv';
 import type { PropertyDefinition } from '../../../../src/tools/database/types';
+import { IconChevronUpDown } from '../../../../src/components/icons';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
+
+/** An icon string as the DOM serializes it once it is set as innerHTML. */
+const markup = (svg: string): string => Object.assign(document.createElement('span'), { innerHTML: svg }).innerHTML;
 
 const R27 = [
   'Name,Due,Amount,Site,Email,Done,Stage',
@@ -428,6 +432,13 @@ describe('openCsvImportDialog (research/26 §2, research/27 §2)', () => {
       expect(location?.previousElementSibling?.textContent).toBe('tools.database.csvImportLocation');
       expect(location?.textContent?.trim()).toBe('Tasks');
       expect(location?.getAttribute('aria-disabled')).toBe('true');
+    });
+
+    // research/31 §5a: the field ends in an up/down chevron, like a select.
+    it('ends "Import Location" with an up/down chevron', () => {
+      openMerge();
+
+      expect(byTestId('database-csv-location')?.lastElementChild?.innerHTML).toBe(markup(IconChevronUpDown));
     });
 
     it('has no "Import Location" on a new import', () => {

@@ -323,6 +323,33 @@ test.describe('timeline', () => {
     await expect(bar(page, 'r2')).toBeInViewport();
   });
 
+  // research/26 §4d: a straight arrow about 8x7 px in the 14x12 icon box, not a chevron.
+  test('an off-screen arrow draws a straight arrow at Notion\'s size', async ({ page }) => {
+    const rows = [
+      { id: 'r1', properties: { 'p-title': 'Now', 'p-due': '2026-10-09' } },
+      { id: 'r2', properties: { 'p-title': 'Later', 'p-due': '2026-12-20' } },
+    ];
+
+    await mount(page, blocks({ type: 'timeline' }, rows));
+    const arrow = page.locator('[data-blok-database-timeline-row][data-row-id="r2"] [data-blok-database-timeline-offscreen="after"]');
+
+    await expect(arrow).toBeVisible();
+
+    expect(await arrow.evaluate((el) => [...el.querySelectorAll('svg path')].map((path) => path.getAttribute('d'))))
+      .toEqual(['M3.75 10L16.25 10', 'M10.75 4.5L16.25 10L10.75 15.5']);
+    const box = await arrow.evaluate((el) => {
+      const rects = [...el.querySelectorAll('svg path')].map((path) => path.getBoundingClientRect());
+
+      return {
+        width: Math.max(...rects.map((r) => r.right)) - Math.min(...rects.map((r) => r.left)),
+        height: Math.max(...rects.map((r) => r.bottom)) - Math.min(...rects.map((r) => r.top)),
+      };
+    });
+
+    expect(box.width).toBeCloseTo(7.5, 0);
+    expect(box.height).toBeCloseTo(6.6, 0);
+  });
+
   test('the table panel toggles and lists its own properties', async ({ page }) => {
     await mount(page, blocks({ type: 'timeline', tableProperties: [{ id: 'p-due', visible: true }] }));
 

@@ -1,4 +1,4 @@
-import { IconDotsHorizontal, IconLock } from '../../components/icons';
+import { IconChevronUpDown, IconDotsHorizontal, IconLock } from '../../components/icons';
 import { formatBytes } from '../../components/utils/format-bytes';
 import type { I18n } from '../../../types';
 import { DEFAULT_MAX_SIZE } from '../file/constants';
@@ -538,9 +538,11 @@ export class DatabaseFormView implements DatabaseViewRenderer {
 
   private paintProviderField(property: PropertyDefinition, field: HTMLButtonElement): void {
     const value = this.answers.get(property.id);
+    // Only a Dropdown multiple choice reaches a provider field as multiSelect.
+    const chevron = property.type === 'multiSelect' ? [this.dropdownChevron()] : [];
 
     if (value === undefined) {
-      field.replaceChildren(this.options.i18n.t('tools.database.formChooseAnswer'));
+      field.replaceChildren(this.options.i18n.t('tools.database.formChooseAnswer'), ...chevron);
 
       return;
     }
@@ -548,7 +550,18 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     const shown = renderCellValue(property, value, context);
 
     shown.querySelectorAll('a').forEach((link) => link.replaceWith(link.textContent ?? ''));
-    field.replaceChildren(shown);
+    field.replaceChildren(shown, ...chevron);
+  }
+
+  /** research/12 §4: Notion's Dropdown question box ends in an up/down chevron. */
+  private dropdownChevron(): HTMLSpanElement {
+    const chevron = document.createElement('span');
+
+    chevron.setAttribute('data-blok-database-form-dropdown-chevron', '');
+    chevron.setAttribute('aria-hidden', 'true');
+    chevron.innerHTML = IconChevronUpDown;
+
+    return chevron;
   }
 
   private providerField(property: PropertyDefinition, id: string, setting: ViewPropertySetting): HTMLButtonElement {
@@ -559,6 +572,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     field.type = 'button';
     field.id = id;
     field.setAttribute('data-blok-database-form-provider-answer', '');
+    if (property.type === 'multiSelect') field.setAttribute('data-blok-database-form-dropdown', '');
     field.setAttribute('aria-label', setting.questionName ?? property.name);
     field.addEventListener('click', () => {
       if (this.destroying) return;

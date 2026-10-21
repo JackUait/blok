@@ -34,7 +34,7 @@ import { isHistoryKey } from './database-keyboard';
 import { getElementDirection } from '../../components/utils/direction';
 import { syncCommentBadge } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
-import { IconCalendar, IconChevronLeft, IconChevronRight, IconMenu, IconPlus } from '../../components/icons';
+import { IconArrowLeftSmall, IconArrowRightSmall, IconCalendar, IconChevronLeft, IconChevronRight, IconMenu, IconPlus } from '../../components/icons';
 
 export interface TimelineGroup {
   /** '' when the timeline is not grouped. */
@@ -678,7 +678,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     arrow.tabIndex = -1;
     arrow.setAttribute('data-blok-database-timeline-offscreen', side);
     arrow.setAttribute('aria-label', this.t(side === 'before' ? 'tools.database.timelineJumpBack' : 'tools.database.timelineJumpForward'));
-    arrow.innerHTML = side === 'before' ? IconChevronLeft : IconChevronRight;
+    arrow.innerHTML = side === 'before' ? IconArrowLeftSmall : IconArrowRightSmall;
 
     return arrow;
   }

@@ -4,9 +4,13 @@ import { DatabaseTimelineView } from '../../../../src/tools/database/database-ti
 import type { DatabaseTimelineViewOptions, TimelineGroup, TimelineHandlers } from '../../../../src/tools/database/database-timeline-view';
 import { TIMELINE_DAY_WIDTH, timelineWindow } from '../../../../src/tools/database/timeline-dates';
 import { daysBetween } from '../../../../src/tools/database/calendar-dates';
+import { IconArrowLeftSmall, IconArrowRightSmall } from '../../../../src/components/icons';
 import { hide, showReadout } from '../../../../src/components/utils/tooltip';
 import type * as Tooltip from '../../../../src/components/utils/tooltip';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption } from '../../../../src/tools/database/types';
+
+/** An icon string as the DOM serializes it once it is set as innerHTML. */
+const markup = (svg: string): string => Object.assign(document.createElement('span'), { innerHTML: svg }).innerHTML;
 
 vi.mock('../../../../src/components/utils/tooltip', async (importOriginal) => ({
   ...await importOriginal<typeof Tooltip>(),
@@ -442,6 +446,16 @@ describe('DatabaseTimelineView', () => {
 
       arrow('r2', 'after')?.click();
       expect(handlers.navigate).toHaveBeenCalledWith('2027-03-01');
+    });
+
+    // research/26 §4d: Notion draws a straight arrow in the chip, not a chevron.
+    it('draws a straight arrow pointing to the side the bar is on', () => {
+      const { root } = mount({ groups: single([row('r1', 'Early', '2026-09-02')]) });
+      const glyph = (side: string): string | undefined =>
+        root.querySelector(`[data-blok-database-timeline-offscreen="${side}"]`)?.innerHTML;
+
+      expect(glyph('before')).toBe(markup(IconArrowLeftSmall));
+      expect(glyph('after')).toBe(markup(IconArrowRightSmall));
     });
   });
 

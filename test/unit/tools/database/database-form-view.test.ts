@@ -2,7 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DatabaseFormView } from '../../../../src/tools/database/database-form-view';
 import type { DatabaseFormViewOptions } from '../../../../src/tools/database/database-form-view';
+import { IconChevronUpDown } from '../../../../src/components/icons';
 import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
+
+/** An icon string as the DOM serializes it once it is set as innerHTML. */
+const markup = (svg: string): string => Object.assign(document.createElement('span'), { innerHTML: svg }).innerHTML;
 
 const schema: PropertyDefinition[] = [
   { id: 'title', name: 'Name', type: 'title', position: 'a0' },
@@ -241,6 +245,25 @@ describe('DatabaseFormView', () => {
       submitForm(root);
 
       expect(submit).toHaveBeenCalledWith({ tags: ['t1'] });
+    });
+
+    // research/12 §4 (87-dropdown-selected.png): a Dropdown question's box ends in an up/down chevron.
+    it('a multiple choice dropdown ends in an up/down chevron that survives a pick', () => {
+      const { root } = ask([{ id: 'tags', visible: true, showOptionsAs: 'dropdown' }]);
+      const answer = question(root, 'tags')?.querySelector<HTMLButtonElement>('button[data-blok-database-form-provider-answer]');
+      const chevron = (): string | undefined => answer?.querySelector('[data-blok-database-form-dropdown-chevron]')?.innerHTML;
+
+      expect(answer?.hasAttribute('data-blok-database-form-dropdown')).toBe(true);
+      expect(chevron()).toBe(markup(IconChevronUpDown));
+      answer?.click();
+      document.querySelector<HTMLElement>('[data-blok-database-select-option="t1"]')?.click();
+      expect(chevron()).toBe(markup(IconChevronUpDown));
+    });
+
+    it('a person, file or list answer has no up/down chevron', () => {
+      const { root } = ask([{ id: 'tags', visible: true }]);
+
+      expect(root.querySelector('[data-blok-database-form-dropdown-chevron]')).toBeNull();
     });
   });
 

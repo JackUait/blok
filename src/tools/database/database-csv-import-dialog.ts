@@ -5,6 +5,7 @@ import {
   IconCheck,
   IconChevronDown,
   IconChevronLeft,
+  IconChevronUpDown,
   IconCross,
   IconDatabase,
   IconEyeClosed,
@@ -394,8 +395,9 @@ export const openCsvImportDialog = (options: CsvImportDialogOptions): { close: (
    */
   function locationField(location: string): HTMLElement[] {
     const field = button('database-csv-location', 'data-blok-database-csv-location', location, IconDatabase);
-    const chevron = icon(IconChevronDown);
+    const chevron = icon(IconChevronUpDown);
 
+    chevron.setAttribute('data-blok-database-csv-select-chevron', '');
     field.setAttribute('aria-disabled', 'true');
     field.appendChild(chevron);
 

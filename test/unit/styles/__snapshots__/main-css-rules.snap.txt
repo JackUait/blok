@@ -8030,6 +8030,11 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   text-align: start;
 }
 
+[data-blok-database-csv-location] > [data-blok-database-csv-select-chevron] svg {
+  width: 20px;
+  height: 20px;
+}
+
 [data-blok-database-csv-primary] {
   justify-content: center;
   width: 100%;
@@ -13772,6 +13777,24 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 [data-blok-database-form-provider-answer] {
   text-align: start;
   cursor: pointer;
+}
+
+[data-blok-database-form-dropdown] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+}
+
+[data-blok-database-form-dropdown-chevron] {
+  display: inline-flex;
+  flex: none;
+  margin-inline-start: auto;
+  color: var(--blok-text-tertiary);
+}
+
+[data-blok-database-form-dropdown-chevron] svg {
+  width: 20px;
+  height: 20px;
 }
 
 [data-blok-database-form-description], [data-blok-database-form-selection-limit], [data-blok-database-form-file-limit] {

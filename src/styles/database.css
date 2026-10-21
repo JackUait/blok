@@ -6,6 +6,33 @@
 :where([data-blok-interface]),
 :where([data-blok-popover]),
 :where([data-blok-top-layer]) {
+  /* Notion's inks and hover fill (research/21 §1a). Text that fails AA at Notion's value takes the
+     nearest passing step on the same hue: 125,122,117 is 4.27:1 and 161,158,153 is 2.67:1 on white,
+     so both light text inks are 114,111,106 (4.53:1 on the hover fill). Audit: plans 34. */
+  --blok-database-ink: rgb(44, 44, 43);
+  --blok-database-ink-secondary: rgb(114, 111, 106);
+  --blok-database-ink-tertiary: rgb(114, 111, 106);
+  --blok-database-hover-bg: rgba(33, 27, 23, 0.051);
+  --blok-database-checkbox-checked-bg: rgb(39, 131, 222);
+  --blok-database-switch-on-bg: rgb(39, 131, 222);
+  /* "More templates" card and search borders (research/26 §2). Dark is unmeasured: Blok's border. */
+  --blok-database-tpl-border: rgb(230, 229, 227);
+  --blok-database-calendar-event-muted-text: var(--blok-database-ink-secondary);
+  /* Default column = the plain column (research/08:72); blue and green measured light (research/21 §1f).
+     Notion's blue and green counts fail AA on their tint (3.67, 3.01): the pill text stands in. */
+  --blok-database-column-default-bg: var(--blok-database-column-bg);
+  --blok-database-column-default-ring: var(--blok-database-card-ring);
+  --blok-database-column-default-accent: var(--blok-database-column-accent);
+  --blok-database-column-blue-bg: rgba(0, 128, 213, 0.047);
+  --blok-database-column-blue-ring: rgba(0, 124, 215, 0.094);
+  --blok-database-column-blue-accent: var(--blok-database-option-blue-text);
+  --blok-database-column-green-bg: rgba(3, 87, 31, 0.035);
+  --blok-database-column-green-ring: rgba(0, 100, 45, 0.09);
+  --blok-database-column-green-accent: var(--blok-database-option-green-text);
+  /* research/07:134: a hovered card is translucent, so the column tint shows through. */
+  --blok-database-card-bg-hover: rgba(54, 29, 2, 0.031);
+  --blok-database-popover-shadow: rgba(25, 25, 25, 0.05) 0 20px 24px, rgba(25, 25, 25, 0.027) 0 5px 8px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
+  --blok-database-popover-hover: var(--blok-database-hover-bg);
   /* Option pills: values measured in research/07; gray in research/08. */
   --blok-database-option-default-bg: rgba(42, 28, 0, 0.07);
   --blok-database-option-default-text: rgb(44, 44, 43);
@@ -46,12 +73,12 @@
   /* Table view (research/07 and 08). */
   --blok-database-table-bg: var(--blok-bg-primary);
   --blok-database-table-border: rgba(42, 28, 0, 0.07);
-  --blok-database-table-header-text: rgb(125, 122, 117);
+  --blok-database-table-header-text: var(--blok-database-ink-secondary);
   --blok-database-table-header-icon: rgb(142, 139, 134);
-  --blok-database-table-header-hover-bg: rgba(33, 27, 23, 0.05);
+  --blok-database-table-header-hover-bg: var(--blok-database-hover-bg);
   --blok-database-table-cell-text: rgb(44, 44, 43);
-  --blok-database-table-muted-text: rgb(161, 158, 153);
-  --blok-database-table-calc-value: rgb(125, 122, 117);
+  --blok-database-table-muted-text: var(--blok-database-ink-tertiary);
+  --blok-database-table-calc-value: var(--blok-database-ink-secondary);
   --blok-database-table-gutter-icon: rgb(173, 169, 163);
   --blok-database-table-control-border: rgba(28, 19, 1, 0.11);
   /* research/22 §3. Dark is unmeasured: the table control border's dark value. */
@@ -114,7 +141,7 @@
   --blok-database-tpl-gallery-bg: rgb(249, 248, 247);
   --blok-database-tpl-gallery-card-bg: rgba(66, 35, 3, 0.03);
   --blok-database-confirm-shadow: rgba(25, 25, 25, 0.24) 0 24px 48px, rgba(25, 25, 25, 0.14) 0 4px 12px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
-  --blok-database-confirm-destructive-text: rgb(229, 100, 88);
+  --blok-database-confirm-destructive-text: rgb(182, 79, 70);
   --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
   --blok-database-drop-line: var(--blok-database-table-drop-line);
   /* Gallery (research/07, 08): measured; hover in C. */
@@ -123,9 +150,9 @@
   --blok-database-gallery-card-hover-bg: rgba(55, 53, 47, 0.04);
   --blok-database-gallery-preview-bg: rgba(66, 35, 3, 0.03);
   --blok-database-gallery-preview-border: rgba(42, 28, 0, 0.07);
-  --blok-database-gallery-preview-text: rgb(125, 122, 117);
+  --blok-database-gallery-preview-text: var(--blok-database-ink-secondary);
   --blok-database-gallery-title-text: rgb(44, 44, 43);
-  --blok-database-gallery-muted-text: rgb(161, 158, 153);
+  --blok-database-gallery-muted-text: var(--blok-database-ink-tertiary);
   /* Calendar (research/07 chrome, research/08 event card). */
   --blok-database-calendar-border: rgb(230, 229, 227);
   --blok-database-calendar-weekend-bg: rgb(249, 248, 247);
@@ -141,14 +168,14 @@
   /* Structure tile labels: research/10 §2. */
   --blok-database-builder-tile-text: rgb(115, 114, 110);
   --blok-database-builder-tile-text-active: rgb(29, 27, 22);
-  --blok-database-calendar-muted-text: rgb(161, 158, 153);
+  --blok-database-calendar-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-calendar-day-text: rgb(44, 44, 43);
   --blok-database-calendar-nav-icon: rgb(142, 139, 134);
   --blok-database-calendar-event-bg: #ffffff;
   --blok-database-calendar-event-shadow: rgba(0, 0, 0, 0.04) 0 2px 4px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   --blok-database-calendar-event-hover-bg: rgba(84, 72, 49, 0.08);
   /* A date with a reminder: the same blue in both themes (research/21 §6, research/26 §4f). */
-  --blok-database-reminder-text: rgb(39, 131, 222);
+  --blok-database-reminder-text: rgb(35, 119, 211);
   --blok-database-calendar-today-text: #ffffff;
   /* Timeline (research/07 bars, arrow, gridline; research/08 weekend). */
   --blok-database-timeline-bar-bg: #ffffff;
@@ -156,7 +183,7 @@
   --blok-database-timeline-grid-line: rgba(42, 28, 0, 0.07);
   --blok-database-timeline-header-line: rgb(230, 229, 227);
   --blok-database-timeline-weekend-bg: rgb(247, 247, 247);
-  --blok-database-timeline-muted-text: rgb(161, 158, 153);
+  --blok-database-timeline-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-timeline-text: rgb(44, 44, 43);
   --blok-database-timeline-control-text: rgb(142, 139, 134);
   --blok-database-timeline-arrow-bg: rgb(142, 139, 134);
@@ -169,7 +196,7 @@
   --blok-database-peek-backdrop: rgba(15, 15, 15, 0.6);
   --blok-database-peek-bg: var(--blok-popover-bg);
   /* Light peek title ink is unmeasured (research/21): Blok's primary ink. */
-  --blok-database-peek-title: var(--blok-text-primary);
+  --blok-database-peek-title: var(--blok-database-ink);
   /* research/26 §5f: label cells and "Add a property" hover; a value cell has no fill. */
   --blok-database-peek-hover-bg: rgba(33, 27, 23, 0.051);
   --blok-database-peek-value-hover-bg: transparent;
@@ -213,16 +240,16 @@
   --blok-database-dependency-conflict: rgb(229, 100, 88);
   /* Re-set from colors.css (shipped values, a look change). View tabs: research/07:45-48. */
   --blok-database-tab-bg-active: rgba(33, 27, 23, 0.05);
-  --blok-database-tab-bg-hover: rgba(33, 27, 23, 0.05);
-  --blok-database-tab-text: rgb(125, 122, 117);
+  --blok-database-tab-bg-hover: var(--blok-database-hover-bg);
+  --blok-database-tab-text: var(--blok-database-ink-secondary);
   --blok-database-tab-text-active: rgb(44, 44, 43);
   /* Card hover actions: white with the menu shadow (research/07:135, 08:317); hover is Notion's menu item (08:266). */
   --blok-database-card-actions-bg: var(--blok-database-table-open-bg);
   --blok-database-card-actions-shadow: var(--blok-database-table-open-shadow);
   --blok-database-card-actions-icon: rgb(125, 122, 117);
-  --blok-database-card-menu-hover-bg: rgba(33, 27, 23, 0.05);
+  --blok-database-card-menu-hover-bg: var(--blok-database-hover-bg);
   /* Side peek property label (research/08:329). */
-  --blok-database-peek-label: rgb(125, 122, 117);
+  --blok-database-peek-label: var(--blok-database-ink-secondary);
   /* Favorited row page star (research/22 §14). Dark is unmeasured, so it has no dark value. */
   --blok-database-favorite-star: rgb(246, 192, 80);
   /* Comment badge count and icon (research/21 §1o). */
@@ -233,23 +260,32 @@
   /* Cell editor box, research/22 §4: Notion's menu shadow, light and dark. */
   --blok-database-cell-editor-shadow: var(--blok-inline-toolbar-shadow);
   /* Panels and date picker (research/21 §1c, §1k, §1l): light uses Blok's token for the measured role. */
-  --blok-database-date-weekday-text: var(--blok-text-tertiary);
-  --blok-database-date-today-text: var(--blok-text-secondary);
+  --blok-database-date-weekday-text: var(--blok-database-ink-tertiary);
+  --blok-database-date-today-text: var(--blok-database-ink-tertiary);
   /* research/27 §6: "Today" and "Now" hover. */
   --blok-database-date-today-hover-bg: rgba(33, 27, 23, 0.051);
-  --blok-database-date-setting-value-text: var(--blok-text-secondary);
-  --blok-database-panel-value-text: var(--blok-text-secondary);
-  --blok-database-panel-muted-text: var(--blok-text-secondary);
-  --blok-database-panel-input-bg: var(--blok-database-table-header-hover-bg);
-  --blok-database-filter-add-text: var(--blok-text-secondary);
-  --blok-database-form-answer-border: var(--blok-border-primary);
-  --blok-database-cell-empty-text: var(--blok-text-tertiary);
+  --blok-database-date-setting-value-text: var(--blok-database-ink-secondary);
+  --blok-database-panel-value-text: var(--blok-database-ink-tertiary);
+  --blok-database-panel-muted-text: var(--blok-database-ink-secondary);
+  --blok-database-panel-input-bg: rgba(66, 35, 3, 0.03);
+  --blok-database-filter-add-text: var(--blok-database-ink-tertiary);
+  --blok-database-form-answer-border: rgb(240, 239, 237);
+  --blok-database-cell-empty-text: var(--blok-database-ink-tertiary);
 }
 
 @media (prefers-color-scheme: dark) {
   :where(:root:not([data-blok-theme="light"]) [data-blok-interface]),
   :where(:root:not([data-blok-theme="light"]) [data-blok-popover]),
   :where(:root:not([data-blok-theme="light"]) [data-blok-top-layer]) {
+    /* Dark inks (research/21 §1a). Tertiary 125,122,117 is 4.11:1 on the page and 3.59:1 on a menu:
+       143,140,135 passes on both and on a hovered card (38). */
+    --blok-database-ink: rgb(240, 239, 237);
+    --blok-database-ink-secondary: rgb(173, 169, 163);
+    --blok-database-ink-tertiary: rgb(143, 140, 135);
+    --blok-database-hover-bg: rgba(255, 255, 255, 0.055);
+    --blok-database-tpl-border: #333331;
+    /* An event card is 47,47,47: the tertiary step is 3.9:1 there, 153,150,145 is 4.54:1. */
+    --blok-database-calendar-event-muted-text: rgb(153, 150, 145);
     /* Option pills: dark values measured in research/07; gray, purple, pink and red in research/08:288-296. */
     --blok-database-option-default-bg: rgba(255, 255, 243, 0.082);
     --blok-database-option-default-text: rgb(240, 239, 237);
@@ -291,7 +327,7 @@
     --blok-database-table-header-icon: rgb(173, 169, 163);
     --blok-database-table-header-hover-bg: rgba(255, 255, 255, 0.055);
     --blok-database-table-cell-text: rgb(240, 239, 237);
-    --blok-database-table-muted-text: rgb(125, 122, 117);
+    --blok-database-table-muted-text: var(--blok-database-ink-tertiary);
     --blok-database-table-calc-value: rgb(173, 169, 163);
     --blok-database-table-gutter-icon: rgb(125, 122, 117);
     --blok-database-table-control-border: rgba(255, 255, 235, 0.1);
@@ -306,7 +342,7 @@
     --blok-database-panel-close-active-bg: rgba(255, 255, 255, 0.11);
     --blok-database-panel-row-active-bg: rgba(255, 255, 255, 0.11);
     --blok-database-confirm-close-bg: rgba(255, 255, 243, 0.082);
-    --blok-database-ai-prompt-placeholder: var(--blok-text-tertiary);
+    --blok-database-ai-prompt-placeholder: var(--blok-database-ink-tertiary);
     --blok-database-table-open-bg: rgb(37, 37, 37);
     --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
     /* Measured in dark (research/21 §1e): the selection bar and the database menus (§1a). */
@@ -328,7 +364,7 @@
     --blok-database-column-yellow-accent: rgb(216, 163, 47);
   --blok-database-column-blue-bg: rgba(41, 139, 253, 0.063);
   --blok-database-column-blue-ring: rgba(71, 157, 255, 0.173);
-  --blok-database-column-blue-accent: rgb(39, 131, 222);
+  --blok-database-column-blue-accent: rgb(41, 137, 232);
   --blok-database-column-green-bg: rgba(83, 255, 140, 0.035);
   --blok-database-column-green-ring: rgba(119, 255, 179, 0.118);
   --blok-database-column-green-accent: rgb(70, 161, 113);
@@ -343,7 +379,7 @@
     --blok-database-card-ring: rgba(255, 255, 243, 0.082);
     /* Dialog unmeasured in dark: bg and shadow follow Notion's measured dark menu (research/08). */
     --blok-database-confirm-backdrop: rgba(15, 15, 15, 0.6);
-    --blok-database-confirm-bg: rgb(37, 37, 37);
+    --blok-database-confirm-bg: rgb(32, 32, 32);
     /* Tiles measured in research/26 §6; the dark glyph inks were not, so they take the option inks. */
     --blok-database-starter-tile-green-bg: rgb(38, 61, 48);
     --blok-database-starter-tile-green-ink: var(--blok-database-option-green-text);
@@ -353,7 +389,7 @@
     --blok-database-starter-tile-gray-ink: var(--blok-database-option-gray-text);
     --blok-database-tpl-gallery-bg: rgb(25, 25, 25);
     --blok-database-tpl-gallery-card-bg: rgba(255, 255, 255, 0.03);
-    --blok-database-confirm-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
+    --blok-database-confirm-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.64) 0 24px 48px, rgba(25, 25, 25, 0.56) 0 4px 12px;
     --blok-database-confirm-destructive-text: rgb(229, 100, 88);
     --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
     /* Gallery card, cover, cover line and hover: research/08 and 21 §1g. Text inks are unmeasured. */
@@ -362,9 +398,9 @@
     --blok-database-gallery-card-hover-bg: rgb(47, 47, 47);
     --blok-database-gallery-preview-bg: rgba(252, 252, 252, 0.03);
     --blok-database-gallery-preview-border: transparent;
-    --blok-database-gallery-preview-text: var(--blok-text-secondary);
+    --blok-database-gallery-preview-text: var(--blok-database-ink-secondary);
     --blok-database-gallery-title-text: rgb(240, 239, 237);
-    --blok-database-gallery-muted-text: rgb(125, 122, 117);
+    --blok-database-gallery-muted-text: var(--blok-database-ink-tertiary);
     /* Calendar: research/21 §1h. Today digit stays white; Notion's dark digit is black, a bug. */
     --blok-database-calendar-border: rgb(56, 56, 54);
     --blok-database-calendar-weekend-bg: rgb(32, 32, 32);
@@ -376,15 +412,15 @@
     --blok-database-builder-canvas-bg: rgb(25, 25, 25);
     --blok-database-builder-tile-bg: rgb(32, 32, 32);
     --blok-database-builder-tile-ring: rgb(55, 55, 55);
-  --blok-database-builder-tile-text: rgb(90, 90, 90);
+  --blok-database-builder-tile-text: var(--blok-database-ink-tertiary);
   --blok-database-builder-tile-text-active: rgb(255, 255, 255);
-    --blok-database-calendar-muted-text: rgb(125, 122, 117);
+    --blok-database-calendar-muted-text: var(--blok-database-ink-tertiary);
     --blok-database-calendar-day-text: rgb(240, 239, 237);
     --blok-database-calendar-nav-icon: rgb(173, 169, 163);
     --blok-database-calendar-event-bg: rgb(47, 47, 47);
     --blok-database-calendar-event-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 2px 4px;
     --blok-database-calendar-event-hover-bg: rgb(55, 55, 55);
-    --blok-database-reminder-text: rgb(39, 131, 222);
+    --blok-database-reminder-text: rgb(41, 137, 232);
     --blok-database-calendar-today-text: #ffffff;
     /* Timeline: research/21 §1i. Grid line is unmeasured. The arrow icon is too: page ink, since white on the chip is 2.3:1. */
     --blok-database-timeline-bar-bg: rgb(37, 37, 37);
@@ -392,7 +428,7 @@
     --blok-database-timeline-grid-line: rgba(255, 255, 243, 0.082);
     --blok-database-timeline-header-line: rgb(56, 56, 54);
     --blok-database-timeline-weekend-bg: rgba(255, 255, 255, 0.03);
-    --blok-database-timeline-muted-text: rgb(125, 122, 117);
+    --blok-database-timeline-muted-text: var(--blok-database-ink-tertiary);
     --blok-database-timeline-text: rgb(240, 239, 237);
     --blok-database-timeline-control-text: rgb(173, 169, 163);
     --blok-database-timeline-arrow-bg: rgb(173, 169, 163);
@@ -406,7 +442,7 @@
   /* research/21 §1m: title ink, and no fill on a hovered value. */
   --blok-database-peek-title: rgb(240, 239, 237);
   --blok-database-peek-value-hover-bg: transparent;
-  --blok-database-peek-hover-bg: var(--blok-item-hover-bg);
+  --blok-database-peek-hover-bg: var(--blok-database-hover-bg);
     --blok-database-peek-backdrop: rgba(15, 15, 15, 0.8);
     --blok-database-chart-blue: #3987e5;
     --blok-database-chart-orange: #d95926;
@@ -448,25 +484,35 @@
     --blok-database-peek-label: rgb(173, 169, 163);
     --blok-database-comment-badge-text: rgb(240, 239, 237);
     --blok-database-comment-badge-icon: rgb(173, 169, 163);
-    --blok-database-select-head-bg: rgba(255, 255, 255, 0.055);
+    --blok-database-select-head-bg: rgba(255, 255, 255, 0.03);
     --blok-database-cell-editor-shadow: var(--blok-database-popover-shadow);
     /* research/21 §1c, §1k, §1l, §1m. Notion's rgb(125, 122, 117) fails AA here: values, "+ Filter" and "Empty" take the first passing step. */
     --blok-database-date-weekday-text: rgb(139, 152, 152);
     --blok-database-date-today-text: rgb(142, 139, 134);
     --blok-database-date-today-hover-bg: rgba(255, 255, 255, 0.055);
     --blok-database-date-setting-value-text: rgb(173, 169, 163);
-    --blok-database-panel-value-text: rgb(142, 139, 134);
+    --blok-database-panel-value-text: var(--blok-database-ink-tertiary);
     --blok-database-panel-muted-text: rgb(173, 169, 163);
     --blok-database-panel-input-bg: rgba(252, 252, 252, 0.03);
-    --blok-database-filter-add-text: rgb(135, 132, 127);
+    --blok-database-filter-add-text: var(--blok-database-ink-tertiary);
     --blok-database-form-answer-border: rgb(44, 44, 43);
-    --blok-database-cell-empty-text: rgb(138, 135, 130);
+    --blok-database-cell-empty-text: var(--blok-database-ink-tertiary);
+    --blok-database-popover-hover: var(--blok-database-hover-bg);
   }
 }
 
 :where([data-blok-theme="dark"] [data-blok-interface]),
 :where([data-blok-theme="dark"] [data-blok-popover]),
 :where([data-blok-theme="dark"] [data-blok-top-layer]) {
+  /* Dark inks (research/21 §1a). Tertiary 125,122,117 is 4.11:1 on the page and 3.59:1 on a menu:
+     143,140,135 passes on both and on a hovered card (38). */
+  --blok-database-ink: rgb(240, 239, 237);
+  --blok-database-ink-secondary: rgb(173, 169, 163);
+  --blok-database-ink-tertiary: rgb(143, 140, 135);
+  --blok-database-hover-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-tpl-border: #333331;
+  /* An event card is 47,47,47: the tertiary step is 3.9:1 there, 153,150,145 is 4.54:1. */
+  --blok-database-calendar-event-muted-text: rgb(153, 150, 145);
   --blok-database-option-default-bg: rgba(255, 255, 243, 0.082);
   --blok-database-option-default-text: rgb(240, 239, 237);
   --blok-database-option-gray-bg: rgba(255, 252, 235, 0.306);
@@ -507,7 +553,7 @@
   --blok-database-table-header-icon: rgb(173, 169, 163);
   --blok-database-table-header-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-table-cell-text: rgb(240, 239, 237);
-  --blok-database-table-muted-text: rgb(125, 122, 117);
+  --blok-database-table-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-table-calc-value: rgb(173, 169, 163);
   --blok-database-table-gutter-icon: rgb(125, 122, 117);
   --blok-database-table-control-border: rgba(255, 255, 235, 0.1);
@@ -522,7 +568,7 @@
   --blok-database-panel-close-active-bg: rgba(255, 255, 255, 0.11);
   --blok-database-panel-row-active-bg: rgba(255, 255, 255, 0.11);
   --blok-database-confirm-close-bg: rgba(255, 255, 243, 0.082);
-  --blok-database-ai-prompt-placeholder: var(--blok-text-tertiary);
+  --blok-database-ai-prompt-placeholder: var(--blok-database-ink-tertiary);
   --blok-database-table-open-bg: rgb(37, 37, 37);
   --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   /* Measured in dark (research/21 §1e): the selection bar and the database menus (§1a). */
@@ -544,7 +590,7 @@
   --blok-database-column-yellow-accent: rgb(216, 163, 47);
   --blok-database-column-blue-bg: rgba(41, 139, 253, 0.063);
   --blok-database-column-blue-ring: rgba(71, 157, 255, 0.173);
-  --blok-database-column-blue-accent: rgb(39, 131, 222);
+  --blok-database-column-blue-accent: rgb(41, 137, 232);
   --blok-database-column-green-bg: rgba(83, 255, 140, 0.035);
   --blok-database-column-green-ring: rgba(119, 255, 179, 0.118);
   --blok-database-column-green-accent: rgb(70, 161, 113);
@@ -559,7 +605,7 @@
   --blok-database-card-ring: rgba(255, 255, 243, 0.082);
   /* Dialog unmeasured in dark: bg and shadow follow Notion's measured dark menu (research/08). */
   --blok-database-confirm-backdrop: rgba(15, 15, 15, 0.6);
-  --blok-database-confirm-bg: rgb(37, 37, 37);
+  --blok-database-confirm-bg: rgb(32, 32, 32);
   /* Tiles measured in research/26 §6; the dark glyph inks were not, so they take the option inks. */
   --blok-database-starter-tile-green-bg: rgb(38, 61, 48);
   --blok-database-starter-tile-green-ink: var(--blok-database-option-green-text);
@@ -569,7 +615,7 @@
   --blok-database-starter-tile-gray-ink: var(--blok-database-option-gray-text);
   --blok-database-tpl-gallery-bg: rgb(25, 25, 25);
   --blok-database-tpl-gallery-card-bg: rgba(255, 255, 255, 0.03);
-  --blok-database-confirm-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
+  --blok-database-confirm-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.64) 0 24px 48px, rgba(25, 25, 25, 0.56) 0 4px 12px;
   --blok-database-confirm-destructive-text: rgb(229, 100, 88);
   --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
   /* Gallery card, cover, cover line and hover: research/08 and 21 §1g. Text inks are unmeasured. */
@@ -578,9 +624,9 @@
   --blok-database-gallery-card-hover-bg: rgb(47, 47, 47);
   --blok-database-gallery-preview-bg: rgba(252, 252, 252, 0.03);
   --blok-database-gallery-preview-border: transparent;
-  --blok-database-gallery-preview-text: var(--blok-text-secondary);
+  --blok-database-gallery-preview-text: var(--blok-database-ink-secondary);
   --blok-database-gallery-title-text: rgb(240, 239, 237);
-  --blok-database-gallery-muted-text: rgb(125, 122, 117);
+  --blok-database-gallery-muted-text: var(--blok-database-ink-tertiary);
   /* Calendar: research/21 §1h. Today digit stays white; Notion's dark digit is black, a bug. */
   --blok-database-calendar-border: rgb(56, 56, 54);
   --blok-database-calendar-weekend-bg: rgb(32, 32, 32);
@@ -592,15 +638,15 @@
   --blok-database-builder-canvas-bg: rgb(25, 25, 25);
   --blok-database-builder-tile-bg: rgb(32, 32, 32);
   --blok-database-builder-tile-ring: rgb(55, 55, 55);
-  --blok-database-builder-tile-text: rgb(90, 90, 90);
+  --blok-database-builder-tile-text: var(--blok-database-ink-tertiary);
   --blok-database-builder-tile-text-active: rgb(255, 255, 255);
-  --blok-database-calendar-muted-text: rgb(125, 122, 117);
+  --blok-database-calendar-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-calendar-day-text: rgb(240, 239, 237);
   --blok-database-calendar-nav-icon: rgb(173, 169, 163);
   --blok-database-calendar-event-bg: rgb(47, 47, 47);
   --blok-database-calendar-event-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 2px 4px;
   --blok-database-calendar-event-hover-bg: rgb(55, 55, 55);
-  --blok-database-reminder-text: rgb(39, 131, 222);
+  --blok-database-reminder-text: rgb(41, 137, 232);
   --blok-database-calendar-today-text: #ffffff;
   /* Timeline: research/21 §1i. Grid line is unmeasured. The arrow icon is too: page ink, since white on the chip is 2.3:1. */
   --blok-database-timeline-bar-bg: rgb(37, 37, 37);
@@ -608,7 +654,7 @@
   --blok-database-timeline-grid-line: rgba(255, 255, 243, 0.082);
   --blok-database-timeline-header-line: rgb(56, 56, 54);
   --blok-database-timeline-weekend-bg: rgba(255, 255, 255, 0.03);
-  --blok-database-timeline-muted-text: rgb(125, 122, 117);
+  --blok-database-timeline-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-timeline-text: rgb(240, 239, 237);
   --blok-database-timeline-control-text: rgb(173, 169, 163);
   --blok-database-timeline-arrow-bg: rgb(173, 169, 163);
@@ -621,7 +667,7 @@
   /* research/21 §1m: title ink, and no fill on a hovered value. */
   --blok-database-peek-title: rgb(240, 239, 237);
   --blok-database-peek-value-hover-bg: transparent;
-  --blok-database-peek-hover-bg: var(--blok-item-hover-bg);
+  --blok-database-peek-hover-bg: var(--blok-database-hover-bg);
   --blok-database-peek-backdrop: rgba(15, 15, 15, 0.8);
   --blok-database-fill-handle-bg: rgb(25, 25, 25);
   --blok-database-chart-blue: #3987e5;
@@ -664,19 +710,27 @@
   --blok-database-peek-label: rgb(173, 169, 163);
   --blok-database-comment-badge-text: rgb(240, 239, 237);
   --blok-database-comment-badge-icon: rgb(173, 169, 163);
-  --blok-database-select-head-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-select-head-bg: rgba(255, 255, 255, 0.03);
   --blok-database-cell-editor-shadow: var(--blok-database-popover-shadow);
   /* research/21 §1c, §1k, §1l, §1m. Notion's rgb(125, 122, 117) fails AA here: values, "+ Filter" and "Empty" take the first passing step. */
   --blok-database-date-weekday-text: rgb(139, 152, 152);
   --blok-database-date-today-text: rgb(142, 139, 134);
   --blok-database-date-today-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-date-setting-value-text: rgb(173, 169, 163);
-  --blok-database-panel-value-text: rgb(142, 139, 134);
+  --blok-database-panel-value-text: var(--blok-database-ink-tertiary);
   --blok-database-panel-muted-text: rgb(173, 169, 163);
   --blok-database-panel-input-bg: rgba(252, 252, 252, 0.03);
-  --blok-database-filter-add-text: rgb(135, 132, 127);
+  --blok-database-filter-add-text: var(--blok-database-ink-tertiary);
   --blok-database-form-answer-border: rgb(44, 44, 43);
-  --blok-database-cell-empty-text: rgb(138, 135, 130);
+  --blok-database-cell-empty-text: var(--blok-database-ink-tertiary);
+  --blok-database-popover-hover: var(--blok-database-hover-bg);
+}
+
+/* Notion's primary ink for every database text that has no colour of its own (cards, list rows, title). */
+[data-blok-database-wrapper] {
+  color: var(--blok-database-ink);
+  /* Selected rows and pills keep the same ink as unselected ones (CLAUDE.md). */
+  --blok-icon-active-text: var(--blok-database-ink);
 }
 
 /**
@@ -891,7 +945,7 @@
 [data-blok-database-add-card]:hover,
 [data-blok-database-add-column]:hover {
   background-color: var(--blok-database-add-hover-bg);
-  color: var(--blok-text-primary, inherit);
+  color: var(--blok-database-ink);
 }
 
 /* "+ New page" keeps the group's accent on hover. */
@@ -966,7 +1020,7 @@
 }
 
 [data-blok-database-column-actions] button:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-column-actions] svg {
@@ -988,7 +1042,7 @@
 }
 
 [data-blok-database-hidden-groups]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 /**
@@ -1280,7 +1334,7 @@
 }
 
 [data-blok-database-peek-mode-description] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
 }
 
@@ -1486,7 +1540,7 @@
   border-radius: var(--blok-radius-control-sm);
   background-color: var(--blok-database-table-open-bg);
   box-shadow: var(--blok-database-table-open-shadow);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
   cursor: pointer;
   opacity: 0;
@@ -1721,7 +1775,7 @@
 
 [data-blok-database-row-empty] {
   padding-block: var(--blok-block-padding-top, 7px) var(--blok-block-padding-bottom, 7px);
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
   cursor: text;
   user-select: none;
 }
@@ -1753,7 +1807,7 @@
   border: none;
   border-radius: var(--blok-radius-control);
   background: none;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font: inherit;
   text-align: start;
   cursor: pointer;
@@ -1829,7 +1883,7 @@ button[data-blok-database-column-count] {
 }
 
 button[data-blok-database-column-count]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 /**
@@ -2109,7 +2163,7 @@ button[data-blok-database-column-count]:hover {
   cursor: pointer;
   font-size: 14px;
   font-weight: 400;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   transition: background-color 120ms ease;
 }
 
@@ -2142,7 +2196,7 @@ button[data-blok-database-column-count]:hover {
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
   border-radius: var(--blok-radius-control-sm);
 }
@@ -2175,7 +2229,7 @@ button[data-blok-database-column-count]:hover {
 [data-blok-database-tab-overflow-empty] {
   padding: var(--blok-space-1) var(--blok-space-1-5);
   font-size: 12px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-tab-overflow-new] {
@@ -2317,7 +2371,7 @@ button[data-blok-database-column-count]:hover {
   font-size: 14px;
   line-height: 21px;
   font-weight: 500;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   min-width: 0;
 }
 
@@ -2358,7 +2412,7 @@ button[data-blok-database-column-count]:hover {
   border-radius: var(--blok-radius-control);
   white-space: nowrap;
   font-size: 14px;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   outline: none;
 }
 
@@ -2491,7 +2545,7 @@ button[data-blok-database-column-count]:hover {
 [data-blok-database-list] > [data-blok-database-add-row]:hover,
 [data-blok-database-list-rows] ~ [data-blok-database-add-row]:hover {
   background-color: var(--blok-database-add-hover-bg);
-  color: var(--blok-text-primary, inherit);
+  color: var(--blok-database-ink);
 }
 
 /**
@@ -2632,7 +2686,7 @@ button[data-blok-database-column-count]:hover {
 }
 
 [data-blok-database-drawer-add-prop]:active {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 /* ─── Row page layout (help/layouts; unmeasured, Blok tokens) ─── */
@@ -2705,7 +2759,7 @@ button[data-blok-database-column-count]:hover {
 /* "Linked to this page" (research/17 §2d): header 12px in secondary ink. */
 [data-blok-database-backlinks-heading] {
   padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
 }
 
@@ -2775,7 +2829,7 @@ button[data-blok-database-column-count]:hover {
   display: flex;
   flex-direction: column;
   background-color: var(--blok-database-builder-backdrop);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font-family: var(--blok-font-family, var(--blok-font-sans));
   font-size: 14px;
 }
@@ -2837,7 +2891,7 @@ button[data-blok-database-column-count]:hover {
   border: none;
   border-radius: var(--blok-radius-control);
   background: none;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
@@ -2858,7 +2912,7 @@ button[data-blok-database-column-count]:hover {
 
 @media (hover: hover) {
   [data-blok-database-layout-preview]:hover {
-    background-color: var(--blok-item-hover-bg);
+    background-color: var(--blok-database-hover-bg);
   }
 }
 
@@ -2897,7 +2951,7 @@ button[data-blok-database-column-count]:hover {
   gap: var(--blok-space-2);
   padding-inline: var(--blok-space-3);
   background: none;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-layout-cancel] svg {
@@ -2911,8 +2965,8 @@ button[data-blok-database-column-count]:hover {
   padding-inline: var(--blok-space-2);
   border-start-end-radius: 0;
   border-end-end-radius: 0;
-  background-color: var(--blok-accent);
-  color: var(--blok-text-on-dark);
+  background-color: var(--blok-database-new-bg);
+  color: var(--blok-database-new-text);
   font-weight: 500;
 }
 
@@ -2935,15 +2989,15 @@ button[data-blok-database-column-count]:hover {
   border-radius: var(--blok-radius-control);
   border-start-start-radius: 0;
   border-end-start-radius: 0;
-  background-color: var(--blok-accent);
-  color: var(--blok-text-on-dark);
+  background-color: var(--blok-database-new-bg);
+  color: var(--blok-database-new-text);
   cursor: pointer;
 }
 
 @media (hover: hover) {
   [data-blok-database-layout-apply]:hover,
   [data-blok-database-layout-more-save]:hover {
-    background-color: color-mix(in srgb, var(--blok-accent) 88%, black);
+    background-color: var(--blok-database-new-hover-bg);
   }
 }
 
@@ -3005,7 +3059,7 @@ button[data-blok-database-column-count]:hover {
 }
 
 [data-blok-database-layout-module-name] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
   font-weight: 500;
 }
@@ -3021,7 +3075,7 @@ button[data-blok-database-column-count]:hover {
   border: none;
   border-radius: var(--blok-radius-control-sm);
   background: none;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
   opacity: 0;
 }
@@ -3047,7 +3101,7 @@ button[data-blok-database-column-count]:hover {
   display: inline-flex;
   flex-shrink: 0;
   margin-inline-end: var(--blok-space-1);
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
   cursor: grab;
   touch-action: none;
 }
@@ -3093,7 +3147,7 @@ button[data-blok-database-column-count]:hover {
   border: none;
   border-radius: var(--blok-radius-pill);
   background-color: var(--blok-database-builder-canvas-ring);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }
 
@@ -3149,7 +3203,7 @@ button[data-blok-database-column-count]:hover {
   border: none;
   border-radius: var(--blok-radius-control);
   background: none;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }
 
@@ -3166,7 +3220,7 @@ button[data-blok-database-column-count]:hover {
   border: none;
   border-radius: var(--blok-radius-pill);
   background-color: var(--blok-database-builder-canvas-ring);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
   cursor: pointer;
 }
@@ -3175,8 +3229,8 @@ button[data-blok-database-column-count]:hover {
   [data-blok-database-layout-add-module]:hover,
   [data-blok-database-layout-add-to-panel]:hover,
   [data-blok-database-layout-panel-toggle]:hover {
-    background-color: var(--blok-item-hover-bg);
-    color: var(--blok-text-primary);
+    background-color: var(--blok-database-hover-bg);
+    color: var(--blok-database-ink);
   }
 }
 
@@ -3208,7 +3262,7 @@ button[data-blok-database-column-count]:hover {
 [data-blok-database-layout-group-icon] {
   display: inline-flex;
   flex-shrink: 0;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-layout-pin-icon] svg,
@@ -3241,7 +3295,7 @@ button[data-blok-database-column-count]:hover {
   border: none;
   border-radius: var(--blok-radius-control-sm);
   background: none;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   cursor: pointer;
 }
 
@@ -3252,7 +3306,7 @@ button[data-blok-database-column-count]:hover {
 
 /* research/09 §5: Always hide's glyph is drawn lighter. */
 [data-blok-database-layout-eye][data-visibility="hidden"] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-panel-header] [data-blok-database-layout-add-section] {
@@ -3271,7 +3325,7 @@ button[data-blok-database-column-count]:hover {
 [data-blok-database-layout-section-handle] {
   display: inline-flex;
   flex-shrink: 0;
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
 }
 
 /* research/10 §3: a property row drags by its ⠿, with the pointer only. */
@@ -3321,7 +3375,7 @@ button[data-blok-database-layout-pin-name]:focus-visible {
   border: none;
   border-radius: var(--blok-radius-control-sm);
   background: none;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
   font-weight: 500;
   text-align: start;
@@ -3343,7 +3397,7 @@ button[data-blok-database-layout-pin-name]:focus-visible {
   padding: 0;
   border: none;
   background: none;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   font-size: 14px;
   outline: none;
@@ -3355,8 +3409,8 @@ button[data-blok-database-layout-pin-name]:focus-visible {
   padding-inline: var(--blok-space-2);
   border: none;
   border-radius: var(--blok-radius-control);
-  background-color: var(--blok-accent);
-  color: var(--blok-text-on-dark);
+  background-color: var(--blok-database-new-bg);
+  color: var(--blok-database-new-text);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -3381,7 +3435,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   [data-blok-database-layout-module-menu]:hover,
   [data-blok-database-layout-pin-toggle]:not(:disabled):hover,
   [data-blok-database-layout-eye]:hover {
-    background-color: var(--blok-item-hover-bg);
+    background-color: var(--blok-database-hover-bg);
   }
 }
 
@@ -3401,13 +3455,13 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 
 /* research/09 §1: an untitled page shows the grey "New page" placeholder. */
 [data-blok-database-layout-canvas-title][data-placeholder] {
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
 }
 
 [data-blok-database-layout-canvas-content],
 [data-blok-database-layout-group-empty] {
   padding-block: var(--blok-space-1);
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
   font-size: 14px;
 }
 
@@ -3415,14 +3469,14 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 [data-blok-database-layout-section-empty] {
   padding-block: var(--blok-space-1);
   padding-inline-start: var(--blok-space-5);
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
   font-size: 14px;
 }
 
 [data-blok-database-layout-preview-empty] {
   padding-block: var(--blok-space-1-5);
   padding-inline: var(--blok-space-2);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
 }
 
@@ -3450,7 +3504,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 
 [data-blok-database-layout-options-title] {
   margin: var(--blok-space-2) 0 0;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
   font-weight: 500;
 }
@@ -3493,7 +3547,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 [data-blok-database-layout-structure-art] svg {
   inline-size: 24px;
   block-size: 24px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-layout-option] [data-blok-database-panel-row] {
@@ -3507,7 +3561,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 
 [data-blok-database-layout-hint] {
   display: inline-flex;
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
 }
 
 [data-blok-database-layout-hint] svg {
@@ -3655,7 +3709,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   display: inline-flex;
   align-items: center;
   gap: var(--blok-space-1);
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
   font-size: 14px;
   font-weight: 400;
 }
@@ -3774,7 +3828,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 }
 
 [data-blok-database-drawer-details-title] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 13px;
   font-weight: 500;
 }
@@ -3840,11 +3894,11 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 [data-blok-database-drawer-section-header] > svg {
   inline-size: 14px;
   block-size: 14px;
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
 }
 
 [data-blok-database-drawer-section-name] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 13px;
   font-weight: 500;
 }
@@ -3858,7 +3912,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 }
 
 [data-blok-database-drawer-tabs] [role="tab"][aria-selected="true"] {
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   box-shadow: inset 0 -2px 0 currentColor;
 }
 
@@ -3879,8 +3933,8 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 
 /* Notion's ring is blue; a selected state is never blue here. */
 [data-blok-database-layout-canvas] [data-blok-database-drawer-tabs] [role="tab"][aria-selected="true"] {
-  color: var(--blok-text-primary);
-  box-shadow: inset 0 0 0 1.25px var(--blok-text-primary);
+  color: var(--blok-database-ink);
+  box-shadow: inset 0 0 0 1.25px var(--blok-database-ink);
 }
 
 [data-blok-database-layout-add-tab] {
@@ -3893,8 +3947,8 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   padding: 0;
   border: none;
   border-radius: var(--blok-radius-pill);
-  background: var(--blok-item-hover-bg);
-  color: var(--blok-text-secondary);
+  background: var(--blok-database-hover-bg);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
   opacity: 0;
 }
@@ -3978,7 +4032,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 @media (hover: hover) {
   [data-blok-database-drawer-pins-back]:hover,
   [data-blok-database-drawer-pins-forward]:hover {
-    color: var(--blok-text-primary);
+    color: var(--blok-database-ink);
   }
 }
 
@@ -4044,7 +4098,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 }
 
 [data-blok-database-property-type-option]:active {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 /**
@@ -4137,7 +4191,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   line-height: 24px;
   font-weight: 600;
   text-align: center;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-confirm-description] {
@@ -4146,24 +4200,24 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   line-height: 20px;
   font-weight: 400;
   text-align: center;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-confirm-action] {
   width: 100%;
   height: 32px;
   margin-top: var(--blok-space-2);
-  border: 1px solid var(--blok-popover-border);
+  border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-control);
   background-color: transparent;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
 }
 
 [data-blok-database-confirm-action]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 /* preflight.css hides outline rings after a pointer press. */
@@ -4181,13 +4235,13 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 [data-blok-database-confirm-action][data-primary] {
   margin-top: var(--blok-space-4);
   border-color: transparent;
-  background-color: var(--blok-accent);
-  color: var(--blok-text-on-dark);
+  background-color: var(--blok-database-new-bg);
+  color: var(--blok-database-new-text);
 }
 
 [data-blok-database-confirm-action][data-quiet] {
   border-color: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-confirm-art] {
@@ -4195,7 +4249,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   justify-content: center;
   gap: var(--blok-space-2);
   margin-bottom: var(--blok-space-3);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-confirm-art] svg {
@@ -4228,8 +4282,8 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   border: 0;
   border-radius: var(--blok-radius-control-lg);
   background-color: transparent;
-  box-shadow: inset 0 0 0 1px var(--blok-popover-border);
-  color: var(--blok-text-primary);
+  box-shadow: inset 0 0 0 1px var(--blok-database-table-control-border);
+  color: var(--blok-database-ink);
   text-align: start;
   cursor: pointer;
 }
@@ -4260,7 +4314,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   font-size: 12px;
   line-height: 16px;
   font-weight: 500;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-confirm-choice-dot] {
@@ -4268,7 +4322,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   box-sizing: border-box;
   inline-size: 16px;
   block-size: 16px;
-  border: 1px solid var(--blok-popover-border);
+  border: 1px solid var(--blok-database-table-control-border);
   border-radius: 50%;
 }
 
@@ -4288,7 +4342,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   border-radius: var(--blok-radius-dialog);
   background-color: var(--blok-database-confirm-bg);
   box-shadow: var(--blok-database-confirm-shadow);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font-size: 14px;
 }
 
@@ -4327,7 +4381,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 [data-blok-database-autofill-more] {
   display: inline-flex;
   padding: var(--blok-space-0-5);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-autofill-close] svg,
@@ -4339,11 +4393,11 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 /* The selected tab is primary ink, never a fill (no-blue law). */
 [data-blok-database-autofill-tab] {
   padding: var(--blok-space-1) var(--blok-space-2);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-autofill-tab][aria-selected="true"] {
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font-weight: 500;
 }
 
@@ -4351,14 +4405,14 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   height: 28px;
   white-space: nowrap;
   padding-inline: var(--blok-space-2);
-  border: 1px solid var(--blok-popover-border);
+  border: 1px solid var(--blok-database-table-control-border);
 }
 
 [data-blok-database-autofill-action]:hover:not(:disabled),
 [data-blok-database-autofill-close]:hover,
 [data-blok-database-autofill-more]:hover:not(:disabled),
 [data-blok-database-autofill-tab]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-autofill-action]:disabled,
@@ -4375,7 +4429,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   border: none;
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-table-header-hover-bg);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   resize: vertical;
   outline: none;
@@ -4392,7 +4446,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   border-radius: var(--blok-radius-dialog);
   background-color: var(--blok-database-confirm-bg);
   box-shadow: var(--blok-database-confirm-shadow);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font-size: 14px;
   line-height: 20px;
 }
@@ -4413,7 +4467,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   margin: var(--blok-space-1);
   padding: var(--blok-space-10) var(--blok-space-10) 0;
   overflow: hidden;
-  border: 1px solid var(--blok-popover-border);
+  border: 1px solid var(--blok-database-table-control-border);
   /* 12px dialog less the 4px gap. */
   border-radius: var(--blok-radius-field);
   background-color: var(--blok-bg-secondary);
@@ -4439,14 +4493,14 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   align-items: center;
   gap: var(--blok-space-2);
   padding-bottom: var(--blok-space-3);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 22px;
   line-height: 26px;
   font-weight: 600;
 }
 
 [data-blok-database-csv-preview][data-filled] [data-blok-database-csv-preview-head] {
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 /* Beats the 16px [data-blok-database-csv-icon] svg rule further down. */
@@ -4460,7 +4514,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   flex-direction: column;
   gap: var(--blok-space-4);
   padding-top: var(--blok-space-6);
-  border-top: 1px solid var(--blok-popover-border);
+  border-top: 1px solid var(--blok-database-table-control-border);
 }
 
 [data-blok-database-csv-skeleton-row] {
@@ -4472,7 +4526,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 [data-blok-database-csv-skeleton-bar] {
   height: 8px;
   border-radius: var(--blok-radius-control-sm);
-  background-color: var(--blok-text-secondary);
+  background-color: var(--blok-database-ink-secondary);
   opacity: 0.2;
 }
 
@@ -4488,7 +4542,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   margin-bottom: var(--blok-space-2);
   padding-inline: var(--blok-space-3);
   border-radius: var(--blok-radius-pill);
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
   font-weight: 500;
 }
 
@@ -4503,17 +4557,17 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   height: 38px;
   padding: 0 var(--blok-space-2);
   overflow: hidden;
-  border-bottom: 1px solid var(--blok-popover-border);
+  border-bottom: 1px solid var(--blok-database-table-control-border);
   text-align: start;
   white-space: nowrap;
 }
 
 td[data-blok-database-csv-preview-cell] + td[data-blok-database-csv-preview-cell] {
-  border-inline-start: 1px solid var(--blok-popover-border);
+  border-inline-start: 1px solid var(--blok-database-table-control-border);
 }
 
 th[data-blok-database-csv-preview-cell] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-weight: 400;
 }
 
@@ -4526,7 +4580,7 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon],
 td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   display: inline-flex;
   margin-inline-end: var(--blok-space-1-5);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-csv-pill] {
@@ -4534,7 +4588,7 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   margin-inline-end: var(--blok-space-1);
   padding: 0 var(--blok-space-1-5);
   border-radius: var(--blok-radius-control-sm);
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
   line-height: 20px;
 }
 
@@ -4548,7 +4602,7 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font: inherit;
   cursor: pointer;
 }
@@ -4562,12 +4616,12 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
 
 [data-blok-database-csv-text] {
   margin: var(--blok-space-2) 0 var(--blok-space-4);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-csv-caption] {
   margin-bottom: var(--blok-space-1);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
   line-height: 18px;
   font-weight: 500;
@@ -4617,7 +4671,7 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
 [data-blok-database-csv-corner] {
   align-self: flex-start;
   padding: var(--blok-space-0-5);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-csv-choose],
@@ -4625,7 +4679,7 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   width: 100%;
   height: 32px;
   padding-inline: var(--blok-space-2-5);
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
   font-weight: 500;
 }
 
@@ -4645,7 +4699,7 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   justify-content: center;
   width: 24px;
   height: 24px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 /* research/30 §9f: Merge with CSV's "Import Location", faded and disabled. */
@@ -4662,10 +4716,10 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   width: 100%;
   height: 36px;
   padding-inline: var(--blok-space-2-5);
-  border: 1px solid var(--blok-popover-border);
+  border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font: inherit;
   cursor: default;
   opacity: 0.6;
@@ -4686,8 +4740,8 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   width: 100%;
   height: 36px;
   margin-top: var(--blok-space-4);
-  background-color: var(--blok-accent);
-  color: var(--blok-text-on-dark);
+  background-color: var(--blok-database-new-bg);
+  color: var(--blok-database-new-text);
   font-weight: 500;
 }
 
@@ -4720,7 +4774,7 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   width: 100%;
   height: 32px;
   margin-top: var(--blok-space-1);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-csv-columns] {
@@ -4748,10 +4802,10 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   height: 32px;
   padding: var(--blok-space-1-5) var(--blok-space-2);
   overflow: hidden;
-  border: 1px solid var(--blok-popover-border);
+  border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-control);
-  background-color: var(--blok-item-hover-bg);
-  color: var(--blok-text-secondary);
+  background-color: var(--blok-database-hover-bg);
+  color: var(--blok-database-ink-secondary);
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -4759,13 +4813,13 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
 
 [data-blok-database-csv-arrow] {
   display: inline-flex;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-csv-type] {
   height: 32px;
   padding: var(--blok-space-0-5) var(--blok-space-1-5);
-  border: 1px solid var(--blok-popover-border);
+  border: 1px solid var(--blok-database-table-control-border);
   background-color: var(--blok-database-confirm-bg);
 }
 
@@ -4775,12 +4829,12 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
 }
 
 [data-blok-database-csv-type] > :last-child {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-csv-menu-heading] {
   padding: var(--blok-space-0-5) var(--blok-space-3) var(--blok-space-1) var(--blok-space-2);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
   font-weight: 500;
   cursor: default;
@@ -4792,7 +4846,7 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
 [data-blok-database-csv-secondary]:hover,
 [data-blok-database-csv-type]:hover,
 [data-blok-database-csv-choose]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 /* The drawer has a timeout fallback for the transitionend this removes (database-card-drawer.ts). */
@@ -4898,8 +4952,8 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
 }
 
 [data-blok-database-checkbox][data-state="checked"] {
-  background-color: var(--blok-active-icon);
-  border-color: var(--blok-active-icon);
+  background-color: var(--blok-database-checkbox-checked-bg);
+  border-color: var(--blok-database-checkbox-checked-bg);
 }
 
 [data-blok-database-checkbox] svg {
@@ -5000,7 +5054,7 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
 
 /* ID: tertiary ink (research/08). */
 [data-blok-database-cell="uniqueId"] {
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
 }
 
 /* Person chip: 20px round avatar with a 1px ring, 6px gap (research/08). */
@@ -5028,7 +5082,7 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   justify-content: center;
   font-size: 11px;
   background-color: var(--blok-database-option-default-bg);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-person-initial]::before {
@@ -5139,7 +5193,7 @@ textarea[data-blok-database-property-description][data-blok-field] {
 [data-blok-database-person-option][aria-selected="true"],
 [data-blok-database-relation-option][aria-selected="true"],
 [data-blok-database-file-row] {
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-file-row] > span {
@@ -5214,7 +5268,7 @@ textarea[data-blok-database-property-description][data-blok-field] {
   flex-direction: column;
   min-width: 0;
   font-size: 14px;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 /* 21px line + 16px padding is 37; Notion's one-line box is 39, three lines 79. */
@@ -5312,7 +5366,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-option-colors-heading] {
   padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
   font-size: 12px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 /* Edit property › options list. Layout unmeasured: Blok tokens. */
@@ -5331,7 +5385,7 @@ textarea[data-blok-database-cell-input] {
   justify-content: space-between;
   padding: var(--blok-space-1-5) var(--blok-space-1) var(--blok-space-1);
   font-size: 12px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-options-add] {
@@ -5355,7 +5409,7 @@ textarea[data-blok-database-cell-input] {
 
 @media (hover: hover) {
   [data-blok-database-options-add]:hover {
-    background-color: var(--blok-item-hover-bg);
+    background-color: var(--blok-database-hover-bg);
   }
 }
 
@@ -5375,7 +5429,7 @@ textarea[data-blok-database-cell-input] {
   border-top: 1px solid var(--blok-database-drawer-border);
   background: transparent;
   font: inherit;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   text-align: start;
   cursor: pointer;
 }
@@ -5387,14 +5441,14 @@ textarea[data-blok-database-cell-input] {
 
 @media (hover: hover) {
   [data-blok-database-select-edit-property]:hover {
-    background-color: var(--blok-item-hover-bg);
+    background-color: var(--blok-database-hover-bg);
   }
 }
 
 [data-blok-database-property-menu-note] {
   padding: var(--blok-space-1) var(--blok-space-2);
   font-size: 12px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-select-list] {
@@ -5418,7 +5472,7 @@ textarea[data-blok-database-cell-input] {
   min-height: 28px;
   padding: 0 var(--blok-space-1);
   border-radius: var(--blok-radius-control);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   cursor: pointer;
 }
 
@@ -5426,7 +5480,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-person-option][data-active],
 [data-blok-database-relation-option][data-active],
 [data-blok-database-select-create][data-active] {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 @media (hover: hover) {
@@ -5435,7 +5489,7 @@ textarea[data-blok-database-cell-input] {
   [data-blok-database-relation-option]:hover,
   [data-blok-database-files-upload]:hover,
   [data-blok-database-select-create]:hover {
-    background-color: var(--blok-item-hover-bg);
+    background-color: var(--blok-database-hover-bg);
   }
 }
 
@@ -5461,7 +5515,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-select-option-menu] {
   width: 20px;
   height: 20px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   opacity: 0;
   transition: opacity 0.1s ease;
 }
@@ -5516,7 +5570,7 @@ textarea[data-blok-database-cell-input] {
   border-radius: var(--blok-radius-control);
   background: transparent;
   font: inherit;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   text-align: start;
   cursor: pointer;
 }
@@ -5530,7 +5584,7 @@ textarea[data-blok-database-cell-input] {
   [data-blok-database-date-prev]:hover,
   [data-blok-database-date-next]:hover,
   [data-blok-database-date-day]:hover {
-    background-color: var(--blok-item-hover-bg);
+    background-color: var(--blok-database-hover-bg);
   }
 
   [data-blok-database-date-today]:hover,
@@ -5647,7 +5701,7 @@ textarea[data-blok-database-cell-input] {
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }
 
@@ -5696,12 +5750,12 @@ textarea[data-blok-database-cell-input] {
   border-radius: var(--blok-radius-control);
   background: transparent;
   font: inherit;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   cursor: pointer;
 }
 
 [data-blok-database-date-day][data-outside] {
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
 }
 
 /* research/26 §1c: a 24px red circle behind a white digit. Isolation keeps the circle above the hover fill. */
@@ -5725,7 +5779,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-date-day][data-in-range] {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-date-day][aria-selected="true"] {
@@ -5756,7 +5810,7 @@ textarea[data-blok-database-cell-input] {
   border-radius: var(--blok-radius-control);
   background: transparent;
   font: inherit;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   cursor: pointer;
 }
 
@@ -5783,7 +5837,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [aria-checked="true"] > [data-blok-database-switch-track] {
-  background-color: var(--blok-toggle-on-bg);
+  background-color: var(--blok-database-switch-on-bg);
 }
 
 [aria-checked="true"] > [data-blok-database-switch-track] > span {
@@ -5819,7 +5873,7 @@ textarea[data-blok-database-cell-input] {
   border-radius: var(--blok-radius-control);
   background: transparent;
   font: inherit;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   text-align: start;
   cursor: pointer;
 }
@@ -5837,7 +5891,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-date-remind-chevron],
 [data-blok-database-date-remind-check] {
   display: flex;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-date-remind-chevron] > svg,
@@ -5848,7 +5902,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-date-remind-check] {
   margin-inline-start: auto;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-date-remind] + [data-blok-database-date-clear] {
@@ -5912,7 +5966,7 @@ textarea[data-blok-database-cell-input] {
   [data-blok-database-date-setting]:hover,
   [data-blok-database-date-remind-option]:hover,
   [data-blok-database-date-setting-option]:hover {
-    background-color: var(--blok-item-hover-bg);
+    background-color: var(--blok-database-hover-bg);
   }
 }
 
@@ -5950,7 +6004,7 @@ textarea[data-blok-database-cell-input] {
   font-size: 12px;
   line-height: 14.4px;
   font-weight: 500;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-date-zone-empty] {
@@ -5976,12 +6030,12 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-date-zone-offset] {
   font-size: 12px;
   line-height: 16.8px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 /* The keyboard's row while focus stays in the search. Gray, never blue. */
 [data-blok-database-date-setting-option][data-active] {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 /* A set reminder (research/17 §1c): the date in blue, a 1.2em alarm after it. Not a selected state. */
@@ -6011,16 +6065,16 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-item-name="database-show-page-icon"] {
   --blok-icon-active-bg: transparent;
-  --blok-icon-active-text: var(--blok-text-primary);
+  --blok-icon-active-text: var(--blok-database-ink);
 }
 
 [data-blok-item-name="database-show-page-icon"][data-blok-force-hover] {
-  --blok-icon-active-bg: var(--blok-item-hover-bg);
+  --blok-icon-active-bg: var(--blok-database-hover-bg);
 }
 
 @media (hover: hover) {
   [data-blok-item-name="database-show-page-icon"]:hover {
-    --blok-icon-active-bg: var(--blok-item-hover-bg);
+    --blok-icon-active-bg: var(--blok-database-hover-bg);
   }
 }
 
@@ -6366,12 +6420,12 @@ textarea[data-blok-database-cell-input] {
   border: none;
   border-radius: var(--blok-radius-control-sm);
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }
 
 [data-blok-database-table-cell-action]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-table-cell-action] svg {
@@ -6401,7 +6455,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-comment-badge]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-comment-badge] svg {
@@ -6421,7 +6475,7 @@ textarea[data-blok-database-cell-input] {
   padding: var(--blok-space-1);
   font-size: 14px;
   line-height: 20px;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-comments] [role="list"][hidden] {
@@ -6449,7 +6503,7 @@ textarea[data-blok-database-cell-input] {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: var(--blok-item-hover-bg);
+  background: var(--blok-database-hover-bg);
   font-size: 11px;
   font-weight: 500;
 }
@@ -6459,7 +6513,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-comment-time] {
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
   font-size: 12px;
 }
 
@@ -6495,13 +6549,13 @@ textarea[data-blok-database-cell-input] {
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }
 
 [data-blok-database-comment-tools] button:hover,
 [data-blok-database-comment-send]:hover:not(:disabled) {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-comment-tools] svg,
@@ -6530,7 +6584,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-comment-input]::placeholder {
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
 }
 
 [data-blok-database-comment-send]:disabled {
@@ -6553,14 +6607,14 @@ textarea[data-blok-database-cell-input] {
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   text-align: start;
   cursor: pointer;
 }
 
 [data-blok-database-comment-menu] button:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 /* The row page section sits under the properties. */
@@ -6612,7 +6666,7 @@ textarea[data-blok-database-cell-input] {
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-table-open-bg);
   box-shadow: var(--blok-database-table-open-shadow);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }
 
@@ -6623,7 +6677,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-table-autofill]:hover,
 [data-blok-database-table-autofill-open]:hover {
-  background-image: linear-gradient(var(--blok-item-hover-bg), var(--blok-item-hover-bg));
+  background-image: linear-gradient(var(--blok-database-hover-bg), var(--blok-database-hover-bg));
 }
 
 [data-blok-database-table-autofill] svg,
@@ -6633,7 +6687,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-table-autofill-thinking] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 /* A filled cell: Autofill leads the Comment/Copy pill (research/12 §2), so it drops its own corner box. */
@@ -6663,7 +6717,7 @@ textarea[data-blok-database-cell-input] {
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }
 
@@ -7091,7 +7145,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-table-selection-bar] [data-blok-database-table-selection-property] {
   width: auto;
   padding-inline: var(--blok-space-2);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font-size: 14px;
   white-space: nowrap;
 }
@@ -7167,7 +7221,7 @@ textarea[data-blok-database-cell-input] {
   border-radius: var(--blok-radius-control);
   background: transparent;
   /* The lock badge: secondary ink. Icon buttons take Notion's icon gray below. */
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
   cursor: pointer;
   transition: background-color 0.1s ease-in-out;
@@ -7208,7 +7262,7 @@ textarea[data-blok-database-cell-input] {
   border: none;
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-table-header-hover-bg);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font-size: 14px;
   outline: none;
 }
@@ -7238,7 +7292,7 @@ textarea[data-blok-database-cell-input] {
   border: none;
   border-radius: var(--blok-radius-pill);
   background-color: var(--blok-database-table-header-hover-bg);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
   line-height: 24px;
   white-space: nowrap;
@@ -7288,13 +7342,13 @@ textarea[data-blok-database-cell-input] {
   border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
   cursor: pointer;
 }
 
 [data-blok-database-filter-actions] > [data-blok-database-filter-save] {
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font-weight: 500;
 }
 
@@ -7306,7 +7360,7 @@ textarea[data-blok-database-cell-input] {
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
   white-space: nowrap;
   cursor: pointer;
@@ -7322,7 +7376,7 @@ textarea[data-blok-database-cell-input] {
   max-height: min(70vh, 560px);
   padding: var(--blok-space-1);
   overflow-y: auto;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font-size: 14px;
 }
 
@@ -7431,7 +7485,7 @@ textarea[data-blok-database-cell-input] {
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   font-size: 14px;
   line-height: 20px;
@@ -7624,12 +7678,12 @@ textarea[data-blok-database-cell-input] {
   border: 0;
   border-radius: var(--blok-radius-control);
   background: none;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }
 
 [data-blok-database-starter-nav]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-starter-nav] svg {
@@ -7645,14 +7699,14 @@ textarea[data-blok-database-cell-input] {
   font-size: 20px;
   line-height: 26px;
   font-weight: 600;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-starter-hint] {
   margin-block: var(--blok-space-1) var(--blok-space-3);
   font-size: 14px;
   line-height: 20px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-starter-choices] {
@@ -7676,8 +7730,8 @@ textarea[data-blok-database-cell-input] {
   gap: var(--blok-space-1);
   border: 0;
   background: none;
-  color: var(--blok-text-primary);
-  box-shadow: inset 0 0 0 1px var(--blok-border-primary);
+  color: var(--blok-database-ink);
+  box-shadow: inset 0 0 0 1px var(--blok-database-tpl-border);
   cursor: pointer;
 }
 
@@ -7702,26 +7756,26 @@ textarea[data-blok-database-cell-input] {
 
 /* Notion rings a pick in blue; Blok rings it in primary ink (no-blue law). */
 [data-blok-database-starter-chip][aria-pressed="true"] {
-  box-shadow: inset 0 0 0 1.5px var(--blok-text-primary);
+  box-shadow: inset 0 0 0 1.5px var(--blok-database-ink);
 }
 
 [data-blok-database-starter-card][aria-pressed="true"] {
-  box-shadow: inset 0 0 0 1.5px var(--blok-text-primary);
+  box-shadow: inset 0 0 0 1.5px var(--blok-database-ink);
 }
 
 [data-blok-database-starter-chip] svg,
 [data-blok-database-starter-card] svg {
   inline-size: 16px;
   block-size: 16px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-starter-primary] {
   block-size: 32px;
   border: 0;
   border-radius: var(--blok-radius-control-lg);
-  background-color: var(--blok-accent);
-  color: var(--blok-text-on-dark);
+  background-color: var(--blok-database-new-bg);
+  color: var(--blok-database-new-text);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -7732,9 +7786,9 @@ textarea[data-blok-database-cell-input] {
   min-inline-size: 0;
   overflow: hidden;
   padding: var(--blok-space-10);
-  border: 1px solid var(--blok-border-primary);
+  border: 1px solid var(--blok-database-tpl-border);
   border-radius: var(--blok-radius-dialog);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-starter-preview-title] {
@@ -7748,23 +7802,23 @@ textarea[data-blok-database-cell-input] {
   gap: var(--blok-space-4);
   margin-block: var(--blok-space-3);
   font-size: 14px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 /* The previewed view's tab: primary ink, no fill (no-blue law). */
 [data-blok-database-starter-preview-tabs] [aria-current="true"] {
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-starter-preview-row] {
   display: flex;
-  border-block-end: 1px solid var(--blok-border-primary);
+  border-block-end: 1px solid var(--blok-database-tpl-border);
   font-size: 14px;
   line-height: 36px;
 }
 
 [data-blok-database-starter-preview-row="header"] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-starter-preview-row] > span {
@@ -7782,7 +7836,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-starter-preview-hidden] {
   margin-block-start: var(--blok-space-2);
   font-size: 12px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 /* "More templates" (research/26 §2, research/27 §1e): the Customize modal's 1000x637 shell. */
@@ -7796,7 +7850,7 @@ textarea[data-blok-database-cell-input] {
   border-radius: var(--blok-radius-dialog);
   background-color: var(--blok-database-tpl-gallery-bg);
   box-shadow: var(--blok-database-confirm-shadow);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-tpl-gallery-header] {
@@ -7819,7 +7873,7 @@ textarea[data-blok-database-cell-input] {
   border: 0;
   border-radius: 50%;
   background-color: var(--blok-database-panel-close-bg);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }
 
@@ -7834,10 +7888,10 @@ textarea[data-blok-database-cell-input] {
   inline-size: min(296px, 100%);
   block-size: 36px;
   padding-inline: var(--blok-space-3);
-  border: 1px solid var(--blok-border-primary);
+  border: 1px solid var(--blok-database-tpl-border);
   border-radius: var(--blok-radius-surface);
   background-color: var(--blok-database-confirm-bg);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   font-size: 14px;
   outline: none;
@@ -7865,9 +7919,9 @@ textarea[data-blok-database-cell-input] {
   align-items: flex-start;
   box-sizing: border-box;
   overflow: hidden;
-  border: 1px solid var(--blok-border-primary);
+  border: 1px solid var(--blok-database-tpl-border);
   border-radius: var(--blok-radius-dialog);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   text-align: start;
   cursor: pointer;
@@ -7890,12 +7944,12 @@ textarea[data-blok-database-cell-input] {
   margin-block-start: var(--blok-space-4);
   font-size: 14px;
   font-weight: 500;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-tpl-gallery-glyph] {
   display: inline-flex;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-tpl-gallery-glyph] svg {
@@ -7925,7 +7979,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-tpl-gallery-card-text] {
   font-size: 12px;
   line-height: 16px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-tpl-gallery-thumb] {
@@ -7937,8 +7991,8 @@ textarea[data-blok-database-cell-input] {
   padding: var(--blok-space-2) var(--blok-space-3);
   border-start-start-radius: var(--blok-radius-control-lg);
   background-color: var(--blok-database-confirm-bg);
-  box-shadow: 0 0 0 1px var(--blok-border-primary);
-  color: var(--blok-text-primary);
+  box-shadow: 0 0 0 1px var(--blok-database-tpl-border);
+  color: var(--blok-database-ink);
   font-size: 10px;
   line-height: 20px;
 }
@@ -7961,7 +8015,7 @@ textarea[data-blok-database-cell-input] {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--blok-space-2);
-  border-block-end: 1px solid var(--blok-border-primary);
+  border-block-end: 1px solid var(--blok-database-tpl-border);
 }
 
 [data-blok-database-tpl-gallery-thumb-row] {
@@ -7969,7 +8023,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-tpl-gallery-thumb-head] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-tpl-gallery-thumb-board] {
@@ -7988,7 +8042,7 @@ textarea[data-blok-database-cell-input] {
   inline-size: 60%;
   block-size: 4px;
   border-radius: var(--blok-radius-pill);
-  background-color: var(--blok-border-primary);
+  background-color: var(--blok-database-tpl-border);
 }
 
 [data-blok-database-tpl-gallery-card-bar] {
@@ -7997,7 +8051,7 @@ textarea[data-blok-database-cell-input] {
   margin-block-start: var(--blok-space-1);
   border-radius: var(--blok-radius-control-sm);
   background-color: transparent;
-  box-shadow: 0 0 0 1px var(--blok-border-primary);
+  box-shadow: 0 0 0 1px var(--blok-database-tpl-border);
 }
 
 [data-blok-database-tpl-gallery-pill] {
@@ -8040,7 +8094,7 @@ textarea[data-blok-database-cell-input] {
   border: 0;
   border-radius: var(--blok-radius-control);
   background: none;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font: inherit;
   font-size: 14px;
   font-weight: 500;
@@ -8049,12 +8103,12 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-tpl-gallery-close]:hover,
 [data-blok-database-tpl-gallery-link]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-tpl-gallery-empty]:hover,
 [data-blok-database-tpl-gallery-card]:hover {
-  border-color: var(--blok-text-tertiary);
+  border-color: var(--blok-database-ink-tertiary);
 }
 
 [data-blok-database-panel-close] svg {
@@ -8141,7 +8195,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-panel-description] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
 }
 
@@ -8181,7 +8235,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-panel-section] {
   padding-block: var(--blok-space-1-5) var(--blok-space-0-5);
   padding-inline: var(--blok-space-2);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
   font-weight: 500;
   line-height: 14.4px;
@@ -8190,7 +8244,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-panel-note] {
   padding-block: 0 var(--blok-space-1);
   padding-inline: var(--blok-space-2);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
   line-height: 16px;
 }
@@ -8219,7 +8273,7 @@ textarea[data-blok-database-cell-input] {
   border: none;
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-panel-input-bg);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   outline: none;
 }
@@ -8252,7 +8306,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-calc-hint] {
   width: 176px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
   font-weight: 400;
   line-height: 16px;
@@ -8686,8 +8740,9 @@ textarea[data-blok-database-cell-input] {
   transition: background-color 0.1s ease-in-out;
 }
 
-[data-blok-database-calendar-prev],
-[data-blok-database-calendar-next] {
+/* Prefixed: the nav's own `button` rule is more specific and would paint them in day ink. */
+[data-blok-database-calendar-nav] [data-blok-database-calendar-prev],
+[data-blok-database-calendar-nav] [data-blok-database-calendar-next] {
   color: var(--blok-database-calendar-nav-icon);
 }
 
@@ -8917,7 +8972,7 @@ textarea[data-blok-database-cell-input] {
   text-overflow: clip;
   font-size: 12px;
   line-height: 24px;
-  color: var(--blok-database-calendar-muted-text);
+  color: var(--blok-database-calendar-event-muted-text);
 }
 
 [data-blok-database-calendar-resize] {
@@ -9000,11 +9055,12 @@ textarea[data-blok-database-cell-input] {
   transition: background-color 0.1s ease-in-out;
 }
 
-[data-blok-database-timeline-zoom],
-[data-blok-database-timeline-table-toggle],
+/* Icon-gray labels (research/07:195). Text, so light takes the AA step. Prefixed to beat the toolbar `button` rule. */
+[data-blok-database-timeline-toolbar] [data-blok-database-timeline-zoom],
+[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle],
 [data-blok-database-timeline-new],
 [data-blok-database-timeline-load-more] {
-  color: var(--blok-database-timeline-control-text);
+  color: var(--blok-database-ink-secondary);
 }
 
 /* research/26 §4d: bordered, 6px gap, label weight 500. The calendar's is the same 167x24 (research/21 §1h). */
@@ -9599,7 +9655,7 @@ textarea[data-blok-database-cell-input] {
   margin-inline-end: var(--blok-space-1-5);
   white-space: nowrap;
   text-decoration: underline;
-  text-decoration-color: var(--blok-text-tertiary);
+  text-decoration-color: var(--blok-database-ink-tertiary);
   text-underline-offset: 2px;
 }
 
@@ -9610,7 +9666,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-relation-option][aria-selected="true"]::after {
   content: "✓";
   margin-inline-start: auto;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-relation-search] {
@@ -9628,26 +9684,26 @@ textarea[data-blok-database-cell-input] {
   display: flex;
   align-items: center;
   padding-inline-end: var(--blok-space-2);
-  border-bottom: 1px solid var(--blok-popover-border);
-  background-color: var(--blok-item-hover-bg);
+  border-bottom: 1px solid var(--blok-database-table-control-border);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-relation-scope] {
   flex: none;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   white-space: nowrap;
 }
 
 [data-blok-database-relation-scope] strong {
   font-weight: 600;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-relation-heading] {
   padding: var(--blok-space-2) var(--blok-space-2) var(--blok-space-1);
   font-size: 12px;
   font-weight: 500;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-relation-editor] [role="listbox"] {
@@ -9669,7 +9725,7 @@ textarea[data-blok-database-cell-input] {
   width: 100%;
   resize: vertical;
   padding: var(--blok-space-1-5) var(--blok-space-2);
-  border: 1px solid var(--blok-border-primary);
+  border: 1px solid var(--blok-database-tpl-border);
   border-radius: var(--blok-radius-control);
   background: transparent;
   font-family: var(--blok-font-mono, ui-monospace, monospace);
@@ -9682,7 +9738,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-formula-error] {
   min-height: 18px;
   font-size: 12px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-formula-error-message] {
@@ -9712,7 +9768,7 @@ textarea[data-blok-database-cell-input] {
 
 @media (hover: hover) {
   [data-blok-database-formula-reference-item]:hover {
-    background-color: var(--blok-item-hover-bg);
+    background-color: var(--blok-database-hover-bg);
   }
 }
 
@@ -9721,15 +9777,15 @@ textarea[data-blok-database-cell-input] {
   padding: var(--blok-space-1) var(--blok-space-2);
   border: 0;
   border-radius: var(--blok-radius-control);
-  background: var(--blok-item-hover-bg);
+  background: var(--blok-database-hover-bg);
   font: inherit;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   cursor: pointer;
 }
 
 [data-blok-database-cell="formula"],
 [data-blok-database-cell="rollup"] {
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 /* ─── Chart ───
@@ -9740,7 +9796,7 @@ textarea[data-blok-database-cell-input] {
   position: relative;
   padding-block: var(--blok-space-4) var(--blok-space-2);
   font-size: 12px;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-chart-body] {
@@ -9797,13 +9853,13 @@ textarea[data-blok-database-cell-input] {
   border: none;
   border-radius: var(--blok-radius-control-sm);
   background: transparent;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   cursor: pointer;
 }
 
 [data-blok-database-chart-legend-entry]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-chart-legend-entry][aria-pressed="false"] {
@@ -9925,7 +9981,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-drilldown-close]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-drilldown-close]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *),
@@ -10018,7 +10074,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-feed-author] {
   font-weight: 500;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 /* Tertiary ink, research/21 §1j. */
@@ -10030,7 +10086,7 @@ textarea[data-blok-database-cell-input] {
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   font-size: 26px;
   line-height: 26px;
@@ -10094,7 +10150,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-feed-react]:hover,
 [data-blok-database-feed-more-actions]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 /* Reactions, measured (research/19 §2c): pills "<emoji> <count>", 25px tall,
@@ -10125,7 +10181,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-feed-reaction] {
   gap: var(--blok-space-1);
   padding: var(--blok-space-0-5) var(--blok-space-2);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-feed-reaction][data-mine] {
@@ -10146,7 +10202,7 @@ button[data-blok-database-feed-reaction],
 
 button[data-blok-database-feed-reaction]:hover,
 [data-blok-database-feed-add-reaction]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-feed-add-reaction] > svg {
@@ -10180,7 +10236,7 @@ button[data-blok-database-feed-reaction]:hover,
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   font-size: 14px;
   text-align: start;
@@ -10188,7 +10244,7 @@ button[data-blok-database-feed-reaction]:hover,
 }
 
 [data-blok-database-feed-comments-summary]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-feed-comments-summary]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
@@ -10202,7 +10258,7 @@ button[data-blok-database-feed-reaction]:hover,
 }
 
 [data-blok-database-feed-comments-time] {
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
   font-size: 12px;
 }
 
@@ -10244,7 +10300,7 @@ button[data-blok-database-feed-reaction]:hover,
 }
 
 [data-blok-database-feed-more]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -10266,7 +10322,7 @@ button[data-blok-database-feed-reaction]:hover,
   border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-control);
   background: var(--blok-bg-primary);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   font-size: 14px;
   line-height: 16.8px;
@@ -10276,7 +10332,7 @@ button[data-blok-database-feed-reaction]:hover,
 }
 
 [data-blok-database-button]:hover:not(:disabled) {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-button]:disabled {
@@ -10356,7 +10412,7 @@ button[data-blok-database-feed-reaction]:hover,
   padding: var(--blok-space-2) var(--blok-space-3);
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-bg-secondary);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
   line-height: 20px;
   display: flex;
@@ -10372,7 +10428,7 @@ button[data-blok-database-feed-reaction]:hover,
   align-items: center;
   gap: var(--blok-space-0-5);
   padding: var(--blok-space-0-5) var(--blok-space-2);
-  border: 1px solid var(--blok-popover-border);
+  border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-control);
   background: transparent;
   color: inherit;
@@ -10381,7 +10437,7 @@ button[data-blok-database-feed-reaction]:hover,
 }
 
 [data-blok-database-template-repeat]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-template-repeat-chevron] {
@@ -10411,7 +10467,7 @@ button[data-blok-database-feed-reaction]:hover,
 
 [data-blok-database-template-cadence-title],
 [data-blok-database-template-cadence-next] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
 }
 
@@ -10425,7 +10481,7 @@ button[data-blok-database-feed-reaction]:hover,
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   font-weight: 500;
   cursor: pointer;
@@ -10433,11 +10489,11 @@ button[data-blok-database-feed-reaction]:hover,
 
 [data-blok-database-template-cadence-save]:hover,
 [data-blok-database-template-cadence-days] button:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-template-cadence-value] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-template-cadence-row="every"] input {
@@ -10460,7 +10516,7 @@ button[data-blok-database-feed-reaction]:hover,
 }
 
 [data-blok-database-template-cadence-zone-offset] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-template-cadence-field] {
@@ -10470,7 +10526,7 @@ button[data-blok-database-feed-reaction]:hover,
 [data-blok-database-template-cadence-row] input,
 [data-blok-database-template-cadence-row] select,
 [data-blok-database-template-cadence-field] input {
-  border: 1px solid var(--blok-popover-border);
+  border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-control);
   background: transparent;
   color: inherit;
@@ -10493,10 +10549,10 @@ button[data-blok-database-feed-reaction]:hover,
   min-width: max-content;
   height: 28px;
   padding: 0;
-  border: 1px solid var(--blok-popover-border);
+  border: 1px solid var(--blok-database-table-control-border);
   border-radius: 50%;
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font: inherit;
   font-size: 12px;
   cursor: pointer;
@@ -10515,12 +10571,12 @@ button[data-blok-database-feed-reaction]:hover,
   display: inline-flex;
   vertical-align: middle;
   margin-inline-start: var(--blok-space-1);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-template-default] {
   margin-inline-start: var(--blok-space-2);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-template-repeat-icon] svg {
@@ -10593,7 +10649,7 @@ button[data-blok-database-feed-reaction]:hover,
   border: none;
   background: transparent;
   /* Not the add-row gray: its words need AA. */
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
   text-align: start;
   cursor: pointer;
@@ -10701,7 +10757,7 @@ button[data-blok-database-feed-reaction]:hover,
   padding: var(--blok-space-3) var(--blok-space-4) var(--blok-space-3) var(--blok-space-3);
   border-radius: var(--blok-radius-block);
   background-color: var(--blok-bg-secondary);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
   line-height: 20px;
 }
@@ -10731,14 +10787,14 @@ button[data-blok-database-feed-reaction]:hover,
   border: 1px solid var(--blok-database-table-border);
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   font-size: 14px;
   cursor: pointer;
 }
 
 [data-blok-database-source-picker] > button:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 /* research 20 §2b: "↗ <source name>", a link that keeps the title's look. */
@@ -10792,7 +10848,7 @@ button[data-blok-database-feed-reaction]:hover,
 
 [data-blok-database-form-label] {
   font-weight: 500;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 /* Builder only: the respondent's form has no card (research/19 82-form-preview). research/21 §1k. */
@@ -10822,12 +10878,12 @@ button[data-blok-database-feed-reaction]:hover,
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }
 
 [data-blok-database-form-question-menu]:hover {
-  background: var(--blok-item-hover-bg);
+  background: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-form-question-menu] svg {
@@ -10862,7 +10918,7 @@ button[data-blok-database-feed-reaction]:hover,
 [data-blok-database-form-selection-limit],
 [data-blok-database-form-file-limit] {
   margin: 0;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 0.875em;
 }
 
@@ -10872,7 +10928,7 @@ button[data-blok-database-feed-reaction]:hover,
   border: 1px solid var(--blok-database-form-answer-border);
   border-radius: var(--blok-radius-control);
   background-color: transparent;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
 }
 
@@ -10899,7 +10955,7 @@ button[data-blok-database-feed-reaction]:hover,
   display: inline-flex;
   align-items: center;
   gap: var(--blok-space-1);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 0.875em;
 }
 
@@ -10910,8 +10966,8 @@ button[data-blok-database-feed-reaction]:hover,
   padding-inline: var(--blok-space-3);
   border: none;
   border-radius: var(--blok-radius-control);
-  background-color: var(--blok-accent);
-  color: var(--blok-text-on-dark);
+  background-color: var(--blok-database-new-bg);
+  color: var(--blok-database-new-text);
   font: inherit;
   cursor: pointer;
 }
@@ -10927,7 +10983,7 @@ button[data-blok-database-feed-reaction]:hover,
   border-radius: var(--blok-radius-control);
   /* Measured the column tint in both themes (research/21 §1k). */
   background-color: var(--blok-database-column-bg);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
 }
 
@@ -10949,14 +11005,14 @@ button[data-blok-database-feed-reaction]:hover,
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font: inherit;
   font-weight: 500;
   cursor: pointer;
 }
 
 [data-blok-database-form-access] > button:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 /* The respondent's "Submitting response anonymously" pill (research/23 §6, 96-form-respondent.png): 14px/21px, 6px radius. */
@@ -10966,7 +11022,7 @@ button[data-blok-database-feed-reaction]:hover,
   padding: var(--blok-space-1-5) var(--blok-space-2-5);
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-column-bg);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
   line-height: 21px;
 }
@@ -11006,16 +11062,16 @@ button[data-blok-database-feed-reaction]:hover,
   align-items: center;
   gap: var(--blok-space-1);
   padding: var(--blok-space-1) var(--blok-space-2);
-  border: 1px solid var(--blok-popover-border);
+  border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   cursor: pointer;
 }
 
 [data-blok-database-form-share-copy]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-form-share-copy] svg {
@@ -11039,10 +11095,10 @@ button[data-blok-database-feed-reaction]:hover,
 [data-blok-database-form-response-action] {
   block-size: 32px;
   padding-inline: var(--blok-space-3);
-  border: 1px solid var(--blok-popover-border);
+  border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-control);
   background-color: transparent;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   font-size: 14px;
   font-weight: 500;
@@ -11056,7 +11112,7 @@ button[data-blok-database-feed-reaction]:hover,
 }
 
 [data-blok-database-form-response-action="email"]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 /* The block sets the canvas height inline: the view's Height, 300 to 800px (research/20 §1f). */
@@ -11144,7 +11200,7 @@ button[data-blok-database-feed-reaction]:hover,
 
 [data-blok-database-map-pin-card-crumb] {
   overflow: hidden;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -11169,13 +11225,13 @@ button[data-blok-database-feed-reaction]:hover,
   border-radius: var(--blok-radius-control-sm);
   background-color: var(--blok-bg-primary);
   box-shadow: var(--blok-database-popover-shadow);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }
 
 [data-blok-database-map-add-pin]:hover,
 [data-blok-database-map-add-pin][data-active] {
-  background-color: var(--blok-bg-hover);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-map-add-pin] svg {
@@ -11191,8 +11247,8 @@ button[data-blok-database-feed-reaction]:hover,
   padding: var(--blok-space-1) var(--blok-space-1-5);
   border: 0;
   border-radius: var(--blok-radius-control);
-  background-color: var(--blok-bg-hover);
-  color: var(--blok-text-secondary);
+  background-color: var(--blok-database-hover-bg);
+  color: var(--blok-database-ink-secondary);
   font: inherit;
   font-size: 14px;
   cursor: pointer;
@@ -11217,7 +11273,7 @@ button[data-blok-database-feed-reaction]:hover,
 }
 
 [data-blok-database-map-no-place-row]:hover {
-  background-color: var(--blok-bg-hover);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-map-add-pin],
@@ -11279,7 +11335,7 @@ button[data-blok-database-feed-reaction]:hover,
 
 [data-blok-database-place-current]:hover,
 [data-blok-database-place-result]:hover {
-  background-color: var(--blok-bg-hover);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-place-current]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *),
@@ -11289,7 +11345,7 @@ button[data-blok-database-feed-reaction]:hover,
 
 [data-blok-database-place-result-address],
 [data-blok-database-place-loading] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
 }
 
@@ -11300,7 +11356,7 @@ button[data-blok-database-feed-reaction]:hover,
 [data-blok-database-place-google-maps] {
   display: block;
   padding: var(--blok-space-1-5) var(--blok-space-2);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 13px;
 }
 
@@ -11308,7 +11364,7 @@ button[data-blok-database-feed-reaction]:hover,
 [data-blok-database-form-closed],
 [data-blok-database-dashboard-placeholder] p {
   margin: 0;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 /* Conditional color on items whose own fill is declared after the color rules above. */

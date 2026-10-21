@@ -2010,7 +2010,7 @@ export class DatabaseTool implements BlockTool {
     titleEl.style.fontSize = '1.5rem';
     titleEl.style.fontWeight = '600';
     titleEl.style.lineHeight = '1.3';
-    titleEl.style.color = 'var(--blok-text-primary)';
+    titleEl.style.color = 'var(--blok-database-ink)';
     titleEl.style.outline = 'none';
     titleEl.style.cursor = 'text';
     titleEl.style.wordBreak = 'break-word';

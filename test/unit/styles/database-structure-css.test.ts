@@ -68,15 +68,15 @@ describe('database structure styles', () => {
 
   it('styles the banner\'s "Duplicate every…" button and the list\'s ↻ in neutral ink, never blue', () => {
     expect(ruleBody('[data-blok-database-template-repeat]')).toContain('cursor: pointer');
-    expect(ruleBody('[data-blok-database-template-repeat]:hover')).toContain('--blok-item-hover-bg');
-    expect(ruleBody('[data-blok-database-template-repeat-icon]')).toContain('--blok-text-secondary');
+    expect(ruleBody('[data-blok-database-template-repeat]:hover')).toContain('--blok-database-hover-bg');
+    expect(ruleBody('[data-blok-database-template-repeat-icon]')).toContain('--blok-database-ink-secondary');
   });
 
   it('puts a cadence row\'s value at its right end, in secondary ink (shot 61: "At  Around midnight ›")', () => {
     expect(ruleBody('[data-blok-popover-item-title]:has(> [data-blok-database-template-cadence-setting])')).toContain('flex: 1');
     expect(ruleBody('[data-blok-database-template-cadence-setting]')).toContain('justify-content: space-between');
-    expect(ruleBody('[data-blok-database-template-cadence-value]')).toContain('--blok-text-secondary');
-    expect(ruleBody('[data-blok-database-template-cadence-zone-offset]')).toContain('--blok-text-secondary');
+    expect(ruleBody('[data-blok-database-template-cadence-value]')).toContain('--blok-database-ink-secondary');
+    expect(ruleBody('[data-blok-database-template-cadence-zone-offset]')).toContain('--blok-database-ink-secondary');
   });
 
   it('lays out Edit cadence as measured: 260px, 28px round day chips with 12px text, a chevron on the banner button', () => {

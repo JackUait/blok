@@ -179,7 +179,7 @@ Measured research/07:126-150, 08:69-87, 08:345-348, 21:105-115, 26:231-238.
 | Other-month day numbers | 161,158,153 / 125,122,117 | `calendar-muted-text` | same | AA both |
 | This-month day number | 44,44,43 / 240,239,237 | `calendar-day-text` | same | MATCH |
 | Today circle | 229,100,88, digit white (07:177, 21:137) | `today`, `calendar-today-text` | same | MATCH; digit AA-flagged (3.34), kept |
-| Prev / next chevrons | 142,139,134 / UNMEASURED dark (07:171) | inherits ink | 44,44,43 / 240,239,237 | CHANGE (light 142,139,134; dark the icon step 173,169,163 by role) |
+| Prev / next chevrons | 142,139,134 / UNMEASURED dark (07:171) | `calendar-nav-icon` existed, but the nav's `button` rule (0,1,1) out-ranked it | 44,44,43 / 240,239,237 | CHANGE (specificity fix: 142,139,134 / 173,169,163) |
 | Event card | white + `rgba(0,0,0,0.04) 0 2px 4px, rgba(42,28,0,0.07) 0 0 0 1px` / 47 + `rgb(56,56,54) 0 0 0 1px, rgba(25,25,25,0.08) 0 2px 4px` | `calendar-event-*` | same | MATCH |
 | Event hover | rgba(84,72,49,0.08) / 55,55,55 | `calendar-event-hover-bg` | same | MATCH |
 | Event title | 14px 600, ink | | same | MATCH |
@@ -200,7 +200,7 @@ Measured research/07:126-150, 08:69-87, 08:345-348, 21:105-115, 26:231-238.
 | Bar | white + `rgba(0,0,0,0.04) 0 2px 4px, rgba(42,28,0,0.07) 0 0 0 1px` / 37 + dark shadow | `timeline-bar-*` | same | MATCH |
 | Bar hover overlay | ≈0.051 / 0.055 (21:150) | — | none measured in probe (bar keeps its bg) | UNMEASURED in Blok; not changed |
 | Off-screen arrow chip | 142,139,134 + 1px white, hover 56,56,54 / 173,169,163 + 25 border | `timeline-arrow-*` | source | MATCH |
-| Zoom control "Month ⌄" | 14px 142,139,134 (07:195) | inherits | 44,44,43 / 240,239,237 | Light AA → 114,111,106. Dark CHANGE → 173,169,163 (icon-gray role, 7.52). |
+| Zoom control "Month ⌄" | 14px 142,139,134 (07:195) | `timeline-control-text`, out-ranked by the toolbar `button` rule | 44,44,43 / 240,239,237 | Light AA → 114,111,106. Dark CHANGE → 173,169,163 (icon-gray role, 7.52). |
 | "+ New" | 142,139,134 text | `timeline-control-text` | 142,139,134 / 173,169,163 | Light AA. Dark MATCH. |
 | Range readout pill | 247,247,247 (07:192) | — | not probed | UNMEASURED in Blok |
 | Selected halo | rgba(35,131,226,0.14) | neutral | — | BLUE |
@@ -292,7 +292,7 @@ Measured research/21:35, 22:233, 26:194, 28:61, 30:498, 31:33-36. **Identical in
 | Shadow | `rgba(0,0,0,0.08) 0 4px 12px -2px, rgba(255,255,255,0.05) 0 0 0 1px inset` | `--shadow-tooltip` `0 8px 12px rgba(29,32,43,0.17), 0 4px 5px -3px rgba(5,6,12,0.49)` | CHANGE (global) | — |
 | Radius | 6px | 6px | MATCH | — |
 
-Coupling: the toolbox preview card (`block-preview.css`) paints its frame with `--blok-tooltip-bg`. It is a hover card, not a tooltip. It is pinned to its old value so it does not move with this change.
+Coupling: the toolbox preview card (`block-preview.css`) paints its frame with `--blok-tooltip-bg`, so it moves to rgb(44,44,43) too. That matches Notion: its slash-menu hover hint, the same role, is the dark rgb(44,44,43) box (research/28:61, research/30:498).
 
 ## 14 · Database surfaces with NO measured Notion colour
 
@@ -327,3 +327,13 @@ Verdict mentions over the 180 table rows of sections 1–13 (a row with separate
 | PRIOR | 5 |
 | HOST | 3 |
 | UNMEASURED (rows) | 14, plus the §14 list |
+
+## Phase 2 result (after)
+
+Re-probed in a fresh build (same fixture, both schemes). Every CHANGE and AA row above now reads its target value, with these notes:
+
+- Chrome serialises the 0.051 hover alpha as `0.05` (8-bit alpha: 13/255). The source holds 0.051.
+- Dark board column counts, cards and tints for blue / green / brown / yellow / pink were already Notion's; only the dark blue count moved (AA step 41,137,232).
+- Unchanged on purpose: BLUE rows, PRIOR rows, HOST rows, and every UNMEASURED surface.
+- New database tokens: `--blok-database-ink`, `-ink-secondary`, `-ink-tertiary`, `-hover-bg`, `-checkbox-checked-bg`, `-switch-on-bg`, `-tpl-border`, `-calendar-event-muted-text`, `-column-default-*`, light `-column-blue-*` / `-column-green-*`. They are new, so not breaking.
+- `[data-blok-database-wrapper]` now sets `color` and re-sets `--blok-icon-active-text` to the database ink, so text with no colour of its own (card properties, list rows) and selected rows share one ink.

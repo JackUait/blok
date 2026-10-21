@@ -37,13 +37,13 @@ describe('createTooltipContent', () => {
     vi.clearAllMocks();
   });
 
-  it('creates a container element with flex column layout and muted text color', () => {
+  it('creates a container element with flex column layout and the Notion muted hint ink', () => {
     const result = createTooltipContent(['Line 1', 'Line 2']);
 
     expect(result.style.display).toBe('flex');
     expect(result.style.flexDirection).toBe('column');
     expect(result.style.gap).toBe('4px');
-    expect(result.style.color).toBe('rgba(255, 255, 255, 0.55)');
+    expect(result.style.color).toBe('rgb(173, 169, 163)');
   });
 
   it('creates a single line element without space', () => {

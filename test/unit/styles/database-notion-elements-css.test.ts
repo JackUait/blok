@@ -99,7 +99,8 @@ describe('pressed and hover fills, light and dark (research/27 §6)', () => {
 
   it('a View settings row presses to the measured fills: light is the hover ink at double alpha (research/30 B5)', () => {
     expect(tokenValues('--blok-database-panel-row-active-bg')).toEqual([ 'rgba(33, 27, 23, 0.102)', 'rgba(255, 255, 255, 0.11)', 'rgba(255, 255, 255, 0.11)' ]);
-    expect(tokenValues('--blok-database-table-header-hover-bg')[0]).toBe('rgba(33, 27, 23, 0.05)');
+    expect(tokenValues('--blok-database-table-header-hover-bg')[0]).toBe('var(--blok-database-hover-bg)');
+    expect(tokenValues('--blok-database-hover-bg')[0]).toBe('rgba(33, 27, 23, 0.051)');
     expect(ruleBody(ROW_ACTIVE)).toContain('background-color: var(--blok-database-panel-row-active-bg)');
     expect(tokenValues('--blok-database-table-header-hover-bg').slice(1)).toEqual([ 'rgba(255, 255, 255, 0.055)', 'rgba(255, 255, 255, 0.055)' ]);
     // The press rule must come after the hover rule, which it ties on specificity while both match.

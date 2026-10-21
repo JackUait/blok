@@ -27,11 +27,12 @@ describe('database date reminder css', () => {
     expect(date).toContain('color: var(--blok-database-reminder-text)');
   });
 
-  // Measured rgb(39, 131, 222) in both themes (research/26 §4f), not the global accent #2383e2.
+  // Notion measured rgb(39, 131, 222) in both themes (research/26 §4f); Blok uses its AA steps,
+  // light rgb(35, 119, 211) and dark rgb(41, 137, 232), not the global accent #2383e2.
   it('paints the date in its own database token, not the global accent', () => {
     const values = [ ...database.matchAll(/--blok-database-reminder-text:\s*([^;]+);/g) ].map((m) => m[1].trim());
 
-    expect(values).toEqual(['rgb(39, 131, 222)', 'rgb(39, 131, 222)', 'rgb(39, 131, 222)']);
+    expect(values).toEqual(['rgb(35, 119, 211)', 'rgb(41, 137, 232)', 'rgb(41, 137, 232)']);
   });
 
   // research/23 §1: 342 wide; the search stays put while the list scrolls; two-line rows.
@@ -41,8 +42,8 @@ describe('database date reminder css', () => {
     expect(rulesFor('[data-blok-database-date-setting-menu="timeZone"][data-blok-top-layer][popover]')).not.toContain('overflow-y');
     expect(rulesFor('[data-blok-database-date-zone-search][data-blok-field]')).toContain('font-size: 14px');
     expect(rulesFor('[data-blok-database-date-zone-heading]')).toContain('font-weight: 500');
-    expect(rulesFor('[data-blok-database-date-zone-offset]')).toContain('color: var(--blok-text-secondary)');
-    expect(rulesFor('[data-blok-database-date-setting-option][data-active]')).toContain('background-color: var(--blok-item-hover-bg)');
+    expect(rulesFor('[data-blok-database-date-zone-offset]')).toContain('color: var(--blok-database-ink-secondary)');
+    expect(rulesFor('[data-blok-database-date-setting-option][data-active]')).toContain('background-color: var(--blok-database-hover-bg)');
   });
 
   // research/30 B25: rows are 45 tall and 46 apart.
@@ -53,7 +54,7 @@ describe('database date reminder css', () => {
   // research/23 §1: a 16px check in primary ink at the row's end; the checked row has no fill.
   it('the checked option shows a 16px primary-ink check and no fill', () => {
     expect(rulesFor('[data-blok-database-date-remind-check] > svg')).toContain('width: 16px');
-    expect(rulesFor('[data-blok-database-date-remind-check]')).toContain('color: var(--blok-text-primary)');
+    expect(rulesFor('[data-blok-database-date-remind-check]')).toContain('color: var(--blok-database-ink)');
     expect(rulesFor('[data-blok-database-date-remind-check]')).toContain('margin-inline-start: auto');
     expect(database).not.toMatch(/\[data-blok-database-date-(setting|remind)-option\]\[aria-(checked|selected)="true"\]/);
   });

@@ -611,8 +611,8 @@
   --blok-active-icon: #2383e2;
   --blok-link: #1b6fc2;
   --blok-line-gray: #eff0f1;
-  --blok-tooltip-bg: #1d202b;
-  --blok-tooltip-font: #cdd1e0;
+  --blok-tooltip-bg: rgb(44, 44, 43);
+  --blok-tooltip-font: rgb(240, 239, 237);
   --blok-icon-active-bg: rgba(55, 53, 47, 0.1);
   --blok-icon-active-text: var(--blok-text-primary);
   --blok-text-primary: black;
@@ -948,8 +948,8 @@
     --blok-active-icon: #529cca;
     --blok-link: #529cca;
     --blok-line-gray: #37352f;
-    --blok-tooltip-bg: #2e2e2d;
-    --blok-tooltip-font: #e8e6e3;
+    --blok-tooltip-bg: rgb(44, 44, 43);
+    --blok-tooltip-font: rgb(240, 239, 237);
     --blok-icon-active-bg: rgba(255, 255, 255, 0.09);
     --blok-icon-active-text: var(--blok-text-primary);
     --blok-text-primary: #e2e0dc;
@@ -1114,8 +1114,8 @@
   --blok-active-icon: #529cca;
   --blok-link: #529cca;
   --blok-line-gray: #37352f;
-  --blok-tooltip-bg: #2e2e2d;
-  --blok-tooltip-font: #e8e6e3;
+  --blok-tooltip-bg: rgb(44, 44, 43);
+  --blok-tooltip-font: rgb(240, 239, 237);
   --blok-icon-active-bg: rgba(255, 255, 255, 0.09);
   --blok-icon-active-text: var(--blok-text-primary);
   --blok-text-primary: #e2e0dc;

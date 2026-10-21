@@ -675,6 +675,6 @@ describe('title header page icons through the real editor', () => {
 
     expect(rule, 'selected paint must be scoped to this menu item').toBeDefined();
     expect(rule).toMatch(/--blok-icon-active-bg:\s*transparent\s*;/);
-    expect(rule).toMatch(/--blok-icon-active-text:\s*var\(--blok-text-primary\)\s*;/);
+    expect(rule).toMatch(/--blok-icon-active-text:\s*var\(--blok-database-ink\)\s*;/);
   });
 });

@@ -21,7 +21,7 @@ describe('AI Autofill setup css', () => {
   it('marks the selected tab with primary ink and no fill (no-blue law)', () => {
     const selected = rulesFor('[data-blok-database-autofill-tab][aria-selected="true"]').join(' ');
 
-    expect(selected).toContain('color: var(--blok-text-primary)');
+    expect(selected).toContain('color: var(--blok-database-ink)');
     expect(selected).not.toMatch(/background/);
     expect(rulesFor('[data-blok-database-autofill-tab]').join(' ')).toContain('background: transparent');
   });
@@ -87,8 +87,8 @@ describe('AI Autofill setup css', () => {
       ...rulesFor('[data-blok-database-table-autofill-open]'),
     ].join(' ');
 
-    expect(buttons).toContain('color: var(--blok-text-secondary)');
-    expect(rulesFor('[data-blok-database-table-autofill-thinking]').join(' ')).toContain('color: var(--blok-text-secondary)');
+    expect(buttons).toContain('color: var(--blok-database-ink-secondary)');
+    expect(rulesFor('[data-blok-database-table-autofill-thinking]').join(' ')).toContain('color: var(--blok-database-ink-secondary)');
     expect(buttons).not.toMatch(/blue|--blok-link|--blok-focus/);
   });
 });

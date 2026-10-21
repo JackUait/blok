@@ -35,7 +35,7 @@ describe('database row page layout css', () => {
   it('marks the open tab with primary ink and an underline, never blue', () => {
     const body = ruleBody('[data-blok-database-drawer-tabs] [role="tab"][aria-selected="true"]');
 
-    expect(body).toContain('color: var(--blok-text-primary)');
+    expect(body).toContain('color: var(--blok-database-ink)');
     expect(body).toContain('box-shadow: inset 0 -2px 0 currentColor');
     expect(body).not.toMatch(/blue|#2383e2|rgb\(35, 131, 226\)/i);
   });
@@ -153,7 +153,7 @@ describe('database row page layout css', () => {
     expect(ruleBody('[data-blok-database-drawer-pins] [data-blok-database-drawer-pin][data-labelless]')).toContain('min-height: 0');
     expect(placeholder).toContain('display: inline-flex');
     expect(placeholder).toContain('align-items: center');
-    expect(placeholder).toContain('color: var(--blok-text-tertiary)');
+    expect(placeholder).toContain('color: var(--blok-database-ink-tertiary)');
     expect(placeholder).toContain('font-size: 14px');
     expect(placeholder).toContain('font-weight: 400');
     // With no label to grab, the builder drags the pin itself, on touch too.
@@ -247,9 +247,9 @@ describe('database row page layout css', () => {
   // research/09 §10: Cancel has no fill; Apply is the primary action, so it stays blue.
   it('fills only Apply, and joins its chevron half to it', () => {
     expect(ruleBody('[data-blok-database-layout-cancel]')).toContain('background: none');
-    expect(ruleBody('[data-blok-database-layout-apply]')).toContain('background-color: var(--blok-accent)');
+    expect(ruleBody('[data-blok-database-layout-apply]')).toContain('background-color: var(--blok-database-new-bg)');
     expect(ruleBody('[data-blok-database-layout-apply]')).toContain('border-start-end-radius: 0');
-    expect(ruleBody('[data-blok-database-layout-more-save]')).toContain('background-color: var(--blok-accent)');
+    expect(ruleBody('[data-blok-database-layout-more-save]')).toContain('background-color: var(--blok-database-new-bg)');
     expect(ruleBody('[data-blok-database-layout-more-save]')).toContain('border-start-start-radius: 0');
   });
 
@@ -265,7 +265,7 @@ describe('database row page layout css', () => {
     expect(ruleBody('[data-blok-database-layout-heading]')).toContain('flex-direction: column');
     expect(preview).toContain('font-size: 12px');
     expect(preview).toContain('font-weight: 500');
-    expect(preview).toContain('color: var(--blok-text-secondary)');
+    expect(preview).toContain('color: var(--blok-database-ink-secondary)');
     expect(preview).toContain('background: none');
     expect(preview).toContain('pointer-events: auto');
     expect(database).toMatch(/\[data-blok-database-layout-preview\]:focus-visible[^{]*\{[^}]*outline: 2px solid var\(--blok-focus-ring\)/);
@@ -273,15 +273,16 @@ describe('database row page layout css', () => {
 
   // research/09 §1: the zero-row heading shows the grey placeholder "New page".
   it('greys the placeholder title and the empty lines of a placeholder page', () => {
-    expect(ruleBody('[data-blok-database-layout-canvas-title][data-placeholder]')).toContain('color: var(--blok-text-tertiary)');
-    expect(ruleBody('[data-blok-database-layout-canvas-content], [data-blok-database-layout-group-empty]')).toContain('color: var(--blok-text-tertiary)');
+    expect(ruleBody('[data-blok-database-layout-canvas-title][data-placeholder]')).toContain('color: var(--blok-database-ink-tertiary)');
+    expect(ruleBody('[data-blok-database-layout-canvas-content], [data-blok-database-layout-group-empty]')).toContain('color: var(--blok-database-ink-tertiary)');
     // research/09 §1: the zero-row Preview menu reads "No results." in grey, inset like a menu row.
-    expect(ruleBody('[data-blok-database-layout-preview-empty]')).toContain('color: var(--blok-text-secondary)');
+    expect(ruleBody('[data-blok-database-layout-preview-empty]')).toContain('color: var(--blok-database-ink-secondary)');
     expect(ruleBody('[data-blok-database-layout-preview-empty]')).toContain('padding-inline: var(--blok-space-2)');
   });
 
   // research/10 §2: 117x80 cards. Notion rings the selected one blue; the blue law makes it neutral.
-  // Labels as measured: light 115,114,110 / 29,27,22 (research/10 §2), dark 90,90,90 / white (research/21 §1n).
+  // Labels as measured: light 115,114,110 / 29,27,22 (research/10 §2), dark white (research/21 §1n).
+  // Dark's measured 90,90,90 fails AA, so the dark label is the tertiary ink's AA step.
   it('marks the selected Structure card with the measured label inks and no blue', () => {
     const card = ruleBody('[data-blok-database-layout-structure-card]');
     const selected = ruleBody('[data-blok-database-layout-structure-card][aria-pressed="true"]');
@@ -292,7 +293,7 @@ describe('database row page layout css', () => {
     expect(card).toContain('block-size: 80px');
     expect(ink(card)).toBe('var(--blok-database-builder-tile-text)');
     expect(ink(selected)).toBe('var(--blok-database-builder-tile-text-active)');
-    expect(values('--blok-database-builder-tile-text')).toEqual(['rgb(115, 114, 110)', 'rgb(90, 90, 90)', 'rgb(90, 90, 90)']);
+    expect(values('--blok-database-builder-tile-text')).toEqual(['rgb(115, 114, 110)', 'var(--blok-database-ink-tertiary)', 'var(--blok-database-ink-tertiary)']);
     expect(values('--blok-database-builder-tile-text-active')).toEqual(['rgb(29, 27, 22)', 'rgb(255, 255, 255)', 'rgb(255, 255, 255)']);
     expect(selected).not.toMatch(/background/);
     expect(selected).toContain('font-weight: 600');
@@ -310,7 +311,7 @@ describe('database row page layout css', () => {
     expect(card).toContain('border-radius: var(--blok-radius-control-lg)');
     expect(card).toContain('box-shadow: inset 0 0 0 1px var(--blok-database-builder-canvas-ring)');
     expect(strip).toContain('background-color: var(--blok-database-builder-canvas-ring)');
-    expect(name).toContain('color: var(--blok-text-secondary)');
+    expect(name).toContain('color: var(--blok-database-ink-secondary)');
     expect(name).toContain('font-weight: 500');
     for (const body of [card, strip, name]) expect(body).not.toMatch(/accent|blue|#2383e2|rgb\(35, 131, 226\)|rgb\(182, 212, 243\)/i);
   });
@@ -335,7 +336,7 @@ describe('database row page layout css', () => {
     expect(row).toContain('min-block-size: 28px');
     expect(toggle).toContain('inline-size: 24px');
     expect(toggle).toContain('block-size: 24px');
-    expect(toggle).toContain('color: var(--blok-text-primary)');
+    expect(toggle).toContain('color: var(--blok-database-ink)');
     expect(database).not.toMatch(/\[data-blok-database-layout-pin-toggle\]\[data-pinned\][^{]*\{[^}]*color/);
   });
 
@@ -346,7 +347,7 @@ describe('database row page layout css', () => {
 
     expect(row).toContain('min-block-size: 28px');
     expect(toggle).toContain('inline-size: 24px');
-    expect(toggle).toContain('color: var(--blok-text-primary)');
+    expect(toggle).toContain('color: var(--blok-database-ink)');
     expect(database).not.toMatch(/\[data-blok-database-layout-eye\]\[data-visibility="(?:always|hideWhenEmpty)"\][^{]*\{[^}]*color/);
     expect(ruleBody('[data-blok-database-panel-header] [data-blok-database-layout-add-section]')).toContain('margin-inline-start: auto');
   });
@@ -372,7 +373,7 @@ describe('database row page layout css', () => {
     expect(add).toContain('block-size: 32px');
     expect(add).toContain('border-radius: var(--blok-radius-pill)');
     expect(add).toContain('background-color: var(--blok-database-builder-canvas-ring)');
-    expect(add).toContain('color: var(--blok-text-secondary)');
+    expect(add).toContain('color: var(--blok-database-ink-secondary)');
     expect(add).not.toMatch(/accent|blue|#2383e2|rgb\(35, 131, 226\)|rgb\(39, 131, 222\)/i);
   });
 
@@ -406,14 +407,14 @@ describe('database row page layout css', () => {
     const row = ruleBody('[data-blok-database-layout-section-row]');
 
     expect(row).toContain('min-block-size: 24px');
-    expect(row).toContain('color: var(--blok-text-secondary)');
+    expect(row).toContain('color: var(--blok-database-ink-secondary)');
     expect(row).toContain('font-weight: 500');
     // Done is the field's primary action, like Apply: a button, not a selected state.
-    expect(ruleBody('[data-blok-database-layout-section-done]')).toContain('background-color: var(--blok-accent)');
-    expect(ruleBody('[data-blok-database-layout-section-empty]')).toContain('color: var(--blok-text-tertiary)');
+    expect(ruleBody('[data-blok-database-layout-section-done]')).toContain('background-color: var(--blok-database-new-bg)');
+    expect(ruleBody('[data-blok-database-layout-section-empty]')).toContain('color: var(--blok-database-ink-tertiary)');
     expect(ruleBody('[data-blok-database-layout-section-empty]')).toContain('padding-inline-start: var(--blok-space-5)');
     expect(ruleBody('[data-blok-database-drawer-section-name]')).toContain('font-size: 13px');
-    expect(ruleBody('[data-blok-database-panel-description]')).toContain('color: var(--blok-text-secondary)');
+    expect(ruleBody('[data-blok-database-panel-description]')).toContain('color: var(--blok-database-ink-secondary)');
     expect(ruleBody('[data-blok-database-layout-group-handle]')).toContain('cursor: grab');
     // Sections move from their menu only, so their ⠿ is no drag handle.
     expect(ruleBody('[data-blok-database-layout-group-handle], [data-blok-database-layout-section-handle]')).not.toContain('cursor: grab');
@@ -427,7 +428,7 @@ describe('database row page layout css', () => {
     const prompt = ruleBody('[data-blok-database-row-empty]');
     const create = ruleBody('[data-blok-database-row-create-template]');
 
-    expect(prompt).toContain('color: var(--blok-text-tertiary)');
+    expect(prompt).toContain('color: var(--blok-database-ink-tertiary)');
     expect(create).toContain('text-decoration: underline');
     expect(create).toContain('cursor: pointer');
   });
@@ -439,7 +440,7 @@ describe('database row page layout css', () => {
 
     expect(pick).toContain('block-size: 32px');
     expect(pick).toContain('background: none');
-    expect(ink(pick)).toBe('var(--blok-text-secondary)');
+    expect(ink(pick)).toBe('var(--blok-database-ink-secondary)');
     expect(active).toContain('background: var(--blok-item-focus-bg)');
     expect(ink(active) ?? ink(pick)).toBe(ink(pick));
     expect(active).not.toMatch(/accent|blue|focus-ring|#2383e2|toggle-on/i);
@@ -461,7 +462,7 @@ describe('database row page layout css', () => {
 
     expect(title).toContain('font-size: 13px');
     expect(title).toContain('font-weight: 500');
-    expect(title).toContain('color: var(--blok-text-secondary)');
+    expect(title).toContain('color: var(--blok-database-ink-secondary)');
     expect(close).toContain('inline-size: 24px');
     expect(close).toContain('block-size: 24px');
     expect(close).toContain('border-radius: var(--blok-radius-pill)');
@@ -511,8 +512,8 @@ describe('database row page layout css', () => {
 
     expect(pill).toContain('min-height: 32px');
     expect(pill).toContain('border-radius: var(--blok-radius-pill)');
-    expect(selected).toContain('color: var(--blok-text-primary)');
-    expect(selected).toContain('box-shadow: inset 0 0 0 1.25px var(--blok-text-primary)');
+    expect(selected).toContain('color: var(--blok-database-ink)');
+    expect(selected).toContain('box-shadow: inset 0 0 0 1.25px var(--blok-database-ink)');
     expect(selected).not.toMatch(/blue|#2383e2|rgb\(35, 131, 226\)|background/i);
   });
 

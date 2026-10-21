@@ -45,7 +45,7 @@ describe('database comment badge css', () => {
   });
 
   it('hovers with the neutral item fill, never blue', () => {
-    expect(rulesFor('[data-blok-database-comment-badge]:hover')).toContain('background-color: var(--blok-item-hover-bg)');
+    expect(rulesFor('[data-blok-database-comment-badge]:hover')).toContain('background-color: var(--blok-database-hover-bg)');
   });
 
   // The list title grows to fill the row, which would push the badge to the properties.

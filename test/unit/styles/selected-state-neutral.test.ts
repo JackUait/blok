@@ -71,7 +71,8 @@ describe('selected-state tokens are neutral', () => {
     const values = declarations('--blok-icon-active-text');
 
     expect(values.length).toBeGreaterThanOrEqual(3);
-    values.forEach(value => expect(value).toBe('var(--blok-text-primary)'));
+    // Database surfaces re-set it to their own primary ink (Notion's 44,44,43), never a colour.
+    values.forEach(value => expect(['var(--blok-text-primary)', 'var(--blok-database-ink)']).toContain(value));
   });
 
   it('the public settingsButtonActive class paints primary ink on a gray fill', () => {
@@ -94,8 +95,8 @@ describe('selected-state tokens are neutral', () => {
 
     expect(rule?.[1]).toContain('background-color: var(--blok-icon-active-bg)');
     expect(rule?.[1]).toContain('color: var(--blok-icon-active-text)');
-    // The same ink as someone else's pill: --blok-icon-active-text is the primary ink.
-    expect(css.match(/\[data-blok-database-feed-reaction\]\s*\{([^}]*)\}/)?.[1]).toContain('color: var(--blok-text-primary)');
+    // The same ink as someone else's pill: the database primary ink.
+    expect(css.match(/\[data-blok-database-feed-reaction\]\s*\{([^}]*)\}/)?.[1]).toContain('color: var(--blok-database-ink)');
   });
 
   it('an on day chip in Edit cadence is gray with primary ink, not Notion\'s blue', () => {

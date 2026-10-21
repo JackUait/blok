@@ -997,6 +997,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const SELECTED_OWN_BLOCK_BYTES = 319;
     // database.css: the up/down chevron in the CSV Import Location field and a form Dropdown question (research/31 §5a, research/12 §4).
     const DATABASE_SELECT_CHEVRON_BYTES = 460;
+    // database.css: Notion's inks, hover fill and AA steps as database tokens, board blue/green/default, checkbox and switch blue;
+    // colors.css + tokens.css: Notion's tooltip bg, ink and shadow (plans 34 colour audit).
+    const DATABASE_NOTION_COLOURS_BYTES = 5_991 + 57 + 6;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1158,7 +1161,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_BAND_TOGGLE_BYTES
       + DATABASE_PURPLE_TEMPLATE_TILE_BYTES
       + SELECTED_OWN_BLOCK_BYTES
-      + DATABASE_SELECT_CHEVRON_BYTES;
+      + DATABASE_SELECT_CHEVRON_BYTES
+      + DATABASE_NOTION_COLOURS_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

@@ -18,8 +18,8 @@ export interface TooltipSegment {
  */
 export type TooltipLine = string | TooltipSegment[];
 
-/** The muted ink of a two-tone hint; the bright part uses the tooltip font colour. */
-export const TOOLTIP_MUTED_INK = 'rgba(255, 255, 255, 0.55)';
+/** The muted ink of a two-tone hint (Notion's inverse secondary, research/31 §1); the bright part uses the tooltip font colour. */
+export const TOOLTIP_MUTED_INK = 'rgb(173, 169, 163)';
 
 /**
  * Applies highlight styling (white color, semibold weight) to a span element.

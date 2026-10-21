@@ -62,7 +62,7 @@ describe('database confirm dialog css', () => {
     expect(body).toContain('font-size: 14px');
     expect(body).toContain('font-weight: 400');
     expect(body).toContain('text-align: center');
-    expect(body).toContain('color: var(--blok-text-secondary)');
+    expect(body).toContain('color: var(--blok-database-ink-secondary)');
   });
 
   it('stacks full-width 32px buttons with the control radius', () => {
@@ -81,7 +81,8 @@ describe('database confirm dialog css', () => {
 
     expect(body).toContain('color: var(--blok-database-confirm-destructive-text)');
     expect(body).toContain('border-color: var(--blok-database-confirm-destructive-border)');
-    expect(tokenValues('--blok-database-confirm-destructive-text')[0]).toBe('rgb(229, 100, 88)');
+    // Light is the AA step of Notion's rgb(229, 100, 88); dark keeps the measured value.
+    expect(tokenValues('--blok-database-confirm-destructive-text')).toEqual(['rgb(182, 79, 70)', 'rgb(229, 100, 88)', 'rgb(229, 100, 88)']);
     expect(tokenValues('--blok-database-confirm-destructive-border')[0]).toBe('rgba(206, 24, 0, 0.165)');
   });
 

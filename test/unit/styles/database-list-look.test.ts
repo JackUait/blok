@@ -37,7 +37,7 @@ describe('list rows (research/07)', () => {
     expect(body).toContain('font-size: 14px');
     expect(body).toContain('line-height: 21px');
     expect(body).toContain('font-weight: 500');
-    expect(body).toContain('color: var(--blok-text-primary)');
+    expect(body).toContain('color: var(--blok-database-ink)');
   });
 
   it('gives each property a 30px slot padded 0 8px, with no fill of its own', () => {

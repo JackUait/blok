@@ -2130,8 +2130,8 @@
   --blok-active-icon: #2383e2;
   --blok-link: #1b6fc2;
   --blok-line-gray: #eff0f1;
-  --blok-tooltip-bg: #1d202b;
-  --blok-tooltip-font: #cdd1e0;
+  --blok-tooltip-bg: rgb(44, 44, 43);
+  --blok-tooltip-font: rgb(240, 239, 237);
   --blok-icon-active-bg: rgba(55, 53, 47, 0.1);
   --blok-icon-active-text: var(--blok-text-primary);
   --blok-text-primary: black;
@@ -2464,8 +2464,8 @@
   --blok-active-icon: #529cca;
   --blok-link: #529cca;
   --blok-line-gray: #37352f;
-  --blok-tooltip-bg: #2e2e2d;
-  --blok-tooltip-font: #e8e6e3;
+  --blok-tooltip-bg: rgb(44, 44, 43);
+  --blok-tooltip-font: rgb(240, 239, 237);
   --blok-icon-active-bg: rgba(255, 255, 255, 0.09);
   --blok-icon-active-text: var(--blok-text-primary);
   --blok-text-primary: #e2e0dc;
@@ -2630,8 +2630,8 @@
   --blok-active-icon: #529cca;
   --blok-link: #529cca;
   --blok-line-gray: #37352f;
-  --blok-tooltip-bg: #2e2e2d;
-  --blok-tooltip-font: #e8e6e3;
+  --blok-tooltip-bg: rgb(44, 44, 43);
+  --blok-tooltip-font: rgb(240, 239, 237);
   --blok-icon-active-bg: rgba(255, 255, 255, 0.09);
   --blok-icon-active-text: var(--blok-text-primary);
   --blok-text-primary: #e2e0dc;
@@ -3965,6 +3965,26 @@ span[data-blok-slash-search] {
 }
 
 :where([data-blok-interface]), :where([data-blok-popover]), :where([data-blok-top-layer]) {
+  --blok-database-ink: rgb(44, 44, 43);
+  --blok-database-ink-secondary: rgb(114, 111, 106);
+  --blok-database-ink-tertiary: rgb(114, 111, 106);
+  --blok-database-hover-bg: rgba(33, 27, 23, 0.051);
+  --blok-database-checkbox-checked-bg: rgb(39, 131, 222);
+  --blok-database-switch-on-bg: rgb(39, 131, 222);
+  --blok-database-tpl-border: rgb(230, 229, 227);
+  --blok-database-calendar-event-muted-text: var(--blok-database-ink-secondary);
+  --blok-database-column-default-bg: var(--blok-database-column-bg);
+  --blok-database-column-default-ring: var(--blok-database-card-ring);
+  --blok-database-column-default-accent: var(--blok-database-column-accent);
+  --blok-database-column-blue-bg: rgba(0, 128, 213, 0.047);
+  --blok-database-column-blue-ring: rgba(0, 124, 215, 0.094);
+  --blok-database-column-blue-accent: var(--blok-database-option-blue-text);
+  --blok-database-column-green-bg: rgba(3, 87, 31, 0.035);
+  --blok-database-column-green-ring: rgba(0, 100, 45, 0.09);
+  --blok-database-column-green-accent: var(--blok-database-option-green-text);
+  --blok-database-card-bg-hover: rgba(54, 29, 2, 0.031);
+  --blok-database-popover-shadow: rgba(25, 25, 25, 0.05) 0 20px 24px, rgba(25, 25, 25, 0.027) 0 5px 8px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
+  --blok-database-popover-hover: var(--blok-database-hover-bg);
   --blok-database-option-default-bg: rgba(42, 28, 0, 0.07);
   --blok-database-option-default-text: rgb(44, 44, 43);
   --blok-database-option-gray-bg: rgba(28, 19, 1, 0.11);
@@ -3998,12 +4018,12 @@ span[data-blok-slash-search] {
   --blok-database-column-bg: rgba(66, 35, 3, 0.03);
   --blok-database-table-bg: var(--blok-bg-primary);
   --blok-database-table-border: rgba(42, 28, 0, 0.07);
-  --blok-database-table-header-text: rgb(125, 122, 117);
+  --blok-database-table-header-text: var(--blok-database-ink-secondary);
   --blok-database-table-header-icon: rgb(142, 139, 134);
-  --blok-database-table-header-hover-bg: rgba(33, 27, 23, 0.05);
+  --blok-database-table-header-hover-bg: var(--blok-database-hover-bg);
   --blok-database-table-cell-text: rgb(44, 44, 43);
-  --blok-database-table-muted-text: rgb(161, 158, 153);
-  --blok-database-table-calc-value: rgb(125, 122, 117);
+  --blok-database-table-muted-text: var(--blok-database-ink-tertiary);
+  --blok-database-table-calc-value: var(--blok-database-ink-secondary);
   --blok-database-table-gutter-icon: rgb(173, 169, 163);
   --blok-database-table-control-border: rgba(28, 19, 1, 0.11);
   --blok-database-cell-link-underline: rgba(28, 19, 1, 0.11);
@@ -4053,7 +4073,7 @@ span[data-blok-slash-search] {
   --blok-database-tpl-gallery-bg: rgb(249, 248, 247);
   --blok-database-tpl-gallery-card-bg: rgba(66, 35, 3, 0.03);
   --blok-database-confirm-shadow: rgba(25, 25, 25, 0.24) 0 24px 48px, rgba(25, 25, 25, 0.14) 0 4px 12px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
-  --blok-database-confirm-destructive-text: rgb(229, 100, 88);
+  --blok-database-confirm-destructive-text: rgb(182, 79, 70);
   --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
   --blok-database-drop-line: var(--blok-database-table-drop-line);
   --blok-database-gallery-card-bg: #ffffff;
@@ -4061,9 +4081,9 @@ span[data-blok-slash-search] {
   --blok-database-gallery-card-hover-bg: rgba(55, 53, 47, 0.04);
   --blok-database-gallery-preview-bg: rgba(66, 35, 3, 0.03);
   --blok-database-gallery-preview-border: rgba(42, 28, 0, 0.07);
-  --blok-database-gallery-preview-text: rgb(125, 122, 117);
+  --blok-database-gallery-preview-text: var(--blok-database-ink-secondary);
   --blok-database-gallery-title-text: rgb(44, 44, 43);
-  --blok-database-gallery-muted-text: rgb(161, 158, 153);
+  --blok-database-gallery-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-calendar-border: rgb(230, 229, 227);
   --blok-database-calendar-weekend-bg: rgb(249, 248, 247);
   --blok-database-builder-backdrop: rgb(249, 248, 247);
@@ -4074,20 +4094,20 @@ span[data-blok-slash-search] {
   --blok-database-builder-tile-ring: var(--blok-database-drawer-border);
   --blok-database-builder-tile-text: rgb(115, 114, 110);
   --blok-database-builder-tile-text-active: rgb(29, 27, 22);
-  --blok-database-calendar-muted-text: rgb(161, 158, 153);
+  --blok-database-calendar-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-calendar-day-text: rgb(44, 44, 43);
   --blok-database-calendar-nav-icon: rgb(142, 139, 134);
   --blok-database-calendar-event-bg: #ffffff;
   --blok-database-calendar-event-shadow: rgba(0, 0, 0, 0.04) 0 2px 4px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   --blok-database-calendar-event-hover-bg: rgba(84, 72, 49, 0.08);
-  --blok-database-reminder-text: rgb(39, 131, 222);
+  --blok-database-reminder-text: rgb(35, 119, 211);
   --blok-database-calendar-today-text: #ffffff;
   --blok-database-timeline-bar-bg: #ffffff;
   --blok-database-timeline-bar-shadow: rgba(0, 0, 0, 0.04) 0 2px 4px 0, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   --blok-database-timeline-grid-line: rgba(42, 28, 0, 0.07);
   --blok-database-timeline-header-line: rgb(230, 229, 227);
   --blok-database-timeline-weekend-bg: rgb(247, 247, 247);
-  --blok-database-timeline-muted-text: rgb(161, 158, 153);
+  --blok-database-timeline-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-timeline-text: rgb(44, 44, 43);
   --blok-database-timeline-control-text: rgb(142, 139, 134);
   --blok-database-timeline-arrow-bg: rgb(142, 139, 134);
@@ -4096,7 +4116,7 @@ span[data-blok-slash-search] {
   --blok-database-timeline-arrow-border: #ffffff;
   --blok-database-peek-backdrop: rgba(15, 15, 15, 0.6);
   --blok-database-peek-bg: var(--blok-popover-bg);
-  --blok-database-peek-title: var(--blok-text-primary);
+  --blok-database-peek-title: var(--blok-database-ink);
   --blok-database-peek-hover-bg: rgba(33, 27, 23, 0.051);
   --blok-database-peek-value-hover-bg: transparent;
   --blok-database-fill-handle-bg: #ffffff;
@@ -4126,32 +4146,38 @@ span[data-blok-slash-search] {
   --blok-database-dependency-line: rgb(142, 139, 134);
   --blok-database-dependency-conflict: rgb(229, 100, 88);
   --blok-database-tab-bg-active: rgba(33, 27, 23, 0.05);
-  --blok-database-tab-bg-hover: rgba(33, 27, 23, 0.05);
-  --blok-database-tab-text: rgb(125, 122, 117);
+  --blok-database-tab-bg-hover: var(--blok-database-hover-bg);
+  --blok-database-tab-text: var(--blok-database-ink-secondary);
   --blok-database-tab-text-active: rgb(44, 44, 43);
   --blok-database-card-actions-bg: var(--blok-database-table-open-bg);
   --blok-database-card-actions-shadow: var(--blok-database-table-open-shadow);
   --blok-database-card-actions-icon: rgb(125, 122, 117);
-  --blok-database-card-menu-hover-bg: rgba(33, 27, 23, 0.05);
-  --blok-database-peek-label: rgb(125, 122, 117);
+  --blok-database-card-menu-hover-bg: var(--blok-database-hover-bg);
+  --blok-database-peek-label: var(--blok-database-ink-secondary);
   --blok-database-favorite-star: rgb(246, 192, 80);
   --blok-database-comment-badge-text: rgb(44, 44, 43);
   --blok-database-comment-badge-icon: rgb(142, 139, 134);
   --blok-database-select-head-bg: rgba(242, 241, 238, 0.6);
   --blok-database-cell-editor-shadow: var(--blok-inline-toolbar-shadow);
-  --blok-database-date-weekday-text: var(--blok-text-tertiary);
-  --blok-database-date-today-text: var(--blok-text-secondary);
+  --blok-database-date-weekday-text: var(--blok-database-ink-tertiary);
+  --blok-database-date-today-text: var(--blok-database-ink-tertiary);
   --blok-database-date-today-hover-bg: rgba(33, 27, 23, 0.051);
-  --blok-database-date-setting-value-text: var(--blok-text-secondary);
-  --blok-database-panel-value-text: var(--blok-text-secondary);
-  --blok-database-panel-muted-text: var(--blok-text-secondary);
-  --blok-database-panel-input-bg: var(--blok-database-table-header-hover-bg);
-  --blok-database-filter-add-text: var(--blok-text-secondary);
-  --blok-database-form-answer-border: var(--blok-border-primary);
-  --blok-database-cell-empty-text: var(--blok-text-tertiary);
+  --blok-database-date-setting-value-text: var(--blok-database-ink-secondary);
+  --blok-database-panel-value-text: var(--blok-database-ink-tertiary);
+  --blok-database-panel-muted-text: var(--blok-database-ink-secondary);
+  --blok-database-panel-input-bg: rgba(66, 35, 3, 0.03);
+  --blok-database-filter-add-text: var(--blok-database-ink-tertiary);
+  --blok-database-form-answer-border: rgb(240, 239, 237);
+  --blok-database-cell-empty-text: var(--blok-database-ink-tertiary);
 }
 
 [@media (prefers-color-scheme: dark)] :where(:root:not([data-blok-theme="light"]) [data-blok-interface]), :where(:root:not([data-blok-theme="light"]) [data-blok-popover]), :where(:root:not([data-blok-theme="light"]) [data-blok-top-layer]) {
+  --blok-database-ink: rgb(240, 239, 237);
+  --blok-database-ink-secondary: rgb(173, 169, 163);
+  --blok-database-ink-tertiary: rgb(143, 140, 135);
+  --blok-database-hover-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-tpl-border: #333331;
+  --blok-database-calendar-event-muted-text: rgb(153, 150, 145);
   --blok-database-option-default-bg: rgba(255, 255, 243, 0.082);
   --blok-database-option-default-text: rgb(240, 239, 237);
   --blok-database-option-gray-bg: rgba(255, 252, 235, 0.306);
@@ -4189,7 +4215,7 @@ span[data-blok-slash-search] {
   --blok-database-table-header-icon: rgb(173, 169, 163);
   --blok-database-table-header-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-table-cell-text: rgb(240, 239, 237);
-  --blok-database-table-muted-text: rgb(125, 122, 117);
+  --blok-database-table-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-table-calc-value: rgb(173, 169, 163);
   --blok-database-table-gutter-icon: rgb(125, 122, 117);
   --blok-database-table-control-border: rgba(255, 255, 235, 0.1);
@@ -4203,7 +4229,7 @@ span[data-blok-slash-search] {
   --blok-database-panel-close-active-bg: rgba(255, 255, 255, 0.11);
   --blok-database-panel-row-active-bg: rgba(255, 255, 255, 0.11);
   --blok-database-confirm-close-bg: rgba(255, 255, 243, 0.082);
-  --blok-database-ai-prompt-placeholder: var(--blok-text-tertiary);
+  --blok-database-ai-prompt-placeholder: var(--blok-database-ink-tertiary);
   --blok-database-table-open-bg: rgb(37, 37, 37);
   --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-table-selection-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
@@ -4222,7 +4248,7 @@ span[data-blok-slash-search] {
   --blok-database-column-yellow-accent: rgb(216, 163, 47);
   --blok-database-column-blue-bg: rgba(41, 139, 253, 0.063);
   --blok-database-column-blue-ring: rgba(71, 157, 255, 0.173);
-  --blok-database-column-blue-accent: rgb(39, 131, 222);
+  --blok-database-column-blue-accent: rgb(41, 137, 232);
   --blok-database-column-green-bg: rgba(83, 255, 140, 0.035);
   --blok-database-column-green-ring: rgba(119, 255, 179, 0.118);
   --blok-database-column-green-accent: rgb(70, 161, 113);
@@ -4235,7 +4261,7 @@ span[data-blok-slash-search] {
   --blok-database-card-lift: rgba(25, 25, 25, 0.08) 0 2px 4px;
   --blok-database-card-ring: rgba(255, 255, 243, 0.082);
   --blok-database-confirm-backdrop: rgba(15, 15, 15, 0.6);
-  --blok-database-confirm-bg: rgb(37, 37, 37);
+  --blok-database-confirm-bg: rgb(32, 32, 32);
   --blok-database-starter-tile-green-bg: rgb(38, 61, 48);
   --blok-database-starter-tile-green-ink: var(--blok-database-option-green-text);
   --blok-database-starter-tile-blue-bg: rgb(35, 56, 80);
@@ -4244,7 +4270,7 @@ span[data-blok-slash-search] {
   --blok-database-starter-tile-gray-ink: var(--blok-database-option-gray-text);
   --blok-database-tpl-gallery-bg: rgb(25, 25, 25);
   --blok-database-tpl-gallery-card-bg: rgba(255, 255, 255, 0.03);
-  --blok-database-confirm-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
+  --blok-database-confirm-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.64) 0 24px 48px, rgba(25, 25, 25, 0.56) 0 4px 12px;
   --blok-database-confirm-destructive-text: rgb(229, 100, 88);
   --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
   --blok-database-gallery-card-bg: rgba(255, 255, 255, 0.055);
@@ -4252,9 +4278,9 @@ span[data-blok-slash-search] {
   --blok-database-gallery-card-hover-bg: rgb(47, 47, 47);
   --blok-database-gallery-preview-bg: rgba(252, 252, 252, 0.03);
   --blok-database-gallery-preview-border: transparent;
-  --blok-database-gallery-preview-text: var(--blok-text-secondary);
+  --blok-database-gallery-preview-text: var(--blok-database-ink-secondary);
   --blok-database-gallery-title-text: rgb(240, 239, 237);
-  --blok-database-gallery-muted-text: rgb(125, 122, 117);
+  --blok-database-gallery-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-calendar-border: rgb(56, 56, 54);
   --blok-database-calendar-weekend-bg: rgb(32, 32, 32);
   --blok-database-builder-backdrop: rgb(32, 32, 32);
@@ -4263,22 +4289,22 @@ span[data-blok-slash-search] {
   --blok-database-builder-canvas-bg: rgb(25, 25, 25);
   --blok-database-builder-tile-bg: rgb(32, 32, 32);
   --blok-database-builder-tile-ring: rgb(55, 55, 55);
-  --blok-database-builder-tile-text: rgb(90, 90, 90);
+  --blok-database-builder-tile-text: var(--blok-database-ink-tertiary);
   --blok-database-builder-tile-text-active: rgb(255, 255, 255);
-  --blok-database-calendar-muted-text: rgb(125, 122, 117);
+  --blok-database-calendar-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-calendar-day-text: rgb(240, 239, 237);
   --blok-database-calendar-nav-icon: rgb(173, 169, 163);
   --blok-database-calendar-event-bg: rgb(47, 47, 47);
   --blok-database-calendar-event-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 2px 4px;
   --blok-database-calendar-event-hover-bg: rgb(55, 55, 55);
-  --blok-database-reminder-text: rgb(39, 131, 222);
+  --blok-database-reminder-text: rgb(41, 137, 232);
   --blok-database-calendar-today-text: #ffffff;
   --blok-database-timeline-bar-bg: rgb(37, 37, 37);
   --blok-database-timeline-bar-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-timeline-grid-line: rgba(255, 255, 243, 0.082);
   --blok-database-timeline-header-line: rgb(56, 56, 54);
   --blok-database-timeline-weekend-bg: rgba(255, 255, 255, 0.03);
-  --blok-database-timeline-muted-text: rgb(125, 122, 117);
+  --blok-database-timeline-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-timeline-text: rgb(240, 239, 237);
   --blok-database-timeline-control-text: rgb(173, 169, 163);
   --blok-database-timeline-arrow-bg: rgb(173, 169, 163);
@@ -4290,7 +4316,7 @@ span[data-blok-slash-search] {
   --blok-database-peek-bg: rgb(32, 32, 32);
   --blok-database-peek-title: rgb(240, 239, 237);
   --blok-database-peek-value-hover-bg: transparent;
-  --blok-database-peek-hover-bg: var(--blok-item-hover-bg);
+  --blok-database-peek-hover-bg: var(--blok-database-hover-bg);
   --blok-database-peek-backdrop: rgba(15, 15, 15, 0.8);
   --blok-database-chart-blue: #3987e5;
   --blok-database-chart-orange: #d95926;
@@ -4327,21 +4353,28 @@ span[data-blok-slash-search] {
   --blok-database-peek-label: rgb(173, 169, 163);
   --blok-database-comment-badge-text: rgb(240, 239, 237);
   --blok-database-comment-badge-icon: rgb(173, 169, 163);
-  --blok-database-select-head-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-select-head-bg: rgba(255, 255, 255, 0.03);
   --blok-database-cell-editor-shadow: var(--blok-database-popover-shadow);
   --blok-database-date-weekday-text: rgb(139, 152, 152);
   --blok-database-date-today-text: rgb(142, 139, 134);
   --blok-database-date-today-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-date-setting-value-text: rgb(173, 169, 163);
-  --blok-database-panel-value-text: rgb(142, 139, 134);
+  --blok-database-panel-value-text: var(--blok-database-ink-tertiary);
   --blok-database-panel-muted-text: rgb(173, 169, 163);
   --blok-database-panel-input-bg: rgba(252, 252, 252, 0.03);
-  --blok-database-filter-add-text: rgb(135, 132, 127);
+  --blok-database-filter-add-text: var(--blok-database-ink-tertiary);
   --blok-database-form-answer-border: rgb(44, 44, 43);
-  --blok-database-cell-empty-text: rgb(138, 135, 130);
+  --blok-database-cell-empty-text: var(--blok-database-ink-tertiary);
+  --blok-database-popover-hover: var(--blok-database-hover-bg);
 }
 
 :where([data-blok-theme="dark"] [data-blok-interface]), :where([data-blok-theme="dark"] [data-blok-popover]), :where([data-blok-theme="dark"] [data-blok-top-layer]) {
+  --blok-database-ink: rgb(240, 239, 237);
+  --blok-database-ink-secondary: rgb(173, 169, 163);
+  --blok-database-ink-tertiary: rgb(143, 140, 135);
+  --blok-database-hover-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-tpl-border: #333331;
+  --blok-database-calendar-event-muted-text: rgb(153, 150, 145);
   --blok-database-option-default-bg: rgba(255, 255, 243, 0.082);
   --blok-database-option-default-text: rgb(240, 239, 237);
   --blok-database-option-gray-bg: rgba(255, 252, 235, 0.306);
@@ -4379,7 +4412,7 @@ span[data-blok-slash-search] {
   --blok-database-table-header-icon: rgb(173, 169, 163);
   --blok-database-table-header-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-table-cell-text: rgb(240, 239, 237);
-  --blok-database-table-muted-text: rgb(125, 122, 117);
+  --blok-database-table-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-table-calc-value: rgb(173, 169, 163);
   --blok-database-table-gutter-icon: rgb(125, 122, 117);
   --blok-database-table-control-border: rgba(255, 255, 235, 0.1);
@@ -4393,7 +4426,7 @@ span[data-blok-slash-search] {
   --blok-database-panel-close-active-bg: rgba(255, 255, 255, 0.11);
   --blok-database-panel-row-active-bg: rgba(255, 255, 255, 0.11);
   --blok-database-confirm-close-bg: rgba(255, 255, 243, 0.082);
-  --blok-database-ai-prompt-placeholder: var(--blok-text-tertiary);
+  --blok-database-ai-prompt-placeholder: var(--blok-database-ink-tertiary);
   --blok-database-table-open-bg: rgb(37, 37, 37);
   --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-table-selection-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
@@ -4412,7 +4445,7 @@ span[data-blok-slash-search] {
   --blok-database-column-yellow-accent: rgb(216, 163, 47);
   --blok-database-column-blue-bg: rgba(41, 139, 253, 0.063);
   --blok-database-column-blue-ring: rgba(71, 157, 255, 0.173);
-  --blok-database-column-blue-accent: rgb(39, 131, 222);
+  --blok-database-column-blue-accent: rgb(41, 137, 232);
   --blok-database-column-green-bg: rgba(83, 255, 140, 0.035);
   --blok-database-column-green-ring: rgba(119, 255, 179, 0.118);
   --blok-database-column-green-accent: rgb(70, 161, 113);
@@ -4425,7 +4458,7 @@ span[data-blok-slash-search] {
   --blok-database-card-lift: rgba(25, 25, 25, 0.08) 0 2px 4px;
   --blok-database-card-ring: rgba(255, 255, 243, 0.082);
   --blok-database-confirm-backdrop: rgba(15, 15, 15, 0.6);
-  --blok-database-confirm-bg: rgb(37, 37, 37);
+  --blok-database-confirm-bg: rgb(32, 32, 32);
   --blok-database-starter-tile-green-bg: rgb(38, 61, 48);
   --blok-database-starter-tile-green-ink: var(--blok-database-option-green-text);
   --blok-database-starter-tile-blue-bg: rgb(35, 56, 80);
@@ -4434,7 +4467,7 @@ span[data-blok-slash-search] {
   --blok-database-starter-tile-gray-ink: var(--blok-database-option-gray-text);
   --blok-database-tpl-gallery-bg: rgb(25, 25, 25);
   --blok-database-tpl-gallery-card-bg: rgba(255, 255, 255, 0.03);
-  --blok-database-confirm-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px;
+  --blok-database-confirm-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.64) 0 24px 48px, rgba(25, 25, 25, 0.56) 0 4px 12px;
   --blok-database-confirm-destructive-text: rgb(229, 100, 88);
   --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
   --blok-database-gallery-card-bg: rgba(255, 255, 255, 0.055);
@@ -4442,9 +4475,9 @@ span[data-blok-slash-search] {
   --blok-database-gallery-card-hover-bg: rgb(47, 47, 47);
   --blok-database-gallery-preview-bg: rgba(252, 252, 252, 0.03);
   --blok-database-gallery-preview-border: transparent;
-  --blok-database-gallery-preview-text: var(--blok-text-secondary);
+  --blok-database-gallery-preview-text: var(--blok-database-ink-secondary);
   --blok-database-gallery-title-text: rgb(240, 239, 237);
-  --blok-database-gallery-muted-text: rgb(125, 122, 117);
+  --blok-database-gallery-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-calendar-border: rgb(56, 56, 54);
   --blok-database-calendar-weekend-bg: rgb(32, 32, 32);
   --blok-database-builder-backdrop: rgb(32, 32, 32);
@@ -4453,22 +4486,22 @@ span[data-blok-slash-search] {
   --blok-database-builder-canvas-bg: rgb(25, 25, 25);
   --blok-database-builder-tile-bg: rgb(32, 32, 32);
   --blok-database-builder-tile-ring: rgb(55, 55, 55);
-  --blok-database-builder-tile-text: rgb(90, 90, 90);
+  --blok-database-builder-tile-text: var(--blok-database-ink-tertiary);
   --blok-database-builder-tile-text-active: rgb(255, 255, 255);
-  --blok-database-calendar-muted-text: rgb(125, 122, 117);
+  --blok-database-calendar-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-calendar-day-text: rgb(240, 239, 237);
   --blok-database-calendar-nav-icon: rgb(173, 169, 163);
   --blok-database-calendar-event-bg: rgb(47, 47, 47);
   --blok-database-calendar-event-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 2px 4px;
   --blok-database-calendar-event-hover-bg: rgb(55, 55, 55);
-  --blok-database-reminder-text: rgb(39, 131, 222);
+  --blok-database-reminder-text: rgb(41, 137, 232);
   --blok-database-calendar-today-text: #ffffff;
   --blok-database-timeline-bar-bg: rgb(37, 37, 37);
   --blok-database-timeline-bar-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-timeline-grid-line: rgba(255, 255, 243, 0.082);
   --blok-database-timeline-header-line: rgb(56, 56, 54);
   --blok-database-timeline-weekend-bg: rgba(255, 255, 255, 0.03);
-  --blok-database-timeline-muted-text: rgb(125, 122, 117);
+  --blok-database-timeline-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-timeline-text: rgb(240, 239, 237);
   --blok-database-timeline-control-text: rgb(173, 169, 163);
   --blok-database-timeline-arrow-bg: rgb(173, 169, 163);
@@ -4479,7 +4512,7 @@ span[data-blok-slash-search] {
   --blok-database-peek-bg: rgb(32, 32, 32);
   --blok-database-peek-title: rgb(240, 239, 237);
   --blok-database-peek-value-hover-bg: transparent;
-  --blok-database-peek-hover-bg: var(--blok-item-hover-bg);
+  --blok-database-peek-hover-bg: var(--blok-database-hover-bg);
   --blok-database-peek-backdrop: rgba(15, 15, 15, 0.8);
   --blok-database-fill-handle-bg: rgb(25, 25, 25);
   --blok-database-chart-blue: #3987e5;
@@ -4517,18 +4550,24 @@ span[data-blok-slash-search] {
   --blok-database-peek-label: rgb(173, 169, 163);
   --blok-database-comment-badge-text: rgb(240, 239, 237);
   --blok-database-comment-badge-icon: rgb(173, 169, 163);
-  --blok-database-select-head-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-select-head-bg: rgba(255, 255, 255, 0.03);
   --blok-database-cell-editor-shadow: var(--blok-database-popover-shadow);
   --blok-database-date-weekday-text: rgb(139, 152, 152);
   --blok-database-date-today-text: rgb(142, 139, 134);
   --blok-database-date-today-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-date-setting-value-text: rgb(173, 169, 163);
-  --blok-database-panel-value-text: rgb(142, 139, 134);
+  --blok-database-panel-value-text: var(--blok-database-ink-tertiary);
   --blok-database-panel-muted-text: rgb(173, 169, 163);
   --blok-database-panel-input-bg: rgba(252, 252, 252, 0.03);
-  --blok-database-filter-add-text: rgb(135, 132, 127);
+  --blok-database-filter-add-text: var(--blok-database-ink-tertiary);
   --blok-database-form-answer-border: rgb(44, 44, 43);
-  --blok-database-cell-empty-text: rgb(138, 135, 130);
+  --blok-database-cell-empty-text: var(--blok-database-ink-tertiary);
+  --blok-database-popover-hover: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-wrapper] {
+  color: var(--blok-database-ink);
+  --blok-icon-active-text: var(--blok-database-ink);
 }
 
 [data-blok-database-board] {
@@ -4696,7 +4735,7 @@ span[data-blok-slash-search] {
 
 [data-blok-database-add-card]:hover, [data-blok-database-add-column]:hover {
   background-color: var(--blok-database-add-hover-bg);
-  color: var(--blok-text-primary, inherit);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-add-card]:hover {
@@ -4761,7 +4800,7 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-database-column-actions] button:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-column-actions] svg {
@@ -4783,7 +4822,7 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-database-hidden-groups]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-column-pill] {
@@ -5014,7 +5053,7 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-database-peek-mode-description] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
 }
 
@@ -5194,7 +5233,7 @@ span[data-blok-slash-search] {
   border-radius: var(--blok-radius-control-sm);
   background-color: var(--blok-database-table-open-bg);
   box-shadow: var(--blok-database-table-open-shadow);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
   cursor: pointer;
   opacity: 0;
@@ -5381,7 +5420,7 @@ span[data-blok-slash-search] {
 
 [data-blok-database-row-empty] {
   padding-block: var(--blok-block-padding-top, 7px) var(--blok-block-padding-bottom, 7px);
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
   cursor: text;
   user-select: none;
 }
@@ -5412,7 +5451,7 @@ span[data-blok-slash-search] {
   border: none;
   border-radius: var(--blok-radius-control);
   background: none;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font: inherit;
   text-align: start;
   cursor: pointer;
@@ -5482,7 +5521,7 @@ button[data-blok-database-column-count] {
 }
 
 button[data-blok-database-column-count]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-empty-placeholder] {
@@ -5737,7 +5776,7 @@ button[data-blok-database-column-count]:hover {
   cursor: pointer;
   font-size: 14px;
   font-weight: 400;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   transition: background-color 120ms ease;
 }
 
@@ -5768,7 +5807,7 @@ button[data-blok-database-column-count]:hover {
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
   border-radius: var(--blok-radius-control-sm);
 }
@@ -5798,7 +5837,7 @@ button[data-blok-database-column-count]:hover {
 [data-blok-database-tab-overflow-empty] {
   padding: var(--blok-space-1) var(--blok-space-1-5);
   font-size: 12px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-tab-overflow-new] {
@@ -5920,7 +5959,7 @@ button[data-blok-database-column-count]:hover {
   font-size: 14px;
   line-height: 21px;
   font-weight: 500;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   min-width: 0;
 }
 
@@ -5953,7 +5992,7 @@ button[data-blok-database-column-count]:hover {
   border-radius: var(--blok-radius-control);
   white-space: nowrap;
   font-size: 14px;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   outline: none;
 }
 
@@ -6074,7 +6113,7 @@ button[data-blok-database-column-count]:hover {
 
 [data-blok-database-list] > [data-blok-database-add-row]:hover, [data-blok-database-list-rows] ~ [data-blok-database-add-row]:hover {
   background-color: var(--blok-database-add-hover-bg);
-  color: var(--blok-text-primary, inherit);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-list-group] {
@@ -6183,7 +6222,7 @@ button[data-blok-database-column-count]:hover {
 }
 
 [data-blok-database-drawer-add-prop]:active {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-drawer-customize] {
@@ -6252,7 +6291,7 @@ button[data-blok-database-column-count]:hover {
 
 [data-blok-database-backlinks-heading] {
   padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
 }
 
@@ -6316,7 +6355,7 @@ button[data-blok-database-column-count]:hover {
   display: flex;
   flex-direction: column;
   background-color: var(--blok-database-builder-backdrop);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font-family: var(--blok-font-family, var(--blok-font-sans));
   font-size: 14px;
 }
@@ -6373,7 +6412,7 @@ button[data-blok-database-column-count]:hover {
   border: none;
   border-radius: var(--blok-radius-control);
   background: none;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
@@ -6393,7 +6432,7 @@ button[data-blok-database-column-count]:hover {
 }
 
 [@media (hover: hover)] [data-blok-database-layout-preview]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-layout-title] {
@@ -6429,7 +6468,7 @@ button[data-blok-database-column-count]:hover {
   gap: var(--blok-space-2);
   padding-inline: var(--blok-space-3);
   background: none;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-layout-cancel] svg {
@@ -6442,8 +6481,8 @@ button[data-blok-database-column-count]:hover {
   padding-inline: var(--blok-space-2);
   border-start-end-radius: 0;
   border-end-end-radius: 0;
-  background-color: var(--blok-accent);
-  color: var(--blok-text-on-dark);
+  background-color: var(--blok-database-new-bg);
+  color: var(--blok-database-new-text);
   font-weight: 500;
 }
 
@@ -6464,13 +6503,13 @@ button[data-blok-database-column-count]:hover {
   border-radius: var(--blok-radius-control);
   border-start-start-radius: 0;
   border-end-start-radius: 0;
-  background-color: var(--blok-accent);
-  color: var(--blok-text-on-dark);
+  background-color: var(--blok-database-new-bg);
+  color: var(--blok-database-new-text);
   cursor: pointer;
 }
 
 [@media (hover: hover)] [data-blok-database-layout-apply]:hover, [data-blok-database-layout-more-save]:hover {
-  background-color: color-mix(in srgb, var(--blok-accent) 88%, black);
+  background-color: var(--blok-database-new-hover-bg);
 }
 
 [data-blok-database-layout-preview]:focus-visible, [data-blok-database-layout-cancel]:focus-visible, [data-blok-database-layout-apply]:focus-visible, [data-blok-database-layout-more-save]:focus-visible, [data-blok-database-layout-structure-card]:focus-visible {
@@ -6520,7 +6559,7 @@ button[data-blok-database-column-count]:hover {
 }
 
 [data-blok-database-layout-module-name] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
   font-weight: 500;
 }
@@ -6535,7 +6574,7 @@ button[data-blok-database-column-count]:hover {
   border: none;
   border-radius: var(--blok-radius-control-sm);
   background: none;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
   opacity: 0;
 }
@@ -6558,7 +6597,7 @@ button[data-blok-database-column-count]:hover {
   display: inline-flex;
   flex-shrink: 0;
   margin-inline-end: var(--blok-space-1);
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
   cursor: grab;
   touch-action: none;
 }
@@ -6601,7 +6640,7 @@ button[data-blok-database-column-count]:hover {
   border: none;
   border-radius: var(--blok-radius-pill);
   background-color: var(--blok-database-builder-canvas-ring);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }
 
@@ -6653,7 +6692,7 @@ button[data-blok-database-column-count]:hover {
   border: none;
   border-radius: var(--blok-radius-control);
   background: none;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }
 
@@ -6671,14 +6710,14 @@ button[data-blok-database-column-count]:hover {
   border: none;
   border-radius: var(--blok-radius-pill);
   background-color: var(--blok-database-builder-canvas-ring);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
   cursor: pointer;
 }
 
 [@media (hover: hover)] [data-blok-database-layout-add-module]:hover, [data-blok-database-layout-add-to-panel]:hover, [data-blok-database-layout-panel-toggle]:hover {
-  background-color: var(--blok-item-hover-bg);
-  color: var(--blok-text-primary);
+  background-color: var(--blok-database-hover-bg);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-layout-add-module]:focus-visible, [data-blok-database-layout-add-to-panel]:focus-visible, [data-blok-database-layout-panel-toggle]:focus-visible {
@@ -6703,7 +6742,7 @@ button[data-blok-database-column-count]:hover {
 [data-blok-database-layout-pin-icon], [data-blok-database-layout-group-icon] {
   display: inline-flex;
   flex-shrink: 0;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-layout-pin-icon] svg, [data-blok-database-layout-group-icon] svg, [data-blok-database-layout-pin-toggle] svg, [data-blok-database-layout-eye] svg {
@@ -6730,7 +6769,7 @@ button[data-blok-database-column-count]:hover {
   border: none;
   border-radius: var(--blok-radius-control-sm);
   background: none;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   cursor: pointer;
 }
 
@@ -6740,7 +6779,7 @@ button[data-blok-database-column-count]:hover {
 }
 
 [data-blok-database-layout-eye][data-visibility="hidden"] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-panel-header] [data-blok-database-layout-add-section] {
@@ -6756,7 +6795,7 @@ button[data-blok-database-column-count]:hover {
 [data-blok-database-layout-group-handle], [data-blok-database-layout-section-handle] {
   display: inline-flex;
   flex-shrink: 0;
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
 }
 
 [data-blok-database-layout-group-handle] {
@@ -6798,7 +6837,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   border: none;
   border-radius: var(--blok-radius-control-sm);
   background: none;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
   font-weight: 500;
   text-align: start;
@@ -6819,7 +6858,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   padding: 0;
   border: none;
   background: none;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   font-size: 14px;
   outline: none;
@@ -6831,8 +6870,8 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   padding-inline: var(--blok-space-2);
   border: none;
   border-radius: var(--blok-radius-control);
-  background-color: var(--blok-accent);
-  color: var(--blok-text-on-dark);
+  background-color: var(--blok-database-new-bg);
+  color: var(--blok-database-new-text);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -6848,7 +6887,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 }
 
 [@media (hover: hover)] [data-blok-database-layout-pin-row]:hover, [data-blok-database-layout-group-row]:hover, [data-blok-database-layout-section-row]:hover, [data-blok-database-layout-module-menu]:hover, [data-blok-database-layout-pin-toggle]:not(:disabled):hover, [data-blok-database-layout-eye]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-layout-module-menu]:focus-visible, [data-blok-database-layout-pin-toggle]:focus-visible, [data-blok-database-layout-eye]:focus-visible {
@@ -6864,26 +6903,26 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 }
 
 [data-blok-database-layout-canvas-title][data-placeholder] {
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
 }
 
 [data-blok-database-layout-canvas-content], [data-blok-database-layout-group-empty] {
   padding-block: var(--blok-space-1);
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
   font-size: 14px;
 }
 
 [data-blok-database-layout-section-empty] {
   padding-block: var(--blok-space-1);
   padding-inline-start: var(--blok-space-5);
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
   font-size: 14px;
 }
 
 [data-blok-database-layout-preview-empty] {
   padding-block: var(--blok-space-1-5);
   padding-inline: var(--blok-space-2);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
 }
 
@@ -6910,7 +6949,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 
 [data-blok-database-layout-options-title] {
   margin: var(--blok-space-2) 0 0;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
   font-weight: 500;
 }
@@ -6949,7 +6988,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 [data-blok-database-layout-structure-art] svg {
   inline-size: 24px;
   block-size: 24px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-layout-option] [data-blok-database-panel-row] {
@@ -6962,7 +7001,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 
 [data-blok-database-layout-hint] {
   display: inline-flex;
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
 }
 
 [data-blok-database-layout-hint] svg {
@@ -7093,7 +7132,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   display: inline-flex;
   align-items: center;
   gap: var(--blok-space-1);
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
   font-size: 14px;
   font-weight: 400;
 }
@@ -7198,7 +7237,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 }
 
 [data-blok-database-drawer-details-title] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 13px;
   font-weight: 500;
 }
@@ -7262,11 +7301,11 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 [data-blok-database-drawer-section-header] > svg {
   inline-size: 14px;
   block-size: 14px;
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
 }
 
 [data-blok-database-drawer-section-name] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 13px;
   font-weight: 500;
 }
@@ -7280,7 +7319,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 }
 
 [data-blok-database-drawer-tabs] [role="tab"][aria-selected="true"] {
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   box-shadow: inset 0 -2px 0 currentColor;
 }
 
@@ -7299,8 +7338,8 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 }
 
 [data-blok-database-layout-canvas] [data-blok-database-drawer-tabs] [role="tab"][aria-selected="true"] {
-  color: var(--blok-text-primary);
-  box-shadow: inset 0 0 0 1.25px var(--blok-text-primary);
+  color: var(--blok-database-ink);
+  box-shadow: inset 0 0 0 1.25px var(--blok-database-ink);
 }
 
 [data-blok-database-layout-add-tab] {
@@ -7313,8 +7352,8 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   padding: 0;
   border: none;
   border-radius: var(--blok-radius-pill);
-  background: var(--blok-item-hover-bg);
-  color: var(--blok-text-secondary);
+  background: var(--blok-database-hover-bg);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
   opacity: 0;
 }
@@ -7381,7 +7420,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 }
 
 [@media (hover: hover)] [data-blok-database-drawer-pins-back]:hover, [data-blok-database-drawer-pins-forward]:hover {
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [@media (prefers-reduced-motion: reduce)] [data-blok-database-drawer-section-toggle] svg {
@@ -7443,7 +7482,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 }
 
 [data-blok-database-property-type-option]:active {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-property-type-option-icon] {
@@ -7527,7 +7566,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   line-height: 24px;
   font-weight: 600;
   text-align: center;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-confirm-description] {
@@ -7536,24 +7575,24 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   line-height: 20px;
   font-weight: 400;
   text-align: center;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-confirm-action] {
   width: 100%;
   height: 32px;
   margin-top: var(--blok-space-2);
-  border: 1px solid var(--blok-popover-border);
+  border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-control);
   background-color: transparent;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
 }
 
 [data-blok-database-confirm-action]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-confirm-action]:focus-visible {
@@ -7569,13 +7608,13 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 [data-blok-database-confirm-action][data-primary] {
   margin-top: var(--blok-space-4);
   border-color: transparent;
-  background-color: var(--blok-accent);
-  color: var(--blok-text-on-dark);
+  background-color: var(--blok-database-new-bg);
+  color: var(--blok-database-new-text);
 }
 
 [data-blok-database-confirm-action][data-quiet] {
   border-color: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-confirm-art] {
@@ -7583,7 +7622,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   justify-content: center;
   gap: var(--blok-space-2);
   margin-bottom: var(--blok-space-3);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-confirm-art] svg {
@@ -7615,8 +7654,8 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   border: 0;
   border-radius: var(--blok-radius-control-lg);
   background-color: transparent;
-  box-shadow: inset 0 0 0 1px var(--blok-popover-border);
-  color: var(--blok-text-primary);
+  box-shadow: inset 0 0 0 1px var(--blok-database-table-control-border);
+  color: var(--blok-database-ink);
   text-align: start;
   cursor: pointer;
 }
@@ -7646,7 +7685,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   font-size: 12px;
   line-height: 16px;
   font-weight: 500;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-confirm-choice-dot] {
@@ -7654,7 +7693,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   box-sizing: border-box;
   inline-size: 16px;
   block-size: 16px;
-  border: 1px solid var(--blok-popover-border);
+  border: 1px solid var(--blok-database-table-control-border);
   border-radius: 50%;
 }
 
@@ -7673,7 +7712,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   border-radius: var(--blok-radius-dialog);
   background-color: var(--blok-database-confirm-bg);
   box-shadow: var(--blok-database-confirm-shadow);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font-size: 14px;
 }
 
@@ -7706,7 +7745,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 [data-blok-database-autofill-close], [data-blok-database-autofill-more] {
   display: inline-flex;
   padding: var(--blok-space-0-5);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-autofill-close] svg, [data-blok-database-autofill-more] svg {
@@ -7716,11 +7755,11 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 
 [data-blok-database-autofill-tab] {
   padding: var(--blok-space-1) var(--blok-space-2);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-autofill-tab][aria-selected="true"] {
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font-weight: 500;
 }
 
@@ -7728,11 +7767,11 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   height: 28px;
   white-space: nowrap;
   padding-inline: var(--blok-space-2);
-  border: 1px solid var(--blok-popover-border);
+  border: 1px solid var(--blok-database-table-control-border);
 }
 
 [data-blok-database-autofill-action]:hover:not(:disabled), [data-blok-database-autofill-close]:hover, [data-blok-database-autofill-more]:hover:not(:disabled), [data-blok-database-autofill-tab]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-autofill-action]:disabled, [data-blok-database-autofill-more]:disabled {
@@ -7747,7 +7786,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   border: none;
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-table-header-hover-bg);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   resize: vertical;
   outline: none;
@@ -7763,7 +7802,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   border-radius: var(--blok-radius-dialog);
   background-color: var(--blok-database-confirm-bg);
   box-shadow: var(--blok-database-confirm-shadow);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font-size: 14px;
   line-height: 20px;
 }
@@ -7784,7 +7823,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   margin: var(--blok-space-1);
   padding: var(--blok-space-10) var(--blok-space-10) 0;
   overflow: hidden;
-  border: 1px solid var(--blok-popover-border);
+  border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-field);
   background-color: var(--blok-bg-secondary);
 }
@@ -7806,14 +7845,14 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   align-items: center;
   gap: var(--blok-space-2);
   padding-bottom: var(--blok-space-3);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 22px;
   line-height: 26px;
   font-weight: 600;
 }
 
 [data-blok-database-csv-preview][data-filled] [data-blok-database-csv-preview-head] {
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-csv-preview-head] [data-blok-database-csv-icon] svg {
@@ -7826,7 +7865,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   flex-direction: column;
   gap: var(--blok-space-4);
   padding-top: var(--blok-space-6);
-  border-top: 1px solid var(--blok-popover-border);
+  border-top: 1px solid var(--blok-database-table-control-border);
 }
 
 [data-blok-database-csv-skeleton-row] {
@@ -7838,7 +7877,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 [data-blok-database-csv-skeleton-bar] {
   height: 8px;
   border-radius: var(--blok-radius-control-sm);
-  background-color: var(--blok-text-secondary);
+  background-color: var(--blok-database-ink-secondary);
   opacity: 0.2;
 }
 
@@ -7854,7 +7893,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   margin-bottom: var(--blok-space-2);
   padding-inline: var(--blok-space-3);
   border-radius: var(--blok-radius-pill);
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
   font-weight: 500;
 }
 
@@ -7869,17 +7908,17 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   height: 38px;
   padding: 0 var(--blok-space-2);
   overflow: hidden;
-  border-bottom: 1px solid var(--blok-popover-border);
+  border-bottom: 1px solid var(--blok-database-table-control-border);
   text-align: start;
   white-space: nowrap;
 }
 
 td[data-blok-database-csv-preview-cell] + td[data-blok-database-csv-preview-cell] {
-  border-inline-start: 1px solid var(--blok-popover-border);
+  border-inline-start: 1px solid var(--blok-database-table-control-border);
 }
 
 th[data-blok-database-csv-preview-cell] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-weight: 400;
 }
 
@@ -7890,7 +7929,7 @@ th[data-blok-database-csv-preview-cell] > *, td[data-blok-database-csv-preview-c
 th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   display: inline-flex;
   margin-inline-end: var(--blok-space-1-5);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-csv-pill] {
@@ -7898,7 +7937,7 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   margin-inline-end: var(--blok-space-1);
   padding: 0 var(--blok-space-1-5);
   border-radius: var(--blok-radius-control-sm);
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
   line-height: 20px;
 }
 
@@ -7911,7 +7950,7 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font: inherit;
   cursor: pointer;
 }
@@ -7925,12 +7964,12 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
 
 [data-blok-database-csv-text] {
   margin: var(--blok-space-2) 0 var(--blok-space-4);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-csv-caption] {
   margin-bottom: var(--blok-space-1);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
   line-height: 18px;
   font-weight: 500;
@@ -7974,14 +8013,14 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
 [data-blok-database-csv-corner] {
   align-self: flex-start;
   padding: var(--blok-space-0-5);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-csv-choose], [data-blok-database-csv-file] {
   width: 100%;
   height: 32px;
   padding-inline: var(--blok-space-2-5);
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
   font-weight: 500;
 }
 
@@ -8001,7 +8040,7 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   justify-content: center;
   width: 24px;
   height: 24px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-csv-choose] + [data-blok-database-csv-caption], [data-blok-database-csv-file] + [data-blok-database-csv-caption] {
@@ -8016,10 +8055,10 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   width: 100%;
   height: 36px;
   padding-inline: var(--blok-space-2-5);
-  border: 1px solid var(--blok-popover-border);
+  border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font: inherit;
   cursor: default;
   opacity: 0.6;
@@ -8040,8 +8079,8 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   width: 100%;
   height: 36px;
   margin-top: var(--blok-space-4);
-  background-color: var(--blok-accent);
-  color: var(--blok-text-on-dark);
+  background-color: var(--blok-database-new-bg);
+  color: var(--blok-database-new-text);
   font-weight: 500;
 }
 
@@ -8073,7 +8112,7 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   width: 100%;
   height: 32px;
   margin-top: var(--blok-space-1);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-csv-columns] {
@@ -8100,10 +8139,10 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   height: 32px;
   padding: var(--blok-space-1-5) var(--blok-space-2);
   overflow: hidden;
-  border: 1px solid var(--blok-popover-border);
+  border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-control);
-  background-color: var(--blok-item-hover-bg);
-  color: var(--blok-text-secondary);
+  background-color: var(--blok-database-hover-bg);
+  color: var(--blok-database-ink-secondary);
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -8111,13 +8150,13 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
 
 [data-blok-database-csv-arrow] {
   display: inline-flex;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-csv-type] {
   height: 32px;
   padding: var(--blok-space-0-5) var(--blok-space-1-5);
-  border: 1px solid var(--blok-popover-border);
+  border: 1px solid var(--blok-database-table-control-border);
   background-color: var(--blok-database-confirm-bg);
 }
 
@@ -8127,12 +8166,12 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
 }
 
 [data-blok-database-csv-type] > :last-child {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-csv-menu-heading] {
   padding: var(--blok-space-0-5) var(--blok-space-3) var(--blok-space-1) var(--blok-space-2);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
   font-weight: 500;
   cursor: default;
@@ -8140,7 +8179,7 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
 }
 
 [data-blok-database-csv-corner]:hover, [data-blok-database-csv-clear]:hover, [data-blok-database-csv-secondary]:hover, [data-blok-database-csv-type]:hover, [data-blok-database-csv-choose]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [@media (prefers-reduced-motion: reduce)] [data-blok-interface=blok][data-blok-database-peek] {
@@ -8255,8 +8294,8 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
 }
 
 [data-blok-database-checkbox][data-state="checked"] {
-  background-color: var(--blok-active-icon);
-  border-color: var(--blok-active-icon);
+  background-color: var(--blok-database-checkbox-checked-bg);
+  border-color: var(--blok-database-checkbox-checked-bg);
 }
 
 [data-blok-database-checkbox] svg {
@@ -8383,7 +8422,7 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
 }
 
 [data-blok-database-cell="uniqueId"] {
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
 }
 
 [data-blok-database-person-chip] {
@@ -8409,7 +8448,7 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   justify-content: center;
   font-size: 11px;
   background-color: var(--blok-database-option-default-bg);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-person-initial]::before {
@@ -8508,7 +8547,7 @@ textarea[data-blok-database-property-description][data-blok-field] {
 }
 
 [data-blok-database-person-option][aria-selected="true"], [data-blok-database-relation-option][aria-selected="true"], [data-blok-database-file-row] {
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-file-row] > span {
@@ -8575,7 +8614,7 @@ textarea[data-blok-database-property-description][data-blok-field] {
   flex-direction: column;
   min-width: 0;
   font-size: 14px;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-cell-input] {
@@ -8650,7 +8689,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-select-hint], [data-blok-database-status-group-heading], [data-blok-database-option-colors-heading] {
   padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
   font-size: 12px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-options-editor] {
@@ -8668,7 +8707,7 @@ textarea[data-blok-database-cell-input] {
   justify-content: space-between;
   padding: var(--blok-space-1-5) var(--blok-space-1) var(--blok-space-1);
   font-size: 12px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-options-add] {
@@ -8691,7 +8730,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [@media (hover: hover)] [data-blok-database-options-add]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-options-editor] [data-blok-database-select-option] {
@@ -8709,7 +8748,7 @@ textarea[data-blok-database-cell-input] {
   border-top: 1px solid var(--blok-database-drawer-border);
   background: transparent;
   font: inherit;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   text-align: start;
   cursor: pointer;
 }
@@ -8720,13 +8759,13 @@ textarea[data-blok-database-cell-input] {
 }
 
 [@media (hover: hover)] [data-blok-database-select-edit-property]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-property-menu-note] {
   padding: var(--blok-space-1) var(--blok-space-2);
   font-size: 12px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-select-list] {
@@ -8744,16 +8783,16 @@ textarea[data-blok-database-cell-input] {
   min-height: 28px;
   padding: 0 var(--blok-space-1);
   border-radius: var(--blok-radius-control);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   cursor: pointer;
 }
 
 [data-blok-database-select-option][data-active], [data-blok-database-person-option][data-active], [data-blok-database-relation-option][data-active], [data-blok-database-select-create][data-active] {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [@media (hover: hover)] [data-blok-database-select-option]:hover, [data-blok-database-person-option]:hover, [data-blok-database-relation-option]:hover, [data-blok-database-files-upload]:hover, [data-blok-database-select-create]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-select-option-label] {
@@ -8775,7 +8814,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-select-option-handle], [data-blok-database-select-option-menu] {
   width: 20px;
   height: 20px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   opacity: 0;
   transition: opacity 0.1s ease;
 }
@@ -8824,13 +8863,13 @@ textarea[data-blok-database-cell-input] {
   border-radius: var(--blok-radius-control);
   background: transparent;
   font: inherit;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   text-align: start;
   cursor: pointer;
 }
 
 [@media (hover: hover)] [data-blok-database-option-delete]:hover, [data-blok-database-option-delete-confirm]:hover, [data-blok-database-option-delete-cancel]:hover, [data-blok-database-option-color]:hover, [data-blok-database-date-clear]:hover, [data-blok-database-date-prev]:hover, [data-blok-database-date-next]:hover, [data-blok-database-date-day]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [@media (hover: hover)] [data-blok-database-date-today]:hover, [data-blok-database-date-help]:hover, [data-blok-database-csv-help]:hover {
@@ -8939,7 +8978,7 @@ textarea[data-blok-database-cell-input] {
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }
 
@@ -8984,12 +9023,12 @@ textarea[data-blok-database-cell-input] {
   border-radius: var(--blok-radius-control);
   background: transparent;
   font: inherit;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   cursor: pointer;
 }
 
 [data-blok-database-date-day][data-outside] {
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
 }
 
 [data-blok-database-date-day][data-today] {
@@ -9012,7 +9051,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-date-day][data-in-range] {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-date-day][aria-selected="true"] {
@@ -9041,7 +9080,7 @@ textarea[data-blok-database-cell-input] {
   border-radius: var(--blok-radius-control);
   background: transparent;
   font: inherit;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   cursor: pointer;
 }
 
@@ -9067,7 +9106,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [aria-checked="true"] > [data-blok-database-switch-track] {
-  background-color: var(--blok-toggle-on-bg);
+  background-color: var(--blok-database-switch-on-bg);
 }
 
 [aria-checked="true"] > [data-blok-database-switch-track] > span {
@@ -9092,7 +9131,7 @@ textarea[data-blok-database-cell-input] {
   border-radius: var(--blok-radius-control);
   background: transparent;
   font: inherit;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   text-align: start;
   cursor: pointer;
 }
@@ -9108,7 +9147,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-date-remind-chevron], [data-blok-database-date-remind-check] {
   display: flex;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-date-remind-chevron] > svg, [data-blok-database-date-remind-check] > svg {
@@ -9118,7 +9157,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-date-remind-check] {
   margin-inline-start: auto;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-date-remind] + [data-blok-database-date-clear] {
@@ -9171,7 +9210,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [@media (hover: hover)] [data-blok-database-date-remind]:hover, [data-blok-database-date-setting]:hover, [data-blok-database-date-remind-option]:hover, [data-blok-database-date-setting-option]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-date-remind-option]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *), [data-blok-database-date-setting-option]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
@@ -9204,7 +9243,7 @@ textarea[data-blok-database-cell-input] {
   font-size: 12px;
   line-height: 14.4px;
   font-weight: 500;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-date-zone-empty] {
@@ -9230,11 +9269,11 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-date-zone-offset] {
   font-size: 12px;
   line-height: 16.8px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-date-setting-option][data-active] {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-cell="date"][data-reminder] {
@@ -9257,15 +9296,15 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-item-name="database-show-page-icon"] {
   --blok-icon-active-bg: transparent;
-  --blok-icon-active-text: var(--blok-text-primary);
+  --blok-icon-active-text: var(--blok-database-ink);
 }
 
 [data-blok-item-name="database-show-page-icon"][data-blok-force-hover] {
-  --blok-icon-active-bg: var(--blok-item-hover-bg);
+  --blok-icon-active-bg: var(--blok-database-hover-bg);
 }
 
 [@media (hover: hover)] [data-blok-item-name="database-show-page-icon"]:hover {
-  --blok-icon-active-bg: var(--blok-item-hover-bg);
+  --blok-icon-active-bg: var(--blok-database-hover-bg);
 }
 
 [data-blok-item-name="database-show-page-icon"][data-blok-focused="true"] {
@@ -9585,12 +9624,12 @@ textarea[data-blok-database-cell-input] {
   border: none;
   border-radius: var(--blok-radius-control-sm);
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }
 
 [data-blok-database-table-cell-action]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-table-cell-action] svg {
@@ -9618,7 +9657,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-comment-badge]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-comment-badge] svg {
@@ -9636,7 +9675,7 @@ textarea[data-blok-database-cell-input] {
   padding: var(--blok-space-1);
   font-size: 14px;
   line-height: 20px;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-comments] [role="list"][hidden] {
@@ -9664,7 +9703,7 @@ textarea[data-blok-database-cell-input] {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: var(--blok-item-hover-bg);
+  background: var(--blok-database-hover-bg);
   font-size: 11px;
   font-weight: 500;
 }
@@ -9674,7 +9713,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-comment-time] {
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
   font-size: 12px;
 }
 
@@ -9706,12 +9745,12 @@ textarea[data-blok-database-cell-input] {
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }
 
 [data-blok-database-comment-tools] button:hover, [data-blok-database-comment-send]:hover:not(:disabled) {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-comment-tools] svg, [data-blok-database-comment-send] svg {
@@ -9739,7 +9778,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-comment-input]::placeholder {
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
 }
 
 [data-blok-database-comment-send]:disabled {
@@ -9762,14 +9801,14 @@ textarea[data-blok-database-cell-input] {
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   text-align: start;
   cursor: pointer;
 }
 
 [data-blok-database-comment-menu] button:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-comments-section] {
@@ -9815,7 +9854,7 @@ textarea[data-blok-database-cell-input] {
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-table-open-bg);
   box-shadow: var(--blok-database-table-open-shadow);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }
 
@@ -9824,7 +9863,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-table-autofill]:hover, [data-blok-database-table-autofill-open]:hover {
-  background-image: linear-gradient(var(--blok-item-hover-bg), var(--blok-item-hover-bg));
+  background-image: linear-gradient(var(--blok-database-hover-bg), var(--blok-database-hover-bg));
 }
 
 [data-blok-database-table-autofill] svg, [data-blok-database-table-autofill-open] svg {
@@ -9833,7 +9872,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-table-autofill-thinking] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-table-cell-actions] > [data-blok-database-table-autofill] {
@@ -9860,7 +9899,7 @@ textarea[data-blok-database-cell-input] {
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }
 
@@ -10249,7 +10288,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-table-selection-bar] [data-blok-database-table-selection-property] {
   width: auto;
   padding-inline: var(--blok-space-2);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font-size: 14px;
   white-space: nowrap;
 }
@@ -10301,7 +10340,7 @@ textarea[data-blok-database-cell-input] {
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
   cursor: pointer;
   transition: background-color 0.1s ease-in-out;
@@ -10339,7 +10378,7 @@ textarea[data-blok-database-cell-input] {
   border: none;
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-table-header-hover-bg);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font-size: 14px;
   outline: none;
 }
@@ -10369,7 +10408,7 @@ textarea[data-blok-database-cell-input] {
   border: none;
   border-radius: var(--blok-radius-pill);
   background-color: var(--blok-database-table-header-hover-bg);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
   line-height: 24px;
   white-space: nowrap;
@@ -10418,13 +10457,13 @@ textarea[data-blok-database-cell-input] {
   border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
   cursor: pointer;
 }
 
 [data-blok-database-filter-actions] > [data-blok-database-filter-save] {
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font-weight: 500;
 }
 
@@ -10436,7 +10475,7 @@ textarea[data-blok-database-cell-input] {
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
   white-space: nowrap;
   cursor: pointer;
@@ -10452,7 +10491,7 @@ textarea[data-blok-database-cell-input] {
   max-height: min(70vh, 560px);
   padding: var(--blok-space-1);
   overflow-y: auto;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font-size: 14px;
 }
 
@@ -10554,7 +10593,7 @@ textarea[data-blok-database-cell-input] {
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   font-size: 14px;
   line-height: 20px;
@@ -10734,12 +10773,12 @@ textarea[data-blok-database-cell-input] {
   border: 0;
   border-radius: var(--blok-radius-control);
   background: none;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }
 
 [data-blok-database-starter-nav]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-starter-nav] svg {
@@ -10755,14 +10794,14 @@ textarea[data-blok-database-cell-input] {
   font-size: 20px;
   line-height: 26px;
   font-weight: 600;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-starter-hint] {
   margin-block: var(--blok-space-1) var(--blok-space-3);
   font-size: 14px;
   line-height: 20px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-starter-choices] {
@@ -10785,8 +10824,8 @@ textarea[data-blok-database-cell-input] {
   gap: var(--blok-space-1);
   border: 0;
   background: none;
-  color: var(--blok-text-primary);
-  box-shadow: inset 0 0 0 1px var(--blok-border-primary);
+  color: var(--blok-database-ink);
+  box-shadow: inset 0 0 0 1px var(--blok-database-tpl-border);
   cursor: pointer;
 }
 
@@ -10810,25 +10849,25 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-starter-chip][aria-pressed="true"] {
-  box-shadow: inset 0 0 0 1.5px var(--blok-text-primary);
+  box-shadow: inset 0 0 0 1.5px var(--blok-database-ink);
 }
 
 [data-blok-database-starter-card][aria-pressed="true"] {
-  box-shadow: inset 0 0 0 1.5px var(--blok-text-primary);
+  box-shadow: inset 0 0 0 1.5px var(--blok-database-ink);
 }
 
 [data-blok-database-starter-chip] svg, [data-blok-database-starter-card] svg {
   inline-size: 16px;
   block-size: 16px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-starter-primary] {
   block-size: 32px;
   border: 0;
   border-radius: var(--blok-radius-control-lg);
-  background-color: var(--blok-accent);
-  color: var(--blok-text-on-dark);
+  background-color: var(--blok-database-new-bg);
+  color: var(--blok-database-new-text);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -10839,9 +10878,9 @@ textarea[data-blok-database-cell-input] {
   min-inline-size: 0;
   overflow: hidden;
   padding: var(--blok-space-10);
-  border: 1px solid var(--blok-border-primary);
+  border: 1px solid var(--blok-database-tpl-border);
   border-radius: var(--blok-radius-dialog);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-starter-preview-title] {
@@ -10855,22 +10894,22 @@ textarea[data-blok-database-cell-input] {
   gap: var(--blok-space-4);
   margin-block: var(--blok-space-3);
   font-size: 14px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-starter-preview-tabs] [aria-current="true"] {
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-starter-preview-row] {
   display: flex;
-  border-block-end: 1px solid var(--blok-border-primary);
+  border-block-end: 1px solid var(--blok-database-tpl-border);
   font-size: 14px;
   line-height: 36px;
 }
 
 [data-blok-database-starter-preview-row="header"] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-starter-preview-row] > span {
@@ -10888,7 +10927,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-starter-preview-hidden] {
   margin-block-start: var(--blok-space-2);
   font-size: 12px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-tpl-gallery] {
@@ -10901,7 +10940,7 @@ textarea[data-blok-database-cell-input] {
   border-radius: var(--blok-radius-dialog);
   background-color: var(--blok-database-tpl-gallery-bg);
   box-shadow: var(--blok-database-confirm-shadow);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-tpl-gallery-header] {
@@ -10924,7 +10963,7 @@ textarea[data-blok-database-cell-input] {
   border: 0;
   border-radius: 50%;
   background-color: var(--blok-database-panel-close-bg);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }
 
@@ -10938,10 +10977,10 @@ textarea[data-blok-database-cell-input] {
   inline-size: min(296px, 100%);
   block-size: 36px;
   padding-inline: var(--blok-space-3);
-  border: 1px solid var(--blok-border-primary);
+  border: 1px solid var(--blok-database-tpl-border);
   border-radius: var(--blok-radius-surface);
   background-color: var(--blok-database-confirm-bg);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   font-size: 14px;
   outline: none;
@@ -10967,9 +11006,9 @@ textarea[data-blok-database-cell-input] {
   align-items: flex-start;
   box-sizing: border-box;
   overflow: hidden;
-  border: 1px solid var(--blok-border-primary);
+  border: 1px solid var(--blok-database-tpl-border);
   border-radius: var(--blok-radius-dialog);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   text-align: start;
   cursor: pointer;
@@ -10991,12 +11030,12 @@ textarea[data-blok-database-cell-input] {
   margin-block-start: var(--blok-space-4);
   font-size: 14px;
   font-weight: 500;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-tpl-gallery-glyph] {
   display: inline-flex;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-tpl-gallery-glyph] svg {
@@ -11025,7 +11064,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-tpl-gallery-card-text] {
   font-size: 12px;
   line-height: 16px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-tpl-gallery-thumb] {
@@ -11037,8 +11076,8 @@ textarea[data-blok-database-cell-input] {
   padding: var(--blok-space-2) var(--blok-space-3);
   border-start-start-radius: var(--blok-radius-control-lg);
   background-color: var(--blok-database-confirm-bg);
-  box-shadow: 0 0 0 1px var(--blok-border-primary);
-  color: var(--blok-text-primary);
+  box-shadow: 0 0 0 1px var(--blok-database-tpl-border);
+  color: var(--blok-database-ink);
   font-size: 10px;
   line-height: 20px;
 }
@@ -11059,7 +11098,7 @@ textarea[data-blok-database-cell-input] {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--blok-space-2);
-  border-block-end: 1px solid var(--blok-border-primary);
+  border-block-end: 1px solid var(--blok-database-tpl-border);
 }
 
 [data-blok-database-tpl-gallery-thumb-row] {
@@ -11067,7 +11106,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-tpl-gallery-thumb-head] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-tpl-gallery-thumb-board] {
@@ -11086,7 +11125,7 @@ textarea[data-blok-database-cell-input] {
   inline-size: 60%;
   block-size: 4px;
   border-radius: var(--blok-radius-pill);
-  background-color: var(--blok-border-primary);
+  background-color: var(--blok-database-tpl-border);
 }
 
 [data-blok-database-tpl-gallery-card-bar] {
@@ -11095,7 +11134,7 @@ textarea[data-blok-database-cell-input] {
   margin-block-start: var(--blok-space-1);
   border-radius: var(--blok-radius-control-sm);
   background-color: transparent;
-  box-shadow: 0 0 0 1px var(--blok-border-primary);
+  box-shadow: 0 0 0 1px var(--blok-database-tpl-border);
 }
 
 [data-blok-database-tpl-gallery-pill] {
@@ -11138,7 +11177,7 @@ textarea[data-blok-database-cell-input] {
   border: 0;
   border-radius: var(--blok-radius-control);
   background: none;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font: inherit;
   font-size: 14px;
   font-weight: 500;
@@ -11146,11 +11185,11 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-tpl-gallery-close]:hover, [data-blok-database-tpl-gallery-link]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-tpl-gallery-empty]:hover, [data-blok-database-tpl-gallery-card]:hover {
-  border-color: var(--blok-text-tertiary);
+  border-color: var(--blok-database-ink-tertiary);
 }
 
 [data-blok-database-panel-close] svg {
@@ -11234,7 +11273,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-panel-description] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
 }
 
@@ -11266,7 +11305,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-panel-section] {
   padding-block: var(--blok-space-1-5) var(--blok-space-0-5);
   padding-inline: var(--blok-space-2);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
   font-weight: 500;
   line-height: 14.4px;
@@ -11275,7 +11314,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-panel-note] {
   padding-block: 0 var(--blok-space-1);
   padding-inline: var(--blok-space-2);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
   line-height: 16px;
 }
@@ -11302,7 +11341,7 @@ textarea[data-blok-database-cell-input] {
   border: none;
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-panel-input-bg);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   outline: none;
 }
@@ -11331,7 +11370,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-calc-hint] {
   width: 176px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
   font-weight: 400;
   line-height: 16px;
@@ -11769,7 +11808,7 @@ textarea[data-blok-database-cell-input] {
   transition: background-color 0.1s ease-in-out;
 }
 
-[data-blok-database-calendar-prev], [data-blok-database-calendar-next] {
+[data-blok-database-calendar-nav] [data-blok-database-calendar-prev], [data-blok-database-calendar-nav] [data-blok-database-calendar-next] {
   color: var(--blok-database-calendar-nav-icon);
 }
 
@@ -11992,7 +12031,7 @@ textarea[data-blok-database-cell-input] {
   text-overflow: clip;
   font-size: 12px;
   line-height: 24px;
-  color: var(--blok-database-calendar-muted-text);
+  color: var(--blok-database-calendar-event-muted-text);
 }
 
 [data-blok-database-calendar-resize] {
@@ -12059,8 +12098,8 @@ textarea[data-blok-database-cell-input] {
   transition: background-color 0.1s ease-in-out;
 }
 
-[data-blok-database-timeline-zoom], [data-blok-database-timeline-table-toggle], [data-blok-database-timeline-new], [data-blok-database-timeline-load-more] {
-  color: var(--blok-database-timeline-control-text);
+[data-blok-database-timeline-toolbar] [data-blok-database-timeline-zoom], [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle], [data-blok-database-timeline-new], [data-blok-database-timeline-load-more] {
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-timeline-toolbar] [data-blok-database-timeline-manage-calendar], [data-blok-database-calendar-nav] [data-blok-database-calendar-manage-calendar] {
@@ -12612,7 +12651,7 @@ textarea[data-blok-database-cell-input] {
   margin-inline-end: var(--blok-space-1-5);
   white-space: nowrap;
   text-decoration: underline;
-  text-decoration-color: var(--blok-text-tertiary);
+  text-decoration-color: var(--blok-database-ink-tertiary);
   text-underline-offset: 2px;
 }
 
@@ -12623,7 +12662,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-relation-option][aria-selected="true"]::after {
   content: "✓";
   margin-inline-start: auto;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-relation-search] {
@@ -12640,26 +12679,26 @@ textarea[data-blok-database-cell-input] {
   display: flex;
   align-items: center;
   padding-inline-end: var(--blok-space-2);
-  border-bottom: 1px solid var(--blok-popover-border);
-  background-color: var(--blok-item-hover-bg);
+  border-bottom: 1px solid var(--blok-database-table-control-border);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-relation-scope] {
   flex: none;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   white-space: nowrap;
 }
 
 [data-blok-database-relation-scope] strong {
   font-weight: 600;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-relation-heading] {
   padding: var(--blok-space-2) var(--blok-space-2) var(--blok-space-1);
   font-size: 12px;
   font-weight: 500;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-relation-editor] [role="listbox"] {
@@ -12681,7 +12720,7 @@ textarea[data-blok-database-cell-input] {
   width: 100%;
   resize: vertical;
   padding: var(--blok-space-1-5) var(--blok-space-2);
-  border: 1px solid var(--blok-border-primary);
+  border: 1px solid var(--blok-database-tpl-border);
   border-radius: var(--blok-radius-control);
   background: transparent;
   font-family: var(--blok-font-mono, ui-monospace, monospace);
@@ -12693,7 +12732,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-formula-preview], [data-blok-database-formula-error] {
   min-height: 18px;
   font-size: 12px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-formula-error-message] {
@@ -12722,7 +12761,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [@media (hover: hover)] [data-blok-database-formula-reference-item]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-formula-done] {
@@ -12730,21 +12769,21 @@ textarea[data-blok-database-cell-input] {
   padding: var(--blok-space-1) var(--blok-space-2);
   border: 0;
   border-radius: var(--blok-radius-control);
-  background: var(--blok-item-hover-bg);
+  background: var(--blok-database-hover-bg);
   font: inherit;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   cursor: pointer;
 }
 
 [data-blok-database-cell="formula"], [data-blok-database-cell="rollup"] {
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-chart] {
   position: relative;
   padding-block: var(--blok-space-4) var(--blok-space-2);
   font-size: 12px;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-chart-body] {
@@ -12801,13 +12840,13 @@ textarea[data-blok-database-cell-input] {
   border: none;
   border-radius: var(--blok-radius-control-sm);
   background: transparent;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   cursor: pointer;
 }
 
 [data-blok-database-chart-legend-entry]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-chart-legend-entry][aria-pressed="false"] {
@@ -12926,7 +12965,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-drilldown-close]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-drilldown-close]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *), [data-blok-database-drilldown-open]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
@@ -13013,7 +13052,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-feed-author] {
   font-weight: 500;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-feed-time] {
@@ -13024,7 +13063,7 @@ textarea[data-blok-database-cell-input] {
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   font-size: 26px;
   line-height: 26px;
@@ -13079,7 +13118,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-feed-react]:hover, [data-blok-database-feed-more-actions]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-feed-reactions] {
@@ -13106,7 +13145,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-feed-reaction] {
   gap: var(--blok-space-1);
   padding: var(--blok-space-0-5) var(--blok-space-2);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-feed-reaction][data-mine] {
@@ -13125,7 +13164,7 @@ button[data-blok-database-feed-reaction], [data-blok-database-feed-add-reaction]
 }
 
 button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-reaction]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-feed-add-reaction] > svg {
@@ -13154,7 +13193,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   font-size: 14px;
   text-align: start;
@@ -13162,7 +13201,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-database-feed-comments-summary]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-feed-comments-summary]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
@@ -13176,7 +13215,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-database-feed-comments-time] {
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
   font-size: 12px;
 }
 
@@ -13229,7 +13268,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-database-feed-more]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [@media (prefers-reduced-motion: reduce)] [data-blok-database-drilldown] {
@@ -13244,7 +13283,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-control);
   background: var(--blok-bg-primary);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   font-size: 14px;
   line-height: 16.8px;
@@ -13254,7 +13293,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-database-button]:hover:not(:disabled) {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-button]:disabled {
@@ -13333,7 +13372,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   padding: var(--blok-space-2) var(--blok-space-3);
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-bg-secondary);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
   line-height: 20px;
   display: flex;
@@ -13348,7 +13387,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   align-items: center;
   gap: var(--blok-space-0-5);
   padding: var(--blok-space-0-5) var(--blok-space-2);
-  border: 1px solid var(--blok-popover-border);
+  border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-control);
   background: transparent;
   color: inherit;
@@ -13357,7 +13396,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-database-template-repeat]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-template-repeat-chevron] {
@@ -13384,7 +13423,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-database-template-cadence-title], [data-blok-database-template-cadence-next] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
 }
 
@@ -13397,18 +13436,18 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   font-weight: 500;
   cursor: pointer;
 }
 
 [data-blok-database-template-cadence-save]:hover, [data-blok-database-template-cadence-days] button:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-template-cadence-value] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-template-cadence-row="every"] input {
@@ -13429,7 +13468,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-database-template-cadence-zone-offset] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-template-cadence-field] {
@@ -13437,7 +13476,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-database-template-cadence-row] input, [data-blok-database-template-cadence-row] select, [data-blok-database-template-cadence-field] input {
-  border: 1px solid var(--blok-popover-border);
+  border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-control);
   background: transparent;
   color: inherit;
@@ -13459,10 +13498,10 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   min-width: max-content;
   height: 28px;
   padding: 0;
-  border: 1px solid var(--blok-popover-border);
+  border: 1px solid var(--blok-database-table-control-border);
   border-radius: 50%;
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font: inherit;
   font-size: 12px;
   cursor: pointer;
@@ -13479,12 +13518,12 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   display: inline-flex;
   vertical-align: middle;
   margin-inline-start: var(--blok-space-1);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-template-default] {
   margin-inline-start: var(--blok-space-2);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-template-repeat-icon] svg {
@@ -13552,7 +13591,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   padding-inline-start: calc(var(--blok-space-2) + var(--blok-database-subitem-depth, 1) * var(--blok-database-subitem-indent));
   border: none;
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
   text-align: start;
   cursor: pointer;
@@ -13653,7 +13692,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   padding: var(--blok-space-3) var(--blok-space-4) var(--blok-space-3) var(--blok-space-3);
   border-radius: var(--blok-radius-block);
   background-color: var(--blok-bg-secondary);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
   line-height: 20px;
 }
@@ -13682,14 +13721,14 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   border: 1px solid var(--blok-database-table-border);
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   font-size: 14px;
   cursor: pointer;
 }
 
 [data-blok-database-source-picker] > button:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-linked-title] {
@@ -13734,7 +13773,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-database-form-label] {
   font-weight: 500;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-form-question]:has(> [data-blok-database-form-question-header]) {
@@ -13761,12 +13800,12 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }
 
 [data-blok-database-form-question-menu]:hover {
-  background: var(--blok-item-hover-bg);
+  background: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-form-question-menu] svg {
@@ -13799,7 +13838,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-database-form-description], [data-blok-database-form-selection-limit], [data-blok-database-form-file-limit] {
   margin: 0;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 0.875em;
 }
 
@@ -13809,7 +13848,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   border: 1px solid var(--blok-database-form-answer-border);
   border-radius: var(--blok-radius-control);
   background-color: transparent;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
 }
 
@@ -13836,7 +13875,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   display: inline-flex;
   align-items: center;
   gap: var(--blok-space-1);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 0.875em;
 }
 
@@ -13846,8 +13885,8 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   padding-inline: var(--blok-space-3);
   border: none;
   border-radius: var(--blok-radius-control);
-  background-color: var(--blok-accent);
-  color: var(--blok-text-on-dark);
+  background-color: var(--blok-database-new-bg);
+  color: var(--blok-database-new-text);
   font: inherit;
   cursor: pointer;
 }
@@ -13861,7 +13900,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   padding: var(--blok-space-2) var(--blok-space-3);
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-column-bg);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
 }
 
@@ -13883,14 +13922,14 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   border: none;
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font: inherit;
   font-weight: 500;
   cursor: pointer;
 }
 
 [data-blok-database-form-access] > button:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-form-anonymous] {
@@ -13899,7 +13938,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   padding: var(--blok-space-1-5) var(--blok-space-2-5);
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-column-bg);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
   line-height: 21px;
 }
@@ -13939,16 +13978,16 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   align-items: center;
   gap: var(--blok-space-1);
   padding: var(--blok-space-1) var(--blok-space-2);
-  border: 1px solid var(--blok-popover-border);
+  border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   cursor: pointer;
 }
 
 [data-blok-database-form-share-copy]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-form-share-copy] svg {
@@ -13971,10 +14010,10 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 [data-blok-database-form-response-action] {
   block-size: 32px;
   padding-inline: var(--blok-space-3);
-  border: 1px solid var(--blok-popover-border);
+  border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-control);
   background-color: transparent;
-  color: var(--blok-text-primary);
+  color: var(--blok-database-ink);
   font: inherit;
   font-size: 14px;
   font-weight: 500;
@@ -13988,7 +14027,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-database-form-response-action="email"]:hover {
-  background-color: var(--blok-item-hover-bg);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-map-frame] {
@@ -14092,7 +14131,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-database-map-pin-card-crumb] {
   overflow: hidden;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -14116,12 +14155,12 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   border-radius: var(--blok-radius-control-sm);
   background-color: var(--blok-bg-primary);
   box-shadow: var(--blok-database-popover-shadow);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }
 
 [data-blok-database-map-add-pin]:hover, [data-blok-database-map-add-pin][data-active] {
-  background-color: var(--blok-bg-hover);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-map-add-pin] svg {
@@ -14136,8 +14175,8 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   padding: var(--blok-space-1) var(--blok-space-1-5);
   border: 0;
   border-radius: var(--blok-radius-control);
-  background-color: var(--blok-bg-hover);
-  color: var(--blok-text-secondary);
+  background-color: var(--blok-database-hover-bg);
+  color: var(--blok-database-ink-secondary);
   font: inherit;
   font-size: 14px;
   cursor: pointer;
@@ -14162,7 +14201,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-database-map-no-place-row]:hover {
-  background-color: var(--blok-bg-hover);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-map-add-pin], [data-blok-database-map-no-place], [data-blok-database-map-no-place-row] {
@@ -14216,7 +14255,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-database-place-current]:hover, [data-blok-database-place-result]:hover {
-  background-color: var(--blok-bg-hover);
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-place-current]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *), [data-blok-database-place-result]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
@@ -14224,7 +14263,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-database-place-result-address], [data-blok-database-place-loading] {
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
 }
 
@@ -14235,13 +14274,13 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 [data-blok-database-place-google-maps] {
   display: block;
   padding: var(--blok-space-1-5) var(--blok-space-2);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 13px;
 }
 
 [data-blok-database-map-empty], [data-blok-database-form-closed], [data-blok-database-dashboard-placeholder] p {
   margin: 0;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 :is([data-blok-database-calendar-event], [data-blok-database-calendar-no-date-item], [data-blok-database-timeline-bar], [data-blok-database-feed-card])[data-blok-database-color] {

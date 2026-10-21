@@ -134,7 +134,7 @@ describe('board column, card and header look (research/08)', () => {
     expect(body).toContain('background: none');
     expect(body).toContain('font-family: inherit');
     expect(body).toContain('cursor: pointer');
-    expect(ruleBody(database, 'button[data-blok-database-column-count]:hover')).toContain('background-color: var(--blok-item-hover-bg)');
+    expect(ruleBody(database, 'button[data-blok-database-column-count]:hover')).toContain('background-color: var(--blok-database-hover-bg)');
   });
 
   it('shows the no-value label as plain 14px/500 text, no pill', () => {
@@ -161,7 +161,8 @@ describe('board in dark (research/21 §1f)', () => {
     expect(dark('--blok-database-column-green-bg')).toEqual(Array(2).fill('rgba(83, 255, 140, 0.035)'));
     expect(dark('--blok-database-column-blue-ring')).toEqual(Array(2).fill('rgba(71, 157, 255, 0.173)'));
     expect(dark('--blok-database-column-green-ring')).toEqual(Array(2).fill('rgba(119, 255, 179, 0.118)'));
-    expect(dark('--blok-database-column-blue-accent')).toEqual(Array(2).fill('rgb(39, 131, 222)'));
+    // Notion's rgb(39, 131, 222) fails AA on the dark column; rgb(41, 137, 232) is the AA step.
+    expect(dark('--blok-database-column-blue-accent')).toEqual(Array(2).fill('rgb(41, 137, 232)'));
     expect(dark('--blok-database-column-green-accent')).toEqual(Array(2).fill('rgb(70, 161, 113)'));
     expect(dark('--blok-database-column-blue-card-bg')).toEqual(Array(2).fill('rgb(33, 48, 65)'));
     expect(dark('--blok-database-column-green-card-bg')).toEqual(Array(2).fill('rgb(36, 52, 43)'));

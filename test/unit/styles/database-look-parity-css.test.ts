@@ -39,7 +39,9 @@ describe('view tabs (research/07:45-50, 222)', () => {
 
   it('take Notion ink and fill in light and dark', () => {
     expect(tokenValues('--blok-database-tab-bg-active')).toEqual(['rgba(33, 27, 23, 0.05)', 'rgba(255, 255, 255, 0.055)', 'rgba(255, 255, 255, 0.055)']);
-    expect(tokenValues('--blok-database-tab-text')).toEqual(['rgb(125, 122, 117)', 'rgb(173, 169, 163)', 'rgb(173, 169, 163)']);
+    // Light points at the AA step of Notion's rgb(125, 122, 117).
+    expect(tokenValues('--blok-database-tab-text')).toEqual(['var(--blok-database-ink-secondary)', 'rgb(173, 169, 163)', 'rgb(173, 169, 163)']);
+    expect(tokenValues('--blok-database-ink-secondary')[0]).toBe('rgb(114, 111, 106)');
     expect(tokenValues('--blok-database-tab-text-active')).toEqual(['rgb(44, 44, 43)', 'rgb(240, 239, 237)', 'rgb(240, 239, 237)']);
   });
 });
@@ -165,10 +167,11 @@ describe('fill handle (D3)', () => {
 });
 
 describe('side peek properties (research/08:329)', () => {
-  it('use 34px rows and Notion secondary ink labels', () => {
+  it('use 34px rows and the AA step of Notion secondary ink for labels', () => {
     expect(ruleBody('[data-blok-database-drawer-prop-row]')).toContain('min-height: 34px');
     expect(ruleBody('[data-blok-database-drawer-prop-label]')).toContain('color: var(--blok-database-peek-label)');
-    expect(tokenValues('--blok-database-peek-label')[0]).toBe('rgb(125, 122, 117)');
+    expect(tokenValues('--blok-database-peek-label')[0]).toBe('var(--blok-database-ink-secondary)');
+    expect(tokenValues('--blok-database-ink-secondary')[0]).toBe('rgb(114, 111, 106)');
   });
 });
 
@@ -189,9 +192,9 @@ describe('row page peek in dark (research/21 §1m)', () => {
     expect(tokenValues('--blok-database-peek-backdrop')).toEqual(['rgba(15, 15, 15, 0.6)', 'rgba(15, 15, 15, 0.8)', 'rgba(15, 15, 15, 0.8)']);
   });
 
-  it('inks the title rgb(240, 239, 237) in dark with its own token; light keeps the primary ink (unmeasured)', () => {
+  it('inks the title in the database ink: rgb(44, 44, 43) light (research/26 §1e), rgb(240, 239, 237) dark', () => {
     expect(ruleBody('[data-blok-database-drawer-title]')).toContain('color: var(--blok-database-peek-title)');
-    expect(tokenValues('--blok-database-peek-title')).toEqual(['var(--blok-text-primary)', 'rgb(240, 239, 237)', 'rgb(240, 239, 237)']);
+    expect(tokenValues('--blok-database-peek-title')).toEqual(['var(--blok-database-ink)', 'rgb(240, 239, 237)', 'rgb(240, 239, 237)']);
   });
 
   it('shows no fill on a hovered value in either theme (research/26 §5f)', () => {
@@ -266,7 +269,7 @@ describe('view overflow list (research/13:81, notion-measure5/51-one-more.json)'
     expect(tokenValues(fill ?? '').length).toBeGreaterThan(0);
     expect(tokenValues(fill ?? '').every(neutral)).toBe(true);
     expect(active).not.toMatch(/(^|;)\s*color:/);
-    expect(ruleBody('[data-blok-database-tab-overflow-item]')).toContain('color: var(--blok-text-primary)');
+    expect(ruleBody('[data-blok-database-tab-overflow-item]')).toContain('color: var(--blok-database-ink)');
   });
 
   it('is 290px wide and shows every row\'s handle and "•••" without hover', () => {

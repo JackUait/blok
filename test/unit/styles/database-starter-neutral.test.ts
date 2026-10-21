@@ -24,7 +24,7 @@ describe('starter Customize picks are neutral', () => {
 
     expect(body).not.toMatch(/background/);
     expect(body).not.toMatch(/(^|[\s;{])color:/);
-    expect(body).toMatch(/box-shadow:[^;]*var\(--blok-text-primary\)/);
+    expect(body).toMatch(/box-shadow:[^;]*var\(--blok-database-ink\)/);
   });
 });
 
@@ -46,7 +46,7 @@ describe('the database icon a template gives (research/27:42)', () => {
   it('the template menu\'s "Default" reads in secondary ink, no fill', () => {
     const body = rule('[data-blok-database-template-default]');
 
-    expect(body).toContain('var(--blok-text-secondary)');
+    expect(body).toContain('var(--blok-database-ink-secondary)');
     expect(body).not.toMatch(/background/);
   });
 });

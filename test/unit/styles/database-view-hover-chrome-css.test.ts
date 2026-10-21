@@ -118,7 +118,7 @@ describe('form builder question card (research/21 §1k)', () => {
     expect(chip).toContain('block-size: 24px');
     expect(chip).toContain('border-radius: var(--blok-radius-control)');
     expect(ruleBody('[data-blok-database-form-question-menu] svg')).toContain('inline-size: 16px');
-    expect(ruleBody('[data-blok-database-form-question-menu]:hover')).toContain('background: var(--blok-item-hover-bg)');
+    expect(ruleBody('[data-blok-database-form-question-menu]:hover')).toContain('background: var(--blok-database-hover-bg)');
     expect(ruleBody('[data-blok-database-form-question-menu]:hover')).not.toMatch(/35, 131, 226/);
   });
 });

@@ -169,7 +169,8 @@ describe('gallery and calendar in dark (research/21 §1g, §1h)', () => {
     ['--blok-database-gallery-preview-border', 'transparent'],
     ['--blok-database-calendar-border', 'rgb(56, 56, 54)'],
     ['--blok-database-calendar-weekend-bg', 'rgb(32, 32, 32)'],
-    ['--blok-database-calendar-muted-text', 'rgb(125, 122, 117)'],
+    // Notion's rgb(125, 122, 117) fails AA in dark; the tertiary ink is the AA step rgb(143, 140, 135).
+    ['--blok-database-calendar-muted-text', 'var(--blok-database-ink-tertiary)'],
     ['--blok-database-calendar-nav-icon', 'rgb(173, 169, 163)'],
     ['--blok-database-calendar-event-bg', 'rgb(47, 47, 47)'],
     ['--blok-database-calendar-event-shadow', 'rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 2px 4px'],

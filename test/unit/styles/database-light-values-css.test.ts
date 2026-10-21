@@ -93,7 +93,7 @@ describe('peek (research/26 §1e, §5f)', () => {
 
   it('label cells and "Add a property" hover with the measured light fill; values have none', () => {
     expect(tokenValues('--blok-database-peek-hover-bg'))
-      .toEqual(['rgba(33, 27, 23, 0.051)', 'var(--blok-item-hover-bg)', 'var(--blok-item-hover-bg)']);
+      .toEqual(['rgba(33, 27, 23, 0.051)', 'var(--blok-database-hover-bg)', 'var(--blok-database-hover-bg)']);
     expect(ruleBody('[data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-head]:has(> [data-blok-database-drawer-prop-label][role="button"]:hover)'))
       .toContain('background-color: var(--blok-database-peek-hover-bg)');
     expect(ruleBody('[data-blok-database-drawer-add-prop]:hover')).toContain('background-color: var(--blok-database-peek-hover-bg)');
@@ -102,8 +102,8 @@ describe('peek (research/26 §1e, §5f)', () => {
 });
 
 describe('dark leftovers (research/26 §4c, §4e, §4f)', () => {
-  it('a reminder is the measured blue in both themes', () => {
-    expect(tokenValues('--blok-database-reminder-text')).toEqual(['rgb(39, 131, 222)', 'rgb(39, 131, 222)', 'rgb(39, 131, 222)']);
+  it('a reminder is the AA step of the measured blue rgb(39, 131, 222) in each theme', () => {
+    expect(tokenValues('--blok-database-reminder-text')).toEqual(['rgb(35, 119, 211)', 'rgb(41, 137, 232)', 'rgb(41, 137, 232)']);
   });
 
   it('gallery property text is primary ink', () => {

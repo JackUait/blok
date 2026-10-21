@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SCHEMA, buildTool, makeDoc, tableData } from './tier3-harness';
 import type { DatabaseTool } from '../../../../src/tools/database';
 import { csvDatabaseBlocks } from '../../../../src/tools/database/database-csv';
+import { resolveViewProperties } from '../../../../src/shared/database/view-properties';
 import type { DatabaseData, PropertyDefinition } from '../../../../src/tools/database/types';
 
 vi.mock('../../../../src/blok', () => ({
@@ -116,6 +117,24 @@ describe('DatabaseTool — a column added from a table view shows in it', () => 
     expect(headerOrder(el)).not.toContain('where');
     expect(headerOrder(el)).toContain(id);
     expect(tool.save(el).views[0].properties?.find((p) => p.id === 'where')?.visible).toBe(false);
+  });
+
+  // research/30 B28: a property added in the table view reads "Hidden in board" in the board view.
+  it.each([
+    ['a board view with a properties list', { properties: [{ id: 'title', visible: true }, { id: 'notes', visible: true }] }],
+    ['a legacy board view', { visibleProperties: ['notes'] }],
+  ])('header "+" in the table view leaves the new column hidden in %s', (_name, stored) => {
+    const table = tableData();
+    const board = { id: 'board', name: 'Board', type: 'board' as const, position: 'a1', sorts: [], filters: [], ...stored };
+    const { tool, el } = build({ ...table, views: [table.views[0], board] });
+
+    addFromHeaderPlus(el);
+    const id = newId(tool, el);
+    const saved = tool.save(el);
+    const savedBoard = saved.views.find((view) => view.id === 'board');
+
+    expect(savedBoard === undefined ? undefined : resolveViewProperties(savedBoard, saved.schema).find((p) => p.id === id)?.visible).toBe(false);
+    expect(headerOrder(el)).toContain(id);
   });
 
   it('header "+" on a CSV-imported database shows the new column', () => {

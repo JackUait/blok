@@ -56,9 +56,9 @@ const data = (extra: Partial<DatabaseData> = {}): DatabaseData => ({
 const isMenuItem = (item: unknown): item is MenuItem => typeof item === 'object' && item !== null;
 
 /** Opens the active tab's menu and returns its "Hide / Show data source titles" item. */
-const titlesItem = (el: HTMLElement): MenuItem | undefined => {
+const titlesItem = (el: HTMLElement, viewId = 'v1'): MenuItem | undefined => {
   popovers.items.length = 0;
-  el.querySelector('[data-blok-database-tab][data-view-id="v1"]')?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+  el.querySelector(`[data-blok-database-tab][data-view-id="${viewId}"]`)?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
 
   return popovers.items.flat().filter(isMenuItem).find((item) => item.name === 'database-view-data-source-titles');
 };
@@ -90,6 +90,20 @@ describe('DatabaseTool — "Hide data source titles" (research/23 §10)', () => 
     expect(tool.save(document.createElement('div')).hideDataSourceTitles).toBe(true);
     el.querySelector<HTMLElement>('[data-blok-database-tab][data-view-id="v2"]')?.click();
     expect(title(el)?.hidden).toBe(true);
+  });
+
+  // research/30 B17: switched from one view, the other view's menu then reads "Show".
+  it('is one flag for the block: another view\'s menu offers "Show" after hiding from the first', () => {
+    const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }]);
+    const { tool, el } = buildDatabase(doc, 'db', data());
+
+    titlesItem(el, 'v1')?.onActivate?.();
+    el.querySelector<HTMLElement>('[data-blok-database-tab][data-view-id="v2"]')?.click();
+
+    expect(el.querySelector('[data-blok-database-tab][data-view-id="v2"]')?.getAttribute('aria-selected')).toBe('true');
+    expect(titlesItem(el, 'v2')?.title).toBe('tools.database.showDataSourceTitles');
+    expect(title(el)?.hidden).toBe(true);
+    expect(tool.save(document.createElement('div')).views.some((view) => 'showDataSourceTitle' in view)).toBe(false);
   });
 
   it('"Show data source titles" brings the line back and drops the key', () => {

@@ -1238,5 +1238,73 @@ describe('createLivePreview', () => {
       expect(state.layer.querySelector(`${IMAGE} img`)?.getAttribute('src')).toBe('https://example.com/b.png');
       expect(caption()).toBe('Moon');
     });
+
+    const CODE = '[data-blok-tool="code"]';
+    const codeTexts = (): string[] => [...state.layer.querySelectorAll('[data-blok-testid="code-content"]')].map((code) => code.textContent ?? '');
+    const settle = async (): Promise<void> => {
+      vi.advanceTimersByTime(35 * 20);
+      await vi.dynamicImportSettled();
+      await Promise.resolve();
+      vi.advanceTimersByTime(1000);
+      await vi.dynamicImportSettled();
+    };
+
+    it('draws a $$ block as the LaTeX block the importer makes, showing the rendered formula', async () => {
+      const preview = make();
+
+      preview.update('c1', markdown('$$\nE = mc^2\n$$'));
+      await settle();
+
+      const block = state.layer.querySelector(CODE);
+
+      expect(block?.querySelector('[data-blok-testid="code-language-name"]')?.textContent).toBe('LaTeX');
+      expect(block?.querySelector<HTMLElement>('[data-blok-testid="code-preview"]')?.hidden).toBe(false);
+      expect(block?.querySelector('pre')?.hidden).toBe(true);
+      expect(block?.querySelector('[data-blok-testid="code-mode-preview"]')?.getAttribute('aria-pressed')).toBe('true');
+      expect(codeTexts()).toEqual(['E = mc^2']);
+      expect(block?.querySelector('[data-blok-testid="code-preview"] .katex')).not.toBeNull();
+      expect(layerText()).not.toContain('$$');
+    });
+
+    it('splits a paragraph around inline math, as the importer does', () => {
+      const preview = make();
+
+      preview.update('c1', markdown('text $x^2$ more'));
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(codeTexts()).toEqual(['x^2']);
+      expect([...state.layer.querySelectorAll('.blok-block')].map((block) => block.textContent)).toEqual(['text', 'more']);
+    });
+
+    it('keeps prices a paragraph', () => {
+      const preview = make();
+
+      preview.update('c1', markdown('costs $5 and $10'));
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(state.layer.querySelector(CODE)).toBeNull();
+      expect(state.layer.querySelector('.blok-block')?.textContent).toBe('costs $5 and $10');
+    });
+
+    it('draws code with the editable block\'s header, and no editable field in the overlay', () => {
+      const preview = make();
+
+      preview.update('c1', markdown('```python\nx = 1\n```'));
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(state.layer.querySelector<HTMLElement>('[data-blok-testid="code-language-chevron"]')?.hidden).toBe(false);
+      expect(state.layer.querySelector('[contenteditable]')).toBeNull();
+      expect(state.layer.querySelector<HTMLElement>('[data-blok-testid="code-preview"]')?.hidden).toBe(true);
+    });
+
+    it('opens a mermaid fence in preview mode, as the real block does', () => {
+      const preview = make();
+
+      preview.update('c1', markdown('```mermaid\ngraph TD\n```'));
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(state.layer.querySelector<HTMLElement>('[data-blok-testid="code-preview"]')?.hidden).toBe(false);
+      expect(state.layer.querySelector('pre')?.hidden).toBe(true);
+    });
   });
 });

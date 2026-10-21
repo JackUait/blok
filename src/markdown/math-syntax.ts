@@ -14,7 +14,7 @@ const DISPLAY_MATH = /\$\$[\s\S]+?\$\$/;
  * separator (`$5/$`) are prose; `$2x$`, `$5 + 3$` and `$5$` are math.
  * @param content - the text between the dollars
  */
-const isInlineMath = (content: string): boolean =>
+export const isInlineMath = (content: string): boolean =>
   content !== '' && content.trim() === content && !PRICE.test(content);
 
 /**

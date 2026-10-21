@@ -3,14 +3,16 @@ import type { PartialCommand } from '../../../agent/partial-json';
 import { ALERT_KINDS, ALERT_MARKER, ALERT_STYLE } from '../../../markdown/alerts';
 import type { AlertKind } from '../../../markdown/alerts';
 import { normalizeFenceLang } from '../../../markdown/fence-language';
+import { isInlineMath } from '../../../markdown/math-syntax';
+import { renderLatex } from '../../../shared/katex';
 import { DIVIDER_RULE_CLASSES, DIVIDER_WRAPPER_CLASSES } from '../../../shared/tool-classes/divider';
 import { headerClasses } from '../../../shared/tool-classes/header';
 import { LIST_CONTENT_CLASSES, LIST_ITEM_CLASSES, LIST_ITEM_ROW_CLASSES } from '../../../shared/tool-classes/list';
 import { PARAGRAPH_CLASSES } from '../../../shared/tool-classes/paragraph';
 import { quoteClasses } from '../../../shared/tool-classes/quote';
-import { DEFAULT_LANGUAGE, GUTTER_LINE_STYLES, LANGUAGE_COLORS, LANGUAGES } from '../../../tools/code/constants';
+import { DEFAULT_LANGUAGE, GUTTER_LINE_STYLES, LANGUAGE_COLORS, LANGUAGES, PREVIEWABLE_LANGUAGES } from '../../../tools/code/constants';
 import { buildCalloutDOM } from '../../../tools/callout/dom-builder';
-import { buildCodeDOM } from '../../../tools/code/dom-builder';
+import { buildCodeDOM, setActiveViewMode } from '../../../tools/code/dom-builder';
 import { createMarker } from '../../../tools/list/dom-builder';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { colorVarName } from '../../shared/color-presets';
@@ -320,6 +322,62 @@ const fencedCode = (raw: string[], index: number, lineDone: LineDone): Parsed | 
   };
 };
 
+const MATH_FENCE = /^ {0,3}\$\$ *$/;
+
+/** A `$$` block: the importer makes it a LaTeX code block. */
+const mathBlock = (raw: string[], index: number, lineDone: LineDone): Parsed | null => {
+  if (!MATH_FENCE.test(raw[index]) || (!lineDone(index) && index === raw.length - 1)) {
+    return null;
+  }
+  const closeAt = raw.findIndex((line, at) => at > index && MATH_FENCE.test(line));
+  const body = raw.slice(index + 1, closeAt < 0 ? raw.length : closeAt);
+  // A closing `$` still being written is not math.
+  const cut = closeAt < 0 && !lineDone(raw.length - 1) && /^ {0,3}\$ *$/.test(body[body.length - 1] ?? '');
+
+  return {
+    spec: { ...BASE, kind: 'code', text: (cut ? body.slice(0, -1) : body).join('\n'), complete: closeAt >= 0 || lineDone(raw.length - 1), language: 'latex' },
+    next: closeAt < 0 ? raw.length : closeAt + 1,
+  };
+};
+
+/**
+ * A paragraph's text and the math in it, read the way the math extension reads it:
+ * `$$x$$` always, `$x$` only when the content is math rather than prices. An escaped `$` is text.
+ */
+const mathSegments = (text: string): Array<{ math: boolean; text: string }> => {
+  const segments: Array<{ math: boolean; text: string }> = [];
+  const at = { index: 0, start: 0 };
+
+  while (at.index < text.length) {
+    const char = text[at.index];
+
+    if (char === '\\') {
+      at.index += 2;
+      continue;
+    }
+    if (char !== '$') {
+      at.index += 1;
+      continue;
+    }
+    const run = text.startsWith('$$', at.index) ? '$$' : '$';
+    const from = at.index + run.length;
+    const close = text.indexOf(run, from);
+    const content = close < 0 ? '' : text.slice(from, close);
+    const lone = run === '$' || text[close + 2] !== '$';
+
+    if (close < 0 || content.includes('$') || !lone || (run === '$' ? !isInlineMath(content) : content.trim() === '')) {
+      at.index = from;
+      continue;
+    }
+    segments.push({ math: false, text: text.slice(at.start, at.index) }, { math: true, text: content });
+    at.index = close + run.length;
+    at.start = at.index;
+  }
+  segments.push({ math: false, text: text.slice(at.start) });
+
+  return segments;
+};
+
 /** A row's cells; while the row streams, its newest cell is final once its closing pipe arrives. */
 const rowCells = (line: string, complete: boolean, align: Array<string | undefined>): CellSpec[] => {
   const { cells, closed } = splitRow(line);
@@ -449,9 +507,17 @@ function parseLines(raw: string[], lineDone: LineDone): LineSpec[] {
   const specs: LineSpec[] = [];
   const paragraph: { texts: string[]; complete: boolean } = { texts: [], complete: true };
   const flush = (): void => {
-    if (paragraph.texts.length > 0) {
-      specs.push({ ...BASE, kind: 'paragraph', text: inlineMarkdown(paragraph.texts.join(' '), paragraph.complete), complete: paragraph.complete });
-    }
+    const { complete } = paragraph;
+    const segments = paragraph.texts.length > 0 ? mathSegments(paragraph.texts.join(' ')) : [];
+
+    // Math splits the paragraph, and the text around it is trimmed; a paragraph without math keeps its spacing.
+    segments.forEach((segment) => {
+      if (segment.math) {
+        specs.push({ ...BASE, kind: 'code', text: segment.text, complete: true, language: 'latex' });
+      } else if (segments.length === 1 || segment.text.trim() !== '') {
+        specs.push({ ...BASE, kind: 'paragraph', text: inlineMarkdown(segments.length === 1 ? segment.text : segment.text.trim(), complete), complete });
+      }
+    });
     paragraph.texts = [];
   };
   const at = { index: 0 };
@@ -460,7 +526,7 @@ function parseLines(raw: string[], lineDone: LineDone): LineSpec[] {
     const index = at.index;
     const line = raw[index];
     const complete = lineDone(index);
-    const block = fencedCode(raw, index, lineDone) ?? tableAt(raw, index, lineDone) ?? calloutAt(raw, index, lineDone) ?? quoteAt(raw, index, lineDone)
+    const block = fencedCode(raw, index, lineDone) ?? mathBlock(raw, index, lineDone) ?? tableAt(raw, index, lineDone) ?? calloutAt(raw, index, lineDone) ?? quoteAt(raw, index, lineDone)
       ?? (paragraph.texts.length === 0 ? imageAt(raw, index, lineDone) : null);
     const heading = /^(#{1,6})\s+(.*)$/.exec(line);
     const check = /^\s*[-*+]\s+\[[ xX]\]\s*(.*)$/.exec(line);
@@ -668,13 +734,52 @@ const makeTable = (spec: LineSpec): View => {
   };
 };
 
-/** The real code block's markup, read-only so the overlay holds no editable field. */
+/** Rendering waits this long after the newest word, so a streaming formula is not rendered once per word. */
+const MATH_RENDER_MS = 150;
+
+/** Mermaid stays out of core until an agent writes a diagram; the real block loads it then too. */
+const renderPreview = async (language: string, code: string): Promise<string> =>
+  (language === 'mermaid' ? (await import('../../../tools/code/mermaid-loader')).renderMermaid(code) : renderLatex(code));
+
+/**
+ * The editable code block's markup, as the real block renders: its controls show on hover only,
+ * so their empty labels never show. Math and diagrams open in preview mode, as they do in the tool.
+ */
 const makeCode = (spec: LineSpec): View => {
   const language = spec.language ?? DEFAULT_LANGUAGE;
+  const previewable = PREVIEWABLE_LANGUAGES.has(language);
   // The tool names plain text through i18n, which the preview has not got: it shows no name.
   const name = language === DEFAULT_LANGUAGE ? '' : LANGUAGES.find((entry) => entry.id === language)?.name ?? language;
-  const dom = buildCodeDOM({ code: '', languageName: name, languageColor: LANGUAGE_COLORS[language], readOnly: true, copyLabel: '' });
+  const dom = buildCodeDOM({
+    code: '', languageName: name, languageColor: LANGUAGE_COLORS[language], readOnly: false, copyLabel: '',
+    previewable, viewModeLabels: { code: '', preview: '', split: '' },
+  });
   const gutter = dom.gutterElement;
+  const rendered = { code: '', timer: undefined as ReturnType<typeof setTimeout> | undefined };
+
+  dom.codeElement.removeAttribute('contenteditable');
+  dom.codeElement.removeAttribute('spellcheck');
+  if (previewable && dom.viewModeContainer !== null && dom.previewElement !== null) {
+    // Mirrors CodeTool.applyViewMode('preview').
+    setActiveViewMode(dom.viewModeContainer, 'preview');
+    dom.preElement.hidden = true;
+    gutter.hidden = true;
+    dom.previewElement.hidden = false;
+    const codeHalf = dom.preElement.parentElement?.parentElement;
+
+    if (codeHalf) {
+      codeHalf.hidden = true;
+    }
+  }
+  const output = dom.previewElement;
+  const render = (code: string): void => {
+    void renderPreview(language, code).then((html) => {
+      // A formula cut mid-command fails to render: the last good one stays until the next.
+      if (output !== null && code === rendered.code && (!html.includes('katex-error') || output.childElementCount === 0)) {
+        output.innerHTML = html;
+      }
+    });
+  };
 
   return {
     block: dom.wrapper,
@@ -692,6 +797,12 @@ const makeCode = (spec: LineSpec): View => {
       }
       while (gutter.children.length > count) {
         gutter.lastElementChild?.remove();
+      }
+      // A diagram cut mid-line is not drawn; it waits for the whole fence.
+      if (previewable && next.text !== rendered.code && (next.complete || language !== 'mermaid')) {
+        rendered.code = next.text;
+        clearTimeout(rendered.timer);
+        rendered.timer = setTimeout(() => render(next.text), next.complete ? 0 : MATH_RENDER_MS);
       }
 
       return true;

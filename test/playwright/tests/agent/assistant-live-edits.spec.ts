@@ -5,6 +5,10 @@ import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 const HOLDER_ID = 'blok';
+
+/** Whether a code block's preview area shows a rendered formula or diagram. */
+const drawn = (area: Locator): Promise<boolean> =>
+  area.evaluate((element) => element.querySelector('.katex, svg') !== null && element.getBoundingClientRect().height > 0);
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 
 /** One model call the test drives: stream events into it, then answer it. */
@@ -745,5 +749,76 @@ test.describe('Ask AI live edits', () => {
 
     await expect(real).toContainText('Red planet');
     expect(await look(real)).toEqual(before);
+  });
+
+  test('a code fence and a $$ formula stream as the real code and LaTeX blocks, and hand off without a jump', async ({ page }) => {
+    const markdown = '```python\nx = 1\nprint(x)\n```\n\n$$\nE = mc^2\n$$';
+    const json = JSON.stringify({ commands: [{ name: 'markdown.insert', args: { position: 'end', markdown } }] });
+
+    await ask(page, 'Second');
+    await emit(page, 0, { type: 'tool_start', index: 0, id: 'call-1', name: 'blok_execute' });
+    await emit(page, 0, { type: 'tool_input', index: 0, json });
+
+    const preview = page.getByTestId('ai-preview');
+    const previewBlocks = preview.locator('[data-blok-tool="code"]');
+
+    await expect(previewBlocks).toHaveCount(2);
+    await expect.poll(() => drawn(previewBlocks.nth(1).getByTestId('code-preview'))).toBe(true);
+    await expect(previewBlocks.nth(0).getByTestId('code-content')).toHaveText('x = 1\nprint(x)');
+    expect(await preview.textContent()).not.toMatch(/```|\$\$/);
+
+    const look = (block: Locator): Promise<Record<string, string>> => block.evaluate((element) => {
+      const top = element.getBoundingClientRect().top;
+      const box = (node: Element | null): string => {
+        const rect = node?.getBoundingClientRect();
+
+        return rect === undefined ? 'none' : [rect.left, rect.top - top, rect.width, rect.height].map(Math.round).join(',');
+      };
+
+      return {
+        block: box(element),
+        header: box(element.querySelector('[data-blok-testid="code-language-btn"]')),
+        content: box(element.querySelector('[data-blok-testid="code-preview"]:not([hidden])') ?? element.querySelector('[data-blok-testid="code-content"]')),
+      };
+    });
+    // KaTeX's fonts change the formula's height when they arrive.
+    await page.evaluate(() => document.fonts.ready);
+    const before = [await look(previewBlocks.nth(0)), await look(previewBlocks.nth(1))];
+
+    await emit(page, 0, { type: 'tool_end', index: 0 });
+    await expect(preview).toHaveCount(0);
+
+    const real = page.locator(`#${HOLDER_ID} [data-blok-tool="code"]`);
+
+    await expect.poll(() => drawn(real.nth(1).getByTestId('code-preview'))).toBe(true);
+    await page.evaluate(() => document.fonts.ready);
+    expect([await look(real.nth(0)), await look(real.nth(1))]).toEqual(before);
+  });
+
+  test('a mermaid fence streams as the drawn diagram, and hands off without a jump', async ({ page }) => {
+    const markdown = '```mermaid\ngraph TD\n  A --> B\n```';
+    const json = JSON.stringify({ commands: [{ name: 'markdown.insert', args: { position: 'end', markdown } }] });
+
+    await ask(page, 'Second');
+    await emit(page, 0, { type: 'tool_start', index: 0, id: 'call-1', name: 'blok_execute' });
+    await emit(page, 0, { type: 'tool_input', index: 0, json });
+
+    const preview = page.getByTestId('ai-preview');
+    await expect.poll(() => drawn(preview.getByTestId('code-preview'))).toBe(true);
+
+    const size = (block: Locator): Promise<string> => block.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+
+      return [rect.left, rect.width, rect.height].map(Math.round).join(',');
+    });
+    const before = await size(preview.locator('[data-blok-tool="code"]'));
+
+    await emit(page, 0, { type: 'tool_end', index: 0 });
+    await expect(preview).toHaveCount(0);
+
+    const real = page.locator(`#${HOLDER_ID} [data-blok-tool="code"]`);
+
+    await expect.poll(() => drawn(real.getByTestId('code-preview'))).toBe(true);
+    expect(await size(real)).toBe(before);
   });
 });

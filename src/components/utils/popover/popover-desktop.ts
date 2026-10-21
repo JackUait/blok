@@ -116,7 +116,8 @@ export interface PopoverCurrentItem {
 /**
  * Desktop popover.
  * On desktop devices popover behaves like a floating element. Nested popovers
- * open toward the inline end: right, or left in RTL.
+ * open toward the inline end (right, or left in RTL), or toward the start when
+ * only the start side has room.
  * @internal
  */
 export class PopoverDesktop extends PopoverAbstract {
@@ -1674,20 +1675,24 @@ export class PopoverDesktop extends PopoverAbstract {
     // (0.25rem = 4px).
     const overlap = 4;
 
-    // Submenus otherwise ALWAYS open toward the inline end of their parent
-    // (right, or left in RTL), regardless of the parent's own side or the
-    // space available — a side that flips with geometry made the same menu
-    // open on different sides on different blocks. The submenu overlaps the
-    // parent's trailing edge by `overlap` px.
-    // A wide submenu (the 320px convert menu) near the viewport edge would
-    // run off-screen, so slide it back in. A submenu wider than the viewport
-    // keeps its left margin instead of hanging left.
+    // Submenus open toward the inline end of their parent (right, or left in
+    // RTL), overlapping its edge by `overlap` px. The side depends only on
+    // fit, never on the parent's own side: when the end side has no room the
+    // submenu opens on the start side instead of sliding back over its
+    // trigger. Fitting on neither side, it stays on the end side and slides
+    // back inside the viewport; one wider than the viewport keeps its left
+    // margin.
     const nestedWidth = nestedContainer.offsetWidth > 0
       ? nestedContainer.offsetWidth
       : this.nestedPopover?.size.width ?? 0;
-    const viewportLeft = isRtl
-      ? parentRect.left + overlap - nestedWidth
-      : parentRect.right - overlap;
+    const rightSideLeft = parentRect.right - overlap;
+    const leftSideLeft = parentRect.left + overlap - nestedWidth;
+    const fits = (left: number): boolean => left >= NESTED_POPOVER_VIEWPORT_MARGIN
+      && left + nestedWidth <= window.innerWidth - NESTED_POPOVER_VIEWPORT_MARGIN;
+    const endLeft = isRtl ? leftSideLeft : rightSideLeft;
+    const startLeft = isRtl ? rightSideLeft : leftSideLeft;
+    const flips = nestedWidth > 0 && !fits(endLeft) && fits(startLeft);
+    const viewportLeft = flips ? startLeft : endLeft;
     const rightLimit = window.innerWidth - NESTED_POPOVER_VIEWPORT_MARGIN - nestedWidth;
     const clampedLeft = nestedWidth > 0
       ? Math.max(NESTED_POPOVER_VIEWPORT_MARGIN, Math.min(viewportLeft, rightLimit))
@@ -1697,7 +1702,7 @@ export class PopoverDesktop extends PopoverAbstract {
 
     // Stamp the resolved side/align so CSS/animation can key off it, mirroring
     // the root popover's data-side/data-align contract.
-    actualPopoverEl.setAttribute('data-side', isRtl ? 'left' : 'right');
+    actualPopoverEl.setAttribute('data-side', isRtl !== flips ? 'left' : 'right');
     actualPopoverEl.setAttribute('data-align', 'center');
 
     // Center nested popover vertically on the trigger item, then clamp

@@ -123,14 +123,45 @@ test('sets the interval and the start date and time of a schedule', async ({ pag
 });
 
 test('the ↻ hint in the templates list names the unit only, after the hint delay', async ({ page }) => {
-  // Narrow on purpose: with the database at the window's right edge, the template's
-  // submenu opens over ↻ and the hint never shows (a known gap, not pinned here).
+  // Narrow: the submenu opens on the right here. The right-edge case is the next test.
   await mount(page, { frequency: 'weekly', interval: 2, start: '2026-10-05T07:30:00.000Z', timeZone: 'Europe/Berlin' }, '900px');
   await page.getByTestId('database-toolbar-new-menu').click();
   await page.getByRole('img', { name: 'Duplicate weekly' }).hover();
 
   await expect(page.getByRole('tooltip')).toHaveCount(0);
   await expect(page.getByRole('tooltip')).toHaveText('Duplicate weekly', { timeout: 2000 });
+});
+
+// research/30 X1: at the window's right edge the template's "…" submenu opens
+// on the left of the list, so it no longer covers ↻ and its hint.
+test('at the window\'s right edge the template submenu opens on the left and the ↻ hint shows', async ({ page }) => {
+  await mount(page, { frequency: 'weekly', interval: 2, start: '2026-10-05T07:30:00.000Z', timeZone: 'Europe/Berlin' });
+  await page.getByTestId('database-toolbar-new-menu').click();
+
+  const containerRect = (name: string) => page.getByRole('menuitem', { name, exact: true }).evaluate((item) => {
+    const rect = item.closest('[data-blok-popover-container]')?.getBoundingClientRect();
+
+    return { left: rect?.left ?? Number.NaN, right: rect?.right ?? Number.NaN };
+  });
+  const list = await containerRect('Empty page');
+
+  // No room for a submenu on the right.
+  expect(1400 - list.right).toBeLessThan(250);
+
+  await page.getByRole('img', { name: 'Duplicate weekly' }).hover();
+  await expect(page.getByRole('menuitem', { name: 'Edit', exact: true })).toBeVisible();
+
+  const submenu = await containerRect('Edit');
+
+  expect(submenu.right).toBeLessThanOrEqual(list.left + 4);
+  await expect(page.getByRole('tooltip')).toHaveText('Duplicate weekly', { timeout: 2000 });
+
+  // Crossing the list to the submenu keeps it open, and its items still work.
+  const edit = await page.getByRole('menuitem', { name: 'Edit', exact: true }).boundingBox();
+
+  await page.mouse.move(submenu.right - 20, (edit?.y ?? 0) + (edit?.height ?? 0) / 2, { steps: 8 });
+  await page.getByRole('menuitem', { name: 'Edit', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Duplicate every 2 weeks' })).toBeVisible();
 });
 
 test('a monthly schedule picks its day from "On the [Nth] [Day]"', async ({ page }) => {

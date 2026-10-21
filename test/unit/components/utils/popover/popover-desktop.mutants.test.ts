@@ -2914,7 +2914,10 @@ describe('PopoverDesktop — nested beside placement geometry', () => {
     }
   });
 
-  it('slides a wide submenu back when its width shrinks the right limit', () => {
+  const showWideSubmenu = (
+    containerRect: { left: number; right: number },
+    rtl = false
+  ): { nested: PopoverDesktop; rootLeft: number } => {
     const popover = createPopover({
       items: [
         {
@@ -2927,38 +2930,88 @@ describe('PopoverDesktop — nested beside placement geometry', () => {
       ],
     });
     const instance = asInternal(popover);
+    const rootLeft = containerRect.left - 20;
+
+    if (rtl) {
+      instance.nodes.popover.style.direction = 'rtl';
+    }
 
     vi.spyOn(instance.nodes.popoverContainer, 'getBoundingClientRect').mockReturnValue(
-      makeRect({ left: 700, top: 100, right: 900, bottom: 190, width: 200, height: 90 })
+      makeRect({ ...containerRect, top: 100, bottom: 190, width: containerRect.right - containerRect.left, height: 90 })
     );
     vi.spyOn(instance.nodes.popover, 'getBoundingClientRect').mockReturnValue(
-      makeRect({ left: 680, top: 80, right: 920, bottom: 210, width: 240, height: 130 })
+      makeRect({ left: rootLeft, right: containerRect.right + 20, top: 80, bottom: 210, width: containerRect.right - containerRect.left + 40, height: 130 })
     );
 
     const triggerItem = itemByName(popover, 'wide-trigger');
     const triggerElement = triggerItem.getElement();
 
-    expect(triggerElement).not.toBeNull();
-
     if (triggerElement !== null) {
       vi.spyOn(triggerElement, 'getBoundingClientRect').mockReturnValue(
-        makeRect({ top: 120, bottom: 160, left: 710, right: 790, width: 80, height: 40 })
+        makeRect({ top: 120, bottom: 160, left: containerRect.left + 10, right: containerRect.right - 10, width: 80, height: 40 })
       );
     }
 
+    return { nested: instance.showNestedPopoverForItem(triggerItem), rootLeft };
+  };
+
+  it('opens a submenu with no room on the right on the left of its parent', () => {
     const sizeSpy = vi.spyOn(PopoverDesktop.prototype, 'size', 'get')
       .mockReturnValue({ width: 320, height: 80 });
 
     try {
-      const nested = instance.showNestedPopoverForItem(triggerItem);
+      // Right side: 900 - 4 + 320 > 1024 - 8. Left side: 700 + 4 - 320 = 384 fits.
+      const { nested, rootLeft } = showWideSubmenu({ left: 700, right: 900 });
       const nestedContainer = asInternal(nested).nodes.popoverContainer;
 
-      // viewportLeft = 900 - 4 = 896; rightLimit = 1024 - 8 - 320 = 696;
-      // clamped to 696, converted into the root space: 696 - 680 = 16.
-      expect(nestedContainer.style.left).toBe('16px');
-
-      // Centered on the trigger with the mocked height: 140 - 40 = 100 - 80.
+      expect(nestedContainer.style.left).toBe(`${384 - rootLeft}px`);
+      expect(nested.getElement().getAttribute('data-side')).toBe('left');
       expect(nestedContainer.style.top).toBe('20px');
+    } finally {
+      sizeSpy.mockRestore();
+    }
+  });
+
+  it('keeps a submenu that fits on the right there, even when the left has room too', () => {
+    const sizeSpy = vi.spyOn(PopoverDesktop.prototype, 'size', 'get')
+      .mockReturnValue({ width: 320, height: 80 });
+
+    try {
+      // Right side: 600 - 4 = 596, right edge 916 <= 1016.
+      const { nested, rootLeft } = showWideSubmenu({ left: 400, right: 600 });
+
+      expect(asInternal(nested).nodes.popoverContainer.style.left).toBe(`${596 - rootLeft}px`);
+      expect(nested.getElement().getAttribute('data-side')).toBe('right');
+    } finally {
+      sizeSpy.mockRestore();
+    }
+  });
+
+  it('slides a submenu that fits on neither side back from the right edge', () => {
+    const sizeSpy = vi.spyOn(PopoverDesktop.prototype, 'size', 'get')
+      .mockReturnValue({ width: 320, height: 80 });
+
+    try {
+      // Right: 704 + 320 > 1016. Left: 300 + 4 - 320 < 8. Clamped to 1024 - 8 - 320 = 696.
+      const { nested, rootLeft } = showWideSubmenu({ left: 300, right: 708 });
+
+      expect(asInternal(nested).nodes.popoverContainer.style.left).toBe(`${696 - rootLeft}px`);
+      expect(nested.getElement().getAttribute('data-side')).toBe('right');
+    } finally {
+      sizeSpy.mockRestore();
+    }
+  });
+
+  it('in RTL opens a submenu with no room on the left on the right of its parent', () => {
+    const sizeSpy = vi.spyOn(PopoverDesktop.prototype, 'size', 'get')
+      .mockReturnValue({ width: 320, height: 80 });
+
+    try {
+      // Left (inline end): 100 + 4 - 320 < 8. Right (inline start): 300 - 4 = 296 fits.
+      const { nested, rootLeft } = showWideSubmenu({ left: 100, right: 300 }, true);
+
+      expect(asInternal(nested).nodes.popoverContainer.style.left).toBe(`${296 - rootLeft}px`);
+      expect(nested.getElement().getAttribute('data-side')).toBe('right');
     } finally {
       sizeSpy.mockRestore();
     }

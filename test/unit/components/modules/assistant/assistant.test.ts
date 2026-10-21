@@ -1478,12 +1478,16 @@ describe('in-editor assistant bar', () => {
       });
 
       it('holds space only for what the bar grows by after it opened', async () => {
-        await createEditor(scripted(), undefined, WITH_EMPTY);
+        const live = streaming();
+
+        await createEditor(live.model, undefined, WITH_EMPTY);
         fakeLayout();
         select('p2', 0, 'p2', 0);
         pressSpace(inputOf('p2'));
 
         submit('Write');
+        await waitFor(() => expect(live.started()).toBe(true));
+        live.emit({ type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' });
 
         // The bar ends 11px past p2, and its slots hang 10px under it.
         await waitFor(() => expect(holderOf('p2').style.getPropertyValue('--blok-ai-gap')).toBe(`${11 + 10 + SLOTS_HEIGHT}px`));

@@ -330,7 +330,7 @@ test.describe('in-editor assistant', () => {
     }).toBe(true);
   });
 
-  test('a model that does not stream shows slots under the bar until the run ends, and reveals the written block', async ({ page }) => {
+  test('a model that does not stream shows slots under the bar after its first edit until the run ends, and reveals the written block', async ({ page }) => {
     await setup(page, [insertCall('Revealed line'), reply('Done.')], { hold: true });
 
     await page.getByText('Second').click();
@@ -341,8 +341,8 @@ test.describe('in-editor assistant', () => {
     await bar.getByRole('textbox').fill('Add a line');
     await page.keyboard.press('Enter');
     await expect.poll(() => page.evaluate(() => window.assistantPrompts?.length)).toBe(1);
-    // Blok cannot see where the edit lands, so it shows placeholder lines under the bar.
-    await expect(bar.locator('[data-blok-ai-slot]').first()).toBeVisible();
+    // No edit yet: it may only answer, so no placeholder lines.
+    await expect(bar.locator('[data-blok-ai-slot]').first()).toBeHidden();
 
     await page.evaluate(() => window.assistantRelease?.());
 

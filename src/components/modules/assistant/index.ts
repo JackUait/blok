@@ -91,6 +91,8 @@ export class Assistant extends Module {
   private listening = false;
   /** Stream index → id of the `blok_execute` call it carries, in the current model response. */
   private readonly streamCalls = new Map<number, string>();
+  /** The preview drew in this answer. */
+  private drawn = false;
   /** Calls that streamed input, so the preview drew them. */
   private readonly streamed = new Set<string>();
   /** Calls aimed at a sub-page's own document: nothing of theirs draws on this page. */
@@ -298,9 +300,8 @@ export class Assistant extends Module {
     this.edited = false;
     this.clearLines();
     this.bar?.render({ kind: 'working', status: '' });
+    this.drawn = false;
     this.say(this.activityStatus('thinking'));
-    // Until the preview draws: a model that does not stream never does.
-    this.setSlots(true);
     void pending.then((result) => {
       if (id === this.answerId) {
         this.finish(result);
@@ -318,6 +319,10 @@ export class Assistant extends Module {
       return;
     }
 
+    // A model that does not stream says it edits only here.
+    if (activity === EXECUTE_TOOL) {
+      this.showEditSlots();
+    }
     // Its stream already named it.
     if (activity === EXECUTE_TOOL && this.announced !== null) {
       return;
@@ -528,6 +533,7 @@ export class Assistant extends Module {
     if (event.type === 'tool_start') {
       if (event.name === EXECUTE_TOOL) {
         this.streamCalls.set(event.index, event.id);
+        this.showEditSlots();
       } else {
         this.streamCalls.delete(event.index);
       }
@@ -629,7 +635,10 @@ export class Assistant extends Module {
       onWord: (word) => this.Blok.AgentAPI.followLive(word),
       // The preview shows where edits land, so the slots go. No re-place here: the
       // layout's gap writes re-place the bar once, which drops the slots' gap too.
-      onDraw: () => this.bar?.setSlots(false),
+      onDraw: () => {
+        this.drawn = true;
+        this.bar?.setSlots(false);
+      },
       t: (key) => this.Blok.I18n.t(key),
     });
 
@@ -810,6 +819,13 @@ export class Assistant extends Module {
   private relayout(): void {
     this.placeBar();
     this.preview?.relayout();
+  }
+
+  /** Slots show only once the model starts an edit, so a question gets none. Once the preview draws, it shows where edits land. */
+  private showEditSlots(): void {
+    if (!this.drawn) {
+      this.setSlots(true);
+    }
   }
 
   private setSlots(shown: boolean): void {

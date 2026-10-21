@@ -2394,7 +2394,7 @@
   --blok-image-lightbox-btn-active-bg: rgba(255, 255, 255, 0.09);
   --blok-image-lightbox-divider-bg: rgba(255, 255, 255, 0.1);
   --blok-image-lightbox-caption-fg: #a39e98;
-  --blok-image-lightbox-shortcut-fg: rgba(255, 255, 255, 0.45);
+  --blok-image-lightbox-shortcut-fg: rgb(173, 169, 163);
   --blok-image-embed-submit-fg: #fff;
   --blok-crop-rect-drop-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.8);
   --blok-crop-handle-edge-drop-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
@@ -3972,7 +3972,7 @@ span[data-blok-slash-search] {
   --blok-database-checkbox-checked-bg: rgb(39, 131, 222);
   --blok-database-switch-on-bg: rgb(39, 131, 222);
   --blok-database-tpl-border: rgb(230, 229, 227);
-  --blok-database-calendar-event-muted-text: var(--blok-database-ink-secondary);
+  --blok-database-calendar-event-muted-text: rgb(112, 109, 104);
   --blok-database-column-default-bg: var(--blok-database-column-bg);
   --blok-database-column-default-ring: var(--blok-database-card-ring);
   --blok-database-column-default-accent: var(--blok-database-column-accent);
@@ -4177,7 +4177,7 @@ span[data-blok-slash-search] {
   --blok-database-ink-tertiary: rgb(143, 140, 135);
   --blok-database-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-tpl-border: #333331;
-  --blok-database-calendar-event-muted-text: rgb(153, 150, 145);
+  --blok-database-calendar-event-muted-text: rgb(162, 159, 154);
   --blok-database-option-default-bg: rgba(255, 255, 243, 0.082);
   --blok-database-option-default-text: rgb(240, 239, 237);
   --blok-database-option-gray-bg: rgba(255, 252, 235, 0.306);
@@ -4374,7 +4374,7 @@ span[data-blok-slash-search] {
   --blok-database-ink-tertiary: rgb(143, 140, 135);
   --blok-database-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-tpl-border: #333331;
-  --blok-database-calendar-event-muted-text: rgb(153, 150, 145);
+  --blok-database-calendar-event-muted-text: rgb(162, 159, 154);
   --blok-database-option-default-bg: rgba(255, 255, 243, 0.082);
   --blok-database-option-default-text: rgb(240, 239, 237);
   --blok-database-option-gray-bg: rgba(255, 252, 235, 0.306);
@@ -5629,6 +5629,22 @@ button[data-blok-database-column-count]:hover {
 
 [data-blok-database-tab][data-active][data-blok-database-tab-activating] {
   background-color: var(--blok-database-tab-bg);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] {
+  --blok-popover-box-shadow: var(--blok-database-cell-editor-shadow);
+  --blok-text-primary: var(--blok-database-ink);
+  --blok-text-secondary: var(--blok-database-ink-secondary);
+  --blok-item-hover-bg: rgba(33, 27, 23, 0.051);
+  --blok-icon-active-text: var(--blok-database-ink);
+}
+
+[@media (prefers-color-scheme: dark)] :root:not([data-blok-theme="light"]) [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] {
+  --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
+}
+
+[data-blok-theme="dark"] [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] {
+  --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
 }
 
 [data-blok-popover][popover][data-blok-popover-custom-class~='blok-database-menu'] {
@@ -10058,7 +10074,7 @@ textarea[data-blok-database-cell-input] {
   border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-database-table-header-icon);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -12598,7 +12614,7 @@ textarea[data-blok-database-cell-input] {
   block-size: 28px;
   padding: var(--blok-space-1-5);
   border-radius: var(--blok-radius-control);
-  color: var(--blok-database-calendar-nav-icon);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-calendar-no-date-list] {
@@ -24579,7 +24595,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   border-radius: var(--blok-radius-surface);
   --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-preview-card-pad)));
   background: var(--blok-tooltip-bg);
-  color: var(--blok-text-on-dark);
+  color: var(--blok-tooltip-font);
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.16), 0 12px 32px -6px rgb(0 0 0 / 0.36);
 }
 

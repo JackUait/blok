@@ -495,7 +495,7 @@
   --blok-image-lightbox-btn-active-bg: rgba(255, 255, 255, 0.09);
   --blok-image-lightbox-divider-bg: rgba(255, 255, 255, 0.1);
   --blok-image-lightbox-caption-fg: #a39e98;
-  --blok-image-lightbox-shortcut-fg: rgba(255, 255, 255, 0.45);
+  --blok-image-lightbox-shortcut-fg: rgb(173, 169, 163);
 
   /* Image empty-state embed submit (high-contrast fg on accent). */
   --blok-image-embed-submit-fg: #fff;

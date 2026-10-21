@@ -54,7 +54,7 @@ describe('createTooltipContent', () => {
     expect(line).toHaveTextContent('SingleLine');
   });
 
-  it('creates a single line element with space - first word styled white and bold', () => {
+  it('creates a single line element with space - first word in the tooltip ink and bold', () => {
     const result = createTooltipContent(['First rest']);
 
     expect(result.children).toHaveLength(1);
@@ -64,7 +64,7 @@ describe('createTooltipContent', () => {
     const span = line.children[0] as HTMLElement;
     expect(span.tagName).toBe('SPAN');
     expect(span).toHaveTextContent('First');
-    expect(span.style.color).toBe('white');
+    expect(span.style.color).toBe('var(--blok-tooltip-font)');
     expect(span.style.fontWeight).toBe('500');
 
     // The rest of the text is a text node
@@ -84,12 +84,12 @@ describe('createTooltipContent', () => {
 
     expect(result.children).toHaveLength(3);
 
-    // Check each line has first word styled white
+    // Check each line has its first word in the tooltip ink
     for (let i = 0; i < 3; i++) {
       const line = result.children[i] as HTMLElement;
       expect(line.children).toHaveLength(1);
       const span = line.children[0] as HTMLElement;
-      expect(span.style.color).toBe('white');
+      expect(span.style.color).toBe('var(--blok-tooltip-font)');
     }
   });
 
@@ -131,7 +131,7 @@ describe('createTooltipContent', () => {
       const span = line.children[0] as HTMLElement;
       expect(span.tagName).toBe('SPAN');
       expect(span).toHaveTextContent('Click');
-      expect(span.style.color).toBe('white');
+      expect(span.style.color).toBe('var(--blok-tooltip-font)');
     expect(span.style.fontWeight).toBe('500');
 
       const textNode = line.childNodes[1] as Text;
@@ -156,10 +156,10 @@ describe('createTooltipContent', () => {
       expect(spans).toHaveLength(2);
       expect(spans[0].tagName).toBe('SPAN');
       expect(spans[0]).toHaveTextContent('Click');
-      expect(spans[0].style.color).toBe('white');
+      expect(spans[0].style.color).toBe('var(--blok-tooltip-font)');
       expect(spans[1].tagName).toBe('SPAN');
       expect(spans[1]).toHaveTextContent('⌘/');
-      expect(spans[1].style.color).toBe('white');
+      expect(spans[1].style.color).toBe('var(--blok-tooltip-font)');
 
       // Text nodes in between
       const childNodes = Array.from(line.childNodes);
@@ -209,7 +209,7 @@ describe('createTooltipContent', () => {
       const firstLine = result.children[0] as HTMLElement;
       const firstSpan = firstLine.children[0] as HTMLElement;
       expect(firstSpan).toHaveTextContent('Drag');
-      expect(firstSpan.style.color).toBe('white');
+      expect(firstSpan.style.color).toBe('var(--blok-tooltip-font)');
 
       // Second line: segment-based (two highlighted spans)
       const secondLine = result.children[1] as HTMLElement;

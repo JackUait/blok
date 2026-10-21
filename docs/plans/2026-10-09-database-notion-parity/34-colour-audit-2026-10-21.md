@@ -29,7 +29,8 @@ One step per ink role, computed as the nearest value on Notion's own hue that pa
 | Light tertiary ink ("Empty", "+ New page", weekdays, other-month days, timeline days, calc label) | 161,158,153 | 2.67 | **114,111,106** | 5.00 / 4.53 | same |
 | Light icon gray used as TEXT ("+ Add property", "Today", zoom label, "+ New" on timeline, "Edit filters") | 142,139,134 | 3.39 | **114,111,106** | 5.00 / 4.53 | same. Icons keep 142,139,134 (3:1 non-text rule passes). |
 | Dark tertiary ink | 125,122,117 | 4.11 on 25 / 3.59 on 37 / 3.13 on 47 | **143,140,135** | 5.25 / 4.58 / 4.52 on 38 | card hover 38. Prior dark steps (138,135,130; 135,132,127; 142,139,134) fold into this one. |
-| Dark tertiary on a calendar event card (bg 47) | 125,122,117 | 3.13 | **153,150,145** | 4.54 | event card 47,47,47 |
+| Calendar event text, light (hover rgba(84,72,49,0.08)) | 161,158,153 | 2.6 | **112,109,104** | 4.54 | hovered event card |
+| Calendar event text, dark (card 47, hover 55) | 125,122,117 | 3.13 / 2.8 | **162,159,154** | 4.51 on 55 | hovered event card |
 | Light blue text (reminder date) | 39,131,222 | 3.90 | **35,119,211** | 4.52 | white |
 | Dark blue text (reminder on a card, blue column count) | 39,131,222 | 4.18 on 32 / 4.20 on the blue tint | **41,137,232** | 4.53 / 4.55 | card 32 |
 | Light red text (destructive button "Remove", danger rows) | 229,100,88 | 3.34 | **182,79,70** | 4.53 on hover | hover fill over white |
@@ -90,7 +91,7 @@ Measured research/07:104-113, 08:287-296, 21:84-86, 22:240-244, 26:203-204, 31:1
 | Checkbox checked bg | 39,131,222 both (07:75, 07:223) | `--blok-active-icon` | 35,131,226 / 82,156,202 | CHANGE |
 | "+ New page" row | text 161,158,153 / 125,122,117; icon 173,169,163 / 125,122,117 (08:262, 22:234) | `table-muted-text`, `table-gutter-icon` | same | Text AA both themes. Icon MATCH. |
 | "+ New page" hover | rgba(33,27,23,0.051) / rgba(255,255,255,0.055) (22:234) | `table-header-hover-bg` | 0.05 / 0.055 | CHANGE light 0.051 |
-| "+ Add property" | 142,139,134 text (08:261) | rule uses `table-header-icon` | 142,139,134 / 173,169,163 | Light AA → 114,111,106. Dark MATCH. |
+| "+ Add property" | 142,139,134 (08:261) | `table-header-icon` | 142,139,134 / 173,169,163 | MATCH (Blok renders it icon-only, 28×28 "+": non-text) |
 | OPEN button | white + 3-layer shadow; text 125,122,117 (07:77); dark bg 37 inner, text 173,169,163 (22:232) | `table-open-*`, `card-actions-icon` | bg/shadow MATCH; text 125,122,117 / 173,169,163 | bg/shadow MATCH. Light text AA → 114,111,106. |
 | Row handle ⋮⋮ | 173,169,163 (08:178) | `table-gutter-icon` | 173,169,163 / 125,122,117 | MATCH (dark UNMEASURED) |
 | Calc row label | 161,158,153 / 125,122,117 (21:75) | `table-muted-text` | — | AA both |
@@ -183,8 +184,8 @@ Measured research/07:126-150, 08:69-87, 08:345-348, 21:105-115, 26:231-238.
 | Event card | white + `rgba(0,0,0,0.04) 0 2px 4px, rgba(42,28,0,0.07) 0 0 0 1px` / 47 + `rgb(56,56,54) 0 0 0 1px, rgba(25,25,25,0.08) 0 2px 4px` | `calendar-event-*` | same | MATCH |
 | Event hover | rgba(84,72,49,0.08) / 55,55,55 | `calendar-event-hover-bg` | same | MATCH |
 | Event title | 14px 600, ink | | same | MATCH |
-| Event property text | UNMEASURED (Blok uses tertiary) | `calendar-muted-text` | 161,158,153 / 125,122,117 | AA (light 114,111,106; dark on the 47 card 153,150,145) |
-| "No date (N)" | 142,139,134 / 173,169,163 (21:139) | — | not shown in the fixture | Light AA when shown |
+| Event property text | UNMEASURED (Blok uses tertiary) | `calendar-event-muted-text` (new) | 161,158,153 / 125,122,117 | AA (112,109,104 / 162,159,154, passing on the hovered card) |
+| "No date (N)" | 142,139,134 / 173,169,163 (21:139) | `calendar-nav-icon` | source | Light AA → 114,111,106. Dark MATCH. |
 | "Manage in Calendar" border | rgba(28,19,1,0.11) / rgba(255,255,235,0.1) | `table-control-border` | source | MATCH |
 | Event selection overlay / lasso | rgba(35,131,226,0.14) (22:30) | neutral | — | BLUE |
 
@@ -235,6 +236,7 @@ Measured research/07:126-150, 08:69-87, 08:345-348, 21:105-115, 26:231-238.
 | Surface | Notion L / D | Blok | Blok L / D | Status |
 |---|---|---|---|---|
 | Menu / panel surface | white + `rgba(25,25,25,0.05) 0 20px 24px, rgba(25,25,25,0.027) 0 5px 8px, rgba(42,28,0,0.07) 0 0 0 1px` / 37 + `rgb(56,56,54) 0 0 0 1px, rgba(25,25,25,0.2) 0 14px 28px -6px, rgba(25,25,25,0.118) 0 2px 4px -1px` (21:34, 26:176) | View settings, cell editors (`blok-database-cell-editor`) | computed: same | MATCH |
+| Shared-popover database menus (`blok-database-menu`: property header menu, add-view, card/row "…", group, tab menus) | same menu surface; items 44,44,43 / 240,239,237; hover 0.051 / 0.055 (08:266-267) | core `--blok-popover-box-shadow`, `--blok-text-primary`, `--blok-item-hover-bg` | computed: core shadow, items black / 226,224,220, hover 0.08 / 0.055 | CHANGE (core tokens re-set on the menu root) |
 | Overflow tab list (`tab-overflow-dropdown`) | same menu surface | `--blok-database-popover-shadow` (colors.css light `0 4px 24px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)`) | source | CHANGE light |
 | Menu row ink | 44,44,43 / 240,239,237 (26:32, 27:282) | `[data-blok-database-panel]` `--blok-text-primary` | computed black / 226,224,220 | CHANGE |
 | Menu row value | 161,158,153 / 125,122,117 (26:32) | `panel-value-text` | 100,106,121 / 142,139,134 | AA both (light step; dark 142 PRIOR → step 143,140,135) |
@@ -288,7 +290,10 @@ Measured research/21:35, 22:233, 26:194, 28:61, 30:498, 31:33-36. **Identical in
 |---|---|---|---|---|
 | Box bg | rgb(44,44,43) | `--blok-tooltip-bg` #1d202b (29,32,43) / #2e2e2d (46,46,45) | CHANGE (global, BREAKING) | — |
 | Ink | rgb(240,239,237) | `--blok-tooltip-font` #cdd1e0 / #e8e6e3 | CHANGE (global, BREAKING) | 12.16 |
-| Second line (description, shortcut) | rgb(173,169,163) | `TOOLTIP_MUTED_INK` rgba(255,255,255,0.55) | CHANGE | 5.98 |
+| Second line (description, shortcut) | rgb(173,169,163) | `TOOLTIP_MUTED_INK` rgba(255,255,255,0.55); lightbox `--blok-image-lightbox-shortcut-fg` rgba(255,255,255,0.45) | CHANGE (both) | 5.98 |
+| Highlighted word (toolbar hints) | name line 240,239,237 (31:35) | inline `white` | CHANGE → `var(--blok-tooltip-font)` | 12.16 |
+| Toolbox preview card text | 240,239,237 (28:61) | `--blok-text-on-dark` white | CHANGE → `var(--blok-tooltip-font)` | 12.16 |
+| Video seek time bubble | — | video chrome over the frame, not a hint | UNMEASURED (kept) | — |
 | Shadow | `rgba(0,0,0,0.08) 0 4px 12px -2px, rgba(255,255,255,0.05) 0 0 0 1px inset` | `--shadow-tooltip` `0 8px 12px rgba(29,32,43,0.17), 0 4px 5px -3px rgba(5,6,12,0.49)` | CHANGE (global) | — |
 | Radius | 6px | 6px | MATCH | — |
 
@@ -316,24 +321,35 @@ For a future measuring session:
 
 ## Counts
 
-Verdict mentions over the 180 table rows of sections 1–13 (a row with separate light and dark verdicts counts each). Counted by script from this file.
+Verdicts in the Status column of the 184 table rows in sections 1–13, counted by script. A row with separate light and dark verdicts counts each. "PRIOR (AA …)" counts as PRIOR only; the today-digit flag is not counted.
 
 | Status | Count |
 |---|---|
-| MATCH | 116 |
-| CHANGE | 43 |
-| AA (text kept at / stepped to a passing value) | 43 |
-| BLUE (neutral by law) | 11 |
+| MATCH | 85 |
+| CHANGE (to Notion) | 37 |
+| AA (Notion fails AA for text; nearest passing step) | 32 |
+| BLUE (kept neutral, blue law) | 8 |
 | PRIOR | 5 |
 | HOST | 3 |
-| UNMEASURED (rows) | 14, plus the §14 list |
+| UNMEASURED (rows) | 11, plus the §14 list |
 
 ## Phase 2 result (after)
 
-Re-probed in a fresh build (same fixture, both schemes). Every CHANGE and AA row above now reads its target value, with these notes:
+Re-probed in a fresh build (same fixture, both schemes, scratchpad `r13-after*.json`, `p3.js`, `p4.js`).
+
+**Computed-verified after the change** (getComputedStyle in the built page):
+
+- Table: header text, inactive tab, calc value, "+ New page" text, OPEN text, checked checkbox (39,131,222 both themes), wrapper ink.
+- Board: default / blue / green column tints, card rings and counts in light; default count and ring in dark; dark blue count 41,137,232; card property ink; light hovered card rgba(54,29,2,0.031).
+- Gallery: cover text, "New page" text, card ink. Calendar: weekday labels, other-month days, prev/next chevrons, event property text. Timeline: day labels, zoom label, "+ New". List: row title and property ink.
+- Menus: View settings panel row ink and value; shared-popover database menus (property header menu, add-view) shadow, item ink and hover fill.
+- Tooltip: bg, name ink, second-line ink, shadow, radius in both themes.
+
+**Checked from source only** (unit tests pin the declarations; not re-read in a browser): reminder blue steps, light destructive red, dark dialog surface and shadow, dark select head, light menu field fill, tab-overflow menu shadow, light form answer ring, "More templates" borders, switch-on blue, dark structure tile label, "Edit filters", "No date (N)", lightbox shortcut ink, toolbox preview card text, toolbar hint highlight. The e2e specs updated in 5c77bfe5 read several of these in a browser (reminder, form ring, tile label) and pass.
+
+Notes:
 
 - Chrome serialises the 0.051 hover alpha as `0.05` (8-bit alpha: 13/255). The source holds 0.051.
-- Dark board column counts, cards and tints for blue / green / brown / yellow / pink were already Notion's; only the dark blue count moved (AA step 41,137,232).
 - Unchanged on purpose: BLUE rows, PRIOR rows, HOST rows, and every UNMEASURED surface.
-- New database tokens: `--blok-database-ink`, `-ink-secondary`, `-ink-tertiary`, `-hover-bg`, `-checkbox-checked-bg`, `-switch-on-bg`, `-tpl-border`, `-calendar-event-muted-text`, `-column-default-*`, light `-column-blue-*` / `-column-green-*`. They are new, so not breaking.
-- `[data-blok-database-wrapper]` now sets `color` and re-sets `--blok-icon-active-text` to the database ink, so text with no colour of its own (card properties, list rows) and selected rows share one ink.
+- New database tokens: `--blok-database-ink`, `-ink-secondary`, `-ink-tertiary`, `-hover-bg`, `-checkbox-checked-bg`, `-switch-on-bg`, `-tpl-border`, `-calendar-event-muted-text`, `-column-default-*`, light `-column-blue-*` / `-column-green-*`. Database-only, so not breaking.
+- `[data-blok-database-wrapper]` sets `color` and `--blok-icon-active-text` to the database ink. Database menus re-set `--blok-text-primary`, `--blok-text-secondary`, `--blok-item-hover-bg`, `--blok-popover-box-shadow` and `--blok-icon-active-text`. A host override of those core tokens no longer reaches database surfaces.

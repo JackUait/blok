@@ -112,6 +112,19 @@ describe('tooltips take Notion\'s look in both themes (research/26 §5, research
     expect(value(tokens, '--shadow-tooltip')).toBe('0 4px 12px -2px rgba(0, 0, 0, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.05)');
   });
 
+  it('a hint\'s highlighted word uses the tooltip ink, and the lightbox shortcut the second-line ink', () => {
+    const tooltip = readFileSync(resolve(__dirname, '../../../src/components/modules/toolbar/tooltip.ts'), 'utf8');
+
+    expect(tooltip).toContain("span.style.color = 'var(--blok-tooltip-font)';");
+    expect(value(colorsLight, '--blok-image-lightbox-shortcut-fg')).toBe('rgb(173, 169, 163)');
+  });
+
+  it('the toolbox preview card, Notion\'s slash-menu hint, writes in the tooltip ink', () => {
+    const preview = read('block-preview.css');
+
+    expect(preview).toContain("[data-blok-interface='block-preview'] [data-blok-preview-card] { padding: var(--blok-preview-card-pad); border-radius: var(--blok-radius-surface); --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-preview-card-pad))); background: var(--blok-tooltip-bg); color: var(--blok-tooltip-font);");
+  });
+
   it('a hint\'s second line is Notion\'s inverse secondary ink', () => {
     expect(TOOLTIP_MUTED_INK).toBe('rgb(173, 169, 163)');
     expect(contrast(TOOLTIP_MUTED_INK, [44, 44, 43])).toBeGreaterThanOrEqual(4.5);
@@ -171,6 +184,29 @@ describe('database inks', () => {
   });
 });
 
+describe('database menus built on the shared popover (research/08:267, research/21 §1a)', () => {
+  const MENU = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu']";
+
+  it('re-set the core popover tokens to Notion\'s menu shadow, inks and hover fill', () => {
+    const body = ruleBody(MENU);
+
+    expect(body).toContain('--blok-popover-box-shadow: var(--blok-database-cell-editor-shadow)');
+    expect(body).toContain('--blok-text-primary: var(--blok-database-ink)');
+    expect(body).toContain('--blok-text-secondary: var(--blok-database-ink-secondary)');
+    expect(body).toContain('--blok-icon-active-text: var(--blok-database-ink)');
+  });
+
+  // A literal per theme: the selected-state law rejects a token that aliases an alias.
+  it('re-set the hover fill to Notion\'s, light and both dark shapes', () => {
+    const dark = /\[data-blok-theme="dark"\] \[data-blok-popover\]\[data-blok-popover-custom-class~='blok-database-menu'\] \{([^}]*)\}/;
+    const media = /:root:not\(\[data-blok-theme="light"\]\) \[data-blok-popover\]\[data-blok-popover-custom-class~='blok-database-menu'\] \{([^}]*)\}/;
+
+    expect(ruleBody(MENU)).toContain('--blok-item-hover-bg: rgba(33, 27, 23, 0.051)');
+    expect(rules.match(media)?.[1]).toContain('--blok-item-hover-bg: rgba(255, 255, 255, 0.055)');
+    expect(rules.match(dark)?.[1]).toContain('--blok-item-hover-bg: rgba(255, 255, 255, 0.055)');
+  });
+});
+
 describe('text tokens that held a failing Notion value take the AA step', () => {
   it.each([
     ['--blok-database-table-header-text', '--blok-database-ink-secondary'],
@@ -201,13 +237,16 @@ describe('text tokens that held a failing Notion value take the AA step', () => 
     expect(attr).toBe('var(--blok-database-ink-tertiary)');
   });
 
-  it('a calendar event card is lighter in dark, so its muted text takes a lighter step', () => {
+  it('calendar event text passes on the hovered card too, which is darker in light and lighter in dark', () => {
     const { light, dark, attr } = themed('--blok-database-calendar-event-muted-text');
+    const lightHover = over([84, 72, 49, 0.08], WHITE);
 
-    expect(light).toBe('var(--blok-database-ink-secondary)');
-    expect(dark).toBe('rgb(153, 150, 145)');
-    expect(attr).toBe('rgb(153, 150, 145)');
-    expect(contrast('rgb(153, 150, 145)', [47, 47, 47])).toBeGreaterThanOrEqual(4.5);
+    expect(contrast('rgb(114, 111, 106)', lightHover)).toBeLessThan(4.5);
+    expect(light).toBe('rgb(112, 109, 104)');
+    expect(dark).toBe('rgb(162, 159, 154)');
+    expect(attr).toBe('rgb(162, 159, 154)');
+    expect(contrast('rgb(112, 109, 104)', lightHover)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast('rgb(162, 159, 154)', [55, 55, 55])).toBeGreaterThanOrEqual(4.5);
     expect(ruleBody('[data-blok-database-calendar-event-property]')).toContain('color: var(--blok-database-calendar-event-muted-text)');
   });
 
@@ -313,6 +352,11 @@ describe('fills and lines that differed from Notion', () => {
   // Both need the toolbar prefix: the toolbar's own `button` rule is more specific and painted them in primary ink.
   it('calendar prev / next chevrons are Notion\'s icon gray (research/07:171)', () => {
     expect(ruleBody('[data-blok-database-calendar-nav] [data-blok-database-calendar-prev]')).toContain('color: var(--blok-database-calendar-nav-icon)');
+  });
+
+  it('"Edit filters" and "No date (N)" are icon-gray words, so light takes the AA step (research/08:239, 21:139)', () => {
+    expect(ruleBody('[data-blok-database-table-edit-filters]')).toContain('color: var(--blok-database-ink-secondary)');
+    expect(ruleBody('[data-blok-database-calendar-nav] [data-blok-database-calendar-no-date]')).toContain('color: var(--blok-database-ink-secondary)');
   });
 
   it('timeline zoom, "+ New" and "Show table" labels are icon-gray text at the AA step (research/07:195)', () => {

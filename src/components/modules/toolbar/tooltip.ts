@@ -22,18 +22,18 @@ export type TooltipLine = string | TooltipSegment[];
 export const TOOLTIP_MUTED_INK = 'rgb(173, 169, 163)';
 
 /**
- * Applies highlight styling (white color, semibold weight) to a span element.
+ * Applies highlight styling (the tooltip ink, semibold weight) to a span element.
  */
 const applyHighlight = (span: HTMLElement): void => {
   // eslint-disable-next-line no-param-reassign -- intentional styling helper
-  span.style.color = 'white';
+  span.style.color = 'var(--blok-tooltip-font)';
   // eslint-disable-next-line no-param-reassign -- intentional styling helper
   span.style.fontWeight = '500';
 };
 
 /**
  * Creates a tooltip content element with multiple lines and consistent styling.
- * The first word of each string line is styled in white to highlight keywords.
+ * The first word of each string line takes the tooltip ink to highlight keywords.
  * Segment-based lines allow highlighting multiple specific tokens per line.
  *
  * @param lines - Array of lines; each line is a string or an array of TooltipSegment

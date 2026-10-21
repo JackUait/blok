@@ -17,7 +17,8 @@
   --blok-database-switch-on-bg: rgb(39, 131, 222);
   /* "More templates" card and search borders (research/26 §2). Dark is unmeasured: Blok's border. */
   --blok-database-tpl-border: rgb(230, 229, 227);
-  --blok-database-calendar-event-muted-text: var(--blok-database-ink-secondary);
+  /* Event cards: the hover fill rgba(84, 72, 49, 0.08) puts the light step at 4.41:1; one step darker passes. */
+  --blok-database-calendar-event-muted-text: rgb(112, 109, 104);
   /* Default column = the plain column (research/08:72); blue and green measured light (research/21 §1f).
      Notion's blue and green counts fail AA on their tint (3.67, 3.01): the pill text stands in. */
   --blok-database-column-default-bg: var(--blok-database-column-bg);
@@ -284,8 +285,8 @@
     --blok-database-ink-tertiary: rgb(143, 140, 135);
     --blok-database-hover-bg: rgba(255, 255, 255, 0.055);
     --blok-database-tpl-border: #333331;
-    /* An event card is 47,47,47: the tertiary step is 3.9:1 there, 153,150,145 is 4.54:1. */
-    --blok-database-calendar-event-muted-text: rgb(153, 150, 145);
+    /* An event card is 47 and 55 hovered: the tertiary step is 4.0:1 there, 162,159,154 is 4.51:1 on 55. */
+    --blok-database-calendar-event-muted-text: rgb(162, 159, 154);
     /* Option pills: dark values measured in research/07; gray, purple, pink and red in research/08:288-296. */
     --blok-database-option-default-bg: rgba(255, 255, 243, 0.082);
     --blok-database-option-default-text: rgb(240, 239, 237);
@@ -511,8 +512,8 @@
   --blok-database-ink-tertiary: rgb(143, 140, 135);
   --blok-database-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-tpl-border: #333331;
-  /* An event card is 47,47,47: the tertiary step is 3.9:1 there, 153,150,145 is 4.54:1. */
-  --blok-database-calendar-event-muted-text: rgb(153, 150, 145);
+  /* An event card is 47 and 55 hovered: the tertiary step is 4.0:1 there, 162,159,154 is 4.51:1 on 55. */
+  --blok-database-calendar-event-muted-text: rgb(162, 159, 154);
   --blok-database-option-default-bg: rgba(255, 255, 243, 0.082);
   --blok-database-option-default-text: rgb(240, 239, 237);
   --blok-database-option-gray-bg: rgba(255, 252, 235, 0.306);
@@ -2011,6 +2012,27 @@ button[data-blok-database-column-count]:hover {
 
 /* Database menus open from the anchor's corner (popover-animation.css sets the origin).
    The root's display/overlay hold must match, or the close is cut at 120ms. */
+/* Database menus on the shared popover take Notion's menu (research/08:267, 21:34): its shadow,
+   inks and hover fill. Re-set on the popover root, which also declares the core values. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] {
+  --blok-popover-box-shadow: var(--blok-database-cell-editor-shadow);
+  --blok-text-primary: var(--blok-database-ink);
+  --blok-text-secondary: var(--blok-database-ink-secondary);
+  --blok-item-hover-bg: rgba(33, 27, 23, 0.051);
+  --blok-icon-active-text: var(--blok-database-ink);
+}
+
+/* Literals, not var(--blok-database-hover-bg): the selected-state law rejects an alias of an alias. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-blok-theme="light"]) [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] {
+    --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
+  }
+}
+
+[data-blok-theme="dark"] [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] {
+  --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
+}
+
 [data-blok-popover][popover][data-blok-popover-custom-class~='blok-database-menu'] {
   transition: display 200ms allow-discrete, overlay 200ms allow-discrete;
 }
@@ -6892,7 +6914,7 @@ textarea[data-blok-database-cell-input] {
   border: 1px solid var(--blok-database-table-control-border);
   border-radius: var(--blok-radius-control);
   background: transparent;
-  color: var(--blok-database-table-header-icon);
+  color: var(--blok-database-ink-secondary);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -9596,7 +9618,7 @@ textarea[data-blok-database-cell-input] {
   block-size: 28px;
   padding: var(--blok-space-1-5);
   border-radius: var(--blok-radius-control);
-  color: var(--blok-database-calendar-nav-icon);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-calendar-no-date-list] {

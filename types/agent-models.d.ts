@@ -48,14 +48,17 @@ export type AgentModelSearchProvider = 'anthropic' | 'openai' | 'gemini' | 'azur
 /**
  * Each provider is sent the best API it serves. Levels map to the values the provider documents.
  * - Anthropic Messages: `anthropic`, `deepseek`, `qwen`, `kimi`, `minimax`. Levels set `output_config.effort`; `off` sends
- *   `low`, since some models cannot turn thinking off. Caches by default: a mark on the system block and top-level
- *   `cache_control`. A platform that rejects top-level `cache_control` deletes it from the body in `send`.
+ *   `low`, since some models cannot turn thinking off. `minimax` also sends `thinking: { type: 'adaptive' }` above `off`.
+ *   `qwen` sends no effort, since its values differ per model: pass `levels`. Caches by default: a mark on the system
+ *   block and top-level `cache_control`. A platform that rejects top-level `cache_control` deletes it from the body in `send`.
  * - OpenAI Responses, stateless (`store: false`): `openai`, `azure`, `xai`. Levels set `reasoning.effort`; `off` sends `low`.
+ *   On `openai` and `azure`, `xhigh` and `max` exist on some models only; on others, pass `levels`.
  * - Gemini generateContent (v1beta): `gemini`. Levels set `generationConfig.thinkingConfig.thinkingLevel`.
  *   The body is the same for both transports. With `stream`, call `:streamGenerateContent?alt=sse`.
  * - Chat Completions, levels set `reasoning_effort`: `zai`, `mistral`, `groq`, `ollama`, `openrouter`, `fireworks`,
  *   `cerebras`, `sambanova`, `together`, `cohere`, `huggingface`, `vercel`, `litellm`, `lmstudio`, `vllm`, `vertex`,
- *   `bedrock`, `yandex`, and `openai-compatible` for any other endpoint that speaks it.
+ *   `bedrock`, `yandex`, and `openai-compatible` for any other endpoint that speaks it. `zai` also turns thinking on;
+ *   its `off` and `openrouter`'s send nothing.
  */
 export type AgentModelProvider =
   | AgentModelSearchProvider

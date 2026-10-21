@@ -50,13 +50,17 @@ const PROVIDERS = {
   // Effort values differ per model, so the host's levels pick them. Web search needs the client identifier in system.
   qwen: anthropic({ name: 'Qwen', levels: efforts(outputEffort, []), searchSystem: 'x-anthropic-billing-header: cc_entrypoint=cli;' }, true),
   kimi: anthropic({ name: 'Kimi', levels: LOW_HIGH_MAX }),
-  minimax: anthropic({ name: 'MiniMax' }),
+  // Thinking stays off unless adaptive is sent, and M3.1-Flash rejects disabled, so off just leaves it out.
+  minimax: anthropic({ name: 'MiniMax', levels: { ...efforts((effort) => ({ thinking: { type: 'adaptive' }, ...outputEffort(effort) }), [undefined, 'low', 'medium', 'high', 'xhigh', 'max']), off: outputEffort('low') } }),
   // Reads the effort only with thinking on, and streams tool arguments only when asked.
-  zai: chat({ name: 'Z.ai', levels: efforts((effort) => ({ thinking: { type: 'enabled' }, reasoning_effort: effort }), [undefined, 'low', 'medium', 'high', 'xhigh', 'max']), streamBody: { tool_stream: true } }),
+  // GLM-5.3 takes low, high and max only, and errors on thinking disabled, so off sends nothing.
+  zai: chat({ name: 'Z.ai', levels: efforts((effort) => ({ thinking: { type: 'enabled' }, reasoning_effort: effort }), [undefined, 'low', 'high', 'high', 'max', 'max']), streamBody: { tool_stream: true } }),
   mistral: chat({ name: 'Mistral', levels: NONE_TO_XHIGH, toolName: true }),
   groq: chat({ name: 'Groq', tokens: 'max_completion_tokens', levels: LOW_TO_HIGH }),
-  ollama: chat({ name: 'Ollama' }),
-  openrouter: chat({ name: 'OpenRouter' }),
+  // Older versions reject anything above high.
+  ollama: chat({ name: 'Ollama', levels: efforts(reasoningEffort, ['none', 'low', 'medium', 'high', 'high', 'high']) }),
+  // Models with mandatory reasoning reject none.
+  openrouter: chat({ name: 'OpenRouter', levels: efforts(reasoningEffort, [undefined, 'low', 'medium', 'high', 'xhigh', 'max']) }),
   // Its message schema rejects any other field.
   fireworks: chat({ name: 'Fireworks', replayFields: ['role', 'content', 'reasoning_content', 'tool_calls'] }),
   cerebras: chat({ name: 'Cerebras', levels: LOW_TO_HIGH }),

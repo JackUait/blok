@@ -121,8 +121,12 @@ const EFFORTS: Partial<Record<AgentModelProvider, unknown[]>> = {
   // Cohere takes none and high only.
   cohere: ['none', 'high', 'high', 'high', 'high', 'high'],
   qwen: NONE,
-  // Z.ai reads the effort only with thinking on.
-  zai: [undefined, 'low', 'medium', 'high', 'xhigh', 'max'],
+  // GLM-5.3 takes low, high and max only. Off sends nothing: it errors on thinking disabled.
+  zai: [undefined, 'low', 'high', 'high', 'max', 'max'],
+  // Ollama 0.16 takes none to high only.
+  ollama: ['none', 'low', 'medium', 'high', 'high', 'high'],
+  // Models with mandatory reasoning reject none.
+  openrouter: [undefined, 'low', 'medium', 'high', 'xhigh', 'max'],
 };
 
 const DEFAULT_EFFORTS: Record<string, unknown[]> = {
@@ -206,6 +210,15 @@ describe('agentModel', () => {
   it('turns Z.ai thinking on with the effort, and off by leaving both out', async () => {
     expect((await bodyOf('zai', {}, afterCall('high'))).thinking).toEqual({ type: 'enabled' });
     expect(await bodyOf('zai', {}, afterCall('off'))).not.toHaveProperty('thinking');
+  });
+
+  it('turns MiniMax thinking on with adaptive, and leaves it out for off', async () => {
+    const on = await Promise.all(LEVELS.slice(1).map(async (level) => (await bodyOf('minimax', {}, afterCall(level))).thinking));
+    const off = await bodyOf('minimax', {}, afterCall('off'));
+
+    expect(on).toEqual(Array(5).fill({ type: 'adaptive' }));
+    expect(off).not.toHaveProperty('thinking');
+    expect(effortOf(off)).toBe('low');
   });
 
   it('puts the client identifier Qwen web search needs first in system, and only with webSearch', async () => {

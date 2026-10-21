@@ -64,6 +64,8 @@ export interface StarterBuild {
   /** Page templates; the first is the default. */
   templates: StarterRow[];
   icon: DatabaseIcon;
+  /** Properties the Customize preview draws last, whatever their schema place (research/31 §8). */
+  previewLast?: string[];
 }
 
 export interface StarterBuildOptions {
@@ -394,6 +396,7 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
     });
   };
   const templates: StarterRow[] = [];
+  const previewLast: string[] = [];
   // research/27:44, :81: the default template. Its body is not measured: it repeats the first row's.
   const template = (title: string, body: StarterBodyBlock[]): void => {
     const made: StarterRow = { id: newId(), data: { properties: { [options.titleId]: title }, title, position: 'a0', template: true }, body };
@@ -579,6 +582,11 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
     row(t('tools.database.starterIdeaRow1'), values(0, 1));
     row(t('tools.database.starterIdeaRow2'), values(1, 2));
     row(t('tools.database.starterIdeaRow3'), values(2, 0));
+    // research/30 B8: Top Ideas lists the rows in reverse (Improve SEO first). Why is not known
+    // (its sort was not read): Blok stores the order on the view.
+    const top = viewList.find((v) => v.name === t('tools.database.starterViewTopIdeas'));
+
+    if (top !== undefined) top.rowOrder = Object.fromEntries([...rows].reverse().map((r, index) => [r.id, rows[index].data.position]));
   } else if (id === 'meetingNotes') {
     add(t('tools.database.starterMeetingName'), 'title');
     const date = features.has('date') ? add(t('tools.database.propertyTypeDate'), 'date', { date: { dateFormat: 'relative', timeFormat: 'hidden' } }) : undefined;
@@ -617,9 +625,10 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
     if (due !== undefined && features.has('daysUntilDue')) {
       const days = `dateBetween({{property:${due.id}}}, now(), "days")`;
 
-      add(t('tools.database.starterDaysUntilDue'), 'formula', {
+      // research/31 §8: after Due date in the database, last in the preview.
+      previewLast.push(add(t('tools.database.starterDaysUntilDue'), 'formula', {
         formula: { expression: `if(${days} > 0, ${days}, ${JSON.stringify(t('tools.database.starterOverdue'))})` },
-      });
+      }).id);
     }
     const prio = features.has('priority') ? priority() : undefined;
     const quarter = features.has('quarter') ? add(t('tools.database.starterQuarter'), 'multiSelect', optionsOf([
@@ -795,5 +804,8 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
     });
   }
 
-  return { title: t(meta.nameKey), schema, views: viewList, activeViewId: viewList[0].id, rows, templates, icon: { glyph: meta.glyph, color: meta.tint } };
+  return {
+    title: t(meta.nameKey), schema, views: viewList, activeViewId: viewList[0].id, rows, templates, icon: { glyph: meta.glyph, color: meta.tint },
+    ...(previewLast.length > 0 ? { previewLast } : {}),
+  };
 };

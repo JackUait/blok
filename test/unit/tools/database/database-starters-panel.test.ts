@@ -237,6 +237,59 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
     expect(active()).toBe('tools.database.starterViewAllIdeas');
   });
 
+  describe('the preview draws the view it shows (research/30 B8, research/31 §8)', () => {
+    const openGallery = async (id: string): Promise<HTMLElement | undefined> => {
+      await insert();
+      byTestId(panel(), 'database-new-database-more-templates').click();
+      byTestId(document.body, `database-template-gallery-template-${id}`).click();
+
+      return modal() ?? undefined;
+    };
+    const previewRows = (dialog: HTMLElement | undefined): string[] =>
+      [...(dialog?.querySelectorAll('[data-blok-database-starter-preview-table] > [data-blok-database-starter-preview-row=""] > span:first-child') ?? [])].map((el) => el.textContent ?? '');
+
+    it('a grouped view draws group headings in the view\'s order, each over its rows: By Team', async () => {
+      const dialog = await openGallery('goals');
+
+      byTestId(dialog, 'database-starter-next').click();
+      byTestId(dialog, 'database-starter-view-byTeam').click();
+      const table = dialog?.querySelector('[data-blok-database-starter-preview-table]');
+      const groups = [...(table?.querySelectorAll('[data-blok-database-starter-preview-group]') ?? [])].map((el) => el.textContent ?? '');
+
+      expect(groups).toEqual([
+        'tools.database.starterTeamAccountManagement', 'tools.database.starterTeamBusinessDevelopment',
+        'tools.database.starterTeamHumanResources', 'tools.database.starterTeamProductDesign',
+        'tools.database.noValueGroup {"property":"tools.database.starterTeam"}',
+      ]);
+      // Launch 3 new products is Account Management's; the other two are Business Development's.
+      const order = [...(table?.children ?? [])].map((el) => (el.hasAttribute('data-blok-database-starter-preview-group') ? `#${el.textContent ?? ''}` : el.querySelector('span')?.textContent ?? ''));
+
+      expect(order.slice(1, 6)).toEqual([
+        '#tools.database.starterTeamAccountManagement', 'tools.database.starterGoalRow2',
+        '#tools.database.starterTeamBusinessDevelopment', 'tools.database.starterGoalRow1', 'tools.database.starterGoalRow3',
+      ]);
+    });
+
+    it('Top Ideas shows its rows in reverse order, Improve SEO first', async () => {
+      const dialog = await openGallery('brainstorm');
+
+      byTestId(dialog, 'database-starter-next').click();
+      expect(previewRows(dialog)).toEqual(['tools.database.starterIdeaRow1', 'tools.database.starterIdeaRow2', 'tools.database.starterIdeaRow3']);
+      byTestId(dialog, 'database-starter-view-top').click();
+      expect(previewRows(dialog)).toEqual(['tools.database.starterIdeaRow3', 'tools.database.starterIdeaRow2', 'tools.database.starterIdeaRow1']);
+    });
+
+    it('Days until due shows last in the preview, though the database puts it after Due date', async () => {
+      const dialog = await openGallery('goals');
+
+      byTestId(dialog, 'database-starter-feature-daysUntilDue').click();
+      const header = [...(dialog?.querySelectorAll('[data-blok-database-starter-preview-row="header"] > span') ?? [])].map((el) => el.textContent ?? '');
+
+      expect(header.at(-1)).toBe('tools.database.starterDaysUntilDue');
+      expect(header.indexOf('tools.database.starterDueDate')).toBeLessThan(header.length - 2);
+    });
+  });
+
   it('closing Customize builds nothing and keeps the empty database', async () => {
     const { doc, tool } = await insert();
     const schema = saved(tool).schema;

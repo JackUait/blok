@@ -10952,6 +10952,11 @@ textarea[data-blok-database-cell-input] {
   flex-basis: 240px;
 }
 
+[data-blok-database-starter-preview-group] {
+  padding: var(--blok-space-3) var(--blok-space-2) var(--blok-space-1);
+  font-size: 14px;
+}
+
 [data-blok-database-starter-preview-hidden] {
   margin-block-start: var(--blok-space-2);
   font-size: 12px;

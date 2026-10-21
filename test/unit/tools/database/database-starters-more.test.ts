@@ -266,6 +266,15 @@ describe('"More templates" (research/27 §1e, research/30 §10)', () => {
       expect(shownNames(made, 'Top Ideas')).toEqual(['Created by']);
     });
 
+    it('Top Ideas keeps its rows in reverse, Improve SEO first; the other views keep the shared order (research/30 B8)', () => {
+      const made = build('brainstorm', { views: ['All Ideas', 'By category', 'Top Ideas'] });
+      const order = viewNamed(made, 'Top Ideas').rowOrder ?? {};
+      const sorted = [...made.rows].sort((x, y) => ((order[x.id] ?? '') < (order[y.id] ?? '') ? -1 : 1)).map((r) => r.data.title);
+
+      expect(sorted).toEqual(['Improve SEO', 'Simplify onboarding experience', 'Launch back to school campaign']);
+      expect(viewNamed(made, 'All Ideas').rowOrder).toBeUndefined();
+    });
+
     it('has the three measured rows', () => {
       const made = build('brainstorm');
 

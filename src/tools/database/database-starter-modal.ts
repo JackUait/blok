@@ -2,8 +2,9 @@ import { IconBoard, IconChevronLeft, IconCross, IconList, IconTable, IconTimelin
 import { openModalDialog } from '../../components/utils/modal-dialog';
 import { PROPERTY_TYPE_META } from './database-property-types';
 import { hiddenPropertyCount } from './database-starters';
-import type { StarterBuild, StarterChoice, StarterMeta } from './database-starters';
-import type { PropertyType, ViewType } from './types';
+import type { StarterBuild, StarterChoice, StarterMeta, StarterRow } from './database-starters';
+import { createOptionPill } from './cells/display';
+import type { PropertyType, SelectOption, ViewType } from './types';
 
 export interface StarterPicks {
   features: Set<string>;
@@ -24,6 +25,47 @@ const iconOf = (kind: StarterChoice['kind']): string =>
   VIEW_ICONS[kind as ViewType] ?? (Object.hasOwn(PROPERTY_TYPE_META, kind) ? PROPERTY_TYPE_META[kind as PropertyType].icon : '');
 
 const counter = { next: 0 };
+
+/**
+ * research/30 B8: a grouped view's preview is drawn grouped. A heading per
+ * group in the view's manual order, each over its rows, then the no-value
+ * group. The heading's look was not measured: the option pill.
+ */
+const groupedLines = (
+  made: StarterBuild,
+  view: StarterBuild['views'][number],
+  rows: StarterRow[],
+  rowLine: (row: StarterRow) => HTMLElement,
+  t: StarterCustomizeOptions['t']
+): HTMLElement[] => {
+  const property = made.schema.find((p) => p.id === view.groupBy);
+
+  if (property === undefined || (property.type !== 'select' && property.type !== 'multiSelect')) return rows.map(rowLine);
+  const keyOf = (option: SelectOption): string => view.groupOrder?.[option.id] ?? option.position;
+  const options = [...(property.config?.options ?? [])].sort((x, y) => (keyOf(x) < keyOf(y) ? -1 : 1));
+  const valuesOf = (row: StarterRow): string[] => {
+    const value = row.data.properties[property.id];
+
+    if (typeof value === 'string') return [value];
+
+    return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [];
+  };
+  const heading = (content: HTMLElement | string): HTMLElement => {
+    const el = document.createElement('div');
+
+    el.setAttribute('data-blok-database-starter-preview-group', '');
+    el.append(content);
+
+    return el;
+  };
+  const empty = rows.filter((row) => valuesOf(row).length === 0);
+
+  return [
+    ...options.flatMap((option) => [heading(createOptionPill(option)), ...rows.filter((row) => valuesOf(row).includes(option.id)).map(rowLine)]),
+    heading(t('tools.database.noValueGroup', { property: property.name })),
+    ...empty.map(rowLine),
+  ];
+};
 
 /**
  * Notion's two-step "Customize" modal (research/27 §1b): feature chips, then
@@ -78,7 +120,9 @@ export const openStarterCustomize = (options: StarterCustomizeOptions): Promise<
     // research/30 B8: a view card turned on shows its view; else the first view.
     const shownName = meta.views.find((c) => c.id === focus.view && picks.views.has(c.id));
     const first = made.views.find((view) => shownName !== undefined && view.name === t(shownName.labelKey)) ?? made.views[0];
-    const columns = [made.schema[0], ...(first?.visibleProperties ?? []).map((id) => made.schema.find((p) => p.id === id))]
+    const last = made.previewLast ?? [];
+    const shown = (first?.visibleProperties ?? []).filter((id) => !last.includes(id));
+    const columns = [made.schema[0], ...[...shown, ...last.filter((id) => (first?.visibleProperties ?? []).includes(id))].map((id) => made.schema.find((p) => p.id === id))]
       .filter((p) => p !== undefined);
     const line = (cells: string[], header: boolean): HTMLElement => {
       const row = document.createElement('div');
@@ -107,7 +151,11 @@ export const openStarterCustomize = (options: StarterCustomizeOptions): Promise<
       return tab;
     }));
     table.setAttribute('data-blok-database-starter-preview-table', '');
-    table.append(line(columns.map((p) => p.name), true), ...made.rows.map((row) => line(columns.map((p, i) => (i === 0 ? row.data.title ?? '' : '')), false)));
+    const order = first?.rowOrder;
+    const rows = [...made.rows].sort((x, y) => ((order?.[x.id] ?? x.data.position) < (order?.[y.id] ?? y.data.position) ? -1 : 1));
+    const rowLine = (row: StarterRow): HTMLElement => line(columns.map((p, i) => (i === 0 ? row.data.title ?? '' : '')), false);
+
+    table.append(line(columns.map((p) => p.name), true), ...(first === undefined ? rows.map(rowLine) : groupedLines(made, first, rows, rowLine, t)));
     // research/30 B8: "0 hidden properties" under the table.
     hidden.textContent = t('tools.database.starterHiddenProperties', { count: String(hiddenPropertyCount(made, first)) });
     preview.replaceChildren(title, tabs, table, hidden);

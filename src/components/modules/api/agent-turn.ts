@@ -16,6 +16,8 @@ export interface AgentTurnHooks {
   onExecuted(result: Extract<AgentResult, { ok: true }>): void;
   onClosed(reason: 'end' | 'stop'): void;
   isEditorDestroyed(): boolean;
+  /** The sub-page document a page block points at, for a call with `page`. Absent: `page` is refused. */
+  openPage?(blockId: string): Promise<TurnSession & { close(): void }>;
 }
 
 type Parsed<T> = { ok: true; value: T } | { ok: false; error: AgentError };
@@ -178,6 +180,9 @@ export function createAgentTurn(session: TurnSession, hooks: AgentTurnHooks): Ag
     if (!parsed.ok) {
       return asToolError(parsed.error);
     }
+    if (parsed.value.page !== undefined && name !== 'blok_describe') {
+      return callPage(name, parsed.value);
+    }
 
     try {
       if (name === 'blok_read') {
@@ -208,6 +213,51 @@ export function createAgentTurn(session: TurnSession, hooks: AgentTurnHooks): Ag
       const result = await execute(batch.value);
 
       return { content: JSON.stringify(modelAnswer(result)), isError: !result.ok };
+    } catch (error) {
+      if (error instanceof AgentFailure) {
+        return asToolError(error.error);
+      }
+
+      throw error;
+    }
+  };
+
+  /** A read or batch on a sub-page's own document. It opens, runs and closes in the turn's queue. */
+  const callPage = async (name: string, value: Record<string, unknown>): Promise<AgentToolResult> => {
+    const { page, ...rest } = value;
+
+    if (typeof page !== 'string' || page === '') {
+      return asToolError({ code: 'INVALID_ARGS', message: '`page` must be the id of a page block.', retryable: true, path: '/page' });
+    }
+    if (hooks.openPage === undefined) {
+      return asToolError({ code: 'COMMAND_UNAVAILABLE', message: 'This editor cannot open sub-page documents. Omit `page`.', retryable: false });
+    }
+    const batch = name === 'blok_execute' ? toBatch(rest) : null;
+
+    if (batch !== null && !batch.ok) {
+      return asToolError(batch.error);
+    }
+    const open = hooks.openPage;
+    const accepted = !state.closed;
+
+    try {
+      return await enqueue(async (): Promise<AgentToolResult> => {
+        if (!accepted || controller.signal.aborted) {
+          throw new AgentFailure(cancelledError());
+        }
+        const session = await open(page);
+
+        try {
+          if (batch === null) {
+            return { content: JSON.stringify(await session.read(rest)), isError: false };
+          }
+          const result = await session.execute(batch.value, { signal: controller.signal });
+
+          return { content: JSON.stringify(modelAnswer(result)), isError: !result.ok };
+        } finally {
+          session.close();
+        }
+      });
     } catch (error) {
       if (error instanceof AgentFailure) {
         return asToolError(error.error);

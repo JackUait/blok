@@ -13,7 +13,8 @@ import type {
   AgentTurn,
   AgentTurnOptions,
 } from '../../../../types/api';
-import type { ChangedSet } from '../../../../types/agent';
+import type { OutputData } from '../../../../types';
+import type { AgentActor, AgentSession, ChangedSet } from '../../../../types/agent';
 import type { HostService } from '../../../../types/tools/tool-description';
 import { Module } from '../../__module';
 import { announce } from '../../utils/announcer';
@@ -26,6 +27,8 @@ import { isThinkingLevel, readThinkingConfig, type ThinkingChoice } from '../../
 import { createAgentPresence, type AgentPresence } from './agent-presence';
 
 import { createEditorServices } from './agent-services';
+import { createPageDocuments, type PageDocuments } from '../agent/page-documents';
+import { AgentFailure, failure } from '../../../shared/agent/errors';
 import { createAgentRun } from './agent-run';
 import { createAgentTurn } from './agent-turn';
 import { createLiveFollow } from './live-follow';
@@ -84,6 +87,12 @@ export class AgentAPI extends Module {
   private readonly subscribers = new Set<() => void>();
 
   private serviceCache: Partial<Record<HostService, unknown>> | null = null;
+  /** Undefined until first asked; null when no page tool has loadDocument and saveDocument. */
+  private pageDocs: PageDocuments | null | undefined;
+  /** Each sub-page the open turn saved, as it was before the turn's first save. Discard writes them back. */
+  private turnPages = new Map<string, OutputData>();
+  /** Who page writes are stamped with: the open turn's agent. */
+  private actor: AgentActor = { id: 'agent', name: 'Agent', kind: 'agent' };
 
   private contractSource: ContractSource | null = null;
 
@@ -201,6 +210,7 @@ export class AgentAPI extends Module {
     const name = assistant.name?.trim() || 'AI';
     const agent = { id: 'blok-assistant', name };
     const turn = internal === undefined ? this.begin({ agent }) : this.begin({ agent, follow: internal.barFollow === true }, internal);
+    const pagesSaved = this.turnPages;
 
     return createAgentRun(composeFirstMessage(prompt, place.text, turn.read, place.blockIds), {
       turn,
@@ -215,6 +225,7 @@ export class AgentAPI extends Module {
         return { tools: [...tools, ...offered], system };
       },
       changed: () => [...this.turnLog.changed],
+      restorePages: () => this.restorePages(pagesSaved),
       onActivity: hooks.onActivity,
       onStream: hooks.onStream,
       onToolDone: hooks.onToolDone,
@@ -253,7 +264,7 @@ export class AgentAPI extends Module {
   }
 
   private services(): Partial<Record<HostService, unknown>> {
-    this.serviceCache ??= createEditorServices(this.Blok, this.config);
+    this.serviceCache ??= createEditorServices(this.Blok, this.config, () => this.actor, this.pages());
 
     return this.serviceCache;
   }
@@ -301,7 +312,7 @@ export class AgentAPI extends Module {
   private tools(options: ToolsOptions & { format: 'openai' }): Promise<AgentOpenAITool[]>;
   private async tools(options: ToolsOptions): Promise<AgentAnthropicTool[] | AgentOpenAITool[]> {
     const { renderAgentTools } = await import('../../../agent/render-tools');
-    const tools = renderAgentTools(this.source().contract(), { ...options, schema: options.schema ?? 'mixed' });
+    const tools = renderAgentTools(this.source().contract(), { ...options, schema: options.schema ?? 'mixed', pages: this.pages() !== null });
 
     return options.format === 'anthropic'
       ? tools.filter((tool): tool is AgentAnthropicTool => 'input_schema' in tool)
@@ -311,7 +322,52 @@ export class AgentAPI extends Module {
   private async guidance(): Promise<string> {
     const { composeGuidance } = await import('../../../agent/guidance');
 
-    return composeGuidance(this.source().contract());
+    return composeGuidance(this.source().contract(), { pages: this.pages() !== null });
+  }
+
+  private pages(): PageDocuments | null {
+    if (this.pageDocs === undefined) {
+      this.pageDocs = createPageDocuments(this.Blok, this.config.documentId, (pageId, loaded) => {
+        if (!this.turnPages.has(pageId)) {
+          this.turnPages.set(pageId, loaded);
+        }
+      });
+    }
+
+    return this.pageDocs;
+  }
+
+  /** Writes back each sub-page a turn saved. True when there was one. */
+  private async restorePages(saved: Map<string, OutputData>): Promise<boolean> {
+    const docs = this.pages();
+
+    if (docs === null || saved.size === 0) {
+      return false;
+    }
+    await Promise.all([...saved].map(([pageId, data]) => docs.save(pageId, data)));
+    saved.clear();
+
+    return true;
+  }
+
+  /** The sub-page document a page block in this document points at. */
+  private async openPage(blockId: string, actor: AgentActor): Promise<AgentSession & { close(): void }> {
+    const docs = this.pages();
+    const block = this.Blok.BlockManager.getBlockById(blockId);
+
+    if (docs === null) {
+      throw new AgentFailure({ code: 'COMMAND_UNAVAILABLE', message: 'This editor cannot open sub-page documents. Omit `page`.', retryable: false });
+    }
+    if (block === undefined) {
+      throw failure('BLOCK_NOT_FOUND', `No block "${blockId}".`, { details: { blockId } });
+    }
+    const pageId = block.preservedData.pageId;
+
+    if (block.name !== 'page' || typeof pageId !== 'string') {
+      throw failure('INVALID_ARGS', `Block "${blockId}" is not a page block with a pageId.`, { path: '/page', details: { blockId } });
+    }
+
+    return docs.open(pageId, actor);
   }
 
   private begin(options: AgentTurnOptions, internal: InternalTurnOptions = { drawLocal: true }): AgentTurn {
@@ -320,6 +376,9 @@ export class AgentAPI extends Module {
     }
 
     const identity = readIdentity(options?.agent);
+
+    this.actor = { ...identity, kind: 'agent' };
+    this.turnPages = new Map();
     const session = createEditorAgentSession(
       this.Blok,
       { ...identity, kind: 'agent' },
@@ -346,6 +405,7 @@ export class AgentAPI extends Module {
       },
       onClosed: () => this.closeTurn(turn),
       isEditorDestroyed: () => this.isDestroyed,
+      ...(this.pages() === null ? {} : { openPage: (blockId: string) => this.openPage(blockId, { ...identity, kind: 'agent' }) }),
     });
 
     this.current.turn = turn;

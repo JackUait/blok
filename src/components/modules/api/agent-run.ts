@@ -22,6 +22,8 @@ export interface AgentRunDeps {
   prepare(): Promise<{ system: string; tools: AgentModelTool[] }>;
   /** Ids the turn changed so far. */
   changed(): string[];
+  /** Discard: write back each sub-page document the run saved. True when there was one. */
+  restorePages?(): Promise<boolean>;
   /** Read once per prompt, so a run already answering keeps its level. */
   thinking(): AgentThinkingLevel | undefined;
   /** What the run does now, for the prompt bar's status line. */
@@ -143,9 +145,11 @@ export function createAgentRun(prompt: string | Promise<string>, deps: AgentRunD
         }
         undone.count += 1;
       }
+      const restored = await deps.restorePages?.() ?? false;
+
       end();
 
-      return undone.count > 0;
+      return undone.count > 0 || restored;
     },
     end,
   };

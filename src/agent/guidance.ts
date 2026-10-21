@@ -15,6 +15,8 @@ const IN_APP_RULES = [
   '- After you edit, end with one friendly sentence of under 10 words on what you did, in the user\'s language, like "Added a short paragraph about how YouTube began." Say what, never where: no caret, position, block names or ids. No lists, tables or Markdown.',
 ].join('\n');
 
-export function composeGuidance(contract: AgentContract): string {
-  return `${contract.guidance.general.trim()}\n\n${IN_APP_RULES}`;
+const PAGE_RULE = '- A page block points at a sub-page with its own document. To write inside one, call blok_read or blok_execute with `page` set to the page block\'s id; there doc.setTitle and doc.setIcon name the sub-page. Insert the page block first if it does not exist.';
+
+export function composeGuidance(contract: AgentContract, options: { pages?: boolean } = {}): string {
+  return `${contract.guidance.general.trim()}\n\n${IN_APP_RULES}${options.pages === true ? `\n${PAGE_RULE}` : ''}`;
 }

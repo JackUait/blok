@@ -12,6 +12,8 @@ export interface RenderOptions {
   schema?: 'envelope' | 'full' | 'mixed';
   strict?: boolean;
   handle?: boolean;
+  /** Offer `page` on blok_read and blok_execute: the host can open sub-page documents. */
+  pages?: boolean;
 }
 
 export type RenderedTool =
@@ -212,6 +214,22 @@ const withHandle = (options: RenderOptions, input: Schema): Schema => {
   };
 };
 
+const PAGE_FIELD: Schema = {
+  type: 'string',
+  minLength: 1,
+  description: 'Id of a page block in this document. Works on that sub-page\'s own document instead: its blocks, title and icon. Omit it for this document.',
+};
+
+// Strict OpenAI schemas need every key required, so strict tools go without it.
+const withPage = (options: RenderOptions, name: AgentToolName, input: Schema): Schema => {
+  if (options.pages !== true || options.strict === true || name === 'blok_describe') {
+    return input;
+  }
+  const properties = isSchema(input.properties) ? input.properties : {};
+
+  return { ...input, properties: { ...properties, page: PAGE_FIELD } };
+};
+
 const outputFor = (contract: AgentContract, name: AgentToolName): Schema => {
   if (name === 'blok_execute') {
     return cloneSchema(EXECUTE_OUTPUT_SCHEMA);
@@ -225,7 +243,7 @@ const outputFor = (contract: AgentContract, name: AgentToolName): Schema => {
 
 const wrap = (contract: AgentContract, options: RenderOptions, name: AgentToolName, rawInput: Schema): RenderedTool => {
   const description = name === 'blok_execute' && options.schema === 'mixed' ? mixedExecuteDescription(contract) : DESCRIPTIONS[name];
-  const input = withHandle(options, rawInput);
+  const input = withPage(options, name, withHandle(options, rawInput));
   const strict = strictFor(options, name, input);
 
   if (name === 'blok_execute' && options.schema !== undefined && options.schema !== 'envelope') {

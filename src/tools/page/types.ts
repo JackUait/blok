@@ -1,4 +1,4 @@
-import type { BlockToolData, OutputBlockData } from '../../../types';
+import type { BlockToolData, OutputBlockData, OutputData } from '../../../types';
 
 /** What `create` may answer: the id the host gave the page, or nothing to keep Blok's. */
 export type PageCreateResult = void | { pageId: string };
@@ -72,4 +72,8 @@ export interface PageConfig {
   peek?(pageId: string, ctx: { event?: MouseEvent }): void;
   /** The page's opening blocks, for the hover preview. */
   preview?(pageId: string): OutputBlockData[] | null | undefined | Promise<OutputBlockData[] | null | undefined>;
+  /** The page's own document, for the editor's agent. `null` when missing. */
+  loadDocument?(pageId: string): OutputData | null | Promise<OutputData | null>;
+  /** Saves the page's document after an agent batch changed it. */
+  saveDocument?(pageId: string, data: OutputData): void | Promise<void>;
 }

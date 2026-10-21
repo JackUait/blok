@@ -1,0 +1,86 @@
+import type { OutputData } from '../../../../types';
+import type { AgentActor, AgentSession } from '../../../../types/agent';
+import type { PageConfig } from '../../../../types/tools/page';
+import { createDocumentAgentSession } from '../../../shared/agent/document-session';
+import { failure } from '../../../shared/agent/errors';
+import type { AgentPorts } from '../../../shared/agent/types';
+import { outputBlocksToSegments } from '../../../shared/rich-text/block-data';
+import type { BlokModules } from '../../../types-internal/blok-modules';
+import { htmlToSegmentsDom } from '../../utils/rich-text-dom';
+import { liveContractSource } from './editor-session';
+import { createEditorPorts, editorRichTextFieldsFor } from './editor-ports';
+
+export type OpenPageDocument = NonNullable<AgentPorts['openPageDocument']>;
+
+type DocumentHooks = Required<Pick<PageConfig, 'loadDocument' | 'saveDocument'>>;
+
+const documentHooks = (settings: Record<string, unknown>): DocumentHooks | null => {
+  const { loadDocument, saveDocument } = settings;
+
+  return typeof loadDocument === 'function' && typeof saveDocument === 'function'
+    ? { loadDocument, saveDocument } as DocumentHooks
+    : null;
+};
+
+export interface PageDocuments {
+  open: OpenPageDocument;
+  /** Writes a whole document back, as Discard does with the one a run started from. */
+  save(pageId: string, data: OutputData): Promise<void>;
+}
+
+/**
+ * Opens a sub-page's own document through the page tool's loadDocument and
+ * saveDocument hooks. Null when no page tool has both.
+ * @param onBeforeSave - gets the document as loaded, before each agent save
+ */
+export const createPageDocuments = (
+  Blok: BlokModules,
+  ownDocumentId: string | undefined,
+  onBeforeSave?: (pageId: string, loaded: OutputData) => void
+): PageDocuments | null => {
+  const hooks = [...Blok.Tools.blockTools.values()]
+    .map((tool) => documentHooks(tool.settings))
+    .find((found) => found !== null);
+
+  if (hooks === undefined || hooks === null) {
+    return null;
+  }
+
+  const open = async (pageId: string, actor: AgentActor): Promise<AgentSession & { close(): void }> => {
+    // Two writers on one document: the editor and this session.
+    if (pageId === ownDocumentId) {
+      throw failure('INVALID_ARGS', 'This page block points at the document you have open. Use doc.setTitle or doc.setIcon instead.', { details: { pageId } });
+    }
+    const loaded = await hooks.loadDocument(pageId);
+
+    if (loaded === null || loaded === undefined) {
+      throw failure('BLOCK_NOT_FOUND', `The host has no document for page "${pageId}".`, { details: { pageId } });
+    }
+    const original = structuredClone(loaded);
+    const fieldsFor = editorRichTextFieldsFor(Blok);
+    // Stored text may still be HTML; the session works on segments.
+    const document: OutputData = { ...loaded, blocks: outputBlocksToSegments(loaded.blocks, fieldsFor, htmlToSegmentsDom) };
+    const source = liveContractSource(Blok);
+    const contract = source.contract();
+    const session = createDocumentAgentSession({
+      document, tools: source.runtimes(contract), contract, actor, ports: createEditorPorts(Blok),
+    });
+
+    return {
+      ...session,
+      execute: async (batch, options) => {
+        const before = session.revision();
+        const result = await session.execute(batch, options);
+
+        if (result.ok && result.revision !== before) {
+          onBeforeSave?.(pageId, original);
+          await hooks.saveDocument(pageId, session.output());
+        }
+
+        return result;
+      },
+    };
+  };
+
+  return { open, save: async (pageId, data) => hooks.saveDocument(pageId, data) };
+};

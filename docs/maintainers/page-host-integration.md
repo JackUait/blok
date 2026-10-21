@@ -161,6 +161,21 @@ What it does not prove:
 - Real authentication. The host trusts an `X-Dev-User` header.
 - Access to page bodies. The playground still keeps bodies in each profile's `localStorage`.
 
+## Letting the agent write sub-pages
+
+The editor's agent (`editor.agent` and Ask AI) works on the open document. To let it also read and write a sub-page, give the page tool two hooks:
+
+- `loadDocument(pageId)` returns the page's document as `OutputData`: its blocks, `title` and `icon`. Return `null` for a missing page.
+- `saveDocument(pageId, data)` saves the whole document. Blok calls it once per agent batch that changed the page. A rejection fails that batch.
+
+With both hooks:
+
+- The model gets a `page` field on `blok_read` and `blok_execute`. It names a page block in the open document, and the call works on that page's own document. Without the hooks the tool definitions do not change.
+- `page.rename` and `page.setIcon` work without `rename` and `setIcon`, by writing the sub-page's `title` and `icon`. When those hooks exist, they still win.
+- Discard in Ask AI saves back each sub-page the run changed, as it was before the run's first save. A change the user made to that page in the meantime is overwritten.
+
+Each call loads the page fresh and saves the whole document, so the host should keep its own title record in step with `data.title` and `data.icon`. A page block that points at the open document (`documentId`) is refused.
+
 ## Importing page pointers
 
 Notion clipboard page records can contain an ID and title without the page body. The V3 parser maps a subpage record to an ID-only owning `page` pointer, but the editor's singleton paste path can convert it to a non-owning link. Neither path imports the body or creates a host page. Do not treat the foreign ID as a local page until the host resolves an existing page or imports the body and remaps the ID. The host's `href` must not generate a local route for an unknown foreign ID. Do not create an empty host page merely because the pasted record has a title. If import is unavailable, the host may offer a link to the Notion page instead. A `page-link` remains non-owning and cannot create the target page.

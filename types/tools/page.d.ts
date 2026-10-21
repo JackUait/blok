@@ -1,7 +1,7 @@
 import { ConversionConfig, SanitizerConfig } from '../configs';
 import { BlockTool, BlockToolConstructorOptions } from './block-tool';
 import { BlockToolData } from './block-tool-data';
-import { OutputBlockData } from '../data-formats/output-data';
+import { OutputBlockData, OutputData } from '../data-formats/output-data';
 import { ToolboxConfig } from './tool-settings';
 
 /** What `create` may answer: the id the host gave the page, or nothing to keep Blok's. */
@@ -132,6 +132,18 @@ export interface PageConfig {
    * title, like Notion. Without it the preview shows only icon, path and title.
    */
   preview?(pageId: string): OutputBlockData[] | null | undefined | Promise<OutputBlockData[] | null | undefined>;
+  /**
+   * The page's own document: its blocks, title and icon. With `saveDocument`,
+   * the editor's agent (`editor.agent`, Ask AI) can read and edit a sub-page,
+   * and `page.rename` / `page.setIcon` work without `rename` / `setIcon`.
+   * Return `null` when the page is missing.
+   */
+  loadDocument?(pageId: string): OutputData | null | Promise<OutputData | null>;
+  /**
+   * Saves the page's document after an agent changed it. Called once per
+   * agent batch that changed something. A rejection fails that batch.
+   */
+  saveDocument?(pageId: string, data: OutputData): void | Promise<void>;
 }
 
 /**

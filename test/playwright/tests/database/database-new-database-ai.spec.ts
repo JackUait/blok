@@ -17,8 +17,8 @@ declare global {
   }
 }
 
-const mount = async (page: Page, withLever: boolean): Promise<void> => {
-  await page.evaluate(async (lever) => {
+const mount = async (page: Page, withLever: boolean, leadText?: string): Promise<void> => {
+  await page.evaluate(async ({ lever, lead }) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
       window.blokInstance = undefined;
@@ -47,7 +47,12 @@ const mount = async (page: Page, withLever: boolean): Promise<void> => {
 
     window.blokInstance = new window.Blok({
       holder,
-      data: { blocks: [{ id: 'p0', type: 'paragraph', data: { text: '' } }] },
+      data: {
+        blocks: [
+          ...(lead === undefined ? [] : [{ id: 'p-lead', type: 'paragraph', data: { text: lead } }]),
+          { id: 'p0', type: 'paragraph', data: { text: '' } },
+        ],
+      },
       tools: {
         database: {
           class: (window as unknown as Record<string, unknown>).BlokDatabase,
@@ -57,7 +62,7 @@ const mount = async (page: Page, withLever: boolean): Promise<void> => {
       },
     });
     await window.blokInstance.isReady;
-  }, withLever);
+  }, { lever: withLever, lead: leadText });
 };
 
 const insertDatabase = async (page: Page): Promise<void> => {
@@ -245,7 +250,8 @@ const VIEW_ENTRIES = [
 
 for (const entry of VIEW_ENTRIES) {
   test(`"${entry.query}" + Enter inserts a database whose first view is ${entry.views[0][0]}, with the "New database" panel`, async ({ page }) => {
-    await mount(page, false);
+    // research/30 B7a: a Table view alone on the page opens no panel, so the page has text above.
+    await mount(page, false, 'Trips');
     await page.locator('[data-blok-id="p0"] [contenteditable]').focus();
     await page.keyboard.type(entry.query);
     const first = page.getByTestId('toolbox-popover').locator('[data-blok-item-name]:visible').first();

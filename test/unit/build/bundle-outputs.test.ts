@@ -681,10 +681,11 @@ describe('dist weight (consumer parse cost)', () => {
     // 12.1 MiB (USER, 2026-10-18): built-in database comments add ~16 KB of code and CSS with no duplication.
     // 13.8 MiB (USER, 2026-10-19: bundle MapLibre): its lazy chunk is 1,705,067 bytes (library, worker and shared
     // module as blob sources, CSS); code went 12,633,521 -> 14,350,582 bytes.
+    // 14.3 MiB (USER, 2026-10-21): Ask AI and database parity rounds; code measured 14,687,410 bytes.
     const codeBytes = esFiles
       .filter((file) => !readFileSync(file, 'utf-8').slice(0, 200).includes('JSON.parse('))
       .reduce((sum, file) => sum + readFileSync(file).byteLength, 0)
-    expect(codeBytes).toBeLessThan(13.8 * 1024 * 1024)
+    expect(codeBytes).toBeLessThan(14.3 * 1024 * 1024)
   })
 
   it('emits minified chunks (no indented multi-line output)', () => {

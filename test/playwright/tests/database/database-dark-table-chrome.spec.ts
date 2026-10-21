@@ -155,7 +155,7 @@ for (const path of paths) {
     test('calculation row: tertiary label and the dark hover fill (§1d)', async ({ page }) => {
       const calc = page.locator('[data-blok-database-table-calc][data-property-id="p-amount"]');
 
-      await expect(calc.locator('[data-blok-database-table-calc-label]')).toHaveCSS('color', 'rgb(125, 122, 117)');
+      await expect(calc.locator('[data-blok-database-table-calc-label]')).toHaveCSS('color', 'rgb(143, 140, 135)');
       await calc.hover();
       await expect(calc).toHaveCSS('background-color', HOVER_FILL);
     });
@@ -211,7 +211,7 @@ for (const path of paths) {
     test('"+ New page": dark ink, and the hover fills only the button (research/22 §12)', async ({ page }) => {
       const add = page.locator('[data-blok-database-table-add-row]').first();
 
-      await expect(add).toHaveCSS('color', 'rgb(125, 122, 117)');
+      await expect(add).toHaveCSS('color', 'rgb(143, 140, 135)');
       // The plus icon's wrapper is the button's first child.
       expect(await add.evaluate((el) => (el.firstElementChild === null ? null : getComputedStyle(el.firstElementChild).color))).toBe('rgb(125, 122, 117)');
       await add.hover();
@@ -251,17 +251,17 @@ for (const path of paths) {
 
     test('view settings: row values in the nearest AA gray; "Add sort" in dark secondary (§1l, §1c)', async ({ page }) => {
       await page.getByTestId('database-toolbar-settings').click();
-      // Notion's rgb(125, 122, 117) is 3.6:1 on the menu; this is the first gray that passes.
-      await expect(page.getByTestId('database-settings-layout').locator('[data-blok-database-panel-value]')).toHaveCSS('color', 'rgb(142, 139, 134)');
+      // The dark tertiary AA step: Notion's rgb(125, 122, 117) is 3.6:1 on the menu.
+      await expect(page.getByTestId('database-settings-layout').locator('[data-blok-database-panel-value]')).toHaveCSS('color', 'rgb(143, 140, 135)');
       await page.getByTestId('database-settings-sort').click();
       await expect(page.getByTestId('database-sort-add')).toHaveCSS('color', 'rgb(173, 169, 163)');
     });
 
     test('filter rule editor: AA operator ink and the dark field fill; "+ Filter" AA ink (§1c)', async ({ page }) => {
-      // Notion's rgb(125, 122, 117) is 3.9:1 on the page; this is the first gray that passes.
-      await expect(page.locator('[data-blok-database-filter-add]')).toHaveCSS('color', 'rgb(135, 132, 127)');
+      // The dark tertiary AA step: Notion's rgb(125, 122, 117) is 3.9:1 on the page.
+      await expect(page.locator('[data-blok-database-filter-add]')).toHaveCSS('color', 'rgb(143, 140, 135)');
       await page.locator('[data-blok-database-filter-pill]').first().click();
-      await expect(page.getByTestId('database-filter-operator').locator('[data-blok-database-panel-value]')).toHaveCSS('color', 'rgb(142, 139, 134)');
+      await expect(page.getByTestId('database-filter-operator').locator('[data-blok-database-panel-value]')).toHaveCSS('color', 'rgb(143, 140, 135)');
       await expect(page.getByTestId('database-filter-value')).toHaveCSS('background-color', 'rgba(252, 252, 252, 0.03)');
     });
 

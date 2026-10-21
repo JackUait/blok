@@ -100,8 +100,8 @@ const THEMES = [
     chipHover: 'rgb(56, 56, 54)',
     questionBg: 'rgb(255, 255, 255)',
     questionRing: 'rgb(182, 212, 243) 0px 0px 0px 0.5px inset',
-    // Blok's border token; Notion's light ring rgb(240, 239, 237) is not copied.
-    answerBorder: 'rgb(224, 221, 214)',
+    // research/21 §1k.
+    answerBorder: 'rgb(240, 239, 237)',
   },
   {
     scheme: 'dark' as const,

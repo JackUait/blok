@@ -202,7 +202,7 @@ test.describe('side peek', () => {
 });
 
 test.describe('side peek properties (research/08)', () => {
-  test('rows are 34px with a 4px gap, labels 14/20 in rgb(125, 122, 117)', async ({ page }) => {
+  test('rows are 34px with a 4px gap, labels 14/20 in rgb(114, 111, 106)', async ({ page }) => {
     await mount(page, blocks());
     await tableRow(page, 'r1').hover();
     await tableRow(page, 'r1').locator('[data-blok-database-table-open]').click();
@@ -218,7 +218,7 @@ test.describe('side peek properties (research/08)', () => {
 
     expect(look[0].height).toBe(34);
     expect(look[1].top - look[0].top).toBe(38);
-    expect(look[0].color).toBe('rgb(125, 122, 117)');
+    expect(look[0].color).toBe('rgb(114, 111, 106)');
     expect(look[0].size).toBe('14px');
     expect(look[0].line).toBe('20px');
   });

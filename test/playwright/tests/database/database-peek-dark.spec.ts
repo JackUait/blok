@@ -135,8 +135,8 @@ for (const mode of DARK_MODES) {
       const empty = value(page, 'p-due').locator('[data-blok-database-cell][data-empty]');
 
       await expect(empty).toHaveText('Empty');
-      // Notion's rgb(125, 122, 117) is 3.8:1 on the peek; this is the first gray that passes.
-      await expect(empty).toHaveCSS('color', 'rgb(138, 135, 130)');
+      // The dark tertiary AA step: Notion's rgb(125, 122, 117) is 3.8:1 on the peek.
+      await expect(empty).toHaveCSS('color', 'rgb(143, 140, 135)');
     });
 
     test('center peek: rgb(32, 32, 32) panel, measured shadow, 0.8 backdrop', async ({ page }) => {
@@ -166,9 +166,9 @@ test('the layout builder paints the measured dark surfaces (research/21 §1n)', 
   await expect(dialog.locator('[data-blok-database-layout-canvas]')).toHaveCSS('background-color', 'rgb(25, 25, 25)');
   await expect(dialog.locator('[data-blok-database-layout-module="heading"]')).toHaveCSS('background-color', 'rgb(25, 25, 25)');
   await expect(dialog.locator('[data-blok-database-layout-structure-card]').first()).toHaveCSS('background-color', 'rgb(32, 32, 32)');
-  // Selected "Simple" label white, unselected "Tabbed" rgb(90, 90, 90).
+  // Selected "Simple" label white; unselected "Tabbed" takes the dark tertiary AA step (Notion's rgb(90, 90, 90) is 2.5:1).
   await expect(dialog.locator('[data-blok-database-layout-structure-card][aria-pressed="true"]')).toHaveCSS('color', 'rgb(255, 255, 255)');
-  await expect(dialog.locator('[data-blok-database-layout-structure-card][aria-pressed="false"]')).toHaveCSS('color', 'rgb(90, 90, 90)');
+  await expect(dialog.locator('[data-blok-database-layout-structure-card][aria-pressed="false"]')).toHaveCSS('color', 'rgb(143, 140, 135)');
 });
 
 test('light keeps the 0.6 backdrop and the white panel (research/08)', async ({ page }) => {

@@ -105,8 +105,8 @@ const LIGHT: Look = {
   rowHover: 'rgba(33, 27, 23, 0.05)',
   rowPressed: 'rgba(33, 27, 23, 0.05)',
   todayHover: 'rgba(33, 27, 23, 0.05)',
-  // Blok's secondary ink: Notion's rgb(142, 139, 134) is 3.39:1 on white.
-  todayInk: 'rgb(100, 106, 121)',
+  // The database tertiary AA step: Notion's rgb(142, 139, 134) is 3.39:1 on white.
+  todayInk: 'rgb(114, 111, 106)',
 };
 
 const DARK: Look = {

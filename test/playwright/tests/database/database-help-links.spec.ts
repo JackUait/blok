@@ -122,7 +122,7 @@ test('"Learn about reminders" is the date picker\'s last row, a 28px link to the
     };
   });
 
-  expect(look).toEqual({ height: 28, icon: '20px', iconInk: 'rgb(142, 139, 134)', ink: 'rgb(125, 122, 117)', last: true, line: '1px' });
+  expect(look).toEqual({ height: 28, icon: '20px', iconInk: 'rgb(142, 139, 134)', ink: 'rgb(114, 111, 106)', last: true, line: '1px' });
 });
 
 test('without config.helpLinks neither help link shows', async ({ page }) => {

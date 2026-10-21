@@ -391,8 +391,7 @@ test.describe('date picker submenus', () => {
     expect(innerHeight - ((menuBox?.y ?? 0) + (menuBox?.height ?? 0))).toBeLessThanOrEqual(8);
   });
 
-  // Light uses Blok's tokens for Notion's measured roles; dark resolves to its own values.
-  for (const [scheme, ink] of [['light', { city: 'rgb(0, 0, 0)', muted: 'rgb(100, 106, 121)' }], ['dark', { city: 'rgb(226, 224, 220)', muted: 'rgb(163, 158, 152)' }]] as const) {
+  for (const [scheme, ink] of [['light', { city: 'rgb(44, 44, 43)', muted: 'rgb(114, 111, 106)' }], ['dark', { city: 'rgb(240, 239, 237)', muted: 'rgb(173, 169, 163)' }]] as const) {
     test(`Time zone in ${scheme}: city, offset and heading inks`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
       await openZones(page);

@@ -619,7 +619,7 @@ test.describe('calendar', () => {
     expect((await card('r2').boundingBox())?.height).toBe(52);
     expect((await card('r3').boundingBox())?.height).toBe(52);
     await expect(card('r1').locator('[data-blok-database-calendar-event-property]').last()).toHaveCSS('text-overflow', 'clip');
-    await expect(card('r1').locator('[data-blok-database-cell="date"][data-reminder]')).toHaveCSS('color', 'rgb(39, 131, 222)');
+    await expect(card('r1').locator('[data-blok-database-cell="date"][data-reminder]')).toHaveCSS('color', 'rgb(35, 119, 211)');
 
     const [first, second] = await Promise.all([card('r1').boundingBox(), card('r2').boundingBox()]);
 

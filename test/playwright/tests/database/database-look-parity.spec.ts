@@ -134,7 +134,7 @@ test('view tabs: 32px pill, 6px 12px, label 14px 500, Notion ink (research/07:45
     'background-color': 'rgba(33, 27, 23, 0.05)',
     'color': 'rgb(44, 44, 43)',
   });
-  expect((await style(inactive, ['color'])).color).toBe('rgb(125, 122, 117)');
+  expect((await style(inactive, ['color'])).color).toBe('rgb(114, 111, 106)');
   expect(await active.evaluate((el) => el.querySelector('svg')?.getBoundingClientRect().width)).toBe(20);
 });
 
@@ -196,14 +196,14 @@ test('board card: 40px, ink title, white action pill with the menu shadow (resea
   expect((await style(card.locator('[data-blok-database-card-menu]'), ['color'])).color).toBe('rgb(125, 122, 117)');
 });
 
-test('side peek: labels in Notion secondary ink, 34px rows (research/08:329)', async ({ page }) => {
+test('side peek: labels in the database secondary ink, 34px rows (research/08:329)', async ({ page }) => {
   await tab(page, 'v2').click();
   await page.locator('[data-blok-database-card][data-row-id="r2"] [data-blok-database-card-title]').click();
   const row = page.locator('[data-blok-database-drawer-prop-row]').first();
 
   await expect(row).toBeVisible();
   expect((await row.boundingBox())?.height).toBe(34);
-  expect((await style(row.locator('[data-blok-database-drawer-prop-label]'), ['color'])).color).toBe('rgb(125, 122, 117)');
+  expect((await style(row.locator('[data-blok-database-drawer-prop-label]'), ['color'])).color).toBe('rgb(114, 111, 106)');
 });
 
 test('side peek: measured shadow with its ring, a 160x34 label hover cell, no value hover (research/08:329, 21 §1m, 26 §5f)', async ({ page }) => {
@@ -332,7 +332,7 @@ test.describe('measured values the CSS snapshot used to pin alone (ledger OM6)',
       'padding-left': '8px',
       'font-size': '14px',
       'line-height': '20px',
-      'color': 'rgb(161, 158, 153)',
+      'color': 'rgb(114, 111, 106)',
     });
 
     // The icon wrapper is the button's first child; the svg inside it.
@@ -381,7 +381,7 @@ test.describe('measured values the CSS snapshot used to pin alone (ledger OM6)',
       'font-weight': '500',
       'text-transform': 'uppercase',
       'letter-spacing': '1px',
-      'color': 'rgb(161, 158, 153)',
+      'color': 'rgb(114, 111, 106)',
       'margin-right': '4px',
     });
     expect(await label.evaluate((el) => (el instanceof HTMLElement ? el.innerText : ''))).toBe('SUM');

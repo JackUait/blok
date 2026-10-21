@@ -134,8 +134,8 @@ for (const theme of THEMES) {
       await page.getByTestId('database-toolbar-settings').click();
       const title = page.locator('[data-blok-database-panel-header]');
 
-      // Notion's light rgb(125, 122, 117) is 4.27:1 on white; Blok keeps its AA secondary.
-      await expect(title).toHaveCSS('color', theme.dark ? 'rgb(173, 169, 163)' : 'rgb(100, 106, 121)');
+      // The light AA step: Notion's rgb(125, 122, 117) is 4.27:1 on white.
+      await expect(title).toHaveCSS('color', theme.dark ? 'rgb(173, 169, 163)' : 'rgb(114, 111, 106)');
       await expect(title).toHaveCSS('font-size', '12px');
       await expect(title).toHaveCSS('line-height', '16px');
       await expect(title).toHaveCSS('font-weight', '500');
@@ -195,11 +195,11 @@ for (const theme of THEMES) {
       expect((await remind.boundingBox())?.width).toBe(250);
     });
 
-    test('a reminder date is rgb(39, 131, 222) (§4f)', async ({ page }) => {
+    test('a reminder date is the AA reminder blue (§4f)', async ({ page }) => {
       await mount(page, blocks({ type: 'table' }));
       await theme.apply(page);
 
-      await expect(row(page, 'r1').locator('[data-blok-database-cell="date"][data-reminder]')).toHaveCSS('color', 'rgb(39, 131, 222)');
+      await expect(row(page, 'r1').locator('[data-blok-database-cell="date"][data-reminder]')).toHaveCSS('color', theme.dark ? 'rgb(41, 137, 232)' : 'rgb(35, 119, 211)');
     });
 
     test('center peek title is 40px/48px 700 (§1e)', async ({ page }) => {

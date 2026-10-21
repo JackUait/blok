@@ -168,7 +168,7 @@ test.describe('timeline', () => {
     expect(layout.sameLine).toBe(true);
     await expect(bar(page, 'r1').locator('[data-blok-database-cell="date"]')).toHaveCSS('font-size', '12px');
     await expect(bar(page, 'r1').locator('[data-blok-database-timeline-bar-property]').last()).toHaveCSS('font-size', '13px');
-    await expect(bar(page, 'r1').locator('[data-blok-database-cell="date"][data-reminder]')).toHaveCSS('color', 'rgb(39, 131, 222)');
+    await expect(bar(page, 'r1').locator('[data-blok-database-cell="date"][data-reminder]')).toHaveCSS('color', 'rgb(35, 119, 211)');
   });
 
   test('shows today on screen with a dot and a line', async ({ page }) => {

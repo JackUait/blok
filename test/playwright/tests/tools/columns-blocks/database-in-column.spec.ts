@@ -315,13 +315,10 @@ test.describe('Database inside a column', () => {
     expect(findBlock(saved, 'database1')).toBeUndefined();
     expect(saved.blocks.filter((b) => b.type === 'database')).toHaveLength(0);
 
-    // Known data-integrity smell: deleting the database does NOT cascade-delete
-    // its `database-row` children. Instead each former row is PROMOTED to root —
-    // it survives with `parent` undefined rather than being removed.
-    expect(findBlock(saved, 'dbrow1')).toBeDefined();
-    expect(findBlock(saved, 'dbrow2')).toBeDefined();
-    expect(findBlock(saved, 'dbrow1')?.parent).toBeUndefined();
-    expect(findBlock(saved, 'dbrow2')?.parent).toBeUndefined();
+    // Its rows go with it.
+    expect(findBlock(saved, 'dbrow1')).toBeUndefined();
+    expect(findBlock(saved, 'dbrow2')).toBeUndefined();
+    expect(saved.blocks.filter((b) => b.type === 'database-row')).toHaveLength(0);
 
     // The columns scaffold dissolves: no column_list, no column survives.
     expect(saved.blocks.filter((b) => b.type === 'column_list')).toHaveLength(0);

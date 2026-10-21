@@ -42,6 +42,22 @@ export interface AgentModelSearchAdapterOptions extends AgentModelAdapterOptions
   webSearch?: boolean | Record<string, unknown>;
 }
 
+/** Providers whose own web search `webSearch` turns on. */
+export type AgentModelSearchProvider = 'anthropic' | 'openai' | 'gemini';
+
+/** `openai-compatible` covers any other endpoint that speaks Chat Completions. */
+export type AgentModelProvider = AgentModelSearchProvider | 'deepseek' | 'mistral' | 'groq' | 'ollama' | 'openrouter' | 'openai-compatible';
+
+export type AgentModelOptions =
+  | (AgentModelSearchAdapterOptions & { provider: AgentModelSearchProvider })
+  | (AgentModelAdapterOptions & { provider: Exclude<AgentModelProvider, AgentModelSearchProvider>; webSearch?: never });
+
+/**
+ * The model for your provider. It picks the API that provider serves, so you name the provider, not the API.
+ * `webSearch` is for Anthropic, OpenAI and Gemini only. An unknown provider throws a TypeError.
+ */
+export declare function agentModel(options: AgentModelOptions): AgentModel;
+
 /**
  * Anthropic Messages API. `off` sends the lowest effort, since some Claude models cannot turn thinking off.
  * Caches by default: a mark on the system block and top-level `cache_control`. A platform that rejects

@@ -6223,6 +6223,7 @@ export class DatabaseTool implements BlockTool {
       ...(lanes !== null ? { subGroups: lanes.lanes } : {}),
       ...(viewConfig !== undefined ? { onLaneToggle: (key: string, collapsed: boolean) => this.saveGroupCollapse(viewConfig.id, `sub:${key}`, collapsed) } : {}),
       ...this.commentBadgeLever(),
+      ...this.addCardLabel(titlePropId),
       onTitleEdit: (rowId, newTitle) => {
         const titlePropId = this.titlePropertyId();
         this.updateRowTitleBlock(rowId, titlePropId, newTitle);
@@ -7301,6 +7302,13 @@ export class DatabaseTool implements BlockTool {
 
   private rowOrTemplate(rowId: string): DatabaseRow | undefined {
     return this.model.getRow(rowId) ?? this.templates.find((template) => template.id === rowId);
+  }
+
+  /** research/27 shot 04: a board's add button reads the default template's name ("+ New task"). */
+  private addCardLabel(titlePropId: string): { addCardLabel?: string } {
+    const title = this.defaultTemplate()?.properties[titlePropId];
+
+    return typeof title === 'string' && title.trim() !== '' ? { addCardLabel: title } : {};
   }
 
   private defaultTemplate(): DatabaseRow | undefined {

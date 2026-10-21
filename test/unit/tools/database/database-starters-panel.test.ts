@@ -404,6 +404,23 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
     expect(createRow.mock.calls.filter(([params]) => (params as { template?: boolean }).template === true)).toHaveLength(1);
   });
 
+  it('the By Status board\'s add buttons name the default template; without one they read "New page" (research/27 shot 04)', async () => {
+    const { tool } = await insert();
+
+    await applyTasks();
+    const board = saved(tool).views.find((v) => v.type === 'board');
+    const tab = document.querySelector<HTMLElement>(`[data-blok-database-tab][data-view-id="${board?.id}"]`);
+
+    tab?.click();
+    const labels = (): string[] => [...document.querySelectorAll('[data-blok-database-add-card] span:last-child')].map((el) => el.textContent ?? '');
+
+    expect(labels().length).toBeGreaterThan(0);
+    expect(new Set(labels())).toEqual(new Set(['tools.database.starterNewTask']));
+
+    tool.setDefaultTemplate(null);
+    expect(new Set(labels())).toEqual(new Set(['tools.database.newPage']));
+  });
+
   it('View settings has "Undo skills database"; it empties the database back to a plain table in one step (Blok choice)', async () => {
     const { doc, tool } = await insert();
     const titleId = saved(tool).schema.find((p) => p.type === 'title')?.id;

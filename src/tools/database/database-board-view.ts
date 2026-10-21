@@ -54,6 +54,8 @@ interface DatabaseBoardViewOptions {
   onLoadMore?: (optionId: string) => void;
   /** The host's comment counts. Without it there are no badges. */
   commentBadges?: CommentBadges;
+  /** The add-card label: the default template's name (research/27 shot 04). Absent: "New page". */
+  addCardLabel?: string;
 }
 
 export interface BoardLane {
@@ -87,7 +89,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
   private readonly hiddenGroupCount: number;
   private readonly aggregate: ((optionId: string) => string) | undefined;
   private readonly aggregateHint: string | undefined;
-  private readonly settings: Pick<DatabaseBoardViewOptions, 'view' | 'schema' | 'bodyOf' | 'locale' | 'onPropertyEdit' | 'subGroups' | 'onLaneToggle' | 'cellContext' | 'getTotal' | 'onLoadMore' | 'commentBadges'>;
+  private readonly settings: Pick<DatabaseBoardViewOptions, 'view' | 'schema' | 'bodyOf' | 'locale' | 'onPropertyEdit' | 'subGroups' | 'onLaneToggle' | 'cellContext' | 'getTotal' | 'onLoadMore' | 'commentBadges' | 'addCardLabel'>;
 
   constructor({
     readOnly, i18n, options, getRows, titlePropertyId, onTitleEdit, hideCounts, hiddenGroupCount, aggregate, aggregateHint, ...settings
@@ -464,7 +466,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
 
       const labelEl = document.createElement('span');
 
-      labelEl.textContent = this.i18n.t('tools.database.newPage');
+      labelEl.textContent = this.settings.addCardLabel ?? this.i18n.t('tools.database.newPage');
       addCardBtn.appendChild(labelEl);
 
       columnEl.appendChild(addCardBtn);

@@ -430,6 +430,15 @@ describe('DatabaseBoardView', () => {
       expect(labelEl?.textContent).toBeTruthy();
     });
 
+    it('the add-card button reads "New page", or the name it is given (research/27 shot 04: "+ New task")', () => {
+      const labelOf = (board: HTMLElement): string | null | undefined =>
+        board.querySelector('[data-blok-database-add-card] span:last-child')?.textContent;
+      const options = [makeOption({ id: 'opt-1' })];
+
+      expect(labelOf(new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title', addCardLabel: 'New task' }).createView())).toBe('New task');
+      expect(labelOf(new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' }).createView())).toBe('tools.database.newPage');
+    });
+
     it('prefixes add-column button text with +', () => {
       const view = new DatabaseBoardView({ readOnly: false, i18n, options: [], getRows: () => [], titlePropertyId: 'title' });
       const board = view.createView();

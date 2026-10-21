@@ -1291,6 +1291,68 @@ describe('in-editor assistant bar', () => {
     });
   });
 
+  describe('a click outside', () => {
+    const type = (text: string): void => {
+      const field = within(bar()).getByRole('textbox');
+
+      if (!(field instanceof HTMLTextAreaElement)) {
+        throw new Error('prompt field is not a textarea');
+      }
+      field.value = text;
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    const pressOn = (target: Element): void => {
+      target.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
+    };
+    const barShown = (): boolean => screen.queryByRole('dialog', { name: 'Ask AI' }) !== null;
+    const fieldValue = (): string => within(bar()).getByRole<HTMLTextAreaElement>('textbox').value;
+
+    it('closes the bar before a run, and the next open brings back what was typed', async () => {
+      await createEditor(scripted());
+      pressModJ(paragraphInput());
+      type('Draft prompt');
+
+      pressOn(paragraphInput());
+
+      expect(barShown()).toBe(false);
+      pressModJ(paragraphInput());
+      expect(fieldValue()).toBe('Draft prompt');
+      expect(within(bar()).getByRole('button', { name: 'Send' })).toBeEnabled();
+    });
+
+    it('keeps the bar open for a press inside it', async () => {
+      await createEditor(scripted());
+      pressModJ(paragraphInput());
+
+      pressOn(within(bar()).getByRole('textbox'));
+
+      expect(barShown()).toBe(true);
+    });
+
+    it('leaves the bar open once a run has started', async () => {
+      await createEditor(scripted(answer('Done.')));
+      pressModJ(paragraphInput());
+      submit('Write');
+      await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+
+      pressOn(paragraphInput());
+
+      expect(barShown()).toBe(true);
+    });
+
+    it('does not bring back a prompt that was sent', async () => {
+      await createEditor(scripted(answer('Done.')));
+      pressModJ(paragraphInput());
+      submit('Write');
+      await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+      within(bar()).getByRole('textbox').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+      pressModJ(paragraphInput());
+
+      expect(fieldValue()).toBe('');
+    });
+  });
+
   describe('in the page', () => {
     it('opens anchored under the caret block and reserves a gap there', async () => {
       await createEditor(scripted(), undefined, THREE_BLOCKS);

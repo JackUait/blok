@@ -155,6 +155,8 @@ export class AssistantBar {
   /** The bar's height when it began floating over its anchor; null when it sits under it. */
   private inPlaceHeight: number | null = null;
   private view: AssistantBarView = { kind: 'prompt' };
+  /** A prompt typed but not sent: the next open shows it again. */
+  private draft = '';
   private anchor: HTMLElement | null = null;
   private thinkingView: AssistantThinkingView | null = null;
   private thinkingMenu: PopoverDesktop | null = null;
@@ -266,12 +268,18 @@ export class AssistantBar {
     this.element.hidden = false;
     promoteToTopLayer(this.element);
     this.place(anchor, column, inPlace);
+    if (this.view.kind === 'prompt' && this.field.value === '') {
+      this.field.value = this.draft;
+      this.sync();
+    }
     this.field.focus({ preventScroll: true });
   }
 
   public close(): void {
     this.element.hidden = true;
     this.thinkingMenu?.hide();
+    // A follow-up typed after an answer belongs to that run, which ends here.
+    this.draft = this.view.kind === 'prompt' ? this.field.value : '';
     this.field.value = '';
     removeFromTopLayer(this.element);
     this.render({ kind: 'prompt' });

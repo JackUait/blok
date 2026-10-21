@@ -115,9 +115,20 @@ export class Assistant extends Module {
         this.open({ inPlace: !isOpenShortcut(event) });
       }
     });
+    // Capture: a block's own pointerdown handler may stop it.
+    this.listeners.on(document, 'pointerdown', (event: Event) => this.pressOutside(event), { capture: true });
     this.listeners.on(window, 'resize', () => this.scheduleRelayout());
     // Capture: a scrolling ancestor's scroll does not bubble to window.
     this.listeners.on(window, 'scroll', () => this.scheduleRelayout(), { capture: true, passive: true });
+  }
+
+  /** Before a run starts, a press outside closes the bar; it keeps what was typed for the next open. */
+  private pressOutside(event: Event): void {
+    if (!this.isOpen || this.run !== null || this.isWorking() || this.contains(event.target)) {
+      return;
+    }
+    // The press puts the caret where it lands.
+    this.close({ restoreFocus: false });
   }
 
   /** Space in an empty default block opens the bar, as its placeholder says (tools/factory.ts). */

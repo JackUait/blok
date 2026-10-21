@@ -33,7 +33,7 @@ import { templateMenuItems, templateRepeatItems, templateRepeatSummary } from '.
 import type { TemplateRepeatHost } from './database-template-menu';
 import { resolveDynamicProperties } from './dynamic-values';
 import { safeHref } from '../../components/utils/sanitize-url';
-import { bulkEditableProperties, createSelectionBar } from './database-selection-bar';
+import { bulkCloseClearsSelection, bulkEditableProperties, bulkStartValue, createSelectionBar, watchBulkCloseKey } from './database-selection-bar';
 import { calculationItems, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
 import type { RowFavorite } from './database-table-menus';
 import { EmojiPicker, prefetchEmojiPickerData } from '../callout/emoji-picker';
@@ -621,6 +621,8 @@ export class DatabaseTool implements BlockTool {
   /** The last row a click picked: a Shift-click selects from it. */
   private selectionAnchor: string | null = null;
   private bulkEditor: CellEditorHandle | null = null;
+  /** The board/list selection bar, when shown. */
+  private rowSelectionBar: HTMLElement | null = null;
   /** A row "+ New" just made, with the values it was born with. Escape deletes it while it stays so. */
   private freshRow: { id: string; properties: string } | null = null;
 
@@ -9593,8 +9595,9 @@ export class DatabaseTool implements BlockTool {
     });
     const slot = this.selectionBarSlot() ?? container;
 
-    slot.querySelector(':scope > [data-blok-database-table-selection-bar]')?.remove();
-    // A table view's own bar may still be there.
+    // Only this bar: a table view's own bar shares the slot and the attribute, and keeps its selection across a redraw.
+    this.rowSelectionBar?.remove();
+    this.rowSelectionBar = null;
     slot.toggleAttribute('data-blok-database-selecting', slot.querySelector(':scope > [data-blok-database-table-selection-bar]') !== null);
     document.removeEventListener('keydown', this.handleSelectionKeys, true);
     if (this.rowSelection.size === 0) {
@@ -9611,7 +9614,7 @@ export class DatabaseTool implements BlockTool {
     const properties = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).filter((p) => visible.includes(p.id));
 
     slot.setAttribute('data-blok-database-selecting', '');
-    slot.prepend(createSelectionBar({
+    this.rowSelectionBar = createSelectionBar({
       count: this.rowSelection.size,
       properties,
       i18n: this.api.i18n,
@@ -9623,7 +9626,8 @@ export class DatabaseTool implements BlockTool {
           { name: 'database-selection-delete', title: this.api.i18n.t('tools.database.tableMoveToTrash'), icon: IconTrash, closeOnActivate: true, onActivate: () => this.trashSelection() },
         ]);
       },
-    }));
+    });
+    slot.prepend(this.rowSelectionBar);
   }
 
   private openBulkEditor(propertyId: string, anchor: HTMLElement): void {
@@ -9634,12 +9638,12 @@ export class DatabaseTool implements BlockTool {
       return;
     }
     this.bulkEditor?.close();
-    // A date opens on the first selected row's (research/21 §6).
-    const first = property.type === 'date' ? this.model.getRow(rowIds[0]) : undefined;
     const changeDisplay = property.type === 'date' ? this.dateDisplayChanger(propertyId) : undefined;
     const displayChanged = { any: false };
+    const written = { any: false };
+    const closeKey = watchBulkCloseKey();
 
-    this.bulkEditor = openCellEditor(property, first === undefined ? null : readPropertyValue(first, property), anchor, {
+    this.bulkEditor = openCellEditor(property, bulkStartValue(property, rowIds.map((rowId) => this.model.getRow(rowId))), anchor, {
       ...this.cellContext(),
       i18n: this.api.i18n,
       readOnly: false,
@@ -9652,12 +9656,20 @@ export class DatabaseTool implements BlockTool {
           changeDisplay(change);
         } }
         : {}),
-      onCommit: (value) => this.commitTableCells(rowIds.map((rowId) => ({ rowId, propertyId, value })), []),
+      options: this.model.getProperty(propertyId)?.config?.options ?? [],
+      onOptionsChange: (options) => this.handleTableOptionsChange(propertyId, options),
+      onCommit: (value) => {
+        written.any = true;
+        this.commitTableCells(rowIds.map((rowId) => ({ rowId, propertyId, value })), []);
+      },
       onClose: () => {
+        closeKey.stop();
         this.bulkEditor = null;
+        if (bulkCloseClearsSelection(property.type, closeKey.key(), written.any)) this.clearRowSelection();
         if (displayChanged.any) this.rerenderView({ keepDrawer: true });
       },
     });
+    if (!this.bulkEditor.isOpen) closeKey.stop();
   }
 
   /** ⌘⇧M and ⌘⇧P on one picked card, list row or calendar event: its Comment and its Move to, as the row menu shows. */

@@ -672,6 +672,58 @@ describe('table bulk actions and clipboard', () => {
       ], [], true]);
     });
 
+    it('a Text bulk edit opens on the value every selected row shares, and empty on mixed rows (research/31 §4b)', () => {
+      const shared = mount({ rows: [row('r1', 'Alpha', { 'p-notes': 'same' }), row('r2', 'Bravo', { 'p-notes': 'same' }), row('r3', 'Charlie')] });
+
+      selectRows(shared.root, 'r1', 'r2');
+      shared.root.querySelector<HTMLElement>('[data-blok-database-table-selection-property][data-property-id="p-notes"]')?.click();
+      expect(editorField().value).toBe('same');
+      press(editorField(), 'Escape');
+      expect(commitsOf(shared.handlers)).toEqual([]);
+      document.body.innerHTML = '';
+
+      const mixed = mount();
+
+      selectRows(mixed.root, 'r1', 'r2');
+      mixed.root.querySelector<HTMLElement>('[data-blok-database-table-selection-property][data-property-id="p-notes"]')?.click();
+      expect(editorField().value).toBe('');
+    });
+
+    it('a Text bulk edit shows each key in every selected cell, and writes once, on close (research/31 §4b)', () => {
+      const { root, handlers } = mount();
+
+      selectRows(root, 'r1', 'r2');
+      root.querySelector<HTMLElement>('[data-blok-database-table-selection-property][data-property-id="p-notes"]')?.click();
+      editorField().value = 'live';
+      editorField().dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(cell(root, 'r1', 'p-notes').textContent).toBe('live');
+      expect(cell(root, 'r2', 'p-notes').textContent).toBe('live');
+      expect(commitsOf(handlers)).toEqual([]);
+
+      press(editorField(), 'Escape');
+
+      expect(commitsOf(handlers)).toEqual([[[
+        { rowId: 'r1', propertyId: 'p-notes', value: 'live' },
+        { rowId: 'r2', propertyId: 'p-notes', value: 'live' },
+      ], [], true]]);
+    });
+
+    it('a Text bulk edit closed with nothing written shows the old values again', () => {
+      const { root, handlers } = mount();
+
+      selectRows(root, 'r1', 'r2');
+      root.querySelector<HTMLElement>('[data-blok-database-table-selection-property][data-property-id="p-notes"]')?.click();
+      editorField().value = 'live';
+      editorField().dispatchEvent(new Event('input', { bubbles: true }));
+      editorField().value = '';
+      editorField().dispatchEvent(new Event('input', { bubbles: true }));
+      press(editorField(), 'Escape');
+
+      expect(commitsOf(handlers)).toEqual([]);
+      expect(cell(root, 'r1', 'p-notes').textContent).toBe('short');
+    });
+
     it('the … menu duplicates and moves the selection to the trash', () => {
       const { root, handlers } = mount();
 

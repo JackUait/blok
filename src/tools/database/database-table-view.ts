@@ -25,6 +25,7 @@ import {
   withPropertySetting,
 } from './view-settings';
 import { DatabaseTableGrid, createTableState } from './database-table-grid';
+import { bulkCloseClearsSelection, bulkStartValue, watchBulkCloseKey } from './database-selection-bar';
 import { cellText } from './database-table-clipboard';
 import type { CellChange, TableState } from './database-table-grid';
 import { pageIconElement, showsPageIcon } from './page-icon';
@@ -1342,13 +1343,21 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     this.bulkEditing = true;
     this.bulkEditor?.close();
     const written = { any: false };
+    const closeKey = watchBulkCloseKey();
+    const before = rowIds.map((rowId) => this.rowMap.get(rowId));
+    const showDraft = (text: string): void => {
+      rowIds.forEach((rowId) => {
+        const row = this.rowMap.get(rowId);
+
+        if (row !== undefined) this.rowMap.set(rowId, { ...row, properties: { ...row.properties, [propertyId]: text } });
+      });
+      repaint();
+    };
     const repaint = (): void => rowIds.forEach((rowId) => this.root
       ?.querySelector(`[data-blok-database-table-row][data-row-id="${CSS.escape(rowId)}"] [role="gridcell"][data-property-id="${CSS.escape(propertyId)}"]`)
       ?.dispatchEvent(new CustomEvent('blok-database-table-repaint', { bubbles: true })));
-    // A date opens on the first selected row's (research/21 §6).
-    const first = property.type === 'date' ? this.rowMap.get(rowIds[0]) : undefined;
     const changeDisplay = property.type === 'date' ? handlers.dateDisplayChanger?.(propertyId) : undefined;
-    const handle = openCellEditor(property, first === undefined ? null : readPropertyValue(first, property), anchor, {
+    const handle = openCellEditor(property, bulkStartValue(property, rowIds.map((rowId) => this.rowMap.get(rowId))), anchor, {
       ...this.options.cellContext,
       i18n: this.options.i18n,
       readOnly: false,
@@ -1376,6 +1385,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
           repaint();
         } }
         : {}),
+      // research/31 §4b: the cells show each key; the write waits for the close, so it is one undo step.
+      ...(property.type === 'text' ? { onDraft: showDraft } : {}),
       onCommit: (value) => {
         written.any = true;
         rowIds.forEach((rowId) => {
@@ -1387,14 +1398,24 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         repaint();
       },
       onClose: () => {
+        closeKey.stop();
         if (generation !== this.bulkGeneration) return;
+        if (!written.any && property.type === 'text') {
+          before.forEach((row) => { if (row !== undefined) this.rowMap.set(row.id, row); });
+          repaint();
+        }
         this.bulkEditing = false;
         this.bulkEditor = null;
+        if (bulkCloseClearsSelection(property.type, closeKey.key(), written.any)) {
+          this.state.selection = null;
+          this.grid?.paint();
+        }
         if (written.any) handlers.editEnded();
       },
     });
 
     this.bulkEditor = handle.isOpen ? handle : null;
+    if (!handle.isOpen) closeKey.stop();
   }
 
   /** Cmd/Ctrl+/: the properties to edit on every selected row. */

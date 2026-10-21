@@ -1,7 +1,7 @@
 import type { I18n } from '../../../types';
 import { IconDotsHorizontal, IconTrash } from '../../components/icons';
-import { isReadOnlyType } from './property-values';
-import type { PropertyDefinition } from './types';
+import { isReadOnlyType, readPropertyValue } from './property-values';
+import type { DatabaseRow, PropertyDefinition, PropertyValue } from './types';
 
 export interface SelectionBarOptions {
   count: number;
@@ -16,6 +16,46 @@ export interface SelectionBarOptions {
 /** Properties a bulk edit can write: no title, nothing computed. */
 export const bulkEditableProperties = (properties: PropertyDefinition[]): PropertyDefinition[] =>
   properties.filter((property) => property.type !== 'title' && !isReadOnlyType(property.type));
+
+/**
+ * What a bulk editor opens on. A date: the first selected row's (research/21 §6).
+ * A text: the value every row shares (research/31 §4b). Else, and on mixed
+ * rows (unmeasured), empty, so no row's value shows as if all had it.
+ */
+export const bulkStartValue = (property: PropertyDefinition, rows: Array<DatabaseRow | undefined>): PropertyValue => {
+  const values = rows.map((row) => (row === undefined ? null : readPropertyValue(row, property) ?? null));
+
+  if (property.type === 'date') return values[0] ?? null;
+  if (property.type === 'text' && values.every((value) => value === values[0])) return values[0] ?? null;
+
+  return null;
+};
+
+/**
+ * Records the key that closes a bulk editor. Add it before the editor opens:
+ * the editor's own window listener stops the key, but not for an earlier one.
+ */
+export const watchBulkCloseKey = (): { key: () => string | null; stop: () => void } => {
+  const state: { key: string | null } = { key: null };
+  const record = (event: KeyboardEvent): void => {
+    state.key = event.key;
+    setTimeout(() => {
+      state.key = null;
+    }, 0);
+  };
+
+  window.addEventListener('keydown', record, true);
+
+  return { key: () => state.key, stop: () => window.removeEventListener('keydown', record, true) };
+};
+
+/**
+ * research/31 §4b: Escape after a Text bulk edit and Enter on a Select pick
+ * clear the selection; a Date's Escape and a Select's Escape keep it. Other
+ * closes are unmeasured and keep it.
+ */
+export const bulkCloseClearsSelection = (type: PropertyDefinition['type'], key: string | null, written: boolean): boolean =>
+  written && ((type === 'text' && key === 'Escape') || (type === 'select' && key === 'Enter'));
 
 /**
  * The board and list selection bar: "N selected", one button per editable

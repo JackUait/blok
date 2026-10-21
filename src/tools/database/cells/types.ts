@@ -97,6 +97,8 @@ export interface CellEditorCallbacks {
    * editor is open; each call carries the whole new value, not a delta.
    */
   onCommit: (value: PropertyValue) => void;
+  /** Text: the field's text on every key, before any commit. A bulk edit previews it in every row. */
+  onDraft?: (text: string) => void;
   /** The editor closed with nothing committed (Escape where it cancels, no change, or an invalid number). */
   onCancel?: () => void;
   /** The editor closed, after any commit or cancel. Hosts restore focus here. */

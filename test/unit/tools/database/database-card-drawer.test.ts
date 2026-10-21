@@ -398,6 +398,70 @@ describe('DatabaseCardDrawer', () => {
       rtl.drawer.destroy();
     });
 
+    // research/31 §2: a click on the handle closes the peek; a press alone or a drag does not.
+    it('a click on the handle closes the peek', () => {
+      const onClose = vi.fn();
+      const wrapper = document.createElement('div');
+
+      document.body.appendChild(wrapper);
+      const drawer = new DatabaseCardDrawer(createOptions({ wrapper, onClose }));
+
+      drawer.open(makeRow(), 'side');
+      const handle = wrapper.querySelector<HTMLElement>('[data-blok-database-peek-resize]');
+
+      if (handle === null) throw new Error('no resize handle');
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 762, clientY: 400, pointerId: 1, button: 0, bubbles: true }));
+      expect(wrapper.querySelector('[data-blok-database-drawer]')).not.toBeNull();
+      expect(onClose).not.toHaveBeenCalled();
+
+      handle.dispatchEvent(new PointerEvent('pointerup', { clientX: 762, clientY: 400, pointerId: 1, bubbles: true }));
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(drawer.isOpen).toBe(false);
+      drawer.destroy();
+    });
+
+    it('a drag on the handle resizes and keeps the peek open', () => {
+      vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1512);
+      const onClose = vi.fn();
+      const wrapper = document.createElement('div');
+
+      document.body.appendChild(wrapper);
+      const drawer = new DatabaseCardDrawer(createOptions({ wrapper, onClose }));
+
+      drawer.open(makeRow(), 'side');
+      const el = wrapper.querySelector<HTMLElement>('[data-blok-database-drawer]');
+      const handle = wrapper.querySelector<HTMLElement>('[data-blok-database-peek-resize]');
+
+      if (el === null || handle === null) throw new Error('no drawer or resize handle');
+      vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(new DOMRect(756, 0, 756, 800));
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 762, clientY: 400, pointerId: 1, button: 0, bubbles: true }));
+      handle.dispatchEvent(new PointerEvent('pointermove', { clientX: 700, clientY: 400, pointerId: 1, bubbles: true }));
+      handle.dispatchEvent(new PointerEvent('pointerup', { clientX: 700, clientY: 400, pointerId: 1, bubbles: true }));
+
+      expect(width(el)).toBe('812px');
+      expect(onClose).not.toHaveBeenCalled();
+      expect(drawer.isOpen).toBe(true);
+      drawer.destroy();
+    });
+
+    it('a cancelled press on the handle keeps the peek open', () => {
+      const onClose = vi.fn();
+      const wrapper = document.createElement('div');
+
+      document.body.appendChild(wrapper);
+      const drawer = new DatabaseCardDrawer(createOptions({ wrapper, onClose }));
+
+      drawer.open(makeRow(), 'side');
+      const handle = wrapper.querySelector<HTMLElement>('[data-blok-database-peek-resize]');
+
+      if (handle === null) throw new Error('no resize handle');
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 762, clientY: 400, pointerId: 1, button: 0, bubbles: true }));
+      handle.dispatchEvent(new PointerEvent('pointercancel', { clientX: 762, clientY: 400, pointerId: 1, bubbles: true }));
+
+      expect(onClose).not.toHaveBeenCalled();
+      drawer.destroy();
+    });
+
     it('keeps the width per viewer and reopens at it', () => {
       const first = openSide();
 
@@ -493,7 +557,7 @@ describe('DatabaseCardDrawer', () => {
       document.body.innerHTML = '';
     });
 
-    it('shows "Resize" and "Drag" only after the hint delay, beside the handle', () => {
+    it('shows "Close · Click" and "Resize · Drag" only after the hint delay, beside the handle', () => {
       const { drawer, handle } = openSide();
 
       pointer(handle, 'pointerenter', 360);
@@ -502,7 +566,7 @@ describe('DatabaseCardDrawer', () => {
       vi.advanceTimersByTime(300);
 
       expect(shown()).toBe(true);
-      expect(tooltip()?.textContent).toBe('Resize Drag');
+      expect([...(tooltip()?.querySelector('[data-blok-testid="tooltip-content"] > div')?.children ?? [])].map((line) => line.textContent)).toEqual(['Close Click', 'Resize Drag']);
       expect(tooltip()?.getAttribute('data-blok-placement')).toBe('left');
       drawer.destroy();
     });

@@ -179,7 +179,7 @@ test('light keeps the 0.6 backdrop and the white panel (research/08)', async ({ 
 });
 
 // research/30 B24: hover changes nothing on the handle; a hint beside it follows the pointer's height.
-test('side peek handle: no hover look, and a "Resize Drag" hint to its left that follows the pointer', async ({ page }) => {
+test('side peek handle: no hover look, and a "Close Click / Resize Drag" hint to its left that follows the pointer', async ({ page }) => {
   await mount(page, blocks('side'));
   await openRow(page);
   const handle = page.locator('[data-blok-database-peek-resize]');
@@ -207,7 +207,8 @@ test('side peek handle: no hover look, and a "Resize Drag" hint to its left that
   }));
   await expect(tooltip).toBeHidden();
   await expect(tooltip).toBeVisible();
-  await expect(tooltip).toHaveText('Resize Drag');
+  await expect(tooltip).toHaveText('Close ClickResize Drag');
+  expect(await tooltip.getByTestId('tooltip-content').evaluate((el) => [...(el.firstElementChild?.children ?? [])].map((line) => line.textContent))).toEqual(['Close Click', 'Resize Drag']);
   expect(await look()).toBe(rest);
 
   const first = await tooltip.boundingBox();
@@ -225,4 +226,47 @@ test('side peek handle: no hover look, and a "Resize Drag" hint to its left that
 
   await page.mouse.move(box.x - 200, box.y + 420);
   await expect(tooltip).toBeHidden();
+});
+
+// research/31 §2: a click on the handle closes the peek; a press alone does not; a drag resizes and keeps it.
+test('side peek handle: a click closes the peek, a drag resizes it', async ({ page }) => {
+  await mount(page, blocks('side'));
+  await openRow(page);
+  const handle = page.locator('[data-blok-database-peek-resize]');
+  const viewport = page.viewportSize()?.width ?? 0;
+
+  // Wait for the slide-in to finish, so the handle is where the pointer goes.
+  await expect.poll(async () => Math.round((await peek(page).boundingBox())?.x ?? -1)).toBe(viewport - 756);
+  const box = await handle.boundingBox();
+
+  if (box === null) throw new Error('no handle');
+  const x = box.x + box.width / 2;
+  const y = box.y + 300;
+  const before = (await peek(page).boundingBox())?.width ?? 0;
+
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x - 56, y, { steps: 6 });
+  await page.mouse.up();
+  await expect(peek(page)).toBeVisible();
+  // The width follows the pointer from the peek's right edge.
+  expect(Math.round((await peek(page).boundingBox())?.width ?? 0)).toBe(Math.round(viewport - (x - 56)));
+  expect(before).toBe(756);
+
+  const moved = await handle.boundingBox();
+
+  if (moved === null) throw new Error('no handle');
+  await page.mouse.move(moved.x + moved.width / 2, y);
+  await page.mouse.down();
+  await page.evaluate(() => new Promise<void>((resolve) => {
+    setTimeout(resolve, 500);
+  }));
+  await expect(peek(page)).toBeVisible();
+  await page.mouse.up();
+  await expect(peek(page)).toHaveCount(0);
+  // The click that closed it opens nothing behind it.
+  await page.evaluate(() => new Promise<void>((resolve) => {
+    setTimeout(resolve, 300);
+  }));
+  await expect(peek(page)).toHaveCount(0);
 });

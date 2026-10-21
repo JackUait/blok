@@ -70,6 +70,8 @@ const PEEK_MAX_WIDTH = 1008;
 const PEEK_DETAILS_WIDTH = 280;
 /** Arrow-key step. The column resizer's. */
 const PEEK_RESIZE_STEP = 16;
+// A press that moves less than this is a click (research/31 §2), not a resize. Unmeasured.
+const PEEK_CLICK_SLOP = 4;
 /** Notion's persistence was not measured: Blok keeps it per viewer, for every database. */
 const PEEK_WIDTH_KEY = 'blok:database-peek-width';
 /** Notion's pin arrows scroll 400px per click (research/09 §4). */
@@ -1030,16 +1032,24 @@ export class DatabaseCardDrawer {
       }
       // The page beside the peek follows the pointer at once, not over its 200ms ease.
       this.peekHost?.setAttribute('data-blok-database-peek-resizing', '');
+      const start = { x: event.clientX, y: event.clientY, width: this.peekWidth };
       const onMove = (move: PointerEvent): void => {
         const rect = drawer.getBoundingClientRect();
 
         this.setPeekWidth(getElementDirection(drawer) === 'rtl' ? move.clientX - rect.left : rect.right - move.clientX);
       };
-      const onEnd = (): void => {
+      const onEnd = (end: PointerEvent): void => {
         handle.removeEventListener('pointermove', onMove);
         handle.removeEventListener('pointerup', onEnd);
         handle.removeEventListener('pointercancel', onEnd);
         this.peekHost?.removeAttribute('data-blok-database-peek-resizing');
+        // research/31 §2: a click (no drag) on the handle closes the peek.
+        if (end.type === 'pointerup' && Math.hypot(end.clientX - start.x, end.clientY - start.y) < PEEK_CLICK_SLOP) {
+          this.setPeekWidth(start.width);
+          this.close();
+
+          return;
+        }
         this.savePeekWidth();
       };
 
@@ -1052,9 +1062,9 @@ export class DatabaseCardDrawer {
   }
 
   /**
-   * research/30 B24: hovering the handle shows "Resize · Drag" beside it, level
-   * with the pointer. Notion's line "Close · Click or ⌘\" is left out: a click and
-   * ⌘\ on the handle were not measured, and Blok does neither.
+   * research/30 B24: hovering the handle shows "Close · Click" and "Resize · Drag"
+   * beside it, level with the pointer. Notion's "or ⌘\" is left out: in the web
+   * app ⌘\ toggles the sidebar, not the peek (research/31 §2).
    */
   private bindPeekHandleHint(handle: HTMLElement, drawer: HTMLElement): void {
     // The tooltip places itself against this 0px-tall anchor, so it follows the pointer's height.
@@ -1066,6 +1076,10 @@ export class DatabaseCardDrawer {
     handle.appendChild(hintAnchor);
 
     const content = createTooltipContent([[
+      { text: this.label('tools.database.close'), highlight: true },
+      { text: ' ', highlight: false },
+      { text: this.label('blockSettings.clickAction'), highlight: false },
+    ], [
       { text: this.label('tools.database.peekResizeHint'), highlight: true },
       { text: ' ', highlight: false },
       { text: this.label('tools.database.peekResizeHintAction'), highlight: false },

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { openCellEditor } from '../../../../../src/tools/database/cells';
 import { PopoverRegistry } from '../../../../../src/components/utils/popover/popover-registry';
 import type { PlaceValue } from '../../../../../src/tools/database/types';
-import { editorRoot, makeAnchor, makeEditorContext, makeProperty, press } from './helpers';
+import { editorRoot, makeAnchor, makeEditorContext, makeProperty, press, pressOutside } from './helpers';
 
 const EIFFEL: PlaceValue = { name: 'Eiffel Tower', address: '5 Avenue Anatole France, 75007 Paris, France', lat: 48.8584, lon: 2.2945 };
 
@@ -144,6 +144,35 @@ describe('Place editor: "Search for a location..." with the host geocoder (resea
     press(field(), 'Enter');
 
     expect(onCommit).toHaveBeenCalledWith({ address: '1 Main St' });
+  });
+
+  describe('a saved place stays until a result is picked or × clears it (research/31 §4a; Notion clears it on the first key)', () => {
+    it('Escape after a search writes nothing', async () => {
+      const onCommit = vi.fn();
+      const geocode = vi.fn().mockResolvedValue([EIFFEL]);
+
+      openCellEditor(makeProperty('place'), EIFFEL, makeAnchor(), makeEditorContext({ geocode, onCommit }));
+      type('Ber');
+      await settle();
+      press(field(), 'Escape');
+
+      expect(onCommit).not.toHaveBeenCalled();
+      expect(editorRoot()).toBeNull();
+    });
+
+    it('a press outside with a search nobody picked from writes nothing', async () => {
+      const onCommit = vi.fn();
+      const geocode = vi.fn().mockResolvedValue([EIFFEL]);
+
+      openCellEditor(makeProperty('place'), EIFFEL, makeAnchor(), makeEditorContext({ geocode, onCommit }));
+      type('Ber');
+      await settle();
+      pressOutside();
+      await Promise.resolve();
+
+      expect(onCommit).not.toHaveBeenCalled();
+      expect(editorRoot()).toBeNull();
+    });
   });
 
   it('without a geocoder the field is a plain address field: no search, no results', async () => {

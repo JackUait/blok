@@ -156,7 +156,7 @@ const openPlaceEditor = (
   const place = isPlaceValue(value) ? value : undefined;
   const address = place?.address ?? '';
   const name = place?.name?.trim() ?? '';
-  const state: { cleared: boolean; picked: PlaceValue | null } = { cleared: false, picked: null };
+  const state: { cleared: boolean; picked: PlaceValue | null; entered: boolean } = { cleared: false, picked: null, entered: false };
   const header = name === '' ? undefined : document.createElement('div');
   const search = placeSearch(ctx, (picked) => {
     state.picked = picked;
@@ -175,6 +175,8 @@ const openPlaceEditor = (
       if (state.picked !== null) ctx.onCommit(state.picked);
       else if (state.cleared) ctx.onCommit(null);
       else if (typed === address.trim()) ctx.onCancel?.();
+      // research/31 §4a: with a search, only Enter stores typed text; a press outside keeps the saved place.
+      else if (search !== undefined && !state.entered) ctx.onCancel?.();
       else ctx.onCommit(typed === '' ? null : { address: typed });
     },
     // The × and a picked result leave the text as it was, so the text editor sees no change.
@@ -186,7 +188,13 @@ const openPlaceEditor = (
   }, footer, header, true);
   const field = footer?.parentElement?.querySelector<HTMLInputElement | HTMLTextAreaElement>('[data-blok-database-cell-input]');
 
-  if (search !== undefined && field !== null && field !== undefined) search.attach(field, () => handle.isOpen);
+  if (search !== undefined && field !== null && field !== undefined) {
+    search.attach(field, () => handle.isOpen);
+    // Capture on the parent runs before the text editor's own Enter handler commits.
+    field.parentElement?.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.isComposing) state.entered = true;
+    }, true);
+  }
 
   if (header !== undefined) {
     const chip = document.createElement('span');

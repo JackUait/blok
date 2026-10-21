@@ -21,7 +21,7 @@ import type { BlokSchema, BlockToolDescription, DescribeBlockTool } from '../../
 type MediaName = 'image' | 'video' | 'audio' | 'file';
 
 const pinPath = resolve(__dirname, '../../view/__snapshots__/document-schema.json');
-const pinHash = 'b8e1c905d285a136fa3f10c7fcf25d31296850cd751f92fbf8b8db5f61f12e96';
+const pinHash = 'ff39e596a93010464b853538631b25793f57ab78202868061e52c7673de5b421';
 
 const media: Array<{
   name: MediaName;

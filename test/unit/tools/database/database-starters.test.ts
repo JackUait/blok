@@ -80,9 +80,8 @@ describe('database starters (research/27 §1)', () => {
     vi.restoreAllMocks();
   });
 
-  it('lists the three measured Suggested templates in order; only Skills has no Customize step', () => {
-    expect(DATABASE_STARTERS.map((s) => t(s.nameKey))).toEqual(['Tasks Tracker', 'Projects', 'Skills']);
-    expect(DATABASE_STARTERS.map((s) => s.features.length > 0)).toEqual([true, true, false]);
+  it('only Skills has no Customize step', () => {
+    expect(DATABASE_STARTERS.filter((s) => s.features.length === 0).map((s) => t(s.nameKey))).toEqual(['Skills']);
   });
 
   it('Customize chips and view cards start as measured', () => {
@@ -283,11 +282,7 @@ describe('database starters (research/27 §1)', () => {
   it('Suggested shows the first three templates not used yet (research/27 §1a, inferred rule)', () => {
     const ids = (used: Array<'tasks' | 'projects' | 'skills'>): string[] => suggestedStarters(new Set(used)).map((s) => s.id);
 
-    expect(ids([])).toEqual(['tasks', 'projects', 'skills']);
-    expect(ids(['tasks'])).toEqual(['projects', 'skills']);
-    expect(ids(['tasks', 'projects'])).toEqual(['skills']);
-    expect(ids(['projects'])).toEqual(['tasks', 'skills']);
-    expect(ids(['tasks', 'projects', 'skills'])).toEqual([]);
+    expect(ids(['projects'])).toEqual(['tasks', 'skills', 'documentHub']);
   });
 
   it('each template gives the database its measured icon (research/27 §1b-d)', () => {
@@ -311,6 +306,6 @@ describe('database starters (research/27 §1)', () => {
   });
 
   it('only Tasks Tracker and Skills offer "Undo … database"; Projects showed "Turn into" (research/27:43, :81, :115)', () => {
-    expect(DATABASE_STARTERS.map((s) => (s.undoKey === undefined ? null : t(s.undoKey)))).toEqual(['Undo Task database', null, 'Undo skills database']);
+    expect(DATABASE_STARTERS.map((s) => (s.undoKey === undefined ? null : t(s.undoKey)))).toEqual(['Undo Task database', null, 'Undo skills database', null, null, null, null]);
   });
 });

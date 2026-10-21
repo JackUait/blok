@@ -119,6 +119,7 @@ describe('"New database" panel with the AI prompt (research/26 §2, research/20 
       'tools.database.linkedNewEmpty',
       'tools.database.csvImport',
       'tools.database.starterTasks', 'tools.database.starterProjects', 'tools.database.starterSkills',
+      'tools.database.starterMoreTemplates',
       'tools.database.linkedLinkExisting',
     ]);
   });
@@ -145,6 +146,7 @@ describe('"New database" panel with the AI prompt (research/26 §2, research/20 
       'tools.database.linkedNewEmpty',
       'tools.database.csvImport',
       'tools.database.starterTasks', 'tools.database.starterProjects', 'tools.database.starterSkills',
+      'tools.database.starterMoreTemplates',
       'tools.database.linkedLinkExisting',
     ]);
   });
@@ -362,6 +364,7 @@ describe('"New database" panel with the AI prompt (research/26 §2, research/20 
       'tools.database.linkedNewEmpty',
       'tools.database.csvImport',
       'tools.database.starterTasks', 'tools.database.starterProjects', 'tools.database.starterSkills',
+      'tools.database.starterMoreTemplates',
       'tools.database.linkedLinkExisting',
     ]);
   });

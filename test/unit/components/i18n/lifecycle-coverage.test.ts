@@ -270,7 +270,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1423 + 126 + 488 + 4 closure for all 2041 keys', () => {
+  it('rebuilds a disjoint 1485 + 126 + 486 + 4 closure for all 2101 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -284,7 +284,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2041);
+    expect(lifecycle.size).toBe(2101);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -426,7 +426,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +2: the CSV dialog's "Use first row as headers" switch and "New table" preview title.
       // -1: tools.database.dateFormat.full left for registered-namespace-compatible: the CSV type
       // label now builds its date-format key from the picked format.
-      'executable-literal': 1423,
+      // +62: the "More templates" gallery and its four templates (60 new keys; net 2 moved over from registered-namespace-compatible).
+      'executable-literal': 1485,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -480,7 +481,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +6: Edit cadence's months row, "On the", the ordinals (templateRepeatOrdinal<Category>) and "Day", all built from a short name.
       // +1: the template menu's "Default" (tools.database.templateDefault, via the menu's prefixing t).
       // +1: tools.database.dateFormat.full (see executable-literal).
-      'registered-namespace-compatible': 488,
+      // -2: see executable-literal ("More templates").
+      'registered-namespace-compatible': 486,
       'catalog-only': 4,
     });
     expect(

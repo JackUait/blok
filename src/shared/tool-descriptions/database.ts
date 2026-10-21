@@ -425,11 +425,11 @@ export const DATABASE_DATA = {
       required: ['glyph', 'color'],
       additionalProperties: false,
       properties: {
-        glyph: { type: 'string', enum: ['check', 'timeline', 'wand'] },
-        color: { type: 'string', enum: ['green', 'blue', 'gray'] },
+        glyph: { type: 'string', enum: ['check', 'timeline', 'wand', 'doc', 'idea', 'calendar', 'flag'] },
+        color: { type: 'string', enum: ['green', 'blue', 'gray', 'red', 'orange', 'yellow'] },
       },
     },
-    starter: { type: 'string', enum: ['tasks', 'projects', 'skills'], description: 'The Suggested template this database was made from. Removed by "Undo … database".' },
+    starter: { type: 'string', enum: ['tasks', 'projects', 'skills', 'documentHub', 'brainstorm', 'meetingNotes', 'goals'], description: 'The template this database was made from. Removed by "Undo … database".' },
     automations: {
       type: 'object',
       required: ['version', 'definitions'],

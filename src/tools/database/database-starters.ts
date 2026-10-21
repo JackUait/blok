@@ -5,11 +5,11 @@ import type { DatabaseIcon, DatabaseRowData, DatabaseStarterId, DatabaseViewConf
 import type { ViewCreateConfig } from '../../shared/database/schema-ops';
 
 /**
- * The "Suggested" database templates of Notion's "New database" panel
- * (research/27 §1). Every name, option, view and sample row is as measured
- * with the Customize defaults kept. What a chip or a view card turned on or
- * off changes was not measured: here it only adds or leaves out its property
- * or view (Blok choice).
+ * The database templates of Notion's "New database" panel and its "More
+ * templates" gallery (research/27 §1, research/30 §10). Every name, option,
+ * view and sample row is as measured with the Customize defaults kept. A chip
+ * or view card only adds or leaves out its property or view (research/30 B8).
+ * Only the seven templates whose schema was measured are listed.
  */
 export type StarterId = DatabaseStarterId;
 
@@ -25,6 +25,13 @@ export interface StarterChoice {
 export interface StarterMeta {
   id: StarterId;
   nameKey: string;
+  /** The gallery card's one-line description (research/27 §1e). */
+  descriptionKey: string;
+  /**
+   * The gallery card's preview (research/30 §10a): column names, and option
+   * pills drawn in column `pillColumn` (a board's group headers without columns).
+   */
+  thumbnail: { columns: string[]; pills: Array<[string, string]>; pillColumn?: number };
   /** The panel tile tint (research/26 §2). */
   tint: DatabaseIcon['color'];
   glyph: DatabaseIcon['glyph'];
@@ -72,10 +79,16 @@ export interface StarterBuildOptions {
 
 const choice = (id: string, labelKey: string, on: boolean, kind: StarterChoice['kind']): StarterChoice => ({ id, labelKey, on, kind });
 
+const STATUS_PILLS: Array<[string, string]> = [
+  ['tools.database.defaultStatusNotStarted', 'gray'], ['tools.database.defaultStatusInProgress', 'blue'], ['tools.database.defaultStatusDone', 'green'],
+];
+
 export const DATABASE_STARTERS: readonly StarterMeta[] = [
   {
     id: 'tasks',
     nameKey: 'tools.database.starterTasks',
+    descriptionKey: 'tools.database.starterTasksDescription',
+    thumbnail: { columns: ['tools.database.starterTaskName', 'tools.database.defaultStatusProperty', 'tools.database.starterAssignee'], pills: STATUS_PILLS, pillColumn: 1 },
     tint: 'green',
     glyph: 'check',
     undoKey: 'tools.database.starterUndoTasks',
@@ -98,6 +111,8 @@ export const DATABASE_STARTERS: readonly StarterMeta[] = [
   {
     id: 'projects',
     nameKey: 'tools.database.starterProjects',
+    descriptionKey: 'tools.database.starterProjectsDescription',
+    thumbnail: { columns: [], pills: STATUS_PILLS },
     tint: 'blue',
     glyph: 'timeline',
     features: [
@@ -116,20 +131,140 @@ export const DATABASE_STARTERS: readonly StarterMeta[] = [
       choice('mine', 'tools.database.starterViewMyProjects', false, 'table'),
     ],
   },
-  { id: 'skills', nameKey: 'tools.database.starterSkills', tint: 'gray', glyph: 'wand', undoKey: 'tools.database.starterUndoSkills', features: [], views: [] },
+  {
+    id: 'skills',
+    nameKey: 'tools.database.starterSkills',
+    descriptionKey: 'tools.database.starterSkillsDescription',
+    thumbnail: { columns: ['tools.database.starterSkillName', 'tools.database.formQuestionDescription', 'tools.database.starterFiles'], pills: [] },
+    tint: 'gray',
+    glyph: 'wand',
+    undoKey: 'tools.database.starterUndoSkills',
+    features: [],
+    views: [],
+  },
+  // research/30 §10c-f. Tints and glyphs follow the gallery shot's icons (a red page, an orange bulb, a yellow calendar, a blue flag); their values were not read.
+  {
+    id: 'documentHub',
+    nameKey: 'tools.database.starterDocumentHub',
+    descriptionKey: 'tools.database.starterDocumentHubDescription',
+    thumbnail: { columns: ['tools.database.starterDocName', 'tools.database.propertyTypeCreatedBy', 'tools.database.propertyTypeCreatedTime'], pills: [] },
+    tint: 'red',
+    glyph: 'doc',
+    features: [
+      choice('createdTime', 'tools.database.propertyTypeCreatedTime', true, 'createdTime'),
+      choice('category', 'tools.database.starterCategory', true, 'multiSelect'),
+      choice('lastEditedBy', 'tools.database.propertyTypeLastEditedBy', true, 'lastEditedBy'),
+      choice('lastUpdated', 'tools.database.starterLastUpdatedTime', true, 'lastEditedTime'),
+      // A person: the chip shows Notion's people glyph (research/30 shot 20).
+      choice('reviewers', 'tools.database.starterReviewers', false, 'person'),
+    ],
+    views: [
+      choice('all', 'tools.database.starterViewAllDocs', true, 'table'),
+      choice('mine', 'tools.database.starterViewMyDocs', true, 'table'),
+      choice('byCategory', 'tools.database.starterViewByCategory', false, 'table'),
+    ],
+  },
+  {
+    id: 'brainstorm',
+    nameKey: 'tools.database.starterBrainstorm',
+    descriptionKey: 'tools.database.starterBrainstormDescription',
+    thumbnail: {
+      columns: ['tools.database.starterIdea', 'tools.database.propertyTypeCreatedBy', 'tools.database.starterPriority'],
+      pills: [['tools.database.starterOptionMediumPriority', 'yellow'], ['tools.database.starterOptionLow', 'green'], ['tools.database.starterOptionHigh', 'red']],
+      pillColumn: 2,
+    },
+    tint: 'orange',
+    glyph: 'idea',
+    features: [
+      choice('createdBy', 'tools.database.propertyTypeCreatedBy', true, 'createdBy'),
+      choice('priority', 'tools.database.starterPriority', true, 'select'),
+      choice('upvote', 'tools.database.starterUpvote', true, 'button'),
+      choice('status', 'tools.database.defaultStatusProperty', false, 'status'),
+    ],
+    views: [
+      choice('all', 'tools.database.starterViewAllIdeas', true, 'table'),
+      choice('byCategory', 'tools.database.starterViewByCategoryIdeas', true, 'board'),
+      choice('top', 'tools.database.starterViewTopIdeas', false, 'table'),
+    ],
+  },
+  {
+    id: 'meetingNotes',
+    nameKey: 'tools.database.starterMeetingNotes',
+    descriptionKey: 'tools.database.starterMeetingNotesDescription',
+    thumbnail: {
+      columns: ['tools.database.starterMeetingName', 'tools.database.propertyTypeDate', 'tools.database.starterCategory'],
+      pills: [['tools.database.starterOptionPresentation', 'yellow'], ['tools.database.starterOptionPlanning', 'blue'], ['tools.database.starterOptionStandup', 'red']],
+      pillColumn: 2,
+    },
+    tint: 'yellow',
+    glyph: 'calendar',
+    features: [
+      choice('date', 'tools.database.propertyTypeDate', true, 'date'),
+      choice('category', 'tools.database.starterCategory', true, 'multiSelect'),
+      choice('attendees', 'tools.database.starterAttendees', true, 'person'),
+      choice('lastEditedBy', 'tools.database.propertyTypeLastEditedBy', false, 'lastEditedBy'),
+      choice('lastUpdated', 'tools.database.starterLastUpdatedTime', false, 'lastEditedTime'),
+    ],
+    views: [
+      choice('all', 'tools.database.starterViewAllMeetings', true, 'table'),
+      choice('mine', 'tools.database.starterViewMyNotes', true, 'table'),
+      choice('byCategory', 'tools.database.starterViewByCategory', false, 'table'),
+    ],
+  },
+  {
+    id: 'goals',
+    nameKey: 'tools.database.starterGoals',
+    descriptionKey: 'tools.database.starterGoalsDescription',
+    thumbnail: { columns: ['tools.database.starterGoalName', 'tools.database.starterOwner', 'tools.database.defaultStatusProperty'], pills: STATUS_PILLS, pillColumn: 2 },
+    tint: 'blue',
+    glyph: 'flag',
+    // Quarter, Progress and Days until due are off chips too: only their names were read, so they are not offered.
+    features: [
+      choice('dueDate', 'tools.database.starterDueDate', true, 'date'),
+      choice('priority', 'tools.database.starterPriority', true, 'select'),
+      choice('team', 'tools.database.starterTeam', true, 'multiSelect'),
+    ],
+    views: [
+      choice('all', 'tools.database.starterViewAllGoals', true, 'table'),
+      choice('byStatus', 'tools.database.starterViewByStatus', true, 'board'),
+      choice('mine', 'tools.database.starterViewMyGoals', true, 'table'),
+      choice('byTeam', 'tools.database.starterViewByTeam', false, 'table'),
+    ],
+  },
 ];
 
 /**
  * research/27 §1a: after each use the next template moves up. Inferred, not
- * verified there: the first three not used yet.
+ * verified there: the first three not used yet. With seven templates it
+ * gives every list research/27 §1a saw.
  */
 export const suggestedStarters = (used: ReadonlySet<StarterId>): StarterMeta[] =>
   DATABASE_STARTERS.filter((starter) => !used.has(starter.id)).slice(0, 3);
+
+/** The gallery's "Templates": unused ones first, then used ones (research/27 §1e, inferred rule). */
+export const galleryStarters = (used: ReadonlySet<StarterId>): StarterMeta[] => [
+  ...DATABASE_STARTERS.filter((starter) => !used.has(starter.id)),
+  ...DATABASE_STARTERS.filter((starter) => used.has(starter.id)),
+];
+
+/**
+ * The Customize preview's "N hidden properties" (research/30 B8): the first
+ * view's properties that are not shown, leaving out the title and a board's
+ * group. Inferred from four counts (0, 4, 4, 5), all of which it gives.
+ */
+export const hiddenPropertyCount = (made: StarterBuild): number => {
+  const first = made.views[0];
+
+  if (first === undefined) return 0;
+
+  return made.schema.filter((p, index) => index > 0 && !first.visibleProperties.includes(p.id) && p.id !== first.groupBy).length;
+};
 
 const picked = (list: StarterChoice[], chosen: ReadonlySet<string> | undefined): Set<string> =>
   new Set(list.filter((c) => (chosen === undefined ? c.on : chosen.has(c.id))).map((c) => c.id));
 
 const MDY = { dateFormat: 'month_day_year', timeFormat: '12_hour' } as const;
+const FULL = { dateFormat: 'full', timeFormat: '12_hour' } as const;
 
 /** Builds one template's schema, views, rows and row bodies. */
 export const buildStarter = (id: StarterId, options: StarterBuildOptions): StarterBuild => {
@@ -156,6 +291,10 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
   });
   const priority = (): PropertyDefinition => add(t('tools.database.starterPriority'), 'select',
     optionsOf([[t('tools.database.starterOptionHigh'), 'red'], [t('tools.database.starterOptionMediumPriority'), 'yellow'], [t('tools.database.starterOptionLow'), 'green']]));
+  const teamProperty = (): PropertyDefinition => add(t('tools.database.starterTeam'), 'multiSelect', optionsOf([
+    [t('tools.database.starterTeamAccountManagement'), 'default'], [t('tools.database.starterTeamBusinessDevelopment'), 'blue'],
+    [t('tools.database.starterTeamProductDesign'), 'green'], [t('tools.database.starterTeamHumanResources'), 'purple'],
+  ]));
   const option = (property: PropertyDefinition | undefined, index: number): string | undefined => property?.config?.options[index]?.id;
   const viewList: DatabaseViewConfig[] = [];
   const view = (name: string, type: ViewType, shown: Array<PropertyDefinition | undefined>, extra: ViewCreateConfig = {}): void => {
@@ -268,10 +407,7 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
     const end = features.has('dates') ? add(t('tools.database.dateEnd'), 'date', { date: { ...MDY } }) : undefined;
     const start = features.has('dates') ? add(t('tools.database.dateStart'), 'date', { date: { ...MDY } }) : undefined;
     const state = status();
-    const team = features.has('team') ? add(t('tools.database.starterTeam'), 'multiSelect', optionsOf([
-      [t('tools.database.starterTeamAccountManagement'), 'default'], [t('tools.database.starterTeamBusinessDevelopment'), 'blue'],
-      [t('tools.database.starterTeamProductDesign'), 'green'], [t('tools.database.starterTeamHumanResources'), 'purple'],
-    ])) : undefined;
+    const team = features.has('team') ? teamProperty() : undefined;
 
     if (features.has('progress')) add(t('tools.database.starterProgress'), 'number');
     if (features.has('budget')) add(t('tools.database.starterBudget'), 'number');
@@ -310,6 +446,127 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
     row(t('tools.database.starterProjectRow2'), values(2, '2025-01-20', '2025-02-04', 2, 3));
     row(t('tools.database.starterProjectRow3'), values(1, '2025-04-09', '2025-04-30', 0, 2), '📱');
     pin(state, assignee, prio, end);
+  } else if (id === 'documentHub') {
+    add(t('tools.database.starterDocName'), 'title');
+    const category = features.has('category') ? add(t('tools.database.starterCategory'), 'multiSelect', optionsOf([
+      [t('tools.database.starterOptionProposal'), 'yellow'], [t('tools.database.starterOptionCustomerResearch'), 'blue'],
+      [t('tools.database.starterOptionStrategyDoc'), 'orange'], [t('tools.database.starterOptionPlanning'), 'red'],
+    ])) : undefined;
+
+    // research/30 B8: Reviewers turned on sits right after Category.
+    if (features.has('reviewers')) add(t('tools.database.starterReviewers'), 'person');
+    const author = add(t('tools.database.propertyTypeCreatedBy'), 'createdBy');
+
+    if (features.has('createdTime')) add(t('tools.database.propertyTypeCreatedTime'), 'createdTime', { date: { ...FULL } });
+    if (features.has('lastEditedBy')) add(t('tools.database.propertyTypeLastEditedBy'), 'lastEditedBy');
+    if (features.has('lastUpdated')) add(t('tools.database.starterLastUpdatedTime'), 'lastEditedTime', { date: { ...FULL } });
+    const all = schema.slice(1);
+
+    if (views.has('all')) view(t('tools.database.starterViewAllDocs'), 'table', all, tableLook);
+    if (views.has('mine')) view(t('tools.database.starterViewMyDocs'), 'table', [category], { loadLimit: 50, ...mine(author) });
+    if (views.has('byCategory') && category !== undefined) view(t('tools.database.starterViewByCategory'), 'table', all, { ...tableLook, groupBy: category.id });
+    if (viewList.length === 0) view(t('tools.database.starterViewAllDocs'), 'table', all, tableLook);
+
+    const values = (c: number): Record<string, PropertyValue | undefined> => (category === undefined ? {} : { [category.id]: [option(category, c) ?? ''] });
+
+    row(t('tools.database.starterDocRow1'), values(2));
+    row(t('tools.database.starterDocRow2'), values(0));
+    row(t('tools.database.starterDocRow3'), values(1));
+  } else if (id === 'brainstorm') {
+    add(t('tools.database.starterIdea'), 'title');
+    // research/30 B8: Status turned on is the first column after the title. Its options were not
+    // read (Notion's sample value is "New idea"), so it gets a new status's own and no row values.
+    if (features.has('status')) status();
+    const author = features.has('createdBy') ? add(t('tools.database.propertyTypeCreatedBy'), 'createdBy') : undefined;
+    const prio = features.has('priority') ? priority() : undefined;
+    const category = add(t('tools.database.starterCategory'), 'multiSelect', optionsOf([
+      [t('tools.database.starterOptionTopOfFunnel'), 'yellow'], [t('tools.database.starterOptionActivation'), 'orange'], [t('tools.database.starterOptionConversion'), 'blue'],
+    ]));
+
+    // One chip, three properties. The button's actions and the formula's expression were not read.
+    if (features.has('upvote')) {
+      add(t('tools.database.starterUpvote'), 'button');
+      add(t('tools.database.starterTotalVotes'), 'formula');
+      add(t('tools.database.starterUpvotedBy'), 'person');
+    }
+    const all = schema.slice(1);
+
+    if (views.has('all')) view(t('tools.database.starterViewAllIdeas'), 'table', all, tableLook);
+    if (views.has('byCategory')) {
+      view(t('tools.database.starterViewByCategoryIdeas'), 'board', [], {
+        ...boardLook, groupBy: category.id, groupSettings: { sort: 'manual', hideEmptyGroups: false, colorColumns: true },
+      });
+    }
+    // Shows Idea and Created by (research/30 B8). Its layout and sort were not read: a table, unsorted.
+    if (views.has('top')) view(t('tools.database.starterViewTopIdeas'), 'table', [author], tableLook);
+    if (viewList.length === 0) view(t('tools.database.starterViewAllIdeas'), 'table', all, tableLook);
+
+    const values = (p: number, c: number): Record<string, PropertyValue | undefined> => ({
+      ...(prio === undefined ? {} : { [prio.id]: option(prio, p) }),
+      [category.id]: [option(category, c) ?? ''],
+    });
+
+    row(t('tools.database.starterIdeaRow1'), values(0, 1));
+    row(t('tools.database.starterIdeaRow2'), values(1, 2));
+    row(t('tools.database.starterIdeaRow3'), values(2, 0));
+  } else if (id === 'meetingNotes') {
+    add(t('tools.database.starterMeetingName'), 'title');
+    const date = features.has('date') ? add(t('tools.database.propertyTypeDate'), 'date', { date: { dateFormat: 'relative', timeFormat: 'hidden' } }) : undefined;
+    const category = features.has('category') ? add(t('tools.database.starterCategory'), 'multiSelect', optionsOf([
+      [t('tools.database.starterOptionPlanning'), 'blue'], [t('tools.database.starterOptionStandup'), 'red'], [t('tools.database.starterOptionPresentation'), 'yellow'],
+      [t('tools.database.starterOptionRetro'), 'green'], [t('tools.database.starterOptionCustomerCall'), 'blue'],
+    ])) : undefined;
+    const attendees = features.has('attendees') ? add(t('tools.database.starterAttendees'), 'person') : undefined;
+    const author = add(t('tools.database.propertyTypeCreatedBy'), 'createdBy');
+
+    if (features.has('lastEditedBy')) add(t('tools.database.propertyTypeLastEditedBy'), 'lastEditedBy');
+    if (features.has('lastUpdated')) add(t('tools.database.starterLastUpdatedTime'), 'lastEditedTime', { date: { ...FULL } });
+    const all = schema.slice(1);
+
+    if (views.has('all')) view(t('tools.database.starterViewAllMeetings'), 'table', all, tableLook);
+    // Four columns and a Created by filter were read; which columns, and the filter's operator and value, were not.
+    if (views.has('mine')) view(t('tools.database.starterViewMyNotes'), 'table', [date, category, attendees], { ...tableLook, showPageIcon: true, ...mine(author) });
+    if (views.has('byCategory') && category !== undefined) view(t('tools.database.starterViewByCategory'), 'table', all, { ...tableLook, groupBy: category.id });
+    if (viewList.length === 0) view(t('tools.database.starterViewAllMeetings'), 'table', all, tableLook);
+
+    const values = (c: number): Record<string, PropertyValue | undefined> => ({
+      ...(date === undefined ? {} : { [date.id]: '2025-02-13' }),
+      ...(category === undefined ? {} : { [category.id]: [option(category, c) ?? ''] }),
+    });
+
+    row(t('tools.database.starterMeetingRow1'), values(3));
+    row(t('tools.database.starterMeetingRow2'), values(1));
+    row(t('tools.database.starterMeetingRow3'), values(2));
+  } else if (id === 'goals') {
+    add(t('tools.database.starterGoalName'), 'title');
+    const owner = add(t('tools.database.starterOwner'), 'person');
+    const state = status();
+    const due = features.has('dueDate') ? add(t('tools.database.starterDueDate'), 'date', { date: { ...MDY } }) : undefined;
+    const prio = features.has('priority') ? priority() : undefined;
+    const team = features.has('team') ? teamProperty() : undefined;
+    const all = schema.slice(1);
+
+    if (views.has('all')) view(t('tools.database.starterViewAllGoals'), 'table', all, tableLook);
+    if (views.has('byStatus')) {
+      view(t('tools.database.starterViewByStatus'), 'board', [prio, state], {
+        ...boardLook, groupBy: state.id, groupSettings: { sort: 'ascending', hideEmptyGroups: false, colorColumns: false },
+      });
+    }
+    // The filter's operator was not read: Contains Me, as My Tasks.
+    if (views.has('mine')) view(t('tools.database.starterViewMyGoals'), 'table', [owner, prio, state, team], { ...tableLook, showPageIcon: true, ...mine(owner) });
+    if (views.has('byTeam') && team !== undefined) view(t('tools.database.starterViewByTeam'), 'table', all, { ...tableLook, groupBy: team.id });
+    if (viewList.length === 0) view(t('tools.database.starterViewAllGoals'), 'table', all, tableLook);
+
+    const values = (s: number, date: string, p: number, tm: number): Record<string, PropertyValue | undefined> => ({
+      [state.id]: option(state, s) ?? null,
+      ...(due === undefined ? {} : { [due.id]: date }),
+      ...(prio === undefined ? {} : { [prio.id]: option(prio, p) }),
+      ...(team === undefined ? {} : { [team.id]: [option(team, tm) ?? ''] }),
+    });
+
+    row(t('tools.database.starterGoalRow1'), values(1, '2025-02-26', 0, 1));
+    row(t('tools.database.starterGoalRow2'), values(0, '2025-04-16', 1, 0));
+    row(t('tools.database.starterGoalRow3'), values(2, '2025-02-03', 1, 1));
   } else {
     const title = add(t('tools.database.starterSkillName'), 'title');
 

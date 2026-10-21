@@ -1,6 +1,7 @@
 import { IconBoard, IconChevronLeft, IconCross, IconList, IconTable, IconTimeline } from '../../components/icons';
 import { openModalDialog } from '../../components/utils/modal-dialog';
 import { PROPERTY_TYPE_META } from './database-property-types';
+import { hiddenPropertyCount } from './database-starters';
 import type { StarterBuild, StarterChoice, StarterMeta } from './database-starters';
 import type { PropertyType, ViewType } from './types';
 
@@ -45,6 +46,7 @@ export const openStarterCustomize = (options: StarterCustomizeOptions): Promise<
   const choices = document.createElement('div');
   const primary = document.createElement('button');
   const preview = document.createElement('div');
+  const hidden = document.createElement('div');
   const step = { at: 1 };
 
   counter.next += 1;
@@ -65,6 +67,7 @@ export const openStarterCustomize = (options: StarterCustomizeOptions): Promise<
   primary.setAttribute('data-blok-database-starter-primary', '');
   preview.setAttribute('data-blok-database-starter-preview', '');
   preview.setAttribute('aria-hidden', 'true');
+  hidden.setAttribute('data-blok-database-starter-preview-hidden', '');
 
   const drawPreview = (): void => {
     const made = options.preview(picks);
@@ -101,7 +104,9 @@ export const openStarterCustomize = (options: StarterCustomizeOptions): Promise<
     }));
     table.setAttribute('data-blok-database-starter-preview-table', '');
     table.append(line(columns.map((p) => p.name), true), ...made.rows.map((row) => line(columns.map((p, i) => (i === 0 ? row.data.title ?? '' : '')), false)));
-    preview.replaceChildren(title, tabs, table);
+    // research/30 B8: "0 hidden properties" under the table.
+    hidden.textContent = t('tools.database.starterHiddenProperties', { count: String(hiddenPropertyCount(made)) });
+    preview.replaceChildren(title, tabs, table, hidden);
   };
 
   const chip = (item: StarterChoice, chosen: Set<string>, kind: 'feature' | 'view'): HTMLButtonElement => {
@@ -118,6 +123,8 @@ export const openStarterCustomize = (options: StarterCustomizeOptions): Promise<
     label.textContent = t(item.labelKey);
     button.append(icon, label);
     button.addEventListener('click', () => {
+      // research/30 B8: the last view stays on.
+      if (kind === 'view' && chosen.size === 1 && chosen.has(item.id)) return;
       if (chosen.has(item.id)) chosen.delete(item.id);
       else chosen.add(item.id);
       paint();

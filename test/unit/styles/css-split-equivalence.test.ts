@@ -983,6 +983,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_HELP_LINKS_BYTES = 1_177;
     // database.css: the time zone rows' 1px gap and the menu comment (research/30 B25).
     const DATABASE_TIME_ZONE_ROWS_BYTES = 87;
+    // database.css: "More templates" gallery, red/orange/yellow template tints, hidden-properties line, icon offset (research/26 §2, research/27 §1e, research/30 B8).
+    const DATABASE_MORE_TEMPLATES_BYTES = 10_032;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1138,7 +1140,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_PROPERTY_DESCRIPTION_BUTTON_BYTES
       + DATABASE_TIME_ZONE_ROWS_BYTES
       + POPOVER_SEARCH_SUFFIX_INK_BYTES
-      + DATABASE_CONFIRM_CLOSE_BYTES;
+      + DATABASE_CONFIRM_CLOSE_BYTES
+      + DATABASE_MORE_TEMPLATES_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

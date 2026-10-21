@@ -107,15 +107,18 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
     document.body.innerHTML = '';
   });
 
-  it('lists Suggested with Tasks Tracker, Projects and Skills between Import and Link; no More templates row', async () => {
+  it('lists Suggested with Tasks Tracker, Projects and Skills, then More templates, between Import and Link', async () => {
     await insert();
 
     expect(rowLabels()).toEqual([
       'tools.database.linkedNewEmpty',
       'tools.database.csvImport',
       'tools.database.starterTasks', 'tools.database.starterProjects', 'tools.database.starterSkills',
+      'tools.database.starterMoreTemplates',
       'tools.database.linkedLinkExisting',
     ]);
+    // research/26 §2: the row is in secondary ink.
+    expect(byTestId(panel(), 'database-new-database-more-templates').hasAttribute('data-muted')).toBe(true);
     expect(panel()?.querySelector('[data-blok-database-panel-section]')?.textContent).toBe('tools.database.linkedSuggested');
   });
 
@@ -194,6 +197,26 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
     expect(data.views.map((v) => v.name)).toEqual(['tools.database.starterViewAllTasks', 'tools.database.starterViewByStatus']);
   });
 
+  it('the preview counts hidden properties and follows the first view; the last view card cannot be turned off (research/30 B8)', async () => {
+    await insert();
+
+    byTestId(panel(), 'database-new-database-starter-tasks').click();
+    const dialog = modal() ?? undefined;
+    const footer = (): string | null => dialog?.querySelector('[data-blok-database-starter-preview-hidden]')?.textContent ?? null;
+
+    expect(footer()).toBe('tools.database.starterHiddenProperties {"count":"0"}');
+    byTestId(dialog, 'database-starter-next').click();
+    byTestId(dialog, 'database-starter-view-all').click();
+    // By Status shows Assignee, Priority and Task type and groups by Status: three are hidden.
+    expect(footer()).toBe('tools.database.starterHiddenProperties {"count":"3"}');
+    byTestId(dialog, 'database-starter-view-byStatus').click();
+    const last = byTestId(dialog, 'database-starter-view-mine');
+
+    last.click();
+    expect(last.getAttribute('aria-pressed')).toBe('true');
+    expect([...(dialog?.querySelectorAll('[data-blok-database-starter-card][aria-pressed="true"]') ?? [])]).toHaveLength(1);
+  });
+
   it('closing Customize builds nothing and keeps the empty database', async () => {
     const { doc, tool } = await insert();
     const schema = saved(tool).schema;
@@ -225,16 +248,66 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
     expect(rowLabels()).toEqual([
       'tools.database.linkedNewEmpty',
       'tools.database.csvImport',
-      'tools.database.starterProjects', 'tools.database.starterSkills',
+      'tools.database.starterProjects', 'tools.database.starterSkills', 'tools.database.starterDocumentHub',
+      'tools.database.starterMoreTemplates',
       'tools.database.linkedLinkExisting',
     ]);
   });
 
-  it('with every template used, Suggested and its label are gone', async () => {
-    await insert([{ starter: 'tasks' }, { starter: 'projects' }, { starter: 'skills' }]);
+  it('with every template used, Suggested and its label are gone; More templates stays', async () => {
+    await insert(['tasks', 'projects', 'skills', 'documentHub', 'brainstorm', 'meetingNotes', 'goals'].map((starter) => ({ starter } as Partial<DatabaseData>)));
 
     expect(rowLabels()).not.toContain('tools.database.starterSkills');
+    expect(rowLabels()).toContain('tools.database.starterMoreTemplates');
     expect(panel()?.querySelector('[data-blok-database-panel-section]')).toBeNull();
+  });
+
+  it('More templates closes the panel and opens the gallery: unused templates first, the document\'s databases as sources', async () => {
+    await insert([{ starter: 'tasks', title: 'Mine' }]);
+
+    byTestId(panel(), 'database-new-database-more-templates').click();
+    const gallery = byTestId(document.body, 'database-template-gallery');
+    const ids = [...gallery.querySelectorAll('[data-blok-testid^="database-template-gallery-template-"]')]
+      .map((card) => card.getAttribute('data-blok-testid')?.replace('database-template-gallery-template-', ''));
+
+    expect(popovers.destroyed).toBe(1);
+    expect(ids).toEqual(['projects', 'skills', 'documentHub', 'brainstorm', 'meetingNotes', 'goals', 'tasks']);
+    expect(byTestId(gallery, 'database-template-gallery-template-documentHub').getAttribute('data-tint')).toBe('red');
+    expect(byTestId(gallery, 'database-template-gallery-source-other-0').textContent).toContain('Mine');
+  });
+
+  it('a gallery template opens Customize; Done builds it with its icon and starter in one step', async () => {
+    const { doc, tool } = await insert();
+    const before = doc.transact.mock.calls.length;
+
+    byTestId(panel(), 'database-new-database-more-templates').click();
+    byTestId(document.body, 'database-template-gallery-template-documentHub').click();
+    expect(document.querySelector('[data-blok-testid="database-template-gallery"]')).toBeNull();
+    byTestId(modal() ?? undefined, 'database-starter-next').click();
+    byTestId(modal() ?? undefined, 'database-starter-done').click();
+    await settle();
+    const data = saved(tool);
+
+    expect(data.title).toBe('tools.database.starterDocumentHub');
+    expect(data.schema.map((p) => p.type)).toEqual(['title', 'multiSelect', 'createdBy', 'createdTime', 'lastEditedBy', 'lastEditedTime']);
+    expect(data.icon).toEqual({ glyph: 'doc', color: 'red' });
+    expect(data.starter).toBe('documentHub');
+    expect(rows(doc)).toHaveLength(3);
+    expect(templateRows(doc)).toEqual([]);
+    expect(doc.transact.mock.calls.length - before).toBe(1);
+  });
+
+  it('Empty database in the gallery keeps the empty database', async () => {
+    const { doc, tool } = await insert();
+    const schema = saved(tool).schema;
+
+    byTestId(panel(), 'database-new-database-more-templates').click();
+    byTestId(document.body, 'database-template-gallery-empty').click();
+    await settle();
+
+    expect(document.querySelector('[data-blok-testid="database-template-gallery"]')).toBeNull();
+    expect(saved(tool).schema).toEqual(schema);
+    expect(rows(doc)).toEqual([]);
   });
 
   it('Tasks Tracker gives the database its icon, saved and drawn before the title (research/27:42)', async () => {

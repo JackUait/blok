@@ -766,6 +766,23 @@ const DATABASE_STARTER_COGNATE_RETENTIONS: Record<string, string[]> = {
   sv: ['tools.database.starterTeam', 'tools.database.starterBudget'],
 };
 
+/** "More templates" words that are native in the locale (Idea, Planning, Presentation…). Each has a ledger retention row. */
+const DATABASE_GALLERY_COGNATE_RETENTIONS: Record<string, string[]> = {
+  es: ['tools.database.starterIdea'],
+  fi: ['tools.database.starterIdea'],
+  fr: ['tools.database.starterOptionActivation', 'tools.database.starterOptionConversion'],
+  id: ['tools.database.starterOptionProposal'],
+  it: ['tools.database.starterIdea'],
+  ms: ['tools.database.starterIdea'],
+  nl: ['tools.database.starterOptionPlanning'],
+  sv: ['tools.database.starterOptionPresentation'],
+};
+
+for (const [locale, keys] of Object.entries(DATABASE_GALLERY_COGNATE_RETENTIONS)) {
+  const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
+  for (const key of keys) set.add(key);
+}
+
 for (const [locale, keys] of Object.entries(DATABASE_STARTER_COGNATE_RETENTIONS)) {
   const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
   for (const key of keys) set.add(key);

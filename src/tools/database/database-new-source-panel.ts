@@ -1,4 +1,4 @@
-import { IconArrowDiagonal, IconArrowUp, IconDatabase, IconEmojiSparkles, IconPlus, IconUpload } from '../../components/icons';
+import { IconArrowDiagonal, IconArrowUp, IconDatabase, IconDotsHorizontal, IconEmojiSparkles, IconPlus, IconUpload } from '../../components/icons';
 import { DatabasePanel, panelCloseButton, panelInput, panelLabel, panelRow, panelSeparator } from './database-panel';
 import type { LinkedPickerSource } from './database-linked-picker';
 
@@ -25,7 +25,7 @@ export interface NewSourcePanelOptions {
    */
   prompt?: { submit: (text: string) => Promise<boolean> };
   /** A new database's "Suggested" templates (research/27 §1), under Import CSV. */
-  starters?: { list: Array<{ id: string; label: string; icon: string; tint: string }>; pick: (id: string) => void };
+  starters?: { list: Array<{ id: string; label: string; icon: string; tint: string }>; pick: (id: string) => void; more?: () => void };
   onClose?: () => void;
 }
 
@@ -101,7 +101,6 @@ const promptBox = (
  * The panel "New data source" opens on its new tab (research/23 §10, shot 121).
  * The source already exists, so "New empty data source" only closes it.
  * With `newDatabase` it is the "New database" panel of a fresh insert instead.
- * Not built: "More templates" (only the three Suggested templates were measured).
  */
 export const openNewSourcePanel = (options: NewSourcePanelOptions): DatabasePanel => {
   const { t } = options;
@@ -212,6 +211,21 @@ export const openNewSourcePanel = (options: NewSourcePanelOptions): DatabasePane
         row.querySelector('[data-blok-database-panel-icon]')?.setAttribute('data-blok-database-starter-tile', starter.tint);
 
         return row;
+      }));
+    }
+    const more = starters?.more;
+
+    // research/26 §2: an ellipsis row in secondary ink, after Suggested; it stays when every template is used.
+    if (more !== undefined && query === '') {
+      rows.push(panelRow({
+        label: t('tools.database.starterMoreTemplates'),
+        testId: 'database-new-database-more-templates',
+        icon: IconDotsHorizontal,
+        muted: true,
+        onClick: () => {
+          panel.close();
+          more();
+        },
       }));
     }
     if (matches(link, state.query)) {

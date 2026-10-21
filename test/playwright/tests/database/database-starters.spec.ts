@@ -78,13 +78,13 @@ test.beforeEach(async ({ page }) => {
   await page.waitForFunction(() => typeof window.Blok === 'function');
 });
 
-test('the panel lists the three Suggested templates; More templates is not there', async ({ page }) => {
+test('the panel lists the three Suggested templates, then More templates', async ({ page }) => {
   await mount(page);
   await insertDatabase(page);
   const panel = page.getByTestId('database-new-database-panel');
 
   await expect(panel.getByText('Suggested', { exact: true })).toBeVisible();
-  await expect(panel.locator('[data-blok-database-panel-row]')).toHaveText(['New empty data source', 'Import CSV', 'Tasks Tracker', 'Projects', 'Skills', 'Link to existing data source']);
+  await expect(panel.locator('[data-blok-database-panel-row]')).toHaveText(['New empty data source', 'Import CSV', 'Tasks Tracker', 'Projects', 'Skills', 'More templates', 'Link to existing data source']);
 });
 
 test('Tasks Tracker: Customize, then the measured schema, views and rows; one undo takes it all back', async ({ page }) => {
@@ -187,7 +187,7 @@ test('Suggested leaves out a template a database of the page was made from (rese
   await insertDatabase(page);
 
   await expect(page.getByTestId('database-new-database-panel').locator('[data-blok-database-panel-row]'))
-    .toHaveText(['New empty data source', 'Import CSV', 'Projects', 'Skills', 'Link to existing data source']);
+    .toHaveText(['New empty data source', 'Import CSV', 'Projects', 'Skills', 'Document Hub', 'More templates', 'Link to existing data source']);
 });
 
 test('Tasks Tracker: the database gets its icon, "New task" is the Default template, and "Undo Task database" empties it', async ({ page }) => {
@@ -257,4 +257,61 @@ test('Projects has no "Undo … database" row (Notion showed "Turn into" there)'
   await openSettings(page);
   await expect(page.getByTestId('database-settings-lock')).toBeVisible();
   await expect(page.getByTestId('database-settings-undo-starter')).toHaveCount(0);
+});
+
+test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
+  test('the gallery lists six templates, expands to seven, and Brainstorm Session builds its measured database', async ({ page }) => {
+    await mount(page);
+    await insertDatabase(page);
+    await page.getByTestId('database-new-database-panel').getByRole('button', { name: 'More templates' }).click();
+    const gallery = page.getByRole('dialog', { name: 'More templates' });
+
+    await expect(gallery.getByRole('textbox', { name: 'Search' })).toBeFocused();
+    await expect(gallery.getByTestId('database-template-gallery-empty')).toContainText('Empty database');
+    const cards = gallery.locator('[data-blok-testid^="database-template-gallery-template-"]:visible');
+
+    await expect(cards).toHaveCount(6);
+    await gallery.getByRole('button', { name: 'More templates' }).click();
+    await expect(cards).toHaveCount(7);
+    await expect(gallery.getByTestId('database-template-gallery-template-goals')).toContainText('Set team goals, achieve together.');
+
+    await gallery.getByTestId('database-template-gallery-template-brainstorm').click();
+    const dialog = page.getByRole('dialog', { name: 'Customize Brainstorm Session' });
+
+    await expect(dialog.getByText('0 hidden properties')).toBeVisible();
+    await dialog.getByRole('button', { name: 'Upvote' }).click();
+    // One chip, three columns (research/30 B8).
+    await expect(dialog.locator('[data-blok-database-starter-preview-row="header"]')).toHaveText('IdeaCreated byPriorityCategory');
+    await dialog.getByRole('button', { name: 'Upvote' }).click();
+    await dialog.getByRole('button', { name: 'Get started' }).click();
+    await dialog.getByRole('button', { name: 'Done' }).click();
+    await expect(dialog).toBeHidden();
+
+    await expect.poll(async () => {
+      const { db, rows } = await read(page);
+
+      return [db.title, db.schema.map((p) => [p.name, p.type]), db.views.map((v) => [v.name, v.type, nameOf(db, v.groupBy)]), rows.map((r) => (r.data as { title?: string }).title), db.icon, db.starter];
+    }).toEqual([
+      'Brainstorm Session',
+      [['Idea', 'title'], ['Created by', 'createdBy'], ['Priority', 'select'], ['Category', 'multiSelect'], ['Upvote', 'button'], ['Total votes', 'formula'], ['Upvoted by', 'person']],
+      [['All Ideas', 'table', undefined], ['By category', 'board', 'Category']],
+      ['Launch back to school campaign', 'Simplify onboarding experience', 'Improve SEO'],
+      { glyph: 'idea', color: 'orange' },
+      'brainstorm',
+    ]);
+  });
+
+  test('the last view card stays on (research/30 B8)', async ({ page }) => {
+    await mount(page);
+    await insertDatabase(page);
+    await page.getByTestId('database-new-database-panel').getByRole('button', { name: 'More templates' }).click();
+    await page.getByRole('dialog', { name: 'More templates' }).getByTestId('database-template-gallery-template-documentHub').click();
+    const dialog = page.getByRole('dialog', { name: 'Customize Document Hub' });
+
+    await dialog.getByRole('button', { name: 'Get started' }).click();
+    await dialog.getByRole('button', { name: 'All Docs' }).click();
+    await expect(dialog.getByText('4 hidden properties')).toBeVisible();
+    await dialog.getByRole('button', { name: 'My Docs' }).click();
+    await expect(dialog.getByRole('button', { name: 'My Docs' })).toHaveAttribute('aria-pressed', 'true');
+  });
 });

@@ -45,10 +45,11 @@ import { DatabaseModel, NO_VALUE_GROUP_KEY } from './database-model';
 import { openLinkedAddView, openLinkedPicker } from './database-linked-picker';
 import { openNewSourcePanel } from './database-new-source-panel';
 import { planAiSetup } from './database-ai-setup';
-import { DATABASE_STARTERS, buildStarter, suggestedStarters } from './database-starters';
+import { DATABASE_STARTERS, buildStarter, galleryStarters, suggestedStarters } from './database-starters';
 import { createSeedDefinition } from '../../shared/database/seed-layouts';
 import type { StarterId } from './database-starters';
 import { openStarterCustomize } from './database-starter-modal';
+import { openTemplateGallery } from './database-template-gallery';
 import type { StarterPicks } from './database-starter-modal';
 import type { LinkedPickerSource } from './database-linked-picker';
 import { newRowValues, rowOrderKey, sortRows } from './database-query';
@@ -123,7 +124,7 @@ import type { DrawerBacklink, LayoutTab, LayoutTabsDraft, LayoutTabsHost } from 
 import { relatedTabSources, thisPageFilter } from './layout-tab-relations';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar, VIEW_ICONS } from './database-tab-bar';
-import { IconArrowDiagonal, IconDatabase, IconTrash, IconCheck, IconChevronRight, IconCopy, IconDownload, IconImage, IconListChecklist, IconMergeCells, IconPageLayout, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
+import { IconArrowDiagonal, IconCalendar, IconDatabase, IconEmojiFlag, IconEmojiLightbulb, IconFileDoc, IconTrash, IconCheck, IconChevronRight, IconCopy, IconDownload, IconImage, IconListChecklist, IconMergeCells, IconPageLayout, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -248,10 +249,11 @@ const INTERACTION_END_EVENTS = ['focusout', 'pointerup', 'pointercancel', 'keyup
  */
 const INITIAL_VIEW_KEY = 'initialView';
 
-/** Panel tile glyphs for the Suggested templates: Notion's are checkmark, iterate and magic wand. */
-const STARTER_ICONS: Record<StarterId, string> = { tasks: IconCheck, projects: IconTimeline, skills: IconWand };
-const ICON_GLYPHS: Record<DatabaseIcon['glyph'], string> = { check: IconCheck, timeline: IconTimeline, wand: IconWand };
-const ICON_COLORS: ReadonlySet<string> = new Set<DatabaseIcon['color']>(['green', 'blue', 'gray']);
+/** Template glyphs: Notion's are checkmark, iterate, magic wand, page, bulb, calendar and flag. */
+const ICON_GLYPHS: Record<DatabaseIcon['glyph'], string> = {
+  check: IconCheck, timeline: IconTimeline, wand: IconWand, doc: IconFileDoc, idea: IconEmojiLightbulb, calendar: IconCalendar, flag: IconEmojiFlag,
+};
+const ICON_COLORS: ReadonlySet<string> = new Set<DatabaseIcon['color']>(['green', 'blue', 'gray', 'red', 'orange', 'yellow']);
 
 /** A saved icon Blok can draw, else undefined. */
 const iconOf = (data: Partial<DatabaseData> | undefined): DatabaseIcon | undefined => {
@@ -962,10 +964,11 @@ export class DatabaseTool implements BlockTool {
         list: suggestedStarters(this.usedStarters()).map((starter) => ({
           id: starter.id,
           label: this.api.i18n.t(starter.nameKey),
-          icon: STARTER_ICONS[starter.id],
+          icon: ICON_GLYPHS[starter.glyph],
           tint: starter.tint,
         })),
         pick: (id) => this.pickStarter(id),
+        more: () => this.openTemplateGallery(),
       },
       onClose: () => {
         if (this.sourcePicker === panel) this.sourcePicker = null;
@@ -1088,6 +1091,31 @@ export class DatabaseTool implements BlockTool {
   /** Another database asks which template made this one. */
   readStarter(param: { receive: (id: StarterId | undefined) => void }): void {
     param.receive(this.starter);
+  }
+
+  /** "More templates" (research/27 §1e): Empty database keeps this one empty, a source links to it. */
+  private openTemplateGallery(): void {
+    if (this.readOnly || this.structureLocked()) return;
+    const t = (key: string, vars?: Record<string, string>): string => this.api.i18n.t(key, vars);
+
+    openTemplateGallery({
+      t,
+      templates: galleryStarters(this.usedStarters()).map((starter) => ({
+        id: starter.id,
+        name: t(starter.nameKey),
+        description: t(starter.descriptionKey),
+        icon: ICON_GLYPHS[starter.glyph],
+        tint: starter.tint,
+        columns: starter.thumbnail.columns.map((key) => t(key)),
+        pills: starter.thumbnail.pills.map(([key, color]) => ({ label: t(key), color })),
+        ...(starter.thumbnail.pillColumn === undefined ? {} : { pillColumn: starter.thumbnail.pillColumn }),
+      })),
+      sources: this.pickerSources(),
+      onEmpty: () => undefined,
+      onSource: (id) => this.linkTo(id),
+      onTemplate: (id) => this.pickStarter(id),
+      directionSource: this.element,
+    });
   }
 
   /** A Suggested template picked in the "New database" panel (research/27 §1). Skills has no Customize step. */

@@ -89,6 +89,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/database/database-calendar-view.ts': cmds(['database.addRow', 'database.setRowValues'], 'Add a row on a day; drag a card to another day writes its date value.'),
   'ui-file:src/tools/database/database-chart-drilldown.ts': exempt('view-only', 'Lists the rows behind a chart point and opens one; the document does not change.'),
   'ui-file:src/tools/database/database-chart-view.ts': exempt('view-only', 'Legend toggles and chart point drilldown change only what is shown; nothing is saved.'),
+  'ui-file:src/tools/database/database-template-gallery.ts': cmds(['database.addProperty', 'database.addView', 'database.addRow'], 'The More templates gallery only picks a template or a source; an agent adds the properties, views and rows itself.'),
   'ui-file:src/tools/database/database-starter-modal.ts': cmds(['database.addProperty', 'database.addView', 'database.addRow'], 'The Customize step of a Suggested template only picks properties and views; an agent adds them and the sample rows itself.'),
   'ui-file:src/tools/database/database-confirm-dialog.ts': exempt('chrome', 'Confirm or cancel of a destructive action; the confirmed action has its own id.'),
   'ui-file:src/tools/database/database-feed-view.ts': exempt('view-only', 'Loads more rows or opens a row in the feed; the document does not change.'),

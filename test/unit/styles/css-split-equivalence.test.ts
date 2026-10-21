@@ -833,7 +833,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // block-preview/database.css: the Map view toolbox preview (map, land, Add pin, the real pin masks).
     const DATABASE_MAP_VIEW_PREVIEW_BYTES = 3_828;
     // block-preview/database.css: the Gallery, List, Feed, Calendar, Timeline and Form "/" entry previews (research/28 §3).
-    const DATABASE_SLASH_VIEW_PREVIEWS_BYTES = 10_765;
+    // +103: the Feed fold and the List, Calendar and Form sizes that keep each drawing inside its paper.
+    const DATABASE_SLASH_VIEW_PREVIEWS_BYTES = 10_765 + 103;
     // database.css: Edit cadence's "Label  value ›" rows, their submenu fields and zone rows (research/21 §3).
     const DATABASE_CADENCE_SETTINGS_BYTES = 606;
     // database.css: the property menu (i) "Add property description" button (research/26 §3c).

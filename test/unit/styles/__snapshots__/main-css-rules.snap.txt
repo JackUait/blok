@@ -23648,7 +23648,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   align-items: center;
   justify-content: space-between;
   gap: var(--blok-preview-space-6);
-  height: 24px;
+  height: 26px;
   border-bottom: 1px solid color-mix(in srgb, currentColor 7%, transparent);
 }
 
@@ -23660,6 +23660,8 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   display: flex;
   flex-direction: column;
   gap: var(--blok-preview-space-8);
+  height: 98px;
+  overflow: hidden;
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='database'] [data-feed-card] {
@@ -23701,7 +23703,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin-bottom: var(--blok-preview-space-4);
+  margin-bottom: var(--blok-preview-space-2);
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='database'] [data-month] {
@@ -23716,7 +23718,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='database'] [data-weekday] {
-  padding: var(--blok-preview-space-1) var(--blok-preview-space-3);
+  padding: 0 var(--blok-preview-space-3);
   border-right: 1px solid var(--blok-database-calendar-border);
   border-bottom: 1px solid var(--blok-database-calendar-border);
   color: var(--blok-database-calendar-muted-text);
@@ -23726,7 +23728,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-interface='block-preview'] [data-blok-preview='database'] [data-day] {
   position: relative;
-  height: 24px;
+  height: 22px;
   border-right: 1px solid var(--blok-database-calendar-border);
   border-bottom: 1px solid var(--blok-database-calendar-border);
 }
@@ -23744,7 +23746,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   border-radius: var(--blok-radius-pill);
   color: var(--blok-database-calendar-day-text);
   font-size: 9px;
-  line-height: 12px;
+  line-height: 11px;
   text-align: center;
 }
 
@@ -23755,7 +23757,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-interface='block-preview'] [data-blok-preview='database'] [data-event] {
   position: absolute;
-  inset: 13px var(--blok-preview-space-1) auto;
+  inset: 12px var(--blok-preview-space-1) auto;
   display: flex;
   align-items: center;
   overflow: hidden;
@@ -23837,14 +23839,14 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 [data-blok-interface='block-preview'] [data-blok-preview='database'] [data-form] {
   display: flex;
   flex-direction: column;
-  gap: var(--blok-preview-space-6);
+  gap: var(--blok-preview-space-4);
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='database'] [data-form-question] {
   display: flex;
   flex-direction: column;
-  gap: var(--blok-preview-space-3);
-  padding: var(--blok-preview-space-5) var(--blok-preview-space-8);
+  gap: var(--blok-preview-space-2);
+  padding: var(--blok-preview-space-3) var(--blok-preview-space-8);
   border-radius: var(--blok-radius-dialog);
   background: var(--blok-database-form-question-bg);
   box-shadow: var(--blok-database-form-question-ring) 0 0 0 0.5px inset;

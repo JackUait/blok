@@ -121,7 +121,7 @@ describe('DatabaseTool — a column added from a table view shows in it', () => 
 
   // research/30 B28: a property added in the table view reads "Hidden in board" in the board view.
   it.each([
-    ['a board view with a properties list', { properties: [{ id: 'title', visible: true }, { id: 'notes', visible: true }] }],
+    ['a board view with a properties list', { visibleProperties: ['notes'], properties: [{ id: 'title', visible: true }, { id: 'notes', visible: true }] }],
     ['a legacy board view', { visibleProperties: ['notes'] }],
   ])('header "+" in the table view leaves the new column hidden in %s', (_name, stored) => {
     const table = tableData();

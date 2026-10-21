@@ -55,6 +55,22 @@ describe('blok.title API', () => {
     expect(blok.title.get()).toBe('');
   });
 
+  it('an agent turn that sets the title and icon shows them in the header', async () => {
+    blok = create({ holder, pageTitle: true });
+
+    await blok.isReady;
+    const turn = blok.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const result = await turn.execute({ commands: [
+      { name: 'doc.setTitle', args: { title: 'Pizza' } },
+      { name: 'doc.setIcon', args: { icon: { type: 'emoji', value: '🍕' } } },
+    ] });
+
+    turn.end();
+    expect(result.ok).toBe(true);
+    expect(holder.querySelector(`[${DATA_ATTR.pageIcon}]`)?.textContent).toBe('🍕');
+    expect(holder.querySelector(`[${DATA_ATTR.pageTitle}]`)?.textContent).toBe('Pizza');
+  });
+
   it('width.set full marks the header too', async () => {
     blok = create({ holder, pageTitle: true });
 

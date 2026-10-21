@@ -419,8 +419,13 @@ export class EditorApplier implements AgentApplier {
             : error;
         }
         break;
+      // Through PageTitle: a local Yjs write does not redraw the header or fire the host callbacks.
       case 'setPageField':
-        YjsManager.setPageField(edit.key, edit.value);
+        if (edit.key === 'title') {
+          this.Blok.PageTitle.setText(typeof edit.value === 'string' ? edit.value : '', 'api');
+        } else {
+          this.Blok.PageTitle.setIcon(typeof edit.value === 'string' ? null : edit.value, 'api');
+        }
         break;
     }
   }

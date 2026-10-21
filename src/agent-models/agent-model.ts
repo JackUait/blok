@@ -6,17 +6,20 @@ import { openaiModel } from './openai';
 import { openaiCompatibleModel } from './openai-compatible';
 import type { AdapterOptions } from './shared';
 
+/** Chat Completions providers, as their errors name them. */
+const chat = (name: string) => (options: AdapterOptions): AgentModel => openaiCompatibleModel(options, name);
+
 /** Each provider mapped to the API its endpoint serves. Keep in sync with AgentModelProvider in types/agent-models.d.ts. */
 const PROVIDERS = {
   anthropic: anthropicModel,
   openai: openaiModel,
   gemini: geminiModel,
-  deepseek: openaiCompatibleModel,
-  mistral: openaiCompatibleModel,
-  groq: openaiCompatibleModel,
-  ollama: openaiCompatibleModel,
-  openrouter: openaiCompatibleModel,
-  'openai-compatible': openaiCompatibleModel,
+  deepseek: chat('DeepSeek'),
+  mistral: chat('Mistral'),
+  groq: chat('Groq'),
+  ollama: chat('Ollama'),
+  openrouter: chat('OpenRouter'),
+  'openai-compatible': chat('OpenAI-compatible'),
 } satisfies Record<string, (options: AdapterOptions) => AgentModel>;
 
 export type AgentModelProvider = keyof typeof PROVIDERS;

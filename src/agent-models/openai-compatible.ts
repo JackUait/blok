@@ -57,8 +57,8 @@ const textOf = (content: unknown): string => {
     : '';
 };
 
-const readReply = (reply: unknown, step: number): AgentModelResponse => {
-  const error = errorOf(reply, 'OpenAI-compatible');
+const readReply = (reply: unknown, step: number, name: string): AgentModelResponse => {
+  const error = errorOf(reply, name);
 
   if (error !== null) {
     throw error;
@@ -67,7 +67,7 @@ const readReply = (reply: unknown, step: number): AgentModelResponse => {
   const first: unknown = isRecord(reply) && Array.isArray(reply.choices) ? reply.choices[0] : undefined;
 
   if (!isRecord(first) || !isRecord(first.message)) {
-    throw new Error('OpenAI-compatible: the reply has no choices.');
+    throw new Error(`${name}: the reply has no choices.`);
   }
 
   const calls = (Array.isArray(first.message.tool_calls) ? first.message.tool_calls : [])
@@ -137,7 +137,12 @@ const messageOf = (state: Assembly): Record<string, unknown> => {
 };
 
 /** Reports tool calls as they stream, then reads the assembled message through readReply. */
-const readStream = async (source: Response | ReadableStream<Uint8Array>, request: AgentModelRequest, step: number): Promise<AgentModelResponse> => {
+const readStream = async (
+  source: Response | ReadableStream<Uint8Array>,
+  request: AgentModelRequest,
+  step: number,
+  name: string
+): Promise<AgentModelResponse> => {
   const state: Assembly = { calls: new Map() };
   const endOpenCalls = (): void => {
     [...state.calls.entries()].forEach(([key, call], index) => {
@@ -175,7 +180,7 @@ const readStream = async (source: Response | ReadableStream<Uint8Array>, request
   };
 
   const onChunk = (chunk: Record<string, unknown>): void => {
-    const error = errorOf(chunk, 'OpenAI-compatible');
+    const error = errorOf(chunk, name);
 
     if (error !== null) {
       throw error;
@@ -208,26 +213,27 @@ const readStream = async (source: Response | ReadableStream<Uint8Array>, request
     }
   };
 
-  for await (const chunk of readJsonEvents(source, request.signal, 'OpenAI-compatible')) {
+  for await (const chunk of readJsonEvents(source, request.signal, name)) {
     onChunk(chunk);
   }
 
-  endOfStream(request.signal, state.finish !== undefined, 'OpenAI-compatible');
+  endOfStream(request.signal, state.finish !== undefined, name);
 
-  return readReply({ choices: [{ message: messageOf(state), finish_reason: state.finish }] }, step);
+  return readReply({ choices: [{ message: messageOf(state), finish_reason: state.finish }] }, step, name);
 };
 
 /**
  * Chat Completions, the format DeepSeek, Mistral, Groq, Ollama and OpenRouter accept.
  * Never sends tool_choice: Ollama does not support it, and the loop only needs auto.
  * @param options - model id, the host's send or stream, and optional level overrides
+ * @param name - the provider, as errors name it
  */
-export function openaiCompatibleModel(options: AdapterOptions): AgentModel {
-  requireTransport(options, 'OpenAI-compatible');
+export function openaiCompatibleModel(options: AdapterOptions, name = 'OpenAI-compatible'): AgentModel {
+  requireTransport(options, name);
 
   // Types leave webSearch out here; this catches plain JS callers.
   if (options.webSearch !== undefined && options.webSearch !== false) {
-    throw new TypeError('OpenAI-compatible: webSearch is not supported. Add your provider\'s search in send, or give the assistant a search tool.');
+    throw new TypeError(`${name}: webSearch is not supported. Add your provider's search in send, or give the assistant a search tool.`);
   }
 
   return async (request) => {
@@ -249,9 +255,9 @@ export function openaiCompatibleModel(options: AdapterOptions): AgentModel {
     if (stream !== undefined) {
       const streaming = { ...body, stream: true };
 
-      return readStream(await postStream(stream, streaming, request, options), request, stepOf(request));
+      return readStream(await postStream(stream, streaming, request, options), request, stepOf(request), name);
     }
 
-    return readReply(await post(body, request, options, 'OpenAI-compatible'), stepOf(request));
+    return readReply(await post(body, request, options, name), stepOf(request), name);
   };
 }

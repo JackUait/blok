@@ -69,4 +69,39 @@ describe('agentModel', () => {
     expect(() => agentModel({ provider: 'antrophic', model: 'm', send: async () => ({}) } as unknown as AgentModelOptions))
       .toThrow(/unknown provider "antrophic".*anthropic/);
   });
+
+  describe('names the provider in its errors', () => {
+    const NAMES = [
+      ['deepseek', 'DeepSeek'],
+      ['mistral', 'Mistral'],
+      ['groq', 'Groq'],
+      ['ollama', 'Ollama'],
+      ['openrouter', 'OpenRouter'],
+      ['openai-compatible', 'OpenAI-compatible'],
+      ['anthropic', 'Anthropic'],
+      ['openai', 'OpenAI'],
+      ['gemini', 'Gemini'],
+    ] as const;
+
+    it.each(NAMES)('%s: a missing transport', (provider, name) => {
+      expect(() => agentModel({ provider, model: 'm' })).toThrow(new TypeError(`${name}: pass send or stream.`));
+    });
+
+    it.each(NAMES)('%s: an error reply', async (provider, name) => {
+      const model = agentModel({ provider, model: 'm', send: async () => ({ error: { message: 'Bad key' } }) });
+
+      await expect(model(request())).rejects.toThrow(`${name}: Bad key`);
+    });
+
+    it.each(NAMES)('%s: an HTTP error on a stream', async (provider, name) => {
+      const model = agentModel({ provider, model: 'm', stream: async () => new Response('Bad Gateway', { status: 502 }) });
+
+      await expect(model(request())).rejects.toThrow(`${name}: HTTP 502.`);
+    });
+
+    it('deepseek: webSearch', () => {
+      expect(() => agentModel({ provider: 'deepseek', model: 'm', send: async () => ({}), webSearch: true } as unknown as AgentModelOptions))
+        .toThrow(/^DeepSeek: webSearch is not supported/);
+    });
+  });
 });

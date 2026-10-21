@@ -24,6 +24,7 @@ interface TestEditor {
   save: () => Promise<OutputData>;
   agent: Agent;
   readOnly: { toggle(state?: boolean): Promise<boolean> };
+  toolbar: { open(): void };
   blocks: { delete(index?: number): Promise<void>; update(id: string, data: Record<string, unknown>): Promise<unknown> };
 }
 

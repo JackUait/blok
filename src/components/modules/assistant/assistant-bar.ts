@@ -309,7 +309,7 @@ export class AssistantBar {
     const base = this.inPlaceHeight;
     const top = base === null ? null : rect.top + (rect.height - base) / 2;
     // Floating: only the slots and any growth push the page, from the bar's bottom on.
-    const below = top === null ? 0 : Math.max(0, top + base - rect.bottom);
+    const below = base === null || top === null ? 0 : Math.max(0, top + base - rect.bottom);
     const offset = base === null
       ? reserveGap(anchor, BAR_GAP, SPACE_BEFORE + height + SPACE_AFTER)
       : reserveGap(anchor, BAR_GAP, Math.max(0, height - base) + (this.slots.hidden ? 0 : below + SPACE_AFTER));

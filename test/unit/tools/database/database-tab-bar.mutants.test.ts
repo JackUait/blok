@@ -87,6 +87,10 @@ vi.mock('../../../../src/components/utils/popover', () => {
     off(): void {
       /* no-op */
     }
+
+    holdOpen(): () => void {
+      return () => undefined;
+    }
   }
 
   return { PopoverDesktop: MockPopoverDesktop, PopoverMobile: MockPopoverDesktop };
@@ -696,7 +700,8 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(items[2]).toStrictEqual({ type: PopoverItemType.Separator });
       expect(items[3].title).toBe('tools.database.deleteView');
       expect(items[3].isDestructive).toBe(true);
-      expect(items[3].closeOnActivate).toBe(true);
+      // The bar closes it itself: a delete that asks keeps it open (research/30 B3).
+      expect(items[3].closeOnActivate).toBeUndefined();
     });
 
     it('offers no delete — and no separator — for the last remaining view', () => {

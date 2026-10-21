@@ -57,7 +57,8 @@ export interface TabBarOptions {
   onAddView: (type: ViewType) => void;
   onRename: (viewId: string, newName: string) => void;
   onDuplicate: (viewId: string) => void;
-  onDelete: (viewId: string) => void;
+  /** A promise means it asked first: true once the view is gone, false when cancelled. */
+  onDelete: (viewId: string) => void | Promise<boolean>;
   onReorder: (viewId: string, newPosition: string) => void;
   /** "Edit view": opens the view settings panel under the tab. */
   onEditView?: (viewId: string, anchor: HTMLElement) => void;
@@ -386,10 +387,7 @@ export class DatabaseTabBar {
             name: 'database-view-delete',
             title: t('tools.database.deleteView', 'Delete'),
             isDestructive: true,
-            closeOnActivate: true,
-            onActivate: () => {
-              this.options.onDelete(viewId);
-            },
+            onActivate: () => this.deleteFromMenu(viewId),
           },
         ]
       : [];
@@ -458,6 +456,34 @@ export class DatabaseTabBar {
         })),
       },
     }];
+  }
+
+  /**
+   * research/30 B3: a delete that asks first keeps the menu open behind its
+   * dialog; after Cancel the cursor goes back to the Delete row.
+   */
+  private deleteFromMenu(viewId: string): void {
+    const popover = this.contextPopover;
+    // Before onDelete: the dialog takes focus as it opens, and that would close the menu.
+    const release = popover?.holdOpen();
+    const asked = this.options.onDelete(viewId);
+
+    if (asked === undefined || release === undefined) {
+      this.closeContextPopover();
+
+      return;
+    }
+
+    void asked.then((deleted) => {
+      // A rebuild while the dialog was up already closed this menu.
+      if (this.contextPopover !== popover) return;
+      if (deleted) {
+        this.closeContextPopover();
+
+        return;
+      }
+      release('database-view-delete');
+    });
   }
 
   private closeContextPopover(): void {

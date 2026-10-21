@@ -4344,9 +4344,10 @@ export class DatabaseTool implements BlockTool {
   /**
    * Delete from the tab menu or View settings. The last view of a second
    * source asks first, "Delete view only" picked (research/26 §5a). Only a
-   * click gets here: agents, undo and peers call deleteView.
+   * click gets here: agents, undo and peers call deleteView. When it asks,
+   * the promise says whether the view went (the tab menu stays open until then).
    */
-  private requestDeleteView(viewId: string): void {
+  private requestDeleteView(viewId: string): Promise<boolean> | undefined {
     const view = this.model.getView(viewId);
     const sourceId = view === undefined ? undefined : this.otherSourceId(view);
     const ownSource = sourceId !== undefined && this.api.blocks.getChildren(this.dataId).some((child) => child.id === sourceId && child.name === 'database');
@@ -4355,11 +4356,11 @@ export class DatabaseTool implements BlockTool {
     if (!last || sourceId === undefined || this.model.getViews().length <= 1 || this.structureLocked()) {
       this.deleteView(viewId);
 
-      return;
+      return undefined;
     }
     const t = (key: string): string => this.api.i18n.t(key);
 
-    void openDatabaseChoice({
+    return openDatabaseChoice({
       title: t('tools.database.deleteLastViewTitle'),
       confirmLabel: t('tools.database.layoutDeleteView'),
       cancelLabel: t('tools.database.layoutCancel'),
@@ -4372,11 +4373,11 @@ export class DatabaseTool implements BlockTool {
         { label: t('tools.database.deleteLastViewAndSource'), description: t('tools.database.deleteLastViewAndSourceDescription') },
       ],
     }).then((choice) => {
-      if (choice === null || this.destroyed || this.model.getView(viewId) === undefined) return;
+      if (choice === null || this.destroyed || this.model.getView(viewId) === undefined) return false;
       if (choice === 0) {
         this.deleteView(viewId);
 
-        return;
+        return true;
       }
       this.inOneStep(() => {
         this.deleteView(viewId);
@@ -4390,6 +4391,8 @@ export class DatabaseTool implements BlockTool {
           if (index !== undefined) void this.api.blocks.delete(index, false);
         }
       });
+
+      return true;
     });
   }
 
@@ -5965,7 +5968,9 @@ export class DatabaseTool implements BlockTool {
       setLocked: (locked) => this.setDatabaseLocked(locked),
       linked: () => owner.linked,
       duplicateView: () => this.duplicateView(this.activeViewId),
-      deleteView: () => this.requestDeleteView(this.activeViewId),
+      deleteView: () => {
+        void this.requestDeleteView(this.activeViewId);
+      },
       copyViewLink: () => this.copyViewLink(),
       ...this.calendarLever(owner.dataId, context?.viewId ?? this.activeViewId),
       ...(context === undefined ? {

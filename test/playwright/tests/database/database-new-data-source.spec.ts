@@ -409,6 +409,43 @@ test.describe('database New data source', () => {
       expect((await save(page)).some((block) => block.id === 'src-b')).toBe(true);
     });
 
+    // research/30 B3: the tab menu stays open behind the dialog; after Cancel, its Delete row has focus.
+    test('from the tab menu: the menu stays open behind the dialog, Cancel and Escape go back to its Delete row', async ({ page }) => {
+      await mount(page, bound);
+      const row = page.locator('[data-blok-item-name="database-view-delete"]:visible');
+      const dialog = page.getByRole('alertdialog');
+      const ask = async (): Promise<void> => {
+        await page.locator('[data-blok-database-tab][data-view-id="vb"]').click({ button: 'right' });
+        await row.click();
+        await expect(dialog).toContainText('Delete the last view for this data source?');
+      };
+
+      await ask();
+      await expect(row).toBeVisible();
+      await dialog.getByRole('button', { name: 'Cancel' }).click();
+      await expect(dialog).toBeHidden();
+      await expect(row).toBeVisible();
+      await expect(row).toHaveAttribute('data-blok-focused', 'true');
+
+      // One Escape closes the dialog only.
+      await page.keyboard.press('Escape');
+      await expect(row).toHaveCount(0);
+      await ask();
+      await page.keyboard.press('Escape');
+      await expect(dialog).toBeHidden();
+      await expect(row).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(row).toHaveCount(0);
+
+      // Deleting closes the menu with the view.
+      await ask();
+      await dialog.getByRole('button', { name: 'Delete view', exact: true }).click();
+      await expect(dialog).toBeHidden();
+      await expect(row).toHaveCount(0);
+      await expect(page.locator('[data-blok-database-tab][data-view-id="vb"]')).toHaveCount(0);
+      expect((await save(page)).some((block) => block.id === 'src-b')).toBe(true);
+    });
+
     test('"Delete view only" is picked and keeps the source and its rows', async ({ page }) => {
       await mount(page, bound);
       await deleteFromSettings(page);

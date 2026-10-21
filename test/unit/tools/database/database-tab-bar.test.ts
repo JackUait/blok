@@ -12,12 +12,12 @@ vi.mock('../../../../src/components/utils/popover', () => {
 
   class MockPopoverDesktop {
     private container: HTMLElement | null = null;
-    private readonly items: Array<{ title?: string; onActivate?: () => void; type?: string }>;
+    private readonly items: Array<{ title?: string; name?: string; onActivate?: () => void; type?: string; closeOnActivate?: boolean }>;
     private readonly eventHandlers: Map<string, Array<() => void>> = new Map();
 
     private readonly className: unknown;
 
-    constructor(params: { items?: Array<{ title?: string; onActivate?: () => void; type?: string }>; [key: string]: unknown }) {
+    constructor(params: { items?: Array<{ title?: string; name?: string; onActivate?: () => void; type?: string; closeOnActivate?: boolean }>; [key: string]: unknown }) {
       this.items = params.items ?? [];
       this.className = params.class;
     }
@@ -35,7 +35,10 @@ vi.mock('../../../../src/components/utils/popover', () => {
         el.textContent = item.title;
         const onActivate = item.onActivate;
         if (onActivate) {
-          el.addEventListener('click', () => onActivate());
+          el.addEventListener('click', () => {
+            onActivate();
+            if (item.closeOnActivate === true && item.name === 'database-view-delete') this.destroy();
+          });
         }
         this.container.appendChild(el);
       }
@@ -66,6 +69,16 @@ vi.mock('../../../../src/components/utils/popover', () => {
 
     getElement(): HTMLElement | null {
       return this.container;
+    }
+
+    /** Records the row the release gives the cursor back to. */
+    holdOpen(): (focusItemName?: string) => void {
+      this.container?.setAttribute('data-held', '');
+
+      return (focusItemName) => {
+        this.container?.removeAttribute('data-held');
+        this.container?.setAttribute('data-released-to', focusItemName ?? '');
+      };
     }
 
     hasNode(node: Node): boolean {
@@ -157,7 +170,7 @@ describe('DatabaseTabBar', () => {
   let onAddView: ReturnType<typeof vi.fn<(type: ViewType) => void>>;
   let onRename: ReturnType<typeof vi.fn<(viewId: string, newName: string) => void>>;
   let onDuplicate: ReturnType<typeof vi.fn<(viewId: string) => void>>;
-  let onDelete: ReturnType<typeof vi.fn<(viewId: string) => void>>;
+  let onDelete: ReturnType<typeof vi.fn<(viewId: string) => void | Promise<boolean>>>;
   let onReorder: ReturnType<typeof vi.fn<(viewId: string, newPosition: string) => void>>;
 
   beforeEach(() => {
@@ -166,7 +179,7 @@ describe('DatabaseTabBar', () => {
     onAddView = vi.fn<(type: ViewType) => void>();
     onRename = vi.fn<(viewId: string, newName: string) => void>();
     onDuplicate = vi.fn<(viewId: string) => void>();
-    onDelete = vi.fn<(viewId: string) => void>();
+    onDelete = vi.fn<(viewId: string) => void | Promise<boolean>>();
     onReorder = vi.fn<(viewId: string, newPosition: string) => void>();
   });
 
@@ -468,6 +481,60 @@ describe('DatabaseTabBar', () => {
       dup.click();
       expect(onDuplicate).toHaveBeenCalledWith('v1');
       el.remove();
+    });
+
+    describe('a Delete that asks first (research/30 B3)', () => {
+      const openDelete = (ask: () => void | Promise<boolean>): HTMLElement => {
+        onDelete.mockImplementation(ask);
+        const bar = createTabBar([makeView({ id: 'v1', position: 'a0' }), makeView({ id: 'v2', position: 'a1' })], 'v1');
+        const el = bar.render();
+
+        document.body.appendChild(el);
+        el.querySelector<HTMLElement>('[data-view-id="v1"]')?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+        document.querySelector<HTMLElement>('[data-blok-database-tab-action="delete"]')?.click();
+
+        return el;
+      };
+      const menu = (): HTMLElement | null => document.querySelector('[data-blok-database-tab-context]');
+
+      it('keeps the menu open behind the dialog; after Cancel the cursor goes back to Delete', async () => {
+        const answer: { resolve: (deleted: boolean) => void; heldWhenAsked?: boolean } = { resolve: () => undefined };
+        const el = openDelete(() => {
+          // The dialog takes focus as it opens, so the hold must already be on.
+          answer.heldWhenAsked = menu()?.hasAttribute('data-held');
+
+          return new Promise<boolean>((resolve) => {
+            answer.resolve = resolve;
+          });
+        });
+
+        expect(answer.heldWhenAsked).toBe(true);
+        expect(menu()?.hasAttribute('data-held')).toBe(true);
+        answer.resolve(false);
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(menu()?.getAttribute('data-released-to')).toBe('database-view-delete');
+        el.remove();
+      });
+
+      it('closes the menu once the view is deleted', async () => {
+        const el = openDelete(() => Promise.resolve(true));
+
+        expect(menu()).not.toBeNull();
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(menu()).toBeNull();
+        el.remove();
+      });
+
+      it('closes the menu at once when nothing asks', () => {
+        const el = openDelete(() => undefined);
+
+        expect(menu()).toBeNull();
+        el.remove();
+      });
     });
 
     it('calls onDelete when Delete is clicked', () => {

@@ -1,4 +1,5 @@
 import { DATA_ATTR } from '../../constants/data-attributes';
+import { PopoverRegistry } from './popover-registry';
 import { Flipper } from '../../flipper';
 import { keyCodes } from '../../utils';
 import { generateId } from '../id-generator';
@@ -1030,6 +1031,35 @@ export class PopoverDesktop extends PopoverAbstract {
   public destroy(): void {
     this.hide();
     super.destroy();
+  }
+
+  /**
+   * Keeps the menu open under a dialog one of its rows opened (research/30 B3).
+   * Presses, focus and keys in the dialog leave it alone until the release,
+   * which gives the cursor back to the named row.
+   * @returns the release; a no-op once the menu has closed
+   */
+  public holdOpen(): (focusItemName?: string) => void {
+    const trigger = this.params.trigger;
+
+    PopoverRegistry.instance.unregister(this);
+    this.flipper?.deactivate();
+
+    return (focusItemName) => {
+      if (!this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpened)) {
+        return;
+      }
+      if (trigger !== undefined) {
+        PopoverRegistry.instance.register(this, trigger);
+      }
+      const items = this.flippableElements;
+      const index = items.findIndex((item) => item.getAttribute(DATA_ATTR.itemName) === focusItemName);
+
+      this.flipper?.activate(items);
+      if (index >= 0) {
+        this.flipper?.focusItem(index, { skipNextTab: false });
+      }
+    };
   }
 
   /**

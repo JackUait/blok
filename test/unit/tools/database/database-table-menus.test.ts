@@ -18,7 +18,7 @@ vi.mock('../../../../src/components/utils/popover', () => {
   return { PopoverDesktop: MockPopoverDesktop };
 });
 
-import { openMenu } from '../../../../src/tools/database/database-table-menus';
+import { openMenu, rowMenuFooter } from '../../../../src/tools/database/database-table-menus';
 
 describe('table view menus', () => {
   beforeEach(() => {
@@ -34,5 +34,21 @@ describe('table view menus', () => {
     openMenu(document.createElement('button'), []);
 
     expect(constructed[0]?.class).toBe('blok-database-menu');
+  });
+});
+
+// research/30 B6 measured the date cell only; the row menu's last-edited time keeps "N days ago".
+describe('row menu footer time', () => {
+  it('writes an edit three days back as "3 days ago"', () => {
+    const now = new Date(2026, 9, 21, 12);
+    const footer = rowMenuFooter({
+      row: { properties: {}, meta: { lastEditedAt: new Date(2026, 9, 18, 12).getTime() } },
+      titlePropertyId: 'p-title',
+      locale: 'en-US',
+      now,
+      hourCycle: 'h12',
+    });
+
+    expect(footer.lastEdited?.time).toBe('3 days ago 12:00 PM');
   });
 });

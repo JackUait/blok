@@ -1680,7 +1680,6 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         row: this.allRows().find((row) => row.id === rowId),
         titlePropertyId: this.options.titlePropertyId,
         locale: resolveLocale(this.options.locale),
-        i18n: this.options.i18n,
         ...(this.options.cellContext?.people !== undefined ? { people: this.options.cellContext.people } : {}),
         ...(this.options.cellContext?.now !== undefined ? { now: this.options.cellContext.now } : {}),
         ...(this.options.cellContext?.hourCycle !== undefined ? { hourCycle: this.options.cellContext.hourCycle } : {}),

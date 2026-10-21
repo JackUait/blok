@@ -179,7 +179,12 @@ interface DayOptions {
   /** The date picker's field: Full date with the short month (research/27 §4a), never relative words (research/30 B6). */
   field?: boolean;
   i18n?: Pick<I18n, 't'>;
+  /** Feed and row-menu times: "3 days ago" within a week, as before research/30 (unmeasured there). */
+  stamp?: boolean;
 }
+
+/** Days within this distance of today read as "N days ago" / "In N days" in a stamp. */
+const STAMP_DAY_LIMIT = 6;
 
 const formatDay = (part: string, locale: string, display: DateDisplay, now: Date, options: DayOptions = {}): string => {
   const { year, month, day } = dayPartsOf(part, display.timeZone);
@@ -194,9 +199,16 @@ const formatDay = (part: string, locale: string, display: DateDisplay, now: Date
       return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', ...zoneOption(part, display.timeZone) }).format(toLocalDate(part));
     case 'relative': {
       const diff = Math.round((Date.UTC(year, month - 1, day) - Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) / DAY_MS);
-      const words = field ? null : relativeDay(diff, new Date(year, month - 1, day), now, locale, options.i18n);
+      const words = (): string | null => {
+        if (field) return null;
+        if (options.stamp !== true) return relativeDay(diff, new Date(year, month - 1, day), now, locale, options.i18n);
 
-      return words ?? formatDay(part, locale, { ...display, dateFormat: 'full' }, now, options);
+        return Math.abs(diff) <= STAMP_DAY_LIMIT
+          ? capitalize(new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(diff, 'day'), locale)
+          : null;
+      };
+
+      return words() ?? formatDay(part, locale, { ...display, dateFormat: 'full' }, now, options);
     }
     case 'full':
     default:
@@ -301,8 +313,8 @@ export const applyDateDisplayChange = (date: DateDisplay, change: DateDisplayCha
   return change.timeZone === null ? rest : { ...rest, timeZone: change.timeZone };
 };
 
-const formatPart = (part: string, locale: string, display: DateDisplay, now: Date, hourCycle?: 'h12' | 'h23', i18n?: Pick<I18n, 't'>): string => {
-  const day = formatDay(part, locale, display, now, { i18n });
+const formatPart = (part: string, locale: string, display: DateDisplay, now: Date, hourCycle: 'h12' | 'h23' | undefined, options: DayOptions): string => {
+  const day = formatDay(part, locale, display, now, options);
 
   if (!part.includes('T') || display.timeFormat === 'hidden') {
     return day;
@@ -343,7 +355,11 @@ export const formatDateDisplay = (
     return null;
   }
 
-  const start = formatPart(parsed.start, locale, display, now, hourCycle, i18n);
+  const start = formatPart(parsed.start, locale, display, now, hourCycle, { i18n });
 
-  return parsed.end === undefined ? start : `${start} → ${formatPart(parsed.end, locale, display, now, hourCycle, i18n)}`;
+  return parsed.end === undefined ? start : `${start} → ${formatPart(parsed.end, locale, display, now, hourCycle, { i18n })}`;
 };
+
+/** A feed or row-menu time: Relative, but "3 days ago" / "In 3 days" within a week. */
+export const formatRelativeStamp = (at: number, locale: string, display: Omit<DateDisplay, 'dateFormat'> = {}, now: Date = new Date(), hourCycle?: 'h12' | 'h23'): string =>
+  formatPart(new Date(at).toISOString(), locale, { ...display, dateFormat: 'relative' }, now, hourCycle, { stamp: true });

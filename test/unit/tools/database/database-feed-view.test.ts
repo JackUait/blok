@@ -70,6 +70,13 @@ describe('DatabaseFeedView', () => {
     vi.restoreAllMocks();
   });
 
+  // research/30 B6 measured the date cell only; the feed time keeps "N days ago".
+  it('writes a post time three days back as "3 days ago"', () => {
+    const el = render({ rows: [{ ...rows[0], meta: { createdBy: 'u1', createdAt: Date.now() - 3 * 86_400_000 } }], total: 1 });
+
+    expect(el.querySelector('[data-blok-database-feed-time]')?.textContent).toBe('3 days ago');
+  });
+
   it('stacks one card per row in a list', () => {
     const el = render();
 

@@ -2,7 +2,7 @@ import type { I18n } from '../../../types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, RowReactions } from './types';
 import { renderCellValue } from './cells';
-import { formatDateDisplay } from './cells/date-format';
+import { formatRelativeStamp } from './cells/date-format';
 import type { BodyBlock } from './row-body';
 import { resolveViewProperties } from './view-settings';
 import { pageIconElement, showsPageIcon } from './page-icon';
@@ -329,7 +329,7 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
       const time = document.createElement('span');
 
       time.setAttribute('data-blok-database-feed-time', '');
-      time.textContent = formatDateDisplay(new Date(at).toISOString(), this.options.locale, { dateFormat: 'relative', timeFormat: 'hidden' }, undefined, undefined, this.options.i18n) ?? '';
+      time.textContent = formatRelativeStamp(at, this.options.locale, { timeFormat: 'hidden' });
       byline.appendChild(time);
     }
 

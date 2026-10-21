@@ -25,7 +25,7 @@ import {
 import { beautifyShortcut } from '../../components/utils/string';
 import { CALCULATIONS_FOR_TYPE } from './database-calculations';
 import type { CalculationFn, DatabaseRow, OpenPagesIn, PropertyDefinition } from './types';
-import { formatDateDisplay } from './cells/date-format';
+import { formatRelativeStamp } from './cells/date-format';
 
 type T = Pick<I18n, 't'>;
 
@@ -305,7 +305,6 @@ export interface RowMenuFooterSource {
   people?: ReadonlyArray<{ id: string; name: string }>;
   now?: Date;
   hourCycle?: 'h12' | 'h23';
-  i18n?: Pick<I18n, 't'>;
 }
 
 /**
@@ -324,7 +323,7 @@ export const rowMenuFooter = (source: RowMenuFooterSource): Pick<RowMenuContext,
   if (at === undefined) {
     return { counts };
   }
-  const time = formatDateDisplay(new Date(at).toISOString(), source.locale, { dateFormat: 'relative' }, source.now, source.hourCycle, source.i18n) ?? '';
+  const time = formatRelativeStamp(at, source.locale, {}, source.now, source.hourCycle);
   const name = meta?.lastEditedBy === undefined ? undefined : source.people?.find((person) => person.id === meta.lastEditedBy)?.name;
 
   return { lastEdited: { ...(name !== undefined ? { name } : {}), time }, counts };

@@ -53,7 +53,7 @@ describe('openaiModel', () => {
 
     expect(await run(openaiModel({ model: 'gpt-5.5', send }), [{ role: 'user', content: 'Go' }])).toEqual({ status: 'done', reply: 'Hi' });
     expect(bodies[0]).toEqual({
-      model: 'gpt-5.5', instructions: 'sys', store: false, max_output_tokens: 16000,
+      model: 'gpt-5.5', instructions: 'sys', store: false, max_output_tokens: 16000, include: ['reasoning.encrypted_content'],
       input: [{ role: 'user', content: 'Go' }],
       tools: [{ type: 'function', name: 'blok_read', description: 'd', parameters: { type: 'object' }, strict: false }],
     });
@@ -259,8 +259,51 @@ describe('openaiModel', () => {
 
       const response = await openaiModel({ model: 'm', stream: fakeStream(text).stream })(request((event) => events.push(event)));
 
-      expect(events).toEqual([{ type: 'tool_start', index: 0, id: 'call-1-1', name: 'blok_read' }, { type: 'tool_end', index: 0 }]);
+      expect(events).toEqual([
+        { type: 'tool_start', index: 0, id: 'call-1-1', name: 'blok_read' },
+        { type: 'tool_input', index: 0, json: '{}' },
+        { type: 'tool_end', index: 0 },
+      ]);
       expect(response.content[1]).toEqual({ type: 'tool_use', id: 'call-1-1', name: 'blok_read', input: {} });
+    });
+
+    describe('a call that arrives whole, with no argument deltas (xAI)', () => {
+      const whole = sse(
+        { type: 'response.output_item.added', output_index: 0, item: { ...headingCall, status: 'in_progress' } },
+        { type: 'response.output_item.done', output_index: 0, item: headingCall },
+        { type: 'response.completed', response: { status: 'completed', output: [headingCall] } }
+      );
+
+      it('runs the streamed call with its full input', async () => {
+        const seen: unknown[] = [];
+
+        await runAssistantLoop({
+          model: openaiModel({ model: 'm', stream: fakeStream(whole, sse({ type: 'response.completed', response: { status: 'completed', output: [] } })).stream }),
+          system: 's', tools: [], messages: [{ role: 'user', content: 'a' }],
+          call: async (_name, input) => {
+            seen.push(input);
+
+            return { content: '{"ok":true}', isError: false };
+          },
+          signal: new AbortController().signal, maxSteps: 5,
+        });
+
+        expect(seen).toEqual([heading]);
+      });
+
+      it('reports its input once, and returns it as tool_use', async () => {
+        const events: AgentModelStreamEvent[] = [];
+
+        const response = await openaiModel({ model: 'm', stream: fakeStream(whole).stream })(request((event) => events.push(event)));
+
+        expect(events).toEqual([
+          { type: 'tool_start', index: 0, id: 'call_1', name: 'blok_execute' },
+          { type: 'tool_input', index: 0, json: JSON.stringify(heading) },
+          { type: 'tool_end', index: 0 },
+        ]);
+        expect(response.content[0]).toEqual({ type: 'tool_use', id: 'call_1', name: 'blok_execute', input: heading });
+        expect(response.stop_reason).toBe('tool_use');
+      });
     });
 
     it('maps a truncated stream, which ends with response.incomplete, as send does', async () => {

@@ -152,6 +152,12 @@ const readStream = async (
       request.onStream?.({ type: 'tool_input', index: streaming.call, json });
     }
     if (event.type === 'response.output_item.done' && streaming !== undefined) {
+      const json = isRecord(event.item) ? event.item.arguments : undefined;
+
+      // xAI sends a call whole, with no deltas; the loop runs it at tool_end with the input reported so far.
+      if (typeof json === 'string' && json !== streaming.json) {
+        request.onStream?.({ type: 'tool_input', index: streaming.call, json });
+      }
       request.onStream?.({ type: 'tool_end', index: streaming.call });
     }
   };
@@ -180,6 +186,8 @@ export function openaiModel(options: AdapterOptions, { name, levels }: Profile =
       model: options.model,
       instructions: request.system,
       store: false,
+      // Azure and xAI drop reasoning across stateless turns without it; OpenAI accepts it.
+      include: ['reasoning.encrypted_content'],
       max_output_tokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
       input: request.messages.flatMap((message) => (message.role === 'user' ? userItems(message) : assistantItems(message))),
       // strict: our blok_execute schema is not closed, and leaving strict out makes OpenAI try strict mode.

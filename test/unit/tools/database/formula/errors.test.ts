@@ -33,7 +33,6 @@ describe('formula error codes', () => {
     ['-"a"', 'negateNotNumber', { type: 'Text' }],
     ['current', 'lambdaKeywordOutside', { name: 'current' }],
     ['foo', 'unknownVariable', { name: 'foo' }],
-    ['if(true, 1, "a")', 'branchTypesDiffer', { a: 'Number', b: 'Text' }],
     ['true > 1', 'cannotCompare', { a: 'Boolean', b: 'Number' }],
     ['true + 1', 'cannotAdd', { a: 'Boolean', b: 'Number' }],
     ['"a" * 2', 'operatorNotNumber', { op: '*', type: 'Text' }],
@@ -53,6 +52,11 @@ describe('formula error codes', () => {
     expect(error.code).toBe(code);
     expect(error.params).toEqual(params);
     expect(error.end).toBeGreaterThanOrEqual(error.start);
+  });
+
+  it('has no code for if() branches of different types', () => {
+    expect(compileFormula('if(true, 1, "a")', schema).ok).toBe(true);
+    expect(FORMULA_ERROR_CODES).not.toContain('branchTypesDiffer');
   });
 
   it('has an English string for every code', () => {

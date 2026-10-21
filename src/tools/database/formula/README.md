@@ -79,7 +79,7 @@ Strings use double quotes; `\"`, `\\`, `\n`, `\t` are escapes, so `"\\d"` is the
 ## Empty values
 
 - `empty()` with no argument is the empty value. It fits either branch of `if()` (H-err, "Wrong return type").
-- `if()` branches of different types are a compile error: `if(Date, Date.dateAdd(1, "day"), "")` fails, `... , empty())` compiles (H-err).
+- `if()` and `ifs()` branches may differ in type. H-err: "Unlike formula properties in databases, formulas in automations expect a specific return type"; for `if(Date, Date.dateAdd(1, "day"), "")` "the return type is unknown". The result type is then Any, and the property shows, filters, sorts and calculates as text. A number branch prints as plain text (`"12"`, no number format). The Goals Tracker template's "Days until due" (`if(dateBetween(...) > 0, dateBetween(...), "Overdue")`) is Notion's own example. How Notion aligns, sorts and filters such a value is **unverified**.
 - Conditions take any type. `false`, `0`, `""`, `[]` and empty are false (H-fxs `empty`: "0, "", and [] are considered empty"; `false` counting as empty is **unverified**).
 - A function given an empty argument returns empty, except `empty`, `format`, `equal`, `unequal`, `includes` (**unverified**). So `prop("Price") + 1` is empty when Price is empty.
 - `"x" + empty` is `"x"`. `<`, `>` with an empty side are `false`. `sort` puts empties last (D8).

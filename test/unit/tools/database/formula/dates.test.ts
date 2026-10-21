@@ -188,12 +188,13 @@ describe('formula date functions', () => {
     ['end(now())', 'Unknown function "end"'],
     ['dateAdd("2023-01-01", 1, "days")', 'Argument 1 of dateAdd() expects Date, got Text'],
     ['now() + 1', 'Operator "+" cannot combine Date and Number'],
-    [
-      'if(prop("Due"), prop("Due").dateAdd(1, "day"), "")',
-      'if() branches return different types: Date and Text',
-    ],
   ])('%s fails with "%s"', (source, message) => {
     expect(compileError(source)).toBe(message);
+  });
+
+  // H-err: only automations refuse this ("Unlike formula properties in databases..."); a property's result type is unknown.
+  it('accepts a Date branch next to a Text branch, as a database formula property', () => {
+    expect(compileError('if(prop("Due"), prop("Due").dateAdd(1, "day"), "")')).toBe('compiled');
   });
 
   it('accepts the empty() fix from the common errors page', () => {

@@ -6,7 +6,7 @@ export const FORMULA_ERROR_CODES = [
   'unexpectedCharacter', 'unterminatedComment', 'unterminatedString',
   'unexpectedToken', 'expectedToken', 'expectedFunctionName', 'unexpectedEnd', 'propNeedsName',
   'unknownProperty', 'propertyNotUsable', 'negateNotNumber', 'lambdaKeywordOutside', 'unknownVariable',
-  'branchTypesDiffer', 'cannotCompare', 'cannotAdd', 'operatorNotNumber', 'unknownFunction',
+  'cannotCompare', 'cannotAdd', 'operatorNotNumber', 'unknownFunction',
   'argumentCount', 'argumentCountRange', 'argumentCountAtLeast', 'argumentType', 'cannotConcat',
   'bindingName', 'pairedArguments', 'listExpected', 'conditionNotBoolean',
   'unknownRelatedProperty', 'circularReference', 'tooDeep',

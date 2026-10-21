@@ -122,7 +122,7 @@ export class Checker {
       case 'ternary': {
         this.check(node.test, scope);
 
-        return this.branches([this.check(node.then, scope), this.check(node.otherwise, scope)], node);
+        return this.branches([this.check(node.then, scope), this.check(node.otherwise, scope)]);
       }
       case 'call': return this.checkCall(node, scope);
     }
@@ -153,8 +153,13 @@ export class Checker {
     return type;
   }
 
-  private branches(types: FormulaType[], node: FormulaNode): FormulaType {
-    return types.reduce((acc, type) => unify(acc, type) ?? fail('branchTypesDiffer', { a: typeName(acc), b: typeName(type) }, `if() branches return different types: ${typeName(acc)} and ${typeName(type)}`, node));
+  /**
+   * The type all branches share. Branches of different types give Any: a
+   * database formula property takes them (H-err "Wrong return type").
+   * Once two branches differ the result stays Any, since unify(Any, x) is x.
+   */
+  private branches(types: FormulaType[]): FormulaType {
+    return types.reduce<FormulaType | undefined>((acc, type) => (acc === undefined ? undefined : unify(acc, type)), T.empty) ?? T.any;
   }
 
   private checkBinary(node: Extract<FormulaNode, { type: 'binary' }>, scope: Scope<FormulaType>): FormulaType {
@@ -210,7 +215,7 @@ export class Checker {
         if (args.length !== 3) failArity('if', 3, 3, args.length, node);
         this.check(args[0], scope);
 
-        return this.branches([this.check(args[1], scope), this.check(args[2], scope)], node);
+        return this.branches([this.check(args[1], scope), this.check(args[2], scope)]);
       case 'ifs': {
         if (args.length < 3 || args.length % 2 === 0) fail('pairedArguments', { name }, 'ifs() takes conditions and values in pairs, then a fallback value', node);
         const values = args.filter((arg, i) => {
@@ -221,7 +226,7 @@ export class Checker {
           return isValue;
         });
 
-        return this.branches(values.map((arg) => this.check(arg, scope)), node);
+        return this.branches(values.map((arg) => this.check(arg, scope)));
       }
       case 'and':
       case 'or':

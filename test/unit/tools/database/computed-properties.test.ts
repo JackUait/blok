@@ -71,6 +71,29 @@ describe('ComputedProperties', () => {
       expect(valueOf(rows, 'r1', schema[7])).toBe('1, 2');
     });
 
+    it('shows a formula with Number and Text branches as text, the number printed plain', () => {
+      const due: PropertyDefinition = { id: 'due', name: 'Due date', type: 'date', position: 'a3' };
+      const days = formula('days', 'if(dateBetween({{property:due}}, now(), "days") > 0, dateBetween({{property:due}}, now(), "days"), "Overdue")', 'b0');
+      const schema = [title, due, days];
+      const engine = new ComputedProperties('db');
+      const rows = engine.apply(schema, [row('r1', { due: '2026-10-19' }), row('r2', { due: '2026-10-01' })], { databaseId: 'db', now: NOW, timeZone: 'UTC' });
+
+      expect(engine.valueProperty(days).type).toBe('text');
+      // 9.5 days from noon: dateBetween drops the part day.
+      expect(valueOf(rows, 'r1', days)).toBe('9');
+      expect(valueOf(rows, 'r2', days)).toBe('Overdue');
+    });
+
+    it('hands a mixed-branch formula to another formula as its raw value', () => {
+      const mixed = formula('mixed', 'if({{property:amount}} > 0, {{property:amount}}, "none")');
+      const reader = formula('reader', '{{property:mixed}} > 1', 'b1');
+      const engine = new ComputedProperties('db');
+      const rows = engine.apply([title, amount, mixed, reader], [row('r1', { amount: 5 }), row('r2', { amount: 0 })], { databaseId: 'db', now: NOW });
+
+      expect(valueOf(rows, 'r1', reader)).toBe(true);
+      expect(valueOf(rows, 'r2', reader)).toBe(false);
+    });
+
     it('reads another formula of the same row', () => {
       const a = formula('a', '{{property:amount}} + 1');
       const b = formula('b', '{{property:a}} * 10', 'b1');

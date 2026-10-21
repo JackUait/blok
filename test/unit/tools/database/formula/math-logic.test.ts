@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { compileError, run, text } from './helpers';
+import { compileFormula } from '../../../../../src/tools/database/formula';
+import { compileError, run, schema, text } from './helpers';
 
 describe('formula math, operators and logic', () => {
   beforeEach(() => {
@@ -80,6 +81,32 @@ describe('formula math, operators and logic', () => {
       ['ifs(false, 1, true, 2, 3)', 2],
     ])('%s = %s', (source, expected) => {
       expect(run(source)).toBe(expected);
+    });
+
+    // Database formula properties take branches of different types; the result type is unknown (H-err "Wrong return type").
+    it.each([
+      ['if(true, 1, "a")', 1],
+      ['if(false, 1, "a")', 'a'],
+      ['ifs(false, 1, true, "a", now())', 'a'],
+    ])('%s mixes branch types and = %s', (source, expected) => {
+      expect(compileError(source)).toBe('compiled');
+      expect(run(source)).toBe(expected);
+    });
+
+    it.each([
+      ['if(true, 1, "a")'],
+      ['ifs(false, 1, false, "a", now())'],
+      ['if(true, "a", if(true, 1, 2))'],
+    ])('%s has an unknown result type', (source) => {
+      const compiled = compileFormula(source, schema);
+
+      expect(compiled.ok && compiled.resultType.kind).toBe('any');
+    });
+
+    it('keeps one result type when the branches agree', () => {
+      const compiled = compileFormula('if(true, 1, empty())', schema);
+
+      expect(compiled.ok && compiled.resultType.kind).toBe('number');
     });
 
     it('treats empty values as false in a condition', () => {
@@ -237,7 +264,6 @@ describe('formula math, operators and logic', () => {
       ['smaller(1, 2)', 'Unknown function "smaller"'],
       ['smallerEq(1, 2)', 'Unknown function "smallerEq"'],
       ['foo', 'Unknown variable "foo"'],
-      ['if(true, 1, "a")', 'if() branches return different types: Number and Text'],
       ['ifs(true, 1)', 'ifs() takes conditions and values in pairs, then a fallback value'],
       ['let(1, 2, 3)', 'let() needs a variable name as argument 1'],
       ['lets(a, 1, b, 2)', 'lets() takes names and values in pairs, then an expression'],

@@ -1508,6 +1508,7 @@
   "tools.database.propertyDescription": "ගුණාංග විස්තරය",
   "tools.database.propertyDescriptionPlaceholder": "විස්තරයක් එක් කරන්න…",
   "tools.database.addPropertyDescription": "ගුණාංග විස්තරයක් එක් කරන්න",
+  "tools.database.editPropertyDescription": "ගුණාංග විස්තරය සංස්කරණය කරන්න",
   "tools.database.pageVisibility": "ගුණාංග දෘශ්‍යතාව",
   "tools.database.pageVisibility.always": "සැමවිට පෙන්වන්න",
   "tools.database.pageVisibility.hideWhenEmpty": "හිස් විට සඟවන්න",

@@ -1,4 +1,4 @@
-import { IconCalendar, IconCopy, IconEmojiSmile, IconInfo, IconPencil, IconTrash, IconEmojiSparkles, IconMessage, IconPageLayout, IconWand } from '../../components/icons';
+import { IconCalendar, IconCopy, IconEmojiSmile, IconInfo, IconPencil, IconTrash, IconEmojiSparkles, IconPageLayout, IconWand } from '../../components/icons';
 import { nameTakenError } from './database-name-taken-error';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
@@ -32,7 +32,7 @@ import type {
   SelectOption,
 } from './types';
 
-export type PropertyMenuEntry = 'editProperty' | 'displayAs' | 'changeType' | 'description' | 'visibility' | 'duplicate' | 'delete';
+export type PropertyMenuEntry = 'editProperty' | 'displayAs' | 'changeType' | 'visibility' | 'duplicate' | 'delete';
 
 /** Rows that come before the view's own rows; the rest come after. */
 const HEAD_ENTRIES: ReadonlySet<PropertyMenuEntry> = new Set<PropertyMenuEntry>(['editProperty', 'displayAs', 'changeType']);
@@ -56,7 +56,6 @@ const ALL_VIEWS_NOTE: ReadonlySet<PropertyType> = new Set<PropertyType>(['number
  * Change type or Duplicate, as Notion's ID menu.
  */
 export const propertyMenuEntries = (property: PropertyDefinition): PropertyMenuEntry[] => {
-  // research/08: the Title menu has no description row.
   if (property.type === 'title') {
     return [];
   }
@@ -69,7 +68,6 @@ export const propertyMenuEntries = (property: PropertyDefinition): PropertyMenuE
     ...(EDITABLE_SETTINGS.has(property.type) ? ['editProperty' as const] : []),
     ...(property.type === 'status' ? ['displayAs' as const] : []),
     ...(isId ? [] : ['changeType' as const]),
-    'description',
     'visibility',
     ...(noDuplicate ? [] : ['duplicate' as const]),
     'delete',
@@ -160,8 +158,8 @@ export class DatabasePropertyMenu {
   /** The open property with localized option and group names, for display only. Patches come from the saved one. */
   private shown: PropertyDefinition | null = null;
   private emojiPicker: EmojiPicker | null = null;
-  /** The open menu's description textarea, focused by the (i) button. */
-  private descriptionArea: HTMLTextAreaElement | null = null;
+  /** Saves the open menu's description field if it changed. */
+  private saveDescription: (() => void) | null = null;
 
   constructor(private readonly options: PropertyMenuOptions) {}
 
@@ -200,7 +198,8 @@ export class DatabasePropertyMenu {
     const lead = viewItems.filter((item) => item.type === PopoverItemType.Default && item.name === SHOW_PAGE_ICON_ITEM);
     const rest = viewItems.filter((item) => !lead.includes(item));
     const items: PopoverItemParams[] = [
-      { type: PopoverItemType.Html, element: this.nameField(property, entries.includes('description')), name: 'name' },
+      // research/08: the title has no description.
+      { type: PopoverItemType.Html, element: this.nameField(property, property.type !== 'title'), name: 'name' },
       { type: PopoverItemType.Separator },
       ...head.map((entry) => this.entry(entry, property)),
       ...lead,
@@ -217,6 +216,7 @@ export class DatabasePropertyMenu {
     popover.on(PopoverEvent.Closed, () => {
       if (this.popover === popover) {
         this.popover = null;
+        this.flushDescription();
         queueMicrotask(() => popover.destroy());
         this.options.onClose?.();
       }
@@ -271,8 +271,16 @@ export class DatabasePropertyMenu {
     const popover = this.popover;
 
     this.popover = null;
+    if (popover !== null) this.flushDescription();
     popover?.destroy();
     if (popover !== null) this.options.onClose?.();
+  }
+
+  private flushDescription(): void {
+    const save = this.saveDescription;
+
+    this.saveDescription = null;
+    save?.();
   }
 
   destroy(): void {
@@ -330,35 +338,68 @@ export class DatabasePropertyMenu {
       }
     });
     row.append(icon, input);
-    if (describable) row.append(this.descriptionButton());
+    const description = describable ? this.descriptionField(property) : null;
+
+    if (description !== null) row.append(description.button);
     row.append(error.element);
+    if (description !== null) row.append(description.box);
 
     return row;
   }
 
   /**
-   * research/26 §3c: the (i) at the name field's end. It opens the "Property
-   * description" submenu, so that menu item must stay in the popover.
+   * research/30 X2: the (i) at the name field's end shows a description
+   * field under the name row, inside this menu. Closing the menu saves it.
    */
-  private descriptionButton(): HTMLButtonElement {
+  private descriptionField(property: PropertyDefinition): { button: HTMLButtonElement; box: HTMLElement } {
     const button = document.createElement('button');
+    const box = document.createElement('div');
+    const area = document.createElement('textarea');
+    const saved = property.description ?? '';
 
     button.type = 'button';
     button.setAttribute('data-blok-database-property-menu-description-button', '');
-    button.setAttribute('aria-label', this.t('tools.database.addPropertyDescription'));
+    button.setAttribute('aria-label', this.t(saved === '' ? 'tools.database.addPropertyDescription' : 'tools.database.editPropertyDescription'));
     button.innerHTML = IconInfo;
+
+    // `hidden` goes on the box: textarea[data-blok-field] sets display and would beat it.
+    box.setAttribute('data-blok-database-property-description-box', '');
+    box.setAttribute('data-blok-keyboard-owner', '');
+    box.hidden = saved === '';
+    area.setAttribute('data-blok-database-property-description', '');
+    area.setAttribute('data-blok-field', 'text');
+    area.setAttribute('aria-label', this.t('tools.database.propertyDescription'));
+    area.placeholder = this.t('tools.database.propertyDescriptionPlaceholder');
+    area.rows = 2;
+    area.value = saved;
+    box.appendChild(area);
+
+    const written = { value: saved };
+    const save = (): void => {
+      const value = area.value.trim() === '' ? '' : area.value;
+
+      if (value === written.value) return;
+      written.value = value;
+      this.options.onUpdate(property.id, { description: value === '' ? undefined : value });
+    };
+
+    this.saveDescription = save;
+    area.addEventListener('change', save);
+    // research/30 X2: Enter adds no line and keeps the menu open.
+    area.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) event.preventDefault();
+    });
     button.addEventListener('click', () => {
       const popover = this.popover;
 
       if (popover === null) return;
-      // An open submenu makes activateItemByName a no-op, so close every level first.
       // closeSubmenuOnEscape works here because open() sets escapeClosesSubmenuFirst.
       while (popover.closeSubmenuOnEscape()) { /* one level per call */ }
-      popover.activateItemByName('description');
-      this.descriptionArea?.focus();
+      box.hidden = !box.hidden;
+      if (!box.hidden) area.focus();
     });
 
-    return button;
+    return { button, box };
   }
 
   private openIconPicker(property: PropertyDefinition, anchor: HTMLElement): void {
@@ -433,8 +474,6 @@ export class DatabasePropertyMenu {
               })),
           },
         };
-      case 'description':
-        return { name: entry, title: this.t('tools.database.propertyDescription'), icon: IconMessage, children: { items: [this.descriptionField(property, update)] } };
       case 'visibility': {
         const current = property.pageVisibility ?? 'always';
 
@@ -606,25 +645,6 @@ export class DatabasePropertyMenu {
         ? this.numberItems(property.number ?? {}, (number) => update({ number }))
         : []),
     ];
-  }
-
-  private descriptionField(property: PropertyDefinition, update: (patch: Partial<PropertySettingsV2>) => void): PopoverItemParams {
-    const area = document.createElement('textarea');
-
-    area.setAttribute('data-blok-database-property-description', '');
-    area.setAttribute('aria-label', this.t('tools.database.propertyDescription'));
-    area.placeholder = this.t('tools.database.propertyDescriptionPlaceholder');
-    area.value = property.description ?? '';
-    area.rows = 3;
-    this.descriptionArea = area;
-    area.addEventListener('change', () => update({ description: area.value.trim() === '' ? undefined : area.value }));
-
-    const wrap = document.createElement('div');
-
-    wrap.setAttribute('data-blok-keyboard-owner', '');
-    wrap.appendChild(area);
-
-    return { type: PopoverItemType.Html, element: wrap, name: 'description-field' };
   }
 
   private editItems(property: PropertyDefinition, update: (patch: Partial<PropertySettingsV2>) => void): PopoverItemParams[] {

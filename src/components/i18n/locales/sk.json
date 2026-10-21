@@ -1512,6 +1512,7 @@
   "tools.database.propertyDescription": "Popis vlastnosti",
   "tools.database.propertyDescriptionPlaceholder": "Pridať popis…",
   "tools.database.addPropertyDescription": "Pridať popis vlastnosti",
+  "tools.database.editPropertyDescription": "Upraviť popis vlastnosti",
   "tools.database.pageVisibility": "Viditeľnosť vlastnosti",
   "tools.database.pageVisibility.always": "Vždy zobraziť",
   "tools.database.pageVisibility.hideWhenEmpty": "Skryť, keď je prázdne",

@@ -1508,6 +1508,7 @@
   "tools.database.propertyDescription": "বৈশিষ্ট্যের বিবরণ",
   "tools.database.propertyDescriptionPlaceholder": "একটি বিবরণ যোগ করুন…",
   "tools.database.addPropertyDescription": "বৈশিষ্ট্যের বিবরণ যোগ করুন",
+  "tools.database.editPropertyDescription": "বৈশিষ্ট্যের বিবরণ সম্পাদনা করুন",
   "tools.database.pageVisibility": "বৈশিষ্ট্যের দৃশ্যমানতা",
   "tools.database.pageVisibility.always": "সবসময় দেখান",
   "tools.database.pageVisibility.hideWhenEmpty": "খালি থাকলে লুকান",

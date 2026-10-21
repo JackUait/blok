@@ -1508,6 +1508,7 @@
   "tools.database.propertyDescription": "Հատկության նկարագրություն",
   "tools.database.propertyDescriptionPlaceholder": "Ավելացնել նկարագրություն…",
   "tools.database.addPropertyDescription": "Ավելացնել հատկության նկարագրություն",
+  "tools.database.editPropertyDescription": "Խմբագրել հատկության նկարագրությունը",
   "tools.database.pageVisibility": "Հատկության տեսանելիություն",
   "tools.database.pageVisibility.always": "Միշտ ցուցադրել",
   "tools.database.pageVisibility.hideWhenEmpty": "Թաքցնել, երբ դատարկ է",

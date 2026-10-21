@@ -1508,6 +1508,7 @@
   "tools.database.propertyDescription": "ޕްރޮޕަރޓީގެ ތަފްސީލު",
   "tools.database.propertyDescriptionPlaceholder": "ތަފްސީލެއް އިތުރުކުރޭ…",
   "tools.database.addPropertyDescription": "ޕްރޮޕަރޓީގެ ތަފްސީލެއް އިތުރުކުރޭ",
+  "tools.database.editPropertyDescription": "ޕްރޮޕަރޓީގެ ތަފްސީލު ބަދަލުކުރޭ",
   "tools.database.pageVisibility": "ޕްރޮޕަރޓީ ފެންނަ ގޮތް",
   "tools.database.pageVisibility.always": "އަބަދު ދައްކާ",
   "tools.database.pageVisibility.hideWhenEmpty": "ހުސްނަމަ ފޮރުވާ",

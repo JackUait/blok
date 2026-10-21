@@ -8261,10 +8261,17 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   height: 15px;
 }
 
-[data-blok-database-property-description] {
-  min-height: 60px;
-  padding: var(--blok-space-1-5) var(--blok-space-2);
-  resize: vertical;
+[data-blok-database-property-description-box] {
+  flex-basis: 100%;
+}
+
+textarea[data-blok-database-property-description][data-blok-field] {
+  min-height: 26px;
+  padding: var(--blok-space-0-75) var(--blok-space-1-5);
+  font-size: 13px;
+  line-height: 20px;
+  field-sizing: content;
+  resize: none;
 }
 
 [data-blok-database-files-input] {
@@ -8404,7 +8411,7 @@ textarea[data-blok-database-cell-input] {
   height: 12px;
 }
 
-[data-blok-database-select-search], [data-blok-database-person-search], [data-blok-database-files-link-input], [data-blok-database-property-name-input], [data-blok-database-property-menu-name-input], [data-blok-database-property-menu-field] input, [data-blok-database-property-description], [data-blok-database-option-name], [data-blok-database-date-input], [data-blok-database-date-time] {
+[data-blok-database-select-search], [data-blok-database-person-search], [data-blok-database-files-link-input], [data-blok-database-property-name-input], [data-blok-database-property-menu-name-input], [data-blok-database-property-menu-field] input, [data-blok-database-option-name], [data-blok-database-date-input], [data-blok-database-date-time] {
   flex: 1;
   min-width: 60px;
   border: none;

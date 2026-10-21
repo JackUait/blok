@@ -1508,6 +1508,7 @@
   "tools.database.propertyDescription": "Özellik açıklaması",
   "tools.database.propertyDescriptionPlaceholder": "Açıklama ekleyin…",
   "tools.database.addPropertyDescription": "Özellik açıklaması ekleyin",
+  "tools.database.editPropertyDescription": "Özellik açıklamasını düzenleyin",
   "tools.database.pageVisibility": "Özellik görünürlüğü",
   "tools.database.pageVisibility.always": "Her zaman göster",
   "tools.database.pageVisibility.hideWhenEmpty": "Boşken gizle",

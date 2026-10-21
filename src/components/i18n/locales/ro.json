@@ -1510,6 +1510,7 @@
   "tools.database.propertyDescription": "Descrierea proprietății",
   "tools.database.propertyDescriptionPlaceholder": "Adăugați o descriere…",
   "tools.database.addPropertyDescription": "Adăugați descrierea proprietății",
+  "tools.database.editPropertyDescription": "Editați descrierea proprietății",
   "tools.database.pageVisibility": "Vizibilitatea proprietății",
   "tools.database.pageVisibility.always": "Afișează mereu",
   "tools.database.pageVisibility.hideWhenEmpty": "Ascunde când e goală",

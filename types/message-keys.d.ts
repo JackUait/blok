@@ -774,6 +774,7 @@ export type BlokMessageKey =
   | 'tools.database.editCardTitle'
   | 'tools.database.editOptions'
   | 'tools.database.editProperty'
+  | 'tools.database.editPropertyDescription'
   | 'tools.database.editView'
   | 'tools.database.emptyColumn'
   | 'tools.database.feedAddReaction'

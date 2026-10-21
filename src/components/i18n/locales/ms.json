@@ -1508,6 +1508,7 @@
   "tools.database.propertyDescription": "Perihalan sifat",
   "tools.database.propertyDescriptionPlaceholder": "Tambah perihalan…",
   "tools.database.addPropertyDescription": "Tambah perihalan sifat",
+  "tools.database.editPropertyDescription": "Sunting perihalan sifat",
   "tools.database.pageVisibility": "Keterlihatan sifat",
   "tools.database.pageVisibility.always": "Sentiasa tunjukkan",
   "tools.database.pageVisibility.hideWhenEmpty": "Sembunyikan jika kosong",

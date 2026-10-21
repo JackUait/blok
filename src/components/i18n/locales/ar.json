@@ -1516,6 +1516,7 @@
   "tools.database.propertyDescription": "وصف الخاصية",
   "tools.database.propertyDescriptionPlaceholder": "إضافة وصف…",
   "tools.database.addPropertyDescription": "إضافة وصف للخاصية",
+  "tools.database.editPropertyDescription": "تعديل وصف الخاصية",
   "tools.database.pageVisibility": "ظهور الخاصية",
   "tools.database.pageVisibility.always": "إظهار دائمًا",
   "tools.database.pageVisibility.hideWhenEmpty": "إخفاء عندما تكون فارغة",

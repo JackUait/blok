@@ -98,9 +98,9 @@ describe('property menu — computed types', () => {
   });
 
   it.each<[PropertyType, string[]]>([
-    ['relation', ['editProperty', 'changeType', 'description', 'visibility', 'delete']],
-    ['rollup', ['editProperty', 'changeType', 'description', 'visibility', 'duplicate', 'delete']],
-    ['formula', ['editProperty', 'changeType', 'description', 'visibility', 'duplicate', 'delete']],
+    ['relation', ['editProperty', 'changeType', 'visibility', 'delete']],
+    ['rollup', ['editProperty', 'changeType', 'visibility', 'duplicate', 'delete']],
+    ['formula', ['editProperty', 'changeType', 'visibility', 'duplicate', 'delete']],
   ])('%s: Edit property first; relation has no Duplicate (research/08)', (type, entries) => {
     expect(propertyMenuEntries(prop(type))).toEqual(entries);
   });

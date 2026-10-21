@@ -18,14 +18,16 @@ interface CapturedItem {
   children?: { items: CapturedItem[]; searchable?: boolean };
 }
 
-const captured = vi.hoisted((): { popovers: Array<{ items: CapturedItem[]; destroyed: boolean; params: Record<string, unknown>; activated: string[] }> } => ({ popovers: [] }));
+interface CapturedPopover { items: CapturedItem[]; destroyed: boolean; params: Record<string, unknown>; activated: string[]; closed?: () => void; hide: () => void }
+
+const captured = vi.hoisted((): { popovers: CapturedPopover[] } => ({ popovers: [] }));
 
 vi.mock('../../../../src/components/utils/popover', () => ({
   PopoverDesktop: class {
-    readonly record: { items: CapturedItem[]; destroyed: boolean; params: Record<string, unknown>; activated: string[] };
+    readonly record: CapturedPopover;
 
     constructor(params: { items: CapturedItem[] }) {
-      this.record = { items: params.items, destroyed: false, params, activated: [] };
+      this.record = { items: params.items, destroyed: false, params, activated: [], hide: () => this.hide() };
       captured.popovers.push(this.record);
     }
 
@@ -39,9 +41,13 @@ vi.mock('../../../../src/components/utils/popover', () => ({
 
     show(): void {}
 
-    on(): void {}
+    on(_event: string, handler: () => void): void {
+      this.record.closed = handler;
+    }
 
-    hide(): void {}
+    hide(): void {
+      this.record.closed?.();
+    }
 
     destroy(): void {
       this.record.destroyed = true;
@@ -83,17 +89,17 @@ describe('property menu entries (research/08 header menus, property-level items)
   it.each<[PropertyType, string[]]>([
     // research/08: the Title list has no description row.
     ['title', []],
-    ['text', ['changeType', 'description', 'visibility', 'duplicate', 'delete']],
-    ['number', ['editProperty', 'changeType', 'description', 'visibility', 'duplicate', 'delete']],
-    ['select', ['editProperty', 'changeType', 'description', 'visibility', 'duplicate', 'delete']],
-    ['multiSelect', ['editProperty', 'changeType', 'description', 'visibility', 'duplicate', 'delete']],
-    ['status', ['editProperty', 'displayAs', 'changeType', 'description', 'visibility', 'duplicate', 'delete']],
-    ['date', ['editProperty', 'changeType', 'description', 'visibility', 'duplicate', 'delete']],
-    ['checkbox', ['changeType', 'description', 'visibility', 'duplicate', 'delete']],
-    ['files', ['changeType', 'description', 'visibility', 'duplicate', 'delete']],
-    ['createdTime', ['editProperty', 'changeType', 'description', 'visibility', 'duplicate', 'delete']],
-    ['uniqueId', ['editProperty', 'description', 'visibility', 'delete']],
-    ['person', ['editProperty', 'changeType', 'description', 'visibility', 'duplicate', 'delete']],
+    ['text', ['changeType', 'visibility', 'duplicate', 'delete']],
+    ['number', ['editProperty', 'changeType', 'visibility', 'duplicate', 'delete']],
+    ['select', ['editProperty', 'changeType', 'visibility', 'duplicate', 'delete']],
+    ['multiSelect', ['editProperty', 'changeType', 'visibility', 'duplicate', 'delete']],
+    ['status', ['editProperty', 'displayAs', 'changeType', 'visibility', 'duplicate', 'delete']],
+    ['date', ['editProperty', 'changeType', 'visibility', 'duplicate', 'delete']],
+    ['checkbox', ['changeType', 'visibility', 'duplicate', 'delete']],
+    ['files', ['changeType', 'visibility', 'duplicate', 'delete']],
+    ['createdTime', ['editProperty', 'changeType', 'visibility', 'duplicate', 'delete']],
+    ['uniqueId', ['editProperty', 'visibility', 'delete']],
+    ['person', ['editProperty', 'changeType', 'visibility', 'duplicate', 'delete']],
   ])('%s → %j', (type, entries) => {
     expect(propertyMenuEntries(prop(type))).toEqual(entries);
   });
@@ -262,41 +268,141 @@ describe('DatabasePropertyMenu', () => {
     expect(cb.onUpdate).toHaveBeenCalledWith('p', { pageVisibility: 'hidden' });
   });
 
-  it('saves the description from its field', () => {
-    const cb = open(prop('text'));
-    const area = byName(lastItems(), 'description').children?.items[0]?.element?.querySelector('textarea');
+  // research/30 X2: no "Property description" row; the (i) opens a field inside the menu.
+  describe('the description field (research/30 X2)', () => {
+    const openMenu = (property: PropertyDefinition): { cb: ReturnType<typeof callbacks>; menu: InstanceType<typeof DatabasePropertyMenu>; row: HTMLElement; info: HTMLButtonElement; area: HTMLTextAreaElement; box: HTMLElement } => {
+      const cb = callbacks();
+      const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...cb });
 
-    if (area === null || area === undefined) throw new Error('no description field');
-    area.value = 'What we spend';
-    area.dispatchEvent(new Event('change'));
+      menu.open(property, document.createElement('button'));
+      const row = byName(lastItems(), 'name').element;
+      const info = row?.querySelector<HTMLButtonElement>('[data-blok-database-property-menu-description-button]');
+      const area = row?.querySelector<HTMLTextAreaElement>('textarea[data-blok-database-property-description]');
+      const box = area?.parentElement;
 
-    expect(cb.onUpdate).toHaveBeenCalledWith('p', { description: 'What we spend' });
-  });
+      if (row === undefined || info === null || info === undefined || area === null || area === undefined || box === null || box === undefined) {
+        throw new Error('no description field in the name row');
+      }
+      document.body.appendChild(row);
 
-  // research/26 §3c: an (i) "Add property description" button at the name field's right end.
-  it('the (i) button at the name field\'s end opens the description editor and focuses it', () => {
-    open(prop('text'));
-    const items = lastItems();
-    const row = byName(items, 'name').element;
-    const info = row?.querySelector<HTMLButtonElement>('[data-blok-database-property-menu-description-button]');
+      return { cb, menu, row, info, area, box };
+    };
 
-    if (info === null || info === undefined) throw new Error('no (i) button');
-    expect(info.getAttribute('aria-label')).toBe('tools.database.addPropertyDescription');
-    expect(info.type).toBe('button');
-    const glyph = document.createElement('span');
+    afterEach(() => {
+      document.body.innerHTML = '';
+    });
 
-    glyph.innerHTML = IconInfo;
-    expect(info.innerHTML).toBe(glyph.innerHTML);
-    // It sits after the name input.
-    expect(info.previousElementSibling?.hasAttribute('data-blok-database-property-menu-name-input')).toBe(true);
-    const area = byName(items, 'description').children?.items[0]?.element?.querySelector('textarea');
+    it('has no "Property description" menu item', () => {
+      openMenu(prop('text'));
 
-    if (area === null || area === undefined) throw new Error('no description field');
-    document.body.appendChild(area);
-    info.click();
+      expect(lastItems().some((i) => i.name === 'description')).toBe(false);
+    });
 
-    expect(captured.popovers.at(-1)?.activated).toEqual(['description']);
-    expect(area).toHaveFocus();
+    it('the (i) is labelled "Add property description", sits after the name input and draws the info glyph', () => {
+      const { info } = openMenu(prop('text'));
+
+      expect(info.getAttribute('aria-label')).toBe('tools.database.addPropertyDescription');
+      expect(info.type).toBe('button');
+      const glyph = document.createElement('span');
+
+      glyph.innerHTML = IconInfo;
+      expect(info.innerHTML).toBe(glyph.innerHTML);
+      expect(info.previousElementSibling?.hasAttribute('data-blok-database-property-menu-name-input')).toBe(true);
+    });
+
+    it('the field starts hidden when there is no description, and the (i) shows and focuses it', () => {
+      const { info, area, box } = openMenu(prop('text'));
+
+      expect(box.hidden).toBe(true);
+      info.click();
+
+      expect(box.hidden).toBe(false);
+      expect(area).toHaveFocus();
+      expect(area.placeholder).toBe('tools.database.propertyDescriptionPlaceholder');
+      expect(area.rows).toBe(2);
+      expect(area.getAttribute('data-blok-field')).toBe('text');
+      // It opens no submenu.
+      expect(captured.popovers.at(-1)?.activated).toEqual([]);
+    });
+
+    it('a second click on the (i) hides the field again', () => {
+      const { info, box } = openMenu(prop('text'));
+
+      info.click();
+      info.click();
+
+      expect(box.hidden).toBe(true);
+    });
+
+    it('with a description, the field shows at once and the (i) reads "Edit property description"', () => {
+      const { info, area, box } = openMenu(prop('text', { description: 'What we spend' }));
+
+      expect(box.hidden).toBe(false);
+      expect(area.value).toBe('What we spend');
+      expect(info.getAttribute('aria-label')).toBe('tools.database.editPropertyDescription');
+    });
+
+    it('Enter adds no new line and does not close the menu', () => {
+      const { menu, info, area } = openMenu(prop('text'));
+
+      info.click();
+      const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+
+      area.dispatchEvent(enter);
+
+      expect(enter.defaultPrevented).toBe(true);
+      expect(menu.isOpen).toBe(true);
+    });
+
+    it('closing the menu saves the typed text once', () => {
+      const { cb, menu, info, area } = openMenu(prop('text'));
+
+      info.click();
+      area.value = 'What we spend';
+      area.dispatchEvent(new Event('change'));
+      menu.close();
+
+      expect(cb.onUpdate).toHaveBeenCalledTimes(1);
+      expect(cb.onUpdate).toHaveBeenCalledWith('p', { description: 'What we spend' });
+    });
+
+    it('a menu closed by Escape or a click outside saves the text before onClose', () => {
+      const cb = callbacks();
+      const order: string[] = [];
+      const menu = new DatabasePropertyMenu({
+        i18n: { t: (key: string) => key, getLocale: () => 'en' } as never,
+        hasPeople: false,
+        ...cb,
+        onUpdate: () => order.push('update'),
+        onClose: () => order.push('close'),
+      });
+
+      menu.open(prop('text'), document.createElement('button'));
+      const area = byName(lastItems(), 'name').element?.querySelector('textarea');
+
+      if (area === null || area === undefined) throw new Error('no description field');
+      area.value = 'Typed';
+      captured.popovers.at(-1)?.hide();
+
+      expect(order).toEqual(['update', 'close']);
+    });
+
+    it('closing with an emptied field clears the description', () => {
+      const { cb, menu, area } = openMenu(prop('text', { description: 'Old' }));
+
+      area.value = '  ';
+      menu.close();
+
+      expect(cb.onUpdate).toHaveBeenCalledWith('p', { description: undefined });
+    });
+
+    it('closing without a change saves nothing', () => {
+      const { cb, menu } = openMenu(prop('text', { description: 'Same' }));
+
+      menu.close();
+
+      expect(cb.onUpdate).not.toHaveBeenCalled();
+    });
   });
 
   it('the title has no description, so its name field has no (i) button', () => {

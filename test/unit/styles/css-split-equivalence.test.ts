@@ -943,6 +943,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_BACKLINK_RIGHT_PATH_BYTES = 192;
     // database.css: bordered sort buttons, selection bar dividers, the property menu icon button, the panel × (research/26 §3, §1b).
     const DATABASE_NOTION_ELEMENTS_BYTES = 3_845;
+    // database.css: the property menu's inline description field under the name row (research/30 X2).
+    // [data-blok-field] in its selector: field.css loads later and would win a tie.
+    const DATABASE_PROPERTY_DESCRIPTION_FIELD_BYTES = 271;
     // assistant.css + colors.css: the Ask AI live preview's holder gap, overlay box, heading parity rules,
     // shimmer slots, word blur-in and violet tail, plus their light and dark tokens (2026-10-20).
     const ASSISTANT_LIVE_PREVIEW_BYTES = 3_831;
@@ -1108,6 +1111,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_BACKLINK_CRUMBS_BYTES
       + DATABASE_DARK_LEFTOVERS_BYTES + DATABASE_BACKLINK_RIGHT_PATH_BYTES
       + DATABASE_NOTION_ELEMENTS_BYTES
+      + DATABASE_PROPERTY_DESCRIPTION_FIELD_BYTES
       + DATABASE_LIGHT_VALUES_BYTES
       + ASSISTANT_LIVE_PREVIEW_BYTES
       + ASSISTANT_REWRITE_PREVIEW_BYTES

@@ -1508,6 +1508,7 @@
   "tools.database.propertyDescription": "توضیحات ویژگی",
   "tools.database.propertyDescriptionPlaceholder": "افزودن توضیحات…",
   "tools.database.addPropertyDescription": "افزودن توضیحات ویژگی",
+  "tools.database.editPropertyDescription": "ویرایش توضیحات ویژگی",
   "tools.database.pageVisibility": "نمایانی ویژگی",
   "tools.database.pageVisibility.always": "همیشه نمایش",
   "tools.database.pageVisibility.hideWhenEmpty": "پنهان در صورت خالی بودن",

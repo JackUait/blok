@@ -1508,6 +1508,7 @@
   "tools.database.propertyDescription": "Xüsusiyyətin təsviri",
   "tools.database.propertyDescriptionPlaceholder": "Təsvir əlavə edin…",
   "tools.database.addPropertyDescription": "Xüsusiyyətə təsvir əlavə edin",
+  "tools.database.editPropertyDescription": "Xüsusiyyətin təsvirini redaktə edin",
   "tools.database.pageVisibility": "Xüsusiyyətin görünməsi",
   "tools.database.pageVisibility.always": "Həmişə göstər",
   "tools.database.pageVisibility.hideWhenEmpty": "Boş olduqda gizlət",

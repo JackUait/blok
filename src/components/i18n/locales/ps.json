@@ -1508,6 +1508,7 @@
   "tools.database.propertyDescription": "د ځانګړتیا تشریح",
   "tools.database.propertyDescriptionPlaceholder": "تشریح اضافه کړئ…",
   "tools.database.addPropertyDescription": "د ځانګړتیا تشریح اضافه کړئ",
+  "tools.database.editPropertyDescription": "د ځانګړتیا تشریح سمه کړئ",
   "tools.database.pageVisibility": "د ځانګړتیا ښکاروالی",
   "tools.database.pageVisibility.always": "تل ښکاره کړئ",
   "tools.database.pageVisibility.hideWhenEmpty": "کله چې تش وي پټ یې کړئ",

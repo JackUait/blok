@@ -1508,6 +1508,7 @@
   "tools.database.propertyDescription": "Deskripsi properti",
   "tools.database.propertyDescriptionPlaceholder": "Tambahkan deskripsi…",
   "tools.database.addPropertyDescription": "Tambahkan deskripsi properti",
+  "tools.database.editPropertyDescription": "Edit deskripsi properti",
   "tools.database.pageVisibility": "Visibilitas properti",
   "tools.database.pageVisibility.always": "Selalu tampilkan",
   "tools.database.pageVisibility.hideWhenEmpty": "Sembunyikan jika kosong",

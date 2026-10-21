@@ -1508,6 +1508,7 @@
   "tools.database.propertyDescription": "Mô tả thuộc tính",
   "tools.database.propertyDescriptionPlaceholder": "Thêm mô tả…",
   "tools.database.addPropertyDescription": "Thêm mô tả thuộc tính",
+  "tools.database.editPropertyDescription": "Chỉnh sửa mô tả thuộc tính",
   "tools.database.pageVisibility": "Hiển thị thuộc tính",
   "tools.database.pageVisibility.always": "Luôn hiển thị",
   "tools.database.pageVisibility.hideWhenEmpty": "Ẩn khi trống",

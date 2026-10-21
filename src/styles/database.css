@@ -4877,10 +4877,19 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   height: 15px;
 }
 
-[data-blok-database-property-description] {
-  min-height: 60px;
-  padding: var(--blok-space-1-5) var(--blok-space-2);
-  resize: vertical;
+/* research/30 X2: a field under the name row, spanning icon and name.
+   Notion's tint fill and blue ring are not copied: the shared field look wins. */
+[data-blok-database-property-description-box] {
+  flex-basis: 100%;
+}
+
+textarea[data-blok-database-property-description][data-blok-field] {
+  min-height: 26px;
+  padding: var(--blok-space-0-75) var(--blok-space-1-5);
+  font-size: 13px;
+  line-height: 20px;
+  field-sizing: content;
+  resize: none;
 }
 
 [data-blok-database-files-input] {
@@ -5049,7 +5058,6 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-property-name-input],
 [data-blok-database-property-menu-name-input],
 [data-blok-database-property-menu-field] input,
-[data-blok-database-property-description],
 [data-blok-database-option-name],
 [data-blok-database-date-input],
 [data-blok-database-date-time] {

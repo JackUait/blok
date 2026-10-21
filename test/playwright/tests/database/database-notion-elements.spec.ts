@@ -360,20 +360,38 @@ test.describe('property header menu: Edit property opens one level at a time (re
     await expect(open).toHaveCount(0);
   });
 
-  // research/26 §3c. What Notion's click opens was not measured: it opens Blok's description editor.
-  test('the (i) opens the description editor with the caret in it, and the text saves', async ({ page }) => {
+  // research/30 X2: the (i) shows a field inside the header menu; there is no "Property description" row.
+  test('the (i) shows a description field in the same menu; Enter adds no line; Escape closes the menu and saves', async ({ page }) => {
     const open = page.locator('[data-blok-popover-opened="true"]');
+    const header = page.locator('[data-blok-database-table-column-header][data-property-id="p-amount"]');
 
-    await page.locator('[data-blok-database-table-column-header][data-property-id="p-amount"]').click();
+    await header.click();
+    await expect(open).toHaveCount(1);
+    await expect(open.locator('[data-blok-item-name="description"]')).toHaveCount(0);
+    const area = open.getByRole('textbox', { name: 'Property description', exact: true });
+
+    await expect(area).toBeHidden();
     await open.getByRole('button', { name: 'Add property description', exact: true }).click();
-    const area = page.locator('[data-blok-database-property-description]');
 
-    await expect(area).toBeFocused();
-    // The pointer rests on the name row: the submenu must not close under it.
-    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 800)));
     await expect(area).toBeVisible();
-    await page.keyboard.type('What we spend');
-    await area.blur();
+    await expect(area).toBeFocused();
+    await expect(area).toHaveAttribute('placeholder', 'Add a description…');
+    await expect(area).toHaveCSS('font-size', '13px');
+    await expect(area).toHaveCSS('line-height', '20px');
+    await expect(area).toHaveCSS('padding', '3px 6px');
+    // The menu grows and moves: no submenu may open under the resting pointer.
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 800)));
+    await expect(open).toHaveCount(1);
+    await expect(area).toBeVisible();
+
+    await page.keyboard.type('First line');
+    await page.keyboard.press('Enter');
+    await expect(area).toHaveValue('First line');
+    await expect(area).toBeFocused();
+    await expect(open).toHaveCount(1);
+
+    await page.keyboard.press('Escape');
+    await expect(open).toHaveCount(0);
 
     const description = await page.evaluate(async () => {
       const saved = await window.blokInstance?.save();
@@ -382,10 +400,15 @@ test.describe('property header menu: Edit property opens one level at a time (re
       return data?.schema.find((p) => p.id === 'p-amount')?.description;
     });
 
-    expect(description).toBe('What we spend');
+    expect(description).toBe('First line');
+
+    // Reopened: the field shows the text at once and the (i) reads "Edit".
+    await header.click();
+    await expect(open.getByRole('button', { name: 'Edit property description', exact: true })).toBeVisible();
+    await expect(open.getByRole('textbox', { name: 'Property description', exact: true })).toHaveValue('First line');
   });
 
-  test('the (i) opens the description editor even while another submenu is open', async ({ page }) => {
+  test('the (i) shows the field even while another submenu is open, and closes that submenu', async ({ page }) => {
     const open = page.locator('[data-blok-popover-opened="true"]');
     const edit = page.locator('[data-blok-popover-opened="true"] [data-blok-item-name="editProperty"]');
 
@@ -403,7 +426,7 @@ test.describe('property header menu: Edit property opens one level at a time (re
 
     await expect(area).toBeVisible();
     await expect(area).toBeFocused();
-    await expect(page.locator('[data-blok-popover-opened="true"] [data-blok-item-name="numberFormat"]')).toHaveCount(0);
+    await expect(open).toHaveCount(1);
   });
 
   test('the name field keeps its caret and Enter while it holds the highlight', async ({ page }) => {

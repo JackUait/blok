@@ -1508,6 +1508,7 @@
   "tools.database.propertyDescription": "प्रॉपर्टी का विवरण",
   "tools.database.propertyDescriptionPlaceholder": "विवरण जोड़ें…",
   "tools.database.addPropertyDescription": "प्रॉपर्टी का विवरण जोड़ें",
+  "tools.database.editPropertyDescription": "प्रॉपर्टी का विवरण संपादित करें",
   "tools.database.pageVisibility": "प्रॉपर्टी की दृश्यता",
   "tools.database.pageVisibility.always": "हमेशा दिखाएं",
   "tools.database.pageVisibility.hideWhenEmpty": "खाली होने पर छिपाएं",

@@ -1508,6 +1508,7 @@
   "tools.database.propertyDescription": "Tulajdonság leírása",
   "tools.database.propertyDescriptionPlaceholder": "Leírás hozzáadása…",
   "tools.database.addPropertyDescription": "Tulajdonság leírásának hozzáadása",
+  "tools.database.editPropertyDescription": "Tulajdonság leírásának szerkesztése",
   "tools.database.pageVisibility": "Tulajdonság láthatósága",
   "tools.database.pageVisibility.always": "Mindig látható",
   "tools.database.pageVisibility.hideWhenEmpty": "Elrejtés, ha üres",

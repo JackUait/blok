@@ -1508,6 +1508,7 @@
   "tools.database.propertyDescription": "Property description",
   "tools.database.propertyDescriptionPlaceholder": "Add a description…",
   "tools.database.addPropertyDescription": "Add property description",
+  "tools.database.editPropertyDescription": "Edit property description",
   "tools.database.pageVisibility": "Property visibility",
   "tools.database.pageVisibility.always": "Always show",
   "tools.database.pageVisibility.hideWhenEmpty": "Hide when empty",

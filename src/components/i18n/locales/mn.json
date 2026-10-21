@@ -1508,6 +1508,7 @@
   "tools.database.propertyDescription": "Шинжийн тайлбар",
   "tools.database.propertyDescriptionPlaceholder": "Тайлбар нэмэх…",
   "tools.database.addPropertyDescription": "Шинжийн тайлбар нэмэх",
+  "tools.database.editPropertyDescription": "Шинжийн тайлбарыг засах",
   "tools.database.pageVisibility": "Шинжийн харагдах байдал",
   "tools.database.pageVisibility.always": "Үргэлж харуулах",
   "tools.database.pageVisibility.hideWhenEmpty": "Хоосон үед нуух",

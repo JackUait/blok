@@ -1510,6 +1510,7 @@
   "tools.database.propertyDescription": "Opis svojstva",
   "tools.database.propertyDescriptionPlaceholder": "Dodaj opis…",
   "tools.database.addPropertyDescription": "Dodaj opis svojstva",
+  "tools.database.editPropertyDescription": "Uredi opis svojstva",
   "tools.database.pageVisibility": "Vidljivost svojstva",
   "tools.database.pageVisibility.always": "Uvijek prikaži",
   "tools.database.pageVisibility.hideWhenEmpty": "Sakrij kad je prazno",

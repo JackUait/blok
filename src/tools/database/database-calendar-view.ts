@@ -99,6 +99,7 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
   private suppressClick = false;
   /** The press found a menu open: its click only closes the menu. */
   private pressClosedMenu = false;
+  private gestureClosedMenu = false;
   /** Days in grid order, for arrow keys. */
   private shownDays: string[] = [];
   private columns = 7;
@@ -147,6 +148,7 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
 
     root.appendChild(this.createGrid());
     root.addEventListener('click', this.onClick);
+    root.addEventListener('dblclick', this.onDoubleClick);
     root.addEventListener('keydown', this.onKeyDown);
     root.addEventListener('pointerdown', this.onPointerDown);
 
@@ -484,6 +486,8 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
   }
 
   private readonly onClick = (event: MouseEvent): void => {
+    // A double-click whose first press closed a menu adds nothing either.
+    this.gestureClosedMenu = (event.detail > 1 && this.gestureClosedMenu) || this.pressClosedMenu;
     if (this.suppressClick) {
       this.suppressClick = false;
 
@@ -539,7 +543,7 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     const rowId = target.closest('[data-blok-database-calendar-event]')?.getAttribute('data-row-id');
 
     if (rowId === null || rowId === undefined) {
-      this.addOnPlainClick(target, event);
+      this.clearOnPlainClick(target, event);
 
       return;
     }
@@ -555,16 +559,33 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     handlers.openRow(rowId);
   };
 
-  /** research/30 B11: a plain click on a day's empty space adds a page on that day and opens it. */
-  private addOnPlainClick(target: Element, event: MouseEvent): void {
+  /** The day a plain, editable click on a day's empty space lands on. */
+  private emptyDayAt(target: Element, event: MouseEvent): string | null {
     const dayIso = target.closest('[data-blok-database-calendar-day]')?.getAttribute('data-day');
 
-    if (dayIso === null || dayIso === undefined || !this.canEdit || this.pressClosedMenu || event.shiftKey || event.metaKey || event.ctrlKey || event.altKey
-      || target.closest('button, a, input, [role="button"]') !== null) {
-      return;
+    if (dayIso === null || dayIso === undefined || !this.canEdit || this.gestureClosedMenu || event.shiftKey || event.metaKey || event.ctrlKey || event.altKey
+      || target.closest('[data-blok-database-calendar-event], button, a, input, [role="button"]') !== null) {
+      return null;
     }
-    this.options.handlers?.addRow(dayIso, true);
+
+    return dayIso;
   }
+
+  /** research/31 §6: a single click on a day's empty space only clears the selection. */
+  private clearOnPlainClick(target: Element, event: MouseEvent): void {
+    if (this.emptyDayAt(target, event) !== null) {
+      this.options.handlers?.lassoRows?.([]);
+    }
+  }
+
+  /** research/31 §6: only a double-click on a day (its number too) adds a page on that day and opens it. */
+  private readonly onDoubleClick = (event: MouseEvent): void => {
+    const dayIso = event.target instanceof Element ? this.emptyDayAt(event.target, event) : null;
+
+    if (dayIso !== null) {
+      this.options.handlers?.addRow(dayIso, true);
+    }
+  };
 
   /** research/22 §1: a lasso from the page margin picks every event it touches. */
   private readonly onLasso = (event: Event): void => {

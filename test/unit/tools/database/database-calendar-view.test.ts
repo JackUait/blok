@@ -447,60 +447,126 @@ describe('DatabaseCalendarView', () => {
       expect(handlers.addRow).toHaveBeenCalledExactlyOnceWith('2026-10-20');
     });
 
-    // research/30 B11: a plain click in an empty day cell made a page dated that day and opened it.
-    it('a plain click in a day cell adds a row on that date and opens it', () => {
+    // research/31 §6: only a real double-click made a page dated that day, and opened it.
+    const doubleClick = (target: HTMLElement, init: MouseEventInit = {}): void => {
+      target.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1, ...init }));
+      target.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 2, ...init }));
+      target.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, detail: 2, ...init }));
+    };
+
+    it('a single click in a day cell adds nothing', () => {
       const { root, handlers } = mount();
 
-      day(root, '2026-10-20').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      day(root, '2026-10-20').dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+      day(root, '2026-10-20').dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+
+      expect(handlers.addRow).not.toHaveBeenCalled();
+      expect(handlers.openRow).not.toHaveBeenCalled();
+    });
+
+    it('a double-click in a day cell adds one row on that date and opens it', () => {
+      const { root, handlers } = mount();
+
+      doubleClick(day(root, '2026-10-20'));
 
       expect(handlers.addRow).toHaveBeenCalledExactlyOnceWith('2026-10-20', true);
       expect(handlers.openRow).not.toHaveBeenCalled();
     });
 
-    it('a click on an event opens it and adds nothing', () => {
+    it('a double-click on the day number adds a row on that date too', () => {
+      const { root, handlers } = mount();
+      const number = day(root, '2026-10-08').querySelector<HTMLElement>('[data-blok-database-calendar-day-number]');
+
+      if (number === null) throw new Error('no day number');
+      doubleClick(number);
+
+      expect(handlers.addRow).toHaveBeenCalledExactlyOnceWith('2026-10-08', true);
+    });
+
+    it('with events selected, a single click on an empty day clears the selection and adds nothing', () => {
+      const lassoRows = vi.fn();
+      const handlers = { ...makeHandlers(), lassoRows };
+      const { root } = mount({ handlers });
+
+      day(root, '2026-10-20').dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+
+      expect(lassoRows).toHaveBeenCalledExactlyOnceWith([]);
+      expect(handlers.addRow).not.toHaveBeenCalled();
+    });
+
+    it('with events selected, a double-click on an empty day clears the selection and adds a row', () => {
+      const lassoRows = vi.fn();
+      const handlers = { ...makeHandlers(), lassoRows };
+      const { root } = mount({ handlers });
+
+      doubleClick(day(root, '2026-10-20'));
+
+      expect(lassoRows).toHaveBeenCalledWith([]);
+      expect(handlers.addRow).toHaveBeenCalledExactlyOnceWith('2026-10-20', true);
+    });
+
+    it('a double-click on an event opens it and adds nothing', () => {
       const { root, handlers } = mount();
 
-      events(root, 'r1')[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      doubleClick(events(root, 'r1')[0]);
 
-      expect(handlers.openRow).toHaveBeenCalledExactlyOnceWith('r1');
+      expect(handlers.openRow).toHaveBeenCalledWith('r1');
       expect(handlers.addRow).not.toHaveBeenCalled();
+    });
+
+    it('a double-click on "+" adds without opening', () => {
+      const { root, handlers } = mount();
+      const add = day(root, '2026-10-20').querySelector<HTMLElement>('[data-blok-database-calendar-add]');
+
+      if (add === null) throw new Error('no +');
+      doubleClick(add);
+
+      expect(handlers.addRow).not.toHaveBeenCalledWith('2026-10-20', true);
     });
 
     it.each([
       ['Shift', { shiftKey: true }],
       ['Cmd', { metaKey: true }],
       ['Ctrl', { ctrlKey: true }],
-    ])('a %s-click in a day cell adds nothing', (_name, modifiers) => {
+      ['Alt', { altKey: true }],
+    ])('a %s-double-click in a day cell adds nothing', (_name, modifiers) => {
       const { root, handlers } = mount();
 
-      day(root, '2026-10-20').dispatchEvent(new MouseEvent('click', { bubbles: true, ...modifiers }));
+      doubleClick(day(root, '2026-10-20'), modifiers);
 
       expect(handlers.addRow).not.toHaveBeenCalled();
     });
 
-    it('a click that closes an open menu only closes it', () => {
+    it('a double-click whose first press closes an open menu only closes it', () => {
       const { root, handlers } = mount();
       const cell = day(root, '2026-10-20');
+      const press = (detail: number): void => {
+        cell.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+        document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+        cell.dispatchEvent(new MouseEvent('click', { bubbles: true, detail }));
+      };
 
       vi.spyOn(PopoverRegistry.instance, 'hasOpenPopovers').mockReturnValue(true);
       cell.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
       vi.mocked(PopoverRegistry.instance.hasOpenPopovers).mockReturnValue(false);
       document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
-      cell.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      cell.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+      press(2);
+      cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, detail: 2 }));
 
       expect(handlers.addRow).not.toHaveBeenCalled();
 
-      cell.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
-      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
-      cell.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      press(1);
+      press(2);
+      cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, detail: 2 }));
 
       expect(handlers.addRow).toHaveBeenCalledExactlyOnceWith('2026-10-20', true);
     });
 
-    it('read-only: a click in a day cell adds nothing', () => {
+    it('read-only: a double-click in a day cell adds nothing', () => {
       const { root, handlers } = mount({ readOnly: true });
 
-      day(root, '2026-10-20').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      doubleClick(day(root, '2026-10-20'));
 
       expect(handlers.addRow).not.toHaveBeenCalled();
     });

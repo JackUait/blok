@@ -237,6 +237,52 @@ test.describe('a lasso from the page margin', () => {
     expect(await picked(page)).toEqual([]);
   });
 
+  // research/31 §6: with events selected, one click on an empty day cleared them; a double-click cleared them and made a page.
+  for (const [name, clicks] of [['a single click', 1], ['a double-click', 2]] as const) {
+    test(`${name} on an empty day clears a drag box selection${clicks === 2 ? ' and adds a row there' : ', adds nothing'}`, async ({ page }) => {
+      const today = new Date();
+      const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() === today.getDate();
+      const [first, second] = await isoDays(page, lastDay ? [-1, 0] : [0, 1]);
+
+      await mount(page, blocks({ type: 'calendar' }, [first, second]));
+      const events = page.locator('[data-blok-database-calendar-event]');
+
+      await expect(events).toHaveCount(2);
+      const a = await events.nth(0).boundingBox();
+      const b = await events.nth(1).boundingBox();
+      const cell = await page.locator(`[data-blok-database-calendar-day][data-day="${first}"]`).boundingBox();
+      const emptyDay = page.locator('[data-blok-database-calendar-day]').filter({ hasNot: page.locator('[data-blok-database-calendar-event]') }).last();
+      const empty = await emptyDay.boundingBox();
+      const emptyIso = await emptyDay.getAttribute('data-day');
+
+      if (a === null || b === null || cell === null || empty === null) {
+        throw new Error('no boxes');
+      }
+
+      await lasso(
+        page,
+        { x: cell.x + 8, y: cell.y + cell.height - 6 },
+        { x: Math.max(a.x + a.width, b.x + b.width) - 4, y: Math.min(a.y, b.y) + 4 }
+      );
+      expect(await picked(page)).toEqual(['r1', 'r2']);
+
+      const at = { x: empty.x + empty.width / 2, y: empty.y + empty.height - 8 };
+
+      await (clicks === 2 ? page.mouse.dblclick(at.x, at.y) : page.mouse.click(at.x, at.y));
+
+      expect(await picked(page)).toEqual([]);
+      await expect.poll(async () => page.evaluate(async () => {
+        const output = await window.blokInstance?.save();
+
+        return output?.blocks.filter((block) => block.type === 'database-row').map((block) => {
+          const due = (block.data as { properties: Record<string, unknown> }).properties['p-due'];
+
+          return typeof due === 'string' ? due : '';
+        }).sort() ?? [];
+      })).toEqual((clicks === 2 ? [first, second, '', emptyIso ?? 'none'] : [first, second, '']).sort());
+    });
+  }
+
   test('across a board still selects the database block, as before', async ({ page }) => {
     await mount(page, blocks({ type: 'board', groupBy: 'p-stage' }));
     const cardBox = await item(page, '[data-blok-database-card]', 'r1').boundingBox();

@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen, waitFor, within } from '@testing-library/dom';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { configure, fireEvent, getConfig, screen, waitFor, within } from '@testing-library/dom';
 
 import { Blok } from '../../../../../src/blok';
 import { releaseGap, reserveGap } from '../../../../../src/components/modules/assistant/gap';
@@ -33,6 +33,13 @@ const settle = (ms = 0): Promise<void> => new Promise((resolve) => {
 });
 
 const editors: TestEditor[] = [];
+
+// Each status line holds 0.6s and the answer waits for the queue, so a run of
+// instant model calls needs more than the default 1s wait.
+const asyncTimeout = getConfig().asyncUtilTimeout;
+
+beforeAll(() => configure({ asyncUtilTimeout: 4000 }));
+afterAll(() => configure({ asyncUtilTimeout: asyncTimeout }));
 
 const insertBatch = (text: string): AgentModelResponse => ({
   stop_reason: 'tool_use',
@@ -504,21 +511,55 @@ describe('in-editor assistant bar', () => {
     editor.agent.openAssistant();
     observer.observe(bar(), { subtree: true, childList: true, characterData: true });
     submit('Write');
-    await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+    // Each line holds 0.6s, and the answer waits for the queue.
+    await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible(), { timeout: 4000 });
     observer.disconnect();
 
+    // Every step shows, in order. A Thinking a later step overtook is skipped.
     expect(statuses).toEqual([
       'Thinking…',
       'Reading the page…',
-      'Thinking…',
       'Looking up blocks…',
-      'Thinking…',
       'Writing a paragraph…',
     ]);
     expect(within(bar()).getByRole('status')).toHaveTextContent('');
   });
 
-  it('holds the line naming a block long enough to read before Thinking returns', async () => {
+  it('queues lines that come faster than 0.6s and shows each for at least 0.6s, Thinking too', async () => {
+    const { model, release } = gated(answer('Done.'));
+    const responses: AgentModelResponse[] = [
+      { stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'r1', name: 'blok_read', input: {} }] },
+      { stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'd1', name: 'blok_describe', input: {} }] },
+      insertBatch('From AI'),
+    ];
+    const editor = await createEditor(async (request) => responses.shift() ?? model(request));
+    const shown: Array<{ text: string; at: number }> = [];
+    const observer = new MutationObserver(() => {
+      const text = document.querySelector('[data-blok-testid="assistant-bar"] [role="status"]')?.textContent ?? '';
+
+      if (text !== '' && shown.at(-1)?.text !== text) {
+        shown.push({ text, at: performance.now() });
+      }
+    });
+
+    editor.agent.openAssistant();
+    observer.observe(bar(), { subtree: true, childList: true, characterData: true });
+    submit('Write');
+    await waitFor(() => expect(shown.map(({ text }) => text)).toEqual([
+      'Thinking…', 'Reading the page…', 'Looking up blocks…', 'Writing a paragraph…', 'Thinking…',
+    ]), { timeout: 4000 });
+    observer.disconnect();
+
+    const durations = shown.slice(1).map(({ at }, index) => at - shown[index].at);
+
+    // The observer stamps a line late when a long task follows its render, so allow some slack.
+    durations.forEach((ms) => expect(ms).toBeGreaterThanOrEqual(550));
+    expect(within(bar()).getByRole('status')).toHaveTextContent('Thinking…');
+    release();
+    await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+  });
+
+  it('holds the line naming a block for 0.6s before Thinking returns', async () => {
     const { model, release } = gated(answer('Done.'));
     const responses = [insertBatch('From AI')];
     const editor = await createEditor(async (request) => responses.shift() ?? model(request));
@@ -527,11 +568,12 @@ describe('in-editor assistant bar', () => {
     submit('Write');
     await settle(50);
 
-    expect(within(bar()).getByRole('status')).toHaveTextContent('Writing a paragraph…');
-
-    await settle(1600);
-
+    // The first Thinking holds its 0.6s, so the write waits in the queue.
     expect(within(bar()).getByRole('status')).toHaveTextContent('Thinking…');
+    await waitFor(() => expect(within(bar()).getByRole('status')).toHaveTextContent('Writing a paragraph…'));
+    await settle(400);
+    expect(within(bar()).getByRole('status')).toHaveTextContent('Writing a paragraph…');
+    await waitFor(() => expect(within(bar()).getByRole('status')).toHaveTextContent('Thinking…'));
     release();
     await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
   });
@@ -1044,17 +1086,17 @@ describe('in-editor assistant bar', () => {
 
       emit({ type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' });
       emit({ type: 'tool_input', index: 0, json: call.json.slice(0, call.json.indexOf('A big ') + 'A big '.length) });
-      expect(within(bar()).getByRole('status')).toHaveTextContent('Writing a paragraph…');
+      await waitFor(() => expect(within(bar()).getByRole('status')).toHaveTextContent('Writing a paragraph…'));
 
-      await settle(1000);
+      await settle(300);
       emit({ type: 'tool_input', index: 0, json: call.json });
       emit({ type: 'tool_end', index: 0 });
       await waitFor(async () => expect(await texts(editor)).toEqual(['Hello', 'A big paragraph']));
       calls[0].finish(call.use);
       await waitFor(() => expect(calls).toHaveLength(2));
 
-      // The hold began with the first words, so Thinking is back 1.5s after them, not 1.5s after execute.
-      await settle(700);
+      // The hold began with the first words, so Thinking is back 0.6s after them, not 0.6s after execute.
+      await settle(400);
       observer.disconnect();
       expect(within(bar()).getByRole('status')).toHaveTextContent('Thinking…');
       expect(statuses).toEqual(['Thinking…', 'Writing a paragraph…', 'Thinking…']);

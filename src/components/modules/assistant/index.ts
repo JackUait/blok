@@ -26,8 +26,8 @@ interface ReturnPoint {
   range: Range | null;
 }
 
-/** How long a line naming a write stays up before "Thinking…" may replace it. */
-const WRITE_HOLD_MS = 1500;
+/** The least time a status line stays up. A write takes a few ms, so a shorter line looks like a glitch. */
+const LINE_MS = 600;
 
 /** The reveal class and its length. Keep REVEAL_MS at least the `blok-ai-reveal` animation in assistant.css. */
 const REVEAL_CLASS = 'blok-ai-reveal';
@@ -68,9 +68,13 @@ export class Assistant extends Module {
   private edited = false;
   /** The bar's pick. Undefined when the host offers no choice. */
   private level: AgentThinkingLevel | undefined;
-  private holdTimer: ReturnType<typeof setTimeout> | null = null;
-  /** The line waiting for the hold to end. */
-  private heldStatus: string | null = null;
+  /** Runs while the shown line has not had its LINE_MS yet. */
+  private lineTimer: ReturnType<typeof setTimeout> | null = null;
+  private shownLine: string | null = null;
+  /** Lines waiting their turn. */
+  private readonly lines: string[] = [];
+  /** A finished answer waits for the queued lines. */
+  private pendingResult: AgentRunResult | null = null;
   private preview: LivePreview | null = null;
   /** False once the answer is stopped or over, so late stream events draw nothing. */
   private listening = false;
@@ -206,7 +210,7 @@ export class Assistant extends Module {
    */
   public close(options: { restoreFocus?: boolean } = {}): void {
     this.answerId += 1;
-    this.clearHold();
+    this.clearLines();
     this.endStream();
     this.run?.stop();
     this.run?.end();
@@ -279,20 +283,20 @@ export class Assistant extends Module {
 
     this.listening = true;
     this.edited = false;
-    this.bar?.render({ kind: 'working', status: this.activityStatus('thinking') });
+    this.clearLines();
+    this.bar?.render({ kind: 'working', status: '' });
+    this.say(this.activityStatus('thinking'));
     // Until the preview draws: a model that does not stream never does.
     this.setSlots(true);
     void pending.then((result) => {
       if (id === this.answerId) {
-        this.show(result);
+        this.finish(result);
       }
     });
   }
 
   /**
    * Show the line for the step the run is on. Hosts reword it with i18n messages.
-   * A line naming a write stays up for WRITE_HOLD_MS: the write itself takes a few
-   * milliseconds, so the next "Thinking…" would hide it at once.
    * @param activity - 'thinking', or the tool the model calls
    * @param input - that tool's input
    */
@@ -301,40 +305,70 @@ export class Assistant extends Module {
       return;
     }
 
-    // Its stream already named it, and the hold runs from its first words.
+    // Its stream already named it.
     if (activity === EXECUTE_TOOL && this.announced !== null) {
       return;
     }
 
-    const status = this.activityStatus(activity, input);
-
-    if (activity === 'thinking' && this.holdTimer !== null) {
-      this.heldStatus = status;
-
-      return;
-    }
-    if (activity === EXECUTE_TOOL) {
-      this.showWrite(status);
-
-      return;
-    }
-    this.clearHold();
-    this.bar?.render({ kind: 'working', status });
+    this.say(this.activityStatus(activity, input));
   }
 
-  /** Shows a line naming a write, and holds it for WRITE_HOLD_MS. */
-  private showWrite(status: string): void {
-    this.clearHold();
-    this.bar?.render({ kind: 'working', status });
-    this.holdTimer = setTimeout(() => {
-      const held = this.heldStatus;
+  /**
+   * Queues a line. Each line stays up for LINE_MS, so steps that come faster
+   * all show, in order. A queued Thinking is dropped once a later step comes.
+   */
+  private say(status: string): void {
+    const thinking = this.activityStatus('thinking');
 
-      this.holdTimer = null;
-      this.heldStatus = null;
-      if (held !== null && this.isWorking()) {
-        this.bar?.render({ kind: 'working', status: held });
+    if (status !== thinking) {
+      while (this.lines.at(-1) === thinking) {
+        this.lines.pop();
       }
-    }, WRITE_HOLD_MS);
+    }
+    if (status === (this.lines.at(-1) ?? this.shownLine)) {
+      return;
+    }
+    this.lines.push(status);
+    if (this.lineTimer === null) {
+      this.nextLine();
+    }
+  }
+
+  private nextLine(): void {
+    this.lineTimer = null;
+    const status = this.lines.shift();
+
+    if (status === undefined) {
+      const result = this.pendingResult;
+
+      this.pendingResult = null;
+      if (result !== null) {
+        this.show(result);
+      }
+
+      return;
+    }
+    if (!this.isWorking()) {
+      return;
+    }
+    this.shownLine = status;
+    this.bar?.render({ kind: 'working', status });
+    this.lineTimer = setTimeout(() => this.nextLine(), LINE_MS);
+  }
+
+  /** A finished answer shows once the queued steps have shown. Any other end shows at once. */
+  private finish(result: AgentRunResult): void {
+    const thinking = this.activityStatus('thinking');
+
+    while (this.lines.at(-1) === thinking) {
+      this.lines.pop();
+    }
+    if (result.status !== 'done' || this.lineTimer === null) {
+      this.show(result);
+
+      return;
+    }
+    this.pendingResult = result;
   }
 
   /** Names a streaming call from its first words, once the part that picks the line is whole. */
@@ -351,7 +385,7 @@ export class Assistant extends Module {
       return;
     }
     this.announced = { id, status };
-    this.showWrite(status);
+    this.say(status);
   }
 
   private activityStatus(activity: string, input?: unknown): string {
@@ -360,12 +394,14 @@ export class Assistant extends Module {
     return this.Blok.I18n.t(key);
   }
 
-  private clearHold(): void {
-    if (this.holdTimer !== null) {
-      clearTimeout(this.holdTimer);
+  private clearLines(): void {
+    if (this.lineTimer !== null) {
+      clearTimeout(this.lineTimer);
     }
-    this.holdTimer = null;
-    this.heldStatus = null;
+    this.lineTimer = null;
+    this.shownLine = null;
+    this.lines.length = 0;
+    this.pendingResult = null;
   }
 
   private startRun(prompt: string): Promise<AgentRunResult> | null {
@@ -401,7 +437,7 @@ export class Assistant extends Module {
   }
 
   private show(result: AgentRunResult): void {
-    this.clearHold();
+    this.clearLines();
     this.endStream();
     this.changed = this.changed || result.changed.length > 0;
 

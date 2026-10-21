@@ -4,7 +4,8 @@ import { DatabaseTableView, createTableState } from '../../../../src/tools/datab
 import type { TableHandlers, TableState, DatabaseTableViewOptions, TableGroup } from '../../../../src/tools/database/database-table-view';
 import { calculationItems } from '../../../../src/tools/database/database-table-menus';
 import { PROPERTY_TYPE_META } from '../../../../src/tools/database/database-property-types';
-import { IconSplitView } from '../../../../src/components/icons';
+import { IconInfo, IconSplitView } from '../../../../src/components/icons';
+import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, PropertyType, PropertyValue } from '../../../../src/tools/database/types';
 
@@ -189,6 +190,73 @@ describe('DatabaseTableView', () => {
 
       expect(icon?.textContent).toBe('🙂');
       expect(icon?.querySelector('svg')).toBeNull();
+    });
+
+    describe('property description (research/30 X2)', () => {
+      const described: PropertyDefinition[] = [schema[0], { ...schema[1], description: 'What we noted' }, schema[2]];
+      const header = (root: HTMLElement, id: string): HTMLElement => {
+        const el = root.querySelector<HTMLElement>(`[role="columnheader"][data-property-id="${id}"]`);
+
+        if (el === null) throw new Error(`no header ${id}`);
+
+        return el;
+      };
+      const shownHint = (): { text: string; placement: string | null } | null => {
+        const wrapper = document.querySelector('[data-blok-testid="tooltip"]');
+
+        return wrapper?.getAttribute('data-blok-shown') === 'true'
+          ? { text: document.querySelector('[data-blok-testid="tooltip-content"]')?.textContent ?? '', placement: wrapper.getAttribute('data-blok-placement') }
+          : null;
+      };
+
+      beforeEach(() => {
+        destroyTooltip();
+        vi.useFakeTimers();
+      });
+
+      afterEach(() => {
+        destroyTooltip();
+        vi.useRealTimers();
+      });
+
+      it('draws the info icon after the name only when the property has a description', () => {
+        const { root } = mount({ schema: described });
+        const button = header(root, 'p-notes').querySelector('[data-blok-database-table-column-button]');
+        const icon = header(root, 'p-notes').querySelector<HTMLElement>('[data-blok-database-table-column-description]');
+        const expected = document.createElement('span');
+
+        expected.innerHTML = IconInfo;
+        expect(icon?.innerHTML).toBe(expected.innerHTML);
+        expect(icon?.previousElementSibling?.hasAttribute('data-blok-database-table-column-name')).toBe(true);
+        expect(icon?.parentElement).toBe(button);
+        // Size and ink come from the type icon's rule.
+        expect(icon?.hasAttribute('data-blok-database-table-column-icon')).toBe(true);
+        // The description must not join the header's name.
+        expect(icon?.getAttribute('aria-hidden')).toBe('true');
+        expect(header(root, 'p-notes').getAttribute('aria-description')).toBe('What we noted');
+        expect(header(root, 'p-amount').querySelector('[data-blok-database-table-column-description]')).toBeNull();
+        expect(header(root, 'p-amount').hasAttribute('aria-description')).toBe(false);
+      });
+
+      it('shows the description above the header on hover, after the hint delay', () => {
+        const { root } = mount({ schema: described });
+        const cellEl = header(root, 'p-notes');
+        const icon = cellEl.querySelector<HTMLElement>('[data-blok-database-table-column-description]');
+
+        if (icon === null) throw new Error('no description icon');
+        // jsdom lays out nothing; room above the header keeps the hint on top.
+        vi.spyOn(icon, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 100, y: 300, width: 16, height: 16 }));
+        icon.dispatchEvent(new FocusEvent('focus'));
+        vi.advanceTimersByTime(HINT_DELAY);
+        expect(shownHint()).toBeNull();
+
+        cellEl.dispatchEvent(new MouseEvent('mouseenter'));
+        icon.dispatchEvent(new MouseEvent('mouseenter'));
+        vi.advanceTimersByTime(HINT_DELAY - 1);
+        expect(shownHint()).toBeNull();
+        vi.advanceTimersByTime(1);
+        expect(shownHint()).toEqual({ text: 'What we noted', placement: 'top' });
+      });
     });
 
     it('renders a grid whose keyboard belongs to the table', () => {

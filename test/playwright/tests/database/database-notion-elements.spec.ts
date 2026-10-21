@@ -408,6 +408,54 @@ test.describe('property header menu: Edit property opens one level at a time (re
     await expect(open.getByRole('textbox', { name: 'Property description', exact: true })).toHaveValue('First line');
   });
 
+  // research/30 X2: a described property's header shows an (i); hovering it shows the description above the header.
+  test('a described header shows an (i) whose hover hint reads the description above it', async ({ page }) => {
+    const open = page.locator('[data-blok-popover-opened="true"]');
+    const header = page.locator('[data-blok-database-table-column-header][data-property-id="p-amount"]');
+    const info = header.locator('[data-blok-database-table-column-description]');
+    const hint = page.getByTestId('tooltip');
+
+    await expect(info).toHaveCount(0);
+    await header.click();
+    await open.getByRole('button', { name: 'Add property description', exact: true }).click();
+    await page.keyboard.type('First line');
+    await page.keyboard.press('Escape');
+    await expect(open).toHaveCount(0);
+
+    await expect(info).toBeVisible();
+    await expect(header).toHaveAttribute('aria-description', 'First line');
+    const [iconBox, nameBox, headerBox] = await Promise.all([
+      info.boundingBox(),
+      header.locator('[data-blok-database-table-column-name]').boundingBox(),
+      header.boundingBox(),
+    ]);
+
+    expect(iconBox?.width).toBe(16);
+    expect(iconBox?.height).toBe(16);
+    expect((iconBox?.x ?? 0)).toBeGreaterThan((nameBox?.x ?? 0) + (nameBox?.width ?? 0) - 1);
+
+    await page.mouse.move((headerBox?.x ?? 0) - 40, (headerBox?.y ?? 0) - 60);
+    await info.hover();
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 200)));
+    await expect(hint).not.toHaveAttribute('data-blok-shown', 'true');
+    await expect(hint).toHaveAttribute('data-blok-shown', 'true');
+    await expect(page.getByTestId('tooltip-content')).toHaveText('First line');
+    const hintBox = await hint.boundingBox();
+
+    expect((hintBox?.y ?? 0) + (hintBox?.height ?? 0)).toBeLessThanOrEqual(headerBox?.y ?? 0);
+
+    // Clearing the description removes the (i).
+    await page.mouse.move((headerBox?.x ?? 0) - 40, (headerBox?.y ?? 0) - 60);
+    await header.click();
+    const area = open.getByRole('textbox', { name: 'Property description', exact: true });
+
+    await area.fill('');
+    await page.keyboard.press('Escape');
+    await expect(open).toHaveCount(0);
+    await expect(info).toHaveCount(0);
+    await expect(header).not.toHaveAttribute('aria-description', /.*/);
+  });
+
   test('the (i) shows the field even while another submenu is open, and closes that submenu', async ({ page }) => {
     const open = page.locator('[data-blok-popover-opened="true"]');
     const edit = page.locator('[data-blok-popover-opened="true"] [data-blok-item-name="editProperty"]');

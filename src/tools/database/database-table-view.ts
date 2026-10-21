@@ -53,6 +53,7 @@ import {
   IconMessage,
   IconWand,
   IconWarning,
+  IconInfo,
 } from '../../components/icons';
 
 export { createTableState };
@@ -604,6 +605,19 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     button.append(icon, name);
     cell.appendChild(button);
     onHover(cell, property.name);
+    if (property.description !== undefined && property.description !== '') {
+      const info = document.createElement('span');
+
+      // research/30 X2: an (i) after the name; hovering it shows the description above the header.
+      info.setAttribute('data-blok-database-table-column-icon', '');
+      info.setAttribute('data-blok-database-table-column-description', '');
+      // Hidden so the description stays out of the header's accessible name.
+      info.setAttribute('aria-hidden', 'true');
+      info.innerHTML = IconInfo;
+      button.appendChild(info);
+      cell.setAttribute('aria-description', property.description);
+      onHover(info, property.description, { placement: 'top' });
+    }
     if (property.type === 'button' && this.options.buttonError?.(property) === true) {
       const warning = document.createElement('span');
       const label = this.t('tools.database.buttonError');

@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} pagina's",
   "tools.database.settingsDragToReorder": "Sleep om de volgorde te wijzigen",
   "tools.database.openPagesSide": "Zijweergave",
+  "tools.database.peekResizeHint": "Formaat aanpassen",
+  "tools.database.peekResizeHintAction": "Slepen",
   "tools.database.openPagesCenter": "Middenweergave",
   "tools.database.openPagesFull": "Volledige pagina",
   "tools.database.openPagesSideDescription": "Open pagina's aan de zijkant. De weergave erachter blijft bruikbaar.",

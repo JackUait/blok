@@ -1141,6 +1141,8 @@
   "tools.database.settingsLoadLimitPages": "Pagini: {count}",
   "tools.database.settingsDragToReorder": "Trageți pentru a reordona",
   "tools.database.openPagesSide": "Panoul lateral",
+  "tools.database.peekResizeHint": "Redimensionează",
+  "tools.database.peekResizeHintAction": "Trageți",
   "tools.database.openPagesCenter": "Panoul central",
   "tools.database.openPagesFull": "Pagina întreagă",
   "tools.database.openPagesSideDescription": "Deschideți paginile în lateral. Vizualizarea din spate rămâne interactivă.",

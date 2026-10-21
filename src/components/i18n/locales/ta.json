@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} பக்கங்கள்",
   "tools.database.settingsDragToReorder": "வரிசையை மாற்ற இழுக்கவும்",
   "tools.database.openPagesSide": "பக்கப் பலகம்",
+  "tools.database.peekResizeHint": "அளவை மாற்று",
+  "tools.database.peekResizeHintAction": "இழுக்கவும்",
   "tools.database.openPagesCenter": "மையச் சாளரம்",
   "tools.database.openPagesFull": "முழுப் பக்கம்",
   "tools.database.openPagesSideDescription": "பக்கங்களைப் பக்கவாட்டில் திறக்கும். பின்னால் உள்ள காட்சி செயலில் இருக்கும்.",

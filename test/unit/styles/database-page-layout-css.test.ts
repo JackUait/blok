@@ -117,6 +117,11 @@ describe('database row page layout css', () => {
       .toContain('var(--blok-focus-ring)');
   });
 
+  // research/30 B24: hovering the handle changes nothing on it; only the hint shows.
+  it('gives the side peek resize handle no hover look', () => {
+    expect(database).not.toMatch(/\[data-blok-database-peek-resize\][^{,]*:hover/);
+  });
+
   it('puts the icon in the label column, which keeps the label width', () => {
     const head = ruleBody('[data-blok-database-drawer-prop-head]');
 

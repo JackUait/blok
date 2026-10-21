@@ -1143,6 +1143,8 @@
   "tools.database.settingsLoadLimitPages": "{count} сторінок",
   "tools.database.settingsDragToReorder": "Перетягніть, щоб змінити порядок",
   "tools.database.openPagesSide": "Бічній панелі",
+  "tools.database.peekResizeHint": "Змінити розмір",
+  "tools.database.peekResizeHintAction": "Перетягніть",
   "tools.database.openPagesCenter": "Вікні по центру",
   "tools.database.openPagesFull": "Повній сторінці",
   "tools.database.openPagesSideDescription": "Відкривати сторінки збоку. Подання позаду залишається активним.",

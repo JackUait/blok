@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} страници",
   "tools.database.settingsDragToReorder": "Повлечете за промена на редоследот",
   "tools.database.openPagesSide": "Страничен панел",
+  "tools.database.peekResizeHint": "Промени ги димензиите",
+  "tools.database.peekResizeHintAction": "Повлечете",
   "tools.database.openPagesCenter": "Централен прозорец",
   "tools.database.openPagesFull": "Цела страница",
   "tools.database.openPagesSideDescription": "Отворај страници од страна. Приказот позади останува активен.",

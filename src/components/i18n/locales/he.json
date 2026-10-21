@@ -1141,6 +1141,8 @@
   "tools.database.settingsLoadLimitPages": "{count} דפים",
   "tools.database.settingsDragToReorder": "גרור לשינוי הסדר",
   "tools.database.openPagesSide": "חלונית צדדית",
+  "tools.database.peekResizeHint": "שינוי גודל",
+  "tools.database.peekResizeHintAction": "גרור",
   "tools.database.openPagesCenter": "חלונית מרכזית",
   "tools.database.openPagesFull": "דף מלא",
   "tools.database.openPagesSideDescription": "פתח דפים בצד. התצוגה שמאחור נשארת פעילה.",

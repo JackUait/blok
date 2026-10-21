@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} หน้า",
   "tools.database.settingsDragToReorder": "ลากเพื่อจัดลำดับใหม่",
   "tools.database.openPagesSide": "มุมมองด้านข้าง",
+  "tools.database.peekResizeHint": "ปรับขนาด",
+  "tools.database.peekResizeHintAction": "ลาก",
   "tools.database.openPagesCenter": "มุมมองตรงกลาง",
   "tools.database.openPagesFull": "เต็มหน้า",
   "tools.database.openPagesSideDescription": "เปิดหน้าด้านข้าง มุมมองด้านหลังยังใช้งานได้",

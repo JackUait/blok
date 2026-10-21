@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} صفحات",
   "tools.database.settingsDragToReorder": "ترتیب بدلنے کے لیے گھسیٹیں",
   "tools.database.openPagesSide": "سائیڈ پینل",
+  "tools.database.peekResizeHint": "سائز تبدیل کریں",
+  "tools.database.peekResizeHintAction": "گھسیٹیں",
   "tools.database.openPagesCenter": "مرکزی پینل",
   "tools.database.openPagesFull": "پورا صفحہ",
   "tools.database.openPagesSideDescription": "صفحات کو سائیڈ پر کھولیں۔ پیچھے والا ویو قابلِ استعمال رہتا ہے۔",

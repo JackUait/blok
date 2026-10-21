@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} ទំព័រ",
   "tools.database.settingsDragToReorder": "អូសដើម្បីតម្រៀបឡើងវិញ",
   "tools.database.openPagesSide": "ផ្ទាំងចំហៀង",
+  "tools.database.peekResizeHint": "ប្ដូរទំហំ",
+  "tools.database.peekResizeHintAction": "អូស",
   "tools.database.openPagesCenter": "ផ្ទាំងកណ្ដាល",
   "tools.database.openPagesFull": "ពេញទំព័រ",
   "tools.database.openPagesSideDescription": "បើកទំព័រនៅចំហៀង។ ទិដ្ឋភាពខាងក្រោយនៅតែអាចប្រើបាន។",

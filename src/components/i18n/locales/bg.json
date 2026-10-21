@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} страници",
   "tools.database.settingsDragToReorder": "Плъзнете за пренареждане",
   "tools.database.openPagesSide": "Страничния панел",
+  "tools.database.peekResizeHint": "Преоразмеряване",
+  "tools.database.peekResizeHintAction": "Плъзнете",
   "tools.database.openPagesCenter": "Централния прозорец",
   "tools.database.openPagesFull": "Цяла страница",
   "tools.database.openPagesSideDescription": "Отваряй страниците отстрани. Изгледът отзад остава активен.",

@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} पृष्ठ",
   "tools.database.settingsDragToReorder": "क्रम मिलाउन तान्नुहोस्",
   "tools.database.openPagesSide": "साइड प्यानल",
+  "tools.database.peekResizeHint": "आकार परिवर्तन गर्नुहोस्",
+  "tools.database.peekResizeHintAction": "तान्नुहोस्",
   "tools.database.openPagesCenter": "बीचको प्यानल",
   "tools.database.openPagesFull": "पूरा पृष्ठ",
   "tools.database.openPagesSideDescription": "पृष्ठहरू छेउमा खोल्नुहोस्। पछाडिको दृश्य चलाउन मिल्ने रहन्छ।",

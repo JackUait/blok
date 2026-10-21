@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} પૃષ્ઠો",
   "tools.database.settingsDragToReorder": "ક્રમ બદલવા માટે ખેંચો",
   "tools.database.openPagesSide": "બાજુની પેનલ",
+  "tools.database.peekResizeHint": "કદ બદલો",
+  "tools.database.peekResizeHintAction": "ખેંચો",
   "tools.database.openPagesCenter": "મધ્ય પેનલ",
   "tools.database.openPagesFull": "પૂર્ણ પૃષ્ઠ",
   "tools.database.openPagesSideDescription": "પૃષ્ઠો બાજુમાં ખોલો. પાછળનું દૃશ્ય વાપરી શકાય તેવું રહે છે.",

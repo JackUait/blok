@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} halaman",
   "tools.database.settingsDragToReorder": "Seret untuk menyusun semula",
   "tools.database.openPagesSide": "Panel sisi",
+  "tools.database.peekResizeHint": "Ubah saiz",
+  "tools.database.peekResizeHintAction": "Seret",
   "tools.database.openPagesCenter": "Panel tengah",
   "tools.database.openPagesFull": "Halaman penuh",
   "tools.database.openPagesSideDescription": "Buka halaman di sisi. Paparan di belakang kekal interaktif.",

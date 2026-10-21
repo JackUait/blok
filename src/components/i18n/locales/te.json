@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} పేజీలు",
   "tools.database.settingsDragToReorder": "క్రమం మార్చడానికి లాగండి",
   "tools.database.openPagesSide": "సైడ్ ప్యానెల్",
+  "tools.database.peekResizeHint": "పరిమాణం మార్చు",
+  "tools.database.peekResizeHintAction": "లాగండి",
   "tools.database.openPagesCenter": "మధ్య విండో",
   "tools.database.openPagesFull": "పూర్తి పేజీ",
   "tools.database.openPagesSideDescription": "పేజీలను పక్కన తెరుస్తుంది. వెనుక ఉన్న వీక్షణ పనిచేస్తూనే ఉంటుంది.",

@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} صفحا",
   "tools.database.settingsDragToReorder": "ترتيب بدلائڻ لاءِ ڇڪيو",
   "tools.database.openPagesSide": "پاسي واري پينل",
+  "tools.database.peekResizeHint": "ماپ تبديل ڪريو",
+  "tools.database.peekResizeHintAction": "ڇڪيو",
   "tools.database.openPagesCenter": "وچ وارو پينل",
   "tools.database.openPagesFull": "پورو صفحو",
   "tools.database.openPagesSideDescription": "صفحا پاسي ۾ کوليو. پويان ويو ڪم لائق رهي ٿو.",

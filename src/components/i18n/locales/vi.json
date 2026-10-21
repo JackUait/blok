@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} trang",
   "tools.database.settingsDragToReorder": "Kéo để sắp xếp lại",
   "tools.database.openPagesSide": "Chế độ xem bên",
+  "tools.database.peekResizeHint": "Thay đổi kích thước",
+  "tools.database.peekResizeHintAction": "Kéo",
   "tools.database.openPagesCenter": "Xem ở giữa",
   "tools.database.openPagesFull": "Toàn trang",
   "tools.database.openPagesSideDescription": "Mở trang ở bên cạnh. Chế độ xem phía sau vẫn tương tác được.",

@@ -1242,6 +1242,8 @@ export type BlokMessageKey =
   | 'tools.database.peekFavoriteHint'
   | 'tools.database.peekNext'
   | 'tools.database.peekPrevious'
+  | 'tools.database.peekResizeHint'
+  | 'tools.database.peekResizeHintAction'
   | 'tools.database.peekUnfavoriteHint'
   | 'tools.database.personAnonymous'
   | 'tools.database.personDefault'

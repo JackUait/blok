@@ -1141,6 +1141,8 @@
   "tools.database.settingsLoadLimitPages": "{count} pages",
   "tools.database.settingsDragToReorder": "Glisser pour réorganiser",
   "tools.database.openPagesSide": "Aperçu latéral",
+  "tools.database.peekResizeHint": "Redimensionner",
+  "tools.database.peekResizeHintAction": "Glisser",
   "tools.database.openPagesCenter": "Aperçu centré",
   "tools.database.openPagesFull": "Pleine page",
   "tools.database.openPagesSideDescription": "Ouvrez les pages sur le côté. La vue derrière reste interactive.",

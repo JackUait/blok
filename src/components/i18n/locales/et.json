@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} lehte",
   "tools.database.settingsDragToReorder": "Lohista järjestuse muutmiseks",
   "tools.database.openPagesSide": "Külgpaneelis",
+  "tools.database.peekResizeHint": "Muuda suurust",
+  "tools.database.peekResizeHintAction": "Lohista",
   "tools.database.openPagesCenter": "Keskpaneelis",
   "tools.database.openPagesFull": "Täislehena",
   "tools.database.openPagesSideDescription": "Ava lehed küljel. Taustal olev vaade jääb kasutatavaks.",

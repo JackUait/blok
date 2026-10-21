@@ -270,7 +270,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1485 + 126 + 486 + 4 closure for all 2101 keys', () => {
+  it('rebuilds a disjoint 1487 + 126 + 486 + 4 closure for all 2103 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -284,7 +284,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2101);
+    expect(lifecycle.size).toBe(2103);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -427,7 +427,8 @@ describe('current English catalog lifecycle coverage', () => {
       // -1: tools.database.dateFormat.full left for registered-namespace-compatible: the CSV type
       // label now builds its date-format key from the picked format.
       // +62: the "More templates" gallery and its four templates (60 new keys; net 2 moved over from registered-namespace-compatible).
-      'executable-literal': 1485,
+      // +2: the side peek resize hint calls tools.database.peekResizeHint and peekResizeHintAction by literal.
+      'executable-literal': 1487,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

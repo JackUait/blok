@@ -177,3 +177,49 @@ test('light keeps the 0.6 backdrop and the white panel (research/08)', async ({ 
   await expect(page.getByRole('dialog')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
   await expect(page.locator('[data-blok-database-peek-backdrop]')).toHaveCSS('background-color', 'rgba(15, 15, 15, 0.6)');
 });
+
+// research/30 B24: hover changes nothing on the handle; a hint beside it follows the pointer's height.
+test('side peek handle: no hover look, and a "Resize Drag" hint to its left that follows the pointer', async ({ page }) => {
+  await mount(page, blocks('side'));
+  await openRow(page);
+  const handle = page.locator('[data-blok-database-peek-resize]');
+
+  await expect(handle).toBeVisible();
+  const look = async (): Promise<string> => handle.evaluate((el) => {
+    const s = getComputedStyle(el);
+
+    return [s.backgroundColor, s.boxShadow, s.opacity, getComputedStyle(el, '::before').content, getComputedStyle(el, '::after').content].join('|');
+  });
+  const rest = await look();
+  const box = await handle.boundingBox();
+
+  if (box === null) throw new Error('no handle');
+  await page.mouse.move(box.x - 60, box.y + 300);
+  await page.mouse.move(box.x + 6, box.y + 300);
+  const tooltip = page.getByRole('tooltip');
+
+  // Never instant: still hidden well inside the 300ms floor.
+  await page.evaluate(() => new Promise<void>((resolve) => {
+    setTimeout(resolve, 150);
+  }));
+  await expect(tooltip).toBeHidden();
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip).toHaveText('Resize Drag');
+  expect(await look()).toBe(rest);
+
+  const first = await tooltip.boundingBox();
+
+  if (first === null) throw new Error('no tooltip');
+  expect(first.x + first.width).toBeLessThanOrEqual(box.x);
+  expect(Math.abs(first.y + first.height / 2 - (box.y + 300))).toBeLessThan(2);
+
+  await page.mouse.move(box.x + 6, box.y + 420);
+  await expect.poll(async () => {
+    const next = await tooltip.boundingBox();
+
+    return next === null ? NaN : Math.round(next.y + next.height / 2 - (box.y + 420));
+  }).toBe(0);
+
+  await page.mouse.move(box.x - 200, box.y + 420);
+  await expect(tooltip).toBeHidden();
+});

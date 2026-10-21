@@ -1141,6 +1141,8 @@
   "tools.database.settingsLoadLimitPages": "{count} páginas",
   "tools.database.settingsDragToReorder": "Arraste para reordenar",
   "tools.database.openPagesSide": "Visualização lateral",
+  "tools.database.peekResizeHint": "Redimensionar",
+  "tools.database.peekResizeHintAction": "Arraste",
   "tools.database.openPagesCenter": "Visualização central",
   "tools.database.openPagesFull": "Página inteira",
   "tools.database.openPagesSideDescription": "Abra as páginas na lateral. A visualização ao fundo continua interativa.",

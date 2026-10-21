@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} sayfa",
   "tools.database.settingsDragToReorder": "Yeniden sıralamak için sürükle",
   "tools.database.openPagesSide": "Yan panel",
+  "tools.database.peekResizeHint": "Yeniden boyutlandır",
+  "tools.database.peekResizeHintAction": "Sürükle",
   "tools.database.openPagesCenter": "Orta panel",
   "tools.database.openPagesFull": "Tam sayfa",
   "tools.database.openPagesSideDescription": "Sayfaları yanda açar. Arkadaki görünüm etkileşimli kalır.",

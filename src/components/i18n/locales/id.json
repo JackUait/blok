@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} halaman",
   "tools.database.settingsDragToReorder": "Seret untuk mengurutkan ulang",
   "tools.database.openPagesSide": "Panel samping",
+  "tools.database.peekResizeHint": "Ubah ukuran",
+  "tools.database.peekResizeHintAction": "Seret",
   "tools.database.openPagesCenter": "Panel tengah",
   "tools.database.openPagesFull": "Halaman penuh",
   "tools.database.openPagesSideDescription": "Buka halaman di samping. Tampilan di belakangnya tetap interaktif.",

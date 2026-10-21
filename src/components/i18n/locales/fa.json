@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} صفحه",
   "tools.database.settingsDragToReorder": "برای مرتب‌سازی بکشید",
   "tools.database.openPagesSide": "پنل کناری",
+  "tools.database.peekResizeHint": "تغییر اندازه",
+  "tools.database.peekResizeHintAction": "بکشید",
   "tools.database.openPagesCenter": "پنجره مرکزی",
   "tools.database.openPagesFull": "تمام‌صفحه",
   "tools.database.openPagesSideDescription": "صفحه‌ها را در کنار باز کنید. نمای پشت آن فعال می‌ماند.",

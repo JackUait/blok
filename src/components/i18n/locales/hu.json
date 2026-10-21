@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} oldal",
   "tools.database.settingsDragToReorder": "Húzással átrendezheti",
   "tools.database.openPagesSide": "Oldalsó panelen",
+  "tools.database.peekResizeHint": "Átméretezés",
+  "tools.database.peekResizeHintAction": "Húzza",
   "tools.database.openPagesCenter": "Középső ablakban",
   "tools.database.openPagesFull": "Teljes oldalon",
   "tools.database.openPagesSideDescription": "Az oldalak oldalt nyílnak meg. A háttérben lévő nézet használható marad.",

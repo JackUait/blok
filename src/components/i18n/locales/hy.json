@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} էջ",
   "tools.database.settingsDragToReorder": "Քաշեք՝ վերադասավորելու համար",
   "tools.database.openPagesSide": "Կողային վահանակ",
+  "tools.database.peekResizeHint": "Փոխել չափը",
+  "tools.database.peekResizeHintAction": "Քաշեք",
   "tools.database.openPagesCenter": "Կենտրոնական պատուհան",
   "tools.database.openPagesFull": "Ամբողջ էջ",
   "tools.database.openPagesSideDescription": "Բացել էջերը կողքից։ Հետևի տեսքը մնում է ակտիվ։",

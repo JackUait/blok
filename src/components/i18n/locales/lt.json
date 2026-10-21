@@ -1143,6 +1143,8 @@
   "tools.database.settingsLoadLimitPages": "Puslapių: {count}",
   "tools.database.settingsDragToReorder": "Vilkite norėdami pakeisti tvarką",
   "tools.database.openPagesSide": "Šoniniame skydelyje",
+  "tools.database.peekResizeHint": "Keisti dydį",
+  "tools.database.peekResizeHintAction": "Vilkite",
   "tools.database.openPagesCenter": "Centriniame skydelyje",
   "tools.database.openPagesFull": "Visame puslapyje",
   "tools.database.openPagesSideDescription": "Atidaryti puslapius šone. Užpakalinis rodinys lieka aktyvus.",

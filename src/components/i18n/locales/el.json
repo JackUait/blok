@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} σελίδες",
   "tools.database.settingsDragToReorder": "Σύρετε για αλλαγή σειράς",
   "tools.database.openPagesSide": "Πλαϊνό πλαίσιο",
+  "tools.database.peekResizeHint": "Αλλαγή μεγέθους",
+  "tools.database.peekResizeHintAction": "Σύρετε",
   "tools.database.openPagesCenter": "Κεντρικό πλαίσιο",
   "tools.database.openPagesFull": "Πλήρη σελίδα",
   "tools.database.openPagesSideDescription": "Άνοιγμα σελίδων στο πλάι. Η προβολή στο φόντο παραμένει διαδραστική.",

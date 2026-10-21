@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} पृष्ठे",
   "tools.database.settingsDragToReorder": "क्रम बदलण्यासाठी ओढा",
   "tools.database.openPagesSide": "बाजूचे पॅनेल",
+  "tools.database.peekResizeHint": "आकार बदला",
+  "tools.database.peekResizeHintAction": "ओढा",
   "tools.database.openPagesCenter": "मध्य पॅनेल",
   "tools.database.openPagesFull": "पूर्ण पृष्ठ",
   "tools.database.openPagesSideDescription": "पृष्ठे बाजूला उघडा. मागील दृश्य वापरता येत राहते.",

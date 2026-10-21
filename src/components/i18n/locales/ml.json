@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} പേജുകൾ",
   "tools.database.settingsDragToReorder": "ക്രമം മാറ്റാൻ വലിച്ചിടുക",
   "tools.database.openPagesSide": "സൈഡ് പാനൽ",
+  "tools.database.peekResizeHint": "വലുപ്പം മാറ്റുക",
+  "tools.database.peekResizeHintAction": "വലിച്ചിടുക",
   "tools.database.openPagesCenter": "മധ്യ പാനൽ",
   "tools.database.openPagesFull": "പൂർണ്ണ പേജ്",
   "tools.database.openPagesSideDescription": "പേജുകൾ വശത്ത് തുറക്കുക. പിന്നിലെ കാഴ്ച ഉപയോഗിക്കാനാകും.",

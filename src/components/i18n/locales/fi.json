@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} sivua",
   "tools.database.settingsDragToReorder": "Vedä järjestääksesi uudelleen",
   "tools.database.openPagesSide": "Sivupaneelissa",
+  "tools.database.peekResizeHint": "Muuta kokoa",
+  "tools.database.peekResizeHintAction": "Vedä",
   "tools.database.openPagesCenter": "Keskipaneelissa",
   "tools.database.openPagesFull": "Koko sivuna",
   "tools.database.openPagesSideDescription": "Avaa sivut sivupaneeliin. Taustalla oleva näkymä pysyy käytettävissä.",

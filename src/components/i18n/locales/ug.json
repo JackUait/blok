@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} بەت",
   "tools.database.settingsDragToReorder": "تەرتىپىنى ئۆزگەرتىش ئۈچۈن سۆرەڭ",
   "tools.database.openPagesSide": "يان تاختا",
+  "tools.database.peekResizeHint": "ئۆلچىمىنى ئۆزگەرتىش",
+  "tools.database.peekResizeHintAction": "سۆرەڭ",
   "tools.database.openPagesCenter": "ئوتتۇرا تاختا",
   "tools.database.openPagesFull": "تولۇق بەت",
   "tools.database.openPagesSideDescription": "بەتلەرنى يان تەرەپتە ئېچىش. ئارقىدىكى كۆرۈنۈش ئىشلەتكىلى بولىدىغان پېتى قالىدۇ.",

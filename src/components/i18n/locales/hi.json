@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} पृष्ठ",
   "tools.database.settingsDragToReorder": "क्रम बदलने के लिए खींचें",
   "tools.database.openPagesSide": "साइड पैनल",
+  "tools.database.peekResizeHint": "आकार बदलें",
+  "tools.database.peekResizeHintAction": "खींचें",
   "tools.database.openPagesCenter": "केंद्रीय पैनल",
   "tools.database.openPagesFull": "पूरा पृष्ठ",
   "tools.database.openPagesSideDescription": "पृष्ठों को किनारे पर खोलें। पीछे का दृश्य इंटरैक्टिव रहता है।",

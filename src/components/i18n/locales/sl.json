@@ -1143,6 +1143,8 @@
   "tools.database.settingsLoadLimitPages": "{count} strani",
   "tools.database.settingsDragToReorder": "Povlecite za spremembo vrstnega reda",
   "tools.database.openPagesSide": "Stranski plošči",
+  "tools.database.peekResizeHint": "Spremeni velikost",
+  "tools.database.peekResizeHintAction": "Povlecite",
   "tools.database.openPagesCenter": "Osrednjem oknu",
   "tools.database.openPagesFull": "Celotni strani",
   "tools.database.openPagesSideDescription": "Odpiraj strani ob strani. Pogled zadaj ostane interaktiven.",

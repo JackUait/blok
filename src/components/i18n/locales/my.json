@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "စာမျက်နှာ {count} ခု",
   "tools.database.settingsDragToReorder": "အစီအစဉ်ပြန်စီရန် ဆွဲယူပါ",
   "tools.database.openPagesSide": "ဘေးဘောင်",
+  "tools.database.peekResizeHint": "အရွယ်အစား ချိန်ညှိရန်",
+  "tools.database.peekResizeHintAction": "ဆွဲယူပါ",
   "tools.database.openPagesCenter": "အလယ်ဘောင်",
   "tools.database.openPagesFull": "စာမျက်နှာအပြည့်",
   "tools.database.openPagesSideDescription": "စာမျက်နှာများကို ဘေးတွင် ဖွင့်သည်။ နောက်ကွယ်ရှိ မြင်ကွင်းကို ဆက်သုံးနိုင်သည်။",

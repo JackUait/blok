@@ -1097,7 +1097,7 @@
   transform: none;
 }
 
-/* research/22 §10: a 12px col-resize handle on the inner edge. Its hover look was not measured. */
+/* research/22 §10: a 12px col-resize handle on the inner edge. Hover changes nothing (r30 B24). */
 [data-blok-database-peek-resize] {
   position: absolute;
   inset-block: 0;

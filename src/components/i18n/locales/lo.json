@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} ໜ້າ",
   "tools.database.settingsDragToReorder": "ລາກເພື່ອຈັດລຳດັບໃໝ່",
   "tools.database.openPagesSide": "ແຜງດ້ານຂ້າງ",
+  "tools.database.peekResizeHint": "ປ່ຽນຂະໜາດ",
+  "tools.database.peekResizeHintAction": "ລາກ",
   "tools.database.openPagesCenter": "ມຸມມອງກາງ",
   "tools.database.openPagesFull": "ເຕັມໜ້າ",
   "tools.database.openPagesSideDescription": "ເປີດໜ້າຢູ່ດ້ານຂ້າງ. ມຸມມອງດ້ານຫຼັງຍັງໃຊ້ງານໄດ້.",

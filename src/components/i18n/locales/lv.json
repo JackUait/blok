@@ -1141,6 +1141,8 @@
   "tools.database.settingsLoadLimitPages": "{count} lapas",
   "tools.database.settingsDragToReorder": "Velciet, lai mainītu secību",
   "tools.database.openPagesSide": "Sānu panelī",
+  "tools.database.peekResizeHint": "Mainīt izmēru",
+  "tools.database.peekResizeHintAction": "Velciet",
   "tools.database.openPagesCenter": "Centra panelī",
   "tools.database.openPagesFull": "Pilnā lapā",
   "tools.database.openPagesSideDescription": "Atver lapas sānos. Skats aizmugurē paliek interaktīvs.",

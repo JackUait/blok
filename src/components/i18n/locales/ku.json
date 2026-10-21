@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} پەڕە",
   "tools.database.settingsDragToReorder": "ڕاکێشە بۆ ڕیزکردنەوە",
   "tools.database.openPagesSide": "پانێڵی لاتەنیشت",
+  "tools.database.peekResizeHint": "گۆڕینی قەبارە",
+  "tools.database.peekResizeHintAction": "ڕاکێشە",
   "tools.database.openPagesCenter": "پانێڵی ناوەڕاست",
   "tools.database.openPagesFull": "پەڕەی تەواو",
   "tools.database.openPagesSideDescription": "پەڕەکان لە لاتەنیشت بکەرەوە. بینینەکەی پشتەوە کارا دەمێنێتەوە.",

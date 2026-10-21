@@ -1143,6 +1143,8 @@
   "tools.database.settingsLoadLimitPages": "{count} страниц",
   "tools.database.settingsDragToReorder": "Перетащите, чтобы изменить порядок",
   "tools.database.openPagesSide": "Боковой панели",
+  "tools.database.peekResizeHint": "Изменить размер",
+  "tools.database.peekResizeHintAction": "Перетащите",
   "tools.database.openPagesCenter": "Окне по центру",
   "tools.database.openPagesFull": "Полной странице",
   "tools.database.openPagesSideDescription": "Открывать страницы сбоку. Представление позади остаётся активным.",

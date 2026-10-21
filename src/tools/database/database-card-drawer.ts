@@ -16,7 +16,8 @@ import { getUserOS } from '../../components/utils/browser';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { rowActionItems } from './database-table-menus';
 import type { RowActionContext, RowFavorite } from './database-table-menus';
-import { onHover } from '../../components/utils/tooltip';
+import { hide as hideTooltip, onHover, show as showTooltip } from '../../components/utils/tooltip';
+import { createTooltipContent } from '../../components/modules/toolbar/tooltip';
 import { createHeadingToggle } from '../table/table-heading-toggle';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { EmojiPicker } from '../callout/emoji-picker';
@@ -1016,10 +1017,13 @@ export class DatabaseCardDrawer {
       this.setPeekWidth(next, true);
     });
 
+    this.bindPeekHandleHint(handle, drawer);
+
     handle.addEventListener('pointerdown', (event) => {
       if (event.button !== 0) {
         return;
       }
+      hideTooltip();
       event.preventDefault();
       if (typeof handle.setPointerCapture === 'function') {
         handle.setPointerCapture(event.pointerId);
@@ -1045,6 +1049,43 @@ export class DatabaseCardDrawer {
     });
 
     return handle;
+  }
+
+  /**
+   * research/30 B24: hovering the handle shows "Resize · Drag" beside it, level
+   * with the pointer. Notion's line "Close · Click or ⌘\" is left out: a click and
+   * ⌘\ on the handle were not measured, and Blok does neither.
+   */
+  private bindPeekHandleHint(handle: HTMLElement, drawer: HTMLElement): void {
+    // The tooltip places itself against this 0px-tall anchor, so it follows the pointer's height.
+    const hintAnchor = document.createElement('div');
+
+    hintAnchor.setAttribute('data-blok-database-peek-hint-anchor', '');
+    hintAnchor.setAttribute('aria-hidden', 'true');
+    Object.assign(hintAnchor.style, { position: 'absolute', insetInline: '0', height: '0', pointerEvents: 'none' });
+    handle.appendChild(hintAnchor);
+
+    const content = createTooltipContent([[
+      { text: this.label('tools.database.peekResizeHint'), highlight: true },
+      { text: ' ', highlight: false },
+      { text: this.label('tools.database.peekResizeHintAction'), highlight: false },
+    ]]);
+    const place = (event: PointerEvent): { placement: string } => {
+      hintAnchor.style.top = `${event.clientY - handle.getBoundingClientRect().top}px`;
+
+      return { placement: getElementDirection(drawer) === 'rtl' ? 'right' : 'left' };
+    };
+
+    handle.addEventListener('pointerenter', (event) => {
+      if (event.pointerType !== 'touch') showTooltip(hintAnchor, content, place(event));
+    });
+    handle.addEventListener('pointermove', (event) => {
+      const options = place(event);
+
+      // Re-showing while the delay runs would restart it; once shown, it moves at once.
+      if (hintAnchor.hasAttribute('aria-describedby')) showTooltip(hintAnchor, content, options);
+    });
+    handle.addEventListener('pointerleave', () => hideTooltip());
   }
 
   private setPeekWidth(width: number, save = false): void {

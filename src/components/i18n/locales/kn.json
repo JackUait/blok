@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} ಪುಟಗಳು",
   "tools.database.settingsDragToReorder": "ಕ್ರಮ ಬದಲಿಸಲು ಎಳೆಯಿರಿ",
   "tools.database.openPagesSide": "ಪಕ್ಕದ ಫಲಕ",
+  "tools.database.peekResizeHint": "ಗಾತ್ರ ಬದಲಿಸಿ",
+  "tools.database.peekResizeHintAction": "ಎಳೆಯಿರಿ",
   "tools.database.openPagesCenter": "ಮಧ್ಯದ ಫಲಕ",
   "tools.database.openPagesFull": "ಪೂರ್ಣ ಪುಟ",
   "tools.database.openPagesSideDescription": "ಪುಟಗಳನ್ನು ಪಕ್ಕದಲ್ಲಿ ತೆರೆಯಿರಿ. ಹಿಂದಿನ ವೀಕ್ಷಣೆ ಬಳಸಲು ಲಭ್ಯವಿರುತ್ತದೆ.",

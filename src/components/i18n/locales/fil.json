@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} pahina",
   "tools.database.settingsDragToReorder": "I-drag para ayusin ang pagkakasunod",
   "tools.database.openPagesSide": "Gilid na panel",
+  "tools.database.peekResizeHint": "Baguhin ang laki",
+  "tools.database.peekResizeHintAction": "I-drag",
   "tools.database.openPagesCenter": "Gitnang panel",
   "tools.database.openPagesFull": "Buong pahina",
   "tools.database.openPagesSideDescription": "Buksan ang mga pahina sa gilid. Magagamit pa rin ang view sa likod.",

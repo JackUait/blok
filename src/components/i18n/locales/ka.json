@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} გვერდი",
   "tools.database.settingsDragToReorder": "ჩავლებით გადაალაგეთ",
   "tools.database.openPagesSide": "გვერდითი პანელი",
+  "tools.database.peekResizeHint": "ზომის შეცვლა",
+  "tools.database.peekResizeHintAction": "ჩაავლეთ",
   "tools.database.openPagesCenter": "ცენტრალური ფანჯარა",
   "tools.database.openPagesFull": "სრული გვერდი",
   "tools.database.openPagesSideDescription": "გვერდები გაიხსნება გვერდით. უკანა ხედი აქტიური რჩება.",

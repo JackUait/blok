@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} pages",
   "tools.database.settingsDragToReorder": "Drag to reorder",
   "tools.database.openPagesSide": "Side peek",
+  "tools.database.peekResizeHint": "Resize",
+  "tools.database.peekResizeHintAction": "Drag",
   "tools.database.openPagesCenter": "Center peek",
   "tools.database.openPagesFull": "Full page",
   "tools.database.openPagesSideDescription": "Open pages on the side. Keeps the view behind interactive.",

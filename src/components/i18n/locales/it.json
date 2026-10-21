@@ -1141,6 +1141,8 @@
   "tools.database.settingsLoadLimitPages": "{count} pagine",
   "tools.database.settingsDragToReorder": "Trascina per riordinare",
   "tools.database.openPagesSide": "Pannello laterale",
+  "tools.database.peekResizeHint": "Ridimensiona",
+  "tools.database.peekResizeHintAction": "Trascina",
   "tools.database.openPagesCenter": "Pannello centrale",
   "tools.database.openPagesFull": "Pagina intera",
   "tools.database.openPagesSideDescription": "Apri le pagine di lato. La vista dietro resta interattiva.",

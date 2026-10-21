@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} хуудас",
   "tools.database.settingsDragToReorder": "Дараалал өөрчлөхийн тулд чирнэ үү",
   "tools.database.openPagesSide": "Хажуугийн самбар",
+  "tools.database.peekResizeHint": "Хэмжээг өөрчлөх",
+  "tools.database.peekResizeHintAction": "Чирнэ үү",
   "tools.database.openPagesCenter": "Төвийн цонх",
   "tools.database.openPagesFull": "Бүтэн хуудас",
   "tools.database.openPagesSideDescription": "Хуудсыг хажуу талд нээнэ. Ард байгаа харагдацыг ашиглах боломжтой хэвээр.",

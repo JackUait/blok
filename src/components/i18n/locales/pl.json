@@ -1143,6 +1143,8 @@
   "tools.database.settingsLoadLimitPages": "{count} stron",
   "tools.database.settingsDragToReorder": "Przeciągnij, aby zmienić kolejność",
   "tools.database.openPagesSide": "Panelu bocznym",
+  "tools.database.peekResizeHint": "Zmień rozmiar",
+  "tools.database.peekResizeHintAction": "Przeciągnij",
   "tools.database.openPagesCenter": "Oknie na środku",
   "tools.database.openPagesFull": "Pełnej stronie",
   "tools.database.openPagesSideDescription": "Otwieraj strony z boku. Widok w tle pozostaje aktywny.",

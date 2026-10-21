@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "පිටු {count}",
   "tools.database.settingsDragToReorder": "පිළිවෙළ වෙනස් කිරීමට අදින්න",
   "tools.database.openPagesSide": "පැති පුවරුව",
+  "tools.database.peekResizeHint": "ප්‍රමාණය වෙනස් කරන්න",
+  "tools.database.peekResizeHintAction": "අදින්න",
   "tools.database.openPagesCenter": "මැද කවුළුව",
   "tools.database.openPagesFull": "සම්පූර්ණ පිටුව",
   "tools.database.openPagesSideDescription": "පිටු පැත්තකින් විවෘත කරයි. පිටුපස දසුන සක්‍රියව පවතී.",

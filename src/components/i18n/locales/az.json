@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} səhifə",
   "tools.database.settingsDragToReorder": "Sıralamaq üçün dartın",
   "tools.database.openPagesSide": "Yan panel",
+  "tools.database.peekResizeHint": "Ölçünü dəyiş",
+  "tools.database.peekResizeHintAction": "Dartın",
   "tools.database.openPagesCenter": "Mərkəzi panel",
   "tools.database.openPagesFull": "Tam səhifə",
   "tools.database.openPagesSideDescription": "Səhifələri yanda açır. Arxadakı görünüş interaktiv qalır.",

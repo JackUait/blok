@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} ਪੰਨੇ",
   "tools.database.settingsDragToReorder": "ਕ੍ਰਮ ਬਦਲਣ ਲਈ ਖਿੱਚੋ",
   "tools.database.openPagesSide": "ਸਾਈਡ ਪੈਨਲ",
+  "tools.database.peekResizeHint": "ਆਕਾਰ ਬਦਲੋ",
+  "tools.database.peekResizeHintAction": "ਖਿੱਚੋ",
   "tools.database.openPagesCenter": "ਵਿਚਕਾਰਲਾ ਪੈਨਲ",
   "tools.database.openPagesFull": "ਪੂਰਾ ਪੰਨਾ",
   "tools.database.openPagesSideDescription": "ਪੰਨੇ ਪਾਸੇ ਖੋਲ੍ਹੋ। ਪਿੱਛੇ ਵਾਲਾ ਦ੍ਰਿਸ਼ ਵਰਤੋਂਯੋਗ ਰਹਿੰਦਾ ਹੈ।",

@@ -1143,6 +1143,8 @@
   "tools.database.settingsLoadLimitPages": "{count} stránek",
   "tools.database.settingsDragToReorder": "Přetažením změníte pořadí",
   "tools.database.openPagesSide": "Bočním panelu",
+  "tools.database.peekResizeHint": "Změnit velikost",
+  "tools.database.peekResizeHintAction": "Přetáhněte",
   "tools.database.openPagesCenter": "Středovém okně",
   "tools.database.openPagesFull": "Celé stránce",
   "tools.database.openPagesSideDescription": "Otevírá stránky po straně. Zobrazení v pozadí zůstane interaktivní.",

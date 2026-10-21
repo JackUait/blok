@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} בלעטער",
   "tools.database.settingsDragToReorder": "שלעפּ צו איבערסדרן",
   "tools.database.openPagesSide": "זײַט־פּאַנעל",
+  "tools.database.peekResizeHint": "ענדערן גרייס",
+  "tools.database.peekResizeHintAction": "שלעפּ",
   "tools.database.openPagesCenter": "צענטער־פּאַנעל",
   "tools.database.openPagesFull": "גאַנצער בלאט",
   "tools.database.openPagesSideDescription": "עפֿן בלעטער אויף דער זײַט. דער אויסשטעל הינטן בלײַבט אַקטיוו.",

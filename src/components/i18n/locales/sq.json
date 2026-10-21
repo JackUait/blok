@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} faqe",
   "tools.database.settingsDragToReorder": "Tërhiq për të rirenditur",
   "tools.database.openPagesSide": "Panelin anësor",
+  "tools.database.peekResizeHint": "Ndrysho madhësinë",
+  "tools.database.peekResizeHintAction": "Tërhiq",
   "tools.database.openPagesCenter": "Panelin qendror",
   "tools.database.openPagesFull": "Faqe të plotë",
   "tools.database.openPagesSideDescription": "Hap faqet anash. Pamja prapa mbetet interaktive.",

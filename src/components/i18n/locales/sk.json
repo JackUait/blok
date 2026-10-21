@@ -1143,6 +1143,8 @@
   "tools.database.settingsLoadLimitPages": "{count} stránok",
   "tools.database.settingsDragToReorder": "Potiahnutím zmeníte poradie",
   "tools.database.openPagesSide": "Bočnom paneli",
+  "tools.database.peekResizeHint": "Zmeniť veľkosť",
+  "tools.database.peekResizeHintAction": "Potiahnite",
   "tools.database.openPagesCenter": "Strednom okne",
   "tools.database.openPagesFull": "Celej stránke",
   "tools.database.openPagesSideDescription": "Otvára stránky na boku. Zobrazenie v pozadí zostane interaktívne.",

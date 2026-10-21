@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} Seiten",
   "tools.database.settingsDragToReorder": "Zum Neuordnen ziehen",
   "tools.database.openPagesSide": "Seitenvorschau",
+  "tools.database.peekResizeHint": "Größe ändern",
+  "tools.database.peekResizeHintAction": "Ziehen",
   "tools.database.openPagesCenter": "Zentrierte Vorschau",
   "tools.database.openPagesFull": "Ganze Seite",
   "tools.database.openPagesSideDescription": "Seiten seitlich öffnen. Die Ansicht dahinter bleibt bedienbar.",

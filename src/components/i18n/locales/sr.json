@@ -1141,6 +1141,8 @@
   "tools.database.settingsLoadLimitPages": "{count} страница",
   "tools.database.settingsDragToReorder": "Превуците за промену редоследа",
   "tools.database.openPagesSide": "Бочном панелу",
+  "tools.database.peekResizeHint": "Промени величину",
+  "tools.database.peekResizeHintAction": "Превуците",
   "tools.database.openPagesCenter": "Централном прозору",
   "tools.database.openPagesFull": "Целој страници",
   "tools.database.openPagesSideDescription": "Отварај странице са стране. Приказ иза остаје активан.",

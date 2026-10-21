@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} sider",
   "tools.database.settingsDragToReorder": "Træk for at ændre rækkefølge",
   "tools.database.openPagesSide": "Sidepanel",
+  "tools.database.peekResizeHint": "Tilpas størrelse",
+  "tools.database.peekResizeHintAction": "Træk",
   "tools.database.openPagesCenter": "Centreret panel",
   "tools.database.openPagesFull": "Hel side",
   "tools.database.openPagesSideDescription": "Åbn sider i siden. Visningen bagved forbliver interaktiv.",

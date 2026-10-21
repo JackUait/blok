@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "Kurasa {count}",
   "tools.database.settingsDragToReorder": "Buruta ili kupanga upya",
   "tools.database.openPagesSide": "Paneli ya kando",
+  "tools.database.peekResizeHint": "Badilisha ukubwa",
+  "tools.database.peekResizeHintAction": "Buruta",
   "tools.database.openPagesCenter": "Paneli ya katikati",
   "tools.database.openPagesFull": "Ukurasa mzima",
   "tools.database.openPagesSideDescription": "Fungua kurasa pembeni. Mwonekano ulio nyuma unaendelea kufanya kazi.",

@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count}টি পৃষ্ঠা",
   "tools.database.settingsDragToReorder": "ক্রম বদলাতে টেনে আনুন",
   "tools.database.openPagesSide": "পার্শ্ব প্যানেল",
+  "tools.database.peekResizeHint": "আকার পরিবর্তন",
+  "tools.database.peekResizeHintAction": "টেনে আনুন",
   "tools.database.openPagesCenter": "কেন্দ্রীয় প্যানেল",
   "tools.database.openPagesFull": "পূর্ণ পৃষ্ঠা",
   "tools.database.openPagesSideDescription": "পৃষ্ঠাগুলি পাশে খুলুন। পেছনের ভিউ ব্যবহারযোগ্য থাকে।",

@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} ޞަފްޙާ",
   "tools.database.settingsDragToReorder": "ތަރުތީބު ބަދަލުކުރަން ދަމާލާ",
   "tools.database.openPagesSide": "ސައިޑް ޕެނަލް",
+  "tools.database.peekResizeHint": "ފުޅާމިން ބަދަލުކުރޭ",
+  "tools.database.peekResizeHintAction": "ދަމާލާ",
   "tools.database.openPagesCenter": "މެދު ޕެނަލް",
   "tools.database.openPagesFull": "ފުރިހަމަ ޞަފްޙާ",
   "tools.database.openPagesSideDescription": "ޞަފްޙާތައް ފަރާތުގައި ހުޅުވާ. ފަހަތުގައިވާ ވިއު ބޭނުންކުރެވޭނެ.",

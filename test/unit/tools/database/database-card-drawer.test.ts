@@ -443,6 +443,129 @@ describe('DatabaseCardDrawer', () => {
     });
   });
 
+  // research/30 B24: hovering the handle shows "Resize · Drag" beside it, level with the pointer.
+  describe('side peek handle hint', () => {
+    const tooltip = (): HTMLElement | null => document.getElementById('blok-tooltip');
+    const shown = (): boolean => tooltip()?.getAttribute('data-state') === 'open';
+    const pointer = (target: HTMLElement, type: string, clientY: number, pointerType = 'mouse'): void => {
+      const event = new MouseEvent(type, { bubbles: type !== 'pointerenter' && type !== 'pointerleave', clientY, clientX: 300 });
+
+      Object.defineProperty(event, 'pointerType', { value: pointerType });
+      target.dispatchEvent(event);
+    };
+    const openSide = (dir?: 'rtl'): { drawer: DatabaseCardDrawer; handle: HTMLElement } => {
+      const wrapper = document.createElement('div');
+
+      if (dir !== undefined) wrapper.dir = dir;
+      document.body.appendChild(wrapper);
+      const drawer = new DatabaseCardDrawer(createOptions({ wrapper }));
+
+      drawer.open(makeRow(), 'side');
+      const handle = wrapper.querySelector<HTMLElement>('[data-blok-database-peek-resize]');
+
+      if (handle === null) throw new Error('no resize handle');
+      const layout = HTMLElement.prototype.getBoundingClientRect;
+
+      // jsdom has no layout: the handle spans the peek, and the hint's anchor sits at its style top.
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function rect(this: HTMLElement) {
+        if (this === handle) return new DOMRect(300, 0, 12, 700);
+        if (this.hasAttribute('data-blok-database-peek-hint-anchor')) return new DOMRect(300, parseFloat(this.style.top), 12, 0);
+
+        return layout.call(this);
+      });
+
+      return { drawer, handle };
+    };
+
+    // Earlier tests clear the body, which detaches the tooltip singleton: start a fresh one.
+    beforeEach(async () => {
+      const { destroy } = await import('../../../../src/components/utils/tooltip');
+
+      destroy();
+      vi.useFakeTimers();
+    });
+
+    afterEach(async () => {
+      const { destroy } = await import('../../../../src/components/utils/tooltip');
+
+      destroy();
+      vi.useRealTimers();
+      document.body.innerHTML = '';
+    });
+
+    it('shows "Resize" and "Drag" only after the hint delay, beside the handle', () => {
+      const { drawer, handle } = openSide();
+
+      pointer(handle, 'pointerenter', 360);
+      vi.advanceTimersByTime(299);
+      expect(shown()).toBe(false);
+      vi.advanceTimersByTime(300);
+
+      expect(shown()).toBe(true);
+      expect(tooltip()?.textContent).toBe('Resize Drag');
+      expect(tooltip()?.getAttribute('data-blok-placement')).toBe('left');
+      drawer.destroy();
+    });
+
+    it('puts the hint on the right in a right-to-left editor', () => {
+      const { drawer, handle } = openSide('rtl');
+
+      pointer(handle, 'pointerenter', 360);
+      vi.advanceTimersByTime(600);
+
+      expect(tooltip()?.getAttribute('data-blok-placement')).toBe('right');
+      drawer.destroy();
+    });
+
+    it('follows the pointer up and down the handle', () => {
+      const { drawer, handle } = openSide();
+
+      pointer(handle, 'pointerenter', 300);
+      vi.advanceTimersByTime(600);
+      const first = parseFloat(tooltip()?.style.top ?? '');
+
+      pointer(handle, 'pointermove', 420);
+
+      expect(parseFloat(tooltip()?.style.top ?? '') - first).toBe(120);
+      drawer.destroy();
+    });
+
+    it('a move before the hint shows does not restart its delay', () => {
+      const { drawer, handle } = openSide();
+
+      pointer(handle, 'pointerenter', 300);
+      vi.advanceTimersByTime(400);
+      pointer(handle, 'pointermove', 320);
+      vi.advanceTimersByTime(200);
+
+      expect(shown()).toBe(true);
+      drawer.destroy();
+    });
+
+    it('hides when the pointer leaves or starts a drag, and shows nothing for touch or focus', () => {
+      const { drawer, handle } = openSide();
+
+      pointer(handle, 'pointerenter', 300);
+      vi.advanceTimersByTime(600);
+      pointer(handle, 'pointerleave', 300);
+      vi.advanceTimersByTime(200);
+      expect(shown()).toBe(false);
+
+      pointer(handle, 'pointerenter', 300);
+      vi.advanceTimersByTime(600);
+      handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, clientY: 300 }));
+      expect(shown()).toBe(false);
+      handle.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      pointer(handle, 'pointerleave', 300);
+      pointer(handle, 'pointerenter', 300, 'touch');
+      handle.focus();
+      vi.advanceTimersByTime(600);
+      expect(shown()).toBe(false);
+      drawer.destroy();
+    });
+  });
+
   describe('accessibility', () => {
     it('drawer has role="complementary" and aria-label', () => {
       const options = createOptions();

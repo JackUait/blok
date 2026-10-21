@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} پاڼې",
   "tools.database.settingsDragToReorder": "د ترتیب بدلولو لپاره کش کړئ",
   "tools.database.openPagesSide": "څنګ پینل",
+  "tools.database.peekResizeHint": "اندازه بدله کړئ",
+  "tools.database.peekResizeHintAction": "کش کړئ",
   "tools.database.openPagesCenter": "منځنی پینل",
   "tools.database.openPagesFull": "بشپړه پاڼه",
   "tools.database.openPagesSideDescription": "پاڼې په څنګ کې پرانیزئ. شاته لید د کار وړ پاتې کېږي.",

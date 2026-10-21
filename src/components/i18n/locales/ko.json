@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "페이지 {count}개",
   "tools.database.settingsDragToReorder": "드래그하여 순서 변경",
   "tools.database.openPagesSide": "사이드 보기",
+  "tools.database.peekResizeHint": "크기 조정",
+  "tools.database.peekResizeHintAction": "드래그",
   "tools.database.openPagesCenter": "가운데 보기",
   "tools.database.openPagesFull": "전체 페이지",
   "tools.database.openPagesSideDescription": "페이지를 옆에 엽니다. 뒤의 보기도 계속 사용할 수 있습니다.",

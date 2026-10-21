@@ -1141,6 +1141,8 @@
   "tools.database.settingsLoadLimitPages": "{count} stranica",
   "tools.database.settingsDragToReorder": "Povuci za promjenu redoslijeda",
   "tools.database.openPagesSide": "Bočnoj ploči",
+  "tools.database.peekResizeHint": "Promijeni veličinu",
+  "tools.database.peekResizeHintAction": "Povuci",
   "tools.database.openPagesCenter": "Središnjem prozoru",
   "tools.database.openPagesFull": "Cijeloj stranici",
   "tools.database.openPagesSideDescription": "Otvaraj stranice sa strane. Prikaz iza ostaje aktivan.",

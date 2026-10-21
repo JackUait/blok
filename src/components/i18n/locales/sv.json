@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} sidor",
   "tools.database.settingsDragToReorder": "Dra för att ändra ordning",
   "tools.database.openPagesSide": "Sidovy",
+  "tools.database.peekResizeHint": "Ändra storlek",
+  "tools.database.peekResizeHintAction": "Dra",
   "tools.database.openPagesCenter": "Centrerad vy",
   "tools.database.openPagesFull": "Helsida",
   "tools.database.openPagesSideDescription": "Öppna sidor vid sidan. Vyn bakom förblir interaktiv.",

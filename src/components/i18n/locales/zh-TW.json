@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} 個頁面",
   "tools.database.settingsDragToReorder": "拖曳以重新排序",
   "tools.database.openPagesSide": "側邊預覽",
+  "tools.database.peekResizeHint": "調整大小",
+  "tools.database.peekResizeHintAction": "拖曳",
   "tools.database.openPagesCenter": "置中預覽",
   "tools.database.openPagesFull": "整頁",
   "tools.database.openPagesSideDescription": "在側邊開啟頁面，後方的檢視仍可互動。",

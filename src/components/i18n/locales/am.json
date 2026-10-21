@@ -1139,6 +1139,8 @@
   "tools.database.settingsLoadLimitPages": "{count} ገጾች",
   "tools.database.settingsDragToReorder": "ቅደም ተከተል ለመቀየር ይጎትቱ",
   "tools.database.openPagesSide": "የጎን ፓነል",
+  "tools.database.peekResizeHint": "መጠን ቀይር",
+  "tools.database.peekResizeHintAction": "ይጎትቱ",
   "tools.database.openPagesCenter": "የመሃል መስኮት",
   "tools.database.openPagesFull": "ሙሉ ገጽ",
   "tools.database.openPagesSideDescription": "ገጾችን በጎን ይክፈቱ። ከበስተጀርባ ያለው ዕይታ ንቁ ሆኖ ይቆያል።",

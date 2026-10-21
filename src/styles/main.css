@@ -635,16 +635,16 @@
  * Applies selection background to the list item itself (not the content wrapper)
  * so that the inline-start indentation is respected
  */
-[data-blok-selected="true"] [data-blok-element-content]:has([data-list-style]) {
+[data-blok-selected="true"] > [data-blok-element-content]:has(> [data-list-style]) {
   @apply bg-transparent;
 }
 
-[data-blok-selected="true"] [data-list-style] [role="listitem"] {
+[data-blok-selected="true"] > [data-blok-element-content] > [data-list-style] > [role="listitem"] {
   @apply bg-selection;
   border-radius: var(--blok-radius-control);
 }
 
-[data-blok-selected="true"] [data-list-style] [role="listitem"] [contenteditable] {
+[data-blok-selected="true"] > [data-blok-element-content] > [data-list-style] > [role="listitem"] [contenteditable] {
   @apply select-none;
 }
 
@@ -655,11 +655,11 @@
  * highlights empty gutters. Drop the wrapper background and draw a padded
  * selection rectangle that hugs the figure's real dimensions instead.
  */
-[data-blok-selected="true"] [data-blok-element-content]:has([data-role="embed-figure"]) {
+[data-blok-selected="true"] > [data-blok-element-content]:has(> [data-blok-tool="embed"] [data-role="embed-figure"]) {
   @apply bg-transparent;
 }
 
-[data-blok-selected="true"] [data-role="embed-figure"]::before {
+[data-blok-selected="true"] > [data-blok-element-content] > [data-blok-tool="embed"] [data-role="embed-figure"]::before {
   @apply content-[''] absolute -inset-2 bg-selection pointer-events-none;
   /* Concentric with the frame it wraps: -inset-2 puts it 8px outside. */
   border-radius: calc(var(--blok-radius-block) + var(--blok-space-2));

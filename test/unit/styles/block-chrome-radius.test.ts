@@ -73,7 +73,7 @@ describe('block highlights', () => {
   });
 
   it('a selected list item uses the control role', () => {
-    expect(radiusOf(main, '[data-blok-selected="true"] [data-list-style] [role="listitem"]')).toBe('var(--blok-radius-control)');
+    expect(radiusOf(main, '[data-blok-selected="true"] > [data-blok-element-content] > [data-list-style] > [role="listitem"]')).toBe('var(--blok-radius-control)');
   });
 
   it('drop indicator bars are pills', () => {

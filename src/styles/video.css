@@ -51,10 +51,10 @@
 }
 
 /* Block-selection highlight: paint the figure box only, not the full zone. */
-[data-blok-element-content].bg-selection:has([data-blok-tool="video"]) {
+[data-blok-element-content].bg-selection:has(> [data-blok-tool="video"]) {
   background-color: transparent;
 }
-[data-blok-element-content].bg-selection:has([data-blok-tool="video"]) .blok-video-inner {
+[data-blok-element-content].bg-selection > [data-blok-tool="video"] .blok-video-inner {
   background-color: var(--blok-selection);
   border-radius: var(--blok-radius-block);
 }

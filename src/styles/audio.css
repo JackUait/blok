@@ -135,10 +135,10 @@
 }
 
 /* ----- block selection ------------------------------------ */
-[data-blok-element-content].bg-selection:has([data-blok-tool="audio"]) {
+[data-blok-element-content].bg-selection:has(> [data-blok-tool="audio"]) {
   background-color: transparent;
 }
-[data-blok-element-content].bg-selection:has([data-blok-tool="audio"]) .blok-audio-inner {
+[data-blok-element-content].bg-selection > [data-blok-tool="audio"] .blok-audio-inner {
   background-color: var(--blok-selection);
 }
 

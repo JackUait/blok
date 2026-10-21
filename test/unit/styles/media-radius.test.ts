@@ -63,7 +63,7 @@ const BORDER = '--blok-border-width-hairline';
 
 const RADII: Array<[string, string, string]> = [
   ['styles/image.css', '[data-blok-tool="image"] .blok-image-inner img', role('block')],
-  ['styles/image.css', '[data-blok-element-content].bg-selection:has([data-blok-tool="image"]) .blok-image-inner', role('block')],
+  ['styles/image.css', '[data-blok-element-content].bg-selection > [data-blok-tool="image"] .blok-image-inner', role('block')],
   ['styles/image.css', '[data-blok-tool="image"] .blok-image-alt-pill', role('control')],
   ['styles/main.css', '[data-blok-tool="image"] .blok-image-toolbar', role('surface')],
   ['styles/image.css', '[data-blok-tool="image"] .blok-image-toolbar button', nested('control')],
@@ -100,7 +100,7 @@ const RADII: Array<[string, string, string]> = [
   ['tools/image/darkroom/darkroom.css', '.blok-darkroom__grid', 'var(--blok-radius-darkroom-frame)'],
   ['tools/image/darkroom/darkroom.css', '.blok-darkroom-flight', 'var(--blok-radius-darkroom-frame)'],
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-media', role('block')],
-  ['styles/video.css', '[data-blok-element-content].bg-selection:has([data-blok-tool="video"]) .blok-video-inner', role('block')],
+  ['styles/video.css', '[data-blok-element-content].bg-selection > [data-blok-tool="video"] .blok-video-inner', role('block')],
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-error-state', role('block')],
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-retry', role('control')],
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-controls__menu', role('surface')],

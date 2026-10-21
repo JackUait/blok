@@ -126,8 +126,8 @@ describe('image toolbar (one bar)', () => {
   });
 
   it('selection is read from the block holder, not the dead data-selected', () => {
-    expect(css).toContain('[data-blok-selected="true"] [data-blok-tool="image"] [data-role="image-selection-ring"]');
-    expect(css).toContain('[data-blok-selected="true"] [data-blok-tool="image"] [data-role="resize-handle"]');
+    expect(css).toContain('[data-blok-selected="true"] > [data-blok-element-content] > [data-blok-tool="image"] [data-role="image-selection-ring"]');
+    expect(css).toContain('[data-blok-selected="true"] > [data-blok-element-content] > [data-blok-tool="image"] [data-role="resize-handle"]');
   });
 });
 

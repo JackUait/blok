@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "Tệp CSV này không có hàng nào",
   "tools.database.csvUntitledColumn": "Cột",
   "tools.database.csvImportDescription": "Tạo cơ sở dữ liệu mới từ tệp CSV của bạn",
+  "tools.database.csvMergeDescription": "Tạo cơ sở dữ liệu mới từ tệp CSV của bạn hoặc hợp nhất nó vào một cơ sở dữ liệu hiện có",
   "tools.database.csvUploadLabel": "Tải lên CSV",
   "tools.database.csvImportLocation": "Vị trí nhập",
   "tools.database.csvChooseFile": "Chọn tệp",

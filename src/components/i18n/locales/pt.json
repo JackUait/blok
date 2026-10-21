@@ -1782,6 +1782,7 @@
   "tools.database.csvEmpty": "Este arquivo CSV não tem linhas",
   "tools.database.csvUntitledColumn": "Coluna",
   "tools.database.csvImportDescription": "Crie um novo banco de dados com seu CSV",
+  "tools.database.csvMergeDescription": "Crie um novo banco de dados com seu CSV ou mescle-o com um existente",
   "tools.database.csvUploadLabel": "Enviar CSV",
   "tools.database.csvImportLocation": "Local de importação",
   "tools.database.csvChooseFile": "Escolher arquivo",

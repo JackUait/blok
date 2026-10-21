@@ -716,6 +716,7 @@ export type BlokMessageKey =
   | 'tools.database.csvImportsHelp'
   | 'tools.database.csvMapHeaders'
   | 'tools.database.csvMerge'
+  | 'tools.database.csvMergeDescription'
   | 'tools.database.csvMerged'
   | 'tools.database.csvNewTable'
   | 'tools.database.csvPasteConvert'

@@ -447,6 +447,15 @@ describe('openCsvImportDialog (research/26 §2, research/27 §2)', () => {
       expect(byTestId('database-csv-location')).toBeNull();
     });
 
+    it('says it can merge only when it merges (research/31 §5a); a new import keeps the short subtitle', () => {
+      openMerge();
+      expect(document.querySelector('[data-blok-database-csv-text]')?.textContent).toBe('tools.database.csvMergeDescription');
+      document.body.innerHTML = '';
+
+      open();
+      expect(document.querySelector('[data-blok-database-csv-text]')?.textContent).toBe('tools.database.csvImportDescription');
+    });
+
     it('maps a header onto the property it names, showing that property\'s name; the rest go to a new property', async () => {
       await mapped();
 

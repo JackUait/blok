@@ -1784,6 +1784,7 @@
   "tools.database.csvEmpty": "Ta datoteka CSV nima vrstic",
   "tools.database.csvUntitledColumn": "Stolpec",
   "tools.database.csvImportDescription": "Ustvarite novo podatkovno bazo iz svojega CSV",
+  "tools.database.csvMergeDescription": "Ustvarite novo podatkovno bazo iz svojega CSV ali ga združite z obstoječo",
   "tools.database.csvUploadLabel": "Naloži CSV",
   "tools.database.csvImportLocation": "Mesto uvoza",
   "tools.database.csvChooseFile": "Izberi datoteko",

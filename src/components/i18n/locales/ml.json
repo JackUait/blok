@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "ഈ CSV ഫയലിൽ വരികളൊന്നുമില്ല",
   "tools.database.csvUntitledColumn": "കോളം",
   "tools.database.csvImportDescription": "നിങ്ങളുടെ CSV-യിൽ നിന്ന് പുതിയ ഡാറ്റാബേസ് സൃഷ്ടിക്കുക",
+  "tools.database.csvMergeDescription": "നിങ്ങളുടെ CSV-യിൽ നിന്ന് പുതിയ ഡാറ്റാബേസ് സൃഷ്ടിക്കുക അല്ലെങ്കിൽ നിലവിലുള്ള ഒന്നുമായി ലയിപ്പിക്കുക",
   "tools.database.csvUploadLabel": "CSV അപ്‌ലോഡ് ചെയ്യുക",
   "tools.database.csvImportLocation": "ഇംപോർട്ട് സ്ഥാനം",
   "tools.database.csvChooseFile": "ഫയൽ തിരഞ്ഞെടുക്കുക",

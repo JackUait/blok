@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "এই CSV ফাইলে কোনো সারি নেই",
   "tools.database.csvUntitledColumn": "কলাম",
   "tools.database.csvImportDescription": "আপনার CSV দিয়ে একটি নতুন ডেটাবেস তৈরি করুন",
+  "tools.database.csvMergeDescription": "আপনার CSV দিয়ে একটি নতুন ডেটাবেস তৈরি করুন বা এটিকে একটি বিদ্যমান ডেটাবেসে একত্র করুন",
   "tools.database.csvUploadLabel": "CSV আপলোড করুন",
   "tools.database.csvImportLocation": "ইমপোর্টের অবস্থান",
   "tools.database.csvChooseFile": "ফাইল বেছে নিন",

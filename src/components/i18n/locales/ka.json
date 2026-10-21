@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "ამ CSV ფაილში მწკრივები არ არის",
   "tools.database.csvUntitledColumn": "სვეტი",
   "tools.database.csvImportDescription": "შექმენით ახალი მონაცემთა ბაზა თქვენი CSV-ით",
+  "tools.database.csvMergeDescription": "შექმენით ახალი მონაცემთა ბაზა თქვენი CSV-ით ან გააერთიანეთ ის არსებულთან",
   "tools.database.csvUploadLabel": "CSV-ის ატვირთვა",
   "tools.database.csvImportLocation": "იმპორტის ადგილი",
   "tools.database.csvChooseFile": "ფაილის არჩევა",

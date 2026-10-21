@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "ይህ የCSV ፋይል ምንም ረድፎች የሉትም",
   "tools.database.csvUntitledColumn": "አምድ",
   "tools.database.csvImportDescription": "ከCSV ፋይል አዲስ የውሂብ ጎታ ፍጠር",
+  "tools.database.csvMergeDescription": "ከCSV ፋይል አዲስ የውሂብ ጎታ ፍጠር ወይም ካለ የውሂብ ጎታ ጋር አዋህደው",
   "tools.database.csvUploadLabel": "CSV ስቀል",
   "tools.database.csvImportLocation": "የማስመጫ ቦታ",
   "tools.database.csvChooseFile": "ፋይል ምረጥ",

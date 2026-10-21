@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "Denne CSV-fil indeholder ingen rækker",
   "tools.database.csvUntitledColumn": "Kolonne",
   "tools.database.csvImportDescription": "Opret en ny database fra din CSV",
+  "tools.database.csvMergeDescription": "Opret en ny database fra din CSV, eller flet den ind i en eksisterende",
   "tools.database.csvUploadLabel": "Overfør CSV",
   "tools.database.csvImportLocation": "Importplacering",
   "tools.database.csvChooseFile": "Vælg fil",

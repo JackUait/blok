@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "આ CSV ફાઇલમાં કોઈ પંક્તિ નથી",
   "tools.database.csvUntitledColumn": "કૉલમ",
   "tools.database.csvImportDescription": "તમારી CSV વડે નવો ડેટાબેઝ બનાવો",
+  "tools.database.csvMergeDescription": "તમારી CSV વડે નવો ડેટાબેઝ બનાવો અથવા તેને હાલના ડેટાબેઝમાં મર્જ કરો",
   "tools.database.csvUploadLabel": "CSV અપલોડ કરો",
   "tools.database.csvImportLocation": "ઇમ્પોર્ટ સ્થાન",
   "tools.database.csvChooseFile": "ફાઇલ પસંદ કરો",

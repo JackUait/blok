@@ -1784,6 +1784,7 @@
   "tools.database.csvEmpty": "Ten plik CSV nie zawiera wierszy",
   "tools.database.csvUntitledColumn": "Kolumna",
   "tools.database.csvImportDescription": "Utwórz nową bazę danych z pliku CSV",
+  "tools.database.csvMergeDescription": "Utwórz nową bazę danych z pliku CSV lub scal go z istniejącą",
   "tools.database.csvUploadLabel": "Prześlij CSV",
   "tools.database.csvImportLocation": "Miejsce importu",
   "tools.database.csvChooseFile": "Wybierz plik",

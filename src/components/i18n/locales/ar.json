@@ -1788,6 +1788,7 @@
   "tools.database.csvEmpty": "لا يحتوي ملف CSV هذا على أي صفوف",
   "tools.database.csvUntitledColumn": "عمود",
   "tools.database.csvImportDescription": "أنشئ قاعدة بيانات جديدة من ملف CSV",
+  "tools.database.csvMergeDescription": "أنشئ قاعدة بيانات جديدة من ملف CSV أو ادمجه في قاعدة بيانات موجودة",
   "tools.database.csvUploadLabel": "رفع CSV",
   "tools.database.csvImportLocation": "موقع الاستيراد",
   "tools.database.csvChooseFile": "اختيار ملف",

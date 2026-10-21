@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "ឯកសារ CSV នេះគ្មានជួរដេកទេ",
   "tools.database.csvUntitledColumn": "ជួរឈរ",
   "tools.database.csvImportDescription": "បង្កើតមូលដ្ឋានទិន្នន័យថ្មីពី CSV របស់អ្នក",
+  "tools.database.csvMergeDescription": "បង្កើតមូលដ្ឋានទិន្នន័យថ្មីពី CSV របស់អ្នក ឬបញ្ចូលវាទៅក្នុងមូលដ្ឋានទិន្នន័យដែលមានស្រាប់",
   "tools.database.csvUploadLabel": "បង្ហោះ CSV",
   "tools.database.csvImportLocation": "ទីតាំងនាំចូល",
   "tools.database.csvChooseFile": "ជ្រើសរើសឯកសារ",

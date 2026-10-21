@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "ဤ CSV ဖိုင်တွင် အတန်း မရှိပါ",
   "tools.database.csvUntitledColumn": "ကော်လံ",
   "tools.database.csvImportDescription": "သင့် CSV ဖြင့် ဒေတာဘေ့စ်အသစ် ဖန်တီးရန်",
+  "tools.database.csvMergeDescription": "သင့် CSV ဖြင့် ဒေတာဘေ့စ်အသစ် ဖန်တီးရန် သို့မဟုတ် ရှိပြီးသား ဒေတာဘေ့စ်နှင့် ပေါင်းစည်းရန်",
   "tools.database.csvUploadLabel": "CSV အပ်လုဒ်လုပ်ရန်",
   "tools.database.csvImportLocation": "တင်သွင်းမည့်နေရာ",
   "tools.database.csvChooseFile": "ဖိုင် ရွေးရန်",

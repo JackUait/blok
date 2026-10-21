@@ -1782,6 +1782,7 @@
   "tools.database.csvEmpty": "Ce fichier CSV ne contient aucune ligne",
   "tools.database.csvUntitledColumn": "Colonne",
   "tools.database.csvImportDescription": "Créer une base de données à partir d’un CSV",
+  "tools.database.csvMergeDescription": "Créer une base de données à partir d’un CSV ou le fusionner avec une base existante",
   "tools.database.csvUploadLabel": "Importer un CSV",
   "tools.database.csvImportLocation": "Emplacement de l’import",
   "tools.database.csvChooseFile": "Choisir un fichier",

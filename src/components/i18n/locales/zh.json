@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "此 CSV 文件没有任何行",
   "tools.database.csvUntitledColumn": "列",
   "tools.database.csvImportDescription": "使用你的 CSV 创建新数据库",
+  "tools.database.csvMergeDescription": "使用你的 CSV 创建新数据库，或将其合并到现有数据库",
   "tools.database.csvUploadLabel": "上传 CSV",
   "tools.database.csvImportLocation": "导入位置",
   "tools.database.csvChooseFile": "选择文件",

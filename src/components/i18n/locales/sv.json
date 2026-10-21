@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "Den här CSV-filen innehåller inga rader",
   "tools.database.csvUntitledColumn": "Kolumn",
   "tools.database.csvImportDescription": "Skapa en ny databas från din CSV",
+  "tools.database.csvMergeDescription": "Skapa en ny databas från din CSV eller sammanfoga den med en befintlig",
   "tools.database.csvUploadLabel": "Ladda upp CSV",
   "tools.database.csvImportLocation": "Importplats",
   "tools.database.csvChooseFile": "Välj fil",

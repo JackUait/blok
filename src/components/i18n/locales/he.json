@@ -1782,6 +1782,7 @@
   "tools.database.csvEmpty": "אין שורות בקובץ CSV זה",
   "tools.database.csvUntitledColumn": "עמודה",
   "tools.database.csvImportDescription": "צור מסד נתונים חדש מקובץ CSV",
+  "tools.database.csvMergeDescription": "צור מסד נתונים חדש מקובץ CSV או מזג אותו למסד נתונים קיים",
   "tools.database.csvUploadLabel": "העלה CSV",
   "tools.database.csvImportLocation": "מיקום הייבוא",
   "tools.database.csvChooseFile": "בחר קובץ",

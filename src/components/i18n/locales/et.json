@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "Selles CSV-failis pole ridu",
   "tools.database.csvUntitledColumn": "Veerg",
   "tools.database.csvImportDescription": "Loo oma CSV-st uus andmebaas",
+  "tools.database.csvMergeDescription": "Loo oma CSV-st uus andmebaas või ühenda see olemasolevaga",
   "tools.database.csvUploadLabel": "Laadi CSV üles",
   "tools.database.csvImportLocation": "Impordi asukoht",
   "tools.database.csvChooseFile": "Vali fail",

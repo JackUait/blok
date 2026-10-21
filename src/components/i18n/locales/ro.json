@@ -1782,6 +1782,7 @@
   "tools.database.csvEmpty": "Acest fișier CSV nu are rânduri",
   "tools.database.csvUntitledColumn": "Coloană",
   "tools.database.csvImportDescription": "Creează o bază de date nouă din CSV-ul tău",
+  "tools.database.csvMergeDescription": "Creează o bază de date nouă din CSV-ul tău sau îmbină-l cu una existentă",
   "tools.database.csvUploadLabel": "Încarcă CSV",
   "tools.database.csvImportLocation": "Locația importului",
   "tools.database.csvChooseFile": "Alege fișierul",

@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "دا CSV فایل هېڅ قطار نه لري",
   "tools.database.csvUntitledColumn": "کالم",
   "tools.database.csvImportDescription": "له خپل CSV څخه نوی ډیټابیس جوړ کړئ",
+  "tools.database.csvMergeDescription": "له خپل CSV څخه نوی ډیټابیس جوړ کړئ یا یې له موجود ډیټابیس سره یو ځای کړئ",
   "tools.database.csvUploadLabel": "CSV پورته کړئ",
   "tools.database.csvImportLocation": "د واردولو ځای",
   "tools.database.csvChooseFile": "فایل وټاکئ",

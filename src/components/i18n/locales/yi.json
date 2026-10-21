@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "די CSV־טעקע האָט נישט קיין שורות",
   "tools.database.csvUntitledColumn": "שפּאַלט",
   "tools.database.csvImportDescription": "שאַפֿט אַ נײַע דאַטאַבאַנק מיט אײַער CSV",
+  "tools.database.csvMergeDescription": "שאַפֿט אַ נײַע דאַטאַבאַנק מיט אײַער CSV אָדער גיסט עס צונויף מיט אַן עקזיסטירנדיקן",
   "tools.database.csvUploadLabel": "אַרויפֿלאָדן CSV",
   "tools.database.csvImportLocation": "אימפּאָרט אָרט",
   "tools.database.csvChooseFile": "אויסקלײַבן טעקע",

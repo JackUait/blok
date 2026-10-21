@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "Dit CSV-bestand bevat geen rijen",
   "tools.database.csvUntitledColumn": "Kolom",
   "tools.database.csvImportDescription": "Maak een nieuwe database van je CSV",
+  "tools.database.csvMergeDescription": "Maak een nieuwe database van je CSV of voeg hem samen met een bestaande",
   "tools.database.csvUploadLabel": "CSV uploaden",
   "tools.database.csvImportLocation": "Importlocatie",
   "tools.database.csvChooseFile": "Bestand kiezen",

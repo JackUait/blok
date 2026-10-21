@@ -1784,6 +1784,7 @@
   "tools.database.csvEmpty": "У цьому CSV-файлі немає рядків",
   "tools.database.csvUntitledColumn": "Стовпець",
   "tools.database.csvImportDescription": "Створіть нову базу даних із CSV",
+  "tools.database.csvMergeDescription": "Створіть нову базу даних із CSV або об’єднайте його з наявною",
   "tools.database.csvUploadLabel": "Завантажити CSV",
   "tools.database.csvImportLocation": "Куди імпортувати",
   "tools.database.csvChooseFile": "Вибрати файл",

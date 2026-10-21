@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "ໄຟລ໌ CSV ນີ້ບໍ່ມີແຖວ",
   "tools.database.csvUntitledColumn": "ຖັນ",
   "tools.database.csvImportDescription": "ສ້າງຖານຂໍ້ມູນໃໝ່ຈາກ CSV ຂອງທ່ານ",
+  "tools.database.csvMergeDescription": "ສ້າງຖານຂໍ້ມູນໃໝ່ຈາກ CSV ຂອງທ່ານ ຫຼື ລວມມັນເຂົ້າກັບຖານຂໍ້ມູນທີ່ມີຢູ່",
   "tools.database.csvUploadLabel": "ອັບໂຫຼດ CSV",
   "tools.database.csvImportLocation": "ບ່ອນນຳເຂົ້າ",
   "tools.database.csvChooseFile": "ເລືອກໄຟລ໌",

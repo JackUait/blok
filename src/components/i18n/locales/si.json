@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "මෙම CSV ගොනුවේ පේළි නැත",
   "tools.database.csvUntitledColumn": "තීරුව",
   "tools.database.csvImportDescription": "ඔබේ CSV සමඟ නව දත්ත සමුදායක් සාදන්න",
+  "tools.database.csvMergeDescription": "ඔබේ CSV සමඟ නව දත්ත සමුදායක් සාදන්න හෝ එය පවතින එකක් සමඟ ඒකාබද්ධ කරන්න",
   "tools.database.csvUploadLabel": "CSV උඩුගත කරන්න",
   "tools.database.csvImportLocation": "ආයාත ස්ථානය",
   "tools.database.csvChooseFile": "ගොනුව තෝරන්න",

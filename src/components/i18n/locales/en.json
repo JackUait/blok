@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "This CSV file has no rows",
   "tools.database.csvUntitledColumn": "Column",
   "tools.database.csvImportDescription": "Create a new database with your CSV",
+  "tools.database.csvMergeDescription": "Create a new database with your CSV or merge it into an existing one",
   "tools.database.csvUploadLabel": "Upload CSV",
   "tools.database.csvImportLocation": "Import Location",
   "tools.database.csvChooseFile": "Choose file",

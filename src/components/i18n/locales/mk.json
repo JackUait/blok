@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "Оваа CSV-датотека нема редови",
   "tools.database.csvUntitledColumn": "Колона",
   "tools.database.csvImportDescription": "Создај нова база на податоци од вашиот CSV",
+  "tools.database.csvMergeDescription": "Создај нова база на податоци од вашиот CSV или спои го со постоечка",
   "tools.database.csvUploadLabel": "Прикачи CSV",
   "tools.database.csvImportLocation": "Локација за увоз",
   "tools.database.csvChooseFile": "Избери датотека",

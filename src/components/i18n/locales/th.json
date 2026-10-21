@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "ไฟล์ CSV นี้ไม่มีแถว",
   "tools.database.csvUntitledColumn": "คอลัมน์",
   "tools.database.csvImportDescription": "สร้างฐานข้อมูลใหม่จาก CSV ของคุณ",
+  "tools.database.csvMergeDescription": "สร้างฐานข้อมูลใหม่จาก CSV ของคุณ หรือผสานเข้ากับฐานข้อมูลที่มีอยู่",
   "tools.database.csvUploadLabel": "อัปโหลด CSV",
   "tools.database.csvImportLocation": "ตำแหน่งที่นำเข้า",
   "tools.database.csvChooseFile": "เลือกไฟล์",

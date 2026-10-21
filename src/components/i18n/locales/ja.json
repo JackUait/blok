@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "このCSVファイルには行がありません",
   "tools.database.csvUntitledColumn": "列",
   "tools.database.csvImportDescription": "CSVから新しいデータベースを作成",
+  "tools.database.csvMergeDescription": "CSVから新しいデータベースを作成するか、既存のデータベースにマージ",
   "tools.database.csvUploadLabel": "CSVをアップロード",
   "tools.database.csvImportLocation": "インポート先",
   "tools.database.csvChooseFile": "ファイルを選択",

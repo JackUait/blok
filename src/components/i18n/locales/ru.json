@@ -1784,6 +1784,7 @@
   "tools.database.csvEmpty": "В этом CSV-файле нет строк",
   "tools.database.csvUntitledColumn": "Столбец",
   "tools.database.csvImportDescription": "Создайте новую базу данных из CSV",
+  "tools.database.csvMergeDescription": "Создайте новую базу данных из CSV или объедините его с существующей",
   "tools.database.csvUploadLabel": "Загрузить CSV",
   "tools.database.csvImportLocation": "Куда импортировать",
   "tools.database.csvChooseFile": "Выбрать файл",

@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "هن CSV فائل ۾ ڪا قطار ناهي",
   "tools.database.csvUntitledColumn": "ڪالم",
   "tools.database.csvImportDescription": "پنهنجي CSV سان نئون ڊيٽابيس ٺاهيو",
+  "tools.database.csvMergeDescription": "پنهنجي CSV سان نئون ڊيٽابيس ٺاهيو يا ان کي موجوده ڊيٽابيس سان ملايو",
   "tools.database.csvUploadLabel": "CSV اپلوڊ ڪريو",
   "tools.database.csvImportLocation": "درآمد جي جاءِ",
   "tools.database.csvChooseFile": "فائل چونڊيو",

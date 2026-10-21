@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "Fail CSV ini tiada baris",
   "tools.database.csvUntitledColumn": "Lajur",
   "tools.database.csvImportDescription": "Cipta pangkalan data baharu daripada CSV anda",
+  "tools.database.csvMergeDescription": "Cipta pangkalan data baharu daripada CSV anda atau gabungkannya ke dalam pangkalan data sedia ada",
   "tools.database.csvUploadLabel": "Muat naik CSV",
   "tools.database.csvImportLocation": "Lokasi import",
   "tools.database.csvChooseFile": "Pilih fail",

@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "Denne CSV-filen har ingen rader",
   "tools.database.csvUntitledColumn": "Kolonne",
   "tools.database.csvImportDescription": "Opprett en ny database fra CSV-filen din",
+  "tools.database.csvMergeDescription": "Opprett en ny database fra CSV-filen din, eller slå den sammen med en eksisterende",
   "tools.database.csvUploadLabel": "Last opp CSV",
   "tools.database.csvImportLocation": "Importplassering",
   "tools.database.csvChooseFile": "Velg fil",

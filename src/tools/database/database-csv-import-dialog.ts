@@ -446,7 +446,8 @@ export const openCsvImportDialog = (options: CsvImportDialogOptions): { close: (
     side.replaceChildren(
       close,
       title,
-      el('p', 'data-blok-database-csv-text', t('tools.database.csvImportDescription')),
+      // research/30 §9 shows the long text on a new import too; it cannot merge, so it keeps the short one.
+      el('p', 'data-blok-database-csv-text', t(merge === undefined ? 'tools.database.csvImportDescription' : 'tools.database.csvMergeDescription')),
       el('div', 'data-blok-database-csv-caption', t('tools.database.csvUploadLabel')),
       slot,
       ...(merge === undefined ? [] : locationField(merge.location)),

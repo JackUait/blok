@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "Այս CSV ֆայլում տողեր չկան",
   "tools.database.csvUntitledColumn": "Սյունակ",
   "tools.database.csvImportDescription": "Ստեղծել նոր տվյալների բազա CSV ֆայլից",
+  "tools.database.csvMergeDescription": "Ստեղծել նոր տվյալների բազա CSV ֆայլից կամ միավորել այն գոյություն ունեցողի հետ",
   "tools.database.csvUploadLabel": "Վերբեռնել CSV",
   "tools.database.csvImportLocation": "Ներմուծման վայր",
   "tools.database.csvChooseFile": "Ընտրել ֆայլ",

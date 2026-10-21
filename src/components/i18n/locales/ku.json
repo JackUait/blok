@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "ئەم پەڕگەی CSV هیچ ڕیزێکی تێدا نییە",
   "tools.database.csvUntitledColumn": "ستوون",
   "tools.database.csvImportDescription": "داتابەیسێکی نوێ لە CSVـەکەت دروست بکە",
+  "tools.database.csvMergeDescription": "داتابەیسێکی نوێ لە CSVـەکەت دروست بکە یان تێکەڵی داتابەیسێکی هەبووی بکە",
   "tools.database.csvUploadLabel": "بارکردنی CSV",
   "tools.database.csvImportLocation": "Cihê îtxalkirinê",
   "tools.database.csvChooseFile": "هەڵبژاردنی فایل",

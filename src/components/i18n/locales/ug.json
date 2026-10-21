@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "بۇ CSV ھۆججىتىدە قۇر يوق",
   "tools.database.csvUntitledColumn": "ئىستون",
   "tools.database.csvImportDescription": "CSV ئارقىلىق يېڭى ساندان قۇرۇش",
+  "tools.database.csvMergeDescription": "CSV ئارقىلىق يېڭى ساندان قۇرۇش ياكى ئۇنى بار ساندان بىلەن بىرلەشتۈرۈش",
   "tools.database.csvUploadLabel": "CSV يۈكلەش",
   "tools.database.csvImportLocation": "ئەكىرىش ئورنى",
   "tools.database.csvChooseFile": "ھۆججەت تاللاش",

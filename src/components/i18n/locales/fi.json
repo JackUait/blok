@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "Tässä CSV-tiedostossa ei ole rivejä",
   "tools.database.csvUntitledColumn": "Sarake",
   "tools.database.csvImportDescription": "Luo uusi tietokanta CSV-tiedostosta",
+  "tools.database.csvMergeDescription": "Luo uusi tietokanta CSV-tiedostosta tai yhdistä se olemassa olevaan",
   "tools.database.csvUploadLabel": "Lataa CSV",
   "tools.database.csvImportLocation": "Tuonnin sijainti",
   "tools.database.csvChooseFile": "Valitse tiedosto",

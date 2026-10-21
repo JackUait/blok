@@ -1784,6 +1784,7 @@
   "tools.database.csvEmpty": "Šiame CSV faile nėra eilučių",
   "tools.database.csvUntitledColumn": "Stulpelis",
   "tools.database.csvImportDescription": "Sukurkite naują duomenų bazę iš savo CSV",
+  "tools.database.csvMergeDescription": "Sukurkite naują duomenų bazę iš savo CSV arba sujunkite jį su esama",
   "tools.database.csvUploadLabel": "Įkelti CSV",
   "tools.database.csvImportLocation": "Importavimo vieta",
   "tools.database.csvChooseFile": "Pasirinkti failą",

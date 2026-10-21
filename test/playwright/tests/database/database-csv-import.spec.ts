@@ -103,6 +103,8 @@ test.describe('database CSV import', () => {
 
     await expect(preview).toBeVisible();
     await expect(preview).toContainText('New table');
+    // A new import cannot merge, so it does not offer one.
+    await expect(dialog.getByText('Create a new database with your CSV', { exact: true })).toBeVisible();
 
     await dialog.locator('[data-blok-database-csv-input]').setInputFiles({ name: 'people.csv', mimeType: 'text/csv', buffer: Buffer.from(NEUTRAL) });
     await expect(preview).toContainText('people');
@@ -193,6 +195,8 @@ test.describe('database CSV import', () => {
         size: [svg?.getBoundingClientRect().width, svg?.getBoundingClientRect().height],
       };
     })).toEqual({ paths: ['M5.5 8L10 3.5L14.5 8', 'M5.5 12L10 16.5L14.5 12'], size: [20, 20] });
+    // research/31 §5a: the merge dialog says it can merge.
+    await expect(dialog.getByText('Create a new database with your CSV or merge it into an existing one', { exact: true })).toBeVisible();
     await dialog.locator('[data-blok-database-csv-input]').setInputFiles({ name: 'merge.csv', mimeType: 'text/csv', buffer: Buffer.from('Name,Due,Extra\nR1,2026-03-04,x1\nR9,2026-03-05,x9') });
     await dialog.getByTestId('database-csv-map').click();
 

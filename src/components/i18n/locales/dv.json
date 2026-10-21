@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "މި CSV ފައިލުގައި އެއްވެސް ރޯއެއް ނެތް",
   "tools.database.csvUntitledColumn": "ކޮލަމު",
   "tools.database.csvImportDescription": "CSV ފައިލުން އައު ޑޭޓާބޭސްއެއް އުފައްދާ",
+  "tools.database.csvMergeDescription": "CSV ފައިލުން އައު ޑޭޓާބޭސްއެއް އުފައްދާ ނުވަތަ ކުރިން ހުރި ޑޭޓާބޭސްއަކާ ގުޅުވާ",
   "tools.database.csvUploadLabel": "CSV އަޕްލޯޑްކުރޭ",
   "tools.database.csvImportLocation": "އިމްޕޯޓް ކުރާ ތަން",
   "tools.database.csvChooseFile": "ފައިލް ހޮވާ",

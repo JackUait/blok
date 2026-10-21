@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "Ky skedar CSV nuk ka rreshta",
   "tools.database.csvUntitledColumn": "Kolonë",
   "tools.database.csvImportDescription": "Krijo një bazë të re të dhënash me CSV-në tënde",
+  "tools.database.csvMergeDescription": "Krijo një bazë të re të dhënash me CSV-në tënde ose bashkoje me një ekzistuese",
   "tools.database.csvUploadLabel": "Ngarko CSV",
   "tools.database.csvImportLocation": "Vendndodhja e importit",
   "tools.database.csvChooseFile": "Zgjidh skedarin",

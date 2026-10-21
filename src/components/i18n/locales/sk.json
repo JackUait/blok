@@ -1784,6 +1784,7 @@
   "tools.database.csvEmpty": "Tento súbor CSV neobsahuje žiadne riadky",
   "tools.database.csvUntitledColumn": "Stĺpec",
   "tools.database.csvImportDescription": "Vytvorte novú databázu zo svojho CSV",
+  "tools.database.csvMergeDescription": "Vytvorte novú databázu zo svojho CSV alebo ho zlúčte s existujúcou",
   "tools.database.csvUploadLabel": "Nahrať CSV",
   "tools.database.csvImportLocation": "Umiestnenie importu",
   "tools.database.csvChooseFile": "Vybrať súbor",

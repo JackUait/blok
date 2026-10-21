@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "Walang hanay ang CSV file na ito",
   "tools.database.csvUntitledColumn": "Kolum",
   "tools.database.csvImportDescription": "Gumawa ng bagong database mula sa iyong CSV",
+  "tools.database.csvMergeDescription": "Gumawa ng bagong database mula sa iyong CSV o isama ito sa isang umiiral na",
   "tools.database.csvUploadLabel": "Mag-upload ng CSV",
   "tools.database.csvImportLocation": "Lokasyon ng pag-import",
   "tools.database.csvChooseFile": "Pumili ng file",

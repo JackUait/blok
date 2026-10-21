@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "ಈ CSV ಫೈಲ್‌ನಲ್ಲಿ ಯಾವುದೇ ಸಾಲುಗಳಿಲ್ಲ",
   "tools.database.csvUntitledColumn": "ಕಾಲಮ್",
   "tools.database.csvImportDescription": "ನಿಮ್ಮ CSV ಯಿಂದ ಹೊಸ ಡೇಟಾಬೇಸ್ ರಚಿಸಿ",
+  "tools.database.csvMergeDescription": "ನಿಮ್ಮ CSV ಯಿಂದ ಹೊಸ ಡೇಟಾಬೇಸ್ ರಚಿಸಿ ಅಥವಾ ಅದನ್ನು ಈಗಿರುವ ಡೇಟಾಬೇಸ್‌ಗೆ ವಿಲೀನಗೊಳಿಸಿ",
   "tools.database.csvUploadLabel": "CSV ಅಪ್‌ಲೋಡ್ ಮಾಡಿ",
   "tools.database.csvImportLocation": "ಆಮದು ಸ್ಥಳ",
   "tools.database.csvChooseFile": "ಫೈಲ್ ಆಯ್ಕೆಮಾಡಿ",

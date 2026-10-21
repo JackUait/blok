@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "این فایل CSV هیچ ردیفی ندارد",
   "tools.database.csvUntitledColumn": "ستون",
   "tools.database.csvImportDescription": "با CSV خود یک پایگاه داده جدید بسازید",
+  "tools.database.csvMergeDescription": "با CSV خود یک پایگاه داده جدید بسازید یا آن را با یک پایگاه داده موجود ادغام کنید",
   "tools.database.csvUploadLabel": "بارگذاری CSV",
   "tools.database.csvImportLocation": "محل درون‌ریزی",
   "tools.database.csvChooseFile": "انتخاب فایل",

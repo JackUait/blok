@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "اس CSV فائل میں کوئی قطار نہیں ہے",
   "tools.database.csvUntitledColumn": "کالم",
   "tools.database.csvImportDescription": "اپنی CSV سے نیا ڈیٹابیس بنائیں",
+  "tools.database.csvMergeDescription": "اپنی CSV سے نیا ڈیٹابیس بنائیں یا اسے موجودہ ڈیٹابیس میں ضم کریں",
   "tools.database.csvUploadLabel": "CSV اپ لوڈ کریں",
   "tools.database.csvImportLocation": "درآمد کا مقام",
   "tools.database.csvChooseFile": "فائل منتخب کریں",

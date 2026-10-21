@@ -1782,6 +1782,7 @@
   "tools.database.csvEmpty": "Ova CSV datoteka nema redaka",
   "tools.database.csvUntitledColumn": "Stupac",
   "tools.database.csvImportDescription": "Izradi novu bazu podataka iz CSV datoteke",
+  "tools.database.csvMergeDescription": "Izradi novu bazu podataka iz CSV datoteke ili je spoji s postojećom",
   "tools.database.csvUploadLabel": "Prenesi CSV",
   "tools.database.csvImportLocation": "Mjesto uvoza",
   "tools.database.csvChooseFile": "Odaberi datoteku",

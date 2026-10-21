@@ -1782,6 +1782,7 @@
   "tools.database.csvEmpty": "Questo file CSV non contiene righe",
   "tools.database.csvUntitledColumn": "Colonna",
   "tools.database.csvImportDescription": "Crea un nuovo database dal tuo CSV",
+  "tools.database.csvMergeDescription": "Crea un nuovo database dal tuo CSV o uniscilo a uno esistente",
   "tools.database.csvUploadLabel": "Carica CSV",
   "tools.database.csvImportLocation": "Posizione di importazione",
   "tools.database.csvChooseFile": "Scegli file",

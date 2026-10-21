@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "இந்த CSV கோப்பில் வரிசைகள் இல்லை",
   "tools.database.csvUntitledColumn": "நெடுவரிசை",
   "tools.database.csvImportDescription": "உங்கள் CSV மூலம் புதிய தரவுத்தளத்தை உருவாக்கு",
+  "tools.database.csvMergeDescription": "உங்கள் CSV மூலம் புதிய தரவுத்தளத்தை உருவாக்கு அல்லது ஏற்கெனவே உள்ள ஒன்றுடன் இணை",
   "tools.database.csvUploadLabel": "CSV ஐப் பதிவேற்று",
   "tools.database.csvImportLocation": "இறக்குமதி இடம்",
   "tools.database.csvChooseFile": "கோப்பைத் தேர்ந்தெடு",

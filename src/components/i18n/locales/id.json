@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "File CSV ini tidak memiliki baris",
   "tools.database.csvUntitledColumn": "Kolom",
   "tools.database.csvImportDescription": "Buat basis data baru dari CSV Anda",
+  "tools.database.csvMergeDescription": "Buat basis data baru dari CSV Anda atau gabungkan ke basis data yang ada",
   "tools.database.csvUploadLabel": "Unggah CSV",
   "tools.database.csvImportLocation": "Lokasi impor",
   "tools.database.csvChooseFile": "Pilih file",

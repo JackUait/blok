@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "Αυτό το αρχείο CSV δεν έχει γραμμές",
   "tools.database.csvUntitledColumn": "Στήλη",
   "tools.database.csvImportDescription": "Δημιουργία νέας βάσης δεδομένων από CSV",
+  "tools.database.csvMergeDescription": "Δημιουργία νέας βάσης δεδομένων από CSV ή συγχώνευση σε υπάρχουσα",
   "tools.database.csvUploadLabel": "Μεταφόρτωση CSV",
   "tools.database.csvImportLocation": "Τοποθεσία εισαγωγής",
   "tools.database.csvChooseFile": "Επιλογή αρχείου",

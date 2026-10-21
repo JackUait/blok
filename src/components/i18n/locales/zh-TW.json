@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "此 CSV 檔案沒有任何列",
   "tools.database.csvUntitledColumn": "欄",
   "tools.database.csvImportDescription": "使用你的 CSV 建立新資料庫",
+  "tools.database.csvMergeDescription": "使用你的 CSV 建立新資料庫，或將其合併到現有資料庫",
   "tools.database.csvUploadLabel": "上傳 CSV",
   "tools.database.csvImportLocation": "匯入位置",
   "tools.database.csvChooseFile": "選擇檔案",

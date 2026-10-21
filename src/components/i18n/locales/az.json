@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "Bu CSV faylında sətir yoxdur",
   "tools.database.csvUntitledColumn": "Sütun",
   "tools.database.csvImportDescription": "CSV faylı ilə yeni verilənlər bazası yarat",
+  "tools.database.csvMergeDescription": "CSV faylı ilə yeni verilənlər bazası yarat və ya onu mövcud bazaya birləşdir",
   "tools.database.csvUploadLabel": "CSV yüklə",
   "tools.database.csvImportLocation": "İdxal yeri",
   "tools.database.csvChooseFile": "Fayl seç",

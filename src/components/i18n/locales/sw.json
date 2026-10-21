@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "Faili hii ya CSV haina safu mlalo",
   "tools.database.csvUntitledColumn": "Safu wima",
   "tools.database.csvImportDescription": "Unda hifadhidata mpya kwa CSV yako",
+  "tools.database.csvMergeDescription": "Unda hifadhidata mpya kwa CSV yako au uiunganishe na iliyopo",
   "tools.database.csvUploadLabel": "Pakia CSV",
   "tools.database.csvImportLocation": "Mahali pa kuingiza",
   "tools.database.csvChooseFile": "Chagua faili",

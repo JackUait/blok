@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "या CSV फाइलमध्ये एकही पंक्ती नाही",
   "tools.database.csvUntitledColumn": "स्तंभ",
   "tools.database.csvImportDescription": "तुमच्या CSV मधून नवीन डेटाबेस तयार करा",
+  "tools.database.csvMergeDescription": "तुमच्या CSV मधून नवीन डेटाबेस तयार करा किंवा तो विद्यमान डेटाबेसमध्ये विलीन करा",
   "tools.database.csvUploadLabel": "CSV अपलोड करा",
   "tools.database.csvImportLocation": "इम्पोर्ट स्थान",
   "tools.database.csvChooseFile": "फाइल निवडा",

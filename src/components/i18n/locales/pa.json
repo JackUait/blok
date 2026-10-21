@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "ਇਸ CSV ਫ਼ਾਈਲ ਵਿੱਚ ਕੋਈ ਕਤਾਰ ਨਹੀਂ ਹੈ",
   "tools.database.csvUntitledColumn": "ਕਾਲਮ",
   "tools.database.csvImportDescription": "ਆਪਣੀ CSV ਤੋਂ ਨਵਾਂ ਡਾਟਾਬੇਸ ਬਣਾਓ",
+  "tools.database.csvMergeDescription": "ਆਪਣੀ CSV ਤੋਂ ਨਵਾਂ ਡਾਟਾਬੇਸ ਬਣਾਓ ਜਾਂ ਇਸਨੂੰ ਮੌਜੂਦਾ ਡਾਟਾਬੇਸ ਨਾਲ ਮਿਲਾਓ",
   "tools.database.csvUploadLabel": "CSV ਅੱਪਲੋਡ ਕਰੋ",
   "tools.database.csvImportLocation": "ਇੰਪੋਰਟ ਟਿਕਾਣਾ",
   "tools.database.csvChooseFile": "ਫ਼ਾਈਲ ਚੁਣੋ",

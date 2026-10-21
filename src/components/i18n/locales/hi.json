@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "इस CSV फ़ाइल में कोई पंक्ति नहीं है",
   "tools.database.csvUntitledColumn": "कॉलम",
   "tools.database.csvImportDescription": "अपनी CSV से नया डेटाबेस बनाएँ",
+  "tools.database.csvMergeDescription": "अपनी CSV से नया डेटाबेस बनाएँ या उसे किसी मौजूदा डेटाबेस में मर्ज करें",
   "tools.database.csvUploadLabel": "CSV अपलोड करें",
   "tools.database.csvImportLocation": "इम्पोर्ट स्थान",
   "tools.database.csvChooseFile": "फ़ाइल चुनें",

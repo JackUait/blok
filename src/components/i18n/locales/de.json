@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "Diese CSV-Datei enthält keine Zeilen",
   "tools.database.csvUntitledColumn": "Spalte",
   "tools.database.csvImportDescription": "Neue Datenbank aus einer CSV-Datei erstellen",
+  "tools.database.csvMergeDescription": "Neue Datenbank aus einer CSV-Datei erstellen oder sie mit einer bestehenden zusammenführen",
   "tools.database.csvUploadLabel": "CSV hochladen",
   "tools.database.csvImportLocation": "Importziel",
   "tools.database.csvChooseFile": "Datei auswählen",

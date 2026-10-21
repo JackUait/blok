@@ -1782,6 +1782,7 @@
   "tools.database.csvEmpty": "Šajā CSV failā nav rindu",
   "tools.database.csvUntitledColumn": "Kolonna",
   "tools.database.csvImportDescription": "Izveidojiet jaunu datubāzi no sava CSV",
+  "tools.database.csvMergeDescription": "Izveidojiet jaunu datubāzi no sava CSV vai apvienojiet to ar esošu",
   "tools.database.csvUploadLabel": "Augšupielādēt CSV",
   "tools.database.csvImportLocation": "Importēšanas vieta",
   "tools.database.csvChooseFile": "Izvēlēties failu",

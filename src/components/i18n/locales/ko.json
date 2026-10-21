@@ -1780,6 +1780,7 @@
   "tools.database.csvEmpty": "이 CSV 파일에 행이 없습니다",
   "tools.database.csvUntitledColumn": "열",
   "tools.database.csvImportDescription": "CSV로 새 데이터베이스 만들기",
+  "tools.database.csvMergeDescription": "CSV로 새 데이터베이스를 만들거나 기존 데이터베이스에 병합",
   "tools.database.csvUploadLabel": "CSV 업로드",
   "tools.database.csvImportLocation": "가져오기 위치",
   "tools.database.csvChooseFile": "파일 선택",

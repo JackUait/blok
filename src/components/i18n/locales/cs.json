@@ -1784,6 +1784,7 @@
   "tools.database.csvEmpty": "Tento soubor CSV neobsahuje žádné řádky",
   "tools.database.csvUntitledColumn": "Sloupec",
   "tools.database.csvImportDescription": "Vytvořit novou databázi z CSV souboru",
+  "tools.database.csvMergeDescription": "Vytvořit novou databázi z CSV souboru nebo ho sloučit s existující",
   "tools.database.csvUploadLabel": "Nahrát CSV",
   "tools.database.csvImportLocation": "Umístění importu",
   "tools.database.csvChooseFile": "Vybrat soubor",

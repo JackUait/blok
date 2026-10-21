@@ -94,6 +94,9 @@ const PROVIDERS: Array<[AgentModelProvider, string, string, boolean]> = [
   ['openai-compatible', 'chat', 'OpenAI-compatible', false],
 ];
 
+/** Qwen's values differ per model, so the host's levels pick them. */
+const NONE = [undefined, undefined, undefined, undefined, undefined, undefined];
+
 /**
  * The effort each level sends, off → max, where a provider differs from its API's default.
  * undefined: the field is left out, for providers that list no value for it.
@@ -107,7 +110,9 @@ const EFFORTS: Partial<Record<AgentModelProvider, unknown[]>> = {
   // Mistral and Hugging Face list none to xhigh.
   mistral: ['none', 'low', 'medium', 'high', 'xhigh', 'xhigh'],
   huggingface: ['none', 'low', 'medium', 'high', 'xhigh', 'xhigh'],
-  // These list low, medium and high only.
+  // These list low, medium and high only (gpt-oss on Groq and Cerebras).
+  groq: [undefined, 'low', 'medium', 'high', 'high', 'high'],
+  cerebras: [undefined, 'low', 'medium', 'high', 'high', 'high'],
   sambanova: [undefined, 'low', 'medium', 'high', 'high', 'high'],
   together: [undefined, 'low', 'medium', 'high', 'high', 'high'],
   vertex: [undefined, 'low', 'medium', 'high', 'high', 'high'],
@@ -115,6 +120,9 @@ const EFFORTS: Partial<Record<AgentModelProvider, unknown[]>> = {
   yandex: [undefined, 'low', 'medium', 'high', 'high', 'high'],
   // Cohere takes none and high only.
   cohere: ['none', 'high', 'high', 'high', 'high', 'high'],
+  qwen: NONE,
+  // Z.ai reads the effort only with thinking on.
+  zai: [undefined, 'low', 'medium', 'high', 'xhigh', 'max'],
 };
 
 const DEFAULT_EFFORTS: Record<string, unknown[]> = {
@@ -195,6 +203,18 @@ describe('agentModel', () => {
     expect(field(body.messages, 2)).toEqual({ role: 'assistant', content: 'Hi', tool_calls: raw.tool_calls });
   });
 
+  it('turns Z.ai thinking on with the effort, and off by leaving both out', async () => {
+    expect((await bodyOf('zai', {}, afterCall('high'))).thinking).toEqual({ type: 'enabled' });
+    expect(await bodyOf('zai', {}, afterCall('off'))).not.toHaveProperty('thinking');
+  });
+
+  it('puts the client identifier Qwen web search needs first in system, and only with webSearch', async () => {
+    const block = { type: 'text', text: 'x-anthropic-billing-header: cc_entrypoint=cli;' };
+
+    expect(field(await bodyOf('qwen', { webSearch: true }), 'system')).toEqual([block, expect.objectContaining({ text: 'sys' })]);
+    expect(JSON.stringify(await bodyOf('qwen'))).not.toContain('cc_entrypoint');
+  });
+
   it('names the known providers when given an unknown one', () => {
     expect(() => agentModel({ provider: 'antrophic', model: 'm', send: async () => ({}) } as unknown as AgentModelOptions))
       .toThrow(/unknown provider "antrophic".*anthropic/);
@@ -209,6 +229,12 @@ describe('agentModel', () => {
       const model = agentModel({ provider, model: 'm', send: async () => ({ error: { message: 'Bad key' } }) });
 
       await expect(model(request())).rejects.toThrow(`${name}: Bad key`);
+    });
+
+    it.each(['azure', 'xai'] as const)('%s: a reply cut short', async (provider) => {
+      const model = agentModel({ provider, model: 'm', send: async () => ({ status: 'incomplete', incomplete_details: { reason: 'max_messages' }, output: [] }) });
+
+      await expect(model(request())).rejects.toThrow(new Error(`${provider === 'azure' ? 'Azure OpenAI' : 'xAI'} stopped: max_messages`));
     });
 
     it.each(PROVIDERS)('%s: an HTTP error on a stream', async (provider, _api, name) => {

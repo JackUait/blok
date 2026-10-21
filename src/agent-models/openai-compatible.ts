@@ -147,8 +147,8 @@ interface Assembly {
 const REASONING_FIELDS = ['reasoning_content', 'reasoning'] as const;
 const KNOWN_DELTA = new Set(['role', 'content', ...REASONING_FIELDS, 'refusal', 'tool_calls']);
 const CALL_FIELDS = new Set(['index', 'id', 'type', 'function']);
-// Providers repeat these on every piece of an item, so the first one stands.
-const IDENTITY = new Set(['type', 'id', 'format', 'index']);
+// Providers may repeat these on every piece of an item, so the first one stands; joining would corrupt a signature.
+const IDENTITY = new Set(['type', 'id', 'format', 'index', 'signature', 'thought_signature']);
 
 const without = (record: Record<string, unknown>, keys: Set<string>): Record<string, unknown> =>
   Object.fromEntries(Object.entries(record).filter(([key]) => !keys.has(key)));
@@ -171,8 +171,8 @@ const mergedRecord = (current: Record<string, unknown>, piece: Record<string, un
 
 /**
  * An item with an index merges into the item with the same index (OpenRouter's reasoning_details).
- * An item without one merges into the last item of its type until a signature closes it: LiteLLM
- * streams each thinking block as unindexed pieces and sends its signature last.
+ * An item without one merges into the last thinking item until a signature closes it: LiteLLM
+ * streams each thinking block as unindexed pieces and sends its signature last. Other types arrive whole.
  */
 const mergedItems = (current: unknown[], pieces: unknown[]): unknown[] => pieces.reduce<unknown[]>((out, piece) => {
   if (!isRecord(piece)) {
@@ -184,7 +184,7 @@ const mergedItems = (current: unknown[], pieces: unknown[]): unknown[] => pieces
     : out.length - 1;
   const target = out[at];
   const joins = isRecord(target) && (typeof piece.index === 'number'
-    || (target.index === undefined && target.signature === undefined && target.type === piece.type));
+    || (target.index === undefined && target.signature === undefined && target.type === 'thinking' && piece.type === 'thinking'));
 
   return joins ? out.map((item, position) => (position === at ? mergedRecord(target, piece) : item)) : [...out, piece];
 }, [...current]);

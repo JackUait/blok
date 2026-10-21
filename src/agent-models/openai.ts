@@ -90,7 +90,7 @@ const readReply = (reply: unknown, step: number, name: string): AgentModelRespon
 
   // max_messages, steered and any newer reason cut the reply short; passing it as done would store a partial turn.
   if (reply.status === 'incomplete' && reason !== 'max_output_tokens' && reason !== 'content_filter') {
-    throw new Error(`OpenAI stopped: ${String(reason)}`);
+    throw new Error(`${name} stopped: ${String(reason)}`);
   }
   const stop = ((): string => {
     if (reason === 'max_output_tokens') {

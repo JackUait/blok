@@ -145,12 +145,27 @@ const readStream = async (
   return { content: withCallIds(content, step), stop_reason: state.stop };
 };
 
+export interface AnthropicProfile extends Profile {
+  /** A text block put first in system when webSearch is on. Qwen searches only when it is there. */
+  searchSystem?: string;
+}
+
+// Tools render before system, so the mark on the host's block caches both for every prompt. An empty text block is a 400.
+const systemOf = (text: string, first: string | undefined): string | Body[] => {
+  const blocks = [
+    ...(first === undefined ? [] : [{ type: 'text', text: first }]),
+    ...(text === '' ? [] : [{ type: 'text', text, cache_control: { type: 'ephemeral' } }]),
+  ];
+
+  return blocks.length === 0 ? '' : blocks;
+};
+
 /**
  * The Messages API. The request is already in its shape, so this mostly adds model, effort and cache marks.
  * @param options - model id, the host's send or stream, and optional level overrides
  * @param profile - the provider's name for errors and its level defaults
  */
-export function anthropicModel(options: AdapterOptions, { name, levels }: Profile = { name: 'Anthropic' }): AgentModel {
+export function anthropicModel(options: AdapterOptions, { name, levels, searchSystem }: AnthropicProfile = { name: 'Anthropic' }): AgentModel {
   requireTransport(options, name);
 
   // 20260209 and later search from code execution, which Anthropic-compatible APIs (DeepSeek) do not run.
@@ -166,8 +181,7 @@ export function anthropicModel(options: AdapterOptions, { name, levels }: Profil
     const body = withLevel({
       model: options.model,
       max_tokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
-      // Tools render before system, so this mark caches both for every prompt. An empty text block is a 400.
-      system: request.system === '' ? '' : [{ type: 'text', text: request.system, cache_control: { type: 'ephemeral' } }],
+      system: systemOf(request.system, search.length > 0 ? searchSystem : undefined),
       messages: request.messages.map(withoutProviderBlocks),
       tools: [...request.tools, ...search],
       // Moves to the last block on each call, so a step reads the steps before it.

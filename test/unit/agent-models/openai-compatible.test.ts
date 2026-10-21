@@ -20,6 +20,9 @@ const delta = (value: Record<string, unknown>, finish: string | null = null): Re
   choices: [{ index: 0, delta: value, finish_reason: finish }],
 });
 
+const field = (value: unknown, key: string | number): unknown =>
+  (typeof value === 'object' && value !== null ? Reflect.get(value, key) : undefined);
+
 const heading = { commands: [{ name: 'block.insert', args: { type: 'header' } }] };
 
 const fakeSend = (...replies: unknown[]): { send: (body: Record<string, unknown>) => Promise<unknown>; bodies: Record<string, unknown>[] } => {
@@ -316,6 +319,28 @@ describe('openaiCompatibleModel', () => {
       };
 
       expect(await replayed(text)).toEqual({ raw: { type: 'provider', format: 'openai-chat', raw: message }, sent: message });
+    });
+
+    it('keeps two redacted_thinking blocks in a row apart', async () => {
+      const text = chunks(
+        delta({ role: 'assistant', content: '', thinking_blocks: [{ type: 'redacted_thinking', data: 'AAA' }] }),
+        delta({ thinking_blocks: [{ type: 'redacted_thinking', data: 'BBB' }] }),
+        callChunk()
+      );
+      const { sent } = await replayed(text);
+
+      expect(field(sent, 'thinking_blocks')).toEqual([{ type: 'redacted_thinking', data: 'AAA' }, { type: 'redacted_thinking', data: 'BBB' }]);
+    });
+
+    it('keeps a signature that repeats on every piece of a call once', async () => {
+      const signature = { google: { thought_signature: 'sig' } };
+      const text = chunks(
+        delta({ role: 'assistant', content: null, tool_calls: [{ index: 0, id: 'call_1', type: 'function', function: { name: 'blok_read', arguments: '' }, extra_content: signature }] }),
+        delta({ tool_calls: [{ index: 0, function: { arguments: '{}' }, extra_content: signature }] }, 'tool_calls')
+      );
+      const { sent } = await replayed(text);
+
+      expect(field(field(sent, 'tool_calls'), 0)).toEqual({ id: 'call_1', type: 'function', function: { name: 'blok_read', arguments: '{}' }, extra_content: signature });
     });
 
     it('keeps a Vertex thought_signature on its streamed tool call, and sends it back', async () => {

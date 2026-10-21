@@ -1,6 +1,6 @@
 import type { AgentModel, AgentThinkingLevel } from '../../types/api';
 
-import { anthropicModel } from './anthropic';
+import { anthropicModel, type AnthropicProfile } from './anthropic';
 import { geminiModel } from './gemini';
 import { openaiModel } from './openai';
 import { openaiCompatibleModel, type ChatProfile } from './openai-compatible';
@@ -14,7 +14,7 @@ interface Route {
   search?: true;
 }
 
-const anthropic = (profile: Profile, search?: true): Route => ({ model: (options) => anthropicModel(options, profile), name: profile.name, search });
+const anthropic = (profile: AnthropicProfile, search?: true): Route => ({ model: (options) => anthropicModel(options, profile), name: profile.name, search });
 const responses = (profile: Profile): Route => ({ model: (options) => openaiModel(options, profile), name: profile.name, search: true });
 const chat = (profile: ChatProfile): Route => ({ model: (options) => openaiCompatibleModel(options, profile), name: profile.name });
 
@@ -32,7 +32,7 @@ const efforts = (wrap: (effort: string) => Body, values: Array<string | undefine
 const outputEffort = (effort: string): Body => ({ output_config: { effort } });
 const reasoningEffort = (effort: string): Body => ({ reasoning_effort: effort });
 
-// Providers that list low, medium and high only.
+// Providers that list low, medium and high only, as gpt-oss does on Groq and Cerebras.
 const LOW_TO_HIGH = efforts(reasoningEffort, [undefined, 'low', 'medium', 'high', 'high', 'high']);
 const NONE_TO_XHIGH = efforts(reasoningEffort, ['none', 'low', 'medium', 'high', 'xhigh', 'xhigh']);
 // Anthropic-compatible APIs that take low, high and max only.
@@ -47,19 +47,19 @@ const PROVIDERS = {
   // Reasoning cannot be turned off, and xhigh is the top.
   xai: responses({ name: 'xAI', levels: efforts((effort) => ({ reasoning: { effort } }), ['low', 'low', 'medium', 'high', 'xhigh', 'xhigh']) }),
   deepseek: anthropic({ name: 'DeepSeek', levels: LOW_HIGH_MAX }, true),
-  // Effort values differ per model; the host's levels pick them.
-  qwen: anthropic({ name: 'Qwen' }, true),
+  // Effort values differ per model, so the host's levels pick them. Web search needs the client identifier in system.
+  qwen: anthropic({ name: 'Qwen', levels: efforts(outputEffort, []), searchSystem: 'x-anthropic-billing-header: cc_entrypoint=cli;' }, true),
   kimi: anthropic({ name: 'Kimi', levels: LOW_HIGH_MAX }),
   minimax: anthropic({ name: 'MiniMax' }),
-  // Streams tool arguments only when asked.
-  zai: chat({ name: 'Z.ai', streamBody: { tool_stream: true } }),
+  // Reads the effort only with thinking on, and streams tool arguments only when asked.
+  zai: chat({ name: 'Z.ai', levels: efforts((effort) => ({ thinking: { type: 'enabled' }, reasoning_effort: effort }), [undefined, 'low', 'medium', 'high', 'xhigh', 'max']), streamBody: { tool_stream: true } }),
   mistral: chat({ name: 'Mistral', levels: NONE_TO_XHIGH, toolName: true }),
-  groq: chat({ name: 'Groq', tokens: 'max_completion_tokens' }),
+  groq: chat({ name: 'Groq', tokens: 'max_completion_tokens', levels: LOW_TO_HIGH }),
   ollama: chat({ name: 'Ollama' }),
   openrouter: chat({ name: 'OpenRouter' }),
   // Its message schema rejects any other field.
   fireworks: chat({ name: 'Fireworks', replayFields: ['role', 'content', 'reasoning_content', 'tool_calls'] }),
-  cerebras: chat({ name: 'Cerebras' }),
+  cerebras: chat({ name: 'Cerebras', levels: LOW_TO_HIGH }),
   sambanova: chat({ name: 'SambaNova', levels: LOW_TO_HIGH }),
   together: chat({ name: 'Together AI', levels: LOW_TO_HIGH }),
   cohere: chat({ name: 'Cohere', levels: efforts(reasoningEffort, ['none', 'high', 'high', 'high', 'high', 'high']) }),

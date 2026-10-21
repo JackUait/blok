@@ -1385,6 +1385,8 @@ export type BlokMessageKey =
   | 'tools.database.selectHint'
   | 'tools.database.selectSearchPlaceholder'
   | 'tools.database.settingsBack'
+  | 'tools.database.settingsCardLayout'
+  | 'tools.database.settingsCardLayoutCompact'
   | 'tools.database.settingsConditionalColor'
   | 'tools.database.settingsCopyLink'
   | 'tools.database.settingsDataSourceSettings'

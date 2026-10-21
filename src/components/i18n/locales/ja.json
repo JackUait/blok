@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "編集",
   "tools.database.galleryCardMore": "名前の変更、削除、移動など…",
   "tools.database.galleryCardSize": "カードサイズ",
+  "tools.database.settingsCardLayout": "カードレイアウト",
+  "tools.database.settingsCardLayoutCompact": "コンパクト",
   "tools.database.galleryCardSizeSmall": "小",
   "tools.database.galleryCardSizeMedium": "中",
   "tools.database.galleryCardSizeLarge": "大",

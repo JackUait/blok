@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "سم یې کړئ",
   "tools.database.galleryCardMore": "نوم بدلول، ړنګول، لېږدول او نور…",
   "tools.database.galleryCardSize": "د کارت اندازه",
+  "tools.database.settingsCardLayout": "د کارت جوړښت",
+  "tools.database.settingsCardLayoutCompact": "فشرده",
   "tools.database.galleryCardSizeSmall": "وړوکی",
   "tools.database.galleryCardSizeMedium": "منځنی",
   "tools.database.galleryCardSizeLarge": "لوی",

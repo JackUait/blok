@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "แก้ไข",
   "tools.database.galleryCardMore": "เปลี่ยนชื่อ ลบ ย้าย และอื่นๆ…",
   "tools.database.galleryCardSize": "ขนาดการ์ด",
+  "tools.database.settingsCardLayout": "เลย์เอาต์การ์ด",
+  "tools.database.settingsCardLayoutCompact": "กะทัดรัด",
   "tools.database.galleryCardSizeSmall": "เล็ก",
   "tools.database.galleryCardSizeMedium": "กลาง",
   "tools.database.galleryCardSizeLarge": "ใหญ่",

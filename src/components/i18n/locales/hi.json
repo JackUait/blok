@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "संपादित करें",
   "tools.database.galleryCardMore": "नाम बदलें, हटाएं, ले जाएं और भी…",
   "tools.database.galleryCardSize": "कार्ड का आकार",
+  "tools.database.settingsCardLayout": "कार्ड लेआउट",
+  "tools.database.settingsCardLayoutCompact": "सघन",
   "tools.database.galleryCardSizeSmall": "छोटा",
   "tools.database.galleryCardSizeMedium": "मध्यम",
   "tools.database.galleryCardSizeLarge": "बड़ा",

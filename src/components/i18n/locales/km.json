@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "កែសម្រួល",
   "tools.database.galleryCardMore": "ប្ដូរឈ្មោះ លុប ផ្លាស់ទី និងច្រើនទៀត…",
   "tools.database.galleryCardSize": "ទំហំកាត",
+  "tools.database.settingsCardLayout": "ប្លង់កាត",
+  "tools.database.settingsCardLayoutCompact": "តូច",
   "tools.database.galleryCardSizeSmall": "តូច",
   "tools.database.galleryCardSizeMedium": "មធ្យម",
   "tools.database.galleryCardSizeLarge": "ធំ",

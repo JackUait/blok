@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "সম্পাদনা",
   "tools.database.galleryCardMore": "নাম পরিবর্তন, মুছুন, সরান এবং আরও…",
   "tools.database.galleryCardSize": "কার্ডের আকার",
+  "tools.database.settingsCardLayout": "কার্ডের লেআউট",
+  "tools.database.settingsCardLayoutCompact": "কমপ্যাক্ট",
   "tools.database.galleryCardSizeSmall": "ছোট",
   "tools.database.galleryCardSizeMedium": "মাঝারি",
   "tools.database.galleryCardSizeLarge": "বড়",

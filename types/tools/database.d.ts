@@ -893,6 +893,8 @@ export interface DatabaseViewConfig {
   cardPreview?: CardPreview;
   /** Gallery or board: show the whole image instead of cropping it. Default false. */
   fitImage?: boolean;
+  /** Board: `list` puts each card property on its own line, `compact` sets them side by side. Default 'list'. */
+  cardLayout?: CardLayout;
   /** Calendar: the date property that places each row. Default the first date property. */
   calendarBy?: string;
   /** Calendar. Default 'month'. */
@@ -985,6 +987,8 @@ export interface DatabaseViewConfig {
   subItemsFilter?: SubItemsFilter;
 }
 
+export type CardLayout = 'compact' | 'list';
+
 export type SubItemsDisplay = 'nested' | 'card' | 'flattened';
 
 export type SubItemsFilter = 'parents' | 'parentsAndSubItems' | 'subItems';
@@ -999,7 +1003,7 @@ export type DatabaseViewSettingKey =
   | 'properties' | 'wrapCells' | 'frozenColumnCount' | 'showVerticalLines' | 'loadLimit' | 'calculations' | 'openPagesIn'
   | 'noValueGroupPosition' | 'groupOrder' | 'hiddenGroups' | 'collapsedGroups' | 'hideGroupAggregation' | 'groupCalculation'
   | 'filterTree' | 'groupSettings' | 'subGroupBy' | 'subGroupSettings' | 'colorRules' | 'showPageIcon' | 'showDataSourceTitle' | 'groupByStatus'
-  | 'cardSize' | 'cardPreview' | 'fitImage' | 'calendarBy' | 'calendarRange' | 'showWeekends'
+  | 'cardSize' | 'cardPreview' | 'fitImage' | 'cardLayout' | 'calendarBy' | 'calendarRange' | 'showWeekends'
   | 'timelineBy' | 'timelineEndBy' | 'timelineZoom' | 'timelineCenter' | 'showTimelineTable' | 'tableProperties' | 'arrowsBy'
   | 'chartType' | 'chartMeasure' | 'chartSort' | 'chartOmitZero' | 'chartCumulative' | 'chartColor' | 'chartHeight'
   | 'chartGridLines' | 'chartAxisNames' | 'chartDataLabels' | 'chartSmooth' | 'chartGradient' | 'chartCenterValue' | 'chartLegend'

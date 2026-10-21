@@ -1304,6 +1304,8 @@
   "tools.database.galleryCardEdit": "Uredi",
   "tools.database.galleryCardMore": "Preimenuj, izbriši, premakni in več…",
   "tools.database.galleryCardSize": "Velikost kartice",
+  "tools.database.settingsCardLayout": "Postavitev kartice",
+  "tools.database.settingsCardLayoutCompact": "Strnjeno",
   "tools.database.galleryCardSizeSmall": "Majhna",
   "tools.database.galleryCardSizeMedium": "Srednja",
   "tools.database.galleryCardSizeLarge": "Velika",

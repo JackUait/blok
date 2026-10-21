@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "دەستکاری",
   "tools.database.galleryCardMore": "ناو گۆڕین، سڕینەوە، گواستنەوە و زیاتر…",
   "tools.database.galleryCardSize": "قەبارەی کارت",
+  "tools.database.settingsCardLayout": "داڕشتنی کارت",
+  "tools.database.settingsCardLayoutCompact": "چڕ",
   "tools.database.galleryCardSizeSmall": "بچووک",
   "tools.database.galleryCardSizeMedium": "مامناوەند",
   "tools.database.galleryCardSizeLarge": "گەورە",

@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "I-edit",
   "tools.database.galleryCardMore": "Palitan ang pangalan, tanggalin, ilipat at iba pa…",
   "tools.database.galleryCardSize": "Laki ng card",
+  "tools.database.settingsCardLayout": "Ayos ng card",
+  "tools.database.settingsCardLayoutCompact": "Siksik",
   "tools.database.galleryCardSizeSmall": "Maliit",
   "tools.database.galleryCardSizeMedium": "Katamtaman",
   "tools.database.galleryCardSizeLarge": "Malaki",

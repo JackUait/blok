@@ -1302,6 +1302,8 @@
   "tools.database.galleryCardEdit": "Editar",
   "tools.database.galleryCardMore": "Renomear, excluir, mover e mais…",
   "tools.database.galleryCardSize": "Tamanho do cartão",
+  "tools.database.settingsCardLayout": "Disposição do cartão",
+  "tools.database.settingsCardLayoutCompact": "Compacto",
   "tools.database.galleryCardSizeSmall": "Pequeno",
   "tools.database.galleryCardSizeMedium": "Médio",
   "tools.database.galleryCardSizeLarge": "Grande",

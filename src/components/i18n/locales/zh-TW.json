@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "編輯",
   "tools.database.galleryCardMore": "重新命名、刪除、移動等…",
   "tools.database.galleryCardSize": "卡片大小",
+  "tools.database.settingsCardLayout": "卡片版面配置",
+  "tools.database.settingsCardLayoutCompact": "精簡",
   "tools.database.galleryCardSizeSmall": "小",
   "tools.database.galleryCardSizeMedium": "中",
   "tools.database.galleryCardSizeLarge": "大",

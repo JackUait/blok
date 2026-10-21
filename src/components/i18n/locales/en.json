@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "Edit",
   "tools.database.galleryCardMore": "Rename, delete, move to and more…",
   "tools.database.galleryCardSize": "Card size",
+  "tools.database.settingsCardLayout": "Card layout",
+  "tools.database.settingsCardLayoutCompact": "Compact",
   "tools.database.galleryCardSizeSmall": "Small",
   "tools.database.galleryCardSizeMedium": "Medium",
   "tools.database.galleryCardSizeLarge": "Large",

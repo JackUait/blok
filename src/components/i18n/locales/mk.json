@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "Уреди",
   "tools.database.galleryCardMore": "Преименувај, избриши, премести и повеќе…",
   "tools.database.galleryCardSize": "Големина на картичката",
+  "tools.database.settingsCardLayout": "Распоред на картичката",
+  "tools.database.settingsCardLayoutCompact": "Компактно",
   "tools.database.galleryCardSizeSmall": "Мала",
   "tools.database.galleryCardSizeMedium": "Средна",
   "tools.database.galleryCardSizeLarge": "Голема",

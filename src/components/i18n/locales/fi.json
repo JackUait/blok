@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "Muokkaa",
   "tools.database.galleryCardMore": "Nimeä uudelleen, poista, siirrä ja muuta…",
   "tools.database.galleryCardSize": "Kortin koko",
+  "tools.database.settingsCardLayout": "Kortin asettelu",
+  "tools.database.settingsCardLayoutCompact": "Tiivis",
   "tools.database.galleryCardSizeSmall": "Pieni",
   "tools.database.galleryCardSizeMedium": "Keskikokoinen",
   "tools.database.galleryCardSizeLarge": "Suuri",

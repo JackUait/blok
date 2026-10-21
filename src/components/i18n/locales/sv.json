@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "Redigera",
   "tools.database.galleryCardMore": "Byt namn, ta bort, flytta och mer…",
   "tools.database.galleryCardSize": "Kortstorlek",
+  "tools.database.settingsCardLayout": "Kortutformning",
+  "tools.database.settingsCardLayoutCompact": "Kompakt",
   "tools.database.galleryCardSizeSmall": "Liten",
   "tools.database.galleryCardSizeMedium": "Mellanstor",
   "tools.database.galleryCardSizeLarge": "Stor",

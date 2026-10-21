@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "Hariri",
   "tools.database.galleryCardMore": "Badilisha jina, futa, hamisha na zaidi…",
   "tools.database.galleryCardSize": "Ukubwa wa kadi",
+  "tools.database.settingsCardLayout": "Muundo wa kadi",
+  "tools.database.settingsCardLayoutCompact": "Uliobanana",
   "tools.database.galleryCardSizeSmall": "Ndogo",
   "tools.database.galleryCardSizeMedium": "Wastani",
   "tools.database.galleryCardSizeLarge": "Kubwa",

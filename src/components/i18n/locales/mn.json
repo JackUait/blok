@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "Засах",
   "tools.database.galleryCardMore": "Нэр өөрчлөх, устгах, зөөх болон бусад…",
   "tools.database.galleryCardSize": "Картын хэмжээ",
+  "tools.database.settingsCardLayout": "Картын бүтэц",
+  "tools.database.settingsCardLayoutCompact": "Авсаархан",
   "tools.database.galleryCardSizeSmall": "Жижиг",
   "tools.database.galleryCardSizeMedium": "Дунд",
   "tools.database.galleryCardSizeLarge": "Том",

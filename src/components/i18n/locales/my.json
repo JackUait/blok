@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "တည်းဖြတ်ရန်",
   "tools.database.galleryCardMore": "အမည်ပြောင်း၊ ဖျက်၊ ရွှေ့ နှင့် နောက်ထပ်…",
   "tools.database.galleryCardSize": "ကတ်အရွယ်အစား",
+  "tools.database.settingsCardLayout": "ကတ်အပြင်အဆင်",
+  "tools.database.settingsCardLayoutCompact": "ကျစ်လစ်",
   "tools.database.galleryCardSizeSmall": "သေး",
   "tools.database.galleryCardSizeMedium": "အလတ်",
   "tools.database.galleryCardSizeLarge": "ကြီး",

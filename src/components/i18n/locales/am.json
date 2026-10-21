@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "አርትዕ",
   "tools.database.galleryCardMore": "ዳግም ሰይም፣ አጥፋ፣ አንቀሳቅስ እና ሌሎችም…",
   "tools.database.galleryCardSize": "የካርድ መጠን",
+  "tools.database.settingsCardLayout": "የካርድ አቀማመጥ",
+  "tools.database.settingsCardLayoutCompact": "የታመቀ",
   "tools.database.galleryCardSizeSmall": "ትንሽ",
   "tools.database.galleryCardSizeMedium": "መካከለኛ",
   "tools.database.galleryCardSizeLarge": "ትልቅ",

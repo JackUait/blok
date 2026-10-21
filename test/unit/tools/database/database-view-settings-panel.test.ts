@@ -244,6 +244,46 @@ describe('view settings panel', () => {
     });
   });
 
+  describe('a board\'s "Card layout" (research/30 §10d, §10f; shots 22, 24)', () => {
+    const tiles = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>('[data-blok-database-card-layout-tile]')];
+
+    it('ends the board\'s layout page with a "Card layout" box of two tiles, Compact then List; List is the default', () => {
+      harness({ type: 'board', groupBy: 'stage' }).open();
+      click('database-settings-layout');
+      const box = document.querySelector<HTMLElement>('[data-blok-testid="database-settings-card-layout"]');
+
+      expect(box?.parentElement?.lastElementChild).toBe(box);
+      expect(box?.querySelector('[data-blok-database-card-layout-label]')?.textContent).toBe('tools.database.settingsCardLayout');
+      expect(tiles().map((tile) => tile.textContent?.trim())).toEqual(['tools.database.settingsCardLayoutCompact', 'tools.database.viewTypeList']);
+      expect(tiles().map((tile) => tile.getAttribute('aria-pressed'))).toEqual(['false', 'true']);
+    });
+
+    it('a tile click saves the layout and moves the pick', () => {
+      const h = harness({ type: 'board', groupBy: 'stage' });
+
+      h.open();
+      click('database-settings-layout');
+      click('database-card-layout-compact');
+
+      expect(h.ctx.updateView).toHaveBeenCalledWith({ cardLayout: 'compact' });
+      expect(tiles().map((tile) => tile.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
+    });
+
+    it('is not on a table, and its tiles are disabled while the view is locked', () => {
+      harness().open();
+      click('database-settings-layout');
+      expect(exists('database-settings-card-layout')).toBe(false);
+      document.body.innerHTML = '';
+
+      const h = harness({ type: 'board', groupBy: 'stage' });
+
+      h.state.locked = true;
+      h.open();
+      click('database-settings-layout');
+      expect(tiles().every((tile) => (tile as HTMLButtonElement).disabled)).toBe(true);
+    });
+  });
+
   it('sets the load limit, where pages open, and the layout switches', () => {
     const h = harness();
 

@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "ਸੋਧੋ",
   "tools.database.galleryCardMore": "ਨਾਮ ਬਦਲੋ, ਮਿਟਾਓ, ਲਿਜਾਓ ਅਤੇ ਹੋਰ…",
   "tools.database.galleryCardSize": "ਕਾਰਡ ਦਾ ਆਕਾਰ",
+  "tools.database.settingsCardLayout": "ਕਾਰਡ ਦਾ ਖਾਕਾ",
+  "tools.database.settingsCardLayoutCompact": "ਕੰਪੈਕਟ",
   "tools.database.galleryCardSizeSmall": "ਛੋਟਾ",
   "tools.database.galleryCardSizeMedium": "ਦਰਮਿਆਨਾ",
   "tools.database.galleryCardSizeLarge": "ਵੱਡਾ",

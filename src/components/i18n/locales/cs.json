@@ -1304,6 +1304,8 @@
   "tools.database.galleryCardEdit": "Upravit",
   "tools.database.galleryCardMore": "Přejmenovat, smazat, přesunout a další…",
   "tools.database.galleryCardSize": "Velikost karty",
+  "tools.database.settingsCardLayout": "Rozvržení karty",
+  "tools.database.settingsCardLayoutCompact": "Kompaktní",
   "tools.database.galleryCardSizeSmall": "Malá",
   "tools.database.galleryCardSizeMedium": "Střední",
   "tools.database.galleryCardSizeLarge": "Velká",

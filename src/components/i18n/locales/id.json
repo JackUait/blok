@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "Ubah",
   "tools.database.galleryCardMore": "Ubah nama, hapus, pindahkan, dan lainnya…",
   "tools.database.galleryCardSize": "Ukuran kartu",
+  "tools.database.settingsCardLayout": "Tata letak kartu",
+  "tools.database.settingsCardLayoutCompact": "Ringkas",
   "tools.database.galleryCardSizeSmall": "Kecil",
   "tools.database.galleryCardSizeMedium": "Sedang",
   "tools.database.galleryCardSizeLarge": "Besar",

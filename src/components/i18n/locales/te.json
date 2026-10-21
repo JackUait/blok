@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "సవరించు",
   "tools.database.galleryCardMore": "పేరు మార్చు, తొలగించు, తరలించు మరియు మరిన్ని…",
   "tools.database.galleryCardSize": "కార్డ్ పరిమాణం",
+  "tools.database.settingsCardLayout": "కార్డ్ లేఅవుట్",
+  "tools.database.settingsCardLayoutCompact": "కాంపాక్ట్",
   "tools.database.galleryCardSizeSmall": "చిన్నది",
   "tools.database.galleryCardSizeMedium": "మధ్యస్థం",
   "tools.database.galleryCardSizeLarge": "పెద్దది",

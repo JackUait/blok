@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "എഡിറ്റ് ചെയ്യുക",
   "tools.database.galleryCardMore": "പേരുമാറ്റുക, ഇല്ലാതാക്കുക, നീക്കുക എന്നിവയും മറ്റും…",
   "tools.database.galleryCardSize": "കാർഡ് വലുപ്പം",
+  "tools.database.settingsCardLayout": "കാർഡ് ലേഔട്ട്",
+  "tools.database.settingsCardLayoutCompact": "ഒതുക്കമുള്ളത്",
   "tools.database.galleryCardSizeSmall": "ചെറുത്",
   "tools.database.galleryCardSizeMedium": "ഇടത്തരം",
   "tools.database.galleryCardSizeLarge": "വലുത്",

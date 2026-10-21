@@ -666,6 +666,7 @@ export const DATABASE_DATA = {
             description: 'What a gallery or board card shows above its title: none, the page cover, the page content, or "property:<id>". Default content on a gallery, none on a board.',
           },
           fitImage: { type: 'boolean', description: 'Gallery or board: show the whole image instead of cropping it. Default false.' },
+          cardLayout: { type: 'string', enum: ['compact', 'list'], description: 'Board: list puts each card property on its own line, compact sets them side by side. Default list.' },
           calendarBy: { type: 'string', description: 'Calendar: the date property id that places each row. Default the first date property.' },
           calendarRange: { type: 'string', enum: ['month', 'week'], description: 'Calendar range. Default month.' },
           showWeekends: { type: 'boolean', description: 'Calendar. Default true.' },

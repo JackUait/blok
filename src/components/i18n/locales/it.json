@@ -1302,6 +1302,8 @@
   "tools.database.galleryCardEdit": "Modifica",
   "tools.database.galleryCardMore": "Rinomina, elimina, sposta e altro…",
   "tools.database.galleryCardSize": "Dimensione delle schede",
+  "tools.database.settingsCardLayout": "Disposizione delle schede",
+  "tools.database.settingsCardLayoutCompact": "Compatta",
   "tools.database.galleryCardSizeSmall": "Piccola",
   "tools.database.galleryCardSizeMedium": "Media",
   "tools.database.galleryCardSizeLarge": "Grande",

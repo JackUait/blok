@@ -1302,6 +1302,8 @@
   "tools.database.galleryCardEdit": "Rediģēt",
   "tools.database.galleryCardMore": "Pārdēvēt, dzēst, pārvietot un vairāk…",
   "tools.database.galleryCardSize": "Kartītes izmērs",
+  "tools.database.settingsCardLayout": "Kartītes izkārtojums",
+  "tools.database.settingsCardLayoutCompact": "Kompakts",
   "tools.database.galleryCardSizeSmall": "Mazs",
   "tools.database.galleryCardSizeMedium": "Vidējs",
   "tools.database.galleryCardSizeLarge": "Liels",

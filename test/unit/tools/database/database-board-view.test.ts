@@ -439,6 +439,16 @@ describe('DatabaseBoardView', () => {
       expect(labelOf(new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' }).createView())).toBe('tools.database.newPage');
     });
 
+    it('marks the board with its card layout; List by default (research/30 §10f)', () => {
+      const view = (cardLayout?: 'compact' | 'list'): HTMLElement => new DatabaseBoardView({
+        readOnly: false, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title',
+        view: { id: 'v', name: 'Board', type: 'board', position: 'a0', sorts: [], filters: [], visibleProperties: [], ...(cardLayout === undefined ? {} : { cardLayout }) },
+      }).createView();
+
+      expect(view().querySelector('[data-blok-database-board]')?.getAttribute('data-card-layout')).toBe('list');
+      expect(view('compact').querySelector('[data-blok-database-board]')?.getAttribute('data-card-layout')).toBe('compact');
+    });
+
     it('prefixes add-column button text with +', () => {
       const view = new DatabaseBoardView({ readOnly: false, i18n, options: [], getRows: () => [], titlePropertyId: 'title' });
       const board = view.createView();

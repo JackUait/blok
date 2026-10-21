@@ -45,6 +45,7 @@ import { ME_FILTER_VALUE, THIS_PAGE_FILTER_VALUE } from './database-query';
 import { COLOR_RULE_LAYOUTS, COLOR_RULE_TYPES, isGroupHidden, withGroupFlags } from './view-data';
 import {
   LOAD_LIMITS,
+  resolveCardLayout,
   resolveLoadLimit,
   defaultOpenPagesIn,
   resolveOpenPagesIn,
@@ -817,9 +818,53 @@ export class ViewSettingsPages {
           loadLimit,
           ...switches,
           ...this.layoutRows(panel),
+          ...(view.type === 'board' ? [this.cardLayoutBox(panel)] : []),
         ];
       },
     };
+  }
+
+  /**
+   * research/30 §10d, §10f (shots 22, 24): the board's "Card layout" box, two
+   * drawn tiles. Notion rings the pick blue; Blok rings it in primary ink (no-blue law).
+   */
+  private cardLayoutBox(panel: DatabasePanel): HTMLElement {
+    const box = document.createElement('div');
+    const label = document.createElement('div');
+    const tiles = document.createElement('div');
+    const current = resolveCardLayout(this.ctx.view());
+
+    box.setAttribute('data-blok-database-card-layout', '');
+    box.setAttribute('data-blok-testid', 'database-settings-card-layout');
+    label.setAttribute('data-blok-database-card-layout-label', '');
+    label.textContent = this.t('settingsCardLayout');
+    tiles.setAttribute('data-blok-database-card-layout-tiles', '');
+    tiles.append(...(['compact', 'list'] as const).map((layout) => {
+      const tile = document.createElement('button');
+      const drawing = document.createElement('span');
+      const caption = document.createElement('span');
+
+      tile.type = 'button';
+      tile.setAttribute('data-blok-database-card-layout-tile', layout);
+      tile.setAttribute('data-blok-testid', `database-card-layout-${layout}`);
+      tile.setAttribute('aria-pressed', String(current === layout));
+      tile.disabled = !this.shared;
+      drawing.setAttribute('data-blok-database-card-layout-drawing', layout);
+      drawing.setAttribute('aria-hidden', 'true');
+      // The drawing: a dot, then bars side by side (Compact) or one per line (List).
+      drawing.append(...Array.from({ length: layout === 'compact' ? 6 : 3 }, () => document.createElement('i')));
+      caption.textContent = this.t(layout === 'compact' ? 'settingsCardLayoutCompact' : 'viewTypeList');
+      tile.append(drawing, caption);
+      tile.addEventListener('click', () => {
+        this.ctx.updateView({ cardLayout: layout });
+        panel.refresh();
+      });
+
+      return tile;
+    }));
+    box.append(label, tiles);
+
+    return box;
   }
 
   private currentLayoutItems(): LayoutItem[] {

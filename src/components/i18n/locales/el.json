@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "Επεξεργασία",
   "tools.database.galleryCardMore": "Μετονομασία, διαγραφή, μετακίνηση και άλλα…",
   "tools.database.galleryCardSize": "Μέγεθος κάρτας",
+  "tools.database.settingsCardLayout": "Διάταξη κάρτας",
+  "tools.database.settingsCardLayoutCompact": "Συμπαγής",
   "tools.database.galleryCardSizeSmall": "Μικρό",
   "tools.database.galleryCardSizeMedium": "Μεσαίο",
   "tools.database.galleryCardSizeLarge": "Μεγάλο",

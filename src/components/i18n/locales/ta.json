@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "திருத்து",
   "tools.database.galleryCardMore": "மறுபெயரிடு, அழி, நகர்த்து மற்றும் பல…",
   "tools.database.galleryCardSize": "அட்டை அளவு",
+  "tools.database.settingsCardLayout": "அட்டை தளவமைப்பு",
+  "tools.database.settingsCardLayoutCompact": "இறுக்கமானது",
   "tools.database.galleryCardSizeSmall": "சிறியது",
   "tools.database.galleryCardSizeMedium": "நடுத்தரம்",
   "tools.database.galleryCardSizeLarge": "பெரியது",

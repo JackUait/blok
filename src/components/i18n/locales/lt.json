@@ -1304,6 +1304,8 @@
   "tools.database.galleryCardEdit": "Redaguoti",
   "tools.database.galleryCardMore": "Pervadinti, ištrinti, perkelti ir daugiau…",
   "tools.database.galleryCardSize": "Kortelės dydis",
+  "tools.database.settingsCardLayout": "Kortelės išdėstymas",
+  "tools.database.settingsCardLayoutCompact": "Kompaktiškas",
   "tools.database.galleryCardSizeSmall": "Mažas",
   "tools.database.galleryCardSizeMedium": "Vidutinis",
   "tools.database.galleryCardSizeLarge": "Didelis",

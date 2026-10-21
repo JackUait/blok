@@ -1302,6 +1302,8 @@
   "tools.database.galleryCardEdit": "ערוך",
   "tools.database.galleryCardMore": "שינוי שם, מחיקה, העברה ועוד…",
   "tools.database.galleryCardSize": "גודל כרטיס",
+  "tools.database.settingsCardLayout": "פריסת כרטיס",
+  "tools.database.settingsCardLayoutCompact": "קומפקטי",
   "tools.database.galleryCardSizeSmall": "קטן",
   "tools.database.galleryCardSizeMedium": "בינוני",
   "tools.database.galleryCardSizeLarge": "גדול",

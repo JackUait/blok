@@ -1302,6 +1302,8 @@
   "tools.database.galleryCardEdit": "Editează",
   "tools.database.galleryCardMore": "Redenumește, șterge, mută și altele…",
   "tools.database.galleryCardSize": "Dimensiunea cardului",
+  "tools.database.settingsCardLayout": "Aspectul cardului",
+  "tools.database.settingsCardLayoutCompact": "Restrâns",
   "tools.database.galleryCardSizeSmall": "Mică",
   "tools.database.galleryCardSizeMedium": "Medie",
   "tools.database.galleryCardSizeLarge": "Mare",

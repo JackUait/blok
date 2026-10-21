@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "Szerkesztés",
   "tools.database.galleryCardMore": "Átnevezés, törlés, áthelyezés és egyebek…",
   "tools.database.galleryCardSize": "Kártyaméret",
+  "tools.database.settingsCardLayout": "Kártyaelrendezés",
+  "tools.database.settingsCardLayoutCompact": "Kompakt",
   "tools.database.galleryCardSizeSmall": "Kicsi",
   "tools.database.galleryCardSizeMedium": "Közepes",
   "tools.database.galleryCardSizeLarge": "Nagy",

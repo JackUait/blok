@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "Muuda",
   "tools.database.galleryCardMore": "Nimeta ümber, kustuta, teisalda ja muud…",
   "tools.database.galleryCardSize": "Kaardi suurus",
+  "tools.database.settingsCardLayout": "Kaardi paigutus",
+  "tools.database.settingsCardLayoutCompact": "Kompaktne",
   "tools.database.galleryCardSizeSmall": "Väike",
   "tools.database.galleryCardSizeMedium": "Keskmine",
   "tools.database.galleryCardSizeLarge": "Suur",

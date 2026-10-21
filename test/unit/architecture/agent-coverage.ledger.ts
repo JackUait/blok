@@ -105,6 +105,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/database/database-property-menu.ts': cmds(['database.updateProperty'], 'Rename a property and pick its icon.'),
   'ui-file:src/tools/database/database-selection-bar.ts': cmds(['database.setRowValues', 'block.delete'], 'Edit a property on the selected rows, or delete them.'),
   'ui-file:src/tools/database/database-table-column-drag.ts': exempt('cut-v1', VIEW_LAYOUT_CUT),
+  'ui-file:src/tools/database/database-view-settings-panel.ts': exempt('cut-v1', 'The board\'s Card layout tiles write the view\'s cardLayout. View layout settings are cut from v1 by D6.'),
   'ui-file:src/tools/database/database-table-grid.ts': cmds(['database.setRowValues'], 'Cell keys, paste and fill-drag write cell values.'),
   'ui-file:src/tools/database/database-table-resize.ts': exempt('cut-v1', VIEW_LAYOUT_CUT),
   'ui-file:src/tools/database/database-table-row-drag.ts': cmds(['database.moveRow'], 'Reorder rows in the table view.'),

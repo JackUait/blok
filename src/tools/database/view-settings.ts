@@ -4,6 +4,7 @@ import type { ResolvedViewProperty } from '../../shared/database/view-properties
 import type {
   CalendarRange,
   CalculationFn,
+  CardLayout,
   CardSize,
   DatabaseViewConfig,
   LoadLimit,
@@ -157,6 +158,9 @@ export const resolveBoardCardPreview = (view: DatabaseViewConfig, schema: Proper
     : resolveCardPreview(view, schema);
 
 export const resolveFitImage = (view: DatabaseViewConfig): boolean => view.fitImage === true;
+
+/** research/30 §10f: Card layout on a board. Default list, Blok's card look before the setting. */
+export const resolveCardLayout = (view: DatabaseViewConfig): CardLayout => (view.cardLayout === 'compact' ? 'compact' : 'list');
 
 const CALENDAR_RANGES: readonly CalendarRange[] = ['month', 'week'];
 

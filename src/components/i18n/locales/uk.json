@@ -1304,6 +1304,8 @@
   "tools.database.galleryCardEdit": "Редагувати",
   "tools.database.galleryCardMore": "Перейменувати, видалити, перемістити й інше…",
   "tools.database.galleryCardSize": "Розмір картки",
+  "tools.database.settingsCardLayout": "Макет картки",
+  "tools.database.settingsCardLayoutCompact": "Компактний",
   "tools.database.galleryCardSizeSmall": "Малий",
   "tools.database.galleryCardSizeMedium": "Середній",
   "tools.database.galleryCardSizeLarge": "Великий",

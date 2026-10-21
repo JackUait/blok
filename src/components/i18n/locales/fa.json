@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "ویرایش",
   "tools.database.galleryCardMore": "تغییر نام، حذف، انتقال و موارد بیشتر…",
   "tools.database.galleryCardSize": "اندازه کارت",
+  "tools.database.settingsCardLayout": "چیدمان کارت",
+  "tools.database.settingsCardLayoutCompact": "فشرده",
   "tools.database.galleryCardSizeSmall": "کوچک",
   "tools.database.galleryCardSizeMedium": "متوسط",
   "tools.database.galleryCardSizeLarge": "بزرگ",

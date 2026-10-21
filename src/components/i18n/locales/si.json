@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "සංස්කරණය",
   "tools.database.galleryCardMore": "නැවත නම් කරන්න, මකන්න, ගෙන යන්න සහ තවත්…",
   "tools.database.galleryCardSize": "කාඩ්පත් ප්‍රමාණය",
+  "tools.database.settingsCardLayout": "කාඩ්පත් පිරිසැලසුම",
+  "tools.database.settingsCardLayoutCompact": "සංයුක්ත",
   "tools.database.galleryCardSizeSmall": "කුඩා",
   "tools.database.galleryCardSizeMedium": "මධ්‍යම",
   "tools.database.galleryCardSizeLarge": "විශාල",

@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "Խմբագրել",
   "tools.database.galleryCardMore": "Վերանվանել, ջնջել, տեղափոխել և այլն…",
   "tools.database.galleryCardSize": "Քարտի չափ",
+  "tools.database.settingsCardLayout": "Քարտի դասավորություն",
+  "tools.database.settingsCardLayoutCompact": "Սեղմ",
   "tools.database.galleryCardSizeSmall": "Փոքր",
   "tools.database.galleryCardSizeMedium": "Միջին",
   "tools.database.galleryCardSizeLarge": "Մեծ",

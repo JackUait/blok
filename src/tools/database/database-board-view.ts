@@ -9,7 +9,7 @@ import type { CellContext } from './cells';
 import { readPropertyValue } from './property-values';
 import { createCardPreview } from './database-card-preview';
 import type { BodyBlock } from './row-body';
-import { resolveBoardCardPreview, resolveCardSize, resolveFitImage, resolveViewProperties } from './view-settings';
+import { resolveBoardCardPreview, resolveCardLayout, resolveCardSize, resolveFitImage, resolveViewProperties } from './view-settings';
 import { getElementDirection } from '../../components/utils/direction';
 import { IconPlus, IconPencil, IconDotsHorizontal, IconChevronDown } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
@@ -122,6 +122,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
 
     boardArea.setAttribute('data-blok-database-board', '');
     boardArea.setAttribute('data-card-size', this.cardSize);
+    boardArea.setAttribute('data-card-layout', this.settings.view === undefined ? 'list' : resolveCardLayout(this.settings.view));
     if (this.settings.view !== undefined && resolveFitImage(this.settings.view)) {
       boardArea.setAttribute('data-fit-image', '');
     }

@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "સંપાદિત કરો",
   "tools.database.galleryCardMore": "નામ બદલો, કાઢી નાખો, ખસેડો અને વધુ…",
   "tools.database.galleryCardSize": "કાર્ડનું કદ",
+  "tools.database.settingsCardLayout": "કાર્ડનો લેઆઉટ",
+  "tools.database.settingsCardLayoutCompact": "કોમ્પેક્ટ",
   "tools.database.galleryCardSizeSmall": "નાનું",
   "tools.database.galleryCardSizeMedium": "મધ્યમ",
   "tools.database.galleryCardSizeLarge": "મોટું",

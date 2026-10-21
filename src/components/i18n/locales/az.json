@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "Redaktə et",
   "tools.database.galleryCardMore": "Adını dəyiş, sil, köçür və daha çox…",
   "tools.database.galleryCardSize": "Kart ölçüsü",
+  "tools.database.settingsCardLayout": "Kart düzəni",
+  "tools.database.settingsCardLayoutCompact": "Kompakt",
   "tools.database.galleryCardSizeSmall": "Kiçik",
   "tools.database.galleryCardSizeMedium": "Orta",
   "tools.database.galleryCardSizeLarge": "Böyük",

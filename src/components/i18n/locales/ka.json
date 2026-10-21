@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "რედაქტირება",
   "tools.database.galleryCardMore": "გადარქმევა, წაშლა, გადატანა და სხვა…",
   "tools.database.galleryCardSize": "ბარათის ზომა",
+  "tools.database.settingsCardLayout": "ბარათის განლაგება",
+  "tools.database.settingsCardLayoutCompact": "კომპაქტური",
   "tools.database.galleryCardSizeSmall": "პატარა",
   "tools.database.galleryCardSizeMedium": "საშუალო",
   "tools.database.galleryCardSizeLarge": "დიდი",

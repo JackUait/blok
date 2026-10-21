@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "އެޑިޓްކުރޭ",
   "tools.database.galleryCardMore": "ނަން ބަދަލުކުރުން، ފޮހެލުން، ބަދަލުކުރުން އަދި އިތުރު…",
   "tools.database.galleryCardSize": "ކާޑުގެ ސައިޒު",
+  "tools.database.settingsCardLayout": "ކާޑުގެ ލޭއައުޓް",
+  "tools.database.settingsCardLayoutCompact": "ކުޑަ",
   "tools.database.galleryCardSizeSmall": "ކުޑަ",
   "tools.database.galleryCardSizeMedium": "މެދުމިން",
   "tools.database.galleryCardSizeLarge": "ބޮޑު",

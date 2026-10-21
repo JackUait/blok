@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "Rediger",
   "tools.database.galleryCardMore": "Omdøb, slet, flyt og mere…",
   "tools.database.galleryCardSize": "Kortstørrelse",
+  "tools.database.settingsCardLayout": "Kortopsætning",
+  "tools.database.settingsCardLayoutCompact": "Kompakt",
   "tools.database.galleryCardSizeSmall": "Lille",
   "tools.database.galleryCardSizeMedium": "Mellem",
   "tools.database.galleryCardSizeLarge": "Stor",

@@ -17,6 +17,26 @@ const ruleBody = (selector: string): string =>
     .join(';');
 
 describe('database board card and calendar "No date" styles', () => {
+  // research/03: compact cards set their properties inline (card_property_width_mode inline); List keeps one per line.
+  it('Compact puts card properties side by side and wraps them; List keeps the column', () => {
+    const body = ruleBody('[data-blok-database-board][data-card-layout="compact"] [data-blok-database-card-properties]');
+
+    expect(body).toMatch(/flex-direction:\s*row/);
+    expect(body).toMatch(/flex-wrap:\s*wrap/);
+    expect(ruleBody('[data-blok-database-card-properties]')).toMatch(/flex-direction:\s*column/);
+  });
+
+  it('the picked Card layout tile is never blue: a neutral ring in primary ink, the same ink as the other tile (no-blue law)', () => {
+    const picked = ruleBody('[data-blok-database-card-layout-tile][aria-pressed="true"] [data-blok-database-card-layout-drawing]');
+    const tile = ruleBody('[data-blok-database-card-layout-tile]');
+
+    expect(picked).not.toMatch(/blue|focus-ring|#2383e2|rgb\(35, 131, 226\)/i);
+    expect(picked).toMatch(/--blok-text-primary/);
+    expect(picked).not.toMatch(/background/);
+    expect(picked).not.toMatch(/(^|;)\s*color:/);
+    expect(tile).toMatch(/color:\s*var\(--blok-text-secondary\)|color:\s*var\(--blok-text-primary\)/);
+  });
+
   it('draws card properties as the measured 12px rows', () => {
     const body = ruleBody('[data-blok-database-card-property]');
 

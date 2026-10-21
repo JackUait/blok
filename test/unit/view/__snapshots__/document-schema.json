@@ -3137,6 +3137,14 @@
                 "type": "boolean",
                 "description": "Gallery or board: show the whole image instead of cropping it. Default false."
               },
+              "cardLayout": {
+                "type": "string",
+                "enum": [
+                  "compact",
+                  "list"
+                ],
+                "description": "Board: list puts each card property on its own line, compact sets them side by side. Default list."
+              },
               "calendarBy": {
                 "type": "string",
                 "description": "Calendar: the date property id that places each row. Default the first date property."

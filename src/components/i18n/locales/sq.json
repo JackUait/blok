@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "Redakto",
   "tools.database.galleryCardMore": "Riemërto, fshi, zhvendos dhe më shumë…",
   "tools.database.galleryCardSize": "Madhësia e kartës",
+  "tools.database.settingsCardLayout": "Struktura e kartës",
+  "tools.database.settingsCardLayoutCompact": "Kompakt",
   "tools.database.galleryCardSizeSmall": "E vogël",
   "tools.database.galleryCardSizeMedium": "E mesme",
   "tools.database.galleryCardSizeLarge": "E madhe",

@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "Chỉnh sửa",
   "tools.database.galleryCardMore": "Đổi tên, xóa, di chuyển và nhiều hơn…",
   "tools.database.galleryCardSize": "Kích thước thẻ",
+  "tools.database.settingsCardLayout": "Bố cục thẻ",
+  "tools.database.settingsCardLayoutCompact": "Thu gọn",
   "tools.database.galleryCardSizeSmall": "Nhỏ",
   "tools.database.galleryCardSizeMedium": "Vừa",
   "tools.database.galleryCardSizeLarge": "Lớn",

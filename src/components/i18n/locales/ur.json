@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "ترمیم کریں",
   "tools.database.galleryCardMore": "نام تبدیل کریں، حذف کریں، منتقل کریں اور مزید…",
   "tools.database.galleryCardSize": "کارڈ کا سائز",
+  "tools.database.settingsCardLayout": "کارڈ کا لے آؤٹ",
+  "tools.database.settingsCardLayoutCompact": "کمپیکٹ",
   "tools.database.galleryCardSizeSmall": "چھوٹا",
   "tools.database.galleryCardSizeMedium": "درمیانہ",
   "tools.database.galleryCardSizeLarge": "بڑا",

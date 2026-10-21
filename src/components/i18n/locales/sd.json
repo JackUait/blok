@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "ترميم ڪريو",
   "tools.database.galleryCardMore": "نالو بدلايو، ختم ڪريو، منتقل ڪريو ۽ وڌيڪ…",
   "tools.database.galleryCardSize": "ڪارڊ جي سائيز",
+  "tools.database.settingsCardLayout": "ڪارڊ جو لي آئوٽ",
+  "tools.database.settingsCardLayoutCompact": "ننڍو",
   "tools.database.galleryCardSizeSmall": "ننڍو",
   "tools.database.galleryCardSizeMedium": "وچولو",
   "tools.database.galleryCardSizeLarge": "وڏو",

@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "편집",
   "tools.database.galleryCardMore": "이름 바꾸기, 삭제, 이동 등…",
   "tools.database.galleryCardSize": "카드 크기",
+  "tools.database.settingsCardLayout": "카드 레이아웃",
+  "tools.database.settingsCardLayoutCompact": "촘촘하게",
   "tools.database.galleryCardSizeSmall": "작게",
   "tools.database.galleryCardSizeMedium": "보통",
   "tools.database.galleryCardSizeLarge": "크게",

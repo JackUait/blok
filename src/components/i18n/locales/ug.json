@@ -1300,6 +1300,8 @@
   "tools.database.galleryCardEdit": "تەھرىرلە",
   "tools.database.galleryCardMore": "قايتا ئاتاش، ئۆچۈرۈش، يۆتكەش ۋە تېخىمۇ كۆپ…",
   "tools.database.galleryCardSize": "كارتا چوڭلۇقى",
+  "tools.database.settingsCardLayout": "كارتا ئورۇنلاشتۇرۇشى",
+  "tools.database.settingsCardLayoutCompact": "ئىخچام",
   "tools.database.galleryCardSizeSmall": "كىچىك",
   "tools.database.galleryCardSizeMedium": "ئوتتۇرا",
   "tools.database.galleryCardSizeLarge": "چوڭ",

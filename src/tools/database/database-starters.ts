@@ -248,13 +248,11 @@ export const galleryStarters = (used: ReadonlySet<StarterId>): StarterMeta[] => 
 ];
 
 /**
- * The Customize preview's "N hidden properties" (research/30 B8): the first
- * view's properties that are not shown, leaving out the title and a board's
+ * The Customize preview's "N hidden properties" (research/30 B8): the shown
+ * view's (default: the first) properties that are not shown, leaving out the title and a board's
  * group. Inferred from four counts (0, 4, 4, 5), all of which it gives.
  */
-export const hiddenPropertyCount = (made: StarterBuild): number => {
-  const first = made.views[0];
-
+export const hiddenPropertyCount = (made: StarterBuild, first = made.views[0]): number => {
   if (first === undefined) return 0;
 
   return made.schema.filter((p, index) => index > 0 && !first.visibleProperties.includes(p.id) && p.id !== first.groupBy).length;

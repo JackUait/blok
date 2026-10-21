@@ -48,6 +48,7 @@ export const openStarterCustomize = (options: StarterCustomizeOptions): Promise<
   const preview = document.createElement('div');
   const hidden = document.createElement('div');
   const step = { at: 1 };
+  const focus: { view?: string } = {};
 
   counter.next += 1;
   backdrop.setAttribute('data-blok-popover', '');
@@ -74,7 +75,9 @@ export const openStarterCustomize = (options: StarterCustomizeOptions): Promise<
     const title = document.createElement('div');
     const tabs = document.createElement('div');
     const table = document.createElement('div');
-    const first = made.views[0];
+    // research/30 B8: a view card turned on shows its view; else the first view.
+    const shownName = meta.views.find((c) => c.id === focus.view && picks.views.has(c.id));
+    const first = made.views.find((view) => shownName !== undefined && view.name === t(shownName.labelKey)) ?? made.views[0];
     const columns = [made.schema[0], ...(first?.visibleProperties ?? []).map((id) => made.schema.find((p) => p.id === id))]
       .filter((p) => p !== undefined);
     const line = (cells: string[], header: boolean): HTMLElement => {
@@ -99,13 +102,14 @@ export const openStarterCustomize = (options: StarterCustomizeOptions): Promise<
       const tab = document.createElement('span');
 
       tab.textContent = view.name;
+      if (view === first) tab.setAttribute('aria-current', 'true');
 
       return tab;
     }));
     table.setAttribute('data-blok-database-starter-preview-table', '');
     table.append(line(columns.map((p) => p.name), true), ...made.rows.map((row) => line(columns.map((p, i) => (i === 0 ? row.data.title ?? '' : '')), false)));
     // research/30 B8: "0 hidden properties" under the table.
-    hidden.textContent = t('tools.database.starterHiddenProperties', { count: String(hiddenPropertyCount(made)) });
+    hidden.textContent = t('tools.database.starterHiddenProperties', { count: String(hiddenPropertyCount(made, first)) });
     preview.replaceChildren(title, tabs, table, hidden);
   };
 
@@ -127,6 +131,7 @@ export const openStarterCustomize = (options: StarterCustomizeOptions): Promise<
       if (kind === 'view' && chosen.size === 1 && chosen.has(item.id)) return;
       if (chosen.has(item.id)) chosen.delete(item.id);
       else chosen.add(item.id);
+      if (kind === 'view' && chosen.has(item.id)) focus.view = item.id;
       paint();
       drawPreview();
     });

@@ -261,6 +261,9 @@ test('Projects has no "Undo … database" row (Notion showed "Turn into" there)'
 
 test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
   test('the gallery lists six templates, expands to seven, and Brainstorm Session builds its measured database', async ({ page }) => {
+    const errors: string[] = [];
+
+    page.on('pageerror', (error) => errors.push(error.message));
     await mount(page);
     await insertDatabase(page);
     await page.getByTestId('database-new-database-panel').getByRole('button', { name: 'More templates' }).click();
@@ -299,6 +302,9 @@ test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
       { glyph: 'idea', color: 'orange' },
       'brainstorm',
     ]);
+    // Upvote has no actions and Total votes no expression: the table still draws every row.
+    await expect(page.getByText('Improve SEO')).toBeVisible();
+    expect(errors).toEqual([]);
   });
 
   test('the last view card stays on (research/30 B8)', async ({ page }) => {

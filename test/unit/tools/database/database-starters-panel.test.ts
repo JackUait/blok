@@ -217,6 +217,26 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
     expect([...(dialog?.querySelectorAll('[data-blok-database-starter-card][aria-pressed="true"]') ?? [])]).toHaveLength(1);
   });
 
+  it('turning a view card on shows that view in the preview; turning it off falls back to the first (research/30 B8)', async () => {
+    await insert();
+
+    byTestId(panel(), 'database-new-database-more-templates').click();
+    byTestId(document.body, 'database-template-gallery-template-brainstorm').click();
+    const dialog = modal() ?? undefined;
+    const footer = (): string | null => dialog?.querySelector('[data-blok-database-starter-preview-hidden]')?.textContent ?? null;
+    const active = (): string | null => dialog?.querySelector('[data-blok-database-starter-preview-tabs] [aria-current="true"]')?.textContent ?? null;
+
+    byTestId(dialog, 'database-starter-next').click();
+    expect(footer()).toBe('tools.database.starterHiddenProperties {"count":"0"}');
+    byTestId(dialog, 'database-starter-view-top').click();
+    // Top Ideas shows Idea and Created by: five hidden, as measured.
+    expect(footer()).toBe('tools.database.starterHiddenProperties {"count":"5"}');
+    expect(active()).toBe('tools.database.starterViewTopIdeas');
+    byTestId(dialog, 'database-starter-view-top').click();
+    expect(footer()).toBe('tools.database.starterHiddenProperties {"count":"0"}');
+    expect(active()).toBe('tools.database.starterViewAllIdeas');
+  });
+
   it('closing Customize builds nothing and keeps the empty database', async () => {
     const { doc, tool } = await insert();
     const schema = saved(tool).schema;

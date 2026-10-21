@@ -7703,6 +7703,11 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-text-secondary);
 }
 
+/* The previewed view's tab: primary ink, no fill (no-blue law). */
+[data-blok-database-starter-preview-tabs] [aria-current="true"] {
+  color: var(--blok-text-primary);
+}
+
 [data-blok-database-starter-preview-row] {
   display: flex;
   border-block-end: 1px solid var(--blok-border-primary);

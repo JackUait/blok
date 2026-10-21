@@ -19,7 +19,7 @@ describe('agent-models public surface', () => {
     const declared = [...readFileSync(resolve(__dirname, '../../../types/agent-models.d.ts'), 'utf8')
       .matchAll(/export declare function (\w+)/g)].map((match) => match[1]).sort();
 
-    expect(Object.keys(models).sort()).toEqual(['agentModel', 'anthropicModel', 'geminiModel', 'openaiCompatibleModel', 'openaiModel']);
+    expect(Object.keys(models).sort()).toEqual(['agentModel']);
     expect(declared).toEqual(Object.keys(models).sort());
   });
 

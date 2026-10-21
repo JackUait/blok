@@ -506,8 +506,7 @@ describe('package.json exports include require conditions', () => {
 
     for (const file of ['dist/agent-models.mjs', 'dist/agent-models.cjs', 'types/agent-models.d.ts']) {
       const built = readFileSync(resolve(repoRoot, file), 'utf-8')
-      expect(built).toContain('openaiCompatibleModel')
-      expect(built).toContain('geminiModel')
+      expect(built).toContain('agentModel')
     }
   })
 

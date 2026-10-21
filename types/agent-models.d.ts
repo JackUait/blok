@@ -45,37 +45,29 @@ export interface AgentModelSearchAdapterOptions extends AgentModelAdapterOptions
 /** Providers whose own web search `webSearch` turns on. */
 export type AgentModelSearchProvider = 'anthropic' | 'openai' | 'gemini';
 
-/** `openai-compatible` covers any other endpoint that speaks Chat Completions. */
+/**
+ * Each provider is sent the API it serves:
+ * - `anthropic`: Messages API. Levels set `output_config.effort`; `off` sends `low`, since some Claude models cannot turn
+ *   thinking off. Caches by default: a mark on the system block and top-level `cache_control`. A platform that rejects
+ *   top-level `cache_control` (the legacy Bedrock integration) deletes it from the body in `send`.
+ * - `openai`: Responses API, stateless (`store: false`). Levels set `reasoning.effort`; `off` sends `low`, since some models reject `none`.
+ * - `gemini`: generateContent (v1beta). Levels set `generationConfig.thinkingConfig.thinkingLevel`.
+ *   The body is the same for both transports. With `stream`, call `:streamGenerateContent?alt=sse`.
+ * - `deepseek`, `mistral`, `groq`, `ollama`, `openrouter`, and `openai-compatible` for any other endpoint:
+ *   Chat Completions. Levels set `reasoning_effort`.
+ */
 export type AgentModelProvider = AgentModelSearchProvider | 'deepseek' | 'mistral' | 'groq' | 'ollama' | 'openrouter' | 'openai-compatible';
 
 export type AgentModelOptions =
   | (AgentModelSearchAdapterOptions & { provider: AgentModelSearchProvider })
-  | (AgentModelAdapterOptions & { provider: Exclude<AgentModelProvider, AgentModelSearchProvider>; webSearch?: never });
+  | (AgentModelAdapterOptions & {
+    provider: Exclude<AgentModelProvider, AgentModelSearchProvider>;
+    /** These APIs share no search tool. Add your provider's search to the body in `send`, or pass a search tool in `agent.assistant.tools`. */
+    webSearch?: never;
+  });
 
 /**
  * The model for your provider. It picks the API that provider serves, so you name the provider, not the API.
- * `webSearch` is for Anthropic, OpenAI and Gemini only. An unknown provider throws a TypeError.
+ * Throws a TypeError for an unknown provider, for `webSearch` on a provider without one, and with neither `send` nor `stream`.
  */
 export declare function agentModel(options: AgentModelOptions): AgentModel;
-
-/**
- * Anthropic Messages API. `off` sends the lowest effort, since some Claude models cannot turn thinking off.
- * Caches by default: a mark on the system block and top-level `cache_control`. A platform that rejects
- * top-level `cache_control` (the legacy Bedrock integration) deletes it from the body in `send`.
- */
-export declare function anthropicModel(options: AgentModelSearchAdapterOptions): AgentModel;
-
-/** OpenAI Responses API, stateless (`store: false`). Levels set `reasoning.effort`; `off` sends `low`, since some models reject `none`. */
-export declare function openaiModel(options: AgentModelSearchAdapterOptions): AgentModel;
-
-/**
- * Chat Completions: DeepSeek, Mistral, Groq, Ollama, OpenRouter and others. Levels set `reasoning_effort`.
- * No `webSearch`: these APIs share no search tool. Add your provider's search to the body in `send`, or pass a search tool in `agent.assistant.tools`.
- */
-export declare function openaiCompatibleModel(options: AgentModelAdapterOptions): AgentModel;
-
-/**
- * Gemini generateContent (v1beta). Levels set `generationConfig.thinkingConfig.thinkingLevel`.
- * The body is the same for both transports. With `stream`, call `:streamGenerateContent?alt=sse`.
- */
-export declare function geminiModel(options: AgentModelSearchAdapterOptions): AgentModel;

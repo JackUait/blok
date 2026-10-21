@@ -112,7 +112,7 @@ describe('geminiModel', () => {
     await run(geminiModel({ model: 'm', send }), [{ role: 'user', content: 'a' }], 'off');
     await run(geminiModel({ model: 'm', send }), [{ role: 'user', content: 'a' }], 'high');
     expect(bodies.map((body) => body.generationConfig)).toEqual([
-      { maxOutputTokens: 16000, thinkingConfig: { thinkingLevel: 'MINIMAL' } },
+      { maxOutputTokens: 16000, thinkingConfig: { thinkingLevel: 'LOW' } },
       { maxOutputTokens: 16000, thinkingConfig: { thinkingLevel: 'HIGH' } },
     ]);
   });
@@ -429,6 +429,17 @@ describe('geminiModel', () => {
 
       expect(on.bodies[0].tools).toEqual([declarations, { googleSearch: {} }]);
       expect(off.bodies[0].tools).toEqual([declarations]);
+    });
+
+    it('turns on tool context circulation with search, since function calls go with it', async () => {
+      const on = fakeSend(candidate([{ text: 'ok' }]));
+      const off = fakeSend(candidate([{ text: 'ok' }]));
+
+      await run(geminiModel({ model: 'm', send: on.send, webSearch: true }), [{ role: 'user', content: 'Go' }]);
+      await run(geminiModel({ model: 'm', send: off.send }), [{ role: 'user', content: 'Go' }]);
+
+      expect(on.bodies[0].toolConfig).toEqual({ includeServerSideToolInvocations: true });
+      expect(off.bodies[0]).not.toHaveProperty('toolConfig');
     });
 
     it('merges an options object into the search tool entry', async () => {

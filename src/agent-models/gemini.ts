@@ -11,9 +11,10 @@ import { readJsonEvents } from './sse';
 const FORMAT = 'gemini';
 
 // Gemini 3+ cannot turn thinking off, and sending thinkingBudget with thinkingLevel is a 400.
+// Some models reject MINIMAL, so "off" is LOW, which every text model takes.
 const level = (value: string): Body => ({ generationConfig: { thinkingConfig: { thinkingLevel: value } } });
 const LEVELS: Record<AgentThinkingLevel, Body> = {
-  off: level('MINIMAL'), low: level('LOW'), medium: level('MEDIUM'), high: level('HIGH'), xhigh: level('HIGH'), max: level('HIGH'),
+  off: level('LOW'), low: level('LOW'), medium: level('MEDIUM'), high: level('HIGH'), xhigh: level('HIGH'), max: level('HIGH'),
 };
 
 const REFUSALS = new Set(['SAFETY', 'RECITATION', 'BLOCKLIST', 'PROHIBITED_CONTENT', 'SPII']);
@@ -215,6 +216,8 @@ export function geminiModel(options: AdapterOptions, { name, levels }: Profile =
         })) },
         ...search,
       ],
+      // Search alongside function calls needs this flag.
+      ...(search.length > 0 ? { toolConfig: { includeServerSideToolInvocations: true } } : {}),
       generationConfig: { maxOutputTokens: options.maxTokens ?? DEFAULT_MAX_TOKENS },
     }, request, { ...LEVELS, ...levels }, options);
 

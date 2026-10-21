@@ -328,6 +328,13 @@ describe('openaiModel', () => {
       await expect(openaiModel({ model: 'm', stream: fakeStream(text).stream })(request())).rejects.toThrow('OpenAI: Slow down');
     });
 
+    it('reads an SSE error event whose message is nested under error, as Azure sends it', async () => {
+      const text = sse({ type: 'error', error: { type: 'too_many_requests', code: 'no_capacity', message: 'High demand' } });
+      const stream = fakeStream(text).stream;
+
+      await expect(openaiModel({ model: 'm', stream }, { name: 'Azure OpenAI' })(request())).rejects.toThrow('Azure OpenAI: High demand');
+    });
+
     it('throws the provider\'s message for an HTTP error response', async () => {
       const stream = async (): Promise<Response> => new Response('{"error":{"message":"Incorrect API key"}}', { status: 401 });
 

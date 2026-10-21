@@ -123,9 +123,12 @@ const readStream = async (
   const state: { final: unknown } = { final: undefined };
 
   const onEvent = (event: Record<string, unknown>): void => {
-    // The error event carries its message at the top level, not under `error`.
+    // OpenAI puts the message at the top level; Azure nests it under `error`.
     if (event.type === 'error') {
-      throw new Error(`${name}: ${typeof event.message === 'string' ? event.message : 'the stream failed.'}`);
+      if (typeof event.message === 'string') {
+        throw new Error(`${name}: ${event.message}`);
+      }
+      throw errorOf(event, name) ?? new Error(`${name}: the stream failed.`);
     }
     if (event.type === 'response.failed') {
       throw errorOf(event.response, name) ?? new Error(`${name}: the response failed.`);

@@ -18,6 +18,9 @@ export interface TooltipSegment {
  */
 export type TooltipLine = string | TooltipSegment[];
 
+/** The muted ink of a two-tone hint; the bright part uses the tooltip font colour. */
+export const TOOLTIP_MUTED_INK = 'rgba(255, 255, 255, 0.55)';
+
 /**
  * Applies highlight styling (white color, semibold weight) to a span element.
  */
@@ -42,7 +45,7 @@ export const createTooltipContent = function(lines: TooltipLine[]): HTMLElement 
   container.style.display = 'flex';
   container.style.flexDirection = 'column';
   container.style.gap = '4px';
-  container.style.color = 'rgba(255, 255, 255, 0.55)';
+  container.style.color = TOOLTIP_MUTED_INK;
 
   lines.forEach((line) => {
     const lineEl = $.make('div');

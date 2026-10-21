@@ -408,22 +408,40 @@ test.describe('property header menu: Edit property opens one level at a time (re
     await expect(open.getByRole('textbox', { name: 'Property description', exact: true })).toHaveValue('First line');
   });
 
-  // research/30 X2: a described property's header shows an (i); hovering it shows the description above the header.
-  test('a described header shows an (i) whose hover hint reads the description above it', async ({ page }) => {
+  // research/30 X2: a described property's header shows an (i). research/31 §1: hovering the header shows its name and description above it.
+  test('a described header shows an (i); hovering the header shows the name and the description above it', async ({ page }) => {
     const open = page.locator('[data-blok-popover-opened="true"]');
     const header = page.locator('[data-blok-database-table-column-header][data-property-id="p-amount"]');
     const info = header.locator('[data-blok-database-table-column-description]');
     const hint = page.getByTestId('tooltip');
+    const setDescription = async (text: string): Promise<void> => {
+      await header.click();
+      const area = open.getByRole('textbox', { name: 'Property description', exact: true });
+
+      if (await area.isVisible()) {
+        await area.fill(text);
+      } else {
+        await open.getByRole('button', { name: 'Add property description', exact: true }).click();
+        await page.keyboard.type(text);
+      }
+      await page.keyboard.press('Escape');
+      await expect(open).toHaveCount(0);
+    };
+    const hintText = page.locator('[data-blok-database-header-hint-text]');
+    const hintLines = async (): Promise<Array<{ text: string; size: string; weight: string }>> => hintText.evaluate((el) =>
+      [...el.children].map((line) => ({ text: line.textContent ?? '', size: getComputedStyle(line).fontSize, weight: getComputedStyle(line).fontWeight })));
+    const hover = async (): Promise<void> => {
+      const box = await header.boundingBox();
+
+      await page.mouse.move((box?.x ?? 0) - 40, (box?.y ?? 0) - 60);
+      await page.mouse.move((box?.x ?? 0) + (box?.width ?? 0) - 10, (box?.y ?? 0) + (box?.height ?? 0) / 2);
+    };
 
     await expect(info).toHaveCount(0);
-    await header.click();
-    await open.getByRole('button', { name: 'Add property description', exact: true }).click();
-    await page.keyboard.type('First line');
-    await page.keyboard.press('Escape');
-    await expect(open).toHaveCount(0);
+    await setDescription('Short one');
 
     await expect(info).toBeVisible();
-    await expect(header).toHaveAttribute('aria-description', 'First line');
+    await expect(header).toHaveAttribute('aria-description', 'Short one');
     const [iconBox, nameBox, headerBox] = await Promise.all([
       info.boundingBox(),
       header.locator('[data-blok-database-table-column-name]').boundingBox(),
@@ -434,15 +452,37 @@ test.describe('property header menu: Edit property opens one level at a time (re
     expect(iconBox?.height).toBe(16);
     expect((iconBox?.x ?? 0)).toBeGreaterThan((nameBox?.x ?? 0) + (nameBox?.width ?? 0) - 1);
 
-    await page.mouse.move((headerBox?.x ?? 0) - 40, (headerBox?.y ?? 0) - 60);
-    await info.hover();
+    // The empty right part of the header carries the hint too, after Blok's hint delay.
+    await hover();
     await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 200)));
     await expect(hint).not.toHaveAttribute('data-blok-shown', 'true');
     await expect(hint).toHaveAttribute('data-blok-shown', 'true');
-    await expect(page.getByTestId('tooltip-content')).toHaveText('First line');
-    const hintBox = await hint.boundingBox();
+    await expect(hintText).toHaveText('AmountShort one');
+    const short = await hint.boundingBox();
 
-    expect((hintBox?.y ?? 0) + (hintBox?.height ?? 0)).toBeLessThanOrEqual(headerBox?.y ?? 0);
+    // Notion: 71.2x43.6 shrink-to-fit, left edges aligned, 6px above the header.
+    expect(short?.height).toBeCloseTo(43.6, 1);
+    expect(short?.width).toBeLessThan(120);
+    expect(short?.x).toBeCloseTo(headerBox?.x ?? -1, 1);
+    // Sub-pixel: the tooltip places itself with the whole-pixel clientHeight.
+    expect((short?.y ?? 0) + (short?.height ?? 0)).toBeCloseTo((headerBox?.y ?? 0) - 6, 0);
+    await expect(hint).toHaveCSS('border-radius', '6px');
+    expect(await hintLines()).toEqual([
+      { text: 'Amount', size: '12px', weight: '400' },
+      { text: 'Short one', size: '12px', weight: '400' },
+    ]);
+
+    // A long description wraps at 280px: the box is 296 wide.
+    await page.mouse.move((headerBox?.x ?? 0) - 40, (headerBox?.y ?? 0) - 60);
+    await setDescription('This longer property description is here to measure how the header hint wraps across several lines of text.');
+    await hover();
+    await expect(hint).toHaveAttribute('data-blok-shown', 'true');
+    const long = await hint.boundingBox();
+    const lines = Math.round(((long?.height ?? 0) - 10) / 16.8);
+
+    expect(long?.width).toBeCloseTo(296, 0);
+    expect(lines).toBeGreaterThanOrEqual(3);
+    expect(long?.height).toBeCloseTo(10 + lines * 16.8, 1);
 
     // Clearing the description removes the (i).
     await page.mouse.move((headerBox?.x ?? 0) - 40, (headerBox?.y ?? 0) - 60);

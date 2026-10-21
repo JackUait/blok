@@ -37,6 +37,7 @@ import { DatabaseTableColumnDrag } from './database-table-column-drag';
 import { DatabaseTableRowDrag } from './database-table-row-drag';
 import type { TableRowDropResult } from './database-table-row-drag';
 import { onHover } from '../../components/utils/tooltip';
+import { TOOLTIP_MUTED_INK } from '../../components/modules/toolbar/tooltip';
 import { syncCommentBadge } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
 import { propertyTypeMeta } from './database-property-types';
@@ -281,6 +282,26 @@ export const formatCalculation = (
  * keyboard model lives in DatabaseTableGrid. The root keeps
  * `data-blok-database-table` and each row `data-row-id`: the tool finds both.
  */
+/** research/31 §1: the name, then the description in muted ink; wraps at 280px. */
+const headerHint = (name: string, description: string): HTMLElement => {
+  const box = document.createElement('div');
+  const text = document.createElement('div');
+  const nameLine = document.createElement('div');
+  const descriptionLine = document.createElement('div');
+
+  box.setAttribute('data-blok-database-header-hint', '');
+  Object.assign(box.style, { padding: '5px 8px', fontWeight: '400', lineHeight: '16.8px', textAlign: 'start' });
+  text.setAttribute('data-blok-database-header-hint-text', '');
+  Object.assign(text.style, { maxWidth: '280px', width: 'max-content', overflowWrap: 'break-word' });
+  nameLine.textContent = name;
+  descriptionLine.textContent = description;
+  Object.assign(descriptionLine.style, { color: TOOLTIP_MUTED_INK, whiteSpace: 'pre-line' });
+  text.append(nameLine, descriptionLine);
+  box.appendChild(text);
+
+  return box;
+};
+
 export class DatabaseTableView implements DatabaseViewRenderer {
   private readonly options: DatabaseTableViewOptions;
   private readonly state: TableState;
@@ -604,11 +625,12 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     name.textContent = property.name;
     button.append(icon, name);
     cell.appendChild(button);
-    onHover(cell, property.name);
-    if (property.description !== undefined && property.description !== '') {
+    if (property.description === undefined || property.description === '') {
+      onHover(cell, property.name);
+    } else {
       const info = document.createElement('span');
 
-      // research/30 X2: an (i) after the name; hovering it shows the description above the header.
+      // research/30 X2: an (i) after the name.
       info.setAttribute('data-blok-database-table-column-icon', '');
       info.setAttribute('data-blok-database-table-column-description', '');
       // Hidden so the description stays out of the header's accessible name.
@@ -616,7 +638,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       info.innerHTML = IconInfo;
       button.appendChild(info);
       cell.setAttribute('aria-description', property.description);
-      onHover(info, property.description, { placement: 'top' });
+      // research/31 §1: the whole cell carries one hint, left edges aligned, 6px above.
+      onHover(cell, headerHint(property.name, property.description), { placement: 'top', align: 'start', gap: 6, bare: true });
     }
     if (property.type === 'button' && this.options.buttonError?.(property) === true) {
       const warning = document.createElement('span');

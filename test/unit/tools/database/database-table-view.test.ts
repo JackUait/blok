@@ -6,6 +6,7 @@ import { calculationItems } from '../../../../src/tools/database/database-table-
 import { PROPERTY_TYPE_META } from '../../../../src/tools/database/database-property-types';
 import { IconInfo, IconSplitView } from '../../../../src/components/icons';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
+import { TOOLTIP_MUTED_INK } from '../../../../src/components/modules/toolbar/tooltip';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, PropertyType, PropertyValue } from '../../../../src/tools/database/types';
 
@@ -238,24 +239,63 @@ describe('DatabaseTableView', () => {
         expect(header(root, 'p-amount').hasAttribute('aria-description')).toBe(false);
       });
 
-      it('shows the description above the header on hover, after the hint delay', () => {
+      // research/31 §1: the whole header cell carries one hint: the name, then the description in grey.
+      it('hovering anywhere on the header shows the name and the description above it, after the hint delay', () => {
         const { root } = mount({ schema: described });
         const cellEl = header(root, 'p-notes');
-        const icon = cellEl.querySelector<HTMLElement>('[data-blok-database-table-column-description]');
 
-        if (icon === null) throw new Error('no description icon');
         // jsdom lays out nothing; room above the header keeps the hint on top.
-        vi.spyOn(icon, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 100, y: 300, width: 16, height: 16 }));
-        icon.dispatchEvent(new FocusEvent('focus'));
+        vi.spyOn(cellEl, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 100, y: 300, width: 200, height: 33 }));
+        cellEl.dispatchEvent(new FocusEvent('focus'));
         vi.advanceTimersByTime(HINT_DELAY);
         expect(shownHint()).toBeNull();
 
         cellEl.dispatchEvent(new MouseEvent('mouseenter'));
-        icon.dispatchEvent(new MouseEvent('mouseenter'));
         vi.advanceTimersByTime(HINT_DELAY - 1);
         expect(shownHint()).toBeNull();
         vi.advanceTimersByTime(1);
-        expect(shownHint()).toEqual({ text: 'What we noted', placement: 'top' });
+        expect(shownHint()).toEqual({ text: 'NotesWhat we noted', placement: 'top' });
+
+        const hint = document.querySelector<HTMLElement>('[data-blok-database-header-hint]');
+        const lines = hint?.querySelector<HTMLElement>('[data-blok-database-header-hint-text]');
+        const [nameLine, descriptionLine] = [...(lines?.children ?? [])].map((el) => el instanceof HTMLElement ? el : null);
+
+        expect(nameLine?.textContent).toBe('Notes');
+        expect(nameLine?.style.color).toBe('');
+        expect(descriptionLine?.textContent).toBe('What we noted');
+        expect(descriptionLine?.style.color).toBe(TOOLTIP_MUTED_INK);
+        expect(descriptionLine?.style.whiteSpace).toBe('pre-line');
+        expect(hint?.style.padding).toBe('5px 8px');
+        expect([hint?.style.fontWeight, hint?.style.lineHeight, hint?.style.textAlign]).toEqual(['400', '16.8px', 'start']);
+        expect(lines?.style.maxWidth).toBe('280px');
+        expect(lines?.style.width).toBe('max-content');
+        expect(lines?.style.overflowWrap).toBe('break-word');
+        // Left edges aligned, 6px above the header.
+        const wrapper = document.querySelector<HTMLElement>('[data-blok-testid="tooltip"]');
+
+        expect(wrapper?.style.left).toBe('100px');
+      });
+
+      it('the (i) has no hint of its own', () => {
+        const { root } = mount({ schema: described });
+        const icon = header(root, 'p-notes').querySelector<HTMLElement>('[data-blok-database-table-column-description]');
+
+        if (icon === null) throw new Error('no description icon');
+        vi.spyOn(icon, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 100, y: 300, width: 16, height: 16 }));
+        icon.dispatchEvent(new MouseEvent('mouseenter'));
+        vi.advanceTimersByTime(HINT_DELAY);
+        expect(shownHint()).toBeNull();
+      });
+
+      it('a header without a description keeps its plain name hint', () => {
+        const { root } = mount({ schema: described });
+        const cellEl = header(root, 'p-amount');
+
+        vi.spyOn(cellEl, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 100, y: 300, width: 200, height: 33 }));
+        cellEl.dispatchEvent(new MouseEvent('mouseenter'));
+        vi.advanceTimersByTime(HINT_DELAY);
+        expect(shownHint()?.text).toBe('Amount');
+        expect(document.querySelector('[data-blok-database-header-hint]')).toBeNull();
       });
     });
 

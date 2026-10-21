@@ -15,6 +15,16 @@ import type { TooltipContent, TooltipOptions } from '@/types/api/tooltip';
 
 export type { TooltipContent, TooltipOptions };
 
+/** In-repo layout options. Not on the published TooltipOptions. */
+export interface HintOptions extends TooltipOptions {
+  /** `start`: the bubble's start edge lines up with the trigger's (top and bottom only). */
+  align?: 'center' | 'start';
+  /** Px between trigger and bubble. Defaults to 10. */
+  gap?: number;
+  /** The content brings its own padding, alignment and line height. */
+  bare?: boolean;
+}
+
 const DEFAULT_OFFSET = 10;
 /**
  * Hints never show instantly: a hover hint waits {@link HINT_DELAY} ms unless
@@ -45,6 +55,7 @@ type CSSTooltipClasses = {
   tooltip: string | string[];
   tooltipContent: string | string[];
   tooltipShown: string | string[];
+  tooltipBareContent: string[];
 };
 
 /**
@@ -89,6 +100,7 @@ class Tooltip {
         'tracking-[0.02em] leading-[1em]'
       ).split(' '),
       tooltipShown: ['opacity-100'],
+      tooltipBareContent: ['text-tooltip-font', 'text-xs'],
     };
   }
 
@@ -200,7 +212,7 @@ class Tooltip {
    * @param {TooltipContent} content — any HTML Element of String that will be used as content
    * @param {TooltipOptions} options — Available options {@link TooltipOptions}
    */
-  public show(element: HTMLElement, content: TooltipContent, options: TooltipOptions = {}): void {
+  public show(element: HTMLElement, content: TooltipContent, options: HintOptions = {}): void {
     this.display(element, content, options, false);
   }
 
@@ -210,11 +222,11 @@ class Tooltip {
    * @param {TooltipContent} content — any HTML Element of String that will be used as content
    * @param {TooltipOptions} options — Available options {@link TooltipOptions}
    */
-  public showReadout(element: HTMLElement, content: TooltipContent, options: TooltipOptions = {}): void {
+  public showReadout(element: HTMLElement, content: TooltipContent, options: HintOptions = {}): void {
     this.display(element, content, options, true);
   }
 
-  private display(element: HTMLElement, content: TooltipContent, options: TooltipOptions, immediate: boolean): void {
+  private display(element: HTMLElement, content: TooltipContent, options: HintOptions, immediate: boolean): void {
     if (this.destroyed) {
       return;
     }
@@ -306,12 +318,14 @@ class Tooltip {
    * @param {Node} contentNode - bubble content
    * @param {TooltipOptions} showingOptions - placement and margins
    */
-  private render(element: HTMLElement, contentNode: Node, showingOptions: TooltipOptions): void {
+  private render(element: HTMLElement, contentNode: Node, showingOptions: HintOptions): void {
     if (!this.nodes.content || !this.nodes.wrapper) {
       return;
     }
 
     this.nodes.content.innerHTML = '';
+    // Set on every show: the singleton must not keep the last hint's layout.
+    this.nodes.content.className = (showingOptions.bare === true ? this.CSS.tooltipBareContent : [this.CSS.tooltipContent].flat()).join(' ');
     this.nodes.content.appendChild(contentNode);
 
     /**
@@ -322,7 +336,7 @@ class Tooltip {
     // A flip moves the anchor; the bubble goes rather than float at the old spot.
     syncPortalDirection(this.nodes.wrapper, { source: element, onResync: () => this.hide() });
 
-    const resolvedPlacement = this.resolvePlacement(element, showingOptions.placement ?? 'bottom');
+    const resolvedPlacement = this.resolvePlacement(element, showingOptions.placement ?? 'bottom', this.gapOf(showingOptions));
 
     switch (resolvedPlacement) {
       case 'top':
@@ -552,7 +566,7 @@ class Tooltip {
     return openedPopover !== null && !openedPopover.contains(element);
   }
 
-  public onHover(element: HTMLElement, content: TooltipContent, options: TooltipOptions = {}): void {
+  public onHover(element: HTMLElement, content: TooltipContent, options: HintOptions = {}): void {
     if (this.destroyed) {
       return;
     }
@@ -744,9 +758,10 @@ class Tooltip {
    * rather than a tooltip-specific reimplementation.
    * @param {HTMLElement} element - target element the tooltip anchors to
    * @param {string} placement - requested placement
+   * @param {number} gap - px between trigger and bubble
    * @returns {string} the resolved placement
    */
-  private resolvePlacement(element: HTMLElement, placement: string): string {
+  private resolvePlacement(element: HTMLElement, placement: string, gap: number): string {
     if (!this.nodes.wrapper) {
       return placement;
     }
@@ -756,8 +771,8 @@ class Tooltip {
     const viewportHeight = window.innerHeight;
 
     if (placement === 'top' || placement === 'bottom') {
-      const spaceBelow = viewportHeight - rect.bottom - this.offsetTop;
-      const spaceAbove = rect.top - this.offsetTop;
+      const spaceBelow = viewportHeight - rect.bottom - gap;
+      const spaceAbove = rect.top - gap;
       const preferred = placement === 'bottom' ? spaceBelow : spaceAbove;
       const alternate = placement === 'bottom' ? spaceAbove : spaceBelow;
 
@@ -785,14 +800,14 @@ class Tooltip {
    * @param {HTMLElement} element - target element
    * @param {TooltipOptions} showingOptions - placement options
    */
-  private placeBottom(element: HTMLElement, showingOptions: TooltipOptions): void {
+  private placeBottom(element: HTMLElement, showingOptions: HintOptions): void {
     if (!this.nodes.wrapper) {
       return;
     }
 
     const elementCoords = element.getBoundingClientRect();
-    const left = elementCoords.left + element.clientWidth / 2 - this.nodes.wrapper.offsetWidth / 2;
-    const top = elementCoords.bottom + this.getScrollTop() + this.offsetTop + (showingOptions.marginTop ?? 0);
+    const left = this.horizontalLeft(element, showingOptions);
+    const top = elementCoords.bottom + this.getScrollTop() + this.gapOf(showingOptions) + (showingOptions.marginTop ?? 0);
 
     this.applyPlacement('bottom', left, top);
   }
@@ -800,18 +815,39 @@ class Tooltip {
   /**
    * Calculates element coords and moves tooltip top of the element
    * @param {HTMLElement} element - target element
-   * @param {TooltipOptions} _showingOptions - placement options (unused for top placement)
+   * @param {HintOptions} showingOptions - placement options
    */
-  private placeTop(element: HTMLElement, _showingOptions: TooltipOptions): void {
+  private placeTop(element: HTMLElement, showingOptions: HintOptions): void {
     if (!this.nodes.wrapper) {
       return;
     }
 
     const elementCoords = element.getBoundingClientRect();
-    const left = elementCoords.left + element.clientWidth / 2 - this.nodes.wrapper.offsetWidth / 2;
-    const top = elementCoords.top + this.getScrollTop() - this.nodes.wrapper.clientHeight - this.offsetTop;
+    const left = this.horizontalLeft(element, showingOptions);
+    const top = elementCoords.top + this.getScrollTop() - this.nodes.wrapper.clientHeight - this.gapOf(showingOptions);
 
     this.applyPlacement('top', left, top);
+  }
+
+  /**
+   * The bubble's left for a top or bottom placement.
+   * @param {HTMLElement} element - target element
+   * @param {HintOptions} showingOptions - placement options
+   * @returns {number} left in px
+   */
+  private horizontalLeft(element: HTMLElement, showingOptions: HintOptions): number {
+    const elementCoords = element.getBoundingClientRect();
+    const width = this.nodes.wrapper?.offsetWidth ?? 0;
+
+    if (showingOptions.align !== 'start') {
+      return elementCoords.left + element.clientWidth / 2 - width / 2;
+    }
+
+    return window.getComputedStyle(element).direction === 'rtl' ? elementCoords.right - width : elementCoords.left;
+  }
+
+  private gapOf(showingOptions: HintOptions): number {
+    return showingOptions.gap ?? this.offsetTop;
   }
 
   /**
@@ -946,7 +982,7 @@ const getTooltip = (): Tooltip => {
  * @param {TooltipContent} content - tooltip content
  * @param {TooltipOptions} options - tooltip options
  */
-export const show = (element: HTMLElement, content: TooltipContent, options?: TooltipOptions): void => {
+export const show = (element: HTMLElement, content: TooltipContent, options?: HintOptions): void => {
   getTooltip().show(element, content, options ?? {});
 };
 
@@ -957,7 +993,7 @@ export const show = (element: HTMLElement, content: TooltipContent, options?: To
  * @param {TooltipContent} content - tooltip content
  * @param {TooltipOptions} options - tooltip options
  */
-export const showReadout = (element: HTMLElement, content: TooltipContent, options?: TooltipOptions): void => {
+export const showReadout = (element: HTMLElement, content: TooltipContent, options?: HintOptions): void => {
   getTooltip().showReadout(element, content, options ?? {});
 };
 
@@ -974,7 +1010,7 @@ export const hide = (): void => {
  * @param {TooltipContent} content - tooltip content
  * @param {TooltipOptions} options - tooltip options
  */
-export const onHover = (element: HTMLElement, content: TooltipContent, options?: TooltipOptions): void => {
+export const onHover = (element: HTMLElement, content: TooltipContent, options?: HintOptions): void => {
   getTooltip().onHover(element, content, options ?? {});
 };
 

@@ -877,6 +877,74 @@ describe('Tooltip utility', () => {
     expect(wrapper.getAttribute('data-blok-placement')).toBe('top');
   });
 
+  describe('start alignment, gap and bare content', () => {
+    const placed = (wrapper: HTMLElement): { left: string; top: string } => ({ left: wrapper.style.left, top: wrapper.style.top });
+    const setUp = (): { target: HTMLElement; wrapper: HTMLElement } => {
+      popoverPolyfill = installPopoverPolyfill();
+      const target = createTargetElement({ left: 200, top: 300, width: 160, height: 32 });
+
+      showReadout(target, 'x');
+      const wrapper = getTooltipWrapper();
+
+      if (wrapper === null) throw new Error('Tooltip wrapper should exist');
+      setWrapperSize(wrapper, 80, 24);
+
+      return { target, wrapper };
+    };
+
+    it('lines the bubble up with the trigger\'s start edge, the given gap above it', () => {
+      const { target, wrapper } = setUp();
+
+      showReadout(target, 'x', { placement: 'top', align: 'start', gap: 6 });
+
+      // top = 300 - 24 - 6
+      expect(placed(wrapper)).toEqual({ left: '200px', top: '270px' });
+    });
+
+    it('in a right-to-left trigger, lines the bubble up with the trigger\'s right edge', () => {
+      const { target, wrapper } = setUp();
+
+      target.style.direction = 'rtl';
+      showReadout(target, 'x', { placement: 'top', align: 'start', gap: 6 });
+
+      // left = 200 + 160 - 80
+      expect(placed(wrapper)).toEqual({ left: '280px', top: '270px' });
+    });
+
+    it('keeps start alignment and the gap when it flips below', () => {
+      const { wrapper } = setUp();
+      const low = createTargetElement({ left: 200, top: 4, width: 160, height: 32 });
+
+      showReadout(low, 'x', { placement: 'top', align: 'start', gap: 6 });
+
+      expect(wrapper.getAttribute('data-blok-placement')).toBe('bottom');
+      expect(placed(wrapper)).toEqual({ left: '200px', top: '42px' });
+    });
+
+    it('drops the content padding, centring and line height for bare content', () => {
+      const { target } = setUp();
+      const content = document.querySelector<HTMLElement>('[data-blok-testid="tooltip-content"]');
+
+      showReadout(target, 'x', { placement: 'top', bare: true });
+
+      expect(content?.className).not.toMatch(/px-2\.5|py-1\.5|text-center|leading-\[1em\]|tracking-/);
+      expect(content?.className).toMatch(/text-tooltip-font/);
+    });
+
+    it('the next plain hint is centred, 10px off, with the default padding again', () => {
+      const { target, wrapper } = setUp();
+      const content = document.querySelector<HTMLElement>('[data-blok-testid="tooltip-content"]');
+
+      showReadout(target, 'x', { placement: 'top', align: 'start', gap: 6, bare: true });
+      showReadout(target, 'x', { placement: 'top' });
+
+      // left = 200 + 80 - 40; top = 300 - 24 - 10
+      expect(placed(wrapper)).toEqual({ left: '240px', top: '266px' });
+      expect(content?.className).toMatch(/px-2\.5/);
+      expect(content?.className).toMatch(/text-center/);
+    });
+  });
+
   it('links the target to the tooltip via aria-describedby on show and clears it on hide', () => {
     vi.useFakeTimers();
 

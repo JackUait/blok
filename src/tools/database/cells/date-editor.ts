@@ -198,6 +198,8 @@ class DateEditor {
   /** The Remind menu was used: the choice is the user's, not the default. */
   private remindPicked = false;
   private menu: { element: HTMLElement; kind: MenuKind } | null = null;
+  /** Applies the date fields' typed text that no Enter or change applied yet. */
+  private readonly pendingTyped: Partial<Record<'start' | 'end', () => void>> = {};
   /** The property's date settings, kept here so a pick shows at once. */
   private display: DateDisplay;
   private open = true;
@@ -245,6 +247,8 @@ class DateEditor {
         if (this.menu !== null) {
           this.closeMenu(true);
         } else {
+          // research/31 §4b: Escape in a bulk picker saves the typed date.
+          if (this.ctx.bulk === true) Object.values(this.pendingTyped).forEach((apply) => apply());
           this.finish(true);
         }
       },
@@ -372,6 +376,8 @@ class DateEditor {
   // ─── Rendering ───
 
   private render(): void {
+    delete this.pendingTyped.start;
+    delete this.pendingTyped.end;
     const focusedDay = this.root.contains(document.activeElement)
       ? document.activeElement?.getAttribute('data-blok-database-date-day')
       : null;
@@ -403,7 +409,9 @@ class DateEditor {
     input.type = 'text';
     input.setAttribute('data-blok-database-date-input', which);
     input.setAttribute('aria-label', this.t(which === 'start' ? 'tools.database.dateStart' : 'tools.database.dateEnd'));
-    const shown = part === null ? '' : formatDayField(part.day, this.locale, this.display);
+    // research/31 §4b: an empty bulk picker shows today, as a hint only.
+    const hint = part === null && which === 'start' && this.ctx.bulk === true ? formatDayField(toIsoDay(new Date()), this.locale, this.display) : '';
+    const shown = part === null ? hint : formatDayField(part.day, this.locale, this.display);
 
     input.value = shown;
     const apply = (): void => {
@@ -442,6 +450,9 @@ class DateEditor {
         apply();
       }
     });
+    this.pendingTyped[which] = () => {
+      if (input.value.trim() !== '' && input.value.trim() !== shown.trim()) apply();
+    };
     row.appendChild(input);
 
     if (this.timeOn && part !== null) {

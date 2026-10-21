@@ -448,12 +448,15 @@ describe('bulk edit of a date: Remind and the property default', () => {
     });
   });
 
-  it('table: a first selected row with no date opens the bulk picker empty', async () => {
+  // research/31 §4b: the field shows today, and nothing is written.
+  it('table: a first selected row with no date opens the bulk picker on today, writing nothing', async () => {
     await make(doc({}));
     await selectTableRows('r3', 'r1');
     await openBulkDue();
 
-    expect(document.querySelector<HTMLInputElement>('[data-blok-database-date-input="start"]')?.value).toBe('');
+    expect(document.querySelector<HTMLInputElement>('[data-blok-database-date-input="start"]')?.value).not.toBe('');
+    expect((await savedRow('r3'))?.properties?.due).toBeNull();
+    expect(document.querySelector('[data-blok-database-date-day][aria-selected="true"]')).toBeNull();
   });
 
   it('table paste stays as it was (unmeasured): a pasted date brings no default reminder', async () => {

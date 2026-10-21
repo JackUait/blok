@@ -322,6 +322,47 @@ describe('date cell editor', () => {
       expect(ctx.onCommit).toHaveBeenCalledWith('2026-10-21T02:00');
     });
 
+    describe('bulk Escape (research/31 §4b)', () => {
+      it('an empty first row shows today in the field and writes nothing; Escape writes nothing', () => {
+        const ctx = openDate(null, { bulk: true });
+        const input = q<HTMLInputElement>('[data-blok-database-date-input="start"]');
+
+        expect(input.value).toBe('Oct 9, 2026');
+        press(input, 'Escape');
+
+        expect(ctx.onCommit).not.toHaveBeenCalled();
+        expect(editorRoot()).toBeNull();
+      });
+
+      it('a typed date is saved on Escape', () => {
+        const ctx = openDate(null, { bulk: true });
+        const input = q<HTMLInputElement>('[data-blok-database-date-input="start"]');
+
+        typeInto(input, 'Oct 5, 2026');
+        press(input, 'Escape');
+
+        expect(ctx.onCommit).toHaveBeenCalledTimes(1);
+        expect(ctx.onCommit).toHaveBeenCalledWith('2026-10-05');
+        expect(editorRoot()).toBeNull();
+      });
+
+      it('the first row\'s date left as it is writes nothing on Escape', () => {
+        const ctx = openDate('2026-10-12', { bulk: true });
+
+        press(q<HTMLInputElement>('[data-blok-database-date-input="start"]'), 'Escape');
+
+        expect(ctx.onCommit).not.toHaveBeenCalled();
+      });
+
+      it('Enter on the shown today writes today', () => {
+        const ctx = openDate(null, { bulk: true });
+
+        press(q<HTMLInputElement>('[data-blok-database-date-input="start"]'), 'Enter');
+
+        expect(ctx.onCommit).toHaveBeenCalledWith('2026-10-09');
+      });
+    });
+
     // The bulk picker opens on the first selected row's value: an empty one counts as today, another day takes 9:00.
     it('the bulk picker follows the first row: empty takes the next hour, a set date 9:00', () => {
       vi.setSystemTime(new Date(2026, 9, 20, 13, 58));

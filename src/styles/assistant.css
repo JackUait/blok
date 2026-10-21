@@ -478,6 +478,11 @@
   margin-block-start: var(--blok-ai-gap-start);
 }
 
+/* The bar sits over this empty block: its placeholder must not show through. */
+[data-blok-element][data-blok-ai-replaced] [data-blok-element-content] {
+  visibility: hidden;
+}
+
 /*
   A block being rewritten: its text fields hide but keep their box, so nothing
   moves; live-preview.ts draws the new text over them. Markers, checkboxes and

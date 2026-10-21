@@ -1272,6 +1272,72 @@ describe('in-editor assistant bar', () => {
       expect(barStyle()).toEqual({ top: '230px', left: '128px', width: '544px' });
     });
 
+    describe('opened by Space in an empty paragraph', () => {
+      const WITH_EMPTY: Partial<BlokConfig> = {
+        data: {
+          blocks: [
+            { id: 'p1', type: 'paragraph', data: { text: 'Hello' } },
+            { id: 'p2', type: 'paragraph', data: { text: '' } },
+            { id: 'p3', type: 'paragraph', data: { text: 'Third' } },
+          ],
+        },
+      };
+
+      const pressSpace = (target: HTMLElement): void => {
+        target.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, cancelable: true }));
+      };
+
+      it('sits in place of the empty block, which it hides', async () => {
+        await createEditor(scripted(), undefined, WITH_EMPTY);
+        fakeLayout();
+        select('p2', 0, 'p2', 0);
+
+        pressSpace(inputOf('p2'));
+
+        // At p2's top (200). The gap holds only what the 24px block does not: 46 + 10 - 24.
+        expect(barStyle().top).toBe('200px');
+        expect(gapOf('p2')).toBe('32px');
+        expect(holderOf('p2')).toHaveAttribute('data-blok-ai-replaced');
+      });
+
+      it('shows the block again when the bar closes', async () => {
+        await createEditor(scripted(), undefined, WITH_EMPTY);
+        fakeLayout();
+        select('p2', 0, 'p2', 0);
+        pressSpace(inputOf('p2'));
+
+        within(bar()).getByRole('textbox').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+        expect(holderOf('p2')).not.toHaveAttribute('data-blok-ai-replaced');
+        expect(gapped()).toEqual([]);
+      });
+
+      it('goes under the block once the block has text', async () => {
+        const editor = await createEditor(scripted(), undefined, WITH_EMPTY);
+
+        fakeLayout();
+        select('p2', 0, 'p2', 0);
+        pressSpace(inputOf('p2'));
+
+        await editor.blocks.update('p2', { text: 'Now full' });
+
+        await waitFor(() => expect(barStyle().top).toBe('230px'));
+        expect(gapOf('p2')).toBe(`${BAR_GAP}px`);
+        expect(document.querySelector('[data-blok-ai-replaced]')).toBeNull();
+      });
+
+      it('Mod+J in an empty paragraph still opens under it', async () => {
+        await createEditor(scripted(), undefined, WITH_EMPTY);
+        fakeLayout();
+        select('p2', 0, 'p2', 0);
+
+        pressModJ(inputOf('p2'));
+
+        expect(barStyle().top).toBe('230px');
+        expect(holderOf('p2')).not.toHaveAttribute('data-blok-ai-replaced');
+      });
+    });
+
     it('opens under the selection\'s block from the inline toolbar', async () => {
       const editor = await createEditor(scripted(), undefined, THREE_BLOCKS);
 

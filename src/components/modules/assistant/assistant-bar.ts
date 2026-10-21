@@ -248,14 +248,15 @@ export class AssistantBar {
    * Show the bar under `anchor`, across `column`.
    * @param anchor - the block holder to sit under
    * @param column - the content column, in viewport px
+   * @param inPlace - cover the anchor instead of sitting under it
    */
-  public open(anchor: HTMLElement, column: AssistantBarColumn): void {
+  public open(anchor: HTMLElement, column: AssistantBarColumn, inPlace = false): void {
     if (!this.element.isConnected) {
       document.body.appendChild(this.element);
     }
     this.element.hidden = false;
     promoteToTopLayer(this.element);
-    this.place(anchor, column);
+    this.place(anchor, column, inPlace);
     this.field.focus({ preventScroll: true });
   }
 
@@ -272,15 +273,21 @@ export class AssistantBar {
    * Hold a gap under `anchor` as tall as the bar (and its slots), and sit in it.
    * @param anchor - the block holder to sit under
    * @param column - the content column, in viewport px
+   * @param inPlace - cover the anchor (hidden meanwhile): the gap holds only what it does not
    */
-  public place(anchor: HTMLElement, column: AssistantBarColumn): void {
+  public place(anchor: HTMLElement, column: AssistantBarColumn, inPlace = false): void {
     if (this.anchor !== anchor) {
       this.release();
       this.anchor = anchor;
     }
+    // Hidden before measuring, so the open animation never shows it through the bar.
+    anchor.toggleAttribute(DATA_ATTR.aiReplaced, inPlace);
 
+    const rect = anchor.getBoundingClientRect();
     const height = this.element.getBoundingClientRect().height;
-    const offset = reserveGap(anchor, BAR_GAP, SPACE_BEFORE + height + SPACE_AFTER);
+    const offset = inPlace
+      ? reserveGap(anchor, BAR_GAP, Math.max(0, height + SPACE_AFTER - rect.height))
+      : reserveGap(anchor, BAR_GAP, SPACE_BEFORE + height + SPACE_AFTER);
 
     if (this.slots.hidden) {
       releaseGap(anchor, SLOTS_GAP);
@@ -289,7 +296,7 @@ export class AssistantBar {
       this.slots.style.fontSize = getComputedStyle(anchor).fontSize;
       reserveGap(anchor, SLOTS_GAP, this.slots.getBoundingClientRect().height);
     }
-    this.element.style.top = `${anchor.getBoundingClientRect().bottom + offset + SPACE_BEFORE}px`;
+    this.element.style.top = `${inPlace ? rect.top : rect.bottom + offset + SPACE_BEFORE}px`;
     // Centred on the column; a narrow window trims the overhang first, then the column.
     // clientWidth leaves out a classic scrollbar; it is 0 only with no layout (jsdom).
     const page = document.documentElement.clientWidth || window.innerWidth;
@@ -469,6 +476,7 @@ export class AssistantBar {
   /** Drop the gap the bar holds. */
   private release(): void {
     if (this.anchor !== null) {
+      this.anchor.removeAttribute(DATA_ATTR.aiReplaced);
       releaseGap(this.anchor, BAR_GAP);
       releaseGap(this.anchor, SLOTS_GAP);
     }

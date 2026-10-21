@@ -85,6 +85,8 @@ export class Assistant extends Module {
   /** The block the bar sits under, and its neighbours when last placed: where it goes if the block is removed. */
   private anchor: { id: string; next?: string; prev?: string } | null = null;
   private placing = false;
+  /** The empty block the bar covers, when Space opened it there. */
+  private inPlaceId: string | null = null;
   /** Watches the bar and its anchor for size changes, and the page for removed blocks, while open. */
   private watchers: { resize: ResizeObserver | null; mutations: MutationObserver; gaps: () => void } | null = null;
   /** The pending re-place frame, if any. */
@@ -107,7 +109,7 @@ export class Assistant extends Module {
     this.listeners.on(this.Blok.UI.nodes.wrapper, 'keydown', (event: Event) => {
       if (event instanceof KeyboardEvent && (isOpenShortcut(event) || this.isSpaceInEmptyBlock(event))) {
         event.preventDefault();
-        this.open();
+        this.open({ inPlace: !isOpenShortcut(event) });
       }
     });
     this.listeners.on(window, 'resize', () => this.scheduleRelayout());
@@ -131,8 +133,9 @@ export class Assistant extends Module {
 
   /**
    * Open the prompt bar. Does nothing without an assistant or in read-only mode.
+   * @param options.inPlace - cover the caret's block while it stays empty, instead of sitting under it
    */
-  public open(): void {
+  public open(options: { inPlace?: boolean } = {}): void {
     if (!this.Blok.AgentAPI.hasAssistant || this.Blok.ReadOnly.isEnabled) {
       return;
     }
@@ -151,6 +154,7 @@ export class Assistant extends Module {
       const block = caret === undefined ? undefined : this.anchorFor(caret);
 
       this.anchor = block === undefined ? null : { id: block.id };
+      this.inPlaceId = options.inPlace === true ? block?.id ?? null : null;
     }
     syncPortalDirection(bar.element, { source: this.Blok.UI.nodes.wrapper });
     this.syncThinking();
@@ -160,7 +164,7 @@ export class Assistant extends Module {
     if (block === undefined) {
       return;
     }
-    bar.open(block.holder, this.columnOf(block.holder));
+    bar.open(block.holder, this.columnOf(block.holder), this.coversBlock(block));
     this.remember(block);
     this.watch();
     if (opening) {
@@ -195,6 +199,7 @@ export class Assistant extends Module {
     this.unwatch();
     this.bar?.close();
     this.anchor = null;
+    this.inPlaceId = null;
 
     const back = this.returnPoint;
 
@@ -675,6 +680,11 @@ export class Assistant extends Module {
     return { left: rect.left, width: rect.width };
   }
 
+  /** Once the covered block gets content, the bar goes under it so the content shows. */
+  private coversBlock(block: Block): boolean {
+    return block.id === this.inPlaceId && block.isEmpty;
+  }
+
   /** Re-place the bar at its anchor, re-anchoring if the block is gone. */
   private placeBar(): void {
     const bar = this.bar;
@@ -693,7 +703,7 @@ export class Assistant extends Module {
 
     this.placing = true;
     try {
-      bar.place(block.holder, this.columnOf(block.holder));
+      bar.place(block.holder, this.columnOf(block.holder), this.coversBlock(block));
     } finally {
       this.placing = false;
     }

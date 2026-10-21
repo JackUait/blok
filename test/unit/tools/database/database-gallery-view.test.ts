@@ -182,6 +182,15 @@ describe('DatabaseGalleryView', () => {
       expect(cards(root)[0].querySelector('[data-blok-database-gallery-preview]')?.hasAttribute('data-empty')).toBe(true);
     });
 
+    it('keeps an empty preview box when the preview property is empty (research/08 empty gallery cover)', () => {
+      const { root } = mount({
+        view: galleryView({ cardPreview: 'property:p-link' }),
+        groups: single([row('r1', 'Alpha', {})]),
+      });
+
+      expect(cards(root)[0].querySelector('[data-blok-database-gallery-preview]')?.hasAttribute('data-empty')).toBe(true);
+    });
+
     it('leaves out the preview when set to none', () => {
       const { root } = mount({ view: galleryView({ cardPreview: 'none' }), bodyOf: () => [image] });
 

@@ -153,6 +153,29 @@ test.describe('gallery', () => {
     await expect(image).toHaveCSS('object-fit', 'contain');
   });
 
+  test('an empty preview property: a board card draws no preview area, a gallery card keeps its empty cover', async ({ page }) => {
+    const pixel = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+    const rows = [
+      { id: 'r1', properties: { 'p-title': 'Pic', 'p-image': pixel, 'p-stage': 'o-a' } },
+      { id: 'r2', properties: { 'p-title': 'Bare', 'p-stage': 'o-a' } },
+    ];
+    const board = blocks({ type: 'board', groupBy: 'p-stage', cardPreview: 'property:p-image' }, rows);
+    const stage = { id: 'p-stage', name: 'Stage', type: 'select', position: 'a4', config: { options: [{ id: 'o-a', label: 'A', position: 'a0' }] } };
+
+    (board[0].data as { schema: unknown[] }).schema = [...SCHEMA, stage];
+    await mount(page, board);
+
+    const boardCard = (rowId: string): Locator => page.locator(`[data-blok-database-card][data-row-id="${rowId}"]`);
+
+    // research/31 shot 51: no file, no preview area.
+    await expect(boardCard('r2').locator('[data-blok-database-card-preview]')).toHaveCount(0);
+    await expect(boardCard('r1').locator('[data-blok-database-card-preview]')).toBeVisible();
+
+    await mount(page, blocks({ type: 'gallery', cardPreview: 'property:p-image' }, rows));
+
+    expect((await card(page, 'r2').locator('[data-blok-database-gallery-preview]').boundingBox())?.height).toBeCloseTo(146, 0);
+  });
+
   test('"Page cover" shows the row\'s own cover, and follows a cover set in the drawer', async ({ page }) => {
     const pixel = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
     const rows = [

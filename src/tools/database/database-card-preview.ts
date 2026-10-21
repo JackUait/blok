@@ -49,13 +49,20 @@ export const createCardPreview = (
     return null;
   }
 
+  const fromProperty = preview.kind === 'property' ? imageFromValue(row.properties[preview.propertyId]) : undefined;
+
+  // research/31 shot 51: a board card with no file has no preview area. A gallery keeps its empty cover (research/08).
+  if (preview.kind === 'property' && fromProperty === undefined && scope === 'card') {
+    return null;
+  }
+
   const box = document.createElement('div');
 
   box.setAttribute(`data-blok-database-${scope}-preview`, '');
   box.setAttribute('data-preview', preview.kind);
 
   if (preview.kind === 'property') {
-    fillImage(box, imageFromValue(row.properties[preview.propertyId]), scope);
+    fillImage(box, fromProperty, scope);
 
     return box;
   }

@@ -119,8 +119,14 @@ describe('DatabaseBoardView card parity', () => {
       const img = card(board, 'r3').querySelector<HTMLImageElement>('[data-blok-database-card-preview] [data-blok-database-card-image]');
 
       expect(img?.getAttribute('src')).toBe('https://example.com/a.png');
-      expect(card(board, 'r1').querySelector('[data-blok-database-card-preview]')?.hasAttribute('data-empty')).toBe(true);
       expect(board.querySelector('[data-blok-database-board]')?.hasAttribute('data-fit-image')).toBe(true);
+    });
+
+    it('draws no preview area on a card whose Files & media property is empty (research/31 shot 51)', () => {
+      const board = mount({ view: boardView({ cardPreview: 'property:files' }) });
+
+      expect(card(board, 'r1').querySelector('[data-blok-database-card-preview]')).toBeNull();
+      expect(card(board, 'r3').querySelector('[data-blok-database-card-preview]')).not.toBeNull();
     });
 
     it('drops an unsafe image URL', () => {

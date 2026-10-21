@@ -5,6 +5,7 @@ import {
   attachCreatedPageSeed,
   createdPageSeed,
   fromPageIcon,
+  pageDocumentHooks,
   pushRecord,
   titleCallbacks,
   titleData,
@@ -343,3 +344,23 @@ describe('attachCreatedPageSeed', () => {
   });
 });
 
+describe('pageDocumentHooks', () => {
+  it('loads a page as one document and saves the blocks, title and icon back to the registry', () => {
+    const pages = new PageRegistry(seed());
+    const hooks = pageDocumentHooks(pages);
+
+    expect(hooks.loadDocument('guide')).toEqual({ blocks: [], title: 'Guide', icon: { type: 'emoji', value: '📘' } });
+    expect(hooks.loadDocument('missing')).toBeNull();
+
+    hooks.saveDocument('keys', {
+      title: 'Shortcuts',
+      icon: { type: 'emoji', value: '⌨️' },
+      blocks: [{ id: 'b', type: 'paragraph', data: { text: [{ text: 'Hi' }] } }],
+    });
+
+    expect(pages.get('keys')).toMatchObject({ title: 'Shortcuts', icon: '⌨️', parentId: 'guide', blocks: [{ id: 'b' }] });
+    hooks.saveDocument('keys', { blocks: [] });
+    expect(pages.get('keys')?.title).toBe('');
+    expect(pages.get('keys')?.icon).toBeUndefined();
+  });
+});

@@ -1,4 +1,5 @@
 import type { Title, TitleChange } from '../../types/api/title';
+import type { OutputData } from '../../types';
 import type { PageIcon } from '../../types/tools/page';
 import { DATA_ATTR } from '../components/constants/data-attributes';
 import type { PageRegistry } from './page-host';
@@ -21,6 +22,23 @@ export const titleData = (pages: Pick<PageRegistry, 'get' | 'root'>, pageId: str
 
   return { title: page?.title ?? '', ...(icon !== undefined && { icon }) };
 };
+
+/** The page tool's loadDocument / saveDocument over the registry, which keeps blocks, title and icon apart. */
+export const pageDocumentHooks = (pages: Pick<PageRegistry, 'get' | 'root' | 'setBlocks' | 'setTitle' | 'setIcon'>): {
+  loadDocument(pageId: string): OutputData | null;
+  saveDocument(pageId: string, data: OutputData): void;
+} => ({
+  loadDocument: (pageId) => {
+    const page = pages.get(pageId);
+
+    return page === undefined ? null : { blocks: page.blocks, ...titleData(pages, pageId) };
+  },
+  saveDocument: (pageId, data) => {
+    pages.setBlocks(pageId, data.blocks);
+    pages.setTitle(pageId, data.title ?? '');
+    pages.setIcon(pageId, fromPageIcon(data.icon ?? null));
+  },
+});
 
 /** True for the built-in title's own unrecorded set: its value came from the registry or the host. */
 export const isUnrecordedSet = (change: TitleChange): boolean => change.source === 'api' && change.record === false;

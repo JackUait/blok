@@ -1823,7 +1823,7 @@
     import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
     import { mountPageTree } from './src/playground/page-tree.ts';
     import { playgroundModel, playgroundWebTools } from './src/playground/ai-model.ts';
-    import { attachCreatedPageSeed, pushRecord, titleCallbacks, titleData } from './src/playground/page-title-wiring.ts';
+    import { attachCreatedPageSeed, pageDocumentHooks, pushRecord, titleCallbacks, titleData } from './src/playground/page-title-wiring.ts';
     import { remotePagePlayground } from './src/playground/remote-page-host.ts';
     import { mountNavIndicator } from './src/playground/nav-indicator.ts';
     import { mountPositionPicker } from './src/playground/position-picker.ts';
@@ -2038,6 +2038,8 @@
               pages.create(id, pageId);
             },
             preview: (id) => pages.get(id)?.blocks,
+            // Ask AI reads and writes sub-pages through these.
+            ...pageDocumentHooks(pages),
           }),
         },
       };

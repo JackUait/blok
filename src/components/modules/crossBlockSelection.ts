@@ -10,14 +10,23 @@ import {
   focusEdgeForPointer,
   getEditingHost,
   hasEditableContent,
+  nearestRowIndex,
   pointAtInputBoundary,
-  resolveCrossBlockTextSelection
+  resolveCrossBlockTextSelection,
+  visibleVerticalBounds
 } from '../selection/cross-block-range';
 import type { CrossBlockTextSelection } from '../selection/cross-block-range';
 import { SelectionUtils } from '../selection/index';
 import { announce } from '../utils/announcer';
 import { mouseButtons } from '../utils';
 import { horizontalArrowIntent } from './blockEvents/utils/keyboard';
+
+/**
+ * Capture so a scroll box's own scroll is seen (scroll does not bubble). One
+ * shared object, because Listeners.off matches options by equality.
+ */
+const DRAG_SCROLL_OPTIONS: AddEventListenerOptions = { capture: true,
+  passive: true };
 
 /**
  *
@@ -69,11 +78,20 @@ export class CrossBlockSelection extends Module {
   private textDragAnchor: { node: Node; offset: number } | null = null;
 
   /**
-   * Viewport point of the mousedown, used to recover the drag anchor when the
-   * browser has not placed a caret we can read (e.g. the press landed on
-   * padding rather than on text).
+   * Point of the mousedown, relative to the redactor's box so it stays on the
+   * pressed content if the page scrolls before it is read. Used to recover the
+   * drag anchor when the browser has not placed a caret we can read (e.g. the
+   * press landed on padding rather than on text).
    */
   private textDragOrigin: { x: number; y: number } | null = null;
+
+  /**
+   * Last viewport point of a held-button drag. A scroll moves the content under
+   * a still pointer without any mouse event, so the focus is recomputed from
+   * this. Null until the drag first moves, and again once the button is seen
+   * released: a press that only scrolls must stay a caret.
+   */
+  private textDragPointer: { x: number; y: number } | null = null;
 
   /**
    * Whether the current gesture has produced a cross-block TEXT selection. While
@@ -99,6 +117,7 @@ export class CrossBlockSelection extends Module {
     focus: { node: Node; offset: number };
     applied: { startContainer: Node; startOffset: number; endContainer: Node; endOffset: number };
     reassertAllowed: boolean;
+    rearmed: boolean;
   } | null = null;
 
   /**
@@ -287,12 +306,17 @@ export class CrossBlockSelection extends Module {
     this.textDragActive = false;
     this.textDragAnchor = null;
     this.textDragIntent = null;
-    this.textDragOrigin = { x: event.clientX,
-      y: event.clientY };
+    this.textDragPointer = null;
+
+    const redactorBox = this.Blok.UI.nodes.redactor.getBoundingClientRect();
+
+    this.textDragOrigin = { x: event.clientX - redactorBox.left,
+      y: event.clientY - redactorBox.top };
 
     this.listeners.on(document, 'mouseover', this.onMouseOver);
     this.listeners.on(document, 'mousemove', this.onMouseMove);
     this.listeners.on(document, 'mouseup', this.onMouseUp);
+    this.listeners.on(document, 'scroll', this.onDragScroll, DRAG_SCROLL_OPTIONS);
   }
 
   /**
@@ -812,12 +836,24 @@ export class CrossBlockSelection extends Module {
    * Mouse up event handler.
    * Removes the listeners and shows toolbar for multi-block selection
    */
-  private onMouseUp = (): void => {
+  private onMouseUp = (event: Event): void => {
+    const mouseEvent = event as MouseEvent;
+
+    /**
+     * A wheel scroll right before release may have moved the content without a
+     * scroll event reaching us yet, so the release point is read once more.
+     */
+    if (this.textDragPointer !== null) {
+      this.updateTextDrag(mouseEvent.clientX, mouseEvent.clientY, mouseEvent.target, false);
+    }
+
     this.listeners.off(document, 'mouseover', this.onMouseOver);
     this.listeners.off(document, 'mousemove', this.onMouseMove);
     this.listeners.off(document, 'mouseup', this.onMouseUp);
+    this.listeners.off(document, 'scroll', this.onDragScroll, DRAG_SCROLL_OPTIONS);
 
     this.nestedRangeDragActive = false;
+    this.textDragPointer = null;
 
     /**
      * A text drag never selected blocks, so there is no multi-block toolbar to
@@ -867,6 +903,49 @@ export class CrossBlockSelection extends Module {
    */
   private onMouseMove = (event: Event): void => {
     const mouseEvent = event as MouseEvent;
+
+    if (this.textDragOrigin === null) {
+      return;
+    }
+
+    /**
+     * The button was released outside the window: mouseup never arrived, so the
+     * gesture is over even though the listeners are still attached.
+     */
+    if ((mouseEvent.buttons & 1) === 0) {
+      this.textDragPointer = null;
+
+      return;
+    }
+
+    this.textDragPointer = { x: mouseEvent.clientX,
+      y: mouseEvent.clientY };
+    this.updateTextDrag(mouseEvent.clientX, mouseEvent.clientY, mouseEvent.target, true);
+  };
+
+  /**
+   * Content scrolled under a held pointer (native autoscroll at an edge, the
+   * wheel, a scroll box). No mouse event fires for that, so the focus is
+   * recomputed from the last pointer position.
+   */
+  private onDragScroll = (): void => {
+    const pointer = this.textDragPointer;
+
+    if (pointer !== null) {
+      this.updateTextDrag(pointer.x, pointer.y, document.elementFromPoint(pointer.x, pointer.y), false);
+    }
+  };
+
+  /**
+   * Derive the drag's focus from a viewport point and apply the range. The one
+   * place the cross-block text selection is computed: mousemove, scroll and
+   * mouseup all come through here, so none of them can leave it stale.
+   * @param x - pointer viewport x
+   * @param y - pointer viewport y
+   * @param under - the element under the pointer
+   * @param pointerMoved - true for a mousemove, which comes with a mouseover
+   */
+  private updateTextDrag(x: number, y: number, under: EventTarget | null, pointerMoved: boolean): void {
     const { BlockManager, DragManager, RectangleSelection, UI } = this.Blok;
 
     /**
@@ -884,14 +963,6 @@ export class CrossBlockSelection extends Module {
       return;
     }
 
-    /**
-     * The button was released outside the window: mouseup never arrived, so the
-     * gesture is over even though the listeners are still attached.
-     */
-    if ((mouseEvent.buttons & 1) === 0) {
-      return;
-    }
-
     const anchor = this.resolveTextDragAnchor();
 
     if (anchor === null) {
@@ -905,14 +976,14 @@ export class CrossBlockSelection extends Module {
       return;
     }
 
-    const focus = this.resolveTextDragFocus(mouseEvent, anchorHost);
-    const focusHost = focus === null ? null : getEditingHost(focus.node);
+    const focus = this.resolveTextDragFocus(x, y, under, anchorBlock, anchorHost);
 
-    if (focus === null || focusHost === null) {
+    if (focus === null) {
       return;
     }
 
-    const focusBlock = BlockManager.getBlockByChildNode(focusHost);
+    const focusHost = focus.point === null ? null : getEditingHost(focus.point.node);
+    const focusBlock = focusHost === null ? focus.block : BlockManager.getBlockByChildNode(focusHost);
 
     /**
      * The pointer is back inside the block it started in. The engine's own
@@ -946,19 +1017,27 @@ export class CrossBlockSelection extends Module {
       this.textDragActive = false;
 
       /**
-       * Only take over when a text range was actually standing: mouseover fires
-       * on boundary CROSSINGS, and the gesture has already crossed into this
-       * block while the block path was stood down — so nothing else would
-       * replace the now-illegal range before mouseup.
+       * A standing text range has no other writer before mouseup. Otherwise
+       * mouseover owns the block path, but only while the pointer moves over a
+       * block: a scroll, a release, or a pointer over no block (gutter, header)
+       * fires no mouseover on a block, so the range is applied here. Skipped
+       * when it already ends on this block, since this runs on every move.
        */
-      if (wasTextDrag) {
+      const mouseoverCovers = pointerMoved && under instanceof Node && BlockManager.getBlockByChildNode(under) !== undefined;
+      const alreadyThere = this.lastSelectedBlock === BlockManager.resolveToSelectableBlock(focusBlock);
+
+      if (wasTextDrag || (!mouseoverCovers && !alreadyThere)) {
         this.takeOverWithBlockRange(anchorBlock, focusBlock);
       }
 
       return;
     }
 
-    const applied = applySpanningSelection(anchor, focus);
+    if (focus.point === null) {
+      return;
+    }
+
+    const applied = applySpanningSelection(anchor, focus.point);
 
     if (applied === null) {
       return;
@@ -966,7 +1045,7 @@ export class CrossBlockSelection extends Module {
 
     this.textDragIntent = {
       anchor,
-      focus,
+      focus: focus.point,
       applied: {
         startContainer: applied.startContainer,
         startOffset: applied.startOffset,
@@ -974,6 +1053,7 @@ export class CrossBlockSelection extends Module {
         endOffset: applied.endOffset,
       },
       reassertAllowed: true,
+      rearmed: false,
     };
 
     if (!this.textDragActive) {
@@ -984,7 +1064,7 @@ export class CrossBlockSelection extends Module {
     }
 
     this.syncTextSelectionHighlight();
-  };
+  }
 
   /**
    * Replace a standing cross-block text range with the block-level range the
@@ -1021,7 +1101,7 @@ export class CrossBlockSelection extends Module {
   private reassertTextDragSelection(): void {
     const intent = this.textDragIntent;
 
-    if (!this.textDragActive || intent === null || !intent.reassertAllowed) {
+    if (!this.textDragActive || intent === null) {
       return;
     }
 
@@ -1033,7 +1113,22 @@ export class CrossBlockSelection extends Module {
       range.endContainer === intent.applied.endContainer &&
       range.endOffset === intent.applied.endOffset;
 
+    /**
+     * Our range stood, so a later rewrite is a new engine update (WebKit makes
+     * one after the last move), not a reply to our write. Re-armed once per
+     * move: an engine that clamps in reply, even a frame later, is still held
+     * to two repairs per move and cannot ping-pong.
+     */
     if (matches) {
+      if (!intent.rearmed) {
+        intent.rearmed = true;
+        intent.reassertAllowed = true;
+      }
+
+      return;
+    }
+
+    if (!intent.reassertAllowed) {
       return;
     }
 
@@ -1084,47 +1179,93 @@ export class CrossBlockSelection extends Module {
 
     const origin = this.textDragOrigin;
 
-    this.textDragAnchor = origin === null ? null : caretPointFromCoords(origin.x, origin.y, document);
+    const redactorBox = this.Blok.UI.nodes.redactor?.getBoundingClientRect();
+
+    this.textDragAnchor = origin === null || redactorBox === undefined
+      ? null
+      : caretPointFromCoords(redactorBox.left + origin.x, redactorBox.top + origin.y, document);
 
     return this.textDragAnchor;
   }
 
   /**
-   * Where the drag currently points. Falls back to the edge of the hovered block
-   * the pointer actually reached when the hit test lands outside any editing
-   * host — a pointer in a block's padding or in the sliver between two blocks
-   * must still move the selection, not freeze it at the last character it
-   * passed over. See {@link focusEdgeForPointer} for why the edge is chosen
-   * from geometry rather than from the drag's direction.
-   * @param event - the mouse move event
+   * Where the drag currently points.
+   *
+   * The caret hit test is trusted only while the pointer is over a block: past
+   * the last block an engine snaps to the nearest character, which would end
+   * the range mid-text. Otherwise the focus snaps to an edge of the block under
+   * the pointer or, when the pointer is over no block at all (a gutter, a
+   * sticky header, above or below the editor), of the nearest row by height.
+   * Bailing there instead froze the focus at the last block passed. See
+   * {@link focusEdgeForPointer} for why the edge comes from geometry.
+   * @param x - pointer viewport x
+   * @param y - pointer viewport y
+   * @param under - the element under the pointer
+   * @param anchorBlock - the block the gesture started in
    * @param anchorHost - the editing host the gesture started in
+   * @returns the block pointed at, with a text position in it unless it has no text
    */
   private resolveTextDragFocus(
-    event: MouseEvent,
+    x: number,
+    y: number,
+    under: EventTarget | null,
+    anchorBlock: Block,
     anchorHost: HTMLElement
-  ): { node: Node; offset: number } | null {
-    const point = caretPointFromCoords(event.clientX, event.clientY, document);
+  ): { block: Block | undefined; point: { node: Node; offset: number } | null } | null {
+    const hoveredBlock = under instanceof Node ? this.Blok.BlockManager.getBlockByChildNode(under) : undefined;
+    const point = hoveredBlock === undefined ? null : caretPointFromCoords(x, y, document);
 
     if (point !== null && getEditingHost(point.node) !== null) {
-      return point;
+      return { block: undefined,
+        point };
     }
 
-    const hoveredBlock = this.Blok.BlockManager.getBlockByChildNode(event.target as Node);
-    const hoveredInput = hoveredBlock?.firstInput;
+    const rowBlock = hoveredBlock ?? this.nearestRowBlock(y, anchorBlock);
 
-    if (hoveredBlock === undefined || hoveredInput === undefined) {
+    if (rowBlock === undefined) {
       return null;
     }
 
-    const anchorIsBefore = (anchorHost.compareDocumentPosition(hoveredInput) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+    const firstInput = rowBlock.firstInput;
+
+    if (firstInput === undefined) {
+      return { block: rowBlock,
+        point: null };
+    }
+
+    const anchorIsBefore = (anchorHost.compareDocumentPosition(firstInput) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
     const edge = focusEdgeForPointer(
-      hoveredInput,
-      hoveredBlock.lastInput ?? hoveredInput,
-      event.clientY,
+      firstInput,
+      rowBlock.lastInput ?? firstInput,
+      y,
       anchorIsBefore
     );
 
-    return pointAtInputBoundary(edge.input, edge.atEnd);
+    return { block: rowBlock,
+      point: pointAtInputBoundary(edge.input, edge.atEnd) };
+  }
+
+  /**
+   * The block level with viewport `y` among the anchor's siblings (blocks of
+   * the same nested container), clamped to the part of the editor that can be
+   * seen — a pointer past a scroll box's edge means its last visible row.
+   * @param y - pointer viewport y
+   * @param anchorBlock - the block the gesture started in
+   */
+  private nearestRowBlock(y: number, anchorBlock: Block): Block | undefined {
+    const redactor = this.Blok.UI.nodes.redactor;
+
+    if (!redactor) {
+      return undefined;
+    }
+
+    const container = this.getNestedBlocksContainer(anchorBlock);
+    const rows = this.Blok.BlockManager.blocks.filter((block) => this.getNestedBlocksContainer(block) === container);
+    const visible = visibleVerticalBounds(redactor);
+    const clampedY = Math.min(Math.max(y, visible.top), visible.bottom - 1);
+    const index = nearestRowIndex(rows.map((block) => block.holder.getBoundingClientRect()), clampedY);
+
+    return rows[index];
   }
 
   /**

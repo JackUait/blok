@@ -461,3 +461,61 @@ export const focusEdgeForPointer = (
     : { input: first,
       atEnd: false };
 };
+
+/**
+ * Index of the row a viewport `y` belongs to: the row holding it, else the
+ * closest one (so above the first row is the first, below the last is the
+ * last). Rows with no height are skipped: a collapsed toggle's children report
+ * a zero box at the top of the page and would win every pointer up there.
+ * @param rows - the rows' vertical extents, in document order
+ * @param y - viewport y
+ * @returns the row index, or -1 when no row has a height
+ */
+export const nearestRowIndex = (rows: Array<{ top: number; bottom: number }>, y: number): number => {
+  return rows.reduce<{ index: number; distance: number }>((best, row, index) => {
+    if (row.bottom <= row.top) {
+      return best;
+    }
+
+    const distance = y < row.top ? row.top - y : Math.max(0, y - row.bottom + 1);
+
+    return distance < best.distance ? { index, distance } : best;
+  }, { index: -1, distance: Infinity }).index;
+};
+
+/**
+ * The vertical band of the viewport where `element` can be seen: the viewport
+ * cut down by every clipping ancestor (a scroll box). A pointer outside that
+ * band is over content the user cannot see, so it is brought back to the edge.
+ * @param element - element whose visible band to measure
+ */
+export const visibleVerticalBounds = (element: Element): { top: number; bottom: number } => {
+  const view = element.ownerDocument.defaultView;
+  const viewport = { top: 0, bottom: view?.innerHeight ?? Infinity };
+
+  if (view === null) {
+    return viewport;
+  }
+
+  const root = element.ownerDocument.documentElement;
+  const body = element.ownerDocument.body;
+  const rootClipsItself = view.getComputedStyle(root).overflowY !== 'visible';
+
+  /**
+   * The root's overflow, and body's while the root's is visible, belongs to the
+   * viewport, not to their own box. Counting them broke `body { height: 100% }`
+   * pages: the body box ends one screen down, so after a scroll the band was
+   * empty and every pointer clamped to rows above the viewport.
+   */
+  const clipsOwnBox = (node: Element): boolean => node !== root && (node !== body || rootClipsItself);
+  const ancestors = (node: Element | null): Element[] => node === null ? [] : [node, ...ancestors(node.parentElement)];
+
+  return ancestors(element.parentElement)
+    .filter((node) => clipsOwnBox(node) && view.getComputedStyle(node).overflowY !== 'visible')
+    .reduce((bounds, node) => {
+      const rect = node.getBoundingClientRect();
+
+      return { top: Math.max(bounds.top, rect.top),
+        bottom: Math.min(bounds.bottom, rect.bottom) };
+    }, viewport);
+};

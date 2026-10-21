@@ -7,6 +7,7 @@ import {
   focusEdgeForPointer,
   getEditingHost,
   hasCrossHostSelectionWithin,
+  nearestRowIndex,
   resolveCrossBlockTextSelection,
   splitRangeByEditingHost
 } from '../../../../src/components/selection/cross-block-range';
@@ -222,6 +223,49 @@ describe('cross-block-range', () => {
       selectRange(rangeAcross(fixture.hosts[0], 2, fixture.hosts[0], 2));
 
       expect(hasCrossHostSelectionWithin(fixture.root)).toBe(false);
+    });
+  });
+
+  describe('nearestRowIndex', () => {
+    const rows = [
+      { top: 100, bottom: 130 },
+      { top: 140, bottom: 170 },
+      { top: 170, bottom: 200 },
+    ];
+
+    it('picks the row holding the pointer', () => {
+      expect(nearestRowIndex(rows, 100)).toBe(0);
+      expect(nearestRowIndex(rows, 169)).toBe(1);
+      expect(nearestRowIndex(rows, 170)).toBe(2);
+    });
+
+    it('clamps a pointer above the first row to the first row', () => {
+      expect(nearestRowIndex(rows, 10)).toBe(0);
+    });
+
+    it('clamps a pointer below the last row to the last row', () => {
+      expect(nearestRowIndex(rows, 200)).toBe(2);
+      expect(nearestRowIndex(rows, 900)).toBe(2);
+    });
+
+    it('picks the closer row for a pointer in the gap between two rows', () => {
+      expect(nearestRowIndex(rows, 133)).toBe(0);
+      expect(nearestRowIndex(rows, 137)).toBe(1);
+    });
+
+    it('skips rows with no height, like the children of a collapsed toggle', () => {
+      const withHidden = [
+        { top: 0, bottom: 0 },
+        { top: 100, bottom: 130 },
+        { top: 0, bottom: 0 },
+      ];
+
+      expect(nearestRowIndex(withHidden, 5)).toBe(1);
+      expect(nearestRowIndex(withHidden, 500)).toBe(1);
+    });
+
+    it('is -1 when no row has a height', () => {
+      expect(nearestRowIndex([{ top: 0, bottom: 0 }], 5)).toBe(-1);
     });
   });
 

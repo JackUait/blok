@@ -1025,6 +1025,58 @@ describe('CrossBlockSelection — mutation coverage', () => {
       expect(selectionRange).toBe(secondClamp);
     });
 
+    it('re-arms once its re-asserted range is seen standing, so a later engine rewrite is undone too', () => {
+      startDrag();
+      atPoint(20, 50, p[2], 2);
+      mouseMove(20, 50, p[2]);
+
+      const firstClamp = document.createRange();
+
+      firstClamp.setStart(textNodeOf(p[1]), 0);
+      firstClamp.setEnd(textNodeOf(p[1]), 2);
+      selectionRange = firstClamp;
+      document.dispatchEvent(new Event('selectionchange'));
+
+      /** The selectionchange of the re-assert itself: the range stood. */
+      document.dispatchEvent(new Event('selectionchange'));
+
+      const lateClamp = document.createRange();
+
+      lateClamp.setStart(textNodeOf(p[1]), 1);
+      lateClamp.setEnd(textNodeOf(p[1]), 3);
+      selectionRange = lateClamp;
+      document.dispatchEvent(new Event('selectionchange'));
+
+      expect(selectionRange?.startContainer).toBe(textNodeOf(p[1]));
+      expect(selectionRange?.endContainer).toBe(textNodeOf(p[2]));
+    });
+
+    it('re-arms only once per move, so an engine that clamps a frame later cannot ping-pong', () => {
+      startDrag();
+      atPoint(20, 50, p[2], 2);
+      mouseMove(20, 50, p[2]);
+
+      const clampAt = (start: number): Range => {
+        const clamp = document.createRange();
+
+        clamp.setStart(textNodeOf(p[1]), start);
+        clamp.setEnd(textNodeOf(p[1]), start + 1);
+        selectionRange = clamp;
+        document.dispatchEvent(new Event('selectionchange'));
+
+        return clamp;
+      };
+
+      clampAt(0);
+      document.dispatchEvent(new Event('selectionchange'));
+      clampAt(1);
+      document.dispatchEvent(new Event('selectionchange'));
+
+      const third = clampAt(2);
+
+      expect(selectionRange).toBe(third);
+    });
+
     it('opens no multi-block toolbar when the gesture was a text drag', () => {
       startDrag();
       atPoint(20, 50, p[2], 2);
@@ -1549,6 +1601,25 @@ describe('CrossBlockSelection — mutation coverage', () => {
 
       mouseDownOn(p[1], { clientX: 10,
         clientY: 10 });
+      mouseMove(20, 50, p[2]);
+
+      expect(selectionRange?.startContainer).toBe(textNodeOf(p[1]));
+      expect(selectionRange?.startOffset).toBe(1);
+    });
+
+    it('keeps the pointer origin on the pressed content when the page scrolls before the first move', () => {
+      caretPoints.clear();
+      redactor.getBoundingClientRect = (): DOMRect => new DOMRect(0, 0, 800, 2000);
+
+      mouseDownOn(p[1], { clientX: 10,
+        clientY: 10 });
+
+      /** The page scrolled 300px: the pressed text is now at y=-290, another block sits at y=10. */
+      redactor.getBoundingClientRect = (): DOMRect => new DOMRect(0, -300, 800, 2000);
+      atPoint(10, -290, p[1], 1);
+      atPoint(10, 10, p[0], 3);
+      atPoint(20, 50, p[2], 2);
+
       mouseMove(20, 50, p[2]);
 
       expect(selectionRange?.startContainer).toBe(textNodeOf(p[1]));

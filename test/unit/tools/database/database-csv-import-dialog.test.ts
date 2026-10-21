@@ -301,11 +301,15 @@ describe('openCsvImportDialog (research/26 §2, research/27 §2)', () => {
   describe('the Date type\'s date-format submenu (research/30 §9b)', () => {
     const DMY = 'Name,When\nAlpha,03/04/2026\nBravo,03/05/2026';
     const openDateFormats = async (): Promise<void> => {
+      document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 1, clientY: 1 }));
       document.querySelectorAll<HTMLElement>('[data-blok-testid="database-csv-type"]')[1].click();
       await flush();
       item('database-csv-type-new')?.click();
       await flush();
-      item('database-csv-type-new-date')?.click();
+      // A hover opens the formats; a click picks Date. The popover ignores hovers until the pointer moves.
+      document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 5, clientY: 5 }));
+      item('database-csv-type-new-date')?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 50, clientY: 50 }));
+      await new Promise((resolve) => setTimeout(resolve, 150));
       await flush();
     };
 
@@ -342,6 +346,28 @@ describe('openCsvImportDialog (research/26 §2, research/27 §2)', () => {
 
       expect(onImport.mock.calls[0][1]).toEqual(['title', 'date']);
       expect(onImport.mock.calls[0][2]).toEqual({ headers: true, dateFormats: [undefined, 'day_month_year'] });
+    });
+
+    // Notion: a click on the Date row picks Date at once; only hover and ArrowRight open the formats.
+    it('a click on the Date row picks Date with Full date and closes the menu', async () => {
+      open();
+      await choose('Name,Count\nAlpha,1', 'n.csv');
+      byTestId('database-csv-map')?.click();
+      document.querySelectorAll<HTMLElement>('[data-blok-testid="database-csv-type"]')[1].click();
+      await flush();
+      item('database-csv-type-new')?.click();
+      await flush();
+      item('database-csv-type-new-date')?.click();
+      await flush();
+
+      expect(typeLabels()[1]).toBe('tools.database.propertyTypeDate • tools.database.dateFormat.full');
+      expect(item('database-csv-type-new-date')).toBeNull();
+      expect(item('database-csv-date-full')).toBeNull();
+
+      byTestId('database-csv-import')?.click();
+
+      expect(onImport.mock.calls[0][1]).toEqual(['title', 'date']);
+      expect(onImport.mock.calls[0][2]).toEqual({ headers: true, dateFormats: [undefined, 'full'] });
     });
 
     it('Year/Month/Day leaves those cells empty', async () => {

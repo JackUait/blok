@@ -122,6 +122,13 @@ export abstract class PopoverItem {
   }
 
   /**
+   * Returns true if the item has its own onActivate handler
+   */
+  public get hasActivateHandler(): boolean {
+    return this.params !== undefined && 'onActivate' in this.params && typeof this.params.onActivate === 'function';
+  }
+
+  /**
    * Returns true if item children should be open instantly after popover is opened and not on item click/hover
    */
   public get isChildrenOpen(): boolean {

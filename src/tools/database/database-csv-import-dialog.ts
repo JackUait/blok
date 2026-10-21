@@ -183,7 +183,7 @@ export const openCsvImportDialog = (options: CsvImportDialogOptions): { close: (
 
   /**
    * research/30 §9b: the format says how the CSV text is read. Notion opens
-   * this submenu only with ArrowRight; here a hover or click opens it too.
+   * this submenu only with ArrowRight; here a hover opens it too.
    * No row is checked, as measured.
    */
   const dateFormatItems = (column: number): PopoverItemParams[] => CSV_DATE_FORMATS.map((format) => ({
@@ -231,8 +231,16 @@ export const openCsvImportDialog = (options: CsvImportDialogOptions): { close: (
           items: NEW_TYPES.filter((type) => options.hasPeople || type !== 'person').map((type): PopoverItemParams => {
             const look = { title: t(propertyTypeMeta(type).labelKey), icon: propertyTypeMeta(type).icon, trailingIcon: current === type ? IconCheck : undefined };
 
+            // research/30 §9b: a click or Enter picks Date with Full date; hover and ArrowRight open the formats.
             return type === 'date'
-              ? { type: PopoverItemType.Default, name: 'database-csv-type-new-date', ...look, children: { items: dateFormatItems(column) } }
+              ? {
+                type: PopoverItemType.Default,
+                name: 'database-csv-type-new-date',
+                ...look,
+                closeOnActivate: true,
+                onActivate: () => retarget(column, 'date', 'full'),
+                children: { items: dateFormatItems(column) },
+              }
               : { type: PopoverItemType.Default, name: `database-csv-type-new-${type}`, ...look, closeOnActivate: true, onActivate: () => retarget(column, type) };
           }),
         },

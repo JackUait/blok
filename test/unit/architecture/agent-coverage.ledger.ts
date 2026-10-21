@@ -71,6 +71,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'menu:database/database-csv-type-skip': exempt('gesture-alias', 'Picks a CSV column type before import; ui-file:src/tools/database/database-csv-import-dialog.ts covers the import.'),
   'menu:database/database-csv-type-title': exempt('gesture-alias', 'Picks a CSV column type before import; ui-file:src/tools/database/database-csv-import-dialog.ts covers the import.'),
   'menu:database/database-csv-type-new-*': exempt('gesture-alias', 'Picks a CSV column type before import; ui-file:src/tools/database/database-csv-import-dialog.ts covers the import.'),
+  'menu:database/database-csv-type-new-date': exempt('gesture-alias', 'Picks Date as a CSV column type before import; ui-file:src/tools/database/database-csv-import-dialog.ts covers the import.'),
   'menu:database/database-csv-date-*': exempt('gesture-alias', 'Picks how a CSV date column is read before import; ui-file:src/tools/database/database-csv-import-dialog.ts covers the import.'),
   'ui-file:src/tools/database/database-new-source-panel.ts': cmds(['database.addProperty', 'database.addView', 'database.addRow'], 'The New database AI prompt asks the host to set the database up, and a Suggested template builds one; an agent adds the properties, views and rows itself.'),
   'ui-file:src/tools/database/cells/cell-popover.ts': exempt('chrome', 'Closes the cell editor popover on Escape; the editors inside it have their own ids.'),

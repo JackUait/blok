@@ -456,6 +456,7 @@ export class PopoverDesktop extends PopoverAbstract {
           keyCodes.LEFT,
         ],
         onArrowLeft: params.onNavigateBack,
+        onOpenChildren: (element) => this.openChildrenOf(element),
         handleContentEditableTargets: params.handleContentEditableNavigation,
       });
     }
@@ -1081,6 +1082,28 @@ export class PopoverDesktop extends PopoverAbstract {
    * Handles displaying nested items for the item.
    * @param item – item to show nested popover for
    */
+  /**
+   * ArrowRight on a row with a submenu: opens it without running the row's own action.
+   * @param element - the focused row
+   */
+  private openChildrenOf(element: HTMLElement): void {
+    const item = this.items.find((candidate) => candidate.getElement() === element);
+
+    if (item === undefined || !item.hasChildren || (item instanceof PopoverItemDefault && item.isDisabled)) {
+      return;
+    }
+    this.showNestedItems(item);
+  }
+
+  /**
+   * A row with a submenu and its own action runs the action on click and
+   * Enter; hover and ArrowRight open the submenu.
+   * @param item - the clicked row
+   */
+  protected override clickRunsParentAction(item: PopoverItem): boolean {
+    return item.hasActivateHandler;
+  }
+
   protected override showNestedItems(item: PopoverItem): void {
     // Asking for the submenu supersedes the grace close a wandering pointer may
     // have started — cancelled before the early return, or a submenu that is

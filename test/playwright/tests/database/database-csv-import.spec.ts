@@ -155,6 +155,22 @@ test.describe('database CSV import', () => {
     await expect(dialog.getByTestId('database-csv-type').nth(2)).toContainText('Day/Month/Year');
   });
 
+  // Notion: a click on the Date row picks Date with the default format; it does not open the formats.
+  test('a click on the Date row picks Date at once', async ({ page }) => {
+    await mount(page, empty);
+    const dialog = await openCsvDialog(page);
+
+    await dialog.locator('[data-blok-database-csv-input]').setInputFiles({ name: 'people.csv', mimeType: 'text/csv', buffer: Buffer.from(NEUTRAL) });
+    await dialog.getByTestId('database-csv-map').click();
+    await dialog.getByTestId('database-csv-type').nth(1).click();
+    await page.locator('[data-blok-item-name="database-csv-type-new"]:visible').click();
+    await page.locator('[data-blok-item-name="database-csv-type-new-date"]:visible').click();
+
+    await expect(dialog.getByTestId('database-csv-type').nth(1)).toContainText('Date • Full date');
+    await expect(page.locator('[data-blok-item-name="database-csv-date-full"]:visible')).toHaveCount(0);
+    await expect(page.locator('[data-blok-item-name="database-csv-type-new-date"]:visible')).toHaveCount(0);
+  });
+
   test('Merge with CSV adds rows, never updates a match, and shows them at once', async ({ page }) => {
     await mount(page, existing);
     await expect(grid(page)).toContainText('R1');

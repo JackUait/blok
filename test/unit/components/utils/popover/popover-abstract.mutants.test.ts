@@ -629,13 +629,9 @@ describe('PopoverAbstract', () => {
       expect(onActivate).not.toHaveBeenCalled();
     });
 
+    // A popover with no hover or ArrowRight path (the abstract default, mobile) opens the children on click and runs the row's action.
     it('opens the nested popover and still runs the handler for an item with children', () => {
       const onActivate = vi.fn();
-      /**
-       * `WithChildren` types `onActivate` as `never`, so an item carrying both is
-       * unbuildable as a literal. Declared as a variable to keep the pair the runtime
-       * has to cope with, which is exactly what this test measures.
-       */
       const parentWithHandler: PopoverItemDefaultBaseParams & { children: PopoverItemChildren } = {
         title: 'Parent',
         onActivate,

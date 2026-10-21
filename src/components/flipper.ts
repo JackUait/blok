@@ -49,6 +49,13 @@ export interface FlipperOptions {
   onArrowLeft?: () => void;
 
   /**
+   * Opens the focused item's submenu. The arrow toward the inline end calls it
+   * instead of clicking the item, so a row with its own action keeps that
+   * action for click and Enter. Without it the arrow clicks the item.
+   */
+  onOpenChildren?: (item: HTMLElement) => void;
+
+  /**
    * Optional host element that receives aria-activedescendant so the virtual
    * focus is perceivable to screen readers without moving real DOM focus.
    */
@@ -126,6 +133,8 @@ export class Flipper {
    */
   private readonly onArrowLeftCallback?: () => void;
 
+  private readonly onOpenChildrenCallback?: (item: HTMLElement) => void;
+
   /**
    * True when opt-in typeahead navigation is enabled
    */
@@ -150,6 +159,7 @@ export class Flipper {
     this.allowedKeys = options.allowedKeys || Flipper.usedKeys;
     this.handleContentEditableTargets = options.handleContentEditableTargets ?? false;
     this.onArrowLeftCallback = options.onArrowLeft;
+    this.onOpenChildrenCallback = options.onOpenChildren;
     this.typeAhead = options.typeAhead ?? false;
   }
 
@@ -319,9 +329,22 @@ export class Flipper {
       return;
     }
 
-    if (this.iterator?.currentItem && this.currentItemHasChildren()) {
-      this.handleEnterPress(event);
+    const current = this.iterator?.currentItem;
+
+    if (!current || !this.currentItemHasChildren()) {
+      return;
     }
+    if (this.onOpenChildrenCallback === undefined) {
+      this.handleEnterPress(event);
+
+      return;
+    }
+    if (!this.activated) {
+      return;
+    }
+    event.stopPropagation();
+    event.preventDefault();
+    this.onOpenChildrenCallback(current);
   }
 
   /**

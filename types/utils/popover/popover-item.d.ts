@@ -77,9 +77,11 @@ export type WithChildren<T> = Omit<T, 'onActivate'> & {
   children: PopoverItemChildren;
 
   /**
-   * Items with children should not have onActivate handler
+   * Optional action of the row itself. On the desktop popover a click or
+   * Enter runs it, while hover and ArrowRight open the children. Without it
+   * a click opens the children. The mobile popover opens the children and runs it.
    */
-  onActivate?: never;
+  onActivate?: PopoverItemDefaultBaseParams['onActivate'];
 };
 
 /**

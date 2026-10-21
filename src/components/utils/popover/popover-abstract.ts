@@ -751,7 +751,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       return;
     }
 
-    if (item.hasChildren) {
+    if (item.hasChildren && !this.clickRunsParentAction(item)) {
       this.showNestedItems(item as PopoverItemDefault | PopoverItemHtml);
       this.callHandleClickIfPresent(item);
 
@@ -907,6 +907,16 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * @param item – item to show nested popover for
    */
   protected abstract showNestedItems(item: PopoverItemDefault | PopoverItemHtml): void;
+
+  /**
+   * True when a click on a row with a submenu runs the row's own action
+   * instead of opening the submenu. Only a popover with another way in
+   * (hover, ArrowRight) says yes; otherwise a click opens it and runs the action.
+   * @param _item - the clicked row
+   */
+  protected clickRunsParentAction(_item: PopoverItem): boolean {
+    return false;
+  }
 
   /**
    * Toggles nothing found message visibility

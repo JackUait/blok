@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "تنظیم ستون‌های CSV",
   "tools.database.csvSetupDescription": "نوع ویژگی را برای هر ستون فایل CSV انتخاب کنید",
   "tools.database.csvFileColumns": "ستون‌های فایل CSV",
+  "tools.database.csvFirstRowHeaders": "استفاده از ردیف اول به‌عنوان سرستون",
+  "tools.database.csvNewTable": "جدول جدید",
   "tools.database.csvSearchTypes": "جستجوی انواع ویژگی…",
   "tools.database.csvExistingProperty": "ویژگی موجود",
   "tools.database.csvDontImport": "وارد نکردن",

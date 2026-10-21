@@ -7296,6 +7296,23 @@ describe('DatabaseTool — property menu and insert placement', () => {
       tool.destroy();
     });
 
+    // research/30 §9b-c: the dialog's switches reach the import.
+    it('imports without a header line and reads dates in the picked format', () => {
+      const { tool, options } = mount({});
+
+      Object.assign(options.api.blocks, { transact: vi.fn((fn: () => void) => fn()) });
+      tool.importCsv('Task,When\nWrite,03/04/2026', 'tasks.csv', ['title', 'date'], { headers: false, dateFormats: [undefined, 'day_month_year'] });
+
+      const calls = vi.mocked(options.api.blocks.insertAt).mock.calls;
+      const database = calls[0][1] as DatabaseData;
+
+      expect(database.schema.map((p) => p.name)).toEqual(['Title', 'tools.database.csvUntitledColumn 2']);
+      expect(calls.slice(1).map(([, rowData]) => (rowData as DatabaseRowData).title)).toEqual(['Task', 'Write']);
+      expect((calls[2][1] as DatabaseRowData).properties[database.schema[1].id]).toBe('2026-04-03');
+
+      tool.destroy();
+    });
+
     it('merges a CSV by adding rows only, matching headers to property names', () => {
       const { tool, options } = mount({});
 

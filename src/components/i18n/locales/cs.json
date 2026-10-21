@@ -1776,6 +1776,8 @@
   "tools.database.csvSetupTitle": "Nastavit sloupce CSV",
   "tools.database.csvSetupDescription": "Vyberte typ vlastnosti pro každý sloupec v CSV souboru",
   "tools.database.csvFileColumns": "Sloupce CSV souboru",
+  "tools.database.csvFirstRowHeaders": "Použít první řádek jako záhlaví",
+  "tools.database.csvNewTable": "Nová tabulka",
   "tools.database.csvSearchTypes": "Hledat typy vlastností…",
   "tools.database.csvExistingProperty": "Stávající vlastnost",
   "tools.database.csvDontImport": "Neimportovat",

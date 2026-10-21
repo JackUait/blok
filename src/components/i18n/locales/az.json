@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSV sütunlarını qur",
   "tools.database.csvSetupDescription": "CSV faylındakı hər sütun üçün xüsusiyyət növünü seç",
   "tools.database.csvFileColumns": "CSV fayl sütunları",
+  "tools.database.csvFirstRowHeaders": "Birinci sətri başlıq kimi istifadə et",
+  "tools.database.csvNewTable": "Yeni cədvəl",
   "tools.database.csvSearchTypes": "Xüsusiyyət növlərini axtar…",
   "tools.database.csvExistingProperty": "Mövcud xüsusiyyət",
   "tools.database.csvDontImport": "İdxal etmə",

@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "د CSV ستنې تنظیم کړئ",
   "tools.database.csvSetupDescription": "د خپل CSV فایل د هرې ستنې لپاره د ځانګړتیا ډول وټاکئ",
   "tools.database.csvFileColumns": "د CSV فایل ستنې",
+  "tools.database.csvFirstRowHeaders": "لومړی کتار د سرلیکونو په توګه وکاروئ",
+  "tools.database.csvNewTable": "نوی جدول",
   "tools.database.csvSearchTypes": "د ځانګړتیا ډولونه ولټوئ…",
   "tools.database.csvExistingProperty": "شته ځانګړتیا",
   "tools.database.csvDontImport": "مه یې واردوئ",

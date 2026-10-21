@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "Atur kolom CSV",
   "tools.database.csvSetupDescription": "Pilih tipe properti untuk setiap kolom di file CSV Anda",
   "tools.database.csvFileColumns": "Kolom file CSV",
+  "tools.database.csvFirstRowHeaders": "Gunakan baris pertama sebagai header",
+  "tools.database.csvNewTable": "Tabel baru",
   "tools.database.csvSearchTypes": "Cari tipe properti…",
   "tools.database.csvExistingProperty": "Properti yang ada",
   "tools.database.csvDontImport": "Jangan impor",

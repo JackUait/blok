@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSV ڪالم سيٽ ڪريو",
   "tools.database.csvSetupDescription": "پنهنجي CSV فائل جي هر ڪالم لاءِ پراپرٽي جو قسم چونڊيو",
   "tools.database.csvFileColumns": "CSV فائل جا ڪالم",
+  "tools.database.csvFirstRowHeaders": "پهرين قطار کي هيڊرز طور استعمال ڪريو",
+  "tools.database.csvNewTable": "نئون ٽيبل",
   "tools.database.csvSearchTypes": "پراپرٽي جا قسم ڳوليو…",
   "tools.database.csvExistingProperty": "موجوده پراپرٽي",
   "tools.database.csvDontImport": "امپورٽ نه ڪريو",

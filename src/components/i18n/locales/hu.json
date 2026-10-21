@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSV-oszlopok beállítása",
   "tools.database.csvSetupDescription": "Tulajdonságtípus kiválasztása a CSV-fájl minden oszlopához",
   "tools.database.csvFileColumns": "CSV-fájl oszlopai",
+  "tools.database.csvFirstRowHeaders": "Első sor használata fejlécként",
+  "tools.database.csvNewTable": "Új táblázat",
   "tools.database.csvSearchTypes": "Tulajdonságtípusok keresése…",
   "tools.database.csvExistingProperty": "Meglévő tulajdonság",
   "tools.database.csvDontImport": "Kihagyás",

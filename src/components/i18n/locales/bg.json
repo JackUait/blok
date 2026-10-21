@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "Настрой колоните на CSV",
   "tools.database.csvSetupDescription": "Избери типа на свойството за всяка колона в CSV файла",
   "tools.database.csvFileColumns": "Колони на CSV файла",
+  "tools.database.csvFirstRowHeaders": "Първият ред като заглавия",
+  "tools.database.csvNewTable": "Нова таблица",
   "tools.database.csvSearchTypes": "Търсене на типове свойства…",
   "tools.database.csvExistingProperty": "Съществуващо свойство",
   "tools.database.csvDontImport": "Не импортирай",

@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "រៀបចំជួរឈរ CSV",
   "tools.database.csvSetupDescription": "ជ្រើសរើសប្រភេទលក្ខណៈសម្រាប់ជួរឈរនីមួយៗក្នុងឯកសារ CSV របស់អ្នក",
   "tools.database.csvFileColumns": "ជួរឈរឯកសារ CSV",
+  "tools.database.csvFirstRowHeaders": "ប្រើជួរដេកទីមួយជាក្បាល",
+  "tools.database.csvNewTable": "តារាងថ្មី",
   "tools.database.csvSearchTypes": "ស្វែងរកប្រភេទលក្ខណៈ…",
   "tools.database.csvExistingProperty": "លក្ខណៈដែលមានស្រាប់",
   "tools.database.csvDontImport": "កុំនាំចូល",

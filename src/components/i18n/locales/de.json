@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSV-Spalten einrichten",
   "tools.database.csvSetupDescription": "Eigenschaftstyp für jede Spalte der CSV-Datei auswählen",
   "tools.database.csvFileColumns": "Spalten der CSV-Datei",
+  "tools.database.csvFirstRowHeaders": "Erste Zeile als Überschriften verwenden",
+  "tools.database.csvNewTable": "Neue Tabelle",
   "tools.database.csvSearchTypes": "Eigenschaftstypen suchen…",
   "tools.database.csvExistingProperty": "Vorhandene Eigenschaft",
   "tools.database.csvDontImport": "Nicht importieren",

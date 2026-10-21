@@ -1774,6 +1774,8 @@
   "tools.database.csvSetupTitle": "CSV kolonnu iestatīšana",
   "tools.database.csvSetupDescription": "Izvēlieties rekvizīta tipu katrai CSV faila kolonnai",
   "tools.database.csvFileColumns": "CSV faila kolonnas",
+  "tools.database.csvFirstRowHeaders": "Izmantot pirmo rindu kā galvenes",
+  "tools.database.csvNewTable": "Jauna tabula",
   "tools.database.csvSearchTypes": "Meklēt rekvizītu tipus…",
   "tools.database.csvExistingProperty": "Esošs rekvizīts",
   "tools.database.csvDontImport": "Neimportēt",

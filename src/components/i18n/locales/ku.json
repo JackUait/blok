@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "ڕێکخستنی ستوونەکانی CSV",
   "tools.database.csvSetupDescription": "جۆری تایبەتمەندی بۆ هەر ستوونێکی فایلی CSVـەکەت هەڵبژێرە",
   "tools.database.csvFileColumns": "ستوونەکانی فایلی CSV",
+  "tools.database.csvFirstRowHeaders": "یەکەم ڕیز وەک سەردێڕ بەکاربهێنە",
+  "tools.database.csvNewTable": "خشتەی نوێ",
   "tools.database.csvSearchTypes": "گەڕان لە جۆرەکانی تایبەتمەندی…",
   "tools.database.csvExistingProperty": "تایبەتمەندیی هەبوو",
   "tools.database.csvDontImport": "هاوردە مەکە",

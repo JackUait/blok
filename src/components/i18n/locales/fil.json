@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "I-set up ang mga column ng CSV",
   "tools.database.csvSetupDescription": "Piliin ang uri ng property para sa bawat column sa iyong CSV file",
   "tools.database.csvFileColumns": "Mga column ng CSV file",
+  "tools.database.csvFirstRowHeaders": "Gamitin ang unang row bilang mga header",
+  "tools.database.csvNewTable": "Bagong talahanayan",
   "tools.database.csvSearchTypes": "Maghanap ng mga uri ng property…",
   "tools.database.csvExistingProperty": "Kasalukuyang property",
   "tools.database.csvDontImport": "Huwag i-import",

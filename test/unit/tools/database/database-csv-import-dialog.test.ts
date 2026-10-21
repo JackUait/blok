@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { openCsvImportDialog } from '../../../../src/tools/database/database-csv-import-dialog';
-import type { CsvColumnTarget } from '../../../../src/tools/database/database-csv';
+import type { CsvColumnTarget, CsvImportSettings } from '../../../../src/tools/database/database-csv';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
 
 const R27 = [
@@ -40,7 +40,7 @@ const escape = (): void => {
 const item = (name: string): HTMLElement | null => document.querySelector<HTMLElement>(`[data-blok-item-name="${name}"]`);
 
 describe('openCsvImportDialog (research/26 §2, research/27 §2)', () => {
-  const onImport = vi.fn<(file: { name: string; text: string }, targets: CsvColumnTarget[]) => void>();
+  const onImport = vi.fn<(file: { name: string; text: string }, targets: CsvColumnTarget[], settings: CsvImportSettings) => void>();
   const onClose = vi.fn();
   const open = (hasPeople = false): ReturnType<typeof openCsvImportDialog> => openCsvImportDialog({ t, hasPeople, onImport, onClose });
 
@@ -206,6 +206,155 @@ describe('openCsvImportDialog (research/26 §2, research/27 §2)', () => {
 
     expect(document.querySelector('[role="dialog"]')).toBeNull();
     expect(onImport).not.toHaveBeenCalled();
+  });
+
+  describe('right-hand preview (research/26 §2, research/27 §2, research/30 §9)', () => {
+    const preview = (): HTMLElement | null => byTestId('database-csv-preview');
+    const previewTitle = (): string => preview()?.querySelector('[data-blok-database-csv-preview-title]')?.textContent ?? '';
+    const headerCells = (): string[] => [...(preview()?.querySelectorAll('th') ?? [])].map((th) => th.textContent?.trim() ?? '');
+    const column = (index: number): string[] => [...(preview()?.querySelectorAll('tbody tr') ?? [])]
+      .map((tr) => tr.querySelectorAll('td')[index]?.textContent?.trim() ?? '');
+
+    it('is a skeleton titled "New table" before a file, then titled with the file name without its extension', async () => {
+      open();
+
+      expect(previewTitle()).toBe('tools.database.csvNewTable');
+      expect(preview()?.querySelector('[data-blok-database-csv-skeleton]')).not.toBeNull();
+      expect(preview()?.getAttribute('aria-hidden')).toBe('true');
+
+      await choose(R27, 'blok-r27.csv');
+
+      expect(previewTitle()).toBe('blok-r27');
+      expect(preview()?.querySelector('[data-blok-database-csv-skeleton]')).not.toBeNull();
+    });
+
+    it('shows the table the import will make on "Setup CSV columns", in file order', async () => {
+      open();
+      await choose(R27, 'blok-r27.csv');
+      byTestId('database-csv-map')?.click();
+
+      expect(previewTitle()).toBe('blok-r27');
+      expect(preview()?.querySelector('[data-blok-database-csv-skeleton]')).toBeNull();
+      expect(headerCells()).toEqual(['Name', 'Due', 'Amount', 'Site', 'Email', 'Done', 'Stage']);
+      expect(column(0)).toEqual(['Alpha', 'Bravo', 'Charlie']);
+      expect(column(1)).toEqual(['March 4, 2026', 'March 5, 2026', 'March 6, 2026']);
+    });
+
+    it('follows the mapping: a skipped column leaves, a Person column empties', async () => {
+      open(true);
+      await choose(R27, 'blok-r27.csv');
+      byTestId('database-csv-map')?.click();
+      const buttons = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>('[data-blok-testid="database-csv-type"]')];
+
+      buttons()[3].click();
+      await flush();
+      item('database-csv-type-skip')?.click();
+      await flush();
+      buttons()[6].click();
+      await flush();
+      item('database-csv-type-new')?.click();
+      await flush();
+      item('database-csv-type-new-person')?.click();
+      await flush();
+
+      expect(headerCells()).toEqual(['Name', 'Due', 'Amount', 'Email', 'Done', 'Stage']);
+      expect(column(5)).toEqual(['', '', '']);
+    });
+  });
+
+  describe('"Use first row as headers" (research/27 §2, research/30 §9c)', () => {
+    const toggle = (): HTMLElement | null => byTestId('database-csv-headers');
+
+    it('is a switch, on by default, on "Setup CSV columns"', async () => {
+      open();
+      await choose(R27, 'blok-r27.csv');
+      byTestId('database-csv-map')?.click();
+
+      expect(toggle()?.getAttribute('role')).toBe('switch');
+      expect(toggle()?.getAttribute('aria-checked')).toBe('true');
+      expect(toggle()?.textContent).toContain('tools.database.csvFirstRowHeaders');
+      // The shared switch CSS styles only a direct-child track.
+      expect(toggle()?.querySelector(':scope > [data-blok-database-switch-track]')).not.toBeNull();
+    });
+
+    it('off: columns read "Column N", the header line becomes a row, and the chosen types stay', async () => {
+      open();
+      await choose(R27, 'blok-r27.csv');
+      byTestId('database-csv-map')?.click();
+      const labelsBefore = typeLabels().slice(1);
+
+      toggle()?.click();
+
+      expect(toggle()?.getAttribute('aria-checked')).toBe('false');
+      expect([...document.querySelectorAll('[data-blok-testid="database-csv-column"]')].map((el) => el.textContent?.trim()))
+        .toEqual([1, 2, 3, 4, 5, 6, 7].map((n) => `tools.database.csvUntitledColumn ${n}`));
+      expect(typeLabels().slice(1)).toEqual(labelsBefore);
+      expect([...(byTestId('database-csv-preview')?.querySelectorAll('tbody tr') ?? [])].map((tr) => tr.querySelector('td')?.textContent?.trim()))
+        .toEqual(['Name', 'Alpha', 'Bravo', 'Charlie']);
+
+      byTestId('database-csv-import')?.click();
+
+      expect(onImport.mock.calls[0][2]).toEqual(expect.objectContaining({ headers: false }));
+    });
+  });
+
+  describe('the Date type\'s date-format submenu (research/30 §9b)', () => {
+    const DMY = 'Name,When\nAlpha,03/04/2026\nBravo,03/05/2026';
+    const openDateFormats = async (): Promise<void> => {
+      document.querySelectorAll<HTMLElement>('[data-blok-testid="database-csv-type"]')[1].click();
+      await flush();
+      item('database-csv-type-new')?.click();
+      await flush();
+      item('database-csv-type-new-date')?.click();
+      await flush();
+    };
+
+    it('lists the five formats a CSV date can be read in, with no checkmark', async () => {
+      open();
+      await choose(DMY, 'dates.csv');
+      byTestId('database-csv-map')?.click();
+      await openDateFormats();
+
+      const rows = [...document.querySelectorAll<HTMLElement>('[data-blok-item-name^="database-csv-date-"]')];
+
+      expect(rows.map((row) => row.getAttribute('data-blok-item-name'))).toEqual(
+        ['full', 'short', 'month_day_year', 'day_month_year', 'year_month_day'].map((format) => `database-csv-date-${format}`)
+      );
+      expect(rows.map((row) => row.textContent?.trim())).toEqual(
+        ['full', 'short', 'month_day_year', 'day_month_year', 'year_month_day'].map((format) => `tools.database.dateFormat.${format}`)
+      );
+      expect(rows.some((row) => row.getAttribute('aria-checked') === 'true' || row.querySelector('[data-blok-popover-item-secondary-title], [data-blok-popover-item-trailing-icon] svg') !== null)).toBe(false);
+    });
+
+    it('Day/Month/Year reads 03/04/2026 as April 3 in the preview and the import', async () => {
+      open();
+      await choose(DMY, 'dates.csv');
+      byTestId('database-csv-map')?.click();
+      await openDateFormats();
+      item('database-csv-date-day_month_year')?.click();
+      await flush();
+
+      expect(typeLabels()[1]).toBe('tools.database.propertyTypeDate • tools.database.dateFormat.day_month_year');
+      expect([...(byTestId('database-csv-preview')?.querySelectorAll('tbody tr') ?? [])].map((tr) => tr.querySelectorAll('td')[1]?.textContent?.trim()))
+        .toEqual(['April 3, 2026', 'May 3, 2026']);
+
+      byTestId('database-csv-import')?.click();
+
+      expect(onImport.mock.calls[0][1]).toEqual(['title', 'date']);
+      expect(onImport.mock.calls[0][2]).toEqual({ headers: true, dateFormats: [undefined, 'day_month_year'] });
+    });
+
+    it('Year/Month/Day leaves those cells empty', async () => {
+      open();
+      await choose(DMY, 'dates.csv');
+      byTestId('database-csv-map')?.click();
+      await openDateFormats();
+      item('database-csv-date-year_month_day')?.click();
+      await flush();
+
+      expect([...(byTestId('database-csv-preview')?.querySelectorAll('tbody tr') ?? [])].map((tr) => tr.querySelectorAll('td')[1]?.textContent?.trim()))
+        .toEqual(['', '']);
+    });
   });
 
   it('hides Person without a people directory', async () => {

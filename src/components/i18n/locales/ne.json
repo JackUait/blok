@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSV स्तम्भहरू सेटअप गर्नुहोस्",
   "tools.database.csvSetupDescription": "तपाईंको CSV फाइलको प्रत्येक स्तम्भका लागि गुणको प्रकार छान्नुहोस्",
   "tools.database.csvFileColumns": "CSV फाइलका स्तम्भहरू",
+  "tools.database.csvFirstRowHeaders": "पहिलो पङ्क्तिलाई हेडरका रूपमा प्रयोग गर्नुहोस्",
+  "tools.database.csvNewTable": "नयाँ तालिका",
   "tools.database.csvSearchTypes": "गुणका प्रकारहरू खोज्नुहोस्…",
   "tools.database.csvExistingProperty": "विद्यमान गुण",
   "tools.database.csvDontImport": "आयात नगर्नुहोस्",

@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSV තීරු සකසන්න",
   "tools.database.csvSetupDescription": "ඔබේ CSV ගොනුවේ එක් එක් තීරුව සඳහා ගුණාංග වර්ගය තෝරන්න",
   "tools.database.csvFileColumns": "CSV ගොනු තීරු",
+  "tools.database.csvFirstRowHeaders": "පළමු පේළිය ශීර්ෂ ලෙස භාවිත කරන්න",
+  "tools.database.csvNewTable": "නව වගුව",
   "tools.database.csvSearchTypes": "ගුණාංග වර්ග සොයන්න…",
   "tools.database.csvExistingProperty": "පවතින ගුණාංගය",
   "tools.database.csvDontImport": "ආයාත නොකරන්න",

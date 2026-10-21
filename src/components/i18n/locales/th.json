@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "ตั้งค่าคอลัมน์ CSV",
   "tools.database.csvSetupDescription": "เลือกประเภทคุณสมบัติสำหรับแต่ละคอลัมน์ในไฟล์ CSV ของคุณ",
   "tools.database.csvFileColumns": "คอลัมน์ในไฟล์ CSV",
+  "tools.database.csvFirstRowHeaders": "ใช้แถวแรกเป็นส่วนหัว",
+  "tools.database.csvNewTable": "ตารางใหม่",
   "tools.database.csvSearchTypes": "ค้นหาประเภทคุณสมบัติ…",
   "tools.database.csvExistingProperty": "คุณสมบัติที่มีอยู่",
   "tools.database.csvDontImport": "ไม่นำเข้า",

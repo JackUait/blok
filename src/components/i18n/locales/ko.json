@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSV 열 설정",
   "tools.database.csvSetupDescription": "CSV 파일의 각 열에 사용할 속성 유형을 선택하세요",
   "tools.database.csvFileColumns": "CSV 파일 열",
+  "tools.database.csvFirstRowHeaders": "첫 행을 머리글로 사용",
+  "tools.database.csvNewTable": "새 표",
   "tools.database.csvSearchTypes": "속성 유형 검색…",
   "tools.database.csvExistingProperty": "기존 속성",
   "tools.database.csvDontImport": "가져오지 않음",

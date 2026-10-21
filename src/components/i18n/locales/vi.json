@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "Thiết lập cột CSV",
   "tools.database.csvSetupDescription": "Chọn loại thuộc tính cho từng cột trong tệp CSV của bạn",
   "tools.database.csvFileColumns": "Các cột trong tệp CSV",
+  "tools.database.csvFirstRowHeaders": "Dùng hàng đầu tiên làm tiêu đề",
+  "tools.database.csvNewTable": "Bảng mới",
   "tools.database.csvSearchTypes": "Tìm loại thuộc tính…",
   "tools.database.csvExistingProperty": "Thuộc tính hiện có",
   "tools.database.csvDontImport": "Không nhập",

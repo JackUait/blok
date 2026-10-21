@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSV కాలమ్‌లను సెటప్ చేయండి",
   "tools.database.csvSetupDescription": "మీ CSV ఫైల్‌లోని ప్రతి కాలమ్‌కు ప్రాపర్టీ రకాన్ని ఎంచుకోండి",
   "tools.database.csvFileColumns": "CSV ఫైల్ కాలమ్‌లు",
+  "tools.database.csvFirstRowHeaders": "మొదటి అడ్డు వరుసను శీర్షికలుగా ఉపయోగించు",
+  "tools.database.csvNewTable": "కొత్త పట్టిక",
   "tools.database.csvSearchTypes": "ప్రాపర్టీ రకాలను వెతకండి…",
   "tools.database.csvExistingProperty": "ఇప్పటికే ఉన్న ప్రాపర్టీ",
   "tools.database.csvDontImport": "దిగుమతి చేయవద్దు",

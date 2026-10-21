@@ -1776,6 +1776,8 @@
   "tools.database.csvSetupTitle": "Налаштування стовпців CSV",
   "tools.database.csvSetupDescription": "Виберіть тип властивості для кожного стовпця CSV-файлу",
   "tools.database.csvFileColumns": "Стовпці CSV-файлу",
+  "tools.database.csvFirstRowHeaders": "Перший рядок — заголовки",
+  "tools.database.csvNewTable": "Нова таблиця",
   "tools.database.csvSearchTypes": "Шукати типи властивостей…",
   "tools.database.csvExistingProperty": "Наявна властивість",
   "tools.database.csvDontImport": "Не імпортувати",

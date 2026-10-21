@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSV ئىستونلىرىنى تەڭشەش",
   "tools.database.csvSetupDescription": "CSV ھۆججىتىڭىزدىكى ھەر بىر ئىستون ئۈچۈن خاسلىق تىپىنى تاللاڭ",
   "tools.database.csvFileColumns": "CSV ھۆججەت ئىستونلىرى",
+  "tools.database.csvFirstRowHeaders": "بىرىنچى قۇرنى ماۋزۇ قىلىش",
+  "tools.database.csvNewTable": "يېڭى جەدۋەل",
   "tools.database.csvSearchTypes": "خاسلىق تىپى ئىزدەش…",
   "tools.database.csvExistingProperty": "بار خاسلىق",
   "tools.database.csvDontImport": "ئەكىرمەسلىك",

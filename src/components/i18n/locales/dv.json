@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSV ކޮލަމްތައް ސެޓަޕްކުރޭ",
   "tools.database.csvSetupDescription": "CSV ފައިލުގެ ކޮންމެ ކޮލަމަކަށް ޕްރޮޕަރޓީ ޓައިޕް ހޮވާ",
   "tools.database.csvFileColumns": "CSV ފައިލުގެ ކޮލަމްތައް",
+  "tools.database.csvFirstRowHeaders": "ފުރަތަމަ ރޯ ސުރުޚީތަކެއްގެ ގޮތުގައި ބޭނުންކުރޭ",
+  "tools.database.csvNewTable": "އައު ޓޭބަލް",
   "tools.database.csvSearchTypes": "ޕްރޮޕަރޓީ ޓައިޕްތައް ހޯދާ…",
   "tools.database.csvExistingProperty": "މިހާރު ހުރި ޕްރޮޕަރޓީ",
   "tools.database.csvDontImport": "އިމްޕޯޓް ނުކުރާ",

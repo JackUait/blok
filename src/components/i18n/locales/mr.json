@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSV स्तंभ सेट करा",
   "tools.database.csvSetupDescription": "तुमच्या CSV फाइलमधील प्रत्येक स्तंभासाठी गुणधर्म प्रकार निवडा",
   "tools.database.csvFileColumns": "CSV फाइलचे स्तंभ",
+  "tools.database.csvFirstRowHeaders": "पहिली ओळ शीर्षके म्हणून वापरा",
+  "tools.database.csvNewTable": "नवीन तक्ता",
   "tools.database.csvSearchTypes": "गुणधर्म प्रकार शोधा…",
   "tools.database.csvExistingProperty": "विद्यमान गुणधर्म",
   "tools.database.csvDontImport": "आयात करू नका",

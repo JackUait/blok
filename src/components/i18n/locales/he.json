@@ -1774,6 +1774,8 @@
   "tools.database.csvSetupTitle": "הגדר עמודות CSV",
   "tools.database.csvSetupDescription": "בחר סוג מאפיין לכל עמודה בקובץ ה-CSV",
   "tools.database.csvFileColumns": "עמודות קובץ CSV",
+  "tools.database.csvFirstRowHeaders": "שימוש בשורה הראשונה ככותרות",
+  "tools.database.csvNewTable": "טבלה חדשה",
   "tools.database.csvSearchTypes": "חיפוש סוגי מאפיינים…",
   "tools.database.csvExistingProperty": "מאפיין קיים",
   "tools.database.csvDontImport": "אל תייבא",

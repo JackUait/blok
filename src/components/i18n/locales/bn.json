@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSV কলাম সেট আপ করুন",
   "tools.database.csvSetupDescription": "আপনার CSV ফাইলের প্রতিটি কলামের জন্য বৈশিষ্ট্যের ধরন বেছে নিন",
   "tools.database.csvFileColumns": "CSV ফাইলের কলাম",
+  "tools.database.csvFirstRowHeaders": "প্রথম সারিকে শিরোনাম হিসেবে ব্যবহার করুন",
+  "tools.database.csvNewTable": "নতুন টেবিল",
   "tools.database.csvSearchTypes": "বৈশিষ্ট্যের ধরন খুঁজুন…",
   "tools.database.csvExistingProperty": "বিদ্যমান বৈশিষ্ট্য",
   "tools.database.csvDontImport": "আমদানি করবেন না",

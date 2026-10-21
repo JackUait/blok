@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSV sütunlarını ayarla",
   "tools.database.csvSetupDescription": "CSV dosyanızdaki her sütun için özellik türünü seçin",
   "tools.database.csvFileColumns": "CSV dosyası sütunları",
+  "tools.database.csvFirstRowHeaders": "İlk satırı başlık olarak kullan",
+  "tools.database.csvNewTable": "Yeni tablo",
   "tools.database.csvSearchTypes": "Özellik türü arayın…",
   "tools.database.csvExistingProperty": "Mevcut özellik",
   "tools.database.csvDontImport": "İçe aktarma",

@@ -1774,6 +1774,8 @@
   "tools.database.csvSetupTitle": "Postavi CSV kolone",
   "tools.database.csvSetupDescription": "Odaberi vrstu svojstva za svaku kolonu u CSV datoteci",
   "tools.database.csvFileColumns": "Kolone CSV datoteke",
+  "tools.database.csvFirstRowHeaders": "Koristi prvi red kao zaglavlja",
+  "tools.database.csvNewTable": "Nova tabela",
   "tools.database.csvSearchTypes": "Pretražite vrste svojstava…",
   "tools.database.csvExistingProperty": "Postojeće svojstvo",
   "tools.database.csvDontImport": "Ne uvozi",

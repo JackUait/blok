@@ -1776,6 +1776,8 @@
   "tools.database.csvSetupTitle": "CSV stulpelių nustatymas",
   "tools.database.csvSetupDescription": "Pasirinkite savybės tipą kiekvienam CSV failo stulpeliui",
   "tools.database.csvFileColumns": "CSV failo stulpeliai",
+  "tools.database.csvFirstRowHeaders": "Pirmą eilutę naudoti kaip antraštes",
+  "tools.database.csvNewTable": "Nauja lentelė",
   "tools.database.csvSearchTypes": "Ieškoti savybių tipų…",
   "tools.database.csvExistingProperty": "Esama savybė",
   "tools.database.csvDontImport": "Neimportuoti",

@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "設定 CSV 欄位",
   "tools.database.csvSetupDescription": "為 CSV 檔案中的每一欄選擇屬性類型",
   "tools.database.csvFileColumns": "CSV 檔案欄位",
+  "tools.database.csvFirstRowHeaders": "將第一列作為標題",
+  "tools.database.csvNewTable": "新增表格",
   "tools.database.csvSearchTypes": "搜尋屬性類型…",
   "tools.database.csvExistingProperty": "現有屬性",
   "tools.database.csvDontImport": "不匯入",

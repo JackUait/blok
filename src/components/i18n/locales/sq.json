@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "Konfiguro kolonat e CSV",
   "tools.database.csvSetupDescription": "Zgjidh llojin e vetisë për çdo kolonë në skedarin CSV",
   "tools.database.csvFileColumns": "Kolonat e skedarit CSV",
+  "tools.database.csvFirstRowHeaders": "Përdor rreshtin e parë si tituj",
+  "tools.database.csvNewTable": "Tabelë e re",
   "tools.database.csvSearchTypes": "Kërko lloje vetish…",
   "tools.database.csvExistingProperty": "Veti ekzistuese",
   "tools.database.csvDontImport": "Mos e importo",

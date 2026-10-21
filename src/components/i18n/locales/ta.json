@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSV நெடுவரிசைகளை அமை",
   "tools.database.csvSetupDescription": "உங்கள் CSV கோப்பின் ஒவ்வொரு நெடுவரிசைக்கும் பண்பு வகையைத் தேர்ந்தெடுக்கவும்",
   "tools.database.csvFileColumns": "CSV கோப்பு நெடுவரிசைகள்",
+  "tools.database.csvFirstRowHeaders": "முதல் வரிசையைத் தலைப்புகளாகப் பயன்படுத்து",
+  "tools.database.csvNewTable": "புதிய அட்டவணை",
   "tools.database.csvSearchTypes": "பண்பு வகைகளைத் தேடு…",
   "tools.database.csvExistingProperty": "ஏற்கனவே உள்ள பண்பு",
   "tools.database.csvDontImport": "இறக்குமதி செய்யாதே",

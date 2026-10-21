@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "Կարգավորել CSV սյունակները",
   "tools.database.csvSetupDescription": "Ընտրեք հատկության տեսակը CSV ֆայլի յուրաքանչյուր սյունակի համար",
   "tools.database.csvFileColumns": "CSV ֆայլի սյունակներ",
+  "tools.database.csvFirstRowHeaders": "Օգտագործել առաջին տողը որպես վերնագրեր",
+  "tools.database.csvNewTable": "Նոր աղյուսակ",
   "tools.database.csvSearchTypes": "Որոնել հատկությունների տեսակներ…",
   "tools.database.csvExistingProperty": "Առկա հատկություն",
   "tools.database.csvDontImport": "Չներմուծել",

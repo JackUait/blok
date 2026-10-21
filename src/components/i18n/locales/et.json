@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "Seadista CSV veerud",
   "tools.database.csvSetupDescription": "Vali CSV-faili iga veeru jaoks omaduse tüüp",
   "tools.database.csvFileColumns": "CSV-faili veerud",
+  "tools.database.csvFirstRowHeaders": "Kasuta esimest rida päistena",
+  "tools.database.csvNewTable": "Uus tabel",
   "tools.database.csvSearchTypes": "Otsi omaduste tüüpe…",
   "tools.database.csvExistingProperty": "Olemasolev omadus",
   "tools.database.csvDontImport": "Ära impordi",

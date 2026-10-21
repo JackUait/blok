@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSV कॉलम सेट करें",
   "tools.database.csvSetupDescription": "अपनी CSV फ़ाइल के हर कॉलम के लिए प्रॉपर्टी का प्रकार चुनें",
   "tools.database.csvFileColumns": "CSV फ़ाइल के कॉलम",
+  "tools.database.csvFirstRowHeaders": "पहली पंक्ति को हेडर के रूप में इस्तेमाल करें",
+  "tools.database.csvNewTable": "नई तालिका",
   "tools.database.csvSearchTypes": "प्रॉपर्टी के प्रकार खोजें…",
   "tools.database.csvExistingProperty": "मौजूदा प्रॉपर्टी",
   "tools.database.csvDontImport": "आयात न करें",

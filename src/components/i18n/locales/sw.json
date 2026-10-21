@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "Weka safu wima za CSV",
   "tools.database.csvSetupDescription": "Chagua aina ya sifa kwa kila safu wima katika faili yako ya CSV",
   "tools.database.csvFileColumns": "Safu wima za faili ya CSV",
+  "tools.database.csvFirstRowHeaders": "Tumia safu mlalo ya kwanza kama vichwa",
+  "tools.database.csvNewTable": "Jedwali jipya",
   "tools.database.csvSearchTypes": "Tafuta aina za sifa…",
   "tools.database.csvExistingProperty": "Sifa iliyopo",
   "tools.database.csvDontImport": "Usilete",

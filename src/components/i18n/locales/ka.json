@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSV-ის სვეტების დაყენება",
   "tools.database.csvSetupDescription": "აირჩიეთ თვისების ტიპი CSV ფაილის თითოეული სვეტისთვის",
   "tools.database.csvFileColumns": "CSV ფაილის სვეტები",
+  "tools.database.csvFirstRowHeaders": "პირველი მწკრივის სათაურებად გამოყენება",
+  "tools.database.csvNewTable": "ახალი ცხრილი",
   "tools.database.csvSearchTypes": "თვისების ტიპების ძიება…",
   "tools.database.csvExistingProperty": "არსებული თვისება",
   "tools.database.csvDontImport": "არ დაიმპორტდეს",

@@ -1776,6 +1776,8 @@
   "tools.database.csvSetupTitle": "Nastavenie stĺpcov CSV",
   "tools.database.csvSetupDescription": "Vyberte typ vlastnosti pre každý stĺpec v súbore CSV",
   "tools.database.csvFileColumns": "Stĺpce súboru CSV",
+  "tools.database.csvFirstRowHeaders": "Použiť prvý riadok ako hlavičky",
+  "tools.database.csvNewTable": "Nová tabuľka",
   "tools.database.csvSearchTypes": "Hľadať typy vlastností…",
   "tools.database.csvExistingProperty": "Existujúca vlastnosť",
   "tools.database.csvDontImport": "Neimportovať",

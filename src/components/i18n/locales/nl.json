@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSV-kolommen instellen",
   "tools.database.csvSetupDescription": "Kies het eigenschapstype voor elke kolom in je CSV-bestand",
   "tools.database.csvFileColumns": "Kolommen in CSV-bestand",
+  "tools.database.csvFirstRowHeaders": "Eerste rij als kopteksten gebruiken",
+  "tools.database.csvNewTable": "Nieuwe tabel",
   "tools.database.csvSearchTypes": "Eigenschapstypen zoeken…",
   "tools.database.csvExistingProperty": "Bestaande eigenschap",
   "tools.database.csvDontImport": "Niet importeren",

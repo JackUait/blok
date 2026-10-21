@@ -4,7 +4,7 @@ import { filesOf, personIdsOf } from './property-values';
 import { isOutputData, placeText, verificationStatus } from './tier3-values';
 import { generateKeyBetween } from 'fractional-indexing';
 
-import type { DatabaseData, DatabaseRowData, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
+import type { DatabaseData, DatabaseRowData, DateFormat, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
 import { htmlToPlainText } from '../../components/utils/plain-text';
 import { freePropertyName, newView } from '../../shared/database/schema-ops';
 import { planTypeChange } from './property-conversion';
@@ -195,19 +195,36 @@ const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 const US_DAY = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
 const URL = /^https?:\/\/\S+$/i;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE = /^\+?[\d\s()-]+$/;
 
 const isNumber = (text: string): boolean => text !== '' && text !== '-' && NUMBER.test(text);
+
+/** Seven or more digits with phone punctuation. It runs after Number and Date, which claim bare digits and ISO days. */
+const isPhone = (text: string): boolean => PHONE.test(text) && (text.match(/\d/g) ?? []).length >= 7;
 
 const ISO_DAY_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 /** Blok's English date display, as an export writes it: "October 9, 2026", maybe with a time. */
 const WRITTEN_DAY = /^[A-Za-z]{3,9}\.? \d{1,2}, \d{4}(,? \d{1,2}:\d{2}( ?[AP]M)?)?$/i;
 
+/**
+ * How a "03/04/2026" cell reads: month first, day first, or not at all.
+ * research/30 §9b: the import's date format picks it, and Year/Month/Day leaves such cells empty.
+ */
+const slashDay = (match: RegExpExecArray, format: DateFormat | undefined): string | null => {
+  if (format === 'year_month_day') return null;
+  const [month, day] = format === 'day_month_year' ? [match[2], match[1]] : [match[1], match[2]];
+
+  if (Number(month) < 1 || Number(month) > 12 || Number(day) < 1 || Number(day) > 31) return null;
+
+  return `${match[3]}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+};
+
 /** One date: `YYYY-MM-DD`, Notion's import format MM/DD/YYYY (research/05 §9.3), or written out. */
-const toDatePart = (text: string): string | null => {
+const toDatePart = (text: string, format?: DateFormat): string | null => {
   if (ISO_DAY.test(text) || ISO_DAY_TIME.test(text)) return text;
   const us = US_DAY.exec(text);
 
-  if (us !== null) return `${us[3]}-${us[1].padStart(2, '0')}-${us[2].padStart(2, '0')}`;
+  if (us !== null) return slashDay(us, format);
   const time = Date.parse(text);
 
   if (Number.isNaN(time) || !/\d{4}/.test(text)) return null;
@@ -217,8 +234,8 @@ const toDatePart = (text: string): string | null => {
 };
 
 /** A date or a range, as the date property stores it. A range is written "start → end". */
-const toDay = (text: string): string | null => {
-  const parts = text.split('→').map((part) => toDatePart(part.trim()));
+const toDay = (text: string, format?: DateFormat): string | null => {
+  const parts = text.split('→').map((part) => toDatePart(part.trim(), format));
 
   return parts.length > 2 || parts.some((part) => part === null) ? null : parts.join('/');
 };
@@ -244,13 +261,15 @@ export const inferColumnType = (cells: string[]): PropertyType => {
     ['date', isDay],
     ['url', (text) => URL.test(text)],
     ['email', (text) => EMAIL.test(text)],
+    // research/30 §9a: by the values, never the header. Person and Status are never guessed.
+    ['phone', isPhone],
   ];
 
   return checks.find(([, test]) => filled.every(test))?.[0] ?? 'text';
 };
 
 /** A cell's text as a stored value. Types with no text form (people, files, computed) give undefined. */
-const parseCell = (property: PropertyDefinition, raw: string): PropertyValue | undefined => {
+const parseCell = (property: PropertyDefinition, raw: string, dateFormat?: DateFormat): PropertyValue | undefined => {
   const text = raw.trim();
 
   switch (property.type) {
@@ -259,7 +278,7 @@ const parseCell = (property: PropertyDefinition, raw: string): PropertyValue | u
     case 'checkbox':
       return YES.test(text);
     case 'date':
-      return text === '' ? null : toDay(text);
+      return text === '' ? null : toDay(text, dateFormat);
     case 'title':
     case 'text':
     case 'url':
@@ -291,6 +310,12 @@ const parseCell = (property: PropertyDefinition, raw: string): PropertyValue | u
   }
 };
 
+/** The "Setup CSV columns" switches beside the per-column targets. */
+export interface CsvImportSettings {
+  headers: boolean;
+  dateFormats: Array<DateFormat | undefined>;
+}
+
 /** Where a CSV column goes: nowhere, the title, or a new property of a type. */
 export type CsvColumnTarget = 'skip' | PropertyType;
 
@@ -300,8 +325,12 @@ export interface CsvImportOptions {
   untitled: string;
   /** One target per column. Without it every column takes its detected type. */
   targets?: CsvColumnTarget[];
-  /** The title's name when no column maps to it. */
+  /** The title's name when no column maps to it, or when the file has no header line. */
   titleName?: string;
+  /** False: the first line is a row, and columns are named "Column N" (research/30 §9c). Default true. */
+  headers?: boolean;
+  /** How each date column's text is read (research/30 §9b). Month first when unset. */
+  dateFormats?: Array<DateFormat | undefined>;
 }
 
 export interface CsvImport {
@@ -327,11 +356,11 @@ const numberedHeaders = (headers: string[]): string[] =>
   headers.reduce<string[]>((names, header) => [...names, freePropertyName(names, header)], []);
 
 /** Each column's name and detected type, as the "Setup CSV columns" step lists them. */
-export const csvColumns = (table: string[][], untitled = 'Column'): CsvColumn[] => {
+export const csvColumns = (table: string[][], untitled = 'Column', headers = true): CsvColumn[] => {
   const [header = [], ...body] = table;
   const width = Math.max(header.length, ...body.map((row) => row.length), 1);
   const names = numberedHeaders(Array.from({ length: width }, (_, column) => {
-    const typed = (header[column] ?? '').trim();
+    const typed = headers ? (header[column] ?? '').trim() : '';
 
     return typed === '' ? `${untitled} ${column + 1}` : typed;
   }));
@@ -347,8 +376,9 @@ const CONVERTED_TYPES: ReadonlySet<PropertyType> = new Set<PropertyType>(['selec
 
 /** A new database from a CSV: the first row names the columns. Columns and rows keep file order. */
 export const buildCsvImport = (table: string[][], options: CsvImportOptions): CsvImport => {
-  const body = table.slice(1);
-  const columns = csvColumns(table, options.untitled);
+  const headers = options.headers !== false;
+  const body = headers ? table.slice(1) : table;
+  const columns = csvColumns(table, options.untitled, headers);
   const wanted = columns.map((column, index) => options.targets?.[index] ?? column.detected);
   // One title: the first column that asks for it.
   const titleAt = wanted.indexOf('title');
@@ -359,7 +389,10 @@ export const buildCsvImport = (table: string[][], options: CsvImportOptions): Cs
 
     return type === 'skip' ? [] : [{ column: index, name: column.name, type }];
   });
-  const fields: Array<{ column: number; name: string; type: PropertyType }> = titleAt === -1 ? [{ column: -1, name: options.titleName ?? 'Name', type: 'title' }, ...kept] : kept;
+  const titleName = options.titleName ?? 'Name';
+  // research/30 §9c: without a header line the title keeps its own name.
+  const named = headers ? kept : kept.map((field) => (field.type === 'title' ? { ...field, name: titleName } : field));
+  const fields: Array<{ column: number; name: string; type: PropertyType }> = titleAt === -1 ? [{ column: -1, name: titleName, type: 'title' }, ...named] : named;
   const schema: PropertyDefinition[] = fields.map((field, index) => ({
     id: options.newId(),
     name: field.name,
@@ -369,7 +402,7 @@ export const buildCsvImport = (table: string[][], options: CsvImportOptions): Cs
   const rows = body.map((row) => Object.fromEntries(schema.map((property, index) => {
     const raw = fields[index].column === -1 ? '' : row[fields[index].column] ?? '';
 
-    return [property.id, parseCell(property, raw) ?? null];
+    return [property.id, parseCell(property, raw, options.dateFormats?.[fields[index].column]) ?? null];
   })));
   const ordered = rows.map((properties, index) => ({ id: String(index), position: position(index), properties }));
   const finished = schema.map((property, index) => {

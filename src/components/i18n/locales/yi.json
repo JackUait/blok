@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "איינשטעלן CSV שפּאַלטן",
   "tools.database.csvSetupDescription": "קלײַבט אויס דעם אייגנשאַפֿט־טיפּ פֿאַר יעדן שפּאַלט אין אײַער CSV טעקע",
   "tools.database.csvFileColumns": "CSV טעקע שפּאַלטן",
+  "tools.database.csvFirstRowHeaders": "ניצן די ערשטע ריי ווי קעפּלעך",
+  "tools.database.csvNewTable": "נײַע טאַבעלע",
   "tools.database.csvSearchTypes": "זוכן אייגנשאַפֿט־טיפּן…",
   "tools.database.csvExistingProperty": "עקזיסטירנדיקע אייגנשאַפֿט",
   "tools.database.csvDontImport": "נישט אימפּאָרטירן",

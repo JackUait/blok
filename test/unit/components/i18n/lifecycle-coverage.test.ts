@@ -270,7 +270,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1422 + 126 + 487 + 4 closure for all 2039 keys', () => {
+  it('rebuilds a disjoint 1423 + 126 + 488 + 4 closure for all 2041 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -284,7 +284,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2039);
+    expect(lifecycle.size).toBe(2041);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -423,7 +423,10 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the property menu's (i) calls tools.database.addPropertyDescription by literal.
       // +1: and tools.database.editPropertyDescription once a description exists.
       // +14: the Relative date format's "Last <weekday>" / "Next <weekday>" keys by literal.
-      'executable-literal': 1422,
+      // +2: the CSV dialog's "Use first row as headers" switch and "New table" preview title.
+      // -1: tools.database.dateFormat.full left for registered-namespace-compatible: the CSV type
+      // label now builds its date-format key from the picked format.
+      'executable-literal': 1423,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -476,7 +479,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the view settings "Source" row, tools.database.settingsSource.
       // +6: Edit cadence's months row, "On the", the ordinals (templateRepeatOrdinal<Category>) and "Day", all built from a short name.
       // +1: the template menu's "Default" (tools.database.templateDefault, via the menu's prefixing t).
-      'registered-namespace-compatible': 487,
+      // +1: tools.database.dateFormat.full (see executable-literal).
+      'registered-namespace-compatible': 488,
       'catalog-only': 4,
     });
     expect(

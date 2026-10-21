@@ -1774,6 +1774,8 @@
   "tools.database.csvSetupTitle": "Postavi CSV stupce",
   "tools.database.csvSetupDescription": "Odaberi vrstu svojstva za svaki stupac u CSV datoteci",
   "tools.database.csvFileColumns": "Stupci CSV datoteke",
+  "tools.database.csvFirstRowHeaders": "Koristi prvi redak kao zaglavlja",
+  "tools.database.csvNewTable": "Nova tablica",
   "tools.database.csvSearchTypes": "Pretraži vrste svojstava…",
   "tools.database.csvExistingProperty": "Postojeće svojstvo",
   "tools.database.csvDontImport": "Ne uvozi",

@@ -1774,6 +1774,8 @@
   "tools.database.csvSetupTitle": "Configurează coloanele CSV",
   "tools.database.csvSetupDescription": "Alege tipul de proprietate pentru fiecare coloană din fișierul CSV",
   "tools.database.csvFileColumns": "Coloanele fișierului CSV",
+  "tools.database.csvFirstRowHeaders": "Folosește primul rând ca anteturi",
+  "tools.database.csvNewTable": "Tabel nou",
   "tools.database.csvSearchTypes": "Căutați tipuri de proprietăți…",
   "tools.database.csvExistingProperty": "Proprietate existentă",
   "tools.database.csvDontImport": "Nu importa",

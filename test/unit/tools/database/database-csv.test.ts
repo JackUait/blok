@@ -243,6 +243,129 @@ describe('database CSV', () => {
     });
   });
 
+  // research/30 §9: the two files Notion's detection was measured with.
+  const DETECT = parseCsv([
+    'Name,When,Phone,Owner,State,Score',
+    'Alpha,03/04/2026,+1 555 123 4567,Jane Roe,Not started,1',
+    'Bravo,03/05/2026,(555) 123-4567,jroe@example.com,In progress,2',
+    'Charlie,03/06/2026,555-123-4567,John Doe,Done,3',
+  ].join('\n'));
+  const NEUTRAL = parseCsv([
+    'Title,Contact,Status,Person,Progress,Tags',
+    'Alpha,+1 555 123 4567,Not started,Jane Roe,Not started,red',
+    'Bravo,(555) 123-4567,In progress,John Doe,In progress,blue',
+    'Charlie,555-123-4567,Done,Jane Roe,Done,red',
+  ].join('\n'));
+
+  describe('detection as research/30 §9a measured', () => {
+    it('detects Phone from the values, whatever the header says', () => {
+      expect(csvColumns(DETECT).map((c) => c.detected)).toEqual(['title', 'date', 'phone', 'text', 'text', 'number']);
+      expect(csvColumns(NEUTRAL)[1]).toEqual({ name: 'Contact', detected: 'phone' });
+    });
+
+    it('never detects Person or Status, even under headers named so', () => {
+      expect(csvColumns(NEUTRAL).map((c) => c.detected)).toEqual(['title', 'phone', 'text', 'text', 'text', 'text']);
+    });
+
+    it('keeps numbers, ISO dates and short digit runs out of Phone', () => {
+      expect(inferColumnType(['1234567', '7654321'])).toBe('number');
+      expect(inferColumnType(['2026-03-04', '2026-03-05'])).toBe('date');
+      expect(inferColumnType(['12-34', '5-6'])).toBe('text');
+      // DD.MM.YYYY, a common spreadsheet date export, is not a phone number.
+      expect(inferColumnType(['03.04.2026', '2026.03.04'])).toBe('text');
+    });
+  });
+
+  describe('the Date type\'s format sets how the text is read (research/30 §9b)', () => {
+    const when = (format?: 'full' | 'short' | 'month_day_year' | 'day_month_year' | 'year_month_day'): unknown[] => {
+      const result = buildCsvImport(DETECT, { untitled: 'Column', newId: ids(), dateFormats: [undefined, format] });
+      const due = result.schema[1];
+
+      return result.rows.map((row) => row[due.id]);
+    };
+
+    it('reads 03/04/2026 as March 4 under Full date, Short date and Month/Day/Year', () => {
+      for (const format of [undefined, 'full', 'short', 'month_day_year'] as const) {
+        expect(when(format)).toEqual(['2026-03-04', '2026-03-05', '2026-03-06']);
+      }
+    });
+
+    it('reads it as April 3 under Day/Month/Year', () => {
+      expect(when('day_month_year')).toEqual(['2026-04-03', '2026-05-03', '2026-06-03']);
+    });
+
+    it('leaves the cells empty under Year/Month/Day', () => {
+      expect(when('year_month_day')).toEqual([null, null, null]);
+    });
+  });
+
+  describe('"Use first row as headers" off (research/30 §9c)', () => {
+    const imported = buildCsvImport(NEUTRAL, {
+      untitled: 'Column',
+      titleName: 'Name',
+      newId: ids(),
+      headers: false,
+      targets: ['title', 'phone', 'text', 'text', 'status', 'select'],
+    });
+
+    it('names the title "Name" and every other column "Column N" by its position', () => {
+      expect(imported.schema.map((p) => p.name)).toEqual(['Name', 'Column 2', 'Column 3', 'Column 4', 'Column 5', 'Column 6']);
+    });
+
+    it('imports the header line as the first row, keeping file order', () => {
+      const title = imported.schema[0].id;
+
+      expect(imported.rows.map((row) => row[title])).toEqual(['Title', 'Alpha', 'Bravo', 'Charlie']);
+      expect(imported.rows[0][imported.schema[2].id]).toBe('Status');
+    });
+
+    it('keeps the chosen types, and the header\'s value becomes the first Select option', () => {
+      expect(imported.schema.map((p) => p.type)).toEqual(['title', 'phone', 'text', 'text', 'status', 'select']);
+      expect(imported.schema[5].config?.options.map((o) => o.label)).toEqual(['Tags', 'red', 'blue']);
+    });
+
+    it('lists the columns as "Column N" while detection still reads the rows below the header line', () => {
+      expect(csvColumns(NEUTRAL, 'Column', false)).toEqual([
+        { name: 'Column 1', detected: 'title' },
+        { name: 'Column 2', detected: 'phone' },
+        { name: 'Column 3', detected: 'text' },
+        { name: 'Column 4', detected: 'text' },
+        { name: 'Column 5', detected: 'text' },
+        { name: 'Column 6', detected: 'text' },
+      ]);
+    });
+  });
+
+  describe('Person and Status mapped by hand (research/30 §9d)', () => {
+    const imported = buildCsvImport(DETECT, { untitled: 'Column', newId: ids(), targets: ['title', 'date', 'phone', 'person', 'status', 'number'] });
+    const [, , , owner, state] = imported.schema;
+
+    it('drops Person values: a name or an email cannot name a person, as in Notion', () => {
+      expect(owner.type).toBe('person');
+      expect(imported.rows.map((row) => row[owner.id])).toEqual([[], [], []]);
+    });
+
+    // Deliberate deviation: Notion dropped every Status value and left the property with no options or groups.
+    // As with any change from text to Status, the new options carry no group, so they read as the first group (To-do).
+    it('keeps Status values as options, in the first status group', () => {
+      expect(state.type).toBe('status');
+      expect(state.config?.options.map((o) => o.label)).toEqual(['Not started', 'In progress', 'Done']);
+      expect(state.status?.groups[0]?.kind).toBe('todo');
+      expect(state.config?.options.map((o) => o.groupId)).toEqual([undefined, undefined, undefined]);
+      expect(imported.rows.map((row) => row[state.id])).toEqual(state.config?.options.map((o) => o.id));
+    });
+  });
+
+  // research/30 §9e: "red" got Brown and "blue" got Red in Notion.
+  it('does not colour a Select option after its name', () => {
+    const result = buildCsvImport([['Name', 'Tags'], ['a', 'red'], ['b', 'blue'], ['c', 'green']], { untitled: 'Column', newId: ids(), targets: ['title', 'select'] });
+    const colors = Object.fromEntries((result.schema[1].config?.options ?? []).map((o) => [o.label, o.color]));
+
+    expect(colors.red).not.toBe('red');
+    expect(colors.blue).not.toBe('blue');
+    expect(colors.green).not.toBe('green');
+  });
+
   describe('planCsvMerge', () => {
     const schema: PropertyDefinition[] = [
       { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },

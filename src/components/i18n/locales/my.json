@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSV ကော်လံများ သတ်မှတ်ရန်",
   "tools.database.csvSetupDescription": "သင့် CSV ဖိုင်ရှိ ကော်လံတစ်ခုစီအတွက် ဂုဏ်သတ္တိအမျိုးအစား ရွေးပါ",
   "tools.database.csvFileColumns": "CSV ဖိုင် ကော်လံများ",
+  "tools.database.csvFirstRowHeaders": "ပထမအတန်းကို ခေါင်းစီးအဖြစ် သုံးရန်",
+  "tools.database.csvNewTable": "ဇယားအသစ်",
   "tools.database.csvSearchTypes": "ဂုဏ်သတ္တိအမျိုးအစားများ ရှာပါ…",
   "tools.database.csvExistingProperty": "ရှိပြီးသား ဂုဏ်သတ္တိ",
   "tools.database.csvDontImport": "မတင်သွင်းပါ",

@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "Setup CSV columns",
   "tools.database.csvSetupDescription": "Choose the property type for each column in your CSV file",
   "tools.database.csvFileColumns": "CSV File Columns",
+  "tools.database.csvFirstRowHeaders": "Use first row as headers",
+  "tools.database.csvNewTable": "New table",
   "tools.database.csvSearchTypes": "Search property types…",
   "tools.database.csvExistingProperty": "Existing property",
   "tools.database.csvDontImport": "Don’t import",

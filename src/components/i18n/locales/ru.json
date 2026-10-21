@@ -1776,6 +1776,8 @@
   "tools.database.csvSetupTitle": "Настройка столбцов CSV",
   "tools.database.csvSetupDescription": "Выберите тип свойства для каждого столбца CSV-файла",
   "tools.database.csvFileColumns": "Столбцы CSV-файла",
+  "tools.database.csvFirstRowHeaders": "Первая строка — заголовки",
+  "tools.database.csvNewTable": "Новая таблица",
   "tools.database.csvSearchTypes": "Поиск типов свойств…",
   "tools.database.csvExistingProperty": "Существующее свойство",
   "tools.database.csvDontImport": "Не импортировать",

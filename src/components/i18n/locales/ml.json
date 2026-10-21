@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSV കോളങ്ങൾ സജ്ജീകരിക്കുക",
   "tools.database.csvSetupDescription": "നിങ്ങളുടെ CSV ഫയലിലെ ഓരോ കോളത്തിനും പ്രോപ്പർട്ടി തരം തിരഞ്ഞെടുക്കുക",
   "tools.database.csvFileColumns": "CSV ഫയൽ കോളങ്ങൾ",
+  "tools.database.csvFirstRowHeaders": "ആദ്യ വരി തലക്കെട്ടുകളായി ഉപയോഗിക്കുക",
+  "tools.database.csvNewTable": "പുതിയ പട്ടിക",
   "tools.database.csvSearchTypes": "പ്രോപ്പർട്ടി തരങ്ങൾ തിരയുക…",
   "tools.database.csvExistingProperty": "നിലവിലുള്ള പ്രോപ്പർട്ടി",
   "tools.database.csvDontImport": "ഇമ്പോർട്ട് ചെയ്യരുത്",

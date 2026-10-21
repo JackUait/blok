@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "设置 CSV 列",
   "tools.database.csvSetupDescription": "为 CSV 文件中的每一列选择属性类型",
   "tools.database.csvFileColumns": "CSV 文件列",
+  "tools.database.csvFirstRowHeaders": "将第一行用作标题",
+  "tools.database.csvNewTable": "新建表格",
   "tools.database.csvSearchTypes": "搜索属性类型…",
   "tools.database.csvExistingProperty": "现有属性",
   "tools.database.csvDontImport": "不导入",

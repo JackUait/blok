@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSV કૉલમ સેટ કરો",
   "tools.database.csvSetupDescription": "તમારી CSV ફાઇલની દરેક કૉલમ માટે ગુણધર્મનો પ્રકાર પસંદ કરો",
   "tools.database.csvFileColumns": "CSV ફાઇલની કૉલમ",
+  "tools.database.csvFirstRowHeaders": "પ્રથમ પંક્તિને હેડર તરીકે વાપરો",
+  "tools.database.csvNewTable": "નવું કોષ્ટક",
   "tools.database.csvSearchTypes": "ગુણધર્મના પ્રકારો શોધો…",
   "tools.database.csvExistingProperty": "હાલનો ગુણધર્મ",
   "tools.database.csvDontImport": "આયાત કરશો નહીં",

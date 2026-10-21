@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "ຕັ້ງຄ່າຖັນ CSV",
   "tools.database.csvSetupDescription": "ເລືອກປະເພດຄຸນສົມບັດສຳລັບແຕ່ລະຖັນໃນໄຟລ໌ CSV ຂອງທ່ານ",
   "tools.database.csvFileColumns": "ຖັນໃນໄຟລ໌ CSV",
+  "tools.database.csvFirstRowHeaders": "ໃຊ້ແຖວທຳອິດເປັນຫົວຂໍ້",
+  "tools.database.csvNewTable": "ຕາຕະລາງໃໝ່",
   "tools.database.csvSearchTypes": "ຄົ້ນຫາປະເພດຄຸນສົມບັດ…",
   "tools.database.csvExistingProperty": "ຄຸນສົມບັດທີ່ມີຢູ່",
   "tools.database.csvDontImport": "ບໍ່ນຳເຂົ້າ",

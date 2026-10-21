@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "Konfigurera CSV-kolumner",
   "tools.database.csvSetupDescription": "Välj egenskapstyp för varje kolumn i din CSV-fil",
   "tools.database.csvFileColumns": "Kolumner i CSV-filen",
+  "tools.database.csvFirstRowHeaders": "Använd första raden som rubriker",
+  "tools.database.csvNewTable": "Ny tabell",
   "tools.database.csvSearchTypes": "Sök efter egenskapstyper…",
   "tools.database.csvExistingProperty": "Befintlig egenskap",
   "tools.database.csvDontImport": "Importera inte",

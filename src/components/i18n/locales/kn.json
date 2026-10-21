@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSV ಕಾಲಮ್‌ಗಳನ್ನು ಸಿದ್ಧಪಡಿಸಿ",
   "tools.database.csvSetupDescription": "ನಿಮ್ಮ CSV ಫೈಲ್‌ನ ಪ್ರತಿ ಕಾಲಮ್‌ಗೆ ಗುಣಲಕ್ಷಣ ಪ್ರಕಾರವನ್ನು ಆಯ್ಕೆಮಾಡಿ",
   "tools.database.csvFileColumns": "CSV ಫೈಲ್ ಕಾಲಮ್‌ಗಳು",
+  "tools.database.csvFirstRowHeaders": "ಮೊದಲ ಸಾಲನ್ನು ಶೀರ್ಷಿಕೆಗಳಾಗಿ ಬಳಸಿ",
+  "tools.database.csvNewTable": "ಹೊಸ ಕೋಷ್ಟಕ",
   "tools.database.csvSearchTypes": "ಗುಣಲಕ್ಷಣ ಪ್ರಕಾರಗಳನ್ನು ಹುಡುಕಿ…",
   "tools.database.csvExistingProperty": "ಈಗಿರುವ ಗುಣಲಕ್ಷಣ",
   "tools.database.csvDontImport": "ಆಮದು ಮಾಡಬೇಡಿ",

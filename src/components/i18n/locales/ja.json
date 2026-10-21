@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSVの列を設定",
   "tools.database.csvSetupDescription": "CSVファイルの各列のプロパティの種類を選択してください",
   "tools.database.csvFileColumns": "CSVファイルの列",
+  "tools.database.csvFirstRowHeaders": "1行目を見出しとして使用",
+  "tools.database.csvNewTable": "新しい表",
   "tools.database.csvSearchTypes": "プロパティの種類を検索…",
   "tools.database.csvExistingProperty": "既存のプロパティ",
   "tools.database.csvDontImport": "インポートしない",

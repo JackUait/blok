@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSV баганыг тохируулах",
   "tools.database.csvSetupDescription": "CSV файлын багана бүрийн шинжийн төрлийг сонгоно уу",
   "tools.database.csvFileColumns": "CSV файлын баганууд",
+  "tools.database.csvFirstRowHeaders": "Эхний мөрийг гарчиг болгох",
+  "tools.database.csvNewTable": "Шинэ хүснэгт",
   "tools.database.csvSearchTypes": "Шинжийн төрөл хайх…",
   "tools.database.csvExistingProperty": "Одоо байгаа шинж",
   "tools.database.csvDontImport": "Импортлохгүй",

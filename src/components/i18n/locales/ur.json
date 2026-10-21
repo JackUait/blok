@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSV کالمز سیٹ اپ کریں",
   "tools.database.csvSetupDescription": "اپنی CSV فائل کے ہر کالم کے لیے پراپرٹی کی قسم منتخب کریں",
   "tools.database.csvFileColumns": "CSV فائل کے کالمز",
+  "tools.database.csvFirstRowHeaders": "پہلی قطار کو ہیڈرز کے طور پر استعمال کریں",
+  "tools.database.csvNewTable": "نیا ٹیبل",
   "tools.database.csvSearchTypes": "پراپرٹی کی اقسام تلاش کریں…",
   "tools.database.csvExistingProperty": "موجودہ پراپرٹی",
   "tools.database.csvDontImport": "امپورٹ نہ کریں",

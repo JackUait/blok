@@ -4365,21 +4365,176 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   outline: none;
 }
 
-/* CSV import (database-csv-import-dialog.ts), research/26 §2 + research/27 §2: the 322px left column, no preview. */
+/* CSV import (database-csv-import-dialog.ts), research/26 §2 + research/27 §2: a 322px left column and the preview. */
 [data-blok-database-csv-import] {
   display: flex;
-  flex-direction: column;
   box-sizing: border-box;
-  width: 370px;
+  width: 1000px;
+  height: 637px;
   max-width: calc(100vw - 32px);
   max-height: calc(100vh - 32px);
-  padding: var(--blok-space-6);
   border-radius: var(--blok-radius-dialog);
   background-color: var(--blok-database-confirm-bg);
   box-shadow: var(--blok-database-confirm-shadow);
   color: var(--blok-text-primary);
   font-size: 14px;
   line-height: 20px;
+}
+
+[data-blok-database-csv-side] {
+  display: flex;
+  flex: 0 0 370px;
+  flex-direction: column;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  padding: var(--blok-space-6);
+}
+
+[data-blok-database-csv-preview] {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: var(--blok-space-1);
+  padding: var(--blok-space-10) var(--blok-space-10) 0;
+  overflow: hidden;
+  border: 1px solid var(--blok-popover-border);
+  /* 12px dialog less the 4px gap. */
+  border-radius: var(--blok-radius-field);
+  background-color: var(--blok-bg-secondary);
+}
+
+[data-blok-database-csv-preview][data-filled] {
+  background-color: var(--blok-database-confirm-bg);
+}
+
+/* The preview is a picture: a narrow screen keeps only the column list. */
+@media (max-width: 720px) {
+  [data-blok-database-csv-preview] {
+    display: none;
+  }
+
+  [data-blok-database-csv-side] {
+    flex-basis: 100%;
+  }
+}
+
+[data-blok-database-csv-preview-head] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  padding-bottom: var(--blok-space-3);
+  color: var(--blok-text-secondary);
+  font-size: 22px;
+  line-height: 26px;
+  font-weight: 600;
+}
+
+[data-blok-database-csv-preview][data-filled] [data-blok-database-csv-preview-head] {
+  color: var(--blok-text-primary);
+}
+
+/* Beats the 16px [data-blok-database-csv-icon] svg rule further down. */
+[data-blok-database-csv-preview-head] [data-blok-database-csv-icon] svg {
+  width: 24px;
+  height: 24px;
+}
+
+[data-blok-database-csv-skeleton] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blok-space-4);
+  padding-top: var(--blok-space-6);
+  border-top: 1px solid var(--blok-popover-border);
+}
+
+[data-blok-database-csv-skeleton-row] {
+  display: grid;
+  grid-template-columns: 2fr 1.3fr 1.3fr;
+  gap: var(--blok-space-10);
+}
+
+[data-blok-database-csv-skeleton-bar] {
+  height: 8px;
+  border-radius: var(--blok-radius-control-sm);
+  background-color: var(--blok-text-secondary);
+  opacity: 0.2;
+}
+
+[data-blok-database-csv-skeleton-row]:first-child > [data-blok-database-csv-skeleton-bar] {
+  width: 50%;
+}
+
+[data-blok-database-csv-preview-tab] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  height: 32px;
+  margin-bottom: var(--blok-space-2);
+  padding-inline: var(--blok-space-3);
+  border-radius: var(--blok-radius-pill);
+  background-color: var(--blok-item-hover-bg);
+  font-weight: 500;
+}
+
+[data-blok-database-csv-preview-table] {
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+[data-blok-database-csv-preview-cell] {
+  box-sizing: border-box;
+  width: 250px;
+  height: 38px;
+  padding: 0 var(--blok-space-2);
+  overflow: hidden;
+  border-bottom: 1px solid var(--blok-popover-border);
+  text-align: start;
+  white-space: nowrap;
+}
+
+td[data-blok-database-csv-preview-cell] + td[data-blok-database-csv-preview-cell] {
+  border-inline-start: 1px solid var(--blok-popover-border);
+}
+
+th[data-blok-database-csv-preview-cell] {
+  color: var(--blok-text-secondary);
+  font-weight: 400;
+}
+
+th[data-blok-database-csv-preview-cell] > *,
+td[data-blok-database-csv-preview-cell] > * {
+  vertical-align: middle;
+}
+
+th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon],
+td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
+  display: inline-flex;
+  margin-inline-end: var(--blok-space-1-5);
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-database-csv-pill] {
+  display: inline-block;
+  margin-inline-end: var(--blok-space-1);
+  padding: 0 var(--blok-space-1-5);
+  border-radius: var(--blok-radius-control-sm);
+  background-color: var(--blok-item-hover-bg);
+  line-height: 20px;
+}
+
+/* research/27 §2: the 30x18 switch, then the label 8px after it. */
+[data-blok-database-csv-switch] {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: var(--blok-space-2);
+  margin-bottom: var(--blok-space-4);
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--blok-text-secondary);
+  font: inherit;
+  cursor: pointer;
 }
 
 [data-blok-database-csv-title] {

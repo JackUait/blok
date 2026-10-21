@@ -829,7 +829,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // database.css: the comment count badge after a row title (research/12 §3).
     const DATABASE_COMMENT_BADGE_BYTES = 1_131;
     // database.css: the CSV import dialog, its Setup CSV columns step and type picker heading (research/27 §2).
-    const DATABASE_CSV_IMPORT_BYTES = 4_875;
+    // +3_925: the right-hand preview and the "Use first row as headers" switch (research/27 §2, research/30 §9).
+    const DATABASE_CSV_IMPORT_BYTES = 4_875 + 3_925;
     // block-preview/database.css: the Map view toolbox preview (map, land, Add pin, the real pin masks).
     const DATABASE_MAP_VIEW_PREVIEW_BYTES = 3_828;
     // block-preview/database.css: the Gallery, List, Feed, Calendar, Timeline and Form "/" entry previews (research/28 §3).

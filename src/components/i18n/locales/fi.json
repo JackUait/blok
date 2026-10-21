@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "Määritä CSV-sarakkeet",
   "tools.database.csvSetupDescription": "Valitse ominaisuuden tyyppi jokaiselle CSV-tiedoston sarakkeelle",
   "tools.database.csvFileColumns": "CSV-tiedoston sarakkeet",
+  "tools.database.csvFirstRowHeaders": "Käytä ensimmäistä riviä otsikkoina",
+  "tools.database.csvNewTable": "Uusi taulukko",
   "tools.database.csvSearchTypes": "Etsi ominaisuustyyppejä…",
   "tools.database.csvExistingProperty": "Olemassa oleva ominaisuus",
   "tools.database.csvDontImport": "Älä tuo",

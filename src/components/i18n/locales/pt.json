@@ -1774,6 +1774,8 @@
   "tools.database.csvSetupTitle": "Configurar colunas do CSV",
   "tools.database.csvSetupDescription": "Escolha o tipo de propriedade para cada coluna do seu arquivo CSV",
   "tools.database.csvFileColumns": "Colunas do arquivo CSV",
+  "tools.database.csvFirstRowHeaders": "Usar a primeira linha como cabeçalhos",
+  "tools.database.csvNewTable": "Nova tabela",
   "tools.database.csvSearchTypes": "Pesquisar tipos de propriedade…",
   "tools.database.csvExistingProperty": "Propriedade existente",
   "tools.database.csvDontImport": "Não importar",

@@ -1780,6 +1780,8 @@
   "tools.database.csvSetupTitle": "إعداد أعمدة CSV",
   "tools.database.csvSetupDescription": "اختر نوع الخاصية لكل عمود في ملف CSV",
   "tools.database.csvFileColumns": "أعمدة ملف CSV",
+  "tools.database.csvFirstRowHeaders": "استخدام الصف الأول كعناوين",
+  "tools.database.csvNewTable": "جدول جديد",
   "tools.database.csvSearchTypes": "البحث في أنواع الخصائص…",
   "tools.database.csvExistingProperty": "خاصية حالية",
   "tools.database.csvDontImport": "عدم الاستيراد",

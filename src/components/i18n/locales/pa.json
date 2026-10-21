@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "CSV ਕਾਲਮ ਸੈੱਟ ਕਰੋ",
   "tools.database.csvSetupDescription": "ਆਪਣੀ CSV ਫ਼ਾਈਲ ਦੇ ਹਰੇਕ ਕਾਲਮ ਲਈ ਵਿਸ਼ੇਸ਼ਤਾ ਦੀ ਕਿਸਮ ਚੁਣੋ",
   "tools.database.csvFileColumns": "CSV ਫ਼ਾਈਲ ਦੇ ਕਾਲਮ",
+  "tools.database.csvFirstRowHeaders": "ਪਹਿਲੀ ਕਤਾਰ ਨੂੰ ਸਿਰਲੇਖਾਂ ਵਜੋਂ ਵਰਤੋ",
+  "tools.database.csvNewTable": "ਨਵਾਂ ਟੇਬਲ",
   "tools.database.csvSearchTypes": "ਵਿਸ਼ੇਸ਼ਤਾ ਦੀਆਂ ਕਿਸਮਾਂ ਲੱਭੋ…",
   "tools.database.csvExistingProperty": "ਮੌਜੂਦਾ ਵਿਸ਼ੇਸ਼ਤਾ",
   "tools.database.csvDontImport": "ਆਯਾਤ ਨਾ ਕਰੋ",

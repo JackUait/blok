@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "Sediakan lajur CSV",
   "tools.database.csvSetupDescription": "Pilih jenis sifat untuk setiap lajur dalam fail CSV anda",
   "tools.database.csvFileColumns": "Lajur fail CSV",
+  "tools.database.csvFirstRowHeaders": "Guna baris pertama sebagai pengepala",
+  "tools.database.csvNewTable": "Jadual baharu",
   "tools.database.csvSearchTypes": "Cari jenis sifat…",
   "tools.database.csvExistingProperty": "Sifat sedia ada",
   "tools.database.csvDontImport": "Jangan import",

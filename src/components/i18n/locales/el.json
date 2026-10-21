@@ -1772,6 +1772,8 @@
   "tools.database.csvSetupTitle": "Ρύθμιση στηλών CSV",
   "tools.database.csvSetupDescription": "Επιλέξτε τον τύπο ιδιότητας για κάθε στήλη του αρχείου CSV",
   "tools.database.csvFileColumns": "Στήλες αρχείου CSV",
+  "tools.database.csvFirstRowHeaders": "Χρήση πρώτης γραμμής ως κεφαλίδων",
+  "tools.database.csvNewTable": "Νέος πίνακας",
   "tools.database.csvSearchTypes": "Αναζήτηση τύπων ιδιοτήτων…",
   "tools.database.csvExistingProperty": "Υπάρχουσα ιδιότητα",
   "tools.database.csvDontImport": "Χωρίς εισαγωγή",

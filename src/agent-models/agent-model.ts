@@ -7,7 +7,7 @@ import { openaiCompatibleModel } from './openai-compatible';
 import type { AdapterOptions } from './shared';
 
 /** Chat Completions providers, as their errors name them. */
-const chat = (name: string) => (options: AdapterOptions): AgentModel => openaiCompatibleModel(options, name);
+const chat = (name: string) => (options: AdapterOptions): AgentModel => openaiCompatibleModel(options, { name });
 
 /** Each provider mapped to the API its endpoint serves. Keep in sync with AgentModelProvider in types/agent-models.d.ts. */
 const PROVIDERS = {

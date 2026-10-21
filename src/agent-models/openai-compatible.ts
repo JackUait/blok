@@ -4,7 +4,7 @@ import type {
 
 import {
   DEFAULT_MAX_TOKENS, blocksOf, endOfStream, errorOf, isRecord, isText, isToolResult, isToolUse, parseArguments,
-  callId, providerBlock, rawTurn, post, postStream, requireTransport, stepOf, toolNames, withLevel, type AdapterOptions, type Body,
+  callId, providerBlock, rawTurn, post, postStream, requireTransport, stepOf, toolNames, withLevel, type AdapterOptions, type Body, type Profile,
 } from './shared';
 import { readJsonEvents } from './sse';
 
@@ -111,12 +111,15 @@ interface StreamingCall {
 
 interface Assembly {
   text?: string;
-  reasoning?: string;
+  /** Each reasoning field under the name it streamed in, since the provider wants that name back. */
+  reasoning: Record<string, string>;
   refusal?: string;
   finish?: string;
   /** Keyed by the provider's tool_calls index, in order of first chunk. */
   calls: Map<number, StreamingCall>;
 }
+
+const REASONING_FIELDS = ['reasoning_content', 'reasoning'] as const;
 
 const appended = (current: string | undefined, piece: unknown): string | undefined =>
   (typeof piece === 'string' ? `${current ?? ''}${piece}` : current);
@@ -130,7 +133,7 @@ const messageOf = (state: Assembly): Record<string, unknown> => {
   return {
     role: 'assistant',
     content: state.text ?? null,
-    ...(state.reasoning === undefined ? {} : { reasoning_content: state.reasoning }),
+    ...state.reasoning,
     ...(state.refusal === undefined ? {} : { refusal: state.refusal }),
     ...(calls.length === 0 ? {} : { tool_calls: calls }),
   };
@@ -143,7 +146,7 @@ const readStream = async (
   step: number,
   name: string
 ): Promise<AgentModelResponse> => {
-  const state: Assembly = { calls: new Map() };
+  const state: Assembly = { reasoning: {}, calls: new Map() };
   const endOpenCalls = (): void => {
     [...state.calls.entries()].forEach(([key, call], index) => {
       if (call.open) {
@@ -196,8 +199,14 @@ const readStream = async (
     const delta = isRecord(first.delta) ? first.delta : {};
 
     state.text = appended(state.text, delta.content);
-    // DeepSeek needs reasoning_content back on the next request.
-    state.reasoning = appended(state.reasoning, delta.reasoning_content);
+    // DeepSeek needs reasoning_content back on the next request. vLLM, Cerebras and SambaNova name it reasoning.
+    for (const field of REASONING_FIELDS) {
+      const piece = appended(state.reasoning[field], delta[field]);
+
+      if (piece !== undefined) {
+        state.reasoning[field] = piece;
+      }
+    }
     state.refusal = appended(state.refusal, delta.refusal);
 
     if (Array.isArray(delta.tool_calls)) {
@@ -226,9 +235,9 @@ const readStream = async (
  * Chat Completions, the format DeepSeek, Mistral, Groq, Ollama and OpenRouter accept.
  * Never sends tool_choice: Ollama does not support it, and the loop only needs auto.
  * @param options - model id, the host's send or stream, and optional level overrides
- * @param name - the provider, as errors name it
+ * @param profile - the provider's name for errors and its level defaults
  */
-export function openaiCompatibleModel(options: AdapterOptions, name = 'OpenAI-compatible'): AgentModel {
+export function openaiCompatibleModel(options: AdapterOptions, { name, levels }: Profile = { name: 'OpenAI-compatible' }): AgentModel {
   requireTransport(options, name);
 
   // Types leave webSearch out here; this catches plain JS callers.
@@ -248,7 +257,7 @@ export function openaiCompatibleModel(options: AdapterOptions, name = 'OpenAI-co
       tools: request.tools.map((tool) => ({
         type: 'function', function: { name: tool.name, description: tool.description, parameters: tool.input_schema },
       })),
-    }, request, LEVELS, options);
+    }, request, { ...LEVELS, ...levels }, options);
 
     const { stream } = options;
 

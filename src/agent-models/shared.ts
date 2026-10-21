@@ -24,6 +24,14 @@ export interface AdapterOptions {
   webSearch?: boolean | Body;
 }
 
+/** What agentModel knows about a provider beyond the API it speaks. */
+export interface Profile {
+  /** Names the provider in errors. */
+  name: string;
+  /** Level fragments that replace the API's defaults for this provider. The host's `levels` still win. */
+  levels?: Partial<Record<AgentThinkingLevel, Body>>;
+}
+
 /** The provider's search tool entry, or none when the host did not ask for it. */
 export const webSearchTool = (options: AdapterOptions, entry: Body): Body[] => {
   if (options.webSearch === undefined || options.webSearch === false) {

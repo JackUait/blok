@@ -219,6 +219,20 @@ describe('openaiCompatibleModel', () => {
       expect(response.content[2]).toEqual({ type: 'provider', format: 'openai-chat', raw: twinMessage });
     });
 
+    it('keeps a streamed `reasoning` field under its own name', async () => {
+      const text = chunks(
+        delta({ role: 'assistant', content: null, reasoning: 'Thinking ' }),
+        delta({ reasoning: 'it over.' }),
+        delta({ content: 'Done.' }, 'stop'),
+        '[DONE]'
+      );
+      const response = await openaiCompatibleModel({ model: 'm', stream: fakeStream(text).stream })(request());
+
+      expect(response.content.at(-1)).toEqual({
+        type: 'provider', format: 'openai-chat', raw: { role: 'assistant', content: 'Done.', reasoning: 'Thinking it over.' },
+      });
+    });
+
     it('sends stream: true without stream_options, and only when streaming', async () => {
       const streaming = fakeStream(FIXTURE);
       const plain = fakeSend(choice({ role: 'assistant', content: 'Hi' }, 'stop'));

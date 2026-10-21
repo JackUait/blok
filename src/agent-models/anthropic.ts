@@ -4,7 +4,7 @@ import type {
 
 import {
   DEFAULT_MAX_TOKENS, callId, endOfStream, errorOf, isRecord, parseArguments, post, postStream, requireTransport, stepOf, webSearchTool, withLevel,
-  type AdapterOptions, type Body,
+  type AdapterOptions, type Body, type Profile,
 } from './shared';
 import { readJsonEvents } from './sse';
 
@@ -29,8 +29,8 @@ const withCallIds = (blocks: AgentModelContentBlock[], step: number): AgentModel
   ? { ...block, id: callId(block.id, step, index), name: typeof block.name === 'string' ? block.name : '' }
   : block));
 
-const readReply = (reply: unknown, step: number): AgentModelResponse => {
-  const error = errorOf(reply, 'Anthropic');
+const readReply = (reply: unknown, step: number, name: string): AgentModelResponse => {
+  const error = errorOf(reply, name);
 
   if (error !== null) {
     throw error;
@@ -38,7 +38,7 @@ const readReply = (reply: unknown, step: number): AgentModelResponse => {
   const content: unknown = isRecord(reply) ? reply.content : undefined;
 
   if (!isRecord(reply) || !Array.isArray(content)) {
-    throw new Error('Anthropic: the reply has no content.');
+    throw new Error(`${name}: the reply has no content.`);
   }
 
   return { content: withCallIds(content.filter(isBlock), step), stop_reason: typeof reply.stop_reason === 'string' ? reply.stop_reason : null };
@@ -84,12 +84,17 @@ const finished = ({ block, json }: Building): AgentModelContentBlock => ('input'
   : { ...block, type: String(block.type) });
 
 /** Builds the same response readReply gives for the JSON reply, and reports tool calls as they stream. */
-const readStream = async (source: Response | ReadableStream<Uint8Array>, request: AgentModelRequest, step: number): Promise<AgentModelResponse> => {
+const readStream = async (
+  source: Response | ReadableStream<Uint8Array>,
+  request: AgentModelRequest,
+  step: number,
+  name: string
+): Promise<AgentModelResponse> => {
   const blocks = new Map<number, Building>();
   const state: { stopped: boolean; stop: string | null; calls: number } = { stopped: false, stop: null, calls: 0 };
 
   const onEvent = (event: Record<string, unknown>): void => {
-    const error = errorOf(event, 'Anthropic');
+    const error = errorOf(event, name);
 
     if (error !== null) {
       throw error;
@@ -129,11 +134,11 @@ const readStream = async (source: Response | ReadableStream<Uint8Array>, request
     }
   };
 
-  for await (const event of readJsonEvents(source, request.signal, 'Anthropic')) {
+  for await (const event of readJsonEvents(source, request.signal, name)) {
     onEvent(event);
   }
 
-  endOfStream(request.signal, state.stopped, 'Anthropic');
+  endOfStream(request.signal, state.stopped, name);
 
   const content = [...blocks.entries()].sort(([a], [b]) => a - b).map(([, entry]) => finished(entry));
 
@@ -143,18 +148,19 @@ const readStream = async (source: Response | ReadableStream<Uint8Array>, request
 /**
  * The Messages API. The request is already in its shape, so this mostly adds model, effort and cache marks.
  * @param options - model id, the host's send or stream, and optional level overrides
+ * @param profile - the provider's name for errors and its level defaults
  */
-export function anthropicModel(options: AdapterOptions): AgentModel {
-  requireTransport(options, 'Anthropic');
+export function anthropicModel(options: AdapterOptions, { name, levels }: Profile = { name: 'Anthropic' }): AgentModel {
+  requireTransport(options, name);
 
   // 20260209 and later search from code execution, which Anthropic-compatible APIs (DeepSeek) do not run.
   const search = webSearchTool(options, { type: 'web_search_20250305', name: 'web_search' });
 
   return async (request) => {
-    const name = search[0]?.name;
+    const searchName = search[0]?.name;
 
-    if (request.tools.some((tool) => tool.name === name)) {
-      throw new Error(`Anthropic: a host tool is named "${String(name)}", the same as webSearch's tool. Rename one.`);
+    if (request.tools.some((tool) => tool.name === searchName)) {
+      throw new Error(`${name}: a host tool is named "${String(searchName)}", the same as webSearch's tool. Rename one.`);
     }
 
     const body = withLevel({
@@ -166,14 +172,14 @@ export function anthropicModel(options: AdapterOptions): AgentModel {
       tools: [...request.tools, ...search],
       // Moves to the last block on each call, so a step reads the steps before it.
       cache_control: { type: 'ephemeral' },
-    }, request, LEVELS, options);
+    }, request, { ...LEVELS, ...levels }, options);
 
     const { stream } = options;
 
     if (stream !== undefined) {
-      return readStream(await postStream(stream, { ...body, stream: true }, request, options), request, stepOf(request));
+      return readStream(await postStream(stream, { ...body, stream: true }, request, options), request, stepOf(request), name);
     }
 
-    return readReply(await post(body, request, options, 'Anthropic'), stepOf(request));
+    return readReply(await post(body, request, options, name), stepOf(request), name);
   };
 }

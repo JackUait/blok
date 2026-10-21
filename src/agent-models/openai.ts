@@ -4,7 +4,7 @@ import type {
 
 import {
   DEFAULT_MAX_TOKENS, blocksOf, endOfStream, errorOf, isRecord, isText, isToolResult, isToolUse, parseArguments,
-  callId, providerBlock, rawTurn, post, postStream, requireTransport, stepOf, webSearchTool, withLevel, type AdapterOptions, type Body,
+  callId, providerBlock, rawTurn, post, postStream, requireTransport, stepOf, webSearchTool, withLevel, type AdapterOptions, type Body, type Profile,
 } from './shared';
 import { readJsonEvents } from './sse';
 
@@ -49,14 +49,14 @@ const assistantItems = (message: AgentModelMessage): unknown[] => {
   });
 };
 
-const readReply = (reply: unknown, step: number): AgentModelResponse => {
-  const error = errorOf(reply, 'OpenAI');
+const readReply = (reply: unknown, step: number, name: string): AgentModelResponse => {
+  const error = errorOf(reply, name);
 
   if (error !== null) {
     throw error;
   }
   if (!isRecord(reply) || !Array.isArray(reply.output)) {
-    throw new Error('OpenAI: the reply has no output.');
+    throw new Error(`${name}: the reply has no output.`);
   }
 
   const content: AgentModelContentBlock[] = [];
@@ -113,17 +113,22 @@ interface Streaming {
 }
 
 /** Reports tool calls as they stream, then reads the final response through readReply. */
-const readStream = async (source: Response | ReadableStream<Uint8Array>, request: AgentModelRequest, step: number): Promise<AgentModelResponse> => {
+const readStream = async (
+  source: Response | ReadableStream<Uint8Array>,
+  request: AgentModelRequest,
+  step: number,
+  name: string
+): Promise<AgentModelResponse> => {
   const calls = new Map<number, Streaming>();
   const state: { final: unknown } = { final: undefined };
 
   const onEvent = (event: Record<string, unknown>): void => {
     // The error event carries its message at the top level, not under `error`.
     if (event.type === 'error') {
-      throw new Error(`OpenAI: ${typeof event.message === 'string' ? event.message : 'the stream failed.'}`);
+      throw new Error(`${name}: ${typeof event.message === 'string' ? event.message : 'the stream failed.'}`);
     }
     if (event.type === 'response.failed') {
-      throw errorOf(event.response, 'OpenAI') ?? new Error('OpenAI: the response failed.');
+      throw errorOf(event.response, name) ?? new Error(`${name}: the response failed.`);
     }
     // A truncated reply ends with response.incomplete; readReply maps it like a sent one.
     if (event.type === 'response.completed' || event.type === 'response.incomplete') {
@@ -151,21 +156,22 @@ const readStream = async (source: Response | ReadableStream<Uint8Array>, request
     }
   };
 
-  for await (const event of readJsonEvents(source, request.signal, 'OpenAI')) {
+  for await (const event of readJsonEvents(source, request.signal, name)) {
     onEvent(event);
   }
 
-  endOfStream(request.signal, state.final !== undefined, 'OpenAI');
+  endOfStream(request.signal, state.final !== undefined, name);
 
-  return readReply(state.final, step);
+  return readReply(state.final, step, name);
 };
 
 /**
  * The OpenAI Responses API, stateless (`store: false`).
  * @param options - model id, the host's send or stream, and optional level overrides
+ * @param profile - the provider's name for errors and its level defaults
  */
-export function openaiModel(options: AdapterOptions): AgentModel {
-  requireTransport(options, 'OpenAI');
+export function openaiModel(options: AdapterOptions, { name, levels }: Profile = { name: 'OpenAI' }): AgentModel {
+  requireTransport(options, name);
 
   const search = webSearchTool(options, { type: 'web_search' });
 
@@ -183,14 +189,14 @@ export function openaiModel(options: AdapterOptions): AgentModel {
         })),
         ...search,
       ],
-    }, request, LEVELS, options);
+    }, request, { ...LEVELS, ...levels }, options);
 
     const { stream } = options;
 
     if (stream !== undefined) {
-      return readStream(await postStream(stream, { ...body, stream: true }, request, options), request, stepOf(request));
+      return readStream(await postStream(stream, { ...body, stream: true }, request, options), request, stepOf(request), name);
     }
 
-    return readReply(await post(body, request, options, 'OpenAI'), stepOf(request));
+    return readReply(await post(body, request, options, name), stepOf(request), name);
   };
 }

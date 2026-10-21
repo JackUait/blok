@@ -4,7 +4,7 @@ import type {
 
 import {
   DEFAULT_MAX_TOKENS, blocksOf, endOfStream, errorOf, isRecord, isText, isToolResult, isToolUse,
-  callId, providerBlock, rawTurn, post, postStream, requireTransport, stepOf, toolNames, webSearchTool, withLevel, type AdapterOptions, type Body,
+  callId, providerBlock, rawTurn, post, postStream, requireTransport, stepOf, toolNames, webSearchTool, withLevel, type AdapterOptions, type Body, type Profile,
 } from './shared';
 import { readJsonEvents } from './sse';
 
@@ -60,8 +60,8 @@ const MALFORMED_TRIES = 3;
 
 class MalformedCall extends Error {}
 
-const readReply = (reply: unknown, step: number): AgentModelResponse => {
-  const error = errorOf(reply, 'Gemini');
+const readReply = (reply: unknown, step: number, name: string): AgentModelResponse => {
+  const error = errorOf(reply, name);
 
   if (error !== null) {
     throw error;
@@ -73,7 +73,7 @@ const readReply = (reply: unknown, step: number): AgentModelResponse => {
   const first: unknown = isRecord(reply) && Array.isArray(reply.candidates) ? reply.candidates[0] : undefined;
 
   if (!isRecord(first)) {
-    throw new Error('Gemini: the reply has no candidates.');
+    throw new Error(`${name}: the reply has no candidates.`);
   }
 
   const parts = isRecord(first.content) && Array.isArray(first.content.parts) ? first.content.parts.filter(isRecord) : [];
@@ -146,13 +146,18 @@ const emitCalls = (request: AgentModelRequest, parts: Part[], step: number): voi
  * Merges the chunks into the JSON reply readReply reads. Gemini sends each functionCall whole,
  * so the calls' events wait for a safe finish without losing anything live.
  */
-const readStream = async (source: Response | ReadableStream<Uint8Array>, request: AgentModelRequest, step: number): Promise<unknown> => {
+const readStream = async (
+  source: Response | ReadableStream<Uint8Array>,
+  request: AgentModelRequest,
+  step: number,
+  name: string
+): Promise<unknown> => {
   const state: { parts: Part[]; candidate: Part; promptFeedback?: Part; finished: boolean } = {
     parts: [], candidate: {}, finished: false,
   };
 
-  for await (const chunk of readJsonEvents(source, request.signal, 'Gemini')) {
-    const error = errorOf(chunk, 'Gemini');
+  for await (const chunk of readJsonEvents(source, request.signal, name)) {
+    const error = errorOf(chunk, name);
 
     if (error !== null) {
       throw error;
@@ -176,7 +181,7 @@ const readStream = async (source: Response | ReadableStream<Uint8Array>, request
     state.parts = parts.reduce(withPart, state.parts);
   }
 
-  endOfStream(request.signal, state.finished, 'Gemini');
+  endOfStream(request.signal, state.finished, name);
 
   if (state.promptFeedback?.blockReason === undefined && SAFE.has(state.candidate.finishReason)) {
     emitCalls(request, state.parts, step);
@@ -191,9 +196,10 @@ const readStream = async (source: Response | ReadableStream<Uint8Array>, request
 /**
  * Gemini generateContent (v1beta). The model id goes in the URL, so `send` and `stream` get it as `context.model`.
  * @param options - model id, the host's send or stream, and optional level overrides
+ * @param profile - the provider's name for errors and its level defaults
  */
-export function geminiModel(options: AdapterOptions): AgentModel {
-  requireTransport(options, 'Gemini');
+export function geminiModel(options: AdapterOptions, { name, levels }: Profile = { name: 'Gemini' }): AgentModel {
+  requireTransport(options, name);
 
   const search = webSearchTool(options, { googleSearch: {} });
 
@@ -210,24 +216,24 @@ export function geminiModel(options: AdapterOptions): AgentModel {
         ...search,
       ],
       generationConfig: { maxOutputTokens: options.maxTokens ?? DEFAULT_MAX_TOKENS },
-    }, request, LEVELS, options);
+    }, request, { ...LEVELS, ...levels }, options);
 
     const { stream } = options;
 
     // The body is the same for both; Gemini picks streaming by URL.
     const ask = async (tries: number): Promise<AgentModelResponse> => {
       const reply = stream === undefined
-        ? await post(body, request, options, 'Gemini')
-        : await readStream(await postStream(stream, body, request, options), request, step);
+        ? await post(body, request, options, name)
+        : await readStream(await postStream(stream, body, request, options), request, step, name);
 
       try {
-        return readReply(reply, step);
+        return readReply(reply, step, name);
       } catch (error) {
         if (!(error instanceof MalformedCall)) {
           throw error;
         }
         if (tries === MALFORMED_TRIES || request.signal.aborted) {
-          throw new Error(`Gemini wrote a tool call that was not valid, ${tries} times${error.message === '' ? '.' : `: ${error.message}`}`);
+          throw new Error(`${name} wrote a tool call that was not valid, ${tries} times${error.message === '' ? '.' : `: ${error.message}`}`);
         }
 
         return ask(tries + 1);

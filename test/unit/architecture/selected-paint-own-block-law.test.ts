@@ -36,6 +36,27 @@ const isSelectedContent = (node: Node): boolean => node.type === 'class' && node
 const isContent = (node: Node): boolean => node.type === 'attribute' && node.attribute === 'data-blok-element-content';
 const isToolRoot = (node: Node): boolean => node.type === 'attribute' && (node.attribute === 'data-blok-tool' || node.attribute === 'data-list-style');
 
+const WRAPPERS = new Set([ ':is', ':where', ':matches' ]);
+
+/** Whether a compound selects a selected block, directly or through :is()/:where(). */
+const isTrigger = (node: Node): boolean => {
+  if (isSelectedHolder(node) || isSelectedContent(node)) {
+    return true;
+  }
+
+  if (node.type !== 'pseudo' || !WRAPPERS.has(node.value)) {
+    return false;
+  }
+
+  let found = false;
+
+  node.walk((inner) => {
+    found ||= isSelectedHolder(inner) || isSelectedContent(inner);
+  });
+
+  return found;
+};
+
 /** Splits a selector into compounds and the combinators between them. */
 const compounds = (selector: selectorParser.Selector): { nodes: Node[]; combinator: string | null }[] => {
   const out: { nodes: Node[]; combinator: string | null }[] = [ { nodes: [], combinator: null } ];
@@ -67,7 +88,7 @@ const looseHas = (compound: Node[]): string[] => compound
 const leak = (selector: selectorParser.Selector): string | null => {
   const parts = compounds(selector);
   // The last selected compound is the block being styled; earlier ones are its ancestors or siblings.
-  const marks = parts.map((part) => part.nodes.some((node) => isSelectedHolder(node) || isSelectedContent(node)));
+  const marks = parts.map((part) => part.nodes.some(isTrigger));
   const start = marks.lastIndexOf(true);
 
   if (start === -1) {
@@ -99,8 +120,25 @@ const leak = (selector: selectorParser.Selector): string | null => {
   return null;
 };
 
-const offenders = (): string[] => listCss(SRC).flatMap((file) => {
-  const root = postcss.parse(readFileSync(file, 'utf8'), { from: file });
+/** A rule's selector list with native nesting resolved against its parent rules. */
+const fullSelectors = (rule: postcss.Rule): string[] => {
+  let parent: postcss.Container | postcss.Document | undefined = rule.parent;
+
+  while (parent !== undefined && parent.type !== 'rule' && parent.type !== 'root') {
+    parent = parent.parent;
+  }
+
+  const own = postcss.list.comma(rule.selector);
+
+  if (parent?.type !== 'rule') {
+    return own;
+  }
+
+  return fullSelectors(parent as postcss.Rule).flatMap((outer) => own.map((inner) => (inner.includes('&') ? inner.replaceAll('&', outer) : `${outer} ${inner}`)));
+};
+
+const cssOffenders = (css: string, name: string): string[] => {
+  const root = postcss.parse(css, { from: name });
   const found: string[] = [];
   const rules: postcss.Rule[] = [];
 
@@ -108,22 +146,71 @@ const offenders = (): string[] => listCss(SRC).flatMap((file) => {
     rules.push(rule);
   });
 
-  rules.filter((rule) => /data-blok-selected|bg-selection/.test(rule.selector)).forEach((rule) => {
-    selectorParser((selectors) => {
-      selectors.each((selector) => {
-        const why = leak(selector);
+  rules.forEach((rule) => {
+    fullSelectors(rule).filter((full) => /data-blok-selected|bg-selection/.test(full)).forEach((full) => {
+      selectorParser((selectors) => {
+        selectors.each((selector) => {
+          const why = leak(selector);
 
-        found.push(...(why === null ? [] : [ `${relative(SRC, file)}:${rule.source?.start?.line ?? 0} ${selector.toString().trim()} — ${why}` ]));
-      });
-    }).processSync(rule.selector);
+          found.push(...(why === null ? [] : [ `${name}:${rule.source?.start?.line ?? 0} ${selector.toString().trim()} — ${why}` ]));
+        });
+      }).processSync(full);
+    });
   });
 
   return found;
+};
+
+/**
+ * A Tailwind variant keyed on the selected attribute (`group-data-[blok-selected=true]:`,
+ * `in-data-[…]:`, `[[data-blok-selected=true]_&]:`) compiles to a descendant step from
+ * the holder, so it styles every nested block too. None is allowed.
+ */
+const SELECTED_VARIANT = /[^\s'"`]*(?:data-\[blok-selected|\[data-blok-selected)[^\s'"`]*\]:[^\s'"`]+/g;
+
+const tsOffenders = (text: string, name: string): string[] => Array.from(text.matchAll(SELECTED_VARIANT), (match) => `${name} ${match[0]}`);
+
+const SOURCE_ROOTS = [ SRC, resolve(__dirname, '../../../packages') ];
+
+const listSources = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+  const full = join(dir, entry.name);
+
+  if (entry.isDirectory()) {
+    return [ 'node_modules', 'dist' ].includes(entry.name) ? [] : listSources(full);
+  }
+
+  return /\.(ts|tsx|vue)$/.test(entry.name) && !entry.name.endsWith('.d.ts') ? [ full ] : [];
 });
+
+const offenders = (): string[] => listCss(SRC).flatMap((file) => cssOffenders(readFileSync(file, 'utf8'), relative(SRC, file)));
 
 describe('selected-state CSS styles only the selected block', () => {
   it('no rule reaches from a selected block into its nested blocks', () => {
     expect(offenders()).toEqual([]);
+  });
+
+  it('no class string uses a selected-keyed Tailwind variant', () => {
+    const found = SOURCE_ROOTS.flatMap(listSources).flatMap((file) => tsOffenders(readFileSync(file, 'utf8'), relative(SRC, file)));
+
+    expect(found).toEqual([]);
+  });
+
+  it('sees a trigger wrapped in :is() or :where()', () => {
+    expect(cssOffenders(':where([data-blok-selected="true"]) [data-list-style] { color: red; }', 'x.css')).toHaveLength(1);
+    expect(cssOffenders(':is([data-blok-selected="true"], .other) [data-blok-element-content] .y { color: red; }', 'x.css')).toHaveLength(1);
+  });
+
+  it('sees a leak written as a nested rule', () => {
+    expect(cssOffenders('[data-blok-selected="true"] { & [data-list-style] { color: red; } }', 'x.css')).toHaveLength(1);
+    expect(cssOffenders('[data-blok-selected="true"] { [data-list-style] { color: red; } }', 'x.css')).toHaveLength(1);
+    expect(cssOffenders('[data-blok-selected="true"] { & > [data-blok-element-content] > [data-list-style] { color: red; } }', 'x.css')).toEqual([]);
+  });
+
+  it('sees a selected-keyed Tailwind variant in a class string', () => {
+    expect(tsOffenders(`const c = 'group-data-[blok-selected=true]:bg-selection';`, 'x.ts')).toHaveLength(1);
+    expect(tsOffenders(`const c = '[[data-blok-selected=true]_&]:opacity-50';`, 'x.ts')).toHaveLength(1);
+    expect(tsOffenders(`const c = 'in-data-[blok-selected=true]:hidden';`, 'x.ts')).toHaveLength(1);
+    expect(tsOffenders(`el.setAttribute('data-blok-selected', 'true');`, 'x.ts')).toEqual([]);
   });
 
   it('flags the leaks it exists to catch', () => {

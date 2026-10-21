@@ -1306,5 +1306,21 @@ describe('createLivePreview', () => {
       expect(state.layer.querySelector<HTMLElement>('[data-blok-testid="code-preview"]')?.hidden).toBe(false);
       expect(state.layer.querySelector('pre')?.hidden).toBe(true);
     });
+
+    it('names a fence with no language the way the code tool does, through the editor\'s messages', () => {
+      const preview = createLivePreview({
+        layer: state.layer,
+        holderOf: (id) => state.container.querySelector<HTMLElement>(`[data-blok-id="${id}"]`),
+        edgeHolder: () => state.holders[state.holders.length - 1] ?? null,
+        anchorHolder: () => state.holders[1] ?? null,
+        t: (key) => (key === 'tools.code.plainText' ? 'Texte brut' : key),
+      });
+
+      state.preview = preview;
+      preview.update('c1', markdown('> [!NOTE]\n> ```\n> x\n> ```'));
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(state.layer.querySelector('[data-blok-testid="code-language-name"]')?.textContent).toBe('Texte brut');
+    });
   });
 });

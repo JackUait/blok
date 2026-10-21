@@ -10,7 +10,7 @@ import { headerClasses } from '../../../shared/tool-classes/header';
 import { LIST_CONTENT_CLASSES, LIST_ITEM_CLASSES, LIST_ITEM_ROW_CLASSES } from '../../../shared/tool-classes/list';
 import { PARAGRAPH_CLASSES } from '../../../shared/tool-classes/paragraph';
 import { quoteClasses } from '../../../shared/tool-classes/quote';
-import { DEFAULT_LANGUAGE, GUTTER_LINE_STYLES, LANGUAGE_COLORS, LANGUAGES, PREVIEWABLE_LANGUAGES } from '../../../tools/code/constants';
+import { DEFAULT_LANGUAGE, GUTTER_LINE_STYLES, LANGUAGE_COLORS, LANGUAGES, PLAIN_TEXT_KEY, PREVIEWABLE_LANGUAGES } from '../../../tools/code/constants';
 import { buildCalloutDOM } from '../../../tools/callout/dom-builder';
 import { buildCodeDOM, setActiveViewMode } from '../../../tools/code/dom-builder';
 import { createMarker } from '../../../tools/list/dom-builder';
@@ -38,6 +38,8 @@ export interface LivePreviewDeps {
   onWord?(word: HTMLElement): void;
   /** A layout is about to place boxes, before its gap writes: the preview now shows where edits land. */
   onDraw?(): void;
+  /** The editor's message for a key; without it, a label that comes from messages shows empty. */
+  t?(key: string): string;
 }
 
 export interface LivePreview {
@@ -60,6 +62,8 @@ export interface LivePreview {
 const WORD_GAP_MS = 35;
 
 const INSERTS = new Set(['block.insert', 'markdown.insert']);
+
+type Translate = (key: string) => string;
 
 type Kind = 'paragraph' | 'header' | 'list' | 'rewrite' | 'table' | 'quote' | 'code' | 'divider' | 'callout' | 'image';
 type ListStyle = 'unordered' | 'ordered' | 'checklist';
@@ -745,11 +749,11 @@ const renderPreview = async (language: string, code: string): Promise<string> =>
  * The editable code block's markup, as the real block renders: its controls show on hover only,
  * so their empty labels never show. Math and diagrams open in preview mode, as they do in the tool.
  */
-const makeCode = (spec: LineSpec): View => {
+const makeCode = (spec: LineSpec, t: Translate): View => {
   const language = spec.language ?? DEFAULT_LANGUAGE;
   const previewable = PREVIEWABLE_LANGUAGES.has(language);
-  // The tool names plain text through i18n, which the preview has not got: it shows no name.
-  const name = language === DEFAULT_LANGUAGE ? '' : LANGUAGES.find((entry) => entry.id === language)?.name ?? language;
+  // Mirrors CodeTool.getLanguageName.
+  const name = language === DEFAULT_LANGUAGE ? t(PLAIN_TEXT_KEY) : LANGUAGES.find((entry) => entry.id === language)?.name ?? language;
   const dom = buildCodeDOM({
     code: '', languageName: name, languageColor: LANGUAGE_COLORS[language], readOnly: false, copyLabel: '',
     previewable, viewModeLabels: { code: '', preview: '', split: '' },
@@ -839,7 +843,7 @@ const ordinalsOf = (specs: LineSpec[]): number[] => specs.reduce<number[]>((ordi
 const CALLOUT_DEFAULT_BORDER = '1px solid var(--blok-callout-default-border, #e5e7eb)';
 
 /** The callout tool's markup; its body holds one view per child block, the way its child holders stack. */
-const makeCallout = (spec: LineSpec): View => {
+const makeCallout = (spec: LineSpec, t: Translate): View => {
   const dom = buildCalloutDOM({ emoji: spec.emoji ?? '', readOnly: true, addEmojiLabel: '' });
   const body = dom.childContainer;
   const parts: Array<{ view: View; shape: string }> = [];
@@ -868,7 +872,7 @@ const makeCallout = (spec: LineSpec): View => {
       children.slice(parts.length).forEach((child) => {
         const index = parts.length;
         const slot = document.createElement('div');
-        const view = makeView(child, ordinals[index]);
+        const view = makeView(child, ordinals[index], t);
 
         view.sync?.(child);
         slot.append(view.block);
@@ -921,18 +925,18 @@ const makeImage = (): View => {
 };
 
 /** The real tool's markup and classes, so the hand-off to the real block does not jump. */
-function makeView(spec: LineSpec, ordinal: number): View {
+function makeView(spec: LineSpec, ordinal: number, t: Translate): View {
   if (spec.kind === 'table') {
     return makeTable(spec);
   }
   if (spec.kind === 'code') {
-    return makeCode(spec);
+    return makeCode(spec, t);
   }
   if (spec.kind === 'divider') {
     return makeDivider();
   }
   if (spec.kind === 'callout') {
-    return makeCallout(spec);
+    return makeCallout(spec, t);
   }
   if (spec.kind === 'image') {
     return makeImage();
@@ -994,7 +998,7 @@ class Line {
   private view: View | null = null;
   private readonly spans: HTMLElement[] = [];
 
-  constructor(public spec: LineSpec, private ordinal: number) {}
+  constructor(public spec: LineSpec, private ordinal: number, private readonly t: Translate) {}
 
   public get pending(): boolean {
     return this.spans.length < landable(this.spec);
@@ -1072,7 +1076,7 @@ class Line {
     const fits = this.view !== null && this.shape === shape && (this.view.sync?.(this.spec) ?? true);
 
     if (!fits) {
-      this.view = makeView(this.spec, this.ordinal);
+      this.view = makeView(this.spec, this.ordinal, this.t);
       this.view.sync?.(this.spec);
       this.el.replaceChildren(this.view.block);
     }
@@ -1103,7 +1107,7 @@ class Item {
   /** Set for a rewrite: the box drawn over the block it rewrites. */
   public frame: RewriteBox | null = null;
 
-  constructor(public readonly index: number) {}
+  constructor(public readonly index: number, private readonly t: Translate) {}
 
   public join(group: Group): void {
     this.group = group;
@@ -1135,7 +1139,7 @@ class Item {
 
         return;
       }
-      const line = new Line(spec, ordinals[index]);
+      const line = new Line(spec, ordinals[index], this.t);
 
       this.root.append(line.el);
       this.lines.push(line);
@@ -1554,6 +1558,8 @@ class CallPreview {
     return `call:${this.id}`;
   }
 
+  private readonly t: Translate = (key) => this.deps.t?.(key) ?? '';
+
   public get layer(): HTMLElement {
     return this.deps.layer;
   }
@@ -1568,7 +1574,7 @@ class CallPreview {
       if (command.name === undefined || !INSERTS.has(command.name)) {
         return;
       }
-      const item = this.items.get(index) ?? new Item(index);
+      const item = this.items.get(index) ?? new Item(index, this.t);
 
       item.ref = command.ref;
       this.items.set(index, item);
@@ -1697,7 +1703,7 @@ class CallPreview {
 
       return;
     }
-    const item = known ?? new Item(index);
+    const item = known ?? new Item(index, this.t);
 
     this.items.set(index, item);
     if (item.frame === null) {

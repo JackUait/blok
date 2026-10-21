@@ -795,6 +795,16 @@ test.describe('Ask AI live edits', () => {
     expect([await look(real.nth(0)), await look(real.nth(1))]).toEqual(before);
   });
 
+  test('a fence with no language shows the code block\'s "Plain text" label while it streams', async ({ page }) => {
+    const json = JSON.stringify({ commands: [{ name: 'markdown.insert', args: { position: 'end', markdown: '```\nnotes\n```' } }] });
+
+    await ask(page, 'Second');
+    await emit(page, 0, { type: 'tool_start', index: 0, id: 'call-1', name: 'blok_execute' });
+    await emit(page, 0, { type: 'tool_input', index: 0, json });
+
+    await expect(page.getByTestId('ai-preview').getByTestId('code-language-name')).toHaveText('Plain text');
+  });
+
   test('a mermaid fence streams as the drawn diagram, and hands off without a jump', async ({ page }) => {
     const markdown = '```mermaid\ngraph TD\n  A --> B\n```';
     const json = JSON.stringify({ commands: [{ name: 'markdown.insert', args: { position: 'end', markdown } }] });

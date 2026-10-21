@@ -107,10 +107,14 @@ const readReply = (reply: unknown, step: number, name: string): AgentModelRespon
   ];
   const finish = first.finish_reason;
   const stop = ((): string => {
-    if (finish === 'length') {
+    // Mistral and Z.ai end a failed generation with these instead of an error object.
+    if (finish === 'error' || finish === 'network_error') {
+      throw new Error(`${name}: the provider stopped with ${String(finish)}.`);
+    }
+    if (finish === 'length' || finish === 'model_length' || finish === 'model_context_window_exceeded') {
       return 'max_tokens';
     }
-    if (finish === 'content_filter' || (typeof message.refusal === 'string' && message.refusal !== '')) {
+    if (finish === 'content_filter' || finish === 'sensitive' || (typeof message.refusal === 'string' && message.refusal !== '')) {
       return 'refusal';
     }
 
@@ -162,7 +166,8 @@ const mergedRecord = (current: Record<string, unknown>, piece: Record<string, un
 
     const known = out[key];
 
-    if (known !== undefined && IDENTITY.has(key)) {
+    // OpenRouter sends signature: null on early pieces, so null does not hold the place.
+    if (known !== undefined && known !== null && IDENTITY.has(key)) {
       return out;
     }
 
@@ -245,7 +250,11 @@ const readStream = async (
   };
 
   const onToolDelta = (entry: Record<string, unknown>, position: number): void => {
-    const key = typeof entry.index === 'number' ? entry.index : position;
+    // Vertex may move a call to another index mid-stream, so a seen id wins. LM Studio sends id null after the first chunk, so index stays the fallback.
+    const byId = typeof entry.id === 'string' && entry.id !== ''
+      ? [...state.calls.entries()].find(([, call]) => call.id === entry.id)?.[0]
+      : undefined;
+    const key = byId ?? (typeof entry.index === 'number' ? entry.index : position);
     const fn = isRecord(entry.function) ? entry.function : {};
     const known = state.calls.get(key);
     const index = known === undefined ? state.calls.size : [...state.calls.keys()].indexOf(key);
@@ -368,9 +377,12 @@ export function openaiCompatibleModel(options: AdapterOptions, profile: ChatProf
         { role: 'system', content: request.system },
         ...request.messages.flatMap((message) => (message.role === 'user' ? userMessages(message, names, toolName) : [assistantMessage(message, replayFields)])),
       ],
-      tools: request.tools.map((tool) => ({
-        type: 'function', function: { name: tool.name, description: tool.description, parameters: tool.input_schema },
-      })),
+      // vLLM rejects an empty tools array.
+      ...(request.tools.length === 0 ? {} : {
+        tools: request.tools.map((tool) => ({
+          type: 'function', function: { name: tool.name, description: tool.description, parameters: tool.input_schema },
+        })),
+      }),
     }, request, { ...LEVELS, ...levels }, options);
 
     const { stream } = options;

@@ -97,6 +97,29 @@ describe('openaiCompatibleModel', () => {
     expect((await run(openaiCompatibleModel({ model: 'm', send: refusal.send }), [{ role: 'user', content: 'a' }])).status).toBe('refused');
   });
 
+  it('maps provider-specific stop states, and throws on a provider error', async () => {
+    const statusOf = async (finish: string): Promise<string> =>
+      (await run(openaiCompatibleModel({ model: 'm', send: fakeSend(choice({ role: 'assistant', content: 'x' }, finish)).send }), [{ role: 'user', content: 'a' }])).status;
+
+    expect(await statusOf('model_length')).toBe('truncated');
+    expect(await statusOf('model_context_window_exceeded')).toBe('truncated');
+    expect(await statusOf('sensitive')).toBe('refused');
+    await expect(openaiCompatibleModel({ model: 'm', send: fakeSend(choice(toolTurn, 'error')).send }, { name: 'Mistral' })(request()))
+      .rejects.toThrow('Mistral: the provider stopped with error.');
+    await expect(openaiCompatibleModel({ model: 'm', stream: fakeStream(chunks(delta({ content: 'Hi' }, 'network_error'))).stream }, { name: 'Z.ai' })(request()))
+      .rejects.toThrow('Z.ai: the provider stopped with network_error.');
+  });
+
+  it('omits tools when the request has none, since vLLM rejects an empty array', async () => {
+    const plain = fakeSend(choice({ role: 'assistant', content: 'ok' }, 'stop'));
+    const streaming = fakeStream(chunks(delta({ content: 'ok' }, 'stop')));
+
+    await openaiCompatibleModel({ model: 'm', send: plain.send })(request());
+    await openaiCompatibleModel({ model: 'm', stream: streaming.stream })(request());
+    expect('tools' in plain.bodies[0]).toBe(false);
+    expect('tools' in streaming.bodies[0]).toBe(false);
+  });
+
   it('hands broken arguments to the tool instead of throwing', async () => {
     const broken = { ...toolTurn, tool_calls: [{ id: 'c', type: 'function', function: { name: 'blok_read', arguments: 'nope' } }] };
     const { send } = fakeSend(choice(broken, 'tool_calls'), choice({ role: 'assistant', content: 'ok' }, 'stop'));
@@ -302,6 +325,37 @@ describe('openaiCompatibleModel', () => {
       };
 
       expect(await replayed(text)).toEqual({ raw: { type: 'provider', format: 'openai-chat', raw: message }, sent: message });
+    });
+
+    it('takes a streamed signature that first arrived as null', async () => {
+      const text = chunks(
+        delta({ role: 'assistant', content: null, reasoning_details: [{ type: 'reasoning.text', text: 'Hm.', signature: null, index: 0 }] }),
+        delta({ reasoning_details: [{ type: 'reasoning.text', text: '', signature: 'sig', index: 0 }] }),
+        callChunk()
+      );
+      const message = {
+        role: 'assistant', content: null,
+        reasoning_details: [{ type: 'reasoning.text', text: 'Hm.', signature: 'sig', index: 0 }],
+        tool_calls: [{ id: 'call_1', type: 'function', function: { name: 'blok_read', arguments: '{}' } }],
+      };
+
+      expect(await replayed(text)).toEqual({ raw: { type: 'provider', format: 'openai-chat', raw: message }, sent: message });
+    });
+
+    it('follows a call by its id when the provider moves its index mid-stream', async () => {
+      const events: AgentModelStreamEvent[] = [];
+      const text = chunks(
+        delta({ role: 'assistant', content: null, tool_calls: [{ index: 0, id: 'a', type: 'function', function: { name: 'f', arguments: '{"y":2}' } }] }),
+        delta({ tool_calls: [{ index: 1, id: 'b', type: 'function', function: { name: 'g', arguments: '{"x":' } }] }),
+        delta({ tool_calls: [{ index: 0, id: 'b', function: { arguments: '1}' } }] }, 'tool_calls')
+      );
+      const response = await openaiCompatibleModel({ model: 'm', stream: fakeStream(text).stream })(request((event) => events.push(event)));
+
+      expect(response.content.slice(0, 2)).toEqual([
+        { type: 'tool_use', id: 'a', name: 'f', input: { y: 2 } },
+        { type: 'tool_use', id: 'b', name: 'g', input: { x: 1 } },
+      ]);
+      expect(events).toContainEqual({ type: 'tool_input', index: 1, json: '{"x":1}' });
     });
 
     it('keeps LiteLLM thinking_blocks, joining unindexed pieces until the signature, and sends them back', async () => {

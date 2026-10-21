@@ -9,6 +9,7 @@ const callbacks = {
   onKeep: vi.fn(),
   onDiscard: vi.fn(),
   onContinue: vi.fn(),
+  onInsert: vi.fn(),
   onEscape: vi.fn(),
   onThinking: vi.fn(),
 };

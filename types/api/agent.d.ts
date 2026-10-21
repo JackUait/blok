@@ -153,12 +153,32 @@ export interface AgentAssistantConfig {
   maxSteps?: number;
   /** Extra tools the model may call, after the Blok tools. The host runs them. */
   tools?: AgentHostTool[];
+  /**
+   * Buttons under the Ask AI field. Each one sends its prompt.
+   * This list replaces the built-in one. An empty list shows no buttons.
+   */
+  actions?: AgentAssistantAction[];
   /** Levels the user may pick in the Ask AI bar. The picker shows only with two or more. */
   thinking?: {
     levels: AgentThinkingLevel[];
     /** Must be one of `levels`. Default: the first level. */
     default?: AgentThinkingLevel;
   };
+}
+
+/** A button under the Ask AI field. */
+export interface AgentAssistantAction {
+  /** The button's text. */
+  label: string;
+  /** What the button sends to the model. */
+  prompt: string;
+  /**
+   * When the button shows:
+   * - `selection`: the user selected text.
+   * - `caret`: no text is selected.
+   * Without it, the button always shows.
+   */
+  context?: 'selection' | 'caret';
 }
 
 export interface AgentAskOptions {

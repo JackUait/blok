@@ -6,6 +6,7 @@ import { PopoverDesktop } from '../../utils/popover';
 import { onHover } from '../../utils/tooltip';
 import { promoteToTopLayer, removeFromTopLayer } from '../../utils/top-layer';
 
+import type { AssistantAction } from './actions';
 import { releaseGap, reserveGap } from './gap';
 
 export interface AssistantBarCallbacks {
@@ -14,6 +15,8 @@ export interface AssistantBarCallbacks {
   onKeep(): void;
   onDiscard(): void;
   onContinue(): void;
+  /** Put the shown answer into the page. */
+  onInsert(): void;
   onEscape(): void;
   onThinking(level: AgentThinkingLevel): void;
 }
@@ -51,6 +54,8 @@ const ATTR = {
   undo: 'data-blok-assistant-undo',
   keep: 'data-blok-assistant-keep',
   continue: 'data-blok-assistant-continue',
+  insert: 'data-blok-assistant-insert',
+  actions: 'data-blok-assistant-actions',
   slots: 'data-blok-assistant-slots',
   working: 'data-blok-assistant-working',
 } as const;
@@ -150,6 +155,8 @@ export class AssistantBar {
   private readonly undo: HTMLButtonElement;
   private readonly keep: HTMLButtonElement;
   private readonly resume: HTMLButtonElement;
+  private readonly insert: HTMLButtonElement;
+  private readonly actions: HTMLElement;
   private readonly thinking: HTMLButtonElement;
   private readonly slots: HTMLElement;
   /** The bar's height when it began floating over its anchor; null when it sits under it. */
@@ -217,8 +224,12 @@ export class AssistantBar {
     this.keep = this.iconButton(ATTR.keep, IconCheck, t('assistant.keep'));
     this.resume = build('button', { type: 'button', [ATTR.button]: '', [ATTR.continue]: '' });
     this.resume.textContent = t('assistant.continue');
-    this.head.append(headIcon, answer, this.resume, this.undo, this.keep);
+    this.insert = build('button', { type: 'button', [ATTR.button]: '', [ATTR.insert]: '' });
+    this.insert.textContent = t('assistant.insert');
+    this.head.append(headIcon, answer, this.insert, this.resume, this.undo, this.keep);
     row.append(icon, field, this.thinking, this.send, this.stop);
+    // Under the row: hiding them on the first keystroke never moves the field.
+    this.actions = build('div', { [ATTR.actions]: '', role: 'group', 'aria-label': t('assistant.actions') });
 
     this.reply = build('div', { [ATTR.reply]: '' });
 
@@ -226,7 +237,7 @@ export class AssistantBar {
     this.slots.append(...['', 'short'].map((size) => build('div', { [DATA_ATTR.aiSlot]: size, class: 'blok-ai-shimmer' })));
     this.slots.hidden = true;
 
-    this.element.append(this.head, this.reply, row, this.slots);
+    this.element.append(this.head, this.reply, row, this.actions, this.slots);
 
     this.field.addEventListener('keydown', (event) => this.onKeydown(event));
     this.field.addEventListener('input', () => this.sync());
@@ -236,6 +247,7 @@ export class AssistantBar {
     this.keep.addEventListener('click', () => callbacks.onKeep());
     this.undo.addEventListener('click', () => callbacks.onDiscard());
     this.resume.addEventListener('click', () => callbacks.onContinue());
+    this.insert.addEventListener('click', () => callbacks.onInsert());
 
     this.element.hidden = true;
     this.render({ kind: 'prompt' });
@@ -304,7 +316,10 @@ export class AssistantBar {
     const height = this.element.getBoundingClientRect().height;
 
     // The height it opened at stays its centre line, so a bar that grows grows down.
-    this.inPlaceHeight = inPlace ? this.inPlaceHeight ?? height : null;
+    // The actions under the field are growth too: the field row covers the block.
+    const actions = this.actions.hidden ? 0 : this.actions.getBoundingClientRect().height;
+
+    this.inPlaceHeight = inPlace ? this.inPlaceHeight ?? height - actions : null;
 
     const base = this.inPlaceHeight;
     const top = base === null ? null : rect.top + (rect.height - base) / 2;
@@ -377,6 +392,26 @@ export class AssistantBar {
 
     this.thinking.setAttribute('aria-label', label);
     onHover(this.thinking, label);
+  }
+
+  /**
+   * The buttons under an empty field. Set them before open(), which measures the bar.
+   * @param actions - each button's label and the prompt it sends
+   */
+  public setActions(actions: readonly AssistantAction[]): void {
+    this.actions.replaceChildren(...actions.map(({ label, prompt }) => {
+      const button = build('button', { type: 'button', [ATTR.button]: '' });
+
+      button.textContent = label;
+      button.addEventListener('click', () => {
+        if (!this.field.readOnly) {
+          this.callbacks.onSubmit(prompt);
+        }
+      });
+
+      return button;
+    }));
+    this.sync();
   }
 
   public focusField(): void {
@@ -488,6 +523,8 @@ export class AssistantBar {
     this.summary.hidden = kind !== 'answered' || this.summary.textContent === '';
     this.alert.hidden = kind !== 'error' || this.alert.textContent === '';
     this.resume.hidden = this.view.kind !== 'error' || this.view.resumable !== true;
+    this.insert.hidden = this.view.kind !== 'answered' || this.view.edited || this.view.reply.trim() === '';
+    this.actions.hidden = kind !== 'prompt' || this.field.value !== '' || this.actions.childElementCount === 0;
     this.head.hidden = this.summary.hidden && this.alert.hidden && !actions;
     this.element.toggleAttribute(ATTR.followUp, !this.head.hidden);
     this.field.placeholder = working ? '' : this.t(kind === 'prompt' ? 'assistant.placeholder' : 'assistant.followUp');

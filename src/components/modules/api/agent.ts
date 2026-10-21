@@ -14,7 +14,7 @@ import type {
   AgentTurnOptions,
 } from '../../../../types/api';
 import type { OutputData } from '../../../../types';
-import type { AgentActor, AgentSession, ChangedSet } from '../../../../types/agent';
+import type { AgentActor, AgentBatch, AgentResult, AgentSession, ChangedSet } from '../../../../types/agent';
 import type { HostService } from '../../../../types/tools/tool-description';
 import { Module } from '../../__module';
 import { announce } from '../../utils/announcer';
@@ -147,6 +147,21 @@ export class AgentAPI extends Module {
    */
   public describeUserPlace(): UserPlace {
     return this.editorContext();
+  }
+
+  /**
+   * Apply a batch in the open turn, without the model: its changes join the
+   * run's, so Discard undoes them with the rest.
+   * @param batch - the commands to apply
+   */
+  public executeInRun(batch: AgentBatch): Promise<AgentResult> {
+    const turn = this.current.turn;
+
+    if (turn === null) {
+      return Promise.reject(new Error('No agent turn is open.'));
+    }
+
+    return turn.execute(batch);
   }
 
   /**

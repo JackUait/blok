@@ -236,6 +236,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'notifier.ok',
   ]),
   fr: new Set([
+    // "Suggestions" is the native French plural noun.
+    'assistant.actions',
     // "Question" and "Option" are native French words.
     'tools.database.seedQuestion',
     'tools.database.seedOption',

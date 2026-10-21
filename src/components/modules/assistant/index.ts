@@ -15,6 +15,7 @@ import { getUserOS } from '../../utils/browser';
 import { syncPortalDirection } from '../../utils/portal-direction';
 import { prefersReducedMotion } from '../../utils/reduced-motion';
 
+import { assistantActions, type ActionContext } from './actions';
 import { AssistantBar, type AssistantBarColumn } from './assistant-bar';
 import { onGapChange } from './gap';
 import { createLivePreview, type LivePreview } from './live-preview';
@@ -77,6 +78,8 @@ export class Assistant extends Module {
   private changed = false;
   /** This answer changed the document. `changed` covers the whole run. */
   private edited = false;
+  /** The answer in the bar, while Insert can put it into the page. */
+  private shownReply: string | null = null;
   /** The bar's pick. Undefined when the host offers no choice. */
   private level: AgentThinkingLevel | undefined;
   /** Runs while the shown line has not had its LINE_MS yet. */
@@ -188,6 +191,8 @@ export class Assistant extends Module {
 
       this.anchor = block === undefined ? null : { id: block.id };
       this.inPlaceId = options.inPlace === true ? block?.id ?? null : null;
+      // Here, before the field takes focus and the selection collapses.
+      bar.setActions(assistantActions(this.actionContext(), (key) => this.Blok.I18n.t(key), this.config.agent?.assistant?.actions));
     }
     syncPortalDirection(bar.element, { source: this.Blok.UI.nodes.wrapper });
     this.syncThinking();
@@ -231,6 +236,7 @@ export class Assistant extends Module {
     this.run?.end();
     this.run = null;
     this.changed = false;
+    this.shownReply = null;
     this.unwatch();
     this.bar?.close();
     this.Blok.Toolbar.setSuppressed(false);
@@ -275,6 +281,7 @@ export class Assistant extends Module {
       onKeep: () => this.close(),
       onDiscard: () => void this.discard(),
       onContinue: () => this.submit(CONTINUE_PROMPT),
+      onInsert: () => void this.insertAnswer(),
       onEscape: () => this.escape(),
       onThinking: (level) => {
         this.level = level;
@@ -466,6 +473,7 @@ export class Assistant extends Module {
       'step-limit': 'assistant.stepLimit',
     };
 
+    this.shownReply = result.status === 'done' && !this.edited ? result.reply : null;
     if (result.status === 'done') {
       this.bar?.render({ kind: 'answered', reply: result.reply, changed: this.changed, edited: this.edited });
     } else {
@@ -475,6 +483,35 @@ export class Assistant extends Module {
 
       this.bar?.render({ kind: 'error', message, changed: this.changed, resumable: result.status === 'step-limit' });
     }
+    this.bar?.focusField();
+  }
+
+  /** Put the shown answer under the bar's block, as Markdown, in the run's turn so Undo covers it. */
+  private async insertAnswer(): Promise<void> {
+    const reply = this.shownReply;
+    const after = this.anchorBlock();
+
+    if (this.run === null || reply === null || after === undefined) {
+      return;
+    }
+
+    const id = ++this.answerId;
+    const result = await this.Blok.AgentAPI.executeInRun({
+      commands: [{ name: 'markdown.insert', args: { markdown: reply, parentId: after.parentId, position: { after: after.id } } }],
+    });
+
+    if (id !== this.answerId) {
+      return;
+    }
+    if (!result.ok) {
+      this.bar?.render({ kind: 'error', message: this.Blok.I18n.t('assistant.failed', { error: result.error.message }), changed: this.changed });
+
+      return;
+    }
+    this.changed = true;
+    this.edited = true;
+    this.shownReply = null;
+    this.bar?.render({ kind: 'answered', reply: this.Blok.I18n.t('assistant.inserted'), changed: true, edited: true });
     this.bar?.focusField();
   }
 
@@ -669,6 +706,15 @@ export class Assistant extends Module {
     const block = (captured === undefined ? undefined : manager.getBlockById(captured)) ?? manager.currentBlock ?? manager.lastBlock;
 
     return block?.holder ?? null;
+  }
+
+  /** Where the bar opens, for the actions it offers. */
+  private actionContext(): ActionContext {
+    if (this.selectionEndBlockId() !== undefined) {
+      return 'selection';
+    }
+
+    return this.Blok.BlockManager.blocks.every((block) => block.isEmpty) ? 'empty' : 'caret';
   }
 
   /**

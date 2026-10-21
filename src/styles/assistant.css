@@ -320,6 +320,15 @@
   outline-offset: 2px;
 }
 
+/* Suggested actions under an empty field, lined up with the field text. Quiet text buttons, never blue. */
+[data-blok-assistant-actions] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--blok-space-1-5);
+  padding-block: 0 var(--blok-space-2-5);
+  padding-inline: calc(var(--blok-space-3) + var(--_blok-assistant-dot) + var(--blok-space-2-5)) var(--blok-space-2);
+}
+
 /* The rest of a longer reply, under its first line; a long one scrolls. */
 [data-blok-assistant-reply] {
   max-height: 40vh;

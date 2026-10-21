@@ -148,7 +148,7 @@ export const BUILT_IN_BLOCK_STATICS: Readonly<Record<string, {
     title: 'Table view',
     statics: {
       toolbox: [
-        { name: 'tableView', title: 'Table view', previewCaption: 'Add a table view for a new or existing data source', data: { initialView: 'table' } },
+        { name: 'tableView', title: 'Table view', previewCaption: 'Add a table view for a new or existing data source', data: { initialView: 'table', aloneSkipsPanel: true } },
         { name: 'board', title: 'Board view', previewCaption: 'Create a kanban board database view', data: { initialView: 'board' } },
         { name: 'galleryView', title: 'Gallery view', previewCaption: 'Create a gallery database view', data: { initialView: 'gallery' } },
         { name: 'listView', title: 'List view', previewCaption: 'Create a list database view', data: { initialView: 'list' } },

@@ -125,7 +125,8 @@ test('"/text" shows no suffix on a Basic blocks row', async ({ page }) => {
 
 // research/28 §3: what each entry inserts.
 const INSERTS = [
-  { query: '/table view', views: [['table', 'Table']], schema: [['Name', 'title']], panel: true, title: '' },
+  // research/30 B7a: alone on the page, so no panel. The next test inserts a second one.
+  { query: '/table view', views: [['table', 'Table']], schema: [['Name', 'title']], panel: false, title: '' },
   { query: '/board', views: [['board', 'Board view']], schema: [['Name', 'title'], ['Assign', 'person'], ['Status', 'status']], panel: true, title: '' },
   { query: '/gallery', views: [['gallery', 'Gallery view']], schema: [['Name', 'title'], ['Created', 'createdTime'], ['Tags', 'multiSelect']], panel: true, title: '' },
   { query: '/list view', views: [['list', 'List view']], schema: [['Name', 'title'], ['Tags', 'multiSelect'], ['Created', 'createdTime']], panel: true, title: '' },
@@ -197,6 +198,31 @@ test('"/timeline" adds Card 1-3 as rows of the new database', async ({ page }) =
 
   await expect.poll(async () => (await saved(page)).filter((block) => block.type === 'database-row')
     .map((block) => (block.data as { title?: string }).title)).toEqual(['Card 1', 'Card 2', 'Card 3']);
+});
+
+// research/30 B7a, research/28:123-124: the first Table view on a fresh page opens no panel; one more below it does.
+test('"/table view" opens no panel as the page\'s only block, and the panel for a second one', async ({ page }) => {
+  await mount(page);
+  await typeInFirstParagraph(page, '/table view');
+  await page.keyboard.press('Enter');
+
+  await expect(page.locator('[data-blok-tool="database"]')).toBeVisible();
+  // The panel opens a frame after the insert: wait past it.
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await expect(page.getByTestId('database-new-database-panel')).toHaveCount(0);
+  expect((await saved(page)).filter((block) => block.parent === undefined || block.parent === null).map((block) => block.type)).toEqual(['database']);
+
+  await page.evaluate(() => {
+    const blocks = window.blokInstance?.blocks;
+
+    blocks?.insert('paragraph', { text: '' }, {}, blocks.getBlocksCount(), true, false, 'p1');
+  });
+  await page.locator('[data-blok-id="p1"] [contenteditable]').focus();
+  await page.keyboard.type('/table view');
+  await page.keyboard.press('Enter');
+
+  await expect(page.getByTestId('database-new-database-panel')).toBeVisible();
+  expect((await saved(page)).filter((block) => block.type === 'database')).toHaveLength(2);
 });
 
 test('"/linked" opens the source picker, not the "New database" panel', async ({ page }) => {

@@ -319,6 +319,12 @@ const ROW_CONTROL_SELECTOR = [
  */
 const LINK_PICKER_KEY = 'linkPicker';
 
+/**
+ * Insert-time hint from the "Table view" entry only: no "New database" panel
+ * when it is the page's only block (research/30 B7a). Never saved.
+ */
+const ALONE_SKIPS_PANEL_KEY = 'aloneSkipsPanel';
+
 /** "New <layout> view" on a linked view's add-view panel (research 20 §2b). The add-view menu offers no form there, and no dashboard anywhere. */
 const LINKED_NEW_VIEW_KEYS: Readonly<Record<Exclude<ViewType, 'form' | 'dashboard'>, string>> = {
   table: 'tools.database.linkedNewTableView',
@@ -353,7 +359,7 @@ const deletedBackendRowsOf = (adapter: DatabaseAdapter | undefined, databaseId: 
 const BACKLINKS_SETTLE_MS = 300;
 
 // `icon` and `starter` stay in the passthrough: a value this client cannot draw (a newer glyph) is saved back as it came.
-const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'schema', 'views', 'activeViewId', 'source', 'automations', 'hideDataSourceTitles', INITIAL_VIEW_KEY, LINK_PICKER_KEY]);
+const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'schema', 'views', 'activeViewId', 'source', 'automations', 'hideDataSourceTitles', INITIAL_VIEW_KEY, LINK_PICKER_KEY, ALONE_SKIPS_PANEL_KEY]);
 
 const sourceRefOf = (data: DatabaseData | undefined): DatabaseSourceRef | undefined => {
   const source = data?.source as unknown;
@@ -477,6 +483,7 @@ export class DatabaseTool implements BlockTool {
   private seeded: boolean;
   /** A user just inserted this database: rendered() opens the "New database" panel once. */
   private offerNewDatabasePanel: boolean;
+  private aloneSkipsPanel: boolean;
   /** A user just inserted a Timeline view: rendered() adds "Card 1-3" once. */
   private sampleCardsPending: boolean;
   /** Those cards: a panel choice that replaces the database (template, CSV, AI, link) deletes them. */
@@ -642,6 +649,7 @@ export class DatabaseTool implements BlockTool {
     this.linkPicker = this.source === undefined && (data as Record<string, unknown> | undefined)?.[LINK_PICKER_KEY] === true;
     // Only a user's insert: a load, undo, redo or a peer's insert never opens it. Form opens none (research/28 §3).
     this.offerNewDatabasePanel = origin === 'user' && this.seeded && !this.linkPicker && initialView !== 'form';
+    this.aloneSkipsPanel = (data as Record<string, unknown> | undefined)?.[ALONE_SKIPS_PANEL_KEY] === true;
     // research/28 §3: written once, by the inserting client only, so peers never add a second set.
     this.sampleCardsPending = origin === 'user' && initialView === 'timeline';
     if (origin === 'user' && initialView === 'form' && this.title === '') this.title = this.api.i18n.t('tools.database.seedNewForm');
@@ -914,6 +922,24 @@ export class DatabaseTool implements BlockTool {
         this.sourcePicker = null;
       },
     });
+  }
+
+  /**
+   * Every block of the document is this block or one of its rows. Notion's two
+   * samples do not tell "first block", "empty page" and "first database" apart
+   * (research/30 B7a), so the skip needs all three.
+   */
+  private aloneInDocument(): boolean {
+    const inThisBlock = (block: BlockAPI | null | undefined, seen = new Set<string>()): boolean => {
+      if (block === null || block === undefined || seen.has(block.id)) return false;
+      if (block.id === this.block.id) return true;
+      seen.add(block.id);
+
+      return block.parentId !== null && inThisBlock(this.api.blocks.getById(block.parentId), seen);
+    };
+
+    return Array.from({ length: this.api.blocks.getBlocksCount() }, (_, index) => this.api.blocks.getBlockByIndex(index))
+      .every((block) => inThisBlock(block));
   }
 
   /**
@@ -1792,18 +1818,18 @@ export class DatabaseTool implements BlockTool {
    */
   static get toolbox(): ToolboxConfig {
     // titleKey and descriptionKey stay literals: the i18n lifecycle test reads them from source.
-    const view = (entry: { name: string; titleKey: string; layout: ViewType; searchTerms: string[]; render: () => HTMLElement; descriptionKey: string }): ToolboxConfigEntry => ({
+    const view = (entry: { name: string; aloneSkipsPanel?: true; titleKey: string; layout: ViewType; searchTerms: string[]; render: () => HTMLElement; descriptionKey: string }): ToolboxConfigEntry => ({
       icon: VIEW_ICONS[entry.layout],
       titleKey: entry.titleKey,
       name: entry.name,
       searchTerms: entry.searchTerms,
       section: 'database',
       preview: { render: entry.render, descriptionKey: entry.descriptionKey },
-      data: { [INITIAL_VIEW_KEY]: entry.layout },
+      data: { [INITIAL_VIEW_KEY]: entry.layout, ...(entry.aloneSkipsPanel === true ? { [ALONE_SKIPS_PANEL_KEY]: true } : {}) },
     });
 
     return [
-      view({ name: 'tableView', titleKey: 'tableView', layout: 'table', searchTerms: ['table view', 'database', 'view'], render: renderTableViewPreview, descriptionKey: 'toolbox.preview.tableView' }),
+      view({ name: 'tableView', aloneSkipsPanel: true, titleKey: 'tableView', layout: 'table', searchTerms: ['table view', 'database', 'view'], render: renderTableViewPreview, descriptionKey: 'toolbox.preview.tableView' }),
       view({ name: 'board', titleKey: 'board', layout: 'board', searchTerms: ['board view', 'board', 'kanban', 'database', 'view'], render: renderBoardPreview, descriptionKey: 'toolbox.preview.board' }),
       view({ name: 'galleryView', titleKey: 'galleryView', layout: 'gallery', searchTerms: ['gallery view', 'gallery', 'database', 'view'], render: renderGalleryViewPreview, descriptionKey: 'toolbox.preview.galleryView' }),
       view({ name: 'listView', titleKey: 'listView', layout: 'list', searchTerms: ['list view', 'list', 'database', 'view'], render: renderListViewPreview, descriptionKey: 'toolbox.preview.listView' }),
@@ -2084,7 +2110,7 @@ export class DatabaseTool implements BlockTool {
       this.offerNewDatabasePanel = false;
       // The insert puts the caret in the title after rendered(); the panel takes focus after it.
       requestAnimationFrame(() => {
-        if (!this.destroyed) this.openNewDatabasePanel();
+        if (!this.destroyed && !(this.aloneSkipsPanel && this.aloneInDocument())) this.openNewDatabasePanel();
       });
     }
 

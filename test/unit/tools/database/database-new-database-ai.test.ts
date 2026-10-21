@@ -464,6 +464,69 @@ describe('"New database" panel for every database toolbox entry', () => {
     expect(activeType(tool)).toBe(layout);
   });
 
+  // research/30 B7a, research/28:123: "/table view" as the first block of a fresh page opens no panel; the next insert does.
+  describe('a Table view alone on the page', () => {
+    const insertWith = async (name: string, others: Array<{ id: string; name: string; parentId: string | null }>): Promise<void> => {
+      const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }, ...others.map((other) => ({ ...other, data: {} }))]);
+
+      buildDatabase(doc, 'db', dataOf(name), {}, 'user');
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    };
+
+    it('opens no panel when the document holds nothing else', async () => {
+      await insertWith('tableView', []);
+
+      expect(panel()).toBeUndefined();
+    });
+
+    it('opens no panel when the only other blocks are its own rows', async () => {
+      await insertWith('tableView', [{ id: 'r1', name: 'database-row', parentId: 'db' }]);
+
+      expect(panel()).toBeUndefined();
+    });
+
+    it.each([
+      ['another database', { id: 'other', name: 'database', parentId: null }],
+      ['a paragraph', { id: 'p1', name: 'paragraph', parentId: null }],
+    ])('opens the panel when the document also holds %s', async (_label, other) => {
+      await insertWith('tableView', [other]);
+
+      expect(rowLabels()[0]).toBe('tools.database.linkedNewEmpty');
+    });
+
+    // Database - Inline on a fresh page is unmeasured: it keeps the panel.
+    it.each(['database', 'board', 'mapView'])('the %s entry still opens the panel alone on the page', async (name) => {
+      await insertWith(name, []);
+
+      expect(rowLabels()[0]).toBe('tools.database.linkedNewEmpty');
+    });
+
+    it('a load or a peer of the same seed opens nothing either way', async () => {
+      const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }, { id: 'p1', name: 'paragraph', parentId: null, data: {} }]);
+
+      buildDatabase(doc, 'db', dataOf('tableView'), {}, 'replay');
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+
+      expect(panel()).toBeUndefined();
+    });
+
+    // research/30 B7b: Notion names the one view "Table" and shows no tab for it.
+    it('names its one view "Table" and draws no tab bar for it', async () => {
+      const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }]);
+      const { tool, el } = buildDatabase(doc, 'db', dataOf('tableView'), {}, 'user');
+
+      expect(saved(tool).views.map((view) => [view.type, view.name])).toEqual([['table', 'Table']]);
+      expect(el.querySelector<HTMLElement>(':scope > [data-blok-database-view-bar] > [data-blok-database-tab-bar]')?.style.display).toBe('none');
+    });
+
+    it('saves no trace of the seed marker', async () => {
+      const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }]);
+      const { tool } = buildDatabase(doc, 'db', dataOf('tableView'), {}, 'user');
+
+      expect(Object.keys(saved(tool)).filter((key) => !['title', 'schema', 'views', 'activeViewId', 'automations'].includes(key))).toEqual([]);
+    });
+  });
+
   // research/28 §3: Form opens no panel; its title is real text "New form"; it opens on its Form builder.
   it('a user insert of the Form entry opens no panel, titles it "New form" and shows the Form builder', async () => {
     const { tool } = await insert(undefined, 'user', dataOf('databaseForm'));

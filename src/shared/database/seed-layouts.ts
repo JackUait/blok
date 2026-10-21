@@ -20,7 +20,7 @@ const T = DATABASE_DEFAULT_TEXT;
 /** "Question {number}" and the like, as the seed saves them. */
 export const numbered = (template: string, n: number): string => template.replace('{number}', String(n));
 
-/** The view name a layout's entry gives its first view. Table keeps Blok's "Table" (Notion's empty name is UNMEASURED). */
+/** The view name a layout's entry gives its first view. Table is "Table": Notion's one-view name, unrendered until a second view (research/30 B7b). */
 const SEED_VIEW_NAMES: Partial<Record<ViewType, string>> = {
   table: T.viewTypeTable,
   board: T.viewBoardSeed,

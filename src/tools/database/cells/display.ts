@@ -357,7 +357,7 @@ export const renderCellValue = (property: PropertyDefinition, value: PropertyVal
     case 'date':
     case 'createdTime':
     case 'lastEditedTime':
-      cell.textContent = formatDateDisplay(value, resolveLocale(ctx.locale), property.date, ctx.now, ctx.hourCycle)
+      cell.textContent = formatDateDisplay(value, resolveLocale(ctx.locale), property.date, ctx.now, ctx.hourCycle, ctx.i18n)
         ?? (typeof value === 'string' ? value : '');
       if (property.type === 'date' && ctx.reminder !== undefined && reminderDueAt(value, ctx.reminder, property.date?.timeZone) !== null) {
         renderReminder(cell, ctx.i18n.t('tools.database.dateReminderSet', { reminder: ctx.i18n.t(`tools.database.dateRemind.${ctx.reminder}`) }));

@@ -256,7 +256,8 @@ export const orderGroupKeys = (
   const listed = groupOptions === undefined ? manual : [...real].sort((a, b) => options.findIndex((o) => o.id === a) - options.findIndex((o) => o.id === b));
   // A status sorts by workflow, the order `listed` is in.
   const sorted = (): string[] => {
-    if (property.type !== 'status') return [...real].sort((a, b) => compare(a, b) * sign);
+    // research/30 B12: "Out of range" stays after the ranges in both directions.
+    if (property.type !== 'status') return [...real].sort((a, b) => (a === OUT_OF_RANGE_KEY || b === OUT_OF_RANGE_KEY ? compare(a, b) : compare(a, b) * sign));
 
     return sign === 1 ? listed : [...listed].reverse();
   };

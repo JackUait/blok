@@ -329,7 +329,7 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
       const time = document.createElement('span');
 
       time.setAttribute('data-blok-database-feed-time', '');
-      time.textContent = formatDateDisplay(new Date(at).toISOString(), this.options.locale, { dateFormat: 'relative', timeFormat: 'hidden' }) ?? '';
+      time.textContent = formatDateDisplay(new Date(at).toISOString(), this.options.locale, { dateFormat: 'relative', timeFormat: 'hidden' }, undefined, undefined, this.options.i18n) ?? '';
       byline.appendChild(time);
     }
 

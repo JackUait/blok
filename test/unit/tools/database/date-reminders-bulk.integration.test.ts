@@ -395,11 +395,12 @@ describe('bulk edit of a date: Remind and the property default', () => {
     });
   });
 
-  describe('End date on an empty picker writes nothing (unmeasured in Notion)', () => {
+  describe('End date on an empty picker', () => {
     const toggleEnd = async (): Promise<void> => {
       await click(document.querySelector('[data-blok-database-date-end-toggle]'));
     };
 
+    // Unmeasured in Notion: a bulk picker on an empty first row writes nothing.
     it('bulk: an empty first row keeps every selected row\'s date', async () => {
       await make(doc({}));
       await selectTableRows('r3', 'r1', 'r2');
@@ -433,12 +434,16 @@ describe('bulk edit of a date: Remind and the property default', () => {
       expect((await savedRow('r2'))?.properties?.due).toBe('2026-10-27');
     });
 
-    it('table cell: an empty cell stays empty', async () => {
+    // research/30 B2: a single empty cell gets today → today at once.
+    it('table cell: an empty cell gets today to today', async () => {
       await make(doc({}));
       await click(q('[data-row-id="r3"] [role="gridcell"][data-property-id="due"]'));
+      const now = new Date();
+      const today = [now.getFullYear(), now.getMonth() + 1, now.getDate()].map((n) => String(n).padStart(2, '0')).join('-');
+
       await toggleEnd();
 
-      expect((await savedRow('r3'))?.properties?.due).toBeNull();
+      expect((await savedRow('r3'))?.properties?.due).toBe(`${today}/${today}`);
       expect((await savedRow('r1'))?.properties?.due).toBe('2026-10-12');
     });
   });

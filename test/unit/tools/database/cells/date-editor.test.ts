@@ -172,6 +172,18 @@ describe('date cell editor', () => {
       expect(q<HTMLInputElement>('[data-blok-database-date-input="end"]')).toBeTruthy();
     });
 
+    // research/30 B2: an empty cell gets today → today at once.
+    it('turning End date on in an empty cell writes today to today', () => {
+      const ctx = openDate(null);
+
+      q('[data-blok-database-date-end-toggle]').click();
+
+      expect(ctx.onCommit).toHaveBeenCalledTimes(1);
+      expect(ctx.onCommit).toHaveBeenCalledWith('2026-10-09/2026-10-09');
+      expect(q<HTMLInputElement>('[data-blok-database-date-input="start"]').value).toBe('Oct 9, 2026');
+      expect(q<HTMLInputElement>('[data-blok-database-date-input="end"]').value).toBe('Oct 9, 2026');
+    });
+
     it('a click before the start moves the start', () => {
       const ctx = openDate('2026-10-09/2026-10-12');
 
@@ -298,6 +310,16 @@ describe('date cell editor', () => {
 
       q('[data-blok-database-date-time-toggle]').click();
       expect(lateSet.onCommit).toHaveBeenLastCalledWith('2026-10-20T00:00');
+    });
+
+    // research/30 B1: at 01:00:07 Notion filled 2:00 AM, so inside the hh:00 minute it still takes the next hour.
+    it('Include time inside the hh:00 minute takes the next hour', () => {
+      vi.setSystemTime(new Date(2026, 9, 21, 1, 0, 7));
+      const ctx = openDate(null);
+
+      q('[data-blok-database-date-time-toggle]').click();
+
+      expect(ctx.onCommit).toHaveBeenCalledWith('2026-10-21T02:00');
     });
 
     // The bulk picker opens on the first selected row's value: an empty one counts as today, another day takes 9:00.
@@ -670,7 +692,8 @@ describe('date cell editor', () => {
       ['month_day_year', '2026-06-05', '06/05/2026'],
       ['day_month_year', '2026-06-05', '05/06/2026'],
       ['year_month_day', '2026-06-05', '2026/06/05'],
-      ['relative', '2026-10-10', 'Tomorrow'],
+      // research/30 B6: the field never shows relative words.
+      ['relative', '2026-10-10', 'Oct 10, 2026'],
       ['relative', '2026-06-05', 'Jun 5, 2026'],
     ] as const)('%s shows %s as %s', (format, value, shown) => {
       openFormat(value, format);

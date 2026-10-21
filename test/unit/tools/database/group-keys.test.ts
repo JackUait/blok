@@ -4,6 +4,7 @@ import {
   defaultGroupSort,
   groupKeysFor,
   groupValueForKey,
+  OUT_OF_RANGE_KEY,
   orderGroupKeys,
 } from '../../../../src/tools/database/group-keys';
 import { NO_VALUE_GROUP_KEY } from '../../../../src/tools/database/database-model';
@@ -116,6 +117,14 @@ describe('group-keys', () => {
       expect(orderGroupKeys(select, keys, {})).toEqual(['o-b', 'o-a', 'o-c', NO_VALUE_GROUP_KEY]);
       expect(orderGroupKeys(select, keys, { sort: 'ascending' })).toEqual(['o-a', 'o-b', 'o-c', NO_VALUE_GROUP_KEY]);
       expect(orderGroupKeys(select, keys, { sort: 'descending' })).toEqual(['o-c', 'o-b', 'o-a', NO_VALUE_GROUP_KEY]);
+    });
+
+    // research/30 B12: only the ranges flip; "Out of range" stays after them in both directions.
+    it('keeps Out of range after the number ranges under a descending sort', () => {
+      const keys = ['range:2', OUT_OF_RANGE_KEY, 'range:1'];
+
+      expect(orderGroupKeys(prop('number'), keys, { numberBy: 'range', sort: 'descending' })).toEqual(['range:2', 'range:1', OUT_OF_RANGE_KEY]);
+      expect(orderGroupKeys(prop('number'), keys, { numberBy: 'range', sort: 'ascending' })).toEqual(['range:1', 'range:2', OUT_OF_RANGE_KEY]);
     });
 
     it('puts the no-value group first for number, text and date', () => {

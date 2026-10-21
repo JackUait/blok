@@ -305,6 +305,7 @@ export interface RowMenuFooterSource {
   people?: ReadonlyArray<{ id: string; name: string }>;
   now?: Date;
   hourCycle?: 'h12' | 'h23';
+  i18n?: Pick<I18n, 't'>;
 }
 
 /**
@@ -323,7 +324,7 @@ export const rowMenuFooter = (source: RowMenuFooterSource): Pick<RowMenuContext,
   if (at === undefined) {
     return { counts };
   }
-  const time = formatDateDisplay(new Date(at).toISOString(), source.locale, { dateFormat: 'relative' }, source.now, source.hourCycle) ?? '';
+  const time = formatDateDisplay(new Date(at).toISOString(), source.locale, { dateFormat: 'relative' }, source.now, source.hourCycle, source.i18n) ?? '';
   const name = meta?.lastEditedBy === undefined ? undefined : source.people?.find((person) => person.id === meta.lastEditedBy)?.name;
 
   return { lastEdited: { ...(name !== undefined ? { name } : {}), time }, counts };

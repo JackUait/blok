@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { applyDateDisplayChange, formatShortDatePart, resolveHourCycle, resolveWeekStart, timeZones, toIsoDay, toLocalDate } from '../../../../../src/tools/database/cells/date-format';
+import enJson from '../../../../../src/components/i18n/locales/en.json';
+import { applyDateDisplayChange, formatDateDisplay, formatDayField, formatShortDatePart, resolveHourCycle, resolveWeekStart, timeZones, toIsoDay, toLocalDate } from '../../../../../src/tools/database/cells/date-format';
+
+const en: Record<string, string> = enJson;
+const t = (key: string): string => en[key] ?? key;
 
 describe('date-format', () => {
   beforeEach(() => {
@@ -61,6 +65,50 @@ describe('date-format', () => {
 
     it('writes a part with no time as the short month and day', () => {
       expect(formatShortDatePart('2026-10-20', 'en-US')).toBe('Oct 20');
+    });
+  });
+
+  // research/30 B6: today is Wednesday, Oct 21, 2026. Weeks run Monday to Sunday.
+  describe('Relative date format', () => {
+    const now = new Date(2026, 9, 21, 1, 0, 7);
+    const relative = (value: string): string | null =>
+      formatDateDisplay(value, 'en-US', { dateFormat: 'relative', timeFormat: '12_hour' }, now, undefined, { t });
+
+    it.each([
+      ['2026-10-26T02:00', 'Next Monday 2:00 AM'],
+      ['2026-10-18T02:00', 'Last Sunday 2:00 AM'],
+      ['2026-10-28T02:00', 'Next Wednesday 2:00 AM'],
+      ['2026-10-31T02:00', 'Next Saturday 2:00 AM'],
+      ['2026-11-01T02:00', 'Next Sunday 2:00 AM'],
+      ['2026-10-14T02:00', 'Last Wednesday 2:00 AM'],
+      ['2026-10-13T02:00', 'Last Tuesday 2:00 AM'],
+      ['2026-10-23T02:00', 'Friday 2:00 AM'],
+      ['2026-10-19T02:00', 'Monday 2:00 AM'],
+      ['2026-10-25T02:00', 'Sunday 2:00 AM'],
+      ['2026-10-21T02:00', 'Today 2:00 AM'],
+      ['2026-10-22T02:00', 'Tomorrow 2:00 AM'],
+      ['2026-10-20T02:00', 'Yesterday 2:00 AM'],
+      ['2026-10-11T02:00', 'October 11, 2026 2:00 AM'],
+      ['2026-12-02T02:00', 'December 2, 2026 2:00 AM'],
+    ])('the cell shows %s as %s', (value, shown) => {
+      expect(relative(value)).toBe(shown);
+    });
+
+    // Unmeasured edges: the ±1 day words win over the week rule.
+    it('writes Yesterday on a Monday and Tomorrow on a Sunday', () => {
+      const monday = new Date(2026, 9, 19, 12);
+      const sunday = new Date(2026, 9, 25, 12);
+
+      expect(formatDateDisplay('2026-10-18', 'en-US', { dateFormat: 'relative' }, monday, undefined, { t })).toBe('Yesterday');
+      expect(formatDateDisplay('2026-10-26', 'en-US', { dateFormat: 'relative' }, sunday, undefined, { t })).toBe('Tomorrow');
+      expect(formatDateDisplay('2026-10-12', 'en-US', { dateFormat: 'relative' }, monday, undefined, { t })).toBe('Last Monday');
+      expect(formatDateDisplay('2026-10-27', 'en-US', { dateFormat: 'relative' }, sunday, undefined, { t })).toBe('Next Tuesday');
+    });
+
+    it('the picker field always shows the full date', () => {
+      expect(formatDayField('2026-10-21', 'en-US', { dateFormat: 'relative' }, now)).toBe('Oct 21, 2026');
+      expect(formatDayField('2026-10-22', 'en-US', { dateFormat: 'relative' }, now)).toBe('Oct 22, 2026');
+      expect(formatDayField('2026-10-26', 'en-US', { dateFormat: 'relative' }, now)).toBe('Oct 26, 2026');
     });
   });
 

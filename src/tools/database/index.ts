@@ -8109,6 +8109,7 @@ export class DatabaseTool implements BlockTool {
         row: this.model.getRow(rowId),
         titlePropertyId: this.titlePropertyId(),
         locale: resolveLocale(undefined),
+        i18n: this.api.i18n,
         ...(this.people !== undefined ? { people: this.people } : {}),
       }),
     }), {

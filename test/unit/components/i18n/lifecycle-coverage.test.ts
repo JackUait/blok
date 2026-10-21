@@ -270,7 +270,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1408 + 126 + 487 + 4 closure for all 2025 keys', () => {
+  it('rebuilds a disjoint 1422 + 126 + 487 + 4 closure for all 2039 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -284,7 +284,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2025);
+    expect(lifecycle.size).toBe(2039);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -422,7 +422,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +2: "Learn about reminders" and "Learn about imports" call their keys by literal.
       // +1: the property menu's (i) calls tools.database.addPropertyDescription by literal.
       // +1: and tools.database.editPropertyDescription once a description exists.
-      'executable-literal': 1408,
+      // +14: the Relative date format's "Last <weekday>" / "Next <weekday>" keys by literal.
+      'executable-literal': 1422,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

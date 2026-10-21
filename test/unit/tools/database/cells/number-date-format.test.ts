@@ -127,10 +127,9 @@ describe('formatDateDisplay', () => {
     expect(TIME_FORMATS).toEqual(['hidden', '12_hour', '24_hour']);
   });
 
+  // research/30 B6: another day of this Monday–Sunday week reads as its weekday.
   it('writes relative days near today and the full date further away', () => {
-    const rtf = new Intl.RelativeTimeFormat('en-US', { numeric: 'auto' });
-
-    expect(formatDateDisplay('2026-10-07', 'en-US', { dateFormat: 'relative' }, now)).toBe(rtf.format(-2, 'day'));
+    expect(formatDateDisplay('2026-10-07', 'en-US', { dateFormat: 'relative' }, now)).toBe('Wednesday');
     expect(formatDateDisplay('2026-12-25', 'en-US', { dateFormat: 'relative' }, now))
       .toBe(formatDateDisplay('2026-12-25', 'en-US', { dateFormat: 'full' }, now));
   });

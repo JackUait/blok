@@ -1,3 +1,4 @@
+import type { I18n } from '../../../../types';
 import type { DateDisplay, DateFormat, TimeFormat } from '../types';
 import { parseDateValue, toIsoDay, toIsoTime } from './date-value';
 
@@ -98,8 +99,31 @@ export const resolveHourCycle = (locale: string): 'h12' | 'h23' => {
   }
 };
 
-/** Days within this distance of today read as relative words; further ones as the full date. */
-const RELATIVE_DAY_LIMIT = 6;
+/** How far typed relative words reach: Monday of last week to Sunday of next week. */
+const RELATIVE_DAY_LIMIT = 13;
+
+/** Literal keys, Monday first, so the i18n checks see each one. One key per weekday: the adjective agrees with it. */
+const LAST_WEEKDAY_KEYS = [
+  'tools.database.dateRelative.lastMonday',
+  'tools.database.dateRelative.lastTuesday',
+  'tools.database.dateRelative.lastWednesday',
+  'tools.database.dateRelative.lastThursday',
+  'tools.database.dateRelative.lastFriday',
+  'tools.database.dateRelative.lastSaturday',
+  'tools.database.dateRelative.lastSunday',
+] as const;
+
+const NEXT_WEEKDAY_KEYS = [
+  'tools.database.dateRelative.nextMonday',
+  'tools.database.dateRelative.nextTuesday',
+  'tools.database.dateRelative.nextWednesday',
+  'tools.database.dateRelative.nextThursday',
+  'tools.database.dateRelative.nextFriday',
+  'tools.database.dateRelative.nextSaturday',
+  'tools.database.dateRelative.nextSunday',
+] as const;
+
+const capitalize = (text: string, locale: string): string => text.charAt(0).toLocaleUpperCase(locale) + text.slice(1);
 
 const DAY_MS = 86_400_000;
 
@@ -129,9 +153,37 @@ const dayPartsOf = (part: string, timeZone: string | undefined): DayParts => {
 const zoneOption = (part: string, timeZone: string | undefined): Intl.DateTimeFormatOptions =>
   isInstant(part) && timeZone !== undefined ? { timeZone } : {};
 
-/** `field`: the date picker's field, which writes Full date with the short month (research/27 §4a). */
-const formatDay = (part: string, locale: string, display: DateDisplay, now: Date, field = false): string => {
+/**
+ * Relative words for a day `diff` days from today (research/30 B6): ±1 day as
+ * Today / Tomorrow / Yesterday, the rest of this Monday–Sunday week as the
+ * weekday, the weeks around it as "Last" / "Next" <weekday>. null further out,
+ * or for those two weeks when there is no `i18n`. Monday is fixed: Notion's
+ * grid starts on Sunday and the rule still splits weeks on Monday.
+ */
+const relativeDay = (diff: number, date: Date, now: Date, locale: string, i18n?: Pick<I18n, 't'>): string | null => {
+  if (Math.abs(diff) <= 1) {
+    // research/23 §1: Notion writes "Today".
+    return capitalize(new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(diff, 'day'), locale);
+  }
+  const todayFromMonday = (now.getDay() + 6) % 7;
+  const week = Math.floor((todayFromMonday + diff) / 7);
+  const weekday = todayFromMonday + diff - week * 7;
+
+  if (week === 0) return capitalize(new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(date), locale);
+  if (i18n === undefined || Math.abs(week) > 1) return null;
+
+  return i18n.t((week < 0 ? LAST_WEEKDAY_KEYS : NEXT_WEEKDAY_KEYS)[weekday]);
+};
+
+interface DayOptions {
+  /** The date picker's field: Full date with the short month (research/27 §4a), never relative words (research/30 B6). */
+  field?: boolean;
+  i18n?: Pick<I18n, 't'>;
+}
+
+const formatDay = (part: string, locale: string, display: DateDisplay, now: Date, options: DayOptions = {}): string => {
   const { year, month, day } = dayPartsOf(part, display.timeZone);
+  const field = options.field === true;
 
   switch (display.dateFormat ?? 'full') {
     case 'month_day_year': return [pad(month), pad(day), String(year)].join('/');
@@ -142,15 +194,9 @@ const formatDay = (part: string, locale: string, display: DateDisplay, now: Date
       return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', ...zoneOption(part, display.timeZone) }).format(toLocalDate(part));
     case 'relative': {
       const diff = Math.round((Date.UTC(year, month - 1, day) - Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) / DAY_MS);
+      const words = field ? null : relativeDay(diff, new Date(year, month - 1, day), now, locale, options.i18n);
 
-      if (Math.abs(diff) <= RELATIVE_DAY_LIMIT) {
-        const text = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(diff, 'day');
-
-        // research/23 §1: Notion writes "Today".
-        return text.charAt(0).toLocaleUpperCase(locale) + text.slice(1);
-      }
-
-      return formatDay(part, locale, { ...display, dateFormat: 'full' }, now, field);
+      return words ?? formatDay(part, locale, { ...display, dateFormat: 'full' }, now, options);
     }
     case 'full':
     default:
@@ -160,7 +206,7 @@ const formatDay = (part: string, locale: string, display: DateDisplay, now: Date
 
 /** A bare `YYYY-MM-DD` day as the date picker's field shows it: the property's Date format, no time. */
 export const formatDayField = (day: string, locale: string, display: DateDisplay, now: Date = new Date()): string =>
-  formatDay(day, locale, display, now, true);
+  formatDay(day, locale, display, now, { field: true });
 
 const NUMERIC_ORDER: Partial<Record<DateFormat, ReadonlyArray<'y' | 'm' | 'd'>>> = {
   month_day_year: ['m', 'd', 'y'],
@@ -196,7 +242,7 @@ export const parseDayField = (text: string, locale: string, display: DateDisplay
 
     return dayFrom(value('y'), value('m'), value('d'));
   }
-  // The words the field shows for days near today ("Yesterday", "In 3 days").
+  // Relative words typed by hand ("Yesterday", "Friday"); the field itself shows the full date.
   const near = format === 'relative'
     ? Array.from({ length: RELATIVE_DAY_LIMIT * 2 + 1 }, (_, i) => toIsoDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() + i - RELATIVE_DAY_LIMIT)))
       .find((day) => formatDay(day, locale, display, now).toLocaleLowerCase(locale) === trimmed.toLocaleLowerCase(locale))
@@ -255,8 +301,8 @@ export const applyDateDisplayChange = (date: DateDisplay, change: DateDisplayCha
   return change.timeZone === null ? rest : { ...rest, timeZone: change.timeZone };
 };
 
-const formatPart = (part: string, locale: string, display: DateDisplay, now: Date, hourCycle?: 'h12' | 'h23'): string => {
-  const day = formatDay(part, locale, display, now);
+const formatPart = (part: string, locale: string, display: DateDisplay, now: Date, hourCycle?: 'h12' | 'h23', i18n?: Pick<I18n, 't'>): string => {
+  const day = formatDay(part, locale, display, now, { i18n });
 
   if (!part.includes('T') || display.timeFormat === 'hidden') {
     return day;
@@ -287,7 +333,9 @@ export const formatDateDisplay = (
   locale: string,
   display: DateDisplay = {},
   now: Date = new Date(),
-  hourCycle?: 'h12' | 'h23'
+  hourCycle?: 'h12' | 'h23',
+  /** Relative format: the "Last Monday" / "Next Monday" words. Without it those weeks show the full date. */
+  i18n?: Pick<I18n, 't'>
 ): string | null => {
   const parsed = parseDateValue(value);
 
@@ -295,7 +343,7 @@ export const formatDateDisplay = (
     return null;
   }
 
-  const start = formatPart(parsed.start, locale, display, now, hourCycle);
+  const start = formatPart(parsed.start, locale, display, now, hourCycle, i18n);
 
-  return parsed.end === undefined ? start : `${start} → ${formatPart(parsed.end, locale, display, now, hourCycle)}`;
+  return parsed.end === undefined ? start : `${start} → ${formatPart(parsed.end, locale, display, now, hourCycle, i18n)}`;
 };

@@ -123,8 +123,8 @@ const EFFORTS: Partial<Record<AgentModelProvider, unknown[]>> = {
   qwen: NONE,
   // GLM-5.3 takes low, high and max only. Off sends nothing: it errors on thinking disabled.
   zai: [undefined, 'low', 'high', 'high', 'max', 'max'],
-  // Ollama 0.16 takes none to high only.
-  ollama: ['none', 'low', 'medium', 'high', 'high', 'high'],
+  // Ollama 0.16 refuses any effort but none on models that only turn thinking on and off.
+  ollama: ['none', undefined, undefined, undefined, undefined, undefined],
   // Models with mandatory reasoning reject none.
   openrouter: [undefined, 'low', 'medium', 'high', 'xhigh', 'max'],
 };

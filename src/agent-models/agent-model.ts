@@ -57,8 +57,8 @@ const PROVIDERS = {
   zai: chat({ name: 'Z.ai', levels: efforts((effort) => ({ thinking: { type: 'enabled' }, reasoning_effort: effort }), [undefined, 'low', 'high', 'high', 'max', 'max']), streamBody: { tool_stream: true } }),
   mistral: chat({ name: 'Mistral', levels: NONE_TO_XHIGH, toolName: true }),
   groq: chat({ name: 'Groq', tokens: 'max_completion_tokens', levels: LOW_TO_HIGH }),
-  // Older versions reject anything above high.
-  ollama: chat({ name: 'Ollama', levels: efforts(reasoningEffort, ['none', 'low', 'medium', 'high', 'high', 'high']) }),
+  // Older versions refuse any effort but none on models that only turn thinking on and off.
+  ollama: chat({ name: 'Ollama', levels: efforts(reasoningEffort, ['none']) }),
   // Models with mandatory reasoning reject none.
   openrouter: chat({ name: 'OpenRouter', levels: efforts(reasoningEffort, [undefined, 'low', 'medium', 'high', 'xhigh', 'max']) }),
   // Its message schema rejects any other field.

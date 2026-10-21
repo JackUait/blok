@@ -58,7 +58,7 @@ export type AgentModelSearchProvider = 'anthropic' | 'openai' | 'gemini' | 'azur
  * - Chat Completions, levels set `reasoning_effort`: `zai`, `mistral`, `groq`, `ollama`, `openrouter`, `fireworks`,
  *   `cerebras`, `sambanova`, `together`, `cohere`, `huggingface`, `vercel`, `litellm`, `lmstudio`, `vllm`, `vertex`,
  *   `bedrock`, `yandex`, and `openai-compatible` for any other endpoint that speaks it. `zai` also turns thinking on;
- *   its `off` and `openrouter`'s send nothing.
+ *   its `off` and `openrouter`'s send nothing. `ollama` sends only `none`, for `off`.
  */
 export type AgentModelProvider =
   | AgentModelSearchProvider

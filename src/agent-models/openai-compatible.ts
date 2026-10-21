@@ -14,7 +14,7 @@ const FORMAT = 'openai-chat';
 export interface ChatProfile extends Profile {
   /** The field that carries the output cap. Defaults to max_tokens; only one is ever sent. */
   tokens?: 'max_tokens' | 'max_completion_tokens';
-  /** Sends `name` on tool messages. Mistral shows it; Groq answers 400 and Fireworks' schema rejects it. */
+  /** Sends `name` on tool messages. Mistral shows it; Fireworks' strict schema rejects it. */
   toolName?: true;
   /** When set, a replayed assistant turn keeps only these keys. Fireworks rejects unknown ones. */
   replayFields?: readonly string[];

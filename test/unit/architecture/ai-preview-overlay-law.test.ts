@@ -32,12 +32,14 @@ const ALLOWED_RECEIVERS: Record<string, string> = {
   scroll: 'A preview table\'s scroll box, created by makeTable.',
   table: 'A preview <table>, created by makeTable.',
   colgroup: 'A preview table\'s <colgroup>, created by makeTable.',
-  row: 'A row makeTable added to its own <tbody>.',
   cell: 'A preview table cell tableCell just created.',
   blocks: 'A preview cell\'s content box, created by tableCell.',
   gutter: 'The line numbers of a preview code block buildCodeDOM just created.',
   body: 'A preview callout\'s child container, created by makeCallout through buildCalloutDOM.',
   slot: 'A preview callout child\'s box, created by makeCallout.',
+  root: 'A preview image block\'s root, created by makeImage.',
+  figure: 'A preview image\'s figure, created by makeImage.',
+  row: 'A row makeTable added to its own <tbody>, or a preview image\'s caption row makeImage created.',
   landedWord: 'A word span this module created; it only gets its text reset.',
 };
 

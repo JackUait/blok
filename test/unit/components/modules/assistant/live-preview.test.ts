@@ -1176,5 +1176,67 @@ describe('createLivePreview', () => {
       expect(state.layer.querySelector(CALLOUT)?.querySelector('[data-blok-testid="callout-emoji-face"]')?.textContent).toBe('🔥');
       expect(state.layer.querySelectorAll(SLOT)).toHaveLength(0);
     });
+
+    const IMAGE = '[data-blok-tool="image"]';
+    const caption = (): string => state.layer.querySelector(`${IMAGE} .blok-image-caption`)?.textContent ?? '';
+
+    it('draws a lone Markdown image as the image block, its alt text as the caption', () => {
+      const preview = make();
+
+      preview.update('c1', markdown('![Red planet](https://example.com/mars.png)'));
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(state.layer.querySelector(`${IMAGE} img`)?.getAttribute('src')).toBe('https://example.com/mars.png');
+      expect(caption()).toBe('Red planet');
+      expect(layerText()).not.toContain('![');
+    });
+
+    it('shows the image block while its URL streams, and loads nothing until the URL is whole', () => {
+      const preview = make();
+      const json = markdown('![Red planet](https://example.com/mars.png)\n\nafter');
+
+      preview.update('c1', open(json, 'example.com/ma'));
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(state.layer.querySelector(IMAGE)).not.toBeNull();
+      expect(state.layer.querySelector(`${IMAGE} img`)?.hasAttribute('src') ?? false).toBe(false);
+      expect(caption()).toBe('Red planet');
+      expect(layerText()).not.toContain('example.com');
+
+      preview.update('c1', json);
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(state.layer.querySelector(`${IMAGE} img`)?.getAttribute('src')).toBe('https://example.com/mars.png');
+    });
+
+    it('never loads an image with an unsafe URL', () => {
+      const preview = make();
+
+      preview.update('c1', markdown('![x](javascript:alert(1))'));
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(state.layer.querySelector('img')).toBeNull();
+      expect(layerText()).not.toContain('javascript');
+    });
+
+    it('keeps an image inside a sentence a paragraph, as the importer does', () => {
+      const preview = make();
+
+      preview.update('c1', markdown('see ![a](https://example.com/a.png) here'));
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(state.layer.querySelector(IMAGE)).toBeNull();
+    });
+
+    it('draws an image from block.insert', () => {
+      const preview = make();
+      const json = execute({ name: 'block.insert', args: { position: { after: 'b1' }, type: 'image', data: { url: 'https://example.com/b.png', caption: 'Moon' } } });
+
+      preview.update('c1', json);
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(state.layer.querySelector(`${IMAGE} img`)?.getAttribute('src')).toBe('https://example.com/b.png');
+      expect(caption()).toBe('Moon');
+    });
   });
 });

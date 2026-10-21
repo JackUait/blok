@@ -697,4 +697,53 @@ test.describe('Ask AI live edits', () => {
     await expect(real).toContainText('Deimos');
     expect(await look(real)).toEqual(before);
   });
+
+  test('a Markdown image streams as the real image block, alt text as its caption, and hands off without a jump', async ({ page }) => {
+    const url = new URL('/test/playwright/fixtures/image/shot.png', page.url()).href;
+    const markdown = `![Red planet](${url})`;
+    const json = JSON.stringify({ commands: [{ name: 'markdown.insert', args: { position: 'end', markdown } }] });
+
+    await ask(page, 'Second');
+    await emit(page, 0, { type: 'tool_start', index: 0, id: 'call-1', name: 'blok_execute' });
+    await emit(page, 0, { type: 'tool_input', index: 0, json: json.slice(0, json.indexOf('/fixtures')) });
+
+    const preview = page.getByTestId('ai-preview');
+    const previewImage = preview.locator('[data-blok-tool="image"]');
+
+    await expect(previewImage).toBeVisible();
+    await expect(previewImage).toContainText('Red planet');
+    expect(await preview.textContent()).not.toMatch(/!\[|http/);
+
+    await emit(page, 0, { type: 'tool_input', index: 0, json });
+
+    const look = (image: Locator): Promise<Record<string, string | number>> => image.evaluate(async (element) => {
+      const img = element.querySelector('img');
+
+      await img?.decode();
+
+      const box = (node: Element | null): string => {
+        const rect = node?.getBoundingClientRect();
+
+        return rect === undefined ? 'none' : [rect.left, rect.top - element.getBoundingClientRect().top, rect.width, rect.height].map(Math.round).join(',');
+      };
+      const caption = element.querySelector('.blok-image-caption');
+
+      return {
+        root: box(element), img: box(img), caption: box(caption),
+        captionSize: caption === null ? 'none' : getComputedStyle(caption).fontSize, radius: img === null ? 'none' : getComputedStyle(img).borderTopLeftRadius,
+      };
+    });
+    const before = await look(previewImage);
+
+    expect(before.img).not.toBe('none');
+    expect(before.caption).not.toBe('none');
+
+    await emit(page, 0, { type: 'tool_end', index: 0 });
+    await expect(preview).toHaveCount(0);
+
+    const real = page.locator(`#${HOLDER_ID} [data-blok-tool="image"]`);
+
+    await expect(real).toContainText('Red planet');
+    expect(await look(real)).toEqual(before);
+  });
 });

@@ -15,6 +15,7 @@ import { createMarker } from '../../../tools/list/dom-builder';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { colorVarName } from '../../shared/color-presets';
 import { prefersReducedMotion } from '../../utils/reduced-motion';
+import { safeImageSrc } from '../../utils/sanitize-url';
 
 import { gapSize, holdGapChanges, releaseGap, reserveGap } from './gap';
 import type { GapSide } from './gap';
@@ -58,7 +59,7 @@ const WORD_GAP_MS = 35;
 
 const INSERTS = new Set(['block.insert', 'markdown.insert']);
 
-type Kind = 'paragraph' | 'header' | 'list' | 'rewrite' | 'table' | 'quote' | 'code' | 'divider' | 'callout';
+type Kind = 'paragraph' | 'header' | 'list' | 'rewrite' | 'table' | 'quote' | 'code' | 'divider' | 'callout' | 'image';
 type ListStyle = 'unordered' | 'ordered' | 'checklist';
 
 /** One table cell. `placement`: the importer's, from the column's alignment. */
@@ -68,6 +69,7 @@ interface CellSpec { text: string; complete: boolean; placement?: string }
  * `before` / `after`: a rewrite's text outside the replaced range.
  * `rows`: a table's cells, every row as wide as the widest. `heading`: its first row is a heading row.
  * `children`: a callout's body blocks. `color` / `background`: a callout's preset names.
+ * `url`: an image's source, once it is whole and safe; its `text` is the caption.
  */
 interface LineSpec {
   kind: Kind;
@@ -84,7 +86,12 @@ interface LineSpec {
   color?: string;
   background?: string;
   children?: LineSpec[];
+  url?: string;
 }
+
+/** A URL the preview may load: only a whole one, so no request goes out for a cut-off address. */
+const loadable = (value: unknown, whole: boolean): string | undefined =>
+  (whole && typeof value === 'string' ? safeImageSrc(value) ?? undefined : undefined);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -188,6 +195,11 @@ const blockLine = (command: PartialCommand): LineSpec => {
   }
   if (type === 'divider') {
     return { ...base, kind: 'divider', text: '', complete: true };
+  }
+  if (type === 'image') {
+    const caption = typeof data.caption === 'string' ? data.caption : '';
+
+    return { ...base, kind: 'image', text: caption, complete: dataDone || settled(data, 'caption', done), url: loadable(data.url, dataDone || settled(data, 'url', done)) };
   }
   if (type === 'callout') {
     const name = (value: unknown): string | undefined => (typeof value === 'string' && value !== '' ? value : undefined);
@@ -391,6 +403,35 @@ const calloutAt = (raw: string[], index: number, lineDone: LineDone): Parsed | n
   };
 };
 
+/** A paragraph that is one image, read the way the importer reads it: the alt text becomes the caption. */
+const WHOLE_IMAGE = /^ {0,3}!\[([^\]]*)\]\(\s*(\S+?)(?:\s+"[^"]*")?\s*\)\s*$/;
+
+/** While it streams: the alt text so far, and the rest once the `]` arrives. */
+const OPEN_IMAGE = /^ {0,3}!\[([^\]]*)(\]\(([^)]*))?$/;
+
+const imageAt = (raw: string[], index: number, lineDone: LineDone): Parsed | null => {
+  const complete = lineDone(index);
+  const whole = WHOLE_IMAGE.exec(raw[index]);
+  const partial = complete ? null : OPEN_IMAGE.exec(raw[index]);
+  const next = index + 1;
+
+  // A lone line that follows would join the paragraph, which the importer then keeps a paragraph.
+  if (whole === null && partial === null) {
+    return null;
+  }
+  if (whole !== null) {
+    const url = loadable(whole[2], true);
+
+    // An unsafe URL leaves the importer an empty paragraph.
+    return url === undefined
+      ? { spec: { ...BASE, kind: 'paragraph', text: '', complete: true }, next }
+      : { spec: { ...BASE, kind: 'image', text: inlineMarkdown(whole[1], true), complete, url }, next };
+  }
+  const altDone = partial?.[2] !== undefined;
+
+  return { spec: { ...BASE, kind: 'image', text: inlineMarkdown(partial?.[1] ?? '', altDone), complete: altDone }, next };
+};
+
 const quoteAt = (raw: string[], index: number, lineDone: LineDone): Parsed | null => {
   if (!QUOTE.test(raw[index])) {
     return null;
@@ -419,7 +460,8 @@ function parseLines(raw: string[], lineDone: LineDone): LineSpec[] {
     const index = at.index;
     const line = raw[index];
     const complete = lineDone(index);
-    const block = fencedCode(raw, index, lineDone) ?? tableAt(raw, index, lineDone) ?? calloutAt(raw, index, lineDone) ?? quoteAt(raw, index, lineDone);
+    const block = fencedCode(raw, index, lineDone) ?? tableAt(raw, index, lineDone) ?? calloutAt(raw, index, lineDone) ?? quoteAt(raw, index, lineDone)
+      ?? (paragraph.texts.length === 0 ? imageAt(raw, index, lineDone) : null);
     const heading = /^(#{1,6})\s+(.*)$/.exec(line);
     const check = /^\s*[-*+]\s+\[[ xX]\]\s*(.*)$/.exec(line);
     const bullet = /^\s*[-*+]\s+(.*)$/.exec(line);
@@ -494,11 +536,11 @@ const landable = (spec: LineSpec): number => fieldsOf(spec).reduce((count, field
 }, 0);
 
 const SLOTS: Record<Kind, string[]> = {
-  header: ['heading'], list: ['short'], paragraph: ['line', 'short'], rewrite: ['line'], quote: ['line'], table: [], code: [], divider: [], callout: [],
+  header: ['heading'], list: ['short'], paragraph: ['line', 'short'], rewrite: ['line'], quote: ['line'], table: [], code: [], divider: [], callout: [], image: [],
 };
 
 /** Blocks whose final form shows before any word: a grid, a code box, a rule. */
-const FRAMED_EMPTY = new Set<Kind>(['table', 'code', 'divider', 'callout']);
+const FRAMED_EMPTY = new Set<Kind>(['table', 'code', 'divider', 'callout', 'image']);
 
 const makeSlots = (kind: Kind): HTMLElement[] => {
   const shimmer = !prefersReducedMotion();
@@ -728,6 +770,45 @@ const makeCallout = (spec: LineSpec): View => {
   };
 };
 
+/**
+ * Mirrors the image tool's rendered state (`renderImage` and its caption row) at its defaults.
+ * Its hover controls are absolutely placed, so leaving them out moves nothing.
+ */
+const makeImage = (): View => {
+  const root = document.createElement('div');
+  const figure = document.createElement('figure');
+  const img = document.createElement('img');
+  const row = document.createElement('div');
+  const captionText = document.createElement('div');
+
+  root.setAttribute('data-blok-tool', 'image');
+  Object.entries({ 'data-state': 'rendered', 'data-size': 'full', 'data-align': 'center', 'data-frame': 'none', 'data-rounded': 'on', 'data-caption': 'on' })
+    .forEach(([name, value]) => root.setAttribute(name, value));
+  figure.className = 'blok-image-inner';
+  figure.setAttribute('data-role', 'image-figure');
+  Object.assign(figure.style, { margin: '0', textAlign: 'center', position: 'relative' });
+  img.alt = '';
+  img.draggable = false;
+  row.className = 'blok-image-caption-row';
+  captionText.className = 'blok-image-caption';
+  Object.assign(captionText.style, { outline: 'none', textAlign: 'start' });
+  row.append(captionText);
+  figure.append(img, row);
+  root.append(figure);
+
+  return {
+    block: root,
+    targets: [captionText],
+    sync: (next) => {
+      if (next.url !== undefined && img.getAttribute('src') !== next.url) {
+        img.src = next.url;
+      }
+
+      return true;
+    },
+  };
+};
+
 /** The real tool's markup and classes, so the hand-off to the real block does not jump. */
 function makeView(spec: LineSpec, ordinal: number): View {
   if (spec.kind === 'table') {
@@ -741,6 +822,9 @@ function makeView(spec: LineSpec, ordinal: number): View {
   }
   if (spec.kind === 'callout') {
     return makeCallout(spec);
+  }
+  if (spec.kind === 'image') {
+    return makeImage();
   }
   if (spec.kind === 'quote') {
     const quote = document.createElement('blockquote');

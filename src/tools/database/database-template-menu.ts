@@ -515,7 +515,8 @@ const defaultTitle = (titleEl: HTMLElement | undefined, title: string, label: st
   if (titleEl === undefined) el.append(title);
   badge.setAttribute('data-blok-database-template-default', '');
   badge.textContent = label;
-  el.append(badge);
+  // The space keeps the accessible name "New task Default", not "New taskDefault".
+  el.append(' ', badge);
 
   return el;
 };

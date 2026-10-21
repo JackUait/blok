@@ -252,7 +252,7 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
     expect(icon?.nextElementSibling?.hasAttribute('data-blok-database-title')).toBe(true);
   });
 
-  it('a saved icon is drawn on load, and an unknown one is ignored', () => {
+  it('a saved icon is drawn on load; an unknown icon or starter is not drawn but saved back as loaded', () => {
     const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }]);
     const base = { schema: [{ id: 't', name: 'Name', type: 'title', position: 'a0' }], views: [{ id: 'v', name: 'T', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }], activeViewId: 'v' } as unknown as DatabaseData;
     const { tool } = buildDatabase(doc, 'db', { ...base, icon: { glyph: 'wand', color: 'gray' } });
@@ -263,7 +263,11 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
     const { tool: other } = buildDatabase(makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }]), 'db', { ...base, icon: { glyph: 'nope', color: 'pink' } } as unknown as DatabaseData);
 
     expect(document.querySelector('[data-blok-database-icon]')).toBeNull();
-    expect(saved(other).icon).toBeUndefined();
+    expect(saved(other).icon).toEqual({ glyph: 'nope', color: 'pink' });
+    document.body.innerHTML = '';
+    const { tool: future } = buildDatabase(makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }]), 'db', { ...base, starter: 'roadmap' } as unknown as DatabaseData);
+
+    expect(saved(future).starter).toBe('roadmap');
   });
 
   it('Tasks Tracker adds the "New task" template as the default, with the row body, in the same step; the backend gets it as a template', async () => {
@@ -322,19 +326,39 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
     expect(doc.transact.mock.calls.length - before).toBe(1);
   });
 
-  it('Undo Task database removes the template\'s rows and its template too', async () => {
-    const { doc, tool } = await insert();
+  it('Undo Task database removes the template\'s rows and its template too; the backend drops its properties and views', async () => {
+    const deleteProperty = vi.fn(async () => undefined);
+    const deleteView = vi.fn(async () => undefined);
+    const adapter = {
+      loadDatabase: vi.fn(() => new Promise<never>(() => undefined)),
+      createRow: vi.fn(async (params: { id: string }) => ({ ...params })),
+      updateRow: vi.fn(async () => undefined),
+      moveRow: vi.fn(async () => undefined),
+      deleteRow: vi.fn(async () => undefined),
+      createProperty: vi.fn(async (params: { id: string }) => ({ ...params })),
+      updateProperty: vi.fn(async () => undefined),
+      deleteProperty,
+      createView: vi.fn(async (params: { id: string }) => ({ ...params })),
+      updateView: vi.fn(async () => undefined),
+      deleteView,
+    };
+    const { doc, tool } = await insert([], { adapter } as unknown as DatabaseConfig);
 
     await applyTasks();
     byTestId(document.body, 'database-toolbar-settings').click();
     const row = settingsRow('database-settings-undo-starter');
 
     expect(row?.textContent).toContain('tools.database.starterUndoTasks');
+    deleteProperty.mockClear();
+    deleteView.mockClear();
     row?.click();
 
     expect(rows(doc)).toEqual([]);
     expect(templateRows(doc)).toEqual([]);
     expect(saved(tool).schema[0].defaultTemplateId).toBeUndefined();
+    // Seven properties after the title, and the three views, go; the title property stays.
+    expect(deleteProperty).toHaveBeenCalledTimes(7);
+    expect(deleteView).toHaveBeenCalledTimes(3);
   });
 
   it('Projects has no Undo row (Notion showed "Turn into" there); a plain database has none either', async () => {

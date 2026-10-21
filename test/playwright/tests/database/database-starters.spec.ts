@@ -225,6 +225,15 @@ test('Tasks Tracker: the database gets its icon, "New task" is the Default templ
     return [back.db.title ?? '', back.db.schema.map((p) => p.name), back.rows.length, back.templates.length, back.db.icon ?? null, back.db.starter ?? null];
   }).toEqual(['', ['Name'], 0, 0, null, null]);
   await expect(icon).toHaveCount(0);
+
+  // One undo brings the template back whole.
+  await page.evaluate(() => window.blokInstance?.history.undo());
+  await expect.poll(async () => {
+    const back = await read(page);
+
+    return [back.db.title ?? '', back.rows.length, back.templates.length, back.db.icon ?? null, back.db.starter ?? null];
+  }).toEqual(['Tasks Tracker', 3, 1, { glyph: 'check', color: 'green' }, 'tasks']);
+  await expect(icon).toBeVisible();
 });
 
 test('Skills reads "Undo skills database"', async ({ page }) => {

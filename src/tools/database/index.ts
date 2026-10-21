@@ -352,7 +352,8 @@ const deletedBackendRowsOf = (adapter: DatabaseAdapter | undefined, databaseId: 
 /** Backlinks are counted again this long after the last block change, so typing never scans per keystroke. */
 const BACKLINKS_SETTLE_MS = 300;
 
-const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'schema', 'views', 'activeViewId', 'source', 'automations', 'hideDataSourceTitles', 'icon', 'starter', INITIAL_VIEW_KEY, LINK_PICKER_KEY]);
+// `icon` and `starter` stay in the passthrough: a value this client cannot draw (a newer glyph) is saved back as it came.
+const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'schema', 'views', 'activeViewId', 'source', 'automations', 'hideDataSourceTitles', INITIAL_VIEW_KEY, LINK_PICKER_KEY]);
 
 const sourceRefOf = (data: DatabaseData | undefined): DatabaseSourceRef | undefined => {
   const source = data?.source as unknown;
@@ -1094,6 +1095,8 @@ export class DatabaseTool implements BlockTool {
       this.dropSampleCards();
       this.databaseIcon = made.icon;
       this.starter = id;
+      delete this.unknown.icon;
+      delete this.unknown.starter;
       this.paintDatabaseIcon();
       // The definition first: a database write inside a row insert's sync window reads as an echo.
       this.writeDefinition(made);
@@ -1142,6 +1145,8 @@ export class DatabaseTool implements BlockTool {
       for (const rowId of rowIds) this.removeRowBlock(rowId);
       this.databaseIcon = undefined;
       this.starter = undefined;
+      delete this.unknown.icon;
+      delete this.unknown.starter;
       this.paintDatabaseIcon();
       this.writeDefinition({ schema, views, activeViewId: views[0].id, title: '' });
     });

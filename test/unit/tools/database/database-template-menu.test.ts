@@ -99,6 +99,7 @@ describe('template menu', () => {
     const plain = templateMenuItems(host({ i18n: english })) as Item[];
 
     expect(badge(plain, 't1')).toBe('Default');
+    expect(find(plain, 'template-t1')?.titleEl?.textContent).toBe('Bug Default');
     expect(find(plain, 'template-t1')?.titleEl?.firstChild?.textContent).toBe('Bug');
     expect(find(plain, 'template-t1')?.title).toBe('Bug');
     expect(find(plain, 'template-t2')?.titleEl).toBeUndefined();

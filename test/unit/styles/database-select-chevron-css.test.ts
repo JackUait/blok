@@ -28,7 +28,7 @@ describe('database up/down chevron styles', () => {
   it('puts the form Dropdown chevron at the end of the box, 20px, in faint ink', () => {
     expect(ruleBody('[data-blok-database-form-dropdown]')).toMatch(/display:\s*flex/);
     expect(ruleBody('[data-blok-database-form-dropdown-chevron]')).toMatch(/margin-inline-start:\s*auto/);
-    expect(ruleBody('[data-blok-database-form-dropdown-chevron]')).toMatch(/color:\s*var\(--blok-text-tertiary\)/);
+    expect(ruleBody('[data-blok-database-form-dropdown-chevron]')).toMatch(/color:\s*var\(--blok-database-ink-tertiary\)/);
     expect(ruleBody('[data-blok-database-form-dropdown-chevron] svg')).toMatch(/width:\s*20px/);
     expect(ruleBody('[data-blok-database-form-dropdown-chevron] svg')).toMatch(/height:\s*20px/);
   });

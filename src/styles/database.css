@@ -10928,7 +10928,7 @@ button[data-blok-database-feed-reaction]:hover,
   display: inline-flex;
   flex: none;
   margin-inline-start: auto;
-  color: var(--blok-text-tertiary);
+  color: var(--blok-database-ink-tertiary);
 }
 
 [data-blok-database-form-dropdown-chevron] svg {

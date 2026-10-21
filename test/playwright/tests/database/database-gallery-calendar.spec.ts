@@ -665,6 +665,21 @@ test.describe('calendar', () => {
     expect((await savedRows(page)).map((row) => row.id)).toContain(added[0].id);
   });
 
+  test('a click on a day that closes View settings only closes it', async ({ page }) => {
+    await mount(page, blocks({ type: 'calendar' }));
+    await page.getByTestId('database-toolbar-settings').click();
+    await expect(page.getByTestId('database-view-settings')).toBeVisible();
+
+    const cell = await day(page, '2026-10-20').boundingBox();
+
+    if (cell === null) throw new Error('no day');
+    await page.mouse.click(cell.x + cell.width / 2, cell.y + cell.height - 8);
+
+    await expect(page.getByTestId('database-view-settings')).toBeHidden();
+    await expect(drawer(page)).toHaveCount(0);
+    expect((await savedRows(page)).map((row) => row.id).sort()).toEqual(['r1', 'r2', 'r3']);
+  });
+
   test('dragging an event to another day moves its date', async ({ page }) => {
     await mount(page, blocks({ type: 'calendar' }));
 

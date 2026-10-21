@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { DatabaseCalendarView } from '../../../../src/tools/database/database-calendar-view';
 import type { CalendarHandlers, DatabaseCalendarViewOptions } from '../../../../src/tools/database/database-calendar-view';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
+import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
 
 const schema: PropertyDefinition[] = [
   { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
@@ -475,6 +476,25 @@ describe('DatabaseCalendarView', () => {
       day(root, '2026-10-20').dispatchEvent(new MouseEvent('click', { bubbles: true, ...modifiers }));
 
       expect(handlers.addRow).not.toHaveBeenCalled();
+    });
+
+    it('a click that closes an open menu only closes it', () => {
+      const { root, handlers } = mount();
+      const cell = day(root, '2026-10-20');
+
+      vi.spyOn(PopoverRegistry.instance, 'hasOpenPopovers').mockReturnValue(true);
+      cell.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+      vi.mocked(PopoverRegistry.instance.hasOpenPopovers).mockReturnValue(false);
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      cell.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(handlers.addRow).not.toHaveBeenCalled();
+
+      cell.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      cell.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(handlers.addRow).toHaveBeenCalledExactlyOnceWith('2026-10-20', true);
     });
 
     it('read-only: a click in a day cell adds nothing', () => {

@@ -26,6 +26,7 @@ import { syncCommentBadge } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
 import { getElementDirection } from '../../components/utils/direction';
 import { IconCalendar, IconChevronLeft, IconChevronRight, IconPlus } from '../../components/icons';
+import { PopoverRegistry } from '../../components/utils/popover/popover-registry';
 
 export interface CalendarHandlers {
   openRow: (rowId: string) => void;
@@ -96,6 +97,8 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
   /** A drag box started on empty grid space (research/23 §2c). */
   private box: { startX: number; startY: number; el: HTMLElement | null; picked: string | null } | null = null;
   private suppressClick = false;
+  /** The press found a menu open: its click only closes the menu. */
+  private pressClosedMenu = false;
   /** Days in grid order, for arrow keys. */
   private shownDays: string[] = [];
   private columns = 7;
@@ -556,7 +559,7 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
   private addOnPlainClick(target: Element, event: MouseEvent): void {
     const dayIso = target.closest('[data-blok-database-calendar-day]')?.getAttribute('data-day');
 
-    if (dayIso === null || dayIso === undefined || !this.canEdit || event.shiftKey || event.metaKey || event.ctrlKey || event.altKey
+    if (dayIso === null || dayIso === undefined || !this.canEdit || this.pressClosedMenu || event.shiftKey || event.metaKey || event.ctrlKey || event.altKey
       || target.closest('button, a, input, [role="button"]') !== null) {
       return;
     }
@@ -658,6 +661,8 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
   }
 
   private readonly onPointerDown = (event: PointerEvent): void => {
+    // Read before the registry's document listener closes the menu.
+    this.pressClosedMenu = PopoverRegistry.instance.hasOpenPopovers();
     if (event.button !== 0 || !this.canEdit || !(event.target instanceof Element)) {
       return;
     }

@@ -8889,7 +8889,7 @@ textarea[data-blok-database-cell-input] {
   min-height: 28px;
   padding: 0 var(--blok-space-1);
   border-radius: var(--blok-radius-control);
-  color: var(--blok-text-primary);
+  color: var(--blok-database-table-header-text);
   text-decoration: none;
 }
 

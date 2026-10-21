@@ -116,12 +116,13 @@ test('"Learn about reminders" is the date picker\'s last row, a 28px link to the
       height: (el as HTMLElement).offsetHeight,
       icon: icon === null ? '' : getComputedStyle(icon).width,
       iconInk: icon === null ? '' : getComputedStyle(icon).color,
+      ink: getComputedStyle(el).color,
       last: options?.lastElementChild?.contains(el) ?? false,
       line: getComputedStyle(el.parentElement ?? el).borderTopWidth,
     };
   });
 
-  expect(look).toEqual({ height: 28, icon: '20px', iconInk: 'rgb(142, 139, 134)', last: true, line: '1px' });
+  expect(look).toEqual({ height: 28, icon: '20px', iconInk: 'rgb(142, 139, 134)', ink: 'rgb(125, 122, 117)', last: true, line: '1px' });
 });
 
 test('without config.helpLinks neither help link shows', async ({ page }) => {

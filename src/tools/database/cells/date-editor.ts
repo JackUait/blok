@@ -112,6 +112,8 @@ interface ZoneEntry {
   offset: string;
   /** Lower-case city, zone id and offset: what the search matches. */
   search: string;
+  /** Lower-case city and zone id: a near match looks for its letters here, not in "GMT". */
+  name: string;
 }
 
 /** Fewest letters that differ between `query` and a same-length run of `text`. */
@@ -132,7 +134,7 @@ const zoneRank = (query: string, entry: ZoneEntry): number | null => {
     return 0;
   }
   // Near matches on one or two letters would list almost every zone.
-  if (query.length < 3 || ![...query].every((letter) => entry.search.includes(letter))) {
+  if (query.length < 3 || ![...query].every((letter) => entry.name.includes(letter))) {
     return null;
   }
 
@@ -167,7 +169,9 @@ const zoneEntry = (id: string, zone: string, at: Date): ZoneEntry => {
   const city = (zone.split('/').pop() ?? zone).replace(/_/g, ' ');
   const offset = zoneOffset(zone, at);
 
-  return { id, city, offset, search: `${city} ${zone} ${offset}`.toLocaleLowerCase() };
+  const name = `${city} ${zone}`.toLocaleLowerCase();
+
+  return { id, city, offset, name, search: `${name} ${offset.toLocaleLowerCase()}` };
 };
 
 /** Gap between the picker and its submenus. */

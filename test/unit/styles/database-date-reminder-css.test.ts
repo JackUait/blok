@@ -54,14 +54,15 @@ describe('database date reminder css', () => {
   });
 
   // research/23 §1: a 36-tall footer under a line, holding a 28-tall link; 20px (?) icon in rgb(142, 139, 134).
-  it('"Learn about reminders" is a 28px row in a footer under a line, gray icon, measured hover', () => {
+  // The label reads rgb(125, 122, 117) in Notion's shot (14-timezone.png pixels), not the anchor's rgb(44, 44, 43).
+  it('"Learn about reminders" is a 28px row in a footer under a line, gray icon and label, measured hover', () => {
     const footer = rulesFor('[data-blok-database-date-help-footer]');
     const link = rulesFor('[data-blok-database-date-help]');
 
     expect(footer).toContain('border-top: 1px solid var(--blok-database-drawer-border)');
     expect(footer).toContain('padding-top: var(--blok-space-1)');
     expect(link).toContain('min-height: 28px');
-    expect(link).toContain('color: var(--blok-text-primary)');
+    expect(link).toContain('color: var(--blok-database-table-header-text)');
     expect(link).toContain('text-decoration: none');
     expect(rulesFor('[data-blok-database-date-help] svg')).toContain('color: var(--blok-database-calendar-nav-icon)');
     expect(rulesFor('[data-blok-database-date-help]:hover')).toContain('background-color: var(--blok-database-date-today-hover-bg)');

@@ -944,8 +944,9 @@ describe('date cell editor', () => {
       describe('fuzzy search (research/23 §1)', () => {
         // A fixed list: the engine's own zone names change between ICU versions (Kanton was Enderbury).
         const ZONES = [
-          'Africa/Freetown', 'Africa/Khartoum', 'Africa/Nouakchott', 'America/Atikokan', 'America/Kentucky/Louisville',
-          'America/Toronto', 'Antarctica/Vostok', 'Asia/Tokyo', 'Asia/Tomsk', 'Asia/Vladivostok', 'Australia/Broken_Hill',
+          'Africa/Bamako', 'Africa/Conakry', 'Africa/Freetown', 'Africa/Khartoum', 'Africa/Nouakchott', 'America/Atikokan',
+          'America/Kentucky/Louisville', 'America/Toronto', 'Antarctica/Vostok', 'Asia/Bangkok', 'Asia/Tokyo', 'Asia/Tomsk',
+          'Asia/Vladivostok', 'Australia/Broken_Hill',
           'Europe/Berlin', 'Europe/Stockholm', 'Pacific/Kanton',
         ];
         const rows = (): string[] => [...(zoneMenu()?.querySelectorAll('[data-blok-database-date-setting-option]') ?? [])]
@@ -980,6 +981,9 @@ describe('date cell editor', () => {
 
           expect(rows()).not.toContain('America/Toronto');
           expect(rows()).not.toContain('Africa/Freetown');
+          // Every offset reads "GMT…": its letters must not count.
+          expect(rows()).not.toContain('Asia/Bangkok');
+          expect(rows()).not.toContain('Africa/Bamako');
         });
 
         it('the current timezone stays in its own section with its check while it matches', () => {

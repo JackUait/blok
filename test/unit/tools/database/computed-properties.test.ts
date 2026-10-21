@@ -84,6 +84,29 @@ describe('ComputedProperties', () => {
       expect(valueOf(rows, 'r2', days)).toBe('Overdue');
     });
 
+    it('prints a person branch turned into text by name, as the CSV export does', () => {
+      const owner: PropertyDefinition = { id: 'owner', name: 'Owner', type: 'person', position: 'a3' };
+      const who = formula('who', 'if({{property:done}}, {{property:owner}}, "Nobody")', 'b0');
+      const people = [{ id: 'u1', name: 'Ada Lovelace' }, { id: 'u2', name: 'Alan Turing' }];
+      const engine = new ComputedProperties('db');
+      const input = [row('r1', { done: true, owner: [{ id: 'u1' }, { id: 'u2' }] }), row('r2', { done: false, owner: [{ id: 'u1' }] })];
+      const rows = engine.apply([title, done, owner, who], input, { databaseId: 'db', now: NOW, people });
+
+      expect(valueOf(rows, 'r1', who)).toBe('Ada Lovelace, Alan Turing');
+      expect(valueOf(rows, 'r2', who)).toBe('Nobody');
+      expect(engine.valueProperty(who).type).toBe('text');
+    });
+
+    it('prints the person id until the people directory loads, then the name', () => {
+      const owner: PropertyDefinition = { id: 'owner', name: 'Owner', type: 'person', position: 'a3' };
+      const who = formula('who', 'if({{property:done}}, {{property:owner}}, "Nobody")', 'b0');
+      const engine = new ComputedProperties('db');
+      const input = [row('r1', { done: true, owner: [{ id: 'u1' }] })];
+
+      expect(valueOf(engine.apply([title, done, owner, who], input, { databaseId: 'db', now: NOW }), 'r1', who)).toBe('u1');
+      expect(valueOf(engine.apply([title, done, owner, who], input, { databaseId: 'db', now: NOW, people: [{ id: 'u1', name: 'Ada' }] }), 'r1', who)).toBe('Ada');
+    });
+
     it('hands a mixed-branch formula to another formula as its raw value', () => {
       const mixed = formula('mixed', 'if({{property:amount}} > 0, {{property:amount}}, "none")');
       const reader = formula('reader', '{{property:mixed}} > 1', 'b1');

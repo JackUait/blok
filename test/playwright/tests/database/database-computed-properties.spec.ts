@@ -122,6 +122,37 @@ test.describe('formula', () => {
     expect(await savedProperties(page, 'r2')).not.toHaveProperty('p-double');
   });
 
+  test('a mixed formula prints its person branch by name and never saves it', async ({ page }) => {
+    const schema = [
+      { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
+      { id: 'p-owner', name: 'Owner', type: 'person', position: 'a1' },
+      { id: 'p-who', name: 'Who', type: 'formula', position: 'a2', formula: { expression: 'if(empty({{property:p-owner}}), "Nobody", {{property:p-owner}})' } },
+    ];
+
+    await page.evaluate(async (input) => {
+      await window.blokInstance?.destroy?.();
+      document.getElementById('blok')?.remove();
+      const holder = document.createElement('div');
+
+      holder.id = 'blok';
+      document.body.appendChild(holder);
+      window.blokInstance = new window.Blok({
+        holder,
+        data: { blocks: input },
+        tools: { database: { class: (window as unknown as Record<string, unknown>).BlokDatabase, config: { people: { list: () => Promise.resolve([{ id: 'u-ada', name: 'Ada Lovelace' }]) } } } },
+      });
+      await window.blokInstance.isReady;
+    }, [
+      { id: 'db-1', type: 'database', data: { schema, views: [{ id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: ['p-who'] }], activeViewId: 'v1' }, content: ['r1', 'r2'] },
+      { id: 'r1', type: 'database-row', data: { position: rowKey(0), properties: { 'p-title': 'Alpha', 'p-owner': [{ id: 'u-ada' }] } } },
+      { id: 'r2', type: 'database-row', data: { position: rowKey(1), properties: { 'p-title': 'Bravo' } } },
+    ]);
+
+    await expect(cell(page, 'r1', 'p-who')).toHaveText('Ada Lovelace');
+    await expect(cell(page, 'r2', 'p-who')).toHaveText('Nobody');
+    expect(await savedProperties(page, 'r1')).not.toHaveProperty('p-who');
+  });
+
   test('the editor shows names, saves ids, and survives a rename', async ({ page }) => {
     await header(page, 'p-double').click();
     await page.getByRole('menuitem', { name: 'Edit property' }).click();

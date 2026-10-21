@@ -1,6 +1,7 @@
 import { compileFormula, evaluateFormula, formulaDateToStored, formulaValueToText } from './formula';
 import type { CompileResult, FormulaType, FormulaValue } from './formula';
 import { propertyFormulaValue } from './formula/properties';
+import type { TextContext } from './formula/values';
 import { isDate, isRef } from './formula/types';
 import { readPropertyValue } from './property-values';
 import { relationIdsOf } from './relation-values';
@@ -23,6 +24,8 @@ export interface ComputeContext {
   timeZone?: string;
   /** Another database block in this document, or undefined when there is none. */
   resolveDatabase?: (databaseId: string) => DatabaseSource | undefined;
+  /** The host's people directory: a person turned into text prints its name, as the CSV export does. */
+  people?: ReadonlyArray<{ id: string; name: string }>;
 }
 
 /** H-err: "Formulas can only reference other formulas 15 layers deep". */
@@ -60,17 +63,17 @@ const shapeOfFormula = (type: FormulaType, property: PropertyDefinition): Proper
 };
 
 /** A formula result in the stored shape of the property type that shows it. */
-const storeFormulaValue = (value: FormulaValue, shape: PropertyDefinition, timeZone: string | undefined): PropertyValue => {
+const storeFormulaValue = (value: FormulaValue, shape: PropertyDefinition, context: TextContext): PropertyValue => {
   if (shape.type === 'number') return typeof value === 'number' ? value : null;
   if (shape.type === 'checkbox') return value === true;
-  if (shape.type === 'date') return isDate(value) ? formulaDateToStored(value, timeZone) : null;
+  if (shape.type === 'date') return isDate(value) ? formulaDateToStored(value, context.timeZone) : null;
   if (shape.type === 'person' || shape.type === 'relation') {
     const items = Array.isArray(value) ? value : [value];
 
     return items.filter(isRef).map((ref) => ({ id: ref.id }));
   }
 
-  return formulaValueToText(value, { timeZone });
+  return formulaValueToText(value, context);
 };
 
 const signatureOf = (schema: PropertyDefinition[]): string =>
@@ -95,6 +98,8 @@ export class ComputedProperties {
   private rows = new Map<string, DatabaseRow>();
   private reverse = new Map<string, Map<string, string[]>>();
 
+  private readonly person = (id: string): { name: string } | undefined => this.ctx.people?.find((p) => p.id === id);
+
   constructor(databaseId: string) {
     this.ctx = { databaseId, now: new Date(0) };
   }
@@ -102,6 +107,8 @@ export class ComputedProperties {
   /** Rows with `computed` filled. The schema has no computed property: rows come back as they are. */
   apply(schema: PropertyDefinition[], rows: DatabaseRow[], ctx: ComputeContext): DatabaseRow[] {
     this.schema = schema;
+    // The memo key has no people: a new directory (it loads late) recomputes every row.
+    if (ctx.people !== this.ctx.people) this.memo.clear();
     this.ctx = ctx;
     const computedProps = schema.filter((p) => COMPUTED.has(p.type));
 
@@ -300,7 +307,7 @@ export class ComputedProperties {
     if (property.type === 'rollup') return this.rollup(rowId, property);
     const value = this.formulaRaw(rowId, property);
 
-    return value === undefined ? null : storeFormulaValue(value, this.valueProperty(property), this.ctx.timeZone);
+    return value === undefined ? null : storeFormulaValue(value, this.valueProperty(property), { timeZone: this.ctx.timeZone, people: this.person });
   }
 
   private rollup(rowId: string, property: PropertyDefinition): PropertyValue {
@@ -337,6 +344,7 @@ export class ComputedProperties {
       now: this.ctx.now,
       timeZone: tz,
       schema: this.schema,
+      people: this.person,
       propValue: (ref) => {
         if (ref.type === 'formula') return this.busy.has(`${rowId}\u0000${ref.id}`) ? null : this.formulaRawGuarded(rowId, ref);
         if (ref.type === 'rollup' || ref.type === 'relation') return propertyFormulaValue(this.valueProperty(ref), this.valueFor(rowId, ref), tz);

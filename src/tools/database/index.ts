@@ -2540,6 +2540,7 @@ export class DatabaseTool implements BlockTool {
       databaseId: this.dataId,
       now: new Date(),
       resolveDatabase: (databaseId) => this.readDatabaseSource(databaseId),
+      ...(this.people === undefined ? {} : { people: this.people }),
     }));
     // The source stores its own derived IDs; a linked view writing them too would double every write.
     if (!this.readOnly && !this.linked) {
@@ -10727,6 +10728,7 @@ export class DatabaseTool implements BlockTool {
           databaseId: this.dataId,
           now: new Date(),
           resolveDatabase: (databaseId) => this.readDatabaseSource(databaseId),
+          ...(this.people === undefined ? {} : { people: this.people }),
         });
         const value = rows.find((row) => row.id === sample)?.computed?.[propertyId];
 

@@ -20,6 +20,7 @@ import {
   toIsoDay,
   toIsoTime,
   toLocalDate,
+  zoneOffsetText,
 } from './date-format';
 import type { DateDisplayChange } from './date-format';
 import { formatDateValue, parseDateValue } from './date-value';
@@ -141,19 +142,6 @@ const zoneRank = (query: string, entry: ZoneEntry): number | null => {
   return closestRun(query, entry.city.toLocaleLowerCase()) <= 1 ? 1 : 2;
 };
 
-const offsetFormats = new Map<string, Intl.DateTimeFormat>();
-
-/** "GMT+2:00", "GMT+5:30", "GMT" (research/23 §1: Notion drops the hour's leading zero). */
-const zoneOffset = (zone: string, at: Date): string => {
-  const format = offsetFormats.get(zone) ?? new Intl.DateTimeFormat('en-US', { timeZone: zone, timeZoneName: 'longOffset' });
-
-  offsetFormats.set(zone, format);
-  const name = format.formatToParts(at).find((p) => p.type === 'timeZoneName')?.value ?? 'GMT';
-
-  // Chromium writes a zero offset as "GMT+00:00"; Notion shows "GMT".
-  return /^GMT[+-]00:00$/.test(name) ? 'GMT' : name.replace(/([+-])0(\d)/, '$1$2');
-};
-
 const canonicalZone = (zone: string | undefined): string | undefined => {
   if (zone === undefined) {
     return undefined;
@@ -167,7 +155,7 @@ const canonicalZone = (zone: string | undefined): string | undefined => {
 
 const zoneEntry = (id: string, zone: string, at: Date): ZoneEntry => {
   const city = (zone.split('/').pop() ?? zone).replace(/_/g, ' ');
-  const offset = zoneOffset(zone, at);
+  const offset = zoneOffsetText(zone, at);
 
   const name = `${city} ${zone}`.toLocaleLowerCase();
 

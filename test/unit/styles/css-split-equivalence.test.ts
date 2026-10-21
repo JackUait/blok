@@ -972,6 +972,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_STARTER_ICON_BYTES = 993;
     // database.css: "Learn about reminders" and "Learn about imports" (research/23 §1, research/26 §2).
     const DATABASE_HELP_LINKS_BYTES = 1_177;
+    // database.css: the time zone rows' 1px gap and the menu comment (research/30 B25).
+    const DATABASE_TIME_ZONE_ROWS_BYTES = 87;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1123,7 +1125,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_CADENCE_SETTINGS_BYTES
       + DATABASE_STARTER_ICON_BYTES
       + DATABASE_HELP_LINKS_BYTES
-      + DATABASE_PROPERTY_DESCRIPTION_BUTTON_BYTES;
+      + DATABASE_PROPERTY_DESCRIPTION_BUTTON_BYTES
+      + DATABASE_TIME_ZONE_ROWS_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

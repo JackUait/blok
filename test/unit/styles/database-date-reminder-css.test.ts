@@ -45,6 +45,11 @@ describe('database date reminder css', () => {
     expect(rulesFor('[data-blok-database-date-setting-option][data-active]')).toContain('background-color: var(--blok-item-hover-bg)');
   });
 
+  // research/30 B25: rows are 45 tall and 46 apart.
+  it('the time zone rows sit 1px apart', () => {
+    expect(rulesFor('[data-blok-database-date-zone-list]')).toContain('gap: var(--blok-space-0-25)');
+  });
+
   // research/23 §1: a 16px check in primary ink at the row's end; the checked row has no fill.
   it('the checked option shows a 16px primary-ink check and no fill', () => {
     expect(rulesFor('[data-blok-database-date-remind-check] > svg')).toContain('width: 16px');

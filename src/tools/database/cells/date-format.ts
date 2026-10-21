@@ -216,6 +216,19 @@ export const HOUR_CYCLES: Partial<Record<string, 'h12' | 'h23'>> = { '12_hour': 
 export const DATE_FORMATS: readonly DateFormat[] = ['full', 'short', 'month_day_year', 'day_month_year', 'year_month_day', 'relative'];
 export const TIME_FORMATS: readonly TimeFormat[] = ['hidden', '12_hour', '24_hour'];
 
+const offsetFormats = new Map<string, Intl.DateTimeFormat>();
+
+/** "GMT+2:00", "GMT+5:30", "GMT" (research/23 §1: Notion drops the hour's leading zero). */
+export const zoneOffsetText = (zone: string, at: Date): string => {
+  const format = offsetFormats.get(zone) ?? new Intl.DateTimeFormat('en-US', { timeZone: zone, timeZoneName: 'longOffset' });
+
+  offsetFormats.set(zone, format);
+  const name = format.formatToParts(at).find((p) => p.type === 'timeZoneName')?.value ?? 'GMT';
+
+  // Chromium writes a zero offset as "GMT+00:00"; Notion shows "GMT".
+  return /^GMT[+-]00:00$/.test(name) ? 'GMT' : name.replace(/([+-])0(\d)/, '$1$2');
+};
+
 export const timeZones = (): string[] => {
   const intl = Intl as typeof Intl & { supportedValuesOf?: (key: 'timeZone') => string[] };
 

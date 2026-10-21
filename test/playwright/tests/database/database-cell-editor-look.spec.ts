@@ -373,6 +373,37 @@ test.describe('date picker submenus', () => {
     await expect(zoneSearch(page)).toBeInViewport();
   });
 
+  // research/30 B25: rows 45 tall, 46 apart; the window, not a cap on the list, bounds the height.
+  test('Time zone: rows are 46px apart and the window bounds the menu', async ({ page }) => {
+    await openZones(page);
+    const rows = zoneMenu(page).locator('[data-blok-database-date-zone-list]').locator('[data-blok-database-date-setting-option]');
+    const first = await rows.nth(1).boundingBox();
+    const second = await rows.nth(2).boundingBox();
+
+    expect((second?.y ?? 0) - (first?.y ?? 0)).toBe(46);
+    expect(first?.height).toBe(45);
+    expect(first?.width).toBe(334);
+    expect(await zoneMenu(page).locator('[data-blok-database-date-zone-list]').evaluate((el) => getComputedStyle(el).maxHeight)).toBe('none');
+    const menuBox = await zoneMenu(page).boundingBox();
+    const innerHeight = await page.evaluate(() => window.innerHeight);
+
+    expect(Math.abs((menuBox?.height ?? 0) - 595)).toBeLessThanOrEqual(1);
+    expect(innerHeight - ((menuBox?.y ?? 0) + (menuBox?.height ?? 0))).toBeLessThanOrEqual(8);
+  });
+
+  // Light uses Blok's tokens for Notion's measured roles; dark resolves to its own values.
+  for (const [scheme, ink] of [['light', { city: 'rgb(0, 0, 0)', muted: 'rgb(100, 106, 121)' }], ['dark', { city: 'rgb(226, 224, 220)', muted: 'rgb(163, 158, 152)' }]] as const) {
+    test(`Time zone in ${scheme}: city, offset and heading inks`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await openZones(page);
+      const rows = zoneMenu(page).locator('[data-blok-database-date-zone-list]').locator('[data-blok-database-date-setting-option]');
+
+      await expect(rows.nth(1).locator('[data-blok-database-date-zone-city]')).toHaveCSS('color', ink.city);
+      await expect(rows.nth(1).locator('[data-blok-database-date-zone-offset]')).toHaveCSS('color', ink.muted);
+      await expect(zoneMenu(page).locator('[data-blok-database-date-zone-heading]').first()).toHaveCSS('color', ink.muted);
+    });
+  }
+
   test('Time zone: typing filters, "No results" when nothing matches, arrows and Enter pick', async ({ page }) => {
     await openZones(page);
     await page.keyboard.type('zzqx');

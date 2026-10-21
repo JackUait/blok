@@ -8961,6 +8961,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-date-zone-list] {
   display: flex;
   flex-direction: column;
+  gap: var(--blok-space-0-25);
   min-height: 0;
   overflow-y: auto;
 }

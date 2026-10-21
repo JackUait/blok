@@ -5677,7 +5677,7 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-item-focus-bg);
 }
 
-/* Time zone menu (research/23 §1): 342x595, a fixed search over a scrolling list of two-line rows. */
+/* Time zone menu (research/23 §1, research/30 B25): 342x595, a fixed search over a scrolling list of two-line rows. On short windows the window bounds it. */
 [data-blok-database-date-zone-menu],
 [data-blok-database-date-zone-menu][data-blok-top-layer][popover] {
   width: 342px;
@@ -5694,6 +5694,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-date-zone-list] {
   display: flex;
   flex-direction: column;
+  gap: var(--blok-space-0-25);
   min-height: 0;
   overflow-y: auto;
 }

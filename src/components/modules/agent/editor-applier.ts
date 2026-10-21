@@ -80,6 +80,11 @@ export class EditorApplier implements AgentApplier {
     return this.counter.value();
   }
 
+  /** The same host hook a toolbox insert waits for, e.g. a page's `create`. */
+  public async prepareInsert(type: string): Promise<Record<string, unknown> | undefined> {
+    return this.Blok.Tools.blockTools.get(type)?.prepareInsert();
+  }
+
   public async undo(): Promise<void> {
     const { YjsManager } = this.Blok;
 

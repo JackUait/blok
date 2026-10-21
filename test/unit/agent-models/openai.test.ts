@@ -53,7 +53,7 @@ describe('openaiModel', () => {
 
     expect(await run(openaiModel({ model: 'gpt-5.5', send }), [{ role: 'user', content: 'Go' }])).toEqual({ status: 'done', reply: 'Hi' });
     expect(bodies[0]).toEqual({
-      model: 'gpt-5.5', instructions: 'sys', store: false, max_output_tokens: 16000, include: ['reasoning.encrypted_content'],
+      model: 'gpt-5.5', instructions: 'sys', store: false, max_output_tokens: 16000,
       input: [{ role: 'user', content: 'Go' }],
       tools: [{ type: 'function', name: 'blok_read', description: 'd', parameters: { type: 'object' }, strict: false }],
     });

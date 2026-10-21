@@ -171,12 +171,17 @@ const readStream = async (
   return readReply(state.final, step, name);
 };
 
+export interface ResponsesProfile extends Profile {
+  /** Ask for encrypted reasoning. Azure and xAI drop reasoning across stateless turns without it; OpenAI sends it anyway. */
+  encryptedReasoning?: true;
+}
+
 /**
  * The OpenAI Responses API, stateless (`store: false`).
  * @param options - model id, the host's send or stream, and optional level overrides
  * @param profile - the provider's name for errors and its level defaults
  */
-export function openaiModel(options: AdapterOptions, { name, levels }: Profile = { name: 'OpenAI' }): AgentModel {
+export function openaiModel(options: AdapterOptions, { name, levels, encryptedReasoning }: ResponsesProfile = { name: 'OpenAI' }): AgentModel {
   requireTransport(options, name);
 
   const search = webSearchTool(options, { type: 'web_search' });
@@ -186,8 +191,7 @@ export function openaiModel(options: AdapterOptions, { name, levels }: Profile =
       model: options.model,
       instructions: request.system,
       store: false,
-      // Azure and xAI drop reasoning across stateless turns without it; OpenAI accepts it.
-      include: ['reasoning.encrypted_content'],
+      ...(encryptedReasoning === true ? { include: ['reasoning.encrypted_content'] } : {}),
       max_output_tokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
       input: request.messages.flatMap((message) => (message.role === 'user' ? userItems(message) : assistantItems(message))),
       // strict: our blok_execute schema is not closed, and leaving strict out makes OpenAI try strict mode.

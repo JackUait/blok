@@ -2,9 +2,9 @@ import type { AgentModel, AgentThinkingLevel } from '../../types/api';
 
 import { anthropicModel, type AnthropicProfile } from './anthropic';
 import { geminiModel } from './gemini';
-import { openaiModel } from './openai';
+import { openaiModel, type ResponsesProfile } from './openai';
 import { openaiCompatibleModel, type ChatProfile } from './openai-compatible';
-import type { AdapterOptions, Body, Profile } from './shared';
+import type { AdapterOptions, Body } from './shared';
 
 interface Route {
   /** The provider's adapter, with its profile applied. */
@@ -15,7 +15,7 @@ interface Route {
 }
 
 const anthropic = (profile: AnthropicProfile, search?: true): Route => ({ model: (options) => anthropicModel(options, profile), name: profile.name, search });
-const responses = (profile: Profile): Route => ({ model: (options) => openaiModel(options, profile), name: profile.name, search: true });
+const responses = (profile: ResponsesProfile): Route => ({ model: (options) => openaiModel(options, profile), name: profile.name, search: true });
 const chat = (profile: ChatProfile): Route => ({ model: (options) => openaiCompatibleModel(options, profile), name: profile.name });
 
 /** One fragment per level, off → max. undefined sends no effort at all. */
@@ -43,9 +43,9 @@ const PROVIDERS = {
   anthropic: anthropic({ name: 'Anthropic' }, true),
   openai: responses({ name: 'OpenAI' }),
   gemini: { model: (options: AdapterOptions) => geminiModel(options), name: 'Gemini', search: true },
-  azure: responses({ name: 'Azure OpenAI' }),
+  azure: responses({ name: 'Azure OpenAI', encryptedReasoning: true }),
   // Reasoning cannot be turned off, and xhigh is the top.
-  xai: responses({ name: 'xAI', levels: efforts((effort) => ({ reasoning: { effort } }), ['low', 'low', 'medium', 'high', 'xhigh', 'xhigh']) }),
+  xai: responses({ name: 'xAI', encryptedReasoning: true, levels: efforts((effort) => ({ reasoning: { effort } }), ['low', 'low', 'medium', 'high', 'xhigh', 'xhigh']) }),
   deepseek: anthropic({ name: 'DeepSeek', levels: LOW_HIGH_MAX }, true),
   // Effort values differ per model, so the host's levels pick them. Web search needs the client identifier in system.
   qwen: anthropic({ name: 'Qwen', levels: efforts(outputEffort, []), searchSystem: 'x-anthropic-billing-header: cc_entrypoint=cli;' }, true),

@@ -215,6 +215,12 @@ describe('agentModel', () => {
     expect(JSON.stringify(await bodyOf('qwen'))).not.toContain('cc_entrypoint');
   });
 
+  it('asks Azure and xAI, not OpenAI, for encrypted reasoning', async () => {
+    expect((await bodyOf('azure')).include).toEqual(['reasoning.encrypted_content']);
+    expect((await bodyOf('xai')).include).toEqual(['reasoning.encrypted_content']);
+    expect(await bodyOf('openai')).not.toHaveProperty('include');
+  });
+
   it('names the known providers when given an unknown one', () => {
     expect(() => agentModel({ provider: 'antrophic', model: 'm', send: async () => ({}) } as unknown as AgentModelOptions))
       .toThrow(/unknown provider "antrophic".*anthropic/);

@@ -127,6 +127,8 @@
   max-height: 160px;
   padding: 0;
   border: 0;
+  /* A rounded textarea clips its content at the corners, the caret too. */
+  border-radius: 0;
   background: transparent;
   field-sizing: content;
   resize: none;

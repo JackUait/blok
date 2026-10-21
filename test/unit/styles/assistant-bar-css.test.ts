@@ -129,4 +129,10 @@ describe('Ask AI bar colours', () => {
     expect(bar.length).toBeGreaterThan(0);
     bar.forEach(([, body]) => expect(body).not.toMatch(/(?:^|;|\s)bottom\s*:/));
   });
+
+  it('the prompt field has square corners, so a short textarea does not clip its caret', () => {
+    const [, body] = rulesFor('textarea[data-blok-field]').find(([selector]) => selector === '[data-blok-assistant] [data-blok-assistant-field] textarea[data-blok-field]') ?? ['', ''];
+
+    expect(body).toMatch(/border-radius:\s*0\s*;/);
+  });
 });

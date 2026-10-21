@@ -409,6 +409,7 @@ describe('openCsvImportDialog (research/26 §2, research/27 §2)', () => {
       { id: 'p-due', name: 'Due', type: 'date', position: 'a1' },
       { id: 'p-total', name: 'Total', type: 'formula', position: 'a2' },
       { id: 'p-tag', name: 'Tag', type: 'select', position: 'a3', config: { options: [{ id: 'o1', label: 'Red', position: 'a0' }] } },
+      { id: 'p-where', name: 'Where', type: 'place', position: 'a4' },
     ];
     const onMerge = vi.fn<(file: { name: string; text: string }, targets: CsvMergeTarget[], settings: CsvImportSettings) => void>();
     const openMerge = (): ReturnType<typeof openCsvImportDialog> =>
@@ -444,6 +445,14 @@ describe('openCsvImportDialog (research/26 §2, research/27 §2)', () => {
         .toEqual(['March 4, 2026', 'March 5, 2026']);
     });
 
+    it('maps a header onto the property it names in another case (research/31 §5b)', async () => {
+      openMerge();
+      await choose('name,due,TAG\nR1,2026-03-04,Red', 'a.csv');
+      byTestId('database-csv-map')?.click();
+
+      expect(typeLabels()).toEqual(['Name', 'Due', 'Tag']);
+    });
+
     it('maps a header naming a property by its saved name, while the button shows the name this person reads', async () => {
       const stored: PropertyDefinition[] = [{ id: 'p-t', name: 'Title', type: 'title', position: 'a0' }];
 
@@ -454,7 +463,8 @@ describe('openCsvImportDialog (research/26 §2, research/27 §2)', () => {
       expect(typeLabels()).toEqual(['Titel']);
     });
 
-    it('lists every property a CSV can fill under "Existing property", with a check on the current one', async () => {
+    // research/31 §5b: Where (Place) is never listed.
+    it('lists every property a CSV can fill under "Existing property" but Place, with a check on the current one', async () => {
       await mapped();
       buttons()[1].click();
       await flush();

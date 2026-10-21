@@ -461,9 +461,14 @@ export const csvMergeTargets = (table: string[][], schema: PropertyDefinition[],
   // Detection reads the rows below the first line either way, as csvColumns does.
   const body = table.slice(1);
   const shown = (property: PropertyDefinition): PropertyDefinition | undefined => options.localized?.find((p) => p.id === property.id);
+  const named = (property: PropertyDefinition, same: (name: string) => boolean): boolean =>
+    [property.name, shown(property)?.name].some((name) => name !== undefined && same(name));
 
   return csvColumns(table, options.untitled, options.headers !== false).map((column, index): CsvMergeTarget => {
-    const property = schema.find((p) => p.name === column.name || shown(p)?.name === column.name);
+    const lower = column.name.toLowerCase();
+    // Case is ignored (research/31 §5b). Names differing only in case are unmeasured: exact wins, else schema order.
+    const property = schema.find((p) => named(p, (name) => name === column.name))
+      ?? schema.find((p) => named(p, (name) => name.toLowerCase() === lower));
 
     if (property !== undefined) return isMergeableProperty(property) ? { property: property.id } : 'skip';
 

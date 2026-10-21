@@ -256,7 +256,10 @@ export const openCsvImportDialog = (options: CsvImportDialogOptions): { close: (
     // research/30 §9f: a merge lists the database's own properties here, the title tagged "Title".
     const existingItems = merge === undefined
       ? [titleItem]
-      : merge.schema.filter(isMergeableProperty).map((property): PopoverItemParams => ({
+      : merge.schema
+        // research/31 §5b: Notion never lists a Place property here. A header naming one still maps to it (unmeasured).
+        .filter((property) => isMergeableProperty(property) && property.type !== 'place')
+        .map((property): PopoverItemParams => ({
         type: PopoverItemType.Default,
         name: `database-csv-type-existing-${property.id}`,
         title: property.name,

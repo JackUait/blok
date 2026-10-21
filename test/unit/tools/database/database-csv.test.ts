@@ -399,13 +399,33 @@ describe('database CSV', () => {
     });
 
     // research/30 §9f: "Extra" matched nothing and became a new Text property at the end.
-    it('matches headers to property names exactly and adds the rest as new properties of their detected type', () => {
+    // research/31 §5b: "tag" matched "Tag", so the match ignores case.
+    it('matches headers to property names in any case and adds the rest as new properties of their detected type', () => {
       const plan = planCsvMerge([['Name', 'points', 'Extra'], ['A', '1', 'x']], schema, { newId: ids() });
 
-      expect(plan.newProperties.map((p) => [p.name, p.type])).toEqual([['points', 'number'], ['Extra', 'text']]);
+      expect(plan.rows).toEqual([{ 'p-title': 'A', 'p-pts': 1, [plan.newProperties[0].id]: 'x' }]);
+      expect(plan.newProperties.map((p) => [p.name, p.type])).toEqual([['Extra', 'text']]);
       expect(plan.newProperties.every((p) => p.position > 'a2')).toBe(true);
-      expect(plan.rows).toEqual([{ 'p-title': 'A', [plan.newProperties[0].id]: 1, [plan.newProperties[1].id]: 'x' }]);
       expect(plan.skippedColumns).toEqual([]);
+    });
+
+    it('matches a header in another case, also against the name this person reads', () => {
+      const localized = schema.map((p) => (p.id === 'p-tag' ? { ...p, name: 'Etikett' } : p));
+
+      expect(csvMergeTargets([['NAME', 'tag', 'etikett'], ['A', 'Red', 'Red']], schema, { localized }))
+        .toEqual([{ property: 'p-title' }, { property: 'p-tag' }, { property: 'p-tag' }]);
+    });
+
+    // Not measured in Notion: two names differing only in case. The exact one wins, else the first in schema order.
+    it('prefers the property whose name matches exactly, else the first in schema order', () => {
+      const twins: PropertyDefinition[] = [
+        { id: 'p-name', name: 'Name', type: 'title', position: 'a0' },
+        { id: 'p-lo', name: 'tag', type: 'text', position: 'a1' },
+        { id: 'p-up', name: 'Tag', type: 'text', position: 'a2' },
+      ];
+
+      expect(csvMergeTargets([['Name', 'Tag', 'tag', 'TAG'], ['A', 'x', 'y', 'z']], twins))
+        .toEqual([{ property: 'p-name' }, { property: 'p-up' }, { property: 'p-lo' }, { property: 'p-lo' }]);
     });
 
     it('maps a column onto the existing property, a new type, or nowhere, as the targets say', () => {

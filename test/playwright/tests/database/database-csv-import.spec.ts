@@ -201,4 +201,36 @@ test.describe('database CSV import', () => {
     await expect(grid(page).getByRole('row').filter({ hasText: /^\s*R1/ })).toHaveCount(2);
     await expect(grid(page).getByRole('row').filter({ hasText: 'R1' }).first()).toContainText('January 1, 2026');
   });
+
+  // research/31 §5b
+  test('Merge with CSV matches headers in any case and never offers a Place property', async ({ page }) => {
+    const [database, row] = existing;
+    const schema = [
+      { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
+      { id: 'p-tag', name: 'Tag', type: 'select', position: 'a1', config: { options: [{ id: 'o1', label: 'alpha', position: 'a0' }] } },
+      { id: 'p-where', name: 'Where', type: 'place', position: 'a2' },
+    ];
+
+    await mount(page, [{ ...database, data: { ...database.data, schema, views: [{ id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: ['p-tag', 'p-where'] }] } }, row]);
+    await expect(grid(page)).toContainText('R1');
+    await page.getByTestId('database-toolbar-settings').click();
+    await page.getByTestId('database-settings-csv-merge').click();
+    const dialog = page.getByRole('dialog');
+
+    await dialog.locator('[data-blok-database-csv-input]').setInputFiles({ name: 'merge.csv', mimeType: 'text/csv', buffer: Buffer.from('name,tag\nR7,alpha') });
+    await dialog.getByTestId('database-csv-map').click();
+    const types = dialog.getByTestId('database-csv-type');
+
+    await expect(types).toHaveText(['Name', 'Tag']);
+    await types.nth(1).click();
+    await expect(page.locator('[data-blok-item-name="database-csv-type-existing-p-tag"]:visible [data-blok-testid="popover-item-trailing-icon"]')).toBeVisible();
+    await expect(page.locator('[data-blok-item-name="database-csv-type-existing-p-title"]:visible')).toBeVisible();
+    await expect(page.locator('[data-blok-item-name="database-csv-type-existing-p-where"]')).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await dialog.getByTestId('database-csv-import').click();
+    await expect(dialog).toHaveCount(0);
+
+    await expect(grid(page).getByRole('row').filter({ hasText: 'R7' })).toContainText('alpha');
+    await expect(grid(page).getByRole('columnheader', { name: 'tag', exact: true })).toHaveCount(0);
+  });
 });

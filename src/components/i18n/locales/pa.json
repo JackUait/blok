@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "3 ਨਵੇਂ ਉਤਪਾਦ ਲਾਂਚ ਕਰੋ",
   "tools.database.starterGoalRow3": "20 ਹਜ਼ਾਰ ਨਵੇਂ ਵਰਤੋਂਕਾਰ ਜੋੜੋ",
   "tools.database.starterQuarter": "ਤਿਮਾਹੀ",
+  "tools.database.starterDaysUntilDue": "ਨਿਯਤ ਮਿਤੀ ਤੱਕ ਦਿਨ",
+  "tools.database.starterOverdue": "ਮਿਆਦ ਲੰਘ ਗਈ",
   "tools.database.starterOptionQuarter": "ਤਿਮਾਹੀ {number}",
   "tools.database.starterStartValue": "ਸ਼ੁਰੂਆਤੀ ਮੁੱਲ",
   "tools.database.starterEndValue": "ਅੰਤਿਮ ਮੁੱਲ",

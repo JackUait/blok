@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "3 nieuwe producten lanceren",
   "tools.database.starterGoalRow3": "20.000 nieuwe gebruikers werven",
   "tools.database.starterQuarter": "Kwartaal",
+  "tools.database.starterDaysUntilDue": "Dagen tot vervaldatum",
+  "tools.database.starterOverdue": "Achterstallig",
   "tools.database.starterOptionQuarter": "K{number}",
   "tools.database.starterStartValue": "Beginwaarde",
   "tools.database.starterEndValue": "Eindwaarde",

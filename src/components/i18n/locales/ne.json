@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "3 नयाँ उत्पादनहरू सुरु गर्नुहोस्",
   "tools.database.starterGoalRow3": "20 हजार नयाँ प्रयोगकर्ता प्राप्त गर्नुहोस्",
   "tools.database.starterQuarter": "त्रैमास",
+  "tools.database.starterDaysUntilDue": "अन्तिम म्यादसम्मका दिन",
+  "tools.database.starterOverdue": "म्याद नाघेको",
   "tools.database.starterOptionQuarter": "त्रैमास {number}",
   "tools.database.starterStartValue": "सुरुको मान",
   "tools.database.starterEndValue": "अन्तिम मान",

@@ -218,14 +218,14 @@ export const DATABASE_STARTERS: readonly StarterMeta[] = [
     thumbnail: { columns: ['tools.database.starterGoalName', 'tools.database.starterOwner', 'tools.database.defaultStatusProperty'], pills: STATUS_PILLS, pillColumn: 2 },
     tint: 'blue',
     glyph: 'flag',
-    // research/31 §8. Days until due is not offered: Blok's formula checker refuses its measured
-    // expression (an if() whose branches are a number and the text "Overdue").
+    // research/31 §8.
     features: [
       choice('dueDate', 'tools.database.starterDueDate', true, 'date'),
       choice('priority', 'tools.database.starterPriority', true, 'select'),
       choice('team', 'tools.database.starterTeam', true, 'multiSelect'),
       choice('quarter', 'tools.database.starterQuarter', false, 'multiSelect'),
       choice('progress', 'tools.database.starterProgress', false, 'formula'),
+      choice('daysUntilDue', 'tools.database.starterDaysUntilDue', false, 'date'),
     ],
     views: [
       choice('all', 'tools.database.starterViewAllGoals', true, 'table'),
@@ -596,6 +596,15 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
     const owner = add(t('tools.database.starterOwner'), 'person');
     const state = status();
     const due = features.has('dueDate') ? add(t('tools.database.starterDueDate'), 'date', { date: { ...MDY } }) : undefined;
+
+    // A number of days or the text "Overdue", as measured. Without Due date it has nothing to read (unmeasured).
+    if (due !== undefined && features.has('daysUntilDue')) {
+      const days = `dateBetween({{property:${due.id}}}, now(), "days")`;
+
+      add(t('tools.database.starterDaysUntilDue'), 'formula', {
+        formula: { expression: `if(${days} > 0, ${days}, ${JSON.stringify(t('tools.database.starterOverdue'))})` },
+      });
+    }
     const prio = features.has('priority') ? priority() : undefined;
     const quarter = features.has('quarter') ? add(t('tools.database.starterQuarter'), 'multiSelect', optionsOf([
       [t('tools.database.starterOptionQuarter', { number: '1' }), 'yellow'], [t('tools.database.starterOptionQuarter', { number: '2' }), 'pink'],

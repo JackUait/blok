@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "3 ახალი პროდუქტის გაშვება",
   "tools.database.starterGoalRow3": "20 ათასი ახალი მომხმარებლის მოზიდვა",
   "tools.database.starterQuarter": "კვარტალი",
+  "tools.database.starterDaysUntilDue": "დღეები ვადამდე",
+  "tools.database.starterOverdue": "ვადაგადაცილებული",
   "tools.database.starterOptionQuarter": "კვარტალი {number}",
   "tools.database.starterStartValue": "საწყისი მნიშვნელობა",
   "tools.database.starterEndValue": "საბოლოო მნიშვნელობა",

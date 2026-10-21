@@ -2063,6 +2063,8 @@
   "tools.database.starterGoalRow2": "Lansirati 3 nova proizvoda",
   "tools.database.starterGoalRow3": "Steći 20 tisuća novih korisnika",
   "tools.database.starterQuarter": "Tromjesečje",
+  "tools.database.starterDaysUntilDue": "Dana do roka",
+  "tools.database.starterOverdue": "Kasni",
   "tools.database.starterOptionQuarter": "{number}. tromjesečje",
   "tools.database.starterStartValue": "Početna vrijednost",
   "tools.database.starterEndValue": "Završna vrijednost",

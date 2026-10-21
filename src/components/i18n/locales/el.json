@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "Κυκλοφορία 3 νέων προϊόντων",
   "tools.database.starterGoalRow3": "Απόκτηση 20.000 νέων χρηστών",
   "tools.database.starterQuarter": "Τρίμηνο",
+  "tools.database.starterDaysUntilDue": "Ημέρες έως την προθεσμία",
+  "tools.database.starterOverdue": "Εκπρόθεσμο",
   "tools.database.starterOptionQuarter": "Τρίμηνο {number}",
   "tools.database.starterStartValue": "Αρχική τιμή",
   "tools.database.starterEndValue": "Τελική τιμή",

@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "אַרויסגעבן 3 נײַע פּראָדוקטן",
   "tools.database.starterGoalRow3": "צוציִען 20 טויזנט נײַע ניצערס",
   "tools.database.starterQuarter": "פֿערטל",
+  "tools.database.starterDaysUntilDue": "טעג ביזן טערמין",
+  "tools.database.starterOverdue": "פֿאַרשפּעטיקט",
   "tools.database.starterOptionQuarter": "פֿערטל {number}",
   "tools.database.starterStartValue": "אָנהייב־ווערט",
   "tools.database.starterEndValue": "סוף־ווערט",

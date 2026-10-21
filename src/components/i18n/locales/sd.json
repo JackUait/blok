@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "3 نيون پراڊڪٽس لانچ ڪريو",
   "tools.database.starterGoalRow3": "20 هزار نوان صارف حاصل ڪريو",
   "tools.database.starterQuarter": "ٽماهي",
+  "tools.database.starterDaysUntilDue": "مقرر تاريخ تائين ڏينهن",
+  "tools.database.starterOverdue": "دير ٿي وئي",
   "tools.database.starterOptionQuarter": "ٽماهي {number}",
   "tools.database.starterStartValue": "شروعاتي قدر",
   "tools.database.starterEndValue": "آخري قدر",

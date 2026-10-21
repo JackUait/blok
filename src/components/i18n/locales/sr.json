@@ -2063,6 +2063,8 @@
   "tools.database.starterGoalRow2": "Покретање 3 нова производа",
   "tools.database.starterGoalRow3": "Привлачење 20.000 нових корисника",
   "tools.database.starterQuarter": "Квартал",
+  "tools.database.starterDaysUntilDue": "Дана до рока",
+  "tools.database.starterOverdue": "Касни",
   "tools.database.starterOptionQuarter": "{number}. кв.",
   "tools.database.starterStartValue": "Почетна вредност",
   "tools.database.starterEndValue": "Крајња вредност",

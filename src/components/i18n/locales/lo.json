@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "ເປີດຕົວຜະລິດຕະພັນໃໝ່ 3 ລາຍການ",
   "tools.database.starterGoalRow3": "ຫາຜູ້ໃຊ້ໃໝ່ 20,000 ຄົນ",
   "tools.database.starterQuarter": "ໄຕມາດ",
+  "tools.database.starterDaysUntilDue": "ຈຳນວນມື້ຈົນຮອດວັນຄົບກຳນົດ",
+  "tools.database.starterOverdue": "ເກີນກຳນົດ",
   "tools.database.starterOptionQuarter": "ຕມ{number}",
   "tools.database.starterStartValue": "ຄ່າເລີ່ມຕົ້ນ",
   "tools.database.starterEndValue": "ຄ່າສຸດທ້າຍ",

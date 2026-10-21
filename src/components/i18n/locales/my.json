@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "ထုတ်ကုန်အသစ် 3 ခု မိတ်ဆက်ရန်",
   "tools.database.starterGoalRow3": "အသုံးပြုသူအသစ် 20,000 ရယူရန်",
   "tools.database.starterQuarter": "သုံးလပတ်",
+  "tools.database.starterDaysUntilDue": "သတ်မှတ်ရက်အထိ ရက်များ",
+  "tools.database.starterOverdue": "သတ်မှတ်ရက် ကျော်လွန်",
   "tools.database.starterOptionQuarter": "သုံးလပတ် {number}",
   "tools.database.starterStartValue": "စတင်တန်ဖိုး",
   "tools.database.starterEndValue": "နောက်ဆုံးတန်ဖိုး",

@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "3 yeni ürün piyasaya sür",
   "tools.database.starterGoalRow3": "20 bin yeni kullanıcı kazan",
   "tools.database.starterQuarter": "Çeyrek",
+  "tools.database.starterDaysUntilDue": "Son tarihe kalan gün",
+  "tools.database.starterOverdue": "Gecikti",
   "tools.database.starterOptionQuarter": "{number}. Çeyrek",
   "tools.database.starterStartValue": "Başlangıç değeri",
   "tools.database.starterEndValue": "Bitiş değeri",

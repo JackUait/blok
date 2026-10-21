@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "3 އާ އުފެއްދުން ނެރުން",
   "tools.database.starterGoalRow3": "20 ހާސް އާ ބޭނުންކުރާ މީހުން ހޯދުން",
   "tools.database.starterQuarter": "ކުއާޓަރު",
+  "tools.database.starterDaysUntilDue": "ނިންމަންޖެހޭ ތާރީޚަށް ދުވަސް",
+  "tools.database.starterOverdue": "ލަސްވެއްޖެ",
   "tools.database.starterOptionQuarter": "ކުއާޓަރު {number}",
   "tools.database.starterStartValue": "ފެށުމުގެ އަގު",
   "tools.database.starterEndValue": "ނިމުމުގެ އަގު",

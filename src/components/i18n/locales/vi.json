@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "Ra mắt 3 sản phẩm mới",
   "tools.database.starterGoalRow3": "Có thêm 20 nghìn người dùng mới",
   "tools.database.starterQuarter": "Quý",
+  "tools.database.starterDaysUntilDue": "Số ngày đến hạn chót",
+  "tools.database.starterOverdue": "Quá hạn",
   "tools.database.starterOptionQuarter": "Quý {number}",
   "tools.database.starterStartValue": "Giá trị bắt đầu",
   "tools.database.starterEndValue": "Giá trị kết thúc",

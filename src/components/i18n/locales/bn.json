@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "৩টি নতুন পণ্য চালু করুন",
   "tools.database.starterGoalRow3": "২০ হাজার নতুন ব্যবহারকারী অর্জন করুন",
   "tools.database.starterQuarter": "ত্রৈমাসিক",
+  "tools.database.starterDaysUntilDue": "নির্ধারিত তারিখ পর্যন্ত দিন",
+  "tools.database.starterOverdue": "মেয়াদোত্তীর্ণ",
   "tools.database.starterOptionQuarter": "ত্রৈমাসিক {number}",
   "tools.database.starterStartValue": "প্রারম্ভিক মান",
   "tools.database.starterEndValue": "শেষ মান",

@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "3 yeni məhsul buraxmaq",
   "tools.database.starterGoalRow3": "20 min yeni istifadəçi cəlb etmək",
   "tools.database.starterQuarter": "Rüb",
+  "tools.database.starterDaysUntilDue": "Son tarixə qədər günlər",
+  "tools.database.starterOverdue": "Gecikib",
   "tools.database.starterOptionQuarter": "Rüb {number}",
   "tools.database.starterStartValue": "Başlanğıc dəyər",
   "tools.database.starterEndValue": "Son dəyər",

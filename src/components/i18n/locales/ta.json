@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "3 புதிய தயாரிப்புகளை வெளியிடு",
   "tools.database.starterGoalRow3": "20 ஆயிரம் புதிய பயனர்களைப் பெறு",
   "tools.database.starterQuarter": "காலாண்டு",
+  "tools.database.starterDaysUntilDue": "நிலுவைத் தேதி வரை நாட்கள்",
+  "tools.database.starterOverdue": "காலம் கடந்தது",
   "tools.database.starterOptionQuarter": "காலாண்டு {number}",
   "tools.database.starterStartValue": "தொடக்க மதிப்பு",
   "tools.database.starterEndValue": "இறுதி மதிப்பு",

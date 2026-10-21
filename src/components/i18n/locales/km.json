@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "ដាក់ឱ្យដំណើរការផលិតផលថ្មី 3",
   "tools.database.starterGoalRow3": "ទទួលបានអ្នកប្រើថ្មី 20,000 នាក់",
   "tools.database.starterQuarter": "ត្រីមាស",
+  "tools.database.starterDaysUntilDue": "ចំនួនថ្ងៃរហូតដល់ថ្ងៃផុតកំណត់",
+  "tools.database.starterOverdue": "ហួសកំណត់",
   "tools.database.starterOptionQuarter": "ត្រីមាសទី{number}",
   "tools.database.starterStartValue": "តម្លៃចាប់ផ្ដើម",
   "tools.database.starterEndValue": "តម្លៃបញ្ចប់",

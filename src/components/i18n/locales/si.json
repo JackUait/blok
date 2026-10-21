@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "නව නිෂ්පාදන 3ක් දියත් කරන්න",
   "tools.database.starterGoalRow3": "නව පරිශීලකයින් 20,000ක් ලබා ගන්න",
   "tools.database.starterQuarter": "කාර්තුව",
+  "tools.database.starterDaysUntilDue": "නියමිත දිනයට දින",
+  "tools.database.starterOverdue": "කල් ඉකුත් වී ඇත",
   "tools.database.starterOptionQuarter": "කාර්තුව {number}",
   "tools.database.starterStartValue": "ආරම්භක අගය",
   "tools.database.starterEndValue": "අවසාන අගය",

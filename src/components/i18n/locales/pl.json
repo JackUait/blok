@@ -2073,6 +2073,8 @@
   "tools.database.starterGoalRow2": "Wprowadź 3 nowe produkty",
   "tools.database.starterGoalRow3": "Pozyskaj 20 tys. nowych użytkowników",
   "tools.database.starterQuarter": "Kwartał",
+  "tools.database.starterDaysUntilDue": "Dni do terminu",
+  "tools.database.starterOverdue": "Po terminie",
   "tools.database.starterOptionQuarter": "{number} kw.",
   "tools.database.starterStartValue": "Wartość początkowa",
   "tools.database.starterEndValue": "Wartość końcowa",

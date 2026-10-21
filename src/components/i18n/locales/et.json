@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "Too turule 3 uut toodet",
   "tools.database.starterGoalRow3": "Hangi 20 000 uut kasutajat",
   "tools.database.starterQuarter": "Kvartal",
+  "tools.database.starterDaysUntilDue": "Päevi tähtajani",
+  "tools.database.starterOverdue": "Hilinenud",
   "tools.database.starterOptionQuarter": "{number}. kv",
   "tools.database.starterStartValue": "Algväärtus",
   "tools.database.starterEndValue": "Lõppväärtus",

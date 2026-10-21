@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "3 új termék bevezetése",
   "tools.database.starterGoalRow3": "20 ezer új felhasználó szerzése",
   "tools.database.starterQuarter": "Negyedév",
+  "tools.database.starterDaysUntilDue": "Napok a határidőig",
+  "tools.database.starterOverdue": "Lejárt",
   "tools.database.starterOptionQuarter": "{number}. negyedév",
   "tools.database.starterStartValue": "Kezdőérték",
   "tools.database.starterEndValue": "Záróérték",

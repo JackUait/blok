@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "3 പുതിയ ഉൽപ്പന്നങ്ങൾ പുറത്തിറക്കുക",
   "tools.database.starterGoalRow3": "20,000 പുതിയ ഉപയോക്താക്കളെ നേടുക",
   "tools.database.starterQuarter": "പാദം",
+  "tools.database.starterDaysUntilDue": "അവസാന തീയതി വരെയുള്ള ദിവസങ്ങൾ",
+  "tools.database.starterOverdue": "കാലാവധി കഴിഞ്ഞു",
   "tools.database.starterOptionQuarter": "പാദം {number}",
   "tools.database.starterStartValue": "ആരംഭ മൂല്യം",
   "tools.database.starterEndValue": "അന്തിമ മൂല്യം",

@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "3 नवीन उत्पादने लाँच करा",
   "tools.database.starterGoalRow3": "20 हजार नवीन वापरकर्ते मिळवा",
   "tools.database.starterQuarter": "तिमाही",
+  "tools.database.starterDaysUntilDue": "नियत तारखेपर्यंतचे दिवस",
+  "tools.database.starterOverdue": "मुदत संपली",
   "tools.database.starterOptionQuarter": "ति{number}",
   "tools.database.starterStartValue": "प्रारंभिक मूल्य",
   "tools.database.starterEndValue": "अंतिम मूल्य",

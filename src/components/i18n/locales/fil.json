@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "Maglunsad ng 3 bagong produkto",
   "tools.database.starterGoalRow3": "Makakuha ng 20K bagong user",
   "tools.database.starterQuarter": "Kwarter",
+  "tools.database.starterDaysUntilDue": "Mga araw bago ang takdang petsa",
+  "tools.database.starterOverdue": "Lampas na sa takdang petsa",
   "tools.database.starterOptionQuarter": "Kwarter {number}",
   "tools.database.starterStartValue": "Panimulang halaga",
   "tools.database.starterEndValue": "Huling halaga",

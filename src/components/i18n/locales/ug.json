@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "3 يېڭى مەھسۇلات ئېلان قىلىش",
   "tools.database.starterGoalRow3": "20 مىڭ يېڭى ئىشلەتكۈچىگە ئېرىشىش",
   "tools.database.starterQuarter": "چارەك",
+  "tools.database.starterDaysUntilDue": "مۆھلەتكىچە قالغان كۈن",
+  "tools.database.starterOverdue": "مۆھلىتى ئۆتتى",
   "tools.database.starterOptionQuarter": "{number}-چارەك",
   "tools.database.starterStartValue": "باشلىنىش قىممىتى",
   "tools.database.starterEndValue": "ئاخىرقى قىممەت",

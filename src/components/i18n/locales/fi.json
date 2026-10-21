@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "Lanseeraa 3 uutta tuotetta",
   "tools.database.starterGoalRow3": "Hanki 20 000 uutta käyttäjää",
   "tools.database.starterQuarter": "Vuosineljännes",
+  "tools.database.starterDaysUntilDue": "Päiviä määräpäivään",
+  "tools.database.starterOverdue": "Myöhässä",
   "tools.database.starterOptionQuarter": "{number}. neljännes",
   "tools.database.starterStartValue": "Alkuarvo",
   "tools.database.starterEndValue": "Loppuarvo",

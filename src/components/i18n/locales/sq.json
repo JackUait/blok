@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "Lanço 3 produkte të reja",
   "tools.database.starterGoalRow3": "Fito 20 mijë përdorues të rinj",
   "tools.database.starterQuarter": "Tremujor",
+  "tools.database.starterDaysUntilDue": "Ditë deri në afat",
+  "tools.database.starterOverdue": "Me vonesë",
   "tools.database.starterOptionQuarter": "Tremujori {number}",
   "tools.database.starterStartValue": "Vlera fillestare",
   "tools.database.starterEndValue": "Vlera përfundimtare",

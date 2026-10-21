@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "3 కొత్త ఉత్పత్తులను విడుదల చేయండి",
   "tools.database.starterGoalRow3": "20 వేల కొత్త వినియోగదారులను పొందండి",
   "tools.database.starterQuarter": "త్రైమాసికం",
+  "tools.database.starterDaysUntilDue": "గడువు తేదీ వరకు రోజులు",
+  "tools.database.starterOverdue": "గడువు మీరింది",
   "tools.database.starterOptionQuarter": "త్రైమాసికం {number}",
   "tools.database.starterStartValue": "ప్రారంభ విలువ",
   "tools.database.starterEndValue": "ముగింపు విలువ",

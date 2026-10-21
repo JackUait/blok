@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "3 ಹೊಸ ಉತ್ಪನ್ನಗಳನ್ನು ಬಿಡುಗಡೆ ಮಾಡಿ",
   "tools.database.starterGoalRow3": "20 ಸಾವಿರ ಹೊಸ ಬಳಕೆದಾರರನ್ನು ಪಡೆಯಿರಿ",
   "tools.database.starterQuarter": "ತ್ರೈಮಾಸಿಕ",
+  "tools.database.starterDaysUntilDue": "ಗಡುವಿನವರೆಗಿನ ದಿನಗಳು",
+  "tools.database.starterOverdue": "ಗಡುವು ಮೀರಿದೆ",
   "tools.database.starterOptionQuarter": "ತ್ರೈ {number}",
   "tools.database.starterStartValue": "ಆರಂಭಿಕ ಮೌಲ್ಯ",
   "tools.database.starterEndValue": "ಅಂತಿಮ ಮೌಲ್ಯ",

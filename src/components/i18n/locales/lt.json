@@ -2073,6 +2073,8 @@
   "tools.database.starterGoalRow2": "Išleisti 3 naujus produktus",
   "tools.database.starterGoalRow3": "Pritraukti 20 tūkst. naujų naudotojų",
   "tools.database.starterQuarter": "Ketvirtis",
+  "tools.database.starterDaysUntilDue": "Dienos iki termino",
+  "tools.database.starterOverdue": "Vėluoja",
   "tools.database.starterOptionQuarter": "{number} ketv.",
   "tools.database.starterStartValue": "Pradinė vertė",
   "tools.database.starterEndValue": "Galutinė vertė",

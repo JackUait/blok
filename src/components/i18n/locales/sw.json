@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "Zindua bidhaa 3 mpya",
   "tools.database.starterGoalRow3": "Pata watumiaji wapya 20,000",
   "tools.database.starterQuarter": "Robo",
+  "tools.database.starterDaysUntilDue": "Siku hadi tarehe ya kukamilisha",
+  "tools.database.starterOverdue": "Imechelewa",
   "tools.database.starterOptionQuarter": "Robo {number}",
   "tools.database.starterStartValue": "Thamani ya mwanzo",
   "tools.database.starterEndValue": "Thamani ya mwisho",

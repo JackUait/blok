@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "3 نئی پروڈکٹس لانچ کریں",
   "tools.database.starterGoalRow3": "20 ہزار نئے صارفین حاصل کریں",
   "tools.database.starterQuarter": "سہ ماہی",
+  "tools.database.starterDaysUntilDue": "مقررہ تاریخ تک دن",
+  "tools.database.starterOverdue": "تاخیر شدہ",
   "tools.database.starterOptionQuarter": "سہ ماہی {number}",
   "tools.database.starterStartValue": "ابتدائی قدر",
   "tools.database.starterEndValue": "اختتامی قدر",

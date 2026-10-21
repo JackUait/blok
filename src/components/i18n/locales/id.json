@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "Luncurkan 3 produk baru",
   "tools.database.starterGoalRow3": "Dapatkan 20 ribu pengguna baru",
   "tools.database.starterQuarter": "Kuartal",
+  "tools.database.starterDaysUntilDue": "Hari menuju tenggat",
+  "tools.database.starterOverdue": "Terlambat",
   "tools.database.starterOptionQuarter": "Kuartal {number}",
   "tools.database.starterStartValue": "Nilai awal",
   "tools.database.starterEndValue": "Nilai akhir",

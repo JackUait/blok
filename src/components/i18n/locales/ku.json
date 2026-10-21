@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "بڵاوکردنەوەی 3 بەرهەمی نوێ",
   "tools.database.starterGoalRow3": "بەدەستهێنانی 20 هەزار بەکارهێنەری نوێ",
   "tools.database.starterQuarter": "چارەک",
+  "tools.database.starterDaysUntilDue": "ڕۆژ تا دوا وادە",
+  "tools.database.starterOverdue": "دواکەوتوو",
   "tools.database.starterOptionQuarter": "چارەکی {number}",
   "tools.database.starterStartValue": "بەهای سەرەتا",
   "tools.database.starterEndValue": "بەهای کۆتایی",

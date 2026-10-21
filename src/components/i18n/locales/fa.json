@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "عرضهٔ ۳ محصول جدید",
   "tools.database.starterGoalRow3": "جذب ۲۰ هزار کاربر جدید",
   "tools.database.starterQuarter": "سه‌ماهه",
+  "tools.database.starterDaysUntilDue": "روزهای مانده تا موعد",
+  "tools.database.starterOverdue": "عقب‌افتاده",
   "tools.database.starterOptionQuarter": "سه‌ماهه {number}",
   "tools.database.starterStartValue": "مقدار اولیه",
   "tools.database.starterEndValue": "مقدار نهایی",

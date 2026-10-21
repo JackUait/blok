@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "Launch 3 new products",
   "tools.database.starterGoalRow3": "Acquire 20K new users",
   "tools.database.starterQuarter": "Quarter",
+  "tools.database.starterDaysUntilDue": "Days until due",
+  "tools.database.starterOverdue": "Overdue",
   "tools.database.starterOptionQuarter": "Q{number}",
   "tools.database.starterStartValue": "Start value",
   "tools.database.starterEndValue": "End value",

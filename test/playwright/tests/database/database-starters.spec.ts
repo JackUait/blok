@@ -381,7 +381,7 @@ test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
     const dialog = await openTemplate(page, 'goals', 'Goals Tracker');
 
     await expect(dialog.getByRole('button', { name: 'Quarter' })).toHaveAttribute('aria-pressed', 'false');
-    await expect(dialog.getByRole('button', { name: 'Days until due' })).toHaveCount(0);
+    await expect(dialog.getByRole('button', { name: 'Days until due' })).toHaveAttribute('aria-pressed', 'false');
     await dialog.getByRole('button', { name: 'Quarter' }).click();
     await dialog.getByRole('button', { name: 'Progress' }).click();
     await expect(dialog.locator('[data-blok-database-starter-preview-row="header"]')).toHaveText('Goal nameOwnerStatusDue datePriorityQuarterTeamStart valueEnd valueProgress');
@@ -393,6 +393,20 @@ test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
 
     await expect(progress).toHaveText(['75%', '0%', '125%']);
     await expect(page.locator('[data-blok-database-cell="formula"] [data-blok-database-number-bar]').nth(2)).toHaveAttribute('style', /--blok-database-number-fill: 100%/);
+  });
+
+  test('Goals Tracker with Days until due on: the 2025 sample rows read Overdue (research/31 §8)', async ({ page }) => {
+    const dialog = await openTemplate(page, 'goals', 'Goals Tracker');
+
+    await dialog.getByRole('button', { name: 'Days until due' }).click();
+    await expect(dialog.getByRole('button', { name: 'Days until due' })).toHaveAttribute('aria-pressed', 'true');
+    // Notion's preview puts it last; Blok's preview follows the created schema, where Notion puts it after Due date.
+    await expect(dialog.locator('[data-blok-database-starter-preview-row="header"]')).toHaveText('Goal nameOwnerStatusDue dateDays until duePriorityTeam');
+    await dialog.getByRole('button', { name: 'Get started' }).click();
+    await dialog.getByRole('button', { name: 'Done' }).click();
+    await expect(dialog).toBeHidden();
+
+    await expect(page.locator('[data-blok-database-cell="formula"]')).toHaveText(['Overdue', 'Overdue', 'Overdue']);
   });
 
   test('the last view card stays on (research/30 B8)', async ({ page }) => {

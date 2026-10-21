@@ -2063,6 +2063,8 @@
   "tools.database.starterGoalRow2": "השקת 3 מוצרים חדשים",
   "tools.database.starterGoalRow3": "גיוס 20 אלף משתמשים חדשים",
   "tools.database.starterQuarter": "רבעון",
+  "tools.database.starterDaysUntilDue": "ימים עד תאריך היעד",
+  "tools.database.starterOverdue": "באיחור",
   "tools.database.starterOptionQuarter": "רבעון {number}",
   "tools.database.starterStartValue": "ערך התחלתי",
   "tools.database.starterEndValue": "ערך סופי",

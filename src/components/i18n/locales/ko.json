@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "신제품 3개 출시",
   "tools.database.starterGoalRow3": "신규 사용자 2만 명 확보",
   "tools.database.starterQuarter": "분기",
+  "tools.database.starterDaysUntilDue": "마감까지 남은 일수",
+  "tools.database.starterOverdue": "기한 지남",
   "tools.database.starterOptionQuarter": "{number}분기",
   "tools.database.starterStartValue": "시작 값",
   "tools.database.starterEndValue": "종료 값",

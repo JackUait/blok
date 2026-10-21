@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "推出 3 款新产品",
   "tools.database.starterGoalRow3": "获取 2 万名新用户",
   "tools.database.starterQuarter": "季度",
+  "tools.database.starterDaysUntilDue": "距截止日期天数",
+  "tools.database.starterOverdue": "已逾期",
   "tools.database.starterOptionQuarter": "第{number}季度",
   "tools.database.starterStartValue": "起始值",
   "tools.database.starterEndValue": "结束值",

@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "เปิดตัวผลิตภัณฑ์ใหม่ 3 รายการ",
   "tools.database.starterGoalRow3": "หาผู้ใช้ใหม่ 20,000 คน",
   "tools.database.starterQuarter": "ไตรมาส",
+  "tools.database.starterDaysUntilDue": "จำนวนวันถึงวันครบกำหนด",
+  "tools.database.starterOverdue": "เกินกำหนด",
   "tools.database.starterOptionQuarter": "ไตรมาส {number}",
   "tools.database.starterStartValue": "ค่าตั้งต้น",
   "tools.database.starterEndValue": "ค่าสิ้นสุด",

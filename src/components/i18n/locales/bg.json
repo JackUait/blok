@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "Пускане на 3 нови продукта",
   "tools.database.starterGoalRow3": "Привличане на 20 000 нови потребители",
   "tools.database.starterQuarter": "Тримесечие",
+  "tools.database.starterDaysUntilDue": "Дни до крайния срок",
+  "tools.database.starterOverdue": "Просрочено",
   "tools.database.starterOptionQuarter": "Тримесечие {number}",
   "tools.database.starterStartValue": "Начална стойност",
   "tools.database.starterEndValue": "Крайна стойност",

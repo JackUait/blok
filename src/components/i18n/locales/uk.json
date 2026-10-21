@@ -2073,6 +2073,8 @@
   "tools.database.starterGoalRow2": "Запустити 3 нові продукти",
   "tools.database.starterGoalRow3": "Залучити 20 тис. нових користувачів",
   "tools.database.starterQuarter": "Квартал",
+  "tools.database.starterDaysUntilDue": "Днів до терміну",
+  "tools.database.starterOverdue": "Прострочено",
   "tools.database.starterOptionQuarter": "{number} кв.",
   "tools.database.starterStartValue": "Початкове значення",
   "tools.database.starterEndValue": "Кінцеве значення",

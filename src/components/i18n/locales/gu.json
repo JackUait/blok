@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "3 નવા પ્રોડક્ટ્સ લોન્ચ કરો",
   "tools.database.starterGoalRow3": "20 હજાર નવા વપરાશકર્તાઓ મેળવો",
   "tools.database.starterQuarter": "ત્રિમાસિક",
+  "tools.database.starterDaysUntilDue": "નિયત તારીખ સુધીના દિવસો",
+  "tools.database.starterOverdue": "મુદત વીતી ગઈ",
   "tools.database.starterOptionQuarter": "ત્રિમાસિક {number}",
   "tools.database.starterStartValue": "પ્રારંભિક મૂલ્ય",
   "tools.database.starterEndValue": "અંતિમ મૂલ્ય",

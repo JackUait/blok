@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "3 አዳዲስ ምርቶችን ማስጀመር",
   "tools.database.starterGoalRow3": "20 ሺህ አዳዲስ ተጠቃሚዎችን ማግኘት",
   "tools.database.starterQuarter": "ሩብ ዓመት",
+  "tools.database.starterDaysUntilDue": "እስከ መጨረሻ ቀን ያሉ ቀናት",
+  "tools.database.starterOverdue": "ጊዜው ያለፈበት",
   "tools.database.starterOptionQuarter": "ሩብ ዓመት {number}",
   "tools.database.starterStartValue": "መነሻ እሴት",
   "tools.database.starterEndValue": "መጨረሻ እሴት",

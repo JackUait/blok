@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "新製品を3つ発売",
   "tools.database.starterGoalRow3": "新規ユーザーを2万人獲得",
   "tools.database.starterQuarter": "四半期",
+  "tools.database.starterDaysUntilDue": "期日までの日数",
+  "tools.database.starterOverdue": "期限切れ",
   "tools.database.starterOptionQuarter": "第{number}四半期",
   "tools.database.starterStartValue": "開始値",
   "tools.database.starterEndValue": "終了値",

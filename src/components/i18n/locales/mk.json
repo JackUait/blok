@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "Лансирање 3 нови производи",
   "tools.database.starterGoalRow3": "Привлекување 20.000 нови корисници",
   "tools.database.starterQuarter": "Тромесечје",
+  "tools.database.starterDaysUntilDue": "Денови до рокот",
+  "tools.database.starterOverdue": "Задоцнето",
   "tools.database.starterOptionQuarter": "{number}. тромесечје",
   "tools.database.starterStartValue": "Почетна вредност",
   "tools.database.starterEndValue": "Крајна вредност",

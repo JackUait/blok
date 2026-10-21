@@ -2093,6 +2093,8 @@
   "tools.database.starterGoalRow2": "إطلاق 3 منتجات جديدة",
   "tools.database.starterGoalRow3": "اكتساب 20 ألف مستخدم جديد",
   "tools.database.starterQuarter": "الربع",
+  "tools.database.starterDaysUntilDue": "الأيام حتى الاستحقاق",
+  "tools.database.starterOverdue": "متأخر",
   "tools.database.starterOptionQuarter": "الربع {number}",
   "tools.database.starterStartValue": "قيمة البداية",
   "tools.database.starterEndValue": "قيمة النهاية",

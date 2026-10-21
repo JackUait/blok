@@ -140,9 +140,8 @@ describe('"More templates" (research/27 §1e, research/30 §10)', () => {
     expect(on('meetingNotes', 'features', false)).toEqual(['Last edited by', 'Last updated time']);
     expect(on('meetingNotes', 'views', true)).toEqual(['All Meetings', 'My Notes']);
     expect(on('meetingNotes', 'views', false)).toEqual(['By Category']);
-    // research/31 §8. Days until due is not offered: Blok's formula engine refuses its measured expression.
     expect(on('goals', 'features', true)).toEqual(['Due date', 'Priority', 'Team']);
-    expect(on('goals', 'features', false)).toEqual(['Quarter', 'Progress']);
+    expect(on('goals', 'features', false)).toEqual(['Quarter', 'Progress', 'Days until due']);
     // research/31 §7: Owner, Budget, Accounts, By Market and By Platform were left off, so never measured: not offered.
     expect(on('campaign', 'features', true)).toEqual(['Campaign type', 'Markets', 'Channels', 'Audiences targeted', 'Files & media']);
     expect(on('campaign', 'features', false)).toEqual([]);
@@ -389,6 +388,41 @@ describe('"More templates" (research/27 §1e, research/30 §10)', () => {
       expect(cells.map((cell) => cell.querySelector('[data-blok-database-number-text]')?.textContent)).toEqual(['75%', '0%', '125%']);
       expect(cells.map((cell) => cell.querySelector<HTMLElement>('[data-blok-database-number-bar]')?.style.getPropertyValue('--blok-database-number-fill'))).toEqual(['75%', '0%', '100%']);
       expect(cells[0].querySelector('[data-blok-database-number-bar]')?.getAttribute('data-color')).toBe('green');
+    });
+
+    it('Days until due on adds the measured formula right after Due date (research/31 §8)', () => {
+      const made = build('goals', { features: [...allGoals.features, 'Days until due'] });
+      const due = prop(made, 'Due date');
+
+      expect(made.schema.map((p) => p.name)).toEqual([
+        'Goal name', 'Owner', 'Status', 'Due date', 'Days until due', 'Priority', 'Quarter', 'Team', 'Start value', 'End value', 'Progress',
+      ]);
+      expect(prop(made, 'Days until due')).toMatchObject({
+        type: 'formula',
+        formula: { expression: `if(dateBetween({{property:${due.id}}}, now(), "days") > 0, dateBetween({{property:${due.id}}}, now(), "days"), "Overdue")` },
+      });
+      expect(prop(made, 'Days until due').number).toBeUndefined();
+      expect(shownNames(made, 'All Goals')).toContain('Days until due');
+      expect(shownNames(made, 'My Goals')).not.toContain('Days until due');
+    });
+
+    it('Days until due reads "Overdue" on the 2025 sample rows and a plain day count before the date', () => {
+      const made = build('goals', { features: [...allGoals.features, 'Days until due'] });
+      const days = prop(made, 'Days until due');
+      const due = prop(made, 'Due date');
+      const engine = new ComputedProperties('db');
+      const input = made.rows.map((r) => ({ id: r.id, position: r.data.position, properties: r.data.properties }));
+      const later = [...input, { id: 'later', position: 'z', properties: { [due.id]: '2026-10-31' } }];
+      const rows = engine.apply(made.schema, later, { databaseId: 'db', now: new Date('2026-10-21T00:00:00Z'), timeZone: 'UTC' });
+
+      expect(rows.map((row) => readPropertyValue(row, days))).toEqual(['Overdue', 'Overdue', 'Overdue', '10']);
+      expect(engine.valueProperty(days).type).toBe('text');
+    });
+
+    it('Days until due needs Due date: without it the chip adds nothing (unmeasured)', () => {
+      const made = build('goals', { features: ['Priority', 'Team', 'Days until due'] });
+
+      expect(made.schema.map((p) => p.name)).not.toContain('Days until due');
     });
 
     it('Quarter and Progress off leave the measured default schema', () => {

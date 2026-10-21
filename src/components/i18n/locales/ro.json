@@ -2063,6 +2063,8 @@
   "tools.database.starterGoalRow2": "Lansarea a 3 produse noi",
   "tools.database.starterGoalRow3": "Atragerea a 20.000 de utilizatori noi",
   "tools.database.starterQuarter": "Trimestru",
+  "tools.database.starterDaysUntilDue": "Zile până la termen",
+  "tools.database.starterOverdue": "Întârziat",
   "tools.database.starterOptionQuarter": "Trim. {number}",
   "tools.database.starterStartValue": "Valoare inițială",
   "tools.database.starterEndValue": "Valoare finală",

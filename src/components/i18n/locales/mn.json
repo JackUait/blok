@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "3 шинэ бүтээгдэхүүн гаргах",
   "tools.database.starterGoalRow3": "20 мянган шинэ хэрэглэгч татах",
   "tools.database.starterQuarter": "Улирал",
+  "tools.database.starterDaysUntilDue": "Эцсийн хугацаа хүртэлх өдөр",
+  "tools.database.starterOverdue": "Хугацаа хэтэрсэн",
   "tools.database.starterOptionQuarter": "{number}-р улирал",
   "tools.database.starterStartValue": "Эхлэх утга",
   "tools.database.starterEndValue": "Эцсийн утга",

@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "Թողարկել 3 նոր ապրանք",
   "tools.database.starterGoalRow3": "Ներգրավել 20 հազար նոր օգտատեր",
   "tools.database.starterQuarter": "Եռամսյակ",
+  "tools.database.starterDaysUntilDue": "Օրեր մինչև վերջնաժամկետը",
+  "tools.database.starterOverdue": "Ժամկետանց",
   "tools.database.starterOptionQuarter": "Եռամսյակ {number}",
   "tools.database.starterStartValue": "Սկզբնական արժեք",
   "tools.database.starterEndValue": "Վերջնական արժեք",

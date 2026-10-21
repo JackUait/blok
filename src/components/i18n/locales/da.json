@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "Lancér 3 nye produkter",
   "tools.database.starterGoalRow3": "Skaf 20.000 nye brugere",
   "tools.database.starterQuarter": "Kvartal",
+  "tools.database.starterDaysUntilDue": "Dage til forfald",
+  "tools.database.starterOverdue": "Forfalden",
   "tools.database.starterOptionQuarter": "K{number}",
   "tools.database.starterStartValue": "Startværdi",
   "tools.database.starterEndValue": "Slutværdi",

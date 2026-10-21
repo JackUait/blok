@@ -2053,6 +2053,8 @@
   "tools.database.starterGoalRow2": "3 نوي محصولات پیل کړئ",
   "tools.database.starterGoalRow3": "20 زره نوي کاروونکي جذب کړئ",
   "tools.database.starterQuarter": "درې میاشتنۍ",
+  "tools.database.starterDaysUntilDue": "د سپارلو نېټې پورې ورځې",
+  "tools.database.starterOverdue": "ناوخته",
   "tools.database.starterOptionQuarter": "درې میاشتنۍ {number}",
   "tools.database.starterStartValue": "پیلنی ارزښت",
   "tools.database.starterEndValue": "وروستی ارزښت",

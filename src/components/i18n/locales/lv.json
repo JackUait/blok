@@ -2063,6 +2063,8 @@
   "tools.database.starterGoalRow2": "Laist klajā 3 jaunus produktus",
   "tools.database.starterGoalRow3": "Piesaistīt 20 tūkst. jaunu lietotāju",
   "tools.database.starterQuarter": "Ceturksnis",
+  "tools.database.starterDaysUntilDue": "Dienas līdz termiņam",
+  "tools.database.starterOverdue": "Nokavēts",
   "tools.database.starterOptionQuarter": "{number}. cet.",
   "tools.database.starterStartValue": "Sākuma vērtība",
   "tools.database.starterEndValue": "Beigu vērtība",

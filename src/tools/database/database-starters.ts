@@ -527,7 +527,14 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
 
     if (views.has('all')) view(t('tools.database.starterViewAllDocs'), 'table', all, tableLook);
     if (views.has('mine')) view(t('tools.database.starterViewMyDocs'), 'table', [category], { loadLimit: 50, ...mine(author) });
-    if (views.has('byCategory') && category !== undefined) view(t('tools.database.starterViewByCategory'), 'table', all, { ...tableLook, groupBy: category.id });
+    // research/30 B8: the grouped preview's first group is Customer research. The rest were not read.
+    const research = option(category, 1);
+
+    if (views.has('byCategory') && category !== undefined) {
+      view(t('tools.database.starterViewByCategory'), 'table', all, {
+        ...tableLook, groupBy: category.id, ...(research === undefined ? {} : { groupOrder: { [research]: positionBetween(null, 'a0') } }),
+      });
+    }
     if (viewList.length === 0) view(t('tools.database.starterViewAllDocs'), 'table', all, tableLook);
 
     const values = (c: number): Record<string, PropertyValue | undefined> => (category === undefined ? {} : { [category.id]: [option(category, c) ?? ''] });
@@ -641,8 +648,12 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
     // The filter's operator was not read: Contains Me, as My Tasks.
     if (views.has('mine')) view(t('tools.database.starterViewMyGoals'), 'table', [owner, prio, quarter, state, team], { ...tableLook, showPageIcon: true, ...mine(owner) });
     if (views.has('byTeam') && team !== undefined) {
+      const [, development, design, people] = team.config?.options ?? [];
+
+      // research/31 §8: Human Resources before Product Design here; the options keep Product Design first.
       view(t('tools.database.starterViewByTeam'), 'table', [state, owner, team, prio, quarter], {
         ...tableLook, showPageIcon: true, loadLimit: 25, groupBy: team.id, groupSettings: { sort: 'manual', hideEmptyGroups: false },
+        ...(development === undefined || design === undefined || people === undefined ? {} : { groupOrder: { [people.id]: positionBetween(development.position, design.position) } }),
       });
     }
     if (viewList.length === 0) view(t('tools.database.starterViewAllGoals'), 'table', all, tableLook);

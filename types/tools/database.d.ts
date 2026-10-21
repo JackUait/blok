@@ -943,6 +943,12 @@ export interface DatabaseViewConfig {
   chartLegend?: ChartLegend;
   /** Where the no-value group sits among the option groups. Absent means last. */
   noValueGroupPosition?: string;
+  /**
+   * This view's own manual group order: option id to a fractional key, compared
+   * with the options' shared `position` keys. An option without a key uses its
+   * `position`. Read only when the groups are sorted Manual. Absent: the option order.
+   */
+  groupOrder?: Record<string, string>;
   /** Groups this view hides, by option id. */
   hiddenGroups?: GroupRef[];
   /** Groups this view shows collapsed, by option id. */
@@ -991,7 +997,7 @@ export interface GroupRef {
 /** View fields a caller may set when creating or changing a view. */
 export type DatabaseViewSettingKey =
   | 'properties' | 'wrapCells' | 'frozenColumnCount' | 'showVerticalLines' | 'loadLimit' | 'calculations' | 'openPagesIn'
-  | 'noValueGroupPosition' | 'hiddenGroups' | 'collapsedGroups' | 'hideGroupAggregation' | 'groupCalculation'
+  | 'noValueGroupPosition' | 'groupOrder' | 'hiddenGroups' | 'collapsedGroups' | 'hideGroupAggregation' | 'groupCalculation'
   | 'filterTree' | 'groupSettings' | 'subGroupBy' | 'subGroupSettings' | 'colorRules' | 'showPageIcon' | 'showDataSourceTitle' | 'groupByStatus'
   | 'cardSize' | 'cardPreview' | 'fitImage' | 'calendarBy' | 'calendarRange' | 'showWeekends'
   | 'timelineBy' | 'timelineEndBy' | 'timelineZoom' | 'timelineCenter' | 'showTimelineTable' | 'tableProperties' | 'arrowsBy'

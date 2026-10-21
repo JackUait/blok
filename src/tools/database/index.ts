@@ -5866,9 +5866,13 @@ export class DatabaseTool implements BlockTool {
     const reorder = (): SelectOption[] => property?.type === 'status'
       ? [...listed].reverse()
       : [...listed].sort((x, y) => x.label.localeCompare(y.label) * (sort === 'descending' ? -1 : 1));
-    const options = inOrder ? listed : reorder();
+    // research/31 §8: a view's own manual order. Status keeps its workflow order.
+    const order = sort === 'manual' && property?.type !== 'status' ? view?.groupOrder : undefined;
+    const keyOf = (option: SelectOption): string => order?.[option.id] ?? option.position;
+    const manual = order === undefined ? listed : [...listed].sort((x, y) => (keyOf(x) < keyOf(y) ? -1 : 1));
+    const options = inOrder ? manual : reorder();
     const stored = view?.noValueGroupPosition;
-    const index = stored === undefined || !inOrder ? -1 : options.findIndex((option) => option.position > stored);
+    const index = stored === undefined || !inOrder ? -1 : options.findIndex((option) => keyOf(option) > stored);
     const all = index === -1
       ? [...options, noValue]
       : [...options.slice(0, index), noValue, ...options.slice(index)];
@@ -9314,9 +9318,13 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
+    // A view with its own group order moves the column there only; the options keep their positions.
+    const order = viewConfig?.groupOrder !== undefined && prop.type !== 'status' ? viewConfig.groupOrder : undefined;
     // Keep the stored array in position order so every later reader (add-column,
     // neighbour lookup) sees the same order the board renders in.
-    const options = [...prop.config.options].sort((a, b) => (a.position < b.position ? -1 : 1));
+    const options = prop.config.options
+      .map((o) => (order?.[o.id] === undefined ? o : { ...o, position: order[o.id] }))
+      .sort((a, b) => (a.position < b.position ? -1 : 1));
     const draggedIdx = options.findIndex((o) => o.id === optionId);
 
     if (draggedIdx === -1) {
@@ -9338,6 +9346,13 @@ export class DatabaseTool implements BlockTool {
     const newPosition = beforeOptionId === NO_VALUE_GROUP_KEY && viewConfig?.noValueGroupPosition === undefined
       ? DatabaseModel.positionBetween(positionOf(afterOptionId), null)
       : DatabaseModel.positionBetween(positionOf(afterOptionId), positionOf(beforeOptionId));
+
+    if (order !== undefined && viewConfig !== undefined) {
+      this.writeView(viewConfig.id, { groupOrder: { ...order, [optionId]: newPosition } });
+      this.moveColumnInDom(optionId, beforeOptionId);
+
+      return;
+    }
 
     options[draggedIdx] = { ...options[draggedIdx], position: newPosition };
     options.sort((a, b) => (a.position < b.position ? -1 : 1));

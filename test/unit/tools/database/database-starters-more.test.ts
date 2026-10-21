@@ -207,6 +207,16 @@ describe('"More templates" (research/27 §1e, research/30 §10)', () => {
       expect(made.views.map((v) => v.name)).toEqual(['All Docs', 'My Docs', 'By Category']);
       expect(viewNamed(made, 'By Category').groupBy).toBe(prop(made, 'Category').id);
     });
+
+    it('By Category\'s first group is Customer research (research/30 B8); the rest keep the option order (unmeasured)', () => {
+      const made = build('documentHub', { views: ['All Docs', 'My Docs', 'By Category'] });
+      const order = viewNamed(made, 'By Category').groupOrder ?? {};
+      const category = prop(made, 'Category').config?.options ?? [];
+      const keyOf = (id: string): string => order[id] ?? category.find((o) => o.id === id)?.position ?? '';
+
+      expect([...category].sort((x, y) => (keyOf(x.id) < keyOf(y.id) ? -1 : 1)).map((o) => o.label))
+        .toEqual(['Customer research', 'Proposal', 'Strategy doc', 'Planning']);
+    });
   });
 
   describe('Brainstorm Session (research/30 §10d)', () => {
@@ -353,6 +363,17 @@ describe('"More templates" (research/27 §1e, research/30 §10)', () => {
       expect(byTeam.type).toBe('table');
       expect(shownNames(made, 'By Team')).toEqual(['Status', 'Owner', 'Team', 'Priority', 'Quarter']);
       expect(byTeam).toMatchObject({ showPageIcon: true, wrapCells: false, showVerticalLines: true, openPagesIn: 'side', loadLimit: 25, groupSettings: { sort: 'manual', hideEmptyGroups: false } });
+    });
+
+    it('By Team lists its groups Account Management, Business Development, Human Resources, Product Design; the option order is kept (research/31 §8)', () => {
+      const made = build('goals', { views: ['All Goals', 'By Team'] });
+      const order = viewNamed(made, 'By Team').groupOrder ?? {};
+      const team = prop(made, 'Team').config?.options ?? [];
+      const keyOf = (id: string): string => order[id] ?? team.find((o) => o.id === id)?.position ?? '';
+
+      expect([...team].sort((x, y) => (keyOf(x.id) < keyOf(y.id) ? -1 : 1)).map((o) => o.label))
+        .toEqual(['Account Management', 'Business Development', 'Human Resources', 'Product Design']);
+      expect(team.map((o) => o.label)).toEqual(['Account Management', 'Business Development', 'Product Design', 'Human Resources']);
     });
 
     const allGoals = { features: ['Due date', 'Priority', 'Team', 'Quarter', 'Progress'] };

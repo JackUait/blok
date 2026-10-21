@@ -717,6 +717,11 @@ export const DATABASE_DATA = {
           chartCenterValue: { type: 'boolean', description: 'Donut chart: show the total in the center. Default true.' },
           chartLegend: { type: 'string', enum: ['off', 'bottom', 'side'], description: 'Chart legend position. Default bottom.' },
           noValueGroupPosition: { type: 'string', description: 'Where the no-value group sits among the groups. Absent means last.' },
+          groupOrder: {
+            type: 'object',
+            additionalProperties: { type: 'string' },
+            description: 'This view\'s own manual group order: option id to a fractional key, compared with option positions. An option without a key uses its position.',
+          },
           hiddenGroups: GROUP_REFS,
           collapsedGroups: GROUP_REFS,
           hideGroupAggregation: { type: 'boolean' },

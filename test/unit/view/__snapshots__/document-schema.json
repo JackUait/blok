@@ -3321,6 +3321,13 @@
                 "type": "string",
                 "description": "Where the no-value group sits among the groups. Absent means last."
               },
+              "groupOrder": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "This view's own manual group order: option id to a fractional key, compared with option positions. An option without a key uses its position."
+              },
               "hiddenGroups": {
                 "type": "array",
                 "items": {

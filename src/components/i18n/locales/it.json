@@ -1770,6 +1770,7 @@
   "tools.database.csvUntitledColumn": "Colonna",
   "tools.database.csvImportDescription": "Crea un nuovo database dal tuo CSV",
   "tools.database.csvUploadLabel": "Carica CSV",
+  "tools.database.csvImportLocation": "Posizione di importazione",
   "tools.database.csvChooseFile": "Scegli file",
   "tools.database.csvClearFile": "Cancella file",
   "tools.database.csvMapHeaders": "Mappa intestazioni CSV",

@@ -1772,6 +1772,7 @@
   "tools.database.csvUntitledColumn": "Kolumna",
   "tools.database.csvImportDescription": "Utwórz nową bazę danych z pliku CSV",
   "tools.database.csvUploadLabel": "Prześlij CSV",
+  "tools.database.csvImportLocation": "Miejsce importu",
   "tools.database.csvChooseFile": "Wybierz plik",
   "tools.database.csvClearFile": "Wyczyść plik",
   "tools.database.csvMapHeaders": "Dopasuj nagłówki CSV",

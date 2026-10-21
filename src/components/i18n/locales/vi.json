@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "Cột",
   "tools.database.csvImportDescription": "Tạo cơ sở dữ liệu mới từ tệp CSV của bạn",
   "tools.database.csvUploadLabel": "Tải lên CSV",
+  "tools.database.csvImportLocation": "Vị trí nhập",
   "tools.database.csvChooseFile": "Chọn tệp",
   "tools.database.csvClearFile": "Xóa tệp",
   "tools.database.csvMapHeaders": "Ánh xạ tiêu đề CSV",

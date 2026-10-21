@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "Kolom",
   "tools.database.csvImportDescription": "Maak een nieuwe database van je CSV",
   "tools.database.csvUploadLabel": "CSV uploaden",
+  "tools.database.csvImportLocation": "Importlocatie",
   "tools.database.csvChooseFile": "Bestand kiezen",
   "tools.database.csvClearFile": "Bestand wissen",
   "tools.database.csvMapHeaders": "CSV-kopteksten koppelen",

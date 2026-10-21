@@ -4176,6 +4176,26 @@ describe('row ⋮⋮ menu with a real editor', () => {
     expect((merged?.data as DatabaseRowData | undefined)?.properties.stage).toBe(shipId);
   });
 
+  // research/30 §9f: an unmatched column becomes a new property; one undo takes it out with the rows.
+  it('undoes a CSV merge\'s new property with its rows in one undo step', async () => {
+    const names = async (): Promise<string[]> =>
+      ((await editor?.save())?.blocks.find((block) => block.id === 'db')?.data as DatabaseData).schema.map((property) => property.name);
+    const rows = (): string[] => editor?.blocks.getChildren('db').map((block) => block.id) ?? [];
+
+    await make(doc());
+    const before = await names();
+
+    editor?.blocks.getById('db')?.call('mergeCsv', 'Name,Extra\nShip it,x' as never);
+    await quiet();
+    if (!(await names()).includes('Extra') || rows().length !== 3) throw new Error('mergeCsv made no new property or row');
+
+    editor?.history.undo();
+    await quiet();
+
+    expect(await names()).toEqual(before);
+    expect(rows()).toEqual(['r1', 'r2']);
+  });
+
   it('sends a redone CSV merge row with the option the same step created', async () => {
     const blocks = doc();
     const backend = backendFor(blocks, 'db');

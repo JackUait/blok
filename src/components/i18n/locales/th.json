@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "คอลัมน์",
   "tools.database.csvImportDescription": "สร้างฐานข้อมูลใหม่จาก CSV ของคุณ",
   "tools.database.csvUploadLabel": "อัปโหลด CSV",
+  "tools.database.csvImportLocation": "ตำแหน่งที่นำเข้า",
   "tools.database.csvChooseFile": "เลือกไฟล์",
   "tools.database.csvClearFile": "ล้างไฟล์",
   "tools.database.csvMapHeaders": "จับคู่ส่วนหัว CSV",

@@ -1770,6 +1770,7 @@
   "tools.database.csvUntitledColumn": "עמודה",
   "tools.database.csvImportDescription": "צור מסד נתונים חדש מקובץ CSV",
   "tools.database.csvUploadLabel": "העלה CSV",
+  "tools.database.csvImportLocation": "מיקום הייבוא",
   "tools.database.csvChooseFile": "בחר קובץ",
   "tools.database.csvClearFile": "נקה קובץ",
   "tools.database.csvMapHeaders": "מפה כותרות CSV",

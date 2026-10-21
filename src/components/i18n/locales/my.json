@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "ကော်လံ",
   "tools.database.csvImportDescription": "သင့် CSV ဖြင့် ဒေတာဘေ့စ်အသစ် ဖန်တီးရန်",
   "tools.database.csvUploadLabel": "CSV အပ်လုဒ်လုပ်ရန်",
+  "tools.database.csvImportLocation": "တင်သွင်းမည့်နေရာ",
   "tools.database.csvChooseFile": "ဖိုင် ရွေးရန်",
   "tools.database.csvClearFile": "ဖိုင် ရှင်းလင်းရန်",
   "tools.database.csvMapHeaders": "CSV ခေါင်းစီးများကို ချိတ်ဆက်ရန်",

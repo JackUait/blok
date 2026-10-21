@@ -70,6 +70,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/database/database-csv-import-dialog.ts': cmds(['block.insert', 'database.addProperty', 'database.addRow'], 'The CSV import dialog: an agent makes the database, its typed properties and rows itself.'),
   'menu:database/database-csv-type-skip': exempt('gesture-alias', 'Picks a CSV column type before import; ui-file:src/tools/database/database-csv-import-dialog.ts covers the import.'),
   'menu:database/database-csv-type-title': exempt('gesture-alias', 'Picks a CSV column type before import; ui-file:src/tools/database/database-csv-import-dialog.ts covers the import.'),
+  'menu:database/database-csv-type-existing-*': exempt('gesture-alias', 'Maps a CSV column onto an existing property before a merge; ui-file:src/tools/database/database-csv-import-dialog.ts covers the merge.'),
   'menu:database/database-csv-type-new-*': exempt('gesture-alias', 'Picks a CSV column type before import; ui-file:src/tools/database/database-csv-import-dialog.ts covers the import.'),
   'menu:database/database-csv-type-new-date': exempt('gesture-alias', 'Picks Date as a CSV column type before import; ui-file:src/tools/database/database-csv-import-dialog.ts covers the import.'),
   'menu:database/database-csv-date-*': exempt('gesture-alias', 'Picks how a CSV date column is read before import; ui-file:src/tools/database/database-csv-import-dialog.ts covers the import.'),

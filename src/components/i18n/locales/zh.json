@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "列",
   "tools.database.csvImportDescription": "使用你的 CSV 创建新数据库",
   "tools.database.csvUploadLabel": "上传 CSV",
+  "tools.database.csvImportLocation": "导入位置",
   "tools.database.csvChooseFile": "选择文件",
   "tools.database.csvClearFile": "清除文件",
   "tools.database.csvMapHeaders": "映射 CSV 表头",

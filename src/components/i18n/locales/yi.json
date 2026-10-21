@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "שפּאַלט",
   "tools.database.csvImportDescription": "שאַפֿט אַ נײַע דאַטאַבאַנק מיט אײַער CSV",
   "tools.database.csvUploadLabel": "אַרויפֿלאָדן CSV",
+  "tools.database.csvImportLocation": "אימפּאָרט אָרט",
   "tools.database.csvChooseFile": "אויסקלײַבן טעקע",
   "tools.database.csvClearFile": "אויסליידיקן טעקע",
   "tools.database.csvMapHeaders": "צופּאַסן CSV קעפּלעך",

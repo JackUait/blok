@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "Sütun",
   "tools.database.csvImportDescription": "CSV faylı ilə yeni verilənlər bazası yarat",
   "tools.database.csvUploadLabel": "CSV yüklə",
+  "tools.database.csvImportLocation": "İdxal yeri",
   "tools.database.csvChooseFile": "Fayl seç",
   "tools.database.csvClearFile": "Faylı təmizlə",
   "tools.database.csvMapHeaders": "CSV başlıqlarını uyğunlaşdır",

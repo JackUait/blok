@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "Sarake",
   "tools.database.csvImportDescription": "Luo uusi tietokanta CSV-tiedostosta",
   "tools.database.csvUploadLabel": "Lataa CSV",
+  "tools.database.csvImportLocation": "Tuonnin sijainti",
   "tools.database.csvChooseFile": "Valitse tiedosto",
   "tools.database.csvClearFile": "Tyhjennä tiedosto",
   "tools.database.csvMapHeaders": "Yhdistä CSV-otsikot",

@@ -6,6 +6,7 @@ import {
   csvColumns,
   inferColumnType,
   parseCsv,
+  csvMergeTargets,
   planCsvMerge,
   serializeCsv,
 } from '../../../../src/tools/database/database-csv';
@@ -299,6 +300,15 @@ describe('database CSV', () => {
     });
   });
 
+  // research/30 §9a: a first column headed "Title" read "Name" in Notion's preview.
+  it('names a title column headed "Title" with the title name; any other header keeps its text', () => {
+    const named = (header: string): string | undefined =>
+      buildCsvImport([[header, 'Notes'], ['A', 'x']], { untitled: 'Column', titleName: 'Name', newId: ids() }).schema[0].name;
+
+    expect(named('Title')).toBe('Name');
+    expect(named('Task')).toBe('Task');
+  });
+
   describe('"Use first row as headers" off (research/30 §9c)', () => {
     const imported = buildCsvImport(NEUTRAL, {
       untitled: 'Column',
@@ -379,11 +389,51 @@ describe('database CSV', () => {
       expect(plan.rows).toEqual([{ 'p-title': 'Write', 'p-pts': 5 }]);
     });
 
-    it('matches headers to property names exactly and skips the rest', () => {
-      const plan = planCsvMerge([['Name', 'points', 'Extra'], ['A', '1', 'x']], schema, { newId: () => 'o-new' });
+    // research/30 §9f: "Extra" matched nothing and became a new Text property at the end.
+    it('matches headers to property names exactly and adds the rest as new properties of their detected type', () => {
+      const plan = planCsvMerge([['Name', 'points', 'Extra'], ['A', '1', 'x']], schema, { newId: ids() });
 
-      expect(plan.rows).toEqual([{ 'p-title': 'A' }]);
-      expect(plan.skippedColumns).toEqual(['points', 'Extra']);
+      expect(plan.newProperties.map((p) => [p.name, p.type])).toEqual([['points', 'number'], ['Extra', 'text']]);
+      expect(plan.newProperties.every((p) => p.position > 'a2')).toBe(true);
+      expect(plan.rows).toEqual([{ 'p-title': 'A', [plan.newProperties[0].id]: 1, [plan.newProperties[1].id]: 'x' }]);
+      expect(plan.skippedColumns).toEqual([]);
+    });
+
+    it('maps a column onto the existing property, a new type, or nowhere, as the targets say', () => {
+      const plan = planCsvMerge([['Name', 'Due', 'Extra'], ['R1', 'Red', 'x']], schema, {
+        newId: ids(),
+        targets: [{ property: 'p-title' }, { property: 'p-tag' }, 'skip'],
+      });
+
+      expect(plan.newProperties).toEqual([]);
+      expect(plan.rows).toEqual([{ 'p-title': 'R1', 'p-tag': 'o1' }]);
+      expect(plan.skippedColumns).toEqual(['Extra']);
+    });
+
+    it('names a new property apart from an existing one, and builds a new Select from the values', () => {
+      const plan = planCsvMerge([['Name', 'Tag'], ['A', 'x'], ['B', 'y']], schema, { newId: ids(), targets: [{ property: 'p-title' }, 'select'] });
+      const [tag] = plan.newProperties;
+
+      expect([tag.name, tag.type]).toEqual(['Tag 1', 'select']);
+      expect(tag.config?.options.map((o) => o.label)).toEqual(['x', 'y']);
+      expect(plan.rows.map((row) => row[tag.id])).toEqual(tag.config?.options.map((o) => o.id));
+    });
+
+    it('reads a new date column in the chosen format', () => {
+      const plan = planCsvMerge([['Name', 'When'], ['A', '03/04/2026']], schema, { newId: ids(), dateFormats: [undefined, 'day_month_year'] });
+
+      expect(plan.rows[0][plan.newProperties[0].id]).toBe('2026-04-03');
+    });
+
+    it('defaults each column: a matching property, else its detected type; a computed match is not imported', () => {
+      const withFormula: PropertyDefinition[] = [...schema, { id: 'p-f', name: 'Total', type: 'formula', position: 'a3' }];
+
+      expect(csvMergeTargets([['Name', 'Points', 'Total', 'When'], ['A', '1', '2', '2026-03-04']], withFormula))
+        .toEqual([{ property: 'p-title' }, { property: 'p-pts' }, 'skip', 'date']);
+    });
+
+    it('without a header line, names the columns "Column N" and matches none of them', () => {
+      expect(csvMergeTargets([['Name', 'Points'], ['A', '1']], schema, { headers: false, untitled: 'Column' })).toEqual(['text', 'number']);
     });
 
     // Not measured in Notion: repeated headers are numbered as on import, so a file merges into the database it made.

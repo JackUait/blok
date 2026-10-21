@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "কলাম",
   "tools.database.csvImportDescription": "আপনার CSV দিয়ে একটি নতুন ডেটাবেস তৈরি করুন",
   "tools.database.csvUploadLabel": "CSV আপলোড করুন",
+  "tools.database.csvImportLocation": "ইমপোর্টের অবস্থান",
   "tools.database.csvChooseFile": "ফাইল বেছে নিন",
   "tools.database.csvClearFile": "ফাইল সাফ করুন",
   "tools.database.csvMapHeaders": "CSV হেডার মেলান",

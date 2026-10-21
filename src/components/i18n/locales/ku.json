@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "ستوون",
   "tools.database.csvImportDescription": "داتابەیسێکی نوێ لە CSVـەکەت دروست بکە",
   "tools.database.csvUploadLabel": "بارکردنی CSV",
+  "tools.database.csvImportLocation": "Cihê îtxalkirinê",
   "tools.database.csvChooseFile": "هەڵبژاردنی فایل",
   "tools.database.csvClearFile": "پاککردنەوەی فایل",
   "tools.database.csvMapHeaders": "گونجاندنی سەردێڕەکانی CSV",

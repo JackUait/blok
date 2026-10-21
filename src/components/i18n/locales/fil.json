@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "Kolum",
   "tools.database.csvImportDescription": "Gumawa ng bagong database mula sa iyong CSV",
   "tools.database.csvUploadLabel": "Mag-upload ng CSV",
+  "tools.database.csvImportLocation": "Lokasyon ng pag-import",
   "tools.database.csvChooseFile": "Pumili ng file",
   "tools.database.csvClearFile": "I-clear ang file",
   "tools.database.csvMapHeaders": "I-map ang mga header ng CSV",

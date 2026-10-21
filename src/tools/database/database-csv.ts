@@ -390,8 +390,8 @@ export const buildCsvImport = (table: string[][], options: CsvImportOptions): Cs
     return type === 'skip' ? [] : [{ column: index, name: column.name, type }];
   });
   const titleName = options.titleName ?? 'Name';
-  // research/30 §9c: without a header line the title keeps its own name.
-  const named = headers ? kept : kept.map((field) => (field.type === 'title' ? { ...field, name: titleName } : field));
+  // research/30 §9c: without a header line the title keeps its own name. §9a: so does a title headed "Title".
+  const named = kept.map((field) => (field.type === 'title' && (!headers || field.name === 'Title') ? { ...field, name: titleName } : field));
   const fields: Array<{ column: number; name: string; type: PropertyType }> = titleAt === -1 ? [{ column: -1, name: titleName, type: 'title' }, ...named] : named;
   const schema: PropertyDefinition[] = fields.map((field, index) => ({
     id: options.newId(),
@@ -420,11 +420,50 @@ export const buildCsvImport = (table: string[][], options: CsvImportOptions): Cs
 
 export interface CsvMergePlan {
   rows: Array<Record<string, PropertyValue>>;
-  /** Headers that name no property, so their cells are dropped. */
+  /** Headers set to "Don't import", so their cells are dropped. */
   skippedColumns: string[];
   /** Select options to add, by property id. */
   newOptions: Record<string, Array<Pick<SelectOption, 'id' | 'label'>>>;
+  /** Properties to add at the end, for the columns that go to a new property, in CSV order. */
+  newProperties: PropertyDefinition[];
 }
+
+/** Where a merged CSV column goes: nowhere, an existing property, or a new property of a type. */
+export type CsvMergeTarget = CsvColumnTarget | { property: string };
+
+/** Types a merged column can fill from text. Computed, people and file values have no text form. */
+const MERGEABLE_TYPES: ReadonlySet<PropertyType> = new Set<PropertyType>([
+  'title', 'text', 'number', 'checkbox', 'date', 'url', 'email', 'phone', 'place', 'select', 'multiSelect', 'status',
+]);
+
+export const isMergeableProperty = (property: PropertyDefinition): boolean => MERGEABLE_TYPES.has(property.type);
+
+export interface CsvMergeOptions {
+  /** The schema as this person reads it: an export writes localized names and labels. */
+  localized?: PropertyDefinition[];
+  /** False: the first line is a row and the columns are "Column N" (research/30 §9c). Default true. */
+  headers?: boolean;
+  untitled?: string;
+}
+
+/**
+ * Each column's default on merge (research/30 §9f): the property its header
+ * names, else a new property of the detected type. A header that names a
+ * property no text can fill is not imported.
+ */
+export const csvMergeTargets = (table: string[][], schema: PropertyDefinition[], options: CsvMergeOptions = {}): CsvMergeTarget[] => {
+  // Detection reads the rows below the first line either way, as csvColumns does.
+  const body = table.slice(1);
+  const shown = (property: PropertyDefinition): PropertyDefinition | undefined => options.localized?.find((p) => p.id === property.id);
+
+  return csvColumns(table, options.untitled, options.headers !== false).map((column, index): CsvMergeTarget => {
+    const property = schema.find((p) => p.name === column.name || shown(p)?.name === column.name);
+
+    if (property !== undefined) return isMergeableProperty(property) ? { property: property.id } : 'skip';
+
+    return column.detected === 'title' ? inferColumnType(body.map((row) => row[index] ?? '')) : column.detected;
+  });
+};
 
 /**
  * A multi-select cell's labels. The export joins them with ", ", so a comma
@@ -445,22 +484,35 @@ const splitLabels = (text: string, isKnown: (label: string) => boolean): string[
 };
 
 /**
- * Merge with CSV: headers must match property names exactly, and every CSV
- * row becomes a new row. Notion never updates an existing row here
- * (research/05 §9.3), so neither does Blok.
+ * Merge with CSV: every CSV row becomes a new row. Notion never updates an
+ * existing row here (research/05 §9.3, research/30 §9f), so neither does Blok.
+ * A column with no property becomes a new one at the end (§9f "Extra").
  */
 export const planCsvMerge = (
   table: string[][],
   schema: PropertyDefinition[],
-  options: {
+  options: CsvMergeOptions & {
     newId: () => string;
-    /** The schema as this person reads it: an export writes localized names and labels. */
-    localized?: PropertyDefinition[];
+    /** One target per column. Without it, csvMergeTargets. */
+    targets?: CsvMergeTarget[];
+    /** How each new date column's text is read (research/30 §9b). */
+    dateFormats?: Array<DateFormat | undefined>;
   }
 ): CsvMergePlan => {
-  const [header = [], ...body] = table;
+  const headers = options.headers !== false;
+  const body = headers ? table.slice(1) : table;
+  const columns = csvColumns(table, options.untitled, headers);
+  const defaults = csvMergeTargets(table, schema, options);
+  const titleId = schema.find((p) => p.type === 'title')?.id;
+  const targets = columns.map((_, index): CsvMergeTarget => {
+    const target = options.targets?.[index] ?? defaults[index];
+
+    if (target !== 'title') return target;
+
+    // One title per database: a new title means the existing one.
+    return titleId === undefined ? 'skip' : { property: titleId };
+  });
   const shown = (property: PropertyDefinition): PropertyDefinition | undefined => options.localized?.find((p) => p.id === property.id);
-  const columns = numberedHeaders(header).map((name) => schema.find((property) => property.name === name || shown(property)?.name === name));
   const newOptions: CsvMergePlan['newOptions'] = {};
   const knownOption = (property: PropertyDefinition, label: string): SelectOption | undefined => {
     const localizedLabel = (id: string): string | undefined => shown(property)?.config?.options.find((option) => option.id === id)?.label;
@@ -487,16 +539,44 @@ export const planCsvMerge = (
 
     return parseCell(property, raw);
   };
-  const rows = body.map((row) => Object.fromEntries(columns.flatMap((property, column) => {
-    const value = property === undefined ? undefined : valueOf(property, row[column] ?? '');
+  const lastPosition = [...schema].sort((a, b) => (a.position < b.position ? -1 : 1)).at(-1)?.position ?? null;
+  const names = schema.map((p) => p.name);
+  const fresh = targets.flatMap((target, column) => (typeof target === 'string' && target !== 'skip' ? [{ column, type: target }] : []));
+  const positions = fresh.reduce<string[]>((list) => [...list, generateKeyBetween(list.at(-1) ?? lastPosition, null)], []);
+  const added = fresh.map((field, index) => {
+    const name = freePropertyName(names, columns[field.column].name);
+    const property: PropertyDefinition = { id: options.newId(), name, type: CONVERTED_TYPES.has(field.type) ? 'text' : field.type, position: positions[index] };
+
+    names.push(name);
+
+    return { ...field, property };
+  });
+  const newAt = new Map(added.map((field) => [field.column, field.property]));
+  const rows = body.map((row) => Object.fromEntries(targets.flatMap((target, column) => {
+    const raw = row[column] ?? '';
+    const fresh = newAt.get(column);
+
+    if (fresh !== undefined) return [[fresh.id, parseCell(fresh, raw, options.dateFormats?.[column]) ?? null]];
+    const property = typeof target === 'string' ? undefined : schema.find((p) => p.id === target.property);
+    const value = property === undefined ? undefined : valueOf(property, raw);
 
     return property === undefined || value === undefined ? [] : [[property.id, value]];
   })));
+  const ordered = rows.map((properties, index) => ({ id: String(index), position: position(index), properties }));
+  const newProperties = added.map((field) => {
+    const plan = CONVERTED_TYPES.has(field.type) ? planTypeChange(field.property, field.type, ordered, options.newId) : null;
+
+    if (plan === null) return field.property;
+    for (const write of plan.writes) rows[Number(write.rowId)][field.property.id] = write.value;
+
+    return plan.property;
+  });
 
   return {
     rows,
-    skippedColumns: header.filter((_, column) => columns[column] === undefined),
+    skippedColumns: columns.filter((_, column) => targets[column] === 'skip').map((column) => column.name),
     newOptions,
+    newProperties,
   };
 };
 

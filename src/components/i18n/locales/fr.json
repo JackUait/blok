@@ -1770,6 +1770,7 @@
   "tools.database.csvUntitledColumn": "Colonne",
   "tools.database.csvImportDescription": "Créer une base de données à partir d’un CSV",
   "tools.database.csvUploadLabel": "Importer un CSV",
+  "tools.database.csvImportLocation": "Emplacement de l’import",
   "tools.database.csvChooseFile": "Choisir un fichier",
   "tools.database.csvClearFile": "Effacer le fichier",
   "tools.database.csvMapHeaders": "Associer les en-têtes CSV",

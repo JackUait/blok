@@ -1772,6 +1772,7 @@
   "tools.database.csvUntitledColumn": "Sloupec",
   "tools.database.csvImportDescription": "Vytvořit novou databázi z CSV souboru",
   "tools.database.csvUploadLabel": "Nahrát CSV",
+  "tools.database.csvImportLocation": "Umístění importu",
   "tools.database.csvChooseFile": "Vybrat soubor",
   "tools.database.csvClearFile": "Vymazat soubor",
   "tools.database.csvMapHeaders": "Namapovat záhlaví CSV",

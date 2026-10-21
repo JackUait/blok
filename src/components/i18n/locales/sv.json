@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "Kolumn",
   "tools.database.csvImportDescription": "Skapa en ny databas från din CSV",
   "tools.database.csvUploadLabel": "Ladda upp CSV",
+  "tools.database.csvImportLocation": "Importplats",
   "tools.database.csvChooseFile": "Välj fil",
   "tools.database.csvClearFile": "Rensa fil",
   "tools.database.csvMapHeaders": "Mappa CSV-rubriker",

@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "Kolom",
   "tools.database.csvImportDescription": "Buat basis data baru dari CSV Anda",
   "tools.database.csvUploadLabel": "Unggah CSV",
+  "tools.database.csvImportLocation": "Lokasi impor",
   "tools.database.csvChooseFile": "Pilih file",
   "tools.database.csvClearFile": "Hapus file",
   "tools.database.csvMapHeaders": "Petakan header CSV",

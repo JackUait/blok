@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "کالم",
   "tools.database.csvImportDescription": "اپنی CSV سے نیا ڈیٹابیس بنائیں",
   "tools.database.csvUploadLabel": "CSV اپ لوڈ کریں",
+  "tools.database.csvImportLocation": "درآمد کا مقام",
   "tools.database.csvChooseFile": "فائل منتخب کریں",
   "tools.database.csvClearFile": "فائل صاف کریں",
   "tools.database.csvMapHeaders": "CSV ہیڈرز میپ کریں",

@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "நெடுவரிசை",
   "tools.database.csvImportDescription": "உங்கள் CSV மூலம் புதிய தரவுத்தளத்தை உருவாக்கு",
   "tools.database.csvUploadLabel": "CSV ஐப் பதிவேற்று",
+  "tools.database.csvImportLocation": "இறக்குமதி இடம்",
   "tools.database.csvChooseFile": "கோப்பைத் தேர்ந்தெடு",
   "tools.database.csvClearFile": "கோப்பை அழி",
   "tools.database.csvMapHeaders": "CSV தலைப்புகளைப் பொருத்து",

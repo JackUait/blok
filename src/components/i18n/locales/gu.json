@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "કૉલમ",
   "tools.database.csvImportDescription": "તમારી CSV વડે નવો ડેટાબેઝ બનાવો",
   "tools.database.csvUploadLabel": "CSV અપલોડ કરો",
+  "tools.database.csvImportLocation": "ઇમ્પોર્ટ સ્થાન",
   "tools.database.csvChooseFile": "ફાઇલ પસંદ કરો",
   "tools.database.csvClearFile": "ફાઇલ સાફ કરો",
   "tools.database.csvMapHeaders": "CSV હેડરનો મેળ કરો",

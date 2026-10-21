@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "Spalte",
   "tools.database.csvImportDescription": "Neue Datenbank aus einer CSV-Datei erstellen",
   "tools.database.csvUploadLabel": "CSV hochladen",
+  "tools.database.csvImportLocation": "Importziel",
   "tools.database.csvChooseFile": "Datei auswählen",
   "tools.database.csvClearFile": "Datei entfernen",
   "tools.database.csvMapHeaders": "CSV-Überschriften zuordnen",

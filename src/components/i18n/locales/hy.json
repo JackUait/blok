@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "Սյունակ",
   "tools.database.csvImportDescription": "Ստեղծել նոր տվյալների բազա CSV ֆայլից",
   "tools.database.csvUploadLabel": "Վերբեռնել CSV",
+  "tools.database.csvImportLocation": "Ներմուծման վայր",
   "tools.database.csvChooseFile": "Ընտրել ֆայլ",
   "tools.database.csvClearFile": "Մաքրել ֆայլը",
   "tools.database.csvMapHeaders": "Համապատասխանեցնել CSV վերնագրերը",

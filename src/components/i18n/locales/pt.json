@@ -1770,6 +1770,7 @@
   "tools.database.csvUntitledColumn": "Coluna",
   "tools.database.csvImportDescription": "Crie um novo banco de dados com seu CSV",
   "tools.database.csvUploadLabel": "Enviar CSV",
+  "tools.database.csvImportLocation": "Local de importação",
   "tools.database.csvChooseFile": "Escolher arquivo",
   "tools.database.csvClearFile": "Limpar arquivo",
   "tools.database.csvMapHeaders": "Mapear cabeçalhos do CSV",

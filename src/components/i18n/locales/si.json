@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "තීරුව",
   "tools.database.csvImportDescription": "ඔබේ CSV සමඟ නව දත්ත සමුදායක් සාදන්න",
   "tools.database.csvUploadLabel": "CSV උඩුගත කරන්න",
+  "tools.database.csvImportLocation": "ආයාත ස්ථානය",
   "tools.database.csvChooseFile": "ගොනුව තෝරන්න",
   "tools.database.csvClearFile": "ගොනුව හිස් කරන්න",
   "tools.database.csvMapHeaders": "CSV ශීර්ෂ ගළපන්න",

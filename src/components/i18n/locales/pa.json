@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "ਕਾਲਮ",
   "tools.database.csvImportDescription": "ਆਪਣੀ CSV ਤੋਂ ਨਵਾਂ ਡਾਟਾਬੇਸ ਬਣਾਓ",
   "tools.database.csvUploadLabel": "CSV ਅੱਪਲੋਡ ਕਰੋ",
+  "tools.database.csvImportLocation": "ਇੰਪੋਰਟ ਟਿਕਾਣਾ",
   "tools.database.csvChooseFile": "ਫ਼ਾਈਲ ਚੁਣੋ",
   "tools.database.csvClearFile": "ਫ਼ਾਈਲ ਸਾਫ਼ ਕਰੋ",
   "tools.database.csvMapHeaders": "CSV ਸਿਰਲੇਖ ਮਿਲਾਓ",

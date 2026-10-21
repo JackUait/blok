@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "स्तम्भ",
   "tools.database.csvImportDescription": "तपाईंको CSV बाट नयाँ डेटाबेस बनाउनुहोस्",
   "tools.database.csvUploadLabel": "CSV अपलोड गर्नुहोस्",
+  "tools.database.csvImportLocation": "आयात स्थान",
   "tools.database.csvChooseFile": "फाइल छान्नुहोस्",
   "tools.database.csvClearFile": "फाइल खाली गर्नुहोस्",
   "tools.database.csvMapHeaders": "CSV हेडरहरू मिलाउनुहोस्",

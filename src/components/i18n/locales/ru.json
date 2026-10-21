@@ -1772,6 +1772,7 @@
   "tools.database.csvUntitledColumn": "Столбец",
   "tools.database.csvImportDescription": "Создайте новую базу данных из CSV",
   "tools.database.csvUploadLabel": "Загрузить CSV",
+  "tools.database.csvImportLocation": "Куда импортировать",
   "tools.database.csvChooseFile": "Выбрать файл",
   "tools.database.csvClearFile": "Очистить файл",
   "tools.database.csvMapHeaders": "Сопоставить заголовки CSV",

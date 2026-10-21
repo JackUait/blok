@@ -1770,6 +1770,7 @@
   "tools.database.csvUntitledColumn": "Coloană",
   "tools.database.csvImportDescription": "Creează o bază de date nouă din CSV-ul tău",
   "tools.database.csvUploadLabel": "Încarcă CSV",
+  "tools.database.csvImportLocation": "Locația importului",
   "tools.database.csvChooseFile": "Alege fișierul",
   "tools.database.csvClearFile": "Golește fișierul",
   "tools.database.csvMapHeaders": "Mapează anteturile CSV",

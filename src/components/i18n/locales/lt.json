@@ -1772,6 +1772,7 @@
   "tools.database.csvUntitledColumn": "Stulpelis",
   "tools.database.csvImportDescription": "Sukurkite naują duomenų bazę iš savo CSV",
   "tools.database.csvUploadLabel": "Įkelti CSV",
+  "tools.database.csvImportLocation": "Importavimo vieta",
   "tools.database.csvChooseFile": "Pasirinkti failą",
   "tools.database.csvClearFile": "Išvalyti failą",
   "tools.database.csvMapHeaders": "Susieti CSV antraštes",

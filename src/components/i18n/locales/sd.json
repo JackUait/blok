@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "ڪالم",
   "tools.database.csvImportDescription": "پنهنجي CSV سان نئون ڊيٽابيس ٺاهيو",
   "tools.database.csvUploadLabel": "CSV اپلوڊ ڪريو",
+  "tools.database.csvImportLocation": "درآمد جي جاءِ",
   "tools.database.csvChooseFile": "فائل چونڊيو",
   "tools.database.csvClearFile": "فائل صاف ڪريو",
   "tools.database.csvMapHeaders": "CSV هيڊر ملايو",

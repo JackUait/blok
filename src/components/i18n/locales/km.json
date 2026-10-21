@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "ជួរឈរ",
   "tools.database.csvImportDescription": "បង្កើតមូលដ្ឋានទិន្នន័យថ្មីពី CSV របស់អ្នក",
   "tools.database.csvUploadLabel": "បង្ហោះ CSV",
+  "tools.database.csvImportLocation": "ទីតាំងនាំចូល",
   "tools.database.csvChooseFile": "ជ្រើសរើសឯកសារ",
   "tools.database.csvClearFile": "ជម្រះឯកសារ",
   "tools.database.csvMapHeaders": "ផ្គូផ្គងក្បាលជួរឈរ CSV",

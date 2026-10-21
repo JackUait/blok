@@ -698,6 +698,7 @@ export type BlokMessageKey =
   | 'tools.database.csvFirstRowHeaders'
   | 'tools.database.csvImport'
   | 'tools.database.csvImportDescription'
+  | 'tools.database.csvImportLocation'
   | 'tools.database.csvImported'
   | 'tools.database.csvImportsHelp'
   | 'tools.database.csvMapHeaders'

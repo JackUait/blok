@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "ކޮލަމު",
   "tools.database.csvImportDescription": "CSV ފައިލުން އައު ޑޭޓާބޭސްއެއް އުފައްދާ",
   "tools.database.csvUploadLabel": "CSV އަޕްލޯޑްކުރޭ",
+  "tools.database.csvImportLocation": "އިމްޕޯޓް ކުރާ ތަން",
   "tools.database.csvChooseFile": "ފައިލް ހޮވާ",
   "tools.database.csvClearFile": "ފައިލް ސާފުކުރޭ",
   "tools.database.csvMapHeaders": "CSV ހެޑަރުތައް ގުޅުވާ",

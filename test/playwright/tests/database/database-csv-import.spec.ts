@@ -109,8 +109,9 @@ test.describe('database CSV import', () => {
     await expect(preview).not.toContainText('people.csv');
     await dialog.getByTestId('database-csv-map').click();
 
-    // research/30 §9a: Phone comes from the values under a neutral header.
+    // research/30 §9a: Phone comes from the values under a neutral header, and a "Title" header reads "Name".
     await expect(dialog.getByTestId('database-csv-type').nth(1)).toContainText('Phone');
+    await expect(preview.locator('[data-blok-database-csv-preview-thead] [data-blok-database-csv-preview-cell]').first()).toHaveText('Name');
     await expect(rows(preview).first()).toContainText('Alpha');
 
     const headers = dialog.getByTestId('database-csv-headers');
@@ -171,16 +172,32 @@ test.describe('database CSV import', () => {
     await expect(page.locator('[data-blok-item-name="database-csv-type-new-date"]:visible')).toHaveCount(0);
   });
 
-  test('Merge with CSV adds rows, never updates a match, and shows them at once', async ({ page }) => {
+  // research/30 §9f: the import dialog with "Import Location"; Due maps onto Due, Extra becomes a new Text property.
+  test('Merge with CSV maps columns onto existing properties, adds an unmatched one, and only adds rows', async ({ page }) => {
     await mount(page, existing);
     await expect(grid(page)).toContainText('R1');
     await page.getByTestId('database-toolbar-settings').click();
-    const chooser = page.waitForEvent('filechooser');
-
     await page.getByTestId('database-settings-csv-merge').click();
-    await (await chooser).setFiles({ name: 'merge.csv', mimeType: 'text/csv', buffer: Buffer.from('Name,Due\nR1,2026-03-04\nR9,2026-03-05') });
+    const dialog = page.getByRole('dialog');
 
-    await expect(grid(page).getByRole('row').filter({ hasText: 'R9' })).toBeVisible();
+    await expect(dialog.getByTestId('database-csv-location')).toHaveAttribute('aria-disabled', 'true');
+    await expect(dialog.getByTestId('database-csv-location')).toHaveText('New database');
+    await dialog.locator('[data-blok-database-csv-input]').setInputFiles({ name: 'merge.csv', mimeType: 'text/csv', buffer: Buffer.from('Name,Due,Extra\nR1,2026-03-04,x1\nR9,2026-03-05,x9') });
+    await dialog.getByTestId('database-csv-map').click();
+
+    const types = dialog.getByTestId('database-csv-type');
+
+    await expect(types).toHaveText(['Name', 'Due', 'Text']);
+    await types.nth(1).click();
+    await expect(page.locator('[data-blok-item-name="database-csv-type-existing-p-due"]:visible [data-blok-testid="popover-item-trailing-icon"]')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-blok-item-name="database-csv-type-existing-p-due"]:visible')).toHaveCount(0);
+    await dialog.getByTestId('database-csv-import').click();
+    await expect(dialog).toHaveCount(0);
+
+    await expect(grid(page).getByRole('columnheader', { name: 'Extra' })).toBeVisible();
+    await expect(grid(page).getByRole('row').filter({ hasText: 'R9' })).toContainText('x9');
+    await expect(grid(page).getByRole('row').filter({ hasText: 'R9' })).toContainText('March 5, 2026');
     await expect(grid(page).getByRole('row').filter({ hasText: /^\s*R1/ })).toHaveCount(2);
     await expect(grid(page).getByRole('row').filter({ hasText: 'R1' }).first()).toContainText('January 1, 2026');
   });

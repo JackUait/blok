@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "Багана",
   "tools.database.csvImportDescription": "CSV-ээсээ шинэ мэдээллийн сан үүсгэх",
   "tools.database.csvUploadLabel": "CSV байршуулах",
+  "tools.database.csvImportLocation": "Импортлох байршил",
   "tools.database.csvChooseFile": "Файл сонгох",
   "tools.database.csvClearFile": "Файл цэвэрлэх",
   "tools.database.csvMapHeaders": "CSV толгойг тааруулах",

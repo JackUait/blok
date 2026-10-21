@@ -7306,14 +7306,16 @@ describe('DatabaseTool — property menu and insert placement', () => {
       const calls = vi.mocked(options.api.blocks.insertAt).mock.calls;
       const database = calls[0][1] as DatabaseData;
 
-      expect(database.schema.map((p) => p.name)).toEqual(['Title', 'tools.database.csvUntitledColumn 2']);
+      // research/30 §9c: Notion named the title "Name".
+      expect(database.schema.map((p) => p.name)).toEqual(['Name', 'tools.database.csvUntitledColumn 2']);
       expect(calls.slice(1).map(([, rowData]) => (rowData as DatabaseRowData).title)).toEqual(['Task', 'Write']);
       expect((calls[2][1] as DatabaseRowData).properties[database.schema[1].id]).toBe('2026-04-03');
 
       tool.destroy();
     });
 
-    it('merges a CSV by adding rows only, matching headers to property names', () => {
+    // research/30 §9f: rows are added, never matched; "Extra" became a new Text property at the end.
+    it('merges a CSV by adding rows only, matching headers to property names and adding the rest as properties', () => {
       const { tool, options } = mount({});
 
       tool.mergeCsv('Task,Status,Points,Extra\nShip,Done,8,x\nNew,Blocked,1,y');
@@ -7321,15 +7323,52 @@ describe('DatabaseTool — property menu and insert placement', () => {
       const added = vi.mocked(options.api.blocks.insertAt).mock.calls
         .filter(([type]) => type === 'database-row')
         .map(([, data]) => (data as DatabaseRowData).properties);
-      const status = tool.save(document.createElement('div')).schema.find((p) => p.id === 'prop-status');
+      const schema = tool.save(document.createElement('div')).schema;
+      const status = schema.find((p) => p.id === 'prop-status');
       const blocked = status?.config?.options.find((o) => o.label === 'Blocked');
+      const extra = schema.find((p) => p.name === 'Extra');
 
+      expect([extra?.type, [...schema].sort((a, b) => (a.position < b.position ? -1 : 1)).at(-1)?.name]).toEqual(['text', 'Extra']);
       expect(added).toEqual([
-        { 'prop-title': 'Ship', 'prop-status': 'opt-done', 'prop-points': 8 },
-        { 'prop-title': 'New', 'prop-status': blocked?.id, 'prop-points': 1 },
+        { 'prop-title': 'Ship', 'prop-status': 'opt-done', 'prop-points': 8, [extra?.id ?? '']: 'x' },
+        { 'prop-title': 'New', 'prop-status': blocked?.id, 'prop-points': 1, [extra?.id ?? '']: 'y' },
       ]);
       expect(options.api.notifier.show).toHaveBeenCalled();
 
+      tool.destroy();
+    });
+
+    it('merges with the dialog\'s mapping: a column onto an existing property, one not imported, one as a new type', () => {
+      const { tool, options } = mount({});
+
+      tool.mergeCsv('Task,Stage,Notes,Level\nShip,Done,x,High\nNew,Done,y,Low', [{ property: 'prop-title' }, { property: 'prop-status' }, 'skip', 'select']);
+
+      const added = vi.mocked(options.api.blocks.insertAt).mock.calls
+        .filter(([type]) => type === 'database-row')
+        .map(([, data]) => (data as DatabaseRowData).properties);
+      const level = tool.save(document.createElement('div')).schema.find((p) => p.name === 'Level');
+
+      expect(level?.type).toBe('select');
+      expect(level?.config?.options.map((o) => o.label)).toEqual(['High', 'Low']);
+      expect(added.map((row) => [row['prop-title'], row['prop-status'], row[level?.id ?? '']])).toEqual([
+        ['Ship', 'opt-done', level?.config?.options[0].id],
+        ['New', 'opt-done', level?.config?.options[1].id],
+      ]);
+      expect(added.every((row) => !Object.values(row).includes('x'))).toBe(true);
+
+      tool.destroy();
+    });
+
+    // research/30 §9f: Merge with CSV opens the import dialog with "Import Location", not a bare file picker.
+    it('opens the import dialog on Merge with CSV, its Import Location naming this database', () => {
+      const { tool } = mount({});
+      const click = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => undefined);
+
+      internals(tool).csvActions().find((a) => a.testId === 'database-settings-csv-merge')?.onClick();
+
+      expect(click).not.toHaveBeenCalled();
+      expect(document.querySelector('[data-blok-testid="database-csv-location"]')?.textContent?.trim()).toBe('Tasks');
+      document.querySelector<HTMLElement>('[data-blok-testid="database-csv-close"]')?.click();
       tool.destroy();
     });
 

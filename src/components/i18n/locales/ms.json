@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "Lajur",
   "tools.database.csvImportDescription": "Cipta pangkalan data baharu daripada CSV anda",
   "tools.database.csvUploadLabel": "Muat naik CSV",
+  "tools.database.csvImportLocation": "Lokasi import",
   "tools.database.csvChooseFile": "Pilih fail",
   "tools.database.csvClearFile": "Kosongkan fail",
   "tools.database.csvMapHeaders": "Petakan pengepala CSV",

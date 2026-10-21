@@ -119,6 +119,21 @@ describe('DatabaseTool — linked database', () => {
     expect(doc.childrenOf('linked')).toEqual([]);
   });
 
+  it('adds a merged CSV\'s unmatched column to the source and shows it in its own view', () => {
+    const doc = docWithSource();
+    const source = buildDatabase(doc, 'db', sourceData());
+    const { tool, el } = buildDatabase(doc, 'linked', linkedData());
+
+    tool.mergeCsv('Name,Extra\nThree,x\n');
+
+    const extra = source.tool.save(document.createElement('div')).schema.find((p) => p.name === 'Extra');
+    const row = doc.childrenOf('db').map((id) => doc.row(id)).find((data) => data.properties.title === 'Three');
+
+    expect(extra?.type).toBe('text');
+    expect(row?.properties[extra?.id ?? '']).toBe('x');
+    expect(el.querySelector(`[data-blok-database-table-row] [data-property-id="${extra?.id ?? ''}"]`)).not.toBeNull();
+  });
+
   it('adds a new row under the source and never under itself', () => {
     const doc = docWithSource();
 

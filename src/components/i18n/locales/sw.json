@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "Safu wima",
   "tools.database.csvImportDescription": "Unda hifadhidata mpya kwa CSV yako",
   "tools.database.csvUploadLabel": "Pakia CSV",
+  "tools.database.csvImportLocation": "Mahali pa kuingiza",
   "tools.database.csvChooseFile": "Chagua faili",
   "tools.database.csvClearFile": "Futa faili",
   "tools.database.csvMapHeaders": "Linganisha vichwa vya CSV",

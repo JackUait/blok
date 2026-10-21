@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "کالم",
   "tools.database.csvImportDescription": "له خپل CSV څخه نوی ډیټابیس جوړ کړئ",
   "tools.database.csvUploadLabel": "CSV پورته کړئ",
+  "tools.database.csvImportLocation": "د واردولو ځای",
   "tools.database.csvChooseFile": "فایل وټاکئ",
   "tools.database.csvClearFile": "فایل پاک کړئ",
   "tools.database.csvMapHeaders": "د CSV سرلیکونه برابر کړئ",

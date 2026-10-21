@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "Kolonë",
   "tools.database.csvImportDescription": "Krijo një bazë të re të dhënash me CSV-në tënde",
   "tools.database.csvUploadLabel": "Ngarko CSV",
+  "tools.database.csvImportLocation": "Vendndodhja e importit",
   "tools.database.csvChooseFile": "Zgjidh skedarin",
   "tools.database.csvClearFile": "Pastro skedarin",
   "tools.database.csvMapHeaders": "Përputh titujt e CSV",

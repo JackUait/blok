@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "列",
   "tools.database.csvImportDescription": "CSVから新しいデータベースを作成",
   "tools.database.csvUploadLabel": "CSVをアップロード",
+  "tools.database.csvImportLocation": "インポート先",
   "tools.database.csvChooseFile": "ファイルを選択",
   "tools.database.csvClearFile": "ファイルをクリア",
   "tools.database.csvMapHeaders": "CSVヘッダーを対応付け",

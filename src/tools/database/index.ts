@@ -174,7 +174,7 @@ import { openChartDrilldown } from './database-chart-drilldown';
 import { DatabaseFeedView } from './database-feed-view';
 import type { FeedReactions } from './database-feed-view';
 import { rowReactions } from './row-reactions';
-import { csvCellText, csvDatabaseBlocks, parseCsv, planCsvMerge, serializeCsv, type CsvColumnTarget, type CsvImportSettings } from './database-csv';
+import { csvCellText, csvDatabaseBlocks, parseCsv, planCsvMerge, serializeCsv, type CsvColumnTarget, type CsvImportSettings, type CsvMergeTarget } from './database-csv';
 import { openCsvImportDialog } from './database-csv-import-dialog';
 import { formatNumberValue } from './cells/number-format';
 import { downloadBlob } from './database-download';
@@ -5275,19 +5275,26 @@ export class DatabaseTool implements BlockTool {
   }
 
   /**
-   * Merge with CSV: every CSV row becomes a new row; headers must match property
-   * names. Notion never updates an existing row here (research/05 §9.3).
+   * Merge with CSV: every CSV row becomes a new row (research/05 §9.3, research/30 §9f).
+   * `targets` is the dialog's mapping; without it a header goes to the property
+   * it names, and any other column becomes a new property at the end.
    */
-  mergeCsv(text: string): void {
+  mergeCsv(text: string, targets?: CsvMergeTarget[], settings?: CsvImportSettings): void {
     if (this.readOnly || this.structureLocked()) return;
     const table = parseCsv(text);
 
-    if (table.length < 2) {
+    if (table.length < (settings?.headers === false ? 1 : 2)) {
       this.api.notifier.show({ message: this.api.i18n.t('tools.database.csvEmpty') });
 
       return;
     }
-    const plan = planCsvMerge(table, this.model.getSchema(), { newId: () => nanoid(), localized: localizeDatabaseSchema(this.model.getSchema(), this.api.i18n) });
+    const plan = planCsvMerge(table, this.model.getSchema(), {
+      newId: () => nanoid(),
+      localized: localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
+      untitled: this.api.i18n.t('tools.database.csvUntitledColumn'),
+      ...(targets === undefined ? {} : { targets }),
+      ...settings,
+    });
     const titleId = this.titlePropertyId();
     const write = (): void => {
       for (const [propertyId, added] of Object.entries(plan.newOptions)) {
@@ -5298,10 +5305,12 @@ export class DatabaseTool implements BlockTool {
         this.model.updateProperty(propertyId, { config: { options } });
         void this.sync.syncUpdateProperty({ propertyId, changes: { config: { options } } });
       }
+      const ids = new Map(plan.newProperties.map((planned) => [planned.id, this.addMergedProperty(planned).id]));
       // Before the rows: each row insert keeps a sync window open to the next
       // frame, and a change dispatched inside it is dropped as an echo.
-      if (Object.keys(plan.newOptions).length > 0) this.block.dispatchChange();
-      plan.rows.reduce<string | null>((previous, csvProperties) => {
+      if (Object.keys(plan.newOptions).length > 0 || ids.size > 0) this.writeSchema();
+      plan.rows.reduce<string | null>((previous, csvRow) => {
+        const csvProperties = Object.fromEntries(Object.entries(csvRow).map(([id, value]) => [ids.get(id) ?? id, value]));
         const properties = withEmptyLists(this.model.getSchema(), csvProperties);
         const position = DatabaseModel.positionBetween(previous, null);
         const id = nanoid();
@@ -5319,12 +5328,32 @@ export class DatabaseTool implements BlockTool {
     };
 
     this.inOneStep(write);
+    this.cardDrawer?.setSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
     this.rerenderView({ keepDrawer: true });
     const skipped = plan.skippedColumns.length > 0
       ? ` ${this.api.i18n.t('tools.database.csvSkipped', { columns: plan.skippedColumns.join(', ') })}`
       : '';
 
     this.api.notifier.show({ message: `${this.api.i18n.t('tools.database.csvMerged', { count: plan.rows.length })}${skipped}` });
+  }
+
+  /** A merge's new property, at the end and shown in the active view, as Add property does. */
+  private addMergedProperty(planned: PropertyDefinition): PropertyDefinition {
+    const { id: _id, name, type, position: _position, config, ...settings } = planned;
+    const prop = this.model.addProperty(name, type, config, {}, settings);
+
+    this.showInActiveView(prop);
+    this.writeEmptyLists(prop.id);
+    void this.sync.syncCreateProperty({
+      id: prop.id,
+      name: prop.name,
+      type: prop.type,
+      position: prop.position,
+      ...(prop.config !== undefined ? { config: prop.config } : {}),
+      ...(prop.status !== undefined ? { status: prop.status } : {}),
+    });
+
+    return prop;
   }
 
   private inOneStep(fn: () => void): void {
@@ -5388,7 +5417,8 @@ export class DatabaseTool implements BlockTool {
       untitled: this.api.i18n.t('tools.database.csvUntitledColumn'),
       viewName: DATABASE_DEFAULT_TEXT.viewTypeTable,
       title: '',
-      titleName: DATABASE_DEFAULT_TEXT.titleProperty,
+      // research/30 §9a, §9c: Notion's import names the title "Name", as a new data source does.
+      titleName: DATABASE_DEFAULT_TEXT.sourceTitleProperty,
       ...(targets === undefined ? {} : { targets }),
       ...settings,
     });
@@ -5405,23 +5435,21 @@ export class DatabaseTool implements BlockTool {
     });
   }
 
-  /** A file picker for one CSV or TSV file. */
-  private pickCsvFile(then: (file: { name: string; text: string }) => void): void {
-    const input = document.createElement('input');
+  /** "Merge with CSV": the import dialog with "Import Location" and this database's properties (research/30 §9f). */
+  private openCsvMerge(): void {
+    const name = (this.source === undefined ? this.title : this.databaseTitleOf(this.source.databaseId) ?? '').trim();
 
-    input.type = 'file';
-    input.accept = '.csv,.tsv,text/csv,text/tab-separated-values';
-    input.hidden = true;
-    input.setAttribute('data-blok-database-csv-input', '');
-    input.addEventListener('cancel', () => input.remove());
-    input.addEventListener('change', () => {
-      const file = input.files?.[0];
-
-      input.remove();
-      if (file !== undefined) void file.text().then((text) => then({ name: file.name, text }));
+    openCsvImportDialog({
+      t: (key, vars) => this.api.i18n.t(key, vars),
+      hasPeople: this.hasPeople,
+      directionSource: this.element,
+      merge: {
+        location: name === '' ? this.api.i18n.t('tools.database.titlePlaceholder') : name,
+        schema: localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
+        onMerge: (file, targets, settings) => this.mergeCsv(file.text, targets, settings),
+      },
+      ...(this.config.helpLinks?.imports !== undefined ? { helpUrl: this.config.helpLinks.imports } : {}),
     });
-    this.element?.appendChild(input);
-    input.click();
   }
 
   /**
@@ -5478,7 +5506,7 @@ export class DatabaseTool implements BlockTool {
           label: t('csvMerge'),
           icon: IconMergeCells,
           disabled: this.structureLocked(),
-          onClick: () => this.pickCsvFile((file) => this.mergeCsv(file.text)),
+          onClick: () => this.openCsvMerge(),
         }
       );
     }

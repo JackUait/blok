@@ -6,6 +6,7 @@ import {
   IconChevronDown,
   IconChevronLeft,
   IconCross,
+  IconDatabase,
   IconEyeClosed,
   IconFile,
   IconMoveRight,
@@ -14,7 +15,19 @@ import {
   IconTable,
 } from '../../components/icons';
 import { helpLink } from './database-help-link';
-import { buildCsvImport, csvCellText, csvColumns, parseCsv, type CsvColumn, type CsvColumnTarget, type CsvImportSettings } from './database-csv';
+import {
+  buildCsvImport,
+  csvCellText,
+  csvColumns,
+  csvMergeTargets,
+  isMergeableProperty,
+  parseCsv,
+  planCsvMerge,
+  type CsvColumn,
+  type CsvColumnTarget,
+  type CsvImportSettings,
+  type CsvMergeTarget,
+} from './database-csv';
 import { propertyTypeMeta } from './database-property-types';
 import { openMenu } from './database-table-menus';
 import { resolveLocale } from './cells/date-format';
@@ -25,7 +38,16 @@ export interface CsvImportDialogOptions {
   t: (key: string, vars?: Record<string, string | number>) => string;
   /** Offer Person: the host gave a people directory. */
   hasPeople: boolean;
-  onImport: (file: { name: string; text: string }, targets: CsvColumnTarget[], settings: CsvImportSettings) => void;
+  onImport?: (file: { name: string; text: string }, targets: CsvColumnTarget[], settings: CsvImportSettings) => void;
+  /**
+   * Merge with CSV (research/30 §9f): "Import Location" names the database,
+   * and a column can go to one of its properties. `schema` is as the person reads it.
+   */
+  merge?: {
+    location: string;
+    schema: PropertyDefinition[];
+    onMerge: (file: { name: string; text: string }, targets: CsvMergeTarget[], settings: CsvImportSettings) => void;
+  };
   onClose?: () => void;
   directionSource?: Element | null;
   /** "Learn about imports" under Map CSV headers (`config.helpLinks.imports`). Without it no link. */
@@ -118,7 +140,7 @@ export const openCsvImportDialog = (options: CsvImportDialogOptions): { close: (
   const state: {
     file: { name: string; text: string } | null;
     columns: CsvColumn[];
-    targets: CsvColumnTarget[];
+    targets: CsvMergeTarget[];
     headers: boolean;
     dateFormats: Array<DateFormat | undefined>;
     closed: boolean;
@@ -153,7 +175,14 @@ export const openCsvImportDialog = (options: CsvImportDialogOptions): { close: (
     });
   });
 
-  const typeLabel = (target: CsvColumnTarget, column: number): string => {
+  const { merge } = options;
+  const existing = (target: CsvMergeTarget): PropertyDefinition | undefined =>
+    (typeof target === 'string' ? undefined : merge?.schema.find((property) => property.id === target.property));
+  const sameTarget = (a: CsvMergeTarget, b: CsvMergeTarget): boolean =>
+    (typeof a === 'string' || typeof b === 'string' ? a === b : a.property === b.property);
+
+  const typeLabel = (target: CsvMergeTarget, column: number): string => {
+    if (typeof target !== 'string') return existing(target)?.name ?? '';
     if (target === 'skip') return t('tools.database.csvDontImport');
     if (target === 'title') return titleName();
     const type = t(propertyTypeMeta(target).labelKey);
@@ -162,16 +191,28 @@ export const openCsvImportDialog = (options: CsvImportDialogOptions): { close: (
 
     return `${type} • ${t(`tools.database.dateFormat.${state.dateFormats[column] ?? 'full'}`)}`;
   };
-  const typeIcon = (target: CsvColumnTarget): string => (target === 'skip' ? IconEyeClosed : propertyTypeMeta(target).icon);
-  /** The title takes the name of the column that maps to it; without a header line it keeps its own (research/30 §9c). */
-  const titleName = (): string => (state.headers ? state.columns[state.targets.indexOf('title')]?.name : undefined) ?? t('tools.database.propertyTypeTitle');
+  const typeIcon = (target: CsvMergeTarget): string => {
+    if (typeof target !== 'string') return propertyTypeMeta(existing(target)?.type ?? 'text').icon;
+
+    return target === 'skip' ? IconEyeClosed : propertyTypeMeta(target).icon;
+  };
+  /**
+   * The title takes the name of the column that maps to it. Notion named it
+   * "Name" without a header line (research/30 §9c) and for a "Title" header (§9a).
+   */
+  const titleName = (): string => {
+    const header = state.headers ? state.columns[state.targets.indexOf('title')]?.name : undefined;
+
+    return header === undefined || header === 'Title' ? t('tools.database.defaultSourceTitleProperty') : header;
+  };
   const settings = (): CsvImportSettings => ({ headers: state.headers, dateFormats: [...state.dateFormats] });
 
-  const retarget = (column: number, target: CsvColumnTarget, dateFormat?: DateFormat): void => {
-    const was = state.targets.indexOf('title');
+  const retarget = (column: number, target: CsvMergeTarget, dateFormat?: DateFormat): void => {
+    const unique = target === 'title' || typeof target !== 'string';
+    const was = state.targets.findIndex((other) => sameTarget(other, target));
 
-    // One title: the column that had it falls back to its detected type.
-    if (target === 'title' && was !== -1 && was !== column) {
+    // One column per title or existing property: the column that had it falls back to its detected type.
+    if (unique && was !== -1 && was !== column) {
       const detected = state.columns[was].detected;
 
       state.targets[was] = detected === 'title' ? 'text' : detected;
@@ -200,6 +241,30 @@ export const openCsvImportDialog = (options: CsvImportDialogOptions): { close: (
 
     heading.setAttribute('role', 'presentation');
 
+    const titleItem: PopoverItemParams = {
+      type: PopoverItemType.Default,
+      name: 'database-csv-type-title',
+      title: titleName(),
+      icon: propertyTypeMeta('title').icon,
+      secondaryLabel: t('tools.database.propertyTypeTitle'),
+      trailingIcon: current === 'title' ? IconCheck : undefined,
+      closeOnActivate: true,
+      onActivate: () => retarget(column, 'title'),
+    };
+    // research/30 §9f: a merge lists the database's own properties here, the title tagged "Title".
+    const existingItems = merge === undefined
+      ? [titleItem]
+      : merge.schema.filter(isMergeableProperty).map((property): PopoverItemParams => ({
+        type: PopoverItemType.Default,
+        name: `database-csv-type-existing-${property.id}`,
+        title: property.name,
+        icon: propertyTypeMeta(property.type).icon,
+        ...(property.type === 'title' ? { secondaryLabel: t('tools.database.propertyTypeTitle') } : {}),
+        trailingIcon: typeof current !== 'string' && current.property === property.id ? IconCheck : undefined,
+        closeOnActivate: true,
+        onActivate: () => retarget(column, { property: property.id }),
+      }));
+
     return [
       { type: PopoverItemType.Html, element: heading },
       {
@@ -211,16 +276,7 @@ export const openCsvImportDialog = (options: CsvImportDialogOptions): { close: (
         closeOnActivate: true,
         onActivate: () => retarget(column, 'skip'),
       },
-      {
-        type: PopoverItemType.Default,
-        name: 'database-csv-type-title',
-        title: titleName(),
-        icon: propertyTypeMeta('title').icon,
-        secondaryLabel: t('tools.database.propertyTypeTitle'),
-        trailingIcon: current === 'title' ? IconCheck : undefined,
-        closeOnActivate: true,
-        onActivate: () => retarget(column, 'title'),
-      },
+      ...existingItems,
       { type: PopoverItemType.Separator },
       {
         type: PopoverItemType.Default,
@@ -259,6 +315,36 @@ export const openCsvImportDialog = (options: CsvImportDialogOptions): { close: (
 
   const fileTitle = (): string => (state.file === null ? t('tools.database.csvNewTable') : state.file.name.replace(/\.[^.]+$/, ''));
 
+  const columnTargets = (): CsvColumnTarget[] => state.targets.map((target) => (typeof target === 'string' ? target : 'skip'));
+
+  /** The columns and rows the import or merge makes, in CSV column order. */
+  const previewTable = (sample: string[][]): { schema: PropertyDefinition[]; rows: Array<Record<string, PropertyValue>> } => {
+    const ids = { next: 0 };
+    const newId = (): string => `preview-${ids.next++}`;
+    const untitled = t('tools.database.csvUntitledColumn');
+
+    if (merge === undefined) {
+      return buildCsvImport(sample, { newId, untitled, titleName: t('tools.database.defaultSourceTitleProperty'), targets: columnTargets(), ...settings() });
+    }
+    const plan = planCsvMerge(sample, merge.schema, { newId, untitled, targets: state.targets, ...settings() });
+    const fresh = [...plan.newProperties];
+    // New options get drawn as pills too; their position is not shown.
+    const withAdded = (property: PropertyDefinition): PropertyDefinition => {
+      const added = plan.newOptions[property.id] ?? [];
+
+      return added.length === 0 ? property : { ...property, config: { ...property.config, options: [...(property.config?.options ?? []), ...added.map((option) => ({ ...option, position: '' }))] } };
+    };
+    const schema = state.targets.flatMap((target): PropertyDefinition[] => {
+      if (target === 'skip') return [];
+      // planCsvMerge lists new properties in column order.
+      const property = typeof target === 'string' ? fresh.shift() : existing(target);
+
+      return property === undefined ? [] : [withAdded(property)];
+    });
+
+    return { schema, rows: plan.rows };
+  };
+
   /** Before the mapping, a skeleton; on it, the table the import makes from the current choices. */
   function showPreview(table: string[][] | null): void {
     const head = el('div', 'data-blok-database-csv-preview-head');
@@ -270,14 +356,7 @@ export const openCsvImportDialog = (options: CsvImportDialogOptions): { close: (
 
       return;
     }
-    const ids = { next: 0 };
-    const made = buildCsvImport(table.slice(0, PREVIEW_ROWS + 1), {
-      newId: () => `preview-${ids.next++}`,
-      untitled: t('tools.database.csvUntitledColumn'),
-      titleName: t('tools.database.propertyTypeTitle'),
-      targets: state.targets,
-      ...settings(),
-    });
+    const made = previewTable(table.slice(0, PREVIEW_ROWS + 1));
     const tab = el('span', 'data-blok-database-csv-preview-tab');
     const grid = el('table', 'data-blok-database-csv-preview-table');
     const headRow = el('tr', 'data-blok-database-csv-preview-row');
@@ -302,6 +381,20 @@ export const openCsvImportDialog = (options: CsvImportDialogOptions): { close: (
     grid.append(el('thead', 'data-blok-database-csv-preview-thead'), body);
     grid.firstElementChild?.appendChild(headRow);
     preview.replaceChildren(head, tab, grid);
+  }
+
+  /**
+   * research/30 §9f: the database a merge goes into, faded and disabled.
+   * aria-disabled keeps it focusable, like Map CSV headers.
+   */
+  function locationField(location: string): HTMLElement[] {
+    const field = button('database-csv-location', 'data-blok-database-csv-location', location, IconDatabase);
+    const chevron = icon(IconChevronDown);
+
+    field.setAttribute('aria-disabled', 'true');
+    field.appendChild(chevron);
+
+    return [el('div', 'data-blok-database-csv-caption', t('tools.database.csvImportLocation')), field];
   }
 
   function showFileStep(): void {
@@ -335,7 +428,9 @@ export const openCsvImportDialog = (options: CsvImportDialogOptions): { close: (
       const table = parseCsv(state.file.text);
 
       state.columns = csvColumns(table, t('tools.database.csvUntitledColumn'), state.headers);
-      state.targets = state.columns.map((column) => column.detected);
+      state.targets = merge === undefined
+        ? state.columns.map((column) => column.detected)
+        : csvMergeTargets(table, merge.schema, { headers: state.headers, untitled: t('tools.database.csvUntitledColumn') });
       state.dateFormats = state.columns.map(() => undefined);
       showSetupStep();
       back.focus();
@@ -347,6 +442,7 @@ export const openCsvImportDialog = (options: CsvImportDialogOptions): { close: (
       el('p', 'data-blok-database-csv-text', t('tools.database.csvImportDescription')),
       el('div', 'data-blok-database-csv-caption', t('tools.database.csvUploadLabel')),
       slot,
+      ...(merge === undefined ? [] : locationField(merge.location)),
       el('div', 'data-blok-database-csv-spacer'),
       map,
       ...[helpLink(options.helpUrl, t('tools.database.csvImportsHelp'), 'data-blok-database-csv-help')].filter((link) => link !== null),
@@ -423,11 +519,15 @@ export const openCsvImportDialog = (options: CsvImportDialogOptions): { close: (
 
       if (file === null) return;
       const targets = [...state.targets];
-
+      const imported = columnTargets();
       const chosen = settings();
 
       finish();
-      options.onImport(file, targets, chosen);
+      if (merge === undefined) {
+        options.onImport?.(file, imported, chosen);
+      } else {
+        merge.onMerge(file, targets, chosen);
+      }
     });
     cancel.addEventListener('click', () => finish());
     showPreview(state.file === null ? null : parseCsv(state.file.text));

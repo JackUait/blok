@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "ستون",
   "tools.database.csvImportDescription": "با CSV خود یک پایگاه داده جدید بسازید",
   "tools.database.csvUploadLabel": "بارگذاری CSV",
+  "tools.database.csvImportLocation": "محل درون‌ریزی",
   "tools.database.csvChooseFile": "انتخاب فایل",
   "tools.database.csvClearFile": "پاک کردن فایل",
   "tools.database.csvMapHeaders": "تطبیق سرستون‌های CSV",

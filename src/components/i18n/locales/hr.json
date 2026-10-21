@@ -1770,6 +1770,7 @@
   "tools.database.csvUntitledColumn": "Stupac",
   "tools.database.csvImportDescription": "Izradi novu bazu podataka iz CSV datoteke",
   "tools.database.csvUploadLabel": "Prenesi CSV",
+  "tools.database.csvImportLocation": "Mjesto uvoza",
   "tools.database.csvChooseFile": "Odaberi datoteku",
   "tools.database.csvClearFile": "Očisti datoteku",
   "tools.database.csvMapHeaders": "Poveži CSV zaglavlja",

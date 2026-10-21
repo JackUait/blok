@@ -1776,6 +1776,7 @@
   "tools.database.csvUntitledColumn": "عمود",
   "tools.database.csvImportDescription": "أنشئ قاعدة بيانات جديدة من ملف CSV",
   "tools.database.csvUploadLabel": "رفع CSV",
+  "tools.database.csvImportLocation": "موقع الاستيراد",
   "tools.database.csvChooseFile": "اختيار ملف",
   "tools.database.csvClearFile": "مسح الملف",
   "tools.database.csvMapHeaders": "مطابقة عناوين CSV",

@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "ئىستون",
   "tools.database.csvImportDescription": "CSV ئارقىلىق يېڭى ساندان قۇرۇش",
   "tools.database.csvUploadLabel": "CSV يۈكلەش",
+  "tools.database.csvImportLocation": "ئەكىرىش ئورنى",
   "tools.database.csvChooseFile": "ھۆججەت تاللاش",
   "tools.database.csvClearFile": "ھۆججەتنى تازىلاش",
   "tools.database.csvMapHeaders": "CSV ماۋزۇلىرىنى ماسلاشتۇرۇش",

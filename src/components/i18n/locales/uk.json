@@ -1772,6 +1772,7 @@
   "tools.database.csvUntitledColumn": "Стовпець",
   "tools.database.csvImportDescription": "Створіть нову базу даних із CSV",
   "tools.database.csvUploadLabel": "Завантажити CSV",
+  "tools.database.csvImportLocation": "Куди імпортувати",
   "tools.database.csvChooseFile": "Вибрати файл",
   "tools.database.csvClearFile": "Очистити файл",
   "tools.database.csvMapHeaders": "Зіставити заголовки CSV",

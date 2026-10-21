@@ -1770,6 +1770,7 @@
   "tools.database.csvUntitledColumn": "Kolonna",
   "tools.database.csvImportDescription": "Izveidojiet jaunu datubāzi no sava CSV",
   "tools.database.csvUploadLabel": "Augšupielādēt CSV",
+  "tools.database.csvImportLocation": "Importēšanas vieta",
   "tools.database.csvChooseFile": "Izvēlēties failu",
   "tools.database.csvClearFile": "Notīrīt failu",
   "tools.database.csvMapHeaders": "Kartēt CSV galvenes",

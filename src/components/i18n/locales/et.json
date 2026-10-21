@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "Veerg",
   "tools.database.csvImportDescription": "Loo oma CSV-st uus andmebaas",
   "tools.database.csvUploadLabel": "Laadi CSV üles",
+  "tools.database.csvImportLocation": "Impordi asukoht",
   "tools.database.csvChooseFile": "Vali fail",
   "tools.database.csvClearFile": "Tühjenda fail",
   "tools.database.csvMapHeaders": "Seosta CSV päised",

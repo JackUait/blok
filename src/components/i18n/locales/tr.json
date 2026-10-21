@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "Sütun",
   "tools.database.csvImportDescription": "CSV dosyanızla yeni bir veritabanı oluşturun",
   "tools.database.csvUploadLabel": "CSV yükle",
+  "tools.database.csvImportLocation": "İçe aktarma konumu",
   "tools.database.csvChooseFile": "Dosya seç",
   "tools.database.csvClearFile": "Dosyayı temizle",
   "tools.database.csvMapHeaders": "CSV başlıklarını eşle",

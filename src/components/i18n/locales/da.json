@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "Kolonne",
   "tools.database.csvImportDescription": "Opret en ny database fra din CSV",
   "tools.database.csvUploadLabel": "Overfør CSV",
+  "tools.database.csvImportLocation": "Importplacering",
   "tools.database.csvChooseFile": "Vælg fil",
   "tools.database.csvClearFile": "Ryd fil",
   "tools.database.csvMapHeaders": "Tilknyt CSV-overskrifter",

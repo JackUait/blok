@@ -1770,6 +1770,7 @@
   "tools.database.csvUntitledColumn": "Kolona",
   "tools.database.csvImportDescription": "Kreiraj novu bazu podataka iz CSV datoteke",
   "tools.database.csvUploadLabel": "Učitaj CSV",
+  "tools.database.csvImportLocation": "Lokacija uvoza",
   "tools.database.csvChooseFile": "Odaberi datoteku",
   "tools.database.csvClearFile": "Očisti datoteku",
   "tools.database.csvMapHeaders": "Mapiraj CSV zaglavlja",

@@ -490,10 +490,12 @@ test.describe('CSV', () => {
 
   test('merges a CSV by adding rows only', async ({ page }) => {
     await mount(page, blocks({ type: 'table' }));
-    const chooser = page.waitForEvent('filechooser');
-
     await openSettingsAction(page, 'database-settings-csv-merge');
-    await (await chooser).setFiles({ name: 'more.csv', mimeType: 'text/csv', buffer: Buffer.from('Task,Points\nShip,8\nPlan,2\n') });
+    const dialog = page.getByRole('dialog');
+
+    await dialog.locator('[data-blok-database-csv-input]').setInputFiles({ name: 'more.csv', mimeType: 'text/csv', buffer: Buffer.from('Task,Points\nShip,8\nPlan,2\n') });
+    await dialog.getByTestId('database-csv-map').click();
+    await dialog.getByTestId('database-csv-import').click();
 
     await expect.poll(async () => (await saved(page)).filter((block) => block.type === 'database-row').length).toBe(5);
     const rows = (await saved(page)).filter((block) => block.type === 'database-row').map((row) => row.data.properties as Record<string, unknown>);

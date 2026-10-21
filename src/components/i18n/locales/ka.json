@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "სვეტი",
   "tools.database.csvImportDescription": "შექმენით ახალი მონაცემთა ბაზა თქვენი CSV-ით",
   "tools.database.csvUploadLabel": "CSV-ის ატვირთვა",
+  "tools.database.csvImportLocation": "იმპორტის ადგილი",
   "tools.database.csvChooseFile": "ფაილის არჩევა",
   "tools.database.csvClearFile": "ფაილის გასუფთავება",
   "tools.database.csvMapHeaders": "CSV-ის სათაურების შესაბამისობა",

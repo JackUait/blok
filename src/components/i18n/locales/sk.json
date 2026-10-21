@@ -1772,6 +1772,7 @@
   "tools.database.csvUntitledColumn": "Stĺpec",
   "tools.database.csvImportDescription": "Vytvorte novú databázu zo svojho CSV",
   "tools.database.csvUploadLabel": "Nahrať CSV",
+  "tools.database.csvImportLocation": "Umiestnenie importu",
   "tools.database.csvChooseFile": "Vybrať súbor",
   "tools.database.csvClearFile": "Vymazať súbor",
   "tools.database.csvMapHeaders": "Priradiť hlavičky CSV",

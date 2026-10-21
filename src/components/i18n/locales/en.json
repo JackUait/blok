@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "Column",
   "tools.database.csvImportDescription": "Create a new database with your CSV",
   "tools.database.csvUploadLabel": "Upload CSV",
+  "tools.database.csvImportLocation": "Import Location",
   "tools.database.csvChooseFile": "Choose file",
   "tools.database.csvClearFile": "Clear file",
   "tools.database.csvMapHeaders": "Map CSV headers",

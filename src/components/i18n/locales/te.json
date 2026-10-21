@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "నిలువు వరుస",
   "tools.database.csvImportDescription": "మీ CSVతో కొత్త డేటాబేస్‌ను సృష్టించండి",
   "tools.database.csvUploadLabel": "CSVని అప్‌లోడ్ చేయండి",
+  "tools.database.csvImportLocation": "దిగుమతి స్థానం",
   "tools.database.csvChooseFile": "ఫైల్‌ను ఎంచుకోండి",
   "tools.database.csvClearFile": "ఫైల్‌ను క్లియర్ చేయి",
   "tools.database.csvMapHeaders": "CSV హెడర్‌లను మ్యాప్ చేయండి",

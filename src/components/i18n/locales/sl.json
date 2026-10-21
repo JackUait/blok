@@ -1772,6 +1772,7 @@
   "tools.database.csvUntitledColumn": "Stolpec",
   "tools.database.csvImportDescription": "Ustvarite novo podatkovno bazo iz svojega CSV",
   "tools.database.csvUploadLabel": "Naloži CSV",
+  "tools.database.csvImportLocation": "Mesto uvoza",
   "tools.database.csvChooseFile": "Izberi datoteko",
   "tools.database.csvClearFile": "Počisti datoteko",
   "tools.database.csvMapHeaders": "Preslikaj glave CSV",

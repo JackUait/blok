@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "열",
   "tools.database.csvImportDescription": "CSV로 새 데이터베이스 만들기",
   "tools.database.csvUploadLabel": "CSV 업로드",
+  "tools.database.csvImportLocation": "가져오기 위치",
   "tools.database.csvChooseFile": "파일 선택",
   "tools.database.csvClearFile": "파일 지우기",
   "tools.database.csvMapHeaders": "CSV 헤더 매핑",

@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "አምድ",
   "tools.database.csvImportDescription": "ከCSV ፋይል አዲስ የውሂብ ጎታ ፍጠር",
   "tools.database.csvUploadLabel": "CSV ስቀል",
+  "tools.database.csvImportLocation": "የማስመጫ ቦታ",
   "tools.database.csvChooseFile": "ፋይል ምረጥ",
   "tools.database.csvClearFile": "ፋይል አጽዳ",
   "tools.database.csvMapHeaders": "የCSV ራስጌዎችን አዛምድ",

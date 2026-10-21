@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "Στήλη",
   "tools.database.csvImportDescription": "Δημιουργία νέας βάσης δεδομένων από CSV",
   "tools.database.csvUploadLabel": "Μεταφόρτωση CSV",
+  "tools.database.csvImportLocation": "Τοποθεσία εισαγωγής",
   "tools.database.csvChooseFile": "Επιλογή αρχείου",
   "tools.database.csvClearFile": "Απαλοιφή αρχείου",
   "tools.database.csvMapHeaders": "Αντιστοίχιση κεφαλίδων CSV",

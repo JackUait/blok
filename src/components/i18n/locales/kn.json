@@ -1768,6 +1768,7 @@
   "tools.database.csvUntitledColumn": "ಕಾಲಮ್",
   "tools.database.csvImportDescription": "ನಿಮ್ಮ CSV ಯಿಂದ ಹೊಸ ಡೇಟಾಬೇಸ್ ರಚಿಸಿ",
   "tools.database.csvUploadLabel": "CSV ಅಪ್‌ಲೋಡ್ ಮಾಡಿ",
+  "tools.database.csvImportLocation": "ಆಮದು ಸ್ಥಳ",
   "tools.database.csvChooseFile": "ಫೈಲ್ ಆಯ್ಕೆಮಾಡಿ",
   "tools.database.csvClearFile": "ಫೈಲ್ ತೆರವುಗೊಳಿಸಿ",
   "tools.database.csvMapHeaders": "CSV ಶೀರ್ಷಿಕೆಗಳನ್ನು ಹೊಂದಿಸಿ",

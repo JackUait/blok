@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { openCsvImportDialog } from '../../../../src/tools/database/database-csv-import-dialog';
-import type { CsvColumnTarget, CsvImportSettings } from '../../../../src/tools/database/database-csv';
+import type { CsvColumnTarget, CsvImportSettings, CsvMergeTarget } from '../../../../src/tools/database/database-csv';
+import type { PropertyDefinition } from '../../../../src/tools/database/types';
 import { PopoverRegistry } from '../../../../src/components/utils/popover/popover-registry';
 
 const R27 = [
@@ -380,6 +381,98 @@ describe('openCsvImportDialog (research/26 §2, research/27 §2)', () => {
 
       expect([...(byTestId('database-csv-preview')?.querySelectorAll('tbody tr') ?? [])].map((tr) => tr.querySelectorAll('td')[1]?.textContent?.trim()))
         .toEqual(['', '']);
+    });
+  });
+
+  // research/30 §9a: a title column headed "Title" read "Name"; §9c: so did the title with headers off.
+  it('names the title "Name" when its column is headed "Title", and when the first row is not headers', async () => {
+    open();
+    await choose('Title,Notes\nAlpha,x', 'neutral.csv');
+    byTestId('database-csv-map')?.click();
+
+    expect(typeLabels()[0]).toBe('tools.database.defaultSourceTitleProperty');
+    expect(byTestId('database-csv-preview')?.querySelector('th')?.textContent?.trim()).toBe('tools.database.defaultSourceTitleProperty');
+
+    byTestId('database-csv-cancel')?.click();
+    open();
+    await choose('Task,Notes\nAlpha,x', 'tasks.csv');
+    byTestId('database-csv-map')?.click();
+    expect(typeLabels()[0]).toBe('Task');
+    byTestId('database-csv-headers')?.click();
+    expect(typeLabels()[0]).toBe('tools.database.defaultSourceTitleProperty');
+  });
+
+  describe('Merge with CSV (research/30 §9f)', () => {
+    const MERGE = 'Name,Due,Extra\nR1,2026-03-04,x1\nR9,2026-03-05,x9';
+    const schema: PropertyDefinition[] = [
+      { id: 'p-name', name: 'Name', type: 'title', position: 'a0' },
+      { id: 'p-due', name: 'Due', type: 'date', position: 'a1' },
+      { id: 'p-total', name: 'Total', type: 'formula', position: 'a2' },
+      { id: 'p-tag', name: 'Tag', type: 'select', position: 'a3', config: { options: [{ id: 'o1', label: 'Red', position: 'a0' }] } },
+    ];
+    const onMerge = vi.fn<(file: { name: string; text: string }, targets: CsvMergeTarget[], settings: CsvImportSettings) => void>();
+    const openMerge = (): ReturnType<typeof openCsvImportDialog> =>
+      openCsvImportDialog({ t, hasPeople: false, merge: { location: 'Tasks', schema, onMerge } });
+    const buttons = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>('[data-blok-testid="database-csv-type"]')];
+    const mapped = async (): Promise<void> => {
+      openMerge();
+      await choose(MERGE, 'blok-r30-merge.csv');
+      byTestId('database-csv-map')?.click();
+    };
+
+    it('shows "Import Location" on the file step: the database, faded and disabled', () => {
+      openMerge();
+      const location = byTestId('database-csv-location');
+
+      expect(location?.previousElementSibling?.textContent).toBe('tools.database.csvImportLocation');
+      expect(location?.textContent?.trim()).toBe('Tasks');
+      expect(location?.getAttribute('aria-disabled')).toBe('true');
+    });
+
+    it('has no "Import Location" on a new import', () => {
+      open();
+
+      expect(byTestId('database-csv-location')).toBeNull();
+    });
+
+    it('maps a header onto the property it names, showing that property\'s name; the rest go to a new property', async () => {
+      await mapped();
+
+      expect(typeLabels()).toEqual(['Name', 'Due', 'tools.database.propertyTypeText']);
+      expect([...(byTestId('database-csv-preview')?.querySelectorAll('th') ?? [])].map((th) => th.textContent?.trim())).toEqual(['Name', 'Due', 'Extra']);
+      expect([...(byTestId('database-csv-preview')?.querySelectorAll('tbody tr') ?? [])].map((tr) => tr.querySelectorAll('td')[1]?.textContent?.trim()))
+        .toEqual(['March 4, 2026', 'March 5, 2026']);
+    });
+
+    it('lists every property a CSV can fill under "Existing property", with a check on the current one', async () => {
+      await mapped();
+      buttons()[1].click();
+      await flush();
+
+      const names = [...document.querySelectorAll<HTMLElement>('[data-blok-item-name^="database-csv-type-"]')]
+        .map((el) => el.getAttribute('data-blok-item-name'));
+
+      expect(names).toEqual(['database-csv-type-skip', 'database-csv-type-existing-p-name', 'database-csv-type-existing-p-due', 'database-csv-type-existing-p-tag', 'database-csv-type-new']);
+      expect(item('database-csv-type-existing-p-name')?.textContent).toContain('tools.database.propertyTypeTitle');
+      expect(item('database-csv-type-existing-p-due')?.querySelector('[data-blok-testid="popover-item-trailing-icon"]')).not.toBeNull();
+      expect(item('database-csv-type-existing-p-name')?.querySelector('[data-blok-testid="popover-item-trailing-icon"]')).toBeNull();
+    });
+
+    it('merges with the mapping; a property picked for a second column leaves the first, which goes back to a new property', async () => {
+      await mapped();
+      buttons()[2].click();
+      await flush();
+      item('database-csv-type-existing-p-due')?.click();
+      await flush();
+
+      expect(typeLabels()).toEqual(['Name', 'tools.database.propertyTypeDate • tools.database.dateFormat.full', 'Due']);
+
+      byTestId('database-csv-import')?.click();
+
+      expect(onMerge).toHaveBeenCalledTimes(1);
+      expect(onMerge.mock.calls[0][0]).toEqual({ name: 'blok-r30-merge.csv', text: MERGE });
+      expect(onMerge.mock.calls[0][1]).toEqual([{ property: 'p-name' }, 'date', { property: 'p-due' }]);
+      expect(document.querySelector('[role="dialog"]')).toBeNull();
     });
   });
 

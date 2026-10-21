@@ -18,6 +18,7 @@ import { prefersReducedMotion } from '../../utils/reduced-motion';
 import { AssistantBar, type AssistantBarColumn } from './assistant-bar';
 import { onGapChange } from './gap';
 import { createLivePreview, type LivePreview } from './live-preview';
+import { parsePartialJson } from '../../../agent/partial-json';
 import { stepStatusKey, streamStatusKey } from './step-status';
 
 /** The user's place in the document when the bar opened. */
@@ -34,6 +35,16 @@ const REVEAL_CLASS = 'blok-ai-reveal';
 const REVEAL_MS = 900;
 
 const EXECUTE_TOOL = 'blok_execute';
+
+/** A `blok_execute` input, maybe cut off, that names a sub-page with `page`. */
+const aimsAtSubPage = (json: string): boolean => {
+  if (!json.includes('"page"')) {
+    return false;
+  }
+  const input = parsePartialJson(json);
+
+  return typeof input === 'object' && input !== null && 'page' in input && typeof input.page === 'string';
+};
 
 /** What the Continue button sends. The model reads it, so it stays English. */
 const CONTINUE_PROMPT = 'Continue where you stopped.';
@@ -82,6 +93,8 @@ export class Assistant extends Module {
   private readonly streamCalls = new Map<number, string>();
   /** Calls that streamed input, so the preview drew them. */
   private readonly streamed = new Set<string>();
+  /** Calls aimed at a sub-page's own document: nothing of theirs draws on this page. */
+  private readonly elsewhere = new Set<string>();
   /** Streamed calls that ended before a frame showed any of their words (Gemini sends a call whole). */
   private readonly unseen = new Set<string>();
   /** The streaming call the status line names, and that line, until its tool_end. */
@@ -500,6 +513,7 @@ export class Assistant extends Module {
     this.streamCalls.clear();
     this.streamed.clear();
     this.unseen.clear();
+    this.elsewhere.clear();
     this.announced = null;
     this.applied = null;
     this.preview?.clear();
@@ -524,9 +538,17 @@ export class Assistant extends Module {
     const id = this.streamCalls.get(event.index);
 
     // tool_end draws nothing: the call's result settles or cancels it.
-    if (event.type === 'tool_input' && id !== undefined) {
+    // The model may write `page` after `commands`, so the call can turn out to be elsewhere mid-stream.
+    if (event.type === 'tool_input' && id !== undefined && !this.elsewhere.has(id) && aimsAtSubPage(event.json)) {
+      this.elsewhere.add(id);
+      this.streamed.delete(id);
+      this.preview?.cancel(id);
+    }
+    if (event.type === 'tool_input' && id !== undefined && !this.elsewhere.has(id)) {
       this.streamed.add(id);
       this.ensurePreview().update(id, event.json);
+    }
+    if (event.type === 'tool_input' && id !== undefined) {
       this.announce(id, event.json);
     }
     if (event.type === 'tool_end' && id !== undefined && this.preview?.shown(id) !== true) {

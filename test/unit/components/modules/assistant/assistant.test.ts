@@ -8,6 +8,7 @@ import { Paragraph } from '../../../../../src/tools/paragraph';
 import { Column } from '../../../../../src/tools/column';
 import { ToggleItem } from '../../../../../src/tools/toggle';
 import { ColumnList } from '../../../../../src/tools/column-list';
+import { PageTool } from '../../../../../src/tools/page';
 import type { BlokConfig, OutputData } from '../../../../../types';
 import type {
   Agent,
@@ -819,6 +820,44 @@ describe('in-editor assistant bar', () => {
 
       live.finish(call.use);
       await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+    });
+
+    it('a call aimed at a sub-page draws no preview here, even when page comes after commands', async () => {
+      const live = streaming();
+      const pages: Record<string, OutputData> = { sub: { blocks: [] } };
+      const editor = await createEditor(live.model, undefined, {
+        tools: {
+          paragraph: Paragraph,
+          page: { class: PageTool, config: {
+            loadDocument: (pageId: string) => structuredClone(pages[pageId] ?? null),
+            saveDocument: (pageId: string, data: OutputData) => {
+              pages[pageId] = structuredClone(data);
+            },
+          } },
+        },
+        data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'Hello' } }, { id: 'pg', type: 'page', data: { pageId: 'sub' } }] },
+      });
+      const commands = insert('Sub page words');
+      const json = JSON.stringify({ commands, page: 'pg' });
+
+      fakeLayout();
+      editor.agent.openAssistant();
+      submit('Write');
+      await waitFor(() => expect(live.started()).toBe(true));
+
+      live.emit({ type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' });
+      live.emit({ type: 'tool_input', index: 0, json: json.slice(0, json.indexOf('words')) });
+      // Before page arrives the call looks like one on this page.
+      await waitFor(() => expect(previewText()).toBe('Sub page'));
+      live.emit({ type: 'tool_input', index: 0, json });
+      await waitFor(() => expect(document.querySelector(PREVIEW)).toBeNull());
+      live.emit({ type: 'tool_end', index: 0 });
+      live.finish({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'c1', name: 'blok_execute', input: { commands, page: 'pg' } }] });
+
+      await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+      expect(document.querySelector(PREVIEW)).toBeNull();
+      expect((await editor.save()).blocks.map((block) => block.id)).toEqual(['p1', 'pg']);
+      expect(pages.sub.blocks.map((block) => plain(block.data.text))).toEqual(['Sub page words']);
     });
 
     it('a call id the model used in an earlier run streams live words again', async () => {
@@ -1770,7 +1809,7 @@ describe('in-editor assistant bar', () => {
       expect(barStyle().left).toBe('16px');
     });
 
-    it('a new run on a model that stopped streaming shows the slots again', async () => {
+    it('a new run that only answers shows no slots after a run that streamed', async () => {
       const gate = { open: (): void => undefined };
       const opened = new Promise<void>((resolve) => {
         gate.open = resolve;
@@ -1798,7 +1837,7 @@ describe('in-editor assistant bar', () => {
       submit('Two');
       await settle();
 
-      expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).not.toBeNull();
+      expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).toBeNull();
       gate.open();
       await waitFor(() => expect(within(bar()).getByText('Second.')).toBeVisible());
     });
@@ -1943,7 +1982,25 @@ describe('in-editor assistant bar', () => {
       expect(barStyle().top).toBe('230px');
     });
 
-    it('a model that does not stream shows shimmer slots under the bar until the run ends', async () => {
+    it('a question answered in text never shows the slots', async () => {
+      const { model, release } = gated(answer('Knead the dough longer.'));
+
+      await createEditor(model, undefined, THREE_BLOCKS);
+      fakeLayout();
+      select('p2', 0, 'p2', 0);
+      pressModJ(inputOf('p2'));
+      submit('How do I make a good pizza?');
+      await settle();
+
+      expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).toBeNull();
+      expect(gapOf('p2')).toBe(`${BAR_GAP}px`);
+
+      release();
+      await waitFor(() => expect(within(bar()).getByText('Knead the dough longer.')).toBeVisible());
+      expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).toBeNull();
+    });
+
+    it('a model that does not stream shows no slots before its first edit', async () => {
       const { model, release } = gated(insertBatch('From AI'));
       const calls = { count: 0 };
       const editor = await createEditor(
@@ -1958,12 +2015,8 @@ describe('in-editor assistant bar', () => {
       submit('Write');
       await settle();
 
-      const slots = bar().querySelector('[data-blok-assistant-slots]');
-
-      expect(slots).not.toBeNull();
-      expect(slots?.querySelectorAll('[data-blok-ai-slot]').length).toBeGreaterThan(0);
-      expect(slots).toHaveAttribute('aria-hidden', 'true');
-      expect(gapOf('p2')).toBe(`${BAR_GAP + SLOTS_HEIGHT}px`);
+      expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).toBeNull();
+      expect(gapOf('p2')).toBe(`${BAR_GAP}px`);
 
       release();
       await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
@@ -2024,7 +2077,30 @@ describe('in-editor assistant bar', () => {
       await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
     });
 
-    it('a follow-up on a streaming model shows the slots again while it thinks', async () => {
+    it('a streaming model does not bring the slots back for a second edit after the first drew', async () => {
+      const live = streaming();
+      const first = executeCall('c1', [{ name: 'block.insert', args: { type: 'paragraph', position: 'end', data: { text: 'Fresh words here' } } }]);
+
+      await createEditor(live.model);
+      fakeLayout();
+      pressModJ(paragraphInput());
+      submit('Write');
+      await waitFor(() => expect(live.started()).toBe(true));
+
+      live.emit({ type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' });
+      live.emit({ type: 'tool_input', index: 0, json: first.json.slice(0, first.json.indexOf('here')) });
+      await waitFor(() => expect(previewText()).toBe('Fresh words'));
+      await waitFor(() => expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).toBeNull());
+
+      live.emit({ type: 'tool_start', index: 1, id: 'c2', name: 'blok_execute' });
+      await settle(50);
+
+      expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).toBeNull();
+      live.finish(answer('Done.'));
+      await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+    });
+
+    it('a follow-up on a streaming model shows the slots again once it starts an edit', async () => {
       const runs = liveRuns();
       const editor = await createEditor(runs.model);
 
@@ -2039,6 +2115,9 @@ describe('in-editor assistant bar', () => {
       submit('Two');
       await waitFor(() => expect(runs.calls).toHaveLength(2));
 
+      expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).toBeNull();
+      runs.calls[1].request.onStream?.({ type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' });
+      await settle();
       expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).not.toBeNull();
       runs.calls[1].finish(answer('Second.'));
       await waitFor(() => expect(within(bar()).getByText('Second.')).toBeVisible());

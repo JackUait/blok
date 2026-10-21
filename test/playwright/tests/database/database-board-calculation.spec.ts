@@ -202,3 +202,61 @@ test('Escape closes one menu layer at a time', async ({ page }) => {
   await page.keyboard.press('Escape');
   await expect(anyItem(page, 'More options')).toHaveCount(0);
 });
+
+// research/30 B26: "Latest date in Due date" sits above the value, centred on it.
+test('the calculation hint shows above the value, centred on it, after the hint delay', async ({ page }) => {
+  const [db, ...rows] = blocks();
+
+  await mount(page, [{ ...db, data: { ...db.data, views: [{ ...(db.data.views as Array<Record<string, unknown>>)[0], groupCalculation: { id: 'p-points', fn: 'sum', capCounts: false } }] } }, ...rows]);
+  await expect(count(page, 'o-todo')).toHaveText('15');
+
+  await count(page, 'o-todo').hover();
+  const tooltip = page.getByRole('tooltip');
+
+  await expect(tooltip).toHaveText('Sum in Points');
+  const value = await count(page, 'o-todo').boundingBox();
+  const hint = await tooltip.boundingBox();
+
+  if (value === null || hint === null) throw new Error('no boxes');
+  expect(hint.y + hint.height).toBeLessThanOrEqual(value.y);
+  expect(Math.abs((hint.x + hint.width / 2) - (value.x + value.width / 2))).toBeLessThan(1);
+});
+
+// research/30 B26: after picking Priority, only the bands holding cards showed.
+test('picking a sub-group shows a band per value with cards, and no band for an empty value', async ({ page }) => {
+  const priority = {
+    id: 'p-priority',
+    name: 'Priority',
+    type: 'select',
+    position: 'a4',
+    config: {
+      options: [
+        { id: 'o-high', label: 'High', color: 'red', position: 'a0' },
+        { id: 'o-medium', label: 'Medium', color: 'yellow', position: 'a1' },
+        { id: 'o-low', label: 'Low', color: 'green', position: 'a2' },
+      ],
+    },
+  };
+  const [db, ...rows] = blocks();
+  const ranked = rows.map((row, i) => ({
+    ...row,
+    data: { ...row.data, properties: { ...(row.data.properties as Record<string, unknown>), 'p-priority': i === 0 ? 'o-high' : 'o-medium' } },
+  }));
+
+  await mount(page, [{ ...db, data: { ...db.data, schema: [...SCHEMA, priority] } }, ...ranked]);
+  await page.getByTestId('database-toolbar-settings').click();
+  await page.getByTestId('database-settings-subgroup').click();
+  await page.getByTestId('database-subgroup-by').click();
+  await page.getByTestId('database-pick-property-p-priority').click();
+
+  const lanes = page.locator('[data-blok-database-board-lane]');
+
+  await expect(lanes).toHaveCount(2);
+  await expect(lanes.nth(0)).toHaveAttribute('data-sub-group', 'o-high');
+  await expect(lanes.nth(1)).toHaveAttribute('data-sub-group', 'o-medium');
+  // Every cell of a shown band keeps its own add button, the empty ones too.
+  const columns = await page.locator('[data-blok-database-board-column-head]').count();
+
+  expect(columns).toBeGreaterThan(1);
+  await expect(lanes.nth(0).locator('[data-blok-database-add-card]')).toHaveCount(columns);
+});

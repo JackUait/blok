@@ -40,4 +40,24 @@ describe('DatabaseBoardView column count hint', () => {
 
     expect(hintsOn(count)).toEqual(['Sum in Points']);
   });
+
+  // research/30 B26: "Latest date in Due date" sits above the value, centred on it.
+  it('shows the calculation hint above the value with the default hint delay', () => {
+    const view = new DatabaseBoardView({ readOnly: false, i18n, options: [{ id: 'opt-1', label: 'To Do', position: 'a0' }], getRows: () => [], titlePropertyId: 'title', aggregate: () => '04/16/2025', aggregateHint: 'Latest date in Due date' });
+    const count = countOf(view.createView());
+    const call = vi.mocked(onHover).mock.calls.find(([target]) => target === count);
+
+    expect(call?.[2]).toEqual({ placement: 'top' });
+  });
+
+  it('puts the hint above the value in a sub-grouped board too', () => {
+    const view = new DatabaseBoardView({
+      readOnly: false, i18n, options: [{ id: 'opt-1', label: 'To Do', position: 'a0' }], getRows: () => [], titlePropertyId: 'title',
+      aggregate: () => '04/16/2025', aggregateHint: 'Latest date in Due date', subGroups: [{ key: 'high', label: 'High' }],
+    });
+    const count = countOf(view.createView());
+    const call = vi.mocked(onHover).mock.calls.find(([target]) => target === count);
+
+    expect(call?.[2]).toEqual({ placement: 'top' });
+  });
 });

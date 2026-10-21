@@ -45,6 +45,20 @@ export const groupByChange = (
   return { groupBy: property.id, groupSettings: property.type === 'number' ? { hideEmptyGroups: true } : {} };
 };
 
+/**
+ * The write when people pick a board's sub-group. Notion hid the bands with no
+ * cards right after the pick (research/30 B26); the switch itself was not read.
+ * Re-picking the same property keeps the settings.
+ */
+export const subGroupByChange = (
+  view: DatabaseViewConfig | undefined,
+  property: PropertyDefinition
+): Pick<DatabaseViewConfig, 'subGroupBy' | 'subGroupSettings'> => {
+  if (property.id === view?.subGroupBy) return { subGroupBy: property.id };
+
+  return { subGroupBy: property.id, subGroupSettings: { hideEmptyGroups: true } };
+};
+
 /** Values below the range start or past its end. */
 export const OUT_OF_RANGE_KEY = 'range:out';
 

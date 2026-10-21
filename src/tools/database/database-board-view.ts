@@ -520,8 +520,9 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     countEl.setAttribute('data-blok-testid', 'database-column-count');
     countEl.setAttribute('data-option-id', option.id);
     countEl.textContent = this.aggregate?.(option.id) ?? String(count);
+    // research/30 B26: the hint sits above the value.
     if (this.aggregateHint !== undefined) {
-      onHover(countEl, this.aggregateHint);
+      onHover(countEl, this.aggregateHint, { placement: 'top' });
     }
 
     countEl.hidden = this.hideCounts;

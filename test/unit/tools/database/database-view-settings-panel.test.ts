@@ -748,15 +748,27 @@ describe('view settings panel', () => {
       expect(h.ctx.updateView).not.toHaveBeenCalled();
     });
 
-    it('leaves the sub-group settings alone (unmeasured)', () => {
-      const h = harness({ type: 'board', groupBy: 'stage' });
+    // research/30 B26: after picking a sub-group, bands with no cards did not show.
+    it('turns Hide empty groups on when a sub-group is picked', () => {
+      const h = harness({ type: 'board', groupBy: 'stage', subGroupSettings: { sort: 'descending' } });
 
       h.open('root');
       click('database-settings-subgroup');
       click('database-subgroup-by');
-      click('database-pick-property-num');
+      click('database-pick-property-prog');
 
-      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ subGroupBy: 'num' });
+      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ subGroupBy: 'prog', subGroupSettings: { hideEmptyGroups: true } });
+    });
+
+    it('keeps the sub-group settings when the same sub-group is picked again', () => {
+      const h = harness({ type: 'board', groupBy: 'stage', subGroupBy: 'prog', subGroupSettings: { hideEmptyGroups: false } });
+
+      h.open('root');
+      click('database-settings-subgroup');
+      click('database-subgroup-by');
+      click('database-pick-property-prog');
+
+      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ subGroupBy: 'prog' });
     });
   });
 

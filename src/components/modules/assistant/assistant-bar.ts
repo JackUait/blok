@@ -152,6 +152,8 @@ export class AssistantBar {
   private readonly resume: HTMLButtonElement;
   private readonly thinking: HTMLButtonElement;
   private readonly slots: HTMLElement;
+  /** The bar's height when it began floating over its anchor; null when it sits under it. */
+  private inPlaceHeight: number | null = null;
   private view: AssistantBarView = { kind: 'prompt' };
   private anchor: HTMLElement | null = null;
   private thinkingView: AssistantThinkingView | null = null;
@@ -280,7 +282,7 @@ export class AssistantBar {
    * Hold a gap under `anchor` as tall as the bar (and its slots), and sit in it.
    * @param anchor - the block holder to sit under
    * @param column - the content column, in viewport px
-   * @param inPlace - cover the anchor (hidden meanwhile): the gap holds only what it does not
+   * @param inPlace - float over the anchor (hidden meanwhile): the page moves only for what the bar grows by
    */
   public place(anchor: HTMLElement, column: AssistantBarColumn, inPlace = false): void {
     if (this.anchor !== anchor) {
@@ -292,9 +294,17 @@ export class AssistantBar {
 
     const rect = anchor.getBoundingClientRect();
     const height = this.element.getBoundingClientRect().height;
-    const offset = inPlace
-      ? reserveGap(anchor, BAR_GAP, Math.max(0, height + SPACE_AFTER - rect.height))
-      : reserveGap(anchor, BAR_GAP, SPACE_BEFORE + height + SPACE_AFTER);
+
+    // The height it opened at stays its centre line, so a bar that grows grows down.
+    this.inPlaceHeight = inPlace ? this.inPlaceHeight ?? height : null;
+
+    const base = this.inPlaceHeight;
+    const top = base === null ? null : rect.top + (rect.height - base) / 2;
+    // Floating: only the slots and any growth push the page, from the bar's bottom on.
+    const below = top === null ? 0 : Math.max(0, top + base - rect.bottom);
+    const offset = base === null
+      ? reserveGap(anchor, BAR_GAP, SPACE_BEFORE + height + SPACE_AFTER)
+      : reserveGap(anchor, BAR_GAP, Math.max(0, height - base) + (this.slots.hidden ? 0 : below + SPACE_AFTER));
 
     if (this.slots.hidden) {
       releaseGap(anchor, SLOTS_GAP);
@@ -303,7 +313,7 @@ export class AssistantBar {
       this.slots.style.fontSize = getComputedStyle(anchor).fontSize;
       reserveGap(anchor, SLOTS_GAP, this.slots.getBoundingClientRect().height);
     }
-    this.element.style.top = `${inPlace ? rect.top : rect.bottom + offset + SPACE_BEFORE}px`;
+    this.element.style.top = `${top ?? rect.bottom + offset + SPACE_BEFORE}px`;
     // Centred on the column; a narrow window trims the overhang first, then the column.
     // clientWidth leaves out a classic scrollbar; it is 0 only with no layout (jsdom).
     const page = document.documentElement.clientWidth || window.innerWidth;
@@ -485,6 +495,7 @@ export class AssistantBar {
   private release(): void {
     if (this.anchor !== null) {
       this.anchor.removeAttribute(DATA_ATTR.aiReplaced);
+      this.inPlaceHeight = null;
       releaseGap(this.anchor, BAR_GAP);
       releaseGap(this.anchor, SLOTS_GAP);
     }

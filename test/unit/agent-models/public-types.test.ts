@@ -25,7 +25,7 @@ describe('agent-models public surface', () => {
 
   it('declares the same providers that agentModel accepts', () => {
     const union = readFileSync(resolve(__dirname, '../../../types/agent-models.d.ts'), 'utf8')
-      .match(/type AgentModel(?:Search)?Provider = [^;]+;/g)?.join(' ') ?? '';
+      .match(/type AgentModel(?:Search)?Provider =\s[^;]+;/g)?.join(' ') ?? '';
     const declared = [...union.matchAll(/'([\w-]+)'/g)].map((match) => match[1]).sort();
     const accepted = (() => {
       try {
@@ -41,10 +41,10 @@ describe('agent-models public surface', () => {
   });
 
   it('types webSearch only for providers that run a search', () => {
-    // @ts-expect-error deepseek has no webSearch
-    const noSearch: AgentModelOptions = { provider: 'deepseek', model: 'm', webSearch: true };
+    // @ts-expect-error groq has no webSearch
+    const noSearch: AgentModelOptions = { provider: 'groq', model: 'm', webSearch: true };
     const withSearch: AgentModelOptions = { provider: 'gemini', model: 'm', webSearch: true };
 
-    expect([noSearch.provider, withSearch.provider]).toEqual(['deepseek', 'gemini']);
+    expect([noSearch.provider, withSearch.provider]).toEqual(['groq', 'gemini']);
   });
 });

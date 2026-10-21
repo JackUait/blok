@@ -4,11 +4,23 @@ import type {
 
 import {
   DEFAULT_MAX_TOKENS, blocksOf, endOfStream, errorOf, isRecord, isText, isToolResult, isToolUse, parseArguments,
-  callId, providerBlock, rawTurn, post, postStream, requireTransport, stepOf, toolNames, withLevel, type AdapterOptions, type Body, type Profile,
+  callId, merge, providerBlock, rawTurn, post, postStream, requireTransport, stepOf, toolNames, withLevel, type AdapterOptions, type Body, type Profile,
 } from './shared';
 import { readJsonEvents } from './sse';
 
 const FORMAT = 'openai-chat';
+
+/** How one provider's Chat Completions differs from the common shape. */
+export interface ChatProfile extends Profile {
+  /** The field that carries the output cap. Defaults to max_tokens; only one is ever sent. */
+  tokens?: 'max_tokens' | 'max_completion_tokens';
+  /** Sends `name` on tool messages. Mistral shows it; Groq answers 400 and Fireworks' schema rejects it. */
+  toolName?: true;
+  /** When set, a replayed assistant turn keeps only these keys. Fireworks rejects unknown ones. */
+  replayFields?: readonly string[];
+  /** Merged into the body only when the request streams. */
+  streamBody?: Body;
+}
 
 const LEVELS: Record<AgentThinkingLevel, Body> = {
   off: { reasoning_effort: 'none' },
@@ -19,19 +31,20 @@ const LEVELS: Record<AgentThinkingLevel, Body> = {
   max: { reasoning_effort: 'max' },
 };
 
-const userMessages = (message: AgentModelMessage, names: Map<string, string>): unknown[] => (typeof message.content === 'string'
+const userMessages = (message: AgentModelMessage, names: Map<string, string>, toolName: boolean): unknown[] => (typeof message.content === 'string'
   ? [{ role: 'user', content: message.content }]
   : message.content.flatMap((block): unknown[] => {
     if (isToolResult(block)) {
-      // Mistral and Groq show `name` on tool messages.
-      return [{ role: 'tool', tool_call_id: block.tool_use_id, name: names.get(block.tool_use_id) ?? '', content: block.content }];
+      const name = toolName ? { name: names.get(block.tool_use_id) ?? '' } : {};
+
+      return [{ role: 'tool', tool_call_id: block.tool_use_id, ...name, content: block.content }];
     }
 
     return isText(block) ? [{ role: 'user', content: block.text }] : [];
   }));
 
 // DeepSeek returns HTTP 400 when reasoning_content is missing while tools are present.
-const assistantMessage = (message: AgentModelMessage): unknown => {
+const turnOf = (message: AgentModelMessage): Record<string, unknown> => {
   const raw = rawTurn(message.content, FORMAT);
 
   if (isRecord(raw)) {
@@ -45,6 +58,12 @@ const assistantMessage = (message: AgentModelMessage): unknown => {
   }));
 
   return { role: 'assistant', content: text === '' ? null : text, ...(calls.length === 0 ? {} : { tool_calls: calls }) };
+};
+
+const assistantMessage = (message: AgentModelMessage, fields: readonly string[] | undefined): unknown => {
+  const turn = turnOf(message);
+
+  return fields === undefined ? turn : Object.fromEntries(Object.entries(turn).filter(([key]) => fields.includes(key)));
 };
 
 const textOf = (content: unknown): string => {
@@ -107,19 +126,79 @@ interface StreamingCall {
   name: string;
   arguments: string;
   open: boolean;
+  /** Provider keys on the call, such as Vertex's extra_content, which must go back. */
+  extra: Record<string, unknown>;
 }
 
 interface Assembly {
   text?: string;
+  /** Mistral's ThinkChunks, joined into one. */
+  think?: { chunk: Record<string, unknown>; text: string };
   /** Each reasoning field under the name it streamed in, since the provider wants that name back. */
   reasoning: Record<string, string>;
   refusal?: string;
   finish?: string;
   /** Keyed by the provider's tool_calls index, in order of first chunk. */
   calls: Map<number, StreamingCall>;
+  /** Delta fields this adapter does not know, kept because providers want some back. */
+  extra: Record<string, unknown>;
 }
 
 const REASONING_FIELDS = ['reasoning_content', 'reasoning'] as const;
+const KNOWN_DELTA = new Set(['role', 'content', ...REASONING_FIELDS, 'refusal', 'tool_calls']);
+const CALL_FIELDS = new Set(['index', 'id', 'type', 'function']);
+// Providers repeat these on every piece of an item, so the first one stands.
+const IDENTITY = new Set(['type', 'id', 'format', 'index']);
+
+const without = (record: Record<string, unknown>, keys: Set<string>): Record<string, unknown> =>
+  Object.fromEntries(Object.entries(record).filter(([key]) => !keys.has(key)));
+
+/** Strings join, arrays merge by item, objects merge deeply. Nulls carry nothing. */
+const mergedRecord = (current: Record<string, unknown>, piece: Record<string, unknown>): Record<string, unknown> =>
+  Object.entries(piece).reduce<Record<string, unknown>>((out, [key, value]) => {
+    if (value === null || value === undefined) {
+      return out;
+    }
+
+    const known = out[key];
+
+    if (known !== undefined && IDENTITY.has(key)) {
+      return out;
+    }
+
+    return { ...out, [key]: mergedValue(known, value) };
+  }, { ...current });
+
+/**
+ * An item with an index merges into the item with the same index (OpenRouter's reasoning_details).
+ * An item without one merges into the last item of its type until a signature closes it: LiteLLM
+ * streams each thinking block as unindexed pieces and sends its signature last.
+ */
+const mergedItems = (current: unknown[], pieces: unknown[]): unknown[] => pieces.reduce<unknown[]>((out, piece) => {
+  if (!isRecord(piece)) {
+    return [...out, piece];
+  }
+
+  const at = typeof piece.index === 'number'
+    ? out.findIndex((item) => isRecord(item) && item.index === piece.index)
+    : out.length - 1;
+  const target = out[at];
+  const joins = isRecord(target) && (typeof piece.index === 'number'
+    || (target.index === undefined && target.signature === undefined && target.type === piece.type));
+
+  return joins ? out.map((item, position) => (position === at ? mergedRecord(target, piece) : item)) : [...out, piece];
+}, [...current]);
+
+const mergedValue = (current: unknown, piece: unknown): unknown => {
+  if (typeof piece === 'string') {
+    return typeof current === 'string' ? `${current}${piece}` : piece;
+  }
+  if (Array.isArray(piece)) {
+    return mergedItems(Array.isArray(current) ? current : [], piece);
+  }
+
+  return isRecord(piece) ? mergedRecord(isRecord(current) ? current : {}, piece) : piece;
+};
 
 const appended = (current: string | undefined, piece: unknown): string | undefined =>
   (typeof piece === 'string' ? `${current ?? ''}${piece}` : current);
@@ -128,12 +207,21 @@ const appended = (current: string | undefined, piece: unknown): string | undefin
 const messageOf = (state: Assembly): Record<string, unknown> => {
   const calls = [...state.calls.values()].map((call) => ({
     ...(typeof call.id === 'string' ? { id: call.id } : {}), type: 'function', function: { name: call.name, arguments: call.arguments },
+    ...call.extra,
   }));
+  // Mistral wants the ThinkChunk replayed, so its content goes back as chunks.
+  const content = state.think === undefined
+    ? state.text ?? null
+    : [
+      { ...state.think.chunk, type: 'thinking', thinking: [{ type: 'text', text: state.think.text }] },
+      ...(state.text === undefined ? [] : [{ type: 'text', text: state.text }]),
+    ];
 
   return {
     role: 'assistant',
-    content: state.text ?? null,
+    content,
     ...state.reasoning,
+    ...state.extra,
     ...(state.refusal === undefined ? {} : { refusal: state.refusal }),
     ...(calls.length === 0 ? {} : { tool_calls: calls }),
   };
@@ -146,7 +234,7 @@ const readStream = async (
   step: number,
   name: string
 ): Promise<AgentModelResponse> => {
-  const state: Assembly = { reasoning: {}, calls: new Map() };
+  const state: Assembly = { reasoning: {}, calls: new Map(), extra: {} };
   const endOpenCalls = (): void => {
     [...state.calls.entries()].forEach(([key, call], index) => {
       if (call.open) {
@@ -165,13 +253,16 @@ const readStream = async (
     if (known === undefined) {
       // Calls stream one after another, so a new one ends the one before.
       endOpenCalls();
-      state.calls.set(key, { id: entry.id, name: typeof fn.name === 'string' ? fn.name : '', arguments: '', open: true });
+      state.calls.set(key, { id: entry.id, name: typeof fn.name === 'string' ? fn.name : '', arguments: '', open: true, extra: {} });
       // Same id as readReply gives the final call, so the loop matches the early call.
       request.onStream?.({ type: 'tool_start', index, id: callId(entry.id, step, index), name: typeof fn.name === 'string' ? fn.name : '' });
     }
 
     const call = state.calls.get(key);
 
+    if (call !== undefined) {
+      call.extra = mergedRecord(call.extra, without(entry, CALL_FIELDS));
+    }
     if (call !== undefined && typeof fn.arguments === 'string' && fn.arguments !== '') {
       call.arguments += fn.arguments;
 
@@ -180,6 +271,25 @@ const readStream = async (
         request.onStream?.({ type: 'tool_input', index, json: call.arguments });
       }
     }
+  };
+
+  // Mistral streams reasoning as chunk arrays in content, then the answer as plain strings.
+  const onContent = (content: unknown): void => {
+    if (!Array.isArray(content)) {
+      state.text = appended(state.text, content);
+
+      return;
+    }
+    content.filter(isRecord).forEach((chunk) => {
+      if (chunk.type === 'text') {
+        state.text = appended(state.text, chunk.text);
+      } else if (chunk.type === 'thinking') {
+        state.think = {
+          chunk: { ...state.think?.chunk, ...without(chunk, new Set(['thinking'])) },
+          text: `${state.think?.text ?? ''}${textOf(chunk.thinking)}`,
+        };
+      }
+    });
   };
 
   const onChunk = (chunk: Record<string, unknown>): void => {
@@ -198,7 +308,7 @@ const readStream = async (
 
     const delta = isRecord(first.delta) ? first.delta : {};
 
-    state.text = appended(state.text, delta.content);
+    onContent(delta.content);
     // DeepSeek needs reasoning_content back on the next request. vLLM, Cerebras and SambaNova name it reasoning.
     for (const field of REASONING_FIELDS) {
       const piece = appended(state.reasoning[field], delta[field]);
@@ -208,6 +318,8 @@ const readStream = async (
       }
     }
     state.refusal = appended(state.refusal, delta.refusal);
+    // OpenRouter's reasoning_details and LiteLLM's thinking_blocks must go back with tool results.
+    state.extra = mergedRecord(state.extra, without(delta, KNOWN_DELTA));
 
     if (Array.isArray(delta.tool_calls)) {
       delta.tool_calls.forEach((entry, position) => {
@@ -235,9 +347,11 @@ const readStream = async (
  * Chat Completions, the format DeepSeek, Mistral, Groq, Ollama and OpenRouter accept.
  * Never sends tool_choice: Ollama does not support it, and the loop only needs auto.
  * @param options - model id, the host's send or stream, and optional level overrides
- * @param profile - the provider's name for errors and its level defaults
+ * @param profile - the provider's name for errors, its level defaults and its Chat Completions quirks
  */
-export function openaiCompatibleModel(options: AdapterOptions, { name, levels }: Profile = { name: 'OpenAI-compatible' }): AgentModel {
+export function openaiCompatibleModel(options: AdapterOptions, profile: ChatProfile = { name: 'OpenAI-compatible' }): AgentModel {
+  const { name, levels, tokens = 'max_tokens', toolName = false, replayFields, streamBody = {} } = profile;
+
   requireTransport(options, name);
 
   // Types leave webSearch out here; this catches plain JS callers.
@@ -249,10 +363,10 @@ export function openaiCompatibleModel(options: AdapterOptions, { name, levels }:
     const names = toolNames(request.messages);
     const body = withLevel({
       model: options.model,
-      max_tokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
+      [tokens]: options.maxTokens ?? DEFAULT_MAX_TOKENS,
       messages: [
         { role: 'system', content: request.system },
-        ...request.messages.flatMap((message) => (message.role === 'user' ? userMessages(message, names) : [assistantMessage(message)])),
+        ...request.messages.flatMap((message) => (message.role === 'user' ? userMessages(message, names, toolName) : [assistantMessage(message, replayFields)])),
       ],
       tools: request.tools.map((tool) => ({
         type: 'function', function: { name: tool.name, description: tool.description, parameters: tool.input_schema },
@@ -262,7 +376,7 @@ export function openaiCompatibleModel(options: AdapterOptions, { name, levels }:
     const { stream } = options;
 
     if (stream !== undefined) {
-      const streaming = { ...body, stream: true };
+      const streaming = merge({ ...body, stream: true }, streamBody);
 
       return readStream(await postStream(stream, streaming, request, options), request, stepOf(request), name);
     }

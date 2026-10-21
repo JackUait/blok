@@ -36,27 +36,32 @@ export interface AgentModelSearchAdapterOptions extends AgentModelAdapterOptions
   /**
    * Let the model search the web on the provider's side. The provider bills each search.
    * An object is shallow-merged into the provider's tool entry:
-   * Anthropic `{ type: 'web_search_20250305', name: 'web_search' }`, OpenAI `{ type: 'web_search' }`,
-   * Gemini `{ googleSearch: {} }`. Default off.
+   * `{ type: 'web_search_20250305', name: 'web_search' }` on the Anthropic Messages providers, `{ type: 'web_search' }`
+   * on the Responses providers, `{ googleSearch: {} }` on Gemini. Default off.
    */
   webSearch?: boolean | Record<string, unknown>;
 }
 
 /** Providers whose own web search `webSearch` turns on. */
-export type AgentModelSearchProvider = 'anthropic' | 'openai' | 'gemini';
+export type AgentModelSearchProvider = 'anthropic' | 'openai' | 'gemini' | 'azure' | 'xai' | 'deepseek' | 'qwen';
 
 /**
- * Each provider is sent the API it serves:
- * - `anthropic`: Messages API. Levels set `output_config.effort`; `off` sends `low`, since some Claude models cannot turn
- *   thinking off. Caches by default: a mark on the system block and top-level `cache_control`. A platform that rejects
- *   top-level `cache_control` (the legacy Bedrock integration) deletes it from the body in `send`.
- * - `openai`: Responses API, stateless (`store: false`). Levels set `reasoning.effort`; `off` sends `low`, since some models reject `none`.
- * - `gemini`: generateContent (v1beta). Levels set `generationConfig.thinkingConfig.thinkingLevel`.
+ * Each provider is sent the best API it serves. Levels map to the values the provider documents.
+ * - Anthropic Messages: `anthropic`, `deepseek`, `qwen`, `kimi`, `minimax`. Levels set `output_config.effort`; `off` sends
+ *   `low`, since some models cannot turn thinking off. Caches by default: a mark on the system block and top-level
+ *   `cache_control`. A platform that rejects top-level `cache_control` deletes it from the body in `send`.
+ * - OpenAI Responses, stateless (`store: false`): `openai`, `azure`, `xai`. Levels set `reasoning.effort`; `off` sends `low`.
+ * - Gemini generateContent (v1beta): `gemini`. Levels set `generationConfig.thinkingConfig.thinkingLevel`.
  *   The body is the same for both transports. With `stream`, call `:streamGenerateContent?alt=sse`.
- * - `deepseek`, `mistral`, `groq`, `ollama`, `openrouter`, and `openai-compatible` for any other endpoint:
- *   Chat Completions. Levels set `reasoning_effort`.
+ * - Chat Completions, levels set `reasoning_effort`: `zai`, `mistral`, `groq`, `ollama`, `openrouter`, `fireworks`,
+ *   `cerebras`, `sambanova`, `together`, `cohere`, `huggingface`, `vercel`, `litellm`, `lmstudio`, `vllm`, `vertex`,
+ *   `bedrock`, `yandex`, and `openai-compatible` for any other endpoint that speaks it.
  */
-export type AgentModelProvider = AgentModelSearchProvider | 'deepseek' | 'mistral' | 'groq' | 'ollama' | 'openrouter' | 'openai-compatible';
+export type AgentModelProvider =
+  | AgentModelSearchProvider
+  | 'kimi' | 'minimax' | 'zai' | 'mistral' | 'groq' | 'ollama' | 'openrouter' | 'fireworks' | 'cerebras' | 'sambanova'
+  | 'together' | 'cohere' | 'huggingface' | 'vercel' | 'litellm' | 'lmstudio' | 'vllm' | 'vertex' | 'bedrock' | 'yandex'
+  | 'openai-compatible';
 
 export type AgentModelOptions =
   | (AgentModelSearchAdapterOptions & { provider: AgentModelSearchProvider })

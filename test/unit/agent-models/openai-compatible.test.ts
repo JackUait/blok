@@ -65,7 +65,7 @@ describe('openaiCompatibleModel', () => {
       { role: 'system', content: 'sys' },
       { role: 'user', content: 'Go' },
       toolTurn,
-      { role: 'tool', tool_call_id: 'call_1', name: 'blok_read', content: '{"ok":true}' },
+      { role: 'tool', tool_call_id: 'call_1', content: '{"ok":true}' },
     ]);
     expect(bodies[0]).toMatchObject({
       model: 'deepseek-v4-pro', max_tokens: 16000,
@@ -130,7 +130,7 @@ describe('openaiCompatibleModel', () => {
     ]);
     expect((bodies[0].messages as unknown[]).slice(2)).toEqual([
       { role: 'assistant', content: 'b', tool_calls: [{ id: 'u1', type: 'function', function: { name: 'blok_read', arguments: '{}' } }] },
-      { role: 'tool', tool_call_id: 'u1', name: 'blok_read', content: 'r' },
+      { role: 'tool', tool_call_id: 'u1', content: 'r' },
     ]);
   });
 
@@ -168,8 +168,8 @@ describe('openaiCompatibleModel', () => {
         { id: 'call-1-0', type: 'function', function: { name: 'blok_read', arguments: '{}' } },
         { id: 'call-1-1', type: 'function', function: { name: 'blok_read', arguments: '{}' } },
       ] },
-      { role: 'tool', tool_call_id: 'call-1-0', name: 'blok_read', content: '{"ok":true}' },
-      { role: 'tool', tool_call_id: 'call-1-1', name: 'blok_read', content: '{"ok":true}' },
+      { role: 'tool', tool_call_id: 'call-1-0', content: '{"ok":true}' },
+      { role: 'tool', tool_call_id: 'call-1-1', content: '{"ok":true}' },
     ]);
   });
 
@@ -180,12 +180,171 @@ describe('openaiCompatibleModel', () => {
       .toEqual({ status: 'failed', reply: '', error: 'OpenAI-compatible: Rate limited' });
   });
 
+  describe('provider profile', () => {
+    const end = choice({ role: 'assistant', content: 'ok' }, 'stop');
+
+    it('sends the tool name on tool messages only when the profile asks', async () => {
+      const { send, bodies } = fakeSend(choice(toolTurn, 'tool_calls'), end);
+
+      await run(openaiCompatibleModel({ model: 'm', send }, { name: 'Mistral', toolName: true }), [{ role: 'user', content: 'Go' }]);
+      expect((bodies[1].messages as unknown[]).at(-1)).toEqual({ role: 'tool', tool_call_id: 'call_1', name: 'blok_read', content: '{"ok":true}' });
+    });
+
+    it('puts the output cap in the field the profile names, never both', async () => {
+      const plain = fakeSend(end);
+      const completion = fakeSend(end);
+
+      await run(openaiCompatibleModel({ model: 'm', send: plain.send, maxTokens: 900 }), [{ role: 'user', content: 'a' }]);
+      await run(openaiCompatibleModel({ model: 'm', send: completion.send, maxTokens: 900 }, { name: 'Groq', tokens: 'max_completion_tokens' }), [{ role: 'user', content: 'a' }]);
+      expect(plain.bodies[0].max_tokens).toBe(900);
+      expect('max_completion_tokens' in plain.bodies[0]).toBe(false);
+      expect(completion.bodies[0].max_completion_tokens).toBe(900);
+      expect('max_tokens' in completion.bodies[0]).toBe(false);
+    });
+
+    it('a level mapped to {} sends no reasoning_effort', async () => {
+      const { send, bodies } = fakeSend(end);
+
+      await run(openaiCompatibleModel({ model: 'm', send }, { name: 'P', levels: { off: {} } }), [{ role: 'user', content: 'a' }], 'off');
+      expect('reasoning_effort' in bodies[0]).toBe(false);
+    });
+
+    it('replays only the profile\'s fields of a stored assistant turn, and leaves the stored turn whole', async () => {
+      const extra = { ...toolTurn, refusal: null, annotations: [] };
+      const { send, bodies } = fakeSend(choice(extra, 'tool_calls'), end);
+      const fields = ['role', 'content', 'reasoning_content', 'tool_calls'];
+
+      const model = openaiCompatibleModel({ model: 'm', send }, { name: 'Fireworks', replayFields: fields });
+      const response = await model({ system: 's', tools: [], signal: new AbortController().signal, messages: [{ role: 'user', content: 'Go' }] });
+
+      await model({ system: 's', tools: [], signal: new AbortController().signal, messages: [
+        { role: 'user', content: 'Go' },
+        { role: 'assistant', content: response.content },
+      ] });
+      expect((bodies[1].messages as unknown[])[2]).toEqual(toolTurn);
+      expect(response.content.at(-1)).toEqual({ type: 'provider', format: 'openai-chat', raw: extra });
+    });
+
+    it('replays only the profile\'s fields of a rebuilt assistant turn', async () => {
+      const { send, bodies } = fakeSend(end);
+
+      await run(openaiCompatibleModel({ model: 'm', send }, { name: 'P', replayFields: ['role', 'tool_calls'] }), [
+        { role: 'user', content: 'a' },
+        { role: 'assistant', content: [{ type: 'text', text: 'b' }, { type: 'tool_use', id: 'u1', name: 'blok_read', input: {} }] },
+        { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'u1', content: 'r' }] },
+      ]);
+      expect((bodies[0].messages as unknown[])[2]).toEqual({
+        role: 'assistant', tool_calls: [{ id: 'u1', type: 'function', function: { name: 'blok_read', arguments: '{}' } }],
+      });
+    });
+
+    it('merges streamBody only into streaming requests', async () => {
+      const streaming = fakeStream(chunks(delta({ content: 'Hi' }, 'stop')));
+      const plain = fakeSend(end);
+      const profile = { name: 'Z.ai', streamBody: { tool_stream: true } };
+
+      await openaiCompatibleModel({ model: 'm', stream: streaming.stream }, profile)(request());
+      await openaiCompatibleModel({ model: 'm', send: plain.send }, profile)(request());
+      expect(streaming.bodies[0]).toMatchObject({ stream: true, tool_stream: true });
+      expect('tool_stream' in plain.bodies[0]).toBe(false);
+    });
+  });
+
   describe('streaming', () => {
     // What DeepSeek returns without stream for the fixture's content.
     const twinMessage = {
       role: 'assistant', content: 'Adding a heading.', reasoning_content: 'The user wants a heading.',
       tool_calls: [{ id: 'call_1', type: 'function', function: { name: 'blok_execute', arguments: JSON.stringify(heading) } }],
     };
+
+    const callChunk = (extra: Record<string, unknown> = {}): Record<string, unknown> => delta({
+      tool_calls: [{ index: 0, id: 'call_1', type: 'function', function: { name: 'blok_read', arguments: '{}' }, ...extra }],
+    }, 'tool_calls');
+    const finished = chunks(delta({ content: 'Done.' }, 'stop'));
+    const replayed = async (text: string): Promise<{ raw: unknown; sent: unknown }> => {
+      const { stream, bodies } = fakeStream(text, finished);
+      const raws: unknown[] = [];
+      const model = openaiCompatibleModel({ model: 'm', stream });
+
+      await run(async (input) => {
+        const response = await model(input);
+
+        raws.push(response.content.at(-1));
+
+        return response;
+      }, [{ role: 'user', content: 'Go' }]);
+
+      return { raw: raws[0], sent: (bodies[1].messages as unknown[])[2] };
+    };
+
+    it('keeps OpenRouter reasoning_details, merging pieces of one item by index, and sends them back', async () => {
+      const text = chunks(
+        delta({ role: 'assistant', content: null, reasoning: 'Think', reasoning_details: [
+          { type: 'reasoning.text', text: 'Think', id: 'r1', format: 'anthropic-claude-v1', index: 0 },
+        ] }),
+        delta({ reasoning: 'ing.', reasoning_details: [{ type: 'reasoning.text', text: 'ing.', format: 'anthropic-claude-v1', index: 0 }] }),
+        delta({ reasoning_details: [
+          { type: 'reasoning.text', text: '', signature: 'sig', index: 0 },
+          { type: 'reasoning.encrypted', data: 'abc', index: 1 },
+        ] }),
+        callChunk()
+      );
+      const message = {
+        role: 'assistant', content: null, reasoning: 'Thinking.',
+        reasoning_details: [
+          { type: 'reasoning.text', text: 'Thinking.', id: 'r1', format: 'anthropic-claude-v1', index: 0, signature: 'sig' },
+          { type: 'reasoning.encrypted', data: 'abc', index: 1 },
+        ],
+        tool_calls: [{ id: 'call_1', type: 'function', function: { name: 'blok_read', arguments: '{}' } }],
+      };
+
+      expect(await replayed(text)).toEqual({ raw: { type: 'provider', format: 'openai-chat', raw: message }, sent: message });
+    });
+
+    it('keeps LiteLLM thinking_blocks, joining unindexed pieces until the signature, and sends them back', async () => {
+      const text = chunks(
+        delta({ role: 'assistant', content: '', reasoning_content: 'Hm', thinking_blocks: [{ type: 'thinking', thinking: 'Hm' }], function_call: null, audio: null }),
+        delta({ reasoning_content: 'm.', thinking_blocks: [{ type: 'thinking', thinking: 'm.' }] }),
+        delta({ thinking_blocks: [{ type: 'thinking', thinking: '', signature: 'sig' }] }),
+        delta({ thinking_blocks: [{ type: 'redacted_thinking', data: 'xyz' }] }),
+        callChunk()
+      );
+      const message = {
+        role: 'assistant', content: '', reasoning_content: 'Hmm.',
+        thinking_blocks: [{ type: 'thinking', thinking: 'Hmm.', signature: 'sig' }, { type: 'redacted_thinking', data: 'xyz' }],
+        tool_calls: [{ id: 'call_1', type: 'function', function: { name: 'blok_read', arguments: '{}' } }],
+      };
+
+      expect(await replayed(text)).toEqual({ raw: { type: 'provider', format: 'openai-chat', raw: message }, sent: message });
+    });
+
+    it('keeps a Vertex thought_signature on its streamed tool call, and sends it back', async () => {
+      const text = chunks(delta({ role: 'assistant', content: null }), callChunk({ extra_content: { google: { thought_signature: 'sig' } } }));
+      const message = {
+        role: 'assistant', content: null,
+        tool_calls: [{ id: 'call_1', type: 'function', function: { name: 'blok_read', arguments: '{}' }, extra_content: { google: { thought_signature: 'sig' } } }],
+      };
+
+      expect(await replayed(text)).toEqual({ raw: { type: 'provider', format: 'openai-chat', raw: message }, sent: message });
+    });
+
+    it('keeps streamed Mistral text and thinking chunks, and replays the chunk-array content', async () => {
+      const text = chunks(
+        delta({ role: 'assistant', content: [{ type: 'thinking', thinking: [{ type: 'text', text: 'Let me ' }] }] }),
+        delta({ content: [{ type: 'thinking', thinking: [{ type: 'text', text: 'see.' }] }, { type: 'text', text: 'Reading ' }] }),
+        delta({ content: 'it.' }),
+        callChunk()
+      );
+      const message = {
+        role: 'assistant',
+        content: [{ type: 'thinking', thinking: [{ type: 'text', text: 'Let me see.' }] }, { type: 'text', text: 'Reading it.' }],
+        tool_calls: [{ id: 'call_1', type: 'function', function: { name: 'blok_read', arguments: '{}' } }],
+      };
+      const response = await openaiCompatibleModel({ model: 'm', stream: fakeStream(text).stream })(request());
+
+      expect(response.content[0]).toEqual({ type: 'text', text: 'Reading it.' });
+      expect(await replayed(text)).toEqual({ raw: { type: 'provider', format: 'openai-chat', raw: message }, sent: message });
+    });
 
     it('streams tool input as tool_start/tool_input/tool_end with the accumulated json', async () => {
       const events: AgentModelStreamEvent[] = [];

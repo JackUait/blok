@@ -915,8 +915,13 @@ const makeImage = (): View => {
     block: root,
     targets: [captionText],
     sync: (next) => {
-      if (next.url !== undefined && img.getAttribute('src') !== next.url) {
-        img.src = next.url;
+      if (next.url === undefined) {
+        return true;
+      }
+      const src = safeImageSrc(next.url);
+
+      if (src !== null && img.getAttribute('src') !== src) {
+        img.src = src;
       }
 
       return true;

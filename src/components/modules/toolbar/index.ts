@@ -90,6 +90,9 @@ export class Toolbar extends Module<ToolbarNodes> {
    */
   private explicitlyClosed: boolean = false;
 
+  /** Set by setSuppressed: the toolbar does not open at all. */
+  private suppressed = false;
+
   /**
    * Flag to track if the current hovered block was resolved from a table cell block.
    * When true, the toolbar suppresses plus button, settings toggler, and
@@ -501,6 +504,18 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     if (hidden && this.opened) {
       this.close();
+    }
+  }
+
+  /**
+   * Keep the toolbar shut while another surface owns the block's place (the
+   * Ask AI bar). Unlike `setHidden`, the gutter and the host config stay as they are.
+   * @param suppressed - true closes the toolbar and keeps it closed
+   */
+  public setSuppressed(suppressed: boolean): void {
+    this.suppressed = suppressed;
+    if (suppressed && this.opened) {
+      this.close({ setExplicitlyClosed: false });
     }
   }
 
@@ -1388,6 +1403,9 @@ export class Toolbar extends Module<ToolbarNodes> {
    *                                     This flag allows to open Toolbar without Actions.
    */
   private open(withBlockActions = true): void {
+    if (this.suppressed) {
+      return;
+    }
     // eslint-disable-next-line @typescript-eslint/no-deprecated
     this.nodes.wrapper?.classList.remove(this.CSS.toolbarClosed);
     // eslint-disable-next-line @typescript-eslint/no-deprecated

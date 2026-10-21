@@ -167,6 +167,8 @@ export class Assistant extends Module {
     if (block === undefined) {
       return;
     }
+    // The + and drag handle would sit beside the bar, for a block it covers or works on.
+    this.Blok.Toolbar.setSuppressed(true);
     bar.open(block.holder, this.columnOf(block.holder), this.coversBlock(block));
     this.remember(block);
     this.watch();
@@ -201,6 +203,7 @@ export class Assistant extends Module {
     this.changed = false;
     this.unwatch();
     this.bar?.close();
+    this.Blok.Toolbar.setSuppressed(false);
     this.anchor = null;
     this.inPlaceId = null;
 
@@ -558,6 +561,7 @@ export class Assistant extends Module {
       // The preview shows where edits land, so the slots go. No re-place here: the
       // layout's gap writes re-place the bar once, which drops the slots' gap too.
       onDraw: () => this.bar?.setSlots(false),
+      t: (key) => this.Blok.I18n.t(key),
     });
 
     return this.preview;

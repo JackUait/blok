@@ -1372,6 +1372,30 @@ describe('in-editor assistant bar', () => {
         expect(document.querySelector('[data-blok-ai-replaced]')).toBeNull();
       });
 
+      it('hides the block controls while open, and lets them back after', async () => {
+        const editor = await createEditor(scripted(), undefined, WITH_EMPTY);
+        const toolbarOpen = (): boolean => document.querySelector('[data-blok-opened="true"]') !== null;
+
+        select('p2', 0, 'p2', 0);
+        // The toolbox builds in an idle callback; the toolbar opens once it exists.
+        await waitFor(() => {
+          editor.toolbar.open();
+          expect(toolbarOpen()).toBe(true);
+        });
+
+        pressSpace(inputOf('p2'));
+
+        expect(toolbarOpen()).toBe(false);
+        // A hover over a block while the bar is open does not bring them back.
+        editor.toolbar.open();
+        expect(toolbarOpen()).toBe(false);
+
+        within(bar()).getByRole('textbox').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+        editor.toolbar.open();
+
+        expect(toolbarOpen()).toBe(true);
+      });
+
       it('Mod+J in an empty paragraph still opens under it', async () => {
         await createEditor(scripted(), undefined, WITH_EMPTY);
         fakeLayout();

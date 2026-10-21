@@ -185,6 +185,8 @@ test('side peek handle: no hover look, and a "Resize Drag" hint to its left that
   const handle = page.locator('[data-blok-database-peek-resize]');
 
   await expect(handle).toBeVisible();
+  // The peek slides in: measure the handle once it stops.
+  await expect.poll(async () => peek(page).evaluate((el) => getComputedStyle(el).transform)).toBe('none');
   const look = async (): Promise<string> => handle.evaluate((el) => {
     const s = getComputedStyle(el);
 
@@ -196,7 +198,8 @@ test('side peek handle: no hover look, and a "Resize Drag" hint to its left that
   if (box === null) throw new Error('no handle');
   await page.mouse.move(box.x - 60, box.y + 300);
   await page.mouse.move(box.x + 6, box.y + 300);
-  const tooltip = page.getByRole('tooltip');
+  // By test id: the open peek hides the rest of the page from the accessibility tree.
+  const tooltip = page.getByTestId('tooltip');
 
   // Never instant: still hidden well inside the 300ms floor.
   await page.evaluate(() => new Promise<void>((resolve) => {

@@ -8,6 +8,7 @@ const callbacks = {
   onStop: vi.fn(),
   onKeep: vi.fn(),
   onDiscard: vi.fn(),
+  onContinue: vi.fn(),
   onEscape: vi.fn(),
   onThinking: vi.fn(),
 };

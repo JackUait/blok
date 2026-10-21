@@ -25313,6 +25313,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   max-height: 160px;
   padding: 0;
   border: 0;
+  border-radius: 0;
   background: transparent;
   field-sizing: content;
   resize: none;
@@ -25594,6 +25595,10 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-element][data-blok-ai-gap~='start'] {
   margin-block-start: var(--blok-ai-gap-start);
+}
+
+[data-blok-element][data-blok-ai-replaced] [data-blok-element-content] {
+  visibility: hidden;
 }
 
 [data-blok-element][data-blok-ai-rewriting] [data-blok-element-content] [contenteditable]:not([contenteditable="false"]) {

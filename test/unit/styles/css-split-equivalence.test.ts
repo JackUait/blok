@@ -986,6 +986,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_TIME_ZONE_ROWS_BYTES = 87;
     // database.css: "More templates" gallery, red/orange/yellow template tints, hidden-properties line, icon offset (research/26 §2, research/27 §1e, research/30 B8).
     const DATABASE_MORE_TEMPLATES_BYTES = 10_204;
+    // assistant.css: Space hides the empty block under the Ask AI bar (bd2501b4, +179), the Stop/Continue comment (be6c08ed, +37)
+    // and the prompt field's square corners (e14c7b26, +96).
+    const ASSISTANT_REPLACED_BLOCK_BYTES = 179 + 37 + 96;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1142,7 +1145,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_TIME_ZONE_ROWS_BYTES
       + POPOVER_SEARCH_SUFFIX_INK_BYTES
       + DATABASE_CONFIRM_CLOSE_BYTES
-      + DATABASE_MORE_TEMPLATES_BYTES;
+      + DATABASE_MORE_TEMPLATES_BYTES
+      + ASSISTANT_REPLACED_BLOCK_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

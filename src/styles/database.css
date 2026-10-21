@@ -6912,7 +6912,8 @@ textarea[data-blok-database-cell-input] {
   height: 42px;
 }
 
-[data-blok-database-table-group-toggle] {
+[data-blok-database-table-group-toggle],
+[data-blok-database-board-lane-toggle] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -6926,21 +6927,25 @@ textarea[data-blok-database-cell-input] {
   cursor: pointer;
 }
 
-[data-blok-database-table-group-toggle] svg {
+[data-blok-database-table-group-toggle] svg,
+[data-blok-database-board-lane-toggle] svg {
   width: 16px;
   height: 16px;
   transition: transform 200ms ease-out;
 }
 
-[data-blok-database-table-group-toggle]:hover {
+[data-blok-database-table-group-toggle]:hover,
+[data-blok-database-board-lane-toggle]:hover {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
-[data-blok-database-table-group][data-collapsed] [data-blok-database-table-group-toggle] svg {
+[data-blok-database-table-group][data-collapsed] [data-blok-database-table-group-toggle] svg,
+[data-blok-database-board-lane][data-collapsed] [data-blok-database-board-lane-toggle] svg {
   transform: rotate(-90deg);
 }
 
-[dir="rtl"] [data-blok-database-table-group][data-collapsed] [data-blok-database-table-group-toggle] svg {
+[dir="rtl"] [data-blok-database-table-group][data-collapsed] [data-blok-database-table-group-toggle] svg,
+[dir="rtl"] [data-blok-database-board-lane][data-collapsed] [data-blok-database-board-lane-toggle] svg {
   transform: rotate(90deg);
 }
 
@@ -7107,6 +7112,7 @@ textarea[data-blok-database-cell-input] {
   [data-blok-database-table-row-checkbox],
   [data-blok-database-table-select-all],
   [data-blok-database-table-group-toggle] svg,
+  [data-blok-database-board-lane-toggle] svg,
   [data-blok-database-table-drop-line],
   [data-blok-database-table-column-drop-line],
   [data-blok-database-table-calc],
@@ -9489,6 +9495,10 @@ textarea[data-blok-database-cell-input] {
   display: flex;
   align-items: flex-start;
   gap: var(--blok-space-3);
+}
+
+[data-blok-database-board-lane][data-collapsed] [data-blok-database-board-lane-columns] {
+  display: none;
 }
 
 /* Sticky inside the board's scroller only: it clips on both axes. */

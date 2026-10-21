@@ -30,6 +30,64 @@ describe('DatabaseBoardView', () => {
     vi.restoreAllMocks();
   });
 
+  describe('the sub-group band toggle (research/31 §3)', () => {
+    const lanesView = (lanes: Array<{ key: string; label: string; collapsed?: boolean }>, onLaneToggle?: (key: string, collapsed: boolean) => void, readOnly = false): HTMLElement =>
+      new DatabaseBoardView({
+        readOnly, i18n, options: [makeOption()], getRows: () => [makeRow()], titlePropertyId: 'title',
+        subGroups: lanes, ...(onLaneToggle !== undefined ? { onLaneToggle } : {}),
+      }).createView();
+    const laneOf = (board: HTMLElement, key: string): HTMLElement | null =>
+      board.querySelector<HTMLElement>(`[data-blok-database-board-lane][data-sub-group="${key}"]`);
+    const toggleOf = (board: HTMLElement, key: string): HTMLButtonElement | null =>
+      laneOf(board, key)?.querySelector<HTMLButtonElement>('[data-blok-database-board-lane-toggle]') ?? null;
+
+    it('puts an open toggle button before the band label', () => {
+      const board = lanesView([{ key: 'l1', label: 'High' }]);
+      const toggle = toggleOf(board, 'l1');
+
+      expect(toggle?.tagName).toBe('BUTTON');
+      expect(toggle?.getAttribute('aria-expanded')).toBe('true');
+      expect(toggle?.getAttribute('aria-label')).toBe('tools.database.close');
+      expect(toggle?.parentElement?.firstElementChild).toBe(toggle);
+      expect(toggle?.querySelector('svg')).not.toBeNull();
+    });
+
+    it('a click collapses only that band and reports it', () => {
+      const onLaneToggle = vi.fn();
+      const board = lanesView([{ key: 'l1', label: 'High' }, { key: 'l2', label: 'Low' }], onLaneToggle);
+
+      toggleOf(board, 'l1')?.click();
+
+      expect(laneOf(board, 'l1')?.hasAttribute('data-collapsed')).toBe(true);
+      expect(laneOf(board, 'l2')?.hasAttribute('data-collapsed')).toBe(false);
+      expect(toggleOf(board, 'l1')?.getAttribute('aria-expanded')).toBe('false');
+      expect(toggleOf(board, 'l1')?.getAttribute('aria-label')).toBe('tools.database.tableOpen');
+      expect(onLaneToggle).toHaveBeenCalledWith('l1', true);
+
+      toggleOf(board, 'l1')?.click();
+
+      expect(laneOf(board, 'l1')?.hasAttribute('data-collapsed')).toBe(false);
+      expect(toggleOf(board, 'l1')?.getAttribute('aria-label')).toBe('tools.database.close');
+      expect(onLaneToggle).toHaveBeenLastCalledWith('l1', false);
+    });
+
+    it('draws a band the view saved collapsed as collapsed', () => {
+      const board = lanesView([{ key: 'l1', label: 'High', collapsed: true }]);
+
+      expect(laneOf(board, 'l1')?.hasAttribute('data-collapsed')).toBe(true);
+      expect(toggleOf(board, 'l1')?.getAttribute('aria-expanded')).toBe('false');
+      expect(toggleOf(board, 'l1')?.getAttribute('aria-label')).toBe('tools.database.tableOpen');
+    });
+
+    it('still folds a band in read-only mode', () => {
+      const board = lanesView([{ key: 'l1', label: 'High' }], undefined, true);
+
+      toggleOf(board, 'l1')?.click();
+
+      expect(laneOf(board, 'l1')?.hasAttribute('data-collapsed')).toBe(true);
+    });
+  });
+
   describe('the column header actions', () => {
     const header = (board: HTMLElement, optionId: string): HTMLElement | null =>
       board.querySelector<HTMLElement>(`[data-blok-database-column][data-option-id="${optionId}"] [data-blok-database-column-header]`);

@@ -989,6 +989,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // assistant.css: Space hides the empty block under the Ask AI bar (bd2501b4, +179), the Stop/Continue comment (be6c08ed, +37)
     // and the prompt field's square corners (e14c7b26, +96).
     const ASSISTANT_REPLACED_BLOCK_BYTES = 179 + 37 + 96;
+    // database.css: the board sub-group band toggle joins the table group toggle rules, and a folded band hides its cards (research/31 §3).
+    const DATABASE_BAND_TOGGLE_BYTES = 482;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1146,7 +1148,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + POPOVER_SEARCH_SUFFIX_INK_BYTES
       + DATABASE_CONFIRM_CLOSE_BYTES
       + DATABASE_MORE_TEMPLATES_BYTES
-      + ASSISTANT_REPLACED_BLOCK_BYTES;
+      + ASSISTANT_REPLACED_BLOCK_BYTES
+      + DATABASE_BAND_TOGGLE_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

@@ -6490,6 +6490,68 @@ describe('DatabaseTool — board sub-group lanes', () => {
     vi.restoreAllMocks();
   });
 
+  describe('collapsing a band (research/31 §3)', () => {
+    const toggle = (element: HTMLElement, key: string): HTMLButtonElement | null =>
+      lane(element, key)?.querySelector<HTMLButtonElement>('[data-blok-database-board-lane-toggle]') ?? null;
+
+    it('keeps the collapse on the view under the sub: key, so a reload shows the band collapsed', () => {
+      const { tool, element } = mount();
+
+      toggle(element, 'team-a')?.click();
+
+      const saved = tool.save(element);
+
+      expect(saved.views[0].collapsedGroups).toEqual([{ id: 'sub:team-a' }]);
+
+      const reloaded = new DatabaseTool(createDatabaseOptions(saved, {}, { childBlocks: rows() }));
+      const reloadedElement = reloaded.render();
+
+      reloaded.rendered();
+
+      expect(lane(reloadedElement, 'team-a')?.hasAttribute('data-collapsed')).toBe(true);
+      expect(lane(reloadedElement, 'team-b')?.hasAttribute('data-collapsed')).toBe(false);
+
+      tool.destroy();
+      reloaded.destroy();
+    });
+
+    it('opening the band again removes it from the saved list', () => {
+      const { tool, element } = mount({ collapsedGroups: [{ id: 'sub:team-a' }, { id: 'opt-todo' }] });
+
+      toggle(element, 'team-a')?.click();
+
+      expect(tool.save(element).views[0].collapsedGroups).toEqual([{ id: 'opt-todo' }]);
+
+      tool.destroy();
+    });
+
+    it('leaves the column counts as they are', () => {
+      const { tool, element } = mount();
+
+      toggle(element, 'team-a')?.click();
+
+      expect(element.querySelector('[data-blok-database-board-heads] [data-option-id="opt-todo"] [data-blok-database-column-count]')?.textContent).toBe('2');
+
+      tool.destroy();
+    });
+
+    it('collapses on screen but saves nothing in read-only mode', () => {
+      const options = createDatabaseOptions({ schema, views: [board], activeViewId: 'view-board' }, {}, { childBlocks: rows() });
+
+      options.readOnly = true;
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      tool.rendered();
+      toggle(element, 'team-a')?.click();
+
+      expect(lane(element, 'team-a')?.hasAttribute('data-collapsed')).toBe(true);
+      expect(tool.save(element).views[0].collapsedGroups ?? []).toEqual([]);
+
+      tool.destroy();
+    });
+  });
+
   it('leaves out a sub-group the view hid, and its cards from the column count', () => {
     const { tool, element } = mount({ hiddenGroups: [{ id: 'sub:team-b' }] });
 

@@ -11,7 +11,7 @@ import { createCardPreview } from './database-card-preview';
 import type { BodyBlock } from './row-body';
 import { resolveBoardCardPreview, resolveCardSize, resolveFitImage, resolveViewProperties } from './view-settings';
 import { getElementDirection } from '../../components/utils/direction';
-import { IconPlus, IconPencil, IconDotsHorizontal } from '../../components/icons';
+import { IconPlus, IconPencil, IconDotsHorizontal, IconChevronDown } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
 import { onHover } from '../../components/utils/tooltip';
 import { syncCommentBadge } from './database-comment-badge';
@@ -46,6 +46,8 @@ interface DatabaseBoardViewOptions {
   onPropertyEdit?: (rowId: string, propertyId: string, anchor: HTMLElement) => void;
   /** Sub-groups: one horizontal lane each, holding every column. */
   subGroups?: BoardLane[];
+  /** A band's ▼ toggle was clicked. The band folds on screen either way. */
+  onLaneToggle?: (key: string, collapsed: boolean) => void;
   /** A column's full row count when `getRows` gives only the first page (load limit). */
   getTotal?: (optionId: string) => number;
   /** "Load more" under a column that holds more rows than it shows. */
@@ -59,6 +61,8 @@ export interface BoardLane {
   label: string;
   /** Set for an option-like sub-group, so its label shows as a pill. */
   option?: SelectOption;
+  /** The view saved this band collapsed. */
+  collapsed?: boolean;
 }
 
 /** Card widths per card size. Medium (260) is measured (research/07); small and large are unmeasured. */
@@ -83,7 +87,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
   private readonly hiddenGroupCount: number;
   private readonly aggregate: ((optionId: string) => string) | undefined;
   private readonly aggregateHint: string | undefined;
-  private readonly settings: Pick<DatabaseBoardViewOptions, 'view' | 'schema' | 'bodyOf' | 'locale' | 'onPropertyEdit' | 'subGroups' | 'cellContext' | 'getTotal' | 'onLoadMore' | 'commentBadges'>;
+  private readonly settings: Pick<DatabaseBoardViewOptions, 'view' | 'schema' | 'bodyOf' | 'locale' | 'onPropertyEdit' | 'subGroups' | 'onLaneToggle' | 'cellContext' | 'getTotal' | 'onLoadMore' | 'commentBadges'>;
 
   constructor({
     readOnly, i18n, options, getRows, titlePropertyId, onTitleEdit, hideCounts, hiddenGroupCount, aggregate, aggregateHint, ...settings
@@ -208,6 +212,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     section.setAttribute('data-sub-group', lane.key);
     section.setAttribute('aria-label', lane.label);
     header.setAttribute('data-blok-database-board-lane-header', '');
+    header.appendChild(this.createLaneToggle(section, lane));
     if (lane.option !== undefined) {
       header.appendChild(createOptionPill(lane.option));
     } else {
@@ -225,6 +230,29 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     section.append(header, columns);
 
     return section;
+  }
+
+  /** research/31 §3: only the arrow turns; the cards hide at once. */
+  private createLaneToggle(section: HTMLElement, lane: BoardLane): HTMLButtonElement {
+    const toggle = document.createElement('button');
+    const setCollapsed = (collapsed: boolean): void => {
+      section.toggleAttribute('data-collapsed', collapsed);
+      toggle.setAttribute('aria-expanded', String(!collapsed));
+      toggle.setAttribute('aria-label', this.i18n.t(collapsed ? 'tools.database.tableOpen' : 'tools.database.close'));
+    };
+
+    toggle.type = 'button';
+    toggle.setAttribute('data-blok-database-board-lane-toggle', '');
+    toggle.innerHTML = IconChevronDown;
+    setCollapsed(lane.collapsed === true);
+    toggle.addEventListener('click', () => {
+      const collapsed = !section.hasAttribute('data-collapsed');
+
+      setCollapsed(collapsed);
+      this.settings.onLaneToggle?.(lane.key, collapsed);
+    });
+
+    return toggle;
   }
 
   private get cardSize(): CardSize {

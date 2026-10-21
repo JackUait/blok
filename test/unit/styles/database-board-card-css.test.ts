@@ -67,6 +67,22 @@ describe('database board card and calendar "No date" styles', () => {
     expect(ruleBody('[data-blok-database-board-lane-columns]')).toMatch(/display:\s*flex/);
   });
 
+  it('draws the band toggle as the measured 24px button that turns -90deg in 200ms (research/31 §3)', () => {
+    const body = ruleBody('[data-blok-database-board-lane-toggle]');
+
+    expect(body).toMatch(/width:\s*24px/);
+    expect(body).toMatch(/height:\s*24px/);
+    expect(body).toMatch(/background:\s*transparent/);
+    expect(ruleBody('[data-blok-database-board-lane-toggle]:hover')).toContain('var(--blok-database-table-header-hover-bg)');
+    expect(ruleBody('[data-blok-database-board-lane-toggle] svg')).toMatch(/transition:\s*transform 200ms ease-out/);
+    expect(ruleBody('[data-blok-database-board-lane][data-collapsed] [data-blok-database-board-lane-toggle] svg')).toMatch(/rotate\(-90deg\)/);
+    expect(ruleBody('[dir="rtl"] [data-blok-database-board-lane][data-collapsed] [data-blok-database-board-lane-toggle] svg')).toMatch(/rotate\(90deg\)/);
+  });
+
+  it('hides a collapsed band\'s row of cards', () => {
+    expect(ruleBody('[data-blok-database-board-lane][data-collapsed] [data-blok-database-board-lane-columns]')).toMatch(/display:\s*none/);
+  });
+
   it('draws the measured "No date" button', () => {
     const body = ruleBody('[data-blok-database-calendar-nav] [data-blok-database-calendar-no-date]');
 

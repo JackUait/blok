@@ -6213,6 +6213,7 @@ export class DatabaseTool implements BlockTool {
       cellContext: this.cellContext(),
       onPropertyEdit: (rowId, propertyId, anchor) => this.editCardProperty(rowId, propertyId, anchor),
       ...(lanes !== null ? { subGroups: lanes.lanes } : {}),
+      ...(viewConfig !== undefined ? { onLaneToggle: (key: string, collapsed: boolean) => this.saveGroupCollapse(viewConfig.id, `sub:${key}`, collapsed) } : {}),
       ...this.commentBadgeLever(),
       onTitleEdit: (rowId, newTitle) => {
         const titlePropId = this.titlePropertyId();
@@ -6248,7 +6249,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** Board sub-groups (Phase 3 `subGroupBy`): the lanes in order and each row's lane keys. */
-  private boardLanes(view: DatabaseViewConfig): { lanes: Array<{ key: string; label: string; option?: SelectOption }>; keysOf: (row: DatabaseRow) => string[] } | null {
+  private boardLanes(view: DatabaseViewConfig): { lanes: Array<{ key: string; label: string; option?: SelectOption; collapsed: boolean }>; keysOf: (row: DatabaseRow) => string[] } | null {
     const subGroupBy = view.subGroupBy;
 
     if (subGroupBy === undefined || subGroupBy === view.groupBy || this.model.getProperty(subGroupBy) === undefined) {
@@ -6262,6 +6263,7 @@ export class DatabaseTool implements BlockTool {
       lanes: this.groupOptions(subGroupBy, subView).filter((option) => !hasGroup(view.hiddenGroups, `sub:${option.id}`)).map((option) => ({
         key: option.id,
         label: option.label,
+        collapsed: hasGroup(view.collapsedGroups, `sub:${option.id}`),
         ...(optionGroup && option.id !== NO_VALUE_GROUP_KEY ? { option } : {}),
       })),
       keysOf: this.model.groupKeysOf(subGroupBy, { settings: view.subGroupSettings ?? {} }),

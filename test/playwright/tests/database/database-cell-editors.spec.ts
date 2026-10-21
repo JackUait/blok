@@ -300,6 +300,35 @@ test.describe('Escape saves a number or text', () => {
       await undo(page);
       await expect.poll(async () => (await saved(page)).properties['prop-score']).toBe(5);
     });
+
+    // research/30 B20: Notion kept "R3x" after Escape and after a reload.
+    test('Escape in the title cell saves the title, closes the editor, and the title survives a reload', async ({ page }) => {
+      await cell(page, 'prop-title').click();
+      const input = editor(page).locator('[data-blok-database-cell-input="title"]');
+
+      await input.press('End');
+      await input.pressSequentially('x');
+      await page.keyboard.press('Escape');
+
+      await expect.poll(async () => (await saved(page)).properties['prop-title']).toBe('Ship itx');
+      await expect(editor(page)).toHaveCount(0);
+      await expect(page.locator('[data-blok-database-drawer]')).toHaveCount(0);
+      await expect(cell(page, 'prop-title')).toContainText('Ship itx');
+
+      const output = await page.evaluate(async () => window.blokInstance?.save());
+
+      await page.evaluate(async (data) => {
+        await window.blokInstance?.destroy?.();
+        const holder = document.getElementById('blok');
+
+        if (holder === null || data === undefined) throw new Error('no holder');
+        holder.innerHTML = '';
+        window.blokInstance = new window.Blok({ holder, data });
+        await window.blokInstance.isReady;
+      }, output);
+
+      await expect(cell(page, 'prop-title')).toContainText('Ship itx');
+    });
   });
 
   test('board card: Escape saves a typed number in place', async ({ page }) => {

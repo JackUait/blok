@@ -931,6 +931,24 @@ describe('DatabaseTableView', () => {
       expect(handlers.deleteRows).toHaveBeenCalledWith(['r-new']);
     });
 
+    // research/30 B20: Escape saves the title, so a typed title keeps the new row.
+    it('Escape in the title editor of a new row saves the title and keeps the row', async () => {
+      const state = createTableState();
+
+      state.freshRowId = 'r-new';
+      state.pendingEdit = { rowId: 'r-new', propertyId: 'p-title' };
+      const { root, handlers } = mount({ state, rows: [...rows(), row('r-new', '')] });
+
+      await Promise.resolve();
+      editorField().value = 'Named';
+      press(editorField(), 'Escape');
+
+      expect(handlers.commitCell).toHaveBeenCalledWith('r-new', 'p-title', 'Named');
+      expect(handlers.deleteRows).not.toHaveBeenCalled();
+      expect(editor()).toBeNull();
+      expect(anchorCell(root)).toBe('r-new/p-title');
+    });
+
     // research/22 §3: Escape saves a text, so the typed note keeps the new row.
     it('Escape in a note of a new row saves the note and keeps the row', async () => {
       const state = createTableState();

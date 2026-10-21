@@ -19,12 +19,9 @@ const parseNumberEntry = (text: string): Outcome | null => {
 /** research/16 §4: Notion's url, email and phone editors. */
 const INPUT_TYPES: Partial<Record<PropertyDefinition['type'], string>> = { url: 'url', email: 'email', phone: 'tel' };
 
-/**
- * research/22 §3, research/23 §3c: Escape saves a text, number, url, email or phone.
- * Unmeasured, so Escape cancels: the title.
- */
+/** research/22 §3, research/23 §3c, research/30 B20: Escape saves every text-like value. */
 const escapeCommits = (type: PropertyDefinition['type']): boolean =>
-  type === 'text' || type === 'richText' || type === 'number' || type === 'url'
+  type === 'title' || type === 'text' || type === 'richText' || type === 'number' || type === 'url'
   || type === 'email' || type === 'phone';
 
 const initialText = (value: PropertyValue | undefined): string =>

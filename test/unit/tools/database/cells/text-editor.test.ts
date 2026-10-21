@@ -73,18 +73,28 @@ describe('cell text editors', () => {
     expect(ctx.onCommit).not.toHaveBeenCalled();
   });
 
-  // Escape on the title is unmeasured in research/22 §3, so Blok's cancel stays.
-  it('Escape on a title cancels: nothing is written', () => {
+  // research/30 B20: Notion saves the title on Escape.
+  it('Escape on a title saves the typed title and closes', () => {
     const ctx = makeEditorContext();
-    const handle = openCellEditor(makeProperty('title'), 'a', makeAnchor(), ctx);
+    const handle = openCellEditor(makeProperty('title'), 'R3', makeAnchor(), ctx);
 
-    type('changed');
+    type('R3x');
     const event = press(field(), 'Escape');
+
+    expect(ctx.onCommit).toHaveBeenCalledWith('R3x');
+    expect(ctx.onCancel).not.toHaveBeenCalled();
+    expect(handle.isOpen).toBe(false);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('Escape on an untouched title writes nothing', () => {
+    const ctx = makeEditorContext();
+
+    openCellEditor(makeProperty('title'), 'R3', makeAnchor(), ctx);
+    press(field(), 'Escape');
 
     expect(ctx.onCommit).not.toHaveBeenCalled();
     expect(ctx.onCancel).toHaveBeenCalledTimes(1);
-    expect(handle.isOpen).toBe(false);
-    expect(event.defaultPrevented).toBe(true);
   });
 
   // research/22 §3: Notion saves a url, email or phone on Escape.

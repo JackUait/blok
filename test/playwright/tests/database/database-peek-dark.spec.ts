@@ -13,6 +13,8 @@ declare global {
   interface Window {
     Blok: new (...args: unknown[]) => Blok;
     blokInstance?: Blok;
+    outsideClicks?: string[];
+    stopLoggingClicks?: () => void;
   }
 }
 
@@ -269,4 +271,76 @@ test('side peek handle: a click closes the peek, a drag resizes it', async ({ pa
     setTimeout(resolve, 300);
   }));
   await expect(peek(page)).toHaveCount(0);
+});
+
+// The click that follows the closing pointerup must not land on whatever the peek uncovers.
+test('side peek handle: the click that closes the peek activates nothing behind it', async ({ page }) => {
+  await mount(page, blocks('side'));
+  await openRow(page);
+  const handle = page.locator('[data-blok-database-peek-resize]');
+  const viewport = page.viewportSize()?.width ?? 0;
+
+  await expect.poll(async () => Math.round((await peek(page).boundingBox())?.x ?? -1)).toBe(viewport - 756);
+  const box = await handle.boundingBox();
+
+  if (box === null) throw new Error('no handle');
+  const x = box.x + box.width / 2;
+  const y = box.y + 300;
+
+  // A button under the handle, below the peek, and a log of every click outside the peek.
+  await page.evaluate(({ left }) => {
+    const button = document.createElement('button');
+
+    button.setAttribute('data-blok-testid', 'behind');
+    button.textContent = 'Behind';
+    button.dataset.clicks = '0';
+    // In the peek's stacking context, one step under it, so only the peek can cover it.
+    const peekZ = Number(getComputedStyle(document.querySelector('[data-blok-database-drawer]') ?? document.body).zIndex);
+
+    button.style.cssText = `position:fixed;top:0;bottom:0;left:${left - 40}px;width:80px;z-index:${peekZ - 1}`;
+    button.addEventListener('click', () => {
+      button.dataset.clicks = String(Number(button.dataset.clicks) + 1);
+    });
+    (document.querySelector('[data-blok-interface]') ?? document.body).appendChild(button);
+    const log: string[] = [];
+    const onClick = (event: MouseEvent): void => {
+      const target = event.target instanceof Element ? event.target : null;
+
+      if (target === null || target.closest('[data-blok-database-drawer]') === null) {
+        log.push(target?.outerHTML.slice(0, 80) ?? 'non-element target');
+      }
+    };
+
+    window.outsideClicks = log;
+    document.addEventListener('click', onClick, true);
+    window.stopLoggingClicks = () => document.removeEventListener('click', onClick, true);
+  }, { left: x });
+  const behind = page.getByTestId('behind');
+
+  // The peek covers the button: the handle is what the pointer hits.
+  expect(await page.evaluate(({ px, py }) => document.elementFromPoint(px, py)?.hasAttribute('data-blok-database-peek-resize') ?? false, { px: x, py: y })).toBe(true);
+
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.up();
+  await expect(peek(page)).toHaveCount(0);
+  await page.evaluate(() => new Promise<void>((resolve) => {
+    setTimeout(resolve, 300);
+  }));
+
+  // The button is uncovered now.
+  expect(await page.evaluate(({ px, py }) => document.elementFromPoint(px, py)?.getAttribute('data-blok-testid'), { px: x, py: y })).toBe('behind');
+  expect(await page.evaluate(() => window.outsideClicks)).toEqual([]);
+  await expect(behind).toHaveAttribute('data-clicks', '0');
+  await expect(peek(page)).toHaveCount(0);
+
+  // Control: the button is now uncovered and a plain click reaches it.
+  await page.mouse.click(x, y);
+  await expect(behind).toHaveAttribute('data-clicks', '1');
+  expect(await page.evaluate(() => window.outsideClicks)).toHaveLength(1);
+  // The page is shared: leave no button or listener behind.
+  await page.evaluate(() => {
+    window.stopLoggingClicks?.();
+    document.querySelector('[data-blok-testid="behind"]')?.remove();
+  });
 });

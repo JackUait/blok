@@ -253,7 +253,7 @@ const INITIAL_VIEW_KEY = 'initialView';
 const ICON_GLYPHS: Record<DatabaseIcon['glyph'], string> = {
   check: IconCheck, timeline: IconTimeline, wand: IconWand, doc: IconFileDoc, idea: IconEmojiLightbulb, calendar: IconCalendar, flag: IconEmojiFlag,
 };
-const ICON_COLORS: ReadonlySet<string> = new Set<DatabaseIcon['color']>(['green', 'blue', 'gray', 'red', 'orange', 'yellow']);
+const ICON_COLORS: ReadonlySet<string> = new Set<DatabaseIcon['color']>(['green', 'blue', 'gray', 'red', 'orange', 'yellow', 'purple']);
 
 /** A saved icon Blok can draw, else undefined. */
 const iconOf = (data: Partial<DatabaseData> | undefined): DatabaseIcon | undefined => {

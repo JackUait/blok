@@ -275,7 +275,7 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
   });
 
   it('with every template used, Suggested and its label are gone; More templates stays', async () => {
-    await insert(['tasks', 'projects', 'skills', 'documentHub', 'brainstorm', 'meetingNotes', 'goals'].map((starter) => ({ starter } as Partial<DatabaseData>)));
+    await insert(['tasks', 'projects', 'skills', 'documentHub', 'brainstorm', 'meetingNotes', 'goals', 'campaign', 'contentCalendar'].map((starter) => ({ starter } as Partial<DatabaseData>)));
 
     expect(rowLabels()).not.toContain('tools.database.starterSkills');
     expect(rowLabels()).toContain('tools.database.starterMoreTemplates');
@@ -291,7 +291,7 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
       .map((card) => card.getAttribute('data-blok-testid')?.replace('database-template-gallery-template-', ''));
 
     expect(popovers.destroyed).toBe(1);
-    expect(ids).toEqual(['projects', 'skills', 'documentHub', 'brainstorm', 'meetingNotes', 'goals', 'tasks']);
+    expect(ids).toEqual(['projects', 'skills', 'documentHub', 'brainstorm', 'meetingNotes', 'goals', 'campaign', 'contentCalendar', 'tasks']);
     expect(byTestId(gallery, 'database-template-gallery-template-documentHub').getAttribute('data-tint')).toBe('red');
     expect(byTestId(gallery, 'database-template-gallery-source-other-0').textContent).toContain('Mine');
   });
@@ -343,6 +343,16 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
     expect(icon?.getAttribute('data-blok-database-icon')).toBe('green');
     expect(icon?.querySelector('svg')).not.toBeNull();
     expect(icon?.nextElementSibling?.hasAttribute('data-blok-database-title')).toBe(true);
+  });
+
+  it('a saved purple icon (Campaign Management, research/31 shot 51) is drawn on load and saved back', () => {
+    const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }]);
+    const base = { schema: [{ id: 't', name: 'Name', type: 'title', position: 'a0' }], views: [{ id: 'v', name: 'T', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }], activeViewId: 'v' } as unknown as DatabaseData;
+    const { tool } = buildDatabase(doc, 'db', { ...base, icon: { glyph: 'flag', color: 'purple' }, starter: 'campaign' });
+
+    expect(document.querySelector('[data-blok-database-icon]')?.getAttribute('data-blok-database-icon')).toBe('purple');
+    expect(saved(tool).icon).toEqual({ glyph: 'flag', color: 'purple' });
+    expect(saved(tool).starter).toBe('campaign');
   });
 
   it('a saved icon is drawn on load; an unknown icon or starter is not drawn but saved back as loaded', () => {

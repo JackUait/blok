@@ -9,7 +9,7 @@ import type { ViewCreateConfig } from '../../shared/database/schema-ops';
  * templates" gallery (research/27 §1, research/30 §10). Every name, option,
  * view and sample row is as measured with the Customize defaults kept. A chip
  * or view card only adds or leaves out its property or view (research/30 B8).
- * Only the seven templates whose schema was measured are listed.
+ * Only the nine templates whose schema was measured are listed (research/31 §7).
  */
 export type StarterId = DatabaseStarterId;
 
@@ -218,17 +218,67 @@ export const DATABASE_STARTERS: readonly StarterMeta[] = [
     thumbnail: { columns: ['tools.database.starterGoalName', 'tools.database.starterOwner', 'tools.database.defaultStatusProperty'], pills: STATUS_PILLS, pillColumn: 2 },
     tint: 'blue',
     glyph: 'flag',
-    // Quarter, Progress and Days until due are off chips too: only their names were read, so they are not offered.
+    // research/31 §8. Days until due is not offered: Blok's formula checker refuses its measured
+    // expression (an if() whose branches are a number and the text "Overdue").
     features: [
       choice('dueDate', 'tools.database.starterDueDate', true, 'date'),
       choice('priority', 'tools.database.starterPriority', true, 'select'),
       choice('team', 'tools.database.starterTeam', true, 'multiSelect'),
+      choice('quarter', 'tools.database.starterQuarter', false, 'multiSelect'),
+      choice('progress', 'tools.database.starterProgress', false, 'formula'),
     ],
     views: [
       choice('all', 'tools.database.starterViewAllGoals', true, 'table'),
       choice('byStatus', 'tools.database.starterViewByStatus', true, 'board'),
       choice('mine', 'tools.database.starterViewMyGoals', true, 'table'),
       choice('byTeam', 'tools.database.starterViewByTeam', false, 'table'),
+    ],
+  },
+  // research/31 §7. Off chips and view cards were never created, so their types are unknown: not offered.
+  {
+    id: 'campaign',
+    nameKey: 'tools.database.starterCampaign',
+    descriptionKey: 'tools.database.starterCampaignDescription',
+    thumbnail: {
+      columns: [],
+      pills: [['tools.database.starterOptionBlocked', 'red'], ['tools.database.defaultStatusNotStarted', 'gray'], ['tools.database.starterOptionPlanning', 'yellow']],
+    },
+    // A purple flag (research/31 shot 51).
+    tint: 'purple',
+    glyph: 'flag',
+    features: [
+      choice('campaignType', 'tools.database.starterCampaignType', true, 'multiSelect'),
+      choice('markets', 'tools.database.starterMarkets', true, 'multiSelect'),
+      choice('channels', 'tools.database.starterChannels', true, 'multiSelect'),
+      choice('audiences', 'tools.database.starterAudiencesTargeted', true, 'multiSelect'),
+      choice('files', 'tools.database.propertyTypeFiles', true, 'files'),
+    ],
+    views: [
+      choice('byStatus', 'tools.database.starterViewByStatus', true, 'board'),
+      choice('all', 'tools.database.starterViewAllCampaigns', true, 'table'),
+      choice('calendar', 'tools.database.viewTypeCalendar', true, 'calendar'),
+    ],
+  },
+  {
+    id: 'contentCalendar',
+    nameKey: 'tools.database.starterContentCalendar',
+    descriptionKey: 'tools.database.starterContentCalendarDescription',
+    // The thumbnail is the calendar's weekday row.
+    thumbnail: { columns: ['tools.database.starterWeekdaySun', 'tools.database.starterWeekdayMon', 'tools.database.starterWeekdayTue'], pills: [] },
+    // Not measured (no shot shows it): Blok's calendar glyph on gray.
+    tint: 'gray',
+    glyph: 'calendar',
+    features: [
+      choice('publishDate', 'tools.database.starterPublishDate', true, 'date'),
+      choice('platform', 'tools.database.starterPlatform', true, 'multiSelect'),
+      choice('contentType', 'tools.database.starterContentType', true, 'select'),
+      choice('owner', 'tools.database.starterOwner', true, 'person'),
+      choice('postUrl', 'tools.database.starterPostUrl', true, 'url'),
+    ],
+    views: [
+      choice('calendar', 'tools.database.viewTypeCalendar', true, 'calendar'),
+      choice('all', 'tools.database.starterViewAllContent', true, 'table'),
+      choice('byStatus', 'tools.database.starterViewByStatus', true, 'board'),
     ],
   },
 ];
@@ -285,6 +335,12 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
   const status = (): PropertyDefinition => add(t('tools.database.defaultStatusProperty'), 'status', {
     // Stored in English like a status Blok adds itself; the view localizes these names.
     config: { options: createDefaultStatusOptions({ notStarted: DATABASE_DEFAULT_TEXT.statusNotStarted, inProgress: DATABASE_DEFAULT_TEXT.statusInProgress, done: DATABASE_DEFAULT_TEXT.statusDone }, newId) },
+    status: createDefaultStatusSettings(),
+  });
+  // Options as [label, colour, group]. The DEFAULT option Notion marks has no Blok lever.
+  const customStatus = (list: Array<[string, string, string]>): PropertyDefinition => add(t('tools.database.defaultStatusProperty'), 'status', {
+    config: { options: list.reduce<NonNullable<PropertyDefinition['config']>['options']>((all, [label, color, groupId]) =>
+      [...all, { id: newId(), label, color, groupId, position: positionBetween(all.at(-1)?.position ?? null, null) }], []) },
     status: createDefaultStatusSettings(),
   });
   const priority = (): PropertyDefinition => add(t('tools.database.starterPriority'), 'select',
@@ -541,7 +597,21 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
     const state = status();
     const due = features.has('dueDate') ? add(t('tools.database.starterDueDate'), 'date', { date: { ...MDY } }) : undefined;
     const prio = features.has('priority') ? priority() : undefined;
+    const quarter = features.has('quarter') ? add(t('tools.database.starterQuarter'), 'multiSelect', optionsOf([
+      [t('tools.database.starterOptionQuarter', { number: '1' }), 'yellow'], [t('tools.database.starterOptionQuarter', { number: '2' }), 'pink'],
+      [t('tools.database.starterOptionQuarter', { number: '3' }), 'green'], [t('tools.database.starterOptionQuarter', { number: '4' }), 'gray'],
+    ])) : undefined;
     const team = features.has('team') ? teamProperty() : undefined;
+    // One chip, three properties. Progress is not capped: 25/20 reads 125% with a full bar.
+    const start = features.has('progress') ? add(t('tools.database.starterStartValue'), 'number') : undefined;
+    const end = features.has('progress') ? add(t('tools.database.starterEndValue'), 'number') : undefined;
+
+    if (start !== undefined && end !== undefined) {
+      add(t('tools.database.starterProgress'), 'formula', {
+        formula: { expression: `{{property:${start.id}}}/{{property:${end.id}}}` },
+        number: { format: 'percent', showAs: 'bar', color: 'green' },
+      });
+    }
     const all = schema.slice(1);
 
     if (views.has('all')) view(t('tools.database.starterViewAllGoals'), 'table', all, tableLook);
@@ -551,20 +621,139 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
       });
     }
     // The filter's operator was not read: Contains Me, as My Tasks.
-    if (views.has('mine')) view(t('tools.database.starterViewMyGoals'), 'table', [owner, prio, state, team], { ...tableLook, showPageIcon: true, ...mine(owner) });
-    if (views.has('byTeam') && team !== undefined) view(t('tools.database.starterViewByTeam'), 'table', all, { ...tableLook, groupBy: team.id });
+    if (views.has('mine')) view(t('tools.database.starterViewMyGoals'), 'table', [owner, prio, quarter, state, team], { ...tableLook, showPageIcon: true, ...mine(owner) });
+    if (views.has('byTeam') && team !== undefined) {
+      view(t('tools.database.starterViewByTeam'), 'table', [state, owner, team, prio, quarter], {
+        ...tableLook, showPageIcon: true, loadLimit: 25, groupBy: team.id, groupSettings: { sort: 'manual', hideEmptyGroups: false },
+      });
+    }
     if (viewList.length === 0) view(t('tools.database.starterViewAllGoals'), 'table', all, tableLook);
 
-    const values = (s: number, date: string, p: number, tm: number): Record<string, PropertyValue | undefined> => ({
+    const values = (s: number, date: string, p: number, tm: number, q: number[], from: number, to: number): Record<string, PropertyValue | undefined> => ({
       [state.id]: option(state, s) ?? null,
       ...(due === undefined ? {} : { [due.id]: date }),
       ...(prio === undefined ? {} : { [prio.id]: option(prio, p) }),
+      ...(quarter === undefined ? {} : { [quarter.id]: q.map((i) => option(quarter, i) ?? '') }),
       ...(team === undefined ? {} : { [team.id]: [option(team, tm) ?? ''] }),
+      ...(start === undefined || end === undefined ? {} : { [start.id]: from, [end.id]: to }),
     });
 
-    row(t('tools.database.starterGoalRow1'), values(1, '2025-02-26', 0, 1));
-    row(t('tools.database.starterGoalRow2'), values(0, '2025-04-16', 1, 0));
-    row(t('tools.database.starterGoalRow3'), values(2, '2025-02-03', 1, 1));
+    row(t('tools.database.starterGoalRow1'), values(1, '2025-02-26', 0, 1, [1], 15, 20));
+    row(t('tools.database.starterGoalRow2'), values(0, '2025-04-16', 1, 0, [2, 3], 0, 3));
+    row(t('tools.database.starterGoalRow3'), values(2, '2025-02-03', 1, 1, [0], 25, 20));
+  } else if (id === 'campaign') {
+    add(t('tools.database.starterCampaignName'), 'title');
+    const channels = features.has('channels') ? add(t('tools.database.starterChannels'), 'multiSelect', optionsOf([
+      [t('tools.database.starterOptionBlog'), 'green'], [t('tools.database.starterOptionEmail'), 'yellow'], [t('tools.database.starterOptionInstagram'), 'purple'],
+      [t('tools.database.starterOptionX'), 'gray'], [t('tools.database.starterOptionTiktok'), 'purple'], [t('tools.database.starterOptionLinkedinCampaign'), 'blue'],
+      [t('tools.database.starterOptionGoogle'), 'brown'],
+    ])) : undefined;
+    const markets = features.has('markets') ? add(t('tools.database.starterMarkets'), 'multiSelect', optionsOf([
+      [t('tools.database.starterOptionAmer'), 'orange'], [t('tools.database.starterOptionEmea'), 'gray'], [t('tools.database.starterOptionApac'), 'purple'],
+      [t('tools.database.starterOptionUk'), 'yellow'], [t('tools.database.starterOptionFr'), 'brown'], [t('tools.database.starterOptionLatam'), 'green'],
+    ])) : undefined;
+    const kind = features.has('campaignType') ? add(t('tools.database.starterCampaignType'), 'multiSelect', optionsOf([
+      [t('tools.database.starterOptionProductLaunch'), 'gray'], [t('tools.database.starterOptionBrandAwareness'), 'brown'], [t('tools.database.starterOptionLeadGeneration'), 'blue'],
+      [t('tools.database.starterOptionSalesPromotion'), 'green'], [t('tools.database.starterOptionContentMarketing'), 'yellow'], [t('tools.database.starterOptionEmailMarketing'), 'default'],
+    ])) : undefined;
+    const audiences = features.has('audiences') ? add(t('tools.database.starterAudiencesTargeted'), 'multiSelect', optionsOf([
+      [t('tools.database.starterOptionDemographic', { number: '1' }), 'yellow'], [t('tools.database.starterOptionDemographic', { number: '2' }), 'blue'],
+      [t('tools.database.starterOptionDemographic', { number: '3' }), 'red'],
+    ])) : undefined;
+    const completion = add(t('tools.database.starterCompletionDate'), 'date', { date: { ...FULL } });
+    const files = features.has('files') ? add(t('tools.database.propertyTypeFiles'), 'files') : undefined;
+    // Complete's colour menu did not open; its pill rgba(0, 96, 38, 0.157) is the one every checked Green option reads.
+    const state = customStatus([
+      [t('tools.database.starterOptionBlocked'), 'red', 'todo'], [t('tools.database.defaultStatusNotStarted'), 'gray', 'todo'],
+      [t('tools.database.starterOptionPlanning'), 'yellow', 'inProgress'], [t('tools.database.starterOptionOnHoldCampaign'), 'orange', 'inProgress'],
+      [t('tools.database.starterOptionInProduction'), 'purple', 'inProgress'],
+      [t('tools.database.starterOptionInFlight'), 'blue', 'complete'], [t('tools.database.starterOptionComplete'), 'green', 'complete'],
+    ]);
+
+    // research/31 §7c: Hide empty groups read on, yet Notion drew the empty columns. Blok applies the switch.
+    if (views.has('byStatus')) {
+      view(t('tools.database.starterViewByStatus'), 'board', [channels, markets, kind], {
+        ...boardLook, wrapCells: false, cardPreview: files === undefined ? 'none' : `property:${files.id}`, openPagesIn: 'side', groupBy: state.id,
+        groupSettings: { sort: 'manual', hideEmptyGroups: true, colorColumns: true },
+      });
+    }
+    if (views.has('all')) view(t('tools.database.starterViewAllCampaigns'), 'table', [state, audiences, kind, channels, markets, files, completion], tableLook);
+    if (views.has('calendar')) {
+      view(t('tools.database.viewTypeCalendar'), 'calendar', [], {
+        calendarBy: completion.id, calendarRange: 'month', showWeekends: true, showPageIcon: true, wrapCells: false, openPagesIn: 'center',
+      });
+    }
+    if (viewList.length === 0) view(t('tools.database.starterViewAllCampaigns'), 'table', [state, audiences, kind, channels, markets, files, completion], tableLook);
+
+    const values = (s: number, a: number, k: number, c: number, m: number, date: string): Record<string, PropertyValue | undefined> => ({
+      [state.id]: option(state, s) ?? null,
+      [completion.id]: date,
+      ...(audiences === undefined ? {} : { [audiences.id]: [option(audiences, a) ?? ''] }),
+      ...(kind === undefined ? {} : { [kind.id]: [option(kind, k) ?? ''] }),
+      ...(channels === undefined ? {} : { [channels.id]: [option(channels, c) ?? ''] }),
+      ...(markets === undefined ? {} : { [markets.id]: [option(markets, m) ?? ''] }),
+    });
+
+    row(t('tools.database.starterCampaignRow1'), values(0, 2, 0, 3, 1, '2025-03-28'));
+    row(t('tools.database.starterCampaignRow2'), values(1, 1, 3, 5, 0, '2025-03-18'));
+    row(t('tools.database.starterCampaignRow3'), values(2, 0, 1, 2, 2, '2025-03-13'));
+  } else if (id === 'contentCalendar') {
+    // The "Status (1)" research/31 §7b saw is left out: probably made by its script.
+    add(t('tools.database.starterContentName'), 'title');
+    const kind = features.has('contentType') ? add(t('tools.database.starterContentType'), 'select', optionsOf([
+      [t('tools.database.starterOptionLiveStream'), 'default'], [t('tools.database.starterOptionLongFormVideo'), 'purple'],
+      [t('tools.database.starterOptionShortFormVideo'), 'gray'], [t('tools.database.starterOptionSocialPost'), 'red'],
+      [t('tools.database.starterOptionPodcastVideo'), 'pink'], [t('tools.database.starterOptionPodcastAudio'), 'orange'],
+      [t('tools.database.starterOptionBlogArticle'), 'blue'],
+    ])) : undefined;
+    const film = add(t('tools.database.starterFilmDate'), 'date', { date: { ...FULL } });
+    const owner = features.has('owner') ? add(t('tools.database.starterOwner'), 'person') : undefined;
+    const platform = features.has('platform') ? add(t('tools.database.starterPlatform'), 'multiSelect', optionsOf([
+      [t('tools.database.starterOptionLinkedin'), 'default'], [t('tools.database.starterOptionTiktok'), 'yellow'], [t('tools.database.starterOptionX'), 'blue'],
+      [t('tools.database.starterOptionYoutube'), 'gray'], [t('tools.database.starterOptionInstagram'), 'purple'], [t('tools.database.starterOptionSpotify'), 'pink'],
+      [t('tools.database.starterOptionEmail'), 'red'], [t('tools.database.starterOptionBlogWebsite'), 'orange'],
+    ])) : undefined;
+    const url = features.has('postUrl') ? add(t('tools.database.starterPostUrl'), 'url') : undefined;
+    const publish = features.has('publishDate') ? add(t('tools.database.starterPublishDate'), 'date', { date: { ...FULL } }) : undefined;
+    // Published and On hold: their colour menus did not open. Their pills are the Green and the Brown one
+    // (rgba(0, 96, 38, 0.157) and rgba(127, 51, 0, 0.157), as every checked Green and Brown option reads).
+    const state = customStatus([
+      [t('tools.database.starterOptionIdea'), 'gray', 'todo'],
+      [t('tools.database.starterOptionDrafting'), 'yellow', 'inProgress'], [t('tools.database.starterOptionFilming'), 'red', 'inProgress'],
+      [t('tools.database.starterOptionEditing'), 'orange', 'inProgress'], [t('tools.database.starterOptionReadyForReview'), 'purple', 'inProgress'],
+      [t('tools.database.starterOptionInReview'), 'pink', 'inProgress'], [t('tools.database.starterOptionApprovedForPublishing'), 'blue', 'inProgress'],
+      [t('tools.database.starterOptionScheduled'), 'orange', 'inProgress'],
+      [t('tools.database.starterOptionPublished'), 'green', 'complete'], [t('tools.database.starterOptionOnHold'), 'brown', 'complete'],
+    ]);
+    const newestFirst = (): ViewCreateConfig => (publish === undefined ? {} : { sorts: [{ id: newId(), propertyId: publish.id, direction: 'desc' }] });
+
+    if (views.has('calendar')) {
+      view(t('tools.database.viewTypeCalendar'), 'calendar', [], {
+        calendarBy: film.id, calendarRange: 'month', showWeekends: true, showPageIcon: true, wrapCells: false, openPagesIn: 'center', ...newestFirst(),
+      });
+    }
+    if (views.has('all')) view(t('tools.database.starterViewAllContent'), 'table', [owner, state, film, publish, kind, platform, url], { ...tableLook, wrapCells: true, ...newestFirst() });
+    // research/31 §7c: as Campaign Management's board, Blok applies Hide empty groups.
+    if (views.has('byStatus')) {
+      view(t('tools.database.starterViewByStatus'), 'board', [owner, kind, platform], {
+        ...boardLook, openPagesIn: 'side', groupBy: state.id, groupSettings: { sort: 'ascending', hideEmptyGroups: true, colorColumns: true }, ...newestFirst(),
+      });
+    }
+    if (viewList.length === 0) view(t('tools.database.starterViewAllContent'), 'table', [owner, state, film, publish, kind, platform, url], { ...tableLook, wrapCells: true, ...newestFirst() });
+
+    const values = (s: number, filmed: string, published: string, k: number, p: number[]): Record<string, PropertyValue | undefined> => ({
+      [state.id]: option(state, s) ?? null,
+      [film.id]: filmed,
+      ...(publish === undefined ? {} : { [publish.id]: published }),
+      ...(kind === undefined ? {} : { [kind.id]: option(kind, k) }),
+      ...(platform === undefined ? {} : { [platform.id]: p.map((i) => option(platform, i) ?? '') }),
+      // As the cell showed it. Blok links a scheme-less address to http://x.com/NotionHQ.
+      ...(url === undefined ? {} : { [url.id]: 'x.com/NotionHQ' }),
+    });
+
+    row(t('tools.database.starterContentRow1'), values(0, '2025-03-11', '2025-03-28', 2, [3]));
+    row(t('tools.database.starterContentRow2'), values(6, '2025-02-19', '2025-03-27', 3, [4]));
+    row(t('tools.database.starterContentRow3'), values(8, '2025-02-10', '2025-02-13', 6, [0, 7]));
   } else {
     const title = add(t('tools.database.starterSkillName'), 'title');
 

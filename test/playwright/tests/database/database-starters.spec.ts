@@ -260,7 +260,7 @@ test('Projects has no "Undo … database" row (Notion showed "Turn into" there)'
 });
 
 test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
-  test('the gallery lists six templates, expands to seven, and Brainstorm Session builds its measured database', async ({ page }) => {
+  test('the gallery lists six templates, expands to nine, and Brainstorm Session builds its measured database', async ({ page }) => {
     const errors: string[] = [];
 
     page.on('pageerror', (error) => errors.push(error.message));
@@ -275,7 +275,7 @@ test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
 
     await expect(cards).toHaveCount(6);
     await gallery.getByRole('button', { name: 'More templates' }).click();
-    await expect(cards).toHaveCount(7);
+    await expect(cards).toHaveCount(9);
     await expect(gallery.getByTestId('database-template-gallery-template-goals')).toContainText('Set team goals, achieve together.');
 
     await gallery.getByTestId('database-template-gallery-template-brainstorm').click();
@@ -305,6 +305,94 @@ test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
     // Upvote has no actions and Total votes no expression: the table still draws every row.
     await expect(page.getByText('Improve SEO')).toBeVisible();
     expect(errors).toEqual([]);
+  });
+
+  const openTemplate = async (page: Page, id: string, name: string): Promise<ReturnType<Page['getByRole']>> => {
+    await mount(page);
+    await insertDatabase(page);
+    await page.getByTestId('database-new-database-panel').getByRole('button', { name: 'More templates' }).click();
+    const gallery = page.getByRole('dialog', { name: 'More templates' });
+
+    await gallery.getByRole('button', { name: 'More templates' }).click();
+    await gallery.getByTestId(`database-template-gallery-template-${id}`).click();
+
+    return page.getByRole('dialog', { name: `Customize ${name}` });
+  };
+
+  test('Campaign Management builds its measured board, table and calendar, with a purple flag (research/31 §7a)', async ({ page }) => {
+    const errors: string[] = [];
+
+    page.on('pageerror', (error) => errors.push(error.message));
+    const dialog = await openTemplate(page, 'campaign', 'Campaign Management');
+
+    await expect(dialog.getByText('3 hidden properties')).toBeVisible();
+    await dialog.getByRole('button', { name: 'Get started' }).click();
+    await dialog.getByRole('button', { name: 'Done' }).click();
+    await expect(dialog).toBeHidden();
+
+    await expect.poll(async () => {
+      const { db, rows } = await read(page);
+
+      return [db.title, db.schema.map((p) => [p.name, p.type]), db.views.map((v) => [v.name, v.type, nameOf(db, v.groupBy)]), rows.map((r) => (r.data as { title?: string }).title), db.icon, db.starter];
+    }).toEqual([
+      'Campaign Management',
+      [['Campaign name', 'title'], ['Channels', 'multiSelect'], ['Markets', 'multiSelect'], ['Campaign type', 'multiSelect'], ['Audiences targeted', 'multiSelect'], ['Completion date', 'date'], ['Files & media', 'files'], ['Status', 'status']],
+      [['By Status', 'board', 'Status'], ['All Campaigns', 'table', undefined], ['Calendar', 'calendar', undefined]],
+      ['New mobile app', 'Engineering content', 'Win the market'],
+      { glyph: 'flag', color: 'purple' },
+      'campaign',
+    ]);
+    const icon = page.locator('[data-blok-database-icon="purple"]');
+
+    await expect(icon).toBeVisible();
+    // The tile takes Blok's purple block colour, not the gray fallback.
+    expect(await icon.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(await page.evaluate(() => {
+      const probe = document.createElement('span');
+
+      probe.setAttribute('data-blok-database-icon', 'gray');
+      document.body.appendChild(probe);
+      const gray = getComputedStyle(probe).backgroundColor;
+
+      probe.remove();
+
+      return gray;
+    }));
+    await expect(page.getByText('New mobile app')).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
+  test('Content Calendar opens on its calendar by Film date (research/31 §7b)', async ({ page }) => {
+    const dialog = await openTemplate(page, 'contentCalendar', 'Content Calendar');
+
+    await expect(dialog.getByText('7 hidden properties')).toBeVisible();
+    await dialog.getByRole('button', { name: 'Get started' }).click();
+    await dialog.getByRole('button', { name: 'Done' }).click();
+    await expect(dialog).toBeHidden();
+
+    await expect.poll(async () => {
+      const { db, rows } = await read(page);
+
+      return [db.views.map((v) => [v.name, v.type]), rows.map((r) => (r.data as { title?: string }).title)];
+    }).toEqual([[['Calendar', 'calendar'], ['All Content', 'table'], ['By Status', 'board']], ['Product launch', 'Opinion piece', 'Blog post']]);
+    await expect(page.locator('[data-blok-database-calendar-weekdays]')).toBeVisible();
+  });
+
+  test('Goals Tracker with Quarter and Progress on: Progress reads 75%, 0% and an uncapped 125% (research/31 §8)', async ({ page }) => {
+    const dialog = await openTemplate(page, 'goals', 'Goals Tracker');
+
+    await expect(dialog.getByRole('button', { name: 'Quarter' })).toHaveAttribute('aria-pressed', 'false');
+    await expect(dialog.getByRole('button', { name: 'Days until due' })).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Quarter' }).click();
+    await dialog.getByRole('button', { name: 'Progress' }).click();
+    await expect(dialog.locator('[data-blok-database-starter-preview-row="header"]')).toHaveText('Goal nameOwnerStatusDue datePriorityQuarterTeamStart valueEnd valueProgress');
+    await dialog.getByRole('button', { name: 'Get started' }).click();
+    await dialog.getByRole('button', { name: 'Done' }).click();
+    await expect(dialog).toBeHidden();
+
+    const progress = page.locator('[data-blok-database-cell="formula"] [data-blok-database-number-text]');
+
+    await expect(progress).toHaveText(['75%', '0%', '125%']);
+    await expect(page.locator('[data-blok-database-cell="formula"] [data-blok-database-number-bar]').nth(2)).toHaveAttribute('style', /--blok-database-number-fill: 100%/);
   });
 
   test('the last view card stays on (research/30 B8)', async ({ page }) => {

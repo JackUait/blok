@@ -3,6 +3,9 @@ import { englishDictionary } from '../../../../src/components/i18n/lightweight-i
 import { DATABASE_STARTERS, buildStarter, galleryStarters, hiddenPropertyCount, suggestedStarters } from '../../../../src/tools/database/database-starters';
 import type { StarterBuild, StarterId } from '../../../../src/tools/database/database-starters';
 import type { PropertyDefinition } from '../../../../src/tools/database/types';
+import { ComputedProperties } from '../../../../src/tools/database/computed-properties';
+import { readPropertyValue } from '../../../../src/tools/database/property-values';
+import { renderCellValue } from '../../../../src/tools/database/cells/display';
 
 const dictionary: Record<string, string> = englishDictionary;
 const t = (key: string, vars: Record<string, string> = {}): string => {
@@ -76,7 +79,7 @@ describe('"More templates" (research/27 §1e, research/30 §10)', () => {
     vi.restoreAllMocks();
   });
 
-  it('lists the seven templates whose schema was measured, in Notion\'s order, each with its measured description', () => {
+  it('lists the nine templates whose schema was measured, in Notion\'s order, each with its measured description', () => {
     expect(DATABASE_STARTERS.map((s) => [t(s.nameKey), t(s.descriptionKey)])).toEqual([
       ['Tasks Tracker', 'Stay organized with tasks, your way.'],
       ['Projects', 'Manage projects start to finish.'],
@@ -85,6 +88,8 @@ describe('"More templates" (research/27 §1e, research/30 §10)', () => {
       ['Brainstorm Session', 'Spark new ideas together.'],
       ['Meeting Notes', 'Turn meetings into action.'],
       ['Goals Tracker', 'Set team goals, achieve together.'],
+      ['Campaign Management', 'Plan and deliver winning campaigns.'],
+      ['Content Calendar', 'Streamline content creation.'],
     ]);
   });
 
@@ -100,8 +105,9 @@ describe('"More templates" (research/27 §1e, research/30 §10)', () => {
   it('the gallery lists unused templates first; with the first three used it reads as research/27 §1e', () => {
     const names = (used: StarterId[]): string[] => galleryStarters(new Set(used)).map((s) => t(s.nameKey));
 
-    expect(names([])).toEqual(['Tasks Tracker', 'Projects', 'Skills', 'Document Hub', 'Brainstorm Session', 'Meeting Notes', 'Goals Tracker']);
-    expect(names(['tasks', 'projects', 'skills'])).toEqual(['Document Hub', 'Brainstorm Session', 'Meeting Notes', 'Goals Tracker', 'Tasks Tracker', 'Projects', 'Skills']);
+    // research/31 §7: the same order, Campaign Management and Content Calendar after Goals Tracker.
+    expect(names([])).toEqual(['Tasks Tracker', 'Projects', 'Skills', 'Document Hub', 'Brainstorm Session', 'Meeting Notes', 'Goals Tracker', 'Campaign Management', 'Content Calendar']);
+    expect(names(['tasks', 'projects', 'skills'])).toEqual(['Document Hub', 'Brainstorm Session', 'Meeting Notes', 'Goals Tracker', 'Campaign Management', 'Content Calendar', 'Tasks Tracker', 'Projects', 'Skills']);
   });
 
   it('each card carries the measured thumbnail text (research/30 §10a)', () => {
@@ -113,7 +119,10 @@ describe('"More templates" (research/27 §1e, research/30 §10)', () => {
       ['Idea', 'Created by', 'Priority', 'Medium', 'Low', 'High'],
       ['Meeting name', 'Date', 'Category', 'Presentation', 'Planning', 'Standup'],
       ['Goal name', 'Owner', 'Status', 'Not started', 'In progress', 'Done'],
+      ['Blocked', 'Not started', 'Planning'],
+      ['Sun', 'Mon', 'Tue'],
     ]);
+    expect(meta('campaign').thumbnail.pills.map(([, color]) => color)).toEqual(['red', 'gray', 'yellow']);
     // The pill colours are the options' own (research/27 shot 07-08).
     expect(DATABASE_STARTERS.find((s) => s.id === 'meetingNotes')?.thumbnail.pills.map(([, color]) => color)).toEqual(['yellow', 'blue', 'red']);
   });
@@ -131,9 +140,18 @@ describe('"More templates" (research/27 §1e, research/30 §10)', () => {
     expect(on('meetingNotes', 'features', false)).toEqual(['Last edited by', 'Last updated time']);
     expect(on('meetingNotes', 'views', true)).toEqual(['All Meetings', 'My Notes']);
     expect(on('meetingNotes', 'views', false)).toEqual(['By Category']);
-    // Quarter, Progress and Days until due were measured as names only: no type, so no chip.
+    // research/31 §8. Days until due is not offered: Blok's formula engine refuses its measured expression.
     expect(on('goals', 'features', true)).toEqual(['Due date', 'Priority', 'Team']);
-    expect(on('goals', 'features', false)).toEqual([]);
+    expect(on('goals', 'features', false)).toEqual(['Quarter', 'Progress']);
+    // research/31 §7: Owner, Budget, Accounts, By Market and By Platform were left off, so never measured: not offered.
+    expect(on('campaign', 'features', true)).toEqual(['Campaign type', 'Markets', 'Channels', 'Audiences targeted', 'Files & media']);
+    expect(on('campaign', 'features', false)).toEqual([]);
+    expect(on('campaign', 'views', true)).toEqual(['By Status', 'All Campaigns', 'Calendar']);
+    expect(on('campaign', 'views', false)).toEqual([]);
+    expect(on('contentCalendar', 'features', true)).toEqual(['Publish date', 'Platform', 'Content type', 'Owner', 'Post URL']);
+    expect(on('contentCalendar', 'features', false)).toEqual([]);
+    expect(on('contentCalendar', 'views', true)).toEqual(['Calendar', 'All Content', 'By Status']);
+    expect(on('contentCalendar', 'views', false)).toEqual([]);
     expect(on('goals', 'views', true)).toEqual(['All Goals', 'By Status', 'My Goals']);
     expect(on('goals', 'views', false)).toEqual(['By Team']);
   });
@@ -323,15 +341,214 @@ describe('"More templates" (research/27 §1e, research/30 §10)', () => {
       expect(made.rows.map((_, i) => valueOf(made, i, 'Owner'))).toEqual([[], [], []]);
     });
 
-    it('By Team on adds a view grouped by Team', () => {
-      const made = build('goals', { views: ['All Goals', 'By Status', 'My Goals', 'By Team'] });
+    it('By Team on adds a table grouped by Team, manual, empty groups shown, page icons on, 25 rows (research/31 §8)', () => {
+      const made = build('goals', { features: ['Due date', 'Priority', 'Team', 'Quarter'], views: ['All Goals', 'By Status', 'My Goals', 'By Team'] });
+      const byTeam = viewNamed(made, 'By Team');
 
-      expect(viewNamed(made, 'By Team').groupBy).toBe(prop(made, 'Team').id);
+      expect(byTeam.groupBy).toBe(prop(made, 'Team').id);
+      expect(byTeam.type).toBe('table');
+      expect(shownNames(made, 'By Team')).toEqual(['Status', 'Owner', 'Team', 'Priority', 'Quarter']);
+      expect(byTeam).toMatchObject({ showPageIcon: true, wrapCells: false, showVerticalLines: true, openPagesIn: 'side', loadLimit: 25, groupSettings: { sort: 'manual', hideEmptyGroups: false } });
+    });
+
+    const allGoals = { features: ['Due date', 'Priority', 'Team', 'Quarter', 'Progress'] };
+
+    it('Quarter on adds a multi-select between Priority and Team: Q1 yellow, Q2 pink, Q3 green, Q4 gray (research/31 §8)', () => {
+      const made = build('goals', allGoals);
+
+      expect(made.schema.map((p) => [p.name, p.type])).toEqual([
+        ['Goal name', 'title'], ['Owner', 'person'], ['Status', 'status'], ['Due date', 'date'], ['Priority', 'select'], ['Quarter', 'multiSelect'],
+        ['Team', 'multiSelect'], ['Start value', 'number'], ['End value', 'number'], ['Progress', 'formula'],
+      ]);
+      expect(options(made, 'Quarter')).toEqual([['Q1', 'yellow'], ['Q2', 'pink'], ['Q3', 'green'], ['Q4', 'gray']]);
+      expect(made.rows.map((_, i) => labelsOf(made, 'Quarter', i))).toEqual([['Q2'], ['Q3', 'Q4'], ['Q1']]);
+      expect(shownNames(made, 'All Goals')).toHaveLength(9);
+      expect(shownNames(made, 'My Goals')).toEqual(['Owner', 'Priority', 'Quarter', 'Status', 'Team']);
+    });
+
+    it('Progress on adds Start value, End value and a Start value/End value formula shown as a green percent bar (research/31 §8)', () => {
+      const made = build('goals', allGoals);
+      const start = prop(made, 'Start value');
+      const end = prop(made, 'End value');
+
+      expect(prop(made, 'Progress').formula).toEqual({ expression: `{{property:${start.id}}}/{{property:${end.id}}}` });
+      expect(prop(made, 'Progress').number).toEqual({ format: 'percent', showAs: 'bar', color: 'green' });
+      expect(start.number).toBeUndefined();
+      expect(made.rows.map((_, i) => [valueOf(made, i, 'Start value'), valueOf(made, i, 'End value')])).toEqual([[15, 20], [0, 3], [25, 20]]);
+    });
+
+    it('Progress reads 75%, 0% and an uncapped 125% with a full bar (research/31 §8)', () => {
+      const made = build('goals', allGoals);
+      const progress = prop(made, 'Progress');
+      const engine = new ComputedProperties('db');
+      const rows = engine.apply(made.schema, made.rows.map((r) => ({ id: r.id, position: r.data.position, properties: r.data.properties })), { databaseId: 'db', now: new Date('2026-10-21T12:00:00Z') });
+      const cells = rows.map((row) => renderCellValue(progress, readPropertyValue(row, progress), {
+        i18n: { t }, readOnly: true, locale: 'en-US', valueProperty: (p) => engine.valueProperty(p),
+      }));
+
+      expect(cells.map((cell) => cell.querySelector('[data-blok-database-number-text]')?.textContent)).toEqual(['75%', '0%', '125%']);
+      expect(cells.map((cell) => cell.querySelector<HTMLElement>('[data-blok-database-number-bar]')?.style.getPropertyValue('--blok-database-number-fill'))).toEqual(['75%', '0%', '100%']);
+      expect(cells[0].querySelector('[data-blok-database-number-bar]')?.getAttribute('data-color')).toBe('green');
+    });
+
+    it('Quarter and Progress off leave the measured default schema', () => {
+      expect(build('goals').schema.map((p) => p.name)).toEqual(['Goal name', 'Owner', 'Status', 'Due date', 'Priority', 'Team']);
     });
   });
 
-  it('the four new templates bring no page template and no Undo row (unmeasured)', () => {
-    for (const id of ['documentHub', 'brainstorm', 'meetingNotes', 'goals'] as const) {
+  describe('Campaign Management (research/31 §7a)', () => {
+    it('has the measured properties, types and option colours', () => {
+      const made = build('campaign');
+
+      expect(made.title).toBe('Campaign Management');
+      expect(made.schema.map((p) => [p.name, p.type])).toEqual([
+        ['Campaign name', 'title'], ['Channels', 'multiSelect'], ['Markets', 'multiSelect'], ['Campaign type', 'multiSelect'],
+        ['Audiences targeted', 'multiSelect'], ['Completion date', 'date'], ['Files & media', 'files'], ['Status', 'status'],
+      ]);
+      expect(options(made, 'Channels')).toEqual([
+        ['Blog', 'green'], ['Email', 'yellow'], ['Instagram', 'purple'], ['X', 'gray'], ['Tiktok', 'purple'], ['Linkedin', 'blue'], ['Google', 'brown'],
+      ]);
+      expect(options(made, 'Markets')).toEqual([['AMER', 'orange'], ['EMEA', 'gray'], ['APAC', 'purple'], ['UK', 'yellow'], ['FR', 'brown'], ['LATAM', 'green']]);
+      expect(options(made, 'Campaign type')).toEqual([
+        ['Product launch', 'gray'], ['Brand awareness', 'brown'], ['Lead generation', 'blue'], ['Sales promotion', 'green'], ['Content marketing', 'yellow'], ['Email marketing', 'default'],
+      ]);
+      expect(options(made, 'Audiences targeted')).toEqual([['Demographic 1', 'yellow'], ['Demographic 2', 'blue'], ['Demographic 3', 'red']]);
+      expect(prop(made, 'Completion date').date).toEqual({ dateFormat: 'full', timeFormat: '12_hour' });
+    });
+
+    it('Status has the measured groups; Complete is the green pill', () => {
+      const made = build('campaign');
+      const status = prop(made, 'Status');
+      const grouped = (status.config?.options ?? []).map((o) => [o.label, o.color, o.groupId]);
+
+      expect(status.status?.groups.map((g) => [g.id, g.name])).toEqual([['todo', 'To-do'], ['inProgress', 'In progress'], ['complete', 'Complete']]);
+      expect(grouped).toEqual([
+        ['Blocked', 'red', 'todo'], ['Not started', 'gray', 'todo'],
+        ['Planning', 'yellow', 'inProgress'], ['On Hold', 'orange', 'inProgress'], ['In Production', 'purple', 'inProgress'],
+        ['In Flight', 'blue', 'complete'], ['Complete', 'green', 'complete'],
+      ]);
+    });
+
+    it('has a By Status board, All Campaigns and a Calendar by Completion date, as measured', () => {
+      const made = build('campaign');
+      const board = viewNamed(made, 'By Status');
+      const calendar = viewNamed(made, 'Calendar');
+
+      expect(made.views.map((v) => [v.name, v.type])).toEqual([['By Status', 'board'], ['All Campaigns', 'table'], ['Calendar', 'calendar']]);
+      expect(board.groupBy).toBe(prop(made, 'Status').id);
+      expect(shownNames(made, 'By Status')).toEqual(['Channels', 'Markets', 'Campaign type']);
+      expect(board).toMatchObject({
+        showPageIcon: true, wrapCells: false, loadLimit: 25, openPagesIn: 'side', cardSize: 'medium', cardPreview: `property:${prop(made, 'Files & media').id}`,
+        groupSettings: { sort: 'manual', hideEmptyGroups: true, colorColumns: true }, sorts: [], filters: [],
+      });
+      expect(shownNames(made, 'All Campaigns')).toEqual(['Status', 'Audiences targeted', 'Campaign type', 'Channels', 'Markets', 'Files & media', 'Completion date']);
+      expect(viewNamed(made, 'All Campaigns')).toMatchObject({ showPageIcon: false, wrapCells: false, showVerticalLines: true, loadLimit: 50, openPagesIn: 'side' });
+      expect(shownNames(made, 'Calendar')).toEqual([]);
+      expect(calendar).toMatchObject({ calendarBy: prop(made, 'Completion date').id, calendarRange: 'month', showWeekends: true, showPageIcon: true, wrapCells: false, openPagesIn: 'center' });
+      expect(hiddenPropertyCount(made)).toBe(3);
+    });
+
+    it('has the three measured rows; Files & media empty', () => {
+      const made = build('campaign');
+
+      expect(made.rows.map((r) => r.data.title)).toEqual(['New mobile app', 'Engineering content', 'Win the market']);
+      expect(made.rows.map((_, i) => labelsOf(made, 'Status', i))).toEqual([['Blocked'], ['Not started'], ['Planning']]);
+      expect(made.rows.map((_, i) => labelsOf(made, 'Audiences targeted', i))).toEqual([['Demographic 3'], ['Demographic 2'], ['Demographic 1']]);
+      expect(made.rows.map((_, i) => labelsOf(made, 'Campaign type', i))).toEqual([['Product launch'], ['Sales promotion'], ['Brand awareness']]);
+      expect(made.rows.map((_, i) => labelsOf(made, 'Channels', i))).toEqual([['X'], ['Linkedin'], ['Instagram']]);
+      expect(made.rows.map((_, i) => labelsOf(made, 'Markets', i))).toEqual([['EMEA'], ['AMER'], ['APAC']]);
+      expect(made.rows.map((_, i) => valueOf(made, i, 'Completion date'))).toEqual(['2025-03-28', '2025-03-18', '2025-03-13']);
+      expect(made.rows.map((_, i) => valueOf(made, i, 'Files & media'))).toEqual([[], [], []]);
+    });
+
+    it('is a purple flag (shot 51)', () => {
+      expect(build('campaign').icon).toEqual({ glyph: 'flag', color: 'purple' });
+    });
+
+    it('a chip off removes its column; Files & media off leaves the board without a card preview', () => {
+      const made = build('campaign', { features: ['Campaign type', 'Markets', 'Channels', 'Audiences targeted'] });
+
+      expect(made.schema.map((p) => p.name)).not.toContain('Files & media');
+      expect(viewNamed(made, 'By Status').cardPreview).toBe('none');
+    });
+  });
+
+  describe('Content Calendar (research/31 §7b)', () => {
+    it('has the measured properties, types and option colours; no "Status (1)"', () => {
+      const made = build('contentCalendar');
+
+      expect(made.title).toBe('Content Calendar');
+      expect(made.schema.map((p) => [p.name, p.type])).toEqual([
+        ['Content name', 'title'], ['Content type', 'select'], ['Film date', 'date'], ['Owner', 'person'],
+        ['Platform', 'multiSelect'], ['Post URL', 'url'], ['Publish date', 'date'], ['Status', 'status'],
+      ]);
+      expect(options(made, 'Content type')).toEqual([
+        ['Live stream', 'default'], ['Long form video', 'purple'], ['Story / short form video', 'gray'], ['Social post', 'red'],
+        ['Podcast (video)', 'pink'], ['Podcast (audio)', 'orange'], ['Blog article', 'blue'],
+      ]);
+      expect(options(made, 'Platform')).toEqual([
+        ['LinkedIn', 'default'], ['Tiktok', 'yellow'], ['X', 'blue'], ['YouTube', 'gray'], ['Instagram', 'purple'], ['Spotify', 'pink'], ['Email', 'red'], ['Blog / website', 'orange'],
+      ]);
+      expect(prop(made, 'Film date').date).toEqual({ dateFormat: 'full', timeFormat: '12_hour' });
+      expect(prop(made, 'Publish date').date).toEqual({ dateFormat: 'full', timeFormat: '12_hour' });
+    });
+
+    it('Status has the measured groups; Published is the green pill and On hold the brown one', () => {
+      const status = prop(build('contentCalendar'), 'Status');
+
+      expect((status.config?.options ?? []).map((o) => [o.label, o.color, o.groupId])).toEqual([
+        ['Idea', 'gray', 'todo'],
+        ['Drafting', 'yellow', 'inProgress'], ['Filming', 'red', 'inProgress'], ['Editing', 'orange', 'inProgress'], ['Ready for review', 'purple', 'inProgress'],
+        ['In review', 'pink', 'inProgress'], ['Approved for publishing', 'blue', 'inProgress'], ['Scheduled', 'orange', 'inProgress'],
+        ['Published', 'green', 'complete'], ['On hold', 'brown', 'complete'],
+      ]);
+    });
+
+    it('has a Calendar by Film date, All Content and a By Status board, each sorted by Publish date new to old', () => {
+      const made = build('contentCalendar');
+      const publish = prop(made, 'Publish date').id;
+      const board = viewNamed(made, 'By Status');
+
+      expect(made.views.map((v) => [v.name, v.type])).toEqual([['Calendar', 'calendar'], ['All Content', 'table'], ['By Status', 'board']]);
+      expect(made.views.map((v) => v.sorts.map((sort) => [sort.propertyId, sort.direction]))).toEqual([[[publish, 'desc']], [[publish, 'desc']], [[publish, 'desc']]]);
+      expect(shownNames(made, 'Calendar')).toEqual([]);
+      expect(viewNamed(made, 'Calendar')).toMatchObject({ calendarBy: prop(made, 'Film date').id, calendarRange: 'month', showWeekends: true, showPageIcon: true, wrapCells: false, openPagesIn: 'center' });
+      expect(shownNames(made, 'All Content')).toEqual(['Owner', 'Status', 'Film date', 'Publish date', 'Content type', 'Platform', 'Post URL']);
+      expect(viewNamed(made, 'All Content')).toMatchObject({ showPageIcon: false, wrapCells: true, showVerticalLines: true, loadLimit: 50, openPagesIn: 'side' });
+      expect(board.groupBy).toBe(prop(made, 'Status').id);
+      expect(shownNames(made, 'By Status')).toEqual(['Owner', 'Content type', 'Platform']);
+      expect(board).toMatchObject({
+        showPageIcon: true, wrapCells: true, loadLimit: 25, openPagesIn: 'side', cardSize: 'medium', cardPreview: 'none',
+        groupSettings: { sort: 'ascending', hideEmptyGroups: true, colorColumns: true },
+      });
+      expect(hiddenPropertyCount(made)).toBe(7);
+    });
+
+    it('has the three measured rows; Owner empty', () => {
+      const made = build('contentCalendar');
+
+      expect(made.rows.map((r) => r.data.title)).toEqual(['Product launch', 'Opinion piece', 'Blog post']);
+      expect(made.rows.map((_, i) => labelsOf(made, 'Status', i))).toEqual([['Idea'], ['Approved for publishing'], ['Published']]);
+      expect(made.rows.map((_, i) => [valueOf(made, i, 'Film date'), valueOf(made, i, 'Publish date')])).toEqual([
+        ['2025-03-11', '2025-03-28'], ['2025-02-19', '2025-03-27'], ['2025-02-10', '2025-02-13'],
+      ]);
+      expect(made.rows.map((_, i) => labelsOf(made, 'Content type', i))).toEqual([['Story / short form video'], ['Social post'], ['Blog article']]);
+      expect(made.rows.map((_, i) => labelsOf(made, 'Platform', i))).toEqual([['YouTube'], ['Instagram'], ['LinkedIn', 'Blog / website']]);
+      expect(made.rows.map((_, i) => valueOf(made, i, 'Post URL'))).toEqual(['x.com/NotionHQ', 'x.com/NotionHQ', 'x.com/NotionHQ']);
+      expect(made.rows.map((_, i) => valueOf(made, i, 'Owner'))).toEqual([[], [], []]);
+    });
+
+    it('Publish date off drops the sort; the calendar still places rows by Film date', () => {
+      const made = build('contentCalendar', { features: ['Platform', 'Content type', 'Owner', 'Post URL'] });
+
+      expect(made.schema.map((p) => p.name)).not.toContain('Publish date');
+      expect(made.views.every((v) => v.sorts.length === 0)).toBe(true);
+      expect(viewNamed(made, 'Calendar').calendarBy).toBe(prop(made, 'Film date').id);
+    });
+  });
+
+  it('the new templates bring no page template and no Undo row (unmeasured)', () => {
+    for (const id of ['documentHub', 'brainstorm', 'meetingNotes', 'goals', 'campaign', 'contentCalendar'] as const) {
       expect(build(id).templates).toEqual([]);
       expect(meta(id).undoKey).toBeUndefined();
     }

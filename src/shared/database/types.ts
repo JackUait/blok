@@ -1034,11 +1034,11 @@ export interface DatabaseData extends BlockToolData {
 /** A database icon: one of Blok's glyphs on a tinted tile. */
 export interface DatabaseIcon {
   glyph: 'check' | 'timeline' | 'wand' | 'doc' | 'idea' | 'calendar' | 'flag';
-  color: 'green' | 'blue' | 'gray' | 'red' | 'orange' | 'yellow';
+  color: 'green' | 'blue' | 'gray' | 'red' | 'orange' | 'yellow' | 'purple';
 }
 
 /** The "New database" panel's Suggested and More templates. */
-export type DatabaseStarterId = 'tasks' | 'projects' | 'skills' | 'documentHub' | 'brainstorm' | 'meetingNotes' | 'goals';
+export type DatabaseStarterId = 'tasks' | 'projects' | 'skills' | 'documentHub' | 'brainstorm' | 'meetingNotes' | 'goals' | 'campaign' | 'contentCalendar';
 
 // ─── View data (kanban board) ───
 

@@ -270,7 +270,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1489 + 126 + 486 + 4 closure for all 2105 keys', () => {
+  it('rebuilds a disjoint 1566 + 126 + 486 + 4 closure for all 2182 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -284,7 +284,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2105);
+    expect(lifecycle.size).toBe(2182);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -430,7 +430,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +2: the side peek resize hint calls tools.database.peekResizeHint and peekResizeHintAction by literal.
       // +1: the Ask AI bar's Continue button calls assistant.continue by literal.
       // +1: the CSV merge dialog's "Import Location".
-      'executable-literal': 1489,
+      // +77: Campaign Management, Content Calendar and Goals Tracker's Quarter and Progress (research/31 §7, §8).
+      'executable-literal': 1566,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

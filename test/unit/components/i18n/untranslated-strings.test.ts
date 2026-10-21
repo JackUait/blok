@@ -77,6 +77,21 @@ const UNIVERSAL_EXACT_VALUES: Readonly<Record<string, string>> = {
   'tools.database.filterOperator.greaterThanOrEqual': '≥',
   'tools.database.filterOperator.lessThan': '<',
   'tools.database.filterOperator.lessThanOrEqual': '≤',
+  // Brand names and region codes of the Campaign Management and Content Calendar options.
+  'tools.database.starterOptionInstagram': 'Instagram',
+  'tools.database.starterOptionX': 'X',
+  'tools.database.starterOptionTiktok': 'Tiktok',
+  'tools.database.starterOptionLinkedinCampaign': 'Linkedin',
+  'tools.database.starterOptionLinkedin': 'LinkedIn',
+  'tools.database.starterOptionGoogle': 'Google',
+  'tools.database.starterOptionYoutube': 'YouTube',
+  'tools.database.starterOptionSpotify': 'Spotify',
+  'tools.database.starterOptionAmer': 'AMER',
+  'tools.database.starterOptionEmea': 'EMEA',
+  'tools.database.starterOptionApac': 'APAC',
+  'tools.database.starterOptionLatam': 'LATAM',
+  'tools.database.starterOptionUk': 'UK',
+  'tools.database.starterOptionFr': 'FR',
 };
 
 /**
@@ -765,6 +780,37 @@ const DATABASE_STARTER_COGNATE_RETENTIONS: Record<string, string[]> = {
   pt: ['tools.database.starterOptionBug'],
   sv: ['tools.database.starterTeam', 'tools.database.starterBudget'],
 };
+
+/** Campaign Management, Content Calendar and Goals Tracker words that are native in the locale (Blog, Platform…). Each has a ledger retention row. */
+const DATABASE_ROUND11_COGNATE_RETENTIONS: Record<string, string[]> = {
+  bs: ['tools.database.starterOptionBlog'],
+  cs: ['tools.database.starterOptionBlog', 'tools.database.starterOptionPodcastVideo'],
+  da: ['tools.database.starterOptionBlog', 'tools.database.starterPlatform', 'tools.database.starterOptionPodcastVideo'],
+  de: ['tools.database.starterOptionQuarter', 'tools.database.starterOptionBlog'],
+  es: ['tools.database.starterOptionBlog', 'tools.database.starterOptionIdea'],
+  fi: ['tools.database.starterOptionPodcastVideo', 'tools.database.starterOptionIdea'],
+  fil: ['tools.database.starterOptionBlog', 'tools.database.starterOptionEmail', 'tools.database.starterOptionBlogWebsite'],
+  fr: ['tools.database.starterOptionBlog', 'tools.database.starterOptionPodcastAudio'],
+  hr: ['tools.database.starterOptionBlog'],
+  hu: ['tools.database.starterOptionBlog', 'tools.database.starterPlatform'],
+  id: ['tools.database.starterOptionBlog', 'tools.database.starterPlatform', 'tools.database.starterOptionPodcastVideo', 'tools.database.starterOptionPodcastAudio'],
+  it: ['tools.database.starterOptionBlog', 'tools.database.starterOptionEmail', 'tools.database.starterOptionPodcastVideo', 'tools.database.starterOptionPodcastAudio', 'tools.database.starterOptionIdea'],
+  ms: ['tools.database.starterOptionBlog', 'tools.database.starterPlatform', 'tools.database.starterOptionIdea'],
+  nl: ['tools.database.starterOptionBlog', 'tools.database.starterPlatform', 'tools.database.starterOptionPodcastVideo', 'tools.database.starterOptionPodcastAudio', 'tools.database.starterOptionBlogWebsite'],
+  pl: ['tools.database.starterOptionBlog', 'tools.database.starterOptionPodcastAudio'],
+  pt: ['tools.database.starterOptionBlog'],
+  ro: ['tools.database.starterOptionBlog', 'tools.database.starterOptionPodcastVideo', 'tools.database.starterOptionPodcastAudio'],
+  sk: ['tools.database.starterOptionBlog', 'tools.database.starterOptionPodcastVideo', 'tools.database.starterOptionPodcastAudio'],
+  sl: ['tools.database.starterOptionBlog'],
+  sq: ['tools.database.starterOptionBlog'],
+  tr: ['tools.database.starterOptionBlog', 'tools.database.starterPlatform'],
+  vi: ['tools.database.starterOptionBlog'],
+};
+
+for (const [locale, keys] of Object.entries(DATABASE_ROUND11_COGNATE_RETENTIONS)) {
+  const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
+  for (const key of keys) set.add(key);
+}
 
 /** "More templates" words that are native in the locale (Idea, Planning, Presentation…). Each has a ledger retention row. */
 const DATABASE_GALLERY_COGNATE_RETENTIONS: Record<string, string[]> = {

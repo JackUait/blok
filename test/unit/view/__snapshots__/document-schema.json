@@ -1834,7 +1834,8 @@
                 "gray",
                 "red",
                 "orange",
-                "yellow"
+                "yellow",
+                "purple"
               ]
             }
           }
@@ -1848,7 +1849,9 @@
             "documentHub",
             "brainstorm",
             "meetingNotes",
-            "goals"
+            "goals",
+            "campaign",
+            "contentCalendar"
           ],
           "description": "The template this database was made from. Removed by \"Undo … database\"."
         },

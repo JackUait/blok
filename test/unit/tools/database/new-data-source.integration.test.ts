@@ -579,6 +579,22 @@ describe('New data source: a view bound to a second source in the same block', (
     expect((await dataOf(api, 'db'))?.views.some((v) => v.id === 'vb')).toBe(true);    confirmAction('cancel')?.click();
   });
 
+  // research/30 B3.
+  it('the last-view question opens with focus on its × "Close", which deletes nothing', async () => {
+    const api = await make(doc('vb'));
+
+    await deleteFromSettings();
+    const close = document.querySelector<HTMLButtonElement>('[data-blok-database-confirm-close]');
+
+    expect(close?.getAttribute('aria-label')).toBe('Close');
+    expect(close).toHaveFocus();
+    close?.click();
+    await quiet();
+
+    expect(document.querySelector('[data-blok-database-confirm-dialog]')).toBeNull();
+    expect((await dataOf(api, 'db'))?.views.some((v) => v.id === 'vb')).toBe(true);
+  });
+
   it('Cancel on the last-view question deletes nothing', async () => {
     const api = await make(doc('vb'));
 

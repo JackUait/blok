@@ -145,6 +145,38 @@ describe('openDatabaseConfirm', () => {
       await expect(answer).resolves.toBeNull();
     });
 
+    // research/30 B3: Notion's dialog has a × at the top right, and it takes focus on open.
+    describe('with a close label', () => {
+      const closeButton = (): HTMLButtonElement | null => document.querySelector<HTMLButtonElement>('[data-blok-database-confirm-close]');
+      const openClosable = (): Promise<number | null> => openDatabaseChoice({ title: 'Delete?', confirmLabel: 'Delete view', cancelLabel: 'Cancel', destructive: true, choices, closeLabel: 'Close' });
+
+      it('focuses the × on open', () => {
+        void openClosable();
+
+        expect(closeButton()).toHaveFocus();
+        expect(closeButton()?.getAttribute('aria-label')).toBe('Close');
+        expect(closeButton()?.type).toBe('button');
+        expect(dialog()?.contains(closeButton())).toBe(true);
+      });
+
+      it('resolves null and closes on a × click', async () => {
+        const answer = openClosable();
+
+        cards()[1].click();
+        closeButton()?.click();
+
+        await expect(answer).resolves.toBeNull();
+        expect(dialog()).toBeNull();
+      });
+    });
+
+    it('has no × and focuses Cancel without a close label', () => {
+      void openChoice();
+
+      expect(document.querySelector('[data-blok-database-confirm-close]')).toBeNull();
+      expect(action('cancel')).toHaveFocus();
+    });
+
     // CLAUDE.md "No blue selected states": a picked card has no fill and the same ink as the others.
     it('paints a picked card with no fill and the same ink as an unpicked one', () => {
       const css = readMainCss();

@@ -4015,6 +4015,7 @@ span[data-blok-slash-search] {
   --blok-database-panel-close-hover-bg: rgba(42, 28, 0, 0.106);
   --blok-database-panel-close-active-bg: rgba(33, 27, 23, 0.102);
   --blok-database-panel-row-active-bg: rgba(33, 27, 23, 0.102);
+  --blok-database-confirm-close-bg: var(--blok-database-panel-close-bg);
   --blok-database-ai-prompt-placeholder: rgba(21, 14, 0, 0.286);
   --blok-database-table-open-bg: #ffffff;
   --blok-database-table-open-shadow: rgba(25, 25, 25, 0.027) 0 8px 12px, rgba(25, 25, 25, 0.027) 0 2px 6px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
@@ -4191,6 +4192,7 @@ span[data-blok-slash-search] {
   --blok-database-panel-close-hover-bg: rgba(255, 255, 235, 0.153);
   --blok-database-panel-close-active-bg: rgba(255, 255, 255, 0.11);
   --blok-database-panel-row-active-bg: rgba(255, 255, 255, 0.11);
+  --blok-database-confirm-close-bg: rgba(255, 255, 243, 0.082);
   --blok-database-ai-prompt-placeholder: var(--blok-text-tertiary);
   --blok-database-table-open-bg: rgb(37, 37, 37);
   --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
@@ -4378,6 +4380,7 @@ span[data-blok-slash-search] {
   --blok-database-panel-close-hover-bg: rgba(255, 255, 235, 0.153);
   --blok-database-panel-close-active-bg: rgba(255, 255, 255, 0.11);
   --blok-database-panel-row-active-bg: rgba(255, 255, 255, 0.11);
+  --blok-database-confirm-close-bg: rgba(255, 255, 243, 0.082);
   --blok-database-ai-prompt-placeholder: var(--blok-text-tertiary);
   --blok-database-table-open-bg: rgb(37, 37, 37);
   --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
@@ -7465,6 +7468,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 }
 
 [data-blok-database-confirm-dialog] {
+  position: relative;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -7475,6 +7479,33 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   background-color: var(--blok-database-confirm-bg);
   box-shadow: var(--blok-database-confirm-shadow);
   animation: blok-database-confirm-in 200ms ease both;
+}
+
+[data-blok-database-confirm-close] {
+  position: absolute;
+  inset-block-start: var(--blok-space-3);
+  inset-inline-end: var(--blok-space-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background-color: var(--blok-database-confirm-close-bg);
+  color: var(--blok-database-table-header-icon);
+  cursor: pointer;
+}
+
+[data-blok-database-confirm-close] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-confirm-close]:focus-visible {
+  outline: 2px solid var(--blok-focus-ring);
+  outline-offset: 2px;
 }
 
 [data-blok-database-confirm-title] {

@@ -390,6 +390,25 @@ test.describe('database New data source', () => {
       await expect(page.getByRole('alertdialog')).toContainText('Delete the last view for this data source?');
     };
 
+    // research/30 B3: focus on the × "Close", and no ring when the dialog was opened by a click.
+    test('opens with focus on its × "Close", with no ring after a click', async ({ page }) => {
+      await mount(page, bound);
+      await deleteFromSettings(page);
+      const close = page.getByRole('alertdialog').getByRole('button', { name: 'Close' });
+
+      await expect(close).toBeFocused();
+      const ring = await close.evaluate((el) => {
+        const style = getComputedStyle(el);
+
+        return { outline: style.outlineStyle, shadow: style.boxShadow };
+      });
+
+      expect(ring).toEqual({ outline: 'none', shadow: 'none' });
+      await close.click();
+      await expect(page.getByRole('alertdialog')).toBeHidden();
+      expect((await save(page)).some((block) => block.id === 'src-b')).toBe(true);
+    });
+
     test('"Delete view only" is picked and keeps the source and its rows', async ({ page }) => {
       await mount(page, bound);
       await deleteFromSettings(page);

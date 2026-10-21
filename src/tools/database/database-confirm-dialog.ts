@@ -1,3 +1,4 @@
+import { IconCross } from '../../components/icons';
 import { openModalDialog } from '../../components/utils/modal-dialog';
 import type { DialogRole } from '../../components/utils/modal-dialog';
 
@@ -23,6 +24,8 @@ export interface DatabaseConfirmOptions {
   art?: string[];
   /** What Escape, a press outside and an abort resolve to. Defaults to false. */
   dismissAs?: boolean;
+  /** Draws a × at the top right with this label. It dismisses, and takes focus on open (research/30 B3). */
+  closeLabel?: string;
 }
 
 export interface DatabaseChoice {
@@ -60,6 +63,15 @@ const buildConfirm = (options: DatabaseConfirmOptions, choices: DatabaseChoice[]
   // Mounted on body: the popover scope brings the editor font and preflight.
   backdrop.setAttribute('data-blok-popover', '');
   panel.setAttribute('data-blok-database-confirm-dialog', '');
+  const close = options.closeLabel === undefined ? null : document.createElement('button');
+
+  if (close !== null) {
+    close.type = 'button';
+    close.setAttribute('data-blok-database-confirm-close', '');
+    close.setAttribute('aria-label', options.closeLabel ?? '');
+    close.innerHTML = IconCross;
+    panel.appendChild(close);
+  }
   if (options.art !== undefined) {
     const art = document.createElement('div');
 
@@ -151,7 +163,7 @@ const buildConfirm = (options: DatabaseConfirmOptions, choices: DatabaseChoice[]
     role: options.role ?? 'alertdialog',
     labelledBy: title.id,
     ...(description === null ? {} : { describedBy: description.id }),
-    initialFocus: () => (options.primary === true ? confirmButton : cancelButton),
+    initialFocus: () => close ?? (options.primary === true ? confirmButton : cancelButton),
     directionSource: options.directionSource ?? null,
     ...(options.container === undefined ? {} : { container: options.container, topLayer: false }),
     onDismiss: () => finish(options.dismissAs ?? false),
@@ -171,4 +183,5 @@ const buildConfirm = (options: DatabaseConfirmOptions, choices: DatabaseChoice[]
   options.signal?.addEventListener('abort', () => finish(options.dismissAs ?? false), { once: true });
   confirmButton.addEventListener('click', () => finish(true));
   cancelButton.addEventListener('click', () => finish(false));
+  close?.addEventListener('click', () => finish(options.dismissAs ?? false));
 });

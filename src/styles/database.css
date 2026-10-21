@@ -66,6 +66,8 @@
   /* research/27 §6: × pressed. research/30 B5: a pressed row is the hover ink at double alpha. */
   --blok-database-panel-close-active-bg: rgba(33, 27, 23, 0.102);
   --blok-database-panel-row-active-bg: rgba(33, 27, 23, 0.102);
+  /* research/26 §5a: the last-view dialog's ×. Light is unmeasured: the panel ×'s fill. */
+  --blok-database-confirm-close-bg: var(--blok-database-panel-close-bg);
   /* research/26 §2: the AI prompt box placeholder. Dark is unmeasured. */
   --blok-database-ai-prompt-placeholder: rgba(21, 14, 0, 0.286);
   --blok-database-table-open-bg: #ffffff;
@@ -291,6 +293,7 @@
     --blok-database-panel-close-hover-bg: rgba(255, 255, 235, 0.153);
     --blok-database-panel-close-active-bg: rgba(255, 255, 255, 0.11);
     --blok-database-panel-row-active-bg: rgba(255, 255, 255, 0.11);
+    --blok-database-confirm-close-bg: rgba(255, 255, 243, 0.082);
     --blok-database-ai-prompt-placeholder: var(--blok-text-tertiary);
     --blok-database-table-open-bg: rgb(37, 37, 37);
     --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
@@ -504,6 +507,7 @@
   --blok-database-panel-close-hover-bg: rgba(255, 255, 235, 0.153);
   --blok-database-panel-close-active-bg: rgba(255, 255, 255, 0.11);
   --blok-database-panel-row-active-bg: rgba(255, 255, 255, 0.11);
+  --blok-database-confirm-close-bg: rgba(255, 255, 243, 0.082);
   --blok-database-ai-prompt-placeholder: var(--blok-text-tertiary);
   --blok-database-table-open-bg: rgb(37, 37, 37);
   --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
@@ -4071,6 +4075,7 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 }
 
 [data-blok-database-confirm-dialog] {
+  position: relative;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -4081,6 +4086,34 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   background-color: var(--blok-database-confirm-bg);
   box-shadow: var(--blok-database-confirm-shadow);
   animation: blok-database-confirm-in 200ms ease both;
+}
+
+[data-blok-database-confirm-close] {
+  position: absolute;
+  inset-block-start: var(--blok-space-3);
+  inset-inline-end: var(--blok-space-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background-color: var(--blok-database-confirm-close-bg);
+  color: var(--blok-database-table-header-icon);
+  cursor: pointer;
+}
+
+[data-blok-database-confirm-close] svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* preflight.css hides outline rings after a pointer press, so opening the dialog by click draws none. */
+[data-blok-database-confirm-close]:focus-visible {
+  outline: 2px solid var(--blok-focus-ring);
+  outline-offset: 2px;
 }
 
 [data-blok-database-confirm-title] {

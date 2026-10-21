@@ -125,3 +125,23 @@ describe('"Manage in Calendar" row arrow (research/26 §3d light, research/30 B4
     expect(tokenValues('--blok-database-table-gutter-icon')).toEqual([ 'rgb(173, 169, 163)', 'rgb(125, 122, 117)', 'rgb(125, 122, 117)' ]);
   });
 });
+
+describe('delete-last-view dialog × (research/26 §5a, research/30 B3)', () => {
+  it('is a 24px round button at the top right on the measured dark fill; light reuses the panel ×', () => {
+    const body = ruleBody('[data-blok-database-confirm-close]');
+
+    expect(ruleBody('[data-blok-database-confirm-dialog]')).toContain('position: relative');
+    expect(body).toContain('position: absolute');
+    expect(body).toContain('inset-inline-end: var(--blok-space-3)');
+    expect(body).toContain('width: 24px');
+    expect(body).toContain('height: 24px');
+    expect(body).toContain('border-radius: 50%');
+    expect(body).toContain('background-color: var(--blok-database-confirm-close-bg)');
+    expect(tokenValues('--blok-database-confirm-close-bg')).toEqual([ 'var(--blok-database-panel-close-bg)', 'rgba(255, 255, 243, 0.082)', 'rgba(255, 255, 243, 0.082)' ]);
+  });
+
+  it('draws no ring on a pointer focus: its ring is an outline, which the preflight pointer guard hides', () => {
+    expect(ruleBody('[data-blok-database-confirm-close]')).not.toContain('box-shadow');
+    expect(ruleBody('[data-blok-database-confirm-close]:focus-visible')).toContain('outline: 2px solid var(--blok-focus-ring)');
+  });
+});

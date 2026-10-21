@@ -9,7 +9,7 @@ import { isPlaceValue, placeText, verificationStatus } from '../tier3-values';
 import { reminderDueAt } from '../reminders';
 import { formatDateDisplay, resolveLocale } from './date-format';
 import { formatNumberValue, numberFill } from './number-format';
-import { optionColorOf } from './option-colors';
+import { optionColorOf, shownStatusOption } from './option-colors';
 import type { CellContext } from './types';
 
 export const optionsFor = (property: PropertyDefinition, ctx: Pick<CellContext, 'options'>): SelectOption[] =>
@@ -161,7 +161,7 @@ const renderStatus = (cell: HTMLElement, property: PropertyDefinition, value: Pr
     return;
   }
 
-  const pill = createOptionPill(option);
+  const pill = createOptionPill(shownStatusOption(option));
 
   pill.setAttribute('data-status-group', group?.kind ?? 'todo');
   cell.appendChild(pill);

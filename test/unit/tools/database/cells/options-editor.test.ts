@@ -182,5 +182,80 @@ describe('options editor (Edit property for select, multi-select and status)', (
 
       expect(last(onChange).find((o) => o.id === 'n')?.groupId).toBe('inProgress');
     });
+
+    // research/30 §10f, shot 23: the option menu reads Delete, Set as default, then the colours.
+    describe('the default option', () => {
+      const colourless = (): PropertyDefinition => {
+        const property = statusProp();
+
+        return {
+          ...property,
+          status: { ...createDefaultStatusSettings(), defaultOptionId: 'n' },
+          config: { options: (property.config?.options ?? []).map(({ color, ...option }) => (option.id === 'n' ? option : { ...option, color })) },
+        };
+      };
+      const openPanel = (root: HTMLElement, id: string): void =>
+        root.querySelector<HTMLElement>(`[data-blok-database-select-option="${id}"] [data-blok-database-select-option-menu]`)?.click();
+
+      it('marks the default option "Default" in the list; no other option is marked', () => {
+        const root = createOptionsEditor({ property: colourless(), i18n, onChange: vi.fn(), onSetDefault: vi.fn() });
+
+        expect(root.querySelector('[data-blok-database-select-option="n"] [data-blok-database-option-default]')?.textContent).toBe('tools.database.templateDefault');
+        expect(root.querySelectorAll('[data-blok-database-option-default]')).toHaveLength(1);
+      });
+
+      it('a colourless status option draws the gray pill, and its colour menu checks no colour', () => {
+        const root = createOptionsEditor({ property: colourless(), i18n, onChange: vi.fn(), onSetDefault: vi.fn() });
+
+        expect(root.querySelector('[data-blok-database-select-option="n"] [data-blok-database-option-pill]')?.getAttribute('data-color')).toBe('gray');
+        openPanel(root, 'n');
+        expect(root.querySelectorAll('[data-blok-database-option-color][aria-checked="true"]')).toHaveLength(0);
+        expect(root.querySelector('[data-blok-database-option-color] [data-blok-database-select-option-check]')).toBeNull();
+      });
+
+      it('renaming a colourless option keeps it colourless: the gray it draws is never saved', () => {
+        const onChange = vi.fn<(options: SelectOption[]) => void>();
+        const root = createOptionsEditor({ property: colourless(), i18n, onChange, onSetDefault: vi.fn() });
+
+        openPanel(root, 'n');
+        const name = root.querySelector<HTMLInputElement>('[data-blok-database-option-name]');
+
+        if (name === null) throw new Error('no name field');
+        name.value = 'Backlog';
+        press(name, 'Enter');
+        expect(last(onChange).find((o) => o.id === 'n')).toEqual({ id: 'n', label: 'Backlog', position: 'a0', groupId: 'todo' });
+      });
+
+      it('"Set as default" sits right after Delete and makes that option the default', () => {
+        const onSetDefault = vi.fn();
+        const root = createOptionsEditor({ property: colourless(), i18n, onChange: vi.fn(), onSetDefault });
+
+        openPanel(root, 'i');
+        const row = root.querySelector<HTMLElement>('[data-blok-database-option-set-default]');
+
+        expect(row?.previousElementSibling?.hasAttribute('data-blok-database-option-delete')).toBe(true);
+        expect(row?.textContent?.trim()).toBe('tools.database.templateSetDefault');
+        row?.click();
+        expect(onSetDefault).toHaveBeenCalledWith('i');
+        expect(root.querySelector('[data-blok-database-select-option="i"] [data-blok-database-option-default]')).not.toBeNull();
+        expect(root.querySelector('[data-blok-database-select-option="n"] [data-blok-database-option-default]')).toBeNull();
+      });
+
+      it('the current default keeps the row, as measured; a click there changes nothing', () => {
+        const onSetDefault = vi.fn();
+        const root = createOptionsEditor({ property: colourless(), i18n, onChange: vi.fn(), onSetDefault });
+
+        openPanel(root, 'n');
+        root.querySelector<HTMLElement>('[data-blok-database-option-set-default]')?.click();
+        expect(onSetDefault).not.toHaveBeenCalled();
+      });
+
+      it('a select option has no "Set as default" row', () => {
+        const root = createOptionsEditor({ property: selectProp(), i18n, onChange: vi.fn(), onSetDefault: vi.fn() });
+
+        openPanel(root, 'o1');
+        expect(root.querySelector('[data-blok-database-option-set-default]')).toBeNull();
+      });
+    });
   });
 });

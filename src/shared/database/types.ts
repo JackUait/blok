@@ -171,6 +171,8 @@ export interface StatusGroup {
 export interface StatusSettings {
   groups: StatusGroup[];
   showAs?: 'select' | 'checkbox';
+  /** The option a new row starts with. Absent: a new row has no status. */
+  defaultOptionId?: string;
 }
 
 export type PageVisibility = 'always' | 'hideWhenEmpty' | 'hidden';

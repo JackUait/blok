@@ -270,7 +270,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1582 + 126 + 486 + 4 closure for all 2198 keys', () => {
+  it('rebuilds a disjoint 1584 + 126 + 484 + 4 closure for all 2198 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -435,7 +435,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +12: the Ask AI action buttons, Insert, its done line and the group name, by literal.
       // +1: the "/" menu footer calls toolbox.closeMenu by literal (research/30 §B7c).
       // +1: the merge dialog's subtitle, tools.database.csvMergeDescription (research/31 §5a).
-      'executable-literal': 1582,
+      // +2: a status option's "Set as default" and "Default" call templateSetDefault / templateDefault by literal.
+      'executable-literal': 1584,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -490,7 +491,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the template menu's "Default" (tools.database.templateDefault, via the menu's prefixing t).
       // +1: tools.database.dateFormat.full (see executable-literal).
       // -2: see executable-literal ("More templates").
-      'registered-namespace-compatible': 486,
+      // -2: see executable-literal (status default).
+      'registered-namespace-compatible': 484,
       'catalog-only': 4,
     });
     expect(

@@ -108,7 +108,9 @@ describe('database starters (research/27 §1)', () => {
         ['Priority', 'select'], ['Task type', 'multiSelect'], ['Description', 'text'], ['Effort level', 'select'],
       ]);
       expect(made.schema[0].id).toBe('old-title');
-      expect(options(made, 'Status')).toEqual([['Not started', 'gray'], ['In progress', 'blue'], ['Done', 'green']]);
+      // research/27:48: Not started is the DEFAULT and has no checked colour.
+      expect(options(made, 'Status')).toEqual([['Not started', undefined], ['In progress', 'blue'], ['Done', 'green']]);
+      expect(prop(made, 'Status').status?.defaultOptionId).toBe(prop(made, 'Status').config?.options[0].id);
       expect(prop(made, 'Status').config?.options.map((o) => o.groupId)).toEqual(['todo', 'inProgress', 'complete']);
       expect(prop(made, 'Status').status?.groups.map((g) => g.kind)).toEqual(['todo', 'inProgress', 'complete']);
       expect(options(made, 'Priority')).toEqual([['High', 'red'], ['Medium', 'yellow'], ['Low', 'green']]);
@@ -216,6 +218,9 @@ describe('database starters (research/27 §1)', () => {
       ]);
       expect(options(made, 'Team')).toEqual([['Account Management', 'default'], ['Business Development', 'blue'], ['Product Design', 'green'], ['Human Resources', 'purple']]);
       expect(options(made, 'Priority')).toEqual([['High', 'red'], ['Medium', 'yellow'], ['Low', 'green']]);
+      // research/27:89: the same three as Tasks Tracker.
+      expect(options(made, 'Status')).toEqual([['Not started', undefined], ['In progress', 'blue'], ['Done', 'green']]);
+      expect(prop(made, 'Status').status?.defaultOptionId).toBe(prop(made, 'Status').config?.options[0].id);
       expect(prop(made, 'Start date').date).toEqual({ dateFormat: 'month_day_year', timeFormat: '12_hour' });
     });
 

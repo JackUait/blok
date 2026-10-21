@@ -564,6 +564,21 @@ describe('DatabasePropertyMenu', () => {
       expect(cb.onOptionsChange).toHaveBeenCalledWith('p', [options[0], { ...options[1], color: 'red' }]);
     });
 
+    it('a status option\'s "Set as default" saves the default with the status settings (research/30 §10f)', () => {
+      const status = { ...createDefaultStatusSettings(), showAs: 'checkbox' as const };
+      const statusOptions = [
+        { id: 'n', label: 'Not started', position: 'a0', groupId: 'todo' },
+        { id: 'i', label: 'In progress', color: 'blue', position: 'a0', groupId: 'inProgress' },
+      ];
+      const cb = open(prop('status', { status, config: { options: statusOptions } }));
+      const list = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'options').element;
+
+      list?.querySelector<HTMLElement>('[data-blok-database-select-option="i"] [data-blok-database-select-option-menu]')?.click();
+      list?.querySelector<HTMLElement>('[data-blok-database-option-set-default]')?.click();
+
+      expect(cb.onUpdate).toHaveBeenCalledWith('p', { status: { ...status, defaultOptionId: 'i' } });
+    });
+
     it('keeps its keys away from the menu', () => {
       open(prop('select', { config: { options } }));
       const list = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'options').element;

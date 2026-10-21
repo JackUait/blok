@@ -18,6 +18,7 @@ import { pageLayoutFields, pageLayoutOf } from './page-layout';
 import type { PageLayoutData } from './page-layout';
 import { queryGroups, queryRows, rowOrderKey } from './database-query';
 import { orderedStatusOptions, personIdsOf, readPropertyValue, statusGroupOf, statusGroupsOf, withEmptyLists } from './property-values';
+import { shownStatusOption } from './cells/option-colors';
 import type { GroupCount, QueryRowsRequest, QueryRowsResult, QuerySource } from './database-query';
 import { visibleRowPropertyIds } from './view-settings';
 import { NO_VALUE_GROUP_KEY, groupKeysFor, orderGroupKeys } from './group-keys';
@@ -333,6 +334,21 @@ export class DatabaseModel {
     };
   }
 
+  /** A status with a default option fills a new row that has no key for it (research/04: "null resets to the default option"). */
+  withStatusDefaults(properties: Record<string, PropertyValue>): Record<string, PropertyValue> {
+    const result = { ...properties };
+
+    for (const property of this.schema) {
+      const id = property.type === 'status' ? property.status?.defaultOptionId : undefined;
+
+      if (id !== undefined && !(property.id in result) && property.config?.options.some((option) => option.id === id) === true) {
+        result[property.id] = id;
+      }
+    }
+
+    return result;
+  }
+
   /** A person property set to default "Created by" starts with the current user, unless the caller gave a value. */
   private withCreatedByDefaults(properties: Record<string, PropertyValue>): Record<string, PropertyValue> {
     const me = this.me();
@@ -468,7 +484,7 @@ export class DatabaseModel {
     if (prop?.type === 'status') {
       return grouping.statusBy === 'group'
         ? statusGroupsOf(prop).map((g) => ({ id: g.id, label: g.name, color: g.color, position: g.position }))
-        : orderedStatusOptions(prop);
+        : orderedStatusOptions(prop).map(shownStatusOption);
     }
     if (prop === undefined || (prop.type !== 'select' && prop.type !== 'multiSelect')) return [];
     const options = prop.config?.options ?? [];

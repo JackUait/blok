@@ -75,6 +75,7 @@ const PROPERTY_SETTINGS = {
         },
       },
       showAs: { type: 'string', enum: ['select', 'checkbox'] },
+      defaultOptionId: { type: 'string', description: 'The option id a new row starts with.' },
     },
   },
   uniqueId: { type: 'object', additionalProperties: false, properties: { prefix: { type: 'string' } } },

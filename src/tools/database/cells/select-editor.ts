@@ -6,7 +6,7 @@ import { orderedStatusOptions, personIdsOf, statusGroupOf, statusGroupsOf } from
 import type { PropertyDefinition, PropertyValue, SelectOption } from '../types';
 import { CellPopover } from './cell-popover';
 import { createOptionPill, optionsFor } from './display';
-import { pickOptionColor } from './option-colors';
+import { pickOptionColor, shownStatusOption } from './option-colors';
 import { OptionDrag, buildDeletePrompt, buildOptionPanel, placeDroppedOption } from './option-editing';
 import type { CellEditorContext, CellEditorHandle } from './types';
 
@@ -307,7 +307,7 @@ class SelectEditor {
       if (option === undefined) {
         continue;
       }
-      const chip = createOptionPill(option);
+      const chip = createOptionPill(this.property.type === 'status' ? shownStatusOption(option) : option);
 
       chip.setAttribute('data-blok-database-select-chip', id);
       if (this.multi) {
@@ -436,7 +436,7 @@ class SelectEditor {
     const pillSlot = document.createElement('span');
 
     pillSlot.setAttribute('data-blok-database-select-option-label', '');
-    pillSlot.appendChild(createOptionPill(option));
+    pillSlot.appendChild(createOptionPill(this.property.type === 'status' ? shownStatusOption(option) : option));
     row.appendChild(pillSlot);
 
     if (selected) {
@@ -505,6 +505,7 @@ class SelectEditor {
         this.renderPanel();
       },
       onDelete: () => this.confirmDelete(option.id),
+      status: this.property.type === 'status',
     });
 
     this.body.replaceChildren(panel);

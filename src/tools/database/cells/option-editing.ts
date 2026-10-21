@@ -1,4 +1,4 @@
-import { IconCheck, IconTrash } from '../../../components/icons';
+import { IconCheck, IconEmojiFlag, IconTrash } from '../../../components/icons';
 import { getTabbables } from '../../../components/utils/modal-dialog';
 import { DatabaseModel } from '../database-model';
 import { statusGroupOf } from '../property-values';
@@ -17,6 +17,10 @@ export const buildOptionPanel = (option: SelectOption, handlers: {
   onRename: (label: string) => void;
   onRecolor: (color: OptionColor) => void;
   onDelete: () => void;
+  /** A status option: with no colour, no colour row is checked (research/30 §10f). */
+  status?: boolean;
+  /** Status in Edit property: "Set as default" after Delete (research/30 §10f, shot 23). */
+  onSetDefault?: () => void;
 }): { panel: HTMLElement; name: HTMLInputElement } => {
   const { t } = handlers;
   const panel = document.createElement('div');
@@ -50,6 +54,13 @@ export const buildOptionPanel = (option: SelectOption, handlers: {
   del.innerHTML = IconTrash;
   del.append(t('tools.database.optionDelete'));
   del.addEventListener('click', handlers.onDelete);
+  const setDefault = document.createElement('button');
+
+  setDefault.type = 'button';
+  setDefault.setAttribute('data-blok-database-option-set-default', '');
+  setDefault.innerHTML = IconEmojiFlag;
+  setDefault.append(t('tools.database.templateSetDefault'));
+  setDefault.addEventListener('click', () => handlers.onSetDefault?.());
 
   const heading = document.createElement('div');
 
@@ -60,7 +71,7 @@ export const buildOptionPanel = (option: SelectOption, handlers: {
 
   colors.setAttribute('role', 'menu');
   colors.setAttribute('aria-label', t('tools.database.optionColors'));
-  const current = optionColorOf(option);
+  const current = handlers.status === true && option.color === undefined ? null : optionColorOf(option);
 
   for (const color of OPTION_COLORS) {
     const item = document.createElement('button');
@@ -87,7 +98,7 @@ export const buildOptionPanel = (option: SelectOption, handlers: {
     colors.appendChild(item);
   }
 
-  panel.append(name, del, heading, colors);
+  panel.append(name, del, ...(handlers.onSetDefault === undefined ? [] : [setDefault]), heading, colors);
 
   return { panel, name };
 };

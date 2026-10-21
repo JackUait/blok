@@ -15,3 +15,11 @@ export const optionColorOf = (option: Pick<SelectOption, 'color'>): OptionColor 
 /** i18n key of a color's name. `default` has no color-picker entry of its own. */
 export const optionColorLabelKey = (color: OptionColor): string =>
   color === 'default' ? 'tools.marker.default' : `tools.colorPicker.color.${color}`;
+
+/**
+ * A status option with no colour draws the gray pill and checks no colour
+ * (research/30 §10f: Not started; research/31 §7b: Idea). Gray is the measured
+ * pill; why Notion picks it is not known. For drawing only: never save it.
+ */
+export const shownStatusOption = <T extends Pick<SelectOption, 'color'>>(option: T): T =>
+  (option.color === undefined ? { ...option, color: 'gray' } : option);

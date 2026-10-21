@@ -7363,6 +7363,8 @@ export class DatabaseTool implements BlockTool {
 
       Object.assign(rowData.properties, resolveDynamicProperties(structuredClone(template.properties), { me: this.config.people?.me?.() ?? null, now: new Date() }), given);
     }
+    // After the template: its own status wins over the property's default.
+    Object.assign(rowData.properties, this.model.withStatusDefaults(rowData.properties));
     const title = rowData.properties[titlePropId];
     const reminders = copiedReminders(template?.reminders, rowData.properties);
 
@@ -8453,6 +8455,11 @@ export class DatabaseTool implements BlockTool {
     const properties: Record<string, PropertyValue> = { ...newRowValues(filters, this.model.getSchema(), this.config.people?.me?.() ?? null, this.thisPage), [titlePropId]: '' };
 
     const value = groupByPropId === undefined || optionId === NO_VALUE_GROUP_KEY ? undefined : this.groupValueFor(groupByPropId, optionId, effective);
+
+    // A row added under "No Status" stays there: the status default does not fill it.
+    if (groupByPropId !== undefined && optionId === NO_VALUE_GROUP_KEY && this.model.getProperty(groupByPropId)?.status?.defaultOptionId !== undefined) {
+      return { ...properties, [groupByPropId]: null };
+    }
 
     return groupByPropId === undefined || value === undefined ? properties : { ...properties, [groupByPropId]: value };
   }

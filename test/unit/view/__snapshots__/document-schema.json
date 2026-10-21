@@ -2407,6 +2407,10 @@
                       "select",
                       "checkbox"
                     ]
+                  },
+                  "defaultOptionId": {
+                    "type": "string",
+                    "description": "The option id a new row starts with."
                   }
                 }
               },

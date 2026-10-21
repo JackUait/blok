@@ -332,17 +332,26 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
     config: { options: list.reduce<NonNullable<PropertyDefinition['config']>['options']>((all, [label, color]) =>
       [...all, { id: newId(), label, color, position: positionBetween(all.at(-1)?.position ?? null, null) }], []) },
   });
-  const status = (): PropertyDefinition => add(t('tools.database.defaultStatusProperty'), 'status', {
+  // research/27:48, research/30 §10f: Not started is the DEFAULT and has no colour. `measured` false: a status Blok adds itself.
+  const status = (measured = true): PropertyDefinition => {
     // Stored in English like a status Blok adds itself; the view localizes these names.
-    config: { options: createDefaultStatusOptions({ notStarted: DATABASE_DEFAULT_TEXT.statusNotStarted, inProgress: DATABASE_DEFAULT_TEXT.statusInProgress, done: DATABASE_DEFAULT_TEXT.statusDone }, newId) },
-    status: createDefaultStatusSettings(),
-  });
-  // Options as [label, colour, group]. The DEFAULT option Notion marks has no Blok lever.
-  const customStatus = (list: Array<[string, string, string]>): PropertyDefinition => add(t('tools.database.defaultStatusProperty'), 'status', {
-    config: { options: list.reduce<NonNullable<PropertyDefinition['config']>['options']>((all, [label, color, groupId]) =>
-      [...all, { id: newId(), label, color, groupId, position: positionBetween(all.at(-1)?.position ?? null, null) }], []) },
-    status: createDefaultStatusSettings(),
-  });
+    const [notStarted, ...rest] = createDefaultStatusOptions({ notStarted: DATABASE_DEFAULT_TEXT.statusNotStarted, inProgress: DATABASE_DEFAULT_TEXT.statusInProgress, done: DATABASE_DEFAULT_TEXT.statusDone }, newId);
+    const { color: _gray, ...colourless } = notStarted;
+
+    return add(t('tools.database.defaultStatusProperty'), 'status', measured
+      ? { config: { options: [colourless, ...rest] }, status: { ...createDefaultStatusSettings(), defaultOptionId: notStarted.id } }
+      : { config: { options: [notStarted, ...rest] }, status: createDefaultStatusSettings() });
+  };
+  // Options as [label, colour, group]; no colour for the DEFAULT option, at `defaultAt` (research/31 §7a-b).
+  const customStatus = (list: Array<[string, string | undefined, string]>, defaultAt: number): PropertyDefinition => {
+    const made = list.reduce<NonNullable<PropertyDefinition['config']>['options']>((all, [label, color, groupId]) =>
+      [...all, { id: newId(), label, ...(color === undefined ? {} : { color }), groupId, position: positionBetween(all.at(-1)?.position ?? null, null) }], []);
+
+    return add(t('tools.database.defaultStatusProperty'), 'status', {
+      config: { options: made },
+      status: { ...createDefaultStatusSettings(), ...(made[defaultAt] === undefined ? {} : { defaultOptionId: made[defaultAt].id }) },
+    });
+  };
   const priority = (): PropertyDefinition => add(t('tools.database.starterPriority'), 'select',
     optionsOf([[t('tools.database.starterOptionHigh'), 'red'], [t('tools.database.starterOptionMediumPriority'), 'yellow'], [t('tools.database.starterOptionLow'), 'green']]));
   const teamProperty = (): PropertyDefinition => add(t('tools.database.starterTeam'), 'multiSelect', optionsOf([
@@ -530,7 +539,7 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
     add(t('tools.database.starterIdea'), 'title');
     // research/30 B8: Status turned on is the first column after the title. Its options were not
     // read (Notion's sample value is "New idea"), so it gets a new status's own and no row values.
-    if (features.has('status')) status();
+    if (features.has('status')) status(false);
     const author = features.has('createdBy') ? add(t('tools.database.propertyTypeCreatedBy'), 'createdBy') : undefined;
     const prio = features.has('priority') ? priority() : undefined;
     const category = add(t('tools.database.starterCategory'), 'multiSelect', optionsOf([
@@ -673,11 +682,11 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
     const files = features.has('files') ? add(t('tools.database.propertyTypeFiles'), 'files') : undefined;
     // Complete's colour menu did not open; its pill rgba(0, 96, 38, 0.157) is the one every checked Green option reads.
     const state = customStatus([
-      [t('tools.database.starterOptionBlocked'), 'red', 'todo'], [t('tools.database.defaultStatusNotStarted'), 'gray', 'todo'],
+      [t('tools.database.starterOptionBlocked'), 'red', 'todo'], [t('tools.database.defaultStatusNotStarted'), undefined, 'todo'],
       [t('tools.database.starterOptionPlanning'), 'yellow', 'inProgress'], [t('tools.database.starterOptionOnHoldCampaign'), 'orange', 'inProgress'],
       [t('tools.database.starterOptionInProduction'), 'purple', 'inProgress'],
       [t('tools.database.starterOptionInFlight'), 'blue', 'complete'], [t('tools.database.starterOptionComplete'), 'green', 'complete'],
-    ]);
+    ], 1);
 
     // research/31 §7c: Hide empty groups read on, yet Notion drew the empty columns. Blok applies the switch.
     if (views.has('byStatus')) {
@@ -727,13 +736,13 @@ export const buildStarter = (id: StarterId, options: StarterBuildOptions): Start
     // Published and On hold: their colour menus did not open. Their pills are the Green and the Brown one
     // (rgba(0, 96, 38, 0.157) and rgba(127, 51, 0, 0.157), as every checked Green and Brown option reads).
     const state = customStatus([
-      [t('tools.database.starterOptionIdea'), 'gray', 'todo'],
+      [t('tools.database.starterOptionIdea'), undefined, 'todo'],
       [t('tools.database.starterOptionDrafting'), 'yellow', 'inProgress'], [t('tools.database.starterOptionFilming'), 'red', 'inProgress'],
       [t('tools.database.starterOptionEditing'), 'orange', 'inProgress'], [t('tools.database.starterOptionReadyForReview'), 'purple', 'inProgress'],
       [t('tools.database.starterOptionInReview'), 'pink', 'inProgress'], [t('tools.database.starterOptionApprovedForPublishing'), 'blue', 'inProgress'],
       [t('tools.database.starterOptionScheduled'), 'orange', 'inProgress'],
       [t('tools.database.starterOptionPublished'), 'green', 'complete'], [t('tools.database.starterOptionOnHold'), 'brown', 'complete'],
-    ]);
+    ], 0);
     const newestFirst = (): ViewCreateConfig => (publish === undefined ? {} : { sorts: [{ id: newId(), propertyId: publish.id, direction: 'desc' }] });
 
     if (views.has('calendar')) {

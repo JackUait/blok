@@ -5579,6 +5579,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-option-delete],
+[data-blok-database-option-set-default],
 [data-blok-database-option-delete-confirm],
 [data-blok-database-option-delete-cancel],
 [data-blok-database-option-color],
@@ -5599,6 +5600,7 @@ textarea[data-blok-database-cell-input] {
 
 @media (hover: hover) {
   [data-blok-database-option-delete]:hover,
+  [data-blok-database-option-set-default]:hover,
   [data-blok-database-option-delete-confirm]:hover,
   [data-blok-database-option-delete-cancel]:hover,
   [data-blok-database-option-color]:hover,
@@ -5632,9 +5634,17 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-color-red-text);
 }
 
-[data-blok-database-option-delete] svg {
+[data-blok-database-option-delete] svg,
+[data-blok-database-option-set-default] svg {
   width: 16px;
   height: 16px;
+}
+
+/* research/30 §10f: "Not started DEFAULT". Size and ink unmeasured: the template menu's "Default" mark. */
+[data-blok-database-option-default] {
+  margin-inline-start: var(--blok-space-1);
+  color: var(--blok-text-secondary);
+  font-size: 12px;
 }
 
 [data-blok-database-option-color] [data-blok-database-select-option-check] {

@@ -233,6 +233,9 @@ describe('"More templates" (research/27 §1e, research/30 §10)', () => {
       expect(shownNames(made, 'All Ideas')[0]).toBe('Status');
       // Notion's sample value "New idea" belongs to options that were not read: rows get none.
       expect(made.rows.every((r) => r.data.properties[prop(made, 'Status').id] === undefined)).toBe(true);
+      // Its options were not read: a status Blok adds itself, gray and no default.
+      expect(options(made, 'Status')[0]).toEqual(['Not started', 'gray']);
+      expect(prop(made, 'Status').status?.defaultOptionId).toBeUndefined();
     });
 
     it('has All Ideas (all seven) and a By category board grouped by Category, Idea only', () => {
@@ -310,7 +313,9 @@ describe('"More templates" (research/27 §1e, research/30 §10)', () => {
       expect(made.schema.map((p) => [p.name, p.type])).toEqual([
         ['Goal name', 'title'], ['Owner', 'person'], ['Status', 'status'], ['Due date', 'date'], ['Priority', 'select'], ['Team', 'multiSelect'],
       ]);
-      expect(options(made, 'Status')).toEqual([['Not started', 'gray'], ['In progress', 'blue'], ['Done', 'green']]);
+      // research/30 §10f: Not started is the DEFAULT, with no checked colour.
+      expect(options(made, 'Status')).toEqual([['Not started', undefined], ['In progress', 'blue'], ['Done', 'green']]);
+      expect(prop(made, 'Status').status?.defaultOptionId).toBe(prop(made, 'Status').config?.options[0].id);
       expect(prop(made, 'Due date').date).toEqual({ dateFormat: 'month_day_year', timeFormat: '12_hour' });
       expect(options(made, 'Team')).toEqual([['Account Management', 'default'], ['Business Development', 'blue'], ['Product Design', 'green'], ['Human Resources', 'purple']]);
     });
@@ -457,10 +462,12 @@ describe('"More templates" (research/27 §1e, research/30 §10)', () => {
 
       expect(status.status?.groups.map((g) => [g.id, g.name])).toEqual([['todo', 'To-do'], ['inProgress', 'In progress'], ['complete', 'Complete']]);
       expect(grouped).toEqual([
-        ['Blocked', 'red', 'todo'], ['Not started', 'gray', 'todo'],
+        ['Blocked', 'red', 'todo'], ['Not started', undefined, 'todo'],
         ['Planning', 'yellow', 'inProgress'], ['On Hold', 'orange', 'inProgress'], ['In Production', 'purple', 'inProgress'],
         ['In Flight', 'blue', 'complete'], ['Complete', 'green', 'complete'],
       ]);
+      // research/31 §7a: the DEFAULT is Not started, the second To-do option.
+      expect(status.status?.defaultOptionId).toBe(status.config?.options[1].id);
     });
 
     it('has a By Status board, All Campaigns and a Calendar by Completion date, as measured', () => {
@@ -531,11 +538,12 @@ describe('"More templates" (research/27 §1e, research/30 §10)', () => {
       const status = prop(build('contentCalendar'), 'Status');
 
       expect((status.config?.options ?? []).map((o) => [o.label, o.color, o.groupId])).toEqual([
-        ['Idea', 'gray', 'todo'],
+        ['Idea', undefined, 'todo'],
         ['Drafting', 'yellow', 'inProgress'], ['Filming', 'red', 'inProgress'], ['Editing', 'orange', 'inProgress'], ['Ready for review', 'purple', 'inProgress'],
         ['In review', 'pink', 'inProgress'], ['Approved for publishing', 'blue', 'inProgress'], ['Scheduled', 'orange', 'inProgress'],
         ['Published', 'green', 'complete'], ['On hold', 'brown', 'complete'],
       ]);
+      expect(status.status?.defaultOptionId).toBe(status.config?.options[0].id);
     });
 
     it('has a Calendar by Film date, All Content and a By Status board, each sorted by Publish date new to old', () => {

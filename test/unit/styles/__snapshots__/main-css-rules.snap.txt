@@ -8875,7 +8875,7 @@ textarea[data-blok-database-cell-input] {
   border-radius: var(--blok-radius-control);
 }
 
-[data-blok-database-option-delete], [data-blok-database-option-delete-confirm], [data-blok-database-option-delete-cancel], [data-blok-database-option-color], [data-blok-database-date-clear] {
+[data-blok-database-option-delete], [data-blok-database-option-set-default], [data-blok-database-option-delete-confirm], [data-blok-database-option-delete-cancel], [data-blok-database-option-color], [data-blok-database-date-clear] {
   display: flex;
   align-items: center;
   gap: var(--blok-space-2);
@@ -8890,7 +8890,7 @@ textarea[data-blok-database-cell-input] {
   cursor: pointer;
 }
 
-[@media (hover: hover)] [data-blok-database-option-delete]:hover, [data-blok-database-option-delete-confirm]:hover, [data-blok-database-option-delete-cancel]:hover, [data-blok-database-option-color]:hover, [data-blok-database-date-clear]:hover, [data-blok-database-date-prev]:hover, [data-blok-database-date-next]:hover, [data-blok-database-date-day]:hover {
+[@media (hover: hover)] [data-blok-database-option-delete]:hover, [data-blok-database-option-set-default]:hover, [data-blok-database-option-delete-confirm]:hover, [data-blok-database-option-delete-cancel]:hover, [data-blok-database-option-color]:hover, [data-blok-database-date-clear]:hover, [data-blok-database-date-prev]:hover, [data-blok-database-date-next]:hover, [data-blok-database-date-day]:hover {
   background-color: var(--blok-database-hover-bg);
 }
 
@@ -8914,9 +8914,15 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-color-red-text);
 }
 
-[data-blok-database-option-delete] svg {
+[data-blok-database-option-delete] svg, [data-blok-database-option-set-default] svg {
   width: 16px;
   height: 16px;
+}
+
+[data-blok-database-option-default] {
+  margin-inline-start: var(--blok-space-1);
+  color: var(--blok-text-secondary);
+  font-size: 12px;
 }
 
 [data-blok-database-option-color] [data-blok-database-select-option-check] {

@@ -662,12 +662,16 @@ export class DatabasePropertyMenu {
     return { type: PopoverItemType.Html, element: note, name: 'all-views-note' };
   }
 
-  private optionsItem(property: PropertyDefinition): PopoverItemParams {
+  private optionsItem(property: PropertyDefinition, update: (patch: Partial<PropertySettingsV2>) => void): PopoverItemParams {
     const shown = this.shown?.id === property.id ? this.shown : property;
+    const status = property.status;
     const element = createOptionsEditor({
       property: shown,
       i18n: this.options.i18n,
       onChange: (options) => this.options.onOptionsChange?.(property.id, options),
+      ...(property.type === 'status'
+        ? { onSetDefault: (defaultOptionId: string) => update({ status: { groups: status?.groups ?? [], ...status, defaultOptionId } }) }
+        : {}),
     });
 
     return { type: PopoverItemType.Html, element, name: 'options' };
@@ -675,7 +679,7 @@ export class DatabasePropertyMenu {
 
   private settingsItems(property: PropertyDefinition, update: (patch: Partial<PropertySettingsV2>) => void): PopoverItemParams[] {
     if (OPTION_TYPES.has(property.type)) {
-      return [this.optionsItem(property)];
+      return [this.optionsItem(property, update)];
     }
     if (property.type === 'relation') {
       return this.relationItems(property, update);

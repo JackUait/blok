@@ -6,7 +6,7 @@ import { DatabaseModel } from '../database-model';
 import { orderedStatusOptions, statusGroupOf, statusGroupsOf } from '../property-values';
 import type { PropertyDefinition, SelectOption } from '../types';
 import { createOptionPill } from './display';
-import { pickOptionColor } from './option-colors';
+import { pickOptionColor, shownStatusOption } from './option-colors';
 import { OptionDrag, buildDeletePrompt, buildOptionPanel, placeDroppedOption } from './option-editing';
 
 export interface OptionsEditorOptions {
@@ -15,6 +15,8 @@ export interface OptionsEditorOptions {
   i18n: Pick<I18n, 't'>;
   /** The whole new list after each add, rename, recolour, delete or move. */
   onChange: (options: SelectOption[]) => void;
+  /** Status only: "Set as default" picked another option (research/30 §10f). */
+  onSetDefault?: (optionId: string) => void;
 }
 
 const byPosition = (options: SelectOption[]): SelectOption[] =>
@@ -44,9 +46,11 @@ class OptionsEditor {
   /** The group whose add field is open; '' for a select. */
   private adding: string | null = null;
   private readonly drag: OptionDrag;
+  private defaultId: string | undefined;
 
   constructor(private readonly opts: OptionsEditorOptions) {
     this.options = this.sorted(opts.property.config?.options ?? []);
+    this.defaultId = opts.property.status?.defaultOptionId;
     this.root.setAttribute('data-blok-database-options-editor', opts.property.type);
     this.root.setAttribute('data-blok-keyboard-owner', '');
     this.drag = new OptionDrag(this.root, () => this.options, (id, others, index) => {
@@ -201,7 +205,15 @@ class OptionsEditor {
     row.setAttribute('data-blok-database-select-option', option.id);
     handle.addEventListener('pointerdown', (event) => this.drag.start(event, option.id));
     label.setAttribute('data-blok-database-select-option-label', '');
-    label.appendChild(createOptionPill(option));
+    label.appendChild(createOptionPill(this.isStatus ? shownStatusOption(option) : option));
+    // research/30 §10f: the Edit property list reads "Not started DEFAULT". Its look was not measured.
+    if (this.isStatus && option.id === this.defaultId) {
+      const badge = document.createElement('span');
+
+      badge.setAttribute('data-blok-database-option-default', '');
+      badge.textContent = this.t('tools.database.templateDefault');
+      label.append(' ', badge);
+    }
     menu.addEventListener('click', () => {
       this.panelOptionId = option.id;
       this.render();
@@ -229,6 +241,8 @@ class OptionsEditor {
         update({ color });
         this.render();
       },
+      status: this.isStatus,
+      ...(this.isStatus && this.opts.onSetDefault !== undefined ? { onSetDefault: () => this.setDefault(optionId) } : {}),
       onDelete: () => {
         const { prompt, confirm } = buildDeletePrompt({
           t: (key) => this.t(key),
@@ -247,6 +261,15 @@ class OptionsEditor {
 
     this.root.replaceChildren(panel);
     name.focus();
+  }
+
+  /** The current default keeps the row (shot 23); picking it again changes nothing. */
+  private setDefault(optionId: string): void {
+    if (optionId === this.defaultId) return;
+    this.defaultId = optionId;
+    this.opts.onSetDefault?.(optionId);
+    this.panelOptionId = null;
+    this.render();
   }
 }
 

@@ -16,6 +16,8 @@ import { SelectionUtils } from '../selection/index';
 import { announce } from '../utils/announcer';
 import { throttle } from '../utils';
 
+import { findScrollableAncestor } from './drag/utils/findScrollableAncestor';
+
 import { CELL_BLOCKS_SELECTOR, CHILD_TOOLBAR_SELECTOR } from './uiControllers/hovered-block-resolution';
 
 /** Fired on a {@link DATA_ATTR.selectionOwner} element; see its doc. */
@@ -110,12 +112,25 @@ export class RectangleSelection extends Module {
   private inScrollZone: number | null = null;
 
   /**
-   *  Coords of rect
+   * Band anchor, relative to the redactor's top-left. It moves with the
+   * redactor, so it stays on its row whatever scrolls the editor: the window,
+   * an overflow box, or both.
    */
   private startX = 0;
   private startY = 0;
+
+  /**
+   * Last pointer position, in client coordinates. A scroll moves the content
+   * under the pointer, never the pointer itself.
+   */
   private mouseX = 0;
   private mouseY = 0;
+
+  /**
+   * What auto-scroll moves: the editor's scrolling ancestor, or null for the
+   * window.
+   */
+  private scroller: HTMLElement | null = null;
 
   /**
    * Blocks the lasso selected, in document order. Kept as blocks, not
@@ -266,8 +281,11 @@ export class RectangleSelection extends Module {
     }
 
     this.mousedown = true;
-    this.startX = pageX;
-    this.startY = pageY;
+    this.startX = pointerX - editorRect.left;
+    this.startY = pointerY - editorRect.top;
+    this.mouseX = pointerX;
+    this.mouseY = pointerY;
+    this.scroller = findScrollableAncestor(redactor);
   }
 
   /**
@@ -279,6 +297,9 @@ export class RectangleSelection extends Module {
     this.pendingToolbarClose = false;
     this.startX = 0;
     this.startY = 0;
+    this.isScrolling = false;
+    this.inScrollZone = null;
+    this.scroller = null;
     this.stackOfSelected = [];
     this.lassoTaker = null;
     if (this.overlayRectangle !== null) {
@@ -346,21 +367,21 @@ export class RectangleSelection extends Module {
       passive: true,
     });
 
-    this.listeners.on(document.body, 'mouseleave', () => {
-      this.processMouseLeave();
-    });
-
-    const throttledScroll = throttle((event: unknown) => {
-      this.processScroll(event as MouseEvent);
-
+    const throttledScroll = throttle(() => {
+      this.processScroll();
     }, 10) as EventListener;
 
-    this.listeners.on(window, 'scroll', throttledScroll, {
+    /**
+     * Capture on document: an element's scroll event does not bubble, so a
+     * window listener never hears the overflow box the editor may sit in.
+     */
+    this.listeners.on(document, 'scroll', throttledScroll, {
+      capture: true,
       passive: true,
     });
 
-    this.listeners.on(document, 'mouseup', () => {
-      this.processMouseUp();
+    this.listeners.on(document, 'mouseup', (event: Event) => {
+      this.processMouseUp(event as MouseEvent);
     }, false);
   }
 
@@ -408,6 +429,17 @@ export class RectangleSelection extends Module {
    */
   private processMouseMove(mouseEvent: MouseEvent): void {
     /**
+     * The button came up where no mouseup reached the document. Leaving the
+     * body is NOT the end: a band dragged below a short page must live on.
+     */
+    if (this.mousedown && (mouseEvent.buttons & 1) === 0) {
+      this.clearSelection();
+      this.endSelection();
+
+      return;
+    }
+
+    /**
      * When the user clicked inside a contentEditable element within the editor's
      * horizontal bounds and is now dragging, close the toolbar on the first move.
      * We defer this to mousemove (rather than mousedown) so that a plain click
@@ -428,28 +460,32 @@ export class RectangleSelection extends Module {
     }
 
     this.changingRectangle(mouseEvent);
-    this.scrollByZones(mouseEvent.clientY);
+
+    if (this.mousedown) {
+      this.scrollByZones(mouseEvent.clientY);
+    }
   }
 
   /**
-   * Handle mouse leave
+   * Any scroller moved: the pointer now sits over different content.
    */
-  private processMouseLeave(): void {
-    this.clearSelection();
-    this.endSelection();
-  }
-
-  /**
-   * @param {MouseEvent} mouseEvent - mouse event payload
-   */
-  private processScroll(mouseEvent: MouseEvent): void {
-    this.changingRectangle(mouseEvent);
+  private processScroll(): void {
+    this.changingRectangle();
   }
 
   /**
    * Handle mouse up
+   * @param mouseEvent - the release; its position is the band's final corner
    */
-  private processMouseUp(): void {
+  private processMouseUp(mouseEvent?: MouseEvent): void {
+    /**
+     * A throttled move or scroll may still be queued, and it runs after
+     * mousedown is cleared, so it can no longer grow the band.
+     */
+    if (this.isRectSelectionActivated && mouseEvent !== undefined) {
+      this.changingRectangle(mouseEvent);
+    }
+
     /**
      * Show toolbar for multi-block selection after mouse up
      */
@@ -487,11 +523,13 @@ export class RectangleSelection extends Module {
    * @param {number} clientY - Y coord of mouse
    */
   private scrollByZones(clientY: number): void {
+    const visible = this.visibleScrollArea();
+
     this.inScrollZone = null;
-    if (clientY <= this.HEIGHT_OF_SCROLL_ZONE) {
+    if (clientY <= visible.top + this.HEIGHT_OF_SCROLL_ZONE) {
       this.inScrollZone = this.TOP_SCROLL_ZONE;
     }
-    if (document.documentElement.clientHeight - clientY <= this.HEIGHT_OF_SCROLL_ZONE) {
+    if (visible.bottom - clientY <= this.HEIGHT_OF_SCROLL_ZONE) {
       this.inScrollZone = this.BOTTOM_SCROLL_ZONE;
     }
 
@@ -502,9 +540,25 @@ export class RectangleSelection extends Module {
     }
 
     if (!this.isScrolling) {
-      this.scrollVertical(this.inScrollZone === this.TOP_SCROLL_ZONE ? -this.SCROLL_SPEED : this.SCROLL_SPEED);
       this.isScrolling = true;
+      this.scrollVertical(this.inScrollZone === this.TOP_SCROLL_ZONE ? -this.SCROLL_SPEED : this.SCROLL_SPEED);
     }
+  }
+
+  /**
+   * Client-space top and bottom of what auto-scroll can reveal: the
+   * scroller's box, cut to the viewport.
+   */
+  private visibleScrollArea(): { top: number; bottom: number } {
+    const viewportBottom = document.documentElement.clientHeight;
+
+    if (this.scroller === null) {
+      return { top: 0, bottom: viewportBottom };
+    }
+
+    const rect = this.scroller.getBoundingClientRect();
+
+    return { top: Math.max(rect.top, 0), bottom: Math.min(rect.bottom, viewportBottom) };
   }
 
   /**
@@ -571,22 +625,42 @@ export class RectangleSelection extends Module {
    */
   private scrollVertical(speed: number): void {
     if (!(this.inScrollZone && this.mousedown)) {
+      this.isScrolling = false;
+
       return;
     }
-    const lastOffset = this.getScrollTop();
 
-    window.scrollBy(0, speed);
-    this.mouseY += this.getScrollTop() - lastOffset;
+    const scroller = this.scroller;
+    const offset = (): number => scroller === null ? this.getScrollTop() : scroller.scrollTop;
+    const before = offset();
+
+    // 'instant': a host's `scroll-behavior: smooth` would defer the move and read as "cannot scroll".
+    if (scroller === null) {
+      window.scrollBy({ top: speed, behavior: 'instant' });
+    } else {
+      scroller.scrollBy({ top: speed, behavior: 'instant' });
+    }
+
+    // At the end of the content: stop until the pointer moves again.
+    if (offset() === before) {
+      this.isScrolling = false;
+
+      return;
+    }
+
+    this.changingRectangle();
     setTimeout(() => {
       this.scrollVertical(speed);
     }, 0);
   }
 
   /**
-   * Handles the change in the rectangle and its effect
-   * @param {MouseEvent} event - mouse event
+   * Rebuilds the band from the anchor and the pointer, then the selection
+   * from the band. Every input — move, scroll, auto-scroll tick, release —
+   * comes here, and nothing here depends on which one it was.
+   * @param event - a pointer event carrying a new pointer position, if any
    */
-  private changingRectangle(event: MouseEvent): void {
+  private changingRectangle(event?: Pick<MouseEvent, 'clientX' | 'clientY'>): void {
     if (!this.mousedown) {
       return;
     }
@@ -597,9 +671,9 @@ export class RectangleSelection extends Module {
       return;
     }
 
-    if (event.pageY !== undefined) {
-      this.mouseX = event.pageX;
-      this.mouseY = event.pageY;
+    if (event !== undefined) {
+      this.mouseX = event.clientX;
+      this.mouseY = event.clientY;
     }
 
     if (!this.isRectSelectionActivated) {
@@ -608,54 +682,15 @@ export class RectangleSelection extends Module {
       overlayRectangle.style.display = 'block';
     }
 
-    const { index } = this.genInfoForMouseSelection();
+    const band = this.band();
 
-    /**
-     * Check if the selection rectangle intersects the block holder horizontally.
-     * For page-wide selection, we need to verify the rectangle actually reaches the block,
-     * not just that the mouse Y position is at the same height as a block.
-     */
-    this.rectCrossesBlocks = false;
-    const block = index !== undefined ? this.Blok.BlockManager.getBlockByIndex(index) : undefined;
-    const rootBlock = block !== undefined
-      ? this.Blok.BlockManager.resolveToSelectableBlock(block)
-      : undefined;
-
-    if (rootBlock) {
-      const holderRect = rootBlock.holder.getBoundingClientRect();
-      const redactorRect = this.Blok.UI.nodes.redactor.getBoundingClientRect();
-      const scrollLeft = this.getScrollLeft();
-
-      // Selection rectangle horizontal bounds (in page coordinates)
-      const rectLeft = Math.min(this.startX, this.mouseX);
-      const rectRight = Math.max(this.startX, this.mouseX);
-
-      /**
-       * Block holder horizontal bounds (converted from viewport to page
-       * coordinates), extended to the redactor's own box. The redactor's
-       * gutter (--blok-editor-gutter-start/-end padding that houses the
-       * floating +/⠿ controls) belongs to the block's row: a lasso drawn
-       * inside the gutter must select the rows it spans, exactly like it
-       * did when block holders reached the editor edge themselves. True
-       * page margins OUTSIDE the editor stay non-selecting.
-       */
-      const holderLeft = Math.min(holderRect.left, redactorRect.left) + scrollLeft;
-      const holderRight = Math.max(holderRect.right, redactorRect.right) + scrollLeft;
-
-      // Check for horizontal intersection
-      this.rectCrossesBlocks = rectRight >= holderLeft && rectLeft <= holderRight;
-    }
-
+    this.rectCrossesBlocks = this.bandCrossesEditor(band);
     this.updateRectangleSize();
 
     /**
      * Hide Block Settings Toggler (along with the Toolbar) (if showed) when the Rectangle Selection is activated
      */
     this.Blok.Toolbar.close();
-
-    if (index === undefined) {
-      return;
-    }
 
     this.trySelectNextBlock();
     // For case, when rect is out from blocks
@@ -669,10 +704,54 @@ export class RectangleSelection extends Module {
   }
 
   /**
+   * The band in client coordinates, from the anchor (re-read off the
+   * redactor's live position) to the pointer.
+   */
+  private band(): LassoRect {
+    const anchor = this.anchorPoint();
+
+    return {
+      left: Math.min(anchor.x, this.mouseX),
+      top: Math.min(anchor.y, this.mouseY),
+      right: Math.max(anchor.x, this.mouseX),
+      bottom: Math.max(anchor.y, this.mouseY),
+    };
+  }
+
+  /**
+   * The anchor in client coordinates.
+   */
+  private anchorPoint(): { x: number; y: number } {
+    const redactorRect = this.Blok.UI.nodes.redactor.getBoundingClientRect();
+
+    return { x: redactorRect.left + this.startX, y: redactorRect.top + this.startY };
+  }
+
+  /**
+   * Whether the band reaches the editor horizontally. The redactor's gutter
+   * (--blok-editor-gutter-* padding housing the floating +/⠿ controls) is part
+   * of every row; true page margins OUTSIDE the editor stay non-selecting.
+   * @param band - the band in client coordinates
+   */
+  private bandCrossesEditor(band: LassoRect): boolean {
+    const redactorRect = this.Blok.UI.nodes.redactor.getBoundingClientRect();
+    // A display:none holder (a collapsed toggle's child) measures 0,0,0,0 and would stretch the span to x=0.
+    const spans = this.Blok.BlockManager.blocks
+      .map((block) => block.holder.getBoundingClientRect())
+      .filter((rect) => rect.width > 0 || rect.height > 0);
+    const left = Math.min(redactorRect.left, ...spans.map((rect) => rect.left));
+    const right = Math.max(redactorRect.right, ...spans.map((rect) => rect.right));
+
+    return band.right >= left && band.left <= right;
+  }
+
+  /**
    * Shrink rect to singular point
    */
   private shrinkRectangleToPoint(): void {
-    this.positionRectangle(this.startX, this.startY, this.startX, this.startY);
+    const anchor = this.anchorPoint();
+
+    this.positionRectangle(anchor.x, anchor.y, anchor.x, anchor.y);
   }
 
   /**
@@ -713,11 +792,13 @@ export class RectangleSelection extends Module {
    * Updates size of rectangle
    */
   private updateRectangleSize(): void {
-    this.positionRectangle(this.startX, this.startY, this.mouseX, this.mouseY);
+    const band = this.band();
+
+    this.positionRectangle(band.left, band.top, band.right, band.bottom);
   }
 
   /**
-   * Positions and sizes the overlay rectangle so it spans two page-space points.
+   * Positions and sizes the overlay rectangle so it spans two client points.
    *
    * Coordinates are converted into the overlay container's own local space (its
    * top-left, measured live via getBoundingClientRect) rather than assumed to be
@@ -727,29 +808,24 @@ export class RectangleSelection extends Module {
    * backdrop-filter re-anchors the overlay to that ancestor's box. Measuring the
    * container's actual origin keeps the rectangle under the pointer in every case
    * (when nothing re-anchors it, the origin is 0,0 and this is a no-op).
-   * @param {number} pageAX - X page-coordinate of the first corner
-   * @param {number} pageAY - Y page-coordinate of the first corner
-   * @param {number} pageBX - X page-coordinate of the second corner
-   * @param {number} pageBY - Y page-coordinate of the second corner
+   * @param ax - client x of the first corner
+   * @param ay - client y of the first corner
+   * @param bx - client x of the second corner
+   * @param by - client y of the second corner
    */
-  private positionRectangle(pageAX: number, pageAY: number, pageBX: number, pageBY: number): void {
+  private positionRectangle(ax: number, ay: number, bx: number, by: number): void {
     if (this.overlayRectangle === null) {
       return;
     }
 
-    const scrollLeft = this.getScrollLeft();
-    const scrollTop = this.getScrollTop();
     const origin = this.getOverlayOrigin();
-
-    const ax = pageAX - scrollLeft - origin.left;
-    const ay = pageAY - scrollTop - origin.top;
-    const bx = pageBX - scrollLeft - origin.left;
-    const by = pageBY - scrollTop - origin.top;
+    const left = Math.min(ax, bx) - origin.left;
+    const top = Math.min(ay, by) - origin.top;
 
     const { style } = this.overlayRectangle;
 
-    style.left = `${Math.min(ax, bx)}px`;
-    style.top = `${Math.min(ay, by)}px`;
+    style.left = `${left}px`;
+    style.top = `${top}px`;
     style.width = `${Math.abs(bx - ax)}px`;
     style.height = `${Math.abs(by - ay)}px`;
   }
@@ -771,39 +847,6 @@ export class RectangleSelection extends Module {
     const rect = container.getBoundingClientRect();
 
     return { left: rect.left, top: rect.top };
-  }
-
-  /**
-   * Collects information needed to determine the behavior of the rectangle
-   * For page-wide selection, we check blocks at the redactor's center X position but at the actual mouse Y position
-   * @returns {object} index - index of the Block at the current mouse Y position
-   */
-  private genInfoForMouseSelection(): {index: number | undefined} {
-    const { UI } = this.Blok;
-    const redactor = UI.nodes.redactor;
-    const redactorRect = redactor.getBoundingClientRect();
-    const centerOfRedactor = redactorRect.left + redactorRect.width / 2;
-    const scrollTop = this.getScrollTop();
-    const y = this.mouseY - scrollTop;
-
-    // For page-wide selection: check what block is at the center X, but at the mouse's Y position
-    // This allows selection to work even when mouse is in the left/right margins
-    const elementUnderMouse = document.elementFromPoint(centerOfRedactor, y);
-
-    if (!elementUnderMouse) {
-      return {
-        index: undefined,
-      };
-    }
-    const blockInCurrentPos = this.Blok.BlockManager.getBlockByChildNode(elementUnderMouse);
-
-    const index = blockInCurrentPos !== undefined
-      ? this.Blok.BlockManager.blocks.indexOf(blockInCurrentPos)
-      : undefined;
-
-    return {
-      index,
-    };
   }
 
   /**
@@ -889,13 +932,11 @@ export class RectangleSelection extends Module {
      * fast drag used to drop every row above that block while the overlay still
      * covered them.
      */
-    const scrollTop = this.getScrollTop();
-    const minY = Math.min(this.startY, this.mouseY) - scrollTop;
-    const maxY = Math.max(this.startY, this.mouseY) - scrollTop;
-
-    const scrollLeft = this.getScrollLeft();
-    const rubberBandMinX = Math.min(this.startX, this.mouseX) - scrollLeft;
-    const rubberBandMaxX = Math.max(this.startX, this.mouseX) - scrollLeft;
+    const band = this.band();
+    const minY = band.top;
+    const maxY = band.bottom;
+    const rubberBandMinX = band.left;
+    const rubberBandMaxX = band.right;
 
     const crossedIndices = new Set<number>();
 

@@ -155,6 +155,7 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
     UI: {
       nodes: {
         holder,
+        redactor: blokWrapper,
       },
       CSS: {
         blokWrapper: '',
@@ -631,38 +632,58 @@ describe('RectangleSelection', () => {
       processMouseMove: (event: MouseEvent) => void;
       changingRectangle: (event: MouseEvent) => void;
       scrollByZones: (clientY: number) => void;
+      mousedown: boolean;
     };
 
-    const changeSpy = vi.spyOn(internal, 'changingRectangle');
-    const scrollSpy = vi.spyOn(internal, 'scrollByZones');
+    const changeSpy = vi.spyOn(internal, 'changingRectangle').mockImplementation(() => undefined);
+    const scrollSpy = vi.spyOn(internal, 'scrollByZones').mockImplementation(() => undefined);
+
+    internal.mousedown = true;
 
     const mouseEvent = {
       clientY: 320,
+      buttons: 1,
     } as unknown as MouseEvent;
 
     internal.processMouseMove(mouseEvent);
 
-    expect(changeSpy).toHaveBeenCalledWith(mouseEvent);
     expect(scrollSpy).toHaveBeenCalledWith(320);
+    expect(changeSpy).toHaveBeenCalledWith(mouseEvent);
   });
 
-  it('updates rectangle on scroll events', () => {
+  it('does not auto-scroll on a plain hover with no drag in progress', () => {
+    const { rectangleSelection } = createRectangleSelection();
+
+    const internal = rectangleSelection as unknown as {
+      processMouseMove: (event: MouseEvent) => void;
+      scrollByZones: (clientY: number) => void;
+      mousedown: boolean;
+    };
+
+    const scrollSpy = vi.spyOn(internal, 'scrollByZones').mockImplementation(() => undefined);
+
+    internal.mousedown = false;
+    internal.processMouseMove({ clientY: 5, buttons: 0 } as unknown as MouseEvent);
+
+    expect(scrollSpy).not.toHaveBeenCalled();
+  });
+
+  it('updates rectangle on scroll events without moving the pointer', () => {
     const {
       rectangleSelection,
     } = createRectangleSelection();
 
     const internal = rectangleSelection as unknown as {
-      processScroll: (event: MouseEvent) => void;
-      changingRectangle: (event: MouseEvent) => void;
+      processScroll: () => void;
+      changingRectangle: (event?: MouseEvent) => void;
     };
 
-    const changeSpy = vi.spyOn(internal, 'changingRectangle');
-    const scrollEvent = { pageX: 50,
-      pageY: 75 } as unknown as MouseEvent;
+    const changeSpy = vi.spyOn(internal, 'changingRectangle').mockImplementation(() => undefined);
 
-    internal.processScroll(scrollEvent);
+    internal.processScroll();
 
-    expect(changeSpy).toHaveBeenCalledWith(scrollEvent);
+    // No event: a scroll moves the content, never the pointer.
+    expect(changeSpy).toHaveBeenCalledWith();
   });
 
   it('stops scrolling when cursor leaves scroll zones', () => {
@@ -722,6 +743,11 @@ describe('RectangleSelection', () => {
       mouseY: number;
     };
 
+    const changeSpy = vi.spyOn(
+      rectangleSelection as unknown as { changingRectangle: () => void },
+      'changingRectangle'
+    ).mockImplementation(() => undefined);
+
     vi.useFakeTimers();
 
     internal.inScrollZone = 1;
@@ -732,8 +758,10 @@ describe('RectangleSelection', () => {
 
     const scrollYSpy = vi.spyOn(window, 'scrollY', 'get').mockImplementation(() => yOffset);
 
-    const scrollBySpy = vi.spyOn(window, 'scrollBy').mockImplementation((_x, y) => {
-      yOffset += y;
+    const scrollBySpy = vi.spyOn(window, 'scrollBy').mockImplementation((options?: ScrollToOptions | number) => {
+      if (typeof options === 'object') {
+        yOffset += options.top ?? 0;
+      }
     });
 
     internal.scrollVertical(5);
@@ -742,11 +770,42 @@ describe('RectangleSelection', () => {
     vi.runOnlyPendingTimers();
     vi.useRealTimers();
 
-    expect(scrollBySpy).toHaveBeenCalledWith(0, 5);
-    expect(internal.mouseY).toBe(105);
+    expect(scrollBySpy).toHaveBeenCalledWith({ top: 5, behavior: 'instant' });
+    // The pointer stays put on screen; the band follows via the moving anchor.
+    expect(internal.mouseY).toBe(100);
+    expect(changeSpy).toHaveBeenCalledWith();
 
     scrollBySpy.mockRestore();
     scrollYSpy.mockRestore();
+  });
+
+  it('stops auto-scrolling when the page cannot scroll any further', () => {
+    const { rectangleSelection } = createRectangleSelection();
+    const internal = rectangleSelection as unknown as {
+      scrollVertical: (speed: number) => void;
+      inScrollZone: number | null;
+      mousedown: boolean;
+      isScrolling: boolean;
+    };
+
+    vi.useFakeTimers();
+
+    internal.inScrollZone = 1;
+    internal.mousedown = true;
+    internal.isScrolling = true;
+
+    vi.spyOn(window, 'scrollY', 'get').mockReturnValue(400);
+    const scrollBySpy = vi.spyOn(window, 'scrollBy').mockImplementation(() => undefined);
+
+    internal.scrollVertical(5);
+
+    const queuedTicks = vi.getTimerCount();
+
+    vi.useRealTimers();
+
+    expect(queuedTicks).toBe(0);
+    expect(internal.isScrolling).toBe(false);
+    expect(scrollBySpy).toHaveBeenCalledTimes(1);
   });
 
   it('shrinks overlay rectangle to the starting point', () => {
@@ -765,16 +824,23 @@ describe('RectangleSelection', () => {
     };
 
     internal.overlayRectangle = blokWrapper.querySelector('[data-blok-testid="overlay-rectangle"]') as HTMLDivElement;
+    // The anchor is relative to the redactor, which sits at client (30, 40).
     internal.startX = 150;
     internal.startY = 260;
 
+    vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+      top: 40, bottom: 840, left: 30, right: 830, width: 800, height: 800,
+      x: 30, y: 40, toJSON: () => ({}),
+    });
+
+    // Window scroll is already inside the redactor's client rect; subtracting it again would misplace the point.
     const scrollXSpy = vi.spyOn(window, 'scrollX', 'get').mockReturnValue(10);
     const scrollYSpy = vi.spyOn(window, 'scrollY', 'get').mockReturnValue(20);
 
     internal.shrinkRectangleToPoint();
 
-    expect(internal.overlayRectangle.style.left).toBe('140px');
-    expect(internal.overlayRectangle.style.top).toBe('240px');
+    expect(internal.overlayRectangle.style.left).toBe('180px');
+    expect(internal.overlayRectangle.style.top).toBe('300px');
     expect(internal.overlayRectangle.style.width).toBe('0px');
     expect(internal.overlayRectangle.style.height).toBe('0px');
 
@@ -1005,57 +1071,6 @@ describe('RectangleSelection', () => {
     expect(internal.overlayRectangle.style.height).toBe('100px');
   });
 
-  it('computes block information for current cursor position', () => {
-    const {
-      rectangleSelection,
-      blockManager,
-      blokWrapper,
-      modules,
-    } = createRectangleSelection();
-
-    // Set blokWrapper as the redactor in the UI nodes
-    if (modules.UI) {
-      modules.UI.nodes.redactor = blokWrapper;
-    }
-
-    vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
-      top: 0,
-      bottom: 500,
-      left: 0,
-      right: 800,
-      width: 800,
-      height: 500,
-      x: 0,
-      y: 0,
-      toJSON: () => ({}),
-    });
-
-    const blockHolder = document.createElement('div');
-
-    const block = {
-      holder: blockHolder,
-    } as unknown as BlockType;
-
-    blockManager.blocks.push(block);
-
-    blockManager.getBlockByChildNode.mockReturnValue(block);
-
-    const internal = rectangleSelection as unknown as {
-      mouseY: number;
-      genInfoForMouseSelection: () => { index: number | undefined };
-    };
-
-    internal.mouseY = 300;
-
-    const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(blockHolder);
-
-    const result = internal.genInfoForMouseSelection();
-
-    expect(result.index).toBe(0);
-
-    elementFromPointSpy.mockRestore();
-  });
-
   it('activates rectangle selection and updates state when cursor moves with pressed mouse', () => {
     const {
       rectangleSelection,
@@ -1076,12 +1091,6 @@ describe('RectangleSelection', () => {
     internal.isRectSelectionActivated = false;
     internal.overlayRectangle = blokWrapper.querySelector('[data-blok-testid="overlay-rectangle"]') as HTMLDivElement;
 
-    const genInfoSpy = vi.spyOn(
-      rectangleSelection as unknown as { genInfoForMouseSelection: () => { index: number } },
-      'genInfoForMouseSelection'
-    ).mockReturnValue({
-      index: 1,
-    });
     const trySelectSpy = vi.spyOn(
       rectangleSelection as unknown as { trySelectNextBlock: (index: number) => void },
       'trySelectNextBlock'
@@ -1096,8 +1105,8 @@ describe('RectangleSelection', () => {
     } as unknown as Selection);
 
     internal.changingRectangle({
-      pageX: 200,
-      pageY: 220,
+      clientX: 200,
+      clientY: 220,
     } as MouseEvent);
 
     expect(internal.isRectSelectionActivated).toBe(true);
@@ -1107,59 +1116,150 @@ describe('RectangleSelection', () => {
     expect(inverseSpy).toHaveBeenCalled();
     expect(selectionRemove).toHaveBeenCalled();
 
-    genInfoSpy.mockRestore();
     selectionSpy.mockRestore();
   });
 
-  it('does not attempt block selection when no block is detected under cursor', () => {
-    const {
-      rectangleSelection,
-      toolbar,
-      blokWrapper,
-    } = createRectangleSelection();
+  describe('a drag that moves the band without a block under the pointer', () => {
+    /**
+     * Four 50px rows (0-200) across the editor. `scrollBy` moves the redactor
+     * and every row up together, as a real scroll does.
+     */
+    const seedRows = (blockManager: BlockManagerModuleMock, blokWrapper: HTMLDivElement): { scrollBy: (amount: number) => void } => {
+      const offset = { value: 0 };
+      const rectAt = (top: number, height: number): DOMRect => ({
+        top: top - offset.value,
+        bottom: top + height - offset.value,
+        left: 0,
+        right: 800,
+        width: 800,
+        height,
+        x: 0,
+        y: top - offset.value,
+        toJSON: () => ({}),
+      });
 
-    rectangleSelection.prepare();
+      vi.spyOn(blokWrapper, 'getBoundingClientRect').mockImplementation(() => rectAt(0, 1000));
 
-    const internal = rectangleSelection as unknown as {
-      changingRectangle: (event: MouseEvent) => void;
+      for (let i = 0; i < 4; i++) {
+        const holder = document.createElement('div');
+
+        holder.getBoundingClientRect = vi.fn(() => rectAt(i * 50, 50));
+        blockManager.blocks.push({ id: `b${i}`, holder, parentId: null } as unknown as BlockType);
+      }
+
+      return {
+        scrollBy: (amount: number): void => {
+          offset.value += amount;
+        },
+      };
+    };
+
+    type DragInternals = {
+      changingRectangle: (event?: Pick<MouseEvent, 'clientX' | 'clientY'>) => void;
+      processMouseMove: (event: MouseEvent) => void;
       mousedown: boolean;
       isRectSelectionActivated: boolean;
       overlayRectangle: HTMLDivElement;
+      startX: number;
+      startY: number;
     };
 
-    internal.mousedown = true;
-    internal.isRectSelectionActivated = true;
-    internal.overlayRectangle = blokWrapper.querySelector('[data-blok-testid="overlay-rectangle"]') as HTMLDivElement;
+    const pressAt = (rectangleSelection: RectangleSelection, startX: number, startY: number): DragInternals => {
+      const internal = rectangleSelection as unknown as DragInternals;
 
-    const genInfoSpy = vi.spyOn(
-      rectangleSelection as unknown as { genInfoForMouseSelection: () => { index: number | undefined } },
-      'genInfoForMouseSelection'
-    ).mockReturnValue({
-      index: undefined,
+      internal.mousedown = true;
+      internal.isRectSelectionActivated = false;
+      internal.startX = startX;
+      internal.startY = startY;
+
+      return internal;
+    };
+
+    it('selects every crossed row when the pointer is below the last block', () => {
+      const { rectangleSelection, blockManager, blockSelection, blokWrapper } = createRectangleSelection();
+
+      rectangleSelection.prepare();
+      seedRows(blockManager, blokWrapper);
+
+      // Nothing at the pointer's row: the old probe stopped selection here.
+      vi.spyOn(document, 'elementFromPoint').mockReturnValue(null);
+
+      const internal = pressAt(rectangleSelection, 100, 25);
+
+      internal.changingRectangle({ clientX: 100, clientY: 400 });
+
+      expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(3);
+      expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(0);
+      expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(1);
+      expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(2);
     });
-    const trySelectSpy = vi.spyOn(
-      rectangleSelection as unknown as { trySelectNextBlock: (index: number) => void },
-      'trySelectNextBlock'
-    );
-    const selectionSpy = vi.spyOn(SelectionUtils, 'get');
 
-    internal.changingRectangle({
-      pageX: 120,
-      pageY: 140,
-    } as MouseEvent);
+    it('ends the gesture on a move with the primary button released, but not on leaving the body', () => {
+      const { rectangleSelection, blockManager, blokWrapper } = createRectangleSelection();
 
-    expect(toolbar.close).toHaveBeenCalled();
-    expect(trySelectSpy).not.toHaveBeenCalled();
-    expect(selectionSpy).not.toHaveBeenCalled();
-    // Verify observable state: when no block is detected, selection remains active
-    // (the overlay stays visible for continuing the selection)
-    expect(internal.isRectSelectionActivated).toBe(true);
+      rectangleSelection.prepare();
+      seedRows(blockManager, blokWrapper);
 
-    genInfoSpy.mockRestore();
-    selectionSpy.mockRestore();
+      const internal = pressAt(rectangleSelection, 100, 25);
+
+      internal.processMouseMove(new MouseEvent('mousemove', { clientX: 100, clientY: 75, buttons: 1 }));
+      document.body.dispatchEvent(new MouseEvent('mouseleave'));
+
+      // A band dragged below a short page leaves the body and must live on.
+      expect(internal.mousedown).toBe(true);
+      expect(internal.isRectSelectionActivated).toBe(true);
+      expect(internal.overlayRectangle.style.display).toBe('block');
+
+      internal.processMouseMove(new MouseEvent('mousemove', { clientX: 100, clientY: 75, buttons: 0 }));
+
+      expect(internal.mousedown).toBe(false);
+      expect(internal.isRectSelectionActivated).toBe(false);
+      expect(internal.overlayRectangle.style.display).toBe('none');
+    });
+
+    it('grows the band over content a scroll brings under the still pointer', () => {
+      const { rectangleSelection, blockManager, blockSelection, blokWrapper } = createRectangleSelection();
+
+      rectangleSelection.prepare();
+
+      const page = seedRows(blockManager, blokWrapper);
+      const internal = pressAt(rectangleSelection, 100, 25);
+
+      internal.changingRectangle({ clientX: 100, clientY: 75 });
+      blockSelection.selectBlockByIndex.mockClear();
+
+      page.scrollBy(100);
+      // An overflow box's scroll does not bubble; only a capture listener on document hears it.
+      blokWrapper.dispatchEvent(new Event('scroll'));
+
+      expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(3);
+      expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(2);
+      // The anchor scrolled with its row, so the rows above stay in the band.
+      expect(blockSelection.unSelectBlockByIndex).not.toHaveBeenCalledWith(0);
+      expect(blockSelection.unSelectBlockByIndex).not.toHaveBeenCalledWith(1);
+    });
+
+    it('takes the band\'s final corner from the mouseup itself before ending', () => {
+      const { rectangleSelection, blockManager, blockSelection, blokWrapper } = createRectangleSelection();
+
+      rectangleSelection.prepare();
+      seedRows(blockManager, blokWrapper);
+
+      const internal = pressAt(rectangleSelection, 100, 25);
+
+      internal.changingRectangle({ clientX: 100, clientY: 30 });
+      blockSelection.selectBlockByIndex.mockClear();
+
+      document.dispatchEvent(new MouseEvent('mouseup', { clientX: 100, clientY: 125 }));
+
+      expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(2);
+      expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(1);
+      expect(internal.mousedown).toBe(false);
+      expect(internal.isRectSelectionActivated).toBe(false);
+    });
   });
 
-  it('clears selection state on mouse leave and mouse up events', () => {
+  it('clears selection state on mouse up', () => {
     const {
       rectangleSelection,
       blokWrapper,
@@ -1168,7 +1268,6 @@ describe('RectangleSelection', () => {
     rectangleSelection.prepare();
 
     const internal = rectangleSelection as unknown as {
-      processMouseLeave: () => void;
       processMouseUp: () => void;
       mousedown: boolean;
       startX: number;
@@ -1177,7 +1276,6 @@ describe('RectangleSelection', () => {
       overlayRectangle: HTMLDivElement;
     };
 
-    // Set up initial state
     internal.mousedown = true;
     internal.startX = 100;
     internal.startY = 200;
@@ -1185,28 +1283,13 @@ describe('RectangleSelection', () => {
     internal.overlayRectangle = blokWrapper.querySelector('[data-blok-testid="overlay-rectangle"]') as HTMLDivElement;
     internal.overlayRectangle.style.display = 'block';
 
-    internal.processMouseLeave();
+    internal.processMouseUp();
 
-    // Verify state changes after mouse leave
     expect(internal.mousedown).toBe(false);
     expect(internal.startX).toBe(0);
     expect(internal.startY).toBe(0);
     expect(internal.isRectSelectionActivated).toBe(false);
     expect(internal.overlayRectangle.style.display).toBe('none');
-
-    // Reset state to test mouse up
-    internal.mousedown = true;
-    internal.startX = 100;
-    internal.startY = 200;
-    internal.isRectSelectionActivated = true;
-
-    internal.processMouseUp();
-
-    // Verify state changes after mouse up
-    expect(internal.mousedown).toBe(false);
-    expect(internal.startX).toBe(0);
-    expect(internal.startY).toBe(0);
-    expect(internal.isRectSelectionActivated).toBe(false);
   });
 
   it('extends selection to skipped blocks in downward direction', () => {
@@ -1673,7 +1756,7 @@ describe('RectangleSelection', () => {
       expect(internal.mousedown).toBe(true);
 
       // On the first mousemove the toolbar IS closed and the flag cleared
-      internal.processMouseMove(new MouseEvent('mousemove', { clientX: 310, clientY: 250 }));
+      internal.processMouseMove(new MouseEvent('mousemove', { clientX: 310, clientY: 250, buttons: 1 }));
       expect(toolbar.close).toHaveBeenCalled();
       expect(internal.pendingToolbarClose).toBe(false);
     });
@@ -1712,218 +1795,6 @@ describe('RectangleSelection', () => {
     });
   });
 
-  describe('genInfoForMouseSelection returns child block index directly', () => {
-    it('returns the child block index when getBlockByChildNode returns a child block with parentId', () => {
-      const {
-        rectangleSelection,
-        blockManager,
-        blokWrapper,
-        modules,
-      } = createRectangleSelection();
-
-      if (modules.UI) {
-        modules.UI.nodes.redactor = blokWrapper;
-      }
-
-      vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
-        top: 0, bottom: 500, left: 0, right: 800, width: 800, height: 500,
-        x: 0, y: 0, toJSON: () => ({}),
-      });
-
-      const tableHolder = document.createElement('div');
-      const childHolder = document.createElement('div');
-
-      const tableBlock = {
-        id: 'table-1',
-        holder: tableHolder,
-        parentId: null,
-      } as unknown as BlockType;
-
-      const childBlock = {
-        id: 'child-1',
-        holder: childHolder,
-        parentId: 'table-1',
-      } as unknown as BlockType;
-
-      blockManager.blocks.push(tableBlock, childBlock);
-
-      blockManager.getBlockByChildNode.mockReturnValue(childBlock);
-
-      const internal = rectangleSelection as unknown as {
-        mouseY: number;
-        genInfoForMouseSelection: () => { index: number | undefined };
-      };
-
-      internal.mouseY = 300;
-
-      const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(childHolder);
-
-      const result = internal.genInfoForMouseSelection();
-
-      // Returns child's own index (1), not resolved root (0)
-      expect(blockManager.resolveToRootBlock).not.toHaveBeenCalled();
-      expect(result.index).toBe(1);
-
-      elementFromPointSpy.mockRestore();
-    });
-
-    it('returns the block index directly when the block has no parentId', () => {
-      const {
-        rectangleSelection,
-        blockManager,
-        blokWrapper,
-        modules,
-      } = createRectangleSelection();
-
-      if (modules.UI) {
-        modules.UI.nodes.redactor = blokWrapper;
-      }
-
-      vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
-        top: 0, bottom: 500, left: 0, right: 800, width: 800, height: 500,
-        x: 0, y: 0, toJSON: () => ({}),
-      });
-
-      const blockHolder = document.createElement('div');
-
-      const rootBlock = {
-        id: 'paragraph-1',
-        holder: blockHolder,
-        parentId: null,
-      } as unknown as BlockType;
-
-      blockManager.blocks.push(rootBlock);
-
-      blockManager.getBlockByChildNode.mockReturnValue(rootBlock);
-
-      const internal = rectangleSelection as unknown as {
-        mouseY: number;
-        genInfoForMouseSelection: () => { index: number | undefined };
-      };
-
-      internal.mouseY = 300;
-
-      const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(blockHolder);
-
-      const result = internal.genInfoForMouseSelection();
-
-      expect(blockManager.resolveToRootBlock).not.toHaveBeenCalled();
-      expect(result.index).toBe(0);
-
-      elementFromPointSpy.mockRestore();
-    });
-
-    it('returns the cell paragraph index directly when mouse is over a cell paragraph inside a table', () => {
-      const {
-        rectangleSelection,
-        blockManager,
-        blokWrapper,
-        modules,
-      } = createRectangleSelection();
-
-      if (modules.UI) {
-        modules.UI.nodes.redactor = blokWrapper;
-      }
-
-      vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
-        top: 0, bottom: 500, left: 0, right: 800, width: 800, height: 500,
-        x: 0, y: 0, toJSON: () => ({}),
-      });
-
-      // Set up blocks: [paragraph, table, cellParagraph1, cellParagraph2, paragraph2]
-      const paragraphHolder = document.createElement('div');
-      const tableHolder = document.createElement('div');
-      const cellParagraph1Holder = document.createElement('div');
-      const cellParagraph2Holder = document.createElement('div');
-      const paragraph2Holder = document.createElement('div');
-
-      const paragraph = {
-        id: 'p-1',
-        holder: paragraphHolder,
-        parentId: null,
-      } as unknown as BlockType;
-
-      const table = {
-        id: 'table-1',
-        holder: tableHolder,
-        parentId: null,
-      } as unknown as BlockType;
-
-      const cellParagraph1 = {
-        id: 'cell-p-1',
-        holder: cellParagraph1Holder,
-        parentId: 'table-1',
-      } as unknown as BlockType;
-
-      const cellParagraph2 = {
-        id: 'cell-p-2',
-        holder: cellParagraph2Holder,
-        parentId: 'table-1',
-      } as unknown as BlockType;
-
-      const paragraph2 = {
-        id: 'p-2',
-        holder: paragraph2Holder,
-        parentId: null,
-      } as unknown as BlockType;
-
-      blockManager.blocks.push(paragraph, table, cellParagraph1, cellParagraph2, paragraph2);
-
-      blockManager.getBlockByChildNode.mockReturnValue(cellParagraph1);
-
-      const internal = rectangleSelection as unknown as {
-        mouseY: number;
-        genInfoForMouseSelection: () => { index: number | undefined };
-      };
-
-      internal.mouseY = 300;
-
-      const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(cellParagraph1Holder);
-
-      const result = internal.genInfoForMouseSelection();
-
-      // Returns cellParagraph1's own index (2), not table's index (1)
-      expect(blockManager.resolveToRootBlock).not.toHaveBeenCalled();
-      expect(result.index).toBe(2);
-
-      elementFromPointSpy.mockRestore();
-    });
-
-    it('returns undefined index when no element is found under cursor', () => {
-      const {
-        rectangleSelection,
-        blockManager,
-        blokWrapper,
-        modules,
-      } = createRectangleSelection();
-
-      if (modules.UI) {
-        modules.UI.nodes.redactor = blokWrapper;
-      }
-
-      vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
-        top: 0, bottom: 500, left: 0, right: 800, width: 800, height: 500,
-        x: 0, y: 0, toJSON: () => ({}),
-      });
-
-      const internal = rectangleSelection as unknown as {
-        mouseY: number;
-        genInfoForMouseSelection: () => { index: number | undefined };
-      };
-
-      internal.mouseY = 300;
-
-      const elementFromPointSpy2 = vi.spyOn(document, 'elementFromPoint').mockReturnValue(null);
-
-      const result = internal.genInfoForMouseSelection();
-
-      expect(result.index).toBeUndefined();
-      expect(blockManager.resolveToRootBlock).not.toHaveBeenCalled();
-
-      elementFromPointSpy2.mockRestore();
-    });
-  });
-
   describe('visual-position-based selection', () => {
     /**
      * Helper to create a block stub with mocked getBoundingClientRect for visual position tests
@@ -1956,65 +1827,6 @@ describe('RectangleSelection', () => {
         tool: { ownsChildren: false },
       } as unknown as BlockType;
     };
-
-    describe('genInfoForMouseSelection returns child block index directly', () => {
-      it('returns the child block index without calling resolveToRootBlock', () => {
-        const {
-          rectangleSelection,
-          blockManager,
-          blokWrapper,
-          modules,
-        } = createRectangleSelection();
-
-        if (modules.UI) {
-          modules.UI.nodes.redactor = blokWrapper;
-        }
-
-        vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
-          top: 0, bottom: 500, left: 0, right: 800, width: 800, height: 500,
-          x: 0, y: 0, toJSON: () => ({}),
-        });
-
-        const toggleHolder = document.createElement('div');
-        const childHolder = document.createElement('div');
-
-        const toggleBlock = {
-          id: 'toggle-1',
-          name: 'header',
-          holder: toggleHolder,
-          parentId: null,
-          tool: { ownsChildren: false },
-        } as unknown as BlockType;
-
-        const childBlock = {
-          id: 'child-1',
-          name: 'paragraph',
-          holder: childHolder,
-          parentId: 'toggle-1',
-          tool: { ownsChildren: false },
-        } as unknown as BlockType;
-
-        blockManager.blocks.push(toggleBlock, childBlock);
-        blockManager.getBlockByChildNode.mockReturnValue(childBlock);
-
-        const internal = rectangleSelection as unknown as {
-          mouseY: number;
-          genInfoForMouseSelection: () => { index: number | undefined };
-        };
-
-        internal.mouseY = 300;
-
-        const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(childHolder);
-
-        const result = internal.genInfoForMouseSelection();
-
-        // Should return child's own index (1), NOT resolve to root toggle (0)
-        expect(result.index).toBe(1);
-        expect(blockManager.resolveToRootBlock).not.toHaveBeenCalled();
-
-        elementFromPointSpy.mockRestore();
-      });
-    });
 
     describe('trySelectNextBlock uses visual positions', () => {
       it('excludes blocks with zero height (hidden/collapsed) from selection', () => {
@@ -2174,7 +1986,6 @@ describe('RectangleSelection', () => {
 
         internal.rectCrossesBlocks = true;
 
-        // genInfoForMouseSelection hands back the CELL index when the pointer is over a cell
         internal.startY = 20;
         internal.mouseY = 20;
         internal.trySelectNextBlock(1);
@@ -2262,9 +2073,8 @@ describe('RectangleSelection', () => {
 
         internal.rectCrossesBlocks = true;
 
-        // Anchor at block 0, mouse moves onto the toggle child at index 3.
-        // genInfoForMouseSelection still hands back the CHILD index (3) — the lasso
-        // must resolve that to the containing root rather than selecting the child.
+        // Anchor at block 0, pointer on the toggle child at index 3: the lasso
+        // must select the containing root rather than the child.
         // block0: 0-50, block1: 50-80, block2: 80-130, block3: 130-180, block4: 180-230
         internal.startY = 25;   // anchor at block 0 center
         internal.mouseY = 25;
@@ -2365,7 +2175,6 @@ describe('RectangleSelection', () => {
 
         seedToggleWithTable(blockManager);
 
-        // genInfoForMouseSelection hands back the CELL index (3) for a point in the table.
         dragBand(rectangleSelection, 95, 100, 3);
 
         expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(2);
@@ -2582,108 +2391,60 @@ describe('RectangleSelection', () => {
         expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(0);
       });
 
-      it('does not select blocks whose X range does not overlap the rubber band X range', () => {
+      it('does not select a block in the other column when the band covers only one column', () => {
         const {
           rectangleSelection,
           blockManager,
           blockSelection,
         } = createRectangleSelection();
 
+        const blockAt = (
+          id: string,
+          box: { left: number; right: number },
+          parentId: string | null,
+          extras: { name?: string; ownsChildren?: boolean; content?: { left: number; right: number } } = {}
+        ): BlockType => {
+          const holder = document.createElement('div');
+          const rect = (left: number, right: number): DOMRect => ({
+            top: 100, bottom: 200, left, right, width: right - left, height: 100,
+            x: left, y: 100, toJSON: () => ({}),
+          });
+
+          holder.getBoundingClientRect = vi.fn(() => rect(box.left, box.right));
+
+          if (extras.content !== undefined) {
+            const { left, right } = extras.content;
+            const contentEl = document.createElement('div');
+
+            contentEl.setAttribute('data-blok-element-content', '');
+            contentEl.getBoundingClientRect = vi.fn(() => rect(left, right));
+            holder.appendChild(contentEl);
+          }
+
+          return {
+            id,
+            name: extras.name ?? 'paragraph',
+            holder,
+            parentId,
+            tool: { ownsChildren: extras.ownsChildren ?? false },
+          } as unknown as BlockType;
+        };
+
         /**
-         * Layout: two blocks at the same vertical position but different horizontal positions.
-         * Holders are full-width (left=0, right=1280) as they would be in a real editor.
-         * The fix should check the content element's X bounds, not the holder's.
-         *
-         *   Block 0: holder full-width, content left=500, right=700  ← RIGHT side, outside rubber band X
-         *   Block 1: holder full-width, content left=100, right=300  ← LEFT side, inside rubber band X
-         *
-         * Rubber band: startX=50, mouseX=350, startY=50, mouseY=250 (page coords, scrollX=0)
-         *   → X viewport range: [50, 350]  — overlaps block 1 content (100-300) but NOT block 0 content (500-700)
-         *   → Y viewport range: [50, 250]  — overlaps BOTH blocks (top=100, bottom=200)
-         *
-         * Expected: block 1 IS selected, block 0 is NOT selected.
-         * Bug: current code uses holder bounds (0-1280 for both), so block 0 gets selected despite its
-         * content element being outside the rubber band horizontally.
+         * A column row (0-1280): left column 0-600 with content 100-300,
+         * right column 640-1280 with content 700-900. Same vertical span.
          */
-        const block0Holder = document.createElement('div');
-
-        block0Holder.getBoundingClientRect = vi.fn(() => ({
-          top: 100,
-          bottom: 200,
-          left: 0,
-          right: 1280,
-          width: 1280,
-          height: 100,
-          x: 0,
-          y: 100,
-          toJSON: () => ({}),
-        }));
-
-        const block0ContentEl = document.createElement('div');
-
-        block0ContentEl.setAttribute('data-blok-element-content', '');
-        block0ContentEl.getBoundingClientRect = vi.fn(() => ({
-          top: 100,
-          bottom: 200,
-          left: 500,
-          right: 700,
-          width: 200,
-          height: 100,
-          x: 500,
-          y: 100,
-          toJSON: () => ({}),
-        }));
-        block0Holder.appendChild(block0ContentEl);
-
-        const block1Holder = document.createElement('div');
-
-        block1Holder.getBoundingClientRect = vi.fn(() => ({
-          top: 100,
-          bottom: 200,
-          left: 0,
-          right: 1280,
-          width: 1280,
-          height: 100,
-          x: 0,
-          y: 100,
-          toJSON: () => ({}),
-        }));
-
-        const block1ContentEl = document.createElement('div');
-
-        block1ContentEl.setAttribute('data-blok-element-content', '');
-        block1ContentEl.getBoundingClientRect = vi.fn(() => ({
-          top: 100,
-          bottom: 200,
-          left: 100,
-          right: 300,
-          width: 200,
-          height: 100,
-          x: 100,
-          y: 100,
-          toJSON: () => ({}),
-        }));
-        block1Holder.appendChild(block1ContentEl);
-
-        const block0 = {
-          id: 'b0',
-          holder: block0Holder,
-          parentId: null,
-        } as unknown as BlockType;
-
-        const block1 = {
-          id: 'b1',
-          holder: block1Holder,
-          parentId: null,
-        } as unknown as BlockType;
-
-        blockManager.blocks.push(block0, block1);
+        blockManager.blocks.push(
+          blockAt('row', { left: 0, right: 1280 }, null, { name: 'column_list', ownsChildren: true }),
+          blockAt('col-left', { left: 0, right: 600 }, 'row', { name: 'column' }),
+          blockAt('left-inner', { left: 0, right: 600 }, 'col-left', { content: { left: 100, right: 300 } }),
+          blockAt('col-right', { left: 640, right: 1280 }, 'row', { name: 'column' }),
+          blockAt('right-inner', { left: 640, right: 1280 }, 'col-right', { content: { left: 700, right: 900 } })
+        );
 
         const internal = rectangleSelection as unknown as {
           rectCrossesBlocks: boolean;
-          anchorBlockIndex: number | null;
-          trySelectNextBlock: (index: number) => void;
-          stackOfSelected: BlockType[];
+          trySelectNextBlock: () => void;
           startX: number;
           mouseX: number;
           startY: number;
@@ -2692,43 +2453,34 @@ describe('RectangleSelection', () => {
 
         internal.rectCrossesBlocks = true;
 
-        // Rubber band covers both blocks vertically, but only block 1 horizontally
+        // Band x 50-350 covers only the left column; y 50-250 covers both.
         internal.startX = 50;
         internal.mouseX = 350;
         internal.startY = 50;
         internal.mouseY = 250;
 
-        // Anchor at block 1 (inside the rubber band X range)
-        internal.anchorBlockIndex = 1;
-        internal.trySelectNextBlock(1);
+        internal.trySelectNextBlock();
 
-        // Block 1 content (left=100, right=300) overlaps rubber band X [50, 350] — must be selected
-        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(1);
-
-        // Block 0 content (left=500, right=700) does NOT overlap rubber band X [50, 350] — must NOT be selected
-        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(0);
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(4);
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(2);
       });
     });
 
-    describe('changingRectangle uses the selection unit holder for rectCrossesBlocks', () => {
-      it('resolves to the selection unit holder for horizontal intersection check', () => {
+    describe('rectCrossesBlocks spans the redactor and every block holder', () => {
+      it('counts a band outside the redactor as crossing only where a block holder reaches', () => {
         const {
           rectangleSelection,
           blockManager,
           blokWrapper,
-          modules,
         } = createRectangleSelection();
 
-        if (modules.UI) {
-          modules.UI.nodes.redactor = blokWrapper;
-        }
-
+        // A narrow redactor, so only the holders can make the band cross.
         vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
-          top: 0, bottom: 500, left: 0, right: 800, width: 800, height: 500,
+          top: 0, bottom: 500, left: 0, right: 300, width: 300, height: 500,
           x: 0, y: 0, toJSON: () => ({}),
         });
 
-        // Root toggle has wide holder, child has narrow holder
+        // Root toggle has a wide holder, its child a narrow one.
         const rootHolder = document.createElement('div');
         const childHolder = document.createElement('div');
 
@@ -2741,64 +2493,41 @@ describe('RectangleSelection', () => {
           x: 200, y: 80, toJSON: () => ({}),
         }));
 
-        const rootBlock = {
-          id: 'toggle-1',
-          name: 'header',
-          holder: rootHolder,
-          parentId: null,
-          tool: { ownsChildren: false },
-        } as unknown as BlockType;
-
-        const childBlock = {
-          id: 'child-1',
-          name: 'paragraph',
-          holder: childHolder,
-          parentId: 'toggle-1',
-          tool: { ownsChildren: false },
-        } as unknown as BlockType;
-
-        blockManager.blocks.push(rootBlock, childBlock);
-        blockManager.getBlockByChildNode.mockReturnValue(childBlock);
-        blockManager.resolveToSelectableBlock.mockReturnValue(rootBlock);
+        blockManager.blocks.push(
+          { id: 'toggle-1', name: 'header', holder: rootHolder, parentId: null, tool: { ownsChildren: false } } as unknown as BlockType,
+          { id: 'child-1', name: 'paragraph', holder: childHolder, parentId: 'toggle-1', tool: { ownsChildren: false } } as unknown as BlockType
+        );
 
         const internal = rectangleSelection as unknown as {
           mousedown: boolean;
-          mouseX: number;
-          mouseY: number;
           startX: number;
           startY: number;
           isRectSelectionActivated: boolean;
           rectCrossesBlocks: boolean;
           overlayRectangle: HTMLDivElement;
-          changingRectangle: (event: MouseEvent) => void;
+          changingRectangle: (event: Pick<MouseEvent, 'clientX' | 'clientY'>) => void;
         };
 
         internal.mousedown = true;
         internal.isRectSelectionActivated = true;
         internal.overlayRectangle = document.createElement('div');
-        // Rubber band covers x=150 to x=350 — intersects root (100-700) but starts at 150
-        internal.startX = 150;
+
+        // Band x 750-790: right of the redactor and of every holder.
+        internal.startX = 750;
         internal.startY = 50;
-        internal.mouseX = 350;
-        internal.mouseY = 120;
+        internal.changingRectangle({ clientX: 790, clientY: 120 });
 
-        const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(childHolder);
+        expect(internal.rectCrossesBlocks).toBe(false);
 
-        const mouseEvent = new MouseEvent('mousemove', { clientX: 350, clientY: 120 });
+        // Band x 450-650: right of the redactor and the child, inside the root holder.
+        internal.startX = 450;
+        internal.changingRectangle({ clientX: 650, clientY: 120 });
 
-        Object.defineProperty(mouseEvent, 'pageX', { value: 350 });
-        Object.defineProperty(mouseEvent, 'pageY', { value: 120 });
-
-        internal.changingRectangle(mouseEvent);
-
-        // The rectCrossesBlocks check should use the resolved unit's holder (wide: 100-700),
-        // not the child block holder (narrow: 200-400)
-        expect(blockManager.resolveToSelectableBlock).toHaveBeenCalledWith(childBlock);
         expect(internal.rectCrossesBlocks).toBe(true);
-
-        elementFromPointSpy.mockRestore();
       });
+    });
 
+    describe('changingRectangle measures the full row for rectCrossesBlocks', () => {
       it('sets rectCrossesBlocks to true when rubber band is in the margin but overlaps the full-width block holder X range', () => {
         const {
           rectangleSelection,
@@ -2868,9 +2597,6 @@ describe('RectangleSelection', () => {
         const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(rootHolder);
 
         const mouseEvent = new MouseEvent('mousemove', { clientX: 200, clientY: 350 });
-
-        Object.defineProperty(mouseEvent, 'pageX', { value: 200 });
-        Object.defineProperty(mouseEvent, 'pageY', { value: 350 });
 
         internal.changingRectangle(mouseEvent);
 
@@ -2949,9 +2675,6 @@ describe('RectangleSelection', () => {
         const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(rootHolder);
 
         const mouseEvent = new MouseEvent('mousemove', { clientX: 500, clientY: 350 });
-
-        Object.defineProperty(mouseEvent, 'pageX', { value: 500 });
-        Object.defineProperty(mouseEvent, 'pageY', { value: 350 });
 
         internal.changingRectangle(mouseEvent);
 
@@ -3227,75 +2950,6 @@ describe('RectangleSelection', () => {
 
     // Observable state: selection is now active after starting
     expect(rectangleSelection.isRectActivated()).toBe(true);
-
-    elementFromPointSpy.mockRestore();
-  });
-
-  it('uses redactor center X instead of document.body center for elementFromPoint in genInfoForMouseSelection', () => {
-    const {
-      rectangleSelection,
-      blockManager,
-      blokWrapper,
-      modules,
-    } = createRectangleSelection();
-
-    rectangleSelection.prepare();
-
-    // Set blokWrapper as the redactor in the UI nodes
-    if (modules.UI) {
-      modules.UI.nodes.redactor = blokWrapper;
-    }
-
-    // Simulate editor offset to the right (e.g., in a sidebar layout)
-    // Editor occupies x: 600-1000, so its center is 800
-    vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
-      top: 0,
-      bottom: 500,
-      left: 600,
-      right: 1000,
-      width: 400,
-      height: 500,
-      x: 600,
-      y: 0,
-      toJSON: () => ({}),
-    });
-
-    // document.body is 1200px wide, so body center = 600 (NOT the editor center of 800)
-    Object.defineProperty(document.body, 'offsetWidth', {
-      configurable: true,
-      value: 1200,
-    });
-
-    const blockHolder = document.createElement('div');
-    const block = { id: 'b0', holder: blockHolder, parentId: null } as unknown as BlockType;
-
-    blockManager.blocks.push(block);
-    blockManager.getBlockByChildNode.mockReturnValue(block);
-
-    blockHolder.getBoundingClientRect = vi.fn(() => ({
-      top: 0, bottom: 50, left: 600, right: 1000, width: 400, height: 50,
-      x: 600, y: 0, toJSON: () => ({}),
-    }));
-
-    blockManager.resolveToRootBlock.mockReturnValue(block);
-    blockManager.getBlockByIndex.mockReturnValue(block);
-
-    const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(blockHolder);
-
-    const internal = rectangleSelection as unknown as {
-      mouseY: number;
-      genInfoForMouseSelection: () => { index: number | undefined };
-    };
-
-    internal.mouseY = 25;
-
-    vi.spyOn(window, 'scrollY', 'get').mockReturnValue(0);
-
-    internal.genInfoForMouseSelection();
-
-    // The X coordinate passed to elementFromPoint should be the redactor's center (800),
-    // NOT document.body.offsetWidth / 2 (600)
-    expect(elementFromPointSpy).toHaveBeenCalledWith(800, 25);
 
     elementFromPointSpy.mockRestore();
   });

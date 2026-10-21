@@ -42,12 +42,18 @@ const B0: Box = { left: 300, top: 120, right: 900, bottom: 180 };
 const B1: Box = { left: 300, top: 200, right: 900, bottom: 300 };
 const B2: Box = { left: 300, top: 320, right: 900, bottom: 350 };
 
+/** The window cannot scroll past this, so a bottom-zone auto-scroll never runs out of page. */
+const MAX_SCROLL_Y = 100000;
+
 const boxToRect = (box: Box): DOMRect => new DOMRect(box.left, box.top, box.right - box.left, box.bottom - box.top);
 
-const stubRect = (element: HTMLElement, box: Box): void => {
+/** `shiftY` lets a rect follow the page scroll; it reads 0 unless a harness opts in. */
+const stubRect = (element: HTMLElement, box: Box, shiftY: () => number = () => 0): void => {
   Object.defineProperty(element, 'getBoundingClientRect', {
     configurable: true,
-    value: (): DOMRect => boxToRect(box),
+    value: (): DOMRect => boxToRect({ ...box,
+      top: box.top - shiftY(),
+      bottom: box.bottom - shiftY() }),
   });
 };
 
@@ -85,8 +91,6 @@ interface BlockSpec {
   ownsChildren?: boolean;
   isUnit?: boolean;
   slot?: SlotSpec;
-  /** Registers the holder itself as a hit region (for pointer positions off the content column). */
-  hitHolder?: boolean;
   /** Mount into the parent's holder rather than its nested-blocks slot. */
   mountInParentHolder?: boolean;
   /** Mount at the editor root even though the model gives this block a parent. */
@@ -114,10 +118,7 @@ interface BlockSelectionMock {
 
 interface BlockManagerMock {
   blocks: BlockType[];
-  getBlockByChildNode: Mock<(node: Node | null) => BlockType | undefined>;
-  getBlockByIndex: Mock<(index: number | undefined) => BlockType | undefined>;
   getBlockById: Mock<(id: string | null) => BlockType | undefined>;
-  resolveToSelectableBlock: Mock<(block: BlockType) => BlockType>;
   isSelectionUnit: Mock<(block: BlockType) => boolean>;
   getBlockDepth: Mock<(block: BlockType) => number>;
 }
@@ -139,6 +140,10 @@ interface HarnessOptions {
   scrollY?: number;
   /** Skip prepare() so a test can watch the bindings being installed. */
   autoPrepare?: boolean;
+  /** The redactor and every block move up as the page scrolls down, like real content. */
+  scrollTracksContent?: boolean;
+  /** Makes the editor's holder an overflow box with this client rect. */
+  scroller?: Box;
 }
 
 interface Harness {
@@ -154,14 +159,17 @@ interface Harness {
   overlayRectangle: HTMLElement;
   overlayContainer: HTMLElement;
   scroll: { x: number; y: number };
-  scrollBy: Mock<(x: number, y: number) => void>;
+  scrollBy: Mock<(options: ScrollToOptions) => void>;
+  /** The overflow box's own scrollBy; only installed with the `scroller` option. */
+  scrollerScrollBy: Mock<(options: ScrollToOptions) => void>;
+  holder: HTMLElement;
   register: (box: Box, element: Element) => void;
   mouseDownAt: (pageX: number, pageY: number, target?: Element) => void;
-  moveTo: (pageX: number, pageY: number) => void;
-  moveToClientY: (pageX: number, pageY: number, clientY: number) => void;
+  /** A drag move: the main button is held unless `buttons` says otherwise. */
+  moveTo: (pageX: number, pageY: number, buttons?: number) => void;
   releaseThrottle: () => void;
-  mouseUp: () => void;
-  mouseLeave: () => void;
+  /** Releases at the given page point, or at the last pointer position. */
+  mouseUp: (pageX?: number, pageY?: number) => void;
   scrollWindow: () => void;
   contentEditable: HTMLElement;
   errors: string[];
@@ -273,18 +281,38 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
 
   vi.spyOn(document.documentElement, 'clientHeight', 'get').mockReturnValue(VIEWPORT_HEIGHT);
 
-  const scrollBy = vi.fn<(x: number, y: number) => void>((_x, y) => {
-    scroll.y += y;
+  const scrollBy = vi.fn<(options: ScrollToOptions) => void>((options) => {
+    scroll.y = Math.min(MAX_SCROLL_Y, Math.max(0, scroll.y + (options.top ?? 0)));
   });
 
   defineOn(window, 'scrollBy', scrollBy);
 
+  const initialScrollY = scroll.y;
+  const shiftY = (): number => options.scrollTracksContent === true ? scroll.y - initialScrollY : 0;
+
   const holder = document.createElement('div');
   const editor = document.createElement('div');
+  const scrollerScrollBy = vi.fn<(options: ScrollToOptions) => void>((scrollOptions) => {
+    holder.scrollTop = Math.max(0, holder.scrollTop + (scrollOptions.top ?? 0));
+  });
+
+  if (options.scroller !== undefined) {
+    holder.style.overflowY = 'auto';
+    Object.defineProperty(holder, 'scrollHeight', { configurable: true,
+      value: 5000 });
+    Object.defineProperty(holder, 'clientHeight', { configurable: true,
+      value: 500 });
+    Object.defineProperty(holder, 'scrollTop', { configurable: true,
+      writable: true,
+      value: 1000 });
+    Object.defineProperty(holder, 'scrollBy', { configurable: true,
+      value: scrollerScrollBy });
+    stubRect(holder, options.scroller);
+  }
 
   editor.setAttribute('data-blok-editor', '');
   editor.setAttribute('data-blok-redactor', '');
-  stubRect(editor, REDACTOR);
+  stubRect(editor, REDACTOR, shiftY);
   holder.appendChild(editor);
   document.body.appendChild(holder);
 
@@ -320,7 +348,7 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
     const blockHolder = document.createElement('div');
 
     blockHolder.setAttribute('data-blok-element', '');
-    stubRect(blockHolder, spec.holder);
+    stubRect(blockHolder, spec.holder, shiftY);
 
     const contentBox = spec.content === undefined ? spec.holder : spec.content;
 
@@ -328,7 +356,7 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
       const contentElement = document.createElement('div');
 
       contentElement.setAttribute('data-blok-element-content', '');
-      stubRect(contentElement, contentBox);
+      stubRect(contentElement, contentBox, shiftY);
       blockHolder.appendChild(contentElement);
       hitRegions.push({ box: contentBox,
         element: contentElement });
@@ -338,11 +366,6 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
 
     if (slotElement !== null) {
       slotById.set(spec.id, slotElement);
-    }
-
-    if (spec.hitHolder === true) {
-      hitRegions.push({ box: spec.holder,
-        element: blockHolder });
     }
 
     holderById.set(spec.id, blockHolder);
@@ -378,18 +401,6 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
   const byId = (id: string | null): TestBlock | undefined => blocks.find((block) => block.id === id);
   const indexOf = (id: string): number => blocks.findIndex((block) => block.id === id);
 
-  const domDepth = (element: HTMLElement): number => {
-    let depth = 0;
-    let cursor: HTMLElement | null = element.parentElement;
-
-    while (cursor !== null) {
-      depth += 1;
-      cursor = cursor.parentElement;
-    }
-
-    return depth;
-  };
-
   const blockSelection: BlockSelectionMock = {
     allBlocksSelected: false,
     selectBlockByIndex: vi.fn<(index: number) => void>((index) => {
@@ -414,30 +425,11 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
 
   const blockManager: BlockManagerMock = {
     blocks: asBlocks,
-    getBlockByChildNode: vi.fn<(node: Node | null) => BlockType | undefined>((node) => {
-      if (node === null || !(node instanceof Node)) {
-        return undefined;
-      }
-
-      const matches = blocks.filter((block) => block.holder === node || block.holder.contains(node));
-
-      if (matches.length === 0) {
-        return undefined;
-      }
-
-      const deepest = matches.reduce((best, candidate) =>
-        domDepth(candidate.holder) > domDepth(best.holder) ? candidate : best);
-
-      return deepest as unknown as BlockType;
-    }),
-    getBlockByIndex: vi.fn<(index: number | undefined) => BlockType | undefined>((index) =>
-      index === undefined ? undefined : asBlocks[index]),
     getBlockById: vi.fn<(id: string | null) => BlockType | undefined>((id) => {
       const found = byId(id);
 
       return found === undefined ? undefined : found as unknown as BlockType;
     }),
-    resolveToSelectableBlock: vi.fn<(block: BlockType) => BlockType>((block) => block),
     isSelectionUnit: vi.fn<(block: BlockType) => boolean>((block) =>
       (block as unknown as TestBlock).isUnit),
     getBlockDepth: vi.fn<(block: BlockType) => number>((block) => {
@@ -516,12 +508,18 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
     prepare();
   }
 
-  const pageEvent = (type: string, pageX: number, pageY: number, clientY: number): MouseEvent => {
+  const pointer = { clientX: 0, clientY: 0 };
+
+  const pageEvent = (type: string, pageX: number, pageY: number, buttons: number): MouseEvent => {
+    pointer.clientX = pageX - scroll.x;
+    pointer.clientY = pageY - scroll.y;
+
     const event = new MouseEvent(type, {
       bubbles: true,
       button: 0,
-      clientX: pageX - scroll.x,
-      clientY,
+      buttons,
+      clientX: pointer.clientX,
+      clientY: pointer.clientY,
     });
 
     Object.defineProperty(event, 'pageX', { value: pageX });
@@ -550,30 +548,33 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
     },
     scroll,
     scrollBy,
+    scrollerScrollBy,
+    holder,
     register: (box: Box, element: Element): void => {
       hitRegions.push({ box,
         element });
     },
     mouseDownAt: (pageX: number, pageY: number, target?: Element): void => {
-      (target ?? pageElement).dispatchEvent(pageEvent('mousedown', pageX, pageY, pageY - scroll.y));
+      (target ?? pageElement).dispatchEvent(pageEvent('mousedown', pageX, pageY, 1));
     },
-    moveTo: (pageX: number, pageY: number): void => {
-      document.body.dispatchEvent(pageEvent('mousemove', pageX, pageY, pageY - scroll.y));
-    },
-    moveToClientY: (pageX: number, pageY: number, clientY: number): void => {
-      document.body.dispatchEvent(pageEvent('mousemove', pageX, pageY, clientY));
+    moveTo: (pageX: number, pageY: number, buttons = 1): void => {
+      document.body.dispatchEvent(pageEvent('mousemove', pageX, pageY, buttons));
     },
     releaseThrottle: (): void => {
       vi.advanceTimersByTime(20);
     },
-    mouseUp: (): void => {
-      document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    mouseUp: (pageX?: number, pageY?: number): void => {
+      if (pageX !== undefined && pageY !== undefined) {
+        pointer.clientX = pageX - scroll.x;
+        pointer.clientY = pageY - scroll.y;
+      }
+      document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true,
+        clientX: pointer.clientX,
+        clientY: pointer.clientY }));
     },
-    mouseLeave: (): void => {
-      document.body.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
-    },
+    /** The viewport's scroll event fires at the document, not the window. */
     scrollWindow: (): void => {
-      window.dispatchEvent(new Event('scroll'));
+      document.dispatchEvent(new Event('scroll'));
     },
     contentEditable,
     errors: listenerErrors,
@@ -735,9 +736,10 @@ describe('RectangleSelection — surviving mutants', () => {
 
       expect(onBody).toHaveBeenCalledWith('mousedown', expect.any(Function), false);
       expect(onBody).toHaveBeenCalledWith('mousemove', expect.any(Function), { passive: true });
-      expect(onBody).toHaveBeenCalledWith('mouseleave', expect.any(Function), false);
-      expect(onWindow).toHaveBeenCalledWith('scroll', expect.any(Function), { passive: true });
+      expect(onDocument).toHaveBeenCalledWith('scroll', expect.any(Function), { capture: true,
+        passive: true });
       expect(onDocument).toHaveBeenCalledWith('mouseup', expect.any(Function), false);
+      expect(onWindow).not.toHaveBeenCalledWith('scroll', expect.anything(), expect.anything());
     });
 
     it('arms the lasso from a real mousedown in the editor gutter', () => {
@@ -748,13 +750,67 @@ describe('RectangleSelection — surviving mutants', () => {
       expect(h.rect.isRectActivated()).toBe(true);
     });
 
-    it('drops the gesture when the pointer leaves the document body', () => {
+    it('keeps the gesture when the pointer leaves the document body', () => {
       const h = createHarness();
 
       h.mouseDownAt(250, 500);
-      h.mouseLeave();
+      document.body.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
+
+      expect(h.rect.isRectActivated()).toBe(true);
+    });
+
+    it('ends the gesture on a move whose main button is already up', () => {
+      const h = createHarness();
+
+      h.rect.startSelection(250, 280);
+      h.moveTo(940, 320);
+      h.releaseThrottle();
+      h.blockSelection.selectBlockByIndex.mockClear();
+      h.moveTo(940, 400, 0);
 
       expect(h.rect.isRectActivated()).toBe(false);
+      expect(h.blockSelection.selectBlockByIndex).not.toHaveBeenCalled();
+      expect(h.overlayRectangle.style.display).toBe('none');
+    });
+
+    it('ends the gesture when only a non-main button is still held', () => {
+      const h = createHarness();
+
+      h.rect.startSelection(250, 280);
+      h.moveTo(940, 320, 2);
+
+      expect(h.rect.isRectActivated()).toBe(false);
+    });
+
+    it('keeps dragging while the main button is held together with another', () => {
+      const h = createHarness();
+
+      h.rect.startSelection(250, 280);
+      h.moveTo(940, 400, 3);
+
+      expect(h.blockSelection.selectBlockByIndex.mock.calls).toEqual([ [ 1 ], [ 2 ] ]);
+    });
+
+    it('takes the release point as the band final corner', () => {
+      const h = createHarness();
+
+      h.rect.startSelection(250, 180);
+      h.moveTo(940, 220);
+      h.releaseThrottle();
+      h.blockSelection.selectBlockByIndex.mockClear();
+      h.mouseUp(940, 400);
+
+      expect(h.blockSelection.selectBlockByIndex.mock.calls).toEqual([ [ 1 ], [ 2 ] ]);
+      expect(h.toolbar.moveAndOpenForMultipleBlocks).toHaveBeenCalledTimes(1);
+    });
+
+    it('selects nothing for a press and release with no move between them', () => {
+      const h = createHarness();
+
+      h.mouseDownAt(250, 280);
+      h.mouseUp();
+
+      expect(h.blockSelection.selectBlockByIndex).not.toHaveBeenCalled();
     });
 
     it('drops the gesture on mouseup anywhere in the document', () => {
@@ -1060,21 +1116,31 @@ describe('RectangleSelection — surviving mutants', () => {
     it('closes nothing and paints nothing', () => {
       const h = createHarness();
 
-      h.moveTo(660, 520);
+      h.moveTo(660, 520, 0);
 
       expect(h.toolbar.close).not.toHaveBeenCalled();
       expect(h.rect.isRectActivated()).toBe(false);
     });
   });
 
-  describe('scroll zones', () => {
+  describe('scroll zones of the window', () => {
     it('scrolls up on the exact top scroll-zone edge', () => {
       const h = createHarness();
 
       h.rect.startSelection(640, 500);
       h.moveTo(660, 100);
 
-      expect(h.scrollBy).toHaveBeenCalledWith(0, -3);
+      expect(h.scrollBy).toHaveBeenCalledWith({ top: -3,
+        behavior: 'instant' });
+    });
+
+    it('does not scroll one pixel below the top scroll zone', () => {
+      const h = createHarness();
+
+      h.rect.startSelection(640, 500);
+      h.moveTo(660, 101);
+
+      expect(h.scrollBy).not.toHaveBeenCalled();
     });
 
     it('scrolls down on the exact bottom scroll-zone edge', () => {
@@ -1083,25 +1149,17 @@ describe('RectangleSelection — surviving mutants', () => {
       h.rect.startSelection(640, 500);
       h.moveTo(660, 820);
 
-      expect(h.scrollBy).toHaveBeenCalledWith(0, 3);
+      expect(h.scrollBy).toHaveBeenCalledWith({ top: 3,
+        behavior: 'instant' });
     });
 
-    it('does not restart an auto-scroll that is already running', () => {
+    it('does not scroll one pixel above the bottom scroll zone', () => {
       const h = createHarness();
 
       h.rect.startSelection(640, 500);
-      h.moveTo(660, 100);
+      h.moveTo(660, 819);
 
-      /** Disarm the pending self-reschedule so the throttle can be released safely. */
-      h.rect.endSelection();
-      h.releaseThrottle();
-
-      h.rect.startSelection(640, 500);
-
-      /** The first scroll moved the page, so the same zone is now a different pageY. */
-      h.moveToClientY(660, 97, 40);
-
-      expect(h.scrollBy).toHaveBeenCalledTimes(1);
+      expect(h.scrollBy).not.toHaveBeenCalled();
     });
 
     it('keeps scrolling on its own timer while the pointer stays in the zone', () => {
@@ -1115,17 +1173,184 @@ describe('RectangleSelection — surviving mutants', () => {
       expect(h.scrollBy).toHaveBeenCalledTimes(2);
     });
 
-    it('carries the auto-scrolled distance into the rectangle redrawn by a page scroll', () => {
+    it('does not start a second auto-scroll loop on a move inside a running one', () => {
+      const h = createHarness();
+
+      h.rect.startSelection(640, 500);
+      h.moveTo(660, 820);
+
+      const ticksPer5ms = (): number => {
+        const before = h.scrollBy.mock.calls.length;
+
+        vi.advanceTimersByTime(5);
+
+        return h.scrollBy.mock.calls.length - before;
+      };
+
+      /** The first tick is due at once; later ones are 1ms apart under fake timers. */
+      vi.advanceTimersByTime(0);
+
+      const alone = ticksPer5ms();
+
+      /** Lands inside the move throttle, so it runs as the trailing call. */
+      h.moveTo(660, 760 + h.scroll.y);
+      vi.advanceTimersByTime(10);
+
+      expect(ticksPer5ms()).toBe(alone);
+      expect(alone).toBeGreaterThan(0);
+    });
+
+    it('stops once the page can scroll no further', () => {
       const h = createHarness();
 
       h.rect.startSelection(640, 500);
       h.moveTo(660, 100);
+
+      /** Throws on the timer loop limit if the loop never ends. */
+      vi.runAllTimers();
+
+      /** 60px at 3px a tick is 20 moves, plus the tick that found no movement. */
+      expect(h.scrollBy).toHaveBeenCalledTimes(21);
+      expect(h.scroll.y).toBe(0);
+    });
+
+    it('starts again on the next move after a scroll that found the end', () => {
+      const h = createHarness({ scrollY: 0 });
+
+      h.rect.startSelection(640, 440);
+      h.moveTo(660, 40);
+
+      expect(h.scrollBy).toHaveBeenCalledTimes(1);
+
+      h.scroll.y = 30;
+      h.releaseThrottle();
+      h.moveTo(660, 70);
+
+      expect(h.scrollBy).toHaveBeenCalledTimes(2);
+      expect(h.scroll.y).toBe(27);
+    });
+
+    it('re-derives the band on each tick, since the anchor moves with the content', () => {
+      const h = createHarness({ scrollTracksContent: true });
+
+      h.rect.startSelection(640, 500);
+      h.moveTo(700, 820);
+
+      /** One 3px tick ran: the anchor rose 3px, the pointer did not move. */
+      expect(h.overlayRectangle.style.top).toBe('419px');
+      expect(h.overlayRectangle.style.height).toBe('323px');
+      expect(h.overlayRectangle.style.left).toBe('576px');
+      expect(h.overlayRectangle.style.width).toBe('60px');
+      expect(h.scrollBy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('scroll zones of an overflow box', () => {
+    const BOX: Box = { left: 150,
+      top: 150,
+      right: 1050,
+      bottom: 650 };
+
+    it('scrolls the box up on the exact top edge of its zone', () => {
+      const h = createHarness({ scroller: BOX });
+
+      h.rect.startSelection(640, 500);
+      h.moveTo(660, 250);
+
+      expect(h.scrollerScrollBy).toHaveBeenCalledWith({ top: -3,
+        behavior: 'instant' });
+      expect(h.scrollBy).not.toHaveBeenCalled();
+    });
+
+    it('does not scroll one pixel below the box top zone', () => {
+      const h = createHarness({ scroller: BOX });
+
+      h.rect.startSelection(640, 500);
+      h.moveTo(660, 251);
+
+      expect(h.scrollerScrollBy).not.toHaveBeenCalled();
+      expect(h.scrollBy).not.toHaveBeenCalled();
+    });
+
+    it('scrolls the box down on the exact bottom edge of its zone', () => {
+      const h = createHarness({ scroller: BOX });
+
+      h.rect.startSelection(640, 500);
+      h.moveTo(660, 670);
+
+      expect(h.scrollerScrollBy).toHaveBeenCalledWith({ top: 3,
+        behavior: 'instant' });
+      expect(h.scrollBy).not.toHaveBeenCalled();
+    });
+
+    it('does not scroll one pixel above the box bottom zone', () => {
+      const h = createHarness({ scroller: BOX });
+
+      h.rect.startSelection(640, 500);
+      h.moveTo(660, 669);
+
+      expect(h.scrollerScrollBy).not.toHaveBeenCalled();
+      expect(h.scrollBy).not.toHaveBeenCalled();
+    });
+
+    it('keeps scrolling the box, not the window, on its own timer', () => {
+      const h = createHarness({ scroller: BOX });
+
+      h.rect.startSelection(640, 500);
+      h.moveTo(660, 670);
+      vi.advanceTimersToNextTimer();
+
+      expect(h.scrollerScrollBy).toHaveBeenCalledTimes(2);
+      expect(h.scrollBy).not.toHaveBeenCalled();
+    });
+
+    it('measures the zones on the part of a tall box the viewport shows', () => {
+      const h = createHarness({ scroller: { left: 150,
+        top: -100,
+        right: 1050,
+        bottom: 1200 } });
+
+      h.rect.startSelection(640, 500);
+      h.moveTo(660, 100);
+      h.rect.endSelection();
+      h.releaseThrottle();
+      h.rect.startSelection(640, 500);
+      h.moveTo(660, 820);
+
+      expect(h.scrollerScrollBy.mock.calls).toEqual([
+        [ { top: -3,
+          behavior: 'instant' } ],
+        [ { top: 3,
+          behavior: 'instant' } ],
+      ]);
+    });
+  });
+
+  describe('scrolling under a held band', () => {
+    it('lets a page scroll alone bring the next row into the band', () => {
+      const h = createHarness({ scrollTracksContent: true });
+
+      h.rect.startSelection(250, 180);
+      h.moveTo(940, 250);
+      h.blockSelection.selectBlockByIndex.mockClear();
+
+      h.scroll.y += 50;
       h.scrollWindow();
 
-      expect(h.overlayRectangle.style.left).toBe('576px');
-      expect(h.overlayRectangle.style.width).toBe('20px');
-      expect(h.overlayRectangle.style.top).toBe('22px');
-      expect(h.overlayRectangle.style.height).toBe('403px');
+      expect(h.blockSelection.selectBlockByIndex.mock.calls).toEqual([ [ 1 ] ]);
+    });
+
+    it('hears the scroll of an overflow box, whose scroll event does not bubble', () => {
+      const h = createHarness({ scrollTracksContent: true });
+
+      h.rect.startSelection(250, 180);
+      h.moveTo(940, 250);
+      h.blockSelection.selectBlockByIndex.mockClear();
+
+      h.scroll.y += 50;
+      h.holder.dispatchEvent(new Event('scroll', { bubbles: false }));
+
+      expect(h.blockSelection.selectBlockByIndex.mock.calls).toEqual([ [ 1 ] ]);
     });
   });
 
@@ -1169,6 +1394,26 @@ describe('RectangleSelection — surviving mutants', () => {
   });
 
   describe('rows crossed horizontally by the band', () => {
+    it('selects nothing from a left-margin drag while a hidden row measures as a zero rect', () => {
+      const h = createHarness({
+        blocks: [
+          ...DEFAULT_BLOCKS,
+          { id: 'hidden',
+            holder: { left: 0,
+              top: 0,
+              right: 0,
+              bottom: 0 },
+            content: null },
+        ],
+      });
+
+      h.rect.startSelection(100, 280);
+      h.moveTo(100, 320);
+
+      expect(h.blockSelection.selectBlockByIndex).not.toHaveBeenCalled();
+    });
+
+
     it('selects the row when the drag starts right of the editor and sweeps left', () => {
       const h = createHarness();
 
@@ -1327,7 +1572,6 @@ describe('RectangleSelection — surviving mutants', () => {
       h.moveTo(240, 320);
 
       expect(h.blockSelection.selectBlockByIndex).not.toHaveBeenCalled();
-      expect(h.blockManager.getBlockByIndex).not.toHaveBeenCalledWith(undefined);
     });
 
     it('does not reach a row when the band starts exactly on its right hit edge', () => {
@@ -1393,60 +1637,14 @@ describe('RectangleSelection — surviving mutants', () => {
     });
   });
 
-  describe('the block under the probe point', () => {
-    it('asks for no block index when nothing sits under the probe point', () => {
+  describe('a band whose pointer is over no block', () => {
+    it('still selects every row it spans when it ends below the last one', () => {
       const h = createHarness();
 
-      h.blockManager.getBlockByChildNode.mockReturnValue(undefined);
-      h.rect.startSelection(250, 280);
-      h.moveTo(940, 320);
+      h.rect.startSelection(250, 180);
+      h.moveTo(940, 560);
 
-      expect(h.blockManager.getBlockByIndex).not.toHaveBeenCalled();
-    });
-
-    it('does not hit-test a block when nothing at all is under the probe point', () => {
-      const h = createHarness({
-        pageBackdrop: false,
-        backdrop: { left: 200,
-          top: 400,
-          right: 280,
-          bottom: 480 },
-      });
-
-      h.rect.startSelection(250, 500);
-      h.moveTo(260, 520);
-
-      expect(h.blockManager.getBlockByChildNode).not.toHaveBeenCalled();
-    });
-
-    it('selects nothing when the row under the pointer is no longer in the block list', () => {
-      const h = createHarness();
-      const stray = document.createElement('div');
-
-      stray.setAttribute('data-blok-element', '');
-      h.blockManager.getBlockByChildNode.mockReturnValue({
-        id: 'stray',
-        parentId: null,
-        holder: stray,
-      } as unknown as BlockType);
-
-      h.rect.startSelection(250, 280);
-      h.moveTo(940, 320);
-
-      expect(h.blockSelection.selectBlockByIndex).not.toHaveBeenCalled();
-    });
-
-    it('survives a row that disappears from the manager mid-drag', () => {
-      const h = createHarness();
-
-      h.rect.startSelection(250, 280);
-      h.moveTo(940, 320);
-      h.releaseThrottle();
-      h.blockManager.getBlockByIndex.mockReturnValue(undefined);
-      h.moveTo(940, 320);
-
-      expect(h.errors).toEqual([]);
-      expect(h.rect.isRectActivated()).toBe(true);
+      expect(h.blockSelection.selectBlockByIndex.mock.calls).toEqual([ [ 0 ], [ 1 ], [ 2 ] ]);
     });
 
     it('drags on when the document has no live selection to clear', () => {
@@ -1459,6 +1657,57 @@ describe('RectangleSelection — surviving mutants', () => {
 
       expect(h.errors).toEqual([]);
       expect(h.blockSelection.selectBlockByIndex.mock.calls).toEqual([ [ 1 ] ]);
+    });
+  });
+
+  describe('the editor span a band must reach', () => {
+    /** Overhangs the redactor (200..1000) on both sides; its text column does not. */
+    const WIDE: BlockSpec[] = [
+      { id: 'wide',
+        holder: { left: 150,
+          top: 200,
+          right: 1050,
+          bottom: 300 },
+        content: { left: 300,
+          top: 200,
+          right: 900,
+          bottom: 300 } },
+    ];
+
+    it('reaches a row from a straight drag on the left edge of a block wider than the editor', () => {
+      const h = createHarness({ blocks: WIDE });
+
+      h.rect.startSelection(190, 280);
+      h.moveTo(190, 320);
+
+      expect(h.blockSelection.selectBlockByIndex.mock.calls).toEqual([ [ 0 ] ]);
+    });
+
+    it('does not reach it one pixel further left', () => {
+      const h = createHarness({ blocks: WIDE });
+
+      h.rect.startSelection(189, 280);
+      h.moveTo(189, 320);
+
+      expect(h.blockSelection.selectBlockByIndex).not.toHaveBeenCalled();
+    });
+
+    it('reaches a row from a straight drag on the right edge of a block wider than the editor', () => {
+      const h = createHarness({ blocks: WIDE });
+
+      h.rect.startSelection(1090, 280);
+      h.moveTo(1090, 320);
+
+      expect(h.blockSelection.selectBlockByIndex.mock.calls).toEqual([ [ 0 ] ]);
+    });
+
+    it('does not reach it one pixel further right', () => {
+      const h = createHarness({ blocks: WIDE });
+
+      h.rect.startSelection(1091, 280);
+      h.moveTo(1091, 320);
+
+      expect(h.blockSelection.selectBlockByIndex).not.toHaveBeenCalled();
     });
   });
 
@@ -1542,7 +1791,6 @@ describe('RectangleSelection — surviving mutants', () => {
           bottom: 240 },
         slot: { box: slotBox,
           kind: slotKind },
-        hitHolder: true,
       },
       {
         id: 'kid',
@@ -1624,8 +1872,7 @@ describe('RectangleSelection — surviving mutants', () => {
               bottom: 240 },
             slot: { box: PLAIN_SLOT,
               insideDescendant: true },
-            hitHolder: true,
-          },
+              },
           {
             id: 'kid',
             parentId: 'tog',
@@ -1666,7 +1913,6 @@ describe('RectangleSelection — surviving mutants', () => {
           bottom: 400 },
         kind: 'childToolbar',
         firstChild: options.firstChild },
-        hitHolder: true,
       },
       {
         id: 'kid',

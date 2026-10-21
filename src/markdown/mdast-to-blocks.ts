@@ -9,7 +9,7 @@ import { BREAK, literalTree, phrasingToTree } from './phrasing-to-tree';
 import type { InlineNode } from '../shared/rich-text/inline-tree';
 import { inlineTreeToSegments } from '../shared/rich-text/html-to-segments';
 import { normalizeFenceLang } from './fence-language';
-import { matchAlert, type AlertKind } from './alerts';
+import { ALERT_STYLE, matchAlert, type AlertKind } from './alerts';
 
 /** Everything one `mdastToBlocks` call shares with every node handler. */
 interface ConvertContext {
@@ -528,14 +528,6 @@ function handleListItem(
 }
 
 /** Callout emoji and background preset per GitHub alert kind. */
-const ALERT_STYLE: Record<AlertKind, { emoji: string; backgroundColor: string }> = {
-  note: { emoji: 'ℹ️', backgroundColor: 'blue' },
-  tip: { emoji: '💡', backgroundColor: 'green' },
-  important: { emoji: '❗', backgroundColor: 'purple' },
-  warning: { emoji: '⚠️', backgroundColor: 'orange' },
-  caution: { emoji: '🛑', backgroundColor: 'red' },
-};
-
 /**
  * A quote's text is one inline field, so only paragraphs join into it. Any
  * other child (code, list, nested quote) becomes its own block in place,

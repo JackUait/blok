@@ -1107,5 +1107,74 @@ describe('createLivePreview', () => {
       expect(state.layer.querySelectorAll('hr')).toHaveLength(1);
       expect(state.layer.querySelectorAll(SLOT)).toHaveLength(0);
     });
+
+    const CALLOUT = '[data-blok-tool="callout"]';
+    const calloutBody = (): string => state.layer.querySelector(`${CALLOUT} [data-blok-nested-blocks]`)?.textContent ?? '';
+
+    it('draws a GitHub alert as the callout the importer makes, never as a quote', () => {
+      const preview = make();
+
+      preview.update('c1', markdown('> [!NOTE]\n> Body **b**'));
+      vi.advanceTimersByTime(35 * 10);
+
+      const callout = state.layer.querySelector<HTMLElement>(CALLOUT);
+
+      expect(callout?.querySelector('[data-blok-testid="callout-emoji-face"]')?.textContent).toBe('ℹ️');
+      expect(callout?.style.backgroundColor).toBe('var(--blok-color-blue-bg)');
+      expect(calloutBody()).toBe('Body b');
+      expect(layerText()).not.toContain('[!');
+      expect(state.layer.querySelector('blockquote')).toBeNull();
+    });
+
+    it('shows no marker text while the alert marker is still being written', () => {
+      const preview = make();
+      const json = markdown('> [!WARNING]\n> Careful');
+
+      preview.update('c1', open(json, '[!WARN'));
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(layerText()).not.toContain('[!');
+      expect(state.layer.querySelector('blockquote')).toBeNull();
+
+      preview.update('c1', open(json, '> Car'));
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(state.layer.querySelector(CALLOUT)?.querySelector('[data-blok-testid="callout-emoji-face"]')?.textContent).toBe('⚠️');
+    });
+
+    it('keeps a lowercase marker a quote, as the importer does', () => {
+      const preview = make();
+
+      preview.update('c1', markdown('> [!note]\n> lower'));
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(state.layer.querySelector(CALLOUT)).toBeNull();
+      expect(state.layer.querySelector('blockquote')?.textContent).toBe('[!note] lower');
+    });
+
+    it('draws a callout body as its own blocks, and ends it at the first line without ">"', () => {
+      const preview = make();
+
+      preview.update('c1', markdown('> [!TIP] Lead\n> - one\n> - two\n\nafter'));
+      vi.advanceTimersByTime(35 * 20);
+
+      const callout = state.layer.querySelector(CALLOUT);
+
+      expect(callout?.querySelectorAll('[data-list-style="unordered"]')).toHaveLength(2);
+      expect(calloutBody()).toBe('Lead•one•two');
+      expect(callout?.textContent).not.toContain('after');
+      expect(layerText()).toContain('after');
+    });
+
+    it('draws a callout from block.insert', () => {
+      const preview = make();
+      const json = execute({ name: 'block.insert', args: { position: { after: 'b1' }, type: 'callout', data: { emoji: '🔥', backgroundColor: 'red' } } });
+
+      preview.update('c1', json);
+      vi.advanceTimersByTime(35 * 10);
+
+      expect(state.layer.querySelector(CALLOUT)?.querySelector('[data-blok-testid="callout-emoji-face"]')?.textContent).toBe('🔥');
+      expect(state.layer.querySelectorAll(SLOT)).toHaveLength(0);
+    });
   });
 });

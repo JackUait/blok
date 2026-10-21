@@ -5,7 +5,17 @@ export const ALERT_KINDS = ['note', 'tip', 'important', 'warning', 'caution'] as
 
 export type AlertKind = typeof ALERT_KINDS[number];
 
-const ALERT_MARKER = /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/;
+/** Case-sensitive, as GitHub reads it: `[!note]` stays a quote. */
+export const ALERT_MARKER = /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/;
+
+/** The callout an alert becomes. */
+export const ALERT_STYLE: Record<AlertKind, { emoji: string; backgroundColor: string }> = {
+  note: { emoji: 'ℹ️', backgroundColor: 'blue' },
+  tip: { emoji: '💡', backgroundColor: 'green' },
+  important: { emoji: '❗', backgroundColor: 'purple' },
+  warning: { emoji: '⚠️', backgroundColor: 'orange' },
+  caution: { emoji: '🛑', backgroundColor: 'red' },
+};
 
 /**
  * Detect a GitHub alert blockquote (`> [!NOTE]` on the first line) and return

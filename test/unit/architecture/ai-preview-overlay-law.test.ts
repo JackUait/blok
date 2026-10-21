@@ -36,6 +36,8 @@ const ALLOWED_RECEIVERS: Record<string, string> = {
   cell: 'A preview table cell tableCell just created.',
   blocks: 'A preview cell\'s content box, created by tableCell.',
   gutter: 'The line numbers of a preview code block buildCodeDOM just created.',
+  body: 'A preview callout\'s child container, created by makeCallout through buildCalloutDOM.',
+  slot: 'A preview callout child\'s box, created by makeCallout.',
   landedWord: 'A word span this module created; it only gets its text reset.',
 };
 

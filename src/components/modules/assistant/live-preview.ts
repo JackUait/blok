@@ -1,5 +1,7 @@
 import { readPartialCommands } from '../../../agent/partial-json';
 import type { PartialCommand } from '../../../agent/partial-json';
+import { ALERT_KINDS, ALERT_MARKER, ALERT_STYLE } from '../../../markdown/alerts';
+import type { AlertKind } from '../../../markdown/alerts';
 import { normalizeFenceLang } from '../../../markdown/fence-language';
 import { DIVIDER_RULE_CLASSES, DIVIDER_WRAPPER_CLASSES } from '../../../shared/tool-classes/divider';
 import { headerClasses } from '../../../shared/tool-classes/header';
@@ -7,9 +9,11 @@ import { LIST_CONTENT_CLASSES, LIST_ITEM_CLASSES, LIST_ITEM_ROW_CLASSES } from '
 import { PARAGRAPH_CLASSES } from '../../../shared/tool-classes/paragraph';
 import { quoteClasses } from '../../../shared/tool-classes/quote';
 import { DEFAULT_LANGUAGE, GUTTER_LINE_STYLES, LANGUAGE_COLORS, LANGUAGES } from '../../../tools/code/constants';
+import { buildCalloutDOM } from '../../../tools/callout/dom-builder';
 import { buildCodeDOM } from '../../../tools/code/dom-builder';
 import { createMarker } from '../../../tools/list/dom-builder';
 import { DATA_ATTR } from '../../constants/data-attributes';
+import { colorVarName } from '../../shared/color-presets';
 import { prefersReducedMotion } from '../../utils/reduced-motion';
 
 import { gapSize, holdGapChanges, releaseGap, reserveGap } from './gap';
@@ -54,7 +58,7 @@ const WORD_GAP_MS = 35;
 
 const INSERTS = new Set(['block.insert', 'markdown.insert']);
 
-type Kind = 'paragraph' | 'header' | 'list' | 'rewrite' | 'table' | 'quote' | 'code' | 'divider';
+type Kind = 'paragraph' | 'header' | 'list' | 'rewrite' | 'table' | 'quote' | 'code' | 'divider' | 'callout';
 type ListStyle = 'unordered' | 'ordered' | 'checklist';
 
 /** One table cell. `placement`: the importer's, from the column's alignment. */
@@ -63,6 +67,7 @@ interface CellSpec { text: string; complete: boolean; placement?: string }
 /**
  * `before` / `after`: a rewrite's text outside the replaced range.
  * `rows`: a table's cells, every row as wide as the widest. `heading`: its first row is a heading row.
+ * `children`: a callout's body blocks. `color` / `background`: a callout's preset names.
  */
 interface LineSpec {
   kind: Kind;
@@ -75,6 +80,10 @@ interface LineSpec {
   rows?: CellSpec[][];
   heading?: boolean;
   language?: string;
+  emoji?: string;
+  color?: string;
+  background?: string;
+  children?: LineSpec[];
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -179,6 +188,15 @@ const blockLine = (command: PartialCommand): LineSpec => {
   }
   if (type === 'divider') {
     return { ...base, kind: 'divider', text: '', complete: true };
+  }
+  if (type === 'callout') {
+    const name = (value: unknown): string | undefined => (typeof value === 'string' && value !== '' ? value : undefined);
+
+    // Its text comes in child blocks of their own, so it shows one empty paragraph, as an empty callout does.
+    return {
+      ...base, kind: 'callout', text: '', complete: true, emoji: typeof data.emoji === 'string' ? data.emoji : '',
+      color: name(data.textColor), background: name(data.backgroundColor), children: [{ ...base, kind: 'paragraph', text: '', complete: true }],
+    };
   }
   const kind: Kind = type === 'header' || type === 'list' || type === 'quote' ? type : 'paragraph';
 
@@ -340,6 +358,39 @@ const tableAt = (raw: string[], index: number, lineDone: LineDone): Parsed | nul
   };
 };
 
+const ALERT_TAGS = ALERT_KINDS.map((kind) => `[!${kind.toUpperCase()}]`);
+
+/** A quote line whose text may still become an alert marker: it is not quote text yet. */
+const alertPrefix = (line: string): boolean => {
+  const text = QUOTE.exec(line)?.[1].trim() ?? '';
+
+  return text !== '' && ALERT_TAGS.some((tag) => tag.startsWith(text) && tag !== text);
+};
+
+/** A GitHub alert: the importer makes it a callout whose body is child blocks. */
+const calloutAt = (raw: string[], index: number, lineDone: LineDone): Parsed | null => {
+  const first = QUOTE.exec(raw[index])?.[1] ?? '';
+  const marker = ALERT_MARKER.exec(first);
+
+  if (marker === null) {
+    return null;
+  }
+  const end = raw.findIndex((line, at) => at > index && !QUOTE.test(line));
+  const stop = end < 0 ? raw.length : end;
+  const lead = first.slice(marker[0].length);
+  const skip = lead === '' ? 1 : 0;
+  const body = [lead, ...raw.slice(index + 1, stop).map((line) => QUOTE.exec(line)?.[1] ?? '')].slice(skip);
+  const style = ALERT_STYLE[marker[1].toLowerCase() as AlertKind];
+
+  return {
+    spec: {
+      ...BASE, kind: 'callout', text: '', complete: lineDone(stop - 1), emoji: style.emoji, background: style.backgroundColor,
+      children: parseLines(body, (at) => lineDone(index + skip + at)),
+    },
+    next: stop,
+  };
+};
+
 const quoteAt = (raw: string[], index: number, lineDone: LineDone): Parsed | null => {
   if (!QUOTE.test(raw[index])) {
     return null;
@@ -352,12 +403,8 @@ const quoteAt = (raw: string[], index: number, lineDone: LineDone): Parsed | nul
   return { spec: { ...BASE, kind: 'quote', text: inlineMarkdown(texts.join(' '), complete), complete }, next: stop };
 };
 
-const markdownLines = (command: PartialCommand): LineSpec[] => {
-  const { args, done } = command;
-  const markdown = typeof args.markdown === 'string' ? args.markdown : '';
-  const allDone = settled(args, 'markdown', done);
-  const raw = markdown.split('\n');
-  const lineDone: LineDone = (index) => allDone || index < raw.length - 1;
+/** Blocks from Markdown lines; also a callout's body. */
+function parseLines(raw: string[], lineDone: LineDone): LineSpec[] {
   const specs: LineSpec[] = [];
   const paragraph: { texts: string[]; complete: boolean } = { texts: [], complete: true };
   const flush = (): void => {
@@ -372,7 +419,7 @@ const markdownLines = (command: PartialCommand): LineSpec[] => {
     const index = at.index;
     const line = raw[index];
     const complete = lineDone(index);
-    const block = fencedCode(raw, index, lineDone) ?? tableAt(raw, index, lineDone) ?? quoteAt(raw, index, lineDone);
+    const block = fencedCode(raw, index, lineDone) ?? tableAt(raw, index, lineDone) ?? calloutAt(raw, index, lineDone) ?? quoteAt(raw, index, lineDone);
     const heading = /^(#{1,6})\s+(.*)$/.exec(line);
     const check = /^\s*[-*+]\s+\[[ xX]\]\s*(.*)$/.exec(line);
     const bullet = /^\s*[-*+]\s+(.*)$/.exec(line);
@@ -380,7 +427,7 @@ const markdownLines = (command: PartialCommand): LineSpec[] => {
     const underline = complete && paragraph.texts.length > 0 ? SETEXT.exec(line) : null;
 
     at.index += 1;
-    if (line.trim() === '' || (!complete && (MARKER_ONLY.test(line.trim()) || MARKS_ONLY.test(line)))) {
+    if (line.trim() === '' || (!complete && (MARKER_ONLY.test(line.trim()) || MARKS_ONLY.test(line) || alertPrefix(line)))) {
       flush();
     } else if (underline) {
       specs.push({ ...BASE, kind: 'header', level: underline[1].startsWith('=') ? 1 : 2, text: inlineMarkdown(paragraph.texts.join(' '), true), complete: true });
@@ -407,17 +454,28 @@ const markdownLines = (command: PartialCommand): LineSpec[] => {
   }
   flush();
 
-  return specs.length > 0 ? specs : [{ ...BASE, kind: 'paragraph', text: '', complete: allDone }];
+  return specs.length > 0 ? specs : [{ ...BASE, kind: 'paragraph', text: '', complete: lineDone(raw.length - 1) }];
+}
+
+const markdownLines = (command: PartialCommand): LineSpec[] => {
+  const { args, done } = command;
+  const markdown = typeof args.markdown === 'string' ? args.markdown : '';
+  const allDone = settled(args, 'markdown', done);
+  const raw = markdown.split('\n');
+
+  return parseLines(raw, (index) => allDone || index < raw.length - 1);
 };
 
-/** A field words land in: a block's text, or one table cell. */
-interface Field { text: string; complete: boolean }
+/** A field words land in: a block's text, one table cell, or a field of a callout's child. `verbatim`: code, which keeps its spacing. */
+interface Field { text: string; complete: boolean; verbatim: boolean }
 
-/** Table cells in reading order; a finished line has every field final. */
+/** Fields in reading order; a finished line has every field final. */
 const fieldsOf = (spec: LineSpec): Field[] => {
-  const fields = spec.rows ? spec.rows.flat() : [spec];
+  const fields: Field[] = spec.children
+    ? spec.children.flatMap(fieldsOf)
+    : (spec.rows ? spec.rows.flat() : [spec]).map((field) => ({ text: field.text, complete: field.complete, verbatim: spec.kind === 'code' }));
 
-  return spec.complete ? fields.map((field) => ({ text: field.text, complete: true })) : fields;
+  return spec.complete ? fields.map((field) => ({ ...field, complete: true })) : fields;
 };
 
 interface Token { text: string; field: number }
@@ -426,21 +484,21 @@ interface Token { text: string; field: number }
 const splitWords = (text: string, verbatim: boolean): string[] => text.match(verbatim ? /^\s+|\S+\s*/g : /\S+\s*/g) ?? [];
 
 const tokensOf = (spec: LineSpec): Token[] =>
-  fieldsOf(spec).flatMap((field, index) => splitWords(field.text, spec.kind === 'code').map((text) => ({ text, field: index })));
+  fieldsOf(spec).flatMap((field, index) => splitWords(field.text, field.verbatim).map((text) => ({ text, field: index })));
 
 /** Words that can land now: a word still being written waits for its trailing space. Only the newest field is ever unfinished. */
 const landable = (spec: LineSpec): number => fieldsOf(spec).reduce((count, field) => {
-  const fieldWords = splitWords(field.text, spec.kind === 'code');
+  const fieldWords = splitWords(field.text, field.verbatim);
 
   return count + (field.complete ? fieldWords.length : fieldWords.filter((token) => /\s$/.test(token)).length);
 }, 0);
 
 const SLOTS: Record<Kind, string[]> = {
-  header: ['heading'], list: ['short'], paragraph: ['line', 'short'], rewrite: ['line'], quote: ['line'], table: [], code: [], divider: [],
+  header: ['heading'], list: ['short'], paragraph: ['line', 'short'], rewrite: ['line'], quote: ['line'], table: [], code: [], divider: [], callout: [],
 };
 
 /** Blocks whose final form shows before any word: a grid, a code box, a rule. */
-const FRAMED_EMPTY = new Set<Kind>(['table', 'code', 'divider']);
+const FRAMED_EMPTY = new Set<Kind>(['table', 'code', 'divider', 'callout']);
 
 const makeSlots = (kind: Kind): HTMLElement[] => {
   const shimmer = !prefersReducedMotion();
@@ -610,8 +668,68 @@ const makeDivider = (): View => {
   return { block: wrapper, targets: [] };
 };
 
+/** What a view is built for: a spec that differs here needs new markup. A callout's children are its sync's business. */
+const shapeOf = (spec: LineSpec, ordinal: number): string => {
+  const { kind, level, style, before, after, language, rows, emoji, color, background } = spec;
+
+  return [kind, level, style, ordinal, before ?? '', after ?? '', language ?? '', rows?.[0]?.length ?? 0, emoji ?? '', color ?? '', background ?? ''].join(':');
+};
+
+/** An ordered list item's number: it counts up through a run of them. */
+const ordinalsOf = (specs: LineSpec[]): number[] => specs.reduce<number[]>((ordinals, spec, index) => {
+  ordinals.push(spec.kind === 'list' && spec.style === 'ordered' ? (ordinals[index - 1] ?? 0) + 1 : 0);
+
+  return ordinals;
+}, []);
+
+/** Mirrors the callout tool's `applyColors`. */
+const CALLOUT_DEFAULT_BORDER = '1px solid var(--blok-callout-default-border, #e5e7eb)';
+
+/** The callout tool's markup; its body holds one view per child block, the way its child holders stack. */
+const makeCallout = (spec: LineSpec): View => {
+  const dom = buildCalloutDOM({ emoji: spec.emoji ?? '', readOnly: true, addEmojiLabel: '' });
+  const body = dom.childContainer;
+  const parts: Array<{ view: View; shape: string }> = [];
+
+  dom.wrapper.style.color = spec.color === undefined ? '' : colorVarName(spec.color, 'text');
+  if (spec.background === undefined) {
+    dom.wrapper.style.border = CALLOUT_DEFAULT_BORDER;
+  } else {
+    dom.wrapper.style.backgroundColor = colorVarName(spec.background, 'bg');
+  }
+
+  return {
+    block: dom.wrapper,
+    get targets() {
+      return parts.flatMap((part) => part.view.targets);
+    },
+    // Children only grow here, like table rows: a rebuilt child would replay its words' blur-in.
+    sync: (next) => {
+      const children = next.children ?? [];
+      const ordinals = ordinalsOf(children);
+      const shapes = children.map((child, index) => shapeOf(child, ordinals[index]));
+
+      if (children.length < parts.length || parts.some((part, index) => part.shape !== shapes[index] || part.view.sync?.(children[index]) === false)) {
+        return false;
+      }
+      children.slice(parts.length).forEach((child) => {
+        const index = parts.length;
+        const slot = document.createElement('div');
+        const view = makeView(child, ordinals[index]);
+
+        view.sync?.(child);
+        slot.append(view.block);
+        body.append(slot);
+        parts.push({ view, shape: shapes[index] });
+      });
+
+      return true;
+    },
+  };
+};
+
 /** The real tool's markup and classes, so the hand-off to the real block does not jump. */
-const makeView = (spec: LineSpec, ordinal: number): View => {
+function makeView(spec: LineSpec, ordinal: number): View {
   if (spec.kind === 'table') {
     return makeTable(spec);
   }
@@ -620,6 +738,9 @@ const makeView = (spec: LineSpec, ordinal: number): View => {
   }
   if (spec.kind === 'divider') {
     return makeDivider();
+  }
+  if (spec.kind === 'callout') {
+    return makeCallout(spec);
   }
   if (spec.kind === 'quote') {
     const quote = document.createElement('blockquote');
@@ -668,7 +789,7 @@ const makeView = (spec: LineSpec, ordinal: number): View => {
   paragraph.className = PARAGRAPH_CLASSES.join(' ');
 
   return { block: paragraph, targets: [paragraph] };
-};
+}
 
 /** One block in the preview: slots until its first word, then the real block's markup. */
 class Line {
@@ -739,8 +860,8 @@ class Line {
   }
 
   private draw(): void {
-    const { kind, level, style, before, after, language, rows } = this.spec;
-    const shape = [kind, level, style, this.ordinal, before ?? '', after ?? '', language ?? '', rows?.[0]?.length ?? 0].join(':');
+    const { kind, before, after } = this.spec;
+    const shape = shapeOf(this.spec, this.ordinal);
     // A range rewrite shows the text around the range at once.
     const framed = FRAMED_EMPTY.has(kind) || this.spans.length > 0 || Boolean(before) || Boolean(after);
 
@@ -809,23 +930,21 @@ class Item {
   public sync(specs: LineSpec[]): void {
     this.lines.splice(specs.length).forEach((line) => line.el.remove());
 
-    const ordinal = { count: 0 };
+    const ordinals = ordinalsOf(specs);
 
     specs.forEach((spec, index) => {
-      ordinal.count = spec.kind === 'list' && spec.style === 'ordered' ? ordinal.count + 1 : 0;
-
       const known = this.lines[index];
 
       if (known) {
-        known.update(spec, ordinal.count);
+        known.update(spec, ordinals[index]);
 
         return;
       }
-      const line = new Line(spec, ordinal.count);
+      const line = new Line(spec, ordinals[index]);
 
       this.root.append(line.el);
       this.lines.push(line);
-      line.update(spec, ordinal.count);
+      line.update(spec, ordinals[index]);
     });
   }
 }

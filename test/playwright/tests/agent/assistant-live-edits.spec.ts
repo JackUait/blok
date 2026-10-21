@@ -617,7 +617,7 @@ test.describe('Ask AI live edits', () => {
     await emit(page, 0, { type: 'tool_input', index: 0, json: json.slice(0, json.indexOf('| Mars |') + '| Mars |'.length) });
 
     const preview = page.getByTestId('ai-preview');
-    const previewTable = preview.locator('table');
+    const previewTable = preview.getByRole('table', { includeHidden: true });
 
     await expect(previewTable).toBeVisible();
     await expect(previewTable.locator('[data-blok-table-cell]')).toHaveCount(4);
@@ -645,6 +645,56 @@ test.describe('Ask AI live edits', () => {
     const real = page.locator(`#${HOLDER_ID} [data-blok-tool="table"] table`);
 
     await expect(real.locator('[data-blok-table-cell]')).toHaveText(['Planet', 'Moons', 'Mars', '2', 'Jupiter', '95']);
+    expect(await look(real)).toEqual(before);
+  });
+
+  test('a GitHub alert streams as the real callout, with its body blocks, and hands off without a jump', async ({ page }) => {
+    const markdown = '> [!NOTE]\n> Mars has **two** moons.\n> - Phobos\n> - Deimos';
+    const input = { commands: [{ name: 'markdown.insert', args: { position: 'end', markdown } }] };
+    const json = JSON.stringify(input);
+
+    await ask(page, 'Second');
+    await emit(page, 0, { type: 'tool_start', index: 0, id: 'call-1', name: 'blok_execute' });
+    await emit(page, 0, { type: 'tool_input', index: 0, json: json.slice(0, json.indexOf('moons.') + 'moons.'.length) });
+
+    const preview = page.getByTestId('ai-preview');
+    const previewCallout = preview.locator('[data-blok-tool="callout"]');
+
+    await expect(previewCallout).toBeVisible();
+    await expect(previewCallout.getByTestId('callout-emoji-face')).toHaveText('ℹ️');
+    expect(await preview.textContent()).not.toMatch(/\[!|>/);
+
+    await emit(page, 0, { type: 'tool_input', index: 0, json });
+    await expect(previewCallout).toContainText('Deimos');
+
+    const look = (callout: Locator): Promise<Record<string, string | number>> => callout.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      const offset = (node: Element | null): string => {
+        const box = node?.getBoundingClientRect();
+
+        return box === undefined ? 'none' : `${Math.round(box.left - rect.left)},${Math.round(box.top - rect.top)},${Math.round(box.height)}`;
+      };
+      const texts = [...element.querySelectorAll('[data-blok-nested-blocks] *')].filter((node) => node.childElementCount === 0 && node.textContent?.trim() === 'Deimos');
+
+      return {
+        left: Math.round(rect.left), width: Math.round(rect.width), height: Math.round(rect.height),
+        background: style.backgroundColor, radius: style.borderTopLeftRadius, border: style.borderTopWidth,
+        emoji: offset(element.querySelector('[data-blok-testid="callout-emoji-face"]')),
+        lastItem: offset(texts[0]?.closest('[data-list-style]') ?? null),
+      };
+    });
+    const before = await look(previewCallout);
+
+    expect(before.emoji).not.toBe('none');
+    expect(before.lastItem).not.toBe('none');
+
+    await emit(page, 0, { type: 'tool_end', index: 0 });
+    await expect(preview).toHaveCount(0);
+
+    const real = page.locator(`#${HOLDER_ID} [data-blok-tool="callout"]`);
+
+    await expect(real).toContainText('Deimos');
     expect(await look(real)).toEqual(before);
   });
 });

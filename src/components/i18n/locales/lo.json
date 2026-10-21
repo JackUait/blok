@@ -121,6 +121,7 @@
   "assistant.stop": "ຢຸດ",
   "assistant.keep": "ເກັບໄວ້",
   "assistant.discard": "ຍົກເລີກ",
+  "assistant.continue": "ດຳເນີນການຕໍ່",
   "assistant.thinking": "ການຄິດ",
   "assistant.thinking.off": "ປິດ",
   "assistant.thinking.low": "ຕ່ຳ",

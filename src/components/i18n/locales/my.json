@@ -155,6 +155,7 @@
   "assistant.stop": "ရပ်ရန်",
   "assistant.keep": "ထားရှိရန်",
   "assistant.discard": "ပယ်ရန်",
+  "assistant.continue": "ဆက်လုပ်ရန်",
   "assistant.thinking": "တွေးခေါ်မှု",
   "assistant.thinking.off": "ပိတ်",
   "assistant.thinking.low": "နိမ့်",

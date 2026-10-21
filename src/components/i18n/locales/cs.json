@@ -166,6 +166,7 @@
   "assistant.stop": "Zastavit",
   "assistant.keep": "Ponechat",
   "assistant.discard": "Zahodit",
+  "assistant.continue": "Pokračovat",
   "assistant.thinking": "Uvažování",
   "assistant.thinking.off": "Vypnuto",
   "assistant.thinking.low": "Nízké",

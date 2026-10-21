@@ -226,6 +226,20 @@ describe('editor.agent.ask', () => {
     run.end();
   });
 
+  it('allows 100 model calls per prompt by default', async () => {
+    const calls = { count: 0 };
+    const editor = await createEditor(async () => {
+      calls.count += 1;
+
+      return { stop_reason: 'tool_use', content: [{ type: 'tool_use', id: `use-${calls.count}`, name: 'blok_read', input: {} }] };
+    });
+    const run = editor.agent.ask('Keep going');
+
+    expect(await run.result).toMatchObject({ status: 'step-limit' });
+    expect(calls.count).toBe(100);
+    run.end();
+  });
+
   it('stop() aborts the model call, applies nothing, and the run can still be discarded or ended', async () => {
     const seen: AbortSignal[] = [];
     const model: AgentModel = (request) => {

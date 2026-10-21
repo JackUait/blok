@@ -290,7 +290,7 @@
   --blok-icon-active-bg: var(--blok-item-focus-bg);
 }
 
-/* Stop: a quiet text button in place of send. */
+/* Stop (in place of send) and Continue (after the step limit): quiet text buttons. */
 [data-blok-assistant-button] {
   height: 28px;
   padding-inline: var(--blok-space-2-5);

@@ -132,6 +132,7 @@
   "assistant.stop": "შეჩერება",
   "assistant.keep": "შენახვა",
   "assistant.discard": "გაუქმება",
+  "assistant.continue": "გაგრძელება",
   "assistant.thinking": "აზროვნება",
   "assistant.thinking.off": "გამორთული",
   "assistant.thinking.low": "დაბალი",

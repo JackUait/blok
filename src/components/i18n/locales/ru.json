@@ -166,6 +166,7 @@
   "assistant.stop": "Остановить",
   "assistant.keep": "Оставить",
   "assistant.discard": "Отменить",
+  "assistant.continue": "Продолжить",
   "assistant.thinking": "Рассуждение",
   "assistant.thinking.off": "Выкл.",
   "assistant.thinking.low": "Низкое",

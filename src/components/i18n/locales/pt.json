@@ -166,6 +166,7 @@
   "assistant.stop": "Parar",
   "assistant.keep": "Manter",
   "assistant.discard": "Descartar",
+  "assistant.continue": "Continuar",
   "assistant.thinking": "Raciocínio",
   "assistant.thinking.off": "Desativado",
   "assistant.thinking.low": "Baixo",

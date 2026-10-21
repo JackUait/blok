@@ -132,6 +132,7 @@
   "assistant.stop": "หยุด",
   "assistant.keep": "เก็บไว้",
   "assistant.discard": "ทิ้ง",
+  "assistant.continue": "ดำเนินการต่อ",
   "assistant.thinking": "การคิด",
   "assistant.thinking.off": "ปิด",
   "assistant.thinking.low": "ต่ำ",

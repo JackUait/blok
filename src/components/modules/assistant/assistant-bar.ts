@@ -13,6 +13,7 @@ export interface AssistantBarCallbacks {
   onStop(): void;
   onKeep(): void;
   onDiscard(): void;
+  onContinue(): void;
   onEscape(): void;
   onThinking(level: AgentThinkingLevel): void;
 }
@@ -28,7 +29,8 @@ export type AssistantBarView =
   | { kind: 'working'; status: string }
   /** `edited`: this answer changed the document, so only its first line shows. */
   | { kind: 'answered'; reply: string; changed: boolean; edited: boolean }
-  | { kind: 'error'; message: string; changed: boolean };
+  /** `resumable`: the run ran out of steps, so Continue picks it up again. */
+  | { kind: 'error'; message: string; changed: boolean; resumable?: boolean };
 
 const ATTR = {
   dock: 'data-blok-assistant',
@@ -48,6 +50,7 @@ const ATTR = {
   button: 'data-blok-assistant-button',
   undo: 'data-blok-assistant-undo',
   keep: 'data-blok-assistant-keep',
+  continue: 'data-blok-assistant-continue',
   slots: 'data-blok-assistant-slots',
   working: 'data-blok-assistant-working',
 } as const;
@@ -146,6 +149,7 @@ export class AssistantBar {
   private readonly stop: HTMLButtonElement;
   private readonly undo: HTMLButtonElement;
   private readonly keep: HTMLButtonElement;
+  private readonly resume: HTMLButtonElement;
   private readonly thinking: HTMLButtonElement;
   private readonly slots: HTMLElement;
   private view: AssistantBarView = { kind: 'prompt' };
@@ -207,7 +211,9 @@ export class AssistantBar {
     this.thinking.hidden = true;
     this.undo = this.iconButton(ATTR.undo, IconUndo, t('assistant.discard'));
     this.keep = this.iconButton(ATTR.keep, IconCheck, t('assistant.keep'));
-    this.head.append(headIcon, answer, this.undo, this.keep);
+    this.resume = build('button', { type: 'button', [ATTR.button]: '', [ATTR.continue]: '' });
+    this.resume.textContent = t('assistant.continue');
+    this.head.append(headIcon, answer, this.resume, this.undo, this.keep);
     row.append(icon, field, this.thinking, this.send, this.stop);
 
     this.reply = build('div', { [ATTR.reply]: '' });
@@ -225,6 +231,7 @@ export class AssistantBar {
     this.stop.addEventListener('click', () => callbacks.onStop());
     this.keep.addEventListener('click', () => callbacks.onKeep());
     this.undo.addEventListener('click', () => callbacks.onDiscard());
+    this.resume.addEventListener('click', () => callbacks.onContinue());
 
     this.element.hidden = true;
     this.render({ kind: 'prompt' });
@@ -462,6 +469,7 @@ export class AssistantBar {
 
     this.summary.hidden = kind !== 'answered' || this.summary.textContent === '';
     this.alert.hidden = kind !== 'error' || this.alert.textContent === '';
+    this.resume.hidden = this.view.kind !== 'error' || this.view.resumable !== true;
     this.head.hidden = this.summary.hidden && this.alert.hidden && !actions;
     this.element.toggleAttribute(ATTR.followUp, !this.head.hidden);
     this.field.placeholder = working ? '' : this.t(kind === 'prompt' ? 'assistant.placeholder' : 'assistant.followUp');

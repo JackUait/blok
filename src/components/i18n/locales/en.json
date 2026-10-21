@@ -169,6 +169,7 @@
   "assistant.stop": "Stop",
   "assistant.keep": "Keep",
   "assistant.discard": "Discard",
+  "assistant.continue": "Continue",
   "assistant.thinking": "Thinking",
   "assistant.thinking.off": "Off",
   "assistant.thinking.low": "Low",

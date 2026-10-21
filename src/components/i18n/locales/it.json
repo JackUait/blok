@@ -166,6 +166,7 @@
   "assistant.stop": "Interrompi",
   "assistant.keep": "Mantieni",
   "assistant.discard": "Scarta",
+  "assistant.continue": "Continua",
   "assistant.thinking": "Ragionamento",
   "assistant.thinking.off": "Disattivato",
   "assistant.thinking.low": "Basso",

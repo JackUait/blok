@@ -35,6 +35,9 @@ const REVEAL_MS = 900;
 
 const EXECUTE_TOOL = 'blok_execute';
 
+/** What the Continue button sends. The model reads it, so it stays English. */
+const CONTINUE_PROMPT = 'Continue where you stopped.';
+
 /** Room kept between a bar scrolled into view and the window's edge. */
 const REVEAL_ROOM = 16;
 
@@ -238,6 +241,7 @@ export class Assistant extends Module {
       onStop: () => this.stopAnswer(),
       onKeep: () => this.close(),
       onDiscard: () => void this.discard(),
+      onContinue: () => this.submit(CONTINUE_PROMPT),
       onEscape: () => this.escape(),
       onThinking: (level) => {
         this.level = level;
@@ -401,7 +405,7 @@ export class Assistant extends Module {
         ? this.Blok.I18n.t('assistant.failed', { error: result.error ?? '' })
         : this.Blok.I18n.t(messages[result.status]);
 
-      this.bar?.render({ kind: 'error', message, changed: this.changed });
+      this.bar?.render({ kind: 'error', message, changed: this.changed, resumable: result.status === 'step-limit' });
     }
     this.bar?.focusField();
   }

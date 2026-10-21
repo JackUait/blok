@@ -149,7 +149,7 @@ export interface AgentAssistantConfig {
   model: AgentModel;
   /** Shown on the agent caret and in announcements. Default "AI". */
   name?: string;
-  /** Model calls allowed per prompt. Default 30. */
+  /** Model calls allowed per prompt. Default 100. */
   maxSteps?: number;
   /** Extra tools the model may call, after the Blok tools. The host runs them. */
   tools?: AgentHostTool[];

@@ -166,6 +166,7 @@
   "assistant.stop": "Peata",
   "assistant.keep": "Säilita",
   "assistant.discard": "Loobu",
+  "assistant.continue": "Jätka",
   "assistant.thinking": "Arutlus",
   "assistant.thinking.off": "Väljas",
   "assistant.thinking.low": "Madal",

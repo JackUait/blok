@@ -39,7 +39,7 @@ export class AgentTurnOpenError extends Error {
 
 const IDLE: AgentState = { status: 'idle' };
 
-const DEFAULT_MAX_STEPS = 30;
+const DEFAULT_MAX_STEPS = 100;
 
 /** Where the user is: the text for the model and the blocks it names. */
 export interface UserPlace {

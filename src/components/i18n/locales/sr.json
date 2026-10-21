@@ -166,6 +166,7 @@
   "assistant.stop": "Заустави",
   "assistant.keep": "Задржи",
   "assistant.discard": "Одбаци",
+  "assistant.continue": "Настави",
   "assistant.thinking": "Размишљање",
   "assistant.thinking.off": "Искључено",
   "assistant.thinking.low": "Ниско",

@@ -54,6 +54,7 @@ export type BlokMessageKey =
   | 'a11y.textFormatting'
   | 'agent.changedBlocks'
   | 'agent.changedOneBlock'
+  | 'assistant.continue'
   | 'assistant.discard'
   | 'assistant.discardBlocked'
   | 'assistant.failed'

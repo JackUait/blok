@@ -166,6 +166,7 @@
   "assistant.stop": "Leállítás",
   "assistant.keep": "Megtartás",
   "assistant.discard": "Elvetés",
+  "assistant.continue": "Folytatás",
   "assistant.thinking": "Gondolkodás",
   "assistant.thinking.off": "Ki",
   "assistant.thinking.low": "Alacsony",

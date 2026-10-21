@@ -138,6 +138,7 @@
   "assistant.stop": "Arrêter",
   "assistant.keep": "Conserver",
   "assistant.discard": "Annuler",
+  "assistant.continue": "Continuer",
   "assistant.thinking": "Réflexion",
   "assistant.thinking.off": "Désactivée",
   "assistant.thinking.low": "Faible",

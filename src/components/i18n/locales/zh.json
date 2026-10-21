@@ -138,6 +138,7 @@
   "assistant.stop": "停止",
   "assistant.keep": "保留",
   "assistant.discard": "放弃",
+  "assistant.continue": "继续",
   "assistant.thinking": "思考",
   "assistant.thinking.off": "关闭",
   "assistant.thinking.low": "低",

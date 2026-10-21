@@ -138,6 +138,7 @@
   "assistant.stop": "توقف",
   "assistant.keep": "نگه داشتن",
   "assistant.discard": "کنار گذاشتن",
+  "assistant.continue": "ادامه",
   "assistant.thinking": "استدلال",
   "assistant.thinking.off": "خاموش",
   "assistant.thinking.low": "کم",

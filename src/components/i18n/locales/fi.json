@@ -138,6 +138,7 @@
   "assistant.stop": "Pysäytä",
   "assistant.keep": "Säilytä",
   "assistant.discard": "Hylkää",
+  "assistant.continue": "Jatka",
   "assistant.thinking": "Päättely",
   "assistant.thinking.off": "Pois",
   "assistant.thinking.low": "Matala",

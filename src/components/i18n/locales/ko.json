@@ -166,6 +166,7 @@
   "assistant.stop": "중지",
   "assistant.keep": "유지",
   "assistant.discard": "취소",
+  "assistant.continue": "계속",
   "assistant.thinking": "추론",
   "assistant.thinking.off": "끔",
   "assistant.thinking.low": "낮음",

@@ -166,6 +166,7 @@
   "assistant.stop": "停止",
   "assistant.keep": "保持",
   "assistant.discard": "破棄",
+  "assistant.continue": "続行",
   "assistant.thinking": "思考",
   "assistant.thinking.off": "オフ",
   "assistant.thinking.low": "低",

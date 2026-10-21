@@ -660,6 +660,39 @@ describe('in-editor assistant bar', () => {
     expect(within(bar()).getByRole('textbox')).toHaveAttribute('placeholder', 'Ask a question or request a change…');
   });
 
+  it('after the step limit, Continue resumes the same conversation and the field stays', async () => {
+    const model = scripted(insertBatch('Part one'), answer('Finished the rest.'));
+    const editor = await createEditor(null, undefined, { agent: { assistant: { model, maxSteps: 1 } } });
+
+    editor.agent.openAssistant();
+    submit('Write a long page');
+    await waitFor(() => expect(within(bar()).getByRole('alert')).toHaveTextContent('AI stopped after too many steps.'));
+
+    const resume = within(bar()).getByRole('button', { name: 'Continue' });
+
+    expect(resume).toBeVisible();
+    expect(within(bar()).getByRole('textbox')).toBeVisible();
+
+    fireEvent.click(resume);
+    await waitFor(() => expect(within(bar()).getByText('Finished the rest.')).toBeVisible());
+
+    expect(model.requests).toHaveLength(2);
+    expect(model.requests[1].messages[0]).toEqual({ role: 'user', content: expect.stringContaining('Write a long page') });
+    expect(within(bar()).queryByRole('button', { name: 'Continue' })).toBeNull();
+  });
+
+  it('shows no Continue button for other stops', async () => {
+    const editor = await createEditor(async () => {
+      throw new Error('No API key');
+    });
+
+    editor.agent.openAssistant();
+    submit('Write');
+    await waitFor(() => expect(within(bar()).getByRole('alert')).toHaveTextContent('No API key'));
+
+    expect(within(bar()).queryByRole('button', { name: 'Continue' })).toBeNull();
+  });
+
   it('shows a failed model call as an alert', async () => {
     const editor = await createEditor(async () => {
       throw new Error('No API key');

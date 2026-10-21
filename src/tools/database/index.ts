@@ -5572,10 +5572,11 @@ export class DatabaseTool implements BlockTool {
           pickRow: (rowId: string) => this.pickCalendarEvent(rowId, dateId),
           lassoRows: (rowIds: string[]) => this.selectRows(rowIds),
         }),
-        addRow: (day) => {
-          if (dateId !== undefined) {
-            this.addCalendarRow(dateId, day);
-          }
+        addRow: (day, open) => {
+          if (dateId === undefined) return;
+          const rowId = this.addCalendarRow(dateId, day);
+
+          if (open === true && rowId !== undefined) this.handleRowClick(rowId);
         },
         setDate: (rowId, value) => {
           if (dateId !== undefined) {
@@ -5776,14 +5777,16 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** "+" on a day: a new row dated that day, plus what the view's filters ask for. */
-  private addCalendarRow(dateId: string, day: string): void {
-    if (this.readOnly) return;
+  private addCalendarRow(dateId: string, day: string): string | undefined {
+    if (this.readOnly) return undefined;
     const titlePropId = this.titlePropertyId();
     const rowData = this.model.createRowData({ ...this.newRowProperties(titlePropId, undefined, NO_VALUE_GROUP_KEY), [dateId]: day });
 
     this.insertNewRow(rowData);
     void this.sync.syncCreateRow({ id: rowData.id, properties: rowData.properties, position: rowData.position });
     this.rerenderView({ keepDrawer: true });
+
+    return rowData.id;
   }
 
   /**

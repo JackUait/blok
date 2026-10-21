@@ -644,6 +644,27 @@ test.describe('calendar', () => {
     expect(added?.properties['p-due']).toBe('2026-10-20');
   });
 
+  // research/30 B11: Notion made a page dated that day and opened it.
+  test('a plain click in an empty day cell adds a row on that date and opens it; Escape keeps the row', async ({ page }) => {
+    await mount(page, blocks({ type: 'calendar' }));
+
+    const cell = await day(page, '2026-10-20').boundingBox();
+
+    if (cell === null) throw new Error('no day');
+    await page.mouse.click(cell.x + cell.width / 2, cell.y + cell.height - 8);
+
+    await expect(drawer(page)).toBeVisible();
+    const added = (await savedRows(page)).filter((row) => !['r1', 'r2', 'r3'].includes(row.id));
+
+    expect(added).toHaveLength(1);
+    expect(added[0].properties['p-due']).toBe('2026-10-20');
+
+    // Notion: Escape closed the peek and the empty row stayed.
+    await page.keyboard.press('Escape');
+    await expect(drawer(page)).toBeHidden();
+    expect((await savedRows(page)).map((row) => row.id)).toContain(added[0].id);
+  });
+
   test('dragging an event to another day moves its date', async ({ page }) => {
     await mount(page, blocks({ type: 'calendar' }));
 

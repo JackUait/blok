@@ -163,6 +163,41 @@ test.describe('a lasso from the page margin', () => {
     await expect(database(page)).not.toHaveAttribute('data-blok-selected', 'true');
   });
 
+  // research/30 B11: one Escape cleared the picks; a second changed nothing.
+  test('one Escape clears a drag box made inside the calendar grid; a second Escape changes nothing', async ({ page }) => {
+    const today = new Date();
+    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() === today.getDate();
+    const [first, second] = await isoDays(page, lastDay ? [-1, 0] : [0, 1]);
+
+    await mount(page, blocks({ type: 'calendar' }, [first, second]));
+    const events = page.locator('[data-blok-database-calendar-event]');
+
+    await expect(events).toHaveCount(2);
+    const a = await events.nth(0).boundingBox();
+    const b = await events.nth(1).boundingBox();
+    const cell = await page.locator(`[data-blok-database-calendar-day][data-day="${first}"]`).boundingBox();
+
+    if (a === null || b === null || cell === null) {
+      throw new Error('no boxes');
+    }
+
+    await lasso(
+      page,
+      { x: cell.x + 8, y: cell.y + cell.height - 6 },
+      { x: Math.max(a.x + a.width, b.x + b.width) - 4, y: Math.min(a.y, b.y) + 4 }
+    );
+    expect(await picked(page)).toEqual(['r1', 'r2']);
+
+    await page.keyboard.press('Escape');
+    expect(await picked(page)).toEqual([]);
+
+    await page.keyboard.press('Escape');
+    expect(await picked(page)).toEqual([]);
+    await expect(database(page)).not.toHaveAttribute('data-blok-selected', 'true');
+    await expect(events).toHaveCount(2);
+    await expect(page.locator('[data-blok-database-drawer]')).toHaveCount(0);
+  });
+
   test('started on empty space inside the calendar grid, picks every event it touches, creates none, selects no text (research/23 §2c)', async ({ page }) => {
     const today = new Date();
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() === today.getDate();

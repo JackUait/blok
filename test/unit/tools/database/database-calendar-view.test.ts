@@ -443,7 +443,46 @@ describe('DatabaseCalendarView', () => {
 
       day(root, '2026-10-20').querySelector<HTMLElement>('[data-blok-database-calendar-add]')?.click();
 
-      expect(handlers.addRow).toHaveBeenCalledWith('2026-10-20');
+      expect(handlers.addRow).toHaveBeenCalledExactlyOnceWith('2026-10-20');
+    });
+
+    // research/30 B11: a plain click in an empty day cell made a page dated that day and opened it.
+    it('a plain click in a day cell adds a row on that date and opens it', () => {
+      const { root, handlers } = mount();
+
+      day(root, '2026-10-20').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(handlers.addRow).toHaveBeenCalledExactlyOnceWith('2026-10-20', true);
+      expect(handlers.openRow).not.toHaveBeenCalled();
+    });
+
+    it('a click on an event opens it and adds nothing', () => {
+      const { root, handlers } = mount();
+
+      events(root, 'r1')[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(handlers.openRow).toHaveBeenCalledExactlyOnceWith('r1');
+      expect(handlers.addRow).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['Shift', { shiftKey: true }],
+      ['Cmd', { metaKey: true }],
+      ['Ctrl', { ctrlKey: true }],
+    ])('a %s-click in a day cell adds nothing', (_name, modifiers) => {
+      const { root, handlers } = mount();
+
+      day(root, '2026-10-20').dispatchEvent(new MouseEvent('click', { bubbles: true, ...modifiers }));
+
+      expect(handlers.addRow).not.toHaveBeenCalled();
+    });
+
+    it('read-only: a click in a day cell adds nothing', () => {
+      const { root, handlers } = mount({ readOnly: true });
+
+      day(root, '2026-10-20').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(handlers.addRow).not.toHaveBeenCalled();
     });
 
     it('has no "+" when read-only', () => {

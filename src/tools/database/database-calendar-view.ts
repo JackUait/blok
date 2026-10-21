@@ -29,8 +29,8 @@ import { IconCalendar, IconChevronLeft, IconChevronRight, IconPlus } from '../..
 
 export interface CalendarHandlers {
   openRow: (rowId: string) => void;
-  /** Adds a row dated `day` (`YYYY-MM-DD`). */
-  addRow: (day: string) => void;
+  /** Adds a row dated `day` (`YYYY-MM-DD`), and opens it when `open` is set. */
+  addRow: (day: string, open?: boolean) => void;
   /** The row's new date value, as a stored string. */
   setDate: (rowId: string, value: string) => void;
   /** Show the range around `anchor`, then focus `focusDay` when given. */
@@ -536,6 +536,8 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     const rowId = target.closest('[data-blok-database-calendar-event]')?.getAttribute('data-row-id');
 
     if (rowId === null || rowId === undefined) {
+      this.addOnPlainClick(target, event);
+
       return;
     }
     // research/22 §1: Shift selects without opening; Cmd/Ctrl-click does nothing.
@@ -549,6 +551,17 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     }
     handlers.openRow(rowId);
   };
+
+  /** research/30 B11: a plain click on a day's empty space adds a page on that day and opens it. */
+  private addOnPlainClick(target: Element, event: MouseEvent): void {
+    const dayIso = target.closest('[data-blok-database-calendar-day]')?.getAttribute('data-day');
+
+    if (dayIso === null || dayIso === undefined || !this.canEdit || event.shiftKey || event.metaKey || event.ctrlKey || event.altKey
+      || target.closest('button, a, input, [role="button"]') !== null) {
+      return;
+    }
+    this.options.handlers?.addRow(dayIso, true);
+  }
 
   /** research/22 §1: a lasso from the page margin picks every event it touches. */
   private readonly onLasso = (event: Event): void => {

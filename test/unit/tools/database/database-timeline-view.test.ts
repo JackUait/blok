@@ -320,7 +320,8 @@ describe('DatabaseTimelineView', () => {
       const button = root.querySelector<HTMLElement>('[data-blok-database-timeline-manage-calendar]');
 
       expect(button?.textContent?.trim()).toBe('Manage in Calendar');
-      expect(button?.querySelector('svg')).not.toBeNull();
+      // research/30 B4: the calendar icon only; the "leaves this app" arrow is on the View settings row alone.
+      expect(button?.querySelectorAll('svg')).toHaveLength(1);
       expect(button?.nextElementSibling?.hasAttribute('data-blok-database-timeline-zoom')).toBe(true);
       button?.click();
       expect(manage).toHaveBeenCalledTimes(1);

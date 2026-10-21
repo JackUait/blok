@@ -2221,6 +2221,7 @@
   --blok-border-primary: #e0ddd6;
   --blok-border-strong: #c9c5bc;
   --blok-text-tertiary: #a3a39e;
+  --blok-popover-search-suffix-text: rgb(161, 158, 153);
   --blok-color-accent: #2383e2;
   --blok-color-danger: #e24a4a;
   --blok-file-icon-pdf: #d93025;
@@ -2553,6 +2554,7 @@
   --blok-border-primary: #333331;
   --blok-border-strong: #474744;
   --blok-text-tertiary: #6e6e68;
+  --blok-popover-search-suffix-text: rgb(125, 122, 117);
   --blok-color-accent: #4c9fff;
   --blok-color-danger: #ff6b6b;
   --blok-image-shadow-resting: 0 10px 28px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.05);
@@ -2718,6 +2720,7 @@
   --blok-border-primary: #333331;
   --blok-border-strong: #474744;
   --blok-text-tertiary: #6e6e68;
+  --blok-popover-search-suffix-text: rgb(125, 122, 117);
   --blok-color-accent: #4c9fff;
   --blok-color-danger: #ff6b6b;
   --blok-image-shadow-resting: 0 10px 28px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.05);

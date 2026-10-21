@@ -961,6 +961,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // assistant.css: the preview heading rules drop to heading.css's (0,1,0) via :where(), so a host's
     // unscoped .m-0 hits both alike, plus the comment saying why (2026-10-20).
     const ASSISTANT_PREVIEW_HEADING_SPECIFICITY_BYTES = 250;
+    // colors.css: the "· Database" search suffix ink, light and both darks (research/30 B4).
+    const POPOVER_SEARCH_SUFFIX_INK_BYTES = 257;
     // database.css: the radio cards of "Delete the last view for this data source?" (research/26 §5a).
     const DATABASE_LAST_VIEW_CHOICE_BYTES = 1_844;
     // database.css: the bordered timeline "Manage in Calendar" button and the panel's "leaves this app" arrow (research/26 §3d, §4d).
@@ -1131,7 +1133,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_STARTER_ICON_BYTES
       + DATABASE_HELP_LINKS_BYTES
       + DATABASE_PROPERTY_DESCRIPTION_BUTTON_BYTES
-      + DATABASE_TIME_ZONE_ROWS_BYTES;
+      + DATABASE_TIME_ZONE_ROWS_BYTES
+      + POPOVER_SEARCH_SUFFIX_INK_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { PopoverDesktop } from '../../../../../src/components/utils/popover/popover-desktop';
 import type { PopoverItemDefaultBaseParams } from '../../../../../types/utils/popover/popover-item';
@@ -108,5 +110,21 @@ describe('popover search tie-break', () => {
     popover.filterItems('database');
 
     expect(visibleNames(popover)).toEqual(['database', 'tableView', 'board']);
+  });
+});
+
+describe('the "· Database" suffix ink (research/28 §1b light, research/30 B4 dark)', () => {
+  const colors = readFileSync(resolve(__dirname, '../../../../../src/styles/colors.css'), 'utf-8');
+
+  it('paints the suffix with its own token', () => {
+    const popover = new PopoverDesktop({ searchable: true, items: [item({ title: 'Table view', name: 'tableView', searchSuffix: 'Database' })] });
+
+    expect(suffixOf(popover, 'tableView')?.className).toContain('[color:var(--blok-popover-search-suffix-text)]');
+  });
+
+  it('is rgb(161, 158, 153) in light and rgb(125, 122, 117) in both dark blocks', () => {
+    const values = [...colors.matchAll(/--blok-popover-search-suffix-text:\s*([^;]+);/g)].map((match) => match[1]);
+
+    expect(values).toEqual([ 'rgb(161, 158, 153)', 'rgb(125, 122, 117)', 'rgb(125, 122, 117)' ]);
   });
 });

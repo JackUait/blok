@@ -354,7 +354,7 @@ export class PopoverItemDefault extends PopoverItem {
 
         // The title gives up me-auto so the suffix sits right after it.
         titleEl.classList.remove('me-auto');
-        suffixEl.className = 'me-auto min-w-0 truncate ps-[5px] text-[13px] leading-5 [color:var(--blok-text-tertiary)]';
+        suffixEl.className = 'me-auto min-w-0 truncate ps-[5px] text-[13px] leading-5 [color:var(--blok-popover-search-suffix-text)]';
         suffixEl.setAttribute(DATA_ATTR.popoverItemSearchSuffix, '');
         suffixEl.setAttribute('aria-hidden', 'true');
         suffixEl.textContent = `· ${params.searchSuffix}`;

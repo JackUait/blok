@@ -118,3 +118,10 @@ describe('pressed and hover fills, light and dark (research/27 §6)', () => {
     expect(tokenValues('--blok-database-date-today-hover-bg')).toEqual([ 'rgba(33, 27, 23, 0.051)', 'rgba(255, 255, 255, 0.055)', 'rgba(255, 255, 255, 0.055)' ]);
   });
 });
+
+describe('"Manage in Calendar" row arrow (research/26 §3d light, research/30 B4 dark)', () => {
+  it('is the gutter ink: rgb(173, 169, 163) light, rgb(125, 122, 117) dark', () => {
+    expect(ruleBody('[data-blok-database-panel-external]')).toContain('color: var(--blok-database-table-gutter-icon)');
+    expect(tokenValues('--blok-database-table-gutter-icon')).toEqual([ 'rgb(173, 169, 163)', 'rgb(125, 122, 117)', 'rgb(125, 122, 117)' ]);
+  });
+});

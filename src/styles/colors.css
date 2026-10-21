@@ -224,6 +224,8 @@
   --blok-border-primary: #e0ddd6;
   --blok-border-strong: #c9c5bc;
   --blok-text-tertiary: #a3a39e;
+  /* "· Database" after a "/" search result (research/28 §1b, research/30 B4). */
+  --blok-popover-search-suffix-text: rgb(161, 158, 153);
   --blok-color-accent: #2383e2;
   --blok-color-danger: #e24a4a;
 
@@ -693,6 +695,7 @@
     --blok-border-primary: #333331;
     --blok-border-strong: #474744;
     --blok-text-tertiary: #6e6e68;
+    --blok-popover-search-suffix-text: rgb(125, 122, 117);
     --blok-color-accent: #4c9fff;
     --blok-color-danger: #ff6b6b;
 
@@ -894,6 +897,7 @@
   --blok-border-primary: #333331;
   --blok-border-strong: #474744;
   --blok-text-tertiary: #6e6e68;
+  --blok-popover-search-suffix-text: rgb(125, 122, 117);
   --blok-color-accent: #4c9fff;
   --blok-color-danger: #ff6b6b;
 

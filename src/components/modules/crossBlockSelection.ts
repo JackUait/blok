@@ -63,6 +63,18 @@ export class CrossBlockSelection extends Module {
   private shiftDragActive = false;
 
   /**
+   * Last viewport point of a held Shift+drag, so a scroll under a still pointer
+   * can recompute the range. Null until the drag moves.
+   */
+  private shiftDragPointer: { x: number; y: number } | null = null;
+
+  /**
+   * The block a plain drag was pressed on. When it has no text the drag has no
+   * text anchor and is block-level from the start.
+   */
+  private dragPressBlock: Block | null = null;
+
+  /**
    * Whether the current drag gesture has selected a multi-line child-block
    * range inside a nested-blocks container (several "lines" in one table
    * cell). While false, a drag that stays on the anchor line is a plain
@@ -302,6 +314,7 @@ export class CrossBlockSelection extends Module {
 
     this.firstSelectedBlock = block;
     this.lastSelectedBlock = block;
+    this.dragPressBlock = block;
     this.nestedRangeDragActive = false;
     this.textDragActive = false;
     this.textDragAnchor = null;
@@ -380,26 +393,73 @@ export class CrossBlockSelection extends Module {
     // selectBlockRange (via handleShiftClick) sets lastSelectedBlock to the clicked block.
     this.shiftDragClickedBlock = this.lastSelectedBlock;
     this.shiftDragActive = false;
+    this.shiftDragPointer = null;
 
     this.listeners.on(document, 'mouseover', this.onShiftDragOver);
+    this.listeners.on(document, 'mousemove', this.onShiftDragMove);
     this.listeners.on(document, 'mouseup', this.onShiftDragUp);
+    this.listeners.on(document, 'scroll', this.onShiftDragScroll, DRAG_SCROLL_OPTIONS);
   }
 
   /**
-   * Mouse over handler for a Shift+DRAG. Re-selects the union of the pre-gesture
-   * base selection and the inclusive range from the clicked pivot to the hovered
-   * block, so dragging EXTENDS the existing selection rather than replacing it.
+   * Mouse over handler for a Shift+DRAG.
    * @param event - mouseover event
    */
   private onShiftDragOver = (event: Event): void => {
     const mouseEvent = event as MouseEvent;
-    const { BlockManager, BlockSelection, DragManager } = this.Blok;
 
-    if (!this.shiftDragClickedBlock || !this.shiftDragBaseSelected || DragManager.isDragging) {
+    this.updateShiftDrag(mouseEvent.clientY, mouseEvent.target);
+  };
+
+  /**
+   * Mouse move handler for a Shift+DRAG. Keeps the pointer for a later scroll.
+   * @param event - mousemove event
+   */
+  private onShiftDragMove = (event: Event): void => {
+    const mouseEvent = event as MouseEvent;
+
+    /** Released outside the window: no mouseup came, the gesture is over. */
+    if ((mouseEvent.buttons & 1) === 0) {
+      this.shiftDragPointer = null;
+
       return;
     }
 
-    const rawHover = BlockManager.getBlockByChildNode(mouseEvent.target as Node);
+    this.shiftDragPointer = { x: mouseEvent.clientX,
+      y: mouseEvent.clientY };
+    this.updateShiftDrag(mouseEvent.clientY, mouseEvent.target);
+  };
+
+  /**
+   * Content scrolled under a held Shift+drag. No mouse event fires for that, so
+   * the range is recomputed from the last pointer position.
+   */
+  private onShiftDragScroll = (): void => {
+    const pointer = this.shiftDragPointer;
+
+    if (pointer !== null) {
+      this.updateShiftDrag(pointer.y, document.elementFromPoint(pointer.x, pointer.y));
+    }
+  };
+
+  /**
+   * Re-select the union of the pre-gesture base selection and the inclusive
+   * range from the clicked pivot to the pointed block, so dragging EXTENDS the
+   * existing selection rather than replacing it. A pointer over no block (a
+   * gutter, below the last block) points at the nearest row by height.
+   * @param y - pointer viewport y
+   * @param under - the element under the pointer
+   */
+  private updateShiftDrag(y: number, under: EventTarget | null): void {
+    const { BlockManager, BlockSelection, DragManager } = this.Blok;
+    const pivot = this.shiftDragClickedBlock;
+
+    if (!pivot || !this.shiftDragBaseSelected || DragManager.isDragging) {
+      return;
+    }
+
+    const rawHover = (under instanceof Node ? BlockManager.getBlockByChildNode(under) : undefined) ??
+      this.nearestRowBlock(y, pivot);
 
     if (!rawHover) {
       return;
@@ -407,11 +467,12 @@ export class CrossBlockSelection extends Module {
 
     const hoverBlock = BlockManager.resolveToSelectableBlock(rawHover);
 
-    if (hoverBlock === this.shiftDragClickedBlock) {
+    /** This runs on every move; the range is already there. */
+    if (hoverBlock === pivot || (this.shiftDragActive && hoverBlock === this.lastSelectedBlock)) {
       return;
     }
 
-    const draggedRange = BlockManager.getSelectionSiblingRange(this.shiftDragClickedBlock, hoverBlock);
+    const draggedRange = BlockManager.getSelectionSiblingRange(pivot, hoverBlock);
 
     if (draggedRange.length === 0) {
       return;
@@ -430,25 +491,36 @@ export class CrossBlockSelection extends Module {
 
     BlockSelection.clearCache();
 
-    this.firstSelectedBlock = this.shiftDragClickedBlock;
+    this.firstSelectedBlock = pivot;
     this.lastSelectedBlock = hoverBlock;
 
     this.Blok.Toolbar.close();
-  };
+  }
 
   /**
    * Mouse up handler ending a Shift+pointer gesture. Tears down the drag-watch
    * listeners and, when the gesture was a drag, re-opens the multi-block toolbar.
+   * @param event - mouseup event
    */
-  private onShiftDragUp = (): void => {
+  private onShiftDragUp = (event: Event): void => {
+    const mouseEvent = event as MouseEvent;
+
+    /** A scroll right before release may not have reached us yet. */
+    if (this.shiftDragPointer !== null) {
+      this.updateShiftDrag(mouseEvent.clientY, mouseEvent.target);
+    }
+
     this.listeners.off(document, 'mouseover', this.onShiftDragOver);
+    this.listeners.off(document, 'mousemove', this.onShiftDragMove);
     this.listeners.off(document, 'mouseup', this.onShiftDragUp);
+    this.listeners.off(document, 'scroll', this.onShiftDragScroll, DRAG_SCROLL_OPTIONS);
 
     const wasDrag = this.shiftDragActive;
 
     this.shiftDragBaseSelected = null;
     this.shiftDragClickedBlock = null;
     this.shiftDragActive = false;
+    this.shiftDragPointer = null;
 
     if (wasDrag && this.Blok.BlockSelection.anyBlockSelected) {
       this.Blok.UI.disableHoverForCooldown();
@@ -854,6 +926,7 @@ export class CrossBlockSelection extends Module {
 
     this.nestedRangeDragActive = false;
     this.textDragPointer = null;
+    this.dragPressBlock = null;
 
     /**
      * A text drag never selected blocks, so there is no multi-block toolbar to
@@ -963,6 +1036,24 @@ export class CrossBlockSelection extends Module {
       return;
     }
 
+    const pressBlock = this.dragPressBlock;
+
+    /**
+     * A press on a block with no text (a divider, an image) has no text anchor.
+     * Gated on the pressed block, not on a failed anchor read: the selection may
+     * still hold a caret left in another block.
+     */
+    if (pressBlock !== null && !hasEditableContent(pressBlock.holder)) {
+      const hoveredBlock = under instanceof Node ? BlockManager.getBlockByChildNode(under) : undefined;
+      const focusBlock = hoveredBlock ?? this.nearestRowBlock(y, pressBlock);
+
+      if (focusBlock !== undefined) {
+        this.followWithBlockRange(pressBlock, focusBlock, under, pointerMoved, false);
+      }
+
+      return;
+    }
+
     const anchor = this.resolveTextDragAnchor();
 
     if (anchor === null) {
@@ -1016,19 +1107,7 @@ export class CrossBlockSelection extends Module {
       this.textDragIntent = null;
       this.textDragActive = false;
 
-      /**
-       * A standing text range has no other writer before mouseup. Otherwise
-       * mouseover owns the block path, but only while the pointer moves over a
-       * block: a scroll, a release, or a pointer over no block (gutter, header)
-       * fires no mouseover on a block, so the range is applied here. Skipped
-       * when it already ends on this block, since this runs on every move.
-       */
-      const mouseoverCovers = pointerMoved && under instanceof Node && BlockManager.getBlockByChildNode(under) !== undefined;
-      const alreadyThere = this.lastSelectedBlock === BlockManager.resolveToSelectableBlock(focusBlock);
-
-      if (wasTextDrag || (!mouseoverCovers && !alreadyThere)) {
-        this.takeOverWithBlockRange(anchorBlock, focusBlock);
-      }
+      this.followWithBlockRange(anchorBlock, focusBlock, under, pointerMoved, wasTextDrag);
 
       return;
     }
@@ -1064,6 +1143,35 @@ export class CrossBlockSelection extends Module {
     }
 
     this.syncTextSelectionHighlight();
+  }
+
+  /**
+   * Apply the block-level range of a drag where no mouseover will.
+   *
+   * Mouseover owns the block path, but only while the pointer moves over a
+   * block: a scroll, a release, or a pointer over no block (gutter, header)
+   * fires no mouseover on a block, so the range is applied here. Skipped when
+   * it already ends on this block, since this runs on every move.
+   * @param anchorBlock - block the gesture started in
+   * @param focusBlock - block the pointer points at
+   * @param under - the element under the pointer
+   * @param pointerMoved - true for a mousemove, which comes with a mouseover
+   * @param force - a standing text range, which has no other writer before mouseup
+   */
+  private followWithBlockRange(
+    anchorBlock: Block,
+    focusBlock: Block,
+    under: EventTarget | null,
+    pointerMoved: boolean,
+    force: boolean
+  ): void {
+    const { BlockManager } = this.Blok;
+    const mouseoverCovers = pointerMoved && under instanceof Node && BlockManager.getBlockByChildNode(under) !== undefined;
+    const alreadyThere = this.lastSelectedBlock === BlockManager.resolveToSelectableBlock(focusBlock);
+
+    if (force || (!mouseoverCovers && !alreadyThere)) {
+      this.takeOverWithBlockRange(anchorBlock, focusBlock);
+    }
   }
 
   /**

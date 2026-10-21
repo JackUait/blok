@@ -451,6 +451,194 @@ for (const container of [false, true]) {
   });
 }
 
+type BlockGesture = 'shift' | 'non-text';
+
+/**
+ * Start a block-level drag at `from` and move over `over`, holding the button.
+ * 'shift' places a caret at `from` and Shift+presses there. 'non-text' presses
+ * a divider at `from`, so the drag has no text anchor.
+ */
+const startBlockDrag = async (
+  page: Page,
+  gesture: BlockGesture,
+  from: number,
+  over: number
+): Promise<{ x: number; y: number }> => {
+  const fromWrapper = page.locator(BLOCK_WRAPPER_SELECTOR).nth(from);
+
+  await fromWrapper.scrollIntoViewIfNeeded();
+
+  let start: { x: number; y: number };
+
+  if (gesture === 'shift') {
+    start = await pointAtCharacter(editableByIndex(page, from), 6);
+    await page.mouse.click(start.x, start.y);
+    await page.keyboard.down('Shift');
+  } else {
+    const box = await fromWrapper.boundingBox();
+
+    expect(box).not.toBeNull();
+    start = { x: (box?.x ?? 0) + (box?.width ?? 0) / 2,
+      y: (box?.y ?? 0) + (box?.height ?? 0) / 2 };
+  }
+
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x + 12, start.y, { steps: 2 });
+
+  const end = await pointAtCharacter(editableByIndex(page, over), 6);
+
+  await page.mouse.move(end.x, end.y, { steps: 8 });
+
+  expect(await selectedIndexes(page)).toStrictEqual(indexRange(Math.min(from, over), Math.max(from, over)));
+
+  return end;
+};
+
+const releaseBlockDrag = async (page: Page, gesture: BlockGesture): Promise<void> => {
+  await page.mouse.up();
+
+  if (gesture === 'shift') {
+    await page.keyboard.up('Shift');
+  }
+
+  await nextFrame(page);
+};
+
+for (const gesture of ['shift', 'non-text'] as const) {
+  for (const container of [false, true]) {
+    const what = gesture === 'shift' ? 'a Shift+drag' : 'a drag from a block with no text';
+    const where = container ? 'in an overflow:auto container' : 'in a scrolling window';
+
+    test.describe(`${what} with scroll ${where}`, () => {
+      const layoutFor = (anchor: number): Layout => ({
+        container,
+        dividerAt: gesture === 'non-text' ? anchor : undefined,
+      });
+
+      test.beforeAll(() => {
+        ensureBlokBundleBuilt();
+      });
+
+      test.beforeEach(async ({ page }) => {
+        await gotoTestPage(page);
+      });
+
+
+      /**
+       * After a scroll Chromium fires one synthetic mouseover at the pointer, so
+       * the held pointer sits in the gutter, where that mouseover hits no block.
+       */
+      test('content scrolled under a held pointer in the gutter, then a release without moving, ends at the row under it', async ({ page }) => {
+        await createBlok(page, layoutFor(2));
+
+        const pointer = await startBlockDrag(page, gesture, 2, 5);
+
+        await page.mouse.move(3, pointer.y, { steps: 4 });
+        await scrollContent(page, 400, container);
+
+        const expected = await rowAt(page, pointer.y);
+
+        expect(expected).toBeGreaterThan(8);
+        expect(await selectedIndexes(page)).toStrictEqual(indexRange(2, expected));
+
+        await releaseBlockDrag(page, gesture);
+
+        expect(await selectedIndexes(page)).toStrictEqual(indexRange(2, expected));
+      });
+
+      test('a wheel scroll with the pointer in the gutter then a release without moving ends at the row level with it', async ({ page }) => {
+        await createBlok(page, layoutFor(2));
+
+        const pointer = await startBlockDrag(page, gesture, 2, 5);
+
+        /** Inside the scroll box (the body margin at x=3 is not), left of the editor column. */
+        const wheelX = 80;
+        const inGutter = await page.evaluate(({ x, y, selector }) => {
+          return document.elementFromPoint(x, y)?.closest(selector) ?? null;
+        }, { x: wheelX, y: pointer.y, selector: BLOCK_WRAPPER_SELECTOR });
+
+        expect(inGutter).toBeNull();
+
+        await page.mouse.move(wheelX, pointer.y, { steps: 4 });
+        await page.mouse.wheel(0, 400);
+        await expect.poll(() => rowAt(page, pointer.y)).toBeGreaterThan(8);
+
+        const expected = await rowAt(page, pointer.y);
+
+        await releaseBlockDrag(page, gesture);
+
+        expect(await selectedIndexes(page)).toStrictEqual(indexRange(2, expected));
+      });
+
+      test('a pointer in the left gutter selects up to the row level with it', async ({ page }) => {
+        await createBlok(page, layoutFor(2));
+        await startBlockDrag(page, gesture, 2, 5);
+
+        const row = await pointAtCharacter(editableByIndex(page, 8), 6);
+        const inGutter = await page.evaluate(({ y, selector }) => {
+          return document.elementFromPoint(3, y)?.closest(selector) ?? null;
+        }, { y: row.y, selector: BLOCK_WRAPPER_SELECTOR });
+
+        expect(inGutter).toBeNull();
+
+        await page.mouse.move(3, row.y, { steps: 6 });
+
+        const expected = await rowAt(page, row.y);
+
+        expect(expected).toBe(8);
+        expect(await selectedIndexes(page)).toStrictEqual(indexRange(2, expected));
+
+        await releaseBlockDrag(page, gesture);
+
+        expect(await selectedIndexes(page)).toStrictEqual(indexRange(2, expected));
+      });
+
+      if (gesture === 'non-text') {
+        test('a caret left in another block does not become the anchor of the drag', async ({ page }) => {
+          await createBlok(page, layoutFor(2));
+
+          const caret = await pointAtCharacter(editableByIndex(page, 9), 6);
+
+          await page.mouse.click(caret.x, caret.y);
+          await startBlockDrag(page, gesture, 2, 5);
+
+          const row = await pointAtCharacter(editableByIndex(page, 7), 6);
+
+          await page.mouse.move(3, row.y, { steps: 6 });
+          await releaseBlockDrag(page, gesture);
+
+          expect(await selectedIndexes(page)).toStrictEqual(indexRange(2, 7));
+        });
+      }
+
+      test('a fast flick below the last block then a release selects through the last block', async ({ page }) => {
+        const anchor = BLOCK_COUNT - 6;
+
+        await createBlok(page, layoutFor(anchor));
+        await startBlockDrag(page, gesture, anchor, BLOCK_COUNT - 3);
+
+        const last = await page.locator(BLOCK_WRAPPER_SELECTOR).nth(BLOCK_COUNT - 1).boundingBox();
+
+        expect(last).not.toBeNull();
+
+        const belowY = (last?.y ?? 0) + (last?.height ?? 0) + 40;
+        const below = await page.evaluate(({ y, selector }) => {
+          return document.elementFromPoint(window.innerWidth / 2, y)?.closest(selector) ?? null;
+        }, { y: belowY, selector: BLOCK_WRAPPER_SELECTOR });
+
+        expect(below).toBeNull();
+
+        /** One step: a fast flick fires no mouseover on the rows it skips. */
+        await page.mouse.move(400, belowY);
+        await releaseBlockDrag(page, gesture);
+
+        expect(await selectedIndexes(page)).toStrictEqual(indexRange(anchor, BLOCK_COUNT - 1));
+      });
+    });
+  }
+}
+
 test.describe('cross-block text selection leaving the editor upward', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();

@@ -278,6 +278,7 @@ export type BlokMessageKey =
   | 'toolNames.underline'
   | 'toolNames.video'
   | 'toolbox.addBelow'
+  | 'toolbox.closeMenu'
   | 'toolbox.ctrlAddAbove'
   | 'toolbox.optionAddAbove'
   | 'toolbox.preview.audio'

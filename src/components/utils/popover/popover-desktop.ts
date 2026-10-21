@@ -926,6 +926,55 @@ export class PopoverDesktop extends PopoverAbstract {
     this.emit(PopoverEvent.ClosedOnActivate);
   };
 
+  /** The row under the list (the toolbox's "Close menu  esc"), or null. */
+  private footerAction: HTMLElement | null = null;
+
+  /**
+   * Adds a row under the scrolling list. Keyboard navigation reaches it after
+   * the last row; Enter or a click runs `onActivate`. It stays during search.
+   * @param params - the label, the shortcut text on its right, and the action
+   * @param params.label - visible label, also the accessible name
+   * @param params.shortcut - text on the right, hidden from assistive tech
+   * @param params.onActivate - runs on Enter and on click
+   */
+  public setFooter(params: { label: string; shortcut: string; onActivate: () => void }): void {
+    const wrapper = document.createElement('div');
+    const divider = document.createElement('div');
+    const action = document.createElement('div');
+    const label = document.createElement('span');
+    const shortcut = document.createElement('span');
+
+    wrapper.className = 'shrink-0 bg-popover-bg';
+    divider.className = 'h-px -mx-1 mb-1 bg-popover-border/60';
+    divider.setAttribute('aria-hidden', 'true');
+    // Same look and neutral highlight as a row; outside the listbox, so a button, not an option.
+    action.className = twMerge(popoverItemCls.item, 'ps-2 pe-2 mb-1 cursor-pointer');
+    action.setAttribute('role', 'button');
+    action.setAttribute('tabindex', '-1');
+    action.setAttribute('data-blok-testid', 'popover-footer-action');
+    label.className = 'me-auto whitespace-nowrap text-[13px] font-medium leading-5';
+    label.textContent = params.label;
+    shortcut.className = 'ms-auto ps-4 text-xs leading-5 text-text-secondary';
+    shortcut.setAttribute('aria-hidden', 'true');
+    shortcut.textContent = params.shortcut;
+
+    action.append(label, shortcut);
+    wrapper.append(divider, action);
+    this.nodes.popoverContainer.insertBefore(wrapper, this.nodes.items.nextSibling);
+
+    // Keep the caret in the block that opened the menu.
+    this.listeners.on(action, 'mousedown', (event: Event) => event.preventDefault());
+    this.listeners.on(action, 'click', () => params.onActivate());
+
+    this.footerAction = action;
+    this._size = undefined;
+
+    if (this.flipper?.isActivated) {
+      this.flipper.deactivate();
+      this.flipper.activate(this.flippableElements);
+    }
+  }
+
   /**
    * Clears memory
    */
@@ -1843,7 +1892,7 @@ export class PopoverDesktop extends PopoverAbstract {
       return this.getFlippableElementsForItem(item);
     }).filter((item): item is HTMLElement => item !== undefined && item !== null);
 
-    return result;
+    return this.footerAction === null ? result : [...result, this.footerAction];
   }
 
   /**
@@ -2308,7 +2357,7 @@ export class PopoverDesktop extends PopoverAbstract {
 
     // Build flippable elements list: top-level matches + promoted items
     const topLevelFlippable = isEmptyQuery
-      ? this.flippableElements
+      ? this.flippableElements.filter(el => el !== this.footerAction)
       : matchingTopLevel.map(item => item.getElement());
 
     const promotedFlippable = data.promotedItems.map(({ item }) => item.getElement());
@@ -2323,7 +2372,8 @@ export class PopoverDesktop extends PopoverAbstract {
     }
 
     this.flipper.deactivate();
-    this.flipper.activate(flippableElements);
+    // The footer comes last and is never the first match: Enter on a query with no match must not close the menu.
+    this.flipper.activate(this.footerAction === null ? flippableElements : [...flippableElements, this.footerAction]);
 
     if (flippableElements.length > 0 && !this.nodes.items.querySelector(`[data-blok-convert-item]:not([${DATA_ATTR.promotedItem}])`)) {
       this.flipper.focusItem(0, { skipNextTab: true });

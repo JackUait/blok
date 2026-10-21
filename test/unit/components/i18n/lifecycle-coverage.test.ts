@@ -270,7 +270,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1580 + 126 + 486 + 4 closure for all 2196 keys', () => {
+  it('rebuilds a disjoint 1581 + 126 + 486 + 4 closure for all 2197 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -284,7 +284,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2196);
+    expect(lifecycle.size).toBe(2197);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -433,7 +433,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +77: Campaign Management, Content Calendar and Goals Tracker's Quarter and Progress (research/31 §7, §8).
       // +2: Goals Tracker's Days until due chip and its "Overdue" text (research/31 §8).
       // +12: the Ask AI action buttons, Insert, its done line and the group name, by literal.
-      'executable-literal': 1580,
+      // +1: the "/" menu footer calls toolbox.closeMenu by literal (research/30 §B7c).
+      'executable-literal': 1581,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

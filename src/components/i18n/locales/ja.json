@@ -7,6 +7,7 @@
   "toolbox.optionAddAbove": "⌥+クリックで上に追加",
   "toolbox.ctrlAddAbove": "Ctrl+クリックで上に追加",
   "toolbox.typeToSearch": "入力して検索",
+  "toolbox.closeMenu": "メニューを閉じる",
   "toolbox.sectionBasic": "基本ブロック",
   "toolbox.sectionMedia": "メディア",
   "toolbox.sectionDatabase": "データベース",

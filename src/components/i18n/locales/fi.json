@@ -7,6 +7,7 @@
   "toolbox.optionAddAbove": "Optio-klikkaa lisätäksesi yläpuolelle",
   "toolbox.ctrlAddAbove": "Ctrl+napsauta lisätäksesi yläpuolelle",
   "toolbox.typeToSearch": "Kirjoita hakeaksesi",
+  "toolbox.closeMenu": "Sulje valikko",
   "toolbox.sectionBasic": "Peruslohkot",
   "toolbox.sectionMedia": "Media",
   "toolbox.sectionDatabase": "Tietokanta",

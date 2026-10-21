@@ -41,6 +41,7 @@ const mockPopoverInstance = vi.hoisted(() => ({
   updatePosition: vi.fn(),
   setLeftAlignElement: vi.fn(),
   onCurrentItemChange: vi.fn(() => () => {}),
+  setFooter: vi.fn(),
 }));
 
 vi.mock('../../../src/components/dom', () => ({
@@ -69,6 +70,7 @@ vi.mock('../../../src/components/utils/popover', () => {
     public updatePosition = mockPopoverInstance.updatePosition;
     public setLeftAlignElement = mockPopoverInstance.setLeftAlignElement;
     public onCurrentItemChange = mockPopoverInstance.onCurrentItemChange;
+    public setFooter = mockPopoverInstance.setFooter;
   }
 
   return {

@@ -685,6 +685,8 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     if (this.popover instanceof PopoverDesktop) {
       this.initPreview(this.popover);
+      // research/30 §B7c. "esc" names the key, so it is not translated.
+      this.popover.setFooter({ label: this.i18n.t('toolbox.closeMenu'), shortcut: 'esc', onActivate: () => this.close() });
     }
   }
 

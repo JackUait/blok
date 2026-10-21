@@ -1060,7 +1060,7 @@ test.describe('toolbox keyboard navigation', () => {
     await expect(popover).not.toHaveAttribute('data-blok-popover-opened', 'true');
   });
 
-  test('wraps focus around when reaching end of list with ArrowDown', async ({ page, browserName }) => {
+  test('ArrowDown from the last item reaches the footer, then wraps to the first item', async ({ page, browserName }) => {
     // eslint-disable-next-line playwright/no-skipped-test -- Firefox doesn't support keyboard nav from contenteditable
     test.skip(browserName === 'firefox', 'Firefox has different Tab behavior when focus is in contenteditable');
     await createBlokWithTools(page, {
@@ -1090,10 +1090,11 @@ test.describe('toolbox keyboard navigation', () => {
      
     await expect(popoverItems.last()).toHaveAttribute('data-blok-focused', 'true');
 
-    // Press ArrowDown one more time - should wrap to first item
+    // The "Close menu" footer sits after the last item (research/30 §B7c), then the list wraps.
     await page.keyboard.press('ArrowDown');
+    await expect(page.locator(POPOVER_SELECTOR).getByRole('button', { name: 'Close menu', exact: true })).toHaveAttribute('data-blok-focused', 'true');
 
-     
+    await page.keyboard.press('ArrowDown');
     await expect(popoverItems.first()).toHaveAttribute('data-blok-focused', 'true');
   });
 });

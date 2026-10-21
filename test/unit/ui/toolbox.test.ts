@@ -50,6 +50,7 @@ const mockPopoverInstance = vi.hoisted(() => ({
   updatePosition: vi.fn(),
   setLeftAlignElement: vi.fn(),
   onCurrentItemChange: vi.fn(() => () => {}),
+  setFooter: vi.fn<(params: { label: string; shortcut: string; onActivate: () => void }) => void>(),
   setActiveDescendantHost: vi.fn(),
 }));
 
@@ -94,6 +95,7 @@ vi.mock('../../../src/components/utils/popover', () => {
       public updatePosition = mockPopoverInstance.updatePosition;
       public setLeftAlignElement = mockPopoverInstance.setLeftAlignElement;
       public onCurrentItemChange = mockPopoverInstance.onCurrentItemChange;
+      public setFooter = mockPopoverInstance.setFooter;
       public setActiveDescendantHost = mockPopoverInstance.setActiveDescendantHost;
     },
     PopoverMobile: class MockPopoverMobile {
@@ -109,6 +111,7 @@ vi.mock('../../../src/components/utils/popover', () => {
       public updatePosition = mockPopoverInstance.updatePosition;
       public setLeftAlignElement = mockPopoverInstance.setLeftAlignElement;
       public onCurrentItemChange = mockPopoverInstance.onCurrentItemChange;
+      public setFooter = mockPopoverInstance.setFooter;
       public setActiveDescendantHost = mockPopoverInstance.setActiveDescendantHost;
     },
   };
@@ -308,6 +311,25 @@ describe('Toolbox', () => {
       const element = toolbox.getElement();
 
       expect(element?.getAttribute('data-blok-testid')).toBe('toolbox');
+    });
+
+    it('adds the "Close menu  esc" footer, which closes the toolbox (research/30 §B7c)', () => {
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      expect(mockPopoverInstance.setFooter).toHaveBeenCalledWith(expect.objectContaining({ label: 'toolbox.closeMenu', shortcut: 'esc' }));
+
+      toolbox.open();
+      expect(toolbox.opened).toBe(true);
+
+      const [ footer ] = mockPopoverInstance.setFooter.mock.calls.at(-1) ?? [];
+
+      footer?.onActivate();
+      expect(toolbox.opened).toBe(false);
     });
 
     it('should initialize with opened = false', () => {

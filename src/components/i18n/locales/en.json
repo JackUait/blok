@@ -12,6 +12,7 @@
   "toolbox.ctrlAddAbove": "Ctrl-click to add above",
   "popover.search": "Find an action…",
   "toolbox.typeToSearch": "Type to search",
+  "toolbox.closeMenu": "Close menu",
   "toolbox.sectionBasic": "Basic blocks",
   "toolbox.sectionMedia": "Media",
   "toolbox.sectionDatabase": "Database",

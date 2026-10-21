@@ -7,6 +7,7 @@
   "toolbox.optionAddAbove": "⌥-kattintással új blokkot szúrhat be fölé",
   "toolbox.ctrlAddAbove": "Ctrl+kattintással új blokkot szúrhat be fölé",
   "toolbox.typeToSearch": "Kezdjen el gépelni a kereséshez",
+  "toolbox.closeMenu": "Menü bezárása",
   "toolbox.sectionBasic": "Alap blokkok",
   "toolbox.sectionMedia": "Média",
   "toolbox.sectionDatabase": "Adatbázis",

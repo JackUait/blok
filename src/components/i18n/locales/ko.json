@@ -7,6 +7,7 @@
   "toolbox.optionAddAbove": "⌥+클릭하여 위에 추가",
   "toolbox.ctrlAddAbove": "Ctrl+클릭하여 위에 추가",
   "toolbox.typeToSearch": "검색어를 입력하세요",
+  "toolbox.closeMenu": "메뉴 닫기",
   "toolbox.sectionBasic": "기본 블록",
   "toolbox.sectionMedia": "미디어",
   "toolbox.sectionDatabase": "데이터베이스",

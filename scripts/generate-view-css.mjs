@@ -550,6 +550,9 @@ const main = async () => {
    *
    * `assistant.css` too: the Ask AI bar is editor UI, and its thinking menu
    * rules only set custom properties, so they read as carriers.
+   *
+   * `popover-animation.css` too: a view has no popovers, and its dark menu
+   * label token reads as a carrier.
    */
   const entrySource = readFileSync(STYLES_ENTRY, 'utf-8')
     .replace(/^@import '\.\/fonts\.css';$/m, '')
@@ -558,7 +561,8 @@ const main = async () => {
     .replace(/^@import '\.\/loading\.css';$/m, '')
     .replace(/^@import '\.\/page-title\.css';$/m, '')
     .replace(/^@import '\.\/database\.css';$/m, '')
-    .replace(/^@import '\.\/assistant\.css';$/m, '');
+    .replace(/^@import '\.\/assistant\.css';$/m, '')
+    .replace(/^@import '\.\/popover-animation\.css';$/m, '');
 
   const compiler = await compile(entrySource, {
     base: dirname(STYLES_ENTRY),

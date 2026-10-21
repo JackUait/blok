@@ -1,3 +1,11 @@
+[@media (prefers-color-scheme: dark)] :where(:root:not([data-blok-theme="light"]) [data-blok-interface]), :where(:root:not([data-blok-theme="light"]) [data-blok-popover]), :where(:root:not([data-blok-theme="light"]) [data-blok-top-layer]) {
+  --blok-popover-item-label-text: rgb(240, 239, 237);
+}
+
+:where([data-blok-theme="dark"] [data-blok-interface]), :where([data-blok-theme="dark"] [data-blok-popover]), :where([data-blok-theme="dark"] [data-blok-top-layer]) {
+  --blok-popover-item-label-text: rgb(240, 239, 237);
+}
+
 [data-blok-popover][popover] {
   transition: display 120ms allow-discrete, overlay 120ms allow-discrete;
 }

@@ -15,6 +15,8 @@
   --color-icon-active-bg: var(--blok-icon-active-bg);
   --color-icon-active-text: var(--blok-icon-active-text);
   --color-text-primary: var(--blok-text-primary);
+  /* Menu row label. Only dark sets it (popover-animation.css), so light follows --blok-text-primary. */
+  --color-popover-item-label: var(--blok-popover-item-label-text, var(--blok-text-primary));
   --color-text-secondary: var(--blok-text-secondary);
   --color-popover-border: var(--blok-popover-border);
   --color-popover-shadow: var(--blok-popover-shadow);

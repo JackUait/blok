@@ -965,6 +965,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const ASSISTANT_PREVIEW_HEADING_SPECIFICITY_BYTES = 250;
     // colors.css: the "· Database" search suffix ink, light and both darks (research/30 B4).
     const POPOVER_SEARCH_SUFFIX_INK_BYTES = 257;
+    // popover-animation.css + colors.css: the dark menu row label ink, both darks (research/30 B4).
+    const POPOVER_ITEM_LABEL_INK_BYTES = 711;
     // database.css: the delete-last-view dialog's round × and its fill tokens (research/30 B3).
     const DATABASE_CONFIRM_CLOSE_BYTES = 1_038;
     // database.css: the radio cards of "Delete the last view for this data source?" (research/26 §5a).
@@ -1155,6 +1157,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_PROPERTY_DESCRIPTION_BUTTON_BYTES
       + DATABASE_TIME_ZONE_ROWS_BYTES
       + POPOVER_SEARCH_SUFFIX_INK_BYTES
+      + POPOVER_ITEM_LABEL_INK_BYTES
       + DATABASE_CONFIRM_CLOSE_BYTES
       + DATABASE_MORE_TEMPLATES_BYTES
       + ASSISTANT_REPLACED_BLOCK_BYTES

@@ -128,3 +128,51 @@ describe('the "· Database" suffix ink (research/28 §1b light, research/30 B4 d
     expect(values).toEqual([ 'rgb(161, 158, 153)', 'rgb(125, 122, 117)', 'rgb(125, 122, 117)' ]);
   });
 });
+
+describe('the "/" row text in Notion\'s size and dark ink (research/28 §1b, research/30 B4)', () => {
+  const colors = readFileSync(resolve(__dirname, '../../../../../src/styles/colors.css'), 'utf-8');
+  const popoverCss = readFileSync(resolve(__dirname, '../../../../../src/styles/popover-animation.css'), 'utf-8');
+
+  it('sets the suffix in 14px', () => {
+    const popover = new PopoverDesktop({ searchable: true, items: [item({ title: 'Table view', name: 'tableView', searchSuffix: 'Database' })] });
+
+    expect(suffixOf(popover, 'tableView')?.className).toContain('text-[14px]');
+    expect(suffixOf(popover, 'tableView')?.className).not.toContain('text-[13px]');
+  });
+
+  it('paints a row label with its own token, rgb(240, 239, 237) in both dark blocks', () => {
+    const popover = new PopoverDesktop({ items: [item({ title: 'Text', name: 'text' })] });
+    const classes = row(popover, 'text')?.className.split(' ') ?? [];
+    const values = [...popoverCss.matchAll(/--blok-popover-item-label-text:\s*([^;]+);/g)].map((match) => match[1]);
+
+    expect(classes).toContain('text-popover-item-label');
+    expect(classes).not.toContain('text-text-primary');
+    expect(values).toEqual([ 'rgb(240, 239, 237)', 'rgb(240, 239, 237)' ]);
+    // Light has no value of its own, so it follows --blok-text-primary where the host sets it.
+    expect(colors).toContain('--color-popover-item-label: var(--blok-popover-item-label-text, var(--blok-text-primary));');
+  });
+
+  it('gives a selected row the same ink as an unselected one, on the gray fill', () => {
+    const popover = new PopoverDesktop({ items: [item({ title: 'Text', name: 'text', isActive: true })] });
+    const classes = row(popover, 'text')?.className.split(' ') ?? [];
+
+    expect(classes).toContain('data-blok-popover-item-active:text-popover-item-label');
+    expect(classes).not.toContain('data-blok-popover-item-active:text-icon-active-text');
+    expect(classes).toContain('data-blok-popover-item-active:bg-icon-active-bg');
+  });
+
+  it('still turns a destructive row red and a disabled row gray', () => {
+    const popover = new PopoverDesktop({
+      items: [
+        item({ title: 'Delete', name: 'delete', isDestructive: true }),
+        item({ title: 'Off', name: 'off', isDisabled: true }),
+      ],
+    });
+    const destructive = row(popover, 'delete')?.className.split(' ') ?? [];
+    const disabled = row(popover, 'off')?.className.split(' ') ?? [];
+
+    expect(destructive).toContain('[&[data-blok-popover-item-destructive][data-blok-focused="true"]]:text-item-destructive-text');
+    expect(disabled).toContain('text-text-secondary');
+    expect(disabled).not.toContain('text-popover-item-label');
+  });
+});

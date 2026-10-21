@@ -5330,7 +5330,8 @@ export class DatabaseTool implements BlockTool {
     this.inOneStep(write);
     this.cardDrawer?.setSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
     this.rerenderView({ keepDrawer: true });
-    const skipped = plan.skippedColumns.length > 0
+    // From the dialog a skipped column is the person's own "Don't import", not a missing match.
+    const skipped = targets === undefined && plan.skippedColumns.length > 0
       ? ` ${this.api.i18n.t('tools.database.csvSkipped', { columns: plan.skippedColumns.join(', ') })}`
       : '';
 
@@ -5446,6 +5447,7 @@ export class DatabaseTool implements BlockTool {
       merge: {
         location: name === '' ? this.api.i18n.t('tools.database.titlePlaceholder') : name,
         schema: localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
+        stored: this.model.getSchema(),
         onMerge: (file, targets, settings) => this.mergeCsv(file.text, targets, settings),
       },
       ...(this.config.helpLinks?.imports !== undefined ? { helpUrl: this.config.helpLinks.imports } : {}),

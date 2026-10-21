@@ -309,6 +309,15 @@ describe('database CSV', () => {
     expect(named('Task')).toBe('Task');
   });
 
+  // Unmeasured: Blok keeps property names unique, so the renamed title never doubles a "Name" column.
+  it('never gives two properties the name "Name"', () => {
+    const names = (table: string[][], targets?: Array<'title' | 'text'>): string[] =>
+      buildCsvImport(table, { untitled: 'Column', titleName: 'Name', newId: ids(), ...(targets === undefined ? {} : { targets }) }).schema.map((p) => p.name);
+
+    expect(names([['Title', 'Name'], ['A', 'x']])).toEqual(['Name', 'Name 1']);
+    expect(names([['Code', 'Name'], ['A', 'x']], ['text', 'text'])).toEqual(['Name', 'Code', 'Name 1']);
+  });
+
   describe('"Use first row as headers" off (research/30 §9c)', () => {
     const imported = buildCsvImport(NEUTRAL, {
       untitled: 'Column',

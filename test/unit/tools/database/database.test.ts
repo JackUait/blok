@@ -7355,6 +7355,8 @@ describe('DatabaseTool — property menu and insert placement', () => {
         ['New', 'opt-done', level?.config?.options[1].id],
       ]);
       expect(added.every((row) => !Object.values(row).includes('x'))).toBe(true);
+      // A column the person chose not to import is not "unmatched".
+      expect(options.api.notifier.show).toHaveBeenLastCalledWith({ message: 'tools.database.csvMerged' });
 
       tool.destroy();
     });

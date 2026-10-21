@@ -392,7 +392,13 @@ export const buildCsvImport = (table: string[][], options: CsvImportOptions): Cs
   const titleName = options.titleName ?? 'Name';
   // research/30 §9c: without a header line the title keeps its own name. §9a: so does a title headed "Title".
   const named = kept.map((field) => (field.type === 'title' && (!headers || field.name === 'Title') ? { ...field, name: titleName } : field));
-  const fields: Array<{ column: number; name: string; type: PropertyType }> = titleAt === -1 ? [{ column: -1, name: titleName, type: 'title' }, ...named] : named;
+  const titled: Array<{ column: number; name: string; type: PropertyType }> = titleAt === -1 ? [{ column: -1, name: titleName, type: 'title' }, ...named] : named;
+  // The title keeps its name; another column that has it takes "Name 1".
+  const titleNames = titled.filter((field) => field.type === 'title').map((field) => field.name);
+  const fields = titled.reduce<typeof titled>((list, field) => [
+    ...list,
+    field.type === 'title' ? field : { ...field, name: freePropertyName([...titleNames, ...list.map((f) => f.name)], field.name) },
+  ], []);
   const schema: PropertyDefinition[] = fields.map((field, index) => ({
     id: options.newId(),
     name: field.name,

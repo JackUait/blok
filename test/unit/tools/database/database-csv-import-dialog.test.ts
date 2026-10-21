@@ -444,6 +444,16 @@ describe('openCsvImportDialog (research/26 §2, research/27 §2)', () => {
         .toEqual(['March 4, 2026', 'March 5, 2026']);
     });
 
+    it('maps a header naming a property by its saved name, while the button shows the name this person reads', async () => {
+      const stored: PropertyDefinition[] = [{ id: 'p-t', name: 'Title', type: 'title', position: 'a0' }];
+
+      openCsvImportDialog({ t, hasPeople: false, merge: { location: 'Tasks', schema: [{ ...stored[0], name: 'Titel' }], stored, onMerge } });
+      await choose('Title\nA', 'a.csv');
+      byTestId('database-csv-map')?.click();
+
+      expect(typeLabels()).toEqual(['Titel']);
+    });
+
     it('lists every property a CSV can fill under "Existing property", with a check on the current one', async () => {
       await mapped();
       buttons()[1].click();

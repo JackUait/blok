@@ -46,6 +46,8 @@ export interface CsvImportDialogOptions {
   merge?: {
     location: string;
     schema: PropertyDefinition[];
+    /** The saved schema: a header may name a default property by its English name. */
+    stored?: PropertyDefinition[];
     onMerge: (file: { name: string; text: string }, targets: CsvMergeTarget[], settings: CsvImportSettings) => void;
   };
   onClose?: () => void;
@@ -430,7 +432,7 @@ export const openCsvImportDialog = (options: CsvImportDialogOptions): { close: (
       state.columns = csvColumns(table, t('tools.database.csvUntitledColumn'), state.headers);
       state.targets = merge === undefined
         ? state.columns.map((column) => column.detected)
-        : csvMergeTargets(table, merge.schema, { headers: state.headers, untitled: t('tools.database.csvUntitledColumn') });
+        : csvMergeTargets(table, merge.stored ?? merge.schema, { localized: merge.schema, headers: state.headers, untitled: t('tools.database.csvUntitledColumn') });
       state.dateFormats = state.columns.map(() => undefined);
       showSetupStep();
       back.focus();

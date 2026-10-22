@@ -158,13 +158,15 @@ test('at the window\'s right edge the ↻ hint shows, and "…" opens the submen
   await page.getByRole('menuitem', { name: /^Standup/ }).getByTestId('popover-item-more').click();
   await expect(page.getByRole('menuitem', { name: 'Edit', exact: true })).toBeVisible();
 
-  const submenu = await containerRect('Edit');
   const more = await page.getByRole('menuitem', { name: /^Standup/ })
     .getByTestId('popover-item-more')
     .evaluate((el) => el.getBoundingClientRect().left);
 
-  // Over the list, ending 12px before the "…".
-  expect(Math.abs(submenu.right - (more - 12))).toBeLessThanOrEqual(1);
+  // Over the list, ending 12px before the "…". Polled: the first frames of
+  // the open motion can read a few px off the resting spot.
+  await expect.poll(async () => Math.abs((await containerRect('Edit')).right - (more - 12))).toBeLessThanOrEqual(1);
+  const submenu = await containerRect('Edit');
+
   expect(submenu.left).toBeGreaterThan(list.left);
 
   // Crossing the list to the submenu keeps it open, and its items still work.

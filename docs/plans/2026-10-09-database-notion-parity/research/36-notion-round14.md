@@ -115,8 +115,8 @@ Trigger: table row handle (`"Drag to move, click to open menu"`) › **Move to T
 | Pointer moved onto "Restore" at about 1.5 s and held there | 0.48 s | still on screen at 26.0 s (pointer still on it) | — |
 | … then pointer moved away at **26.0 s** | | **30.0 s** (4.0 s after leaving) | 30.13 s |
 
-So the toast lives about **5 s** after it appears, **hover pauses the timer**, and leaving resumes it with the time that was left (about 1 s had passed before the hover, about 4 s ran after). Research 35's 11.7 s had the pointer on "Restore" only for 0.8 s, so it does not fit this; that run was not repeated.
-A second visible text "1 block deleted" exists in a 1x1 live region next to the off-screen "Moved to Trash" alert (screen-reader only).
+So the toast lives about **5 s** after it appears and **hover holds it open** (measured: 26 s with the pointer on it). After leaving it ran **4.0 s**. Whether leaving **resumes the time that was left** (about 1 s had passed before the hover) or **starts a fresh ~4 s timer** is a **hypothesis either way**: one sample, and both predict 4.0 s. A hover starting about 3 s in would separate them; not done. Research 35's 11.7 s had the pointer on "Restore" only for 0.8 s, so it does not fit this; that run was not repeated.
+A second text "1 block deleted" exists in a 1x1 live region next to the off-screen "Moved to Trash" alert (screen-reader only).
 
 ## 7. Place editor after a pick, light (item 2)
 
@@ -196,7 +196,7 @@ Screenshot pixels (DPR 2) agree: unpicked radio centre rgb(255, 255, 255), picke
 
 Two databases:
 - **CSV import**: `r14-101.csv` (`Name,Grp,Score`, rows "Row 001" … "Row 101", Grp = **A** for all, Score = row number), imported as a new data source of R14 ("3 more…" › New data source › Import CSV › Choose file, fed by `hook.sh` › Map CSV headers › Import CSV › "Import complete"). Its Table view was switched to Board (View settings › Layout › Board; it grouped by Grp at once). One group **A** of 101, plus "No Grp 0".
-- **R14** itself: 5 rows, Board grouped by Select, groups of 1, 1, 1 and "No Select 2".
+- **R14**'s own data source: 5 rows, Board grouped by Select, groups of 1, 1, 1 and "No Select 2". Note: this source is in the **same database block** as the 101-row import above.
 
 A view filter on **Score ≤ N** shrinks the visible group while the database keeps 101 rows. Each read: click the group count › hover "Count" › read the switch (`INPUT[role=switch]`, opacity 0 over a 30x18 track) `checked` / `disabled`.
 
@@ -207,10 +207,10 @@ A view filter on **Score ≤ N** shrinks the visible group while the database ke
 | 101 | Score ≤ 99 | **"99"** | true | false | |
 | 101 | Score ≤ 50 | "50" | true | false | |
 | 101 | Score ≤ 3 | "3" | true | false | |
-| **5** (R14) | none | "1" (Def column) | true | **false** | rgb(39, 131, 222); a click turned it **off** (`checked=false`), a second click back on |
+| **5-row data source** (R14, same database as the 101-row source) | none | "1" (Def column) | true | **false** | rgb(39, 131, 222); a click turned it **off** (`checked=false`), a second click back on |
 
-So the switch was **enabled in every case tried**, down to a 5-row database with one row in the group. Research 30's "disabled on 3 rows" was **not reproduced**; whether it depended on something else on that database (or changed since) is unknown. The count label switches to "99+" only at **100** rows in the group (99 shows "99"; 100 shows "99+"). No ancestor of the switch had `aria-disabled`, reduced opacity, or `pointer-events: none`.
-Not tried: a fresh database of exactly 3 rows (the 5-row R14 stands in for it).
+So the switch was **enabled in every case tried**, down to a 5-row data source with one row in the group. But every read was in a database that also held a 101-row source, so if the rule looks at the whole database, none of these reads could show it disabled. **The enable threshold stays UNMEASURED**: a standalone small database (nothing imported beside it) was not tested. The contradiction with research 30's "disabled on 3 rows" is **unresolved**. The count label switches to "99+" only at **100** rows in the group (99 shows "99"; 100 shows "99+"). No ancestor of the switch had `aria-disabled`, reduced opacity, or `pointer-events: none`.
+Not tried: a standalone database of 3 rows with no other source beside it.
 
 ## 10. Feed byline age (item 8)
 
@@ -280,7 +280,7 @@ R14 › "3 more…" › New view › **Form** › "New form / Select data source
 ## 14. Not measured
 
 - Item 3: the Undo dialog has no ×, so its × position is "none" (not unmeasured). Dark Reset dialog: not read.
-- Item 5: a fresh database of exactly 3 rows (R14's 5 rows stand in). Why research 30 saw the switch disabled: unknown.
+- Item 5: the enable threshold. All reads shared a database with a 101-row source; a standalone small database was not tested, so the research 30 contradiction is unresolved.
 - Item 8: "1h" → "2h" / date, and the day boundary (clock).
 - Item 10: relation-tab colours, "Add new relation", deleting a relation tab.
 - Item 11: anonymous responses on (its switch was not found outside "Share form", which is sharing).

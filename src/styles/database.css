@@ -5643,7 +5643,7 @@ textarea[data-blok-database-cell-input] {
 /* research/30 §10f: "Not started DEFAULT". Size and ink unmeasured: the template menu's "Default" mark. */
 [data-blok-database-option-default] {
   margin-inline-start: var(--blok-space-1);
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   font-size: 12px;
 }
 
@@ -7876,14 +7876,14 @@ textarea[data-blok-database-cell-input] {
   margin: var(--blok-space-2) var(--blok-space-1) var(--blok-space-1);
   padding: var(--blok-space-2) var(--blok-space-3) var(--blok-space-3);
   border-radius: var(--blok-radius-control);
-  background: var(--blok-item-hover-bg);
+  background: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-card-layout-label] {
   margin-block-end: var(--blok-space-2);
   text-align: center;
   font-size: 12px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-card-layout-tiles] {
@@ -7902,7 +7902,7 @@ textarea[data-blok-database-cell-input] {
   background: transparent;
   font: inherit;
   font-size: 14px;
-  color: var(--blok-text-secondary);
+  color: var(--blok-database-ink-secondary);
   cursor: pointer;
 }
 
@@ -7919,14 +7919,14 @@ textarea[data-blok-database-cell-input] {
   inline-size: 100%;
   block-size: 72px;
   padding: var(--blok-space-3) var(--blok-space-2-5);
-  border: 1px solid var(--blok-border-primary);
+  border: 1px solid var(--blok-database-tpl-border);
   border-radius: var(--blok-radius-control);
   background: var(--blok-database-card-bg);
 }
 
 /* The List tile's top band is neutral, not Notion's blue (no-blue law). */
 [data-blok-database-card-layout-drawing="list"] {
-  background: linear-gradient(var(--blok-item-hover-bg) 0 30%, var(--blok-database-card-bg) 30%);
+  background: linear-gradient(var(--blok-database-hover-bg) 0 30%, var(--blok-database-card-bg) 30%);
 }
 
 [data-blok-database-card-layout-drawing] i {
@@ -7935,7 +7935,7 @@ textarea[data-blok-database-cell-input] {
   flex: 0 0 28%;
   block-size: 5px;
   border-radius: var(--blok-radius-control-sm);
-  background: var(--blok-border-primary);
+  background: var(--blok-database-tpl-border);
 }
 
 [data-blok-database-card-layout-drawing] i:first-child {
@@ -7951,8 +7951,8 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-card-layout-tile][aria-pressed="true"] [data-blok-database-card-layout-drawing] {
-  border-color: var(--blok-text-primary);
-  box-shadow: 0 0 0 1px var(--blok-text-primary);
+  border-color: var(--blok-database-ink);
+  box-shadow: 0 0 0 1px var(--blok-database-ink);
 }
 
 [data-blok-database-starter-preview-hidden] {

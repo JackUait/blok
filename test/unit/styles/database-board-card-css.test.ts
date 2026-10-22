@@ -31,10 +31,10 @@ describe('database board card and calendar "No date" styles', () => {
     const tile = ruleBody('[data-blok-database-card-layout-tile]');
 
     expect(picked).not.toMatch(/blue|focus-ring|#2383e2|rgb\(35, 131, 226\)/i);
-    expect(picked).toMatch(/--blok-text-primary/);
+    expect(picked).toMatch(/--blok-database-ink\)/);
     expect(picked).not.toMatch(/background/);
     expect(picked).not.toMatch(/(^|;)\s*color:/);
-    expect(tile).toMatch(/color:\s*var\(--blok-text-secondary\)|color:\s*var\(--blok-text-primary\)/);
+    expect(tile).toMatch(/color:\s*var\(--blok-database-ink(-secondary)?\)/);
   });
 
   it('draws card properties as the measured 12px rows', () => {

@@ -866,6 +866,56 @@ export const IconAlarm = `
 </svg>
 `;
 
+// Ticket — the card box with a notch in each side and a torn-off line (database template icon)
+export const IconTicket = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M5 5h10a2 2 0 0 1 2 2v1.5a1.5 1.5 0 0 0 0 3V13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1.5a1.5 1.5 0 0 0 0-3V7a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12.5 7v.5M12.5 9.75v.5M12.5 12.5v.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Currency — a coin with a dollar sign (database template icon)
+export const IconCurrency = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12.25 8.1c-.3-.7-1.2-1.1-2.25-1.1-1.25 0-2.25.6-2.25 1.5 0 2 4.5 1 4.5 3 0 .9-1 1.5-2.25 1.5-1.05 0-1.95-.4-2.25-1.1M10 6v1M10 13v1" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Credit card — a card with its stripe and a number line (database template icon)
+export const IconCreditCard = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <rect x="3" y="5" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3 8.5h14M6 12h2.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Paint brush — a wide house-painting brush: handle, ferrule, bristles (database template icon)
+export const IconPaintBrush = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M8.75 8V4.25a1.25 1.25 0 0 1 2.5 0V8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6.5 8h7v3l1.5 3.25V16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-1.75L6.5 11Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6.5 11h7M10 14v3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Package — a taped box (database template icon)
+export const IconPackage = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M10 2.75 16.5 6.25v7.5L10 17.25 3.5 13.75v-7.5L10 2.75Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3.5 6.25 10 9.75l6.5-3.5M10 9.75v7.5M6.75 4.5l6.5 3.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Fan deck — colour swatches fanned out from a pivot (database template icon)
+export const IconFanDeck = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3.5 14.75V4.5A1.5 1.5 0 0 1 5 3h1.5A1.5 1.5 0 0 1 8 4.5v10.25a2.25 2.25 0 0 1-4.5 0Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M8 8.5l3.36-3.36a1.25 1.25 0 0 1 1.77 0l1.41 1.41a1.25 1.25 0 0 1 0 1.77L9.86 13h5.64a1.5 1.5 0 0 1 1.5 1.5v1a1.5 1.5 0 0 1-1.5 1.5H5.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="5.75" cy="14.75" r=".85" fill="currentColor" stroke="none"/>
+</svg>
+`;
+
 // Merge cells — the wall between two cells opens up
 export const IconMergeCells = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

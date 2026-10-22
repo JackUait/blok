@@ -13,6 +13,10 @@
   --blok-database-ink-secondary: rgb(114, 111, 106);
   --blok-database-ink-tertiary: rgb(114, 111, 106);
   --blok-database-hover-bg: rgba(33, 27, 23, 0.051);
+  /* Pressed header cell and toolbar icon: the hover ink at double alpha (research/33 §4.2). */
+  --blok-database-pressed-bg: rgba(33, 27, 23, 0.102);
+  /* Line under a row page's properties (research/33 §4.1). */
+  --blok-database-page-divider: rgba(55, 53, 47, 0.09);
   --blok-database-checkbox-checked-bg: rgb(39, 131, 222);
   --blok-database-switch-on-bg: rgb(39, 131, 222);
   /* "More templates" card and search borders (research/26 §2). Dark is unmeasured: Blok's border. */
@@ -30,6 +34,16 @@
   --blok-database-column-green-bg: rgba(3, 87, 31, 0.035);
   --blok-database-column-green-ring: rgba(0, 100, 45, 0.09);
   --blok-database-column-green-accent: var(--blok-database-option-green-text);
+  /* research/33 §4.4. The counts stay the pill text: Notion's dot inks fail AA on these tints (2.8-3.1:1). */
+  --blok-database-column-orange-bg: rgba(186, 72, 3, 0.043);
+  --blok-database-column-orange-ring: rgba(224, 101, 1, 0.13);
+  --blok-database-column-purple-bg: rgba(98, 3, 161, 0.03);
+  --blok-database-column-purple-ring: rgba(102, 0, 178, 0.08);
+  --blok-database-column-pink-bg: rgba(161, 3, 66, 0.03);
+  --blok-database-column-pink-ring: rgba(197, 0, 93, 0.086);
+  --blok-database-column-red-bg: rgba(199, 3, 3, 0.035);
+  --blok-database-column-red-ring: rgba(223, 22, 0, 0.094);
+  --blok-database-column-brown-ring: rgba(139, 46, 0, 0.086);
   /* research/07:134: a hovered card is translucent, so the column tint shows through. */
   --blok-database-card-bg-hover: rgba(54, 29, 2, 0.031);
   --blok-database-popover-shadow: rgba(25, 25, 25, 0.05) 0 20px 24px, rgba(25, 25, 25, 0.027) 0 5px 8px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
@@ -63,6 +77,13 @@
   --blok-database-status-dot-gray: rgb(142, 139, 134);
   --blok-database-status-dot-blue: rgb(39, 131, 222);
   --blok-database-status-dot-green: rgb(70, 161, 113);
+  /* research/33 §4.3: the same in both themes. */
+  --blok-database-status-dot-brown: rgb(182, 137, 101);
+  --blok-database-status-dot-orange: rgb(213, 128, 59);
+  --blok-database-status-dot-yellow: rgb(216, 163, 47);
+  --blok-database-status-dot-purple: rgb(181, 119, 214);
+  --blok-database-status-dot-pink: rgb(219, 105, 153);
+  --blok-database-status-dot-red: rgb(229, 100, 88);
   --blok-database-avatar-ring: rgba(42, 28, 0, 0.07);
   --blok-database-status-pill-pad-start: 7px;
   --blok-database-status-pill-pad-end: 9px;
@@ -149,6 +170,7 @@
   --blok-database-gallery-card-bg: #ffffff;
   --blok-database-gallery-card-shadow: rgba(25, 25, 25, 0.027) 0 4px 12px 0, rgba(25, 25, 25, 0.02) 0 1px 2px 0, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   --blok-database-gallery-card-hover-bg: rgba(55, 53, 47, 0.04);
+  --blok-database-gallery-card-active-bg: rgba(55, 53, 47, 0.06);
   --blok-database-gallery-preview-bg: rgba(66, 35, 3, 0.03);
   --blok-database-gallery-preview-border: rgba(42, 28, 0, 0.07);
   --blok-database-gallery-preview-text: var(--blok-database-ink-secondary);
@@ -178,6 +200,8 @@
   /* A date with a reminder: the same blue in both themes (research/21 §6, research/26 §4f). */
   --blok-database-reminder-text: rgb(35, 119, 211);
   --blok-database-calendar-today-text: #ffffff;
+  /* The calendar's today digit only (research/33 §4.6): white in light, black in dark. */
+  --blok-database-calendar-day-today-text: #ffffff;
   /* Timeline (research/07 bars, arrow, gridline; research/08 weekend). */
   --blok-database-timeline-bar-bg: #ffffff;
   --blok-database-timeline-bar-shadow: rgba(0, 0, 0, 0.04) 0 2px 4px 0, rgba(42, 28, 0, 0.07) 0 0 0 1px;
@@ -284,6 +308,27 @@
     --blok-database-ink-secondary: rgb(173, 169, 163);
     --blok-database-ink-tertiary: rgb(143, 140, 135);
     --blok-database-hover-bg: rgba(255, 255, 255, 0.055);
+    --blok-database-pressed-bg: rgba(255, 255, 255, 0.11);
+    --blok-database-page-divider: rgba(255, 255, 255, 0.094);
+    /* research/33 §4.4: tint, ring and count (Notion's dot ink, 5.0-5.5:1 on the tint); tinted cards in yellow and red. */
+    --blok-database-column-orange-bg: rgba(254, 139, 71, 0.043);
+    --blok-database-column-orange-ring: rgba(255, 134, 51, 0.157);
+    --blok-database-column-orange-accent: rgb(213, 128, 59);
+    --blok-database-column-purple-bg: rgba(196, 101, 253, 0.05);
+    --blok-database-column-purple-ring: rgba(201, 122, 255, 0.165);
+    --blok-database-column-purple-accent: rgb(181, 119, 214);
+    --blok-database-column-pink-ring: rgba(255, 104, 171, 0.165);
+    --blok-database-column-red-bg: rgba(251, 107, 107, 0.047);
+    --blok-database-column-red-ring: rgba(255, 106, 94, 0.173);
+    --blok-database-column-red-accent: rgb(229, 100, 88);
+    --blok-database-column-yellow-card-bg: rgb(55, 51, 37);
+    --blok-database-column-red-card-bg: rgb(65, 39, 37);
+    /* Their hover is unmeasured: the card keeps its tint rather than falling back to the gray hover. */
+    --blok-database-column-yellow-card-hover-bg: rgb(55, 51, 37);
+    --blok-database-column-red-card-hover-bg: rgb(65, 39, 37);
+    --blok-database-gallery-card-active-bg: rgb(37, 37, 37);
+    /* Notion's dark digit is black: 6.3:1, where white is 3.3:1. */
+    --blok-database-calendar-day-today-text: rgb(0, 0, 0);
     --blok-database-tpl-border: #333331;
     /* An event card is 47 and 55 hovered: the tertiary step is 4.0:1 there, 162,159,154 is 4.51:1 on 55. */
     --blok-database-calendar-event-muted-text: rgb(162, 159, 154);
@@ -402,7 +447,7 @@
     --blok-database-gallery-preview-text: var(--blok-database-ink-secondary);
     --blok-database-gallery-title-text: rgb(240, 239, 237);
     --blok-database-gallery-muted-text: var(--blok-database-ink-tertiary);
-    /* Calendar: research/21 §1h. Today digit stays white; Notion's dark digit is black, a bug. */
+    /* Calendar: research/21 §1h. The today digit has its own token: Notion's dark digit is black (research/33 §4.6). */
     --blok-database-calendar-border: rgb(56, 56, 54);
     --blok-database-calendar-weekend-bg: rgb(32, 32, 32);
     /* Builder surfaces: research/21 §1n. Notion's frame, module ring and strip are blue; neutral here (Q6).
@@ -511,6 +556,27 @@
   --blok-database-ink-secondary: rgb(173, 169, 163);
   --blok-database-ink-tertiary: rgb(143, 140, 135);
   --blok-database-hover-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-pressed-bg: rgba(255, 255, 255, 0.11);
+  --blok-database-page-divider: rgba(255, 255, 255, 0.094);
+  /* research/33 §4.4: tint, ring and count (Notion's dot ink, 5.0-5.5:1 on the tint); tinted cards in yellow and red. */
+  --blok-database-column-orange-bg: rgba(254, 139, 71, 0.043);
+  --blok-database-column-orange-ring: rgba(255, 134, 51, 0.157);
+  --blok-database-column-orange-accent: rgb(213, 128, 59);
+  --blok-database-column-purple-bg: rgba(196, 101, 253, 0.05);
+  --blok-database-column-purple-ring: rgba(201, 122, 255, 0.165);
+  --blok-database-column-purple-accent: rgb(181, 119, 214);
+  --blok-database-column-pink-ring: rgba(255, 104, 171, 0.165);
+  --blok-database-column-red-bg: rgba(251, 107, 107, 0.047);
+  --blok-database-column-red-ring: rgba(255, 106, 94, 0.173);
+  --blok-database-column-red-accent: rgb(229, 100, 88);
+  --blok-database-column-yellow-card-bg: rgb(55, 51, 37);
+  --blok-database-column-red-card-bg: rgb(65, 39, 37);
+  /* Their hover is unmeasured: the card keeps its tint rather than falling back to the gray hover. */
+  --blok-database-column-yellow-card-hover-bg: rgb(55, 51, 37);
+  --blok-database-column-red-card-hover-bg: rgb(65, 39, 37);
+  --blok-database-gallery-card-active-bg: rgb(37, 37, 37);
+  /* Notion's dark digit is black: 6.3:1, where white is 3.3:1. */
+  --blok-database-calendar-day-today-text: rgb(0, 0, 0);
   --blok-database-tpl-border: #333331;
   /* An event card is 47 and 55 hovered: the tertiary step is 4.0:1 there, 162,159,154 is 4.51:1 on 55. */
   --blok-database-calendar-event-muted-text: rgb(162, 159, 154);
@@ -628,7 +694,7 @@
   --blok-database-gallery-preview-text: var(--blok-database-ink-secondary);
   --blok-database-gallery-title-text: rgb(240, 239, 237);
   --blok-database-gallery-muted-text: var(--blok-database-ink-tertiary);
-  /* Calendar: research/21 §1h. Today digit stays white; Notion's dark digit is black, a bug. */
+  /* Calendar: research/21 §1h. The today digit has its own token: Notion's dark digit is black (research/33 §4.6). */
   --blok-database-calendar-border: rgb(56, 56, 54);
   --blok-database-calendar-weekend-bg: rgb(32, 32, 32);
   /* Builder surfaces: research/21 §1n. Notion's frame, module ring and strip are blue; neutral here (Q6).
@@ -1751,7 +1817,7 @@
  */
 [data-blok-database-drawer] hr {
   border: none;
-  border-top: 1px solid var(--blok-database-drawer-border);
+  border-top: 1px solid var(--blok-database-page-divider);
   margin: 0 0 var(--blok-space-1);
 }
 
@@ -5030,6 +5096,12 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
 [data-blok-database-option-pill][data-status-group][data-color="gray"]::before { background-color: var(--blok-database-status-dot-gray); }
 [data-blok-database-option-pill][data-status-group][data-color="blue"]::before { background-color: var(--blok-database-status-dot-blue); }
 [data-blok-database-option-pill][data-status-group][data-color="green"]::before { background-color: var(--blok-database-status-dot-green); }
+[data-blok-database-option-pill][data-status-group][data-color="brown"]::before { background-color: var(--blok-database-status-dot-brown); }
+[data-blok-database-option-pill][data-status-group][data-color="orange"]::before { background-color: var(--blok-database-status-dot-orange); }
+[data-blok-database-option-pill][data-status-group][data-color="yellow"]::before { background-color: var(--blok-database-status-dot-yellow); }
+[data-blok-database-option-pill][data-status-group][data-color="purple"]::before { background-color: var(--blok-database-status-dot-purple); }
+[data-blok-database-option-pill][data-status-group][data-color="pink"]::before { background-color: var(--blok-database-status-dot-pink); }
+[data-blok-database-option-pill][data-status-group][data-color="red"]::before { background-color: var(--blok-database-status-dot-red); }
 
 /* Number: right-aligned as measured. Bar and ring look is unmeasured; colors reuse option ink. */
 [data-blok-database-cell="number"] {
@@ -6173,6 +6245,10 @@ textarea[data-blok-database-cell-input] {
   background-image: linear-gradient(var(--blok-database-table-header-hover-bg), var(--blok-database-table-header-hover-bg));
 }
 
+[data-blok-database-table-column-header]:active {
+  background-image: linear-gradient(var(--blok-database-pressed-bg), var(--blok-database-pressed-bg));
+}
+
 [data-blok-database-table-column-button] {
   display: flex;
   align-items: center;
@@ -7272,6 +7348,10 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
+[data-blok-database-view-toolbar] > button:active {
+  background-color: var(--blok-database-pressed-bg);
+}
+
 [data-blok-database-view-toolbar] > button[data-active] {
   color: var(--blok-icon-active-text);
 }
@@ -7950,6 +8030,11 @@ textarea[data-blok-database-cell-input] {
   margin-inline-end: 30%;
 }
 
+/* Notion's picked tile has a blue ring and primary ink label (research/33 §3.2); the ring stays ink (no-blue law). */
+[data-blok-database-card-layout-tile][aria-pressed="true"] {
+  color: var(--blok-database-ink);
+}
+
 [data-blok-database-card-layout-tile][aria-pressed="true"] [data-blok-database-card-layout-drawing] {
   border-color: var(--blok-database-ink);
   box-shadow: 0 0 0 1px var(--blok-database-ink);
@@ -8626,6 +8711,10 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-gallery-card-hover-bg);
 }
 
+[data-blok-database-gallery-card]:active {
+  background-color: var(--blok-database-gallery-card-active-bg);
+}
+
 /* The gallery holds focus while arrows select cards; the gray selection marks the card, not a ring. */
 [data-blok-database-gallery]:focus-visible {
   outline: none;
@@ -8969,7 +9058,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-calendar-day][data-today] [data-blok-database-calendar-day-number] {
   background-color: var(--blok-database-today);
-  color: var(--blok-database-calendar-today-text);
+  color: var(--blok-database-calendar-day-today-text);
 }
 
 [data-blok-database-calendar-add] {

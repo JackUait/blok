@@ -137,7 +137,7 @@ test('gallery: card, empty cover and cover line take Notion dark (research/21 §
   });
 });
 
-test('calendar: grid, weekend, event card and a white today digit in dark (research/21 §1h)', async ({ page }) => {
+test('calendar: grid, weekend, event card and Notion\'s black today digit in dark (research/21 §1h, research/33 §4.6)', async ({ page }) => {
   await mount(page, blocks({ type: 'calendar' }));
 
   const today = page.locator('[data-blok-database-calendar-day][data-day="2026-10-09"]');
@@ -151,9 +151,9 @@ test('calendar: grid, weekend, event card and a white today digit in dark (resea
     'background-color': 'rgb(47, 47, 47)',
     'box-shadow': 'rgb(56, 56, 54) 0px 0px 0px 1px, rgba(25, 25, 25, 0.08) 0px 2px 4px 0px',
   });
-  // Divergence: Notion's dark digit computes black (its white var does not resolve); Blok keeps white.
+  // Black is 6.3:1 on the red circle; white is 3.3:1.
   expect(await style(today.locator('[data-blok-database-calendar-day-number]'), ['background-color', 'color'])).toEqual({
     'background-color': 'rgb(229, 100, 88)',
-    'color': 'rgb(255, 255, 255)',
+    'color': 'rgb(0, 0, 0)',
   });
 });

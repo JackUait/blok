@@ -353,3 +353,116 @@ Notes:
 - Unchanged on purpose: BLUE rows, PRIOR rows, HOST rows, and every UNMEASURED surface.
 - New database tokens: `--blok-database-ink`, `-ink-secondary`, `-ink-tertiary`, `-hover-bg`, `-checkbox-checked-bg`, `-switch-on-bg`, `-tpl-border`, `-calendar-event-muted-text`, `-column-default-*`, light `-column-blue-*` / `-column-green-*`. Database-only, so not breaking.
 - `[data-blok-database-wrapper]` sets `color` and `--blok-icon-active-text` to the database ink. Database menus re-set `--blok-text-primary`, `--blok-text-secondary`, `--blok-item-hover-bg`, `--blok-popover-box-shadow` and `--blok-icon-active-text`. A host override of those core tokens no longer reaches database surfaces.
+
+## Pass 2 (2026-10-22): research 33 §4 colour dump
+
+Source: `research/33-notion-round12.md` §4 (light and dark sweeps of the same elements; raw JSON in `notion-measure33/colours/`).
+
+Method: Blok's values were read with `getComputedStyle` in a built page (`vite build --mode test` from origin/main ae96e482), headless Chromium, light and dark. Fixture: one database with a select and a status option in each of the 10 colours, dates, checkboxes, text; views table, board (Color columns on), status board, gallery, calendar, timeline, feed. Hover and pressed were read with the mouse held 0.25 s. Scratchpad: `r14c/probe.tpl.js`, `inter.tpl.js`, `inter2.tpl.js`, `before.txt`, `after.txt`; the table and counts below come from `r14c/pass2.py`.
+
+Notion values that research 33 corrected:
+
+- Calendar weekday names are 125,122,117 in light too (research 21 read 161,158,153). Both fail AA on white, so Blok's step 114,111,106 is unchanged.
+- The dark calendar today digit is black, measured again. Research 21 called it a bug. Black is 6.30:1 on the red circle, white is 3.34:1, so Blok now uses black in dark. The date picker and the timeline today chip keep white (their dark digit is unmeasured), so the calendar has its own token.
+
+Contrast for the dark board counts was taken on the resting tint over Notion's page (25), the rule pass 1 used. On the hovered "+ New" row (tint plus the 0.055 hover) every dark count ink drops to 3.9–4.7:1, including the ones pass 1 shipped (blue, green, brown, pink). That is a separate decision and is not changed here.
+
+| Surface | Notion L / D | Blok before | Status |
+|---|---|---|---|
+| Page / frame bg | 255 / 25,25,25 | 255 / 29,29,28 (host) | HOST |
+| Primary ink | 44,44,43 / 240,239,237 | same | MATCH |
+| Secondary ink (tabs, header, property names) | 125,122,117 / 173,169,163 | 114,111,106 / 173,169,163 | AA (light) + MATCH (dark) |
+| Tertiary ink | 161,158,153 / 125,122,117 | 114,111,106 / 143,140,135 | AA |
+| Toolbar icon | 142,139,134 / 173,169,163 | same | MATCH |
+| Uncoloured board count / "+ New" ink | 95,94,89 / 188,186,182 | same | MATCH |
+| Cell borders, dividers | rgba(42,28,0,0.07) / rgba(255,255,243,0.082) | same | MATCH |
+| Outlined button border | rgba(28,19,1,0.11) / rgba(255,255,235,0.1) | same (table-control-border) | MATCH |
+| Row page property divider | rgba(55,53,47,0.09) / rgba(255,255,255,0.094) | 232,232,235 / rgba(255,255,255,0.1) | CHANGE |
+| Header cell hover | 0.051 / 0.055 | same | MATCH |
+| Header cell pressed | rgba(33,27,23,0.102) / rgba(255,255,255,0.11) | stayed at hover | CHANGE |
+| Toolbar icon pressed | 0.102 / 0.110 | stayed at hover | CHANGE |
+| Gallery card hover | rgba(55,53,47,0.04) / 47,47,47 | same | MATCH |
+| Gallery card pressed | rgba(55,53,47,0.06) / 37,37,37 | stayed at hover | CHANGE |
+| Row selection halo | rgba(35,131,226,0.14) | rgba(55,53,47,0.1) / rgba(255,255,255,0.09) | BLUE |
+| Column resize / drag guides (1x144 0.21, 2x144 0.32, 4x28 solid, left table edge) | see §4.2 | table-resize 0.8 | AMBIGUOUS |
+| Option pills, 10 colours, bg + text | §4.3 | same (computed, table + board header) | MATCH |
+| Status dot, no-colour / gray, blue, green | 142,139,134 / 39,131,222 / 70,161,113 | same | MATCH |
+| Status dot brown, orange, yellow, purple, pink, red | dot inks, both themes | the pill text | CHANGE |
+| Status DEFAULT pill (no colour) = gray pill | gray pill | gray pill (shownStatusOption) | MATCH |
+| Board tint gray / default | rgba(66,35,3,0.03) / rgba(252,252,252,0.03) | same | MATCH |
+| Board tint + ring brown | ring rgba(139,46,0,0.086) / rgba(255,174,122,0.133) | light ring derived 0.077; tint and dark MATCH | CHANGE (light ring) |
+| Board tint + ring orange | rgba(186,72,3,0.043) + rgba(224,101,1,0.13) / rgba(254,139,71,0.043) + rgba(255,134,51,0.157) | derived from the pill | CHANGE |
+| Board tint + ring yellow | §4.4 | same | MATCH |
+| Board tint + ring green | §4.4 | same | MATCH |
+| Board tint + ring blue | §4.4 | same | MATCH |
+| Board tint + ring purple | rgba(98,3,161,0.03) + rgba(102,0,178,0.08) / rgba(196,101,253,0.05) + rgba(201,122,255,0.165) | derived | CHANGE |
+| Board tint + ring pink | rgba(161,3,66,0.03) + rgba(197,0,93,0.086) / tint MATCH + rgba(255,104,171,0.165) | derived | CHANGE |
+| Board tint + ring red | rgba(199,3,3,0.035) + rgba(223,22,0,0.094) / rgba(251,107,107,0.047) + rgba(255,106,94,0.173) | derived | CHANGE |
+| Count + "+ New" ink, coloured columns, light | the dot ink (2.2-3.7:1 on the tint) | the pill text | AA |
+| Count + "+ New" ink, dark orange / purple / red | 213,128,59 / 181,119,214 / 229,100,88 (5.5 / 5.2 / 5.0 on the tint over 25) | the pill text | CHANGE |
+| Count + "+ New" ink, dark brown / yellow / green / pink | dot ink | same | MATCH |
+| Count + "+ New" ink, dark blue | 39,131,222 (4.2:1) | 41,137,232 | AA |
+| Card bg + shadow, plain | §4.4 | same | MATCH |
+| Dark card bg yellow / red | 55,51,37 / 65,39,37 | 32,32,32 | CHANGE |
+| Dark card bg blue / green | 33,48,65 / 36,52,43 | same | MATCH |
+| Gallery card bg + shadow | §4.5 | same | MATCH |
+| Feed post card | §4.5 | same | MATCH |
+| Feed hover pill / small control | white + 240,239,237 / 47 + 44,44,43 | same (source) | MATCH |
+| Calendar weekend cell | 249,248,247 / 32,32,32 | same | MATCH |
+| Calendar grid lines + weekday row line | 230,229,227 / 56,56,54 | same (Blok draws a border, Notion a shadow) | MATCH |
+| Calendar weekday names | 125,122,117 both (research 33; research 21 read 161 light) | 114,111,106 / 143,140,135 | AA |
+| Calendar today marker, light | 229,100,88 + white digit (3.34:1) | same | MATCH |
+| Calendar today marker, dark digit | black (6.30:1) | white (3.34:1) | CHANGE |
+| Timeline view bg | 253,253,253 / 25,25,25 | page | HOST |
+| Timeline header bottom | 230,229,227 / 56,56,54 inset | same | MATCH |
+| Timeline today dot | 229,100,88 | same | MATCH |
+| Timeline edge fades (30x30 gradients) | §4.6 | no such element in Blok | NOT BUILT |
+| Side peek panel | white + 3-layer / 32 + dark shadow, radius 0 | same | MATCH |
+| Center peek panel | radius 12, shadow as side, backdrop 0.6 / 0.8 | --blok-radius-dialog, peek shadow, backdrop tokens (source) | MATCH |
+| Menu / popover surface | §4.7 | same (header menu computed: bg, shadow, radius 10) | MATCH |
+| Card hover action bar | §4.7 | same | MATCH |
+| Tooltip bg, ink, shadow, radius | 44,44,43 / 240,239,237, identical in dark | same | MATCH |
+| Tooltip second line | 173,169,163 | same (TOOLTIP_MUTED_INK) | MATCH |
+| "New" button | 39,131,222 + 243,249,253 (3.67:1) | 30,110,195 | AA |
+| "New" chevron split | rgba(28,19,1,0.11) / rgba(255,255,235,0.1) | same | MATCH |
+| Table row checkbox border | rgba(27,21,0,0.19) / rgba(255,252,235,0.306) | same | MATCH |
+| Card layout tile, not picked | 1px 230,229,227, label 125,122,117 | same border; label 114,111,106 | AA |
+| Card layout tile, picked ring | 2px rgb(39,131,222) | 1px border + 1px shadow in the database ink | BLUE |
+| Card layout tile, picked label | 44,44,43 | 114,111,106 | CHANGE |
+| Confirm dialog, light | white, radius 12, backdrop 0.6 | same (source) | MATCH |
+| "View details", "Clear search" ink | 142,139,134 both | not reached by the probe (no matching Blok control found) | UNMEASURED |
+| Feed avatar ring | rgba(42,28,0,0.07) / rgba(255,255,243,0.082) | not reached (fixture has no comments) | UNMEASURED |
+| Map view | canvas not captured | — | UNMEASURED |
+
+| Status | Count |
+|---|---|
+| MATCH | 35 |
+| CHANGE | 14 |
+| AA | 7 |
+| BLUE | 2 |
+| HOST | 2 |
+| AMBIGUOUS | 1 |
+| NOT BUILT | 1 |
+| UNMEASURED | 3 |
+
+Rows: 64; verdicts: 65
+
+A row with a light and a dark verdict counts each.
+
+What changed (all in `database.css`, database-scoped tokens; no published core variable changed):
+
+- New tokens: `--blok-database-pressed-bg`, `-page-divider`, `-gallery-card-active-bg`, `-calendar-day-today-text`, `-status-dot-{brown,orange,yellow,purple,pink,red}`, `-column-{orange,purple,pink,red}-{bg,ring}`, light `-column-brown-ring`, dark `-column-{orange,purple,red}-accent`, dark `-column-{yellow,red}-card-bg` and `-card-hover-bg`.
+- Dark yellow and red card hover is unmeasured. The hovered card keeps its tint instead of falling back to the gray 38.
+- Blue kept neutral: the picked Card layout tile. Notion draws a 2px rgb(39,131,222) outline (research 33 §3.2); Blok keeps its ink ring and now uses Notion's 44,44,43 label.
+- Not a colour, not changed: the tooltip padding is 6px 10px (Notion 5px 8px).
+
+Surfaces research 33 could not measure (Blok unchanged):
+
+- Default and Gray board columns (not on any swept board).
+- Calendar events.
+- Timeline bars.
+- Toasts.
+- Card hover.
+- New and Filter hover.
+- Map canvas.
+- Dark confirm dialog.

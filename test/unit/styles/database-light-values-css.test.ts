@@ -115,7 +115,7 @@ describe('dark leftovers (research/26 §4c, §4e, §4f)', () => {
     const dark = (name: string): string[] => tokenValues(name).slice(-2);
 
     expect(dark('--blok-database-column-brown-bg')).toEqual(Array(2).fill('rgba(253, 158, 101, 0.05)'));
-    expect(tokenValues('--blok-database-column-brown-ring')).toEqual(Array(2).fill('rgba(255, 174, 122, 0.133)'));
+    expect(tokenValues('--blok-database-column-brown-ring')).toEqual(['rgba(139, 46, 0, 0.086)', 'rgba(255, 174, 122, 0.133)', 'rgba(255, 174, 122, 0.133)']);
     expect(dark('--blok-database-column-brown-accent')).toEqual(Array(2).fill('rgb(182, 137, 101)'));
     expect(tokenValues('--blok-database-column-brown-card-bg')).toEqual(Array(2).fill('rgb(56, 45, 38)'));
     expect(tokenValues('--blok-database-column-brown-card-hover-bg')).toEqual(Array(2).fill('rgb(64, 51, 43)'));

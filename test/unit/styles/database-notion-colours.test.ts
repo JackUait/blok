@@ -363,3 +363,94 @@ describe('fills and lines that differed from Notion', () => {
     expect(ruleBody('[data-blok-database-timeline-toolbar] [data-blok-database-timeline-zoom]')).toContain('color: var(--blok-database-ink-secondary)');
   });
 });
+
+describe('pass 2: research/33 §4 colour dump', () => {
+  const both = (name: string, dark: string): void => {
+    expect(value(dbMedia, name)).toBe(dark);
+    expect(value(dbAttr, name)).toBe(dark);
+  };
+
+  it.each([
+    ['orange', 'rgba(186, 72, 3, 0.043)', 'rgba(224, 101, 1, 0.13)', 'rgba(254, 139, 71, 0.043)', 'rgba(255, 134, 51, 0.157)'],
+    ['purple', 'rgba(98, 3, 161, 0.03)', 'rgba(102, 0, 178, 0.08)', 'rgba(196, 101, 253, 0.05)', 'rgba(201, 122, 255, 0.165)'],
+    ['pink', 'rgba(161, 3, 66, 0.03)', 'rgba(197, 0, 93, 0.086)', 'rgba(255, 78, 149, 0.055)', 'rgba(255, 104, 171, 0.165)'],
+    ['red', 'rgba(199, 3, 3, 0.035)', 'rgba(223, 22, 0, 0.094)', 'rgba(251, 107, 107, 0.047)', 'rgba(255, 106, 94, 0.173)'],
+  ])('board: the %s column takes Notion\'s tint and card ring in both themes', (color, lightBg, lightRing, darkBg, darkRing) => {
+    expect(value(dbLight, `--blok-database-column-${color}-bg`)).toBe(lightBg);
+    expect(value(dbLight, `--blok-database-column-${color}-ring`)).toBe(lightRing);
+    both(`--blok-database-column-${color}-bg`, darkBg);
+    both(`--blok-database-column-${color}-ring`, darkRing);
+  });
+
+  it('board: the light brown card ring is Notion\'s', () => {
+    expect(value(dbLight, '--blok-database-column-brown-ring')).toBe('rgba(139, 46, 0, 0.086)');
+    both('--blok-database-column-brown-ring', 'rgba(255, 174, 122, 0.133)');
+  });
+
+  it.each([
+    ['orange', [213, 128, 59], [186, 72, 3, 0.043], [254, 139, 71, 0.043]],
+    ['purple', [181, 119, 214], [98, 3, 161, 0.03], [196, 101, 253, 0.05]],
+    ['pink', [219, 105, 153], [161, 3, 66, 0.03], [255, 78, 149, 0.055]],
+    ['red', [229, 100, 88], [199, 3, 3, 0.035], [251, 107, 107, 0.047]],
+  ])('board: the %s count is Notion\'s dot colour in dark; in light it fails AA on the tint, so the pill text stays', (color, dot, lightTint, darkTint) => {
+    const ink = `rgb(${dot.join(', ')})`;
+
+    expect(contrast(ink, over(lightTint, WHITE))).toBeLessThan(4.5);
+    expect(value(dbLight, `--blok-database-column-${color}-accent`)).toBeUndefined();
+    expect(contrast(ink, over(darkTint, DARK_PAGE))).toBeGreaterThanOrEqual(4.5);
+    both(`--blok-database-column-${color}-accent`, ink);
+  });
+
+  it('board: dark cards in yellow and red columns take Notion\'s tinted card', () => {
+    both('--blok-database-column-yellow-card-bg', 'rgb(55, 51, 37)');
+    both('--blok-database-column-red-card-bg', 'rgb(65, 39, 37)');
+    both('--blok-database-column-yellow-card-hover-bg', 'rgb(55, 51, 37)');
+    both('--blok-database-column-red-card-hover-bg', 'rgb(65, 39, 37)');
+  });
+
+  it.each([
+    ['brown', 'rgb(182, 137, 101)'],
+    ['orange', 'rgb(213, 128, 59)'],
+    ['yellow', 'rgb(216, 163, 47)'],
+    ['purple', 'rgb(181, 119, 214)'],
+    ['pink', 'rgb(219, 105, 153)'],
+    ['red', 'rgb(229, 100, 88)'],
+  ])('status: the %s dot is Notion\'s, the same in both themes', (color, dot) => {
+    expect(themed(`--blok-database-status-dot-${color}`)).toEqual({ light: dot, dark: dot, attr: dot });
+    expect(ruleBody(`[data-blok-database-option-pill][data-status-group][data-color="${color}"]::before`)).toContain(`background-color: var(--blok-database-status-dot-${color})`);
+  });
+
+  it('pressed: header cells and toolbar icons darken to Notion\'s pressed fill', () => {
+    expect(themed('--blok-database-pressed-bg')).toEqual({ light: 'rgba(33, 27, 23, 0.102)', dark: 'rgba(255, 255, 255, 0.11)', attr: 'rgba(255, 255, 255, 0.11)' });
+    expect(ruleBody('[data-blok-database-table-column-header]:active')).toContain('background-image: linear-gradient(var(--blok-database-pressed-bg), var(--blok-database-pressed-bg))');
+    expect(ruleBody('[data-blok-database-view-toolbar] > button:active')).toContain('background-color: var(--blok-database-pressed-bg)');
+  });
+
+  it('pressed: a gallery card takes Notion\'s pressed fill', () => {
+    expect(themed('--blok-database-gallery-card-active-bg')).toEqual({ light: 'rgba(55, 53, 47, 0.06)', dark: 'rgb(37, 37, 37)', attr: 'rgb(37, 37, 37)' });
+    expect(ruleBody('[data-blok-database-gallery-card]:active')).toContain('background-color: var(--blok-database-gallery-card-active-bg)');
+  });
+
+  it('calendar: the dark today digit is Notion\'s black, which passes AA where white does not', () => {
+    const today = [229, 100, 88];
+
+    expect(contrast('rgb(255, 255, 255)', today)).toBeLessThan(4.5);
+    expect(contrast('rgb(0, 0, 0)', today)).toBeGreaterThanOrEqual(4.5);
+    expect(themed('--blok-database-calendar-day-today-text')).toEqual({ light: '#ffffff', dark: 'rgb(0, 0, 0)', attr: 'rgb(0, 0, 0)' });
+    expect(ruleBody('[data-blok-database-calendar-day][data-today] [data-blok-database-calendar-day-number]')).toContain('color: var(--blok-database-calendar-day-today-text)');
+  });
+
+  it('row page: the line under the properties is Notion\'s divider', () => {
+    expect(themed('--blok-database-page-divider')).toEqual({ light: 'rgba(55, 53, 47, 0.09)', dark: 'rgba(255, 255, 255, 0.094)', attr: 'rgba(255, 255, 255, 0.094)' });
+    expect(ruleBody('[data-blok-database-drawer] hr')).toContain('border-top: 1px solid var(--blok-database-page-divider)');
+  });
+
+  // Notion rings the picked tile in blue (research/33 §3.2); the no-blue law keeps Blok's ink ring.
+  it('card layout: the picked tile has an ink ring, not blue, and an ink label', () => {
+    const picked = ruleBody('[data-blok-database-card-layout-tile][aria-pressed="true"] [data-blok-database-card-layout-drawing]');
+
+    expect(picked).toContain('box-shadow: 0 0 0 1px var(--blok-database-ink)');
+    expect(picked).not.toMatch(/39, 131, 222|35, 131, 226|focus-ring/);
+    expect(ruleBody('[data-blok-database-card-layout-tile][aria-pressed="true"]')).toContain('color: var(--blok-database-ink)');
+  });
+});

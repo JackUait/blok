@@ -3975,6 +3975,8 @@ span[data-blok-slash-search] {
   --blok-database-ink-secondary: rgb(114, 111, 106);
   --blok-database-ink-tertiary: rgb(114, 111, 106);
   --blok-database-hover-bg: rgba(33, 27, 23, 0.051);
+  --blok-database-pressed-bg: rgba(33, 27, 23, 0.102);
+  --blok-database-page-divider: rgba(55, 53, 47, 0.09);
   --blok-database-checkbox-checked-bg: rgb(39, 131, 222);
   --blok-database-switch-on-bg: rgb(39, 131, 222);
   --blok-database-tpl-border: rgb(230, 229, 227);
@@ -3988,6 +3990,15 @@ span[data-blok-slash-search] {
   --blok-database-column-green-bg: rgba(3, 87, 31, 0.035);
   --blok-database-column-green-ring: rgba(0, 100, 45, 0.09);
   --blok-database-column-green-accent: var(--blok-database-option-green-text);
+  --blok-database-column-orange-bg: rgba(186, 72, 3, 0.043);
+  --blok-database-column-orange-ring: rgba(224, 101, 1, 0.13);
+  --blok-database-column-purple-bg: rgba(98, 3, 161, 0.03);
+  --blok-database-column-purple-ring: rgba(102, 0, 178, 0.08);
+  --blok-database-column-pink-bg: rgba(161, 3, 66, 0.03);
+  --blok-database-column-pink-ring: rgba(197, 0, 93, 0.086);
+  --blok-database-column-red-bg: rgba(199, 3, 3, 0.035);
+  --blok-database-column-red-ring: rgba(223, 22, 0, 0.094);
+  --blok-database-column-brown-ring: rgba(139, 46, 0, 0.086);
   --blok-database-card-bg-hover: rgba(54, 29, 2, 0.031);
   --blok-database-popover-shadow: rgba(25, 25, 25, 0.05) 0 20px 24px, rgba(25, 25, 25, 0.027) 0 5px 8px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   --blok-database-popover-hover: var(--blok-database-hover-bg);
@@ -4016,6 +4027,12 @@ span[data-blok-slash-search] {
   --blok-database-status-dot-gray: rgb(142, 139, 134);
   --blok-database-status-dot-blue: rgb(39, 131, 222);
   --blok-database-status-dot-green: rgb(70, 161, 113);
+  --blok-database-status-dot-brown: rgb(182, 137, 101);
+  --blok-database-status-dot-orange: rgb(213, 128, 59);
+  --blok-database-status-dot-yellow: rgb(216, 163, 47);
+  --blok-database-status-dot-purple: rgb(181, 119, 214);
+  --blok-database-status-dot-pink: rgb(219, 105, 153);
+  --blok-database-status-dot-red: rgb(229, 100, 88);
   --blok-database-avatar-ring: rgba(42, 28, 0, 0.07);
   --blok-database-status-pill-pad-start: 7px;
   --blok-database-status-pill-pad-end: 9px;
@@ -4085,6 +4102,7 @@ span[data-blok-slash-search] {
   --blok-database-gallery-card-bg: #ffffff;
   --blok-database-gallery-card-shadow: rgba(25, 25, 25, 0.027) 0 4px 12px 0, rgba(25, 25, 25, 0.02) 0 1px 2px 0, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   --blok-database-gallery-card-hover-bg: rgba(55, 53, 47, 0.04);
+  --blok-database-gallery-card-active-bg: rgba(55, 53, 47, 0.06);
   --blok-database-gallery-preview-bg: rgba(66, 35, 3, 0.03);
   --blok-database-gallery-preview-border: rgba(42, 28, 0, 0.07);
   --blok-database-gallery-preview-text: var(--blok-database-ink-secondary);
@@ -4108,6 +4126,7 @@ span[data-blok-slash-search] {
   --blok-database-calendar-event-hover-bg: rgba(84, 72, 49, 0.08);
   --blok-database-reminder-text: rgb(35, 119, 211);
   --blok-database-calendar-today-text: #ffffff;
+  --blok-database-calendar-day-today-text: #ffffff;
   --blok-database-timeline-bar-bg: #ffffff;
   --blok-database-timeline-bar-shadow: rgba(0, 0, 0, 0.04) 0 2px 4px 0, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   --blok-database-timeline-grid-line: rgba(42, 28, 0, 0.07);
@@ -4182,6 +4201,24 @@ span[data-blok-slash-search] {
   --blok-database-ink-secondary: rgb(173, 169, 163);
   --blok-database-ink-tertiary: rgb(143, 140, 135);
   --blok-database-hover-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-pressed-bg: rgba(255, 255, 255, 0.11);
+  --blok-database-page-divider: rgba(255, 255, 255, 0.094);
+  --blok-database-column-orange-bg: rgba(254, 139, 71, 0.043);
+  --blok-database-column-orange-ring: rgba(255, 134, 51, 0.157);
+  --blok-database-column-orange-accent: rgb(213, 128, 59);
+  --blok-database-column-purple-bg: rgba(196, 101, 253, 0.05);
+  --blok-database-column-purple-ring: rgba(201, 122, 255, 0.165);
+  --blok-database-column-purple-accent: rgb(181, 119, 214);
+  --blok-database-column-pink-ring: rgba(255, 104, 171, 0.165);
+  --blok-database-column-red-bg: rgba(251, 107, 107, 0.047);
+  --blok-database-column-red-ring: rgba(255, 106, 94, 0.173);
+  --blok-database-column-red-accent: rgb(229, 100, 88);
+  --blok-database-column-yellow-card-bg: rgb(55, 51, 37);
+  --blok-database-column-red-card-bg: rgb(65, 39, 37);
+  --blok-database-column-yellow-card-hover-bg: rgb(55, 51, 37);
+  --blok-database-column-red-card-hover-bg: rgb(65, 39, 37);
+  --blok-database-gallery-card-active-bg: rgb(37, 37, 37);
+  --blok-database-calendar-day-today-text: rgb(0, 0, 0);
   --blok-database-tpl-border: #333331;
   --blok-database-calendar-event-muted-text: rgb(162, 159, 154);
   --blok-database-option-default-bg: rgba(255, 255, 243, 0.082);
@@ -4379,6 +4416,24 @@ span[data-blok-slash-search] {
   --blok-database-ink-secondary: rgb(173, 169, 163);
   --blok-database-ink-tertiary: rgb(143, 140, 135);
   --blok-database-hover-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-pressed-bg: rgba(255, 255, 255, 0.11);
+  --blok-database-page-divider: rgba(255, 255, 255, 0.094);
+  --blok-database-column-orange-bg: rgba(254, 139, 71, 0.043);
+  --blok-database-column-orange-ring: rgba(255, 134, 51, 0.157);
+  --blok-database-column-orange-accent: rgb(213, 128, 59);
+  --blok-database-column-purple-bg: rgba(196, 101, 253, 0.05);
+  --blok-database-column-purple-ring: rgba(201, 122, 255, 0.165);
+  --blok-database-column-purple-accent: rgb(181, 119, 214);
+  --blok-database-column-pink-ring: rgba(255, 104, 171, 0.165);
+  --blok-database-column-red-bg: rgba(251, 107, 107, 0.047);
+  --blok-database-column-red-ring: rgba(255, 106, 94, 0.173);
+  --blok-database-column-red-accent: rgb(229, 100, 88);
+  --blok-database-column-yellow-card-bg: rgb(55, 51, 37);
+  --blok-database-column-red-card-bg: rgb(65, 39, 37);
+  --blok-database-column-yellow-card-hover-bg: rgb(55, 51, 37);
+  --blok-database-column-red-card-hover-bg: rgb(65, 39, 37);
+  --blok-database-gallery-card-active-bg: rgb(37, 37, 37);
+  --blok-database-calendar-day-today-text: rgb(0, 0, 0);
   --blok-database-tpl-border: #333331;
   --blok-database-calendar-event-muted-text: rgb(162, 159, 154);
   --blok-database-option-default-bg: rgba(255, 255, 243, 0.082);
@@ -5406,7 +5461,7 @@ span[data-blok-slash-search] {
 
 [data-blok-database-drawer] hr {
   border: none;
-  border-top: 1px solid var(--blok-database-drawer-border);
+  border-top: 1px solid var(--blok-database-page-divider);
   margin: 0 0 var(--blok-space-1);
 }
 
@@ -8377,6 +8432,30 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   background-color: var(--blok-database-status-dot-green);
 }
 
+[data-blok-database-option-pill][data-status-group][data-color="brown"]::before {
+  background-color: var(--blok-database-status-dot-brown);
+}
+
+[data-blok-database-option-pill][data-status-group][data-color="orange"]::before {
+  background-color: var(--blok-database-status-dot-orange);
+}
+
+[data-blok-database-option-pill][data-status-group][data-color="yellow"]::before {
+  background-color: var(--blok-database-status-dot-yellow);
+}
+
+[data-blok-database-option-pill][data-status-group][data-color="purple"]::before {
+  background-color: var(--blok-database-status-dot-purple);
+}
+
+[data-blok-database-option-pill][data-status-group][data-color="pink"]::before {
+  background-color: var(--blok-database-status-dot-pink);
+}
+
+[data-blok-database-option-pill][data-status-group][data-color="red"]::before {
+  background-color: var(--blok-database-status-dot-red);
+}
+
 [data-blok-database-cell="number"] {
   justify-content: flex-end;
   text-align: end;
@@ -9395,6 +9474,10 @@ textarea[data-blok-database-cell-input] {
   background-image: linear-gradient(var(--blok-database-table-header-hover-bg), var(--blok-database-table-header-hover-bg));
 }
 
+[data-blok-database-table-column-header]:active {
+  background-image: linear-gradient(var(--blok-database-pressed-bg), var(--blok-database-pressed-bg));
+}
+
 [data-blok-database-table-column-button] {
   display: flex;
   align-items: center;
@@ -10385,6 +10468,10 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 
+[data-blok-database-view-toolbar] > button:active {
+  background-color: var(--blok-database-pressed-bg);
+}
+
 [data-blok-database-view-toolbar] > button[data-active] {
   color: var(--blok-icon-active-text);
 }
@@ -11031,6 +11118,10 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-card-layout-drawing="list"] i:not(:first-child) {
   flex-basis: 60%;
   margin-inline-end: 30%;
+}
+
+[data-blok-database-card-layout-tile][aria-pressed="true"] {
+  color: var(--blok-database-ink);
 }
 
 [data-blok-database-card-layout-tile][aria-pressed="true"] [data-blok-database-card-layout-drawing] {
@@ -11705,6 +11796,10 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-gallery-card-hover-bg);
 }
 
+[data-blok-database-gallery-card]:active {
+  background-color: var(--blok-database-gallery-card-active-bg);
+}
+
 [data-blok-database-gallery]:focus-visible {
   outline: none;
 }
@@ -12023,7 +12118,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-calendar-day][data-today] [data-blok-database-calendar-day-number] {
   background-color: var(--blok-database-today);
-  color: var(--blok-database-calendar-today-text);
+  color: var(--blok-database-calendar-day-today-text);
 }
 
 [data-blok-database-calendar-add] {

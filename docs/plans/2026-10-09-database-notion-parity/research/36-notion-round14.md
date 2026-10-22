@@ -276,3 +276,24 @@ R14 › "3 more…" › New view › **Form** › "New form / Select data source
 - **"View my response"** navigated the tab to the new row **as a full page** (`/p/FormResp-<id>`, breadcrumb … / R14 / FormResp), with the row's own layout (here the Tabbed layout from §12). So "View my response" **is** reachable without a share link, from Preview.
 - **"Created by"** (added afterwards from the table header "+"): the FormResp row shows **the same person as every other row** (the user who submitted from Preview; compared in-page, name not recorded). So with anonymous off, a response's Created by is the respondent.
 - Anonymous on: **UNMEASURED** (its switch was not found outside the share panel).
+
+## 14. Not measured
+
+- Item 3: the Undo dialog has no ×, so its × position is "none" (not unmeasured). Dark Reset dialog: not read.
+- Item 5: a fresh database of exactly 3 rows (R14's 5 rows stand in). Why research 30 saw the switch disabled: unknown.
+- Item 8: "1h" → "2h" / date, and the day boundary (clock).
+- Item 10: relation-tab colours, "Add new relation", deleting a relation tab.
+- Item 11: anonymous responses on (its switch was not found outside "Share form", which is sharing).
+- Item 12: the toast in dark was not re-timed (research 35 §1.6 has its look).
+
+## 15. Safety and account state
+
+- **No billing surface opened.** One **upsell panel** did open by accident: plain Enter in the description textarea activated the pointer-highlighted "Property access" row (§2, try 3), which shows "Get the Business plan … Upgrade now". Nothing in it was clicked; Escape closed it; no screenshot of it was taken. Other gate hits were text false positives ("New" in "New template", the sample task "Upgrade database" in the Tasks setup dialog, the workspace switcher's upgrade row, which was not clicked). "Submit screen" in Form settings carries a **Plus** badge and was not opened.
+- Not used: Notion AI (the AI Autofill buttons and the bottom-right AI button were never clicked), Copy link / Copy to Clipboard, charts, dashboards, favourites, "Share form" / sharing / inviting, "Email me a copy", "Current Location", "Open in Google Maps" (hovered only), help links, timeline drags, Cmd+click.
+- **Rows created by side effect**: Enter on the template "…" made a row from TplA (§3.1); the form Preview submit made row "FormResp" (§13). Both lived in R14 and went to Trash with it.
+- **Viewport**: `resize 1400 717` (emulation only; the real window stayed 1512 wide), set back to 1512x717 and read back.
+- **Theme**: dark was set with Cmd+Shift+L for §11, then **Settings › Preferences › Theme › "Use system setting"** (the first pick landed on "Light"; corrected and read back: stored `"system"`, body white). Settings was opened only for this; nothing else there was changed.
+- **Sidebar**: it was collapsed during the session (cause not identified) and was set back to open with "Lock sidebar open", as it was at the start.
+- **Task database**: the conversion of §8.1 was undone with Remove before cleanup.
+- **Cleanup**: the scratch page M36 went to Trash (page Actions › Move to Trash), with R14, its four data sources (R14, two empty ones, the 101-row import), all views (Table, Feed, Board, the imported Board, the second sources' Tables, Form), the template TplA, the relation tab layout, and every row (F1–F3, TplA, T1–T5, FormResp). The sidebar afterwards lists no M36 / R14 / FormResp. The bottom-left "Turned into task database" notice was closed with its ×. `.playwright-cli/` snapshots were deleted; screenshots that showed the user's name or avatar were deleted at once. Raw files were grepped for the user's name, email and page names: no hits. The session `notion36` was closed; no other session was used.
+- Seen, not touched: the relation target list ("Existing data sources") still offered a database from research 35's scratch page (name withheld), so that page may not be fully in Trash, or Trash items are still listed there. Not investigated.

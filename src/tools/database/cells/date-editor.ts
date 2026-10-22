@@ -184,8 +184,8 @@ interface MenuChoice {
 
 /**
  * Date picker: a typed field, a month grid, End date (range), Date format,
- * Include time (then Time format and Time zone), Remind and Clear. Every change commits at once; Escape and an outside press
- * just close.
+ * Include time (then Time format and Time zone), Remind and Clear. Every change commits at once; Escape saves the typed
+ * date and closes; an outside press just closes.
  */
 class DateEditor {
   private start: Part | null;
@@ -255,8 +255,8 @@ class DateEditor {
         if (this.menu !== null) {
           this.closeMenu(true);
         } else {
-          // research/31 §4b: Escape in a bulk picker saves the typed date.
-          if (this.ctx.bulk === true) Object.values(this.pendingTyped).forEach((apply) => apply());
+          // research/31 §4b, research/35 §3: Escape saves the typed date.
+          Object.values(this.pendingTyped).forEach((apply) => apply());
           this.finish(true);
         }
       },

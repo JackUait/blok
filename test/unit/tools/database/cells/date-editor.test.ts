@@ -131,12 +131,50 @@ describe('date cell editor', () => {
     expect(input.getAttribute('aria-invalid')).toBe('true');
   });
 
-  it('typing alone commits nothing until Enter or leaving the field', () => {
+  it('typing alone commits nothing until Enter, Escape or leaving the field', () => {
     const ctx = openDate('2026-10-09');
 
     typeInto(q<HTMLInputElement>('[data-blok-database-date-input="start"]'), '2026-11-01');
 
     expect(ctx.onCommit).not.toHaveBeenCalled();
+  });
+
+  describe('single cell Escape (research/35 §3)', () => {
+    it('a typed date is saved on Escape, and one Escape closes', () => {
+      const ctx = openDate('2026-10-09');
+      const input = q<HTMLInputElement>('[data-blok-database-date-input="start"]');
+
+      typeInto(input, 'Oct 25, 2026');
+      press(input, 'Escape');
+
+      expect(ctx.onCommit).toHaveBeenCalledTimes(1);
+      expect(ctx.onCommit).toHaveBeenCalledWith('2026-10-25');
+      expect(ctx.onClose).toHaveBeenCalledTimes(1);
+      expect(editorRoot()).toBeNull();
+    });
+
+    it('a typed end date is saved on Escape', () => {
+      const ctx = openDate('2026-10-09/2026-10-12');
+      const input = q<HTMLInputElement>('[data-blok-database-date-input="end"]');
+
+      typeInto(input, 'Oct 20, 2026');
+      press(input, 'Escape');
+
+      expect(ctx.onCommit).toHaveBeenCalledWith('2026-10-09/2026-10-20');
+      expect(ctx.onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('an entry that is not a date writes nothing and still closes', () => {
+      const ctx = openDate('2026-10-09');
+      const input = q<HTMLInputElement>('[data-blok-database-date-input="start"]');
+
+      typeInto(input, 'soon');
+      press(input, 'Escape');
+
+      expect(ctx.onCommit).not.toHaveBeenCalled();
+      expect(ctx.onClose).toHaveBeenCalledTimes(1);
+      expect(editorRoot()).toBeNull();
+    });
   });
 
   it('Clear commits null and closes', () => {

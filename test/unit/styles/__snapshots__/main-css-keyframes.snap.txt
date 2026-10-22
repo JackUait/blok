@@ -16,6 +16,10 @@
   to { opacity: 1; filter: none }
 }
 
+@keyframes blok-assistant-dissolve {
+  to { opacity: 0; transform: translateY(-4px) scale(0.94); filter: blur(3px) }
+}
+
 @keyframes blok-assistant-draw {
   from { stroke-dashoffset: 16 }
 }

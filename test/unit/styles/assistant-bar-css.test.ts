@@ -212,6 +212,21 @@ describe('Ask AI bar colours', () => {
       .forEach((selector) => expect(reducedRule(selector), selector).toMatch(/animation:\s*none/));
   });
 
+  it('the actions row folds to nothing: its padding is inside its height, and it clips only while it moves', () => {
+    expect(bodyOf('[data-blok-assistant-actions]')).toMatch(/box-sizing:\s*border-box/);
+    expect(bodyOf('[data-blok-assistant-actions]')).not.toMatch(/overflow/);
+    expect(bodyOf('[data-blok-assistant-actions][data-blok-assistant-actions-motion]')).toMatch(/overflow:\s*clip/);
+  });
+
+  it('as the row folds, the chips dissolve one after another, and stay still under reduced motion', () => {
+    const chip = "[data-blok-assistant-actions-motion='out'] [data-blok-assistant-action]";
+
+    expect(bodyOf(chip)).toMatch(/animation:\s*blok-assistant-dissolve\b/);
+    expect(bodyOf(chip)).toMatch(/animation-delay:\s*calc\(var\(--blok-assistant-action-index\)/);
+    expect(ASSISTANT_CSS).toMatch(/@keyframes blok-assistant-dissolve\s*\{[\s\S]*?opacity:\s*0/);
+    expect(reducedRule(chip)).toMatch(/animation:\s*none/);
+  });
+
   it('Stop is an ink disc with an arc that spins without a hover', () => {
     const arc = bodyOf('[data-blok-assistant-stop]::before');
 

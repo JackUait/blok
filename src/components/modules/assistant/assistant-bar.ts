@@ -62,6 +62,7 @@ const ATTR = {
   continue: 'data-blok-assistant-continue',
   insert: 'data-blok-assistant-insert',
   actions: 'data-blok-assistant-actions',
+  actionsMotion: 'data-blok-assistant-actions-motion',
   slots: 'data-blok-assistant-slots',
   working: 'data-blok-assistant-working',
 } as const;
@@ -79,6 +80,13 @@ const OVERHANG = 12;
 
 /** Least room kept between the bar and the window's sides on a narrow screen. */
 const WINDOW_EDGE = 16;
+
+/** The actions row unfolds, and folds after a beat, so the chips fade first. */
+const UNFOLD = { duration: 420, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' };
+const FOLD = { duration: 340, delay: 60, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' };
+
+const canMove = (element: HTMLElement): boolean => typeof element.animate === 'function'
+  && !(typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
 /** Where the bar sits: the content column it spans, in viewport px. */
 export interface AssistantBarColumn {
@@ -194,6 +202,8 @@ export class AssistantBar {
   private readonly resume: HTMLButtonElement;
   private readonly insert: HTMLButtonElement;
   private readonly actions: HTMLElement;
+  /** The actions row's height while it unfolds or folds; the bar's gap follows it. */
+  private actionsMotion: Animation | null = null;
   private readonly thinking: HTMLButtonElement;
   private readonly slots: HTMLElement;
   /** The block the slots sit under; null: under the bar. */
@@ -326,13 +336,21 @@ export class AssistantBar {
     if (!this.element.isConnected) {
       document.body.appendChild(this.element);
     }
-    this.element.hidden = false;
-    promoteToTopLayer(this.element);
-    this.place(anchor, column, inPlace);
+    // The draft first: a bar that opens with text must not unfold the actions and fold them at once.
     if (this.view.kind === 'prompt' && this.field.value === '') {
       this.field.value = this.draft;
       this.sync();
     }
+
+    const opening = !this.isOpen;
+
+    this.element.hidden = false;
+    promoteToTopLayer(this.element);
+    // Before place(): it keeps the height it first measures as the field row's.
+    if (opening && !this.actions.hidden && canMove(this.actions)) {
+      this.unfoldActions(0);
+    }
+    this.place(anchor, column, inPlace);
     this.field.focus({ preventScroll: true });
   }
 
@@ -608,7 +626,7 @@ export class AssistantBar {
     this.alert.hidden = kind !== 'error' || this.alert.textContent === '';
     this.resume.hidden = this.view.kind !== 'error' || this.view.resumable !== true;
     this.insert.hidden = this.view.kind !== 'answered' || this.view.edited || this.view.reply.trim() === '';
-    this.actions.hidden = kind !== 'prompt' || this.field.value !== '' || this.actions.childElementCount === 0;
+    this.showActions(kind === 'prompt' && this.field.value === '' && this.actions.childElementCount > 0);
     this.head.hidden = this.summary.hidden && this.alert.hidden && !actions;
     this.element.toggleAttribute(ATTR.followUp, !this.head.hidden);
     this.field.placeholder = working ? '' : this.t(kind === 'prompt' ? 'assistant.placeholder' : 'assistant.followUp');
@@ -618,6 +636,63 @@ export class AssistantBar {
     this.send.hidden = working;
     this.send.disabled = this.field.value.trim() === '';
     this.thinking.hidden = working || this.thinkingView === null;
+  }
+
+  private showActions(shown: boolean): void {
+    const folding = this.actions.getAttribute(ATTR.actionsMotion) === 'out';
+
+    if (shown ? !this.actions.hidden && !folding : this.actions.hidden || folding) {
+      return;
+    }
+    if (!this.isOpen || !canMove(this.actions)) {
+      this.settleActions();
+      this.actions.hidden = !shown;
+
+      return;
+    }
+    if (shown) {
+      this.unfoldActions();
+    } else {
+      this.moveActions(this.actions.getBoundingClientRect().height, 0, 'out', () => {
+        this.actions.hidden = true;
+      });
+    }
+  }
+
+  /** @param from - the height to start at: by default where the row is now */
+  private unfoldActions(from = this.actions.hidden ? 0 : this.actions.getBoundingClientRect().height): void {
+    this.settleActions();
+    this.actions.hidden = false;
+    this.moveActions(from, this.actions.getBoundingClientRect().height, 'in', () => undefined);
+  }
+
+  /** Move the row's height; the stylesheet clips it and plays the chips by `direction`. */
+  private moveActions(from: number, to: number, direction: 'in' | 'out', done: () => void): void {
+    this.settleActions();
+
+    const pad = parseFloat(getComputedStyle(this.actions).paddingBlockEnd) || 0;
+    // border-box: the padding shrinks with the height, or a closed row keeps it.
+    const frame = (height: number): Keyframe => ({ height: `${height}px`, paddingBlockEnd: `${Math.min(pad, height)}px` });
+    const motion = this.actions.animate([frame(from), frame(to)], { ...(direction === 'in' ? UNFOLD : FOLD), fill: 'both' });
+
+    this.actions.setAttribute(ATTR.actionsMotion, direction);
+    this.actions.inert = direction === 'out';
+    this.actionsMotion = motion;
+    motion.onfinish = () => {
+      // A newer motion owns the row now.
+      if (this.actionsMotion !== motion) {
+        return;
+      }
+      done();
+      this.settleActions();
+    };
+  }
+
+  private settleActions(): void {
+    this.actionsMotion?.cancel();
+    this.actionsMotion = null;
+    this.actions.removeAttribute(ATTR.actionsMotion);
+    this.actions.inert = false;
   }
 
   /** Drop the gap the bar holds. */

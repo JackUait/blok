@@ -511,6 +511,7 @@
 
 /* Suggested actions under an empty field, lined up with the field text. Quiet text buttons, never blue. */
 [data-blok-assistant-actions] {
+  box-sizing: border-box;
   display: flex;
   flex-wrap: wrap;
   gap: var(--blok-space-1-5);
@@ -540,6 +541,25 @@
 [data-blok-assistant-action]:hover {
   background: var(--blok-item-hover-bg);
   box-shadow: none;
+}
+
+/* While assistant-bar.ts unfolds or folds the row. Not always: the chips' focus ring reaches past it. */
+[data-blok-assistant-actions][data-blok-assistant-actions-motion] {
+  overflow: clip;
+}
+
+/* Folding: the chips dissolve one after another, then the row closes under them. */
+[data-blok-assistant-actions-motion='out'] [data-blok-assistant-action] {
+  animation: blok-assistant-dissolve 0.24s cubic-bezier(0.4, 0, 1, 1) both;
+  animation-delay: calc(var(--blok-assistant-action-index) * 28ms);
+}
+
+@keyframes blok-assistant-dissolve {
+  to {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.94);
+    filter: blur(3px);
+  }
 }
 
 @keyframes blok-assistant-rise {
@@ -691,7 +711,8 @@
   [data-blok-assistant-stop]::before,
   [data-blok-assistant-keep]::before,
   [data-blok-assistant-keep]:hover svg path,
-  [data-blok-assistant-action] {
+  [data-blok-assistant-action],
+  [data-blok-assistant-actions-motion='out'] [data-blok-assistant-action] {
     animation: none;
   }
 

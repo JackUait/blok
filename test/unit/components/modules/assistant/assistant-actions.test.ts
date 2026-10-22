@@ -199,4 +199,20 @@ describe('Ask AI action buttons', () => {
 
     await waitFor(async () => expect(await texts(editor)).toEqual(['Hello world']));
   });
+
+  it('inserts the answer once when Insert is pressed twice in a row', async () => {
+    const editor = await createEditor(scripted(answer('The page greets the world.')));
+
+    putCaret(paragraphInput());
+    pressModJ(paragraphInput());
+    fireEvent.click(within(group()).getByRole('button', { name: 'Summarize' }));
+
+    const insert = await waitFor(() => within(bar()).getByRole('button', { name: 'Insert' }));
+
+    fireEvent.click(insert);
+    fireEvent.click(insert);
+
+    await waitFor(() => expect(within(bar()).getByText('Added to the page.')).toBeTruthy());
+    expect(await texts(editor)).toEqual(['Hello world', 'The page greets the world.']);
+  });
 });

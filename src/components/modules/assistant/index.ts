@@ -496,6 +496,9 @@ export class Assistant extends Module {
     }
 
     const id = ++this.answerId;
+
+    // Taken before the await: a second press while the batch runs finds nothing to insert.
+    this.shownReply = null;
     const result = await this.Blok.AgentAPI.executeInRun({
       commands: [{ name: 'markdown.insert', args: { markdown: reply, parentId: after.parentId, position: { after: after.id } } }],
     });
@@ -510,7 +513,6 @@ export class Assistant extends Module {
     }
     this.changed = true;
     this.edited = true;
-    this.shownReply = null;
     this.bar?.render({ kind: 'answered', reply: this.Blok.I18n.t('assistant.inserted'), changed: true, edited: true });
     this.bar?.focusField();
   }

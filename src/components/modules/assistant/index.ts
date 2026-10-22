@@ -112,6 +112,10 @@ export class Assistant extends Module {
   private placing = false;
   /** The empty block the bar covers, when Space opened it there. */
   private inPlaceId: string | null = null;
+  /** The empty paragraph the caret sat in at open. Content the run writes next to it takes its place. */
+  private emptyId: string | null = null;
+  /** Blocks this open run created. */
+  private readonly created = new Set<string>();
   /** Watches the bar and its anchor for size changes, and the page for removed blocks, while open. */
   private watchers: { resize: ResizeObserver | null; mutations: MutationObserver; gaps: () => void } | null = null;
   /** The pending re-place frame, if any. */
@@ -170,8 +174,9 @@ export class Assistant extends Module {
   /**
    * Open the prompt bar. Does nothing without an assistant or in read-only mode.
    * @param options.inPlace - cover the caret's block while it stays empty, instead of sitting under it
+   * @param options.prompt - send this prompt once the bar is open
    */
-  public open(options: { inPlace?: boolean } = {}): void {
+  public open(options: { inPlace?: boolean; prompt?: string } = {}): void {
     if (!this.Blok.AgentAPI.hasAssistant || this.Blok.ReadOnly.isEnabled) {
       return;
     }
@@ -191,6 +196,11 @@ export class Assistant extends Module {
 
       this.anchor = block === undefined ? null : { id: block.id };
       this.inPlaceId = options.inPlace === true ? block?.id ?? null : null;
+      // Only the block the model is told the caret is in: content goes next to it.
+      this.emptyId = caret !== undefined && caret.id === this.context.blockIds[0] && caret.tool.isDefault && caret.isEmpty
+        ? caret.id
+        : null;
+      this.created.clear();
       // Here, before the field takes focus and the selection collapses.
       bar.setActions(assistantActions(this.actionContext(), (key) => this.Blok.I18n.t(key), this.config.agent?.assistant?.actions));
     }
@@ -209,6 +219,9 @@ export class Assistant extends Module {
     this.watch();
     if (opening) {
       this.revealBar(bar.element);
+    }
+    if (options.prompt !== undefined) {
+      this.submit(options.prompt);
     }
   }
 
@@ -242,6 +255,8 @@ export class Assistant extends Module {
     this.Blok.Toolbar.setSuppressed(false);
     this.anchor = null;
     this.inPlaceId = null;
+    this.emptyId = null;
+    this.created.clear();
 
     const back = this.returnPoint;
 
@@ -309,7 +324,10 @@ export class Assistant extends Module {
     this.bar?.render({ kind: 'working', status: '' });
     this.drawn = false;
     this.say(this.activityStatus('thinking'));
-    void pending.then((result) => {
+    void pending.then(async (result) => {
+      if (id === this.answerId) {
+        await this.consumeEmpty();
+      }
       if (id === this.answerId) {
         this.finish(result);
       }
@@ -511,10 +529,41 @@ export class Assistant extends Module {
 
       return;
     }
+    result.changed.created.forEach((blockId) => this.created.add(blockId));
+    await this.consumeEmpty();
+    if (id !== this.answerId) {
+      return;
+    }
     this.changed = true;
     this.edited = true;
     this.bar?.render({ kind: 'answered', reply: this.Blok.I18n.t('assistant.inserted'), changed: true, edited: true });
     this.bar?.focusField();
+  }
+
+  /**
+   * Content the run wrote right next to the empty paragraph the user asked in
+   * takes that paragraph's place. Content put elsewhere leaves it. The delete
+   * joins the run, so Discard brings the paragraph back.
+   */
+  private async consumeEmpty(): Promise<void> {
+    const manager = this.Blok.BlockManager;
+    const block = this.emptyId === null ? undefined : manager.getBlockById(this.emptyId);
+
+    if (this.run === null || block === undefined || !block.isEmpty) {
+      return;
+    }
+
+    const siblings = block.parentId === null
+      ? manager.blocks.filter((other) => other.parentId === null).map((other) => other.id)
+      : manager.getBlockById(block.parentId)?.contentIds ?? [];
+    const index = siblings.indexOf(block.id);
+    const neighbours = [siblings[index - 1], siblings[index + 1]];
+
+    if (!neighbours.some((id) => id !== undefined && this.created.has(id))) {
+      return;
+    }
+    this.emptyId = null;
+    await this.Blok.AgentAPI.executeInRun({ commands: [{ name: 'block.delete', args: { id: block.id } }] });
   }
 
   private async discard(): Promise<void> {
@@ -606,6 +655,7 @@ export class Assistant extends Module {
   }
 
   private executed(changed: ChangedSet): void {
+    changed.created.forEach((blockId) => this.created.add(blockId));
     if (!this.listening) {
       return;
     }

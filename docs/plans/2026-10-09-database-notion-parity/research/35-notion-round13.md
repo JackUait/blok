@@ -274,3 +274,32 @@ Same Tag header menu, dark.
 - **Growth**: 1 line 20px; 2 lines 40px; from 3 lines on the textarea stays **60px** (inline `style="height: 60px"`) and scrolls (`overflow-y: auto`, scrollHeight 100 then 180).
 - **Dark**: see §4 (wrapper rgba(252, 252, 252, 0.03), blue focus ring, radius 6px).
 
+## 6. B12: calendar clicks (dark)
+
+R13's Calendar view (Month). Its View settings › Layout › "Open pages in" lists Side peek ("Open pages on the side. Keeps the view behind interactive."), **Center peek ("… Default for Calendar")**, Full page. `peektype.sh` reads the URL's `p` / `pm` (`pm=c` center, `pm=s` side) and the peek box.
+
+| Action | Open mode setting | Result |
+|---|---|---|
+| Hover an empty day: a 20x20 **"Add an item"** `plus` button shows at the cell's top left | — | — |
+| Click "Add an item" (day 28) | Center peek | new page "New task" on that day, opened in a **center peek** (`pm=c`) |
+| Click an event (E1) | **Side peek** | side peek (`pm=s`, 756x717 at x 756) |
+| Click "Add an item" (day 29) | Side peek | new page, **side peek** (`pm=s`), with the template picker row "TplA / Empty / New template" at the bottom |
+| Real double-click (`page.mouse.dblclick`) on an empty part of day 30 | Side peek | **one** new page (item count 6 → 7), **side peek** |
+| **Shift** + double-click, day 31 | Side peek | same as plain: one new page, side peek |
+| **Alt** + double-click, day 27 | Side peek | same as plain: one new page, side peek |
+| Cmd + double-click | — | **not tried**: a Cmd-click may open a new tab, which takes the extension relay |
+
+So "+" and the double-click open the new page **in the view's own open mode** (center by default, side after the change).
+
+Single clicks on an empty day, Side peek mode: **no page was created** (3 tries: two CLI mouse down/up, one `page.mouse.click`). Research 30 §B11 saw a single click create a page with the view in Center peek mode. Whether the single-click create depends on the open mode was not separated.
+
+Events selected (drag box over E1–E3, 3 halos), then:
+
+| Step | Menu | Selection |
+|---|---|---|
+| Click the toolbar Sort button | Sort menu opens | **kept** (3) |
+| Click outside (page margin, x 400) | menu closes | **kept** (3) |
+| Click outside again | — | kept (3) |
+| Reselect; open Sort; click an **empty day cell** | menu closes, **no page created** | **kept** (3) |
+| Then click the same empty day (no menu open) | — | **cleared** (0); no page created |
+

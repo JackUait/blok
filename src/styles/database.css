@@ -135,10 +135,12 @@
   /* Notion's yellow and brown accents fail AA on their tint (2.2:1, 2.9:1); the measured pill text passes. */
   --blok-database-column-yellow-accent: var(--blok-database-option-yellow-text);
   --blok-database-column-brown-accent: var(--blok-database-option-brown-text);
-  /* Gray ("Not started") measured the plain column look in both themes (research/21 §1f). */
+  /* Gray keeps the plain tint and ring (research/35 §1.1). Notion's count 142,139,134 fails AA on the hovered
+     "+ New" row and count, so the nearest passing step. Light yellow cards hover to Notion's yellow wash (§1.2). */
   --blok-database-column-gray-bg: var(--blok-database-column-bg);
   --blok-database-column-gray-ring: var(--blok-database-card-ring);
-  --blok-database-column-gray-accent: var(--blok-database-column-accent);
+  --blok-database-column-gray-accent: rgb(110, 107, 102);
+  --blok-database-column-yellow-card-hover-bg: rgba(194, 164, 0, 0.063);
   --blok-database-card-lift: rgba(25, 25, 25, 0.027) 0 4px 12px, rgba(25, 25, 25, 0.02) 0 1px 2px;
   --blok-database-card-ring: rgba(42, 28, 0, 0.07);
   --blok-database-confirm-backdrop: rgba(15, 15, 15, 0.6);
@@ -263,6 +265,8 @@
      Dark hover goes lighter like Notion's (research/21 §1b), clamped to stay AA. */
   --blok-database-new-bg: rgb(30, 110, 195);
   --blok-database-new-hover-bg: rgb(24, 96, 172);
+  /* Pressed: Notion's 28,105,182 passes but is lighter than Blok's hover; a step darker keeps the order (research/35 §1.3). */
+  --blok-database-new-active-bg: rgb(21, 85, 153);
   --blok-database-new-text: rgb(243, 249, 253);
   --blok-database-new-divider: rgba(28, 19, 1, 0.11);
   /* Dependency arrows: unmeasured; the timeline's control ink and today red stand in. */
@@ -328,8 +332,11 @@
     --blok-database-column-red-accent: rgb(238, 109, 97);
     --blok-database-column-yellow-card-bg: rgb(55, 51, 37);
     --blok-database-column-red-card-bg: rgb(65, 39, 37);
-    /* Their hover is unmeasured: the card keeps its tint rather than falling back to the gray hover. */
-    --blok-database-column-yellow-card-hover-bg: rgb(55, 51, 37);
+    /* research/35 §1.1-§1.2: yellow and gray hover lighter. Red's hover is unmeasured: it keeps its tint. */
+    --blok-database-column-yellow-card-hover-bg: rgb(63, 58, 42);
+    --blok-database-column-gray-card-bg: rgb(44, 44, 43);
+    --blok-database-column-gray-card-hover-bg: rgb(50, 50, 49);
+    --blok-database-column-gray-accent: rgb(154, 151, 146);
     --blok-database-column-red-card-hover-bg: rgb(65, 39, 37);
     --blok-database-gallery-card-active-bg: rgb(37, 37, 37);
     /* Notion's dark digit is black: 6.3:1, where white is 3.3:1. */
@@ -518,6 +525,8 @@
     --blok-database-form-question-ring: rgb(53, 95, 139);
     --blok-database-new-bg: rgb(30, 110, 195);
     --blok-database-new-hover-bg: rgb(36, 115, 201);
+    /* Notion's lighter pressed blue fails AA; no lighter step passes, so pressed equals hover. */
+    --blok-database-new-active-bg: rgb(36, 115, 201);
     --blok-database-new-text: rgb(243, 249, 253);
     --blok-database-new-divider: rgba(255, 255, 235, 0.1);
     --blok-database-dependency-line: rgb(125, 122, 117);
@@ -579,8 +588,11 @@
   --blok-database-column-red-accent: rgb(238, 109, 97);
   --blok-database-column-yellow-card-bg: rgb(55, 51, 37);
   --blok-database-column-red-card-bg: rgb(65, 39, 37);
-  /* Their hover is unmeasured: the card keeps its tint rather than falling back to the gray hover. */
-  --blok-database-column-yellow-card-hover-bg: rgb(55, 51, 37);
+  /* research/35 §1.1-§1.2: yellow and gray hover lighter. Red's hover is unmeasured: it keeps its tint. */
+  --blok-database-column-yellow-card-hover-bg: rgb(63, 58, 42);
+  --blok-database-column-gray-card-bg: rgb(44, 44, 43);
+  --blok-database-column-gray-card-hover-bg: rgb(50, 50, 49);
+  --blok-database-column-gray-accent: rgb(154, 151, 146);
   --blok-database-column-red-card-hover-bg: rgb(65, 39, 37);
   --blok-database-gallery-card-active-bg: rgb(37, 37, 37);
   /* Notion's dark digit is black: 6.3:1, where white is 3.3:1. */
@@ -768,6 +780,8 @@
   --blok-database-form-question-ring: rgb(53, 95, 139);
   --blok-database-new-bg: rgb(30, 110, 195);
   --blok-database-new-hover-bg: rgb(36, 115, 201);
+  /* Notion's lighter pressed blue fails AA; no lighter step passes, so pressed equals hover. */
+  --blok-database-new-active-bg: rgb(36, 115, 201);
   --blok-database-new-text: rgb(243, 249, 253);
   --blok-database-new-divider: rgba(255, 255, 235, 0.1);
   --blok-database-dependency-line: rgb(125, 122, 117);
@@ -901,7 +915,7 @@
 }
 
 [data-blok-database-card-active] {
-  background-color: var(--blok-database-card-bg-hover);
+  background-color: var(--_blok-group-card-hover, var(--blok-database-card-bg-hover));
   outline: 2px solid var(--blok-database-card-border-active);
   outline-offset: -1px;
 }
@@ -910,7 +924,7 @@
  * During drag the source card stays in place with the hover tint (research/08).
  */
 [data-blok-database-card][data-blok-database-drag-source] {
-  background-color: var(--blok-database-card-bg-hover);
+  background-color: var(--_blok-group-card-hover, var(--blok-database-card-bg-hover));
 }
 
 [data-blok-database-column-reordering] {
@@ -2108,6 +2122,20 @@ button[data-blok-database-column-count]:hover {
 
 [data-blok-theme="dark"] [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] {
   --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
+}
+
+/* A template row's "…" (research/35 §1.8): icon gray, which passes the 3:1 icon rule on the menu.
+   It keeps the hover fill while its submenu is open, and doubles it when pressed. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-item-more] {
+  color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [aria-expanded="true"] > [data-blok-popover-item-more] {
+  background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-item-more]:active {
+  background-color: var(--blok-database-pressed-bg);
 }
 
 [data-blok-popover][popover][data-blok-popover-custom-class~='blok-database-menu'] {
@@ -10641,6 +10669,10 @@ button[data-blok-database-feed-reaction]:hover,
 
 [data-blok-database-new] > button:hover {
   background-color: var(--blok-database-new-hover-bg);
+}
+
+[data-blok-database-new] > button:active {
+  background-color: var(--blok-database-new-active-bg);
 }
 
 [data-blok-database-new] > button:first-child {

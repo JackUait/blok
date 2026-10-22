@@ -1791,10 +1791,14 @@ export class PopoverDesktop extends PopoverAbstract {
       ? nestedContainer.offsetWidth
       : this.nestedPopover?.size.width ?? 0;
     // A row with a "…" (children.moreButton) anchors on it instead of a chevron.
-    const chevron = triggerItem.getElement()
-      ?.querySelector(`[${DATA_ATTR.popoverItemMore}], [${DATA_ATTR.popoverItemIconChevronRight}]`)
-      ?.getBoundingClientRect();
+    const anchorEl = triggerItem.getElement()
+      ?.querySelector(`[${DATA_ATTR.popoverItemMore}], [${DATA_ATTR.popoverItemIconChevronRight}]`);
+    const chevron = anchorEl?.getBoundingClientRect();
     const chevronRect = chevron !== undefined && chevron.width > 0 ? chevron : undefined;
+    // research/35 §1.8: a "…" submenu's top is level with the "…", not centred on the row.
+    const moreTop = chevronRect !== undefined && anchorEl?.hasAttribute(DATA_ATTR.popoverItemMore) === true
+      ? chevronRect.top
+      : undefined;
     const rightSideLeft = parentRect.right - overlap;
     const leftSideLeft = parentRect.left + overlap - nestedWidth;
     const fits = (left: number): boolean => left >= NESTED_POPOVER_VIEWPORT_MARGIN
@@ -1827,7 +1831,7 @@ export class PopoverDesktop extends PopoverAbstract {
 
     if (triggerItemRect && nestedHeight > 0) {
       const triggerCenterY = triggerItemRect.top + triggerItemRect.height / 2;
-      const desiredTop = triggerCenterY - nestedHeight / 2;
+      const desiredTop = moreTop ?? triggerCenterY - nestedHeight / 2;
       const { top: clampedTop } = clampNestedPopoverTop({
         desiredTop,
         nestedHeight,
@@ -1837,7 +1841,7 @@ export class PopoverDesktop extends PopoverAbstract {
       nestedContainer.style.top = `${clampedTop - parentRootRect.top}px`;
     } else if (this.nestedInTopLayer && triggerItemRect) {
       // The CSS fallback below is parent-relative; a top-layer mount is not.
-      nestedContainer.style.top = `${triggerItemRect.top - parentRootRect.top}px`;
+      nestedContainer.style.top = `${(moreTop ?? triggerItemRect.top) - parentRootRect.top}px`;
     } else {
       nestedContainer.style.top = 'calc(var(--trigger-item-top) - var(--popover-height) / 2 + var(--item-height) / 2)';
     }

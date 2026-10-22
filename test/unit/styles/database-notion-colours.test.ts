@@ -409,7 +409,7 @@ describe('pass 2: research/33 §4 colour dump', () => {
   it('board: dark cards in yellow and red columns take Notion\'s tinted card', () => {
     both('--blok-database-column-yellow-card-bg', 'rgb(55, 51, 37)');
     both('--blok-database-column-red-card-bg', 'rgb(65, 39, 37)');
-    both('--blok-database-column-yellow-card-hover-bg', 'rgb(55, 51, 37)');
+    both('--blok-database-column-yellow-card-hover-bg', 'rgb(63, 58, 42)');
     both('--blok-database-column-red-card-hover-bg', 'rgb(65, 39, 37)');
   });
 
@@ -457,5 +457,111 @@ describe('pass 2: research/33 §4 colour dump', () => {
     expect(picked).toContain('box-shadow: 0 0 0 1px var(--blok-database-ink)');
     expect(picked).not.toMatch(/39, 131, 222|35, 131, 226|focus-ring/);
     expect(ruleBody('[data-blok-database-card-layout-tile][aria-pressed="true"]')).toContain('color: var(--blok-database-ink)');
+  });
+});
+
+describe('round 13: research/35 §1.1-§1.3, §1.8', () => {
+  const both = (name: string, dark: string): void => {
+    expect(value(dbMedia, name)).toBe(dark);
+    expect(value(dbAttr, name)).toBe(dark);
+  };
+  const LIGHT_TINT = over([66, 35, 3, 0.03], WHITE);
+  const DARK_TINT = over([252, 252, 252, 0.03], [29, 29, 28]);
+  // Worst surfaces: the hovered "+ New" row and the hovered count button.
+  const LIGHT_SURFACES = [over([55, 53, 47, 0.06], LIGHT_TINT), over([33, 27, 23, 0.051], LIGHT_TINT)];
+  const DARK_SURFACES = [over([255, 255, 255, 0.055], DARK_TINT)];
+  const passes = (ink: string, surfaces: number[][]): boolean => surfaces.every((s) => contrast(ink, s) >= 4.5);
+  const shift = (ink: string, by: number): string => `rgb(${channels(ink).map((c) => c + by).join(', ')})`;
+
+  it('board: a gray column keeps the plain tint and ring', () => {
+    expect(value(dbLight, '--blok-database-column-gray-bg')).toBe('var(--blok-database-column-bg)');
+    expect(value(dbLight, '--blok-database-column-gray-ring')).toBe('var(--blok-database-card-ring)');
+  });
+
+  it('board: Notion\'s gray count 142,139,134 fails AA in both themes, so each takes the nearest passing step', () => {
+    expect(passes('rgb(142, 139, 134)', LIGHT_SURFACES)).toBe(false);
+    expect(passes('rgb(142, 139, 134)', DARK_SURFACES)).toBe(false);
+
+    const light = value(dbLight, '--blok-database-column-gray-accent') ?? '';
+
+    expect(light).toBe('rgb(110, 107, 102)');
+    expect(passes(light, LIGHT_SURFACES)).toBe(true);
+    expect(passes(shift(light, 1), LIGHT_SURFACES)).toBe(false);
+    both('--blok-database-column-gray-accent', 'rgb(154, 151, 146)');
+    expect(passes('rgb(154, 151, 146)', DARK_SURFACES)).toBe(true);
+    expect(passes('rgb(153, 150, 145)', DARK_SURFACES)).toBe(false);
+  });
+
+  it('board: the default column keeps Notion\'s 95,94,89 / 188,186,182 count', () => {
+    expect(value(dbLight, '--blok-database-column-default-accent')).toBe('var(--blok-database-column-accent)');
+    expect(themed('--blok-database-column-accent')).toEqual({ light: 'rgb(95, 94, 89)', dark: 'rgb(188, 186, 182)', attr: 'rgb(188, 186, 182)' });
+  });
+
+  it('board: dark gray cards are 44,44,43 and hover to 50,50,49; light gray cards stay white', () => {
+    both('--blok-database-column-gray-card-bg', 'rgb(44, 44, 43)');
+    both('--blok-database-column-gray-card-hover-bg', 'rgb(50, 50, 49)');
+    expect(value(dbLight, '--blok-database-column-gray-card-bg')).toBeUndefined();
+    expect(value(dbLight, '--blok-database-column-gray-card-hover-bg')).toBeUndefined();
+  });
+
+  it('board: default cards are white / 32 and hover to Notion\'s translucent wash / 38', () => {
+    expect(themed('--blok-database-card-bg-hover')).toEqual({ light: 'rgba(54, 29, 2, 0.031)', dark: 'rgb(38, 38, 38)', attr: 'rgb(38, 38, 38)' });
+    both('--blok-database-card-bg', 'rgb(32, 32, 32)');
+  });
+
+  it('board: a yellow card hovers to Notion\'s yellow wash in light and 63,58,42 in dark', () => {
+    expect(value(dbLight, '--blok-database-column-yellow-card-hover-bg')).toBe('rgba(194, 164, 0, 0.063)');
+    both('--blok-database-column-yellow-card-hover-bg', 'rgb(63, 58, 42)');
+  });
+
+  it('board: a dragged or picked card keeps its column\'s hover fill', () => {
+    expect(ruleBody('[data-blok-database-card][data-blok-database-drag-source]')).toContain('background-color: var(--_blok-group-card-hover, var(--blok-database-card-bg-hover))');
+    expect(ruleBody('[data-blok-database-card-active]')).toContain('background-color: var(--_blok-group-card-hover, var(--blok-database-card-bg-hover))');
+  });
+
+  it('toolbar: Filter and Sort hover to 0.051 / 0.055 and press to double', () => {
+    expect(ruleBody('[data-blok-database-view-toolbar] > button:hover')).toContain('background-color: var(--blok-database-table-header-hover-bg)');
+    expect(themed('--blok-database-table-header-hover-bg')).toEqual({ light: 'var(--blok-database-hover-bg)', dark: 'rgba(255, 255, 255, 0.055)', attr: 'rgba(255, 255, 255, 0.055)' });
+    expect(themed('--blok-database-hover-bg').light).toBe('rgba(33, 27, 23, 0.051)');
+    expect(ruleBody('[data-blok-database-view-toolbar] > button:active')).toContain('background-color: var(--blok-database-pressed-bg)');
+  });
+
+  // Notion's blue fails AA under its words (rest 3.67, light hover 4.37, dark hover 3.15, dark pressed 2.73).
+  // Blok keeps the AA steps and Notion's direction: light darkens on hover and press, dark lightens.
+  it('toolbar: "New" and its chevron darken on hover and press in light, lighten in dark, all AA', () => {
+    const text = themed('--blok-database-new-text').light ?? '';
+    const states = (theme: 'light' | 'dark'): number[] => ['--blok-database-new-bg', '--blok-database-new-hover-bg', '--blok-database-new-active-bg']
+      .map((name) => themed(name)[theme] ?? '')
+      .map((css) => {
+        expect(contrast(text, channels(css))).toBeGreaterThanOrEqual(4.5);
+
+        return luminance(channels(css));
+      });
+
+    expect(contrast(text, [31, 118, 204])).toBeLessThan(4.5);
+    expect(themed('--blok-database-new-active-bg')).toEqual({ light: 'rgb(21, 85, 153)', dark: 'rgb(36, 115, 201)', attr: 'rgb(36, 115, 201)' });
+
+    const [lightRest, lightHover, lightPressed] = states('light');
+    const [darkRest, darkHover, darkPressed] = states('dark');
+
+    expect(lightHover).toBeLessThan(lightRest);
+    expect(lightPressed).toBeLessThan(lightHover);
+    expect(darkHover).toBeGreaterThan(darkRest);
+    expect(darkPressed).toBeGreaterThanOrEqual(darkHover);
+    expect(ruleBody('[data-blok-database-new] > button:active')).toContain('background-color: var(--blok-database-new-active-bg)');
+  });
+
+  const MORE = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-item-more]";
+
+  it('template "…": Notion\'s icon gray glyph (a non-text 3:1 icon), the menu hover fill, double when pressed', () => {
+    expect(ruleBody(MORE)).toContain('color: var(--blok-database-table-header-icon)');
+    expect(themed('--blok-database-table-header-icon')).toEqual({ light: 'rgb(142, 139, 134)', dark: 'rgb(173, 169, 163)', attr: 'rgb(173, 169, 163)' });
+    expect(contrast('rgb(142, 139, 134)', WHITE)).toBeGreaterThanOrEqual(3);
+    expect(ruleBody(`${MORE}:active`)).toContain('background-color: var(--blok-database-pressed-bg)');
+  });
+
+  it('template "…": keeps its hover fill while its submenu is open', () => {
+    expect(ruleBody("[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [aria-expanded=\"true\"] > [data-blok-popover-item-more]"))
+      .toContain('background-color: var(--blok-database-hover-bg)');
   });
 });

@@ -3013,6 +3013,38 @@ describe('PopoverDesktop — nested beside placement geometry', () => {
     }
   });
 
+  // research/35 §1.8, research/30 X1: the submenu's top is level with the "…", on either side.
+  it.each([
+    ['right', { left: 400, right: 600 }],
+    ['left', { left: 700, right: 900 }],
+  ])('opened on the %s, a "…" submenu tops out at the "…" top, not centred on the row', (_side, rect) => {
+    const sizeSpy = vi.spyOn(PopoverDesktop.prototype, 'size', 'get')
+      .mockReturnValue({ width: 320, height: 80 });
+
+    try {
+      const { nested } = showWideSubmenu(rect, false, false, true);
+
+      // "…" top 128, root top 80.
+      expect(asInternal(nested).nodes.popoverContainer.style.top).toBe('48px');
+    } finally {
+      sizeSpy.mockRestore();
+    }
+  });
+
+  it('a chevron submenu stays centred on its row', () => {
+    const sizeSpy = vi.spyOn(PopoverDesktop.prototype, 'size', 'get')
+      .mockReturnValue({ width: 320, height: 80 });
+
+    try {
+      const { nested } = showWideSubmenu({ left: 400, right: 600 });
+
+      // Row centre 140 - 40 = 100, root top 80.
+      expect(asInternal(nested).nodes.popoverContainer.style.top).toBe('20px');
+    } finally {
+      sizeSpy.mockRestore();
+    }
+  });
+
   it('starts a flipped RTL submenu 12px after the trigger\'s "…"', () => {
     const sizeSpy = vi.spyOn(PopoverDesktop.prototype, 'size', 'get')
       .mockReturnValue({ width: 320, height: 80 });

@@ -185,11 +185,11 @@ describe('board in dark (research/21 §1f)', () => {
     expect(dark('--blok-database-column-accent')).toEqual(Array(2).fill('rgb(188, 186, 182)'));
   });
 
-  // Notion's gray ("Not started") column measured the plain column tint, card ring and count in both themes.
-  it('draws a gray column like an uncolored one, in light and dark', () => {
+  // research/21's "Not started" was a Default column; research/35 §1.1 measured Gray: plain tint and ring, its own count.
+  it('draws a gray column with the plain tint and ring but its own count', () => {
     expect(tokenValues('--blok-database-column-gray-bg')).toEqual(['var(--blok-database-column-bg)']);
     expect(tokenValues('--blok-database-column-gray-ring')).toEqual(['var(--blok-database-card-ring)']);
-    expect(tokenValues('--blok-database-column-gray-accent')).toEqual(['var(--blok-database-column-accent)']);
+    expect(tokenValues('--blok-database-column-gray-accent')).toEqual(['rgb(110, 107, 102)', 'rgb(154, 151, 146)', 'rgb(154, 151, 146)']);
   });
 
   it('hovers a card to rgb(38, 38, 38)', () => {

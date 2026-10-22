@@ -37,6 +37,6 @@ describe('database drop line css', () => {
 
   it('tints the card being dragged like a hovered card', () => {
     expect(ruleBody(database, '[data-blok-database-card][data-blok-database-drag-source]'))
-      .toContain('background-color: var(--blok-database-card-bg-hover)');
+      .toContain('background-color: var(--_blok-group-card-hover, var(--blok-database-card-bg-hover))');
   });
 });

@@ -134,6 +134,16 @@ describe('Ask AI bar colours', () => {
     expect(bodyOf(hover)).toMatch(/animation-play-state:\s*running/);
   });
 
+  it.each([
+    '[data-blok-assistant-send]:hover:not(:disabled)::before',
+    '[data-blok-assistant-keep]:hover::before',
+  ])('the hover halo %s stays faint and close to the button', (hover) => {
+    const body = bodyOf(hover);
+
+    expect(Number(body.match(/opacity:\s*([\d.]+)/)?.[1])).toBeLessThanOrEqual(0.5);
+    expect(Number(body.match(/inset:\s*-([\d.]+)px/)?.[1])).toBeLessThanOrEqual(4);
+  });
+
   it('Keep and Discard are pills; Keep is ink and redraws its check on hover', () => {
     expect(bodyOf('[data-blok-assistant-keep]')).toMatch(/border-radius:\s*var\(--blok-radius-pill\)/);
     expect(bodyOf('[data-blok-assistant-undo]')).toMatch(/border-radius:\s*var\(--blok-radius-pill\)/);

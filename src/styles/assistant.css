@@ -314,8 +314,8 @@
 
 [data-blok-assistant-send]:hover:not(:disabled)::before,
 [data-blok-assistant-keep]:hover::before {
-  inset: -5px;
-  opacity: 1;
+  inset: -4px;
+  opacity: 0.5;
   animation-play-state: running;
 }
 

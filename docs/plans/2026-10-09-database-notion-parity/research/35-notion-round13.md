@@ -445,3 +445,28 @@ R13 table, new Formula property **F** = `if(prop("Num") > 40, prop("Num"), "low"
 - **Filter** (toolbar Filter › F): default condition "contains"; the condition list is the **text** one: Is, Is not, Contains, Does not contain, Starts with, Ends with, Is empty, Is not empty.
 - **Calculate** (F header menu › Calculate): **None, Count ›, Percent ›** only (Percent › Percent empty, Percent not empty). No Sum / Average / Min / Max. The Count submenu did not open on hover in two tries, so its rows were not read.
 
+## 18. B22: "Manage in Calendar" button (dark)
+
+Calendar view toolbar. Button 166.9x24, transparent, **border 1px rgba(255, 255, 235, 0.1)**, radius 6px, padding 0 6px, gap 6px, text 14px / 500 rgb(240, 239, 237). Icon: svg class `calendarDate22`, **16x16** box (its path 12.5x13.1), fill rgb(240, 239, 237). Light border was research 33 §4.1 (1px rgba(28, 19, 1, 0.11)).
+
+## 19. B3: relative dates
+
+- **Workspace "start week on Monday"**: see §22 (read in Settings at the end, not changed).
+- **Yesterday on a Monday / Tomorrow on a Sunday**: **could not measure: clock** (the session ran on Thursday Oct 22).
+- **Row menu "last edited"** (table row handle ⋮⋮ menu, light, row made a few minutes before): the footer reads "Last edited | <user> | **Today at 4:54 AM**", then "1 word, 2 characters". So the row menu uses "Today at h:mm AM", not "N minutes ago".
+- **Feed byline** (Feed view added to R13, dark): the time after the author reads **"31m" / "32m"** (12px, rgb(125, 122, 117)) for pages made about half an hour earlier. Hover (2.5 s) shows a hint "**Created October 22, 2026 at 5:43:51 AM**" (12px, rgb(173, 169, 163)). Research 33 saw "5h" on older posts.
+- The "Full date" cell format shows dates as "October 25, 2026" even for days inside this week (§3); words like "Sunday" appear only with the Relative format (research 30 §B6).
+
+## 20. B17: the time zone menu's top edge and bottom margin (dark)
+
+Date editor (E2) › Include time on › **Timezone** row. Two samples with the trigger row at different heights:
+
+| Date editor box | Timezone row | Menu |
+|---|---|---|
+| (818, 12) 248x594 | y 471 | **342x595 at (1062, 110)**; bottom gap **12px** |
+| (818, 111) 248x594 (page scrolled 250px) | y 570 | **342x595 at (1062, 110)**; bottom gap **12px** |
+
+The template cadence's Timezone menu (§13) was also 342x595 at y 110. So in a 717px window the menu does not follow the trigger: it sits **12px above the window bottom** with a fixed **595px** height (search input at y 126; the list scroller 547 tall over 568 rows), which puts its top at 110. Its left edge is the editor's right edge minus 4px (1062 vs 1066). Whether 595 is a cap or the window minus 122: **blocked** (window size cannot change).
+
+Side read for B1: at **06:16:28** local, turning Include time on in an empty-time date gave **7:00 AM** (start and end).
+

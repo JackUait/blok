@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "Kiitos! Vastauksesi lähetettiin.",
   "tools.database.formSubmitAnother": "Lähetä uusi vastaus",
   "tools.database.formAnonymousPill": "Vastaus lähetetään nimettömänä",
+  "tools.database.formRespondentPill": "Vastaus lähetetään nimellä {name}",
   "tools.database.formViewResponse": "Näytä vastaukseni",
   "tools.database.formEmailCopy": "Lähetä minulle kopio sähköpostitse",
   "tools.database.formClosed": "Tämä lomake on suljettu.",

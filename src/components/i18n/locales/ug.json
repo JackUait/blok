@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "رەھمەت! جاۋابلىرىڭىز يوللاندى.",
   "tools.database.formSubmitAnother": "يەنە بىر جاۋاب يوللاش",
   "tools.database.formAnonymousPill": "جاۋاب نامسىز يوللىنىۋاتىدۇ",
+  "tools.database.formRespondentPill": "جاۋاب {name} سۈپىتىدە يوللىنىۋاتىدۇ",
   "tools.database.formViewResponse": "جاۋابىمنى كۆرۈش",
   "tools.database.formEmailCopy": "ماڭا كۆچۈرمىسىنى ئېلخەتتە يوللاش",
   "tools.database.formClosed": "بۇ ئانكېتا تاقالدى.",

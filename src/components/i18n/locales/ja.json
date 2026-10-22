@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "ありがとうございます！回答が送信されました。",
   "tools.database.formSubmitAnother": "別の回答を送信",
   "tools.database.formAnonymousPill": "匿名で回答を送信しています",
+  "tools.database.formRespondentPill": "{name} として回答を送信しています",
   "tools.database.formViewResponse": "自分の回答を表示",
   "tools.database.formEmailCopy": "控えをメールで受け取る",
   "tools.database.formClosed": "このフォームは締め切られました。",

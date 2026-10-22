@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "شکریہ! آپ کے جوابات بھیج دیے گئے۔",
   "tools.database.formSubmitAnother": "ایک اور جواب جمع کرائیں",
   "tools.database.formAnonymousPill": "جواب گمنام طور پر جمع کرایا جا رہا ہے",
+  "tools.database.formRespondentPill": "جواب {name} کے طور پر جمع کرایا جا رہا ہے",
   "tools.database.formViewResponse": "میرا جواب دیکھیں",
   "tools.database.formEmailCopy": "مجھے ایک کاپی ای میل کریں",
   "tools.database.formClosed": "یہ فارم بند ہے۔",

@@ -250,6 +250,8 @@ describe('form Share panel (research/19 §3d)', () => {
       expect(viewResponse()?.textContent).toBe('View my response');
       viewResponse()?.click();
       await vi.waitFor(() => expect(q('[data-blok-database-drawer][data-open]')).not.toBeNull());
+      // research/36 §13: Notion opens the response as a full page.
+      expect(need('[data-blok-database-drawer]').getAttribute('data-peek-mode')).toBe('full');
       expect(need<HTMLTextAreaElement>('[data-blok-database-drawer] [data-blok-database-drawer-title]').value).toBe('Ada');
     });
 
@@ -371,6 +373,108 @@ describe('form Share panel (research/19 §3d)', () => {
 
       expect(need('[data-blok-database-cell="createdBy"]').textContent).toBe('Anonymous');
       expect(need('[data-blok-database-cell="lastEditedBy"]').textContent).toBe('');
+    });
+  });
+
+  // research/36 §13: with anonymous off, the respondent sees who the answer is from.
+  describe('respondent chip', () => {
+    const people = { list: async () => [{ id: 'u-ada', name: 'Ada', avatarUrl: 'https://example.test/ada.png' }], me: () => 'u-ada' };
+    const chip = (): HTMLElement | null => q('[data-blok-database-form-respondent]');
+
+    it('a respondent sees "Submitting response as" with the current person first', async () => {
+      await mount(blocks(), host(), true, { config: { people } });
+
+      await vi.waitFor(() => expect(chip()).not.toBeNull());
+      const shown = need('[data-blok-database-form-respondent]');
+
+      expect(shown.textContent).toBe('Submitting response as Ada');
+      expect(shown.querySelector('img[data-blok-database-person-avatar]')?.getAttribute('src')).toBe('https://example.test/ada.png');
+      expect(need('[data-blok-database-form]').firstElementChild).toBe(shown);
+    });
+
+    it('shows nothing without a current person the directory knows', async () => {
+      await mount(blocks(), host(), true, { config: { people: { list: async () => [{ id: 'u-bob', name: 'Bob' }], me: () => 'u-ada' } } });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(chip()).toBeNull();
+    });
+
+    it('shows nothing without a people directory', async () => {
+      await mount(blocks(), host(), true);
+
+      expect(chip()).toBeNull();
+    });
+
+    it('gives way to the anonymous pill when answers are anonymous', async () => {
+      await mount(blocks({ anonymous: true }), host(), true, { config: { people } });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(chip()).toBeNull();
+      expect(q('[data-blok-database-form-anonymous]')).not.toBeNull();
+    });
+
+    it('keeps the builder free of the chip', async () => {
+      await mount(blocks(), host(), false, { config: { people } });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(chip()).toBeNull();
+    });
+  });
+
+  // research/36 §13: "Preview" shows the form as a respondent sees it, and its answer is a real row.
+  describe('Preview', () => {
+    const people = { list: async () => [{ id: 'u-ada', name: 'Ada' }], me: () => 'u-ada' };
+    const preview = (): HTMLElement => {
+      need(byTestId('database-toolbar-preview-form')).click();
+
+      return need(byTestId('database-form-preview'));
+    };
+
+    it('sits in a form view\'s toolbar beside "Share form", and not in read-only', async () => {
+      await mount(blocks(), host());
+
+      expect(need(byTestId('database-toolbar-preview-form')).getAttribute('aria-label')).toBe('Preview');
+      expect(need(byTestId('database-toolbar-preview-form')).closest('[hidden]')).toBeNull();
+      await mount(blocks(), host(), true);
+      expect(q(byTestId('database-toolbar-preview-form'))?.closest('[hidden]') ?? null).not.toBeNull();
+    });
+
+    it('opens the respondent\'s form in a dialog: no access line, the chip first', async () => {
+      await mount(blocks(), host(), false, { user: { id: 'u-ada' }, config: { people } });
+      const dialog = preview();
+
+      expect(dialog.getAttribute('role')).toBe('dialog');
+      expect(dialog.querySelector('[data-blok-database-form-access]')).toBeNull();
+      await vi.waitFor(() => expect(dialog.querySelector('[data-blok-database-form-respondent]')?.textContent).toBe('Submitting response as Ada'));
+      expect(q('[data-blok-database-form-access]')).not.toBeNull();
+    });
+
+    it('submitting makes a row whose author is the respondent, and leaves the builder as it was', async () => {
+      await mount(blocks(), host(), false, { user: { id: 'u-ada' }, config: { people } });
+      const dialog = preview();
+
+      need<HTMLInputElement>('[data-blok-database-form-preview] [id="blok-form-form-title"]').value = 'FormResp';
+      need('[data-blok-database-form-preview] [data-blok-database-form-submit]').click();
+      expect(dialog.querySelector('[data-blok-database-form-done]')).not.toBeNull();
+      const saved = await editor?.save();
+      const row = saved?.blocks.find((block) => block.type === 'database-row');
+
+      expect(row?.createdBy).toBe('u-ada');
+      expect((row?.data as { properties: Record<string, unknown> }).properties.title).toBe('FormResp');
+      expect(document.querySelectorAll('[data-blok-database-form-done]')).toHaveLength(1);
+    });
+
+    it('"View my response" closes the preview and opens the row as a full page', async () => {
+      await mount(blocks(), host(), false, { user: { id: 'u-ada' }, config: { people } });
+      preview();
+      need<HTMLInputElement>('[data-blok-database-form-preview] [id="blok-form-form-title"]').value = 'FormResp';
+      need('[data-blok-database-form-preview] [data-blok-database-form-submit]').click();
+      need(`[data-blok-database-form-preview] ${byTestId('database-form-view-response')}`).click();
+
+      await vi.waitFor(() => expect(q('[data-blok-database-drawer][data-open]')).not.toBeNull());
+      expect(q(byTestId('database-form-preview'))).toBeNull();
+      expect(need('[data-blok-database-drawer]').getAttribute('data-peek-mode')).toBe('full');
+      expect(need<HTMLTextAreaElement>('[data-blok-database-drawer] [data-blok-database-drawer-title]').value).toBe('FormResp');
     });
   });
 

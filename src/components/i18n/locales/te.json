@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "ధన్యవాదాలు! మీ సమాధానాలు పంపబడ్డాయి.",
   "tools.database.formSubmitAnother": "మరో ప్రతిస్పందనను సమర్పించండి",
   "tools.database.formAnonymousPill": "ప్రతిస్పందన అనామకంగా సమర్పించబడుతోంది",
+  "tools.database.formRespondentPill": "ప్రతిస్పందన {name}గా సమర్పించబడుతోంది",
   "tools.database.formViewResponse": "నా ప్రతిస్పందనను చూడండి",
   "tools.database.formEmailCopy": "నాకు కాపీని ఇమెయిల్ చేయండి",
   "tools.database.formClosed": "ఈ ఫారమ్ మూసివేయబడింది.",

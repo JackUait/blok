@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "Cảm ơn! Câu trả lời của bạn đã được gửi.",
   "tools.database.formSubmitAnother": "Gửi phản hồi khác",
   "tools.database.formAnonymousPill": "Đang gửi phản hồi ẩn danh",
+  "tools.database.formRespondentPill": "Đang gửi phản hồi với tư cách {name}",
   "tools.database.formViewResponse": "Xem phản hồi của tôi",
   "tools.database.formEmailCopy": "Gửi bản sao qua email cho tôi",
   "tools.database.formClosed": "Biểu mẫu này đã đóng.",

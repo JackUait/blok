@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "ಧನ್ಯವಾದಗಳು! ನಿಮ್ಮ ಉತ್ತರಗಳನ್ನು ಕಳುಹಿಸಲಾಗಿದೆ.",
   "tools.database.formSubmitAnother": "ಇನ್ನೊಂದು ಪ್ರತಿಕ್ರಿಯೆ ಸಲ್ಲಿಸಿ",
   "tools.database.formAnonymousPill": "ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು ಅನಾಮಧೇಯವಾಗಿ ಸಲ್ಲಿಸಲಾಗುತ್ತಿದೆ",
+  "tools.database.formRespondentPill": "ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು {name} ಆಗಿ ಸಲ್ಲಿಸಲಾಗುತ್ತಿದೆ",
   "tools.database.formViewResponse": "ನನ್ನ ಪ್ರತಿಕ್ರಿಯೆ ವೀಕ್ಷಿಸಿ",
   "tools.database.formEmailCopy": "ನನಗೆ ಒಂದು ಪ್ರತಿಯನ್ನು ಇಮೇಲ್ ಮಾಡಿ",
   "tools.database.formClosed": "ಈ ಫಾರ್ಮ್ ಮುಚ್ಚಲಾಗಿದೆ.",

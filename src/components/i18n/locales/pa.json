@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "ਧੰਨਵਾਦ! ਤੁਹਾਡੇ ਜਵਾਬ ਭੇਜੇ ਗਏ।",
   "tools.database.formSubmitAnother": "ਇੱਕ ਹੋਰ ਜਵਾਬ ਜਮ੍ਹਾਂ ਕਰੋ",
   "tools.database.formAnonymousPill": "ਜਵਾਬ ਗੁਮਨਾਮ ਤੌਰ 'ਤੇ ਜਮ੍ਹਾਂ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ",
+  "tools.database.formRespondentPill": "ਜਵਾਬ {name} ਵਜੋਂ ਜਮ੍ਹਾਂ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ",
   "tools.database.formViewResponse": "ਮੇਰਾ ਜਵਾਬ ਵੇਖੋ",
   "tools.database.formEmailCopy": "ਮੈਨੂੰ ਇੱਕ ਕਾਪੀ ਈਮੇਲ ਕਰੋ",
   "tools.database.formClosed": "ਇਹ ਫਾਰਮ ਬੰਦ ਹੈ।",

@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "እናመሰግናለን! መልሶችዎ ተልከዋል።",
   "tools.database.formSubmitAnother": "ሌላ ምላሽ አስገባ",
   "tools.database.formAnonymousPill": "ምላሽ በስም-አልባ እየተላከ ነው",
+  "tools.database.formRespondentPill": "ምላሽ እንደ {name} እየተላከ ነው",
   "tools.database.formViewResponse": "ምላሼን አሳይ",
   "tools.database.formEmailCopy": "ቅጂ በኢሜይል ላክልኝ",
   "tools.database.formClosed": "ይህ ቅጽ ተዘግቷል።",

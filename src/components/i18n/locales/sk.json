@@ -1341,6 +1341,7 @@
   "tools.database.formSubmitted": "Ďakujeme! Vaše odpovede boli odoslané.",
   "tools.database.formSubmitAnother": "Odoslať ďalšiu odpoveď",
   "tools.database.formAnonymousPill": "Odpoveď sa odosiela anonymne",
+  "tools.database.formRespondentPill": "Odpoveď sa odosiela ako {name}",
   "tools.database.formViewResponse": "Zobraziť moju odpoveď",
   "tools.database.formEmailCopy": "Poslať mi kópiu e-mailom",
   "tools.database.formClosed": "Tento formulár je zatvorený.",

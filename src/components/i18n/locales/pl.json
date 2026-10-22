@@ -1341,6 +1341,7 @@
   "tools.database.formSubmitted": "Dziękujemy! Twoje odpowiedzi zostały wysłane.",
   "tools.database.formSubmitAnother": "Wyślij kolejną odpowiedź",
   "tools.database.formAnonymousPill": "Odpowiedź jest wysyłana anonimowo",
+  "tools.database.formRespondentPill": "Odpowiedź jest wysyłana jako {name}",
   "tools.database.formViewResponse": "Wyświetl moją odpowiedź",
   "tools.database.formEmailCopy": "Wyślij mi kopię e-mailem",
   "tools.database.formClosed": "Ten formularz jest zamknięty.",

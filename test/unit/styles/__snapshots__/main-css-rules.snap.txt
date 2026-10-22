@@ -7684,6 +7684,33 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   background-color: var(--blok-database-confirm-backdrop);
 }
 
+[data-blok-database-form-preview-backdrop] {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background-color: var(--blok-database-confirm-backdrop);
+}
+
+[data-blok-database-form-preview-backdrop][data-blok-top-layer][popover] {
+  inset: 0;
+  background-color: var(--blok-database-confirm-backdrop);
+}
+
+[data-blok-database-form-preview] {
+  box-sizing: border-box;
+  width: 960px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 144px);
+  margin-block-start: 72px;
+  overflow: auto;
+  padding: var(--blok-space-10);
+  border-radius: var(--blok-radius-dialog);
+  background-color: var(--blok-database-confirm-bg);
+  box-shadow: var(--blok-database-confirm-shadow);
+}
+
 [data-blok-database-confirm-dialog] {
   position: relative;
   display: flex;
@@ -14353,7 +14380,13 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   background-color: var(--blok-database-hover-bg);
 }
 
-[data-blok-database-form-anonymous] {
+[data-blok-database-form-respondent] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+}
+
+[data-blok-database-form-anonymous], [data-blok-database-form-respondent] {
   inline-size: fit-content;
   margin-block: 0 var(--blok-space-4);
   padding: var(--blok-space-1-5) var(--blok-space-2-5);

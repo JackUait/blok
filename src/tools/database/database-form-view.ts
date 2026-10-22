@@ -1,6 +1,7 @@
 import { IconChevronUpDown, IconDotsHorizontal, IconLock } from '../../components/icons';
 import { formatBytes } from '../../components/utils/format-bytes';
 import type { I18n } from '../../../types';
+import { safeImageSrc } from '../../components/utils/sanitize-url';
 import { DEFAULT_MAX_SIZE } from '../file/constants';
 import { openCellEditor, renderCellValue } from './cells';
 import type { CellContext, CellEditorHandle } from './cells';
@@ -11,7 +12,7 @@ import { DatabasePanel, panelInput, panelLabel, panelRow, panelSwitch } from './
 import { propertyTypeMeta } from './database-property-types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { isReadOnlyType } from './property-values';
-import type { DatabaseRow, DatabaseSourceRef, DatabaseViewConfig, FormSettings, PropertyDefinition, PropertyType, PropertyValue, SelectOption, ViewPropertySetting } from './types';
+import type { DatabasePerson, DatabaseRow, DatabaseSourceRef, DatabaseViewConfig, FormSettings, PropertyDefinition, PropertyType, PropertyValue, SelectOption, ViewPropertySetting } from './types';
 import { resolveViewProperties, withPropertySetting } from './view-settings';
 import type { ViewPropertyPatch } from './view-settings';
 
@@ -39,6 +40,8 @@ export interface DatabaseFormViewOptions {
   onInteractionEnd?: () => void;
   submitted?: boolean;
   onSubmittedChange?: (submitted: boolean) => void;
+  /** Who a respondent answers as, read when the form draws. Absent: no "Submitting response as" chip. */
+  respondent?: () => DatabasePerson | undefined;
   /** The thank-you screen's "View my response" and "Email me a copy", read when it draws. Absent ones are not offered. */
   responseActions?: () => { view?: () => void; email?: () => void };
   /** The Share panel and the builder's access line. Only for someone who may edit the form. */
@@ -215,6 +218,10 @@ export class DatabaseFormView implements DatabaseViewRenderer {
 
     // research/23 §6: above the questions, for the respondent only; the builder does not change.
     if (!builder && view.form?.anonymous === true) root.appendChild(this.anonymousPill());
+    const respondent = builder || view.form?.anonymous === true ? undefined : this.options.respondent?.();
+
+    // research/36 §13: with anonymous off, the respondent is named before submitting.
+    if (respondent !== undefined) root.appendChild(this.respondentChip(respondent));
     const form = document.createElement('form');
 
     form.noValidate = true;
@@ -269,6 +276,29 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     pill.textContent = this.options.i18n.t('tools.database.formAnonymousPill');
 
     return pill;
+  }
+
+  /** "Submitting response as [avatar] <name>", the avatar where the sentence names the person. */
+  private respondentChip(person: DatabasePerson): HTMLElement {
+    const chip = document.createElement('p');
+    const [before, after = ''] = this.options.i18n.t('tools.database.formRespondentPill', { name: '\u0000' }).split('\u0000');
+    const avatarUrl = person.avatarUrl === undefined ? null : safeImageSrc(person.avatarUrl);
+    const avatar = document.createElement(avatarUrl === null ? 'span' : 'img');
+
+    chip.setAttribute('data-blok-database-form-respondent', '');
+    if (avatar instanceof HTMLImageElement && avatarUrl !== null) {
+      avatar.src = avatarUrl;
+      avatar.alt = '';
+      avatar.setAttribute('data-blok-database-person-avatar', '');
+    } else {
+      // Drawn by CSS from the attribute, as a person chip's initial.
+      avatar.setAttribute('data-blok-database-person-initial', [...person.name][0] ?? '');
+      avatar.setAttribute('aria-hidden', 'true');
+    }
+    // Flex drops the spaces at the avatar's sides; the gap draws them.
+    chip.append(before, avatar, `${person.name}${after}`);
+
+    return chip;
   }
 
   /** Opens the Share panel; the toolbar's "Share form" and the access line's "Change" both land here. */

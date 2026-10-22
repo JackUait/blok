@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "Bedankt! Je antwoorden zijn verzonden.",
   "tools.database.formSubmitAnother": "Nog een antwoord verzenden",
   "tools.database.formAnonymousPill": "Antwoord wordt anoniem verzonden",
+  "tools.database.formRespondentPill": "Antwoord wordt verzonden als {name}",
   "tools.database.formViewResponse": "Mijn antwoord bekijken",
   "tools.database.formEmailCopy": "Stuur me een kopie per e-mail",
   "tools.database.formClosed": "Dit formulier is gesloten.",

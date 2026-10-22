@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "Təşəkkürlər! Cavablarınız göndərildi.",
   "tools.database.formSubmitAnother": "Başqa cavab göndər",
   "tools.database.formAnonymousPill": "Cavab anonim göndərilir",
+  "tools.database.formRespondentPill": "Cavab {name} adından göndərilir",
   "tools.database.formViewResponse": "Cavabıma bax",
   "tools.database.formEmailCopy": "Mənə e-poçtla surət göndər",
   "tools.database.formClosed": "Bu forma bağlıdır.",

@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "Terima kasih! Jawaban Anda telah terkirim.",
   "tools.database.formSubmitAnother": "Kirim tanggapan lain",
   "tools.database.formAnonymousPill": "Mengirim tanggapan secara anonim",
+  "tools.database.formRespondentPill": "Mengirim tanggapan sebagai {name}",
   "tools.database.formViewResponse": "Lihat tanggapan saya",
   "tools.database.formEmailCopy": "Kirimi saya salinan lewat email",
   "tools.database.formClosed": "Formulir ini sudah ditutup.",

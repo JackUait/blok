@@ -1345,6 +1345,7 @@
   "tools.database.formSubmitted": "شكرًا! تم إرسال إجاباتك.",
   "tools.database.formSubmitAnother": "إرسال إجابة أخرى",
   "tools.database.formAnonymousPill": "يتم إرسال الإجابة بشكل مجهول الهوية",
+  "tools.database.formRespondentPill": "يتم إرسال الإجابة باسم {name}",
   "tools.database.formViewResponse": "عرض إجابتي",
   "tools.database.formEmailCopy": "أرسل لي نسخة عبر البريد الإلكتروني",
   "tools.database.formClosed": "هذا النموذج مغلق.",

@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "ကျေးဇူးတင်ပါသည်။ သင့်အဖြေများကို ပို့ပြီးပါပြီ။",
   "tools.database.formSubmitAnother": "နောက်ထပ် တုံ့ပြန်ချက် တင်သွင်းရန်",
   "tools.database.formAnonymousPill": "အမည်မဖော်ဘဲ တုံ့ပြန်ချက် တင်သွင်းနေသည်",
+  "tools.database.formRespondentPill": "{name} အဖြစ် တုံ့ပြန်ချက် တင်သွင်းနေသည်",
   "tools.database.formViewResponse": "ကျွန်ုပ်၏ တုံ့ပြန်ချက်ကို ကြည့်ရန်",
   "tools.database.formEmailCopy": "မိတ္တူကို ကျွန်ုပ်ထံ အီးမေးလ်ပို့ရန်",
   "tools.database.formClosed": "ဤဖောင်ကို ပိတ်ထားသည်။",

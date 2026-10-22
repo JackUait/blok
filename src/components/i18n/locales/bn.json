@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "ধন্যবাদ! আপনার উত্তর পাঠানো হয়েছে।",
   "tools.database.formSubmitAnother": "আরেকটি উত্তর জমা দিন",
   "tools.database.formAnonymousPill": "বেনামী হিসেবে উত্তর জমা দেওয়া হচ্ছে",
+  "tools.database.formRespondentPill": "{name} হিসেবে উত্তর জমা দেওয়া হচ্ছে",
   "tools.database.formViewResponse": "আমার উত্তর দেখুন",
   "tools.database.formEmailCopy": "আমাকে একটি কপি ইমেল করুন",
   "tools.database.formClosed": "এই ফর্মটি বন্ধ আছে।",

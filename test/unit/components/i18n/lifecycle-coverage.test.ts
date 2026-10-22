@@ -270,7 +270,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1871 + 126 + 487 + 4 closure for all 2488 keys', () => {
+  it('rebuilds a disjoint 1873 + 126 + 486 + 4 closure for all 2489 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -284,7 +284,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2488);
+    expect(lifecycle.size).toBe(2489);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -438,7 +438,9 @@ describe('current English catalog lifecycle coverage', () => {
       // +2: a status option's "Set as default" and "Default" call templateSetDefault / templateDefault by literal.
       // +277: the twelve research/33 templates and Campaign / Content Calendar's off chips, views and page templates.
       // +2: rowEditedTodayAt and feedCreatedAt (research/35 §19).
-      'executable-literal': 1871,
+      // +1: the form's respondent chip, formRespondentPill (research/36 §13).
+      // +1: tools.file.preview, called by literal for the form's Preview button.
+      'executable-literal': 1873,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -496,7 +498,8 @@ describe('current English catalog lifecycle coverage', () => {
       // -2: see executable-literal (status default).
       // +2: the board's Card layout box (settingsCardLayout, settingsCardLayoutCompact), via the panel's prefixing t.
       // +1: the template row's "…" hint, tools.database.templateMore (research/30 X1).
-      'registered-namespace-compatible': 487,
+      // -1: tools.file.preview moved to executable-literal (form Preview).
+      'registered-namespace-compatible': 486,
       'catalog-only': 4,
     });
     expect(

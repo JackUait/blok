@@ -1339,6 +1339,7 @@
   "tools.database.formSubmitted": "Mulțumim! Răspunsurile au fost trimise.",
   "tools.database.formSubmitAnother": "Trimite un alt răspuns",
   "tools.database.formAnonymousPill": "Răspunsul se trimite anonim",
+  "tools.database.formRespondentPill": "Răspunsul se trimite ca {name}",
   "tools.database.formViewResponse": "Vezi răspunsul meu",
   "tools.database.formEmailCopy": "Trimite-mi o copie pe e-mail",
   "tools.database.formClosed": "Acest formular este închis.",

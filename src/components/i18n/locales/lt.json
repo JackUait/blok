@@ -1341,6 +1341,7 @@
   "tools.database.formSubmitted": "Ačiū! Jūsų atsakymai išsiųsti.",
   "tools.database.formSubmitAnother": "Pateikti dar vieną atsakymą",
   "tools.database.formAnonymousPill": "Atsakymas pateikiamas anonimiškai",
+  "tools.database.formRespondentPill": "Atsakymas pateikiamas kaip {name}",
   "tools.database.formViewResponse": "Peržiūrėti mano atsakymą",
   "tools.database.formEmailCopy": "Atsiųsti man kopiją el. paštu",
   "tools.database.formClosed": "Ši forma uždaryta.",

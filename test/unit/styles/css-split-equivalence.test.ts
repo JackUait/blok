@@ -871,6 +871,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_FORM_SHARE_BYTES = 4_606;
     // database.css: the respondent's "Submitting response anonymously" pill and the thank-you screen's two buttons (research/23 §6).
     const DATABASE_FORM_RESPONSE_BYTES = 1_333;
+    // database.css: the form's Preview dialog and the "Submitting response as" chip (research/36 §13).
+    const DATABASE_FORM_PREVIEW_BYTES = 1_086;
     // database.css: an empty row page still shows its placeholder when the row holds only comment threads.
     const DATABASE_ROW_COMMENTS_EMPTY_BYTES = 54;
     // database.css: the built-in comments thread, composer and row page section (research/12 §3, research/19 §2d).
@@ -1133,6 +1135,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_FEED_REACTIONS_BYTES
       + DATABASE_FORM_SHARE_BYTES
       + DATABASE_FORM_RESPONSE_BYTES
+      + DATABASE_FORM_PREVIEW_BYTES
       + DATABASE_ROW_PAGE_BACKLINKS_BYTES
       + DATABASE_ROW_COMMENTS_EMPTY_BYTES
       + DATABASE_BUILT_IN_COMMENTS_BYTES

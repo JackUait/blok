@@ -1,5 +1,5 @@
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
-import { IconSearch, IconSliders, IconLock, IconPlus, IconChevronDown, IconFilter, IconSort } from '../../components/icons';
+import { IconSearch, IconSliders, IconLock, IconPlus, IconChevronDown, IconFilter, IconSort, IconPreview } from '../../components/icons';
 import type { I18n } from '../../../types';
 import { DatabasePanel, panelRow } from './database-panel';
 import { PersonalViewEdits } from './database-view-state';
@@ -79,6 +79,8 @@ export interface ViewControlsHost {
   openNewMenu?: (anchor: HTMLElement) => void;
   /** A form view's "Share form" (research/19 §3d). */
   shareForm?: (anchor: HTMLElement) => void;
+  /** A form view's "Preview": the form as a respondent sees it (research/36 §13). */
+  previewForm?: () => void;
 }
 
 const button = (testId: string, label: string, content: { icon?: string; text?: string }): HTMLButtonElement => {
@@ -120,6 +122,7 @@ export class DatabaseViewControls {
   private readonly settingsButton: HTMLButtonElement;
   private readonly lockBadge: HTMLElement;
   private readonly shareFormButton: HTMLButtonElement;
+  private readonly previewFormButton: HTMLButtonElement;
   private panel: DatabasePanel | null = null;
   private query = '';
 
@@ -175,7 +178,10 @@ export class DatabaseViewControls {
     this.shareFormButton = button('database-toolbar-share-form', this.t('formShare'), { text: this.t('formShare') });
     this.shareFormButton.setAttribute('data-blok-database-toolbar-share-form', '');
     this.shareFormButton.addEventListener('click', () => this.host.shareForm?.(this.shareFormButton));
-    this.toolbar.append(this.lockBadge, this.filterButton, this.sortButton, this.searchButton, this.settingsButton, this.shareFormButton);
+    // "Preview" reuses the file tool's word: the same in every locale.
+    this.previewFormButton = iconButton('database-toolbar-preview-form', this.host.i18n.t('tools.file.preview'), IconPreview);
+    this.previewFormButton.addEventListener('click', () => this.host.previewForm?.());
+    this.toolbar.append(this.lockBadge, this.filterButton, this.sortButton, this.searchButton, this.settingsButton, this.previewFormButton, this.shareFormButton);
     if (host.newRow !== undefined) {
       this.toolbar.append(this.newSplitButton(host.newRow, host.openNewMenu));
     }
@@ -246,6 +252,7 @@ export class DatabaseViewControls {
 
     this.lockBadge.hidden = !this.host.locked();
     this.shareFormButton.hidden = this.host.shareForm === undefined || saved.type !== 'form' || this.host.locked();
+    this.previewFormButton.hidden = this.host.previewForm === undefined || this.shareFormButton.hidden;
     this.filterButton.toggleAttribute('data-active', view.filters.length + countFilterRules(view.filterTree) > 0);
     this.sortButton.toggleAttribute('data-active', view.sorts.length > 0);
     this.searchButton.hidden = this.host.rowCount() < SEARCH_MIN_ROWS && this.query === '';

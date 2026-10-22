@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "ຂອບໃຈ! ສົ່ງຄຳຕອບຂອງທ່ານແລ້ວ.",
   "tools.database.formSubmitAnother": "ສົ່ງຄຳຕອບອື່ນ",
   "tools.database.formAnonymousPill": "ກຳລັງສົ່ງຄຳຕອບແບບບໍ່ລະບຸຊື່",
+  "tools.database.formRespondentPill": "ກຳລັງສົ່ງຄຳຕອບໃນນາມ {name}",
   "tools.database.formViewResponse": "ເບິ່ງຄຳຕອບຂອງຂ້ອຍ",
   "tools.database.formEmailCopy": "ສົ່ງສຳເນົາໃຫ້ຂ້ອຍທາງອີເມວ",
   "tools.database.formClosed": "ແບບຟອມນີ້ປິດແລ້ວ.",

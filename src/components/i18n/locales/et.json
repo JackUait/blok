@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "Aitäh! Teie vastused on saadetud.",
   "tools.database.formSubmitAnother": "Saada uus vastus",
   "tools.database.formAnonymousPill": "Vastus saadetakse anonüümselt",
+  "tools.database.formRespondentPill": "Vastus saadetakse kasutajana {name}",
   "tools.database.formViewResponse": "Vaata minu vastust",
   "tools.database.formEmailCopy": "Saada mulle koopia e-postiga",
   "tools.database.formClosed": "See vorm on suletud.",

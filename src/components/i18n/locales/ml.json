@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "നന്ദി! നിങ്ങളുടെ ഉത്തരങ്ങൾ അയച്ചു.",
   "tools.database.formSubmitAnother": "മറ്റൊരു പ്രതികരണം സമർപ്പിക്കുക",
   "tools.database.formAnonymousPill": "പ്രതികരണം അജ്ഞാതമായി സമർപ്പിക്കുന്നു",
+  "tools.database.formRespondentPill": "പ്രതികരണം {name} ആയി സമർപ്പിക്കുന്നു",
   "tools.database.formViewResponse": "എന്റെ പ്രതികരണം കാണുക",
   "tools.database.formEmailCopy": "ഒരു പകർപ്പ് എനിക്ക് ഇമെയിൽ ചെയ്യുക",
   "tools.database.formClosed": "ഈ ഫോം അടച്ചിരിക്കുന്നു.",

@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "धन्यवाद! आपके उत्तर भेज दिए गए।",
   "tools.database.formSubmitAnother": "एक और उत्तर सबमिट करें",
   "tools.database.formAnonymousPill": "उत्तर गुमनाम रूप से सबमिट किया जा रहा है",
+  "tools.database.formRespondentPill": "उत्तर {name} के रूप में सबमिट किया जा रहा है",
   "tools.database.formViewResponse": "मेरा उत्तर देखें",
   "tools.database.formEmailCopy": "मुझे एक कॉपी ईमेल करें",
   "tools.database.formClosed": "यह फ़ॉर्म बंद है।",

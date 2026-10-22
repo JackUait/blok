@@ -1341,6 +1341,7 @@
   "tools.database.formSubmitted": "Дякуємо! Ваші відповіді надіслано.",
   "tools.database.formSubmitAnother": "Надіслати ще одну відповідь",
   "tools.database.formAnonymousPill": "Відповідь надсилається анонімно",
+  "tools.database.formRespondentPill": "Відповідь надсилається від імені {name}",
   "tools.database.formViewResponse": "Переглянути мою відповідь",
   "tools.database.formEmailCopy": "Надіслати мені копію на пошту",
   "tools.database.formClosed": "Цю форму закрито.",

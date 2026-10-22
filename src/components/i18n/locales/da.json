@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "Tak! Dine svar er sendt.",
   "tools.database.formSubmitAnother": "Send et svar mere",
   "tools.database.formAnonymousPill": "Svaret sendes anonymt",
+  "tools.database.formRespondentPill": "Svaret sendes som {name}",
   "tools.database.formViewResponse": "Se mit svar",
   "tools.database.formEmailCopy": "Send mig en kopi på e-mail",
   "tools.database.formClosed": "Denne formular er lukket.",

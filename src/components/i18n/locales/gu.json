@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "આભાર! તમારા જવાબો મોકલાઈ ગયા.",
   "tools.database.formSubmitAnother": "બીજો પ્રતિસાદ સબમિટ કરો",
   "tools.database.formAnonymousPill": "પ્રતિસાદ અનામી રીતે સબમિટ થઈ રહ્યો છે",
+  "tools.database.formRespondentPill": "પ્રતિસાદ {name} તરીકે સબમિટ થઈ રહ્યો છે",
   "tools.database.formViewResponse": "મારો પ્રતિસાદ જુઓ",
   "tools.database.formEmailCopy": "મને એક નકલ ઇમેઇલ કરો",
   "tools.database.formClosed": "આ ફોર્મ બંધ છે.",

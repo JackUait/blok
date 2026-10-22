@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "Баярлалаа! Таны хариултууд илгээгдлээ.",
   "tools.database.formSubmitAnother": "Өөр хариулт илгээх",
   "tools.database.formAnonymousPill": "Хариултыг нэргүйгээр илгээж байна",
+  "tools.database.formRespondentPill": "Хариултыг {name} нэрээр илгээж байна",
   "tools.database.formViewResponse": "Миний хариултыг харах",
   "tools.database.formEmailCopy": "Хуулбарыг надад имэйлээр илгээх",
   "tools.database.formClosed": "Энэ маягт хаалттай.",

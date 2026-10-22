@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "Teşekkürler! Yanıtlarınız gönderildi.",
   "tools.database.formSubmitAnother": "Başka bir yanıt gönder",
   "tools.database.formAnonymousPill": "Yanıt anonim olarak gönderiliyor",
+  "tools.database.formRespondentPill": "Yanıt {name} olarak gönderiliyor",
   "tools.database.formViewResponse": "Yanıtımı görüntüle",
   "tools.database.formEmailCopy": "Bana bir kopyasını e-postayla gönder",
   "tools.database.formClosed": "Bu form kapalı.",

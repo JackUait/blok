@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "Köszönjük! A válaszait elküldtük.",
   "tools.database.formSubmitAnother": "Újabb válasz küldése",
   "tools.database.formAnonymousPill": "A válasz küldése névtelenül történik",
+  "tools.database.formRespondentPill": "A válasz küldője: {name}",
   "tools.database.formViewResponse": "Válaszom megtekintése",
   "tools.database.formEmailCopy": "Másolat küldése e-mailben",
   "tools.database.formClosed": "Ez az űrlap le van zárva.",

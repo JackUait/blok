@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "ขอบคุณ! ส่งคำตอบของคุณแล้ว",
   "tools.database.formSubmitAnother": "ส่งคำตอบอื่น",
   "tools.database.formAnonymousPill": "กำลังส่งคำตอบแบบไม่ระบุชื่อ",
+  "tools.database.formRespondentPill": "กำลังส่งคำตอบในนาม {name}",
   "tools.database.formViewResponse": "ดูคำตอบของฉัน",
   "tools.database.formEmailCopy": "ส่งสำเนาทางอีเมลถึงฉัน",
   "tools.database.formClosed": "ฟอร์มนี้ปิดแล้ว",

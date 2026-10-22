@@ -1341,6 +1341,7 @@
   "tools.database.formSubmitted": "Спасибо! Ваши ответы отправлены.",
   "tools.database.formSubmitAnother": "Отправить ещё один ответ",
   "tools.database.formAnonymousPill": "Ответ отправляется анонимно",
+  "tools.database.formRespondentPill": "Ответ отправляется от имени {name}",
   "tools.database.formViewResponse": "Посмотреть мой ответ",
   "tools.database.formEmailCopy": "Отправить мне копию на почту",
   "tools.database.formClosed": "Эта форма закрыта.",

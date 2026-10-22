@@ -925,6 +925,7 @@ export type BlokMessageKey =
   | 'tools.database.formRelationScope'
   | 'tools.database.formRelationSearch'
   | 'tools.database.formRequiredToggle'
+  | 'tools.database.formRespondentPill'
   | 'tools.database.formSelectType'
   | 'tools.database.formSelectionCustom'
   | 'tools.database.formSelectionLimit'

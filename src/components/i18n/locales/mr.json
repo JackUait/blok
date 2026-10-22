@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "धन्यवाद! तुमची उत्तरे पाठवली गेली.",
   "tools.database.formSubmitAnother": "आणखी एक प्रतिसाद सबमिट करा",
   "tools.database.formAnonymousPill": "प्रतिसाद निनावी स्वरूपात सबमिट होत आहे",
+  "tools.database.formRespondentPill": "प्रतिसाद {name} म्हणून सबमिट होत आहे",
   "tools.database.formViewResponse": "माझा प्रतिसाद पहा",
   "tools.database.formEmailCopy": "मला एक प्रत ईमेल करा",
   "tools.database.formClosed": "हा फॉर्म बंद आहे.",

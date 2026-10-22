@@ -54,8 +54,8 @@ const blocks = (view: Record<string, unknown>): OutputBlockData[] => [
 type Lever = 'none' | 'forms' | 'map' | 'readOnlyGate' | 'comments';
 
 /** Levers are functions, so they are built inside the page. */
-const mount = async (page: Page, data: OutputBlockData[], lever: Lever, extra: { user?: string; readOnly?: boolean } = {}): Promise<void> => {
-  await page.evaluate(async ({ input, which, user, readOnly }) => {
+const mount = async (page: Page, data: OutputBlockData[], lever: Lever, extra: { user?: string; readOnly?: boolean; people?: boolean } = {}): Promise<void> => {
+  await page.evaluate(async ({ input, which, user, readOnly, people }) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
       window.blokInstance = undefined;
@@ -111,6 +111,9 @@ const mount = async (page: Page, data: OutputBlockData[], lever: Lever, extra: {
         },
       };
     }
+    if (people === true) {
+      config.people = { list: () => Promise.resolve([{ id: 'u-ada', name: 'Ada Lovelace' }]), me: () => 'u-ada' };
+    }
     if (which === 'readOnlyGate') {
       config.permissions = { can: (action: string) => action === 'comment' };
     }
@@ -128,7 +131,7 @@ const mount = async (page: Page, data: OutputBlockData[], lever: Lever, extra: {
       },
     });
     await window.blokInstance.isReady;
-  }, { input: data, which: lever, user: extra.user, readOnly: extra.readOnly });
+  }, { input: data, which: lever, user: extra.user, readOnly: extra.readOnly, people: extra.people });
   await expect(page.locator('[data-blok-database-wrapper]')).toBeVisible();
 };
 
@@ -224,6 +227,62 @@ test.describe('form view, research/23 §6', () => {
 
     await page.getByRole('button', { name: 'View my response' }).click();
     await expect(page.locator('[data-blok-database-drawer] [data-blok-database-drawer-title]')).toHaveValue('FormResp1');
+  });
+});
+
+// research/36 §13: Preview, who a response is from, and "View my response".
+test.describe('form view, research/36 §13', () => {
+  const withCreatedBy = (): OutputBlockData[] => {
+    const [database, ...rows] = blocks({ type: 'form' });
+    const data = database.data as { schema: unknown[]; views: unknown[] };
+
+    return [{
+      ...database,
+      data: {
+        ...data,
+        schema: [...data.schema, { id: 'p-by', name: 'Created by', type: 'createdBy', position: 'a3' }],
+        views: [...data.views, { id: 'v2', name: 'Table', type: 'table', position: 'a1', sorts: [], filters: [], visibleProperties: [] }],
+      },
+    }, ...rows];
+  };
+
+  test('Preview names the respondent, its answer is a row they created, and "View my response" opens it full page', async ({ page }) => {
+    // The chip reads people.me(); Created by reads the editor's user id. The host sets both alike.
+    await mount(page, withCreatedBy(), 'forms', { user: 'u-ada', people: true });
+
+    await page.getByRole('button', { name: 'Preview' }).click();
+    const preview = page.getByRole('dialog', { name: 'Preview' });
+
+    await expect(preview.getByText('Submitting response as Ada Lovelace')).toBeVisible();
+    await expect(preview.locator('[data-blok-database-form-access]')).toHaveCount(0);
+    await preview.locator('[data-blok-database-form-question="p-title"]').getByRole('textbox').fill('FormResp');
+    await preview.getByRole('button', { name: 'Submit' }).click();
+    await expect(preview.locator('[data-blok-database-form-confirmation]')).toBeVisible();
+
+    const saved = await page.evaluate(async () => (await window.blokInstance?.save())?.blocks.filter((block) => block.type === 'database-row'));
+    const added = saved?.find((block) => (block.data as { properties: Record<string, unknown> }).properties['p-title'] === 'FormResp');
+
+    expect(added?.createdBy).toBe('u-ada');
+    // The builder's own form is untouched: it still asks its questions.
+    await expect(page.locator('[data-blok-database-wrapper] [data-blok-database-form-confirmation]')).toHaveCount(0);
+
+    await preview.getByRole('button', { name: 'View my response' }).click();
+    await expect(preview).toHaveCount(0);
+    const drawer = page.locator('[data-blok-database-drawer]');
+
+    await expect(drawer).toHaveAttribute('data-peek-mode', 'full');
+    await expect(drawer.locator('[data-blok-database-drawer-title]')).toHaveValue('FormResp');
+    await expect(drawer.getByText('Ada Lovelace')).toBeVisible();
+  });
+
+  test('an anonymous form shows only the anonymous pill in Preview', async ({ page }) => {
+    await mount(page, blocks({ type: 'form', form: { anonymous: true } }), 'forms', { user: 'u-ada', people: true });
+
+    await page.getByRole('button', { name: 'Preview' }).click();
+    const preview = page.getByRole('dialog', { name: 'Preview' });
+
+    await expect(preview.getByText('Submitting response anonymously')).toBeVisible();
+    await expect(preview.getByText(/Submitting response as/)).toHaveCount(0);
   });
 });
 

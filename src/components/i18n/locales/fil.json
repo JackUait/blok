@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "Salamat! Naipadala na ang iyong mga sagot.",
   "tools.database.formSubmitAnother": "Magpasa ng isa pang sagot",
   "tools.database.formAnonymousPill": "Ipinapasa ang sagot nang anonimo",
+  "tools.database.formRespondentPill": "Ipinapasa ang sagot bilang {name}",
   "tools.database.formViewResponse": "Tingnan ang aking sagot",
   "tools.database.formEmailCopy": "I-email sa akin ang kopya",
   "tools.database.formClosed": "Sarado na ang pormularyong ito.",

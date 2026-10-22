@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "مننه! ستاسو ځوابونه ولېږل شول.",
   "tools.database.formSubmitAnother": "بل ځواب وسپارئ",
   "tools.database.formAnonymousPill": "ځواب په بې نومه ډول سپارل کېږي",
+  "tools.database.formRespondentPill": "ځواب د {name} په توګه سپارل کېږي",
   "tools.database.formViewResponse": "زما ځواب وګورئ",
   "tools.database.formEmailCopy": "ماته یوه کاپي برېښنالیک کړئ",
   "tools.database.formClosed": "دا فورمه تړل شوې ده.",

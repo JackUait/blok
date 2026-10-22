@@ -1339,6 +1339,7 @@
   "tools.database.formSubmitted": "תודה! התשובות שלך נשלחו.",
   "tools.database.formSubmitAnother": "שלח תשובה נוספת",
   "tools.database.formAnonymousPill": "התשובה נשלחת באופן אנונימי",
+  "tools.database.formRespondentPill": "התשובה נשלחת בתור {name}",
   "tools.database.formViewResponse": "הצג את התשובה שלי",
   "tools.database.formEmailCopy": "שלח לי עותק במייל",
   "tools.database.formClosed": "טופס זה סגור.",

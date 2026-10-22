@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "謝謝！您的回答已送出。",
   "tools.database.formSubmitAnother": "送出另一份回應",
   "tools.database.formAnonymousPill": "正在以匿名方式送出回應",
+  "tools.database.formRespondentPill": "正在以 {name} 的身分送出回應",
   "tools.database.formViewResponse": "查看我的回應",
   "tools.database.formEmailCopy": "以電子郵件寄送副本給我",
   "tools.database.formClosed": "此表單已關閉。",

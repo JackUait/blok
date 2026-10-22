@@ -1,3 +1,5 @@
+import { openModalDialog } from '../../components/utils/modal-dialog';
+import type { ModalDialogHandle } from '../../components/utils/modal-dialog';
 import { describeDatabase } from '../../shared/tool-descriptions/database';
 import { DATABASE_ACTION_HANDLERS } from '../../shared/tool-actions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
@@ -2299,6 +2301,7 @@ export class DatabaseTool implements BlockTool {
   destroy(): void {
     this.destroyed = true;
     this.sourcePicker?.close();
+    this.formPreview?.close();
     this.formPromptAbort?.abort();
     this.api.events.off(DATABASE_GONE_EVENT, this.handleDatabaseGone);
     this.api.events.emit(DATABASE_GONE_EVENT, { databaseId: this.block.id });
@@ -4765,7 +4768,8 @@ export class DatabaseTool implements BlockTool {
           if (!submitted) this.submittedForms.delete(viewId);
           else if (!this.submittedForms.has(viewId)) this.submittedForms.set(viewId, null);
         },
-        responseActions: () => this.formResponseActions(viewId),
+        respondent: () => this.respondent(),
+        responseActions: () => this.formResponseActions(this.submittedForms.get(viewId)),
         onSubmit: (values) => this.submitForm(viewId, values),
         ...(this.readOnly || this.structureLocked() ? {} : {
           share: {
@@ -4881,10 +4885,10 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** A form answer becomes a row (Notion: responses land in the database). Read-only only tells the host. */
-  private submitForm(viewId: string, values: Record<string, PropertyValue>): void {
+  private submitForm(viewId: string, values: Record<string, PropertyValue>, record = true): DatabaseFormSubmission | undefined {
     const view = this.viewOf(viewId);
 
-    if (this.destroyed || !this.shows(viewId) || view?.type !== 'form' || view.form?.closed === true) return;
+    if (this.destroyed || !this.shows(viewId) || view?.type !== 'form' || view.form?.closed === true) return undefined;
     const rowId = this.readOnly ? undefined : this.insertRow(values, { rerender: false, anonymous: view.form?.anonymous === true });
     const submission: DatabaseFormSubmission = {
       databaseId: this.viewOwner().block.id,
@@ -4899,28 +4903,97 @@ export class DatabaseTool implements BlockTool {
     };
     const forms = this.config.forms;
 
-    this.submittedForms.set(viewId, submission);
-    if (forms === undefined) return;
+    if (record) this.submittedForms.set(viewId, submission);
+    if (forms === undefined) return submission;
     try {
       void Promise.resolve(forms.onSubmit(submission)).catch(() => undefined);
     } catch {
       // The row is already saved; a failing host must not undo it.
     }
+
+    return submission;
+  }
+
+  /** The person the current user is in the host's directory, once it has loaded. */
+  private respondent(): DatabasePerson | undefined {
+    const me = this.config.people?.me?.();
+
+    return me === undefined || me === '' ? undefined : this.people?.find((person) => person.id === me);
+  }
+
+  private formPreview: ModalDialogHandle | null = null;
+
+  /**
+   * research/36 §13: "Preview" shows the form as a respondent sees it, in a
+   * centred dialog. Its answer is a real row; the builder's own form keeps
+   * its state.
+   */
+  private openFormPreview(viewId: string): void {
+    const view = this.viewOf(viewId);
+
+    if (this.destroyed || this.readOnly || view?.type !== 'form' || this.formPreview !== null) return;
+    const backdrop = document.createElement('div');
+    const surface = document.createElement('div');
+    const state: { submission?: DatabaseFormSubmission } = {};
+    const form = new DatabaseFormView({
+      i18n: this.api.i18n,
+      view,
+      schema: localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
+      readOnly: false,
+      source: this.source,
+      cellContext: { ...this.cellContext(), openEditors: undefined, relationScope: (property: PropertyDefinition) => this.relatedDatabaseName(property) },
+      hasPeople: this.hasPeople,
+      respondent: () => this.respondent(),
+      onSubmittedChange: (submitted) => {
+        if (!submitted) delete state.submission;
+      },
+      responseActions: () => this.formResponseActions(state.submission, () => handle.close()),
+      onSubmit: (values) => {
+        state.submission = this.submitForm(viewId, values, false);
+      },
+    });
+
+    // Mounted on body: the popover scope brings the editor font and preflight.
+    backdrop.setAttribute('data-blok-popover', '');
+    backdrop.setAttribute('data-blok-database-form-preview-backdrop', '');
+    surface.setAttribute('data-blok-database-form-preview', '');
+    surface.setAttribute('data-blok-testid', 'database-form-preview');
+    surface.appendChild(form.createView());
+    backdrop.appendChild(surface);
+    const handle = openModalDialog({
+      content: backdrop,
+      surface,
+      role: 'dialog',
+      label: this.api.i18n.t('tools.file.preview'),
+      directionSource: this.element,
+      onDismiss: () => handle.close(),
+      onClose: () => {
+        form.destroy();
+        this.formPreview = null;
+      },
+    });
+
+    this.formPreview = handle;
   }
 
   /**
    * The thank-you screen's buttons (research/23 §6): "View my response" while
    * the row the answer became is there, "Email me a copy" when the host sends it.
    */
-  private formResponseActions(viewId: string): { view?: () => void; email?: () => void } {
-    const submission = this.submittedForms.get(viewId);
+  private formResponseActions(submission: DatabaseFormSubmission | null | undefined, beforeOpen?: () => void): { view?: () => void; email?: () => void } {
     const rowId = submission?.rowId;
     const emailCopy = this.config.forms?.emailCopy;
 
     if (submission === undefined || submission === null) return {};
 
     return {
-      ...(rowId !== undefined && this.model.getRow(rowId) !== undefined ? { view: () => this.handleRowClick(rowId) } : {}),
+      // research/36 §13: Notion opens the response as a full page.
+      ...(rowId !== undefined && this.model.getRow(rowId) !== undefined ? {
+        view: () => {
+          beforeOpen?.();
+          this.handleRowClick(rowId, 'full');
+        },
+      } : {}),
       ...(emailCopy === undefined ? {} : {
         email: () => {
           try {
@@ -5997,6 +6070,7 @@ export class DatabaseTool implements BlockTool {
         shareForm: (anchor: HTMLElement) => {
           if (this.view instanceof DatabaseFormView) this.view.openShare(anchor);
         },
+        previewForm: () => this.openFormPreview(this.activeViewId),
       } : {}),
       groups: (sub) => this.groupEntries(sub),
       rerender: () => context === undefined ? this.rerenderView({ keepDrawer: true }) : context.redraw(),

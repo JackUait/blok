@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "Благодарим! Отговорите ви бяха изпратени.",
   "tools.database.formSubmitAnother": "Изпрати още един отговор",
   "tools.database.formAnonymousPill": "Отговорът се изпраща анонимно",
+  "tools.database.formRespondentPill": "Отговорът се изпраща като {name}",
   "tools.database.formViewResponse": "Виж моя отговор",
   "tools.database.formEmailCopy": "Изпрати ми копие по имейл",
   "tools.database.formClosed": "Този формуляр е затворен.",

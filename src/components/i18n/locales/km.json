@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "សូមអរគុណ! ចម្លើយរបស់អ្នកត្រូវបានផ្ញើហើយ។",
   "tools.database.formSubmitAnother": "ដាក់ស្នើចម្លើយផ្សេងទៀត",
   "tools.database.formAnonymousPill": "កំពុងដាក់ស្នើចម្លើយជាអនាមិក",
+  "tools.database.formRespondentPill": "កំពុងដាក់ស្នើចម្លើយជា {name}",
   "tools.database.formViewResponse": "មើលចម្លើយរបស់ខ្ញុំ",
   "tools.database.formEmailCopy": "ផ្ញើច្បាប់ចម្លងមកខ្ញុំតាមអ៊ីមែល",
   "tools.database.formClosed": "ទម្រង់នេះត្រូវបានបិទ។",

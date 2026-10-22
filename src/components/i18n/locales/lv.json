@@ -1339,6 +1339,7 @@
   "tools.database.formSubmitted": "Paldies! Jūsu atbildes ir nosūtītas.",
   "tools.database.formSubmitAnother": "Iesniegt vēl vienu atbildi",
   "tools.database.formAnonymousPill": "Atbilde tiek iesniegta anonīmi",
+  "tools.database.formRespondentPill": "Atbilde tiek iesniegta kā {name}",
   "tools.database.formViewResponse": "Skatīt manu atbildi",
   "tools.database.formEmailCopy": "Nosūtīt man kopiju e-pastā",
   "tools.database.formClosed": "Šī veidlapa ir slēgta.",

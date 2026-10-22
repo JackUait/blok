@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "გმადლობთ! თქვენი პასუხები გაიგზავნა.",
   "tools.database.formSubmitAnother": "სხვა პასუხის გაგზავნა",
   "tools.database.formAnonymousPill": "პასუხი იგზავნება ანონიმურად",
+  "tools.database.formRespondentPill": "პასუხი იგზავნება როგორც {name}",
   "tools.database.formViewResponse": "ჩემი პასუხის ნახვა",
   "tools.database.formEmailCopy": "ასლის გაგზავნა ჩემს ელფოსტაზე",
   "tools.database.formClosed": "ეს ფორმა დახურულია.",

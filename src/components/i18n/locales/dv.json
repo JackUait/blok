@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "ޝުކުރިއްޔާ! ތިޔަބޭފުޅާގެ ޖަވާބުތައް ފޮނުވިއްޖެ.",
   "tools.database.formSubmitAnother": "އިތުރު ޖަވާބެއް ހުށަހަޅާ",
   "tools.database.formAnonymousPill": "ޖަވާބު ހުށަހަޅަނީ ނަން ނޭނގޭ ގޮތަށް",
+  "tools.database.formRespondentPill": "ޖަވާބު ހުށަހަޅަނީ {name} ގެ ގޮތުގައި",
   "tools.database.formViewResponse": "އަހަރެންގެ ޖަވާބު ބަލާ",
   "tools.database.formEmailCopy": "ކޮޕީއެއް އަހަރެންނަށް އީމެއިލް ކުރޭ",
   "tools.database.formClosed": "މި ފޯމު ބަންދުކުރެވިފައި.",

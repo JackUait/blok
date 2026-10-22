@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "Thanks! Your answers were sent.",
   "tools.database.formSubmitAnother": "Submit another response",
   "tools.database.formAnonymousPill": "Submitting response anonymously",
+  "tools.database.formRespondentPill": "Submitting response as {name}",
   "tools.database.formViewResponse": "View my response",
   "tools.database.formEmailCopy": "Email me a copy",
   "tools.database.formClosed": "This form is closed.",

@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "سوپاس! وەڵامەکانت نێردران.",
   "tools.database.formSubmitAnother": "ناردنی وەڵامێکی تر",
   "tools.database.formAnonymousPill": "وەڵام بە بێناوی دەنێردرێت",
+  "tools.database.formRespondentPill": "وەڵام وەک {name} دەنێردرێت",
   "tools.database.formViewResponse": "بینینی وەڵامەکەم",
   "tools.database.formEmailCopy": "ناردنی کۆپییەک بۆ ئیمەیڵەکەم",
   "tools.database.formClosed": "ئەم فۆرمە داخراوە.",

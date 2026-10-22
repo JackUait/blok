@@ -1341,6 +1341,7 @@
   "tools.database.formSubmitted": "Hvala! Odgovori so bili poslani.",
   "tools.database.formSubmitAnother": "Pošlji še en odgovor",
   "tools.database.formAnonymousPill": "Odgovor se pošilja anonimno",
+  "tools.database.formRespondentPill": "Odgovor se pošilja kot {name}",
   "tools.database.formViewResponse": "Prikaži moj odgovor",
   "tools.database.formEmailCopy": "Pošlji mi kopijo po e-pošti",
   "tools.database.formClosed": "Ta obrazec je zaprt.",

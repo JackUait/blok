@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "Tack! Dina svar har skickats.",
   "tools.database.formSubmitAnother": "Skicka ett till svar",
   "tools.database.formAnonymousPill": "Svaret skickas anonymt",
+  "tools.database.formRespondentPill": "Svaret skickas som {name}",
   "tools.database.formViewResponse": "Visa mitt svar",
   "tools.database.formEmailCopy": "Skicka en kopia till mig via e-post",
   "tools.database.formClosed": "Formuläret är stängt.",

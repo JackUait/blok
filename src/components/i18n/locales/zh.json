@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "谢谢！您的回答已发送。",
   "tools.database.formSubmitAnother": "提交另一份回复",
   "tools.database.formAnonymousPill": "正在匿名提交回复",
+  "tools.database.formRespondentPill": "正在以 {name} 的身份提交回复",
   "tools.database.formViewResponse": "查看我的回复",
   "tools.database.formEmailCopy": "通过电子邮件向我发送副本",
   "tools.database.formClosed": "此表单已关闭。",

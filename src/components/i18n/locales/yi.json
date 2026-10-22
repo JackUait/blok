@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "אַ דאַנק! אײַערע ענטפֿערס זײַנען אָפּגעשיקט געוואָרן.",
   "tools.database.formSubmitAnother": "אָפּשיקן נאָך אַן ענטפֿער",
   "tools.database.formAnonymousPill": "דער ענטפֿער ווערט אָפּגעשיקט אַנאָנים",
+  "tools.database.formRespondentPill": "דער ענטפֿער ווערט אָפּגעשיקט ווי {name}",
   "tools.database.formViewResponse": "זען מײַן ענטפֿער",
   "tools.database.formEmailCopy": "שיקט מיר אַ קאָפּיע פּער בליצפּאָסט",
   "tools.database.formClosed": "דער פֿאָרמולאַר איז פֿאַרמאַכט.",

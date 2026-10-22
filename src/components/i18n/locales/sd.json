@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "مهرباني! توهان جا جواب موڪليا ويا.",
   "tools.database.formSubmitAnother": "ٻيو جواب جمع ڪرايو",
   "tools.database.formAnonymousPill": "جواب گمنام طور جمع ٿي رهيو آهي",
+  "tools.database.formRespondentPill": "جواب {name} طور جمع ٿي رهيو آهي",
   "tools.database.formViewResponse": "منهنجو جواب ڏسو",
   "tools.database.formEmailCopy": "مون کي ڪاپي اي ميل ڪريو",
   "tools.database.formClosed": "هي فارم بند آهي.",

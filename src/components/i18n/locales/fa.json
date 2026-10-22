@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "سپاسگزاریم! پاسخ‌های شما ارسال شد.",
   "tools.database.formSubmitAnother": "ارسال پاسخی دیگر",
   "tools.database.formAnonymousPill": "پاسخ به‌صورت ناشناس ارسال می‌شود",
+  "tools.database.formRespondentPill": "پاسخ به‌عنوان {name} ارسال می‌شود",
   "tools.database.formViewResponse": "مشاهده پاسخ من",
   "tools.database.formEmailCopy": "ارسال یک نسخه به ایمیل من",
   "tools.database.formClosed": "این فرم بسته است.",

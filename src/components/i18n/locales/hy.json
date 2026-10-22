@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "Շնորհակալություն։ Ձեր պատասխաններն ուղարկվեցին։",
   "tools.database.formSubmitAnother": "Ուղարկել ևս մեկ պատասխան",
   "tools.database.formAnonymousPill": "Պատասխանն ուղարկվում է անանուն",
+  "tools.database.formRespondentPill": "Պատասխանն ուղարկվում է որպես {name}",
   "tools.database.formViewResponse": "Դիտել իմ պատասխանը",
   "tools.database.formEmailCopy": "Ուղարկել ինձ պատճենը էլ. փոստով",
   "tools.database.formClosed": "Այս ձևը փակ է։",

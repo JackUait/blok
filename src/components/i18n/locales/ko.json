@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "감사합니다! 답변이 전송되었습니다.",
   "tools.database.formSubmitAnother": "다른 응답 제출",
   "tools.database.formAnonymousPill": "익명으로 응답 제출 중",
+  "tools.database.formRespondentPill": "{name}(으)로 응답 제출 중",
   "tools.database.formViewResponse": "내 응답 보기",
   "tools.database.formEmailCopy": "사본을 이메일로 받기",
   "tools.database.formClosed": "이 양식은 마감되었습니다.",

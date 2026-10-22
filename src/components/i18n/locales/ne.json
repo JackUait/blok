@@ -1337,6 +1337,7 @@
   "tools.database.formSubmitted": "धन्यवाद! तपाईंका जवाफहरू पठाइए।",
   "tools.database.formSubmitAnother": "अर्को प्रतिक्रिया पेस गर्नुहोस्",
   "tools.database.formAnonymousPill": "प्रतिक्रिया बेनामी रूपमा पेस हुँदैछ",
+  "tools.database.formRespondentPill": "प्रतिक्रिया {name} को रूपमा पेस हुँदैछ",
   "tools.database.formViewResponse": "मेरो प्रतिक्रिया हेर्नुहोस्",
   "tools.database.formEmailCopy": "मलाई एउटा प्रतिलिपि इमेल गर्नुहोस्",
   "tools.database.formClosed": "यो फारम बन्द छ।",

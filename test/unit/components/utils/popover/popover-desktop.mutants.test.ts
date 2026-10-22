@@ -2916,7 +2916,9 @@ describe('PopoverDesktop — nested beside placement geometry', () => {
 
   const showWideSubmenu = (
     containerRect: { left: number; right: number },
-    rtl = false
+    rtl = false,
+    hideChevron = false,
+    more = false
   ): { nested: PopoverDesktop; rootLeft: number } => {
     const popover = createPopover({
       items: [
@@ -2924,6 +2926,8 @@ describe('PopoverDesktop — nested beside placement geometry', () => {
           title: 'Wide Trigger',
           name: 'wide-trigger',
           children: {
+            hideChevron,
+            ...(more ? { moreButton: { label: 'More' } } : {}),
             items: [{ title: 'Child', name: 'child', onActivate: vi.fn() }],
           },
         },
@@ -2950,6 +2954,26 @@ describe('PopoverDesktop — nested beside placement geometry', () => {
       vi.spyOn(triggerElement, 'getBoundingClientRect').mockReturnValue(
         makeRect({ top: 120, bottom: 160, left: containerRect.left + 10, right: containerRect.right - 10, width: 80, height: 40 })
       );
+
+      // The 16px chevron sits at the row's inline end.
+      const chevron = triggerElement.querySelector<HTMLElement>('[data-blok-popover-item-icon-chevron-right]');
+      const chevronLeft = rtl ? containerRect.left + 10 : containerRect.right - 26;
+
+      if (chevron !== null) {
+        vi.spyOn(chevron, 'getBoundingClientRect').mockReturnValue(
+          makeRect({ top: 132, bottom: 148, left: chevronLeft, right: chevronLeft + 16, width: 16, height: 16 })
+        );
+      }
+
+      // The 24px "…" sits at the row's inline end, in the chevron's place.
+      const moreEl = triggerElement.querySelector<HTMLElement>('[data-blok-popover-item-more]');
+      const moreLeft = rtl ? containerRect.left + 10 : containerRect.right - 34;
+
+      if (moreEl !== null) {
+        vi.spyOn(moreEl, 'getBoundingClientRect').mockReturnValue(
+          makeRect({ top: 128, bottom: 152, left: moreLeft, right: moreLeft + 24, width: 24, height: 24 })
+        );
+      }
     }
 
     return { nested: instance.showNestedPopoverForItem(triggerItem), rootLeft };
@@ -2960,13 +2984,59 @@ describe('PopoverDesktop — nested beside placement geometry', () => {
       .mockReturnValue({ width: 320, height: 80 });
 
     try {
-      // Right side: 900 - 4 + 320 > 1024 - 8. Left side: 700 + 4 - 320 = 384 fits.
+      // research/30 X1: Right side: 900 - 4 + 320 > 1024 - 8. Flipped, it covers the
+      // parent and ends 12px before the chevron (left 874): 874 - 12 - 320 = 542.
       const { nested, rootLeft } = showWideSubmenu({ left: 700, right: 900 });
       const nestedContainer = asInternal(nested).nodes.popoverContainer;
 
-      expect(nestedContainer.style.left).toBe(`${384 - rootLeft}px`);
+      expect(nestedContainer.style.left).toBe(`${542 - rootLeft}px`);
       expect(nested.getElement().getAttribute('data-side')).toBe('left');
       expect(nestedContainer.style.top).toBe('20px');
+    } finally {
+      sizeSpy.mockRestore();
+    }
+  });
+
+  // research/30 X1: Notion's submenu ends 12px before the "…" it opened from.
+  it('ends a flipped submenu 12px before the trigger\'s "…"', () => {
+    const sizeSpy = vi.spyOn(PopoverDesktop.prototype, 'size', 'get')
+      .mockReturnValue({ width: 320, height: 80 });
+
+    try {
+      // "…" left 866: 866 - 12 - 320 = 534.
+      const { nested, rootLeft } = showWideSubmenu({ left: 700, right: 900 }, false, false, true);
+
+      expect(asInternal(nested).nodes.popoverContainer.style.left).toBe(`${534 - rootLeft}px`);
+      expect(nested.getElement().getAttribute('data-side')).toBe('left');
+    } finally {
+      sizeSpy.mockRestore();
+    }
+  });
+
+  it('starts a flipped RTL submenu 12px after the trigger\'s "…"', () => {
+    const sizeSpy = vi.spyOn(PopoverDesktop.prototype, 'size', 'get')
+      .mockReturnValue({ width: 320, height: 80 });
+
+    try {
+      // "…" right 134: 134 + 12 = 146.
+      const { nested, rootLeft } = showWideSubmenu({ left: 100, right: 300 }, true, false, true);
+
+      expect(asInternal(nested).nodes.popoverContainer.style.left).toBe(`${146 - rootLeft}px`);
+    } finally {
+      sizeSpy.mockRestore();
+    }
+  });
+
+  it('opens a flipped submenu outside its parent when the trigger shows no chevron', () => {
+    const sizeSpy = vi.spyOn(PopoverDesktop.prototype, 'size', 'get')
+      .mockReturnValue({ width: 320, height: 80 });
+
+    try {
+      const { nested, rootLeft } = showWideSubmenu({ left: 700, right: 900 }, false, true);
+
+      // No chevron to anchor on: 700 + 4 - 320 = 384.
+      expect(asInternal(nested).nodes.popoverContainer.style.left).toBe(`${384 - rootLeft}px`);
+      expect(nested.getElement().getAttribute('data-side')).toBe('left');
     } finally {
       sizeSpy.mockRestore();
     }
@@ -2989,13 +3059,13 @@ describe('PopoverDesktop — nested beside placement geometry', () => {
 
   it('slides a submenu that fits on neither side back from the right edge', () => {
     const sizeSpy = vi.spyOn(PopoverDesktop.prototype, 'size', 'get')
-      .mockReturnValue({ width: 320, height: 80 });
+      .mockReturnValue({ width: 700, height: 80 });
 
     try {
-      // Right: 704 + 320 > 1016. Left: 300 + 4 - 320 < 8. Clamped to 1024 - 8 - 320 = 696.
-      const { nested, rootLeft } = showWideSubmenu({ left: 300, right: 708 });
+      // Right: 396 + 700 > 1016. Flipped: 374 - 12 - 700 < 8. Clamped to 1024 - 8 - 700 = 316.
+      const { nested, rootLeft } = showWideSubmenu({ left: 300, right: 400 });
 
-      expect(asInternal(nested).nodes.popoverContainer.style.left).toBe(`${696 - rootLeft}px`);
+      expect(asInternal(nested).nodes.popoverContainer.style.left).toBe(`${316 - rootLeft}px`);
       expect(nested.getElement().getAttribute('data-side')).toBe('right');
     } finally {
       sizeSpy.mockRestore();
@@ -3007,10 +3077,11 @@ describe('PopoverDesktop — nested beside placement geometry', () => {
       .mockReturnValue({ width: 320, height: 80 });
 
     try {
-      // Left (inline end): 100 + 4 - 320 < 8. Right (inline start): 300 - 4 = 296 fits.
+      // Left (inline end): 100 + 4 - 320 < 8. Flipped, it starts 12px after the
+      // chevron's right edge (126): 138.
       const { nested, rootLeft } = showWideSubmenu({ left: 100, right: 300 }, true);
 
-      expect(asInternal(nested).nodes.popoverContainer.style.left).toBe(`${296 - rootLeft}px`);
+      expect(asInternal(nested).nodes.popoverContainer.style.left).toBe(`${138 - rootLeft}px`);
       expect(nested.getElement().getAttribute('data-side')).toBe('right');
     } finally {
       sizeSpy.mockRestore();

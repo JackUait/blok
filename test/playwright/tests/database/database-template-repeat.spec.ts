@@ -133,8 +133,8 @@ test('the ↻ hint in the templates list names the unit only, after the hint del
 });
 
 // research/30 X1: the template's submenu opens on a click of its "…", never on
-// hover, so ↻ keeps its hint. At the window's right edge it opens on the left.
-test('at the window\'s right edge the ↻ hint shows, and "…" opens the submenu on the left', async ({ page }) => {
+// hover, so ↻ keeps its hint. At the window's right edge it opens over the list.
+test('at the window\'s right edge the ↻ hint shows, and "…" opens the submenu over the list', async ({ page }) => {
   await mount(page, { frequency: 'weekly', interval: 2, start: '2026-10-05T07:30:00.000Z', timeZone: 'Europe/Berlin' });
   await page.getByTestId('database-toolbar-new-menu').click();
 
@@ -159,8 +159,13 @@ test('at the window\'s right edge the ↻ hint shows, and "…" opens the submen
   await expect(page.getByRole('menuitem', { name: 'Edit', exact: true })).toBeVisible();
 
   const submenu = await containerRect('Edit');
+  const more = await page.getByRole('menuitem', { name: /^Standup/ })
+    .getByTestId('popover-item-more')
+    .evaluate((el) => el.getBoundingClientRect().left);
 
-  expect(submenu.right).toBeLessThanOrEqual(list.left + 4);
+  // Over the list, ending 12px before the "…".
+  expect(Math.abs(submenu.right - (more - 12))).toBeLessThanOrEqual(1);
+  expect(submenu.left).toBeGreaterThan(list.left);
 
   // Crossing the list to the submenu keeps it open, and its items still work.
   const edit = await page.getByRole('menuitem', { name: 'Edit', exact: true }).boundingBox();

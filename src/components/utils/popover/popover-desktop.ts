@@ -1780,19 +1780,31 @@ export class PopoverDesktop extends PopoverAbstract {
     // Submenus open toward the inline end of their parent (right, or left in
     // RTL), overlapping its edge by `overlap` px. The side depends only on
     // fit, never on the parent's own side: when the end side has no room the
-    // submenu opens on the start side instead of sliding back over its
-    // trigger. Fitting on neither side, it stays on the end side and slides
-    // back inside the viewport; one wider than the viewport keeps its left
-    // margin.
+    // submenu flips to the start side. Flipped, it covers the parent and ends
+    // `flipGap` px before the trigger's "…" or chevron (research/30 X1:
+    // Notion's template submenu ends 12px before the "…" it opened from).
+    // Without either it sits outside the parent's start edge. Fitting on neither
+    // side, it stays on the end side and slides back inside the viewport;
+    // one wider than the viewport keeps its left margin.
+    const flipGap = 12;
     const nestedWidth = nestedContainer.offsetWidth > 0
       ? nestedContainer.offsetWidth
       : this.nestedPopover?.size.width ?? 0;
+    // A row with a "…" (children.moreButton) anchors on it instead of a chevron.
+    const chevron = triggerItem.getElement()
+      ?.querySelector(`[${DATA_ATTR.popoverItemMore}], [${DATA_ATTR.popoverItemIconChevronRight}]`)
+      ?.getBoundingClientRect();
+    const chevronRect = chevron !== undefined && chevron.width > 0 ? chevron : undefined;
     const rightSideLeft = parentRect.right - overlap;
     const leftSideLeft = parentRect.left + overlap - nestedWidth;
     const fits = (left: number): boolean => left >= NESTED_POPOVER_VIEWPORT_MARGIN
       && left + nestedWidth <= window.innerWidth - NESTED_POPOVER_VIEWPORT_MARGIN;
     const endLeft = isRtl ? leftSideLeft : rightSideLeft;
-    const startLeft = isRtl ? rightSideLeft : leftSideLeft;
+    const coveringLeft = isRtl
+      ? (chevronRect?.right ?? 0) + flipGap
+      : (chevronRect?.left ?? 0) - flipGap - nestedWidth;
+    const outsideLeft = isRtl ? rightSideLeft : leftSideLeft;
+    const startLeft = chevronRect === undefined ? outsideLeft : coveringLeft;
     const flips = nestedWidth > 0 && !fits(endLeft) && fits(startLeft);
     const viewportLeft = flips ? startLeft : endLeft;
     const rightLimit = window.innerWidth - NESTED_POPOVER_VIEWPORT_MARGIN - nestedWidth;

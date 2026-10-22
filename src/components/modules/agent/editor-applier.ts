@@ -152,6 +152,7 @@ export class EditorApplier implements AgentApplier {
     BlockManager.beginToolTransaction();
 
     const before = YjsManager.topUndoToken();
+    const pageIdsBefore = new Map([...plan.touched].map((id) => [id, this.pageIdOf(id)]));
     const gesturesAtOpen = YjsManager.gestureCount();
     const release = BlockManager.attributeTo({
       ids: plan.touched, actor: this.options.actor, turnId: this.options.turnId,
@@ -165,13 +166,15 @@ export class EditorApplier implements AgentApplier {
 
       release();
       if (token !== undefined && token !== before && !await this.rollBack(token, tag)) {
+        // Part of the batch stays, so any pageId it wrote stays untrusted.
+        this.reportPagePointers(plan.touched, pageIdsBefore);
         throw rollbackRefused(error);
       }
       throw error;
     } finally {
       release();
     }
-    this.reportPagePointers(plan.touched);
+    this.reportPagePointers(plan.touched, pageIdsBefore);
 
     const token = YjsManager.topUndoToken();
 
@@ -230,19 +233,24 @@ export class EditorApplier implements AgentApplier {
     return rolledBack;
   }
 
-  /** Reads the blocks after the batch, so a type change earlier in it cannot hide a page. */
-  private reportPagePointers(ids: ReadonlySet<string>): void {
+  private pageIdOf(id: string): unknown {
+    const block = this.Blok.BlockManager.getBlockById(id);
+
+    return block?.name === 'page' ? block.preservedData.pageId : undefined;
+  }
+
+  /**
+   * Reports each pageId the batch left that the block did not have before.
+   * Read after the batch, so a type change earlier in it cannot hide a page.
+   */
+  private reportPagePointers(ids: ReadonlySet<string>, before: ReadonlyMap<string, unknown>): void {
     const report = this.options.onPagePointed;
 
-    if (report === undefined) {
-      return;
-    }
     for (const id of ids) {
-      const block = this.Blok.BlockManager.getBlockById(id);
-      const pageId = block?.name === 'page' ? block.preservedData.pageId : undefined;
+      const pageId = this.pageIdOf(id);
 
-      if (typeof pageId === 'string') {
-        report(pageId);
+      if (typeof pageId === 'string' && before.get(id) !== pageId) {
+        report?.(pageId);
       }
     }
   }

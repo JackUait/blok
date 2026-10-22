@@ -240,4 +240,19 @@ describe('the agent edits a sub-page through the host page documents', () => {
     expect(now.content).not.toContain('Private');
     expect(later.content).not.toContain('Private');
   });
+
+  it('a page block the agent only restyled still opens in a later turn', async () => {
+    const pages = new Map<string, OutputData>([['sub', { title: 'Sub', blocks: [] }]]);
+    const editor = await boot(host(pages));
+    const first = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const styled = await first.execute({ commands: [{ name: 'block.update', args: { id: 'pg', data: { textColor: 'red' } } }] });
+
+    first.end();
+    const second = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const read = await second.call('blok_read', { page: 'pg' });
+
+    second.end();
+    expect(styled.ok).toBe(true);
+    expect(read.isError).toBe(false);
+  });
 });

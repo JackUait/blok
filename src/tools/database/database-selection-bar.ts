@@ -18,15 +18,14 @@ export const bulkEditableProperties = (properties: PropertyDefinition[]): Proper
   properties.filter((property) => property.type !== 'title' && !isReadOnlyType(property.type));
 
 /**
- * What a bulk editor opens on. A date: the first selected row's (research/21 §6).
- * A text: the value every row shares (research/31 §4b). Else, and on mixed
- * rows (unmeasured), empty, so no row's value shows as if all had it.
+ * What a bulk editor opens on. A date or a text: the first selected row's
+ * (research/21 §6, research/35 §3). Else empty, so no row's value shows as if
+ * all had it. A text editor closed with its text unchanged writes nothing.
  */
 export const bulkStartValue = (property: PropertyDefinition, rows: Array<DatabaseRow | undefined>): PropertyValue => {
   const values = rows.map((row) => (row === undefined ? null : readPropertyValue(row, property) ?? null));
 
-  if (property.type === 'date') return values[0] ?? null;
-  if (property.type === 'text' && values.every((value) => value === values[0])) return values[0] ?? null;
+  if (property.type === 'date' || property.type === 'text') return values[0] ?? null;
 
   return null;
 };
@@ -50,12 +49,13 @@ export const watchBulkCloseKey = (): { key: () => string | null; stop: () => voi
 };
 
 /**
- * research/31 §4b: Escape after a Text bulk edit and Enter on a Select pick
- * clear the selection; a Date's Escape and a Select's Escape keep it. Other
- * closes are unmeasured and keep it.
+ * After a write: any close of a Text bulk edit (Escape, Enter, a press outside),
+ * Enter on a URL and Enter on a Select pick clear the selection (research/31 §4b,
+ * research/35 §3). A Date's or Number's Escape and a Select's click keep it.
+ * Other closes are unmeasured and keep it.
  */
 export const bulkCloseClearsSelection = (type: PropertyDefinition['type'], key: string | null, written: boolean): boolean =>
-  written && ((type === 'text' && key === 'Escape') || (type === 'select' && key === 'Enter'));
+  written && (type === 'text' || ((type === 'select' || type === 'url') && key === 'Enter'));
 
 /**
  * The board and list selection bar: "N selected", one button per editable

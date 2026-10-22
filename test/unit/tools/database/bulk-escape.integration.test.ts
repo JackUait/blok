@@ -222,7 +222,45 @@ describe('Escape in bulk editors (research/31 §4b)', () => {
     expect(bar()).toBeNull();
   });
 
-  it.each(VIEWS)('%s: Enter in a Text bulk edit keeps the selection (unmeasured: Blok keeps it)', async (_name, view, rowSelector) => {
+  // research/35 §3: mixed alpha / beta / empty opened on "alpha"; one key gave every row "alphaX".
+  it.each(VIEWS)('%s: a Text bulk edit on mixed values opens on the first row\'s value and writes it to every row', async (_name, view, rowSelector) => {
+    const blocks = doc(view);
+
+    (blocks[2].data as { properties: Record<string, unknown> }).properties.notes = 'beta';
+    await make(blocks);
+    await selectRows(rowSelector, 'r1', 'r2', 'r3');
+    await openBulk('notes');
+    const field = document.querySelector<HTMLTextAreaElement>('[data-blok-database-cell-input]');
+
+    if (field === null) throw new Error('no text field');
+    expect(field.value).toBe('same');
+    field.value = 'sameX';
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    await escape(field);
+
+    expect([(await saved('r1'))?.properties?.notes, (await saved('r2'))?.properties?.notes, (await saved('r3'))?.properties?.notes])
+      .toEqual(['sameX', 'sameX', 'sameX']);
+  });
+
+  // Opening on the first row's value must not write it over the others when nothing was typed.
+  it.each(VIEWS)('%s: a Text bulk edit on mixed values closed without typing changes no row', async (_name, view, rowSelector) => {
+    const blocks = doc(view);
+
+    (blocks[2].data as { properties: Record<string, unknown> }).properties.notes = 'beta';
+    await make(blocks);
+    await selectRows(rowSelector, 'r1', 'r2', 'r3');
+    await openBulk('notes');
+    const field = document.querySelector<HTMLTextAreaElement>('[data-blok-database-cell-input]');
+
+    if (field === null) throw new Error('no text field');
+    await escape(field);
+
+    expect([(await saved('r1'))?.properties?.notes, (await saved('r2'))?.properties?.notes, (await saved('r3'))?.properties?.notes])
+      .toEqual(['same', 'beta', undefined]);
+  });
+
+  // research/35 §3: Enter in a Text bulk edit clears the selection.
+  it.each(VIEWS)('%s: Enter in a Text bulk edit clears the selection', async (_name, view, rowSelector) => {
     await make(doc(view));
     await selectRows(rowSelector, 'r1', 'r2');
     await openBulk('notes');
@@ -235,7 +273,7 @@ describe('Escape in bulk editors (research/31 §4b)', () => {
     await quiet();
 
     expect((await saved('r2'))?.properties?.notes).toBe('other');
-    expect(bar()).not.toBeNull();
+    expect(bar()).toBeNull();
   });
 
   it.each(VIEWS)('%s: one undo takes a bulk Text edit, and a bulk Select Create, back on every row', async (_name, view, rowSelector) => {

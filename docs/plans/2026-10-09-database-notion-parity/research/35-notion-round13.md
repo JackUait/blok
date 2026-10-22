@@ -494,7 +494,21 @@ Side read for B1: at **06:16:28** local, turning Include time on in an empty-tim
 - Property **label** hover (the 160x34 `role=cell`): bg `color(srgb 0.129412 0.105882 0.0901961 / 0.0509804)` ≈ rgba(33, 27, 23, 0.051); label ink rgb(125, 122, 117) unchanged.
 - Property **value** hover (Notes, 438x34 `role=cell` holding a 434x34 `role=button`): **no fill** on any of the 10 elements up from the point, after 1.5 s.
 
-Not attempted (time): backlinks with 20+ sources; form "Created by" with anonymous off; the layout builder items; sort-row drag motion; the other light leftovers (218fec5b, b8cddcef, 8396d0eb).
+**Sort-row drag motion** (light; R13 table Sort editor with two sorts, F then Num; rows 32 tall at y 133 and 173; handle `dragHandleFillSmall` at x 561). Mouse down on Num's handle at y 189, then moves upward, reading each row's box after every move:
+
+| Pointer y | Num row top | F row top |
+|---|---|---|
+| 189 (down) | 173 | 133 |
+| 186, 180 | 173 (not moving yet) | 133 |
+| 170 | **154** (follows the pointer, offset −16) | 133 |
+| 160 | 144 | **173** (jumped down in one step) |
+| 150 | 134 | 173 |
+| 144 | **133** (stops at the list top) | 173 |
+| released | 133 (order now Num, F) | 173 |
+
+No `transform`, no opacity change, no fill and no shadow on the dragged row in any sample, and no fixed ghost element. The other row moves in a single jump (no in-between position was caught at the sample rate). The dragged row did not move for moves of 3 and 9 px, and did at 19 px: a start threshold somewhere in 10–19 px (not narrowed).
+
+Not attempted (time): backlinks with 20+ sources; form "Created by" with anonymous off; the layout builder items; the other light leftovers (218fec5b, b8cddcef, 8396d0eb).
 
 ## 22. Settings read (B3) and theme restore
 

@@ -1979,7 +1979,7 @@ describe('in-editor assistant bar', () => {
       expect(await texts(editor)).toEqual(['Hello', 'Second', 'Third', 'From AI']);
     });
 
-    it('a model that does not stream keeps the slots after a batch applies, while it still works', async () => {
+    it('a model that does not stream drops the slots once its edit lands, while it still works', async () => {
       const { model, release } = gated(answer('Done.'));
       const calls = { count: 0 };
       const editor = await createEditor(
@@ -1997,13 +1997,108 @@ describe('in-editor assistant bar', () => {
       await waitFor(() => expect(calls.count).toBe(2));
       await settle();
 
-      expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).not.toBeNull();
-      expect(gapOf('p2')).toBe(`${BAR_GAP + SLOTS_HEIGHT}px`);
+      expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).toBeNull();
+      expect(gapped()).toEqual(['p2']);
+      expect(gapOf('p2')).toBe(`${BAR_GAP}px`);
 
       release();
       await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
       expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).toBeNull();
-      expect(gapOf('p2')).toBe(`${BAR_GAP}px`);
+    });
+
+    describe('a streamed edit the preview has not drawn', () => {
+      const writeAfterP2 = (id: string, text: string): { json: string } =>
+        executeCall(id, [{ name: 'block.insert', args: { type: 'paragraph', data: { text }, position: { after: 'p2' } } }]);
+
+      const slotsShown = (): boolean => bar().querySelector('[data-blok-assistant-slots]:not([hidden])') !== null;
+
+      const holderWithText = (text: string): HTMLElement => {
+        const holder = [...document.querySelectorAll<HTMLElement>('[data-blok-element]')].find((el) => el.textContent === text);
+
+        if (holder === undefined) {
+          throw new Error(`no holder with ${text}`);
+        }
+
+        return holder;
+      };
+
+      const open = async (): Promise<ReturnType<typeof liveRuns>> => {
+        const runs = liveRuns();
+
+        await createEditor(runs.model, undefined, THREE_BLOCKS);
+        fakeLayout();
+        select('p2', 0, 'p2', 0);
+        pressModJ(inputOf('p2'));
+        submit('Write');
+        await waitFor(() => expect(runs.calls).toHaveLength(1));
+        // The preview never draws, as when a call arrives whole: only the bar's slots show.
+        vi.stubGlobal('requestAnimationFrame', () => 0);
+
+        return runs;
+      };
+
+      it('drops the slots once it lands, and the next edit shows them under what it wrote', async () => {
+        const runs = await open();
+        const emit = (event: AgentModelStreamEvent): void => runs.calls[0].request.onStream?.(event);
+        const first = writeAfterP2('c1', 'Table here');
+
+        emit({ type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' });
+        await settle();
+        expect(slotsShown()).toBe(true);
+        expect(gapOf('p2')).toBe(`${BAR_GAP + SLOTS_HEIGHT}px`);
+
+        emit({ type: 'tool_input', index: 0, json: first.json });
+        emit({ type: 'tool_end', index: 0 });
+        await waitFor(() => expect(holderWithText('Table here')).toBeTruthy());
+        await settle();
+
+        expect(slotsShown()).toBe(false);
+        expect(gapped()).toEqual(['p2']);
+        expect(gapOf('p2')).toBe(`${BAR_GAP}px`);
+
+        emit({ type: 'tool_start', index: 1, id: 'c2', name: 'blok_execute' });
+        await settle();
+
+        const written = holderWithText('Table here');
+
+        expect(slotsShown()).toBe(true);
+        expect(gapOf('p2')).toBe(`${BAR_GAP}px`);
+        expect(written.style.getPropertyValue('--blok-ai-gap')).toBe(`${SLOTS_HEIGHT}px`);
+      });
+
+      it('keeps the slots, moved under what it wrote, when the next edit already started', async () => {
+        const runs = await open();
+        const emit = (event: AgentModelStreamEvent): void => runs.calls[0].request.onStream?.(event);
+        const first = writeAfterP2('c1', 'Table here');
+
+        emit({ type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' });
+        emit({ type: 'tool_input', index: 0, json: first.json });
+        emit({ type: 'tool_start', index: 1, id: 'c2', name: 'blok_execute' });
+        emit({ type: 'tool_end', index: 0 });
+        await waitFor(() => expect(holderWithText('Table here')).toBeTruthy());
+        await settle();
+
+        expect(slotsShown()).toBe(true);
+        expect(gapOf('p2')).toBe(`${BAR_GAP}px`);
+        expect(holderWithText('Table here').style.getPropertyValue('--blok-ai-gap')).toBe(`${SLOTS_HEIGHT}px`);
+      });
+
+      it('leaves no gap under what it wrote once the run ends', async () => {
+        const runs = await open();
+        const emit = (event: AgentModelStreamEvent): void => runs.calls[0].request.onStream?.(event);
+        const first = writeAfterP2('c1', 'Table here');
+
+        emit({ type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' });
+        emit({ type: 'tool_input', index: 0, json: first.json });
+        emit({ type: 'tool_start', index: 1, id: 'c2', name: 'blok_execute' });
+        emit({ type: 'tool_end', index: 0 });
+        await waitFor(() => expect(holderWithText('Table here')).toBeTruthy());
+        runs.calls[0].finish(answer('Done.'));
+        await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+
+        expect(slotsShown()).toBe(false);
+        expect(gapped()).toEqual(['p2']);
+      });
     });
 
     it('a streaming model keeps the slots until the preview draws its first write', async () => {

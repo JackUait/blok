@@ -43,10 +43,12 @@ interface SetupOptions {
   /** The document; two paragraphs, p1 and p2, by default. */
   blocks?: Array<Record<string, unknown>>;
   thinking?: { levels: string[]; default?: string };
+  /** Stream events the first model call sends before it holds or answers. */
+  stream?: Array<Record<string, unknown>>;
 }
 
 const setup = async (page: Page, script: ScriptedResponse[], options: SetupOptions = {}): Promise<void> => {
-  await page.evaluate(async ({ holder, responses, hold, thinking, blocks }) => {
+  await page.evaluate(async ({ holder, responses, hold, thinking, blocks, stream }) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
       window.blokInstance = undefined;
@@ -74,6 +76,9 @@ const setup = async (page: Page, script: ScriptedResponse[], options: SetupOptio
           model: async (request: AgentModelRequest) => {
             window.assistantPrompts?.push(request.messages[0]?.content);
             window.assistantLevels?.push(request.thinking);
+            if (stream !== undefined && window.assistantPrompts?.length === 1) {
+              stream.forEach((event) => request.onStream?.(event as unknown as Parameters<NonNullable<AgentModelRequest['onStream']>>[0]));
+            }
             if (hold) {
               // Answers only when the test says so, or when Stop aborts it.
               await new Promise<void>((resolve) => {
@@ -95,7 +100,7 @@ const setup = async (page: Page, script: ScriptedResponse[], options: SetupOptio
 
     window.blokInstance = blok;
     await blok.isReady;
-  }, { holder: HOLDER_ID, responses: script, hold: options.hold === true, thinking: options.thinking, blocks: options.blocks });
+  }, { holder: HOLDER_ID, responses: script, hold: options.hold === true, thinking: options.thinking, blocks: options.blocks, stream: options.stream });
 };
 
 const savedTexts = (page: Page): Promise<string[]> => page.evaluate(async () => {
@@ -356,7 +361,7 @@ test.describe('in-editor assistant', () => {
     }).toBe(true);
   });
 
-  test('a model that does not stream shows slots under the bar after its first edit until the run ends, and reveals the written block', async ({ page }) => {
+  test('a model that does not stream drops the slots once its edit lands, and reveals the written block', async ({ page }) => {
     await setup(page, [insertCall('Revealed line'), reply('Done.')], { hold: true });
 
     await page.getByText('Second').click();
@@ -382,11 +387,56 @@ test.describe('in-editor assistant', () => {
     ).toBe(true);
 
     await expect.poll(() => page.evaluate(() => window.assistantPrompts?.length)).toBe(2);
-    // The model still works on its next step, so the slots stay.
-    await expect(bar.locator('[data-blok-ai-slot]').first()).toBeVisible();
+    // The content is in, so the slots do not stay in its place while the model works on.
+    await expect(bar.locator('[data-blok-ai-slot]').first()).toBeHidden();
     await page.evaluate(() => window.assistantRelease?.());
     await expect(bar.getByText('Done.')).toBeVisible();
     await expect(bar.locator('[data-blok-ai-slot]').first()).toBeHidden();
+  });
+
+  test('slots for an edit still on its way sit below the content the last edit wrote', async ({ page }) => {
+    const commands = [{ name: 'block.insert', args: { type: 'paragraph', data: { text: 'Landed first' }, position: { after: 'p1' } } }];
+
+    await setup(page, [reply('Done.')], {
+      hold: true,
+      stream: [
+        { type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' },
+        { type: 'tool_input', index: 0, json: JSON.stringify({ commands }) },
+        { type: 'tool_start', index: 1, id: 'c2', name: 'blok_execute' },
+        { type: 'tool_end', index: 0 },
+      ],
+    });
+
+    await page.getByText('The quick brown fox').click();
+    await page.keyboard.press(`${MOD}+j`);
+
+    const bar = page.getByRole('dialog', { name: 'Ask AI' });
+
+    await bar.getByRole('textbox').fill('Add two things');
+    await page.keyboard.press('Enter');
+
+    const written = page.locator(`#${HOLDER_ID} [data-blok-element]`).filter({ hasText: 'Landed first' });
+    const slot = bar.locator('[data-blok-ai-slot]').first();
+
+    await expect(written).toBeVisible();
+    await expect(slot).toBeVisible();
+
+    const box = await bar.boundingBox();
+    const block = await written.boundingBox();
+    const slotBox = await slot.boundingBox();
+    const next = await page.getByText('Second').boundingBox();
+
+    if (box === null || block === null || slotBox === null || next === null) {
+      throw new Error('no layout');
+    }
+    // Bar, then the written block, then the slots, then the rest of the page.
+    expect(block.y).toBeGreaterThanOrEqual(box.y + box.height);
+    expect(slotBox.y).toBeGreaterThanOrEqual(block.y + block.height);
+    expect(next.y).toBeGreaterThanOrEqual(slotBox.y + slotBox.height);
+
+    await page.evaluate(() => window.assistantRelease?.());
+    await expect(bar.getByText('Done.')).toBeVisible();
+    await expect(slot).toBeHidden();
   });
 
   test('after an answer, a follow-up field under it takes a question with a visible caret', async ({ page }) => {

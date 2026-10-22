@@ -163,6 +163,10 @@ export class AssistantBar {
   private readonly actions: HTMLElement;
   private readonly thinking: HTMLButtonElement;
   private readonly slots: HTMLElement;
+  /** The block the slots sit under; null: under the bar. */
+  private slotsUnder: HTMLElement | null = null;
+  /** The holder whose gap the slots hold now. */
+  private slotsHolder: HTMLElement | null = null;
   /** The bar's height when it began floating over its anchor; null when it sits under it. */
   private inPlaceHeight: number | null = null;
   private view: AssistantBarView = { kind: 'prompt' };
@@ -335,24 +339,40 @@ export class AssistantBar {
     const top = base === null ? null : rect.top + (rect.height - base) / 2;
     // Floating: only the slots and any growth push the page, from the bar's bottom on.
     const below = base === null || top === null ? 0 : Math.max(0, top + base - rect.bottom);
+    const under = this.slots.hidden || this.slotsUnder?.isConnected !== true ? null : this.slotsUnder;
+    const slotsUnderBar = !this.slots.hidden && under === null;
     const offset = base === null
       ? reserveGap(anchor, BAR_GAP, SPACE_BEFORE + height + SPACE_AFTER)
-      : reserveGap(anchor, BAR_GAP, Math.max(0, height - base) + (this.slots.hidden ? 0 : below + SPACE_AFTER));
+      : reserveGap(anchor, BAR_GAP, Math.max(0, height - base) + (slotsUnderBar ? below + SPACE_AFTER : 0));
+    const slotsHolder = this.slots.hidden ? null : under ?? anchor;
 
-    if (this.slots.hidden) {
-      releaseGap(anchor, SLOTS_GAP);
-    } else {
-      // Slots use em, like the preview: size them as a block here would be.
-      this.slots.style.fontSize = getComputedStyle(anchor).fontSize;
-      reserveGap(anchor, SLOTS_GAP, this.slots.getBoundingClientRect().height);
+    if (this.slotsHolder !== null && this.slotsHolder !== slotsHolder) {
+      releaseGap(this.slotsHolder, SLOTS_GAP);
     }
+    this.slotsHolder = slotsHolder;
+
+    if (slotsHolder !== null) {
+      // Slots use em, like the preview: size them as a block here would be.
+      this.slots.style.fontSize = getComputedStyle(slotsHolder).fontSize;
+    }
+
+    const slotsOffset = slotsHolder === null ? 0 : reserveGap(slotsHolder, SLOTS_GAP, this.slots.getBoundingClientRect().height);
+
     this.homeTop = top ?? rect.bottom + offset + SPACE_BEFORE;
     // Pinned inside the window, over the text, when its spot leaves it. Only this write:
     // the gaps above follow the spot, or every scroll would resize them.
     // client sizes leave out classic scrollbars; they are 0 only with no layout (jsdom).
     const view = document.documentElement.clientHeight || window.innerHeight;
 
-    this.element.style.top = `${Math.max(WINDOW_EDGE, Math.min(this.homeTop, view - WINDOW_EDGE - height))}px`;
+    const barTop = Math.max(WINDOW_EDGE, Math.min(this.homeTop, view - WINDOW_EDGE - height));
+
+    this.element.style.top = `${barTop}px`;
+    // Under a block, the slots sit in its gap; the stylesheet puts them under the bar otherwise.
+    if (under === null) {
+      this.slots.style.removeProperty('top');
+    } else {
+      this.slots.style.top = `${under.getBoundingClientRect().bottom + slotsOffset - barTop}px`;
+    }
     // Centred on the column; a narrow window trims the overhang first, then the column.
     const page = document.documentElement.clientWidth || window.innerWidth;
     const width = Math.max(0, Math.min(column.width + 2 * OVERHANG, page - 2 * WINDOW_EDGE));
@@ -366,9 +386,15 @@ export class AssistantBar {
    * Shimmer slots under the bar, for a model whose edits Blok cannot see coming.
    * The caller re-places the bar after this.
    * @param shown - draw the slots or remove them
+   * @param under - a block holder to draw them under instead, as the next content lands after it
    */
-  public setSlots(shown: boolean): void {
+  public setSlots(shown: boolean, under: HTMLElement | null = null): void {
     this.slots.hidden = !shown;
+    this.slotsUnder = shown ? under : null;
+  }
+
+  public get slotsUnderHolder(): HTMLElement | null {
+    return this.slotsUnder;
   }
 
   public get slotsShown(): boolean {
@@ -565,8 +591,11 @@ export class AssistantBar {
       this.anchor.removeAttribute(DATA_ATTR.aiReplaced);
       this.inPlaceHeight = null;
       releaseGap(this.anchor, BAR_GAP);
-      releaseGap(this.anchor, SLOTS_GAP);
     }
+    if (this.slotsHolder !== null) {
+      releaseGap(this.slotsHolder, SLOTS_GAP);
+    }
+    this.slotsHolder = null;
     this.anchor = null;
   }
 

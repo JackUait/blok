@@ -107,6 +107,10 @@ export class Assistant extends Module {
   private announced: { id: string; status: string } | null = null;
   /** The batch the running call applied, until that call reports done. Calls run one at a time. */
   private applied: ChangedSet | null = null;
+  /** Edits whose stream started and that have not landed yet. */
+  private readonly openEdits = new Set<string>();
+  /** The newest content this answer wrote: the next edit's slots go under it. */
+  private lastWrittenId: string | null = null;
   private readonly reveals = new Map<HTMLElement, ReturnType<typeof setTimeout>>();
   /** The block the bar sits under, and its neighbours when last placed: where it goes if the block is removed. */
   private anchor: { id: string; next?: string; prev?: string } | null = null;
@@ -324,6 +328,8 @@ export class Assistant extends Module {
 
     this.listening = true;
     this.edited = false;
+    this.openEdits.clear();
+    this.lastWrittenId = null;
     this.clearLines();
     this.bar?.render({ kind: 'working', status: '' });
     this.drawn = false;
@@ -606,6 +612,8 @@ export class Assistant extends Module {
   /** Stop drawing: whatever is still previewed will not commit from here. */
   private endStream(): void {
     this.setSlots(false);
+    this.openEdits.clear();
+    this.lastWrittenId = null;
     this.listening = false;
     this.streamCalls.clear();
     this.streamed.clear();
@@ -625,6 +633,7 @@ export class Assistant extends Module {
     if (event.type === 'tool_start') {
       if (event.name === EXECUTE_TOOL) {
         this.streamCalls.set(event.index, event.id);
+        this.openEdits.add(event.id);
         this.showEditSlots();
       } else {
         this.streamCalls.delete(event.index);
@@ -670,6 +679,7 @@ export class Assistant extends Module {
   }
 
   private toolDone(id: string, result: AgentToolResult): void {
+    this.openEdits.delete(id);
     if (!this.listening) {
       return;
     }
@@ -689,12 +699,35 @@ export class Assistant extends Module {
     if (changed === null) {
       return;
     }
+    this.landed(changed);
     // A call with no stream, or a rewrite the preview did not draw, replays its words now.
     const framed = this.preview?.framed(id) ?? [];
 
     this.reveal(streamed
       ? changed.updated.filter((blockId) => !framed.includes(blockId))
       : [...changed.created, ...changed.updated]);
+  }
+
+  /**
+   * Content showed up, so the slots leave its place. An edit already on its way
+   * keeps them, under the newest content, where it will most likely land.
+   */
+  private landed(changed: ChangedSet): void {
+    if ([changed.created, changed.updated, changed.moved, changed.removed].every((ids) => ids.length === 0)) {
+      return;
+    }
+
+    const manager = this.Blok.BlockManager;
+    const created = new Set(changed.created);
+    // Only top blocks of what was written: a table's cell blocks sit inside it.
+    const lowest = changed.created
+      .map((blockId) => manager.getBlockById(blockId))
+      .filter((block): block is Block => block !== undefined && (block.parentId === null || !created.has(block.parentId)))
+      .sort((a, b) => manager.getBlockIndex(a) - manager.getBlockIndex(b))
+      .at(-1);
+
+    this.lastWrittenId = lowest?.id ?? this.lastWrittenId;
+    this.setSlots(this.openEdits.size > 0 && !this.drawn);
   }
 
   /** Re-plays the word fade-in over committed blocks. A class on the content column is inert to the block. */
@@ -930,10 +963,13 @@ export class Assistant extends Module {
   }
 
   private setSlots(shown: boolean): void {
-    if (this.bar === null || this.bar.slotsShown === shown) {
+    const written = this.lastWrittenId === null ? undefined : this.Blok.BlockManager.getBlockById(this.lastWrittenId);
+    const under = shown ? written?.holder ?? null : null;
+
+    if (this.bar === null || (this.bar.slotsShown === shown && this.bar.slotsUnderHolder === under)) {
       return;
     }
-    this.bar.setSlots(shown);
+    this.bar.setSlots(shown, under);
     this.relayout();
   }
 

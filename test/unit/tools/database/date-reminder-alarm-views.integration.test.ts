@@ -115,4 +115,60 @@ describe('the reminder alarm in every view that shows the date', () => {
     expect(holder?.querySelector('[data-blok-database-calendar-event][data-row-id="r1"]')).not.toBeNull();
     expect(holder?.querySelector('[data-blok-database-date-reminder]')).toBeNull();
   });
+
+  describe('the row page', () => {
+    const click = async (el: Element | null): Promise<void> => {
+      el?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await quiet();
+    };
+    const pageValue = (): HTMLElement | null =>
+      holder?.querySelector<HTMLElement>('[data-blok-database-drawer] [data-blok-database-drawer-prop-value][data-property-id="due"]') ?? null;
+    const pageAlarm = (): Element | null =>
+      pageValue()?.querySelector('[data-blok-database-cell="date"][data-reminder] [data-blok-database-date-reminder]') ?? null;
+    const openPage = async (mode: string, rowId: string): Promise<void> => {
+      await make(doc({ type: 'table', openPagesIn: mode }));
+      await click(holder?.querySelector(`[data-row-id="${rowId}"] [data-blok-database-table-open]`) ?? null);
+    };
+    const closeEditor = async (): Promise<void> => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await quiet();
+    };
+
+    it.each([['side peek', 'side'], ['center peek', 'center'], ['full page', 'full']])(
+      '%s: the date with a reminder carries the alarm, as in the table',
+      async (_name, mode) => {
+        await openPage(mode, 'r1');
+
+        expect(pageAlarm()).not.toBeNull();
+        expect(pageAlarm()?.querySelector('svg')).not.toBeNull();
+      }
+    );
+
+    it('a date with no reminder shows none', async () => {
+      await openPage('side', 'r2');
+
+      expect(pageValue()?.querySelector('[data-blok-database-cell="date"]')).not.toBeNull();
+      expect(pageValue()?.querySelector('[data-reminder]')).toBeNull();
+    });
+
+    it('a reminder picked in the editor shows the alarm once it closes', async () => {
+      await openPage('side', 'r2');
+      await click(pageValue());
+      await click(document.querySelector('[data-blok-database-date-remind]'));
+      await click(document.querySelector('[data-blok-database-date-remind-option="1_day_before"]'));
+      await closeEditor();
+
+      expect(pageAlarm()).not.toBeNull();
+    });
+
+    it('a cleared date shows no alarm', async () => {
+      await openPage('side', 'r1');
+      await click(pageValue());
+      await click(document.querySelector('[data-blok-database-date-clear]'));
+      await closeEditor();
+
+      expect(pageValue()?.querySelector('[data-blok-database-cell="date"][data-empty]')).not.toBeNull();
+      expect(pageValue()?.querySelector('[data-blok-database-date-reminder]')).toBeNull();
+    });
+  });
 });

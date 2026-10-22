@@ -8,6 +8,7 @@ import type { CellContext , CellEditorHandle } from './cells';
 import type { DateDisplayChange } from './cells/date-format';
 import { isReadOnlyType, readPropertyValue } from './property-values';
 import { cellText } from './database-table-clipboard';
+import { rowCellContext } from './reminders';
 import { IconArrowDiagonal, IconCheck, IconCopy, IconMessage, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconEmojiStar, IconExpandFullscreen, IconStarFilled, IconLink, IconPage, IconPageLayout, IconPlayerTheater, IconPreview, IconSidebarRight, IconSplitView } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
@@ -3151,7 +3152,7 @@ export class DatabaseCardDrawer {
       i18n: { t: (key) => this.t(key) },
       readOnly: this.readOnly,
       followLinks: true,
-      ...(this.currentRow?.meta?.anonymous === true ? { anonymous: true } : {}),
+      ...rowCellContext(this.currentRow ?? undefined, def.id),
     });
 
     cell.querySelectorAll('[data-blok-database-option-pill]').forEach((pill) => pill.setAttribute('data-blok-database-drawer-prop-pill', ''));

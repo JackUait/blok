@@ -255,6 +255,21 @@ describe('Escape in bulk editors (research/31 §4b)', () => {
     expect(document.querySelector<HTMLTextAreaElement>('[data-blok-database-cell-input]')?.value).toBe('same');
   });
 
+  // research/36 §5: under a Z → A sort the top row is the one sorted first; tick order does not matter.
+  it.each(VIEWS.flatMap(([name, view, rowSelector]) => [['r1', 'r3'], ['r3', 'r1']].map((ticked) => [`${name}, ticked ${ticked.join(' then ')}`, view, rowSelector, ticked] as const)))(
+    '%s: a Text bulk edit under a Z → A sort opens on the top row\'s value', async (_name, view, rowSelector, ticked) => {
+      const blocks = doc({ ...view, sorts: [{ propertyId: 'notes', direction: 'desc' }] });
+
+      (blocks[1].data as { properties: Record<string, unknown> }).properties.notes = 'alpha';
+      (blocks[3].data as { properties: Record<string, unknown> }).properties.notes = 'gamma';
+      await make(blocks);
+      await selectRows(rowSelector, ...ticked);
+      await openBulk('notes');
+
+      expect(document.querySelector<HTMLTextAreaElement>('[data-blok-database-cell-input]')?.value).toBe('gamma');
+    },
+  );
+
   // Opening on the first row's value must not write it over the others when nothing was typed.
   it.each(VIEWS)('%s: a Text bulk edit on mixed values closed without typing changes no row', async (_name, view, rowSelector) => {
     const blocks = doc(view);

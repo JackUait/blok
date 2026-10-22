@@ -164,6 +164,12 @@ const zoneEntry = (id: string, zone: string, at: Date): ZoneEntry => {
 
 /** Gap between the picker and its submenus. */
 const MENU_GAP = 4;
+/**
+ * research/35 §20: the time zone menu overlaps the picker's edge by 4px and
+ * sits 12px above the window bottom. Where it goes for a trigger above that
+ * line was not measured: it stays level with the row.
+ */
+const ZONE_MENU_PLACE = { gap: -4, bottom: 12 };
 
 type MenuKind = 'remind' | 'dateFormat' | 'timeFormat' | 'timeZone';
 
@@ -984,22 +990,22 @@ class DateEditor {
     this.menu = { element: menu, kind: 'timeZone' };
     row.setAttribute('aria-expanded', 'true');
     promoteToTopLayer(menu);
-    this.placeMenu(row, menu, true);
+    this.placeMenu(row, menu, ZONE_MENU_PLACE);
     search.focus();
   }
 
-  /** Beside the picker on its end side; `preferStart` tries the start side first (the time zone menu). */
-  private placeMenu(row: HTMLElement, menu: HTMLElement, preferStart = false): void {
+  /** Beside the picker on its end side, else its start side; level with the row, kept `place.bottom` above the window bottom. */
+  private placeMenu(row: HTMLElement, menu: HTMLElement, place: { gap: number; bottom: number } = { gap: MENU_GAP, bottom: MENU_GAP }): void {
     const box = this.root.getBoundingClientRect();
     const rowBox = row.getBoundingClientRect();
     const width = menu.offsetWidth;
     const height = menu.offsetHeight;
     const rtl = getElementDirection(this.anchor) === 'rtl';
-    const right = box.right + MENU_GAP;
-    const left = box.left - MENU_GAP - width;
-    const sides = (rtl !== preferStart) ? [left, right] : [right, left];
+    const right = box.right + place.gap;
+    const left = box.left - place.gap - width;
+    const sides = rtl ? [left, right] : [right, left];
     const x = sides.find((side) => side >= 0 && side + width <= window.innerWidth) ?? sides[1];
-    const top = Math.max(0, Math.min(rowBox.top, window.innerHeight - height - MENU_GAP));
+    const top = Math.max(0, Math.min(rowBox.top, window.innerHeight - height - place.bottom));
 
     Object.assign(menu.style, { position: 'fixed', left: `${Math.max(0, x)}px`, top: `${top}px` });
   }

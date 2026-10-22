@@ -353,13 +353,14 @@ test.describe('date picker submenus', () => {
     await expect(page.locator('[data-blok-database-date-today]')).toHaveText('Now');
   });
 
-  test('Time zone: a 342px menu left of the picker, a focused search, the current zone pinned on top', async ({ page }) => {
+  // research/35 §20: the menu covers the picker's right edge by 4px.
+  test('Time zone: a 342px menu over the picker\'s right edge, a focused search, the current zone pinned on top', async ({ page }) => {
     await openZones(page);
     const menuBox = await zoneMenu(page).boundingBox();
     const pickerBox = await picker(page).boundingBox();
 
     expect(menuBox?.width).toBe(342);
-    expect((menuBox?.x ?? Infinity) + (menuBox?.width ?? 0)).toBeLessThanOrEqual(pickerBox?.x ?? 0);
+    expect(menuBox?.x).toBe((pickerBox?.x ?? 0) + (pickerBox?.width ?? 0) - 4);
     await expect(zoneSearch(page)).toBeFocused();
     await expect(zoneSearch(page)).toHaveAttribute('placeholder', 'Search cities, timezones…');
     await expect(zoneMenu(page).locator('[data-blok-database-date-zone-heading]')).toHaveText(['Current timezone', 'Select a timezone']);
@@ -388,7 +389,8 @@ test.describe('date picker submenus', () => {
     const innerHeight = await page.evaluate(() => window.innerHeight);
 
     expect(Math.abs((menuBox?.height ?? 0) - 595)).toBeLessThanOrEqual(1);
-    expect(innerHeight - ((menuBox?.y ?? 0) + (menuBox?.height ?? 0))).toBeLessThanOrEqual(8);
+    // research/35 §20: 12px above the window bottom.
+    expect(innerHeight - ((menuBox?.y ?? 0) + (menuBox?.height ?? 0))).toBe(12);
   });
 
   for (const [scheme, ink] of [['light', { city: 'rgb(44, 44, 43)', muted: 'rgb(114, 111, 106)' }], ['dark', { city: 'rgb(240, 239, 237)', muted: 'rgb(173, 169, 163)' }]] as const) {
@@ -422,13 +424,15 @@ test.describe('date picker submenus', () => {
     await expect(page.locator('[data-blok-database-date-setting="timeZone"]')).toHaveText(/Asia\/Tokyo/);
   });
 
-  test('Time zone in RTL opens on the right of the picker', async ({ page }) => {
+  // RTL is unmeasured: the LTR rule mirrored. This picker has no room on its left, so the menu takes the other side.
+  test('Time zone in RTL with no room on the left opens over the right edge of the picker', async ({ page }) => {
     await mount(page, ORDER, 'rtl');
     await openZones(page);
     const menuBox = await zoneMenu(page).boundingBox();
     const pickerBox = await picker(page).boundingBox();
 
-    expect(menuBox?.x ?? 0).toBeGreaterThanOrEqual((pickerBox?.x ?? Infinity) + (pickerBox?.width ?? 0));
+    expect(pickerBox?.x ?? Infinity).toBeLessThan(342 - 4);
+    expect(menuBox?.x).toBe((pickerBox?.x ?? 0) + (pickerBox?.width ?? 0) - 4);
   });
 
   test('Escape closes only the time zone menu', async ({ page }) => {

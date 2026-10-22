@@ -932,6 +932,22 @@ describe('date cell editor', () => {
       const selected = (): string[] => [...(zoneMenu()?.querySelectorAll('[aria-selected="true"]') ?? [])]
         .map((row) => row.getAttribute('data-blok-database-date-setting-option') ?? '');
 
+      // research/35 §20: in a 717px window the 595px menu sat at (1062, 110): over the picker's
+      // right edge by 4px, 12px above the window bottom, for a trigger at y 471.
+      it('opens on the end side over the picker edge by 4px, 12px above the window bottom', () => {
+        vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1512);
+        vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+        vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(342);
+        vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(595);
+        openRows('2026-10-09T14:00');
+        vi.spyOn(document.querySelector<HTMLElement>('[data-blok-database-date-editor]') ?? document.body, 'getBoundingClientRect').mockReturnValue(new DOMRect(818, 12, 248, 594));
+        vi.spyOn(setting('timeZone'), 'getBoundingClientRect').mockReturnValue(new DOMRect(822, 471, 240, 28));
+        setting('timeZone').click();
+
+        expect(zoneMenu()?.style.left).toBe('1062px');
+        expect(zoneMenu()?.style.top).toBe('110px');
+      });
+
       it('opens with a focused search field, the current timezone pinned on top, then every other zone', () => {
         openRows('2026-10-09T14:00');
         setting('timeZone').click();

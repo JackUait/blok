@@ -1055,6 +1055,12 @@ describe('date cell editor', () => {
       });
 
       it('names a nested zone by its path and a US zone as "Mountain (US)" (research/23 §1, 30 B25)', () => {
+        const real = Intl.DateTimeFormat.prototype.resolvedOptions;
+
+        // The browser zone gets the pinned "local" row instead of its own, and CI runs in UTC.
+        vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockImplementation(function (this: Intl.DateTimeFormat) {
+          return { ...real.call(this), timeZone: 'Europe/Berlin' };
+        });
         openRows('2026-10-09T14:00');
         setting('timeZone').click();
 

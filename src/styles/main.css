@@ -631,38 +631,30 @@
 }
 
 /**
- * List item selection styles
- * Applies selection background to the list item itself (not the content wrapper)
- * so that the inline-start indentation is respected
+ * Block selection: ONE translucent layer over the whole selected block.
+ * - Over, not under: a tool's own opaque surface (code card, callout fill,
+ *   bookmark card) would hide a fill painted beneath it.
+ * - isolate: the layer's z-index stays inside this block, above everything the
+ *   tool draws and below whatever sits outside the block.
+ * - A block inside a selected block is already under that layer; a second one
+ *   would show as a darker tint.
  */
-[data-blok-selected="true"] > [data-blok-element-content]:has(> [data-list-style]) {
-  @apply bg-transparent;
+[data-blok-selected="true"] > [data-blok-element-content] {
+  isolation: isolate;
 }
 
-[data-blok-selected="true"] > [data-blok-element-content] > [data-list-style] > [role="listitem"] {
-  @apply bg-selection;
-  border-radius: var(--blok-radius-control);
+[data-blok-selected="true"] > [data-blok-element-content]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2147483647;
+  border-radius: inherit;
+  background-color: var(--blok-selection);
+  pointer-events: none;
 }
 
-[data-blok-selected="true"] > [data-blok-element-content] > [data-list-style] > [role="listitem"] [contenteditable] {
-  @apply select-none;
-}
-
-/**
- * Embed selection styles
- * The embed figure can be narrower than the content box (percent width +
- * alignment), so painting the selection on the full-width content wrapper
- * highlights empty gutters. Drop the wrapper background and draw a padded
- * selection rectangle that hugs the figure's real dimensions instead.
- */
-[data-blok-selected="true"] > [data-blok-element-content]:has(> [data-blok-tool="embed"] [data-role="embed-figure"]) {
-  @apply bg-transparent;
-}
-
-[data-blok-selected="true"] > [data-blok-element-content] > [data-blok-tool="embed"] [data-role="embed-figure"]::before {
-  @apply content-[''] absolute -inset-2 bg-selection pointer-events-none;
-  /* Concentric with the frame it wraps: -inset-2 puts it 8px outside. */
-  border-radius: calc(var(--blok-radius-block) + var(--blok-space-2));
+[data-blok-selected="true"] [data-blok-selected="true"] > [data-blok-element-content]::after {
+  display: none;
 }
 
 /**

@@ -157,6 +157,11 @@ The law applies to **tags and downstream parsing too**, not just attributes:
 - *Why no wrappers*: `hierarchy.setBlockParent` finds a holder's next sibling with `b.holder.parentElement === newContainer` and otherwise appends at the container's end, `mountChildBlocks` assumes the same, and `caret.ts` decides "same DOM container" by comparing sibling `holder.parentElement` by identity. A per-child wrapper corrupts reparent ordering and makes every sibling pair look cross-container.
 - This is what the framework adapters' declarative per-child channel is built on — `<BlockChildren childAttributes>` (React/Vue) and `ctx.mountChildren(host, childAttributes)` (Angular).
 
+**Block selection paint law**: a selected block shows ONE translucent tint drawn OVER it: `[data-blok-selected="true"] > [data-blok-element-content]::after` in `main.css`, and no second tint on a block inside a selected block. Never paint selection as a fill under a tool, and never re-tint a tool's own parts. A fill under a tool is hidden by the tool's own opaque surfaces (code card, callout, bookmark), and a fill on nested blocks stacks. Selection CSS may reach only the selected block's own tool, with `>` steps from the holder.
+- `test/unit/architecture/selected-paint-own-block-law.test.ts` scans every stylesheet and TS class string.
+- `test/playwright/tests/ui/selection-paint-matrix.spec.ts` checks pixels: every tool, at the top level and inside every container, light and dark, must show exactly one tint.
+- `test/unit/architecture/selection-paint-coverage-law.test.ts` fails when a new built-in tool is missing from that matrix's fixture table (`test/playwright/fixtures/selection-paint-fixtures.ts`).
+
 ## Code Conventions
 
 ### Avoid Over-Engineering

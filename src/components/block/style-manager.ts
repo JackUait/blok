@@ -20,10 +20,11 @@ export class StyleManager {
     wrapper: BLOCK_WRAPPER_CLASSES.join(' '),
     content: BLOCK_CONTENT_CLASSES.join(' '),
     /**
-     * The fill is the content wrapper, which has no padding, so the gap to a
-     * framed tool's corner is 0 and the fill radius is the frame radius itself.
+     * The selection tint is a layer over the content wrapper (main.css) that
+     * takes this radius. The wrapper has no padding, so the gap to a framed
+     * tool's corner is 0 and the radius is the frame radius itself.
      */
-    contentSelected: 'bg-selection rounded-(--blok-radius-frame,var(--blok-radius-control)) **:[[contenteditable]]:select-none [&_img]:opacity-55 **:data-[blok-tool=stub]:opacity-55',
+    contentSelected: 'rounded-(--blok-radius-frame,var(--blok-radius-control)) **:[[contenteditable]]:select-none',
     contentStretched: 'max-w-none',
   };
 

@@ -72,8 +72,8 @@ describe('block highlights', () => {
     expect(ruleBody(main, '[data-blok-element-content]')).toMatch(/--blok-radius-frame:\s*initial;/);
   });
 
-  it('a selected list item uses the control role', () => {
-    expect(radiusOf(main, '[data-blok-selected="true"] > [data-blok-element-content] > [data-list-style] > [role="listitem"]')).toBe('var(--blok-radius-control)');
+  it('the selection layer takes the content wrapper radius, which StyleManager sets from the frame', () => {
+    expect(radiusOf(main, '[data-blok-selected="true"] > [data-blok-element-content]::after')).toBe('inherit');
   });
 
   it('drop indicator bars are pills', () => {

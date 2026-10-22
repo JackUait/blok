@@ -74,7 +74,8 @@ function altInputRule(): string {
   return css.slice(open + 1, findMatchingBrace(css, open));
 }
 
-const light = tokenMap(blockContaining('--blok-selection: #e1f2ff'));
+// Anchors on a light-only value; the dark palettes declare this token as rgba().
+const light = tokenMap(blockContaining('--blok-selection-inline: #d4ecff'));
 const dark = tokenMap(blockContaining('--blok-popover-bg: #252525'));
 
 function declLine(body: string, prop: string): string {

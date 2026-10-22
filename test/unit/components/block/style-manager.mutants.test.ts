@@ -52,14 +52,15 @@ describe('StyleManager — mutation hardening', () => {
     const selectedOnly = styleManager.getContentClasses(true, false);
 
     expect(selectedOnly).not.toContain('max-w-none');
-    expect(selectedOnly).toContain('bg-selection');
+    expect(selectedOnly).toContain('rounded-(--blok-radius-frame,var(--blok-radius-control))');
     expect(selectedOnly).toContain('max-w-blok-content');
   });
 
   it('keeps selection styling out of the stretched-only classes', () => {
     const stretchedOnly = styleManager.getContentClasses(false, true);
 
-    expect(stretchedOnly).not.toContain('bg-selection');
+    expect(stretchedOnly).not.toContain('rounded-(--blok-radius-frame,var(--blok-radius-control))');
+    expect(stretchedOnly).not.toContain('**:[[contenteditable]]:select-none');
     expect(stretchedOnly).toContain('max-w-none');
   });
 });

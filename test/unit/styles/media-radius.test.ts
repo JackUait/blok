@@ -63,7 +63,6 @@ const BORDER = '--blok-border-width-hairline';
 
 const RADII: Array<[string, string, string]> = [
   ['styles/image.css', '[data-blok-tool="image"] .blok-image-inner img', role('block')],
-  ['styles/image.css', '[data-blok-element-content].bg-selection > [data-blok-tool="image"] .blok-image-inner', role('block')],
   ['styles/image.css', '[data-blok-tool="image"] .blok-image-alt-pill', role('control')],
   ['styles/main.css', '[data-blok-tool="image"] .blok-image-toolbar', role('surface')],
   ['styles/image.css', '[data-blok-tool="image"] .blok-image-toolbar button', nested('control')],
@@ -100,7 +99,6 @@ const RADII: Array<[string, string, string]> = [
   ['tools/image/darkroom/darkroom.css', '.blok-darkroom__grid', 'var(--blok-radius-darkroom-frame)'],
   ['tools/image/darkroom/darkroom.css', '.blok-darkroom-flight', 'var(--blok-radius-darkroom-frame)'],
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-media', role('block')],
-  ['styles/video.css', '[data-blok-element-content].bg-selection > [data-blok-tool="video"] .blok-video-inner', role('block')],
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-error-state', role('block')],
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-retry', role('control')],
   ['styles/video.css', '[data-blok-tool="video"] .blok-video-controls__menu', role('surface')],
@@ -232,5 +230,10 @@ describe('media files hold no off-system radius', () => {
   it('no dead image popover, toolbar pill or audio radius CSS is left', () => {
     expect(read('styles/image.css')).not.toMatch(/blok-image-popover|blok-image-toolbar__pill/);
     expect(read('styles/audio.css')).not.toContain('--blok-audio-radius');
+  });
+
+  // Block selection is one layer over the block (main.css); a tool fill under it would tint twice.
+  it.each(['styles/image.css', 'styles/video.css', 'styles/audio.css', 'styles/embed.css'])('%s repaints no block selection', (file) => {
+    expect(read(file)).not.toMatch(/bg-selection|var\(--blok-selection\)/);
   });
 });

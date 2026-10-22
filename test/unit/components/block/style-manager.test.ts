@@ -4,6 +4,10 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { StyleManager } from '../../../../src/components/block/style-manager';
 import { DATA_ATTR } from '../../../../src/components/constants';
 
+// main.css draws the selection layer over the content wrapper with `border-radius: inherit`.
+const SELECTED_RADIUS = 'rounded-(--blok-radius-frame,var(--blok-radius-control))';
+const SELECTED_NO_TEXT_SELECT = '**:[[contenteditable]]:select-none';
+
 describe('StyleManager', () => {
   let holder: HTMLDivElement;
   let contentElement: HTMLDivElement;
@@ -79,7 +83,7 @@ describe('StyleManager', () => {
       styleManager.updateContentState(true, false);
 
       const classes = styleManager.getContentClasses(true, false);
-      expect(classes).toContain('bg-selection');
+      expect(classes).toContain(SELECTED_RADIUS);
       expect(contentElement.className).toBe(classes);
     });
 
@@ -95,7 +99,7 @@ describe('StyleManager', () => {
       styleManager.updateContentState(true, true);
 
       const classes = styleManager.getContentClasses(true, true);
-      expect(classes).toContain('bg-selection');
+      expect(classes).toContain(SELECTED_RADIUS);
       expect(classes).toContain('max-w-none');
       expect(contentElement.className).toBe(classes);
     });
@@ -119,8 +123,14 @@ describe('StyleManager', () => {
     it('returns selected classes when selected is true', () => {
       const classes = styleManager.getContentClasses(true, false);
 
-      expect(classes).toContain('bg-selection');
-      expect(classes).toContain('rounded-(--blok-radius-frame,var(--blok-radius-control))');
+      expect(classes).toContain(SELECTED_RADIUS);
+      expect(classes).toContain(SELECTED_NO_TEXT_SELECT);
+    });
+
+    it('paints no fill and dims nothing under the selection layer', () => {
+      const classes = styleManager.getContentClasses(true, false).split(' ');
+
+      expect(classes.filter((token) => /(^|:)bg-|opacity-/.test(token))).toEqual([]);
     });
 
     it('returns stretched classes when stretched is true', () => {
@@ -132,7 +142,7 @@ describe('StyleManager', () => {
     it('returns both selected and stretched classes when both are true', () => {
       const classes = styleManager.getContentClasses(true, true);
 
-      expect(classes).toContain('bg-selection');
+      expect(classes).toContain(SELECTED_RADIUS);
       expect(classes).toContain('max-w-none');
     });
 
@@ -141,7 +151,8 @@ describe('StyleManager', () => {
 
       expect(classes).toContain('mx-auto');
       expect(classes).toContain('max-w-blok-content');
-      expect(classes).not.toContain('bg-selection');
+      expect(classes).not.toContain(SELECTED_RADIUS);
+      expect(classes).not.toContain(SELECTED_NO_TEXT_SELECT);
       expect(classes).not.toContain('max-w-none');
     });
 

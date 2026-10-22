@@ -134,13 +134,6 @@
   pointer-events: none;
 }
 
-/* ----- block selection ------------------------------------ */
-[data-blok-element-content].bg-selection:has(> [data-blok-tool="audio"]) {
-  background-color: transparent;
-}
-[data-blok-element-content].bg-selection > [data-blok-tool="audio"] .blok-audio-inner {
-  background-color: var(--blok-selection);
-}
 
 /* ----- cover art — tall rounded panel on the left --------- */
 [data-blok-tool="audio"] .blok-audio-cover {

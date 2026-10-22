@@ -1,7 +1,8 @@
 /**
- * A rounded block's selection fill follows its frame: the tool declares
+ * A rounded block's selection layer follows its frame: the tool declares
  * `static frameRadius`, core writes it on the content wrapper as
- * `--blok-radius-frame`, and the fill's radius reads it (spec §5.5).
+ * `--blok-radius-frame`, the wrapper's selected radius reads it, and the
+ * layer drawn over the wrapper (main.css `::after`) inherits that radius.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -11,7 +12,7 @@ import { ToolsCollection } from '../../../../src/components/tools/collection';
 import type { API as ApiModules } from '../../../../src/components/modules/api';
 import type { API, BlockToolConstructable } from '@/types';
 
-const FILL_RADIUS_CLASS = 'rounded-(--blok-radius-frame,var(--blok-radius-control))';
+const SELECTED_RADIUS_CLASS = 'rounded-(--blok-radius-frame,var(--blok-radius-control))';
 
 const makeTool = (statics: Record<string, unknown> = {}): BlockToolConstructable => {
   class FramedTool {
@@ -60,7 +61,7 @@ const contentOf = (block: Block): HTMLElement => {
   return content;
 };
 
-describe('selection fill follows the block frame', () => {
+describe('selection layer follows the block frame', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -82,19 +83,19 @@ describe('selection fill follows the block frame', () => {
     expect(contentOf(block).style.getPropertyValue('--blok-radius-frame')).toBe('');
   });
 
-  it('rounds the selection fill from the frame, keeping the frame through select and unselect', () => {
+  it('rounds the selection layer from the frame, keeping the frame through select and unselect', () => {
     const block = makeBlock(makeTool({ frameRadius: 'var(--blok-radius-block)' }));
     const content = contentOf(block);
 
     block.selected = true;
 
-    expect(content.classList.contains('bg-selection')).toBe(true);
-    expect(content.classList.contains(FILL_RADIUS_CLASS)).toBe(true);
+    expect(block.holder.getAttribute('data-blok-selected')).toBe('true');
+    expect(content.classList.contains(SELECTED_RADIUS_CLASS)).toBe(true);
     expect(content.style.getPropertyValue('--blok-radius-frame')).toBe('var(--blok-radius-block)');
 
     block.selected = false;
 
-    expect(content.classList.contains(FILL_RADIUS_CLASS)).toBe(false);
+    expect(content.classList.contains(SELECTED_RADIUS_CLASS)).toBe(false);
     expect(content.style.getPropertyValue('--blok-radius-frame')).toBe('var(--blok-radius-block)');
   });
 });

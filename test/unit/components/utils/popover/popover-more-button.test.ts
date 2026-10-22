@@ -149,6 +149,21 @@ describe('Popover: children.moreButton', () => {
     expect(onRow).not.toHaveBeenCalled();
   });
 
+  // research/35 §14: ArrowRight in the "…" submenu does nothing. ArrowLeft still closes it:
+  // Blok keeps the menu pattern there (Notion's ArrowLeft did nothing).
+  it('ArrowRight in the "…" submenu does nothing', () => {
+    const popover = open();
+
+    focusRow(popover, 'row');
+    key(popover, 'ArrowRight', 39);
+    key(popover, 'ArrowDown', 40);
+    expect(itemEl('child')?.getAttribute('data-blok-focused')).toBe('true');
+
+    key(popover, 'ArrowRight', 39);
+    expect(itemEl('child')?.getAttribute('data-blok-focused')).toBe('true');
+    expect(onChild).not.toHaveBeenCalled();
+  });
+
   it('Enter on the row runs its action', () => {
     const popover = open();
 

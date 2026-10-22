@@ -6074,6 +6074,8 @@ export class DatabaseTool implements BlockTool {
       duplicate: (id) => this.duplicateTemplate(id),
       remove: (id) => this.deleteTemplate(id),
     }), anchor);
+    // research/35 §14: Escape in a template's "…" submenu closes only that submenu.
+    if (this.groupMenuPopover !== null) this.groupMenuPopover.escapeClosesSubmenuFirst = true;
   }
 
   private groupEntries(sub: boolean): ViewGroupEntry[] {

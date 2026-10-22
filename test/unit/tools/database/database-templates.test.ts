@@ -16,12 +16,15 @@ vi.mock('../../../../src/blok', () => ({
 
 interface MockItem { name?: string; element?: HTMLElement; onActivate?: () => void }
 
-const popovers = vi.hoisted(() => ({ items: [] as MockItem[][] }));
+const popovers = vi.hoisted(() => ({ items: [] as MockItem[][], made: [] as Array<{ escapeClosesSubmenuFirst: boolean }> }));
 
 vi.mock('../../../../src/components/utils/popover', () => {
   class MockPopoverDesktop {
+    escapeClosesSubmenuFirst = false;
+
     constructor(params?: { items?: MockItem[] }) {
       popovers.items.push(params?.items ?? []);
+      popovers.made.push(this);
     }
 
     show(): void {}
@@ -246,6 +249,16 @@ describe('DatabaseTool — templates', () => {
     expect(made).toHaveLength(1);
     expect(doc.row(made[0]).properties.title).toBe('Bug report');
     expect(el.querySelector('[data-blok-testid="database-toolbar-new-menu"]')).not.toBeNull();
+  });
+
+  // research/35 §14: Escape in a template's "…" submenu closes only that submenu; the templates menu stays.
+  it('the New menu closes a template\'s submenu first on Escape', () => {
+    const { el } = buildDatabase(seed(), 'db', data(), { people });
+
+    popovers.made.length = 0;
+    el.querySelector<HTMLButtonElement>('[data-blok-testid="database-toolbar-new-menu"]')?.click();
+
+    expect(popovers.made.at(-1)?.escapeClosesSubmenuFirst).toBe(true);
   });
 
   it('deleting the default template clears the default', () => {

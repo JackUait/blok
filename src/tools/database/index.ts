@@ -5177,7 +5177,7 @@ export class DatabaseTool implements BlockTool {
       total: result.total ?? result.rows.length,
       titlePropertyId: titlePropId,
       i18n: this.api.i18n,
-      locale: resolveLocale(undefined),
+      locale: resolveLocale(this.api.i18n.getLocale?.()),
       bodyOf: (rowId) => this.rowBodyBlocks(rowId, descriptionId),
       personName: (id) => this.people?.find((person) => person.id === id)?.name,
       handlers: {
@@ -8230,7 +8230,8 @@ export class DatabaseTool implements BlockTool {
       ...rowMenuFooter({
         row: this.model.getRow(rowId),
         titlePropertyId: this.titlePropertyId(),
-        locale: resolveLocale(undefined),
+        // "Today at {time}" is in the editor's language, so its time is too.
+        locale: resolveLocale(this.api.i18n.getLocale?.()),
         ...(this.people !== undefined ? { people: this.people } : {}),
         i18n: this.api.i18n,
       }),

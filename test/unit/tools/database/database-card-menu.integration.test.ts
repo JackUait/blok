@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DatabaseData } from '../../../../src/tools/database/types';
 import { SCHEMA, buildTool as buildHarnessTool, fakeRow, makeDoc, tableData } from './tier3-harness';
 import type { Doc } from './tier3-harness';
+import { hover, shownHint } from './hint-harness';
+import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 
 vi.mock('../../../../src/blok', () => ({
   Blok: class MockBlok {
@@ -183,6 +185,56 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       '|',
       'footer',
     ]);
+  });
+
+  describe('dates follow the editor\'s locale, not the browser\'s', () => {
+    /** ru at 16:54 reads "16:54"; the browser's en-US would read "4:54 PM". */
+    const ruEditor = (doc: Doc): void => {
+      vi.spyOn(navigator, 'language', 'get').mockReturnValue('en-US');
+      Object.assign(doc.api.i18n, {
+        t: (key: string, vars?: Record<string, string | number>) => `${key}|${Object.values(vars ?? {}).join('|')}`,
+        getLocale: () => 'ru',
+      });
+    };
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it.each(['board', 'list', 'feed'] as const)('the %s menu footer writes "Today at" with the editor\'s clock', (type) => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2026, 9, 22, 16, 54));
+      const doc = oneRow();
+      const block = doc.rows.get('a')?.block as unknown as { lastEditedAt?: number; createdBy?: string; createdAt?: number };
+
+      block.lastEditedAt = Date.now();
+      block.createdBy = 'u1';
+      ruEditor(doc);
+      const { el } = buildTool(doc, {}, viewData(type));
+
+      openMenu(el, type);
+
+      expect(document.querySelector('[data-blok-database-row-menu-footer]')?.textContent).toContain('tools.database.rowEditedTodayAt|16:54');
+    });
+
+    it('the feed\'s "Created … at …" hint writes the date and time in the editor\'s locale', () => {
+      destroyTooltip();
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(2026, 9, 22, 17, 30));
+      const at = new Date(2026, 9, 22, 16, 54, 7);
+      const doc = oneRow();
+      const block = doc.rows.get('a')?.block as unknown as { createdBy?: string; createdAt?: number };
+
+      block.createdBy = 'u1';
+      block.createdAt = at.getTime();
+      ruEditor(doc);
+      const { el } = buildTool(doc, {}, viewData('feed'));
+
+      hover(el.querySelector('[data-blok-database-feed-time]'));
+      vi.advanceTimersByTime(HINT_DELAY);
+
+      expect(shownHint()?.text).toBe('tools.database.feedCreatedAt|22 октября 2026 г.|16:54:07');
+    });
   });
 
   it('the footer counts the words and characters of the card title', () => {

@@ -202,6 +202,12 @@ describe('openDatabaseConfirm', () => {
       });
     });
 
+    it('focuses the confirm button when asked', () => {
+      void openDatabaseConfirm({ title: 'Undo?', confirmLabel: 'Remove', cancelLabel: 'Cancel', destructive: true, focusConfirm: true });
+
+      expect(action('confirm')).toHaveFocus();
+    });
+
     it('has no × and focuses Cancel without a close label', () => {
       void openChoice();
 
@@ -210,9 +216,12 @@ describe('openDatabaseConfirm', () => {
     });
 
     // CLAUDE.md "No blue selected states": a picked card has no fill and the same ink as the others.
+    // The radio dot is exempt: its measured light centre (research/35 §1.7) is not a card fill.
     it('paints a picked card with no fill and the same ink as an unpicked one', () => {
       const css = readMainCss();
-      const picked = [...css.matchAll(/\[data-blok-database-confirm-choice\]\[aria-checked="true"\][^{]*\{([^}]*)\}/g)].map((m) => m[1]);
+      const picked = [...css.matchAll(/\[data-blok-database-confirm-choice\]\[aria-checked="true"\]([^{]*)\{([^}]*)\}/g)]
+        .filter((m) => !m[1].includes('[data-blok-database-confirm-choice-dot]'))
+        .map((m) => m[2]);
 
       expect(picked.length).toBeGreaterThan(0);
       for (const body of picked) {

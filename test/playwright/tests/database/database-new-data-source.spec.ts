@@ -466,6 +466,61 @@ test.describe('database New data source', () => {
       });
     }
 
+    // research/35 §1.7 and §10: colours per theme, and the box's inner geometry.
+    for (const [scheme, look] of [
+      ['light', { backdrop: 'rgba(15, 15, 15, 0.6)', close: 'rgba(42, 28, 0, 0.07)', glyph: 'rgb(142, 139, 134)', line: 'rgba(42, 28, 0, 0.07)', ring: 'rgb(230, 229, 227)', radio: ['rgb(255, 255, 255)', 'rgba(27, 21, 0, 0.19)'] }],
+      ['dark', { backdrop: 'rgba(15, 15, 15, 0.8)', close: 'rgba(255, 255, 243, 0.082)', glyph: 'rgb(173, 169, 163)', line: 'rgba(255, 255, 243, 0.082)', ring: 'rgb(56, 56, 54)', radio: ['rgb(37, 37, 37)', 'rgba(255, 252, 235, 0.306)'] }],
+    ] as const) {
+      test(`draws Notion's round-13 colours and layout in ${scheme}`, async ({ page }) => {
+        await page.emulateMedia({ colorScheme: scheme });
+        await mount(page, bound);
+        await deleteFromSettings(page);
+        // The entrance scales the box; measure after it lands.
+        await page.getByRole('alertdialog').evaluate((box) => Promise.all(box.getAnimations({ subtree: true }).map((animation) => animation.finished)));
+        const measured = await page.getByRole('alertdialog').evaluate((box) => {
+          const q = (selector: string): Element => box.querySelector(selector) ?? box;
+          const rect = (el: Element): DOMRect => el.getBoundingClientRect();
+          const style = (el: Element): CSSStyleDeclaration => getComputedStyle(el);
+          const b = rect(box);
+          const close = q('[data-blok-database-confirm-close]');
+          const art = q('[data-blok-database-confirm-art] svg');
+          const title = q('[data-blok-database-confirm-title]');
+          const group = q('[data-blok-database-confirm-choices]');
+          const [picked, other] = [...box.querySelectorAll('[data-blok-database-confirm-choice]')];
+          const pickedDot = picked.querySelector('[data-blok-database-confirm-choice-dot]') ?? picked;
+          const otherDot = other.querySelector('[data-blok-database-confirm-choice-dot]') ?? other;
+          const label = picked.querySelector('[data-blok-database-confirm-choice-label]') ?? picked;
+          const remove = q('[data-blok-database-confirm-action="confirm"]');
+
+          return {
+            backdrop: style(box.parentElement ?? box).backgroundColor,
+            close: [style(close).backgroundColor, b.right - rect(close).right, rect(close).top - b.top],
+            glyph: style(art).color,
+            art: [rect(art).width, rect(art).height, rect(art).top - b.top, rect(title).top - rect(art).bottom],
+            lines: [style(group).borderTopColor, style(group).borderBottomColor, rect(group).left - b.left, rect(group).width - b.width],
+            gaps: [rect(group).top - rect(title).bottom, rect(picked).top - rect(group).top, rect(group).bottom - rect(other).bottom, rect(remove).top - rect(group).bottom],
+            ring: style(other).boxShadow,
+            radio: [style(otherDot).backgroundColor, style(otherDot).borderTopColor],
+            dot: style(pickedDot).backgroundColor,
+            card: [rect(label).left - rect(picked).left, rect(label).top - rect(picked).top, rect(picked).right - rect(pickedDot).right],
+            heights: [rect(picked).height, rect(other).height, b.height],
+          };
+        });
+
+        expect(measured.backdrop).toBe(look.backdrop);
+        expect(measured.close).toEqual([look.close, 10, 10]);
+        expect(measured.glyph).toBe(look.glyph);
+        expect(measured.art).toEqual([32, 32, 20, 10]);
+        expect(measured.lines).toEqual([look.line, look.line, 0, 0]);
+        expect(measured.gaps).toEqual([14, 1, 1, 20]);
+        expect(measured.ring).toBe(`${look.ring} 0px 0px 0px 1px inset`);
+        expect(measured.radio).toEqual(look.radio);
+        expect(measured.dot).toBe('rgb(240, 239, 237)');
+        expect(measured.card).toEqual([14, 12, 14]);
+        expect(measured.heights).toEqual([78, 70, 368]);
+      });
+    }
+
     test('"Delete view only" is picked and keeps the source and its rows', async ({ page }) => {
       await mount(page, bound);
       await deleteFromSettings(page);

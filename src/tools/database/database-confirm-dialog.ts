@@ -32,6 +32,8 @@ export interface DatabaseConfirmOptions {
   quietCancel?: boolean;
   /** Draws a × at the top right with this label. It dismisses, and takes focus on open (research/30 B3). */
   closeLabel?: string;
+  /** Focuses the confirm button on open, as Notion's "Undo Task Database?" (research/35 §1.7). */
+  focusConfirm?: boolean;
 }
 
 export interface DatabaseChoice {
@@ -177,7 +179,7 @@ const buildConfirm = (options: DatabaseConfirmOptions, choices: DatabaseChoice[]
     role: options.role ?? 'alertdialog',
     labelledBy: title.id,
     ...(description === null ? {} : { describedBy: description.id }),
-    initialFocus: () => close ?? (options.primary === true ? confirmButton : cancelButton),
+    initialFocus: () => close ?? (options.primary === true || options.focusConfirm === true ? confirmButton : cancelButton),
     directionSource: options.directionSource ?? null,
     ...(options.container === undefined ? {} : { container: options.container, topLayer: false }),
     onDismiss: () => finish(options.dismissAs ?? false),

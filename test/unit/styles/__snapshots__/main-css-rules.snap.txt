@@ -4058,7 +4058,7 @@ span[data-blok-slash-search] {
   --blok-database-panel-close-hover-bg: rgba(42, 28, 0, 0.106);
   --blok-database-panel-close-active-bg: rgba(33, 27, 23, 0.102);
   --blok-database-panel-row-active-bg: rgba(33, 27, 23, 0.102);
-  --blok-database-confirm-close-bg: var(--blok-database-panel-close-bg);
+  --blok-database-confirm-close-bg: rgba(42, 28, 0, 0.07);
   --blok-database-ai-prompt-placeholder: rgba(21, 14, 0, 0.286);
   --blok-database-table-open-bg: #ffffff;
   --blok-database-table-open-shadow: rgba(25, 25, 25, 0.027) 0 8px 12px, rgba(25, 25, 25, 0.027) 0 2px 6px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
@@ -4104,6 +4104,12 @@ span[data-blok-slash-search] {
   --blok-database-confirm-destructive-fill: rgb(182, 79, 70);
   --blok-database-confirm-destructive-fill-text: rgb(253, 246, 246);
   --blok-database-confirm-choice-ring: rgb(229, 100, 88);
+  --blok-database-confirm-destructive-hover-bg: var(--blok-database-hover-bg);
+  --blok-database-confirm-choice-border: rgb(230, 229, 227);
+  --blok-database-confirm-choice-dot: rgb(240, 239, 237);
+  --blok-database-confirm-radio-border: rgba(27, 21, 0, 0.19);
+  --blok-database-confirm-radio-bg: rgb(255, 255, 255);
+  --blok-database-confirm-divider: rgba(42, 28, 0, 0.07);
   --blok-database-drop-line: var(--blok-database-table-drop-line);
   --blok-database-gallery-card-bg: #ffffff;
   --blok-database-gallery-card-shadow: rgba(25, 25, 25, 0.027) 0 4px 12px 0, rgba(25, 25, 25, 0.02) 0 1px 2px 0, rgba(42, 28, 0, 0.07) 0 0 0 1px;
@@ -4313,7 +4319,7 @@ span[data-blok-slash-search] {
   --blok-database-column-pink-accent: rgb(226, 112, 160);
   --blok-database-card-lift: rgba(25, 25, 25, 0.08) 0 2px 4px;
   --blok-database-card-ring: rgba(255, 255, 243, 0.082);
-  --blok-database-confirm-backdrop: rgba(15, 15, 15, 0.6);
+  --blok-database-confirm-backdrop: rgba(15, 15, 15, 0.8);
   --blok-database-confirm-bg: rgb(32, 32, 32);
   --blok-database-starter-tile-green-bg: rgb(38, 61, 48);
   --blok-database-starter-tile-green-ink: var(--blok-database-option-green-text);
@@ -4325,10 +4331,16 @@ span[data-blok-slash-search] {
   --blok-database-tpl-gallery-card-bg: rgba(255, 255, 255, 0.03);
   --blok-database-confirm-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.64) 0 24px 48px, rgba(25, 25, 25, 0.56) 0 4px 12px;
   --blok-database-confirm-destructive-text: rgb(229, 100, 88);
-  --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
+  --blok-database-confirm-destructive-border: rgba(255, 104, 92, 0.24);
   --blok-database-confirm-destructive-fill: rgb(182, 79, 70);
   --blok-database-confirm-destructive-fill-text: rgb(253, 246, 246);
   --blok-database-confirm-choice-ring: rgb(229, 100, 88);
+  --blok-database-confirm-destructive-hover-bg: rgba(255, 105, 96, 0.114);
+  --blok-database-confirm-choice-border: rgb(56, 56, 54);
+  --blok-database-confirm-choice-dot: rgb(240, 239, 237);
+  --blok-database-confirm-radio-border: rgba(255, 252, 235, 0.306);
+  --blok-database-confirm-radio-bg: rgb(37, 37, 37);
+  --blok-database-confirm-divider: rgba(255, 255, 243, 0.082);
   --blok-database-gallery-card-bg: rgba(255, 255, 255, 0.055);
   --blok-database-gallery-card-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
   --blok-database-gallery-card-hover-bg: rgb(47, 47, 47);
@@ -4535,7 +4547,7 @@ span[data-blok-slash-search] {
   --blok-database-column-pink-accent: rgb(226, 112, 160);
   --blok-database-card-lift: rgba(25, 25, 25, 0.08) 0 2px 4px;
   --blok-database-card-ring: rgba(255, 255, 243, 0.082);
-  --blok-database-confirm-backdrop: rgba(15, 15, 15, 0.6);
+  --blok-database-confirm-backdrop: rgba(15, 15, 15, 0.8);
   --blok-database-confirm-bg: rgb(32, 32, 32);
   --blok-database-starter-tile-green-bg: rgb(38, 61, 48);
   --blok-database-starter-tile-green-ink: var(--blok-database-option-green-text);
@@ -4547,10 +4559,16 @@ span[data-blok-slash-search] {
   --blok-database-tpl-gallery-card-bg: rgba(255, 255, 255, 0.03);
   --blok-database-confirm-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.64) 0 24px 48px, rgba(25, 25, 25, 0.56) 0 4px 12px;
   --blok-database-confirm-destructive-text: rgb(229, 100, 88);
-  --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
+  --blok-database-confirm-destructive-border: rgba(255, 104, 92, 0.24);
   --blok-database-confirm-destructive-fill: rgb(182, 79, 70);
   --blok-database-confirm-destructive-fill-text: rgb(253, 246, 246);
   --blok-database-confirm-choice-ring: rgb(229, 100, 88);
+  --blok-database-confirm-destructive-hover-bg: rgba(255, 105, 96, 0.114);
+  --blok-database-confirm-choice-border: rgb(56, 56, 54);
+  --blok-database-confirm-choice-dot: rgb(240, 239, 237);
+  --blok-database-confirm-radio-border: rgba(255, 252, 235, 0.306);
+  --blok-database-confirm-radio-bg: rgb(37, 37, 37);
+  --blok-database-confirm-divider: rgba(255, 255, 243, 0.082);
   --blok-database-gallery-card-bg: rgba(255, 255, 255, 0.055);
   --blok-database-gallery-card-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
   --blok-database-gallery-card-hover-bg: rgb(47, 47, 47);
@@ -7720,6 +7738,10 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   border-color: var(--blok-database-confirm-destructive-border);
 }
 
+[data-blok-database-confirm-action][data-destructive]:hover {
+  background-color: var(--blok-database-confirm-destructive-hover-bg);
+}
+
 [data-blok-database-confirm-action][data-destructive][data-filled] {
   border-color: transparent;
   background-color: var(--blok-database-confirm-destructive-fill);
@@ -7759,11 +7781,29 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   width: 400px;
 }
 
+[data-blok-database-confirm-dialog][data-wide] [data-blok-database-confirm-close] {
+  inset-block-start: var(--blok-space-2-5);
+  inset-inline-end: var(--blok-space-2-5);
+}
+
+[data-blok-database-confirm-dialog][data-wide] [data-blok-database-confirm-art] {
+  margin-bottom: var(--blok-space-2-5);
+  color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-database-confirm-dialog][data-wide] [data-blok-database-confirm-art] svg {
+  inline-size: 32px;
+  block-size: 32px;
+}
+
 [data-blok-database-confirm-choices] {
   display: flex;
   flex-direction: column;
   gap: var(--blok-space-2);
-  margin-block: var(--blok-space-4) var(--blok-space-2);
+  margin-block: var(--blok-space-3-5) var(--blok-space-3);
+  margin-inline: calc(-1 * var(--blok-space-5));
+  padding-inline: var(--blok-space-5);
+  border-block: 1px solid var(--blok-database-confirm-divider);
 }
 
 [data-blok-database-confirm-choice] {
@@ -7771,11 +7811,12 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   align-items: center;
   gap: var(--blok-space-2-5);
   padding-block: var(--blok-space-3);
-  padding-inline: var(--blok-space-3-5) var(--blok-space-1-5);
+  min-height: 70px;
+  padding-inline: var(--blok-space-3-5);
   border: 0;
   border-radius: var(--blok-radius-control-lg);
   background-color: transparent;
-  box-shadow: inset 0 0 0 1px var(--blok-database-table-control-border);
+  box-shadow: inset 0 0 0 1px var(--blok-database-confirm-choice-border);
   color: var(--blok-database-ink);
   text-align: start;
   cursor: pointer;
@@ -7803,6 +7844,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 }
 
 [data-blok-database-confirm-choice-description] {
+  margin-top: var(--blok-space-0-5);
   font-size: 12px;
   line-height: 16px;
   font-weight: 500;
@@ -7814,12 +7856,14 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   box-sizing: border-box;
   inline-size: 16px;
   block-size: 16px;
-  border: 1px solid var(--blok-database-table-control-border);
+  border: 1px solid var(--blok-database-confirm-radio-border);
   border-radius: 50%;
+  background-color: var(--blok-database-confirm-radio-bg);
 }
 
 [data-blok-database-confirm-choice][aria-checked="true"] [data-blok-database-confirm-choice-dot] {
   border: 5px solid var(--blok-database-confirm-choice-ring);
+  background-color: var(--blok-database-confirm-choice-dot);
 }
 
 [data-blok-database-autofill-setup] {

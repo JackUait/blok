@@ -1021,6 +1021,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_CAL_TIMELINE_HALO_BYTES = 1_218;
     // database.css: research/35 §1.1-§1.3, §1.8 — gray column count and dark cards, yellow card hover, "New" pressed, template "…" inks.
     const DATABASE_ROUND13_BOARD_TOOLBAR_BYTES = 1_910;
+    // database.css: dark confirm values, the last-view dialog's hairlines, 32px trash, 10px ×, radios and card sizes (research/35 §1.7, §10).
+    const DATABASE_CONFIRM_ROUND13_BYTES = 2_131;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1193,7 +1195,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_PINK_TEMPLATE_TILE_BYTES
       + DATABASE_CONFIRM_LARGE_TITLE_BYTES
       + DATABASE_CAL_TIMELINE_HALO_BYTES
-      + DATABASE_ROUND13_BOARD_TOOLBAR_BYTES;
+      + DATABASE_ROUND13_BOARD_TOOLBAR_BYTES
+      + DATABASE_CONFIRM_ROUND13_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

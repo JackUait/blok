@@ -128,9 +128,85 @@ describe('database confirm dialog css', () => {
   });
 
   it('defines every confirm token in light and both dark blocks', () => {
-    for (const name of ['backdrop', 'bg', 'shadow', 'destructive-text', 'destructive-border', 'destructive-fill', 'destructive-fill-text', 'choice-ring']) {
+    for (const name of ['backdrop', 'bg', 'shadow', 'destructive-text', 'destructive-border', 'destructive-hover-bg', 'destructive-fill', 'destructive-fill-text', 'choice-ring', 'choice-border', 'choice-dot', 'radio-border', 'radio-bg', 'divider', 'close-bg']) {
       expect(tokenValues(`--blok-database-confirm-${name}`), name).toHaveLength(3);
     }
+  });
+
+  // research/35 §1.7: dark dims harder (0.8), light stays 0.6.
+  it('dims the page 0.8 in dark', () => {
+    expect(tokenValues('--blok-database-confirm-backdrop')).toEqual(['rgba(15, 15, 15, 0.6)', 'rgba(15, 15, 15, 0.8)', 'rgba(15, 15, 15, 0.8)']);
+  });
+
+  // research/35 §1.7 "Undo Task Database?" (dark). Light hover is unmeasured: the generic hover.
+  it('gives the destructive button the measured dark hairline and red hover', () => {
+    expect(tokenValues('--blok-database-confirm-destructive-border'))
+      .toEqual(['rgba(206, 24, 0, 0.165)', 'rgba(255, 104, 92, 0.24)', 'rgba(255, 104, 92, 0.24)']);
+    expect(ruleBody(database, '[data-blok-database-confirm-action][data-destructive]:hover'))
+      .toContain('background-color: var(--blok-database-confirm-destructive-hover-bg)');
+    expect(tokenValues('--blok-database-confirm-destructive-hover-bg'))
+      .toEqual(['var(--blok-database-hover-bg)', 'rgba(255, 105, 96, 0.114)', 'rgba(255, 105, 96, 0.114)']);
+  });
+
+  // research/35 §10: a filled circle, 10px from the box's top and right.
+  it('draws the last-view × as a filled circle 10px in from the corner', () => {
+    expect(tokenValues('--blok-database-confirm-close-bg'))
+      .toEqual(['rgba(42, 28, 0, 0.07)', 'rgba(255, 255, 243, 0.082)', 'rgba(255, 255, 243, 0.082)']);
+    const body = ruleBody(database, '[data-blok-database-confirm-dialog][data-wide] [data-blok-database-confirm-close]');
+
+    expect(body).toContain('inset-block-start: var(--blok-space-2-5)');
+    expect(body).toContain('inset-inline-end: var(--blok-space-2-5)');
+  });
+
+  // research/35 §1.7: a 32px trash in the icon grey, 10px above the title.
+  it('draws the last-view trash 32px in the icon grey', () => {
+    expect(ruleBody(database, '[data-blok-database-confirm-dialog][data-wide] [data-blok-database-confirm-art]'))
+      .toContain('margin-bottom: var(--blok-space-2-5)');
+    expect(ruleBody(database, '[data-blok-database-confirm-dialog][data-wide] [data-blok-database-confirm-art]'))
+      .toContain('color: var(--blok-database-table-header-icon)');
+    const svg = ruleBody(database, '[data-blok-database-confirm-dialog][data-wide] [data-blok-database-confirm-art] svg');
+
+    expect(svg).toContain('inline-size: 32px');
+    expect(svg).toContain('block-size: 32px');
+  });
+
+  // research/35 §1.7: the cards sit between two full-width hairlines, 14px under the title and 20px above Delete view.
+  it('frames the radio cards with full-width hairlines', () => {
+    const body = ruleBody(database, '[data-blok-database-confirm-choices]');
+
+    expect(body).toContain('margin-block: var(--blok-space-3-5) var(--blok-space-3)');
+    expect(body).toContain('margin-inline: calc(-1 * var(--blok-space-5))');
+    expect(body).toContain('padding-inline: var(--blok-space-5)');
+    expect(body).toContain('border-block: 1px solid var(--blok-database-confirm-divider)');
+    expect(tokenValues('--blok-database-confirm-divider'))
+      .toEqual(['rgba(42, 28, 0, 0.07)', 'rgba(255, 255, 243, 0.082)', 'rgba(255, 255, 243, 0.082)']);
+  });
+
+  // research/35 §1.7: unpicked ring and radio, and the picked radio's light dot, as measured.
+  // research/35 §1.7: label 14px from the card's start, radio 14px from its end (research/26 read 6px at the end).
+  it('pads the radio cards 14px on both sides', () => {
+    expect(ruleBody(database, '[data-blok-database-confirm-choice]')).toContain('padding-inline: var(--blok-space-3-5);');
+  });
+
+  // research/35 §1.7 dumps: cards 78 and 70 tall, the subtitle 2px under the label (a one-line card centres in 70).
+  it('keeps the radio cards at least 70px with a 2px label gap', () => {
+    expect(ruleBody(database, '[data-blok-database-confirm-choice]')).toContain('min-height: 70px');
+    expect(ruleBody(database, '[data-blok-database-confirm-choice-description]')).toContain('margin-top: var(--blok-space-0-5)');
+  });
+
+  it('draws the unpicked card and both radios with the measured colours', () => {
+    expect(ruleBody(database, '[data-blok-database-confirm-choice]'))
+      .toContain('box-shadow: inset 0 0 0 1px var(--blok-database-confirm-choice-border)');
+    expect(tokenValues('--blok-database-confirm-choice-border')).toEqual(['rgb(230, 229, 227)', 'rgb(56, 56, 54)', 'rgb(56, 56, 54)']);
+    const dot = ruleBody(database, '[data-blok-database-confirm-choice-dot]');
+
+    expect(dot).toContain('border: 1px solid var(--blok-database-confirm-radio-border)');
+    expect(dot).toContain('background-color: var(--blok-database-confirm-radio-bg)');
+    expect(tokenValues('--blok-database-confirm-radio-border')).toEqual(['rgba(27, 21, 0, 0.19)', 'rgba(255, 252, 235, 0.306)', 'rgba(255, 252, 235, 0.306)']);
+    expect(tokenValues('--blok-database-confirm-radio-bg')).toEqual(['rgb(255, 255, 255)', 'rgb(37, 37, 37)', 'rgb(37, 37, 37)']);
+    expect(ruleBody(database, '[data-blok-database-confirm-choice][aria-checked="true"] [data-blok-database-confirm-choice-dot]'))
+      .toContain('background-color: var(--blok-database-confirm-choice-dot)');
+    expect(tokenValues('--blok-database-confirm-choice-dot')).toEqual(['rgb(240, 239, 237)', 'rgb(240, 239, 237)', 'rgb(240, 239, 237)']);
   });
 
   it('drops the entrance under reduced motion', () => {

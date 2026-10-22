@@ -530,6 +530,8 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
     expect(dialogButton('confirm').textContent).toBe('tools.database.starterUndoRemove');
     expect(dialogButton('confirm').hasAttribute('data-destructive')).toBe(true);
     expect(dialogButton('cancel').textContent).toBe('tools.database.optionDeleteCancel');
+    // research/35 §1.7: Notion focuses Remove on open, so Enter confirms.
+    expect(dialogButton('confirm')).toHaveFocus();
     expect(JSON.stringify(saved(tool))).toBe(before);
     expect(doc.transact.mock.calls.length).toBe(steps);
   });

@@ -247,9 +247,10 @@ test('Tasks Tracker: the database gets its icon, "New task" is the Default templ
 
 // research/33 §3.10: title 16px/500 in rgb(44, 44, 43), body 12px/400, Remove outline red.
 // Notion's body grey and red ink fail AA on white, so light keeps Blok's AA inks. Dark was not read.
-for (const [scheme, ink, body, red] of [
-  ['light', 'rgb(44, 44, 43)', 'rgb(114, 111, 106)', 'rgb(182, 79, 70)'],
-  ['dark', 'rgb(240, 239, 237)', 'rgb(173, 169, 163)', 'rgb(229, 100, 88)'],
+// research/35 §1.7 read dark: backdrop 0.8, Remove's hairline rgba(255, 104, 92, 0.24) and its red hover, focus on Remove.
+for (const [scheme, ink, body, red, hairline, backdrop, hover] of [
+  ['light', 'rgb(44, 44, 43)', 'rgb(114, 111, 106)', 'rgb(182, 79, 70)', 'rgba(206, 24, 0, 0.165)', 'rgba(15, 15, 15, 0.6)', 'rgba(33, 27, 23, 0.05)'],
+  ['dark', 'rgb(240, 239, 237)', 'rgb(173, 169, 163)', 'rgb(229, 100, 88)', 'rgba(255, 104, 92, 0.24)', 'rgba(15, 15, 15, 0.8)', 'rgba(255, 105, 96, 0.114)'],
 ] as const) {
   test(`the "Undo Task Database?" confirm draws Notion's look in ${scheme}`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme });
@@ -268,8 +269,13 @@ for (const [scheme, ink, body, red] of [
 
     expect(await read(confirm.locator('[data-blok-database-confirm-title]'), ['font-weight', 'font-size', 'color'])).toEqual(['500', '16px', ink]);
     expect(await read(confirm.locator('[data-blok-database-confirm-description]'), ['font-size', 'font-weight', 'color'])).toEqual(['12px', '400', body]);
-    expect(await read(confirm.getByRole('button', { name: 'Remove' }), ['background-color', 'color', 'border-top-color']))
-      .toEqual(['rgba(0, 0, 0, 0)', red, 'rgba(206, 24, 0, 0.165)']);
+    const remove = confirm.getByRole('button', { name: 'Remove' });
+
+    await expect(remove).toBeFocused();
+    expect(await confirm.evaluate((el) => getComputedStyle(el.parentElement ?? el).backgroundColor)).toBe(backdrop);
+    expect(await read(remove, ['background-color', 'color', 'border-top-color'])).toEqual(['rgba(0, 0, 0, 0)', red, hairline]);
+    await remove.hover();
+    await expect.poll(() => read(remove, ['background-color'])).toEqual([hover]);
     await confirm.getByRole('button', { name: 'Cancel' }).click();
   });
 }

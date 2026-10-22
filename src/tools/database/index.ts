@@ -1204,6 +1204,7 @@ export class DatabaseTool implements BlockTool {
       confirmLabel: t('tools.database.starterUndoRemove'),
       cancelLabel: t('tools.database.optionDeleteCancel'),
       destructive: true,
+      focusConfirm: true,
       directionSource: this.element,
     });
 

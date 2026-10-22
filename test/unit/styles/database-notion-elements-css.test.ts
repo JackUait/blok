@@ -128,7 +128,7 @@ describe('"Manage in Calendar" row arrow (research/26 §3d light, research/30 B4
 });
 
 describe('delete-last-view dialog × (research/26 §5a, research/30 B3)', () => {
-  it('is a 24px round button at the top right on the measured dark fill; light reuses the panel ×', () => {
+  it('is a 24px round button at the top right on the measured fill (light: research/35 §10)', () => {
     const body = ruleBody('[data-blok-database-confirm-close]');
 
     expect(ruleBody('[data-blok-database-confirm-dialog]')).toContain('position: relative');
@@ -138,7 +138,7 @@ describe('delete-last-view dialog × (research/26 §5a, research/30 B3)', () => 
     expect(body).toContain('height: 24px');
     expect(body).toContain('border-radius: 50%');
     expect(body).toContain('background-color: var(--blok-database-confirm-close-bg)');
-    expect(tokenValues('--blok-database-confirm-close-bg')).toEqual([ 'var(--blok-database-panel-close-bg)', 'rgba(255, 255, 243, 0.082)', 'rgba(255, 255, 243, 0.082)' ]);
+    expect(tokenValues('--blok-database-confirm-close-bg')).toEqual([ 'rgba(42, 28, 0, 0.07)', 'rgba(255, 255, 243, 0.082)', 'rgba(255, 255, 243, 0.082)' ]);
   });
 
   it('draws no ring on a pointer focus: its ring is an outline, which the preflight pointer guard hides', () => {

@@ -162,11 +162,11 @@ describe('database confirm dialog css', () => {
     expect(close).toContain('color: var(--blok-database-confirm-small-close-icon)');
     expect(ruleBody(database, '[data-blok-database-confirm-dialog][data-small] [data-blok-database-confirm-close]:hover'))
       .toContain('background-color: var(--blok-database-confirm-small-close-hover-bg)');
-    // Dark is unmeasured: the last-view circle, no hover change.
+    // research/37 §4.1: in dark the hover is fainter than the rest.
     expect(tokenValues('--blok-database-confirm-small-close-bg'))
-      .toEqual(['rgba(55, 53, 47, 0.06)', 'var(--blok-database-confirm-close-bg)', 'var(--blok-database-confirm-close-bg)']);
+      .toEqual(['rgba(55, 53, 47, 0.06)', 'rgba(255, 255, 255, 0.055)', 'rgba(255, 255, 255, 0.055)']);
     expect(tokenValues('--blok-database-confirm-small-close-hover-bg'))
-      .toEqual(['rgba(55, 53, 47, 0.16)', 'var(--blok-database-confirm-close-bg)', 'var(--blok-database-confirm-close-bg)']);
+      .toEqual(['rgba(55, 53, 47, 0.16)', 'rgba(255, 255, 255, 0.03)', 'rgba(255, 255, 255, 0.03)']);
     // Notion's glyph 142,139,134 is 2.54:1 on the hovered circle; 129,126,121 is the nearest 3:1 step.
     expect(tokenValues('--blok-database-confirm-small-close-icon'))
       .toEqual(['rgb(129, 126, 121)', 'var(--blok-database-table-header-icon)', 'var(--blok-database-table-header-icon)']);
@@ -188,12 +188,12 @@ describe('database confirm dialog css', () => {
     expect(ruleBody(database, '[data-blok-database-confirm-dialog][data-small] [data-blok-database-confirm-action="confirm"]')).toContain('margin-top: var(--blok-space-6)');
   });
 
-  // research/36 §8.2: Reset's label is pure white; dark is unmeasured and keeps the shared label ink.
+  // research/36 §8.2 (light) and 37 §4.1 (dark): Reset's label is pure white. White on the 182,79,70 fill is 5.00:1.
   it('writes the small dialog\'s filled button label in white', () => {
     expect(ruleBody(database, '[data-blok-database-confirm-dialog][data-small] [data-blok-database-confirm-action][data-destructive][data-filled]'))
       .toContain('color: var(--blok-database-confirm-small-fill-text)');
     expect(tokenValues('--blok-database-confirm-small-fill-text'))
-      .toEqual(['rgb(255, 255, 255)', 'var(--blok-database-confirm-destructive-fill-text)', 'var(--blok-database-confirm-destructive-fill-text)']);
+      .toEqual(['rgb(255, 255, 255)', 'rgb(255, 255, 255)', 'rgb(255, 255, 255)']);
   });
 
   // research/35 §10: a filled circle, 10px from the box's top and right.

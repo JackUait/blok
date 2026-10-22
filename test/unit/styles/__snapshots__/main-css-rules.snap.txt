@@ -4361,10 +4361,10 @@ span[data-blok-slash-search] {
   --blok-database-confirm-destructive-fill-text: rgb(253, 246, 246);
   --blok-database-confirm-choice-ring: rgb(229, 100, 88);
   --blok-database-confirm-destructive-hover-bg: rgba(255, 105, 96, 0.114);
-  --blok-database-confirm-small-close-bg: var(--blok-database-confirm-close-bg);
-  --blok-database-confirm-small-close-hover-bg: var(--blok-database-confirm-close-bg);
+  --blok-database-confirm-small-close-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-confirm-small-close-hover-bg: rgba(255, 255, 255, 0.03);
   --blok-database-confirm-small-close-icon: var(--blok-database-table-header-icon);
-  --blok-database-confirm-small-fill-text: var(--blok-database-confirm-destructive-fill-text);
+  --blok-database-confirm-small-fill-text: rgb(255, 255, 255);
   --blok-database-confirm-choice-border: rgb(56, 56, 54);
   --blok-database-confirm-choice-dot: rgb(240, 239, 237);
   --blok-database-confirm-radio-border: rgba(255, 252, 235, 0.306);
@@ -4598,10 +4598,10 @@ span[data-blok-slash-search] {
   --blok-database-confirm-destructive-fill-text: rgb(253, 246, 246);
   --blok-database-confirm-choice-ring: rgb(229, 100, 88);
   --blok-database-confirm-destructive-hover-bg: rgba(255, 105, 96, 0.114);
-  --blok-database-confirm-small-close-bg: var(--blok-database-confirm-close-bg);
-  --blok-database-confirm-small-close-hover-bg: var(--blok-database-confirm-close-bg);
+  --blok-database-confirm-small-close-bg: rgba(255, 255, 255, 0.055);
+  --blok-database-confirm-small-close-hover-bg: rgba(255, 255, 255, 0.03);
   --blok-database-confirm-small-close-icon: var(--blok-database-table-header-icon);
-  --blok-database-confirm-small-fill-text: var(--blok-database-confirm-destructive-fill-text);
+  --blok-database-confirm-small-fill-text: rgb(255, 255, 255);
   --blok-database-confirm-choice-border: rgb(56, 56, 54);
   --blok-database-confirm-choice-dot: rgb(240, 239, 237);
   --blok-database-confirm-radio-border: rgba(255, 252, 235, 0.306);

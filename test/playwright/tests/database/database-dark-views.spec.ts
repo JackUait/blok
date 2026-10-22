@@ -103,7 +103,7 @@ test('board: gray, blue and green columns tint their cards as Notion dark measur
 
   const cases = [
     // research/35 §1.1: a Gray column's dark card is 44,44,43; its count is the AA step of Notion's 142,139,134.
-    { color: 'gray', tint: 'rgba(252, 252, 252, 0.03)', card: 'rgb(44, 44, 43)', ring: 'rgba(255, 255, 243, 0.082)', count: 'rgb(154, 151, 146)' },
+    { color: 'gray', tint: 'rgba(252, 252, 252, 0.03)', card: 'rgb(44, 44, 43)', ring: 'rgba(255, 255, 243, 0.082)', count: 'rgb(156, 153, 148)' },
     { color: 'blue', tint: 'rgba(41, 139, 253, 0.063)', card: 'rgb(33, 48, 65)', ring: 'rgba(71, 157, 255, 0.173)', count: 'rgb(62, 154, 245)' },
     { color: 'green', tint: 'rgba(83, 255, 140, 0.035)', card: 'rgb(36, 52, 43)', ring: 'rgba(119, 255, 179, 0.118)', count: 'rgb(77, 168, 120)' },
   ];

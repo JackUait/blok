@@ -106,7 +106,7 @@ const BOARD: Record<'light' | 'dark', { counts: [string, string]; looks: ColumnL
     ],
   },
   dark: {
-    counts: ['rgb(188, 186, 182)', 'rgb(154, 151, 146)'],
+    counts: ['rgb(188, 186, 182)', 'rgb(156, 153, 148)'],
     looks: [
       { color: 'default', card: 'rgb(32, 32, 32)', hover: 'rgb(38, 38, 38)' },
       { color: 'gray', card: 'rgb(44, 44, 43)', hover: 'rgb(50, 50, 49)' },

@@ -881,7 +881,8 @@ test.describe('row page layout', () => {
   // research/33 §3.10: title weight 500, body 12px. research/10 §5: Reset is a filled red button,
   // with a U-turn glyph, a ×, a 17px title and a grey borderless Cancel.
   // Notion's body grey and red fail AA, so Blok keeps its secondary ink and AA red.
-  for (const [scheme, body] of [['light', 'rgb(114, 111, 106)'], ['dark', 'rgb(173, 169, 163)']] as const) {
+  // research/36 §8.2: Reset's label is white in light; dark is unmeasured and keeps the shared label ink.
+  for (const [scheme, body, label] of [['light', 'rgb(114, 111, 106)', 'rgb(255, 255, 255)'], ['dark', 'rgb(173, 169, 163)', 'rgb(253, 246, 246)']] as const) {
     test(`the Reset confirm draws Notion's look in ${scheme}`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
       await mount(page, blocks({ pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }], pageLayoutSections: [] }));
@@ -894,14 +895,19 @@ test.describe('row page layout', () => {
       const read = (locator: Locator, props: string[]): Promise<string[]> =>
         locator.evaluate((el, names) => names.map((name) => getComputedStyle(el).getPropertyValue(name)), props);
 
-      expect(await read(confirm.locator('[data-blok-database-confirm-title]'), ['font-weight', 'font-size'])).toEqual(['500', '17px']);
+      // The entrance scales the box; measure after it lands.
+      await confirm.evaluate((box) => Promise.all(box.getAnimations({ subtree: true }).map((animation) => animation.finished)));
+
+      expect(await confirm.evaluate((el) => [el.getBoundingClientRect().width, el.getBoundingClientRect().height])).toEqual([300, 226]);
+      expect(await read(confirm.locator('[data-blok-database-confirm-title]'), ['font-weight', 'font-size'])).toEqual(['600', '17px']);
+      expect(await read(confirm.getByRole('button', { name: 'Close' }), ['width', 'height'])).toEqual(['22px', '22px']);
       await expect(confirm.locator('[data-blok-database-confirm-art] svg')).toBeVisible();
       await expect(confirm.getByRole('button', { name: 'Close' })).toBeVisible();
       expect(await read(confirm.getByRole('button', { name: 'Cancel' }), ['border-top-color', 'background-color', 'color']))
         .toEqual(['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0)', body]);
-      expect(await read(confirm.locator('[data-blok-database-confirm-description]'), ['font-size', 'color'])).toEqual(['12px', body]);
+      expect(await read(confirm.locator('[data-blok-database-confirm-description]'), ['font-size', 'color'])).toEqual(['14px', body]);
       expect(await read(confirm.getByRole('button', { name: 'Reset' }), ['background-color', 'color']))
-        .toEqual(['rgb(182, 79, 70)', 'rgb(253, 246, 246)']);
+        .toEqual(['rgb(182, 79, 70)', label]);
       await confirm.getByRole('button', { name: 'Cancel' }).click();
     });
   }

@@ -189,6 +189,36 @@ describe('startInlineRename', () => {
     expect(container.querySelector('div[data-title]')?.textContent).toBe('Todo');
   });
 
+  it('commits on Escape once when escapeCommits is set', () => {
+    const { container, title } = makeTitle('Todo');
+    const onCommit = vi.fn();
+    const onCancel = vi.fn();
+
+    startInlineRename({
+      target: title,
+      currentValue: 'Todo',
+      label: 'Rename card',
+      escapeCommits: true,
+      onCommit,
+      onCancel,
+      buildRestored,
+    });
+
+    const input = container.querySelector('input');
+
+    if (input === null) {
+      throw new Error('no input');
+    }
+    input.value = 'Done';
+    simulateKeydown(input, 'Escape');
+    input.dispatchEvent(new Event('blur'));
+
+    expect(onCommit).toHaveBeenCalledTimes(1);
+    expect(onCommit).toHaveBeenCalledWith('Done');
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(container.querySelector('div[data-title]')?.textContent).toBe('Done');
+  });
+
   it('does not commit on the blur that follows an Escape cancel', () => {
     const { container, title } = makeTitle('Todo');
     const onCommit = vi.fn();

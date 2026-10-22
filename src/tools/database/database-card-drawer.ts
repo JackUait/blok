@@ -71,8 +71,6 @@ const PEEK_MAX_WIDTH = 1008;
 const PEEK_DETAILS_WIDTH = 280;
 /** Arrow-key step. The column resizer's. */
 const PEEK_RESIZE_STEP = 16;
-// A press that moves less than this is a click (research/31 §2), not a resize. Unmeasured.
-const PEEK_CLICK_SLOP = 4;
 /** Notion's persistence was not measured: Blok keeps it per viewer, for every database. */
 const PEEK_WIDTH_KEY = 'blok:database-peek-width';
 /** Notion's pin arrows scroll 400px per click (research/09 §4). */
@@ -1033,9 +1031,11 @@ export class DatabaseCardDrawer {
       }
       // The page beside the peek follows the pointer at once, not over its 200ms ease.
       this.peekHost?.setAttribute('data-blok-database-peek-resizing', '');
-      const start = { x: event.clientX, y: event.clientY, width: this.peekWidth };
+      const press = { moved: false };
       const onMove = (move: PointerEvent): void => {
         const rect = drawer.getBoundingClientRect();
+
+        press.moved = true;
 
         this.setPeekWidth(getElementDirection(drawer) === 'rtl' ? move.clientX - rect.left : rect.right - move.clientX);
       };
@@ -1044,9 +1044,8 @@ export class DatabaseCardDrawer {
         handle.removeEventListener('pointerup', onEnd);
         handle.removeEventListener('pointercancel', onEnd);
         this.peekHost?.removeAttribute('data-blok-database-peek-resizing');
-        // research/31 §2: a click (no drag) on the handle closes the peek.
-        if (end.type === 'pointerup' && Math.hypot(end.clientX - start.x, end.clientY - start.y) < PEEK_CLICK_SLOP) {
-          this.setPeekWidth(start.width);
+        // research/35 §12: only a press with no pointer move closes; any move, even 0px, resized.
+        if (end.type === 'pointerup' && !press.moved) {
           this.close();
 
           return;

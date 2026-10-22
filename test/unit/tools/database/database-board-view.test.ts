@@ -671,7 +671,8 @@ describe('DatabaseBoardView', () => {
       expect(onTitleEdit).toHaveBeenCalledWith('row-1', 'Blurred Title');
     });
 
-    it('restores original title on Escape without calling onTitleEdit', () => {
+    // research/35 §9: Escape in a card's inline rename saves the title.
+    it('saves the typed title on Escape', () => {
       const onTitleEdit = vi.fn();
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1', properties: { title: 'Fix bug' } })];
@@ -685,10 +686,13 @@ describe('DatabaseBoardView', () => {
       const input = cardEl.querySelector<HTMLInputElement>('[data-blok-database-card-title-input]')!;
       input.value = 'Changed';
       simulateKeydown(input, 'Escape');
+      // The blur that follows the swap must not save a second time.
+      input.dispatchEvent(new Event('blur', { bubbles: true }));
 
       const titleDiv = cardEl.querySelector('[data-blok-database-card-title]');
-      expect(titleDiv?.textContent).toBe('Fix bug');
-      expect(onTitleEdit).not.toHaveBeenCalled();
+      expect(onTitleEdit).toHaveBeenCalledTimes(1);
+      expect(onTitleEdit).toHaveBeenCalledWith('row-1', 'Changed');
+      expect(titleDiv?.textContent).toBe('Changed');
     });
 
     it('starts an untitled card rename empty and keeps the card untitled on an empty commit', () => {

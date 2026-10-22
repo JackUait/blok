@@ -25,6 +25,8 @@ export interface StartInlineRenameParams {
   onCommit: (value: string) => void;
   /** Commit an emptied input as '' instead of falling back to `currentValue`. */
   allowEmpty?: boolean;
+  /** Escape commits like Enter instead of cancelling. */
+  escapeCommits?: boolean;
   /** Called once when the rename is cancelled via Escape. */
   onCancel?: () => void;
   /** Called on every keystroke with the raw input value. */
@@ -49,7 +51,7 @@ const isNativelyFocusable = (element: HTMLElement): boolean => {
 };
 
 export function startInlineRename(params: StartInlineRenameParams): void {
-  const { target, currentValue, label, allowEmpty = false, onCommit, onCancel, onInput, buildRestored, configureInput } = params;
+  const { target, currentValue, label, allowEmpty = false, escapeCommits = false, onCommit, onCancel, onInput, buildRestored, configureInput } = params;
 
   const input = document.createElement('input');
 
@@ -111,7 +113,7 @@ export function startInlineRename(params: StartInlineRenameParams): void {
   input.addEventListener('keydown', (event: KeyboardEvent) => {
     event.stopPropagation();
 
-    if (event.key === 'Enter') {
+    if (event.key === 'Enter' || (event.key === 'Escape' && escapeCommits)) {
       commit();
     } else if (event.key === 'Escape') {
       input.removeEventListener('blur', commit);

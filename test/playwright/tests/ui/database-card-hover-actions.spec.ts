@@ -124,7 +124,8 @@ test.describe('Database board — card hover actions', () => {
     await expect(card.locator('[data-blok-database-card-title-input]')).toBeHidden();
   });
 
-  test('Escape restores original title without saving', async ({ page }) => {
+  // research/35 §9: Notion saves a card rename on Escape.
+  test('Escape saves the typed title', async ({ page }) => {
     const card = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-database-card][data-row-id="row-1"]`);
 
     await card.hover();
@@ -134,7 +135,8 @@ test.describe('Database board — card hover actions', () => {
     await input.fill('Temporary');
     await input.press('Escape');
 
-    await expect(card.locator('[data-blok-database-card-title]')).toHaveText('My Card');
+    await expect(card.locator('[data-blok-database-card-title]')).toHaveText('Temporary');
+    await expect(card.locator('[data-blok-database-card-title-input]')).toBeHidden();
   });
 
   test('dots button opens the row menu with Move to Trash', async ({ page }) => {

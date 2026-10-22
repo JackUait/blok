@@ -744,6 +744,8 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       target: titleEl,
       currentValue: originalTitle,
       label: this.i18n.t('tools.database.editCardTitle'),
+      // research/35 §9: Notion saves a card rename on Escape.
+      escapeCommits: true,
       configureInput: (input) => {
         input.setAttribute('data-blok-database-card-title-input', '');
         input.style.setProperty('width', '100%');

@@ -342,6 +342,26 @@ describe('row page peek modes', () => {
     expect((saved?.data as { properties: Record<string, unknown> }).properties.own).toEqual([{ id: 'u-ada' }]);
   });
 
+  // research/35 §9: one Escape in the page heading saves the title and closes the peek.
+  it('Escape in the peek title saves the typed title and closes the peek', async () => {
+    await make(doc());
+    await openRow('r1');
+    const title = q<HTMLTextAreaElement>('[data-blok-database-drawer-title]');
+
+    if (title === null) throw new Error('no title');
+    title.focus();
+    title.value = 'OneY';
+    title.dispatchEvent(new Event('input', { bubbles: true }));
+    title.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await quiet();
+
+    expect(q('[data-blok-database-drawer][data-open]')).toBeNull();
+    const saved = (await editor?.save())?.blocks.find((block) => block.id === 'r1');
+
+    expect((saved?.data as { properties: Record<string, unknown> }).properties.t).toBe('OneY');
+    expect(q('[data-row-id="r1"]')?.textContent).toContain('OneY');
+  });
+
   it('Escape deletes a new row left empty in its peek, and keeps one that got a title', async () => {
     const blocks = doc({ filters: [{ propertyId: 'n', operator: 'is_not_empty', value: null }] });
 

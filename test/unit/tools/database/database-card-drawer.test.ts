@@ -446,6 +446,33 @@ describe('DatabaseCardDrawer', () => {
       drawer.destroy();
     });
 
+    // research/35 §12: any move between down and up resizes, even 0px; only a press with no move closes.
+    it.each([[0, 0], [1, 1], [3, 3]])('a press with moves of %ipx resizes to the pointer and keeps the peek open', (first, second) => {
+      vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1512);
+      const onClose = vi.fn();
+      const wrapper = document.createElement('div');
+
+      document.body.appendChild(wrapper);
+      const drawer = new DatabaseCardDrawer(createOptions({ wrapper, onClose }));
+
+      drawer.open(makeRow(), 'side');
+      const el = wrapper.querySelector<HTMLElement>('[data-blok-database-drawer]');
+      const handle = wrapper.querySelector<HTMLElement>('[data-blok-database-peek-resize]');
+
+      if (el === null || handle === null) throw new Error('no drawer or resize handle');
+      vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(new DOMRect(756, 0, 756, 800));
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 762, clientY: 400, pointerId: 1, button: 0, bubbles: true }));
+      handle.dispatchEvent(new PointerEvent('pointermove', { clientX: 762 + first, clientY: 400, pointerId: 1, bubbles: true }));
+      handle.dispatchEvent(new PointerEvent('pointermove', { clientX: 762 + second, clientY: 400, pointerId: 1, bubbles: true }));
+      handle.dispatchEvent(new PointerEvent('pointerup', { clientX: 762 + second, clientY: 400, pointerId: 1, bubbles: true }));
+
+      expect(onClose).not.toHaveBeenCalled();
+      expect(drawer.isOpen).toBe(true);
+      // The left edge jumps to the pointer, not to where the handle was grabbed.
+      expect(width(el)).toBe(`${1512 - 762 - second}px`);
+      drawer.destroy();
+    });
+
     it('a cancelled press on the handle keeps the peek open', () => {
       const onClose = vi.fn();
       const wrapper = document.createElement('div');

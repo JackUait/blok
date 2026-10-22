@@ -137,8 +137,6 @@ export class EditorApplier implements AgentApplier {
     if (plan.edits.length === 0) {
       return;
     }
-    this.reportPagePointers(plan.edits);
-
     const { BlockManager, YjsManager } = this.Blok;
     const tag = { actorId: this.options.actor.id, sessionId: this.options.sessionId };
     const previous = YjsManager.topUndoToken();
@@ -173,6 +171,7 @@ export class EditorApplier implements AgentApplier {
     } finally {
       release();
     }
+    this.reportPagePointers(plan.touched);
 
     const token = YjsManager.topUndoToken();
 
@@ -231,31 +230,19 @@ export class EditorApplier implements AgentApplier {
     return rolledBack;
   }
 
-  private reportPagePointers(edits: readonly Edit[]): void {
+  /** Reads the blocks after the batch, so a type change earlier in it cannot hide a page. */
+  private reportPagePointers(ids: ReadonlySet<string>): void {
     const report = this.options.onPagePointed;
 
     if (report === undefined) {
       return;
     }
-    const pointer = (type: string | undefined, data: Record<string, unknown>): void => {
-      if (type === 'page' && typeof data.pageId === 'string') {
-        report(data.pageId);
-      }
-    };
-    const walk = (block: PlannedBlock): void => {
-      pointer(block.type, block.data);
-      block.children.forEach(walk);
-    };
+    for (const id of ids) {
+      const block = this.Blok.BlockManager.getBlockById(id);
+      const pageId = block?.name === 'page' ? block.preservedData.pageId : undefined;
 
-    for (const edit of edits) {
-      if (edit.op === 'insert') {
-        walk(edit.block);
-      }
-      if (edit.op === 'replaceType') {
-        pointer(edit.type, edit.data);
-      }
-      if (edit.op === 'setData') {
-        pointer(this.Blok.BlockManager.getBlockById(edit.id)?.name, edit.patch);
+      if (typeof pageId === 'string') {
+        report(pageId);
       }
     }
   }

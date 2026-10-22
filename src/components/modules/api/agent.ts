@@ -93,10 +93,12 @@ export class AgentAPI extends Module {
   private pageDocs: PageDocuments | null | undefined;
   /** Each sub-page the open turn saved, as it was before the turn's first save. Discard writes them back. */
   private turnPages = new Map<string, OutputData>();
-  /** PageIds an agent wrote into a page block. Kept across turns: such an id could name any document. */
+  /** PageIds an agent left on a page block. Kept across turns: such an id could name any document. */
   private readonly agentPageIds = new Set<string>();
-  /** PageIds the host's create gave. They stay trusted though the agent's insert writes them too. */
+  /** PageIds the host's create gave. Trusted though the agent's insert writes them too. */
   private readonly hostPageIds = new Set<string>();
+  /** Page block id → pageId when the turn began, leaving out ids an agent wrote. */
+  private startPageIds = new Map<string, string>();
   /** Who page writes are stamped with: the open turn's agent. */
   private actor: AgentActor = { id: 'agent', name: 'Agent', kind: 'agent' };
 
@@ -387,7 +389,8 @@ export class AgentAPI extends Module {
     if (block.name !== 'page' || typeof pageId !== 'string') {
       throw failure('INVALID_ARGS', `Block "${blockId}" is not a page block with a pageId.`, { path: '/page', details: { blockId } });
     }
-    if (this.agentPageIds.has(pageId) && !this.hostPageIds.has(pageId)) {
+    // Allowed: the id the block had before the turn, or one the host's create gave.
+    if (this.startPageIds.get(blockId) !== pageId && !this.hostPageIds.has(pageId)) {
       throw failure('INVALID_ARGS', `Block "${blockId}" points at a page an agent set, not one the host created. It cannot be opened.`, { path: '/page', details: { blockId } });
     }
     const session = await docs.open(pageId, actor);
@@ -410,6 +413,14 @@ export class AgentAPI extends Module {
 
     this.actor = { ...identity, kind: 'agent' };
     this.turnPages = new Map();
+    this.startPageIds = new Map();
+    for (const block of this.Blok.BlockManager.blocks) {
+      const pageId = block.name === 'page' ? block.preservedData.pageId : undefined;
+
+      if (typeof pageId === 'string' && !this.agentPageIds.has(pageId)) {
+        this.startPageIds.set(block.id, pageId);
+      }
+    }
     const session = createEditorAgentSession(
       this.Blok,
       { ...identity, kind: 'agent' },

@@ -191,3 +191,48 @@ Screenshot pixels (DPR 2) agree: unpicked radio centre rgb(255, 255, 255), picke
 ### 8.4 The bottom-left notice in light
 
 "Turned into task database" (after 8.1's conversion), read in light: **the same dark box as research 35 §1.9 read in dark**: 280x78 at (282, 627), bg **rgb(32, 32, 32)**, border 1px rgb(44, 44, 43), radius 8px, padding 8px 8px 4px, no shadow; `checkmarkCircleSmall` 16px fill rgb(70, 161, 113); title 12px / 16px / 600 and body 12px / 16px / 400, both rgb(240, 239, 237); × `"Close"` 24x24 radius 6px, `xMark` 14px fill rgba(255, 255, 255, 0.81). So this notice does **not** follow the theme.
+
+## 9. "Show large counts as 99+": when the switch is enabled (item 5)
+
+Two databases:
+- **CSV import**: `r14-101.csv` (`Name,Grp,Score`, rows "Row 001" … "Row 101", Grp = **A** for all, Score = row number), imported as a new data source of R14 ("3 more…" › New data source › Import CSV › Choose file, fed by `hook.sh` › Map CSV headers › Import CSV › "Import complete"). Its Table view was switched to Board (View settings › Layout › Board; it grouped by Grp at once). One group **A** of 101, plus "No Grp 0".
+- **R14** itself: 5 rows, Board grouped by Select, groups of 1, 1, 1 and "No Select 2".
+
+Per advisor's design: a view filter on **Score ≤ N** shrinks the visible group while the database keeps 101 rows. Each read: click the group count › hover "Count" › read the switch (`INPUT[role=switch]`, opacity 0 over a 30x18 track) `checked` / `disabled`.
+
+| Database rows | Filter | Group A count shown | Switch `checked` | `disabled` | Track |
+|---|---|---|---|---|---|
+| 101 | none | **"99+"** | true | **false** | rgb(39, 131, 222) |
+| 101 | Score ≤ 100 | **"99+"** (100 rows) | true | false | |
+| 101 | Score ≤ 99 | **"99"** | true | false | |
+| 101 | Score ≤ 50 | "50" | true | false | |
+| 101 | Score ≤ 3 | "3" | true | false | |
+| **5** (R14) | none | "1" (Def column) | true | **false** | rgb(39, 131, 222); a click turned it **off** (`checked=false`), a second click back on |
+
+So the switch was **enabled in every case tried**, down to a 5-row database with one row in the group. Research 30's "disabled on 3 rows" was **not reproduced**; whether it depended on something else on that database (or changed since) is unknown. The count label switches to "99+" only at **100** rows in the group (99 shows "99"; 100 shows "99+"). No ancestor of the switch had `aria-disabled`, reduced opacity, or `pointer-events: none`.
+Not tried: a fresh database of exactly 3 rows (the 5-row R14 stands in for it).
+
+## 10. Feed byline age (item 8)
+
+Feed view of R14. An in-page `setInterval` (1 s) stored the byline text of every "(edited)" card when it changed (`raw/feed-ages-*.json`). The age's hover hint gives the exact time: **"Created October 22, 2026 at 9:32:17 AM"** (F1) and "Created … 9:34:50 AM" (F2), so **the age counts from the page's creation time**, not the last edit. The "(edited)" label's hint is "Last edited October 22, 2026 at 9:35:12 AM".
+
+| Wall clock (local) | F1 (created 09:32:17) | F2 (created 09:34:50) | Note |
+|---|---|---|---|
+| ~09:33 | **"Just now"** | — | read in a screenshot right after creation |
+| 09:34:39 | 1m | — | |
+| **09:34:45** | → **2m** (age 148 s) | | |
+| 09:35:13 | 2m | **"Just now"** | F2 created from the feed's "+ New page" |
+| **09:35:45** | → 3m (208 s) | Just now (55 s) | |
+| **09:36:15** | 3m (238 s) | → **1m** (85 s) | |
+| **09:36:45** | → 4m | 1m (115 s) | |
+| 09:37:08 (view re-rendered by switching tabs) | 4m (291 s) | **1m** (138 s, not 2m) | |
+| **09:37:15** | 4m | → 2m (145 s) | |
+| 10:31:45 | 59m | 56m | |
+| **10:32:15** | **59m** (age 3598 s) | 57m | |
+| **10:32:45** | → **"1h"** (age 3628 s) | 57m | |
+
+What this shows:
+- **It updates live**: with the page left open, the text changed on its own every minute for 3+ minutes (09:34–09:37) and again at 10:31–10:32.
+- **Under 1 minute: "Just now"** (not "now", not "0m"). From 1 minute: **"1m" … "59m"**, then **"1h"** (not "60m").
+- **Every change happened on the wall-clock second :15 or :45**, for both cards, so the app re-reads the time on a **30 s tick** (phase set by the app, not by each card). The shown value is **floor(age ÷ 60 s) at the last tick**: the fresh render at 09:37:08 still showed F2 "1m" at 138 s, because the last tick (09:36:45) had seen 115 s. So a byline can lag up to 30 s.
+- Not read: when "1h" turns into "2h" or into a date; the 24 h / day boundary (clock).

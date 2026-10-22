@@ -380,9 +380,22 @@ describe('form Share panel (research/19 §3d)', () => {
   describe('respondent chip', () => {
     const people = { list: async () => [{ id: 'u-ada', name: 'Ada', avatarUrl: 'https://example.test/ada.png' }], me: () => 'u-ada' };
     const chip = (): HTMLElement | null => q('[data-blok-database-form-respondent]');
+    // A locked database is editable but not the builder: the respondent's form, where submitting makes a row.
+    const locked = (form?: FormSettings): OutputBlockData[] => blocks(form).map((block) => ({
+      ...block,
+      data: { ...(block.data as DatabaseData), schema: [{ ...schema[0], databaseLocked: true }] },
+    }));
+
+    it('shows no chip on a read-only form, where submitting makes no row', async () => {
+      await mount(blocks(), host(), true, { user: { id: 'u-ada' }, config: { people } });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(chip()).toBeNull();
+      expect(q('[data-blok-database-form-submit]')).not.toBeNull();
+    });
 
     it('a respondent sees "Submitting response as" with the current person first', async () => {
-      await mount(blocks(), host(), true, { user: { id: 'u-ada' }, config: { people } });
+      await mount(locked(), host(), false, { user: { id: 'u-ada' }, config: { people } });
 
       await vi.waitFor(() => expect(chip()).not.toBeNull());
       const shown = need('[data-blok-database-form-respondent]');
@@ -393,20 +406,20 @@ describe('form Share panel (research/19 §3d)', () => {
     });
 
     it('shows nothing without a current person the directory knows', async () => {
-      await mount(blocks(), host(), true, { user: { id: 'u-ada' }, config: { people: { list: async () => [{ id: 'u-bob', name: 'Bob' }], me: () => 'u-ada' } } });
+      await mount(locked(), host(), false, { user: { id: 'u-ada' }, config: { people: { list: async () => [{ id: 'u-bob', name: 'Bob' }], me: () => 'u-ada' } } });
       await new Promise((resolve) => setTimeout(resolve, 20));
 
       expect(chip()).toBeNull();
     });
 
     it('shows nothing without a people directory', async () => {
-      await mount(blocks(), host(), true);
+      await mount(locked(), host(), false);
 
       expect(chip()).toBeNull();
     });
 
     it('gives way to the anonymous pill when answers are anonymous', async () => {
-      await mount(blocks({ anonymous: true }), host(), true, { user: { id: 'u-ada' }, config: { people } });
+      await mount(locked({ anonymous: true }), host(), false, { user: { id: 'u-ada' }, config: { people } });
       await new Promise((resolve) => setTimeout(resolve, 20));
 
       expect(chip()).toBeNull();

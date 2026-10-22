@@ -218,7 +218,8 @@ export class DatabaseFormView implements DatabaseViewRenderer {
 
     // research/23 §6: above the questions, for the respondent only; the builder does not change.
     if (!builder && view.form?.anonymous === true) root.appendChild(this.anonymousPill());
-    const respondent = builder || view.form?.anonymous === true ? undefined : this.options.respondent?.();
+    // Read-only submits make no row, so no Created by would name this person.
+    const respondent = builder || this.options.readOnly || view.form?.anonymous === true ? undefined : this.options.respondent?.();
 
     // research/36 §13: with anonymous off, the respondent is named before submitting.
     if (respondent !== undefined) root.appendChild(this.respondentChip(respondent));

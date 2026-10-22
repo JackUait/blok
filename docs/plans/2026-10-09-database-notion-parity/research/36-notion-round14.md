@@ -143,3 +143,51 @@ Research 35 read this button in dark as bg rgb(25, 25, 25) (the dark page bg), s
 | Side peek | 1512 (research 35 §9) | 756 | 435 | 427 |
 
 So **map width = editor width − 8** in both peeks (4px inset each side), and neither peek changes width between 1400 and 1512. The peek was switched with the peek header's `"Switch peek mode"` › Center peek (this also set the Table view to open in center peek; scratch only).
+
+## 8. Confirm dialogs in light (item 3)
+
+### 8.1 "Undo Task Database?"
+
+Reached as in research 35 §0: a second data source ("New data source" › "New empty data source"), View settings › Turn into › Turn into Tasks database › setup dialog › "Turn into task database"; then View settings › **Undo Task database**. After reading, **Remove** was clicked (the conversion is undone; View settings shows "Turn into" again).
+
+| Part | Light |
+|---|---|
+| Box | 324x193 at (594, 262), bg white, radius 12px; shadow `rgba(25,25,25,0.24) 0 24px 48px 0, rgba(25,25,25,0.14) 0 4px 12px 0, rgba(42,28,0,0.07) 0 0 0 1px`; backdrop rgba(15, 15, 15, 0.6) |
+| **×** | **none**: the dialog has no close button and **no svg at all** (0 svgs, 0 `aria-label="Close"`), and no icon above the title |
+| Title | "Undo Task Database?" 16px / 500, centred |
+| Text | 12px / 400, rgb(125, 122, 117) |
+| **"Remove"** (284x32, radius 6px) | ink rgb(229, 100, 88), border 1px rgba(206, 24, 0, 0.165), transparent; **hover bg `color(srgb 0.87451 0.0627451 0 / 0.0627451)` ≈ rgba(223, 16, 0, 0.063)**; ink and border unchanged. Focused on open (no ring drawn: `box-shadow: none`). |
+| "Cancel" | ink rgb(44, 44, 43), border 1px rgba(28, 19, 1, 0.11); hover ≈ rgba(33, 27, 23, 0.051) |
+
+Dark "Remove" hover (research 35 §1.7) was ≈ rgba(255, 105, 96, 0.114).
+
+### 8.2 "Reset to original page layout?" (layout builder)
+
+Row F3's page › "Customize layout" (`layoutFillSmall`, no badge) › builder › "More save options" (chevron at top right) › "Reset to original page layout" ("No properties will be deleted") › dialog. Closed with Cancel; the builder was left with its own "Cancel" (nothing applied).
+
+| Part | Light |
+|---|---|
+| Box | **300x226 at (606, 246)**, bg white, same shadow and backdrop (0.6) as 8.1 |
+| **×** `aria-label="Dismiss"` | **22x22** at (874, 256): **10px** from the top and from the right edge; radius 100%; **bg rgba(55, 53, 47, 0.06)** at rest, **rgba(55, 53, 47, 0.16)** on hover; `xMarkFill` 16px fill rgb(142, 139, 134). **Focused on open** (no ring drawn). |
+| Icon | `arrowUTurnUpLeft` **32x32** at (740, 266): centred, **20px** below the box top; fill rgb(142, 139, 134) |
+| Title | 17px / **600**, centred, 234 wide at y 306 |
+| Text | "No properties will be deleted." 14px / 400, rgb(125, 122, 117) |
+| "Reset" | 260x32, bg rgb(229, 100, 88), ink **rgb(255, 255, 255)**, radius 6px; hover `color(srgb 0.911511 0.472468 0.431627)` ≈ rgb(232, 120, 110) (lighter) |
+| "Cancel" | 260x32, **no border**, ink **rgb(125, 122, 117)**, radius 6px; hover ≈ rgba(33, 27, 23, 0.051) |
+
+So the "10px top/right × + 32px icon" rule **does hold here** (× 10px in, icon 20px below the top, as in the delete-last-view dialog, research 35 §1.7), but this × is **22px with the older rgba(55, 53, 47, …) fills**, not the 24px rgba(42, 28, 0, 0.07) circle of the delete-last-view dialog. "Undo Task Database?" has neither × nor icon.
+
+### 8.3 Delete-last-view dialog: the unselected radio's dot (light)
+
+Second data source's only view › tab menu › Delete view. Same box as research 35 §1.7 (400x368, × "Close" 24x24 bg rgba(42, 28, 0, 0.07) 10px in, focused on open).
+
+| Radio | Ring | Inner dot (6x6, radius 6px) |
+|---|---|---|
+| Picked ("Delete view only") | 16x16, bg rgb(229, 100, 88) | bg rgb(240, 239, 237), **opacity 1** |
+| Unpicked ("Delete view and data source") | 16x16, bg white, border 1px rgba(27, 21, 0, 0.19) | **present in the DOM** (bg rgb(240, 239, 237), `display: block`, `visibility: visible`) but **opacity 0** |
+
+Screenshot pixels (DPR 2) agree: unpicked radio centre rgb(255, 255, 255), picked centre rgb(240, 239, 237). So the unpicked dot is **not visible**. Hovering the unpicked card changed nothing. Closed with Cancel (the view menu stayed open behind it).
+
+### 8.4 The bottom-left notice in light
+
+"Turned into task database" (after 8.1's conversion), read in light: **the same dark box as research 35 §1.9 read in dark**: 280x78 at (282, 627), bg **rgb(32, 32, 32)**, border 1px rgb(44, 44, 43), radius 8px, padding 8px 8px 4px, no shadow; `checkmarkCircleSmall` 16px fill rgb(70, 161, 113); title 12px / 16px / 600 and body 12px / 16px / 400, both rgb(240, 239, 237); × `"Close"` 24x24 radius 6px, `xMark` 14px fill rgba(255, 255, 255, 0.81). So this notice does **not** follow the theme.

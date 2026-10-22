@@ -7,7 +7,7 @@ import { renderCellValue, createOptionPill, openCellEditor } from './cells';
 import { rowCellContext } from './reminders';
 import type { CellContext, CellEditorHandle } from './cells';
 import { isReadOnlyType, readPropertyValue } from './property-values';
-import { formatDateText, resolveLocale } from './cells/date-format';
+import { editorLocale, formatDateText, resolveLocale } from './cells/date-format';
 import type { DateDisplayChange } from './cells/date-format';
 import { formatNumberValue } from './cells/number-format';
 import { computeCalculation } from './database-calculations';
@@ -1717,7 +1717,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         row: this.allRows().find((row) => row.id === rowId),
         titlePropertyId: this.options.titlePropertyId,
         // "Today at {time}" is in the editor's language, so its time is too.
-        locale: resolveLocale(this.options.locale ?? this.options.i18n.getLocale?.()),
+        locale: this.options.locale ?? editorLocale(this.options.i18n),
         ...(this.options.cellContext?.people !== undefined ? { people: this.options.cellContext.people } : {}),
         ...(this.options.cellContext?.now !== undefined ? { now: this.options.cellContext.now } : {}),
         ...(this.options.cellContext?.hourCycle !== undefined ? { hourCycle: this.options.cellContext.hourCycle } : {}),

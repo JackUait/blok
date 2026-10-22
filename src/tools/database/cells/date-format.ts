@@ -22,6 +22,22 @@ export { toIsoDay, toIsoTime };
 export const resolveLocale = (locale: string | undefined): string =>
   locale ?? (typeof navigator !== 'undefined' ? navigator.language : 'en-US');
 
+const baseLanguage = (tag: string): string => tag.split('-')[0].toLowerCase();
+
+/**
+ * The locale for dates and numbers next to the editor's words: the editor's
+ * language, but the browser's tag when it speaks that language, so an en-GB
+ * browser under an `en` editor keeps its 24 hour clock.
+ */
+export const editorLocale = (i18n: { getLocale?: () => string } | undefined): string => {
+  const browser = resolveLocale(undefined);
+  const editor = i18n?.getLocale?.();
+
+  if (editor === undefined || baseLanguage(editor) === baseLanguage(browser)) return browser;
+
+  return editor;
+};
+
 /** A stored part as display text: "October 9, 2026", plus the time when it has one. */
 export const formatDatePart = (part: string, locale: string, hourCycle?: 'h12' | 'h23'): string => {
   const date = toLocalDate(part);

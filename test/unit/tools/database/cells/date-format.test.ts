@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import enJson from '../../../../../src/components/i18n/locales/en.json';
-import { applyDateDisplayChange, formatDateDisplay, formatDayField, formatShortDatePart, resolveHourCycle, resolveWeekStart, timeZones, toIsoDay, toLocalDate } from '../../../../../src/tools/database/cells/date-format';
+import { applyDateDisplayChange, editorLocale, formatDateDisplay, formatDayField, formatShortDatePart, resolveHourCycle, resolveWeekStart, timeZones, toIsoDay, toLocalDate } from '../../../../../src/tools/database/cells/date-format';
 
 const en: Record<string, string> = enJson;
 const t = (key: string): string => en[key] ?? key;
@@ -13,6 +13,37 @@ describe('date-format', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  describe('editorLocale', () => {
+    const browser = (language: string): void => {
+      vi.spyOn(navigator, 'language', 'get').mockReturnValue(language);
+    };
+
+    it('keeps the browser\'s region when it speaks the editor\'s language', () => {
+      browser('en-GB');
+
+      expect(editorLocale({ getLocale: () => 'en' })).toBe('en-GB');
+    });
+
+    it('takes the editor\'s language when the browser speaks another one', () => {
+      browser('en-US');
+
+      expect(editorLocale({ getLocale: () => 'ru' })).toBe('ru');
+    });
+
+    it('matches the base language only: a zh-TW editor keeps a zh-HK browser', () => {
+      browser('zh-HK');
+
+      expect(editorLocale({ getLocale: () => 'zh-TW' })).toBe('zh-HK');
+    });
+
+    it('without getLocale it is the browser\'s locale', () => {
+      browser('de-AT');
+
+      expect(editorLocale({})).toBe('de-AT');
+      expect(editorLocale(undefined)).toBe('de-AT');
+    });
   });
 
   describe('resolveWeekStart', () => {

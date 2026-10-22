@@ -72,7 +72,7 @@ import type { BarWrite } from './timeline-dates';
 import { boardLayoutItems, calendarLayoutItems, galleryLayoutItems, timelineLayoutItems } from './database-layout-items';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { legacyBodyInserts, pageContentSourceBlocks, rowDescription } from './row-body';
-import { applyDateDisplayChange, resolveLocale, resolveWeekStart, toIsoDay } from './cells/date-format';
+import { applyDateDisplayChange, editorLocale, resolveWeekStart, toIsoDay } from './cells/date-format';
 import type { DateDisplayChange } from './cells/date-format';
 import type { TableAutofill, TableGroup, TableHandlers, TableNesting, TableState } from './database-table-view';
 import type { CellChange } from './database-table-grid';
@@ -680,7 +680,7 @@ export class DatabaseTool implements BlockTool {
 
     this.builtInComments = new BuiltInCommentsUi({
       api: this.api,
-      locale: () => resolveLocale(undefined),
+      locale: () => editorLocale(this.api.i18n),
       me: () => this.config.people?.me?.() ?? null,
       personName: (id) => this.people?.find((person) => person.id === id)?.name,
       permitted: () => this.config.comments === undefined && this.permits('comment'),
@@ -4976,6 +4976,7 @@ export class DatabaseTool implements BlockTool {
       grouped,
       titlePropertyId: titlePropId,
       bodyOf: (rowId) => this.rowBodyBlocks(rowId, descriptionId),
+      locale: editorLocale(this.api.i18n),
       cellContext: this.cellContext(),
       ...this.commentBadgeLever(),
       handlers: {
@@ -5117,7 +5118,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   private formatChartValue(measure: ReturnType<typeof resolveChartSettings>['measure'], value: number, schema: PropertyDefinition[]): string {
-    const locale = resolveLocale(undefined);
+    const locale = editorLocale(this.api.i18n);
 
     if (measure.kind === 'property' && measure.fn.startsWith('percent_')) {
       return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value)}%`;
@@ -5145,7 +5146,7 @@ export class DatabaseTool implements BlockTool {
     const shown = localizeDatabaseSchema([this.computedValues.valueProperty(property)], this.api.i18n)[0];
 
     return csvCellText(shown, readPropertyValue(row, property), {
-      locale: resolveLocale(undefined),
+      locale: editorLocale(this.api.i18n),
       personName: (id) => this.people?.find((person) => person.id === id)?.name,
       rowTitle: (id) => this.csvRowTitle(shown, id),
     });
@@ -5177,7 +5178,7 @@ export class DatabaseTool implements BlockTool {
       total: result.total ?? result.rows.length,
       titlePropertyId: titlePropId,
       i18n: this.api.i18n,
-      locale: resolveLocale(this.api.i18n.getLocale?.()),
+      locale: editorLocale(this.api.i18n),
       bodyOf: (rowId) => this.rowBodyBlocks(rowId, descriptionId),
       personName: (id) => this.people?.find((person) => person.id === id)?.name,
       handlers: {
@@ -5442,6 +5443,7 @@ export class DatabaseTool implements BlockTool {
   private openCsvImport(then: (file: { name: string; text: string }, targets: CsvColumnTarget[], settings: CsvImportSettings) => void): void {
     openCsvImportDialog({
       t: (key, vars) => this.api.i18n.t(key, vars),
+      locale: editorLocale(this.api.i18n),
       hasPeople: this.hasPeople,
       directionSource: this.element,
       onImport: then,
@@ -5455,6 +5457,7 @@ export class DatabaseTool implements BlockTool {
 
     openCsvImportDialog({
       t: (key, vars) => this.api.i18n.t(key, vars),
+      locale: editorLocale(this.api.i18n),
       hasPeople: this.hasPeople,
       directionSource: this.element,
       merge: {
@@ -5584,7 +5587,7 @@ export class DatabaseTool implements BlockTool {
   private renderCalendarView(titlePropId: string, viewConfig: DatabaseViewConfig): HTMLDivElement {
     const schema = this.model.getSchema();
     const dateId = resolveCalendarBy(viewConfig, schema);
-    const locale = resolveLocale(undefined);
+    const locale = editorLocale(this.api.i18n);
     const today = toIsoDay(new Date());
     const configured = this.config.weekStart;
     const weekStart = typeof configured === 'number' && Number.isInteger(configured) && configured >= 0 && configured <= 6
@@ -5719,7 +5722,7 @@ export class DatabaseTool implements BlockTool {
       endPropertyId: endId,
       center: this.timelineCenter(viewConfig.id, today),
       today,
-      locale: resolveLocale(undefined),
+      locale: editorLocale(this.api.i18n),
       cellContext: this.cellContext(),
       ...this.commentBadgeLever(),
       ...this.calendarLever(this.dataId, viewConfig.id),
@@ -6195,7 +6198,7 @@ export class DatabaseTool implements BlockTool {
     const aggregate = viewConfig === undefined || calculation === undefined ? undefined : (optionId: string): string => {
       const rows = (drawn.done ? this.queryGroupRows(viewConfig, [optionId]).get(optionId) : groups.get(optionId)) ?? [];
 
-      return groupCalculationText(calculation, rows.filter(inShownLane), localSchema, resolveLocale(undefined), shownOf);
+      return groupCalculationText(calculation, rows.filter(inShownLane), localSchema, editorLocale(this.api.i18n), shownOf);
     };
 
     this.view = new DatabaseBoardView({
@@ -6230,7 +6233,7 @@ export class DatabaseTool implements BlockTool {
       ...(viewConfig !== undefined ? { view: viewConfig } : {}),
       schema: localSchema,
       bodyOf: (rowId) => this.rowBodyBlocks(rowId, descriptionId),
-      locale: resolveLocale(undefined),
+      locale: editorLocale(this.api.i18n),
       cellContext: this.cellContext(),
       onPropertyEdit: (rowId, propertyId, anchor) => this.editCardProperty(rowId, propertyId, anchor),
       ...(lanes !== null ? { subGroups: lanes.lanes } : {}),
@@ -7894,7 +7897,7 @@ export class DatabaseTool implements BlockTool {
       visiblePropertyIds: visibleRowPropertyIds(viewConfig, this.model.getSchema()),
       cellContext: this.cellContext(),
       ...this.commentBadgeLever(),
-      locale: resolveLocale(undefined),
+      locale: editorLocale(this.api.i18n),
       onPropertyEdit: (rowId: string, propertyId: string, anchor: HTMLElement) =>
         this.editCardProperty(rowId, propertyId, anchor, () => this.focusListProperty(rowId, propertyId, context), context),
       onNewBelow: (rowId: string, groupKey: string | null) => this.addListRowBelow(rowId, groupKey, context),
@@ -8230,8 +8233,7 @@ export class DatabaseTool implements BlockTool {
       ...rowMenuFooter({
         row: this.model.getRow(rowId),
         titlePropertyId: this.titlePropertyId(),
-        // "Today at {time}" is in the editor's language, so its time is too.
-        locale: resolveLocale(this.api.i18n.getLocale?.()),
+        locale: editorLocale(this.api.i18n),
         ...(this.people !== undefined ? { people: this.people } : {}),
         i18n: this.api.i18n,
       }),

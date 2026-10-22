@@ -53,6 +53,8 @@ export interface CsvImportDialogOptions {
   };
   onClose?: () => void;
   directionSource?: Element | null;
+  /** Dates and numbers in the preview. Without it, the browser's locale. */
+  locale?: string;
   /** "Learn about imports" under Map CSV headers (`config.helpLinks.imports`). Without it no link. */
   helpUrl?: string;
 }
@@ -367,7 +369,7 @@ export const openCsvImportDialog = (options: CsvImportDialogOptions): { close: (
     const grid = el('table', 'data-blok-database-csv-preview-table');
     const headRow = el('tr', 'data-blok-database-csv-preview-row');
     const body = el('tbody', 'data-blok-database-csv-preview-body');
-    const locale = resolveLocale(undefined);
+    const locale = resolveLocale(options.locale);
 
     tab.append(icon(IconTable), el('span', 'data-blok-database-csv-label', t('tools.database.viewTypeTable')));
     headRow.append(...made.schema.map((property) => {

@@ -217,6 +217,23 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       expect(document.querySelector('[data-blok-database-row-menu-footer]')?.textContent).toContain('tools.database.rowEditedTodayAt|16:54');
     });
 
+    it.each(['board', 'table'] as const)('the %s menu keeps an en-GB browser\'s 24 hour clock under an en editor', (type) => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2026, 9, 22, 16, 54));
+      const doc = oneRow();
+      const block = doc.rows.get('a')?.block as unknown as { lastEditedAt?: number };
+
+      block.lastEditedAt = Date.now();
+      ruEditor(doc);
+      vi.spyOn(navigator, 'language', 'get').mockReturnValue('en-GB');
+      Object.assign(doc.api.i18n, { getLocale: () => 'en' });
+      const { el } = buildTool(doc, {}, viewData(type));
+
+      openMenu(el, type);
+
+      expect(document.querySelector('[data-blok-database-row-menu-footer]')?.textContent).toContain('tools.database.rowEditedTodayAt|16:54');
+    });
+
     it('the feed\'s "Created … at …" hint writes the date and time in the editor\'s locale', () => {
       destroyTooltip();
       vi.useFakeTimers();

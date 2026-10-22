@@ -382,7 +382,7 @@ Board card E3 › side peek 756x717. Handle = `role=separator` 12x717 at the pee
 | **no move event** (down, up) | **closed** |
 
 So it is not a distance threshold: **any pointer move between down and up starts a resize**, and the peek's left edge follows the pointer's x (not the offset where the handle was grabbed). Only a press with no move closes.
-The peek width is stored: after the test it was dragged back to **756** (read back 756,0,756,717) and closed with a click on the handle.
+The width carried over when the peek was closed and reopened; after the test it was dragged back to **756** (read back 756,0,756,717) and closed with a click on the handle.
 
 ## 13. B15: "Edit cadence" (template "Duplicate every…", dark)
 
@@ -420,5 +420,28 @@ The trigger is the "…" (`ellipsisSmall`); no chevron on it. Inside, "Duplicate
 
 ## 15. B18: "Hide data source titles" on a non-linked two-source database
 
-R13 after "New data source › New empty data source" (two sources, not linked). The **tab's view menu** (click a selected tab) lists: Rename, Display as ›, Edit view, Source › (New data source / R13), Copy link to view, Add view to sidebar, Open as full page, **"Hide data source titles"** (`eye` icon, plain `menuitem`, no switch), Duplicate view, Delete view. It showed on the second source's view tab (light) and on a Board tab of R13's own source (dark). The "New view" layout pages show **"Show data source titles"** as a switch (board, calendar, timeline). The row was not clicked, so whether it acts per view or per block was not read.
+R13 after "New data source › New empty data source" (two sources, not linked). The **tab's view menu** (click a selected tab) lists: Rename, Display as ›, Edit view, Source › (New data source / R13), Copy link to view, Add view to sidebar, Open as full page, **"Hide data source titles"** (`eye` icon, plain `menuitem`, no switch), Duplicate view, Delete view. It showed on the second source's view tab (light). A Calendar tab of R13's own source (dark) also had a row after "Open as full page" starting "Hide"; the read cut the text there, so its full label is not confirmed. The "New view" layout pages show **"Show data source titles"** as a switch (board, calendar, timeline). The row was not clicked, so whether it acts per view or per block was not read.
+
+## 16. B19: an added property in other views (dark)
+
+R13 (views Table, Board, Calendar, Timeline, List, Gallery). In the **table**, header "+" › "Extra" › Text; E1 got a value. Then each other view's View settings › Property visibility:
+
+| View | "Extra" |
+|---|---|
+| Board | **hidden** (shown: Name, Notes, Num, Tag; the earlier-added Notes / Num were shown only because they were switched on in §4) |
+| List | **hidden** (shown: Name, Date, Tag) |
+| Gallery | **hidden** (shown: Name, Tag) |
+| Calendar | **hidden** (shown: Name) |
+| Timeline | **hidden** (shown: Name) |
+
+So a property added from the table is hidden in every other existing view (board matches research 30 §B28). Relation tabs: **could not measure** (no relation property; time).
+
+## 17. B20: a formula with mixed branch types (dark)
+
+R13 table, new Formula property **F** = `if(prop("Num") > 40, prop("Num"), "low")` (typed into "Edit formula"; the editor showed the chips "Num"; preview "Type: **unknown**"; no save button: Escape kept it). Num: E1 4277, E2 100, E3 42; the six untitled rows empty.
+
+- **Render**: F shows 4277 / 100 / 42 / "low". The number-branch values are **left-aligned** like text (text box 8px from the cell's left), while the Num column right-aligns the same numbers (9px from the right). Both columns use `font-variant-numeric: lining-nums tabular-nums`; same ink.
+- **Sort** (toolbar Sort › F, ascending): **42, 100, 4277, low, low, …**: numbers sort **as numbers** (a text sort would put "100" before "42"), and the text values come after them.
+- **Filter** (toolbar Filter › F): default condition "contains"; the condition list is the **text** one: Is, Is not, Contains, Does not contain, Starts with, Ends with, Is empty, Is not empty.
+- **Calculate** (F header menu › Calculate): **None, Count ›, Percent ›** only (Percent › Percent empty, Percent not empty). No Sum / Average / Min / Max. The Count submenu did not open on hover in two tries, so its rows were not read.
 

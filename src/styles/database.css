@@ -9159,6 +9159,24 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-calendar-event-hover-bg);
 }
 
+/* research/35 §1.4: the fill stays; a halo 1px inside the card. Notion's halo is blue, so the gray selected token. */
+[data-blok-database-calendar-event][data-blok-database-row-selected] {
+  background-image: none;
+}
+
+[data-blok-database-calendar-event][data-blok-database-row-selected]::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  /* Longhands: a week-cut card squares its cut corners. */
+  border-start-start-radius: inherit;
+  border-start-end-radius: inherit;
+  border-end-start-radius: inherit;
+  border-end-end-radius: inherit;
+  background-color: var(--blok-icon-active-bg);
+  pointer-events: none;
+}
+
 [data-blok-database-calendar-event]:focus-visible {
   outline: 2px solid var(--blok-focus-ring);
 }
@@ -9604,6 +9622,23 @@ textarea[data-blok-database-cell-input] {
 /* An image layer, so it tints a conditional colour fill too (research/21 §1i). */
 [data-blok-database-timeline-bar]:hover {
   background-image: linear-gradient(var(--blok-database-table-header-hover-bg), var(--blok-database-table-header-hover-bg));
+}
+
+/* research/35 §1.5: a picked row shows only on its bar, as a halo 2px inside it (gray, not Notion's blue). */
+[data-blok-database-timeline-row][data-blok-database-row-selected] {
+  background-image: none;
+}
+
+[data-blok-database-timeline-row][data-blok-database-row-selected] [data-blok-database-timeline-bar]::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-start-start-radius: inherit;
+  border-start-end-radius: inherit;
+  border-end-start-radius: inherit;
+  border-end-end-radius: inherit;
+  background-color: var(--blok-icon-active-bg);
+  pointer-events: none;
 }
 
 [data-blok-database-timeline-bar][data-dragging] {

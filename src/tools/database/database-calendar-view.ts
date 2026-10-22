@@ -535,7 +535,7 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     const addDay = add?.closest('[data-blok-database-calendar-day]')?.getAttribute('data-day');
 
     if (addDay !== null && addDay !== undefined && this.canEdit) {
-      handlers.addRow(addDay);
+      handlers.addRow(addDay, true);
 
       return;
     }
@@ -559,11 +559,12 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     handlers.openRow(rowId);
   };
 
-  /** The day a plain, editable click on a day's empty space lands on. */
-  private emptyDayAt(target: Element, event: MouseEvent): string | null {
+  /** The day an editable click on a day's empty space lands on. Shift and Alt count only where `shiftAlt` allows them. */
+  private emptyDayAt(target: Element, event: MouseEvent, shiftAlt = false): string | null {
     const dayIso = target.closest('[data-blok-database-calendar-day]')?.getAttribute('data-day');
 
-    if (dayIso === null || dayIso === undefined || !this.canEdit || this.gestureClosedMenu || event.shiftKey || event.metaKey || event.ctrlKey || event.altKey
+    if (dayIso === null || dayIso === undefined || !this.canEdit || this.gestureClosedMenu || event.metaKey || event.ctrlKey
+      || (!shiftAlt && (event.shiftKey || event.altKey))
       || target.closest('[data-blok-database-calendar-event], button, a, input, [role="button"]') !== null) {
       return null;
     }
@@ -578,9 +579,9 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     }
   }
 
-  /** research/31 §6: only a double-click on a day (its number too) adds a page on that day and opens it. */
+  /** research/31 §6: only a double-click on a day (its number too) adds a page on that day and opens it; research/35 §6: Shift or Alt too. */
   private readonly onDoubleClick = (event: MouseEvent): void => {
-    const dayIso = event.target instanceof Element ? this.emptyDayAt(event.target, event) : null;
+    const dayIso = event.target instanceof Element ? this.emptyDayAt(event.target, event, true) : null;
 
     if (dayIso !== null) {
       this.options.handlers?.addRow(dayIso, true);

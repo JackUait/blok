@@ -72,6 +72,56 @@ describe('DatabaseTool — calendar event selection (research/22 §1)', () => {
     document.body.innerHTML = '';
   });
 
+  // research/35 §6: "+" and a double-click open the new page in the view's open mode, center by default.
+  const dayCell = (el: HTMLElement, iso: string): HTMLElement => {
+    const found = el.querySelector<HTMLElement>(`[data-blok-database-calendar-day][data-day="${iso}"]`);
+
+    if (found === null) throw new Error(`no day ${iso}`);
+
+    return found;
+  };
+  const peekMode = (): string | null | undefined => document.querySelector('[data-blok-database-drawer]')?.getAttribute('data-peek-mode');
+
+  it.each([
+    ['center', {}],
+    ['side', { openPagesIn: 'side' as const }],
+  ])('"+" adds a page on its day and opens it in a %s peek', (mode, view) => {
+    const d = doc();
+    const { el } = buildTool(d, {}, tableData(SCHEMA, { type: 'calendar', ...view }));
+
+    dayCell(el, '2026-10-28').querySelector<HTMLElement>('[data-blok-database-calendar-add]')?.click();
+
+    expect(d.order).toHaveLength(4);
+    expect(peekMode()).toBe(mode);
+  });
+
+  it.each([
+    ['plain', {}],
+    ['Shift', { shiftKey: true }],
+    ['Alt', { altKey: true }],
+  ])('a %s double-click on an empty day adds one page and opens it in the view\'s side peek', (_name, init) => {
+    const d = doc();
+    const { el } = buildTool(d, {}, tableData(SCHEMA, { type: 'calendar', openPagesIn: 'side' }));
+    const cell = dayCell(el, '2026-10-30');
+
+    click(cell, { detail: 1, ...init });
+    click(cell, { detail: 2, ...init });
+    cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true, detail: 2, ...init }));
+
+    expect(d.order).toHaveLength(4);
+    expect(peekMode()).toBe('side');
+  });
+
+  it('a single click on an empty day adds no page', () => {
+    const d = doc();
+    const { el } = buildTool(d, {}, calendarData());
+
+    click(dayCell(el, '2026-10-19'), { detail: 1 });
+
+    expect(d.order).toHaveLength(3);
+    expect(document.querySelector('[data-blok-database-drawer]')).toBeNull();
+  });
+
   it('Shift-click selects the event without opening it', () => {
     const { el, tool } = buildTool(doc(), {}, calendarData());
     const open = vi.spyOn(tool as unknown as Opener, 'handleRowClick');

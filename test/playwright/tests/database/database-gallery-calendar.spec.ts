@@ -656,15 +656,34 @@ test.describe('calendar', () => {
     await expect(page.getByRole('columnheader')).toHaveCount(5);
   });
 
-  test('"+" on a hovered day adds a row on that date', async ({ page }) => {
+  // research/35 §6: "+" opens the new page in the view's open mode, a center peek by default.
+  test('"+" on a hovered day adds a row on that date and opens it in a center peek', async ({ page }) => {
     await mount(page, blocks({ type: 'calendar' }));
 
     await day(page, '2026-10-20').hover();
     await day(page, '2026-10-20').locator('[data-blok-database-calendar-add]').click();
 
-    const added = (await savedRows(page)).find((row) => !['r1', 'r2', 'r3'].includes(row.id));
+    await expect(drawer(page)).toHaveAttribute('data-peek-mode', 'center');
+    const added = (await savedRows(page)).filter((row) => !['r1', 'r2', 'r3'].includes(row.id));
 
-    expect(added?.properties['p-due']).toBe('2026-10-20');
+    expect(added.map((row) => row.properties['p-due'])).toEqual(['2026-10-20']);
+  });
+
+  // research/35 §6: a Shift double-click acts as a plain one.
+  test('a Shift double-click in an empty day adds one row and opens it in the view\'s side peek', async ({ page }) => {
+    await mount(page, blocks({ type: 'calendar', openPagesIn: 'side' }));
+
+    const cell = await day(page, '2026-10-20').boundingBox();
+
+    if (cell === null) throw new Error('no day');
+    await page.keyboard.down('Shift');
+    await page.mouse.dblclick(cell.x + cell.width / 2, cell.y + cell.height - 8);
+    await page.keyboard.up('Shift');
+
+    await expect(drawer(page)).toHaveAttribute('data-peek-mode', 'side');
+    const added = (await savedRows(page)).filter((row) => !['r1', 'r2', 'r3'].includes(row.id));
+
+    expect(added.map((row) => row.properties['p-due'])).toEqual(['2026-10-20']);
   });
 
   // research/31 §6: a single click did nothing; only a real double-click made a page dated that day and opened it.
@@ -807,11 +826,12 @@ test.describe('calendar', () => {
       await mount(page, blocks({ type: 'calendar' }, SAME_DAY));
       await event(page, 'r1').click({ modifiers: ['Shift'] });
 
-      const look = async (rowId: string): Promise<{ image: string; color: string; bg: string; radius: string }> =>
+      const look = async (rowId: string): Promise<{ halo: string; haloInset: string; color: string; bg: string; radius: string }> =>
         event(page, rowId).evaluate((el) => {
           const style = getComputedStyle(el);
+          const after = getComputedStyle(el, '::after');
 
-          return { image: style.backgroundImage, color: style.color, bg: style.backgroundColor, radius: style.borderRadius };
+          return { halo: after.backgroundColor, haloInset: after.top, color: style.color, bg: style.backgroundColor, radius: style.borderRadius };
         });
       // Away from the cards, so neither is hovered; then let the hover fade finish.
       await page.mouse.move(5, 5);
@@ -821,8 +841,10 @@ test.describe('calendar', () => {
       const isBlue = (value: string): boolean => [...value.matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g)]
         .some(([, r, g, b]) => Number(b) > Number(r) + 40 && Number(b) > Number(g) + 20);
 
-      expect(on.image).not.toBe('none');
-      expect(isBlue(on.image)).toBe(false);
+      // research/35 §1.4: the tint is a halo 1px inside the card, over the unchanged fill.
+      expect(on.halo).not.toBe('rgba(0, 0, 0, 0)');
+      expect(on.haloInset).toBe('1px');
+      expect(isBlue(on.halo)).toBe(false);
       expect(on.bg).toBe(off.bg);
       expect(on.color).toBe(off.color);
       expect(on.radius).toBe('6px');

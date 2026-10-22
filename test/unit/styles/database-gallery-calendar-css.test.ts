@@ -108,6 +108,38 @@ describe('database gallery and calendar styles', () => {
     expect(ruleBody('[data-blok-database-calendar-event]')).toContain('border-radius: var(--blok-radius-control)');
   });
 
+  // research/35 §1.4: the fill stays and a halo sits 1px inside the card. Notion's halo is blue; Blok's is the gray token.
+  it('keeps a picked event\'s fill and lays the gray halo 1px inside it', () => {
+    const picked = '[data-blok-database-calendar-event][data-blok-database-row-selected]';
+
+    expect(ruleBody(picked)).toContain('background-image: none');
+    expect(ruleBody(picked)).not.toContain('background-color');
+    const halo = ruleBody(`${picked}::after`);
+
+    expect(halo).toContain('inset: 1px');
+    expect(halo).toContain('border-start-start-radius: inherit');
+    expect(halo).toContain('border-end-end-radius: inherit');
+    expect(halo).toContain('pointer-events: none');
+    expect(halo).toContain('background-color: var(--blok-icon-active-bg)');
+  });
+
+  // research/35 §1.4: rest white, hover rgba(84, 72, 49, 0.08) over the cell.
+  it('hovers an event to the measured light fill', () => {
+    expect(ruleBody('[data-blok-database-calendar-event]:hover')).toContain('background-color: var(--blok-database-calendar-event-hover-bg)');
+    expect(css).toContain('--blok-database-calendar-event-bg: #ffffff;');
+    expect(css).toContain('--blok-database-calendar-event-hover-bg: rgba(84, 72, 49, 0.08);');
+  });
+
+  // research/35 §18: 16px icon, bordered with the control border (dark rgba(255, 255, 235, 0.1)), day ink.
+  it('draws "Manage in Calendar" with a 16px icon and the control border', () => {
+    const manage = '[data-blok-database-calendar-nav] [data-blok-database-calendar-manage-calendar]';
+
+    expect(ruleBody(manage)).toContain('border: 1px solid var(--blok-database-table-control-border)');
+    expect(ruleBody(`${manage} svg`)).toContain('inline-size: 16px');
+    expect(ruleBody(`${manage} svg`)).toContain('block-size: 16px');
+    expect(ruleBody('[data-blok-database-calendar-nav] button')).toContain('color: var(--blok-database-calendar-day-text)');
+  });
+
   it('lets an event title shrink so its comment badge stays in the card', () => {
     const title = ruleBody('[data-blok-database-calendar-event-title]:has(+ [data-blok-database-comment-badge])');
 

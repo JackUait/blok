@@ -119,6 +119,28 @@ describe('database timeline styles', () => {
     expect(timelineCss).not.toMatch(/(?:^|[\s;{])(?:left|right|margin-left|margin-right|padding-left|padding-right)\s*:/);
   });
 
+  // research/35 §1.5: only the bar shows the pick, as a halo 2px inside it; the lane and the bar fill stay. Gray, not Notion's blue.
+  it('marks a picked row with a gray halo 2px inside its bar, not a lane tint', () => {
+    const picked = '[data-blok-database-timeline-row][data-blok-database-row-selected]';
+
+    expect(ruleBody(picked)).toContain('background-image: none');
+    const halo = ruleBody(`${picked} [data-blok-database-timeline-bar]::after`);
+
+    expect(halo).toContain('inset: 2px');
+    expect(halo).toContain('border-start-start-radius: inherit');
+    expect(halo).toContain('border-end-end-radius: inherit');
+    expect(halo).toContain('pointer-events: none');
+    expect(halo).toContain('background-color: var(--blok-icon-active-bg)');
+  });
+
+  // research/35 §1.5: hover ≈ rgba(33, 27, 23, 0.051) light, rgba(255, 255, 255, 0.055) dark, over the bar fill.
+  it('hovers a bar to the measured overlay', () => {
+    expect(ruleBody('[data-blok-database-timeline-bar]:hover')).toContain('linear-gradient(var(--blok-database-table-header-hover-bg), var(--blok-database-table-header-hover-bg))');
+    expect(css).toContain('--blok-database-hover-bg: rgba(33, 27, 23, 0.051);');
+    expect(darkValues('--blok-database-table-header-hover-bg')).toEqual(['rgba(255, 255, 255, 0.055)', 'rgba(255, 255, 255, 0.055)']);
+    expect(css).toContain('--blok-database-timeline-bar-bg: #ffffff;');
+  });
+
   it('turns every timeline transition off under reduced motion', () => {
     const reduced = timelineCss.slice(timelineCss.lastIndexOf('@media (prefers-reduced-motion: reduce)'));
 

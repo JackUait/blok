@@ -1017,6 +1017,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_CONFIRM_LOOK_BYTES = 1_016;
     // database.css: the 17px title on Reset and "Delete the last view…" (research/10 §5, 26 §5a).
     const DATABASE_CONFIRM_LARGE_TITLE_BYTES = 204;
+    // database.css: picked calendar events and timeline bars draw a gray halo inside the card (research/35 §1.4, §1.5).
+    const DATABASE_CAL_TIMELINE_HALO_BYTES = 1_218;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1187,7 +1189,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_NOTION_COLOURS_PASS2_BYTES
       + DATABASE_CONFIRM_LOOK_BYTES
       + DATABASE_PINK_TEMPLATE_TILE_BYTES
-      + DATABASE_CONFIRM_LARGE_TITLE_BYTES;
+      + DATABASE_CONFIRM_LARGE_TITLE_BYTES
+      + DATABASE_CAL_TIMELINE_HALO_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

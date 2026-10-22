@@ -439,12 +439,13 @@ describe('DatabaseCalendarView', () => {
   });
 
   describe('adding a row on a day', () => {
-    it('offers "+" on each day that adds a row on that date', () => {
+    // research/35 §6: "+" opens the new page in the view's open mode.
+    it('offers "+" on each day that adds a row on that date and opens it', () => {
       const { root, handlers } = mount();
 
       day(root, '2026-10-20').querySelector<HTMLElement>('[data-blok-database-calendar-add]')?.click();
 
-      expect(handlers.addRow).toHaveBeenCalledExactlyOnceWith('2026-10-20');
+      expect(handlers.addRow).toHaveBeenCalledExactlyOnceWith('2026-10-20', true);
     });
 
     // research/31 §6: only a real double-click made a page dated that day, and opened it.
@@ -514,21 +515,33 @@ describe('DatabaseCalendarView', () => {
       expect(handlers.addRow).not.toHaveBeenCalled();
     });
 
-    it('a double-click on "+" adds without opening', () => {
+    // Notion's double-click on "+" is unmeasured: only its clicks add.
+    it('the dblclick event on "+" adds nothing of its own', () => {
       const { root, handlers } = mount();
       const add = day(root, '2026-10-20').querySelector<HTMLElement>('[data-blok-database-calendar-add]');
 
       if (add === null) throw new Error('no +');
-      doubleClick(add);
+      add.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, detail: 2 }));
 
-      expect(handlers.addRow).not.toHaveBeenCalledWith('2026-10-20', true);
+      expect(handlers.addRow).not.toHaveBeenCalled();
     });
 
+    // research/35 §6: Shift and Alt double-clicks act as plain ones.
     it.each([
       ['Shift', { shiftKey: true }],
+      ['Alt', { altKey: true }],
+    ])('a %s-double-click in a day cell adds one row on that date and opens it', (_name, modifiers) => {
+      const { root, handlers } = mount();
+
+      doubleClick(day(root, '2026-10-20'), modifiers);
+
+      expect(handlers.addRow).toHaveBeenCalledExactlyOnceWith('2026-10-20', true);
+    });
+
+    // Unmeasured in Notion (Cmd untried, Ctrl not read): kept as before.
+    it.each([
       ['Cmd', { metaKey: true }],
       ['Ctrl', { ctrlKey: true }],
-      ['Alt', { altKey: true }],
     ])('a %s-double-click in a day cell adds nothing', (_name, modifiers) => {
       const { root, handlers } = mount();
 

@@ -155,16 +155,37 @@ describe('Ask AI bar colours', () => {
       .forEach((selector) => expect(reducedRule(selector), selector).toMatch(/transform:\s*none/));
   });
 
-  it('while working, the mark turns at one steady speed with no colour or glow', () => {
+  it('while working, the mark turns at one steady speed', () => {
     const mark = bodyOf('[data-blok-assistant-working] [data-blok-assistant-icon] svg');
     const turn = ASSISTANT_CSS.match(/@keyframes blok-assistant-rose\s*\{([\s\S]*?\})\s*\}/)?.[1] ?? '';
 
     expect(mark).toMatch(/animation:\s*blok-assistant-rose\s+[\d.]+s\s+linear\s+infinite/);
-    expect(mark).not.toMatch(/gradient|filter|url\(|drop-shadow/);
     expect(bodyOf('[data-blok-assistant-working] [data-blok-assistant-icon]')).toMatch(/color:\s*var\(--blok-text-secondary\)/);
     // One step to a full turn: no pause, no easing back, so it has no start or end.
     expect(turn.match(/\{/g)).toHaveLength(1);
     expect(turn).toMatch(/^\s*to\s*\{\s*transform:\s*rotate\(1turn\);?\s*\}$/);
+  });
+
+  it('while working, the rose dims and a light runs round it at one steady speed', () => {
+    const light = bodyOf('[data-blok-assistant-working] [data-blok-assistant-light]');
+    const run = ASSISTANT_CSS.match(/@keyframes blok-assistant-light\s*\{([\s\S]*?\})\s*\}/)?.[1] ?? '';
+
+    expect(bodyOf('[data-blok-assistant-light]')).toMatch(/display:\s*none/);
+    expect(light).toMatch(/display:\s*inline/);
+    expect(light).toMatch(/stroke-dasharray:\s*14\s+36/);
+    expect(light).toMatch(/animation:\s*blok-assistant-light\s+5s\s+linear\s+infinite/);
+    expect(run).toMatch(/^\s*to\s*\{\s*stroke-dashoffset:\s*-100;?\s*\}$/);
+    expect(bodyOf('[data-blok-assistant-working] [data-blok-assistant-icon] path:not([data-blok-assistant-light])')).toMatch(/opacity:\s*0?\.\d+/);
+  });
+
+  it('the light has no glow', () => {
+    [...rulesFor('data-blok-assistant-icon'), ...rulesFor('data-blok-assistant-light')]
+      .forEach(([selector, body]) => expect(body, selector).not.toMatch(/filter|blur|drop-shadow|box-shadow/));
+  });
+
+  it('under reduced motion the light is gone and the rose is drawn at full strength', () => {
+    expect(reducedRule('[data-blok-assistant-working] [data-blok-assistant-light]')).toMatch(/display:\s*none/);
+    expect(reducedRule('[data-blok-assistant-working] [data-blok-assistant-icon] path:not([data-blok-assistant-light])')).toMatch(/opacity:\s*1/);
   });
 
   it('under reduced motion the halo, the Stop arc and the rise-in stay still', () => {

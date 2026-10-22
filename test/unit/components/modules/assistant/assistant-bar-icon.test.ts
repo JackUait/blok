@@ -35,4 +35,26 @@ describe('assistant bar: its mark', () => {
     expect(marks).toHaveLength(2);
     marks.forEach((mark) => expect(mark.querySelector('path')?.getAttribute('d')).toBe(rose));
   });
+
+  it('lays one light over each rose, on the same line, coloured by its own gradient', () => {
+    const other = new AssistantBar((key) => key, callbacks);
+    const marks = [...bar.element.querySelectorAll('[data-blok-assistant-icon]'), ...other.element.querySelectorAll('[data-blok-assistant-icon]')];
+    const rose = new DOMParser().parseFromString(IconRose, 'image/svg+xml').querySelector('path')?.getAttribute('d');
+    const ids = marks.map((mark) => {
+      const lights = mark.querySelectorAll('[data-blok-assistant-light]');
+      const light = lights[0];
+      const id = light?.getAttribute('stroke')?.match(/^url\(#(.+)\)$/)?.[1] ?? '';
+
+      // One path only: no blurred copy under it.
+      expect(lights).toHaveLength(1);
+      expect(mark.querySelectorAll('path')).toHaveLength(2);
+      expect(light?.getAttribute('d')).toBe(rose);
+      expect(light?.getAttribute('pathLength')).toBe('100');
+      expect(mark.querySelector(`linearGradient[id="${id}"]`)?.querySelectorAll('stop')).toHaveLength(3);
+
+      return id;
+    });
+
+    expect(new Set(ids).size).toBe(4);
+  });
 });

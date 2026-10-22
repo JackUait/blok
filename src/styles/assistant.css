@@ -32,11 +32,16 @@
   overflow: visible;
   /* The sparkle and send are this round size; the panel lines up after the sparkle. */
   --_blok-assistant-dot: 26px;
+  /* The rose's light uses the hues as they are. */
+  --blok-ai-hue-1: #e8609e;
+  --blok-ai-hue-2: #eba84a;
+  --blok-ai-hue-3: #86c46b;
+  --blok-ai-hue-4: #a77be6;
   /* The send halo and Stop arc. Mixed into the surface: pastel on light, muted on dark. */
-  --blok-ai-aura-1: color-mix(in srgb, #e8609e 70%, var(--blok-popover-bg));
-  --blok-ai-aura-2: color-mix(in srgb, #eba84a 70%, var(--blok-popover-bg));
-  --blok-ai-aura-3: color-mix(in srgb, #86c46b 70%, var(--blok-popover-bg));
-  --blok-ai-aura-4: color-mix(in srgb, #a77be6 70%, var(--blok-popover-bg));
+  --blok-ai-aura-1: color-mix(in srgb, var(--blok-ai-hue-1) 70%, var(--blok-popover-bg));
+  --blok-ai-aura-2: color-mix(in srgb, var(--blok-ai-hue-2) 70%, var(--blok-popover-bg));
+  --blok-ai-aura-3: color-mix(in srgb, var(--blok-ai-hue-3) 70%, var(--blok-popover-bg));
+  --blok-ai-aura-4: color-mix(in srgb, var(--blok-ai-hue-4) 70%, var(--blok-popover-bg));
   animation: blok-assistant-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
@@ -101,6 +106,61 @@
 @keyframes blok-assistant-rose {
   to {
     transform: rotate(1turn);
+  }
+}
+
+/* While working the rose dims and a light runs round it. No blurred copy: no glow. */
+[data-blok-assistant-light] {
+  display: none;
+}
+
+[data-blok-assistant-working] [data-blok-assistant-icon] path:not([data-blok-assistant-light]) {
+  opacity: 0.45;
+}
+
+/* pathLength is 100, so a 14 + 36 dash repeats twice per lap and -100 is one lap. */
+[data-blok-assistant-working] [data-blok-assistant-light] {
+  display: inline;
+  stroke-width: 1.5;
+  stroke-dasharray: 14 36;
+  animation: blok-assistant-light 5s linear infinite;
+}
+
+@keyframes blok-assistant-light {
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+
+/* The three stops walk the same hue loop, a quarter and three quarters apart. */
+[data-blok-assistant-working] [data-blok-assistant-icon] stop {
+  animation: blok-assistant-light-hue 4s linear infinite;
+}
+
+[data-blok-assistant-working] [data-blok-assistant-icon] stop:nth-child(2) {
+  animation-delay: -1s;
+}
+
+[data-blok-assistant-working] [data-blok-assistant-icon] stop:nth-child(3) {
+  animation-delay: -3s;
+}
+
+@keyframes blok-assistant-light-hue {
+  0%,
+  100% {
+    stop-color: var(--blok-ai-hue-1);
+  }
+
+  25% {
+    stop-color: var(--blok-ai-hue-2);
+  }
+
+  50% {
+    stop-color: var(--blok-ai-hue-3);
+  }
+
+  75% {
+    stop-color: var(--blok-ai-hue-4);
   }
 }
 
@@ -636,6 +696,14 @@
   [data-blok-assistant-keep]:hover svg path,
   [data-blok-assistant-action] {
     animation: none;
+  }
+
+  [data-blok-assistant-working] [data-blok-assistant-light] {
+    display: none;
+  }
+
+  [data-blok-assistant-working] [data-blok-assistant-icon] path:not([data-blok-assistant-light]) {
+    opacity: 1;
   }
 
   [data-blok-assistant-send],

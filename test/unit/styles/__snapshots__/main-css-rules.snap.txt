@@ -25826,10 +25826,14 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   line-height: var(--blok-line-height-body);
   overflow: visible;
   --_blok-assistant-dot: 26px;
-  --blok-ai-aura-1: color-mix(in srgb, #e8609e 70%, var(--blok-popover-bg));
-  --blok-ai-aura-2: color-mix(in srgb, #eba84a 70%, var(--blok-popover-bg));
-  --blok-ai-aura-3: color-mix(in srgb, #86c46b 70%, var(--blok-popover-bg));
-  --blok-ai-aura-4: color-mix(in srgb, #a77be6 70%, var(--blok-popover-bg));
+  --blok-ai-hue-1: #e8609e;
+  --blok-ai-hue-2: #eba84a;
+  --blok-ai-hue-3: #86c46b;
+  --blok-ai-hue-4: #a77be6;
+  --blok-ai-aura-1: color-mix(in srgb, var(--blok-ai-hue-1) 70%, var(--blok-popover-bg));
+  --blok-ai-aura-2: color-mix(in srgb, var(--blok-ai-hue-2) 70%, var(--blok-popover-bg));
+  --blok-ai-aura-3: color-mix(in srgb, var(--blok-ai-hue-3) 70%, var(--blok-popover-bg));
+  --blok-ai-aura-4: color-mix(in srgb, var(--blok-ai-hue-4) 70%, var(--blok-popover-bg));
   animation: blok-assistant-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
@@ -25876,6 +25880,33 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-assistant-working] [data-blok-assistant-icon] svg {
   animation: blok-assistant-rose 28s linear infinite;
+}
+
+[data-blok-assistant-light] {
+  display: none;
+}
+
+[data-blok-assistant-working] [data-blok-assistant-icon] path:not([data-blok-assistant-light]) {
+  opacity: 0.45;
+}
+
+[data-blok-assistant-working] [data-blok-assistant-light] {
+  display: inline;
+  stroke-width: 1.5;
+  stroke-dasharray: 14 36;
+  animation: blok-assistant-light 5s linear infinite;
+}
+
+[data-blok-assistant-working] [data-blok-assistant-icon] stop {
+  animation: blok-assistant-light-hue 4s linear infinite;
+}
+
+[data-blok-assistant-working] [data-blok-assistant-icon] stop:nth-child(2) {
+  animation-delay: -1s;
+}
+
+[data-blok-assistant-working] [data-blok-assistant-icon] stop:nth-child(3) {
+  animation-delay: -3s;
 }
 
 [data-blok-assistant-field] {
@@ -26300,6 +26331,14 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [@media (prefers-reduced-motion: reduce)] [data-blok-assistant], [data-blok-assistant][data-blok-top-layer][popover], [data-blok-assistant-summary], [data-blok-assistant-working] [data-blok-assistant-icon] svg, [data-blok-assistant-send]::before, [data-blok-assistant-stop]::before, [data-blok-assistant-keep]::before, [data-blok-assistant-keep]:hover svg path, [data-blok-assistant-action] {
   animation: none;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-assistant-working] [data-blok-assistant-light] {
+  display: none;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-assistant-working] [data-blok-assistant-icon] path:not([data-blok-assistant-light]) {
+  opacity: 1;
 }
 
 [@media (prefers-reduced-motion: reduce)] [data-blok-assistant-send], [data-blok-assistant-send] svg, [data-blok-assistant-send]::before, [data-blok-assistant-stop]::before, [data-blok-assistant-keep]::before, [data-blok-assistant-undo] svg, [data-blok-assistant-thinking], [data-blok-assistant-undo], [data-blok-assistant-keep], [data-blok-assistant-button], [data-blok-assistant-stop], [data-blok-assistant-action], [data-blok-assistant-action-icon] {

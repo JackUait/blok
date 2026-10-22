@@ -2,6 +2,7 @@ import type { AgentThinkingLevel } from '../../../../types/api';
 import { PopoverEvent } from '../../../../types/utils/popover/popover-event';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { IconArrowUp, IconCheck, IconPlayerSpeed, IconRose, IconUndo } from '../../icons';
+import { generateBlockId } from '../../utils/id-generator';
 import { PopoverDesktop } from '../../utils/popover';
 import { onHover } from '../../utils/tooltip';
 import { promoteToTopLayer, removeFromTopLayer } from '../../utils/top-layer';
@@ -47,6 +48,7 @@ const ATTR = {
   row: 'data-blok-assistant-row',
   field: 'data-blok-assistant-field',
   icon: 'data-blok-assistant-icon',
+  light: 'data-blok-assistant-light',
   send: 'data-blok-assistant-send',
   thinking: 'data-blok-assistant-thinking',
   thinkingMenu: 'data-blok-assistant-thinking-menu',
@@ -138,6 +140,37 @@ const withoutImages = (html: string): DocumentFragment => {
   return template.content;
 };
 
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/** Lays the light that runs round the rose while the model works. Its gradient id is unique per mark. */
+const addLight = (mark: HTMLElement): void => {
+  const svg = mark.querySelector('svg');
+  const rose = svg?.querySelector('path');
+
+  if (!svg || !rose) {
+    return;
+  }
+
+  const id = `blok-assistant-light-${generateBlockId()}`;
+  const gradient = document.createElementNS(SVG_NS, 'linearGradient');
+  const light = document.createElementNS(SVG_NS, 'path');
+
+  gradient.id = id;
+  ['x1', 'y1', 'x2', 'y2'].forEach((key, index) => gradient.setAttribute(key, index < 2 ? '0' : '1'));
+  ['0', '0.5', '1'].forEach((offset) => {
+    const stop = document.createElementNS(SVG_NS, 'stop');
+
+    stop.setAttribute('offset', offset);
+    gradient.append(stop);
+  });
+  light.setAttribute('d', rose.getAttribute('d') ?? '');
+  light.setAttribute('pathLength', '100');
+  light.setAttribute('fill', 'none');
+  light.setAttribute('stroke', `url(#${id})`);
+  light.setAttribute(ATTR.light, '');
+  svg.append(gradient, light);
+};
+
 /**
  * The "Ask AI" prompt bar, in the page under its anchor block.
  *
@@ -204,6 +237,8 @@ export class AssistantBar {
 
     headIcon.innerHTML = IconRose;
     icon.innerHTML = IconRose;
+    addLight(headIcon);
+    addLight(icon);
     this.field = build('textarea', {
       'data-blok-field': 'text',
       rows: '1',

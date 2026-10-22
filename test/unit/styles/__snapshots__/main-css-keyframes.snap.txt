@@ -28,6 +28,17 @@
   from { opacity: 0; transform: translateY(-4px) scale(0.99) }
 }
 
+@keyframes blok-assistant-light {
+  to { stroke-dashoffset: -100 }
+}
+
+@keyframes blok-assistant-light-hue {
+  0%, 100% { stop-color: var(--blok-ai-hue-1) }
+  25% { stop-color: var(--blok-ai-hue-2) }
+  50% { stop-color: var(--blok-ai-hue-3) }
+  75% { stop-color: var(--blok-ai-hue-4) }
+}
+
 @keyframes blok-assistant-rise {
   from { opacity: 0; transform: translateY(6px) scale(0.96); filter: blur(2px) }
 }

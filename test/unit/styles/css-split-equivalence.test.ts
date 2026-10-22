@@ -997,6 +997,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // assistant.css: the Ask AI "Halo" buttons: send halo, round Stop with its arc, pill actions with icons and rise-in.
     // +1801: Discard and Keep as labelled pills, Send and Keep halos on hover only, Stop's arc always (2026-10-22).
     const ASSISTANT_HALO_BUTTONS_BYTES = 4757 + 1801;
+    // assistant.css: while working the rose dims and a coloured light runs round it, no glow, plus the raw hue tokens (2026-10-22).
+    const ASSISTANT_ROSE_LIGHT_BYTES = 1689;
     // database.css: the board sub-group band toggle joins the table group toggle rules, and a folded band hides its cards (research/31 §3).
     const DATABASE_BAND_TOGGLE_BYTES = 482;
     // database.css: the purple template tile (Campaign Management, research/31 shot 51).
@@ -1202,6 +1204,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_MORE_TEMPLATES_BYTES
       + ASSISTANT_REPLACED_BLOCK_BYTES
       + ASSISTANT_HALO_BUTTONS_BYTES
+      + ASSISTANT_ROSE_LIGHT_BYTES
       + DATABASE_BAND_TOGGLE_BYTES
       + DATABASE_PURPLE_TEMPLATE_TILE_BYTES
       + SELECTED_OWN_BLOCK_BYTES

@@ -439,6 +439,58 @@ test.describe('in-editor assistant', () => {
     await expect(slot).toBeHidden();
   });
 
+  test('with the bar open in an empty paragraph, slots for the next edit sit below what the last edit wrote', async ({ page }) => {
+    const commands = [{ name: 'block.insert', args: { type: 'paragraph', data: { text: 'Landed first' }, position: { after: 'empty' } } }];
+
+    await setup(page, [reply('Done.')], {
+      hold: true,
+      blocks: [
+        { id: 'p1', type: 'paragraph', data: { text: 'The quick brown fox' } },
+        { id: 'empty', type: 'paragraph', data: { text: '' } },
+        { id: 'p2', type: 'paragraph', data: { text: 'Second' } },
+      ],
+      stream: [
+        { type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' },
+        { type: 'tool_input', index: 0, json: JSON.stringify({ commands }) },
+        { type: 'tool_start', index: 1, id: 'c2', name: 'blok_execute' },
+        { type: 'tool_end', index: 0 },
+      ],
+    });
+
+    await page.locator(`#${HOLDER_ID} [data-blok-id="empty"] [contenteditable="true"]`).click();
+    await page.keyboard.press('Space');
+
+    const bar = page.getByRole('dialog', { name: 'Ask AI' });
+
+    await bar.getByRole('textbox').fill('Add two things');
+    await page.keyboard.press('Enter');
+
+    const written = page.locator(`#${HOLDER_ID} [data-blok-element]`).filter({ hasText: 'Landed first' });
+    const slot = bar.locator('[data-blok-ai-slot]').first();
+    const gapped = (): Promise<string[]> => page.evaluate((holder) => [...document.querySelectorAll(`#${holder} [data-blok-ai-gap]`)]
+      .map((element) => element.textContent || element.getAttribute('data-blok-id') || ''), HOLDER_ID);
+
+    await expect(written).toBeVisible();
+    await expect(slot).toBeVisible();
+    await expect.poll(gapped).toEqual(['empty', 'Landed first']);
+
+    const block = await written.boundingBox();
+    const slotBox = await slot.boundingBox();
+    const next = await page.getByText('Second').boundingBox();
+
+    if (block === null || slotBox === null || next === null) {
+      throw new Error('no layout');
+    }
+    expect(slotBox.y).toBeGreaterThanOrEqual(block.y + block.height);
+    expect(next.y).toBeGreaterThanOrEqual(slotBox.y + slotBox.height);
+
+    await page.evaluate(() => window.assistantRelease?.());
+    await expect(bar.getByText('Done.')).toBeVisible();
+    await expect(slot).toBeHidden();
+    // The run used up the empty paragraph, so the bar's own gap is all that is left, under what it wrote.
+    await expect.poll(gapped).toEqual(['Landed first']);
+  });
+
   test('after an answer, a follow-up field under it takes a question with a visible caret', async ({ page }) => {
     await setup(page, [
       insertCall('Draft one'),

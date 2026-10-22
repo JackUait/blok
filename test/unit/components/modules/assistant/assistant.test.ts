@@ -9,6 +9,7 @@ import { Column } from '../../../../../src/tools/column';
 import { ToggleItem } from '../../../../../src/tools/toggle';
 import { ColumnList } from '../../../../../src/tools/column-list';
 import { PageTool } from '../../../../../src/tools/page';
+import { Table } from '../../../../../src/tools/table';
 import type { BlokConfig, OutputData } from '../../../../../types';
 import type {
   Agent,
@@ -2022,10 +2023,10 @@ describe('in-editor assistant bar', () => {
         return holder;
       };
 
-      const open = async (): Promise<ReturnType<typeof liveRuns>> => {
+      const open = async (extra: Partial<BlokConfig> = {}): Promise<ReturnType<typeof liveRuns>> => {
         const runs = liveRuns();
 
-        await createEditor(runs.model, undefined, THREE_BLOCKS);
+        await createEditor(runs.model, undefined, { ...THREE_BLOCKS, ...extra });
         fakeLayout();
         select('p2', 0, 'p2', 0);
         pressModJ(inputOf('p2'));
@@ -2081,6 +2082,27 @@ describe('in-editor assistant bar', () => {
         expect(slotsShown()).toBe(true);
         expect(gapOf('p2')).toBe(`${BAR_GAP}px`);
         expect(holderWithText('Table here').style.getPropertyValue('--blok-ai-gap')).toBe(`${SLOTS_HEIGHT}px`);
+      });
+
+      it('puts the slots under a written table, not inside one of its cells', async () => {
+        const runs = await open({ tools: { paragraph: Paragraph, table: Table } });
+        const emit = (event: AgentModelStreamEvent): void => runs.calls[0].request.onStream?.(event);
+        const markdown = '| Year | Event |\n| --- | --- |\n| 2006 | Books |\n| 2011 | Pizza |';
+        const { json } = executeCall('c1', [{ name: 'markdown.insert', args: { markdown, position: { after: 'p2' } } }]);
+
+        emit({ type: 'tool_start', index: 0, id: 'c1', name: 'blok_execute' });
+        emit({ type: 'tool_input', index: 0, json });
+        emit({ type: 'tool_start', index: 1, id: 'c2', name: 'blok_execute' });
+        emit({ type: 'tool_end', index: 0 });
+
+        const table = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-blok-component="table"]');
+
+        await waitFor(() => expect(table()?.textContent).toContain('Pizza'));
+        await settle();
+
+        expect(slotsShown()).toBe(true);
+        expect(table()?.style.getPropertyValue('--blok-ai-gap')).toBe(`${SLOTS_HEIGHT}px`);
+        expect(gapped()).toHaveLength(2);
       });
 
       it('leaves no gap under what it wrote once the run ends', async () => {

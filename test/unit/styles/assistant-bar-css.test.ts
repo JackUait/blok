@@ -155,6 +155,13 @@ describe('Ask AI bar colours', () => {
       .forEach((selector) => expect(reducedRule(selector), selector).toMatch(/transform:\s*none/));
   });
 
+  it('the mark is drawn at 24px, so the rose reads next to 16px text', () => {
+    const mark = bodyOf('[data-blok-assistant-icon] svg');
+
+    expect(mark).toMatch(/width:\s*24px/);
+    expect(mark).toMatch(/height:\s*24px/);
+  });
+
   it('while working, the mark turns at one steady speed', () => {
     const mark = bodyOf('[data-blok-assistant-working] [data-blok-assistant-icon] svg');
     const turn = ASSISTANT_CSS.match(/@keyframes blok-assistant-rose\s*\{([\s\S]*?\})\s*\}/)?.[1] ?? '';

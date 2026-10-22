@@ -25870,8 +25870,8 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-assistant-icon] svg {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
 }
 
 [data-blok-assistant-working] [data-blok-assistant-icon] {

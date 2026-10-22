@@ -89,8 +89,8 @@
 }
 
 [data-blok-assistant-icon] svg {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
 }
 
 /* The rose turns while the model works. Linear, one step: a pause or an ease

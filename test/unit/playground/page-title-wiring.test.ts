@@ -1,9 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PageRegistry, ROOT_STORAGE_KEY, type PageMap } from '../../../src/playground/page-host';
 import type { PageIcon } from '../../../types/tools/page';
+import { EventsDispatcher } from '../../../src/components/utils/events';
+import type { OutputBlockData } from '../../../types';
 import {
   attachCreatedPageSeed,
   createdPageSeed,
+  createHeldDocuments,
+  statusRecorder,
+  type BodyEditor,
   fromPageIcon,
   pageDocumentHooks,
   pushRecord,
@@ -362,5 +367,99 @@ describe('pageDocumentHooks', () => {
     hooks.saveDocument('keys', { blocks: [] });
     expect(pages.get('keys')?.title).toBe('');
     expect(pages.get('keys')?.icon).toBeUndefined();
+  });
+});
+
+describe('statusRecorder', () => {
+  it('records the status and leaves the payload intact for the listeners after it', () => {
+    const dispatcher = new EventsDispatcher<{ 'collaboration:status': { status: string } }>();
+    const statuses = new WeakMap<WeakKey, string>();
+    const editor = {};
+    const later = vi.fn();
+
+    dispatcher.on('collaboration:status', statusRecorder(statuses, editor));
+    dispatcher.on('collaboration:status', later);
+    dispatcher.emit('collaboration:status', { status: 'connected' });
+
+    expect(later).toHaveBeenCalledWith({ status: 'connected' });
+    expect(statuses.get(editor)).toBe('connected');
+  });
+});
+
+describe('held sub-page documents under collaboration', () => {
+  const written: OutputBlockData[] = [{ id: 'p1', type: 'paragraph', data: { text: [{ text: 'From the agent' }] } }];
+
+  const bodyEditor = (shown: Array<{ id: string; isEmpty: boolean }>): {
+    editor: TitleEditor & BodyEditor;
+    insertMany: ReturnType<typeof vi.fn>;
+    remove: ReturnType<typeof vi.fn>;
+    clear: ReturnType<typeof vi.fn>;
+  } => {
+    const insertMany = vi.fn((blocks: OutputBlockData[], index: number) => {
+      shown.splice(index, 0, ...blocks.map((block) => ({ id: block.id ?? '', isEmpty: false })));
+    });
+    const remove = vi.fn(async (index: number) => {
+      shown.splice(index, 1);
+    });
+    const clear = vi.fn();
+
+    return {
+      editor: {
+        title: { get: () => '', set: vi.fn(), icon: { get: () => null, set: vi.fn() } },
+        blocks: {
+          getBlocksCount: () => shown.length,
+          getBlockByIndex: (index) => shown[index] as never,
+          getBlockIndex: (id) => shown.findIndex((block) => block.id === id),
+          insertMany: insertMany as never,
+          delete: remove,
+        },
+        history: { clear },
+      },
+      insertMany,
+      remove,
+      clear,
+    };
+  };
+
+  it('writes a held document into the empty room of a page this tab created, with no undo step', async () => {
+    const shown = [{ id: 'empty', isEmpty: true }];
+    const { editor, insertMany, clear } = bodyEditor(shown);
+    const held = createHeldDocuments(new Set(['fresh']));
+
+    held.hold('fresh', written);
+    createdPageSeed(editor, { pageId: 'fresh', created: new Set(['fresh']), record: () => ({ title: 'T' }), held })({ status: 'connected' });
+    await vi.waitFor(() => expect(clear).toHaveBeenCalled());
+
+    expect(insertMany).toHaveBeenCalledWith(written, 0);
+    expect(shown.map((block) => block.id)).toEqual(['p1']);
+  });
+
+  it('leaves a room that already has content alone', async () => {
+    const shown = [{ id: 'peer', isEmpty: false }];
+    const { editor, insertMany } = bodyEditor(shown);
+    const held = createHeldDocuments(new Set(['fresh']));
+
+    held.hold('fresh', written);
+    createdPageSeed(editor, { pageId: 'fresh', created: new Set(['fresh']), record: () => ({ title: 'T' }), held })({ status: 'connected' });
+    await Promise.resolve();
+
+    expect(insertMany).not.toHaveBeenCalled();
+    expect(shown.map((block) => block.id)).toEqual(['peer']);
+  });
+
+  it('lets the agent write only a page this tab created whose room is not open yet', () => {
+    const pages = new PageRegistry({ ...seed(), fresh: { title: '', parentId: null, blocks: [] } });
+    const held = createHeldDocuments(new Set(['fresh']));
+    const hooks = pageDocumentHooks(pages, held);
+
+    // A live room would ignore the write, so the agent gets "no document" instead of a false success.
+    expect(hooks.loadDocument('guide')).toBeNull();
+    expect(hooks.loadDocument('fresh')).toEqual({ blocks: [], title: '' });
+
+    hooks.saveDocument('fresh', { title: 'Named', blocks: written });
+    expect(held.take('fresh')).toEqual(written);
+    expect(pages.get('fresh')).toMatchObject({ title: 'Named', blocks: written });
+
+    expect(hooks.loadDocument('fresh')).toBeNull();
   });
 });

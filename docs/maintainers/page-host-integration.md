@@ -176,6 +176,8 @@ With both hooks:
 
 Each call loads the page fresh and saves the whole document, so the host should keep its own title record in step with `data.title` and `data.icon`.
 
+Under collaboration a sub-page's body lives in its room, not in the host's store. `saveDocument` must reach that room, or the page opens empty while the model reports success. When the host cannot write a page, `loadDocument` should return `null`: the model then gets an error. The playground does this. It holds a write for a page the tab created whose room has not opened yet, and puts it in on the first connect (`createHeldDocuments` in `src/playground/page-title-wiring.ts`). Every other page loads as `null`.
+
 Access stays the host's job. `loadDocument` and `saveDocument` must check that the current user may read and write that page, as `resolve` does. Blok narrows what the model can reach, but it does not authorize:
 
 - A `pageId` an agent wrote into a page block is never opened, in that turn or a later one, unless the host's `create` gave it.

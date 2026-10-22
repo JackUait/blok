@@ -1823,7 +1823,7 @@
     import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
     import { mountPageTree } from './src/playground/page-tree.ts';
     import { playgroundModel, playgroundWebTools } from './src/playground/ai-model.ts';
-    import { attachCreatedPageSeed, pageDocumentHooks, pushRecord, titleCallbacks, titleData } from './src/playground/page-title-wiring.ts';
+    import { attachCreatedPageSeed, createHeldDocuments, pageDocumentHooks, pushRecord, statusRecorder, titleCallbacks, titleData } from './src/playground/page-title-wiring.ts';
     import { remotePagePlayground } from './src/playground/remote-page-host.ts';
     import { mountNavIndicator } from './src/playground/nav-indicator.ts';
     import { mountPositionPicker } from './src/playground/position-picker.ts';
@@ -2039,7 +2039,7 @@
             },
             preview: (id) => pages.get(id)?.blocks,
             // Ask AI reads and writes sub-pages through these.
-            ...pageDocumentHooks(pages),
+            ...pageDocumentHooks(pages, collaborationConfig(pageId) === null ? undefined : heldDocuments),
           }),
         },
       };
@@ -2083,7 +2083,7 @@
           ? documentSource
           : { server: DEV_SERVER_URL, collaboration, ...(DEV_TICKET_URL !== null && { ticket: playgroundTicketUrl(DEV_TICKET_URL, collaboration.user?.name ?? null) }) }),
         ...(collaboration !== null && {
-          onReady: (editor) => editor.on('collaboration:status', ({ status }) => collabStatus.set(editor, status)),
+          onReady: (editor) => editor.on('collaboration:status', statusRecorder(collabStatus, editor)),
         }),
         onChange(api, event) {
           console.log('something changed', event);
@@ -2160,6 +2160,8 @@
     let livePointers = null;
     // Pages this tab created. Only these may seed their collaboration room with the local title.
     const createdHere = new Set();
+    // Ask AI's writes to those pages, until their room first opens.
+    const heldDocuments = createHeldDocuments(createdHere);
     // Each editor's last collaboration status, recorded from onReady. Blok has no status getter.
     // A seed wired later still hears the room: core replays the current status once, in a task
     // after isReady (collaboration/index.ts, readyReplay).
@@ -2340,7 +2342,7 @@
       if (collaborationConfig(pageId) === null) return;
       attachCreatedPageSeed(
         editor,
-        { pageId, created: createdHere, record: () => pages.get(pageId) },
+        { pageId, created: createdHere, record: () => pages.get(pageId), held: heldDocuments },
         () => collabStatus.get(editor) === 'connected'
       );
     }

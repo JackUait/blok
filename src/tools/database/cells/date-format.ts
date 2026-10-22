@@ -312,12 +312,34 @@ export const zoneOffsetText = (zone: string, at: Date): string => {
   return /^GMT[+-]00:00$/.test(name) ? 'GMT' : name.replace(/([+-])0(\d:00)$/, '$1$2');
 };
 
-/** "Addis Ababa", "Kentucky/Louisville", "Mountain (US)" (research/23 §1, 30 B25). Other legacy folders: unmeasured. */
-export const zoneCity = (zone: string): string => {
-  const slash = zone.indexOf('/');
-  const rest = (slash === -1 ? zone : zone.slice(slash + 1)).replace(/_/g, ' ');
+/** Notion's labels that no rule gives (research/37 §1.3). */
+const ZONE_LABELS: Record<string, string> = {
+  'America/Argentina/ComodRivadavia': 'Comod Rivadavia',
+  'Antarctica/DumontDUrville': 'Dumont d\'Urville',
+  'Chile/EasterIsland': 'Easter Island',
+  'Europe/Kiev': 'Kyiv',
+  'Mexico/BajaNorte': 'Baja Norte',
+  'Mexico/BajaSur': 'Baja Sur',
+  'Mexico/General': 'Mexico General',
+};
 
-  return zone.startsWith('US/') ? `${rest} (US)` : rest;
+/** Notion keeps "_" in these four (research/37 §1.3). */
+const KEEPS_UNDERSCORE = ['America/Buenos_Aires', 'America/Indiana/Tell_City', 'America/North_Dakota/New_Salem', 'America/Santo_Domingo'];
+
+/** Names two areas share get the area in brackets (research/37 §1.3). */
+const CLASHING = /^(?:(US|Canada)\/(Central|Eastern|Mountain|Pacific)|(Brazil|Australia)\/(West))$/;
+
+/** "Addis Ababa", "Knox", "Kentucky/Louisville", "St. Johns", "Mountain (US)" (research/37 §1.3). */
+export const zoneCity = (zone: string): string => {
+  const clash = CLASHING.exec(zone);
+
+  if (clash !== null) {
+    return `${clash[2] ?? clash[4]} (${clash[1] ?? clash[3]})`;
+  }
+
+  const last = zone.startsWith('America/Kentucky/') ? zone.slice(8) : zone.slice(zone.lastIndexOf('/') + 1);
+
+  return ZONE_LABELS[zone] ?? (KEEPS_UNDERSCORE.includes(zone) ? last : last.replace(/^St_/, 'St. ').replace(/_/g, ' '));
 };
 
 const supported = { zones: null as string[] | null };

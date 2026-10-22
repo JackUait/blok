@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+import notionZones from '../../../../fixtures/notion/time-zone-labels.json';
 import enJson from '../../../../../src/components/i18n/locales/en.json';
 import { applyDateDisplayChange, editorLocale, formatDateDisplay, formatDayField, formatShortDatePart, resolveHourCycle, resolveWeekStart, timeZones, toIsoDay, toLocalDate, zoneCity, zoneOffsetText } from '../../../../../src/tools/database/cells/date-format';
 
@@ -157,10 +158,16 @@ describe('date-format', () => {
     });
   });
 
-  // research/23 §1, 30 B25, 35 §13: 568 rows with the current zone; head, tail and "tok" hits as measured.
-  // The full set was not dumped. The IANA 2026e names minus Factory, Etc/GMT±N, US/Samoa, Universal and
-  // Zulu is the one rule found that hits 568 and every measured name.
+  // research/37 §1: Notion's whole list, read row by row (test/fixtures/notion/time-zone-labels.json).
   describe('timeZones', () => {
+    it('shows exactly Notion\'s 568 labels, in Notion\'s order', () => {
+      const zones = timeZones();
+
+      expect(zones.filter((zone) => zone !== 'Europe/Berlin').map(zoneCity)).toEqual(notionZones.labels);
+      expect(zoneCity('Europe/Berlin')).toBe(notionZones.current);
+      expect(zones).toHaveLength(568);
+    });
+
     it('lists the 568 zones in IANA id order, from Abidjan to WET', () => {
       const zones = timeZones();
 
@@ -193,17 +200,44 @@ describe('date-format', () => {
     });
   });
 
+  // research/37 §1.3.
   describe('zoneCity', () => {
-    it('drops the region, keeps the rest of the path, and reads "_" as a space', () => {
+    it('keeps the last segment and reads "_" as a space; Kentucky keeps its middle', () => {
       expect(zoneCity('Africa/Addis_Ababa')).toBe('Addis Ababa');
+      expect(zoneCity('America/Argentina/Buenos_Aires')).toBe('Buenos Aires');
+      expect(zoneCity('America/Indiana/Knox')).toBe('Knox');
       expect(zoneCity('America/Kentucky/Louisville')).toBe('Kentucky/Louisville');
       expect(zoneCity('UTC')).toBe('UTC');
       expect(zoneCity('W-SU')).toBe('W-SU');
     });
 
-    it('writes a US zone as "Mountain (US)"', () => {
+    it('keeps "_" in Buenos_Aires, Tell_City, New_Salem and Santo_Domingo', () => {
+      expect(zoneCity('America/Buenos_Aires')).toBe('Buenos_Aires');
+      expect(zoneCity('America/Indiana/Tell_City')).toBe('Tell_City');
+      expect(zoneCity('America/North_Dakota/New_Salem')).toBe('New_Salem');
+      expect(zoneCity('America/Santo_Domingo')).toBe('Santo_Domingo');
+    });
+
+    it('rewrites "St_" as "St." and a few joined names', () => {
+      expect(zoneCity('America/St_Johns')).toBe('St. Johns');
+      expect(zoneCity('Atlantic/St_Helena')).toBe('St. Helena');
+      expect(zoneCity('America/Argentina/ComodRivadavia')).toBe('Comod Rivadavia');
+      expect(zoneCity('Antarctica/DumontDUrville')).toBe('Dumont d\'Urville');
+      expect(zoneCity('Chile/EasterIsland')).toBe('Easter Island');
+      expect(zoneCity('Mexico/BajaNorte')).toBe('Baja Norte');
+      expect(zoneCity('Mexico/General')).toBe('Mexico General');
+      expect(zoneCity('Brazil/DeNoronha')).toBe('DeNoronha');
+      expect(zoneCity('Europe/Kiev')).toBe('Kyiv');
+    });
+
+    it('adds the area only to a name two areas share', () => {
       expect(zoneCity('US/Mountain')).toBe('Mountain (US)');
-      expect(zoneCity('US/Pacific')).toBe('Pacific (US)');
+      expect(zoneCity('Canada/Pacific')).toBe('Pacific (Canada)');
+      expect(zoneCity('Brazil/West')).toBe('West (Brazil)');
+      expect(zoneCity('Australia/West')).toBe('West (Australia)');
+      expect(zoneCity('US/Hawaii')).toBe('Hawaii');
+      expect(zoneCity('Canada/Atlantic')).toBe('Atlantic');
+      expect(zoneCity('Brazil/East')).toBe('East');
     });
   });
 
@@ -221,6 +255,12 @@ describe('date-format', () => {
     it('keeps the leading zero when the offset has minutes', () => {
       expect(zoneOffsetText('Asia/Kolkata', at)).toBe('GMT+05:30');
       expect(zoneOffsetText('Australia/Broken_Hill', at)).toBe('GMT+10:30');
+    });
+
+    // research/37 §1.3: an Etc row keeps IANA's inverted sign.
+    it('shows "GMT+1" as GMT-1:00 and "GMT-14" as GMT+14:00', () => {
+      expect(zoneOffsetText('Etc/GMT+1', at)).toBe('GMT-1:00');
+      expect(zoneOffsetText('Etc/GMT-14', at)).toBe('GMT+14:00');
     });
   });
 });

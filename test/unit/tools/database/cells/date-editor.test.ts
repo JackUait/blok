@@ -1054,7 +1054,7 @@ describe('date cell editor', () => {
         expect(selected()).toEqual(['Asia/Tokyo']);
       });
 
-      it('names a nested zone by its path and a US zone as "Mountain (US)" (research/23 §1, 30 B25)', () => {
+      it('names Kentucky zones with their middle and a US zone as "Mountain (US)" (research/37 §1.3)', () => {
         const real = Intl.DateTimeFormat.prototype.resolvedOptions;
 
         // The browser zone gets the pinned "local" row instead of its own, and CI runs in UTC.

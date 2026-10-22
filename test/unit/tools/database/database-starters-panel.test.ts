@@ -270,6 +270,16 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
       ]);
     });
 
+    it('a grouped board keeps the flat preview: its grouped look was not measured', async () => {
+      const dialog = await openGallery('brainstorm');
+
+      byTestId(dialog, 'database-starter-next').click();
+      byTestId(dialog, 'database-starter-view-all').click();
+      expect(dialog?.querySelector('[data-blok-database-starter-preview-tabs] [aria-current="true"]')?.textContent).toBe('tools.database.starterViewByCategoryIdeas');
+      expect(dialog?.querySelectorAll('[data-blok-database-starter-preview-group]')).toHaveLength(0);
+      expect(previewRows(dialog)).toHaveLength(3);
+    });
+
     it('Top Ideas shows its rows in reverse order, Improve SEO first', async () => {
       const dialog = await openGallery('brainstorm');
 

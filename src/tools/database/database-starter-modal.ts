@@ -27,7 +27,7 @@ const iconOf = (kind: StarterChoice['kind']): string =>
 const counter = { next: 0 };
 
 /**
- * research/30 B8: a grouped view's preview is drawn grouped. A heading per
+ * research/30 B8: a grouped table's preview is drawn grouped. A heading per
  * group in the view's manual order, each over its rows, then the no-value
  * group. The heading's look was not measured: the option pill.
  */
@@ -40,7 +40,8 @@ const groupedLines = (
 ): HTMLElement[] => {
   const property = made.schema.find((p) => p.id === view.groupBy);
 
-  if (property === undefined || (property.type !== 'select' && property.type !== 'multiSelect')) return rows.map(rowLine);
+  // Only grouped tables were seen grouped; a grouped board's preview was not read.
+  if (view.type !== 'table' || property === undefined || (property.type !== 'select' && property.type !== 'multiSelect')) return rows.map(rowLine);
   const keyOf = (option: SelectOption): string => view.groupOrder?.[option.id] ?? option.position;
   const options = [...(property.config?.options ?? [])].sort((x, y) => (keyOf(x) < keyOf(y) ? -1 : 1));
   const valuesOf = (row: StarterRow): string[] => {

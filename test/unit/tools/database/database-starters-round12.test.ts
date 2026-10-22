@@ -195,14 +195,14 @@ describe('"More templates", research/33 §3', () => {
     expect(['socialMedia', 'campaign', 'contentCalendar'].map((id) => hiddenPropertyCount(build(id as StarterId, true)))).toEqual([7, 4, 8]);
   });
 
-  it('the icons take the measured colours; glyphs Blok lacks use the database glyph', () => {
+  it('the icons take the measured colours and Notion\'s glyphs (research/33 §3.8, §3.13)', () => {
     const ids: StarterId[] = ['events', 'socialMedia', 'campaign', 'contentCalendar', 'issues', 'featureRequests', 'engineeringDocs', 'fundraising', 'pipeline', 'accounts', 'creative', 'inventory', 'roadmap', 'assets'];
 
     expect(ids.map((id) => build(id).icon)).toEqual([
-      { glyph: 'database', color: 'purple' }, { glyph: 'database', color: 'purple' }, { glyph: 'flag', color: 'purple' }, { glyph: 'calendar', color: 'purple' },
-      { glyph: 'check', color: 'red' }, { glyph: 'comment', color: 'red' }, { glyph: 'doc', color: 'red' }, { glyph: 'database', color: 'gray' },
-      { glyph: 'person', color: 'blue' }, { glyph: 'database', color: 'blue' }, { glyph: 'database', color: 'blue' }, { glyph: 'database', color: 'gray' },
-      { glyph: 'map', color: 'pink' }, { glyph: 'database', color: 'green' },
+      { glyph: 'ticket', color: 'purple' }, { glyph: 'feed', color: 'purple' }, { glyph: 'flag', color: 'purple' }, { glyph: 'calendar', color: 'purple' },
+      { glyph: 'check', color: 'red' }, { glyph: 'comment', color: 'red' }, { glyph: 'doc', color: 'red' }, { glyph: 'currency', color: 'gray' },
+      { glyph: 'person', color: 'blue' }, { glyph: 'card', color: 'blue' }, { glyph: 'paintBrush', color: 'blue' }, { glyph: 'package', color: 'gray' },
+      { glyph: 'map', color: 'pink' }, { glyph: 'fanDeck', color: 'green' },
     ]);
   });
 

@@ -1827,7 +1827,14 @@
                 "comment",
                 "person",
                 "map",
-                "database"
+                "database",
+                "ticket",
+                "feed",
+                "currency",
+                "card",
+                "paintBrush",
+                "package",
+                "fanDeck"
               ]
             },
             "color": {

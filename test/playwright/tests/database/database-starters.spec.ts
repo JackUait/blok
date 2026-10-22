@@ -463,18 +463,18 @@ test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
 
   // research/33 §3: each template with its defaults kept: the Customize footer, the views, the default page template and the rows.
   const ROUND12: Array<{ id: string; name: string; hidden: number; views: Array<[string, string]>; template: string; rows: number; icon: { glyph: string; color: string } }> = [
-    { id: 'events', name: 'Event Management', hidden: 0, views: [['All Events', 'table'], ['By Status', 'board'], ['Calendar', 'calendar']], template: 'New event', rows: 3, icon: { glyph: 'database', color: 'purple' } },
-    { id: 'socialMedia', name: 'Social Media Planner', hidden: 6, views: [['Calendar', 'calendar'], ['All Posts', 'table'], ['By Status', 'board']], template: 'New post', rows: 3, icon: { glyph: 'database', color: 'purple' } },
+    { id: 'events', name: 'Event Management', hidden: 0, views: [['All Events', 'table'], ['By Status', 'board'], ['Calendar', 'calendar']], template: 'New event', rows: 3, icon: { glyph: 'ticket', color: 'purple' } },
+    { id: 'socialMedia', name: 'Social Media Planner', hidden: 6, views: [['Calendar', 'calendar'], ['All Posts', 'table'], ['By Status', 'board']], template: 'New post', rows: 3, icon: { glyph: 'feed', color: 'purple' } },
     { id: 'issues', name: 'Issue Tracking', hidden: 2, views: [['Kanban', 'board'], ['All Issues', 'table'], ['My Issues', 'list']], template: 'New issue', rows: 0, icon: { glyph: 'check', color: 'red' } },
     { id: 'featureRequests', name: 'Feature Requests', hidden: 5, views: [['By Status', 'board'], ['All Requests', 'table'], ['Assigned to Me', 'table']], template: 'New request', rows: 0, icon: { glyph: 'comment', color: 'red' } },
     { id: 'engineeringDocs', name: 'Engineering Docs', hidden: 0, views: [['All Docs', 'table'], ['Published Docs', 'list'], ['Docs by Category', 'table']], template: 'New document', rows: 0, icon: { glyph: 'doc', color: 'red' } },
-    { id: 'fundraising', name: 'Fundraising Tracker', hidden: 5, views: [['By Status', 'board'], ['All Investors', 'table'], ['Won', 'table']], template: 'New investor', rows: 0, icon: { glyph: 'database', color: 'gray' } },
+    { id: 'fundraising', name: 'Fundraising Tracker', hidden: 5, views: [['By Status', 'board'], ['All Investors', 'table'], ['Won', 'table']], template: 'New investor', rows: 0, icon: { glyph: 'currency', color: 'gray' } },
     { id: 'pipeline', name: 'Pipeline Tracking', hidden: 5, views: [['By Deal Stage', 'board'], ['All Deals', 'table'], ['Active Deals', 'table']], template: 'New deal', rows: 0, icon: { glyph: 'person', color: 'blue' } },
-    { id: 'accounts', name: 'Account Management', hidden: 3, views: [['By Status', 'board'], ['All Accounts', 'table'], ['By Region', 'table']], template: 'New account', rows: 0, icon: { glyph: 'database', color: 'blue' } },
-    { id: 'creative', name: 'Creative Projects', hidden: 2, views: [['By Status', 'board'], ['All Projects', 'table'], ['My Projects', 'table']], template: 'New project', rows: 0, icon: { glyph: 'database', color: 'blue' } },
-    { id: 'inventory', name: 'Inventory Management', hidden: 0, views: [['All Inventory', 'table'], ['Recently Ordered', 'list']], template: 'New item', rows: 0, icon: { glyph: 'database', color: 'gray' } },
+    { id: 'accounts', name: 'Account Management', hidden: 3, views: [['By Status', 'board'], ['All Accounts', 'table'], ['By Region', 'table']], template: 'New account', rows: 0, icon: { glyph: 'card', color: 'blue' } },
+    { id: 'creative', name: 'Creative Projects', hidden: 2, views: [['By Status', 'board'], ['All Projects', 'table'], ['My Projects', 'table']], template: 'New project', rows: 0, icon: { glyph: 'paintBrush', color: 'blue' } },
+    { id: 'inventory', name: 'Inventory Management', hidden: 0, views: [['All Inventory', 'table'], ['Recently Ordered', 'list']], template: 'New item', rows: 0, icon: { glyph: 'package', color: 'gray' } },
     { id: 'roadmap', name: 'Product Roadmap', hidden: 4, views: [['By Status', 'board'], ['All Projects', 'table'], ['My Projects', 'table'], ['By Team', 'list']], template: 'New project', rows: 0, icon: { glyph: 'map', color: 'pink' } },
-    { id: 'assets', name: 'Asset Library', hidden: 4, views: [['Gallery', 'gallery'], ['All Assets', 'table'], ['By Status', 'board']], template: 'New asset', rows: 0, icon: { glyph: 'database', color: 'green' } },
+    { id: 'assets', name: 'Asset Library', hidden: 4, views: [['Gallery', 'gallery'], ['All Assets', 'table'], ['By Status', 'board']], template: 'New asset', rows: 0, icon: { glyph: 'fanDeck', color: 'green' } },
   ];
 
   for (const spec of ROUND12) {
@@ -496,6 +496,41 @@ test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
       }).toEqual([spec.name, spec.id, spec.icon, spec.views, spec.template, spec.rows]);
       await expect(page.locator(`[data-blok-database-icon="${spec.icon.color}"]`).first()).toBeVisible();
       expect(errors).toEqual([]);
+    });
+  }
+
+  // research/33 §3.13: the first path of each glyph Blok drew for Notion's ticket, feed, currency, card,
+  // paint brush, package and fan deck. The database glyph used to stand in for all seven.
+  const TEMPLATE_GLYPHS: Array<[string, string]> = [
+    ['events', 'M5 5h10a2 2 0 0 1 2 2v1.5a1.5 1.5 0 0 0 0 3V13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1.5a1.5 1.5 0 0 0 0-3V7a2 2 0 0 1 2-2Z'],
+    ['socialMedia', 'M5 4h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H9l-4 3v-3a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z'],
+    ['fundraising', 'M12.25 8.1c-.3-.7-1.2-1.1-2.25-1.1-1.25 0-2.25.6-2.25 1.5 0 2 4.5 1 4.5 3 0 .9-1 1.5-2.25 1.5-1.05 0-1.95-.4-2.25-1.1M10 6v1M10 13v1'],
+    ['accounts', 'M3 8.5h14M6 12h2.5'],
+    ['creative', 'M8.75 8V4.25a1.25 1.25 0 0 1 2.5 0V8'],
+    ['inventory', 'M10 2.75 16.5 6.25v7.5L10 17.25 3.5 13.75v-7.5L10 2.75Z'],
+    ['assets', 'M3.5 14.75V4.5A1.5 1.5 0 0 1 5 3h1.5A1.5 1.5 0 0 1 8 4.5v10.25a2.25 2.25 0 0 1-4.5 0Z'],
+  ];
+
+  test('each "More templates" tile draws its Notion glyph, not the database glyph (research/33 §3.13)', async ({ page }) => {
+    await mount(page);
+    await insertDatabase(page);
+    await page.getByTestId('database-new-database-panel').getByRole('button', { name: 'More templates' }).click();
+    const gallery = page.getByRole('dialog', { name: 'More templates' });
+
+    await gallery.getByRole('button', { name: 'More templates' }).click();
+    for (const [id, d] of TEMPLATE_GLYPHS) {
+      await expect(gallery.getByTestId(`database-template-gallery-template-${id}`).locator('[data-blok-database-tpl-gallery-glyph] svg path').first()).toHaveAttribute('d', d);
+    }
+  });
+
+  for (const [id, d] of TEMPLATE_GLYPHS) {
+    test(`the ${id} database draws its template glyph before the title (research/33 §3.8)`, async ({ page }) => {
+      const dialog = await openTemplate(page, id, ROUND12.find((spec) => spec.id === id)?.name ?? '');
+
+      await dialog.getByRole('button', { name: 'Get started' }).click();
+      await dialog.getByRole('button', { name: 'Done' }).click();
+      await expect(dialog).toBeHidden();
+      await expect(page.locator('[data-blok-database-title-row] [data-blok-database-icon] svg path').first()).toHaveAttribute('d', d);
     });
   }
 

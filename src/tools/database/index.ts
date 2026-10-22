@@ -123,7 +123,7 @@ import type { DrawerBacklink, LayoutTab, LayoutTabsDraft, LayoutTabsHost } from 
 import { relatedTabSources, thisPageFilter } from './layout-tab-relations';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar, VIEW_ICONS } from './database-tab-bar';
-import { IconArrowDiagonal, IconCalendar, IconDatabase, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile, IconFileDoc, IconMap, IconMessage, IconTrash, IconCheck, IconChevronRight, IconCopy, IconDownload, IconImage, IconListChecklist, IconMergeCells, IconPageLayout, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
+import { IconArrowDiagonal, IconCalendar, IconCreditCard, IconCurrency, IconDatabase, IconFanDeck, IconPackage, IconPaintBrush, IconTicket, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile, IconFileDoc, IconMap, IconMessage, IconTrash, IconCheck, IconChevronRight, IconCopy, IconDownload, IconImage, IconListChecklist, IconMergeCells, IconPageLayout, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -249,12 +249,13 @@ const INTERACTION_END_EVENTS = ['focusout', 'pointerup', 'pointercancel', 'keyup
 const INITIAL_VIEW_KEY = 'initialView';
 
 /**
- * Template glyphs: Notion's are checkmark, iterate, magic wand, page, bulb, calendar, flag, comment,
- * user circle and map. `database` stands in for the ones Blok has no icon for (research/33 §3.13).
+ * Template glyphs, after Notion's (research/33 §3.13). `feed` and `comment` both draw IconMessage,
+ * Blok's Feed view glyph. `database` stays for icons saved before a glyph existed.
  */
 const ICON_GLYPHS: Record<DatabaseIcon['glyph'], string> = {
   check: IconCheck, timeline: IconTimeline, wand: IconWand, doc: IconFileDoc, idea: IconEmojiLightbulb, calendar: IconCalendar, flag: IconEmojiFlag,
   comment: IconMessage, person: IconEmojiSmile, map: IconMap, database: IconDatabase,
+  ticket: IconTicket, feed: IconMessage, currency: IconCurrency, card: IconCreditCard, paintBrush: IconPaintBrush, package: IconPackage, fanDeck: IconFanDeck,
 };
 const ICON_COLORS: ReadonlySet<string> = new Set<DatabaseIcon['color']>(['green', 'blue', 'gray', 'red', 'orange', 'yellow', 'purple', 'pink']);
 

@@ -426,7 +426,7 @@ export const DATABASE_DATA = {
       required: ['glyph', 'color'],
       additionalProperties: false,
       properties: {
-        glyph: { type: 'string', enum: ['check', 'timeline', 'wand', 'doc', 'idea', 'calendar', 'flag', 'comment', 'person', 'map', 'database'] },
+        glyph: { type: 'string', enum: ['check', 'timeline', 'wand', 'doc', 'idea', 'calendar', 'flag', 'comment', 'person', 'map', 'database', 'ticket', 'feed', 'currency', 'card', 'paintBrush', 'package', 'fanDeck'] },
         color: { type: 'string', enum: ['green', 'blue', 'gray', 'red', 'orange', 'yellow', 'purple', 'pink'] },
       },
     },

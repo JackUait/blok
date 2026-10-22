@@ -1045,7 +1045,8 @@ export interface DatabaseData extends BlockToolData {
 
 /** A database icon: one of Blok's glyphs on a tinted tile. */
 export interface DatabaseIcon {
-  glyph: 'check' | 'timeline' | 'wand' | 'doc' | 'idea' | 'calendar' | 'flag' | 'comment' | 'person' | 'map' | 'database';
+  glyph: 'check' | 'timeline' | 'wand' | 'doc' | 'idea' | 'calendar' | 'flag' | 'comment' | 'person' | 'map' | 'database'
+    | 'ticket' | 'feed' | 'currency' | 'card' | 'paintBrush' | 'package' | 'fanDeck';
   color: 'green' | 'blue' | 'gray' | 'red' | 'orange' | 'yellow' | 'purple' | 'pink';
 }
 

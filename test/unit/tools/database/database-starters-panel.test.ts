@@ -3,6 +3,7 @@ import type { DatabaseConfig, DatabaseData, DatabaseRowData } from '../../../../
 import type { DatabaseTool } from '../../../../src/tools/database';
 import { buildDatabase, makeDoc } from './structure-harness';
 import type { Doc } from './structure-harness';
+import * as icons from '../../../../src/components/icons';
 
 vi.mock('../../../../src/blok', () => ({
   Blok: class MockBlok {
@@ -422,6 +423,21 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
     expect(document.querySelector('[data-blok-database-icon]')?.getAttribute('data-blok-database-icon')).toBe('purple');
     expect(saved(tool).icon).toEqual({ glyph: 'flag', color: 'purple' });
     expect(saved(tool).starter).toBe('campaign');
+  });
+
+  it.each([
+    ['ticket', 'IconTicket'], ['feed', 'IconMessage'], ['currency', 'IconCurrency'], ['card', 'IconCreditCard'],
+    ['paintBrush', 'IconPaintBrush'], ['package', 'IconPackage'], ['fanDeck', 'IconFanDeck'],
+  ] as const)('a saved %s glyph draws %s (research/33 §3.13)', (glyph, name) => {
+    const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }]);
+    const base = { schema: [{ id: 't', name: 'Name', type: 'title', position: 'a0' }], views: [{ id: 'v', name: 'T', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }], activeViewId: 'v' } as unknown as DatabaseData;
+
+    const expected = document.createElement('span');
+
+    expected.innerHTML = icons[name];
+    buildDatabase(doc, 'db', { ...base, icon: { glyph, color: 'blue' } });
+
+    expect(document.querySelector('[data-blok-database-icon]')?.innerHTML).toBe(expected.innerHTML);
   });
 
   it('a saved icon is drawn on load; an unknown icon or starter is not drawn but saved back as loaded', () => {

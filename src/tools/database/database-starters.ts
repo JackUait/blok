@@ -294,8 +294,7 @@ export const DATABASE_STARTERS: readonly StarterMeta[] = [
       choice('byPlatform', 'tools.database.starterViewByPlatform', false, 'table'),
     ],
   },
-  // research/33 §3.4-3.5, §3.11. Icons Blok has no glyph for (ticket, feed, currency, card, paint brush,
-  // package, fan deck) draw the database glyph in the measured colour. Inventory's light gray is gray.
+  // research/33 §3.4-3.5, §3.11. Inventory's light gray is gray.
   {
     id: 'events',
     nameKey: 'tools.database.starterEvents',
@@ -306,7 +305,7 @@ export const DATABASE_STARTERS: readonly StarterMeta[] = [
       pillColumn: 1,
     },
     tint: 'purple',
-    glyph: 'database',
+    glyph: 'ticket',
     features: [
       choice('owner', 'tools.database.starterEventOwner', true, 'person'),
       choice('category', 'tools.database.starterCategory', true, 'select'),
@@ -330,7 +329,7 @@ export const DATABASE_STARTERS: readonly StarterMeta[] = [
     descriptionKey: 'tools.database.starterSocialMediaDescription',
     thumbnail: { columns: ['tools.database.starterWeekdaySun', 'tools.database.starterWeekdayMon', 'tools.database.starterWeekdayTue'], pills: [] },
     tint: 'purple',
-    glyph: 'database',
+    glyph: 'feed',
     features: [
       choice('platform', 'tools.database.starterPlatform', true, 'multiSelect'),
       choice('postUrl', 'tools.database.starterPostUrl', true, 'url'),
@@ -428,7 +427,7 @@ export const DATABASE_STARTERS: readonly StarterMeta[] = [
       pills: [['tools.database.defaultStatusNotStarted', 'gray'], ['tools.database.starterOptionDiligence', 'blue'], ['tools.database.starterOptionPitched', 'yellow']],
     },
     tint: 'gray',
-    glyph: 'database',
+    glyph: 'currency',
     features: [
       choice('capital', 'tools.database.starterCapitalCommitted', true, 'number'),
       choice('description', 'tools.database.formQuestionDescription', true, 'text'),
@@ -489,7 +488,7 @@ export const DATABASE_STARTERS: readonly StarterMeta[] = [
       pills: [['tools.database.starterOptionActive', 'brown'], ['tools.database.starterOptionChurned', 'yellow'], ['tools.database.starterOptionPendingRenewal', 'green']],
     },
     tint: 'blue',
-    glyph: 'database',
+    glyph: 'card',
     features: [
       choice('manager', 'tools.database.starterAccountManager', true, 'person'),
       choice('products', 'tools.database.starterProductCategories', true, 'multiSelect'),
@@ -515,7 +514,7 @@ export const DATABASE_STARTERS: readonly StarterMeta[] = [
       pills: [['tools.database.defaultStatusNotStarted', 'gray'], ['tools.database.defaultStatusInProgress', 'blue'], ['tools.database.starterOptionNeedsReview', 'yellow']],
     },
     tint: 'blue',
-    glyph: 'database',
+    glyph: 'paintBrush',
     features: [
       choice('creativeType', 'tools.database.starterCreativeType', true, 'multiSelect'),
       choice('priority', 'tools.database.starterPriority', true, 'select'),
@@ -541,7 +540,7 @@ export const DATABASE_STARTERS: readonly StarterMeta[] = [
       pillColumn: 2,
     },
     tint: 'gray',
-    glyph: 'database',
+    glyph: 'package',
     features: [
       choice('id', 'tools.database.propertyTypeUniqueId', true, 'uniqueId'),
       choice('category', 'tools.database.starterCategory', true, 'select'),
@@ -592,7 +591,7 @@ export const DATABASE_STARTERS: readonly StarterMeta[] = [
     // research/30 §10a: the card shows no preview text.
     thumbnail: { columns: [], pills: [] },
     tint: 'green',
-    glyph: 'database',
+    glyph: 'fanDeck',
     features: [
       choice('designer', 'tools.database.starterDesigner', true, 'person'),
       choice('assetType', 'tools.database.starterAssetType', true, 'multiSelect'),

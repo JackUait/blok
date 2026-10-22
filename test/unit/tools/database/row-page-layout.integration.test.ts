@@ -1420,6 +1420,102 @@ describe('row page layout through the database tool', () => {
         expect(drawer()?.querySelector('[data-blok-database-drawer-tab-panel]')?.textContent).toContain('Measure A: This page');
       });
 
+      describe('a relation to this same database (research/36 §12)', () => {
+        /**
+         * R14 relates one-way to itself through "Related R14". F2 (r2) → F3, T4.
+         * Database order is Select, Text, Place, Related R14; the tab sorts by name.
+         */
+        const selfDoc = (extraSchema: Array<Record<string, unknown>> = [], values: Record<string, Record<string, unknown>> = {}): OutputBlockData[] => {
+          const blocks = doc({}, { pageLayoutStructure: 'tabbed' });
+          const a = blocks[0] as unknown as { data: { title?: string; schema: Array<Record<string, unknown>> }; content: string[] };
+
+          a.data.title = 'R14';
+          a.data.schema.splice(1, 1,
+            { id: 'sel', name: 'Select', type: 'select', position: 'a1', config: { options: [] } },
+            { id: 'txt', name: 'Text', type: 'text', position: 'a2' },
+            { id: 'pl', name: 'Place', type: 'place', position: 'a3' },
+            { id: 'rel', name: 'Related R14', type: 'relation', position: 'a4', relation: { targetDatabaseId: 'db' } },
+            ...extraSchema);
+          a.content.push('r4');
+          (blocks[2].data as { properties: Record<string, unknown> }).properties.rel = ['r3', 'r4'];
+          blocks.push({ id: 'r4', type: 'database-row', parent: 'db', data: { properties: { t: 'T4' }, position: 'a3' } });
+
+          return blocks.map((block) => (block.id !== undefined && values[block.id] !== undefined
+            ? { ...block, data: { ...block.data, properties: { ...(block.data as { properties: Record<string, unknown> }).properties, ...values[block.id] } } }
+            : block));
+        };
+        const headers = (root: Element | null): string[] =>
+          [...(root?.querySelectorAll('[data-blok-database-drawer-tab-panel] [data-blok-database-table-column-header]') ?? [])].map((el) => el.getAttribute('data-property-id') ?? '');
+        const addSelfTab = async (blocks: OutputBlockData[]): Promise<void> => {
+          await make(blocks);
+          await openRow('r2');
+          await click(q('[data-blok-database-drawer-customize]'));
+          await openAddTab();
+          await click(testId('database-layout-related-rel'));
+        };
+
+        it('offers the relation under Related to <this database>, by its property name', async () => {
+          await make(selfDoc());
+          await openRow('r2');
+          await click(q('[data-blok-database-drawer-customize]'));
+          const menu = await openAddTab();
+
+          expect(testId('database-layout-related-rel')?.textContent?.trim()).toBe('Related R14');
+          expect(menu?.textContent).toContain('Related to R14');
+        });
+
+        it('adds a tab named after the property that lists the pages this row relates to', async () => {
+          await addSelfTab(selfDoc());
+
+          expect(names(builderRoot())).toEqual(['Content', 'Related R14']);
+          expect(selected(builderRoot())).toBe('Related R14');
+          expect([...shownRows(builderRoot())].sort()).toEqual(['r3', 'r4']);
+        });
+
+        it('lists the title first, then every property by name', async () => {
+          await addSelfTab(selfDoc());
+
+          expect(headers(builderRoot())).toEqual(['t', 'pl', 'rel', 'sel', 'txt']);
+        });
+
+        it('shows a property added from the main table at its place by name', async () => {
+          await addSelfTab(selfDoc());
+          await click(b('[data-blok-database-layout-apply]'));
+          await click(q('[data-blok-database-drawer-close]'));
+          const plus = [...(holder?.querySelectorAll<HTMLElement>('[data-blok-database-table-add-property]') ?? [])]
+            .find((el) => el.closest('[data-blok-database-drawer-tab-panel]') === null) ?? null;
+
+          await click(plus);
+          await click(document.querySelector<HTMLElement>('[data-blok-database-property-type-option="number"]'));
+          const added = ((await savedBlocks()).find((block) => block.id === 'db')?.data as { schema: Array<{ id: string; type: string }> }).schema.find((p) => p.type === 'number')?.id;
+
+          await openRow('r2');
+
+          expect(added).toBeDefined();
+          expect(headers(drawer())).toEqual(['t', added, 'pl', 'rel', 'sel', 'txt']);
+        });
+
+        it('also lists a row that points at this one, as the relation cell does (unmeasured in Notion)', async () => {
+          await addSelfTab(selfDoc([], { r1: { rel: ['r2'] } }));
+
+          expect([...shownRows(builderRoot())].sort()).toEqual(['r1', 'r3', 'r4']);
+        });
+
+        it('a two-way pair such as Sub-items lists the rows on the other side', async () => {
+          await make(selfDoc([
+            { id: 'par', name: 'Parent item', type: 'relation', position: 'a5', relation: { targetDatabaseId: 'db', twoWay: true, syncedPropertyId: 'sub' } },
+            { id: 'sub', name: 'Sub-items', type: 'relation', position: 'a6', relation: { targetDatabaseId: 'db', twoWay: true, syncedPropertyId: 'par' } },
+          ], { r1: { sub: ['r3'] }, r3: { par: ['r1'] } }));
+          await openRow('r1');
+          await click(q('[data-blok-database-drawer-customize]'));
+          await openAddTab();
+          await click(testId('database-layout-related-sub'));
+
+          expect(selected(builderRoot())).toBe('Sub-items');
+          expect(shownRows(builderRoot())).toEqual(['r3']);
+        });
+      });
+
       describe('Link existing data source > Add new relation (research/13 §1d, §2)', () => {
         const openForm = async (): Promise<void> => {
           await make(relatedDoc());

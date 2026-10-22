@@ -62,7 +62,7 @@ const validWidth = (width: unknown): number | undefined =>
 /**
  * Every schema property, in column order, with its settings in this view.
  * Entries for properties the schema lacks are skipped; schema properties the
- * view does not mention go last.
+ * view does not mention go last, or by name in an alphabetical view.
  */
 export const resolveViewProperties = (view: DatabaseViewConfig, schema: PropertyDefinition[]): ResolvedViewProperty[] => {
   const entries = Array.isArray(view.properties) ? mergeDuplicates(view.properties) : legacyEntries(view, schema);
@@ -71,16 +71,20 @@ export const resolveViewProperties = (view: DatabaseViewConfig, schema: Property
   const seen = new Set<string>();
   const resolved: ResolvedViewProperty[] = [];
 
-  const push = (property: PropertyDefinition, entry: ViewPropertySetting | undefined): void => {
+  const settle = (property: PropertyDefinition, entry: ViewPropertySetting | undefined): ResolvedViewProperty => {
     const width = validWidth(entry?.width);
 
     seen.add(property.id);
-    resolved.push({
+
+    return {
       id: property.id,
       visible: typeof entry?.visible === 'boolean' ? entry.visible : defaultVisible(view, property),
       ...(width !== undefined ? { width } : {}),
       wrap: typeof entry?.wrap === 'boolean' ? entry.wrap : wrapAll,
-    });
+    };
+  };
+  const push = (property: PropertyDefinition, entry: ViewPropertySetting | undefined): void => {
+    resolved.push(settle(property, entry));
   };
 
   for (const entry of entries) {
@@ -91,10 +95,23 @@ export const resolveViewProperties = (view: DatabaseViewConfig, schema: Property
     }
   }
 
-  for (const property of bySchemaPosition(schema)) {
-    if (!seen.has(property.id)) {
-      push(property, undefined);
-    }
+  const unlisted = bySchemaPosition(schema).filter((property) => !seen.has(property.id));
+
+  if (view.propertyOrder !== 'alphabetical') {
+    unlisted.forEach((property) => push(property, undefined));
+
+    return resolved;
+  }
+  const nameOf = (id: string): string => propertiesById.get(id)?.name ?? '';
+  const isTitle = (id: string): boolean => propertiesById.get(id)?.type === 'title';
+
+  for (const property of [...unlisted].sort((a, b) => a.name.localeCompare(b.name))) {
+    // Before the first listed column that sorts after it, so a moved column stays where it was put.
+    const at = property.type === 'title'
+      ? resolved.findIndex((p) => !isTitle(p.id))
+      : resolved.findIndex((p) => !isTitle(p.id) && nameOf(p.id).localeCompare(property.name) > 0);
+
+    resolved.splice(at === -1 ? resolved.length : at, 0, settle(property, undefined));
   }
 
   return resolved;

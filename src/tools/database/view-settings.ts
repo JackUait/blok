@@ -78,10 +78,17 @@ export const withPropertyOrder = (
 ): ViewPropertySetting[] => {
   const stored = storedOrMaterialised(view, schema);
   const storedIds = new Set(stored.map((entry) => entry.id));
-  const missing = resolveViewProperties(view, schema)
+  const resolved = resolveViewProperties(view, schema);
+  const missing = resolved
     .filter((p) => !storedIds.has(p.id))
     .map((p) => ({ id: p.id, visible: p.visible }));
-  const entries = [...stored, ...missing];
+  // Alphabetical: the move starts from the columns as shown, not with the unlisted ones last.
+  const entries = view.propertyOrder === 'alphabetical'
+    ? [
+      ...resolved.map((p) => stored.find((entry) => entry.id === p.id) ?? { id: p.id, visible: p.visible }),
+      ...stored.filter((entry) => !resolved.some((p) => p.id === entry.id)),
+    ]
+    : [...stored, ...missing];
   const moving = entries.find((entry) => entry.id === propertyId);
 
   if (moving === undefined || propertyId === beforeId) {

@@ -877,6 +877,12 @@ export interface DatabaseViewConfig {
   rowOrder?: Record<string, string>;
   /** Per-property visibility, order, width and wrap. Wins over `visibleProperties`. */
   properties?: ViewPropertySetting[];
+  /**
+   * `'alphabetical'`: a property `properties` does not list goes after the
+   * title, by name, as Notion's relation tabs show a property added later.
+   * Listed entries keep their order. Absent: unlisted properties go last.
+   */
+  propertyOrder?: 'alphabetical';
   /** Wrap every cell. Default false. */
   wrapCells?: boolean;
   /** Columns, from the start, that stay put on horizontal scroll. Default 0. */

@@ -137,6 +137,44 @@ describe('view-settings', () => {
     });
   });
 
+  describe('propertyOrder alphabetical (a relation tab, research/36 §12)', () => {
+    const tabSchema: PropertyDefinition[] = [
+      { id: 'n', name: 'Name', type: 'title', position: 'a0' },
+      { id: 'sel', name: 'Select', type: 'select', position: 'a1', config: { options: [] } },
+      { id: 'txt', name: 'Text', type: 'text', position: 'a2' },
+      { id: 'pl', name: 'Place', type: 'place', position: 'a3' },
+      { id: 'rel', name: 'Related R14', type: 'relation', position: 'a4' },
+    ];
+    const ids = (v: DatabaseViewConfig, s: PropertyDefinition[] = tabSchema): string[] => resolveViewProperties(v, s).map((p) => p.id);
+    const withNumber: PropertyDefinition[] = [...tabSchema, { id: 'num', name: 'Number', type: 'number', position: 'a5' }];
+
+    it('puts the title first, then every other property by name', () => {
+      expect(ids(view({ properties: [], propertyOrder: 'alphabetical' }))).toEqual(['n', 'pl', 'rel', 'sel', 'txt']);
+    });
+
+    it('places a property added later at its alphabetical place', () => {
+      expect(ids(view({ properties: [], propertyOrder: 'alphabetical' }), withNumber)).toEqual(['n', 'num', 'pl', 'rel', 'sel', 'txt']);
+    });
+
+    it('still places a later property by name after a column was resized', () => {
+      const resized = view({ properties: withPropertySetting(view({ properties: [], propertyOrder: 'alphabetical' }), tabSchema, 'txt', { width: 300 }), propertyOrder: 'alphabetical' });
+
+      expect(ids(resized, withNumber)).toEqual(['n', 'num', 'pl', 'rel', 'sel', 'txt']);
+    });
+
+    it('keeps a manual move, and a later property still lands by name', () => {
+      const start = view({ properties: [], propertyOrder: 'alphabetical' });
+      const moved = view({ properties: withPropertyOrder(start, tabSchema, 'txt', 'pl'), propertyOrder: 'alphabetical' });
+
+      expect(ids(moved)).toEqual(['n', 'txt', 'pl', 'rel', 'sel']);
+      expect(ids(moved, withNumber)).toEqual(['n', 'num', 'txt', 'pl', 'rel', 'sel']);
+    });
+
+    it('leaves a view without the flag in schema order', () => {
+      expect(ids(view({ properties: [] }), withNumber)).toEqual(['n', 'sel', 'txt', 'pl', 'rel', 'num']);
+    });
+  });
+
   describe('visibleRowPropertyIds', () => {
     it('lists visible non-title ids in column order, which is what v1.16.1 reads', () => {
       expect(visibleRowPropertyIds(view({ type: 'list', visibleProperties: ['p-due'] }), schema)).toEqual(['p-due']);

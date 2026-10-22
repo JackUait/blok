@@ -3034,8 +3034,8 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** A linked view's data: its one view copies the source's first table view (Notion, R:2021-12-23). */
-  private linkedViewData(databaseId: string, name: string, filters?: FilterConfig[]): DatabaseData {
-    const view = { ...this.linkedFirstView(databaseId), ...(filters !== undefined ? { filters } : {}) };
+  private linkedViewData(databaseId: string, name: string, filters?: FilterConfig[], overrides: Partial<DatabaseViewConfig> = {}): DatabaseData {
+    const view = { ...this.linkedFirstView(databaseId), ...(filters !== undefined ? { filters } : {}), ...overrides };
     const title = this.model.getSchema().find((p) => p.type === 'title');
 
     return {
@@ -3066,7 +3066,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** Makes a view tab of `sourceId` at once, with no undo step. `made` is what Discard deletes. */
-  private makeViewTab(sourceId: string, title: string, filters?: FilterConfig[]): { tabId: string; made: string; contentId: string | null } | null {
+  private makeViewTab(sourceId: string, title: string, filters?: FilterConfig[], overrides?: Partial<DatabaseViewConfig>): { tabId: string; made: string; contentId: string | null } | null {
     if (!this.canEditLayoutTabs()) return null;
     const made: { tabId: string; made: string; contentId: string | null } = { tabId: '', made: '', contentId: null };
 
@@ -3084,7 +3084,7 @@ export class DatabaseTool implements BlockTool {
 
       this.layoutDrafts.made.add(tab.id);
       if (existing === undefined) this.layoutDrafts.made.add(tabs.id);
-      this.api.blocks.insertAt('database', this.linkedViewData(sourceId, title, filters), { parentId: tab.id, position: 'end' });
+      this.api.blocks.insertAt('database', this.linkedViewData(sourceId, title, filters, overrides), { parentId: tab.id, position: 'end' });
       made.tabId = tab.id;
       made.made = existing === undefined ? tabs.id : tab.id;
       if (existing === undefined) this.madeTabsBlocks.add(tabs.id);
@@ -3223,7 +3223,13 @@ export class DatabaseTool implements BlockTool {
     addRelated: (propertyId) => {
       const source = this.relatedTabSources().find((each) => each.propertyId === propertyId);
 
-      return source === undefined ? null : this.makeViewTab(source.sourceId, source.title, [thisPageFilter(source.backPropertyId)]);
+      if (source === undefined) return null;
+      // research/36 §12: every column, the title first, then by name, a later property too. Measured on a self-relation only.
+      const columns: Partial<DatabaseViewConfig> | undefined = source.sourceId === this.dataId
+        ? { properties: [], visibleProperties: [], propertyOrder: 'alphabetical' }
+        : undefined;
+
+      return this.makeViewTab(source.sourceId, source.title, [thisPageFilter(source.backPropertyId)], columns);
     },
     canRelate: (sourceId) => this.canRelateTab(sourceId),
     propertyNames: (sourceId) => (sourceId === this.dataId ? this.model.getSchema() : this.readDatabaseSource(sourceId)?.schema ?? []).map((property) => property.name),

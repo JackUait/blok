@@ -17,6 +17,9 @@ export interface RelatedTabSource {
  * research/13 §1b: one item per relation to another database of this
  * document. The tab filters on the related side's mirror, so a relation
  * with no live mirror (one-way) has nothing to filter on and is left out.
+ * research/36 §12: a relation to this same database is offered too, named
+ * after the property. One-way, it filters on itself: its value reads both
+ * ways, so "contains This page" finds the rows this one relates to.
  */
 export const relatedTabSources = (
   schema: PropertyDefinition[],
@@ -26,9 +29,10 @@ export const relatedTabSources = (
 ): RelatedTabSource[] => schema.flatMap((property) => {
   const target = property.relation?.targetDatabaseId;
 
-  if (property.type !== 'relation' || target === undefined || target === databaseId || property.relation?.targetDocumentId !== undefined) return [];
-  const title = titleOf(target);
-  const backPropertyId = mirrorOf(property);
+  if (property.type !== 'relation' || target === undefined || property.relation?.targetDocumentId !== undefined) return [];
+  const self = target === databaseId;
+  const title = self ? property.name : titleOf(target);
+  const backPropertyId = mirrorOf(property) ?? (self ? property.id : undefined);
 
   return title === undefined || backPropertyId === undefined ? [] : [{ propertyId: property.id, sourceId: target, backPropertyId, title }];
 });

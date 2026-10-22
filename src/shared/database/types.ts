@@ -872,6 +872,12 @@ export interface DatabaseViewConfig {
    */
   rowOrder?: Record<string, string>;
   properties?: ViewPropertySetting[];
+  /**
+   * `'alphabetical'`: a property `properties` does not list goes after the
+   * title, by name, as Notion's relation tabs show a property added later.
+   * Listed entries keep their order. Absent: unlisted properties go last.
+   */
+  propertyOrder?: 'alphabetical';
   wrapCells?: boolean;
   /** How many columns, from the start, stay put on horizontal scroll. */
   frozenColumnCount?: number;

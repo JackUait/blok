@@ -111,6 +111,21 @@ describe('DatabaseBoardView card parity', () => {
       }
     });
 
+    it('in right-to-left text the value hint sits on the right, the inline-start side', () => {
+      destroyTooltip();
+      vi.useFakeTimers();
+      try {
+        const board = mount({ view: boardView({ properties: [{ id: 'notes', visible: true }] }) });
+
+        board.style.direction = 'rtl';
+        hover(card(board, 'r1').querySelector('[data-blok-database-card-property][data-property-id="notes"]'));
+        vi.advanceTimersByTime(HINT_DELAY);
+        expect(shownHint()?.placement).toBe('right');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     // research/20 §1d: a place keeps its own card; the property hint around it must not replace it.
     it('hovering a place value still shows the place card', () => {
       destroyTooltip();

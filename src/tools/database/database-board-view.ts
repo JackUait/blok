@@ -14,7 +14,7 @@ import { getElementDirection } from '../../components/utils/direction';
 import { IconPlus, IconPencil, IconDotsHorizontal, IconChevronDown } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
 import { onHover } from '../../components/utils/tooltip';
-import { propertyHint } from './property-hint';
+import { onPropertyHover } from './property-hint';
 import { syncCommentBadge } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
 
@@ -703,7 +703,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       item.setAttribute('data-property-id', property.id);
       item.setAttribute('data-wrap', String(setting.wrap));
       // research/35 §4: left of the card in Notion; Blok anchors on the value.
-      onHover(item, propertyHint(property.name, property.description), { placement: 'left', bare: true });
+      onPropertyHover(item, property.name, property.description);
       item.appendChild(cell);
       list.appendChild(item);
     }

@@ -1,4 +1,6 @@
 import { TOOLTIP_MUTED_INK } from '../../components/modules/toolbar/tooltip';
+import { onHover } from '../../components/utils/tooltip';
+import { getElementDirection } from '../../components/utils/direction';
 
 /**
  * research/31 §1, research/35 §4: a property's hint. The name, then the
@@ -25,4 +27,18 @@ export const propertyHint = (name: string, description?: string): HTMLElement =>
   box.appendChild(text);
 
   return box;
+};
+
+/**
+ * research/35 §4: the hint sits on the inline-start side of a card value or
+ * drawer label, like the peek handle hint: the left, or the right in RTL.
+ */
+export const onPropertyHover = (trigger: HTMLElement, name: string, description?: string): void => {
+  onHover(trigger, propertyHint(name, description), {
+    bare: true,
+    // A getter: the trigger is not in the page yet when this binds, so its direction is read on hover.
+    get placement(): string {
+      return getElementDirection(trigger) === 'rtl' ? 'right' : 'left';
+    },
+  });
 };

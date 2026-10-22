@@ -17,7 +17,7 @@ import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { rowActionItems } from './database-table-menus';
 import type { RowActionContext, RowFavorite } from './database-table-menus';
 import { hide as hideTooltip, onHover, show as showTooltip } from '../../components/utils/tooltip';
-import { propertyHint } from './property-hint';
+import { onPropertyHover } from './property-hint';
 import { createTooltipContent } from '../../components/modules/toolbar/tooltip';
 import { createHeadingToggle } from '../table/table-heading-toggle';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
@@ -3364,8 +3364,8 @@ export class DatabaseCardDrawer {
     label.setAttribute('data-blok-database-drawer-prop-label', '');
     label.setAttribute('data-property-id', def.id);
     label.textContent = def.name;
-    // research/35 §4: the name, plus the description, left of the label.
-    onHover(label, propertyHint(def.name, def.description), { placement: 'left', bare: true });
+    // research/35 §4: the name, plus the description, on the label's inline-start side.
+    onPropertyHover(label, def.name, def.description);
     const head = document.createElement('div');
 
     head.setAttribute('data-blok-database-drawer-prop-head', '');

@@ -100,3 +100,46 @@ R14 table, Text values: F1X "alpha", F2 "beta", F3 "gamma" (row order TplA, F1X,
 | sorted Text Z → A | F3, then F1X | "gamma" (F3) |
 
 So the editor shows the value of the selected row that is **highest in the current view**. Tick order does not matter. The sort was deleted afterwards.
+
+## 6. "Moved to Trash" toast in light (item 12)
+
+Trigger: table row handle (`"Drag to move, click to open menu"`) › **Move to Trash** on rows made for it (T1–T5). An in-page poller (every 50 ms) logged the toast's "Restore" leaf; times are from the click on "Move to Trash".
+
+**Look (light).** The same box as research 35 §1.6 (which was read in light too): bg **rgb(44, 44, 43)**, ink **rgb(240, 239, 237)**, radius **8px**, padding **11px 16px**, 14px / 21px / 400, shadow `rgba(25,25,25,0.05) 0 20px 24px 0, rgba(25,25,25,0.027) 0 5px 8px 0, rgba(42,28,0,0.07) 0 0 0 1px`, **198x43 at (657, 646)** in a 1512x717 window (centred on x 756, bottom 28px above the window edge). Text "Moved to Trash" (a text node, no icon, no svg in the box) then a **"Restore"** `role=button` (transparent, ink rgb(240, 239, 237), 14px / 500, padding 0 8px, radius 6px, 67x17). "Restore" hover: `color(srgb 0.129412 0.105882 0.0901961 / 0.0509804)` ≈ rgba(33, 27, 23, 0.051). It has a Restore button, **no "Undo"** label and no close ×. Restore was never clicked.
+
+**Motion.** Enters by sliding up: the "Restore" leaf at y 703 → 686 → 671 → 663 → 660 → 659 in 50 ms steps, so about **250 ms**, from about 0.5–0.7 s after the click. Exit: the leaf shrinks 67 → 64 px wide over about 250 ms, then the toast is gone.
+
+| Case | Visible from | Exit starts | Gone |
+|---|---|---|---|
+| Pointer parked at (1500, 120) from the click on | 0.67 s | **5.67 s** | 5.92 s |
+| Pointer moved onto "Restore" at about 1.5 s and held there | 0.48 s | still on screen at 26.0 s (pointer still on it) | — |
+| … then pointer moved away at **26.0 s** | | **30.0 s** (4.0 s after leaving) | 30.13 s |
+
+So the toast lives about **5 s** after it appears, **hover pauses the timer**, and leaving resumes it with the time that was left (about 1 s had passed before the hover, about 4 s ran after). Research 35's 11.7 s had the pointer on "Restore" only for 0.8 s, so it does not fit this; that run was not repeated.
+A second visible text "1 block deleted" exists in a 1x1 live region next to the off-screen "Moved to Trash" alert (screen-reader only).
+
+## 7. Place editor after a pick, light (item 2)
+
+R14 row F2, property **Place**, search "Paris", click "Paris, Ile-de-France, France". Note: while results show, **"Current Location" is the highlighted row** by default (Enter would pick it; not pressed). The window was set to **1400x717** with `playwright-cli resize` (it emulates the viewport: `innerWidth` read back 1400, `outerWidth` stayed 1512), then back to 1512 (read back).
+
+| Part (view state after the pick) | Light |
+|---|---|
+| Popover | bg rgb(255, 255, 255), radius **6px**, shadow `rgba(25,25,25,0.05) 0 20px 24px 0, rgba(25,25,25,0.027) 0 5px 8px 0, rgba(42,28,0,0.07) 0 0 0 1px` |
+| Name chip `"Edit place name"` | 191.7x20, radius 4px, ink rgb(44, 44, 43); hover ≈ rgba(33, 27, 23, 0.051) |
+| **×** `"Clear location field"` | 20x20, radius 4px, transparent; `xMarkFill` 14px, **fill rgb(142, 139, 134)**; hover bg `color(srgb 0.129412 0.105882 0.0901961 / 0.0509804)`, glyph unchanged |
+| Map | `CANVAS[role=region][aria-label=Map]`, 168 tall; its wrapper radius **6px**, `overflow: hidden`; inset **4px** on every side |
+| Pin | `"Map marker"` 22x31.5, svg 22x26: outline path fill **rgb(255, 255, 255)** (`var(--c-bacPri)`, the page bg), body **rgb(35, 131, 226)** (`#2383E2`) |
+| **"Open in Google Maps"** | `A[role=link]` 24x24, radius 6px, **bg rgb(255, 255, 255)**, shadow `rgba(25,25,25,0.027) 0 8px 12px 0, rgba(25,25,25,0.027) 0 2px 6px 0, rgba(42,28,0,0.07) 0 0 0 1px`; `maps` glyph 16px, **fill rgb(142, 139, 134)**; ink rgb(44, 44, 43). Placed **8px** from the map's right edge and **10px** from its bottom. Hover bg **`color(srgb 0.956863 0.952941 0.952941)` ≈ rgb(244, 243, 243)** (opaque), shadow and glyph unchanged. Not clicked. |
+
+Research 35 read this button in dark as bg rgb(25, 25, 25) (the dark page bg), so it follows the page background, with a raised shadow in light.
+
+**Width** (popover = the property value column):
+
+| Where | Window | Peek box | Popover | Map |
+|---|---|---|---|---|
+| Side peek | 1400 | 756 wide (x 644) | **435** at x 889 | **427** (= 435 − 8) |
+| Center peek | 1400 | 960x573 at (220, 72) | **539** at x 515 | **531** (= 539 − 8) |
+| Center peek | 1512 | 960x573 at (276, 72) | 539 at x 571 | 531 |
+| Side peek | 1512 (research 35 §9) | 756 | 435 | 427 |
+
+So **map width = editor width − 8** in both peeks (4px inset each side), and neither peek changes width between 1400 and 1512. The peek was switched with the peek header's `"Switch peek mode"` › Center peek (this also set the Table view to open in center peek; scratch only).

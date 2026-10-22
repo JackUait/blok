@@ -1051,6 +1051,7 @@
   "tools.database.commentPlaceholder": "Přidat komentář…",
   "tools.database.commentSend": "Odeslat komentář",
   "tools.database.commentJustNow": "Právě teď",
+  "tools.database.feedJustNow": "Právě teď",
   "tools.database.commentEdited": "(upraveno)",
   "tools.database.commentResolve": "Vyřešit",
   "tools.database.commentMoreActions": "Další akce",

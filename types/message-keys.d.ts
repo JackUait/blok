@@ -813,6 +813,7 @@ export type BlokMessageKey =
   | 'tools.database.feedCommentReplies_one'
   | 'tools.database.feedCommentReplies_other'
   | 'tools.database.feedCreatedAt'
+  | 'tools.database.feedJustNow'
   | 'tools.database.feedReact'
   | 'tools.database.feedReactedWith'
   | 'tools.database.filesAdd'

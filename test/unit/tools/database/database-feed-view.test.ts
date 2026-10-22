@@ -86,6 +86,79 @@ describe('DatabaseFeedView', () => {
     expect(el.querySelector('[data-blok-database-feed-time]')?.textContent).toBe(shown);
   });
 
+  // research/36 §10: under a minute "Just now", then 1m…59m, then 1h; the age is rounded down.
+  it.each([[0, 'tools.database.feedJustNow'], [59_000, 'tools.database.feedJustNow'], [60_000, '1m'], [3_599_000, '59m'], [3_600_000, '1h']])(
+    'writes a post %ims old as %s', (age, shown) => {
+      const el = render({ rows: [{ ...rows[0], meta: { createdBy: 'u1', createdAt: Date.now() - age } }], total: 1 });
+
+      expect(el.querySelector('[data-blok-database-feed-time]')?.textContent).toBe(shown);
+    },
+  );
+
+  // research/36 §10: Notion re-reads the time every 30 s with the page left open.
+  describe('live age', () => {
+    const now = Date.parse('2026-10-22T09:35:00Z');
+    const live = (age: number): { feed: DatabaseFeedView; time: () => string | null | undefined } => {
+      const feed = new DatabaseFeedView({
+        view, schema, total: 1, titlePropertyId: 'p-title', locale: 'en-US',
+        rows: [{ ...rows[0], meta: { createdBy: 'u1', createdAt: now - age } }],
+        i18n: { t: (key: string) => key },
+        bodyOf: () => [],
+        handlers: { openRow, loadMore: vi.fn() },
+      });
+      const el = feed.createView();
+
+      document.body.appendChild(el);
+
+      return { feed, time: () => el.querySelector('[data-blok-database-feed-time]')?.textContent };
+    };
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(now);
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('updates the shown age on a 30 s tick without a redraw', () => {
+      const { feed, time } = live(55_000);
+
+      expect(time()).toBe('tools.database.feedJustNow');
+      vi.advanceTimersByTime(29_999);
+      expect(time()).toBe('tools.database.feedJustNow');
+      vi.advanceTimersByTime(1);
+      expect(time()).toBe('1m');
+      vi.advanceTimersByTime(3_540_000);
+      expect(time()).toBe('1h');
+      feed.destroy();
+    });
+
+    it('runs one timer per view and stops it on destroy', () => {
+      const base = vi.getTimerCount();
+      const { feed, time } = live(55_000);
+
+      expect(vi.getTimerCount()).toBe(base + 1);
+      feed.destroy();
+      expect(vi.getTimerCount()).toBe(base);
+      vi.advanceTimersByTime(60_000);
+      expect(time()).toBe('tools.database.feedJustNow');
+    });
+
+    it('starts no timer when no card shows a time', () => {
+      const base = vi.getTimerCount();
+      const feed = new DatabaseFeedView({
+        view, schema, rows: [rows[1]], total: 1, titlePropertyId: 'p-title', locale: 'en-US',
+        i18n: { t: (key: string) => key }, bodyOf: () => [], handlers: { openRow, loadMore: vi.fn() },
+      });
+
+      feed.createView();
+      expect(vi.getTimerCount()).toBe(base);
+      feed.destroy();
+    });
+  });
+
   // research/35 §19: hovering "31m" shows "Created October 22, 2026 at 5:43:51 AM".
   it('the post time hints when the page was made, to the second, after the hint delay', () => {
     destroyTooltip();

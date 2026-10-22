@@ -1051,6 +1051,7 @@
   "tools.database.commentPlaceholder": "Pievienot komentāru…",
   "tools.database.commentSend": "Nosūtīt komentāru",
   "tools.database.commentJustNow": "Tikko",
+  "tools.database.feedJustNow": "Tikko",
   "tools.database.commentEdited": "(rediģēts)",
   "tools.database.commentResolve": "Atrisināt",
   "tools.database.commentMoreActions": "Papildu darbības",

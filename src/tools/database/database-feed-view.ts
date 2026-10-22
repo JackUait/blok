@@ -113,14 +113,19 @@ const levelOf = (block: BodyBlock): string => {
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
 
+/** research/36 §10: Notion re-reads every byline age on a 30 s tick. */
+const AGE_TICK_MS = 30_000;
+
 /**
- * research/35 §19: "31m" for a post half an hour old, research/33 "5h". Older
- * posts keep "Yesterday" / "3 days ago"; a post under a minute old is unmeasured.
+ * research/36 §10: "Just now" under a minute, then "1m" … "59m", then "1h",
+ * floored; research/33 "5h". Older posts keep "Yesterday" / "3 days ago"
+ * (when hours turn into a date is unmeasured).
  */
-const feedAge = (at: number, locale: string): string => {
+const feedAge = (at: number, locale: string, justNow: string): string => {
   const age = Date.now() - at;
 
   if (age < 0 || age >= 24 * HOUR_MS) return formatRelativeStamp(at, locale, { timeFormat: 'hidden' });
+  if (age < MINUTE_MS) return justNow;
   const unit = age < HOUR_MS ? 'minute' : 'hour';
 
   return new Intl.NumberFormat(locale, { style: 'unit', unit, unitDisplay: 'narrow' }).format(Math.floor(age / (unit === 'minute' ? MINUTE_MS : HOUR_MS)));
@@ -129,6 +134,9 @@ const feedAge = (at: number, locale: string): string => {
 export class DatabaseFeedView implements DatabaseViewRenderer {
   private readonly options: FeedViewOptions;
   private readonly cleanups: Array<() => void> = [];
+  /** Every shown byline age, re-read by one shared timer. */
+  private readonly ages = new Map<HTMLElement, number>();
+  private ageTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(options: FeedViewOptions) {
     this.options = options;
@@ -160,7 +168,10 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
   }
 
   removeRow(wrapper: HTMLElement, rowId: string): void {
-    wrapper.querySelector(`[data-blok-database-feed-card][data-row-id="${CSS.escape(rowId)}"]`)?.remove();
+    const card = wrapper.querySelector(`[data-blok-database-feed-card][data-row-id="${CSS.escape(rowId)}"]`);
+
+    [...this.ages.keys()].filter((el) => card?.contains(el) === true).forEach((el) => this.ages.delete(el));
+    card?.remove();
   }
 
   updateRowTitle(wrapper: HTMLElement, rowId: string, title: string): void {
@@ -171,6 +182,9 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
 
   destroy(): void {
     this.cleanups.splice(0).forEach((cleanup) => cleanup());
+    if (this.ageTimer !== null) clearInterval(this.ageTimer);
+    this.ageTimer = null;
+    this.ages.clear();
   }
 
   private createCard(row: DatabaseRow): HTMLElement {
@@ -346,12 +360,24 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
       const time = document.createElement('span');
 
       time.setAttribute('data-blok-database-feed-time', '');
-      time.textContent = feedAge(at, this.options.locale);
+      time.textContent = this.age(at);
+      this.ages.set(time, at);
+      this.ageTimer ??= setInterval(() => this.refreshAges(), AGE_TICK_MS);
       onHover(time, this.createdHint(at));
       byline.appendChild(time);
     }
 
     return byline;
+  }
+
+  private refreshAges(): void {
+    for (const [el, created] of this.ages) {
+      el.textContent = this.age(created);
+    }
+  }
+
+  private age(at: number): string {
+    return feedAge(at, this.options.locale, this.options.i18n.t('tools.database.feedJustNow'));
   }
 
   /** research/35 §19: "Created October 22, 2026 at 5:43:51 AM". */

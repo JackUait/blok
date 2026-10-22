@@ -1051,6 +1051,7 @@
   "tools.database.commentPlaceholder": "เพิ่มความคิดเห็น…",
   "tools.database.commentSend": "ส่งความคิดเห็น",
   "tools.database.commentJustNow": "เมื่อสักครู่",
+  "tools.database.feedJustNow": "เมื่อสักครู่",
   "tools.database.commentEdited": "(แก้ไขแล้ว)",
   "tools.database.commentResolve": "แก้ไขเรียบร้อย",
   "tools.database.commentMoreActions": "การดำเนินการเพิ่มเติม",

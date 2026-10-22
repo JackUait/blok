@@ -1051,6 +1051,7 @@
   "tools.database.commentPlaceholder": "Opmerking toevoegen…",
   "tools.database.commentSend": "Opmerking verzenden",
   "tools.database.commentJustNow": "Zojuist",
+  "tools.database.feedJustNow": "Zojuist",
   "tools.database.commentEdited": "(bewerkt)",
   "tools.database.commentResolve": "Oplossen",
   "tools.database.commentMoreActions": "Meer acties",

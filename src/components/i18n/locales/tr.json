@@ -1051,6 +1051,7 @@
   "tools.database.commentPlaceholder": "Yorum ekle…",
   "tools.database.commentSend": "Yorumu gönder",
   "tools.database.commentJustNow": "Az önce",
+  "tools.database.feedJustNow": "Az önce",
   "tools.database.commentEdited": "(düzenlendi)",
   "tools.database.commentResolve": "Çözümle",
   "tools.database.commentMoreActions": "Diğer eylemler",

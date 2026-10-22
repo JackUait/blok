@@ -1051,6 +1051,7 @@
   "tools.database.commentPlaceholder": "ເພີ່ມຄຳເຫັນ…",
   "tools.database.commentSend": "ສົ່ງຄຳເຫັນ",
   "tools.database.commentJustNow": "ຫາກໍ່ນີ້",
+  "tools.database.feedJustNow": "ຫາກໍ່ນີ້",
   "tools.database.commentEdited": "(ແກ້ໄຂແລ້ວ)",
   "tools.database.commentResolve": "ໝາຍວ່າແກ້ໄຂແລ້ວ",
   "tools.database.commentMoreActions": "ຄຳສັ່ງເພີ່ມເຕີມ",

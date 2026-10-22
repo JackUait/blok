@@ -1051,6 +1051,7 @@
   "tools.database.commentPlaceholder": "添加评论…",
   "tools.database.commentSend": "发送评论",
   "tools.database.commentJustNow": "刚刚",
+  "tools.database.feedJustNow": "刚刚",
   "tools.database.commentEdited": "（已编辑）",
   "tools.database.commentResolve": "解决",
   "tools.database.commentMoreActions": "更多操作",

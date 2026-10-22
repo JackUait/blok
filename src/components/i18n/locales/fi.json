@@ -1051,6 +1051,7 @@
   "tools.database.commentPlaceholder": "Lisää kommentti…",
   "tools.database.commentSend": "Lähetä kommentti",
   "tools.database.commentJustNow": "Juuri nyt",
+  "tools.database.feedJustNow": "Juuri nyt",
   "tools.database.commentEdited": "(muokattu)",
   "tools.database.commentResolve": "Ratkaise",
   "tools.database.commentMoreActions": "Lisää toimintoja",

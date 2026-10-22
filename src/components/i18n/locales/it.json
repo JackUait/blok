@@ -1051,6 +1051,7 @@
   "tools.database.commentPlaceholder": "Aggiungi un commento…",
   "tools.database.commentSend": "Invia commento",
   "tools.database.commentJustNow": "Proprio ora",
+  "tools.database.feedJustNow": "Proprio ora",
   "tools.database.commentEdited": "(modificato)",
   "tools.database.commentResolve": "Risolvi",
   "tools.database.commentMoreActions": "Altre azioni",

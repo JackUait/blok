@@ -1051,6 +1051,7 @@
   "tools.database.commentPlaceholder": "კომენტარის დამატება…",
   "tools.database.commentSend": "კომენტარის გაგზავნა",
   "tools.database.commentJustNow": "ახლახან",
+  "tools.database.feedJustNow": "ახლახან",
   "tools.database.commentEdited": "(რედაქტირებული)",
   "tools.database.commentResolve": "გადაწყვეტა",
   "tools.database.commentMoreActions": "მეტი მოქმედება",

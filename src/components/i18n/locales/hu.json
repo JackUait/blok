@@ -1051,6 +1051,7 @@
   "tools.database.commentPlaceholder": "Megjegyzés hozzáadása…",
   "tools.database.commentSend": "Megjegyzés küldése",
   "tools.database.commentJustNow": "Az imént",
+  "tools.database.feedJustNow": "Az imént",
   "tools.database.commentEdited": "(szerkesztve)",
   "tools.database.commentResolve": "Megoldás",
   "tools.database.commentMoreActions": "További műveletek",

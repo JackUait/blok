@@ -1051,6 +1051,7 @@
   "tools.database.commentPlaceholder": "Добавете коментар…",
   "tools.database.commentSend": "Изпрати коментара",
   "tools.database.commentJustNow": "Току-що",
+  "tools.database.feedJustNow": "Току-що",
   "tools.database.commentEdited": "(редактиран)",
   "tools.database.commentResolve": "Разреши",
   "tools.database.commentMoreActions": "Още действия",

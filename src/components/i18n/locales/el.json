@@ -1051,6 +1051,7 @@
   "tools.database.commentPlaceholder": "Προσθήκη σχολίου…",
   "tools.database.commentSend": "Αποστολή σχολίου",
   "tools.database.commentJustNow": "Μόλις τώρα",
+  "tools.database.feedJustNow": "Μόλις τώρα",
   "tools.database.commentEdited": "(επεξεργάστηκε)",
   "tools.database.commentResolve": "Επίλυση",
   "tools.database.commentMoreActions": "Περισσότερες ενέργειες",

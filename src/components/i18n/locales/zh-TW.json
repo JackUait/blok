@@ -1051,6 +1051,7 @@
   "tools.database.commentPlaceholder": "新增留言…",
   "tools.database.commentSend": "傳送留言",
   "tools.database.commentJustNow": "剛剛",
+  "tools.database.feedJustNow": "剛剛",
   "tools.database.commentEdited": "（已編輯）",
   "tools.database.commentResolve": "解決",
   "tools.database.commentMoreActions": "更多動作",

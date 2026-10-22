@@ -1051,6 +1051,7 @@
   "tools.database.commentPlaceholder": "Lägg till en kommentar…",
   "tools.database.commentSend": "Skicka kommentar",
   "tools.database.commentJustNow": "Just nu",
+  "tools.database.feedJustNow": "Just nu",
   "tools.database.commentEdited": "(redigerad)",
   "tools.database.commentResolve": "Lös",
   "tools.database.commentMoreActions": "Fler åtgärder",

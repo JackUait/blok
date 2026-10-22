@@ -1051,6 +1051,7 @@
   "tools.database.commentPlaceholder": "Сэтгэгдэл нэмэх…",
   "tools.database.commentSend": "Сэтгэгдэл илгээх",
   "tools.database.commentJustNow": "Дөнгөж сая",
+  "tools.database.feedJustNow": "Дөнгөж сая",
   "tools.database.commentEdited": "(засварласан)",
   "tools.database.commentResolve": "Шийдвэрлэх",
   "tools.database.commentMoreActions": "Бусад үйлдлүүд",

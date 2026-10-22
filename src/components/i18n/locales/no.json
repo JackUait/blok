@@ -1051,6 +1051,7 @@
   "tools.database.commentPlaceholder": "Legg til en kommentar…",
   "tools.database.commentSend": "Send kommentar",
   "tools.database.commentJustNow": "Akkurat nå",
+  "tools.database.feedJustNow": "Akkurat nå",
   "tools.database.commentEdited": "(redigert)",
   "tools.database.commentResolve": "Løs",
   "tools.database.commentMoreActions": "Flere handlinger",

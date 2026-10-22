@@ -586,7 +586,8 @@ describe('row page layout through the database tool', () => {
       (blocks[0] as { content: string[] }).content.push('tB');
       await make(blocks);
       await click(q('[data-blok-element][data-blok-id="db"] [data-blok-testid="database-toolbar-new-menu"]'));
-      await click(item('template-tB'));
+      // A click on the row itself makes a page from the template (a7407fba); "…" opens Edit.
+      await click(item('template-tB')?.querySelector('[data-blok-popover-item-more]') ?? null);
       await click(item('template-tB-edit'));
 
       expect(prompt()?.textContent).toBe('Press Enter to continue with an empty page');

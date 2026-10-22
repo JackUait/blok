@@ -206,4 +206,21 @@ describe('the agent edits a sub-page through the host page documents', () => {
     expect(written.isError).toBe(false);
     expect(pages.get('made')?.title).toBe('Fresh');
   });
+
+  it('a pageId the agent wrote in an earlier turn still does not open that document', async () => {
+    const pages = new Map<string, OutputData>([['sub', { blocks: [] }], ['other', { title: 'Private', blocks: [] }]]);
+    const editor = await boot(host(pages));
+    const first = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+
+    await first.execute({ commands: [{ name: 'block.update', args: { id: 'pg', data: { pageId: 'other' } } }] });
+    first.end();
+    const second = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const read = await second.call('blok_read', { page: 'pg' });
+    const written = await second.call('blok_execute', { page: 'pg', commands: [{ name: 'doc.setTitle', args: { title: 'Taken' } }] });
+
+    second.end();
+    expect(read.content).not.toContain('Private');
+    expect(written.isError).toBe(true);
+    expect(pages.get('other')?.title).toBe('Private');
+  });
 });

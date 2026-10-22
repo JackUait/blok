@@ -178,7 +178,7 @@ Each call loads the page fresh and saves the whole document, so the host should 
 
 Access stays the host's job. `loadDocument` and `saveDocument` must check that the current user may read and write that page, as `resolve` does. Blok narrows what the model can reach, but it does not authorize:
 
-- A call opens only a page block whose `pageId` it had when the turn began, or one the host's `create` gave in this turn. A `pageId` the model wrote itself is refused.
+- A `pageId` an agent wrote into a page block is never opened, in that turn or a later one, unless the host's `create` gave it.
 - A page block that points at the open document (`documentId`) is refused.
 - In read-only mode, and for a read-only page block, the agent can read a sub-page but not write it.
 

@@ -53,6 +53,8 @@ export class EditorApplier implements AgentApplier {
       mergeSteps?: 'batch' | 'turn';
       /** Data a tool's prepareInsert answered, such as the pageId a host's create gave. */
       onPrepared?(type: string, data: Record<string, unknown>): void;
+      /** A pageId this session writes into a page block. */
+      onPagePointed?(pageId: string): void;
     }
   ) {
     this.counter = createRevisionCounter(Blok);
@@ -135,6 +137,7 @@ export class EditorApplier implements AgentApplier {
     if (plan.edits.length === 0) {
       return;
     }
+    this.reportPagePointers(plan.edits);
 
     const { BlockManager, YjsManager } = this.Blok;
     const tag = { actorId: this.options.actor.id, sessionId: this.options.sessionId };
@@ -226,6 +229,35 @@ export class EditorApplier implements AgentApplier {
     await this.settle();
 
     return rolledBack;
+  }
+
+  private reportPagePointers(edits: readonly Edit[]): void {
+    const report = this.options.onPagePointed;
+
+    if (report === undefined) {
+      return;
+    }
+    const pointer = (type: string | undefined, data: Record<string, unknown>): void => {
+      if (type === 'page' && typeof data.pageId === 'string') {
+        report(data.pageId);
+      }
+    };
+    const walk = (block: PlannedBlock): void => {
+      pointer(block.type, block.data);
+      block.children.forEach(walk);
+    };
+
+    for (const edit of edits) {
+      if (edit.op === 'insert') {
+        walk(edit.block);
+      }
+      if (edit.op === 'replaceType') {
+        pointer(edit.type, edit.data);
+      }
+      if (edit.op === 'setData') {
+        pointer(this.Blok.BlockManager.getBlockById(edit.id)?.name, edit.patch);
+      }
+    }
   }
 
   public lastStepToken(): CaretHistoryEntry | undefined {

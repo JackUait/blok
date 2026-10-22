@@ -93,10 +93,10 @@ export class AgentAPI extends Module {
   private pageDocs: PageDocuments | null | undefined;
   /** Each sub-page the open turn saved, as it was before the turn's first save. Discard writes them back. */
   private turnPages = new Map<string, OutputData>();
-  /** Page block id → pageId when the turn began. A pageId the model wrote itself could name any document. */
-  private startPageIds = new Map<string, unknown>();
-  /** PageIds the host's create gave in this turn. */
-  private hostPageIds = new Set<string>();
+  /** PageIds an agent wrote into a page block. Kept across turns: such an id could name any document. */
+  private readonly agentPageIds = new Set<string>();
+  /** PageIds the host's create gave. They stay trusted though the agent's insert writes them too. */
+  private readonly hostPageIds = new Set<string>();
   /** Who page writes are stamped with: the open turn's agent. */
   private actor: AgentActor = { id: 'agent', name: 'Agent', kind: 'agent' };
 
@@ -387,8 +387,8 @@ export class AgentAPI extends Module {
     if (block.name !== 'page' || typeof pageId !== 'string') {
       throw failure('INVALID_ARGS', `Block "${blockId}" is not a page block with a pageId.`, { path: '/page', details: { blockId } });
     }
-    if (this.startPageIds.get(blockId) !== pageId && !this.hostPageIds.has(pageId)) {
-      throw failure('INVALID_ARGS', `Block "${blockId}" points at a page this turn did not open or create. Use a page block from blok_read.`, { path: '/page', details: { blockId } });
+    if (this.agentPageIds.has(pageId) && !this.hostPageIds.has(pageId)) {
+      throw failure('INVALID_ARGS', `Block "${blockId}" points at a page an agent set, not one the host created. It cannot be opened.`, { path: '/page', details: { blockId } });
     }
     const session = await docs.open(pageId, actor);
     const getById = (id: string): Block | undefined => this.Blok.BlockManager.getBlockById(id);
@@ -410,10 +410,6 @@ export class AgentAPI extends Module {
 
     this.actor = { ...identity, kind: 'agent' };
     this.turnPages = new Map();
-    this.hostPageIds = new Set();
-    this.startPageIds = new Map(this.Blok.BlockManager.blocks
-      .filter((block) => block.name === 'page')
-      .map((block) => [block.id, block.preservedData.pageId]));
     const session = createEditorAgentSession(
       this.Blok,
       { ...identity, kind: 'agent' },
@@ -427,6 +423,7 @@ export class AgentAPI extends Module {
             this.hostPageIds.add(data.pageId);
           }
         },
+        onPagePointed: (pageId) => this.agentPageIds.add(pageId),
       }
     );
     this.turnLog = { agentName: identity.name, changed: new Set<string>() };

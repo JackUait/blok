@@ -54,6 +54,7 @@ export const createEditorAgentSession = (
     attributeLastEditedBy?: boolean;
     services?: Partial<Record<HostService, unknown>>;
     onPrepared?(type: string, data: Record<string, unknown>): void;
+    onPagePointed?(pageId: string): void;
   } = {}
 ): AgentSession => {
   const id = `editor-session-${++editorSessions.count}`;
@@ -67,6 +68,7 @@ export const createEditorAgentSession = (
     actor, sessionId: id, turnId: options.turnId ?? id, attributeLastEditedBy: options.attributeLastEditedBy,
     mergeSteps: options.mergeSteps ?? 'batch',
     onPrepared: options.onPrepared,
+    onPagePointed: options.onPagePointed,
   });
   const log: CommandLogEntry[] = [];
   const state: {

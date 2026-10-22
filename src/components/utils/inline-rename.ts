@@ -5,7 +5,8 @@
  * Enter/blur with a single-commit guard, cancels on Escape (restoring the
  * original value) and — critically — restores focus to the element that is
  * swapped back in instead of dropping it to `<body>` (which is what happens
- * when `replaceWith` runs on the currently focused input).
+ * when `replaceWith` runs on the currently focused input). An Escape commit
+ * (`escapeCommits`) is the exception: it leaves nothing focused.
  *
  * Consolidates three previously divergent copies in the database tool
  * (column header, view tab and board card rename).
@@ -25,7 +26,7 @@ export interface StartInlineRenameParams {
   onCommit: (value: string) => void;
   /** Commit an emptied input as '' instead of falling back to `currentValue`. */
   allowEmpty?: boolean;
-  /** Escape commits like Enter instead of cancelling. */
+  /** Escape commits like Enter instead of cancelling, and leaves nothing focused. */
   escapeCommits?: boolean;
   /** Called once when the rename is cancelled via Escape. */
   onCancel?: () => void;
@@ -68,13 +69,13 @@ export function startInlineRename(params: StartInlineRenameParams): void {
 
   const guard = { done: false };
 
-  const swapBack = (value: string): void => {
+  const swapBack = (value: string, keepFocus = true): void => {
     const restored = buildRestored(value);
     // Capture focus ownership BEFORE the swap: only pull focus back to the
     // restored element when the input still owns it (Enter / programmatic
     // commit). If focus already moved elsewhere (blur onto another control),
     // leave it there.
-    const shouldRestoreFocus = document.activeElement === input;
+    const shouldRestoreFocus = keepFocus && document.activeElement === input;
 
     input.replaceWith(restored);
 
@@ -86,7 +87,7 @@ export function startInlineRename(params: StartInlineRenameParams): void {
     }
   };
 
-  const commit = (): void => {
+  const commit = (keepFocus = true): void => {
     if (guard.done) {
       return;
     }
@@ -95,7 +96,7 @@ export function startInlineRename(params: StartInlineRenameParams): void {
     const trimmed = input.value.trim();
     const resolved = allowEmpty ? trimmed : trimmed || currentValue;
 
-    swapBack(resolved);
+    swapBack(resolved, keepFocus);
     onCommit(resolved);
   };
 
@@ -109,7 +110,9 @@ export function startInlineRename(params: StartInlineRenameParams): void {
     onCancel?.();
   };
 
-  input.addEventListener('blur', commit);
+  const commitOnBlur = (): void => commit();
+
+  input.addEventListener('blur', commitOnBlur);
   input.addEventListener('keydown', (event: KeyboardEvent) => {
     event.stopPropagation();
 
@@ -118,10 +121,14 @@ export function startInlineRename(params: StartInlineRenameParams): void {
     if (event.isComposing || event.keyCode === 229) {
       return;
     }
-    if (event.key === 'Enter' || (event.key === 'Escape' && escapeCommits)) {
+    if (event.key === 'Enter') {
       commit();
+    } else if (event.key === 'Escape' && escapeCommits) {
+      input.removeEventListener('blur', commitOnBlur);
+      input.blur();
+      commit(false);
     } else if (event.key === 'Escape') {
-      input.removeEventListener('blur', commit);
+      input.removeEventListener('blur', commitOnBlur);
       cancel();
     }
   });

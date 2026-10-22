@@ -219,6 +219,22 @@ describe('startInlineRename', () => {
     expect(container.querySelector('div[data-title]')?.textContent).toBe('Done');
   });
 
+  // research/36 §4: Notion's card rename leaves nothing focused after Escape.
+  it('leaves nothing focused after an Escape commit', () => {
+    const { container, title } = makeTitle('Todo');
+
+    startInlineRename({ target: title, currentValue: 'Todo', label: 'Rename card', escapeCommits: true, onCommit: vi.fn(), buildRestored });
+    const input = container.querySelector('input');
+
+    if (input === null) {
+      throw new Error('no input');
+    }
+    simulateKeydown(input, 'Escape');
+
+    expect(document.body).toHaveFocus();
+    expect(container.querySelector('div[data-title]')?.hasAttribute('tabindex')).toBe(false);
+  });
+
   describe('while an IME composes', () => {
     const open = (escapeCommits: boolean): { input: HTMLInputElement; onCommit: ReturnType<typeof vi.fn>; onCancel: ReturnType<typeof vi.fn> } => {
       const { container, title } = makeTitle('Todo');

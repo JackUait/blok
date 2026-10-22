@@ -4519,6 +4519,32 @@ describe('DatabaseTool', () => {
       tool.destroy();
       document.body.innerHTML = '';
     });
+    // research/36 §4: Escape saves the title, nothing keeps focus and no card is selected.
+    it('Escape in a card rename saves, drops focus to the page and selects no card', async () => {
+      const childBlocks = [createMockRowBlock({ id: 'row-a', properties: { 'prop-title': 'F1', 'prop-status': 'opt-todo' }, position: 'a0' })];
+      const tool = new DatabaseTool(createDatabaseOptions({
+        views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', filters: [], visibleProperties: [], sorts: [] }],
+      }, {}, { childBlocks }));
+      const element = tool.render();
+
+      document.body.appendChild(element);
+      tool.rendered();
+      queryAllByData(element, 'data-row-id', 'row-a').find((el) => el.hasAttribute('data-blok-database-edit-card'))?.click();
+      const input = queryByData(element, 'data-blok-database-card-title-input');
+
+      if (!(input instanceof HTMLInputElement)) throw new Error('no title input');
+      input.value = 'F1X';
+      fireEvent.keyDown(input, { key: 'Escape' });
+      fireEvent.keyUp(document.body, { key: 'Escape' });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(document.body).toHaveFocus();
+      expect(queryAllByData(element, 'data-blok-database-card-title').map((el) => el.textContent)).toEqual(['F1X']);
+      expect(element.querySelector('[data-blok-database-row-selected]')).toBeNull();
+
+      tool.destroy();
+      document.body.innerHTML = '';
+    });
   });
 
   describe('board load limit (research/08: 10/25/50/100, board default 25)', () => {

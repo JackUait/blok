@@ -19,7 +19,7 @@ export const bulkEditableProperties = (properties: PropertyDefinition[]): Proper
 
 /**
  * What a bulk editor opens on. A date or a text: the first selected row's
- * (research/21 §6, research/35 §3). Else empty, so no row's value shows as if
+ * (research/21 §6, research/35 §3). `rows` come in view order: first is the top row. Else empty, so no row's value shows as if
  * all had it. A text editor closed with its text unchanged writes nothing.
  */
 export const bulkStartValue = (property: PropertyDefinition, rows: Array<DatabaseRow | undefined>): PropertyValue => {

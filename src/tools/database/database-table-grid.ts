@@ -410,7 +410,7 @@ export class DatabaseTableGrid {
     return rowSpan.flatMap((rowId) => colSpan.map((propertyId) => ({ rowId, propertyId })));
   }
 
-  /** Row ids the selection covers, whole rows or the rows of a cell range. */
+  /** Row ids the selection covers, whole rows or the rows of a cell range, top to bottom. */
   selectedRowIds(): string[] {
     const selection = this.state.selection;
 
@@ -418,7 +418,9 @@ export class DatabaseTableGrid {
       return [];
     }
     if (selection.kind === 'rows') {
-      return selection.rowIds;
+      const picked = new Set(selection.rowIds);
+
+      return this.rowIds().filter((id) => picked.has(id));
     }
 
     return [...new Set(this.rangeRefs().map((ref) => ref.rowId))];

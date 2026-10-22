@@ -9681,7 +9681,7 @@ export class DatabaseTool implements BlockTool {
 
   private openBulkEditor(propertyId: string, anchor: HTMLElement): void {
     const property = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).find((p) => p.id === propertyId);
-    const rowIds = [...this.rowSelection];
+    const rowIds = this.inViewOrder([...this.rowSelection]);
 
     if (property === undefined || rowIds.length === 0 || this.readOnly) {
       return;
@@ -9854,6 +9854,14 @@ export class DatabaseTool implements BlockTool {
     }
 
     return this.model.queryRows({ view }).rows;
+  }
+
+  /** `rowIds` top to bottom as the view draws them; a row the view lacks goes last. */
+  private inViewOrder(rowIds: string[]): string[] {
+    const order = new Map(this.viewRowOrder().map((row, index) => [row.id, index]));
+    const rank = (id: string): number => order.get(id) ?? order.size;
+
+    return [...rowIds].sort((a, b) => rank(a) - rank(b));
   }
 
   private adjacentRow(rowId: string, direction: 1 | -1): DatabaseRow | undefined {

@@ -242,6 +242,19 @@ describe('Escape in bulk editors (research/31 §4b)', () => {
       .toEqual(['sameX', 'sameX', 'sameX']);
   });
 
+  // The first row is the top one on screen, not the first one ticked.
+  it.each(VIEWS)('%s: a Text bulk edit ticked bottom to top opens on the top row\'s value', async (_name, view, rowSelector) => {
+    const blocks = doc(view);
+
+    (blocks[2].data as { properties: Record<string, unknown> }).properties.notes = 'beta';
+    (blocks[3].data as { properties: Record<string, unknown> }).properties.notes = 'gamma';
+    await make(blocks);
+    await selectRows(rowSelector, 'r3', 'r2', 'r1');
+    await openBulk('notes');
+
+    expect(document.querySelector<HTMLTextAreaElement>('[data-blok-database-cell-input]')?.value).toBe('same');
+  });
+
   // Opening on the first row's value must not write it over the others when nothing was typed.
   it.each(VIEWS)('%s: a Text bulk edit on mixed values closed without typing changes no row', async (_name, view, rowSelector) => {
     const blocks = doc(view);

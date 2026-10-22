@@ -53,6 +53,9 @@ const doc = (view: Record<string, unknown>, date: Record<string, unknown> = {}, 
   { id: 'r3', type: 'database-row', parent: 'db', data: { properties: { t: 'Echo', s: 'o1', due: null }, position: 'a2', ...r3 } },
 ];
 
+/** Echo, the row with no date, drawn above Alpha and Delta. */
+const EMPTY_ON_TOP = { position: 'Z0' };
+
 let editor: TestEditor | undefined;
 let holder: HTMLDivElement | undefined;
 
@@ -314,7 +317,7 @@ describe('bulk edit of a date: Remind and the property default', () => {
     ['table', {}, ''],
     ['board', { type: 'board', groupBy: 's' }, '[data-blok-database-card]'],
     ['list', { type: 'list' }, '[data-blok-database-list-row]'],
-  ])('%s: the bulk picker opens on the first selected row\'s date (research/21 §6)', async (_name, view, rowSelector) => {
+  ])('%s: the bulk picker opens on the top selected row\'s date, whatever the ticking order (research/21 §6)', async (_name, view, rowSelector) => {
     await make(doc(view));
     if (rowSelector === '') {
       await selectTableRows('r2', 'r1');
@@ -324,8 +327,8 @@ describe('bulk edit of a date: Remind and the property default', () => {
     }
     await openBulkDue();
 
-    expect(document.querySelector<HTMLInputElement>('[data-blok-database-date-input="start"]')?.value).toMatch(/27/);
-    expect(document.querySelector('[data-blok-database-date-day="2026-10-27"]')?.getAttribute('aria-selected')).toBe('true');
+    expect(document.querySelector<HTMLInputElement>('[data-blok-database-date-input="start"]')?.value).toMatch(/12/);
+    expect(document.querySelector('[data-blok-database-date-day="2026-10-12"]')?.getAttribute('aria-selected')).toBe('true');
   });
 
   it('table: the pre-filled bulk picker still shows the default, and picking that same day writes it to every row with the default', async () => {
@@ -374,7 +377,7 @@ describe('bulk edit of a date: Remind and the property default', () => {
     });
 
     it('bulk: an empty first row writes today 20:00 to every selected row, and one undo takes it back', async () => {
-      await make(doc({}, { defaultReminder: '1_day_before' }));
+      await make(doc({}, { defaultReminder: '1_day_before' }, EMPTY_ON_TOP));
       await selectTableRows('r3', 'r1');
       await openBulkDue();
       await toggleTime();
@@ -402,7 +405,7 @@ describe('bulk edit of a date: Remind and the property default', () => {
 
     // research/35 §3: Notion gave every row today → today here, replacing their own dates. Not copied (data loss).
     it('bulk: an empty first row keeps every selected row\'s date', async () => {
-      await make(doc({}));
+      await make(doc({}, {}, EMPTY_ON_TOP));
       await selectTableRows('r3', 'r1', 'r2');
       await openBulkDue();
       await toggleEnd();
@@ -414,7 +417,7 @@ describe('bulk edit of a date: Remind and the property default', () => {
     });
 
     it('bulk: a day picked after End date is on gives every selected row that range', async () => {
-      await make(doc({}));
+      await make(doc({}, {}, EMPTY_ON_TOP));
       await selectTableRows('r3', 'r1');
       await openBulkDue();
       await toggleEnd();
@@ -425,7 +428,7 @@ describe('bulk edit of a date: Remind and the property default', () => {
     });
 
     it('bulk: Clear on an empty first row still clears every selected row', async () => {
-      await make(doc({}));
+      await make(doc({}, {}, EMPTY_ON_TOP));
       await selectTableRows('r3', 'r1');
       await openBulkDue();
       await click(document.querySelector('[data-blok-database-date-clear]'));
@@ -450,7 +453,7 @@ describe('bulk edit of a date: Remind and the property default', () => {
 
   // research/31 §4b: the field shows today, and nothing is written.
   it('table: a first selected row with no date opens the bulk picker on today, writing nothing', async () => {
-    await make(doc({}));
+    await make(doc({}, {}, EMPTY_ON_TOP));
     await selectTableRows('r3', 'r1');
     await openBulkDue();
 

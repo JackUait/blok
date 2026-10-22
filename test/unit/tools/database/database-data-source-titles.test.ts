@@ -92,6 +92,18 @@ describe('DatabaseTool — "Hide data source titles" (research/23 §10)', () => 
     expect(title(el)?.hidden).toBe(true);
   });
 
+  // research/35 §15: a plain row of the tab's view menu, just before Duplicate.
+  it('sits in the tab\'s view menu, right before Duplicate', () => {
+    const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }]);
+    const { el } = buildDatabase(doc, 'db', data());
+
+    expect(titlesItem(el)).toBeDefined();
+    const names = popovers.items.flat().filter(isMenuItem).map((item) => item.name);
+    const at = names.indexOf('database-view-data-source-titles');
+
+    expect(names[at + 1]).toBe('database-view-duplicate');
+  });
+
   // research/30 B17: switched from one view, the other view's menu then reads "Show".
   it('is one flag for the block: another view\'s menu offers "Show" after hiding from the first', () => {
     const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }]);

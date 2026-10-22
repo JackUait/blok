@@ -623,7 +623,8 @@ class DateEditor {
     options.appendChild(createSwitch('data-blok-database-date-end-toggle', this.t('tools.database.dateEndDate'), this.rangeOn, () => {
       this.rangeOn = !this.rangeOn;
       if (this.rangeOn) {
-        // research/30 B2: an empty cell gets today → today at once. A bulk picker is unmeasured and writes nothing.
+        // research/30 B2: an empty cell gets today → today at once. A bulk picker writes nothing: Notion's
+        // replaced every row's own date (research/35 §3), which loses data.
         if (this.ctx.bulk !== true) this.start ??= { day: toIsoDay(new Date()), time: null };
         this.end = this.start === null ? null : { ...this.start };
         this.rangeTarget = 'end';

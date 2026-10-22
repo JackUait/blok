@@ -400,7 +400,7 @@ describe('bulk edit of a date: Remind and the property default', () => {
       await click(document.querySelector('[data-blok-database-date-end-toggle]'));
     };
 
-    // Unmeasured in Notion: a bulk picker on an empty first row writes nothing.
+    // research/35 §3: Notion gave every row today → today here, replacing their own dates. Not copied (data loss).
     it('bulk: an empty first row keeps every selected row\'s date', async () => {
       await make(doc({}));
       await selectTableRows('r3', 'r1', 'r2');

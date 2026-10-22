@@ -137,6 +137,24 @@ describe('DatabaseTool — a column added from a table view shows in it', () => 
     expect(headerOrder(el)).toContain(id);
   });
 
+  // research/35 §16: hidden in every other layout, not only the board.
+  it('header "+" in the table view leaves the new column hidden in board, list, gallery, calendar and timeline views', () => {
+    const table = tableData();
+    const others = (['board', 'list', 'gallery', 'calendar', 'timeline'] as const).map((type, i) => ({
+      id: type, name: type, type, position: `a${i + 1}`, sorts: [], filters: [], visibleProperties: ['notes'],
+    }));
+    const { tool, el } = build({ ...table, views: [table.views[0], ...others] });
+
+    addFromHeaderPlus(el);
+    const id = newId(tool, el);
+    const saved = tool.save(el);
+    const shownIn = saved.views
+      .filter((view) => view.id !== 'v')
+      .map((view) => [view.type, resolveViewProperties(view, saved.schema).find((p) => p.id === id)?.visible]);
+
+    expect(shownIn).toEqual([['board', false], ['list', false], ['gallery', false], ['calendar', false], ['timeline', false]]);
+  });
+
   it('header "+" on a CSV-imported database shows the new column', () => {
     const imported = csvDatabaseBlocks([['Task', 'Points'], ['Write', '3']], {
       newId: (() => { let n = 0; return () => `csv${n++}`; })(), untitled: 'Column', viewName: 'Table', title: 'Pasted',

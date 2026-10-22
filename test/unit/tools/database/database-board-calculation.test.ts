@@ -119,6 +119,17 @@ describe('board column calculation', () => {
       expect(active(titled(count.children?.items, 'tools.database.calcShowLargeCounts'))).toBe(true);
     });
 
+    // research/35 §7: on a 105-row group the switch is enabled, on by default, and one setting per view.
+    it('keeps the 99+ switch enabled, and a new view starts capped while another keeps its cap off', () => {
+      const count = titled(groupCalculationItems(menu()), 'tools.database.calcCount');
+      const cap = titled(count.children?.items, 'tools.database.calcShowLargeCounts');
+      const off = view({ id: 'v1', groupCalculation: groupCalculationCapped({ fn: 'count', capCounts: true }, false, 'p-name') });
+
+      expect('isDisabled' in cap ? cap.isDisabled : undefined).toBeUndefined();
+      expect(resolveGroupCalculation(off, SCHEMA).capCounts).toBe(false);
+      expect(resolveGroupCalculation(view({ id: 'v2' }), SCHEMA).capCounts).toBe(true);
+    });
+
     // research/22 §5: the switch carries "This improves performance for large databases." under its name.
     it('shows a hint under the 99+ switch', () => {
       const count = titled(groupCalculationItems(menu()), 'tools.database.calcCount');

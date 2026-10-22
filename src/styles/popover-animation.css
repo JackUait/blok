@@ -224,7 +224,7 @@
 
 /* Built utilities are unlayered; beat their active, hover, and focus selectors. */
 [data-blok-popover-items] > [data-blok-popover-item][data-blok-header-level][data-blok-popover-item-active] {
-  color: var(--blok-text-primary);
+  color: var(--blok-popover-item-label-text, var(--blok-text-primary));
   background-color: var(--blok-item-hover-bg);
   box-shadow: inset 0 0 0 1px var(--blok-popover-border);
 }

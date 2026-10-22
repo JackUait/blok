@@ -221,3 +221,24 @@ So, measured: **a hint never appeared for the first option entered from outside 
 S3's first database (one Table view) › View settings › **Lock database** (the row then reads "Unlock database"). After closing View settings: **no tab** is drawn (tabs: none), the database title row shows the title as plain heading text ("New database", primary ink in the screenshot) with a **"🔒 Locked"** label before the toolbar icons; the "Add property" header cell is gone. So a locked one-view database still renders no view tab.
 Side note: after Escape closed View settings, focus went back to the Settings button, which drew a blue focus ring and its "Settings" tooltip without a hover (same as the template "…" in §1.8).
 
+## 3. B2: bulk editors and the single date cell
+
+Database R13 (table view). Extra properties added for this: **Notes** (Text), **Num** (Number), **Link** (URL). Rows E1–E3 selected with their checkboxes. The selection bar ("3 selected", Date, Tag, St, Assignee, Move to Trash, "…") had no room for Notes / Num / Link (their buttons were 0 wide), so each editor was opened through the bar's **"…" › Edit property › <property>** (the submenu lists Name, Assignee, Date, Link, Notes, Num, St, Tag).
+
+| Editor | Rows before | On open | While typing | Close | Cells after | Selection after |
+|---|---|---|---|---|---|---|
+| Text (Notes), **mixed values** | alpha / beta / empty | contenteditable prefilled with the **first row's value "alpha"**, caret at the end (offset 5); cells unchanged on open | first key "X": **all 3 cells "alphaX" at once** (beta lost) | **Enter** | all "alphaX"; editor closed | **cleared** (bar gone) |
+| Text (Notes), press outside | alphaX ×3 | "alphaX" | "alphaXY" live | **click outside** at (1400, 600) on the page | all "alphaXY" (kept) | **cleared** |
+| Select (Tag), **mixed** | Def / Gry / Blu | input empty, the first row's option **"Def" shown as the chip** in the editor | — | **click** on the option "Gry" | all 3 **Gry** (replaced); menu closed | **kept** (3 selected) |
+| Number (Num) | empty ×3 | `INPUT`, empty | "42": all 3 cells **42 live** | **Escape** | all 42 (kept) | **kept** |
+| URL (Link) | empty ×3 | `INPUT`, empty | "example.com": all 3 live | **Enter** | all "example.com" | **cleared** |
+| Date, **first row empty** (E1 cleared; E2 Oct 15, E3 Oct 28) | — | picker, input "**Oct 22, 2026**" (today); End date switch off; cells unchanged on open | switch **End date on**: inputs "Oct 22, 2026" / "Oct 22, 2026", and **all 3 rows became "October 22, 2026 → October 22, 2026"** at once (E2's and E3's own dates replaced) | Escape | all three today → today | not read |
+
+**Board live preview.** Board view, View settings › Property visibility › Notes and Num shown on cards. Cards selected with a drag box from the empty board area (each card got a halo rgba(35, 131, 226, 0.14), **radius 10px**, 256x97). No selection bar on a board; **Cmd+/** opened the action menu (Page, Edit icon, Edit property, Copy links to all, Duplicate, Move to, Move to Trash, Ask AI). Edit property › Notes: contenteditable prefilled "alphaXY"; typing "Z" changed **every card's Notes line to "alphaXYZ" live**. Escape kept it; afterwards one card (the top one) still showed a halo.
+**List view live preview: not read** (no list view was made; time).
+
+**Single date cell** (before the bulk tests, light):
+- **Empty cell, open**: the picker's input reads **today, "Oct 22, 2026"**, focused; the cell stays empty. **Escape** without typing: the cell **stays empty**.
+- **Escape with typed text**: Cmd+A in the input, typed "Oct 25, 2026", Escape (no Enter): the cell **saved "October 25, 2026"**, and the one Escape closed the picker.
+- Enter on a typed date in the start input saved it and kept the picker open. A date typed into the **End** input followed by Enter did **not** change the end (twice); clicking a day in the grid with the End input focused did.
+

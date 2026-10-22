@@ -1848,6 +1848,7 @@
   "tools.database.templateUntitled": "제목 없는 템플릿",
   "tools.database.templateUse": "새 페이지",
   "tools.database.templateEdit": "편집",
+  "tools.database.templateMore": "이 템플릿 편집",
   "tools.database.templateSetDefault": "기본값으로 설정",
   "tools.database.templateDefault": "기본",
   "tools.database.templateRepeatSummaryNone": "복제 주기…",

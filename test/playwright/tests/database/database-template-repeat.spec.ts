@@ -61,7 +61,7 @@ const repeatOf = async (page: Page): Promise<Record<string, unknown> | undefined
 
 const openBanner = async (page: Page): Promise<void> => {
   await page.getByTestId('database-toolbar-new-menu').click();
-  await page.getByRole('menuitem', { name: 'Standup' }).click();
+  await page.getByRole('menuitem', { name: 'Standup' }).getByTestId('popover-item-more').click();
   await page.getByRole('menuitem', { name: 'Edit' }).click();
 };
 
@@ -132,9 +132,9 @@ test('the ↻ hint in the templates list names the unit only, after the hint del
   await expect(page.getByRole('tooltip')).toHaveText('Duplicate weekly', { timeout: 2000 });
 });
 
-// research/30 X1: at the window's right edge the template's "…" submenu opens
-// on the left of the list, so it no longer covers ↻ and its hint.
-test('at the window\'s right edge the template submenu opens on the left and the ↻ hint shows', async ({ page }) => {
+// research/30 X1: the template's submenu opens on a click of its "…", never on
+// hover, so ↻ keeps its hint. At the window's right edge it opens on the left.
+test('at the window\'s right edge the ↻ hint shows, and "…" opens the submenu on the left', async ({ page }) => {
   await mount(page, { frequency: 'weekly', interval: 2, start: '2026-10-05T07:30:00.000Z', timeZone: 'Europe/Berlin' });
   await page.getByTestId('database-toolbar-new-menu').click();
 
@@ -148,13 +148,19 @@ test('at the window\'s right edge the template submenu opens on the left and the
   // No room for a submenu on the right.
   expect(1400 - list.right).toBeLessThan(250);
 
+  await page.getByRole('menuitem', { name: /^Standup/ }).hover();
   await page.getByRole('img', { name: 'Duplicate weekly' }).hover();
+  await expect(page.getByRole('tooltip')).toHaveText('Duplicate weekly', { timeout: 2000 });
+  // Hover alone never opens the submenu.
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 1000)));
+  await expect(page.getByRole('menuitem', { name: 'Edit', exact: true })).toHaveCount(0);
+
+  await page.getByRole('menuitem', { name: /^Standup/ }).getByTestId('popover-item-more').click();
   await expect(page.getByRole('menuitem', { name: 'Edit', exact: true })).toBeVisible();
 
   const submenu = await containerRect('Edit');
 
   expect(submenu.right).toBeLessThanOrEqual(list.left + 4);
-  await expect(page.getByRole('tooltip')).toHaveText('Duplicate weekly', { timeout: 2000 });
 
   // Crossing the list to the submenu keeps it open, and its items still work.
   const edit = await page.getByRole('menuitem', { name: 'Edit', exact: true }).boundingBox();

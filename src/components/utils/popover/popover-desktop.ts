@@ -1303,14 +1303,14 @@ export class PopoverDesktop extends PopoverAbstract {
 
       this.scheduleNestedClose();
 
-      if (item.hasChildren) {
+      if (item.opensOnHover) {
         this.scheduleNestedOpenIntent(item);
       }
 
       return;
     }
 
-    if (!item.hasChildren) {
+    if (!item.opensOnHover) {
       return;
     }
 

@@ -1848,6 +1848,7 @@
   "tools.database.templateUntitled": "ແມ່ແບບບໍ່ມີຊື່",
   "tools.database.templateUse": "ໜ້າໃໝ່",
   "tools.database.templateEdit": "ແກ້ໄຂ",
+  "tools.database.templateMore": "ແກ້ໄຂແມ່ແບບນີ້",
   "tools.database.templateSetDefault": "ຕັ້ງເປັນຄ່າເລີ່ມຕົ້ນ",
   "tools.database.templateDefault": "ຄ່າເລີ່ມຕົ້ນ",
   "tools.database.templateRepeatSummaryNone": "ເຮັດສຳເນົາທຸກໆ…",

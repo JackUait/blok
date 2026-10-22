@@ -905,7 +905,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
     target: 'block',
     args: closed({ values: ROW_VALUES, group: OPTION_ID, before: ROW_ID, after: ROW_ID }),
     result: closed({ rowId: { type: 'string' } }, ['rowId']),
-    mirrors: ['menu:database/template-empty-use'],
+    mirrors: ['menu:database/template-empty', 'menu:database/template-empty-use'],
   },
   {
     name: 'moveRow',

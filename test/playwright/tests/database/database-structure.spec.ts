@@ -144,8 +144,8 @@ test.describe('templates', () => {
     await expect(tableRow(page, 'tpl')).toHaveCount(0);
 
     await page.getByTestId('database-toolbar-new-menu').click();
+    // research/33 §3.8: a click on the template row makes the row.
     await page.getByRole('menuitem', { name: 'Bug report' }).click();
-    await page.getByRole('menuitem', { name: 'New page' }).click();
 
     await expect.poll(async () => (await saved(page)).filter((block) => block.type === 'database-row').length).toBe(3);
     const made = (await saved(page)).find((block) => block.type === 'database-row' && !['r1', 'tpl'].includes(block.id ?? ''));
@@ -175,7 +175,7 @@ test.describe('templates', () => {
   test('the template banner sets a repeat through Edit cadence; the templates list shows ↻ with its hint', async ({ page }) => {
     await mount(page, blocks());
     await page.getByTestId('database-toolbar-new-menu').click();
-    await page.getByRole('menuitem', { name: 'Bug report' }).click();
+    await page.getByRole('menuitem', { name: 'Bug report' }).getByTestId('popover-item-more').click();
     await page.getByRole('menuitem', { name: 'Edit' }).click();
 
     const repeat = page.getByRole('button', { name: 'Duplicate every…' });
@@ -211,7 +211,7 @@ test.describe('templates', () => {
     await expect(icon).toBeVisible();
     await icon.hover();
     await expect(page.getByRole('tooltip')).toHaveText('Duplicate weekly');
-    await page.getByRole('menuitem', { name: 'Bug report' }).click();
+    await page.getByRole('menuitem', { name: 'Bug report' }).getByTestId('popover-item-more').click();
     await expect(page.getByRole('menuitem', { name: 'Edit' })).toBeVisible();
     await expect(page.getByRole('menuitem', { name: 'Repeat' })).toHaveCount(0);
   });

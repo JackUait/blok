@@ -1848,6 +1848,7 @@
   "tools.database.templateUntitled": "Mal uten tittel",
   "tools.database.templateUse": "Ny side",
   "tools.database.templateEdit": "Rediger",
+  "tools.database.templateMore": "Rediger denne malen",
   "tools.database.templateSetDefault": "Angi som standard",
   "tools.database.templateDefault": "Standard",
   "tools.database.templateRepeatSummaryNone": "Dupliser hver…",

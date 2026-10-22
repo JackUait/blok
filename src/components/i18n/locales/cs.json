@@ -1852,6 +1852,7 @@
   "tools.database.templateUntitled": "Šablona bez názvu",
   "tools.database.templateUse": "Nová stránka",
   "tools.database.templateEdit": "Upravit",
+  "tools.database.templateMore": "Upravit tuto šablonu",
   "tools.database.templateSetDefault": "Nastavit jako výchozí",
   "tools.database.templateDefault": "Výchozí",
   "tools.database.templateRepeatSummaryNone": "Duplikovat každých…",

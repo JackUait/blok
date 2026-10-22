@@ -270,7 +270,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1591 + 126 + 486 + 4 closure for all 2207 keys', () => {
+  it('rebuilds a disjoint 1591 + 126 + 487 + 4 closure for all 2208 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -284,7 +284,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2207);
+    expect(lifecycle.size).toBe(2208);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -493,7 +493,8 @@ describe('current English catalog lifecycle coverage', () => {
       // -2: see executable-literal ("More templates").
       // -2: see executable-literal (status default).
       // +2: the board's Card layout box (settingsCardLayout, settingsCardLayoutCompact), via the panel's prefixing t.
-      'registered-namespace-compatible': 486,
+      // +1: the template row's "…" hint, tools.database.templateMore (research/30 X1).
+      'registered-namespace-compatible': 487,
       'catalog-only': 4,
     });
     expect(

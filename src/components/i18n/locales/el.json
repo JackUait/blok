@@ -1848,6 +1848,7 @@
   "tools.database.templateUntitled": "Πρότυπο χωρίς τίτλο",
   "tools.database.templateUse": "Νέα σελίδα",
   "tools.database.templateEdit": "Επεξεργασία",
+  "tools.database.templateMore": "Επεξεργασία αυτού του προτύπου",
   "tools.database.templateSetDefault": "Ορισμός ως προεπιλογή",
   "tools.database.templateDefault": "Προεπιλογή",
   "tools.database.templateRepeatSummaryNone": "Διπλότυπο κάθε…",

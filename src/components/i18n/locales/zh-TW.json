@@ -1848,6 +1848,7 @@
   "tools.database.templateUntitled": "未命名範本",
   "tools.database.templateUse": "新增頁面",
   "tools.database.templateEdit": "編輯",
+  "tools.database.templateMore": "編輯此範本",
   "tools.database.templateSetDefault": "設為預設",
   "tools.database.templateDefault": "預設",
   "tools.database.templateRepeatSummaryNone": "每…建立副本",

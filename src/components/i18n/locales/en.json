@@ -1848,6 +1848,7 @@
   "tools.database.templateUntitled": "Untitled template",
   "tools.database.templateUse": "New page",
   "tools.database.templateEdit": "Edit",
+  "tools.database.templateMore": "Edit this template",
   "tools.database.templateSetDefault": "Set as default",
   "tools.database.templateDefault": "Default",
   "tools.database.templateRepeatSummaryNone": "Duplicate every…",

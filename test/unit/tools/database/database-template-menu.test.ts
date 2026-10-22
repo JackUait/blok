@@ -7,7 +7,7 @@ import { LightweightI18n } from '../../../../src/components/i18n/lightweight-i18
 
 vi.mock('../../../../src/components/utils/tooltip', () => ({ onHover: vi.fn() }));
 
-interface Item { name?: string; title?: string; titleEl?: HTMLElement; isActive?: boolean | (() => boolean); element?: HTMLElement; onActivate?: () => void; children?: { items?: Item[]; searchable?: boolean } }
+interface Item { name?: string; title?: string; titleEl?: HTMLElement; isActive?: boolean | (() => boolean); element?: HTMLElement; onActivate?: () => void; closeOnActivate?: boolean; children?: { items?: Item[]; searchable?: boolean; moreButton?: { label: string } } }
 
 const host = (patch: Partial<TemplateMenuHost> = {}): TemplateMenuHost => ({
   i18n: { t: (key: string) => key },
@@ -61,6 +61,25 @@ describe('template menu', () => {
     find(templateMenuItems(h) as Item[], 'template-t1', 'template-t1-use')?.onActivate?.();
 
     expect(h.newFromTemplate).toHaveBeenCalledWith('t1');
+  });
+
+  // research/33 §3.8: a click on a template row makes a row; research/30 X1: "…" opens the rest.
+  it('a template row makes a row on click, and its "…" ("Edit this template") opens its submenu', () => {
+    const h = host({ i18n: english });
+    const items = templateMenuItems(h) as Item[];
+    const row = find(items, 'template-t1');
+
+    row?.onActivate?.();
+    expect(h.newFromTemplate).toHaveBeenCalledWith('t1');
+    expect(row?.closeOnActivate).toBe(true);
+    expect(row?.children?.moreButton).toEqual({ label: 'Edit this template' });
+
+    const empty = find(items, 'template-empty');
+
+    empty?.onActivate?.();
+    expect(h.newEmpty).toHaveBeenCalledTimes(1);
+    expect(empty?.closeOnActivate).toBe(true);
+    expect(empty?.children?.moreButton?.label).toBe('More actions');
   });
 
   it('marks the default with a check and can move it to an empty page', () => {

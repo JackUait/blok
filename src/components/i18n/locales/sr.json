@@ -1850,6 +1850,7 @@
   "tools.database.templateUntitled": "Шаблон без наслова",
   "tools.database.templateUse": "Нова страница",
   "tools.database.templateEdit": "Измени",
+  "tools.database.templateMore": "Измени овај шаблон",
   "tools.database.templateSetDefault": "Постави као подразумевано",
   "tools.database.templateDefault": "Подразумевано",
   "tools.database.templateRepeatSummaryNone": "Дуплирај сваки…",

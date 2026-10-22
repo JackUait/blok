@@ -1850,6 +1850,7 @@
   "tools.database.templateUntitled": "Șablon fără titlu",
   "tools.database.templateUse": "Pagină nouă",
   "tools.database.templateEdit": "Editează",
+  "tools.database.templateMore": "Editează acest șablon",
   "tools.database.templateSetDefault": "Setează ca implicit",
   "tools.database.templateDefault": "Implicit",
   "tools.database.templateRepeatSummaryNone": "Duplică la fiecare…",

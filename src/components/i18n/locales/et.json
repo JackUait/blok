@@ -1848,6 +1848,7 @@
   "tools.database.templateUntitled": "Pealkirjata mall",
   "tools.database.templateUse": "Uus leht",
   "tools.database.templateEdit": "Muuda",
+  "tools.database.templateMore": "Muuda seda malli",
   "tools.database.templateSetDefault": "Määra vaikimisi",
   "tools.database.templateDefault": "Vaikimisi",
   "tools.database.templateRepeatSummaryNone": "Dubleeri iga…",

@@ -1848,6 +1848,7 @@
   "tools.database.templateUntitled": "Namnlös mall",
   "tools.database.templateUse": "Ny sida",
   "tools.database.templateEdit": "Redigera",
+  "tools.database.templateMore": "Redigera den här mallen",
   "tools.database.templateSetDefault": "Ange som standard",
   "tools.database.templateDefault": "Standard",
   "tools.database.templateRepeatSummaryNone": "Duplicera varje…",

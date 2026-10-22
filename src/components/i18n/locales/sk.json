@@ -1852,6 +1852,7 @@
   "tools.database.templateUntitled": "Šablóna bez názvu",
   "tools.database.templateUse": "Nová stránka",
   "tools.database.templateEdit": "Upraviť",
+  "tools.database.templateMore": "Upraviť túto šablónu",
   "tools.database.templateSetDefault": "Nastaviť ako predvolenú",
   "tools.database.templateDefault": "Predvolená",
   "tools.database.templateRepeatSummaryNone": "Duplikovať každý…",

@@ -135,6 +135,20 @@ export abstract class PopoverItem {
     return this.params !== undefined && 'children' in this.params && this.params.children?.isOpen === true;
   }
 
+  /**
+   * Hint of the "…" that opens the children on click, when the item has one
+   */
+  public get moreButtonLabel(): string | undefined {
+    return this.params !== undefined && 'children' in this.params && this.hasChildren ? this.params.children?.moreButton?.label : undefined;
+  }
+
+  /**
+   * True if hovering the item opens its children
+   */
+  public get opensOnHover(): boolean {
+    return this.hasChildren && this.moreButtonLabel === undefined;
+  }
+
   /**   * Returns true if the chevron icon should be hidden
    */
   public get isChevronHidden(): boolean {

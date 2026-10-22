@@ -1850,6 +1850,7 @@
   "tools.database.templateUntitled": "Modèle sans titre",
   "tools.database.templateUse": "Nouvelle page",
   "tools.database.templateEdit": "Modifier",
+  "tools.database.templateMore": "Modifier ce modèle",
   "tools.database.templateSetDefault": "Définir par défaut",
   "tools.database.templateDefault": "Par défaut",
   "tools.database.templateRepeatSummaryNone": "Dupliquer tous les…",

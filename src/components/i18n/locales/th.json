@@ -1848,6 +1848,7 @@
   "tools.database.templateUntitled": "เทมเพลตไม่มีชื่อ",
   "tools.database.templateUse": "หน้าใหม่",
   "tools.database.templateEdit": "แก้ไข",
+  "tools.database.templateMore": "แก้ไขเทมเพลตนี้",
   "tools.database.templateSetDefault": "ตั้งเป็นค่าเริ่มต้น",
   "tools.database.templateDefault": "ค่าเริ่มต้น",
   "tools.database.templateRepeatSummaryNone": "ทำซ้ำทุก…",

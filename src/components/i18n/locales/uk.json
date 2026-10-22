@@ -1852,6 +1852,7 @@
   "tools.database.templateUntitled": "Шаблон без назви",
   "tools.database.templateUse": "Нова сторінка",
   "tools.database.templateEdit": "Редагувати",
+  "tools.database.templateMore": "Редагувати цей шаблон",
   "tools.database.templateSetDefault": "Використовувати за замовчуванням",
   "tools.database.templateDefault": "За замовчуванням",
   "tools.database.templateRepeatSummaryNone": "Дублювати кожні…",

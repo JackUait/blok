@@ -1850,6 +1850,7 @@
   "tools.database.templateUntitled": "Šablon bez naslova",
   "tools.database.templateUse": "Nova stranica",
   "tools.database.templateEdit": "Uredi",
+  "tools.database.templateMore": "Uredi ovaj šablon",
   "tools.database.templateSetDefault": "Postavi kao podrazumijevano",
   "tools.database.templateDefault": "Podrazumijevano",
   "tools.database.templateRepeatSummaryNone": "Dupliciraj svakih…",

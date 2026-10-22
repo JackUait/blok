@@ -1,5 +1,5 @@
 import { DATA_ATTR } from '../../../../../constants/data-attributes';
-import { IconChevronRight } from '../../../../../icons';
+import { IconChevronRight, IconDotsHorizontal } from '../../../../../icons';
 import { makeShortcutHtml, shortcutToAriaKeyshortcuts, shortcutToReadable } from '../../../../key-icon';
 import { log } from '../../../../logger';
 import { onHover } from '../../../../tooltip';
@@ -414,8 +414,23 @@ export class PopoverItemDefault extends PopoverItem {
       root.appendChild(trailingEl);
     }
 
+    const moreLabel = this.moreButtonLabel;
+
+    if (moreLabel !== undefined) {
+      const moreEl = document.createElement('div');
+
+      // Hidden: a button inside a menuitem would nest controls. ArrowRight opens the submenu.
+      moreEl.className = twMerge(css.icon, 'ms-auto shrink-0 w-6 h-6 rounded-(--blok-radius-inner,var(--blok-radius-control)) text-text-secondary can-hover:hover:bg-item-hover-bg [&_svg]:w-4 [&_svg]:h-4');
+      moreEl.setAttribute(DATA_ATTR.popoverItemMore, '');
+      moreEl.setAttribute('data-blok-testid', 'popover-item-more');
+      moreEl.setAttribute('aria-hidden', 'true');
+      moreEl.innerHTML = IconDotsHorizontal;
+      onHover(moreEl, moreLabel, { placement: 'top' });
+      root.appendChild(moreEl);
+    }
+
     // Chevron
-    const showChevron = this.hasChildren && !this.isChevronHidden;
+    const showChevron = this.hasChildren && !this.isChevronHidden && moreLabel === undefined;
 
     if (showChevron) {
       const chevronEl = document.createElement('div');

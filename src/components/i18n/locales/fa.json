@@ -1848,6 +1848,7 @@
   "tools.database.templateUntitled": "الگوی بدون عنوان",
   "tools.database.templateUse": "صفحه جدید",
   "tools.database.templateEdit": "ویرایش",
+  "tools.database.templateMore": "ویرایش این الگو",
   "tools.database.templateSetDefault": "تنظیم به‌عنوان پیش‌فرض",
   "tools.database.templateDefault": "پیش‌فرض",
   "tools.database.templateRepeatSummaryNone": "تکثیر هر…",

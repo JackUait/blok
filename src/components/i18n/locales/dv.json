@@ -1848,6 +1848,7 @@
   "tools.database.templateUntitled": "ނަމެއް ނެތް ޓެމްޕްލޭޓް",
   "tools.database.templateUse": "އައު ޞަފްޙާ",
   "tools.database.templateEdit": "އެޑިޓްކުރޭ",
+  "tools.database.templateMore": "މި ޓެމްޕްލޭޓް އެޑިޓްކުރޭ",
   "tools.database.templateSetDefault": "ޑީފޯލްޓަކަށް ހަދާ",
   "tools.database.templateDefault": "ޑީފޯލްޓް",
   "tools.database.templateRepeatSummaryNone": "ކޮންމެ… ކޮޕީ ހަދާ",

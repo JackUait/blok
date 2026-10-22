@@ -1850,6 +1850,7 @@
   "tools.database.templateUntitled": "Veidne bez nosaukuma",
   "tools.database.templateUse": "Jauna lapa",
   "tools.database.templateEdit": "Rediģēt",
+  "tools.database.templateMore": "Rediģēt šo veidni",
   "tools.database.templateSetDefault": "Iestatīt kā noklusējuma",
   "tools.database.templateDefault": "Noklusējuma",
   "tools.database.templateRepeatSummaryNone": "Dublēt katru…",

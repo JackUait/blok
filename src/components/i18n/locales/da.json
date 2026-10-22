@@ -1848,6 +1848,7 @@
   "tools.database.templateUntitled": "Skabelon uden titel",
   "tools.database.templateUse": "Ny side",
   "tools.database.templateEdit": "Rediger",
+  "tools.database.templateMore": "Rediger denne skabelon",
   "tools.database.templateSetDefault": "Angiv som standard",
   "tools.database.templateDefault": "Standard",
   "tools.database.templateRepeatSummaryNone": "Dupliker hver…",

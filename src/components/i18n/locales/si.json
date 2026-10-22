@@ -1848,6 +1848,7 @@
   "tools.database.templateUntitled": "මාතෘකාවක් නැති සැකිල්ල",
   "tools.database.templateUse": "නව පිටුව",
   "tools.database.templateEdit": "සංස්කරණය",
+  "tools.database.templateMore": "මෙම සැකිල්ල සංස්කරණය කරන්න",
   "tools.database.templateSetDefault": "පෙරනිමිය ලෙස සකසන්න",
   "tools.database.templateDefault": "පෙරනිමි",
   "tools.database.templateRepeatSummaryNone": "සෑම… අනුපිටපත් කරන්න",

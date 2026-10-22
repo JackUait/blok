@@ -47,6 +47,13 @@ export interface PopoverItemChildren {
   hideChevron?: boolean;
 
   /**
+   * Draws a "…" button in place of the chevron, with `label` as its hover hint.
+   * Only a click on "…" or ArrowRight opens the children: hovering the row does not.
+   * Give the item its own onActivate for what a click on the row does.
+   */
+  moreButton?: { label: string };
+
+  /**
    * Where the children popover opens relative to the parent popover.
    * 'beside' (default) opens it next to the parent, vertically centered on
    * the trigger item; 'below' opens it under the parent with left edges

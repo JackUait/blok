@@ -1852,6 +1852,7 @@
   "tools.database.templateUntitled": "Шаблон без названия",
   "tools.database.templateUse": "Новая страница",
   "tools.database.templateEdit": "Изменить",
+  "tools.database.templateMore": "Изменить шаблон",
   "tools.database.templateSetDefault": "Использовать по умолчанию",
   "tools.database.templateDefault": "По умолчанию",
   "tools.database.templateRepeatSummaryNone": "Дублировать каждый…",

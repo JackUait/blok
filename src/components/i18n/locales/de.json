@@ -1848,6 +1848,7 @@
   "tools.database.templateUntitled": "Vorlage ohne Titel",
   "tools.database.templateUse": "Neue Seite",
   "tools.database.templateEdit": "Bearbeiten",
+  "tools.database.templateMore": "Diese Vorlage bearbeiten",
   "tools.database.templateSetDefault": "Als Standard festlegen",
   "tools.database.templateDefault": "Standard",
   "tools.database.templateRepeatSummaryNone": "Alle … duplizieren",

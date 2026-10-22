@@ -830,6 +830,16 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       return;
     }
 
+    const more = item.getElement()?.querySelector(`[${DATA_ATTR.popoverItemMore}]`);
+
+    if (more instanceof Node && event.composedPath().includes(more)) {
+      if (!(item instanceof PopoverItemDefault && item.isDisabled)) {
+        this.showNestedItems(item);
+      }
+
+      return;
+    }
+
     this.handleItemClick(item);
   }
 
@@ -914,8 +924,9 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * (hover, ArrowRight) says yes; otherwise a click opens it and runs the action.
    * @param _item - the clicked row
    */
-  protected clickRunsParentAction(_item: PopoverItem): boolean {
-    return false;
+  protected clickRunsParentAction(item: PopoverItem): boolean {
+    // "…" is the other way in, on every platform.
+    return item.hasActivateHandler && item.moreButtonLabel !== undefined;
   }
 
   /**

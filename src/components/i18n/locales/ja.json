@@ -1848,6 +1848,7 @@
   "tools.database.templateUntitled": "無題のテンプレート",
   "tools.database.templateUse": "新しいページ",
   "tools.database.templateEdit": "編集",
+  "tools.database.templateMore": "このテンプレートを編集",
   "tools.database.templateSetDefault": "デフォルトに設定",
   "tools.database.templateDefault": "デフォルト",
   "tools.database.templateRepeatSummaryNone": "複製の頻度…",

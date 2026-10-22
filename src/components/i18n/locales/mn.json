@@ -1848,6 +1848,7 @@
   "tools.database.templateUntitled": "Нэргүй загвар",
   "tools.database.templateUse": "Шинэ хуудас",
   "tools.database.templateEdit": "Засах",
+  "tools.database.templateMore": "Энэ загварыг засах",
   "tools.database.templateSetDefault": "Өгөгдмөлөөр тохируулах",
   "tools.database.templateDefault": "Өгөгдмөл",
   "tools.database.templateRepeatSummaryNone": "Хувилах давтамж…",

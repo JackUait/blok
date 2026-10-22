@@ -1852,6 +1852,7 @@
   "tools.database.templateUntitled": "Szablon bez tytułu",
   "tools.database.templateUse": "Nowa strona",
   "tools.database.templateEdit": "Edytuj",
+  "tools.database.templateMore": "Edytuj ten szablon",
   "tools.database.templateSetDefault": "Ustaw jako domyślny",
   "tools.database.templateDefault": "Domyślny",
   "tools.database.templateRepeatSummaryNone": "Duplikuj co…",

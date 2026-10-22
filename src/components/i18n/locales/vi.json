@@ -1848,6 +1848,7 @@
   "tools.database.templateUntitled": "Mẫu không có tiêu đề",
   "tools.database.templateUse": "Trang mới",
   "tools.database.templateEdit": "Chỉnh sửa",
+  "tools.database.templateMore": "Chỉnh sửa mẫu này",
   "tools.database.templateSetDefault": "Đặt làm mặc định",
   "tools.database.templateDefault": "Mặc định",
   "tools.database.templateRepeatSummaryNone": "Nhân bản mỗi…",

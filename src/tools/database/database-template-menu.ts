@@ -523,8 +523,8 @@ const defaultTitle = (titleEl: HTMLElement | undefined, title: string, label: st
 
 /**
  * The "New" dropdown (research/05 §7): one entry per template, then an
- * empty page and "+ New template". Each entry's submenu holds what Notion
- * puts behind its "•••": use, edit, set as default, duplicate, delete.
+ * empty page and "+ New template". A click on an entry makes a row; its
+ * "…" opens use, edit, set as default, duplicate, delete.
  * Repeat lives in the template's banner, as in Notion (research/21 §3).
  */
 export const templateMenuItems = (host: TemplateMenuHost): PopoverItemParams[] => {
@@ -541,7 +541,11 @@ export const templateMenuItems = (host: TemplateMenuHost): PopoverItemParams[] =
       title: shown,
       ...(marked === undefined ? {} : { titleEl: marked }),
       icon: IconPage,
+      // research/33 §3.8: a click makes a row; research/30 X1: "…" opens the rest on click.
+      closeOnActivate: true,
+      onActivate: () => host.newFromTemplate(id),
       children: {
+        moreButton: { label: t('templateMore') },
         items: [
           { name: `template-${id}-use`, title: t('templateUse'), icon: IconPlus, closeOnActivate: true, onActivate: () => host.newFromTemplate(id) },
           { name: `template-${id}-edit`, title: t('templateEdit'), icon: IconPencil, closeOnActivate: true, onActivate: () => host.editTemplate(id) },
@@ -558,7 +562,11 @@ export const templateMenuItems = (host: TemplateMenuHost): PopoverItemParams[] =
       name: 'template-empty',
       title: t('templateEmptyPage'),
       icon: IconPage,
+      closeOnActivate: true,
+      onActivate: () => host.newEmpty(),
       children: {
+        // The hint of Empty's "…" was not measured.
+        moreButton: { label: t('tableMoreActions') },
         items: [
           { name: 'template-empty-use', title: t('templateUse'), icon: IconPlus, closeOnActivate: true, onActivate: () => host.newEmpty() },
           { name: 'template-empty-default', title: t('templateSetDefault'), isActive: current === undefined, closeOnActivate: true, onActivate: () => host.setDefault(null) },

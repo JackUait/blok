@@ -1848,6 +1848,7 @@
   "tools.database.templateUntitled": "Nimetön mallipohja",
   "tools.database.templateUse": "Uusi sivu",
   "tools.database.templateEdit": "Muokkaa",
+  "tools.database.templateMore": "Muokkaa tätä mallipohjaa",
   "tools.database.templateSetDefault": "Aseta oletukseksi",
   "tools.database.templateDefault": "Oletus",
   "tools.database.templateRepeatSummaryNone": "Monista joka…",

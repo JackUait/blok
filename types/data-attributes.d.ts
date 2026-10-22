@@ -234,6 +234,8 @@ export const DATA_ATTR: {
   readonly popoverItemIcon: 'data-blok-popover-item-icon';
   /** Chevron icon for nested items */
   readonly popoverItemIconChevronRight: 'data-blok-popover-item-icon-chevron-right';
+  /** The "…" that opens a row's submenu on click (children.moreButton). */
+  readonly popoverItemMore: 'data-blok-popover-item-more';
   /** Item title text */
   readonly popoverItemTitle: 'data-blok-popover-item-title';
   /** Item secondary title */

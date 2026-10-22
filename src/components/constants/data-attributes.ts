@@ -255,6 +255,8 @@ export const DATA_ATTR = {
   popoverItemIcon: 'data-blok-popover-item-icon',
   /** Chevron icon for nested items */
   popoverItemIconChevronRight: 'data-blok-popover-item-icon-chevron-right',
+  /** The "…" that opens a row's submenu on click (children.moreButton). */
+  popoverItemMore: 'data-blok-popover-item-more',
   /** Item title text */
   popoverItemTitle: 'data-blok-popover-item-title',
   /** Item secondary title */

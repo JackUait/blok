@@ -1848,6 +1848,7 @@
   "tools.database.templateUntitled": "无标题模板",
   "tools.database.templateUse": "新页面",
   "tools.database.templateEdit": "编辑",
+  "tools.database.templateMore": "编辑此模板",
   "tools.database.templateSetDefault": "设为默认",
   "tools.database.templateDefault": "默认",
   "tools.database.templateRepeatSummaryNone": "每…创建副本",

@@ -1718,6 +1718,7 @@ export type BlokMessageKey =
   | 'tools.database.templateEdit'
   | 'tools.database.templateEmptyPage'
   | 'tools.database.templateMenuLabel'
+  | 'tools.database.templateMore'
   | 'tools.database.templateNew'
   | 'tools.database.templateRepeatAt'
   | 'tools.database.templateRepeatCancel'

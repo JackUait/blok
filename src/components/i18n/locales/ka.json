@@ -1848,6 +1848,7 @@
   "tools.database.templateUntitled": "უსათაურო შაბლონი",
   "tools.database.templateUse": "ახალი გვერდი",
   "tools.database.templateEdit": "რედაქტირება",
+  "tools.database.templateMore": "ამ შაბლონის რედაქტირება",
   "tools.database.templateSetDefault": "ნაგულისხმევად დაყენება",
   "tools.database.templateDefault": "ნაგულისხმევი",
   "tools.database.templateRepeatSummaryNone": "დუბლირება ყოველ…",

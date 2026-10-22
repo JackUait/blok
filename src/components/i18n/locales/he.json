@@ -1850,6 +1850,7 @@
   "tools.database.templateUntitled": "תבנית ללא כותרת",
   "tools.database.templateUse": "דף חדש",
   "tools.database.templateEdit": "ערוך",
+  "tools.database.templateMore": "ערוך תבנית זו",
   "tools.database.templateSetDefault": "הגדר כברירת מחדל",
   "tools.database.templateDefault": "ברירת מחדל",
   "tools.database.templateRepeatSummaryNone": "שכפל כל…",

@@ -300,11 +300,6 @@ describe('fills and lines that differed from Notion', () => {
     expect(value(dbLight, '--blok-database-column-green-accent')).toBe('var(--blok-database-option-green-text)');
   });
 
-  it('board: the dark blue count takes the nearest passing step (Notion\'s is 4.2:1 on the tint)', () => {
-    expect(value(dbMedia, '--blok-database-column-blue-accent')).toBe('rgb(41, 137, 232)');
-    expect(value(dbAttr, '--blok-database-column-blue-accent')).toBe('rgb(41, 137, 232)');
-  });
-
   it('board: the default column looks like the plain (gray) column (research/08:72, 08:345, 08:347)', () => {
     expect(value(dbLight, '--blok-database-column-default-bg')).toBe('var(--blok-database-column-bg)');
     expect(value(dbLight, '--blok-database-column-default-ring')).toBe('var(--blok-database-card-ring)');
@@ -391,17 +386,24 @@ describe('pass 2: research/33 §4 colour dump', () => {
   const DARK_ADD_HOVER = (tint: number[]): number[] => over([255, 255, 255, 0.055], over(tint, [29, 29, 28]));
 
   it.each([
-    ['orange', [213, 128, 59], [186, 72, 3, 0.043], [254, 139, 71, 0.043], 'rgb(216, 131, 62)'],
-    ['purple', [181, 119, 214], [98, 3, 161, 0.03], [196, 101, 253, 0.05], 'rgb(187, 125, 220)'],
+    ['orange', [213, 128, 59], [186, 72, 3, 0.043], [254, 139, 71, 0.043], 'rgb(214, 129, 60)'],
+    ['purple', [181, 119, 214], [98, 3, 161, 0.03], [196, 101, 253, 0.05], 'rgb(186, 124, 219)'],
     ['red', [229, 100, 88], [199, 3, 3, 0.035], [251, 107, 107, 0.047], 'rgb(238, 109, 97)'],
-  ])('board: Notion\'s %s dot ink fails AA as a count in both themes, so light keeps the pill text and dark takes the step', (color, dot, lightTint, darkTint, step) => {
+    ['blue', [39, 131, 222], [0, 128, 213, 0.047], [41, 139, 253, 0.063], 'rgb(62, 154, 245)'],
+    ['green', [70, 161, 113], [3, 87, 31, 0.035], [83, 255, 140, 0.035], 'rgb(77, 168, 120)'],
+    ['brown', [182, 137, 101], [115, 59, 3, 0.035], [253, 158, 101, 0.05], 'rgb(187, 142, 106)'],
+    ['pink', [219, 105, 153], [161, 3, 66, 0.03], [255, 78, 149, 0.055], 'rgb(226, 112, 160)'],
+  ])('board: Notion\'s %s dot ink fails AA as a count in both themes, so light keeps the pill text and dark takes the nearest step', (color, dot, lightTint, darkTint, step) => {
     const ink = `rgb(${dot.join(', ')})`;
+    const lightAccent = value(dbLight, `--blok-database-column-${color}-accent`);
 
     expect(contrast(ink, over(lightTint, WHITE))).toBeLessThan(4.5);
-    expect(value(dbLight, `--blok-database-column-${color}-accent`)).toBeUndefined();
+    expect(lightAccent === undefined || lightAccent === `var(--blok-database-option-${color}-text)`).toBe(true);
     expect(contrast(ink, DARK_ADD_HOVER(darkTint))).toBeLessThan(4.5);
     both(`--blok-database-column-${color}-accent`, step);
     expect(contrast(step, DARK_ADD_HOVER(darkTint))).toBeGreaterThanOrEqual(4.5);
+    // Nearest: one channel step darker fails.
+    expect(contrast(`rgb(${channels(step).map((c) => c - 1).join(', ')})`, DARK_ADD_HOVER(darkTint))).toBeLessThan(4.5);
   });
 
   it('board: dark cards in yellow and red columns take Notion\'s tinted card', () => {

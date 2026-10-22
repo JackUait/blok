@@ -161,9 +161,9 @@ describe('board in dark (research/21 §1f)', () => {
     expect(dark('--blok-database-column-green-bg')).toEqual(Array(2).fill('rgba(83, 255, 140, 0.035)'));
     expect(dark('--blok-database-column-blue-ring')).toEqual(Array(2).fill('rgba(71, 157, 255, 0.173)'));
     expect(dark('--blok-database-column-green-ring')).toEqual(Array(2).fill('rgba(119, 255, 179, 0.118)'));
-    // Notion's rgb(39, 131, 222) fails AA on the dark column; rgb(41, 137, 232) is the AA step.
-    expect(dark('--blok-database-column-blue-accent')).toEqual(Array(2).fill('rgb(41, 137, 232)'));
-    expect(dark('--blok-database-column-green-accent')).toEqual(Array(2).fill('rgb(70, 161, 113)'));
+    // Notion's dot inks fail AA on the hovered "+ New" row; these are the nearest passing steps (research/33 §4.4).
+    expect(dark('--blok-database-column-blue-accent')).toEqual(Array(2).fill('rgb(62, 154, 245)'));
+    expect(dark('--blok-database-column-green-accent')).toEqual(Array(2).fill('rgb(77, 168, 120)'));
     expect(dark('--blok-database-column-blue-card-bg')).toEqual(Array(2).fill('rgb(33, 48, 65)'));
     expect(dark('--blok-database-column-green-card-bg')).toEqual(Array(2).fill('rgb(36, 52, 43)'));
   });

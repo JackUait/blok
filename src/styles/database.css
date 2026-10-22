@@ -310,13 +310,13 @@
     --blok-database-hover-bg: rgba(255, 255, 255, 0.055);
     --blok-database-pressed-bg: rgba(255, 255, 255, 0.11);
     --blok-database-page-divider: rgba(255, 255, 255, 0.094);
-    /* research/33 §4.4: tint and ring; tinted cards in yellow and red. Counts: Notion's dot ink is 4.1-4.5:1 on the hovered "+ New" row, so the nearest passing step. */
+    /* research/33 §4.4: tint and ring; tinted cards in yellow and red. Counts: Notion's dot ink fails AA on the hovered "+ New" row, so the nearest passing step. */
     --blok-database-column-orange-bg: rgba(254, 139, 71, 0.043);
     --blok-database-column-orange-ring: rgba(255, 134, 51, 0.157);
-    --blok-database-column-orange-accent: rgb(216, 131, 62);
+    --blok-database-column-orange-accent: rgb(214, 129, 60);
     --blok-database-column-purple-bg: rgba(196, 101, 253, 0.05);
     --blok-database-column-purple-ring: rgba(201, 122, 255, 0.165);
-    --blok-database-column-purple-accent: rgb(187, 125, 220);
+    --blok-database-column-purple-accent: rgb(186, 124, 219);
     --blok-database-column-pink-ring: rgba(255, 104, 171, 0.165);
     --blok-database-column-red-bg: rgba(251, 107, 107, 0.047);
     --blok-database-column-red-ring: rgba(255, 106, 94, 0.173);
@@ -399,28 +399,28 @@
     --blok-database-table-drop-line: rgba(35, 131, 226, 0.43);
     --blok-database-table-resize: rgba(35, 131, 226, 0.8);
     /* Measured in dark: default, yellow, pink (research/08), blue and green (research/21 §1f), brown and the blue
-       card hover (research/26 §4e). */
+       card hover (research/26 §4e). Counts (accents) are the nearest AA step on the hovered "+ New" row; yellow passes as is. */
     --blok-database-column-yellow-bg: rgba(255, 232, 48, 0.043);
     --blok-database-column-brown-bg: rgba(253, 158, 101, 0.05);
   --blok-database-column-brown-ring: rgba(255, 174, 122, 0.133);
-  --blok-database-column-brown-accent: rgb(182, 137, 101);
+  --blok-database-column-brown-accent: rgb(187, 142, 106);
     --blok-database-column-pink-bg: rgba(255, 78, 149, 0.055);
     --blok-database-column-yellow-ring: rgba(255, 225, 117, 0.13);
     --blok-database-column-accent: rgb(188, 186, 182);
     --blok-database-column-yellow-accent: rgb(216, 163, 47);
   --blok-database-column-blue-bg: rgba(41, 139, 253, 0.063);
   --blok-database-column-blue-ring: rgba(71, 157, 255, 0.173);
-  --blok-database-column-blue-accent: rgb(41, 137, 232);
+  --blok-database-column-blue-accent: rgb(62, 154, 245);
   --blok-database-column-green-bg: rgba(83, 255, 140, 0.035);
   --blok-database-column-green-ring: rgba(119, 255, 179, 0.118);
-  --blok-database-column-green-accent: rgb(70, 161, 113);
+  --blok-database-column-green-accent: rgb(77, 168, 120);
   /* Dark only: a colored column tints its cards. Light cards stay white. */
   --blok-database-column-blue-card-bg: rgb(33, 48, 65);
   --blok-database-column-green-card-bg: rgb(36, 52, 43);
   --blok-database-column-brown-card-bg: rgb(56, 45, 38);
   --blok-database-column-blue-card-hover-bg: rgb(37, 54, 73);
   --blok-database-column-brown-card-hover-bg: rgb(64, 51, 43);
-    --blok-database-column-pink-accent: rgb(219, 105, 153);
+    --blok-database-column-pink-accent: rgb(226, 112, 160);
     --blok-database-card-lift: rgba(25, 25, 25, 0.08) 0 2px 4px;
     --blok-database-card-ring: rgba(255, 255, 243, 0.082);
     /* Dialog unmeasured in dark: bg and shadow follow Notion's measured dark menu (research/08). */
@@ -558,13 +558,13 @@
   --blok-database-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-pressed-bg: rgba(255, 255, 255, 0.11);
   --blok-database-page-divider: rgba(255, 255, 255, 0.094);
-  /* research/33 §4.4: tint and ring; tinted cards in yellow and red. Counts: Notion's dot ink is 4.1-4.5:1 on the hovered "+ New" row, so the nearest passing step. */
+  /* research/33 §4.4: tint and ring; tinted cards in yellow and red. Counts: Notion's dot ink fails AA on the hovered "+ New" row, so the nearest passing step. */
   --blok-database-column-orange-bg: rgba(254, 139, 71, 0.043);
   --blok-database-column-orange-ring: rgba(255, 134, 51, 0.157);
-  --blok-database-column-orange-accent: rgb(216, 131, 62);
+  --blok-database-column-orange-accent: rgb(214, 129, 60);
   --blok-database-column-purple-bg: rgba(196, 101, 253, 0.05);
   --blok-database-column-purple-ring: rgba(201, 122, 255, 0.165);
-  --blok-database-column-purple-accent: rgb(187, 125, 220);
+  --blok-database-column-purple-accent: rgb(186, 124, 219);
   --blok-database-column-pink-ring: rgba(255, 104, 171, 0.165);
   --blok-database-column-red-bg: rgba(251, 107, 107, 0.047);
   --blok-database-column-red-ring: rgba(255, 106, 94, 0.173);
@@ -650,24 +650,24 @@
   --blok-database-column-yellow-bg: rgba(255, 232, 48, 0.043);
   --blok-database-column-brown-bg: rgba(253, 158, 101, 0.05);
   --blok-database-column-brown-ring: rgba(255, 174, 122, 0.133);
-  --blok-database-column-brown-accent: rgb(182, 137, 101);
+  --blok-database-column-brown-accent: rgb(187, 142, 106);
   --blok-database-column-pink-bg: rgba(255, 78, 149, 0.055);
   --blok-database-column-yellow-ring: rgba(255, 225, 117, 0.13);
   --blok-database-column-accent: rgb(188, 186, 182);
   --blok-database-column-yellow-accent: rgb(216, 163, 47);
   --blok-database-column-blue-bg: rgba(41, 139, 253, 0.063);
   --blok-database-column-blue-ring: rgba(71, 157, 255, 0.173);
-  --blok-database-column-blue-accent: rgb(41, 137, 232);
+  --blok-database-column-blue-accent: rgb(62, 154, 245);
   --blok-database-column-green-bg: rgba(83, 255, 140, 0.035);
   --blok-database-column-green-ring: rgba(119, 255, 179, 0.118);
-  --blok-database-column-green-accent: rgb(70, 161, 113);
+  --blok-database-column-green-accent: rgb(77, 168, 120);
   /* Dark only: a colored column tints its cards. Light cards stay white. */
   --blok-database-column-blue-card-bg: rgb(33, 48, 65);
   --blok-database-column-green-card-bg: rgb(36, 52, 43);
   --blok-database-column-brown-card-bg: rgb(56, 45, 38);
   --blok-database-column-blue-card-hover-bg: rgb(37, 54, 73);
   --blok-database-column-brown-card-hover-bg: rgb(64, 51, 43);
-  --blok-database-column-pink-accent: rgb(219, 105, 153);
+  --blok-database-column-pink-accent: rgb(226, 112, 160);
   --blok-database-card-lift: rgba(25, 25, 25, 0.08) 0 2px 4px;
   --blok-database-card-ring: rgba(255, 255, 243, 0.082);
   /* Dialog unmeasured in dark: bg and shadow follow Notion's measured dark menu (research/08). */

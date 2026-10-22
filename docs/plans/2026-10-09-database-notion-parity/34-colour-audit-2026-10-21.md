@@ -32,7 +32,8 @@ One step per ink role, computed as the nearest value on Notion's own hue that pa
 | Calendar event text, light (hover rgba(84,72,49,0.08)) | 161,158,153 | 2.6 | **112,109,104** | 4.54 | hovered event card |
 | Calendar event text, dark (card 47, hover 55) | 125,122,117 | 3.13 / 2.8 | **162,159,154** | 4.51 on 55 | hovered event card |
 | Light blue text (reminder date) | 39,131,222 | 3.90 | **35,119,211** | 4.52 | white |
-| Dark blue text (reminder on a card, blue column count) | 39,131,222 | 4.18 on 32 / 4.20 on the blue tint | **41,137,232** | 4.53 / 4.55 | card 32 |
+| Dark blue text (reminder on a card) | 39,131,222 | 4.18 on 32 | **41,137,232** | 4.53 | card 32 |
+| Dark board counts and "+ New" text (pass 2) | blue 39,131,222 / green 70,161,113 / brown 182,137,101 / pink 219,105,153 / orange 213,128,59 / purple 181,119,214 / red 229,100,88 | 3.42 / 4.18 / 4.23 / 4.18 / 4.47 / 4.23 / 4.06 | **62,154,245 / 77,168,120 / 187,142,106 / 226,112,160 / 214,129,60 / 186,124,219 / 238,109,97** | 4.54 / 4.55 / 4.50 / 4.55 / 4.52 / 4.50 / 4.51 | hovered "+ New" row: column tint + 0.055 hover over Blok's dark page (29). Yellow 216,163,47 passes (5.67). |
 | Light red text (destructive button "Remove", danger rows) | 229,100,88 | 3.34 | **182,79,70** | 4.53 on hover | hover fill over white |
 | Light board blue / green count, "+ New page" | 39,131,222 / 70,161,113 | 3.67 / 3.01 on tint | pill text 38,74,114 / 42,83,60 | 8.58 / 8.26 | column tint (already the rule for yellow and brown) |
 | Primary button text on blue ("New", Apply, Save, Import, Submit) | 243,249,253 on 39,131,222 | 3.67 | bg **30,110,195** (PRIOR, research/08 note in database.css) | 4.86 | — |
@@ -365,7 +366,7 @@ Notion values that research 33 corrected:
 - Calendar weekday names are 125,122,117 in light too (research 21 read 161,158,153). Both fail AA on white, so Blok's step 114,111,106 is unchanged.
 - The dark calendar today digit is black, measured again. Research 21 called it a bug. Black is 6.30:1 on the red circle, white is 3.34:1, so Blok now uses black in dark. The date picker and the timeline today chip keep white (their dark digit is unmeasured), so the calendar has its own token.
 
-Contrast for the dark board counts is taken on their worst surface: the hovered "+ New" row (column tint plus the 0.055 hover over Blok's dark page, 29). There Notion's orange, purple and red dot inks are 4.47, 4.23 and 4.06:1, so they take the nearest passing step on the same hue. The accents pass 1 shipped (blue 41,137,232, green, brown, pink) also fall to 3.7–4.2:1 on that surface; they are left for a decision.
+Contrast for the dark board counts is taken on their worst surface: the hovered "+ New" row (column tint plus the 0.055 hover over Blok's dark page, 29). There every dark count ink but yellow fails AA (blue 3.42, green 4.18, brown 4.23, pink 4.18, orange 4.47, purple 4.23, red 4.06), so each takes the nearest passing step on its hue: every channel raised by the smallest equal amount that reaches 4.5:1. Pass 1's dark blue step 41,137,232 (3.71 there) and its Notion green, brown and pink counts move too. Steps are in the AA list at the top.
 
 | Surface | Notion L / D | Blok before | Status |
 |---|---|---|---|
@@ -399,9 +400,10 @@ Contrast for the dark board counts is taken on their worst surface: the hovered 
 | Board tint + ring pink | rgba(161,3,66,0.03) + rgba(197,0,93,0.086) / tint MATCH + rgba(255,104,171,0.165) | derived | CHANGE |
 | Board tint + ring red | rgba(199,3,3,0.035) + rgba(223,22,0,0.094) / rgba(251,107,107,0.047) + rgba(255,106,94,0.173) | derived | CHANGE |
 | Count + "+ New" ink, coloured columns, light | the dot ink (2.2-3.7:1 on the tint) | the pill text | AA |
-| Count + "+ New" ink, dark orange / purple / red | 213,128,59 / 181,119,214 / 229,100,88: 4.47 / 4.23 / 4.06 on the hovered "+ New" row (tint + 0.055 over 29) | the pill text; now 216,131,62 / 187,125,220 / 238,109,97 (4.63 / 4.56 / 4.51) | AA |
-| Count + "+ New" ink, dark brown / yellow / green / pink | dot ink | same | MATCH |
-| Count + "+ New" ink, dark blue | 39,131,222 (4.2:1) | 41,137,232 | AA |
+| Count + "+ New" ink, dark orange / purple / red | 213,128,59 / 181,119,214 / 229,100,88: 4.47 / 4.23 / 4.06 on the hovered "+ New" row (tint + 0.055 over 29) | the pill text; now 214,129,60 / 186,124,219 / 238,109,97 (4.52 / 4.50 / 4.51) | AA |
+| Count + "+ New" ink, dark yellow | 216,163,47 (5.67 on the hovered row) | same | MATCH |
+| Count + "+ New" ink, dark green / brown / pink | 70,161,113 / 182,137,101 / 219,105,153: 4.18 / 4.23 / 4.18 on the hovered row | the dot ink; now 77,168,120 / 187,142,106 / 226,112,160 (4.55 / 4.50 / 4.55) | AA |
+| Count + "+ New" ink, dark blue | 39,131,222: 3.42 on the hovered row | 41,137,232 (3.71 there); now 62,154,245 (4.54) | AA |
 | Card bg + shadow, plain | §4.4 | same | MATCH |
 | Dark card bg yellow / red | 55,51,37 / 65,39,37 | 32,32,32 | CHANGE |
 | Dark card bg blue / green | 33,48,65 / 36,52,43 | same | MATCH |
@@ -438,7 +440,7 @@ Contrast for the dark board counts is taken on their worst surface: the hovered 
 |---|---|
 | MATCH | 35 |
 | CHANGE | 13 |
-| AA | 8 |
+| AA | 9 |
 | BLUE | 2 |
 | HOST | 2 |
 | AMBIGUOUS | 1 |
@@ -446,13 +448,13 @@ Contrast for the dark board counts is taken on their worst surface: the hovered 
 | NOT PROBED | 2 |
 | UNMEASURED | 1 |
 
-Rows: 64; verdicts: 65
+Rows: 65; verdicts: 66
 
 A row with a light and a dark verdict counts each. NOT PROBED: Notion has a value, but the probe did not reach the Blok element. UNMEASURED: Notion has no value. The center peek was not opened in the browser; its row is read from source.
 
 What changed (all in `database.css`, database-scoped tokens; no published core variable changed):
 
-- New tokens: `--blok-database-pressed-bg`, `-page-divider`, `-gallery-card-active-bg`, `-calendar-day-today-text`, `-status-dot-{brown,orange,yellow,purple,pink,red}`, `-column-{orange,purple,pink,red}-{bg,ring}`, light `-column-brown-ring`, dark `-column-{orange,purple,red}-accent` (AA steps 216,131,62 / 187,125,220 / 238,109,97), dark `-column-{yellow,red}-card-bg` and `-card-hover-bg`.
+- New tokens: `--blok-database-pressed-bg`, `-page-divider`, `-gallery-card-active-bg`, `-calendar-day-today-text`, `-status-dot-{brown,orange,yellow,purple,pink,red}`, `-column-{orange,purple,pink,red}-{bg,ring}`, light `-column-brown-ring`, dark `-column-{orange,purple,red}-accent` (AA steps 214,129,60 / 186,124,219 / 238,109,97); dark blue, green, brown and pink accents moved to their steps 62,154,245 / 77,168,120 / 187,142,106 / 226,112,160, dark `-column-{yellow,red}-card-bg` and `-card-hover-bg`.
 - Dark yellow and red card hover is unmeasured. The hovered card keeps its tint instead of falling back to the gray 38.
 - Blue kept neutral: the picked Card layout tile. Notion draws a 2px rgb(39,131,222) outline (research 33 §3.2); Blok keeps its ink ring and now uses Notion's 44,44,43 label.
 - Not a colour, not changed: the tooltip padding is 6px 10px (Notion 5px 8px).

@@ -79,6 +79,13 @@ describe('DatabaseFeedView', () => {
     expect(el.querySelector('[data-blok-database-feed-time]')?.textContent).toBe('3 days ago');
   });
 
+  // research/35 §19: a post made about half an hour ago reads "31m"; research/33 saw "5h" on older ones.
+  it.each([[31 * 60_000, '31m'], [5 * 3_600_000 + 10 * 60_000, '5h']])('writes a post %ims old as %s', (age, shown) => {
+    const el = render({ rows: [{ ...rows[0], meta: { createdBy: 'u1', createdAt: Date.now() - age } }], total: 1 });
+
+    expect(el.querySelector('[data-blok-database-feed-time]')?.textContent).toBe(shown);
+  });
+
   it('stacks one card per row in a list', () => {
     const el = render();
 

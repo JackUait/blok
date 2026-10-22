@@ -110,6 +110,22 @@ const levelOf = (block: BodyBlock): string => {
  * row's page content and its visible properties. Card look measured in
  * research/08. Read-only: the page itself is edited in the row page.
  */
+const MINUTE_MS = 60_000;
+const HOUR_MS = 60 * MINUTE_MS;
+
+/**
+ * research/35 §19: "31m" for a post half an hour old, research/33 "5h". Older
+ * posts keep "Yesterday" / "3 days ago"; a post under a minute old is unmeasured.
+ */
+const feedAge = (at: number, locale: string): string => {
+  const age = Date.now() - at;
+
+  if (age < 0 || age >= 24 * HOUR_MS) return formatRelativeStamp(at, locale, { timeFormat: 'hidden' });
+  const [value, unit] = age < HOUR_MS ? [Math.floor(age / MINUTE_MS), 'minute'] : [Math.floor(age / HOUR_MS), 'hour'];
+
+  return new Intl.NumberFormat(locale, { style: 'unit', unit, unitDisplay: 'narrow' }).format(value);
+};
+
 export class DatabaseFeedView implements DatabaseViewRenderer {
   private readonly options: FeedViewOptions;
   private readonly cleanups: Array<() => void> = [];
@@ -330,7 +346,7 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
       const time = document.createElement('span');
 
       time.setAttribute('data-blok-database-feed-time', '');
-      time.textContent = formatRelativeStamp(at, this.options.locale, { timeFormat: 'hidden' });
+      time.textContent = feedAge(at, this.options.locale);
       byline.appendChild(time);
     }
 

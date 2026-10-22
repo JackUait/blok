@@ -65,7 +65,7 @@ export interface Tooltip {
 
   /**
    * Show the tooltip when the pointer hovers `element`, after `delay`.
-   * Focus does not show it.
+   * Focus does not show it. Pressing the element hides it.
    *
    * @param {HTMLElement} element
    * @param {TooltipContent} content

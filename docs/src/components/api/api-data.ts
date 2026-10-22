@@ -2800,7 +2800,7 @@ editor.tooltip.show(button, 'Click to save', {
       {
         name: "tooltip.onHover(element, content, options?)",
         returnType: "void",
-        description: "Show tooltip on hover using event listeners, after `delay`. It takes the same `options` as `show()`. Focus does not show it, so a click on the element shows nothing at once.",
+        description: "Show tooltip on hover using event listeners, after `delay`. It takes the same `options` as `show()`. Focus does not show it, so a click on the element shows nothing at once. Pressing the element hides the tooltip.",
         example: `const button = document.querySelector('button');
 editor.tooltip.onHover(button, 'Click me', {
   placement: 'bottom'

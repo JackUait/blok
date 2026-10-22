@@ -593,6 +593,58 @@ describe('Tooltip utility', () => {
     expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
   });
 
+  // A shown hint would otherwise sit over the menu the press opens.
+  it('hides a shown hover hint when its trigger is pressed', () => {
+    vi.useFakeTimers();
+
+    const target = createTargetElement();
+
+    onHover(target, 'hover text');
+    target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    vi.advanceTimersByTime(HINT_DELAY);
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
+
+    target.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
+    expect(target.hasAttribute('aria-describedby')).toBe(false);
+  });
+
+  it('cancels a pending hover hint when its trigger is pressed during the delay', () => {
+    vi.useFakeTimers();
+
+    const target = createTargetElement();
+
+    onHover(target, 'hover text');
+    target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    vi.advanceTimersByTime(HINT_DELAY - 100);
+    target.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    vi.advanceTimersByTime(HINT_DELAY);
+
+    expect(getTooltipWrapper()?.getAttribute('aria-hidden')).not.toBe('false');
+  });
+
+  // A child that stops the press must not keep the hint open.
+  it('hides the hint when a child of the trigger stops the press', () => {
+    vi.useFakeTimers();
+
+    const target = createTargetElement();
+    const child = document.createElement('span');
+
+    target.appendChild(child);
+    child.addEventListener('pointerdown', (event) => event.stopPropagation());
+
+    onHover(target, 'hover text');
+    target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    vi.advanceTimersByTime(HINT_DELAY);
+    child.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+
+    expect(getTooltipWrapper()?.getAttribute('aria-hidden')).toBe('true');
+  });
+
   it('does not show tooltip on hover when a Popover is open', () => {
     vi.useFakeTimers();
 

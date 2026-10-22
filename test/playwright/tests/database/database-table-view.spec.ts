@@ -409,6 +409,33 @@ test.describe('columns', () => {
     await expect(page.getByTestId('tooltip').and(page.locator('[data-blok-shown="true"]'))).toHaveCount(0);
     await expect(page.getByRole('columnheader', { name: 'Amount' })).toBeVisible();
   });
+
+  test('pressing a header with its hint shown hides the hint and opens the menu', async ({ page }) => {
+    const described = blocks();
+    const db = described[0].data as { schema: Array<Record<string, unknown>> };
+
+    db.schema = db.schema.map((p) => (p.id === 'p-notes' ? { ...p, description: 'What we know' } : p));
+    await mount(page, described);
+
+    const shownHint = page.getByTestId('tooltip').and(page.locator('[data-blok-shown="true"]'));
+    const box = await header(page, 'p-notes').boundingBox();
+
+    if (box === null) {
+      throw new Error('no header');
+    }
+    // Raw mouse: locator.click retries around a covering element and would hide a shield.
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await expect(shownHint).toContainText('What we know');
+
+    await page.mouse.down();
+    await page.mouse.up();
+
+    await expect(page.getByRole('menuitem', { name: 'Freeze up to column' })).toBeVisible();
+    await expect(shownHint).toHaveCount(0);
+    // The pointer stays on the header past the hint delay: the hint must not come back over the menu.
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 1000)));
+    await expect(shownHint).toHaveCount(0);
+  });
 });
 
 test.describe('calculations', () => {

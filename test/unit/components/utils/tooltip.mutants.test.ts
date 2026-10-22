@@ -22,6 +22,7 @@ const HOVER_EVENT_NAMES = [
   'pointerenter',
   'mouseenter',
   'mouseleave',
+  'pointerdown',
 ] as const;
 
 type AnchorRect = {

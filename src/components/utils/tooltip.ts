@@ -595,16 +595,20 @@ class Tooltip {
     };
     // Defer the hide so brief trigger exits/re-entries do not flicker.
     const handleMouseLeave = (): void => this.scheduleGraceHide(options.hideDelay);
+    // A press usually opens a menu, and the hint would sit over it. Capture so a child's stopPropagation cannot skip it.
+    const handlePointerDown = (): void => this.hide();
 
     // No focus listener on purpose: hints show on hover only, so a click that focuses the trigger shows nothing.
     element.addEventListener('pointerenter', handlePointerEnter);
     element.addEventListener('mouseenter', handleMouseEnter);
     element.addEventListener('mouseleave', handleMouseLeave);
+    element.addEventListener('pointerdown', handlePointerDown, { capture: true });
 
     this.hoverBindings.set(element, () => {
       element.removeEventListener('pointerenter', handlePointerEnter);
       element.removeEventListener('mouseenter', handleMouseEnter);
       element.removeEventListener('mouseleave', handleMouseLeave);
+      element.removeEventListener('pointerdown', handlePointerDown, { capture: true });
     });
   }
 

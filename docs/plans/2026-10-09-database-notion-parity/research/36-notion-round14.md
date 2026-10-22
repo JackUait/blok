@@ -198,7 +198,7 @@ Two databases:
 - **CSV import**: `r14-101.csv` (`Name,Grp,Score`, rows "Row 001" … "Row 101", Grp = **A** for all, Score = row number), imported as a new data source of R14 ("3 more…" › New data source › Import CSV › Choose file, fed by `hook.sh` › Map CSV headers › Import CSV › "Import complete"). Its Table view was switched to Board (View settings › Layout › Board; it grouped by Grp at once). One group **A** of 101, plus "No Grp 0".
 - **R14** itself: 5 rows, Board grouped by Select, groups of 1, 1, 1 and "No Select 2".
 
-Per advisor's design: a view filter on **Score ≤ N** shrinks the visible group while the database keeps 101 rows. Each read: click the group count › hover "Count" › read the switch (`INPUT[role=switch]`, opacity 0 over a 30x18 track) `checked` / `disabled`.
+A view filter on **Score ≤ N** shrinks the visible group while the database keeps 101 rows. Each read: click the group count › hover "Count" › read the switch (`INPUT[role=switch]`, opacity 0 over a 30x18 track) `checked` / `disabled`.
 
 | Database rows | Filter | Group A count shown | Switch `checked` | `disabled` | Track |
 |---|---|---|---|---|---|
@@ -236,3 +236,32 @@ What this shows:
 - **Under 1 minute: "Just now"** (not "now", not "0m"). From 1 minute: **"1m" … "59m"**, then **"1h"** (not "60m").
 - **Every change happened on the wall-clock second :15 or :45**, for both cards, so the app re-reads the time on a **30 s tick** (phase set by the app, not by each card). The shown value is **floor(age ÷ 60 s) at the last tick**: the fresh render at 09:37:08 still showed F2 "1m" at 138 s, because the last tick (09:36:45) had seen 115 s. So a byline can lag up to 30 s.
 - Not read: when "1h" turns into "2h" or into a date; the 24 h / day boundary (clock).
+
+## 11. Board hover in dark (item 1, continued)
+
+Dark via **Cmd+Shift+L** (stored "dark", body bg rgb(25, 25, 25)). The sidebar was closed at this point, so the columns sit 135px further left than in §1.1; sizes are the same. Same `diffhov.sh` method.
+
+| Part | Default (Def) dark | Gray (Gry) dark | **Red** dark |
+|---|---|---|---|
+| Column bg (rest = hover: **no change on column hover**) | rgba(252, 252, 252, 0.03) | rgba(252, 252, 252, 0.03) | **rgba(251, 107, 107, 0.047)** |
+| Card rest bg / ring | rgb(32, 32, 32) / `rgba(255, 255, 243, 0.082) 0 0 0 1px` | rgb(44, 44, 43) / same | **rgb(65, 39, 37)** / **`rgba(255, 106, 94, 0.173) 0 0 0 1px`** |
+| Card shadow (all) | `rgba(25, 25, 25, 0.08) 0 2px 4px 0` + the ring | | |
+| **Card hover** bg (shadow unchanged) | `color(srgb 0.15049 0.15049 0.15049)` ≈ rgb(38, 38, 38) | `color(srgb 0.197836 0.197836 0.19334)` ≈ rgb(50, 50, 49) | **`color(srgb 0.286765 0.172059 0.163235)` ≈ rgb(73, 44, 42)** |
+| "+ New page" row: ink / ring | rgb(188, 186, 182) / `rgba(255, 255, 243, 0.082) 0 0 0 1px` | rgb(142, 139, 134) / same | rgb(229, 100, 88) / `rgba(255, 106, 94, 0.173) 0 0 0 1px` |
+| "+ New page" row **hover** bg | ≈ rgb(38, 38, 38) (the card hover, opaque) | ≈ rgb(50, 50, 49) | ≈ rgb(73, 44, 42) |
+| Header "…" / "+" glyph fill (appear on column hover) | rgb(188, 186, 182) | rgb(142, 139, 134) | rgb(229, 100, 88) |
+| One header button hovered | `color(srgb 1 1 1 / 0.054902)` ≈ rgba(255, 255, 255, 0.055), every column | | |
+| Card hover tool pill (57x24, opacity 0 → 1) | bg rgb(37, 37, 37), shadow `rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px` | | |
+
+So in both themes: the column fill never changes on hover; the hovered card and the hovered "New page" row take **the same fill** (translucent in light, opaque in dark); the header buttons are the only thing the column hover reveals, and their own hover is the neutral tint.
+Raw: `raw/board-dark.txt`.
+
+## 12. Relation tabs (item 10)
+
+Relation property **"Related R14"** added from the table header "+" › Relation › Suggested "R14" (this database; Limit "No limit", "Add related property" off) › Add relation. F2 related to **F3** and **T4** (cell picker "In R14 / Select a page"). On the row pages, the relation's property menu (Rename, Edit property, Comment, Property visibility, Delete property, Customize layout) and its Edit property panel (Type, Property access, Related to, Limit, Add related property, Delete property, Learn about relations) have **no "show as" option**. A relation tab is made in the layout builder:
+
+- F2 › "Customize layout" › Structure **Tabbed** (tab "Content" appears) › hover the tab bar › **"Add tab"** (`aria-label`, at the right of the last tab) › menu 270 wide: a section label **"Related to R14"** (12px / 500, rgb(125, 122, 117)) with the row **"Related R14"** (14px / 400), then **"Link existing data source"** (`viewTable`). So **every relation property is offered as a tab**, above the linked-view option.
+- Picking "Related R14" adds a tab named **"Related R14"**, selects it, and opens its View settings at once: Layout Table · Property visibility **5** · **Filter "Related R14"** (the view is filtered to this row's relation) · Sort · Group · Conditional color · Data source settings: Source R14 · Edit properties · AI Autofill · More settings · Duplicate view · Delete view.
+- The tab's table: columns **Name, Place, Related R14, Select, Text** (Name first, then **alphabetical**, not the database's column order Select, Text, Place, Related R14); rows **T4, F3** (the related pages only).
+- Applied with "Apply to all pages". Then a **Number** property was added from the **main** table's header "+". Reopening F2's side peek (the "Related R14" tab stayed selected): columns **Name, Number, Place, Related R14, Select, Text**. So **a property added elsewhere does show in an existing relation tab**, placed alphabetically. Research 35 §16 found the opposite for ordinary existing views (hidden there).
+- Not read: the tab's colours, its "Add new relation" path, deleting a relation tab, relation tabs in center peek / full page.

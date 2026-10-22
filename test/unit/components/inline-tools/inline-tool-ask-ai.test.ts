@@ -1,14 +1,28 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, within } from '@testing-library/dom';
 
 import { AskAiInlineTool } from '../../../../src/components/inline-tools/inline-tool-ask-ai';
+import { assistantActions } from '../../../../src/components/modules/assistant/actions';
+import { PopoverItemType } from '../../../../src/components/utils/popover';
 import type { API } from '../../../../types';
 
-const apiWith = (): { api: API; openAssistant: ReturnType<typeof vi.fn>; close: ReturnType<typeof vi.fn> } => {
+const t = (key: string): string => ({
+  'assistant.label': 'Ask AI',
+  'assistant.actions': 'Suggestions',
+}[key] ?? key);
+
+const setup = (): { row: HTMLElement; openAssistant: ReturnType<typeof vi.fn>; close: ReturnType<typeof vi.fn> } => {
   const openAssistant = vi.fn();
   const close = vi.fn();
-  const api = { agent: { openAssistant }, inlineToolbar: { close } } as unknown as API;
+  const api = { agent: { openAssistant }, inlineToolbar: { close }, i18n: { t } } as unknown as API;
+  const item = new AskAiInlineTool({ api }).render();
 
-  return { api, openAssistant, close };
+  if (Array.isArray(item) || !('type' in item) || item.type !== PopoverItemType.Html) {
+    throw new Error('expected one html item');
+  }
+  document.body.append(item.element);
+
+  return { row: item.element, openAssistant, close };
 };
 
 describe('AskAiInlineTool', () => {
@@ -17,29 +31,65 @@ describe('AskAiInlineTool', () => {
   });
 
   afterEach(() => {
+    document.body.innerHTML = '';
     vi.restoreAllMocks();
   });
 
-  it('opens the assistant bar and closes the inline toolbar when activated', () => {
-    const { api, openAssistant, close } = apiWith();
-    const item = new AskAiInlineTool({ api }).render();
+  it('opens the assistant bar and closes the inline toolbar from the Ask AI button', () => {
+    const { row, openAssistant, close } = setup();
 
-    expect('onActivate' in item).toBe(true);
-    if ('onActivate' in item && typeof item.onActivate === 'function') {
-      item.onActivate(item, undefined);
-    }
+    fireEvent.click(within(row).getByRole('menuitem', { name: 'Ask AI' }));
 
     expect(openAssistant).toHaveBeenCalledTimes(1);
+    expect(openAssistant).toHaveBeenCalledWith();
     expect(close).toHaveBeenCalledTimes(1);
     // The bar must read the selection before the toolbar closes and drops it.
     expect(openAssistant.mock.invocationCallOrder[0]).toBeLessThan(close.mock.invocationCallOrder[0]);
   });
 
-  // An isActive flag would make the toolbar expose it as a checkbox; it is an action.
-  it('is a plain action, not a toggle', () => {
-    const item = new AskAiInlineTool({ api: apiWith().api }).render();
+  it('labels the Ask AI button at regular weight, like the tools around it', () => {
+    const { row } = setup();
 
-    expect('isActive' in item).toBe(false);
-    expect('toggle' in item).toBe(false);
+    expect(within(row).getByRole('menuitem', { name: 'Ask AI' }).className).not.toContain('font-medium');
+  });
+
+  it('keeps the skills folded until the toggle opens them, and folds them again', () => {
+    const { row } = setup();
+    const toggle = within(row).getByRole('menuitem', { name: 'Suggestions' });
+
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(within(row).queryByRole('menuitem', { name: 'assistant.action.improve' })).toBeNull();
+
+    fireEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(within(row).getByRole('menuitem', { name: 'assistant.action.improve' })).toBeVisible();
+
+    fireEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(within(row).queryByRole('menuitem', { name: 'assistant.action.improve' })).toBeNull();
+  });
+
+  it('lists the built-in selection skills, in order', () => {
+    const { row } = setup();
+
+    fireEvent.click(within(row).getByRole('menuitem', { name: 'Suggestions' }));
+
+    const skills = within(row).getAllByRole('menuitem').filter((button) => button.hasAttribute('data-blok-ask-ai-skill'));
+
+    expect(skills.map((button) => button.textContent?.trim())).toEqual(assistantActions('selection', t).map(({ label }) => label));
+  });
+
+  it('runs a skill: opens the bar with its prompt, then closes the toolbar', () => {
+    const { row, openAssistant, close } = setup();
+    const [improve] = assistantActions('selection', t);
+
+    fireEvent.click(within(row).getByRole('menuitem', { name: 'Suggestions' }));
+    fireEvent.click(within(row).getByRole('menuitem', { name: improve.label }));
+
+    expect(openAssistant).toHaveBeenCalledWith({ prompt: improve.prompt });
+    expect(close).toHaveBeenCalledTimes(1);
+    expect(openAssistant.mock.invocationCallOrder[0]).toBeLessThan(close.mock.invocationCallOrder[0]);
   });
 });

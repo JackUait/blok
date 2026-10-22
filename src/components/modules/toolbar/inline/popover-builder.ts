@@ -54,6 +54,11 @@ export class InlinePopoverBuilder {
       const itemsArray = Array.isArray(renderedTool) ? renderedTool : [renderedTool];
       const isFirstItem = index === 0;
 
+      // Ask AI is the last row: rule it off from the tools above.
+      if (tool.name === 'askAi' && popoverItems.length > 0) {
+        popoverItems.push({ type: PopoverItemType.Separator });
+      }
+
       for (const item of itemsArray) {
         const processed = this.processPopoverItem(item, tool.name, toolTitle, shortcutBeautified, isFirstItem);
 
@@ -92,6 +97,8 @@ export class InlinePopoverBuilder {
     if (item.type === PopoverItemType.Html) {
       result.push({
         ...commonPopoverItemParams,
+        // The Ask AI row shows its label, so a hint would only repeat it.
+        ...(toolName === 'askAi' ? { hint: undefined } : {}),
         ...item,
         type: PopoverItemType.Html,
       });

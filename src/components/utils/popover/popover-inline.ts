@@ -188,7 +188,7 @@ export class PopoverInline extends PopoverDesktop {
 
       convertEl
         .querySelectorAll('[data-blok-testid="popover-item-title"]')
-        .forEach((title) => title.classList.add('font-medium'));
+        .forEach((title) => title.classList.replace('font-medium', 'font-normal'));
 
       convertEl
         .querySelectorAll('[data-blok-testid="popover-item-chevron-right"]')
@@ -202,6 +202,10 @@ export class PopoverInline extends PopoverDesktop {
           'group-data-[blok-popover-item-children-open]/convert:translate-x-0.5',
           'group-data-[blok-popover-item-children-open]/convert:text-text-primary'
         ));
+    }
+
+    for (const askAi of root.querySelectorAll(`[${DATA_ATTR.itemName}="askAi"]`)) {
+      askAi.classList.add('col-span-full');
     }
 
     root

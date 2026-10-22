@@ -1124,7 +1124,7 @@
             "description": "Sends `prompt` to the built-in assistant and returns a run. The model reads and edits the document live, as it does from the Ask AI bar.\n\n- `options.context`: sends the selected text, or the caret's block, to the model. Default `true`.\n- `options.thinking`: sets the level for this run. Without it, the run uses `thinking.default`. Prompts sent from the Ask AI bar use the level picked there.\n\nIt throws when `agent.assistant` is not set or a turn is already open. It throws a `TypeError` when the `thinking` config is invalid or `options.thinking` is not a known level. Wait for `run.result`, then call `run.end()` to keep the edits or `run.discard()` to undo them."
           },
           "openAssistant": {
-            "description": "Opens the Ask AI prompt bar, as Cmd/Ctrl+J does. Use it for an Ask AI button in your own UI. It does nothing when `agent.assistant` is not set or the editor is read-only."
+            "description": "Opens the Ask AI prompt bar, as Cmd/Ctrl+J does. Use it for an Ask AI button in your own UI. Pass `{ prompt }` to send that prompt at once, as if the user typed it. It does nothing when `agent.assistant` is not set or the editor is read-only."
           }
         },
         "turn": {

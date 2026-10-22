@@ -14,10 +14,10 @@ describe('defaultInlineTools order', () => {
 });
 
 describe('INLINE_TOOL_ORDER', () => {
-  it('lays the cells out in Notion order: Ask AI, color and emphasis first, then link and technical marks', () => {
+  // Ask AI is absent: it is the last row, after any third-party tool.
+  it('lays the cells out in Notion order: color and emphasis first, then link and technical marks', () => {
     expect(INLINE_TOOL_ORDER).toEqual([
       'convertTo',
-      'askAi',
       'marker', 'bold', 'italic', 'underline', 'clearFormat',
       'link', 'strikethrough', 'inlineCode', 'equation', 'supSub',
     ]);

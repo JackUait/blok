@@ -251,6 +251,32 @@ test.describe('in-editor assistant', () => {
     expect(String((await page.evaluate(() => window.assistantPrompts))?.[0])).toContain('"The quick brown fox"');
   });
 
+  test('a skill from the inline toolbar\'s Ask AI row runs on the selection at once', async ({ page }) => {
+    await setup(page, [reply('Done.')]);
+
+    const words = page.locator('[data-blok-id="p1"] [contenteditable]');
+
+    await words.click();
+    await page.keyboard.press('Home');
+    await page.keyboard.press('Shift+End');
+
+    const skills = page.getByRole('menuitem', { name: 'Suggestions' });
+
+    await expect(skills).toHaveAttribute('aria-expanded', 'false');
+    await skills.click();
+    await expect(skills).toHaveAttribute('aria-expanded', 'true');
+    await page.getByRole('menuitem', { name: 'Fix spelling and grammar' }).click();
+
+    const bar = page.getByRole('dialog', { name: 'Ask AI' });
+
+    await expect(bar.getByText('Done.')).toBeVisible();
+
+    const prompt = String((await page.evaluate(() => window.assistantPrompts))?.[0]);
+
+    expect(prompt).toContain('Fix spelling, grammar and punctuation in the selected text');
+    expect(prompt).toContain('"The quick brown fox"');
+  });
+
   test('Ask AI in the inline toolbar, on a selection across two blocks, opens under the block where it ends', async ({ page }) => {
     await setup(page, []);
 

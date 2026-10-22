@@ -158,6 +158,18 @@ describe('PopoverInline', () => {
       expect(convert?.className).toContain('col-span-full');
     });
 
+    it('stretches the Ask AI row across all five columns', () => {
+      const popover = new PopoverInline({
+        items: [{ type: PopoverItemType.Html, element: document.createElement('div'), name: 'askAi' }],
+      });
+
+      popover.show();
+
+      const row = popover.getElement().querySelector('[data-blok-item-name="askAi"]');
+
+      expect(row?.className).toContain('col-span-full');
+    });
+
     it('sizes formatting cells 32x28 with the card\'s inner radius', () => {
       const popover = createGridPopover();
 
@@ -212,7 +224,7 @@ describe('PopoverInline', () => {
       expect(chevron?.className).toContain('ml-auto');
     });
 
-    it('styles the convert row as a card header: medium label, muted chevron', () => {
+    it('styles the convert row as a card header: regular-weight label, muted chevron', () => {
       const popover = createGridPopover();
 
       popover.show();
@@ -223,7 +235,7 @@ describe('PopoverInline', () => {
       const title = convert?.querySelector('[data-blok-testid="popover-item-title"]');
       const chevron = convert?.querySelector('[data-blok-testid="popover-item-chevron-right"]');
 
-      expect(title?.className).toContain('font-medium');
+      expect(title?.className).not.toContain('font-medium');
       expect(chevron?.className).toContain('text-text-secondary');
     });
 

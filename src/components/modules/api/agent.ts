@@ -136,7 +136,7 @@ export class AgentAPI extends Module {
       },
       subscribe: (listener: () => void) => this.subscribe(listener),
       ask: (prompt: string, options?: AgentAskOptions) => this.ask(prompt, options),
-      openAssistant: () => this.Blok.Assistant.open(),
+      openAssistant: (options?: { prompt?: string }) => this.Blok.Assistant.open({ prompt: options?.prompt }),
     };
   }
 

@@ -765,13 +765,18 @@ export class Tools extends Module {
    * Orders Inline Tools by the canonical toolbar sequence.
    *
    * Built-in tools take their rank from INLINE_TOOL_ORDER; anything absent
-   * from it (a third-party Inline Tool) ranks last. Array.prototype.sort is
-   * stable, so unknown tools keep the order they were registered in.
+   * from it (a third-party Inline Tool) ranks after them, and Ask AI after
+   * everything. Array.prototype.sort is stable, so unknown tools keep the
+   * order they were registered in.
    * @param entries - inline tool entries in registration order
    * @returns the same entries in canonical order
    */
   private sortInlineTools(entries: [string, InlineToolAdapter][]): [string, InlineToolAdapter][] {
     const rankOf = (name: string): number => {
+      if (name === 'askAi') {
+        return INLINE_TOOL_ORDER.length + 1;
+      }
+
       const index = INLINE_TOOL_ORDER.indexOf(name);
 
       return index === -1 ? INLINE_TOOL_ORDER.length : index;

@@ -12,10 +12,12 @@
  *
  * Adding an Inline Tool to `allTools` in `src/full.ts` without placing it here
  * fails `test/unit/components/modules/tools.test.ts`.
+ *
+ * Ask AI is not listed: `Tools.sortInlineTools` puts it after every tool, as
+ * the card's last row.
  */
 export const INLINE_TOOL_ORDER: readonly string[] = [
   'convertTo',
-  'askAi',
   'marker',
   'bold',
   'italic',

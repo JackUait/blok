@@ -223,11 +223,11 @@ describe('PopoverInline — mutation residue', () => {
       ],
     });
 
-    it('renders the convert label at medium weight', () => {
+    it('renders the convert label at regular weight', () => {
       const popover = makeConvert();
       const title = popover.getElement().querySelector('[data-blok-testid="popover-item-title"]');
 
-      expect(title?.classList.contains('font-medium')).toBe(true);
+      expect(title?.classList.contains('font-medium')).toBe(false);
     });
   });
 

@@ -1090,7 +1090,7 @@ describe('tools module', () => {
       expect(order).toStrictEqual(['convertTo', 'bold', 'clearFormat', 'zeta', 'alpha']);
     });
 
-    it('adds Ask AI right after convertTo only when an assistant model is configured', async () => {
+    it('adds Ask AI last, after third-party tools, only when an assistant model is configured', async () => {
       /**
        * Block tool stub the inline tools get assigned to.
        */
@@ -1104,7 +1104,7 @@ describe('tools module', () => {
       }
       const inlineOrder = async (config: Partial<BlokConfig>): Promise<string[]> => {
         const module = createModule({
-          tools: { bold: makeInlineTool('bold'), blockTool: { class: BlockStub as unknown as ToolConstructable, inlineToolbar: true } },
+          tools: { zeta: makeInlineTool('zeta'), bold: makeInlineTool('bold'), blockTool: { class: BlockStub as unknown as ToolConstructable, inlineToolbar: true } },
           ...config,
         });
 
@@ -1114,8 +1114,8 @@ describe('tools module', () => {
       };
 
       await expect(inlineOrder({ agent: { assistant: { model: async () => ({ content: [], stop_reason: 'end_turn' }) } } }))
-        .resolves.toStrictEqual(['convertTo', 'askAi', 'bold']);
-      await expect(inlineOrder({})).resolves.toStrictEqual(['convertTo', 'bold']);
+        .resolves.toStrictEqual(['convertTo', 'bold', 'zeta', 'askAi']);
+      await expect(inlineOrder({})).resolves.toStrictEqual(['convertTo', 'bold', 'zeta']);
     });
 
     it('lists every inline tool shipped in allTools', () => {

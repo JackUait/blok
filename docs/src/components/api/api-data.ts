@@ -3516,11 +3516,12 @@ if (result.status === 'done') {
 }`,
       },
       {
-        name: "agent.openAssistant()",
+        name: "agent.openAssistant(options?)",
         returnType: "void",
         description:
-          "Opens the Ask AI prompt bar, as Cmd/Ctrl+J does. Use it for an Ask AI button in your own UI. It does nothing when `agent.assistant` is not set or the editor is read-only.",
-        example: `askAiButton.onclick = () => editor.agent.openAssistant();`,
+          "Opens the Ask AI prompt bar, as Cmd/Ctrl+J does. Use it for an Ask AI button in your own UI. Pass `{ prompt }` to send that prompt at once, as if the user typed it. It does nothing when `agent.assistant` is not set or the editor is read-only.",
+        example: `askAiButton.onclick = () => editor.agent.openAssistant();
+summarizeButton.onclick = () => editor.agent.openAssistant({ prompt: 'Summarize this page' });`,
       },
       {
         name: "run.result",

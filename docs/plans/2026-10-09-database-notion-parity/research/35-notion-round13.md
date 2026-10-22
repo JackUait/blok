@@ -470,3 +470,21 @@ The template cadence's Timezone menu (§13) was also 342x595 at y 110. So in a 7
 
 Side read for B1: at **06:16:28** local, turning Include time on in an empty-time date gave **7:00 AM** (start and end).
 
+## 21. B21: carried items (dark, partial)
+
+**Map pins** (120-row database; Row 119 Where = London, Row 118 = Paris; new Map view):
+- A pin is a DOM marker, `div.maplibregl-marker aria-label="Map marker"`, box **22x32**, holding an svg **22x26** with two paths: outline **rgb(25, 25, 25)** (the dark page bg) and fill **rgb(35, 131, 226)**. Inside is an `A` linking to the row page (`/p/Row-119-<id>?pvs=25`). The map itself is one `CANVAS aria-label="Map"` (1026x400 here). The city names under the pins in the screenshot belong to the map tiles, not to the pins.
+- Toolbar: a **"No place (99+)"** button (14px, rgb(173, 169, 163), transparent) for the 118 rows without a place.
+- **Hover card**: 260x119, bg rgb(37, 37, 37), above the pin: breadcrumb (page › … › database, 11–12px rgb(125, 122, 117)) then the row title 13px rgb(240, 239, 237). Delay from `pointerover` on the marker to the card's text: **166 ms** from outside the map, **173 ms** moving pin to pin, **164 ms** again from outside. So **no warm window**: every pin waits about the same.
+- 100+ pins and pin colours by rule: **not measured** (two places only; time).
+
+**Reminders** (R13, E1 date › Remind › "On day of event (9:00 AM)"; the Remind list is None / On day of event (9:00 AM) / 1 day before (9:00 AM) / 2 days before (9:00 AM) / 1 week before (9:00 AM)):
+- Table cell: an **`alarmSmall` icon, 17px, fill rgb(39, 131, 222)** after the date text (129px into the cell); the date text did not change.
+- Row page (side peek) Date value: the same `alarmSmall` 17px rgb(39, 131, 222).
+- Feed: **could not measure** (the Feed view shows no properties by default, and switching Date on failed: the Settings button was not found in the view's scrolled toolbar; time).
+- Lane gap, bulk, paste default: not measured.
+
+**Timeline snap at other zooms: could not measure.** In Month zoom a horizontal mouse drag of E3's bar (6 move events, +60px, at the view's lowest bar row) **moved the row out of the database onto the page** as a page block below the database instead of moving its date. Cmd+Z put it back (E3 back in the timeline at Oct 22, the page block gone, the table row intact). No further bar drags were tried.
+
+Not attempted (time): backlinks with 20+ sources; form "Created by" with anonymous off; the layout builder items; sort-row drag motion; the light leftovers (c7b979bb, 218fec5b, b8cddcef, 8396d0eb).
+

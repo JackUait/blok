@@ -20,6 +20,7 @@ import {
   toIsoDay,
   toIsoTime,
   toLocalDate,
+  zoneCity,
   zoneOffsetText,
 } from './date-format';
 import type { DateDisplayChange } from './date-format';
@@ -142,9 +143,10 @@ const zoneRank = (query: string, entry: ZoneEntry): number | null => {
   return closestRun(query, entry.city.toLocaleLowerCase()) <= 1 ? 1 : 2;
 };
 
-const canonicalZone = (zone: string | undefined): string | undefined => {
-  if (zone === undefined) {
-    return undefined;
+/** The stored zone's row: its own name when listed (Asmara and Asmera are two rows), else the name the engine resolves it to. */
+const listedZone = (zone: string | undefined, listed: readonly string[]): string | undefined => {
+  if (zone === undefined || listed.includes(zone)) {
+    return zone;
   }
   try {
     return new Intl.DateTimeFormat('en-US', { timeZone: zone }).resolvedOptions().timeZone;
@@ -154,7 +156,7 @@ const canonicalZone = (zone: string | undefined): string | undefined => {
 };
 
 const zoneEntry = (id: string, zone: string, at: Date): ZoneEntry => {
-  const city = (zone.split('/').pop() ?? zone).replace(/_/g, ' ');
+  const city = zoneCity(zone);
   const offset = zoneOffsetText(zone, at);
 
   const name = `${city} ${zone}`.toLocaleLowerCase();
@@ -856,11 +858,11 @@ class DateEditor {
     const listId = `blok-date-zones-${++zoneMenus.count}`;
     const now = new Date();
     const localZone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
-    // The engine's own name, so a stored alias (Kolkata for Calcutta) or the browser zone still finds its row.
-    const stored = canonicalZone(this.display.timeZone);
+    const listed = timeZones();
+    const stored = listedZone(this.display.timeZone, listed);
     const current = stored === localZone ? undefined : stored;
     const local = zoneEntry('local', localZone, now);
-    const zones = timeZones().filter((zone) => zone !== localZone).map((zone) => zoneEntry(zone, zone, now));
+    const zones = listed.filter((zone) => zone !== localZone).map((zone) => zoneEntry(zone, zone, now));
     const state = { rows: [] as HTMLElement[], active: -1 };
     const pick = (id: string): void => this.pickSetting('timeZone', { timeZone: id === 'local' ? null : id });
 

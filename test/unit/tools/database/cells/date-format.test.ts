@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import enJson from '../../../../../src/components/i18n/locales/en.json';
-import { applyDateDisplayChange, editorLocale, formatDateDisplay, formatDayField, formatShortDatePart, resolveHourCycle, resolveWeekStart, timeZones, toIsoDay, toLocalDate } from '../../../../../src/tools/database/cells/date-format';
+import { applyDateDisplayChange, editorLocale, formatDateDisplay, formatDayField, formatShortDatePart, resolveHourCycle, resolveWeekStart, timeZones, toIsoDay, toLocalDate, zoneCity, zoneOffsetText } from '../../../../../src/tools/database/cells/date-format';
 
 const en: Record<string, string> = enJson;
 const t = (key: string): string => en[key] ?? key;
@@ -157,24 +157,70 @@ describe('date-format', () => {
     });
   });
 
+  // research/23 §1, 30 B25, 35 §13: 568 rows with the current zone; head, tail and "tok" hits as measured.
+  // The full set was not dumped. The IANA 2026e names minus Factory, Etc/GMT±N, US/Samoa, Universal and
+  // Zulu is the one rule found that hits 568 and every measured name.
   describe('timeZones', () => {
-    type ZoneIntl = typeof Intl & { supportedValuesOf: (key: 'timeZone') => string[] };
+    it('lists the 568 zones in IANA id order, from Abidjan to WET', () => {
+      const zones = timeZones();
 
-    const stubZones = (zones: string[]): void => {
-      vi.spyOn(Intl as ZoneIntl, 'supportedValuesOf').mockReturnValue(zones);
-    };
-
-    // Notion lists UTC among its zones (research/23 §1); Intl leaves it out on some engines.
-    it('adds UTC when the engine leaves it out', () => {
-      stubZones(['Africa/Abidjan', 'Europe/Berlin']);
-
-      expect(timeZones()).toEqual(['Africa/Abidjan', 'Europe/Berlin', 'UTC']);
+      expect(zones).toHaveLength(568);
+      expect(zones.slice(0, 10)).toEqual([
+        'Africa/Abidjan', 'Africa/Accra', 'Africa/Addis_Ababa', 'Africa/Algiers', 'Africa/Asmara', 'Africa/Asmera',
+        'Africa/Bamako', 'Africa/Bangui', 'Africa/Banjul', 'Africa/Bissau',
+      ]);
+      expect(zones.slice(-5)).toEqual(['US/Mountain', 'US/Pacific', 'UTC', 'W-SU', 'WET']);
+      expect(zones).toEqual([...zones].sort());
+      expect(zones).toEqual(expect.arrayContaining(['Europe/Berlin', 'Pacific/Kanton', 'America/Kentucky/Louisville', 'Antarctica/Vostok']));
     });
 
-    it('lists UTC once when the engine has it', () => {
-      stubZones(['Africa/Abidjan', 'UTC']);
+    it('leaves out a name the engine rejects, so the menu still opens', async () => {
+      const Real = Intl.DateTimeFormat;
 
-      expect(timeZones().filter((zone) => zone === 'UTC')).toHaveLength(1);
+      vi.resetModules();
+      vi.spyOn(Intl, 'DateTimeFormat').mockImplementation(class extends Real {
+        constructor(locales?: Intl.LocalesArgument, options?: Intl.DateTimeFormatOptions) {
+          if (options?.timeZone === 'Pacific/Kanton') {
+            throw new RangeError('Invalid time zone specified: Pacific/Kanton');
+          }
+          super(locales, options);
+        }
+      });
+      const fresh = await import('../../../../../src/tools/database/cells/date-format');
+
+      expect(fresh.timeZones()).toHaveLength(567);
+      expect(fresh.timeZones()).not.toContain('Pacific/Kanton');
+    });
+  });
+
+  describe('zoneCity', () => {
+    it('drops the region, keeps the rest of the path, and reads "_" as a space', () => {
+      expect(zoneCity('Africa/Addis_Ababa')).toBe('Addis Ababa');
+      expect(zoneCity('America/Kentucky/Louisville')).toBe('Kentucky/Louisville');
+      expect(zoneCity('UTC')).toBe('UTC');
+      expect(zoneCity('W-SU')).toBe('W-SU');
+    });
+
+    it('writes a US zone as "Mountain (US)"', () => {
+      expect(zoneCity('US/Mountain')).toBe('Mountain (US)');
+      expect(zoneCity('US/Pacific')).toBe('Pacific (US)');
+    });
+  });
+
+  describe('zoneOffsetText', () => {
+    const at = new Date('2026-10-20T04:00:00Z');
+
+    it('drops the hour\'s leading zero on a whole hour, and writes a zero offset as "GMT"', () => {
+      expect(zoneOffsetText('Europe/Berlin', at)).toBe('GMT+2:00');
+      expect(zoneOffsetText('America/Chicago', at)).toBe('GMT-5:00');
+      expect(zoneOffsetText('Africa/Abidjan', at)).toBe('GMT');
+      expect(zoneOffsetText('Pacific/Kanton', at)).toBe('GMT+13:00');
+    });
+
+    // research/23 §1: "GMT+05:30" for Kolkata next to "GMT+10:30". One padded sample only.
+    it('keeps the leading zero when the offset has minutes', () => {
+      expect(zoneOffsetText('Asia/Kolkata', at)).toBe('GMT+05:30');
+      expect(zoneOffsetText('Australia/Broken_Hill', at)).toBe('GMT+10:30');
     });
   });
 });

@@ -295,6 +295,9 @@ describe('template menu', () => {
 
       expect(active(zones.find((entry) => entry.name === 'template-repeat-zone-Europe/Berlin'))).toBe(true);
       expect(tokyo?.title).toBe('Tokyo');
+      // research/35 §13: the same zone list and names as the date picker.
+      expect(zones.filter((entry) => entry.name?.startsWith('template-repeat-zone-'))).toHaveLength(568);
+      expect(zones.find((entry) => entry.name === 'template-repeat-zone-America/Kentucky/Louisville')?.title).toBe('Kentucky/Louisville');
       // The rows read the date picker's offset text (research/30 B25); the row value stays "GMT+9".
       expect(tokyo?.titleEl?.querySelector('[data-blok-database-template-cadence-zone-offset]')?.textContent).toBe('GMT+9:00');
       tokyo?.onActivate?.();

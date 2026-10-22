@@ -3,7 +3,7 @@ import type { PopoverItemParams } from '../../../types/utils/popover/popover-ite
 import { IconCopy, IconPage, IconPencil, IconPlayerLoop, IconPlus, IconTrash } from '../../components/icons';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { onHover } from '../../components/utils/tooltip';
-import { resolveLocale, timeZones, zoneOffsetText } from './cells/date-format';
+import { resolveLocale, timeZones, zoneCity, zoneOffsetText } from './cells/date-format';
 import { wallTime, zonedToEpoch } from './formula/dates';
 import { nextRun, repeatWeekdays, repeatZone } from './templates';
 import type { TemplateRepeat, TemplateRepeatFrequency } from './types';
@@ -398,7 +398,7 @@ const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: Cade
 
   const zones = timeZones();
   const zoneItem = (id: string): PopoverItemParams => {
-    const city = (id.split('/').pop() ?? id).replace(/_/g, ' ');
+    const city = zoneCity(id);
     const titleEl = el('span', 'data-blok-database-template-cadence-zone', city);
 
     titleEl.append(el('span', 'data-blok-database-template-cadence-zone-offset', zoneOffsetText(id, c.now())));

@@ -1004,7 +1004,7 @@ describe('date cell editor', () => {
 
         expect(text(zoneRow('Asia/Tokyo')?.querySelector('[data-blok-database-date-zone-city]'))).toBe('Tokyo');
         expect(text(zoneRow('Asia/Tokyo')?.querySelector('[data-blok-database-date-zone-offset]'))).toBe('GMT+9:00');
-        expect(text(zoneRow('Asia/Colombo')?.querySelector('[data-blok-database-date-zone-offset]'))).toBe('GMT+5:30');
+        expect(text(zoneRow('Asia/Colombo')?.querySelector('[data-blok-database-date-zone-offset]'))).toBe('GMT+05:30');
         expect(text(zoneRow('America/Los_Angeles')?.querySelector('[data-blok-database-date-zone-city]'))).toBe('Los Angeles');
       });
 
@@ -1036,14 +1036,31 @@ describe('date cell editor', () => {
         expect(zoneRow('Asia/Tokyo')).toBeNull();
       });
 
-      // A zone saved in another browser can be an alias the list names differently (Kolkata, Calcutta).
-      it('a stored alias checks the listed zone it names', () => {
-        const listed = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata' }).resolvedOptions().timeZone;
-
-        openRows('2026-10-09T14:00', { timeZone: 'Asia/Kolkata' });
+      // Notion lists links next to their zones (Asmara and Asmera, research/23 §1): the check goes on the stored name,
+      // not on the one the engine resolves it to.
+      it('a stored zone with a listed alias checks its own row only', () => {
+        openRows('2026-10-09T14:00', { timeZone: 'Africa/Asmara' });
         setting('timeZone').click();
 
-        expect(selected()).toEqual([listed]);
+        expect(selected()).toEqual(['Africa/Asmara']);
+        expect(zoneRow('Africa/Asmera')).not.toBeNull();
+      });
+
+      // A zone saved in another engine can be spelled differently (lower case, or a name this list leaves out).
+      it('a stored zone that is not listed checks the listed zone it resolves to', () => {
+        openRows('2026-10-09T14:00', { timeZone: 'asia/tokyo' });
+        setting('timeZone').click();
+
+        expect(selected()).toEqual(['Asia/Tokyo']);
+      });
+
+      it('names a nested zone by its path and a US zone as "Mountain (US)" (research/23 §1, 30 B25)', () => {
+        openRows('2026-10-09T14:00');
+        setting('timeZone').click();
+
+        expect(text(zoneRow('America/Kentucky/Louisville')?.querySelector('[data-blok-database-date-zone-city]'))).toBe('Kentucky/Louisville');
+        expect(text(zoneRow('US/Mountain')?.querySelector('[data-blok-database-date-zone-city]'))).toBe('Mountain (US)');
+        expect(text(zoneRow('UTC')?.querySelector('[data-blok-database-date-zone-city]'))).toBe('UTC');
       });
 
       it('typing filters by city, and "No results" shows when nothing matches', () => {
@@ -1059,33 +1076,36 @@ describe('date cell editor', () => {
       });
 
       describe('fuzzy search (research/23 §1)', () => {
-        // A fixed list: the engine's own zone names change between ICU versions (Kanton was Enderbury).
-        const ZONES = [
-          'Africa/Bamako', 'Africa/Conakry', 'Africa/Freetown', 'Africa/Khartoum', 'Africa/Nouakchott', 'America/Atikokan',
-          'America/Kentucky/Louisville', 'America/Toronto', 'Antarctica/Vostok', 'Asia/Bangkok', 'Asia/Tokyo', 'Asia/Tomsk',
-          'Asia/Vladivostok', 'Australia/Broken_Hill',
-          'Europe/Berlin', 'Europe/Stockholm', 'Pacific/Kanton',
-        ];
         const rows = (): string[] => [...(zoneMenu()?.querySelectorAll('[data-blok-database-date-setting-option]') ?? [])]
           .map((row) => row.getAttribute('data-blok-database-date-setting-option') ?? '');
 
         beforeEach(() => {
           const real = Intl.DateTimeFormat.prototype.resolvedOptions;
 
-          vi.spyOn(Intl, 'supportedValuesOf').mockReturnValue(ZONES);
           vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockImplementation(function (this: Intl.DateTimeFormat) {
             return { ...real.call(this), timeZone: 'Europe/Berlin' };
           });
         });
 
+        it('lists 567 zones under the pinned Berlin row, 568 in all, as Notion did', () => {
+          openRows('2026-10-09T14:00');
+          setting('timeZone').click();
+
+          expect(rows()).toHaveLength(568);
+          expect(rows().slice(0, 3)).toEqual(['local', 'Africa/Abidjan', 'Africa/Accra']);
+          expect(rows()).not.toContain('Europe/Berlin');
+        });
+
+        // Notion's first 11 rows for "tok". Blok also lists Novokuznetsk among them, after Atikokan:
+        // Notion's rule is unknown and it showed no Novokuznetsk in those 11.
         it('"tok" lists exact matches first, then near ones, each in list order, as Notion did', () => {
           openRows('2026-10-09T14:00');
           setting('timeZone').click();
           typeInto(search(), 'tok');
 
-          expect(rows()).toEqual([
+          expect(rows().slice(0, 12)).toEqual([
             'Antarctica/Vostok', 'Asia/Tokyo', 'Asia/Vladivostok',
-            'Africa/Khartoum', 'America/Atikokan', 'Asia/Tomsk', 'Australia/Broken_Hill', 'Europe/Stockholm', 'Pacific/Kanton',
+            'Africa/Khartoum', 'America/Atikokan', 'Asia/Novokuznetsk', 'Asia/Tomsk', 'Australia/Broken_Hill', 'Europe/Stockholm', 'Pacific/Kanton',
             'Africa/Nouakchott', 'America/Kentucky/Louisville',
           ]);
           expect(headings()).toEqual(['Select a timezone']);
@@ -1119,7 +1139,7 @@ describe('date cell editor', () => {
           setting('timeZone').click();
           typeInto(search(), 'tk');
 
-          expect(rows()).toEqual([]);
+          expect(rows()).toEqual(['America/Atka', 'America/Sitka', 'Asia/Kamchatka']);
         });
       });
 

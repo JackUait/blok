@@ -1,6 +1,7 @@
 import type { I18n } from '../../../../types';
 import type { DateDisplay, DateFormat, TimeFormat } from '../types';
 import { parseDateValue, toIsoDay, toIsoTime } from './date-value';
+import { TIME_ZONE_NAMES } from './time-zone-names';
 
 /** Local wall-clock time of one stored date part. A part with a zone keeps its instant. */
 export const toLocalDate = (part: string): Date => {
@@ -292,28 +293,48 @@ export const TIME_FORMATS: readonly TimeFormat[] = ['hidden', '12_hour', '24_hou
 
 const offsetFormats = new Map<string, Intl.DateTimeFormat>();
 
-/** "GMT+2:00", "GMT+5:30", "GMT" (research/23 §1: Notion drops the hour's leading zero). */
-export const zoneOffsetText = (zone: string, at: Date): string => {
+const offsetFormat = (zone: string): Intl.DateTimeFormat => {
   const format = offsetFormats.get(zone) ?? new Intl.DateTimeFormat('en-US', { timeZone: zone, timeZoneName: 'longOffset' });
 
   offsetFormats.set(zone, format);
-  const name = format.formatToParts(at).find((p) => p.type === 'timeZoneName')?.value ?? 'GMT';
 
-  // Chromium writes a zero offset as "GMT+00:00"; Notion shows "GMT".
-  return /^GMT[+-]00:00$/.test(name) ? 'GMT' : name.replace(/([+-])0(\d)/, '$1$2');
+  return format;
 };
 
+/**
+ * "GMT+2:00", "GMT", "GMT+05:30" (research/23 §1). Notion drops the hour's
+ * leading zero on whole hours but kept it for Kolkata (one sample).
+ */
+export const zoneOffsetText = (zone: string, at: Date): string => {
+  const name = offsetFormat(zone).formatToParts(at).find((p) => p.type === 'timeZoneName')?.value ?? 'GMT';
+
+  // Chromium writes a zero offset as "GMT+00:00"; Notion shows "GMT".
+  return /^GMT[+-]00:00$/.test(name) ? 'GMT' : name.replace(/([+-])0(\d:00)$/, '$1$2');
+};
+
+/** "Addis Ababa", "Kentucky/Louisville", "Mountain (US)" (research/23 §1, 30 B25). Other legacy folders: unmeasured. */
+export const zoneCity = (zone: string): string => {
+  const slash = zone.indexOf('/');
+  const rest = (slash === -1 ? zone : zone.slice(slash + 1)).replace(/_/g, ' ');
+
+  return zone.startsWith('US/') ? `${rest} (US)` : rest;
+};
+
+const supported = { zones: null as string[] | null };
+
+/** Notion's list, less any name this engine's time zone data does not know yet. */
 export const timeZones = (): string[] => {
-  const intl = Intl as typeof Intl & { supportedValuesOf?: (key: 'timeZone') => string[] };
+  supported.zones ??= TIME_ZONE_NAMES.filter((zone) => {
+    try {
+      offsetFormat(zone);
 
-  try {
-    const zones = intl.supportedValuesOf?.('timeZone') ?? [];
+      return true;
+    } catch {
+      return false;
+    }
+  });
 
-    // Notion offers UTC (research/23 §1); V8 lists only regional zones.
-    return zones.length === 0 || zones.includes('UTC') ? zones : [...zones, 'UTC'];
-  } catch {
-    return [];
-  }
+  return [...supported.zones];
 };
 
 /** One pick in the date picker's format rows. `timeZone: null` is "Your time zone". */

@@ -174,3 +174,24 @@ test('time zone search: "tok" lists exact matches first, then near ones like Kha
   await menu.locator('[data-blok-database-date-zone-search]').fill('zzqx');
   await expect(menu.locator('[data-blok-database-date-zone-empty]')).toHaveText('No results');
 });
+
+// research/23 §1, 30 B25: 568 options in all, the current zone pinned on top and left out below.
+// In a real engine, so a name its time zone data rejects would show up as a missing row.
+test('time zone list: Notion\'s 568 zones, Asmara and Asmera both, US zones as "Mountain (US)"', async ({ page, browserName }) => {
+  // WebKit's time zone data rejects CST6CDT, EST5EDT, MST7MDT and PST8PDT, so it lists fewer.
+  test.skip(browserName === 'webkit', 'WebKit lists 564');
+  await mount(page, table, false);
+  await openDate(page);
+  await page.locator('[data-blok-database-date-time-toggle]').click();
+  await page.locator('[data-blok-database-date-setting="timeZone"]').click();
+  const menu = page.locator('[data-blok-database-date-setting-menu="timeZone"]');
+  const options = menu.locator('[data-blok-database-date-setting-option]');
+  const local = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
+
+  await expect(options).toHaveCount(568);
+  await expect(menu.locator(`[data-blok-database-date-setting-option="${local}"]`)).toHaveCount(0);
+  await expect(menu.locator('[data-blok-database-date-setting-option="Africa/Asmara"]')).toHaveCount(1);
+  await expect(menu.locator('[data-blok-database-date-setting-option="Africa/Asmera"]')).toHaveCount(1);
+  await expect(menu.locator('[data-blok-database-date-setting-option="US/Mountain"] [data-blok-database-date-zone-city]')).toHaveText('Mountain (US)');
+  await expect(menu.locator('[data-blok-database-date-setting-option="Asia/Kolkata"] [data-blok-database-date-zone-offset]')).toHaveText('GMT+05:30');
+});

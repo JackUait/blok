@@ -4050,6 +4050,7 @@ span[data-blok-slash-search] {
   --blok-database-checkbox-check: #ffffff;
   --blok-database-today: rgb(229, 100, 88);
   --blok-database-column-bg: rgba(66, 35, 3, 0.03);
+  --blok-database-form-respondent-bg: var(--blok-database-column-bg);
   --blok-database-table-bg: var(--blok-bg-primary);
   --blok-database-table-border: rgba(42, 28, 0, 0.07);
   --blok-database-table-header-text: var(--blok-database-ink-secondary);
@@ -4285,6 +4286,7 @@ span[data-blok-slash-search] {
   --blok-database-checkbox-check: #ffffff;
   --blok-database-today: rgb(229, 100, 88);
   --blok-database-column-bg: rgba(252, 252, 252, 0.03);
+  --blok-database-form-respondent-bg: rgba(255, 255, 255, 0.03);
   --blok-database-card-bg: rgb(32, 32, 32);
   --blok-database-card-bg-hover: rgb(38, 38, 38);
   --blok-database-table-bg: var(--blok-bg-primary);
@@ -4521,6 +4523,7 @@ span[data-blok-slash-search] {
   --blok-database-checkbox-check: #ffffff;
   --blok-database-today: rgb(229, 100, 88);
   --blok-database-column-bg: rgba(252, 252, 252, 0.03);
+  --blok-database-form-respondent-bg: rgba(255, 255, 255, 0.03);
   --blok-database-card-bg: rgb(32, 32, 32);
   --blok-database-card-bg-hover: rgb(38, 38, 38);
   --blok-database-table-bg: var(--blok-bg-primary);
@@ -14380,12 +14383,6 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   background-color: var(--blok-database-hover-bg);
 }
 
-[data-blok-database-form-respondent] {
-  display: flex;
-  align-items: center;
-  gap: var(--blok-space-1-5);
-}
-
 [data-blok-database-form-anonymous], [data-blok-database-form-respondent] {
   inline-size: fit-content;
   margin-block: 0 var(--blok-space-4);
@@ -14395,6 +14392,13 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   color: var(--blok-database-ink-secondary);
   font-size: 14px;
   line-height: 21px;
+}
+
+[data-blok-database-form-respondent] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  background-color: var(--blok-database-form-respondent-bg);
 }
 
 [data-blok-database-form-share-badge] {

@@ -99,6 +99,8 @@
   --blok-database-today: rgb(229, 100, 88);
   /* Re-set here, not in colors.css, so view.css keeps the shipped values. Notion's measured tint (research/08). */
   --blok-database-column-bg: rgba(66, 35, 3, 0.03);
+  /* research/36 §13 measured dark only. */
+  --blok-database-form-respondent-bg: var(--blok-database-column-bg);
   /* Table view (research/07 and 08). */
   --blok-database-table-bg: var(--blok-bg-primary);
   --blok-database-table-border: rgba(42, 28, 0, 0.07);
@@ -401,6 +403,7 @@
     --blok-database-today: rgb(229, 100, 88);
     /* Re-set here, not in colors.css, so view.css keeps the shipped values. Measured in dark (research/08). */
     --blok-database-column-bg: rgba(252, 252, 252, 0.03);
+    --blok-database-form-respondent-bg: rgba(255, 255, 255, 0.03);
     --blok-database-card-bg: rgb(32, 32, 32);
   --blok-database-card-bg-hover: rgb(38, 38, 38);
     /* Table view (research/07, 08; research/21 §1a, §1d; research/22 §12 for OPEN and "+ New page"). The gutter is unmeasured in dark. */
@@ -672,6 +675,7 @@
   --blok-database-today: rgb(229, 100, 88);
   /* Re-set here, not in colors.css, so view.css keeps the shipped values. Measured in dark (research/08). */
   --blok-database-column-bg: rgba(252, 252, 252, 0.03);
+  --blok-database-form-respondent-bg: rgba(255, 255, 255, 0.03);
   --blok-database-card-bg: rgb(32, 32, 32);
   --blok-database-card-bg-hover: rgb(38, 38, 38);
   /* Table view (research/07, 08; research/21 §1a, §1d; research/22 §12 for OPEN and "+ New page"). The gutter is unmeasured in dark. */
@@ -11493,13 +11497,6 @@ button[data-blok-database-feed-reaction]:hover,
 }
 
 /* The respondent's "Submitting response anonymously" pill (research/23 §6, 96-form-respondent.png): 14px/21px, 6px radius. */
-/* research/36 §13: the same box as the anonymous pill, with a 20px round avatar before the name. */
-[data-blok-database-form-respondent] {
-  display: flex;
-  align-items: center;
-  gap: var(--blok-space-1-5);
-}
-
 [data-blok-database-form-anonymous],
 [data-blok-database-form-respondent] {
   inline-size: fit-content;
@@ -11510,6 +11507,14 @@ button[data-blok-database-feed-reaction]:hover,
   color: var(--blok-database-ink-secondary);
   font-size: 14px;
   line-height: 21px;
+}
+
+/* research/36 §13: the same box as the anonymous pill, with a 20px round avatar before the name, and Notion's dark fill. */
+[data-blok-database-form-respondent] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  background-color: var(--blok-database-form-respondent-bg);
 }
 
 [data-blok-database-form-share-badge] {

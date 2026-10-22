@@ -250,6 +250,12 @@ describe('text tokens that held a failing Notion value take the AA step', () => 
     expect(ruleBody('[data-blok-database-calendar-event-property]')).toContain('color: var(--blok-database-calendar-event-muted-text)');
   });
 
+  it('the form respondent chip takes Notion\'s dark fill (research/36 §13); light is unmeasured', () => {
+    expect(themed('--blok-database-form-respondent-bg')).toEqual({ light: 'var(--blok-database-column-bg)', dark: 'rgba(255, 255, 255, 0.03)', attr: 'rgba(255, 255, 255, 0.03)' });
+    expect(ruleBody('[data-blok-database-form-respondent]')).toContain('background-color: var(--blok-database-form-respondent-bg)');
+    expect(ruleBody('[data-blok-database-form-anonymous]')).toContain('background-color: var(--blok-database-column-bg)');
+  });
+
   it('reminder dates keep Notion\'s blue hue at the nearest passing step', () => {
     expect(contrast('rgb(39, 131, 222)', WHITE)).toBeLessThan(4.5);
     expect(themed('--blok-database-reminder-text')).toEqual({ light: 'rgb(35, 119, 211)', dark: 'rgb(41, 137, 232)', attr: 'rgb(41, 137, 232)' });

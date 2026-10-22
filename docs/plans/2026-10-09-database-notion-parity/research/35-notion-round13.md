@@ -162,3 +162,62 @@ After Cancel the tab's view menu was still open behind it (light read; matches r
 
 Keyboard after it opened with the mouse: one **Escape** closed only the submenu and put focus on the "…" button (`role=button`), and the tooltip "**Edit this template**" (115x27, bg rgb(44, 44, 43), ink rgb(240, 239, 237)) appeared above it with the pointer elsewhere, so it came from focus. A second Escape removed the tooltip with the menu still open; a third closed the menu.
 
+### 1.9 A second toast kind: the bottom-left notice (dark)
+
+After "Turn into task database" (§0), a notice sat at the **bottom left** of the page frame and was still there about 15 minutes later (it does not time out; closed with its ×):
+
+| Part | Dark |
+|---|---|
+| Box | 280x78 at (282, 627) (10px right of the sidebar edge, 12px above the window bottom), bg **rgb(32, 32, 32)**, border **1px rgb(44, 44, 43)**, radius 8px, padding 8px 8px 4px, no shadow |
+| Icon | 16x16 check-circle, fill **rgb(70, 161, 113)** (green) |
+| Title | "Turned into task database" 12px / 16px / **600**, rgb(240, 239, 237) |
+| Body | "You can now add it as a source for My Tasks" 12px / 16px / 400, rgb(240, 239, 237) |
+| × | `role=button aria-label="Close"` 24x24, radius 6px; glyph 14x14 fill rgba(255, 255, 255, 0.81) |
+
+Light: not read (it appeared while dark was on).
+
+## 2. B5: "/" menu
+
+### 2.1 What makes the Table view insert skip the "New database" panel
+
+All inserts by typing "/table view" (or "/database inline") and Enter on the highlighted row. Pages are new child pages of the scratch page.
+
+| Page state at the insert | Entry | Panel? |
+|---|---|---|
+| Scratch page: title only, caret on the first body line (§0) | Table view | **No panel** (database inserted at once) |
+| S1: line 1 "hello", insert on line 2 (the page's first database) | Table view | **Panel** (290x465 at x 1210) |
+| S2: line 1 empty, line 2 "below", insert on line 1 (first block, first database, but the page is not empty) | Table view | **Panel** |
+| S3: title only, caret on the first body line | **Database - Inline** | **Panel** |
+
+So the skip needs **a page with no other block** (first block alone does not do it, first database alone does not do it), and it applies to the **Table view** entry only: Database - Inline on the same kind of empty page opened the panel. Together with research 28 / 30 that is three "empty page + Table view" samples, all skipping.
+
+### 2.2 Why Feed lists no properties
+
+S3 › "/feed view" › panel › New empty data source. View settings: "Property visibility **0**"; its page reads "Property visibility | **No results**". "Edit properties" reads "Properties | **No results** | New property | Learn about properties": the title property "Name" is not listed in a Feed's lists at all.
+Added a Text property "Note" (Edit properties › New property › name › Text). Property visibility then read "**1**", page "Shown in feed | Hide all | **Note**".
+So Feed's lists leave out the title property; a fresh database has only the title, hence "No results".
+
+### 2.3 The full-page database's View settings
+
+S3 › "/database full" › **Database - Full page**. The browser moved to the new database page. The "New database" panel showed as a **docked right panel** (not a popover): the AI prompt box focused (not typed into), then New empty data source, Import CSV, Suggested (Tasks Tracker, Projects, Skills), More templates, Link to existing data source. Picking **New empty data source** turned the same docked panel into **View settings** (Layout Table, Property visibility 1, Filter, Sort, Group, Conditional color, Copy link to view; Data source settings: Source, Edit properties, Automations, AI Autofill, Turn into, More settings, Manage data sources, Lock database).
+
+The docked panel: `position: absolute`, at x **1125**, from y 166 (right below the 40px sticky toolbar) to the window bottom, 483 wide to the window edge with the content column **290** wide; bg = the page bg (rgb(25, 25, 25) in dark); **border-left 1px rgb(56, 56, 54)** (dark); no shadow; not `role=dialog`. A "Close" × sits at its top right. The toolbar's Settings button **toggles** it (a second click closed it; a third reopened it). Theme: dark (light not read).
+
+### 2.4 Cold hint delay
+
+On S3, "/" with no query (25 rendered options). Pointer parked outside the menu (x 300) for 1.5 s, then moved onto an option; a 5 ms poll looked for the hint text ("Just start writing" for Text). `coldhint2.sh`:
+
+| Path | Hint |
+|---|---|
+| From outside onto "Text", nudged 5px after 0 / 0.2 / 1 s, then 4 s wait (3 runs) | **none** |
+| From outside onto "Board view" in "/board" filtered results (1 and 8 small moves, 3 s) | none |
+| Rest on "Database - Full page" 1.5 s, then move to "Text" (`warmhint.sh`) | **15 ms** after `pointerover` |
+
+A screenshot taken after moving from one option to "Text" and waiting 2.5 s showed the hint card (preview image and "Just start writing with plain text") to the right of the menu. A keyboard-highlighted row (the first row on open) showed no hint.
+So, measured: **a hint never appeared for the first option entered from outside the menu** (6 tries this round, plus research 30's 3); it appears at ~15 ms when moving from one option to another. Whether some longer rest or another pointer path shows it cold: not found.
+
+### 2.5 A read-only one-view database's tab
+
+S3's first database (one Table view) › View settings › **Lock database** (the row then reads "Unlock database"). After closing View settings: **no tab** is drawn (tabs: none), the database title row shows the title as plain heading text ("New database", primary ink in the screenshot) with a **"🔒 Locked"** label before the toolbar icons; the "Add property" header cell is gone. So a locked one-view database still renders no view tab.
+Side note: after Escape closed View settings, focus went back to the Settings button, which drew a blue focus ring and its "Settings" tooltip without a hover (same as the template "…" in §1.8).
+

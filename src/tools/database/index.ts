@@ -6641,6 +6641,7 @@ export class DatabaseTool implements BlockTool {
     const renderer: DatabaseTableView = new DatabaseTableView({
       readOnly,
       i18n: this.api.i18n,
+      locale: editorLocale(this.api.i18n),
       get view() { return context?.view ?? viewConfig; },
       schema: localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
       rows: nesting === undefined ? rows : nesting.nest(rows),

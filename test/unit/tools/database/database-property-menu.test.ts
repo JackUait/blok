@@ -642,6 +642,30 @@ describe('DatabasePropertyMenu', () => {
       expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { date: { timeFormat: '24_hour', timeZone: 'Asia/Tokyo' } });
     });
 
+    // research/37 §2: an untouched Date property shows "Full date" and "12 hour".
+    it('shows the current date format and time format as the rows\' values', () => {
+      open(prop('date'));
+      const untouched = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+      expect(byName(untouched, 'dateFormat').secondaryLabel).toBe('tools.database.dateFormat.full');
+      expect(byName(untouched, 'timeFormat').secondaryLabel).toBe('tools.database.timeFormat.12_hour');
+
+      open(prop('date', { date: { dateFormat: 'relative', timeFormat: 'hidden' } }));
+      const saved = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+      expect(byName(saved, 'dateFormat').secondaryLabel).toBe('tools.database.dateFormat.relative');
+      expect(byName(saved, 'timeFormat').secondaryLabel).toBe('tools.database.timeFormat.hidden');
+    });
+
+    it('shows 24 hour on an untouched Date property when the locale uses a 24 hour clock', () => {
+      const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'de' } as never, hasPeople: false, ...callbacks() });
+
+      menu.open(prop('date'), document.createElement('button'));
+      const items = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+      expect(byName(items, 'timeFormat').secondaryLabel).toBe('tools.database.timeFormat.24_hour');
+    });
+
     // research/17 §1d: Notifications, the Remind a new date starts with.
     it('sets Notifications from the date-only reminders, None by default', () => {
       const cb = open(prop('date', { date: { timeFormat: '24_hour' } }));

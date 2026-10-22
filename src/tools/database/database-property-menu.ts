@@ -716,11 +716,13 @@ export class DatabasePropertyMenu {
 
     const date = property.date ?? {};
     const setDate = (patch: Partial<typeof date>): void => update({ date: { ...date, ...patch } });
+    const shownTimeFormat = date.timeFormat ?? (resolveHourCycle(resolveLocale(this.options.i18n.getLocale())) === 'h12' ? '12_hour' : '24_hour');
 
     return [
       {
         name: 'dateFormat',
         title: this.t('tools.database.dateFormat'),
+        secondaryLabel: this.t(`tools.database.dateFormat.${date.dateFormat ?? 'full'}`),
         icon: IconCalendar,
         children: {
           items: DATE_FORMATS.map((format) => ({
@@ -735,6 +737,7 @@ export class DatabasePropertyMenu {
       {
         name: 'timeFormat',
         title: this.t('tools.database.timeFormat'),
+        secondaryLabel: this.t(`tools.database.timeFormat.${shownTimeFormat}`),
         children: {
           items: TIME_FORMATS.map((format) => ({
             name: `timeFormat-${format}`,

@@ -1211,21 +1211,18 @@ describe('in-editor assistant bar', () => {
       });
     };
 
-    it('follows an out-of-view edit, and typing in the bar keeps following on', async () => {
+    it('does not scroll the page to an edit below the window', async () => {
       const editor = await createEditor(scripted(insertBatch('One'), answer('Done one.'), insertBatch('Two'), answer('Done two.')));
 
       holdersAt(2000);
       editor.agent.openAssistant();
       submit('Write one');
       await waitFor(() => expect(within(bar()).getByText('Done one.')).toBeVisible());
-      expect(scrolls.spy).toHaveBeenCalledTimes(1);
-
-      // submit() types Enter in the bar's field: user intent, but inside the bar.
       submit('Write two');
       await waitFor(() => expect(within(bar()).getByText('Done two.')).toBeVisible());
 
+      expect(scrolls.spy).not.toHaveBeenCalled();
       expect(await texts(editor)).toEqual(['Hello', 'One', 'Two']);
-      expect(scrolls.spy).toHaveBeenCalledTimes(2);
     });
 
     /** Holders and streamed words both at `top`: below jsdom's 768px window when it is large. */
@@ -1251,101 +1248,18 @@ describe('in-editor assistant bar', () => {
       await waitFor(() => expect(previewText()).toBe('Far away words land'));
     };
 
-    it('follows a streamed word drawn below the window before its batch commits, with one glide for one place', async () => {
+    it('does not scroll the page to a streamed word drawn below the window', async () => {
       const live = streaming();
       const editor = await createEditor(live.model);
 
-      // Within one window of the view: a glide.
-      wordsAt(1000);
+      wordsAt(2000);
       editor.agent.openAssistant();
       submit('Write');
       await streamWords(live);
+      await settle(50);
 
+      expect(scrolls.spy).not.toHaveBeenCalled();
       expect(await texts(editor)).toEqual(['Hello']);
-      // The word's bottom (1024) sits 16px above the window's bottom edge.
-      expect(scrolls.spy).toHaveBeenLastCalledWith({ top: 1024 - window.innerHeight + 16, behavior: 'smooth' });
-      // Four words landed at the same place: the glide on its way is not restarted.
-      expect(scrolls.spy).toHaveBeenCalledTimes(1);
-    });
-
-    it('jumps at once to a streamed word more than a window away', async () => {
-      const live = streaming();
-
-      const editor = await createEditor(live.model);
-
-      wordsAt(2000);
-      editor.agent.openAssistant();
-      submit('Write');
-      await streamWords(live);
-
-      expect(scrolls.spy).toHaveBeenNthCalledWith(1, { top: 2024 - window.innerHeight + 16, behavior: 'instant' });
-    });
-
-    it('glides again to the same place once the last glide has ended', async () => {
-      const live = streaming();
-
-      const editor = await createEditor(live.model);
-
-      wordsAt(1000);
-      editor.agent.openAssistant();
-      submit('Write');
-      await streamWords(live);
-      expect(scrolls.spy).toHaveBeenCalledTimes(1);
-
-      window.dispatchEvent(new Event('scrollend'));
-      live.emit({ type: 'tool_input', index: 0, json: executeCall('c1', insert('Far away words land here and more')).json });
-      await waitFor(() => expect(previewText()).toContain('here'));
-
-      expect(scrolls.spy).toHaveBeenCalledTimes(2);
-    });
-
-    it('follows a streamed word at once under reduced motion', async () => {
-      vi.stubGlobal('matchMedia', (query: string) => ({
-        matches: query.includes('reduce'),
-        media: query,
-        onchange: null,
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        dispatchEvent: () => false,
-      }));
-      const live = streaming();
-      const editor = await createEditor(live.model);
-
-      wordsAt(2000);
-      editor.agent.openAssistant();
-      submit('Write');
-      await streamWords(live);
-
-      // The page follows a word once it is placed, on the next frame.
-      await waitFor(() => expect(scrolls.spy).toHaveBeenLastCalledWith({ top: 2024 - window.innerHeight + 16, behavior: 'instant' }));
-    });
-
-    it('a user scroll ends following, so later streamed words do not scroll', async () => {
-      const live = streaming();
-      const editor = await createEditor(live.model);
-
-      wordsAt(2000);
-      editor.agent.openAssistant();
-      submit('Write');
-      await waitFor(() => expect(live.started()).toBe(true));
-      window.dispatchEvent(new WheelEvent('wheel', { deltaY: 40 }));
-      await streamWords(live);
-
-      expect(scrolls.spy).not.toHaveBeenCalled();
-    });
-
-    it('does not scroll for streamed words already in view', async () => {
-      const live = streaming();
-      const editor = await createEditor(live.model);
-
-      wordsAt(100);
-      editor.agent.openAssistant();
-      submit('Write');
-      await streamWords(live);
-
-      expect(scrolls.spy).not.toHaveBeenCalled();
     });
 
     it('does not scroll to an edit already in view', async () => {
@@ -1698,6 +1612,42 @@ describe('in-editor assistant bar', () => {
       pressModJ(inputOf('p2'));
 
       expect(scrollBy).not.toHaveBeenCalled();
+    });
+
+    it('stays at the window\'s bottom edge when its block moves below the window', async () => {
+      await createEditor(scripted(), undefined, THREE_BLOCKS);
+      fakeLayout();
+      vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(250);
+      vi.spyOn(window, 'scrollBy').mockImplementation(() => undefined);
+      select('p1', 0, 'p1', 0);
+      pressModJ(inputOf('p1'));
+      expect(barStyle().top).toBe('130px');
+
+      // Text written above it pushes its block down.
+      pageShift.y = 300;
+      document.dispatchEvent(new Event('scroll'));
+      await settle(50);
+
+      // 16px above the window's bottom: 250 - 16 - 46.
+      expect(barStyle().top).toBe('188px');
+      // The gap stays under its block, so it comes back there.
+      pageShift.y = 0;
+      document.dispatchEvent(new Event('scroll'));
+      await settle(50);
+      expect(barStyle().top).toBe('130px');
+    });
+
+    it('stays at the window\'s top edge when its block is scrolled above the window', async () => {
+      await createEditor(scripted(), undefined, THREE_BLOCKS);
+      fakeLayout();
+      select('p1', 0, 'p1', 0);
+      pressModJ(inputOf('p1'));
+
+      pageShift.y = -400;
+      document.dispatchEvent(new Event('scroll'));
+      await settle(50);
+
+      expect(barStyle().top).toBe('16px');
     });
 
     const NESTING_TOOLS = { paragraph: Paragraph, column_list: ColumnList, column: Column, toggle: ToggleItem };
@@ -2125,41 +2075,6 @@ describe('in-editor assistant bar', () => {
       expect(bar().querySelector('[data-blok-assistant-slots]:not([hidden])')).not.toBeNull();
       runs.calls[1].finish(answer('Second.'));
       await waitFor(() => expect(within(bar()).getByText('Second.')).toBeVisible());
-    });
-
-    it('picking a thinking level in the bar\'s menu keeps following on', async () => {
-      const editor = await createEditor(
-        scripted(insertBatch('One'), answer('Done one.'), insertBatch('Two'), answer('Done two.')),
-        { levels: ['low', 'high'], default: 'low' }
-      );
-      const measure = HTMLElement.prototype.getBoundingClientRect;
-
-      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement): DOMRect {
-        return this.hasAttribute('data-blok-element') ? new DOMRect(0, 2000, 600, 24) : measure.call(this);
-      });
-      editor.agent.openAssistant();
-      submit('Write one');
-      await waitFor(() => expect(within(bar()).getByText('Done one.')).toBeVisible());
-      expect(scrolls.spy).toHaveBeenCalledTimes(1);
-
-      // Typing a follow-up brings the picker back in place of Undo and Keep.
-      const field = within(bar()).getByRole('textbox');
-
-      if (!(field instanceof HTMLTextAreaElement)) {
-        throw new Error('prompt field is not a textarea');
-      }
-      field.value = 'Write two';
-      field.dispatchEvent(new Event('input', { bubbles: true }));
-      within(bar()).getByRole('button', { name: 'Thinking: Low' }).click();
-
-      const high = screen.getByRole('menuitemradio', { name: 'High' });
-
-      high.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
-      high.click();
-      submit('Write two');
-      await waitFor(() => expect(within(bar()).getByText('Done two.')).toBeVisible());
-
-      expect(scrolls.spy).toHaveBeenCalledTimes(2);
     });
   });
 

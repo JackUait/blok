@@ -222,7 +222,7 @@ export class Assistant extends Module {
     this.remember(block);
     this.watch();
     if (opening) {
-      this.revealBar(bar.element);
+      this.revealBar(bar.home);
     }
     if (options.prompt !== undefined) {
       this.submit(options.prompt);
@@ -230,8 +230,7 @@ export class Assistant extends Module {
   }
 
   /** Once, on open: bring a bar placed past the window's edge into view. Later scrolls are the user's. */
-  private revealBar(element: HTMLElement): void {
-    const rect = element.getBoundingClientRect();
+  private revealBar(rect: { top: number; bottom: number }): void {
     const below = rect.bottom + REVEAL_ROOM - window.innerHeight;
     const above = rect.top - REVEAL_ROOM;
     const top = below > 0 ? below : Math.min(above, 0);

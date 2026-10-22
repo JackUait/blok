@@ -195,8 +195,8 @@ export class AgentAPI extends Module {
     thinking: () => AgentThinkingLevel | undefined,
     hooks: AssistantRunHooks = {}
   ): AgentRun {
-    // The live preview stands in for the local caret and pulse.
-    return this.ask(prompt, { context: false }, place, thinking, hooks, { drawLocal: false, barFollow: true, onExecuted: hooks.onExecuted });
+    // The live preview stands in for the local caret and pulse. No follow: the page stays where the user left it.
+    return this.ask(prompt, { context: false }, place, thinking, hooks, { drawLocal: false, onExecuted: hooks.onExecuted });
   }
 
   private ask(

@@ -169,6 +169,8 @@ export class AssistantBar {
   /** A prompt typed but not sent: the next open shows it again. */
   private draft = '';
   private anchor: HTMLElement | null = null;
+  /** The bar's top at its spot in the page, before pinning it inside the window. */
+  private homeTop = 0;
   private thinkingView: AssistantThinkingView | null = null;
   private thinkingMenu: PopoverDesktop | null = null;
   private replyToken = 0;
@@ -265,6 +267,11 @@ export class AssistantBar {
     return this.anchor;
   }
 
+  /** The bar's box at its spot in the page, in viewport px, even while pinned inside the window. */
+  public get home(): { top: number; bottom: number } {
+    return { top: this.homeTop, bottom: this.homeTop + this.element.getBoundingClientRect().height };
+  }
+
   /** Whether a node is in the bar or in a menu the bar opened. */
   public contains(node: Node): boolean {
     return this.element.contains(node) || this.thinkingMenu?.hasNode(node) === true;
@@ -339,9 +346,14 @@ export class AssistantBar {
       this.slots.style.fontSize = getComputedStyle(anchor).fontSize;
       reserveGap(anchor, SLOTS_GAP, this.slots.getBoundingClientRect().height);
     }
-    this.element.style.top = `${top ?? rect.bottom + offset + SPACE_BEFORE}px`;
+    this.homeTop = top ?? rect.bottom + offset + SPACE_BEFORE;
+    // Pinned inside the window, over the text, when its spot leaves it. Only this write:
+    // the gaps above follow the spot, or every scroll would resize them.
+    // client sizes leave out classic scrollbars; they are 0 only with no layout (jsdom).
+    const view = document.documentElement.clientHeight || window.innerHeight;
+
+    this.element.style.top = `${Math.max(WINDOW_EDGE, Math.min(this.homeTop, view - WINDOW_EDGE - height))}px`;
     // Centred on the column; a narrow window trims the overhang first, then the column.
-    // clientWidth leaves out a classic scrollbar; it is 0 only with no layout (jsdom).
     const page = document.documentElement.clientWidth || window.innerWidth;
     const width = Math.max(0, Math.min(column.width + 2 * OVERHANG, page - 2 * WINDOW_EDGE));
     const left = Math.min(Math.max(column.left + column.width / 2 - width / 2, WINDOW_EDGE), page - WINDOW_EDGE - width);

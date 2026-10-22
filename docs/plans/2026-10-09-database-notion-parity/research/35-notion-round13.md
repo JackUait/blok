@@ -404,3 +404,21 @@ Template TplA › "…" › **Duplicate every… Off** (`arrowSquareLeftRight`, 
 
 Escape on the unsaved panel raised **"Discard unsaved changes?"** (dark): 324x187 centred, bg rgb(32, 32, 32), radius 12px, the dark dialog shadow of §1.7, backdrop rgba(15, 15, 15, 0.8); a 32x32 icon fill rgb(173, 169, 163); title 16px / **600**; buttons 284x32: **"Discard"** red (ink rgb(253, 246, 246)), **focused on open with a ring drawn** (`rgb(25,25,25) 0 0 0 2px, rgb(35,131,226) 0 0 0 4px, rgb(25,25,25) 0 0 0 6px`) and its fill read as `color(srgb 0.911511 0.472468 0.431627)` ≈ rgb(232, 120, 110) while focused; "Cancel" outlined (1px rgba(255, 255, 235, 0.1)). Discard closed it; "Duplicate every…" still read **Off** (nothing saved).
 
+## 14. B16: a flipped submenu (dark)
+
+Full-page database (the 120-row import), New chevron at x 1396 › "Templates for New database" menu at x **1048–1408** › template **TplB** › click its "…" (x 1380–1404). The submenu opened **flipped, over the list: 250x152 at x 1114, right edge 1364** (just left of the "…"), top 204 (same as research 30 §X1's right edge 1364). Focus moved into the submenu (`role=menu`), no row highlighted.
+
+| Key | Result |
+|---|---|
+| ArrowDown | highlights "Duplicate every…" (first row) |
+| ArrowDown | "Set as default" |
+| **ArrowRight** (on the first row, and again on "Set as default") | **nothing**: same highlight, submenu stays |
+| **ArrowLeft** (same two rows) | **nothing** |
+| Escape | closes only the submenu; the templates menu stays |
+
+The trigger is the "…" (`ellipsisSmall`); no chevron on it. Inside, "Duplicate every… Off" ends with `arrowChevronSingleDownSmall` (a dropdown, not a side submenu). Arrow keys in the **unflipped** submenu were not tried, so whether Left/Right differ by side is not known.
+
+## 15. B18: "Hide data source titles" on a non-linked two-source database
+
+R13 after "New data source › New empty data source" (two sources, not linked). The **tab's view menu** (click a selected tab) lists: Rename, Display as ›, Edit view, Source › (New data source / R13), Copy link to view, Add view to sidebar, Open as full page, **"Hide data source titles"** (`eye` icon, plain `menuitem`, no switch), Duplicate view, Delete view. It showed on the second source's view tab (light) and on a Board tab of R13's own source (dark). The "New view" layout pages show **"Show data source titles"** as a switch (board, calendar, timeline). The row was not clicked, so whether it acts per view or per block was not read.
+

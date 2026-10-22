@@ -242,3 +242,35 @@ Database R13 (table view). Extra properties added for this: **Notes** (Text), **
 - **Escape with typed text**: Cmd+A in the input, typed "Oct 25, 2026", Escape (no Enter): the cell **saved "October 25, 2026"**, and the one Escape closed the picker.
 - Enter on a typed date in the start input saved it and kept the picker open. A date typed into the **End** input followed by Enter did **not** change the end (twice); clicking a day in the grid with the End input focused did.
 
+## 4. B9: header (i) and description hints (dark)
+
+Tag property, table header menu (220 wide). The name input row has the (i) at its right end.
+
+- **The (i)**: `role=button aria-label="Add property description"`, radius 20px, box **15.3x20** (= the svg box; `infoCircleFill`, viewBox "2.37 0 15.26 20"). Dark fill **rgb(173, 169, 163)** at rest; on hover the button gets ≈ rgba(255, 255, 255, 0.055) and the glyph ink turns **rgb(230, 229, 227)**. No tooltip on hover.
+- **Click**: opens a **textarea** under the name ("Add a description…" placeholder), focused at once. Its wrapper (204x26, padding 3px 6px, radius 6px) has bg rgba(252, 252, 252, 0.03) and, while focused, a **blue ring** `rgb(35, 131, 226) 0 0 0 1px inset, rgb(35, 131, 226) 0 0 0 1px`. Textarea 13px / 20px, ink rgb(240, 239, 237), transparent.
+- **Description hint, dark** (table header with a description, pointer on the right part, after 2 s): box bg rgb(44, 44, 43), radius 6px, padding 5px 8px, shadow `rgba(0,0,0,0.08) 0 4px 12px -2px, rgba(255,255,255,0.05) 0 0 0 1px inset`; line 1 the name 12px rgb(240, 239, 237); line 2 the description 12px **rgb(173, 169, 163)**, the typed newline kept. With a long description the box was **296x128** (so about 280px of text width), placed above the header.
+
+Description hints in other places (Tag has a description; Date, Notes have none). Pointer away 1.5 s, then onto the target, 2.5 s:
+
+| Where | Target | Hint |
+|---|---|---|
+| Row page (side peek) property label | "Tag" | name + description, 296x128, **left of the label**, vertically centred on it |
+| Row page property label, no description | "Date" | **"Date" alone** (42x27), left of the label |
+| Board card property value | Tag pill "Gry" | name + description, left of the card |
+| Board card property value, no description | Notes line | "Notes" alone (49x27), left of the card |
+| List row property value | Tag pill | name + description, **below** the value |
+| List row property value, no description | Date | "Date" alone, below the value |
+| Gallery card property value | Tag pill | name + description, left of the card |
+
+So outside the table header, a property **value or label always has a hint** (its name), and the description is added under the name when there is one. Only the table header shows nothing without a description (research 31 §1, research 33 §1). Hint delay in these places: not timed.
+
+## 5. B10: the description field
+
+Same Tag header menu, dark.
+- **Reopen**: after a description was saved, the header menu reopened with **no field showing** (focus in the name input). The (i) has to be clicked again. The header gained `infoCircleSmall`.
+- **(i) clicks**: click 1 opens the field with the text and focuses it; **click 2 closes it** (focus to body, text kept); click 3 opens it again.
+- **Shift+Enter** inserts a newline ("Tag desc line one\nline two").
+- **Enter** leaves the field (focus moves off the textarea); the menu stays open; the text is kept.
+- **Growth**: 1 line 20px; 2 lines 40px; from 3 lines on the textarea stays **60px** (inline `style="height: 60px"`) and scrolls (`overflow-y: auto`, scrollHeight 100 then 180).
+- **Dark**: see §4 (wrapper rgba(252, 252, 252, 0.03), blue focus ring, radius 6px).
+

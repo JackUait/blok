@@ -303,3 +303,39 @@ Events selected (drag box over E1–E3, 3 halos), then:
 | Reselect; open Sort; click an **empty day cell** | menu closes, **no page created** | **kept** (3) |
 | Then click the same empty day (no menu open) | — | **cleared** (0); no page created |
 
+## 7. B4: board on a 120-row database (dark)
+
+`r13-big.csv` (generated): `Name,When,Grp,Score`, 120 rows "Row 001" … "Row 120"; When = `MM/DD/YYYY` in October 2026; Grp = **Big** for rows 1–105, **Small** for 106–115, empty for 116–120; Score = row number. Imported on child page S1: "/table view" › panel › **Import CSV** › Choose file (fed by `hook.sh`, no native dialog) › Map CSV headers › Import. The step showed When → "Date • Full date", Grp → "Select", Score → "Number". A modal "**Import complete** / Your CSV import was successful / **Go to import**" followed; "Go to import" opened the database as a full page, 120 rows.
+
+New Board view (tab bar "+" › Board): it grouped by **Grp** at once, Color columns on.
+
+| Read | Value |
+|---|---|
+| Group header counts on open | Big **"99+"**, Small **10**, **No Grp 5** |
+| Click the "99+" count | menu Count / Percent / More options / Date; hover **Count** › submenu: "Show large counts as 99+" / "This improves performance for large databases." with a `role=switch`, **on and enabled** (`checked = true`, `disabled = false`), then Count all, Count values, Count unique values, Count empty, Count not empty |
+| Switch off | Big's count reads **105** at once |
+| Same view, the Small column's Count submenu | switch **off** too: one setting for the whole view, not per column |
+| A second new Board view on the same database | Big **"99+"** again: the setting is **per view**, and a new view starts **on**; the first view kept 105 |
+| Where "No Grp" goes (select grouping, manual order) | **last**, after Big and Small |
+
+So research 30's disabled switch was the 3-row case; on a 105-row group it is enabled, on by default, and per view.
+Also seen: after the "Count all" switch, focus returned to the count button with a blue ring and the "Count all" tooltip showing (focus, no hover).
+
+- **Date spans under a day** (25caf2c3): **could not measure**. The ledger's wording does not say which grouping this means, and 25caf2c3 is about number ranges; not attempted.
+- **"No <property>" in a number range grouping**: **could not measure** (Score has no empty value; time).
+
+## 8. B7: help links and CSV
+
+| Link | Theme | Rest | Hover |
+|---|---|---|---|
+| "Learn about reminders" (date picker footer) | dark | `A` (a link), text 14px **rgb(125, 122, 117)**; `questionMarkCircle` fill **rgb(173, 169, 163)** | text and glyph unchanged; cursor pointer; no fill on the link's parent |
+| "Learn about imports" (Import CSV modal, step 1) | dark | `DIV role=button` 322x32, radius 6px, text 14px / 400 **rgb(142, 139, 134)**; `questionMarkCircleSmall` 16px fill **rgb(142, 139, 134)** | row bg ≈ rgba(255, 255, 255, 0.055); text and glyph unchanged |
+| The Setup step ("Setup CSV columns") | dark | **has no "Learn about imports"** (its text: "Setup CSV columns / Choose the property type for each column in your CSV file / Use first row as headers / CSV File Columns / Property Type / … / Import CSV / Cancel") | — |
+
+Neither link was clicked (a click may open a new tab).
+
+CSV, from the import above:
+- The created Date property ("When", from `10/02/2026`-style text) displays **"October 2, 2026"**: the Full date look. Its Date format setting was not opened.
+- The step's preview listed the rows in the order Row 002, Row 001, Row 005, Row 004, Row 003; the imported table (no sort) started Row 120, 119, 118, 116, 117, then the Small rows. Neither is the file order.
+- Not measured (time): unmapped column names with headers off in a merge; two columns onto one property; no column matching the title; a taken name; the "Existing property" list for computed, person and file properties; ISO dates under Day/Month/Year; the doubled-"Name" case.
+

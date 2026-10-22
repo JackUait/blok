@@ -270,6 +270,10 @@ test('Projects shows "Turn into" with the Tasks and Skills entries (their effect
   await expect(page.getByTestId('database-settings-turn-into-skills')).toHaveText('Turn into Skills database');
   await expect(page.getByTestId('database-settings-turn-into-tasks')).toBeDisabled();
   await expect(page.getByTestId('database-settings-turn-into-skills')).toBeDisabled();
+  // Every entry is disabled, so focus must still land in the panel, and going back returns it to the row.
+  expect(await page.evaluate(() => document.activeElement !== document.body)).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('database-settings-turn-into')).toBeFocused();
 });
 
 test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {

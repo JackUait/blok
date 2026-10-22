@@ -114,3 +114,66 @@ Rows were added with the column's "+ New page" (C1 … C10). For 99 and 100 the 
 - At 100 rows, off → the count reads **"100"**; on → **"99+"**.
 
 So in a standalone fresh database **the switch is enabled at every size tried, from 1 row**, and it is on by default. This agrees with research 36 §9. Research 30 B12 read the switch **off and disabled** in a different setup: a **duplicated view** ("By Status (1)") of the **Goals Tracker template** database; its "3 rows" cause was marked there as an inference. Row count is not the cause: a fresh 3-row database has it enabled. What does disable it (the template, the duplicated view, or something else) is **UNMEASURED**; a template database was not made this round.
+
+## 4. Dark (item 3 and item 6)
+
+Dark via **Cmd+Shift+L** (stored "dark", body bg rgb(25, 25, 25)). Afterwards Settings › Preferences › Theme › **"Use system setting"** (read back: stored `"system"`, body white; after a reload the `theme` cache key also read `{"mode":"light"}` as at the start).
+
+### 4.1 "Reset to original page layout?" in dark
+
+The brief points at research 36 §3 "light". The light Reset dialog is in research 36 **§8.2** (§3 is the template submenu), so §8.2's parts are read here. Path as there: R15 row F1 › side peek › "Customize layout" › builder › "More save options" › "Reset to original page layout" › dialog. Closed with Cancel, then the builder's own Cancel (nothing applied). Raw: `raw/reset-dark.json`.
+
+| Part | Dark | Light (research 36 §8.2) |
+|---|---|---|
+| Box | **300x226 at (606, 246)**, bg **rgb(32, 32, 32)**, radius 12px, shadow **`rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.64) 0 24px 48px 0, rgba(25, 25, 25, 0.56) 0 4px 12px 0`** | white; `rgba(25,25,25,0.24) 0 24px 48px 0, rgba(25,25,25,0.14) 0 4px 12px 0, rgba(42,28,0,0.07) 0 0 0 1px` |
+| Backdrop | **rgba(15, 15, 15, 0.8)** | rgba(15, 15, 15, 0.6) |
+| **×** `aria-label="Dismiss"` | 22x22 at (874, 256) (10px from top and right), radius 100%; **rest bg rgba(255, 255, 255, 0.055)**, **hover rgba(255, 255, 255, 0.03)** (hover is *fainter* than rest; read with the × focused and again after Tab moved focus away: same); `xMarkFill` 16px fill **rgb(173, 169, 163)**. Focused on open, no ring drawn. | rest rgba(55, 53, 47, 0.06), hover rgba(55, 53, 47, 0.16); fill rgb(142, 139, 134) |
+| Icon | `arrowUTurnUpLeft` 32x32 at (740, 266), fill **rgb(173, 169, 163)** | same place, rgb(142, 139, 134) |
+| Title | "Reset to original page layout?" 17px / 600, rgb(240, 239, 237), 234x22 at (639, 306) | 17px / 600 |
+| Text | "No properties will be deleted." 14px / 400, **rgb(173, 169, 163)**, 260x20 at (626, 336) | rgb(125, 122, 117) |
+| "Reset" | 260x32 at (626, 380), bg **rgb(229, 100, 88)**, ink rgb(255, 255, 255), 14px / 500, radius 6px; hover **`color(srgb 0.911511 0.472468 0.431627)` ≈ rgb(232, 120, 110)** (same values as light). Keyboard focus ring (after Tab): `rgb(25, 25, 25) 0 0 0 2px, rgb(35, 131, 226) 0 0 0 4px, rgb(25, 25, 25) 0 0 0 6px` | same fill and hover |
+| "Cancel" | 260x32 at (626, 420), no border, ink **rgb(173, 169, 163)**, 14px / 500, radius 6px; hover **`color(srgb 1 1 1 / 0.054902)` ≈ rgba(255, 255, 255, 0.055)** | ink rgb(125, 122, 117), hover ≈ rgba(33, 27, 23, 0.051) |
+
+### 4.2 Place editor "Open in Google Maps" in dark
+
+R15 row F1, **Place** property, search "Paris" › "Paris, Ile-de-France, France" (picked in light, read after switching to dark with the editor still open). Opened from the **table cell** this time (not a peek), so the editor is **240 wide** at (1018, 340), 213 tall. Raw: `raw/place-dark.json`.
+
+| Part | Dark |
+|---|---|
+| Popover | bg rgb(37, 37, 37), radius 6px, shadow `rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px` |
+| Name chip / × | "Edit place name" 191.7x20 radius 4px ink rgb(240, 239, 237); "Clear location field" 20x20 radius 4px, `xMarkFill` 14px fill rgb(173, 169, 163) |
+| Map | `CANVAS[aria-label=Map]` **232x168** at (1022, 381) = editor width − 8 (4px inset), as research 36 §7 found in light |
+| Pin | outline path fill **rgb(25, 25, 25)** (`var(--c-bacPri)`, the dark page bg), body rgb(35, 131, 226) (`#2383E2`) |
+| **"Open in Google Maps"** | `A[role=link]` 24x24 at (1222, 515), radius 6px, **bg rgb(25, 25, 25)**, **shadow `rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px`**; `maps` glyph 16x16 at (1226, 519), **fill rgb(173, 169, 163)**; ink rgb(240, 239, 237); cursor pointer; `target="_blank"`, href starts `https://www.google.com/maps/search/?api=`. **8px** from the map's right edge, **10px** from its bottom (same as light). |
+| Its **hover** (1.5 s, pointer on it, no press) | bg → **`color(srgb 0.14902 0.14902 0.14902)` ≈ rgb(38, 38, 38)** (opaque); shadow, glyph and ink unchanged. No hint appeared within 1.5 s. Never clicked. |
+
+So in dark the button is the page bg with the 1px rgb(56, 56, 54) ring + a soft drop, where light has white with a two-step shadow + rgba(42, 28, 0, 0.07) ring; hover lightens it by one step in both themes.
+
+### 4.3 "Moved to Trash" toast in dark (item 6)
+
+Trigger as research 36 §6: C15 table, row handle › Move to Trash (rows M091–M097). In-page logger (`tlog.js`): a 50 ms poller on the "Restore" leaf, plus capture-phase `pointerover` / `pointerout` listeners on the toast box, all stamped with `performance.now()` in the page (so the CLI's latency does not enter the numbers). Raw: `raw/toast-dark-run1..4.txt`.
+
+**Look (dark).**
+
+| Part | Dark | Light (research 36 §6) |
+|---|---|---|
+| Box | bg **rgb(44, 44, 43)**, ink rgb(240, 239, 237), radius **8px**, padding 11px 16px, 14px / 21px / 400, **shadow `rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.2) 0 14px 28px -6px, rgba(25, 25, 25, 0.118) 0 2px 4px -1px`**, no border | same bg, ink, radius, padding, type; shadow `rgba(25,25,25,0.05) 0 20px 24px 0, rgba(25,25,25,0.027) 0 5px 8px 0, rgba(42,28,0,0.07) 0 0 0 1px` |
+| Position at rest | **198x43 at (657, 646)** in a 1512x717 window: centred on x 756, bottom edge 28px above the window bottom | same |
+| Content | "Moved to Trash" text, then "Restore" `role=button` 67x17 at (776, 659), transparent, 14px / 500, padding 0 8px, radius 6px; no svg, no × | same |
+| "Restore" hover | **`color(srgb 1 1 1 / 0.054902)` ≈ rgba(255, 255, 255, 0.055)**, ink unchanged | ≈ rgba(33, 27, 23, 0.051) |
+
+**Motion.** Slides up over about 250 ms (leaf y 702–708 → 659 in five 50 ms steps), the same as light. Exit: the leaf shrinks 67 → 64 px over about 250 ms, then the toast is gone.
+
+**Timing.** Times in seconds from the toast's first frame ("appear"):
+
+| Run | Pointer enters toast | Pointer leaves | Exit starts | **Leave → exit** | If the timer *resumed* (5.05 − time already shown) |
+|---|---|---|---|---|---|
+| 3 (no hover) | — | — | **5.05** | — | — |
+| 1 | 4.14 | 8.26 | 13.30 | **5.05** | would be ≈ 0.9 |
+| 2 | 2.81 | 6.91 | 12.00 | **5.08** | would be ≈ 2.2 |
+| 4 | 2.83 | 4.96 | 10.00 | **5.04** | would be ≈ 2.2 |
+
+- Untouched, the toast lives **5.05 s** from its first frame (exit animation then about 0.25 s more).
+- **Hover holds it open.** Run 1 was still fully shown at 8.26 s.
+- **Leaving starts a fresh timer of the full length (≈ 5.05 s)**, the same in every run, whether the hover began at 2.8 s or at 4.1 s. A resumed timer would have given 0.9 s and 2.2 s. So the "resume" hypothesis of research 36 is ruled out (in dark; the light number there, 4.0 s, was one sample read with a CLI-side clock).
+- The CLI could not start a hover earlier than about 2.8 s after the toast appeared, so a hover in the first second was not tried.

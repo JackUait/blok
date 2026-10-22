@@ -266,6 +266,44 @@ test.describe('rubber band selection while the page scrolls', () => {
     expect(await selectedIndices(page)).toEqual(range(1, await rowAt(page, viewport - 10)));
   });
 
+  test('auto-scroll speeds up while the band stays at the edge and starts slow again after leaving it', async ({ page }) => {
+    await mount(page, 'window', 400);
+
+    const viewport = await page.evaluate(() => document.documentElement.clientHeight);
+    const x = await contentX(page);
+    /** Pixels the window scrolls during the next half second. */
+    const distance = (): Promise<number> => page.evaluate(async () => {
+      const start = window.scrollY;
+
+      await new Promise((done) => setTimeout(done, 500));
+
+      return window.scrollY - start;
+    });
+
+    await page.mouse.move(BAND_X, await centreY(page, 1));
+    await page.mouse.down();
+    await page.mouse.move(x, viewport - 10, { steps: 6 });
+
+    const early = await distance();
+
+    await page.evaluate(() => new Promise((done) => setTimeout(done, 2000)));
+
+    const late = await distance();
+
+    // Out of the edge zone with the button still held, then back.
+    await page.mouse.move(x, viewport / 2, { steps: 2 });
+    await page.evaluate(() => new Promise((done) => setTimeout(done, 200)));
+    await page.mouse.move(x, viewport - 10, { steps: 2 });
+
+    const restarted = await distance();
+
+    await page.mouse.up();
+
+    expect(early).toBeGreaterThan(0);
+    expect(late).toBeGreaterThan(early * 2);
+    expect(restarted).toBeLessThan(late / 2);
+  });
+
   test('a band dragged past the bottom of a short page is still alive when it comes back', async ({ page }) => {
     await mount(page, 'window', 4);
 

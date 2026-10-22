@@ -808,6 +808,126 @@ describe('RectangleSelection', () => {
     expect(scrollBySpy).toHaveBeenCalledTimes(1);
   });
 
+  describe('auto-scroll speed', () => {
+    type ScrollInternals = {
+      scrollByZones: (clientY: number) => void;
+      inScrollZone: number | null;
+      mousedown: boolean;
+      isScrolling: boolean;
+    };
+
+    /** Holds the button down over a 1000px viewport and records every scroll step. */
+    const holdAtEdge = (): { internal: ScrollInternals; steps: number[]; atEnd: { value: boolean } } => {
+      const { rectangleSelection } = createRectangleSelection();
+      const internal = rectangleSelection as unknown as ScrollInternals;
+      const steps: number[] = [];
+      const atEnd = { value: false };
+      let offset = 0;
+
+      vi.spyOn(rectangleSelection as unknown as { changingRectangle: () => void }, 'changingRectangle').mockImplementation(() => undefined);
+      Object.defineProperty(document.documentElement, 'clientHeight', { configurable: true, value: 1000 });
+      vi.spyOn(window, 'scrollY', 'get').mockImplementation(() => offset);
+      vi.spyOn(window, 'scrollBy').mockImplementation((options?: ScrollToOptions | number) => {
+        const top = typeof options === 'object' ? options.top ?? 0 : 0;
+
+        steps.push(top);
+        offset += atEnd.value ? 0 : top;
+      });
+
+      internal.mousedown = true;
+      internal.isScrolling = false;
+
+      return { internal, steps, atEnd };
+    };
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('speeds up while the band stays at the edge, then holds a top speed', () => {
+      vi.useFakeTimers();
+      const { internal, steps } = holdAtEdge();
+
+      internal.scrollByZones(995);
+      vi.advanceTimersByTime(6000);
+      internal.inScrollZone = null;
+      vi.advanceTimersByTime(50);
+
+      const first = steps[0];
+      const last = steps[steps.length - 1];
+
+      expect(first).toBe(3);
+      expect(last).toBeGreaterThan(first * 2);
+      expect(steps.every((step, i) => i === 0 || step >= steps[i - 1])).toBe(true);
+      // A top speed, not endless growth: the last second of steps is flat.
+      expect(new Set(steps.slice(-50)).size).toBe(1);
+    });
+
+    it('starts over at the default speed after the pointer leaves the edge, button still held', () => {
+      vi.useFakeTimers();
+      const { internal, steps } = holdAtEdge();
+
+      internal.scrollByZones(995);
+      vi.advanceTimersByTime(3000);
+      internal.scrollByZones(500);
+      vi.advanceTimersByTime(50);
+
+      const before = steps.length;
+
+      internal.scrollByZones(995);
+      vi.advanceTimersByTime(10);
+      internal.inScrollZone = null;
+      vi.advanceTimersByTime(50);
+
+      expect(steps[before - 1]).toBeGreaterThan(3);
+      expect(steps[before]).toBe(3);
+    });
+
+    it('starts over at the default speed after the page could not scroll further', () => {
+      vi.useFakeTimers();
+      const { internal, steps, atEnd } = holdAtEdge();
+
+      internal.scrollByZones(995);
+      vi.advanceTimersByTime(3000);
+      atEnd.value = true;
+      vi.advanceTimersByTime(50);
+      atEnd.value = false;
+
+      const before = steps.length;
+
+      internal.scrollByZones(995);
+      vi.advanceTimersByTime(10);
+      internal.inScrollZone = null;
+      vi.advanceTimersByTime(50);
+
+      expect(steps[before - 1]).toBeGreaterThan(3);
+      expect(steps[before]).toBe(3);
+    });
+
+    it('runs one scroll loop when the pointer leaves the edge and comes straight back', () => {
+      vi.useFakeTimers();
+      const once = holdAtEdge();
+
+      once.internal.scrollByZones(995);
+      vi.advanceTimersByTime(40);
+      once.internal.inScrollZone = null;
+      vi.advanceTimersByTime(50);
+      vi.restoreAllMocks();
+
+      const { internal, steps } = holdAtEdge();
+
+      internal.scrollByZones(995);
+      internal.scrollByZones(500);
+      internal.scrollByZones(995);
+      vi.advanceTimersByTime(40);
+      internal.inScrollZone = null;
+      vi.advanceTimersByTime(50);
+
+      // One loop takes one step per tick; a leftover second loop doubles the count.
+      expect(steps.length).toBeLessThanOrEqual(once.steps.length + 1);
+    });
+  });
+
   it('shrinks overlay rectangle to the starting point', () => {
     const {
       rectangleSelection,

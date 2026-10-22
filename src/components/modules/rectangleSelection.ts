@@ -61,9 +61,25 @@ export class RectangleSelection extends Module {
   private isRectSelectionActivated = false;
 
   /**
-   *  Speed of Scrolling
+   *  Speed of Scrolling, px per tick, when an auto-scroll run starts
    */
   private readonly SCROLL_SPEED: number = 3;
+
+  /**
+   * An unbroken auto-scroll run speeds up from SCROLL_SPEED to this over
+   * SCROLL_RAMP_MS, so a long way off-screen is reached without a slow crawl.
+   */
+  private readonly MAX_SCROLL_SPEED = 15;
+  private readonly SCROLL_RAMP_MS = 2000;
+
+  /**
+   * The current auto-scroll run and when it began. A run ends when the pointer
+   * leaves the edge zone, the button is released or the scroller cannot move;
+   * the next one starts at SCROLL_SPEED again. A loop whose run is no longer
+   * current stops, so re-entering the zone never leaves two loops scrolling.
+   */
+  private scrollRun = 0;
+  private scrollRunStart = 0;
 
   /**
    *  Height of scroll zone on boundary of screen
@@ -620,15 +636,28 @@ export class RectangleSelection extends Module {
   }
 
   /**
-   * Activates scrolling if blockSelection is active and mouse is in scroll zone
-   * @param {number} speed - speed of scrolling
+   * Starts an auto-scroll run, or continues `run`, while the pointer is held in a scroll zone
+   * @param {number} speed - starting step of the run, its sign the direction
+   * @param run - the run this tick belongs to; omitted to start a new run
    */
-  private scrollVertical(speed: number): void {
+  private scrollVertical(speed: number, run?: number): void {
+    if (run === undefined) {
+      this.scrollRun++;
+      this.scrollRunStart = Date.now();
+    } else if (run !== this.scrollRun) {
+      return;
+    }
+
+    const currentRun = this.scrollRun;
+
     if (!(this.inScrollZone && this.mousedown)) {
       this.isScrolling = false;
 
       return;
     }
+
+    const ramp = Math.min(1, (Date.now() - this.scrollRunStart) / this.SCROLL_RAMP_MS);
+    const step = Math.sign(speed) * (Math.abs(speed) + (this.MAX_SCROLL_SPEED - Math.abs(speed)) * ramp);
 
     const scroller = this.scroller;
     const offset = (): number => scroller === null ? this.getScrollTop() : scroller.scrollTop;
@@ -636,9 +665,9 @@ export class RectangleSelection extends Module {
 
     // 'instant': a host's `scroll-behavior: smooth` would defer the move and read as "cannot scroll".
     if (scroller === null) {
-      window.scrollBy({ top: speed, behavior: 'instant' });
+      window.scrollBy({ top: step, behavior: 'instant' });
     } else {
-      scroller.scrollBy({ top: speed, behavior: 'instant' });
+      scroller.scrollBy({ top: step, behavior: 'instant' });
     }
 
     // At the end of the content: stop until the pointer moves again.
@@ -650,7 +679,7 @@ export class RectangleSelection extends Module {
 
     this.changingRectangle();
     setTimeout(() => {
-      this.scrollVertical(speed);
+      this.scrollVertical(speed, currentRun);
     }, 0);
   }
 

@@ -51,6 +51,8 @@ export class EditorApplier implements AgentApplier {
       turnId: string;
       attributeLastEditedBy?: boolean;
       mergeSteps?: 'batch' | 'turn';
+      /** Data a tool's prepareInsert answered, such as the pageId a host's create gave. */
+      onPrepared?(type: string, data: Record<string, unknown>): void;
     }
   ) {
     this.counter = createRevisionCounter(Blok);
@@ -82,7 +84,13 @@ export class EditorApplier implements AgentApplier {
 
   /** The same host hook a toolbox insert waits for, e.g. a page's `create`. */
   public async prepareInsert(type: string): Promise<Record<string, unknown> | undefined> {
-    return this.Blok.Tools.blockTools.get(type)?.prepareInsert();
+    const data = await this.Blok.Tools.blockTools.get(type)?.prepareInsert();
+
+    if (data !== undefined) {
+      this.options.onPrepared?.(type, data);
+    }
+
+    return data;
   }
 
   public async undo(): Promise<void> {

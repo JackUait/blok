@@ -53,6 +53,7 @@ export const createEditorAgentSession = (
     mergeSteps?: 'batch' | 'turn';
     attributeLastEditedBy?: boolean;
     services?: Partial<Record<HostService, unknown>>;
+    onPrepared?(type: string, data: Record<string, unknown>): void;
   } = {}
 ): AgentSession => {
   const id = `editor-session-${++editorSessions.count}`;
@@ -65,6 +66,7 @@ export const createEditorAgentSession = (
   const applier = new EditorApplier(editor, {
     actor, sessionId: id, turnId: options.turnId ?? id, attributeLastEditedBy: options.attributeLastEditedBy,
     mergeSteps: options.mergeSteps ?? 'batch',
+    onPrepared: options.onPrepared,
   });
   const log: CommandLogEntry[] = [];
   const state: {

@@ -69,6 +69,9 @@ export const createPageDocuments = (
     return {
       ...session,
       execute: async (batch, options) => {
+        if (Blok.ReadOnly.isEnabled) {
+          throw failure('READ_ONLY', 'The editor is read-only now. Reads still work.', { details: { pageId } });
+        }
         const before = session.revision();
         const result = await session.execute(batch, options);
 

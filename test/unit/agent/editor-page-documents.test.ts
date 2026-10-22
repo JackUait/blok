@@ -6,7 +6,13 @@ import type { Agent, OutputData } from '../../../types';
 import type { AgentModel, AgentModelResponse } from '../../../types/api';
 import type { PageConfig } from '../../../types/tools/page';
 
-interface TestEditor { isReady: Promise<unknown>; destroy: () => void; agent: Agent; save: () => Promise<OutputData> }
+interface TestEditor {
+  isReady: Promise<unknown>;
+  destroy: () => void;
+  agent: Agent;
+  save: () => Promise<OutputData>;
+  readOnly: { toggle(state?: boolean): Promise<boolean> };
+}
 
 const editors: TestEditor[] = [];
 
@@ -151,5 +157,53 @@ describe('the agent edits a sub-page through the host page documents', () => {
     await run.discard();
 
     expect(sub(pages)).toEqual(before);
+  });
+
+  it('a read-only editor reads a sub-page but does not write it', async () => {
+    const pages = new Map<string, OutputData>([['sub', { blocks: [] }]]);
+    const editor = await boot(host(pages));
+
+    await editor.readOnly.toggle(true);
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const read = await turn.call('blok_read', { page: 'pg' });
+    const written = await turn.call('blok_execute', { page: 'pg', commands: [{ name: 'doc.setTitle', args: { title: 'Nope' } }] });
+
+    turn.end();
+    expect(read.isError).toBe(false);
+    expect(written.isError).toBe(true);
+    expect(written.content).toContain('READ_ONLY');
+    expect(sub(pages).title).toBeUndefined();
+  });
+
+  it('a page block the agent pointed somewhere else in this turn does not open that document', async () => {
+    const pages = new Map<string, OutputData>([['sub', { blocks: [] }], ['other', { title: 'Private', blocks: [] }]]);
+    const editor = await boot(host(pages));
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+
+    await turn.execute({ commands: [{ name: 'block.update', args: { id: 'pg', data: { pageId: 'other' } } }] });
+    const read = await turn.call('blok_read', { page: 'pg' });
+    const written = await turn.call('blok_execute', { page: 'pg', commands: [{ name: 'doc.setTitle', args: { title: 'Taken' } }] });
+
+    turn.end();
+    expect(read.content).not.toContain('Private');
+    expect(written.isError).toBe(true);
+    expect(pages.get('other')?.title).toBe('Private');
+  });
+
+  it('a page the agent inserted in this turn opens, under the id the host gave it', async () => {
+    const pages = new Map<string, OutputData>();
+    const editor = await boot({ ...host(pages), create: () => {
+      pages.set('made', { blocks: [] });
+
+      return { pageId: 'made' };
+    } });
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const inserted = await turn.execute({ commands: [{ name: 'block.insert', args: { type: 'page', id: 'np', position: 'end' } }] });
+    const written = await turn.call('blok_execute', { page: 'np', commands: [{ name: 'doc.setTitle', args: { title: 'Fresh' } }] });
+
+    turn.end();
+    expect(inserted.ok).toBe(true);
+    expect(written.isError).toBe(false);
+    expect(pages.get('made')?.title).toBe('Fresh');
   });
 });

@@ -174,7 +174,13 @@ With both hooks:
 - `page.rename` and `page.setIcon` work without `rename` and `setIcon`, by writing the sub-page's `title` and `icon`. When those hooks exist, they still win.
 - Discard in Ask AI saves back each sub-page the run changed, as it was before the run's first save. A change the user made to that page in the meantime is overwritten.
 
-Each call loads the page fresh and saves the whole document, so the host should keep its own title record in step with `data.title` and `data.icon`. A page block that points at the open document (`documentId`) is refused.
+Each call loads the page fresh and saves the whole document, so the host should keep its own title record in step with `data.title` and `data.icon`.
+
+Access stays the host's job. `loadDocument` and `saveDocument` must check that the current user may read and write that page, as `resolve` does. Blok narrows what the model can reach, but it does not authorize:
+
+- A call opens only a page block whose `pageId` it had when the turn began, or one the host's `create` gave in this turn. A `pageId` the model wrote itself is refused.
+- A page block that points at the open document (`documentId`) is refused.
+- In read-only mode, and for a read-only page block, the agent can read a sub-page but not write it.
 
 ## Importing page pointers
 

@@ -220,7 +220,7 @@ describe('AgentAPI state and turns', () => {
     expect(editorSession.createEditorAgentSession).toHaveBeenCalledExactlyOnceWith(
       modules,
       ACTOR,
-      { contractSource: source, services: {}, attributeLastEditedBy: true, mergeSteps: 'turn' }
+      { contractSource: source, services: {}, attributeLastEditedBy: true, mergeSteps: 'turn', onPrepared: expect.any(Function) }
     );
     expect(editorSession.liveContractSource).toHaveBeenCalledExactlyOnceWith(modules, { services: [] });
     expect(editorSession.liveContractSource.mock.calls[0]?.[0]).toBe(modules);
@@ -260,7 +260,7 @@ describe('AgentAPI state and turns', () => {
       expect(editorSession.createEditorAgentSession).toHaveBeenCalledExactlyOnceWith(
         modules,
         ACTOR,
-        { contractSource: source, services: {}, attributeLastEditedBy: stamp, mergeSteps: 'turn' }
+        { contractSource: source, services: {}, attributeLastEditedBy: stamp, mergeSteps: 'turn', onPrepared: expect.any(Function) }
       );
       expect(editorSession.liveContractSource).toHaveBeenCalledExactlyOnceWith(modules, { services: [] });
       expect(editorSession.liveContractSource.mock.calls[0]?.[0]).toBe(modules);
@@ -456,7 +456,7 @@ describe('AgentAPI tools and guidance', () => {
     expect(editorSession.createEditorAgentSession).toHaveBeenCalledExactlyOnceWith(
       modules,
       ACTOR,
-      { contractSource: source, services: {}, attributeLastEditedBy: true, mergeSteps: 'turn' }
+      { contractSource: source, services: {}, attributeLastEditedBy: true, mergeSteps: 'turn', onPrepared: expect.any(Function) }
     );
     expect(editorSession.liveContractSource).toHaveBeenCalledExactlyOnceWith(modules, { services: [] });
     expect(editorSession.liveContractSource.mock.calls[0]?.[0]).toBe(modules);

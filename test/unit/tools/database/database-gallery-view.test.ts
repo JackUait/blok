@@ -5,6 +5,8 @@ import { DatabaseGalleryView } from '../../../../src/tools/database/database-gal
 import type { GalleryGroup, GalleryHandlers, DatabaseGalleryViewOptions } from '../../../../src/tools/database/database-gallery-view';
 import type { BodyBlock } from '../../../../src/tools/database/row-body';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
+import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
+import { hover, shownHint } from './hint-harness';
 
 const schema: PropertyDefinition[] = [
   { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
@@ -224,6 +226,41 @@ describe('DatabaseGalleryView', () => {
     expect(props.map((p) => p.getAttribute('data-property-id'))).toEqual(['p-stage', 'p-notes']);
     expect(props.every((p) => p.getAttribute('data-wrap') === 'true')).toBe(true);
     expect(props[0].textContent).toBe('Idea');
+  });
+
+  // research/35 §4: a card value hints its name, plus the description when there is one, left of the card.
+  describe('property value hints', () => {
+    beforeEach(() => {
+      destroyTooltip();
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('shows the name and the description, or the name alone, after the hint delay', () => {
+      const properties = [{ id: 'p-title', visible: true }, { id: 'p-stage', visible: true }, { id: 'p-notes', visible: true }];
+      const { root } = mount({
+        view: galleryView({ properties }),
+        schema: schema.map((p) => (p.id === 'p-stage' ? { ...p, description: 'Where it is' } : p)),
+        groups: single([row('r1', 'Alpha', { 'p-notes': 'first', 'p-stage': 'o-idea' })]),
+      });
+      const prop = (id: string): HTMLElement | null => cards(root)[0].querySelector<HTMLElement>(`[data-blok-database-gallery-property][data-property-id="${id}"]`);
+
+      expect(prop('p-stage')?.title).toBe('');
+      hover(prop('p-stage'));
+      vi.advanceTimersByTime(HINT_DELAY - 1);
+      expect(shownHint()).toBeNull();
+      vi.advanceTimersByTime(1);
+      expect(shownHint()).toEqual({ text: 'StageWhere it is', placement: 'left' });
+
+      prop('p-stage')?.dispatchEvent(new MouseEvent('mouseleave'));
+      vi.advanceTimersByTime(1000);
+      hover(prop('p-notes'));
+      vi.advanceTimersByTime(HINT_DELAY);
+      expect(shownHint()).toEqual({ text: 'Notes', placement: 'left' });
+    });
   });
 
   it('skips empty property values on a card', () => {

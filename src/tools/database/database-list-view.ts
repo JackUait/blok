@@ -8,6 +8,8 @@ import { rowCellContext } from './reminders';
 import type { CellContext } from './cells';
 import { IconChevronDown, IconMenu } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
+import { onHover } from '../../components/utils/tooltip';
+import { propertyHint } from './property-hint';
 import { syncCommentBadge } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
 
@@ -606,6 +608,8 @@ export class DatabaseListView implements DatabaseViewRenderer {
       }
     }
     badge.appendChild(cell);
+    // research/35 §4: the name, plus the description, below the value.
+    onHover(badge, propertyHint(propDef.name, propDef.description), { placement: 'bottom', bare: true });
 
     return badge;
   }

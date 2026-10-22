@@ -298,7 +298,7 @@ export class ViewSettingsPages {
           panelRow({
             label: this.t('settingsPropertyVisibility'),
             testId: 'database-settings-properties',
-            value: String(resolveViewProperties(view, this.ctx.schema()).filter((p) => p.visible).length),
+            value: String(this.listedProperties().filter((p) => p.visible).length),
             opensPage: true,
             onClick: () => panel.push(this.properties()),
           }),
@@ -1016,13 +1016,24 @@ export class ViewSettingsPages {
 
   // ─── Property visibility ───
 
+  /** research/35 §2.2: Feed's lists leave out the title property. */
+  private listedProperties(): ReturnType<typeof resolveViewProperties> {
+    const view = this.ctx.view();
+    const schema = this.ctx.schema();
+    const titleId = view.type === 'feed' ? schema.find((p) => p.type === 'title')?.id : undefined;
+
+    return resolveViewProperties(view, schema).filter((entry) => entry.id !== titleId);
+  }
+
   properties(): PanelPage {
     return {
       title: this.t('settingsPropertyVisibility'),
       build: (panel) => {
         const schema = this.ctx.schema();
-        const view = this.ctx.view();
-        const items = resolveViewProperties(view, schema).flatMap((entry) => {
+        const listed = this.listedProperties();
+
+        if (listed.length === 0) return [panelText(this.ctx.i18n.t('find.noResults'))];
+        const items = listed.flatMap((entry) => {
           const property = schema.find((p) => p.id === entry.id);
 
           if (property === undefined) return [];

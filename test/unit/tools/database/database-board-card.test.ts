@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DatabaseBoardView } from '../../../../src/tools/database/database-board-view';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption } from '../../../../src/tools/database/types';
 import type { I18n } from '../../../../types';
+import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
+import { hover, shownHint } from './hint-harness';
 
 const i18n = { t: (key: string) => key } as unknown as I18n;
 
@@ -79,6 +81,34 @@ describe('DatabaseBoardView card parity', () => {
 
       expect(card(board, 'r1').querySelector('[data-blok-database-card-property][data-property-id="notes"]')?.textContent).toContain('First note');
       expect(card(board, 'r2').querySelector('[data-blok-database-card-property]')).toBeNull();
+    });
+
+    // research/35 §4: a card value hints its name, plus the description when there is one, left of the card.
+    it('a value hints its name and description, or its name alone, after the hint delay', () => {
+      destroyTooltip();
+      vi.useFakeTimers();
+      try {
+        const board = mount({
+          view: boardView({ properties: [{ id: 'notes', visible: true }, { id: 'link', visible: true }] }),
+          schema: schema.map((p) => (p.id === 'notes' ? { ...p, description: 'Line one\nline two' } : p)),
+        });
+        const prop = (id: string): HTMLElement | null => card(board, 'r1').querySelector<HTMLElement>(`[data-blok-database-card-property][data-property-id="${id}"]`);
+
+        expect(prop('notes')?.title).toBe('');
+        hover(prop('notes'));
+        vi.advanceTimersByTime(HINT_DELAY - 1);
+        expect(shownHint()).toBeNull();
+        vi.advanceTimersByTime(1);
+        expect(shownHint()).toEqual({ text: 'NotesLine one\nline two', placement: 'left' });
+
+        prop('notes')?.dispatchEvent(new MouseEvent('mouseleave'));
+        vi.advanceTimersByTime(1000);
+        hover(prop('link'));
+        vi.advanceTimersByTime(HINT_DELAY);
+        expect(shownHint()).toEqual({ text: 'Link', placement: 'left' });
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it('marks each property with its wrap setting', () => {

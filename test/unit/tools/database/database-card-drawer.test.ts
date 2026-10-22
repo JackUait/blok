@@ -4,6 +4,8 @@ import type { CardDrawerOptions } from '../../../../src/tools/database/database-
 import type { DatabaseRow, SelectOption, PropertyDefinition } from '../../../../src/tools/database/types';
 import type { I18n, OutputData } from '../../../../types';
 import type { ToolsConfig } from '../../../../types/api/tools';
+import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
+import { hover, shownHint } from './hint-harness';
 
 const { stubBlokModule } = vi.hoisted(() => ({
   stubBlokModule: () => ({
@@ -807,6 +809,38 @@ describe('DatabaseCardDrawer', () => {
   });
 
   describe('properties section', () => {
+    // research/35 §4: a row page label hints its name, plus the description when there is one, left of it.
+    it('a property label hints its name and description, or its name alone', () => {
+      destroyTooltip();
+      vi.useFakeTimers();
+      try {
+        const tag = makePropertyDef({ id: 'prop-tag', name: 'Tag', type: 'text', description: 'Line one\nline two' });
+        const date = makePropertyDef({ id: 'prop-date', name: 'Date', type: 'text' });
+        const options = createOptions({ schema: [tag, date] });
+        const drawer = new DatabaseCardDrawer(options);
+
+        document.body.appendChild(options.wrapper);
+        drawer.open(makeRow({ properties: { 'prop-title': 'Card', 'prop-tag': 'a', 'prop-date': 'b' } }));
+        const label = (id: string): HTMLElement | null =>
+          options.wrapper.querySelector<HTMLElement>(`[data-blok-database-drawer-prop-label][data-property-id="${id}"]`);
+
+        hover(label('prop-tag'));
+        vi.advanceTimersByTime(HINT_DELAY - 1);
+        expect(shownHint()).toBeNull();
+        vi.advanceTimersByTime(1);
+        expect(shownHint()).toEqual({ text: 'TagLine one\nline two', placement: 'left' });
+
+        label('prop-tag')?.dispatchEvent(new MouseEvent('mouseleave'));
+        vi.advanceTimersByTime(1000);
+        hover(label('prop-date'));
+        vi.advanceTimersByTime(HINT_DELAY);
+        expect(shownHint()).toEqual({ text: 'Date', placement: 'left' });
+      } finally {
+        vi.useRealTimers();
+        document.body.innerHTML = '';
+      }
+    });
+
     it('shows status property with option label when schema has a select property', () => {
       const selectOption = makeOption({ id: 'opt-in-progress', label: 'In progress', color: 'blue' });
       const statusDef = makePropertyDef({

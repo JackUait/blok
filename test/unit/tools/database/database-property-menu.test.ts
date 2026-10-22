@@ -334,12 +334,49 @@ describe('DatabasePropertyMenu', () => {
       expect(box.hidden).toBe(true);
     });
 
-    it('with a description, the field shows at once and the (i) reads "Edit property description"', () => {
+    // research/35 §5: a saved description does not reopen the field; the (i) does.
+    it('with a description, the field stays closed until the (i), and the (i) reads "Edit property description"', () => {
       const { info, area, box } = openMenu(prop('text', { description: 'What we spend' }));
 
-      expect(box.hidden).toBe(false);
+      expect(box.hidden).toBe(true);
       expect(area.value).toBe('What we spend');
       expect(info.getAttribute('aria-label')).toBe('tools.database.editPropertyDescription');
+      info.click();
+      expect(box.hidden).toBe(false);
+      expect(area).toHaveFocus();
+    });
+
+    // research/35 §5: click 1 opens, click 2 closes with the text kept, click 3 opens again.
+    it('the (i) toggles the field and keeps the text', () => {
+      const { info, area, box } = openMenu(prop('text'));
+
+      info.click();
+      area.value = 'Typed';
+      info.click();
+      expect(box.hidden).toBe(true);
+      info.click();
+      expect(box.hidden).toBe(false);
+      expect(area.value).toBe('Typed');
+    });
+
+    // research/35 §5: Shift+Enter adds a line, so it must not be blocked.
+    it('Shift+Enter is left to the field', () => {
+      const { info, area } = openMenu(prop('text'));
+
+      info.click();
+      const shiftEnter = new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true });
+
+      area.dispatchEvent(shiftEnter);
+
+      expect(shiftEnter.defaultPrevented).toBe(false);
+    });
+
+    // research/35 §4: the (i) has no tooltip.
+    it('the (i) has no hint', () => {
+      const { info } = openMenu(prop('text'));
+
+      expect(info.title).toBe('');
+      expect(info.hasAttribute('aria-describedby')).toBe(false);
     });
 
     it('Enter adds no new line and does not close the menu', () => {

@@ -365,7 +365,8 @@ export class DatabasePropertyMenu {
     // `hidden` goes on the box: textarea[data-blok-field] sets display and would beat it.
     box.setAttribute('data-blok-database-property-description-box', '');
     box.setAttribute('data-blok-keyboard-owner', '');
-    box.hidden = saved === '';
+    // research/35 §5: a saved description does not reopen the field.
+    box.hidden = true;
     area.setAttribute('data-blok-database-property-description', '');
     area.setAttribute('data-blok-field', 'text');
     area.setAttribute('aria-label', this.t('tools.database.propertyDescription'));

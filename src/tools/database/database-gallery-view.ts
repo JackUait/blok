@@ -14,6 +14,7 @@ import type { CommentBadges } from './database-comment-badge';
 import { getElementDirection } from '../../components/utils/direction';
 import { IconDotsHorizontal, IconPencil, IconPlus } from '../../components/icons';
 import { onHover } from '../../components/utils/tooltip';
+import { propertyHint } from './property-hint';
 import { startInlineRename } from '../../components/utils/inline-rename';
 
 export interface GalleryGroup {
@@ -283,7 +284,8 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
       item.setAttribute('data-blok-database-gallery-property', '');
       item.setAttribute('data-property-id', property.id);
       item.setAttribute('data-wrap', String(setting.wrap));
-      item.title = property.name;
+      // research/35 §4: left of the card in Notion; Blok anchors on the value.
+      onHover(item, propertyHint(property.name, property.description), { placement: 'left', bare: true });
       item.appendChild(cell);
       list.appendChild(item);
     }

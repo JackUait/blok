@@ -8725,6 +8725,8 @@ textarea[data-blok-database-property-description][data-blok-field] {
   font-size: 13px;
   line-height: 20px;
   field-sizing: content;
+  max-height: 68px;
+  overflow-y: auto;
   resize: none;
 }
 

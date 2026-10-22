@@ -3,6 +3,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { DatabaseFeedView } from '../../../../src/tools/database/database-feed-view';
 import type { FeedViewOptions } from '../../../../src/tools/database/database-feed-view';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
+import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
+import { hover, shownHint } from './hint-harness';
 
 const schema: PropertyDefinition[] = [
   { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
@@ -99,6 +101,23 @@ describe('DatabaseFeedView', () => {
     expect(first?.querySelector('[data-blok-database-feed-author]')?.textContent).toContain('Ada');
     expect(first?.textContent).toContain('Bring cake');
     expect(first?.textContent).not.toContain('secret');
+  });
+
+  // research/35 §4: outside the table header a value always hints its name.
+  it('a property value hints its name, after the hint delay, with no native title', () => {
+    destroyTooltip();
+    vi.useFakeTimers();
+    try {
+      const el = render();
+      const prop = card(el, 'r1')?.querySelector<HTMLElement>('[data-blok-database-feed-property][data-property-id="p-notes"]');
+
+      expect(prop?.title).toBe('');
+      hover(prop);
+      vi.advanceTimersByTime(HINT_DELAY);
+      expect(shownHint()).toEqual({ text: 'Notes', placement: 'left' });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('renders the page content read-only, as text, with safe images only', () => {

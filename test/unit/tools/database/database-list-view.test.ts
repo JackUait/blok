@@ -3,6 +3,8 @@ import { DatabaseListView } from '../../../../src/tools/database/database-list-v
 import type { DatabaseRow, PropertyDefinition, SelectOption } from '../../../../src/tools/database/types';
 import type { I18n } from '../../../../types';
 import { createDefaultStatusSettings } from '../../../../src/tools/database/property-values';
+import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
+import { hover, shownHint } from './hint-harness';
 
 const makeRow = (overrides: Partial<DatabaseRow> = {}): DatabaseRow => ({
   id: 'row-1', position: 'a0', properties: { title: 'Fix bug' }, ...overrides,
@@ -256,6 +258,37 @@ describe('DatabaseListView', () => {
       const badges = list.querySelectorAll('[data-blok-database-list-row-property]');
 
       expect(badges).toHaveLength(2);
+    });
+
+    // research/35 §4: a list value hints its name, plus the description when there is one, below it.
+    it('a badge hints its name and description, or its name alone, below it', () => {
+      destroyTooltip();
+      vi.useFakeTimers();
+      try {
+        const schema = makeSchema([
+          { id: 'prop-a', name: 'Notes', type: 'text', description: 'What we noted' },
+          { id: 'prop-b', name: 'Count', type: 'number' },
+        ]);
+        const rows = [makeRow({ id: 'row-1', properties: { title: 'Row', 'prop-a': 'hello', 'prop-b': 42 } })];
+        const list = new DatabaseListView({ readOnly: false, i18n, rows, titlePropertyId: 'title', schema, visiblePropertyIds: ['prop-a', 'prop-b'] }).createView();
+        const badge = (id: string): HTMLElement | null => list.querySelector<HTMLElement>(`[data-blok-database-list-row-property][data-property-id="${id}"]`);
+
+        document.body.appendChild(list);
+        hover(badge('prop-a'));
+        vi.advanceTimersByTime(HINT_DELAY - 1);
+        expect(shownHint()).toBeNull();
+        vi.advanceTimersByTime(1);
+        expect(shownHint()).toEqual({ text: 'NotesWhat we noted', placement: 'bottom' });
+
+        badge('prop-a')?.dispatchEvent(new MouseEvent('mouseleave'));
+        vi.advanceTimersByTime(1000);
+        hover(badge('prop-b'));
+        vi.advanceTimersByTime(HINT_DELAY);
+        expect(shownHint()).toEqual({ text: 'Count', placement: 'bottom' });
+      } finally {
+        vi.useRealTimers();
+        document.body.innerHTML = '';
+      }
     });
 
     it('renders select property as the shared colored option pill', () => {

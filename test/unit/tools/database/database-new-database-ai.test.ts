@@ -467,10 +467,12 @@ describe('"New database" panel for every database toolbox entry', () => {
     expect(activeType(tool)).toBe(layout);
   });
 
-  // research/30 B7a, research/28:123: "/table view" as the first block of a fresh page opens no panel; the next insert does.
+  // research/35 §2.1, research/30 B7a, research/28:123: only "/table view" on a page with no other block skips the panel.
   describe('a Table view alone on the page', () => {
-    const insertWith = async (name: string, others: Array<{ id: string; name: string; parentId: string | null }>): Promise<void> => {
-      const doc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }, ...others.map((other) => ({ ...other, data: {} }))]);
+    const insertWith = async (name: string, others: Array<{ id: string; name: string; parentId: string | null }>, above = false): Promise<void> => {
+      const database = { id: 'db', name: 'database', parentId: null, data: {} };
+      const rest = others.map((other) => ({ ...other, data: {} }));
+      const doc = makeDoc(above ? [...rest, database] : [database, ...rest]);
 
       buildDatabase(doc, 'db', dataOf(name), {}, 'user');
       await new Promise((resolve) => requestAnimationFrame(resolve));
@@ -497,7 +499,14 @@ describe('"New database" panel for every database toolbox entry', () => {
       expect(rowLabels()[0]).toBe('tools.database.linkedNewEmpty');
     });
 
-    // Database - Inline on a fresh page is unmeasured: it keeps the panel.
+    // research/35 §2.1 S1 (a line above) and S2 (first block, a line below): both open the panel.
+    it.each([['above', true], ['below', false]] as const)('opens the panel with a paragraph %s it', async (_label, above) => {
+      await insertWith('tableView', [{ id: 'p1', name: 'paragraph', parentId: null }], above);
+
+      expect(rowLabels()[0]).toBe('tools.database.linkedNewEmpty');
+    });
+
+    // research/35 §2.1 S3: "Database - Inline" on an empty page opens the panel.
     it.each(['database', 'board', 'mapView'])('the %s entry still opens the panel alone on the page', async (name) => {
       await insertWith(name, []);
 
@@ -519,6 +528,28 @@ describe('"New database" panel for every database toolbox entry', () => {
       const { tool, el } = buildDatabase(doc, 'db', dataOf('tableView'), {}, 'user');
 
       expect(saved(tool).views.map((view) => [view.type, view.name])).toEqual([['table', 'Table']]);
+      expect(el.querySelector<HTMLElement>(':scope > [data-blok-database-view-bar] > [data-blok-database-tab-bar]')?.style.display).toBe('none');
+    });
+
+    // research/35 §2.5: Lock database on a one-view database still draws no tab; so does read-only.
+    it.each([
+      ['locked', false, true],
+      ['read-only', true, false],
+    ] as const)('a %s one-view database draws no tab bar either', (_label, readOnly, locked) => {
+      const seedDoc = makeDoc([{ id: 'db', name: 'database', parentId: null, data: {} }]);
+      const seed = saved(buildDatabase(seedDoc, 'db', dataOf('tableView'), {}, 'user').tool);
+      const data: DatabaseData = { ...seed, schema: seed.schema.map((p) => (p.type === 'title' ? { ...p, databaseLocked: locked } : p)) };
+
+      document.body.innerHTML = '';
+      const doc = makeDoc([{ id: 'db2', name: 'database', parentId: null, data: {} }]);
+      const tool = new DatabaseTool({ data, config: {}, api: doc.api, readOnly, block: { id: 'db2', name: 'database', dispatchChange: vi.fn() } as never });
+
+      doc.tools.set('db2', tool);
+      const el = tool.render();
+
+      document.body.appendChild(el);
+      tool.rendered();
+
       expect(el.querySelector<HTMLElement>(':scope > [data-blok-database-view-bar] > [data-blok-database-tab-bar]')?.style.display).toBe('none');
     });
 

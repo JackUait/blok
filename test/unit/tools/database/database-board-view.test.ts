@@ -3,6 +3,7 @@ import { DatabaseBoardView } from '../../../../src/tools/database/database-board
 import { simulateKeydown } from '../../../helpers/simulate';
 import type { SelectOption, DatabaseRow } from '../../../../src/tools/database/types';
 import type { I18n } from '../../../../types';
+import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 
 const makeOption = (overrides: Partial<SelectOption> = {}): SelectOption => ({
   id: 'opt-1', label: 'To Do', position: 'a0', ...overrides,
@@ -69,6 +70,27 @@ describe('DatabaseBoardView', () => {
       expect(laneOf(board, 'l1')?.hasAttribute('data-collapsed')).toBe(false);
       expect(toggleOf(board, 'l1')?.getAttribute('aria-label')).toBe('tools.database.close');
       expect(onLaneToggle).toHaveBeenLastCalledWith('l1', false);
+    });
+
+    // research/35 §11: no hint after 2.5 s or 4 s.
+    it('the toggle shows no hint on hover', () => {
+      destroyTooltip();
+      vi.useFakeTimers();
+      try {
+        const board = lanesView([{ key: 'l1', label: 'High' }]);
+        const toggle = toggleOf(board, 'l1');
+
+        if (toggle === null) throw new Error('no lane toggle');
+        document.body.appendChild(board);
+        toggle.dispatchEvent(new MouseEvent('mouseenter'));
+        vi.advanceTimersByTime(HINT_DELAY + 4000);
+
+        expect(toggle.title).toBe('');
+        expect(document.querySelector('[data-blok-testid="tooltip"][data-blok-shown="true"]')).toBeNull();
+      } finally {
+        vi.useRealTimers();
+        document.body.innerHTML = '';
+      }
     });
 
     it('draws a band the view saved collapsed as collapsed', () => {

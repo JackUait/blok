@@ -9,6 +9,7 @@ import { pageIconElement, showsPageIcon } from './page-icon';
 import { htmlToPlainText } from '../../components/utils/plain-text';
 import { safeImageSrc } from '../../components/utils/sanitize-url';
 import { onHover } from '../../components/utils/tooltip';
+import { propertyHint } from './property-hint';
 import { IconDotsHorizontal, IconEmojiSmile } from '../../components/icons';
 
 /** A host's footer for one card: comments, reactions (Tier 3, D6). Returns its cleanup. */
@@ -351,7 +352,8 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
 
       item.setAttribute('data-blok-database-feed-property', '');
       item.setAttribute('data-property-id', property.id);
-      item.title = property.name;
+      // research/35 §4 measured board, list and gallery; Feed's placement is unmeasured.
+      onHover(item, propertyHint(property.name, property.description), { placement: 'left', bare: true });
       item.appendChild(cell);
       list.appendChild(item);
     }

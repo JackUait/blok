@@ -79,6 +79,18 @@ describe('property menu "Add property description" (i) button (research/26 §3c)
   });
 });
 
+// research/35 §5: 1 line 20px, 2 lines 40px, then 60px and it scrolls.
+describe('property description field growth (research/35 §5)', () => {
+  it('grows with its text up to three lines, then scrolls', () => {
+    const body = ruleBody('textarea[data-blok-database-property-description][data-blok-field]');
+
+    expect(body).toContain('field-sizing: content');
+    // 60px of text plus 3px padding and a 1px border on each side (border-box).
+    expect(body).toContain('max-height: 68px');
+    expect(body).toContain('overflow-y: auto');
+  });
+});
+
 describe('view settings Close × (research/26 §1b, §4a)', () => {
   it('is a 20px round button on the measured fills', () => {
     const body = ruleBody('[data-blok-database-panel-close]');

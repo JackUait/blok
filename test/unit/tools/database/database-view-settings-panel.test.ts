@@ -326,6 +326,49 @@ describe('view settings panel', () => {
     expect(h.state.view.properties?.find((p) => p.id === 'due')?.visible).toBe(false);
   });
 
+  // research/35 §2.2: Feed's Property visibility leaves out the title property.
+  describe('a feed view', () => {
+    const titleOnly: PropertyDefinition[] = [{ id: 'title', name: 'Name', type: 'title', position: 'a0' }];
+    const countOf = (): string | null | undefined =>
+      document.querySelector('[data-blok-testid="database-settings-properties"] [data-blok-database-panel-value]')?.textContent;
+
+    it('counts and lists no title, and reads "No results" with nothing else', () => {
+      const h = harness({ type: 'feed' });
+
+      h.ctx.schema = () => titleOnly;
+      h.open();
+      expect(countOf()).toBe('0');
+
+      click('database-settings-properties');
+      expect(document.querySelector('[data-blok-database-panel-note]')?.textContent).toBe('find.noResults');
+      expect(document.body.textContent).not.toContain('Name');
+    });
+
+    it('lists the other properties without the title', () => {
+      const h = harness({ type: 'feed' });
+
+      h.open();
+      // The harness view shows nothing but the title, which Feed does not count.
+      expect(countOf()).toBe('0');
+
+      click('database-settings-properties');
+      expect(exists('database-property-visible-due')).toBe(true);
+      expect(document.querySelector('[data-blok-testid="database-properties-list"]')?.textContent).not.toContain('Name');
+    });
+
+    // research/35 §2.3: a fresh Table reads "Property visibility 1": the title counts there.
+    it('a table still counts and lists its title', () => {
+      const h = harness();
+
+      h.ctx.schema = () => titleOnly;
+      h.open();
+      expect(countOf()).toBe('1');
+
+      click('database-settings-properties');
+      expect(document.querySelector('[data-blok-testid="database-properties-list"]')?.textContent).toContain('Name');
+    });
+  });
+
   it('adds a sort as a personal edit and flips its direction', () => {
     const h = harness();
 

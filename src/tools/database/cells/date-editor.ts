@@ -417,8 +417,8 @@ class DateEditor {
     input.type = 'text';
     input.setAttribute('data-blok-database-date-input', which);
     input.setAttribute('aria-label', this.t(which === 'start' ? 'tools.database.dateStart' : 'tools.database.dateEnd'));
-    // research/31 §4b: an empty bulk picker shows today, as a hint only.
-    const hint = part === null && which === 'start' && this.ctx.bulk === true ? formatDayField(toIsoDay(new Date()), this.locale, this.display) : '';
+    // research/31 §4b, research/35 §3: an empty picker shows today, as a hint only.
+    const hint = part === null && which === 'start' ? formatDayField(toIsoDay(new Date()), this.locale, this.display) : '';
     const shown = part === null ? hint : formatDayField(part.day, this.locale, this.display);
 
     input.value = shown;

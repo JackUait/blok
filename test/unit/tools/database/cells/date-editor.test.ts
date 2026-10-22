@@ -175,6 +175,26 @@ describe('date cell editor', () => {
       expect(ctx.onClose).toHaveBeenCalledTimes(1);
       expect(editorRoot()).toBeNull();
     });
+
+    it('an empty cell shows today in the field; opening and Escape write nothing', () => {
+      const ctx = openDate(null);
+      const input = q<HTMLInputElement>('[data-blok-database-date-input="start"]');
+
+      expect(input.value).toBe('Oct 9, 2026');
+      expect(ctx.onCommit).not.toHaveBeenCalled();
+      press(input, 'Escape');
+
+      expect(ctx.onCommit).not.toHaveBeenCalled();
+      expect(ctx.onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('Enter on the shown today writes today', () => {
+      const ctx = openDate(null);
+
+      press(q<HTMLInputElement>('[data-blok-database-date-input="start"]'), 'Enter');
+
+      expect(ctx.onCommit).toHaveBeenCalledWith('2026-10-09');
+    });
   });
 
   it('Clear commits null and closes', () => {

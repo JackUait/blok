@@ -249,7 +249,7 @@ test('Tasks Tracker: the database gets its icon, "New task" is the Default templ
 // Notion's body grey and red ink fail AA on white, so light keeps Blok's AA inks. Dark was not read.
 // research/35 §1.7 read dark: backdrop 0.8, Remove's hairline rgba(255, 104, 92, 0.24) and its red hover, focus on Remove.
 for (const [scheme, ink, body, red, hairline, backdrop, hover] of [
-  ['light', 'rgb(44, 44, 43)', 'rgb(114, 111, 106)', 'rgb(182, 79, 70)', 'rgba(206, 24, 0, 0.165)', 'rgba(15, 15, 15, 0.6)', 'rgba(33, 27, 23, 0.05)'],
+  ['light', 'rgb(44, 44, 43)', 'rgb(114, 111, 106)', 'rgb(182, 79, 70)', 'rgba(206, 24, 0, 0.165)', 'rgba(15, 15, 15, 0.6)', 'rgba(223, 16, 0, 0.063)'],
   ['dark', 'rgb(240, 239, 237)', 'rgb(173, 169, 163)', 'rgb(229, 100, 88)', 'rgba(255, 104, 92, 0.24)', 'rgba(15, 15, 15, 0.8)', 'rgba(255, 105, 96, 0.114)'],
 ] as const) {
   test(`the "Undo Task Database?" confirm draws Notion's look in ${scheme}`, async ({ page }) => {
@@ -573,3 +573,44 @@ test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
     await expect(dialog.getByRole('button', { name: 'My Docs' })).toHaveAttribute('aria-pressed', 'true');
   });
 });
+
+// research/36 §8.1 (dump notion-measure36/raw/dlg-undotask-light.json): box 324x193; from its top, the title
+// text at 23 (19 tall), the two-line text 50 to 86, Remove at 100, Cancel at 141, each 32 tall, 20px padding below.
+test('the "Undo Task Database?" confirm is Notion\'s 324x193 box, its parts where Notion put them', async ({ page }) => {
+  await mount(page);
+  await insertDatabase(page);
+  await page.getByTestId('database-new-database-panel').getByRole('button', { name: 'Tasks Tracker' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Customize Tasks Tracker' });
+
+  await dialog.getByRole('button', { name: 'Get started' }).click();
+  await dialog.getByRole('button', { name: 'Done' }).click();
+  await openSettings(page);
+  await page.getByTestId('database-settings-undo-starter').click();
+  const confirm = page.getByRole('alertdialog', { name: 'Undo Task Database?' });
+
+  await expect(confirm.getByRole('button', { name: 'Remove' })).toBeFocused();
+  const layout = await confirm.evaluate(async (box) => {
+    // The open animation scales the box.
+    await Promise.all(box.getAnimations().map((animation) => animation.finished));
+    const top = box.getBoundingClientRect().top;
+    const rect = (selector: string): number[] => {
+      const r = box.querySelector(selector)?.getBoundingClientRect();
+
+      return r === undefined ? [] : [Math.round(r.top - top), Math.round(r.height)];
+    };
+    const description = box.querySelector('[data-blok-database-confirm-description]');
+    const lines = description === null ? 0 : Math.round(description.getBoundingClientRect().height / parseFloat(getComputedStyle(description).lineHeight));
+
+    return {
+      box: [Math.round(box.getBoundingClientRect().width), Math.round(box.getBoundingClientRect().height)],
+      description: rect('[data-blok-database-confirm-description]'),
+      lines,
+      remove: rect('[data-blok-database-confirm-action="confirm"]'),
+      cancel: rect('[data-blok-database-confirm-action="cancel"]'),
+    };
+  });
+
+  expect(layout).toEqual({ box: [324, 193], description: [50, 36], lines: 2, remove: [100, 32], cancel: [141, 32] });
+  await confirm.getByRole('button', { name: 'Cancel' }).click();
+});
+

@@ -4430,6 +4430,23 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   color: var(--blok-database-ink-secondary);
 }
 
+/*
+ * research/36 §8.1: a plain box (no ×, no icon, so the title comes first) is 193 tall with
+ * Notion's two-line text, from these gaps. research/22 §8: 145 with no text fits the same gaps.
+ */
+[data-blok-database-confirm-title]:first-child ~ [data-blok-database-confirm-description] {
+  margin-top: var(--blok-space-1-5);
+  line-height: 18px;
+}
+
+[data-blok-database-confirm-title]:first-child ~ [data-blok-database-confirm-description] + [data-blok-database-confirm-action] {
+  margin-top: var(--blok-space-3-5);
+}
+
+[data-blok-database-confirm-title]:first-child ~ [data-blok-database-confirm-action] + [data-blok-database-confirm-action] {
+  margin-top: var(--blok-space-2-25);
+}
+
 [data-blok-database-confirm-action] {
   width: 100%;
   height: 32px;

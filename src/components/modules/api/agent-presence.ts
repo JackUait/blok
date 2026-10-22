@@ -27,24 +27,16 @@ export interface AgentPresenceOptions {
   isHidden(): boolean;
   publish(cursor: AgentCursorField | null): void;
   scrollTo(blockId: string): void;
-  /** Scrolls just enough to bring an element (a streamed word) into the window. */
-  scrollIntoView(element: HTMLElement): void;
 }
 
 export interface AgentFollowOptions {
   follow: boolean;
-  /** Scroll only when the agent's block is not fully in the viewport. */
-  outOfViewOnly?: boolean;
-  /** An intent event on such a target does not end following (the Ask AI bar). */
-  exemptIntent?(target: EventTarget | null): boolean;
 }
 
 export interface AgentPresence {
   start(agent: AgentIdentity, options: AgentFollowOptions): void;
   /** `draw: false` still publishes the cursor and follows, but draws no caret, marker or pulse here. */
   show(result: { changed: ChangedSet; lastRange?: TextRangeRef }, showOptions?: { draw?: boolean }): void;
-  /** A live preview drew `element`: while following, bring it into view. */
-  reveal(element: HTMLElement): void;
   stop(): void;
 }
 
@@ -74,16 +66,6 @@ const cursorFor = (agent: { id: string; name: string; color: string }, target: A
 
 const lastOf = (ids: string[]): string | undefined => ids[ids.length - 1];
 
-/** Whether the element sits fully inside the viewport, top to bottom. */
-const isInView = (holder: HTMLElement | null): boolean => {
-  if (holder === null) {
-    return false;
-  }
-  const rect = holder.getBoundingClientRect();
-
-  return rect.top >= 0 && rect.bottom <= window.innerHeight;
-};
-
 /** lastRange when the batch wrote text, else the last created, moved or updated block. */
 const targetOf = (result: { changed: ChangedSet; lastRange?: TextRangeRef }): AgentTarget | null => {
   if (result.lastRange !== undefined) {
@@ -111,18 +93,13 @@ export function createAgentPresence(options: AgentPresenceOptions): AgentPresenc
     reflow: ResizeObserver | null;
     onInput: (() => void) | null;
     following: boolean;
-    outOfViewOnly: boolean;
     stopFollowing: (() => void) | null;
     published: boolean;
-  } = { agent: null, reflow: null, onInput: null, following: false, outOfViewOnly: false, stopFollowing: null, published: false };
+  } = { agent: null, reflow: null, onInput: null, following: false, stopFollowing: null, published: false };
 
-  const inView = (blockId: string): boolean => isInView(options.resolveHolder(blockId));
-
-  const follow = (exempt: AgentFollowOptions['exemptIntent']): void => {
-    const stop = (event: Event): void => {
-      if (exempt?.(event.target) !== true) {
-        state.following = false;
-      }
+  const follow = (): void => {
+    const stop = (): void => {
+      state.following = false;
     };
 
     state.following = true;
@@ -191,10 +168,9 @@ export function createAgentPresence(options: AgentPresenceOptions): AgentPresenc
         color: isPresenceColor(agent.color) ? agent.color : agentColorFor(agent.id),
       };
       watch();
-      state.outOfViewOnly = startOptions.outOfViewOnly === true;
 
       if (startOptions.follow) {
-        follow(startOptions.exemptIntent);
+        follow();
       }
     },
 
@@ -222,15 +198,8 @@ export function createAgentPresence(options: AgentPresenceOptions): AgentPresenc
         draw(agent, target);
       }
 
-      if (state.following && !(state.outOfViewOnly && inView(target.blockId))) {
+      if (state.following) {
         options.scrollTo(target.blockId);
-      }
-    },
-
-    reveal(element: HTMLElement): void {
-      // The same stop rules as edits: a user scroll, key or click outside the bar ends following.
-      if (state.agent !== null && state.following && !isInView(element)) {
-        options.scrollIntoView(element);
       }
     },
 

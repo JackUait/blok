@@ -725,7 +725,6 @@ export class Assistant extends Module {
       edgeHolder: (edge, parentId) => this.edgeHolder(edge, parentId),
       anchorHolder: () => this.anchorHolder(),
       inputOf: (id, field) => this.inputOf(id, field),
-      onWord: (word) => this.Blok.AgentAPI.followLive(word),
       // The preview shows where edits land, so the slots go. No re-place here: the
       // layout's gap writes re-place the bar once, which drops the slots' gap too.
       onDraw: () => {

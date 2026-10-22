@@ -34,8 +34,6 @@ export interface LivePreviewDeps {
    * Without it, a named field previews only when the block has a single input.
    */
   inputOf?(id: string, field?: string): HTMLElement | null;
-  /** A word just landed and is placed: the page may follow it. */
-  onWord?(word: HTMLElement): void;
   /** A layout is about to place boxes, before its gap writes: the preview now shows where edits land. */
   onDraw?(): void;
   /** The editor's message for a key; without it, a label that comes from messages shows empty. */
@@ -1009,10 +1007,6 @@ class Line {
     return this.spans.length < landable(this.spec);
   }
 
-  public get newest(): HTMLElement | undefined {
-    return this.spans[this.spans.length - 1];
-  }
-
   public update(spec: LineSpec, ordinal: number): void {
     const tokens = tokensOf(spec);
 
@@ -1550,9 +1544,6 @@ class CallPreview {
     return this.painted === 'yes';
   }
 
-  /** The newest word landed since the last layout: the page may follow it once it is placed. */
-  private word: HTMLElement | null = null;
-
   constructor(
     private readonly id: string,
     private readonly deps: LivePreviewDeps,
@@ -1633,7 +1624,7 @@ class CallPreview {
           known.land();
         }
       });
-      this.landed(lines[lines.length - 1]);
+      this.landed();
 
       return;
     }
@@ -1642,7 +1633,7 @@ class CallPreview {
     if (wait <= 0) {
       line.land();
       this.lastLanded = Date.now();
-      this.landed(line);
+      this.landed();
     }
     this.timer = setTimeout(() => {
       this.timer = null;
@@ -1650,26 +1641,15 @@ class CallPreview {
     }, wait > 0 ? wait : WORD_GAP_MS);
   }
 
-  /** After a word lands: tails, a layout, a frame to mark the call shown. The page follows the word once it is placed. */
-  private landed(line: Line): void {
+  /** After a word lands: tails, a layout, a frame to mark the call shown. */
+  private landed(): void {
     this.items.forEach((item) => item.lines.forEach((known) => known.tails()));
-    this.word = line.newest ?? this.word;
     this.requestLayout();
     if (this.painted === 'no') {
       this.painted = 'waiting';
       requestAnimationFrame(() => {
         this.painted = 'yes';
       });
-    }
-  }
-
-  /** After a layout: the newest word is placed, so the page may follow it. */
-  public followWord(): void {
-    const word = this.word;
-
-    this.word = null;
-    if (word !== null) {
-      this.deps.onWord?.(word);
     }
   }
 
@@ -1795,8 +1775,6 @@ const layoutAll = (calls: CallPreview[], onDraw?: () => void): void => {
     boxes.forEach(([box]) => box.locate(layer));
     boxes.forEach(([box]) => box.apply());
   });
-  // Last: following reads the placed word, after the bar has moved too.
-  calls.forEach((call) => call.followWord());
 };
 
 export const createLivePreview = (deps: LivePreviewDeps): LivePreview => {

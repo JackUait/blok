@@ -33,7 +33,6 @@ import type { Block } from '../../block';
 import { AgentFailure, failure } from '../../../shared/agent/errors';
 import { createAgentRun } from './agent-run';
 import { createAgentTurn } from './agent-turn';
-import { createLiveFollow } from './live-follow';
 
 export class AgentTurnOpenError extends Error {
   public constructor() {
@@ -68,8 +67,6 @@ export interface AssistantRunHooks {
 interface InternalTurnOptions {
   /** False: publish and follow, but draw no local caret, marker or pulse. */
   drawLocal: boolean;
-  /** Follow only edits outside the viewport, and keep following through input in the bar. */
-  barFollow?: boolean;
   onExecuted?(changed: ChangedSet): void;
 }
 
@@ -173,16 +170,6 @@ export class AgentAPI extends Module {
   }
 
   /**
-   * The Ask AI preview drew a word: while the run follows, scroll it into view.
-   * @param element - the word just drawn
-   */
-  public followLive(element: HTMLElement): void {
-    if (this.current.turn !== null) {
-      this.presenceLayer?.reveal(element);
-    }
-  }
-
-  /**
    * Start an assistant run with editor context captured earlier.
    * @param prompt - the user's request
    * @param place - from describeUserPlace()
@@ -232,7 +219,7 @@ export class AgentAPI extends Module {
     const place = options.context === false ? captured : this.editorContext();
     const name = assistant.name?.trim() || 'AI';
     const agent = { id: 'blok-assistant', name };
-    const turn = internal === undefined ? this.begin({ agent }) : this.begin({ agent, follow: internal.barFollow === true }, internal);
+    const turn = this.begin({ agent }, internal);
     const pagesSaved = this.turnPages;
 
     return createAgentRun(composeFirstMessage(prompt, place.text, turn.read, place.blockIds), {
@@ -325,7 +312,6 @@ export class AgentAPI extends Module {
 
         window.scrollTo({ top, behavior: prefersReducedMotion() ? 'instant' : 'smooth' });
       },
-      scrollIntoView: createLiveFollow(() => this.config.scrollToBlock?.topOffset ?? 0),
     });
 
     return this.presenceLayer;
@@ -460,9 +446,6 @@ export class AgentAPI extends Module {
     this.setState({ status: 'working', turn: { id: turn.id, agent: identity } });
     this.presence().start(identity, {
       follow: options.follow === true,
-      ...(internal.barFollow === true
-        ? { outOfViewOnly: true, exemptIntent: (target: EventTarget | null) => this.Blok.Assistant.contains(target) }
-        : {}),
     });
 
     return turn;

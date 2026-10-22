@@ -46,8 +46,7 @@ import { openLinkedAddView, openLinkedPicker } from './database-linked-picker';
 import { openNewSourcePanel } from './database-new-source-panel';
 import { planAiSetup } from './database-ai-setup';
 import { DATABASE_STARTERS, buildStarter, galleryStarters, suggestedStarters } from './database-starters';
-import { createSeedDefinition } from '../../shared/database/seed-layouts';
-import type { StarterId } from './database-starters';
+import type { StarterId, StarterMeta } from './database-starters';
 import { openStarterCustomize } from './database-starter-modal';
 import { openTemplateGallery } from './database-template-gallery';
 import type { StarterPicks } from './database-starter-modal';
@@ -158,7 +157,7 @@ import { DatabaseViewControls } from './database-view-controls';
 import type { ViewControlsHost } from './database-view-controls';
 import type { ViewStateFallback } from './database-view-state';
 import { TabDisplayPreference } from './database-tab-display';
-import type { DataSourceChoice, ViewGroupEntry, ViewSettingsAction, ViewSettingsContext } from './database-view-settings-panel';
+import type { DataSourceChoice, ViewGroupEntry, StarterRow, ViewSettingsAction, ViewSettingsContext } from './database-view-settings-panel';
 import { openFilterList } from './database-view-settings-panel';
 import type { DatabasePanel } from './database-panel';
 import { registerGroupToggle } from './database-group-toggle';
@@ -1171,45 +1170,45 @@ export class DatabaseTool implements BlockTool {
     this.rerenderView();
   }
 
-  private undoStarterAction(): { label: string; onClick: () => void } | undefined {
-    const key = DATABASE_STARTERS.find((starter) => starter.id === this.starter)?.undoKey;
+  private starterRow(): StarterRow | undefined {
+    if (this.readOnly) return undefined;
+    const meta = DATABASE_STARTERS.find((starter) => starter.id === this.starter);
+    const t = (key: string): string => this.api.i18n.t(key);
 
-    if (key === undefined || this.readOnly) return undefined;
+    if (meta?.undoKey !== undefined) return { kind: 'undo', label: t(meta.undoKey), onClick: () => void this.undoStarter(meta) };
 
-    return { label: this.api.i18n.t(key), onClick: () => this.undoStarter() };
+    return {
+      kind: 'turnInto',
+      label: t('tools.database.starterTurnInto'),
+      choices: [
+        { label: t('tools.database.starterTurnIntoTasks'), testId: 'database-settings-turn-into-tasks' },
+        { label: t('tools.database.starterTurnIntoSkills'), testId: 'database-settings-turn-into-skills' },
+      ],
+    };
   }
 
   /**
-   * "Undo … database" (research/27:43). What Notion's row does was not
-   * measured. Blok choice: back to a new database's plain table, title and
-   * icon cleared, every row and template removed, in one undo step.
+   * "Undo … database" (research/33 §3.10): asks first, then drops only the
+   * Tasks / Skills designation. Title, icon, views, properties and rows stay.
    */
-  private undoStarter(): void {
-    if (this.destroyed || this.readOnly || this.structureLocked() || this.starter === undefined) return;
-    const titleId = this.titlePropertyId();
-    const seed = createSeedDefinition('table', () => nanoid());
-    const seedTitle = seed.schema.find((p) => p.type === 'title')?.id;
-    const remap = (pid: string): string => (pid === seedTitle && titleId !== '' ? titleId : pid);
-    const schema = seed.schema.map((p) => ({ ...p, id: remap(p.id) }));
-    const views = seed.views.map((view) => ({ ...view, visibleProperties: view.visibleProperties.map(remap), ...(view.properties === undefined ? {} : { properties: view.properties.map((entry) => ({ ...entry, id: remap(entry.id) })) }) }));
-    const oldSchema = this.model.getSchema();
-    const oldViews = this.model.getViews();
-    const rowIds = this.api.blocks.getChildren(this.dataId).filter((child) => child.name === 'database-row').map((child) => child.id);
-
-    this.inOneStep(() => {
-      this.sampleCardIds = [];
-      for (const rowId of rowIds) this.removeRowBlock(rowId);
-      this.databaseIcon = undefined;
-      this.starter = undefined;
-      delete this.unknown.icon;
-      delete this.unknown.starter;
-      this.paintDatabaseIcon();
-      this.writeDefinition({ schema, views, activeViewId: views[0].id, title: '' });
+  private async undoStarter(meta: StarterMeta): Promise<void> {
+    const t = (key: string): string => this.api.i18n.t(key);
+    const confirmed = await openDatabaseConfirm({
+      title: t(meta.undoTitleKey ?? meta.undoKey ?? ''),
+      ...(meta.undoDescriptionKey === undefined ? {} : { description: t(meta.undoDescriptionKey) }),
+      confirmLabel: t('tools.database.starterUndoRemove'),
+      cancelLabel: t('tools.database.optionDeleteCancel'),
+      destructive: true,
+      directionSource: this.element,
     });
-    this.syncDefinition(oldSchema, oldViews, schema, views);
-    this.syncRowsFromBlocks();
-    this.rebuildTabBar();
-    this.rerenderView();
+
+    // The dialog is async: the database may have changed under it.
+    if (!confirmed || this.destroyed || this.readOnly || this.structureLocked() || this.starter !== meta.id) return;
+    this.inOneStep(() => {
+      this.starter = undefined;
+      delete this.unknown.starter;
+      this.block.dispatchChange();
+    });
   }
 
   /**
@@ -5988,7 +5987,7 @@ export class DatabaseTool implements BlockTool {
       layoutItems: () => data().layoutItems(),
       actions: () => data().csvActions(),
       ...(context === undefined ? { customizeLayout: () => data().customizeLayoutAction() } : {}),
-      ...(context === undefined && !this.linked ? { undoStarter: () => this.undoStarterAction() } : {}),
+      ...(context === undefined && !this.linked ? { starterRow: () => this.starterRow() } : {}),
       automations: {
         read: () => owner.savedAutomations,
         schema: () => owner.model.getSchema(),

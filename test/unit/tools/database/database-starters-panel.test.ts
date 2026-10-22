@@ -484,40 +484,61 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
     expect(new Set(labels())).toEqual(new Set(['tools.database.newPage']));
   });
 
-  it('View settings has "Undo skills database"; it empties the database back to a plain table in one step (Blok choice)', async () => {
+  const dialog = (): HTMLElement | null => document.querySelector('[data-blok-database-confirm-dialog]');
+  const dialogButton = (name: 'confirm' | 'cancel'): HTMLElement => {
+    const found = dialog()?.querySelector(`[data-blok-database-confirm-action="${name}"]`);
+
+    if (!(found instanceof HTMLElement)) throw new Error(`no ${name}`);
+
+    return found;
+  };
+
+  it('"Undo Task database" asks first (research/33 §3.10): title, body, Remove in red, Cancel; nothing changes yet', async () => {
     const { doc, tool } = await insert();
-    const titleId = saved(tool).schema.find((p) => p.type === 'title')?.id;
 
-    byTestId(panel(), 'database-new-database-starter-skills').click();
+    await applyTasks();
+    const before = JSON.stringify(saved(tool));
+    const steps = doc.transact.mock.calls.length;
+
     byTestId(document.body, 'database-toolbar-settings').click();
-    const row = settingsRow('database-settings-undo-starter');
+    settingsRow('database-settings-undo-starter')?.click();
 
-    expect(row?.textContent).toContain('tools.database.starterUndoSkills');
-    expect(row?.nextElementSibling?.getAttribute('data-blok-testid')).toBe('database-settings-more');
-    const before = doc.transact.mock.calls.length;
-
-    row?.click();
-    const data = saved(tool);
-
-    expect(data.starter).toBeUndefined();
-    expect(data.icon).toBeUndefined();
-    expect(data.title).toBe('');
-    expect(data.schema.map((p) => p.type)).toEqual(['title']);
-    expect(data.schema[0].id).toBe(titleId);
-    expect(data.views.map((v) => v.type)).toEqual(['table']);
-    expect(document.querySelector('[data-blok-database-icon]')).toBeNull();
-    expect(doc.transact.mock.calls.length - before).toBe(1);
+    expect(dialog()?.querySelector('[data-blok-database-confirm-title]')?.textContent).toBe('tools.database.starterUndoTasksTitle');
+    expect(dialog()?.querySelector('[data-blok-database-confirm-description]')?.textContent).toBe('tools.database.starterUndoTasksDescription');
+    expect(dialogButton('confirm').textContent).toBe('tools.database.starterUndoRemove');
+    expect(dialogButton('confirm').hasAttribute('data-destructive')).toBe(true);
+    expect(dialogButton('cancel').textContent).toBe('tools.database.optionDeleteCancel');
+    expect(JSON.stringify(saved(tool))).toBe(before);
+    expect(doc.transact.mock.calls.length).toBe(steps);
   });
 
-  it('Undo Task database removes the template\'s rows and its template too; the backend drops its properties and views', async () => {
+  it('Cancel keeps the Tasks database as it was, with no history step', async () => {
+    const { doc, tool } = await insert();
+
+    await applyTasks();
+    const before = JSON.stringify(saved(tool));
+    const steps = doc.transact.mock.calls.length;
+
+    byTestId(document.body, 'database-toolbar-settings').click();
+    settingsRow('database-settings-undo-starter')?.click();
+    dialogButton('cancel').click();
+    await settle();
+
+    expect(dialog()).toBeNull();
+    expect(JSON.stringify(saved(tool))).toBe(before);
+    expect(doc.transact.mock.calls.length).toBe(steps);
+  });
+
+  it('Remove drops only the Tasks designation, in one step: title, icon, schema, views, rows and templates stay; the backend is not touched', async () => {
     const deleteProperty = vi.fn(async () => undefined);
     const deleteView = vi.fn(async () => undefined);
+    const deleteRow = vi.fn(async () => undefined);
     const adapter = {
       loadDatabase: vi.fn(() => new Promise<never>(() => undefined)),
       createRow: vi.fn(async (params: { id: string }) => ({ ...params })),
       updateRow: vi.fn(async () => undefined),
       moveRow: vi.fn(async () => undefined),
-      deleteRow: vi.fn(async () => undefined),
+      deleteRow,
       createProperty: vi.fn(async (params: { id: string }) => ({ ...params })),
       updateProperty: vi.fn(async () => undefined),
       deleteProperty,
@@ -528,27 +549,86 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
     const { doc, tool } = await insert([], { adapter } as unknown as DatabaseConfig);
 
     await applyTasks();
+    const { starter, ...kept } = saved(tool);
+    const rowIds = rows(doc);
+    const templateIds = templateRows(doc);
+    const steps = doc.transact.mock.calls.length;
+
+    expect(starter).toBe('tasks');
+    await settle();
+    [deleteProperty, deleteView, deleteRow].forEach((fn) => fn.mockClear());
+    byTestId(document.body, 'database-toolbar-settings').click();
+    settingsRow('database-settings-undo-starter')?.click();
+    dialogButton('confirm').click();
+    await settle();
+
+    const after = saved(tool);
+
+    expect(after.starter).toBeUndefined();
+    expect(after).toEqual(kept);
+    expect(rows(doc)).toEqual(rowIds);
+    expect(templateRows(doc)).toEqual(templateIds);
+    expect(document.querySelector('[data-blok-database-icon]')).not.toBeNull();
+    expect(doc.transact.mock.calls.length - steps).toBe(1);
+    expect(deleteProperty).not.toHaveBeenCalled();
+    expect(deleteView).not.toHaveBeenCalled();
+    expect(deleteRow).not.toHaveBeenCalled();
+  });
+
+  it('after Remove the row reads "Turn into"', async () => {
+    await insert();
+
+    await applyTasks();
+    byTestId(document.body, 'database-toolbar-settings').click();
+    settingsRow('database-settings-undo-starter')?.click();
+    dialogButton('confirm').click();
+    await settle();
+    popovers.items.length = 0;
+    byTestId(document.body, 'database-toolbar-settings').click();
+
+    expect(settingsRow('database-settings-undo-starter')).toBeNull();
+    expect(settingsRow('database-settings-turn-into')?.textContent).toContain('tools.database.starterTurnInto');
+  });
+
+  it('"Undo skills database" sits before More settings; its dialog has the Skills title and no body (unmeasured)', async () => {
+    const { tool } = await insert();
+
+    byTestId(panel(), 'database-new-database-starter-skills').click();
     byTestId(document.body, 'database-toolbar-settings').click();
     const row = settingsRow('database-settings-undo-starter');
 
-    expect(row?.textContent).toContain('tools.database.starterUndoTasks');
-    deleteProperty.mockClear();
-    deleteView.mockClear();
+    expect(row?.textContent).toContain('tools.database.starterUndoSkills');
+    expect(row?.nextElementSibling?.getAttribute('data-blok-testid')).toBe('database-settings-more');
     row?.click();
-
-    expect(rows(doc)).toEqual([]);
-    expect(templateRows(doc)).toEqual([]);
-    expect(saved(tool).schema[0].defaultTemplateId).toBeUndefined();
-    // Seven properties after the title, and the three views, go; the title property stays.
-    expect(deleteProperty).toHaveBeenCalledTimes(7);
-    expect(deleteView).toHaveBeenCalledTimes(3);
+    expect(dialog()?.querySelector('[data-blok-database-confirm-title]')?.textContent).toBe('tools.database.starterUndoSkillsTitle');
+    expect(dialog()?.querySelector('[data-blok-database-confirm-description]')).toBeNull();
+    dialogButton('confirm').click();
+    await settle();
+    expect(saved(tool).starter).toBeUndefined();
+    expect(saved(tool).title).toBe('tools.database.starterSkills');
   });
 
-  it('Projects has no Undo row (Notion showed "Turn into" there); a plain database has none either', async () => {
-    await insert();
+  it('a plain database shows "Turn into" where Tasks shows Undo; it opens Tasks and Skills entries, disabled (their effect is unmeasured)', async () => {
+    const { doc, tool } = await insert();
+    const before = JSON.stringify(saved(tool));
+    const steps = doc.transact.mock.calls.length;
 
     byTestId(document.body, 'database-toolbar-settings').click();
-    expect(settingsRow('database-settings-more') ?? settingsRow('database-settings-lock')).not.toBeNull();
+    const row = settingsRow('database-settings-turn-into');
+
     expect(settingsRow('database-settings-undo-starter')).toBeNull();
+    expect(row?.textContent).toContain('tools.database.starterTurnInto');
+    expect(row?.nextElementSibling?.getAttribute('data-blok-testid')).toBe('database-settings-more');
+    row?.click();
+    const tasks = settingsRow('database-settings-turn-into-tasks');
+    const skills = settingsRow('database-settings-turn-into-skills');
+
+    expect(tasks?.textContent).toContain('tools.database.starterTurnIntoTasks');
+    expect(skills?.textContent).toContain('tools.database.starterTurnIntoSkills');
+    expect((tasks as HTMLButtonElement | null)?.disabled).toBe(true);
+    expect((skills as HTMLButtonElement | null)?.disabled).toBe(true);
+    tasks?.click();
+    expect(JSON.stringify(saved(tool))).toBe(before);
+    expect(doc.transact.mock.calls.length).toBe(steps);
   });
 });

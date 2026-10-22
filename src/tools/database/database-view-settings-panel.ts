@@ -135,11 +135,15 @@ export interface ViewSettingsContext {
   automations?: AutomationSettings;
   /** The host gave `config.ai.autofill`. Without it there is no AI Autofill row. */
   autofill?: AutofillPanelSettings;
-  /** "Undo … database" on a database a Suggested template made (research/27:43). */
-  undoStarter?: () => { label: string; onClick: () => void } | undefined;
+  /** "Undo … database" on a Tasks or Skills database, "Turn into" on any other (research/33 §3.10). */
+  starterRow?: () => StarterRow | undefined;
   /** The database's data sources. With only one, the Source row is greyed (research/09 §1). */
   dataSources?: DataSourceSettings;
 }
+
+export type StarterRow =
+  | { kind: 'undo'; label: string; onClick: () => void }
+  | { kind: 'turnInto'; label: string; choices: Array<{ label: string; testId: string }> };
 
 export interface DataSourceChoice {
   id: string;
@@ -380,18 +384,26 @@ export class ViewSettingsPages {
             },
           }));
         }
-        const undoStarter = this.ctx.undoStarter?.();
+        const starterRow = this.ctx.starterRow?.();
 
-        // Where Notion's other databases show "Turn into".
-        if (undoStarter !== undefined) {
+        if (starterRow?.kind === 'undo') {
           rows.push(panelRow({
-            label: undoStarter.label,
+            label: starterRow.label,
             testId: 'database-settings-undo-starter',
             disabled: !this.shared,
             onClick: () => {
               panel.close();
-              undoStarter.onClick();
+              starterRow.onClick();
             },
+          }));
+        }
+        if (starterRow?.kind === 'turnInto') {
+          rows.push(panelRow({
+            label: starterRow.label,
+            testId: 'database-settings-turn-into',
+            opensPage: true,
+            disabled: !this.shared,
+            onClick: () => panel.push(this.turnInto(starterRow)),
           }));
         }
         if (this.ctx.structure !== undefined || this.ctx.customizeLayout?.() !== undefined) {
@@ -577,6 +589,15 @@ export class ViewSettingsPages {
   }
 
   // ─── More settings: Sub-items, Dependencies, then Customize page layout (research/09 §1) ───
+
+  /** What its entries do was not measured (research/33 §3.10), so they stay disabled. */
+  private turnInto(row: Extract<StarterRow, { kind: 'turnInto' }>): PanelPage {
+    return {
+      title: row.label,
+      returnFocus: 'database-settings-turn-into',
+      build: () => row.choices.map((choice) => panelRow({ label: choice.label, testId: choice.testId, disabled: true, onClick: () => undefined })),
+    };
+  }
 
   private moreSettings(): PanelPage {
     return {

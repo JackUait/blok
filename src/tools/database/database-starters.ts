@@ -37,6 +37,9 @@ export interface StarterMeta {
   glyph: DatabaseIcon['glyph'];
   /** The View settings row "Undo … database". Projects showed "Turn into" there instead (research/27:81). */
   undoKey?: string;
+  /** Its confirm dialog (research/33 §3.10). Only the Tasks wording was measured; Skills has no body. */
+  undoTitleKey?: string;
+  undoDescriptionKey?: string;
   /** Empty: the template has no Customize step. */
   features: StarterChoice[];
   views: StarterChoice[];
@@ -94,6 +97,8 @@ export const DATABASE_STARTERS: readonly StarterMeta[] = [
     tint: 'green',
     glyph: 'check',
     undoKey: 'tools.database.starterUndoTasks',
+    undoTitleKey: 'tools.database.starterUndoTasksTitle',
+    undoDescriptionKey: 'tools.database.starterUndoTasksDescription',
     features: [
       choice('priority', 'tools.database.starterPriority', true, 'select'),
       choice('taskType', 'tools.database.starterTaskType', true, 'multiSelect'),
@@ -141,6 +146,7 @@ export const DATABASE_STARTERS: readonly StarterMeta[] = [
     tint: 'gray',
     glyph: 'wand',
     undoKey: 'tools.database.starterUndoSkills',
+    undoTitleKey: 'tools.database.starterUndoSkillsTitle',
     features: [],
     views: [],
   },

@@ -270,7 +270,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1584 + 126 + 486 + 4 closure for all 2200 keys', () => {
+  it('rebuilds a disjoint 1591 + 126 + 486 + 4 closure for all 2207 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -284,7 +284,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2200);
+    expect(lifecycle.size).toBe(2207);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -436,7 +436,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the "/" menu footer calls toolbox.closeMenu by literal (research/30 §B7c).
       // +1: the merge dialog's subtitle, tools.database.csvMergeDescription (research/31 §5a).
       // +2: a status option's "Set as default" and "Default" call templateSetDefault / templateDefault by literal.
-      'executable-literal': 1584,
+      'executable-literal': 1591,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

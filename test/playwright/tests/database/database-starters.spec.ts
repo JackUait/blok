@@ -190,7 +190,7 @@ test('Suggested leaves out a template a database of the page was made from (rese
     .toHaveText(['New empty data source', 'Import CSV', 'Projects', 'Skills', 'Document Hub', 'More templates', 'Link to existing data source']);
 });
 
-test('Tasks Tracker: the database gets its icon, "New task" is the Default template, and "Undo Task database" empties it', async ({ page }) => {
+test('Tasks Tracker: the database gets its icon, "New task" is the Default template, and "Undo Task database" asks, then drops only the designation', async ({ page }) => {
   await mount(page);
   await insertDatabase(page);
   await page.getByTestId('database-new-database-panel').getByRole('button', { name: 'Tasks Tracker' }).click();
@@ -218,22 +218,31 @@ test('Tasks Tracker: the database gets its icon, "New task" is the Default templ
   await page.keyboard.press('Escape');
 
   await openSettings(page);
+  const before = await read(page);
+
   await page.getByTestId('database-settings-undo-starter').click();
-  await expect.poll(async () => {
-    const back = await read(page);
+  const confirm = page.getByRole('alertdialog', { name: 'Undo Task Database?' });
 
-    return [back.db.title ?? '', back.db.schema.map((p) => p.name), back.rows.length, back.templates.length, back.db.icon ?? null, back.db.starter ?? null];
-  }).toEqual(['', ['Name'], 0, 0, null, null]);
-  await expect(icon).toHaveCount(0);
+  await expect(confirm).toContainText('Tasks from this database will no longer work with My tasks or Sprints.');
+  await confirm.getByRole('button', { name: 'Remove' }).click();
+  await expect(confirm).toBeHidden();
+  await expect.poll(async () => (await read(page)).db.starter ?? null).toBeNull();
+  const after = await read(page);
 
-  // One undo brings the template back whole.
-  await page.evaluate(() => window.blokInstance?.history.undo());
-  await expect.poll(async () => {
-    const back = await read(page);
-
-    return [back.db.title ?? '', back.rows.length, back.templates.length, back.db.icon ?? null, back.db.starter ?? null];
-  }).toEqual(['Tasks Tracker', 3, 1, { glyph: 'check', color: 'green' }, 'tasks']);
+  // research/33 §3.10: only the designation goes.
+  expect([after.db.title, after.db.icon, after.db.schema, after.db.views, after.rows.length, after.templates.length])
+    .toEqual([before.db.title, before.db.icon, before.db.schema, before.db.views, before.rows.length, before.templates.length]);
   await expect(icon).toBeVisible();
+  await openSettings(page);
+  await expect(page.getByTestId('database-settings-undo-starter')).toHaveCount(0);
+  await expect(page.getByTestId('database-settings-turn-into')).toHaveText('Turn into');
+  await page.keyboard.press('Escape');
+
+  // One undo brings the designation back.
+  await page.evaluate(() => window.blokInstance?.history.undo());
+  await expect.poll(async () => (await read(page)).db.starter ?? null).toBe('tasks');
+  await openSettings(page);
+  await expect(page.getByTestId('database-settings-undo-starter')).toHaveText('Undo Task database');
 });
 
 test('Skills reads "Undo skills database"', async ({ page }) => {
@@ -245,7 +254,7 @@ test('Skills reads "Undo skills database"', async ({ page }) => {
   await expect(page.getByTestId('database-settings-undo-starter')).toHaveText('Undo skills database');
 });
 
-test('Projects has no "Undo … database" row (Notion showed "Turn into" there)', async ({ page }) => {
+test('Projects shows "Turn into" with the Tasks and Skills entries (their effect is unmeasured, so disabled)', async ({ page }) => {
   await mount(page);
   await insertDatabase(page);
   await page.getByTestId('database-new-database-panel').getByRole('button', { name: 'Projects' }).click();
@@ -255,8 +264,12 @@ test('Projects has no "Undo … database" row (Notion showed "Turn into" there)'
   await dialog.getByRole('button', { name: 'Done' }).click();
   await expect(page.locator('[data-blok-database-icon="blue"]')).toBeVisible();
   await openSettings(page);
-  await expect(page.getByTestId('database-settings-lock')).toBeVisible();
   await expect(page.getByTestId('database-settings-undo-starter')).toHaveCount(0);
+  await page.getByTestId('database-settings-turn-into').click();
+  await expect(page.getByTestId('database-settings-turn-into-tasks')).toHaveText('Turn into Tasks database');
+  await expect(page.getByTestId('database-settings-turn-into-skills')).toHaveText('Turn into Skills database');
+  await expect(page.getByTestId('database-settings-turn-into-tasks')).toBeDisabled();
+  await expect(page.getByTestId('database-settings-turn-into-skills')).toBeDisabled();
 });
 
 test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {

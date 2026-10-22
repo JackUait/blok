@@ -51,4 +51,36 @@ describe('row menu footer time', () => {
 
     expect(footer.lastEdited?.time).toBe('3 days ago 12:00 PM');
   });
+
+  it('writes an edit from today as "Today at 4:54 AM" through one translated phrase (research/35 §19)', () => {
+    const at = new Date(2026, 9, 22, 4, 54);
+    const t = vi.fn((key: string, vars?: Record<string, string | number>) => `${key}|${String(vars?.time)}`);
+    const footer = rowMenuFooter({
+      row: { properties: {}, meta: { lastEditedAt: at.getTime() } },
+      titlePropertyId: 'p-title',
+      locale: 'en-US',
+      now: new Date(2026, 9, 22, 5, 10),
+      hourCycle: 'h12',
+      i18n: { t },
+    });
+    const time = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hourCycle: 'h12' }).format(at);
+
+    expect(footer.lastEdited?.time).toBe(`tools.database.rowEditedTodayAt|${time}`);
+    expect(time.replace(/\s/g, ' ')).toBe('4:54 AM');
+  });
+
+  it('keeps yesterday as it was: only "Today at" is measured', () => {
+    const t = vi.fn((key: string) => key);
+    const footer = rowMenuFooter({
+      row: { properties: {}, meta: { lastEditedAt: new Date(2026, 9, 21, 12).getTime() } },
+      titlePropertyId: 'p-title',
+      locale: 'en-US',
+      now: new Date(2026, 9, 22, 5),
+      hourCycle: 'h12',
+      i18n: { t },
+    });
+
+    expect(footer.lastEdited?.time).toBe('Yesterday 12:00 PM');
+    expect(t).not.toHaveBeenCalled();
+  });
 });

@@ -1720,6 +1720,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         ...(this.options.cellContext?.people !== undefined ? { people: this.options.cellContext.people } : {}),
         ...(this.options.cellContext?.now !== undefined ? { now: this.options.cellContext.now } : {}),
         ...(this.options.cellContext?.hourCycle !== undefined ? { hourCycle: this.options.cellContext.hourCycle } : {}),
+        i18n: this.options.i18n,
       }),
       ...(this.options.comment !== undefined ? { onComment: () => this.options.comment?.(rowId, undefined, anchor) } : {}),
       onDelete: () => {

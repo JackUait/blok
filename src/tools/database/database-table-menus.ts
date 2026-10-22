@@ -25,7 +25,8 @@ import {
 import { beautifyShortcut } from '../../components/utils/string';
 import { CALCULATIONS_FOR_TYPE } from './database-calculations';
 import type { CalculationFn, DatabaseRow, OpenPagesIn, PropertyDefinition } from './types';
-import { formatRelativeStamp } from './cells/date-format';
+import { formatClock, formatRelativeStamp } from './cells/date-format';
+import { toLocalDay } from './relative-dates';
 
 type T = Pick<I18n, 't'>;
 
@@ -305,6 +306,8 @@ export interface RowMenuFooterSource {
   people?: ReadonlyArray<{ id: string; name: string }>;
   now?: Date;
   hourCycle?: 'h12' | 'h23';
+  /** research/35 §19: an edit from today reads "Today at 4:54 AM". Without it, "Today 4:54 AM". */
+  i18n?: Pick<I18n, 't'>;
 }
 
 /**
@@ -323,7 +326,10 @@ export const rowMenuFooter = (source: RowMenuFooterSource): Pick<RowMenuContext,
   if (at === undefined) {
     return { counts };
   }
-  const time = formatRelativeStamp(at, source.locale, {}, source.now, source.hourCycle);
+  const now = source.now ?? new Date();
+  const time = source.i18n !== undefined && toLocalDay(new Date(at)) === toLocalDay(now)
+    ? source.i18n.t('tools.database.rowEditedTodayAt', { time: formatClock(new Date(at), source.locale, source.hourCycle) })
+    : formatRelativeStamp(at, source.locale, {}, now, source.hourCycle);
   const name = meta?.lastEditedBy === undefined ? undefined : source.people?.find((person) => person.id === meta.lastEditedBy)?.name;
 
   return { lastEdited: { ...(name !== undefined ? { name } : {}), time }, counts };

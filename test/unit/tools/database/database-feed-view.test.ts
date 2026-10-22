@@ -86,6 +86,32 @@ describe('DatabaseFeedView', () => {
     expect(el.querySelector('[data-blok-database-feed-time]')?.textContent).toBe(shown);
   });
 
+  // research/35 §19: hovering "31m" shows "Created October 22, 2026 at 5:43:51 AM".
+  it('the post time hints when the page was made, to the second, after the hint delay', () => {
+    destroyTooltip();
+    vi.useFakeTimers();
+    try {
+      const at = new Date(2026, 9, 22, 5, 43, 51);
+      const el = render({
+        rows: [{ ...rows[0], meta: { createdBy: 'u1', createdAt: at.getTime() } }],
+        total: 1,
+        i18n: { t: (key: string, vars?: Record<string, string | number>) => `${key}|${String(vars?.date)}|${String(vars?.time)}` },
+      });
+      const time = el.querySelector<HTMLElement>('[data-blok-database-feed-time]');
+      const date = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).format(at);
+      const clock = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' }).format(at);
+
+      expect([date, clock.replace(/\s/g, ' ')]).toEqual(['October 22, 2026', '5:43:51 AM']);
+      hover(time);
+      vi.advanceTimersByTime(HINT_DELAY - 1);
+      expect(shownHint()).toBeNull();
+      vi.advanceTimersByTime(1);
+      expect(shownHint()?.text).toBe(`tools.database.feedCreatedAt|${date}|${clock}`);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('stacks one card per row in a list', () => {
     const el = render();
 

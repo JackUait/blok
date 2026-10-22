@@ -347,10 +347,20 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
 
       time.setAttribute('data-blok-database-feed-time', '');
       time.textContent = feedAge(at, this.options.locale);
+      onHover(time, this.createdHint(at));
       byline.appendChild(time);
     }
 
     return byline;
+  }
+
+  /** research/35 §19: "Created October 22, 2026 at 5:43:51 AM". */
+  private createdHint(at: number): string {
+    const { locale, i18n } = this.options;
+    const date = new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'long', day: 'numeric' }).format(at);
+    const time = new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit', second: '2-digit' }).format(at);
+
+    return i18n.t('tools.database.feedCreatedAt', { date, time });
   }
 
   private createProperties(row: DatabaseRow): HTMLElement {

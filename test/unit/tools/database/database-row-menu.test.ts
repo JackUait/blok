@@ -178,6 +178,15 @@ describe('row ⋮⋮ menu in the table', () => {
     expect(document.querySelector('[data-blok-database-row-menu-footer]')?.textContent).toContain('tools.database.rowLastEditedBy:Jack Uait');
   });
 
+  it('writes an edit from today as "Today at <time>" (research/35 §19)', () => {
+    const root = mount({}, { cellContext: { people: [{ id: 'u1', name: 'Jack Uait' }], now: new Date('2026-10-09T15:00:00'), hourCycle: 'h12' } });
+
+    root.querySelector<HTMLElement>('[data-row-id="r1"] [data-blok-database-table-row-handle]')?.click();
+    const time = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hourCycle: 'h12' }).format(new Date('2026-10-09T03:02:00'));
+
+    expect(document.querySelector('[data-blok-database-row-menu-footer]')?.textContent).toContain(`tools.database.rowEditedTodayAt:${time}`);
+  });
+
   it('the footer counts the words and characters of the row title', () => {
     const root = mount();
 

@@ -321,19 +321,24 @@ const formatPart = (part: string, locale: string, display: DateDisplay, now: Dat
   }
 
   const cycle = (display.timeFormat !== undefined ? HOUR_CYCLES[display.timeFormat] : undefined) ?? hourCycle;
+
+  return `${day} ${formatClock(toLocalDate(part), locale, cycle, zoneOption(part, display.timeZone))}`;
+};
+
+/** "4:54 AM", or "6:00" in 24 hour time. */
+export const formatClock = (date: Date, locale: string, cycle: 'h12' | 'h23' | undefined, zone: Intl.DateTimeFormatOptions = {}): string => {
   const formatter = new Intl.DateTimeFormat(locale, {
     hour: 'numeric',
     minute: '2-digit',
     ...(cycle !== undefined ? { hourCycle: cycle } : {}),
-    ...zoneOption(part, display.timeZone),
+    ...zone,
   });
+
   // research/23 §1: Notion writes 24 hour time as "6:00"; en-US pads the hour to "06".
   // Only 24 hour goes through parts: their AM/PM gap is U+202F, where format() gives a plain space.
-  const time = cycle === 'h23'
-    ? formatter.formatToParts(toLocalDate(part)).map((p) => (p.type === 'hour' ? p.value.replace(/^0(?=\d)/, '') : p.value)).join('')
-    : formatter.format(toLocalDate(part));
-
-  return `${day} ${time}`;
+  return cycle === 'h23'
+    ? formatter.formatToParts(date).map((p) => (p.type === 'hour' ? p.value.replace(/^0(?=\d)/, '') : p.value)).join('')
+    : formatter.format(date);
 };
 
 /**

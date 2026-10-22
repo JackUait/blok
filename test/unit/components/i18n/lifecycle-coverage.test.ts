@@ -270,7 +270,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1868 + 126 + 487 + 4 closure for all 2485 keys', () => {
+  it('rebuilds a disjoint 1870 + 126 + 487 + 4 closure for all 2487 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -284,7 +284,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2485);
+    expect(lifecycle.size).toBe(2487);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -437,7 +437,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the merge dialog's subtitle, tools.database.csvMergeDescription (research/31 §5a).
       // +2: a status option's "Set as default" and "Default" call templateSetDefault / templateDefault by literal.
       // +277: the twelve research/33 templates and Campaign / Content Calendar's off chips, views and page templates.
-      'executable-literal': 1868,
+      // +2: rowEditedTodayAt and feedCreatedAt (research/35 §19).
+      'executable-literal': 1870,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

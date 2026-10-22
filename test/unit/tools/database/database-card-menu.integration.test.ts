@@ -149,6 +149,18 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
     expect(document.querySelector('[data-blok-popover-opened] input[placeholder="tools.database.searchActions"]')).not.toBeNull();
   });
 
+  it('the board menu footer writes an edit from today with the "Today at" phrase (research/35 §19)', () => {
+    const doc = oneRow();
+    const block = doc.rows.get('a')?.block as unknown as { lastEditedAt?: number };
+
+    block.lastEditedAt = Date.now();
+    const { el } = buildTool(doc, {}, viewData('board'));
+
+    openMenu(el, 'board');
+
+    expect(document.querySelector('[data-blok-database-row-menu-footer]')?.textContent).toContain('tools.database.rowEditedTodayAt');
+  });
+
   it.each(['board', 'gallery', 'list'] as const)('a right-click on a %s row opens the menu without a comments lever', (type) => {
     const { el } = buildTool(oneRow(), {}, viewData(type));
 

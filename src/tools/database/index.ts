@@ -8232,6 +8232,7 @@ export class DatabaseTool implements BlockTool {
         titlePropertyId: this.titlePropertyId(),
         locale: resolveLocale(undefined),
         ...(this.people !== undefined ? { people: this.people } : {}),
+        i18n: this.api.i18n,
       }),
     }), {
       searchable: true,

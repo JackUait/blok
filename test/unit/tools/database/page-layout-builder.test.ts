@@ -533,6 +533,7 @@ describe('PageLayoutBuilder', () => {
       expect(dialog?.querySelector('[data-blok-database-confirm-description]')?.textContent).toBe('No properties will be deleted.');
       expect(dialog?.querySelector('[data-blok-database-confirm-action="confirm"]')?.textContent).toBe('Reset');
       expect(dialog?.querySelector('[data-blok-database-confirm-action="confirm"]')?.hasAttribute('data-destructive')).toBe(true);
+      expect(dialog?.querySelector('[data-blok-database-confirm-action="confirm"]')?.hasAttribute('data-filled')).toBe(true);
       expect(dialog?.querySelector('[data-blok-database-confirm-action="cancel"]')?.textContent).toBe('Cancel');
       expect(options.onPageLayoutChange).not.toHaveBeenCalled();
       await answer('cancel');
@@ -1676,6 +1677,8 @@ describe('PageLayoutBuilder', () => {
 
     expect(dialog?.closest(BUILDER)).not.toBeNull();
     expect(q('[data-blok-database-confirm-title]')?.textContent).toBe('Discard all layout changes?');
+    // research/23 §7: Discard is a filled red button.
+    expect(q('[data-blok-database-confirm-action="confirm"]')?.hasAttribute('data-filled')).toBe(true);
     q('[data-blok-database-confirm-action="confirm"]')?.click();
     await Promise.resolve();
 

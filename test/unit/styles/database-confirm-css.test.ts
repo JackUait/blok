@@ -46,20 +46,23 @@ describe('database confirm dialog css', () => {
     expect(keyframes).toMatch(/@keyframes blok-database-confirm-in \{ from \{ opacity: 0; transform: scale\(0\.97\); \} to \{ opacity: 1; transform: none; \} \}/);
   });
 
-  it('centres a 16px/24px semibold title', () => {
+  // research/33 §3.10 and 26 §5a read weight 500 (the older 08 and 10 read 600).
+  it('centres a 16px/24px medium title', () => {
     const body = ruleBody(database, '[data-blok-database-confirm-title]');
 
+    expect(body).toContain('font-weight: 500');
     expect(body).toContain('font-size: 16px');
     expect(body).toContain('line-height: 24px');
-    expect(body).toContain('font-weight: 600');
     expect(body).toContain('text-align: center');
   });
 
-  // research/10 §5: "No properties will be deleted." 14px/400 in the secondary grey under the title.
-  it('centres a 14px secondary description under the title', () => {
+  // research/33 §3.10 reads the body 12px/400 (the older 10 §5 read 14px). Notion's grey
+  // rgb(125, 122, 117) is 4.27:1 on white, so Blok keeps its AA secondary ink.
+  it('centres a 12px secondary description under the title', () => {
     const body = ruleBody(database, '[data-blok-database-confirm-description]');
 
-    expect(body).toContain('font-size: 14px');
+    expect(body).toContain('font-size: 12px');
+    expect(body).toContain('line-height: 16px');
     expect(body).toContain('font-weight: 400');
     expect(body).toContain('text-align: center');
     expect(body).toContain('color: var(--blok-database-ink-secondary)');
@@ -86,8 +89,29 @@ describe('database confirm dialog css', () => {
     expect(tokenValues('--blok-database-confirm-destructive-border')[0]).toBe('rgba(206, 24, 0, 0.165)');
   });
 
+  // research/26 §5a, 23 §7, 10 §5: Notion fills with rgb(229, 100, 88) under a rgb(253, 246, 246) label,
+  // 3.13:1 and failing AA. Blok keeps its AA red as the fill in both themes (4.69:1).
+  it('fills a filled destructive button with the AA red under the measured label ink', () => {
+    const body = ruleBody(database, '[data-blok-database-confirm-action][data-destructive][data-filled]');
+
+    expect(body).toContain('border-color: transparent');
+    expect(body).toContain('background-color: var(--blok-database-confirm-destructive-fill)');
+    expect(body).toContain('color: var(--blok-database-confirm-destructive-fill-text)');
+    expect(tokenValues('--blok-database-confirm-destructive-fill')).toEqual(['rgb(182, 79, 70)', 'rgb(182, 79, 70)', 'rgb(182, 79, 70)']);
+    expect(tokenValues('--blok-database-confirm-destructive-fill-text')).toEqual(['rgb(253, 246, 246)', 'rgb(253, 246, 246)', 'rgb(253, 246, 246)']);
+  });
+
+  // research/26 §5a: the picked card's ring and dot are rgb(229, 100, 88). Not text, so 3.34:1 passes the 3:1 bar.
+  it('rings the picked card in Notion red in both themes', () => {
+    expect(ruleBody(database, '[data-blok-database-confirm-choice][aria-checked="true"]'))
+      .toContain('box-shadow: inset 0 0 0 1px var(--blok-database-confirm-choice-ring)');
+    expect(ruleBody(database, '[data-blok-database-confirm-choice][aria-checked="true"] [data-blok-database-confirm-choice-dot]'))
+      .toContain('border: 5px solid var(--blok-database-confirm-choice-ring)');
+    expect(tokenValues('--blok-database-confirm-choice-ring')).toEqual(['rgb(229, 100, 88)', 'rgb(229, 100, 88)', 'rgb(229, 100, 88)']);
+  });
+
   it('defines every confirm token in light and both dark blocks', () => {
-    for (const name of ['backdrop', 'bg', 'shadow', 'destructive-text', 'destructive-border']) {
+    for (const name of ['backdrop', 'bg', 'shadow', 'destructive-text', 'destructive-border', 'destructive-fill', 'destructive-fill-text', 'choice-ring']) {
       expect(tokenValues(`--blok-database-confirm-${name}`), name).toHaveLength(3);
     }
   });

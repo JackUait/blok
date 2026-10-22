@@ -5,7 +5,7 @@
 
 import { readFileSync } from 'node:fs';
 
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 import type { Blok, OutputBlockData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
@@ -445,6 +445,25 @@ test.describe('database New data source', () => {
       await expect(page.locator('[data-blok-database-tab][data-view-id="vb"]')).toHaveCount(0);
       expect((await save(page)).some((block) => block.id === 'src-b')).toBe(true);
     });
+
+    // research/26 §5a: title weight 500, a filled red Delete view, a red ring on the picked card.
+    // Notion's fill rgb(229, 100, 88) fails AA under its label, so the fill is Blok's AA red in both themes.
+    for (const scheme of ['light', 'dark'] as const) {
+      test(`draws Notion's look in ${scheme}`, async ({ page }) => {
+        await page.emulateMedia({ colorScheme: scheme });
+        await mount(page, bound);
+        await deleteFromSettings(page);
+        const dialog = page.getByRole('alertdialog');
+        const read = (locator: Locator, props: string[]): Promise<string[]> =>
+          locator.evaluate((el, names) => names.map((name) => getComputedStyle(el).getPropertyValue(name)), props);
+
+        expect(await read(dialog.locator('[data-blok-database-confirm-title]'), ['font-weight'])).toEqual(['500']);
+        expect(await read(dialog.getByRole('button', { name: 'Delete view', exact: true }), ['background-color', 'color']))
+          .toEqual(['rgb(182, 79, 70)', 'rgb(253, 246, 246)']);
+        expect(await read(dialog.getByRole('radio', { name: /Delete view only/ }), ['box-shadow']))
+          .toEqual(['rgb(229, 100, 88) 0px 0px 0px 1px inset']);
+      });
+    }
 
     test('"Delete view only" is picked and keeps the source and its rows', async ({ page }) => {
       await mount(page, bound);

@@ -4364,6 +4364,7 @@ export class DatabaseTool implements BlockTool {
       confirmLabel: t('tools.database.layoutDeleteView'),
       cancelLabel: t('tools.database.layoutCancel'),
       destructive: true,
+      filled: true,
       art: [IconTrash],
       closeLabel: t('tools.database.close'),
       directionSource: this.element,

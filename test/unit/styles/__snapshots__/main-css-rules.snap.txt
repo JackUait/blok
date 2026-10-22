@@ -4098,6 +4098,9 @@ span[data-blok-slash-search] {
   --blok-database-confirm-shadow: rgba(25, 25, 25, 0.24) 0 24px 48px, rgba(25, 25, 25, 0.14) 0 4px 12px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   --blok-database-confirm-destructive-text: rgb(182, 79, 70);
   --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
+  --blok-database-confirm-destructive-fill: rgb(182, 79, 70);
+  --blok-database-confirm-destructive-fill-text: rgb(253, 246, 246);
+  --blok-database-confirm-choice-ring: rgb(229, 100, 88);
   --blok-database-drop-line: var(--blok-database-table-drop-line);
   --blok-database-gallery-card-bg: #ffffff;
   --blok-database-gallery-card-shadow: rgba(25, 25, 25, 0.027) 0 4px 12px 0, rgba(25, 25, 25, 0.02) 0 1px 2px 0, rgba(42, 28, 0, 0.07) 0 0 0 1px;
@@ -4316,6 +4319,9 @@ span[data-blok-slash-search] {
   --blok-database-confirm-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.64) 0 24px 48px, rgba(25, 25, 25, 0.56) 0 4px 12px;
   --blok-database-confirm-destructive-text: rgb(229, 100, 88);
   --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
+  --blok-database-confirm-destructive-fill: rgb(182, 79, 70);
+  --blok-database-confirm-destructive-fill-text: rgb(253, 246, 246);
+  --blok-database-confirm-choice-ring: rgb(229, 100, 88);
   --blok-database-gallery-card-bg: rgba(255, 255, 255, 0.055);
   --blok-database-gallery-card-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
   --blok-database-gallery-card-hover-bg: rgb(47, 47, 47);
@@ -4531,6 +4537,9 @@ span[data-blok-slash-search] {
   --blok-database-confirm-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.64) 0 24px 48px, rgba(25, 25, 25, 0.56) 0 4px 12px;
   --blok-database-confirm-destructive-text: rgb(229, 100, 88);
   --blok-database-confirm-destructive-border: rgba(206, 24, 0, 0.165);
+  --blok-database-confirm-destructive-fill: rgb(182, 79, 70);
+  --blok-database-confirm-destructive-fill-text: rgb(253, 246, 246);
+  --blok-database-confirm-choice-ring: rgb(229, 100, 88);
   --blok-database-gallery-card-bg: rgba(255, 255, 255, 0.055);
   --blok-database-gallery-card-shadow: rgba(25, 25, 25, 0.08) 0 2px 4px, rgba(255, 255, 243, 0.082) 0 0 0 1px;
   --blok-database-gallery-card-hover-bg: rgb(47, 47, 47);
@@ -7641,15 +7650,15 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 [data-blok-database-confirm-title] {
   font-size: 16px;
   line-height: 24px;
-  font-weight: 600;
+  font-weight: 500;
   text-align: center;
   color: var(--blok-database-ink);
 }
 
 [data-blok-database-confirm-description] {
   margin-top: var(--blok-space-1);
-  font-size: 14px;
-  line-height: 20px;
+  font-size: 12px;
+  line-height: 16px;
   font-weight: 400;
   text-align: center;
   color: var(--blok-database-ink-secondary);
@@ -7680,6 +7689,12 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 [data-blok-database-confirm-action][data-destructive] {
   color: var(--blok-database-confirm-destructive-text);
   border-color: var(--blok-database-confirm-destructive-border);
+}
+
+[data-blok-database-confirm-action][data-destructive][data-filled] {
+  border-color: transparent;
+  background-color: var(--blok-database-confirm-destructive-fill);
+  color: var(--blok-database-confirm-destructive-fill-text);
 }
 
 [data-blok-database-confirm-action][data-primary] {
@@ -7744,7 +7759,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 }
 
 [data-blok-database-confirm-choice][aria-checked="true"] {
-  box-shadow: inset 0 0 0 1px var(--blok-database-confirm-destructive-text);
+  box-shadow: inset 0 0 0 1px var(--blok-database-confirm-choice-ring);
 }
 
 [data-blok-database-confirm-choice]:focus-visible {
@@ -7775,7 +7790,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 }
 
 [data-blok-database-confirm-choice][aria-checked="true"] [data-blok-database-confirm-choice-dot] {
-  border: 5px solid var(--blok-database-confirm-destructive-text);
+  border: 5px solid var(--blok-database-confirm-choice-ring);
 }
 
 [data-blok-database-autofill-setup] {

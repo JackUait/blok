@@ -10,6 +10,8 @@ export interface DatabaseConfirmOptions {
   cancelLabel: string;
   /** Paints the confirm button red, as Notion does for Remove, Delete and Move to Trash. */
   destructive?: boolean;
+  /** With `destructive`: a red fill, as Notion's Delete view, Discard and Reset (research/26 §5a). */
+  filled?: boolean;
   /** An element in the editor whose direction the dialog takes. */
   directionSource?: Element | null;
   /** Defaults to `alertdialog`. */
@@ -150,6 +152,9 @@ const buildConfirm = (options: DatabaseConfirmOptions, choices: DatabaseChoice[]
 
   if (options.destructive === true) {
     confirmButton.setAttribute('data-destructive', '');
+  }
+  if (options.filled === true) {
+    confirmButton.setAttribute('data-filled', '');
   }
   if (options.primary === true) {
     confirmButton.setAttribute('data-primary', '');

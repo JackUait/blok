@@ -877,6 +877,29 @@ test.describe('row page layout', () => {
     expect(await savedTitle(page)).toMatchObject({ pageLayoutPlacements: [{ id: 'p-due', place: 'group' }], pageLayoutSections: [] });
   });
 
+  // research/33 §3.10: title weight 500, body 12px. research/10 §5: Reset is a filled red button.
+  // Notion's body grey and red fail AA, so Blok keeps its secondary ink and AA red.
+  for (const [scheme, body] of [['light', 'rgb(114, 111, 106)'], ['dark', 'rgb(173, 169, 163)']] as const) {
+    test(`the Reset confirm draws Notion's look in ${scheme}`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await mount(page, blocks({ pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }], pageLayoutSections: [] }));
+      await openRow(page, 'r1');
+      await peek(page).hover();
+      await peek(page).getByRole('button', { name: 'Customize layout' }).click();
+      await builder(page).getByRole('button', { name: 'More save options' }).click();
+      await page.getByRole('menuitem', { name: /Reset to original page layout/ }).click();
+      const confirm = page.getByRole('alertdialog', { name: 'Reset to original page layout?' });
+      const read = (locator: Locator, props: string[]): Promise<string[]> =>
+        locator.evaluate((el, names) => names.map((name) => getComputedStyle(el).getPropertyValue(name)), props);
+
+      expect(await read(confirm.locator('[data-blok-database-confirm-title]'), ['font-weight'])).toEqual(['500']);
+      expect(await read(confirm.locator('[data-blok-database-confirm-description]'), ['font-size', 'color'])).toEqual(['12px', body]);
+      expect(await read(confirm.getByRole('button', { name: 'Reset' }), ['background-color', 'color']))
+        .toEqual(['rgb(182, 79, 70)', 'rgb(253, 246, 246)']);
+      await confirm.getByRole('button', { name: 'Cancel' }).click();
+    });
+  }
+
   // research/10 §2 and research/11 §2a: a view tab links a data source; after Apply every row page shows it.
   test('adds a view tab from the hover-only Add tab and shows the whole linked database on every row page', async ({ page }) => {
     await mount(page, blocks({ pageLayoutPlacements: [], pageLayoutSections: [] }));

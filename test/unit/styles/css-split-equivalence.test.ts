@@ -1011,6 +1011,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // database.css: research/33 §4 colours — board orange/purple/pink/red/brown tints, rings and dark counts, status dots,
     // pressed fills, the dark calendar today digit, the row page divider, the picked Card layout tile label.
     const DATABASE_NOTION_COLOURS_PASS2_BYTES = 4_692;
+    // database.css: confirm dialogs' filled red button and picked-card ring tokens (research/26 §5a, 33 §3.10).
+    const DATABASE_CONFIRM_LOOK_BYTES = 1_016;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1178,7 +1180,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_STATUS_DEFAULT_BYTES
       + DATABASE_PREVIEW_GROUPS_BYTES
       + DATABASE_CARD_LAYOUT_BYTES
-      + DATABASE_NOTION_COLOURS_PASS2_BYTES;
+      + DATABASE_NOTION_COLOURS_PASS2_BYTES
+      + DATABASE_CONFIRM_LOOK_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

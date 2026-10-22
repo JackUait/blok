@@ -1497,6 +1497,7 @@ export class PageLayoutBuilder {
       confirmLabel: this.label('tools.database.layoutDiscard'),
       cancelLabel: this.label('tools.database.layoutCancel'),
       destructive: true,
+      filled: true,
       directionSource: this.root,
       // Over this modal: two focus traps on body would pull focus back and forth.
       container: this.root,
@@ -1523,6 +1524,7 @@ export class PageLayoutBuilder {
       confirmLabel: this.label('tools.database.layoutResetConfirm'),
       cancelLabel: this.label('tools.database.layoutCancel'),
       destructive: true,
+      filled: true,
       directionSource: this.root,
       // Over this modal: two focus traps on body would pull focus back and forth.
       container: this.root,

@@ -104,6 +104,15 @@ describe('openDatabaseConfirm', () => {
     void openDatabaseConfirm({ title: 'Delete?', confirmLabel: 'Delete', cancelLabel: 'Cancel', destructive: true });
 
     expect(action('confirm')?.hasAttribute('data-destructive')).toBe(true);
+    expect(action('confirm')?.hasAttribute('data-filled')).toBe(false);
+  });
+
+  // research/26 §5a, 23 §7, 10 §5: Delete view, Discard and Reset are filled red buttons.
+  it('fills the confirm button when asked', () => {
+    void openDatabaseConfirm({ title: 'Discard?', confirmLabel: 'Discard', cancelLabel: 'Cancel', destructive: true, filled: true });
+
+    expect(action('confirm')?.hasAttribute('data-filled')).toBe(true);
+    expect(action('cancel')?.hasAttribute('data-filled')).toBe(false);
   });
 
   // research/26 §5a: "Delete the last view for this data source?" with two radio cards.

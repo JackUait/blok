@@ -574,6 +574,7 @@ describe('New data source: a view bound to a second source in the same block', (
     ]);
     expect(choiceCards().map((card) => card.getAttribute('aria-checked'))).toEqual(['true', 'false']);
     expect(confirmAction('confirm')?.textContent).toBe('Delete view');
+    expect(confirmAction('confirm')?.hasAttribute('data-filled')).toBe(true);
     expect(confirmAction('cancel')?.textContent).toBe('Cancel');
     // Nothing is deleted before the answer.
     expect((await dataOf(api, 'db'))?.views.some((v) => v.id === 'vb')).toBe(true);    confirmAction('cancel')?.click();

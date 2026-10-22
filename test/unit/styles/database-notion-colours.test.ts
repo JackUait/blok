@@ -382,13 +382,17 @@ describe('pass 2: research/33 §4 colour dump', () => {
     both('--blok-database-column-brown-ring', 'rgba(255, 174, 122, 0.133)');
   });
 
-  // The worst surface is the hovered "+ New" row: tint and the 0.055 hover over Blok's dark page (29).
+  // Worst surfaces: the hovered count (tint and the 0.055 hover over Blok's dark page, 29) and, where measured,
+  // the hovered "+ New" row, which takes the hovered card's fill (research/36 §11).
   const DARK_ADD_HOVER = (tint: number[]): number[] => over([255, 255, 255, 0.055], over(tint, [29, 29, 28]));
+  const DARK_ROW_HOVER: Record<string, number[]> = { red: [73, 44, 42] };
+  const darkSurfaces = (color: string, tint: number[]): number[][] => [DARK_ADD_HOVER(tint), ...(color in DARK_ROW_HOVER ? [DARK_ROW_HOVER[color]] : [])];
+  const passesAll = (ink: string, surfaces: number[][]): boolean => surfaces.every((surface) => contrast(ink, surface) >= 4.5);
 
   it.each([
     ['orange', [213, 128, 59], [186, 72, 3, 0.043], [254, 139, 71, 0.043], 'rgb(214, 129, 60)'],
     ['purple', [181, 119, 214], [98, 3, 161, 0.03], [196, 101, 253, 0.05], 'rgb(186, 124, 219)'],
-    ['red', [229, 100, 88], [199, 3, 3, 0.035], [251, 107, 107, 0.047], 'rgb(238, 109, 97)'],
+    ['red', [229, 100, 88], [199, 3, 3, 0.035], [251, 107, 107, 0.047], 'rgb(245, 116, 104)'],
     ['blue', [39, 131, 222], [0, 128, 213, 0.047], [41, 139, 253, 0.063], 'rgb(62, 154, 245)'],
     ['green', [70, 161, 113], [3, 87, 31, 0.035], [83, 255, 140, 0.035], 'rgb(77, 168, 120)'],
     ['brown', [182, 137, 101], [115, 59, 3, 0.035], [253, 158, 101, 0.05], 'rgb(187, 142, 106)'],
@@ -399,18 +403,24 @@ describe('pass 2: research/33 §4 colour dump', () => {
 
     expect(contrast(ink, over(lightTint, WHITE))).toBeLessThan(4.5);
     expect(lightAccent === undefined || lightAccent === `var(--blok-database-option-${color}-text)`).toBe(true);
-    expect(contrast(ink, DARK_ADD_HOVER(darkTint))).toBeLessThan(4.5);
+    expect(passesAll(ink, darkSurfaces(color, darkTint))).toBe(false);
     both(`--blok-database-column-${color}-accent`, step);
-    expect(contrast(step, DARK_ADD_HOVER(darkTint))).toBeGreaterThanOrEqual(4.5);
+    expect(passesAll(step, darkSurfaces(color, darkTint))).toBe(true);
     // Nearest: one channel step darker fails.
-    expect(contrast(`rgb(${channels(step).map((c) => c - 1).join(', ')})`, DARK_ADD_HOVER(darkTint))).toBeLessThan(4.5);
+    expect(passesAll(`rgb(${channels(step).map((c) => c - 1).join(', ')})`, darkSurfaces(color, darkTint))).toBe(false);
   });
 
   it('board: dark cards in yellow and red columns take Notion\'s tinted card', () => {
     both('--blok-database-column-yellow-card-bg', 'rgb(55, 51, 37)');
     both('--blok-database-column-red-card-bg', 'rgb(65, 39, 37)');
     both('--blok-database-column-yellow-card-hover-bg', 'rgb(63, 58, 42)');
-    both('--blok-database-column-red-card-hover-bg', 'rgb(65, 39, 37)');
+    both('--blok-database-column-red-card-hover-bg', 'rgb(73, 44, 42)');
+  });
+
+  it('board: a light red card hovers to Notion\'s red wash (research/36 §1.1)', () => {
+    expect(value(dbLight, '--blok-database-column-red-card-hover-bg')).toBe('rgba(186, 3, 3, 0.035)');
+    expect(value(dbLight, '--blok-database-column-red-bg')).toBe('rgba(199, 3, 3, 0.035)');
+    both('--blok-database-column-red-bg', 'rgba(251, 107, 107, 0.047)');
   });
 
   it.each([
@@ -468,8 +478,9 @@ describe('round 13: research/35 §1.1-§1.3, §1.8', () => {
   const LIGHT_TINT = over([66, 35, 3, 0.03], WHITE);
   const DARK_TINT = over([252, 252, 252, 0.03], [29, 29, 28]);
   // Worst surfaces: the hovered "+ New" row and the hovered count button.
-  const LIGHT_SURFACES = [over([55, 53, 47, 0.06], LIGHT_TINT), over([33, 27, 23, 0.051], LIGHT_TINT)];
-  const DARK_SURFACES = [over([255, 255, 255, 0.055], DARK_TINT)];
+  const LIGHT_SURFACES = [over([54, 29, 2, 0.031], LIGHT_TINT), over([33, 27, 23, 0.051], LIGHT_TINT)];
+  // research/36 §11: a hovered gray "+ New" row is the hovered card, 50,50,49.
+  const DARK_SURFACES = [over([255, 255, 255, 0.055], DARK_TINT), [50, 50, 49]];
   const passes = (ink: string, surfaces: number[][]): boolean => surfaces.every((s) => contrast(ink, s) >= 4.5);
   const shift = (ink: string, by: number): string => `rgb(${channels(ink).map((c) => c + by).join(', ')})`;
 
@@ -487,9 +498,9 @@ describe('round 13: research/35 §1.1-§1.3, §1.8', () => {
     expect(light).toBe('rgb(110, 107, 102)');
     expect(passes(light, LIGHT_SURFACES)).toBe(true);
     expect(passes(shift(light, 1), LIGHT_SURFACES)).toBe(false);
-    both('--blok-database-column-gray-accent', 'rgb(154, 151, 146)');
-    expect(passes('rgb(154, 151, 146)', DARK_SURFACES)).toBe(true);
-    expect(passes('rgb(153, 150, 145)', DARK_SURFACES)).toBe(false);
+    both('--blok-database-column-gray-accent', 'rgb(156, 153, 148)');
+    expect(passes('rgb(156, 153, 148)', DARK_SURFACES)).toBe(true);
+    expect(passes('rgb(155, 152, 147)', DARK_SURFACES)).toBe(false);
   });
 
   it('board: the default column keeps Notion\'s 95,94,89 / 188,186,182 count', () => {
@@ -566,15 +577,41 @@ describe('round 13: research/35 §1.1-§1.3, §1.8', () => {
   });
 });
 
-describe('research/35 §9: the place editor after a pick (dark measured, light Blok\'s)', () => {
-  it('"Open in Google Maps" sits on 25,25,25 in dark; light is unmeasured and stays white', () => {
+describe('research/35 §9 and 36 §7: the place editor after a pick', () => {
+  const LINK = '[data-blok-database-place-view-map] + [data-blok-database-place-google-maps]';
+
+  it('"Open in Google Maps" sits on white with a raised shadow in light, and on 25,25,25 in dark', () => {
     expect(themed('--blok-database-place-map-link-bg')).toEqual({ light: 'rgb(255, 255, 255)', dark: 'rgb(25, 25, 25)', attr: 'rgb(25, 25, 25)' });
-    expect(ruleBody('[data-blok-database-place-view-map] + [data-blok-database-place-google-maps]'))
-      .toContain('background-color: var(--blok-database-place-map-link-bg)');
+    expect(ruleBody(LINK)).toContain('background-color: var(--blok-database-place-map-link-bg)');
+    expect(ruleBody(LINK)).toContain('box-shadow: var(--blok-database-place-map-link-shadow)');
+    // Dark shadow is unmeasured: none, as before.
+    expect(themed('--blok-database-place-map-link-shadow')).toEqual({
+      light: 'rgba(25, 25, 25, 0.027) 0 8px 12px, rgba(25, 25, 25, 0.027) 0 2px 6px, rgba(42, 28, 0, 0.07) 0 0 0 1px',
+      dark: 'none',
+      attr: 'none',
+    });
   });
 
-  it('the × takes Notion\'s 173,169,163 in dark through the secondary ink', () => {
-    expect(ruleBody('[data-blok-database-place-view] [data-blok-database-place-clear]')).toContain('color: var(--blok-database-ink-secondary)');
-    expect(themed('--blok-database-ink-secondary').dark).toBe('rgb(173, 169, 163)');
+  it('"Open in Google Maps" draws its glyph 142,139,134 and hovers to 244,243,243 in light', () => {
+    expect(ruleBody(`${LINK} svg`)).toContain('color: var(--blok-database-place-map-link-icon)');
+    expect(ruleBody(`${LINK}:hover`)).toContain('background-color: var(--blok-database-place-map-link-hover-bg)');
+    // Dark glyph and hover are unmeasured: the old ink and no hover change.
+    expect(themed('--blok-database-place-map-link-icon')).toEqual({ light: 'rgb(142, 139, 134)', dark: 'var(--blok-database-table-cell-text)', attr: 'var(--blok-database-table-cell-text)' });
+    expect(themed('--blok-database-place-map-link-hover-bg')).toEqual({ light: 'rgb(244, 243, 243)', dark: 'var(--blok-database-place-map-link-bg)', attr: 'var(--blok-database-place-map-link-bg)' });
+    // A glyph needs 3:1; both surfaces pass.
+    expect(contrast('rgb(142, 139, 134)', [244, 243, 243])).toBeGreaterThanOrEqual(3);
+  });
+
+  it('"Open in Google Maps" sits 8px from the map\'s end and 10px from its bottom', () => {
+    // The map is inset 4px inside the view, which positions the link.
+    expect(ruleBody(LINK)).toContain('inset-block-end: calc(var(--blok-space-1) + var(--blok-space-2-5))');
+    expect(ruleBody(LINK)).toContain('inset-inline-end: calc(var(--blok-space-1) + var(--blok-space-2))');
+  });
+
+  it('the × takes Notion\'s icon grey: 142,139,134 light, 173,169,163 dark', () => {
+    expect(ruleBody('[data-blok-database-place-view] [data-blok-database-place-clear]')).toContain('color: var(--blok-database-table-header-icon)');
+    expect(themed('--blok-database-table-header-icon')).toEqual({ light: 'rgb(142, 139, 134)', dark: 'rgb(173, 169, 163)', attr: 'rgb(173, 169, 163)' });
+    expect(contrast('rgb(142, 139, 134)', LIGHT_HOVER)).toBeGreaterThanOrEqual(3);
+    expect(ruleBody('[data-blok-database-place-view] [data-blok-database-place-clear]:hover')).toContain('background-color: var(--blok-database-hover-bg)');
   });
 });

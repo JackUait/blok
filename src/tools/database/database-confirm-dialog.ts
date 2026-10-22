@@ -32,6 +32,8 @@ export interface DatabaseConfirmOptions {
   quietCancel?: boolean;
   /** Draws a × at the top right with this label. It dismisses, and takes focus on open (research/30 B3). */
   closeLabel?: string;
+  /** A 300px box with a 22px × and a 32px icon, as Notion's Reset (research/36 §8.2). */
+  small?: boolean;
   /** Focuses the confirm button on open, as Notion's "Undo Task Database?" (research/35 §1.7). */
   focusConfirm?: boolean;
 }
@@ -73,6 +75,9 @@ const buildConfirm = (options: DatabaseConfirmOptions, choices: DatabaseChoice[]
   panel.setAttribute('data-blok-database-confirm-dialog', '');
   if (options.largeTitle === true) {
     panel.setAttribute('data-large-title', '');
+  }
+  if (options.small === true) {
+    panel.setAttribute('data-small', '');
   }
   const close = options.closeLabel === undefined ? null : document.createElement('button');
 

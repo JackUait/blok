@@ -496,6 +496,8 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       // Only dark defines a card tint, and only for measured hues; the rest keep the plain card.
       el.style.setProperty('--_blok-group-card', `var(--blok-database-column-${c}-card-bg, var(--blok-database-card-bg))`);
       el.style.setProperty('--_blok-group-card-hover', `var(--blok-database-column-${c}-card-hover-bg, var(--blok-database-card-bg-hover))`);
+      // "+ New page" hovers to the card fill only where measured; other hues keep the list hover.
+      el.style.setProperty('--_blok-group-add-hover', `var(--blok-database-column-${c}-add-hover-bg, var(--blok-database-add-hover-bg))`);
       el.setAttribute('data-color', c);
     }
   }

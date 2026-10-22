@@ -43,6 +43,13 @@
   --blok-database-column-pink-ring: rgba(197, 0, 93, 0.086);
   --blok-database-column-red-bg: rgba(199, 3, 3, 0.035);
   --blok-database-column-red-ring: rgba(223, 22, 0, 0.094);
+  /* research/36 §1.1: a red card hovers to a red wash. */
+  --blok-database-column-red-card-hover-bg: rgba(186, 3, 3, 0.035);
+  /* research/36 §1.1, §11: a hovered "+ New page" is the hovered card. Measured for these three only;
+     the other hues keep the list hover. They resolve per theme, so one definition covers dark. */
+  --blok-database-column-default-add-hover-bg: var(--blok-database-card-bg-hover);
+  --blok-database-column-gray-add-hover-bg: var(--blok-database-column-gray-card-hover-bg, var(--blok-database-card-bg-hover));
+  --blok-database-column-red-add-hover-bg: var(--blok-database-column-red-card-hover-bg);
   --blok-database-column-brown-ring: rgba(139, 46, 0, 0.086);
   /* research/07:134: a hovered card is translucent, so the column tint shows through. */
   --blok-database-card-bg-hover: rgba(54, 29, 2, 0.031);
@@ -107,8 +114,11 @@
   --blok-database-cell-link-underline: rgba(28, 19, 1, 0.11);
   /* research/26 §3a-§3c, §1b, §4a: sort panel buttons, the property menu's icon button, the panel × fill. */
   --blok-database-sort-button-bg: rgb(255, 255, 255);
-  /* research/35 §9: the place editor's "Open in Google Maps" button over its map. Light is unmeasured. */
+  /* research/35 §9 (dark) and 36 §7 (light): the place editor's "Open in Google Maps" button over its map. */
   --blok-database-place-map-link-bg: rgb(255, 255, 255);
+  --blok-database-place-map-link-shadow: rgba(25, 25, 25, 0.027) 0 8px 12px, rgba(25, 25, 25, 0.027) 0 2px 6px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
+  --blok-database-place-map-link-icon: rgb(142, 139, 134);
+  --blok-database-place-map-link-hover-bg: rgb(244, 243, 243);
   --blok-database-sort-button-hover-bg: rgb(244, 243, 243);
   --blok-database-property-icon-button-ink: rgb(85, 83, 78);
   --blok-database-property-icon-button-hover-bg: rgb(249, 248, 247);
@@ -174,8 +184,14 @@
   --blok-database-confirm-destructive-fill: rgb(182, 79, 70);
   --blok-database-confirm-destructive-fill-text: rgb(253, 246, 246);
   --blok-database-confirm-choice-ring: rgb(229, 100, 88);
-  /* research/35 §1.7. The destructive hover is measured in dark only. */
-  --blok-database-confirm-destructive-hover-bg: var(--blok-database-hover-bg);
+  /* research/36 §8.1: Notion's alpha is 16/255. Rounded to 0.063 the AA red label falls to 4.499:1. */
+  --blok-database-confirm-destructive-hover-bg: rgba(223, 16, 0, 0.0627);
+  /* research/36 §8.2: the Reset dialog's ×. Notion's 142,139,134 glyph is 2.54:1 on the hovered circle,
+     so the nearest 3:1 step. Its label is pure white. */
+  --blok-database-confirm-small-close-bg: rgba(55, 53, 47, 0.06);
+  --blok-database-confirm-small-close-hover-bg: rgba(55, 53, 47, 0.16);
+  --blok-database-confirm-small-close-icon: rgb(129, 126, 121);
+  --blok-database-confirm-small-fill-text: rgb(255, 255, 255);
   --blok-database-confirm-choice-border: rgb(230, 229, 227);
   --blok-database-confirm-choice-dot: rgb(240, 239, 237);
   --blok-database-confirm-radio-border: rgba(27, 21, 0, 0.19);
@@ -338,15 +354,15 @@
     --blok-database-column-pink-ring: rgba(255, 104, 171, 0.165);
     --blok-database-column-red-bg: rgba(251, 107, 107, 0.047);
     --blok-database-column-red-ring: rgba(255, 106, 94, 0.173);
-    --blok-database-column-red-accent: rgb(238, 109, 97);
+    --blok-database-column-red-accent: rgb(245, 116, 104);
     --blok-database-column-yellow-card-bg: rgb(55, 51, 37);
     --blok-database-column-red-card-bg: rgb(65, 39, 37);
-    /* research/35 §1.1-§1.2: yellow and gray hover lighter. Red's hover is unmeasured: it keeps its tint. */
+    /* research/35 §1.1-§1.2, 36 §11: yellow, gray and red cards hover lighter. */
     --blok-database-column-yellow-card-hover-bg: rgb(63, 58, 42);
     --blok-database-column-gray-card-bg: rgb(44, 44, 43);
     --blok-database-column-gray-card-hover-bg: rgb(50, 50, 49);
-    --blok-database-column-gray-accent: rgb(154, 151, 146);
-    --blok-database-column-red-card-hover-bg: rgb(65, 39, 37);
+    --blok-database-column-gray-accent: rgb(156, 153, 148);
+    --blok-database-column-red-card-hover-bg: rgb(73, 44, 42);
     --blok-database-gallery-card-active-bg: rgb(37, 37, 37);
     /* Notion's dark digit is black: 6.3:1, where white is 3.3:1. */
     --blok-database-calendar-day-today-text: rgb(0, 0, 0);
@@ -402,6 +418,10 @@
     /* research/26 §4a. */
     --blok-database-sort-button-bg: rgb(25, 25, 25);
     --blok-database-place-map-link-bg: rgb(25, 25, 25);
+  /* Dark shadow, glyph and hover are unmeasured: Blok's earlier look. */
+  --blok-database-place-map-link-shadow: none;
+  --blok-database-place-map-link-icon: var(--blok-database-table-cell-text);
+  --blok-database-place-map-link-hover-bg: var(--blok-database-place-map-link-bg);
     --blok-database-sort-button-hover-bg: rgb(38, 38, 38);
     --blok-database-property-icon-button-ink: rgb(211, 211, 211);
     --blok-database-property-icon-button-hover-bg: rgb(32, 32, 32);
@@ -464,6 +484,11 @@
     --blok-database-confirm-destructive-fill-text: rgb(253, 246, 246);
     --blok-database-confirm-choice-ring: rgb(229, 100, 88);
     --blok-database-confirm-destructive-hover-bg: rgba(255, 105, 96, 0.114);
+  /* Dark Reset is unmeasured: the last-view ×, no hover change, the shared label ink. */
+  --blok-database-confirm-small-close-bg: var(--blok-database-confirm-close-bg);
+  --blok-database-confirm-small-close-hover-bg: var(--blok-database-confirm-close-bg);
+  --blok-database-confirm-small-close-icon: var(--blok-database-table-header-icon);
+  --blok-database-confirm-small-fill-text: var(--blok-database-confirm-destructive-fill-text);
     --blok-database-confirm-choice-border: rgb(56, 56, 54);
     --blok-database-confirm-choice-dot: rgb(240, 239, 237);
     --blok-database-confirm-radio-border: rgba(255, 252, 235, 0.306);
@@ -601,15 +626,15 @@
   --blok-database-column-pink-ring: rgba(255, 104, 171, 0.165);
   --blok-database-column-red-bg: rgba(251, 107, 107, 0.047);
   --blok-database-column-red-ring: rgba(255, 106, 94, 0.173);
-  --blok-database-column-red-accent: rgb(238, 109, 97);
+  --blok-database-column-red-accent: rgb(245, 116, 104);
   --blok-database-column-yellow-card-bg: rgb(55, 51, 37);
   --blok-database-column-red-card-bg: rgb(65, 39, 37);
   /* research/35 §1.1-§1.2: yellow and gray hover lighter. Red's hover is unmeasured: it keeps its tint. */
   --blok-database-column-yellow-card-hover-bg: rgb(63, 58, 42);
   --blok-database-column-gray-card-bg: rgb(44, 44, 43);
   --blok-database-column-gray-card-hover-bg: rgb(50, 50, 49);
-  --blok-database-column-gray-accent: rgb(154, 151, 146);
-  --blok-database-column-red-card-hover-bg: rgb(65, 39, 37);
+  --blok-database-column-gray-accent: rgb(156, 153, 148);
+  --blok-database-column-red-card-hover-bg: rgb(73, 44, 42);
   --blok-database-gallery-card-active-bg: rgb(37, 37, 37);
   /* Notion's dark digit is black: 6.3:1, where white is 3.3:1. */
   --blok-database-calendar-day-today-text: rgb(0, 0, 0);
@@ -664,6 +689,10 @@
   /* research/26 §4a. */
   --blok-database-sort-button-bg: rgb(25, 25, 25);
   --blok-database-place-map-link-bg: rgb(25, 25, 25);
+  /* Dark shadow, glyph and hover are unmeasured: Blok's earlier look. */
+  --blok-database-place-map-link-shadow: none;
+  --blok-database-place-map-link-icon: var(--blok-database-table-cell-text);
+  --blok-database-place-map-link-hover-bg: var(--blok-database-place-map-link-bg);
   --blok-database-sort-button-hover-bg: rgb(38, 38, 38);
   --blok-database-property-icon-button-ink: rgb(211, 211, 211);
   --blok-database-property-icon-button-hover-bg: rgb(32, 32, 32);
@@ -726,6 +755,11 @@
   --blok-database-confirm-destructive-fill-text: rgb(253, 246, 246);
   --blok-database-confirm-choice-ring: rgb(229, 100, 88);
   --blok-database-confirm-destructive-hover-bg: rgba(255, 105, 96, 0.114);
+  /* Dark Reset is unmeasured: the last-view ×, no hover change, the shared label ink. */
+  --blok-database-confirm-small-close-bg: var(--blok-database-confirm-close-bg);
+  --blok-database-confirm-small-close-hover-bg: var(--blok-database-confirm-close-bg);
+  --blok-database-confirm-small-close-icon: var(--blok-database-table-header-icon);
+  --blok-database-confirm-small-fill-text: var(--blok-database-confirm-destructive-fill-text);
   --blok-database-confirm-choice-border: rgb(56, 56, 54);
   --blok-database-confirm-choice-dot: rgb(240, 239, 237);
   --blok-database-confirm-radio-border: rgba(255, 252, 235, 0.306);
@@ -1063,8 +1097,9 @@
   color: var(--blok-database-ink);
 }
 
-/* "+ New page" keeps the group's accent on hover. */
+/* "+ New page" keeps the group's accent on hover, and takes the hovered card's fill (research/36 §1.1). */
 [data-blok-database-add-card]:hover {
+  background-color: var(--_blok-group-add-hover, var(--blok-database-card-bg-hover));
   color: var(--_blok-group-accent, var(--blok-database-column-accent));
 }
 
@@ -1103,7 +1138,8 @@
 
 /**
  * Column header "New page" (+) and "More group options" (⋯), 24px, shown on
- * header hover (research/08).
+ * column hover (research/36 §1.1). Sub-grouped heads sit outside the column, so header hover stays.
+ * Opacity, not visibility: a hidden button leaves the tab order and :focus-visible never reveals it.
  */
 [data-blok-database-column-actions] {
   display: flex;
@@ -1114,6 +1150,7 @@
   transition: opacity 100ms ease-in-out;
 }
 
+[data-blok-database-column]:hover [data-blok-database-column-actions],
 [data-blok-database-column-header]:hover [data-blok-database-column-actions],
 [data-blok-database-column-header][data-popover-open] [data-blok-database-column-actions],
 [data-blok-database-column-actions]:has(:focus-visible) {
@@ -1130,7 +1167,7 @@
   border: none;
   border-radius: var(--blok-radius-control-sm);
   background: none;
-  color: var(--blok-database-add-text);
+  color: var(--_blok-group-accent, var(--blok-database-column-accent));
   cursor: pointer;
 }
 
@@ -4449,6 +4486,52 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 [data-blok-database-confirm-dialog][data-wide] [data-blok-database-confirm-art] svg {
   inline-size: 32px;
   block-size: 32px;
+}
+
+/* research/36 §8.2: Reset, 300x226. */
+[data-blok-database-confirm-dialog][data-small] {
+  width: 300px;
+}
+
+[data-blok-database-confirm-dialog][data-small] [data-blok-database-confirm-close] {
+  inset-block-start: var(--blok-space-2-5);
+  inset-inline-end: var(--blok-space-2-5);
+  width: 22px;
+  height: 22px;
+  background-color: var(--blok-database-confirm-small-close-bg);
+  color: var(--blok-database-confirm-small-close-icon);
+}
+
+[data-blok-database-confirm-dialog][data-small] [data-blok-database-confirm-close]:hover {
+  background-color: var(--blok-database-confirm-small-close-hover-bg);
+}
+
+[data-blok-database-confirm-dialog][data-small] [data-blok-database-confirm-art] {
+  margin-bottom: var(--blok-space-2);
+  color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-database-confirm-dialog][data-small] [data-blok-database-confirm-art] svg {
+  inline-size: 32px;
+  block-size: 32px;
+}
+
+[data-blok-database-confirm-dialog][data-small] [data-blok-database-confirm-title] {
+  font-weight: 600;
+}
+
+[data-blok-database-confirm-dialog][data-small] [data-blok-database-confirm-description] {
+  margin-top: var(--blok-space-2);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+[data-blok-database-confirm-dialog][data-small] [data-blok-database-confirm-action="confirm"] {
+  margin-top: var(--blok-space-6);
+}
+
+[data-blok-database-confirm-dialog][data-small] [data-blok-database-confirm-action][data-destructive][data-filled] {
+  color: var(--blok-database-confirm-small-fill-text);
 }
 
 /* Hairlines run past the 20px panel padding to the box edges (research/35 §1.7). */
@@ -11737,7 +11820,11 @@ button[data-blok-database-feed-reaction]:hover,
   width: 20px;
   height: 20px;
   border-radius: var(--blok-radius-control-sm);
-  color: var(--blok-database-ink-secondary);
+  color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-database-place-view] [data-blok-database-place-clear]:hover {
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-database-place-view] [data-blok-database-place-clear] svg {
@@ -11754,11 +11841,11 @@ button[data-blok-database-feed-reaction]:hover,
   overflow: hidden;
 }
 
-/* A 24px button on the map's bottom end corner, the "maps" icon 16px. */
+/* A 24px button 8px from the map's end and 10px from its bottom (research/36 §7); the map is inset 4px. */
 [data-blok-database-place-view-map] + [data-blok-database-place-google-maps] {
   position: absolute;
-  inset-block-end: var(--blok-space-2);
-  inset-inline-end: var(--blok-space-2);
+  inset-block-end: calc(var(--blok-space-1) + var(--blok-space-2-5));
+  inset-inline-end: calc(var(--blok-space-1) + var(--blok-space-2));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -11767,12 +11854,18 @@ button[data-blok-database-feed-reaction]:hover,
   padding: 0;
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-place-map-link-bg);
+  box-shadow: var(--blok-database-place-map-link-shadow);
   color: var(--blok-database-table-cell-text);
+}
+
+[data-blok-database-place-view-map] + [data-blok-database-place-google-maps]:hover {
+  background-color: var(--blok-database-place-map-link-hover-bg);
 }
 
 [data-blok-database-place-view-map] + [data-blok-database-place-google-maps] svg {
   inline-size: 16px;
   block-size: 16px;
+  color: var(--blok-database-place-map-link-icon);
 }
 
 /* The button takes MapLibre's corner; the licence "ⓘ" moves to the start corner. */

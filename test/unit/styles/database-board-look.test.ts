@@ -28,11 +28,27 @@ describe('board column header actions', () => {
     expect(body).toContain('height: 24px');
   });
 
-  it('shows them only while the header is hovered, or holds focus or an open menu', () => {
+  // research/36 §1.1: a hover anywhere in the column shows them. Sub-grouped heads sit outside the column, so they keep header hover.
+  it('shows them while the column or its header is hovered, or holds focus or an open menu', () => {
     expect(ruleBody(database, '[data-blok-database-column-actions]')).toContain('opacity: 0');
+    expect(ruleBody(database, '[data-blok-database-column]:hover [data-blok-database-column-actions]')).toContain('opacity: 1');
     expect(ruleBody(database, '[data-blok-database-column-header]:hover [data-blok-database-column-actions]')).toContain('opacity: 1');
     expect(ruleBody(database, '[data-blok-database-column-actions]:has(:focus-visible)')).toContain('opacity: 1');
     expect(ruleBody(database, '[data-blok-database-column-header][data-popover-open] [data-blok-database-column-actions]')).toContain('opacity: 1');
+  });
+
+  // research/36 §1.1, §11: the glyph takes the column's count ink; the hover is the neutral tint in every column.
+  it('draws them in the column\'s count ink with the neutral hover', () => {
+    expect(ruleBody(database, '[data-blok-database-column-actions] button')).toContain('color: var(--_blok-group-accent, var(--blok-database-column-accent))');
+    expect(ruleBody(database, '[data-blok-database-column-actions] button:hover')).toContain('background-color: var(--blok-database-hover-bg)');
+  });
+
+  // research/36 §1.1, §11: the column fill never changes on hover.
+  it('never repaints the column itself on hover', () => {
+    const hovers = [ ...database.matchAll(/(?<=^|[{}])\s*([^{}@]+?)\s*\{([^{}]*)\}/g) ]
+      .filter((rule) => rule[1].split(/,(?![^(]*\))/).some((part) => /\[data-blok-database-column\](\[[^\]]*\])*:hover\s*$/.test(part.trim())));
+
+    expect(hovers.map((rule) => rule[2]).join(';')).not.toMatch(/background/);
   });
 
   it('pushes them to the inline end of the header', () => {
@@ -98,6 +114,14 @@ describe('board column, card and header look (research/08)', () => {
     expect(body).toContain('font-size: 15px');
     expect(body).toContain('line-height: 22.5px');
     expect(body).toContain('font-weight: 500');
+  });
+
+  // research/36 §1.1, §11: hovered, "+ New page" takes the hovered card's fill. Measured for default, gray and red only.
+  it('fills a hovered "+ New page" like a hovered card', () => {
+    expect(ruleBody(database, '[data-blok-database-add-card]:hover')).toContain('background-color: var(--_blok-group-add-hover, var(--blok-database-card-bg-hover))');
+    expect(tokenValues('--blok-database-column-default-add-hover-bg')).toEqual(['var(--blok-database-card-bg-hover)']);
+    expect(tokenValues('--blok-database-column-gray-add-hover-bg')).toEqual(['var(--blok-database-column-gray-card-hover-bg, var(--blok-database-card-bg-hover))']);
+    expect(tokenValues('--blok-database-column-red-add-hover-bg')).toEqual(['var(--blok-database-column-red-card-hover-bg)']);
   });
 
   it('makes "+ New page" a 40px ring button with group-colored text', () => {
@@ -189,7 +213,7 @@ describe('board in dark (research/21 §1f)', () => {
   it('draws a gray column with the plain tint and ring but its own count', () => {
     expect(tokenValues('--blok-database-column-gray-bg')).toEqual(['var(--blok-database-column-bg)']);
     expect(tokenValues('--blok-database-column-gray-ring')).toEqual(['var(--blok-database-card-ring)']);
-    expect(tokenValues('--blok-database-column-gray-accent')).toEqual(['rgb(110, 107, 102)', 'rgb(154, 151, 146)', 'rgb(154, 151, 146)']);
+    expect(tokenValues('--blok-database-column-gray-accent')).toEqual(['rgb(110, 107, 102)', 'rgb(156, 153, 148)', 'rgb(156, 153, 148)']);
   });
 
   it('hovers a card to rgb(38, 38, 38)', () => {

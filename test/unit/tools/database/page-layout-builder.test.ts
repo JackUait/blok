@@ -543,6 +543,8 @@ describe('PageLayoutBuilder', () => {
       expect(dialog?.querySelector('[data-blok-database-confirm-art]')?.innerHTML).toBe(undo.innerHTML);
       expect(dialog?.querySelector('[data-blok-database-confirm-close]')?.getAttribute('aria-label')).toBe('Close');
       expect(dialog?.hasAttribute('data-large-title')).toBe(true);
+      // research/36 §8.2: the 300px box with the 22px × and the 32px icon.
+      expect(dialog?.hasAttribute('data-small')).toBe(true);
       expect(dialog?.querySelector('[data-blok-database-confirm-action="cancel"]')?.hasAttribute('data-quiet')).toBe(true);
       expect(options.onPageLayoutChange).not.toHaveBeenCalled();
       await answer('cancel');

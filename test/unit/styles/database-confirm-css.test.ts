@@ -138,14 +138,62 @@ describe('database confirm dialog css', () => {
     expect(tokenValues('--blok-database-confirm-backdrop')).toEqual(['rgba(15, 15, 15, 0.6)', 'rgba(15, 15, 15, 0.8)', 'rgba(15, 15, 15, 0.8)']);
   });
 
-  // research/35 §1.7 "Undo Task Database?" (dark). Light hover is unmeasured: the generic hover.
-  it('gives the destructive button the measured dark hairline and red hover', () => {
+  // research/35 §1.7 (dark) and 36 §8.1 (light) "Undo Task Database?". Light is Notion's 16/255 alpha written out:
+  // rounded to 0.063 the AA red label lands at 4.499:1.
+  it('gives the destructive button the measured hairline and red hover', () => {
     expect(tokenValues('--blok-database-confirm-destructive-border'))
       .toEqual(['rgba(206, 24, 0, 0.165)', 'rgba(255, 104, 92, 0.24)', 'rgba(255, 104, 92, 0.24)']);
     expect(ruleBody(database, '[data-blok-database-confirm-action][data-destructive]:hover'))
       .toContain('background-color: var(--blok-database-confirm-destructive-hover-bg)');
     expect(tokenValues('--blok-database-confirm-destructive-hover-bg'))
-      .toEqual(['var(--blok-database-hover-bg)', 'rgba(255, 105, 96, 0.114)', 'rgba(255, 105, 96, 0.114)']);
+      .toEqual(['rgba(223, 16, 0, 0.0627)', 'rgba(255, 105, 96, 0.114)', 'rgba(255, 105, 96, 0.114)']);
+  });
+
+  // research/36 §8.2: Reset is 300 wide; a 22px × 10px in, an older grey circle; a 32px icon; a 17px/600 title; 14px body.
+  it('draws the small Reset dialog as measured', () => {
+    expect(ruleBody(database, '[data-blok-database-confirm-dialog][data-small]')).toContain('width: 300px');
+    const close = ruleBody(database, '[data-blok-database-confirm-dialog][data-small] [data-blok-database-confirm-close]');
+
+    expect(close).toContain('width: 22px');
+    expect(close).toContain('height: 22px');
+    expect(close).toContain('inset-block-start: var(--blok-space-2-5)');
+    expect(close).toContain('inset-inline-end: var(--blok-space-2-5)');
+    expect(close).toContain('background-color: var(--blok-database-confirm-small-close-bg)');
+    expect(close).toContain('color: var(--blok-database-confirm-small-close-icon)');
+    expect(ruleBody(database, '[data-blok-database-confirm-dialog][data-small] [data-blok-database-confirm-close]:hover'))
+      .toContain('background-color: var(--blok-database-confirm-small-close-hover-bg)');
+    // Dark is unmeasured: the last-view circle, no hover change.
+    expect(tokenValues('--blok-database-confirm-small-close-bg'))
+      .toEqual(['rgba(55, 53, 47, 0.06)', 'var(--blok-database-confirm-close-bg)', 'var(--blok-database-confirm-close-bg)']);
+    expect(tokenValues('--blok-database-confirm-small-close-hover-bg'))
+      .toEqual(['rgba(55, 53, 47, 0.16)', 'var(--blok-database-confirm-close-bg)', 'var(--blok-database-confirm-close-bg)']);
+    // Notion's glyph 142,139,134 is 2.54:1 on the hovered circle; 129,126,121 is the nearest 3:1 step.
+    expect(tokenValues('--blok-database-confirm-small-close-icon'))
+      .toEqual(['rgb(129, 126, 121)', 'var(--blok-database-table-header-icon)', 'var(--blok-database-table-header-icon)']);
+    const art = ruleBody(database, '[data-blok-database-confirm-dialog][data-small] [data-blok-database-confirm-art]');
+
+    expect(art).toContain('margin-bottom: var(--blok-space-2)');
+    expect(art).toContain('color: var(--blok-database-table-header-icon)');
+    const svg = ruleBody(database, '[data-blok-database-confirm-dialog][data-small] [data-blok-database-confirm-art] svg');
+
+    expect(svg).toContain('inline-size: 32px');
+    expect(svg).toContain('block-size: 32px');
+    expect(ruleBody(database, '[data-blok-database-confirm-dialog][data-small] [data-blok-database-confirm-title]')).toContain('font-weight: 600');
+    const body = ruleBody(database, '[data-blok-database-confirm-dialog][data-small] [data-blok-database-confirm-description]');
+
+    expect(body).toContain('font-size: 14px');
+    expect(body).toContain('line-height: 20px');
+    // Dump rects: the body 8px under the title, Reset 24px under the body (box 226 tall).
+    expect(body).toContain('margin-top: var(--blok-space-2)');
+    expect(ruleBody(database, '[data-blok-database-confirm-dialog][data-small] [data-blok-database-confirm-action="confirm"]')).toContain('margin-top: var(--blok-space-6)');
+  });
+
+  // research/36 §8.2: Reset's label is pure white; dark is unmeasured and keeps the shared label ink.
+  it('writes the small dialog\'s filled button label in white', () => {
+    expect(ruleBody(database, '[data-blok-database-confirm-dialog][data-small] [data-blok-database-confirm-action][data-destructive][data-filled]'))
+      .toContain('color: var(--blok-database-confirm-small-fill-text)');
+    expect(tokenValues('--blok-database-confirm-small-fill-text'))
+      .toEqual(['rgb(255, 255, 255)', 'var(--blok-database-confirm-destructive-fill-text)', 'var(--blok-database-confirm-destructive-fill-text)']);
   });
 
   // research/35 §10: a filled circle, 10px from the box's top and right.

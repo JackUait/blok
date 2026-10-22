@@ -1528,6 +1528,7 @@ export class PageLayoutBuilder {
       art: [IconUndo],
       closeLabel: this.label('tools.database.close'),
       largeTitle: true,
+      small: true,
       quietCancel: true,
       directionSource: this.root,
       // Over this modal: two focus traps on body would pull focus back and forth.

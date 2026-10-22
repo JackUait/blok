@@ -341,6 +341,9 @@ describe('DatabaseBoardView', () => {
         .toBe('var(--blok-database-column-green-card-bg, var(--blok-database-card-bg))');
       expect(column.style.getPropertyValue('--_blok-group-card-hover'))
         .toBe('var(--blok-database-column-green-card-hover-bg, var(--blok-database-card-bg-hover))');
+      // research/36 §1: "+ New page" hovers to the card fill only where measured; other hues keep the list hover.
+      expect(column.style.getPropertyValue('--_blok-group-add-hover'))
+        .toBe('var(--blok-database-column-green-add-hover-bg, var(--blok-database-add-hover-bg))');
       expect(column.style.backgroundColor).toBe('');
     });
 
@@ -357,6 +360,7 @@ describe('DatabaseBoardView', () => {
       expect(column.style.getPropertyValue('--_blok-group-accent')).toBe('');
       expect(column.style.getPropertyValue('--_blok-group-card')).toBe('');
       expect(column.style.getPropertyValue('--_blok-group-card-hover')).toBe('');
+      expect(column.style.getPropertyValue('--_blok-group-add-hover')).toBe('');
       expect(column.hasAttribute('data-color')).toBe(false);
     });
 

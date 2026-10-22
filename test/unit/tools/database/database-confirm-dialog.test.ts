@@ -202,6 +202,13 @@ describe('openDatabaseConfirm', () => {
       });
     });
 
+    // research/36 §8.2: Notion's Reset is a smaller box with its own × and icon.
+    it('marks a small dialog for the Reset look', () => {
+      void openDatabaseConfirm({ title: 'Reset?', confirmLabel: 'Reset', cancelLabel: 'Cancel', small: true });
+
+      expect(document.querySelector('[data-blok-database-confirm-dialog]')?.hasAttribute('data-small')).toBe(true);
+    });
+
     it('focuses the confirm button when asked', () => {
       void openDatabaseConfirm({ title: 'Undo?', confirmLabel: 'Remove', cancelLabel: 'Cancel', destructive: true, focusConfirm: true });
 

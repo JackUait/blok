@@ -532,6 +532,10 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
     expect(dialogButton('cancel').textContent).toBe('tools.database.optionDeleteCancel');
     // research/35 §1.7: Notion focuses Remove on open, so Enter confirms.
     expect(dialogButton('confirm')).toHaveFocus();
+    // research/36 §8.1: no ×, no icon, no svg at all.
+    expect(dialog()?.querySelector('[data-blok-database-confirm-close]')).toBeNull();
+    expect(dialog()?.querySelector('[data-blok-database-confirm-art]')).toBeNull();
+    expect(dialog()?.querySelectorAll('svg')).toHaveLength(0);
     expect(JSON.stringify(saved(tool))).toBe(before);
     expect(doc.transact.mock.calls.length).toBe(steps);
   });

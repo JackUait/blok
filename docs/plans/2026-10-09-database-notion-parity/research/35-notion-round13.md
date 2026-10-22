@@ -23,7 +23,7 @@ Colour notation: Chrome reports some computed colours as `color(srgb r g b / a)`
 
 ## 1. Colour gaps (priority 1)
 
-Method: `board.js`, `cal.js`, `toast.js`, `dlg2.js` read `getComputedStyle` of the target and its parts; `hovdiff.sh x y` reads the element chain under the point at rest, after **1.5 s** hover, and while the mouse is held 0.4 s (then moved off before release, so nothing is clicked). Cards and bars were read with hover only (no press), so a press could not start a drag. A hover value read once at 0.7 s on a board card was a mid-transition colour; every value below was read after 1.5 s and was stable across two reads.
+Method: `board.js`, `cal.js`, `toast.js`, `dlg2.js` read `getComputedStyle` of the target and its parts; `hovdiff.sh x y` reads the element chain under the point at rest, after **1.5 s** hover, and while the mouse is held 0.4 s (then moved off before release, so nothing is clicked). Cards and bars were read with hover only (no press), so a press could not start a drag. Hover values were read after 1.5 s; the Default board card's hover read at 0.7 s and at 1.5 s gave the identical value.
 
 ### 1.1 Board columns: Default and Gray (Color columns on)
 
@@ -152,7 +152,7 @@ After Cancel the tab's view menu was still open behind it (light read; matches r
 | State | Light | Dark |
 |---|---|---|
 | Glyph fill (all states) | rgb(142, 139, 134) | rgb(173, 169, 163) |
-| Button at rest (row not hovered) | transparent; present and visible (opacity 1) | transparent |
+| Button at rest (row not hovered) | transparent; present and visible (opacity 1 on it and its 6 ancestors; a dark screenshot shows the "…" drawn on the un-hovered "Empty" row) | transparent, visible |
 | Row hovered, pointer not on "…" | button transparent | button transparent; **row** bg ≈ rgba(255, 255, 255, 0.055) |
 | "…" hovered | button `color(srgb 0.129412 0.105882 0.0901961 / 0.0509804)` | `color(srgb 1 1 1 / 0.054902)` |
 | "…" pressed | same colour / 0.101961 | white / 0.109804 |
@@ -291,7 +291,7 @@ R13's Calendar view (Month). Its View settings › Layout › "Open pages in" li
 
 So "+" and the double-click open the new page **in the view's own open mode** (center by default, side after the change).
 
-Single clicks on an empty day, Side peek mode: **no page was created** (3 tries: two CLI mouse down/up, one `page.mouse.click`). Research 30 §B11 saw a single click create a page with the view in Center peek mode. Whether the single-click create depends on the open mode was not separated.
+Single clicks on an empty day: **no page was created**, in Side peek mode (3 tries: two CLI mouse down/up, one `page.mouse.click`) and again after setting the view back to **Center peek** (2 tries, days 19 and 20; `elementsFromPoint` showed the collection view under the point). Research 30 §B11 saw a single click create a page; this round could not reproduce it in either mode.
 
 Events selected (drag box over E1–E3, 3 halos), then:
 
@@ -416,7 +416,9 @@ Full-page database (the 120-row import), New chevron at x 1396 › "Templates fo
 | **ArrowLeft** (same two rows) | **nothing** |
 | Escape | closes only the submenu; the templates menu stays |
 
-The trigger is the "…" (`ellipsisSmall`); no chevron on it. Inside, "Duplicate every… Off" ends with `arrowChevronSingleDownSmall` (a dropdown, not a side submenu). Arrow keys in the **unflipped** submenu were not tried, so whether Left/Right differ by side is not known.
+The trigger is the "…" (`ellipsisSmall`); no chevron on it. Inside, "Duplicate every… Off" ends with `arrowChevronSingleDownSmall` (a dropdown, not a side submenu).
+
+**Control, unflipped** (R13's templates menu at x 871, TplA "…", submenu at x 1235 on the right): ArrowDown highlights "Duplicate every…"; **ArrowRight and ArrowLeft do nothing** there too. So the side does not change the keys: neither arrow closes or moves between the template submenu and its list; Escape does. After Escape, focus sits on the row's "…" with a blue ring and the "Edit this template" tooltip (screenshot).
 
 ## 15. B18: "Hide data source titles" on a non-linked two-source database
 
@@ -487,4 +489,11 @@ Side read for B1: at **06:16:28** local, turning Include time on in an empty-tim
 **Timeline snap at other zooms: could not measure.** In Month zoom a horizontal mouse drag of E3's bar (6 move events, +60px, at the view's lowest bar row) **moved the row out of the database onto the page** as a page block below the database instead of moving its date. Cmd+Z put it back (E3 back in the timeline at Oct 22, the page block gone, the table row intact). No further bar drags were tried.
 
 Not attempted (time): backlinks with 20+ sources; form "Created by" with anonymous off; the layout builder items; sort-row drag motion; the light leftovers (c7b979bb, 218fec5b, b8cddcef, 8396d0eb).
+
+## 22. Settings read (B3) and theme restore
+
+Workspace switcher (sidebar bottom) › **Settings** (gear) › **Preferences**. Read by `eval` only; no screenshot or file of Settings was kept.
+- **"Start week on Monday"**: switch **off** ("This will affect the way your calendars appear in Notion"). The calendar view's weekday row reads Sun … Sat, matching. Not toggled, so the relative-date words under a Monday week start were not read.
+- "Date format: Set the default format for new @date mentions" reads **Relative** (this is for @date mentions, not the database cell format).
+- **Theme**: was "Dark" (set with Cmd+Shift+L for the session). Set back to **"Use system setting"** from the Theme dropdown (Use system setting / Light / Dark). After a reload: `appearanceSettingStorageKey` = **"system"**, body bg rgb(255, 255, 255).
 

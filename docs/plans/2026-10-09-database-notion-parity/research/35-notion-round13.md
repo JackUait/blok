@@ -339,3 +339,29 @@ CSV, from the import above:
 - The step's preview listed the rows in the order Row 002, Row 001, Row 005, Row 004, Row 003; the imported table (no sort) started Row 120, 119, 118, 116, 117, then the Small rows. Neither is the file order.
 - Not measured (time): unmapped column names with headers off in a merge; two columns onto one property; no column matching the title; a taken name; the "Existing property" list for computed, person and file properties; ISO dates under Day/Month/Year; the doubled-"Name" case.
 
+## 9. B8: Place editor in a peek, press outside, Escape in titles (dark)
+
+The 120-row database got a **Where** (Place) property.
+
+**Place editor inside a side peek** (Row 120 › OPEN › side peek; click the "Empty" value of Where):
+- Opens a popover **435x73 at (1001, 240)**, over the value (the value column's width), input "Search for a location..." focused, one row "Current Location" (not clicked). Typing "Paris" listed results (first "Paris, Ile-de-France, France"; the others near the user's location are not recorded) and the popover grew to 435x275 with a footer "Results may be limited. Learn more."
+- **After a click on a result the popover stays open in view state**, 435x213: a name chip `role=button aria-label="Edit place name"` (192x20, radius 4px, text 14px), a **"Clear location field"** button 20x20 (radius 4px, `xMarkFill` 14px, fill rgb(173, 169, 163)), a **map** (`CANVAS role=region aria-label="Map"`) **427x168**, inset 4px, radius 6px, with a 22x26 pin in the middle, and an **"Open in Google Maps"** link (`A`, 24x24 at the map's bottom right, bg rgb(25, 25, 25), radius 6px, `maps` icon 16px). The peek's value read "Paris, Ile-de-France, France".
+- One Escape closed the popover; the peek stayed open.
+
+So in a peek the map takes the popover's width (427 wide); the table cell's popover in research 31 §4a was 232x168. Table cell popover this round: 240 wide.
+
+**Press outside an unpicked search** (table cells):
+| Cell before | Action | Cell after |
+|---|---|---|
+| Row 119 empty | typed "Lond" (results listed), click outside on the page | **empty** (nothing saved), popover closed |
+| Row 120 "Paris, Ile-de-France, France" | opened (view state, focus on body), typed **one key "L"** | the cell **cleared at once** (input "L") |
+| | then click outside | **stays empty**: Paris is lost |
+
+**Escape in titles**:
+- **Board card inline rename** (hover a card › `pencilLineSmall` button › title becomes editable, caret placed with End; typed "X"; **Escape**): the title **saved** ("Row 105X"); focus went to the body; no card selected.
+- **Row page heading in a side peek** (click at the end of the H1, typed "Y", **Escape**): **one Escape saved the title and closed the peek** at once (the board card then read "Row 105XY"); focus on the body; nothing selected.
+
+## 10. B11: delete-last-view dialog, light × and position
+
+Measured in §1.7: × "Close" **24x24, bg rgba(42, 28, 0, 0.07)** (a filled circle at rest), radius 100%, glyph fill rgb(142, 139, 134), placed **10px from the box's top and right edges** (box 400x368 at (556, 175), centred in the window). Focus on open: the ×. Dark: bg rgba(255, 255, 243, 0.082), glyph rgb(173, 169, 163).
+

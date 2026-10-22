@@ -366,6 +366,11 @@ test.describe('Place with Blok\'s map', () => {
     expect(box.height).toBe(168);
     expect(box.width).toBe(box.editor - 8);
 
+    // Notion clears the saved place on the first key here (research/35 §9); Blok does not copy that loss.
+    await page.keyboard.press('L');
+    await expect(editor.locator('[data-blok-database-place-name]')).toHaveText('Louvre Museum');
+    expect(await savedPlace(page, 'r2')).toEqual({ name: 'Louvre Museum', address: 'Rue de Rivoli, 75001 Paris, France', lat: 48.8606, lon: 2.3376 });
+
     await page.keyboard.press('Escape');
     await expect(editor).toHaveCount(0);
     await expect(peek).toBeVisible();

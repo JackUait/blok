@@ -146,6 +146,15 @@ test.describe('place editor', () => {
     await expect(editor(page).locator('[data-blok-database-place-name]')).toHaveText('Berlin');
     await expect(cell(page, 'r2', 'p-where')).toHaveText('Berlin');
     await expect.poll(async () => (await properties(page)).r2['p-where']).toEqual({ name: 'Berlin', address: 'Berlin, Germany', lat: 52.52, lon: 13.4 });
+
+    // Notion's first key here clears the place (research/35 §9): not copied.
+    await page.keyboard.press('L');
+    await expect(editor(page).locator('[data-blok-database-place-name]')).toHaveText('Berlin');
+    await expect(editor(page).locator('[data-blok-database-cell-input]')).toHaveCount(0);
+    await page.mouse.click(20, 20);
+    await expect(editor(page)).toHaveCount(0);
+    await expect(cell(page, 'r2', 'p-where')).toHaveText('Berlin');
+    expect((await properties(page)).r2['p-where']).toEqual({ name: 'Berlin', address: 'Berlin, Germany', lat: 52.52, lon: 13.4 });
   });
 });
 

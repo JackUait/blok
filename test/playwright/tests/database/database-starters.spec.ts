@@ -400,8 +400,8 @@ test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
 
     await dialog.getByRole('button', { name: 'Days until due' }).click();
     await expect(dialog.getByRole('button', { name: 'Days until due' })).toHaveAttribute('aria-pressed', 'true');
-    // Notion's preview puts it last; Blok's preview follows the created schema, where Notion puts it after Due date.
-    await expect(dialog.locator('[data-blok-database-starter-preview-row="header"]')).toHaveText('Goal nameOwnerStatusDue dateDays until duePriorityTeam');
+    // The preview puts it last, as measured; the created database keeps it after Due date.
+    await expect(dialog.locator('[data-blok-database-starter-preview-row="header"]')).toHaveText('Goal nameOwnerStatusDue datePriorityTeamDays until due');
     await dialog.getByRole('button', { name: 'Get started' }).click();
     await dialog.getByRole('button', { name: 'Done' }).click();
     await expect(dialog).toBeHidden();

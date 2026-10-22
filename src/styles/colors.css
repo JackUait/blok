@@ -87,6 +87,8 @@
   /* Translucent: block selection is drawn OVER the block (see main.css), so the block must show through. */
   --blok-selection: rgba(35, 131, 226, 0.14);
   --blok-selection-inline: #d4ecff;
+  /* Gray: text Ask AI works on, while focus is in its field. */
+  --blok-selection-inactive: rgba(55, 53, 47, 0.16);
   --blok-selection-highlight: rgba(46, 170, 220, 0.2);
   --blok-bg-light: #eff2f5;
   /*
@@ -582,6 +584,7 @@
   :where(:root:not([data-blok-theme="light"]) [data-blok-top-layer]) {
     --blok-selection: rgba(35, 131, 226, 0.2);
     --blok-selection-inline: rgba(35, 131, 226, 0.3);
+    --blok-selection-inactive: rgba(255, 255, 255, 0.16);
     --blok-selection-highlight: rgba(35, 131, 226, 0.25);
     --blok-bg-light: rgba(255, 255, 255, 0.08);
     --blok-gray-text: #a39e98;
@@ -784,6 +787,7 @@
 :where([data-blok-theme="dark"] [data-blok-top-layer]) {
   --blok-selection: rgba(35, 131, 226, 0.2);
   --blok-selection-inline: rgba(35, 131, 226, 0.3);
+  --blok-selection-inactive: rgba(255, 255, 255, 0.16);
   --blok-selection-highlight: rgba(35, 131, 226, 0.25);
   --blok-bg-light: rgba(255, 255, 255, 0.08);
   --blok-gray-text: #a39e98;

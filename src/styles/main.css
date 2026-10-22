@@ -424,6 +424,11 @@
   background-color: var(--blok-selection-inline);
 }
 
+/* The selection Ask AI works on; selection-tint.ts registers it. */
+[data-blok-interface] ::highlight(blok-assistant-selection) {
+  background-color: var(--blok-selection-inactive);
+}
+
 /**
  * Content width mode
  * 'full' (data-blok-width="full" on the editor wrapper) removes the

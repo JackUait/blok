@@ -2130,6 +2130,7 @@
 :where([data-blok-interface]), :where([data-blok-popover]), :where([data-blok-top-layer]) {
   --blok-selection: rgba(35, 131, 226, 0.14);
   --blok-selection-inline: #d4ecff;
+  --blok-selection-inactive: rgba(55, 53, 47, 0.16);
   --blok-selection-highlight: rgba(46, 170, 220, 0.2);
   --blok-bg-light: #eff2f5;
   --blok-gray-text: #646a79;
@@ -2464,6 +2465,7 @@
 [@media (prefers-color-scheme: dark)] :where(:root:not([data-blok-theme="light"]) [data-blok-interface]), :where(:root:not([data-blok-theme="light"]) [data-blok-popover]), :where(:root:not([data-blok-theme="light"]) [data-blok-top-layer]) {
   --blok-selection: rgba(35, 131, 226, 0.2);
   --blok-selection-inline: rgba(35, 131, 226, 0.3);
+  --blok-selection-inactive: rgba(255, 255, 255, 0.16);
   --blok-selection-highlight: rgba(35, 131, 226, 0.25);
   --blok-bg-light: rgba(255, 255, 255, 0.08);
   --blok-gray-text: #a39e98;
@@ -2630,6 +2632,7 @@
 :where([data-blok-theme="dark"] [data-blok-interface]), :where([data-blok-theme="dark"] [data-blok-popover]), :where([data-blok-theme="dark"] [data-blok-top-layer]) {
   --blok-selection: rgba(35, 131, 226, 0.2);
   --blok-selection-inline: rgba(35, 131, 226, 0.3);
+  --blok-selection-inactive: rgba(255, 255, 255, 0.16);
   --blok-selection-highlight: rgba(35, 131, 226, 0.25);
   --blok-bg-light: rgba(255, 255, 255, 0.08);
   --blok-gray-text: #a39e98;
@@ -3048,6 +3051,10 @@
 
 [data-blok-interface] ::highlight(blok-cross-block-selection) {
   background-color: var(--blok-selection-inline);
+}
+
+[data-blok-interface] ::highlight(blok-assistant-selection) {
+  background-color: var(--blok-selection-inactive);
 }
 
 [data-blok-width="full"] [data-blok-element-content] {

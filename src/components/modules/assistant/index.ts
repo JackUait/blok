@@ -20,6 +20,7 @@ import { AssistantBar, type AssistantBarColumn } from './assistant-bar';
 import { onGapChange } from './gap';
 import { createLivePreview, type LivePreview } from './live-preview';
 import { parsePartialJson } from '../../../agent/partial-json';
+import { clearSelectionTint, paintSelectionTint } from './selection-tint';
 import { stepStatusKey, streamStatusKey } from './step-status';
 
 /** The user's place in the document when the bar opened. */
@@ -203,6 +204,9 @@ export class Assistant extends Module {
       this.created.clear();
       // Here, before the field takes focus and the selection collapses.
       bar.setActions(assistantActions(this.actionContext(), (key) => this.Blok.I18n.t(key), this.config.agent?.assistant?.actions));
+      if (this.selectionEndBlockId() !== undefined) {
+        paintSelectionTint(this, window.getSelection()?.getRangeAt(0) ?? document.createRange());
+      }
     }
     syncPortalDirection(bar.element, { source: this.Blok.UI.nodes.wrapper });
     this.syncThinking();
@@ -252,6 +256,7 @@ export class Assistant extends Module {
     this.shownReply = null;
     this.unwatch();
     this.bar?.close();
+    clearSelectionTint(this);
     this.Blok.Toolbar.setSuppressed(false);
     this.anchor = null;
     this.inPlaceId = null;

@@ -10,7 +10,7 @@ import { readMainCss } from './helpers/read-main-css';
 const css = readMainCss();
 
 /** The keyboard cursor fill counts as selected too: Notion paints it gray. */
-const SELECTED_FILLS = ['--blok-icon-active-bg', '--blok-popover-icon-active-bg', '--blok-item-focus-bg', '--blok-item-focus-shadow', '--blok-database-card-border-active', '--blok-database-table-cell-ring'];
+const SELECTED_FILLS = ['--blok-icon-active-bg', '--blok-popover-icon-active-bg', '--blok-item-focus-bg', '--blok-item-focus-shadow', '--blok-database-card-border-active', '--blok-database-table-cell-ring', '--blok-selection-inactive'];
 
 const declarations = (token: string, source = css): string[] =>
   [...source.matchAll(new RegExp(`${token}:\\s*([^;]+);`, 'g'))].map(match => match[1].trim());
@@ -81,6 +81,12 @@ describe('selected-state tokens are neutral', () => {
     expect(rule?.[1]).toContain('text-icon-active-text');
     expect(rule?.[1]).toContain('bg-icon-active-bg');
     expect(rule?.[1]).not.toContain('active-icon;');
+  });
+
+  it('the text Ask AI works on keeps a gray selection tint', () => {
+    const rule = css.match(/::highlight\(blok-assistant-selection\)\s*\{([^}]*)\}/);
+
+    expect(rule?.[1]).toContain('background-color: var(--blok-selection-inactive)');
   });
 
   it('the find options button marks an active option with the gray tokens', () => {

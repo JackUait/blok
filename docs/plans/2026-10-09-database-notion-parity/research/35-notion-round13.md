@@ -365,3 +365,22 @@ So in a peek the map takes the popover's width (427 wide); the table cell's popo
 
 Measured in §1.7: × "Close" **24x24, bg rgba(42, 28, 0, 0.07)** (a filled circle at rest), radius 100%, glyph fill rgb(142, 139, 134), placed **10px from the box's top and right edges** (box 400x368 at (556, 175), centred in the window). Focus on open: the ×. Dark: bg rgba(255, 255, 243, 0.082), glyph rgb(173, 169, 163).
 
+## 11. B13: sub-group band toggle hint (dark)
+
+R13 board, View settings › Sub-group › **St**. Each band row starts with a toggle: `role=button aria-label="Close"` (while the band is open), 24x24, glyph `arrowCaretDownFillSmall` fill rgb(240, 239, 237). Hover: bg ≈ rgba(255, 255, 255, 0.055), cursor pointer.
+**No hint**: nothing in `[role=tooltip]` / `[role=dialog]` after 2.5 s (one sample) and after 4 s (second sample, a different approach path).
+
+## 12. B14: side peek handle, drags under ~10px (dark)
+
+Board card E3 › side peek 756x717. Handle = `role=separator` 12x717 at the peek's left edge. Mouse down at the handle centre (left edge + 6), then mouse moves, then mouse up (`peekdrag.sh`):
+
+| Moves after mouse down | Result |
+|---|---|
+| +9, +6, +3, +2, +1 px (two move events each) | **resized**, not closed (each time) |
+| two move events of **0 px** (to the same point) | **resized** (the edge jumped 6px to the pointer), not closed |
+| −6 px (back to the left edge) | resized to the same width, not closed |
+| **no move event** (down, up) | **closed** |
+
+So it is not a distance threshold: **any pointer move between down and up starts a resize**, and the peek's left edge follows the pointer's x (not the offset where the handle was grabbed). Only a press with no move closes.
+The peek width is stored: after the test it was dragged back to **756** (read back 756,0,756,717) and closed with a click on the handle.
+

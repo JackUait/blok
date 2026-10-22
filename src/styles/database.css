@@ -107,6 +107,8 @@
   --blok-database-cell-link-underline: rgba(28, 19, 1, 0.11);
   /* research/26 §3a-§3c, §1b, §4a: sort panel buttons, the property menu's icon button, the panel × fill. */
   --blok-database-sort-button-bg: rgb(255, 255, 255);
+  /* research/35 §9: the place editor's "Open in Google Maps" button over its map. Light is unmeasured. */
+  --blok-database-place-map-link-bg: rgb(255, 255, 255);
   --blok-database-sort-button-hover-bg: rgb(244, 243, 243);
   --blok-database-property-icon-button-ink: rgb(85, 83, 78);
   --blok-database-property-icon-button-hover-bg: rgb(249, 248, 247);
@@ -399,6 +401,7 @@
     --blok-database-cell-link-underline: rgba(255, 255, 235, 0.1);
     /* research/26 §4a. */
     --blok-database-sort-button-bg: rgb(25, 25, 25);
+    --blok-database-place-map-link-bg: rgb(25, 25, 25);
     --blok-database-sort-button-hover-bg: rgb(38, 38, 38);
     --blok-database-property-icon-button-ink: rgb(211, 211, 211);
     --blok-database-property-icon-button-hover-bg: rgb(32, 32, 32);
@@ -660,6 +663,7 @@
   --blok-database-cell-link-underline: rgba(255, 255, 235, 0.1);
   /* research/26 §4a. */
   --blok-database-sort-button-bg: rgb(25, 25, 25);
+  --blok-database-place-map-link-bg: rgb(25, 25, 25);
   --blok-database-sort-button-hover-bg: rgb(38, 38, 38);
   --blok-database-property-icon-button-ink: rgb(211, 211, 211);
   --blok-database-property-icon-button-hover-bg: rgb(32, 32, 32);
@@ -11720,6 +11724,59 @@ button[data-blok-database-feed-reaction]:hover,
   padding: var(--blok-space-1-5) var(--blok-space-2);
   color: var(--blok-database-ink-secondary);
   font-size: 13px;
+}
+
+/* research/35 §9: after a pick, the name and ×, then a map inset 4px, 168 tall, 6px corners. */
+[data-blok-database-place-view] {
+  position: relative;
+}
+
+[data-blok-database-place-view] [data-blok-database-place-clear] {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--blok-radius-control-sm);
+  color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-place-view] [data-blok-database-place-clear] svg {
+  width: 14px;
+  height: 14px;
+}
+
+[data-blok-database-place-view-map] {
+  /* MapLibre's own position rule is scoped to descendants; the map root is this box. */
+  position: relative;
+  block-size: 168px;
+  margin: var(--blok-space-1);
+  border-radius: var(--blok-radius-control);
+  overflow: hidden;
+}
+
+/* A 24px button on the map's bottom end corner, the "maps" icon 16px. */
+[data-blok-database-place-view-map] + [data-blok-database-place-google-maps] {
+  position: absolute;
+  inset-block-end: var(--blok-space-2);
+  inset-inline-end: var(--blok-space-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 24px;
+  block-size: 24px;
+  padding: 0;
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-place-map-link-bg);
+  color: var(--blok-database-table-cell-text);
+}
+
+[data-blok-database-place-view-map] + [data-blok-database-place-google-maps] svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+/* The button takes MapLibre's corner; the licence "ⓘ" moves to the start corner. */
+[data-blok-database-place-view-map][data-blok-maplibre] .maplibregl-ctrl-bottom-right {
+  inset-inline-start: 0;
+  inset-inline-end: auto;
 }
 
 [data-blok-database-map-empty],

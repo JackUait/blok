@@ -82,7 +82,117 @@ describe('Place editor: "Search for a location..." with the host geocoder (resea
 
     expect(onCommit).toHaveBeenCalledTimes(1);
     expect(onCommit).toHaveBeenCalledWith(EIFFEL);
-    expect(editorRoot()).toBeNull();
+  });
+
+  describe('after a pick the editor stays open on the picked place (research/31 §4a, research/35 §9)', () => {
+    const pickEiffel = async (overrides: Parameters<typeof makeEditorContext>[0] = {}): Promise<void> => {
+      const geocode = vi.fn().mockResolvedValue([EIFFEL]);
+
+      openCellEditor(makeProperty('place'), null, makeAnchor(), makeEditorContext({ geocode, ...overrides }));
+      type('Eiffel');
+      await settle();
+      document.querySelector<HTMLElement>('[data-blok-database-place-result]')?.click();
+    };
+    const view = (): HTMLElement | null => editorRoot()?.querySelector<HTMLElement>('[data-blok-database-place-view]') ?? null;
+
+    it('shows the name, a × and a Google Maps link instead of the search, and writes once', async () => {
+      const onCommit = vi.fn();
+      const onClose = vi.fn();
+
+      await pickEiffel({ onCommit, onClose });
+
+      expect(editorRoot()).not.toBeNull();
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      expect(onClose).not.toHaveBeenCalled();
+      expect(editorRoot()?.querySelector('[data-blok-database-cell-input]')).toBeNull();
+      expect(editorRoot()?.querySelector('[data-blok-database-place-results]')).toBeNull();
+      expect(view()?.querySelector('[data-blok-database-place-name]')?.textContent).toBe('Eiffel Tower');
+      expect(view()?.querySelector('[data-blok-database-place-clear]')?.getAttribute('aria-label')).toBe('tools.database.placeClear');
+      expect(view()?.querySelector<HTMLAnchorElement>('[data-blok-database-place-google-maps]')?.href)
+        .toBe(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Eiffel Tower,5 Avenue Anatole France, 75007 Paris, France')}`);
+    });
+
+    it('draws the picked place on the host map, inside the editor, once it is attached', async () => {
+      const renderPlace = vi.fn((container: HTMLElement) => {
+        expect(container.isConnected).toBe(true);
+
+        return { destroy: vi.fn() };
+      });
+
+      await pickEiffel({ renderPlace });
+
+      expect(renderPlace).toHaveBeenCalledTimes(1);
+      const [container, place] = renderPlace.mock.calls[0] as unknown as [HTMLElement, PlaceValue];
+
+      expect(place).toEqual(EIFFEL);
+      expect(container.hasAttribute('data-blok-database-place-view-map')).toBe(true);
+      expect(view()?.contains(container)).toBe(true);
+    });
+
+    it('with a map, "Open in Google Maps" is an icon button on it, named for screen readers', async () => {
+      await pickEiffel({ renderPlace: () => ({ destroy: vi.fn() }) });
+      const link = view()?.querySelector<HTMLAnchorElement>('[data-blok-database-place-google-maps]');
+
+      expect(link?.previousElementSibling?.hasAttribute('data-blok-database-place-view-map')).toBe(true);
+      expect(link?.getAttribute('aria-label')).toBe('tools.database.placeOpenInGoogleMaps');
+      expect(link?.querySelector('svg')).not.toBeNull();
+      expect(link?.textContent?.trim()).toBe('');
+    });
+
+    it('a place with no point gets no map box', async () => {
+      const renderPlace = vi.fn();
+      const geocode = vi.fn().mockResolvedValue([{ name: 'Somewhere', address: 'No point' }]);
+
+      openCellEditor(makeProperty('place'), null, makeAnchor(), makeEditorContext({ geocode, renderPlace }));
+      type('Some');
+      await settle();
+      document.querySelector<HTMLElement>('[data-blok-database-place-result]')?.click();
+
+      expect(view()).not.toBeNull();
+      expect(renderPlace).not.toHaveBeenCalled();
+      expect(view()?.querySelector('[data-blok-database-place-view-map]')).toBeNull();
+    });
+
+    it('Escape closes it, writes nothing more and frees the map', async () => {
+      const onCommit = vi.fn();
+      const onCancel = vi.fn();
+      const onClose = vi.fn();
+      const destroy = vi.fn();
+
+      await pickEiffel({ onCommit, onCancel, onClose, renderPlace: () => ({ destroy }) });
+      press(window, 'Escape');
+
+      expect(editorRoot()).toBeNull();
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      expect(onCancel).not.toHaveBeenCalled();
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(destroy).toHaveBeenCalledTimes(1);
+    });
+
+    it('a press outside closes it and writes nothing more', async () => {
+      const onCommit = vi.fn();
+      const destroy = vi.fn();
+
+      await pickEiffel({ onCommit, renderPlace: () => ({ destroy }) });
+      pressOutside();
+      await Promise.resolve();
+
+      expect(editorRoot()).toBeNull();
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      expect(destroy).toHaveBeenCalledTimes(1);
+    });
+
+    it('× clears the place it just stored', async () => {
+      const onCommit = vi.fn();
+      const destroy = vi.fn();
+
+      await pickEiffel({ onCommit, renderPlace: () => ({ destroy }) });
+      view()?.querySelector<HTMLElement>('[data-blok-database-place-clear]')?.click();
+
+      expect(onCommit.mock.calls).toEqual([[EIFFEL], [null]]);
+      expect(editorRoot()).toBeNull();
+      expect(destroy).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('picking the place a cell already holds still stores it whole', async () => {

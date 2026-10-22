@@ -326,4 +326,49 @@ test.describe('Place with Blok\'s map', () => {
     await expect.poll(() => savedPlace(page, 'r2')).toEqual({ name: 'Louvre Museum', address: 'Rue de Rivoli, 75001 Paris, France', lat: 48.8606, lon: 2.3376 });
     await expect(cell(page, 'r2', 'p-where')).toHaveText('Louvre Museum');
   });
+
+  test('in a side peek a pick keeps the editor open on the place, with a map as wide as the editor (research/35 §9)', async ({ page }) => {
+    await mount(page, blocks({ type: 'table' }), { style: true, geocode: true });
+    const row = page.locator('[data-blok-database-table-row][data-row-id="r2"]');
+
+    await row.hover();
+    await row.locator('[data-blok-database-table-open]').click();
+    const peek = page.locator('[data-blok-database-drawer]');
+
+    await expect(peek).toBeVisible();
+    await peek.locator('[data-blok-database-drawer-prop-value][data-property-id="p-where"]').click();
+    await page.getByPlaceholder('Search for a location...').fill('Louvre');
+    await page.locator('[data-blok-database-place-result]').click();
+
+    const editor = page.locator('[data-blok-database-cell-editor]');
+
+    await expect(editor).toBeVisible();
+    await expect(editor.locator('[data-blok-database-place-name]')).toHaveText('Louvre Museum');
+    const map = editor.getByRole('region', { name: 'Map' });
+
+    await expect(map).toBeVisible();
+    await expect(editor.getByRole('link', { name: 'Open in Google Maps' })).toBeVisible();
+    await expect.poll(() => savedPlace(page, 'r2')).toEqual({ name: 'Louvre Museum', address: 'Rue de Rivoli, 75001 Paris, France', lat: 48.8606, lon: 2.3376 });
+
+    const box = await editor.evaluate((root) => {
+      const canvas = root.querySelector('canvas')?.getBoundingClientRect();
+      const frame = root.querySelector('[data-blok-database-place-view-map]')?.getBoundingClientRect();
+
+      return {
+        editor: root.getBoundingClientRect().width,
+        width: canvas?.width ?? 0,
+        height: canvas?.height ?? 0,
+        offset: [(canvas?.x ?? 0) - (frame?.x ?? -1), (canvas?.y ?? 0) - (frame?.y ?? -1)],
+      };
+    });
+
+    expect(box.offset).toEqual([0, 0]);
+    expect(box.height).toBe(168);
+    expect(box.width).toBe(box.editor - 8);
+
+    await page.keyboard.press('Escape');
+    await expect(editor).toHaveCount(0);
+    await expect(peek).toBeVisible();
+    expect(await savedPlace(page, 'r2')).toEqual({ name: 'Louvre Museum', address: 'Rue de Rivoli, 75001 Paris, France', lat: 48.8606, lon: 2.3376 });
+  });
 });

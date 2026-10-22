@@ -6,9 +6,9 @@ import { openRelationEditor } from './relation-editor';
 import { openSelectEditor } from './select-editor';
 import { openTextEditor } from './text-editor';
 import type { CellEditorContext, CellEditorHandle } from './types';
-import { isPlaceValue, verificationStatus } from '../tier3-values';
+import { isPlaceValue, placeText, verificationStatus } from '../tier3-values';
 import { safeHref } from '../../../components/utils/sanitize-url';
-import { IconCross } from '../../../components/icons';
+import { IconCross, IconMap } from '../../../components/icons';
 
 export { renderCellValue, createOptionPill } from './display';
 export type { CellContext, CellEditorCallbacks, CellEditorContext, CellEditorHandle, CellRenderer } from './types';
@@ -156,37 +156,93 @@ const openPlaceEditor = (
   const place = isPlaceValue(value) ? value : undefined;
   const address = place?.address ?? '';
   const name = place?.name?.trim() ?? '';
-  const state: { cleared: boolean; picked: PlaceValue | null; entered: boolean } = { cleared: false, picked: null, entered: false };
+  // `stored`: a pick was written while the editor stayed open; later outcomes write nothing.
+  const state: { cleared: boolean; entered: boolean; stored: boolean; map: { destroy(): void } | null } = {
+    cleared: false, entered: false, stored: false, map: null,
+  };
+  const clear = (): void => {
+    state.cleared = true;
+    handle.close();
+  };
   const header = name === '' ? undefined : document.createElement('div');
   const search = placeSearch(ctx, (picked) => {
-    state.picked = picked;
-    handle.close();
+    state.stored = true;
+    ctx.onCommit(picked);
+    showPicked(picked);
   });
   const link = googleMapsLink(value, ctx);
   const footer = search === undefined ? link : document.createElement('div');
 
   if (search !== undefined && footer !== undefined) footer.append(...[search.list, link].filter((part): part is HTMLElement => part !== undefined));
+  const settle = (outcome: () => void): void => {
+    state.map?.destroy();
+    state.map = null;
+    if (state.stored) {
+      if (state.cleared) ctx.onCommit(null);
+
+      return;
+    }
+    outcome();
+  };
   // Escape on a place is unmeasured: it cancels, unlike a text.
   const handle = openTextEditor({ ...property, type: 'text' }, address, anchor, {
     ...ctx,
-    onCommit: (text) => {
+    onCommit: (text) => settle(() => {
       const typed = typeof text === 'string' ? text.trim() : '';
 
-      if (state.picked !== null) ctx.onCommit(state.picked);
-      else if (state.cleared) ctx.onCommit(null);
+      if (state.cleared) ctx.onCommit(null);
       else if (typed === address.trim()) ctx.onCancel?.();
       // research/31 §4a: with a search, only Enter stores typed text; a press outside keeps the saved place.
       else if (search !== undefined && !state.entered) ctx.onCancel?.();
       else ctx.onCommit(typed === '' ? null : { address: typed });
-    },
-    // The × and a picked result leave the text as it was, so the text editor sees no change.
-    onCancel: () => {
-      if (state.picked !== null) ctx.onCommit(state.picked);
-      else if (state.cleared) ctx.onCommit(null);
+    }),
+    // The × leaves the text as it was, so the text editor sees no change.
+    onCancel: () => settle(() => {
+      if (state.cleared) ctx.onCommit(null);
       else ctx.onCancel?.();
-    },
+    }),
   }, footer, header, true);
   const field = footer?.parentElement?.querySelector<HTMLInputElement | HTMLTextAreaElement>('[data-blok-database-cell-input]');
+
+  /**
+   * research/31 §4a, research/35 §9: a pick keeps the editor open on the
+   * place: its name, a ×, a map and a Google Maps link. Notion's first key
+   * here clears the saved place; Blok has no field here, so it cannot.
+   */
+  const showPicked = (picked: PlaceValue): void => {
+    const content = field?.parentElement;
+
+    if (content === null || content === undefined) return;
+    const view = document.createElement('div');
+    const head = document.createElement('div');
+    const pickedLink = googleMapsLink(picked, ctx);
+
+    view.setAttribute('data-blok-database-place-view', '');
+    head.setAttribute('data-blok-database-place-head', '');
+    head.append(placeChip(placeText(picked)), clearButton(ctx, clear));
+    view.appendChild(head);
+    content.replaceChildren(view);
+    const draw = ctx.renderPlace;
+
+    if (draw !== undefined && picked.lat !== undefined && picked.lon !== undefined) {
+      const map = document.createElement('div');
+
+      map.setAttribute('data-blok-database-place-view-map', '');
+      view.appendChild(map);
+      // Drawn once attached: MapLibre reads the box's size when it starts.
+      try {
+        state.map = draw(map, picked) ?? null;
+      } catch {
+        map.remove();
+      }
+    }
+    if (pickedLink === undefined) return;
+    if (view.lastElementChild?.hasAttribute('data-blok-database-place-view-map') === true) {
+      pickedLink.setAttribute('aria-label', pickedLink.textContent ?? '');
+      pickedLink.innerHTML = IconMap;
+    }
+    view.appendChild(pickedLink);
+  };
 
   if (search !== undefined && field !== null && field !== undefined) {
     search.attach(field, () => handle.isOpen);
@@ -197,30 +253,40 @@ const openPlaceEditor = (
   }
 
   if (header !== undefined) {
-    const chip = document.createElement('span');
-    const label = document.createElement('span');
-    const clear = document.createElement('button');
+    const chip = placeChip(name);
 
     header.setAttribute('data-blok-database-place-head', '');
-    chip.setAttribute('data-blok-database-option-pill', '');
-    chip.setAttribute('data-blok-database-place-chip', '');
-    label.setAttribute('data-blok-database-place-name', '');
-    label.textContent = name;
-    chip.appendChild(label);
-    clear.type = 'button';
-    clear.tabIndex = -1;
-    clear.setAttribute('data-blok-database-place-clear', '');
-    clear.setAttribute('aria-label', ctx.i18n.t('tools.database.placeClear'));
-    clear.innerHTML = IconCross;
-    clear.addEventListener('click', () => {
-      state.cleared = true;
-      handle.close();
-    });
-    chip.appendChild(clear);
+    chip.appendChild(clearButton(ctx, clear));
     header.appendChild(chip);
   }
 
   return handle;
+};
+
+const placeChip = (name: string): HTMLElement => {
+  const chip = document.createElement('span');
+  const label = document.createElement('span');
+
+  chip.setAttribute('data-blok-database-option-pill', '');
+  chip.setAttribute('data-blok-database-place-chip', '');
+  label.setAttribute('data-blok-database-place-name', '');
+  label.textContent = name;
+  chip.appendChild(label);
+
+  return chip;
+};
+
+const clearButton = (ctx: CellEditorContext, onClick: () => void): HTMLButtonElement => {
+  const clear = document.createElement('button');
+
+  clear.type = 'button';
+  clear.tabIndex = -1;
+  clear.setAttribute('data-blok-database-place-clear', '');
+  clear.setAttribute('aria-label', ctx.i18n.t('tools.database.placeClear'));
+  clear.innerHTML = IconCross;
+  clear.addEventListener('click', onClick);
+
+  return clear;
 };
 
 const CLOSED: CellEditorHandle = { isOpen: false, close: () => undefined, cancel: () => undefined };

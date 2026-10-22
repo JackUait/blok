@@ -138,12 +138,13 @@ test.describe('place editor', () => {
     expect((await properties(page)).r1['p-where']).toEqual(PARIS);
   });
 
-  test('a picked result saves at once', async ({ page }) => {
+  test('a picked result saves at once and the editor stays open on it (research/31 §4a)', async ({ page }) => {
     await cell(page, 'r2', 'p-where').click();
     await page.keyboard.type('Ber');
     await page.locator('[data-blok-database-place-result]').click();
 
-    await expect(editor(page)).toHaveCount(0);
+    await expect(editor(page).locator('[data-blok-database-place-name]')).toHaveText('Berlin');
+    await expect(cell(page, 'r2', 'p-where')).toHaveText('Berlin');
     await expect.poll(async () => (await properties(page)).r2['p-where']).toEqual({ name: 'Berlin', address: 'Berlin, Germany', lat: 52.52, lon: 13.4 });
   });
 });

@@ -565,3 +565,16 @@ describe('round 13: research/35 §1.1-§1.3, §1.8', () => {
       .toContain('background-color: var(--blok-database-hover-bg)');
   });
 });
+
+describe('research/35 §9: the place editor after a pick (dark measured, light Blok\'s)', () => {
+  it('"Open in Google Maps" sits on 25,25,25 in dark; light is unmeasured and stays white', () => {
+    expect(themed('--blok-database-place-map-link-bg')).toEqual({ light: 'rgb(255, 255, 255)', dark: 'rgb(25, 25, 25)', attr: 'rgb(25, 25, 25)' });
+    expect(ruleBody('[data-blok-database-place-view-map] + [data-blok-database-place-google-maps]'))
+      .toContain('background-color: var(--blok-database-place-map-link-bg)');
+  });
+
+  it('the × takes Notion\'s 173,169,163 in dark through the secondary ink', () => {
+    expect(ruleBody('[data-blok-database-place-view] [data-blok-database-place-clear]')).toContain('color: var(--blok-database-ink-secondary)');
+    expect(themed('--blok-database-ink-secondary').dark).toBe('rgb(173, 169, 163)');
+  });
+});

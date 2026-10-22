@@ -337,7 +337,8 @@ Neither link was clicked (a click may open a new tab).
 CSV, from the import above:
 - The created Date property ("When", from `10/02/2026`-style text) displays **"October 2, 2026"**. Its header menu › Edit property submenu reads **"Date format: Full date | Time format: 12 hour | Notifications: None"**.
 - The step's preview listed the rows in the order Row 002, Row 001, Row 005, Row 004, Row 003; the imported table (no sort) started Row 120, 119, 118, 116, 117, then the Small rows. Neither is the file order.
-- Not measured (time): unmapped column names with headers off in a merge; two columns onto one property; no column matching the title; a taken name; the "Existing property" list for computed, person and file properties; ISO dates under Day/Month/Year; the doubled-"Name" case.
+- **"Existing property" list in a merge** (light): the 120-row database got **Who** (Person), **Att** (Files & media), **Fx** (Formula, empty), next to Name (title), Grp (Select), Score (Number), When (Date), Where (Place). Page "Actions" (top-right "…") › **Merge with CSV** › file `Name,Extra Col,Score` › Map CSV headers. Name and Score mapped to the existing ones by name. The "Extra Col" type button (default "Text") opened: **Existing property | Don't import (`eyeSlash`) | Grp | Score | When | Name Title | Who | Add new property ›**. So **Person (Who) is offered**; **Files (Att), Formula (Fx) and Place (Where) are not**. Cancelled (no M1/M2 rows, no new column).
+- Not measured (time): unmapped column names with headers off in a merge; two columns onto one property; no column matching the title; a taken name; ISO dates under Day/Month/Year; the doubled-"Name" case.
 
 ## 9. B8: Place editor in a peek, press outside, Escape in titles (dark)
 
@@ -488,7 +489,12 @@ Side read for B1: at **06:16:28** local, turning Include time on in an empty-tim
 
 **Timeline snap at other zooms: could not measure.** In Month zoom a horizontal mouse drag of E3's bar (6 move events, +60px, at the view's lowest bar row) **moved the row out of the database onto the page** as a page block below the database instead of moving its date. Cmd+Z put it back (E3 back in the timeline at Oct 22, the page block gone, the table row intact). No further bar drags were tried.
 
-Not attempted (time): backlinks with 20+ sources; form "Created by" with anonymous off; the layout builder items; sort-row drag motion; the light leftovers (c7b979bb, 218fec5b, b8cddcef, 8396d0eb).
+**Light leftover from c7b979bb** (side peek, light, row E1):
+- Peek title H1: ink **rgb(44, 44, 43)**, 32px / 700.
+- Property **label** hover (the 160x34 `role=cell`): bg `color(srgb 0.129412 0.105882 0.0901961 / 0.0509804)` ≈ rgba(33, 27, 23, 0.051); label ink rgb(125, 122, 117) unchanged.
+- Property **value** hover (Notes, 438x34 `role=cell` holding a 434x34 `role=button`): **no fill** on any of the 10 elements up from the point, after 1.5 s.
+
+Not attempted (time): backlinks with 20+ sources; form "Created by" with anonymous off; the layout builder items; sort-row drag motion; the other light leftovers (218fec5b, b8cddcef, 8396d0eb).
 
 ## 22. Settings read (B3) and theme restore
 

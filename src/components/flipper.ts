@@ -1,4 +1,3 @@
-import { DATA_ATTR } from './constants';
 import { DomIterator } from './domIterator';
 import { getElementDirection, logicalArrow } from './utils/direction';
 import { isFunction, keyCodes } from './utils';
@@ -706,7 +705,7 @@ export class Flipper {
     const items = this.iterator?.getItems() ?? [];
 
     return items.findIndex((item) => {
-      if (item.hasAttribute(DATA_ATTR.disabled)) {
+      if (this.iterator?.isSkipped(item) === true) {
         return false;
       }
 

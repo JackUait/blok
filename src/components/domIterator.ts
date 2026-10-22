@@ -279,12 +279,13 @@ export class DomIterator {
   }
 
   /**
-   * Returns true when the item is marked as disabled and should be skipped
-   * during navigation.
+   * Returns true when navigation should skip the item: it is disabled, or it
+   * sits under a `hidden` element. Checked on every move, because item lists
+   * are built once and a wrapper can be shown or hidden later.
    * @param item - candidate item
    */
-  private isDisabled(item: HTMLElement | undefined): boolean {
-    return !!item && item.hasAttribute(DATA_ATTR.disabled);
+  public isSkipped(item: HTMLElement | undefined): boolean {
+    return !!item && (item.hasAttribute(DATA_ATTR.disabled) || item.closest('[hidden]') !== null);
   }
 
   /**
@@ -300,7 +301,7 @@ export class DomIterator {
 
     // Scan order: forward from 0 for 'first', backward from the end for 'last'.
     const order = Array.from({ length }, (_, offset) => (edge === 'first' ? offset : length - 1 - offset));
-    const target = order.find((index) => !this.isDisabled(this.items[index]));
+    const target = order.find((index) => !this.isSkipped(this.items[index]));
 
     if (target !== undefined) {
       this.applyCursor(target, { setCaret: true });
@@ -357,7 +358,7 @@ export class DomIterator {
       { length },
       (_, scanned) => (((startingIndex + step * (scanned + 1)) % length) + length) % length
     );
-    const focusedButtonIndex = candidates.find((index) => !this.isDisabled(this.items[index]));
+    const focusedButtonIndex = candidates.find((index) => !this.isSkipped(this.items[index]));
 
     if (focusedButtonIndex !== undefined) {
       /**

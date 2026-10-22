@@ -429,5 +429,48 @@ describe('DomIterator', () => {
       expect(iterator.currentItem).toBe(items[items.length - 2]);
     });
   });
+  describe('items under a hidden wrapper', () => {
+    const wrapHidden = (item: HTMLElement): HTMLElement => {
+      const wrapper = document.createElement('div');
+
+      wrapper.hidden = true;
+      wrapper.appendChild(item);
+
+      return wrapper;
+    };
+
+    it('skips them on next, previous and the edges', () => {
+      const items = createItems();
+
+      wrapHidden(items[1]);
+      const iterator = new DomIterator(items, focusedClass);
+
+      iterator.next();
+      iterator.next();
+      expect(iterator.currentItem).toBe(items[2]);
+      iterator.previous();
+      expect(iterator.currentItem).toBe(items[0]);
+
+      wrapHidden(items[0]);
+      iterator.setCursorToFirst();
+      expect(iterator.currentItem).toBe(items[2]);
+
+      wrapHidden(items[2]);
+      items[0].parentElement?.removeAttribute('hidden');
+      iterator.setCursorToLast();
+      expect(iterator.currentItem).toBe(items[0]);
+    });
+
+    it('reaches them again once the wrapper is shown', () => {
+      const items = createItems();
+      const wrapper = wrapHidden(items[1]);
+      const iterator = new DomIterator(items, focusedClass);
+
+      iterator.next();
+      wrapper.hidden = false;
+      iterator.next();
+      expect(iterator.currentItem).toBe(items[1]);
+    });
+  });
 });
 

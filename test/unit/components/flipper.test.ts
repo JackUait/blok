@@ -559,6 +559,30 @@ describe('Flipper', () => {
     vi.useRealTimers();
   });
 
+  it('typeahead skips an item under a hidden wrapper', () => {
+    const items = createItems();
+    const wrapper = document.createElement('div');
+
+    items[0].textContent = 'Apple';
+    items[1].textContent = 'Banana';
+    items[2].textContent = 'Berry';
+    wrapper.hidden = true;
+    wrapper.appendChild(items[1]);
+
+    const flipper = new Flipper({
+      focusedItemClass: focusedClass,
+      items,
+      typeAhead: true,
+    });
+
+    flipper.activate();
+    flipper.handleExternalKeydown(createKeyboardEvent('b'));
+    expect(items[1]).not.toHaveAttribute('data-blok-focused');
+    expect(items[2]).toHaveAttribute('data-blok-focused', 'true');
+
+    flipper.deactivate();
+  });
+
   it('skips inline tool inputs unless explicitly allowed', () => {
     const items = createItems();
     const flipper = new Flipper({

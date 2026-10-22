@@ -545,6 +545,39 @@ test.describe('property header menu: Edit property opens one level at a time (re
     await expect(open).toHaveCount(1);
   });
 
+  test('ArrowDown from the name skips the closed description field and stops on the open one', async ({ page }) => {
+    const menu = page.locator('[data-blok-popover-opened="true"]');
+    const name = menu.locator('[data-blok-database-property-menu-name-input]');
+    const info = menu.getByRole('button', { name: 'Add property description', exact: true });
+    const area = menu.locator('[data-blok-database-property-description]');
+    const edit = menu.locator('[data-blok-item-name="editProperty"]');
+    const highlightName = async (): Promise<void> => {
+      for (let i = 0; i < 30 && await name.getAttribute('data-blok-focused') !== 'true'; i++) {
+        await page.keyboard.press('ArrowDown');
+        await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 200)));
+      }
+      await expect(name).toHaveAttribute('data-blok-focused', 'true');
+    };
+
+    await page.locator('[data-blok-database-table-column-header][data-property-id="p-amount"]').click();
+    await expect(edit).toBeVisible();
+    await highlightName();
+    await page.keyboard.press('ArrowDown');
+    await expect(info).toHaveAttribute('data-blok-focused', 'true');
+    await page.keyboard.press('ArrowDown');
+    await expect(area).not.toHaveAttribute('data-blok-focused', 'true');
+    await expect(edit).toHaveAttribute('data-blok-focused', 'true');
+
+    await info.click();
+    await expect(area).toBeFocused();
+    await name.focus();
+    await highlightName();
+    await page.keyboard.press('ArrowDown');
+    await expect(info).toHaveAttribute('data-blok-focused', 'true');
+    await page.keyboard.press('ArrowDown');
+    await expect(area).toHaveAttribute('data-blok-focused', 'true');
+  });
+
   test('the name field keeps its caret and Enter while it holds the highlight', async ({ page }) => {
     await page.locator('[data-blok-database-table-column-header][data-property-id="p-amount"]').click();
     const name = page.locator('[data-blok-popover-opened="true"] [data-blok-database-property-menu-name-input]');

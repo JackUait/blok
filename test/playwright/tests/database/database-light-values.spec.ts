@@ -258,7 +258,7 @@ for (const theme of THEMES.filter((t) => t.dark)) {
       const card = (id: string): Locator => page.locator(`[data-blok-database-card][data-row-id="${id}"]`);
 
       await expect(column('brown')).toHaveCSS('background-color', 'rgba(253, 158, 101, 0.05)');
-      await expect(column('brown').locator('[data-blok-database-column-count]')).toHaveCSS('color', 'rgb(182, 137, 101)');
+      await expect(column('brown').locator('[data-blok-database-column-count]')).toHaveCSS('color', 'rgb(187, 142, 106)');
       await expect(card('r2')).toHaveCSS('background-color', 'rgb(56, 45, 38)');
       await expect(card('r2')).toHaveCSS('box-shadow', 'rgba(25, 25, 25, 0.08) 0px 2px 4px 0px, rgba(255, 174, 122, 0.133) 0px 0px 0px 1px');
       await card('r2').hover();

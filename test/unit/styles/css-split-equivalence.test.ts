@@ -987,8 +987,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // database.css: "More templates" gallery, red/orange/yellow template tints, hidden-properties line, icon offset (research/26 §2, research/27 §1e, research/30 B8).
     const DATABASE_MORE_TEMPLATES_BYTES = 10_204;
     // assistant.css: Space hides the empty block under the Ask AI bar (bd2501b4, +179), the Stop/Continue comment (be6c08ed, +37)
-    // and the prompt field's square corners (e14c7b26, +96).
-    const ASSISTANT_REPLACED_BLOCK_BYTES = 179 + 37 + 96;
+    // and the prompt field's square corners (e14c7b26, +96), and the action buttons row under the field (be2e7de0, +369).
+    const ASSISTANT_REPLACED_BLOCK_BYTES = 179 + 37 + 96 + 369;
     // database.css: the board sub-group band toggle joins the table group toggle rules, and a folded band hides its cards (research/31 §3).
     const DATABASE_BAND_TOGGLE_BYTES = 482;
     // database.css: the purple template tile (Campaign Management, research/31 shot 51).

@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ComputedProperties } from '../../../../src/tools/database/computed-properties';
 import type { DatabaseSource } from '../../../../src/tools/database/computed-properties';
 import { readPropertyValue } from '../../../../src/tools/database/property-values';
+import { FILTER_OPERATORS, sortRows } from '../../../../src/tools/database/database-query';
+import { calculationItems } from '../../../../src/tools/database/database-table-menus';
 import type { DatabaseRow, PropertyDefinition, PropertyValue } from '../../../../src/tools/database/types';
 
 const NOW = new Date('2026-10-09T12:00:00Z');
@@ -115,6 +117,30 @@ describe('ComputedProperties', () => {
 
       expect(valueOf(rows, 'r1', reader)).toBe(true);
       expect(valueOf(rows, 'r2', reader)).toBe(false);
+    });
+
+    // research/35 §17: 42, 100, 4277, then the text; a text sort would put "100" before "42".
+    it('sorts a mixed-branch formula\'s numbers as numbers, ahead of its text', () => {
+      const mixed = formula('mixed', 'if({{property:amount}} > 40, {{property:amount}}, "low")');
+      const engine = new ComputedProperties('db');
+      const schema = [title, amount, mixed];
+      const rows = engine.apply(schema, [
+        row('big', { amount: 4277 }), row('low', { amount: 4 }), row('mid', { amount: 100 }), row('small', { amount: 42 }),
+      ], { databaseId: 'db', now: NOW });
+      const shown = schema.map((p) => engine.valueProperty(p));
+
+      expect(sortRows(rows, [{ propertyId: 'mixed', direction: 'asc' }], shown).map((r) => r.id)).toEqual(['small', 'mid', 'big', 'low']);
+      expect(engine.valueProperty(mixed).type).toBe('text');
+    });
+
+    // research/35 §17: left-aligned like text, the text filter conditions, and only None, Count and Percent.
+    it('shows, filters and calculates a mixed-branch formula as text', () => {
+      const shown = new ComputedProperties('db').valueProperty(formula('mixed', 'if({{property:amount}} > 40, {{property:amount}}, "low")'));
+      const titles = calculationItems(shown, undefined, { t: (key: string) => key }, vi.fn()).map((item) => ('title' in item ? item.title : undefined));
+
+      expect(shown.type).toBe('text');
+      expect(FILTER_OPERATORS[shown.type]).toEqual(['equals', 'does_not_equal', 'contains', 'does_not_contain', 'starts_with', 'ends_with', 'is_empty', 'is_not_empty']);
+      expect(titles).toEqual(['tools.database.calcNone', 'tools.database.calcCount', 'tools.database.calcPercent']);
     });
 
     it('reads another formula of the same row', () => {

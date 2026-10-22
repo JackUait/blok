@@ -59,6 +59,9 @@ const shapeOfFormula = (type: FormulaType, property: PropertyDefinition): Proper
     return { ...base, type: 'relation', ...(element.databaseId !== undefined ? { relation: { targetDatabaseId: element.databaseId } } : {}) };
   }
 
+  // Branches of different types. The kept `formula` tells database-query.ts sortKeyOf to sort the numbers as numbers.
+  if (type.kind === 'any') return { ...base, type: 'text', ...(property.formula !== undefined ? { formula: property.formula } : {}) };
+
   return { ...base, type: 'text' };
 };
 

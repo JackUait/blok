@@ -519,8 +519,13 @@ const sortKeyOf = (property: PropertyDefinition, value: PropertyValue | undefine
 
       return names.length > 0 ? names : undefined;
     }
-    case 'title':
     case 'text':
+      // research/35 §17: a formula whose branches differ shows as text (computed-properties.ts keeps
+      // its `formula`); its numbers sort as numbers, ahead of the text.
+      if (property.formula !== undefined && typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value))) return Number(value);
+
+      return typeof value === 'string' && value !== '' ? value : undefined;
+    case 'title':
     case 'url':
     case 'richText':
     case 'email':
@@ -543,6 +548,8 @@ const compareSortKeys = (a: string | number | string[], b: string | number | str
   if (typeof a === 'number' && typeof b === 'number') return a - b;
   if (Array.isArray(a) && Array.isArray(b)) return compareKeyLists(a, b);
   if (typeof a === 'string' && typeof b === 'string') return a.localeCompare(b);
+  if (typeof a === 'number' && typeof b === 'string') return -1;
+  if (typeof a === 'string' && typeof b === 'number') return 1;
 
   return 0;
 };

@@ -67,7 +67,7 @@ describe('DatabaseModel — computed properties', () => {
     expect(ids(groups.get('false') ?? [])).toEqual(['r1', 'r3']);
   });
 
-  it('filters and sorts a formula with Number and Text branches as text', () => {
+  it('filters a formula with Number and Text branches as text, and sorts its numbers as numbers', () => {
     const mixed: PropertyDefinition = { id: 'mixed', name: 'Mixed', type: 'formula', position: 'a4', formula: { expression: 'if({{property:amount}} > 1, 24 / {{property:amount}}, "none")' } };
     const withMixed = [...schema, mixed];
     const model = new DatabaseModel({ schema: withMixed, views: [view()], activeViewId: 'v' }, { now: () => NOW });
@@ -81,8 +81,8 @@ describe('DatabaseModel — computed properties', () => {
     model.setRows(engine.apply(withMixed, rows, { databaseId: 'db', now: NOW }));
     model.setValueProperty((property) => engine.valueProperty(property));
 
-    // As text "12" sorts before "8"; as numbers it would not.
-    expect(ids(model.queryRows({ view: view({ sorts: [{ propertyId: 'mixed', direction: 'asc' }] }) }).rows)).toEqual(['r3', 'r2', 'r1']);
+    // research/35 §17: 8 before 12 (a text sort would not), then the text.
+    expect(ids(model.queryRows({ view: view({ sorts: [{ propertyId: 'mixed', direction: 'asc' }] }) }).rows)).toEqual(['r2', 'r3', 'r1']);
     expect(ids(model.queryRows({ view: view({ filters: [{ propertyId: 'mixed', operator: 'contains', value: 'none' }] }) }).rows)).toEqual(['r1']);
     expect(model.getValueSchema().find((p) => p.id === 'mixed')?.type).toBe('text');
   });

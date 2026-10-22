@@ -832,11 +832,12 @@ describe('date cell editor', () => {
     const openRows = (
       value: string | null,
       date: PropertyDefinition['date'] = undefined,
-      overrides: Partial<CellEditorContext> = {}
+      overrides: Partial<CellEditorContext> = {},
+      anchor = makeAnchor()
     ): CellEditorContext => {
       const ctx = makeEditorContext({ i18n, hourCycle: 'h12', onReminderChange: vi.fn(), onDateDisplayChange: vi.fn(), ...overrides });
 
-      openCellEditor({ ...makeProperty('date'), ...(date !== undefined ? { date } : {}) }, value, makeAnchor(), ctx);
+      openCellEditor({ ...makeProperty('date'), ...(date !== undefined ? { date } : {}) }, value, anchor, ctx);
 
       return ctx;
     };
@@ -912,6 +913,42 @@ describe('date cell editor', () => {
 
       expect(q<HTMLInputElement>('[data-blok-database-date-time="start"]').value).toBe('14:00');
       expect(text(setting('timeFormat'))).toBe('Time format24 hour');
+    });
+
+    // A 400px window, the picker at x 100 and 248 wide: a 342px menu fits on neither side.
+    describe('a side menu that fits on neither side stays inside the window', () => {
+      const openIn = (direction: 'ltr' | 'rtl'): void => {
+        const anchor = makeAnchor();
+
+        anchor.style.direction = direction;
+        vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(400);
+        vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+        vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(342);
+        vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(200);
+        openRows('2026-10-09T14:00', undefined, {}, anchor);
+        vi.spyOn(document.querySelector<HTMLElement>('[data-blok-database-date-editor]') ?? document.body, 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 12, 248, 594));
+      };
+      const openedMenu = (): HTMLElement | null =>
+        document.querySelector<HTMLElement>('[data-blok-database-date-setting-menu], [data-blok-database-date-remind-menu]');
+      const triggers: Array<[string, () => HTMLElement]> = [
+        ['time zone', () => setting('timeZone')],
+        ['Date format', () => setting('dateFormat')],
+        ['Remind', () => q('[data-blok-database-date-remind]')],
+      ];
+
+      for (const direction of ['ltr', 'rtl'] as const) {
+        for (const [name, trigger] of triggers) {
+          it(`${name} in ${direction}`, () => {
+            openIn(direction);
+            trigger().click();
+
+            const left = parseFloat(openedMenu()?.style.left ?? 'NaN');
+
+            expect(left).toBeGreaterThanOrEqual(0);
+            expect(left + 342).toBeLessThanOrEqual(400);
+          });
+        }
+      }
     });
 
     describe('Time zone menu (research/23 §1)', () => {

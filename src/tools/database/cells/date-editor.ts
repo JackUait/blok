@@ -994,7 +994,7 @@ class DateEditor {
     search.focus();
   }
 
-  /** Beside the picker on its end side, else its start side; level with the row, kept `place.bottom` above the window bottom. */
+  /** Beside the picker on its end side, else its start side, else kept inside the window; level with the row, kept `place.bottom` above the window bottom. */
   private placeMenu(row: HTMLElement, menu: HTMLElement, place: { gap: number; bottom: number } = { gap: MENU_GAP, bottom: MENU_GAP }): void {
     const box = this.root.getBoundingClientRect();
     const rowBox = row.getBoundingClientRect();
@@ -1004,10 +1004,11 @@ class DateEditor {
     const right = box.right + place.gap;
     const left = box.left - place.gap - width;
     const sides = rtl ? [left, right] : [right, left];
-    const x = sides.find((side) => side >= 0 && side + width <= window.innerWidth) ?? sides[1];
+    const fits = sides.find((side) => side >= 0 && side + width <= window.innerWidth);
+    const x = fits ?? Math.max(0, Math.min(sides[1], window.innerWidth - width));
     const top = Math.max(0, Math.min(rowBox.top, window.innerHeight - height - place.bottom));
 
-    Object.assign(menu.style, { position: 'fixed', left: `${Math.max(0, x)}px`, top: `${top}px` });
+    Object.assign(menu.style, { position: 'fixed', left: `${x}px`, top: `${top}px` });
   }
 
   private closeMenu(focusRow: boolean): void {

@@ -15,6 +15,32 @@ vi.mock('../../../../src/blok', () => ({
   },
 }));
 
+const popovers = vi.hoisted(() => ({ items: [] as Array<Array<{ name?: string; trailingIcon?: string }>> }));
+
+vi.mock('../../../../src/components/utils/popover', () => {
+  class MockPopoverDesktop {
+    constructor(params: { items?: Array<{ name?: string; trailingIcon?: string }> } = {}) {
+      popovers.items.push(params.items ?? []);
+    }
+
+    show(): void {}
+
+    hide(): void {}
+
+    destroy(): void {}
+
+    on(): void {}
+
+    off(): void {}
+
+    getElement(): HTMLElement {
+      return document.createElement('div');
+    }
+  }
+
+  return { PopoverDesktop: MockPopoverDesktop, PopoverMobile: MockPopoverDesktop, PopoverItemType: { Default: 'default', Separator: 'separator', Html: 'html' } };
+});
+
 const status = (defaultOptionId?: string): PropertyDefinition => ({
   id: 'st', name: 'Status', type: 'status', position: 'a1',
   status: {
@@ -101,6 +127,19 @@ describe('a status property\'s default option (research/30 §10f, research/31 §
     const id = tool.newRow();
 
     expect((doc.blocks.get(id ?? '')?.data as DatabaseRowData).properties.st).toBe('blocked');
+  });
+
+  it('the column "⋯" menu of a colourless status option checks no colour, as its option menu does', () => {
+    const { el } = buildDatabase(seed(), 'db', data('board', 'ns'));
+    const checked = (optionId: string): string[] => {
+      popovers.items.length = 0;
+      el.querySelector<HTMLElement>(`[data-blok-database-column-menu][data-option-id="${optionId}"]`)?.click();
+
+      return (popovers.items.at(-1) ?? []).filter((item) => item.name?.startsWith('color-') === true && item.trailingIcon !== undefined).map((item) => item.name ?? '');
+    };
+
+    expect(checked('ns')).toEqual([]);
+    expect(checked('ip')).toEqual(['color-blue']);
   });
 
   it('a colourless status option draws as the gray pill in a cell and as a gray board column', () => {

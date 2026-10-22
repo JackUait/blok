@@ -8293,10 +8293,14 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
+    // A colourless status option is drawn gray but checks no colour (research/30 §10f).
+    const property = view.groupBy === undefined ? undefined : this.model.getProperty(view.groupBy);
+    const stored = property?.type === 'status' ? property.config?.options.find((o) => o.id === groupId) : undefined;
+
     this.showGroupPopover(anchor, groupMenuItems({
       i18n: this.api.i18n,
       isNoValue: groupId === NO_VALUE_GROUP_KEY,
-      color: group.color,
+      color: stored !== undefined && stored.color === undefined ? undefined : group.color,
       aggregationHidden: view.hideGroupAggregation === true,
       groups,
       onToggleGroup: (id) => this.toggleGroupHidden(id),

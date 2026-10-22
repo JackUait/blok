@@ -4,7 +4,7 @@
  * opens on every user insert, so no AI lever is given.
  */
 
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 import type { Blok, OutputBlockData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
@@ -244,6 +244,35 @@ test('Tasks Tracker: the database gets its icon, "New task" is the Default templ
   await openSettings(page);
   await expect(page.getByTestId('database-settings-undo-starter')).toHaveText('Undo Task database');
 });
+
+// research/33 §3.10: title 16px/500 in rgb(44, 44, 43), body 12px/400, Remove outline red.
+// Notion's body grey and red ink fail AA on white, so light keeps Blok's AA inks. Dark was not read.
+for (const [scheme, ink, body, red] of [
+  ['light', 'rgb(44, 44, 43)', 'rgb(114, 111, 106)', 'rgb(182, 79, 70)'],
+  ['dark', 'rgb(240, 239, 237)', 'rgb(173, 169, 163)', 'rgb(229, 100, 88)'],
+] as const) {
+  test(`the "Undo Task Database?" confirm draws Notion's look in ${scheme}`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme: scheme });
+    await mount(page);
+    await insertDatabase(page);
+    await page.getByTestId('database-new-database-panel').getByRole('button', { name: 'Tasks Tracker' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Customize Tasks Tracker' });
+
+    await dialog.getByRole('button', { name: 'Get started' }).click();
+    await dialog.getByRole('button', { name: 'Done' }).click();
+    await openSettings(page);
+    await page.getByTestId('database-settings-undo-starter').click();
+    const confirm = page.getByRole('alertdialog', { name: 'Undo Task Database?' });
+    const read = (locator: Locator, props: string[]): Promise<string[]> =>
+      locator.evaluate((el, names) => names.map((name) => getComputedStyle(el).getPropertyValue(name)), props);
+
+    expect(await read(confirm.locator('[data-blok-database-confirm-title]'), ['font-weight', 'font-size', 'color'])).toEqual(['500', '16px', ink]);
+    expect(await read(confirm.locator('[data-blok-database-confirm-description]'), ['font-size', 'font-weight', 'color'])).toEqual(['12px', '400', body]);
+    expect(await read(confirm.getByRole('button', { name: 'Remove' }), ['background-color', 'color', 'border-top-color']))
+      .toEqual(['rgba(0, 0, 0, 0)', red, 'rgba(206, 24, 0, 0.165)']);
+    await confirm.getByRole('button', { name: 'Cancel' }).click();
+  });
+}
 
 test('Skills reads "Undo skills database"', async ({ page }) => {
   await mount(page);

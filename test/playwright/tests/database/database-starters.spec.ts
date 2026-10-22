@@ -306,7 +306,7 @@ test('Projects shows "Turn into" with the Tasks and Skills entries (their effect
 });
 
 test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
-  test('the gallery lists six templates, expands to nine, and Brainstorm Session builds its measured database', async ({ page }) => {
+  test('the gallery lists six templates, expands to all 21, and Brainstorm Session builds its measured database', async ({ page }) => {
     const errors: string[] = [];
 
     page.on('pageerror', (error) => errors.push(error.message));
@@ -321,8 +321,14 @@ test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
 
     await expect(cards).toHaveCount(6);
     await gallery.getByRole('button', { name: 'More templates' }).click();
-    await expect(cards).toHaveCount(9);
+    // research/31 §7: the full list, in Notion's order.
+    await expect(cards).toHaveCount(21);
+    expect(await cards.evaluateAll((list) => list.map((card) => card.getAttribute('data-blok-testid')?.replace('database-template-gallery-template-', '')))).toEqual([
+      'tasks', 'projects', 'skills', 'documentHub', 'brainstorm', 'meetingNotes', 'goals', 'campaign', 'contentCalendar',
+      'events', 'socialMedia', 'issues', 'featureRequests', 'engineeringDocs', 'fundraising', 'pipeline', 'accounts', 'creative', 'inventory', 'roadmap', 'assets',
+    ]);
     await expect(gallery.getByTestId('database-template-gallery-template-goals')).toContainText('Set team goals, achieve together.');
+    await expect(gallery.getByTestId('database-template-gallery-template-assets')).toContainText('Create shared design assets.');
 
     await gallery.getByTestId('database-template-gallery-template-brainstorm').click();
     const dialog = page.getByRole('dialog', { name: 'Customize Brainstorm Session' });
@@ -453,6 +459,63 @@ test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
     await expect(dialog).toBeHidden();
 
     await expect(page.locator('[data-blok-database-cell="formula"]')).toHaveText(['Overdue', 'Overdue', 'Overdue']);
+  });
+
+  // research/33 §3: each template with its defaults kept: the Customize footer, the views, the default page template and the rows.
+  const ROUND12: Array<{ id: string; name: string; hidden: number; views: Array<[string, string]>; template: string; rows: number; icon: { glyph: string; color: string } }> = [
+    { id: 'events', name: 'Event Management', hidden: 0, views: [['All Events', 'table'], ['By Status', 'board'], ['Calendar', 'calendar']], template: 'New event', rows: 3, icon: { glyph: 'database', color: 'purple' } },
+    { id: 'socialMedia', name: 'Social Media Planner', hidden: 6, views: [['Calendar', 'calendar'], ['All Posts', 'table'], ['By Status', 'board']], template: 'New post', rows: 3, icon: { glyph: 'database', color: 'purple' } },
+    { id: 'issues', name: 'Issue Tracking', hidden: 2, views: [['Kanban', 'board'], ['All Issues', 'table'], ['My Issues', 'list']], template: 'New issue', rows: 0, icon: { glyph: 'check', color: 'red' } },
+    { id: 'featureRequests', name: 'Feature Requests', hidden: 5, views: [['By Status', 'board'], ['All Requests', 'table'], ['Assigned to Me', 'table']], template: 'New request', rows: 0, icon: { glyph: 'comment', color: 'red' } },
+    { id: 'engineeringDocs', name: 'Engineering Docs', hidden: 0, views: [['All Docs', 'table'], ['Published Docs', 'list'], ['Docs by Category', 'table']], template: 'New document', rows: 0, icon: { glyph: 'doc', color: 'red' } },
+    { id: 'fundraising', name: 'Fundraising Tracker', hidden: 5, views: [['By Status', 'board'], ['All Investors', 'table'], ['Won', 'table']], template: 'New investor', rows: 0, icon: { glyph: 'database', color: 'gray' } },
+    { id: 'pipeline', name: 'Pipeline Tracking', hidden: 5, views: [['By Deal Stage', 'board'], ['All Deals', 'table'], ['Active Deals', 'table']], template: 'New deal', rows: 0, icon: { glyph: 'person', color: 'blue' } },
+    { id: 'accounts', name: 'Account Management', hidden: 3, views: [['By Status', 'board'], ['All Accounts', 'table'], ['By Region', 'table']], template: 'New account', rows: 0, icon: { glyph: 'database', color: 'blue' } },
+    { id: 'creative', name: 'Creative Projects', hidden: 2, views: [['By Status', 'board'], ['All Projects', 'table'], ['My Projects', 'table']], template: 'New project', rows: 0, icon: { glyph: 'database', color: 'blue' } },
+    { id: 'inventory', name: 'Inventory Management', hidden: 0, views: [['All Inventory', 'table'], ['Recently Ordered', 'list']], template: 'New item', rows: 0, icon: { glyph: 'database', color: 'gray' } },
+    { id: 'roadmap', name: 'Product Roadmap', hidden: 4, views: [['By Status', 'board'], ['All Projects', 'table'], ['My Projects', 'table'], ['By Team', 'list']], template: 'New project', rows: 0, icon: { glyph: 'map', color: 'pink' } },
+    { id: 'assets', name: 'Asset Library', hidden: 4, views: [['Gallery', 'gallery'], ['All Assets', 'table'], ['By Status', 'board']], template: 'New asset', rows: 0, icon: { glyph: 'database', color: 'green' } },
+  ];
+
+  for (const spec of ROUND12) {
+    test(`${spec.name} applies its measured schema and views (research/33 §3)`, async ({ page }) => {
+      const errors: string[] = [];
+
+      page.on('pageerror', (error) => errors.push(error.message));
+      const dialog = await openTemplate(page, spec.id, spec.name);
+
+      await expect(dialog.getByText(`${spec.hidden} hidden properties`)).toBeVisible();
+      await dialog.getByRole('button', { name: 'Get started' }).click();
+      await dialog.getByRole('button', { name: 'Done' }).click();
+      await expect(dialog).toBeHidden();
+
+      await expect.poll(async () => {
+        const { db, rows, templates } = await read(page);
+
+        return [db.title, db.starter, db.icon, db.views.map((v) => [v.name, v.type]), templates.map((tpl) => (tpl.data as { title?: string }).title).at(0), rows.length];
+      }).toEqual([spec.name, spec.id, spec.icon, spec.views, spec.template, spec.rows]);
+      await expect(page.locator(`[data-blok-database-icon="${spec.icon.color}"]`).first()).toBeVisible();
+      expect(errors).toEqual([]);
+    });
+  }
+
+  test('Issue Tracking opens on its Kanban: every status column is drawn and each reads "New issue"', async ({ page }) => {
+    const dialog = await openTemplate(page, 'issues', 'Issue Tracking');
+
+    await dialog.getByRole('button', { name: 'Get started' }).click();
+    await dialog.getByRole('button', { name: 'Done' }).click();
+    // Seven statuses and No Status, all empty: Hide empty groups is saved off (research/33 §3.3).
+    await expect(page.locator('[data-blok-database-add-card]')).toHaveText(Array<string>(8).fill('New issue'));
+  });
+
+  test('Event Management draws its three measured rows', async ({ page }) => {
+    const dialog = await openTemplate(page, 'events', 'Event Management');
+
+    await dialog.getByRole('button', { name: 'Get started' }).click();
+    await dialog.getByRole('button', { name: 'Done' }).click();
+    await expect(page.getByText('Make with Notion')).toBeVisible();
+    await expect(page.getByText('Fireside chat with Ivan Zhao')).toBeVisible();
+    await expect(page.getByText('VIP dinner')).toBeVisible();
   });
 
   test('the last view card stays on (research/30 B8)', async ({ page }) => {

@@ -338,7 +338,10 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
   });
 
   it('with every template used, Suggested and its label are gone; More templates stays', async () => {
-    await insert(['tasks', 'projects', 'skills', 'documentHub', 'brainstorm', 'meetingNotes', 'goals', 'campaign', 'contentCalendar'].map((starter) => ({ starter } as Partial<DatabaseData>)));
+    await insert([
+      'tasks', 'projects', 'skills', 'documentHub', 'brainstorm', 'meetingNotes', 'goals', 'campaign', 'contentCalendar',
+      'events', 'socialMedia', 'issues', 'featureRequests', 'engineeringDocs', 'fundraising', 'pipeline', 'accounts', 'creative', 'inventory', 'roadmap', 'assets',
+    ].map((starter) => ({ starter } as Partial<DatabaseData>)));
 
     expect(rowLabels()).not.toContain('tools.database.starterSkills');
     expect(rowLabels()).toContain('tools.database.starterMoreTemplates');
@@ -354,7 +357,10 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
       .map((card) => card.getAttribute('data-blok-testid')?.replace('database-template-gallery-template-', ''));
 
     expect(popovers.destroyed).toBe(1);
-    expect(ids).toEqual(['projects', 'skills', 'documentHub', 'brainstorm', 'meetingNotes', 'goals', 'campaign', 'contentCalendar', 'tasks']);
+    expect(ids).toEqual([
+      'projects', 'skills', 'documentHub', 'brainstorm', 'meetingNotes', 'goals', 'campaign', 'contentCalendar',
+      'events', 'socialMedia', 'issues', 'featureRequests', 'engineeringDocs', 'fundraising', 'pipeline', 'accounts', 'creative', 'inventory', 'roadmap', 'assets', 'tasks',
+    ]);
     expect(byTestId(gallery, 'database-template-gallery-template-documentHub').getAttribute('data-tint')).toBe('red');
     expect(byTestId(gallery, 'database-template-gallery-source-other-0').textContent).toContain('Mine');
   });

@@ -92,6 +92,18 @@ const UNIVERSAL_EXACT_VALUES: Readonly<Record<string, string>> = {
   'tools.database.starterOptionLatam': 'LATAM',
   'tools.database.starterOptionUk': 'UK',
   'tools.database.starterOptionFr': 'FR',
+  // research/33 templates: a brand, size letter codes, acronyms, a sample @-handle, the served option "red" and an event's proper name.
+  'tools.database.starterOptionTikTok': 'TikTok',
+  'tools.database.starterOptionSizeXl': 'XL',
+  'tools.database.starterOptionSizeL': 'L',
+  'tools.database.starterOptionSizeM': 'M',
+  'tools.database.starterOptionSizeS': 'S',
+  'tools.database.starterOptionSizeXs': 'XS',
+  'tools.database.starterOptionPrd': 'PRD',
+  'tools.database.starterOptionUiUx': 'UI/UX',
+  'tools.database.starterOptionAccount': '@Account{number}',
+  'tools.database.starterOptionEffortRed': 'red',
+  'tools.database.starterEventRow1': 'Make with Notion',
 };
 
 /**
@@ -808,6 +820,57 @@ const DATABASE_ROUND11_COGNATE_RETENTIONS: Record<string, string[]> = {
   tr: ['tools.database.starterOptionBlog', 'tools.database.starterPlatform'],
   vi: ['tools.database.starterOptionBlog'],
 };
+
+/** research/33 template words that are native in the locale (Webinar, Video, Logo…). Each has a ledger retention row. */
+const DATABASE_ROUND12_COGNATE_RETENTIONS: Record<string, string[]> = {
+  az: ['tools.database.starterOptionVideo'],
+  bs: ['tools.database.starterOptionVideo', 'tools.database.starterOptionSegment', 'tools.database.starterOptionPartner'],
+  cs: ['tools.database.starterOptionWorkshop', 'tools.database.starterOptionText', 'tools.database.starterOptionVideo', 'tools.database.starterOptionSegment', 'tools.database.starterPortfolio', 'tools.database.starterOptionPartner', 'tools.database.starterRegion'],
+  da: ['tools.database.starterFormat', 'tools.database.starterOptionWebinar', 'tools.database.starterOptionWorkshop', 'tools.database.starterOptionVideo', 'tools.database.starterOptionLink', 'tools.database.starterOptionStory', 'tools.database.starterOptionSegment', 'tools.database.starterType', 'tools.database.starterOptionAi', 'tools.database.starterOptionPartner', 'tools.database.starterRegion', 'tools.database.starterOptionIllustration', 'tools.database.starterOptionBranding', 'tools.database.starterOptionHardware', 'tools.database.starterOptionPlatformTeam', 'tools.database.starterDesigner', 'tools.database.starterOptionLogo', 'tools.database.starterOptionAnimation'],
+  de: ['tools.database.starterFormat', 'tools.database.starterOptionWebinar', 'tools.database.starterOptionWorkshop', 'tools.database.starterOptionText', 'tools.database.starterOptionVideo', 'tools.database.starterOptionLink', 'tools.database.starterOptionStory', 'tools.database.starterOptionSegment', 'tools.database.starterOptionBacklog', 'tools.database.starterPortfolio', 'tools.database.starterOptionPartner', 'tools.database.starterRegion', 'tools.database.starterOptionIllustration', 'tools.database.starterOptionHardware', 'tools.database.starterDesigner', 'tools.database.starterOptionLogo', 'tools.database.starterOptionAnimation'],
+  es: ['tools.database.starterOptionVirtual', 'tools.database.starterOptionHardware', 'tools.database.starterOptionColor'],
+  et: ['tools.database.starterOptionVideo', 'tools.database.starterOptionLink', 'tools.database.starterOptionLogo'],
+  fi: ['tools.database.starterOptionVideo', 'tools.database.starterOptionLogo'],
+  fil: ['tools.database.starterOptionVideo', 'tools.database.starterOptionLink', 'tools.database.starterOptionLogo'],
+  fr: ['tools.database.starterNotes', 'tools.database.starterFormat', 'tools.database.starterType', 'tools.database.starterOptionMobile', 'tools.database.starterOptionGuide', 'tools.database.starterOptionArchitecture', 'tools.database.starterOptionIllustration', 'tools.database.starterOptionPhoto', 'tools.database.starterOptionLogo', 'tools.database.starterOptionAnimation'],
+  hr: ['tools.database.starterOptionVideo', 'tools.database.starterOptionPartner'],
+  id: ['tools.database.starterOptionWebinar', 'tools.database.starterOptionVideo', 'tools.database.starterOptionAi', 'tools.database.starterOptionPlatformTeam', 'tools.database.starterOptionLogo'],
+  it: ['tools.database.starterOptionVideo', 'tools.database.starterOptionLink', 'tools.database.starterOptionPartner', 'tools.database.starterDesigner', 'tools.database.starterOptionLogo'],
+  ja: ['tools.database.starterOptionAi'],
+  lv: ['tools.database.starterOptionVideo'],
+  ml: ['tools.database.starterOptionAi'],
+  mn: ['tools.database.starterOptionAi'],
+  mr: ['tools.database.starterOptionAi'],
+  ms: ['tools.database.starterFormat', 'tools.database.starterOptionWebinar', 'tools.database.starterOptionVideo', 'tools.database.starterViewKanban', 'tools.database.starterOptionAi', 'tools.database.starterPortfolio', 'tools.database.starterOptionPlatformTeam', 'tools.database.starterOptionLogo'],
+  my: ['tools.database.starterOptionAi'],
+  ne: ['tools.database.starterOptionAi'],
+  nl: ['tools.database.starterAccounts', 'tools.database.starterOptionWebinar', 'tools.database.starterOptionWorkshop', 'tools.database.starterOptionVideo', 'tools.database.starterOptionLink', 'tools.database.starterOptionSegment', 'tools.database.starterIssue', 'tools.database.starterOptionOpen', 'tools.database.starterOptionAi', 'tools.database.starterOptionPartner', 'tools.database.starterOptionWebsite', 'tools.database.starterOptionPlatformTeam', 'tools.database.starterOptionLogo'],
+  no: ['tools.database.starterFormat', 'tools.database.starterOptionWebinar', 'tools.database.starterOptionWorkshop', 'tools.database.starterOptionVideo', 'tools.database.starterOptionSegment', 'tools.database.starterType', 'tools.database.starterOptionPartner', 'tools.database.starterRegion', 'tools.database.starterDesigner', 'tools.database.starterOptionLogo'],
+  pa: ['tools.database.starterOptionAi'],
+  pl: ['tools.database.starterOptionWebinar', 'tools.database.starterOptionLink', 'tools.database.starterOptionSegment', 'tools.database.starterOptionBacklog', 'tools.database.starterViewKanban', 'tools.database.starterOptionPartner', 'tools.database.starterRegion', 'tools.database.starterOptionLogo'],
+  pt: ['tools.database.starterOptionVirtual', 'tools.database.starterOptionWebinar', 'tools.database.starterOptionLink', 'tools.database.starterOptionBacklog', 'tools.database.starterViewKanban', 'tools.database.starterOptionHardware', 'tools.database.starterDesigner'],
+  ro: ['tools.database.starterFormat', 'tools.database.starterOptionVirtual', 'tools.database.starterOptionWebinar', 'tools.database.starterOptionText', 'tools.database.starterOptionLink', 'tools.database.starterOptionBacklog', 'tools.database.starterViewKanban', 'tools.database.starterOptionHardware', 'tools.database.starterDesigner', 'tools.database.starterOptionLogo'],
+  sk: ['tools.database.starterOptionWorkshop', 'tools.database.starterOptionText', 'tools.database.starterOptionVideo', 'tools.database.starterOptionSegment', 'tools.database.starterOptionBacklog', 'tools.database.starterViewKanban', 'tools.database.starterOptionPartner', 'tools.database.starterOptionLogo'],
+  sl: ['tools.database.starterOptionVideo', 'tools.database.starterOptionSegment', 'tools.database.starterViewKanban', 'tools.database.starterOptionPartner'],
+  sq: ['tools.database.starterOptionVirtual', 'tools.database.starterOptionVideo', 'tools.database.starterViewKanban', 'tools.database.starterOptionPartner', 'tools.database.starterOptionLogo'],
+  sv: ['tools.database.starterFormat', 'tools.database.starterOptionWorkshop', 'tools.database.starterOptionText', 'tools.database.starterOptionVideo', 'tools.database.starterOptionSegment', 'tools.database.starterOptionAi', 'tools.database.starterRegion', 'tools.database.starterOptionIllustration'],
+  sw: ['tools.database.starterOptionVideo'],
+  ta: ['tools.database.starterOptionAi'],
+  te: ['tools.database.starterOptionAi'],
+  th: ['tools.database.starterOptionAi'],
+  tr: ['tools.database.starterOptionVideo', 'tools.database.starterOptionPlatformTeam', 'tools.database.starterOptionLogo'],
+  ug: ['tools.database.starterOptionAi'],
+  ur: ['tools.database.starterOptionAi'],
+  vi: ['tools.database.starterOptionVideo', 'tools.database.starterOptionAi'],
+  yi: ['tools.database.starterOptionAi'],
+  zh: ['tools.database.starterOptionAi'],
+  'zh-TW': ['tools.database.starterOptionAi'],
+};
+
+for (const [locale, keys] of Object.entries(DATABASE_ROUND12_COGNATE_RETENTIONS)) {
+  const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());
+  for (const key of keys) set.add(key);
+}
 
 for (const [locale, keys] of Object.entries(DATABASE_ROUND11_COGNATE_RETENTIONS)) {
   const set = COGNATE_RETENTIONS[locale] ?? (COGNATE_RETENTIONS[locale] = new Set<string>());

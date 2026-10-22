@@ -995,6 +995,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_BAND_TOGGLE_BYTES = 482;
     // database.css: the purple template tile (Campaign Management, research/31 shot 51).
     const DATABASE_PURPLE_TEMPLATE_TILE_BYTES = 632;
+    // database.css: the pink template tile (Product Roadmap, research/33 §3.13).
+    const DATABASE_PINK_TEMPLATE_TILE_BYTES = 396;
     // Selected-state rules reach only the selected block's own tool (holder > content > tool root), so a selected toggle or callout keeps its fill: +319 across main, image, video, audio and tables.css.
     const SELECTED_OWN_BLOCK_BYTES = 319;
     // database.css: the up/down chevron in the CSV Import Location field and a form Dropdown question (research/31 §5a, research/12 §4).
@@ -1181,7 +1183,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_PREVIEW_GROUPS_BYTES
       + DATABASE_CARD_LAYOUT_BYTES
       + DATABASE_NOTION_COLOURS_PASS2_BYTES
-      + DATABASE_CONFIRM_LOOK_BYTES;
+      + DATABASE_CONFIRM_LOOK_BYTES
+      + DATABASE_PINK_TEMPLATE_TILE_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

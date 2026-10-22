@@ -150,7 +150,7 @@
   --blok-database-starter-tile-blue-ink: rgb(51, 126, 169);
   --blok-database-starter-tile-gray-bg: rgb(240, 239, 237);
   --blok-database-starter-tile-gray-ink: rgb(85, 83, 78);
-  /* Not measured: Notion's red, orange, yellow and purple template tiles take Blok's block colours. */
+  /* Not measured: Notion's red, orange, yellow, purple and pink template tiles take Blok's block colours. */
   --blok-database-starter-tile-red-bg: var(--blok-color-red-bg);
   --blok-database-starter-tile-red-ink: var(--blok-color-red-text);
   --blok-database-starter-tile-orange-bg: var(--blok-color-orange-bg);
@@ -159,6 +159,8 @@
   --blok-database-starter-tile-yellow-ink: var(--blok-color-yellow-text);
   --blok-database-starter-tile-purple-bg: var(--blok-color-purple-bg);
   --blok-database-starter-tile-purple-ink: var(--blok-color-purple-text);
+  --blok-database-starter-tile-pink-bg: var(--blok-color-pink-bg);
+  --blok-database-starter-tile-pink-ink: var(--blok-color-pink-text);
   /* "More templates" (research/26 §2): modal bg, source card fill. Dark is unmeasured. */
   --blok-database-tpl-gallery-bg: rgb(249, 248, 247);
   --blok-database-tpl-gallery-card-bg: rgba(66, 35, 3, 0.03);
@@ -7704,6 +7706,13 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-tpl-gallery-card][data-tint="purple"] {
   background-color: var(--blok-database-starter-tile-purple-bg);
   color: var(--blok-database-starter-tile-purple-ink);
+}
+
+[data-blok-database-starter-tile="pink"],
+[data-blok-database-icon="pink"],
+[data-blok-database-tpl-gallery-card][data-tint="pink"] {
+  background-color: var(--blok-database-starter-tile-pink-bg);
+  color: var(--blok-database-starter-tile-pink-ink);
 }
 
 [data-blok-database-tpl-gallery-card][data-tint="green"] {

@@ -426,11 +426,12 @@ export const DATABASE_DATA = {
       required: ['glyph', 'color'],
       additionalProperties: false,
       properties: {
-        glyph: { type: 'string', enum: ['check', 'timeline', 'wand', 'doc', 'idea', 'calendar', 'flag'] },
-        color: { type: 'string', enum: ['green', 'blue', 'gray', 'red', 'orange', 'yellow', 'purple'] },
+        glyph: { type: 'string', enum: ['check', 'timeline', 'wand', 'doc', 'idea', 'calendar', 'flag', 'comment', 'person', 'map', 'database'] },
+        color: { type: 'string', enum: ['green', 'blue', 'gray', 'red', 'orange', 'yellow', 'purple', 'pink'] },
       },
     },
-    starter: { type: 'string', enum: ['tasks', 'projects', 'skills', 'documentHub', 'brainstorm', 'meetingNotes', 'goals', 'campaign', 'contentCalendar'], description: 'The template this database was made from. Removed by "Undo … database".' },
+    starter: { type: 'string', enum: ['tasks', 'projects', 'skills', 'documentHub', 'brainstorm', 'meetingNotes', 'goals', 'campaign', 'contentCalendar',
+      'events', 'socialMedia', 'issues', 'featureRequests', 'engineeringDocs', 'fundraising', 'pipeline', 'accounts', 'creative', 'inventory', 'roadmap', 'assets'], description: 'The template this database was made from. Removed by "Undo … database".' },
     automations: {
       type: 'object',
       required: ['version', 'definitions'],

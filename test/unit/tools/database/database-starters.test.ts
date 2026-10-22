@@ -311,6 +311,6 @@ describe('database starters (research/27 §1)', () => {
   });
 
   it('only Tasks Tracker and Skills offer "Undo … database"; Projects showed "Turn into" (research/27:43, :81, :115)', () => {
-    expect(DATABASE_STARTERS.map((s) => (s.undoKey === undefined ? null : t(s.undoKey)))).toEqual(['Undo Task database', null, 'Undo skills database', null, null, null, null, null, null]);
+    expect(DATABASE_STARTERS.map((s) => (s.undoKey === undefined ? null : t(s.undoKey)))).toEqual(['Undo Task database', null, 'Undo skills database', ...Array<null>(18).fill(null)]);
   });
 });

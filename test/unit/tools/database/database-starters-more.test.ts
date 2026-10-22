@@ -79,8 +79,8 @@ describe('"More templates" (research/27 §1e, research/30 §10)', () => {
     vi.restoreAllMocks();
   });
 
-  it('lists the nine templates whose schema was measured, in Notion\'s order, each with its measured description', () => {
-    expect(DATABASE_STARTERS.map((s) => [t(s.nameKey), t(s.descriptionKey)])).toEqual([
+  it('lists the first nine templates in Notion\'s order, each with its measured description (the rest: research/33)', () => {
+    expect(DATABASE_STARTERS.slice(0, 9).map((s) => [t(s.nameKey), t(s.descriptionKey)])).toEqual([
       ['Tasks Tracker', 'Stay organized with tasks, your way.'],
       ['Projects', 'Manage projects start to finish.'],
       ['Skills', 'Save reusable instructions for agents.'],
@@ -106,12 +106,13 @@ describe('"More templates" (research/27 §1e, research/30 §10)', () => {
     const names = (used: StarterId[]): string[] => galleryStarters(new Set(used)).map((s) => t(s.nameKey));
 
     // research/31 §7: the same order, Campaign Management and Content Calendar after Goals Tracker.
-    expect(names([])).toEqual(['Tasks Tracker', 'Projects', 'Skills', 'Document Hub', 'Brainstorm Session', 'Meeting Notes', 'Goals Tracker', 'Campaign Management', 'Content Calendar']);
-    expect(names(['tasks', 'projects', 'skills'])).toEqual(['Document Hub', 'Brainstorm Session', 'Meeting Notes', 'Goals Tracker', 'Campaign Management', 'Content Calendar', 'Tasks Tracker', 'Projects', 'Skills']);
+    expect(names([]).slice(0, 9)).toEqual(['Tasks Tracker', 'Projects', 'Skills', 'Document Hub', 'Brainstorm Session', 'Meeting Notes', 'Goals Tracker', 'Campaign Management', 'Content Calendar']);
+    expect(names(['tasks', 'projects', 'skills']).slice(0, 6)).toEqual(['Document Hub', 'Brainstorm Session', 'Meeting Notes', 'Goals Tracker', 'Campaign Management', 'Content Calendar']);
+    expect(names(['tasks', 'projects', 'skills']).slice(-3)).toEqual(['Tasks Tracker', 'Projects', 'Skills']);
   });
 
   it('each card carries the measured thumbnail text (research/30 §10a)', () => {
-    expect(DATABASE_STARTERS.map((s) => [...s.thumbnail.columns, ...s.thumbnail.pills.map(([key]) => key)].map((key) => t(key)))).toEqual([
+    expect(DATABASE_STARTERS.slice(0, 9).map((s) => [...s.thumbnail.columns, ...s.thumbnail.pills.map(([key]) => key)].map((key) => t(key)))).toEqual([
       ['Task name', 'Status', 'Assignee', 'Not started', 'In progress', 'Done'],
       ['Not started', 'In progress', 'Done'],
       ['Skill name', 'Description', 'Files'],
@@ -142,15 +143,15 @@ describe('"More templates" (research/27 §1e, research/30 §10)', () => {
     expect(on('meetingNotes', 'views', false)).toEqual(['By Category']);
     expect(on('goals', 'features', true)).toEqual(['Due date', 'Priority', 'Team']);
     expect(on('goals', 'features', false)).toEqual(['Quarter', 'Progress', 'Days until due']);
-    // research/31 §7: Owner, Budget, Accounts, By Market and By Platform were left off, so never measured: not offered.
+    // research/33 §3.6-3.7 read the off chips and view cards.
     expect(on('campaign', 'features', true)).toEqual(['Campaign type', 'Markets', 'Channels', 'Audiences targeted', 'Files & media']);
-    expect(on('campaign', 'features', false)).toEqual([]);
+    expect(on('campaign', 'features', false)).toEqual(['Owner', 'Budget']);
     expect(on('campaign', 'views', true)).toEqual(['By Status', 'All Campaigns', 'Calendar']);
-    expect(on('campaign', 'views', false)).toEqual([]);
+    expect(on('campaign', 'views', false)).toEqual(['By Market']);
     expect(on('contentCalendar', 'features', true)).toEqual(['Publish date', 'Platform', 'Content type', 'Owner', 'Post URL']);
-    expect(on('contentCalendar', 'features', false)).toEqual([]);
+    expect(on('contentCalendar', 'features', false)).toEqual(['Accounts']);
     expect(on('contentCalendar', 'views', true)).toEqual(['Calendar', 'All Content', 'By Status']);
-    expect(on('contentCalendar', 'views', false)).toEqual([]);
+    expect(on('contentCalendar', 'views', false)).toEqual(['By Platform']);
     expect(on('goals', 'views', true)).toEqual(['All Goals', 'By Status', 'My Goals']);
     expect(on('goals', 'views', false)).toEqual(['By Team']);
   });
@@ -510,7 +511,7 @@ describe('"More templates" (research/27 §1e, research/30 §10)', () => {
       expect(shownNames(made, 'By Status')).toEqual(['Channels', 'Markets', 'Campaign type']);
       expect(board).toMatchObject({
         showPageIcon: true, wrapCells: false, loadLimit: 25, openPagesIn: 'side', cardSize: 'medium', cardPreview: `property:${prop(made, 'Files & media').id}`,
-        groupSettings: { sort: 'manual', hideEmptyGroups: true, colorColumns: true }, sorts: [], filters: [],
+        groupSettings: { sort: 'manual', hideEmptyGroups: false, colorColumns: true }, sorts: [], filters: [],
       });
       expect(shownNames(made, 'All Campaigns')).toEqual(['Status', 'Audiences targeted', 'Campaign type', 'Channels', 'Markets', 'Files & media', 'Completion date']);
       expect(viewNamed(made, 'All Campaigns')).toMatchObject({ showPageIcon: false, wrapCells: false, showVerticalLines: true, loadLimit: 50, openPagesIn: 'side' });
@@ -545,13 +546,13 @@ describe('"More templates" (research/27 §1e, research/30 §10)', () => {
   });
 
   describe('Content Calendar (research/31 §7b)', () => {
-    it('has the measured properties, types and option colours; no "Status (1)"', () => {
+    it('has the measured properties, types and option colours; no "Status (1)"; research/33 §3.7\'s order', () => {
       const made = build('contentCalendar');
 
       expect(made.title).toBe('Content Calendar');
       expect(made.schema.map((p) => [p.name, p.type])).toEqual([
-        ['Content name', 'title'], ['Content type', 'select'], ['Film date', 'date'], ['Owner', 'person'],
-        ['Platform', 'multiSelect'], ['Post URL', 'url'], ['Publish date', 'date'], ['Status', 'status'],
+        ['Content name', 'title'], ['Owner', 'person'], ['Content type', 'select'], ['Platform', 'multiSelect'],
+        ['Film date', 'date'], ['Post URL', 'url'], ['Publish date', 'date'], ['Status', 'status'],
       ]);
       expect(options(made, 'Content type')).toEqual([
         ['Live stream', 'default'], ['Long form video', 'purple'], ['Story / short form video', 'gray'], ['Social post', 'red'],
@@ -591,7 +592,7 @@ describe('"More templates" (research/27 §1e, research/30 §10)', () => {
       expect(shownNames(made, 'By Status')).toEqual(['Owner', 'Content type', 'Platform']);
       expect(board).toMatchObject({
         showPageIcon: true, wrapCells: true, loadLimit: 25, openPagesIn: 'side', cardSize: 'medium', cardPreview: 'none',
-        groupSettings: { sort: 'ascending', hideEmptyGroups: true, colorColumns: true },
+        groupSettings: { sort: 'ascending', hideEmptyGroups: false, colorColumns: true },
       });
       expect(hiddenPropertyCount(made)).toBe(7);
     });
@@ -619,8 +620,8 @@ describe('"More templates" (research/27 §1e, research/30 §10)', () => {
     });
   });
 
-  it('the new templates bring no page template and no Undo row (unmeasured)', () => {
-    for (const id of ['documentHub', 'brainstorm', 'meetingNotes', 'goals', 'campaign', 'contentCalendar'] as const) {
+  it('these templates bring no page template and no Undo row (unmeasured)', () => {
+    for (const id of ['documentHub', 'brainstorm', 'meetingNotes', 'goals'] as const) {
       expect(build(id).templates).toEqual([]);
       expect(meta(id).undoKey).toBeUndefined();
     }

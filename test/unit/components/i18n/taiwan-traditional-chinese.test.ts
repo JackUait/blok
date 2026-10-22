@@ -17,6 +17,7 @@ const extractPlaceholders = (value: string): string[] =>
     .sort();
 
 const UNIVERSAL_IDENTICAL_KEYS = [
+  // research/33 templates: a brand, size codes, acronyms (AI, PRD, UI/UX), a sample @-handle, the served option "red" and an event name sit among these.
   'blockSettings.menuShortcutMac',
   'blockSettings.menuShortcutWin',
   'tools.database.buttonUrl',
@@ -28,8 +29,12 @@ const UNIVERSAL_IDENTICAL_KEYS = [
   'tools.database.filterOperator.numberEquals',
   'tools.database.propertyTypeUrl',
   // Brand names and region codes of the template options.
+  'tools.database.starterEventRow1',
+  'tools.database.starterOptionAccount',
+  'tools.database.starterOptionAi',
   'tools.database.starterOptionAmer',
   'tools.database.starterOptionApac',
+  'tools.database.starterOptionEffortRed',
   'tools.database.starterOptionEmea',
   'tools.database.starterOptionFr',
   'tools.database.starterOptionGoogle',
@@ -37,8 +42,16 @@ const UNIVERSAL_IDENTICAL_KEYS = [
   'tools.database.starterOptionLatam',
   'tools.database.starterOptionLinkedin',
   'tools.database.starterOptionLinkedinCampaign',
+  'tools.database.starterOptionPrd',
+  'tools.database.starterOptionSizeL',
+  'tools.database.starterOptionSizeM',
+  'tools.database.starterOptionSizeS',
+  'tools.database.starterOptionSizeXl',
+  'tools.database.starterOptionSizeXs',
   'tools.database.starterOptionSpotify',
+  'tools.database.starterOptionTikTok',
   'tools.database.starterOptionTiktok',
+  'tools.database.starterOptionUiUx',
   'tools.database.starterOptionUk',
   'tools.database.starterOptionX',
   'tools.database.starterOptionYoutube',

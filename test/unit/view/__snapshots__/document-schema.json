@@ -1823,7 +1823,11 @@
                 "doc",
                 "idea",
                 "calendar",
-                "flag"
+                "flag",
+                "comment",
+                "person",
+                "map",
+                "database"
               ]
             },
             "color": {
@@ -1835,7 +1839,8 @@
                 "red",
                 "orange",
                 "yellow",
-                "purple"
+                "purple",
+                "pink"
               ]
             }
           }
@@ -1851,7 +1856,19 @@
             "meetingNotes",
             "goals",
             "campaign",
-            "contentCalendar"
+            "contentCalendar",
+            "events",
+            "socialMedia",
+            "issues",
+            "featureRequests",
+            "engineeringDocs",
+            "fundraising",
+            "pipeline",
+            "accounts",
+            "creative",
+            "inventory",
+            "roadmap",
+            "assets"
           ],
           "description": "The template this database was made from. Removed by \"Undo … database\"."
         },

@@ -63,4 +63,9 @@ describe('API.config', () => {
 
     expect(api.methods.config.media).toBeUndefined();
   });
+
+  it('exposes the user a new block is stamped with, undefined when unset', () => {
+    expect(makeApi({ user: { id: 'u-ada' } }).methods.config.user?.id).toBe('u-ada');
+    expect(makeApi({}).methods.config.user).toBeUndefined();
+  });
 });

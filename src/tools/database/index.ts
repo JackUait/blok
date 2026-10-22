@@ -4914,11 +4914,15 @@ export class DatabaseTool implements BlockTool {
     return submission;
   }
 
-  /** The person the current user is in the host's directory, once it has loaded. */
+  /**
+   * Who the answer's Created by will name: the editor's `user.id`, as core
+   * stamps new blocks (YjsManager.withCreationStamp), with no `people.me()`
+   * fallback. Shown once the host's directory knows that id.
+   */
   private respondent(): DatabasePerson | undefined {
-    const me = this.config.people?.me?.();
+    const id = this.api.config.user?.id;
 
-    return me === undefined || me === '' ? undefined : this.people?.find((person) => person.id === me);
+    return typeof id !== 'string' || id === '' ? undefined : this.people?.find((person) => person.id === id);
   }
 
   private formPreview: ModalDialogHandle | null = null;

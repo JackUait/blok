@@ -247,7 +247,7 @@ test.describe('form view, research/36 §13', () => {
   };
 
   test('Preview names the respondent, its answer is a row they created, and "View my response" opens it full page', async ({ page }) => {
-    // The chip reads people.me(); Created by reads the editor's user id. The host sets both alike.
+    // The chip and Created by both name the editor's user id.
     await mount(page, withCreatedBy(), 'forms', { user: 'u-ada', people: true });
 
     await page.getByRole('button', { name: 'Preview' }).click();

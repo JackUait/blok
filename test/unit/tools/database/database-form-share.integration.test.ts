@@ -382,7 +382,7 @@ describe('form Share panel (research/19 §3d)', () => {
     const chip = (): HTMLElement | null => q('[data-blok-database-form-respondent]');
 
     it('a respondent sees "Submitting response as" with the current person first', async () => {
-      await mount(blocks(), host(), true, { config: { people } });
+      await mount(blocks(), host(), true, { user: { id: 'u-ada' }, config: { people } });
 
       await vi.waitFor(() => expect(chip()).not.toBeNull());
       const shown = need('[data-blok-database-form-respondent]');
@@ -393,7 +393,7 @@ describe('form Share panel (research/19 §3d)', () => {
     });
 
     it('shows nothing without a current person the directory knows', async () => {
-      await mount(blocks(), host(), true, { config: { people: { list: async () => [{ id: 'u-bob', name: 'Bob' }], me: () => 'u-ada' } } });
+      await mount(blocks(), host(), true, { user: { id: 'u-ada' }, config: { people: { list: async () => [{ id: 'u-bob', name: 'Bob' }], me: () => 'u-ada' } } });
       await new Promise((resolve) => setTimeout(resolve, 20));
 
       expect(chip()).toBeNull();
@@ -406,7 +406,7 @@ describe('form Share panel (research/19 §3d)', () => {
     });
 
     it('gives way to the anonymous pill when answers are anonymous', async () => {
-      await mount(blocks({ anonymous: true }), host(), true, { config: { people } });
+      await mount(blocks({ anonymous: true }), host(), true, { user: { id: 'u-ada' }, config: { people } });
       await new Promise((resolve) => setTimeout(resolve, 20));
 
       expect(chip()).toBeNull();
@@ -414,7 +414,7 @@ describe('form Share panel (research/19 §3d)', () => {
     });
 
     it('keeps the builder free of the chip', async () => {
-      await mount(blocks(), host(), false, { config: { people } });
+      await mount(blocks(), host(), false, { user: { id: 'u-ada' }, config: { people } });
       await new Promise((resolve) => setTimeout(resolve, 20));
 
       expect(chip()).toBeNull();
@@ -462,6 +462,31 @@ describe('form Share panel (research/19 §3d)', () => {
       expect(row?.createdBy).toBe('u-ada');
       expect((row?.data as { properties: Record<string, unknown> }).properties.title).toBe('FormResp');
       expect(document.querySelectorAll('[data-blok-database-form-done]')).toHaveLength(1);
+    });
+
+    // The chip names whoever Created by will record: the editor's user.id, never people.me().
+    const submitFromPreview = async (): Promise<OutputBlockData | undefined> => {
+      need<HTMLInputElement>('[data-blok-database-form-preview] [id="blok-form-form-title"]').value = 'FormResp';
+      need('[data-blok-database-form-preview] [data-blok-database-form-submit]').click();
+
+      return (await editor?.save())?.blocks.find((block) => block.type === 'database-row');
+    };
+
+    it('with only user.id set, the chip names that person and Created by records the same id', async () => {
+      await mount(blocks(), host(), false, { user: { id: 'u-ada' }, config: { people: { list: people.list } } });
+      const dialog = preview();
+
+      await vi.waitFor(() => expect(dialog.querySelector('[data-blok-database-form-respondent]')?.textContent).toBe('Submitting response as Ada'));
+      expect((await submitFromPreview())?.createdBy).toBe('u-ada');
+    });
+
+    it('with only people.me() set, Created by records nobody and the chip shows nobody', async () => {
+      await mount(blocks(), host(), false, { config: { people } });
+      const dialog = preview();
+
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(dialog.querySelector('[data-blok-database-form-respondent]')).toBeNull();
+      expect((await submitFromPreview())?.createdBy).toBeUndefined();
     });
 
     it('"View my response" closes the preview and opens the row as a full page', async () => {

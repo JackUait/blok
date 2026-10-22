@@ -94,6 +94,9 @@ export class API extends Module {
         get collaboration() {
           return apiConfig.collaboration;
         },
+        get user() {
+          return apiConfig.user;
+        },
       },
       /**
        * Curated facade exposing exactly the publicly-typed RectangleSelection

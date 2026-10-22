@@ -201,7 +201,7 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
       vi.useRealTimers();
     });
 
-    it.each(['board', 'list', 'feed'] as const)('the %s menu footer writes "Today at" with the editor\'s clock', (type) => {
+    it.each(['board', 'list', 'feed', 'table'] as const)('the %s menu footer writes "Today at" with the editor\'s clock', (type) => {
       vi.useFakeTimers({ toFake: ['Date'] });
       vi.setSystemTime(new Date(2026, 9, 22, 16, 54));
       const doc = oneRow();

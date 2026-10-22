@@ -1716,7 +1716,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       ...rowMenuFooter({
         row: this.allRows().find((row) => row.id === rowId),
         titlePropertyId: this.options.titlePropertyId,
-        locale: resolveLocale(this.options.locale),
+        // "Today at {time}" is in the editor's language, so its time is too.
+        locale: resolveLocale(this.options.locale ?? this.options.i18n.getLocale?.()),
         ...(this.options.cellContext?.people !== undefined ? { people: this.options.cellContext.people } : {}),
         ...(this.options.cellContext?.now !== undefined ? { now: this.options.cellContext.now } : {}),
         ...(this.options.cellContext?.hourCycle !== undefined ? { hourCycle: this.options.cellContext.hourCycle } : {}),

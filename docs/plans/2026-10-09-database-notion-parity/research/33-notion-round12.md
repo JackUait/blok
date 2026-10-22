@@ -649,7 +649,7 @@ No other template among the 12 has a formula property.
 | Outlined button border ("Manage in Calendar", "Clear search") | 1px rgba(28, 19, 1, 0.11) | 1px rgba(255, 255, 235, 0.1) |
 | Row page property-block divider | rgba(55, 53, 47, 0.09) | rgba(255, 255, 255, 0.094) |
 | Unselected view tab (hover-like fill seen on a non-active tab) | rgba(33, 27, 23, 0.05) | rgba(255, 255, 255, 0.055) |
-| Active view tab with keyboard focus ring | color(srgb 0.129 0.106 0.090 / 0.0765) + ring `rgb(248,248,247) 0 0 0 2px, rgb(35,131,226) 0 0 0 4px` | rgba(255, 255, 235, 0.1) + ring `rgb(25,25,25) 0 0 0 2px, rgb(35,131,226) 0 0 0 4px` |
+| Active view tab with a focus ring present at sweep time (the tab had been clicked with the mouse; why the ring showed was not checked) | color(srgb 0.129 0.106 0.090 / 0.0765) + ring `rgb(248,248,247) 0 0 0 2px, rgb(35,131,226) 0 0 0 4px` | rgba(255, 255, 235, 0.1) + ring `rgb(25,25,25) 0 0 0 2px, rgb(35,131,226) 0 0 0 4px` |
 
 ### 4.2 Hover, pressed, selection
 
@@ -672,7 +672,7 @@ Light from 3.1. Dark is the same pill at the same position after the switch.
 | Colour | Light bg | Light text | Dark bg | Dark text |
 |---|---|---|---|---|
 | Default | rgba(42, 28, 0, 0.07) | rgb(44, 44, 43) | rgba(255, 255, 243, 0.082) | not isolated (primary ink) |
-| Gray | rgba(28, 19, 1, 0.11) | rgb(73, 72, 70) | rgba(255, 252, 235, 0.306) | rgb(240, 239, 237) |
+| Gray | rgba(28, 19, 1, 0.11) | rgb(73, 72, 70) | rgba(255, 252, 235, 0.306) | rgb(240, 239, 237) (the only dark pill text that is plain primary ink) |
 | Brown | rgba(127, 51, 0, 0.157) | rgb(88, 68, 55) | rgba(255, 184, 132, 0.365) | rgb(245, 237, 233) |
 | Orange | rgba(196, 88, 0, 0.204) | rgb(106, 66, 34) | rgba(255, 143, 71, 0.482) | rgb(251, 235, 222) |
 | Yellow | rgba(209, 156, 0, 0.282) | rgb(101, 81, 33) | rgba(255, 188, 53, 0.46) | rgb(249, 243, 220) |
@@ -682,7 +682,9 @@ Light from 3.1. Dark is the same pill at the same position after the switch.
 | Pink | rgba(183, 0, 78, 0.153) | rgb(104, 53, 78) | rgba(255, 133, 192, 0.427) | rgb(250, 233, 241) |
 | Red | rgba(206, 24, 0, 0.165) | rgb(109, 53, 49) | rgba(255, 116, 105, 0.525) | rgb(252, 233, 231) |
 
-Status pills carry an 8x8 dot. Its colour is the same in both themes: Gray rgb(142, 139, 134), Brown rgb(182, 137, 101), Orange rgb(213, 128, 59), Yellow rgb(216, 163, 47), Green rgb(70, 161, 113), Blue rgb(39, 131, 222), Purple rgb(181, 119, 214), Pink rgb(219, 105, 153), Red rgb(229, 100, 88).
+Gray evidence: real Gray options, not only Status DEFAULT pills. "Product launch" (Campaign type, Gray) went rgba(28, 19, 1, 0.11) / rgb(73, 72, 70) → rgba(255, 252, 235, 0.306) / rgb(240, 239, 237); "Story / short form video" (Content type, Gray) and "YouTube" (Platform, Gray) card pills went to the same dark bg (their dark text was not isolated). A Status DEFAULT pill ("Not started", "Idea") reads the same as Gray in both themes.
+
+Status pills carry an 8x8 dot. Its colour is the same in both themes: no-colour DEFAULT status rgb(142, 139, 134) (a Gray-coloured status dot was not read), Brown rgb(182, 137, 101), Orange rgb(213, 128, 59), Yellow rgb(216, 163, 47), Green rgb(70, 161, 113), Blue rgb(39, 131, 222), Purple rgb(181, 119, 214), Pink rgb(219, 105, 153), Red rgb(229, 100, 88).
 
 ### 4.4 Board (Color columns on)
 
@@ -745,7 +747,7 @@ Calendar events and timeline bars: **not measured** (the Event calendar had no e
 | Row page (full page) | frame bg as 4.1; title ink primary; property label ink secondary | same rule |
 | Menu / popover (View settings 290x574, property menu 220x502) | bg white; shadow `rgba(25,25,25,0.05) 0 20px 24px 0, rgba(25,25,25,0.027) 0 5px 8px 0, rgba(42,28,0,0.07) 0 0 0 1px`; radius 10px (3.8) | bg **rgb(37, 37, 37)**; shadow `rgb(56,56,54) 0 0 0 1px, rgba(25,25,25,0.2) 0 14px 28px -6px, rgba(25,25,25,0.118) 0 2px 4px -1px` |
 | Small floating bar over a card (57x24) | bg white, shadow `rgba(25,25,25,0.027) 0 8px 12px 0, rgba(25,25,25,0.027) 0 2px 6px 0, rgba(42,28,0,0.07) 0 0 0 1px` | bg rgb(37, 37, 37), shadow `rgb(56,56,54) 0 0 0 1px, rgba(25,25,25,0.08) 0 4px 12px -2px` |
-| **Tooltip** ("Sort", 39.8x26.8) | bg rgb(44, 44, 43), ink rgb(240, 239, 237), radius 6px, padding 5px 8px, 12px, shadow `rgba(0,0,0,0.08) 0 4px 12px -2px, rgba(255,255,255,0.05) 0 0 0 1px inset`; shows ~1.2-1.4 s after the pointer lands | **identical** in dark |
+| **Tooltip** ("Sort", 39.8x26.8) | bg rgb(44, 44, 43), ink rgb(240, 239, 237), radius 6px, padding 5px 8px, 12px, shadow `rgba(0,0,0,0.08) 0 4px 12px -2px, rgba(255,255,255,0.05) 0 0 0 1px inset`; delay not measured (the 1.2-1.4 s seen includes the script gap; see §1, where the same clock read 1589 ms for a 512 ms hint) | **identical** in dark |
 | Description hint (2nd line) | rgb(173, 169, 163) (research 31 §1) | not read |
 | "New" button | bg rgb(39, 131, 222), ink rgb(243, 249, 253) | same |
 | "New" chevron split | `rgba(28,19,1,0.11) 1px 0 0 0 inset` | `rgba(255,255,235,0.1) 1px 0 0 0 inset` |

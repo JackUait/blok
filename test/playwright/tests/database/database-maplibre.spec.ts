@@ -310,6 +310,21 @@ test.describe('Place with Blok\'s map', () => {
 
     await expect(card).toContainText('5 Avenue Anatole France, Paris');
     await expect(card.getByRole('region', { name: 'Map' })).toBeVisible();
+    await expect.poll(() => card.evaluate((root) => root.querySelectorAll('canvas').length)).toBe(1);
+
+    // MapLibre's own `position: relative` is scoped to its descendants; without the box's, the canvas sits over the name.
+    const box = await card.evaluate((root) => {
+      const canvas = root.querySelector('canvas')?.getBoundingClientRect();
+      const frame = root.querySelector('[data-blok-database-place-card-map]')?.getBoundingClientRect();
+
+      return {
+        offset: [(canvas?.x ?? 0) - (frame?.x ?? -1), (canvas?.y ?? 0) - (frame?.y ?? -1)],
+        size: [canvas?.width ?? 0, canvas?.height ?? 0, frame?.width ?? -1, frame?.height ?? -1],
+      };
+    });
+
+    expect(box.offset).toEqual([0, 0]);
+    expect(box.size.slice(0, 2)).toEqual(box.size.slice(2));
   });
 
   test('"Search for a location..." uses the host geocoder; a pick stores name, address and point', async ({ page }) => {

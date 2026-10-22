@@ -1027,6 +1027,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_DESCRIPTION_FIELD_CAP_BYTES = 100;
     // database.css: the place editor after a pick, with its map, × and Google Maps button (research/35 §9).
     const DATABASE_PLACE_VIEW_BYTES = 1_890;
+    // database.css: the place hover card's map box holds MapLibre's canvas (position: relative).
+    const DATABASE_PLACE_CARD_MAP_BYTES = 111;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1202,7 +1204,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_ROUND13_BOARD_TOOLBAR_BYTES
       + DATABASE_CONFIRM_ROUND13_BYTES
       + DATABASE_DESCRIPTION_FIELD_CAP_BYTES
-      + DATABASE_PLACE_VIEW_BYTES;
+      + DATABASE_PLACE_VIEW_BYTES
+      + DATABASE_PLACE_CARD_MAP_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

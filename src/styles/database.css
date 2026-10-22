@@ -11669,6 +11669,8 @@ button[data-blok-database-feed-reaction]:hover,
 }
 
 [data-blok-database-place-card-map] {
+  /* MapLibre's own position rule is scoped to descendants; the map root is this box. */
+  position: relative;
   block-size: 150px;
   border-radius: var(--blok-radius-control);
   overflow: hidden;

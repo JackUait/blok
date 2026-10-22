@@ -14569,6 +14569,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-database-place-card-map] {
+  position: relative;
   block-size: 150px;
   border-radius: var(--blok-radius-control);
   overflow: hidden;

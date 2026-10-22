@@ -24,9 +24,17 @@
   from { opacity: 0; transform: translateY(-4px) scale(0.99) }
 }
 
+@keyframes blok-assistant-rise {
+  from { opacity: 0; transform: translateY(6px) scale(0.96); filter: blur(2px) }
+}
+
 @keyframes blok-assistant-shine {
   from { background-position: 100% 0 }
   to { background-position: -150% 0 }
+}
+
+@keyframes blok-assistant-turn {
+  to { transform: rotate(1turn) }
 }
 
 @keyframes blok-assistant-wobble {

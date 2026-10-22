@@ -86,6 +86,8 @@ describe('Ask AI bar colours', () => {
     ['send', 'data-blok-assistant-send'],
     ['keep', 'data-blok-assistant-keep'],
     ['undo', 'data-blok-assistant-undo'],
+    ['stop', 'data-blok-assistant-stop'],
+    ['action', 'data-blok-assistant-action'],
   ])('%s and its states are not blue in any theme', (_name, attribute) => {
     const rules = rulesFor(attribute);
     const values = rules.flatMap(([, body]) => [...body.matchAll(PAINT)].map((match) => match[2].trim()));
@@ -102,25 +104,56 @@ describe('Ask AI bar colours', () => {
   it('send is ink when ready and a gray fill while the field is empty', () => {
     const send = rulesFor('data-blok-assistant-send');
     const ready = send.find(([selector]) => selector === '[data-blok-assistant-send]');
-    const empty = send.find(([selector]) => selector.includes(':disabled'));
+    const empty = send.find(([selector]) => selector === '[data-blok-assistant-send]:disabled');
 
     expect(ready?.[1]).toMatch(/background:\s*var\(--blok-text-primary\)/);
     expect(empty?.[1]).toMatch(/background:\s*var\(--blok-border-subtle\)/);
   });
 
-  it('under reduced motion the chevron does not turn and buttons do not press in', () => {
+  const reducedRule = (selector: string): string => {
     const reduced = [...ASSISTANT_CSS.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/@media \(prefers-reduced-motion: reduce\)\s*\{((?:[^{}]*\{[^{}]*\})*)\s*\}/g)]
       .map((match) => match[1])
       .join('\n');
-    const rule = (selector: string): string => {
-      const found = [...reduced.matchAll(/([^{}]+)\{([^{}]*)\}/g)].find(([, selectors]) => selectors.split(',').map((part) => part.trim()).includes(selector));
+    const found = [...reduced.matchAll(/([^{}]+)\{([^{}]*)\}/g)].find(([, selectors]) => selectors.split(',').map((part) => part.trim()).includes(selector));
 
-      return found?.[2] ?? '';
-    };
+    return found?.[2] ?? '';
+  };
 
-    expect(rule('[data-blok-assistant-more] svg')).toMatch(/transition:\s*none/);
+  it('under reduced motion buttons do not press in', () => {
     ['[data-blok-assistant-send]:active:not(:disabled)', '[data-blok-assistant-undo]:active', '[data-blok-assistant-keep]:active', '[data-blok-assistant-button]:active']
-      .forEach((selector) => expect(rule(selector), selector).toMatch(/transform:\s*none/));
+      .forEach((selector) => expect(reducedRule(selector), selector).toMatch(/transform:\s*none/));
+  });
+
+  it('under reduced motion the halo, the Stop arc and the rise-in stay still', () => {
+    ['[data-blok-assistant-send]::before', '[data-blok-assistant-stop]::before', '[data-blok-assistant-action]']
+      .forEach((selector) => expect(reducedRule(selector), selector).toMatch(/animation:\s*none/));
+  });
+
+  it('send glows with a turning halo only while there is something to send', () => {
+    const send = rulesFor('data-blok-assistant-send');
+    const halo = send.find(([selector]) => selector === '[data-blok-assistant-send]::before');
+    const off = send.find(([selector]) => selector === '[data-blok-assistant-send]:disabled::before');
+
+    expect(halo?.[1]).toMatch(/background-image:\s*conic-gradient\(/);
+    expect(halo?.[1]).toMatch(/animation:[^;]*infinite/);
+    expect(off?.[1]).toMatch(/opacity:\s*0\s*;/);
+  });
+
+  it('Stop is an ink disc with a spinning arc around it', () => {
+    const stop = rulesFor('data-blok-assistant-stop');
+    const disc = stop.find(([selector]) => selector === '[data-blok-assistant-stop]');
+    const arc = stop.find(([selector]) => selector === '[data-blok-assistant-stop]::before');
+
+    expect(disc?.[1]).toMatch(/border-radius:\s*50%/);
+    expect(disc?.[1]).toMatch(/background:\s*var\(--blok-text-primary\)/);
+    expect(arc?.[1]).toMatch(/animation:[^;]*infinite/);
+  });
+
+  it('actions are outlined pills that rise in one after another', () => {
+    const [, body] = rulesFor('data-blok-assistant-action').find(([selector]) => selector === '[data-blok-assistant-action]') ?? ['', ''];
+
+    expect(body).toMatch(/border-radius:\s*var\(--blok-radius-pill\)/);
+    expect(body).toMatch(/animation-delay:\s*calc\(var\(--blok-assistant-action-index\)/);
   });
 
   it('the bar is not docked to the bottom of the window', () => {

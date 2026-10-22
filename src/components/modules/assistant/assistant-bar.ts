@@ -51,6 +51,9 @@ const ATTR = {
   thinking: 'data-blok-assistant-thinking',
   thinkingMenu: 'data-blok-assistant-thinking-menu',
   button: 'data-blok-assistant-button',
+  stop: 'data-blok-assistant-stop',
+  action: 'data-blok-assistant-action',
+  actionIcon: 'data-blok-assistant-action-icon',
   undo: 'data-blok-assistant-undo',
   keep: 'data-blok-assistant-keep',
   continue: 'data-blok-assistant-continue',
@@ -209,8 +212,8 @@ export class AssistantBar {
 
     this.send = build('button', { type: 'button', [ATTR.send]: '', 'aria-label': t('assistant.send') });
     this.send.innerHTML = IconArrowUp;
-    this.stop = build('button', { type: 'button', [ATTR.button]: '' });
-    this.stop.textContent = t('assistant.stop');
+    // A round stop key: CSS draws the square and the spinning arc.
+    this.stop = this.iconButton(ATTR.stop, '', t('assistant.stop'));
     this.thinking = build('button', {
       type: 'button',
       [ATTR.thinking]: '',
@@ -399,10 +402,18 @@ export class AssistantBar {
    * @param actions - each button's label and the prompt it sends
    */
   public setActions(actions: readonly AssistantAction[]): void {
-    this.actions.replaceChildren(...actions.map(({ label, prompt }) => {
-      const button = build('button', { type: 'button', [ATTR.button]: '' });
+    this.actions.replaceChildren(...actions.map(({ label, prompt, icon }, index) => {
+      const button = build('button', { type: 'button', [ATTR.action]: '' });
 
-      button.textContent = label;
+      // Each one rises in a beat after the one before it.
+      button.style.setProperty('--blok-assistant-action-index', String(index));
+      if (icon !== undefined) {
+        const glyph = build('span', { [ATTR.actionIcon]: '', 'aria-hidden': 'true' });
+
+        glyph.innerHTML = icon;
+        button.append(glyph);
+      }
+      button.append(label);
       button.addEventListener('click', () => {
         if (!this.field.readOnly) {
           this.callbacks.onSubmit(prompt);

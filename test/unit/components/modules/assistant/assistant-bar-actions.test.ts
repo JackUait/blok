@@ -63,6 +63,32 @@ describe('assistant bar: action buttons and Insert', () => {
     expect(callbacks.onSubmit).toHaveBeenCalledWith('Summarize the document.');
   });
 
+  it('draws an action\'s icon before its label, hidden from screen readers', () => {
+    bar.setActions([{ label: 'Summarize', prompt: 'Summarize.', icon: '<svg data-testid="summary-icon"></svg>' }, { label: 'Plain', prompt: 'Plain.' }]);
+
+    const [withIcon, plain] = within(group()).getAllByRole('button');
+
+    expect(withIcon).toHaveAccessibleName('Summarize');
+    expect(withIcon.querySelector('[aria-hidden="true"] svg[data-testid="summary-icon"]')).not.toBeNull();
+    expect(plain).toHaveAccessibleName('Plain');
+    expect(plain.querySelector('svg')).toBeNull();
+  });
+
+  it('staggers the actions: each one knows its place for the rise-in', () => {
+    const buttons = within(group()).getAllByRole('button');
+
+    expect(buttons.map((button) => button.style.getPropertyValue('--blok-assistant-action-index'))).toEqual(['0', '1']);
+  });
+
+  it('shows Stop as a round stop key named Stop, with no visible text', () => {
+    bar.render({ kind: 'working', status: 'Thinking…' });
+
+    const stop = within(bar.element).getByRole('button', { name: 'assistant.stop' });
+
+    expect(stop.hasAttribute('data-blok-assistant-stop')).toBe(true);
+    expect(stop.textContent).toBe('');
+  });
+
   it('puts the actions under the field, so the field never moves when they hide', () => {
     const row = field().closest('[data-blok-assistant-row]');
 

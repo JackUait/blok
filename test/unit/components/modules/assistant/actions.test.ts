@@ -72,6 +72,20 @@ describe('assistantActions', () => {
     expect(assistantActions('empty', t, host)).toEqual([{ label: 'Draft', prompt: 'Draft a plan.' }]);
   });
 
+  it('gives every built-in action an icon', () => {
+    [...assistantActions('selection', t), ...assistantActions('caret', t)]
+      .forEach((action) => expect(action.icon, action.label).toMatch(/^\s*<svg/));
+  });
+
+  it('keeps a host action\'s icon, and shows a host action without one as text only', () => {
+    const host = [
+      { label: 'Translate', prompt: 'Translate it.', icon: '<svg></svg>' },
+      { label: 'Tone', prompt: 'Make it friendly.' },
+    ];
+
+    expect(assistantActions('caret', t, host).map((action) => action.icon)).toEqual(['<svg></svg>', undefined]);
+  });
+
   it('hides every action for an empty host list', () => {
     expect(assistantActions('caret', t, [])).toEqual([]);
   });

@@ -128,7 +128,7 @@ const group = (): HTMLElement => {
 
   return found;
 };
-const labels = (): string[] => within(group()).queryAllByRole('button').map((button) => button.textContent ?? '');
+const labels = (): string[] => within(group()).queryAllByRole('button').map((button) => button.textContent?.trim() ?? '');
 
 describe('Ask AI action buttons', () => {
   beforeEach(() => {

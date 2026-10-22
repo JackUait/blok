@@ -172,6 +172,8 @@ export interface AgentAssistantAction {
   label: string;
   /** What the button sends to the model. */
   prompt: string;
+  /** An SVG string drawn before the label. Without it, the button shows only its label. */
+  icon?: string;
   /**
    * When the button shows:
    * - `selection`: the user selected text.

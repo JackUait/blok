@@ -553,6 +553,19 @@ describe('PageLayoutBuilder', () => {
       drawer.destroy();
     });
 
+    it('resets nothing when the × closes the question', async () => {
+      const { drawer, options } = customize({ schema: SHAPED() });
+
+      askReset();
+      q('[data-blok-database-confirm-close]')?.click();
+      await settle();
+
+      expect(options.onPageLayoutChange).not.toHaveBeenCalled();
+      expect(q('[data-blok-database-confirm-dialog]')).toBeNull();
+      expect(q(BUILDER)).not.toBeNull();
+      drawer.destroy();
+    });
+
     it('resets to Simple with no pins, sections or labels, templates back on, and closes the builder', async () => {
       const { drawer, options } = customize({ schema: SHAPED() });
 

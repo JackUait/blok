@@ -164,6 +164,25 @@ describe('Popover: children.moreButton', () => {
     expect(onChild).not.toHaveBeenCalled();
   });
 
+  it.each([[true, true], [false, false]])('Escape in the "…" submenu with escapeClosesSubmenuFirst %s keeps the menu: %s', (opt, kept) => {
+    const trigger = document.createElement('button');
+
+    document.body.appendChild(trigger);
+    const popover = new PopoverDesktop({ items: items(), trigger });
+
+    popovers.push(popover);
+    document.body.appendChild(popover.getElement());
+    popover.show();
+    popover.escapeClosesSubmenuFirst = opt;
+    focusRow(popover, 'row');
+    key(popover, 'ArrowRight', 39);
+    key(popover, 'ArrowDown', 40);
+    itemEl('child')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true, cancelable: true }));
+
+    expect(itemEl('child')).toBeNull();
+    expect(popover.getElement().hasAttribute('data-blok-popover-opened') || popover.getElement().querySelector('[data-blok-popover-opened]') !== null).toBe(kept);
+  });
+
   it('Enter on the row runs its action', () => {
     const popover = open();
 

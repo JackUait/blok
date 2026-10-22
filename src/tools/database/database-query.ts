@@ -16,6 +16,12 @@ import { scopeSubItems } from './sub-items';
 import { isEmptyObjectValue, isOutputData, placeText } from './tier3-values';
 import { comparePositions } from './positions';
 
+/**
+ * Marks the shown property of a formula whose branches differ (computed-properties.ts).
+ * A symbol, so saved data can never carry it: a formula changed to Text keeps its `formula`.
+ */
+export const MIXED_FORMULA = Symbol('mixed-type formula');
+
 const TEXT_OPERATORS = ['equals', 'does_not_equal', 'contains', 'does_not_contain', 'starts_with', 'ends_with', 'is_empty', 'is_not_empty'] as const;
 const COMPARE_OPERATORS = ['equals', 'does_not_equal', 'greater_than', 'greater_than_or_equal_to', 'less_than', 'less_than_or_equal_to'] as const;
 const NUMBER_OPERATORS = [...COMPARE_OPERATORS, 'is_empty', 'is_not_empty'] as const;
@@ -520,9 +526,8 @@ const sortKeyOf = (property: PropertyDefinition, value: PropertyValue | undefine
       return names.length > 0 ? names : undefined;
     }
     case 'text':
-      // research/35 §17: a formula whose branches differ shows as text (computed-properties.ts keeps
-      // its `formula`); its numbers sort as numbers, ahead of the text.
-      if (property.formula !== undefined && typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value))) return Number(value);
+      // research/35 §17: a formula whose branches differ shows as text; its numbers sort as numbers, ahead of the text.
+      if (MIXED_FORMULA in property && typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value))) return Number(value);
 
       return typeof value === 'string' && value !== '' ? value : undefined;
     case 'title':

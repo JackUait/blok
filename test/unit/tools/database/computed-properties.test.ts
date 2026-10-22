@@ -133,6 +133,15 @@ describe('ComputedProperties', () => {
       expect(engine.valueProperty(mixed).type).toBe('text');
     });
 
+    // A formula changed to Text keeps its `formula` setting (so a change back restores it); it sorts as text.
+    it('sorts a Text property that still carries a formula setting as text', () => {
+      const converted: PropertyDefinition = { id: 'notes', name: 'Notes', type: 'text', position: 'b0', formula: { expression: '1' } };
+      const engine = new ComputedProperties('db');
+      const rows = [row('a', { notes: '42' }), row('b', { notes: '100' })];
+
+      expect(sortRows(rows, [{ propertyId: 'notes', direction: 'asc' }], [title, engine.valueProperty(converted)]).map((r) => r.id)).toEqual(['b', 'a']);
+    });
+
     // research/35 §17: left-aligned like text, the text filter conditions, and only None, Count and Percent.
     it('shows, filters and calculates a mixed-branch formula as text', () => {
       const shown = new ComputedProperties('db').valueProperty(formula('mixed', 'if({{property:amount}} > 40, {{property:amount}}, "low")'));

@@ -121,9 +121,9 @@ const feedAge = (at: number, locale: string): string => {
   const age = Date.now() - at;
 
   if (age < 0 || age >= 24 * HOUR_MS) return formatRelativeStamp(at, locale, { timeFormat: 'hidden' });
-  const [value, unit] = age < HOUR_MS ? [Math.floor(age / MINUTE_MS), 'minute'] : [Math.floor(age / HOUR_MS), 'hour'];
+  const unit = age < HOUR_MS ? 'minute' : 'hour';
 
-  return new Intl.NumberFormat(locale, { style: 'unit', unit, unitDisplay: 'narrow' }).format(value);
+  return new Intl.NumberFormat(locale, { style: 'unit', unit, unitDisplay: 'narrow' }).format(Math.floor(age / (unit === 'minute' ? MINUTE_MS : HOUR_MS)));
 };
 
 export class DatabaseFeedView implements DatabaseViewRenderer {

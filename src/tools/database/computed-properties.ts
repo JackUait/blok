@@ -6,6 +6,7 @@ import { isDate, isRef } from './formula/types';
 import { readPropertyValue } from './property-values';
 import { relationIdsOf } from './relation-values';
 import { computeRollup, rollupResultType } from './rollup';
+import { MIXED_FORMULA } from './database-query';
 import type { DatabaseRow, PropertyDefinition, PropertyValue } from './types';
 
 /** A database in this document, as another database reads it. */
@@ -59,8 +60,8 @@ const shapeOfFormula = (type: FormulaType, property: PropertyDefinition): Proper
     return { ...base, type: 'relation', ...(element.databaseId !== undefined ? { relation: { targetDatabaseId: element.databaseId } } : {}) };
   }
 
-  // Branches of different types. The kept `formula` tells database-query.ts sortKeyOf to sort the numbers as numbers.
-  if (type.kind === 'any') return { ...base, type: 'text', ...(property.formula !== undefined ? { formula: property.formula } : {}) };
+  // Branches of different types: shown as text, but its numbers sort as numbers (research/35 §17).
+  if (type.kind === 'any') return Object.assign({ ...base, type: 'text' as const }, { [MIXED_FORMULA]: true });
 
   return { ...base, type: 'text' };
 };

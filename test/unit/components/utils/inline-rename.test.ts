@@ -219,6 +219,71 @@ describe('startInlineRename', () => {
     expect(container.querySelector('div[data-title]')?.textContent).toBe('Done');
   });
 
+  describe('while an IME composes', () => {
+    const open = (escapeCommits: boolean): { input: HTMLInputElement; onCommit: ReturnType<typeof vi.fn>; onCancel: ReturnType<typeof vi.fn> } => {
+      const { container, title } = makeTitle('Todo');
+      const onCommit = vi.fn();
+      const onCancel = vi.fn();
+
+      startInlineRename({ target: title, currentValue: 'Todo', label: 'Rename', escapeCommits, onCommit, onCancel, buildRestored });
+      const input = container.querySelector('input');
+
+      if (input === null) {
+        throw new Error('no input');
+      }
+      input.value = 'にほ';
+
+      return { input, onCommit, onCancel };
+    };
+    const composingKey = (input: HTMLInputElement, key: string, init: KeyboardEventInit = { isComposing: true }): void => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init }));
+    };
+
+    it('Enter picks the IME candidate and does not commit', () => {
+      const { input, onCommit } = open(false);
+
+      composingKey(input, 'Enter');
+
+      expect(onCommit).not.toHaveBeenCalled();
+      expect(input.isConnected).toBe(true);
+    });
+
+    it('Escape with escapeCommits does not commit', () => {
+      const { input, onCommit } = open(true);
+
+      composingKey(input, 'Escape');
+
+      expect(onCommit).not.toHaveBeenCalled();
+      expect(input.isConnected).toBe(true);
+    });
+
+    it('Escape does not cancel', () => {
+      const { input, onCancel } = open(false);
+
+      composingKey(input, 'Escape');
+
+      expect(onCancel).not.toHaveBeenCalled();
+      expect(input.isConnected).toBe(true);
+    });
+
+    // Some browsers send the key that ends a composition as keyCode 229 without isComposing.
+    it('Enter with keyCode 229 does not commit', () => {
+      const { input, onCommit } = open(false);
+
+      composingKey(input, 'Enter', { keyCode: 229 });
+
+      expect(onCommit).not.toHaveBeenCalled();
+    });
+
+    it('Enter after the composition ends commits', () => {
+      const { input, onCommit } = open(false);
+
+      composingKey(input, 'Enter', {});
+
+      expect(onCommit).toHaveBeenCalledWith('にほ');
+    });
+  });
+
   it('does not commit on the blur that follows an Escape cancel', () => {
     const { container, title } = makeTitle('Todo');
     const onCommit = vi.fn();

@@ -113,6 +113,11 @@ export function startInlineRename(params: StartInlineRenameParams): void {
   input.addEventListener('keydown', (event: KeyboardEvent) => {
     event.stopPropagation();
 
+    // The IME owns Enter and Escape while it composes: they pick or drop a candidate.
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Keep the IME 229 fallback when isComposing is false.
+    if (event.isComposing || event.keyCode === 229) {
+      return;
+    }
     if (event.key === 'Enter' || (event.key === 'Escape' && escapeCommits)) {
       commit();
     } else if (event.key === 'Escape') {

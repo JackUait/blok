@@ -401,11 +401,13 @@ test.describe('columns', () => {
     expect(after?.x).toBeGreaterThanOrEqual((before?.x ?? 0) - 300 + 1);
   });
 
-  test('the header hint shows the full name only after a hover delay', async ({ page }) => {
+  // research/33 §1: Notion showed nothing on 4 undescribed headers within 3s.
+  test('a header without a description shows no hint, and keeps its name', async ({ page }) => {
     await mount(page, blocks());
     await header(page, 'p-amount').hover();
-    await expect(page.getByRole('tooltip')).toHaveCount(0);
-    await expect(page.getByRole('tooltip')).toContainText('Amount', { timeout: 2000 });
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 3000)));
+    await expect(page.getByTestId('tooltip').and(page.locator('[data-blok-shown="true"]'))).toHaveCount(0);
+    await expect(page.getByRole('columnheader', { name: 'Amount' })).toBeVisible();
   });
 });
 

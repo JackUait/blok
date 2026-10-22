@@ -626,9 +626,8 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     name.textContent = property.name;
     button.append(icon, name);
     cell.appendChild(button);
-    if (property.description === undefined || property.description === '') {
-      onHover(cell, property.name);
-    } else {
+    // research/33 §1: a header without a description has no hint.
+    if (property.description !== undefined && property.description !== '') {
       const info = document.createElement('span');
 
       // research/30 X2: an (i) after the name.

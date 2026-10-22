@@ -287,15 +287,17 @@ describe('DatabaseTableView', () => {
         expect(shownHint()).toBeNull();
       });
 
-      it('a header without a description keeps its plain name hint', () => {
+      // research/33 §1: 4 headers, 2 points each, 3s: no hint.
+      it('a header without a description shows no hint, but keeps its name', () => {
         const { root } = mount({ schema: described });
         const cellEl = header(root, 'p-amount');
 
         vi.spyOn(cellEl, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 100, y: 300, width: 200, height: 33 }));
         cellEl.dispatchEvent(new MouseEvent('mouseenter'));
-        vi.advanceTimersByTime(HINT_DELAY);
-        expect(shownHint()?.text).toBe('Amount');
-        expect(document.querySelector('[data-blok-database-header-hint]')).toBeNull();
+        vi.advanceTimersByTime(3000);
+        expect(shownHint()).toBeNull();
+        expect(cellEl.getAttribute('role')).toBe('columnheader');
+        expect(cellEl.textContent?.trim()).toBe('Amount');
       });
     });
 

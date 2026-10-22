@@ -402,10 +402,40 @@ test.describe('property header menu: Edit property opens one level at a time (re
 
     expect(description).toBe('First line');
 
-    // Reopened: the field shows the text at once and the (i) reads "Edit".
+    // research/35 §5: reopened, the field stays closed; the (i) reads "Edit" and opens it with the text.
     await header.click();
-    await expect(open.getByRole('button', { name: 'Edit property description', exact: true })).toBeVisible();
-    await expect(open.getByRole('textbox', { name: 'Property description', exact: true })).toHaveValue('First line');
+    const edit = open.getByRole('button', { name: 'Edit property description', exact: true });
+    const reopened = open.getByRole('textbox', { name: 'Property description', exact: true });
+
+    await expect(edit).toBeVisible();
+    await expect(reopened).toBeHidden();
+    await edit.click();
+    await expect(reopened).toBeVisible();
+    await expect(reopened).toHaveValue('First line');
+
+    // research/35 §5: Shift+Enter adds a line; 20/40/60px of text, then it scrolls.
+    await reopened.press('End');
+    // offsetHeight: the menu may still be scaling in.
+    const height = async (): Promise<number> => reopened.evaluate((el) => (el instanceof HTMLElement ? el.offsetHeight : 0));
+
+    expect(await height()).toBe(28);
+    await page.keyboard.press('Shift+Enter');
+    await page.keyboard.type('two');
+    expect(await height()).toBe(48);
+    await page.keyboard.press('Shift+Enter');
+    await page.keyboard.type('three');
+    expect(await height()).toBe(68);
+    await page.keyboard.press('Shift+Enter');
+    await page.keyboard.type('four');
+    await expect(reopened).toHaveValue('First line\ntwo\nthree\nfour');
+    expect(await height()).toBe(68);
+    expect(await reopened.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+
+    // research/35 §5: a second click on the (i) closes the field and keeps the text.
+    await edit.click();
+    await expect(reopened).toBeHidden();
+    await edit.click();
+    await expect(reopened).toHaveValue('First line\ntwo\nthree\nfour');
   });
 
   // research/30 X2: a described property's header shows an (i). research/31 §1: hovering the header shows its name and description above it.
@@ -418,12 +448,9 @@ test.describe('property header menu: Edit property opens one level at a time (re
       await header.click();
       const area = open.getByRole('textbox', { name: 'Property description', exact: true });
 
-      if (await area.isVisible()) {
-        await area.fill(text);
-      } else {
-        await open.getByRole('button', { name: 'Add property description', exact: true }).click();
-        await page.keyboard.type(text);
-      }
+      // research/35 §5: the field always opens closed; the (i) reads "Add" or "Edit".
+      await open.getByRole('button', { name: /^(Add|Edit) property description$/ }).click();
+      await area.fill(text);
       await page.keyboard.press('Escape');
       await expect(open).toHaveCount(0);
     };
@@ -489,6 +516,7 @@ test.describe('property header menu: Edit property opens one level at a time (re
     await header.click();
     const area = open.getByRole('textbox', { name: 'Property description', exact: true });
 
+    await open.getByRole('button', { name: 'Edit property description', exact: true }).click();
     await area.fill('');
     await page.keyboard.press('Escape');
     await expect(open).toHaveCount(0);

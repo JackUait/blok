@@ -111,6 +111,29 @@ describe('DatabaseBoardView card parity', () => {
       }
     });
 
+    // research/20 §1d: a place keeps its own card; the property hint around it must not replace it.
+    it('hovering a place value still shows the place card', () => {
+      destroyTooltip();
+      vi.useFakeTimers();
+      try {
+        const board = mount({
+          view: boardView({ properties: [{ id: 'where', visible: true }] }),
+          schema: [...schema, { id: 'where', name: 'Where', type: 'place', position: 'a5' }],
+          getRows: () => [{ id: 'r1', position: 'a0', properties: { title: 'One', where: { name: 'Berlin', address: 'Germany' } } }],
+        });
+        const item = card(board, 'r1').querySelector<HTMLElement>('[data-blok-database-card-property][data-property-id="where"]');
+
+        // The browser enters the item, then the cell inside it.
+        hover(item);
+        hover(item?.firstElementChild);
+        vi.advanceTimersByTime(HINT_DELAY);
+        expect(document.querySelector('[data-blok-testid="tooltip-content"] [data-blok-database-place-card]')).not.toBeNull();
+        expect(document.querySelector('[data-blok-testid="tooltip-content"] [data-blok-database-header-hint]')).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('marks each property with its wrap setting', () => {
       const board = mount({ view: boardView({ properties: [{ id: 'notes', visible: true, wrap: true }] }) });
 

@@ -2,7 +2,7 @@ import { nanoid } from 'nanoid';
 import type { I18n } from '../../../types';
 import { englishDictionary } from '../../components/i18n/lightweight-i18n';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
-import { IconArrowDiagonal, IconArrowUp, IconCheck, IconCopy, IconChevronDown, IconChevronLeft, IconChevronRight, IconCross, IconDatabase, IconDotsHorizontal, IconEyeClosed, IconEyeSlash, IconInfo, IconMenu, IconMinus, IconMoveDown, IconPage, IconPencil, IconPin, IconPinFilled, IconPlus, IconPreview, IconSplitView, IconTabs, IconTrash } from '../../components/icons';
+import { IconArrowDiagonal, IconArrowUp, IconCheck, IconCopy, IconChevronDown, IconChevronLeft, IconChevronRight, IconCross, IconDatabase, IconDotsHorizontal, IconEyeClosed, IconEyeSlash, IconInfo, IconMenu, IconMinus, IconMoveDown, IconPage, IconPencil, IconPin, IconPinFilled, IconPlus, IconPreview, IconSplitView, IconTabs, IconTrash, IconUndo } from '../../components/icons';
 import { holdLeave } from '../../components/utils/leave-guards';
 import { openModalDialog } from '../../components/utils/modal-dialog';
 import { onHover } from '../../components/utils/tooltip';
@@ -1525,6 +1525,10 @@ export class PageLayoutBuilder {
       cancelLabel: this.label('tools.database.layoutCancel'),
       destructive: true,
       filled: true,
+      art: [IconUndo],
+      closeLabel: this.label('tools.database.close'),
+      largeTitle: true,
+      quietCancel: true,
       directionSource: this.root,
       // Over this modal: two focus traps on body would pull focus back and forth.
       container: this.root,

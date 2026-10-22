@@ -576,6 +576,9 @@ describe('New data source: a view bound to a second source in the same block', (
     expect(confirmAction('confirm')?.textContent).toBe('Delete view');
     expect(confirmAction('confirm')?.hasAttribute('data-filled')).toBe(true);
     expect(confirmAction('cancel')?.textContent).toBe('Cancel');
+    // research/26 §5a: a 17px title; Cancel keeps its border.
+    expect(document.querySelector('[data-blok-database-confirm-dialog]')?.hasAttribute('data-large-title')).toBe(true);
+    expect(confirmAction('cancel')?.hasAttribute('data-quiet')).toBe(false);
     // Nothing is deleted before the answer.
     expect((await dataOf(api, 'db'))?.views.some((v) => v.id === 'vb')).toBe(true);    confirmAction('cancel')?.click();
   });

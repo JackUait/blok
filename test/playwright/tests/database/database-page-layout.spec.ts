@@ -866,7 +866,8 @@ test.describe('row page layout', () => {
     const confirm = page.getByRole('alertdialog', { name: 'Reset to original page layout?' });
 
     await expect(confirm).toHaveAccessibleDescription('No properties will be deleted.');
-    await expect(confirm.getByRole('button', { name: 'Cancel' })).toBeFocused();
+    // Like "Delete the last view…" (research/30 B3), a dialog with a × opens with focus on it.
+    await expect(confirm.getByRole('button', { name: 'Close' })).toBeFocused();
     await confirm.getByRole('button', { name: 'Reset' }).click();
 
     await expect(builder(page)).toBeHidden();
@@ -877,7 +878,8 @@ test.describe('row page layout', () => {
     expect(await savedTitle(page)).toMatchObject({ pageLayoutPlacements: [{ id: 'p-due', place: 'group' }], pageLayoutSections: [] });
   });
 
-  // research/33 §3.10: title weight 500, body 12px. research/10 §5: Reset is a filled red button.
+  // research/33 §3.10: title weight 500, body 12px. research/10 §5: Reset is a filled red button,
+  // with a U-turn glyph, a ×, a 17px title and a grey borderless Cancel.
   // Notion's body grey and red fail AA, so Blok keeps its secondary ink and AA red.
   for (const [scheme, body] of [['light', 'rgb(114, 111, 106)'], ['dark', 'rgb(173, 169, 163)']] as const) {
     test(`the Reset confirm draws Notion's look in ${scheme}`, async ({ page }) => {
@@ -892,7 +894,11 @@ test.describe('row page layout', () => {
       const read = (locator: Locator, props: string[]): Promise<string[]> =>
         locator.evaluate((el, names) => names.map((name) => getComputedStyle(el).getPropertyValue(name)), props);
 
-      expect(await read(confirm.locator('[data-blok-database-confirm-title]'), ['font-weight'])).toEqual(['500']);
+      expect(await read(confirm.locator('[data-blok-database-confirm-title]'), ['font-weight', 'font-size'])).toEqual(['500', '17px']);
+      await expect(confirm.locator('[data-blok-database-confirm-art] svg')).toBeVisible();
+      await expect(confirm.getByRole('button', { name: 'Close' })).toBeVisible();
+      expect(await read(confirm.getByRole('button', { name: 'Cancel' }), ['border-top-color', 'background-color', 'color']))
+        .toEqual(['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0)', body]);
       expect(await read(confirm.locator('[data-blok-database-confirm-description]'), ['font-size', 'color'])).toEqual(['12px', body]);
       expect(await read(confirm.getByRole('button', { name: 'Reset' }), ['background-color', 'color']))
         .toEqual(['rgb(182, 79, 70)', 'rgb(253, 246, 246)']);

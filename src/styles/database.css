@@ -4294,6 +4294,12 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   color: var(--blok-database-ink);
 }
 
+/* research/26 §5a and 10 §5. Only 26 §5a read the line height. */
+[data-blok-database-confirm-dialog][data-large-title] [data-blok-database-confirm-title] {
+  font-size: 17px;
+  line-height: 22px;
+}
+
 /* research/33 §3.10 read 12px; its line height was not. */
 [data-blok-database-confirm-description] {
   margin-top: var(--blok-space-1);

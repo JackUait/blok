@@ -115,6 +115,29 @@ describe('openDatabaseConfirm', () => {
     expect(action('cancel')?.hasAttribute('data-filled')).toBe(false);
   });
 
+  // research/10 §5 and 26 §5a: Reset and Delete the last view read a 17px title; the rest read 16px.
+  it('marks the title large only when asked', () => {
+    void open();
+
+    expect(dialog()?.hasAttribute('data-large-title')).toBe(false);
+    document.body.innerHTML = '';
+    void openDatabaseConfirm({ title: 'Reset?', confirmLabel: 'Reset', cancelLabel: 'Cancel', largeTitle: true });
+
+    expect(dialog()?.hasAttribute('data-large-title')).toBe(true);
+  });
+
+  // research/10 §5: Reset's Cancel has no border or fill and grey ink.
+  it('draws a quiet Cancel only when asked', () => {
+    void openDatabaseConfirm({ title: 'Delete?', confirmLabel: 'Delete', cancelLabel: 'Cancel', destructive: true });
+
+    expect(action('cancel')?.hasAttribute('data-quiet')).toBe(false);
+    document.body.innerHTML = '';
+    void openDatabaseConfirm({ title: 'Reset?', confirmLabel: 'Reset', cancelLabel: 'Cancel', destructive: true, quietCancel: true });
+
+    expect(action('cancel')?.hasAttribute('data-quiet')).toBe(true);
+    expect(action('confirm')?.hasAttribute('data-quiet')).toBe(false);
+  });
+
   // research/26 §5a: "Delete the last view for this data source?" with two radio cards.
   describe('radio cards', () => {
     const choices = [

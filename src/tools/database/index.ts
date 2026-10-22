@@ -4372,6 +4372,7 @@ export class DatabaseTool implements BlockTool {
       filled: true,
       art: [IconTrash],
       closeLabel: t('tools.database.close'),
+      largeTitle: true,
       directionSource: this.element,
       choices: [
         { label: t('tools.database.deleteLastViewOnly'), description: t('tools.database.deleteLastViewOnlyDescription') },

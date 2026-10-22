@@ -7657,6 +7657,11 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   color: var(--blok-database-ink);
 }
 
+[data-blok-database-confirm-dialog][data-large-title] [data-blok-database-confirm-title] {
+  font-size: 17px;
+  line-height: 22px;
+}
+
 [data-blok-database-confirm-description] {
   margin-top: var(--blok-space-1);
   font-size: 12px;

@@ -56,6 +56,23 @@ describe('database confirm dialog css', () => {
     expect(body).toContain('text-align: center');
   });
 
+  // research/26 §5a reads 17px/22px on "Delete the last view…"; research/10 §5 reads 17px on Reset.
+  it('grows the title to 17px/22px on a dialog marked large', () => {
+    const body = ruleBody(database, '[data-blok-database-confirm-dialog][data-large-title] [data-blok-database-confirm-title]');
+
+    expect(body).toContain('font-size: 17px');
+    expect(body).toContain('line-height: 22px');
+  });
+
+  // research/10 §5: Reset's Cancel has no border or fill and Notion's grey rgb(125, 122, 117),
+  // which is 4.27:1 on white; the secondary ink is the nearest AA step.
+  it('draws a quiet Cancel with no border and the secondary ink', () => {
+    const body = ruleBody(database, '[data-blok-database-confirm-action][data-quiet]');
+
+    expect(body).toContain('border-color: transparent');
+    expect(body).toContain('color: var(--blok-database-ink-secondary)');
+  });
+
   // research/33 §3.10 reads the body 12px/400 (the older 10 §5 read 14px). Notion's grey
   // rgb(125, 122, 117) is 4.27:1 on white, so Blok keeps its AA secondary ink.
   it('centres a 12px secondary description under the title', () => {

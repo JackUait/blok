@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { IconUndo } from '../../../../src/components/icons';
 
 import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
 import type { CardDrawerOptions } from '../../../../src/tools/database/database-card-drawer';
@@ -535,6 +536,14 @@ describe('PageLayoutBuilder', () => {
       expect(dialog?.querySelector('[data-blok-database-confirm-action="confirm"]')?.hasAttribute('data-destructive')).toBe(true);
       expect(dialog?.querySelector('[data-blok-database-confirm-action="confirm"]')?.hasAttribute('data-filled')).toBe(true);
       expect(dialog?.querySelector('[data-blok-database-confirm-action="cancel"]')?.textContent).toBe('Cancel');
+      // research/10 §5: a U-turn glyph on top, a × at the top right, a 17px title, a grey borderless Cancel.
+      const undo = document.createElement('div');
+
+      undo.innerHTML = IconUndo;
+      expect(dialog?.querySelector('[data-blok-database-confirm-art]')?.innerHTML).toBe(undo.innerHTML);
+      expect(dialog?.querySelector('[data-blok-database-confirm-close]')?.getAttribute('aria-label')).toBe('Close');
+      expect(dialog?.hasAttribute('data-large-title')).toBe(true);
+      expect(dialog?.querySelector('[data-blok-database-confirm-action="cancel"]')?.hasAttribute('data-quiet')).toBe(true);
       expect(options.onPageLayoutChange).not.toHaveBeenCalled();
       await answer('cancel');
 

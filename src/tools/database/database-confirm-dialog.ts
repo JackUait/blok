@@ -26,6 +26,10 @@ export interface DatabaseConfirmOptions {
   art?: string[];
   /** What Escape, a press outside and an abort resolve to. Defaults to false. */
   dismissAs?: boolean;
+  /** A 17px title, as Notion's Reset and "Delete the last view…" (research/10 §5, 26 §5a). */
+  largeTitle?: boolean;
+  /** A borderless grey Cancel, as Notion's Reset (research/10 §5). */
+  quietCancel?: boolean;
   /** Draws a × at the top right with this label. It dismisses, and takes focus on open (research/30 B3). */
   closeLabel?: string;
 }
@@ -65,6 +69,9 @@ const buildConfirm = (options: DatabaseConfirmOptions, choices: DatabaseChoice[]
   // Mounted on body: the popover scope brings the editor font and preflight.
   backdrop.setAttribute('data-blok-popover', '');
   panel.setAttribute('data-blok-database-confirm-dialog', '');
+  if (options.largeTitle === true) {
+    panel.setAttribute('data-large-title', '');
+  }
   const close = options.closeLabel === undefined ? null : document.createElement('button');
 
   if (close !== null) {
@@ -158,6 +165,8 @@ const buildConfirm = (options: DatabaseConfirmOptions, choices: DatabaseChoice[]
   }
   if (options.primary === true) {
     confirmButton.setAttribute('data-primary', '');
+  }
+  if (options.primary === true || options.quietCancel === true) {
     cancelButton.setAttribute('data-quiet', '');
   }
   backdrop.appendChild(panel);

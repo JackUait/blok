@@ -175,7 +175,7 @@ import { openChartDrilldown } from './database-chart-drilldown';
 import { DatabaseFeedView } from './database-feed-view';
 import type { FeedReactions } from './database-feed-view';
 import { rowReactions } from './row-reactions';
-import { csvCellText, csvDatabaseBlocks, parseCsv, planCsvMerge, serializeCsv, type CsvColumnTarget, type CsvImportSettings, type CsvMergeTarget } from './database-csv';
+import { csvCellText, csvDatabaseBlocks, csvMergeTargets, parseCsv, planCsvMerge, serializeCsv, type CsvColumnTarget, type CsvImportSettings, type CsvMergeTarget } from './database-csv';
 import { openCsvImportDialog } from './database-csv-import-dialog';
 import { formatNumberValue } from './cells/number-format';
 import { downloadBlob } from './database-download';
@@ -5377,6 +5377,28 @@ export class DatabaseTool implements BlockTool {
    * it names, and any other column becomes a new property at the end.
    */
   mergeCsv(text: string, targets?: CsvMergeTarget[], settings?: CsvImportSettings): void {
+    // Person cells match names in the directory: wait for it, or every name is dropped.
+    if (this.people === undefined && this.peopleLoad !== null && this.mergeFillsPerson(text, targets, settings)) {
+      void this.peopleLoad.then(() => {
+        if (!this.destroyed) this.applyCsvMerge(text, targets, settings);
+      });
+
+      return;
+    }
+    this.applyCsvMerge(text, targets, settings);
+  }
+
+  private mergeFillsPerson(text: string, targets?: CsvMergeTarget[], settings?: CsvImportSettings): boolean {
+    const schema = this.model.getSchema();
+    const chosen = targets ?? csvMergeTargets(parseCsv(text), schema, {
+      localized: localizeDatabaseSchema(schema, this.api.i18n),
+      ...(settings === undefined ? {} : { headers: settings.headers }),
+    });
+
+    return chosen.some((target) => typeof target !== 'string' && schema.find((p) => p.id === target.property)?.type === 'person');
+  }
+
+  private applyCsvMerge(text: string, targets?: CsvMergeTarget[], settings?: CsvImportSettings): void {
     if (this.readOnly || this.structureLocked()) return;
     const table = parseCsv(text);
 
@@ -5391,6 +5413,7 @@ export class DatabaseTool implements BlockTool {
       untitled: this.api.i18n.t('tools.database.csvUntitledColumn'),
       ...(targets === undefined ? {} : { targets }),
       ...settings,
+      ...(this.people === undefined ? {} : { people: this.people }),
     });
     const titleId = this.titlePropertyId();
     const write = (): void => {

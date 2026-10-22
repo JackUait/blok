@@ -483,6 +483,24 @@ describe('openCsvImportDialog (research/26 §2, research/27 §2)', () => {
       expect(typeLabels()).toEqual(['Titel']);
     });
 
+    // research/35 §8: Notion listed Who (Person) and left out Att (Files & media) and Fx (Formula).
+    it('lists a Person property under "Existing property", but not Files & media', async () => {
+      const people: PropertyDefinition[] = [
+        { id: 'p-name', name: 'Name', type: 'title', position: 'a0' },
+        { id: 'p-who', name: 'Who', type: 'person', position: 'a1' },
+        { id: 'p-att', name: 'Att', type: 'files', position: 'a2' },
+      ];
+
+      openCsvImportDialog({ t, hasPeople: true, merge: { location: 'Tasks', schema: people, onMerge } });
+      await choose('Name,Extra Col\nM1,Ada', 'a.csv');
+      byTestId('database-csv-map')?.click();
+      buttons()[1].click();
+      await flush();
+
+      expect(item('database-csv-type-existing-p-who')).not.toBeNull();
+      expect(item('database-csv-type-existing-p-att')).toBeNull();
+    });
+
     // research/31 §5b: Where (Place) is never listed.
     it('lists every property a CSV can fill under "Existing property" but Place, with a check on the current one', async () => {
       await mapped();

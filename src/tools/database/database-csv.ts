@@ -437,9 +437,9 @@ export interface CsvMergePlan {
 /** Where a merged CSV column goes: nowhere, an existing property, or a new property of a type. */
 export type CsvMergeTarget = CsvColumnTarget | { property: string };
 
-/** Types a merged column can fill from text. Computed, people and file values have no text form. */
+/** Types a merged column can fill from text. A person comes from a name in the people directory; computed and file values have no text form. */
 const MERGEABLE_TYPES: ReadonlySet<PropertyType> = new Set<PropertyType>([
-  'title', 'text', 'number', 'checkbox', 'date', 'url', 'email', 'phone', 'place', 'select', 'multiSelect', 'status',
+  'title', 'text', 'number', 'checkbox', 'date', 'url', 'email', 'phone', 'place', 'select', 'multiSelect', 'status', 'person',
 ]);
 
 export const isMergeableProperty = (property: PropertyDefinition): boolean => MERGEABLE_TYPES.has(property.type);
@@ -450,6 +450,8 @@ export interface CsvMergeOptions {
   /** False: the first line is a row and the columns are "Column N" (research/30 §9c). Default true. */
   headers?: boolean;
   untitled?: string;
+  /** The host's people directory: a Person cell's names become these people. */
+  people?: ReadonlyArray<{ id: string; name: string }>;
 }
 
 /**
@@ -547,6 +549,17 @@ export const planCsvMerge = (
     if (property.type === 'multiSelect') return splitLabels(text, (label) => knownOption(property, label) !== undefined).map((label) => optionId(property, label));
     // Status options sit in status groups; an unknown label has no group to go in.
     if (property.type === 'status') return knownOption(property, text)?.id ?? null;
+    // research/30 §9d: a name that is not a member is dropped. A name two people share is dropped too: picking one would guess.
+    if (property.type === 'person') {
+      const named = (label: string): Array<{ id: string }> => (options.people ?? []).filter((person) => person.name === label);
+      const ids = splitLabels(text, (label) => named(label).length > 0).flatMap((label) => {
+        const matches = named(label);
+
+        return matches.length === 1 ? [matches[0].id] : [];
+      });
+
+      return [...new Set(ids)].map((id) => ({ id }));
+    }
 
     return parseCell(property, raw);
   };

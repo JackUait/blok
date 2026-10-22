@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import {
@@ -452,6 +455,52 @@ describe('database CSV', () => {
       const plan = planCsvMerge([['Name', 'When'], ['A', '03/04/2026']], schema, { newId: ids(), dateFormats: [undefined, 'day_month_year'] });
 
       expect(plan.rows[0][plan.newProperties[0].id]).toBe('2026-04-03');
+    });
+
+    // research/35 §8: Notion offers a Person property under "Existing property".
+    // research/30 §9d: names that are not workspace members are dropped.
+    describe('into a Person property', () => {
+      const withWho: PropertyDefinition[] = [
+        { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
+        { id: 'p-who', name: 'Who', type: 'person', position: 'a1' },
+      ];
+      const people = [
+        { id: 'u1', name: 'Ada' },
+        { id: 'u2', name: 'Grace' },
+        { id: 'u3', name: 'Sam' },
+        { id: 'u4', name: 'Sam' },
+        { id: 'u5', name: 'Lovelace, Ada' },
+      ];
+      const file = parseCsv(readFileSync(resolve(__dirname, 'fixtures/merge-people.csv'), 'utf-8'));
+
+      it('maps a header naming the Person property onto it', () => {
+        expect(csvMergeTargets(file, withWho)).toEqual([{ property: 'p-title' }, { property: 'p-who' }]);
+      });
+
+      it('fills each cell with the directory people it names, and drops every name it cannot match to one person', () => {
+        const plan = planCsvMerge(file, withWho, { newId: ids(), people });
+
+        expect(plan.rows.map((row) => [row['p-title'], row['p-who']])).toEqual([
+          ['Alpha', [{ id: 'u1' }]],
+          ['Bravo', [{ id: 'u1' }, { id: 'u2' }]],
+          // Not a member.
+          ['Charlie', []],
+          // Two people share the name: neither is picked.
+          ['Delta', []],
+          ['Echo', []],
+          // A name with a comma stays one name.
+          ['Foxtrot', [{ id: 'u5' }]],
+          // Case is not measured: only the exact name matches.
+          ['Golf', []],
+        ]);
+        expect(plan.newProperties).toEqual([]);
+      });
+
+      it('leaves every cell empty without a people directory', () => {
+        const plan = planCsvMerge(file, withWho, { newId: ids() });
+
+        expect(plan.rows.every((row) => Array.isArray(row['p-who']) && row['p-who'].length === 0)).toBe(true);
+      });
     });
 
     it('defaults each column: a matching property, else its detected type; a computed match is not imported', () => {

@@ -122,4 +122,79 @@ describe('computed CSV values', () => {
     expect(document.querySelector('[data-blok-database-formula-preview]')?.textContent).toBe('Sam');
     expect(parseCsv(database.exportCsv()).slice(1)).toEqual([['One', 'Sam'], ['Two', 'Nobody']]);
   });
+
+  // research/35 §8: a merge can fill an existing Person property. The file can arrive before the directory has loaded.
+  it('merges a Person column by name once the people directory loads', async () => {
+    const schema: PropertyDefinition[] = [
+      { id: 't', name: 'Name', type: 'title', position: 'a0' },
+      { id: 'owner', name: 'Owner', type: 'person', position: 'a1' },
+    ];
+    const directory: { resolve?: (people: Array<{ id: string; name: string }>) => void } = {};
+    const config: DatabaseConfig = { people: { list: () => new Promise((resolve) => { directory.resolve = resolve; }) } };
+
+    let database: DatabaseTool | undefined;
+
+    class ConfiguredDatabase extends DatabaseTool {
+      constructor(options: ConstructorParameters<typeof DatabaseTool>[0]) {
+        super({ ...options, config });
+        database = this;
+      }
+    }
+
+    editor = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { database: ConfiguredDatabase, 'database-row': DatabaseRowTool },
+      data: { blocks: [
+        { id: 'db', type: 'database', content: [], data: {
+          schema,
+          views: [{ id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], properties: schema.map(p => ({ id: p.id, visible: true })) }],
+          activeViewId: 'v',
+        } },
+      ] },
+    });
+    await editor.isReady;
+    if (database === undefined) throw new Error('no database tool');
+    database.mergeCsv('Name,Owner\nOne,Sam\nTwo,Nobody\n');
+    directory.resolve?.([{ id: 'sam', name: 'Sam' }]);
+    for (const _ of [0, 1, 2]) await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(parseCsv(database.exportCsv()).slice(1)).toEqual([['One', 'Sam'], ['Two', '']]);
+  });
+
+  it('merges a CSV with no Person column at once, even while the people directory is loading', async () => {
+    const schema: PropertyDefinition[] = [
+      { id: 't', name: 'Name', type: 'title', position: 'a0' },
+      { id: 'owner', name: 'Owner', type: 'person', position: 'a1' },
+    ];
+    const config: DatabaseConfig = { people: { list: () => new Promise(() => undefined) } };
+
+    let database: DatabaseTool | undefined;
+
+    class ConfiguredDatabase extends DatabaseTool {
+      constructor(options: ConstructorParameters<typeof DatabaseTool>[0]) {
+        super({ ...options, config });
+        database = this;
+      }
+    }
+
+    editor = new Blok({
+      holder,
+      dataModel: 'hierarchical',
+      tools: { database: ConfiguredDatabase, 'database-row': DatabaseRowTool },
+      data: { blocks: [
+        { id: 'db', type: 'database', content: [], data: {
+          schema,
+          views: [{ id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], properties: schema.map(p => ({ id: p.id, visible: true })) }],
+          activeViewId: 'v',
+        } },
+      ] },
+    });
+    await editor.isReady;
+    if (database === undefined) throw new Error('no database tool');
+    database.mergeCsv('Name\nOne\n');
+
+    expect(parseCsv(database.exportCsv()).slice(1)).toEqual([['One', '']]);
+  });
 });
+

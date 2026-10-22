@@ -1567,13 +1567,14 @@ export class PopoverDesktop extends PopoverAbstract {
       nestingLevel: this.nestingLevel + 1,
       flippable: item.isChildrenFlippable,
       messages: this.messages,
-      onNavigateBack: this.destroyNestedPopoverIfExists.bind(this),
+      onNavigateBack: this.arrowLeftClosesSubmenu ? this.destroyNestedPopoverIfExists.bind(this) : undefined,
       width: item.childrenWidth,
       minWidth: item.childrenMinWidth,
       handleContentEditableNavigation: handleContentEditable,
       autoFocusFirstItem: this.params.autoFocusFirstItem,
     });
 
+    this.nestedPopover.arrowLeftClosesSubmenu = this.arrowLeftClosesSubmenu;
     item.onChildrenOpen();
 
     /**

@@ -297,6 +297,12 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   public escapeClosesSubmenuFirst = false;
 
   /**
+   * Opt-out, set on a root menu before a submenu opens: false makes ArrowLeft
+   * leave its submenus open (only Escape closes them). Submenus inherit it.
+   */
+  public arrowLeftClosesSubmenu = true;
+
+  /**
    * Escape's first step: closes the deepest open submenu when opted in.
    * @returns true when a submenu was closed
    */

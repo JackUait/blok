@@ -16,11 +16,13 @@ vi.mock('../../../../src/blok', () => ({
 
 interface MockItem { name?: string; element?: HTMLElement; onActivate?: () => void }
 
-const popovers = vi.hoisted(() => ({ items: [] as MockItem[][], made: [] as Array<{ escapeClosesSubmenuFirst: boolean }> }));
+const popovers = vi.hoisted(() => ({ items: [] as MockItem[][], made: [] as Array<{ escapeClosesSubmenuFirst: boolean; arrowLeftClosesSubmenu: boolean }> }));
 
 vi.mock('../../../../src/components/utils/popover', () => {
   class MockPopoverDesktop {
     escapeClosesSubmenuFirst = false;
+
+    arrowLeftClosesSubmenu = true;
 
     constructor(params?: { items?: MockItem[] }) {
       popovers.items.push(params?.items ?? []);
@@ -259,6 +261,16 @@ describe('DatabaseTool — templates', () => {
     el.querySelector<HTMLButtonElement>('[data-blok-testid="database-toolbar-new-menu"]')?.click();
 
     expect(popovers.made.at(-1)?.escapeClosesSubmenuFirst).toBe(true);
+  });
+
+  // research/36 §3.1: ArrowLeft leaves a template's "…" submenu open; only Escape closes it.
+  it('ArrowLeft does not close a template\'s submenu in the New menu', () => {
+    const { el } = buildDatabase(seed(), 'db', data(), { people });
+
+    popovers.made.length = 0;
+    el.querySelector<HTMLButtonElement>('[data-blok-testid="database-toolbar-new-menu"]')?.click();
+
+    expect(popovers.made.at(-1)?.arrowLeftClosesSubmenu).toBe(false);
   });
 
   it('deleting the default template clears the default', () => {

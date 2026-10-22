@@ -8,7 +8,7 @@ import type { PopoverItemParams } from '../../../../../types/utils/popover/popov
 const itemEl = (name: string): HTMLElement | null => document.querySelector<HTMLElement>(`[data-blok-item-name="${name}"]`);
 const moreOf = (name: string): HTMLElement | null => itemEl(name)?.querySelector<HTMLElement>('[data-blok-popover-item-more]') ?? null;
 
-const key = (popover: PopoverDesktop, name: 'ArrowDown' | 'ArrowRight' | 'Enter', keyCode: number): void => {
+const key = (popover: PopoverDesktop, name: 'ArrowDown' | 'ArrowLeft' | 'ArrowRight' | 'Enter', keyCode: number): void => {
   popover.getElement().dispatchEvent(new KeyboardEvent('keydown', { key: name, code: name, keyCode, bubbles: true }));
 };
 
@@ -149,8 +149,7 @@ describe('Popover: children.moreButton', () => {
     expect(onRow).not.toHaveBeenCalled();
   });
 
-  // research/35 §14: ArrowRight in the "…" submenu does nothing. ArrowLeft still closes it:
-  // Blok keeps the menu pattern there (Notion's ArrowLeft did nothing).
+  // research/35 §14: ArrowRight in the "…" submenu does nothing.
   it('ArrowRight in the "…" submenu does nothing', () => {
     const popover = open();
 
@@ -162,6 +161,21 @@ describe('Popover: children.moreButton', () => {
     key(popover, 'ArrowRight', 39);
     expect(itemEl('child')?.getAttribute('data-blok-focused')).toBe('true');
     expect(onChild).not.toHaveBeenCalled();
+  });
+
+  // research/36 §3: ArrowLeft closes a submenu by default; a menu may opt out (the template menu does).
+  it.each([[true, true], [false, false]])('ArrowLeft in the submenu with arrowLeftClosesSubmenu %s closes it: %s', (opt, closed) => {
+    const popover = open();
+
+    popover.arrowLeftClosesSubmenu = opt;
+    focusRow(popover, 'row');
+    key(popover, 'ArrowRight', 39);
+    key(popover, 'ArrowDown', 40);
+    expect(itemEl('child')?.getAttribute('data-blok-focused')).toBe('true');
+
+    key(popover, 'ArrowLeft', 37);
+    expect(itemEl('child') === null).toBe(closed);
+    if (!closed) expect(itemEl('child')?.getAttribute('data-blok-focused')).toBe('true');
   });
 
   it.each([[true, true], [false, false]])('Escape in the "…" submenu with escapeClosesSubmenuFirst %s keeps the menu: %s', (opt, kept) => {

@@ -140,8 +140,9 @@ describe('Ask AI bar colours', () => {
   ])('the hover halo %s stays faint and close to the button', (hover) => {
     const body = bodyOf(hover);
 
-    expect(Number(body.match(/opacity:\s*([\d.]+)/)?.[1])).toBeLessThanOrEqual(0.5);
-    expect(Number(body.match(/inset:\s*-([\d.]+)px/)?.[1])).toBeLessThanOrEqual(4);
+    expect(Number(body.match(/opacity:\s*([\d.]+)/)?.[1])).toBeLessThanOrEqual(0.3);
+    // No inset on hover: the halo keeps its 3px rest spread and does not grow.
+    expect(body).not.toMatch(/inset:/);
   });
 
   it('Keep and Discard are pills; Keep is ink and redraws its check on hover', () => {

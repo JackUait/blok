@@ -306,16 +306,13 @@
   background-image: conic-gradient(from var(--blok-assistant-aura-angle), var(--blok-ai-aura-1), var(--blok-ai-aura-2), var(--blok-ai-aura-3), var(--blok-ai-aura-4), var(--blok-ai-aura-1));
   filter: blur(5px);
   opacity: 0;
-  transition:
-    opacity 0.3s var(--blok-ease-standard),
-    inset 0.3s var(--blok-ease-standard);
+  transition: opacity 0.3s var(--blok-ease-standard);
   animation-play-state: paused;
 }
 
 [data-blok-assistant-send]:hover:not(:disabled)::before,
 [data-blok-assistant-keep]:hover::before {
-  inset: -4px;
-  opacity: 0.5;
+  opacity: 0.3;
   animation-play-state: running;
 }
 

@@ -177,3 +177,12 @@ Trigger as research 36 §6: C15 table, row handle › Move to Trash (rows M091�
 - **Hover holds it open.** Run 1 was still fully shown at 8.26 s.
 - **Leaving starts a fresh timer of the full length (≈ 5.05 s)**, the same in every run, whether the hover began at 2.8 s or at 4.1 s. A resumed timer would have given 0.9 s and 2.2 s. So the "resume" hypothesis of research 36 is ruled out (in dark; the light number there, 4.0 s, was one sample read with a CLI-side clock).
 - The CLI could not start a hover earlier than about 2.8 s after the toast appeared, so a hover in the first second was not tried.
+
+## 5. Form "anonymous responses" (item 4)
+
+R15 › "Add view" › **Form** › modal "Auto-create form questions based on existing properties? … **Create 2 questions** | **Start from scratch**" › Start from scratch. Builder: "Form title", "Description (optional)", the access line **"Only members at Personal can fill out this form."** with **"Change"**, one question "Name" ("Respondent's answer").
+- **Form settings** (`"Edit form, add questions and more…"`): Form settings · New question · Automations · Submit screen (**Plus** badge, not opened) · Source R15 · Delete form · Learn about forms. **No anonymous option.**
+- The builder text has no "anonym…" string anywhere (searched the frame's `innerText`).
+- The only other entry points are "Change" on the access line and **"Share form"**; both are sharing, so neither was opened.
+
+**UNMEASURED**: the anonymous-responses setting is not reachable without opening sharing (same finding as research 36 §13).

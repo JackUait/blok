@@ -88,27 +88,19 @@
   height: 18px;
 }
 
-/* The sparkle wobbles while the model works. */
+/* The rose turns while the model works. Linear, one step: a pause or an ease
+   would mark where each turn starts. The rose repeats every quarter turn. */
 [data-blok-assistant-working] [data-blok-assistant-icon] {
   color: var(--blok-text-secondary);
 }
 
 [data-blok-assistant-working] [data-blok-assistant-icon] svg {
-  animation: blok-assistant-wobble 1.1s ease-in-out infinite;
+  animation: blok-assistant-rose 28s linear infinite;
 }
 
-@keyframes blok-assistant-wobble {
-  0%,
-  100% {
-    transform: rotate(0);
-  }
-
-  30% {
-    transform: rotate(-12deg) translateY(-1px);
-  }
-
-  60% {
-    transform: rotate(12deg);
+@keyframes blok-assistant-rose {
+  to {
+    transform: rotate(1turn);
   }
 }
 

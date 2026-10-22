@@ -155,8 +155,21 @@ describe('Ask AI bar colours', () => {
       .forEach((selector) => expect(reducedRule(selector), selector).toMatch(/transform:\s*none/));
   });
 
+  it('while working, the mark turns at one steady speed with no colour or glow', () => {
+    const mark = bodyOf('[data-blok-assistant-working] [data-blok-assistant-icon] svg');
+    const turn = ASSISTANT_CSS.match(/@keyframes blok-assistant-rose\s*\{([\s\S]*?\})\s*\}/)?.[1] ?? '';
+
+    expect(mark).toMatch(/animation:\s*blok-assistant-rose\s+[\d.]+s\s+linear\s+infinite/);
+    expect(mark).not.toMatch(/gradient|filter|url\(|drop-shadow/);
+    expect(bodyOf('[data-blok-assistant-working] [data-blok-assistant-icon]')).toMatch(/color:\s*var\(--blok-text-secondary\)/);
+    // One step to a full turn: no pause, no easing back, so it has no start or end.
+    expect(turn.match(/\{/g)).toHaveLength(1);
+    expect(turn).toMatch(/^\s*to\s*\{\s*transform:\s*rotate\(1turn\);?\s*\}$/);
+  });
+
   it('under reduced motion the halo, the Stop arc and the rise-in stay still', () => {
-    ['[data-blok-assistant-send]::before', '[data-blok-assistant-stop]::before', '[data-blok-assistant-keep]::before', '[data-blok-assistant-keep]:hover svg path', '[data-blok-assistant-action]']
+    ['[data-blok-assistant-working] [data-blok-assistant-icon] svg',
+      '[data-blok-assistant-send]::before', '[data-blok-assistant-stop]::before', '[data-blok-assistant-keep]::before', '[data-blok-assistant-keep]:hover svg path', '[data-blok-assistant-action]']
       .forEach((selector) => expect(reducedRule(selector), selector).toMatch(/animation:\s*none/));
   });
 

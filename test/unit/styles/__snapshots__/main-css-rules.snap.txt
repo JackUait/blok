@@ -25825,7 +25825,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-assistant-working] [data-blok-assistant-icon] svg {
-  animation: blok-assistant-wobble 1.1s ease-in-out infinite;
+  animation: blok-assistant-rose 28s linear infinite;
 }
 
 [data-blok-assistant-field] {

@@ -650,6 +650,14 @@ export const IconCodeBlock = `
 </svg>
 `;
 
+// The Ask AI mark: a four-petal rose curve (r = 6.75·cos 2θ) in one stroke.
+// It reads the same a quarter turn on, so the bar can turn it with no seam.
+export const IconRose = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M10 10C12.79 7.22 16.75 7.94 16.75 10C16.75 12.06 12.79 12.78 10 10C7.22 7.21 7.94 3.25 10 3.25C12.06 3.25 12.78 7.21 10 10C7.21 12.78 3.25 12.06 3.25 10C3.25 7.94 7.21 7.22 10 10C12.78 12.79 12.06 16.75 10 16.75C7.94 16.75 7.22 12.79 10 10Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Emoji Picker Category Icons
 
 export const IconEmojiSparkles = `

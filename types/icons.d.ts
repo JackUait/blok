@@ -88,6 +88,7 @@ export declare const IconPaintRoller: string;
 export declare const IconSpacer: string;
 export declare const IconCode: string;
 export declare const IconCodeBlock: string;
+export declare const IconRose: string;
 export declare const IconEmojiSparkles: string;
 export declare const IconEmojiWink: string;
 export declare const IconEmojiBowl: string;

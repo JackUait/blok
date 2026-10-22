@@ -32,6 +32,10 @@
   from { opacity: 0; transform: translateY(6px) scale(0.96); filter: blur(2px) }
 }
 
+@keyframes blok-assistant-rose {
+  to { transform: rotate(1turn) }
+}
+
 @keyframes blok-assistant-shine {
   from { background-position: 100% 0 }
   to { background-position: -150% 0 }
@@ -39,12 +43,6 @@
 
 @keyframes blok-assistant-turn {
   to { --blok-assistant-aura-angle: 360deg }
-}
-
-@keyframes blok-assistant-wobble {
-  0%, 100% { transform: rotate(0) }
-  30% { transform: rotate(-12deg) translateY(-1px) }
-  60% { transform: rotate(12deg) }
 }
 
 @keyframes blok-audio-cover-picker-in {

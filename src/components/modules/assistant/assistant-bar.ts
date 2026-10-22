@@ -1,7 +1,7 @@
 import type { AgentThinkingLevel } from '../../../../types/api';
 import { PopoverEvent } from '../../../../types/utils/popover/popover-event';
 import { DATA_ATTR } from '../../constants/data-attributes';
-import { IconArrowUp, IconCheck, IconEmojiSparkles, IconPlayerSpeed, IconUndo } from '../../icons';
+import { IconArrowUp, IconCheck, IconPlayerSpeed, IconRose, IconUndo } from '../../icons';
 import { PopoverDesktop } from '../../utils/popover';
 import { onHover } from '../../utils/tooltip';
 import { promoteToTopLayer, removeFromTopLayer } from '../../utils/top-layer';
@@ -196,8 +196,8 @@ export class AssistantBar {
     const icon = build('span', { [ATTR.icon]: '', 'aria-hidden': 'true' });
     const field = build('div', { [ATTR.field]: '' });
 
-    headIcon.innerHTML = IconEmojiSparkles;
-    icon.innerHTML = IconEmojiSparkles;
+    headIcon.innerHTML = IconRose;
+    icon.innerHTML = IconRose;
     this.field = build('textarea', {
       'data-blok-field': 'text',
       rows: '1',

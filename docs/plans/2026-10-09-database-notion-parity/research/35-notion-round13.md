@@ -235,7 +235,7 @@ Database R13 (table view). Extra properties added for this: **Notes** (Text), **
 | Date, **first row empty** (E1 cleared; E2 Oct 15, E3 Oct 28) | — | picker, input "**Oct 22, 2026**" (today); End date switch off; cells unchanged on open | switch **End date on**: inputs "Oct 22, 2026" / "Oct 22, 2026", and **all 3 rows became "October 22, 2026 → October 22, 2026"** at once (E2's and E3's own dates replaced) | Escape | all three today → today | not read |
 
 **Board live preview.** Board view, View settings › Property visibility › Notes and Num shown on cards. Cards selected with a drag box from the empty board area (each card got a halo rgba(35, 131, 226, 0.14), **radius 10px**, 256x97). No selection bar on a board; **Cmd+/** opened the action menu (Page, Edit icon, Edit property, Copy links to all, Duplicate, Move to, Move to Trash, Ask AI). Edit property › Notes: contenteditable prefilled "alphaXY"; typing "Z" changed **every card's Notes line to "alphaXYZ" live**. Escape kept it; afterwards one card (the top one) still showed a halo.
-**List view live preview: not read** (no list view was made; time).
+**List live preview** (read later, dark): List view with Notes switched on, rows E1–E3 selected with a drag box from the right margin (halos rgba(35, 131, 226, 0.14), radius 6px, 688x26), Cmd+/ › Edit property › Notes (prefilled "alphaXYZ"), typed "W": **every list row showed "alphaXYZW" live**; Escape kept it.
 
 **Single date cell** (before the bulk tests, light):
 - **Empty cell, open**: the picker's input reads **today, "Oct 22, 2026"**, focused; the cell stays empty. **Escape** without typing: the cell **stays empty**.
@@ -335,7 +335,7 @@ Also seen: after the "Count all" switch, focus returned to the count button with
 Neither link was clicked (a click may open a new tab).
 
 CSV, from the import above:
-- The created Date property ("When", from `10/02/2026`-style text) displays **"October 2, 2026"**: the Full date look. Its Date format setting was not opened.
+- The created Date property ("When", from `10/02/2026`-style text) displays **"October 2, 2026"**. Its header menu › Edit property submenu reads **"Date format: Full date | Time format: 12 hour | Notifications: None"**.
 - The step's preview listed the rows in the order Row 002, Row 001, Row 005, Row 004, Row 003; the imported table (no sort) started Row 120, 119, 118, 116, 117, then the Small rows. Neither is the file order.
 - Not measured (time): unmapped column names with headers off in a merge; two columns onto one property; no column matching the title; a taken name; the "Existing property" list for computed, person and file properties; ISO dates under Day/Month/Year; the doubled-"Name" case.
 

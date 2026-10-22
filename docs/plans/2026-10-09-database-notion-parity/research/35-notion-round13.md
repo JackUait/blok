@@ -517,3 +517,23 @@ Workspace switcher (sidebar bottom) › **Settings** (gear) › **Preferences**.
 - "Date format: Set the default format for new @date mentions" reads **Relative** (this is for @date mentions, not the database cell format).
 - **Theme**: was "Dark" (set with Cmd+Shift+L for the session). Set back to **"Use system setting"** from the Theme dropdown (Use system setting / Light / Dark). After a reload: `appearanceSettingStorageKey` = **"system"**, body bg rgb(255, 255, 255).
 
+## 23. B1: default time at the exact hour (clock)
+
+E3's date (Oct 22 → Oct 22, no time) open in the date editor; the "Include time" row's centre (942, 584) checked with `elementFromPoint` first. A capture-phase click listener stored the page clock. One `run-code`: `waitForFunction(() => new Date().getHours() === 7, {polling: 10})`, then `page.mouse.click(942, 584)`.
+
+- Click logged at **07:00:00.016** local (05:00:00.016Z).
+- Time inputs after the click: **"8:00 AM"** (start and end); the cell then read "October 22, 2026 8:00 AM → 8:00 AM".
+- So at the exact second hh:00:00 Notion still takes the **next** hour (8:00 at 07:00:00), not the current one. Earlier control: at 06:16:28 the same switch gave 7:00 AM (§20).
+- **23:xx: could not measure: clock.** The session ran from 04:36 to about 07:10 local.
+
+## 24. Safety and account state
+
+- **No billing surface opened.** New controls were guarded first (`guard.sh`, `gate.sh`). Gate hits were text false positives: the word "New" in "New template" / "New data source", sample task text "Upgrade database" in the Tasks setup dialog, and the workspace menu (only its "Settings" row was clicked).
+- Not used: Notion AI (the AI prompt box in the full-page "New database" panel was focused by Notion but nothing was typed; the formula editor's "Send to AI" and "Toggle formula assistant" were not clicked), Copy to Clipboard, Copy link, charts, dashboards, favorites, share or invite, "Email me a copy", "Current Location", the help links, Cmd-click.
+- **Settings** was opened once (Preferences): the week-start switch was read by eval and the theme set back. No file or screenshot was taken there.
+- **Theme**: back to **Use system setting**, read back after a reload (`appearanceSettingStorageKey` = "system", body white).
+- **Side peek width**: changed by the B14 drags, dragged back to 756 (read back).
+- **Undo used once**: the B21 timeline drag moved E3 out of the database onto the page; Cmd+Z restored it.
+- **Reminder** on E1 set for B21 was set back to None before cleanup (no `alarmSmall` left on the page). The "Edit cadence" panel was discarded unsaved; TplA kept "Duplicate every… Off". "Undo Task database" › Remove was applied before trashing, so R13 is no longer a My Tasks source.
+- Screenshots that showed the user's name, avatar or the feed byline were deleted at once; the place search results near the user's location and the current time zone city are not written here. Raw files under `notion-measure35/` were grepped for the user's name, email and location words: no hits.
+- **Cleanup**: the scratch page went to Trash (page "Actions" › Move to Trash; the tab then moved to another page, nothing was clicked there). Its children went with it: R13 and its second data source, the templates TplA and TplB, the child pages S1–S3 with their databases, the 120-row import and its views. A sidebar search for the scratch title, "S1"–"S3" and "R13" found nothing. `.playwright-cli/` snapshots were deleted. The session `notion35` was closed; no other session was touched.

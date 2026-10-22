@@ -18,6 +18,12 @@ const rulesFor = (attribute: string): Array<[string, string]> =>
     .filter(([, selector]) => selector.includes(attribute))
     .map(([, selector, body]) => [selector.trim(), body]);
 
+/** Every declaration that applies to exactly `selector`, from each rule whose selector list names it. */
+const bodyOf = (selector: string): string => rulesFor(selector.match(/data-blok-[\w-]+/)?.[0] ?? selector)
+  .filter(([selectors]) => selectors.split(',').map((part) => part.trim()).includes(selector))
+  .map(([, body]) => body)
+  .join(';');
+
 const PAINT = /(?:^|;)\s*(color|background|background-color)\s*:\s*([^;]+)/g;
 
 const declarations = (token: string): string[] =>
@@ -102,12 +108,37 @@ describe('Ask AI bar colours', () => {
   });
 
   it('send is ink when ready and a gray fill while the field is empty', () => {
-    const send = rulesFor('data-blok-assistant-send');
-    const ready = send.find(([selector]) => selector === '[data-blok-assistant-send]');
-    const empty = send.find(([selector]) => selector === '[data-blok-assistant-send]:disabled');
+    expect(bodyOf('[data-blok-assistant-send]::after')).toMatch(/background:\s*var\(--blok-text-primary\)/);
+    expect(bodyOf('[data-blok-assistant-send]:disabled::after')).toMatch(/background:\s*var\(--blok-border-subtle\)/);
+  });
 
-    expect(ready?.[1]).toMatch(/background:\s*var\(--blok-text-primary\)/);
-    expect(empty?.[1]).toMatch(/background:\s*var\(--blok-border-subtle\)/);
+  it.each(['send', 'stop', 'keep'])('the %s ink sits over its halo, so a press or hover scale never lifts the halo over the ink', (name) => {
+    const button = `[data-blok-assistant-${name}]`;
+
+    expect(bodyOf(button)).toMatch(/isolation:\s*isolate/);
+    expect(bodyOf(`${button}::after`)).toMatch(/z-index:\s*-1/);
+    expect(bodyOf(`${button}::before`)).toMatch(/z-index:\s*-2/);
+  });
+
+  it.each([
+    ['send', '[data-blok-assistant-send]:hover:not(:disabled)::before'],
+    ['keep', '[data-blok-assistant-keep]:hover::before'],
+  ])('the %s halo shows and turns only on hover', (name, hover) => {
+    const rest = bodyOf(`[data-blok-assistant-${name}]::before`);
+
+    expect(rest).toMatch(/background-image:\s*conic-gradient\(/);
+    expect(rest).toMatch(/animation:[^;]*infinite/);
+    expect(rest).toMatch(/opacity:\s*0\s*(;|$)/);
+    expect(rest).toMatch(/animation-play-state:\s*paused/);
+    expect(bodyOf(hover)).toMatch(/opacity:\s*(1|0\.\d+)\s*(;|$)/);
+    expect(bodyOf(hover)).toMatch(/animation-play-state:\s*running/);
+  });
+
+  it('Keep and Discard are pills; Keep is ink and redraws its check on hover', () => {
+    expect(bodyOf('[data-blok-assistant-keep]')).toMatch(/border-radius:\s*var\(--blok-radius-pill\)/);
+    expect(bodyOf('[data-blok-assistant-undo]')).toMatch(/border-radius:\s*var\(--blok-radius-pill\)/);
+    expect(bodyOf('[data-blok-assistant-keep]::after')).toMatch(/background:\s*var\(--blok-text-primary\)/);
+    expect(bodyOf('[data-blok-assistant-keep]:hover svg path')).toMatch(/animation:[^;]*blok-assistant-draw/);
   });
 
   const reducedRule = (selector: string): string => {
@@ -125,28 +156,18 @@ describe('Ask AI bar colours', () => {
   });
 
   it('under reduced motion the halo, the Stop arc and the rise-in stay still', () => {
-    ['[data-blok-assistant-send]::before', '[data-blok-assistant-stop]::before', '[data-blok-assistant-action]']
+    ['[data-blok-assistant-send]::before', '[data-blok-assistant-stop]::before', '[data-blok-assistant-keep]::before', '[data-blok-assistant-keep]:hover svg path', '[data-blok-assistant-action]']
       .forEach((selector) => expect(reducedRule(selector), selector).toMatch(/animation:\s*none/));
   });
 
-  it('send glows with a turning halo only while there is something to send', () => {
-    const send = rulesFor('data-blok-assistant-send');
-    const halo = send.find(([selector]) => selector === '[data-blok-assistant-send]::before');
-    const off = send.find(([selector]) => selector === '[data-blok-assistant-send]:disabled::before');
+  it('Stop is an ink disc with an arc that spins without a hover', () => {
+    const arc = bodyOf('[data-blok-assistant-stop]::before');
 
-    expect(halo?.[1]).toMatch(/background-image:\s*conic-gradient\(/);
-    expect(halo?.[1]).toMatch(/animation:[^;]*infinite/);
-    expect(off?.[1]).toMatch(/opacity:\s*0\s*;/);
-  });
-
-  it('Stop is an ink disc with a spinning arc around it', () => {
-    const stop = rulesFor('data-blok-assistant-stop');
-    const disc = stop.find(([selector]) => selector === '[data-blok-assistant-stop]');
-    const arc = stop.find(([selector]) => selector === '[data-blok-assistant-stop]::before');
-
-    expect(disc?.[1]).toMatch(/border-radius:\s*50%/);
-    expect(disc?.[1]).toMatch(/background:\s*var\(--blok-text-primary\)/);
-    expect(arc?.[1]).toMatch(/animation:[^;]*infinite/);
+    expect(bodyOf('[data-blok-assistant-stop]')).toMatch(/border-radius:\s*50%/);
+    expect(bodyOf('[data-blok-assistant-stop]::after')).toMatch(/background:\s*var\(--blok-text-primary\)/);
+    expect(arc).toMatch(/animation:[^;]*infinite/);
+    expect(arc).not.toMatch(/animation-play-state:\s*paused/);
+    expect(arc).not.toMatch(/opacity:\s*0\s*(;|$)/);
   });
 
   it('actions are outlined pills that rise in one after another', () => {

@@ -80,6 +80,17 @@ describe('assistant bar: action buttons and Insert', () => {
     expect(buttons.map((button) => button.style.getPropertyValue('--blok-assistant-action-index'))).toEqual(['0', '1']);
   });
 
+  it('shows Keep and Discard as labelled pills, each with its icon', () => {
+    bar.render({ kind: 'answered', reply: 'Shortened the text.', changed: true, edited: true });
+
+    ['assistant.discard', 'assistant.keep'].forEach((name) => {
+      const button = within(bar.element).getByRole('button', { name });
+
+      expect(button).toHaveTextContent(name);
+      expect(button.querySelector('svg')).not.toBeNull();
+    });
+  });
+
   it('shows Stop as a round stop key named Stop, with no visible text', () => {
     bar.render({ kind: 'working', status: 'Thinking…' });
 

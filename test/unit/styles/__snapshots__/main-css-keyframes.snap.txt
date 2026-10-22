@@ -16,6 +16,10 @@
   to { opacity: 1; filter: none }
 }
 
+@keyframes blok-assistant-draw {
+  from { stroke-dashoffset: 16 }
+}
+
 @keyframes blok-assistant-fade {
   from { opacity: 0; transform: translateY(2px) }
 }
@@ -34,7 +38,7 @@
 }
 
 @keyframes blok-assistant-turn {
-  to { transform: rotate(1turn) }
+  to { --blok-assistant-aura-angle: 360deg }
 }
 
 @keyframes blok-assistant-wobble {

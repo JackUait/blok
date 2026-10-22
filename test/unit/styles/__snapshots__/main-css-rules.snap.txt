@@ -25806,16 +25806,54 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   transition: background-color var(--blok-duration-base) var(--blok-ease-standard), color var(--blok-duration-base) var(--blok-ease-standard), transform var(--blok-duration-base) var(--blok-ease-standard);
 }
 
-[data-blok-assistant-send] {
+[data-blok-assistant-send], [data-blok-assistant-stop], [data-blok-assistant-keep] {
   position: relative;
+  isolation: isolate;
+  padding: 0;
+  background: transparent;
+  color: var(--blok-popover-bg);
+}
+
+[data-blok-assistant-send]::after, [data-blok-assistant-stop]::after, [data-blok-assistant-keep]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--blok-text-primary);
+  transition: background-color var(--blok-duration-base) var(--blok-ease-standard);
+}
+
+[data-blok-assistant-send]::before, [data-blok-assistant-stop]::before, [data-blok-assistant-keep]::before {
+  content: '';
+  position: absolute;
+  z-index: -2;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: blok-assistant-turn 3s linear infinite;
+}
+
+[data-blok-assistant-send]::before, [data-blok-assistant-keep]::before {
+  inset: -3px;
+  background-image: conic-gradient(from var(--blok-assistant-aura-angle), var(--blok-ai-aura-1), var(--blok-ai-aura-2), var(--blok-ai-aura-3), var(--blok-ai-aura-4), var(--blok-ai-aura-1));
+  filter: blur(5px);
+  opacity: 0;
+  transition: opacity 0.3s var(--blok-ease-standard), inset 0.3s var(--blok-ease-standard);
+  animation-play-state: paused;
+}
+
+[data-blok-assistant-send]:hover:not(:disabled)::before, [data-blok-assistant-keep]:hover::before {
+  inset: -5px;
+  opacity: 1;
+  animation-play-state: running;
+}
+
+[data-blok-assistant-send], [data-blok-assistant-stop] {
   display: inline-grid;
   place-items: center;
   width: var(--_blok-assistant-dot);
   height: var(--_blok-assistant-dot);
-  padding: 0;
   border-radius: 50%;
-  background: var(--blok-text-primary);
-  color: var(--blok-popover-bg);
 }
 
 [data-blok-assistant-send] svg {
@@ -25828,46 +25866,16 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   transform: translateY(calc(-1 * var(--blok-space-0-5)));
 }
 
-[data-blok-assistant-send]::before, [data-blok-assistant-stop]::before {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  border-radius: 50%;
-  pointer-events: none;
+[data-blok-assistant-send]:disabled {
+  color: var(--blok-text-tertiary);
+  cursor: default;
 }
 
-[data-blok-assistant-send]::before {
-  inset: -3px;
-  background-image: conic-gradient(var(--blok-ai-aura-1), var(--blok-ai-aura-2), var(--blok-ai-aura-3), var(--blok-ai-aura-4), var(--blok-ai-aura-1));
-  filter: blur(5px);
-  opacity: 0.85;
-  transition: opacity 0.3s var(--blok-ease-standard), inset 0.3s var(--blok-ease-standard);
-  animation: blok-assistant-turn 3s linear infinite;
+[data-blok-assistant-send]:disabled::after {
+  background: var(--blok-border-subtle);
 }
 
-[data-blok-assistant-send]:hover:not(:disabled)::before {
-  inset: -5px;
-  opacity: 1;
-}
-
-[data-blok-assistant-send]:disabled::before {
-  opacity: 0;
-}
-
-[data-blok-assistant-stop] {
-  position: relative;
-  display: inline-grid;
-  place-items: center;
-  width: var(--_blok-assistant-dot);
-  height: var(--_blok-assistant-dot);
-  padding: 0;
-  border-radius: 50%;
-  background: var(--blok-text-primary);
-  color: var(--blok-popover-bg);
-}
-
-[data-blok-assistant-stop]::after {
-  content: '';
+[data-blok-assistant-stop-glyph] {
   width: 9px;
   aspect-ratio: 1;
   border-radius: var(--blok-radius-mark);
@@ -25876,40 +25884,61 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-assistant-stop]::before {
   inset: -4px;
-  background-image: conic-gradient(transparent 0 55%, var(--blok-ai-aura-1) 70%, var(--blok-ai-aura-4) 85%, var(--blok-text-primary));
+  background-image: conic-gradient(from var(--blok-assistant-aura-angle), transparent 0 55%, var(--blok-ai-aura-1) 70%, var(--blok-ai-aura-4) 85%, var(--blok-text-primary));
   -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), currentColor calc(100% - 1.5px));
   mask: radial-gradient(farthest-side, transparent calc(100% - 2px), currentColor calc(100% - 1.5px));
-  animation: blok-assistant-turn 1s linear infinite;
+  animation-duration: 1s;
 }
 
 [data-blok-assistant-stop]:hover {
   transform: scale(1.06);
 }
 
-[data-blok-assistant-send]:disabled {
-  background: var(--blok-border-subtle);
-  color: var(--blok-text-tertiary);
-  cursor: default;
+[data-blok-assistant-undo], [data-blok-assistant-keep] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  height: 30px;
+  padding-inline: var(--blok-space-2-5) var(--blok-space-3);
+  border-radius: var(--blok-radius-pill);
+  font-size: var(--blok-font-size-ui-compact);
+  font-weight: var(--blok-font-weight-medium);
+  white-space: nowrap;
 }
 
-[data-blok-assistant-undo], [data-blok-assistant-keep] {
-  display: inline-grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border-radius: var(--blok-radius-inner);
+[data-blok-assistant-undo] {
+  padding-block: 0;
   background: transparent;
+  box-shadow: inset 0 0 0 1px var(--blok-popover-border);
   color: var(--blok-text-primary);
 }
 
-[data-blok-assistant-undo]:hover, [data-blok-assistant-keep]:hover {
+[data-blok-assistant-undo]:hover {
   background: var(--blok-item-hover-bg);
+  box-shadow: none;
 }
 
 [data-blok-assistant-undo] svg, [data-blok-assistant-keep] svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+[data-blok-assistant-undo] svg {
+  transition: transform 0.35s var(--blok-ease-bounce);
+}
+
+[data-blok-assistant-undo]:hover svg {
+  transform: rotate(-40deg);
+}
+
+[data-blok-assistant-keep]:hover {
+  transform: scale(1.04);
+}
+
+[data-blok-assistant-keep]:hover svg path {
+  stroke-dasharray: 16;
+  animation: blok-assistant-draw 0.45s cubic-bezier(0.6, 0, 0.2, 1) both;
 }
 
 [data-blok-assistant-thinking] {
@@ -26131,15 +26160,15 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   display: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-assistant], [data-blok-assistant][data-blok-top-layer][popover], [data-blok-assistant-summary], [data-blok-assistant-working] [data-blok-assistant-icon] svg, [data-blok-assistant-send]::before, [data-blok-assistant-stop]::before, [data-blok-assistant-action] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-assistant], [data-blok-assistant][data-blok-top-layer][popover], [data-blok-assistant-summary], [data-blok-assistant-working] [data-blok-assistant-icon] svg, [data-blok-assistant-send]::before, [data-blok-assistant-stop]::before, [data-blok-assistant-keep]::before, [data-blok-assistant-keep]:hover svg path, [data-blok-assistant-action] {
   animation: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-assistant-send], [data-blok-assistant-send] svg, [data-blok-assistant-send]::before, [data-blok-assistant-thinking], [data-blok-assistant-undo], [data-blok-assistant-keep], [data-blok-assistant-button], [data-blok-assistant-stop], [data-blok-assistant-action], [data-blok-assistant-action-icon] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-assistant-send], [data-blok-assistant-send] svg, [data-blok-assistant-send]::before, [data-blok-assistant-stop]::before, [data-blok-assistant-keep]::before, [data-blok-assistant-undo] svg, [data-blok-assistant-thinking], [data-blok-assistant-undo], [data-blok-assistant-keep], [data-blok-assistant-button], [data-blok-assistant-stop], [data-blok-assistant-action], [data-blok-assistant-action-icon] {
   transition: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-assistant-send]:active:not(:disabled), [data-blok-assistant-undo]:active, [data-blok-assistant-keep]:active, [data-blok-assistant-button]:active, [data-blok-assistant-stop]:hover, [data-blok-assistant-stop]:active, [data-blok-assistant-action]:active, [data-blok-assistant-send]:hover:not(:disabled) svg, [data-blok-assistant-action]:hover [data-blok-assistant-action-icon] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-assistant-send]:active:not(:disabled), [data-blok-assistant-undo]:active, [data-blok-assistant-keep]:active, [data-blok-assistant-button]:active, [data-blok-assistant-stop]:hover, [data-blok-assistant-stop]:active, [data-blok-assistant-keep]:hover, [data-blok-assistant-undo]:hover svg, [data-blok-assistant-action]:active, [data-blok-assistant-send]:hover:not(:disabled) svg, [data-blok-assistant-action]:hover [data-blok-assistant-action-icon] {
   transform: none;
 }
 

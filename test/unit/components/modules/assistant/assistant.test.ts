@@ -1610,10 +1610,10 @@ describe('in-editor assistant bar', () => {
       const undo = within(bar()).getByRole('button', { name: 'Discard' });
       const keep = within(bar()).getByRole('button', { name: 'Keep' });
 
-      // Icon buttons: the label is for assistive tech and the hover hint.
-      [undo, keep].forEach((button) => {
+      // Labelled pills: the visible label is the name.
+      ([[undo, 'Discard'], [keep, 'Keep']] as const).forEach(([button, label]) => {
         expect(button).toBeVisible();
-        expect(button.textContent?.trim()).toBe('');
+        expect(button.textContent?.trim()).toBe(label);
         expect(button.querySelector('svg')).not.toBeNull();
       });
       // The field still takes a follow-up.

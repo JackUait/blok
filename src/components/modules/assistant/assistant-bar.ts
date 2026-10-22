@@ -52,6 +52,7 @@ const ATTR = {
   thinkingMenu: 'data-blok-assistant-thinking-menu',
   button: 'data-blok-assistant-button',
   stop: 'data-blok-assistant-stop',
+  stopGlyph: 'data-blok-assistant-stop-glyph',
   action: 'data-blok-assistant-action',
   actionIcon: 'data-blok-assistant-action-icon',
   undo: 'data-blok-assistant-undo',
@@ -212,8 +213,7 @@ export class AssistantBar {
 
     this.send = build('button', { type: 'button', [ATTR.send]: '', 'aria-label': t('assistant.send') });
     this.send.innerHTML = IconArrowUp;
-    // A round stop key: CSS draws the square and the spinning arc.
-    this.stop = this.iconButton(ATTR.stop, '', t('assistant.stop'));
+    this.stop = this.iconButton(ATTR.stop, `<span ${ATTR.stopGlyph} aria-hidden="true"></span>`, t('assistant.stop'));
     this.thinking = build('button', {
       type: 'button',
       [ATTR.thinking]: '',
@@ -223,8 +223,8 @@ export class AssistantBar {
     });
     this.thinking.innerHTML = IconPlayerSpeed;
     this.thinking.hidden = true;
-    this.undo = this.iconButton(ATTR.undo, IconUndo, t('assistant.discard'));
-    this.keep = this.iconButton(ATTR.keep, IconCheck, t('assistant.keep'));
+    this.undo = this.labelledButton(ATTR.undo, IconUndo, t('assistant.discard'));
+    this.keep = this.labelledButton(ATTR.keep, IconCheck, t('assistant.keep'));
     this.resume = build('button', { type: 'button', [ATTR.button]: '', [ATTR.continue]: '' });
     this.resume.textContent = t('assistant.continue');
     this.insert = build('button', { type: 'button', [ATTR.button]: '', [ATTR.insert]: '' });
@@ -556,6 +556,16 @@ export class AssistantBar {
       releaseGap(this.anchor, SLOTS_GAP);
     }
     this.anchor = null;
+  }
+
+  /** An icon and its visible label; the label names the button, so it needs no hint. */
+  private labelledButton(attribute: string, icon: string, label: string): HTMLButtonElement {
+    const button = build('button', { type: 'button', [attribute]: '' });
+
+    button.innerHTML = icon;
+    button.append(label);
+
+    return button;
   }
 
   /** An icon button: the label is its name and its hover hint. */

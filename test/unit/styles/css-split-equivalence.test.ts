@@ -992,7 +992,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // and the prompt field's square corners (e14c7b26, +96), and the action buttons row under the field (be2e7de0, +369).
     const ASSISTANT_REPLACED_BLOCK_BYTES = 179 + 37 + 96 + 369;
     // assistant.css: the Ask AI "Halo" buttons: send halo, round Stop with its arc, pill actions with icons and rise-in.
-    const ASSISTANT_HALO_BUTTONS_BYTES = 4757;
+    // +1801: Discard and Keep as labelled pills, Send and Keep halos on hover only, Stop's arc always (2026-10-22).
+    const ASSISTANT_HALO_BUTTONS_BYTES = 4757 + 1801;
     // database.css: the board sub-group band toggle joins the table group toggle rules, and a folded band hides its cards (research/31 §3).
     const DATABASE_BAND_TOGGLE_BYTES = 482;
     // database.css: the purple template tile (Campaign Management, research/31 shot 51).

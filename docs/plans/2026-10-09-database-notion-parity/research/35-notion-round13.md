@@ -384,3 +384,23 @@ Board card E3 › side peek 756x717. Handle = `role=separator` 12x717 at the pee
 So it is not a distance threshold: **any pointer move between down and up starts a resize**, and the peek's left edge follows the pointer's x (not the offset where the handle was grabbed). Only a press with no move closes.
 The peek width is stored: after the test it was dragged back to **756** (read back 756,0,756,717) and closed with a click on the handle.
 
+## 13. B15: "Edit cadence" (template "Duplicate every…", dark)
+
+Template TplA › "…" › **Duplicate every… Off** (`arrowSquareLeftRight`, value "Off" with `arrowChevronSingleDownSmall`) › a 180x239 list: **Day, Weekday, Week, 2 Weeks, Month, 3 Months, 6 Months, Year**. Picking **Month** opened the **"Edit cadence"** panel (260x325, never saved):
+
+"Edit cadence | Save | Every **Month** | On the **23rd** **Day** | At **Around midnight** | Starting **Tomorrow** | Ending **Never** | Timezone **GMT+2** | Cancel recurrence | Next occurrence: **Tomorrow between 12–3 AM**" (today Thu Oct 22).
+
+| Control | Its submenu |
+|---|---|
+| "23rd" (first list, with "Day") | 1st … 31st (31 rows), check on 23rd. No "Last" while the second list is "Day". |
+| "Day" (second list) | **Day, Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday** |
+| After picking **Monday** | the first list became **1st, 2nd, 3rd, 4th, Last**, set to **Last**; "Next occurrence: Next Mon between 12–3 AM" |
+| At "Around midnight" | **"Around midnight / 12–3AM"** (checked), then **3:15 AM, 3:30 AM … 11:45 PM** in 15-minute steps (no 12:00–3:00 AM rows) |
+| Starting "Tomorrow" | a month grid picker (Oct 2026), 268x294; no Today button, no time |
+| Ending "Never" | **Never, Number of runs, Specific date** (check on Never) |
+| Timezone "GMT+2" | 342x595, search input "Search cities, timezones…" focused; "Current timezone" (the user's zone, GMT+2:00, checked), "Select a timezone", then the same **568**-row zone list as the date editor (Abidjan, Accra, Addis Ababa, Algiers, Asmara, Asmera, …) |
+
+**"Around midnight" means a 12–3 AM window** (the At list's first row and the "Next occurrence" line both say so).
+
+Escape on the unsaved panel raised **"Discard unsaved changes?"** (dark): 324x187 centred, bg rgb(32, 32, 32), radius 12px, the dark dialog shadow of §1.7, backdrop rgba(15, 15, 15, 0.8); a 32x32 icon fill rgb(173, 169, 163); title 16px / **600**; buttons 284x32: **"Discard"** red (ink rgb(253, 246, 246)), **focused on open with a ring drawn** (`rgb(25,25,25) 0 0 0 2px, rgb(35,131,226) 0 0 0 4px, rgb(25,25,25) 0 0 0 6px`) and its fill read as `color(srgb 0.911511 0.472468 0.431627)` ≈ rgb(232, 120, 110) while focused; "Cancel" outlined (1px rgba(255, 255, 235, 0.1)). Discard closed it; "Duplicate every…" still read **Off** (nothing saved).
+

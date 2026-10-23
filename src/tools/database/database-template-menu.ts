@@ -1,5 +1,5 @@
 import type { I18n } from '../../../types';
-import type { PopoverItemParams } from '../../../types/utils/popover/popover-item';
+import type { PopoverItemDefaultParams, PopoverItemParams } from '../../../types/utils/popover/popover-item';
 import { IconChevronLeft, IconChevronRight, IconCopy, IconPage, IconPencil, IconPlayerLoop, IconPlus, IconTrash } from '../../components/icons';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { hasEscapeLayer } from '../../components/utils/dismissable-layer';
@@ -493,7 +493,7 @@ const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: Cade
     return heading;
   };
   const currentHeading = zoneHeading('timeZoneCurrent');
-  const zoneItem = (id: string): PopoverItemParams => {
+  const zoneItem = (id: string): PopoverItemDefaultParams => {
     const city = zoneCity(id);
     const titleEl = el('span', 'data-blok-database-template-cadence-zone', city);
 

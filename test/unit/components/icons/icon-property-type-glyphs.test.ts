@@ -76,3 +76,23 @@ describe('property type glyphs (Notion shapes on the Blok Line grid)', () => {
     }
   });
 });
+
+describe('toolbar bolt (Automations)', () => {
+  it('turns onto itself a half turn about the centre', () => {
+    const d = svg(icons.IconBolt).querySelector('path')?.getAttribute('d') ?? '';
+    const vertices: string[] = [];
+    let y = 0;
+
+    for (const [, cmd, args] of d.matchAll(/([MLH])([^MLHZ]+)/g)) {
+      const nums = args.trim().split(/\s+/).map(Number);
+      const x = nums[0];
+
+      y = cmd === 'H' ? y : nums[1];
+      vertices.push(`${x} ${y}`);
+    }
+    const turned = vertices.map((v) => v.split(' ').map((n) => 20 - Number(n)).join(' '));
+
+    expect(vertices.length).toBeGreaterThanOrEqual(6);
+    expect(new Set(turned)).toEqual(new Set(vertices));
+  });
+});

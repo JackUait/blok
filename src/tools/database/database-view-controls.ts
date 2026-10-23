@@ -1,5 +1,5 @@
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
-import { IconSearch, IconSliders, IconLock, IconPlus, IconChevronDown, IconFilter, IconSort, IconPreview } from '../../components/icons';
+import { IconSearch, IconSliders, IconLock, IconPlus, IconChevronDown, IconFilter, IconSort, IconPreview, IconBolt, IconWand } from '../../components/icons';
 import type { I18n } from '../../../types';
 import { DatabasePanel, panelRow } from './database-panel';
 import { PersonalViewEdits } from './database-view-state';
@@ -116,6 +116,8 @@ export class DatabaseViewControls {
   private readonly personal: PersonalViewEdits;
   private readonly filterButton: HTMLButtonElement;
   private readonly sortButton: HTMLButtonElement;
+  private readonly automationsButton: HTMLButtonElement;
+  private readonly autofillButton: HTMLButtonElement;
   private readonly searchButton: HTMLButtonElement;
   /** In the DOM only while the person searches: a hidden input still reads as a caret slot. */
   private readonly searchInput: HTMLInputElement;
@@ -151,6 +153,8 @@ export class DatabaseViewControls {
 
     this.filterButton = iconButton('database-toolbar-filter', this.t('settingsFilter'), IconFilter);
     this.sortButton = iconButton('database-toolbar-sort', this.t('settingsSort'), IconSort);
+    this.automationsButton = iconButton('database-toolbar-automations', this.t('automationTitle'), IconBolt);
+    this.autofillButton = iconButton('database-toolbar-autofill', this.t('aiAutofill'), IconWand);
     this.searchButton = iconButton('database-toolbar-search', this.t('searchLabel'), IconSearch);
     this.settingsButton = iconButton('database-toolbar-settings', this.t('settingsTitle'), IconSliders);
     this.searchInput = document.createElement('input');
@@ -163,6 +167,8 @@ export class DatabaseViewControls {
 
     this.filterButton.addEventListener('click', () => this.openFilterPicker(this.filterButton));
     this.sortButton.addEventListener('click', () => this.openSettings(this.sortButton, 'sort'));
+    this.automationsButton.addEventListener('click', () => this.openSettings(this.automationsButton, 'automations'));
+    this.autofillButton.addEventListener('click', () => this.openSettings(this.autofillButton, 'autofill'));
     this.settingsButton.addEventListener('click', () => this.openSettings(this.settingsButton, 'root'));
     this.searchButton.addEventListener('click', () => this.showSearch());
     this.searchInput.addEventListener('input', () => this.setSearch(this.searchInput.value));
@@ -181,7 +187,7 @@ export class DatabaseViewControls {
     // "Preview" reuses the file tool's word: the same in every locale.
     this.previewFormButton = iconButton('database-toolbar-preview-form', this.host.i18n.t('tools.file.preview'), IconPreview);
     this.previewFormButton.addEventListener('click', () => this.host.previewForm?.());
-    this.toolbar.append(this.lockBadge, this.filterButton, this.sortButton, this.searchButton, this.settingsButton, this.previewFormButton, this.shareFormButton);
+    this.toolbar.append(this.lockBadge, this.filterButton, this.sortButton, this.automationsButton, this.autofillButton, this.searchButton, this.settingsButton, this.previewFormButton, this.shareFormButton);
     if (host.newRow !== undefined) {
       this.toolbar.append(this.newSplitButton(host.newRow, host.openNewMenu));
     }
@@ -255,6 +261,10 @@ export class DatabaseViewControls {
     this.previewFormButton.hidden = this.host.previewForm === undefined || this.shareFormButton.hidden;
     this.filterButton.toggleAttribute('data-active', view.filters.length + countFilterRules(view.filterTree) > 0);
     this.sortButton.toggleAttribute('data-active', view.sorts.length > 0);
+    this.automationsButton.hidden = this.host.automations === undefined;
+    this.automationsButton.disabled = this.host.automations?.writable() !== true;
+    this.autofillButton.hidden = this.host.autofill === undefined;
+    this.autofillButton.disabled = this.host.autofill?.writable() !== true;
     this.searchButton.hidden = this.host.rowCount() < SEARCH_MIN_ROWS && this.query === '';
     this.renderFilterBar(view);
     this.panel?.refresh();

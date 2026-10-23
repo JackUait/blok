@@ -18,7 +18,13 @@ const click = (id: string): void => {
   el.click();
 };
 
-const setup = (options: { rows?: number; readOnly?: boolean; locked?: boolean } = {}): {
+const setup = (options: {
+  rows?: number;
+  readOnly?: boolean;
+  locked?: boolean;
+  schema?: () => PropertyDefinition[];
+  levers?: Partial<ViewControlsHost>;
+} = {}): {
   controls: DatabaseViewControls;
   host: ViewControlsHost;
   saved: { view: DatabaseViewConfig };
@@ -29,7 +35,7 @@ const setup = (options: { rows?: number; readOnly?: boolean; locked?: boolean } 
     i18n: { t: (key: string) => key },
     fallback: { get: (key) => storage.get(key), set: (key, value) => { storage.set(key, value); } },
     savedView: () => saved.view,
-    schema: () => schema,
+    schema: options.schema ?? (() => schema),
     rowCount: () => options.rows ?? 5,
     locked: () => options.locked === true,
     readOnly: () => options.readOnly === true,
@@ -45,6 +51,7 @@ const setup = (options: { rows?: number; readOnly?: boolean; locked?: boolean } 
     copyViewLink: vi.fn(),
     groups: () => [],
     rerender: vi.fn(),
+    ...options.levers,
   };
   const controls = new DatabaseViewControls(host);
 
@@ -75,6 +82,49 @@ describe('DatabaseViewControls', () => {
     }
     expect(q('database-toolbar-filter')?.getAttribute('aria-label')).toBe('tools.database.settingsFilter');
     expect(q('database-toolbar-sort')?.getAttribute('aria-label')).toBe('tools.database.settingsSort');
+  });
+
+  describe('⚡ Automations and ✦ AI Autofill (research/21:49 order)', () => {
+    const levers = (writable = true): Partial<ViewControlsHost> => ({
+      automations: { read: () => undefined, schema: () => schema, views: () => [], writable: () => writable, write: () => true },
+      autofill: { properties: () => schema, writable: () => writable, open: vi.fn() },
+    });
+    const order = (): string[] => [...document.querySelectorAll<HTMLElement>('[data-blok-database-view-toolbar] > button:not([hidden])')]
+      .map((el) => el.getAttribute('data-blok-testid') ?? '');
+
+    it('sit between Sort and search, in Notion\'s order', () => {
+      setup({ levers: levers() });
+
+      expect(order()).toEqual([
+        'database-toolbar-filter', 'database-toolbar-sort', 'database-toolbar-automations', 'database-toolbar-autofill',
+        'database-toolbar-search', 'database-toolbar-settings',
+      ]);
+      expect(q('database-toolbar-automations')?.getAttribute('aria-label')).toBe('tools.database.automationTitle');
+      expect(q('database-toolbar-autofill')?.getAttribute('aria-label')).toBe('tools.database.aiAutofill');
+    });
+
+    it('⚡ opens the automations list and ✦ the AI Autofill list', () => {
+      setup({ levers: levers() });
+      click('database-toolbar-automations');
+      expect(q('database-automation-new')).not.toBeNull();
+
+      click('database-toolbar-autofill');
+      expect(q('database-autofill-new')).not.toBeNull();
+    });
+
+    it('are absent without the host lever', () => {
+      setup();
+
+      expect(q('database-toolbar-automations')?.hidden ?? true).toBe(true);
+      expect(q('database-toolbar-autofill')?.hidden ?? true).toBe(true);
+    });
+
+    it('are disabled while the database cannot be written', () => {
+      setup({ levers: levers(false) });
+
+      expect(q('database-toolbar-automations')).toHaveProperty('disabled', true);
+      expect(q('database-toolbar-autofill')).toHaveProperty('disabled', true);
+    });
   });
 
   // research/23 §2e: the column header's Group follows the same rule as the settings picker.

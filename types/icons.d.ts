@@ -162,6 +162,7 @@ export declare const IconPhone: string;
 export declare const IconAt: string;
 export declare const IconPaperclip: string;
 export declare const IconPeople: string;
+export declare const IconBolt: string;
 export declare const IconSelect: string;
 export declare const IconMultiSelect: string;
 export declare const IconColumns: string;

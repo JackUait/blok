@@ -547,7 +547,7 @@ export class ViewSettingsPages {
 
   // ─── AI Autofill: one row per set-up property, then "New AI Autofill" (research/12 §2) ───
 
-  private autofillList(autofill: AutofillPanelSettings): PanelPage {
+  autofillList(autofill: AutofillPanelSettings): PanelPage {
     const open = (panel: DatabasePanel, id: string): void => {
       if (!autofill.writable()) return;
       panel.close();
@@ -2172,7 +2172,7 @@ const idList = (value: FilterConfig['value']): string[] => {
   return typeof value === 'string' && value !== '' ? [value] : [];
 };
 
-export type ViewSettingsStart = 'root' | 'filter' | 'sort' | 'group' | 'layout' | 'properties';
+export type ViewSettingsStart = 'root' | 'filter' | 'sort' | 'group' | 'layout' | 'properties' | 'automations' | 'autofill';
 
 /** Opens the view settings panel under `anchor`, at `start`. */
 export const openViewSettings = (
@@ -2189,6 +2189,8 @@ export const openViewSettings = (
     group: (): PanelPage => pages.group(false),
     layout: (): PanelPage => pages.layout(),
     properties: (): PanelPage => pages.properties(),
+    automations: (): PanelPage => ctx.automations === undefined ? pages.root() : automationListPage(ctx.automations, ctx.i18n),
+    autofill: (): PanelPage => ctx.autofill === undefined ? pages.root() : pages.autofillList(ctx.autofill),
   }[start]();
   const panel = new DatabasePanel({
     anchor,

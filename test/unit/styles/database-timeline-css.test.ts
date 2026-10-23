@@ -153,6 +153,11 @@ describe('database timeline styles', () => {
     expect(en).toContain('"tools.database.timelineZoomFiveYears": "5 Years"');
   });
 
+  it('mirrors the cut-bar chip and the connector chevron in RTL', () => {
+    expect(ruleBody('[dir="rtl"] [data-blok-database-timeline-bar-chip] svg')).toContain('transform: scaleX(-1)');
+    expect(ruleBody('[dir="rtl"] [data-blok-database-timeline-link-handle] svg')).toContain('transform: scaleX(-1)');
+  });
+
   it('hides an off-screen arrow that the view marks hidden', () => {
     expect(ruleBody('[data-blok-database-timeline-offscreen][hidden]')).toMatch(/display:\s*none/);
   });

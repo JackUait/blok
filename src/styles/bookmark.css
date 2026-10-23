@@ -212,9 +212,6 @@
 [data-blok-tool="bookmark"] .blok-bookmark:hover .blok-bookmark__scene {
   --bookmark-peel: calc(var(--bookmark-scale) * 38 / 7);
 }
-[data-blok-tool="bookmark"] .blok-bookmark:hover .blok-bookmark__peel-under {
-  color: var(--blok-text-primary);
-}
 [data-blok-tool="bookmark"] .blok-bookmark__peel-under,
 [data-blok-tool="bookmark"] .blok-bookmark__peel-sheet,
 [data-blok-tool="bookmark"] .blok-bookmark__peel-flap {
@@ -230,10 +227,10 @@
 }
 [data-blok-tool="bookmark"] .blok-bookmark__peel-under {
   box-sizing: border-box;
-  padding: calc(var(--bookmark-scale) * 3 / 7) calc(var(--bookmark-scale) * 4 / 7);
+  /* Keeps the initial just outside the resting corner, so no sliver of it shows until the peel. */
+  padding: calc(var(--bookmark-scale) * 11 / 14) calc(var(--bookmark-scale) * 13 / 14);
   background: color-mix(in srgb, var(--blok-text-primary) 8%, var(--blok-bg-primary));
-  /* Hidden at rest: the small turned corner would show only a sliver of it. */
-  color: transparent;
+  color: var(--blok-text-primary);
   font-size: calc(var(--bookmark-scale) * 13 / 7);
   font-weight: 800;
   line-height: 1;
@@ -302,9 +299,6 @@
 @media (prefers-reduced-motion: no-preference) {
   [data-blok-tool="bookmark"] .blok-bookmark__peel-sheet {
     transition: clip-path 650ms cubic-bezier(.34, 1.3, .64, 1);
-  }
-  [data-blok-tool="bookmark"] .blok-bookmark__peel-under {
-    transition: color 300ms ease 150ms;
   }
   [data-blok-tool="bookmark"] .blok-bookmark__peel-flap {
     transition: width 650ms cubic-bezier(.34, 1.3, .64, 1), height 650ms cubic-bezier(.34, 1.3, .64, 1);

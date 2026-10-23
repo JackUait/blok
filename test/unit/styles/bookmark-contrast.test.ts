@@ -140,3 +140,12 @@ describe('bookmark gray text contrast', () => {
     });
   });
 });
+
+describe('bookmark failed cover', () => {
+  const under = '[data-blok-tool="bookmark"] .blok-bookmark__peel-under';
+
+  it('inks the site initial at rest, so the peel uncovers it instead of fading it in', () => {
+    expect(/\scolor:\s*([^;]+);/.exec(ruleBody(under))?.[1].trim()).toBe('var(--blok-text-primary)');
+    expect(BOOKMARK_CSS).not.toMatch(/\.blok-bookmark__peel-under\s*\{[^}]*transition/);
+  });
+});

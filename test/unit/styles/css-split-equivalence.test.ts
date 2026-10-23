@@ -1048,7 +1048,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // ask-ai-menu.css + its import: the Ask AI menu's rose light, unfold, icon acts, hue ink, shine and seam.
     const ASK_AI_MENU_MOTION_BYTES = 10_499;
     // bookmark.css: a cover that fails to load is drawn as a page sketch whose corner peels back on hover.
-    const BOOKMARK_PEEL_COVER_BYTES = 6_136;
+    const BOOKMARK_PEEL_COVER_BYTES = 5_955;
     // isolation.css: --blok-font-sans is Notion's longer font stack.
     const NOTION_FONT_STACK_BYTES = 111;
     // database.css: research/37 §4.1-4.2 and 35 §8: dark Reset, map button and help link inks, the confirm keyboard ring, the pin fill.

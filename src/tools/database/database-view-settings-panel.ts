@@ -1,4 +1,4 @@
-import { IconBolt, IconCalendar, IconChevronUpDown, IconCopy, IconCross, IconDatabase, IconDotsHorizontal, IconFilter, IconGallery, IconLink, IconLock, IconPaintRoller, IconPlus, IconPreview, IconReplace, IconSort, IconTable, IconTrash, IconWand } from '../../components/icons';
+import { IconBolt, IconCalendar, IconCheck, IconChevronUpDown, IconCopy, IconCross, IconDatabase, IconDotsHorizontal, IconFilter, IconGallery, IconLink, IconLock, IconPaintRoller, IconPlus, IconPreview, IconReplace, IconSort, IconTable, IconTrash, IconWand } from '../../components/icons';
 import type { I18n } from '../../../types';
 import {
   DatabasePanel,
@@ -229,6 +229,9 @@ const readLayoutItems = (items: PopoverItemParams[]): LayoutItem[] => items.flat
     ...(record.children?.items !== undefined ? { children: readLayoutItems(record.children.items) } : {}),
   }];
 });
+
+/** 11-notion-layout.png: the Layout page's tile order. Layouts it does not show go last. */
+const LAYOUT_TILE_ORDER: readonly ViewType[] = ['table', 'board', 'timeline', 'calendar', 'list', 'gallery', 'chart', 'feed', 'map'];
 
 /** The option colors Notion offers (research/08). */
 const COLORS = ['default', 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'] as const;
@@ -847,16 +850,7 @@ export class ViewSettingsPages {
       title: this.t('settingsLayout'),
       build: (panel) => {
         const view = this.ctx.view();
-        const tiles = this.ctx.layouts.map((type) => panelRow({
-          label: this.t(`viewType${capital(type)}`),
-          testId: `database-layout-${type}`,
-          checked: view.type === type,
-          disabled: !this.shared,
-          onClick: () => {
-            this.ctx.setLayout(type);
-            panel.refresh();
-          },
-        }));
+        const tiles = this.layoutTiles(panel, view.type);
         // Linked views only: a database that holds its rows shows its own title (R-2022-03-15).
         const sourceTitle = this.ctx.linked?.() === true
           ? [panelSwitch({
@@ -892,8 +886,7 @@ export class ViewSettingsPages {
         if (view.type === 'map') {
           // Measured order, no Wrap (research/20 §1f).
           return [
-            ...tiles,
-            panelSeparator(),
+            tiles,
             ...sourceTitle,
             pageIcon,
             panelRow({
@@ -907,39 +900,85 @@ export class ViewSettingsPages {
             loadLimit,
           ];
         }
-        const switches: HTMLElement[] = [
-          panelSwitch({
-            label: this.t('settingsWrapAll'),
-            testId: 'database-settings-wrap',
-            checked: resolveWrapCells(view),
-            disabled: !this.shared,
-            onToggle: (next) => this.ctx.updateView({ wrapCells: next }),
-          }),
-        ];
-
-        if (view.type === 'table') {
-          switches.push(panelSwitch({
+        const verticalLines = view.type === 'table'
+          ? [panelSwitch({
             label: this.t('settingsVerticalLines'),
             testId: 'database-settings-vertical-lines',
             checked: resolveShowVerticalLines(view),
             disabled: !this.shared,
             onToggle: (next) => this.ctx.updateView({ showVerticalLines: next }),
-          }));
-        }
-        switches.push(pageIcon);
+          })]
+          : [];
+        const wrap = panelSwitch({
+          label: this.t('settingsWrapAll'),
+          testId: 'database-settings-wrap',
+          checked: resolveWrapCells(view),
+          disabled: !this.shared,
+          onToggle: (next) => this.ctx.updateView({ wrapCells: next }),
+        });
 
+        // 11-notion-layout.png: the switches, then Open pages in and Load limit.
         return [
-          ...tiles,
-          panelSeparator(),
+          tiles,
           ...sourceTitle,
+          ...verticalLines,
+          pageIcon,
+          wrap,
           openPages,
           loadLimit,
-          ...switches,
           ...this.layoutRows(panel),
           ...(view.type === 'board' ? [this.cardLayoutBox(panel)] : []),
         ];
       },
     };
+  }
+
+  /**
+   * findings V13 (11-notion-layout.png): a 3-column grid of glyph-over-label
+   * tiles in Notion's order. Notion rings the pick blue; Blok marks it gray
+   * with a ✓ (no-blue law).
+   */
+  private layoutTiles(panel: DatabasePanel, current: ViewType): HTMLElement {
+    const grid = document.createElement('div');
+    const rank = (type: ViewType): number => {
+      const at = LAYOUT_TILE_ORDER.indexOf(type);
+
+      return at === -1 ? LAYOUT_TILE_ORDER.length : at;
+    };
+    const types = [...this.ctx.layouts].sort((a, b) => rank(a) - rank(b));
+
+    grid.setAttribute('data-blok-database-layout-tiles', '');
+    grid.append(...types.map((type) => {
+      const tile = document.createElement('button');
+      const glyph = document.createElement('span');
+      const label = document.createElement('span');
+
+      tile.type = 'button';
+      tile.setAttribute('data-blok-database-layout-tile', type);
+      tile.setAttribute('data-blok-testid', `database-layout-${type}`);
+      tile.setAttribute('role', 'menuitemradio');
+      tile.setAttribute('aria-checked', String(current === type));
+      tile.disabled = !this.shared;
+      glyph.setAttribute('data-blok-database-layout-tile-glyph', '');
+      glyph.innerHTML = VIEW_ICONS[type] ?? IconTable;
+      label.textContent = this.t(`viewType${capital(type)}`);
+      tile.append(glyph, label);
+      if (current === type) {
+        const check = document.createElement('span');
+
+        check.setAttribute('data-blok-database-panel-check', '');
+        check.innerHTML = IconCheck;
+        tile.appendChild(check);
+      }
+      tile.addEventListener('click', () => {
+        this.ctx.setLayout(type);
+        panel.refresh();
+      });
+
+      return tile;
+    }));
+
+    return grid;
   }
 
   /**

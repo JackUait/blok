@@ -308,6 +308,48 @@ describe('view settings panel', () => {
     expect(exists('database-settings-subgroup')).toBe(true);
   });
 
+  // findings V13 (11-notion-layout.png): a 3-column tile grid in Notion's order, then the switches, then Open pages in and Load limit.
+  describe('Layout page tiles', () => {
+    const tiles = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>('[data-blok-database-layout-tiles] > [data-blok-database-layout-tile]')];
+
+    it('draws a tile per layout, glyph above label, in Notion\'s order', () => {
+      const h = harness();
+
+      h.ctx.layouts = ['table', 'board', 'list', 'gallery', 'calendar', 'timeline', 'chart', 'feed', 'map', 'form'];
+      h.open('layout');
+
+      expect(tiles().map((tile) => tile.getAttribute('data-blok-database-layout-tile'))).toEqual([
+        'table', 'board', 'timeline', 'calendar', 'list', 'gallery', 'chart', 'feed', 'map', 'form',
+      ]);
+      for (const tile of tiles()) expect(tile.querySelector('svg')).not.toBeNull();
+      expect(tiles()[1].textContent?.trim()).toBe('tools.database.viewTypeBoard');
+    });
+
+    // Notion rings the pick blue; Blok marks it gray with a ✓ (no-blue law, findings "Deliberate deviations").
+    it('marks only the chosen tile, with aria-checked and a ✓', () => {
+      harness({ type: 'board' }).open('layout');
+      const chosen = tiles().filter((tile) => tile.getAttribute('aria-checked') === 'true');
+
+      expect(chosen.map((tile) => tile.getAttribute('data-blok-database-layout-tile'))).toEqual(['board']);
+      expect(chosen[0].getAttribute('role')).toBe('menuitemradio');
+      expect(tiles().filter((tile) => tile.querySelector('[data-blok-database-panel-check] svg') !== null)).toEqual(chosen);
+    });
+
+    it('puts the switches before Open pages in and Load limit, in Notion\'s order', () => {
+      const h = harness();
+
+      h.ctx.linked = () => true;
+      h.open('layout');
+      const ids = [...document.querySelectorAll<HTMLElement>('[data-blok-testid="database-view-settings"] [data-blok-testid^="database-settings-"]')]
+        .map((el) => el.getAttribute('data-blok-testid'));
+
+      expect(ids).toEqual([
+        'database-settings-data-source-title', 'database-settings-vertical-lines', 'database-settings-page-icon', 'database-settings-wrap',
+        'database-settings-open-pages', 'database-settings-load-limit',
+      ]);
+    });
+  });
+
   it('switches the layout and marks the current one with a check', () => {
     const h = harness();
 

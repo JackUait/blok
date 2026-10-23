@@ -1223,6 +1223,67 @@ export const IconDownload = `
 `;
 
 // Select (single-choice dropdown) — database "select" property type
+// Database property type glyphs, drawn after Notion's.
+export const IconLetterCase = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3 15L6.5 5L10 15M4.25 11.5H8.75M17 9.5V15" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="14.25" cy="12.25" r="2.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+export const IconTextLines = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3.5 5.5H16.5M3.5 10H16.5M3.5 14.5H11.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+export const IconSelectCircle = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M8.25 9H11.75L10 11.25Z" fill="currentColor" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+export const IconStatusCircle = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M13.5 10L16.5 10M12.47 12.47L14.6 14.6M10 13.5L10 16.5M7.53 12.47L5.4 14.6M6.5 10L3.5 10M7.53 7.53L5.4 5.4M10 6.5L10 3.5M12.47 7.53L14.6 5.4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+export const IconCheckboxFilled = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <rect x="3.5" y="3.5" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M5.5 3.5H14.5A2 2 0 0 1 16.5 5.5V14.5A2 2 0 0 1 14.5 16.5H5.5A2 2 0 0 1 3.5 14.5V5.5A2 2 0 0 1 5.5 3.5ZM7.28 9.72L8.88 11.32L12.72 7.47L13.78 8.53L8.88 13.44L6.22 10.78Z" fill="currentColor" fill-rule="evenodd" stroke="none"/>
+</svg>
+`;
+
+export const IconPhone = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M5.5 3.5L7.7 3.5L8.9 6.7L7.3 8.1A9 9 0 0 0 11.9 12.7L13.3 11.1L16.5 12.3L16.5 14.5A2 2 0 0 1 14.5 16.5A12.5 12.5 0 0 1 3.5 5.5A2 2 0 0 1 5.5 3.5Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+export const IconAt = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <circle cx="10" cy="10" r="2.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12.75 7.25V11.25A1.875 1.875 0 0 0 16.5 11.25V10A6.5 6.5 0 1 0 13.9 15.2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+export const IconPaperclip = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M14.15 11.15L10.27 15.04A3.75 3.75 0 0 1 4.96 9.73L10.62 4.08A2.5 2.5 0 0 1 14.15 7.61L9.2 12.56A1.25 1.25 0 0 1 7.44 10.8L9.91 8.32" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+export const IconPeople = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <circle cx="7" cy="7" r="2.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="14" cy="7" r="1.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3 16A4 4 0 0 1 11 16M12.97 13.18A3 3 0 0 1 17 16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 export const IconSelect = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>

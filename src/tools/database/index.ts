@@ -6973,6 +6973,8 @@ export class DatabaseTool implements BlockTool {
       bulkEdit: () => undefined,
       commitCells: (changes, newRows, whenIdle) => this.commitTableCells(changes, newRows, context, whenIdle),
       editFilters: (anchor) => { if (writable()) (context?.controls ?? this.controls).openSettings(anchor, 'filter'); },
+      searching: () => (context?.controls ?? this.controls).search !== '',
+      clearSearch: () => (context?.controls ?? this.controls).clearSearch(),
       groupToggled: (key, collapsed) => { if (writable()) (context?.owner ?? this).saveGroupCollapse(context?.viewId ?? this.activeViewId, key, collapsed); },
       rerender: () => context === undefined ? this.rerenderView({ keepDrawer: true }) : context.redraw(),
       // Locked: no option edits, so the select editor offers no "Create" (research/05 §12).

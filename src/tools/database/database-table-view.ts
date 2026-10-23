@@ -112,6 +112,9 @@ export interface TableHandlers {
   /** A paste, fill or bulk edit: cell writes, then new rows. One undo step. `whenIdle`: redraw once the view is idle. */
   commitCells: (changes: CellChange[], newRows: Array<Record<string, PropertyValue>>, whenIdle?: boolean) => void;
   editFilters: (anchor: HTMLElement) => void;
+  /** Whether a search is on: an empty result then offers "Clear search". */
+  searching?: () => boolean;
+  clearSearch?: () => void;
   /** A group was folded or opened. The tool saves it in the view. */
   groupToggled?: (key: string, collapsed: boolean) => void;
   /** Redraw from the model, keeping the table state. */
@@ -738,7 +741,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     closeTo(0);
     fragment.appendChild(body);
 
-    if (rows.length === 0 && group === undefined && this.options.view.filters.length > 0) {
+    if (rows.length === 0 && group === undefined && (this.options.view.filters.length > 0 || this.handlers?.searching?.() === true)) {
       fragment.appendChild(this.createEmptyState());
 
       return fragment;
@@ -841,10 +844,11 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
     empty.setAttribute('data-blok-database-table-empty', '');
     const edit = document.createElement('button');
+    const searching = this.handlers?.searching?.() === true;
 
     edit.type = 'button';
-    edit.setAttribute('data-blok-database-table-edit-filters', '');
-    edit.textContent = this.t('tools.database.tableEditFilters');
+    edit.setAttribute(searching ? 'data-blok-database-table-clear-search' : 'data-blok-database-table-edit-filters', '');
+    edit.textContent = this.t(searching ? 'tools.database.searchClear' : 'tools.database.tableEditFilters');
     empty.appendChild(edit);
     if (this.editable) {
       empty.appendChild(this.createAddRow(''));
@@ -1546,6 +1550,11 @@ export class DatabaseTableView implements DatabaseViewRenderer {
       if (this.options.readOnly) {
         this.clickReadOnlyCell(target, event);
       }
+
+      return;
+    }
+    if (closest('[data-blok-database-table-clear-search]') !== null) {
+      handlers.clearSearch?.();
 
       return;
     }

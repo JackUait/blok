@@ -461,6 +461,19 @@ describe('DatabaseTableView', () => {
       expect(handlers.editFilters).toHaveBeenCalled();
     });
 
+    it('shows Clear search and New page when a search matches no row (Notion, findings V29)', () => {
+      const clearSearch = vi.fn();
+      const { root } = mount({ rows: [], handlers: { ...makeHandlers(), searching: () => true, clearSearch } });
+      const empty = root.querySelector<HTMLElement>('[data-blok-database-table-empty]');
+      const clear = empty?.querySelector<HTMLElement>('[data-blok-database-table-clear-search]');
+
+      expect(clear?.textContent).toBe('tools.database.searchClear');
+      expect(empty?.querySelector('[data-blok-database-table-edit-filters]')).toBeNull();
+      expect(empty?.querySelector('[data-blok-database-table-add-row]')).not.toBeNull();
+      clear?.click();
+      expect(clearSearch).toHaveBeenCalled();
+    });
+
     it('draws "+ New page" and two blank grid lines on a database with no rows (Notion empty table)', () => {
       const { root } = mount({ rows: [] });
       const lines = [...root.querySelectorAll<HTMLElement>('[data-blok-database-table-blank-row]')];

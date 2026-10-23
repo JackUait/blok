@@ -1075,6 +1075,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_SELECTION_BAR_BYTES = 154;
     // database.css: feel/findings-table T27: the filter list's highlighted option.
     const DATABASE_FILTER_LIST_ACTIVE_BYTES = 45;
+    // database.css: feel/findings-table T13: the uncapped board and list bar still hides the whole toolbar.
+    const DATABASE_SELECTION_BAR_BOARD_BYTES = 233;
     const DATABASE_ADD_PROPERTY_GRID_BYTES = 514;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
@@ -1271,7 +1273,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_STATUS_POPOVER_BYTES
       + DATABASE_MULTI_HANDLES_BYTES
       + DATABASE_SELECTION_BAR_BYTES
-      + DATABASE_FILTER_LIST_ACTIVE_BYTES;
+      + DATABASE_FILTER_LIST_ACTIVE_BYTES
+      + DATABASE_SELECTION_BAR_BOARD_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

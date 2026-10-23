@@ -89,6 +89,12 @@ describe('selection bar (T13)', () => {
     expect(declared(rule, 'visibility')).toEqual(['hidden']);
     expect(declared('[data-blok-database-view-bar][data-blok-database-selecting] > :not([data-blok-database-table-selection-bar])', 'visibility')).toEqual([]);
   });
+
+  it('still hides the whole toolbar under the uncapped board and list bar', () => {
+    const rule = '[data-blok-database-view-bar][data-blok-database-selecting]:not([data-blok-database-selecting="table"]) > :not([data-blok-database-table-selection-bar])';
+
+    expect(declared(rule, 'visibility')).toEqual(['hidden']);
+  });
 });
 
 describe('filter property list (T27)', () => {

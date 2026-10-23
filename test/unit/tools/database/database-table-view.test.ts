@@ -604,6 +604,8 @@ describe('DatabaseTableView', () => {
       expect(slot.querySelector('[data-blok-database-table-selection-bar]')).not.toBeNull();
       expect(root.querySelector('[data-blok-database-table-selection-bar]')).toBeNull();
       expect(slot.hasAttribute('data-blok-database-selecting')).toBe(true);
+      // Only the table's capped bar leaves the toolbar showing (database.css).
+      expect(slot.getAttribute('data-blok-database-selecting')).toBe('table');
 
       press(grid(root), 'Escape');
       expect(slot.querySelector('[data-blok-database-table-selection-bar]')).toBeNull();

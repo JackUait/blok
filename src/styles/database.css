@@ -7596,8 +7596,10 @@ textarea[data-blok-database-cell-input] {
   min-height: 32px;
 }
 
-/* The bar takes the tabs' place; the toolbar and New stay to its right (feel/findings-table T13). */
-[data-blok-database-view-bar][data-blok-database-selecting] > [data-blok-database-tab-bar] {
+/* The bar takes the tabs' place; the toolbar and New stay to its right (feel/findings-table T13).
+   The board and list bar is not capped yet, so it still covers the whole row. */
+[data-blok-database-view-bar][data-blok-database-selecting] > [data-blok-database-tab-bar],
+[data-blok-database-view-bar][data-blok-database-selecting]:not([data-blok-database-selecting="table"]) > :not([data-blok-database-table-selection-bar]) {
   visibility: hidden;
 }
 

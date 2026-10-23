@@ -1269,7 +1269,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         root.insertBefore(this.bar, root.firstChild);
       } else {
         slot.appendChild(this.bar);
-        slot.setAttribute('data-blok-database-selecting', '');
+        slot.setAttribute('data-blok-database-selecting', 'table');
       }
     }
     const count = this.bar.querySelector('[data-blok-database-table-selection-count]');

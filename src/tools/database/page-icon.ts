@@ -1,3 +1,5 @@
+import { IconPage } from '../../components/icons';
+
 import type { DatabaseRow, DatabaseViewConfig } from './types';
 
 /** Whether a view shows row page icons. Notion shows them unless the view turns them off. */
@@ -14,6 +16,17 @@ export const pageIconElement = (row: Pick<DatabaseRow, 'icon'>): HTMLElement | n
   icon.setAttribute('data-blok-database-page-icon', '');
   icon.setAttribute('aria-hidden', 'true');
   icon.textContent = row.icon;
+
+  return icon;
+};
+
+/** The page glyph a table shows before a title with no icon (Notion's pageEmpty). */
+export const pagePlaceholderIcon = (): HTMLElement => {
+  const icon = document.createElement('span');
+
+  icon.setAttribute('data-blok-database-page-icon-placeholder', '');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.innerHTML = IconPage;
 
   return icon;
 };

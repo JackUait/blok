@@ -6658,6 +6658,26 @@ textarea[data-blok-database-cell-input] {
   font-weight: 500;
 }
 
+/* research/07:72. A float, so a wrapped title stays beside the icon: the
+   value is overflow-hidden, which keeps it clear of the float. */
+[data-blok-database-table-cell] > [data-blok-database-page-icon],
+[data-blok-database-table-cell] > [data-blok-database-page-icon-placeholder] {
+  float: inline-start;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-block-start: calc(-1 * var(--blok-space-0-5));
+  margin-inline: calc(-1 * var(--blok-space-0-5)) var(--blok-space-0-75);
+  color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-database-page-icon-placeholder] svg {
+  width: 18px;
+  height: 18px;
+}
+
 [data-blok-database-table-cell][data-type="number"] {
   text-align: end;
 }

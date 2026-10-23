@@ -350,6 +350,33 @@ describe('DatabaseTableView', () => {
       expect(grid(root).getAttribute('data-vertical-lines')).toBe('false');
     });
 
+    it('draws a page glyph before a title that has no icon (Notion pageEmpty)', () => {
+      const { root } = mount({ rows: [{ ...row('r1', 'Alpha'), icon: '🥌' }, row('r2', 'Bravo')] });
+      const plain = cell(root, 'r2', 'p-title');
+      const glyph = plain.querySelector<HTMLElement>('[data-blok-database-page-icon-placeholder]');
+
+      expect(glyph?.querySelector('svg')).not.toBeNull();
+      expect(glyph?.getAttribute('aria-hidden')).toBe('true');
+      expect(glyph?.nextElementSibling?.hasAttribute('data-blok-database-cell')).toBe(true);
+      expect(plain.querySelector('[data-blok-database-page-icon]')).toBeNull();
+      expect(cell(root, 'r1', 'p-title').querySelector('[data-blok-database-page-icon]')?.textContent).toBe('🥌');
+      expect(cell(root, 'r1', 'p-title').querySelector('[data-blok-database-page-icon-placeholder]')).toBeNull();
+    });
+
+    it('hides the page glyph when "Show page icon" is off', () => {
+      const { root } = mount({ view: tableView({ showPageIcon: false }) });
+
+      expect(cell(root, 'r1', 'p-title').querySelector('[data-blok-database-page-icon-placeholder]')).toBeNull();
+    });
+
+    it('keeps the page glyph when the title is edited in place', () => {
+      const { root, view } = mount();
+
+      view.updateRowTitle(root, 'r1', 'Renamed');
+      expect(cell(root, 'r1', 'p-title').querySelector('[data-blok-database-page-icon-placeholder]')).not.toBeNull();
+      expect(cell(root, 'r1', 'p-title').textContent).toContain('Renamed');
+    });
+
     it('wraps every column of a view saved with no wrap fields (the v1.16.1 shape)', () => {
       const { root } = mount({ view: tableView({ visibleProperties: ['p-title', 'p-notes', 'p-amount'] }) });
 

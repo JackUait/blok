@@ -152,6 +152,17 @@ describe('DatabaseBoardView', () => {
       expect(statusView([makeOption()]).querySelector('[data-blok-database-add-column]')).toBeNull();
     });
 
+    // findings-board B25: the hidden column just goes; Settings › Group lists it. Select boards are unmeasured and keep the button.
+    it('offers no hidden-groups button', () => {
+      const board = new DatabaseBoardView({
+        readOnly: false, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title', hiddenGroupCount: 1,
+        schema: [{ id: 's', name: 'Status', type: 'status', position: 'a1' }],
+        view: { id: 'v', name: 'Board', type: 'board', position: 'a0', sorts: [], filters: [], visibleProperties: [], groupBy: 's' },
+      }).createView();
+
+      expect(board.querySelector('[data-blok-database-hidden-groups]')).toBeNull();
+    });
+
     it('keeps the select pill for status groups and for select boards', () => {
       const byGroup = statusView([makeOption({ id: 'g', color: 'blue' })], { groupByStatus: 'group' });
       const select = new DatabaseBoardView({ readOnly: false, i18n, options: [makeOption({ id: 'o', color: 'blue' })], getRows: () => [], titlePropertyId: 'title' }).createView();

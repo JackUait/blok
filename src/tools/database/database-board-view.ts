@@ -174,7 +174,8 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       }
     }
 
-    if (this.hiddenGroupCount > 0 && !this.readOnly) {
+    // A Status board drops a hidden column without a trace (findings-board B25); Settings › Group lists it.
+    if (this.hiddenGroupCount > 0 && !this.readOnly && !this.isStatusBoard) {
       const hiddenBtn = document.createElement('button');
 
       hiddenBtn.type = 'button';

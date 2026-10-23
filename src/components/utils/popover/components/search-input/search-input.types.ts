@@ -60,34 +60,45 @@ const levenshteinDistance = (a: string, b: string): number => {
   return prevRow[b.length];
 };
 
+const isWordStart = (target: string, index: number): boolean =>
+  index === 0 || target[index - 1] === ' ' || target[index - 1] === '-' || target[index - 1] === '_';
+
 /**
  * Checks if query characters appear in order in target (subsequence match).
  *
- * The match must be ANCHORED: the first query character has to sit at a word
- * boundary of the target (start of string, or after space/hyphen/underscore).
- * An unanchored subsequence buried mid-word — like "hea" inside
- * "w(h)it(e)sp(a)ce" — is noise, not a match: it made the heading filter
- * surface the Spacer tool.
+ * The match must start at a word start, and each time it moves on to a later
+ * word it must land on that word's first letter. Without the first rule "hea"
+ * matched "w(h)it(e)sp(a)ce" (Spacer); without the second "board" matched
+ * "(b)r(o)wn b(a)ckg(r)oun(d)" (Brown background).
  * @param target - string to search in
  * @param query - characters to find in order
- * @returns true if query is a subsequence of target starting at a word boundary
+ * @returns true if query is such a subsequence of target
  */
 const isSubsequence = (target: string, query: string): boolean => {
-  if (query.length === 0) {
-    return true;
-  }
+  const failed = new Set<string>();
+  const matchFrom = (qi: number, prev: number): boolean => {
+    if (qi === query.length) {
+      return true;
+    }
+    if (failed.has(`${qi}:${prev}`)) {
+      return false;
+    }
 
-  const remainderMatchesFrom = (start: number): boolean =>
-    [...target.slice(start + 1)].reduce(
-      (qi, char) => (qi < query.length && char === query[qi] ? qi + 1 : qi),
-      1
-    ) === query.length;
+    const found = [...target.slice(prev + 1)].some((char, offset) => {
+      const index = prev + 1 + offset;
+      const sameWord = prev >= 0 && !/[ \-_]/.test(target.slice(prev + 1, index));
 
-  return [...target].some((char, start) => {
-    const isWordBoundary = start === 0 || target[start - 1] === ' ' || target[start - 1] === '-' || target[start - 1] === '_';
+      return char === query[qi] && (sameWord || isWordStart(target, index)) && matchFrom(qi + 1, index);
+    });
 
-    return isWordBoundary && char === query[0] && remainderMatchesFrom(start);
-  });
+    if (!found) {
+      failed.add(`${qi}:${prev}`);
+    }
+
+    return found;
+  };
+
+  return query.length === 0 || matchFrom(0, -1);
 };
 
 /**
@@ -100,9 +111,7 @@ const isSubsequence = (target: string, query: string): boolean => {
 const matchesWordBoundaries = (target: string, query: string): boolean => {
   const matched = [...target].reduce(
     (qi, char, ti) => {
-      const isWordBoundary = ti === 0 || target[ti - 1] === ' ' || target[ti - 1] === '-' || target[ti - 1] === '_';
-
-      return qi < query.length && isWordBoundary && char === query[qi] ? qi + 1 : qi;
+      return qi < query.length && isWordStart(target, ti) && char === query[qi] ? qi + 1 : qi;
     },
     0
   );
@@ -132,7 +141,15 @@ const scoreString = (target: string, lowerQuery: string): number => {
   if (lowerQuery.length >= 2 && isSubsequence(target, lowerQuery)) {
     return 35;
   }
-  if (lowerQuery.length >= 3) {
+  /*
+   * A typo keeps the first letter and at most one extra or missing letter,
+   * unless the query just runs on past the term ("linked" for "link").
+   * Otherwise "map" hit "gap" and "inline" hit "line".
+   */
+  const typoShaped = target[0] === lowerQuery[0]
+    && (Math.abs(target.length - lowerQuery.length) <= 1 || lowerQuery.startsWith(target));
+
+  if (lowerQuery.length >= 3 && typoShaped) {
     const maxDist = Math.floor(lowerQuery.length / 3);
     const dist = levenshteinDistance(target, lowerQuery);
 

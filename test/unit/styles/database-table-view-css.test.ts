@@ -79,4 +79,14 @@ describe('database table view styles', () => {
     expect(ruleBody('[data-blok-database-table-cell] > [data-blok-database-page-icon-placeholder]')).toContain('var(--blok-database-table-header-icon)');
     expect(ruleBody('[data-blok-database-page-icon-placeholder] svg')).toMatch(/width:\s*18px/);
   });
+
+  it('draws the header bottom line on the header cells and no dividers between them (Notion: border-right none)', () => {
+    const lines = Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g))
+      .filter((m) => /border-inline-end/.test(m[2] ?? '') && (m[1] ?? '').includes('[data-vertical-lines="true"]'))
+      .map((m) => m[1] ?? '');
+
+    expect(lines.length).toBeGreaterThan(0);
+    expect(lines.join(',')).not.toContain('[data-blok-database-table-column-header]');
+    expect(ruleBody('[data-blok-database-table-column-header]')).toMatch(/box-shadow:\s*inset 0 -1px 0 var\(--blok-database-table-border\)/);
+  });
 });

@@ -6507,6 +6507,8 @@ textarea[data-blok-database-cell-input] {
   font-weight: 400;
   cursor: pointer;
   background-color: var(--blok-database-table-bg);
+  /* The opaque fill hides the row's own line, so each header cell draws it. */
+  box-shadow: inset 0 -1px 0 var(--blok-database-table-border);
   transition: background-color 20ms ease-in;
 }
 
@@ -6643,7 +6645,6 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-table-grid][data-vertical-lines="true"] [data-blok-database-table-cell],
-[data-blok-database-table-grid][data-vertical-lines="true"] [data-blok-database-table-column-header],
 [data-blok-database-table-row-ghost][data-vertical-lines="true"] [data-blok-database-table-cell],
 [data-blok-database-table-column-ghost][data-vertical-lines="true"] {
   border-inline-end: 1px solid var(--blok-database-table-border);

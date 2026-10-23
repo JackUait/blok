@@ -59,6 +59,31 @@ const contentOf = (holder: HTMLElement): HTMLElement | undefined =>
   [...holder.querySelectorAll<HTMLElement>(`[${DATA_ATTR.elementContent}]`)]
     .find((content) => content.closest(`[${DATA_ATTR.element}]`) === holder);
 
+/** A collapsed caret in `input` on a line with no text. Lines split on "\n", as in a code block's plain text. */
+const isCaretOnEmptyLine = (input: HTMLElement): boolean => {
+  const selection = window.getSelection();
+
+  if (selection === null || selection.rangeCount === 0 || !selection.isCollapsed) {
+    return false;
+  }
+
+  const caret = selection.getRangeAt(0);
+
+  if (!input.contains(caret.startContainer)) {
+    return false;
+  }
+
+  const before = document.createRange();
+
+  before.selectNodeContents(input);
+  before.setEnd(caret.startContainer, caret.startOffset);
+
+  const text = input.textContent ?? '';
+  const offset = before.toString().length;
+
+  return (offset === 0 || text[offset - 1] === '\n') && (offset === text.length || text[offset] === '\n');
+};
+
 const isOpenShortcut = (event: KeyboardEvent): boolean => {
   const mac = getUserOS().mac;
 
@@ -162,7 +187,10 @@ export class Assistant extends Module {
     this.close({ restoreFocus: false });
   }
 
-  /** Space in an empty default block opens the bar, as its placeholder says (tools/factory.ts). */
+  /**
+   * Space in any empty block opens the bar: a paragraph (as its placeholder
+   * says), a heading, a list item, a table cell. In a code block, an empty line is enough.
+   */
   private isSpaceInEmptyBlock(event: KeyboardEvent): boolean {
     if (event.key !== ' ' || event.isComposing || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) {
       return false;
@@ -170,10 +198,14 @@ export class Assistant extends Module {
     if (!this.Blok.AgentAPI.hasAssistant || this.Blok.ReadOnly.isEnabled || !(event.target instanceof HTMLElement)) {
       return false;
     }
+    // A field of the tool's own (a code filename, a database cell) types its space.
+    if (event.target.matches('input, textarea, select') || event.target.closest(`[${DATA_ATTR.keyboardOwner}]`) !== null) {
+      return false;
+    }
 
     const block = this.Blok.BlockManager.getBlock(event.target);
 
-    return block !== undefined && block.tool.isDefault && block.isEmpty;
+    return block !== undefined && (block.isEmpty || isCaretOnEmptyLine(event.target));
   }
 
   /**

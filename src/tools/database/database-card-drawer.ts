@@ -731,6 +731,7 @@ export class DatabaseCardDrawer {
         this.onTitleChange(this.currentRowId, titleInput.value);
       }
       this.autoResizeTitle(titleInput);
+      this.syncCrumbs();
     });
     titleInput.addEventListener('keydown', (e) => {
       if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !e.isComposing && !this.readOnly && this.attachedBodyRowId !== null
@@ -917,6 +918,7 @@ export class DatabaseCardDrawer {
     }
 
     this.drawer.querySelector('[data-blok-database-drawer-page-head]')?.replaceWith(this.buildPageHead(row));
+    this.syncCrumbs();
 
     // Reinitialize editor
     const editorHolder = this.drawer.querySelector<HTMLElement>('[data-blok-database-drawer-editor]');
@@ -1609,6 +1611,7 @@ export class DatabaseCardDrawer {
       separator(),
       button('data-blok-database-peek-prev', 'tools.database.peekPrevious', IconChevronDown, () => this.step(-1)),
       button('data-blok-database-peek-next', 'tools.database.peekNext', IconChevronDown, () => this.step(1)),
+      this.buildCrumbs(),
       hinted(button('data-blok-database-peek-copy-link', 'tools.database.tableCopyLink', IconLink, () => this.copyLink()), 'tools.database.tableCopyLink'),
       // research/10 §10: shown only while the layout uses the details panel (syncPageInfo).
       button('data-blok-database-peek-page-info', 'tools.database.layoutPageInfo', IconSidebarRight, () => this.setDetailsOpen(!this.detailsOpen)),
@@ -1617,6 +1620,45 @@ export class DatabaseCardDrawer {
       // research/09 §1b: "•••" ends the bar, in a peek too (side peek: 30-row-page-actions-menu.png).
       hinted(button('data-blok-database-peek-actions', 'tools.database.peekActionsHint', IconDotsHorizontal, (el) => this.openActionsMenu(el)), 'tools.database.peekActionsHint'),
     ];
+  }
+
+  /** A full page's "database / page" path (feel/findings-rowpage R17). The database crumb goes back. */
+  private buildCrumbs(): HTMLElement {
+    const crumbs = document.createElement('span');
+    const database = document.createElement('button');
+    const slash = document.createElement('span');
+    const page = document.createElement('span');
+
+    crumbs.setAttribute('data-blok-database-peek-crumbs', '');
+    crumbs.hidden = true;
+    database.type = 'button';
+    database.setAttribute('data-blok-database-peek-crumb', 'database');
+    database.addEventListener('click', () => this.close());
+    slash.setAttribute('data-blok-database-peek-crumb-slash', '');
+    slash.setAttribute('aria-hidden', 'true');
+    slash.textContent = '/';
+    page.setAttribute('data-blok-database-peek-crumb', 'page');
+    crumbs.append(database, slash, page);
+
+    return crumbs;
+  }
+
+  private syncCrumbs(): void {
+    const crumbs = this.drawer?.querySelector<HTMLElement>('[data-blok-database-peek-crumbs]');
+
+    if (crumbs === null || crumbs === undefined) return;
+    crumbs.hidden = this.mode !== 'full';
+    const database = crumbs.querySelector<HTMLElement>('[data-blok-database-peek-crumb="database"]');
+    const page = crumbs.querySelector<HTMLElement>('[data-blok-database-peek-crumb="page"]');
+    const title = this.drawer?.querySelector<HTMLTextAreaElement>('[data-blok-database-drawer-title]')?.value ?? '';
+
+    if (database !== null) {
+      const name = this.databaseTitle() || this.label('tools.database.titlePlaceholder');
+
+      database.textContent = name;
+      onHover(database, name);
+    }
+    if (page !== null) page.textContent = title;
   }
 
   private copyLink(): void {
@@ -1944,6 +1986,14 @@ export class DatabaseCardDrawer {
     const modeButton = drawer.querySelector<HTMLElement>('[data-blok-database-peek-mode]');
 
     if (modeButton !== null) modeButton.innerHTML = PEEK_MODE_ICONS[mode];
+    // The title is 40px on a full page and in the center peek, 32px in the side peek.
+    const titleInput = drawer.querySelector<HTMLTextAreaElement>('[data-blok-database-drawer-title]');
+
+    if (titleInput !== null) this.autoResizeTitle(titleInput);
+    // A full page has no mode switcher and no row steps (R17).
+    drawer.querySelectorAll<HTMLElement>('[data-blok-database-peek-mode], [data-blok-database-peek-separator], [data-blok-database-peek-prev], [data-blok-database-peek-next]')
+      .forEach((el) => el.toggleAttribute('hidden', mode === 'full'));
+    this.syncCrumbs();
     this.syncCopyLinkButton();
     drawer.querySelector<HTMLElement>('[data-blok-database-peek-expand]')?.toggleAttribute('hidden', mode === 'full');
     drawer.querySelector<HTMLElement>('[data-blok-database-peek-resize]')?.toggleAttribute('hidden', mode !== 'side');
@@ -2107,6 +2157,7 @@ export class DatabaseCardDrawer {
 
     this.refreshSchema(this.schema);
     this.drawer.querySelector('[data-blok-database-drawer-page-head]')?.replaceWith(this.buildPageHead(row));
+    this.syncCrumbs();
 
     if (this.attachedBodyRowId === row.id) {
       return;

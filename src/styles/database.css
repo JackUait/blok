@@ -1547,6 +1547,53 @@
   }
 }
 
+/* A full page's path: 14px crumbs, 24px tall, the database crumb a button back (feel/findings-rowpage R17). */
+[data-blok-database-peek-crumbs] {
+  display: flex;
+  align-items: center;
+  min-inline-size: 0;
+  margin-inline-start: var(--blok-space-1);
+  font-size: 14px;
+  color: var(--blok-database-ink);
+}
+
+[data-blok-database-peek-crumb] {
+  overflow: hidden;
+  max-inline-size: 240px;
+  height: 24px;
+  padding-inline: var(--blok-space-1-5);
+  border: none;
+  border-radius: var(--blok-radius-control-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  line-height: 24px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+[data-blok-database-peek-crumb="database"] {
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  [data-blok-database-peek-crumb="database"]:hover {
+    background-color: var(--blok-database-peek-hover-bg);
+  }
+}
+
+[data-blok-database-peek-crumb-slash] {
+  color: var(--blok-database-peek-glyph);
+}
+
+[data-blok-database-peek-crumbs][hidden],
+[data-blok-database-peek-mode][hidden],
+[data-blok-database-peek-separator][hidden],
+[data-blok-database-peek-prev][hidden],
+[data-blok-database-peek-next][hidden] {
+  display: none;
+}
+
 [data-blok-database-drawer-close][hidden],
 [data-blok-database-peek-copy-link][hidden],
 [data-blok-database-peek-expand][hidden],
@@ -1732,10 +1779,20 @@
   font-family: inherit;
 }
 
-/* research/26 §1e: 40px/48px in both themes; the side peek keeps 32px. */
-[data-blok-database-drawer][data-peek-mode="center"] [data-blok-database-drawer-title] {
+/* research/26 §1e: 40px/48px in both themes, on a full page too (feel/findings-rowpage R17); the side peek keeps 32px. */
+[data-blok-database-drawer][data-peek-mode="center"] [data-blok-database-drawer-title],
+[data-blok-database-drawer][data-peek-mode="full"] [data-blok-database-drawer-title] {
   font-size: 40px;
   line-height: 48px;
+}
+
+/* feel/findings-rowpage R20: the center peek's column is 708px, centred past the 8px scrollbar gutter; its title text sits 8px in. */
+[data-blok-database-drawer][data-peek-mode="center"] [data-blok-database-drawer-content] {
+  padding-inline: max(var(--blok-space-4), calc(50% - 354px - var(--blok-space-2)));
+}
+
+[data-blok-database-drawer][data-peek-mode="center"] [data-blok-database-drawer-title] {
+  padding-inline: var(--blok-space-2);
 }
 
 /* feel/findings-rowpage R25: warm, as the database title's placeholder (T09). */

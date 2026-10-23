@@ -282,6 +282,7 @@ describe('DatabaseCardDrawer shell', () => {
         'data-blok-database-peek-separator',
         'data-blok-database-peek-prev',
         'data-blok-database-peek-next',
+        'data-blok-database-peek-crumbs',
         'data-blok-database-peek-copy-link',
         'data-blok-database-peek-page-info',
         'data-blok-database-peek-favorite',
@@ -388,5 +389,82 @@ describe('DatabaseCardDrawer shell', () => {
       expect(hintOf('[data-blok-database-peek-next]')).toBeNull();
       drawer.destroy();
     });
+  });
+
+  // feel/findings-rowpage R17: a full page has no mode switcher or row steps, and its bar shows where it is.
+  describe('full page bar', () => {
+    const shown = (selector: string): boolean => [...document.querySelectorAll<HTMLElement>(selector)].some((el) => !el.hidden);
+
+    it('drops the mode switcher, the row steps and their rules', () => {
+      const drawer = new DatabaseCardDrawer(createOptions());
+
+      drawer.open(ROW, 'full');
+
+      expect(shown('[data-blok-database-peek-mode]')).toBe(false);
+      expect(shown('[data-blok-database-peek-prev]')).toBe(false);
+      expect(shown('[data-blok-database-peek-next]')).toBe(false);
+      expect(shown('[data-blok-database-peek-separator]')).toBe(false);
+      drawer.open(ROW, 'side');
+      expect(shown('[data-blok-database-peek-mode]')).toBe(true);
+      expect(shown('[data-blok-database-peek-separator]')).toBe(true);
+      drawer.destroy();
+    });
+
+    it('shows a "database / page" path that follows the title, and the database crumb goes back', () => {
+      const onClose = vi.fn();
+      const drawer = new DatabaseCardDrawer(createOptions({ databaseTitle: () => 'Tasks', onClose }));
+
+      drawer.open(ROW, 'side');
+      expect(shown('[data-blok-database-peek-crumbs]')).toBe(false);
+      drawer.open(ROW, 'full');
+
+      const crumbs = (): string => q('[data-blok-database-peek-crumbs]')?.textContent ?? '';
+
+      expect(shown('[data-blok-database-peek-crumbs]')).toBe(true);
+      expect(crumbs()).toBe('Tasks/Card');
+
+      const title = q<HTMLTextAreaElement>('[data-blok-database-drawer-title]');
+
+      if (title !== null) title.value = 'Renamed';
+      title?.dispatchEvent(new Event('input'));
+      expect(crumbs()).toBe('Tasks/Renamed');
+
+      q('[data-blok-database-peek-crumb="database"]')?.click();
+      expect(drawer.isOpen).toBe(false);
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+    it('names an untitled database by its placeholder', () => {
+      const drawer = new DatabaseCardDrawer(createOptions({ databaseTitle: () => '', i18n: i18n() }));
+
+      drawer.open(ROW, 'full');
+
+      expect(q('[data-blok-database-peek-crumb="database"]')?.textContent).toBe('tools.database.titlePlaceholder');
+      drawer.destroy();
+    });
+
+    // The full page and center peek title is 40px, the side peek's 32px: its box must grow with the mode.
+    it('fits the title box again when the mode changes its size', () => {
+      const drawer = new DatabaseCardDrawer(createOptions());
+
+      drawer.open(ROW, 'side');
+      const title = q<HTMLTextAreaElement>('[data-blok-database-drawer-title]');
+
+      if (title === null) throw new Error('no title');
+      Object.defineProperty(title, 'scrollHeight', { configurable: true, get: () => 48 });
+      drawer.open(ROW, 'full');
+
+      expect(title.style.height).toBe('48px');
+      drawer.destroy();
+    });
+  });
+
+  // feel/findings-rowpage R20: Notion's center peek keeps a 708px column centred in its 960px box.
+  it('centres a 708px column in the center peek, its title inset 8px', () => {
+    const css = readFileSync(resolve(__dirname, '../../../../src/styles/database.css'), 'utf8');
+    const body = (selector: string): string => css.match(new RegExp(`${selector.replace(/[[\]().*+?^$|\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`))?.[1] ?? '';
+
+    // Half of 960, less half of 708, less one 8px scrollbar gutter: 118 each side.
+    expect(body('[data-blok-database-drawer][data-peek-mode="center"] [data-blok-database-drawer-content]')).toContain('padding-inline: max(var(--blok-space-4), calc(50% - 354px - var(--blok-space-2)))');
+    expect(body('[data-blok-database-drawer][data-peek-mode="center"] [data-blok-database-drawer-title]')).toContain('padding-inline: var(--blok-space-2)');
   });
 });

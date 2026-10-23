@@ -296,6 +296,19 @@ describe('row page layout through the database tool', () => {
     expect(b('[data-blok-database-layout-preview]')?.textContent?.trim()).toBe('Preview: Two');
   });
 
+  // feel/findings-rowpage R07: the row page menu has none of the table's view rows.
+  it('opens the row page own property menu, not the table column menu', async () => {
+    await make(doc());
+    await openRow('r2');
+    await click(q('[data-blok-database-drawer-prop-label][data-property-id="due"]'));
+    const names = [...document.querySelectorAll<HTMLElement>('[data-blok-popover-opened] [data-blok-popover-item]')]
+      .map((el) => el.getAttribute('data-blok-item-name'))
+      .filter((name) => name !== null);
+
+    expect(names.slice(0, 2)).toEqual(['rename', 'editProperty']);
+    expect(names.some((name) => /filter|sort|freeze|insert|hide/i.test(name ?? ''))).toBe(false);
+  });
+
   it('offers no Customize layout in the column header menu', async () => {
     await make(doc());
     await click(q('[data-blok-database-table-column-header][data-property-id="due"]'));

@@ -8886,7 +8886,7 @@ export class DatabaseTool implements BlockTool {
             this.cardDrawer?.refreshSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
           }
         },
-        onOpenPropertyMenu: (propertyId, anchor, onCustomizeLayout) => this.openPropertyMenu(propertyId, anchor, undefined, undefined, onCustomizeLayout),
+        onOpenPropertyMenu: (propertyId, anchor, onCustomizeLayout, extras) => this.openPropertyMenu(propertyId, anchor, undefined, undefined, onCustomizeLayout, extras ?? {}),
         onOpenAddProperty: (anchor, onAdded) => this.openAddProperty(anchor, undefined, (created) => {
           this.cardDrawer?.refreshSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
           onAdded?.(created.id);
@@ -11071,7 +11071,8 @@ export class DatabaseTool implements BlockTool {
     param.receive(prop.id);
   }
 
-  openPropertyMenu(propertyId: string, anchor: HTMLElement, table?: DatabaseTableView, context?: NativeWidgetContext, onCustomizeLayout?: () => void): void {
+  /** `rowPage`: opened from a row page label, so the menu is the row page's own (no view rows). */
+  openPropertyMenu(propertyId: string, anchor: HTMLElement, table?: DatabaseTableView, context?: NativeWidgetContext, onCustomizeLayout?: () => void, rowPage?: { onComment?: () => void }): void {
     const hostTable = table ?? (this.view instanceof DatabaseTableView ? this.view : undefined);
     const property = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).find((p) => p.id === propertyId);
     const saved = this.model.getProperty(propertyId);
@@ -11079,7 +11080,7 @@ export class DatabaseTool implements BlockTool {
     if (this.destroyed || this.readOnly || (context !== undefined && !context.writable()) || property === undefined || saved === undefined) return;
     // Locked: properties stay as they are, so only the view rows (filter, sort, ...) show.
     if (this.structureLocked()) {
-      hostTable?.openHeaderMenu(propertyId, anchor);
+      if (rowPage === undefined) hostTable?.openHeaderMenu(propertyId, anchor);
 
       return;
     }
@@ -11148,6 +11149,11 @@ export class DatabaseTool implements BlockTool {
     });
     // The saved property, shown with its localized name: a settings patch the
     // menu builds from it must never carry a translated label into the data.
+    if (rowPage !== undefined) {
+      menu.openRowPage({ ...saved, name: property.name }, anchor, rowPage);
+
+      return;
+    }
     const viewItems = (hostTable?.headerItems(propertyId, anchor) ?? []).map((item): PopoverItemParams => {
       if (context === undefined || item.type !== PopoverItemType.Default || item.name !== 'database-show-page-icon'
         || 'children' in item || 'confirmation' in item) return item;

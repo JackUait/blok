@@ -234,7 +234,7 @@ export interface CardDrawerOptions {
    * A property label was clicked: open its property menu under `anchor`.
    * `onCustomizeLayout` is set when the page can be customized: the menu ends with "Customize layout".
    */
-  onOpenPropertyMenu?: (propertyId: string, anchor: HTMLElement, onCustomizeLayout?: () => void) => void;
+  onOpenPropertyMenu?: (propertyId: string, anchor: HTMLElement, onCustomizeLayout?: () => void, extras?: { onComment?: () => void }) => void;
   /** Offer Person when adding a property. */
   hasPeople?: boolean;
   /** What every cell needs from the host beyond i18n: people, uploads, locale. */
@@ -3134,6 +3134,11 @@ export class DatabaseCardDrawer {
   /** Replaces the schema without rebuilding the open properties, so an open cell editor keeps its anchor. */
   setSchema(schema: PropertyDefinition[]): void {
     this.schema = schema;
+    for (const label of this.drawer?.querySelectorAll<HTMLElement>('[data-blok-database-drawer-prop-label][data-property-id]') ?? []) {
+      const name = schema.find((p) => p.id === label.getAttribute('data-property-id'))?.name;
+
+      if (name !== undefined && label.textContent !== name) label.textContent = name;
+    }
   }
 
   private t(key: string): string {
@@ -3370,6 +3375,7 @@ export class DatabaseCardDrawer {
     // research/35 §4: the name, plus the description, on the label's inline-start side.
     onPropertyHover(label, def.name, def.description);
     const head = document.createElement('div');
+    const valueEl = document.createElement('div');
 
     head.setAttribute('data-blok-database-drawer-prop-head', '');
     // Outside the label: callers read the label's text as the property name.
@@ -3386,17 +3392,18 @@ export class DatabaseCardDrawer {
       // research/09 §1b: a row page property menu ends with "Customize layout".
       const customize = this.customizable ? (): void => this.startCustomizing() : undefined;
 
-      label.addEventListener('click', () => openMenu(def.id, label, customize));
+      const open = (): void => openMenu(def.id, head, customize, this.propertyMenuExtras(def.id, valueEl));
+
+      label.addEventListener('click', open);
       label.addEventListener('keydown', (event) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
-          openMenu(def.id, label, customize);
+          open();
         }
       });
     }
     if (!labelless) row.appendChild(head);
 
-    const valueEl = document.createElement('div');
 
     valueEl.setAttribute('data-blok-database-drawer-prop-value', '');
     valueEl.setAttribute('data-property-id', def.id);
@@ -3429,6 +3436,17 @@ export class DatabaseCardDrawer {
     row.appendChild(valueEl);
 
     return row;
+  }
+
+  /** Notion's row page menu has Comment only on a filled value (research/09:93, research/36:261). */
+  private propertyMenuExtras(propertyId: string, slot: HTMLElement): { onComment?: () => void } {
+    const row = this.currentRow;
+    const onComment = this.onCommentProperty;
+    const filled = slot.firstElementChild !== null && !slot.firstElementChild.hasAttribute('data-empty');
+
+    if (row === null || onComment === undefined || !filled) return {};
+
+    return { onComment: () => onComment(row.id, propertyId, slot) };
   }
 
   private updateActiveCard(rowId: string | null): void {

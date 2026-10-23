@@ -128,8 +128,50 @@ describe('DatabaseCardDrawer — Phase 2 properties', () => {
 
     label?.click();
 
-    // No layout lever here, so the menu gets no Customize layout.
-    expect(onOpenPropertyMenu).toHaveBeenCalledWith('prop-owner', label, undefined);
+    // No layout lever here, so the menu gets no Customize layout. It opens under the 160px label box (R07).
+    expect(onOpenPropertyMenu).toHaveBeenCalledWith('prop-owner', label?.parentElement, undefined, {});
+    expect(label?.parentElement?.hasAttribute('data-blok-database-drawer-prop-head')).toBe(true);
+  });
+
+  // feel/findings-rowpage R07: Comment shows for a filled value (Checkbox), not for an empty Number or Text (research/09:93).
+  it('hands the property menu a Comment only for a filled value with the comment lever', () => {
+    const onOpenPropertyMenu = vi.fn();
+    const onCommentProperty = vi.fn();
+    const options = createOptions({ onOpenPropertyMenu, onCommentProperty });
+
+    new DatabaseCardDrawer(options).open(ROW);
+    const labelOf = (id: string): HTMLElement | null => options.wrapper.querySelector<HTMLElement>(`[data-blok-database-drawer-prop-label][data-property-id="${id}"]`);
+
+    labelOf('prop-owner')?.click();
+    const extras = onOpenPropertyMenu.mock.calls.at(-1)?.[3] as { onComment?: () => void };
+
+    extras.onComment?.();
+    expect(onCommentProperty).toHaveBeenCalledWith('row-1', 'prop-owner', valueOf(options, 'prop-owner'));
+
+    labelOf('prop-created')?.click();
+    labelOf('prop-id')?.click();
+    expect(onOpenPropertyMenu.mock.calls.at(-1)?.[3]).toHaveProperty('onComment');
+  });
+
+  // A rename from the row page menu shows on its label at once.
+  it('a new schema renames the open page labels in place', () => {
+    const options = createOptions();
+    const drawer = new DatabaseCardDrawer(options);
+
+    drawer.open(ROW);
+    drawer.setSchema(SCHEMA.map((p) => (p.id === 'prop-owner' ? { ...p, name: 'Lead' } : p)));
+
+    expect(options.wrapper.querySelector('[data-blok-database-drawer-prop-label][data-property-id="prop-owner"]')?.textContent).toBe('Lead');
+  });
+
+  it('hands no Comment for an empty value', () => {
+    const onOpenPropertyMenu = vi.fn();
+    const options = createOptions({ onOpenPropertyMenu, onCommentProperty: vi.fn() });
+
+    new DatabaseCardDrawer(options).open({ ...ROW, properties: { 'prop-title': 'Card' } });
+    options.wrapper.querySelector<HTMLElement>('[data-blok-database-drawer-prop-label][data-property-id="prop-owner"]')?.click();
+
+    expect(onOpenPropertyMenu.mock.calls.at(-1)?.[3]).toEqual({});
   });
 
   it('adds a property named in the name field', () => {

@@ -819,3 +819,73 @@ describe('property menu rename to a taken name', () => {
     menu.destroy();
   });
 });
+
+// feel/findings-rowpage R07, research/09:93, research/36:261: the row page's own property menu.
+describe('row page property menu', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    captured.popovers.length = 0;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  const rowMenu = (property: PropertyDefinition, onComment?: () => void): { cb: ReturnType<typeof callbacks>; menu: InstanceType<typeof DatabasePropertyMenu> } => {
+    const cb = callbacks();
+    const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...cb, onCustomizeLayout: vi.fn() });
+
+    menu.openRowPage(property, document.createElement('div'), onComment === undefined ? {} : { onComment });
+
+    return { cb, menu };
+  };
+  const names = (): Array<string | undefined> => lastItems().filter((i) => i.type !== 'separator').map((i) => i.name);
+
+  it('lists Rename, Edit property, Comment, Property visibility, Duplicate, Delete and Customize layout, with no view rows', () => {
+    const { menu } = rowMenu(prop('checkbox'), vi.fn());
+
+    expect(names()).toEqual(['rename', 'editProperty', 'comment', 'visibility', 'duplicate', 'delete', 'customize-layout']);
+    expect(lastItems().every((i) => i.type === 'separator' || (i.icon ?? '') !== '')).toBe(true);
+    menu.destroy();
+  });
+
+  it('has no Comment without a comment lever, and no Duplicate on a relation', () => {
+    const { menu } = rowMenu(prop('relation'));
+
+    expect(names()).toEqual(['rename', 'editProperty', 'visibility', 'delete', 'customize-layout']);
+    menu.destroy();
+  });
+
+  it('Comment calls the lever', () => {
+    const onComment = vi.fn();
+    const { menu } = rowMenu(prop('text'), onComment);
+
+    byName(lastItems(), 'comment').onActivate?.(byName(lastItems(), 'comment'));
+
+    expect(onComment).toHaveBeenCalledTimes(1);
+    menu.destroy();
+  });
+
+  it('Rename holds the name field, and Enter renames', () => {
+    const { cb, menu } = rowMenu(prop('text'));
+    const field = byName(lastItems(), 'rename').children?.items[0]?.element;
+    const input = field?.querySelector<HTMLInputElement>('input');
+
+    if (input === null || input === undefined) throw new Error('no name input');
+    input.value = 'Memo';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+
+    expect(cb.onRename).toHaveBeenCalledWith('p', 'Memo');
+    menu.destroy();
+  });
+
+  it('Edit property holds Change type and the type settings', () => {
+    const { menu } = rowMenu(prop('number'));
+    const inside = byName(lastItems(), 'editProperty').children?.items.map((i) => i.name) ?? [];
+
+    expect(inside[0]).toBe('changeType');
+    expect(inside.length).toBeGreaterThan(1);
+    menu.destroy();
+  });
+});

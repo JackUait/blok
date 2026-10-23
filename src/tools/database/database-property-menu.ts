@@ -1,4 +1,4 @@
-import { IconCalendar, IconCopy, IconEmojiSmile, IconInfo, IconPencil, IconTrash, IconEmojiSparkles, IconPageLayout, IconWand } from '../../components/icons';
+import { IconCalendar, IconCopy, IconEmojiSmile, IconEyeSlash, IconInfo, IconMessage, IconPencil, IconSliders, IconTrash, IconEmojiSparkles, IconPageLayout, IconWand } from '../../components/icons';
 import { nameTakenError } from './database-name-taken-error';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
@@ -207,7 +207,54 @@ export class DatabasePropertyMenu {
       ...tail.map((entry) => this.entry(entry, property)),
       ...this.customizeItem(),
     ];
-    const popover = new PopoverDesktop({ class: DATABASE_HEADER_MENU_CLASS, animateClose: true, items, trigger: anchor, width: 'auto', minWidth: '240px', flippable: true, autoFocusFirstItem: false });
+    this.show(items, anchor, '240px');
+  }
+
+  /**
+   * The row page's own menu for a property label (research/09:93, research/36:261):
+   * Rename, Edit property, Comment, Property visibility, Duplicate, Delete, Customize layout.
+   * No view rows: the row page is no column.
+   */
+  openRowPage(property: PropertyDefinition, anchor: HTMLElement, extras: { onComment?: () => void } = {}): void {
+    this.close();
+    this.shown = property;
+    const entries = propertyMenuEntries(property);
+    const has = (entry: PropertyMenuEntry): boolean => entries.includes(entry);
+    const update = (patch: Partial<PropertySettingsV2>): void => this.options.onUpdate(property.id, patch);
+    const settings: PopoverItemParams[] = [];
+
+    if (EDITABLE_SETTINGS.has(property.type)) {
+      settings.push(...(property.type === 'formula' ? [this.entry('editProperty', property)] : this.editItems(property, update)));
+    }
+    const typeItems = (['changeType', 'displayAs'] as const).filter(has).map((entry) => this.entry(entry, property));
+    const onComment = extras.onComment;
+    const items: PopoverItemParams[] = [
+      {
+        name: 'rename',
+        title: this.t('tools.database.renameView'),
+        icon: IconPencil,
+        children: { items: [{ type: PopoverItemType.Html, element: this.nameField(property, false), name: 'name' }] },
+      },
+      {
+        name: 'editProperty',
+        title: this.t('tools.database.editProperty'),
+        icon: IconSliders,
+        children: { items: [...typeItems, ...(typeItems.length > 0 && settings.length > 0 ? [{ type: PopoverItemType.Separator } as const] : []), ...settings] },
+      },
+      ...(onComment === undefined ? [] : [{ name: 'comment', title: this.t('tools.database.tableComment'), icon: IconMessage, closeOnActivate: true, onActivate: () => onComment() }]),
+      { type: PopoverItemType.Separator },
+      // feel/findings-rowpage R07: the row page draws it with an eye-slash.
+      ...(['visibility'] as const).filter(has).map((entry) => ({ ...this.entry(entry, property), icon: IconEyeSlash }) as PopoverItemParams),
+      { type: PopoverItemType.Separator },
+      ...(['duplicate', 'delete'] as const).filter(has).map((entry) => this.entry(entry, property)),
+      ...this.customizeItem(),
+    ];
+
+    this.show(items, anchor, '220px');
+  }
+
+  private show(items: PopoverItemParams[], anchor: HTMLElement, minWidth: string): void {
+    const popover = new PopoverDesktop({ class: DATABASE_HEADER_MENU_CLASS, animateClose: true, items, trigger: anchor, width: 'auto', minWidth, flippable: true, autoFocusFirstItem: false });
 
     // research/27 §7: Escape closes the Edit property submenu only; a second Escape closes the menu.
     popover.escapeClosesSubmenuFirst = true;

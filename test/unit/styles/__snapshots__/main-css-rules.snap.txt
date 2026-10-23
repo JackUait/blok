@@ -4154,6 +4154,9 @@ span[data-blok-slash-search] {
   --blok-database-calendar-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-calendar-day-text: rgb(44, 44, 43);
   --blok-database-calendar-nav-icon: rgb(142, 139, 134);
+  --blok-database-date-help-text: var(--blok-database-table-header-text);
+  --blok-database-csv-help-text: rgb(142, 139, 134);
+  --blok-database-csv-help-icon: rgb(142, 139, 134);
   --blok-database-calendar-event-bg: #ffffff;
   --blok-database-calendar-event-shadow: rgba(0, 0, 0, 0.04) 0 2px 4px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   --blok-database-calendar-event-hover-bg: rgba(84, 72, 49, 0.08);
@@ -4392,6 +4395,8 @@ span[data-blok-slash-search] {
   --blok-database-calendar-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-calendar-day-text: rgb(240, 239, 237);
   --blok-database-calendar-nav-icon: rgb(173, 169, 163);
+  --blok-database-date-help-text: rgb(155, 152, 147);
+  --blok-database-csv-help-text: rgb(150, 147, 142);
   --blok-database-calendar-event-bg: rgb(47, 47, 47);
   --blok-database-calendar-event-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 2px 4px;
   --blok-database-calendar-event-hover-bg: rgb(55, 55, 55);
@@ -4629,6 +4634,8 @@ span[data-blok-slash-search] {
   --blok-database-calendar-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-calendar-day-text: rgb(240, 239, 237);
   --blok-database-calendar-nav-icon: rgb(173, 169, 163);
+  --blok-database-date-help-text: rgb(155, 152, 147);
+  --blok-database-csv-help-text: rgb(150, 147, 142);
   --blok-database-calendar-event-bg: rgb(47, 47, 47);
   --blok-database-calendar-event-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 2px 4px;
   --blok-database-calendar-event-hover-bg: rgb(55, 55, 55);
@@ -8390,7 +8397,7 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   height: 32px;
   margin-top: var(--blok-space-2);
   border-radius: var(--blok-radius-control);
-  color: var(--blok-database-calendar-nav-icon);
+  color: var(--blok-database-csv-help-text);
   text-decoration: none;
 }
 
@@ -8398,6 +8405,7 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   flex: none;
   width: 16px;
   height: 16px;
+  color: var(--blok-database-csv-help-icon);
 }
 
 [data-blok-database-csv-secondary] {
@@ -9505,7 +9513,7 @@ textarea[data-blok-database-cell-input] {
   min-height: 28px;
   padding: 0 var(--blok-space-1);
   border-radius: var(--blok-radius-control);
-  color: var(--blok-database-table-header-text);
+  color: var(--blok-database-date-help-text);
   text-decoration: none;
 }
 

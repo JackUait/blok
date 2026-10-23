@@ -1051,8 +1051,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const BOOKMARK_PEEL_COVER_BYTES = 6_136;
     // isolation.css: --blok-font-sans is Notion's longer font stack.
     const NOTION_FONT_STACK_BYTES = 111;
-    // database.css: research/37 §4.1-4.2: dark Reset and map button values, the confirm keyboard ring, the pin fill.
-    const DATABASE_DARK_RESET_MAP_BYTES = 106;
+    // database.css: research/37 §4.1-4.2 and 35 §8: dark Reset, map button and help link inks, the confirm keyboard ring, the pin fill.
+    const DATABASE_DARK_RESET_MAP_BYTES = 644;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1237,7 +1237,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + ASSISTANT_SELECTION_TINT_BYTES + DATABASE_PLAIN_CONFIRM_BYTES + ASSISTANT_ACTIONS_FOLD_BYTES
       + ASK_AI_MENU_MOTION_BYTES + BOOKMARK_PEEL_COVER_BYTES
       + NOTION_FONT_STACK_BYTES
-      + ASSISTANT_SELECTION_TINT_BYTES + DATABASE_PLAIN_CONFIRM_BYTES + DATABASE_DARK_RESET_MAP_BYTES;
+      + DATABASE_DARK_RESET_MAP_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

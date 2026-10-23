@@ -16,6 +16,9 @@ const rulesFor = (selector: string): string =>
     .map((match) => match[2])
     .join(' ');
 
+const tokenValues = (name: string): string[] =>
+  [ ...database.matchAll(new RegExp(`${name}: ([^;]+);`, 'g')) ].map((m) => m[1].trim());
+
 describe('database date reminder css', () => {
   // The base cell is a wrapping flex box: in a narrow card or timeline column the alarm
   // would drop to its own line, or the date would split and clip.
@@ -68,9 +71,13 @@ describe('database date reminder css', () => {
     expect(footer).toContain('border-top: 1px solid var(--blok-database-drawer-border)');
     expect(footer).toContain('padding-top: var(--blok-space-1)');
     expect(link).toContain('min-height: 28px');
-    expect(link).toContain('color: var(--blok-database-table-header-text)');
+    expect(link).toContain('color: var(--blok-database-date-help-text)');
     expect(link).toContain('text-decoration: none');
     expect(rulesFor('[data-blok-database-date-help] svg')).toContain('color: var(--blok-database-calendar-nav-icon)');
+    // research/35 §8 dark: Notion's rgb(125, 122, 117) is 3.59:1 on the 37,37,37 picker.
+    // rgb(155, 152, 147) is the nearest warm grey that passes 4.5:1 on the hovered row too (4.53:1).
+    expect(tokenValues('--blok-database-date-help-text'))
+      .toEqual(['var(--blok-database-table-header-text)', 'rgb(155, 152, 147)', 'rgb(155, 152, 147)']);
     expect(rulesFor('[data-blok-database-date-help]:hover')).toContain('background-color: var(--blok-database-date-today-hover-bg)');
   });
 
@@ -82,7 +89,16 @@ describe('database date reminder css', () => {
     expect(link).toContain('height: 32px');
     expect(link).toContain('margin-top: var(--blok-space-2)');
     expect(link).toContain('gap: var(--blok-space-1-5)');
-    expect(link).toContain('color: var(--blok-database-calendar-nav-icon)');
+    expect(link).toContain('color: var(--blok-database-csv-help-text)');
     expect(link).toContain('text-decoration: none');
+    expect(rulesFor('[data-blok-database-csv-help] svg')).toContain('color: var(--blok-database-csv-help-icon)');
+  });
+
+  // research/35 §8 dark: text and glyph rgb(142, 139, 134), 4.80:1 on the 32,32,32 dialog but 4.10:1 on
+  // the hovered row. The text steps to rgb(150, 147, 142) (4.55:1 hovered); the glyph needs only 3:1.
+  it('"Learn about imports" keeps Notion\'s gray glyph in both themes and an AA label in dark', () => {
+    expect(tokenValues('--blok-database-csv-help-text'))
+      .toEqual(['rgb(142, 139, 134)', 'rgb(150, 147, 142)', 'rgb(150, 147, 142)']);
+    expect(tokenValues('--blok-database-csv-help-icon')).toEqual(['rgb(142, 139, 134)']);
   });
 });

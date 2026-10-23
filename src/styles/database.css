@@ -9192,6 +9192,33 @@ textarea[data-blok-database-cell-input] {
   outline: none;
 }
 
+/* findings V10 (09-notion-rename-full.png): a 28px glyph tile, then the "View name" field. */
+[data-blok-database-view-name-row] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  padding-block: var(--blok-space-1);
+  padding-inline: var(--blok-space-2);
+}
+
+[data-blok-database-view-name-icon] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 28px;
+  block-size: 28px;
+  border: var(--blok-border-width-hairline) solid var(--blok-database-table-border);
+  border-radius: var(--blok-radius-control);
+  color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-database-view-name-row] > [data-blok-database-panel-input] {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+
 /* research/22 §7 (shot 37): "Group range" is [start] – [end] on one line. */
 [data-blok-database-range-pair] {
   display: flex;

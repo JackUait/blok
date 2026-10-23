@@ -7962,6 +7962,8 @@ export class DatabaseTool implements BlockTool {
     void owner.sync.syncUpdateView({ viewId, changes: structuredClone(changes) });
     if (context === undefined) this.rerenderView({ keepDrawer: true });
     else context.redraw();
+    // The view settings "View name" field renames through here; the tabs show the name.
+    if (changes.name !== undefined) owner.rebuildTabBar();
   }
 
   private handleTableRowDrop(result: TableRowDropResult, context?: NativeWidgetContext): void {

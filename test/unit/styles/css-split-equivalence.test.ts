@@ -1083,6 +1083,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_VIEW_SETTINGS_DOCK_BYTES = 228;
     // database.css: feel/findings-toolbar V11: 20px glyphs on the view settings rows.
     const DATABASE_VIEW_SETTINGS_GLYPH_BYTES = 328;
+    // database.css: feel/findings-toolbar V10: the view settings glyph tile and "View name" field.
+    const DATABASE_VIEW_SETTINGS_NAME_BYTES = 753;
     const DATABASE_ADD_PROPERTY_GRID_BYTES = 514;
     // database.css: board columns (findings-board): the status header pill, the AA count inks, "+ New page" type.
     const DATABASE_BOARD_COLUMNS_BYTES = 540;
@@ -1305,7 +1307,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_FILTER_SORT_FEEL_BYTES
       + DATABASE_VIEW_SETTINGS_DOCK_BYTES
       + DATABASE_VIEW_SETTINGS_DOCK_BYTES
-      + DATABASE_VIEW_SETTINGS_GLYPH_BYTES;
+      + DATABASE_VIEW_SETTINGS_GLYPH_BYTES
+      + DATABASE_VIEW_SETTINGS_NAME_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

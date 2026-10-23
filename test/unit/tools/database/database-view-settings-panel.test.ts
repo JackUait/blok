@@ -136,7 +136,7 @@ describe('view settings panel', () => {
     h.ctx.automations = { writable: () => true } as unknown as NonNullable<ViewSettingsContext['automations']>;
     h.ctx.structure = { subItems: () => false, setSubItems: vi.fn(), dependencies: () => undefined, setDependencies: vi.fn(), updateDependency: vi.fn() };
     h.open();
-    const parts = [...document.querySelectorAll<HTMLElement>('[data-blok-testid="database-view-settings"] > *')].slice(1).map((el) =>
+    const parts = [...document.querySelectorAll<HTMLElement>('[data-blok-testid="database-view-settings"] > :not([data-blok-database-panel-header], [data-blok-database-view-name-row])')].map((el) =>
       el.getAttribute('data-blok-testid')?.replace('database-settings-', '')
         ?? (el.hasAttribute('data-blok-database-panel-separator') ? '—' : `[${el.textContent ?? ''}]`));
 
@@ -175,6 +175,61 @@ describe('view settings panel', () => {
     click('database-settings-csv-export');
     expect(exportCsv).toHaveBeenCalledTimes(1);
     expect(close).toHaveBeenCalled();
+  });
+
+  // findings V10: under the title, the layout glyph and a "View name" field (09-notion-rename-full.png).
+  describe('view name field', () => {
+    const field = (): HTMLInputElement => {
+      const input = document.querySelector<HTMLInputElement>('[data-blok-testid="database-settings-view-name"]');
+
+      if (input === null) throw new Error('no view name field');
+
+      return input;
+    };
+    const type = (value: string, key: 'Enter' | 'blur'): void => {
+      field().value = value;
+      field().dispatchEvent(new Event('input', { bubbles: true }));
+      if (key === 'Enter') field().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      else field().dispatchEvent(new FocusEvent('blur'));
+    };
+
+    it('sits first, after the layout glyph, holding the view\'s name', () => {
+      harness({ name: 'Roadmap', type: 'board' }).open();
+      const row = field().closest('[data-blok-database-view-name-row]');
+
+      expect(row).toBe(document.querySelector('[data-blok-testid="database-view-settings"] > :nth-child(2)'));
+      expect(row?.querySelector('[data-blok-database-view-name-icon] svg')).not.toBeNull();
+      expect(field().value).toBe('Roadmap');
+      expect(field().placeholder).toBe('tools.database.layoutViewName');
+    });
+
+    it('renames the view on Enter or blur, trimmed', () => {
+      const h = harness();
+
+      h.open();
+      type('  Plan  ', 'Enter');
+      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ name: 'Plan' });
+      type('Later', 'blur');
+      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ name: 'Later' });
+    });
+
+    it('writes nothing for an unchanged or blank name', () => {
+      const h = harness({ name: 'Table' });
+
+      h.open();
+      type('Table', 'Enter');
+      type('   ', 'blur');
+      expect(h.ctx.updateView).not.toHaveBeenCalled();
+      expect(field().value).toBe('Table');
+    });
+
+    it('is read-only while the database is locked', () => {
+      const h = harness();
+
+      h.state.locked = true;
+      h.open();
+      expect(field().disabled).toBe(true);
+    });
   });
 
   it('lists Notion\'s settings rows (research/08)', () => {

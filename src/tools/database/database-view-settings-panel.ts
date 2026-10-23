@@ -275,6 +275,7 @@ export class ViewSettingsPages {
         const view = this.ctx.view();
         const group = this.property(view.groupBy);
         const isMap = view.type === 'map';
+        const nameRow = this.viewNameRow();
         const layoutRow = panelRow({
           label: this.t('settingsLayout'),
           testId: 'database-settings-layout',
@@ -293,6 +294,7 @@ export class ViewSettingsPages {
         });
         // A map has no Sort, Group or Property visibility (research/20 §1f).
         const rows: HTMLElement[] = isMap ? [
+          nameRow,
           layoutRow,
           panelLabel(this.t('settingsStyle')),
           panelRow({
@@ -305,6 +307,7 @@ export class ViewSettingsPages {
           }),
           filterRow,
         ] : [
+          nameRow,
           layoutRow,
           panelRow({
             label: this.t('settingsPropertyVisibility'),
@@ -472,6 +475,51 @@ export class ViewSettingsPages {
         return rows;
       },
     };
+  }
+
+  /**
+   * findings V10: the layout glyph and a "View name" field. It commits on
+   * Enter or blur, trimmed, and a blank name keeps the old one, as the tab's
+   * inline rename does. Notion's icon picker and description need saved
+   * fields a view does not have, so the glyph is not a button.
+   */
+  private viewNameRow(): HTMLElement {
+    const view = this.ctx.view();
+    const row = document.createElement('div');
+    const icon = document.createElement('span');
+    const input = panelInput({
+      value: view.name,
+      placeholder: this.t('layoutViewName'),
+      label: this.t('layoutViewName'),
+      testId: 'database-settings-view-name',
+      onInput: () => undefined,
+    });
+    const commit = (): void => {
+      const name = input.value.trim();
+      const current = this.ctx.view().name;
+
+      if (name === '') {
+        input.value = current;
+
+        return;
+      }
+      if (name !== current) this.ctx.updateView({ name });
+    };
+
+    row.setAttribute('data-blok-database-view-name-row', '');
+    icon.setAttribute('data-blok-database-view-name-icon', '');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML = VIEW_ICONS[view.type] ?? IconTable;
+    input.disabled = !this.shared;
+    input.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' || event.isComposing) return;
+      event.preventDefault();
+      commit();
+    });
+    input.addEventListener('blur', commit);
+    row.append(icon, input);
+
+    return row;
   }
 
   private moreActions(): ViewSettingsAction[] {

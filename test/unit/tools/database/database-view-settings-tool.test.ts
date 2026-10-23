@@ -103,6 +103,19 @@ describe('DatabaseTool — view settings', () => {
     vi.restoreAllMocks();
   });
 
+  // findings V10: the panel's "View name" field renames the tab too, not only the saved view.
+  it('renames the tab from the view settings name field', () => {
+    const { root } = mount({}, {}, { views: [tableView(), tableView({ id: 'v2', name: 'Two', position: 'a1' })] });
+
+    click('database-toolbar-settings');
+    const field = q('database-settings-view-name') as HTMLInputElement;
+
+    field.value = 'Roadmap';
+    field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+    expect(root.querySelector('[data-blok-database-tab][data-view-id="v1"] [data-blok-database-tab-name]')?.textContent).toBe('Roadmap');
+  });
+
   it('draws the toolbar beside the tabs', () => {
     const { root } = mount();
 

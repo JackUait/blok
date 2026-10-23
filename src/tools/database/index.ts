@@ -61,7 +61,7 @@ import { DATABASE_MENU_CLASS, groupMenuItems } from './database-group-menu';
 import { groupCalculationHint, groupCalculationItems, groupCalculationText } from './database-board-calculation';
 import { optionColorOf, type OptionColor } from './cells/option-colors';
 import { DatabaseBoardView } from './database-board-view';
-import { DatabaseListView } from './database-list-view';
+import { DatabaseListView, pointerAnchor } from './database-list-view';
 import { DatabaseTableView, createTableState } from './database-table-view';
 import { DatabaseGalleryView } from './database-gallery-view';
 import type { GalleryGroup } from './database-gallery-view';
@@ -8312,7 +8312,11 @@ export class DatabaseTool implements BlockTool {
       event.preventDefault();
       // Core opens its block menu on a right-click; this menu replaces it.
       event.stopPropagation();
-      this.openCardMenu(rowEl, rowEl, rowId);
+      // findings-listgallery L16: a list row's menu opens at the pointer.
+      const anchor = rowEl.matches('[data-blok-database-list-row]') ? pointerAnchor(rowEl, event) : rowEl;
+
+      this.openCardMenu(anchor, rowEl, rowId);
+      if (anchor !== rowEl) this.cardMenuPopover?.on(PopoverEvent.Closed, () => anchor.remove());
     });
     boardEl.addEventListener('click', (event) => {
       const target = event.target as HTMLElement;

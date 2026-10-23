@@ -793,6 +793,26 @@ export class DatabaseListView implements DatabaseViewRenderer {
   }
 }
 
+/**
+ * A zero-size anchor at the pointer, inside the row so it keeps the row's
+ * tokens (findings-listgallery L16). It corrects for a transformed ancestor,
+ * where a fixed box at 0,0 is not the viewport corner. The caller removes it.
+ */
+export const pointerAnchor = (rowEl: HTMLElement, event: MouseEvent): HTMLElement => {
+  const point = document.createElement('span');
+
+  point.setAttribute('data-blok-database-menu-point', '');
+  point.setAttribute('aria-hidden', 'true');
+  Object.assign(point.style, { position: 'fixed', left: '0px', top: '0px', width: '0px', height: '0px', pointerEvents: 'none' });
+  rowEl.appendChild(point);
+  const origin = point.getBoundingClientRect();
+
+  point.style.left = `${event.clientX - origin.left}px`;
+  point.style.top = `${event.clientY - origin.top}px`;
+
+  return point;
+};
+
 /** Image file names and data URLs; any other file keeps its chip. */
 const IMAGE_FILE = /(\.(png|jpe?g|gif|webp|avif|svg|bmp)([?#].*)?$)|^data:image\//i;
 

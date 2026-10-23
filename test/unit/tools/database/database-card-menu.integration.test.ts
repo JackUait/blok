@@ -172,6 +172,30 @@ describe('DatabaseTool — one row menu on every view (research/12 §3, research
     expect(menuOutline()).not.toContain('tools.database.tableComment');
   });
 
+  // findings-listgallery L16: Notion opens a list row's right-click menu at the pointer.
+  it('anchors a list row\'s right-click menu at the pointer, and drops the anchor when the menu closes', () => {
+    const { el } = buildTool(oneRow(), {}, viewData('list'));
+
+    rowEl(el, 'list').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 120 }));
+    const point = document.querySelector<HTMLElement>('[data-blok-database-menu-point]');
+
+    expect(point?.hasAttribute('data-popover-open')).toBe(true);
+    expect(point?.style.left).toBe('300px');
+    expect(point?.style.top).toBe('120px');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    menuItem('database-row-copy-link')?.click();
+
+    expect(document.querySelector('[data-blok-database-menu-point]')).toBeNull();
+  });
+
+  it('keeps a board card\'s right-click menu on the card', () => {
+    const { el } = buildTool(oneRow(), {}, viewData('board'));
+
+    rowEl(el, 'board').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 120 }));
+
+    expect(document.querySelector('[data-blok-database-menu-point]')).toBeNull();
+  });
+
   it.each(['board', 'gallery', 'list'] as const)('read-only: a right-click on a %s row offers only what does not edit the row', (type) => {
     const { el } = buildTool(oneRow(), { comments: { open: vi.fn() } }, viewData(type), true);
 

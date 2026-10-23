@@ -584,16 +584,12 @@ describe('row page properties panel', () => {
     expect(reveal()?.getAttribute('aria-expanded')).toBe('false');
   });
 
-  it('collapses and expands the properties section', async () => {
+  // feel/findings-rowpage R11: a classic page shows its properties with no "Properties" fold above them.
+  it('shows the properties with no Properties toggle on a classic page', async () => {
     await make(withProperties());
     await openRow('r1');
 
-    const toggle = holder?.querySelector<HTMLElement>('[data-blok-database-drawer-props-toggle]');
-
-    expect(toggle?.getAttribute('aria-expanded')).toBe('true');
-    toggle?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-
-    expect(toggle?.getAttribute('aria-expanded')).toBe('false');
-    expect(holder?.querySelector<HTMLElement>('[data-blok-database-drawer-props]')?.hidden).toBe(true);
+    expect(holder?.querySelector('[data-blok-database-drawer-props-toggle]')).toBeNull();
+    expect(holder?.querySelector<HTMLElement>('[data-blok-database-drawer-props]')?.hidden).toBe(false);
   });
 });

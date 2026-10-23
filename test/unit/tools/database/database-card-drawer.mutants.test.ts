@@ -183,7 +183,8 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
       const content = query(options.wrapper, '[data-blok-database-drawer-content]');
       const order = [...content.children].map((child) => child.tagName.toLowerCase());
 
-      expect(order).toEqual(['div', 'textarea', 'button', 'div', 'hr', 'div']);
+      // A classic page has no Properties toggle (R11).
+      expect(order).toEqual(['div', 'textarea', 'div', 'hr', 'div']);
     });
   });
 
@@ -612,7 +613,7 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
 
       expect(labels).toEqual(['A', 'B']);
       expect([...content.children].map((child) => child.tagName.toLowerCase()))
-        .toEqual(['div', 'textarea', 'button', 'div', 'hr', 'div']);
+        .toEqual(['div', 'textarea', 'div', 'hr', 'div']);
     });
 
     it('survives a drawer whose content element was removed from the outside', () => {
@@ -647,7 +648,7 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
       const content = query(options.wrapper, '[data-blok-database-drawer-content]');
 
       expect([...content.children].map((child) => child.tagName.toLowerCase()))
-        .toEqual(['div', 'textarea', 'button', 'div', 'hr', 'div']);
+        .toEqual(['div', 'textarea', 'div', 'hr', 'div']);
     });
 
     it('empties the editor holder before rebuilding the nested editor', () => {

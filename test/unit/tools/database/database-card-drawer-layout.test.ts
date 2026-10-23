@@ -124,6 +124,20 @@ describe('DatabaseCardDrawer — page layout', () => {
     document.body.innerHTML = '';
   });
 
+  // feel/findings-rowpage R11: the classic page has no "Properties" heading; Notion names the group once a layout has sections (research/09 §3).
+  it('draws no Properties toggle on a classic page, and one once the page has sections', () => {
+    const drawer = new DatabaseCardDrawer(createOptions());
+
+    drawer.open(ROW);
+
+    expect(q('[data-blok-database-drawer-props-toggle]')).toBeNull();
+    expect(q('[data-blok-database-drawer-props]')?.hidden).toBe(false);
+    drawer.refreshSchema(schemaWith({ pageLayoutSections: [{ id: 's1', name: 'Planning' }], pageLayoutPlacements: [{ id: 'p-due', place: 'section', sectionId: 's1' }] }));
+
+    expect(q('[data-blok-database-drawer-props-toggle]')).not.toBeNull();
+    drawer.destroy();
+  });
+
   it('shows pinned properties in the heading and not again in the group', () => {
     const options = createOptions({ schema: schemaWith({ pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }] }) });
 
@@ -442,14 +456,16 @@ describe('DatabaseCardDrawer — page layout', () => {
   });
 
   it('keeps the group shown in the panel after it was folded on the page', () => {
-    const options = createOptions();
+    // Only a page with sections has the Properties fold (R11).
+    const sections = [{ id: 's1', name: 'Planning' }];
+    const options = createOptions({ schema: schemaWith({ pageLayoutSections: sections }) });
     const drawer = new DatabaseCardDrawer(options);
 
     drawer.open(ROW);
     q('[data-blok-database-drawer-props-toggle]')?.click();
 
     expect(q('[data-blok-database-drawer-props]')?.hidden).toBe(true);
-    drawer.refreshSchema(schemaWith({ pageLayoutGroupIn: 'panel' }));
+    drawer.refreshSchema(schemaWith({ pageLayoutGroupIn: 'panel', pageLayoutSections: sections }));
     q('[data-blok-database-drawer-details-toggle]')?.click();
 
     expect(q('[data-blok-database-drawer-details] [data-blok-database-drawer-props]')?.hidden).toBe(false);
@@ -768,7 +784,8 @@ describe('DatabaseCardDrawer — page layout', () => {
       drawer.destroy();
     });
     it('opens a collapsed property group in Customize and restores it on Cancel', () => {
-      const options = createOptions();
+      // Only a page with sections has the Properties fold (R11).
+      const options = createOptions({ schema: schemaWith({ pageLayoutSections: [{ id: 's1', name: 'Planning' }] }) });
       const drawer = new DatabaseCardDrawer(options);
 
       drawer.open(ROW);

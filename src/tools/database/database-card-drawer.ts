@@ -2347,7 +2347,9 @@ export class DatabaseCardDrawer {
     }
     // The builder draws the group and the modules into their own cards (fillBuilder).
     if (onContent && builder === null) {
-      const page: HTMLElement[] = layout.groupIn === 'page' ? [this.buildPropsToggle(), this.buildPropsSection(layout, row)] : [];
+      // R11: Notion names the group "Properties" only once the layout has sections (research/09 §3).
+      const group = layout.sections.length > 0 ? [this.buildPropsToggle(), this.buildPropsSection(layout, row)] : [this.buildPropsSection(layout, row, false)];
+      const page: HTMLElement[] = layout.groupIn === 'page' ? group : [];
 
       if (layout.pageModules.length > 0) {
         page.push(this.moduleList('data-blok-database-drawer-modules', 'page', layout.pageModules, row));

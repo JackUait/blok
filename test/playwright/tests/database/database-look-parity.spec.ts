@@ -233,12 +233,14 @@ test('side peek: measured shadow with its ring, a 160x34 label hover cell, no va
   expect(box?.width).toBe(160);
   expect(box?.height).toBe(34);
 
-  // The hover box is the click target: a click over the icon, at the cell's start, opens the property menu.
-  const icon = await head.locator('[data-blok-database-drawer-prop-icon]').boundingBox();
+  // The hover box is the click target. findings-rowpage R09: on hover the glyph's place holds the ⋮⋮, and a click on it opens the property menu.
+  await expect(head.locator('[data-blok-database-drawer-prop-icon]')).toBeHidden();
+  const handle = await head.locator('[data-blok-database-drawer-prop-handle]').boundingBox();
 
-  expect(icon).not.toBeNull();
-  await page.mouse.click((icon?.x ?? 0) + 4, (icon?.y ?? 0) + 4);
-  await expect(page.locator('[data-blok-popover-opened="true"] [data-blok-database-property-menu-name-input]')).toHaveValue('Mail');
+  expect(handle).not.toBeNull();
+  await page.mouse.click((handle?.x ?? 0) + 4, (handle?.y ?? 0) + 4);
+  // findings-rowpage R07 (0e99d7ed): the label opens the row page's own menu, which starts with Rename.
+  await expect(page.getByRole('menu').getByRole('menuitem').first()).toHaveText('Rename');
   await page.keyboard.press('Escape');
 
   // research/26 §5f: a light value cell has no hover fill.

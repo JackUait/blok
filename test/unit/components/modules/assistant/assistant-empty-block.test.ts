@@ -273,4 +273,19 @@ describe('Ask AI in an empty block', () => {
     expect(hasEmpty()).toBe(false);
     expect(await texts(editor)).toEqual(['Before', 'A short reply.', 'After']);
   });
+
+  it('puts a follow-up answer under the part it wrote, once the empty block is gone', async () => {
+    const editor = await createEditor(scripted(insertAt({ after: 'empty' }, 'One'), answer('Done.'), answer('A short reply.')));
+
+    openAt('empty');
+    submit('Write a line');
+    await waitFor(() => expect(within(bar()).getByText('Done.')).toBeTruthy());
+    expect(hasEmpty()).toBe(false);
+
+    submit('Say something');
+    fireEvent.click(await waitFor(() => within(bar()).getByRole('button', { name: 'Insert' })));
+
+    await waitFor(() => expect(within(bar()).getByText('Added to the page.')).toBeTruthy());
+    expect(await texts(editor)).toEqual(['Before', 'One', 'A short reply.', 'After']);
+  }, 20_000);
 });

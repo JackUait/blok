@@ -559,7 +559,8 @@ export class Assistant extends Module {
   /** Put the shown answer under the bar's block, as Markdown, in the run's turn so Undo covers it. */
   private async insertAnswer(): Promise<void> {
     const reply = this.shownReply;
-    const after = this.anchorBlock();
+    // Under what this run wrote, else under the bar's block.
+    const after = this.generatedPart()?.last ?? this.anchorBlock();
 
     if (this.run === null || reply === null || after === undefined) {
       return;
@@ -601,15 +602,7 @@ export class Assistant extends Module {
     const manager = this.Blok.BlockManager;
     const block = this.emptyId === null ? undefined : manager.getBlockById(this.emptyId);
 
-    if (this.run === null || block === undefined || !block.isEmpty) {
-      return;
-    }
-
-    const siblings = this.siblingIds(block);
-    const index = siblings.indexOf(block.id);
-    const neighbours = [siblings[index - 1], siblings[index + 1]];
-
-    if (!neighbours.some((id) => id !== undefined && this.created.has(id))) {
+    if (this.run === null || block === undefined || !this.isReplaced(block)) {
       return;
     }
     this.emptyId = null;
@@ -989,22 +982,21 @@ export class Assistant extends Module {
     return first === undefined || last === undefined ? null : { first, last };
   }
 
-  /**
-   * The empty block the part was written next to takes no room from now on.
-   * consumeEmpty deletes it when the run ends; collapsed already, nothing moves then.
-   */
-  private collapseEmpty(part: { first: Block; last: Block } | null): void {
-    const empty = this.emptyId === null ? undefined : this.Blok.BlockManager.getBlockById(this.emptyId);
-
-    if (empty === undefined) {
-      return;
-    }
-
+  /** The empty block is still empty and this run wrote right next to it: the run deletes it when it ends. */
+  private isReplaced(empty: Block): boolean {
     const siblings = this.siblingIds(empty);
     const index = siblings.indexOf(empty.id);
-    const next = part !== null && empty.isEmpty && (siblings[index + 1] === part.first.id || siblings[index - 1] === part.last.id);
 
-    empty.holder.toggleAttribute(DATA_ATTR.aiConsumed, next);
+    return empty.isEmpty && [siblings[index - 1], siblings[index + 1]].some((id) => id !== undefined && this.created.has(id));
+  }
+
+  /** The empty block a run writes next to takes no room from then on, so nothing moves when the run deletes it. */
+  private collapseEmpty(): void {
+    const empty = this.emptyId === null ? undefined : this.Blok.BlockManager.getBlockById(this.emptyId);
+
+    if (empty !== undefined) {
+      empty.holder.toggleAttribute(DATA_ATTR.aiConsumed, this.isReplaced(empty));
+    }
   }
 
   /** Re-place the bar at its anchor, re-anchoring if the block is gone. */
@@ -1040,7 +1032,7 @@ export class Assistant extends Module {
     } else {
       this.partFirstId = part.first.id;
     }
-    this.collapseEmpty(part);
+    this.collapseEmpty();
     if (moved) {
       this.watchers?.resize?.disconnect();
       this.watchers?.resize?.observe(bar.element);

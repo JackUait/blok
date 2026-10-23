@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
 import type { Blok } from '@/types';
+import type { AgentModelRequest } from '@/types/api';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
@@ -14,9 +15,15 @@ declare global {
   }
 }
 
-/** A page with an empty paragraph between text, and a model that writes LINES paragraphs after it, then waits. */
-const setup = async (page: Page): Promise<void> => {
-  await page.evaluate(async ({ holder, lines }) => {
+const PAGE = [
+  { id: 'above', type: 'paragraph', data: { text: 'Above' } },
+  { id: 'empty', type: 'paragraph', data: { text: '' } },
+  ...Array.from({ length: 40 }, (_, index) => ({ id: `below${index}`, type: 'paragraph', data: { text: `Below ${index}` } })),
+];
+
+/** A model that writes `lines` paragraphs after the caret's block, then waits for releaseAnswer. */
+const setup = async (page: Page, blocks: Array<Record<string, unknown>> = PAGE, lines = LINES): Promise<void> => {
+  await page.evaluate(async ({ holder, lines, blocks }) => {
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
       window.blokInstance = undefined;
@@ -31,34 +38,37 @@ const setup = async (page: Page): Promise<void> => {
     const gate = new Promise<void>((resolve) => {
       window.releaseAnswer = resolve;
     });
-    const commands = Array.from({ length: lines }, (_, index) => ({
-      name: 'block.insert',
-      args: { type: 'paragraph', data: { text: `Line ${lines - index}` }, position: { after: 'empty' } },
-    }));
-    const responses = [
-      { stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'c1', name: 'blok_execute', input: { commands } }] },
-      { stop_reason: 'end_turn', content: [{ type: 'text', text: 'Done.' }] },
-    ];
+    const write = (caret: string): unknown => ({
+      stop_reason: 'tool_use',
+      content: [{
+        type: 'tool_use',
+        id: 'c1',
+        name: 'blok_execute',
+        input: {
+          commands: Array.from({ length: lines }, (_, index) => ({
+            name: 'block.insert',
+            args: { type: 'paragraph', data: { text: `Line ${lines - index}` }, position: { after: caret } },
+          })),
+        },
+      }],
+    });
+    const turns = ['write', 'answer'];
 
     const blok = new window.Blok({
       holder,
-      data: {
-        blocks: [
-          { id: 'above', type: 'paragraph', data: { text: 'Above' } },
-          { id: 'empty', type: 'paragraph', data: { text: '' } },
-          ...Array.from({ length: 40 }, (_, index) => ({ id: `below${index}`, type: 'paragraph', data: { text: `Below ${index}` } })),
-        ],
-      },
+      data: { blocks },
       agent: {
         assistant: {
-          model: async () => {
-            const next = responses.shift();
+          model: async (request: AgentModelRequest) => {
+            if (turns.shift() === 'write') {
+              const first = request.messages[0]?.content;
+              const caret = /caret is in block ([\w-]+)/.exec(typeof first === 'string' ? first : '')?.[1] ?? '';
 
-            if (next?.stop_reason === 'end_turn') {
-              await gate;
+              return write(caret) as never;
             }
+            await gate;
 
-            return next as never;
+            return { stop_reason: 'end_turn', content: [{ type: 'text', text: 'Done.' }] };
           },
         },
       },
@@ -66,7 +76,7 @@ const setup = async (page: Page): Promise<void> => {
 
     window.blokInstance = blok;
     await blok.isReady;
-  }, { holder: HOLDER_ID, lines: LINES });
+  }, { holder: HOLDER_ID, lines, blocks });
 };
 
 const bar = (page: Page) => page.getByRole('dialog', { name: 'Ask AI' });
@@ -133,6 +143,33 @@ test.describe('Ask AI bar over the part it wrote', () => {
     expect(await settled(page)).toBeCloseTo(before, 0);
     // The bar grew to show the reply; the written part still starts right under it.
     await expect.poll(() => gapUnderBar(page)).toBe(SPACE_AFTER);
+  });
+
+  test('in an empty paragraph in a column, it gives up its line as the content lands, so nothing moves at the end', async ({ page }) => {
+    await setup(page, [
+      { id: 'above', type: 'paragraph', data: { text: 'Above' } },
+      { id: 'cl', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+      { id: 'c1', type: 'column', data: {}, parent: 'cl', content: ['a', 'empty'] },
+      { id: 'a', type: 'paragraph', data: { text: 'Col A' }, parent: 'c1' },
+      { id: 'empty', type: 'paragraph', data: { text: '' }, parent: 'c1' },
+      { id: 'c2', type: 'column', data: {}, parent: 'cl', content: ['b'] },
+      { id: 'b', type: 'paragraph', data: { text: 'Col B' }, parent: 'c2' },
+      { id: 'after', type: 'paragraph', data: { text: 'After' } },
+    ], 2);
+    await page.locator(`#${HOLDER_ID} [data-blok-id="empty"] [contenteditable="true"]`).click();
+    await page.keyboard.press('Space');
+    await bar(page).getByRole('textbox').fill('Write lines');
+    await page.keyboard.press('Enter');
+    await expect(line(page, 2)).toBeVisible();
+
+    const before = await settled(page);
+    const lineBefore = (await line(page, 1).boundingBox())?.y ?? NaN;
+
+    await page.evaluate(() => window.releaseAnswer?.());
+    await expect(bar(page).getByText('Done.')).toBeVisible();
+
+    expect(await settled(page)).toBeCloseTo(before, 0);
+    expect((await line(page, 1).boundingBox())?.y ?? NaN).toBeCloseTo(lineBefore, 0);
   });
 
   test('sticks to the window\'s top through the part, and leaves with its last line', async ({ page }) => {

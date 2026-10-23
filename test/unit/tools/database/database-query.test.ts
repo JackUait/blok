@@ -91,7 +91,7 @@ describe('database-query', () => {
       expect(FILTER_OPERATORS.multiSelect).toEqual(['contains', 'does_not_contain', 'is_empty', 'is_not_empty']);
       expect(FILTER_OPERATORS.checkbox).toEqual(['equals', 'does_not_equal']);
       expect(FILTER_OPERATORS.date).toEqual([
-        'equals', 'does_not_equal', 'before', 'after', 'on_or_before', 'on_or_after',
+        'equals', 'does_not_equal', 'before', 'after', 'on_or_before', 'on_or_after', 'is_between',
         'past_week', 'past_month', 'past_year', 'next_week', 'next_month', 'next_year', 'this_week', 'relative_to_today',
         'is_empty', 'is_not_empty',
       ]);

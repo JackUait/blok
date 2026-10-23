@@ -19,9 +19,9 @@ export type RelativeDateUnit = 'day' | 'week' | 'month' | 'year';
 
 export const RELATIVE_DATE_UNITS: readonly RelativeDateUnit[] = ['day', 'week', 'month', 'year'];
 
-/** The value of `relative_to_today`: `past:3:day` or `next:2:week`. */
+/** The value of `relative_to_today`: `past:3:day`, `next:2:week`, or `this:1:month` (the current month). */
 export interface RelativeSpan {
-  direction: 'past' | 'next';
+  direction: 'past' | 'next' | 'this';
   count: number;
   unit: RelativeDateUnit;
 }
@@ -74,13 +74,40 @@ export const parseRelativeSpan = (value: unknown): RelativeSpan | undefined => {
   const [direction, count, unit] = value.split(':');
   const n = Number(count);
 
-  if ((direction !== 'past' && direction !== 'next') || !Number.isInteger(n) || n < 1) return undefined;
+  if ((direction !== 'past' && direction !== 'next' && direction !== 'this') || !Number.isInteger(n) || n < 1) return undefined;
   if (!(RELATIVE_DATE_UNITS as readonly string[]).includes(unit)) return undefined;
 
   return { direction, count: n, unit: unit as RelativeDateUnit };
 };
 
 export const formatRelativeSpan = (span: RelativeSpan): string => `${span.direction}:${span.count}:${span.unit}`;
+
+/** The calendar day, week (from Sunday), month or year around `now`. */
+const currentPeriod = (now: Date, unit: RelativeDateUnit): { from: string; to: string } => {
+  switch (unit) {
+    case 'day': return { from: toLocalDay(now), to: toLocalDay(now) };
+    case 'week': {
+      const start = shift(now, 'day', -now.getDay());
+
+      return { from: toLocalDay(start), to: toLocalDay(shift(start, 'day', 6)) };
+    }
+    case 'month':
+      return { from: toLocalDay(new Date(now.getFullYear(), now.getMonth(), 1)), to: toLocalDay(new Date(now.getFullYear(), now.getMonth() + 1, 0)) };
+    case 'year':
+      return { from: `${now.getFullYear()}-01-01`, to: `${now.getFullYear()}-12-31` };
+  }
+};
+
+/** `is_between`'s value is a stored date range, `start/end`; either order reads the same. */
+const betweenWindow = (value: unknown): { from: string; to: string } | undefined => {
+  if (typeof value !== 'string') return undefined;
+  const parts = value.split('/');
+
+  if (parts.length !== 2 || !parts.every((part) => /^\d{4}-\d{2}-\d{2}/.test(part))) return undefined;
+  const [a, b] = parts.map((part) => part.slice(0, 10)).sort();
+
+  return { from: a, to: b };
+};
 
 /**
  * The inclusive day window a relative operator covers, or `undefined` for
@@ -100,15 +127,13 @@ export const relativeWindow = (operator: string, value: unknown, now: Date): { f
     case 'next_week': return next('week', 1);
     case 'next_month': return next('month', 1);
     case 'next_year': return next('year', 1);
-    case 'this_week': {
-      const start = shift(now, 'day', -now.getDay());
-
-      return { from: toLocalDay(start), to: toLocalDay(shift(start, 'day', 6)) };
-    }
+    case 'this_week': return currentPeriod(now, 'week');
+    case 'is_between': return betweenWindow(value);
     case 'relative_to_today': {
       const span = parseRelativeSpan(value);
 
       if (span === undefined) return undefined;
+      if (span.direction === 'this') return currentPeriod(now, span.unit);
 
       return span.direction === 'past' ? past(span.unit, span.count) : next(span.unit, span.count);
     }

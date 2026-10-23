@@ -2,7 +2,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   defaultFilterFor,
   filterPillLabel,
+  menuOperatorOf,
   operatorChoices,
+  operatorLabelKey,
   sortDirectionLabelKey,
 } from '../../../../src/tools/database/database-filter-labels';
 import type { PropertyDefinition } from '../../../../src/tools/database/types';
@@ -33,7 +35,6 @@ describe('database filter labels', () => {
     expect(operatorChoices('select').map((c) => c.operator)).toEqual(['equals', 'does_not_equal', 'is_empty', 'is_not_empty']);
     expect(operatorChoices('multiSelect').map((c) => c.operator)).toEqual(['contains', 'does_not_contain', 'is_empty', 'is_not_empty']);
     expect(operatorChoices('checkbox').map((c) => c.operator)).toEqual(['equals', 'does_not_equal']);
-    expect(operatorChoices('date').map((c) => c.operator)).toContain('within');
     expect(operatorChoices('number')[0].labelKey).toBe('tools.database.filterOperator.numberEquals');
   });
 
@@ -73,7 +74,7 @@ describe('database filter labels', () => {
     expect(operatorChoices('uniqueId').map((c) => c.operator)).toEqual([
       'equals', 'does_not_equal', 'greater_than', 'less_than', 'greater_than_or_equal_to', 'less_than_or_equal_to',
     ]);
-    expect(operatorChoices('createdTime').map((c) => c.operator)).toContain('within');
+    expect(operatorChoices('createdTime')).toEqual(operatorChoices('date'));
     expect(defaultFilterFor(prop('person'))).toMatchObject({ operator: 'contains', value: [] });
     expect(defaultFilterFor(prop('files'))).toMatchObject({ operator: 'is_not_empty' });
     expect(defaultFilterFor(prop('lastEditedTime'))).toMatchObject({ operator: 'this_week' });
@@ -102,5 +103,27 @@ describe('database filter labels', () => {
     expect(sortDirectionLabelKey('status', 'desc')).toBe('tools.database.sortDescending');
     expect(sortDirectionLabelKey('person', 'asc')).toBe('tools.database.sortAscending');
     expect(sortDirectionLabelKey('checkbox', 'asc')).toBe('tools.database.sortAscending');
+  });
+  it('lists Notion\'s date operators, with "Is between" and no "Is not" or "Is within" (findings V18)', () => {
+    expect(operatorChoices('date').map((c) => c.operator)).toEqual([
+      'equals', 'before', 'after', 'on_or_before', 'on_or_after', 'is_between', 'relative_to_today', 'is_empty', 'is_not_empty',
+    ]);
+    expect(operatorChoices('date')[5].labelKey).toBe('tools.database.filterOperator.isBetween');
+  });
+
+  it('still names the operators of old saved date filters', () => {
+    expect(operatorLabelKey('date', 'does_not_equal')).toBe('tools.database.filterOperator.isNot');
+    expect(operatorLabelKey('date', 'past_month')).toBe('tools.database.filterOperator.isRelativeToToday');
+    expect(menuOperatorOf('this_week')).toBe('relative_to_today');
+    expect(filterPillLabel({ operator: 'does_not_equal', value: 'today' }, prop('date'), t)).toBe('Due: tools.database.filterDateToday');
+    expect(filterPillLabel({ operator: 'past_month', value: null }, prop('date'), t)).toBe('Due: tools.database.filterDatePastMonth');
+  });
+
+  it('labels a "this" span and a "between" range on the chip', () => {
+    expect(filterPillLabel({ operator: 'relative_to_today', value: 'this:1:month' }, prop('date'), t)).toBe('Due: tools.database.filterDateThisMonth');
+    expect(filterPillLabel({ operator: 'relative_to_today', value: 'this:1:week' }, prop('date'), t)).toBe('Due: tools.database.filterDateThisWeek');
+    expect(filterPillLabel({ operator: 'relative_to_today', value: 'this:1:day' }, prop('date'), t)).toBe('Due: tools.database.filterDateToday');
+    expect(filterPillLabel({ operator: 'is_between', value: '2026-10-01/2026-10-07' }, prop('date'), t)).toBe('Due: 2026-10-01 → 2026-10-07');
+    expect(filterPillLabel({ operator: 'is_between', value: null }, prop('date'), t)).toBe('Due');
   });
 });

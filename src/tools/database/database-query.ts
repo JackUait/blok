@@ -28,7 +28,7 @@ const NUMBER_OPERATORS = [...COMPARE_OPERATORS, 'is_empty', 'is_not_empty'] as c
 const OPTION_OPERATORS = ['equals', 'does_not_equal', 'is_empty', 'is_not_empty'] as const;
 const LIST_OPERATORS = ['contains', 'does_not_contain', 'is_empty', 'is_not_empty'] as const;
 const DATE_OPERATORS = [
-  'equals', 'does_not_equal', 'before', 'after', 'on_or_before', 'on_or_after', ...RELATIVE_DATE_OPERATORS, 'is_empty', 'is_not_empty',
+  'equals', 'does_not_equal', 'before', 'after', 'on_or_before', 'on_or_after', 'is_between', ...RELATIVE_DATE_OPERATORS, 'is_empty', 'is_not_empty',
 ] as const;
 
 /** Operator names follow the Notion API, so saved filters stay portable. */
@@ -82,6 +82,7 @@ const WORD_LABELS: Readonly<Record<string, string>> = {
   on_or_after: `${OP}onOrAfter`,
   ...Object.fromEntries(RELATIVE_DATE_OPERATORS.map((operator) => [operator, `${OP}isWithin`])),
   relative_to_today: `${OP}isRelativeToToday`,
+  is_between: `${OP}isBetween`,
 };
 
 /** Number filters read as symbols in Notion's menu (research/08): =, ≠, >, <, ≥, ≤. */

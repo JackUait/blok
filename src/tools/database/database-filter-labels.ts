@@ -1,11 +1,11 @@
 import { nanoid } from 'nanoid';
 import { RELATIVE_DATE_OPERATORS, RELATIVE_DATE_VALUES, parseRelativeSpan } from './relative-dates';
+import type { RelativeDateUnit } from './relative-dates';
 import { ME_FILTER_VALUE, THIS_PAGE_FILTER_VALUE } from './database-query';
 import type { FilterConfig, PropertyDefinition, PropertyType, SortConfig } from './types';
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
-/** `within` is a menu entry, not a saved operator: its choice saves `past_week`, `this_week` and so on. */
 export interface OperatorChoice {
   operator: string;
   labelKey: string;
@@ -37,18 +37,20 @@ const COMPARE = [
 
 const LIST = [op('contains', 'contains'), op('does_not_contain', 'doesNotContain'), ...EMPTY];
 
-/** Date labels were not captured in research/08; these follow Notion's help wording (unverified). */
+/** Notion's date menu, measured (findings V18, shot 18c). */
 const DATE = [
   op('equals', 'is'),
-  op('does_not_equal', 'isNot'),
   op('before', 'before'),
   op('after', 'after'),
   op('on_or_before', 'onOrBefore'),
   op('on_or_after', 'onOrAfter'),
-  op('within', 'isWithin'),
+  op('is_between', 'isBetween'),
   op('relative_to_today', 'isRelativeToToday'),
   ...EMPTY,
 ];
+
+/** Saved before Notion's menu was measured: no longer offered, still named. */
+const LEGACY_DATE = [op('does_not_equal', 'isNot')];
 
 /** Menu labels measured in research/08; status, person and files there too. */
 const OPERATORS: Record<PropertyType, OperatorChoice[]> = {
@@ -133,15 +135,18 @@ export const relativeValueLabelKey = (value: typeof RELATIVE_DATE_VALUES[number]
 const isWithin = (operator: string): operator is typeof WITHIN_OPERATORS[number] =>
   (WITHIN_OPERATORS as readonly string[]).includes(operator);
 
-/** The menu operator a saved one belongs to: every window shows as "Is within". */
-export const menuOperatorOf = (operator: string): string => (isWithin(operator) ? 'within' : operator);
+/** The menu operator a saved one belongs to: every window shows as "Is relative to today". */
+export const menuOperatorOf = (operator: string): string => (isWithin(operator) ? 'relative_to_today' : operator);
+
+const isDateType = (type: PropertyType): boolean => type === 'date' || type === 'createdTime' || type === 'lastEditedTime';
 
 export const operatorLabelKey = (type: PropertyType, operator: string): string | undefined =>
-  [...OPERATORS[type], ...QUANTIFIED].find((choice) => choice.operator === menuOperatorOf(operator))?.labelKey;
+  [...OPERATORS[type], ...QUANTIFIED, ...(isDateType(type) ? LEGACY_DATE : [])]
+    .find((choice) => choice.operator === menuOperatorOf(operator) || choice.operator === operator)?.labelKey;
 
 /** Whether an operator takes a value from the person. */
 export const operatorNeedsValue = (operator: string): boolean => {
-  if (operator === 'relative_to_today') return true;
+  if (operator === 'relative_to_today' || operator === 'is_between') return true;
 
   return operator !== 'is_empty' && operator !== 'is_not_empty' && !(RELATIVE_DATE_OPERATORS as readonly string[]).includes(operator);
 };
@@ -193,6 +198,13 @@ export const defaultFilterFor = (property: PropertyDefinition): FilterConfig & {
   }
 };
 
+const THIS_LABEL_KEYS: Record<RelativeDateUnit, string> = {
+  day: 'tools.database.filterDateToday',
+  week: 'tools.database.filterDateThisWeek',
+  month: 'tools.database.filterDateThisMonth',
+  year: 'tools.database.filterDateThisYear',
+};
+
 const isRelativeValue = (value: unknown): value is typeof RELATIVE_DATE_VALUES[number] =>
   typeof value === 'string' && (RELATIVE_DATE_VALUES as readonly string[]).includes(value);
 
@@ -213,7 +225,15 @@ export const filterValueText = (
   if (operator === 'relative_to_today') {
     const span = parseRelativeSpan(value);
 
-    return span === undefined ? '' : t(`tools.database.filterRelative${span.direction === 'past' ? 'Past' : 'Next'}`, { count: span.count, unit: t(`tools.database.filterUnit${span.unit.charAt(0).toUpperCase()}${span.unit.slice(1)}`) });
+    if (span === undefined) return '';
+    if (span.direction === 'this') return t(THIS_LABEL_KEYS[span.unit]);
+
+    return t(`tools.database.filterRelative${span.direction === 'past' ? 'Past' : 'Next'}`, { count: span.count, unit: t(`tools.database.filterUnit${span.unit.charAt(0).toUpperCase()}${span.unit.slice(1)}`) });
+  }
+  if (operator === 'is_between') {
+    const range = typeof value === 'string' ? value.split('/') : [];
+
+    return range.length === 2 ? `${range[0]} → ${range[1]}` : '';
   }
   if (property.type === 'checkbox') return value === true ? t('tools.database.filterChecked') : t('tools.database.filterUnchecked');
   if (property.type === 'person' || property.type === 'createdBy' || property.type === 'lastEditedBy') {

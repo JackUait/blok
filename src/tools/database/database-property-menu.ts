@@ -9,13 +9,12 @@ import type { I18n } from '../../../types';
 import { EmojiPicker } from '../callout/emoji-picker';
 import { NUMBER_FORMATS, MAX_DECIMALS } from './cells/number-format';
 import { OPTION_COLORS, optionColorLabelKey } from './cells/option-colors';
-import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { addablePropertyTypes, propertyTypeMeta } from './database-property-types';
 import { ROLLUP_FUNCTIONS, rollupFunctionsFor, rollupResultType } from './rollup';
 import { buttonEditItems } from './database-button-menu';
 import { createOptionsEditor } from './cells/options-editor';
 import { offersAutofill } from './database-autofill-setup';
-import { SHOW_PAGE_ICON_ITEM } from './database-table-menus';
+import { DATABASE_HEADER_MENU_CLASS, SHOW_PAGE_ICON_ITEM } from './database-table-menus';
 import { reminderLabel, remindersFor } from './reminders';
 import { DATE_FORMATS, HOUR_CYCLES, TIME_FORMATS, resolveHourCycle, resolveLocale, timeZones } from './cells/date-format';
 import type {
@@ -208,7 +207,7 @@ export class DatabasePropertyMenu {
       ...tail.map((entry) => this.entry(entry, property)),
       ...this.customizeItem(),
     ];
-    const popover = new PopoverDesktop({ class: DATABASE_MENU_CLASS, animateClose: true, items, trigger: anchor, width: 'auto', minWidth: '240px', flippable: true, autoFocusFirstItem: false });
+    const popover = new PopoverDesktop({ class: DATABASE_HEADER_MENU_CLASS, animateClose: true, items, trigger: anchor, width: 'auto', minWidth: '240px', flippable: true, autoFocusFirstItem: false });
 
     // research/27 §7: Escape closes the Edit property submenu only; a second Escape closes the menu.
     popover.escapeClosesSubmenuFirst = true;

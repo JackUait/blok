@@ -169,7 +169,7 @@ describe('DatabasePropertyMenu', () => {
 
     const params = captured.popovers[captured.popovers.length - 1]?.params;
 
-    expect(params?.class).toBe('blok-database-menu');
+    expect(String(params?.class).split(' ')).toEqual(['blok-database-menu', 'blok-database-header-menu']);
     expect(params?.animateClose).toBe(true);
   });
 

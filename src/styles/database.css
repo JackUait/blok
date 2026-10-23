@@ -2239,6 +2239,17 @@ button[data-blok-database-column-count]:hover {
   transform: scale(0.96);
 }
 
+/* Notion's column header menu: 28px rows, and it fits without scrolling (498px tall, research/26 §3c).
+   The core popover caps every menu at 400px. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover-item] {
+  height: 28px;
+  padding-block: 0;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover-container] {
+  --max-height: calc(100dvh - 2 * var(--blok-space-3));
+}
+
 [data-blok-database-add-view] {
   display: flex;
   align-items: center;

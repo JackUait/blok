@@ -369,7 +369,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/database-table-selection-delete': cmd('block.delete'),
   'menu:database/database-selection-duplicate': cmd('block.duplicate'),
   'menu:database/database-selection-delete': cmd('block.delete'),
-  'menu:database/*@src/tools/database/database-table-menus.ts': exempt('cut-v1', 'Show page icon in the title column is a view setting. View-state control is cut from v1 by D6 (user can revisit).'),
+  'menu:database/*@src/tools/database/database-table-menus.ts': exempt('cut-v1', 'The column header rows (Show page icon, Filter, Sort, Group, Freeze, Hide, Wrap) are view settings, cut from v1 by D6 (user can revisit). Insert left/right is database.addProperty at a position.'),
   'menu:database/template-*': cmds(['database.addRow', 'database.setDefaultTemplate', 'block.duplicate', 'block.delete'], 'Templates are template rows: use one, set the default, duplicate or delete it.'),
   'menu:database/template-repeat-*': cmd('database.setTemplateRepeat'),
   'menu:database/template-repeat-cancel': cmd('database.setTemplateRepeat'),

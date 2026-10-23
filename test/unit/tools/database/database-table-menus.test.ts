@@ -18,7 +18,10 @@ vi.mock('../../../../src/components/utils/popover', () => {
   return { PopoverDesktop: MockPopoverDesktop };
 });
 
-import { openMenu, rowMenuFooter } from '../../../../src/tools/database/database-table-menus';
+import { openMenu, rowMenuFooter, headerViewItems } from '../../../../src/tools/database/database-table-menus';
+import type { HeaderMenuContext } from '../../../../src/tools/database/database-table-menus';
+import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
+import type { PropertyDefinition } from '../../../../src/tools/database/types';
 
 describe('table view menus', () => {
   beforeEach(() => {
@@ -34,6 +37,12 @@ describe('table view menus', () => {
     openMenu(document.createElement('button'), []);
 
     expect(constructed[0]?.class).toBe('blok-database-menu');
+  });
+
+  it('marks a column header menu, so only it takes the header row size', () => {
+    openMenu(document.createElement('button'), [], { kind: 'header' });
+
+    expect(String(constructed[0]?.class).split(' ')).toEqual(['blok-database-menu', 'blok-database-header-menu']);
   });
 });
 
@@ -82,5 +91,40 @@ describe('row menu footer time', () => {
 
     expect(footer.lastEdited?.time).toBe('Yesterday 12:00 PM');
     expect(t).not.toHaveBeenCalled();
+  });
+});
+
+// research/08 shots-08/22: every row of Notion's column header menu has a glyph.
+describe('column header menu glyphs', () => {
+  const ctx = (type: PropertyDefinition['type'], over: Partial<HeaderMenuContext> = {}): HeaderMenuContext => ({
+    i18n: { t: (key: string) => key },
+    property: { id: 'p', name: 'P', type } as PropertyDefinition,
+    frozenHere: false,
+    wrapped: false,
+    showPageIcon: true,
+    calculation: undefined,
+    onFilter: vi.fn(),
+    onSort: vi.fn(),
+    onGroup: vi.fn(),
+    onCalculate: vi.fn(),
+    onFreeze: vi.fn(),
+    onUnfreeze: vi.fn(),
+    onHide: vi.fn(),
+    onWrap: vi.fn(),
+    onShowPageIcon: vi.fn(),
+    onInsert: vi.fn(),
+    ...over,
+  });
+  const untitled = (items: PopoverItemParams[]): string[] => items
+    .filter((item) => !('icon' in item) || typeof item.icon !== 'string' || item.icon === '')
+    .map((item) => ('title' in item ? String(item.title) : String(item.type)));
+
+  it.each([
+    ['text', {}],
+    ['title', {}],
+    ['number', { frozenHere: true, wrapped: true }],
+    ['checkbox', {}],
+  ] as const)('gives every %s row an icon', (type, over) => {
+    expect(untitled(headerViewItems(ctx(type, over)))).toEqual([]);
   });
 });

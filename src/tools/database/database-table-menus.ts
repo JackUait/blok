@@ -12,13 +12,19 @@ import {
   IconEmojiSmile,
   IconEmojiStar,
   IconEyeSlash,
+  IconFilter,
   IconInsertLeft,
   IconInsertRight,
   IconLink,
+  IconList,
   IconMessage,
   IconPageLayout,
   IconPencil,
+  IconPin,
   IconPreview,
+  IconReturn,
+  IconSigma,
+  IconSort,
   IconSplitView,
   IconTrash,
 } from '../../components/icons';
@@ -125,14 +131,28 @@ export const calculationItems = (
   return items;
 };
 
+/** A column header menu: 28px rows and no 400px cap (database.css). */
+export const DATABASE_HEADER_MENU_CLASS = `${DATABASE_MENU_CLASS} blok-database-header-menu`;
+
+export interface OpenMenuOptions {
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  onClose?: () => void;
+  /** Which database menu this is: its row size comes from the class. */
+  kind?: 'header';
+}
+
+const MENU_CLASS = { header: DATABASE_HEADER_MENU_CLASS } as const;
+
 /** Opens a menu under `anchor`; `data-popover-open` marks the anchor while it is up. */
 export const openMenu = (
   anchor: HTMLElement,
   items: PopoverItemParams[],
-  options: { searchable?: boolean; searchPlaceholder?: string; onClose?: () => void } = {}
+  options: OpenMenuOptions = {}
 ): PopoverDesktop => {
+  const menuClass = options.kind === undefined ? DATABASE_MENU_CLASS : MENU_CLASS[options.kind];
   const popover = new PopoverDesktop({
-    class: DATABASE_MENU_CLASS,
+    class: menuClass,
     animateClose: true,
     trigger: anchor,
     items,
@@ -195,10 +215,12 @@ export const headerViewItems = (ctx: HeaderMenuContext): PopoverItemParams[] => 
   const { i18n, property } = ctx;
   // Personal edits can clone the view backing this menu.
   const state = { showPageIcon: ctx.showPageIcon };
-  const item = (titleKey: string, onActivate: () => void, icon?: string): PopoverItemParams => ({
+  // `name` is a variable on purpose: the agent-coverage ledger covers these rows by file.
+  const item = (name: string, titleKey: string, onActivate: () => void, icon: string): PopoverItemParams => ({
     type: PopoverItemType.Default,
+    name,
     title: i18n.t(titleKey),
-    ...(icon !== undefined ? { icon } : {}),
+    icon,
     onActivate,
   });
   const isTitle = property.type === 'title';
@@ -207,15 +229,16 @@ export const headerViewItems = (ctx: HeaderMenuContext): PopoverItemParams[] => 
   const calculate: PopoverItemParams = {
     type: PopoverItemType.Default,
     title: i18n.t('tools.database.tableCalculate'),
+    icon: IconSigma,
     children: { items: calculationItems(property, ctx.calculation, i18n, ctx.onCalculate, ctx.countCap) },
   };
   // research/08: Files and ID offer no Group; neither can group a view.
   const groupable = property.type !== 'files' && property.type !== 'uniqueId';
   const queries: PopoverItemParams[] = queryable
     ? [
-      item('tools.database.tableFilter', ctx.onFilter),
-      item('tools.database.tableSort', ctx.onSort),
-      ...(groupable ? [item('tools.database.tableGroup', ctx.onGroup)] : []),
+      item('database-header-filter', 'tools.database.tableFilter', ctx.onFilter, IconFilter),
+      item('database-header-sort', 'tools.database.tableSort', ctx.onSort, IconSort),
+      ...(groupable ? [item('database-header-group', 'tools.database.tableGroup', ctx.onGroup, IconList)] : []),
       calculate,
     ]
     : [];
@@ -241,22 +264,22 @@ export const headerViewItems = (ctx: HeaderMenuContext): PopoverItemParams[] => 
     ...lead,
     ...queries,
     ctx.frozenHere
-      ? item('tools.database.tableUnfreeze', ctx.onUnfreeze)
-      : item('tools.database.tableFreeze', ctx.onFreeze),
+      ? item('database-header-unfreeze', 'tools.database.tableUnfreeze', ctx.onUnfreeze, IconPin)
+      : item('database-header-freeze', 'tools.database.tableFreeze', ctx.onFreeze, IconPin),
   ];
 
   if (!isTitle) {
-    items.push(item('tools.database.tableHide', ctx.onHide));
+    items.push(item('database-header-hide', 'tools.database.tableHide', ctx.onHide, IconEyeSlash));
   }
   // Notion offers no wrap toggle on a checkbox or a button column.
   if (property.type !== 'checkbox' && property.type !== 'button') {
     items.push(ctx.wrapped
-      ? item('tools.database.tableUnwrap', () => ctx.onWrap(false))
-      : item('tools.database.tableWrap', () => ctx.onWrap(true)));
+      ? item('database-header-unwrap', 'tools.database.tableUnwrap', () => ctx.onWrap(false), IconReturn)
+      : item('database-header-wrap', 'tools.database.tableWrap', () => ctx.onWrap(true), IconReturn));
   }
   items.push(
-    item('tools.database.tableInsertLeft', () => ctx.onInsert('left'), IconInsertLeft),
-    item('tools.database.tableInsertRight', () => ctx.onInsert('right'), IconInsertRight)
+    item('database-header-insert-left', 'tools.database.tableInsertLeft', () => ctx.onInsert('left'), IconInsertLeft),
+    item('database-header-insert-right', 'tools.database.tableInsertRight', () => ctx.onInsert('right'), IconInsertRight)
   );
 
   return items;

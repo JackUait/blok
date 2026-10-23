@@ -1062,6 +1062,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // database.css: table grid feel (title page glyph, header line, dark header, empty-table lines and Add property, title editor weight, file chip glyph); measured growth.
     // +174: the floated sub-item toggle.
     const DATABASE_TABLE_GRID_FEEL_BYTES = 1_982 + 174;
+    // database.css: feel/findings-table T11: the column header menu's 28px rows and no 400px cap.
+    const DATABASE_HEADER_MENU_BYTES = 473;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1250,7 +1252,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_TEMPLATE_MENU_ROWS_BYTES
       + DATABASE_TITLE_PLACEHOLDER_BYTES
       + DATABASE_TOOLBAR_DISABLED_BYTES
-      + DATABASE_TABLE_GRID_FEEL_BYTES;
+      + DATABASE_TABLE_GRID_FEEL_BYTES
+      + DATABASE_HEADER_MENU_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

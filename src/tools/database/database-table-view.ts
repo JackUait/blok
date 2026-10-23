@@ -31,7 +31,7 @@ import type { CellChange, TableState } from './database-table-grid';
 import { fileChipIcon, pageIconElement, pagePlaceholderIcon, showsPageIcon } from './page-icon';
 
 import { CALCULATION_LABEL_KEYS, calculationItems, headerViewItems, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
-import type { CountCap, RowFavorite } from './database-table-menus';
+import type { CountCap, OpenMenuOptions, RowFavorite } from './database-table-menus';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { DatabaseTableColumnResize } from './database-table-resize';
 import { DatabaseTableColumnDrag } from './database-table-column-drag';
@@ -1678,7 +1678,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     }
   }
 
-  private showMenu(anchor: HTMLElement, items: PopoverItemParams[], options: { searchable?: boolean; searchPlaceholder?: string } = {}): void {
+  private showMenu(anchor: HTMLElement, items: PopoverItemParams[], options: Omit<OpenMenuOptions, 'onClose'> = {}): void {
     this.menu?.destroy();
     const menu = openMenu(anchor, items, {
       ...options,
@@ -1823,7 +1823,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     const items = this.headerItems(propertyId, anchor);
 
     if (items.length > 0) {
-      this.showMenu(anchor, items);
+      this.showMenu(anchor, items, { kind: 'header' });
     }
   }
 

@@ -660,3 +660,70 @@ describe('Suggested templates in the "New database" panel (research/27 §1)', ()
     expect(doc.transact.mock.calls.length).toBe(steps);
   });
 });
+
+describe('templates gallery and Customize, as measured (findings-creation N07, N08, N09)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    popovers.items.length = 0;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  const openFromGallery = async (): Promise<HTMLElement> => {
+    await insert();
+    byTestId(panel(), 'database-new-database-more-templates').click();
+    byTestId(document.body, 'database-template-gallery-template-tasks').click();
+
+    return modal() ?? document.body;
+  };
+
+  it('heads the gallery\'s templates with the Templates glyph (N08)', async () => {
+    await insert();
+    byTestId(panel(), 'database-new-database-more-templates').click();
+    const label = [...document.querySelectorAll('[data-blok-database-tpl-gallery-section]')]
+      .find((node) => node.textContent?.trim() === 'tools.database.templateMenuLabel');
+    const expected = document.createElement('span');
+
+    expected.innerHTML = icons.IconTemplates;
+    expect(label?.querySelector('[data-blok-database-tpl-gallery-glyph]')?.innerHTML).toBe(expected.innerHTML);
+  });
+
+  it('opened from the gallery, Customize shows a back arrow and "Continue" (N09)', async () => {
+    const dialog = await openFromGallery();
+
+    expect(byTestId(dialog, 'database-starter-back-gallery').getAttribute('aria-label')).toBe('tools.database.peekBack');
+    expect(byTestId(dialog, 'database-starter-next').textContent).toBe('tools.database.buttonConfirmContinue');
+  });
+
+  it('the back arrow returns to the gallery (N09)', async () => {
+    const dialog = await openFromGallery();
+
+    byTestId(dialog, 'database-starter-back-gallery').click();
+
+    expect(modal()).toBeNull();
+    expect(document.querySelector('[data-blok-testid="database-template-gallery"]')).not.toBeNull();
+  });
+
+  it('opened from the panel, Customize keeps × and "Get started"', async () => {
+    await insert();
+    byTestId(panel(), 'database-new-database-starter-tasks').click();
+    const dialog = modal() ?? undefined;
+
+    expect(byTestId(dialog, 'database-starter-close')).not.toBeNull();
+    expect(byTestId(dialog, 'database-starter-next').textContent).toBe('tools.database.starterGetStarted');
+  });
+
+  it('the Customize preview fills Status from the template\'s rows, and its tabs and headers carry glyphs (N07)', async () => {
+    await insert();
+    byTestId(panel(), 'database-new-database-starter-tasks').click();
+    const preview = modal()?.querySelector('[data-blok-database-starter-preview]');
+    const pills = [...(preview?.querySelectorAll('[data-blok-database-starter-preview-row=""] [data-blok-database-option-pill], [data-blok-database-starter-preview-row=""] [data-blok-database-pill]') ?? [])];
+
+    expect(pills.length).toBeGreaterThan(0);
+    expect(preview?.querySelector('[data-blok-database-starter-preview-tabs] span svg')).not.toBeNull();
+    expect(preview?.querySelector('[data-blok-database-starter-preview-row="header"] svg')).not.toBeNull();
+  });
+});

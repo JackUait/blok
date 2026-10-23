@@ -4,7 +4,7 @@ import { PROPERTY_TYPE_META } from './database-property-types';
 import { hiddenPropertyCount } from './database-starters';
 import type { StarterBuild, StarterChoice, StarterMeta, StarterRow } from './database-starters';
 import { createOptionPill } from './cells/display';
-import type { PropertyType, SelectOption, ViewType } from './types';
+import type { PropertyDefinition, PropertyType, SelectOption, ViewType } from './types';
 
 export interface StarterPicks {
   features: Set<string>;
@@ -16,6 +16,8 @@ export interface StarterCustomizeOptions {
   t: (key: string, vars?: Record<string, string>) => string;
   /** The database the picks would build, for the preview. */
   preview: (picks: StarterPicks) => StarterBuild;
+  /** Opened from the templates gallery: step one leads back to it with "←", and its button reads "Continue" (findings-creation N09). */
+  onBack?: () => void;
   directionSource?: Element | null;
 }
 
@@ -25,6 +27,20 @@ const iconOf = (kind: StarterChoice['kind']): string =>
   VIEW_ICONS[kind as ViewType] ?? (Object.hasOwn(PROPERTY_TYPE_META, kind) ? PROPERTY_TYPE_META[kind as PropertyType].icon : '');
 
 const counter = { next: 0 };
+
+const TAB_ICONS: Partial<Record<ViewType, string>> = { ...VIEW_ICONS, list: IconList };
+
+/** A preview glyph: Blok's own icon constants, never user text. */
+const glyphOf = (svg: string): HTMLElement => {
+  const icon = document.createElement('span');
+
+  icon.setAttribute('data-blok-database-starter-preview-glyph', '');
+  icon.setAttribute('aria-hidden', 'true');
+  // No whitespace text: the preview's cells are read by their text.
+  icon.innerHTML = svg.replace(/>\s+</g, '><').trim();
+
+  return icon;
+};
 
 /**
  * research/30 B8: a grouped table's preview is drawn grouped. A heading per
@@ -125,14 +141,14 @@ export const openStarterCustomize = (options: StarterCustomizeOptions): Promise<
     const shown = (first?.visibleProperties ?? []).filter((id) => !last.includes(id));
     const columns = [made.schema[0], ...[...shown, ...last.filter((id) => (first?.visibleProperties ?? []).includes(id))].map((id) => made.schema.find((p) => p.id === id))]
       .filter((p) => p !== undefined);
-    const line = (cells: string[], header: boolean): HTMLElement => {
+    const line = (cells: Array<string | HTMLElement>, header: boolean): HTMLElement => {
       const row = document.createElement('div');
 
       row.setAttribute('data-blok-database-starter-preview-row', header ? 'header' : '');
-      row.append(...cells.map((text) => {
+      row.append(...cells.map((content) => {
         const cell = document.createElement('span');
 
-        cell.textContent = text;
+        cell.append(content);
 
         return cell;
       }));
@@ -146,7 +162,7 @@ export const openStarterCustomize = (options: StarterCustomizeOptions): Promise<
     tabs.append(...made.views.map((view) => {
       const tab = document.createElement('span');
 
-      tab.textContent = view.name;
+      tab.append(glyphOf(TAB_ICONS[view.type] ?? IconTable), view.name);
       if (view === first) tab.setAttribute('aria-current', 'true');
 
       return tab;
@@ -154,9 +170,20 @@ export const openStarterCustomize = (options: StarterCustomizeOptions): Promise<
     table.setAttribute('data-blok-database-starter-preview-table', '');
     const order = first?.rowOrder;
     const rows = [...made.rows].sort((x, y) => ((order?.[x.id] ?? x.data.position) < (order?.[y.id] ?? y.data.position) ? -1 : 1));
-    const rowLine = (row: StarterRow): HTMLElement => line(columns.map((p, i) => (i === 0 ? row.data.title ?? '' : '')), false);
+    // findings-creation N07: the rows' own values, an option as its pill.
+    const value = (row: StarterRow, property: PropertyDefinition): string | HTMLElement => {
+      const raw = row.data.properties[property.id];
+      const option = property.config?.options?.find((o) => o.id === (Array.isArray(raw) ? raw[0] : raw));
 
-    table.append(line(columns.map((p) => p.name), true), ...(first === undefined ? rows.map(rowLine) : groupedLines(made, first, rows, rowLine, t)));
+      if (option !== undefined) return createOptionPill(option);
+
+      return typeof raw === 'string' && property.type === 'text' ? raw : '';
+    };
+    const rowLine = (row: StarterRow): HTMLElement => line(columns.map((p, i) => (i === 0 ? row.data.title ?? '' : value(row, p))), false);
+    const header = line(columns.map((p) => p.name), true);
+
+    [...header.children].forEach((cell, i) => cell.prepend(glyphOf(PROPERTY_TYPE_META[columns[i].type].icon)));
+    table.append(header, ...(first === undefined ? rows.map(rowLine) : groupedLines(made, first, rows, rowLine, t)));
     // research/30 B8: "0 hidden properties" under the table.
     hidden.textContent = t('tools.database.starterHiddenProperties', { count: String(hiddenPropertyCount(made, first)) });
     preview.replaceChildren(title, tabs, table, hidden);
@@ -189,16 +216,21 @@ export const openStarterCustomize = (options: StarterCustomizeOptions): Promise<
     return button;
   };
 
+  const backToGallery = options.onBack;
+
   const draw = (): void => {
     const first = step.at === 1;
+    const closes = first && backToGallery === undefined;
+    const firstNavId = backToGallery === undefined ? 'database-starter-close' : 'database-starter-back-gallery';
+    const firstLabel = backToGallery === undefined ? 'tools.database.starterGetStarted' : 'tools.database.buttonConfirmContinue';
 
-    nav.innerHTML = first ? IconCross : IconChevronLeft;
-    nav.setAttribute('aria-label', t(first ? 'tools.database.close' : 'tools.database.peekBack'));
-    nav.setAttribute('data-blok-testid', first ? 'database-starter-close' : 'database-starter-back');
+    nav.innerHTML = closes ? IconCross : IconChevronLeft;
+    nav.setAttribute('aria-label', t(closes ? 'tools.database.close' : 'tools.database.peekBack'));
+    nav.setAttribute('data-blok-testid', first ? firstNavId : 'database-starter-back');
     hint.textContent = first ? t('tools.database.starterFeaturesHint') : t('tools.database.starterViewsHint', { name });
     choices.setAttribute('data-step', first ? 'features' : 'views');
     choices.replaceChildren(...(first ? meta.features.map((c) => chip(c, picks.features, 'feature')) : meta.views.map((c) => chip(c, picks.views, 'view'))));
-    primary.textContent = t(first ? 'tools.database.starterGetStarted' : 'tools.database.layoutSectionDone');
+    primary.textContent = t(first ? firstLabel : 'tools.database.layoutSectionDone');
     primary.setAttribute('data-blok-testid', first ? 'database-starter-next' : 'database-starter-done');
   };
 
@@ -228,6 +260,7 @@ export const openStarterCustomize = (options: StarterCustomizeOptions): Promise<
   nav.addEventListener('click', () => {
     if (step.at === 1) {
       finish(null);
+      backToGallery?.();
 
       return;
     }

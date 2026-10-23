@@ -1132,19 +1132,20 @@ export class DatabaseTool implements BlockTool {
         icon: ICON_GLYPHS[starter.glyph],
         tint: starter.tint,
         columns: starter.thumbnail.columns.map((key) => t(key)),
-        pills: starter.thumbnail.pills.map(([key, color]) => ({ label: t(key), color })),
+        // A status pill carries Notion's dot (findings-creation N07).
+        pills: starter.thumbnail.pills.map(([key, color]) => ({ label: t(key), color, ...(key.startsWith('tools.database.defaultStatus') ? { dot: true } : {}) })),
         ...(starter.thumbnail.pillColumn === undefined ? {} : { pillColumn: starter.thumbnail.pillColumn }),
       })),
       sources: this.pickerSources(),
       onEmpty: () => undefined,
       onSource: (id) => this.linkTo(id),
-      onTemplate: (id) => this.pickStarter(id),
+      onTemplate: (id) => this.pickStarter(id, true),
       directionSource: this.element,
     });
   }
 
   /** A Suggested template picked in the "New database" panel (research/27 §1). Skills has no Customize step. */
-  private pickStarter(id: string): void {
+  private pickStarter(id: string, fromGallery = false): void {
     const meta = DATABASE_STARTERS.find((starter) => starter.id === id);
 
     if (meta === undefined) return;
@@ -1157,6 +1158,7 @@ export class DatabaseTool implements BlockTool {
       meta,
       t: (key, vars) => this.api.i18n.t(key, vars),
       preview: (picks) => buildStarter(meta.id, { t: (key, vars) => this.api.i18n.t(key, vars), newId: () => nanoid(), titleId: this.titlePropertyId(), ...picks }),
+      ...(fromGallery ? { onBack: () => this.openTemplateGallery() } : {}),
       directionSource: this.element,
     }).then((picks) => {
       if (picks !== null) this.createFromStarter(meta.id, picks);

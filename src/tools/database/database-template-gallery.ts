@@ -1,4 +1,4 @@
-import { IconArrowDiagonal, IconCross, IconTable } from '../../components/icons';
+import { IconArrowDiagonal, IconCross, IconTable, IconTemplates } from '../../components/icons';
 import { openModalDialog } from '../../components/utils/modal-dialog';
 
 export interface GalleryTemplate {
@@ -10,7 +10,8 @@ export interface GalleryTemplate {
   tint: string;
   /** Column names, then option pills drawn in column `pillColumn` (a board's groups without columns). */
   columns: string[];
-  pills: Array<{ label: string; color: string }>;
+  /** `dot`: a status pill, drawn with Notion's leading dot. */
+  pills: Array<{ label: string; color: string; dot?: boolean }>;
   pillColumn?: number;
 }
 
@@ -58,6 +59,7 @@ const thumbnail = (title: string, icon: string, columns: string[], pills: Galler
     const node = el('span', 'data-blok-database-tpl-gallery-pill', option.label);
 
     node.setAttribute('data-color', option.color);
+    if (option.dot === true) node.setAttribute('data-dot', '');
 
     return node;
   };
@@ -185,7 +187,7 @@ export const openTemplateGallery = (options: TemplateGalleryOptions): { close: (
     draw();
   });
 
-  const templateLabel = section(t('tools.database.templateMenuLabel'));
+  const templateLabel = section(t('tools.database.templateMenuLabel'), IconTemplates);
   const templateGrid = el('div', 'data-blok-database-tpl-gallery-grid');
   const templateCards = options.templates.map((item) => {
     const card = el('button', 'data-blok-database-tpl-gallery-card');

@@ -11574,44 +11574,61 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-starter-tile-gray-ink);
 }
 
-[data-blok-database-starter-tile="red"], [data-blok-database-icon="red"], [data-blok-database-tpl-gallery-card][data-tint="red"] {
+[data-blok-database-starter-tile="red"], [data-blok-database-icon="red"] {
   background-color: var(--blok-database-starter-tile-red-bg);
   color: var(--blok-database-starter-tile-red-ink);
 }
 
-[data-blok-database-starter-tile="orange"], [data-blok-database-icon="orange"], [data-blok-database-tpl-gallery-card][data-tint="orange"] {
+[data-blok-database-starter-tile="orange"], [data-blok-database-icon="orange"] {
   background-color: var(--blok-database-starter-tile-orange-bg);
   color: var(--blok-database-starter-tile-orange-ink);
 }
 
-[data-blok-database-starter-tile="yellow"], [data-blok-database-icon="yellow"], [data-blok-database-tpl-gallery-card][data-tint="yellow"] {
+[data-blok-database-starter-tile="yellow"], [data-blok-database-icon="yellow"] {
   background-color: var(--blok-database-starter-tile-yellow-bg);
   color: var(--blok-database-starter-tile-yellow-ink);
 }
 
-[data-blok-database-starter-tile="purple"], [data-blok-database-icon="purple"], [data-blok-database-tpl-gallery-card][data-tint="purple"] {
+[data-blok-database-starter-tile="purple"], [data-blok-database-icon="purple"] {
   background-color: var(--blok-database-starter-tile-purple-bg);
   color: var(--blok-database-starter-tile-purple-ink);
 }
 
-[data-blok-database-starter-tile="pink"], [data-blok-database-icon="pink"], [data-blok-database-tpl-gallery-card][data-tint="pink"] {
+[data-blok-database-starter-tile="pink"], [data-blok-database-icon="pink"] {
   background-color: var(--blok-database-starter-tile-pink-bg);
   color: var(--blok-database-starter-tile-pink-ink);
 }
 
 [data-blok-database-tpl-gallery-card][data-tint="green"] {
-  background-color: var(--blok-database-starter-tile-green-bg);
-  color: var(--blok-database-starter-tile-green-ink);
+  --blok-database-tpl-card-tint: var(--blok-database-starter-tile-green-ink);
 }
 
 [data-blok-database-tpl-gallery-card][data-tint="blue"] {
-  background-color: var(--blok-database-starter-tile-blue-bg);
-  color: var(--blok-database-starter-tile-blue-ink);
+  --blok-database-tpl-card-tint: var(--blok-database-starter-tile-blue-ink);
 }
 
 [data-blok-database-tpl-gallery-card][data-tint="gray"] {
-  background-color: var(--blok-database-starter-tile-gray-bg);
-  color: var(--blok-database-starter-tile-gray-ink);
+  --blok-database-tpl-card-tint: var(--blok-database-starter-tile-gray-ink);
+}
+
+[data-blok-database-tpl-gallery-card][data-tint="red"] {
+  --blok-database-tpl-card-tint: var(--blok-database-starter-tile-red-ink);
+}
+
+[data-blok-database-tpl-gallery-card][data-tint="orange"] {
+  --blok-database-tpl-card-tint: var(--blok-database-starter-tile-orange-ink);
+}
+
+[data-blok-database-tpl-gallery-card][data-tint="yellow"] {
+  --blok-database-tpl-card-tint: var(--blok-database-starter-tile-yellow-ink);
+}
+
+[data-blok-database-tpl-gallery-card][data-tint="purple"] {
+  --blok-database-tpl-card-tint: var(--blok-database-starter-tile-purple-ink);
+}
+
+[data-blok-database-tpl-gallery-card][data-tint="pink"] {
+  --blok-database-tpl-card-tint: var(--blok-database-starter-tile-pink-ink);
 }
 
 [data-blok-database-icon] {
@@ -11822,8 +11839,28 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-ink-secondary);
 }
 
+[data-blok-database-starter-preview-tabs] > span {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--blok-space-0-5) var(--blok-space-1-5);
+  border-radius: var(--blok-radius-control);
+}
+
 [data-blok-database-starter-preview-tabs] [aria-current="true"] {
+  background-color: var(--blok-database-tab-bg-active);
   color: var(--blok-database-ink);
+}
+
+[data-blok-database-starter-preview-glyph] {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-inline-end: var(--blok-space-1);
+  color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-database-starter-preview-glyph] svg {
+  width: 16px;
+  height: 16px;
 }
 
 [data-blok-database-starter-preview-row] {
@@ -12161,6 +12198,17 @@ textarea[data-blok-database-cell-input] {
   white-space: nowrap;
 }
 
+[data-blok-database-tpl-gallery-pill][data-dot]::before {
+  content: "";
+  display: inline-block;
+  inline-size: 6px;
+  block-size: 6px;
+  margin-inline-end: var(--blok-space-1);
+  border-radius: 50%;
+  background-color: currentColor;
+  vertical-align: 1px;
+}
+
 [data-blok-database-tpl-gallery-pill][data-color="gray"] {
   background-color: var(--blok-database-option-gray-bg);
   color: var(--blok-database-option-gray-text);
@@ -12205,6 +12253,25 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-tpl-gallery-empty]:hover, [data-blok-database-tpl-gallery-card]:hover {
   border-color: var(--blok-database-ink-tertiary);
+}
+
+[data-blok-database-tpl-gallery-card][data-tint] {
+  border-color: color-mix(in srgb, var(--blok-database-tpl-card-tint) 18%, var(--blok-database-tpl-border));
+  background-color: color-mix(in srgb, var(--blok-database-tpl-card-tint) 4%, var(--blok-database-tpl-gallery-card-bg));
+  color: color-mix(in srgb, var(--blok-database-tpl-card-tint) 55%, var(--blok-database-ink));
+}
+
+[data-blok-database-tpl-gallery-card][data-tint]:hover {
+  border-color: color-mix(in srgb, var(--blok-database-tpl-card-tint) 18%, var(--blok-database-tpl-border));
+  background-color: color-mix(in srgb, var(--blok-database-tpl-card-tint) 9%, var(--blok-database-tpl-gallery-card-bg));
+}
+
+[data-blok-database-tpl-gallery-card][data-tint] [data-blok-database-tpl-gallery-card-text] {
+  color: inherit;
+}
+
+[data-blok-database-tpl-gallery-thumb-title] [data-blok-database-tpl-gallery-glyph] {
+  color: var(--blok-database-tpl-card-tint, var(--blok-database-ink-secondary));
 }
 
 [data-blok-database-panel-close] svg {

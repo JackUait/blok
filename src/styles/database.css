@@ -7621,6 +7621,12 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-pressed-bg);
 }
 
+/* ⚡ and ✦ on a locked database: must come after hover and active. */
+[data-blok-database-view-toolbar] > button:disabled {
+  background-color: transparent;
+  cursor: default;
+}
+
 [data-blok-database-view-toolbar] > button[data-active] {
   color: var(--blok-icon-active-text);
 }

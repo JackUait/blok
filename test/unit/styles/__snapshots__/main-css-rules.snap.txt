@@ -10710,6 +10710,11 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-pressed-bg);
 }
 
+[data-blok-database-view-toolbar] > button:disabled {
+  background-color: transparent;
+  cursor: default;
+}
+
 [data-blok-database-view-toolbar] > button[data-active] {
   color: var(--blok-icon-active-text);
 }

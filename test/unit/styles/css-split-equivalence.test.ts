@@ -1057,6 +1057,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_TEMPLATE_MENU_ROWS_BYTES = 307;
     // database.css: the "New database" placeholder's warm gray ink, light and dark.
     const DATABASE_TITLE_PLACEHOLDER_BYTES = 580;
+    // database.css: a disabled toolbar button (⚡ / ✦ while locked) keeps no fill.
+    const DATABASE_TOOLBAR_DISABLED_BYTES = 183;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1243,7 +1245,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + NOTION_FONT_STACK_BYTES
       + DATABASE_DARK_RESET_MAP_BYTES
       + DATABASE_TEMPLATE_MENU_ROWS_BYTES
-      + DATABASE_TITLE_PLACEHOLDER_BYTES;
+      + DATABASE_TITLE_PLACEHOLDER_BYTES
+      + DATABASE_TOOLBAR_DISABLED_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

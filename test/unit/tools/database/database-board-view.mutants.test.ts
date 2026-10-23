@@ -529,19 +529,17 @@ describe('DatabaseBoardView — mutation coverage', () => {
         input: requireInput(card, '[data-blok-database-card-title-input]') };
     };
 
-    it('configures the rename input with its label, marker and inline styles', () => {
+    it('configures the rename input with its label, marker and placeholder', () => {
       const { input } = openRename();
 
       expect({
         label: input.getAttribute('aria-label'),
         marker: input.getAttribute('data-blok-database-card-title-input'),
-        width: input.style.width,
-        boxSizing: input.style.boxSizing,
+        placeholder: input.placeholder,
       }).toStrictEqual({
         label: 'T(tools.database.editCardTitle)',
         marker: '',
-        width: '100%',
-        boxSizing: 'border-box',
+        placeholder: 'T(tools.database.cardNamePlaceholder)',
       });
     });
 

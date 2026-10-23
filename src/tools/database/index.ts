@@ -8641,10 +8641,18 @@ export class DatabaseTool implements BlockTool {
     this.insertNewRow(rowData);
     this.syncRowsFromBlocks();
 
+    // feel findings B09: the new card opens with its title being edited; Enter with a name makes the next one.
+    const editNewCard = (): void => {
+      if (this.view instanceof DatabaseBoardView) {
+        this.view.editTitle(rowData.id, { onEnter: () => this.handleAddRow(optionId, this.boardContainer ?? boardEl, subKey) });
+      }
+    };
+
     // Lane columns have no header count: a redraw keeps the header and lane counts right.
     if (subKey !== undefined) {
       this.rerenderView({ keepDrawer: true });
       void this.sync.syncCreateRow({ id: rowData.id, properties: rowData.properties, position: rowData.position });
+      editNewCard();
 
       return;
     }
@@ -8669,7 +8677,7 @@ export class DatabaseTool implements BlockTool {
       position: rowData.position,
     });
     this.markFresh(rowData.id);
-    this.openIfFiltered(rowData.id);
+    if (!this.openIfFiltered(rowData.id)) editNewCard();
   }
 
   private handleAddColumn(boardEl: HTMLDivElement): void {
@@ -11345,6 +11353,7 @@ export class DatabaseTool implements BlockTool {
     const oldBoardArea = this.boardContainer.querySelector<HTMLElement>(scrollSelector);
     const savedScrollLeft = oldBoardArea?.scrollLeft ?? 0;
     const formDraft = this.view instanceof DatabaseFormView ? this.view.captureDraft() : undefined;
+    const titleDraft = this.view instanceof DatabaseBoardView ? this.view.captureTitleDraft() : null;
 
     this.cardDrag?.destroy();
     this.columnDrag?.destroy();
@@ -11378,6 +11387,10 @@ export class DatabaseTool implements BlockTool {
 
     if (newBoardArea !== null) {
       newBoardArea.scrollLeft = savedScrollLeft;
+    }
+    // After the swap: the edit focuses its input, which must be in the page.
+    if (titleDraft !== null && this.view instanceof DatabaseBoardView) {
+      this.view.restoreTitleDraft(titleDraft);
     }
 
     // Rows arriving after boot, undo/peer reprojection and setReadOnly all

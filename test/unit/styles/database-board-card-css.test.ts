@@ -50,6 +50,17 @@ describe('database board card and calendar "No date" styles', () => {
     expect(ruleBody('[data-blok-database-card][data-empty]')).toBe('');
   });
 
+  // feel findings B22: Notion edits the title at its own 15px/22.5px/500, with no underline.
+  it('edits a card title at the title\'s own size, with no underline', () => {
+    const body = ruleBody('[data-blok-database-card-title-input]');
+
+    expect(body).toMatch(/font-size:\s*15px/);
+    expect(body).toMatch(/line-height:\s*22\.5px/);
+    expect(body).toMatch(/font-weight:\s*500/);
+    expect(body).not.toMatch(/border-bottom/);
+    expect(ruleBody('[data-blok-database-card-edit-glyph]')).toMatch(/inline-size:\s*18px/);
+  });
+
   it('wraps a property only when its wrap setting is on', () => {
     expect(ruleBody('[data-blok-database-card-property][data-wrap="false"]')).toMatch(/white-space:\s*nowrap/);
   });

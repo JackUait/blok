@@ -12,7 +12,7 @@ import { createCardPreview } from './database-card-preview';
 import type { BodyBlock } from './row-body';
 import { resolveBoardCardPreview, resolveCardLayout, resolveCardSize, resolveFitImage, resolveViewProperties } from './view-settings';
 import { getElementDirection } from '../../components/utils/direction';
-import { IconPlus, IconPencil, IconDotsHorizontal, IconChevronDown } from '../../components/icons';
+import { IconPlus, IconPencil, IconDotsHorizontal, IconChevronDown, IconPage, IconSidebarRight } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
 import { onHover } from '../../components/utils/tooltip';
 import { onPropertyHover } from './property-hint';
@@ -60,6 +60,14 @@ interface DatabaseBoardViewOptions {
   addCardLabel?: string;
   /** A lasso from the margin or a drag box over empty board space: these cards become the selection. Absent when read-only. */
   lassoRows?: (rowIds: string[]) => void;
+}
+
+/** A card title edit in progress, carried across a redraw so typed text is not lost. */
+export interface CardTitleDraft {
+  rowId: string;
+  value: string;
+  /** Enter with a name: make the next new card (feel findings B09). */
+  onEnter?: () => void;
 }
 
 export interface BoardLane {
@@ -114,6 +122,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
   private readonly settings: Pick<DatabaseBoardViewOptions, 'view' | 'schema' | 'bodyOf' | 'locale' | 'onPropertyEdit' | 'subGroups' | 'onLaneToggle' | 'cellContext' | 'getTotal' | 'onLoadMore' | 'commentBadges' | 'addCardLabel' | 'lassoRows'>;
   private root: HTMLElement | null = null;
   private box: { startX: number; startY: number; el: HTMLElement | null; picked: string | null } | null = null;
+  private editing: { rowId: string; input: HTMLInputElement; onEnter?: () => void } | null = null;
 
   constructor({
     readOnly, i18n, options, getRows, titlePropertyId, onTitleEdit, hideCounts, hiddenGroupCount, aggregate, aggregateHint, ...settings
@@ -814,8 +823,18 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       editBtn.setAttribute('data-row-id', row.id);
       editBtn.setAttribute('aria-label', this.i18n.t('tools.database.editCardTitle'));
       editBtn.innerHTML = IconPencil;
+      // While editing, the button is Open in side peek: keep the caret in the title until the click lands.
+      editBtn.addEventListener('mousedown', (e) => {
+        if (cardEl.hasAttribute('data-editing')) e.preventDefault();
+      });
       editBtn.addEventListener('click', (e) => {
         e.stopPropagation();
+        if (this.editing?.rowId === row.id && cardEl.hasAttribute('data-editing')) {
+          this.editing.input.blur();
+          cardEl.click();
+
+          return;
+        }
         this.startCardTitleEdit(cardEl, row.id);
       });
 
@@ -875,11 +894,38 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     return list.childElementCount > 0 ? list : null;
   }
 
+  /** Edits a card's title in place; `value` seeds a draft carried over a redraw. */
+  editTitle(rowId: string, options: { value?: string; onEnter?: () => void } = {}): void {
+    const cardEl = this.root?.querySelector<HTMLElement>(`[data-blok-database-card][data-row-id="${CSS.escape(rowId)}"]`);
+
+    if (this.readOnly || cardEl === null || cardEl === undefined) {
+      return;
+    }
+    this.startCardTitleEdit(cardEl, rowId, options);
+  }
+
+  /** The edit in progress, taken off this board: its input will not save when the board goes away. */
+  captureTitleDraft(): CardTitleDraft | null {
+    const editing = this.editing;
+
+    if (editing === null) {
+      return null;
+    }
+    this.editing = null;
+
+    return { rowId: editing.rowId, value: editing.input.value, ...(editing.onEnter !== undefined ? { onEnter: editing.onEnter } : {}) };
+  }
+
+  restoreTitleDraft(draft: CardTitleDraft): void {
+    this.editTitle(draft.rowId, { value: draft.value, ...(draft.onEnter !== undefined ? { onEnter: draft.onEnter } : {}) });
+  }
+
   /**
-   * Replaces the card title div with an inline input for editing.
-   * Mirrors the input-swap pattern in DatabaseColumnControls.
+   * Swaps the card title for an input at the title's own size, caret at the end
+   * (research/36 §4). While it is open the card shows the page glyph and the
+   * pencil turns into Open in side peek (feel findings B22).
    */
-  private startCardTitleEdit(cardEl: HTMLElement, rowId: string): void {
+  private startCardTitleEdit(cardEl: HTMLElement, rowId: string, options: { value?: string; onEnter?: () => void } = {}): void {
     const titleEl = cardEl.querySelector<HTMLElement>('[data-blok-database-card-title]');
 
     if (titleEl === null) {
@@ -888,6 +934,16 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
 
     // An untitled card shows placeholder text; it must not seed the input or count as the old title.
     const originalTitle = titleEl.hasAttribute('data-placeholder') ? '' : titleEl.textContent ?? '';
+    const state: { viaEnter: boolean; input: HTMLInputElement | null } = { viaEnter: false, input: null };
+    const editBtn = cardEl.querySelector<HTMLElement>('[data-blok-database-edit-card]');
+    const endEditing = (): void => {
+      cardEl.removeAttribute('data-editing');
+      cardEl.querySelector(':scope > [data-blok-database-card-edit-glyph]')?.remove();
+      if (editBtn !== null) {
+        editBtn.innerHTML = IconPencil;
+        editBtn.setAttribute('aria-label', this.i18n.t('tools.database.editCardTitle'));
+      }
+    };
 
     const buildTitleDiv = (title: string): HTMLElement => {
       const div = document.createElement('div');
@@ -912,18 +968,58 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       escapeCommits: true,
       configureInput: (input) => {
         input.setAttribute('data-blok-database-card-title-input', '');
-        input.style.setProperty('width', '100%');
-        input.style.setProperty('box-sizing', 'border-box');
+        input.setAttribute('placeholder', this.i18n.t('tools.database.cardNamePlaceholder'));
+        if (options.value !== undefined) Object.assign(input, { value: options.value });
+        // Added before the rename's own keydown listener, so it runs first.
+        input.addEventListener('keydown', (event) => {
+          // eslint-disable-next-line @typescript-eslint/no-deprecated -- Keep the IME 229 fallback when isComposing is false.
+          state.viaEnter = event.key === 'Enter' && !event.isComposing && event.keyCode !== 229;
+        });
+        state.input = input;
+        this.editing = { rowId, input, ...(options.onEnter !== undefined ? { onEnter: options.onEnter } : {}) };
       },
       buildRestored: buildTitleDiv,
       onCommit: (newTitle) => {
+        const editing = this.editing;
+
+        // A redraw took the draft (captureTitleDraft): the new board saves it.
+        if (editing === null || editing.input !== state.input) {
+          return;
+        }
+        this.editing = null;
+        endEditing();
         if (newTitle !== originalTitle) {
           this.onTitleEdit?.(rowId, newTitle);
         }
 
         cardEl.toggleAttribute('data-empty', newTitle === '');
+        // An empty Enter makes no next card: held Enter would make one after another (Notion unmeasured).
+        if (state.viaEnter && newTitle !== '') {
+          editing.onEnter?.();
+        }
       },
     });
+
+    const input = state.input;
+
+    if (input === null || this.editing?.input !== input) {
+      return;
+    }
+    input.setSelectionRange(input.value.length, input.value.length);
+    cardEl.setAttribute('data-editing', '');
+    // A page with its own icon keeps it; the blank page glyph stands in for none.
+    if (cardEl.querySelector(':scope > [data-blok-database-page-icon]') === null) {
+      const glyph = document.createElement('span');
+
+      glyph.setAttribute('data-blok-database-card-edit-glyph', '');
+      glyph.setAttribute('aria-hidden', 'true');
+      glyph.innerHTML = IconPage;
+      input.before(glyph);
+    }
+    if (editBtn !== null) {
+      editBtn.innerHTML = IconSidebarRight;
+      editBtn.setAttribute('aria-label', this.i18n.t('tools.page.openInSidePeek'));
+    }
   }
 
   /**

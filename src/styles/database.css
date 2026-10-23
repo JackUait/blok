@@ -1074,21 +1074,44 @@
   border-inline-end: 1px solid var(--blok-database-table-border);
 }
 
-/**
- * Inline title edit input inside a card.
- */
+/* The title edits in place at its own size, with no underline (research/36 §4, feel findings B22). */
 [data-blok-database-card-title-input] {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
-  line-height: 1.45;
+  line-height: 22.5px;
   background: none;
   border: none;
-  border-bottom: 1px solid var(--blok-database-card-actions-divider);
-  color: inherit;
+  color: var(--blok-database-table-cell-text);
   outline: none;
   width: 100%;
   box-sizing: border-box;
-  padding: 0;
+  padding: 0 var(--blok-space-0-25);
+}
+
+[data-blok-database-card-title-input]::placeholder {
+  color: var(--blok-database-card-placeholder);
+}
+
+/* Notion's 18px blank page glyph before a title being edited (feel findings B09). */
+[data-blok-database-card-edit-glyph] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: top;
+  inline-size: 18px;
+  block-size: 22.5px;
+  margin-inline-end: var(--blok-space-0-5);
+  color: var(--blok-database-card-actions-icon);
+}
+
+[data-blok-database-card-edit-glyph] svg {
+  inline-size: 18px;
+  block-size: 18px;
+}
+
+[data-blok-database-card-edit-glyph] + [data-blok-database-card-title-input],
+[data-blok-database-page-icon] + [data-blok-database-card-title-input] {
+  width: calc(100% - 22px);
 }
 
 /**

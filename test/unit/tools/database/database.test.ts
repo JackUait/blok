@@ -6667,6 +6667,33 @@ describe('DatabaseTool — board sub-group lanes', () => {
     tool.destroy();
   });
 
+  it('"+ New page" opens the new card with its title being edited, and a redraw keeps what was typed (feel findings B09)', () => {
+    const children = rows();
+    const { tool, element, options } = mount({}, children);
+
+    vi.mocked(options.api.blocks.insertAt).mockImplementation((_type, data, placement) => {
+      const row = data as DatabaseRowData;
+      const id = (placement as { id: string }).id;
+
+      children.push(createMockRowBlock({ id, properties: row.properties, position: row.position }));
+
+      return { id } as unknown as BlockAPI;
+    });
+    lane(element, 'team-b')?.querySelector<HTMLElement>('[data-option-id="opt-done"] [data-blok-database-add-card]')?.click();
+
+    const newId = children.at(-1)?.id ?? '';
+    const field = (): HTMLInputElement | null =>
+      element.querySelector<HTMLInputElement>(`[data-row-id="${newId}"] [data-blok-database-card-title-input]`);
+
+    expect(field()).not.toBeNull();
+    if (field() !== null) (field() as HTMLInputElement).value = 'Half typ';
+    (tool as unknown as { rerenderView: (o?: { keepDrawer?: boolean }) => void }).rerenderView({ keepDrawer: true });
+
+    expect(field()?.value).toBe('Half typ');
+
+    tool.destroy();
+  });
+
   it('a sorted drop into another lane of the same column asks, and "Remove" keeps the sub-group change', async () => {
     const children = rows();
     const { tool, element } = mount(sorted, children);

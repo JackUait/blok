@@ -423,6 +423,7 @@
   "blockSettings.copyLinkError": "לא ניתן להעתיק קישור לבלוק",
   "blockSettings.convertFailed": "לא ניתן לשנות את הבלוק הזה. נסו שוב.",
   "popover.actions": "פעולות",
+  "popover.filteredResults": "תוצאות חיפוש",
   "tools.link.keepTyping": "המשך להקליד כדי להוסיף קישור",
   "tools.link.emailAddress": "כתובת אימייל",
   "tools.link.jumpToSection": "מעבר לסעיף",

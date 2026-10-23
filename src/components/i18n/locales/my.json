@@ -434,6 +434,7 @@
   "blockSettings.copyLinkError": "ဘလောက်လင့်ခ်ကို ကူးယူ၍မရပါ",
   "blockSettings.convertFailed": "ဤဘလောက်ကို ပြောင်းလဲ၍မရပါ။ ထပ်မံကြိုးစားပါ။",
   "popover.actions": "လုပ်ဆောင်ချက်များ",
+  "popover.filteredResults": "ရှာဖွေမှုရလဒ်များ",
   "tools.link.keepTyping": "လင့်ခ်ထည့်ရန် ဆက်လက်ရိုက်ပါ",
   "tools.link.emailAddress": "အီးမေးလ်လိပ်စာ",
   "tools.link.jumpToSection": "ကဏ္ဍသို့သွားရန်",

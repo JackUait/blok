@@ -434,6 +434,7 @@
   "blockSettings.copyLinkError": "ब्लॉकचा दुवा कॉपी करता आला नाही",
   "blockSettings.convertFailed": "हा ब्लॉक बदलता आला नाही. पुन्हा प्रयत्न करा.",
   "popover.actions": "क्रिया",
+  "popover.filteredResults": "शोध परिणाम",
   "tools.link.keepTyping": "दुवा जोडण्यासाठी टाइप करत रहा",
   "tools.link.emailAddress": "ईमेल पत्ता",
   "tools.link.jumpToSection": "विभागाकडे जा",

@@ -425,6 +425,7 @@
   "blockSettings.copyLinkError": "Nu s-a putut copia linkul către bloc",
   "blockSettings.convertFailed": "Nu s-a putut modifica acest bloc. Încercați din nou.",
   "popover.actions": "Acțiuni",
+  "popover.filteredResults": "Rezultate ale căutării",
   "tools.link.keepTyping": "Continuați să scrieți pentru a adăuga un link",
   "tools.link.emailAddress": "Adresă de e-mail",
   "tools.link.jumpToSection": "Mergi la o secțiune",

@@ -423,6 +423,7 @@
   "blockSettings.copyLinkError": "بلاک کا لنک کاپی نہیں ہو سکا",
   "blockSettings.convertFailed": "یہ بلاک تبدیل نہیں ہو سکا۔ دوبارہ کوشش کریں۔",
   "popover.actions": "کارروائیاں",
+  "popover.filteredResults": "تلاش کے نتائج",
   "tools.link.keepTyping": "لنک شامل کرنے کے لیے ٹائپ کرتے رہیں",
   "tools.link.emailAddress": "ای میل پتہ",
   "tools.link.jumpToSection": "سیکشن پر جائیں",

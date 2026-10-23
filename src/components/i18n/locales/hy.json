@@ -425,6 +425,7 @@
   "blockSettings.copyLinkError": "Հնարավոր չէ պատճենել բլոկի հղումը",
   "blockSettings.convertFailed": "Հնարավոր չէ փոխել այս բլոկը։ Փորձեք կրկին։",
   "popover.actions": "Գործողություններ",
+  "popover.filteredResults": "Արդյունքներ",
   "tools.link.keepTyping": "Շարունակեք մուտքագրել՝ հղում ավելացնելու համար",
   "tools.link.emailAddress": "Էլ. հասցե",
   "tools.link.jumpToSection": "Անցնել բաժնին",

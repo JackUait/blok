@@ -434,6 +434,7 @@
   "blockSettings.copyLinkError": "ബ്ലോക്കിന്റെ ലിങ്ക് പകർത്താനായില്ല",
   "blockSettings.convertFailed": "ഈ ബ്ലോക്ക് മാറ്റാനായില്ല. വീണ്ടും ശ്രമിക്കുക.",
   "popover.actions": "പ്രവർത്തനങ്ങൾ",
+  "popover.filteredResults": "തിരയൽ ഫലങ്ങൾ",
   "tools.link.keepTyping": "ലിങ്ക് ചേർക്കാൻ ടൈപ്പ് ചെയ്യുന്നത് തുടരുക",
   "tools.link.emailAddress": "ഇമെയിൽ വിലാസം",
   "tools.link.jumpToSection": "വിഭാഗത്തിലേക്ക് പോവുക",

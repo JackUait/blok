@@ -425,6 +425,7 @@
   "blockSettings.copyLinkError": "Tidak dapat menyalin tautan blok",
   "blockSettings.convertFailed": "Tidak dapat mengubah blok ini. Coba lagi.",
   "popover.actions": "Tindakan",
+  "popover.filteredResults": "Hasil pencarian",
   "tools.link.keepTyping": "Terus ketik untuk menambah tautan",
   "tools.link.emailAddress": "Alamat email",
   "tools.link.jumpToSection": "Lompat ke bagian",

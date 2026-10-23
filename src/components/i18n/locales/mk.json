@@ -434,6 +434,7 @@
   "blockSettings.copyLinkError": "Не може да се копира врската до блокот",
   "blockSettings.convertFailed": "Не може да се промени овој блок. Обидете се повторно.",
   "popover.actions": "Дејства",
+  "popover.filteredResults": "Резултати од пребарувањето",
   "tools.link.keepTyping": "Продолжете да пишувате за да додадете врска",
   "tools.link.emailAddress": "Адреса на е-пошта",
   "tools.link.jumpToSection": "Оди до дел",

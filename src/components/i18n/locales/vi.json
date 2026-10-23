@@ -423,6 +423,7 @@
   "blockSettings.copyLinkError": "Không thể sao chép liên kết đến khối",
   "blockSettings.convertFailed": "Không thể thay đổi khối này. Vui lòng thử lại.",
   "popover.actions": "Thao tác",
+  "popover.filteredResults": "Kết quả tìm kiếm",
   "tools.link.keepTyping": "Tiếp tục nhập để thêm liên kết",
   "tools.link.emailAddress": "Địa chỉ email",
   "tools.link.jumpToSection": "Đi đến mục",

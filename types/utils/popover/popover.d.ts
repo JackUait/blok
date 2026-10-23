@@ -294,6 +294,9 @@ export interface PopoverMessages {
   /** Group label shown above top-level matches in search results */
   actions?: string
 
+  /** Label shown above every search result list, as in Notion's "/" menu. Without it only "actions" shows, and only over promoted groups. */
+  filteredResults?: string
+
   /**
    * Template announced to screen readers with the current result count while
    * filtering. Use the `{count}` placeholder, e.g. "{count} results".

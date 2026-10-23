@@ -425,6 +425,7 @@
   "blockSettings.copyLinkError": "የብሎክ አገናኝ መቅዳት አልተቻለም",
   "blockSettings.convertFailed": "ይህን ብሎክ መቀየር አልተቻለም። እንደገና ይሞክሩ።",
   "popover.actions": "እርምጃዎች",
+  "popover.filteredResults": "የፍለጋ ውጤቶች",
   "tools.link.keepTyping": "አገናኝ ለመጨመር መተየብ ይቀጥሉ",
   "tools.link.emailAddress": "የኢሜይል አድራሻ",
   "tools.link.jumpToSection": "ወደ ክፍል ዝለል",

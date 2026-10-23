@@ -168,6 +168,7 @@ export type BlokMessageKey =
   | 'notifier.ok'
   | 'popover.actions'
   | 'popover.convertTo'
+  | 'popover.filteredResults'
   | 'popover.nothingFound'
   | 'popover.search'
   | 'presence.agentFor'

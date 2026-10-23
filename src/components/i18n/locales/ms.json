@@ -434,6 +434,7 @@
   "blockSettings.copyLinkError": "Tidak dapat menyalin pautan ke blok",
   "blockSettings.convertFailed": "Tidak dapat menukar blok ini. Cuba lagi.",
   "popover.actions": "Tindakan",
+  "popover.filteredResults": "Hasil carian",
   "tools.link.keepTyping": "Terus menaip untuk menambah pautan",
   "tools.link.emailAddress": "Alamat e-mel",
   "tools.link.jumpToSection": "Lompat ke bahagian",

@@ -436,6 +436,7 @@
   "blockSettings.copyLinkError": "ບໍ່ສາມາດສຳເນົາລິ້ງບລັອກໄດ້",
   "blockSettings.convertFailed": "ບໍ່ສາມາດປ່ຽນບລັອກນີ້ໄດ້. ລອງໃໝ່ອີກຄັ້ງ.",
   "popover.actions": "ການກະທຳ",
+  "popover.filteredResults": "ຜົນການຄົ້ນຫາ",
   "tools.link.keepTyping": "ພິມຕໍ່ໄປເພື່ອເພີ່ມລິ້ງ",
   "tools.link.emailAddress": "ທີ່ຢູ່ອີເມລ",
   "tools.link.jumpToSection": "ໄປຫາພາກ",

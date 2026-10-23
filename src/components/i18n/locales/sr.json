@@ -425,6 +425,7 @@
   "blockSettings.copyLinkError": "Није могуће копирати везу ка блоку",
   "blockSettings.convertFailed": "Није могуће променити овај блок. Покушајте поново.",
   "popover.actions": "Радње",
+  "popover.filteredResults": "Резултати претраге",
   "tools.link.keepTyping": "Наставите да куцате да бисте додали везу",
   "tools.link.emailAddress": "Имејл адреса",
   "tools.link.jumpToSection": "Скочи на одељак",

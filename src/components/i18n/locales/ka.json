@@ -425,6 +425,7 @@
   "blockSettings.copyLinkError": "ბლოკის ბმულის კოპირება ვერ მოხერხდა",
   "blockSettings.convertFailed": "ამ ბლოკის შეცვლა ვერ მოხერხდა. სცადეთ ხელახლა.",
   "popover.actions": "მოქმედებები",
+  "popover.filteredResults": "შედეგები",
   "tools.link.keepTyping": "გააგრძელეთ აკრეფა ბმულის დასამატებლად",
   "tools.link.emailAddress": "ელფოსტის მისამართი",
   "tools.link.jumpToSection": "გადასვლა სექციაში",

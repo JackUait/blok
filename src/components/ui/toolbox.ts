@@ -668,6 +668,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
         nothingFound: this.i18nLabels.nothingFound,
         search: this.i18nLabels.filter,
         actions: this.i18n.t('popover.actions'),
+        filteredResults: this.i18n.t('popover.filteredResults'),
         searchResults: this.i18n.t('a11y.searchResults'),
       },
       items: this.toolboxItemsToBeDisplayed,

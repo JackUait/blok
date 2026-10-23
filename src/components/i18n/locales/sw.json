@@ -423,6 +423,7 @@
   "blockSettings.copyLinkError": "Imeshindikana kunakili kiungo cha kizuizi",
   "blockSettings.convertFailed": "Imeshindikana kubadilisha kizuizi hiki. Jaribu tena.",
   "popover.actions": "Vitendo",
+  "popover.filteredResults": "Matokeo ya utafutaji",
   "tools.link.keepTyping": "Endelea kuandika ili kuongeza kiungo",
   "tools.link.emailAddress": "Anwani ya barua pepe",
   "tools.link.jumpToSection": "Ruka kwenye sehemu",

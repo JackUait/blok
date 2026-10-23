@@ -425,6 +425,7 @@
   "blockSettings.copyLinkError": "Odkaz na blok sa nepodarilo skopírovať",
   "blockSettings.convertFailed": "Tento blok sa nepodarilo zmeniť. Skúste to znova.",
   "popover.actions": "Akcie",
+  "popover.filteredResults": "Výsledky vyhľadávania",
   "tools.link.keepTyping": "Pokračujte v písaní, aby ste pridali odkaz",
   "tools.link.emailAddress": "E-mailová adresa",
   "tools.link.jumpToSection": "Prejsť na sekciu",

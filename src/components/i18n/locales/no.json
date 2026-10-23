@@ -423,6 +423,7 @@
   "blockSettings.copyLinkError": "Kunne ikke kopiere lenken til blokken",
   "blockSettings.convertFailed": "Kunne ikke endre denne blokken. Prøv igjen.",
   "popover.actions": "Handlinger",
+  "popover.filteredResults": "Søkeresultater",
   "tools.link.keepTyping": "Fortsett å skrive for å legge til en lenke",
   "tools.link.emailAddress": "E-postadresse",
   "tools.link.jumpToSection": "Gå til seksjon",

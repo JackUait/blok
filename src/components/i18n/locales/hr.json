@@ -423,6 +423,7 @@
   "blockSettings.copyLinkError": "Nije moguće kopirati poveznicu na blok",
   "blockSettings.convertFailed": "Nije moguće promijeniti ovaj blok. Pokušajte ponovno.",
   "popover.actions": "Radnje",
+  "popover.filteredResults": "Rezultati pretraživanja",
   "tools.link.keepTyping": "Nastavi tipkati za dodavanje poveznice",
   "tools.link.emailAddress": "E-adresa",
   "tools.link.jumpToSection": "Idi na odjeljak",

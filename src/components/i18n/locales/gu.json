@@ -423,6 +423,7 @@
   "blockSettings.copyLinkError": "બ્લોકની લિંક કૉપિ કરી શકાઈ નથી",
   "blockSettings.convertFailed": "આ બ્લોક બદલી શકાયો નથી. ફરી પ્રયાસ કરો.",
   "popover.actions": "ક્રિયાઓ",
+  "popover.filteredResults": "શોધ પરિણામો",
   "tools.link.keepTyping": "લિંક ઉમેરવા માટે ટાઇપ કરવાનું ચાલુ રાખો",
   "tools.link.emailAddress": "ઈમેલ સરનામું",
   "tools.link.jumpToSection": "વિભાગ પર જાઓ",

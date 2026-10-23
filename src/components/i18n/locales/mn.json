@@ -434,6 +434,7 @@
   "blockSettings.copyLinkError": "Блокийн холбоосыг хуулж чадсангүй",
   "blockSettings.convertFailed": "Энэ блокийг өөрчилж чадсангүй. Дахин оролдоно уу.",
   "popover.actions": "Үйлдлүүд",
+  "popover.filteredResults": "Хайлтын үр дүн",
   "tools.link.keepTyping": "Холбоос нэмэхийн тулд бичсээр байгаарай",
   "tools.link.emailAddress": "Имэйл хаяг",
   "tools.link.jumpToSection": "Хэсэг рүү очих",

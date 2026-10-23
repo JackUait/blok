@@ -425,6 +425,7 @@
   "blockSettings.copyLinkError": "د بلاک لینک کاپي نه شو",
   "blockSettings.convertFailed": "دا بلاک بدلېدلی نه شو. بیا هڅه وکړئ.",
   "popover.actions": "کړنې",
+  "popover.filteredResults": "د لټون پایلې",
   "tools.link.keepTyping": "د لینک اضافه کولو لپاره ټایپ کولو ته دوام ورکړئ",
   "tools.link.emailAddress": "د برېښنالیک پته",
   "tools.link.jumpToSection": "برخې ته ولاړ شئ",

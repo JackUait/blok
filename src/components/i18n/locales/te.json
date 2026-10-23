@@ -423,6 +423,7 @@
   "blockSettings.copyLinkError": "బ్లాక్ లింక్‌ను కాపీ చేయలేకపోయాము",
   "blockSettings.convertFailed": "ఈ బ్లాక్‌ను మార్చలేకపోయాము. మళ్లీ ప్రయత్నించండి.",
   "popover.actions": "చర్యలు",
+  "popover.filteredResults": "శోధన ఫలితాలు",
   "tools.link.keepTyping": "లింక్ జోడించడానికి టైప్ చేస్తూ ఉండండి",
   "tools.link.emailAddress": "ఇమెయిల్ చిరునామా",
   "tools.link.jumpToSection": "విభాగానికి వెళ్ళండి",

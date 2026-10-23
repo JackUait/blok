@@ -436,6 +436,7 @@
   "blockSettings.copyLinkError": "Could not copy link to block",
   "blockSettings.convertFailed": "Could not change this block. Try again.",
   "popover.actions": "Actions",
+  "popover.filteredResults": "Filtered results",
   "tools.link.keepTyping": "Keep typing to add a link",
   "tools.link.emailAddress": "Email address",
   "tools.link.jumpToSection": "Jump to section",

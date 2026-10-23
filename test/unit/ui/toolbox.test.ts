@@ -3213,9 +3213,11 @@ describe('Toolbox', () => {
         actions?: string;
         back?: string;
         searchResults?: string;
+        filteredResults?: string;
       } | undefined;
 
       // mockI18n.t echoes the key back
+      expect(messages?.filteredResults).toBe('popover.filteredResults');
       expect(messages?.actions).toBe('popover.actions');
       expect(messages?.back).toBe('a11y.back');
       expect(messages?.searchResults).toBe('a11y.searchResults');

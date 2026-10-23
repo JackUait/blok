@@ -425,6 +425,7 @@
   "blockSettings.copyLinkError": "Kunne ikke kopiere linket til blokken",
   "blockSettings.convertFailed": "Kunne ikke ændre denne blok. Prøv igen.",
   "popover.actions": "Handlinger",
+  "popover.filteredResults": "Søgeresultater",
   "tools.link.keepTyping": "Fortsæt med at skrive for at tilføje et link",
   "tools.link.emailAddress": "E-mailadresse",
   "tools.link.jumpToSection": "Gå til afsnit",

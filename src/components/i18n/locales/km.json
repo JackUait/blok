@@ -425,6 +425,7 @@
   "blockSettings.copyLinkError": "មិនអាចចម្លងតំណប្លុកបានទេ",
   "blockSettings.convertFailed": "មិនអាចផ្លាស់ប្ដូរប្លុកនេះបានទេ។ សូមព្យាយាមម្ដងទៀត។",
   "popover.actions": "សកម្មភាព",
+  "popover.filteredResults": "លទ្ធផលស្វែងរក",
   "tools.link.keepTyping": "បន្តវាយដើម្បីបន្ថែមតំណ",
   "tools.link.emailAddress": "អាសយដ្ឋានអ៊ីមែល",
   "tools.link.jumpToSection": "រំលងទៅផ្នែក",

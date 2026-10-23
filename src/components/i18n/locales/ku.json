@@ -436,6 +436,7 @@
   "blockSettings.copyLinkError": "نەتوانرا بەستەری بلۆک کۆپی بکرێت",
   "blockSettings.convertFailed": "نەتوانرا ئەم بلۆکە بگۆڕدرێت. دووبارە هەوڵ بدەوە.",
   "popover.actions": "کردارەکان",
+  "popover.filteredResults": "ئەنجامەکانی گەڕان",
   "tools.link.keepTyping": "بۆ زیادکردنی بەستەر بەردەوام بە لە نووسین",
   "tools.link.emailAddress": "ناونیشانی ئیمەیڵ",
   "tools.link.jumpToSection": "بچۆ بۆ بەش",

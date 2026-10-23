@@ -2345,9 +2345,11 @@ export class PopoverDesktop extends PopoverAbstract {
       }
     }
 
-    // Render top-level group header when promoted groups will be rendered below
-    if (!isEmptyQuery && matchingTopLevel.length > 0 && data.promotedItems.length > 0) {
-      const label = this.messages.actions ?? 'Actions';
+    // Top-level header: "Actions" over promoted groups, or a "Filtered results" label when the popover asks for one.
+    const filteredResults = this.messages.filteredResults;
+
+    if (!isEmptyQuery && matchingTopLevel.length > 0 && (data.promotedItems.length > 0 || filteredResults !== undefined)) {
+      const label = filteredResults ?? this.messages.actions ?? 'Actions';
       const separator = this.createGroupSeparator(label, 'topLevel');
       const firstRankedElement = matchingTopLevel[0].getElement();
 

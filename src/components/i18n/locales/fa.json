@@ -423,6 +423,7 @@
   "blockSettings.copyLinkError": "کپی پیوند بلوک ممکن نشد",
   "blockSettings.convertFailed": "تغییر این بلوک ممکن نشد. دوباره تلاش کنید.",
   "popover.actions": "اقدامات",
+  "popover.filteredResults": "نتایج جستجو",
   "tools.link.keepTyping": "برای افزودن پیوند تایپ را ادامه دهید",
   "tools.link.emailAddress": "نشانی ایمیل",
   "tools.link.jumpToSection": "پرش به بخش",

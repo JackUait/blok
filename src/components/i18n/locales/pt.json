@@ -425,6 +425,7 @@
   "blockSettings.copyLinkError": "Não foi possível copiar o link do bloco",
   "blockSettings.convertFailed": "Não foi possível alterar este bloco. Tente novamente.",
   "popover.actions": "Ações",
+  "popover.filteredResults": "Resultados da pesquisa",
   "tools.link.keepTyping": "Continue digitando para adicionar um link",
   "tools.link.emailAddress": "Endereço de e-mail",
   "tools.link.jumpToSection": "Ir para uma seção",

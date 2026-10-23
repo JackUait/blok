@@ -423,6 +423,7 @@
   "blockSettings.copyLinkError": "بۆلەكنىڭ ئۇلانمىسى كۆچۈرۈلمىدى",
   "blockSettings.convertFailed": "بۇ بۆلەكنى ئۆزگەرتكىلى بولمىدى. قايتا سىناڭ.",
   "popover.actions": "مەشغۇلاتلار",
+  "popover.filteredResults": "ئىزدەش نەتىجىسى",
   "tools.link.keepTyping": "ئۇلانما قوشۇش ئۈچۈن يېزىشنى داۋاملاشتۇرۇڭ",
   "tools.link.emailAddress": "ئېلخەت ئادرېسى",
   "tools.link.jumpToSection": "بۆلەككە ئاتلاش",

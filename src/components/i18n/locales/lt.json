@@ -436,6 +436,7 @@
   "blockSettings.copyLinkError": "Nepavyko nukopijuoti nuorodos į bloką",
   "blockSettings.convertFailed": "Nepavyko pakeisti šio bloko. Bandykite dar kartą.",
   "popover.actions": "Veiksmai",
+  "popover.filteredResults": "Paieškos rezultatai",
   "tools.link.keepTyping": "Rašykite toliau, kad pridėtumėte nuorodą",
   "tools.link.emailAddress": "El. pašto adresas",
   "tools.link.jumpToSection": "Pereiti į skyrių",

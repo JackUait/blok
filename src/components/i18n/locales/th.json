@@ -423,6 +423,7 @@
   "blockSettings.copyLinkError": "ไม่สามารถคัดลอกลิงก์บล็อกได้",
   "blockSettings.convertFailed": "ไม่สามารถเปลี่ยนบล็อกนี้ได้ ลองอีกครั้ง",
   "popover.actions": "การดำเนินการ",
+  "popover.filteredResults": "ผลการค้นหา",
   "tools.link.keepTyping": "พิมพ์ต่อเพื่อเพิ่มลิงก์",
   "tools.link.emailAddress": "ที่อยู่อีเมล",
   "tools.link.jumpToSection": "ไปยังส่วน",

@@ -423,6 +423,7 @@
   "blockSettings.copyLinkError": "Lohkon linkkiä ei voitu kopioida",
   "blockSettings.convertFailed": "Tätä lohkoa ei voitu muuttaa. Yritä uudelleen.",
   "popover.actions": "Toiminnot",
+  "popover.filteredResults": "Hakutulokset",
   "tools.link.keepTyping": "Jatka kirjoittamista lisätäksesi linkin",
   "tools.link.emailAddress": "Sähköpostiosoite",
   "tools.link.jumpToSection": "Siirry osioon",

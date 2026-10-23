@@ -423,6 +423,7 @@
   "blockSettings.copyLinkError": "无法复制块链接",
   "blockSettings.convertFailed": "无法更改此块，请重试。",
   "popover.actions": "操作",
+  "popover.filteredResults": "搜索结果",
   "tools.link.keepTyping": "继续输入以添加链接",
   "tools.link.emailAddress": "电子邮件地址",
   "tools.link.jumpToSection": "跳转到章节",

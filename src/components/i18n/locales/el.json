@@ -425,6 +425,7 @@
   "blockSettings.copyLinkError": "Δεν ήταν δυνατή η αντιγραφή του συνδέσμου προς το μπλοκ",
   "blockSettings.convertFailed": "Δεν ήταν δυνατή η αλλαγή αυτού του μπλοκ. Δοκιμάστε ξανά.",
   "popover.actions": "Ενέργειες",
+  "popover.filteredResults": "Αποτελέσματα αναζήτησης",
   "tools.link.keepTyping": "Συνεχίστε να πληκτρολογείτε για προσθήκη συνδέσμου",
   "tools.link.emailAddress": "Διεύθυνση email",
   "tools.link.jumpToSection": "Μετάβαση σε ενότητα",

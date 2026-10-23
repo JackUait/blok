@@ -425,6 +425,7 @@
   "blockSettings.copyLinkError": "Връзката не можа да бъде копирана",
   "blockSettings.convertFailed": "Блокът не можа да бъде променен. Опитайте отново.",
   "popover.actions": "Действия",
+  "popover.filteredResults": "Резултати от търсенето",
   "tools.link.keepTyping": "Продължете да пишете, за да добавите връзка",
   "tools.link.emailAddress": "Имейл адрес",
   "tools.link.jumpToSection": "Към раздел",

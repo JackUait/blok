@@ -423,6 +423,7 @@
   "blockSettings.copyLinkError": "Blok bağlantısı kopyalanamadı",
   "blockSettings.convertFailed": "Bu blok değiştirilemedi. Tekrar deneyin.",
   "popover.actions": "Eylemler",
+  "popover.filteredResults": "Arama sonuçları",
   "tools.link.keepTyping": "Bağlantı eklemek için yazmaya devam edin",
   "tools.link.emailAddress": "E-posta adresi",
   "tools.link.jumpToSection": "Bölüme git",

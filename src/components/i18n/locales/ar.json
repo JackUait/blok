@@ -425,6 +425,7 @@
   "blockSettings.copyLinkError": "تعذّر نسخ رابط الكتلة",
   "blockSettings.convertFailed": "تعذّر تغيير هذه الكتلة. حاول مرة أخرى.",
   "popover.actions": "الإجراءات",
+  "popover.filteredResults": "نتائج البحث",
   "tools.link.keepTyping": "تابع الكتابة لإضافة رابط",
   "tools.link.emailAddress": "عنوان البريد الإلكتروني",
   "tools.link.jumpToSection": "الانتقال إلى قسم",

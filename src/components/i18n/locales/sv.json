@@ -423,6 +423,7 @@
   "blockSettings.copyLinkError": "Det gick inte att kopiera länken till blocket",
   "blockSettings.convertFailed": "Det gick inte att ändra det här blocket. Försök igen.",
   "popover.actions": "Åtgärder",
+  "popover.filteredResults": "Sökresultat",
   "tools.link.keepTyping": "Fortsätt skriva för att lägga till en länk",
   "tools.link.emailAddress": "E-postadress",
   "tools.link.jumpToSection": "Gå till avsnitt",

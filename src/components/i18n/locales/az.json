@@ -425,6 +425,7 @@
   "blockSettings.copyLinkError": "Bloka keçid kopyalana bilmədi",
   "blockSettings.convertFailed": "Bu blok dəyişdirilə bilmədi. Yenidən cəhd edin.",
   "popover.actions": "Əməliyyatlar",
+  "popover.filteredResults": "Axtarış nəticələri",
   "tools.link.keepTyping": "Keçid əlavə etmək üçün yazmağa davam edin",
   "tools.link.emailAddress": "E-poçt ünvanı",
   "tools.link.jumpToSection": "Bölməyə keç",

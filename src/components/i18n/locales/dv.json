@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "މި އޮޓޮމޭޝަން ފޯމެޓް ސަޕޯޓެއް ނުކުރޭ.",
   "tools.database.settingsLayout": "ލޭއައުޓް",
   "tools.database.settingsPropertyVisibility": "ޕްރޮޕަރޓީތައް ފެންނަ ގޮތް",
+  "tools.database.settingsShownInFeed": "ފީޑުގައި ދައްކާ",
   "tools.database.settingsFilter": "ފިލްޓަރުކުރޭ",
   "tools.database.settingsSort": "ތަރުތީބުކުރޭ",
   "tools.database.settingsSource": "ސޯސް",

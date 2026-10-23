@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "ບໍ່ຮອງຮັບຮູບແບບການເຮັດວຽກອັດຕະໂນມັດນີ້.",
   "tools.database.settingsLayout": "ໂຄງຮ່າງ",
   "tools.database.settingsPropertyVisibility": "ການສະແດງຄຸນສົມບັດ",
+  "tools.database.settingsShownInFeed": "ສະແດງໃນຟີດ",
   "tools.database.settingsFilter": "ກອງ",
   "tools.database.settingsSort": "ຈັດຮຽງ",
   "tools.database.settingsSource": "ແຫຼ່ງ",

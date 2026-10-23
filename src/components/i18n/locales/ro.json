@@ -1135,6 +1135,7 @@
   "tools.database.automationErrorUnavailable": "Acest format de automatizare nu este acceptat.",
   "tools.database.settingsLayout": "Aspect",
   "tools.database.settingsPropertyVisibility": "Vizibilitatea proprietăților",
+  "tools.database.settingsShownInFeed": "Afișate în flux",
   "tools.database.settingsFilter": "Filtrează",
   "tools.database.settingsSort": "Sortează",
   "tools.database.settingsSource": "Sursă",

@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "ئەم فۆرماتی ئۆتۆماسیۆنە پشتگیری ناکرێت.",
   "tools.database.settingsLayout": "داڕشتن",
   "tools.database.settingsPropertyVisibility": "دەرکەوتنی تایبەتمەندییەکان",
+  "tools.database.settingsShownInFeed": "پیشاندراو لە فید",
   "tools.database.settingsFilter": "فلتەرکردن",
   "tools.database.settingsSort": "ڕیزکردن",
   "tools.database.settingsSource": "سەرچاوە",

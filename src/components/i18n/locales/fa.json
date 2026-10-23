@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "این قالب اتوماسیون پشتیبانی نمی‌شود.",
   "tools.database.settingsLayout": "چیدمان",
   "tools.database.settingsPropertyVisibility": "نمایانی ویژگی‌ها",
+  "tools.database.settingsShownInFeed": "نمایش‌داده‌شده در فید",
   "tools.database.settingsFilter": "فیلتر",
   "tools.database.settingsSort": "مرتب‌سازی",
   "tools.database.settingsSource": "منبع",

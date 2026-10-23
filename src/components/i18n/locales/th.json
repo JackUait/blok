@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "ไม่รองรับรูปแบบระบบอัตโนมัตินี้",
   "tools.database.settingsLayout": "เลย์เอาต์",
   "tools.database.settingsPropertyVisibility": "การแสดงคุณสมบัติ",
+  "tools.database.settingsShownInFeed": "แสดงในฟีด",
   "tools.database.settingsFilter": "กรอง",
   "tools.database.settingsSort": "เรียงลำดับ",
   "tools.database.settingsSource": "แหล่งข้อมูล",

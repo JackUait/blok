@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "ទម្រង់ស្វ័យប្រវត្តិកម្មនេះមិនត្រូវបានគាំទ្រទេ។",
   "tools.database.settingsLayout": "ប្លង់",
   "tools.database.settingsPropertyVisibility": "ភាពមើលឃើញលក្ខណៈ",
+  "tools.database.settingsShownInFeed": "បង្ហាញក្នុងផ្ទាំងព័ត៌មាន",
   "tools.database.settingsFilter": "ត្រង",
   "tools.database.settingsSort": "តម្រៀប",
   "tools.database.settingsSource": "ប្រភព",

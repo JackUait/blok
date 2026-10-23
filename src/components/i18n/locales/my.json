@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "ဤအလိုအလျောက်လုပ်ဆောင်မှု ပုံစံကို မပံ့ပိုးပါ။",
   "tools.database.settingsLayout": "အပြင်အဆင်",
   "tools.database.settingsPropertyVisibility": "ဂုဏ်သတ္တိ မြင်နိုင်မှု",
+  "tools.database.settingsShownInFeed": "သတင်းစဉ်တွင် ပြထားသည်",
   "tools.database.settingsFilter": "စစ်ထုတ်ရန်",
   "tools.database.settingsSort": "စီရန်",
   "tools.database.settingsSource": "ရင်းမြစ်",

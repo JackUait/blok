@@ -1135,6 +1135,7 @@
   "tools.database.automationErrorUnavailable": "Questo formato di automazione non è supportato.",
   "tools.database.settingsLayout": "Disposizione",
   "tools.database.settingsPropertyVisibility": "Visibilità proprietà",
+  "tools.database.settingsShownInFeed": "Mostrate nel flusso",
   "tools.database.settingsFilter": "Filtra",
   "tools.database.settingsSort": "Ordina",
   "tools.database.settingsSource": "Origine",

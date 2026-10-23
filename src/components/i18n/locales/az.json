@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "Bu avtomatlaşdırma formatı dəstəklənmir.",
   "tools.database.settingsLayout": "Düzən",
   "tools.database.settingsPropertyVisibility": "Xüsusiyyətlərin görünməsi",
+  "tools.database.settingsShownInFeed": "Lentdə göstərilir",
   "tools.database.settingsFilter": "Filtrlə",
   "tools.database.settingsSort": "Sırala",
   "tools.database.settingsSource": "Mənbə",

@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "آٹومیشن کا یہ فارمیٹ تعاون یافتہ نہیں ہے۔",
   "tools.database.settingsLayout": "لے آؤٹ",
   "tools.database.settingsPropertyVisibility": "پراپرٹی کی مرئیت",
+  "tools.database.settingsShownInFeed": "فیڈ میں دکھائی گئیں",
   "tools.database.settingsFilter": "فلٹر کریں",
   "tools.database.settingsSort": "ترتیب دیں",
   "tools.database.settingsSource": "ماخذ",

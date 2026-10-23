@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "이 자동화 형식은 지원되지 않습니다.",
   "tools.database.settingsLayout": "레이아웃",
   "tools.database.settingsPropertyVisibility": "속성 표시 여부",
+  "tools.database.settingsShownInFeed": "피드에 표시됨",
   "tools.database.settingsFilter": "필터",
   "tools.database.settingsSort": "정렬",
   "tools.database.settingsSource": "소스",

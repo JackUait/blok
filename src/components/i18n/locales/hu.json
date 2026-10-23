@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "Ez az automatizációs formátum nem támogatott.",
   "tools.database.settingsLayout": "Elrendezés",
   "tools.database.settingsPropertyVisibility": "Tulajdonságok láthatósága",
+  "tools.database.settingsShownInFeed": "A hírfolyamban látható",
   "tools.database.settingsFilter": "Szűrés",
   "tools.database.settingsSort": "Rendezés",
   "tools.database.settingsSource": "Forrás",

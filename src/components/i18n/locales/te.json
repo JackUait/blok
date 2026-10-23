@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "ఈ ఆటోమేషన్ ఫార్మాట్‌కు మద్దతు లేదు.",
   "tools.database.settingsLayout": "లేఅవుట్",
   "tools.database.settingsPropertyVisibility": "ప్రాపర్టీ దృశ్యమానత",
+  "tools.database.settingsShownInFeed": "ఫీడ్‌లో చూపినవి",
   "tools.database.settingsFilter": "ఫిల్టర్ చేయి",
   "tools.database.settingsSort": "క్రమబద్ధీకరించు",
   "tools.database.settingsSource": "మూలం",

@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "এই অটোমেশন ফরম্যাট সমর্থিত নয়।",
   "tools.database.settingsLayout": "লেআউট",
   "tools.database.settingsPropertyVisibility": "বৈশিষ্ট্যের দৃশ্যমানতা",
+  "tools.database.settingsShownInFeed": "ফিডে দেখানো",
   "tools.database.settingsFilter": "ফিল্টার করুন",
   "tools.database.settingsSort": "সাজান",
   "tools.database.settingsSource": "সোর্স",

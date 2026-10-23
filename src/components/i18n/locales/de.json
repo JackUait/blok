@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "Dieses Automatisierungsformat wird nicht unterstützt.",
   "tools.database.settingsLayout": "Darstellung",
   "tools.database.settingsPropertyVisibility": "Sichtbarkeit der Eigenschaften",
+  "tools.database.settingsShownInFeed": "Im Feed angezeigt",
   "tools.database.settingsFilter": "Filtern",
   "tools.database.settingsSort": "Sortieren",
   "tools.database.settingsSource": "Quelle",

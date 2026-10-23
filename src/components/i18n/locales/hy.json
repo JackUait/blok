@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "Ավտոմատացման այս ձևաչափը չի աջակցվում։",
   "tools.database.settingsLayout": "Դասավորություն",
   "tools.database.settingsPropertyVisibility": "Հատկության տեսանելիություն",
+  "tools.database.settingsShownInFeed": "Ցուցադրված լրահոսում",
   "tools.database.settingsFilter": "Ֆիլտրել",
   "tools.database.settingsSort": "Տեսակավորել",
   "tools.database.settingsSource": "Աղբյուր",

@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "Bu otomasyon biçimi desteklenmiyor.",
   "tools.database.settingsLayout": "Düzen",
   "tools.database.settingsPropertyVisibility": "Özellik görünürlüğü",
+  "tools.database.settingsShownInFeed": "Akışta gösterilenler",
   "tools.database.settingsFilter": "Filtrele",
   "tools.database.settingsSort": "Sırala",
   "tools.database.settingsSource": "Kaynak",

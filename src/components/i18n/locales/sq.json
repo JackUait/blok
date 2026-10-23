@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "Ky format automatizimi nuk mbështetet.",
   "tools.database.settingsLayout": "Struktura",
   "tools.database.settingsPropertyVisibility": "Dukshmëria e vetive",
+  "tools.database.settingsShownInFeed": "Të shfaqura në rrjedhë",
   "tools.database.settingsFilter": "Filtro",
   "tools.database.settingsSort": "Rendit",
   "tools.database.settingsSource": "Burimi",

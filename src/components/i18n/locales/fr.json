@@ -1135,6 +1135,7 @@
   "tools.database.automationErrorUnavailable": "Ce format d’automatisation n’est pas pris en charge.",
   "tools.database.settingsLayout": "Disposition",
   "tools.database.settingsPropertyVisibility": "Visibilité des propriétés",
+  "tools.database.settingsShownInFeed": "Affichées dans le flux",
   "tools.database.settingsFilter": "Filtrer",
   "tools.database.settingsSort": "Trier",
   "tools.database.settingsSource": "Source",

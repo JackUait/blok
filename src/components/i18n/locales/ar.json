@@ -1141,6 +1141,7 @@
   "tools.database.automationErrorUnavailable": "تنسيق الأتمتة هذا غير مدعوم.",
   "tools.database.settingsLayout": "التخطيط",
   "tools.database.settingsPropertyVisibility": "ظهور الخصائص",
+  "tools.database.settingsShownInFeed": "معروضة في الموجز",
   "tools.database.settingsFilter": "تصفية",
   "tools.database.settingsSort": "فرز",
   "tools.database.settingsSource": "المصدر",

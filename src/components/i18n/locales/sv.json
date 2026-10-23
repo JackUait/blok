@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "Det här automatiseringsformatet stöds inte.",
   "tools.database.settingsLayout": "Utformning",
   "tools.database.settingsPropertyVisibility": "Egenskapers synlighet",
+  "tools.database.settingsShownInFeed": "Visas i flödet",
   "tools.database.settingsFilter": "Filtrera",
   "tools.database.settingsSort": "Sortera",
   "tools.database.settingsSource": "Källa",

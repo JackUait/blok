@@ -1418,6 +1418,7 @@ export type BlokMessageKey =
   | 'tools.database.settingsPropertyVisibility'
   | 'tools.database.settingsShowDataSourceTitle'
   | 'tools.database.settingsShowPageIcon'
+  | 'tools.database.settingsShownInFeed'
   | 'tools.database.settingsSort'
   | 'tools.database.settingsSource'
   | 'tools.database.settingsStyle'

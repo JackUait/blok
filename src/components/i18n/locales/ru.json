@@ -1137,6 +1137,7 @@
   "tools.database.automationErrorUnavailable": "Этот формат автоматизации не поддерживается.",
   "tools.database.settingsLayout": "Макет",
   "tools.database.settingsPropertyVisibility": "Видимость свойств",
+  "tools.database.settingsShownInFeed": "Показаны в ленте",
   "tools.database.settingsFilter": "Фильтровать",
   "tools.database.settingsSort": "Сортировать",
   "tools.database.settingsSource": "Источник",

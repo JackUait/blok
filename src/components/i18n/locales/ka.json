@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "ავტომატიზაციის ეს ფორმატი არ არის მხარდაჭერილი.",
   "tools.database.settingsLayout": "განლაგება",
   "tools.database.settingsPropertyVisibility": "თვისების ხილვადობა",
+  "tools.database.settingsShownInFeed": "ლენტში ნაჩვენები",
   "tools.database.settingsFilter": "გაფილტვრა",
   "tools.database.settingsSort": "დალაგება",
   "tools.database.settingsSource": "წყარო",

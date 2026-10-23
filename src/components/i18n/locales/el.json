@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "Αυτή η μορφή αυτοματισμού δεν υποστηρίζεται.",
   "tools.database.settingsLayout": "Διάταξη",
   "tools.database.settingsPropertyVisibility": "Ορατότητα ιδιοτήτων",
+  "tools.database.settingsShownInFeed": "Εμφανίζονται στη ροή",
   "tools.database.settingsFilter": "Φιλτράρισμα",
   "tools.database.settingsSort": "Ταξινόμηση",
   "tools.database.settingsSource": "Πηγή",

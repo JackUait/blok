@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "不支援此自動化格式。",
   "tools.database.settingsLayout": "版面配置",
   "tools.database.settingsPropertyVisibility": "屬性可見度",
+  "tools.database.settingsShownInFeed": "在動態消息中顯示",
   "tools.database.settingsFilter": "篩選",
   "tools.database.settingsSort": "排序",
   "tools.database.settingsSource": "來源",

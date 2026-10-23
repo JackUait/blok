@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "Định dạng tự động hóa này không được hỗ trợ.",
   "tools.database.settingsLayout": "Bố cục",
   "tools.database.settingsPropertyVisibility": "Hiển thị thuộc tính",
+  "tools.database.settingsShownInFeed": "Hiển thị trong bảng tin",
   "tools.database.settingsFilter": "Lọc",
   "tools.database.settingsSort": "Sắp xếp",
   "tools.database.settingsSource": "Nguồn",

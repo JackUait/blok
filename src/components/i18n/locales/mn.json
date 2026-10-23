@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "Энэ автоматжуулалтын форматыг дэмждэггүй.",
   "tools.database.settingsLayout": "Бүтэц",
   "tools.database.settingsPropertyVisibility": "Шинжийн харагдах байдал",
+  "tools.database.settingsShownInFeed": "Мэдээний урсгалд харагдана",
   "tools.database.settingsFilter": "Шүүх",
   "tools.database.settingsSort": "Эрэмбэлэх",
   "tools.database.settingsSource": "Эх сурвалж",

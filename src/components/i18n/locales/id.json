@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "Format otomatisasi ini tidak didukung.",
   "tools.database.settingsLayout": "Tata letak",
   "tools.database.settingsPropertyVisibility": "Visibilitas properti",
+  "tools.database.settingsShownInFeed": "Ditampilkan di umpan",
   "tools.database.settingsFilter": "Filter",
   "tools.database.settingsSort": "Urutkan",
   "tools.database.settingsSource": "Sumber",

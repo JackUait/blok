@@ -1137,6 +1137,7 @@
   "tools.database.automationErrorUnavailable": "Šis automatizacijos formatas nepalaikomas.",
   "tools.database.settingsLayout": "Išdėstymas",
   "tools.database.settingsPropertyVisibility": "Savybių matomumas",
+  "tools.database.settingsShownInFeed": "Rodoma sraute",
   "tools.database.settingsFilter": "Filtruoti",
   "tools.database.settingsSort": "Rikiuoti",
   "tools.database.settingsSource": "Šaltinis",

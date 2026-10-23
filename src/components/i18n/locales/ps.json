@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "د دې اتوماسیون بڼې ملاتړ نه کېږي.",
   "tools.database.settingsLayout": "جوړښت",
   "tools.database.settingsPropertyVisibility": "د ځانګړتیاوو ښکاروالی",
+  "tools.database.settingsShownInFeed": "په فیډ کې ښودل شوي",
   "tools.database.settingsFilter": "فلټر کړئ",
   "tools.database.settingsSort": "ترتیب کړئ",
   "tools.database.settingsSource": "سرچینه",

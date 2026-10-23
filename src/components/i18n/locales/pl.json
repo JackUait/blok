@@ -1137,6 +1137,7 @@
   "tools.database.automationErrorUnavailable": "Ten format automatyzacji nie jest obsługiwany.",
   "tools.database.settingsLayout": "Układ",
   "tools.database.settingsPropertyVisibility": "Widoczność właściwości",
+  "tools.database.settingsShownInFeed": "Widoczne w kanale",
   "tools.database.settingsFilter": "Filtruj",
   "tools.database.settingsSort": "Sortuj",
   "tools.database.settingsSource": "Źródło",

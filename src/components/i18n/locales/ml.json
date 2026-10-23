@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "ഈ ഓട്ടോമേഷൻ ഫോർമാറ്റ് പിന്തുണയ്ക്കുന്നില്ല.",
   "tools.database.settingsLayout": "ലേഔട്ട്",
   "tools.database.settingsPropertyVisibility": "പ്രോപ്പർട്ടി ദൃശ്യത",
+  "tools.database.settingsShownInFeed": "ഫീഡിൽ കാണിക്കുന്നവ",
   "tools.database.settingsFilter": "ഫിൽട്ടർ ചെയ്യുക",
   "tools.database.settingsSort": "അടുക്കുക",
   "tools.database.settingsSource": "ഉറവിടം",

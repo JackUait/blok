@@ -1137,6 +1137,7 @@
   "tools.database.automationErrorUnavailable": "Tento formát automatizácie nie je podporovaný.",
   "tools.database.settingsLayout": "Rozloženie",
   "tools.database.settingsPropertyVisibility": "Viditeľnosť vlastností",
+  "tools.database.settingsShownInFeed": "Zobrazené v prúde príspevkov",
   "tools.database.settingsFilter": "Filtrovať",
   "tools.database.settingsSort": "Zoradiť",
   "tools.database.settingsSource": "Zdroj",

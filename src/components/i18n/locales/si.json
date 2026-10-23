@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "මෙම ස්වයංක්‍රීයකරණ ආකෘතියට සහය නොදක්වයි.",
   "tools.database.settingsLayout": "පිරිසැලසුම",
   "tools.database.settingsPropertyVisibility": "ගුණාංග දෘශ්‍යතාව",
+  "tools.database.settingsShownInFeed": "සංග්‍රහයේ පෙන්වයි",
   "tools.database.settingsFilter": "පෙරන්න",
   "tools.database.settingsSort": "වර්ග කරන්න",
   "tools.database.settingsSource": "මූලාශ්‍රය",

@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "Този формат на автоматизация не се поддържа.",
   "tools.database.settingsLayout": "Оформление",
   "tools.database.settingsPropertyVisibility": "Видимост на свойствата",
+  "tools.database.settingsShownInFeed": "Показани в емисията",
   "tools.database.settingsFilter": "Филтрирай",
   "tools.database.settingsSort": "Сортирай",
   "tools.database.settingsSource": "Източник",

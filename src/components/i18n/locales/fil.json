@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "Hindi suportado ang format ng automation na ito.",
   "tools.database.settingsLayout": "Ayos",
   "tools.database.settingsPropertyVisibility": "Visibility ng property",
+  "tools.database.settingsShownInFeed": "Ipinapakita sa daloy",
   "tools.database.settingsFilter": "I-filter",
   "tools.database.settingsSort": "I-sort",
   "tools.database.settingsSource": "Pinagmulan",

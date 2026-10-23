@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "Format automasi ini tidak disokong.",
   "tools.database.settingsLayout": "Susun atur",
   "tools.database.settingsPropertyVisibility": "Keterlihatan sifat",
+  "tools.database.settingsShownInFeed": "Ditunjukkan dalam suapan",
   "tools.database.settingsFilter": "Tapis",
   "tools.database.settingsSort": "Isih",
   "tools.database.settingsSource": "Sumber",

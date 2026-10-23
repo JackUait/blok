@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "このオートメーション形式はサポートされていません。",
   "tools.database.settingsLayout": "レイアウト",
   "tools.database.settingsPropertyVisibility": "プロパティの表示",
+  "tools.database.settingsShownInFeed": "フィードに表示",
   "tools.database.settingsFilter": "フィルター",
   "tools.database.settingsSort": "並べ替え",
   "tools.database.settingsSource": "ソース",

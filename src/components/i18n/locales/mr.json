@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "हे ऑटोमेशन स्वरूप समर्थित नाही.",
   "tools.database.settingsLayout": "मांडणी",
   "tools.database.settingsPropertyVisibility": "गुणधर्माची दृश्यमानता",
+  "tools.database.settingsShownInFeed": "फीडमध्ये दाखवलेले",
   "tools.database.settingsFilter": "फिल्टर करा",
   "tools.database.settingsSort": "क्रमवारी लावा",
   "tools.database.settingsSource": "स्रोत",

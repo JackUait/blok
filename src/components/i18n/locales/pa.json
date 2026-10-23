@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "ਇਹ ਆਟੋਮੇਸ਼ਨ ਫਾਰਮੈਟ ਸਮਰਥਿਤ ਨਹੀਂ ਹੈ।",
   "tools.database.settingsLayout": "ਖਾਕਾ",
   "tools.database.settingsPropertyVisibility": "ਵਿਸ਼ੇਸ਼ਤਾ ਦੀ ਦਿੱਖ",
+  "tools.database.settingsShownInFeed": "ਫੀਡ ਵਿੱਚ ਦਿਖਾਏ ਗਏ",
   "tools.database.settingsFilter": "ਫਿਲਟਰ ਕਰੋ",
   "tools.database.settingsSort": "ਕ੍ਰਮਬੱਧ ਕਰੋ",
   "tools.database.settingsSource": "ਸਰੋਤ",

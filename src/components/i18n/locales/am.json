@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "ይህ የአውቶሜሽን ቅርጸት አይደገፍም።",
   "tools.database.settingsLayout": "አቀማመጥ",
   "tools.database.settingsPropertyVisibility": "የንብረት ታይነት",
+  "tools.database.settingsShownInFeed": "በልጥፎች ፍሰት ውስጥ የሚታዩ",
   "tools.database.settingsFilter": "አጣራ",
   "tools.database.settingsSort": "ደርድር",
   "tools.database.settingsSource": "ምንጭ",

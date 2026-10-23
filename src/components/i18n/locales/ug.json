@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "بۇ ئاپتوماتلاشتۇرۇش فورماتىنى قوللىمايدۇ.",
   "tools.database.settingsLayout": "ئورۇنلاشتۇرۇش",
   "tools.database.settingsPropertyVisibility": "خاسلىقلارنىڭ كۆرۈنۈشى",
+  "tools.database.settingsShownInFeed": "ئېقىمدا كۆرسىتىلگەن",
   "tools.database.settingsFilter": "سۈزۈش",
   "tools.database.settingsSort": "رەتلەش",
   "tools.database.settingsSource": "مەنبە",

@@ -1135,6 +1135,7 @@
   "tools.database.automationErrorUnavailable": "Šis automatizācijas formāts netiek atbalstīts.",
   "tools.database.settingsLayout": "Izkārtojums",
   "tools.database.settingsPropertyVisibility": "Rekvizītu redzamība",
+  "tools.database.settingsShownInFeed": "Redzams plūsmā",
   "tools.database.settingsFilter": "Filtrēt",
   "tools.database.settingsSort": "Kārtot",
   "tools.database.settingsSource": "Avots",

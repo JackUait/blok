@@ -1135,6 +1135,7 @@
   "tools.database.automationErrorUnavailable": "Овај формат аутоматизације није подржан.",
   "tools.database.settingsLayout": "Распоред",
   "tools.database.settingsPropertyVisibility": "Видљивост својстава",
+  "tools.database.settingsShownInFeed": "Приказано у току објава",
   "tools.database.settingsFilter": "Филтрирај",
   "tools.database.settingsSort": "Сортирај",
   "tools.database.settingsSource": "Извор",

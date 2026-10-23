@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "ಈ ಸ್ವಯಂಚಾಲನೆ ಸ್ವರೂಪವನ್ನು ಬೆಂಬಲಿಸುವುದಿಲ್ಲ.",
   "tools.database.settingsLayout": "ವಿನ್ಯಾಸ",
   "tools.database.settingsPropertyVisibility": "ಗುಣಲಕ್ಷಣದ ಗೋಚರತೆ",
+  "tools.database.settingsShownInFeed": "ಫೀಡ್‌ನಲ್ಲಿ ತೋರಿಸಲಾಗಿದೆ",
   "tools.database.settingsFilter": "ಫಿಲ್ಟರ್ ಮಾಡಿ",
   "tools.database.settingsSort": "ವಿಂಗಡಿಸಿ",
   "tools.database.settingsSource": "ಮೂಲ",

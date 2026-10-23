@@ -356,6 +356,42 @@ describe('view settings panel', () => {
       expect(document.querySelector('[data-blok-testid="database-properties-list"]')?.textContent).not.toContain('Name');
     });
 
+    // research/35:197: the page reads "Shown in feed | Hide all | Note".
+    it('heads the list with "Shown in feed" and a Hide all that hides every listed property at once', () => {
+      const h = harness({ type: 'feed', properties: [{ id: 'due', visible: true }, { id: 'num', visible: true }] });
+
+      h.open();
+      click('database-settings-properties');
+      expect(document.querySelector('[data-blok-database-panel-section]')?.textContent).toBe('tools.database.settingsShownInFeed');
+      expect(document.querySelector('[data-blok-testid="database-property-hide-all"]')?.textContent).toContain('tools.database.groupHideAll');
+
+      vi.mocked(h.ctx.updateView).mockClear();
+      click('database-property-hide-all');
+
+      expect(h.ctx.updateView).toHaveBeenCalledTimes(1);
+      expect(h.state.view.properties?.filter((p) => p.visible).map((p) => p.id)).toEqual([]);
+      expect(h.state.view.properties?.some((p) => p.id === 'title' && !p.visible)).toBe(false);
+      expect(document.querySelector('[data-blok-testid="database-property-hide-all"]')?.textContent).toContain('tools.database.groupShowAll');
+    });
+
+    it('has no header when only the title exists', () => {
+      const h = harness({ type: 'feed' });
+
+      h.ctx.schema = () => titleOnly;
+      h.open();
+      click('database-settings-properties');
+      expect(exists('database-property-hide-all')).toBe(false);
+    });
+
+    it('a table has no "Shown in feed" header', () => {
+      const h = harness();
+
+      h.open();
+      click('database-settings-properties');
+      expect(exists('database-property-hide-all')).toBe(false);
+      expect(document.body.textContent).not.toContain('tools.database.settingsShownInFeed');
+    });
+
     // research/35 §2.3: a fresh Table reads "Property visibility 1": the title counts there.
     it('a table still counts and lists its title', () => {
       const h = harness();

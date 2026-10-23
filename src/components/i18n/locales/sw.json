@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "Muundo huu wa otomatiki hautumiki.",
   "tools.database.settingsLayout": "Muundo",
   "tools.database.settingsPropertyVisibility": "Mwonekano wa sifa",
+  "tools.database.settingsShownInFeed": "Zinaonyeshwa kwenye mlisho",
   "tools.database.settingsFilter": "Chuja",
   "tools.database.settingsSort": "Panga",
   "tools.database.settingsSource": "Chanzo",

@@ -1137,6 +1137,7 @@
   "tools.database.automationErrorUnavailable": "Ta oblika avtomatizacije ni podprta.",
   "tools.database.settingsLayout": "Postavitev",
   "tools.database.settingsPropertyVisibility": "Vidnost lastnosti",
+  "tools.database.settingsShownInFeed": "Prikazano v toku objav",
   "tools.database.settingsFilter": "Filtriraj",
   "tools.database.settingsSort": "Razvrsti",
   "tools.database.settingsSource": "Vir",

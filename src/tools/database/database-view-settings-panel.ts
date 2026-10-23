@@ -72,6 +72,7 @@ import type {
   SortConfig,
   SubItemsDisplay,
   SubItemsFilter,
+  ViewPropertySetting,
   ViewType,
 } from './types';
 import { nanoid } from 'nanoid';
@@ -1050,7 +1051,7 @@ export class ViewSettingsPages {
           return [{ id: property.id, element: control }];
         });
 
-        return [panelReorderList({
+        return [...this.feedHeader(panel, listed), panelReorderList({
           testId: 'database-properties-list',
           handleLabel: this.t('settingsDragToReorder'),
           items,
@@ -1062,6 +1063,31 @@ export class ViewSettingsPages {
         })];
       },
     };
+  }
+
+  /** research/35:197: "Shown in feed | Hide all". Only the feed's wording was measured. */
+  private feedHeader(panel: DatabasePanel, listed: ReturnType<typeof resolveViewProperties>): HTMLElement[] {
+    if (this.ctx.view().type !== 'feed') return [];
+    const allHidden = listed.every((entry) => !entry.visible);
+
+    return [
+      panelLabel(this.t('settingsShownInFeed')),
+      panelRow({
+        label: this.t(allHidden ? 'groupShowAll' : 'groupHideAll'),
+        testId: 'database-property-hide-all',
+        disabled: !this.shared,
+        onClick: () => {
+          const view = this.ctx.view();
+          const properties = listed.reduce<ViewPropertySetting[] | undefined>(
+            (entries, entry) => withPropertySetting(entries === undefined ? view : { ...view, properties: entries }, this.ctx.schema(), entry.id, { visible: allHidden }),
+            undefined
+          ) ?? [];
+
+          this.ctx.updateView({ properties });
+          panel.refresh();
+        },
+      }),
+    ];
   }
 
   // ─── Property picker ───

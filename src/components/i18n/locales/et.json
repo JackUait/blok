@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "Seda automatiseeringu vormingut ei toetata.",
   "tools.database.settingsLayout": "Paigutus",
   "tools.database.settingsPropertyVisibility": "Omaduste nähtavus",
+  "tools.database.settingsShownInFeed": "Voos näidatud",
   "tools.database.settingsFilter": "Filtreeri",
   "tools.database.settingsSort": "Sordi",
   "tools.database.settingsSource": "Allikas",

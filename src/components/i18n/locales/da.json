@@ -1133,6 +1133,7 @@
   "tools.database.automationErrorUnavailable": "Dette automatiseringsformat understøttes ikke.",
   "tools.database.settingsLayout": "Opsætning",
   "tools.database.settingsPropertyVisibility": "Egenskabers synlighed",
+  "tools.database.settingsShownInFeed": "Vist i strømmen",
   "tools.database.settingsFilter": "Filtrer",
   "tools.database.settingsSort": "Sorter",
   "tools.database.settingsSource": "Kilde",

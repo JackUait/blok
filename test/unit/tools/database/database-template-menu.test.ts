@@ -48,10 +48,14 @@ describe('template menu', () => {
     vi.restoreAllMocks();
   });
 
-  it('lists every template, then an empty page and "New template"', () => {
-    const items = templateMenuItems(host()) as Item[];
+  it('heads the menu with "Templates for <database>" and a description, then the templates, an empty page and "New template"', () => {
+    const items = templateMenuItems(host({ databaseName: () => 'Tasks' })) as Item[];
 
-    expect(items.map((item) => item.name)).toEqual(['template-t1', 'template-t2', 'template-empty', 'template-add']);
+    expect(items.map((item) => item.name ?? '—')).toEqual([
+      'template-header', 'template-description', '—', 'template-t1', 'template-t2', 'template-empty', '—', 'template-add',
+    ]);
+    expect(find(items, 'template-header')?.element?.textContent).toBe('tools.database.templatesFor');
+    expect(find(items, 'template-description')?.element?.textContent).toBe('tools.database.templatesDescription');
     expect(find(items, 'template-t2')?.title).toBe('tools.database.templateUntitled');
   });
 
@@ -732,5 +736,16 @@ describe('template menu', () => {
     expect(h.editTemplate).toHaveBeenCalledWith('t1');
     expect(h.duplicate).toHaveBeenCalledWith('t1');
     expect(h.remove).toHaveBeenCalledWith('t1');
+  });
+  it('names the database in the header, in English', () => {
+    const items = templateMenuItems(host({ i18n: english, databaseName: () => 'Tasks' })) as Item[];
+
+    expect(find(items, 'template-header')?.element?.textContent).toBe('Templates for Tasks');
+  });
+
+  it('offers no "Empty page" row when there are no templates (Notion, findings V23)', () => {
+    const items = templateMenuItems(host({ templates: () => [] })) as Item[];
+
+    expect(items.map((item) => item.name ?? '—')).toEqual(['template-header', 'template-description', '—', 'template-add']);
   });
 });

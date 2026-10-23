@@ -13,6 +13,8 @@ import type { TemplateRepeat, TemplateRepeatFrequency } from './types';
 /** What the "New" dropdown asks of the database tool. */
 export interface TemplateMenuHost {
   i18n: Pick<I18n, 't'>;
+  /** The database's title, for "Templates for <name>". */
+  databaseName?: () => string;
   templates: () => Array<{ id: string; title: string }>;
   defaultTemplateId: () => string | undefined;
   repeatOf: (templateId: string) => TemplateRepeat | undefined;
@@ -699,9 +701,17 @@ export const templateMenuItems = (host: TemplateMenuHost): PopoverItemParams[] =
       },
     };
   };
-  return [
-    ...host.templates().map((template) => entry(template.id, template.title)),
-    {
+  const line = (attribute: string, text: string): HTMLElement => {
+    const el = document.createElement('div');
+
+    el.setAttribute(attribute, '');
+    el.textContent = text;
+
+    return el;
+  };
+  const templates = host.templates();
+  // Notion heads the panel and lists "Empty page" only beside real templates (findings V23).
+  const empty: PopoverItemParams[] = templates.length === 0 ? [] : [{
       name: 'template-empty',
       title: t('templateEmptyPage'),
       icon: IconPage,
@@ -715,7 +725,15 @@ export const templateMenuItems = (host: TemplateMenuHost): PopoverItemParams[] =
           { name: 'template-empty-default', title: t('templateSetDefault'), isActive: current === undefined, closeOnActivate: true, onActivate: () => host.setDefault(null) },
         ],
       },
-    },
+    }];
+
+  return [
+    { type: PopoverItemType.Html, name: 'template-header', element: line('data-blok-database-template-header', t('templatesFor', { name: host.databaseName?.() ?? '' })) },
+    { type: PopoverItemType.Html, name: 'template-description', element: line('data-blok-database-template-description', t('templatesDescription')) },
+    { type: PopoverItemType.Separator },
+    ...templates.map((template) => entry(template.id, template.title)),
+    ...empty,
+    ...(templates.length === 0 ? [] : [{ type: PopoverItemType.Separator } as const]),
     { name: 'template-add', title: t('templateNew'), icon: IconPlus, closeOnActivate: true, onActivate: () => host.addTemplate() },
   ];
 };

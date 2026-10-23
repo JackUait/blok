@@ -6183,6 +6183,7 @@ export class DatabaseTool implements BlockTool {
   private openTemplateMenu(anchor: HTMLElement): void {
     this.showGroupPopover(anchor, templateMenuItems({
       i18n: this.api.i18n,
+      databaseName: () => (this.title.trim() === '' ? this.api.i18n.t('tools.database.titlePlaceholder') : this.title.trim()),
       templates: () => this.templateTitles(),
       defaultTemplateId: () => this.model.getDefaultTemplateId(),
       repeatOf: (id) => this.templateRepeat(this.api.blocks.getChildren(this.dataId).find((child) => child.id === id)),
@@ -6193,7 +6194,11 @@ export class DatabaseTool implements BlockTool {
       setDefault: (id) => this.setDefaultTemplate(id),
       duplicate: (id) => this.duplicateTemplate(id),
       remove: (id) => this.deleteTemplate(id),
-    }), anchor);
+    }), anchor, {
+      // Notion's panel is 360 wide and ends at the chevron: bounding it by the view bar flips it to end-align.
+      minWidth: '360px',
+      scopeElement: anchor.closest<HTMLElement>('[data-blok-database-view-bar]') ?? undefined,
+    });
     // research/35 §14, research/36 §3.1: in a template's "…" submenu only Escape closes it, one level.
     if (this.groupMenuPopover !== null) {
       this.groupMenuPopover.escapeClosesSubmenuFirst = true;
@@ -8407,10 +8412,19 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** `owner` keeps `data-popover-open` while the menu is up, so its hover-only buttons stay shown. */
-  private showGroupPopover(anchor: HTMLElement, items: ReturnType<typeof groupMenuItems>, owner?: HTMLElement): void {
+  private showGroupPopover(anchor: HTMLElement, items: ReturnType<typeof groupMenuItems>, owner?: HTMLElement, layout: { minWidth?: string; scopeElement?: HTMLElement } = {}): void {
     this.groupMenuPopover?.destroy();
 
-    const popover = new PopoverDesktop({ class: DATABASE_MENU_CLASS, animateClose: true, trigger: anchor, width: 'auto', minWidth: '220px', autoFocusFirstItem: false, items });
+    const popover = new PopoverDesktop({
+      class: DATABASE_MENU_CLASS,
+      animateClose: true,
+      trigger: anchor,
+      width: 'auto',
+      minWidth: layout.minWidth ?? '220px',
+      autoFocusFirstItem: false,
+      items,
+      ...(layout.scopeElement !== undefined ? { scopeElement: layout.scopeElement } : {}),
+    });
 
     owner?.setAttribute('data-popover-open', '');
     popover.on(PopoverEvent.Closed, () => {

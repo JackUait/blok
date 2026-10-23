@@ -7596,7 +7596,8 @@ textarea[data-blok-database-cell-input] {
   min-height: 32px;
 }
 
-[data-blok-database-view-bar][data-blok-database-selecting] > :not([data-blok-database-table-selection-bar]) {
+/* The bar takes the tabs' place; the toolbar and New stay to its right (feel/findings-table T13). */
+[data-blok-database-view-bar][data-blok-database-selecting] > [data-blok-database-tab-bar] {
   visibility: hidden;
 }
 
@@ -7652,9 +7653,10 @@ textarea[data-blok-database-cell-input] {
   background-image: linear-gradient(var(--blok-icon-active-bg), var(--blok-icon-active-bg));
 }
 
-/* One button per property: its name, sized to fit (research/08). */
+/* One button per property: its type glyph and name, sized to fit (research/08, feel/findings-table T13). */
 [data-blok-database-table-selection-bar] [data-blok-database-table-selection-property] {
   width: auto;
+  gap: var(--blok-space-1-5);
   padding-inline: var(--blok-space-2);
   color: var(--blok-database-ink);
   font-size: 14px;

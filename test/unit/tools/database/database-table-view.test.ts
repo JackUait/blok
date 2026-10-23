@@ -572,6 +572,25 @@ describe('DatabaseTableView', () => {
       expect(root.querySelector('[data-blok-database-table-selection-bar]')).toBeNull();
     });
 
+    // feel/findings-table T13: Notion's bar shows the first 4 properties; the rest wait under "…".
+    it('shows glyph segments for the first 4 properties and keeps the rest under "…"', () => {
+      const extra = ['Owner', 'Due', 'Link'].map((name, i): PropertyDefinition => ({ id: `p-x${i}`, name, type: 'text', position: `b${i}` }));
+      const { root } = mount({ schema: [...schema, ...extra] });
+
+      root.querySelector<HTMLElement>('[data-blok-database-table-select-all]')?.click();
+      const segments = [...root.querySelectorAll<HTMLElement>('[data-blok-database-table-selection-property]')];
+
+      expect(segments.map((b) => b.getAttribute('data-property-id'))).toEqual(['p-notes', 'p-amount', 'p-stage', 'p-done']);
+      expect(segments.every((b) => b.querySelector('svg') !== null)).toBe(true);
+
+      root.querySelector<HTMLElement>('[data-blok-database-table-selection-more]')?.click();
+      const more = document.querySelector<HTMLElement>('[data-blok-item-name="database-table-selection-edit-p-x2"]');
+
+      expect(more).not.toBeNull();
+      more?.click();
+      expect(document.querySelector('[data-blok-database-cell-input]')).not.toBeNull();
+    });
+
     it('puts the selection bar in the toolbar row slot and marks the slot while rows are selected', () => {
       const slot = document.createElement('div');
 

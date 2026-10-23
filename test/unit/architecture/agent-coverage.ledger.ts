@@ -366,6 +366,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/database-row-delete': cmd('block.delete'),
   'menu:database/database-row-full-width': fld('database-row.fullWidth'),
   'menu:database/database-table-selection-duplicate': cmd('block.duplicate'),
+  'menu:database/database-table-selection-edit-*': cmds(['database.setRowValues'], 'Bulk-edit one property on every selected row, as the bar\'s segments do.'),
   'menu:database/database-table-selection-delete': cmd('block.delete'),
   'menu:database/database-selection-duplicate': cmd('block.duplicate'),
   'menu:database/database-selection-delete': cmd('block.delete'),

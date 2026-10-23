@@ -1,5 +1,6 @@
 import type { I18n } from '../../../types';
 import { IconDotsHorizontal, IconTrash } from '../../components/icons';
+import { propertyTypeMeta } from './database-property-types';
 import { isReadOnlyType, readPropertyValue } from './property-values';
 import type { DatabaseRow, PropertyDefinition, PropertyValue } from './types';
 
@@ -16,6 +17,24 @@ export interface SelectionBarOptions {
 /** Properties a bulk edit can write: no title, nothing computed. */
 export const bulkEditableProperties = (properties: PropertyDefinition[]): PropertyDefinition[] =>
   properties.filter((property) => property.type !== 'title' && !isReadOnlyType(property.type));
+
+/** Notion's bar shows a segment for the first 4 properties (feel/findings-table T13). */
+export const SELECTION_BAR_SEGMENTS = 4;
+
+/** One bar segment: the property's type glyph, then its name. */
+export const selectionPropertyButton = (property: PropertyDefinition): HTMLButtonElement => {
+  const button = document.createElement('button');
+  const label = document.createElement('span');
+
+  button.type = 'button';
+  button.setAttribute('data-blok-database-table-selection-property', '');
+  button.setAttribute('data-property-id', property.id);
+  button.innerHTML = propertyTypeMeta(property.type).icon;
+  label.textContent = property.name;
+  button.appendChild(label);
+
+  return button;
+};
 
 /**
  * What a bulk editor opens on. A date or a text: the first selected row's
@@ -76,13 +95,10 @@ export const createSelectionBar = (options: SelectionBarOptions): HTMLElement =>
   count.setAttribute('aria-live', 'polite');
   count.textContent = i18n.t('tools.database.tableSelectedCount', { count: options.count });
 
+  // Not capped here: this bar's "…" (index.ts) does not list the rest yet.
   const propertyButtons = bulkEditableProperties(options.properties).map((property) => {
-    const button = document.createElement('button');
+    const button = selectionPropertyButton(property);
 
-    button.type = 'button';
-    button.setAttribute('data-blok-database-table-selection-property', '');
-    button.setAttribute('data-property-id', property.id);
-    button.textContent = property.name;
     button.addEventListener('click', () => options.onEdit(property.id, button));
 
     return button;

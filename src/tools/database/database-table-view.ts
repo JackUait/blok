@@ -25,7 +25,7 @@ import {
   withPropertySetting,
 } from './view-settings';
 import { DatabaseTableGrid, createTableState } from './database-table-grid';
-import { bulkCloseClearsSelection, bulkStartValue, watchBulkCloseKey } from './database-selection-bar';
+import { SELECTION_BAR_SEGMENTS, bulkCloseClearsSelection, bulkStartValue, selectionPropertyButton, watchBulkCloseKey } from './database-selection-bar';
 import { cellText } from './database-table-clipboard';
 import type { CellChange, TableState } from './database-table-grid';
 import { fileChipIcon, pageIconElement, pagePlaceholderIcon, showsPageIcon } from './page-icon';
@@ -43,6 +43,7 @@ import { syncCommentBadge } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
 import { propertyTypeMeta } from './database-property-types';
 import type { PopoverDesktop } from '../../components/utils/popover';
+import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import {
   IconChevronDown,
   IconChevronRight,
@@ -1296,16 +1297,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     count.setAttribute('data-blok-database-table-selection-count', '');
     count.setAttribute('aria-live', 'polite');
 
-    const propertyButtons = this.bulkProperties().map((property) => {
-      const button = document.createElement('button');
-
-      button.type = 'button';
-      button.setAttribute('data-blok-database-table-selection-property', '');
-      button.setAttribute('data-property-id', property.id);
-      button.textContent = property.name;
-
-      return button;
-    });
+    const propertyButtons = this.bulkProperties().slice(0, SELECTION_BAR_SEGMENTS).map(selectionPropertyButton);
     const trash = document.createElement('button');
 
     trash.type = 'button';
@@ -1471,7 +1463,18 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     if (handlers === undefined) {
       return;
     }
+    // The properties past the bar's segments are edited from here.
+    const rest = this.bulkProperties().slice(SELECTION_BAR_SEGMENTS).map((property): PopoverItemParams => ({
+      name: `database-table-selection-edit-${property.id}`,
+      title: property.name,
+      icon: propertyTypeMeta(property.type).icon,
+      closeOnActivate: true,
+      onActivate: () => this.openBulkEditor(rowIds, property.id, anchor),
+    }));
+
     this.showMenu(anchor, [
+      ...rest,
+      ...(rest.length > 0 ? [{ type: PopoverItemType.Separator } as const] : []),
       {
         name: 'database-table-selection-duplicate',
         title: this.t('tools.database.tableDuplicate'),

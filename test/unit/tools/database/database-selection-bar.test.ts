@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { bulkCloseClearsSelection, createSelectionBar } from '../../../../src/tools/database/database-selection-bar';
+import { propertyTypeMeta } from '../../../../src/tools/database/database-property-types';
 import type { PropertyDefinition } from '../../../../src/tools/database/types';
 
 const properties: PropertyDefinition[] = [
@@ -32,7 +33,7 @@ describe('selection bar', () => {
     expect(bar.querySelector('[data-blok-database-table-selection-count]')?.textContent).toBe('2 selected');
     const buttons = [...bar.querySelectorAll<HTMLElement>('[data-blok-database-table-selection-property]')];
 
-    expect(buttons.map((button) => button.textContent)).toEqual(['Notes', 'Done']);
+    expect(buttons.map((button) => button.textContent?.trim())).toEqual(['Notes', 'Done']);
     buttons[1].click();
     bar.querySelector<HTMLElement>('[data-blok-database-table-selection-delete]')?.click();
     bar.querySelector<HTMLElement>('[data-blok-database-table-selection-more]')?.click();
@@ -40,6 +41,19 @@ describe('selection bar', () => {
     expect(onEdit).toHaveBeenCalledWith('d', buttons[1]);
     expect(onDelete).toHaveBeenCalledTimes(1);
     expect(onMore).toHaveBeenCalledTimes(1);
+  });
+});
+
+// feel/findings-table T13: Notion's segments read "≡ Text", "# Number".
+describe('selection bar property segments', () => {
+  it('lead each property name with its type glyph', () => {
+    const bar = createSelectionBar({ count: 1, properties, i18n, onEdit: vi.fn(), onDelete: vi.fn(), onMore: vi.fn() });
+    const notes = bar.querySelector<HTMLElement>('[data-blok-database-table-selection-property][data-property-id="n"]');
+    const glyph = document.createElement('span');
+
+    glyph.innerHTML = propertyTypeMeta('text').icon;
+    expect(notes?.querySelector('svg')?.innerHTML).toBe(glyph.querySelector('svg')?.innerHTML);
+    expect(notes?.textContent?.trim()).toBe('Notes');
   });
 });
 

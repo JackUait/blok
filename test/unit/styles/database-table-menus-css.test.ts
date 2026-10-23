@@ -81,3 +81,12 @@ describe('multi-select popover (T18)', () => {
     expect(declared('[data-blok-database-select-option-menu]', 'opacity')).toEqual(['0']);
   });
 });
+
+describe('selection bar (T13)', () => {
+  it('hides only the view tabs while rows are selected: the toolbar and New stay', () => {
+    const rule = '[data-blok-database-view-bar][data-blok-database-selecting] > [data-blok-database-tab-bar]';
+
+    expect(declared(rule, 'visibility')).toEqual(['hidden']);
+    expect(declared('[data-blok-database-view-bar][data-blok-database-selecting] > :not([data-blok-database-table-selection-bar])', 'visibility')).toEqual([]);
+  });
+});

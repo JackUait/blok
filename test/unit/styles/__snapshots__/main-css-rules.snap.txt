@@ -10701,7 +10701,7 @@ textarea[data-blok-database-cell-input] {
   min-height: 32px;
 }
 
-[data-blok-database-view-bar][data-blok-database-selecting] > :not([data-blok-database-table-selection-bar]) {
+[data-blok-database-view-bar][data-blok-database-selecting] > [data-blok-database-tab-bar] {
   visibility: hidden;
 }
 
@@ -10757,6 +10757,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-table-selection-bar] [data-blok-database-table-selection-property] {
   width: auto;
+  gap: var(--blok-space-1-5);
   padding-inline: var(--blok-space-2);
   color: var(--blok-database-ink);
   font-size: 14px;

@@ -69,6 +69,12 @@ describe('database board card and calendar "No date" styles', () => {
     expect(body).toMatch(/block-size:\s*16px/);
   });
 
+  // feel findings B15: Notion fits its 502px row menu in a 717px window; the core 400px cap cut off Move to Trash.
+  it('lets the row menu grow to the window instead of the 400px cap', () => {
+    expect(ruleBody("[data-blok-popover-custom-class~='blok-database-card-menu'] [data-blok-popover-container]"))
+      .toMatch(/--max-height:\s*calc\(100dvh - 24px\)/);
+  });
+
   it('wraps a property only when its wrap setting is on', () => {
     expect(ruleBody('[data-blok-database-card-property][data-wrap="false"]')).toMatch(/white-space:\s*nowrap/);
   });

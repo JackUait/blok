@@ -8363,6 +8363,7 @@ export class DatabaseTool implements BlockTool {
       }),
     }), {
       searchable: true,
+      kind: 'card',
       searchPlaceholder: this.api.i18n.t('tools.database.searchActions'),
       onClose: () => {
         card.removeAttribute('data-popover-open');

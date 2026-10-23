@@ -51,6 +51,24 @@ describe('table view menus', () => {
 
     expect(String(constructed[0]?.class).split(' ')).toEqual(['blok-database-menu', 'blok-database-header-menu']);
   });
+
+  // feel findings B15: a card's row menu is Notion's 265 wide, keeps the row size, and CSS lifts its height cap.
+  it('opens a card menu 265 wide with the row menu size, marked so CSS lifts its height cap', () => {
+    openMenu(document.createElement('button'), [], { kind: 'card' });
+
+    expect(String(constructed[0]?.class).split(' ')).toEqual(['blok-database-menu', 'blok-database-row-menu', 'blok-database-card-menu']);
+    expect(constructed[0]?.minWidth).toBe('265px');
+    expect(constructed[0]?.placeLeftOfAnchor).toBeUndefined();
+  });
+
+  // 09-notion-card-menu.png: the menu opens over its "•••" at the button's left and shifts up to fit.
+  it('opens a card menu over its button, kept inside the window; the table row menu does not', () => {
+    openMenu(document.createElement('button'), [], { kind: 'card' });
+    openMenu(document.createElement('button'), [], { kind: 'row' });
+
+    expect(constructed[0]?.cover).toBe(true);
+    expect(constructed[1]?.cover).toBeUndefined();
+  });
 });
 
 // research/30 B6 measured the date cell only; the row menu's last-edited time keeps "N days ago".

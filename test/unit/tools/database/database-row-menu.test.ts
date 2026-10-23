@@ -4,11 +4,13 @@ import { rowMenuItems } from '../../../../src/tools/database/database-table-menu
 import type { RowMenuContext } from '../../../../src/tools/database/database-table-menus';
 import { DatabaseTableView, createTableState } from '../../../../src/tools/database/database-table-view';
 import type { DatabaseTableViewOptions, TableHandlers } from '../../../../src/tools/database/database-table-view';
+import { IconArrowDiagonal, IconListBulleted, IconPreview } from '../../../../src/components/icons';
 import { beautifyShortcut } from '../../../../src/components/utils/string';
 import type { DatabaseRow, PropertyDefinition } from '../../../../src/tools/database/types';
 
 interface Item {
   title?: string;
+  icon?: string;
   type?: string;
   secondaryLabel?: string;
   element?: HTMLElement;
@@ -121,6 +123,24 @@ describe('row ⋮⋮ menu (research/08)', () => {
     const list = items(context({ onEditIcon: undefined, onEditProperty: undefined, favorite: { on: false, onToggle: vi.fn() } }));
 
     expect(list.slice(1, 4).map((i) => i.title ?? i.type)).toEqual(['tools.database.rowAddToFavorites', 'separator', 'tools.database.tableOpenIn']);
+  });
+
+  // feel findings B15, 09-notion-card-menu.png.
+  it('draws Notion\'s glyphs: a bulleted list, an open eye and an up-right arrow', () => {
+    const list = items(context({ onLayout: vi.fn(), onPropertyVisibility: vi.fn() }));
+
+    expect(named(list, 'tools.database.tableEditProperty').icon).toBe(IconListBulleted);
+    expect(named(list, 'tools.database.settingsPropertyVisibility').icon).toBe(IconPreview);
+    expect(named(list, 'tools.database.tableOpenIn').icon).toBe(IconArrowDiagonal);
+  });
+
+  it('sets Layout and Property visibility apart from Edit property with a line', () => {
+    const list = items(context({ onLayout: vi.fn(), onPropertyVisibility: vi.fn() }));
+    const at = list.findIndex((i) => i.title === 'tools.database.tableEditProperty');
+
+    expect(list.slice(at, at + 3).map((i) => i.title ?? i.type)).toEqual(['tools.database.tableEditProperty', 'separator', 'tools.database.settingsLayout']);
+    expect(items(context()).findIndex((i) => i.title === 'tools.database.tableEditProperty') + 1)
+      .toBe(items(context()).findIndex((i) => i.type === 'separator'));
   });
 
   it('ends with a "Last edited by" footer when the row knows who edited it', () => {

@@ -2236,6 +2236,11 @@ button[data-blok-database-column-count]:hover {
   --blok-icon-active-text: var(--blok-database-ink);
 }
 
+/* The row menu grows to the window like Notion's (feel findings B15). A plain length: spacing tokens do not reach the top layer. */
+[data-blok-popover-custom-class~='blok-database-card-menu'] [data-blok-popover-container] {
+  --max-height: calc(100dvh - 24px);
+}
+
 /* Literals, not var(--blok-database-hover-bg): the selected-state law rejects an alias of an alias. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-blok-theme="light"]) [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] {

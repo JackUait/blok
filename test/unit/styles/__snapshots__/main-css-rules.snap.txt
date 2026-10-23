@@ -5831,6 +5831,10 @@ button[data-blok-database-column-count]:hover {
   --blok-icon-active-text: var(--blok-database-ink);
 }
 
+[data-blok-popover-custom-class~='blok-database-card-menu'] [data-blok-popover-container] {
+  --max-height: calc(100dvh - 24px);
+}
+
 [@media (prefers-color-scheme: dark)] :root:not([data-blok-theme="light"]) [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] {
   --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
 }

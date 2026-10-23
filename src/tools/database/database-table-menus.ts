@@ -17,9 +17,9 @@ import {
   IconInsertRight,
   IconLink,
   IconList,
+  IconListBulleted,
   IconMessage,
   IconPageLayout,
-  IconPencil,
   IconPin,
   IconPreview,
   IconReturn,
@@ -135,16 +135,21 @@ export const calculationItems = (
 export const DATABASE_HEADER_MENU_CLASS = `${DATABASE_MENU_CLASS} blok-database-header-menu`;
 /** The table row menu: 29px rows (database.css). */
 const DATABASE_ROW_MENU_CLASS = `${DATABASE_MENU_CLASS} blok-database-row-menu`;
+/** The same row menu from a card's "•••" or a right-click: 265 wide and no 400px cap (database.css, feel findings B15). */
+const DATABASE_CARD_MENU_CLASS = `${DATABASE_ROW_MENU_CLASS} blok-database-card-menu`;
 
 export interface OpenMenuOptions {
   searchable?: boolean;
   searchPlaceholder?: string;
   onClose?: () => void;
-  /** Which database menu this is: its row size comes from the class. A row menu opens left of its ⋮⋮. */
-  kind?: 'header' | 'row';
+  /**
+   * Which database menu this is: its row size comes from the class. A row menu opens left of its ⋮⋮;
+   * a card menu is the same row menu, opened over its "•••".
+   */
+  kind?: 'header' | 'row' | 'card';
 }
 
-const MENU_CLASS = { header: DATABASE_HEADER_MENU_CLASS, row: DATABASE_ROW_MENU_CLASS } as const;
+const MENU_CLASS = { header: DATABASE_HEADER_MENU_CLASS, row: DATABASE_ROW_MENU_CLASS, card: DATABASE_CARD_MENU_CLASS } as const;
 
 /** Opens a menu under `anchor`; `data-popover-open` marks the anchor while it is up. */
 export const openMenu = (
@@ -160,7 +165,9 @@ export const openMenu = (
     trigger: anchor,
     items,
     width: 'auto',
-    minWidth: '220px',
+    minWidth: options.kind === 'card' ? '265px' : '220px',
+    // A card's menu opens over its "•••", shifted to stay in the window (feel findings B15, 09-notion-card-menu.png).
+    ...(options.kind === 'card' ? { cover: true } : {}),
     autoFocusFirstItem: false,
     ...(options.searchable === true ? { searchable: true } : {}),
     ...(options.searchPlaceholder !== undefined ? { messages: { search: options.searchPlaceholder } } : {}),
@@ -499,7 +506,7 @@ export const rowMenuItems = (ctx: RowMenuContext): PopoverItemParams[] => {
       ? [{
         type: PopoverItemType.Default as const,
         title: i18n.t('tools.database.tableEditProperty'),
-        icon: IconPencil,
+        icon: IconListBulleted,
         children: {
           items: ctx.properties.map((property) => ({
             type: PopoverItemType.Default as const,
@@ -510,18 +517,20 @@ export const rowMenuItems = (ctx: RowMenuContext): PopoverItemParams[] => {
         },
       }]
       : []),
+    // feel findings B15: a line sets the view's Layout and Property visibility apart.
+    ...(onEditProperty !== undefined && (onLayout !== undefined || onPropertyVisibility !== undefined) ? [{ type: PopoverItemType.Separator as const }] : []),
     ...(onLayout !== undefined
       ? [{ type: PopoverItemType.Default as const, name: 'database-row-view-layout', title: i18n.t('tools.database.settingsLayout'), icon: IconPageLayout, onActivate: onLayout }]
       : []),
     ...(onPropertyVisibility !== undefined
-      ? [{ type: PopoverItemType.Default as const, name: 'database-row-view-properties', title: i18n.t('tools.database.settingsPropertyVisibility'), icon: IconEyeSlash, onActivate: onPropertyVisibility }]
+      ? [{ type: PopoverItemType.Default as const, name: 'database-row-view-properties', title: i18n.t('tools.database.settingsPropertyVisibility'), icon: IconPreview, onActivate: onPropertyVisibility }]
       : []),
   ];
   const open: PopoverItemParams[] = [
     {
       type: PopoverItemType.Default,
       title: i18n.t('tools.database.tableOpenIn'),
-      icon: IconSplitView,
+      icon: IconArrowDiagonal,
       children: {
         items: OPEN_IN.map(({ mode, icon, key }) => ({ type: PopoverItemType.Default, name: `database-row-open-in-${mode}`, title: i18n.t(key), icon, onActivate: () => ctx.onOpenIn(mode) })),
       },

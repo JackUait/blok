@@ -121,8 +121,9 @@ const REST = [
   '|',
   'footer',
 ];
-// research/12 §3: board and gallery add Layout and Property visibility after Edit property.
-const WITH_VIEW_SETTINGS = [...PAGE, 'tools.database.settingsLayout', 'tools.database.settingsPropertyVisibility', ...REST];
+// research/12 §3: board and gallery add Layout and Property visibility after Edit property,
+// set apart by a line (feel findings B15, 09-notion-card-menu.png).
+const WITH_VIEW_SETTINGS = [...PAGE, '|', 'tools.database.settingsLayout', 'tools.database.settingsPropertyVisibility', ...REST];
 const WITHOUT_VIEW_SETTINGS = [...PAGE, ...REST];
 
 describe('DatabaseTool — one row menu on every view (research/12 §3, research/08, research/19 §2e)', () => {

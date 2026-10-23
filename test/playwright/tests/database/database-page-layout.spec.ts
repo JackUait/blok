@@ -1288,7 +1288,9 @@ test.describe('row page layout', () => {
 
     await page.keyboard.press('Escape');
     await expect(fullWidth).toBeHidden();
-    await peek(page).getByRole('button', { name: 'Next page' }).click();
+    // A full page has no row steps (feel/findings-rowpage R17): go back through its path, then open the next row.
+    await peek(page).locator('[data-blok-database-peek-crumb="database"]').click();
+    await openRow(page, 'r2');
     await expect(title).toHaveValue('Bravo');
     await expect.poll(width).toBeGreaterThan(720);
   });

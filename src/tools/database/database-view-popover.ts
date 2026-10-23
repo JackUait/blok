@@ -1,4 +1,4 @@
-import { IconBoard, IconCalendar, IconChart, IconGallery, IconList, IconMessage, IconTable, IconTimeline, IconListChecklist, IconMap, IconDatabase } from '../../components/icons';
+import { IconBoard, IconCalendar, IconChart, IconGallery, IconListBulleted, IconMessage, IconTable, IconTimeline, IconListChecklist, IconMap, IconDatabase } from '../../components/icons';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
@@ -18,7 +18,7 @@ const VIEW_TYPES: ViewTypeOption[] = [
   { type: 'table', icon: IconTable, labelKey: 'tools.database.viewTypeTable', descriptionKey: 'tools.database.viewTypeTableDescription' },
   { type: 'board', icon: IconBoard, labelKey: 'tools.database.viewTypeBoard', descriptionKey: 'tools.database.viewTypeBoardDescription' },
   { type: 'gallery', icon: IconGallery, labelKey: 'tools.database.viewTypeGallery', descriptionKey: 'tools.database.viewTypeGalleryDescription' },
-  { type: 'list', icon: IconList, labelKey: 'tools.database.viewTypeList', descriptionKey: 'tools.database.viewTypeListDescription' },
+  { type: 'list', icon: IconListBulleted, labelKey: 'tools.database.viewTypeList', descriptionKey: 'tools.database.viewTypeListDescription' },
   { type: 'chart', icon: IconChart, labelKey: 'tools.database.viewTypeChart', descriptionKey: 'tools.database.viewTypeChartDescription' },
   { type: 'timeline', icon: IconTimeline, labelKey: 'tools.database.viewTypeTimeline', descriptionKey: 'tools.database.viewTypeTimelineDescription' },
   { type: 'feed', icon: IconMessage, labelKey: 'tools.database.viewTypeFeed', descriptionKey: 'tools.database.viewTypeFeedDescription' },

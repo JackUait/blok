@@ -1,5 +1,5 @@
 import { generateKeyBetween } from 'fractional-indexing';
-import { IconBoard, IconChart, IconGallery, IconList, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconColumns, IconMap, IconTabs, IconPreview, IconDatabase, IconViewCalendar, IconViewFeed, IconViewForm, IconViewTimeline } from '../../components/icons';
+import { IconBoard, IconChart, IconGallery, IconListBulleted, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconColumns, IconMap, IconTabs, IconPreview, IconDatabase, IconViewCalendar, IconViewFeed, IconViewForm, IconViewTimeline } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
@@ -38,7 +38,7 @@ function activateOnEnterOrSpace(element: HTMLElement, action: () => void): void 
 
 export const VIEW_ICONS: Record<string, string> = {
   board: IconBoard,
-  list: IconList,
+  list: IconListBulleted,
   table: IconTable,
   gallery: IconGallery,
   calendar: IconViewCalendar,

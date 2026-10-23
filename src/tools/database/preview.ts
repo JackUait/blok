@@ -1,4 +1,4 @@
-import { IconArrowDiagonal, IconBoard, IconCalendar, IconGallery, IconList, IconListChecklist, IconMap, IconMessage, IconSelect, IconTable, IconText, IconTimeline } from '../../components/icons';
+import { IconArrowDiagonal, IconBoard, IconCalendar, IconGallery, IconListBulleted, IconListChecklist, IconMap, IconMessage, IconSelect, IconTable, IconText, IconTimeline } from '../../components/icons';
 import { createPreview, h } from '../../components/utils/block-preview';
 
 type Color = 'gray' | 'yellow' | 'green' | 'purple';
@@ -187,7 +187,7 @@ const listRow = (title: string, tag: string, color: Color, created: string, isNe
 export const renderListViewPreview = (): HTMLElement =>
   createPreview(
     'database',
-    h('div', { 'data-tabs': '' }, tab(IconList, 'List view', true)),
+    h('div', { 'data-tabs': '' }, tab(IconListBulleted, 'List view', true)),
     h(
       'div',
       { 'data-list': '' },

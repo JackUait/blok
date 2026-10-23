@@ -1,4 +1,4 @@
-import { IconBoard, IconChevronLeft, IconCross, IconList, IconTable, IconTimeline } from '../../components/icons';
+import { IconBoard, IconChevronLeft, IconCross, IconListBulleted, IconTable, IconTimeline } from '../../components/icons';
 import { openModalDialog } from '../../components/utils/modal-dialog';
 import { PROPERTY_TYPE_META } from './database-property-types';
 import { hiddenPropertyCount } from './database-starters';
@@ -21,7 +21,7 @@ export interface StarterCustomizeOptions {
   directionSource?: Element | null;
 }
 
-const VIEW_ICONS: Partial<Record<ViewType, string>> = { table: IconTable, board: IconBoard, list: IconList, timeline: IconTimeline };
+const VIEW_ICONS: Partial<Record<ViewType, string>> = { table: IconTable, board: IconBoard, list: IconListBulleted, timeline: IconTimeline };
 
 const iconOf = (kind: StarterChoice['kind']): string =>
   VIEW_ICONS[kind as ViewType] ?? (Object.hasOwn(PROPERTY_TYPE_META, kind) ? PROPERTY_TYPE_META[kind as PropertyType].icon : '');

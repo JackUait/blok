@@ -512,6 +512,15 @@ describe('DatabaseViewControls', () => {
       ]);
     });
 
+    it('starts "Is between" empty when switched from a single day, so no half-read value filters rows', () => {
+      const { controls, saved } = open({ operator: 'equals', value: 'today' });
+
+      click('database-filter-operator');
+      click('database-filter-op-is_between');
+
+      expect(controls.effective(saved.view).filters[0]).toMatchObject({ operator: 'is_between', value: null });
+    });
+
     it('saves "Is between" as a date range once both days are whole', () => {
       const { controls, saved } = open({ operator: 'is_between', value: null });
       const start = q('database-filter-between-start') as HTMLInputElement;

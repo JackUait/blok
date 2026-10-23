@@ -24,6 +24,8 @@ const toggled = (ids: string[], id: string): string[] => (ids.includes(id) ? ids
 /** Keeps a value the new operator can still read; otherwise starts it empty. */
 const valueFor = (property: PropertyDefinition, operator: string, value: FilterConfig['value']): FilterConfig['value'] => {
   if (!operatorNeedsValue(operator)) return null;
+  // A single day is no range: a kept 'today' would filter while the chip read empty.
+  if (operator === 'is_between') return typeof value === 'string' && /^[^/]+\/[^/]+$/.test(value) ? value : null;
   if (property.type === 'date' && parseRelativeSpan(value) !== undefined) return 'today';
 
   return value;

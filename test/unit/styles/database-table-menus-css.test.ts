@@ -74,3 +74,10 @@ describe('status cell popover (T17)', () => {
     expect(declared(rule, 'border-top')).toEqual(['1px solid var(--blok-database-drawer-border)']);
   });
 });
+
+describe('multi-select popover (T18)', () => {
+  it('shows each option\'s ⋮⋮ handle at rest; its "…" still waits for hover', () => {
+    expect(declared('[data-blok-database-select-editor="multiSelect"] [data-blok-database-select-option-handle]', 'opacity')).toEqual(['1']);
+    expect(declared('[data-blok-database-select-option-menu]', 'opacity')).toEqual(['0']);
+  });
+});

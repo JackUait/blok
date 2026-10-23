@@ -5968,6 +5968,11 @@ textarea[data-blok-database-cell-input] {
   opacity: 1;
 }
 
+/* Notion's multi-select popover shows every handle at rest (feel/findings-table T18). Status shows none. */
+[data-blok-database-select-editor="multiSelect"] [data-blok-database-select-option-handle] {
+  opacity: 1;
+}
+
 [data-blok-database-select-option][data-dragging] {
   opacity: 0.5;
 }

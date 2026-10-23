@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, onTestFinished } from 'vitest';
 import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
 import type { CardDrawerOptions } from '../../../../src/tools/database/database-card-drawer';
 import type { DatabaseRow, SelectOption, PropertyDefinition } from '../../../../src/tools/database/types';
@@ -2254,6 +2254,7 @@ describe('DatabaseCardDrawer', () => {
       const options = createOptions({ readOnly: false, schema: [] });
       // The menu mounts in the peek, which is in the document.
       document.body.appendChild(options.wrapper);
+      onTestFinished(() => options.wrapper.remove());
       const drawer = new DatabaseCardDrawer(options);
       const row = makeRow({ properties: { 'prop-title': 'Card' } });
 
@@ -2276,6 +2277,7 @@ describe('DatabaseCardDrawer', () => {
       const options = createOptions({ readOnly: false, schema: [], onAddProperty });
       // The menu mounts in the peek, which is in the document.
       document.body.appendChild(options.wrapper);
+      onTestFinished(() => options.wrapper.remove());
       const drawer = new DatabaseCardDrawer(options);
       const row = makeRow({ properties: { 'prop-title': 'Card' } });
 
@@ -2300,6 +2302,7 @@ describe('DatabaseCardDrawer', () => {
       const options = createOptions({ readOnly: false, schema: [] });
       // The menu mounts in the peek, which is in the document.
       document.body.appendChild(options.wrapper);
+      onTestFinished(() => options.wrapper.remove());
       const drawer = new DatabaseCardDrawer(options);
       const row = makeRow({ properties: { 'prop-title': 'Card' } });
 
@@ -2325,6 +2328,7 @@ describe('DatabaseCardDrawer', () => {
       // no onAddProperty callback
       // The menu mounts in the peek, which is in the document.
       document.body.appendChild(options.wrapper);
+      onTestFinished(() => options.wrapper.remove());
       const drawer = new DatabaseCardDrawer(options);
       const row = makeRow({ properties: { 'prop-title': 'Card' } });
 
@@ -2441,6 +2445,7 @@ describe('DatabaseCardDrawer', () => {
       const options = createOptions({ readOnly: false, schema: [] });
       // The menu mounts in the peek, which is in the document.
       document.body.appendChild(options.wrapper);
+      onTestFinished(() => options.wrapper.remove());
       const drawer = new DatabaseCardDrawer(options);
       const row = makeRow({ properties: { 'prop-title': 'Card' } });
 

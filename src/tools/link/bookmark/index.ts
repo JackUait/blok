@@ -354,6 +354,7 @@ export class Bookmark implements BlockTool {
 
       const image = document.createElement('img');
 
+      image.addEventListener('error', () => image.replaceWith(this.drawnCover(address?.host ?? this.data.url)), { once: true });
       image.src = this.data.image;
       image.alt = '';
       frame.append(bar, image);
@@ -362,6 +363,42 @@ export class Bookmark implements BlockTool {
     }
 
     return card;
+  }
+
+  /**
+   * Stands in for a cover that won't load: a gray sketch of the page on a
+   * sheet whose corner is turned up, showing the site's initial beneath.
+   */
+  private drawnCover(host: string): HTMLElement {
+    const name = host.replace(/^www\./, '');
+    const scene = document.createElement('div');
+
+    scene.classList.add('blok-bookmark__scene');
+    scene.setAttribute('data-role', 'bookmark-scene');
+    scene.setAttribute('aria-hidden', 'true');
+
+    const under = document.createElement('span');
+
+    under.classList.add('blok-bookmark__peel-under');
+    under.textContent = name.charAt(0).toUpperCase();
+
+    const sheet = document.createElement('span');
+
+    sheet.classList.add('blok-bookmark__peel-sheet');
+    sheet.append(...['nav', 'picture', 'heading', 'subheading', 'line', 'line', 'line', 'line', 'line'].map((part) => {
+      const piece = document.createElement('span');
+
+      piece.setAttribute('data-part', part);
+
+      return piece;
+    }));
+
+    const flap = document.createElement('span');
+
+    flap.classList.add('blok-bookmark__peel-flap');
+    scene.append(under, sheet, flap);
+
+    return scene;
   }
 
   /** Host in ink, path in gray; an unparseable url is shown as saved. */

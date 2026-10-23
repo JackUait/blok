@@ -361,6 +361,33 @@ describe('Bookmark tool', () => {
       expect(frame?.querySelector('img')?.getAttribute('src')).toBe('https://example.com/og.png');
     });
 
+    it('swaps a cover that fails to load for a drawn scene marked with the site initial', () => {
+      const card = renderCard({ ...fullMeta, url: 'https://www.kommersant.ru/doc/2614770' });
+      const img = card.querySelector('[data-role="bookmark-window"] img');
+
+      img?.dispatchEvent(new Event('error'));
+
+      const frame = card.querySelector('[data-role="bookmark-window"]');
+      const scene = frame?.querySelector('[data-role="bookmark-scene"]');
+
+      expect(frame?.querySelector('img')).toBeNull();
+      expect(scene?.getAttribute('aria-hidden')).toBe('true');
+      expect(scene?.textContent).toBe('K');
+      expect(frame?.querySelector('[data-role="bookmark-window-bar"]')?.textContent).toBe('www.kommersant.ru/doc/2614770');
+    });
+
+    it('draws the failed cover as a sheet whose corner peels back to the site initial', () => {
+      const card = renderCard({ ...fullMeta, url: 'https://www.kommersant.ru/doc/2614770' });
+
+      card.querySelector('[data-role="bookmark-window"] img')?.dispatchEvent(new Event('error'));
+
+      const scene = card.querySelector('[data-role="bookmark-scene"]');
+
+      expect(scene?.querySelector('.blok-bookmark__peel-under')?.textContent).toBe('K');
+      expect(scene?.querySelector('.blok-bookmark__peel-sheet')).not.toBeNull();
+      expect(scene?.querySelector('.blok-bookmark__peel-flap')).not.toBeNull();
+    });
+
     it('renders the cover image in its own container outside the content column', () => {
       const card = renderCard(fullMeta);
 

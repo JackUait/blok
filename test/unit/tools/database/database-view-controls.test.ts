@@ -712,8 +712,18 @@ describe('DatabaseViewControls', () => {
       return env;
     };
 
-    it('shows » left of Filter while the bar shows, and » hides the bar', () => {
-      const { controls } = withFilter();
+    // Shots 20, 22 and 23 show » with a sort; 15, 17 (a filter only) and 41 (no rule) do not.
+    it('shows no » for a bar of filters alone', () => {
+      withFilter();
+
+      expect(q('database-toolbar-minimize')?.hidden).toBe(true);
+    });
+
+    it('shows » left of Filter while the bar shows a sort, and » hides the bar', () => {
+      const { controls, saved } = withFilter();
+
+      saved.view = { ...saved.view, sorts: [{ id: 's1', propertyId: 'num', direction: 'asc' }] };
+      controls.refresh();
       const minimize = q('database-toolbar-minimize');
 
       expect(controls.filterBar.hidden).toBe(false);
@@ -738,6 +748,19 @@ describe('DatabaseViewControls', () => {
       click('database-toolbar-filter');
       expect(controls.filterBar.hidden).toBe(false);
       expect(q('database-filter-picker')).toBeNull();
+    });
+
+    it('shows the bar again when a column header sorts after a minimize', () => {
+      const { controls, saved } = withFilter();
+
+      saved.view = { ...saved.view, sorts: [{ id: 's1', propertyId: 'num', direction: 'asc' }] };
+      controls.refresh();
+      click('database-toolbar-minimize');
+      controls.sortBy('num', document.body);
+      click('database-header-sort-asc');
+
+      expect(controls.filterBar.hidden).toBe(false);
+      expect(q('database-sort-pill')).not.toBeNull();
     });
 
     it('keeps the bar, with only "+ Filter", after the last rule is deleted', () => {

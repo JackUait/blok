@@ -374,6 +374,7 @@ export class DatabaseViewControls {
       label: this.host.i18n.t(sortDirectionLabelKey(property.type, direction)),
       testId: `database-header-sort-${direction}`,
       onClick: () => {
+        this.barOpen = true;
         this.updatePersonal({ sorts: sortFromHeader(propertyId, direction) });
         this.panel?.close();
       },
@@ -863,7 +864,8 @@ export class DatabaseViewControls {
     // Notion keeps the bar, with only "+ Filter", after its last chip goes.
     if (pills.length === 0 && !personal && this.barShown && this.barOpen === null) this.barOpen = true;
     this.barShown = this.barOpen ?? (pills.length > 0 || personal);
-    this.minimizeButton.hidden = !this.barShown;
+    // Inferred from shots: Notion shows » with a sort (20, 22, 23), not with filters alone (15, 17) or no rule (41).
+    this.minimizeButton.hidden = !this.barShown || view.sorts.length === 0;
     if (!this.barShown) {
       this.filterBar.replaceChildren();
       this.filterBar.hidden = true;

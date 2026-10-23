@@ -542,13 +542,78 @@ describe('view settings panel', () => {
     expect(h.ctx.updateView).toHaveBeenCalledWith({ showPageIcon: false });
   });
 
+  // findings V14 (12-notion-propvis.png): search, "Shown in <layout>" + Hide all, type glyphs, eye toggles.
+  describe('Property visibility page', () => {
+    const eye = (id: string): HTMLElement | null => document.querySelector(`[data-blok-testid="database-property-visible-${id}"]`);
+    const listed = (): string[] => [...document.querySelectorAll<HTMLElement>('[data-blok-testid="database-properties-list"] [data-item-id]')]
+      .map((row) => row.getAttribute('data-item-id') ?? '');
+
+    it('opens with its search focused, and the search narrows the list without losing the field', () => {
+      const h = harness();
+
+      h.open();
+      click('database-settings-properties');
+      const search = document.querySelector<HTMLInputElement>('[data-blok-testid="database-property-search"]');
+
+      expect(search).toHaveFocus();
+      expect(search?.placeholder).toBe('tools.database.settingsSearchProperty');
+      if (search === null) throw new Error('no search');
+      search.value = 'du';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+      expect(listed()).toEqual(['due']);
+      expect(search.isConnected).toBe(true);
+    });
+
+    it('keeps the query when an eye redraws the page', () => {
+      const h = harness();
+
+      h.open('properties');
+      const search = document.querySelector<HTMLInputElement>('[data-blok-testid="database-property-search"]');
+
+      if (search === null) throw new Error('no search');
+      search.value = 'du';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+      eye('due')?.click();
+      expect(document.querySelector<HTMLInputElement>('[data-blok-testid="database-property-search"]')?.value).toBe('du');
+      expect(listed()).toEqual(['due']);
+    });
+
+    it('draws each row as a type glyph, the name and an eye switch', () => {
+      harness({ properties: [{ id: 'due', visible: false }] }).open('properties');
+      const row = document.querySelector('[data-blok-testid="database-properties-list"] [data-item-id="due"]');
+
+      expect(row?.querySelector('[data-blok-database-panel-icon] svg')).not.toBeNull();
+      expect(row?.textContent).toContain('Due');
+      expect(eye('due')?.getAttribute('role')).toBe('switch');
+      expect(eye('due')?.getAttribute('aria-checked')).toBe('false');
+      expect(eye('due')?.getAttribute('aria-label')).toBe('Due');
+      eye('due')?.click();
+      expect(eye('due')?.getAttribute('aria-checked')).toBe('true');
+    });
+
+    it.each([['board', 'settingsShownInBoard'], ['gallery', 'settingsShownInGallery'], ['chart', 'propertiesSection']] as const)(
+      'heads a %s with %s and Hide all, which leaves the title shown',
+      (type, key) => {
+        const h = harness({ type, properties: [{ id: 'due', visible: true }] });
+
+        h.open('properties');
+        expect(document.querySelector('[data-blok-database-panel-section]')?.textContent).toBe(`tools.database.${key}`);
+        expect(document.querySelector('[data-blok-testid="database-property-hide-all"]')?.textContent).toBe('tools.database.groupHideAll');
+        click('database-property-hide-all');
+        expect(h.state.view.properties?.filter((p) => p.id !== 'title' && p.visible)).toEqual([]);
+        expect(h.state.view.properties?.some((p) => p.id === 'title' && !p.visible)).toBe(false);
+      }
+    );
+  });
+
   it('hides a property and keeps the title always shown', () => {
     const h = harness();
 
     h.open();
     click('database-settings-properties');
 
-    expect(exists('database-property-visible-title')).toBe(false);
+    // Notion grays the title's eye: it cannot be hidden (12-notion-propvis.png).
+    expect((document.querySelector('[data-blok-testid="database-property-visible-title"]') as HTMLButtonElement).disabled).toBe(true);
 
     click('database-property-visible-due');
 
@@ -612,12 +677,12 @@ describe('view settings panel', () => {
       expect(exists('database-property-hide-all')).toBe(false);
     });
 
-    it('a table has no "Shown in feed" header', () => {
+    it('a table reads "Shown in table", not "Shown in feed"', () => {
       const h = harness();
 
       h.open();
       click('database-settings-properties');
-      expect(exists('database-property-hide-all')).toBe(false);
+      expect(document.querySelector('[data-blok-database-panel-section]')?.textContent).toBe('tools.database.settingsShownInTable');
       expect(document.body.textContent).not.toContain('tools.database.settingsShownInFeed');
     });
 

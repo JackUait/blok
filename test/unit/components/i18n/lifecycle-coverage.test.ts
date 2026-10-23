@@ -270,7 +270,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1878 + 126 + 500 + 4 closure for all 2508 keys', () => {
+  it('rebuilds a disjoint 1878 + 126 + 507 + 4 closure for all 2515 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -284,7 +284,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2508);
+    expect(lifecycle.size).toBe(2515);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -504,7 +504,9 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: Edit cadence's "Discard unsaved changes?" (templateRepeatDiscardTitle), via the panel's prefixing t.
       // +12: the relative date filter, filter bar minimize and template menu heading keys,
       // called through the database's prefixing t() (filterOperator.isBetween is composed from a short name).
-      'registered-namespace-compatible': 500,
+      // +7: the other layouts' Property visibility headers (settingsShownIn<Layout>) and its search
+      // (settingsSearchProperty), via the panel's prefixing t.
+      'registered-namespace-compatible': 507,
       'catalog-only': 4,
     });
     expect(

@@ -168,6 +168,13 @@ export class DatabasePanel {
   }
 
   private focusFirst(): void {
+    const preferred = this.element.querySelector<HTMLElement>('[autofocus]');
+
+    if (preferred !== null) {
+      preferred.focus();
+
+      return;
+    }
     // The header × never takes first focus: opening lands on the first row.
     this.element.querySelector<HTMLElement>(`[data-blok-database-panel-row]:not([disabled]), :is(${FOCUSABLE}):not([data-blok-database-panel-close])`)?.focus();
   }

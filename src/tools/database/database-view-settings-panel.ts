@@ -1,4 +1,4 @@
-import { IconBolt, IconCalendar, IconCheck, IconChevronUpDown, IconCopy, IconCross, IconDatabase, IconDotsHorizontal, IconFilter, IconGallery, IconLink, IconLock, IconPaintRoller, IconPlus, IconPreview, IconReplace, IconSort, IconTable, IconTrash, IconWand } from '../../components/icons';
+import { IconBolt, IconCalendar, IconCheck, IconChevronUpDown, IconCopy, IconCross, IconDatabase, IconDotsHorizontal, IconEyeSlash, IconFilter, IconGallery, IconLink, IconLock, IconPaintRoller, IconPlus, IconPreview, IconReplace, IconSort, IconTable, IconTrash, IconWand } from '../../components/icons';
 import type { I18n } from '../../../types';
 import {
   DatabasePanel,
@@ -232,6 +232,17 @@ const readLayoutItems = (items: PopoverItemParams[]): LayoutItem[] => items.flat
 
 /** 11-notion-layout.png: the Layout page's tile order. Layouts it does not show go last. */
 const LAYOUT_TILE_ORDER: readonly ViewType[] = ['table', 'board', 'timeline', 'calendar', 'list', 'gallery', 'chart', 'feed', 'map'];
+
+/** "Shown in <layout>" (research/35:197; "Shown in table", 12-notion-propvis.png). Other layouts read "Properties". */
+const SHOWN_IN_KEYS: Partial<Record<ViewType, string>> = {
+  table: 'settingsShownInTable',
+  board: 'settingsShownInBoard',
+  list: 'settingsShownInList',
+  gallery: 'settingsShownInGallery',
+  calendar: 'settingsShownInCalendar',
+  timeline: 'settingsShownInTimeline',
+  feed: 'settingsShownInFeed',
+};
 
 /** The option colors Notion offers (research/08). */
 const COLORS = ['default', 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'] as const;
@@ -1162,67 +1173,124 @@ export class ViewSettingsPages {
   }
 
   properties(): PanelPage {
+    const state = { query: '' };
+    const list = document.createElement('div');
+    const fill = (panel: DatabasePanel): void => {
+      const schema = this.ctx.schema();
+      const listed = this.listedProperties();
+      const query = state.query.trim().toLowerCase();
+
+      if (listed.length === 0) {
+        list.replaceChildren(panelText(this.ctx.i18n.t('find.noResults')));
+
+        return;
+      }
+      const items = listed.flatMap((entry) => {
+        const property = schema.find((p) => p.id === entry.id);
+
+        if (property === undefined || !property.name.toLowerCase().includes(query)) return [];
+
+        return [{ id: property.id, element: this.propertyVisibilityRow(panel, property, entry.visible) }];
+      });
+
+      list.replaceChildren(...this.shownHeader(panel, listed), panelReorderList({
+        testId: 'database-properties-list',
+        handleLabel: this.t('settingsDragToReorder'),
+        items,
+        onMove: (id, beforeId) => {
+          // A filtered list hides the neighbours a move is placed between.
+          if (!this.shared || query !== '') return;
+          this.ctx.updateView({ properties: withPropertyOrder(this.ctx.view(), this.ctx.schema(), id, beforeId) });
+          panel.refresh();
+        },
+      }));
+    };
+
     return {
       title: this.t('settingsPropertyVisibility'),
       build: (panel) => {
-        const schema = this.ctx.schema();
-        const listed = this.listedProperties();
-
-        if (listed.length === 0) return [panelText(this.ctx.i18n.t('find.noResults'))];
-        const items = listed.flatMap((entry) => {
-          const property = schema.find((p) => p.id === entry.id);
-
-          if (property === undefined) return [];
-          const control = property.type === 'title'
-            ? panelText(property.name)
-            : panelSwitch({
-              label: property.name,
-              testId: `database-property-visible-${property.id}`,
-              checked: entry.visible,
-              disabled: !this.shared,
-              onToggle: (next) => this.ctx.updateView({ properties: withPropertySetting(this.ctx.view(), this.ctx.schema(), property.id, { visible: next }) }),
-            });
-
-          return [{ id: property.id, element: control }];
+        const search = panelInput({
+          value: state.query,
+          placeholder: this.t('settingsSearchProperty'),
+          label: this.t('settingsSearchProperty'),
+          testId: 'database-property-search',
+          // Only the list redraws, so the field keeps its caret.
+          onInput: (value) => {
+            state.query = value;
+            fill(panel);
+          },
         });
 
-        return [...this.feedHeader(panel, listed), panelReorderList({
-          testId: 'database-properties-list',
-          handleLabel: this.t('settingsDragToReorder'),
-          items,
-          onMove: (id, beforeId) => {
-            if (!this.shared) return;
-            this.ctx.updateView({ properties: withPropertyOrder(this.ctx.view(), this.ctx.schema(), id, beforeId) });
-            panel.refresh();
-          },
-        })];
+        // 12-notion-propvis.png: the search has focus when the page opens.
+        search.autofocus = true;
+
+        fill(panel);
+
+        return [search, list];
       },
     };
   }
 
-  /** research/35:197: "Shown in feed | Hide all". Only the feed's wording was measured. */
-  private feedHeader(panel: DatabasePanel, listed: ReturnType<typeof resolveViewProperties>): HTMLElement[] {
-    if (this.ctx.view().type !== 'feed') return [];
-    const allHidden = listed.every((entry) => !entry.visible);
+  /** A type glyph, the name and an eye switch. The title's eye is grayed: it is always shown. */
+  private propertyVisibilityRow(panel: DatabasePanel, property: PropertyDefinition, visible: boolean): HTMLElement {
+    const row = document.createElement('div');
+    const icon = document.createElement('span');
+    const name = document.createElement('span');
+    const eye = document.createElement('button');
+    const isTitle = property.type === 'title';
+    const shown = isTitle || visible;
 
-    return [
-      panelLabel(this.t('settingsShownInFeed')),
-      panelRow({
-        label: this.t(allHidden ? 'groupShowAll' : 'groupHideAll'),
-        testId: 'database-property-hide-all',
-        disabled: !this.shared,
-        onClick: () => {
-          const view = this.ctx.view();
-          const properties = listed.reduce<ViewPropertySetting[] | undefined>(
-            (entries, entry) => withPropertySetting(entries === undefined ? view : { ...view, properties: entries }, this.ctx.schema(), entry.id, { visible: allHidden }),
-            undefined
-          ) ?? [];
+    row.setAttribute('data-blok-database-property-visibility-row', '');
+    icon.setAttribute('data-blok-database-panel-icon', '');
+    icon.innerHTML = propertyTypeMeta(property.type).icon;
+    name.setAttribute('data-blok-database-panel-label', '');
+    name.textContent = property.name;
+    eye.type = 'button';
+    eye.setAttribute('role', 'switch');
+    eye.setAttribute('aria-checked', String(shown));
+    eye.setAttribute('aria-label', property.name);
+    eye.setAttribute('data-blok-database-property-eye', '');
+    eye.setAttribute('data-blok-testid', `database-property-visible-${property.id}`);
+    eye.innerHTML = shown ? IconPreview : IconEyeSlash;
+    eye.disabled = isTitle || !this.shared;
+    eye.addEventListener('click', () => {
+      this.ctx.updateView({ properties: withPropertySetting(this.ctx.view(), this.ctx.schema(), property.id, { visible: !shown }) });
+      panel.refresh();
+    });
+    row.append(icon, name, eye);
 
-          this.ctx.updateView({ properties });
-          panel.refresh();
-        },
-      }),
-    ];
+    return row;
+  }
+
+  /** research/35:197, 12-notion-propvis.png: "Shown in <layout>" and Hide all (Show all once all are hidden). */
+  private shownHeader(panel: DatabasePanel, listed: ReturnType<typeof resolveViewProperties>): HTMLElement[] {
+    const titleId = this.ctx.schema().find((p) => p.type === 'title')?.id;
+    const hideable = listed.filter((entry) => entry.id !== titleId);
+
+    if (hideable.length === 0) return [];
+    const allHidden = hideable.every((entry) => !entry.visible);
+    const header = document.createElement('div');
+    const toggle = document.createElement('button');
+
+    header.setAttribute('data-blok-database-property-visibility-header', '');
+    toggle.type = 'button';
+    toggle.setAttribute('data-blok-database-property-hide-all', '');
+    toggle.setAttribute('data-blok-testid', 'database-property-hide-all');
+    toggle.textContent = this.t(allHidden ? 'groupShowAll' : 'groupHideAll');
+    toggle.disabled = !this.shared;
+    toggle.addEventListener('click', () => {
+      const view = this.ctx.view();
+      const properties = hideable.reduce<ViewPropertySetting[] | undefined>(
+        (entries, entry) => withPropertySetting(entries === undefined ? view : { ...view, properties: entries }, this.ctx.schema(), entry.id, { visible: allHidden }),
+        undefined
+      ) ?? [];
+
+      this.ctx.updateView({ properties });
+      panel.refresh();
+    });
+    header.append(panelLabel(this.t(SHOWN_IN_KEYS[this.ctx.view().type] ?? 'propertiesSection')), toggle);
+
+    return [header];
   }
 
   // ─── Property picker ───

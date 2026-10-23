@@ -76,10 +76,22 @@ class FilterChipPages {
   private readonly filterId: string;
   /** The token field's search: kept across the refresh every edit causes. */
   private query = '';
+  /** Set when another editor (view settings) owns the rule: edits go there. */
+  private readonly writer: ((patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>) => void) | undefined;
 
-  constructor(ctx: ViewSettingsContext, filterId: string) {
+  constructor(ctx: ViewSettingsContext, filterId: string, writer?: (patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>) => void) {
     this.ctx = ctx;
     this.filterId = filterId;
+    this.writer = writer;
+  }
+
+  /** The relative editor or "Is between"'s range, or undefined for any other operator. */
+  dateRuleControls(operator: string, value: FilterConfig['value']): HTMLElement[] | undefined {
+    const span = spanOf(operator, value);
+
+    if (span !== undefined) return this.relativeEditor(span);
+
+    return operator === 'is_between' ? this.betweenControls(value) : undefined;
   }
 
   root(): PanelPage {
@@ -108,6 +120,11 @@ class FilterChipPages {
   }
 
   private update(patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>): void {
+    if (this.writer !== undefined) {
+      this.writer(patch);
+
+      return;
+    }
     this.write((filters) => filters.map((f) => (f.id === this.filterId ? { ...f, ...patch } : f)));
   }
 
@@ -154,11 +171,7 @@ class FilterChipPages {
           testId: `database-filter-op-${choice.operator}`,
           checked: menuOperatorOf(current) === choice.operator,
           onClick: () => {
-            const value = this.current()?.value ?? null;
-
-            const span = choice.operator === 'relative_to_today' ? spanOf(this.current()?.operator ?? '', value) : undefined;
-
-            this.update(choice.operator === 'relative_to_today' ? spanFilter(span ?? DEFAULT_SPAN) : { operator: choice.operator, value: valueFor(property, choice.operator, value) });
+            this.update(operatorPick(property, choice.operator, { operator: this.current()?.operator ?? '', value: this.current()?.value ?? null }));
             panel.back();
           },
         }));
@@ -516,6 +529,22 @@ class FilterChipPages {
     return grid;
   }
 }
+
+/** The operator and value an operator pick makes: a relative pick starts a span, "Is between" an empty range. */
+export const operatorPick = (
+  property: PropertyDefinition,
+  operator: string,
+  current: Pick<FilterConfig, 'operator' | 'value'>
+): Pick<FilterConfig, 'operator' | 'value'> => (operator === 'relative_to_today'
+  ? spanFilter(spanOf(current.operator, current.value) ?? DEFAULT_SPAN)
+  : { operator, value: valueFor(property, operator, current.value) });
+
+/** The chip's date editors for another rule editor (view settings), which owns the writes. */
+export const dateRuleControls = (
+  ctx: ViewSettingsContext,
+  filter: Pick<FilterConfig, 'operator' | 'value'>,
+  update: (patch: Partial<Pick<FilterConfig, 'operator' | 'value'>>) => void
+): HTMLElement[] | undefined => new FilterChipPages(ctx, '', update).dateRuleControls(filter.operator, filter.value);
 
 /** Opens a filter chip's popover under the chip: 260 wide (findings V17). */
 export const openFilterChip = (anchor: HTMLElement, ctx: ViewSettingsContext, filterId: string, onClose?: () => void): DatabasePanel => {

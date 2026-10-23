@@ -337,6 +337,61 @@ describe('view settings panel', () => {
     });
   });
 
+  // filter-sort's date filter (findings V18): the settings rule editor reuses the chip's date editor.
+  describe('date rule editor', () => {
+    const openRule = (filter: { operator: string; value: unknown }): ReturnType<typeof harness> => {
+      const h = harness({ filters: [{ id: 'f1', propertyId: 'due', operator: filter.operator, value: filter.value as never }] });
+
+      h.open('filter');
+      click('database-filter-row-f1');
+
+      return h;
+    };
+    const saved = (h: ReturnType<typeof harness>): unknown => h.state.view.filters[0];
+
+    it('edits a saved window filter with the This/Past/Next editor, not the old preset list', () => {
+      const h = openRule({ operator: 'this_week', value: null });
+
+      expect(exists('database-filter-within-this_week')).toBe(false);
+      expect(exists('database-filter-direction')).toBe(true);
+      const unit = document.querySelector<HTMLSelectElement>('[data-blok-testid="database-filter-unit"]');
+
+      if (unit === null) throw new Error('no unit');
+      unit.value = 'month';
+      unit.dispatchEvent(new Event('change'));
+      expect(saved(h)).toMatchObject({ operator: 'relative_to_today', value: 'this:1:month' });
+    });
+
+    it('picking "Is relative to today" starts a span, not a day', () => {
+      const h = openRule({ operator: 'equals', value: 'today' });
+
+      click('database-filter-operator');
+      click('database-filter-op-relative_to_today');
+      expect(saved(h)).toMatchObject({ operator: 'this_week', value: null });
+      expect(exists('database-filter-direction')).toBe(true);
+    });
+
+    it('"Is between" starts empty and saves a start/end range once both days are whole', () => {
+      const h = openRule({ operator: 'equals', value: 'today' });
+
+      click('database-filter-operator');
+      click('database-filter-op-is_between');
+      expect(saved(h)).toMatchObject({ operator: 'is_between', value: null });
+      const type = (which: string, text: string): void => {
+        const input = document.querySelector<HTMLInputElement>(`[data-blok-testid="database-filter-between-${which}"]`);
+
+        if (input === null) throw new Error(`no ${which}`);
+        input.value = text;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+
+      type('start', '2026-10-01');
+      expect(saved(h)).toMatchObject({ value: null });
+      type('end', '2026-10-09');
+      expect(saved(h)).toMatchObject({ operator: 'is_between', value: '2026-10-01/2026-10-09' });
+    });
+  });
+
   it('lists Notion\'s settings rows (research/08)', () => {
     harness().open();
 
@@ -1466,9 +1521,14 @@ describe('view settings panel', () => {
 
     expect((document.querySelector('[data-blok-testid="database-filter-popover"]') as HTMLElement).style.width).toBe('220px');
 
-    click('database-filter-within-past_month');
+    // The window editor is filter-sort's This/Past/Next editor (findings V18).
+    const direction = document.querySelector<HTMLSelectElement>('[data-blok-testid="database-filter-direction"]');
 
-    expect(h.state.view.filters[0]).toMatchObject({ operator: 'past_month', value: null });
+    if (direction === null) throw new Error('no direction');
+    direction.value = 'past';
+    direction.dispatchEvent(new Event('change'));
+
+    expect(h.state.view.filters[0]).toMatchObject({ operator: 'relative_to_today', value: 'past:1:week' });
 
     click('database-filter-delete');
 

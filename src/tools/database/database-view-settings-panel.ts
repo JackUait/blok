@@ -79,6 +79,7 @@ import { nanoid } from 'nanoid';
 import { CARD_LAYOUTS, resolveSubItemsDisplay, resolveSubItemsFilter } from './sub-items';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { automationListPage } from './database-automations-panel';
+import { dateRuleControls, operatorPick } from './database-filter-chip';
 import { VIEW_ICONS } from './database-tab-bar';
 import type { AutomationSettings } from './database-automations-panel';
 import { offersAutofill } from './property-values';
@@ -243,6 +244,8 @@ const SHOWN_IN_KEYS: Partial<Record<ViewType, string>> = {
   timeline: 'settingsShownInTimeline',
   feed: 'settingsShownInFeed',
 };
+
+const DATE_LIKE_TYPES: readonly PropertyType[] = ['date', 'createdTime', 'lastEditedTime'];
 
 /** A picker's search text, kept across page redraws. */
 interface QueryState {
@@ -1504,7 +1507,7 @@ export class ViewSettingsPages {
             value: opKey === undefined ? current.operator : this.ctx.i18n.t(opKey),
             opensPage: true,
             onClick: () => panel.push(this.operators(property, current.operator, (operator) => {
-              rule.update(operator === 'within' ? { operator: 'this_week', value: null } : { operator, value: this.valueFor(property, operator, current.value) });
+              rule.update(operatorPick(property, operator, current));
               panel.back();
             })),
           }),
@@ -1543,15 +1546,6 @@ export class ViewSettingsPages {
     };
   }
 
-  /** Keeps a value the new operator can still read; otherwise starts it empty. */
-  private valueFor(property: PropertyDefinition, operator: string, value: FilterConfig['value']): FilterConfig['value'] {
-    if (!operatorNeedsValue(operator)) return null;
-    if (operator === 'relative_to_today') return parseRelativeSpan(value) === undefined ? 'past:1:week' : value;
-    if (property.type === 'date' && parseRelativeSpan(value) !== undefined) return 'today';
-
-    return value;
-  }
-
   private operators(property: PropertyDefinition, current: string, onPick: (operator: string) => void): PanelPage {
     return {
       title: property.name,
@@ -1571,7 +1565,10 @@ export class ViewSettingsPages {
     thisPage = true
   ): HTMLElement[] {
     const { operator, value } = filter;
+    // filter-sort's relative and "Is between" editors (findings V18), shared with the chip.
+    const dates = DATE_LIKE_TYPES.includes(property.type) ? dateRuleControls(this.ctx, filter, update) : undefined;
 
+    if (dates !== undefined) return dates;
     if ((WITHIN_OPERATORS as readonly string[]).includes(operator)) {
       return WITHIN_OPERATORS.map((within) => panelRow({
         label: this.ctx.i18n.t(withinLabelKey(within)),

@@ -144,6 +144,19 @@ describe('board column, card and header look (research/08)', () => {
     expect(body).toContain('font-weight: 500');
   });
 
+  // findings-board B01: a Status board's header is the cell's status pill.
+  it('draws a status header pill as the status pill: 0 9px 0 7px, round, 400, with its 8px dot', () => {
+    const body = ruleBody(database, '[data-blok-database-column-pill][data-status]');
+    const dot = ruleBody(database, '[data-blok-database-column-pill][data-status] [data-blok-database-column-dot]');
+
+    expect(body).toContain('padding-inline: var(--blok-database-status-pill-pad-start) var(--blok-database-status-pill-pad-end)');
+    expect(body).toContain('border-radius: var(--blok-radius-pill)');
+    expect(body).toContain('font-weight: 400');
+    expect(body).toContain('line-height: 20px');
+    expect(body).toContain('gap: var(--blok-space-1-25)');
+    expect(dot).toContain('display: block');
+  });
+
   it('colors the 14px count by group', () => {
     const body = ruleBody(database, '[data-blok-database-column-count]');
 

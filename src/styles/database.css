@@ -1253,6 +1253,20 @@
   flex-shrink: 0;
 }
 
+/* A Status board's header is the status pill, dot included (findings-board B01). */
+[data-blok-database-column-pill][data-status] {
+  gap: var(--blok-space-1-25);
+  padding-block: 0;
+  padding-inline: var(--blok-database-status-pill-pad-start) var(--blok-database-status-pill-pad-end);
+  border-radius: var(--blok-radius-pill);
+  font-weight: 400;
+  line-height: 20px;
+}
+
+[data-blok-database-column-pill][data-status] [data-blok-database-column-dot] {
+  display: block;
+}
+
 /**
  * Column title text — uppercase status-label style, never truncate.
  */

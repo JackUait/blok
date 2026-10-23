@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DatabaseBoardView } from '../../../../src/tools/database/database-board-view';
 import { simulateKeydown } from '../../../helpers/simulate';
-import type { SelectOption, DatabaseRow } from '../../../../src/tools/database/types';
+import type { SelectOption, DatabaseRow, DatabaseViewConfig } from '../../../../src/tools/database/types';
 import type { I18n } from '../../../../types';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 
@@ -116,6 +116,43 @@ describe('DatabaseBoardView', () => {
       toggleOf(board, 'l1')?.click();
 
       expect(laneOf(board, 'l1')?.hasAttribute('data-collapsed')).toBe(true);
+    });
+  });
+
+  describe('a Status board\'s column header (findings-board B01)', () => {
+    const statusView = (options: SelectOption[], extra: Partial<DatabaseViewConfig> = {}): HTMLElement => new DatabaseBoardView({
+      readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title',
+      schema: [{ id: 'title', name: 'Name', type: 'title', position: 'a0' }, { id: 's', name: 'Status', type: 'status', position: 'a1' }],
+      view: { id: 'v', name: 'Board', type: 'board', position: 'a0', sorts: [], filters: [], visibleProperties: [], groupBy: 's', ...extra },
+    }).createView();
+    const pillOf = (board: HTMLElement, id: string): HTMLElement | null =>
+      board.querySelector<HTMLElement>(`[data-option-id="${id}"] [data-blok-database-column-pill]`);
+
+    it('draws the status pill with its dot', () => {
+      const board = statusView([makeOption({ id: 'ip', label: 'In progress', color: 'blue' })]);
+      const pill = pillOf(board, 'ip');
+      const dot = pill?.querySelector<HTMLElement>('[data-blok-database-column-dot]');
+
+      expect(pill?.hasAttribute('data-status')).toBe(true);
+      expect(dot?.style.backgroundColor).toBe('var(--blok-database-status-dot-blue)');
+      expect(pill?.querySelector('[data-blok-database-column-title]')?.textContent).toBe('In progress');
+    });
+
+    it('draws a colourless status as the gray pill and dot, and leaves its column uncoloured', () => {
+      const board = statusView([makeOption({ id: 'ns', label: 'Not started' })]);
+      const pill = pillOf(board, 'ns');
+
+      expect(pill?.style.backgroundColor).toBe('var(--blok-database-option-gray-bg)');
+      expect(pill?.querySelector<HTMLElement>('[data-blok-database-column-dot]')?.style.backgroundColor).toBe('var(--blok-database-status-dot-gray)');
+      expect(board.querySelector('[data-blok-database-column][data-option-id="ns"]')?.hasAttribute('data-color')).toBe(false);
+    });
+
+    it('keeps the select pill for status groups and for select boards', () => {
+      const byGroup = statusView([makeOption({ id: 'g', color: 'blue' })], { groupByStatus: 'group' });
+      const select = new DatabaseBoardView({ readOnly: false, i18n, options: [makeOption({ id: 'o', color: 'blue' })], getRows: () => [], titlePropertyId: 'title' }).createView();
+
+      expect(pillOf(byGroup, 'g')?.hasAttribute('data-status')).toBe(false);
+      expect(pillOf(select, 'o')?.hasAttribute('data-status')).toBe(false);
     });
   });
 

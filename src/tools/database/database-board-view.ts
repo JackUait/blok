@@ -4,6 +4,7 @@ import type { SelectOption, DatabaseRow, DatabaseViewConfig, PropertyDefinition,
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { NO_VALUE_GROUP_KEY } from './database-model';
 import { createOptionPill, renderCellValue } from './cells';
+import { shownStatusOption } from './cells/option-colors';
 import { rowCellContext } from './reminders';
 import type { CellContext } from './cells';
 import { readPropertyValue } from './property-values';
@@ -392,6 +393,14 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     return toggle;
   }
 
+  /** Columns are a status property's options, not its groups. */
+  private get isStatusBoard(): boolean {
+    const view = this.settings.view;
+
+    return view !== undefined && view.groupByStatus !== 'group'
+      && this.settings.schema?.find((property) => property.id === view.groupBy)?.type === 'status';
+  }
+
   private get cardSize(): CardSize {
     return this.settings.view === undefined ? 'medium' : resolveCardSize(this.settings.view);
   }
@@ -653,17 +662,21 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     header.style.cursor = 'grab';
 
     const pill = document.createElement('div');
+    const status = this.isStatusBoard && option.id !== NO_VALUE_GROUP_KEY;
+    // A status header is the cell's status pill: a colourless option draws gray (B01).
+    const color = status ? shownStatusOption(option).color : option.color;
 
     pill.setAttribute('data-blok-database-column-pill', '');
+    pill.toggleAttribute('data-status', status);
 
-    if (option.color !== undefined) {
-      pill.style.backgroundColor = `var(--blok-database-option-${option.color}-bg)`;
-      pill.style.color = `var(--blok-database-option-${option.color}-text)`;
+    if (color !== undefined) {
+      pill.style.backgroundColor = `var(--blok-database-option-${color}-bg)`;
+      pill.style.color = `var(--blok-database-option-${color}-text)`;
 
       const dot = document.createElement('span');
 
       dot.setAttribute('data-blok-database-column-dot', '');
-      dot.style.backgroundColor = `var(--blok-color-${option.color}-text)`;
+      dot.style.backgroundColor = status ? `var(--blok-database-status-dot-${color})` : `var(--blok-color-${color}-text)`;
       pill.appendChild(dot);
     }
 

@@ -91,6 +91,12 @@ describe('database board card and calendar "No date" styles', () => {
     expect(ruleBody('[data-blok-database-card-property][data-ghost] svg')).toMatch(/inline-size:\s*16px/);
   });
 
+  // The card is white again (B10), and the placeholder's light gray is 2.4:1 there; the secondary ink passes AA (user decision 2026-10-21).
+  it('draws the card title placeholders in an ink that passes AA', () => {
+    expect(ruleBody('[data-blok-database-card-title][data-placeholder]')).toMatch(/color:\s*var\(--blok-database-ink-secondary\)/);
+    expect(ruleBody('[data-blok-database-card-title-input]::placeholder')).toMatch(/color:\s*var\(--blok-database-ink-secondary\)/);
+  });
+
   it('wraps a property only when its wrap setting is on', () => {
     expect(ruleBody('[data-blok-database-card-property][data-wrap="false"]')).toMatch(/white-space:\s*nowrap/);
   });

@@ -1095,7 +1095,7 @@
 }
 
 [data-blok-database-card-title-input]::placeholder {
-  color: var(--blok-database-card-placeholder);
+  color: var(--blok-database-ink-secondary);
 }
 
 /* Notion's 18px blank page glyph before a title being edited (feel findings B09). */
@@ -1327,8 +1327,9 @@
   word-break: break-word;
 }
 
+/* Notion's light gray fails AA on the white card; the secondary ink passes. */
 [data-blok-database-card-title][data-placeholder] {
-  color: var(--blok-database-card-placeholder);
+  color: var(--blok-database-ink-secondary);
   font-style: normal;
 }
 

@@ -4872,7 +4872,7 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-database-card-title-input]::placeholder {
-  color: var(--blok-database-card-placeholder);
+  color: var(--blok-database-ink-secondary);
 }
 
 [data-blok-database-card-edit-glyph] {
@@ -5070,7 +5070,7 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-database-card-title][data-placeholder] {
-  color: var(--blok-database-card-placeholder);
+  color: var(--blok-database-ink-secondary);
   font-style: normal;
 }
 

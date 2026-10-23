@@ -4170,6 +4170,7 @@ span[data-blok-slash-search] {
   --blok-database-timeline-grid-line: rgba(42, 28, 0, 0.07);
   --blok-database-timeline-header-line: rgb(230, 229, 227);
   --blok-database-timeline-weekend-bg: rgb(247, 247, 247);
+  --blok-database-timeline-canvas-bg: rgb(253, 253, 253);
   --blok-database-timeline-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-timeline-text: rgb(44, 44, 43);
   --blok-database-timeline-control-text: rgb(142, 139, 134);
@@ -4411,6 +4412,7 @@ span[data-blok-slash-search] {
   --blok-database-timeline-grid-line: rgba(255, 255, 243, 0.082);
   --blok-database-timeline-header-line: rgb(56, 56, 54);
   --blok-database-timeline-weekend-bg: rgba(255, 255, 255, 0.03);
+  --blok-database-timeline-canvas-bg: rgb(25, 25, 25);
   --blok-database-timeline-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-timeline-text: rgb(240, 239, 237);
   --blok-database-timeline-control-text: rgb(173, 169, 163);
@@ -4652,6 +4654,7 @@ span[data-blok-slash-search] {
   --blok-database-timeline-grid-line: rgba(255, 255, 243, 0.082);
   --blok-database-timeline-header-line: rgb(56, 56, 54);
   --blok-database-timeline-weekend-bg: rgba(255, 255, 255, 0.03);
+  --blok-database-timeline-canvas-bg: rgb(25, 25, 25);
   --blok-database-timeline-muted-text: var(--blok-database-ink-tertiary);
   --blok-database-timeline-text: rgb(240, 239, 237);
   --blok-database-timeline-control-text: rgb(173, 169, 163);
@@ -13281,12 +13284,11 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-timeline-body] {
   display: flex;
   align-items: flex-start;
-  border-block-start: 1px solid var(--blok-database-timeline-grid-line);
 }
 
 [data-blok-database-timeline-table] {
   flex: none;
-  inline-size: 305px;
+  inline-size: 244px;
   overflow: hidden;
   border-inline-end: 1px solid var(--blok-database-timeline-grid-line);
 }
@@ -13320,8 +13322,69 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-timeline-table-title] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
   font-weight: 500;
   cursor: pointer;
+}
+
+[data-blok-database-timeline-table-title] > :is([data-blok-database-page-icon], [data-blok-database-page-icon-placeholder]) {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 20px;
+  block-size: 20px;
+  color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-database-timeline-table-title-text] {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-blok-database-timeline-table-header] > * {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+}
+
+[data-blok-database-timeline-table-header-icon] {
+  display: inline-flex;
+  color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-database-timeline-table-new] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+  inline-size: 100%;
+  block-size: 36px;
+  padding-inline: var(--blok-space-2);
+  border: none;
+  border-block-end: 1px solid var(--blok-database-timeline-grid-line);
+  background: transparent;
+  color: var(--blok-database-ink-secondary);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+[data-blok-database-timeline-table-new]:hover {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
+[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"] {
+  margin-inline-start: calc(244px - 24px);
+}
+
+[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"] svg {
+  transform: scaleX(-1);
+}
+
+[dir="rtl"] [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"] svg {
+  transform: none;
 }
 
 [data-blok-database-timeline-spacer] {
@@ -13335,6 +13398,8 @@ textarea[data-blok-database-cell-input] {
   overflow-x: auto;
   overflow-y: hidden;
   outline-offset: -2px;
+  background-color: var(--blok-database-timeline-canvas-bg);
+  border-block-end: 1px solid var(--blok-database-calendar-border);
 }
 
 [data-blok-database-timeline-scroller]:focus-visible {
@@ -13414,6 +13479,17 @@ textarea[data-blok-database-cell-input] {
   position: absolute;
   inset-block: 0;
   inline-size: 1px;
+  background-color: var(--blok-database-today);
+}
+
+[data-blok-database-timeline-today-line]::before {
+  content: "";
+  position: absolute;
+  inset-block-start: -3.5px;
+  inset-inline-start: -3px;
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: 50%;
   background-color: var(--blok-database-today);
 }
 
@@ -13618,6 +13694,37 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-timeline-units] > [data-range-edge] {
   color: var(--blok-database-timeline-text);
+}
+
+[data-blok-database-timeline-bar-chip] {
+  display: none;
+}
+
+[data-blok-database-timeline-bar][data-clipped-start] > [data-blok-database-timeline-bar-chip] {
+  position: sticky;
+  inset-inline-start: var(--blok-space-1-5);
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  inline-size: 16px;
+  block-size: 16px;
+  border: 1px solid var(--blok-database-timeline-arrow-border);
+  border-radius: var(--blok-radius-control-sm);
+  background-color: var(--blok-database-timeline-arrow-bg);
+  color: var(--blok-database-timeline-arrow-icon);
+  cursor: pointer;
+}
+
+[data-blok-database-timeline-bar][data-clipped-start] > [data-blok-database-timeline-bar-chip] svg {
+  inline-size: 14px;
+  block-size: 12px;
+}
+
+[data-blok-database-timeline-bar][data-clipped-start] > [data-blok-database-timeline-bar-title] {
+  position: sticky;
+  inset-inline-start: calc(var(--blok-space-1-5) * 2 + 16px);
 }
 
 [data-blok-database-timeline-bar-title] {
@@ -14967,6 +15074,10 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-database-timeline-bar]:hover [data-blok-database-timeline-link-handle], [data-blok-database-timeline][data-dragging="link"] [data-blok-database-timeline-link-handle] {
   opacity: 1;
+}
+
+[data-blok-item-name^="database-timeline-zoom-"] {
+  padding-block: var(--blok-space-1);
 }
 
 [data-blok-database-timeline]:is([data-dragging="start"], [data-dragging="end"]) [data-blok-database-timeline-link-handle] {

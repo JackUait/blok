@@ -5932,13 +5932,14 @@ export class DatabaseTool implements BlockTool {
   private openTimelineZoomMenu(anchor: HTMLElement, viewConfig: DatabaseViewConfig): void {
     const current = resolveTimelineZoom(viewConfig);
 
+    // findings C22: Notion's zoom menu is 180 wide.
     this.showGroupPopover(anchor, TIMELINE_ZOOMS.map((zoom) => ({
       type: PopoverItemType.Default,
       name: `database-timeline-zoom-${zoom}`,
       title: this.api.i18n.t(timelineZoomLabelKey(zoom)),
       isActive: zoom === current,
       onActivate: () => this.updateActiveView({ timelineZoom: zoom }),
-    })));
+    })), undefined, { minWidth: '180px' });
   }
 
   /** "+" on a day: a new row dated that day, plus what the view's filters ask for. */

@@ -157,8 +157,9 @@ describe('DatabaseTimelineView', () => {
       // findings C03: an undated item has no lane while the table is hidden.
       expect([...root.querySelectorAll('[data-blok-database-timeline-row]')].map((el) => el.getAttribute('data-row-id'))).toEqual(['r1', 'r2']);
       expect(bars(root).map((el) => el.getAttribute('data-row-id'))).toEqual(['r1', 'r2']);
-      expect(bar(root, 'r2').style.width).toBe(`${3 * width}px`);
-      expect(bar(root, 'r2').style.insetInlineStart).toBe(`${px('2026-10-12')}px`);
+      // findings C23: 1.5px in from each day edge.
+      expect(bar(root, 'r2').style.width).toBe(`${3 * width - 3}px`);
+      expect(bar(root, 'r2').style.insetInlineStart).toBe(`${px('2026-10-12') + 1.5}px`);
     });
 
     it('marks the zoom level and draws the canvas as wide as the window', () => {
@@ -175,7 +176,7 @@ describe('DatabaseTimelineView', () => {
         groups: single([row('r1', 'Build', '2026-10-05', { 'p-end': '2026-10-08' })]),
       });
 
-      expect(bar(root, 'r1').style.width).toBe(`${4 * TIMELINE_DAY_WIDTH.month}px`);
+      expect(bar(root, 'r1').style.width).toBe(`${4 * TIMELINE_DAY_WIDTH.month - 3}px`);
     });
 
     it('shows the title and the visible properties on a bar, and skips empty ones', () => {
@@ -242,6 +243,28 @@ describe('DatabaseTimelineView', () => {
       const { root } = mount({ view: timelineView({ showTimelineTable: true }) });
 
       expect([...root.querySelectorAll('[data-blok-database-timeline-row]')].map((el) => el.getAttribute('data-row-id'))).toEqual(['r1', 'r2', 'r3']);
+    });
+
+    // findings C14: "Aa Name" headers, page icons on the rows, "+ New" as the panel's last row.
+    it('draws each header with its type glyph and each title with its page icon', () => {
+      const { root } = mount({ view: timelineView({ showTimelineTable: true }) });
+      const header = root.querySelector('[data-blok-database-timeline-table-header] [data-property-id="p-title"]');
+      const title = root.querySelector('[data-blok-database-timeline-table-row][data-row-id="r1"] [data-blok-database-timeline-table-title]');
+
+      expect(header?.querySelector('[data-blok-database-timeline-table-header-icon] svg')).not.toBeNull();
+      expect(header?.textContent?.trim()).toBe('Name');
+      expect(title?.firstElementChild?.hasAttribute('data-blok-database-page-icon-placeholder')).toBe(true);
+    });
+
+    it('ends the panel with "+ New", and the canvas lane beside it stays empty', () => {
+      const { root, handlers } = mount({ view: timelineView({ showTimelineTable: true }) });
+      const add = root.querySelector<HTMLElement>('[data-blok-database-timeline-table] [data-blok-database-timeline-table-new]');
+
+      expect(add?.nextElementSibling?.hasAttribute('data-blok-database-timeline-table-footer')).toBe(true);
+      expect(root.querySelector('[data-blok-database-timeline-new-lane] [data-blok-database-timeline-new]')).toBeNull();
+      expect(root.querySelector('[data-blok-database-timeline-new-lane]')).not.toBeNull();
+      add?.click();
+      expect(handlers.addRow).toHaveBeenCalledWith(null, { start: '2026-10-09/2026-10-13' });
     });
 
     it('is hidden by default and its toggle asks to show it', () => {
@@ -589,6 +612,24 @@ describe('DatabaseTimelineView', () => {
 
       arrow('r2', 'after')?.click();
       expect(handlers.navigate).toHaveBeenCalledWith('2027-03-01');
+    });
+
+    // findings C17: a bar cut by the screen's start keeps a "←" chip before its title.
+    it('marks a bar that starts before the screen and still shows, and its chip jumps to its start', () => {
+      const { root, view } = mount();
+      const el = scroller(root);
+
+      Object.defineProperty(el, 'clientWidth', { value: 400, configurable: true });
+      el.scrollLeft = px('2026-10-13');
+      view.refreshOffscreen();
+
+      expect(bar(root, 'r2').hasAttribute('data-clipped-start')).toBe(true);
+      expect(bar(root, 'r1').hasAttribute('data-clipped-start')).toBe(false);
+      const chip = bar(root, 'r2').querySelector<HTMLElement>('[data-blok-database-timeline-bar-chip]');
+
+      expect(chip?.nextElementSibling?.hasAttribute('data-blok-database-timeline-bar-title')).toBe(true);
+      chip?.click();
+      expect(el.scrollLeft).toBeLessThan(px('2026-10-13'));
     });
 
     // research/26 §4d: Notion draws a straight arrow in the chip, not a chevron.

@@ -33,6 +33,7 @@ const TOKENS = [
   '--blok-database-timeline-arrow-bg',
   '--blok-database-timeline-arrow-icon',
   '--blok-database-timeline-arrow-hover-bg',
+  '--blok-database-timeline-canvas-bg',
 ];
 
 describe('database timeline styles', () => {
@@ -109,6 +110,47 @@ describe('database timeline styles', () => {
     const offset = /inset-inline-end:\s*-(\d+)px/.exec(ruleBody('[data-blok-database-timeline-link-handle]'));
 
     expect(Number(offset?.[1]) - 10).toBeGreaterThanOrEqual(6);
+  });
+
+  // findings C19/C20 (r26 §4d, r33 §4.6): no line under the toolbar; a near-white canvas with a bottom line.
+  it('draws no line under the toolbar, and fills the canvas with a line under it', () => {
+    expect(ruleBody('[data-blok-database-timeline-body]')).not.toContain('border-block-start');
+    expect(ruleBody('[data-blok-database-timeline-scroller]')).toContain('background-color: var(--blok-database-timeline-canvas-bg)');
+    expect(ruleBody('[data-blok-database-timeline-scroller]')).toContain('border-block-end: 1px solid var(--blok-database-calendar-border)');
+    expect(css).toContain('--blok-database-timeline-canvas-bg: rgb(253, 253, 253);');
+    expect(darkValues('--blok-database-timeline-canvas-bg')).toEqual(['rgb(25, 25, 25)', 'rgb(25, 25, 25)']);
+  });
+
+  // findings C21: a 7px red dot where the today line meets the header.
+  it('tops the today line with a 7px dot', () => {
+    const dot = ruleBody('[data-blok-database-timeline-today-line]::before');
+
+    expect(dot).toMatch(/inline-size:\s*7px/);
+    expect(dot).toMatch(/block-size:\s*7px/);
+    expect(dot).toContain('background-color: var(--blok-database-today)');
+  });
+
+  // findings C17: the chip before a cut bar's title, the same 16px chip as the off-screen one.
+  it('shows the cut-start chip only on a bar the view marks, and keeps it and the title at the screen\'s start', () => {
+    expect(ruleBody('[data-blok-database-timeline-bar-chip]')).toMatch(/display:\s*none/);
+    expect(ruleBody('[data-blok-database-timeline-bar][data-clipped-start] > [data-blok-database-timeline-bar-chip]')).toMatch(/display:\s*inline-flex/);
+    expect(ruleBody('[data-blok-database-timeline-bar][data-clipped-start] > [data-blok-database-timeline-bar-chip]')).toMatch(/position:\s*sticky/);
+  });
+
+  // findings C14: a 244px panel, its « at the panel's end, beside the month.
+  it('draws the table panel 244px wide and turns the toggle into « at its end while it shows', () => {
+    expect(ruleBody('[data-blok-database-timeline-table]')).toMatch(/inline-size:\s*244px/);
+    const shown = '[data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"]';
+
+    expect(ruleBody(shown)).toMatch(/margin-inline-start:/);
+    expect(ruleBody(`${shown} svg`)).toContain('transform: scaleX(-1)');
+  });
+
+  // findings C22: Notion's last zoom reads "5 Years".
+  it('names the last zoom "5 Years" in English', () => {
+    const en = readFileSync(resolve(__dirname, '../../../src/components/i18n/locales/en.json'), 'utf8');
+
+    expect(en).toContain('"tools.database.timelineZoomFiveYears": "5 Years"');
   });
 
   it('hides an off-screen arrow that the view marks hidden', () => {

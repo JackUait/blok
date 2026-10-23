@@ -1,6 +1,7 @@
 import type { I18n } from '../../../types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
-import { pageIconElement, showsPageIcon } from './page-icon';
+import { pageIconElement, pagePlaceholderIcon, showsPageIcon } from './page-icon';
+import { propertyTypeMeta } from './database-property-types';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption, TimelineZoom } from './types';
 import type { GalleryDropResult } from './database-gallery-view';
 import { createOptionPill, renderCellValue } from './cells';
@@ -107,6 +108,7 @@ export interface DatabaseTimelineViewOptions {
 
 const DRAG_THRESHOLD = 4;
 const DAY_MINUTES = 24 * 60;
+const BAR_INSET = 1.5;
 /** findings C07: Notion's "+ New" made a 5-day bar. */
 const NEW_BAR_DAYS = 5;
 const PAN_PX = 160;
@@ -388,8 +390,13 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     for (const property of properties) {
       const cell = document.createElement('div');
 
+      const glyph = document.createElement('span');
+
       cell.setAttribute('data-property-id', property.id);
-      cell.textContent = property.name;
+      glyph.setAttribute('data-blok-database-timeline-table-header-icon', '');
+      glyph.setAttribute('aria-hidden', 'true');
+      glyph.innerHTML = propertyTypeMeta(property.type).icon;
+      cell.append(glyph, property.name);
       header.appendChild(cell);
     }
     panel.appendChild(header);
@@ -402,6 +409,15 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       if (group.total > group.rows.length) {
         panel.appendChild(this.createSpacer());
       }
+    }
+    if (this.canEdit) {
+      const add = document.createElement('button');
+
+      add.type = 'button';
+      add.setAttribute('data-blok-database-timeline-table-new', '');
+      add.innerHTML = IconPlus;
+      add.append(this.t('tools.database.timelineNew'));
+      panel.appendChild(add);
     }
     panel.appendChild(this.createTableFooter(properties));
 
@@ -475,7 +491,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     cell.setAttribute('data-blok-database-timeline-table-title', '');
     title.setAttribute('data-blok-database-timeline-table-title-text', '');
     title.textContent = this.titleOf(row);
-    cell.appendChild(title);
+    cell.append(pageIconElement(row) ?? pagePlaceholderIcon(), title);
     if (this.options.commentBadges !== undefined) {
       syncCommentBadge(title, row.id, this.options.commentBadges, this.options.i18n);
     }
@@ -544,6 +560,10 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     const add = document.createElement('button');
 
     lane.setAttribute('data-blok-database-timeline-new-lane', '');
+    // With the table shown, "+ New" is the panel's last row; this lane only keeps the rows lined up.
+    if (resolveShowTimelineTable(this.options.view)) {
+      return lane;
+    }
     add.type = 'button';
     add.setAttribute('data-blok-database-timeline-new', '');
     add.innerHTML = IconPlus;
@@ -842,6 +862,13 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       el.appendChild(this.createHandle('start'));
     }
 
+    const chip = document.createElement('span');
+
+    chip.setAttribute('data-blok-database-timeline-bar-chip', '');
+    chip.setAttribute('aria-hidden', 'true');
+    chip.innerHTML = IconArrowLeftSmall;
+    el.appendChild(chip);
+
     const titleEl = this.createBarTitle(title);
     const icon = showsPageIcon(this.options.view) ? pageIconElement(row) : null;
 
@@ -966,6 +993,10 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       line.querySelectorAll('[data-blok-database-timeline-offscreen]').forEach((arrow) => {
         arrow.toggleAttribute('hidden', arrow.getAttribute('data-blok-database-timeline-offscreen') !== side);
       });
+      const barStart = row === undefined || span === null ? null : this.geometryOf(span, this.valuesOf(row)).offset;
+
+      line.querySelector('[data-blok-database-timeline-bar]')
+        ?.toggleAttribute('data-clipped-start', barStart !== null && side === null && barStart < this.scrollStart);
     }
   }
 
@@ -1036,13 +1067,13 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       // Unmeasured in Notion: the step is one screen.
       ['[data-blok-database-timeline-prev]', () => this.stepScreen(-1)],
       ['[data-blok-database-timeline-next]', () => this.stepScreen(1)],
-      ['[data-blok-database-timeline-new]', () => {
+      ['[data-blok-database-timeline-new], [data-blok-database-timeline-table-new]', () => {
         if (this.canEdit) {
           handlers.addRow(this.options.grouped ? this.options.groups[0]?.key ?? null : null, this.newBar());
         }
       }],
       ['[data-blok-database-timeline-load-more]', (el) => handlers.loadMore(el.getAttribute('data-group-key') ?? '')],
-      ['[data-blok-database-timeline-offscreen]', (el) => this.jumpTo(el.closest('[data-row-id]')?.getAttribute('data-row-id') ?? '')],
+      ['[data-blok-database-timeline-offscreen], [data-blok-database-timeline-bar-chip]', (el) => this.jumpTo(el.closest('[data-row-id]')?.getAttribute('data-row-id') ?? '')],
       ['[data-blok-database-timeline-table-title], [data-blok-database-timeline-bar]', (el) => {
         const rowId = el.closest('[data-row-id]')?.getAttribute('data-row-id');
 
@@ -1128,7 +1159,10 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
   /** Hours zoom places a timed value by its time; every other case by whole days. */
   private geometryOf(span: EventSpan, values: BarValues): { offset: number; width: number } {
-    return (this.zoom === 'hours' ? hourBarGeometry(values, this.window.start) : null) ?? barGeometry(span, this.window.start, this.zoom);
+    const geometry = (this.zoom === 'hours' ? hourBarGeometry(values, this.window.start) : null) ?? barGeometry(span, this.window.start, this.zoom);
+
+    // findings C23: at day-level zooms a bar sits 1.5px in from each day edge (37px of a 40px day).
+    return MONTH_IN_TOOLBAR.has(this.zoom) ? { offset: geometry.offset + BAR_INSET, width: geometry.width - 2 * BAR_INSET } : geometry;
   }
 
   private valuesOf(row: DatabaseRow): BarValues {

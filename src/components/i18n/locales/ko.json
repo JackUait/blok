@@ -633,6 +633,7 @@
   "tools.database.duplicateView": "복제",
   "tools.database.deleteView": "삭제",
   "tools.database.addView": "뷰 추가",
+  "tools.database.addNewView": "새 뷰 추가",
   "tools.database.viewTypeBoard": "보드",
   "tools.database.viewTypeList": "목록",
   "tools.database.viewTypeTable": "표",

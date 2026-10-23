@@ -633,6 +633,7 @@
   "tools.database.duplicateView": "دووبارەکردنەوە",
   "tools.database.deleteView": "سڕینەوە",
   "tools.database.addView": "بینین زیاد بکە",
+  "tools.database.addNewView": "بینینی نوێ زیاد بکە",
   "tools.database.viewTypeBoard": "تەختە",
   "tools.database.viewTypeList": "لیست",
   "tools.database.viewTypeTable": "خشتە",

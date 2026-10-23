@@ -622,6 +622,7 @@
   "tools.database.duplicateView": "ކޮޕީ ހަދާ",
   "tools.database.deleteView": "ފޮހެލާ",
   "tools.database.addView": "ވިއު އިތުރުކުރޭ",
+  "tools.database.addNewView": "އައު ވިއުއެއް އިތުރުކުރޭ",
   "tools.database.viewTypeBoard": "ބޯޑް",
   "tools.database.viewTypeList": "ލިސްޓް",
   "tools.database.viewTypeTable": "ޓޭބަލް",

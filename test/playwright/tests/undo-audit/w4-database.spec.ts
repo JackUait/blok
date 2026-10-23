@@ -343,7 +343,11 @@ const GESTURES: Gesture[] = [
     await input.press('Enter');
   } },
   { id: 'W4D-C8', name: 'deleting a view', run: async (page) => {
-    await tabMenu(page, 'view-1', 'Delete');
+    // Every delete asks first (feel/findings-toolbar V24); the menu waits behind the dialog.
+    await page.locator('[data-blok-database-tab][data-view-id="view-1"]').dblclick();
+    await page.getByRole('menuitem').filter({ hasText: 'Delete view' }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Delete view' }).click();
+    await expect(page.getByRole('menuitem').filter({ hasText: 'Delete view' })).toHaveCount(0);
   } },
   { id: 'W4D-C9', name: 'duplicating a view', run: async (page) => {
     await tabMenu(page, 'view-1', 'Duplicate');

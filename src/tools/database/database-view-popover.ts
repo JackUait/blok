@@ -1,4 +1,4 @@
-import { IconBoard, IconCalendar, IconChart, IconGallery, IconListBulleted, IconMessage, IconTable, IconTimeline, IconListChecklist, IconMap, IconDatabase } from '../../components/icons';
+import { IconViewBoard, IconCalendar, IconChart, IconGallery, IconListBulleted, IconMessage, IconTable, IconTimeline, IconListChecklist, IconMap, IconDatabase } from '../../components/icons';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
@@ -10,22 +10,21 @@ interface ViewTypeOption {
   type: ViewType;
   icon: string;
   labelKey: string;
-  descriptionKey: string;
 }
 
 /** Notion's add-view order (research/08:113). */
 const VIEW_TYPES: ViewTypeOption[] = [
-  { type: 'table', icon: IconTable, labelKey: 'tools.database.viewTypeTable', descriptionKey: 'tools.database.viewTypeTableDescription' },
-  { type: 'board', icon: IconBoard, labelKey: 'tools.database.viewTypeBoard', descriptionKey: 'tools.database.viewTypeBoardDescription' },
-  { type: 'gallery', icon: IconGallery, labelKey: 'tools.database.viewTypeGallery', descriptionKey: 'tools.database.viewTypeGalleryDescription' },
-  { type: 'list', icon: IconListBulleted, labelKey: 'tools.database.viewTypeList', descriptionKey: 'tools.database.viewTypeListDescription' },
-  { type: 'chart', icon: IconChart, labelKey: 'tools.database.viewTypeChart', descriptionKey: 'tools.database.viewTypeChartDescription' },
-  { type: 'timeline', icon: IconTimeline, labelKey: 'tools.database.viewTypeTimeline', descriptionKey: 'tools.database.viewTypeTimelineDescription' },
-  { type: 'feed', icon: IconMessage, labelKey: 'tools.database.viewTypeFeed', descriptionKey: 'tools.database.viewTypeFeedDescription' },
+  { type: 'table', icon: IconTable, labelKey: 'tools.database.viewTypeTable' },
+  { type: 'board', icon: IconViewBoard, labelKey: 'tools.database.viewTypeBoard' },
+  { type: 'gallery', icon: IconGallery, labelKey: 'tools.database.viewTypeGallery' },
+  { type: 'list', icon: IconListBulleted, labelKey: 'tools.database.viewTypeList' },
+  { type: 'chart', icon: IconChart, labelKey: 'tools.database.viewTypeChart' },
+  { type: 'timeline', icon: IconTimeline, labelKey: 'tools.database.viewTypeTimeline' },
+  { type: 'feed', icon: IconMessage, labelKey: 'tools.database.viewTypeFeed' },
   // Form and map are Tier 3 (D6). Dashboard, after Chart in Notion, is a data slot only, so it is not offered.
-  { type: 'map', icon: IconMap, labelKey: 'tools.database.viewTypeMap', descriptionKey: 'tools.database.viewTypeMapDescription' },
-  { type: 'calendar', icon: IconCalendar, labelKey: 'tools.database.viewTypeCalendar', descriptionKey: 'tools.database.viewTypeCalendarDescription' },
-  { type: 'form', icon: IconListChecklist, labelKey: 'tools.database.viewTypeForm', descriptionKey: 'tools.database.viewTypeFormDescription' },
+  { type: 'map', icon: IconMap, labelKey: 'tools.database.viewTypeMap' },
+  { type: 'calendar', icon: IconCalendar, labelKey: 'tools.database.viewTypeCalendar' },
+  { type: 'form', icon: IconListChecklist, labelKey: 'tools.database.viewTypeForm' },
 ];
 
 export interface ViewPopoverOptions {
@@ -64,7 +63,7 @@ export class DatabaseViewPopover {
     const headingEl = document.createElement('div');
 
     headingEl.setAttribute('data-blok-database-view-popover-heading', '');
-    headingEl.textContent = this.translate('tools.database.addView', ['Add', 'view'].join(' '));
+    headingEl.textContent = this.translate('tools.database.addNewView', 'Add a new view');
 
     const headingItem = {
       type: PopoverItemType.Html as const,
@@ -78,11 +77,12 @@ export class DatabaseViewPopover {
 
         return {
           type: PopoverItemType.Html as const,
+          name: 'database-view-tile',
           element: el,
           closeOnActivate: true,
         };
       }),
-      ...(this.onNewSource === undefined ? [] : [{
+      ...(this.onNewSource === undefined ? [] : [{ type: PopoverItemType.Separator as const }, {
         type: PopoverItemType.Html as const,
         element: this.createNewSourceItem(this.onNewSource),
         closeOnActivate: true,
@@ -90,13 +90,12 @@ export class DatabaseViewPopover {
     ];
 
     this.popover = new PopoverDesktop({
-      class: DATABASE_MENU_CLASS,
+      // The second class lays the tiles out as Notion's 4-column grid (feel/findings-toolbar V04).
+      class: `${DATABASE_MENU_CLASS} blok-database-add-view-menu`,
       animateClose: true,
       items,
       trigger: anchor,
-      width: 'auto',
-      minWidth: '200px',
-      flippable: false,
+      width: '390px',
       autoFocusFirstItem: false,
     });
 
@@ -112,35 +111,19 @@ export class DatabaseViewPopover {
     this.popover.show();
   }
 
+  /** A button, so the menu's arrow keys reach it and Enter picks it. */
   private createViewItem(option: ViewTypeOption): HTMLElement {
-    const item = document.createElement('div');
-
-    item.setAttribute('data-blok-database-view-option', option.type);
-
-    const iconEl = document.createElement('div');
-
-    iconEl.setAttribute('data-blok-database-view-option-icon', '');
-    iconEl.innerHTML = option.icon;
-    item.appendChild(iconEl);
-
-    const textEl = document.createElement('div');
-
-    textEl.setAttribute('data-blok-database-view-option-text', '');
-
+    const item = document.createElement('button');
+    const iconEl = document.createElement('span');
     const labelEl = document.createElement('span');
 
+    item.type = 'button';
+    item.setAttribute('data-blok-database-view-option', option.type);
+    iconEl.setAttribute('data-blok-database-view-option-icon', '');
+    iconEl.innerHTML = option.icon;
     labelEl.setAttribute('data-blok-database-view-option-label', '');
     labelEl.textContent = this.translate(option.labelKey, '');
-    textEl.appendChild(labelEl);
-
-    const descEl = document.createElement('span');
-
-    descEl.setAttribute('data-blok-database-view-option-desc', '');
-    descEl.textContent = this.translate(option.descriptionKey, '');
-    textEl.appendChild(descEl);
-
-    item.appendChild(textEl);
-
+    item.append(iconEl, labelEl);
     item.addEventListener('click', () => {
       this.onSelect(option.type);
     });
@@ -149,21 +132,18 @@ export class DatabaseViewPopover {
   }
 
   private createNewSourceItem(onNewSource: () => void): HTMLElement {
-    const item = document.createElement('div');
-    const iconEl = document.createElement('div');
-    const textEl = document.createElement('div');
+    const item = document.createElement('button');
+    const iconEl = document.createElement('span');
     const labelEl = document.createElement('span');
 
-    // Shares the layout rows' look.
+    item.type = 'button';
     item.setAttribute('data-blok-database-view-option', 'new-source');
     item.setAttribute('data-blok-database-view-new-source', '');
     iconEl.setAttribute('data-blok-database-view-option-icon', '');
     iconEl.innerHTML = IconDatabase;
-    textEl.setAttribute('data-blok-database-view-option-text', '');
     labelEl.setAttribute('data-blok-database-view-option-label', '');
     labelEl.textContent = this.translate('tools.database.newDataSource', 'New data source');
-    textEl.appendChild(labelEl);
-    item.append(iconEl, textEl);
+    item.append(iconEl, labelEl);
     item.addEventListener('click', () => onNewSource());
 
     return item;

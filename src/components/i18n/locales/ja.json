@@ -622,6 +622,7 @@
   "tools.database.duplicateView": "複製",
   "tools.database.deleteView": "削除",
   "tools.database.addView": "ビューを追加",
+  "tools.database.addNewView": "新しいビューを追加",
   "tools.database.viewTypeBoard": "ボード",
   "tools.database.viewTypeList": "リスト",
   "tools.database.viewTypeTable": "表",

@@ -631,6 +631,7 @@
   "tools.database.duplicateView": "Gandakan",
   "tools.database.deleteView": "Padam",
   "tools.database.addView": "Tambah paparan",
+  "tools.database.addNewView": "Tambah paparan baharu",
   "tools.database.viewTypeBoard": "Papan",
   "tools.database.viewTypeList": "Senarai",
   "tools.database.viewTypeTable": "Jadual",

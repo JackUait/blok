@@ -620,6 +620,7 @@
   "tools.database.duplicateView": "كۆپەيتىش",
   "tools.database.deleteView": "ئۆچۈرۈش",
   "tools.database.addView": "كۆرۈنۈش قوشۇش",
+  "tools.database.addNewView": "يېڭى كۆرۈنۈش قوشۇش",
   "tools.database.viewTypeBoard": "تاختا",
   "tools.database.viewTypeList": "تىزىملىك",
   "tools.database.viewTypeTable": "جەدۋەل",

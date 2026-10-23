@@ -622,6 +622,7 @@
   "tools.database.duplicateView": "Կրկնօրինակել",
   "tools.database.deleteView": "Ջնջել",
   "tools.database.addView": "Ավելացնել տեսք",
+  "tools.database.addNewView": "Ավելացնել նոր տեսք",
   "tools.database.viewTypeBoard": "Տախտակ",
   "tools.database.viewTypeList": "Ցանկ",
   "tools.database.viewTypeTable": "Աղյուսակ",

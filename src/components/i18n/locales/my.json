@@ -631,6 +631,7 @@
   "tools.database.duplicateView": "ပွားယူ",
   "tools.database.deleteView": "ဖျက်",
   "tools.database.addView": "မြင်ကွင်းထည့်",
+  "tools.database.addNewView": "မြင်ကွင်းအသစ်ထည့်",
   "tools.database.viewTypeBoard": "ဘုတ်",
   "tools.database.viewTypeList": "စာရင်း",
   "tools.database.viewTypeTable": "ဇယား",

@@ -633,6 +633,7 @@
   "tools.database.duplicateView": "ನಕಲು ಮಾಡಿ",
   "tools.database.deleteView": "ಅಳಿಸಿ",
   "tools.database.addView": "ವೀಕ್ಷಣೆ ಸೇರಿಸಿ",
+  "tools.database.addNewView": "ಹೊಸ ವೀಕ್ಷಣೆ ಸೇರಿಸಿ",
   "tools.database.viewTypeBoard": "ಬೋರ್ಡ್",
   "tools.database.viewTypeList": "ಪಟ್ಟಿ",
   "tools.database.viewTypeTable": "ಕೋಷ್ಟಕ",

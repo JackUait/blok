@@ -622,6 +622,7 @@
   "tools.database.duplicateView": "ស្ទួន",
   "tools.database.deleteView": "លុប",
   "tools.database.addView": "បន្ថែមទិដ្ឋភាព",
+  "tools.database.addNewView": "បន្ថែមទិដ្ឋភាពថ្មី",
   "tools.database.viewTypeBoard": "ក្ដារ",
   "tools.database.viewTypeList": "បញ្ជី",
   "tools.database.viewTypeTable": "តារាង",

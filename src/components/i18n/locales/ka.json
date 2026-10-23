@@ -622,6 +622,7 @@
   "tools.database.duplicateView": "დუბლირება",
   "tools.database.deleteView": "წაშლა",
   "tools.database.addView": "ხედის დამატება",
+  "tools.database.addNewView": "ახალი ხედის დამატება",
   "tools.database.viewTypeBoard": "დაფა",
   "tools.database.viewTypeList": "სია",
   "tools.database.viewTypeTable": "ცხრილი",

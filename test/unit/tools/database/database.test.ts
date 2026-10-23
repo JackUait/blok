@@ -644,6 +644,61 @@ describe('DatabaseTool', () => {
       expect(titleRow!.compareDocumentPosition(tabBar!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     });
 
+    describe('title row with one view (feel/findings-toolbar V01)', () => {
+      const secondView: DatabaseViewConfig = { id: 'view-2', name: 'Table', type: 'table', position: 'a1', sorts: [], filters: [], visibleProperties: [] };
+
+      it('puts the view toolbar in the title row, after the add-view button', () => {
+        const tool = new DatabaseTool(createDatabaseOptions());
+        const element = tool.render();
+        const titleRow = queryByData(element, 'data-blok-database-title-row');
+        const toolbar = queryByData(element, 'data-blok-database-view-toolbar');
+
+        expect(toolbar?.parentElement).toBe(titleRow);
+        expect(titleRow?.lastElementChild).toBe(toolbar);
+        expect(queryByData(titleRow!, 'data-blok-database-add-view')?.compareDocumentPosition(toolbar!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+        tool.destroy();
+      });
+
+      it('keeps the toolbar in the title row when read-only', () => {
+        const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: true }));
+        const element = tool.render();
+
+        expect(queryByData(element, 'data-blok-database-view-toolbar')?.parentElement?.hasAttribute('data-blok-database-title-row')).toBe(true);
+        tool.destroy();
+      });
+
+      it('moves the toolbar back beside the tabs once there are two views', () => {
+        const tool = new DatabaseTool(createDatabaseOptions());
+        const element = tool.render();
+
+        tool.addView('table');
+
+        const viewBar = queryByData(element, 'data-blok-database-view-bar');
+        const toolbar = queryByData(element, 'data-blok-database-view-toolbar');
+
+        expect(toolbar?.parentElement).toBe(viewBar);
+        expect(queryByData(viewBar!, 'data-blok-database-tab-bar')?.nextElementSibling).toBe(toolbar);
+        expect(viewBar?.hasAttribute('data-single-view')).toBe(false);
+        tool.destroy();
+      });
+
+      it('marks the emptied view bar so it takes no room', () => {
+        const tool = new DatabaseTool(createDatabaseOptions());
+        const element = tool.render();
+
+        expect(queryByData(element, 'data-blok-database-view-bar')?.hasAttribute('data-single-view')).toBe(true);
+        tool.destroy();
+      });
+
+      it('two views keep the toolbar in the view bar', () => {
+        const tool = new DatabaseTool(createDatabaseOptions({ views: [makeDefaultData().views[0], secondView] }));
+        const element = tool.render();
+
+        expect(queryByData(element, 'data-blok-database-view-toolbar')?.parentElement?.hasAttribute('data-blok-database-view-bar')).toBe(true);
+        tool.destroy();
+      });
+    });
+
     it('renders title as contenteditable in edit mode', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
       const element = tool.render();

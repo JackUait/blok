@@ -620,6 +620,7 @@
   "tools.database.duplicateView": "Monista",
   "tools.database.deleteView": "Poista",
   "tools.database.addView": "Lisää näkymä",
+  "tools.database.addNewView": "Lisää uusi näkymä",
   "tools.database.viewTypeBoard": "Taulu",
   "tools.database.viewTypeList": "Luettelo",
   "tools.database.viewTypeTable": "Taulukko",

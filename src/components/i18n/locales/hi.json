@@ -620,6 +620,7 @@
   "tools.database.duplicateView": "प्रतिलिपि बनाएं",
   "tools.database.deleteView": "हटाएं",
   "tools.database.addView": "दृश्य जोड़ें",
+  "tools.database.addNewView": "नया दृश्य जोड़ें",
   "tools.database.viewTypeBoard": "बोर्ड",
   "tools.database.viewTypeList": "सूची",
   "tools.database.viewTypeTable": "तालिका",

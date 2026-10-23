@@ -189,10 +189,11 @@ test.describe('Database — single-view tab bar behaviour', () => {
     const firstTab = tabBar.locator('[data-blok-database-tab][data-view-id="view-1"]');
     await firstTab.dblclick();
 
-    // Wait for context popover and click Delete (destructive item)
+    // Wait for context popover and click Delete (destructive item), then confirm
     const deleteOption = page.locator('[data-blok-popover-item-destructive="true"]').filter({ hasText: 'Delete' });
     await deleteOption.waitFor({ state: 'visible' });
     await deleteOption.click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Delete view' }).click();
 
     // Tab bar should now be hidden (back to single view)
     await expect(tabBar).toBeHidden();

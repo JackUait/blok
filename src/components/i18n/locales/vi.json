@@ -620,6 +620,7 @@
   "tools.database.duplicateView": "Nhân bản",
   "tools.database.deleteView": "Xóa",
   "tools.database.addView": "Thêm chế độ xem",
+  "tools.database.addNewView": "Thêm chế độ xem mới",
   "tools.database.viewTypeBoard": "Bảng",
   "tools.database.viewTypeList": "Danh sách",
   "tools.database.viewTypeTable": "Bảng",

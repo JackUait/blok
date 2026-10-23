@@ -622,6 +622,7 @@
   "tools.database.duplicateView": "Duplică",
   "tools.database.deleteView": "Șterge",
   "tools.database.addView": "Adaugă vizualizare",
+  "tools.database.addNewView": "Adaugă o vizualizare nouă",
   "tools.database.viewTypeBoard": "Panou",
   "tools.database.viewTypeList": "Listă",
   "tools.database.viewTypeTable": "Tabel",

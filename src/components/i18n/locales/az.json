@@ -622,6 +622,7 @@
   "tools.database.duplicateView": "Dublikatını çıxar",
   "tools.database.deleteView": "Sil",
   "tools.database.addView": "Görünüş əlavə et",
+  "tools.database.addNewView": "Yeni görünüş əlavə et",
   "tools.database.viewTypeBoard": "Lövhə",
   "tools.database.viewTypeList": "Siyahı",
   "tools.database.viewTypeTable": "Cədvəl",

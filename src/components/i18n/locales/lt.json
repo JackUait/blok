@@ -633,6 +633,7 @@
   "tools.database.duplicateView": "Dubliuoti",
   "tools.database.deleteView": "Ištrinti",
   "tools.database.addView": "Pridėti rodinį",
+  "tools.database.addNewView": "Pridėti naują rodinį",
   "tools.database.viewTypeBoard": "Lenta",
   "tools.database.viewTypeList": "Sąrašas",
   "tools.database.viewTypeTable": "Lentelė",

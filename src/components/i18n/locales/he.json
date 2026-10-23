@@ -620,6 +620,7 @@
   "tools.database.duplicateView": "שכפל",
   "tools.database.deleteView": "מחק",
   "tools.database.addView": "הוסף תצוגה",
+  "tools.database.addNewView": "הוסף תצוגה חדשה",
   "tools.database.viewTypeBoard": "לוח",
   "tools.database.viewTypeList": "רשימה",
   "tools.database.viewTypeTable": "טבלה",

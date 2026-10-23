@@ -124,7 +124,6 @@ describe('database tabs and menus', () => {
   it('tab buttons are controls', () => {
     expect(radiusOf('database.css', '[data-blok-database-add-view]')).toEqual([role('control')]);
     expect(radiusOf('database.css', '[data-blok-database-tab-more]')).toEqual([role('control')]);
-    expect(radiusOf('database.css', '[data-blok-database-view-option-icon]')).toEqual([role('control')]);
   });
 
   it.each([
@@ -142,9 +141,13 @@ describe('database tabs and menus', () => {
     '[data-blok-database-tab-overflow-item]',
     '[data-blok-database-tab-overflow-new]',
     '[data-blok-database-property-type-option]',
-    '[data-blok-database-view-option]',
+    '[data-blok-database-view-option][data-blok-database-view-new-source]',
   ])('%s is a menu row that nests in its card', (selector) => {
     expect(radiusOf('database.css', selector)).toEqual([inner('control')]);
+  });
+
+  it("an Add view tile takes Notion's 8px, the large control role", () => {
+    expect(radiusOf('database.css', '[data-blok-database-view-option]')).toEqual([role('control-lg')]);
   });
 });
 

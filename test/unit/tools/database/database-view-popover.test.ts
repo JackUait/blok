@@ -103,10 +103,10 @@ describe('DatabaseViewPopover', () => {
     it('opens with the database menu motion', () => {
       popover.open(anchor);
 
-      expect((mockPopoverInstances.at(-1)?.params as { class?: string } | undefined)?.class).toBe('blok-database-menu');
+      expect((mockPopoverInstances.at(-1)?.params as { class?: string } | undefined)?.class?.split(' ')).toContain('blok-database-menu');
     });
 
-    it('renders a heading with "Add view" text', () => {
+    it('renders a heading', () => {
       popover.open(anchor);
       const items = getLastItems();
       const headingEl = items
@@ -114,7 +114,7 @@ describe('DatabaseViewPopover', () => {
         .find((el) => el?.hasAttribute('data-blok-database-view-popover-heading'));
 
       expect(headingEl).not.toBeUndefined();
-      expect(headingEl!.textContent).toContain('Add view');
+      expect(headingEl!.textContent).not.toBe('');
     });
 
     it('renders Board option as enabled', () => {
@@ -233,6 +233,55 @@ describe('DatabaseViewPopover', () => {
       const els = document.querySelectorAll('[data-blok-database-view-popover]');
 
       expect(els.length).toBe(1);
+    });
+  });
+
+  describe("Notion's tile grid (feel/findings-toolbar V04)", () => {
+    const params = (): { class?: string; width?: string; items: Array<{ type?: string; element?: HTMLElement }> } =>
+      mockPopoverInstances.at(-1)!.params as { class?: string; width?: string; items: Array<{ type?: string; element?: HTMLElement }> };
+    const option = (type: string): HTMLElement =>
+      params().items.map((item) => item.element).find((el) => el?.getAttribute('data-blok-database-view-option') === type)!;
+
+    it('heads the menu "Add a new view"', () => {
+      popover.open(anchor);
+
+      const heading = params().items.map((item) => item.element).find((el) => el?.hasAttribute('data-blok-database-view-popover-heading'));
+
+      expect(heading?.textContent).toBe('Add a new view');
+    });
+
+    it('draws each layout as a tile button: its glyph, then its label, no description', () => {
+      popover.open(anchor);
+
+      const board = option('board');
+
+      expect(board.tagName).toBe('BUTTON');
+      expect(board.getAttribute('type')).toBe('button');
+      expect([...board.children].map((child) => child.getAttributeNames()[0])).toEqual([
+        'data-blok-database-view-option-icon',
+        'data-blok-database-view-option-label',
+      ]);
+      expect(board.querySelector('[data-blok-database-view-option-desc]')).toBeNull();
+    });
+
+    it('is a 390px grid menu', () => {
+      popover.open(anchor);
+
+      expect(params().class).toBe('blok-database-menu blok-database-add-view-menu');
+      expect(params().width).toBe('390px');
+    });
+
+    it('puts a divider before "New data source", a row button', () => {
+      const withSource = new DatabaseViewPopover({ onSelect, onNewSource: vi.fn() });
+
+      withSource.open(anchor);
+
+      const { items } = params();
+      const sourceIndex = items.findIndex((item) => item.element?.hasAttribute('data-blok-database-view-new-source'));
+
+      expect(items[sourceIndex - 1].type).toBe('separator');
+      withSource.destroy();
+      expect(items[sourceIndex].element?.tagName).toBe('BUTTON');
     });
   });
 

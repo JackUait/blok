@@ -622,6 +622,7 @@
   "tools.database.duplicateView": "Διπλότυπο",
   "tools.database.deleteView": "Διαγραφή",
   "tools.database.addView": "Προσθήκη προβολής",
+  "tools.database.addNewView": "Προσθήκη νέας προβολής",
   "tools.database.viewTypeBoard": "Πίνακας",
   "tools.database.viewTypeList": "Λίστα",
   "tools.database.viewTypeTable": "Πίνακας",

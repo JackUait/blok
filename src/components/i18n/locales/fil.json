@@ -620,6 +620,7 @@
   "tools.database.duplicateView": "Kopyahin",
   "tools.database.deleteView": "Tanggalin",
   "tools.database.addView": "Magdagdag ng view",
+  "tools.database.addNewView": "Magdagdag ng bagong view",
   "tools.database.viewTypeBoard": "Board",
   "tools.database.viewTypeList": "Listahan",
   "tools.database.viewTypeTable": "Talahanayan",

@@ -620,6 +620,7 @@
   "tools.database.duplicateView": "Dupliceren",
   "tools.database.deleteView": "Verwijderen",
   "tools.database.addView": "Weergave toevoegen",
+  "tools.database.addNewView": "Nieuwe weergave toevoegen",
   "tools.database.viewTypeBoard": "Bord",
   "tools.database.viewTypeList": "Lijst",
   "tools.database.viewTypeTable": "Tabel",

@@ -631,6 +631,7 @@
   "tools.database.duplicateView": "പകർപ്പുണ്ടാക്കുക",
   "tools.database.deleteView": "ഇല്ലാതാക്കുക",
   "tools.database.addView": "കാഴ്ച ചേർക്കുക",
+  "tools.database.addNewView": "പുതിയ കാഴ്ച ചേർക്കുക",
   "tools.database.viewTypeBoard": "ബോർഡ്",
   "tools.database.viewTypeList": "ലിസ്റ്റ്",
   "tools.database.viewTypeTable": "പട്ടിക",

@@ -137,8 +137,10 @@ test.describe('database New data source', () => {
     await expect(grid(page).getByRole('columnheader')).toHaveCount(2);
     await expect(grid(page)).toContainText('Beta');
 
-    // Back on the first source: its own row, its one property.
-    await page.getByRole('tab', { name: 'First' }).click();
+    // Back on the first source: its own row, its one property. At this width its tab
+    // may be folded into "N more…", so pick it from the list.
+    await openList(page);
+    await page.locator('[data-blok-database-tab-overflow-item]').first().click();
     await expect(grid(page)).toContainText('Alpha');
     await expect(grid(page)).not.toContainText('Beta');
     await expect(grid(page).getByRole('columnheader')).toHaveCount(1);

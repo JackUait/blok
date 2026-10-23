@@ -631,6 +631,7 @@
   "tools.database.duplicateView": "Хувилах",
   "tools.database.deleteView": "Устгах",
   "tools.database.addView": "Харагдац нэмэх",
+  "tools.database.addNewView": "Шинэ харагдац нэмэх",
   "tools.database.viewTypeBoard": "Самбар",
   "tools.database.viewTypeList": "Жагсаалт",
   "tools.database.viewTypeTable": "Хүснэгт",

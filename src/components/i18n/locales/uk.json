@@ -620,6 +620,7 @@
   "tools.database.duplicateView": "Дублювати",
   "tools.database.deleteView": "Видалити",
   "tools.database.addView": "Додати подання",
+  "tools.database.addNewView": "Додати нове подання",
   "tools.database.viewTypeBoard": "Дошка",
   "tools.database.viewTypeList": "Список",
   "tools.database.viewTypeTable": "Таблиця",

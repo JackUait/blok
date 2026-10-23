@@ -620,6 +620,7 @@
   "tools.database.duplicateView": "Çoğalt",
   "tools.database.deleteView": "Sil",
   "tools.database.addView": "Görünüm ekle",
+  "tools.database.addNewView": "Yeni görünüm ekle",
   "tools.database.viewTypeBoard": "Pano",
   "tools.database.viewTypeList": "Liste",
   "tools.database.viewTypeTable": "Tablo",

@@ -1528,6 +1528,14 @@ export const IconColumns = `
 </svg>
 `;
 
+// Board view tab: Notion's viewBoard, the Table panel cut into three columns.
+export const IconViewBoard = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M7.67 4v12M12.33 4v12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Tabs tool: the open tab is lit and has no floor. The floor under the other
 // tabs curves up into its edge, which keeps it apart from IconCalendar's
 // full-width header line.

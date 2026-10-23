@@ -738,6 +738,7 @@
   "tools.database.duplicateView": "建立副本",
   "tools.database.deleteView": "刪除",
   "tools.database.addView": "新增檢視",
+  "tools.database.addNewView": "新增檢視",
   "tools.database.viewTypeBoard": "看板",
   "tools.database.viewTypeList": "清單",
   "tools.database.viewTypeTable": "表格",

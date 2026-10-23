@@ -417,8 +417,8 @@ describe('DatabaseTabBar', () => {
       const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
       tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
       expect(document.querySelector('[data-blok-database-tab-action="rename"]')).not.toBeNull();
-      expect(document.querySelector('[data-blok-database-tab-action="duplicate"]')).not.toBeNull();
-      expect(document.querySelector('[data-blok-database-tab-action="delete"]')).not.toBeNull();
+      expect(document.querySelector('[data-blok-database-tab-action="duplicate view"]')).not.toBeNull();
+      expect(document.querySelector('[data-blok-database-tab-action="delete view"]')).not.toBeNull();
       el.remove();
     });
 
@@ -438,7 +438,7 @@ describe('DatabaseTabBar', () => {
         document.body.appendChild(el);
         el.querySelector('[data-view-id="v1"]')?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
 
-        expect(menuTitles()).toStrictEqual(['Rename', 'Hide data source titles', 'Duplicate']);
+        expect(menuTitles()).toStrictEqual(['Rename', 'Hide data source titles', 'Duplicate view']);
         document.querySelector<HTMLElement>('[data-blok-database-tab-action="hide data source titles"]')?.click();
         expect(onDataSourceTitlesToggle).toHaveBeenCalledTimes(1);
         el.remove();
@@ -454,7 +454,7 @@ describe('DatabaseTabBar', () => {
         document.body.appendChild(el);
         el.querySelector('[data-view-id="v1"]')?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
 
-        expect(menuTitles()).toStrictEqual(['Rename', 'Show data source titles', 'Duplicate']);
+        expect(menuTitles()).toStrictEqual(['Rename', 'Show data source titles', 'Duplicate view']);
         el.remove();
       });
     });
@@ -465,7 +465,7 @@ describe('DatabaseTabBar', () => {
       document.body.appendChild(el);
       const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
       tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
-      const deleteItem = document.querySelector<HTMLElement>('[data-blok-database-tab-action="delete"]');
+      const deleteItem = document.querySelector<HTMLElement>('[data-blok-database-tab-action="delete view"]');
       const isHidden = deleteItem === null || deleteItem.style.display === 'none';
       expect(isHidden).toBe(true);
       el.remove();
@@ -477,7 +477,7 @@ describe('DatabaseTabBar', () => {
       document.body.appendChild(el);
       const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
       tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
-      const dup = document.querySelector('[data-blok-database-tab-action="duplicate"]') as HTMLElement;
+      const dup = document.querySelector('[data-blok-database-tab-action="duplicate view"]') as HTMLElement;
       dup.click();
       expect(onDuplicate).toHaveBeenCalledWith('v1');
       el.remove();
@@ -491,7 +491,7 @@ describe('DatabaseTabBar', () => {
 
         document.body.appendChild(el);
         el.querySelector<HTMLElement>('[data-view-id="v1"]')?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
-        document.querySelector<HTMLElement>('[data-blok-database-tab-action="delete"]')?.click();
+        document.querySelector<HTMLElement>('[data-blok-database-tab-action="delete view"]')?.click();
 
         return el;
       };
@@ -544,7 +544,7 @@ describe('DatabaseTabBar', () => {
       document.body.appendChild(el);
       const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
       tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
-      const del = document.querySelector('[data-blok-database-tab-action="delete"]') as HTMLElement;
+      const del = document.querySelector('[data-blok-database-tab-action="delete view"]') as HTMLElement;
       del.click();
       expect(onDelete).toHaveBeenCalledWith('v1');
       el.remove();
@@ -971,7 +971,7 @@ describe('DatabaseTabBar', () => {
 
       const menu = document.querySelector('[data-blok-database-tab-context]') as HTMLElement;
 
-      expect(Array.from(menu.children).map((item) => item.textContent)).toStrictEqual(['Edit view', 'Rename', 'Duplicate', 'Delete']);
+      expect(Array.from(menu.children).map((item) => item.textContent)).toStrictEqual(['Rename', 'Edit view', 'Duplicate view', 'Delete view']);
       expect(onTabClick).not.toHaveBeenCalled();
       expect(list.isConnected).toBe(true);
 
@@ -983,7 +983,7 @@ describe('DatabaseTabBar', () => {
       const { bar, el, list } = open();
 
       openRowMenu(list, 'v2');
-      const item = document.querySelector('[data-blok-database-tab-action="duplicate"]') as HTMLElement;
+      const item = document.querySelector('[data-blok-database-tab-action="duplicate view"]') as HTMLElement;
 
       item.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
       expect(list.isConnected).toBe(true);
@@ -999,7 +999,7 @@ describe('DatabaseTabBar', () => {
       const { bar, el, list } = open();
 
       openRowMenu(list, 'v2');
-      (document.querySelector('[data-blok-database-tab-action="delete"]') as HTMLElement).click();
+      (document.querySelector('[data-blok-database-tab-action="delete view"]') as HTMLElement).click();
 
       expect(onDelete).toHaveBeenCalledWith('v2');
 

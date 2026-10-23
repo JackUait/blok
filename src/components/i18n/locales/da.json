@@ -622,6 +622,7 @@
   "tools.database.duplicateView": "Dupliker",
   "tools.database.deleteView": "Slet",
   "tools.database.addView": "Tilføj visning",
+  "tools.database.addNewView": "Tilføj en ny visning",
   "tools.database.viewTypeBoard": "Tavle",
   "tools.database.viewTypeList": "Liste",
   "tools.database.viewTypeTable": "Tabel",

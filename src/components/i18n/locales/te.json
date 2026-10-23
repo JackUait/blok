@@ -620,6 +620,7 @@
   "tools.database.duplicateView": "నకలు చేయి",
   "tools.database.deleteView": "తొలగించు",
   "tools.database.addView": "వీక్షణను జోడించు",
+  "tools.database.addNewView": "కొత్త వీక్షణను జోడించు",
   "tools.database.viewTypeBoard": "బోర్డ్",
   "tools.database.viewTypeList": "జాబితా",
   "tools.database.viewTypeTable": "పట్టిక",

@@ -622,6 +622,7 @@
   "tools.database.duplicateView": "نقل ٺاهيو",
   "tools.database.deleteView": "ختم ڪريو",
   "tools.database.addView": "ويو شامل ڪريو",
+  "tools.database.addNewView": "نئون ويو شامل ڪريو",
   "tools.database.viewTypeBoard": "بورڊ",
   "tools.database.viewTypeList": "فهرست",
   "tools.database.viewTypeTable": "ٽيبل",

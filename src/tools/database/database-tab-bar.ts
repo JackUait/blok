@@ -1,5 +1,5 @@
 import { generateKeyBetween } from 'fractional-indexing';
-import { IconBoard, IconChart, IconGallery, IconListBulleted, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconColumns, IconMap, IconTabs, IconPreview, IconDatabase, IconViewCalendar, IconViewFeed, IconViewForm, IconViewTimeline } from '../../components/icons';
+import { IconViewBoard, IconChart, IconGallery, IconListBulleted, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconColumns, IconMap, IconTabs, IconPreview, IconDatabase, IconViewCalendar, IconViewFeed, IconViewForm, IconViewTimeline, IconLink, IconDotsHorizontal } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
@@ -37,7 +37,7 @@ function activateOnEnterOrSpace(element: HTMLElement, action: () => void): void 
 }
 
 export const VIEW_ICONS: Record<string, string> = {
-  board: IconBoard,
+  board: IconViewBoard,
   list: IconListBulleted,
   table: IconTable,
   gallery: IconGallery,
@@ -64,6 +64,10 @@ export interface TabBarOptions {
   onEditView?: (viewId: string, anchor: HTMLElement) => void;
   /** "Rename" opens the view settings with the name field focused (findings V08). Without it, the tab renames inline. */
   onRenameView?: (viewId: string, anchor: HTMLElement) => void;
+  /** "Copy link to view". */
+  onCopyLink?: (viewId: string) => void;
+  /** "Edit title" in the title row's "…". */
+  onEditTitle?: () => void;
   /** This person's "Display as". Defaults to both. */
   display?: DatabaseTabDisplay;
   /** Offers "Display as" in the tab menu. */
@@ -96,6 +100,8 @@ export class DatabaseTabBar {
   private moreBtnEl: HTMLElement | null = null;
 
   private isDragging = false;
+  /** The click after a drop belongs to the drag, not the tab. */
+  private dragEnded = false;
   private dragViewId = '';
   private dragStartX = 0;
   private ghostEl: HTMLElement | null = null;
@@ -168,7 +174,14 @@ export class DatabaseTabBar {
         return;
       }
       const viewId = tab.getAttribute('data-view-id');
-      if (viewId === null) {
+      if (viewId === null || this.consumeDragClick()) {
+        return;
+      }
+      // feel/findings-toolbar V06: a click on the current tab opens its menu. A
+      // second click while it is open does nothing (same-trigger law).
+      if (viewId === this.options.activeViewId) {
+        if (!this.readOnly && this.contextPopover === null) this.openContextPopover(tab, viewId);
+
         return;
       }
       this.activateTab(viewId, false);
@@ -193,7 +206,8 @@ export class DatabaseTabBar {
     });
 
     bar.addEventListener('dblclick', (e: MouseEvent) => {
-      if (this.readOnly) {
+      // The first click of the pair already opened the menu on the current tab.
+      if (this.readOnly || this.contextPopover !== null) {
         return;
       }
       const target = e.target as HTMLElement;
@@ -217,6 +231,7 @@ export class DatabaseTabBar {
       if (tab === null) return;
       const viewId = tab.getAttribute('data-view-id');
       if (viewId === null) return;
+      this.dragEnded = false;
       this.dragViewId = viewId;
       this.dragStartX = e.clientX;
       this.isDragging = false;
@@ -240,9 +255,11 @@ export class DatabaseTabBar {
         this.moreBtnEl?.remove();
         this.moreBtnEl = null;
 
-        const addBtnWidth = 40;
+        // The 28px "+", its 1px margin, and the 1px gaps before it and before "N more…";
+        // each tab pays the 1px gap before it (database.css).
+        const addBtnWidth = 31;
         const active = tabs.findIndex((tab) => tab.getAttribute('data-view-id') === this.options.activeViewId);
-        const widths = tabs.map((tab) => tab.offsetWidth + 2);
+        const widths = tabs.map((tab) => tab.offsetWidth + 1);
         // clientWidth counts the padding that centres the bar on a wide page.
         const style = getComputedStyle(this.element);
         const padding = (Number.parseFloat(style.paddingLeft) || 0) + (Number.parseFloat(style.paddingRight) || 0);
@@ -252,7 +269,6 @@ export class DatabaseTabBar {
           return;
         }
         // Once a tab folds, "N more…" takes room too; measured with the widest count it can show.
-        // The +2 on each tab already pays the gap before it.
         const more = this.placeMoreButton(tabs.length);
 
         this.foldTabs(tabsThatFit(widths, active, budget - more.offsetWidth, 0));
@@ -276,6 +292,14 @@ export class DatabaseTabBar {
     }
 
     return bar;
+  }
+
+  private consumeDragClick(): boolean {
+    const ended = this.dragEnded;
+
+    this.dragEnded = false;
+
+    return ended;
   }
 
   private t(key: string, fallback: string): string {
@@ -350,17 +374,9 @@ export class DatabaseTabBar {
     const t = this.t.bind(this);
 
     const onEditView = this.options.onEditView;
-    const editItems = onEditView === undefined ? [] : [{
-      icon: IconSliders,
-      name: 'database-view-edit',
-      title: t('tools.database.editView', 'Edit view'),
-      closeOnActivate: true,
-      onActivate: () => {
-        onEditView(viewId, menu.editAnchor);
-      },
-    }];
-    const baseItems = [
-      ...editItems,
+    const onCopyLink = this.options.onCopyLink;
+    // Notion's order (feel/findings-toolbar V07).
+    const editItems: PopoverItemParams[] = [
       {
         icon: IconPencil,
         name: 'database-view-rename',
@@ -368,32 +384,54 @@ export class DatabaseTabBar {
         closeOnActivate: true,
         onActivate: this.options.onRenameView === undefined ? menu.rename : () => this.options.onRenameView?.(viewId, menu.editAnchor),
       },
+      ...(menu.withDisplay ? this.displayItems() : []),
+      ...(onEditView === undefined ? [] : [{
+        icon: IconSliders,
+        name: 'database-view-edit',
+        title: t('tools.database.editView', 'Edit view'),
+        closeOnActivate: true,
+        onActivate: () => {
+          onEditView(viewId, menu.editAnchor);
+        },
+      }]),
+    ];
+    const shareItems: PopoverItemParams[] = [
+      ...(onCopyLink === undefined ? [] : [{
+        icon: IconLink,
+        name: 'database-view-copy-link',
+        title: t('tools.database.layoutCopyLinkToView', 'Copy link to view'),
+        closeOnActivate: true,
+        onActivate: () => onCopyLink(viewId),
+      }]),
       ...(menu.withDisplay ? this.dataSourceTitleItems() : []),
+    ];
+    const changeItems: PopoverItemParams[] = [
       {
         icon: IconCopy,
         name: 'database-view-duplicate',
-        title: t('tools.database.duplicateView', 'Duplicate'),
+        title: t('tools.database.layoutDuplicateView', 'Duplicate view'),
         closeOnActivate: true,
         onActivate: () => {
           this.options.onDuplicate(viewId);
         },
       },
-      ...(menu.withDisplay ? this.displayItems() : []),
+      ...(canDelete ? [{
+        icon: IconTrash,
+        name: 'database-view-delete',
+        title: t('tools.database.layoutDeleteView', 'Delete view'),
+        isDestructive: true,
+        onActivate: () => this.deleteFromMenu(viewId),
+      }] : []),
     ];
+    const items = [editItems, shareItems, changeItems]
+      .filter((group) => group.length > 0)
+      .flatMap((group, index) => index === 0 ? group : [{ type: PopoverItemType.Separator as const }, ...group]);
 
-    const deleteItems = canDelete
-      ? [
-          { type: PopoverItemType.Separator as const },
-          {
-            icon: IconTrash,
-            name: 'database-view-delete',
-            title: t('tools.database.deleteView', 'Delete'),
-            isDestructive: true,
-            onActivate: () => this.deleteFromMenu(viewId),
-          },
-        ]
-      : [];
+    this.showMenu(trigger, items);
+  }
 
+  private showMenu(trigger: HTMLElement, items: PopoverItemParams[]): void {
+    this.closeContextPopover();
     this.contextPopover = new PopoverDesktop({
       class: DATABASE_MENU_CLASS,
       animateClose: true,
@@ -401,7 +439,7 @@ export class DatabaseTabBar {
       width: 'auto',
       minWidth: '160px',
       autoFocusFirstItem: false,
-      items: [...baseItems, ...deleteItems],
+      items,
     });
 
     this.contextPopover.on(PopoverEvent.Closed, () => {
@@ -447,6 +485,7 @@ export class DatabaseTabBar {
 
     return [{
       icon: IconTabs,
+      name: 'database-tab-display',
       title: this.t('tools.database.tabDisplayAs', 'Display as'),
       children: {
         items: modes.map(([mode, key, fallback]) => ({
@@ -713,7 +752,8 @@ export class DatabaseTabBar {
         this.ghostEl.style.top = `${rect.top}px`;
         this.ghostEl.style.width = `${rect.width}px`;
         mountGhost(sourceTab, this.ghostEl);
-        sourceTab.style.opacity = '0.4';
+        // Its slot closes and the other tabs reflow under the pointer (feel/findings-toolbar V27).
+        sourceTab.setAttribute('data-blok-database-tab-drag-source', '');
       }
     }
     if (this.ghostEl !== null) {
@@ -746,6 +786,7 @@ export class DatabaseTabBar {
 
     const viewId = this.dragViewId;
 
+    this.dragEnded = true;
     this.cleanupDrag();
     this.reorderBetween(viewId, afterViewId, beforeViewId);
   }
@@ -757,9 +798,7 @@ export class DatabaseTabBar {
     }
     this.element?.removeAttribute('data-dragging');
     const sourceTab = this.element?.querySelector(`[data-view-id="${this.dragViewId}"]`) as HTMLElement | null;
-    if (sourceTab !== null) {
-      sourceTab.style.opacity = '';
-    }
+    sourceTab?.removeAttribute('data-blok-database-tab-drag-source');
     this.isDragging = false;
     this.removeDragListeners();
   }
@@ -805,5 +844,52 @@ export class DatabaseTabBar {
 
   getAddBtnEl(): HTMLElement | null {
     return this.addBtnEl;
+  }
+
+  /**
+   * The title row's "…" with one view (feel/findings-toolbar V03): Notion's
+   * items that Blok can back, in Notion's order.
+   */
+  createTitleMoreButton(): HTMLElement {
+    const button = document.createElement('button');
+    const viewId = this.options.activeViewId;
+    const t = this.t.bind(this);
+
+    button.type = 'button';
+    button.setAttribute('data-blok-database-title-more', '');
+    button.setAttribute('aria-label', t('tools.database.tableMoreActions', 'More actions'));
+    button.innerHTML = IconDotsHorizontal;
+    button.addEventListener('click', () => {
+      if (this.contextPopover !== null) return;
+      const onCopyLink = this.options.onCopyLink;
+      const onEditTitle = this.options.onEditTitle;
+      const first: PopoverItemParams[] = [
+        ...(onCopyLink === undefined ? [] : [{
+          icon: IconLink,
+          name: 'database-title-copy-link',
+          title: t('tools.database.layoutCopyLinkToView', 'Copy link to view'),
+          closeOnActivate: true,
+          onActivate: () => onCopyLink(viewId),
+        }]),
+        {
+          icon: IconCopy,
+          name: 'database-title-duplicate',
+          title: t('tools.database.layoutDuplicateView', 'Duplicate view'),
+          closeOnActivate: true,
+          onActivate: () => this.options.onDuplicate(viewId),
+        },
+      ];
+      const second: PopoverItemParams[] = onEditTitle === undefined ? [] : [{
+        icon: IconPencil,
+        name: 'database-title-edit',
+        title: t('tools.database.editCardTitle', 'Edit title'),
+        closeOnActivate: true,
+        onActivate: onEditTitle,
+      }];
+
+      this.showMenu(button, second.length === 0 ? first : [...first, { type: PopoverItemType.Separator }, ...second]);
+    });
+
+    return button;
   }
 }

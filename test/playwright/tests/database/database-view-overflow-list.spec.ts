@@ -134,9 +134,9 @@ test.describe('database view overflow list', () => {
         const add = bar.querySelector<HTMLElement>('[data-blok-database-add-view]')?.getBoundingClientRect();
         const end = add?.left ?? barRight;
         const clipped = tabs.some((tab) => tab.scrollWidth > tab.clientWidth + 1) || more.scrollWidth > more.clientWidth + 1;
-        // A crowded row squeezes the 32px add button and pushes it past the bar.
+        // A crowded row squeezes the 28px add button and pushes it past the bar.
         // Only the current tab left: nothing more can fold, so it may still crowd.
-        const squeezed = tabs.length > 1 && add !== undefined && (add.width < 31.5 || add.right > barRight + 0.5);
+        const squeezed = tabs.length > 1 && add !== undefined && (add.width < 27.5 || add.right > barRight + 0.5);
 
         if ((last !== undefined && last.right > moreBox.left + 0.5) || moreBox.right > end + 0.5 || clipped || squeezed) {
           return `tab right ${last?.right}, more ${moreBox.left}-${moreBox.right}, add ${add?.left}-${add?.right}, bar ${barRight}, clipped ${clipped}`;

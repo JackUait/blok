@@ -622,6 +622,7 @@
   "tools.database.duplicateView": "Дуплирај",
   "tools.database.deleteView": "Обриши",
   "tools.database.addView": "Додај приказ",
+  "tools.database.addNewView": "Додај нови приказ",
   "tools.database.viewTypeBoard": "Табла",
   "tools.database.viewTypeList": "Листа",
   "tools.database.viewTypeTable": "Табела",

@@ -687,7 +687,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
   });
 
   describe('context menu contents', () => {
-    it('describes rename, duplicate and a separated destructive delete', () => {
+    it('describes rename, then a separated duplicate and destructive delete (feel/findings-toolbar V07)', () => {
       const { el } = mount(threeViews(), 'v1', { api: echoApi() });
       const probe = openContextOn(tabOf(el, 'v2'));
       const { items } = probe.params;
@@ -695,21 +695,21 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(items.length).toBe(4);
       expect(items[0].title).toBe('tools.database.renameView');
       expect(items[0].closeOnActivate).toBe(true);
-      expect(items[1].title).toBe('tools.database.duplicateView');
-      expect(items[1].closeOnActivate).toBe(true);
-      expect(items[2]).toStrictEqual({ type: PopoverItemType.Separator });
-      expect(items[3].title).toBe('tools.database.deleteView');
+      expect(items[1]).toStrictEqual({ type: PopoverItemType.Separator });
+      expect(items[2].title).toBe('tools.database.layoutDuplicateView');
+      expect(items[2].closeOnActivate).toBe(true);
+      expect(items[3].title).toBe('tools.database.layoutDeleteView');
       expect(items[3].isDestructive).toBe(true);
       // The bar closes it itself: a delete that asks keeps it open (research/30 B3).
       expect(items[3].closeOnActivate).toBeUndefined();
     });
 
-    it('offers no delete — and no separator — for the last remaining view', () => {
+    it('offers no delete for the last remaining view', () => {
       const { el } = mount([makeView({ id: 'v1' })], 'v1');
       const probe = openContextOn(tabOf(el, 'v1'));
 
-      expect(probe.params.items.length).toBe(2);
-      expect(probe.params.items.map((item) => item.title)).toStrictEqual(['Rename', 'Duplicate']);
+      expect(probe.params.items.length).toBe(3);
+      expect(probe.params.items.map((item) => item.title)).toStrictEqual(['Rename', undefined, 'Duplicate view']);
     });
 
     it('anchors the menu on the tab with the sizing the design asks for', () => {
@@ -727,7 +727,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       const { el } = mount(threeViews(), 'v1');
       const probe = openContextOn(tabOf(el, 'v3'));
 
-      probe.params.items[1].onActivate?.();
+      probe.params.items[2].onActivate?.();
       expect(onDuplicate).toHaveBeenCalledWith('v3');
 
       probe.params.items[3].onActivate?.();
@@ -880,7 +880,8 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
     it('keeps the tabs that fit and folds the rest behind a count button', () => {
       const { el } = mount(threeViews(), 'v1');
 
-      layOutForOverflow(el, 243);
+      // One short of 31 (add) + 2 × 101.
+      layOutForOverflow(el, 232);
       lastResizeProbe().fire();
 
       const more = queryOne(el, '[data-blok-database-tab-more]');
@@ -894,7 +895,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
     it('treats a row that exactly fills the bar as fitting', () => {
       const { el } = mount(threeViews(), 'v1');
 
-      layOutForOverflow(el, 244);
+      layOutForOverflow(el, 233);
       lastResizeProbe().fire();
 
       expect(queryOne(el, '[data-blok-database-tab-more]').textContent).toBe('1 more…');
@@ -927,12 +928,22 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       it('takes the place of the last tab that fits, keeping view order', () => {
         const { el } = mount(eightViews(), 'v4');
 
-        // 40 (add) + 3 × 102 fills 346 exactly: three tabs fit.
+        // 31 (add) + 3 × 101 = 334 of 346: three tabs fit, a fourth does not.
         layOutForOverflow(el, 346);
         lastResizeProbe().fire();
 
         expect(shownIds(el)).toEqual(['v0', 'v1', 'v4']);
         expect(queryOne(el, '[data-blok-database-tab-more]').textContent).toBe('5 more…');
+      });
+
+      it('budgets the 28px "+" with its margin and gaps, and 1px between tabs (feel/findings-toolbar V26, V33)', () => {
+        const { el } = mount(eightViews(), 'v1');
+
+        // 31 (add) + 3 × 101 = 334: three tabs fit exactly.
+        layOutForOverflow(el, 334);
+        lastResizeProbe().fire();
+
+        expect(shownIds(el)).toEqual(['v0', 'v1', 'v2']);
       });
 
       it('changes nothing when the current view already fits', () => {
@@ -951,7 +962,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
         });
         const { el } = mount(eightViews(), 'v1');
 
-        // 346 − 40 (add) − 80 ("N more…") = 226: two 102px tabs.
+        // 346 − 31 (add) − 80 ("N more…") = 235: two 101px tabs.
         layOutForOverflow(el, 346);
         lastResizeProbe().fire();
 
@@ -964,7 +975,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       it('does not count the centring padding of the bar as room for tabs', () => {
         const { el } = mount(eightViews(), 'v1');
 
-        // 546 − 200 padding = 346: three 102px tabs, as with a 346px bar.
+        // 546 − 200 padding = 346: three 101px tabs, as with a 346px bar.
         layOutForOverflow(el, 546);
         el.style.paddingLeft = '200px';
         lastResizeProbe().fire();
@@ -1368,7 +1379,17 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(floating.style.top).toBe('40px');
       expect(floating.style.width).toBe('100px');
       expect(floating.style.left).toBe('150px');
-      expect(tabOf(el, 'v1').style.opacity).toBe('0.4');
+    });
+
+    it('closes the source slot while dragging, so the other tabs reflow (feel/findings-toolbar V27)', () => {
+      const { el } = mount(threeViews(), 'v1');
+
+      dragFrom(el, 'v1', 50);
+      document.dispatchEvent(pointer('pointermove', 200));
+
+      expect(tabOf(el, 'v1').hasAttribute('data-blok-database-tab-drag-source')).toBe(true);
+      document.dispatchEvent(key('Escape'));
+      expect(tabOf(el, 'v1').hasAttribute('data-blok-database-tab-drag-source')).toBe(false);
     });
 
     it('keeps the radius of the tab it came from', () => {
@@ -1541,6 +1562,19 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(onReorder).toHaveBeenCalledWith('v1', generateKeyBetween('a2', null));
     });
 
+    it('the click that ends a drag of the current tab opens no menu (feel/findings-toolbar V06)', () => {
+      const { el } = mount(threeViews(), 'v1');
+
+      dragFrom(el, 'v1', 50);
+      document.dispatchEvent(pointer('pointermove', 350));
+      document.dispatchEvent(pointer('pointerup', 350));
+      tabOf(el, 'v1').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(probes.contexts.length).toBe(0);
+      tabOf(el, 'v1').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      expect(probes.contexts.length).toBe(1);
+    });
+
     it('treats a drop exactly on a tab midpoint as being past that tab', () => {
       const { el } = mount(threeViews(), 'v1');
 
@@ -1561,7 +1595,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(onReorder).toHaveBeenCalledWith('v1', generateKeyBetween(null, null));
     });
 
-    it('clears the ghost, the dragging flag and the faded tab on drop', () => {
+    it('clears the ghost, the dragging flag and the closed slot on drop', () => {
       const { el } = mount(threeViews(), 'v1');
 
       dragFrom(el, 'v1', 50);
@@ -1570,7 +1604,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
 
       expect(ghost()).toBeNull();
       expect(el.hasAttribute('data-dragging')).toBe(false);
-      expect(tabOf(el, 'v1').style.opacity).toBe('');
+      expect(tabOf(el, 'v1').hasAttribute('data-blok-database-tab-drag-source')).toBe(false);
     });
 
     it('cancels on Escape and on pointercancel, reordering nothing', () => {

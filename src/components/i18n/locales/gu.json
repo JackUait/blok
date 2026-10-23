@@ -620,6 +620,7 @@
   "tools.database.duplicateView": "નકલ બનાવો",
   "tools.database.deleteView": "કાઢી નાખો",
   "tools.database.addView": "દૃશ્ય ઉમેરો",
+  "tools.database.addNewView": "નવું દૃશ્ય ઉમેરો",
   "tools.database.viewTypeBoard": "બોર્ડ",
   "tools.database.viewTypeList": "યાદી",
   "tools.database.viewTypeTable": "કોષ્ટક",

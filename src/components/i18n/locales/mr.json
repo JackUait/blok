@@ -631,6 +631,7 @@
   "tools.database.duplicateView": "प्रत बनवा",
   "tools.database.deleteView": "हटवा",
   "tools.database.addView": "दृश्य जोडा",
+  "tools.database.addNewView": "नवीन दृश्य जोडा",
   "tools.database.viewTypeBoard": "बोर्ड",
   "tools.database.viewTypeList": "यादी",
   "tools.database.viewTypeTable": "तक्ता",

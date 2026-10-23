@@ -633,6 +633,7 @@
   "tools.database.duplicateView": "ສຳເນົາ",
   "tools.database.deleteView": "ລຶບ",
   "tools.database.addView": "ເພີ່ມມຸມມອງ",
+  "tools.database.addNewView": "ເພີ່ມມຸມມອງໃໝ່",
   "tools.database.viewTypeBoard": "ກະດານ",
   "tools.database.viewTypeList": "ລາຍການ",
   "tools.database.viewTypeTable": "ຕາຕະລາງ",

@@ -622,6 +622,7 @@
   "tools.database.duplicateView": "አባዛ",
   "tools.database.deleteView": "አጥፋ",
   "tools.database.addView": "ዕይታ አክል",
+  "tools.database.addNewView": "አዲስ ዕይታ አክል",
   "tools.database.viewTypeBoard": "ሰሌዳ",
   "tools.database.viewTypeList": "ዝርዝር",
   "tools.database.viewTypeTable": "ሰንጠረዥ",

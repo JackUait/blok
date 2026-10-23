@@ -622,6 +622,7 @@
   "tools.database.duplicateView": "Gandakan",
   "tools.database.deleteView": "Hapus",
   "tools.database.addView": "Tambah tampilan",
+  "tools.database.addNewView": "Tambah tampilan baru",
   "tools.database.viewTypeBoard": "Papan",
   "tools.database.viewTypeList": "Daftar",
   "tools.database.viewTypeTable": "Tabel",

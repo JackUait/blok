@@ -620,6 +620,7 @@
   "tools.database.duplicateView": "تکثیر",
   "tools.database.deleteView": "حذف",
   "tools.database.addView": "افزودن نما",
+  "tools.database.addNewView": "افزودن نمای جدید",
   "tools.database.viewTypeBoard": "تابلو",
   "tools.database.viewTypeList": "فهرست",
   "tools.database.viewTypeTable": "جدول",

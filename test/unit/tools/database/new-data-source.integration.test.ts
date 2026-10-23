@@ -657,9 +657,9 @@ describe('New data source: a view bound to a second source in the same block', (
 
     tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
     await quiet();
-    const item = [...document.querySelectorAll<HTMLElement>('[data-blok-popover-item], [role="menuitem"]')].find((el) => el.textContent?.trim() === 'Delete');
+    const item = [...document.querySelectorAll<HTMLElement>('[data-blok-popover-item], [role="menuitem"]')].find((el) => el.textContent?.trim() === 'Delete view');
 
-    if (item === undefined) throw new Error('no Delete in the tab menu');
+    if (item === undefined) throw new Error('no Delete view in the tab menu');
     item.click();
     await quiet();
 
@@ -667,12 +667,15 @@ describe('New data source: a view bound to a second source in the same block', (
     confirmAction('cancel')?.click();
   });
 
-  it('deleting a source view while another view still shows the source asks nothing', async () => {
+  it('deleting a source view while another view still shows the source asks only "Delete this view?"', async () => {
     const api = await make(doc('vb', { views: [table('v1', 'a0'), table('vb', 'a1', { dataSourceId: 'src-b' }), table('vb2', 'a2', { dataSourceId: 'src-b' })] }));
 
     await deleteFromTabMenu();
 
-    expect(document.querySelector('[data-blok-database-confirm-dialog]')).toBeNull();
+    expect(document.querySelector('[data-blok-database-confirm-title]')?.textContent).toBe('Delete this view?');
+    expect(document.querySelector('[data-blok-database-confirm-choices]')).toBeNull();
+    confirmAction('confirm')?.click();
+    await quiet();
     expect((await dataOf(api, 'db'))?.views.map((v) => v.id)).toEqual(['v1', 'vb2']);
   });
 

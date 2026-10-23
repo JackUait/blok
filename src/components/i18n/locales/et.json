@@ -620,6 +620,7 @@
   "tools.database.duplicateView": "Dubleeri",
   "tools.database.deleteView": "Kustuta",
   "tools.database.addView": "Lisa vaade",
+  "tools.database.addNewView": "Lisa uus vaade",
   "tools.database.viewTypeBoard": "Tahvel",
   "tools.database.viewTypeList": "Loend",
   "tools.database.viewTypeTable": "Tabel",

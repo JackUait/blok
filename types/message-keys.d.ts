@@ -451,6 +451,7 @@ export type BlokMessageKey =
   | 'tools.database.addColumn'
   | 'tools.database.addCover'
   | 'tools.database.addIcon'
+  | 'tools.database.addNewView'
   | 'tools.database.addOption'
   | 'tools.database.addProperty'
   | 'tools.database.addPropertyDescription'

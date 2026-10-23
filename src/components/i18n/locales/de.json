@@ -622,6 +622,7 @@
   "tools.database.duplicateView": "Duplizieren",
   "tools.database.deleteView": "Löschen",
   "tools.database.addView": "Ansicht hinzufügen",
+  "tools.database.addNewView": "Neue Ansicht hinzufügen",
   "tools.database.viewTypeBoard": "Board",
   "tools.database.viewTypeList": "Liste",
   "tools.database.viewTypeTable": "Tabelle",

@@ -631,6 +631,7 @@
   "tools.database.duplicateView": "Dublēt",
   "tools.database.deleteView": "Dzēst",
   "tools.database.addView": "Pievienot skatu",
+  "tools.database.addNewView": "Pievienot jaunu skatu",
   "tools.database.viewTypeBoard": "Tāfele",
   "tools.database.viewTypeList": "Saraksts",
   "tools.database.viewTypeTable": "Tabula",

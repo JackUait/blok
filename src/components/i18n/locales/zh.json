@@ -620,6 +620,7 @@
   "tools.database.duplicateView": "复制",
   "tools.database.deleteView": "删除",
   "tools.database.addView": "添加视图",
+  "tools.database.addNewView": "添加新视图",
   "tools.database.viewTypeBoard": "看板",
   "tools.database.viewTypeList": "列表",
   "tools.database.viewTypeTable": "表格",

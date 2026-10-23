@@ -2364,7 +2364,7 @@ button[data-blok-database-column-count]:hover {
 [data-blok-database-tab-bar] {
   display: flex;
   align-items: center;
-  gap: var(--blok-space-0-5);
+  gap: var(--blok-border-width-hairline);
   padding: var(--blok-space-1) 0 var(--blok-space-2);
   padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 }
@@ -2379,6 +2379,9 @@ button[data-blok-database-column-count]:hover {
    so the + button sits exactly 4px after the title text */
 [data-blok-database-title-row][data-single-view] {
   padding-inline-start: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  /* Notion's one-view title row is 40px, and the header starts right under it. */
+  min-height: 40px;
+  margin-bottom: 0;
 }
 
 [data-blok-database-title-row][data-single-view] [data-blok-database-title] {
@@ -2388,13 +2391,75 @@ button[data-blok-database-column-count]:hover {
   padding-right: 0;
 }
 
+/* The placeholder has no width (placeholder-layout-inert law), so a hidden copy
+   holds the empty title open and "+" lands after it (feel/findings-toolbar V02). */
+[data-blok-database-title-row][data-single-view] [data-blok-database-title]:is(:empty, [data-blok-empty="true"])::after {
+  content: attr(data-placeholder);
+  display: block;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  white-space: nowrap;
+}
+
+/* Notion's title row: "+" and "…" are 24px (feel/findings-toolbar V02, V03). */
 [data-blok-database-title-row][data-single-view] [data-blok-database-add-view] {
+  width: 24px; height: 24px;
   margin-inline-start: var(--blok-space-1);
+}
+
+[data-blok-database-title-more] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: var(--blok-radius-control);
+  cursor: pointer;
+  color: var(--blok-database-tab-text);
+  transition: background-color 120ms ease, opacity 120ms ease;
+  opacity: 0;
+}
+
+[data-blok-database-title-more] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-database-title-more]:hover,
+[data-blok-database-title-more][data-popover-open] {
+  background-color: var(--blok-database-tab-bg-hover);
+}
+
+/* One view: the toolbar sits in the title row (feel/findings-toolbar V01), so the view bar is empty. */
+[data-blok-database-view-bar][data-single-view] {
+  display: none;
+}
+
+/* The selection bar takes the toolbar's row, as it does in the view bar below. */
+[data-blok-database-title-row][data-blok-database-selecting] {
+  position: relative;
+}
+
+[data-blok-database-title-row][data-blok-database-selecting="table"] > :not([data-blok-database-table-selection-bar], [data-blok-database-view-toolbar]),
+[data-blok-database-title-row][data-blok-database-selecting]:not([data-blok-database-selecting="table"]) > :not([data-blok-database-table-selection-bar]) {
+  visibility: hidden;
+}
+
+[data-blok-database-title-row] > [data-blok-database-table-selection-bar] {
+  inset-block: 0;
+  margin-block: auto;
 }
 
 /* When + button is inside the title row, show it on row hover */
 [data-blok-database-title-row]:hover [data-blok-database-add-view],
-[data-blok-database-title-row] [data-blok-database-add-view][data-popover-open] {
+[data-blok-database-title-row] [data-blok-database-add-view][data-popover-open],
+[data-blok-database-title-row]:hover [data-blok-database-title-more],
+[data-blok-database-title-more][data-popover-open],
+[data-blok-database-title-more]:focus-visible {
   opacity: 1;
 }
 
@@ -2544,25 +2609,25 @@ button[data-blok-database-column-count]:hover {
   color: var(--blok-database-ink-secondary);
 }
 
+/* feel/findings-toolbar V26: 28px, a 16px glyph, 1px after the last tab. */
 [data-blok-database-add-view] {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border: none;
   background: none;
   border-radius: var(--blok-radius-control);
   cursor: pointer;
   color: var(--blok-database-tab-text);
-  margin-inline-start: var(--blok-space-0-5);
+  margin-inline-start: var(--blok-border-width-hairline);
   transition: background-color 120ms ease, opacity 120ms ease;
   opacity: 0;
 }
 
 [data-blok-database-add-view] svg {
-  width: 20px;
-  height: 20px;
+  width: 16px; height: 16px;
   flex-shrink: 0;
 }
 
@@ -2580,7 +2645,7 @@ button[data-blok-database-column-count]:hover {
 [data-blok-database-tab-more] {
   padding: var(--blok-space-1) var(--blok-space-2-5);
   border-radius: var(--blok-radius-control);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--blok-database-tab-text);
   cursor: pointer;
   white-space: nowrap;
@@ -2608,28 +2673,55 @@ button[data-blok-database-column-count]:hover {
   padding: var(--blok-space-1);
 }
 
-/* View option items (rendered as Html items inside PopoverDesktop) */
+/* Add view (feel/findings-toolbar V04): Notion's 390px menu, a 4-column grid of
+   92x62 tiles, a 22px glyph above a 14/20 label, radius 8. The heading,
+   divider and "New data source" span the row. */
+[data-blok-popover-custom-class~='blok-database-add-view-menu'] [data-blok-popover-items] {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  column-gap: var(--blok-space-1);
+  row-gap: 0;
+}
+
+[data-blok-popover-custom-class~='blok-database-add-view-menu'] [data-blok-popover-items] > * {
+  grid-column: 1 / -1;
+}
+
+[data-blok-popover-custom-class~='blok-database-add-view-menu'] [data-blok-popover-items] > [data-blok-item-name='database-view-tile'] {
+  grid-column: auto;
+  min-width: 0;
+}
+
 [data-blok-database-view-popover-heading] {
   padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-size: 12px;
+  line-height: 14.4px;
+  font-weight: 500;
   color: var(--blok-database-tab-text);
 }
 
 [data-blok-database-view-option] {
   display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: var(--blok-space-2-5);
-  padding: var(--blok-space-1-75) var(--blok-space-2);
-  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--blok-space-1);
+  box-sizing: border-box;
+  width: 100%;
+  height: 62px;
+  padding: var(--blok-space-1);
+  border: none;
+  border-radius: var(--blok-radius-control-lg);
+  background: none;
+  color: var(--blok-database-ink);
+  font: inherit;
   cursor: pointer;
   transition: background-color 120ms ease;
 }
 
-[data-blok-database-view-option]:hover {
+[data-blok-database-view-option]:hover,
+[data-blok-focused='true'] > [data-blok-database-view-option],
+[data-blok-database-view-option][data-blok-focused='true'] {
   background-color: var(--blok-database-popover-hover);
 }
 
@@ -2637,37 +2729,38 @@ button[data-blok-database-column-count]:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: var(--blok-radius-control);
-  background: var(--blok-database-popover-hover);
-  color: var(--blok-database-tab-text-active);
+  color: var(--blok-database-ink);
   flex-shrink: 0;
 }
 
 [data-blok-database-view-option-icon] svg {
-  width: 16px;
-  height: 16px;
-}
-
-[data-blok-database-view-option-text] {
-  display: flex;
-  flex-direction: column;
-  gap: var(--blok-border-width-hairline);
-  min-width: 0;
+  width: 22px;
+  height: 22px;
 }
 
 [data-blok-database-view-option-label] {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--blok-database-tab-text-active);
-  line-height: 1.3;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
 }
 
-[data-blok-database-view-option-desc] {
-  font-size: 11px;
-  color: var(--blok-database-tab-text);
-  line-height: 1.3;
+/* "New data source" is a plain row under the grid. */
+[data-blok-database-view-option][data-blok-database-view-new-source] {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: var(--blok-space-2);
+  height: 28px;
+  padding: 0 var(--blok-space-2);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
+}
+
+[data-blok-database-view-new-source] [data-blok-database-view-option-icon] svg {
+  width: 20px;
+  height: 20px;
 }
 
 /* Overflow dropdown items */
@@ -2789,9 +2882,14 @@ button[data-blok-database-column-count]:hover {
 }
 
 /* Tab ghost during drag */
+/* Notion's ghost is a plain translucent tab; the source slot closes (feel/findings-toolbar V27). */
 [data-blok-database-tab-ghost] {
-  box-shadow: var(--blok-shadow-tab-ghost);
+  box-shadow: none;
   background: var(--blok-database-tab-bg-active);
+}
+
+[data-blok-database-tab][data-blok-database-tab-drag-source] {
+  display: none;
 }
 
 /* Board container for slide transitions */

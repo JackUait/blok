@@ -4107,6 +4107,21 @@ export class DatabaseTool implements BlockTool {
   }
 
   /**
+   * Add view's click: the view, then its settings (feel/findings-toolbar V05).
+   * Form asks its own question, and a linked view opens its source picker.
+   */
+  private addViewWithSettings(type: ViewType): void {
+    const before = this.activeViewId;
+
+    this.addView(type);
+    if (this.activeViewId === before || type === 'form' || this.linked) return;
+    const tab = this.element?.querySelector<HTMLElement>(`[data-blok-database-tab][data-view-id="${CSS.escape(this.activeViewId)}"]`);
+    const anchor = tab?.isConnected === true && tab.offsetParent !== null ? tab : this.titleRowElement ?? this.element;
+
+    if (anchor !== null) this.controls.openSettings(anchor, 'layout');
+  }
+
+  /**
    * "New data source" (research/23 §10): a child database block with only a
    * title property, and a Table view of this block bound to it, selected.
    * One undo step removes both.
@@ -4375,10 +4390,10 @@ export class DatabaseTool implements BlockTool {
   }
 
   /**
-   * Delete from the tab menu or View settings. The last view of a second
-   * source asks first, "Delete view only" picked (research/26 §5a). Only a
-   * click gets here: agents, undo and peers call deleteView. When it asks,
-   * the promise says whether the view went (the tab menu stays open until then).
+   * Delete from the tab menu or View settings. It always asks first; the last
+   * view of a second source also offers to delete the source (research/26 §5a).
+   * Only a click gets here: agents, undo and peers call deleteView. The promise
+   * says whether the view went (the tab menu stays open until then).
    */
   private requestDeleteView(viewId: string): Promise<boolean> | undefined {
     const view = this.model.getView(viewId);
@@ -4386,12 +4401,24 @@ export class DatabaseTool implements BlockTool {
     const ownSource = sourceId !== undefined && this.api.blocks.getChildren(this.dataId).some((child) => child.id === sourceId && child.name === 'database');
     const last = ownSource && !this.model.getViews().some((other) => other.id !== viewId && other.dataSourceId === sourceId);
 
-    if (!last || sourceId === undefined || this.model.getViews().length <= 1 || this.structureLocked()) {
-      this.deleteView(viewId);
-
-      return undefined;
-    }
+    if (this.model.getViews().length <= 1 || this.structureLocked()) return undefined;
     const t = (key: string): string => this.api.i18n.t(key);
+
+    // feel/findings-toolbar V24: Notion asks before every delete.
+    if (!last || sourceId === undefined) {
+      return openDatabaseConfirm({
+        title: t('tools.database.layoutDeleteViewTitle'),
+        confirmLabel: t('tools.database.layoutDeleteView'),
+        cancelLabel: t('tools.database.layoutCancel'),
+        destructive: true,
+        directionSource: this.element,
+      }).then((ok) => {
+        if (!ok || this.destroyed || this.model.getView(viewId) === undefined) return false;
+        this.deleteView(viewId);
+
+        return true;
+      });
+    }
 
     return openDatabaseChoice({
       title: t('tools.database.deleteLastViewTitle'),
@@ -4499,15 +4526,26 @@ export class DatabaseTool implements BlockTool {
     const tabBarEl = this.ownTabBarElement();
     const views = this.model.getViews();
     const addBtn = this.tabBar.getAddBtnEl();
+    const single = views.length === 1;
+    const toolbar = this.controls.toolbar;
 
-    if (views.length === 1 && !this.readOnly && !this.structureLocked() && addBtn !== null) {
-      this.titleRowElement.appendChild(addBtn);
-      this.titleRowElement.setAttribute('data-single-view', '');
+    // One view: the toolbar shares the title row (feel/findings-toolbar V01, research/35:221).
+    this.titleRowElement.toggleAttribute('data-single-view', single);
+    tabBarEl?.parentElement?.toggleAttribute('data-single-view', single);
+    if (single) {
+      this.titleRowElement.appendChild(toolbar);
+    } else if (tabBarEl !== null && tabBarEl.nextElementSibling !== toolbar) {
+      tabBarEl.after(toolbar);
+    }
+
+    this.titleRowElement.querySelector(':scope > [data-blok-database-title-more]')?.remove();
+    if (single && !this.readOnly && !this.structureLocked() && addBtn !== null) {
+      this.titleRowElement.insertBefore(addBtn, toolbar);
+      this.titleRowElement.insertBefore(this.tabBar.createTitleMoreButton(), toolbar);
       if (tabBarEl instanceof HTMLElement) {
         tabBarEl.style.display = 'none';
       }
     } else {
-      this.titleRowElement.removeAttribute('data-single-view');
       // Remove all stale addBtn(s) from titleRow before re-attaching cleanly
       const staleInTitleRow = this.titleRowElement.querySelectorAll('[data-blok-database-add-view]');
       staleInTitleRow.forEach((el) => {
@@ -4523,6 +4561,20 @@ export class DatabaseTool implements BlockTool {
     }
   }
 
+  /** "Edit title": the caret at the end of the title. */
+  private focusTitle(): void {
+    const title = this.titleElement;
+
+    if (title === null || !this.titleEditable()) return;
+    title.focus();
+    const range = document.createRange();
+
+    range.selectNodeContents(title);
+    range.collapse(false);
+    window.getSelection()?.removeAllRanges();
+    window.getSelection()?.addRange(range);
+  }
+
   private toggleDataSourceTitles(): void {
     if (this.readOnly || this.structureLocked()) return;
     this.dataSourceTitlesHidden = !this.dataSourceTitlesHidden;
@@ -4536,13 +4588,15 @@ export class DatabaseTool implements BlockTool {
       views: localizeDatabaseViews(this.model.getViews(), this.api.i18n),
       activeViewId: this.activeViewId,
       onTabClick: (viewId) => this.switchView(viewId),
-      onAddView: (type) => this.addView(type),
+      onAddView: (type) => this.addViewWithSettings(type),
       onRename: (viewId, name) => this.renameView(viewId, name),
       onDuplicate: (viewId) => this.duplicateView(viewId),
       onDelete: (viewId) => this.requestDeleteView(viewId),
       onReorder: (viewId, newPosition) => this.reorderView(viewId, newPosition),
       onEditView: (viewId, anchor) => this.editView(viewId, anchor),
       onRenameView: (viewId, anchor) => this.editView(viewId, anchor, 'rename'),
+      onCopyLink: (viewId) => this.copyViewLink(viewId),
+      onEditTitle: () => this.focusTitle(),
       display: this.tabDisplay.get(),
       onDisplayChange: (display) => {
         this.tabDisplay.set(display);
@@ -6330,8 +6384,8 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** Views have no addressable URL yet: the page URL with the view id as its fragment. Read by `consumeViewLink`. */
-  private copyViewLink(): void {
-    const url = `${window.location.href.split('#')[0]}#view-${encodeURIComponent(this.activeViewId)}`;
+  private copyViewLink(viewId: string = this.activeViewId): void {
+    const url = `${window.location.href.split('#')[0]}#view-${encodeURIComponent(viewId)}`;
 
     void navigator.clipboard?.writeText(url).then(
       () => this.api.notifier.show({ message: this.api.i18n.t('tools.database.viewLinkCopied') }),
@@ -9843,11 +9897,11 @@ export class DatabaseTool implements BlockTool {
     this.paintRowSelection();
   }
 
-  /** The view toolbar row: the selection bar takes its place (research/08). */
+  /** The view toolbar row: the selection bar takes its place (research/08). With one view that is the title row. */
   private selectionBarSlot(): HTMLElement | null {
     const owner = this.viewOwner();
 
-    return owner.element?.querySelector<HTMLElement>(':scope > [data-blok-database-view-bar]') ?? null;
+    return owner.element?.querySelector<HTMLElement>(':scope > [data-blok-database-title-row][data-single-view], :scope > [data-blok-database-view-bar]') ?? null;
   }
 
   /** Where this block's shown view is drawn. */

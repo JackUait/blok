@@ -622,6 +622,7 @@
   "tools.database.duplicateView": "Dyfisho",
   "tools.database.deleteView": "Fshi",
   "tools.database.addView": "Shto pamje",
+  "tools.database.addNewView": "Shto një pamje të re",
   "tools.database.viewTypeBoard": "Bord",
   "tools.database.viewTypeList": "Listë",
   "tools.database.viewTypeTable": "Tabelë",

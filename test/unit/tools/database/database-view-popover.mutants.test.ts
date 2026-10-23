@@ -186,9 +186,10 @@ describe('DatabaseViewPopover mutants', () => {
 
     const { params } = lastProbe();
 
-    expect(params.width).toBe('auto');
-    expect(params.minWidth).toBe('200px');
-    expect(params.flippable).toBe(false);
+    expect(params.width).toBe('390px');
+    expect(params.minWidth).toBeUndefined();
+    // The tiles are buttons, so the menu's arrow keys move through them.
+    expect(params.flippable).toBeUndefined();
     expect(params.autoFocusFirstItem).toBe(false);
     expect(params.trigger).toBe(anchor);
   });
@@ -199,13 +200,13 @@ describe('DatabaseViewPopover mutants', () => {
     expect(headingElement().getAttribute('data-blok-database-view-popover-heading')).toBe('');
   });
 
-  it('translates the heading through the addView key', () => {
+  it('translates the heading through the addNewView key', () => {
     const translated = new DatabaseViewPopover({ onSelect,
       api: echoingApi() });
 
     translated.open(anchor);
 
-    expect(headingElement().textContent).toBe('t:tools.database.addView');
+    expect(headingElement().textContent).toBe('t:tools.database.addNewView');
 
     translated.destroy();
   });
@@ -218,44 +219,29 @@ describe('DatabaseViewPopover mutants', () => {
     expect(board.getAttribute('data-blok-database-view-option')).toBe('board');
     expect(descendant(board, '[data-blok-database-view-option-icon]')
       .getAttribute('data-blok-database-view-option-icon')).toBe('');
-    expect(descendant(board, '[data-blok-database-view-option-text]')
-      .getAttribute('data-blok-database-view-option-text')).toBe('');
     expect(descendant(board, '[data-blok-database-view-option-label]')
       .getAttribute('data-blok-database-view-option-label')).toBe('');
-    expect(descendant(board, '[data-blok-database-view-option-desc]')
-      .getAttribute('data-blok-database-view-option-desc')).toBe('');
   });
 
-  it('nests the icon and the text wrapper directly under the option, in that order', () => {
+  it('nests the icon and the label directly under the option, in that order', () => {
     popover.open(anchor);
 
     const list = optionElement('list');
 
     expect(list.children.length).toBe(2);
     expect(childAt(list, 0).hasAttribute('data-blok-database-view-option-icon')).toBe(true);
-    expect(childAt(list, 1).hasAttribute('data-blok-database-view-option-text')).toBe(true);
+    expect(childAt(list, 1).hasAttribute('data-blok-database-view-option-label')).toBe(true);
   });
 
-  it('nests the label and the description directly under the text wrapper, in that order', () => {
-    popover.open(anchor);
-
-    const textEl = childAt(optionElement('list'), 1);
-
-    expect(textEl.children.length).toBe(2);
-    expect(childAt(textEl, 0).hasAttribute('data-blok-database-view-option-label')).toBe(true);
-    expect(childAt(textEl, 1).hasAttribute('data-blok-database-view-option-desc')).toBe(true);
-  });
-
-  it('renders empty label and description text when no api is supplied', () => {
+  it('renders an empty label when no api is supplied', () => {
     popover.open(anchor);
 
     const board = optionElement('board');
 
     expect(descendant(board, '[data-blok-database-view-option-label]').textContent).toBe('');
-    expect(descendant(board, '[data-blok-database-view-option-desc]').textContent).toBe('');
   });
 
-  it('translates the label and the description through their own keys', () => {
+  it('translates the label through its own key', () => {
     const translated = new DatabaseViewPopover({ onSelect,
       api: echoingApi() });
 
@@ -265,8 +251,6 @@ describe('DatabaseViewPopover mutants', () => {
 
     expect(descendant(board, '[data-blok-database-view-option-label]').textContent)
       .toBe('t:tools.database.viewTypeBoard');
-    expect(descendant(board, '[data-blok-database-view-option-desc]').textContent)
-      .toBe('t:tools.database.viewTypeBoardDescription');
 
     translated.destroy();
   });

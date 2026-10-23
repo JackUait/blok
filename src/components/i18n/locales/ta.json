@@ -620,6 +620,7 @@
   "tools.database.duplicateView": "நகலெடு",
   "tools.database.deleteView": "அழி",
   "tools.database.addView": "காட்சியைச் சேர்",
+  "tools.database.addNewView": "புதிய காட்சியைச் சேர்",
   "tools.database.viewTypeBoard": "பலகை",
   "tools.database.viewTypeList": "பட்டியல்",
   "tools.database.viewTypeTable": "அட்டவணை",

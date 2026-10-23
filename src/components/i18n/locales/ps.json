@@ -622,6 +622,7 @@
   "tools.database.duplicateView": "کاپي جوړه کړئ",
   "tools.database.deleteView": "ړنګ کړئ",
   "tools.database.addView": "لید اضافه کړئ",
+  "tools.database.addNewView": "نوی لید اضافه کړئ",
   "tools.database.viewTypeBoard": "بورډ",
   "tools.database.viewTypeList": "لست",
   "tools.database.viewTypeTable": "جدول",

@@ -620,6 +620,7 @@
   "tools.database.duplicateView": "ਨਕਲ ਬਣਾਓ",
   "tools.database.deleteView": "ਮਿਟਾਓ",
   "tools.database.addView": "ਦ੍ਰਿਸ਼ ਸ਼ਾਮਲ ਕਰੋ",
+  "tools.database.addNewView": "ਨਵਾਂ ਦ੍ਰਿਸ਼ ਸ਼ਾਮਲ ਕਰੋ",
   "tools.database.viewTypeBoard": "ਬੋਰਡ",
   "tools.database.viewTypeList": "ਸੂਚੀ",
   "tools.database.viewTypeTable": "ਟੇਬਲ",

@@ -622,6 +622,7 @@
   "tools.database.duplicateView": "අනුපිටපත",
   "tools.database.deleteView": "මකන්න",
   "tools.database.addView": "දසුනක් එක් කරන්න",
+  "tools.database.addNewView": "නව දසුනක් එක් කරන්න",
   "tools.database.viewTypeBoard": "පුවරුව",
   "tools.database.viewTypeList": "ලැයිස්තුව",
   "tools.database.viewTypeTable": "වගුව",

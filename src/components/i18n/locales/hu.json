@@ -620,6 +620,7 @@
   "tools.database.duplicateView": "Megkettőzés",
   "tools.database.deleteView": "Törlés",
   "tools.database.addView": "Nézet hozzáadása",
+  "tools.database.addNewView": "Új nézet hozzáadása",
   "tools.database.viewTypeBoard": "Tábla",
   "tools.database.viewTypeList": "Lista",
   "tools.database.viewTypeTable": "Táblázat",

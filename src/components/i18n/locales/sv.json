@@ -620,6 +620,7 @@
   "tools.database.duplicateView": "Duplicera",
   "tools.database.deleteView": "Ta bort",
   "tools.database.addView": "Lägg till vy",
+  "tools.database.addNewView": "Lägg till en ny vy",
   "tools.database.viewTypeBoard": "Tavla",
   "tools.database.viewTypeList": "Lista",
   "tools.database.viewTypeTable": "Tabell",

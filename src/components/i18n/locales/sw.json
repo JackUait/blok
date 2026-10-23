@@ -620,6 +620,7 @@
   "tools.database.duplicateView": "Rudufu",
   "tools.database.deleteView": "Futa",
   "tools.database.addView": "Ongeza mwonekano",
+  "tools.database.addNewView": "Ongeza mwonekano mpya",
   "tools.database.viewTypeBoard": "Ubao",
   "tools.database.viewTypeList": "Orodha",
   "tools.database.viewTypeTable": "Jedwali",

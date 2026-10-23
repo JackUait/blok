@@ -620,6 +620,7 @@
   "tools.database.duplicateView": "Dupliciraj",
   "tools.database.deleteView": "Izbriši",
   "tools.database.addView": "Dodaj prikaz",
+  "tools.database.addNewView": "Dodaj novi prikaz",
   "tools.database.viewTypeBoard": "Ploča",
   "tools.database.viewTypeList": "Popis",
   "tools.database.viewTypeTable": "Tablica",

@@ -270,7 +270,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1883 + 126 + 510 + 4 closure for all 2523 keys', () => {
+  it('rebuilds a disjoint 1872 + 126 + 522 + 4 closure for all 2524 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -284,7 +284,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2523);
+    expect(lifecycle.size).toBe(2524);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -447,7 +447,10 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: popover.filteredResults, the "/" menu's search header.
       // -2: tools.database.openRow and deleteRow; the list row lost its "›" and "×" (findings-listgallery L03).
       // -1: tools.database.galleryNew; the gallery tile reads tools.database.newPage (findings-listgallery L14).
-      'executable-literal': 1883,
+      // +1: tools.database.addNewView, the Add view heading (feel/findings-toolbar V04).
+      // -12: the 10 Add view descriptions, and duplicateView/deleteView now that the tab menu
+      // reads "Duplicate view"/"Delete view" (feel/findings-toolbar V04, V07). The keys still ship.
+      'executable-literal': 1872,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -514,7 +517,8 @@ describe('current English catalog lifecycle coverage', () => {
       // (settingsSearchProperty), via the panel's prefixing t.
       // +2: tools.database.openRow and deleteRow (see executable-literal).
       // +1: tools.database.galleryNew (see executable-literal).
-      'registered-namespace-compatible': 510,
+      // +12: see executable-literal (Add view descriptions, old tab menu labels).
+      'registered-namespace-compatible': 522,
       'catalog-only': 4,
     });
     expect(

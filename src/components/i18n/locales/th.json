@@ -620,6 +620,7 @@
   "tools.database.duplicateView": "ทำสำเนา",
   "tools.database.deleteView": "ลบ",
   "tools.database.addView": "เพิ่มมุมมอง",
+  "tools.database.addNewView": "เพิ่มมุมมองใหม่",
   "tools.database.viewTypeBoard": "บอร์ด",
   "tools.database.viewTypeList": "รายการ",
   "tools.database.viewTypeTable": "ตาราง",

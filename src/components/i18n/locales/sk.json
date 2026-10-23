@@ -622,6 +622,7 @@
   "tools.database.duplicateView": "Duplikovať",
   "tools.database.deleteView": "Odstrániť",
   "tools.database.addView": "Pridať zobrazenie",
+  "tools.database.addNewView": "Pridať nové zobrazenie",
   "tools.database.viewTypeBoard": "Tabuľa",
   "tools.database.viewTypeList": "Zoznam",
   "tools.database.viewTypeTable": "Tabuľka",

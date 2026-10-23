@@ -620,6 +620,7 @@
   "tools.database.duplicateView": "نقل کریں",
   "tools.database.deleteView": "حذف کریں",
   "tools.database.addView": "ویو شامل کریں",
+  "tools.database.addNewView": "نیا ویو شامل کریں",
   "tools.database.viewTypeBoard": "بورڈ",
   "tools.database.viewTypeList": "فہرست",
   "tools.database.viewTypeTable": "ٹیبل",

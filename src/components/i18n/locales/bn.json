@@ -622,6 +622,7 @@
   "tools.database.duplicateView": "প্রতিলিপি",
   "tools.database.deleteView": "মুছুন",
   "tools.database.addView": "ভিউ যোগ করুন",
+  "tools.database.addNewView": "নতুন ভিউ যোগ করুন",
   "tools.database.viewTypeBoard": "বোর্ড",
   "tools.database.viewTypeList": "তালিকা",
   "tools.database.viewTypeTable": "টেবিল",

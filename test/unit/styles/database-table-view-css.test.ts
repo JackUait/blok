@@ -118,4 +118,8 @@ describe('database table view styles', () => {
     expect(icon).toMatch(/flex:\s*none/);
     expect(ruleBody('[data-blok-database-file-chip-icon] svg')).toMatch(/width:\s*20px/);
   });
+
+  it('floats the sub-item toggle too, so a nested title stays on the toggle\'s line', () => {
+    expect(ruleBody('[data-blok-database-table-cell] > [data-blok-database-subitem-toggle]')).toMatch(/float:\s*inline-start/);
+  });
 });

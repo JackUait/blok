@@ -6706,6 +6706,11 @@ textarea[data-blok-database-cell-input] {
   height: 18px;
 }
 
+/* Floats like the icon after it: inline, it would push the value below. */
+[data-blok-database-table-cell] > [data-blok-database-subitem-toggle] {
+  float: inline-start;
+}
+
 [data-blok-database-table-cell][data-type="number"] {
   text-align: end;
 }

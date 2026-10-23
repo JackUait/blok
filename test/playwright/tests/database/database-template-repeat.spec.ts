@@ -59,6 +59,16 @@ const repeatOf = async (page: Page): Promise<Record<string, unknown> | undefined
   return (saved?.blocks.find((block) => block.id === 'tpl')?.data as { repeat?: Record<string, unknown> }).repeat;
 });
 
+/** Whether the Discard question's backdrop is what a point on this control hits. */
+const coveredByQuestion = (page: Page, label: string): Promise<boolean> => page.evaluate((name) => {
+  const target = [...document.querySelectorAll<HTMLElement>('[data-blok-popover] *')]
+    .find((el) => el.getAttribute('aria-label') === name || (el.childElementCount === 0 && el.textContent === name));
+  const box = target?.getBoundingClientRect();
+  const hit = box === undefined ? null : document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+
+  return hit?.closest('[data-blok-database-confirm]') !== null && hit !== null && !(target?.contains(hit) ?? false);
+}, label);
+
 const openBanner = async (page: Page): Promise<void> => {
   await page.getByTestId('database-toolbar-new-menu').click();
   await page.getByRole('menuitem', { name: 'Standup' }).getByTestId('popover-item-more').click();
@@ -250,6 +260,21 @@ test('Escape on an unsaved Edit cadence asks "Discard unsaved changes?"', async 
 
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Discard' })).toBeFocused();
+  // Mounted inside the popover, it still covers the window and sits centred.
+  const place = await dialog.evaluate((el) => {
+    const backdrop = el.closest('[data-blok-database-confirm]')?.getBoundingClientRect();
+    const box = el.getBoundingClientRect();
+
+    return {
+      backdrop: { x: backdrop?.x, y: backdrop?.y, width: backdrop?.width, height: backdrop?.height },
+      centre: Math.round(box.x + box.width / 2),
+    };
+  });
+
+  expect(place.backdrop).toEqual({ x: 0, y: 0, width: 1400, height: 900 });
+  expect(Math.abs(place.centre - 700)).toBeLessThanOrEqual(1);
+  // Its backdrop paints over the panel: a point on the panel hits the backdrop.
+  expect(await coveredByQuestion(page, 'Edit cadence')).toBe(true);
   await dialog.getByRole('button', { name: 'Cancel' }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByText('Edit cadence')).toBeVisible();
@@ -291,4 +316,25 @@ test('the templates menu rows are 28px, and the "…" submenu rows are not', asy
   const edit = await page.getByRole('menuitem', { name: 'Edit', exact: true }).evaluate((el) => (el instanceof HTMLElement ? el.offsetHeight : 0));
 
   expect(edit).toBe(36);
+});
+
+// A submenu is open when Escape is pressed: the question still draws above it.
+test('the Discard question draws above an open cadence submenu', async ({ page }) => {
+  await mount(page, { frequency: 'weekly', start: '2026-10-05T07:30:00.000Z', timeZone: 'Europe/Berlin' });
+  await openBanner(page);
+  await page.getByRole('button', { name: 'Duplicate every week' }).click();
+  await page.getByRole('spinbutton', { name: 'Every' }).fill('3');
+  await page.getByRole('menuitem', { name: /^Starting/ }).click();
+  await expect(page.getByRole('button', { name: 'Next month' })).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  const discard = page.getByRole('alertdialog', { name: 'Discard unsaved changes?' }).getByRole('button', { name: 'Discard' });
+
+  await expect(discard).toBeFocused();
+  // Its backdrop paints over the panel and over the open month grid.
+  expect(await coveredByQuestion(page, 'Edit cadence')).toBe(true);
+  expect(await coveredByQuestion(page, 'Next month')).toBe(true);
+  await discard.click();
+  await expect(page.getByText('Edit cadence')).toHaveCount(0);
+  expect(await repeatOf(page)).toEqual({ frequency: 'weekly', start: '2026-10-05T07:30:00.000Z', timeZone: 'Europe/Berlin' });
 });

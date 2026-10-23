@@ -582,7 +582,8 @@ const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: Cade
       focusConfirm: true,
       directionSource: panel,
       // Inside the popover: focus on a dialog outside it would close the popover.
-      ...(root === null ? {} : { container: root }),
+      // The top layer keeps it above the popover and an open submenu.
+      ...(root === null ? {} : { container: root, topLayer: true }),
     }).then((discard) => {
       if (discard) host.close();
     });

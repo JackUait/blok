@@ -18,6 +18,8 @@ export interface DatabaseConfirmOptions {
   role?: DialogRole;
   /** Over another modal: mount inside its surface, or the two focus traps pull focus back and forth forever. */
   container?: HTMLElement;
+  /** With `container`: still paint in the top layer, above the container's own top-layer children. */
+  topLayer?: boolean;
   /** Aborting closes the dialog as a dismiss: the modal it sits in is going away. */
   signal?: AbortSignal;
   /** A blue confirm and a borderless cancel, as Notion's form auto-create prompt (research/19 §3a). */
@@ -186,7 +188,7 @@ const buildConfirm = (options: DatabaseConfirmOptions, choices: DatabaseChoice[]
     ...(description === null ? {} : { describedBy: description.id }),
     initialFocus: () => close ?? (options.primary === true || options.focusConfirm === true ? confirmButton : cancelButton),
     directionSource: options.directionSource ?? null,
-    ...(options.container === undefined ? {} : { container: options.container, topLayer: false }),
+    ...(options.container === undefined ? {} : { container: options.container, topLayer: options.topLayer ?? false }),
     onDismiss: () => finish(options.dismissAs ?? false),
   });
 

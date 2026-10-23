@@ -9310,7 +9310,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-tpl-gallery-card][data-tint] {
   border-color: color-mix(in srgb, var(--blok-database-tpl-card-tint) 18%, var(--blok-database-tpl-border));
   background-color: color-mix(in srgb, var(--blok-database-tpl-card-tint) 4%, var(--blok-database-tpl-gallery-card-bg));
-  color: color-mix(in srgb, var(--blok-database-tpl-card-tint) 55%, var(--blok-database-ink));
+  color: color-mix(in srgb, var(--blok-database-tpl-card-tint) 45%, var(--blok-database-ink));
 }
 
 [data-blok-database-tpl-gallery-card][data-tint]:hover {

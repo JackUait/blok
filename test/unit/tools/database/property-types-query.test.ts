@@ -130,7 +130,8 @@ describe('property types — query', () => {
 
       expect(settings.groups.map((g) => [g.id, g.kind])).toEqual([['todo', 'todo'], ['inProgress', 'inProgress'], ['complete', 'complete']]);
       expect(options.map((o) => [o.label, o.groupId, o.color])).toEqual([
-        ['Not started', 'todo', 'gray'],
+        // findings-board B29, research/07:105: Notion's default "Not started" has no colour key.
+        ['Not started', 'todo', undefined],
         ['In progress', 'inProgress', 'blue'],
         ['Done', 'complete', 'green'],
       ]);

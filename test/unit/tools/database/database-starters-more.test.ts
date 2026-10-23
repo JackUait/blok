@@ -244,8 +244,8 @@ describe('"More templates" (research/27 §1e, research/30 §10)', () => {
       expect(shownNames(made, 'All Ideas')[0]).toBe('Status');
       // Notion's sample value "New idea" belongs to options that were not read: rows get none.
       expect(made.rows.every((r) => r.data.properties[prop(made, 'Status').id] === undefined)).toBe(true);
-      // Its options were not read: a status Blok adds itself, gray and no default.
-      expect(options(made, 'Status')[0]).toEqual(['Not started', 'gray']);
+      // Its options were not read: a status Blok adds itself, colourless as Notion's own default (findings-board B29), no default.
+      expect(options(made, 'Status')[0]).toEqual(['Not started', undefined]);
       expect(prop(made, 'Status').status?.defaultOptionId).toBeUndefined();
     });
 

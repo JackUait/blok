@@ -633,9 +633,10 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     el.style.setProperty('min-width', columnWidth);
     el.style.setProperty('flex', `0 0 ${columnWidth}`);
 
+    const c = this.columnColor(option);
+
     // "Color columns" off: columns and cards drop the hue, pills keep it.
-    if (option.color !== undefined && this.settings.view?.groupSettings?.colorColumns !== false) {
-      const c = option.color;
+    if (c !== undefined && this.settings.view?.groupSettings?.colorColumns !== false) {
 
       // Only some hues were measured (colors.css); the rest derive from the option pill.
       el.style.setProperty('--_blok-group-tint', `var(--blok-database-column-${c}-bg, color-mix(in srgb, var(--blok-database-option-${c}-bg) 22%, transparent))`);
@@ -649,6 +650,14 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       el.style.setProperty('--_blok-group-add-hover', `var(--blok-database-column-${c}-add-hover-bg, var(--blok-database-add-hover-bg))`);
       el.setAttribute('data-color', c);
     }
+  }
+
+  /** A status option stored without a colour draws a gray pill, but its column stays uncoloured (findings-board B29). */
+  private columnColor(option: SelectOption): SelectOption['color'] {
+    if (!this.isStatusBoard) return option.color;
+    const stored = this.settings.schema?.find((property) => property.id === this.settings.view?.groupBy)?.config?.options.find((o) => o.id === option.id);
+
+    return stored === undefined ? option.color : stored.color;
   }
 
   /** The pill, the row count and, when editable, the header buttons. */

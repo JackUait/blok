@@ -163,6 +163,18 @@ describe('DatabaseBoardView', () => {
       expect(board.querySelector('[data-blok-database-hidden-groups]')).toBeNull();
     });
 
+    // findings-board B29: the model hands a colourless status option over as gray; its column stays uncoloured.
+    it('leaves the column of a stored colourless status uncoloured, though the pill is gray', () => {
+      const board = new DatabaseBoardView({
+        readOnly: false, i18n, options: [makeOption({ id: 'ns', label: 'Not started', color: 'gray' })], getRows: () => [], titlePropertyId: 'title',
+        schema: [{ id: 's', name: 'Status', type: 'status', position: 'a1', config: { options: [{ id: 'ns', label: 'Not started', position: 'a0', groupId: 'todo' }] } }],
+        view: { id: 'v', name: 'Board', type: 'board', position: 'a0', sorts: [], filters: [], visibleProperties: [], groupBy: 's' },
+      }).createView();
+
+      expect(board.querySelector('[data-blok-database-column][data-option-id="ns"]')?.hasAttribute('data-color')).toBe(false);
+      expect(pillOf(board, 'ns')?.style.backgroundColor).toBe('var(--blok-database-option-gray-bg)');
+    });
+
     it('keeps the select pill for status groups and for select boards', () => {
       const byGroup = statusView([makeOption({ id: 'g', color: 'blue' })], { groupByStatus: 'group' });
       const select = new DatabaseBoardView({ readOnly: false, i18n, options: [makeOption({ id: 'o', color: 'blue' })], getRows: () => [], titlePropertyId: 'title' }).createView();

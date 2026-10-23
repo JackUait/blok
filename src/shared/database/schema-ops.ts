@@ -149,7 +149,7 @@ export const createDefaultStatusOptions = (
   labels: { notStarted: string; inProgress: string; done: string },
   mintId: () => string
 ): SelectOption[] => [
-  { id: mintId(), label: labels.notStarted, color: 'gray', position: 'a0', groupId: 'todo' },
+  { id: mintId(), label: labels.notStarted, position: 'a0', groupId: 'todo' },
   { id: mintId(), label: labels.inProgress, color: 'blue', position: 'a0', groupId: 'inProgress' },
   { id: mintId(), label: labels.done, color: 'green', position: 'a0', groupId: 'complete' },
 ];

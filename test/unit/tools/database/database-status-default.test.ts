@@ -143,7 +143,8 @@ describe('a status property\'s default option (research/30 §10f, research/31 §
     expect((popovers.items.at(-1) ?? []).filter((item) => item.name?.startsWith('color-') === true)).toEqual([]);
   });
 
-  it('a colourless status option draws as the gray pill in a cell and as a gray board column', () => {
+  // findings-board B29: Notion's colourless "Not started" column is uncoloured (count rgb(95,94,89)).
+  it('a colourless status option draws as the gray pill in a cell and an uncoloured board column', () => {
     const doc = seed();
     const table = buildDatabase(doc, 'db', data('table', 'ns')).el;
 
@@ -152,7 +153,7 @@ describe('a status property\'s default option (research/30 §10f, research/31 §
     const board = buildDatabase(seed(), 'db', data('board', 'ns')).el;
     const column = board.querySelector<HTMLElement>('[data-blok-database-column][data-option-id="ns"]');
 
-    expect(column?.getAttribute('data-color')).toBe('gray');
+    expect(column?.hasAttribute('data-color')).toBe(false);
     expect(column?.querySelector('[data-blok-database-column-dot]')).not.toBeNull();
   });
 

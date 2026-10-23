@@ -463,6 +463,15 @@ export const IconPencil = `
 </svg>
 `;
 
+// Notion's `pencilLineSmall` (board card Edit): a slim pencil, its cap apart, its tip on a baseline.
+export const IconPencilLine = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M4.5 15.5 5.25 13 11.5 6.75 13.25 8.5 7 14.75Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M13.25 5l.6-.6a1.24 1.24 0 0 1 1.75 1.75l-.6.6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M9 15.5h7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
 // Trash/Delete icon
 export const IconTrash = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

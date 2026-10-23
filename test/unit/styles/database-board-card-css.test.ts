@@ -61,6 +61,14 @@ describe('database board card and calendar "No date" styles', () => {
     expect(ruleBody('[data-blok-database-card-edit-glyph]')).toMatch(/inline-size:\s*18px/);
   });
 
+  // feel findings B08: the board card's action glyphs are 16px.
+  it('sizes the board card action glyphs 16px', () => {
+    const body = ruleBody('[data-blok-database-card] [data-blok-database-card-actions] svg');
+
+    expect(body).toMatch(/inline-size:\s*16px/);
+    expect(body).toMatch(/block-size:\s*16px/);
+  });
+
   it('wraps a property only when its wrap setting is on', () => {
     expect(ruleBody('[data-blok-database-card-property][data-wrap="false"]')).toMatch(/white-space:\s*nowrap/);
   });

@@ -12,7 +12,7 @@ import { createCardPreview } from './database-card-preview';
 import type { BodyBlock } from './row-body';
 import { resolveBoardCardPreview, resolveCardLayout, resolveCardSize, resolveFitImage, resolveViewProperties } from './view-settings';
 import { getElementDirection } from '../../components/utils/direction';
-import { IconPlus, IconPencil, IconDotsHorizontal, IconChevronDown, IconPage, IconSidebarRight } from '../../components/icons';
+import { IconPlus, IconPencilLine, IconDotsHorizontal, IconChevronDown, IconPage, IconSidebarRight } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
 import { onHover } from '../../components/utils/tooltip';
 import { onPropertyHover } from './property-hint';
@@ -823,7 +823,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       editBtn.setAttribute('data-blok-database-edit-card', '');
       editBtn.setAttribute('data-row-id', row.id);
       editBtn.setAttribute('aria-label', this.i18n.t('tools.database.editCardTitle'));
-      editBtn.innerHTML = IconPencil;
+      editBtn.innerHTML = IconPencilLine;
       // One hint node: the title edit swaps its text while the button opens the peek.
       const editHint = document.createElement('span');
 
@@ -950,7 +950,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       cardEl.removeAttribute('data-editing');
       cardEl.querySelector(':scope > [data-blok-database-card-edit-glyph]')?.remove();
       if (editBtn !== null) {
-        editBtn.innerHTML = IconPencil;
+        editBtn.innerHTML = IconPencilLine;
         editBtn.setAttribute('aria-label', this.i18n.t('tools.database.editCardTitle'));
       }
       if (editHint !== undefined) editHint.textContent = this.i18n.t('tools.database.galleryCardEdit');

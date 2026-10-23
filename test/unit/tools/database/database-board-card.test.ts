@@ -4,6 +4,7 @@ import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption 
 import type { I18n } from '../../../../types';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { hover, shownHint } from './hint-harness';
+import { IconPencilLine } from '../../../../src/components/icons';
 
 const i18n = { t: (key: string) => key } as unknown as I18n;
 
@@ -161,6 +162,14 @@ describe('DatabaseBoardView card parity', () => {
       expect(card(board, 'r1').querySelector('[data-blok-database-card-property]')).toBeNull();
       expect(card(board, 'r1').querySelector('[data-blok-database-card-preview]')).toBeNull();
     });
+  });
+
+  // feel findings B08: Notion's card Edit is the small pencil on a line.
+  it('draws the card Edit button with the pencil-on-a-line glyph', () => {
+    const expected = document.createElement('div');
+
+    expected.innerHTML = IconPencilLine;
+    expect(card(mount(), 'r1').querySelector('[data-blok-database-edit-card]')?.innerHTML).toBe(expected.innerHTML);
   });
 
   // feel findings B16, research/12:54: the card buttons hint after the hint delay.

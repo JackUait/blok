@@ -1067,6 +1067,12 @@
   background: var(--blok-database-card-menu-hover-bg);
 }
 
+/* Notion's board card glyphs are 16px (feel findings B08). */
+[data-blok-database-card] [data-blok-database-card-actions] svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
 /* Measured 29x24 with a 1px end border, so the pill stays 57px (research/21 §1f). */
 [data-blok-database-edit-card] {
   box-sizing: border-box;

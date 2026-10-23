@@ -4847,6 +4847,11 @@ span[data-blok-slash-search] {
   background: var(--blok-database-card-menu-hover-bg);
 }
 
+[data-blok-database-card] [data-blok-database-card-actions] svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
 [data-blok-database-edit-card] {
   box-sizing: border-box;
   width: 29px;

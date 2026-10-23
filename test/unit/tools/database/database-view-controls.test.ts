@@ -164,6 +164,41 @@ describe('DatabaseViewControls', () => {
     expect(q('database-pick-property-act')).toBeNull();
   });
 
+  // research/21 §1c (feel/findings-table T27): 290 wide, search on top, first option highlighted on open.
+  it('opens "+ Filter" as Notion\'s property list: 290 wide, a focused search, the first option highlighted', () => {
+    setup();
+    click('database-toolbar-filter');
+    const picker = q('database-filter-picker');
+    const search = q('database-filter-picker-search');
+
+    expect(picker?.style.width).toBe('290px');
+    expect(search).not.toBeNull();
+    expect(picker?.querySelector('[data-blok-database-panel-input]')).toBe(search);
+    expect(search).toHaveFocus();
+    expect(q('database-pick-property-title')?.hasAttribute('data-active')).toBe(true);
+    expect(q('database-pick-property-num')?.hasAttribute('data-active')).toBe(false);
+  });
+
+  it('filters "+ Filter" as you type, moves the highlight with the arrows and picks it with Enter', () => {
+    setup();
+    click('database-toolbar-filter');
+    const search = q('database-filter-picker-search') as HTMLInputElement;
+    const key = (k: string): void => {
+      search.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+    };
+
+    key('ArrowDown');
+    expect(q('database-pick-property-num')?.hasAttribute('data-active')).toBe(true);
+    search.value = 'amo';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(q('database-pick-property-title')).toBeNull();
+    expect(q('database-pick-property-num')?.hasAttribute('data-active')).toBe(true);
+    key('Enter');
+
+    expect(q('database-filter-picker')).toBeNull();
+    expect(q('database-filter-popover')).not.toBeNull();
+  });
+
   it('keeps a filter personal until Save for everyone', () => {
     const { controls, host, saved } = setup();
     const anchor = document.createElement('button');

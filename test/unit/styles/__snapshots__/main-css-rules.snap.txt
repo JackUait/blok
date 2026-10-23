@@ -11795,7 +11795,7 @@ textarea[data-blok-database-cell-input] {
   transition: background-color 0.02s ease-in;
 }
 
-[data-blok-database-panel-row]:hover:not(:disabled), [data-blok-database-panel-row]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
+[data-blok-database-panel-row]:hover:not(:disabled), [data-blok-database-panel-row][data-active], [data-blok-database-panel-row]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
   background-color: var(--blok-database-table-header-hover-bg);
 }
 

@@ -1,7 +1,7 @@
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { IconSearch, IconSliders, IconLock, IconPlus, IconChevronDown, IconFilter, IconSort, IconPreview, IconBolt, IconWand } from '../../components/icons';
 import type { I18n } from '../../../types';
-import { DatabasePanel, panelRow } from './database-panel';
+import { DatabasePanel, panelInput, panelRow } from './database-panel';
 import { PersonalViewEdits } from './database-view-state';
 import type { ViewStateFallback } from './database-view-state';
 import { FILTERABLE_TYPES, defaultFilterFor, filterPillLabel, filterValueText, sortDirectionLabelKey } from './database-filter-labels';
@@ -433,25 +433,72 @@ export class DatabaseViewControls {
     anchor.setAttribute('data-popover-open', '');
   }
 
-  /** "+ Filter": pick a property, then edit the new filter's value. */
+  /**
+   * "+ Filter": pick a property, then edit the new filter's value. Notion's list
+   * (research/21 §1c): 290 wide, a search on top, the first option highlighted on open.
+   */
   private openFilterPicker(anchor: HTMLElement): void {
+    const state = { query: '', active: 0 };
+    const list = document.createElement('div');
+    const matches = (): PropertyDefinition[] => {
+      const needle = state.query.trim().toLowerCase();
+
+      return this.host.schema()
+        .filter((p) => FILTERABLE_TYPES.includes(p.type))
+        .filter((p) => needle === '' || p.name.toLowerCase().includes(needle));
+    };
+    const pick = (property: PropertyDefinition): void => {
+      panel.close();
+      this.filterBy(property.id, anchor);
+    };
+    const fill = (): void => {
+      list.replaceChildren(...matches().map((property, index) => {
+        const row = panelRow({ label: property.name, testId: `database-pick-property-${property.id}`, onClick: () => pick(property) });
+
+        row.toggleAttribute('data-active', index === state.active);
+
+        return row;
+      }));
+    };
     const panel = new DatabasePanel({
       anchor,
       root: {
-        title: this.t('filterAdd'),
-        build: () => this.host.schema()
-          .filter((p) => FILTERABLE_TYPES.includes(p.type))
-          .map((property) => panelRow({
-            label: property.name,
-            testId: `database-pick-property-${property.id}`,
-            onClick: () => {
-              panel.close();
-              this.filterBy(property.id, anchor);
+        build: () => {
+          const search = panelInput({
+            value: state.query,
+            placeholder: this.t('layoutSearchProperties'),
+            label: this.t('layoutSearchProperties'),
+            testId: 'database-filter-picker-search',
+            // Only the list redraws, so the field keeps its caret.
+            onInput: (value) => {
+              state.query = value;
+              state.active = 0;
+              fill();
             },
-          })),
+          });
+
+          search.addEventListener('keydown', (event) => {
+            const shown = matches();
+
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+              event.preventDefault();
+              if (shown.length === 0) return;
+              state.active = (state.active + (event.key === 'ArrowDown' ? 1 : -1) + shown.length) % shown.length;
+              fill();
+            } else if (event.key === 'Enter' && !event.isComposing) {
+              event.preventDefault();
+              const property = shown[state.active];
+
+              if (property !== undefined) pick(property);
+            }
+          });
+          fill();
+
+          return [search, list];
+        },
       },
       testId: 'database-filter-picker',
-      width: 220,
+      width: 290,
       backLabel: this.t('settingsBack'),
       onClose: () => this.panelClosed(anchor),
     });

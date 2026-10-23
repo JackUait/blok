@@ -90,3 +90,9 @@ describe('selection bar (T13)', () => {
     expect(declared('[data-blok-database-view-bar][data-blok-database-selecting] > :not([data-blok-database-table-selection-bar])', 'visibility')).toEqual([]);
   });
 });
+
+describe('filter property list (T27)', () => {
+  it('paints the highlighted option with the row hover fill', () => {
+    expect(declared('[data-blok-database-panel-row][data-active]', 'background-color')).toEqual(['var(--blok-database-table-header-hover-bg)']);
+  });
+});

@@ -485,14 +485,14 @@ const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: Cade
     return heading;
   };
   const currentHeading = zoneHeading('timeZoneCurrent');
-  const zoneItem = (id: string, name = `template-repeat-zone-${id}`): PopoverItemParams => {
+  const zoneItem = (id: string): PopoverItemParams => {
     const city = zoneCity(id);
     const titleEl = el('span', 'data-blok-database-template-cadence-zone', city);
 
     titleEl.append(el('span', 'data-blok-database-template-cadence-zone-offset', zoneOffsetText(id, c.now())));
 
     return {
-      name,
+      name: `template-repeat-zone-${id}`,
       title: city,
       titleEl,
       searchTerms: [id],
@@ -540,9 +540,9 @@ const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: Cade
         },
         items: [
           { type: PopoverItemType.Html, element: currentHeading, name: 'template-repeat-timezone-current-heading' },
-          { ...zoneItem(c.viewerZone, 'template-repeat-current-zone'), isActive: () => live.zone === c.viewerZone },
+          { ...zoneItem(c.viewerZone), name: 'template-repeat-current-zone', isActive: () => live.zone === c.viewerZone },
           { type: PopoverItemType.Html, element: zoneHeading('timeZoneSelect'), name: 'template-repeat-timezone-select-heading' },
-          ...(zones.includes(live.zone) ? zones : [live.zone, ...zones]).map((id) => zoneItem(id)),
+          ...(zones.includes(live.zone) ? zones : [live.zone, ...zones]).map(zoneItem),
         ],
       },
     },

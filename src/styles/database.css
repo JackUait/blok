@@ -1786,6 +1786,11 @@
   line-height: 48px;
 }
 
+/* feel/findings-rowpage R11: the side peek's header row starts 4px under the 44px bar (Notion: y 48). */
+[data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-content] {
+  padding-block-start: var(--blok-space-1);
+}
+
 /* feel/findings-rowpage R20: the center peek's column is 708px, centred past the 8px scrollbar gutter; its title text sits 8px in. */
 [data-blok-database-drawer][data-peek-mode="center"] [data-blok-database-drawer-content] {
   padding-inline: max(var(--blok-space-4), calc(50% - 354px - var(--blok-space-2)));

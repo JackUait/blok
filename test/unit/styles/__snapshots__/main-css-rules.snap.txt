@@ -5431,6 +5431,10 @@ span[data-blok-slash-search] {
   line-height: 48px;
 }
 
+[data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-content] {
+  padding-block-start: var(--blok-space-1);
+}
+
 [data-blok-database-drawer][data-peek-mode="center"] [data-blok-database-drawer-content] {
   padding-inline: max(var(--blok-space-4), calc(50% - 354px - var(--blok-space-2)));
 }

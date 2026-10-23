@@ -509,5 +509,13 @@ describe('DatabaseCardDrawer shell', () => {
       drawer.destroy();
     });
   });
+
+  // feel/findings-rowpage R11: Notion's side peek starts the header hover row 4px under the 44px bar (y 48).
+  it('starts the side peek page 4px under its top bar', () => {
+    const css = readFileSync(resolve(__dirname, '../../../../src/styles/database.css'), 'utf8');
+    const body = css.match(/\[data-blok-database-drawer\]\[data-peek-mode="side"\] \[data-blok-database-drawer-content\]\s*\{([^}]*)\}/)?.[1] ?? '';
+
+    expect(body).toContain('padding-block-start: var(--blok-space-1)');
+  });
 });
 

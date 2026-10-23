@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, onTestFinished, vi } from 'vitest';
 import { DatabaseModel } from '../../../../src/tools/database/database-model';
 import { openFilterPill, openViewSettings } from '../../../../src/tools/database/database-view-settings-panel';
 import type { ViewSettingsContext, ViewSettingsStart } from '../../../../src/tools/database/database-view-settings-panel';
@@ -232,6 +232,27 @@ describe('view settings panel', () => {
       expect(document.querySelector('[data-blok-database-panel-header]')?.getAttribute('data-blok-database-panel-header')).toBe('label');
     });
 
+    // A rename on blur redraws the panel; mid-press, that would swallow the click on the row pressed.
+    it('a name left by pressing a row is written once the press ends, so the row still gets its click', () => {
+      vi.useFakeTimers();
+      onTestFinished(() => {
+        vi.useRealTimers();
+      });
+      const h = harness();
+
+      h.open();
+      field().focus();
+      field().value = 'Plan';
+      const layout = document.querySelector('[data-blok-testid="database-settings-layout"]');
+
+      layout?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      field().blur();
+      expect(h.ctx.updateView).not.toHaveBeenCalled();
+      layout?.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      vi.runAllTimers();
+      expect(h.ctx.updateView).toHaveBeenLastCalledWith({ name: 'Plan' });
+    });
+
     it('is read-only while the database is locked', () => {
       const h = harness();
 
@@ -239,6 +260,19 @@ describe('view settings panel', () => {
       h.open();
       expect(field().disabled).toBe(true);
     });
+  });
+
+  // With one view the tab is hidden, so its menu cannot be reached: Duplicate stays here.
+  it('offers Duplicate view only while the database has one view', () => {
+    const h = harness();
+
+    h.ctx.canDeleteView = () => false;
+    h.open();
+    click('database-settings-duplicate');
+    expect(h.ctx.duplicateView).toHaveBeenCalledTimes(1);
+    h.ctx.canDeleteView = () => true;
+    h.open();
+    expect(exists('database-settings-duplicate')).toBe(false);
   });
 
   it('lists Notion\'s settings rows (research/08)', () => {

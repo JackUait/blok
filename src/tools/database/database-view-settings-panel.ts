@@ -1,4 +1,4 @@
-import { IconBolt, IconCalendar, IconChevronUpDown, IconCross, IconDatabase, IconDotsHorizontal, IconFilter, IconGallery, IconLink, IconLock, IconPaintRoller, IconPlus, IconPreview, IconReplace, IconSort, IconTable, IconTrash, IconWand } from '../../components/icons';
+import { IconBolt, IconCalendar, IconChevronUpDown, IconCopy, IconCross, IconDatabase, IconDotsHorizontal, IconFilter, IconGallery, IconLink, IconLock, IconPaintRoller, IconPlus, IconPreview, IconReplace, IconSort, IconTable, IconTrash, IconWand } from '../../components/icons';
 import type { I18n } from '../../../types';
 import {
   DatabasePanel,
@@ -361,6 +361,7 @@ export class ViewSettingsPages {
 
         rows.push(
           panelRow({ label: this.t('settingsCopyLink'), testId: 'database-settings-copy-link', icon: IconLink, onClick: () => this.ctx.copyViewLink() }),
+          ...this.loneViewDuplicate(panel),
           // Actions Notion has no row for (saving a chart) sit under Copy link.
           ...this.actionRows(panel, (this.ctx.actions?.() ?? []).filter((action) => action.moreSettings !== true))
         );
@@ -516,10 +517,44 @@ export class ViewSettingsPages {
       event.preventDefault();
       commit();
     });
-    input.addEventListener('blur', commit);
+    // A press inside the panel that blurs the field waits for the press to
+    // end: the redraw a rename makes would swallow that row's click.
+    const pressed = { now: false };
+    const onPress = (): void => {
+      pressed.now = true;
+    };
+    const panelOf = (): HTMLElement | null => input.closest('[data-blok-database-panel]');
+
+    input.addEventListener('focus', () => panelOf()?.addEventListener('pointerdown', onPress, true));
+    input.addEventListener('blur', () => {
+      panelOf()?.removeEventListener('pointerdown', onPress, true);
+      if (!pressed.now) {
+        commit();
+
+        return;
+      }
+      pressed.now = false;
+      document.addEventListener('pointerup', () => setTimeout(commit, 0), { capture: true, once: true });
+    });
     row.append(icon, input);
 
     return row;
+  }
+
+  /** One view hides its tab, and with it the tab menu's Duplicate: then it stays here. */
+  private loneViewDuplicate(panel: DatabasePanel): HTMLElement[] {
+    if (this.ctx.canDeleteView()) return [];
+
+    return [panelRow({
+      label: this.t('duplicateView'),
+      testId: 'database-settings-duplicate',
+      icon: IconCopy,
+      disabled: !this.shared,
+      onClick: () => {
+        panel.close();
+        this.ctx.duplicateView();
+      },
+    })];
   }
 
   private moreActions(): ViewSettingsAction[] {

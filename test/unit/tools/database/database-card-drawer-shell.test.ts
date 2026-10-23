@@ -467,4 +467,34 @@ describe('DatabaseCardDrawer shell', () => {
     expect(body('[data-blok-database-drawer][data-peek-mode="center"] [data-blok-database-drawer-content]')).toContain('padding-inline: max(var(--blok-space-4), calc(50% - 354px - var(--blok-space-2)))');
     expect(body('[data-blok-database-drawer][data-peek-mode="center"] [data-blok-database-drawer-title]')).toContain('padding-inline: var(--blok-space-2)');
   });
+
+  // feel/findings-rowpage R27: Notion's "•••" menu has 28px rows and ends with who edited the page last.
+  describe('"•••" menu', () => {
+    it('ends with the "Last edited" footer and uses 28px rows', () => {
+      const drawer = new DatabaseCardDrawer(createOptions({
+        i18n: i18n(),
+        rowActions: () => ({ onOpenIn: vi.fn(), onCopyLink: vi.fn(), properties: [] }),
+        pageFooter: () => ({ lastEdited: { name: 'Ada', time: 'Today at 3:52 AM' }, counts: { words: 1, characters: 4 } }),
+      }));
+
+      drawer.open(ROW, 'side');
+      q('[data-blok-database-peek-actions]')?.click();
+      const menu = q('[data-blok-popover-opened]');
+
+      expect(menu?.getAttribute('data-blok-popover-custom-class')).toContain('blok-database-header-menu');
+      expect(menu?.querySelector('[data-blok-database-row-menu-footer]')?.textContent).toBe('tools.database.rowLastEditedByToday at 3:52 AMtools.database.rowWordCount');
+      drawer.destroy();
+    });
+
+    it('has no footer when the host gives none', () => {
+      const drawer = new DatabaseCardDrawer(createOptions({ i18n: i18n(), rowActions: () => ({ onOpenIn: vi.fn(), onCopyLink: vi.fn(), properties: [] }) }));
+
+      drawer.open(ROW, 'side');
+      q('[data-blok-database-peek-actions]')?.click();
+
+      expect(q('[data-blok-database-row-menu-footer]')).toBeNull();
+      drawer.destroy();
+    });
+  });
 });
+

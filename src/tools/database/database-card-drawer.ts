@@ -15,8 +15,8 @@ import { PopoverItemType } from '../../components/utils/popover/components/popov
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { getUserOS } from '../../components/utils/browser';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
-import { DATABASE_HEADER_MENU_CLASS, rowActionItems } from './database-table-menus';
-import type { RowActionContext, RowFavorite } from './database-table-menus';
+import { DATABASE_HEADER_MENU_CLASS, rowActionItems, rowFooter } from './database-table-menus';
+import type { RowActionContext, RowFavorite, RowMenuContext } from './database-table-menus';
 import { hide as hideTooltip, onHover, show as showTooltip } from '../../components/utils/tooltip';
 import { onPropertyHover } from './property-hint';
 import { createTooltipContent } from '../../components/modules/toolbar/tooltip';
@@ -296,6 +296,8 @@ export interface CardDrawerOptions {
    * page they cannot act on, such as a template.
    */
   rowActions?: (rowId: string) => Omit<RowActionContext, 'i18n'> | undefined;
+  /** Who edited the page last and its counts, for the "•••" menu's footer (feel/findings-rowpage R27). */
+  pageFooter?: (rowId: string) => Pick<RowMenuContext, 'lastEdited' | 'counts'>;
   /** The host's favorites, asked on each open. Undefined: no star (no lever, or a template's page). */
   favorite?: (rowId: string) => RowFavorite | undefined;
   /** The page's own Full width set, or null to follow the layout again. */
@@ -485,6 +487,7 @@ export class DatabaseCardDrawer {
   /** What the drawn "N backlinks" lists, to skip a redraw that changes nothing. */
   private backlinksShown: string | null = null;
   private readonly rowActions: CardDrawerOptions['rowActions'];
+  private readonly pageFooter: CardDrawerOptions['pageFooter'];
   private readonly favorite: CardDrawerOptions['favorite'];
   private readonly onFullWidthChange: CardDrawerOptions['onFullWidthChange'];
   private readonly onEscapeClose: CardDrawerOptions['onEscapeClose'];
@@ -598,6 +601,7 @@ export class DatabaseCardDrawer {
     this.onCommentProperty = options.onCommentProperty;
     this.notify = options.notify;
     this.rowActions = options.rowActions;
+    this.pageFooter = options.pageFooter;
     this.favorite = options.favorite;
     this.onFullWidthChange = options.onFullWidthChange;
     this.onEscapeClose = options.onEscapeClose;
@@ -1846,7 +1850,8 @@ export class DatabaseCardDrawer {
       return;
     }
     const menu = new PopoverDesktop({
-      class: DATABASE_MENU_CLASS,
+      // Notion's 28px rows (feel/findings-rowpage R27).
+      class: DATABASE_HEADER_MENU_CLASS,
       trigger: anchor,
       width: 'auto',
       minWidth: '240px',
@@ -1883,9 +1888,16 @@ export class DatabaseCardDrawer {
       }] : []),
     ];
 
-    return rowItems.length > 0 && pageItems.length > 0
-      ? [...rowItems, { type: PopoverItemType.Separator }, ...pageItems]
+    const items = rowItems.length > 0 && pageItems.length > 0
+      ? [...rowItems, { type: PopoverItemType.Separator as const }, ...pageItems]
       : [...rowItems, ...pageItems];
+    const footer = this.pageFooter?.(row.id);
+    const i18n = this.i18n;
+
+    // Notion ends the menu with "Last edited", the editor, the time and the word count.
+    return footer === undefined || i18n === undefined || (footer.lastEdited === undefined && footer.counts === undefined) || items.length === 0
+      ? items
+      : [...items, { type: PopoverItemType.Separator }, rowFooter(i18n, footer.lastEdited, footer.counts)];
   }
 
   /** A switch: the page's own Full width, or the layout's while the page has none (research/09 §9). */

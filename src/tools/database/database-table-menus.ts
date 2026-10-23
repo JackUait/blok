@@ -375,7 +375,7 @@ const OPEN_IN: ReadonlyArray<{ mode: OpenPagesIn; icon: string; key: string }> =
 ];
 
 /** research/08's footer: "Last edited by ⟨name⟩", the time, then "1 word, 5 characters". */
-const rowFooter = (i18n: T, lastEdited: RowMenuContext['lastEdited'], counts: RowMenuContext['counts']): PopoverItemParams => {
+export const rowFooter = (i18n: T, lastEdited: RowMenuContext['lastEdited'], counts: RowMenuContext['counts']): PopoverItemParams => {
   const footer = document.createElement('div');
   const line = (text: string): void => {
     const el = document.createElement('div');

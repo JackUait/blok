@@ -110,7 +110,8 @@ describe('row page Actions menu', () => {
 
     const names = [...document.querySelectorAll('[data-blok-popover-opened] [data-blok-item-name]')].map((item) => item.getAttribute('data-blok-item-name'));
 
-    expect(names).toEqual(['database-row-copy-link', 'database-row-duplicate', 'database-row-delete', 'database-row-full-width', 'row-page-customize-layout']);
+    // feel/findings-rowpage R27: the "Last edited" footer ends it.
+    expect(names).toEqual(['database-row-copy-link', 'database-row-duplicate', 'database-row-delete', 'database-row-full-width', 'row-page-customize-layout', 'last-edited']);
   });
 
   it('turns Full width on for this page only: its row saves it and only its full page widens', async () => {
@@ -233,7 +234,7 @@ describe('row page Actions menu', () => {
 
     const names = [...document.querySelectorAll('[data-blok-popover-opened] [data-blok-item-name]')].map((item) => item.getAttribute('data-blok-item-name'));
 
-    expect(names).toEqual(['database-row-copy-link']);
+    expect(names).toEqual(['database-row-copy-link', 'last-edited']);
   });
 
   it('closes only the Actions menu on the first Escape, and the peek on the second', async () => {

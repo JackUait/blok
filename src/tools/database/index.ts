@@ -9023,6 +9023,13 @@ export class DatabaseTool implements BlockTool {
           this.cardDrawer?.syncOpenRow(this.rowOrTemplate(rowId));
         },
         onEditViewDefault: (anchor) => this.controls.openSettingsPage('layout', anchor),
+        pageFooter: (rowId) => rowMenuFooter({
+          row: this.model.getRow(rowId),
+          titlePropertyId: this.titlePropertyId(),
+          locale: editorLocale(this.api.i18n),
+          ...(this.people !== undefined ? { people: this.people } : {}),
+          i18n: this.api.i18n,
+        }),
         onExpand: (rowId) => {
           const navigate = this.config.rowPages?.navigate;
 

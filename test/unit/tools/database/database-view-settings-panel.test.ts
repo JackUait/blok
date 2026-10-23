@@ -129,10 +129,58 @@ describe('view settings panel', () => {
     expect(layoutIcon()).toBe(html(IconTable));
   });
 
+  // findings V12, research/26 §1a: Notion's order; Duplicate and Delete live in the tab menu only.
+  it('orders the root rows as Notion does, with dividers around the data source settings', () => {
+    const h = harness();
+
+    h.ctx.automations = { writable: () => true } as unknown as NonNullable<ViewSettingsContext['automations']>;
+    h.ctx.structure = { subItems: () => false, setSubItems: vi.fn(), dependencies: () => undefined, setDependencies: vi.fn(), updateDependency: vi.fn() };
+    h.open();
+    const parts = [...document.querySelectorAll<HTMLElement>('[data-blok-testid="database-view-settings"] > *')].slice(1).map((el) =>
+      el.getAttribute('data-blok-testid')?.replace('database-settings-', '')
+        ?? (el.hasAttribute('data-blok-database-panel-separator') ? '—' : `[${el.textContent ?? ''}]`));
+
+    expect(parts).toEqual([
+      'layout', 'properties', 'filter', 'sort', 'group', 'color', 'copy-link',
+      '—', '[tools.database.settingsDataSourceSettings]', 'automations', 'more',
+      '—', 'lock',
+    ]);
+  });
+
+  it('shows no value on an empty Filter, Sort, Group or Conditional color, and the count once set', () => {
+    const value = (id: string): string | null => document.querySelector(`[data-blok-testid="database-settings-${id}"] [data-blok-database-panel-value]`)?.textContent ?? null;
+    const first = harness({ type: 'board' }).open();
+
+    for (const id of ['filter', 'sort', 'group', 'subgroup', 'color']) expect(value(id), id).toBeNull();
+    first.close();
+    harness({ type: 'board', sorts: [{ id: 's', propertyId: 'num', direction: 'asc' }], groupBy: 'stage' }).open();
+    expect(value('sort')).toBe('1');
+    expect(value('group')).toBe('Stage');
+  });
+
+  it('puts the CSV actions under More settings; other actions stay on the root', () => {
+    const h = harness();
+    const exportCsv = vi.fn();
+
+    h.ctx.actions = () => [
+      { testId: 'database-settings-chart-save', label: 'Save chart as…', icon: '', page: () => ({ build: () => [] }) },
+      { testId: 'database-settings-csv-export', label: 'Export as CSV', icon: '', moreSettings: true, onClick: exportCsv },
+    ];
+    const panel = h.open();
+    const close = vi.spyOn(panel, 'close');
+
+    expect(exists('database-settings-chart-save')).toBe(true);
+    expect(exists('database-settings-csv-export')).toBe(false);
+    click('database-settings-more');
+    click('database-settings-csv-export');
+    expect(exportCsv).toHaveBeenCalledTimes(1);
+    expect(close).toHaveBeenCalled();
+  });
+
   it('lists Notion\'s settings rows (research/08)', () => {
     harness().open();
 
-    for (const id of ['layout', 'properties', 'filter', 'sort', 'group', 'color', 'copy-link', 'lock', 'duplicate', 'delete']) {
+    for (const id of ['layout', 'properties', 'filter', 'sort', 'group', 'color', 'copy-link', 'lock']) {
       expect(exists(`database-settings-${id}`)).toBe(true);
     }
     expect(exists('database-settings-subgroup')).toBe(false);
@@ -1140,7 +1188,9 @@ describe('view settings panel', () => {
     h.state.locked = true;
     h.open();
 
-    expect((document.querySelector('[data-blok-testid="database-settings-delete"]') as HTMLButtonElement).disabled).toBe(true);
+    click('database-settings-layout');
+    expect((document.querySelector('[data-blok-testid="database-layout-board"]') as HTMLButtonElement).disabled).toBe(true);
+    click('database-panel-back');
 
     click('database-settings-filter');
     click('database-filter-add');

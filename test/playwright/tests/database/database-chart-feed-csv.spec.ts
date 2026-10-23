@@ -105,8 +105,10 @@ const byTestId = (page: Page, id: string): Locator => page.getByTestId(id);
 
 const downloaded = async (file: Download): Promise<string> => readFileSync(await file.path(), 'utf8');
 
+/** CSV actions sit under More settings (feel/findings-toolbar V12). */
 const openSettingsAction = async (page: Page, testId: string): Promise<void> => {
   await byTestId(page, 'database-toolbar-settings').click();
+  await byTestId(page, 'database-settings-more').click();
   await byTestId(page, testId).click();
 };
 

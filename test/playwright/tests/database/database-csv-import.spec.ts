@@ -179,6 +179,7 @@ test.describe('database CSV import', () => {
     await mount(page, existing);
     await expect(grid(page)).toContainText('R1');
     await page.getByTestId('database-toolbar-settings').click();
+    await page.getByTestId('database-settings-more').click();
     await page.getByTestId('database-settings-csv-merge').click();
     const dialog = page.getByRole('dialog');
 
@@ -229,6 +230,7 @@ test.describe('database CSV import', () => {
     await mount(page, [{ ...database, data: { ...database.data, schema, views: [{ id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: ['p-tag', 'p-where'] }] } }, row]);
     await expect(grid(page)).toContainText('R1');
     await page.getByTestId('database-toolbar-settings').click();
+    await page.getByTestId('database-settings-more').click();
     await page.getByTestId('database-settings-csv-merge').click();
     const dialog = page.getByRole('dialog');
 

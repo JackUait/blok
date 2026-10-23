@@ -307,6 +307,7 @@ describe('New data source: every layout on a second source', () => {
     });
     vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
     await click(own('[data-blok-testid="database-toolbar-settings"]'));
+    await click(document.querySelector('[data-blok-testid="database-settings-more"]'));
     await click(document.querySelector('[data-blok-testid="database-settings-csv-export"]'));
     const blob = blobs.at(-1);
 
@@ -385,6 +386,7 @@ describe('New data source: every layout on a second source', () => {
     const api = await make(doc('vb', {}, { type: 'board', groupBy: 'stage' }));
 
     await click(own('[data-blok-testid="database-toolbar-settings"]'));
+    await click(document.querySelector('[data-blok-testid="database-settings-more"]'));
     await click(document.querySelector('[data-blok-testid="database-settings-csv-import"]'));
     const input = document.querySelector<HTMLInputElement>('[data-blok-database-csv-input]');
 

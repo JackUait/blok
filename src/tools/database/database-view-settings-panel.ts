@@ -1,4 +1,4 @@
-import { IconBolt, IconCalendar, IconChevronUpDown, IconCopy, IconCross, IconDatabase, IconDotsHorizontal, IconFilter, IconGallery, IconLink, IconLock, IconPaintRoller, IconPlus, IconPreview, IconReplace, IconSort, IconTable, IconTrash, IconWand } from '../../components/icons';
+import { IconBolt, IconCalendar, IconChevronUpDown, IconCross, IconDatabase, IconDotsHorizontal, IconFilter, IconGallery, IconLink, IconLock, IconPaintRoller, IconPlus, IconPreview, IconReplace, IconSort, IconTable, IconTrash, IconWand } from '../../components/icons';
 import type { I18n } from '../../../types';
 import {
   DatabasePanel,
@@ -194,6 +194,8 @@ export interface ViewSettingsAction {
   onClick?: () => void;
   /** Opens a page instead of acting, and keeps the panel open. */
   page?: () => PanelPage;
+  /** Listed under More settings instead of the root (CSV export, import, merge). */
+  moreSettings?: boolean;
 }
 
 interface LayoutItem {
@@ -231,6 +233,10 @@ const readLayoutItems = (items: PopoverItemParams[]): LayoutItem[] => items.flat
 /** The option colors Notion offers (research/08). */
 const COLORS = ['default', 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'] as const;
 
+
+/** findings V12: Notion shows no value on an empty Filter, Sort, Group or Conditional color. */
+const countValue = (count: number): { value?: string } => (count === 0 ? {} : { value: String(count) });
+const nameValue = (property: PropertyDefinition | undefined): { value?: string } => (property === undefined ? {} : { value: property.name });
 
 const capital = (word: string): string => `${word.charAt(0).toUpperCase()}${word.slice(1)}`;
 
@@ -281,7 +287,7 @@ export class ViewSettingsPages {
           label: this.t('settingsFilter'),
           testId: 'database-settings-filter',
             icon: IconFilter,
-          value: String(view.filters.length + countFilterRules(view.filterTree)),
+          ...countValue(view.filters.length + countFilterRules(view.filterTree)),
           opensPage: true,
           onClick: () => panel.push(this.filters()),
         });
@@ -313,7 +319,7 @@ export class ViewSettingsPages {
             label: this.t('settingsSort'),
             testId: 'database-settings-sort',
             icon: IconSort,
-            value: String(view.sorts.length),
+            ...countValue(view.sorts.length),
             opensPage: true,
             onClick: () => panel.push(this.sorts()),
           }),
@@ -321,7 +327,7 @@ export class ViewSettingsPages {
             label: this.t('settingsGroup'),
             testId: 'database-settings-group',
             icon: IconGallery,
-            value: group?.name ?? this.t('settingsNone'),
+            ...nameValue(group),
             opensPage: true,
             onClick: () => panel.push(this.group(false)),
           }),
@@ -332,7 +338,7 @@ export class ViewSettingsPages {
             label: this.t('settingsSubGroup'),
             testId: 'database-settings-subgroup',
             icon: IconGallery,
-            value: this.property(view.subGroupBy)?.name ?? this.t('settingsNone'),
+            ...nameValue(this.property(view.subGroupBy)),
             opensPage: true,
             onClick: () => panel.push(this.group(true)),
           }));
@@ -342,7 +348,7 @@ export class ViewSettingsPages {
             label: this.t('settingsConditionalColor'),
             testId: 'database-settings-color',
             icon: IconPaintRoller,
-            value: String(view.colorRules?.length ?? 0),
+            ...countValue(view.colorRules?.length ?? 0),
             opensPage: true,
             onClick: () => panel.push(this.colors()),
           }));
@@ -350,6 +356,11 @@ export class ViewSettingsPages {
         const sources = this.ctx.dataSources;
         const choices = sources?.list() ?? [];
 
+        rows.push(
+          panelRow({ label: this.t('settingsCopyLink'), testId: 'database-settings-copy-link', icon: IconLink, onClick: () => this.ctx.copyViewLink() }),
+          // Actions Notion has no row for (saving a chart) sit under Copy link.
+          ...this.actionRows(panel, (this.ctx.actions?.() ?? []).filter((action) => action.moreSettings !== true))
+        );
         const sourceGroupAt = rows.length;
 
         if (sources !== undefined && choices.length > 0) {
@@ -389,7 +400,7 @@ export class ViewSettingsPages {
             label: this.t('aiAutofill'),
             testId: 'database-settings-autofill',
             icon: IconWand,
-            value: String(autofill.properties().filter((p) => p.autofill !== undefined).length),
+            ...countValue(autofill.properties().filter((p) => p.autofill !== undefined).length),
             opensPage: true,
             disabled: !autofill.writable(),
             onClick: () => {
@@ -421,7 +432,7 @@ export class ViewSettingsPages {
             onClick: () => panel.push(this.turnInto(starterRow)),
           }));
         }
-        if (this.ctx.structure !== undefined || this.ctx.customizeLayout?.() !== undefined) {
+        if (this.ctx.structure !== undefined || this.ctx.customizeLayout?.() !== undefined || this.moreActions().length > 0) {
           rows.push(panelRow({
             label: this.t('settingsMoreSettings'),
             testId: 'database-settings-more',
@@ -431,31 +442,10 @@ export class ViewSettingsPages {
           }));
         }
         // research/09 §1: Source, Automations, AI Autofill and More settings sit under "Data source settings".
-        if (rows.length > sourceGroupAt) rows.splice(sourceGroupAt, 0, panelLabel(this.t('settingsDataSourceSettings')));
-        for (const action of this.ctx.actions?.() ?? []) {
-          const page = action.page;
-
-          rows.push(panelRow({
-            label: action.label,
-            testId: action.testId,
-            icon: action.icon,
-            disabled: action.disabled === true,
-            opensPage: page !== undefined,
-            onClick: () => {
-              if (page !== undefined) {
-                panel.push(page());
-
-                return;
-              }
-              panel.close();
-              action.onClick?.();
-            },
-          }));
-        }
+        if (rows.length > sourceGroupAt) rows.splice(sourceGroupAt, 0, panelSeparator(), panelLabel(this.t('settingsDataSourceSettings')));
         const manageInCalendar = this.ctx.manageInCalendar;
 
         rows.push(
-          panelRow({ label: this.t('settingsCopyLink'), testId: 'database-settings-copy-link', icon: IconLink, onClick: () => this.ctx.copyViewLink() }),
           panelSeparator(),
           panelSwitch({
             label: this.t(this.ctx.linked?.() === true ? 'settingsLockViews' : 'settingsLockDatabase'),
@@ -476,33 +466,39 @@ export class ViewSettingsPages {
               panel.close();
               manageInCalendar.onClick();
             },
-          })]),
-          panelRow({
-            label: this.t('duplicateView'),
-            testId: 'database-settings-duplicate',
-            icon: IconCopy,
-            disabled: !this.shared,
-            onClick: () => {
-              panel.close();
-              this.ctx.duplicateView();
-            },
-          }),
-          panelRow({
-            label: this.t('deleteView'),
-            testId: 'database-settings-delete',
-            icon: IconTrash,
-            danger: true,
-            disabled: !this.shared || !this.ctx.canDeleteView(),
-            onClick: () => {
-              panel.close();
-              this.ctx.deleteView();
-            },
-          })
+          })])
         );
 
         return rows;
       },
     };
+  }
+
+  private moreActions(): ViewSettingsAction[] {
+    return (this.ctx.actions?.() ?? []).filter((action) => action.moreSettings === true);
+  }
+
+  private actionRows(panel: DatabasePanel, actions: ViewSettingsAction[]): HTMLElement[] {
+    return actions.map((action) => {
+      const page = action.page;
+
+      return panelRow({
+        label: action.label,
+        testId: action.testId,
+        icon: action.icon,
+        disabled: action.disabled === true,
+        opensPage: page !== undefined,
+        onClick: () => {
+          if (page !== undefined) {
+            panel.push(page());
+
+            return;
+          }
+          panel.close();
+          action.onClick?.();
+        },
+      });
+    });
   }
 
   private sourceName(choice: DataSourceChoice | undefined): string {
@@ -656,6 +652,7 @@ export class ViewSettingsPages {
             },
           }));
         }
+        rows.push(...this.actionRows(panel, this.moreActions()));
 
         return rows;
       },

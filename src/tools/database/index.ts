@@ -5620,15 +5620,16 @@ export class DatabaseTool implements BlockTool {
         }),
       });
     }
-    actions.push({ testId: 'database-settings-csv-export', label: t('csvExport'), icon: IconDownload, onClick: () => this.downloadCsv() });
+    actions.push({ testId: 'database-settings-csv-export', label: t('csvExport'), icon: IconDownload, moreSettings: true, onClick: () => this.downloadCsv() });
     if (!this.readOnly) {
       actions.push(
         // A new database goes beside the block on the page, never inside a holder as a stray source.
-        { testId: 'database-settings-csv-import', label: t('csvImport'), icon: IconUpload, onClick: () => this.openCsvImport((file, targets, settings) => this.viewOwner().importCsv(file.text, file.name, targets, settings)) },
+        { testId: 'database-settings-csv-import', label: t('csvImport'), icon: IconUpload, moreSettings: true, onClick: () => this.openCsvImport((file, targets, settings) => this.viewOwner().importCsv(file.text, file.name, targets, settings)) },
         {
           testId: 'database-settings-csv-merge',
           label: t('csvMerge'),
           icon: IconMergeCells,
+          moreSettings: true,
           disabled: this.structureLocked(),
           onClick: () => this.openCsvMerge(),
         }

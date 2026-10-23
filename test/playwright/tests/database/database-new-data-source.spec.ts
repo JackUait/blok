@@ -384,16 +384,16 @@ test.describe('database New data source', () => {
 
   // research/26 §5a.
   test.describe('deleting the last view of a source', () => {
-    const deleteFromSettings = async (page: Page): Promise<void> => {
-      await page.getByTestId('database-toolbar-settings').click();
-      await page.getByTestId('database-settings-delete').click();
+    const deleteFromTabMenu = async (page: Page): Promise<void> => {
+      await page.locator('[data-blok-database-tab][data-view-id="vb"]').click({ button: 'right' });
+      await page.locator('[data-blok-item-name="database-view-delete"]:visible').click();
       await expect(page.getByRole('alertdialog')).toContainText('Delete the last view for this data source?');
     };
 
     // research/30 B3: focus on the × "Close", and no ring when the dialog was opened by a click.
     test('opens with focus on its × "Close", with no ring after a click', async ({ page }) => {
       await mount(page, bound);
-      await deleteFromSettings(page);
+      await deleteFromTabMenu(page);
       const close = page.getByRole('alertdialog').getByRole('button', { name: 'Close' });
 
       await expect(close).toBeFocused();
@@ -452,7 +452,7 @@ test.describe('database New data source', () => {
       test(`draws Notion's look in ${scheme}`, async ({ page }) => {
         await page.emulateMedia({ colorScheme: scheme });
         await mount(page, bound);
-        await deleteFromSettings(page);
+        await deleteFromTabMenu(page);
         const dialog = page.getByRole('alertdialog');
         const read = (locator: Locator, props: string[]): Promise<string[]> =>
           locator.evaluate((el, names) => names.map((name) => getComputedStyle(el).getPropertyValue(name)), props);
@@ -474,7 +474,7 @@ test.describe('database New data source', () => {
       test(`draws Notion's round-13 colours and layout in ${scheme}`, async ({ page }) => {
         await page.emulateMedia({ colorScheme: scheme });
         await mount(page, bound);
-        await deleteFromSettings(page);
+        await deleteFromTabMenu(page);
         // The entrance scales the box; measure after it lands.
         await page.getByRole('alertdialog').evaluate((box) => Promise.all(box.getAnimations({ subtree: true }).map((animation) => animation.finished)));
         const measured = await page.getByRole('alertdialog').evaluate((box) => {
@@ -523,7 +523,7 @@ test.describe('database New data source', () => {
 
     test('"Delete view only" is picked and keeps the source and its rows', async ({ page }) => {
       await mount(page, bound);
-      await deleteFromSettings(page);
+      await deleteFromTabMenu(page);
       const dialog = page.getByRole('alertdialog');
 
       await expect(dialog.getByRole('radio', { name: /Delete view only/ })).toHaveAttribute('aria-checked', 'true');
@@ -537,7 +537,7 @@ test.describe('database New data source', () => {
 
     test('"Delete view and data source" removes the source and its rows; undo brings them back', async ({ page }) => {
       await mount(page, bound);
-      await deleteFromSettings(page);
+      await deleteFromTabMenu(page);
       const dialog = page.getByRole('alertdialog');
 
       await dialog.getByRole('radio', { name: /Delete view and data source/ }).click();

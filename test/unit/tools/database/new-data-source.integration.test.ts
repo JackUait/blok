@@ -554,9 +554,14 @@ describe('New data source: a view bound to a second source in the same block', (
     document.querySelector<HTMLButtonElement>(`[data-blok-database-confirm-action="${name}"]`);
   const choiceCards = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>('[data-blok-database-confirm-choice]')];
 
-  const deleteFromSettings = async (): Promise<void> => {
-    await openSettings();
-    byTestId('database-settings-delete')?.click();
+  // Delete lives in the tab menu only (feel/findings-toolbar V12).
+  const deleteFromTabMenu = async (): Promise<void> => {
+    own('[data-blok-database-tab][data-view-id="vb"]').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    await quiet();
+    const item = [...document.querySelectorAll<HTMLElement>('[data-blok-popover-item], [role="menuitem"]')].find((el) => el.textContent?.trim() === 'Delete');
+
+    if (item === undefined) throw new Error('no Delete in the tab menu');
+    item.click();
     await quiet();
   };
 
@@ -564,7 +569,7 @@ describe('New data source: a view bound to a second source in the same block', (
   it('deleting the only view on a source asks first, with "Delete view only" picked', async () => {
     const api = await make(doc('vb'));
 
-    await deleteFromSettings();
+    await deleteFromTabMenu();
 
     expect(document.querySelector('[data-blok-database-confirm-title]')?.textContent).toBe('Delete the last view for this data source?');
     expect(choiceCards().map((card) => card.querySelector('[data-blok-database-confirm-choice-label]')?.textContent)).toEqual(['Delete view only', 'Delete view and data source']);
@@ -587,7 +592,7 @@ describe('New data source: a view bound to a second source in the same block', (
   it('the last-view question opens with focus on its × "Close", which deletes nothing', async () => {
     const api = await make(doc('vb'));
 
-    await deleteFromSettings();
+    await deleteFromTabMenu();
     const close = document.querySelector<HTMLButtonElement>('[data-blok-database-confirm-close]');
 
     expect(close?.getAttribute('aria-label')).toBe('Close');
@@ -602,7 +607,7 @@ describe('New data source: a view bound to a second source in the same block', (
   it('Cancel on the last-view question deletes nothing', async () => {
     const api = await make(doc('vb'));
 
-    await deleteFromSettings();
+    await deleteFromTabMenu();
     confirmAction('cancel')?.click();
     await quiet();
 
@@ -614,7 +619,7 @@ describe('New data source: a view bound to a second source in the same block', (
     const api = await make(doc('vb'));
 
     stopCapturing();
-    await deleteFromSettings();
+    await deleteFromTabMenu();
     choiceCards()[1]?.click();
     confirmAction('confirm')?.click();
     await quiet();
@@ -632,7 +637,7 @@ describe('New data source: a view bound to a second source in the same block', (
     const api = await make(doc('vb'));
 
     stopCapturing();
-    await deleteFromSettings();
+    await deleteFromTabMenu();
     choiceCards()[1]?.click();
     confirmAction('confirm')?.click();
     await quiet();
@@ -665,7 +670,7 @@ describe('New data source: a view bound to a second source in the same block', (
   it('deleting a source view while another view still shows the source asks nothing', async () => {
     const api = await make(doc('vb', { views: [table('v1', 'a0'), table('vb', 'a1', { dataSourceId: 'src-b' }), table('vb2', 'a2', { dataSourceId: 'src-b' })] }));
 
-    await deleteFromSettings();
+    await deleteFromTabMenu();
 
     expect(document.querySelector('[data-blok-database-confirm-dialog]')).toBeNull();
     expect((await dataOf(api, 'db'))?.views.map((v) => v.id)).toEqual(['v1', 'vb2']);
@@ -674,7 +679,7 @@ describe('New data source: a view bound to a second source in the same block', (
   it('deleting the only view on a source keeps the source and its rows, still reachable from "Source"', async () => {
     const api = await make(doc('vb'));
 
-    await deleteFromSettings();
+    await deleteFromTabMenu();
     confirmAction('confirm')?.click();
     await quiet();
     const saved = await api.save();

@@ -564,8 +564,14 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
       add.type = 'button';
       add.setAttribute('data-blok-database-table-add-property', '');
-      add.setAttribute('aria-label', this.t('tools.database.tableAddProperty'));
       add.innerHTML = IconPlus;
+      // Notion labels the "+" while the title is the only property.
+      if (this.options.schema.every((property) => property.type === 'title')) {
+        add.setAttribute('data-labelled', '');
+        add.append(this.t('tools.database.tableAddProperty'));
+      } else {
+        add.setAttribute('aria-label', this.t('tools.database.tableAddProperty'));
+      }
       header.appendChild(add);
     }
     header.appendChild(this.createFiller());

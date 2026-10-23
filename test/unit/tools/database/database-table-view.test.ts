@@ -377,6 +377,18 @@ describe('DatabaseTableView', () => {
       expect(cell(root, 'r1', 'p-title').textContent).toContain('Renamed');
     });
 
+    it('labels the header "+" as "Add property" while the title is the only property (Notion empty database)', () => {
+      const lone = mount({ schema: [schema[0]] }).root.querySelector<HTMLElement>('[data-blok-database-table-add-property]');
+      const full = mount().root.querySelector<HTMLElement>('[data-blok-database-table-add-property]');
+
+      expect(lone?.textContent?.trim()).toBe('tools.database.tableAddProperty');
+      expect(lone?.hasAttribute('data-labelled')).toBe(true);
+      expect(lone?.querySelector('svg')).not.toBeNull();
+      expect(full?.textContent?.trim()).toBe('');
+      expect(full?.hasAttribute('data-labelled')).toBe(false);
+      expect(full?.getAttribute('aria-label')).toBe('tools.database.tableAddProperty');
+    });
+
     it('wraps every column of a view saved with no wrap fields (the v1.16.1 shape)', () => {
       const { root } = mount({ view: tableView({ visibleProperties: ['p-title', 'p-notes', 'p-amount'] }) });
 

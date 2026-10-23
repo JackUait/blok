@@ -89,4 +89,16 @@ describe('database table view styles', () => {
     expect(lines.join(',')).not.toContain('[data-blok-database-table-column-header]');
     expect(ruleBody('[data-blok-database-table-column-header]')).toMatch(/box-shadow:\s*inset 0 -1px 0 var\(--blok-database-table-border\)/);
   });
+
+
+  it('widens the header "+" to a 28px "Add property" button with 6px sides, label in AA header ink (research/08:260)', () => {
+    const labelled = ruleBody('[data-blok-database-table-add-property][data-labelled]');
+
+    expect(labelled).toMatch(/width:\s*auto/);
+    expect(labelled).toContain('padding-inline: var(--blok-space-1-5)');
+    expect(labelled).toContain('gap: var(--blok-space-1-5)');
+    expect(labelled).toContain('color: var(--blok-database-table-header-text)');
+    expect(labelled).toMatch(/font-size:\s*14px/);
+    expect(labelled).toMatch(/line-height:\s*16.8px/);
+  });
 });

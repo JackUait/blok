@@ -6583,6 +6583,16 @@ textarea[data-blok-database-cell-input] {
   transition: background-color 100ms ease-in-out;
 }
 
+[data-blok-database-table-add-property][data-labelled] {
+  gap: var(--blok-space-1-5);
+  width: auto;
+  padding-inline: var(--blok-space-1-5);
+  color: var(--blok-database-table-header-text);
+  font-size: 14px;
+  line-height: 16.8px;
+  white-space: nowrap;
+}
+
 [data-blok-database-table-add-property]:hover {
   background-color: var(--blok-database-table-header-hover-bg);
 }

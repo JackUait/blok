@@ -1,4 +1,4 @@
-import { IconCalendar, IconCopy, IconCross, IconDatabase, IconLink, IconPlus, IconTrash, IconWand } from '../../components/icons';
+import { IconBolt, IconCalendar, IconChevronUpDown, IconCopy, IconCross, IconDatabase, IconDotsHorizontal, IconFilter, IconGallery, IconLink, IconLock, IconPaintRoller, IconPlus, IconPreview, IconReplace, IconSort, IconTable, IconTrash, IconWand } from '../../components/icons';
 import type { I18n } from '../../../types';
 import {
   DatabasePanel,
@@ -79,6 +79,7 @@ import { nanoid } from 'nanoid';
 import { CARD_LAYOUTS, resolveSubItemsDisplay, resolveSubItemsFilter } from './sub-items';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { automationListPage } from './database-automations-panel';
+import { VIEW_ICONS } from './database-tab-bar';
 import type { AutomationSettings } from './database-automations-panel';
 import { offersAutofill } from './property-values';
 import { MAP_HEIGHTS, resolveMapBy, resolveMapHeight } from './database-map-view';
@@ -271,6 +272,7 @@ export class ViewSettingsPages {
         const layoutRow = panelRow({
           label: this.t('settingsLayout'),
           testId: 'database-settings-layout',
+            icon: VIEW_ICONS[view.type] ?? IconTable,
           value: this.t(`viewType${capital(view.type)}`),
           opensPage: true,
           onClick: () => panel.push(this.layout()),
@@ -278,6 +280,7 @@ export class ViewSettingsPages {
         const filterRow = panelRow({
           label: this.t('settingsFilter'),
           testId: 'database-settings-filter',
+            icon: IconFilter,
           value: String(view.filters.length + countFilterRules(view.filterTree)),
           opensPage: true,
           onClick: () => panel.push(this.filters()),
@@ -289,6 +292,7 @@ export class ViewSettingsPages {
           panelRow({
             label: this.t('chartHeight'),
             testId: 'database-settings-map-height',
+            icon: IconChevronUpDown,
             value: this.t(`chartHeight${capital(resolveMapHeight(view))}`),
             opensPage: true,
             onClick: () => panel.push(this.mapHeight()),
@@ -299,6 +303,7 @@ export class ViewSettingsPages {
           panelRow({
             label: this.t('settingsPropertyVisibility'),
             testId: 'database-settings-properties',
+            icon: IconPreview,
             value: String(this.listedProperties().filter((p) => p.visible).length),
             opensPage: true,
             onClick: () => panel.push(this.properties()),
@@ -307,6 +312,7 @@ export class ViewSettingsPages {
           panelRow({
             label: this.t('settingsSort'),
             testId: 'database-settings-sort',
+            icon: IconSort,
             value: String(view.sorts.length),
             opensPage: true,
             onClick: () => panel.push(this.sorts()),
@@ -314,6 +320,7 @@ export class ViewSettingsPages {
           panelRow({
             label: this.t('settingsGroup'),
             testId: 'database-settings-group',
+            icon: IconGallery,
             value: group?.name ?? this.t('settingsNone'),
             opensPage: true,
             onClick: () => panel.push(this.group(false)),
@@ -324,6 +331,7 @@ export class ViewSettingsPages {
           rows.push(panelRow({
             label: this.t('settingsSubGroup'),
             testId: 'database-settings-subgroup',
+            icon: IconGallery,
             value: this.property(view.subGroupBy)?.name ?? this.t('settingsNone'),
             opensPage: true,
             onClick: () => panel.push(this.group(true)),
@@ -333,6 +341,7 @@ export class ViewSettingsPages {
           rows.push(panelRow({
             label: this.t('settingsConditionalColor'),
             testId: 'database-settings-color',
+            icon: IconPaintRoller,
             value: String(view.colorRules?.length ?? 0),
             opensPage: true,
             onClick: () => panel.push(this.colors()),
@@ -350,6 +359,7 @@ export class ViewSettingsPages {
           rows.push(panelRow({
             label: this.t('settingsSource'),
             testId: 'database-settings-source',
+            icon: IconDatabase,
             value: this.sourceName(current),
             opensPage: true,
             disabled: !this.shared || others.length === 0,
@@ -362,6 +372,7 @@ export class ViewSettingsPages {
           const control = panelRow({
             label: this.t('automationTitle'),
             testId: 'database-settings-automations',
+            icon: IconBolt,
             opensPage: true,
             disabled: !automations.writable(),
             onClick: () => {
@@ -377,6 +388,7 @@ export class ViewSettingsPages {
           rows.push(panelRow({
             label: this.t('aiAutofill'),
             testId: 'database-settings-autofill',
+            icon: IconWand,
             value: String(autofill.properties().filter((p) => p.autofill !== undefined).length),
             opensPage: true,
             disabled: !autofill.writable(),
@@ -391,6 +403,7 @@ export class ViewSettingsPages {
           rows.push(panelRow({
             label: starterRow.label,
             testId: 'database-settings-undo-starter',
+            icon: IconReplace,
             disabled: !this.shared,
             onClick: () => {
               panel.close();
@@ -402,6 +415,7 @@ export class ViewSettingsPages {
           rows.push(panelRow({
             label: starterRow.label,
             testId: 'database-settings-turn-into',
+            icon: IconReplace,
             opensPage: true,
             disabled: !this.shared,
             onClick: () => panel.push(this.turnInto(starterRow)),
@@ -411,6 +425,7 @@ export class ViewSettingsPages {
           rows.push(panelRow({
             label: this.t('settingsMoreSettings'),
             testId: 'database-settings-more',
+            icon: IconDotsHorizontal,
             opensPage: true,
             onClick: () => panel.push(this.moreSettings()),
           }));
@@ -445,6 +460,7 @@ export class ViewSettingsPages {
           panelSwitch({
             label: this.t(this.ctx.linked?.() === true ? 'settingsLockViews' : 'settingsLockDatabase'),
             testId: 'database-settings-lock',
+            icon: IconLock,
             checked: this.ctx.locked(),
             onToggle: (next) => {
               this.ctx.setLocked(next);

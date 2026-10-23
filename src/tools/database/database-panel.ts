@@ -290,7 +290,7 @@ export const panelRow = (options: PanelRowOptions): HTMLButtonElement => {
   return row;
 };
 
-export const panelSwitch = (options: { label: string; testId: string; checked: boolean; disabled?: boolean; onToggle: (next: boolean) => void }): HTMLButtonElement => {
+export const panelSwitch = (options: { label: string; testId: string; checked: boolean; icon?: string; disabled?: boolean; onToggle: (next: boolean) => void }): HTMLButtonElement => {
   const button = document.createElement('button');
   const track = document.createElement('span');
 
@@ -311,6 +311,13 @@ export const panelSwitch = (options: { label: string; testId: string; checked: b
 
   label.setAttribute('data-blok-database-panel-label', '');
   label.textContent = options.label;
+  if (options.icon !== undefined) {
+    const icon = document.createElement('span');
+
+    icon.setAttribute('data-blok-database-panel-icon', '');
+    icon.innerHTML = options.icon;
+    button.appendChild(icon);
+  }
   button.append(label, track);
   button.addEventListener('click', () => {
     const next = button.getAttribute('aria-checked') !== 'true';

@@ -4,6 +4,7 @@ import { openFilterPill, openViewSettings } from '../../../../src/tools/database
 import type { ViewSettingsContext } from '../../../../src/tools/database/database-view-settings-panel';
 import type { DatabasePanel } from '../../../../src/tools/database/database-panel';
 import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
+import { IconBoard, IconTable } from '../../../../src/components/icons';
 import { PopoverItemType } from '../../../../src/components/utils/popover/components/popover-item';
 
 const schema: PropertyDefinition[] = [
@@ -104,6 +105,28 @@ describe('view settings panel', () => {
       expect(docked()).toBe(true);
       panel.close();
     }
+  });
+
+  // findings V11: every root row carries a glyph; Layout's follows the view's layout.
+  it('gives every root row a glyph, and Layout the current layout\'s', () => {
+    const h = harness({ type: 'board' });
+
+    h.ctx.manageInCalendar = { label: 'Manage in Calendar', onClick: vi.fn() };
+    h.open();
+    const rows = [...document.querySelectorAll<HTMLElement>('[data-blok-testid="database-view-settings"] [data-blok-database-panel-row]')];
+
+    expect(rows.length).toBeGreaterThan(8);
+    for (const row of rows) {
+      expect(row.querySelector('[data-blok-database-panel-icon] svg'), row.getAttribute('data-blok-testid') ?? '').not.toBeNull();
+    }
+    const layoutIcon = (): string | undefined => document.querySelector('[data-blok-testid="database-settings-layout"] [data-blok-database-panel-icon]')?.innerHTML;
+    const html = (svg: string): string => Object.assign(document.createElement('span'), { innerHTML: svg }).innerHTML;
+
+    expect(layoutIcon()).toBe(html(IconBoard));
+    click('database-settings-layout');
+    click('database-layout-table');
+    click('database-panel-back');
+    expect(layoutIcon()).toBe(html(IconTable));
   });
 
   it('lists Notion\'s settings rows (research/08)', () => {

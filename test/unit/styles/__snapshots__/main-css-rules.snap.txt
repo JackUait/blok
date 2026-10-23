@@ -12125,6 +12125,15 @@ textarea[data-blok-database-cell-input] {
   height: 16px;
 }
 
+[data-blok-database-panel][data-docked] [data-blok-database-panel-icon] {
+  color: var(--blok-database-ink);
+}
+
+[data-blok-database-panel][data-docked] [data-blok-database-panel-icon] svg {
+  width: 20px;
+  height: 20px;
+}
+
 [data-blok-database-panel-section] {
   padding-block: var(--blok-space-1-5) var(--blok-space-0-5);
   padding-inline: var(--blok-space-2);

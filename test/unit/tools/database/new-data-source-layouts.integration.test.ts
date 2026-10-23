@@ -228,13 +228,13 @@ describe('New data source: every layout on a second source', () => {
     expect(newSourceRow(api)?.stage).toBe('done');
   });
 
-  it('a timeline\'s New adds a source row dated today', async () => {
+  it('a timeline\'s New adds a source row whose 5-day bar starts today', async () => {
     const api = await make(doc('vb', {}, { type: 'timeline', timelineBy: 'due' }));
 
     await click(layoutRoot('[data-blok-database-timeline]').querySelector('[data-blok-database-timeline-new]'));
 
     expect(parentRows(api)).toEqual(['r1']);
-    expect(newSourceRow(api)?.due).toBe(TODAY);
+    expect(newSourceRow(api)?.due).toMatch(new RegExp(`^${TODAY}/\\d{4}-\\d{2}-\\d{2}$`));
   });
 
   it('a timeline zoom is saved on the holder\'s view, not the source\'s', async () => {

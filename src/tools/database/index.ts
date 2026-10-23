@@ -5837,7 +5837,12 @@ export class DatabaseTool implements BlockTool {
       handlers: {
         openRow: (rowId) => this.handleRowClick(rowId),
         ...(this.readOnly ? {} : { pickRow: (rowId: string, range: boolean) => this.pickRow(rowId, range) }),
-        addRow: (groupKey) => this.addTimelineRow(groupKey, startId, today),
+        addRow: (groupKey, write) => {
+          const rowId = this.addTimelineRow(groupKey, write, startId, endId);
+
+          if (rowId !== undefined && this.view instanceof DatabaseTimelineView) this.view.editTitle(rowId);
+        },
+        renameRow: (rowId, title) => this.updateRowTitleBlock(rowId, titlePropId, title),
         writeDates: (rowId, write) => this.writeTimelineDates(rowId, write, startId, endId),
         moveRow: (result) => this.handleTableRowDrop(result),
         setZoom: (zoom) => this.updateActiveView({ timelineZoom: zoom }),
@@ -5875,17 +5880,23 @@ export class DatabaseTool implements BlockTool {
     }));
   }
 
-  /** "+ New": a row dated today, so its bar shows, plus what the view's filters and group ask for. */
-  private addTimelineRow(groupKey: string | null, startId: string | undefined, today: string): void {
-    if (this.readOnly) return;
+  /** "+ New": a row with the new bar's dates, plus what the view's filters and group ask for. */
+  private addTimelineRow(groupKey: string | null, write: BarWrite, startId: string | undefined, endId: string | undefined): string | undefined {
+    if (this.readOnly) return undefined;
     const titlePropId = this.titlePropertyId();
     const groupBy = groupKey === null ? undefined : this.shownView()?.groupBy;
     const properties = this.newRowProperties(titlePropId, groupBy, groupKey ?? NO_VALUE_GROUP_KEY);
-    const rowData = this.model.createRowData(startId === undefined ? properties : { ...properties, [startId]: today });
+    const dates = {
+      ...(startId !== undefined && write.start !== undefined ? { [startId]: write.start } : {}),
+      ...(endId !== undefined && write.end !== undefined ? { [endId]: write.end } : {}),
+    };
+    const rowData = this.model.createRowData({ ...properties, ...dates });
 
     this.insertNewRow(rowData);
     void this.sync.syncCreateRow({ id: rowData.id, properties: rowData.properties, position: rowData.position });
     this.rerenderView({ keepDrawer: true });
+
+    return rowData.id;
   }
 
   /** A moved bar may change both of its properties: one row write, one sync, one undo step. */

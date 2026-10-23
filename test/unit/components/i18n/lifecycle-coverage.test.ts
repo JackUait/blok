@@ -270,7 +270,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1881 + 126 + 507 + 4 closure for all 2518 keys', () => {
+  it('rebuilds a disjoint 1883 + 126 + 507 + 4 closure for all 2520 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -284,7 +284,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2518);
+    expect(lifecycle.size).toBe(2520);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -442,7 +442,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: tools.file.preview, called by literal for the form's Preview button.
       // +3: the relative date chip's "This" label (filterDateThisMonth / filterDateThisYear) and the search empty state's searchClear, called by literal.
       // +3: the calendar and timeline "No date" popover's search and hints (findings-caltimeline C03/C04).
-      'executable-literal': 1881,
+      // +2: the timeline's ‹ › labels, timelinePrevious / timelineNext (findings-caltimeline C05).
+      'executable-literal': 1883,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

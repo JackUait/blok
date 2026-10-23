@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "ገጽ ይፈልጉ…",
   "tools.database.calendarNoDateHint": "ቀን ለማከል ይጫኑ ወይም ወደ ቀን መቁጠሪያ ይጎትቱ።",
   "tools.database.timelineNoDateHint": "ወደ የጊዜ መስመሩ ለማከል ይጫኑ",
+  "tools.database.timelinePrevious": "ቀዳሚ",
+  "tools.database.timelineNext": "ቀጣይ",
   "tools.database.viewTypeTimeline": "የጊዜ መስመር",
   "tools.database.viewTypeTimelineDescription": "ንጥሎችን በጊዜ መስመር ላይ አሳይ",
   "tools.database.viewTypeForm": "ቅጽ",

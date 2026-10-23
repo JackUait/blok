@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "Nach einer Seite suchen…",
   "tools.database.calendarNoDateHint": "Klicken oder in den Kalender ziehen, um ein Datum hinzuzufügen.",
   "tools.database.timelineNoDateHint": "Klicken, um zur Zeitleiste hinzuzufügen",
+  "tools.database.timelinePrevious": "Vorherige",
+  "tools.database.timelineNext": "Nächste",
   "tools.database.viewTypeTimeline": "Zeitleiste",
   "tools.database.viewTypeTimelineDescription": "Elemente auf einer Zeitleiste anzeigen",
   "tools.database.viewTypeForm": "Formular",

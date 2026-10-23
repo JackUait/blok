@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "جستجوی صفحه…",
   "tools.database.calendarNoDateHint": "برای افزودن تاریخ، کلیک کنید یا به تقویم بکشید.",
   "tools.database.timelineNoDateHint": "برای افزودن به خط زمانی کلیک کنید",
+  "tools.database.timelinePrevious": "قبلی",
+  "tools.database.timelineNext": "بعدی",
   "tools.database.viewTypeTimeline": "خط زمانی",
   "tools.database.viewTypeTimelineDescription": "موارد را در خط زمانی نمایش دهید",
   "tools.database.viewTypeForm": "فرم",

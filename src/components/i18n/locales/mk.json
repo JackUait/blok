@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "Пребарајте страница…",
   "tools.database.calendarNoDateHint": "Кликнете или повлечете во календарот за да додадете датум.",
   "tools.database.timelineNoDateHint": "Кликнете за да додадете во временската линија",
+  "tools.database.timelinePrevious": "Претходно",
+  "tools.database.timelineNext": "Следно",
   "tools.database.viewTypeTimeline": "Временска линија",
   "tools.database.viewTypeTimelineDescription": "Прикажи ги ставките на временска линија",
   "tools.database.viewTypeForm": "Формулар",

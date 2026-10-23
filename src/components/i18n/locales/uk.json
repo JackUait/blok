@@ -1356,6 +1356,8 @@
   "tools.database.noDateSearch": "Пошук сторінки…",
   "tools.database.calendarNoDateHint": "Клацніть або перетягніть у календар, щоб додати дату.",
   "tools.database.timelineNoDateHint": "Клацніть, щоб додати на часову шкалу",
+  "tools.database.timelinePrevious": "Попередній",
+  "tools.database.timelineNext": "Наступний",
   "tools.database.viewTypeTimeline": "Часова шкала",
   "tools.database.viewTypeTimelineDescription": "Показати елементи на часовій шкалі",
   "tools.database.viewTypeForm": "Форма",

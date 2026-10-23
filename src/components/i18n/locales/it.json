@@ -1354,6 +1354,8 @@
   "tools.database.noDateSearch": "Cerca una pagina…",
   "tools.database.calendarNoDateHint": "Fai clic o trascina nel calendario per aggiungere una data.",
   "tools.database.timelineNoDateHint": "Fai clic per aggiungere alla sequenza temporale",
+  "tools.database.timelinePrevious": "Precedente",
+  "tools.database.timelineNext": "Successivo",
   "tools.database.viewTypeTimeline": "Sequenza temporale",
   "tools.database.viewTypeTimelineDescription": "Mostra gli elementi in una sequenza temporale",
   "tools.database.viewTypeForm": "Modulo",

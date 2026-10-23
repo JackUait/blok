@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "Որոնեք էջ…",
   "tools.database.calendarNoDateHint": "Սեղմեք կամ քաշեք օրացույցի վրա՝ ամսաթիվ ավելացնելու համար։",
   "tools.database.timelineNoDateHint": "Սեղմեք՝ ժամանակագծին ավելացնելու համար",
+  "tools.database.timelinePrevious": "Նախորդ",
+  "tools.database.timelineNext": "Հաջորդ",
   "tools.database.viewTypeTimeline": "Ժամանակագիծ",
   "tools.database.viewTypeTimelineDescription": "Տարրերը ցուցադրել ժամանակագծի վրա",
   "tools.database.viewTypeForm": "Ձև",

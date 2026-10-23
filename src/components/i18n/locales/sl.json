@@ -1356,6 +1356,8 @@
   "tools.database.noDateSearch": "Poiščite stran…",
   "tools.database.calendarNoDateHint": "Kliknite ali povlecite na koledar, da dodate datum.",
   "tools.database.timelineNoDateHint": "Kliknite, da dodate na časovnico",
+  "tools.database.timelinePrevious": "Prejšnje",
+  "tools.database.timelineNext": "Naslednje",
   "tools.database.viewTypeTimeline": "Časovnica",
   "tools.database.viewTypeTimelineDescription": "Prikaži elemente na časovnici",
   "tools.database.viewTypeForm": "Obrazec",

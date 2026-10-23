@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "搜索页面…",
   "tools.database.calendarNoDateHint": "点击或拖动到日历以添加日期。",
   "tools.database.timelineNoDateHint": "点击以添加到时间线",
+  "tools.database.timelinePrevious": "上一个",
+  "tools.database.timelineNext": "下一个",
   "tools.database.viewTypeTimeline": "时间线",
   "tools.database.viewTypeTimelineDescription": "在时间线上显示项目",
   "tools.database.viewTypeForm": "表单",

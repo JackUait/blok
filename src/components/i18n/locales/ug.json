@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "بەت ئىزدەڭ…",
   "tools.database.calendarNoDateHint": "چېسلا قوشۇش ئۈچۈن چېكىڭ ياكى كالېندارغا سۆرەڭ.",
   "tools.database.timelineNoDateHint": "ۋاقىت ئوقىغا قوشۇش ئۈچۈن چېكىڭ",
+  "tools.database.timelinePrevious": "ئالدىنقى",
+  "tools.database.timelineNext": "كېيىنكى",
   "tools.database.viewTypeTimeline": "ۋاقىت ئوقى",
   "tools.database.viewTypeTimelineDescription": "تۈرلەرنى ۋاقىت ئوقىدا كۆرسىتىش",
   "tools.database.viewTypeForm": "ئانكېتا",

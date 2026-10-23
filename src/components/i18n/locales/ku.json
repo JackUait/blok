@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "بەدوای پەڕەیەکدا بگەڕێ…",
   "tools.database.calendarNoDateHint": "کرتە بکە یان بیکێشە بۆ ساڵنامە بۆ زیادکردنی بەروار.",
   "tools.database.timelineNoDateHint": "کرتە بکە بۆ زیادکردن بۆ هێڵی کات",
+  "tools.database.timelinePrevious": "پێشوو",
+  "tools.database.timelineNext": "دواتر",
   "tools.database.viewTypeTimeline": "هێڵی کات",
   "tools.database.viewTypeTimelineDescription": "بڕگەکان لە هێڵی کاتدا پیشان بدە",
   "tools.database.viewTypeForm": "فۆرم",

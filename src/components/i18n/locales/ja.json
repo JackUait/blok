@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "ページを検索…",
   "tools.database.calendarNoDateHint": "クリックまたはカレンダーにドラッグして日付を追加",
   "tools.database.timelineNoDateHint": "クリックしてタイムラインに追加",
+  "tools.database.timelinePrevious": "前へ",
+  "tools.database.timelineNext": "次へ",
   "tools.database.viewTypeTimeline": "タイムライン",
   "tools.database.viewTypeTimelineDescription": "アイテムをタイムラインに表示",
   "tools.database.viewTypeForm": "フォーム",

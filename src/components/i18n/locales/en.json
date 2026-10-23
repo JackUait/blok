@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "Search for a page…",
   "tools.database.calendarNoDateHint": "Click or drag to calendar to add date.",
   "tools.database.timelineNoDateHint": "Click to add to the timeline",
+  "tools.database.timelinePrevious": "Previous",
+  "tools.database.timelineNext": "Next",
   "tools.database.viewTypeTimeline": "Timeline",
   "tools.database.viewTypeTimelineDescription": "Show items on a timeline",
   "tools.database.viewTypeForm": "Form",

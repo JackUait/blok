@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "ಪುಟವನ್ನು ಹುಡುಕಿ…",
   "tools.database.calendarNoDateHint": "ದಿನಾಂಕ ಸೇರಿಸಲು ಕ್ಲಿಕ್ ಮಾಡಿ ಅಥವಾ ಕ್ಯಾಲೆಂಡರ್‌ಗೆ ಎಳೆಯಿರಿ.",
   "tools.database.timelineNoDateHint": "ಟೈಮ್‌ಲೈನ್‌ಗೆ ಸೇರಿಸಲು ಕ್ಲಿಕ್ ಮಾಡಿ",
+  "tools.database.timelinePrevious": "ಹಿಂದಿನ",
+  "tools.database.timelineNext": "ಮುಂದಿನ",
   "tools.database.viewTypeTimeline": "ಟೈಮ್‌ಲೈನ್",
   "tools.database.viewTypeTimelineDescription": "ಐಟಂಗಳನ್ನು ಟೈಮ್‌ಲೈನ್‌ನಲ್ಲಿ ತೋರಿಸಿ",
   "tools.database.viewTypeForm": "ಫಾರ್ಮ್",

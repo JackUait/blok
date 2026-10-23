@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "একটি পৃষ্ঠা খুঁজুন…",
   "tools.database.calendarNoDateHint": "তারিখ যোগ করতে ক্লিক করুন বা ক্যালেন্ডারে টেনে আনুন।",
   "tools.database.timelineNoDateHint": "টাইমলাইনে যোগ করতে ক্লিক করুন",
+  "tools.database.timelinePrevious": "আগের",
+  "tools.database.timelineNext": "পরবর্তী",
   "tools.database.viewTypeTimeline": "টাইমলাইন",
   "tools.database.viewTypeTimelineDescription": "আইটেমগুলো টাইমলাইনে দেখান",
   "tools.database.viewTypeForm": "ফর্ম",

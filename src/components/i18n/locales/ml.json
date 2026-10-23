@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "ഒരു പേജ് തിരയുക…",
   "tools.database.calendarNoDateHint": "തീയതി ചേർക്കാൻ ക്ലിക്ക് ചെയ്യുക അല്ലെങ്കിൽ കലണ്ടറിലേക്ക് വലിച്ചിടുക.",
   "tools.database.timelineNoDateHint": "ടൈംലൈനിലേക്ക് ചേർക്കാൻ ക്ലിക്ക് ചെയ്യുക",
+  "tools.database.timelinePrevious": "മുമ്പത്തേത്",
+  "tools.database.timelineNext": "അടുത്തത്",
   "tools.database.viewTypeTimeline": "ടൈംലൈൻ",
   "tools.database.viewTypeTimelineDescription": "ഇനങ്ങൾ ടൈംലൈനിൽ കാണിക്കുക",
   "tools.database.viewTypeForm": "ഫോം",

@@ -33,12 +33,13 @@ import { resolveCalculations, resolveCountCaps, resolveShowTimelineTable, resolv
 import { fillCalculationCell } from './database-table-view';
 import { isHistoryKey } from './database-keyboard';
 import { getElementDirection } from '../../components/utils/direction';
+import { startInlineRename } from '../../components/utils/inline-rename';
 import { syncCommentBadge } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
 import { openNoDatePanel } from './database-no-date';
 import type { NoDateControl } from './database-no-date';
 import type { DatabasePanel } from './database-panel';
-import { IconArrowLeftSmall, IconArrowRightSmall, IconCalendar, IconChevronLeft, IconChevronRight, IconMenu, IconPlus } from '../../components/icons';
+import { IconArrowLeftSmall, IconArrowRightSmall, IconCalendar, IconChevronDoubleRight, IconChevronDown, IconChevronLeft, IconChevronRight, IconMenu, IconPlus } from '../../components/icons';
 
 export interface TimelineGroup {
   /** '' when the timeline is not grouped. */
@@ -55,8 +56,10 @@ export interface TimelineHandlers {
   openRow: (rowId: string) => void;
   /** Cmd/Ctrl- or Shift-click on a row: add it to the selection instead of opening it. */
   pickRow?: (rowId: string, range: boolean) => void;
-  /** Group key, or null when the timeline is not grouped. */
-  addRow: (groupKey: string | null) => void;
+  /** Group key, or null when the timeline is not grouped; the new bar's dates. */
+  addRow: (groupKey: string | null, write: BarWrite) => void;
+  /** A title typed into a new bar. */
+  renameRow?: (rowId: string, title: string) => void;
   /** New stored values for the start and/or end property. */
   writeDates: (rowId: string, write: BarWrite) => void;
   moveRow: (result: GalleryDropResult) => void;
@@ -111,6 +114,8 @@ const PAN_PX = 160;
 const EDGE_SHARE = 0.1;
 /** Zooms whose days are wide enough to shade weekends one by one. */
 const DAY_LEVEL: ReadonlySet<TimelineZoom> = new Set(['hours', 'day', 'week', 'bi_week', 'month']);
+/** Zooms whose header shows day numbers only: the month is named in the toolbar. */
+const MONTH_IN_TOOLBAR: ReadonlySet<TimelineZoom> = new Set(['day', 'week', 'bi_week', 'month']);
 
 const ZOOM_KEYS: Record<TimelineZoom, string> = {
   hours: 'tools.database.timelineZoomHours',
@@ -210,6 +215,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
     root.setAttribute('data-blok-database-timeline', '');
     root.setAttribute('data-zoom', this.zoom);
+    root.style.setProperty('--blok-database-timeline-header-rows', MONTH_IN_TOOLBAR.has(this.zoom) ? '1' : '2');
     root.setAttribute('role', 'region');
     root.setAttribute('aria-label', this.t('tools.database.timelineLabel'));
     this.root = root;
@@ -233,16 +239,6 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     }
     body.appendChild(this.createScroller());
     root.appendChild(body);
-
-    if (this.canEdit) {
-      const add = document.createElement('button');
-
-      add.type = 'button';
-      add.setAttribute('data-blok-database-timeline-new', '');
-      add.innerHTML = IconPlus;
-      add.append(this.t('tools.database.timelineNew'));
-      root.appendChild(add);
-    }
 
     root.addEventListener('click', this.onClick);
     root.addEventListener('keydown', this.onKeyDown);
@@ -270,7 +266,12 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     toggle.setAttribute('data-blok-database-timeline-table-toggle', '');
     toggle.setAttribute('aria-pressed', String(shown));
     toggle.setAttribute('aria-label', this.t(shown ? 'tools.database.timelineHideTable' : 'tools.database.timelineShowTable'));
-    toggle.innerHTML = shown ? IconChevronLeft : IconChevronRight;
+    toggle.innerHTML = IconChevronDoubleRight;
+
+    const month = document.createElement('div');
+
+    month.setAttribute('data-blok-database-timeline-month', '');
+    month.textContent = this.monthLabel(this.options.center);
 
     const spacer = document.createElement('div');
 
@@ -282,13 +283,25 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     zoom.setAttribute('data-blok-database-timeline-zoom', '');
     zoom.setAttribute('aria-haspopup', 'menu');
     zoom.textContent = this.t(ZOOM_KEYS[this.zoom]);
+    zoom.insertAdjacentHTML('beforeend', IconChevronDown);
 
     const today = document.createElement('button');
 
     today.type = 'button';
     today.setAttribute('data-blok-database-timeline-today', '');
     today.textContent = this.t('tools.database.timelineToday');
-    bar.append(toggle, spacer);
+    const step = (attr: string, label: string, icon: string): HTMLButtonElement => {
+      const el = document.createElement('button');
+
+      el.type = 'button';
+      el.setAttribute(attr, '');
+      el.setAttribute('aria-label', this.t(label));
+      el.innerHTML = icon;
+
+      return el;
+    };
+
+    bar.append(toggle, month, spacer);
 
     const calendar = this.options.manageInCalendar;
 
@@ -303,7 +316,12 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       manage.addEventListener('click', () => calendar.onClick());
       bar.append(manage);
     }
-    bar.append(zoom, today);
+    bar.append(
+      zoom,
+      step('data-blok-database-timeline-prev', 'tools.database.timelinePrevious', IconChevronLeft),
+      today,
+      step('data-blok-database-timeline-next', 'tools.database.timelineNext', IconChevronRight)
+    );
 
     return bar;
   }
@@ -345,6 +363,10 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       : this.options.today;
 
     return newBarWrite(start, NEW_BAR_DAYS, this.options.endPropertyId !== undefined);
+  }
+
+  private monthLabel(day: string): string {
+    return new Intl.DateTimeFormat(resolveLocale(this.options.locale), { month: 'long', year: 'numeric' }).format(toLocalDate(day));
   }
 
   /** Every group with its rows, in drawing order, so the table panel and the canvas line up. */
@@ -508,9 +530,78 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     if ((this.options.arrows ?? []).length > 0) {
       canvas.appendChild(this.createArrows());
     }
+    if (this.canEdit) {
+      canvas.appendChild(this.createNewLane());
+    }
     scroller.appendChild(canvas);
 
     return scroller;
+  }
+
+  /** findings C07: "+ New" is the canvas's last 36px lane. */
+  private createNewLane(): HTMLElement {
+    const lane = document.createElement('div');
+    const add = document.createElement('button');
+
+    lane.setAttribute('data-blok-database-timeline-new-lane', '');
+    add.type = 'button';
+    add.setAttribute('data-blok-database-timeline-new', '');
+    add.innerHTML = IconPlus;
+    add.append(this.t('tools.database.timelineNew'));
+    lane.appendChild(add);
+
+    return lane;
+  }
+
+  /**
+   * findings C07: a new bar's title is typed in the bar. Enter keeps the bar
+   * selected; Escape keeps the name and leaves nothing selected.
+   */
+  editTitle(rowId: string): void {
+    const barEl = this.rowsOf('[data-blok-database-timeline-bar]').find((el) => el.getAttribute('data-row-id') === rowId);
+    const titleEl = barEl?.querySelector<HTMLElement>('[data-blok-database-timeline-bar-title]');
+
+    if (!this.canEdit || barEl === undefined || titleEl === null || titleEl === undefined) {
+      return;
+    }
+    const original = titleEl.textContent ?? '';
+    const escaped = { value: false };
+
+    startInlineRename({
+      target: titleEl,
+      currentValue: original,
+      allowEmpty: true,
+      escapeCommits: true,
+      label: this.t('tools.database.editCardTitle'),
+      configureInput: (input) => {
+        input.setAttribute('data-blok-database-timeline-title-input', '');
+        input.setAttribute('placeholder', this.t('tools.database.cardNamePlaceholder'));
+        input.addEventListener('keydown', (event) => {
+          escaped.value = event.key === 'Escape';
+        });
+      },
+      buildRestored: (title) => this.createBarTitle(title),
+      onCommit: (title) => {
+        if (title !== original) {
+          this.options.handlers?.renameRow?.(rowId, title);
+        }
+        if (!escaped.value) {
+          this.options.handlers?.pickRow?.(rowId, false);
+        }
+      },
+    });
+  }
+
+  private createBarTitle(title: string): HTMLElement {
+    const titleEl = document.createElement('span');
+
+    titleEl.setAttribute('data-blok-database-timeline-bar-title', '');
+    titleEl.textContent = title;
+    if (title === '') {
+      titleEl.setAttribute('data-placeholder', this.t('tools.database.cardTitlePlaceholder'));
+    }
+
+    return titleEl;
   }
 
   /**
@@ -594,7 +685,11 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
     header.setAttribute('data-blok-database-timeline-header', '');
     header.setAttribute('aria-hidden', 'true');
-    header.append(line('data-blok-database-timeline-groups', groups), line('data-blok-database-timeline-units', units));
+    // findings C06: at day-level zooms the toolbar names the month, so the header has no month row.
+    if (!MONTH_IN_TOOLBAR.has(this.zoom)) {
+      header.append(line('data-blok-database-timeline-groups', groups));
+    }
+    header.append(line('data-blok-database-timeline-units', units));
 
     const todayIndex = daysBetween(this.window.start, this.options.today);
 
@@ -747,13 +842,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       el.appendChild(this.createHandle('start'));
     }
 
-    const titleEl = document.createElement('span');
-
-    titleEl.setAttribute('data-blok-database-timeline-bar-title', '');
-    titleEl.textContent = title;
-    if (title === '') {
-      titleEl.setAttribute('data-placeholder', this.t('tools.database.cardTitlePlaceholder'));
-    }
+    const titleEl = this.createBarTitle(title);
     const icon = showsPageIcon(this.options.view) ? pageIconElement(row) : null;
 
     if (icon !== null) {
@@ -862,6 +951,12 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       zoom: this.zoom,
     });
 
+    const month = this.root?.querySelector('[data-blok-database-timeline-month]');
+
+    if (month !== null && month !== undefined && this.scroller.clientWidth > 0) {
+      month.textContent = this.monthLabel(range.first);
+    }
+
     for (const line of this.rowsOf('[data-blok-database-timeline-row]')) {
       const row = this.findRow(line.getAttribute('data-row-id') ?? '');
       const span = row === undefined ? null : this.spanOf(row);
@@ -892,6 +987,10 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       this.options.handlers?.navigate(middle);
     }
   };
+
+  private stepScreen(direction: 1 | -1): void {
+    this.scrollStart = this.scrollStart + direction * (this.scroller?.clientWidth ?? 0);
+  }
 
   private jumpTo(rowId: string): void {
     const row = this.findRow(rowId);
@@ -933,9 +1032,12 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
         }
       }],
       ['[data-blok-database-timeline-today]', () => handlers.navigate(this.options.today)],
+      // Unmeasured in Notion: the step is one screen.
+      ['[data-blok-database-timeline-prev]', () => this.stepScreen(-1)],
+      ['[data-blok-database-timeline-next]', () => this.stepScreen(1)],
       ['[data-blok-database-timeline-new]', () => {
         if (this.canEdit) {
-          handlers.addRow(this.options.grouped ? this.options.groups[0]?.key ?? null : null);
+          handlers.addRow(this.options.grouped ? this.options.groups[0]?.key ?? null : null, this.newBar());
         }
       }],
       ['[data-blok-database-timeline-load-more]', (el) => handlers.loadMore(el.getAttribute('data-group-key') ?? '')],

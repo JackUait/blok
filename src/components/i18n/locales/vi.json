@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "Tìm kiếm trang…",
   "tools.database.calendarNoDateHint": "Nhấp hoặc kéo vào lịch để thêm ngày.",
   "tools.database.timelineNoDateHint": "Nhấp để thêm vào dòng thời gian",
+  "tools.database.timelinePrevious": "Trước",
+  "tools.database.timelineNext": "Tiếp theo",
   "tools.database.viewTypeTimeline": "Dòng thời gian",
   "tools.database.viewTypeTimelineDescription": "Hiển thị mục trên dòng thời gian",
   "tools.database.viewTypeForm": "Biểu mẫu",

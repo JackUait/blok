@@ -1360,6 +1360,8 @@
   "tools.database.noDateSearch": "ابحث عن صفحة…",
   "tools.database.calendarNoDateHint": "انقر أو اسحب إلى التقويم لإضافة تاريخ.",
   "tools.database.timelineNoDateHint": "انقر للإضافة إلى الخط الزمني",
+  "tools.database.timelinePrevious": "السابق",
+  "tools.database.timelineNext": "التالي",
   "tools.database.viewTypeTimeline": "خط زمني",
   "tools.database.viewTypeTimelineDescription": "اعرض العناصر على خط زمني",
   "tools.database.viewTypeForm": "نموذج",

@@ -1079,7 +1079,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_FILTER_SORT_FEEL_BYTES = 5_634;
     // database.css: feel/findings-caltimeline: calendar live resize and move ghost,
     // +468: the toolbar "No date (N)" and its popover rows, less the old inline list.
-    const DATABASE_CAL_TIMELINE_FEEL_BYTES = 700 + 468;
+    // +1_694: the timeline's month, ‹ ›, one-row header, "+ New" lane and the new bar's title field.
+    const DATABASE_CAL_TIMELINE_FEEL_BYTES = 700 + 468 + 1_694;
     // database.css: feel/findings-table T13: the uncapped board and list bar still hides the whole toolbar.
     const DATABASE_SELECTION_BAR_BOARD_BYTES = 233;
     // database.css: feel/findings-toolbar V09: view settings docks at the window's end edge with radius 10.

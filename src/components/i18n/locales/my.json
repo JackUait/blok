@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "စာမျက်နှာ ရှာပါ…",
   "tools.database.calendarNoDateHint": "ရက်စွဲထည့်ရန် နှိပ်ပါ သို့မဟုတ် ပြက္ခဒိန်သို့ ဆွဲထည့်ပါ။",
   "tools.database.timelineNoDateHint": "အချိန်လိုင်းသို့ ထည့်ရန် နှိပ်ပါ",
+  "tools.database.timelinePrevious": "ယခင်",
+  "tools.database.timelineNext": "နောက်",
   "tools.database.viewTypeTimeline": "အချိန်လိုင်း",
   "tools.database.viewTypeTimelineDescription": "အကြောင်းအရာများကို အချိန်လိုင်းပေါ်တွင် ပြရန်",
   "tools.database.viewTypeForm": "ဖောင်",

@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "ਕੋਈ ਪੰਨਾ ਲੱਭੋ…",
   "tools.database.calendarNoDateHint": "ਮਿਤੀ ਜੋੜਨ ਲਈ ਕਲਿੱਕ ਕਰੋ ਜਾਂ ਕੈਲੰਡਰ 'ਤੇ ਖਿੱਚੋ।",
   "tools.database.timelineNoDateHint": "ਟਾਈਮਲਾਈਨ ਵਿੱਚ ਜੋੜਨ ਲਈ ਕਲਿੱਕ ਕਰੋ",
+  "tools.database.timelinePrevious": "ਪਿਛਲਾ",
+  "tools.database.timelineNext": "ਅਗਲਾ",
   "tools.database.viewTypeTimeline": "ਟਾਈਮਲਾਈਨ",
   "tools.database.viewTypeTimelineDescription": "ਆਈਟਮਾਂ ਨੂੰ ਟਾਈਮਲਾਈਨ ਉੱਤੇ ਦਿਖਾਓ",
   "tools.database.viewTypeForm": "ਫਾਰਮ",

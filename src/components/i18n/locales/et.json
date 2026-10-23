@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "Otsi lehte…",
   "tools.database.calendarNoDateHint": "Klõpsa või lohista kalendrisse, et kuupäev lisada.",
   "tools.database.timelineNoDateHint": "Klõpsa, et lisada ajateljele",
+  "tools.database.timelinePrevious": "Eelmine",
+  "tools.database.timelineNext": "Järgmine",
   "tools.database.viewTypeTimeline": "Ajatelg",
   "tools.database.viewTypeTimelineDescription": "Kuva üksused ajateljel",
   "tools.database.viewTypeForm": "Vorm",

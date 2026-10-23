@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "Хуудас хайх…",
   "tools.database.calendarNoDateHint": "Огноо нэмэхийн тулд дарж эсвэл хуанли руу чирнэ үү.",
   "tools.database.timelineNoDateHint": "Цагийн хэлхээст нэмэхийн тулд дарна уу",
+  "tools.database.timelinePrevious": "Өмнөх",
+  "tools.database.timelineNext": "Дараагийн",
   "tools.database.viewTypeTimeline": "Цагийн хэлхээс",
   "tools.database.viewTypeTimelineDescription": "Зүйлсийг цагийн хэлхээс дээр харуулах",
   "tools.database.viewTypeForm": "Маягт",

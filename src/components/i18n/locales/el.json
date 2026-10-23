@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "Αναζήτηση σελίδας…",
   "tools.database.calendarNoDateHint": "Κάντε κλικ ή σύρετε στο ημερολόγιο για να προσθέσετε ημερομηνία.",
   "tools.database.timelineNoDateHint": "Κάντε κλικ για προσθήκη στο χρονολόγιο",
+  "tools.database.timelinePrevious": "Προηγούμενο",
+  "tools.database.timelineNext": "Επόμενο",
   "tools.database.viewTypeTimeline": "Χρονολόγιο",
   "tools.database.viewTypeTimelineDescription": "Εμφάνιση στοιχείων σε χρονολόγιο",
   "tools.database.viewTypeForm": "Φόρμα",

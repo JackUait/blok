@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "ค้นหาหน้า…",
   "tools.database.calendarNoDateHint": "คลิกหรือลากไปที่ปฏิทินเพื่อเพิ่มวันที่",
   "tools.database.timelineNoDateHint": "คลิกเพื่อเพิ่มลงในไทม์ไลน์",
+  "tools.database.timelinePrevious": "ก่อนหน้า",
+  "tools.database.timelineNext": "ถัดไป",
   "tools.database.viewTypeTimeline": "ไทม์ไลน์",
   "tools.database.viewTypeTimelineDescription": "แสดงรายการบนไทม์ไลน์",
   "tools.database.viewTypeForm": "ฟอร์ม",

@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "பக்கத்தைத் தேடு…",
   "tools.database.calendarNoDateHint": "தேதியைச் சேர்க்க கிளிக் செய் அல்லது நாட்காட்டிக்கு இழு.",
   "tools.database.timelineNoDateHint": "காலவரிசையில் சேர்க்க கிளிக் செய்",
+  "tools.database.timelinePrevious": "முந்தையது",
+  "tools.database.timelineNext": "அடுத்தது",
   "tools.database.viewTypeTimeline": "காலவரிசை",
   "tools.database.viewTypeTimelineDescription": "உருப்படிகளைக் காலவரிசையில் காட்டு",
   "tools.database.viewTypeForm": "படிவம்",

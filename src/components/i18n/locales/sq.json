@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "Kërko një faqe…",
   "tools.database.calendarNoDateHint": "Kliko ose tërhiq në kalendar për të shtuar datë.",
   "tools.database.timelineNoDateHint": "Kliko për ta shtuar në kronologji",
+  "tools.database.timelinePrevious": "I mëparshmi",
+  "tools.database.timelineNext": "Tjetri",
   "tools.database.viewTypeTimeline": "Kronologji",
   "tools.database.viewTypeTimelineDescription": "Shfaq elementet në kronologji",
   "tools.database.viewTypeForm": "Formular",

@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "Søk etter en side…",
   "tools.database.calendarNoDateHint": "Klikk eller dra til kalenderen for å legge til en dato.",
   "tools.database.timelineNoDateHint": "Klikk for å legge til på tidslinjen",
+  "tools.database.timelinePrevious": "Forrige",
+  "tools.database.timelineNext": "Neste",
   "tools.database.viewTypeTimeline": "Tidslinje",
   "tools.database.viewTypeTimelineDescription": "Vis elementer på en tidslinje",
   "tools.database.viewTypeForm": "Skjema",

@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "Tafuta ukurasa…",
   "tools.database.calendarNoDateHint": "Bofya au buruta kwenye kalenda ili kuongeza tarehe.",
   "tools.database.timelineNoDateHint": "Bofya ili kuongeza kwenye rekodi ya matukio",
+  "tools.database.timelinePrevious": "Iliyotangulia",
+  "tools.database.timelineNext": "Inayofuata",
   "tools.database.viewTypeTimeline": "Rekodi ya matukio",
   "tools.database.viewTypeTimelineDescription": "Onyesha vipengee kwenye rekodi ya matukio",
   "tools.database.viewTypeForm": "Fomu",

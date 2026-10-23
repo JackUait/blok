@@ -1354,6 +1354,8 @@
   "tools.database.noDateSearch": "Potražite stranicu…",
   "tools.database.calendarNoDateHint": "Kliknite ili prevucite na kalendar da dodate datum.",
   "tools.database.timelineNoDateHint": "Kliknite da dodate na vremensku liniju",
+  "tools.database.timelinePrevious": "Prethodno",
+  "tools.database.timelineNext": "Sljedeće",
   "tools.database.viewTypeTimeline": "Vremenska linija",
   "tools.database.viewTypeTimelineDescription": "Prikaži stavke na vremenskoj liniji",
   "tools.database.viewTypeForm": "Obrazac",

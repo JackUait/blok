@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "搜尋頁面…",
   "tools.database.calendarNoDateHint": "點擊或拖曳到行事曆以新增日期。",
   "tools.database.timelineNoDateHint": "點擊以新增至時間軸",
+  "tools.database.timelinePrevious": "上一個",
+  "tools.database.timelineNext": "下一個",
   "tools.database.viewTypeTimeline": "時間軸",
   "tools.database.viewTypeTimelineDescription": "在時間軸上顯示項目",
   "tools.database.viewTypeForm": "表單",

@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "Səhifə axtarın…",
   "tools.database.calendarNoDateHint": "Tarix əlavə etmək üçün klikləyin və ya təqvimə sürükləyin.",
   "tools.database.timelineNoDateHint": "Zaman xəttinə əlavə etmək üçün klikləyin",
+  "tools.database.timelinePrevious": "Əvvəlki",
+  "tools.database.timelineNext": "Növbəti",
   "tools.database.viewTypeTimeline": "Zaman xətti",
   "tools.database.viewTypeTimelineDescription": "Elementləri zaman xəttində göstər",
   "tools.database.viewTypeForm": "Forma",

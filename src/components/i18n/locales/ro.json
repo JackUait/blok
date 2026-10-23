@@ -1354,6 +1354,8 @@
   "tools.database.noDateSearch": "Căutați o pagină…",
   "tools.database.calendarNoDateHint": "Faceți clic sau trageți în calendar pentru a adăuga o dată.",
   "tools.database.timelineNoDateHint": "Faceți clic pentru a adăuga în cronologie",
+  "tools.database.timelinePrevious": "Anterior",
+  "tools.database.timelineNext": "Următor",
   "tools.database.viewTypeTimeline": "Cronologie",
   "tools.database.viewTypeTimelineDescription": "Afișează elementele pe o cronologie",
   "tools.database.viewTypeForm": "Formular",

@@ -10230,6 +10230,8 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-timeline] {
   --blok-database-timeline-line: 28px;
+  /* The view sets 1 when the toolbar names the month (findings C06). */
+  --blok-database-timeline-header-rows: 2;
   /* The view sets the day width inline on the canvas. */
   --blok-database-timeline-day: 40px;
   display: flex;
@@ -10247,6 +10249,25 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-timeline-toolbar-spacer] {
   flex: 1;
+}
+
+/* findings C05: the shown month, right after the table toggle. */
+[data-blok-database-timeline-month] {
+  font-size: 14px;
+  line-height: 21px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+[data-blok-database-timeline-toolbar] :is([data-blok-database-timeline-prev], [data-blok-database-timeline-next]) {
+  justify-content: center;
+  inline-size: 24px;
+  padding: 0;
+  color: var(--blok-database-calendar-nav-icon);
+}
+
+[dir="rtl"] :is([data-blok-database-timeline-prev], [data-blok-database-timeline-next]) svg {
+  transform: scaleX(-1);
 }
 
 [data-blok-database-timeline-toolbar] button,
@@ -10301,6 +10322,23 @@ textarea[data-blok-database-cell-input] {
   transform: scaleX(-1);
 }
 
+/* findings C07: the canvas's last 36px lane; the 197x34 button stays at the screen's start. */
+[data-blok-database-timeline-new-lane] {
+  position: relative;
+  display: flex;
+  align-items: center;
+  block-size: 36px;
+}
+
+[data-blok-database-timeline-new-lane] [data-blok-database-timeline-new] {
+  margin-block-start: 0;
+  position: sticky;
+  inset-inline-start: 0;
+  inline-size: 197px;
+  block-size: 34px;
+  line-height: 20px;
+}
+
 [data-blok-database-timeline-empty] {
   padding: var(--blok-space-4) var(--blok-space-2);
   color: var(--blok-database-timeline-muted-text);
@@ -10336,7 +10374,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-timeline-table-header] {
-  block-size: calc(var(--blok-database-timeline-line) * 2);
+  block-size: calc(var(--blok-database-timeline-line) * var(--blok-database-timeline-header-rows));
   box-sizing: border-box;
   color: var(--blok-database-timeline-muted-text);
 }
@@ -10380,7 +10418,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-timeline-header] {
   position: relative;
-  block-size: calc(var(--blok-database-timeline-line) * 2);
+  block-size: calc(var(--blok-database-timeline-line) * var(--blok-database-timeline-header-rows));
   box-shadow: var(--blok-database-timeline-header-line) 0 -1px 0 0 inset;
 }
 
@@ -10417,7 +10455,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-timeline-today-dot] {
   position: absolute;
   z-index: 1;
-  inset-block-start: calc(var(--blok-database-timeline-line) + 3px);
+  inset-block-start: calc(var(--blok-database-timeline-line) * (var(--blok-database-timeline-header-rows) - 1) + 3px);
   margin-inline-start: -11px;
   inline-size: 22px;
   block-size: 22px;
@@ -10432,7 +10470,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-timeline-background] {
   position: absolute;
-  inset-block: calc(var(--blok-database-timeline-line) * 2) 0;
+  inset-block: calc(var(--blok-database-timeline-line) * var(--blok-database-timeline-header-rows)) 0;
   inset-inline: 0;
   pointer-events: none;
 }
@@ -10601,6 +10639,25 @@ textarea[data-blok-database-cell-input] {
   font-size: 14px;
   line-height: 21px;
   font-weight: 500;
+}
+
+/* findings C07: a new bar's name is typed in the bar itself. */
+[data-blok-database-timeline-title-input] {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  line-height: 21px;
+  font-weight: 500;
+}
+
+[data-blok-database-timeline-title-input]::placeholder {
+  color: var(--blok-database-timeline-muted-text);
 }
 
 [data-blok-database-timeline-bar-title]:empty::before {

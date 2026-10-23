@@ -1354,6 +1354,8 @@
   "tools.database.noDateSearch": "Busca una página…",
   "tools.database.calendarNoDateHint": "Haz clic o arrastra al calendario para añadir una fecha.",
   "tools.database.timelineNoDateHint": "Haz clic para añadir al cronograma",
+  "tools.database.timelinePrevious": "Anterior",
+  "tools.database.timelineNext": "Siguiente",
   "tools.database.viewTypeTimeline": "Cronograma",
   "tools.database.viewTypeTimelineDescription": "Muestra los elementos en un cronograma",
   "tools.database.viewTypeForm": "Formulario",

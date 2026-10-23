@@ -1356,6 +1356,8 @@
   "tools.database.noDateSearch": "Hľadajte stránku…",
   "tools.database.calendarNoDateHint": "Kliknutím alebo presunutím do kalendára pridáte dátum.",
   "tools.database.timelineNoDateHint": "Kliknutím pridáte na časovú os",
+  "tools.database.timelinePrevious": "Predchádzajúce",
+  "tools.database.timelineNext": "Ďalšie",
   "tools.database.viewTypeTimeline": "Časová os",
   "tools.database.viewTypeTimelineDescription": "Zobraziť položky na časovej osi",
   "tools.database.viewTypeForm": "Formulár",

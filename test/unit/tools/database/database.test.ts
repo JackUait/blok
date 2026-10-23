@@ -6284,14 +6284,14 @@ describe('DatabaseTool', () => {
         tool.destroy();
       });
 
-      it('adds a row dated today from "+ New"', () => {
+      it('adds a 5-day bar from today from "+ New" when the screen has no width', () => {
         const { tool, element, options } = timelineTool();
 
         queryByData(element, 'data-blok-database-timeline-new')?.click();
 
         expect(options.api.blocks.insertAt).toHaveBeenCalledWith(
           'database-row',
-          expect.objectContaining({ properties: expect.objectContaining({ 'prop-due': '2026-10-09' }) }),
+          expect.objectContaining({ properties: expect.objectContaining({ 'prop-due': '2026-10-09/2026-10-13' }) }),
           expect.objectContaining({ parentId: 'test-block-id' }),
         );
 

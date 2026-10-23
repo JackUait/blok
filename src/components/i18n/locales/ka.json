@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "მოძებნეთ გვერდი…",
   "tools.database.calendarNoDateHint": "დააწკაპუნეთ ან გადაიტანეთ კალენდარზე თარიღის დასამატებლად.",
   "tools.database.timelineNoDateHint": "დააწკაპუნეთ დროის ხაზზე დასამატებლად",
+  "tools.database.timelinePrevious": "წინა",
+  "tools.database.timelineNext": "შემდეგი",
   "tools.database.viewTypeTimeline": "დროის ხაზი",
   "tools.database.viewTypeTimelineDescription": "ელემენტების დროის ხაზზე ჩვენება",
   "tools.database.viewTypeForm": "ფორმა",

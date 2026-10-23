@@ -1354,6 +1354,8 @@
   "tools.database.noDateSearch": "Meklējiet lapu…",
   "tools.database.calendarNoDateHint": "Noklikšķiniet vai velciet uz kalendāru, lai pievienotu datumu.",
   "tools.database.timelineNoDateHint": "Noklikšķiniet, lai pievienotu laika skalai",
+  "tools.database.timelinePrevious": "Iepriekšējais",
+  "tools.database.timelineNext": "Nākamais",
   "tools.database.viewTypeTimeline": "Laika skala",
   "tools.database.viewTypeTimelineDescription": "Rādīt vienumus laika skalā",
   "tools.database.viewTypeForm": "Veidlapa",

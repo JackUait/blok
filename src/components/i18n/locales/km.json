@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "ស្វែងរកទំព័រ…",
   "tools.database.calendarNoDateHint": "ចុច ឬអូសទៅប្រតិទិន ដើម្បីបន្ថែមកាលបរិច្ឆេទ។",
   "tools.database.timelineNoDateHint": "ចុចដើម្បីបន្ថែមទៅបន្ទាត់ពេលវេលា",
+  "tools.database.timelinePrevious": "មុន",
+  "tools.database.timelineNext": "បន្ទាប់",
   "tools.database.viewTypeTimeline": "បន្ទាត់ពេលវេលា",
   "tools.database.viewTypeTimelineDescription": "បង្ហាញធាតុនៅលើបន្ទាត់ពេលវេលា",
   "tools.database.viewTypeForm": "ទម្រង់",

@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "صفحو ڳوليو…",
   "tools.database.calendarNoDateHint": "تاريخ شامل ڪرڻ لاءِ ڪلڪ ڪريو يا ڪئلينڊر ڏانهن ڇڪيو.",
   "tools.database.timelineNoDateHint": "ٽائيم لائن ۾ شامل ڪرڻ لاءِ ڪلڪ ڪريو",
+  "tools.database.timelinePrevious": "پويون",
+  "tools.database.timelineNext": "ايندڙ",
   "tools.database.viewTypeTimeline": "ٽائيم لائن",
   "tools.database.viewTypeTimelineDescription": "شيون ٽائيم لائن تي ڏيکاريو",
   "tools.database.viewTypeForm": "فارم",

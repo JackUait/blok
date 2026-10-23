@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "ຄົ້ນຫາໜ້າ…",
   "tools.database.calendarNoDateHint": "ຄລິກ ຫຼື ລາກໄປໃສ່ປະຕິທິນເພື່ອເພີ່ມວັນທີ",
   "tools.database.timelineNoDateHint": "ຄລິກເພື່ອເພີ່ມໃສ່ເສັ້ນເວລາ",
+  "tools.database.timelinePrevious": "ກ່ອນໜ້າ",
+  "tools.database.timelineNext": "ຕໍ່ໄປ",
   "tools.database.viewTypeTimeline": "ເສັ້ນເວລາ",
   "tools.database.viewTypeTimelineDescription": "ສະແດງລາຍການໃນເສັ້ນເວລາ",
   "tools.database.viewTypeForm": "ແບບຟອມ",

@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "Zoek een pagina…",
   "tools.database.calendarNoDateHint": "Klik of sleep naar de kalender om een datum toe te voegen.",
   "tools.database.timelineNoDateHint": "Klik om toe te voegen aan de tijdlijn",
+  "tools.database.timelinePrevious": "Vorige",
+  "tools.database.timelineNext": "Volgende",
   "tools.database.viewTypeTimeline": "Tijdlijn",
   "tools.database.viewTypeTimelineDescription": "Items op een tijdlijn weergeven",
   "tools.database.viewTypeForm": "Formulier",

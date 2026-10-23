@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "ޞަފްޙާއެއް ހޯދާ…",
   "tools.database.calendarNoDateHint": "ތާރީޚެއް އިތުރުކުރުމަށް ކްލިކްކުރޭ ނުވަތަ ކަލަންޑަރަށް ދަމާލާ.",
   "tools.database.timelineNoDateHint": "ޓައިމްލައިނަށް އިތުރުކުރުމަށް ކްލިކްކުރޭ",
+  "tools.database.timelinePrevious": "ކުރީގެ",
+  "tools.database.timelineNext": "ދެން އޮތް",
   "tools.database.viewTypeTimeline": "ޓައިމްލައިން",
   "tools.database.viewTypeTimelineDescription": "އައިޓަމްތައް ޓައިމްލައިނެއްގައި ދައްކާ",
   "tools.database.viewTypeForm": "ފޯމު",

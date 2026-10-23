@@ -1354,6 +1354,8 @@
   "tools.database.noDateSearch": "חיפוש דף…",
   "tools.database.calendarNoDateHint": "לחץ או גרור ללוח השנה כדי להוסיף תאריך.",
   "tools.database.timelineNoDateHint": "לחץ כדי להוסיף לציר הזמן",
+  "tools.database.timelinePrevious": "הקודם",
+  "tools.database.timelineNext": "הבא",
   "tools.database.viewTypeTimeline": "ציר זמן",
   "tools.database.viewTypeTimelineDescription": "הצג פריטים בציר זמן",
   "tools.database.viewTypeForm": "טופס",

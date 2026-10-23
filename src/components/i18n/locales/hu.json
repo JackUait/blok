@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "Oldal keresése…",
   "tools.database.calendarNoDateHint": "Kattintson, vagy húzza a naptárba a dátum hozzáadásához.",
   "tools.database.timelineNoDateHint": "Kattintson az idővonalhoz való hozzáadáshoz",
+  "tools.database.timelinePrevious": "Előző",
+  "tools.database.timelineNext": "Következő",
   "tools.database.viewTypeTimeline": "Idővonal",
   "tools.database.viewTypeTimelineDescription": "Elemek megjelenítése idővonalon",
   "tools.database.viewTypeForm": "Űrlap",

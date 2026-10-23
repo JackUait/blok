@@ -1354,6 +1354,8 @@
   "tools.database.noDateSearch": "Pesquise uma página…",
   "tools.database.calendarNoDateHint": "Clique ou arraste para o calendário para adicionar uma data.",
   "tools.database.timelineNoDateHint": "Clique para adicionar à linha do tempo",
+  "tools.database.timelinePrevious": "Anterior",
+  "tools.database.timelineNext": "Próximo",
   "tools.database.viewTypeTimeline": "Linha do tempo",
   "tools.database.viewTypeTimelineDescription": "Mostrar itens em uma linha do tempo",
   "tools.database.viewTypeForm": "Formulário",

@@ -1356,6 +1356,8 @@
   "tools.database.noDateSearch": "Поиск страницы…",
   "tools.database.calendarNoDateHint": "Нажмите или перетащите в календарь, чтобы добавить дату.",
   "tools.database.timelineNoDateHint": "Нажмите, чтобы добавить в хронологию",
+  "tools.database.timelinePrevious": "Предыдущий",
+  "tools.database.timelineNext": "Следующий",
   "tools.database.viewTypeTimeline": "Хронология",
   "tools.database.viewTypeTimelineDescription": "Показывать элементы в хронологии",
   "tools.database.viewTypeForm": "Форма",

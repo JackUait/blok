@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "페이지 검색…",
   "tools.database.calendarNoDateHint": "클릭하거나 캘린더로 드래그하여 날짜를 추가하세요.",
   "tools.database.timelineNoDateHint": "클릭하여 타임라인에 추가",
+  "tools.database.timelinePrevious": "이전",
+  "tools.database.timelineNext": "다음",
   "tools.database.viewTypeTimeline": "타임라인",
   "tools.database.viewTypeTimelineDescription": "항목을 타임라인에 표시",
   "tools.database.viewTypeForm": "양식",

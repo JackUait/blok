@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "Sayfa arayın…",
   "tools.database.calendarNoDateHint": "Tarih eklemek için tıklayın veya takvime sürükleyin.",
   "tools.database.timelineNoDateHint": "Zaman çizelgesine eklemek için tıklayın",
+  "tools.database.timelinePrevious": "Önceki",
+  "tools.database.timelineNext": "Sonraki",
   "tools.database.viewTypeTimeline": "Zaman çizelgesi",
   "tools.database.viewTypeTimelineDescription": "Öğeleri zaman çizelgesinde göster",
   "tools.database.viewTypeForm": "Form",

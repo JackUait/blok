@@ -1356,6 +1356,8 @@
   "tools.database.noDateSearch": "Wyszukaj stronę…",
   "tools.database.calendarNoDateHint": "Kliknij lub przeciągnij do kalendarza, aby dodać datę.",
   "tools.database.timelineNoDateHint": "Kliknij, aby dodać do osi czasu",
+  "tools.database.timelinePrevious": "Poprzednie",
+  "tools.database.timelineNext": "Następne",
   "tools.database.viewTypeTimeline": "Oś czasu",
   "tools.database.viewTypeTimelineDescription": "Pokaż elementy na osi czasu",
   "tools.database.viewTypeForm": "Formularz",

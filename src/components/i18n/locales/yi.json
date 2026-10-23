@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "זוך אַ בלאַט…",
   "tools.database.calendarNoDateHint": "קליק אָדער שלעפּ צום קאַלענדאַר צו צולייגן אַ דאַטום.",
   "tools.database.timelineNoDateHint": "קליק צו צולייגן צו דער צײַטליניע",
+  "tools.database.timelinePrevious": "פֿריִערדיקער",
+  "tools.database.timelineNext": "קומענדיקער",
   "tools.database.viewTypeTimeline": "צײַטליניע",
   "tools.database.viewTypeTimelineDescription": "ווײַז זאַכן אויף אַ צײַטליניע",
   "tools.database.viewTypeForm": "פֿאָרמולאַר",

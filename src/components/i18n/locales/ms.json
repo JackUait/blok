@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "Cari halaman…",
   "tools.database.calendarNoDateHint": "Klik atau seret ke kalendar untuk menambah tarikh.",
   "tools.database.timelineNoDateHint": "Klik untuk menambah ke garis masa",
+  "tools.database.timelinePrevious": "Sebelumnya",
+  "tools.database.timelineNext": "Seterusnya",
   "tools.database.viewTypeTimeline": "Garis masa",
   "tools.database.viewTypeTimelineDescription": "Tunjukkan item pada garis masa",
   "tools.database.viewTypeForm": "Borang",

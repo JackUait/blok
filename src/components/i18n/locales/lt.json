@@ -1356,6 +1356,8 @@
   "tools.database.noDateSearch": "Ieškokite puslapio…",
   "tools.database.calendarNoDateHint": "Spustelėkite arba vilkite į kalendorių, kad pridėtumėte datą.",
   "tools.database.timelineNoDateHint": "Spustelėkite, kad pridėtumėte į laiko juostą",
+  "tools.database.timelinePrevious": "Ankstesnis",
+  "tools.database.timelineNext": "Kitas",
   "tools.database.viewTypeTimeline": "Laiko juosta",
   "tools.database.viewTypeTimelineDescription": "Rodyti elementus laiko juostoje",
   "tools.database.viewTypeForm": "Forma",

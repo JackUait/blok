@@ -4,7 +4,7 @@ import { DatabaseTimelineView } from '../../../../src/tools/database/database-ti
 import type { DatabaseTimelineViewOptions, TimelineGroup, TimelineHandlers } from '../../../../src/tools/database/database-timeline-view';
 import { TIMELINE_DAY_WIDTH, timelineWindow } from '../../../../src/tools/database/timeline-dates';
 import { daysBetween } from '../../../../src/tools/database/calendar-dates';
-import { IconArrowLeftSmall, IconArrowRightSmall } from '../../../../src/components/icons';
+import { IconArrowLeftSmall, IconArrowRightSmall, IconChevronDoubleRight } from '../../../../src/components/icons';
 import { hide, showReadout } from '../../../../src/components/utils/tooltip';
 import type * as Tooltip from '../../../../src/components/utils/tooltip';
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption } from '../../../../src/tools/database/types';
@@ -318,7 +318,7 @@ describe('DatabaseTimelineView', () => {
       const { root, handlers } = mount();
       const zoom = root.querySelector<HTMLElement>('[data-blok-database-timeline-zoom]');
 
-      expect(zoom?.textContent).toBe('tools.database.timelineZoomMonth');
+      expect(zoom?.textContent?.trim()).toBe('tools.database.timelineZoomMonth');
       zoom?.click();
       expect(handlers.openZoomMenu).toHaveBeenCalledWith(zoom);
       root.querySelector<HTMLElement>('[data-blok-database-timeline-today]')?.click();
@@ -338,17 +338,99 @@ describe('DatabaseTimelineView', () => {
       expect(manage).toHaveBeenCalledTimes(1);
     });
 
+    // findings C05: » toggle, the shown month, then Month ⌄ · ‹ · Today · ›.
+    it('draws Notion\'s parts in order: » toggle, the month, the zoom with a chevron, ‹ Today ›', () => {
+      const { root } = mount();
+      const bar = root.querySelector('[data-blok-database-timeline-toolbar]');
+      const order = [...(bar?.children ?? [])].map((el) => [...el.attributes].map((a) => a.name).find((n) => n.startsWith('data-blok-database-timeline-')));
+
+      expect(order).toEqual([
+        'data-blok-database-timeline-table-toggle',
+        'data-blok-database-timeline-month',
+        'data-blok-database-timeline-toolbar-spacer',
+        'data-blok-database-timeline-zoom',
+        'data-blok-database-timeline-prev',
+        'data-blok-database-timeline-today',
+        'data-blok-database-timeline-next',
+      ]);
+      expect(root.querySelector('[data-blok-database-timeline-table-toggle]')?.innerHTML).toBe(markup(IconChevronDoubleRight));
+      expect(root.querySelector('[data-blok-database-timeline-zoom] svg')).not.toBeNull();
+      expect(root.querySelector('[data-blok-database-timeline-prev]')?.getAttribute('aria-label')).toBe('tools.database.timelinePrevious');
+      expect(root.querySelector('[data-blok-database-timeline-next]')?.getAttribute('aria-label')).toBe('tools.database.timelineNext');
+    });
+
+    it('names the month at the screen\'s start, and follows a scroll', () => {
+      const { root, view } = mount();
+      const month = (): string | null | undefined => root.querySelector('[data-blok-database-timeline-month]')?.textContent;
+
+      expect(month()).toBe('October 2026');
+      const el = scroller(root);
+
+      Object.defineProperty(el, 'clientWidth', { value: 400, configurable: true });
+      el.scrollLeft = px('2026-11-02');
+      view.refreshOffscreen();
+      expect(month()).toBe('November 2026');
+    });
+
+    it('‹ and › scroll by one screen', () => {
+      const { root } = mount();
+      const el = scroller(root);
+
+      Object.defineProperty(el, 'clientWidth', { value: 400, configurable: true });
+      el.scrollLeft = 1000;
+      root.querySelector<HTMLElement>('[data-blok-database-timeline-next]')?.click();
+      expect(el.scrollLeft).toBe(1400);
+      root.querySelector<HTMLElement>('[data-blok-database-timeline-prev]')?.click();
+      expect(el.scrollLeft).toBe(1000);
+    });
+
+    it('has no month row in the header at day-level zooms, and keeps it at quarter zoom (findings C06)', () => {
+      expect(mount().root.querySelector('[data-blok-database-timeline-groups]')).toBeNull();
+      document.body.innerHTML = '';
+      expect(mount({ view: timelineView({ timelineZoom: 'quarter' }) }).root.querySelector('[data-blok-database-timeline-groups]')).not.toBeNull();
+    });
+
     it('has no "Manage in Calendar" without the host lever', () => {
       const { root } = mount();
 
       expect(root.querySelector('[data-blok-database-timeline-manage-calendar]')).toBeNull();
     });
 
-    it('adds a row from "+ New"', () => {
+    // findings C07: "+ New" is the canvas's last lane and makes a 5-day bar.
+    it('puts "+ New" in a lane at the end of the canvas, and adds a 5-day bar from it', () => {
       const { root, handlers } = mount();
+      const button = root.querySelector<HTMLElement>('[data-blok-database-timeline-new]');
 
-      root.querySelector<HTMLElement>('[data-blok-database-timeline-new]')?.click();
-      expect(handlers.addRow).toHaveBeenCalledWith(null);
+      expect(canvas(root).lastElementChild?.hasAttribute('data-blok-database-timeline-new-lane')).toBe(true);
+      expect(button?.closest('[data-blok-database-timeline-new-lane]')).not.toBeNull();
+      button?.click();
+      expect(handlers.addRow).toHaveBeenCalledWith(null, { start: '2026-10-09/2026-10-13' });
+    });
+
+    it('names a new bar in place: Enter keeps it selected, Escape keeps the name and drops the selection', () => {
+      const renameRow = vi.fn();
+      const pickRow = vi.fn();
+      const { root, view } = mount({ handlers: { ...makeHandlers(), renameRow, pickRow } });
+
+      view.editTitle('r1');
+      const input = bar(root, 'r1').querySelector('input');
+
+      expect(input?.placeholder).toBe('tools.database.cardNamePlaceholder');
+      expect(input).toHaveFocus();
+      if (input === null) throw new Error('no input');
+      input.value = 'Kappa';
+      key(input, 'Enter');
+      expect(renameRow).toHaveBeenCalledWith('r1', 'Kappa');
+      expect(pickRow).toHaveBeenCalledWith('r1', false);
+
+      view.editTitle('r2');
+      const second = bar(root, 'r2').querySelector('input');
+
+      if (second === null) throw new Error('no input');
+      second.value = 'Lambda';
+      key(second, 'Escape');
+      expect(renameRow).toHaveBeenCalledWith('r2', 'Lambda');
+      expect(pickRow).toHaveBeenCalledTimes(1);
     });
 
     it('has no "+ New", resize handles or drag handles when read-only', () => {

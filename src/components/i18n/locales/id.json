@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "Cari halaman…",
   "tools.database.calendarNoDateHint": "Klik atau seret ke kalender untuk menambahkan tanggal.",
   "tools.database.timelineNoDateHint": "Klik untuk menambahkan ke linimasa",
+  "tools.database.timelinePrevious": "Sebelumnya",
+  "tools.database.timelineNext": "Berikutnya",
   "tools.database.viewTypeTimeline": "Linimasa",
   "tools.database.viewTypeTimelineDescription": "Tampilkan item di linimasa",
   "tools.database.viewTypeForm": "Formulir",

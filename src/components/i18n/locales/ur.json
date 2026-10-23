@@ -1352,6 +1352,8 @@
   "tools.database.noDateSearch": "صفحہ تلاش کریں…",
   "tools.database.calendarNoDateHint": "تاریخ شامل کرنے کے لیے کلک کریں یا کیلنڈر پر گھسیٹیں۔",
   "tools.database.timelineNoDateHint": "ٹائم لائن میں شامل کرنے کے لیے کلک کریں",
+  "tools.database.timelinePrevious": "پچھلا",
+  "tools.database.timelineNext": "اگلا",
   "tools.database.viewTypeTimeline": "ٹائم لائن",
   "tools.database.viewTypeTimelineDescription": "اشیا کو ٹائم لائن پر دکھائیں",
   "tools.database.viewTypeForm": "فارم",

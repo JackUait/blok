@@ -1,11 +1,11 @@
 import type { I18n } from '../../../types';
 import type { PopoverItemParams } from '../../../types/utils/popover/popover-item';
-import { IconCopy, IconPage, IconPencil, IconPlayerLoop, IconPlus, IconTrash } from '../../components/icons';
+import { IconChevronLeft, IconChevronRight, IconCopy, IconPage, IconPencil, IconPlayerLoop, IconPlus, IconTrash } from '../../components/icons';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { hasEscapeLayer } from '../../components/utils/dismissable-layer';
 import { onHover } from '../../components/utils/tooltip';
 import { openDatabaseConfirm } from './database-confirm-dialog';
-import { resolveLocale, timeZones, zoneCity, zoneOffsetText } from './cells/date-format';
+import { formatDatePart, resolveLocale, resolveWeekStart, timeZones, zoneCity, zoneOffsetText } from './cells/date-format';
 import { wallTime, zonedToEpoch } from './formula/dates';
 import { nextRun, repeatWeekdays, repeatZone } from './templates';
 import type { TemplateRepeat, TemplateRepeatFrequency } from './types';
@@ -219,8 +219,8 @@ const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: Cade
   const days = el('div', 'data-blok-database-template-cadence-days');
   const ordinal = el('select', 'data-blok-database-template-cadence-ordinal');
   const dayKind = el('select', 'data-blok-database-template-cadence-day-kind');
-  const date = el('input');
   const time = el('input');
+  const calendar = el('div', 'data-blok-database-template-cadence-calendar');
   const endDate = el('input');
   /** The whole last day counts: a run on it is still made. */
   const endOfDay = (w: { year: number; month: number; day: number }): string =>
@@ -285,7 +285,6 @@ const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: Cade
       everyRow.after(monthDay);
     }
     const fields: Array<[HTMLInputElement, string]> = [
-      [date, isoDay(w)],
       [time, `${pad(w.hour)}:${pad(w.minute)}`],
       [endDate, draft.end === undefined ? '' : isoDay(wallTime(Date.parse(draft.end), live.zone))],
     ];
@@ -300,16 +299,16 @@ const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: Cade
       ? t('templateRepeatNever')
       : new Intl.DateTimeFormat(c.locale, { month: 'short', day: 'numeric', year: 'numeric', timeZone: live.zone }).format(Date.parse(draft.end));
     zoneValue.textContent = zoneOffset(live.zone, c);
+    drawCalendar();
     const at = nextRun(draft, c.now());
 
     next.replaceChildren(el('div', undefined, t('templateRepeatNextOccurrence')), el('div', undefined, at === null ? '' : occurrenceText(at, live.zone, c)));
   };
   const retime = (): void => {
-    const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date.value);
     const h = /^(\d{2}):(\d{2})/.exec(time.value);
 
-    if (d === null || h === null) return;
-    setStart({ year: Number(d[1]), month: Number(d[2]), day: Number(d[3]), hour: Number(h[1]), minute: Number(h[2]) });
+    if (h === null) return;
+    setStart({ ...startWall(), hour: Number(h[1]), minute: Number(h[2]) });
     refresh();
   };
 
@@ -382,9 +381,6 @@ const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: Cade
   dayKind.setAttribute('aria-label', t('templateRepeatDayOfMonth'));
   dayKind.append(el('option', undefined, t('templateRepeatDayOfMonth')));
 
-  date.type = 'date';
-  date.setAttribute('aria-label', t('templateRepeatStarting'));
-  date.addEventListener('input', retime);
   time.type = 'time';
   time.setAttribute('aria-label', t('templateRepeatAt'));
   time.addEventListener('input', retime);
@@ -397,6 +393,88 @@ const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: Cade
     draft.end = endOfDay({ year: Number(d[1]), month: Number(d[2]), day: Number(d[3]) });
     refresh();
   });
+
+  // The month the Starting grid shows. It follows the start until the arrows move it.
+  const view = { year: startWall().year, month: startWall().month, start: draft.start };
+  const weekStart = resolveWeekStart(c.locale);
+  const monthName = new Intl.DateTimeFormat(c.locale, { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const weekdayName = new Intl.DateTimeFormat(c.locale, { weekday: 'short', timeZone: 'UTC' });
+  const step = (attribute: string, icon: string, key: string, months: number): HTMLButtonElement => {
+    const button = el('button', attribute);
+
+    button.type = 'button';
+    button.setAttribute('aria-label', t(key));
+    button.innerHTML = icon;
+    button.addEventListener('click', () => {
+      const first = new Date(Date.UTC(view.year, view.month - 1 + months, 1));
+
+      view.year = first.getUTCFullYear();
+      view.month = first.getUTCMonth() + 1;
+      drawCalendar();
+    });
+
+    return button;
+  };
+  /** The cell date picker's month grid, without Today and without a time (research/35:400). */
+  function drawCalendar(): void {
+    const w = startWall();
+    const today = wallTime(c.now().getTime(), live.zone);
+    const header = el('div', 'data-blok-database-date-header');
+    const grid = el('div', 'data-blok-database-date-grid');
+    const weekdays = el('div');
+
+    // A new start shows its own month.
+    if (view.start !== draft.start) Object.assign(view, { start: draft.start, year: w.year, month: w.month });
+    const first = new Date(Date.UTC(view.year, view.month - 1, 1));
+    const lead = (first.getUTCDay() - weekStart + 7) % 7;
+
+    header.append(
+      el('span', 'data-blok-database-date-month', monthName.format(first)),
+      step('data-blok-database-date-prev', IconChevronLeft, 'datePreviousMonth', -1),
+      step('data-blok-database-date-next', IconChevronRight, 'dateNextMonth', 1)
+    );
+    grid.setAttribute('role', 'grid');
+    weekdays.setAttribute('role', 'row');
+    weekdays.append(...Array.from({ length: 7 }, (_, i) => {
+      const cell = el('span', 'data-blok-database-date-weekday');
+
+      cell.setAttribute('role', 'columnheader');
+      // 4 January 2026 was a Sunday.
+      cell.textContent = weekdayName.format(Date.UTC(2026, 0, 4 + ((weekStart + i) % 7)));
+
+      return cell;
+    }));
+    grid.append(weekdays, ...Array.from({ length: 6 }, (_, week) => {
+      const line = el('div');
+
+      line.setAttribute('role', 'row');
+      line.append(...Array.from({ length: 7 }, (__, d) => {
+        const shown = new Date(Date.UTC(view.year, view.month - 1, 1 + week * 7 + d - lead));
+        const day = { year: shown.getUTCFullYear(), month: shown.getUTCMonth() + 1, day: shown.getUTCDate() };
+        const iso = isoDay(day);
+        const button = el('button', undefined, String(day.day));
+
+        button.type = 'button';
+        button.setAttribute('role', 'gridcell');
+        button.setAttribute('data-blok-database-date-day', iso);
+        button.setAttribute('aria-selected', String(iso === isoDay(w)));
+        button.setAttribute('aria-label', formatDatePart(iso, c.locale));
+        if (day.month !== view.month) button.setAttribute('data-outside', '');
+        if (iso === isoDay(today)) button.setAttribute('data-today', '');
+        button.addEventListener('click', () => {
+          const kept = startWall();
+
+          setStart({ ...day, hour: kept.hour, minute: kept.minute });
+          refresh();
+        });
+
+        return button;
+      }));
+
+      return line;
+    }));
+    calendar.replaceChildren(header, grid);
+  }
 
   const zones = timeZones();
   const zoneHeading = (key: string): HTMLElement => {
@@ -436,7 +514,7 @@ const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: Cade
   const settings: PopoverItemParams[] = [
     { name: 'template-repeat-at', title: t('templateRepeatAt'), titleEl: settingTitle('at', t('templateRepeatAt'), atValue), children: { items: [fieldItem('at', time)] } },
     { type: PopoverItemType.Separator },
-    { name: 'template-repeat-starting', title: t('templateRepeatStarting'), titleEl: settingTitle('starting', t('templateRepeatStarting'), startValue), children: { items: [fieldItem('starting', date)] } },
+    { name: 'template-repeat-starting', title: t('templateRepeatStarting'), titleEl: settingTitle('starting', t('templateRepeatStarting'), startValue), children: { width: '268px', items: [fieldItem('starting', calendar)] } },
     {
       name: 'template-repeat-ending',
       title: t('templateRepeatEnding'),

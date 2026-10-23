@@ -256,7 +256,7 @@ describe('template menu', () => {
         expect(entry?.titleEl?.querySelector('[data-blok-database-template-cadence-label]')?.textContent).toBe(entry?.title);
       });
       expect(field(items, 'at')?.type).toBe('time');
-      expect(field(items, 'starting')?.type).toBe('date');
+      expect(field(items, 'starting', '[data-blok-database-date-grid]')).not.toBeNull();
       expect(field(items, 'ending')?.type).toBe('date');
       expect(find(items, 'template-repeat-timezone')?.children?.searchable).toBe(true);
     });
@@ -482,18 +482,46 @@ describe('template menu', () => {
       const h = repeatHost({ repeat: () => weekly, timeZone: 'America/New_York' });
       const { q, items } = panel(h);
       const time = field(items, 'at');
-      const date = field(items, 'starting');
+      const grid = (): HTMLElement | null => field<HTMLElement>(items, 'starting', '[data-blok-database-date-grid]');
 
       // 07:30Z is 09:30 in Berlin (CEST).
-      expect(date?.value).toBe('2026-10-05');
+      expect(grid()?.querySelector('[aria-selected="true"]')?.getAttribute('data-blok-database-date-day')).toBe('2026-10-05');
       expect(time?.value).toBe('09:30');
       type(time, '');
       type(time, '18:00');
-      type(date, '2026-11-02');
+      field<HTMLButtonElement>(items, 'starting', '[data-blok-database-date-next]')?.click();
+      grid()?.querySelector<HTMLButtonElement>('[data-blok-database-date-day="2026-11-02"]')?.click();
       save(q);
 
       // Nov 2 is after Berlin leaves summer time: 18:00 CET is 17:00Z.
       expect(h.setRepeat).toHaveBeenCalledWith({ ...weekly, start: '2026-11-02T17:00:00.000Z' });
+    });
+
+    // research/35 §13 (r35:400): Starting opens a month grid, 268x294, with no Today button and no time.
+    it('picks the start day from a month grid, keeping the time of day', () => {
+      const h = repeatHost({ repeat: () => weekly });
+      const { q, items } = panel(h);
+      const starting = find(items, 'template-repeat-starting');
+      const box = (selector: string): HTMLElement | null => field<HTMLElement>(items, 'starting', selector);
+
+      expect(box('[data-blok-database-date-grid]')).not.toBeNull();
+      expect(box('input')).toBeNull();
+      expect(box('[data-blok-database-date-today]')).toBeNull();
+      expect(starting?.children?.width).toBe('268px');
+      expect(box('[data-blok-database-date-month]')?.textContent).toBe('October 2026');
+      // Today is Oct 20 in Berlin.
+      expect(box('[data-today]')?.getAttribute('data-blok-database-date-day')).toBe('2026-10-20');
+      expect(box('[data-blok-database-date-weekday]')?.textContent).toBe('Sun');
+
+      box('[data-blok-database-date-day="2026-10-28"]')?.click();
+      expect(value(items, 'starting')).toBe('Oct 28');
+      expect(box('[aria-selected="true"]')?.getAttribute('data-blok-database-date-day')).toBe('2026-10-28');
+      box('[data-blok-database-date-prev]')?.click();
+      expect(box('[data-blok-database-date-month]')?.textContent).toBe('September 2026');
+      save(q);
+
+      // 09:30 in Berlin on Oct 28 (CET) is 08:30Z.
+      expect(h.setRepeat).toHaveBeenCalledWith({ ...weekly, start: '2026-10-28T08:30:00.000Z' });
     });
 
     it('stamps the viewer\'s zone on a zone-less schedule', () => {
@@ -562,7 +590,7 @@ describe('template menu', () => {
       const h = repeatHost({ repeat: () => ({ ...weekly, start: 'soon' }) });
       const { q, items } = panel(h);
 
-      expect(field(items, 'starting')?.value).toBe('2026-10-21');
+      expect(field(items, 'starting', '[aria-selected="true"]')?.getAttribute('data-blok-database-date-day')).toBe('2026-10-21');
       save(q);
       expect(h.setRepeat).toHaveBeenCalledWith({ ...weekly, start: tomorrowMidnight });
     });
@@ -584,7 +612,8 @@ describe('template menu', () => {
     it('lets each submenu field own its keys', () => {
       const { items } = panel(repeatHost({ repeat: () => weekly }));
 
-      ['at', 'starting', 'ending'].forEach((row) => expect(field(items, row)?.closest('[data-blok-keyboard-owner]')).not.toBeNull());
+      ['at', 'ending'].forEach((row) => expect(field(items, row)?.closest('[data-blok-keyboard-owner]')).not.toBeNull());
+      expect(field(items, 'starting', '[data-blok-database-date-grid]')?.closest('[data-blok-keyboard-owner]') ?? null).not.toBeNull();
     });
 
     // research/35 §13 (r35:406): Escape on an unsaved panel asks "Discard unsaved changes?".

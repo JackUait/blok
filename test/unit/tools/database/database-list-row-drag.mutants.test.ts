@@ -533,7 +533,7 @@ describe('DatabaseListRowDrag — mutation coverage', () => {
       });
       expect(ghost.style.cssText).toBe(
         `${GHOST_BASE_CSS} border-top-left-radius: 0px; border-top-right-radius: 0px; ` +
-        'border-bottom-right-radius: 0px; border-bottom-left-radius: 0px; left: 24px; top: 130px; width: 376px;'
+        'border-bottom-right-radius: 0px; border-bottom-left-radius: 0px; width: 376px; left: 24px; top: 130px;'
       );
       expect(ghost.children).toHaveLength(1);
 

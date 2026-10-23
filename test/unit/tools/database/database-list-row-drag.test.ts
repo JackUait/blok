@@ -81,6 +81,38 @@ describe('DatabaseListRowDrag', () => {
     expect(document.querySelector('[data-blok-database-ghost]')).not.toBeNull();
   });
 
+  // findings-listgallery L21: Notion's row copy follows the pointer on both axes.
+  it('moves the ghost with the pointer on both axes, keeping the grab point under it', () => {
+    drag.beginTracking('row-1', 100, 50);
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 130, clientY: 70 }));
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 160, clientY: 90 }));
+    const ghost = document.querySelector<HTMLElement>('[data-blok-database-ghost]');
+
+    expect(ghost?.style.left).toBe('60px');
+    expect(ghost?.style.top).toBe('80px');
+    document.dispatchEvent(new PointerEvent('pointerup', { clientX: 160, clientY: 90 }));
+  });
+
+  it('keeps the ghost under the pointer inside a transformed ancestor, where fixed is not the viewport', () => {
+    const shift = { x: 30, y: 81 };
+    const native = HTMLElement.prototype.getBoundingClientRect;
+
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (!this.hasAttribute('data-blok-database-ghost')) return native.call(this);
+      const left = parseFloat(this.style.left) + shift.x;
+      const top = parseFloat(this.style.top) + shift.y;
+
+      return DOMRect.fromRect({ x: left, y: top, width: 400, height: 40 });
+    });
+    drag.beginTracking('row-1', 100, 50);
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 160, clientY: 90 }));
+    const ghost = document.querySelector<HTMLElement>('[data-blok-database-ghost]');
+
+    expect(ghost?.getBoundingClientRect().left).toBe(60);
+    expect(ghost?.getBoundingClientRect().top).toBe(80);
+    document.dispatchEvent(new PointerEvent('pointerup', { clientX: 160, clientY: 90 }));
+  });
+
   it('removes ghost element on pointerup', () => {
     drag.beginTracking('row-0', 0, 0);
 

@@ -24,10 +24,14 @@ export class DatabaseListRowDrag {
 
   private isDragging = false;
   private rowId = '';
+  private startX = 0;
   private startY = 0;
   private ghostEl: HTMLElement | null = null;
   private sourceRow: HTMLElement | null = null;
   private ghostOffsetY = 0;
+  private ghostOffsetX = 0;
+  /** Where a fixed ghost at 0,0 lands: not the viewport corner inside a transformed ancestor. */
+  private ghostOrigin = { x: 0, y: 0 };
   private readonly dropLine: DatabaseDropLine;
 
   private readonly boundPointerMove: (e: PointerEvent) => void;
@@ -52,6 +56,7 @@ export class DatabaseListRowDrag {
   public beginTracking(rowId: string, startX: number, startY: number): void {
     this.cleanup();
     this.rowId = rowId;
+    this.startX = startX;
     this.startY = startY;
     this.isDragging = false;
     this.sourceRow = this.wrapper.querySelector(`[data-row-id="${rowId}"]`);
@@ -81,6 +86,8 @@ export class DatabaseListRowDrag {
     this.isDragging = false;
     this.rowId = '';
     this.ghostOffsetY = 0;
+    this.ghostOffsetX = 0;
+    this.ghostOrigin = { x: 0, y: 0 };
   }
 
   /** True while a drag has passed the threshold and not yet dropped. */
@@ -130,6 +137,7 @@ export class DatabaseListRowDrag {
       const rect = this.sourceRow.getBoundingClientRect();
 
       this.ghostOffsetY = this.startY - rect.top;
+      this.ghostOffsetX = this.startX - rect.left;
       this.sourceRow.setAttribute('data-blok-database-drag-source', '');
     }
 
@@ -158,26 +166,26 @@ export class DatabaseListRowDrag {
 
       copyGhostRadius(this.sourceRow, ghost);
 
-      const rect = this.sourceRow.getBoundingClientRect();
-
-      style.left = `${rect.left}px`;
-      style.top = `${e.clientY - this.ghostOffsetY}px`;
-      style.width = `${rect.width}px`;
-    } else {
-      style.left = '0px';
-      style.top = `${e.clientY}px`;
+      style.width = `${this.sourceRow.getBoundingClientRect().width}px`;
     }
-
+    style.left = '0px';
+    style.top = '0px';
     mountGhost(this.sourceRow ?? this.wrapper, ghost);
+    const origin = ghost.getBoundingClientRect();
+
+    this.ghostOrigin = { x: origin.left, y: origin.top };
     this.ghostEl = ghost;
+    this.updateGhostPosition(e);
   }
 
+  /** findings-listgallery L21: the row copy follows the pointer on both axes, as Notion's does. */
   private updateGhostPosition(e: PointerEvent): void {
     if (!this.ghostEl) {
       return;
     }
 
-    this.ghostEl.style.top = `${e.clientY - this.ghostOffsetY}px`;
+    this.ghostEl.style.left = `${e.clientX - this.ghostOffsetX - this.ghostOrigin.x}px`;
+    this.ghostEl.style.top = `${e.clientY - this.ghostOffsetY - this.ghostOrigin.y}px`;
   }
 
   private updateDropIndicator(e: PointerEvent): void {

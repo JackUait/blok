@@ -261,7 +261,8 @@ for (const path of paths) {
       // The dark tertiary AA step: Notion's rgb(125, 122, 117) is 3.9:1 on the page.
       await expect(page.locator('[data-blok-database-filter-add]')).toHaveCSS('color', 'rgb(143, 140, 135)');
       await page.locator('[data-blok-database-filter-pill]').first().click();
-      await expect(page.getByTestId('database-filter-operator').locator('[data-blok-database-panel-value]')).toHaveCSS('color', 'rgb(143, 140, 135)');
+      // The chip popover's "Name operator" head (findings V17) takes the dark secondary ink.
+      await expect(page.getByTestId('database-filter-operator')).toHaveCSS('color', 'rgb(173, 169, 163)');
       await expect(page.getByTestId('database-filter-value')).toHaveCSS('background-color', 'rgba(252, 252, 252, 0.03)');
     });
 

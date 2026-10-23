@@ -1,25 +1,34 @@
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
-import { IconSearch, IconSliders, IconLock, IconPlus, IconChevronDown, IconFilter, IconSort, IconPreview, IconBolt, IconWand } from '../../components/icons';
+import { nanoid } from 'nanoid';
+import { IconSearch, IconSliders, IconLock, IconPlus, IconChevronDown, IconFilter, IconSort, IconPreview, IconBolt, IconWand, IconArrowUp, IconCross, IconTrash, IconChevronDoubleRight } from '../../components/icons';
+import { propertyTypeMeta } from './database-property-types';
 import type { I18n } from '../../../types';
-import { DatabasePanel, panelInput, panelRow } from './database-panel';
+import { DatabasePanel, panelInput, panelReorderList, panelRow } from './database-panel';
+import type { PanelPage } from './database-panel';
 import { PersonalViewEdits } from './database-view-state';
 import type { ViewStateFallback } from './database-view-state';
 import { FILTERABLE_TYPES, defaultFilterFor, filterPillLabel, filterValueText, sortDirectionLabelKey } from './database-filter-labels';
 import { countFilterRules, withEntryIds } from './filter-tree';
-import { openFilterPill, openViewSettings } from './database-view-settings-panel';
+import { openViewSettings } from './database-view-settings-panel';
+import { openFilterChip } from './database-filter-chip';
+import { clearSearchMatches, paintSearchMatches } from './database-search-highlight';
 import type { AutofillPanelSettings, DataSourceSettings, StarterRow, StructureSettings, ViewGroupEntry, ViewSettingsAction, ViewSettingsContext, ViewSettingsStart } from './database-view-settings-panel';
 import { sortFromHeader } from './view-data';
 import type { ViewChanges } from './database-model';
-import { groupByChange } from './group-keys';
+import { GROUPABLE_TYPES, groupByChange } from './group-keys';
 import type { AutomationSettings } from './database-automations-panel';
 import type {
   DatabaseViewConfig,
   DatabaseViewStateStore,
   PersonalViewPatch,
   PropertyDefinition,
+  PropertyType,
   SortConfig,
   ViewType,
 } from './types';
+
+/** Notion's sort list adds files and ID to the groupable types (findings V20, shot 19). */
+const SORTABLE_TYPES: readonly PropertyType[] = [...GROUPABLE_TYPES, 'files', 'uniqueId'];
 
 /** Notion shows 🔍 once a database has at least three pages (research/05 §5). */
 export const SEARCH_MIN_ROWS = 3;
@@ -83,6 +92,35 @@ export interface ViewControlsHost {
   previewForm?: () => void;
 }
 
+const part = (attribute: string, content: { icon?: string; text?: string }): HTMLElement => {
+  const el = document.createElement('span');
+
+  el.setAttribute(attribute, '');
+  if (content.icon !== undefined) {
+    el.setAttribute('aria-hidden', 'true');
+    el.innerHTML = content.icon;
+  }
+  if (content.text !== undefined) el.textContent = content.text;
+
+  return el;
+};
+
+/** Notion's chip: a glyph, the name in 500, the value in 400, then a down chevron. */
+const chip = (testId: string, label: string, parts: { glyph: string; name: string; value?: string }): HTMLButtonElement => {
+  const el = button(testId, label, {});
+
+  el.setAttribute('data-blok-database-filter-pill', '');
+  el.append(part('data-blok-database-chip-glyph', { icon: parts.glyph }));
+  if (parts.value === undefined || parts.value === '') {
+    el.append(part('data-blok-database-chip-name', { text: parts.name }));
+  } else {
+    el.append(part('data-blok-database-chip-name', { text: `${parts.name}:` }), ' ', part('data-blok-database-chip-value', { text: parts.value }));
+  }
+  el.append(part('data-blok-database-chip-chevron', { icon: IconChevronDown }));
+
+  return el;
+};
+
 const button = (testId: string, label: string, content: { icon?: string; text?: string }): HTMLButtonElement => {
   const el = document.createElement('button');
 
@@ -115,18 +153,27 @@ export class DatabaseViewControls {
   private readonly host: ViewControlsHost;
   private readonly personal: PersonalViewEdits;
   private readonly filterButton: HTMLButtonElement;
+  private readonly minimizeButton: HTMLButtonElement;
+  /** The person's choice for the chip bar: shown, hidden, or `null` to follow its chips. Reset per view. */
+  private barOpen: boolean | null = null;
+  private barViewId: string | null = null;
+  private barShown = false;
   private readonly sortButton: HTMLButtonElement;
   private readonly automationsButton: HTMLButtonElement;
   private readonly autofillButton: HTMLButtonElement;
   private readonly searchButton: HTMLButtonElement;
   /** In the DOM only while the person searches: a hidden input still reads as a caret slot. */
   private readonly searchInput: HTMLInputElement;
+  /** Notion's clear ×: shown only while there is a query. */
+  private readonly searchClear: HTMLButtonElement;
   private readonly settingsButton: HTMLButtonElement;
   private readonly lockBadge: HTMLElement;
   private readonly shareFormButton: HTMLButtonElement;
   private readonly previewFormButton: HTMLButtonElement;
   private panel: DatabasePanel | null = null;
   private query = '';
+  /** Repaints the match tint when the rows redraw after a search (lazy rows, remote edits). */
+  private matchObserver: MutationObserver | null = null;
 
   constructor(host: ViewControlsHost) {
     this.host = host;
@@ -152,6 +199,7 @@ export class DatabaseViewControls {
     this.lockBadge.innerHTML = IconLock;
 
     this.filterButton = iconButton('database-toolbar-filter', this.t('settingsFilter'), IconFilter);
+    this.minimizeButton = iconButton('database-toolbar-minimize', this.t('filterBarMinimize'), IconChevronDoubleRight);
     this.sortButton = iconButton('database-toolbar-sort', this.t('settingsSort'), IconSort);
     this.automationsButton = iconButton('database-toolbar-automations', this.t('automationTitle'), IconBolt);
     this.autofillButton = iconButton('database-toolbar-autofill', this.t('aiAutofill'), IconWand);
@@ -165,12 +213,26 @@ export class DatabaseViewControls {
     this.searchInput.setAttribute('data-blok-database-search-input', '');
     this.searchInput.setAttribute('data-blok-testid', 'database-search-input');
 
-    this.filterButton.addEventListener('click', () => this.openFilterPicker(this.filterButton));
-    this.sortButton.addEventListener('click', () => this.openSettings(this.sortButton, 'sort'));
+    this.filterButton.addEventListener('click', () => this.toggleFilterBar());
+    this.minimizeButton.addEventListener('click', () => {
+      this.barOpen = false;
+      this.refresh();
+    });
+    this.sortButton.addEventListener('click', () => this.openSort());
     this.automationsButton.addEventListener('click', () => this.openSettings(this.automationsButton, 'automations'));
     this.autofillButton.addEventListener('click', () => this.openSettings(this.autofillButton, 'autofill'));
     this.settingsButton.addEventListener('click', () => this.openSettings(this.settingsButton, 'root'));
     this.searchButton.addEventListener('click', () => this.showSearch());
+    this.searchClear = button('database-search-clear', this.t('searchClear'), { icon: IconCross });
+    this.searchClear.setAttribute('data-blok-database-search-clear', '');
+    this.searchClear.hidden = true;
+    // Keeps the focus in the field: a blur on an empty query would close it.
+    this.searchClear.addEventListener('pointerdown', (event) => event.preventDefault());
+    this.searchClear.addEventListener('click', () => {
+      this.searchInput.value = '';
+      this.setSearch('');
+      this.searchInput.focus();
+    });
     this.searchInput.addEventListener('input', () => this.setSearch(this.searchInput.value));
     this.searchInput.addEventListener('keydown', (event) => {
       if (event.key !== 'Escape') return;
@@ -187,7 +249,7 @@ export class DatabaseViewControls {
     // "Preview" reuses the file tool's word: the same in every locale.
     this.previewFormButton = iconButton('database-toolbar-preview-form', this.host.i18n.t('tools.file.preview'), IconPreview);
     this.previewFormButton.addEventListener('click', () => this.host.previewForm?.());
-    this.toolbar.append(this.lockBadge, this.filterButton, this.sortButton, this.automationsButton, this.autofillButton, this.searchButton, this.settingsButton, this.previewFormButton, this.shareFormButton);
+    this.toolbar.append(this.lockBadge, this.minimizeButton, this.filterButton, this.sortButton, this.automationsButton, this.autofillButton, this.searchButton, this.settingsButton, this.previewFormButton, this.shareFormButton);
     if (host.newRow !== undefined) {
       this.toolbar.append(this.newSplitButton(host.newRow, host.openNewMenu));
     }
@@ -218,6 +280,13 @@ export class DatabaseViewControls {
 
   get search(): string {
     return this.query;
+  }
+
+  /** "Clear search" in an empty result: empties the query and keeps the search box open. */
+  clearSearch(): void {
+    this.searchInput.value = '';
+    this.setSearch('');
+    if (this.searchInput.isConnected) this.searchInput.focus();
   }
 
   /** The view as this person sees it. */
@@ -278,6 +347,9 @@ export class DatabaseViewControls {
   destroy(): void {
     this.panel?.close();
     this.panel = null;
+    this.matchObserver?.disconnect();
+    this.matchObserver = null;
+    clearSearchMatches(this);
   }
 
   /** Filter from a column header: a new simple filter on that property, opened at once. */
@@ -288,6 +360,7 @@ export class DatabaseViewControls {
     if (property === undefined || view === undefined) return;
     const filter = defaultFilterFor(property);
 
+    this.barOpen = true;
     this.updatePersonal({ filters: [...withEntryIds(view.filters), filter] });
     this.openPill(filter.id, this.filterBar.querySelector<HTMLElement>(`[data-filter-id="${CSS.escape(filter.id)}"]`) ?? anchor);
   }
@@ -429,31 +502,62 @@ export class DatabaseViewControls {
 
   private openPill(filterId: string, anchor: HTMLElement): void {
     this.panel?.close();
-    this.panel = openFilterPill(anchor, this.settingsContext(), filterId, () => this.panelClosed(anchor));
+    this.panel = openFilterChip(anchor, this.settingsContext(), filterId, () => this.panelClosed(anchor));
     anchor.setAttribute('data-popover-open', '');
   }
 
-  /**
-   * "+ Filter": pick a property, then edit the new filter's value. Notion's list
-   * (research/21 §1c): 290 wide, a search on top, the first option highlighted on open.
-   */
+  /** Filter: hides a shown bar, shows a hidden one with chips, or with nothing to show picks a property. */
+  private toggleFilterBar(): void {
+    const view = this.view();
+
+    if (view === undefined) return;
+    if (this.barShown) {
+      this.barOpen = false;
+    } else if (view.sorts.length + view.filters.length + countFilterRules(view.filterTree) > 0 || this.personal.has(view.id)) {
+      this.barOpen = true;
+    } else {
+      this.openFilterPicker(this.filterButton);
+
+      return;
+    }
+    this.refresh();
+  }
+
+  /** "+ Filter": pick a property, then edit the new filter's value (research/21 §1c). */
   private openFilterPicker(anchor: HTMLElement): void {
+    this.openPropertyPicker(anchor, 'database-filter-picker', FILTERABLE_TYPES, (property) => this.filterBy(property.id, anchor));
+  }
+
+  /**
+   * Notion's property list: 290 wide, a search on top, the first option
+   * highlighted, Name first and then A→Z, each with its type glyph.
+   */
+  private openPropertyPicker(anchor: HTMLElement, testId: string, types: readonly PropertyType[], onPick: (property: PropertyDefinition) => void): void {
     const state = { query: '', active: 0 };
     const list = document.createElement('div');
     const matches = (): PropertyDefinition[] => {
       const needle = state.query.trim().toLowerCase();
-
-      return this.host.schema()
-        .filter((p) => FILTERABLE_TYPES.includes(p.type))
+      const shown = this.host.schema()
+        .filter((p) => types.includes(p.type))
         .filter((p) => needle === '' || p.name.toLowerCase().includes(needle));
+
+      return [
+        ...shown.filter((p) => p.type === 'title'),
+        ...shown.filter((p) => p.type !== 'title').sort((a, b) => a.name.localeCompare(b.name)),
+      ];
     };
     const pick = (property: PropertyDefinition): void => {
       panel.close();
-      this.filterBy(property.id, anchor);
+      onPick(property);
     };
     const fill = (): void => {
       list.replaceChildren(...matches().map((property, index) => {
-        const row = panelRow({ label: property.name, testId: `database-pick-property-${property.id}`, onClick: () => pick(property) });
+        const row = panelRow({
+          label: property.name,
+          icon: propertyTypeMeta(property.type).icon,
+          testId: `database-pick-property-${property.id}`,
+          onClick: () => pick(property),
+        });
 
         row.toggleAttribute('data-active', index === state.active);
 
@@ -468,7 +572,7 @@ export class DatabaseViewControls {
             value: state.query,
             placeholder: this.t('layoutSearchProperties'),
             label: this.t('layoutSearchProperties'),
-            testId: 'database-filter-picker-search',
+            testId: `${testId}-search`,
             // Only the list redraws, so the field keeps its caret.
             onInput: (value) => {
               state.query = value;
@@ -497,7 +601,7 @@ export class DatabaseViewControls {
           return [search, list];
         },
       },
-      testId: 'database-filter-picker',
+      testId,
       width: 290,
       backLabel: this.t('settingsBack'),
       onClose: () => this.panelClosed(anchor),
@@ -507,25 +611,202 @@ export class DatabaseViewControls {
     this.showPanel(panel);
   }
 
+  /** Sort: with no rule, the property picker; otherwise the sort panel under the chip. */
+  private openSort(): void {
+    const view = this.view();
+
+    if (view === undefined) return;
+    if (view.sorts.length === 0) {
+      this.openPropertyPicker(this.sortButton, 'database-sort-picker', SORTABLE_TYPES, (property) => {
+        this.barOpen = true;
+        this.updatePersonal({ sorts: [{ id: nanoid(), propertyId: property.id, direction: 'asc' }] });
+      });
+
+      return;
+    }
+    const chip = this.filterBar.querySelector<HTMLElement>('[data-blok-testid="database-sort-pill"]');
+
+    this.openSortPanel(chip !== null && chip.isConnected && !this.filterBar.hidden ? chip : this.sortButton);
+  }
+
+  /**
+   * Notion's sort panel (findings V19): no title, sized to its words. Each rule
+   * has a drag handle, a property button and a direction button that open
+   * lists, and a ×. Then "+ Add sort" and "Delete sort".
+   */
+  private openSortPanel(anchor: HTMLElement): void {
+    const sorts = (): Array<SortConfig & { id: string }> => withEntryIds(this.view()?.sorts ?? []);
+    const write = (next: SortConfig[]): void => this.updatePersonal({ sorts: next });
+    const chevron = (row: HTMLElement): HTMLElement => {
+      row.append(part('data-blok-database-chip-chevron', { icon: IconChevronDown }));
+
+      return row;
+    };
+    const propertyPage = (title: string, onPick: (property: PropertyDefinition) => void): PanelPage => ({
+      title,
+      build: () => {
+        const shown = this.host.schema().filter((p) => SORTABLE_TYPES.includes(p.type));
+
+        return [...shown.filter((p) => p.type === 'title'), ...shown.filter((p) => p.type !== 'title').sort((a, b) => a.name.localeCompare(b.name))]
+          .map((property) => panelRow({
+            label: property.name,
+            icon: propertyTypeMeta(property.type).icon,
+            testId: `database-pick-property-${property.id}`,
+            onClick: () => onPick(property),
+          }));
+      },
+    });
+    const directionPage = (sort: SortConfig & { id: string }, property: PropertyDefinition): PanelPage => ({
+      title: property.name,
+      build: (panel) => (['asc', 'desc'] as const).map((direction) => panelRow({
+        label: this.host.i18n.t(sortDirectionLabelKey(property.type, direction)),
+        testId: `database-sort-direction-${direction}`,
+        checked: sort.direction === direction,
+        onClick: () => {
+          write(sorts().map((s) => (s.id === sort.id ? { ...s, direction } : s)));
+          panel.back();
+        },
+      })),
+    });
+    const panel = new DatabasePanel({
+      anchor,
+      root: {
+        build: (current) => {
+          const schema = this.host.schema();
+          const all = sorts();
+          const items = all.flatMap((sort) => {
+            const property = schema.find((p) => p.id === sort.propertyId);
+
+            if (property === undefined) return [];
+            const line = document.createElement('div');
+            const remove = panelRow({
+              label: this.t('sortRemove'),
+              testId: `database-sort-remove-${sort.id}`,
+              icon: IconCross,
+              onClick: () => write(all.filter((s) => s.id !== sort.id)),
+            });
+
+            remove.querySelector('[data-blok-database-panel-label]')?.remove();
+            remove.setAttribute('aria-label', this.t('sortRemove'));
+            remove.setAttribute('data-blok-database-sort-remove', '');
+            line.setAttribute('data-blok-database-sort-row', '');
+            line.setAttribute('data-blok-testid', `database-sort-row-${sort.id}`);
+            line.append(
+              chevron(panelRow({
+                label: property.name,
+                testId: `database-sort-property-${sort.id}`,
+                icon: propertyTypeMeta(property.type).icon,
+                onClick: () => current.push(propertyPage(this.t('settingsSort'), (picked) => {
+                  write(sorts().map((s) => (s.id === sort.id ? { ...s, propertyId: picked.id } : s)));
+                  current.back();
+                })),
+              })),
+              chevron(panelRow({
+                label: this.host.i18n.t(sortDirectionLabelKey(property.type, sort.direction)),
+                testId: `database-sort-direction-${sort.id}`,
+                onClick: () => current.push(directionPage(sort, property)),
+              })),
+              remove
+            );
+
+            return [{ id: sort.id, element: line }];
+          });
+
+          return [
+            panelReorderList({
+              testId: 'database-sorts-list',
+              handleLabel: this.t('settingsDragToReorder'),
+              items,
+              onMove: (id, beforeId) => {
+                const moving = all.find((s) => s.id === id);
+                const rest = all.filter((s) => s.id !== id);
+                const at = beforeId === null ? rest.length : rest.findIndex((s) => s.id === beforeId);
+
+                if (moving !== undefined) write([...rest.slice(0, at), moving, ...rest.slice(at)]);
+              },
+            }),
+            panelRow({
+              label: this.t('sortAdd'),
+              testId: 'database-sort-add',
+              muted: true,
+              icon: IconPlus,
+              onClick: () => current.push(propertyPage(this.t('sortAdd'), (property) => {
+                write([...sorts(), { id: nanoid(), propertyId: property.id, direction: 'asc' }]);
+                current.back();
+              })),
+            }),
+            panelRow({
+              label: this.t('sortDeleteAll'),
+              testId: 'database-sort-delete-all',
+              muted: true,
+              icon: IconTrash,
+              onClick: () => {
+                write([]);
+                current.close();
+              },
+            }),
+          ];
+        },
+      },
+      testId: 'database-sort-panel',
+      width: 290,
+      backLabel: this.t('settingsBack'),
+      onClose: () => this.panelClosed(anchor),
+    });
+
+    // Notion's panel sizes to its words, so no label is cut.
+    panel.root.style.width = 'max-content';
+    anchor.setAttribute('data-popover-open', '');
+    this.showPanel(panel);
+  }
+
   private showSearch(): void {
-    this.searchButton.hidden = true;
+    if (this.searchInput.isConnected) {
+      this.searchInput.focus();
+
+      return;
+    }
     this.searchInput.hidden = false;
-    this.searchButton.after(this.searchInput);
+    this.searchButton.after(this.searchInput, this.searchClear);
     this.searchInput.focus();
   }
 
   private hideSearch(): void {
     this.searchInput.hidden = true;
     this.searchInput.remove();
+    this.searchClear.remove();
     this.searchInput.value = '';
     this.setSearch('');
     this.searchButton.hidden = this.host.rowCount() < SEARCH_MIN_ROWS;
   }
 
   private setSearch(query: string): void {
+    this.searchClear.hidden = query === '';
     if (query === this.query) return;
     this.query = query;
     this.host.rerender();
+    this.paintMatches();
+  }
+
+  /** The database's own wrapper: the rows sit beside the chip bar. */
+  private viewRoot(): HTMLElement | null {
+    return this.filterBar.parentElement;
+  }
+
+  private paintMatches(): void {
+    const root = this.viewRoot();
+
+    this.matchObserver?.disconnect();
+    this.matchObserver = null;
+    if (this.query.trim() === '' || root === null) {
+      clearSearchMatches(this);
+
+      return;
+    }
+    paintSearchMatches(this, root, this.query);
+    if (typeof MutationObserver === 'undefined') return;
+    this.matchObserver = new MutationObserver(() => paintSearchMatches(this, root, this.query));
+    this.matchObserver.observe(root, { childList: true, subtree: true, characterData: true });
   }
 
   private renderFilterBar(view: DatabaseViewConfig): void {
@@ -535,26 +816,29 @@ export class DatabaseViewControls {
 
     if (view.sorts.length > 0) {
       const first = schema.find((p) => p.id === view.sorts[0].propertyId);
+      const name = view.sorts.length === 1 && first !== undefined ? first.name : this.t('sortCount', { count: view.sorts.length });
       const label = view.sorts.length === 1 && first !== undefined
-        ? `${view.sorts[0].direction === 'asc' ? '↑' : '↓'} ${first.name}`
-        : this.t('sortCount', { count: view.sorts.length });
-      const pill = button('database-sort-pill', label, { text: label });
+        ? `${first.name}: ${t(sortDirectionLabelKey(first.type, view.sorts[0].direction))}`
+        : name;
+      const pill = chip('database-sort-pill', label, { glyph: view.sorts.length === 1 ? IconArrowUp : IconSort, name });
 
-      pill.setAttribute('data-blok-database-filter-pill', '');
+      pill.setAttribute('data-direction', view.sorts[0].direction);
       pill.setAttribute('data-active', '');
-      pill.addEventListener('click', () => this.openSettings(pill, 'sort'));
-      pills.push(pill);
+      pill.addEventListener('click', () => this.openSortPanel(pill));
+      pills.push(pill, part('data-blok-database-chip-divider', {}));
     }
     for (const filter of withEntryIds(view.filters)) {
       const property = schema.find((p) => p.id === filter.propertyId);
 
       if (property === undefined) continue;
-      const label = filterPillLabel(filter, property, t, (id) => this.host.people?.().find((person) => person.id === id)?.name, (id) => this.host.relatedRows?.(property).find((row) => row.id === id)?.title);
-      const pill = button(`database-filter-pill-${filter.id}`, label, { text: label });
+      const personName = (id: string): string | undefined => this.host.people?.().find((person) => person.id === id)?.name;
+      const rowTitle = (id: string): string | undefined => this.host.relatedRows?.(property).find((row) => row.id === id)?.title;
+      const label = filterPillLabel(filter, property, t, personName, rowTitle);
+      const value = filterValueText(filter, property, t, personName, rowTitle);
+      const pill = chip(`database-filter-pill-${filter.id}`, label, { glyph: propertyTypeMeta(property.type).icon, name: property.name, value });
 
-      pill.setAttribute('data-blok-database-filter-pill', '');
       pill.setAttribute('data-filter-id', filter.id);
-      pill.toggleAttribute('data-active', filterValueText(filter, property, t, (id) => this.host.people?.().find((person) => person.id === id)?.name, (id) => this.host.relatedRows?.(property).find((row) => row.id === id)?.title) !== '');
+      pill.toggleAttribute('data-active', value !== '');
       pill.addEventListener('click', () => this.openPill(filter.id, pill));
       pills.push(pill);
     }
@@ -562,9 +846,8 @@ export class DatabaseViewControls {
 
     if (rules > 0) {
       const label = this.t('filterRuleCount', { count: rules });
-      const pill = button('database-advanced-pill', label, { text: label });
+      const pill = chip('database-advanced-pill', label, { glyph: IconFilter, name: label });
 
-      pill.setAttribute('data-blok-database-filter-pill', '');
       pill.setAttribute('data-active', '');
       pill.addEventListener('click', () => this.openSettings(pill, 'filter'));
       pills.push(pill);
@@ -572,7 +855,16 @@ export class DatabaseViewControls {
 
     const personal = this.personal.has(view.id);
 
-    if (pills.length === 0 && !personal) {
+    if (this.barViewId !== view.id) {
+      this.barViewId = view.id;
+      this.barOpen = null;
+      this.barShown = false;
+    }
+    // Notion keeps the bar, with only "+ Filter", after its last chip goes.
+    if (pills.length === 0 && !personal && this.barShown && this.barOpen === null) this.barOpen = true;
+    this.barShown = this.barOpen ?? (pills.length > 0 || personal);
+    this.minimizeButton.hidden = !this.barShown;
+    if (!this.barShown) {
       this.filterBar.replaceChildren();
       this.filterBar.hidden = true;
 

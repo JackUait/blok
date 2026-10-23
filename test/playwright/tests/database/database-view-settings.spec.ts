@@ -162,7 +162,9 @@ test.describe('database view settings', () => {
     await byTestId(page, 'database-header-sort-desc').click();
 
     expect(await rowIds(page)).toEqual(['r1', 'r2', 'r3']);
-    await expect(byTestId(page, 'database-sort-pill')).toHaveText('↓ Amount');
+    // The arrow is the chip's glyph now (findings V16); the chip reads the property.
+    await expect(byTestId(page, 'database-sort-pill')).toHaveText('Amount');
+    await expect(byTestId(page, 'database-sort-pill')).toHaveAttribute('data-direction', 'desc');
 
     await byTestId(page, 'database-view-reset').click();
 

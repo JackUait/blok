@@ -77,6 +77,10 @@ const createEditor = async (model: AgentModel): Promise<TestEditor> => {
   return editor;
 };
 
+// The bar opens its gap under the block it sits under.
+const gapHolderText = (): string | null =>
+  document.querySelector('[data-blok-ai-gap]')?.textContent ?? null;
+
 const input = (id: string): HTMLElement => {
   const element = document.querySelector<HTMLElement>(`[data-blok-id="${id}"] [data-blok-tool="paragraph"]`);
 
@@ -168,6 +172,29 @@ describe('Ask AI in an empty block', () => {
     expect(hasEmpty()).toBe(true);
     expect(await texts(editor)).toEqual(['Before', 'Next', 'After']);
   });
+
+  it('sits under the last line written in place of the empty block', async () => {
+    const editor = await createEditor(scripted(insertAt({ after: 'empty' }, 'One', 'Two', 'Three'), answer('Done.')));
+
+    openAt('empty');
+    submit('Write three lines');
+
+    await waitFor(() => expect(within(bar()).getByText('Done.')).toBeTruthy());
+    const written = (await texts(editor)).slice(1, -1);
+
+    expect(written).toHaveLength(3);
+    await waitFor(() => expect(gapHolderText()).toBe(written.at(-1)));
+  }, 20_000);
+
+  it('sits under the content written just above the empty block', async () => {
+    await createEditor(scripted(insertAt({ before: 'empty' }, 'One', 'Two'), answer('Done.')));
+
+    openAt('empty');
+    submit('Write two lines');
+
+    await waitFor(() => expect(within(bar()).getByText('Done.')).toBeTruthy());
+    await waitFor(() => expect(gapHolderText()).toBe('Two'));
+  }, 20_000);
 
   it('puts an inserted answer in place of the empty block', async () => {
     const editor = await createEditor(scripted(answer('A short reply.')));

@@ -567,12 +567,18 @@ export class Assistant extends Module {
       ? manager.blocks.filter((other) => other.parentId === null).map((other) => other.id)
       : manager.getBlockById(block.parentId)?.contentIds ?? [];
     const index = siblings.indexOf(block.id);
-    const neighbours = [siblings[index - 1], siblings[index + 1]];
+    const isCreated = (id: string | undefined): id is string => id !== undefined && this.created.has(id);
+    const after = siblings.slice(index + 1);
+    const stop = after.findIndex((id) => !isCreated(id));
+    // The last new block touching it: the end of the run below, else the one above.
+    const runEnd = isCreated(after[0]) ? after[(stop === -1 ? after.length : stop) - 1] : siblings[index - 1];
 
-    if (!neighbours.some((id) => id !== undefined && this.created.has(id))) {
+    if (!isCreated(runEnd)) {
       return;
     }
     this.emptyId = null;
+    // The block is the bar's anchor. Without this the bar falls back to the block after it: the first new one.
+    this.anchor = { id: runEnd };
     await this.Blok.AgentAPI.executeInRun({ commands: [{ name: 'block.delete', args: { id: block.id } }] });
   }
 

@@ -26,6 +26,8 @@ describe('board column header actions', () => {
 
     expect(body).toContain('width: 24px');
     expect(body).toContain('height: 24px');
+    // findings-board B07: radius 6.
+    expect(body).toContain('border-radius: var(--blok-radius-control)');
   });
 
   // research/36 §1.1: a hover anywhere in the column shows them. Sub-grouped heads sit outside the column, so they keep header hover.

@@ -173,6 +173,14 @@ describe('DatabaseBoardView', () => {
       expect(menu?.getAttribute('aria-haspopup')).toBe('menu');
     });
 
+    // findings-board B07: Notion's order is "…" then "+".
+    it('puts "More group options" before "New page"', () => {
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title' });
+      const actions = header(view.createView(), 'opt-1')?.querySelector('[data-blok-database-column-actions]');
+
+      expect([...(actions?.children ?? [])].map((el) => el.hasAttribute('data-blok-database-column-menu') ? 'menu' : 'new')).toEqual(['menu', 'new']);
+    });
+
     it('has no header actions in read-only mode', () => {
       const view = new DatabaseBoardView({ readOnly: true, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title' });
       const head = header(view.createView(), 'opt-1');

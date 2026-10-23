@@ -1183,7 +1183,7 @@
   height: 24px;
   padding: 0;
   border: none;
-  border-radius: var(--blok-radius-control-sm);
+  border-radius: var(--blok-radius-control);
   background: none;
   color: var(--_blok-group-accent, var(--blok-database-column-accent));
   cursor: pointer;

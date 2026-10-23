@@ -714,7 +714,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     return header;
   }
 
-  /** The "New page" (+) and "More group options" (⋯) buttons, shown on header hover. */
+  /** The "More group options" (⋯) and "New page" (+) buttons, shown on header hover. */
   private createHeaderActions(optionId: string): HTMLElement {
     const actions = document.createElement('div');
 
@@ -737,7 +737,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     menu.setAttribute('aria-haspopup', 'menu');
     menu.innerHTML = IconDotsHorizontal;
 
-    actions.append(newPage, menu);
+    actions.append(menu, newPage);
 
     return actions;
   }

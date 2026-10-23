@@ -27147,6 +27147,10 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   visibility: hidden;
 }
 
+[data-blok-element][data-blok-ai-consumed] > [data-blok-element-content] {
+  display: none;
+}
+
 [data-blok-element][data-blok-ai-rewriting] [data-blok-element-content] [contenteditable]:not([contenteditable="false"]) {
   visibility: hidden;
 }

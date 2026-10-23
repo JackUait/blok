@@ -71,8 +71,8 @@ export interface BoardLane {
   collapsed?: boolean;
 }
 
-/** Card widths per card size. Medium (260) is measured (research/07); small and large are unmeasured. */
-const CARD_WIDTH: Record<CardSize, number> = { small: 220, medium: 260, large: 320 };
+/** Card widths per card size (research/07; feel findings B30: Small 180, Large 320). */
+const CARD_WIDTH: Record<CardSize, number> = { small: 180, medium: 260, large: 320 };
 /** The column's 8px padding on each side (research/07). */
 const COLUMN_PADDING = 16;
 const CELL_LINK = 'a[data-blok-database-cell-link]';

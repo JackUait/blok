@@ -178,6 +178,14 @@ describe('DatabaseBoardView card parity', () => {
       expect(parseFloat(large.querySelector<HTMLElement>('[data-blok-database-column]')?.style.minWidth ?? '0')).toBeGreaterThan(276);
     });
 
+    it('draws Small cards 180 and Large 320 wide, in 196 and 336 columns', () => {
+      const small = mount({ view: boardView({ cardSize: 'small' }) });
+
+      expect(small.querySelector<HTMLElement>('[data-blok-database-column]')?.style.minWidth).toBe('196px');
+      document.body.innerHTML = '';
+      expect(mount({ view: boardView({ cardSize: 'large' }) }).querySelector<HTMLElement>('[data-blok-database-column]')?.style.minWidth).toBe('336px');
+    });
+
     it('shows no preview until one is picked', () => {
       expect(mount().querySelector('[data-blok-database-card-preview]')).toBeNull();
     });

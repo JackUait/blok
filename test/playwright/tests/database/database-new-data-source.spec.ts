@@ -189,6 +189,8 @@ test.describe('database New data source', () => {
     expect(views.views.find((view) => view.id === 'vb')).toMatchObject({ type: 'board', groupBy: 'b-stage' });
 
     await settings.click();
+    // CSV actions sit under More settings (feel/findings-toolbar V12).
+    await page.getByTestId('database-settings-more').click();
     const download = page.waitForEvent('download');
 
     await page.getByTestId('database-settings-csv-export').click();

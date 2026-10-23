@@ -446,6 +446,10 @@ class DateEditor {
       this.render();
     };
 
+    // research/35 §3: a day click sets the part whose field was focused last.
+    input.addEventListener('focus', () => {
+      this.rangeTarget = which;
+    });
     input.addEventListener('input', () => input.removeAttribute('aria-invalid'));
     input.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' && !event.isComposing) {

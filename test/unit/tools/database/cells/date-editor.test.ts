@@ -218,6 +218,26 @@ describe('date cell editor', () => {
   });
 
   describe('range', () => {
+    // research/35 §3: a grid click with the End input focused changed the end.
+    it('focusing the End field makes the next day click set the end', () => {
+      const ctx = openDate('2026-10-09/2026-10-12');
+
+      q<HTMLInputElement>('[data-blok-database-date-input="end"]').focus();
+      day('2026-10-20').click();
+
+      expect(ctx.onCommit).toHaveBeenLastCalledWith('2026-10-09/2026-10-20');
+    });
+
+    it('focusing the Start field makes the next day click set the start', () => {
+      const ctx = openDate('2026-10-09');
+
+      q('[data-blok-database-date-end-toggle]').click();
+      q<HTMLInputElement>('[data-blok-database-date-input="start"]').focus();
+      day('2026-10-15').click();
+
+      expect(ctx.onCommit).toHaveBeenLastCalledWith('2026-10-15/2026-10-15');
+    });
+
     it('turning End date on makes a one-day range, and the next click sets the end', () => {
       const ctx = openDate('2026-10-09');
 

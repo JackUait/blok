@@ -208,7 +208,7 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
       expect(drawerEl.getAttribute('aria-label')).toBe('i18n:tools.database.cardDetails');
       expect(closeBtn.getAttribute('aria-label')).toBe('i18n:tools.database.close');
       expect(titleInput.getAttribute('aria-label')).toBe('i18n:tools.database.cardTitle');
-      expect(titleInput.placeholder).toBe('i18n:tools.database.cardTitlePlaceholder');
+      expect(titleInput.placeholder).toBe('i18n:tools.database.layoutNewPage');
     });
 
     it('falls back to the bundled English strings when no i18n is supplied', () => {
@@ -221,7 +221,7 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
       const titleInput = query<HTMLTextAreaElement>(options.wrapper, '[data-blok-database-drawer-title]');
 
       expect(closeBtn.getAttribute('aria-label')).toBe(englishDictionary['tools.database.close']);
-      expect(titleInput.placeholder).toBe('Empty page');
+      expect(titleInput.placeholder).toBe(englishDictionary['tools.database.layoutNewPage']);
     });
   });
 

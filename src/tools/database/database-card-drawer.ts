@@ -9,7 +9,7 @@ import type { DateDisplayChange } from './cells/date-format';
 import { isReadOnlyType, readPropertyValue } from './property-values';
 import { cellText } from './database-table-clipboard';
 import { rowCellContext } from './reminders';
-import { IconArrowDiagonal, IconCheck, IconCopy, IconMessage, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconEmojiStar, IconExpandFullscreen, IconStarFilled, IconLink, IconPage, IconPageLayout, IconPlayerTheater, IconPreview, IconSidebarRight, IconSplitView } from '../../components/icons';
+import { IconArrowDiagonal, IconCheck, IconCopy, IconEmojiSmile, IconImage, IconMenu, IconMessage, IconPlus, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconEmojiStar, IconExpandFullscreen, IconStarFilled, IconLink, IconPage, IconPageLayout, IconPlayerTheater, IconPreview, IconSidebarRight, IconSplitView } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -23,6 +23,8 @@ import { createTooltipContent } from '../../components/modules/toolbar/tooltip';
 import { createHeadingToggle } from '../table/table-heading-toggle';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { EmojiPicker } from '../callout/emoji-picker';
+import { loadEmojiGrid } from '../../components/utils/emoji/emoji-data';
+import { fileChipIcon } from './page-icon';
 import { openCoverPicker, validateCoverFile } from '../audio/cover-picker';
 import type { CoverPickerHandle } from '../audio/cover-picker';
 import { safeImageSrc } from '../../components/utils/sanitize-url';
@@ -37,9 +39,11 @@ import { outputBlocksToHtml, outputBlocksToSegments } from '../../shared/rich-te
 import type { FieldsResolver } from '../../shared/rich-text/block-data';
 import { htmlToSegmentsDom } from '../../components/utils/rich-text-dom';
 import { declaredRichTextFields } from '../../components/tools/base';
+import { DatabaseDropLine } from './database-drop-line';
 import {
   addModule,
   applyDraft,
+  arrangeSection,
   groupFirst,
   isDraftEmpty,
   pageLayoutOf,
@@ -57,6 +61,9 @@ import type { BuilderTabs, PageLayoutModuleEntry } from './page-layout-builder';
 
 /** Where a property made from a builder menu goes. */
 type AddedPlace = 'pin' | 'group' | 'page' | 'panel' | { sectionId: string };
+
+/** A press on a property's ⋮⋮ becomes a drag past this many pixels; less is a click. */
+const PROPERTY_DRAG_THRESHOLD = 4;
 
 /** Must stay longer than the drawer's `transition: transform` in database.css. */
 const DRAWER_TRANSITION_FALLBACK_MS = 300;
@@ -186,6 +193,8 @@ export interface LayoutTabsHost {
 }
 
 const LINK_TYPES: ReadonlySet<string> = new Set(['url', 'email', 'phone']);
+/** feel/findings-rowpage R16: Notion's Comment and Copy pill shows on every filled value it copies, not only links. */
+const COPY_TYPES: ReadonlySet<string> = new Set([...LINK_TYPES, 'text', 'number']);
 
 /** View tab edits of the open draft. `made` are the blocks Discard deletes; `fresh` every tab made now. */
 class PageLayoutTabEdits {
@@ -704,7 +713,8 @@ export class DatabaseCardDrawer {
 
     titleInput.setAttribute('data-blok-database-drawer-title', '');
     titleInput.setAttribute('aria-label', this.i18n?.t('tools.database.cardTitle') ?? 'tools.database.cardTitle');
-    titleInput.placeholder = this.i18n?.t('tools.database.cardTitlePlaceholder') ?? 'Empty page';
+    // R25: Notion's empty row page title reads "New page".
+    titleInput.placeholder = this.i18n?.t('tools.database.layoutNewPage') ?? 'New page';
     titleInput.value = title;
     titleInput.rows = 1;
     titleInput.readOnly = this.readOnly;
@@ -736,6 +746,14 @@ export class DatabaseCardDrawer {
       // "Press Enter to continue with an empty page".
       if (!this.readOnly && this.attachedBodyRowId !== null) {
         this.rowBody?.start(this.attachedBodyRowId);
+        // R24: Notion scrolls the peek so the caret's block shows.
+        requestAnimationFrame(() => {
+          const focused = document.activeElement;
+
+          if (focused instanceof HTMLElement && this.drawer?.querySelector('[data-blok-database-drawer-editor]')?.contains(focused) === true) {
+            focused.scrollIntoView({ block: 'nearest' });
+          }
+        });
       }
     });
     content.appendChild(titleInput);
@@ -1204,15 +1222,7 @@ export class DatabaseCardDrawer {
     if (backlinks !== null) {
       head.appendChild(backlinks);
     }
-    if (src === null && !this.readOnly && this.onCoverChange !== undefined) {
-      const add = document.createElement('button');
-
-      add.type = 'button';
-      add.setAttribute('data-blok-database-drawer-add-cover', '');
-      add.textContent = this.label('tools.database.addCover');
-      add.addEventListener('click', () => this.openCover(row.id, add));
-      head.appendChild(add);
-    }
+    // R10: Add icon · Add cover · Customize layout, each with its glyph.
     if (row.icon !== undefined) {
       const icon = document.createElement('button');
 
@@ -1228,12 +1238,26 @@ export class DatabaseCardDrawer {
 
       add.type = 'button';
       add.setAttribute('data-blok-database-drawer-add-icon', '');
-      add.textContent = this.label('tools.database.addIcon');
-      add.addEventListener('click', () => this.openIconPicker(row.id, add));
+      add.innerHTML = IconEmojiSmile;
+      add.append(this.label('tools.database.addIcon'));
+      add.addEventListener('click', () => this.addRandomIcon(row.id, add));
+      head.appendChild(add);
+    }
+    if (src === null && !this.readOnly && this.onCoverChange !== undefined) {
+      const add = document.createElement('button');
+
+      add.type = 'button';
+      add.setAttribute('data-blok-database-drawer-add-cover', '');
+      add.innerHTML = IconImage;
+      add.append(this.label('tools.database.addCover'));
+      add.addEventListener('click', () => this.openCover(row.id, add));
       head.appendChild(add);
     }
     if (this.customizable) {
-      head.appendChild(this.textButton('data-blok-database-drawer-customize', 'tools.database.layoutCustomize', () => this.startCustomizing()));
+      const customize = this.textButton('data-blok-database-drawer-customize', 'tools.database.layoutCustomize', () => this.startCustomizing());
+
+      customize.insertAdjacentHTML('afterbegin', IconPageLayout);
+      head.appendChild(customize);
     }
 
     return head;
@@ -1460,6 +1484,23 @@ export class DatabaseCardDrawer {
     if (found !== null) {
       this.openValueEditor(found, propertyId);
     }
+  }
+
+  /** R33: Notion sets a random emoji at once, then opens the picker under the new icon. */
+  private addRandomIcon(rowId: string, button: HTMLElement): void {
+    const onIconChange = this.onIconChange;
+
+    if (this.readOnly || onIconChange === undefined) return;
+    void loadEmojiGrid().then((emojis) => {
+      const pick = emojis[Math.floor(Math.random() * emojis.length)]?.native;
+
+      // The page moved on or got an icon meanwhile.
+      if (pick === undefined || this.currentRowId !== rowId || this.currentRow?.icon !== undefined) return;
+      onIconChange(rowId, pick);
+      const icon = this.drawer?.querySelector<HTMLElement>('[data-blok-database-drawer-icon]');
+
+      this.openIconPicker(rowId, icon ?? button);
+    }, () => this.openIconPicker(rowId, button));
   }
 
   private openIconPicker(rowId: string, anchor: HTMLElement): void {
@@ -2100,7 +2141,9 @@ export class DatabaseCardDrawer {
       const addBtn = document.createElement('button');
 
       addBtn.setAttribute('data-blok-database-drawer-add-prop', '');
-      addBtn.textContent = this.t('tools.database.addProperty');
+      // R13: a plus glyph replaces the "+ " every locale's label starts with; the builder still shows the label as is.
+      addBtn.innerHTML = IconPlus;
+      addBtn.append(this.t('tools.database.addProperty').replace(/^\+\s*/, ''));
       addBtn.addEventListener('click', () => this.openAddProperty(addBtn, null));
       propsSection.appendChild(addBtn);
     }
@@ -3172,6 +3215,8 @@ export class DatabaseCardDrawer {
     });
 
     cell.querySelectorAll('[data-blok-database-option-pill]').forEach((pill) => pill.setAttribute('data-blok-database-drawer-prop-pill', ''));
+    // R29: the page glyph before a file name, as the table draws it.
+    cell.querySelectorAll('[data-blok-database-file-chip]').forEach((chip) => chip.prepend(fileChipIcon()));
     if (cell.hasAttribute('data-empty')) {
       cell.textContent = this.t('tools.database.cellEmpty');
     }
@@ -3185,10 +3230,10 @@ export class DatabaseCardDrawer {
       cell.replaceChildren(placeholder);
     }
     slot.replaceChildren(cell);
-    const link = LINK_TYPES.has(def.type) && !cell.hasAttribute('data-empty');
+    const filled = !cell.hasAttribute('data-empty');
 
-    slot.toggleAttribute('data-link', link);
-    if (link) {
+    slot.toggleAttribute('data-link', LINK_TYPES.has(def.type) && filled);
+    if (COPY_TYPES.has(def.type) && filled) {
       slot.appendChild(this.createLinkActions(def));
     }
   }
@@ -3209,7 +3254,8 @@ export class DatabaseCardDrawer {
       button.tabIndex = -1;
       button.setAttribute('data-blok-database-table-cell-action', action);
       button.setAttribute('aria-label', this.t(key));
-      button.innerHTML = icon;
+      // No whitespace text: the value's own text stays its textContent.
+      button.innerHTML = icon.replace(/>\s+</g, '><').trim();
       onHover(button, this.t(key));
       button.addEventListener('click', (event) => {
         // The value under it would open its editor.
@@ -3460,7 +3506,6 @@ export class DatabaseCardDrawer {
       label.tabIndex = 0;
       // research/09 §1b: a row page property menu ends with "Customize layout".
       const customize = this.customizable ? (): void => this.startCustomizing() : undefined;
-
       const open = (): void => openMenu(def.id, head, customize, this.propertyMenuExtras(def.id, valueEl));
 
       label.addEventListener('click', open);
@@ -3471,8 +3516,10 @@ export class DatabaseCardDrawer {
         }
       });
     }
+    if (this.customizable && this.draft === null && !labelless) {
+      head.prepend(this.dragHandle(def.id, row, label));
+    }
     if (!labelless) row.appendChild(head);
-
 
     valueEl.setAttribute('data-blok-database-drawer-prop-value', '');
     valueEl.setAttribute('data-property-id', def.id);
@@ -3505,6 +3552,71 @@ export class DatabaseCardDrawer {
     row.appendChild(valueEl);
 
     return row;
+  }
+
+  /** R09: the ⋮⋮ that shows over the glyph on row hover. A drag reorders; a click opens the property menu. */
+  private dragHandle(id: string, row: HTMLElement, label: HTMLElement): HTMLElement {
+    const handle = document.createElement('span');
+    const dragged = { value: false };
+
+    handle.setAttribute('data-blok-database-drawer-prop-handle', '');
+    handle.setAttribute('aria-hidden', 'true');
+    handle.innerHTML = IconMenu;
+    handle.addEventListener('pointerdown', (event) => {
+      dragged.value = false;
+      this.startPropertyDrag(event, id, row, () => {
+        dragged.value = true;
+      });
+    });
+    handle.addEventListener('click', () => {
+      if (!dragged.value) label.click();
+    });
+
+    return handle;
+  }
+
+  /** Drags a property row within its list (the group or a section) and writes that list's order. */
+  private startPropertyDrag(event: PointerEvent, id: string, source: HTMLElement, onDrag: () => void): void {
+    const list = source.parentElement;
+
+    if (event.button !== 0 || list === null) return;
+    event.preventDefault();
+    const line = new DatabaseDropLine(this.drawer ?? undefined);
+    const state: { dragging: boolean; order: string[] | null } = { dragging: false, order: null };
+    const move = (moveEvent: PointerEvent): void => {
+      if (!state.dragging && Math.hypot(moveEvent.clientX - event.clientX, moveEvent.clientY - event.clientY) < PROPERTY_DRAG_THRESHOLD) return;
+      state.dragging = true;
+      onDrag();
+      source.setAttribute('data-dragging', '');
+      const rows = [...list.querySelectorAll<HTMLElement>(':scope > [data-blok-database-drawer-prop-row]')].filter((row) => row !== source);
+      const before = rows.find((row) => {
+        const box = row.getBoundingClientRect();
+
+        return moveEvent.clientY < box.top + box.height / 2;
+      });
+      const box = list.getBoundingClientRect();
+      const order = rows.map((row) => row.querySelector('[data-property-id]')?.getAttribute('data-property-id') ?? '');
+
+      order.splice(before === undefined ? order.length : rows.indexOf(before), 0, id);
+      state.order = order;
+      line.showHorizontal({ left: box.left, width: box.width, centerY: before?.getBoundingClientRect().top ?? rows.at(-1)?.getBoundingClientRect().bottom ?? box.top });
+    };
+    const end = (drop: boolean): void => {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      document.removeEventListener('pointercancel', cancel);
+      line.destroy();
+      source.removeAttribute('data-dragging');
+      if (drop && state.dragging && state.order !== null) {
+        this.onPageLayoutChange?.(arrangeSection(id, list.closest('[data-blok-database-drawer-section]')?.getAttribute('data-section-id') ?? null, state.order));
+      }
+    };
+    const up = (): void => end(true);
+    const cancel = (): void => end(false);
+
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+    document.addEventListener('pointercancel', cancel);
   }
 
   /** Notion's row page menu has Comment only on a filled value (research/09:93, research/36:261). */

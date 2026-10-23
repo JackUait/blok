@@ -40,9 +40,10 @@ describe('database row page layout css', () => {
     expect(body).not.toMatch(/blue|#2383e2|rgb\(35, 131, 226\)/i);
   });
 
-  it('shows Customize layout on page hover, like Add icon', () => {
-    expect(ruleBody('[data-blok-database-drawer-customize]')).toContain('opacity: 0');
-    expect(database).toMatch(/\[data-blok-database-drawer-content\]:hover \[data-blok-database-drawer-customize\][^{]*\{ opacity: 1; \}/);
+  // feel/findings-rowpage R10: the header row shows on hover of the page head or title, not the whole page.
+  it('shows Customize layout on page head hover, like Add icon', () => {
+    expect(database).toMatch(/\[data-blok-database-drawer-customize\] \{[^}]*opacity: 0;/);
+    expect(database).toMatch(/\[data-blok-database-drawer-page-head\]:is\(:hover, [^{]*\[data-blok-database-drawer-customize\][^{]*\{ opacity: 1; \}/);
   });
 
   it('turns the section caret and the details panel motion off for reduced motion', () => {

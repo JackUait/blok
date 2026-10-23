@@ -718,10 +718,11 @@ describe('DatabaseCardDrawer', () => {
       expect(closeBtn.querySelectorAll('svg').length).toBe(2);
     });
 
-    it('title input has "Empty page" placeholder from i18n', () => {
+    // feel/findings-rowpage R25: Notion's empty row page title reads "New page".
+    it('title input has "New page" placeholder from i18n', () => {
       const mockI18n = {
         t: vi.fn((key: string) => {
-          if (key === 'tools.database.cardTitlePlaceholder') return 'Empty page';
+          if (key === 'tools.database.layoutNewPage') return 'New page';
 
           return key;
         }),
@@ -737,7 +738,7 @@ describe('DatabaseCardDrawer', () => {
 
       const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLTextAreaElement;
 
-      expect(titleInput.placeholder).toBe('Empty page');
+      expect(titleInput.placeholder).toBe('New page');
     });
   });
 
@@ -2217,7 +2218,8 @@ describe('DatabaseCardDrawer', () => {
 
       const addPropBtn = options.wrapper.querySelector('[data-blok-database-drawer-add-prop]');
 
-      expect(addPropBtn!.textContent).toBe('tools.database.addProperty');
+      // The plus is a glyph now (R13), so the text is the label alone.
+      expect(addPropBtn!.textContent?.trim()).toBe('tools.database.addProperty');
     });
 
     it('does NOT render [data-blok-database-drawer-add-prop] button in read-only mode', () => {

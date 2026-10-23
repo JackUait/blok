@@ -1785,8 +1785,6 @@
   cursor: default;
 }
 
-[data-blok-database-drawer-add-icon],
-[data-blok-database-drawer-add-cover],
 [data-blok-database-drawer-props-toggle],
 [data-blok-database-drawer-hidden-props] {
   display: inline-flex;
@@ -1801,18 +1799,50 @@
   cursor: pointer;
 }
 
-/* "Add icon" shows on hover of the page head, as Notion's page controls do. */
+/*
+ * feel/findings-rowpage R10: Add icon · Add cover · Customize layout, 28px, padding 0 8px, radius 6,
+ * a 14px glyph. Notion's ink fails AA, so the "Empty" value's AA step.
+ */
 [data-blok-database-drawer-add-icon],
-[data-blok-database-drawer-add-cover] {
+[data-blok-database-drawer-add-cover],
+[data-blok-database-drawer-customize] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  height: 28px;
+  padding: 0 var(--blok-space-2);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: none;
+  color: var(--blok-database-ink-tertiary);
+  font-size: 14px;
+  cursor: pointer;
   opacity: 0;
   transition: opacity 100ms ease;
 }
 
-[data-blok-database-drawer-content]:hover [data-blok-database-drawer-add-icon],
-[data-blok-database-drawer-content]:hover [data-blok-database-drawer-add-cover],
+[data-blok-database-drawer-add-icon] svg,
+[data-blok-database-drawer-add-cover] svg,
+[data-blok-database-drawer-customize] svg {
+  inline-size: 14px;
+  block-size: 14px;
+  flex-shrink: 0;
+}
+
+/* Shown while the head or the title under it is hovered; :has stays on the small head, not the page. */
+[data-blok-database-drawer-page-head]:is(:hover, :has(+ [data-blok-database-drawer-title]:hover)) [data-blok-database-drawer-add-icon],
+[data-blok-database-drawer-page-head]:is(:hover, :has(+ [data-blok-database-drawer-title]:hover)) [data-blok-database-drawer-add-cover],
+[data-blok-database-drawer-page-head]:is(:hover, :has(+ [data-blok-database-drawer-title]:hover)) [data-blok-database-drawer-customize],
+[data-blok-database-drawer-add-icon]:focus-visible,
 [data-blok-database-drawer-add-cover]:focus-visible,
-[data-blok-database-drawer-add-icon]:focus-visible {
+[data-blok-database-drawer-customize]:focus-visible {
   opacity: 1;
+}
+
+@media (hover: hover) {
+  [data-blok-database-drawer-add-cover]:hover {
+    background-color: var(--blok-database-peek-hover-bg);
+  }
 }
 
 [data-blok-database-drawer-props-toggle] {
@@ -1843,11 +1873,14 @@
 }
 
 @media (hover: hover) {
-  [data-blok-database-drawer-add-icon]:hover,
   [data-blok-database-drawer-props-toggle]:hover,
   [data-blok-database-drawer-hidden-props]:not(:disabled):hover,
   [data-blok-database-drawer-icon]:not(:disabled):hover {
     background-color: var(--blok-database-drawer-border);
+  }
+
+  [data-blok-database-drawer-add-icon]:hover {
+    background-color: var(--blok-database-peek-hover-bg);
   }
 }
 
@@ -1939,6 +1972,38 @@
   block-size: 19.2px;
   font-size: 14px;
   line-height: 1;
+}
+
+/* feel/findings-rowpage R09: hovering any part of the row swaps the type glyph for a 16px ⋮⋮ (cursor grab). */
+[data-blok-database-drawer-prop-handle] {
+  display: none;
+  position: relative;
+  z-index: 1;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  inline-size: 19.2px;
+  block-size: 19.2px;
+  cursor: grab;
+}
+
+[data-blok-database-drawer-prop-handle] svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+@media (hover: hover) {
+  [data-blok-database-drawer-prop-row]:hover > [data-blok-database-drawer-prop-head] > [data-blok-database-drawer-prop-handle] {
+    display: inline-flex;
+  }
+
+  [data-blok-database-drawer-prop-row]:hover > [data-blok-database-drawer-prop-head] > [data-blok-database-drawer-prop-handle] + [data-blok-database-drawer-prop-icon] {
+    display: none;
+  }
+}
+
+[data-blok-database-drawer-prop-row][data-dragging] {
+  opacity: 0.5;
 }
 
 /* research/09 §8 L83-84: Notion scales a 16px box (group rows) and a 14px box (pins) by 1.2. */
@@ -2976,35 +3041,35 @@ button[data-blok-database-column-count]:hover {
 
 /* ─── "Add a property" button ────────────────────────────────────────────── */
 
-/**
- * Ghost dashed button that reveals itself on hover.
- * Full-width, sits below the last property row.
- */
+/* feel/findings-rowpage R13: Notion's 132x34 text button under the label column, a 16px plus, then the label. */
 [data-blok-database-drawer-add-prop] {
-  display: flex;
+  display: inline-flex;
+  align-self: flex-start;
   align-items: center;
-  gap: var(--blok-space-1-75);
-  width: 100%;
-  padding: var(--blok-space-1-5) var(--blok-space-2);
+  gap: var(--blok-space-1-5);
+  height: 34px;
+  padding: 0 var(--blok-space-2) 0 var(--blok-space-1-5);
   margin-top: var(--blok-space-1);
   background: none;
-  border: 1.5px dashed transparent;
+  border: none;
   border-radius: var(--blok-radius-control);
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--blok-database-add-text);
+  font-size: 14px;
+  font-weight: 400;
+  /* Notion's rgb(161, 158, 153) fails AA: the "Empty" value's AA step. */
+  color: var(--blok-database-ink-tertiary);
   text-align: start;
-  transition:
-    background-color 130ms ease,
-    border-color 130ms ease,
-    color 130ms ease;
+  transition: background-color 130ms ease;
+}
+
+[data-blok-database-drawer-add-prop] svg {
+  inline-size: 16px;
+  block-size: 16px;
+  flex-shrink: 0;
 }
 
 [data-blok-database-drawer-add-prop]:hover {
   background-color: var(--blok-database-peek-hover-bg);
-  border-color: var(--blok-database-add-border);
-  color: var(--blok-database-tab-text-active);
 }
 
 [data-blok-database-drawer-add-prop]:active {
@@ -3013,22 +3078,6 @@ button[data-blok-database-column-count]:hover {
 
 /* ─── Row page layout (help/layouts; unmeasured, Blok tokens) ─── */
 
-[data-blok-database-drawer-customize] {
-  display: inline-flex;
-  align-items: center;
-  padding: var(--blok-space-0-5) var(--blok-space-1-5);
-  border: none;
-  border-radius: var(--blok-radius-control-sm);
-  background: none;
-  color: var(--blok-database-add-text);
-  font-size: 14px;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 100ms ease;
-}
-
-[data-blok-database-drawer-content]:hover [data-blok-database-drawer-customize],
-[data-blok-database-drawer-customize]:focus-visible { opacity: 1; }
 
 /* "N backlinks", first in the hover row (research/17 §2c): 28 high, padding 0 8px, gap 6px, radius 6px, 14px. */
 [data-blok-database-drawer-backlinks] {
@@ -5756,10 +5805,15 @@ textarea[data-blok-database-property-description][data-blok-field] {
 }
 
 /* research/22 §3: its Comment and Copy show at the row's right end on hover. */
+/* feel/findings-rowpage R16: a 52x24 pill with the page's bg, Notion's ring and shadow, radius 6. */
 [data-blok-database-drawer-prop-actions] {
   display: none;
   margin-inline-start: auto;
   flex-shrink: 0;
+  padding: var(--blok-space-0-5);
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-table-open-bg);
+  box-shadow: var(--blok-database-table-open-shadow);
 }
 
 [data-blok-database-drawer-prop-value]:hover > [data-blok-database-drawer-prop-actions] {

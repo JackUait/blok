@@ -386,6 +386,21 @@ describe('DatabaseCardDrawer — link values', () => {
     }
   });
 
+  // feel/findings-rowpage R16: a filled Text or Number value has the Comment and Copy pill too, not only links.
+  it('a filled text or number value shows Comment and Copy; an empty one shows none', () => {
+    const note: PropertyDefinition = { id: 'prop-note', name: 'Note', type: 'text', position: 'a4' };
+    const options = createOptions({ schema: [...SCHEMA, note], onCommentProperty: vi.fn() });
+
+    new DatabaseCardDrawer(options).open(makeRow({ 'prop-note': 'Short note', 'prop-score': 3 }));
+
+    for (const propertyId of ['prop-note', 'prop-score']) {
+      expect(actionIn(options, propertyId, 'tools.database.tableComment')).not.toBeNull();
+      expect(actionIn(options, propertyId, 'tools.database.cellCopy')).not.toBeNull();
+      expect(valueOf(options, propertyId).hasAttribute('data-link')).toBe(false);
+    }
+    expect(valueOf(options, 'prop-status').querySelector('[data-blok-database-drawer-prop-actions]')).toBeNull();
+  });
+
   it('an empty link value has no buttons, and Comment needs the host hook', () => {
     const options = createOptions({ schema: LINK_SCHEMA });
 

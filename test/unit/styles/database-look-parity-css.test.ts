@@ -324,6 +324,64 @@ describe('map pins (research/23 §5b)', () => {
   });
 });
 
+// feel/findings-rowpage R09: on row hover the type glyph turns into a 16px ⋮⋮ with a grab cursor.
+describe('row page property drag handle', () => {
+  it('is hidden at rest and replaces the glyph while the row is hovered', () => {
+    const shown = '[data-blok-database-drawer-prop-row]:hover > [data-blok-database-drawer-prop-head] > [data-blok-database-drawer-prop-handle]';
+
+    expect(ruleBody('[data-blok-database-drawer-prop-handle]')).toContain('display: none');
+    expect(ruleBody('[data-blok-database-drawer-prop-handle]')).toContain('cursor: grab');
+    expect(ruleBody('[data-blok-database-drawer-prop-handle] svg')).toContain('inline-size: 16px');
+    expect(ruleBody(shown)).toContain('display: inline-flex');
+    expect(ruleBody(`${shown} + [data-blok-database-drawer-prop-icon]`)).toContain('display: none');
+  });
+});
+
+// feel/findings-rowpage R13: "Add a property" is a 34px text button with a 16px plus, 14px/400 warm gray, no dashed border.
+describe('row page Add a property', () => {
+  it('is an auto-width 34px button, padding 0 8px 0 6px, with no border', () => {
+    const body = ruleBody('[data-blok-database-drawer-add-prop]');
+
+    expect(body).toContain('display: inline-flex');
+    expect(body).toContain('height: 34px');
+    expect(body).toContain('padding: 0 var(--blok-space-2) 0 var(--blok-space-1-5)');
+    expect(body).toContain('font-size: 14px');
+    expect(body).toContain('font-weight: 400');
+    // Notion's rgb(161,158,153) fails AA: the "Empty" value's AA step.
+    expect(body).toContain('color: var(--blok-database-ink-tertiary)');
+    expect(body).toContain('border: none');
+    expect(body).not.toContain('width: 100%');
+    // The property list is a flex column: without this it stretches to the full width.
+    expect(body).toContain('align-self: flex-start');
+    expect(ruleBody('[data-blok-database-drawer-add-prop]:hover')).not.toContain('border-color');
+    expect(ruleBody('[data-blok-database-drawer-add-prop] svg')).toContain('inline-size: 16px');
+  });
+});
+
+// feel/findings-rowpage R10: Add icon · Add cover · Customize layout are 28px, padding 0 8px, radius 6, 14px glyph, warm gray,
+// and show while the page head or title is hovered, not the whole page.
+describe('row page header hover row', () => {
+  const buttons = ['[data-blok-database-drawer-add-icon]', '[data-blok-database-drawer-add-cover]', '[data-blok-database-drawer-customize]'];
+
+  it.each(buttons)('%s is 28px, padding 0 8px, radius 6, warm gray', (selector) => {
+    const body = ruleBody(selector);
+
+    expect(body).toContain('height: 28px');
+    expect(body).toContain('padding: 0 var(--blok-space-2)');
+    expect(body).toContain('border-radius: var(--blok-radius-control)');
+    expect(body).toContain('color: var(--blok-database-ink-tertiary)');
+    expect(ruleBody(`${selector} svg`)).toContain('inline-size: 14px');
+  });
+
+  it('shows on hover of the page head or the title, not the whole content', () => {
+    expect(database.includes('[data-blok-database-drawer-content]:hover [data-blok-database-drawer-add-icon]')).toBe(false);
+    expect(database.includes('[data-blok-database-drawer-content]:hover [data-blok-database-drawer-customize]')).toBe(false);
+    const shown = '[data-blok-database-drawer-page-head]:is(:hover, :has(+ [data-blok-database-drawer-title]:hover)) [data-blok-database-drawer-customize],';
+
+    expect(database.includes(shown)).toBe(true);
+  });
+});
+
 // feel/findings-rowpage R29, R32: a row page file chip is at most 200 wide; its name ends in "…" and is not underlined.
 describe('row page file chip', () => {
   it('caps the chip at 200px and ellipsizes the name at its end', () => {
@@ -346,5 +404,16 @@ describe('row page body start', () => {
   it('inks the body placeholder with the warm AA gray', () => {
     // A host's --blok-placeholder-color still wins (host-customization-tokens law).
     expect(ruleBody('[data-blok-database-drawer-editor] [contenteditable][data-blok-placeholder-active]:empty::before')).toContain('color: var(--blok-placeholder-color, var(--blok-database-ink-tertiary))');
+  });
+});
+
+// feel/findings-rowpage R16: the value actions sit in a bordered pill: page bg, ring and shadow, radius 6.
+describe('row page value actions pill', () => {
+  it('wraps Comment and Copy in a ringed pill', () => {
+    const pill = ruleBody('[data-blok-database-drawer-prop-actions]');
+
+    expect(pill).toContain('background-color: var(--blok-database-table-open-bg)');
+    expect(pill).toContain('box-shadow: var(--blok-database-table-open-shadow)');
+    expect(pill).toContain('border-radius: var(--blok-radius-control)');
   });
 });

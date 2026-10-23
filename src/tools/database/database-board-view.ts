@@ -581,7 +581,6 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     cardsContainer.style.display = 'flex';
     cardsContainer.style.flexDirection = 'column';
     cardsContainer.style.paddingTop = '6px';
-    cardsContainer.style.minHeight = '40px';
 
     for (const row of rows) {
       const cardEl = this.createCardElement(row, titlePropertyId);

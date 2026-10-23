@@ -247,7 +247,7 @@ describe('DatabaseBoardView — mutation coverage', () => {
         cardsFlexDirection: 'column',
         cardsGap: '',
         cardsPaddingTop: '6px',
-        cardsMinHeight: '40px',
+        cardsMinHeight: '',
       });
     });
 

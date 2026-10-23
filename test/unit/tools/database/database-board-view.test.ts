@@ -996,6 +996,14 @@ describe('DatabaseBoardView', () => {
       expect(boardArea.style.gap).toBe('12px');
     });
 
+    // findings-board B02: Notion's "+ New page" sits right under the header of an empty column.
+    it('leaves no blank space in an empty column', () => {
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options: [makeOption()], getRows: () => [], titlePropertyId: 'title' });
+      const container = view.createView().querySelector('[data-blok-database-cards]') as HTMLElement;
+
+      expect(container.style.minHeight).toBe('');
+    });
+
     it('cards container has padding-top of 6px', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });

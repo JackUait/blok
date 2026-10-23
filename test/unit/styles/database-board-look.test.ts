@@ -127,6 +127,15 @@ describe('board column, card and header look (research/08)', () => {
     expect(tokenValues('--blok-database-column-red-add-hover-bg')).toEqual(['var(--blok-database-column-red-card-hover-bg)']);
   });
 
+  // findings-board B19: Notion's "+ New page" text is 15px/18px after a 16px plus.
+  it('sets "+ New page" in 15px/18px after a 16px plus', () => {
+    const body = ruleBody(database, '[data-blok-database-add-card]');
+
+    expect(body).toContain('font-size: 15px');
+    expect(body).toContain('line-height: 18px');
+    expect(ruleBody(database, '[data-blok-database-add-card-icon] svg')).toContain('width: 16px');
+  });
+
   it('makes "+ New page" a 40px ring button with group-colored text', () => {
     const body = ruleBody(database, '[data-blok-database-add-card]');
 

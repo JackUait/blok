@@ -3994,10 +3994,10 @@ span[data-blok-slash-search] {
   --blok-database-column-default-accent: var(--blok-database-column-accent);
   --blok-database-column-blue-bg: rgba(0, 128, 213, 0.047);
   --blok-database-column-blue-ring: rgba(0, 124, 215, 0.094);
-  --blok-database-column-blue-accent: var(--blok-database-option-blue-text);
+  --blok-database-column-blue-accent: rgb(33, 109, 185);
   --blok-database-column-green-bg: rgba(3, 87, 31, 0.035);
   --blok-database-column-green-ring: rgba(0, 100, 45, 0.09);
-  --blok-database-column-green-accent: var(--blok-database-option-green-text);
+  --blok-database-column-green-accent: rgb(52, 120, 85);
   --blok-database-column-orange-bg: rgba(186, 72, 3, 0.043);
   --blok-database-column-orange-ring: rgba(224, 101, 1, 0.13);
   --blok-database-column-purple-bg: rgba(98, 3, 161, 0.03);
@@ -4943,7 +4943,7 @@ span[data-blok-slash-search] {
   height: 24px;
   padding: 0;
   border: none;
-  border-radius: var(--blok-radius-control-sm);
+  border-radius: var(--blok-radius-control);
   background: none;
   color: var(--_blok-group-accent, var(--blok-database-column-accent));
   cursor: pointer;
@@ -5649,6 +5649,8 @@ span[data-blok-slash-search] {
   border-radius: var(--blok-radius-block);
   box-shadow: var(--_blok-group-ring, var(--blok-database-card-ring)) 0 0 0 1px;
   color: var(--_blok-group-accent, var(--blok-database-column-accent));
+  font-size: 15px;
+  line-height: 18px;
   transition: background-color 100ms ease-in-out;
 }
 
@@ -5659,8 +5661,8 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-database-add-card-icon] svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 [data-blok-database-column-count] {

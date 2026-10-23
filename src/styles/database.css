@@ -2030,6 +2030,8 @@
   border-radius: var(--blok-radius-block);
   box-shadow: var(--_blok-group-ring, var(--blok-database-card-ring)) 0 0 0 1px;
   color: var(--_blok-group-accent, var(--blok-database-column-accent));
+  font-size: 15px;
+  line-height: 18px;
   transition: background-color 100ms ease-in-out;
 }
 
@@ -2040,8 +2042,8 @@
 }
 
 [data-blok-database-add-card-icon] svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 /**

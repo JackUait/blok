@@ -3981,6 +3981,7 @@ span[data-blok-slash-search] {
   --blok-database-ink: rgb(44, 44, 43);
   --blok-database-ink-secondary: rgb(114, 111, 106);
   --blok-database-ink-tertiary: rgb(114, 111, 106);
+  --blok-database-title-placeholder: rgb(149, 148, 145);
   --blok-database-hover-bg: rgba(33, 27, 23, 0.051);
   --blok-database-pressed-bg: rgba(33, 27, 23, 0.102);
   --blok-database-page-divider: rgba(55, 53, 47, 0.09);
@@ -4237,6 +4238,7 @@ span[data-blok-slash-search] {
   --blok-database-ink: rgb(240, 239, 237);
   --blok-database-ink-secondary: rgb(173, 169, 163);
   --blok-database-ink-tertiary: rgb(143, 140, 135);
+  --blok-database-title-placeholder: rgb(106, 104, 101);
   --blok-database-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-pressed-bg: rgba(255, 255, 255, 0.11);
   --blok-database-page-divider: rgba(255, 255, 255, 0.094);
@@ -4476,6 +4478,7 @@ span[data-blok-slash-search] {
   --blok-database-ink: rgb(240, 239, 237);
   --blok-database-ink-secondary: rgb(173, 169, 163);
   --blok-database-ink-tertiary: rgb(143, 140, 135);
+  --blok-database-title-placeholder: rgb(106, 104, 101);
   --blok-database-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-pressed-bg: rgba(255, 255, 255, 0.11);
   --blok-database-page-divider: rgba(255, 255, 255, 0.094);
@@ -5686,6 +5689,10 @@ button[data-blok-database-column-count]:hover {
 [data-blok-database-title] {
   padding-left: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
   padding-right: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+}
+
+[data-blok-database-title][data-placeholder]::before {
+  color: var(--blok-database-title-placeholder);
 }
 
 [data-blok-database-tab-bar] {

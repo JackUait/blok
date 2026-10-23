@@ -1,4 +1,4 @@
-import { IconArrowDiagonal, IconCheck, IconChevronLeft, IconChevronRight, IconCross, IconMenu } from '../../components/icons';
+import { IconArrowDiagonal, IconArrowLeftSmall, IconCheck, IconChevronLeft, IconChevronRight, IconCross, IconMenu } from '../../components/icons';
 import { CellPopover } from './cells/cell-popover';
 import { hide as hideTooltip } from '../../components/utils/tooltip';
 
@@ -28,6 +28,8 @@ export interface DatabasePanelOptions {
   backLabel: string;
   /** Docks at the window's end edge (view settings, research/26 §1a). */
   docked?: boolean;
+  /** With `docked`: every sub-page header ends in a × with this name (findings V25). */
+  closeLabel?: string;
   onClose?: () => void;
 }
 
@@ -154,7 +156,8 @@ export class DatabasePanel {
       back.setAttribute('data-blok-database-panel-back', '');
       back.setAttribute('data-blok-testid', 'database-panel-back');
       back.setAttribute('aria-label', this.options.backLabel);
-      back.innerHTML = IconChevronLeft;
+      // 11-notion-layout.png: the docked view settings goes back with a left arrow.
+      back.innerHTML = this.options.docked === true ? IconArrowLeftSmall : IconChevronLeft;
       back.addEventListener('click', () => this.back());
       header.appendChild(back);
     }
@@ -163,6 +166,11 @@ export class DatabasePanel {
     label.textContent = title;
     header.appendChild(label);
     if (action !== undefined) header.appendChild(action);
+    const closeLabel = this.options.closeLabel;
+
+    if (action === undefined && this.stack.length > 1 && this.options.docked === true && closeLabel !== undefined) {
+      header.appendChild(panelCloseButton(this, closeLabel));
+    }
 
     return header;
   }

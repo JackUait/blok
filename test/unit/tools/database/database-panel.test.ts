@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { DatabasePanel, panelReorderList, panelRow, panelSwitch } from '../../../../src/tools/database/database-panel';
 import type { PanelPage } from '../../../../src/tools/database/database-panel';
+import { IconArrowLeftSmall } from '../../../../src/components/icons';
 import { HINT_DELAY, destroy as destroyTooltip, onHover } from '../../../../src/components/utils/tooltip';
 
 const byTestId = (id: string): HTMLElement | null => document.querySelector(`[data-blok-testid="${id}"]`);
@@ -154,6 +155,33 @@ describe('DatabasePanel', () => {
 
       expect(popoverOf()?.getAttribute('data-blok-popover-custom-class')).not.toContain('blok-database-docked-panel');
       expect(popoverOf()?.style.left).toBe('40px');
+    });
+  });
+
+  // findings V25 (11-notion-layout.png): every docked sub-page has Back, its title and ×.
+  describe('docked sub-page header', () => {
+    const second: PanelPage = { title: 'Layout', build: () => [] };
+
+    it('shows a × that closes the whole panel, and a left arrow for Back', () => {
+      const onClose = vi.fn();
+      const panel = new DatabasePanel({ anchor, root: { title: 'Root', build: () => [] }, testId: 'panel', width: 290, backLabel: 'Back', docked: true, closeLabel: 'Close', onClose });
+
+      panel.open();
+      panel.push(second);
+      const header = document.querySelector('[data-blok-database-panel-header]');
+
+      const html = (svg: string): string => Object.assign(document.createElement('span'), { innerHTML: svg }).innerHTML;
+
+      expect(header?.querySelector('[data-blok-database-panel-back]')?.innerHTML).toBe(html(IconArrowLeftSmall));
+      byTestId('database-panel-close')?.click();
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not add a × to a panel that is not docked', () => {
+      const panel = open({ title: 'Root', build: () => [] });
+
+      panel.push(second);
+      expect(byTestId('database-panel-close')).toBeNull();
     });
   });
 

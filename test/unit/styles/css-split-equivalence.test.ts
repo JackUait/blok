@@ -1089,6 +1089,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_VIEW_SETTINGS_LAYOUT_TILES_BYTES = 1_805;
     // database.css: feel/findings-toolbar V14: the Property visibility header, rows and eye switches.
     const DATABASE_VIEW_SETTINGS_PROPERTY_EYES_BYTES = 1_522;
+    // database.css: feel/findings-toolbar V25: the docked panel's 24x22 Back.
+    const DATABASE_VIEW_SETTINGS_BACK_BYTES = 375;
     const DATABASE_ADD_PROPERTY_GRID_BYTES = 514;
     // database.css: board columns (findings-board): the status header pill, the AA count inks, "+ New page" type.
     const DATABASE_BOARD_COLUMNS_BYTES = 540;
@@ -1314,7 +1316,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_VIEW_SETTINGS_GLYPH_BYTES
       + DATABASE_VIEW_SETTINGS_NAME_BYTES
       + DATABASE_VIEW_SETTINGS_LAYOUT_TILES_BYTES
-      + DATABASE_VIEW_SETTINGS_PROPERTY_EYES_BYTES;
+      + DATABASE_VIEW_SETTINGS_PROPERTY_EYES_BYTES
+      + DATABASE_VIEW_SETTINGS_BACK_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

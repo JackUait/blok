@@ -2500,6 +2500,7 @@ export const openViewSettings = (
     width: 290,
     backLabel: ctx.i18n.t('tools.database.settingsBack'),
     docked: true,
+    closeLabel: ctx.i18n.t('tools.database.close'),
     ...(onClose !== undefined ? { onClose } : {}),
   });
 

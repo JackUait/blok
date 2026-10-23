@@ -8219,6 +8219,17 @@ textarea[data-blok-database-cell-input] {
   height: 16px;
 }
 
+/* research/26 §1b: the docked view settings' Back is 24x22, radius 6. */
+[data-blok-database-panel][data-docked] [data-blok-database-panel-back] {
+  width: 24px;
+  height: 22px;
+  border-radius: var(--blok-radius-control);
+}
+
+[data-blok-database-panel][data-docked] [data-blok-database-panel-back]:hover {
+  background-color: var(--blok-database-table-header-hover-bg);
+}
+
 /* research/26 §1b, §4a: a round × at the header's end, no hint. */
 [data-blok-database-panel-close] {
   display: inline-flex;

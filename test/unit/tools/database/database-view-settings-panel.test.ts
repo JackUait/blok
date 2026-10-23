@@ -811,12 +811,14 @@ describe('view settings panel', () => {
     expect(panel.root.isConnected).toBe(false);
   });
 
-  it('has no Close × on a sub-page, which keeps its Back arrow', () => {
-    harness().open();
-    click('database-settings-sort');
+  // findings V25 (11-notion-layout.png): a sub-page has Back, its title and ×.
+  it('has Back and a Close × on a sub-page; × closes the panel', () => {
+    const panel = harness().open();
 
+    click('database-settings-layout');
     expect(exists('database-panel-back')).toBe(true);
-    expect(exists('database-panel-close')).toBe(false);
+    click('database-panel-close');
+    expect(panel.root.isConnected).toBe(false);
   });
 
   it('marks "Add sort" and "Delete sort" as muted rows, and the sort itself not (research/21 §1c)', () => {

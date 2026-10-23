@@ -27,16 +27,17 @@
   /* Event cards: the hover fill rgba(84, 72, 49, 0.08) puts the light step at 4.41:1; one step darker passes. */
   --blok-database-calendar-event-muted-text: rgb(112, 109, 104);
   /* Default column = the plain column (research/08:72); blue and green measured light (research/21 §1f).
-     Notion's blue and green counts fail AA on their tint (3.67, 3.01): the pill text stands in. */
+     Notion's blue and green counts fail AA on their tint (3.67, 3.01): its hue darkened to the
+     nearest step that passes under the hover fills too (findings-board B21). */
   --blok-database-column-default-bg: var(--blok-database-column-bg);
   --blok-database-column-default-ring: var(--blok-database-card-ring);
   --blok-database-column-default-accent: var(--blok-database-column-accent);
   --blok-database-column-blue-bg: rgba(0, 128, 213, 0.047);
   --blok-database-column-blue-ring: rgba(0, 124, 215, 0.094);
-  --blok-database-column-blue-accent: var(--blok-database-option-blue-text);
+  --blok-database-column-blue-accent: rgb(33, 109, 185);
   --blok-database-column-green-bg: rgba(3, 87, 31, 0.035);
   --blok-database-column-green-ring: rgba(0, 100, 45, 0.09);
-  --blok-database-column-green-accent: var(--blok-database-option-green-text);
+  --blok-database-column-green-accent: rgb(52, 120, 85);
   /* research/33 §4.4. The counts stay the pill text: Notion's dot inks fail AA on these tints (2.8-3.1:1). */
   --blok-database-column-orange-bg: rgba(186, 72, 3, 0.043);
   --blok-database-column-orange-ring: rgba(224, 101, 1, 0.13);

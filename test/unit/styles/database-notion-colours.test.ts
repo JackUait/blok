@@ -304,8 +304,22 @@ describe('fills and lines that differed from Notion', () => {
   it('board: Notion\'s blue and green counts fail AA on their light tint, so they keep the pill text', () => {
     expect(contrast('rgb(39, 131, 222)', over([0, 128, 213, 0.047], WHITE))).toBeLessThan(4.5);
     expect(contrast('rgb(70, 161, 113)', over([3, 87, 31, 0.035], WHITE))).toBeLessThan(4.5);
-    expect(value(dbLight, '--blok-database-column-blue-accent')).toBe('var(--blok-database-option-blue-text)');
-    expect(value(dbLight, '--blok-database-column-green-accent')).toBe('var(--blok-database-option-green-text)');
+  });
+
+  // findings-board B21: the nearest AA step of Notion's hue, on the tint and under both hover fills ("+ New page", count, header buttons).
+  it('board: the blue and green counts are Notion\'s hue darkened to the nearest AA step', () => {
+    const blueTint = over([0, 128, 213, 0.047], WHITE);
+    const greenTint = over([3, 87, 31, 0.035], WHITE);
+    const fills = (tint: number[]): number[][] =>
+      [tint, over([55, 53, 47, 0.06], tint), over([33, 27, 23, 0.051], tint)];
+
+    expect(value(dbLight, '--blok-database-column-blue-accent')).toBe('rgb(33, 109, 185)');
+    expect(value(dbLight, '--blok-database-column-green-accent')).toBe('rgb(52, 120, 85)');
+    fills(blueTint).forEach((fill) => expect(contrast('rgb(33, 109, 185)', fill)).toBeGreaterThanOrEqual(4.5));
+    fills(greenTint).forEach((fill) => expect(contrast('rgb(52, 120, 85)', fill)).toBeGreaterThanOrEqual(4.5));
+    // One step lighter fails under a hover fill, so these are the nearest.
+    expect(contrast('rgb(34, 110, 187)', fills(blueTint)[1])).toBeLessThan(4.5);
+    expect(contrast('rgb(53, 122, 86)', fills(greenTint)[1])).toBeLessThan(4.5);
   });
 
   it('board: the default column looks like the plain (gray) column (research/08:72, 08:345, 08:347)', () => {
@@ -405,12 +419,15 @@ describe('pass 2: research/33 §4 colour dump', () => {
     ['green', [70, 161, 113], [3, 87, 31, 0.035], [83, 255, 140, 0.035], 'rgb(77, 168, 120)'],
     ['brown', [182, 137, 101], [115, 59, 3, 0.035], [253, 158, 101, 0.05], 'rgb(187, 142, 106)'],
     ['pink', [219, 105, 153], [161, 3, 66, 0.03], [255, 78, 149, 0.055], 'rgb(226, 112, 160)'],
-  ])('board: Notion\'s %s dot ink fails AA as a count in both themes, so light keeps the pill text and dark takes the nearest step', (color, dot, lightTint, darkTint, step) => {
+  ])('board: Notion\'s %s dot ink fails AA as a count in both themes, so dark takes the nearest step', (color, dot, lightTint, darkTint, step) => {
     const ink = `rgb(${dot.join(', ')})`;
     const lightAccent = value(dbLight, `--blok-database-column-${color}-accent`);
 
     expect(contrast(ink, over(lightTint, WHITE))).toBeLessThan(4.5);
-    expect(lightAccent === undefined || lightAccent === `var(--blok-database-option-${color}-text)`).toBe(true);
+    // Blue and green take the nearest light step (findings-board B21, tested above); the rest keep the pill text.
+    const LIGHT_STEP: Record<string, string> = { blue: 'rgb(33, 109, 185)', green: 'rgb(52, 120, 85)' };
+
+    expect(lightAccent === undefined || lightAccent === (LIGHT_STEP[color] ?? `var(--blok-database-option-${color}-text)`)).toBe(true);
     expect(passesAll(ink, darkSurfaces(color, darkTint))).toBe(false);
     both(`--blok-database-column-${color}-accent`, step);
     expect(passesAll(step, darkSurfaces(color, darkTint))).toBe(true);

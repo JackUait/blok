@@ -21,9 +21,9 @@ const tokens = read('tokens.css');
 
 /** The light token block, the prefers-color-scheme dark block and the data-blok-theme dark block. */
 const blocks = (css: string): [string, string, string] => {
-  const light = css.match(/:where\(\[data-blok-interface\]\), :where\(\[data-blok-popover\]\), :where\(\[data-blok-top-layer\]\) \{([^}]*)\}/);
-  const media = css.match(/:where\(:root:not\(\[data-blok-theme="light"\]\) \[data-blok-top-layer\]\) \{([^}]*)\}/);
-  const attr = css.match(/:where\(\[data-blok-theme="dark"\] \[data-blok-top-layer\]\) \{([^}]*)\}/);
+  const light = css.match(/:where\(\[data-blok-interface\]\), :where\(\[data-blok-popover\]\), :where\(\[data-blok-top-layer\]:not\(\[data-blok-interface\] \*\)\) \{([^}]*)\}/);
+  const media = css.match(/:where\(:root:not\(\[data-blok-theme="light"\]\) \[data-blok-top-layer\]:not\(\[data-blok-interface\] \*\)\) \{([^}]*)\}/);
+  const attr = css.match(/:where\(\[data-blok-theme="dark"\] \[data-blok-top-layer\]:not\(\[data-blok-interface\] \*\)\) \{([^}]*)\}/);
 
   if (light === null || media === null || attr === null) {
     throw new Error('token blocks not found');
@@ -49,7 +49,7 @@ const themed = (name: string): { light: string | undefined; dark: string | undef
 const rules = database
   .replace(/:where\(\[data-blok-interface\]\), :where\(\[data-blok-popover\]\), :where\(\[data-blok-top-layer\]\) \{[^}]*\}/, '')
   .replace(/:where\(:root:not\(\[data-blok-theme="light"\]\) \[data-blok-interface\]\), :where\(:root:not\(\[data-blok-theme="light"\]\) \[data-blok-popover\]\), :where\(:root:not\(\[data-blok-theme="light"\]\) \[data-blok-top-layer\]\) \{[^}]*\}/, '')
-  .replace(/:where\(\[data-blok-theme="dark"\] \[data-blok-interface\]\), :where\(\[data-blok-theme="dark"\] \[data-blok-popover\]\), :where\(\[data-blok-theme="dark"\] \[data-blok-top-layer\]\) \{[^}]*\}/, '');
+  .replace(/:where\(\[data-blok-theme="dark"\] \[data-blok-interface\]\), :where\(\[data-blok-theme="dark"\] \[data-blok-popover\]\), :where\(\[data-blok-theme="dark"\] \[data-blok-top-layer\]:not\(\[data-blok-interface\] \*\)\) \{[^}]*\}/, '');
 
 const ruleBody = (selector: string): string =>
   [ ...rules.matchAll(/(?<=^|[{}])\s*([^{}@]+?)\s*\{([^{}]*)\}/g) ]

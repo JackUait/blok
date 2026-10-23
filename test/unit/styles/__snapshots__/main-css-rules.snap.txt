@@ -1,8 +1,8 @@
-[@media (prefers-color-scheme: dark)] :where(:root:not([data-blok-theme="light"]) [data-blok-interface]), :where(:root:not([data-blok-theme="light"]) [data-blok-popover]), :where(:root:not([data-blok-theme="light"]) [data-blok-top-layer]) {
+[@media (prefers-color-scheme: dark)] :where(:root:not([data-blok-theme="light"]) [data-blok-interface]), :where(:root:not([data-blok-theme="light"]) [data-blok-popover]), :where(:root:not([data-blok-theme="light"]) [data-blok-top-layer]:not([data-blok-interface] *)) {
   --blok-popover-item-label-text: rgb(240, 239, 237);
 }
 
-:where([data-blok-theme="dark"] [data-blok-interface]), :where([data-blok-theme="dark"] [data-blok-popover]), :where([data-blok-theme="dark"] [data-blok-top-layer]) {
+:where([data-blok-theme="dark"] [data-blok-interface]), :where([data-blok-theme="dark"] [data-blok-popover]), :where([data-blok-theme="dark"] [data-blok-top-layer]:not([data-blok-interface] *)) {
   --blok-popover-item-label-text: rgb(240, 239, 237);
 }
 
@@ -2127,7 +2127,7 @@
   max-width: var(--blok-content-max-width, var(--max-width-content));
 }
 
-:where([data-blok-interface]), :where([data-blok-popover]), :where([data-blok-top-layer]) {
+:where([data-blok-interface]), :where([data-blok-popover]), :where([data-blok-top-layer]:not([data-blok-interface] *)) {
   --blok-selection: rgba(35, 131, 226, 0.14);
   --blok-selection-inline: #d4ecff;
   --blok-selection-inactive: rgba(55, 53, 47, 0.16);
@@ -2462,7 +2462,7 @@
   --blok-z-find: 25;
 }
 
-[@media (prefers-color-scheme: dark)] :where(:root:not([data-blok-theme="light"]) [data-blok-interface]), :where(:root:not([data-blok-theme="light"]) [data-blok-popover]), :where(:root:not([data-blok-theme="light"]) [data-blok-top-layer]) {
+[@media (prefers-color-scheme: dark)] :where(:root:not([data-blok-theme="light"]) [data-blok-interface]), :where(:root:not([data-blok-theme="light"]) [data-blok-popover]), :where(:root:not([data-blok-theme="light"]) [data-blok-top-layer]:not([data-blok-interface] *)) {
   --blok-selection: rgba(35, 131, 226, 0.2);
   --blok-selection-inline: rgba(35, 131, 226, 0.3);
   --blok-selection-inactive: rgba(255, 255, 255, 0.16);
@@ -2629,7 +2629,7 @@
   --blok-find-empty-border: rgba(251, 93, 93, 0.6);
 }
 
-:where([data-blok-theme="dark"] [data-blok-interface]), :where([data-blok-theme="dark"] [data-blok-popover]), :where([data-blok-theme="dark"] [data-blok-top-layer]) {
+:where([data-blok-theme="dark"] [data-blok-interface]), :where([data-blok-theme="dark"] [data-blok-popover]), :where([data-blok-theme="dark"] [data-blok-top-layer]:not([data-blok-interface] *)) {
   --blok-selection: rgba(35, 131, 226, 0.2);
   --blok-selection-inline: rgba(35, 131, 226, 0.3);
   --blok-selection-inactive: rgba(255, 255, 255, 0.16);
@@ -3977,7 +3977,7 @@ span[data-blok-slash-search] {
   background: color-mix(in srgb, var(--blok-text-secondary) 50%, transparent);
 }
 
-:where([data-blok-interface]), :where([data-blok-popover]), :where([data-blok-top-layer]) {
+:where([data-blok-interface]), :where([data-blok-popover]), :where([data-blok-top-layer]:not([data-blok-interface] *)) {
   --blok-database-ink: rgb(44, 44, 43);
   --blok-database-ink-secondary: rgb(114, 111, 106);
   --blok-database-ink-tertiary: rgb(114, 111, 106);
@@ -4240,7 +4240,7 @@ span[data-blok-slash-search] {
   --blok-database-cell-empty-text: var(--blok-database-ink-tertiary);
 }
 
-[@media (prefers-color-scheme: dark)] :where(:root:not([data-blok-theme="light"]) [data-blok-interface]), :where(:root:not([data-blok-theme="light"]) [data-blok-popover]), :where(:root:not([data-blok-theme="light"]) [data-blok-top-layer]) {
+[@media (prefers-color-scheme: dark)] :where(:root:not([data-blok-theme="light"]) [data-blok-interface]), :where(:root:not([data-blok-theme="light"]) [data-blok-popover]), :where(:root:not([data-blok-theme="light"]) [data-blok-top-layer]:not([data-blok-interface] *)) {
   --blok-database-ink: rgb(240, 239, 237);
   --blok-database-ink-secondary: rgb(173, 169, 163);
   --blok-database-ink-tertiary: rgb(143, 140, 135);
@@ -4485,7 +4485,7 @@ span[data-blok-slash-search] {
   --blok-database-popover-hover: var(--blok-database-hover-bg);
 }
 
-:where([data-blok-theme="dark"] [data-blok-interface]), :where([data-blok-theme="dark"] [data-blok-popover]), :where([data-blok-theme="dark"] [data-blok-top-layer]) {
+:where([data-blok-theme="dark"] [data-blok-interface]), :where([data-blok-theme="dark"] [data-blok-popover]), :where([data-blok-theme="dark"] [data-blok-top-layer]:not([data-blok-interface] *)) {
   --blok-database-ink: rgb(240, 239, 237);
   --blok-database-ink-secondary: rgb(173, 169, 163);
   --blok-database-ink-tertiary: rgb(143, 140, 135);
@@ -5246,7 +5246,7 @@ span[data-blok-slash-search] {
   transition: opacity 150ms linear;
 }
 
-[@media (hover: hover)] [data-blok-database-drawer-toolbar]:not(:hover):not(:has(:focus-visible)) :is([data-blok-database-peek-mode], [data-blok-database-peek-separator], [data-blok-database-peek-prev], [data-blok-database-peek-next]) {
+[@media (hover: hover)] [data-blok-database-drawer-toolbar]:not(:hover):not(:has(:focus-visible)):not(:has([data-blok-database-peek-mode][aria-expanded="true"])) :is([data-blok-database-peek-mode], [data-blok-database-peek-separator], [data-blok-database-peek-prev], [data-blok-database-peek-next]) {
   opacity: 0;
 }
 

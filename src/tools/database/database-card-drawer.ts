@@ -1781,6 +1781,7 @@ export class DatabaseCardDrawer {
     });
 
     menu.on(PopoverEvent.Closed, () => {
+      anchor.setAttribute('aria-expanded', 'false');
       if (this.modeMenu === menu) {
         this.modeMenu = null;
         menu.destroy();
@@ -1788,6 +1789,8 @@ export class DatabaseCardDrawer {
     });
     this.modeMenu = menu;
     menu.show();
+    // The bar keeps its revealed controls while this is true (database.css).
+    anchor.setAttribute('aria-expanded', 'true');
   }
 
   /** A row page's selected view tab opens a menu: Customize layout, Copy link to view, or both. */
@@ -1941,6 +1944,7 @@ export class DatabaseCardDrawer {
 
     this.modeMenu = null;
     menu?.destroy();
+    this.drawer?.querySelector('[data-blok-database-peek-mode]')?.setAttribute('aria-expanded', 'false');
   }
 
   /**

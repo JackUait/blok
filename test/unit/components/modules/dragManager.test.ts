@@ -317,6 +317,46 @@ describe('DragManager', () => {
     });
   });
 
+  // A body overlay paints under a top-layer panel, such as a database peek whose page body is dragged.
+  describe('drag preview mount', () => {
+    it('puts the preview in the top-layer panel that holds the dragged block', () => {
+      const { dragManager, blocks, wrapper } = createDragManager();
+      const panel = document.createElement('div');
+
+      panel.setAttribute('data-blok-top-layer', 'true');
+      document.body.appendChild(wrapper);
+      wrapper.appendChild(panel);
+      panel.appendChild(blocks[0].holder);
+
+      const dragHandle = document.createElement('div');
+
+      dragManager.setupDragHandle(dragHandle, blocks[0]);
+      dragHandle.dispatchEvent(createMouseEvent('mousedown', { clientX: 100, clientY: 100 }));
+      document.dispatchEvent(createMouseEvent('mousemove', { clientX: 110, clientY: 100 }));
+
+      const preview = (dragManager as unknown as { preview: DragPreview }).preview.getElement();
+
+      expect(preview?.parentElement).toBe(panel);
+      document.dispatchEvent(createMouseEvent('mouseup'));
+    });
+
+    it('keeps the preview on body for a block outside the top layer', () => {
+      const { dragManager, blocks, wrapper } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      wrapper.appendChild(blocks[0].holder);
+
+      const dragHandle = document.createElement('div');
+
+      dragManager.setupDragHandle(dragHandle, blocks[0]);
+      dragHandle.dispatchEvent(createMouseEvent('mousedown', { clientX: 100, clientY: 100 }));
+      document.dispatchEvent(createMouseEvent('mousemove', { clientX: 110, clientY: 100 }));
+
+      expect((dragManager as unknown as { preview: DragPreview }).preview.getElement()?.parentElement).toBe(document.body);
+      document.dispatchEvent(createMouseEvent('mouseup'));
+    });
+  });
+
   describe('setupDragHandle', () => {
     it('returns a cleanup function', () => {
       const { dragManager, blocks } = createDragManager();

@@ -5,7 +5,7 @@
 /* Not in colors.css: view.css copies every token there. */
 :where([data-blok-interface]),
 :where([data-blok-popover]),
-:where([data-blok-top-layer]) {
+:where([data-blok-top-layer]:not([data-blok-interface] *)) {
   /* Notion's inks and hover fill (research/21 §1a). Text that fails AA at Notion's value takes the
      nearest passing step on the same hue: 125,122,117 is 4.27:1 and 161,158,153 is 2.67:1 on white,
      so both light text inks are 114,111,106 (4.53:1 on the hover fill). Audit: plans 34. */
@@ -357,7 +357,7 @@
 @media (prefers-color-scheme: dark) {
   :where(:root:not([data-blok-theme="light"]) [data-blok-interface]),
   :where(:root:not([data-blok-theme="light"]) [data-blok-popover]),
-  :where(:root:not([data-blok-theme="light"]) [data-blok-top-layer]) {
+  :where(:root:not([data-blok-theme="light"]) [data-blok-top-layer]:not([data-blok-interface] *)) {
     /* Dark inks (research/21 §1a). Tertiary 125,122,117 is 4.11:1 on the page and 3.59:1 on a menu:
        143,140,135 passes on both and on a hovered card (38). */
     --blok-database-ink: rgb(240, 239, 237);
@@ -639,7 +639,7 @@
 
 :where([data-blok-theme="dark"] [data-blok-interface]),
 :where([data-blok-theme="dark"] [data-blok-popover]),
-:where([data-blok-theme="dark"] [data-blok-top-layer]) {
+:where([data-blok-theme="dark"] [data-blok-top-layer]:not([data-blok-interface] *)) {
   /* Dark inks (research/21 §1a). Tertiary 125,122,117 is 4.11:1 on the page and 3.59:1 on a menu:
      143,140,135 passes on both and on a hovered card (38). */
   --blok-database-ink: rgb(240, 239, 237);
@@ -1533,7 +1533,7 @@
   background-color: var(--blok-database-peek-separator);
 }
 
-/* Mode, the rules and the row steps fade in only while the bar is hovered or holds keyboard focus (R03, R18). */
+/* Mode, the rules and the row steps fade in only while the bar is hovered, holds keyboard focus or has a menu open (R03, R18). */
 [data-blok-database-peek-mode],
 [data-blok-database-peek-separator],
 [data-blok-database-peek-prev],
@@ -1542,7 +1542,7 @@
 }
 
 @media (hover: hover) {
-  [data-blok-database-drawer-toolbar]:not(:hover):not(:has(:focus-visible)) :is([data-blok-database-peek-mode], [data-blok-database-peek-separator], [data-blok-database-peek-prev], [data-blok-database-peek-next]) {
+  [data-blok-database-drawer-toolbar]:not(:hover):not(:has(:focus-visible)):not(:has([data-blok-database-peek-mode][aria-expanded="true"])) :is([data-blok-database-peek-mode], [data-blok-database-peek-separator], [data-blok-database-peek-prev], [data-blok-database-peek-next]) {
     opacity: 0;
   }
 }

@@ -31,6 +31,7 @@ import { findOwn } from '../../utils/own-element';
 import { linkToBlock } from '../../utils/copy-as-link';
 import { isPagePointer } from '../../../shared/page-pointer';
 import { carriesReadOnly, isBlockReadOnly } from '../../utils/read-only-blocks';
+import { overlayMountFor } from '../../utils/top-layer';
 import {
   areSourceRootsChildrenOf,
   isCollapsedToggleBlock,
@@ -299,10 +300,10 @@ export class DragController extends Module {
     // Initially hide preview
     this.preview.hide();
 
-    // Add preview to DOM
+    // Add preview to DOM. Inside a top-layer panel (a database peek) it goes into the panel, or the panel would cover it.
     const previewElement = this.preview.getElement();
     if (previewElement) {
-      document.body.appendChild(previewElement);
+      overlayMountFor(block.holder).appendChild(previewElement);
     }
 
     // Start tracking in state machine

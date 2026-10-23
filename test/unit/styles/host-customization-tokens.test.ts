@@ -291,7 +291,7 @@ describe('Host customization tokens (public --blok-* contract)', () => {
   describe('zero-specificity theme declarations', () => {
     it('declares the light palette via :where() so a host single-attribute selector always wins', () => {
       expect(css).toMatch(
-        /:where\(\[data-blok-interface\]\),\s*:where\(\[data-blok-popover\]\),\s*:where\(\[data-blok-top-layer\]\)\s*\{[^}]*--blok-selection:/
+        /:where\(\[data-blok-interface\]\),\s*:where\(\[data-blok-popover\]\),\s*:where\(\[data-blok-top-layer\]:not\(\[data-blok-interface\] \*\)\)\s*\{[^}]*--blok-selection:/
       );
     });
 

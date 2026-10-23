@@ -318,6 +318,18 @@ describe('DatabaseCardDrawer shell', () => {
       drawer.destroy();
     });
 
+    it('marks the mode button expanded while its menu is open', () => {
+      const drawer = new DatabaseCardDrawer(createOptions());
+
+      drawer.open(ROW, 'side');
+      const mode = q('[data-blok-database-peek-mode]');
+
+      mode?.click();
+      expect(mode?.getAttribute('aria-expanded')).toBe('true');
+      drawer.destroy();
+      expect(mode?.getAttribute('aria-expanded')).toBe('false');
+    });
+
     it('copies the row link from the bar, and has no Copy link without row actions', () => {
       const drawer = new DatabaseCardDrawer(createOptions({ rowActions: () => actions }));
 
@@ -337,7 +349,8 @@ describe('DatabaseCardDrawer shell', () => {
     // Notion fades these in only while the pointer is on the bar.
     it('reveals the mode switcher, the separators and the row steps only while the bar is hovered or holds keyboard focus', () => {
       const css = readFileSync(resolve(__dirname, '../../../../src/styles/database.css'), 'utf8');
-      const rule = /\[data-blok-database-drawer-toolbar\]:not\(:hover\):not\(:has\(:focus-visible\)\) :is\(([^)]*)\)\s*\{\s*opacity:\s*0;/.exec(css);
+      // An open mode menu keeps them shown, as in Notion, while the pointer is in the menu.
+      const rule = /\[data-blok-database-drawer-toolbar\]:not\(:hover\):not\(:has\(:focus-visible\)\):not\(:has\(\[data-blok-database-peek-mode\]\[aria-expanded="true"\]\)\) :is\(([^)]*)\)\s*\{\s*opacity:\s*0;/.exec(css);
 
       expect(rule?.[1].split(',').map((x) => x.trim()).sort()).toStrictEqual([
         '[data-blok-database-peek-mode]',

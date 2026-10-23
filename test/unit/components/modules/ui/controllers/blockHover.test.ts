@@ -1567,6 +1567,32 @@ describe('BlockHoverController', () => {
 
       expect(eventsDispatcher.emit).not.toHaveBeenCalled();
     });
+    // A database side or center peek is in the top layer but holds the page's own blocks.
+    it('hovers a block that sits inside a top-layer panel', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+      const block = createMockBlock('peek-body-1', 100, 200);
+      const panel = document.createElement('div');
+      const wrapper = block.holder;
+
+      panel.setAttribute('data-blok-top-layer', 'true');
+      wrapper.setAttribute('data-blok-testid', 'block-wrapper');
+      panel.appendChild(wrapper);
+      document.body.appendChild(panel);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
+      vi.mocked(blok.BlockManager.getBlockByChildNode).mockReturnValue(block);
+
+      const event = new MouseEvent('mousemove', { clientX: 200, clientY: 150, bubbles: true });
+
+      Object.defineProperty(event, 'target', { value: wrapper });
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, { block, target: wrapper });
+      panel.remove();
+    });
   });
 
   describe('multiple editors on one page', () => {

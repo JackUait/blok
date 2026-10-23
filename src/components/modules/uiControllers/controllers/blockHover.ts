@@ -117,13 +117,15 @@ export class BlockHoverController extends Controller {
        * rests on it, the closest-block lookup below fails and nearest-block
        * detection would "leak through" the popup, moving the block toolbar onto
        * whatever block sits behind it. Bail out so hovering our own floating UI
-       * never drives block hover.
+       * never drives block hover. A top-layer panel that holds blocks (a
+       * database peek) is not chrome: its blocks hover as usual.
        */
-      if ((event.target as Element | null)?.closest('[data-blok-top-layer]')) {
+      const closestBlockWrapper = (event.target as Element | null)?.closest('[data-blok-testid="block-wrapper"]');
+      const topLayer = (event.target as Element | null)?.closest('[data-blok-top-layer]');
+
+      if (topLayer && !(closestBlockWrapper && topLayer.contains(closestBlockWrapper))) {
         return;
       }
-
-      const closestBlockWrapper = (event.target as Element | null)?.closest('[data-blok-testid="block-wrapper"]');
 
       /**
        * The pointer is over a block of a different editor on this page. That

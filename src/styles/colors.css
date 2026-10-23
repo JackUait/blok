@@ -83,7 +83,7 @@
    selectors. Blok-internal light→dark ordering resolves by source order. */
 :where([data-blok-interface]),
 :where([data-blok-popover]),
-:where([data-blok-top-layer]) {
+:where([data-blok-top-layer]:not([data-blok-interface] *)) {
   /* Translucent: block selection is drawn OVER the block (see main.css), so the block must show through. */
   --blok-selection: rgba(35, 131, 226, 0.14);
   --blok-selection-inline: #d4ecff;
@@ -581,7 +581,7 @@
 @media (prefers-color-scheme: dark) {
   :where(:root:not([data-blok-theme="light"]) [data-blok-interface]),
   :where(:root:not([data-blok-theme="light"]) [data-blok-popover]),
-  :where(:root:not([data-blok-theme="light"]) [data-blok-top-layer]) {
+  :where(:root:not([data-blok-theme="light"]) [data-blok-top-layer]:not([data-blok-interface] *)) {
     --blok-selection: rgba(35, 131, 226, 0.2);
     --blok-selection-inline: rgba(35, 131, 226, 0.3);
     --blok-selection-inactive: rgba(255, 255, 255, 0.16);
@@ -784,7 +784,7 @@
 /* ─── Dark theme — explicit override ────────────────── */
 :where([data-blok-theme="dark"] [data-blok-interface]),
 :where([data-blok-theme="dark"] [data-blok-popover]),
-:where([data-blok-theme="dark"] [data-blok-top-layer]) {
+:where([data-blok-theme="dark"] [data-blok-top-layer]:not([data-blok-interface] *)) {
   --blok-selection: rgba(35, 131, 226, 0.2);
   --blok-selection-inline: rgba(35, 131, 226, 0.3);
   --blok-selection-inactive: rgba(255, 255, 255, 0.16);

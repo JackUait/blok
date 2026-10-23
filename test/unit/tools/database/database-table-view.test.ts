@@ -389,6 +389,25 @@ describe('DatabaseTableView', () => {
       expect(full?.getAttribute('aria-label')).toBe('tools.database.tableAddProperty');
     });
 
+    it('puts a page glyph before each file name in a files cell (Notion pageEmpty, research/08:278)', () => {
+      const files: PropertyDefinition = { id: 'p-files', name: 'Files', type: 'files', position: 'a1' };
+      const { root } = mount({
+        schema: [schema[0], files],
+        rows: [row('r1', 'Alpha', { 'p-files': [{ id: 'f1', name: 'report.pdf', url: 'https://example.com/report.pdf' }, { id: 'f2', name: 'b.png', url: 'https://example.com/b.png' }] })],
+      });
+      const chips = [...cell(root, 'r1', 'p-files').querySelectorAll<HTMLElement>('[data-blok-database-file-chip]')];
+
+      expect(chips).toHaveLength(2);
+      chips.forEach((chip) => {
+        const icon = chip.firstElementChild;
+
+        expect(icon?.hasAttribute('data-blok-database-file-chip-icon')).toBe(true);
+        expect(icon?.getAttribute('aria-hidden')).toBe('true');
+        expect(icon?.querySelector('svg')).not.toBeNull();
+      });
+      expect(chips[0].textContent?.trim()).toBe('report.pdf');
+    });
+
     it('wraps every column of a view saved with no wrap fields (the v1.16.1 shape)', () => {
       const { root } = mount({ view: tableView({ visibleProperties: ['p-title', 'p-notes', 'p-amount'] }) });
 

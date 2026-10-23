@@ -30,3 +30,14 @@ export const pagePlaceholderIcon = (): HTMLElement => {
 
   return icon;
 };
+
+/** The page glyph before a file name in a table's files cell (research/08:278). */
+export const fileChipIcon = (): HTMLElement => {
+  const icon = document.createElement('span');
+
+  icon.setAttribute('data-blok-database-file-chip-icon', '');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.innerHTML = IconPage;
+
+  return icon;
+};

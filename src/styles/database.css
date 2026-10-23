@@ -5464,6 +5464,17 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   white-space: nowrap;
 }
 
+/* research/08:278: a 20px page glyph in the chip ink, as Notion's 20px box. */
+[data-blok-database-file-chip-icon] {
+  display: inline-flex;
+  flex: none;
+}
+
+[data-blok-database-file-chip-icon] svg {
+  width: 20px;
+  height: 20px;
+}
+
 /* Property menu and editors. Layout unmeasured: Blok tokens. */
 [data-blok-database-property-menu-name],
 [data-blok-database-files-link],

@@ -28,7 +28,7 @@ import { DatabaseTableGrid, createTableState } from './database-table-grid';
 import { bulkCloseClearsSelection, bulkStartValue, watchBulkCloseKey } from './database-selection-bar';
 import { cellText } from './database-table-clipboard';
 import type { CellChange, TableState } from './database-table-grid';
-import { pageIconElement, pagePlaceholderIcon, showsPageIcon } from './page-icon';
+import { fileChipIcon, pageIconElement, pagePlaceholderIcon, showsPageIcon } from './page-icon';
 
 import { CALCULATION_LABEL_KEYS, calculationItems, headerViewItems, moveTargetItems, openMenu, rowMenuFooter, rowMenuItems } from './database-table-menus';
 import type { CountCap, RowFavorite } from './database-table-menus';
@@ -933,6 +933,9 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     const fillHandle = cell.querySelector('[data-blok-database-table-fill-handle]');
 
     cell.replaceChildren(value);
+    if (column.property.type === 'files') {
+      value.querySelectorAll('[data-blok-database-file-chip]').forEach((chip) => chip.prepend(fileChipIcon()));
+    }
 
     const icon = column.property.type === 'title' && showsPageIcon(this.options.view) ? pageIconElement(row) ?? pagePlaceholderIcon() : null;
 

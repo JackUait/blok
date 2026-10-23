@@ -111,4 +111,11 @@ describe('database table view styles', () => {
     expect(ruleBody('[data-blok-database-table-blank-row] > [data-blok-database-table-filler]')).toContain('border-block-end: 1px solid var(--blok-database-table-border)');
     expect(ruleBody('[data-blok-database-table-grid][data-vertical-lines="true"] [data-blok-database-table-blank-cell]')).toContain('border-inline-end');
   });
+
+  it('sizes the file chip glyph to 20px in the chip ink (feel T23)', () => {
+    const icon = ruleBody('[data-blok-database-file-chip-icon]');
+
+    expect(icon).toMatch(/flex:\s*none/);
+    expect(ruleBody('[data-blok-database-file-chip-icon] svg')).toMatch(/width:\s*20px/);
+  });
 });

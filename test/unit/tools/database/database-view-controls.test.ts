@@ -127,6 +127,26 @@ describe('DatabaseViewControls', () => {
     });
   });
 
+  // feel/findings-table T06 (01-notion-empty-db.png): a title-only database shows only Settings and New.
+  it('shows only settings until the database has a second property', () => {
+    const props: PropertyDefinition[] = [schema[0]];
+    const { controls } = setup({
+      schema: () => props,
+      levers: { automations: { read: () => undefined, schema: () => props, views: () => [], writable: () => true, write: () => true } },
+    });
+    const shown = (): string[] => [...document.querySelectorAll<HTMLElement>('[data-blok-database-view-toolbar] > button:not([hidden])')]
+      .map((el) => el.getAttribute('data-blok-testid') ?? '');
+
+    expect(shown()).toEqual(['database-toolbar-settings']);
+
+    props.push(schema[1]);
+    controls.refresh();
+
+    expect(shown()).toEqual([
+      'database-toolbar-filter', 'database-toolbar-sort', 'database-toolbar-automations', 'database-toolbar-search', 'database-toolbar-settings',
+    ]);
+  });
+
   // research/23 §2e: the column header's Group follows the same rule as the settings picker.
   it('turns Hide empty groups on when a column header groups by a number', () => {
     const { controls, host } = setup();

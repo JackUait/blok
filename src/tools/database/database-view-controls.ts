@@ -261,11 +261,16 @@ export class DatabaseViewControls {
     this.previewFormButton.hidden = this.host.previewForm === undefined || this.shareFormButton.hidden;
     this.filterButton.toggleAttribute('data-active', view.filters.length + countFilterRules(view.filterTree) > 0);
     this.sortButton.toggleAttribute('data-active', view.sorts.length > 0);
-    this.automationsButton.hidden = this.host.automations === undefined;
+    // Notion keeps these back until a database has a property besides its title.
+    const titleOnly = this.host.schema().length <= 1;
+
+    this.filterButton.hidden = titleOnly;
+    this.sortButton.hidden = titleOnly;
+    this.automationsButton.hidden = titleOnly || this.host.automations === undefined;
     this.automationsButton.disabled = this.host.automations?.writable() !== true;
-    this.autofillButton.hidden = this.host.autofill === undefined;
+    this.autofillButton.hidden = titleOnly || this.host.autofill === undefined;
     this.autofillButton.disabled = this.host.autofill?.writable() !== true;
-    this.searchButton.hidden = this.host.rowCount() < SEARCH_MIN_ROWS && this.query === '';
+    this.searchButton.hidden = (titleOnly || this.host.rowCount() < SEARCH_MIN_ROWS) && this.query === '';
     this.renderFilterBar(view);
     this.panel?.refresh();
   }

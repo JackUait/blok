@@ -157,11 +157,9 @@ const samples: Record<keyof typeof BLOCK_CLASSES, Sample[]> = {
       ],
     },
     {
+      // Rename opens View settings: its name field sits in the panel, outside the block.
       state: 'view rename', data: databaseData,
-      inputs: [
-        { selector: '[data-blok-database-title]', field: 'title' },
-        { selector: '[data-blok-database-tab-rename-input]', field: 'views', scope: 'nested' },
-      ],
+      inputs: [{ selector: '[data-blok-database-title]', field: 'title' }],
     },
     {
       state: 'card rename', data: databaseData, children: databaseRows,
@@ -712,23 +710,20 @@ describe('Task02/28 inputFields scratch candidate', () => {
     const { block } = await boot('database', sample);
     const before = await block.data;
     if (!Array.isArray(before.views)) throw new Error('Missing database views.');
-    const input = requireElement(block, '[data-blok-database-tab-rename-input]');
+    const input = document.querySelector('[data-blok-testid="database-settings-view-name"]');
     if (!(input instanceof HTMLInputElement)) throw new Error('View rename is not a native input.');
-    const editingInputs = block.inputs;
+    expect(input).toHaveFocus();
     input.value = 'Planning';
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 
     const saved = await block.data;
     if (!Array.isArray(saved.views)) throw new Error('Missing renamed database views.');
-    const renamed = saved.views.find((view: unknown) => isRecord(view) && view.id === 'board');
-    expect(isRecord(renamed) ? renamed.name : undefined).toBe('Planning');
     expect(saved).toEqual({
       ...before,
       views: before.views.map((view: unknown) => isRecord(view) && view.id === 'board' ? { ...view, name: 'Planning' } : view),
     });
-    expect(editingInputs).toEqual([requireElement(block, '[data-blok-database-title]'), input]);
+    expect(block.inputs).toEqual([requireElement(block, '[data-blok-database-title]')]);
     expect(descriptionFor('database').inputFields).toEqual(['title']);
-    expect(descriptionFor('database').inputFields?.[1]).toBeUndefined();
   }, 60_000);
 
   it('card rename writes the row title and title-property mirror, not the database title', async () => {

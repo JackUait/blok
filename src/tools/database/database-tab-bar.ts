@@ -62,6 +62,8 @@ export interface TabBarOptions {
   onReorder: (viewId: string, newPosition: string) => void;
   /** "Edit view": opens the view settings panel under the tab. */
   onEditView?: (viewId: string, anchor: HTMLElement) => void;
+  /** "Rename" opens the view settings with the name field focused (findings V08). Without it, the tab renames inline. */
+  onRenameView?: (viewId: string, anchor: HTMLElement) => void;
   /** This person's "Display as". Defaults to both. */
   display?: DatabaseTabDisplay;
   /** Offers "Display as" in the tab menu. */
@@ -364,7 +366,7 @@ export class DatabaseTabBar {
         name: 'database-view-rename',
         title: t('tools.database.renameView', 'Rename'),
         closeOnActivate: true,
-        onActivate: menu.rename,
+        onActivate: this.options.onRenameView === undefined ? menu.rename : () => this.options.onRenameView?.(viewId, menu.editAnchor),
       },
       ...(menu.withDisplay ? this.dataSourceTitleItems() : []),
       {

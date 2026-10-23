@@ -2233,7 +2233,8 @@ const idList = (value: FilterConfig['value']): string[] => {
   return typeof value === 'string' && value !== '' ? [value] : [];
 };
 
-export type ViewSettingsStart = 'root' | 'filter' | 'sort' | 'group' | 'layout' | 'properties' | 'automations' | 'autofill';
+/** `rename` is the root with the name field focused and selected (findings V08). */
+export type ViewSettingsStart = 'root' | 'rename' | 'filter' | 'sort' | 'group' | 'layout' | 'properties' | 'automations' | 'autofill';
 
 /** Opens the view settings panel under `anchor`, at `start`. */
 export const openViewSettings = (
@@ -2245,6 +2246,7 @@ export const openViewSettings = (
   const pages = new ViewSettingsPages(ctx);
   const root = {
     root: (): PanelPage => pages.root(),
+    rename: (): PanelPage => pages.root(),
     filter: (): PanelPage => pages.filters(),
     sort: (): PanelPage => pages.sorts(),
     group: (): PanelPage => pages.group(false),
@@ -2264,6 +2266,12 @@ export const openViewSettings = (
   });
 
   panel.open();
+  if (start === 'rename') {
+    const name = panel.root.querySelector<HTMLInputElement>('[data-blok-testid="database-settings-view-name"]');
+
+    name?.focus();
+    name?.select();
+  }
 
   return panel;
 };

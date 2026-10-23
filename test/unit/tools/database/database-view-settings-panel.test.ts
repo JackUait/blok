@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { DatabaseModel } from '../../../../src/tools/database/database-model';
 import { openFilterPill, openViewSettings } from '../../../../src/tools/database/database-view-settings-panel';
-import type { ViewSettingsContext } from '../../../../src/tools/database/database-view-settings-panel';
+import type { ViewSettingsContext, ViewSettingsStart } from '../../../../src/tools/database/database-view-settings-panel';
 import type { DatabasePanel } from '../../../../src/tools/database/database-panel';
 import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
 import { IconBoard, IconTable } from '../../../../src/components/icons';
@@ -28,7 +28,7 @@ const exists = (id: string): boolean => document.querySelector(`[data-blok-testi
 interface Harness {
   ctx: ViewSettingsContext;
   state: { view: DatabaseViewConfig; locked: boolean };
-  open: (start?: 'root' | 'filter' | 'sort' | 'group') => DatabasePanel;
+  open: (start?: ViewSettingsStart) => DatabasePanel;
   openPill: (filterId: string) => DatabasePanel;
 }
 
@@ -221,6 +221,15 @@ describe('view settings panel', () => {
       type('   ', 'blur');
       expect(h.ctx.updateView).not.toHaveBeenCalled();
       expect(field().value).toBe('Table');
+    });
+
+    // findings V08: Rename opens View settings with the name field focused.
+    it('a "rename" start opens the root with the name selected in the focused field', () => {
+      harness({ name: 'Roadmap' }).open('rename');
+
+      expect(field()).toHaveFocus();
+      expect([field().selectionStart, field().selectionEnd]).toEqual([0, 'Roadmap'.length]);
+      expect(document.querySelector('[data-blok-database-panel-header]')?.getAttribute('data-blok-database-panel-header')).toBe('label');
     });
 
     it('is read-only while the database is locked', () => {

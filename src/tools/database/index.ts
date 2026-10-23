@@ -4523,6 +4523,7 @@ export class DatabaseTool implements BlockTool {
       onDelete: (viewId) => this.requestDeleteView(viewId),
       onReorder: (viewId, newPosition) => this.reorderView(viewId, newPosition),
       onEditView: (viewId, anchor) => this.editView(viewId, anchor),
+      onRenameView: (viewId, anchor) => this.editView(viewId, anchor, 'rename'),
       display: this.tabDisplay.get(),
       onDisplayChange: (display) => {
         this.tabDisplay.set(display);
@@ -6245,12 +6246,12 @@ export class DatabaseTool implements BlockTool {
     this.rebuildTabBar();
   }
 
-  /** "Edit view" on a tab: show that view, then its settings under the tab. */
-  private editView(viewId: string, anchor: HTMLElement): void {
+  /** "Edit view" or "Rename" on a tab: show that view, then its settings. */
+  private editView(viewId: string, anchor: HTMLElement, start: 'root' | 'rename' = 'root'): void {
     this.switchView(viewId);
     const tab = this.element?.querySelector<HTMLElement>(`[data-blok-database-tab][data-view-id="${CSS.escape(viewId)}"]`);
 
-    this.controls.openSettings(tab?.isConnected === true ? tab : anchor, 'root');
+    this.controls.openSettings(tab?.isConnected === true ? tab : anchor, start);
   }
 
   private setDatabaseLocked(locked: boolean): void {

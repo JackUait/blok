@@ -116,6 +116,19 @@ describe('DatabaseTool — view settings', () => {
     expect(root.querySelector('[data-blok-database-tab][data-view-id="v1"] [data-blok-database-tab-name]')?.textContent).toBe('Roadmap');
   });
 
+  // findings V08: the tab menu's Rename opens View settings with the name field focused.
+  it('the tab menu\'s Rename opens view settings with the name field focused', () => {
+    const { root } = mount({}, {}, { views: [tableView(), tableView({ id: 'v2', name: 'Two', position: 'a1' })] });
+    const tab = root.querySelector('[data-blok-database-tab][data-view-id="v2"]');
+
+    tab?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    document.querySelector<HTMLElement>('[data-blok-item-name="database-view-rename"]')?.click();
+
+    expect(root.querySelector('[data-blok-database-tab-rename-input]')).toBeNull();
+    expect(q('database-settings-view-name')).toHaveFocus();
+    expect((q('database-settings-view-name') as HTMLInputElement).value).toBe('Two');
+  });
+
   it('draws the toolbar beside the tabs', () => {
     const { root } = mount();
 

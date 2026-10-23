@@ -454,6 +454,13 @@ describe('DatabaseListView', () => {
       expect(slot(list, 'fx')?.textContent).toBe('$7.00');
     });
 
+    it('marks each slot with its property type, so the list can cap its width', () => {
+      const list = make();
+
+      expect(slot(list, 'st')?.getAttribute('data-type')).toBe('status');
+      expect(slot(list, 'due')?.getAttribute('data-type')).toBe('date');
+    });
+
     it('leaves out a property with no value', () => {
       expect(slot(make(), 'notes')).toBeNull();
     });

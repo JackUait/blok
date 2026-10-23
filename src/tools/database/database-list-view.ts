@@ -631,6 +631,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
 
     badge.setAttribute('data-blok-database-list-row-property', '');
     badge.setAttribute('data-property-id', propDef.id);
+    badge.setAttribute('data-type', propDef.type);
     if (!this.readOnly && !NOT_EDITABLE.has(propDef.type)) {
       badge.setAttribute('data-editable', '');
       badge.setAttribute('tabindex', '-1');

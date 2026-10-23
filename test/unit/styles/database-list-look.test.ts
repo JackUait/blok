@@ -71,6 +71,40 @@ describe('list rows (research/07)', () => {
   });
 });
 
+describe('list row widths (findings-listgallery L01)', () => {
+  it('keeps the title at least 120px wide and lets it grow', () => {
+    const body = ruleBody(database, '[data-blok-database-list-row-title]');
+
+    expect(body).toContain('flex: 1 1 auto');
+    expect(body).toContain('min-width: 120px');
+  });
+
+  it('lets the properties shrink and clip inside the row', () => {
+    const body = ruleBody(database, '[data-blok-database-list-row-properties]');
+
+    expect(body).toContain('flex: 0 1 auto');
+    expect(body).toContain('min-width: 0');
+    expect(body).toContain('overflow: hidden');
+    expect(body).not.toContain('flex-shrink: 0');
+  });
+
+  it('lets each slot shrink, clipped, with Notion\'s caps per type', () => {
+    const slot = ruleBody(database, '[data-blok-database-list-row-property]');
+
+    expect(slot).toContain('flex: 0 1 auto');
+    expect(slot).toContain('min-width: 0');
+    expect(slot).toContain('overflow: hidden');
+    expect(ruleBody(database, '[data-blok-database-list-row-property] [data-blok-database-cell]')).toContain('flex-wrap: nowrap');
+    expect(ruleBody(database, '[data-blok-database-list-row-property] [data-blok-database-cell] > *')).toContain('flex-shrink: 0');
+    for (const type of ['multiSelect', 'select', 'files']) {
+      expect(ruleBody(database, `[data-blok-database-list-row-property][data-type="${type}"]`)).toContain('max-width: max(200px, 14%)');
+    }
+    for (const type of ['date', 'number']) {
+      expect(ruleBody(database, `[data-blok-database-list-row-property][data-type="${type}"]`)).toContain('max-width: max(150px, 14%)');
+    }
+  });
+});
+
 describe('conditional color on calendar, timeline and feed (research/05 §6.2)', () => {
   const PAINTED = ':is([data-blok-database-calendar-event], [data-blok-database-timeline-bar], [data-blok-database-feed-card])[data-blok-database-color]';
 

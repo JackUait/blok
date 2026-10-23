@@ -1059,6 +1059,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_TITLE_PLACEHOLDER_BYTES = 580;
     // database.css: a disabled toolbar button (⚡ / ✦ while locked) keeps no fill.
     const DATABASE_TOOLBAR_DISABLED_BYTES = 183;
+    // database.css: list and gallery (findings-listgallery): slot caps and clipping.
+    const DATABASE_LIST_GALLERY_BYTES = 707;
     // database.css: table grid feel (title page glyph, header line, dark header, empty-table lines and Add property, title editor weight, file chip glyph); measured growth.
     // +174: the floated sub-item toggle.
     const DATABASE_TABLE_GRID_FEEL_BYTES = 1_982 + 174;
@@ -1319,6 +1321,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_TEMPLATE_MENU_ROWS_BYTES
       + DATABASE_TITLE_PLACEHOLDER_BYTES
       + DATABASE_TOOLBAR_DISABLED_BYTES
+      + DATABASE_LIST_GALLERY_BYTES
       + DATABASE_TABLE_GRID_FEEL_BYTES
       + DATABASE_HEADER_MENU_BYTES
       + DATABASE_ADD_PROPERTY_GRID_BYTES

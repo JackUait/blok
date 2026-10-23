@@ -6366,7 +6366,7 @@ button[data-blok-database-column-count]:hover {
 }
 
 [data-blok-database-list-row-title] {
-  flex: 1;
+  flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -6374,7 +6374,7 @@ button[data-blok-database-column-count]:hover {
   line-height: 21px;
   font-weight: 500;
   color: var(--blok-database-ink);
-  min-width: 0;
+  min-width: 120px;
 }
 
 [data-blok-database-list-row-title][data-placeholder] {
@@ -6394,20 +6394,32 @@ button[data-blok-database-column-count]:hover {
 [data-blok-database-list-row-properties] {
   display: flex;
   align-items: center;
-  flex-shrink: 0;
+  flex: 0 1 auto;
   min-width: 0;
+  overflow: hidden;
 }
 
 [data-blok-database-list-row-property] {
   display: inline-flex;
   align-items: center;
+  flex: 0 1 auto;
+  min-width: 0;
   height: 30px;
   padding: 0 var(--blok-space-2);
+  overflow: hidden;
   border-radius: var(--blok-radius-control);
   white-space: nowrap;
   font-size: 14px;
   color: var(--blok-database-ink);
   outline: none;
+}
+
+[data-blok-database-list-row-property][data-type="multiSelect"], [data-blok-database-list-row-property][data-type="select"], [data-blok-database-list-row-property][data-type="files"] {
+  max-width: max(200px, 14%);
+}
+
+[data-blok-database-list-row-property][data-type="date"], [data-blok-database-list-row-property][data-type="number"] {
+  max-width: max(150px, 14%);
 }
 
 [data-blok-database-list-row-property][data-editable]:hover {
@@ -6416,8 +6428,14 @@ button[data-blok-database-column-count]:hover {
 
 [data-blok-database-list-row-property] [data-blok-database-cell] {
   display: inline-flex;
+  flex-wrap: nowrap;
   align-items: center;
   gap: var(--blok-space-1);
+  white-space: nowrap;
+}
+
+[data-blok-database-list-row-property] [data-blok-database-cell] > * {
+  flex-shrink: 0;
 }
 
 [data-blok-database-list-row-property] [data-blok-database-option-pill]:not([data-status-group]) {

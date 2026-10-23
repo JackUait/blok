@@ -169,6 +169,12 @@ class Tooltip {
   private ariaObserver: MutationObserver | null = null;
 
   /**
+   * Watches the page while a hint is open: a trigger removed from the page
+   * gets no pointerleave, so its hint would otherwise stay on screen.
+   */
+  private detachObserver: MutationObserver | null = null;
+
+  /**
    * The element the singleton tooltip currently describes. Tracked so
    * {@link hide} clears `aria-describedby` from exactly that element (the
    * singleton describes only one target at a time).
@@ -403,6 +409,19 @@ class Tooltip {
     }
     this.showed = true;
     this.registerEscapeListener();
+    this.watchTriggerDetach();
+  }
+
+  private watchTriggerDetach(): void {
+    if (this.detachObserver !== null || typeof MutationObserver === 'undefined') {
+      return;
+    }
+    this.detachObserver = new MutationObserver(() => {
+      if (this.currentTarget !== null && !this.currentTarget.isConnected) {
+        this.hide();
+      }
+    });
+    this.detachObserver.observe(document.body, { childList: true, subtree: true });
   }
 
   /**
@@ -490,6 +509,8 @@ class Tooltip {
     this.cancelGraceHide();
 
     document.removeEventListener('keydown', this.handleDocumentKeydown, { capture: true });
+    this.detachObserver?.disconnect();
+    this.detachObserver = null;
 
     if (this.currentTarget) {
       this.currentTarget.removeAttribute(ARIA_DESCRIBEDBY_ATTRIBUTE);
@@ -636,6 +657,8 @@ class Tooltip {
 
     this.ariaObserver?.disconnect();
     this.ariaObserver = null;
+    this.detachObserver?.disconnect();
+    this.detachObserver = null;
 
     if (this.nodes.wrapper) {
       this.nodes.wrapper.remove();

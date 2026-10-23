@@ -10476,7 +10476,8 @@ textarea[data-blok-database-cell-input] {
 
 /* findings C14: with the panel shown, the toggle is a « at the panel's end, and the month follows it. */
 [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"] {
-  margin-inline-start: calc(244px - 24px);
+  /* The 244px panel less this 24px button. */
+  margin-inline-start: 220px;
 }
 
 [data-blok-database-timeline-toolbar] [data-blok-database-timeline-table-toggle][aria-pressed="true"] svg {
@@ -12319,9 +12320,8 @@ button[data-blok-database-feed-reaction]:hover,
 
 [data-blok-database-timeline-link-handle]:hover svg {
   display: block;
-  inline-size: 8px;
-  block-size: 8px;
-  margin: -1px;
+  inline-size: 6px;
+  block-size: 6px;
   color: var(--blok-database-timeline-muted-text);
 }
 

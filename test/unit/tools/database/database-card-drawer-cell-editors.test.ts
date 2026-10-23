@@ -159,6 +159,73 @@ describe('DatabaseCardDrawer — cell editors', () => {
     expect(drawer.isOpen).toBe(true);
   });
 
+  // feel/findings-rowpage R21: Tab commits and opens the next property's editor, skipping Checkbox; Shift+Tab the previous one.
+  describe('Tab between editors', () => {
+    const NOTE: PropertyDefinition = { id: 'prop-note', name: 'Note', type: 'text', position: 'a4' };
+    const tab = (shiftKey = false): KeyboardEvent => {
+      const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true });
+      const target = editor()?.querySelector<HTMLElement>('input, textarea') ?? editor() ?? document.body;
+
+      target.dispatchEvent(event);
+
+      return event;
+    };
+
+    it('Tab commits the number and opens the next editable value, past the checkbox', () => {
+      const options = createOptions({ schema: [...SCHEMA, NOTE] });
+
+      new DatabaseCardDrawer(options).open(makeRow({ 'prop-score': 3 }));
+      valueOf(options, 'prop-score').click();
+      const input = editor()?.querySelector<HTMLInputElement>('input');
+
+      if (input === null || input === undefined) throw new Error('no input');
+      input.value = '7';
+      const event = tab();
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(options.onPropertyValueChange).toHaveBeenCalledWith('row-1', 'prop-score', 7);
+      expect(options.onPropertyValueChange).not.toHaveBeenCalledWith('row-1', 'prop-done', expect.anything());
+      expect(editor()?.querySelector('[data-blok-database-cell-input="text"]')).not.toBeNull();
+    });
+
+    it('Shift+Tab opens the previous editable value', () => {
+      const options = createOptions();
+
+      new DatabaseCardDrawer(options).open(makeRow());
+      valueOf(options, 'prop-score').click();
+      tab(true);
+
+      expect(editor()?.closest('[data-blok-popover]')).not.toBeNull();
+      expect(editor()?.querySelector('[data-blok-database-cell-input="number"]')).toBeNull();
+    });
+
+    it('Tab on the last editable value closes the editor and keeps focus on that value', () => {
+      const options = createOptions({ schema: [...SCHEMA, NOTE] });
+
+      new DatabaseCardDrawer(options).open(makeRow());
+      valueOf(options, 'prop-note').click();
+      tab();
+
+      expect(editor()).toBeNull();
+      expect(valueOf(options, 'prop-note')).toHaveFocus();
+    });
+
+    // feel/findings-rowpage R22: one Tab from the title opens the first editable value's editor.
+    it('Tab in the title opens the first editable value', () => {
+      const options = createOptions();
+
+      new DatabaseCardDrawer(options).open(makeRow());
+      const title = options.wrapper.querySelector<HTMLTextAreaElement>('[data-blok-database-drawer-title]');
+      const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+
+      title?.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(editor()).not.toBeNull();
+      expect(editor()?.querySelector('[data-blok-database-cell-input="number"]')).toBeNull();
+    });
+  });
+
   it('pressing inside the editor does not close the drawer', () => {
     const options = createOptions();
     const drawer = new DatabaseCardDrawer(options);

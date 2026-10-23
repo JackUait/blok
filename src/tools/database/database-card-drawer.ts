@@ -524,6 +524,8 @@ export class DatabaseCardDrawer {
   /** A body still in a side peek that is sliding out. */
   private leavingBodyRowId: string | null = null;
   private cellEditor: CellEditorHandle | null = null;
+  /** Window-capture Tab while a value editor is open: editors live in a body popover the drawer never sees. */
+  private editorTab: ((event: KeyboardEvent) => void) | null = null;
   private readonly events: Pick<Events, 'on' | 'off'> | undefined;
 
   private drawer: HTMLDivElement | null = null;
@@ -717,6 +719,13 @@ export class DatabaseCardDrawer {
         && this.rowBody?.move?.(this.attachedBodyRowId, e.key === 'ArrowDown' ? 1 : -1) === true) {
         e.preventDefault();
         e.stopPropagation();
+
+        return;
+      }
+      // R22: one Tab from the title opens the first value's editor.
+      if (e.key === 'Tab' && !e.shiftKey && !e.isComposing && !this.readOnly && this.tabbableValues().length > 0) {
+        e.preventDefault();
+        this.openNextEditor(null, 1);
 
         return;
       }
@@ -3324,6 +3333,7 @@ export class DatabaseCardDrawer {
       },
       onClose: () => {
         this.cellEditor = null;
+        this.releaseEditorTab();
         const current = this.schema.find((p) => p.id === propertyId);
 
         if (slot.isConnected && current !== undefined && this.currentRow?.id === rowId) {
@@ -3333,13 +3343,69 @@ export class DatabaseCardDrawer {
     });
     if (!this.cellEditor.isOpen) {
       this.cellEditor = null;
+
+      return;
     }
+    this.watchEditorTab(slot);
+  }
+
+  /** research R21: Tab commits and opens the next value's editor, Shift+Tab the previous; focus stays in the page. */
+  private watchEditorTab(slot: HTMLElement): void {
+    this.releaseEditorTab();
+    const editor = this.cellEditor;
+    const onTab = (event: KeyboardEvent): void => {
+      if (this.cellEditor !== editor || editor === null || this.drawer?.isConnected !== true) {
+        this.releaseEditorTab();
+
+        return;
+      }
+      // The option delete prompt keeps its own Tab loop.
+      if (event.key !== 'Tab' || event.isComposing || (event.target instanceof Element && event.target.closest('[role="alertdialog"]') !== null)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      this.openNextEditor(slot, event.shiftKey ? -1 : 1);
+    };
+
+    this.editorTab = onTab;
+    window.addEventListener('keydown', onTab, true);
+  }
+
+  private releaseEditorTab(): void {
+    if (this.editorTab !== null) window.removeEventListener('keydown', this.editorTab, true);
+    this.editorTab = null;
+  }
+
+  /** Values Tab walks through. A checkbox is skipped: opening its editor would toggle it. */
+  private tabbableValues(): HTMLElement[] {
+    return [...this.drawer?.querySelectorAll<HTMLElement>('[data-blok-database-drawer-prop-value][role="button"]') ?? []]
+      .filter((el) => this.schema.find((p) => p.id === el.getAttribute('data-property-id'))?.type !== 'checkbox');
+  }
+
+  /** `from` null: the title, so the first value. */
+  private openNextEditor(from: HTMLElement | null, step: 1 | -1): boolean {
+    const values = this.tabbableValues();
+    const nextId = (from === null ? values[0] : values[values.indexOf(from) + step])?.getAttribute('data-property-id') ?? null;
+
+    this.closeCellEditor();
+    // The commit may repaint the page, so find the next value again by its id.
+    const next = nextId === null ? null : this.tabbableValues().find((el) => el.getAttribute('data-property-id') === nextId) ?? null;
+
+    if (next === null) {
+      if (from?.isConnected === true) from.focus();
+
+      return false;
+    }
+    next.focus();
+    this.openValueEditor(next, nextId as string);
+
+    return true;
   }
 
   private closeCellEditor(): void {
     const editor = this.cellEditor;
 
     this.cellEditor = null;
+    this.releaseEditorTab();
     editor?.close();
   }
 
@@ -3348,6 +3414,7 @@ export class DatabaseCardDrawer {
     const editor = this.cellEditor;
 
     this.cellEditor = null;
+    this.releaseEditorTab();
     editor?.cancel();
   }
 

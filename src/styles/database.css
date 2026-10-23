@@ -961,9 +961,9 @@
 /**
  * Column header — grab cursor to indicate draggable area.
  */
-/* Header height is unmeasured on boards; 36px matches Notion's table header row. */
+/* Notion's header strip: 40px, the pill centred in it (findings-board B12). */
 [data-blok-database-column-header] {
-  min-height: 36px;
+  min-height: 40px;
   box-sizing: border-box;
   cursor: grab;
   border-radius: var(--blok-radius-inner, var(--blok-radius-control-sm));

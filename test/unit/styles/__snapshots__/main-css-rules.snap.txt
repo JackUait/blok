@@ -4766,7 +4766,7 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-database-column-header] {
-  min-height: 36px;
+  min-height: 40px;
   box-sizing: border-box;
   cursor: grab;
   border-radius: var(--blok-radius-inner, var(--blok-radius-control-sm));

@@ -580,7 +580,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     cardsContainer.setAttribute('data-blok-keyboard-owner', '');
     cardsContainer.style.display = 'flex';
     cardsContainer.style.flexDirection = 'column';
-    cardsContainer.style.paddingTop = '6px';
+    cardsContainer.style.paddingTop = '3px';
 
     for (const row of rows) {
       const cardEl = this.createCardElement(row, titlePropertyId);
@@ -656,7 +656,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     header.setAttribute('data-blok-database-column-header', '');
     header.style.display = 'flex';
     header.style.alignItems = 'center';
-    header.style.padding = '0 0 6px 0';
+    header.style.padding = '0';
     header.style.gap = '6px';
     header.style.cursor = 'grab';
 

@@ -1004,14 +1004,15 @@ describe('DatabaseBoardView', () => {
       expect(container.style.minHeight).toBe('');
     });
 
-    it('cards container has padding-top of 6px', () => {
+    // findings-board B12: the first card sits at the column top +43 (40px header + 3px).
+    it('cards container has padding-top of 3px', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
       const board = view.createView();
 
       const container = board.querySelector('[data-blok-database-cards]') as HTMLElement;
 
-      expect(container.style.paddingTop).toBe('6px');
+      expect(container.style.paddingTop).toBe('3px');
     });
 
     it('column element has min-width of 276px', () => {

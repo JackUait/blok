@@ -94,8 +94,9 @@ describe('board column, card and header look (research/08)', () => {
     expect(tokenValues('--blok-database-option-gray-text')).toEqual(['rgb(73, 72, 70)', 'rgb(240, 239, 237)', 'rgb(240, 239, 237)']);
   });
 
-  it('gives the column header room so the pill does not touch the tint edge (height unmeasured; Notion table headers are 36px)', () => {
-    expect(ruleBody(database, '[data-blok-database-column-header]')).toContain('min-height: 36px');
+  // findings-board B12: Notion's header strip is 40px, the pill centred at +20.
+  it('makes the column header a 40px strip', () => {
+    expect(ruleBody(database, '[data-blok-database-column-header]')).toContain('min-height: 40px');
   });
 
   it('draws a card with the block radius, a 3-layer shadow whose 1px ring takes the column hue, and 8px below it', () => {

@@ -240,13 +240,13 @@ describe('DatabaseBoardView — mutation coverage', () => {
       }).toStrictEqual({
         headerDisplay: 'flex',
         headerAlignItems: 'center',
-        headerPadding: '0px 0px 6px',
+        headerPadding: '0px',
         headerGap: '6px',
         headerCursor: 'grab',
         cardsDisplay: 'flex',
         cardsFlexDirection: 'column',
         cardsGap: '',
-        cardsPaddingTop: '6px',
+        cardsPaddingTop: '3px',
         cardsMinHeight: '',
       });
     });

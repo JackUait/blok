@@ -137,7 +137,10 @@ test.describe('gallery', () => {
 
     await expect(page.locator('[data-blok-database-gallery-card]')).toHaveCount(3);
     await expect(card(page, 'r1').locator('[data-blok-database-gallery-title]')).toHaveText('Launch');
-    expect((await card(page, 'r1').locator('[data-blok-database-gallery-preview]').boundingBox())?.height).toBeCloseTo(146, 0);
+    // findings-listgallery L13: the preview is 16:9 of the card width at every card size.
+    const width = (await card(page, 'r1').boundingBox())?.width ?? 0;
+
+    expect((await card(page, 'r1').locator('[data-blok-database-gallery-preview]').boundingBox())?.height).toBeCloseTo(width * 9 / 16, 0);
     await expect(page.locator('[data-blok-database-gallery-grid]')).toHaveCSS('gap', '16px');
   });
 
@@ -173,7 +176,10 @@ test.describe('gallery', () => {
 
     await mount(page, blocks({ type: 'gallery', cardPreview: 'property:p-image' }, rows));
 
-    expect((await card(page, 'r2').locator('[data-blok-database-gallery-preview]').boundingBox())?.height).toBeCloseTo(146, 0);
+    // findings-listgallery L13: the empty cover keeps the 16:9 preview of the card width.
+    const width = (await card(page, 'r2').boundingBox())?.width ?? 0;
+
+    expect((await card(page, 'r2').locator('[data-blok-database-gallery-preview]').boundingBox())?.height).toBeCloseTo(width * 9 / 16, 0);
   });
 
   test('"Page cover" shows the row\'s own cover, and follows a cover set in the drawer', async ({ page }) => {

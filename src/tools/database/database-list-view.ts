@@ -479,7 +479,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
     header.addEventListener('click', (event) => {
       const target = event.target instanceof Element ? event.target : null;
 
-      if ((target?.closest('[data-blok-database-list-group-actions]') ?? null) !== null) {
+      if (target !== null && target.closest('[data-blok-database-list-group-actions]') !== null) {
         // "+" adds through the group's own "+ New page"; "…" is the host's group menu.
         if (target.closest('[data-blok-database-list-group-add]') !== null) {
           groupEl.querySelector<HTMLElement>(':scope > [data-blok-database-add-row]')?.click();

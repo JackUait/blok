@@ -62,7 +62,23 @@ describe('page layout — reading the title property', () => {
     expect(resolved.groupIn).toBe('page');
   });
 
-  it('places pins, modules and sections, and keeps the rest in the group in schema order', () => {
+  // feel/findings-rowpage R12, research/09:44: an unplaced property sits in the group A→Z by name, not in schema order.
+  it('orders unplaced group properties by name, after the group placements in their saved order', () => {
+    const named = [
+      { ...prop('z'), name: 'Zeta' },
+      { ...prop('t'), name: 'text' },
+      { ...prop('a2'), name: 'Aardvark' },
+      { ...prop('d'), name: 'Date' },
+      { ...prop('n'), name: 'Note' },
+    ];
+
+    expect(ids(resolvePageLayout(pageLayoutOf(TITLE), named).group)).toEqual(['a2', 'd', 'n', 't', 'z']);
+    const dragged = pageLayoutOf({ ...TITLE, pageLayoutPlacements: [{ id: 'z', place: 'group' }, { id: 'n', place: 'group' }] });
+
+    expect(ids(resolvePageLayout(dragged, named).group)).toEqual(['z', 'n', 'a2', 'd', 't']);
+  });
+
+  it('places pins, modules and sections, and keeps the rest in the group in name order', () => {
     const layout = pageLayoutOf({
       ...TITLE,
       pageLayoutSections: [{ id: 's1', name: 'Dates' }],

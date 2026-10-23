@@ -130,7 +130,8 @@ describe('DatabaseCardDrawer — page layout', () => {
     new DatabaseCardDrawer(options).open(ROW);
 
     expect(idsIn('[data-blok-database-drawer-pins]')).toEqual(['p-due']);
-    expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['p-status', 'p-owner', 'p-rel']);
+    // The group lists by name (R12): Owner, Status, Tasks.
+    expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['p-owner', 'p-status', 'p-rel']);
   });
 
   it('puts a 16px property icon beside each label, outside the label text', () => {
@@ -155,7 +156,7 @@ describe('DatabaseCardDrawer — page layout', () => {
     expect(q('[data-blok-database-drawer-pins]')).toBeNull();
     expect(q('[data-blok-database-drawer-details]')).toBeNull();
     expect(q('[data-blok-database-drawer-tabs]')).toBeNull();
-    expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['p-status', 'p-due', 'p-owner', 'p-rel']);
+    expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['p-due', 'p-owner', 'p-status', 'p-rel']);
   });
 
   it('draws named sections that fold away', () => {
@@ -780,7 +781,7 @@ describe('DatabaseCardDrawer — page layout', () => {
       q('[data-blok-database-drawer-props-toggle]')?.click();
 
       expect(q('[data-blok-database-drawer-props]')?.hidden).toBe(false);
-      expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['p-status', 'p-due', 'p-owner', 'p-rel']);
+      expect(idsIn('[data-blok-database-drawer-props]')).toEqual(['p-due', 'p-owner', 'p-status', 'p-rel']);
       q('[data-blok-database-layout-cancel]')?.click();
 
       expect(q('[data-blok-database-drawer-props]')?.hidden).toBe(true);

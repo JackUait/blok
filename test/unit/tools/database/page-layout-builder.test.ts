@@ -1150,7 +1150,8 @@ describe('PageLayoutBuilder', () => {
       drawer.refreshSchema([...schemaWith(), { id: 'p-new', name: 'Budget', type: 'number', position: 'a9' }]);
       onAdded?.('p-new');
 
-      expect(groupIds()).toEqual(['p-new', 'p-status', 'p-due']);
+      // Unplaced properties follow A→Z: Due before Status (R12).
+      expect(groupIds()).toEqual(['p-new', 'p-due', 'p-status']);
       apply();
 
       expect(written(options)?.placements).toEqual([{ id: 'p-new', place: 'group' }]);
@@ -1253,7 +1254,7 @@ describe('PageLayoutBuilder', () => {
       expect(menu?.querySelector('[data-blok-database-panel-header]')?.textContent).toBe('Add to page');
       expect(menu?.textContent).toContain('Use an existing property');
       expect(menu?.textContent).toContain('Create new property');
-      expect(listed(menu)).toEqual(['p-status', 'p-due']);
+      expect(listed(menu)).toEqual(['p-due', 'p-status']);
       q('[data-blok-testid="database-layout-add-existing-p-due"]')?.click();
 
       expect(q('[data-blok-testid="database-layout-add-module-menu"]')).toBeNull();
@@ -1295,9 +1296,9 @@ describe('PageLayoutBuilder', () => {
       const { drawer } = customize({ schema: [...schemaWith(), REL] });
 
       addToPanelButton().click();
-      expect(listed(q('[data-blok-testid="database-layout-add-panel-menu"]'))).toEqual(['p-status', 'p-due']);
+      expect(listed(q('[data-blok-testid="database-layout-add-panel-menu"]'))).toEqual(['p-due', 'p-status']);
       addModuleButton().click();
-      expect(listed(q('[data-blok-testid="database-layout-add-module-menu"]'))).toEqual(['p-status', 'p-due', 'p-rel']);
+      expect(listed(q('[data-blok-testid="database-layout-add-module-menu"]'))).toEqual(['p-due', 'p-status', 'p-rel']);
       drawer.destroy();
     });
 
@@ -1588,7 +1589,8 @@ describe('PageLayoutBuilder', () => {
       remove?.click();
 
       expect(canvasSections()).toEqual([['Later', []]]);
-      expect(menuSections()).toEqual([['', ['p-status', 'p-due', 'p-notes']], ['Later', []]]);
+      // Back in the group unplaced, so by name (R12).
+      expect(menuSections()).toEqual([['', ['p-due', 'p-notes', 'p-status']], ['Later', []]]);
       apply();
 
       expect(onDeleteProperty).not.toHaveBeenCalled();

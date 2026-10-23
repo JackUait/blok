@@ -43,7 +43,7 @@ export interface ResolvedPageLayout {
   heading: PropertyDefinition[];
   pageModules: PropertyDefinition[];
   panelModules: PropertyDefinition[];
-  /** Group properties outside every section: `group` placements in their order, then the rest in schema order. */
+  /** Group properties outside every section: `group` placements in their order, then the rest A→Z by name (research/09:44). */
   group: PropertyDefinition[];
   sections: Array<{ section: PageLayoutSection; properties: PropertyDefinition[] }>;
 }
@@ -122,8 +122,6 @@ export const resolvePageLayout = (layout: PageLayoutData, properties: PropertyDe
     group: [],
     sections: sections.map((section) => ({ section, properties: [] })),
   };
-  const inGroup = new Set<string>();
-
   for (const [id, placement] of placed) {
     const property = byId.get(id) as PropertyDefinition;
     const section = placement.place === 'section' ? resolved.sections.find((s) => s.section.id === placement.sectionId) : undefined;
@@ -139,19 +137,22 @@ export const resolvePageLayout = (layout: PageLayoutData, properties: PropertyDe
     } else if (placement.place === 'panel') {
       resolved.panelModules.push(property);
     } else {
-      inGroup.add(id);
+      // A pin past the limit or a gone section's member keeps its saved place in the group.
+      resolved.group.push(property);
     }
   }
-  for (const property of properties) {
-    const placement = placed.get(property.id);
-
-    if (placement === undefined || inGroup.has(property.id)) {
+  for (const property of [...properties].sort(byName)) {
+    if (!placed.has(property.id)) {
       resolved.group.push(property);
     }
   }
 
   return resolved;
 };
+
+/** Notion lists an unplaced property by name, so one added later is not last (feel/findings-rowpage R12). */
+const byName = (a: PropertyDefinition, b: PropertyDefinition): number =>
+  a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true }) || (a.position < b.position ? -1 : Number(a.position > b.position));
 
 const withPlacement = (layout: PageLayoutData, placement: PageLayoutPlacement | null, id: string): PageLayoutData => ({
   ...layout,

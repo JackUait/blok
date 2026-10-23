@@ -564,7 +564,8 @@ describe('row page properties panel', () => {
     expect(reveal?.textContent).toBe('2 more properties');
     reveal?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-    expect(shownProperties()).toEqual(['Notes', 'Secret', 'Maybe']);
+    // By name (R12).
+    expect(shownProperties()).toEqual(['Maybe', 'Notes', 'Secret']);
   });
 
   it('folds the shown hidden properties back with the same item', async () => {

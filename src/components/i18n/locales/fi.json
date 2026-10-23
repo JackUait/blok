@@ -342,6 +342,7 @@
   "tools.database.newGroup": "Uusi ryhmä",
   "tools.database.cardTitlePlaceholder": "Tyhjä sivu",
   "tools.database.cardNamePlaceholder": "Kirjoita nimi…",
+  "tools.database.cardAddProperty": "Lisää {property}",
   "tools.database.columnTitlePlaceholder": "Sarake",
   "tools.database.noValueGroup": "Ei {property}",
   "tools.database.removeSortingTitle": "Haluatko poistaa lajittelun?",

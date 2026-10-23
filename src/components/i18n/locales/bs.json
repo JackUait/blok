@@ -347,6 +347,7 @@
   "tools.database.cardMenuLabel": "Opcije kartice",
   "tools.database.cardTitlePlaceholder": "Prazna stranica",
   "tools.database.cardNamePlaceholder": "Unesite naziv…",
+  "tools.database.cardAddProperty": "Dodaj {property}",
   "tools.database.columnTitlePlaceholder": "Kolona",
   "tools.database.noValueGroup": "Bez {property}",
   "tools.database.removeSortingTitle": "Želite li ukloniti sortiranje?",

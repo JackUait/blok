@@ -353,6 +353,7 @@
   "tools.database.newGroup": "Нова група",
   "tools.database.cardTitlePlaceholder": "Празна страница",
   "tools.database.cardNamePlaceholder": "Внесете име…",
+  "tools.database.cardAddProperty": "Додај {property}",
   "tools.database.columnTitlePlaceholder": "Колона",
   "tools.database.noValueGroup": "Без {property}",
   "tools.database.removeSortingTitle": "Дали сакате да го отстраните сортирањето?",

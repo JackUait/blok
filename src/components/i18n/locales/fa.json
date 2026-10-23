@@ -342,6 +342,7 @@
   "tools.database.newGroup": "گروه جدید",
   "tools.database.cardTitlePlaceholder": "صفحه خالی",
   "tools.database.cardNamePlaceholder": "یک نام تایپ کنید…",
+  "tools.database.cardAddProperty": "افزودن {property}",
   "tools.database.columnTitlePlaceholder": "ستون",
   "tools.database.noValueGroup": "بدون {property}",
   "tools.database.removeSortingTitle": "آیا می‌خواهید مرتب‌سازی را بردارید؟",

@@ -353,6 +353,7 @@
   "tools.database.newGroup": "Nauja grupė",
   "tools.database.cardTitlePlaceholder": "Tuščias puslapis",
   "tools.database.cardNamePlaceholder": "Įveskite pavadinimą…",
+  "tools.database.cardAddProperty": "Pridėti {property}",
   "tools.database.columnTitlePlaceholder": "Stulpelis",
   "tools.database.noValueGroup": "Be {property}",
   "tools.database.removeSortingTitle": "Ar norite pašalinti rikiavimą?",

@@ -342,6 +342,7 @@
   "tools.database.newGroup": "กลุ่มใหม่",
   "tools.database.cardTitlePlaceholder": "หน้าเปล่า",
   "tools.database.cardNamePlaceholder": "พิมพ์ชื่อ…",
+  "tools.database.cardAddProperty": "เพิ่ม{property}",
   "tools.database.columnTitlePlaceholder": "คอลัมน์",
   "tools.database.noValueGroup": "ไม่มี {property}",
   "tools.database.removeSortingTitle": "ต้องการนำการเรียงลำดับออกหรือไม่?",

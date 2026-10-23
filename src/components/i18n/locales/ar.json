@@ -342,6 +342,7 @@
   "tools.database.newGroup": "مجموعة جديدة",
   "tools.database.cardTitlePlaceholder": "صفحة فارغة",
   "tools.database.cardNamePlaceholder": "اكتب اسمًا…",
+  "tools.database.cardAddProperty": "إضافة {property}",
   "tools.database.columnTitlePlaceholder": "عمود",
   "tools.database.noValueGroup": "بدون {property}",
   "tools.database.removeSortingTitle": "هل تريد إزالة الفرز؟",

@@ -358,6 +358,7 @@
   "tools.database.cardMenuLabel": "കാർഡ് ഓപ്ഷനുകൾ",
   "tools.database.cardTitlePlaceholder": "ശൂന്യ പേജ്",
   "tools.database.cardNamePlaceholder": "ഒരു പേര് ടൈപ്പ് ചെയ്യുക…",
+  "tools.database.cardAddProperty": "{property} ചേർക്കുക",
   "tools.database.columnTitlePlaceholder": "കോളം",
   "tools.database.noValueGroup": "{property} ഇല്ല",
   "tools.database.removeSortingTitle": "അടുക്കൽ നീക്കം ചെയ്യണോ?",

@@ -342,6 +342,7 @@
   "tools.database.newGroup": "Kikundi kipya",
   "tools.database.cardTitlePlaceholder": "Ukurasa tupu",
   "tools.database.cardNamePlaceholder": "Andika jina…",
+  "tools.database.cardAddProperty": "Ongeza {property}",
   "tools.database.columnTitlePlaceholder": "Safu wima",
   "tools.database.noValueGroup": "Hakuna {property}",
   "tools.database.removeSortingTitle": "Ungependa kuondoa upangaji?",

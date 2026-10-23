@@ -353,6 +353,7 @@
   "tools.database.newGroup": "Jauna grupa",
   "tools.database.cardTitlePlaceholder": "Tukša lapa",
   "tools.database.cardNamePlaceholder": "Ierakstiet nosaukumu…",
+  "tools.database.cardAddProperty": "Pievienot {property}",
   "tools.database.columnTitlePlaceholder": "Kolonna",
   "tools.database.noValueGroup": "Bez {property}",
   "tools.database.removeSortingTitle": "Vai vēlaties noņemt kārtošanu?",

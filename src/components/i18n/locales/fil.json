@@ -347,6 +347,7 @@
   "tools.database.cardMenuLabel": "Mga pagpipilian ng card",
   "tools.database.cardTitlePlaceholder": "Walang laman na pahina",
   "tools.database.cardNamePlaceholder": "Mag-type ng pangalan…",
+  "tools.database.cardAddProperty": "Magdagdag ng {property}",
   "tools.database.columnTitlePlaceholder": "Kolum",
   "tools.database.noValueGroup": "Walang {property}",
   "tools.database.removeSortingTitle": "Gusto mo bang alisin ang pag-sort?",

@@ -16,6 +16,7 @@ import { IconPlus, IconPencilLine, IconDotsHorizontal, IconChevronDown, IconPage
 import { startInlineRename } from '../../components/utils/inline-rename';
 import { onHover } from '../../components/utils/tooltip';
 import { onPropertyHover } from './property-hint';
+import { PROPERTY_TYPE_META } from './database-property-types';
 import { syncCommentBadge } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
 
@@ -949,6 +950,10 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     const endEditing = (): void => {
       cardEl.removeAttribute('data-editing');
       cardEl.querySelector(':scope > [data-blok-database-card-edit-glyph]')?.remove();
+      cardEl.querySelectorAll('[data-blok-database-card-property][data-ghost]').forEach((ghost) => ghost.remove());
+      const list = cardEl.querySelector(':scope > [data-blok-database-card-properties]');
+
+      if (list !== null && list.childElementCount === 0) list.remove();
       if (editBtn !== null) {
         editBtn.innerHTML = IconPencilLine;
         editBtn.setAttribute('aria-label', this.i18n.t('tools.database.editCardTitle'));
@@ -1032,6 +1037,53 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       editBtn.setAttribute('aria-label', this.i18n.t('tools.page.openInSidePeek'));
     }
     if (editHint !== undefined) editHint.textContent = this.i18n.t('tools.page.openInSidePeek');
+    this.addGhostProperties(cardEl, rowId);
+  }
+
+  /**
+   * Faint "Add <property>" rows for the card's empty visible properties, shown
+   * only while its title is edited (feel findings B09, B22).
+   */
+  private addGhostProperties(cardEl: HTMLElement, rowId: string): void {
+    const view = this.settings.view;
+    const schema = this.settings.schema;
+
+    if (view === undefined || schema === undefined) {
+      return;
+    }
+    const shown = new Set([...cardEl.querySelectorAll('[data-blok-database-card-property]')].map((el) => el.getAttribute('data-property-id')));
+    const empty = resolveViewProperties(view, schema)
+      .map((setting) => (setting.visible ? schema.find((p) => p.id === setting.id) : undefined))
+      .filter((property): property is PropertyDefinition => property !== undefined && property.type !== 'title' && !shown.has(property.id));
+
+    if (empty.length === 0) {
+      return;
+    }
+    const list = cardEl.querySelector(':scope > [data-blok-database-card-properties]') ?? document.createElement('div');
+
+    list.setAttribute('data-blok-database-card-properties', '');
+    for (const property of empty) {
+      const ghost = document.createElement('div');
+      const glyph = document.createElement('span');
+
+      ghost.setAttribute('data-blok-database-card-property', '');
+      ghost.setAttribute('data-ghost', '');
+      ghost.setAttribute('data-property-id', property.id);
+      glyph.setAttribute('aria-hidden', 'true');
+      glyph.innerHTML = PROPERTY_TYPE_META[property.type].icon;
+      ghost.append(glyph, this.i18n.t('tools.database.cardAddProperty', { property: property.name }));
+      // Keep the caret in the title until the click: a blur would drop this row first.
+      ghost.addEventListener('mousedown', (event) => event.preventDefault());
+      ghost.addEventListener('click', (event) => {
+        event.stopPropagation();
+        this.editing?.input.blur();
+        if (cardEl.isConnected) this.settings.onPropertyEdit?.(rowId, property.id, cardEl);
+      });
+      list.appendChild(ghost);
+    }
+    if (list.parentElement === null) {
+      cardEl.insertBefore(list, cardEl.querySelector(':scope > [data-blok-database-card-actions]'));
+    }
   }
 
   /**

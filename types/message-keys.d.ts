@@ -596,6 +596,7 @@ export type BlokMessageKey =
   | 'tools.database.calendarShowWeekends'
   | 'tools.database.calendarToday'
   | 'tools.database.calendarWeek'
+  | 'tools.database.cardAddProperty'
   | 'tools.database.cardDetails'
   | 'tools.database.cardMenuLabel'
   | 'tools.database.cardNamePlaceholder'

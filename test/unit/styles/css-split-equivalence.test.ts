@@ -1088,6 +1088,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_ROW_MENU_HEIGHT_BYTES = 264;
     // database.css: a board card's select pill is 18px at 12px.
     const DATABASE_CARD_SELECT_PILL_BYTES = 229;
+    // database.css: the "Add …" rows of a card whose title is being edited.
+    const DATABASE_CARD_GHOST_ROWS_BYTES = 410;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1289,7 +1291,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_CARD_TITLE_EDIT_BYTES
       + DATABASE_CARD_GLYPH_SIZE_BYTES
       + DATABASE_ROW_MENU_HEIGHT_BYTES
-      + DATABASE_CARD_SELECT_PILL_BYTES;
+      + DATABASE_CARD_SELECT_PILL_BYTES
+      + DATABASE_CARD_GHOST_ROWS_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

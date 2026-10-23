@@ -342,6 +342,7 @@
   "tools.database.newGroup": "Նոր խումբ",
   "tools.database.cardTitlePlaceholder": "Դատարկ էջ",
   "tools.database.cardNamePlaceholder": "Մուտքագրեք անուն…",
+  "tools.database.cardAddProperty": "Ավելացնել {property}",
   "tools.database.columnTitlePlaceholder": "Սյունակ",
   "tools.database.noValueGroup": "{property} չկա",
   "tools.database.removeSortingTitle": "Ցանկանո՞ւմ եք հեռացնել տեսակավորումը",

@@ -358,6 +358,7 @@
   "tools.database.cardMenuLabel": "ಕಾರ್ಡ್ ಆಯ್ಕೆಗಳು",
   "tools.database.cardTitlePlaceholder": "ಖಾಲಿ ಪುಟ",
   "tools.database.cardNamePlaceholder": "ಹೆಸರನ್ನು ಟೈಪ್ ಮಾಡಿ…",
+  "tools.database.cardAddProperty": "{property} ಸೇರಿಸಿ",
   "tools.database.columnTitlePlaceholder": "ಕಾಲಮ್",
   "tools.database.noValueGroup": "{property} ಇಲ್ಲ",
   "tools.database.removeSortingTitle": "ವಿಂಗಡಣೆಯನ್ನು ತೆಗೆದುಹಾಕಲು ಬಯಸುವಿರಾ?",

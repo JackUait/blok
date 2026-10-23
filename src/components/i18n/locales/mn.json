@@ -353,6 +353,7 @@
   "tools.database.newGroup": "Шинэ бүлэг",
   "tools.database.cardTitlePlaceholder": "Хоосон хуудас",
   "tools.database.cardNamePlaceholder": "Нэр оруулна уу…",
+  "tools.database.cardAddProperty": "{property} нэмэх",
   "tools.database.columnTitlePlaceholder": "Багана",
   "tools.database.noValueGroup": "{property} байхгүй",
   "tools.database.removeSortingTitle": "Эрэмбэлэлтийг арилгах уу?",

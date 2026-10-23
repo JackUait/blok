@@ -342,6 +342,7 @@
   "tools.database.newGroup": "नया समूह",
   "tools.database.cardTitlePlaceholder": "खाली पेज",
   "tools.database.cardNamePlaceholder": "कोई नाम लिखें…",
+  "tools.database.cardAddProperty": "{property} जोड़ें",
   "tools.database.columnTitlePlaceholder": "कॉलम",
   "tools.database.noValueGroup": "{property} नहीं",
   "tools.database.removeSortingTitle": "क्या आप क्रमबद्धता हटाना चाहते हैं?",

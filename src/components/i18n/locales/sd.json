@@ -342,6 +342,7 @@
   "tools.database.newGroup": "نئون گروپ",
   "tools.database.cardTitlePlaceholder": "خالي صفحو",
   "tools.database.cardNamePlaceholder": "ڪو نالو لکو…",
+  "tools.database.cardAddProperty": "{property} شامل ڪريو",
   "tools.database.columnTitlePlaceholder": "ڪالم",
   "tools.database.noValueGroup": "{property} ناهي",
   "tools.database.removeSortingTitle": "ڇا توهان ترتيب هٽائڻ چاهيو ٿا؟",

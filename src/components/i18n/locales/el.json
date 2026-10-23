@@ -342,6 +342,7 @@
   "tools.database.newGroup": "Νέα ομάδα",
   "tools.database.cardTitlePlaceholder": "Κενή σελίδα",
   "tools.database.cardNamePlaceholder": "Πληκτρολογήστε ένα όνομα…",
+  "tools.database.cardAddProperty": "Προσθήκη {property}",
   "tools.database.columnTitlePlaceholder": "Στήλη",
   "tools.database.noValueGroup": "Χωρίς {property}",
   "tools.database.removeSortingTitle": "Θέλετε να καταργήσετε την ταξινόμηση;",

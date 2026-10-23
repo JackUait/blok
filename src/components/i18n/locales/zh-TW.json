@@ -368,6 +368,7 @@
   "tools.database.cardMenuLabel": "卡片選項",
   "tools.database.cardTitlePlaceholder": "空白頁面",
   "tools.database.cardNamePlaceholder": "輸入名稱…",
+  "tools.database.cardAddProperty": "新增{property}",
   "tools.database.columnTitlePlaceholder": "欄",
   "tools.database.noValueGroup": "無{property}",
   "tools.database.removeSortingTitle": "要移除排序嗎？",

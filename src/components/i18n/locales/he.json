@@ -342,6 +342,7 @@
   "tools.database.newGroup": "קבוצה חדשה",
   "tools.database.cardTitlePlaceholder": "דף ריק",
   "tools.database.cardNamePlaceholder": "הקלד שם…",
+  "tools.database.cardAddProperty": "הוסף {property}",
   "tools.database.columnTitlePlaceholder": "עמודה",
   "tools.database.noValueGroup": "ללא {property}",
   "tools.database.removeSortingTitle": "להסיר את המיון?",

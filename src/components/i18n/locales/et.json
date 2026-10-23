@@ -342,6 +342,7 @@
   "tools.database.newGroup": "Uus rühm",
   "tools.database.cardTitlePlaceholder": "Tühi leht",
   "tools.database.cardNamePlaceholder": "Sisesta nimi…",
+  "tools.database.cardAddProperty": "Lisa {property}",
   "tools.database.columnTitlePlaceholder": "Veerg",
   "tools.database.noValueGroup": "{property} puudub",
   "tools.database.removeSortingTitle": "Kas soovite sortimise eemaldada?",

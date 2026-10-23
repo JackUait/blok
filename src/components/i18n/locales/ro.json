@@ -342,6 +342,7 @@
   "tools.database.newGroup": "Grup nou",
   "tools.database.cardTitlePlaceholder": "Pagină goală",
   "tools.database.cardNamePlaceholder": "Tastați un nume…",
+  "tools.database.cardAddProperty": "Adaugă {property}",
   "tools.database.columnTitlePlaceholder": "Coloană",
   "tools.database.noValueGroup": "Fără {property}",
   "tools.database.removeSortingTitle": "Doriți să eliminați sortarea?",

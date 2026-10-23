@@ -342,6 +342,7 @@
   "tools.database.newGroup": "Nhóm mới",
   "tools.database.cardTitlePlaceholder": "Trang trống",
   "tools.database.cardNamePlaceholder": "Nhập tên…",
+  "tools.database.cardAddProperty": "Thêm {property}",
   "tools.database.columnTitlePlaceholder": "Cột",
   "tools.database.noValueGroup": "Không có {property}",
   "tools.database.removeSortingTitle": "Bạn có muốn xóa sắp xếp không?",

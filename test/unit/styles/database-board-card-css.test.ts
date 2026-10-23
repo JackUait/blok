@@ -85,6 +85,12 @@ describe('database board card and calendar "No date" styles', () => {
     expect(body).not.toMatch(/padding/);
   });
 
+  // feel findings B09: Notion's "Add …" rows are rgb(161,158,153), under AA; the nearest passing ink is the secondary gray.
+  it('draws the "Add …" rows of an edited card in the secondary ink with a 16px glyph', () => {
+    expect(ruleBody('[data-blok-database-card-property][data-ghost]')).toMatch(/color:\s*var\(--blok-database-ink-secondary\)/);
+    expect(ruleBody('[data-blok-database-card-property][data-ghost] svg')).toMatch(/inline-size:\s*16px/);
+  });
+
   it('wraps a property only when its wrap setting is on', () => {
     expect(ruleBody('[data-blok-database-card-property][data-wrap="false"]')).toMatch(/white-space:\s*nowrap/);
   });

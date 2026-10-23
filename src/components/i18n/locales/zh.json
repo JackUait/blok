@@ -342,6 +342,7 @@
   "tools.database.newGroup": "新建分组",
   "tools.database.cardTitlePlaceholder": "空白页面",
   "tools.database.cardNamePlaceholder": "输入名称…",
+  "tools.database.cardAddProperty": "添加{property}",
   "tools.database.columnTitlePlaceholder": "列",
   "tools.database.noValueGroup": "无{property}",
   "tools.database.removeSortingTitle": "要移除排序吗？",

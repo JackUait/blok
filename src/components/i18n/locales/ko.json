@@ -353,6 +353,7 @@
   "tools.database.newGroup": "새 그룹",
   "tools.database.cardTitlePlaceholder": "빈 페이지",
   "tools.database.cardNamePlaceholder": "이름 입력…",
+  "tools.database.cardAddProperty": "{property} 추가",
   "tools.database.columnTitlePlaceholder": "열",
   "tools.database.noValueGroup": "{property} 없음",
   "tools.database.removeSortingTitle": "정렬을 제거하시겠습니까?",

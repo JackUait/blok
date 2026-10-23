@@ -347,6 +347,7 @@
   "tools.database.cardMenuLabel": "Kart seçimləri",
   "tools.database.cardTitlePlaceholder": "Boş səhifə",
   "tools.database.cardNamePlaceholder": "Ad yazın…",
+  "tools.database.cardAddProperty": "{property} əlavə et",
   "tools.database.columnTitlePlaceholder": "Sütun",
   "tools.database.noValueGroup": "{property} yoxdur",
   "tools.database.removeSortingTitle": "Sıralamanı silmək istəyirsiniz?",

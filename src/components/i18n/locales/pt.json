@@ -342,6 +342,7 @@
   "tools.database.newGroup": "Novo grupo",
   "tools.database.cardTitlePlaceholder": "Página vazia",
   "tools.database.cardNamePlaceholder": "Digite um nome…",
+  "tools.database.cardAddProperty": "Adicionar {property}",
   "tools.database.columnTitlePlaceholder": "Coluna",
   "tools.database.noValueGroup": "Sem {property}",
   "tools.database.removeSortingTitle": "Deseja remover a classificação?",

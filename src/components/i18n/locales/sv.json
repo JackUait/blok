@@ -342,6 +342,7 @@
   "tools.database.newGroup": "Ny grupp",
   "tools.database.cardTitlePlaceholder": "Tom sida",
   "tools.database.cardNamePlaceholder": "Skriv ett namn…",
+  "tools.database.cardAddProperty": "Lägg till {property}",
   "tools.database.columnTitlePlaceholder": "Kolumn",
   "tools.database.noValueGroup": "Ingen {property}",
   "tools.database.removeSortingTitle": "Vill du ta bort sorteringen?",

@@ -347,6 +347,7 @@
   "tools.database.cardMenuLabel": "કાર્ડ વિકલ્પો",
   "tools.database.cardTitlePlaceholder": "ખાલી પાનું",
   "tools.database.cardNamePlaceholder": "નામ લખો…",
+  "tools.database.cardAddProperty": "{property} ઉમેરો",
   "tools.database.columnTitlePlaceholder": "કૉલમ",
   "tools.database.noValueGroup": "{property} નથી",
   "tools.database.removeSortingTitle": "શું તમે સૉર્ટિંગ દૂર કરવા માંગો છો?",

@@ -342,6 +342,7 @@
   "tools.database.newGroup": "يېڭى گۇرۇپپا",
   "tools.database.cardTitlePlaceholder": "بوش بەت",
   "tools.database.cardNamePlaceholder": "ئات كىرگۈزۈڭ…",
+  "tools.database.cardAddProperty": "{property} قوشۇش",
   "tools.database.columnTitlePlaceholder": "ئىستون",
   "tools.database.noValueGroup": "{property} يوق",
   "tools.database.removeSortingTitle": "رەتلەشنى چىقىرىۋېتەمسىز؟",

@@ -342,6 +342,7 @@
   "tools.database.newGroup": "Nova skupina",
   "tools.database.cardTitlePlaceholder": "Prazna stran",
   "tools.database.cardNamePlaceholder": "Vnesite ime…",
+  "tools.database.cardAddProperty": "Dodaj {property}",
   "tools.database.columnTitlePlaceholder": "Stolpec",
   "tools.database.noValueGroup": "Brez {property}",
   "tools.database.removeSortingTitle": "Ali želite odstraniti razvrščanje?",

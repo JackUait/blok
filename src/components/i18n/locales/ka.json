@@ -342,6 +342,7 @@
   "tools.database.newGroup": "ახალი ჯგუფი",
   "tools.database.cardTitlePlaceholder": "ცარიელი გვერდი",
   "tools.database.cardNamePlaceholder": "აკრიფეთ სახელი…",
+  "tools.database.cardAddProperty": "{property}-ის დამატება",
   "tools.database.columnTitlePlaceholder": "სვეტი",
   "tools.database.noValueGroup": "{property} არ არის",
   "tools.database.removeSortingTitle": "გსურთ დალაგების მოხსნა?",

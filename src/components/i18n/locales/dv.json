@@ -342,6 +342,7 @@
   "tools.database.newGroup": "އައު ގްރޫޕް",
   "tools.database.cardTitlePlaceholder": "ހުސް ޞަފްޙާ",
   "tools.database.cardNamePlaceholder": "ނަމެއް ލިޔޭ…",
+  "tools.database.cardAddProperty": "{property} އިތުރުކުރޭ",
   "tools.database.columnTitlePlaceholder": "ކޮލަމު",
   "tools.database.noValueGroup": "{property} ނެތް",
   "tools.database.removeSortingTitle": "ތަރުތީބު ނަގާލަން ބޭނުންތޯ؟",

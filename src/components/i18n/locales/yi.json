@@ -342,6 +342,7 @@
   "tools.database.newGroup": "נײַע גרופּע",
   "tools.database.cardTitlePlaceholder": "ליידיק בלאַט",
   "tools.database.cardNamePlaceholder": "טיפּ אַ נאָמען…",
+  "tools.database.cardAddProperty": "צולייגן {property}",
   "tools.database.columnTitlePlaceholder": "שפּאַלט",
   "tools.database.noValueGroup": "קיין {property}",
   "tools.database.removeSortingTitle": "ווילסטו אַוועקנעמען די סאָרטירונג?",

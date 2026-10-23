@@ -342,6 +342,7 @@
   "tools.database.newGroup": "نیا گروپ",
   "tools.database.cardTitlePlaceholder": "خالی صفحہ",
   "tools.database.cardNamePlaceholder": "کوئی نام ٹائپ کریں…",
+  "tools.database.cardAddProperty": "{property} شامل کریں",
   "tools.database.columnTitlePlaceholder": "کالم",
   "tools.database.noValueGroup": "کوئی {property} نہیں",
   "tools.database.removeSortingTitle": "کیا آپ ترتیب ہٹانا چاہیں گے؟",

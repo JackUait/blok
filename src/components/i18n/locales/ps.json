@@ -342,6 +342,7 @@
   "tools.database.newGroup": "نوې ګروپ",
   "tools.database.cardTitlePlaceholder": "تشه پاڼه",
   "tools.database.cardNamePlaceholder": "یو نوم ولیکئ…",
+  "tools.database.cardAddProperty": "{property} اضافه کړئ",
   "tools.database.columnTitlePlaceholder": "کالم",
   "tools.database.noValueGroup": "{property} نشته",
   "tools.database.removeSortingTitle": "ایا غواړئ ترتیب لرې کړئ؟",

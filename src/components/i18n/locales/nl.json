@@ -342,6 +342,7 @@
   "tools.database.newGroup": "Nieuwe groep",
   "tools.database.cardTitlePlaceholder": "Lege pagina",
   "tools.database.cardNamePlaceholder": "Typ een naam…",
+  "tools.database.cardAddProperty": "{property} toevoegen",
   "tools.database.columnTitlePlaceholder": "Kolom",
   "tools.database.noValueGroup": "Geen {property}",
   "tools.database.removeSortingTitle": "Wil je de sortering verwijderen?",

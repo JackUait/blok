@@ -342,6 +342,7 @@
   "tools.database.newGroup": "Új csoport",
   "tools.database.cardTitlePlaceholder": "Üres oldal",
   "tools.database.cardNamePlaceholder": "Adjon meg egy nevet…",
+  "tools.database.cardAddProperty": "{property} hozzáadása",
   "tools.database.columnTitlePlaceholder": "Oszlop",
   "tools.database.noValueGroup": "Nincs {property}",
   "tools.database.removeSortingTitle": "Szeretné eltávolítani a rendezést?",

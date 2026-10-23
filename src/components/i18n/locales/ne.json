@@ -358,6 +358,7 @@
   "tools.database.cardMenuLabel": "कार्ड विकल्पहरू",
   "tools.database.cardTitlePlaceholder": "खाली पृष्ठ",
   "tools.database.cardNamePlaceholder": "नाम टाइप गर्नुहोस्…",
+  "tools.database.cardAddProperty": "{property} थप्नुहोस्",
   "tools.database.columnTitlePlaceholder": "स्तम्भ",
   "tools.database.noValueGroup": "{property} छैन",
   "tools.database.removeSortingTitle": "के तपाईं क्रमबद्धता हटाउन चाहनुहुन्छ?",

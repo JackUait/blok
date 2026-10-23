@@ -2719,6 +2719,21 @@ button[data-blok-database-column-count]:hover {
   line-height: 18px;
 }
 
+/* "Add …" rows while a card title is edited. Notion's rgb(161,158,153) fails AA; the secondary ink passes. */
+[data-blok-database-card-property][data-ghost] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  color: var(--blok-database-ink-secondary);
+  cursor: pointer;
+}
+
+[data-blok-database-card-property][data-ghost] svg {
+  inline-size: 16px;
+  block-size: 16px;
+  flex: none;
+}
+
 /* A board card's select pill keeps the 0 6px padding (research/07:95). */
 [data-blok-database-card-property] [data-blok-database-option-pill]:not([data-status-group]) {
   height: 18px;

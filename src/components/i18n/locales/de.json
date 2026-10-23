@@ -342,6 +342,7 @@
   "tools.database.newGroup": "Neue Gruppe",
   "tools.database.cardTitlePlaceholder": "Leere Seite",
   "tools.database.cardNamePlaceholder": "Namen eingeben…",
+  "tools.database.cardAddProperty": "{property} hinzufügen",
   "tools.database.columnTitlePlaceholder": "Spalte",
   "tools.database.noValueGroup": "Ohne {property}",
   "tools.database.removeSortingTitle": "Möchten Sie die Sortierung entfernen?",

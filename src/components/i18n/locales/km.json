@@ -347,6 +347,7 @@
   "tools.database.cardMenuLabel": "ជម្រើសកាត",
   "tools.database.cardTitlePlaceholder": "ទំព័រទទេ",
   "tools.database.cardNamePlaceholder": "វាយឈ្មោះ…",
+  "tools.database.cardAddProperty": "បន្ថែម {property}",
   "tools.database.columnTitlePlaceholder": "ជួរឈរ",
   "tools.database.noValueGroup": "គ្មាន {property}",
   "tools.database.removeSortingTitle": "តើអ្នកចង់ដកការតម្រៀបចេញទេ?",

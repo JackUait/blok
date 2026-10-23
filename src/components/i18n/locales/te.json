@@ -347,6 +347,7 @@
   "tools.database.cardMenuLabel": "కార్డ్ ఎంపికలు",
   "tools.database.cardTitlePlaceholder": "ఖాళీ పేజీ",
   "tools.database.cardNamePlaceholder": "పేరు టైప్ చేయండి…",
+  "tools.database.cardAddProperty": "{property}ని జోడించండి",
   "tools.database.columnTitlePlaceholder": "నిలువు వరుస",
   "tools.database.noValueGroup": "{property} లేదు",
   "tools.database.removeSortingTitle": "క్రమబద్ధీకరణను తీసివేయాలనుకుంటున్నారా?",

@@ -342,6 +342,7 @@
   "tools.database.newGroup": "新しいグループ",
   "tools.database.cardTitlePlaceholder": "空のページ",
   "tools.database.cardNamePlaceholder": "名前を入力…",
+  "tools.database.cardAddProperty": "{property}を追加",
   "tools.database.columnTitlePlaceholder": "列",
   "tools.database.noValueGroup": "{property}なし",
   "tools.database.removeSortingTitle": "並べ替えを解除しますか？",

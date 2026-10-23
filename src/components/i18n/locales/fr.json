@@ -342,6 +342,7 @@
   "tools.database.newGroup": "Nouveau groupe",
   "tools.database.cardTitlePlaceholder": "Page vide",
   "tools.database.cardNamePlaceholder": "Saisissez un nom…",
+  "tools.database.cardAddProperty": "Ajouter {property}",
   "tools.database.columnTitlePlaceholder": "Colonne",
   "tools.database.noValueGroup": "Sans {property}",
   "tools.database.removeSortingTitle": "Voulez-vous supprimer le tri ?",

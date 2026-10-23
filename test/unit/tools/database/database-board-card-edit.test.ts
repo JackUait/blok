@@ -3,7 +3,7 @@ import { DatabaseBoardView } from '../../../../src/tools/database/database-board
 import type { DatabaseRow, DatabaseViewConfig, PropertyDefinition, SelectOption } from '../../../../src/tools/database/types';
 import type { I18n } from '../../../../types';
 
-const i18n = { t: (key: string) => key } as unknown as I18n;
+const i18n = { t: (key: string, vars?: Record<string, string>) => (vars?.property !== undefined ? `${key}:${vars.property}` : key) } as unknown as I18n;
 
 const schema: PropertyDefinition[] = [
   { id: 'title', name: 'Name', type: 'title', position: 'a0' },
@@ -13,6 +13,7 @@ const schema: PropertyDefinition[] = [
 
 const view: DatabaseViewConfig = {
   id: 'v1', name: 'Board', type: 'board', position: 'a0', groupBy: 'status', sorts: [], filters: [], visibleProperties: [],
+  properties: [{ id: 'notes', visible: true }],
 };
 
 const options: SelectOption[] = [{ id: 'o1', label: 'To do', position: 'a0' }];
@@ -159,6 +160,36 @@ describe('board card title, edited in place', () => {
 
     expect(onTitleEdit).toHaveBeenCalledWith('r2', 'Half typ');
     expect(onEnter).toHaveBeenCalledTimes(1);
+  });
+
+  // feel findings B09/B22: while the title is edited, each empty visible property shows a faint "Add …" row.
+  it('shows "Add <property>" rows for empty visible properties while editing, and drops them after', () => {
+    const { view: boardView, board } = make();
+
+    boardView.editTitle('r1');
+
+    const ghost = card(board, 'r1').querySelector<HTMLElement>('[data-blok-database-card-property][data-ghost]');
+
+    expect(ghost?.getAttribute('data-property-id')).toBe('notes');
+    expect(ghost?.textContent?.trim()).toBe('tools.database.cardAddProperty:Notes');
+    expect(ghost?.querySelector('svg')).not.toBeNull();
+
+    press(input(board), 'Enter');
+
+    expect(card(board, 'r1').querySelector('[data-ghost]')).toBeNull();
+  });
+
+  it('an "Add …" row saves the title, then edits that property on the card', () => {
+    const onTitleEdit = vi.fn();
+    const onPropertyEdit = vi.fn();
+    const { view: boardView, board } = make({ onTitleEdit, onPropertyEdit });
+
+    boardView.editTitle('r2');
+    type(input(board), 'Bravo');
+    card(board, 'r2').querySelector<HTMLElement>('[data-ghost]')?.click();
+
+    expect(onTitleEdit).toHaveBeenCalledWith('r2', 'Bravo');
+    expect(onPropertyEdit).toHaveBeenCalledWith('r2', 'notes', card(board, 'r2'));
   });
 
   it('has no draft when nothing is being edited', () => {

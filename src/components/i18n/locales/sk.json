@@ -342,6 +342,7 @@
   "tools.database.newGroup": "Nová skupina",
   "tools.database.cardTitlePlaceholder": "Prázdna stránka",
   "tools.database.cardNamePlaceholder": "Zadajte názov…",
+  "tools.database.cardAddProperty": "Pridať {property}",
   "tools.database.columnTitlePlaceholder": "Stĺpec",
   "tools.database.noValueGroup": "Bez {property}",
   "tools.database.removeSortingTitle": "Chcete odstrániť zoradenie?",

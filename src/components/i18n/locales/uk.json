@@ -342,6 +342,7 @@
   "tools.database.newGroup": "Нова група",
   "tools.database.cardTitlePlaceholder": "Порожня сторінка",
   "tools.database.cardNamePlaceholder": "Введіть назву…",
+  "tools.database.cardAddProperty": "Додати {property}",
   "tools.database.columnTitlePlaceholder": "Стовпець",
   "tools.database.noValueGroup": "Без {property}",
   "tools.database.removeSortingTitle": "Вилучити сортування?",

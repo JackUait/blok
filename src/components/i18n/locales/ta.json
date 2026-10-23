@@ -347,6 +347,7 @@
   "tools.database.cardMenuLabel": "அட்டை விருப்பங்கள்",
   "tools.database.cardTitlePlaceholder": "வெற்று பக்கம்",
   "tools.database.cardNamePlaceholder": "ஒரு பெயரைத் தட்டச்சு செய்…",
+  "tools.database.cardAddProperty": "{property} சேர்",
   "tools.database.columnTitlePlaceholder": "நெடுவரிசை",
   "tools.database.noValueGroup": "{property} இல்லை",
   "tools.database.removeSortingTitle": "வரிசைப்படுத்தலை அகற்ற வேண்டுமா?",

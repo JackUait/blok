@@ -111,6 +111,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/database/database-table-resize.ts': exempt('cut-v1', VIEW_LAYOUT_CUT),
   'ui-file:src/tools/database/database-table-row-drag.ts': cmds(['database.moveRow'], 'Reorder rows in the table view.'),
   'ui-file:src/tools/database/database-table-view.ts': cmds(['database.addRow', 'database.setRowValues'], 'Add rows and open cell editors from the table view.'),
+  'ui-file:src/tools/database/database-no-date.ts': cmds(['database.setRowValues'], 'The No date popover: picking a row writes its date value; Open only opens the row page.'),
   'ui-file:src/tools/database/database-timeline-view.ts': cmds(['database.addRow', 'database.setRowValues'], 'Add a row; drag or resize a bar writes its date values.'),
   'ui-file:src/tools/database/database-view-controls.ts': cmds(['database.addRow'], 'New row button. Filter, sort, search and settings are view state, cut from v1 by D6.'),
   'ui-file:src/tools/database-row/index.ts': cmds(['block.insert'], 'Starts the row page body: inserts its first child block.'),

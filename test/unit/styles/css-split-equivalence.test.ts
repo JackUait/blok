@@ -1085,7 +1085,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // +3_787: the timeline frame (cut-bar chip, canvas fill, today dot, zoom rows) and the table panel parts.
     // +94: the connector's stub lets a press through to the end resize handle.
     // +115: the cut-bar chip and the connector chevron mirror in RTL.
-    const DATABASE_CAL_TIMELINE_FEEL_BYTES = 700 + 468 + 1_694 + 3_583 + 1_050 + 3_787 + 94 + 115;
+    // +52: the growth measured once the lane landed on main's database.css.
+    const DATABASE_CAL_TIMELINE_FEEL_BYTES = 700 + 468 + 1_694 + 3_583 + 1_050 + 3_787 + 94 + 115 + 52;
     // database.css: feel/findings-table T13: the uncapped board and list bar still hides the whole toolbar.
     const DATABASE_SELECTION_BAR_BOARD_BYTES = 233;
     // database.css: feel/findings-toolbar V09: view settings docks at the window's end edge with radius 10.

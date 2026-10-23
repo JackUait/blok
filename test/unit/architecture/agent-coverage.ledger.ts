@@ -308,6 +308,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/buttonRecipientProperty-*': cmd('database.updateProperty'),
   'menu:database/reset': exempt('cut-v1', VIEW_LAYOUT_CUT),
   'menu:database/group-*': exempt('cut-v1', VIEW_SETTING_CUT),
+  'menu:database/edit-groups': exempt('cut-v1', VIEW_SETTING_CUT),
   'menu:database/toggle-aggregation': exempt('cut-v1', VIEW_SETTING_CUT),
   'menu:database/hide-group': exempt('cut-v1', VIEW_SETTING_CUT),
   'menu:database/move-to-trash': cmds(['block.delete'], 'Deletes every row in the group.'),

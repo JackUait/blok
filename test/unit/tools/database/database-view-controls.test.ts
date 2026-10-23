@@ -671,7 +671,9 @@ describe('DatabaseViewControls', () => {
       const root = document.createElement('div');
       const body = document.createElement('div');
 
-      body.innerHTML = '<div data-blok-database-cell>Alpha</div><div data-blok-database-cell>Delta alpha</div><div>Beta</div>';
+      // A column name and the footer's "Calculate" are chrome: only row values are tinted.
+      body.innerHTML = '<span data-blok-database-table-column-name>Alpha col</span><span data-blok-database-cell>Alpha</span>'
+        + '<span data-blok-database-card-title>Delta alpha</span><span data-blok-database-table-calc-placeholder>Calculate</span>';
       root.append(controls.toolbar, controls.filterBar, body);
       document.body.append(root);
       const before = body.innerHTML;

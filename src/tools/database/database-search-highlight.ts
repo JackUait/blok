@@ -7,8 +7,22 @@
 /** Must match the `::highlight()` rule in database.css. */
 const MATCH = 'blok-database-search-match';
 
-/** Chrome around the rows: the title, tabs, toolbar and chip bar are not searched. */
-const SKIP = '[data-blok-database-title-row], [data-blok-database-view-bar], [data-blok-database-filter-bar]';
+/**
+ * Where a row's searched text shows: cell values and each view's row title.
+ * Headers, footers and the toolbar are chrome, never tinted.
+ */
+const ROW_TEXT = [
+  '[data-blok-database-cell]',
+  '[data-blok-database-card-title]',
+  '[data-blok-database-list-row-title]',
+  '[data-blok-database-gallery-title]',
+  '[data-blok-database-feed-title]',
+  '[data-blok-database-calendar-event-title]',
+  '[data-blok-database-timeline-table-title]',
+  '[data-blok-database-timeline-bar-title]',
+].join(', ');
+
+const CHROME = '[data-blok-database-title-row], [data-blok-database-view-bar], [data-blok-database-filter-bar]';
 
 /** `CSS.highlights` is document-global; each database keeps its own ranges. */
 const paints = new Map<unknown, Range[]>();
@@ -46,7 +60,9 @@ const matchesIn = (root: HTMLElement, query: string): Range[] => {
     const haystack = text.toLowerCase();
 
     // Lowercasing can change a string's length; such a node's offsets would be wrong.
-    if (node.parentElement?.closest(SKIP) != null || haystack.length !== text.length) continue;
+    const parent = node.parentElement;
+
+    if (parent?.closest(ROW_TEXT) == null || parent.closest(CHROME) !== null || haystack.length !== text.length) continue;
     const starts = [...haystack.matchAll(new RegExp(escapeRegExp(needle), 'g'))].map((match) => match.index);
 
     for (const at of starts) {

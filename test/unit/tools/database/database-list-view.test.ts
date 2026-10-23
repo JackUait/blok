@@ -679,6 +679,43 @@ describe('DatabaseListView', () => {
       expect(rowEl(list, 'r1')).toHaveFocus();
     });
 
+    // findings-listgallery L20: arrows move a gray row selection; Shift+Arrow extends it.
+    it('selects the row an arrow moves to, and Shift+Arrow extends or shrinks the selection', () => {
+      const lassoRows = vi.fn();
+      const three = [...rows, makeRow({ id: 'r3', position: 'a2', properties: { title: 'Three' } })];
+      const list = mount({ rows: three, lassoRows });
+
+      rowEl(list, 'r1').focus();
+      press(rowEl(list, 'r1'), { key: 'ArrowDown' });
+      expect(lassoRows).toHaveBeenLastCalledWith(['r2']);
+
+      press(rowEl(list, 'r2'), { key: 'ArrowDown', shiftKey: true });
+      expect(lassoRows).toHaveBeenLastCalledWith(['r2', 'r3']);
+      expect(rowEl(list, 'r3')).toHaveFocus();
+
+      press(rowEl(list, 'r3'), { key: 'ArrowUp', shiftKey: true });
+      expect(lassoRows).toHaveBeenLastCalledWith(['r2']);
+
+      press(rowEl(list, 'r2'), { key: 'ArrowUp', shiftKey: true });
+      expect(lassoRows).toHaveBeenLastCalledWith(['r1', 'r2']);
+    });
+
+    it('Escape while editing a title selects that row', () => {
+      const lassoRows = vi.fn();
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows, titlePropertyId: 'title', schema, visiblePropertyIds: [], lassoRows,
+      });
+      const list = view.createView();
+
+      document.body.appendChild(list);
+      view.editTitle('r2');
+      list.querySelector<HTMLInputElement>('[data-blok-database-list-title-input]')
+        ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+      expect(lassoRows).toHaveBeenLastCalledWith(['r2']);
+      expect(rowEl(list, 'r2')).toHaveFocus();
+    });
+
     it('never handles keys in a read-only list beyond opening and moving', () => {
       const onNewBelow = vi.fn();
       const list = mount({ readOnly: true, onNewBelow });

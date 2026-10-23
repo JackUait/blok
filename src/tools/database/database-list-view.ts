@@ -79,6 +79,8 @@ export class DatabaseListView implements DatabaseViewRenderer {
   private readonly settings: Pick<DatabaseListViewOptions,
     'cellContext' | 'commentBadges' | 'locale' | 'onPropertyEdit' | 'onNewBelow' | 'onTitleEdit' | 'onOpenRow' | 'total' | 'getTotal' | 'onLoadMore' | 'lassoRows'>;
   private wrapper: HTMLDivElement | null = null;
+  /** Where a Shift+Arrow selection started (findings-listgallery L20). */
+  private selectionAnchor: HTMLElement | null = null;
 
   constructor({ readOnly, i18n, rows, titlePropertyId, schema, visiblePropertyIds, options, getRows, collapsedGroupIds, onToggleCollapse, showPageIcon, ...settings }: DatabaseListViewOptions) {
     this.settings = settings;
@@ -229,6 +231,8 @@ export class DatabaseListView implements DatabaseViewRenderer {
       onCancel: () => {
         endEditing();
         this.focusRow(rowEl);
+        // findings-listgallery L20: Escape from the title selects the row.
+        this.selectByKey([rowEl], rowEl, rowEl);
       },
     });
     rowEl.setAttribute('data-editing', '');
@@ -342,6 +346,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
 
       if (next !== undefined) {
         this.focusRow(next);
+        this.selectByKey(rows, next, event.shiftKey ? this.selectionAnchor ?? rowEl : next);
       }
 
       return true;
@@ -355,6 +360,19 @@ export class DatabaseListView implements DatabaseViewRenderer {
     }
 
     return false;
+  }
+
+  /** Arrows select the row they reach; Shift+Arrow selects from the anchor to it. The tint is the gray selection. */
+  private selectByKey(rows: HTMLElement[], target: HTMLElement, anchor: HTMLElement): void {
+    if (this.readOnly || this.settings.lassoRows === undefined) {
+      return;
+    }
+    // A redraw may have dropped the old anchor: start again from the target.
+    const start = rows.includes(anchor) ? anchor : target;
+    const [from, to] = [rows.indexOf(start), rows.indexOf(target)].sort((a, b) => a - b);
+
+    this.selectionAnchor = start;
+    this.settings.lassoRows(rows.slice(from, to + 1).map((el) => el.getAttribute('data-row-id') ?? ''));
   }
 
   private onSlotKey(rowEl: HTMLElement, slot: HTMLElement, event: KeyboardEvent): boolean {

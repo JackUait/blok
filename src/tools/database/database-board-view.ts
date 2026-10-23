@@ -122,6 +122,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
   private readonly settings: Pick<DatabaseBoardViewOptions, 'view' | 'schema' | 'bodyOf' | 'locale' | 'onPropertyEdit' | 'subGroups' | 'onLaneToggle' | 'cellContext' | 'getTotal' | 'onLoadMore' | 'commentBadges' | 'addCardLabel' | 'lassoRows'>;
   private root: HTMLElement | null = null;
   private box: { startX: number; startY: number; el: HTMLElement | null; picked: string | null } | null = null;
+  private readonly editHints = new WeakMap<HTMLElement, HTMLElement>();
   private editing: { rowId: string; input: HTMLInputElement; onEnter?: () => void } | null = null;
 
   constructor({
@@ -823,6 +824,13 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       editBtn.setAttribute('data-row-id', row.id);
       editBtn.setAttribute('aria-label', this.i18n.t('tools.database.editCardTitle'));
       editBtn.innerHTML = IconPencil;
+      // One hint node: the title edit swaps its text while the button opens the peek.
+      const editHint = document.createElement('span');
+
+      editHint.setAttribute('data-blok-database-edit-card-hint', '');
+      editHint.textContent = this.i18n.t('tools.database.galleryCardEdit');
+      onHover(editBtn, editHint);
+      this.editHints.set(cardEl, editHint);
       // While editing, the button is Open in side peek: keep the caret in the title until the click lands.
       editBtn.addEventListener('mousedown', (e) => {
         if (cardEl.hasAttribute('data-editing')) e.preventDefault();
@@ -844,6 +852,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       menuBtn.setAttribute('data-row-id', row.id);
       menuBtn.setAttribute('aria-label', this.i18n.t('tools.database.cardMenuLabel'));
       menuBtn.innerHTML = IconDotsHorizontal;
+      onHover(menuBtn, this.i18n.t('tools.database.galleryCardMore'));
 
       actionsEl.appendChild(editBtn);
       actionsEl.appendChild(menuBtn);
@@ -936,6 +945,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     const originalTitle = titleEl.hasAttribute('data-placeholder') ? '' : titleEl.textContent ?? '';
     const state: { viaEnter: boolean; input: HTMLInputElement | null } = { viaEnter: false, input: null };
     const editBtn = cardEl.querySelector<HTMLElement>('[data-blok-database-edit-card]');
+    const editHint = this.editHints.get(cardEl);
     const endEditing = (): void => {
       cardEl.removeAttribute('data-editing');
       cardEl.querySelector(':scope > [data-blok-database-card-edit-glyph]')?.remove();
@@ -943,6 +953,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
         editBtn.innerHTML = IconPencil;
         editBtn.setAttribute('aria-label', this.i18n.t('tools.database.editCardTitle'));
       }
+      if (editHint !== undefined) editHint.textContent = this.i18n.t('tools.database.galleryCardEdit');
     };
 
     const buildTitleDiv = (title: string): HTMLElement => {
@@ -1020,6 +1031,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       editBtn.innerHTML = IconSidebarRight;
       editBtn.setAttribute('aria-label', this.i18n.t('tools.page.openInSidePeek'));
     }
+    if (editHint !== undefined) editHint.textContent = this.i18n.t('tools.page.openInSidePeek');
   }
 
   /**

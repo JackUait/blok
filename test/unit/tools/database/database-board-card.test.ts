@@ -163,6 +163,39 @@ describe('DatabaseBoardView card parity', () => {
     });
   });
 
+  // feel findings B16, research/12:54: the card buttons hint after the hint delay.
+  it('hints Edit and the "•••" menu after the hint delay; the pencil hints Open in side peek while editing', () => {
+    destroyTooltip();
+    vi.useFakeTimers();
+    try {
+      const board = mount();
+      const edit = card(board, 'r1').querySelector<HTMLElement>('[data-blok-database-edit-card]');
+      const more = card(board, 'r1').querySelector<HTMLElement>('[data-blok-database-card-menu]');
+
+      hover(edit);
+      vi.advanceTimersByTime(HINT_DELAY - 1);
+      expect(shownHint()).toBeNull();
+      vi.advanceTimersByTime(1);
+      expect(shownHint()?.text).toBe('tools.database.galleryCardEdit');
+      edit?.dispatchEvent(new MouseEvent('mouseleave'));
+      vi.advanceTimersByTime(HINT_DELAY);
+
+      hover(more);
+      vi.advanceTimersByTime(HINT_DELAY);
+      expect(shownHint()?.text).toBe('tools.database.galleryCardMore');
+      more?.dispatchEvent(new MouseEvent('mouseleave'));
+      vi.advanceTimersByTime(HINT_DELAY);
+
+      edit?.click();
+      hover(edit);
+      vi.advanceTimersByTime(HINT_DELAY);
+      expect(shownHint()?.text).toBe('tools.page.openInSidePeek');
+    } finally {
+      vi.useRealTimers();
+      destroyTooltip();
+    }
+  });
+
   describe('card size and preview', () => {
     it('marks the card size and sizes the columns by it', () => {
       const medium = mount();

@@ -1,7 +1,7 @@
 import type { I18n } from '../../../types';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
-import { IconCheck, IconHash, IconPreview, IconSliders, IconTrash } from '../../components/icons';
+import { IconCheck, IconEyeSlash, IconPreview, IconSliders, IconTrash } from '../../components/icons';
 import { OPTION_COLORS, optionColorLabelKey, type OptionColor } from './cells/option-colors';
 
 /**
@@ -16,9 +16,10 @@ export interface GroupMenuParams {
   isNoValue: boolean;
   color: OptionColor | undefined;
   aggregationHidden: boolean;
-  /** Every group of the view, hidden ones included, in board order. */
-  groups: Array<{ id: string; label: string; hidden: boolean }>;
-  onToggleGroup: (groupId: string) => void;
+  /** A status option's group: Notion lists no colours for it (findings-board B13). */
+  isStatus: boolean;
+  /** Opens the view settings Group page (findings-board B14). */
+  onEditGroups: () => void;
   onToggleAggregation: () => void;
   onHide: () => void;
   onTrash: () => void;
@@ -38,7 +39,7 @@ const swatch = (color: OptionColor): HTMLElement => {
 /**
  * The board column's "More group options" menu (research/08): Edit groups,
  * Hide aggregation, Hide group, Move to Trash, then the ten colors. The current
- * color and the shown groups carry a check mark, never a blue fill.
+ * color carries a check mark, never a blue fill.
  */
 export const groupMenuItems = (params: GroupMenuParams): PopoverItemParams[] => {
   const t = (key: string): string => params.i18n.t(key);
@@ -47,27 +48,20 @@ export const groupMenuItems = (params: GroupMenuParams): PopoverItemParams[] => 
       name: 'edit-groups',
       title: t('tools.database.groupEditGroups'),
       icon: IconSliders,
-      children: {
-        items: params.groups.map((group) => ({
-          name: `group-${group.id}`,
-          title: group.label,
-          trailingIcon: group.hidden ? undefined : IconCheck,
-          closeOnActivate: true,
-          onActivate: () => params.onToggleGroup(group.id),
-        })),
-      },
+      closeOnActivate: true,
+      onActivate: params.onEditGroups,
     },
     {
       name: 'toggle-aggregation',
       title: t(params.aggregationHidden ? 'tools.database.groupShowAggregation' : 'tools.database.groupHideAggregation'),
-      icon: IconHash,
+      icon: params.aggregationHidden ? IconPreview : IconEyeSlash,
       closeOnActivate: true,
       onActivate: params.onToggleAggregation,
     },
     {
       name: 'hide-group',
       title: t('tools.database.groupHide'),
-      icon: IconPreview,
+      icon: IconEyeSlash,
       closeOnActivate: true,
       onActivate: params.onHide,
     },
@@ -81,7 +75,7 @@ export const groupMenuItems = (params: GroupMenuParams): PopoverItemParams[] => 
     },
   ];
 
-  if (params.isNoValue) {
+  if (params.isNoValue || params.isStatus) {
     return items;
   }
 

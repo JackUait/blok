@@ -133,17 +133,14 @@ describe('a status property\'s default option (research/30 §10f, research/31 §
     expect((doc.blocks.get(id ?? '')?.data as DatabaseRowData).properties.st).toBe('blocked');
   });
 
-  it('the column "⋯" menu of a colourless status option checks no colour, as its option menu does', () => {
+  // findings-board B13: Notion's status group menu lists no colours.
+  it('the column "⋯" menu of a status option lists no colours', () => {
     const { el } = buildDatabase(seed(), 'db', data('board', 'ns'));
-    const checked = (optionId: string): string[] => {
-      popovers.items.length = 0;
-      el.querySelector<HTMLElement>(`[data-blok-database-column-menu][data-option-id="${optionId}"]`)?.click();
 
-      return (popovers.items.at(-1) ?? []).filter((item) => item.name?.startsWith('color-') === true && item.trailingIcon !== undefined).map((item) => item.name ?? '');
-    };
+    popovers.items.length = 0;
+    el.querySelector<HTMLElement>('[data-blok-database-column-menu][data-option-id="ip"]')?.click();
 
-    expect(checked('ns')).toEqual([]);
-    expect(checked('ip')).toEqual(['color-blue']);
+    expect((popovers.items.at(-1) ?? []).filter((item) => item.name?.startsWith('color-') === true)).toEqual([]);
   });
 
   it('a colourless status option draws as the gray pill in a cell and as a gray board column', () => {
@@ -163,15 +160,10 @@ describe('a status property\'s default option (research/30 §10f, research/31 §
   describe('the no-value group of a status grouping', () => {
     const noValue = '[data-blok-database-column][data-option-id="__blok-no-value-group__"]';
 
-    it('is left out while every row has a status, in the board and in Edit groups', () => {
+    it('is left out while every row has a status', () => {
       const { el } = buildDatabase(seed(), 'db', data('board', 'ns'));
 
-      popovers.items.length = 0;
-      el.querySelector<HTMLElement>('[data-blok-database-column-menu][data-option-id="ns"]')?.click();
-      const editGroups = (popovers.items.at(-1) ?? []).find((item) => item.name === 'edit-groups') as { children?: { items: Array<{ name?: string }> } } | undefined;
-
       expect(el.querySelector(noValue)).toBeNull();
-      expect(editGroups?.children?.items.map((item) => item.name)).not.toContain('group-__blok-no-value-group__');
     });
 
     it('shows once a row has no status', () => {

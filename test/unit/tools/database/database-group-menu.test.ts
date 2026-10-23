@@ -4,7 +4,7 @@ import type { I18n } from '../../../../types';
 import type { PopoverItemParams } from '../../../../types/utils/popover/popover-item';
 import { groupMenuItems, type GroupMenuParams } from '../../../../src/tools/database/database-group-menu';
 import { OPTION_COLORS } from '../../../../src/tools/database/cells/option-colors';
-import { IconCheck } from '../../../../src/components/icons';
+import { IconCheck, IconEyeSlash } from '../../../../src/components/icons';
 
 const i18n = { t: (key: string) => key, has: () => true } as unknown as I18n;
 
@@ -13,11 +13,8 @@ const params = (overrides: Partial<GroupMenuParams> = {}): GroupMenuParams => ({
   isNoValue: false,
   color: 'yellow',
   aggregationHidden: false,
-  groups: [
-    { id: 'opt-a', label: 'Idea', hidden: false },
-    { id: 'opt-b', label: 'Build', hidden: true },
-  ],
-  onToggleGroup: vi.fn(),
+  isStatus: false,
+  onEditGroups: vi.fn(),
   onToggleAggregation: vi.fn(),
   onHide: vi.fn(),
   onTrash: vi.fn(),
@@ -75,16 +72,29 @@ describe('groupMenuItems', () => {
     expect(names.some((name) => name?.startsWith('color-'))).toBe(false);
   });
 
-  it('lists every group under Edit groups, with a check mark on the shown ones, and toggles one on pick', () => {
+  // findings-board B14: Edit groups opens the view settings Group page.
+  it('opens the Group settings page from Edit groups, with no submenu', () => {
     const p = params();
-    const children = named(groupMenuItems(p), 'edit-groups').children?.items as Item[];
+    const edit = named(groupMenuItems(p), 'edit-groups');
 
-    expect(children.map((item) => item.title)).toEqual(['Idea', 'Build']);
-    expect(children.map((item) => item.trailingIcon)).toEqual([IconCheck, undefined]);
+    edit.onActivate?.();
 
-    children[1].onActivate?.();
+    expect(edit.children).toBeUndefined();
+    expect(p.onEditGroups).toHaveBeenCalledTimes(1);
+  });
 
-    expect(p.onToggleGroup).toHaveBeenCalledWith('opt-b');
+  // findings-board B13: a Status group has no colours; Hide aggregation and Hide group show an eye-slash.
+  it('gives a status group no colors', () => {
+    const names = (groupMenuItems(params({ isStatus: true })) as Item[]).map((item) => item.name ?? item.type);
+
+    expect(names).toEqual(['edit-groups', 'toggle-aggregation', 'hide-group', 'move-to-trash']);
+  });
+
+  it('draws Hide aggregation and Hide group with the eye-slash', () => {
+    const items = groupMenuItems(params());
+
+    expect(named(items, 'toggle-aggregation').icon).toBe(IconEyeSlash);
+    expect(named(items, 'hide-group').icon).toBe(IconEyeSlash);
   });
 
   it('offers to show the counts again once they are hidden', () => {

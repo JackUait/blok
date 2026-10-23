@@ -126,7 +126,7 @@
 
 /* Font family defaults — hoisted to :root so they resolve anywhere (including popovers). */
 :root {
-  --blok-font-sans: 'Inter', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --blok-font-sans: ui-sans-serif, -apple-system, "system-ui", "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", "Noto Sans Arabic", "Noto Sans Hebrew", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";
   --blok-font-serif: 'Source Serif 4', 'Noto Serif', Georgia, ui-serif, serif;
   --blok-font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Monaco, 'Courier New', monospace;
   /* Note: Load 'Permanent Marker' from Google Fonts or @fontsource for best results */

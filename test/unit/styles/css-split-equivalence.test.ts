@@ -1049,6 +1049,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const ASK_AI_MENU_MOTION_BYTES = 10_499;
     // bookmark.css: a cover that fails to load is drawn as a page sketch whose corner peels back on hover.
     const BOOKMARK_PEEL_COVER_BYTES = 6_136;
+    // isolation.css: --blok-font-sans is Notion's longer font stack.
+    const NOTION_FONT_STACK_BYTES = 111;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1231,7 +1233,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_PLACE_CARD_MAP_BYTES
       + DATABASE_ROUND14_COLOURS_BYTES
       + ASSISTANT_SELECTION_TINT_BYTES + DATABASE_PLAIN_CONFIRM_BYTES + ASSISTANT_ACTIONS_FOLD_BYTES
-      + ASK_AI_MENU_MOTION_BYTES + BOOKMARK_PEEL_COVER_BYTES;
+      + ASK_AI_MENU_MOTION_BYTES + BOOKMARK_PEEL_COVER_BYTES
+      + NOTION_FONT_STACK_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

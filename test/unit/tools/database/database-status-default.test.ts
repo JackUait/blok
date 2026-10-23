@@ -145,6 +145,24 @@ describe('a status property\'s default option (research/30 §10f, research/31 §
     expect(doc.row(fromList ?? '').properties[added?.id ?? '']).toBe(notStarted?.id);
   });
 
+  // findings-listgallery L09: a list grouped by Status follows B03, with no "No Status" group while every row has one.
+  it('a list grouped by Status shows "No Status" only while a row has no status', () => {
+    const listData: DatabaseData = {
+      ...data('table', 'ns'),
+      views: [{ id: 'v', name: 'List', type: 'list', position: 'a0', sorts: [], filters: [], visibleProperties: ['st'], groupBy: 'st' }],
+    };
+    const groups = (doc: Doc): string[] => [...buildDatabase(doc, 'db', listData).el.querySelectorAll('[data-blok-database-list-group]')]
+      .map((group) => group.getAttribute('data-option-id') ?? '');
+    const withEmpty = makeDoc([
+      { id: 'db', name: 'database', parentId: null, data: {} },
+      rowSeed('r1', 'db', { properties: { title: 'One', st: 'ns' }, position: 'a0' }),
+      rowSeed('r2', 'db', { properties: { title: 'Two' }, position: 'a1' }),
+    ]);
+
+    expect(groups(seed())).toEqual(['blocked', 'ns', 'ip']);
+    expect(groups(withEmpty)).toContain('__blok-no-value-group__');
+  });
+
   it('a template\'s own status wins over the default', () => {
     const doc = makeDoc([
       { id: 'db', name: 'database', parentId: null, data: {} },

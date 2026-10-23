@@ -6482,10 +6482,6 @@ button[data-blok-database-column-count]:hover {
   max-width: max(150px, 14%);
 }
 
-[data-blok-database-list-row-property][data-editable]:hover {
-  background-color: var(--blok-database-add-hover-bg);
-}
-
 [data-blok-database-list-row-property] [data-blok-database-cell] {
   display: inline-flex;
   flex-wrap: nowrap;
@@ -6506,7 +6502,7 @@ button[data-blok-database-column-count]:hover {
   flex-shrink: 0;
 }
 
-[data-blok-database-list-row-property] [data-blok-database-option-pill]:not([data-status-group]) {
+[data-blok-database-list-row-property] [data-blok-database-option-pill] {
   height: 18px;
   padding: 0 var(--blok-space-2);
   font-size: 13px;
@@ -6533,6 +6529,10 @@ button[data-blok-database-column-count]:hover {
   line-height: 18px;
 }
 
+[data-blok-database-list-row-property] [data-blok-database-option-pill][data-status-group] {
+  padding-inline: var(--blok-space-2-25) var(--blok-space-2-75);
+}
+
 [data-blok-database-list-load-more] {
   align-self: flex-start;
   height: 30px;
@@ -6552,29 +6552,39 @@ button[data-blok-database-column-count]:hover {
 [data-blok-database-list] > [data-blok-database-add-row], [data-blok-database-list-rows] ~ [data-blok-database-add-row] {
   display: flex;
   align-items: center;
-  gap: var(--blok-space-1-5);
   width: 100%;
-  padding: var(--blok-space-1-5) var(--blok-space-2);
+  height: 30px;
+  padding: 0 var(--blok-space-2) 0 var(--blok-space-1-5);
   background: none;
   border: none;
   border-radius: var(--blok-radius-control);
   cursor: pointer;
-  font-size: 13px;
-  color: var(--blok-database-add-text);
+  font-size: 14px;
+  line-height: 21px;
+  color: var(--blok-database-table-muted-text);
   text-align: start;
-  transition: background-color 80ms ease, color 80ms ease;
-  margin-top: var(--blok-space-0-5);
+  transition: background-color 80ms ease;
 }
 
 [data-blok-database-list] > [data-blok-database-add-row]:hover, [data-blok-database-list-rows] ~ [data-blok-database-add-row]:hover {
-  background-color: var(--blok-database-add-hover-bg);
-  color: var(--blok-database-ink);
+  background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-add-row] > span[aria-hidden="true"] {
+  display: inline-flex;
+  margin: var(--blok-space-0-25) var(--blok-space-2);
+  color: var(--blok-database-table-gutter-icon);
+}
+
+[data-blok-database-add-row] > span[aria-hidden="true"] svg {
+  width: 16px;
+  height: 16px;
 }
 
 [data-blok-database-list-group] {
   display: flex;
   flex-direction: column;
-  margin-bottom: 28px;
+  margin-bottom: calc(var(--blok-space-6) + var(--blok-space-1));
 }
 
 [data-blok-database-list-group-header] {
@@ -6582,7 +6592,7 @@ button[data-blok-database-column-count]:hover {
   align-items: center;
   gap: var(--blok-space-1);
   height: 24px;
-  margin-bottom: 12px;
+  margin-bottom: var(--blok-space-3);
   cursor: pointer;
   user-select: none;
 }

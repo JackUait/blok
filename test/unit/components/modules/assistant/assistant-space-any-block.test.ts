@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen } from '@testing-library/dom';
+import { screen, waitFor, within } from '@testing-library/dom';
 
 import { Blok } from '../../../../../src/blok';
 import { Paragraph } from '../../../../../src/tools/paragraph';
@@ -9,23 +9,34 @@ import { Quote } from '../../../../../src/tools/quote';
 import { CodeTool } from '../../../../../src/tools/code';
 import { Table } from '../../../../../src/tools/table';
 import { ToggleItem } from '../../../../../src/tools/toggle';
+import { CalloutTool } from '../../../../../src/tools/callout';
 import type { OutputBlockData } from '../../../../../types';
-import type { AgentModel } from '../../../../../types/api';
+import type { AgentModel, AgentModelResponse } from '../../../../../types/api';
 
 const editors: Blok[] = [];
 
-const model: AgentModel = async () => {
+const unscripted: AgentModel = async () => {
   throw new Error('unscripted model call');
 };
 
-const createEditor = async (blocks: OutputBlockData[]): Promise<Blok> => {
+const scripted = (...responses: AgentModelResponse[]): AgentModel => async () => {
+  const next = responses.shift();
+
+  if (next === undefined) {
+    throw new Error('unscripted model call');
+  }
+
+  return next;
+};
+
+const createEditor = async (blocks: OutputBlockData[], model: AgentModel = unscripted): Promise<Blok> => {
   const holder = document.createElement('div');
 
   document.body.appendChild(holder);
 
   const editor = new Blok({
     holder,
-    tools: { paragraph: Paragraph, header: Header, list: ListItem, quote: Quote, code: CodeTool, table: Table, toggle: ToggleItem },
+    tools: { paragraph: Paragraph, header: Header, list: ListItem, quote: Quote, code: CodeTool, table: Table, toggle: ToggleItem, callout: CalloutTool },
     data: { blocks },
     agent: { assistant: { model } },
   });
@@ -103,6 +114,50 @@ describe('assistant: space in any empty block', () => {
 
     expect(barOpen()).toBe(true);
     expect(event.defaultPrevented).toBe(true);
+  });
+
+  it.each([
+    ['a callout', { id: 'c', type: 'callout', data: { emoji: '', textColor: null, backgroundColor: null }, content: ['b'] }],
+    ['an open toggle', { id: 'c', type: 'toggle', data: { text: 'Open', isOpen: true }, content: ['b'] }],
+  ])('opens Ask AI in an empty heading inside %s', async (_name, container) => {
+    await createEditor([container, { id: 'b', type: 'header', parent: 'c', data: { text: '', level: 3 } }]);
+    caretIn(editable('b'));
+
+    const event = pressSpace(editable('b'));
+
+    expect(barOpen()).toBe(true);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('lets the list items it writes take the place of the empty item it was asked in', async () => {
+    const insert: AgentModelResponse = {
+      stop_reason: 'tool_use',
+      content: [{
+        type: 'tool_use',
+        id: 'c1',
+        name: 'blok_execute',
+        input: { commands: [{ name: 'block.insert', args: { type: 'list', data: { text: 'One', style: 'unordered' }, position: { after: 'b' } } }] },
+      }],
+    };
+
+    await createEditor(
+      [{ id: 'a', type: 'paragraph', data: { text: 'Above' } }, { id: 'b', type: 'list', data: { text: '', style: 'unordered' } }],
+      scripted(insert, { stop_reason: 'end_turn', content: [{ type: 'text', text: 'Done.' }] })
+    );
+    caretIn(editable('b'));
+    pressSpace(editable('b'));
+
+    const field = within(screen.getByRole('dialog', { name: 'Ask AI' })).getByRole('textbox');
+
+    if (!(field instanceof HTMLTextAreaElement)) {
+      throw new Error('prompt field is not a textarea');
+    }
+    field.value = 'Add an item';
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+
+    await waitFor(() => expect(screen.getByText('Done.')).toBeInTheDocument(), { timeout: 10_000 });
+    expect(document.querySelector('[data-blok-id="b"]')).toBeNull();
   });
 
   it('opens Ask AI in an empty table cell', async () => {

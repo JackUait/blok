@@ -142,7 +142,7 @@ export class Assistant extends Module {
   private placing = false;
   /** The empty block the bar covers, when Space opened it there. */
   private inPlaceId: string | null = null;
-  /** The empty paragraph the caret sat in at open. Content the run writes next to it takes its place. */
+  /** The empty block the caret sat in at open. Content the run writes next to it takes its place. */
   private emptyId: string | null = null;
   /** Blocks this open run created. */
   private readonly created = new Set<string>();
@@ -234,7 +234,7 @@ export class Assistant extends Module {
       this.anchor = block === undefined ? null : { id: block.id };
       this.inPlaceId = options.inPlace === true ? block?.id ?? null : null;
       // Only the block the model is told the caret is in: content goes next to it.
-      this.emptyId = caret !== undefined && caret.id === this.context.blockIds[0] && caret.tool.isDefault && caret.isEmpty
+      this.emptyId = caret !== undefined && caret.id === this.context.blockIds[0] && caret.isEmpty
         ? caret.id
         : null;
       this.created.clear();
@@ -583,9 +583,9 @@ export class Assistant extends Module {
   }
 
   /**
-   * Content the run wrote right next to the empty paragraph the user asked in
-   * takes that paragraph's place. Content put elsewhere leaves it. The delete
-   * joins the run, so Discard brings the paragraph back.
+   * Content the run wrote right next to the empty block the user asked in
+   * takes that block's place. Content put elsewhere leaves it. The delete
+   * joins the run, so Discard brings the block back.
    */
   private async consumeEmpty(): Promise<void> {
     const manager = this.Blok.BlockManager;

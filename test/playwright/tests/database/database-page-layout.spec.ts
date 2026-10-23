@@ -881,8 +881,8 @@ test.describe('row page layout', () => {
   // research/33 §3.10: title weight 500, body 12px. research/10 §5: Reset is a filled red button,
   // with a U-turn glyph, a ×, a 17px title and a grey borderless Cancel.
   // Notion's body grey and red fail AA, so Blok keeps its secondary ink and AA red.
-  // research/36 §8.2: Reset's label is white in light; dark is unmeasured and keeps the shared label ink.
-  for (const [scheme, body, label] of [['light', 'rgb(114, 111, 106)', 'rgb(255, 255, 255)'], ['dark', 'rgb(173, 169, 163)', 'rgb(253, 246, 246)']] as const) {
+  // research/36 §8.2: Reset's label is white in light; research/37:134: white in dark too.
+  for (const [scheme, body, label] of [['light', 'rgb(114, 111, 106)', 'rgb(255, 255, 255)'], ['dark', 'rgb(173, 169, 163)', 'rgb(255, 255, 255)']] as const) {
     test(`the Reset confirm draws Notion's look in ${scheme}`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
       await mount(page, blocks({ pageLayoutPlacements: [{ id: 'p-due', place: 'heading' }], pageLayoutSections: [] }));

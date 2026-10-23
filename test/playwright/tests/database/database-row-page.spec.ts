@@ -46,6 +46,18 @@ const blocks = (view: Record<string, unknown> = {}, extra: OutputBlockData[] = [
   ...extra,
 ];
 
+/**
+ * The same page with one layout section, so the row page draws its "Properties" fold:
+ * a plain button in the peek that opens nothing (a classic page has no fold).
+ */
+const withSection = (data: OutputBlockData[]): OutputBlockData[] => data.map((block) => (block.id !== 'db-1' ? block : {
+  ...block,
+  data: {
+    ...block.data,
+    schema: SCHEMA.map((p) => (p.type === 'title' ? { ...p, pageLayoutSections: [{ id: 's1', name: 'Details' }] } : p)),
+  },
+}));
+
 const mount = async (page: Page, data: OutputBlockData[], readOnly = false): Promise<void> => {
   await page.evaluate(async ({ data: input, readOnly: ro }) => {
     if (window.blokInstance) {
@@ -161,7 +173,7 @@ test.describe('page body as child blocks', () => {
   });
 
   test('Escape after a click on a button in the peek closes it, as from the title', async ({ page }) => {
-    await mount(page, blocks());
+    await mount(page, withSection(blocks()));
     await openRow(page, 'r1');
     await expect(peek(page)).toHaveAttribute('data-open', '');
     await peek(page).getByRole('button', { name: 'Properties' }).click();
@@ -174,7 +186,7 @@ test.describe('page body as child blocks', () => {
   test('undo after a click on a button in the peek still undoes the title', async ({ page }) => {
     const title = async (): Promise<unknown> => ((await saved(page)).find((b) => b.id === 'r1')?.data.properties as Record<string, unknown>)['p-title'];
 
-    await mount(page, blocks());
+    await mount(page, withSection(blocks()));
     await openRow(page, 'r1');
     await peekTitle(page).click();
     await page.keyboard.press('End');

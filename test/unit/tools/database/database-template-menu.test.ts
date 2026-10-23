@@ -524,6 +524,22 @@ describe('template menu', () => {
       expect(h.setRepeat).toHaveBeenCalledWith({ ...weekly, start: '2026-10-28T08:30:00.000Z' });
     });
 
+    it('keeps keyboard focus on the month step and the picked day when the grid redraws', () => {
+      const { items } = panel(repeatHost({ repeat: () => weekly }));
+      const box = (selector: string): HTMLButtonElement | null => field<HTMLButtonElement>(items, 'starting', selector);
+      const calendar = find(items, 'template-repeat-starting')?.children?.items?.[0]?.element;
+
+      if (calendar === undefined) throw new Error('no calendar');
+      document.body.append(calendar);
+      box('[data-blok-database-date-next]')?.focus();
+      box('[data-blok-database-date-next]')?.click();
+      expect(box('[data-blok-database-date-next]')).toHaveFocus();
+      box('[data-blok-database-date-day="2026-11-03"]')?.focus();
+      box('[data-blok-database-date-day="2026-11-03"]')?.click();
+      expect(box('[data-blok-database-date-day="2026-11-03"]')).toHaveFocus();
+      calendar.remove();
+    });
+
     it('stamps the viewer\'s zone on a zone-less schedule', () => {
       const legacy: TemplateRepeat = { frequency: 'daily', start: '2026-10-05T07:30:00.000Z' };
       const h = repeatHost({ repeat: () => legacy, timeZone: 'Asia/Tokyo' });

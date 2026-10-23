@@ -473,7 +473,15 @@ const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: Cade
 
       return line;
     }));
+    const focused = document.activeElement;
+    // A redraw replaces the focused button: keyboard focus moves to its new copy.
+    const refocus = focused instanceof HTMLElement && calendar.contains(focused)
+      ? ['data-blok-database-date-prev', 'data-blok-database-date-next', 'data-blok-database-date-day'].find((name) => focused.hasAttribute(name))
+      : undefined;
+    const value = refocus === undefined ? null : focused?.getAttribute(refocus);
+
     calendar.replaceChildren(header, grid);
+    if (refocus !== undefined) calendar.querySelector<HTMLElement>(value === '' ? `[${refocus}]` : `[${refocus}="${value ?? ''}"]`)?.focus();
   }
 
   const zones = timeZones();

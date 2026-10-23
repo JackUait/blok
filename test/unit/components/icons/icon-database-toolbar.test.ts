@@ -5,7 +5,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { IconFilter, IconSigma, IconSort } from '../../../../src/components/icons';
+import { IconChevronDoubleRight, IconChevronRight, IconFilter, IconSigma, IconSort } from '../../../../src/components/icons';
 
 const paths = (markup: string): string[] =>
   [ ...markup.matchAll(/<path d="([^"]+)"/g) ].map((m) => m[1]);
@@ -67,5 +67,14 @@ describe('database toolbar icons', () => {
     expect([Math.min(...points.map(([, y]) => y)), Math.max(...points.map(([, y]) => y))]).toEqual([5, 15]);
     expect((Math.min(...points.map(([x]) => x)) + Math.max(...points.map(([x]) => x))) / 2).toBe(10);
     expect(key(points.map(([x, y]) => [x, 20 - y]))).toEqual(key(points));
+  });
+  it('Minimize: two copies of IconChevronRight\'s skeleton, 5 units apart and centred on the canvas', () => {
+    const shift = (d: string, dx: number): string => d.replace(/M([\d.]+) /, (_, x: string) => `M${Number(x) + dx} `)
+      .replace(/L([\d.]+) ([\d.]+)L([\d.]+)/, (_, a: string, b: string, c: string) => `L${Number(a) + dx} ${b}L${Number(c) + dx}`);
+    const [single] = paths(IconChevronRight);
+    const [left, right] = paths(IconChevronDoubleRight);
+
+    expect(left).toBe(shift(single, -2.5));
+    expect(right).toBe(shift(single, 2.5));
   });
 });

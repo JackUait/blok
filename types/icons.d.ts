@@ -28,6 +28,7 @@ export declare const IconMinus: string;
 export declare const IconChevronDown: string;
 export declare const IconChevronLeft: string;
 export declare const IconChevronRight: string;
+export declare const IconChevronDoubleRight: string;
 export declare const IconChevronUpDown: string;
 export declare const IconSearch: string;
 export declare const IconH1: string;

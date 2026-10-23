@@ -143,6 +143,14 @@ export const IconChevronRight = `
 </svg>
 `;
 
+// Two right chevrons: Notion's "Minimize" on the database toolbar. Each is IconChevronRight's skeleton.
+export const IconChevronDoubleRight = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M5.5 6L9.5 10L5.5 14" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M10.5 6L14.5 10L10.5 14" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Up/down chevron — a select-like field (Notion's CSV Import Location, form
 // Dropdown). Drawn 1:1 for a 20px box: 9 x 13 like Notion's, so it is larger
 // than the disclosure chevrons.

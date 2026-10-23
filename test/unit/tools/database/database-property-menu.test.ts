@@ -657,6 +657,17 @@ describe('DatabasePropertyMenu', () => {
       expect(byName(saved, 'timeFormat').secondaryLabel).toBe('tools.database.timeFormat.hidden');
     });
 
+    // The value reaches innerHTML, and a missing i18n key comes back as the key itself.
+    it('shows the defaults for a saved format it does not know', () => {
+      const markup = '<img src=x onerror=alert(1)>';
+
+      open(prop('date', { date: { dateFormat: markup, timeFormat: markup } as never }));
+      const items = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+      expect(byName(items, 'dateFormat').secondaryLabel).toBe('tools.database.dateFormat.full');
+      expect(byName(items, 'timeFormat').secondaryLabel).toBe('tools.database.timeFormat.12_hour');
+    });
+
     it('shows 24 hour on an untouched Date property when the locale uses a 24 hour clock', () => {
       const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'de' } as never, hasPeople: false, ...callbacks() });
 

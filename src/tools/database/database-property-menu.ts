@@ -716,13 +716,16 @@ export class DatabasePropertyMenu {
 
     const date = property.date ?? {};
     const setDate = (patch: Partial<typeof date>): void => update({ date: { ...date, ...patch } });
-    const shownTimeFormat = date.timeFormat ?? (resolveHourCycle(resolveLocale(this.options.i18n.getLocale())) === 'h12' ? '12_hour' : '24_hour');
+    // Saved values feed an i18n key that reaches innerHTML, so only known ones pass.
+    const shownDateFormat = DATE_FORMATS.find((format) => format === date.dateFormat) ?? 'full';
+    const shownTimeFormat = TIME_FORMATS.find((format) => format === date.timeFormat)
+      ?? (resolveHourCycle(resolveLocale(this.options.i18n.getLocale())) === 'h12' ? '12_hour' : '24_hour');
 
     return [
       {
         name: 'dateFormat',
         title: this.t('tools.database.dateFormat'),
-        secondaryLabel: this.t(`tools.database.dateFormat.${date.dateFormat ?? 'full'}`),
+        secondaryLabel: this.t(`tools.database.dateFormat.${shownDateFormat}`),
         icon: IconCalendar,
         children: {
           items: DATE_FORMATS.map((format) => ({

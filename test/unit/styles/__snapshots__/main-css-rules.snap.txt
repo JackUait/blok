@@ -6263,6 +6263,12 @@ button[data-blok-database-column-count]:hover {
   line-height: 18px;
 }
 
+[data-blok-database-card-property] [data-blok-database-option-pill]:not([data-status-group]) {
+  height: 18px;
+  font-size: 12px;
+  line-height: 18px;
+}
+
 [data-blok-database-list-load-more] {
   align-self: flex-start;
   height: 30px;

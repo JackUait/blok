@@ -75,6 +75,16 @@ describe('database board card and calendar "No date" styles', () => {
       .toMatch(/--max-height:\s*calc\(100dvh - 24px\)/);
   });
 
+  // research/07:95 (feel findings B17): a select pill on a board card is 18px, 0 6px, 12px/18px. Status keeps 20px.
+  it('draws select and multi-select pills on a card at 18px and 12px', () => {
+    const body = ruleBody('[data-blok-database-card-property] [data-blok-database-option-pill]:not([data-status-group])');
+
+    expect(body).toMatch(/height:\s*18px/);
+    expect(body).toMatch(/font-size:\s*12px/);
+    expect(body).toMatch(/line-height:\s*18px/);
+    expect(body).not.toMatch(/padding/);
+  });
+
   it('wraps a property only when its wrap setting is on', () => {
     expect(ruleBody('[data-blok-database-card-property][data-wrap="false"]')).toMatch(/white-space:\s*nowrap/);
   });

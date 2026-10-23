@@ -12802,7 +12802,6 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-gallery] {
   --blok-database-gallery-card-min: 260px;
-  --blok-database-gallery-preview-height: 146px;
   display: flex;
   flex-direction: column;
   gap: var(--blok-space-4);
@@ -12811,17 +12810,14 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-gallery][data-card-size="small"] {
   --blok-database-gallery-card-min: 180px;
-  --blok-database-gallery-preview-height: 100px;
 }
 
 [data-blok-database-gallery][data-card-size="medium"] {
   --blok-database-gallery-card-min: 260px;
-  --blok-database-gallery-preview-height: 146px;
 }
 
 [data-blok-database-gallery][data-card-size="large"] {
   --blok-database-gallery-card-min: 340px;
-  --blok-database-gallery-preview-height: 200px;
 }
 
 [data-blok-database-gallery-grid] {
@@ -12877,10 +12873,6 @@ textarea[data-blok-database-cell-input] {
   outline-offset: 2px;
 }
 
-[data-blok-database-gallery-card] {
-  padding-block-end: var(--blok-space-2);
-}
-
 [data-blok-database-gallery-card][data-dragging] {
   opacity: 0.4;
 }
@@ -12911,7 +12903,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-gallery-preview] {
   flex: none;
-  block-size: var(--blok-database-gallery-preview-height);
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   background-color: var(--blok-database-gallery-preview-bg);
   border-block-end: 1px solid var(--blok-database-gallery-preview-border);
@@ -12963,9 +12955,8 @@ textarea[data-blok-database-cell-input] {
   line-height: 22.5px;
   font-weight: 500;
   color: var(--blok-database-gallery-title-text);
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 [data-blok-database-gallery-title]:empty::before {
@@ -13002,11 +12993,16 @@ textarea[data-blok-database-cell-input] {
   align-items: center;
   justify-content: center;
   gap: var(--blok-space-1);
-  min-height: 80px;
   background-color: transparent;
-  box-shadow: none;
+  box-shadow: 0 0 0 1px var(--blok-database-gallery-preview-border);
   color: var(--blok-database-gallery-muted-text);
-  font-size: 14px;
+  font-size: 15px;
+}
+
+[data-blok-database-gallery-new]::before {
+  content: '';
+  margin-inline-end: calc(-1 * var(--blok-space-1));
+  padding-block-start: calc(56.25% + 38.5px);
 }
 
 [data-blok-database-gallery-new] svg {

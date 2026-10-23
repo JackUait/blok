@@ -354,7 +354,7 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
 
     const label = document.createElement('span');
 
-    label.textContent = this.t('tools.database.galleryNew');
+    label.textContent = this.t('tools.database.newPage');
     add.append(icon, label);
 
     return add;

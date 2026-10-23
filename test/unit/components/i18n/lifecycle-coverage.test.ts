@@ -270,7 +270,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1884 + 126 + 509 + 4 closure for all 2523 keys', () => {
+  it('rebuilds a disjoint 1883 + 126 + 510 + 4 closure for all 2523 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -446,7 +446,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +2: the row page's "…" hint (peekActionsHint) and its "Edit view default" item, by literal.
       // +1: popover.filteredResults, the "/" menu's search header.
       // -2: tools.database.openRow and deleteRow; the list row lost its "›" and "×" (findings-listgallery L03).
-      'executable-literal': 1884,
+      // -1: tools.database.galleryNew; the gallery tile reads tools.database.newPage (findings-listgallery L14).
+      'executable-literal': 1883,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -512,7 +513,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +7: the other layouts' Property visibility headers (settingsShownIn<Layout>) and its search
       // (settingsSearchProperty), via the panel's prefixing t.
       // +2: tools.database.openRow and deleteRow (see executable-literal).
-      'registered-namespace-compatible': 509,
+      // +1: tools.database.galleryNew (see executable-literal).
+      'registered-namespace-compatible': 510,
       'catalog-only': 4,
     });
     expect(

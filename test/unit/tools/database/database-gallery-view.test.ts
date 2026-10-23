@@ -302,6 +302,8 @@ describe('DatabaseGalleryView', () => {
     const add = root.querySelector<HTMLElement>('[data-blok-database-gallery-new]');
 
     expect(add?.parentElement?.lastElementChild).toBe(add);
+    // findings-listgallery L14: Notion's tile reads "New page".
+    expect(add?.textContent?.trim()).toBe('tools.database.newPage');
     add?.click();
 
     expect(handlers.addRow).toHaveBeenCalledWith(null);

@@ -49,12 +49,37 @@ describe('database gallery and calendar styles', () => {
     expect(colors).not.toContain(`${token}:`);
   });
 
-  it('uses the measured gallery grid gap, cover height and title type', () => {
+  it('uses the measured gallery grid gap and title type', () => {
     expect(ruleBody('[data-blok-database-gallery-grid]')).toContain('gap: var(--blok-space-4)');
-    expect(ruleBody('[data-blok-database-gallery][data-card-size="medium"]')).toMatch(/--blok-database-gallery-preview-height:\s*146px/);
-    expect(ruleBody('[data-blok-database-gallery-preview]')).toContain('block-size: var(--blok-database-gallery-preview-height)');
     expect(ruleBody('[data-blok-database-gallery-title]')).toMatch(/font-size:\s*15px/);
     expect(ruleBody('[data-blok-database-gallery-title]')).toMatch(/font-weight:\s*500/);
+  });
+
+  // findings-listgallery L13: the preview is 9/16 of the card width; the card is preview + title, no bottom padding.
+  it('draws the preview 16:9 at every card size, with no padding under the card', () => {
+    expect(ruleBody('[data-blok-database-gallery-preview]')).toContain('aspect-ratio: 16 / 9');
+    expect(css).not.toContain('--blok-database-gallery-preview-height');
+    expect(ruleBody('[data-blok-database-gallery-card]')).not.toContain('padding-block-end');
+  });
+
+  // findings-listgallery L12: a long title wraps in full; grid rows stretch same-row cards to one height.
+  it('wraps a long title instead of cutting it', () => {
+    const title = ruleBody('[data-blok-database-gallery-title]');
+
+    expect(title).toContain('white-space: normal');
+    expect(title).toContain('overflow-wrap: anywhere');
+    expect(title).not.toContain('text-overflow: ellipsis');
+    expect(ruleBody('[data-blok-database-gallery-grid]')).not.toContain('align-items');
+  });
+
+  // findings-listgallery L14: the "+ New page" tile is a card-size tile with the card ring, 15px gray.
+  it('draws the "+ New page" tile at card height with the card ring', () => {
+    const tile = ruleBody('[data-blok-database-gallery-new]');
+
+    expect(tile).toContain('box-shadow: 0 0 0 1px var(--blok-database-gallery-preview-border)');
+    expect(tile).toContain('font-size: 15px');
+    expect(tile).not.toContain('min-height: 80px');
+    expect(ruleBody('[data-blok-database-gallery-new]::before')).toContain('padding-block-start: calc(56.25% + 38.5px)');
   });
 
   it('crops images unless Fit image is on', () => {

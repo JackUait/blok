@@ -1045,6 +1045,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_PLAIN_CONFIRM_BYTES = 688;
     // assistant.css: the Ask AI actions row clips while it folds, and its chips dissolve.
     const ASSISTANT_ACTIONS_FOLD_BYTES = 667;
+    // ask-ai-menu.css + its import: the Ask AI menu's rose light, unfold, icon acts, hue ink, shine and seam.
+    const ASK_AI_MENU_MOTION_BYTES = 10_499;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1226,7 +1228,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_PLACE_VIEW_BYTES
       + DATABASE_PLACE_CARD_MAP_BYTES
       + DATABASE_ROUND14_COLOURS_BYTES
-      + ASSISTANT_SELECTION_TINT_BYTES + DATABASE_PLAIN_CONFIRM_BYTES + ASSISTANT_ACTIONS_FOLD_BYTES;
+      + ASSISTANT_SELECTION_TINT_BYTES + DATABASE_PLAIN_CONFIRM_BYTES + ASSISTANT_ACTIONS_FOLD_BYTES
+      + ASK_AI_MENU_MOTION_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

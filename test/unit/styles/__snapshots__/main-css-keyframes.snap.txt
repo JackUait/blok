@@ -16,6 +16,59 @@
   to { opacity: 1; filter: none }
 }
 
+@keyframes blok-ask-ai-dot-in {
+  from { opacity: 0; transform: scale(0) }
+}
+
+@keyframes blok-ask-ai-draw {
+  from { stroke-dasharray: 1; stroke-dashoffset: 1 }
+  to { stroke-dasharray: 1; stroke-dashoffset: 0 }
+}
+
+@keyframes blok-ask-ai-fade {
+  from { opacity: 0 }
+}
+
+@keyframes blok-ask-ai-hop {
+  35% { transform: translateY(-2.2px) }
+}
+
+@keyframes blok-ask-ai-pop {
+  from { opacity: 0; transform: scale(0) }
+  40% { opacity: 1; transform: scale(1.4) }
+  to { opacity: 0; transform: scale(0.6) translateY(-2px) }
+}
+
+@keyframes blok-ask-ai-row-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98) }
+}
+
+@keyframes blok-ask-ai-shine {
+  from { background-position: 100% 0 }
+  to { background-position: 0 0 }
+}
+
+@keyframes blok-ask-ai-spin {
+  50% { transform: rotate(45deg) scale(1.12) }
+  to { transform: rotate(90deg) }
+}
+
+@keyframes blok-ask-ai-sweep {
+  from { transform: translateX(-100%) }
+}
+
+@keyframes blok-ask-ai-tilt {
+  30% { transform: rotate(-16deg) }
+  65% { transform: rotate(8deg) }
+}
+
+@keyframes blok-ask-ai-write {
+  25% { transform: translate(1.6px, -0.6px) rotate(-3deg) }
+  50% { transform: translate(3.2px, 0.4px) }
+  75% { transform: translate(4.8px, -0.6px) rotate(-3deg) }
+  to { transform: translate(6px, 0) }
+}
+
 @keyframes blok-assistant-dissolve {
   to { opacity: 0; transform: translateY(-4px) scale(0.94); filter: blur(3px) }
 }

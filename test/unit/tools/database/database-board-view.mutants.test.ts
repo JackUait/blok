@@ -336,7 +336,7 @@ describe('DatabaseBoardView — mutation coverage', () => {
         placeholder: title.getAttribute('data-placeholder'),
         empty: card.getAttribute('data-empty'),
       }).toStrictEqual({
-        text: 'T(tools.database.cardTitlePlaceholder)',
+        text: 'T(tools.page.untitled)',
         placeholder: '',
         empty: '',
       });
@@ -352,7 +352,7 @@ describe('DatabaseBoardView — mutation coverage', () => {
         placeholder: title.getAttribute('data-placeholder'),
         empty: card.getAttribute('data-empty'),
       }).toStrictEqual({
-        text: 'T(tools.database.cardTitlePlaceholder)',
+        text: 'T(tools.page.untitled)',
         placeholder: '',
         empty: '',
       });
@@ -466,7 +466,7 @@ describe('DatabaseBoardView — mutation coverage', () => {
         placeholder: requireEl(card, '[data-blok-database-card-title]').getAttribute('data-placeholder'),
         empty: card.getAttribute('data-empty'),
       }).toStrictEqual({
-        text: 'T(tools.database.cardTitlePlaceholder)',
+        text: 'T(tools.page.untitled)',
         placeholder: '',
         empty: '',
       });

@@ -518,7 +518,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
         titleEl.removeAttribute('data-placeholder');
         cardEl?.removeAttribute('data-empty');
       } else {
-        titleEl.textContent = this.i18n.t('tools.database.cardTitlePlaceholder');
+        titleEl.textContent = this.i18n.t('tools.page.untitled');
         titleEl.setAttribute('data-placeholder', '');
         cardEl?.setAttribute('data-empty', '');
       }
@@ -784,7 +784,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     if (title) {
       titleEl.textContent = title;
     } else {
-      titleEl.textContent = this.i18n.t('tools.database.cardTitlePlaceholder');
+      titleEl.textContent = this.i18n.t('tools.page.untitled');
       titleEl.setAttribute('data-placeholder', '');
       cardEl.setAttribute('data-empty', '');
     }
@@ -897,7 +897,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       if (title) {
         div.textContent = title;
       } else {
-        div.textContent = this.i18n.t('tools.database.cardTitlePlaceholder');
+        div.textContent = this.i18n.t('tools.page.untitled');
         div.setAttribute('data-placeholder', '');
       }
 

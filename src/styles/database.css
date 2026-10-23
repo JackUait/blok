@@ -1303,11 +1303,6 @@
   font-style: normal;
 }
 
-[data-blok-database-card][data-empty] {
-  background-color: transparent !important;
-  box-shadow: none !important;
-}
-
 /**
  * Side peek: 756px at the inline end (research/22 §10), sliding in with translateX
  * over 200ms ease (research/08). database-card-drawer.ts sets the width and data-open

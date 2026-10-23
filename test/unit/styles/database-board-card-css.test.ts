@@ -45,6 +45,11 @@ describe('database board card and calendar "No date" styles', () => {
     expect(body).toMatch(/min-block-size:\s*28px/);
   });
 
+  // feel findings B10: Notion's untitled card keeps its white card and ring.
+  it('keeps the card surface and ring on an untitled card', () => {
+    expect(ruleBody('[data-blok-database-card][data-empty]')).toBe('');
+  });
+
   it('wraps a property only when its wrap setting is on', () => {
     expect(ruleBody('[data-blok-database-card-property][data-wrap="false"]')).toMatch(/white-space:\s*nowrap/);
   });

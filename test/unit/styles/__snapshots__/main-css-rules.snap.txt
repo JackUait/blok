@@ -5046,11 +5046,6 @@ span[data-blok-slash-search] {
   font-style: normal;
 }
 
-[data-blok-database-card][data-empty] {
-  background-color: transparent !important;
-  box-shadow: none !important;
-}
-
 [data-blok-database-drawer] {
   position: fixed;
   top: 0;

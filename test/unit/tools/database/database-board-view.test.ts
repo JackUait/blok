@@ -794,7 +794,7 @@ describe('DatabaseBoardView', () => {
 
       const titleDiv = cardEl.querySelector('[data-blok-database-card-title]');
 
-      expect(titleDiv?.textContent).toBe('tools.database.cardTitlePlaceholder');
+      expect(titleDiv?.textContent).toBe('tools.page.untitled');
       expect(titleDiv?.hasAttribute('data-placeholder')).toBe(true);
       expect(cardEl.hasAttribute('data-empty')).toBe(true);
     });
@@ -1184,7 +1184,7 @@ describe('DatabaseBoardView', () => {
       expect(titleEl?.textContent).toBe('Updated title');
     });
 
-    it('updateRowTitle falls back to cardTitlePlaceholder i18n key when title is empty', () => {
+    it('updateRowTitle falls back to the "New page" placeholder when the title is empty', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1', properties: { title: 'Has title' } })];
       const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
@@ -1194,10 +1194,10 @@ describe('DatabaseBoardView', () => {
 
       const titleEl = board.querySelector('[data-row-id="row-1"] [data-blok-database-card-title]');
 
-      expect(titleEl?.textContent).toBe('tools.database.cardTitlePlaceholder');
+      expect(titleEl?.textContent).toBe('tools.page.untitled');
     });
 
-    it('createView renders card with empty title using cardTitlePlaceholder i18n key', () => {
+    it('createView renders an untitled card as "New page"', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1', properties: { title: '' } })];
       const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
@@ -1205,7 +1205,7 @@ describe('DatabaseBoardView', () => {
 
       const titleEl = board.querySelector('[data-row-id="row-1"] [data-blok-database-card-title]');
 
-      expect(titleEl?.textContent).toBe('tools.database.cardTitlePlaceholder');
+      expect(titleEl?.textContent).toBe('tools.page.untitled');
     });
 
     it('createView sets data-placeholder on card title when title is empty', () => {

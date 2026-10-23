@@ -273,6 +273,12 @@ export const resizeBar = (values: BarValues, edge: 'start' | 'end', toDay: strin
   return { end: firstDay(values.end) === null ? day : moveDateValue(values.end, day) ?? day };
 };
 
+/** A new `days`-long bar from `day`: one range value, or a start and an end when the view has an end property. */
+export const newBarWrite = (day: string, days: number, separateEnd: boolean): BarWrite => ({
+  start: day,
+  ...resizeBar({ start: day, end: separateEnd ? null : undefined }, 'end', addDays(day, days - 1)),
+});
+
 export interface HeaderUnit {
   label: string;
   /** Pixels from the canvas start. */

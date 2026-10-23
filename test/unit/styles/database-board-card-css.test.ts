@@ -156,7 +156,7 @@ describe('database board card and calendar "No date" styles', () => {
   });
 
   it('draws the measured "No date" button', () => {
-    const body = ruleBody('[data-blok-database-calendar-nav] [data-blok-database-calendar-no-date]');
+    const body = ruleBody('[data-blok-database-view-toolbar] [data-blok-database-no-date-button]');
 
     expect(body).toMatch(/block-size:\s*28px/);
     // Words in icon gray: Notion's 142,139,134 is 3.39:1 on white, so the light AA step.

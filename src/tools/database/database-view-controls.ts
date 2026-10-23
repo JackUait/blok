@@ -63,6 +63,8 @@ export interface ViewControlsHost {
   duplicateView: () => void;
   deleteView: () => void;
   copyViewLink: () => void;
+  /** A calendar or timeline's "No date (N)": undefined hides it. */
+  noDate?: () => { count: number; label: string; open: (anchor: HTMLElement) => void } | undefined;
   /** "Manage in Calendar": only when the host gave `config.calendar`. */
   manageInCalendar?: { label: string; onClick: () => void };
   groups: (sub: boolean) => ViewGroupEntry[];
@@ -153,6 +155,7 @@ export class DatabaseViewControls {
   private readonly host: ViewControlsHost;
   private readonly personal: PersonalViewEdits;
   private readonly filterButton: HTMLButtonElement;
+  private readonly noDateButton: HTMLButtonElement;
   private readonly minimizeButton: HTMLButtonElement;
   /** The person's choice for the chip bar: shown, hidden, or `null` to follow its chips. Reset per view. */
   private barOpen: boolean | null = null;
@@ -199,6 +202,10 @@ export class DatabaseViewControls {
     this.lockBadge.innerHTML = IconLock;
 
     this.filterButton = iconButton('database-toolbar-filter', this.t('settingsFilter'), IconFilter);
+    this.noDateButton = button('database-toolbar-no-date', '', {});
+    this.noDateButton.setAttribute('data-blok-database-no-date-button', '');
+    this.noDateButton.removeAttribute('aria-label');
+    this.noDateButton.addEventListener('click', () => this.host.noDate?.()?.open(this.noDateButton));
     this.minimizeButton = iconButton('database-toolbar-minimize', this.t('filterBarMinimize'), IconChevronDoubleRight);
     this.sortButton = iconButton('database-toolbar-sort', this.t('settingsSort'), IconSort);
     this.automationsButton = iconButton('database-toolbar-automations', this.t('automationTitle'), IconBolt);
@@ -249,7 +256,7 @@ export class DatabaseViewControls {
     // "Preview" reuses the file tool's word: the same in every locale.
     this.previewFormButton = iconButton('database-toolbar-preview-form', this.host.i18n.t('tools.file.preview'), IconPreview);
     this.previewFormButton.addEventListener('click', () => this.host.previewForm?.());
-    this.toolbar.append(this.lockBadge, this.minimizeButton, this.filterButton, this.sortButton, this.automationsButton, this.autofillButton, this.searchButton, this.settingsButton, this.previewFormButton, this.shareFormButton);
+    this.toolbar.append(this.lockBadge, this.minimizeButton, this.noDateButton, this.filterButton, this.sortButton, this.automationsButton, this.autofillButton, this.searchButton, this.settingsButton, this.previewFormButton, this.shareFormButton);
     if (host.newRow !== undefined) {
       this.toolbar.append(this.newSplitButton(host.newRow, host.openNewMenu));
     }
@@ -334,6 +341,10 @@ export class DatabaseViewControls {
     const titleOnly = this.host.schema().length <= 1;
 
     this.filterButton.hidden = titleOnly;
+    const noDate = this.host.noDate?.();
+
+    this.noDateButton.hidden = noDate === undefined;
+    this.noDateButton.textContent = noDate?.label ?? '';
     this.sortButton.hidden = titleOnly;
     this.automationsButton.hidden = titleOnly || this.host.automations === undefined;
     this.automationsButton.disabled = this.host.automations?.writable() !== true;

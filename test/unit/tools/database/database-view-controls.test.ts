@@ -87,6 +87,28 @@ describe('DatabaseViewControls', () => {
     expect(q('database-toolbar-sort')?.getAttribute('aria-label')).toBe('tools.database.settingsSort');
   });
 
+  describe('"No date (N)" for a calendar or timeline (findings C03/C04)', () => {
+    it('shows the view\'s count left of Filter and opens the view\'s popover from itself', () => {
+      const open = vi.fn();
+      const control = { count: 2, label: 'No date (2)', open };
+
+      setup({ levers: { noDate: () => control } });
+      const button = q('database-toolbar-no-date');
+
+      expect(button?.hidden).toBe(false);
+      expect(text(button)).toBe('No date (2)');
+      expect(button?.nextElementSibling).toBe(q('database-toolbar-filter'));
+      button?.click();
+      expect(open).toHaveBeenCalledWith(button);
+    });
+
+    it('is hidden when the view gives no control', () => {
+      setup({ levers: { noDate: () => undefined } });
+
+      expect(q('database-toolbar-no-date')?.hidden).toBe(true);
+    });
+  });
+
   describe('⚡ Automations and ✦ AI Autofill (research/21:49 order)', () => {
     const levers = (writable = true): Partial<ViewControlsHost> => ({
       automations: { read: () => undefined, schema: () => schema, views: () => [], writable: () => writable, write: () => true },
@@ -728,7 +750,9 @@ describe('DatabaseViewControls', () => {
 
       expect(controls.filterBar.hidden).toBe(false);
       expect(minimize?.hidden).toBe(false);
-      expect(minimize?.nextElementSibling).toBe(q('database-toolbar-filter'));
+      // A calendar or timeline's "No date" sits between them (findings C03); here it is hidden.
+      expect(minimize?.nextElementSibling).toBe(q('database-toolbar-no-date'));
+      expect(q('database-toolbar-no-date')?.nextElementSibling).toBe(q('database-toolbar-filter'));
       expect(minimize?.getAttribute('aria-label')).toBe('tools.database.filterBarMinimize');
       expect(minimize?.querySelector('svg')).not.toBeNull();
 

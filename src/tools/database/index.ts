@@ -6099,6 +6099,7 @@ export class DatabaseTool implements BlockTool {
       setLayout: (type) => this.setActiveLayout(type),
       setLocked: (locked) => this.setDatabaseLocked(locked),
       linked: () => owner.linked,
+      noDate: () => (context === undefined && (this.view instanceof DatabaseCalendarView || this.view instanceof DatabaseTimelineView) ? this.view.noDateControl() : undefined),
       duplicateView: () => this.duplicateView(this.activeViewId),
       deleteView: () => {
         void this.requestDeleteView(this.activeViewId);

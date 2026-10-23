@@ -837,57 +837,82 @@ describe('DatabaseCalendarView', () => {
       expect(view.interacting).toBe(false);
     });
   });
-  describe('"No date" list', () => {
-    const noDate = (root: HTMLElement): HTMLElement | null => root.querySelector<HTMLElement>('[data-blok-database-calendar-no-date]');
-    const items = (root: HTMLElement): HTMLElement[] => [...root.querySelectorAll<HTMLElement>('[data-blok-database-calendar-no-date-item]')];
+  describe('"No date" (research/08, findings C04)', () => {
+    const panel = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-blok-testid="database-no-date"]');
+    const items = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>('[data-blok-database-no-date-row]')];
+    const openPanel = (view: DatabaseCalendarView): HTMLElement => {
+      const anchor = document.createElement('button');
 
-    it('counts the rows without a date in the toolbar', () => {
-      const { root } = mount();
+      document.body.appendChild(anchor);
+      view.noDateControl()?.open(anchor);
 
-      expect(noDate(root)?.getAttribute('data-count')).toBe('1');
-      expect(noDate(root)?.getAttribute('aria-expanded')).toBe('false');
+      return anchor;
+    };
+
+    it('leaves the month bar to the arrows: the count is a control for the database toolbar', () => {
+      const { root, view } = mount();
+
+      expect(root.querySelector('[data-blok-database-calendar-no-date]')).toBeNull();
+      expect(view.noDateControl()?.count).toBe(1);
+      expect(view.noDateControl()?.label).toBe('tools.database.calendarNoDate');
     });
 
-    it('has no button when every row has a date', () => {
-      const { root } = mount({ rows: [row('r1', 'Launch', '2026-10-09')] });
-
-      expect(noDate(root)).toBeNull();
+    it('has no control when every row has a date, or when read-only', () => {
+      expect(mount({ rows: [row('r1', 'Launch', '2026-10-09')] }).view.noDateControl()).toBeUndefined();
+      expect(mount({ readOnly: true }).view.noDateControl()).toBeUndefined();
     });
 
-    it('lists the undated rows and opens one on click', () => {
-      const { root, handlers } = mount();
+    it('opens a 320px popover with a focused search, the hint and each undated page with "Open"', () => {
+      const { view, handlers } = mount();
 
-      noDate(root)?.click();
-      expect(noDate(root)?.getAttribute('aria-expanded')).toBe('true');
-      expect(items(root).map((el) => el.textContent)).toEqual(['Someday']);
-      items(root)[0].click();
+      openPanel(view);
+      const search = panel()?.querySelector<HTMLInputElement>('input');
+
+      expect(panel()?.style.width).toBe('320px');
+      expect(search).toHaveFocus();
+      expect(search?.placeholder).toBe('tools.database.noDateSearch');
+      expect(panel()?.textContent).toContain('tools.database.calendarNoDateHint');
+      expect(items().map((el) => el.querySelector('[data-blok-database-no-date-title]')?.textContent)).toEqual(['Someday']);
+      expect(items()[0].querySelector('[data-blok-database-page-icon-placeholder]')).not.toBeNull();
+      items()[0].querySelector<HTMLElement>('[data-blok-database-no-date-open]')?.click();
       expect(handlers.openRow).toHaveBeenCalledWith('r3');
+      expect(handlers.setDate).not.toHaveBeenCalled();
     });
 
-    it('dates a row dragged from the list onto a day', () => {
-      const { root, handlers } = mount();
+    it('filters the pages by the search', () => {
+      const { view } = mount({ rows: [row('r3', 'Someday', null), row('r4', 'Maybe', null)] });
 
-      noDate(root)?.click();
+      openPanel(view);
+      const search = panel()?.querySelector<HTMLInputElement>('input');
+
+      if (search === null || search === undefined) throw new Error('no search');
+      search.value = 'may';
+      search.dispatchEvent(new Event('input'));
+      expect(items().map((el) => el.querySelector('[data-blok-database-no-date-title]')?.textContent)).toEqual(['Maybe']);
+    });
+
+    it('dates a clicked page today', () => {
+      const { view, handlers } = mount();
+
+      openPanel(view);
+      items()[0].click();
+      expect(handlers.setDate).toHaveBeenCalledWith('r3', '2026-10-09');
+      expect(panel()).toBeNull();
+    });
+
+    it('dates a page dragged from the popover onto a day, and closes the popover as the drag starts', () => {
+      const { root, view, handlers } = mount();
+
       layOut(root);
-      pointer('pointerdown', items(root)[0], 900, 10);
+      openPanel(view);
+      pointer('pointerdown', items()[0], 900, 10);
       pointer('pointermove', document, 350, 210);
+      expect(panel()).toBeNull();
       expect(day(root, '2026-10-14').getAttribute('data-drop')).toBe('');
       pointer('pointerup', document, 350, 210);
 
       expect(handlers.setDate).toHaveBeenCalledWith('r3', '2026-10-14');
       expect(handlers.openRow).not.toHaveBeenCalled();
-    });
-
-    it('cannot drag from the list when read-only', () => {
-      const { root, handlers } = mount({ readOnly: true });
-
-      noDate(root)?.click();
-      layOut(root);
-      pointer('pointerdown', items(root)[0], 900, 10);
-      pointer('pointermove', document, 350, 210);
-      pointer('pointerup', document, 350, 210);
-
-      expect(handlers.setDate).not.toHaveBeenCalled();
     });
   });
 });

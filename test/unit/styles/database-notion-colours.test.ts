@@ -373,7 +373,7 @@ describe('fills and lines that differed from Notion', () => {
 
   it('"Edit filters" and "No date (N)" are icon-gray words, so light takes the AA step (research/08:239, 21:139)', () => {
     expect(ruleBody('[data-blok-database-table-edit-filters]')).toContain('color: var(--blok-database-ink-secondary)');
-    expect(ruleBody('[data-blok-database-calendar-nav] [data-blok-database-calendar-no-date]')).toContain('color: var(--blok-database-ink-secondary)');
+    expect(ruleBody('[data-blok-database-view-toolbar] [data-blok-database-no-date-button]')).toContain('color: var(--blok-database-ink-secondary)');
   });
 
   it('timeline zoom, "+ New" and "Show table" labels are icon-gray text at the AA step (research/07:195)', () => {

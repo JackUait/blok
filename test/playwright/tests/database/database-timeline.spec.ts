@@ -431,13 +431,14 @@ test.describe('calendar "No date"', () => {
   test('lists the undated rows and drags one onto a day', async ({ page }) => {
     await mount(page, blocks({ type: 'calendar' }));
 
-    const button = page.locator('[data-blok-database-calendar-no-date]');
+    // findings C04: in the database toolbar, a 28px button that opens a popover of the undated rows.
+    const button = page.getByTestId('database-toolbar-no-date');
 
-    await expect(button).toHaveAttribute('data-count', '1');
+    await expect(button).toHaveText(/\(1\)/);
     expect((await button.boundingBox())?.height).toBeCloseTo(28, 0);
     await button.click();
 
-    const item = page.locator('[data-blok-database-calendar-no-date-item][data-row-id="r3"]');
+    const item = page.locator('[data-blok-database-no-date-row][data-row-id="r3"]');
     const itemBox = await item.boundingBox();
     const dayBox = await page.locator('[data-blok-database-calendar-day][data-day="2026-10-20"]').boundingBox();
 

@@ -72,7 +72,7 @@ describe('list rows (research/07)', () => {
 });
 
 describe('conditional color on calendar, timeline and feed (research/05 §6.2)', () => {
-  const PAINTED = ':is([data-blok-database-calendar-event], [data-blok-database-calendar-no-date-item], [data-blok-database-timeline-bar], [data-blok-database-feed-card])[data-blok-database-color]';
+  const PAINTED = ':is([data-blok-database-calendar-event], [data-blok-database-timeline-bar], [data-blok-database-feed-card])[data-blok-database-color]';
 
   it('lets the rule color beat the item\'s own fill, which these rules declare after the color rules', () => {
     expect(ruleBody(database, PAINTED)).toContain('background-color: var(--_blok-database-rule-bg)');

@@ -27,6 +27,9 @@ import type { CommentBadges } from './database-comment-badge';
 import { getElementDirection } from '../../components/utils/direction';
 import { IconCalendar, IconChevronLeft, IconChevronRight, IconPlus } from '../../components/icons';
 import { PopoverRegistry } from '../../components/utils/popover/popover-registry';
+import { openNoDatePanel } from './database-no-date';
+import type { NoDateControl } from './database-no-date';
+import type { DatabasePanel } from './database-panel';
 
 export interface CalendarHandlers {
   openRow: (rowId: string) => void;
@@ -99,6 +102,7 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
   private drag: DragState | null = null;
   /** A resize in progress: the row's would-be date, drawn live. */
   private preview: { rowId: string; value: string } | null = null;
+  private noDatePanel: DatabasePanel | null = null;
   /** A drag box started on empty grid space (research/23 §2c). */
   private box: { startX: number; startY: number; el: HTMLElement | null; picked: string | null } | null = null;
   private suppressClick = false;
@@ -223,18 +227,6 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
       this.t(week ? 'tools.database.calendarNextWeek' : 'tools.database.calendarNextMonth'),
       IconChevronRight
     );
-    const undated = this.undatedRows();
-
-    if (undated.length > 0) {
-      const noDate = document.createElement('button');
-
-      noDate.type = 'button';
-      noDate.setAttribute('data-blok-database-calendar-no-date', '');
-      noDate.setAttribute('data-count', String(undated.length));
-      noDate.setAttribute('aria-expanded', 'false');
-      noDate.textContent = this.t('tools.database.calendarNoDate', { count: String(undated.length) });
-      nav.prepend(noDate);
-    }
     bar.append(title, nav);
 
     return bar;
@@ -247,34 +239,35 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     return dateId === undefined ? [] : this.options.rows.filter((row) => eventSpan(row.properties[dateId]) === null);
   }
 
-  private toggleNoDateList(button: Element): void {
-    const open = button.getAttribute('aria-expanded') === 'true';
+  /** The database toolbar's "No date (N)" (findings C04). Undefined when nothing lacks a date, or read-only. */
+  noDateControl(): NoDateControl | undefined {
+    const rows = this.undatedRows();
+    const handlers = this.options.handlers;
 
-    button.setAttribute('aria-expanded', String(!open));
-    this.root?.querySelector('[data-blok-database-calendar-no-date-list]')?.remove();
-    if (open) {
-      return;
+    if (rows.length === 0 || !this.canEdit || handlers === undefined) {
+      return undefined;
     }
 
-    const list = document.createElement('div');
-
-    list.setAttribute('data-blok-database-calendar-no-date-list', '');
-    list.setAttribute('role', 'list');
-    for (const row of this.undatedRows()) {
-      const item = document.createElement('div');
-      const title = row.properties[this.options.titlePropertyId];
-
-      item.setAttribute('data-blok-database-calendar-no-date-item', '');
-      item.setAttribute('data-row-id', row.id);
-      item.setAttribute('role', 'listitem');
-      item.tabIndex = 0;
-      item.textContent = typeof title === 'string' ? title : '';
-      if (item.textContent === '') {
-        item.setAttribute('data-placeholder', this.t('tools.database.cardTitlePlaceholder'));
-      }
-      list.appendChild(item);
-    }
-    this.root?.querySelector('[data-blok-database-calendar-toolbar]')?.after(list);
+    return {
+      count: rows.length,
+      label: this.t('tools.database.calendarNoDate', { count: String(rows.length) }),
+      open: (anchor) => {
+        this.noDatePanel = openNoDatePanel({
+          anchor,
+          i18n: this.options.i18n,
+          rows,
+          titlePropertyId: this.options.titlePropertyId,
+          hint: this.t('tools.database.calendarNoDateHint'),
+          // Unmeasured in Notion: a click dates the page today.
+          pick: (rowId) => handlers.setDate(rowId, this.options.today),
+          open: (rowId) => handlers.openRow(rowId),
+          press: (rowId, event) => {
+            this.drag = { rowId, mode: 'place', grabDay: '', startX: event.clientX, startY: event.clientY, active: false, overDay: null, grabOffset: { x: 0, y: 0 }, ghost: null };
+            this.listenForDrag();
+          },
+        });
+      },
+    };
   }
 
   /** In week range the title names the week's month by its first shown day. */
@@ -506,22 +499,6 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
       return;
     }
 
-    const noDate = target.closest('[data-blok-database-calendar-no-date]');
-
-    if (noDate !== null) {
-      this.toggleNoDateList(noDate);
-
-      return;
-    }
-
-    const undatedId = target.closest('[data-blok-database-calendar-no-date-item]')?.getAttribute('data-row-id');
-
-    if (undatedId !== null && undatedId !== undefined) {
-      handlers.openRow(undatedId);
-
-      return;
-    }
-
     const step = target.closest('[data-blok-database-calendar-prev]') !== null ? -1 : 1;
 
     if (target.closest('[data-blok-database-calendar-prev], [data-blok-database-calendar-next]') !== null) {
@@ -612,7 +589,7 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
   private readonly onKeyDown = (event: KeyboardEvent): void => {
     const target = event.target instanceof HTMLElement ? event.target : null;
 
-    if (target?.matches('[data-blok-database-calendar-event], [data-blok-database-calendar-no-date-item]') === true && event.key === 'Enter') {
+    if (target?.matches('[data-blok-database-calendar-event]') === true && event.key === 'Enter') {
       event.preventDefault();
       target.click();
 
@@ -691,15 +668,6 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     // Read before the registry's document listener closes the menu.
     this.pressClosedMenu = PopoverRegistry.instance.hasOpenPopovers();
     if (event.button !== 0 || !this.canEdit || !(event.target instanceof Element)) {
-      return;
-    }
-
-    const undated = event.target.closest('[data-blok-database-calendar-no-date-item]')?.getAttribute('data-row-id');
-
-    if (undated !== null && undated !== undefined) {
-      this.drag = { rowId: undated, mode: 'place', grabDay: '', startX: event.clientX, startY: event.clientY, active: false, overDay: null, grabOffset: { x: 0, y: 0 }, ghost: null };
-      this.listenForDrag();
-
       return;
     }
 
@@ -855,7 +823,8 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
       drag.active = true;
       this.root?.setAttribute('data-dragging', drag.mode);
       this.eventParts(drag.rowId).forEach((el) => el.setAttribute('data-dragging', ''));
-      this.root?.querySelector(`[data-blok-database-calendar-no-date-item][data-row-id="${CSS.escape(drag.rowId)}"]`)?.setAttribute('data-dragging', '');
+      this.noDatePanel?.close();
+      this.noDatePanel = null;
       if (drag.mode === 'move') {
         drag.ghost = this.createGhost(drag.rowId);
       }
@@ -1015,7 +984,6 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
         this.redrawEvents();
       }
       this.eventParts(drag.rowId).forEach((el) => el.removeAttribute('data-dragging'));
-      this.root?.querySelectorAll('[data-blok-database-calendar-no-date-item][data-dragging]').forEach((el) => el.removeAttribute('data-dragging'));
     }
     this.root?.removeAttribute('data-dragging');
     this.drag = null;
@@ -1042,6 +1010,7 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
   destroy(): void {
     this.endDrag();
     this.endBox();
+    this.noDatePanel?.close();
   }
 
   appendRow(): void {

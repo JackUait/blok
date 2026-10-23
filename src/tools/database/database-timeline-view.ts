@@ -17,6 +17,7 @@ import {
   hourBarGeometry,
   headerUnits,
   moveBar,
+  newBarWrite,
   offscreenSide,
   resizeBar,
   resizeBarByMinutes,
@@ -34,6 +35,9 @@ import { isHistoryKey } from './database-keyboard';
 import { getElementDirection } from '../../components/utils/direction';
 import { syncCommentBadge } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
+import { openNoDatePanel } from './database-no-date';
+import type { NoDateControl } from './database-no-date';
+import type { DatabasePanel } from './database-panel';
 import { IconArrowLeftSmall, IconArrowRightSmall, IconCalendar, IconChevronLeft, IconChevronRight, IconMenu, IconPlus } from '../../components/icons';
 
 export interface TimelineGroup {
@@ -100,6 +104,8 @@ export interface DatabaseTimelineViewOptions {
 
 const DRAG_THRESHOLD = 4;
 const DAY_MINUTES = 24 * 60;
+/** findings C07: Notion's "+ New" made a 5-day bar. */
+const NEW_BAR_DAYS = 5;
 const PAN_PX = 160;
 /** Within this share of either canvas end, a scroll redraws around a new centre. */
 const EDGE_SHARE = 0.1;
@@ -164,6 +170,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   private drag: BarDrag | RowDrag | LinkDrag | null = null;
   private suppressClick = false;
   private recentring = false;
+  private noDatePanel: DatabasePanel | null = null;
 
   constructor(options: DatabaseTimelineViewOptions) {
     this.options = options;
@@ -299,6 +306,45 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     bar.append(zoom, today);
 
     return bar;
+  }
+
+  /** The database toolbar's "No date (N)" (findings C03). Undefined when every item has a date, or read-only. */
+  noDateControl(): NoDateControl | undefined {
+    const rows = this.sections.flatMap((group) => group.rows).filter((row) => this.spanOf(row) === null);
+    const handlers = this.options.handlers;
+
+    if (rows.length === 0 || !this.canEdit || handlers === undefined) {
+      return undefined;
+    }
+
+    return {
+      count: rows.length,
+      label: this.options.i18n.t('tools.database.calendarNoDate', { count: String(rows.length) }),
+      open: (anchor) => {
+        this.noDatePanel = openNoDatePanel({
+          anchor,
+          i18n: this.options.i18n,
+          rows,
+          titlePropertyId: this.options.titlePropertyId,
+          hint: this.t('tools.database.timelineNoDateHint'),
+          pick: (rowId) => handlers.writeDates(rowId, this.newBar()),
+          open: (rowId) => handlers.openRow(rowId),
+        });
+      },
+    };
+  }
+
+  /**
+   * A new bar: NEW_BAR_DAYS long from the second day on screen. Notion's rule
+   * is unmeasured; this matches its one measured case (screen from Oct 14, bar Oct 15–19).
+   */
+  private newBar(): BarWrite {
+    const viewport = this.scroller?.clientWidth ?? 0;
+    const start = viewport > 0
+      ? addDays(visibleRange({ scrollStart: this.scrollStart, viewport, windowStart: this.window.start, zoom: this.zoom }).first, 1)
+      : this.options.today;
+
+    return newBarWrite(start, NEW_BAR_DAYS, this.options.endPropertyId !== undefined);
   }
 
   /** Every group with its rows, in drawing order, so the table panel and the canvas line up. */
@@ -439,12 +485,14 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
     canvas.appendChild(this.createBackground());
 
     const firstDated = this.sections.flatMap((group) => group.rows).find((row) => this.spanOf(row) !== null)?.id;
+    const tableShown = resolveShowTimelineTable(this.options.view);
 
     for (const group of this.sections) {
       if (this.options.grouped) {
         canvas.appendChild(this.createGroupHeader(group, 'canvas'));
       }
-      for (const row of group.rows) {
+      // findings C03: with the table hidden, an undated item has no lane; the toolbar's "No date" lists it.
+      for (const row of group.rows.filter((r) => tableShown || this.spanOf(r) !== null)) {
         canvas.appendChild(this.createRow(row, group.key, row.id === firstDated));
       }
       if (group.total > group.rows.length) {
@@ -1321,6 +1369,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
   destroy(): void {
     this.endDrag();
+    this.noDatePanel?.close();
     this.scroller?.removeEventListener('scroll', this.onScroll);
   }
 

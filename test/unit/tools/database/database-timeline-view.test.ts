@@ -150,11 +150,12 @@ describe('DatabaseTimelineView', () => {
   });
 
   describe('layout', () => {
-    it('draws one row per item and a bar for each dated item, sized by its days', () => {
+    it('draws one row per dated item with the table hidden, and a bar sized by its days', () => {
       const { root } = mount();
       const width = TIMELINE_DAY_WIDTH.month;
 
-      expect(root.querySelectorAll('[data-blok-database-timeline-row]')).toHaveLength(3);
+      // findings C03: an undated item has no lane while the table is hidden.
+      expect([...root.querySelectorAll('[data-blok-database-timeline-row]')].map((el) => el.getAttribute('data-row-id'))).toEqual(['r1', 'r2']);
       expect(bars(root).map((el) => el.getAttribute('data-row-id'))).toEqual(['r1', 'r2']);
       expect(bar(root, 'r2').style.width).toBe(`${3 * width}px`);
       expect(bar(root, 'r2').style.insetInlineStart).toBe(`${px('2026-10-12')}px`);
@@ -237,6 +238,12 @@ describe('DatabaseTimelineView', () => {
   });
 
   describe('table panel', () => {
+    it('keeps an undated item\'s empty lane while the table shows, so panel rows and lanes line up (findings C03)', () => {
+      const { root } = mount({ view: timelineView({ showTimelineTable: true }) });
+
+      expect([...root.querySelectorAll('[data-blok-database-timeline-row]')].map((el) => el.getAttribute('data-row-id'))).toEqual(['r1', 'r2', 'r3']);
+    });
+
     it('is hidden by default and its toggle asks to show it', () => {
       const { root, handlers } = mount();
       const toggle = root.querySelector<HTMLElement>('[data-blok-database-timeline-table-toggle]');
@@ -418,6 +425,60 @@ describe('DatabaseTimelineView', () => {
       scroller(root).dispatchEvent(event);
       expect(handlers.setZoom).not.toHaveBeenCalled();
       expect(event.defaultPrevented).toBe(false);
+    });
+  });
+
+  describe('"No date" (findings C03)', () => {
+    const panel = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-blok-testid="database-no-date"]');
+    const items = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>('[data-blok-database-no-date-row]')];
+    const openPanel = (view: DatabaseTimelineView): void => {
+      const anchor = document.createElement('button');
+
+      document.body.appendChild(anchor);
+      view.noDateControl()?.open(anchor);
+    };
+    /** The screen starts on Oct 14, as in the measured Notion timeline. */
+    const showFrom = (root: HTMLElement, view: DatabaseTimelineView): void => {
+      const el = scroller(root);
+
+      Object.defineProperty(el, 'clientWidth', { value: 720, configurable: true });
+      el.scrollLeft = px('2026-10-14');
+      view.refreshOffscreen();
+    };
+
+    it('counts the undated items for the database toolbar, and has none when read-only or when all are dated', () => {
+      expect(mount().view.noDateControl()?.count).toBe(1);
+      expect(mount().view.noDateControl()?.label).toBe('tools.database.calendarNoDate');
+      expect(mount({ readOnly: true }).view.noDateControl()).toBeUndefined();
+      expect(mount({ groups: single([row('r1', 'Launch', CENTER)]) }).view.noDateControl()).toBeUndefined();
+    });
+
+    it('lists them with the timeline hint, and "Open" opens one', () => {
+      const { view, handlers } = mount();
+
+      openPanel(view);
+      expect(panel()?.textContent).toContain('tools.database.timelineNoDateHint');
+      expect(items().map((el) => el.getAttribute('data-row-id'))).toEqual(['r3']);
+      items()[0].querySelector<HTMLElement>('[data-blok-database-no-date-open]')?.click();
+      expect(handlers.openRow).toHaveBeenCalledWith('r3');
+    });
+
+    it('a click puts the item on the timeline as a 5-day bar from the second shown day', () => {
+      const { root, view, handlers } = mount();
+
+      showFrom(root, view);
+      openPanel(view);
+      items()[0].click();
+      expect(handlers.writeDates).toHaveBeenCalledWith('r3', { start: '2026-10-15/2026-10-19' });
+    });
+
+    it('writes the start and end properties when the bar has both', () => {
+      const { root, view, handlers } = mount({ endPropertyId: 'p-end' });
+
+      showFrom(root, view);
+      openPanel(view);
+      items()[0].click();
+      expect(handlers.writeDates).toHaveBeenCalledWith('r3', { start: '2026-10-15', end: '2026-10-19' });
     });
   });
 
@@ -726,10 +787,10 @@ describe('DatabaseTimelineView', () => {
 
       layOutRows(root);
       pointer('pointerdown', handle(root, 'r1'), 5, 110);
-      pointer('pointermove', document, 5, 100 + 2 * 36 + 30);
-      pointer('pointerup', document, 5, 100 + 2 * 36 + 30);
+      pointer('pointermove', document, 5, 100 + 36 + 30);
+      pointer('pointerup', document, 5, 100 + 36 + 30);
 
-      expect(handlers.moveRow).toHaveBeenCalledWith({ rowId: 'r1', afterRowId: 'r3', beforeRowId: null, groupKey: '', fromGroupKey: '' });
+      expect(handlers.moveRow).toHaveBeenCalledWith({ rowId: 'r1', afterRowId: 'r2', beforeRowId: null, groupKey: '', fromGroupKey: '' });
     });
 
     it('has no row handles in a sorted view', () => {

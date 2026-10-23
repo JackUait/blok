@@ -61,7 +61,7 @@ describe('list rows (research/07)', () => {
   it('draws a status pill in a list row 18px tall, 13px/18px, padded 0 11px 0 9px', () => {
     const body = ruleBody(database, '[data-blok-database-list-row-property] [data-blok-database-option-pill][data-status-group]');
 
-    expect(body).toContain('padding-inline: 9px 11px');
+    expect(body).toContain('padding-inline: var(--blok-space-2-25) var(--blok-space-2-75)');
     expect(ruleBody(database, '[data-blok-database-list-row-property] [data-blok-database-option-pill]:not([data-status-group])')).toBe('');
   });
 
@@ -175,8 +175,8 @@ describe('grouped list (findings-listgallery L08, L10)', () => {
     const header = ruleBody(database, '[data-blok-database-list-group-header]');
 
     expect(header).toContain('height: 24px');
-    expect(header).toContain('margin-bottom: 12px');
-    expect(ruleBody(database, '[data-blok-database-list-group]')).toContain('margin-bottom: 28px');
+    expect(header).toContain('margin-bottom: var(--blok-space-3)');
+    expect(ruleBody(database, '[data-blok-database-list-group]')).toContain('margin-bottom: calc(var(--blok-space-6) + var(--blok-space-1))');
     expect(ruleBody(database, '[data-blok-database-list-rows]')).not.toContain('padding-inline-start');
   });
 });
@@ -188,7 +188,7 @@ describe('list "+ New page" (findings-listgallery L18)', () => {
     const body = rule();
 
     expect(body).toContain('height: 30px');
-    expect(body).toContain('padding: 0 var(--blok-space-2) 0 6px');
+    expect(body).toContain('padding: 0 var(--blok-space-2) 0 var(--blok-space-1-5)');
     expect(body).toContain('font-size: 14px');
     expect(body).toContain('line-height: 21px');
     expect(body).toContain('color: var(--blok-database-table-muted-text)');
@@ -196,7 +196,7 @@ describe('list "+ New page" (findings-listgallery L18)', () => {
   });
 
   it('draws a 16px gray plus with a 1px 8px margin', () => {
-    expect(ruleBody(database, '[data-blok-database-add-row] > span[aria-hidden="true"]')).toContain('margin: 1px var(--blok-space-2)');
+    expect(ruleBody(database, '[data-blok-database-add-row] > span[aria-hidden="true"]')).toContain('margin: var(--blok-space-0-25) var(--blok-space-2)');
     expect(ruleBody(database, '[data-blok-database-add-row] > span[aria-hidden="true"]')).toContain('color: var(--blok-database-table-gutter-icon)');
     expect(ruleBody(database, '[data-blok-database-add-row] > span[aria-hidden="true"] svg')).toContain('width: 16px');
   });

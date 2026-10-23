@@ -151,6 +151,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'tools/database/database-card-drag.ts': 'Fixed pointer-following card ghost refreshes coordinates on every drag pointer move.',
   'tools/database/database-column-drag.ts': 'Fixed pointer-following column ghost refreshes coordinates on every drag pointer move.',
   'tools/database/database-list-row-drag.ts': 'Fixed pointer-following row ghost refreshes coordinates on every drag pointer move.',
+  'tools/database/database-list-view.ts': 'The right-click menu point is placed once at the pointer inside the row, corrected for a transformed ancestor, and removed when the menu closes.',
   'tools/database/database-table-column-drag.ts': 'Fixed pointer-following table header ghost refreshes coordinates on every drag pointer move.',
   'tools/database/database-panel.ts': 'A dragged panel list row follows the pointer in flow, offset from its own box read at drag start.',
   'tools/database/database-table-row-drag.ts': 'Fixed pointer-following table row ghost refreshes coordinates on every drag pointer move.',

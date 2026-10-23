@@ -184,7 +184,8 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       buttonRow.appendChild(hiddenBtn);
     }
 
-    if (!this.readOnly) {
+    // Notion's Status board has no add-group button (findings-board B04).
+    if (!this.readOnly && !this.isStatusBoard) {
       const addColumnBtn = document.createElement('button');
 
       addColumnBtn.setAttribute('data-blok-database-add-column', '');

@@ -147,6 +147,11 @@ describe('DatabaseBoardView', () => {
       expect(board.querySelector('[data-blok-database-column][data-option-id="ns"]')?.hasAttribute('data-color')).toBe(false);
     });
 
+    // findings-board B04: nothing after the last column of a Status board.
+    it('offers no add-group button', () => {
+      expect(statusView([makeOption()]).querySelector('[data-blok-database-add-column]')).toBeNull();
+    });
+
     it('keeps the select pill for status groups and for select boards', () => {
       const byGroup = statusView([makeOption({ id: 'g', color: 'blue' })], { groupByStatus: 'group' });
       const select = new DatabaseBoardView({ readOnly: false, i18n, options: [makeOption({ id: 'o', color: 'blue' })], getRows: () => [], titlePropertyId: 'title' }).createView();

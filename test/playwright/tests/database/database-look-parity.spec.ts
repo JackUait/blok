@@ -65,7 +65,8 @@ const blocks = (): OutputBlockData[] => [
     data: {
       schema: SCHEMA,
       views: [
-        { id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] },
+        // Unwrapped: a table wraps by default, and the long URL would grow its row. Notion's URL wrap is unmeasured.
+        { id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [], wrapCells: false },
         { id: 'v2', name: 'Board', type: 'board', position: 'a1', groupBy: 'p-stage', sorts: [], filters: [], visibleProperties: ['p-title'] },
       ],
       activeViewId: 'v1',

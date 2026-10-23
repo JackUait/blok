@@ -176,7 +176,7 @@ for (const scheme of ['light', 'dark'] as const) {
       await expect(box(page)).toHaveCSS('box-shadow', SHADOW[scheme]);
     });
 
-    test('url: 240x39; title: as wide as its 280px cell', async ({ page }) => {
+    test('url: 240x39; title: 280x38, as wide as its cell (findings T19)', async ({ page }) => {
       const link = await open(page, 'p-link');
 
       expect([link.box.width, link.box.height]).toEqual([240, 39]);
@@ -184,7 +184,7 @@ for (const scheme of ['light', 'dark'] as const) {
 
       const title = await open(page, 'p-title');
 
-      expect([title.box.width, title.box.height]).toEqual([280, 39]);
+      expect([title.box.width, title.box.height]).toEqual([280, 38]);
       expect(Math.abs(title.box.x - (title.cell.x - 1))).toBeLessThan(0.5);
     });
 

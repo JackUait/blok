@@ -4295,7 +4295,7 @@ span[data-blok-slash-search] {
   --blok-database-form-respondent-bg: rgba(255, 255, 255, 0.03);
   --blok-database-card-bg: rgb(32, 32, 32);
   --blok-database-card-bg-hover: rgb(38, 38, 38);
-  --blok-database-table-bg: rgb(25, 25, 25);
+  --blok-database-table-bg: var(--blok-bg-primary);
   --blok-database-table-border: rgba(255, 255, 243, 0.082);
   --blok-database-table-header-text: rgb(173, 169, 163);
   --blok-database-table-header-icon: rgb(173, 169, 163);
@@ -4535,7 +4535,7 @@ span[data-blok-slash-search] {
   --blok-database-form-respondent-bg: rgba(255, 255, 255, 0.03);
   --blok-database-card-bg: rgb(32, 32, 32);
   --blok-database-card-bg-hover: rgb(38, 38, 38);
-  --blok-database-table-bg: rgb(25, 25, 25);
+  --blok-database-table-bg: var(--blok-bg-primary);
   --blok-database-table-border: rgba(255, 255, 243, 0.082);
   --blok-database-table-header-text: rgb(173, 169, 163);
   --blok-database-table-header-icon: rgb(173, 169, 163);

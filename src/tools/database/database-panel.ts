@@ -26,6 +26,8 @@ export interface DatabasePanelOptions {
   width: number;
   /** The back button's accessible name. */
   backLabel: string;
+  /** Docks at the window's end edge (view settings, research/26 §1a). */
+  docked?: boolean;
   onClose?: () => void;
 }
 
@@ -50,10 +52,12 @@ export class DatabasePanel {
     this.element.setAttribute('data-blok-database-panel', '');
     this.element.setAttribute('data-blok-testid', options.testId);
     this.element.style.width = `${options.width}px`;
+    if (options.docked === true) this.element.setAttribute('data-docked', '');
     this.element.addEventListener('keydown', this.handleKeydown);
     this.popover = new CellPopover({
       anchor: options.anchor,
       content: this.element,
+      ...(options.docked === true ? { docked: true } : {}),
       onEscape: () => this.back(),
       onDismiss: () => this.finish(),
     });

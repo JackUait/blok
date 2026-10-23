@@ -131,6 +131,32 @@ describe('DatabasePanel', () => {
     expect(onMove.mock.calls).toEqual([['a', 'c'], ['c', 'b'], ['b', null]]);
   });
 
+  describe('docked placement (research/26 §1a: 290 wide at x 1210 of a 1512 window)', () => {
+    const popoverOf = (): HTMLElement | null => document.querySelector('[data-blok-testid="panel"]')?.closest<HTMLElement>('[data-blok-popover-custom-class]') ?? null;
+
+    it('hugs the window\'s end edge, 12px in, at the anchor\'s top, whatever opened it', () => {
+      vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue(new DOMRect(40, 300, 28, 28));
+      const panel = new DatabasePanel({ anchor, root: { build: () => [] }, testId: 'panel', width: 290, backLabel: 'Back', docked: true });
+
+      panel.open();
+      const popover = popoverOf();
+
+      expect(popover?.getAttribute('data-blok-popover-custom-class')).toContain('blok-database-docked-panel');
+      // jsdom measures the box 0 wide, so its start edge is the end edge.
+      expect(popover?.style.left).toBe(`${window.innerWidth - 12}px`);
+      expect(popover?.style.top).toBe('300px');
+      panel.close();
+    });
+
+    it('opens under its anchor when not docked', () => {
+      vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue(new DOMRect(40, 300, 28, 28));
+      open({ build: () => [] });
+
+      expect(popoverOf()?.getAttribute('data-blok-popover-custom-class')).not.toContain('blok-database-docked-panel');
+      expect(popoverOf()?.style.left).toBe('40px');
+    });
+  });
+
   describe('pointer drag (Notion r35:497-509)', () => {
     /** Notion's measured sort list: 32px rows, 40px apart, list top 133. */
     const dragList = (ids: string[], onMove = vi.fn()): { list: HTMLElement; row: (id: string) => HTMLElement; onMove: typeof onMove } => {

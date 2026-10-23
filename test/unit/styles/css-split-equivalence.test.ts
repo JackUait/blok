@@ -1079,6 +1079,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_FILTER_SORT_FEEL_BYTES = 5_634;
     // database.css: feel/findings-table T13: the uncapped board and list bar still hides the whole toolbar.
     const DATABASE_SELECTION_BAR_BOARD_BYTES = 233;
+    // database.css: feel/findings-toolbar V09: view settings docks at the window's end edge with radius 10.
+    const DATABASE_VIEW_SETTINGS_DOCK_BYTES = 228;
     const DATABASE_ADD_PROPERTY_GRID_BYTES = 514;
     // database.css: board columns (findings-board): the status header pill, the AA count inks, "+ New page" type.
     const DATABASE_BOARD_COLUMNS_BYTES = 540;
@@ -1298,7 +1300,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_CARD_SELECT_PILL_BYTES
       + DATABASE_CARD_GHOST_ROWS_BYTES
       + DATABASE_CARD_PLACEHOLDER_AA_BYTES
-      + DATABASE_FILTER_SORT_FEEL_BYTES;
+      + DATABASE_FILTER_SORT_FEEL_BYTES
+      + DATABASE_VIEW_SETTINGS_DOCK_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

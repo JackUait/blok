@@ -5750,6 +5750,11 @@ textarea[data-blok-database-property-description][data-blok-field] {
   padding: 0;
 }
 
+/* research/26 §1a: view settings, docked at the window's end edge, radius 10px. */
+[data-blok-popover-custom-class~='blok-database-docked-panel'] [data-blok-popover-container] {
+  border-radius: var(--blok-radius-surface);
+}
+
 [data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-items] {
   padding: 0;
 }

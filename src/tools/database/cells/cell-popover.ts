@@ -9,6 +9,8 @@ export interface CellPopoverOptions {
   minWidth?: string;
   /** Open over the anchor (a table cell) instead of below it. */
   cover?: boolean;
+  /** Dock at the window's end edge, top level with the anchor, like Notion's view settings (research/26 §1a). */
+  docked?: boolean;
   /** Escape pressed while open. The owner decides: close, or step back a panel. */
   onEscape: () => void;
   /** The popover closed itself: an outside press, or focus moved away. */
@@ -42,6 +44,25 @@ const coverPlacement = (anchor: HTMLElement): Pick<PopoverParams, 'cover' | 'vie
   };
 };
 
+/** research/26 §1a: the panel ends at x 1500 of a 1512 window. */
+const DOCK_VIEWPORT_MARGIN = 12;
+const DOCKED_CLASS = 'blok-database-docked-panel';
+
+/**
+ * Cover placement from a zero-size rect past the window's end: the clamp
+ * pulls the box back in, so it hugs that edge and slides up only to fit.
+ */
+const dockPlacement = (anchor: HTMLElement): Pick<PopoverParams, 'cover' | 'viewportMargin'> & { position: DOMRect; positionContext: HTMLElement } => {
+  const rtl = getComputedStyle(anchor).direction === 'rtl';
+
+  return {
+    cover: true,
+    viewportMargin: DOCK_VIEWPORT_MARGIN,
+    position: new DOMRect(rtl ? 0 : window.innerWidth, anchor.getBoundingClientRect().top, 0, 0),
+    positionContext: anchor,
+  };
+};
+
 /**
  * The popover every cell editor sits in. One Html item, no flipper: each
  * editor owns its own keys under `data-blok-keyboard-owner`.
@@ -61,17 +82,19 @@ export class CellPopover {
   }
 
   show(): void {
-    const { anchor, cover } = this.options;
+    const { anchor, cover, docked } = this.options;
     const base: PopoverParams = {
       items: [{ type: PopoverItemType.Html, element: this.options.content }],
       trigger: anchor,
       flippable: false,
       width: 'auto',
       autoFocusFirstItem: false,
-      class: CELL_EDITOR_CLASS,
+      class: docked === true ? `${CELL_EDITOR_CLASS} ${DOCKED_CLASS}` : CELL_EDITOR_CLASS,
       ...(this.options.minWidth !== undefined ? { minWidth: this.options.minWidth } : {}),
     };
-    const popover = new PopoverDesktop(cover === true ? { ...base, ...coverPlacement(anchor) } : base);
+    const coverOrNone = cover === true ? coverPlacement(anchor) : {};
+    const placement = docked === true ? dockPlacement(anchor) : coverOrNone;
+    const popover = new PopoverDesktop({ ...base, ...placement });
 
     this.popover = popover;
     popover.on(PopoverEvent.Closed, () => {

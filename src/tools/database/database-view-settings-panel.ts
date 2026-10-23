@@ -2198,6 +2198,7 @@ export const openViewSettings = (
     testId: 'database-view-settings',
     width: 290,
     backLabel: ctx.i18n.t('tools.database.settingsBack'),
+    docked: true,
     ...(onClose !== undefined ? { onClose } : {}),
   });
 

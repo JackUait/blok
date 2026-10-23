@@ -89,6 +89,23 @@ describe('view settings panel', () => {
     vi.restoreAllMocks();
   });
 
+  // research/26 §1a: 290 wide at the window's end edge, radius 10, whatever opened it.
+  it('docks at the window\'s end edge from every start page', () => {
+    const docked = (): boolean => document.querySelector('[data-blok-testid="database-view-settings"]')
+      ?.closest('[data-blok-popover-custom-class]')
+      ?.getAttribute('data-blok-popover-custom-class')
+      ?.split(' ')
+      .includes('blok-database-docked-panel') === true;
+    const h = harness();
+
+    for (const start of ['root', 'filter', 'sort'] as const) {
+      const panel = h.open(start);
+
+      expect(docked()).toBe(true);
+      panel.close();
+    }
+  });
+
   it('lists Notion\'s settings rows (research/08)', () => {
     harness().open();
 

@@ -552,10 +552,11 @@ describe('view settings panel', () => {
 
       if (handle === null) throw new Error(`no handle ${id}`);
       handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0, clientY: 115 }));
+      document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientY: toY }));
       document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientY: toY }));
     };
 
-    it('drops the row before the first row whose middle is below the pointer', () => {
+    it('drops the row past each row whose middle its leading edge crossed', () => {
       const h = harness({ sorts: sorts() });
 
       h.open('sort');
@@ -565,7 +566,7 @@ describe('view settings panel', () => {
       expect(h.state.view.sorts.map((sort) => sort.id)).toEqual(['s2', 's1', 's3']);
     });
 
-    it('drops the row at the end below the last middle', () => {
+    it('drops the row at the end once it crosses the last middle', () => {
       const h = harness({ sorts: sorts() });
 
       h.open('sort');

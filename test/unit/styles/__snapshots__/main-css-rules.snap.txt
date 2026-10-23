@@ -11823,7 +11823,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-panel-list-item][data-dragging] {
-  opacity: 0.4;
+  z-index: 1;
 }
 
 [data-blok-database-panel-list-item] > :last-child {

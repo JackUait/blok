@@ -113,3 +113,18 @@ describe('side peek', () => {
     expect(body(reducedMotion, '[data-blok-interface=blok][data-blok-database-peek]')).toContain('transition: none !important');
   });
 });
+
+describe('panel list drag', () => {
+  const ITEM = '[data-blok-database-panel-list-item]';
+
+  it('keeps the dragged row as it looks: no fade, fill, shadow or transform (r35:507)', () => {
+    const dragged = body(database, `${ITEM}[data-dragging]`);
+
+    expect(dragged).not.toMatch(/opacity|background|box-shadow|transform/);
+  });
+
+  it('jumps rows with no transition', () => {
+    expect(body(database, ITEM)).not.toContain('transition');
+    expect(body(database, `${ITEM}[data-dragging]`)).not.toContain('transition');
+  });
+});

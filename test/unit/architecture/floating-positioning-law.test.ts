@@ -151,6 +151,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'tools/database/database-column-drag.ts': 'Fixed pointer-following column ghost refreshes coordinates on every drag pointer move.',
   'tools/database/database-list-row-drag.ts': 'Fixed pointer-following row ghost refreshes coordinates on every drag pointer move.',
   'tools/database/database-table-column-drag.ts': 'Fixed pointer-following table header ghost refreshes coordinates on every drag pointer move.',
+  'tools/database/database-panel.ts': 'A dragged panel list row follows the pointer in flow, offset from its own box read at drag start.',
   'tools/database/database-table-row-drag.ts': 'Fixed pointer-following table row ghost refreshes coordinates on every drag pointer move.',
   'tools/database/database-tab-bar.ts': 'The tab drag ghost follows pointer movement; the overflow list lives in overflow-list.ts.',
   'tools/spacer/alignment-guide.ts': 'Fixed alignment guide receives fresh viewport coordinates throughout pointer dragging.',

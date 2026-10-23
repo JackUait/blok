@@ -416,7 +416,15 @@ export const panelReorderList = (options: {
   return list;
 };
 
-/** Pointer drag inside one list: the row lands before the first row whose middle is below the pointer. */
+/** Notion starts a list drag somewhere in 10–19px (r35:509, not narrowed). */
+const DRAG_THRESHOLD = 12;
+
+/**
+ * Pointer drag inside one list, as Notion's sort list (r35:497-509): past the
+ * threshold the row follows the pointer, clamped to the list ends. A neighbour
+ * jumps one slot, with no motion, once the row's leading edge passes its middle.
+ * Release commits the order shown.
+ */
 const startDrag = (
   event: PointerEvent,
   list: HTMLElement,
@@ -425,33 +433,66 @@ const startDrag = (
 ): void => {
   if (event.button !== 0) return;
   event.preventDefault();
-  const source = list.querySelector<HTMLElement>(`[data-item-id="${CSS.escape(id)}"]`);
+  const rows = [...list.querySelectorAll<HTMLElement>('[data-blok-database-panel-list-item]')];
+  const from = rows.findIndex((row) => row.getAttribute('data-item-id') === id);
+  const source = rows[from];
 
-  source?.setAttribute('data-dragging', '');
+  if (source === undefined) return;
+  const startY = event.clientY;
+  // Read once: the inline tops written below move these boxes. A passed row
+  // jumps by the dragged row's height plus the gap.
+  const rects = rows.map((row) => row.getBoundingClientRect());
+  const self = rects[from];
+  const pitchUp = from > 0 ? self.bottom - rects[from - 1].bottom : 0;
+  const pitchDown = from < rows.length - 1 ? rects[from + 1].top - self.top : 0;
+  const minOffset = rects[0].top - self.top;
+  const maxOffset = rects[rects.length - 1].bottom - self.bottom;
+  const state = { dragging: false, slot: from };
 
-  const targetAt = (clientY: number): string | null => {
-    const rows = [...list.querySelectorAll<HTMLElement>('[data-blok-database-panel-list-item]')]
-      .filter((row) => row.getAttribute('data-item-id') !== id);
-    const below = rows.find((row) => {
-      const rect = row.getBoundingClientRect();
-
-      return clientY < rect.top + rect.height / 2;
-    });
-
-    return below?.getAttribute('data-item-id') ?? null;
-  };
-  const up = (upEvent: PointerEvent): void => {
+  const clear = (): void => {
+    document.removeEventListener('pointermove', move);
     document.removeEventListener('pointerup', up);
-    document.removeEventListener('pointercancel', cancel);
-    source?.removeAttribute('data-dragging');
-    onMove(id, targetAt(upEvent.clientY));
+    document.removeEventListener('pointercancel', clear);
+    source.removeAttribute('data-dragging');
+    for (const row of rows) {
+      row.style.position = '';
+      row.style.top = '';
+    }
   };
-  const cancel = (): void => {
-    document.removeEventListener('pointerup', up);
-    document.removeEventListener('pointercancel', cancel);
-    source?.removeAttribute('data-dragging');
+  const move = (moveEvent: PointerEvent): void => {
+    const delta = moveEvent.clientY - startY;
+
+    if (!state.dragging) {
+      if (Math.abs(delta) < DRAG_THRESHOLD) return;
+      state.dragging = true;
+      source.setAttribute('data-dragging', '');
+      for (const row of rows) row.style.position = 'relative';
+    }
+    const offset = Math.min(maxOffset, Math.max(minOffset, delta));
+    const top = self.top + offset;
+    const bottom = self.bottom + offset;
+
+    source.style.top = `${offset}px`;
+    state.slot = from;
+    for (const [index, row] of rows.entries()) {
+      const middle = rects[index].top + rects[index].height / 2;
+      const passedAbove = index < from && top < middle;
+      const passedBelow = index > from && bottom > middle;
+      const shift = (passedAbove ? pitchUp : 0) - (passedBelow ? pitchDown : 0);
+
+      state.slot += (passedBelow ? 1 : 0) - (passedAbove ? 1 : 0);
+      if (index !== from) row.style.top = shift === 0 ? '' : `${shift}px`;
+    }
+  };
+  const up = (): void => {
+    clear();
+    if (!state.dragging || state.slot === from) return;
+    const rest = rows.filter((row) => row !== source);
+
+    onMove(id, rest[state.slot]?.getAttribute('data-item-id') ?? null);
   };
 
+  document.addEventListener('pointermove', move);
   document.addEventListener('pointerup', up);
-  document.addEventListener('pointercancel', cancel);
+  document.addEventListener('pointercancel', clear);
 };

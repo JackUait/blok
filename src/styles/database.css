@@ -322,6 +322,7 @@
   /* Re-set from colors.css (shipped values, a look change). View tabs: research/07:45-48. */
   --blok-database-tab-bg-active: rgba(33, 27, 23, 0.05);
   --blok-database-tab-bg-hover: var(--blok-database-hover-bg);
+  --blok-database-source-picker-border: var(--blok-database-table-border);
   --blok-database-tab-text: var(--blok-database-ink-secondary);
   --blok-database-tab-text-active: rgb(44, 44, 43);
   /* Card hover actions: white with the menu shadow (research/07:135, 08:317); hover is Notion's menu item (08:266). */
@@ -608,6 +609,7 @@
        Peek label: research/21 §1m. Comment badge: research/21 §1o. */
     --blok-database-tab-bg-active: rgba(255, 255, 255, 0.055);
     --blok-database-tab-bg-hover: rgba(255, 255, 235, 0.1);
+    --blok-database-source-picker-border: rgba(255, 255, 235, 0.1);
     --blok-database-tab-text: rgb(173, 169, 163);
     --blok-database-tab-text-active: rgb(240, 239, 237);
     --blok-database-card-actions-bg: var(--blok-database-table-open-bg);
@@ -887,6 +889,7 @@
      Peek label: research/21 §1m. Comment badge: research/21 §1o. */
   --blok-database-tab-bg-active: rgba(255, 255, 255, 0.055);
   --blok-database-tab-bg-hover: rgba(255, 255, 235, 0.1);
+  --blok-database-source-picker-border: rgba(255, 255, 235, 0.1);
   --blok-database-tab-text: rgb(173, 169, 163);
   --blok-database-tab-text-active: rgb(240, 239, 237);
   --blok-database-card-actions-bg: var(--blok-database-table-open-bg);
@@ -11992,6 +11995,40 @@ button[data-blok-database-feed-reaction]:hover,
   background-color: var(--blok-database-hover-bg);
 }
 
+/* findings-creation N20: the empty feed's ringed "+ New page" tile, 692x38. Notion's label ink fails AA; secondary ink passes. */
+[data-blok-database-feed-new] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--blok-space-1-5);
+  box-sizing: border-box;
+  inline-size: 100%;
+  max-inline-size: 692px;
+  block-size: 38px;
+  border: none;
+  border-radius: var(--blok-radius-surface);
+  background: transparent;
+  box-shadow: var(--blok-database-card-ring) 0 0 0 1px;
+  color: var(--blok-database-ink-secondary);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+[data-blok-database-feed-new]:hover {
+  background-color: var(--blok-database-hover-bg);
+}
+
+[data-blok-database-feed-new] > span {
+  display: inline-flex;
+  color: var(--blok-database-table-gutter-icon);
+}
+
+[data-blok-database-feed-new] svg {
+  width: 14px;
+  height: 14px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-blok-database-drilldown] {
     animation: none;
@@ -12526,24 +12563,69 @@ button[data-blok-database-feed-reaction]:hover,
   height: 16px;
 }
 
-/* research 20 §2a, 41-linked-picker.png: one bordered button in an empty block. */
+/* A linked view with no source (findings-creation N18, N22): no title or toolbar. */
+[data-blok-database-unlinked] > [data-blok-database-title-row],
+[data-blok-database-unlinked] > [data-blok-database-view-bar] {
+  display: none;
+}
+
+/* The Table view pill on top, then the folder glyph, "New table" and the button, centred. 290px in all. */
 [data-blok-database-source-picker] {
   display: flex;
-  justify-content: center;
-  padding: var(--blok-space-4);
-  border: 1px solid var(--blok-database-table-border);
-  border-radius: var(--blok-radius-block);
+  flex-direction: column;
+  align-items: center;
+  min-height: 290px;
+  padding-block-end: var(--blok-space-4);
+}
+
+[data-blok-database-source-picker-pill] {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  height: 32px;
+  margin-block-end: 82px;
+  padding-inline: var(--blok-space-2-5) var(--blok-space-3);
+  border-radius: var(--blok-radius-pill);
+  background-color: var(--blok-database-tab-bg-active);
+  color: var(--blok-database-tab-text-active);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+[data-blok-database-source-picker-pill] svg {
+  width: 20px;
+  height: 20px;
+}
+
+[data-blok-database-source-picker-glyph] {
+  display: inline-flex;
+  color: var(--blok-database-table-gutter-icon);
+}
+
+[data-blok-database-source-picker-glyph] svg {
+  width: 48px;
+  height: 48px;
+}
+
+/* Notion's caption ink rgb(161,158,153) fails AA; secondary ink is the nearest that passes. */
+[data-blok-database-source-picker-caption] {
+  margin-block: var(--blok-space-1) var(--blok-space-4);
+  color: var(--blok-database-ink-secondary);
+  font-size: 16px;
+  font-weight: 500;
 }
 
 [data-blok-database-source-picker] > button {
   height: 32px;
   padding-inline: var(--blok-space-3);
-  border: 1px solid var(--blok-database-table-border);
+  border: 1px solid var(--blok-database-source-picker-border);
   border-radius: var(--blok-radius-control);
   background: transparent;
   color: var(--blok-database-ink);
   font: inherit;
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
 }
 

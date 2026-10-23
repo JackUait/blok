@@ -1127,7 +1127,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // +297: the side peek's page starts 4px under its bar (R11), measured after the rebase onto rowpage-props.
     const DATABASE_PEEK_SHELL_BYTES = 709 + 1_847 + 1_741 + 313 + 297;
     // database.css: creation panels (findings-creation N03, N19): 44px tile rows, 30px tiles, 20px glyphs, the 10px box.
-    const DATABASE_CREATION_FEEL_BYTES = 1_434;
+    // +1_449: the unlinked linked view's pill, folder glyph, "New table" and its dark border token (N18, N22).
+    // +884: the empty feed's ringed "+ New page" tile (N20).
+    const DATABASE_CREATION_FEEL_BYTES = 1_434 + 1_449 + 884;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

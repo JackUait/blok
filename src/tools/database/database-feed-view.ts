@@ -10,7 +10,7 @@ import { htmlToPlainText } from '../../components/utils/plain-text';
 import { safeImageSrc } from '../../components/utils/sanitize-url';
 import { onHover } from '../../components/utils/tooltip';
 import { onPropertyHover } from './property-hint';
-import { IconDotsHorizontal, IconEmojiSmile } from '../../components/icons';
+import { IconDotsHorizontal, IconEmojiSmile, IconPlus } from '../../components/icons';
 
 /** A host's footer for one card: comments, reactions (Tier 3, D6). Returns its cleanup. */
 export type FeedFooter = (context: { rowId: string; holder: HTMLElement }) => (() => void) | void;
@@ -66,6 +66,8 @@ export interface FeedViewOptions {
   handlers: {
     openRow: (rowId: string) => void;
     loadMore: () => void;
+    /** Adds a post. Without it an empty feed shows no "New page" tile. */
+    addRow?: () => void;
   };
   footer?: FeedFooter;
   /** Built-in reactions. Not drawn when the host owns the footer. */
@@ -149,6 +151,21 @@ export class DatabaseFeedView implements DatabaseViewRenderer {
     feed.setAttribute('role', 'list');
     for (const row of this.options.rows) {
       feed.appendChild(this.createCard(row));
+    }
+    const addRow = this.options.handlers.addRow;
+
+    // findings-creation N20: Notion's empty feed shows a ringed "+ New page" tile. Only the empty state was measured.
+    if (addRow !== undefined && this.options.rows.length === 0) {
+      const add = document.createElement('button');
+      const icon = document.createElement('span');
+
+      add.type = 'button';
+      add.setAttribute('data-blok-database-feed-new', '');
+      icon.setAttribute('aria-hidden', 'true');
+      icon.innerHTML = IconPlus;
+      add.append(icon, this.options.i18n.t('tools.database.layoutNewPage'));
+      add.addEventListener('click', () => addRow());
+      feed.appendChild(add);
     }
     if (this.options.total > this.options.rows.length) {
       const more = document.createElement('button');

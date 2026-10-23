@@ -125,7 +125,7 @@ import type { DrawerBacklink, LayoutTab, LayoutTabsDraft, LayoutTabsHost } from 
 import { relatedTabSources, thisPageFilter } from './layout-tab-relations';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar, VIEW_ICONS } from './database-tab-bar';
-import { IconArrowDiagonal, IconCalendar, IconCreditCard, IconCurrency, IconDatabase, IconDatabaseInline, IconDatabaseLinked, IconFanDeck, IconPackage, IconPaintBrush, IconTicket, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile, IconFileDoc, IconMap, IconMessage, IconTrash, IconCheck, IconChevronRight, IconCopy, IconDownload, IconImage, IconListChecklist, IconMergeCells, IconPageLayout, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
+import { IconArrowDiagonal, IconCalendar, IconCreditCard, IconCurrency, IconDatabase, IconDatabaseInline, IconDatabaseLinked, IconFolderQuestion, IconFanDeck, IconPackage, IconPaintBrush, IconTicket, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile, IconFileDoc, IconMap, IconMessage, IconTrash, IconCheck, IconChevronRight, IconCopy, IconDownload, IconImage, IconListChecklist, IconMergeCells, IconPageLayout, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -892,24 +892,41 @@ export class DatabaseTool implements BlockTool {
     });
   };
 
-  /** A linked view with no source yet: the button that opens the source panel. */
+  /**
+   * A linked view with no source yet (findings-creation N18): a Table view
+   * pill, the folder glyph, "New table" and the button that opens the source
+   * panel. The block's title and toolbar hide (CSS on data-blok-database-unlinked).
+   */
   private renderSourcePicker(): HTMLDivElement {
     const picker = document.createElement('div');
+    const pill = document.createElement('span');
+    const glyph = document.createElement('span');
+    const caption = document.createElement('span');
     const button = document.createElement('button');
+    const t = (key: string): string => this.api.i18n.t(key);
 
     picker.setAttribute('data-blok-database-source-picker', '');
+    pill.setAttribute('data-blok-database-source-picker-pill', '');
+    pill.innerHTML = VIEW_ICONS.table;
+    pill.append(t('tools.database.viewTypeTable'));
+    glyph.setAttribute('data-blok-database-source-picker-glyph', '');
+    glyph.setAttribute('aria-hidden', 'true');
+    glyph.innerHTML = IconFolderQuestion;
+    caption.setAttribute('data-blok-database-source-picker-caption', '');
+    caption.textContent = t('tools.database.csvNewTable');
     button.type = 'button';
-    button.textContent = this.api.i18n.t('tools.database.linkedLinkSource');
+    button.textContent = t('tools.database.linkedLinkSource');
     button.disabled = this.readOnly;
     button.addEventListener('click', () => this.openSourcePicker());
-    picker.appendChild(button);
+    picker.append(pill, glyph, caption, button);
 
     return picker;
   }
 
   /** "Linked view of data source" (research 20 §2a): pick a source, then the first view. */
   private openSourcePicker(): void {
-    const anchor = this.titleRowElement ?? this.element;
+    // The title row is hidden while the view has no source.
+    const anchor = this.element;
 
     if (this.readOnly || this.sourcePicker !== null || anchor === null) return;
 
@@ -4547,6 +4564,7 @@ export class DatabaseTool implements BlockTool {
 
   private renderActiveView(): HTMLDivElement {
     this.paintLinkedTitle();
+    this.element?.toggleAttribute('data-blok-database-unlinked', this.linkPicker);
     if (this.linkPicker) {
       return this.renderSourcePicker();
     }
@@ -5271,6 +5289,7 @@ export class DatabaseTool implements BlockTool {
           this.feedShown.set(viewConfig.id, limit + step);
           this.rerenderView({ keepDrawer: true });
         },
+        ...(this.readOnly ? {} : { addRow: () => this.addTableRow(null) }),
       },
       ...(this.config.feedFooter !== undefined ? { footer: this.config.feedFooter } : {}),
       reactions: this.feedReactions(),

@@ -76,6 +76,11 @@ function tokenizeSegment(segment: string): string[] {
  * No border, no background — just the Unicode character as SVG.
  * Font size and width adapt to single-char symbols vs multi-char labels.
  */
+const HTML_ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+
+/** Labels can come from saved data, and the result goes to innerHTML. */
+const escapeHtml = (text: string): string => text.replace(/[&<>"']/g, (char) => HTML_ESCAPES[char]);
+
 function makeKeySvg(label: string): string {
   const isSymbol = label.length === 1;
   // Symbols (⌘, ⇧, …) are wider glyphs; short text (Del, Ins) is narrower per-char
@@ -99,7 +104,7 @@ function makeKeySvg(label: string): string {
     ` font-size="${fontSize}"` +
     ` font-weight="400"` +
     ` fill="currentColor"` +
-    `>${label}</text>` +
+    `>${escapeHtml(label)}</text>` +
     `</svg>`
   );
 }
@@ -117,7 +122,7 @@ export function makeShortcutHtml(shortcut: string): string {
     .flatMap(tokenizeSegment);
 
   if (tokens.length === 0) {
-    return shortcut;
+    return escapeHtml(shortcut);
   }
 
   const svgs = tokens.map((token) => makeKeySvg(resolveLabel(token)));

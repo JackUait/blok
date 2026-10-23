@@ -220,3 +220,24 @@ describe('shortcutToAriaKeyshortcuts', () => {
     expect(shortcutToAriaKeyshortcuts(' ')).toBe(' ');
   });
 });
+
+describe('makeShortcutHtml with markup in the label', () => {
+  // The result goes to innerHTML, and a label can come from saved data.
+  it('renders markup as text and creates no element from it', () => {
+    const host = document.createElement('div');
+
+    host.innerHTML = makeShortcutHtml('<img src=x onerror=alert(1)>');
+
+    expect(host.querySelector('img')).toBeNull();
+    expect(host.querySelector('text')?.textContent).toBe('<img src=x onerror=alert(1)>');
+  });
+
+  it('escapes quotes and ampersands too', () => {
+    const host = document.createElement('div');
+
+    host.innerHTML = makeShortcutHtml(`a&b"c'd`);
+
+    expect(host.querySelector('text')?.textContent).toBe(`a&b"c'd`);
+    expect(makeShortcutHtml(`a&b"c'd`)).toContain('a&amp;b&quot;c&#39;d');
+  });
+});

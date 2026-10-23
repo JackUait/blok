@@ -62,3 +62,15 @@ describe('row menu (T15)', () => {
     expect(declared('[data-blok-database-row-menu-footer]', 'color')).toEqual(['var(--blok-database-ink-secondary)']);
   });
 });
+
+describe('status cell popover (T17)', () => {
+  it('lets its search field shrink, so the input\'s default size does not push it past 240', () => {
+    expect(declared('[data-blok-database-select-editor="status"] [data-blok-database-select-search]', 'width')).toEqual(['0']);
+  });
+
+  it('separates its groups with a divider line', () => {
+    const rule = '[data-blok-database-select-list] > [data-blok-database-status-group-heading]:not(:first-child)';
+
+    expect(declared(rule, 'border-top')).toEqual(['1px solid var(--blok-database-drawer-border)']);
+  });
+});

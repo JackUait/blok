@@ -9164,6 +9164,15 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-ink-secondary);
 }
 
+[data-blok-database-select-editor="status"] [data-blok-database-select-search] {
+  width: 0;
+}
+
+[data-blok-database-select-list] > [data-blok-database-status-group-heading]:not(:first-child) {
+  margin-top: var(--blok-space-1);
+  border-top: 1px solid var(--blok-database-drawer-border);
+}
+
 [data-blok-database-select-list] {
   display: flex;
   flex-direction: column;

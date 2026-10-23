@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid';
 
-import { IconCheck, IconCross, IconDotsHorizontal, IconMenu, IconPencil } from '../../../components/icons';
+import { IconCheck, IconCross, IconDotsHorizontal, IconMenu, IconSliders } from '../../../components/icons';
 import { DatabaseModel } from '../database-model';
 import { orderedStatusOptions, personIdsOf, statusGroupOf, statusGroupsOf } from '../property-values';
 import type { PropertyDefinition, PropertyValue, SelectOption } from '../types';
@@ -84,7 +84,8 @@ class SelectEditor {
     this.search.setAttribute('aria-autocomplete', 'list');
     this.search.setAttribute('aria-controls', this.listId);
     this.search.setAttribute('aria-label', property.name);
-    this.search.placeholder = this.t('tools.database.selectSearchPlaceholder');
+    // Notion's status head shows only the current pill (feel/findings-table T17).
+    this.search.placeholder = property.type === 'status' ? '' : this.t('tools.database.selectSearchPlaceholder');
     this.chips.appendChild(this.search);
     this.root.append(this.chips, this.body);
 
@@ -105,8 +106,8 @@ class SelectEditor {
       anchor,
       cover: ctx.coverCell === true,
       content: this.root,
-      // Notion: 300 wide beside a 200px cell (research/08:306).
-      minWidth: `${Math.max(anchor.getBoundingClientRect().width, 300)}px`,
+      // Notion: 300 wide beside a 200px cell (research/08:306); status is 240 (feel/findings-table T17).
+      minWidth: `${Math.max(anchor.getBoundingClientRect().width, property.type === 'status' ? 240 : 300)}px`,
       onEscape: () => {
         if (this.deletePromptOpen) {
           this.renderPanel();
@@ -299,6 +300,18 @@ class SelectEditor {
     }
   };
 
+  /** A status option is drawn as the cell draws it: a round pill with its group's dot. */
+  private pill(option: SelectOption): HTMLSpanElement {
+    if (this.property.type !== 'status') {
+      return createOptionPill(option);
+    }
+    const pill = createOptionPill(shownStatusOption(option));
+
+    pill.setAttribute('data-status-group', statusGroupOf(this.property, option.id)?.kind ?? 'todo');
+
+    return pill;
+  }
+
   private renderChips(): void {
     this.chips.querySelectorAll('[data-blok-database-select-chip]').forEach((chip) => chip.remove());
     for (const id of this.selected) {
@@ -307,7 +320,7 @@ class SelectEditor {
       if (option === undefined) {
         continue;
       }
-      const chip = createOptionPill(this.property.type === 'status' ? shownStatusOption(option) : option);
+      const chip = this.pill(option);
 
       chip.setAttribute('data-blok-database-select-chip', id);
       if (this.multi) {
@@ -392,7 +405,7 @@ class SelectEditor {
       list.appendChild(create);
     }
 
-    this.body.replaceChildren(hint, list, ...this.editPropertyFooter());
+    this.body.replaceChildren(...(this.property.type === 'status' ? [] : [hint]), list, ...this.editPropertyFooter());
   }
 
   /** research/08: the status editor ends with "Edit property". */
@@ -406,7 +419,7 @@ class SelectEditor {
 
     footer.type = 'button';
     footer.setAttribute('data-blok-database-select-edit-property', '');
-    footer.innerHTML = IconPencil;
+    footer.innerHTML = IconSliders;
     footer.append(this.t('tools.database.editProperty'));
     footer.addEventListener('click', () => {
       this.finish(true);
@@ -436,7 +449,7 @@ class SelectEditor {
     const pillSlot = document.createElement('span');
 
     pillSlot.setAttribute('data-blok-database-select-option-label', '');
-    pillSlot.appendChild(createOptionPill(this.property.type === 'status' ? shownStatusOption(option) : option));
+    pillSlot.appendChild(this.pill(option));
     row.appendChild(pillSlot);
 
     if (selected) {

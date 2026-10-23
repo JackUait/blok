@@ -5,6 +5,7 @@ import type { CellEditorContext } from '../../../../../src/tools/database/cells/
 import { PopoverRegistry } from '../../../../../src/components/utils/popover/popover-registry';
 import type { SelectOption } from '../../../../../src/tools/database/types';
 import { editorRoot, makeAnchor, makeEditorContext, makeProperty, press } from './helpers';
+import { IconSliders } from '../../../../../src/components/icons';
 
 const OPTIONS: SelectOption[] = [
   { id: 'o2', label: 'Doing', color: 'blue', position: 'a1' },
@@ -439,5 +440,57 @@ describe('select cell editor', () => {
 
     expect(q<HTMLInputElement>('[data-blok-database-select-search]').value).toBe('S');
     expect(document.querySelector('[data-blok-database-select-create]')).not.toBeNull();
+  });
+});
+
+// feel/findings-table T17: Notion's status popover (shots-table/11-notion-status-popover.png).
+describe('status cell editor', () => {
+  const STATUS: SelectOption[] = [
+    { id: 'ns', label: 'Not started', color: 'gray', position: 'a0', groupId: 'todo' },
+    { id: 'ip', label: 'In progress', color: 'blue', position: 'a0', groupId: 'inProgress' },
+    { id: 'dn', label: 'Done', color: 'green', position: 'a0', groupId: 'complete' },
+  ];
+  const openStatus = (value: string | null): void => {
+    openCellEditor(makeProperty('status', STATUS), value, makeAnchor(), makeEditorContext({ options: STATUS, onOptionsChange: vi.fn(), onEditProperty: vi.fn() }));
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    PopoverRegistry.resetForTests();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('opens 240 wide', () => {
+    openStatus('ip');
+
+    expect(editorRoot()?.closest<HTMLElement>('[data-blok-popover]')?.style.getPropertyValue('--width')).toBe('240px');
+  });
+
+  it('shows the current value as a status pill with a dot, and no search prompt or hint', () => {
+    openStatus('ip');
+
+    expect(q('[data-blok-database-select-chip="ip"]').getAttribute('data-status-group')).toBe('inProgress');
+    expect(search().placeholder).toBe('');
+    expect(editorRoot()?.querySelector('[data-blok-database-select-hint]')).toBeNull();
+  });
+
+  it('draws every option as a status pill and keeps the check on the current one', () => {
+    openStatus('ip');
+
+    expect(row('dn').querySelector('[data-blok-database-option-pill]')?.getAttribute('data-status-group')).toBe('complete');
+    expect(row('ip').querySelector('[data-blok-database-select-option-check]')).not.toBeNull();
+  });
+
+  it('ends with "Edit property" behind the sliders glyph', () => {
+    openStatus('ip');
+
+    const glyph = document.createElement('div');
+
+    glyph.innerHTML = IconSliders;
+    expect(q('[data-blok-database-select-edit-property] svg').innerHTML).toBe(glyph.querySelector('svg')?.innerHTML);
   });
 });

@@ -1665,8 +1665,9 @@
   line-height: 48px;
 }
 
+/* feel/findings-rowpage R25: warm, as the database title's placeholder (T09). */
 [data-blok-database-drawer-title]::placeholder {
-  color: var(--blok-database-add-text);
+  color: var(--blok-database-title-placeholder);
 }
 
 /* A row's page icon before its title in a view (size unmeasured: the title's own line). */

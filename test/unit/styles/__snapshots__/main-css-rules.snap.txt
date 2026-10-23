@@ -5342,7 +5342,7 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-database-drawer-title]::placeholder {
-  color: var(--blok-database-add-text);
+  color: var(--blok-database-title-placeholder);
 }
 
 [data-blok-database-page-icon] {

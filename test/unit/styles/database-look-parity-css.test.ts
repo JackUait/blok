@@ -417,3 +417,10 @@ describe('row page value actions pill', () => {
     expect(pill).toContain('border-radius: var(--blok-radius-control)');
   });
 });
+
+// feel/findings-rowpage R25: the empty title's placeholder takes the database title's warm placeholder ink (T09's call).
+describe('row page title placeholder', () => {
+  it('uses the title placeholder token', () => {
+    expect(ruleBody('[data-blok-database-drawer-title]::placeholder')).toContain('color: var(--blok-database-title-placeholder)');
+  });
+});

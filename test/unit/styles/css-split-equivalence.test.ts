@@ -1093,7 +1093,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_VIEW_SETTINGS_BACK_BYTES = 375;
     // database.css: feel/findings-rowpage R09-R16, R26, R29: the row page's property handle, Add a property,
     // header hover row, comment avatar, value pill, body start and file chip.
-    const DATABASE_ROW_PAGE_PROPS_BYTES = 3187;
+    const DATABASE_ROW_PAGE_PROPS_BYTES = 3278;
     const DATABASE_ADD_PROPERTY_GRID_BYTES = 514;
     // database.css: board columns (findings-board): the status header pill, the AA count inks, "+ New page" type.
     const DATABASE_BOARD_COLUMNS_BYTES = 540;

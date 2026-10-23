@@ -107,8 +107,10 @@ test('sets the interval and the start date and time of a schedule', async ({ pag
   await expect(unit.getByRole('option', { selected: true })).toHaveText('Weeks');
 
   // At and Starting are "Label  value ›" rows; their fields sit in submenus.
+  // Starting is a month grid (research/35:400): October, then the next month, then the 2nd.
   await page.getByRole('menuitem', { name: /^Starting/ }).click();
-  await page.getByLabel('Starting', { exact: true }).fill('2026-11-02');
+  await page.getByRole('button', { name: 'Next month' }).click();
+  await page.getByRole('gridcell', { name: 'November 2, 2026' }).click();
   await page.getByRole('menuitem', { name: /^At/ }).click();
   await expect(page.getByLabel('At', { exact: true })).toHaveValue('09:30');
   await page.getByLabel('At', { exact: true }).fill('18:00');
@@ -217,3 +219,76 @@ test('Ending and Timezone set the end and the zone from their submenus', async (
   });
 });
 
+
+// research/35 §13 (r35:400): Starting opens a 268px-wide month grid with no Today button and no time.
+test('Starting opens a month grid as wide as Notion\'s, with no Today and no time', async ({ page }) => {
+  await mount(page, { frequency: 'weekly', start: '2026-10-05T07:30:00.000Z', timeZone: 'Europe/Berlin' });
+  await openBanner(page);
+  await page.getByRole('button', { name: 'Duplicate every week' }).click();
+  await page.getByRole('menuitem', { name: /^Starting/ }).click();
+
+  const grid = page.getByRole('grid').filter({ has: page.getByRole('gridcell', { name: 'October 5, 2026' }) });
+
+  await expect(grid.getByRole('gridcell', { name: 'October 5, 2026' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('button', { name: 'Today' })).toHaveCount(0);
+  // Unscaled: the submenu's open motion scales it.
+  const box = (): Promise<{ width: number }> => grid.evaluate((el) => ({ width: el.closest<HTMLElement>('[data-blok-popover-container]')?.offsetWidth ?? 0 }));
+
+  // Notion's is 268x294 (research/35:400). Its inner sizes were not measured, so only the width is pinned.
+  await expect.poll(async () => (await box()).width).toBe(268);
+});
+
+// research/35 §13 (r35:406): Escape on an unsaved panel asks first; Cancel keeps it, Discard drops it.
+test('Escape on an unsaved Edit cadence asks "Discard unsaved changes?"', async ({ page }) => {
+  await mount(page, { frequency: 'weekly', start: '2026-10-05T07:30:00.000Z', timeZone: 'Europe/Berlin' });
+  await openBanner(page);
+  await page.getByRole('button', { name: 'Duplicate every week' }).click();
+  await page.getByRole('spinbutton', { name: 'Every' }).fill('3');
+  await page.keyboard.press('Escape');
+
+  const dialog = page.getByRole('alertdialog', { name: 'Discard unsaved changes?' });
+
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Discard' })).toBeFocused();
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByText('Edit cadence')).toBeVisible();
+  await expect(page.getByRole('spinbutton', { name: 'Every' })).toHaveValue('3');
+
+  await page.keyboard.press('Escape');
+  await page.getByRole('alertdialog', { name: 'Discard unsaved changes?' }).getByRole('button', { name: 'Discard' }).click();
+  await expect(page.getByText('Edit cadence')).toHaveCount(0);
+  expect(await repeatOf(page)).toEqual({ frequency: 'weekly', start: '2026-10-05T07:30:00.000Z', timeZone: 'Europe/Berlin' });
+});
+
+// research/35 §13 (r35:402): the Timezone submenu reads as the date editor's.
+test('the Timezone submenu has the date editor\'s search and groups', async ({ page }) => {
+  await mount(page, { frequency: 'daily', start: '2026-10-05T07:30:00.000Z', timeZone: 'Europe/Berlin' });
+  await openBanner(page);
+  await page.getByRole('button', { name: 'Duplicate every day' }).click();
+  await page.getByRole('menuitem', { name: /^Timezone/ }).click();
+
+  await expect(page.getByPlaceholder('Search cities, timezones…')).toBeVisible();
+  await expect(page.getByText('Current timezone', { exact: true })).toBeVisible();
+  await expect(page.getByText('Select a timezone', { exact: true })).toBeVisible();
+});
+
+// research/35 §1.8 (r35:150): template rows are 28px with the "…" 2px below the row top; other rows keep their height.
+test('the templates menu rows are 28px, and the "…" submenu rows are not', async ({ page }) => {
+  await mount(page);
+  await page.getByTestId('database-toolbar-new-menu').click();
+
+  const row = page.getByRole('menuitem', { name: /^Standup/ });
+  // Layout sizes, not the rects: the menu's open motion scales them.
+  const geometry = (): Promise<{ height: number; moreTop: number }> => row.evaluate((el) => {
+    const more = el.querySelector<HTMLElement>('[data-blok-testid="popover-item-more"]');
+
+    return { height: el instanceof HTMLElement ? el.offsetHeight : 0, moreTop: more === null ? -1 : more.getBoundingClientRect().top - el.getBoundingClientRect().top };
+  });
+
+  await expect.poll(geometry).toEqual({ height: 28, moreTop: 2 });
+  await row.getByTestId('popover-item-more').click();
+  const edit = await page.getByRole('menuitem', { name: 'Edit', exact: true }).evaluate((el) => (el instanceof HTMLElement ? el.offsetHeight : 0));
+
+  expect(edit).toBe(36);
+});

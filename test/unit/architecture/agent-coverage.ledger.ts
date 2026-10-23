@@ -354,6 +354,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/database-row-edit-icon': fld('database-row.icon'),
   'menu:database/database-row-open-in-*': exempt('view-only', 'Opens the row page in a peek, a side panel or full page; the document does not change.'),
   'menu:database/database-row-comment': exempt('view-only', 'Hands the row to the host comment UI; the document does not change.'),
+  'menu:database/comment': exempt('cut-v1', 'The row page property menu opens that value\'s comment box; agents skip comments (user decision 2026-10-16, design 18).'),
   'menu:database/database-row-view-layout': exempt('chrome', 'Opens the view settings Layout page; each setting in it has its own ledger row.'),
   'menu:database/database-row-view-properties': exempt('chrome', 'Opens the view settings Property visibility page; each setting in it has its own ledger row.'),
   'menu:database/customize-layout': exempt('cut-v1', VIEW_LAYOUT_CUT),

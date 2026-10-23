@@ -751,6 +751,8 @@
   "tools.database.peekFavorite": "Ընտրյալ",
   "tools.database.peekFavoriteHint": "Ավելացնել ընտրյալներում",
   "tools.database.peekUnfavoriteHint": "Հեռացնել ընտրյալներից",
+  "tools.database.peekActionsHint": "Էջի կարգավորումներ և գործողություններ",
+  "tools.database.peekEditViewDefault": "Խմբագրել տեսքի կանխադրվածը",
   "tools.database.defaultTitleProperty": "Վերնագիր",
   "tools.database.defaultSourceTitleProperty": "Անուն",
   "tools.database.defaultStatusProperty": "Կարգավիճակ",

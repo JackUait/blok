@@ -749,6 +749,8 @@
   "tools.database.peekFavorite": "Favorito",
   "tools.database.peekFavoriteHint": "Añadir a favoritos",
   "tools.database.peekUnfavoriteHint": "Quitar de favoritos",
+  "tools.database.peekActionsHint": "Configuración y acciones de la página",
+  "tools.database.peekEditViewDefault": "Editar predeterminado de la vista",
   "tools.database.defaultTitleProperty": "Título",
   "tools.database.defaultSourceTitleProperty": "Nombre",
   "tools.database.defaultStatusProperty": "Estado",

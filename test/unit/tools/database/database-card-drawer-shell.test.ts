@@ -3,6 +3,11 @@ import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card
 import type { CardDrawerOptions } from '../../../../src/tools/database/database-card-drawer';
 import type { DatabaseRow } from '../../../../src/tools/database/types';
 import type { I18n } from '../../../../types';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { IconChevronDoubleRight, IconChevronLeft, IconExpandDiagonal, IconPeekCenter, IconPeekFull, IconPeekSide } from '../../../../src/components/icons';
+import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
+import { hover, shownHint } from './hint-harness';
 
 vi.mock('../../../../src/blok', () => ({
   Blok: vi.fn(function stubBlok() {
@@ -247,6 +252,141 @@ describe('DatabaseCardDrawer shell', () => {
       expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('656px');
       second.destroy();
       first.destroy();
+    });
+  });
+
+  // feel/findings-rowpage R03, R04, R05, R18: Notion's top bar.
+  describe('top bar', () => {
+    const bar = (): string[] => [...(q('[data-blok-database-drawer-toolbar]')?.children ?? [])]
+      .map((el) => [...el.attributes].map((a) => a.name).find((n) => n.startsWith('data-blok-database-')) ?? el.tagName);
+    const actions = { onOpenIn: vi.fn(), onCopyLink: vi.fn(), properties: [] };
+    const drawn = (selector: string): string => q(selector)?.innerHTML ?? '';
+    const parsed = (icon: string): string => {
+      const box = document.createElement('div');
+
+      box.innerHTML = icon;
+
+      return box.innerHTML;
+    };
+
+    it('groups close and expand, the mode, and the row steps, with Copy link before the star and "•••"', () => {
+      const drawer = new DatabaseCardDrawer(createOptions({ rowActions: () => actions }));
+
+      drawer.open(ROW, 'side');
+
+      expect(bar()).toStrictEqual([
+        'data-blok-database-drawer-close',
+        'data-blok-database-peek-expand',
+        'data-blok-database-peek-separator',
+        'data-blok-database-peek-mode',
+        'data-blok-database-peek-separator',
+        'data-blok-database-peek-prev',
+        'data-blok-database-peek-next',
+        'data-blok-database-peek-copy-link',
+        'data-blok-database-peek-page-info',
+        'data-blok-database-peek-favorite',
+        'data-blok-database-peek-actions',
+      ]);
+      drawer.destroy();
+    });
+
+    it('draws Notion\'s » close and diagonal expand, and the open mode\'s glyph on the mode button', () => {
+      const drawer = new DatabaseCardDrawer(createOptions());
+
+      drawer.open(ROW, 'side');
+
+      expect(drawn('[data-blok-database-drawer-close]')).toBe(parsed(IconChevronDoubleRight));
+      expect(drawn('[data-blok-database-peek-expand]')).toBe(parsed(IconExpandDiagonal));
+      expect(drawn('[data-blok-database-peek-mode]')).toBe(parsed(IconPeekSide));
+      drawer.open(ROW, 'center');
+      expect(drawn('[data-blok-database-peek-mode]')).toBe(parsed(IconPeekCenter));
+      drawer.open(ROW, 'full');
+      expect(drawn('[data-blok-database-peek-mode]')).toBe(parsed(IconPeekFull));
+      expect(drawn('[data-blok-database-drawer-close]')).toBe(parsed(IconChevronLeft));
+      drawer.destroy();
+    });
+
+    it('has no close button in the center peek: Escape and the backdrop close it', () => {
+      const drawer = new DatabaseCardDrawer(createOptions());
+
+      drawer.open(ROW, 'center');
+
+      expect(q('[data-blok-database-drawer-close]')?.hidden).toBe(true);
+      drawer.open(ROW, 'side');
+      expect(q('[data-blok-database-drawer-close]')?.hidden).toBe(false);
+      drawer.destroy();
+    });
+
+    it('copies the row link from the bar, and has no Copy link without row actions', () => {
+      const drawer = new DatabaseCardDrawer(createOptions({ rowActions: () => actions }));
+
+      drawer.open(ROW, 'side');
+      q('[data-blok-database-peek-copy-link]')?.click();
+
+      expect(actions.onCopyLink).toHaveBeenCalledOnce();
+      drawer.destroy();
+
+      const bare = new DatabaseCardDrawer(createOptions());
+
+      bare.open(ROW, 'side');
+      expect(q('[data-blok-database-peek-copy-link]')?.hidden).toBe(true);
+      bare.destroy();
+    });
+
+    // Notion fades these in only while the pointer is on the bar.
+    it('reveals the mode switcher, the separators and the row steps only while the bar is hovered or holds keyboard focus', () => {
+      const css = readFileSync(resolve(__dirname, '../../../../src/styles/database.css'), 'utf8');
+      const rule = /\[data-blok-database-drawer-toolbar\]:not\(:hover\):not\(:has\(:focus-visible\)\) :is\(([^)]*)\)\s*\{\s*opacity:\s*0;/.exec(css);
+
+      expect(rule?.[1].split(',').map((x) => x.trim()).sort()).toStrictEqual([
+        '[data-blok-database-peek-mode]',
+        '[data-blok-database-peek-next]',
+        '[data-blok-database-peek-prev]',
+        '[data-blok-database-peek-separator]',
+      ]);
+    });
+  });
+
+  // feel/findings-rowpage R06: Notion's hints on close, expand and "•••"; none on mode, prev and next.
+  describe('top bar hints', () => {
+    // Earlier tests clear the body, which detaches the tooltip singleton: start a fresh one.
+    beforeEach(() => {
+      destroyTooltip();
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      destroyTooltip();
+      vi.useRealTimers();
+    });
+
+    const hintOf = (selector: string): string | null => {
+      hover(q(selector));
+      vi.advanceTimersByTime(HINT_DELAY - 1);
+      const early = shownHint();
+
+      vi.advanceTimersByTime(1);
+      const text = shownHint()?.text ?? null;
+
+      q(selector)?.dispatchEvent(new MouseEvent('mouseleave'));
+      vi.advanceTimersByTime(500);
+
+      return early === null ? text : 'shown before the delay';
+    };
+
+    it('hints close with Escape, expand, and "•••", after the hint delay', () => {
+      const drawer = new DatabaseCardDrawer(createOptions({ i18n: i18n(), rowActions: () => ({ onOpenIn: vi.fn(), onCopyLink: vi.fn(), properties: [] }) }));
+
+      drawer.open(ROW, 'side');
+
+      expect(hintOf('[data-blok-database-drawer-close]')).toBe('tools.database.close Esc');
+      expect(hintOf('[data-blok-database-peek-expand]')).toBe('tools.database.peekExpand');
+      expect(hintOf('[data-blok-database-peek-actions]')).toBe('tools.database.peekActionsHint');
+      expect(hintOf('[data-blok-database-peek-copy-link]')).toBe('tools.database.tableCopyLink');
+      expect(hintOf('[data-blok-database-peek-mode]')).toBeNull();
+      expect(hintOf('[data-blok-database-peek-prev]')).toBeNull();
+      expect(hintOf('[data-blok-database-peek-next]')).toBeNull();
+      drawer.destroy();
     });
   });
 });

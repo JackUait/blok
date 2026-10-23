@@ -104,7 +104,8 @@ describe('row page Actions menu', () => {
     await openRow('r1');
     const button = q('[data-blok-database-peek-actions]');
 
-    expect(button?.getAttribute('aria-label')).toBe('Actions');
+    // feel/findings-rowpage R06: Notion's name for the button.
+    expect(button?.getAttribute('aria-label')).toBe('Page settings & actions');
     await openActions();
 
     const names = [...document.querySelectorAll('[data-blok-popover-opened] [data-blok-item-name]')].map((item) => item.getAttribute('data-blok-item-name'));

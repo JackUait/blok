@@ -749,6 +749,8 @@
   "tools.database.peekFavorite": "Paborito",
   "tools.database.peekFavoriteHint": "Idagdag sa Mga Paborito",
   "tools.database.peekUnfavoriteHint": "Alisin sa Mga Paborito",
+  "tools.database.peekActionsHint": "Mga setting at aksyon ng pahina",
+  "tools.database.peekEditViewDefault": "I-edit ang karaniwan ng view",
   "tools.database.defaultTitleProperty": "Pamagat",
   "tools.database.defaultSourceTitleProperty": "Pangalan",
   "tools.database.defaultStatusProperty": "Katayuan",

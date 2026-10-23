@@ -760,6 +760,8 @@
   "tools.database.peekFavorite": "Дуртай",
   "tools.database.peekFavoriteHint": "Дуртай зүйлд нэмэх",
   "tools.database.peekUnfavoriteHint": "Дуртай зүйлээс хасах",
+  "tools.database.peekActionsHint": "Хуудасны тохиргоо ба үйлдлүүд",
+  "tools.database.peekEditViewDefault": "Харагдацын өгөгдмөлийг засах",
   "tools.database.defaultTitleProperty": "Гарчиг",
   "tools.database.defaultSourceTitleProperty": "Нэр",
   "tools.database.defaultStatusProperty": "Төлөв",

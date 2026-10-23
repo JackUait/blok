@@ -751,6 +751,8 @@
   "tools.database.peekFavorite": "Favorit",
   "tools.database.peekFavoriteHint": "Føj til favoritter",
   "tools.database.peekUnfavoriteHint": "Fjern fra favoritter",
+  "tools.database.peekActionsHint": "Sideindstillinger og handlinger",
+  "tools.database.peekEditViewDefault": "Rediger visningens standard",
   "tools.database.defaultTitleProperty": "Titel",
   "tools.database.defaultSourceTitleProperty": "Navn",
   "tools.database.defaultStatusProperty": "Status",

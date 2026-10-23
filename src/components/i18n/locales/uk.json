@@ -749,6 +749,8 @@
   "tools.database.peekFavorite": "Обране",
   "tools.database.peekFavoriteHint": "Додати до обраного",
   "tools.database.peekUnfavoriteHint": "Видалити з обраного",
+  "tools.database.peekActionsHint": "Налаштування та дії сторінки",
+  "tools.database.peekEditViewDefault": "Редагувати типове значення подання",
   "tools.database.defaultTitleProperty": "Назва",
   "tools.database.defaultSourceTitleProperty": "Назва",
   "tools.database.defaultStatusProperty": "Статус",

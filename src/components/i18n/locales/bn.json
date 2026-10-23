@@ -751,6 +751,8 @@
   "tools.database.peekFavorite": "পছন্দের",
   "tools.database.peekFavoriteHint": "পছন্দের তালিকায় যোগ করুন",
   "tools.database.peekUnfavoriteHint": "পছন্দের তালিকা থেকে সরান",
+  "tools.database.peekActionsHint": "পৃষ্ঠার সেটিংস ও কাজসমূহ",
+  "tools.database.peekEditViewDefault": "ভিউয়ের ডিফল্ট সম্পাদনা করুন",
   "tools.database.defaultTitleProperty": "শিরোনাম",
   "tools.database.defaultSourceTitleProperty": "নাম",
   "tools.database.defaultStatusProperty": "অবস্থা",

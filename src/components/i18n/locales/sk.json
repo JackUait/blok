@@ -751,6 +751,8 @@
   "tools.database.peekFavorite": "Obľúbené",
   "tools.database.peekFavoriteHint": "Pridať do obľúbených",
   "tools.database.peekUnfavoriteHint": "Odstrániť z obľúbených",
+  "tools.database.peekActionsHint": "Nastavenia a akcie stránky",
+  "tools.database.peekEditViewDefault": "Upraviť predvolené nastavenie zobrazenia",
   "tools.database.defaultTitleProperty": "Názov",
   "tools.database.defaultSourceTitleProperty": "Názov",
   "tools.database.defaultStatusProperty": "Stav",

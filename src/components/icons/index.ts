@@ -987,6 +987,38 @@ export const IconSidebarRight = `
 </svg>
 `;
 
+// Peek modes (Notion's peekSide, peekCenter, peekFull): IconSidebarRight's frame
+// with the open page filled in where it shows.
+export const IconPeekSide = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="10.5" y="6" width="4.5" height="8" rx="0.75" fill="currentColor"/>
+</svg>
+`;
+
+export const IconPeekCenter = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="6.5" y="7.5" width="7" height="5" rx="0.75" fill="currentColor"/>
+</svg>
+`;
+
+export const IconPeekFull = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="5" y="6" width="10" height="8" rx="0.75" fill="currentColor"/>
+</svg>
+`;
+
+// Open in full page (Notion's arrowExpandDiagonalSmall): a two-way diagonal arrow.
+export const IconExpandDiagonal = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M5.5 5.5L14.5 14.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M5.5 10L5.5 5.5L10 5.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M14.5 10L14.5 14.5L10 14.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Placement icon (3x3 alignment dot grid)
 export const IconPlacement = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

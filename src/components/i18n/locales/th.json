@@ -749,6 +749,8 @@
   "tools.database.peekFavorite": "รายการโปรด",
   "tools.database.peekFavoriteHint": "เพิ่มในรายการโปรด",
   "tools.database.peekUnfavoriteHint": "นำออกจากรายการโปรด",
+  "tools.database.peekActionsHint": "การตั้งค่าและการดำเนินการของหน้า",
+  "tools.database.peekEditViewDefault": "แก้ไขค่าเริ่มต้นของมุมมอง",
   "tools.database.defaultTitleProperty": "ชื่อ",
   "tools.database.defaultSourceTitleProperty": "ชื่อ",
   "tools.database.defaultStatusProperty": "สถานะ",

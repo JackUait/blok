@@ -749,6 +749,8 @@
   "tools.database.peekFavorite": "મનપસંદ",
   "tools.database.peekFavoriteHint": "મનપસંદમાં ઉમેરો",
   "tools.database.peekUnfavoriteHint": "મનપસંદમાંથી દૂર કરો",
+  "tools.database.peekActionsHint": "પૃષ્ઠ સેટિંગ્સ અને ક્રિયાઓ",
+  "tools.database.peekEditViewDefault": "દૃશ્યનું ડિફૉલ્ટ સંપાદિત કરો",
   "tools.database.defaultTitleProperty": "શીર્ષક",
   "tools.database.defaultSourceTitleProperty": "નામ",
   "tools.database.defaultStatusProperty": "સ્થિતિ",

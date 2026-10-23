@@ -751,6 +751,8 @@
   "tools.database.peekFavorite": "ចំណូលចិត្ត",
   "tools.database.peekFavoriteHint": "បន្ថែមទៅចំណូលចិត្ត",
   "tools.database.peekUnfavoriteHint": "ដកចេញពីចំណូលចិត្ត",
+  "tools.database.peekActionsHint": "ការកំណត់ និងសកម្មភាពទំព័រ",
+  "tools.database.peekEditViewDefault": "កែសម្រួលលំនាំដើមទិដ្ឋភាព",
   "tools.database.defaultTitleProperty": "ចំណងជើង",
   "tools.database.defaultSourceTitleProperty": "ឈ្មោះ",
   "tools.database.defaultStatusProperty": "ស្ថានភាព",

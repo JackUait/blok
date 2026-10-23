@@ -751,6 +751,8 @@
   "tools.database.peekFavorite": "E preferuar",
   "tools.database.peekFavoriteHint": "Shto te të preferuarat",
   "tools.database.peekUnfavoriteHint": "Hiq nga të preferuarat",
+  "tools.database.peekActionsHint": "Cilësimet dhe veprimet e faqes",
+  "tools.database.peekEditViewDefault": "Ndrysho parazgjedhjen e pamjes",
   "tools.database.defaultTitleProperty": "Titull",
   "tools.database.defaultSourceTitleProperty": "Emri",
   "tools.database.defaultStatusProperty": "Statusi",

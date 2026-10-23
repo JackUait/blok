@@ -749,6 +749,8 @@
   "tools.database.peekFavorite": "Favorit",
   "tools.database.peekFavoriteHint": "Lägg till i favoriter",
   "tools.database.peekUnfavoriteHint": "Ta bort från favoriter",
+  "tools.database.peekActionsHint": "Sidinställningar och åtgärder",
+  "tools.database.peekEditViewDefault": "Redigera vyns standard",
   "tools.database.defaultTitleProperty": "Titel",
   "tools.database.defaultSourceTitleProperty": "Namn",
   "tools.database.defaultStatusProperty": "Status",

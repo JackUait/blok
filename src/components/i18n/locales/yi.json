@@ -749,6 +749,8 @@
   "tools.database.peekFavorite": "פֿאַוואָריט",
   "tools.database.peekFavoriteHint": "צולייגן צו פֿאַוואָריטן",
   "tools.database.peekUnfavoriteHint": "אַראָפּנעמען פֿון פֿאַוואָריטן",
+  "tools.database.peekActionsHint": "בלאַט־באַשטימונגען און אקציעס",
+  "tools.database.peekEditViewDefault": "רעדאַקטירן דעם אויסשטעל־שטאַנדאַרד",
   "tools.database.defaultTitleProperty": "טיטל",
   "tools.database.defaultSourceTitleProperty": "נאָמען",
   "tools.database.defaultStatusProperty": "סטאטוס",

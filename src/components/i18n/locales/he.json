@@ -749,6 +749,8 @@
   "tools.database.peekFavorite": "מועדף",
   "tools.database.peekFavoriteHint": "הוספה למועדפים",
   "tools.database.peekUnfavoriteHint": "הסרה מהמועדפים",
+  "tools.database.peekActionsHint": "הגדרות ופעולות של הדף",
+  "tools.database.peekEditViewDefault": "ערוך את ברירת המחדל של התצוגה",
   "tools.database.defaultTitleProperty": "כותרת",
   "tools.database.defaultSourceTitleProperty": "שם",
   "tools.database.defaultStatusProperty": "סטטוס",

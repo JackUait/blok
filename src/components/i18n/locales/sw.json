@@ -749,6 +749,8 @@
   "tools.database.peekFavorite": "Kipendwa",
   "tools.database.peekFavoriteHint": "Ongeza kwenye Vipendwa",
   "tools.database.peekUnfavoriteHint": "Ondoa kwenye Vipendwa",
+  "tools.database.peekActionsHint": "Mipangilio na vitendo vya ukurasa",
+  "tools.database.peekEditViewDefault": "Hariri chaguo-msingi la mwonekano",
   "tools.database.defaultTitleProperty": "Kichwa",
   "tools.database.defaultSourceTitleProperty": "Jina",
   "tools.database.defaultStatusProperty": "Hali",

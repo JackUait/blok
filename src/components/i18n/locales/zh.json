@@ -749,6 +749,8 @@
   "tools.database.peekFavorite": "收藏",
   "tools.database.peekFavoriteHint": "添加到收藏",
   "tools.database.peekUnfavoriteHint": "从收藏中移除",
+  "tools.database.peekActionsHint": "页面设置与操作",
+  "tools.database.peekEditViewDefault": "编辑视图默认值",
   "tools.database.defaultTitleProperty": "标题",
   "tools.database.defaultSourceTitleProperty": "名称",
   "tools.database.defaultStatusProperty": "状态",

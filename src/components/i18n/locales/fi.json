@@ -749,6 +749,8 @@
   "tools.database.peekFavorite": "Suosikki",
   "tools.database.peekFavoriteHint": "Lisää suosikkeihin",
   "tools.database.peekUnfavoriteHint": "Poista suosikeista",
+  "tools.database.peekActionsHint": "Sivun asetukset ja toiminnot",
+  "tools.database.peekEditViewDefault": "Muokkaa näkymän oletusta",
   "tools.database.defaultTitleProperty": "Otsikko",
   "tools.database.defaultSourceTitleProperty": "Nimi",
   "tools.database.defaultStatusProperty": "Tila",

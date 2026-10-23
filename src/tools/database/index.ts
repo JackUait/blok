@@ -9022,7 +9022,7 @@ export class DatabaseTool implements BlockTool {
           this.syncRowsFromBlocks();
           this.cardDrawer?.syncOpenRow(this.rowOrTemplate(rowId));
         },
-        onModeChange: (mode) => this.changeOpenMode(mode),
+        onEditViewDefault: (anchor) => this.controls.openSettingsPage('layout', anchor),
         onExpand: (rowId) => {
           const navigate = this.config.rowPages?.navigate;
 
@@ -10068,17 +10068,6 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** A mode picked in the peek header is saved on the view, as Notion's "Open pages in" is. */
-  private changeOpenMode(mode: OpenPagesIn): void {
-    const rowId = this.cardDrawer?.openRowId ?? null;
-
-    // The same write as the settings panel's "Open pages in": the view field is the one source.
-    this.updateActiveView({ openPagesIn: mode });
-    if (mode === 'full' && rowId !== null && this.config.rowPages?.navigate !== undefined) {
-      this.cardDrawer?.close();
-      this.config.rowPages.navigate(rowId);
-    }
-  }
-
   /**
    * Ask the host about rows an older client touched: one that lost `pageId`
    * (its save prunes keys it does not know), or a moved row whose legacy body

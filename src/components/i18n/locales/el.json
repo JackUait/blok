@@ -751,6 +751,8 @@
   "tools.database.peekFavorite": "Αγαπημένο",
   "tools.database.peekFavoriteHint": "Προσθήκη στα αγαπημένα",
   "tools.database.peekUnfavoriteHint": "Αφαίρεση από τα αγαπημένα",
+  "tools.database.peekActionsHint": "Ρυθμίσεις και ενέργειες σελίδας",
+  "tools.database.peekEditViewDefault": "Επεξεργασία προεπιλογής προβολής",
   "tools.database.defaultTitleProperty": "Τίτλος",
   "tools.database.defaultSourceTitleProperty": "Όνομα",
   "tools.database.defaultStatusProperty": "Κατάσταση",

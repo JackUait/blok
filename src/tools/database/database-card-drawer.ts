@@ -9,13 +9,13 @@ import type { DateDisplayChange } from './cells/date-format';
 import { isReadOnlyType, readPropertyValue } from './property-values';
 import { cellText } from './database-table-clipboard';
 import { rowCellContext } from './reminders';
-import { IconArrowDiagonal, IconCheck, IconCopy, IconEmojiSmile, IconImage, IconMenu, IconMessage, IconPlus, IconCross, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconEmojiStar, IconExpandFullscreen, IconStarFilled, IconLink, IconPage, IconPageLayout, IconPlayerTheater, IconPreview, IconSidebarRight, IconSplitView } from '../../components/icons';
+import { IconArrowDiagonal, IconCheck, IconCopy, IconEmojiSmile, IconImage, IconMenu, IconMessage, IconPlus, IconChevronDown, IconChevronLeft, IconChevronRight, IconDotsHorizontal, IconEmojiStar, IconStarFilled, IconLink, IconPage, IconPageLayout, IconPlayerTheater, IconSidebarRight, IconSplitView, IconChevronDoubleRight, IconExpandDiagonal, IconPeekCenter, IconPeekFull, IconPeekSide, IconSliders } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { getUserOS } from '../../components/utils/browser';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
-import { rowActionItems } from './database-table-menus';
+import { DATABASE_HEADER_MENU_CLASS, rowActionItems } from './database-table-menus';
 import type { RowActionContext, RowFavorite } from './database-table-menus';
 import { hide as hideTooltip, onHover, show as showTooltip } from '../../components/utils/tooltip';
 import { onPropertyHover } from './property-hint';
@@ -84,6 +84,7 @@ const PEEK_RESIZE_STEP = 16;
 const PEEK_WIDTH_KEY = 'blok:database-peek-width';
 /** Notion's pin arrows scroll 400px per click (research/09 §4). */
 const PIN_SCROLL_STEP = 400;
+const PEEK_MODE_ICONS: Record<OpenPagesIn, string> = { side: IconPeekSide, center: IconPeekCenter, full: IconPeekFull };
 /** One peek per page: opening one closes the other database's. */
 const openPeek: { drawer: DatabaseCardDrawer | null } = { drawer: null };
 /** The drawer whose inset a page shows; a peek still sliding out must not undo a newer one's. */
@@ -303,11 +304,8 @@ export interface CardDrawerOptions {
   adjacentRow?: (rowId: string, direction: 1 | -1) => DatabaseRow | undefined;
   /** The view's rows in its order, for the layout builder's Preview switch. */
   viewRows?: () => DatabaseRow[];
-  /**
-   * A mode picked in the peek header. The tool saves it on the view; it may
-   * also take the page away from the drawer (a host's full page).
-   */
-  onModeChange?: (mode: OpenPagesIn) => void;
+  /** "Edit view default" in the mode menu: the view's Layout settings. Without it there is no such item. */
+  onEditViewDefault?: (anchor: HTMLElement) => void;
   /** The expand button. True when the host took the page (its full page); else the drawer goes full. */
   onExpand?: (rowId: string) => boolean;
   /**
@@ -475,7 +473,7 @@ export class DatabaseCardDrawer {
   private readonly viewRows: CardDrawerOptions['viewRows'];
   /** The builder's "New page" preview when the database has no rows (research/09 §1). No drawer is open then. */
   private placeholder: DatabaseRow | null = null;
-  private readonly onModeChange: CardDrawerOptions['onModeChange'];
+  private readonly onEditViewDefault: CardDrawerOptions['onEditViewDefault'];
   private readonly onExpand: CardDrawerOptions['onExpand'];
   private readonly onIconChange: CardDrawerOptions['onIconChange'];
   private readonly backlinks: CardDrawerOptions['backlinks'];
@@ -592,7 +590,7 @@ export class DatabaseCardDrawer {
     this.rowBody = options.rowBody;
     this.adjacentRow = options.adjacentRow;
     this.viewRows = options.viewRows;
-    this.onModeChange = options.onModeChange;
+    this.onEditViewDefault = options.onEditViewDefault;
     this.onExpand = options.onExpand;
     this.onIconChange = options.onIconChange;
     this.backlinks = options.backlinks;
@@ -902,6 +900,7 @@ export class DatabaseCardDrawer {
     this.syncStepButtons();
     this.syncActionsButton();
     this.syncFavoriteButton();
+    this.syncCopyLinkButton();
 
     const title = (row.properties[this.titlePropertyId] as string) ?? '';
 
@@ -1572,7 +1571,10 @@ export class DatabaseCardDrawer {
     return toggle;
   }
 
-  /** Header controls after close: expand to full page, the mode menu, previous and next row. */
+  /**
+   * Header controls after close, in Notion's order (feel/findings-rowpage R03, R05):
+   * expand | mode | previous, next, then Copy link, Page info, Favorite and "•••" at the end.
+   */
   private createHeaderControls(): HTMLElement[] {
     const button = (attr: string, labelKey: string, icon: string, onClick: (el: HTMLButtonElement) => void): HTMLButtonElement => {
       const el = document.createElement('button');
@@ -1585,19 +1587,50 @@ export class DatabaseCardDrawer {
 
       return el;
     };
+    const hinted = (el: HTMLButtonElement, labelKey: string): HTMLButtonElement => {
+      onHover(el, this.label(labelKey));
+
+      return el;
+    };
+    const separator = (): HTMLElement => {
+      const el = document.createElement('span');
+
+      el.setAttribute('data-blok-database-peek-separator', '');
+      el.setAttribute('aria-hidden', 'true');
+
+      return el;
+    };
 
     return [
-      button('data-blok-database-peek-expand', 'tools.database.peekExpand', IconExpandFullscreen, () => this.expand()),
-      button('data-blok-database-peek-mode', 'tools.database.settingsOpenPagesIn', IconSplitView, (el) => this.openModeMenu(el)),
+      hinted(button('data-blok-database-peek-expand', 'tools.database.peekExpand', IconExpandDiagonal, () => this.expand()), 'tools.database.peekExpand'),
+      separator(),
+      // No hint on mode, previous and next, as in Notion: their names are their aria-labels.
+      button('data-blok-database-peek-mode', 'tools.database.settingsOpenPagesIn', IconPeekSide, (el) => this.openModeMenu(el)),
+      separator(),
       button('data-blok-database-peek-prev', 'tools.database.peekPrevious', IconChevronDown, () => this.step(-1)),
       button('data-blok-database-peek-next', 'tools.database.peekNext', IconChevronDown, () => this.step(1)),
+      hinted(button('data-blok-database-peek-copy-link', 'tools.database.tableCopyLink', IconLink, () => this.copyLink()), 'tools.database.tableCopyLink'),
       // research/10 §10: shown only while the layout uses the details panel (syncPageInfo).
       button('data-blok-database-peek-page-info', 'tools.database.layoutPageInfo', IconSidebarRight, () => this.setDetailsOpen(!this.detailsOpen)),
       // research/21 §5: Favorite is a star right before "•••", not an item in its menu.
       this.favoriteButton(button),
       // research/09 §1b: "•••" ends the bar, in a peek too (side peek: 30-row-page-actions-menu.png).
-      button('data-blok-database-peek-actions', 'popover.actions', IconDotsHorizontal, (el) => this.openActionsMenu(el)),
+      hinted(button('data-blok-database-peek-actions', 'tools.database.peekActionsHint', IconDotsHorizontal, (el) => this.openActionsMenu(el)), 'tools.database.peekActionsHint'),
     ];
+  }
+
+  private copyLink(): void {
+    const rowId = this.currentRowId;
+
+    if (rowId !== null) this.rowActions?.(rowId)?.onCopyLink();
+  }
+
+  /** Copy link copies through the row menu's lever, so it shows only where that menu has one. */
+  private syncCopyLinkButton(): void {
+    const rowId = this.currentRowId;
+
+    this.drawer?.querySelector<HTMLElement>('[data-blok-database-peek-copy-link]')
+      ?.toggleAttribute('hidden', rowId === null || this.rowActions?.(rowId) === undefined);
   }
 
   private favoriteButton(button: (attr: string, labelKey: string, icon: string, onClick: (el: HTMLButtonElement) => void) => HTMLButtonElement): HTMLButtonElement {
@@ -1656,44 +1689,49 @@ export class DatabaseCardDrawer {
     if (rowId !== null && this.onExpand?.(rowId) === true) {
       return;
     }
-    this.switchMode('full', false);
+    this.switchMode('full');
   }
 
-  /**
-   * Picks a mode from the header. A saved mode goes to the tool first: for a
-   * host full page it closes this drawer and navigates.
-   */
-  private switchMode(mode: OpenPagesIn, save: boolean): void {
-    if (save) {
-      this.onModeChange?.(mode);
-    }
+  private switchMode(mode: OpenPagesIn): void {
     if (this.drawer !== null && mode !== this.mode) {
       this.applyMode(mode);
     }
   }
 
+  /**
+   * feel/findings-rowpage R19: titles only, 220 wide. A pick changes this peek only;
+   * "Edit view default" opens the view's Layout settings, where the default lives.
+   */
   private openModeMenu(anchor: HTMLElement): void {
     this.closeModeMenu();
-    const modes: Array<{ mode: OpenPagesIn; icon: string; key: string }> = [
-      { mode: 'side', icon: IconSplitView, key: 'Side' },
-      { mode: 'center', icon: IconPreview, key: 'Center' },
-      { mode: 'full', icon: IconExpandFullscreen, key: 'Full' },
-    ];
+    const editDefault = this.onEditViewDefault;
+    const items: PopoverItemParams[] = (['side', 'center', 'full'] as const).map((mode) => ({
+      type: PopoverItemType.Default,
+      title: this.label(`tools.database.openPages${({ side: 'Side', center: 'Center', full: 'Full' } as const)[mode]}`),
+      icon: PEEK_MODE_ICONS[mode],
+      ...(mode === this.mode ? { trailingIcon: IconCheck } : {}),
+      closeOnActivate: true,
+      // A full page goes to the host's page when it has one, as the expand button does.
+      onActivate: () => (mode === 'full' ? this.expand() : this.switchMode(mode)),
+    }));
     const menu = new PopoverDesktop({
-      class: DATABASE_MENU_CLASS,
+      // Notion's 28px rows.
+      class: DATABASE_HEADER_MENU_CLASS,
       trigger: anchor,
-      width: 'auto',
-      minWidth: '240px',
+      width: '220px',
       autoFocusFirstItem: false,
-      items: modes.map(({ mode, icon, key }) => ({
-        type: PopoverItemType.Default,
-        title: this.label(`tools.database.openPages${key}`),
-        titleEl: this.modeLabel(`tools.database.openPages${key}`, `tools.database.openPages${key}Description`),
-        icon,
-        ...(mode === this.mode ? { trailingIcon: IconCheck } : {}),
-        closeOnActivate: true,
-        onActivate: () => this.switchMode(mode, true),
-      })),
+      items: editDefault === undefined || this.readOnly ? items : [
+        ...items,
+        { type: PopoverItemType.Separator },
+        {
+          type: PopoverItemType.Default,
+          name: 'row-page-edit-view-default',
+          title: this.label('tools.database.peekEditViewDefault'),
+          icon: IconSliders,
+          closeOnActivate: true,
+          onActivate: () => editDefault(anchor),
+        },
+      ],
     });
 
     menu.on(PopoverEvent.Closed, () => {
@@ -1704,21 +1742,6 @@ export class DatabaseCardDrawer {
     });
     this.modeMenu = menu;
     menu.show();
-  }
-
-  /** A menu label with Notion's one-line description under it (research/08). */
-  private modeLabel(titleKey: string, descriptionKey: string): HTMLElement {
-    const label = document.createElement('span');
-    const title = document.createElement('span');
-    const description = document.createElement('span');
-
-    label.setAttribute('data-blok-database-peek-mode-label', '');
-    title.textContent = this.label(titleKey);
-    description.setAttribute('data-blok-database-peek-mode-description', '');
-    description.textContent = this.label(descriptionKey);
-    label.append(title, description);
-
-    return label;
   }
 
   /** A row page's selected view tab opens a menu: Customize layout, Copy link to view, or both. */
@@ -1907,9 +1930,21 @@ export class DatabaseCardDrawer {
     const close = drawer.querySelector<HTMLElement>('[data-blok-database-drawer-close]');
 
     if (close !== null) {
-      close.innerHTML = ({ side: IconChevronRight + IconChevronRight, center: IconCross, full: IconChevronLeft } as const)[mode];
+      close.innerHTML = mode === 'full' ? IconChevronLeft : IconChevronDoubleRight;
       close.setAttribute('aria-label', this.label(mode === 'full' ? 'tools.database.peekBack' : 'tools.database.close'));
+      // Notion's center peek has no close button: Escape and the backdrop close it (R18).
+      close.hidden = mode === 'center';
+      // "Close · Esc" (R06); a full page's Back has no shortcut.
+      onHover(close, mode === 'full' ? this.label('tools.database.peekBack') : createTooltipContent([[
+        { text: this.label('tools.database.close'), highlight: true },
+        { text: ' ', highlight: false },
+        { text: 'Esc', highlight: false, direction: 'ltr' },
+      ]]));
     }
+    const modeButton = drawer.querySelector<HTMLElement>('[data-blok-database-peek-mode]');
+
+    if (modeButton !== null) modeButton.innerHTML = PEEK_MODE_ICONS[mode];
+    this.syncCopyLinkButton();
     drawer.querySelector<HTMLElement>('[data-blok-database-peek-expand]')?.toggleAttribute('hidden', mode === 'full');
     drawer.querySelector<HTMLElement>('[data-blok-database-peek-resize]')?.toggleAttribute('hidden', mode !== 'side');
     this.syncStepButtons();

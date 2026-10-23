@@ -751,6 +751,8 @@
   "tools.database.peekFavorite": "ප්‍රියතම",
   "tools.database.peekFavoriteHint": "ප්‍රියතමවලට එක් කරන්න",
   "tools.database.peekUnfavoriteHint": "ප්‍රියතමවලින් ඉවත් කරන්න",
+  "tools.database.peekActionsHint": "පිටු සැකසුම් සහ ක්‍රියා",
+  "tools.database.peekEditViewDefault": "දසුනේ පෙරනිමිය සංස්කරණය කරන්න",
   "tools.database.defaultTitleProperty": "මාතෘකාව",
   "tools.database.defaultSourceTitleProperty": "නම",
   "tools.database.defaultStatusProperty": "තත්ත්වය",

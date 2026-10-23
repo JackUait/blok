@@ -751,6 +751,8 @@
   "tools.database.peekFavorite": "Любими",
   "tools.database.peekFavoriteHint": "Добавяне към любими",
   "tools.database.peekUnfavoriteHint": "Премахване от любими",
+  "tools.database.peekActionsHint": "Настройки и действия за страницата",
+  "tools.database.peekEditViewDefault": "Редактирай настройката по подразбиране на изгледа",
   "tools.database.defaultTitleProperty": "Заглавие",
   "tools.database.defaultSourceTitleProperty": "Име",
   "tools.database.defaultStatusProperty": "Статус",

@@ -749,6 +749,8 @@
   "tools.database.peekFavorite": "پسندیدہ",
   "tools.database.peekFavoriteHint": "پسندیدہ میں شامل کریں",
   "tools.database.peekUnfavoriteHint": "پسندیدہ سے ہٹائیں",
+  "tools.database.peekActionsHint": "صفحے کی ترتیبات اور کارروائیاں",
+  "tools.database.peekEditViewDefault": "ویو کے طے شدہ میں ترمیم کریں",
   "tools.database.defaultTitleProperty": "عنوان",
   "tools.database.defaultSourceTitleProperty": "نام",
   "tools.database.defaultStatusProperty": "حالت",

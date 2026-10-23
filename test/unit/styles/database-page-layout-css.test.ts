@@ -481,16 +481,18 @@ describe('database row page layout css', () => {
   });
 
   // research/09 §1b: "•••" ends the top bar. research/10 §10: Page info sits before it. research/21 §5: the Favorite star sits right before "•••".
-  it('ends the page header with Page info, the Favorite star and Actions, whichever show, pushed to the end together', () => {
-    const header = ruleBody('[data-blok-database-peek-expand], [data-blok-database-peek-mode], [data-blok-database-peek-prev], [data-blok-database-peek-next], [data-blok-database-peek-page-info], [data-blok-database-peek-favorite], [data-blok-database-peek-actions]');
+  it('ends the page header with Copy link, Page info, the Favorite star and Actions, whichever show, pushed to the end together', () => {
+    const header = ruleBody('[data-blok-database-peek-expand], [data-blok-database-peek-mode], [data-blok-database-peek-prev], [data-blok-database-peek-next], [data-blok-database-peek-copy-link], [data-blok-database-peek-page-info], [data-blok-database-peek-favorite], [data-blok-database-peek-actions]');
 
     expect(header).toContain('width: 24px');
     expect(header).toContain('background: none');
-    expect(ruleBody('[data-blok-database-peek-page-info], [data-blok-database-peek-favorite], [data-blok-database-peek-actions]')).toContain('margin-inline-start: auto');
+    expect(ruleBody('[data-blok-database-peek-copy-link], [data-blok-database-peek-page-info], [data-blok-database-peek-favorite], [data-blok-database-peek-actions]')).toContain('margin-inline-start: auto');
     // `~`, not `+`: a hidden star must not leave "•••" with its own auto margin.
-    expect(ruleBody('[data-blok-database-peek-page-info]:not([hidden]) ~ [data-blok-database-peek-favorite], [data-blok-database-peek-page-info]:not([hidden]) ~ [data-blok-database-peek-actions], [data-blok-database-peek-favorite]:not([hidden]) ~ [data-blok-database-peek-actions]')).toContain('margin-inline-start: 0');
-    expect(ruleBody('[data-blok-database-peek-expand][hidden], [data-blok-database-peek-page-info][hidden], [data-blok-database-peek-favorite][hidden], [data-blok-database-peek-actions][hidden]')).toContain('display: none');
-    expect(ruleBody('[data-blok-database-peek-expand] svg, [data-blok-database-peek-mode] svg, [data-blok-database-peek-prev] svg, [data-blok-database-peek-next] svg, [data-blok-database-peek-page-info] svg, [data-blok-database-peek-favorite] svg, [data-blok-database-peek-actions] svg')).toContain('width: 16px');
+    expect(ruleBody('[data-blok-database-peek-copy-link]:not([hidden]) ~ :is([data-blok-database-peek-page-info], [data-blok-database-peek-favorite], [data-blok-database-peek-actions]), [data-blok-database-peek-page-info]:not([hidden]) ~ [data-blok-database-peek-favorite], [data-blok-database-peek-page-info]:not([hidden]) ~ [data-blok-database-peek-actions], [data-blok-database-peek-favorite]:not([hidden]) ~ [data-blok-database-peek-actions]')).toContain('margin-inline-start: 0');
+    expect(ruleBody('[data-blok-database-drawer-close][hidden], [data-blok-database-peek-copy-link][hidden], [data-blok-database-peek-expand][hidden], [data-blok-database-peek-page-info][hidden], [data-blok-database-peek-favorite][hidden], [data-blok-database-peek-actions][hidden]')).toContain('display: none');
+    // feel/findings-rowpage R04: 20px glyphs, Notion's 22px ellipsis.
+    expect(ruleBody('[data-blok-database-peek-expand] svg, [data-blok-database-peek-mode] svg, [data-blok-database-peek-prev] svg, [data-blok-database-peek-next] svg, [data-blok-database-peek-copy-link] svg, [data-blok-database-peek-page-info] svg, [data-blok-database-peek-favorite] svg')).toContain('width: 20px');
+    expect(ruleBody('[data-blok-database-peek-actions] svg')).toContain('width: 22px');
   });
 
   // research/22 §14: favorited is a yellow star, not a selected state, so it gets ink but no button fill.

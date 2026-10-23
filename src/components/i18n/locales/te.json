@@ -749,6 +749,8 @@
   "tools.database.peekFavorite": "ఇష్టమైనది",
   "tools.database.peekFavoriteHint": "ఇష్టమైనవాటికి జోడించు",
   "tools.database.peekUnfavoriteHint": "ఇష్టమైనవాటి నుండి తీసివేయి",
+  "tools.database.peekActionsHint": "పేజీ సెట్టింగ్‌లు & చర్యలు",
+  "tools.database.peekEditViewDefault": "వీక్షణ అప్రమేయాన్ని సవరించు",
   "tools.database.defaultTitleProperty": "శీర్షిక",
   "tools.database.defaultSourceTitleProperty": "పేరు",
   "tools.database.defaultStatusProperty": "స్థితి",

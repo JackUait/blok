@@ -751,6 +751,8 @@
   "tools.database.peekFavorite": "Favorit",
   "tools.database.peekFavoriteHint": "Tambahkan ke Favorit",
   "tools.database.peekUnfavoriteHint": "Hapus dari Favorit",
+  "tools.database.peekActionsHint": "Pengaturan & tindakan halaman",
+  "tools.database.peekEditViewDefault": "Edit bawaan tampilan",
   "tools.database.defaultTitleProperty": "Judul",
   "tools.database.defaultSourceTitleProperty": "Nama",
   "tools.database.defaultStatusProperty": "Status",

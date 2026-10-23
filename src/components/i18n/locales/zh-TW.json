@@ -867,6 +867,8 @@
   "tools.database.peekFavorite": "我的最愛",
   "tools.database.peekFavoriteHint": "加入我的最愛",
   "tools.database.peekUnfavoriteHint": "從我的最愛移除",
+  "tools.database.peekActionsHint": "頁面設定與動作",
+  "tools.database.peekEditViewDefault": "編輯檢視預設值",
   "tools.database.defaultTitleProperty": "標題",
   "tools.database.defaultSourceTitleProperty": "名稱",
   "tools.database.defaultStatusProperty": "狀態",

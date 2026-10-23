@@ -751,6 +751,8 @@
   "tools.database.peekFavorite": "Избранное",
   "tools.database.peekFavoriteHint": "Добавить в избранное",
   "tools.database.peekUnfavoriteHint": "Удалить из избранного",
+  "tools.database.peekActionsHint": "Настройки и действия страницы",
+  "tools.database.peekEditViewDefault": "Изменить значение по умолчанию для представления",
   "tools.database.defaultTitleProperty": "Название",
   "tools.database.defaultSourceTitleProperty": "Название",
   "tools.database.defaultStatusProperty": "Статус",

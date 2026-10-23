@@ -751,6 +751,8 @@
   "tools.database.peekFavorite": "ފޭވަރިޓް",
   "tools.database.peekFavoriteHint": "ފޭވަރިޓްސްއަށް އިތުރުކުރޭ",
   "tools.database.peekUnfavoriteHint": "ފޭވަރިޓްސްއިން ނައްތާލާ",
+  "tools.database.peekActionsHint": "ޞަފްޙާގެ ސެޓިންގްސް އަދި ޢަމަލު",
+  "tools.database.peekEditViewDefault": "ވިއުގެ ޑީފޯލްޓް ބަދަލުކުރޭ",
   "tools.database.defaultTitleProperty": "ސުރުޚީ",
   "tools.database.defaultSourceTitleProperty": "ނަން",
   "tools.database.defaultStatusProperty": "ހާލަތް",

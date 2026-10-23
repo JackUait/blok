@@ -751,6 +751,8 @@
   "tools.database.peekFavorite": "خوښه",
   "tools.database.peekFavoriteHint": "خوښو ته ورزیات کړئ",
   "tools.database.peekUnfavoriteHint": "له خوښو لرې کړئ",
+  "tools.database.peekActionsHint": "د پاڼې تنظیمات او کړنې",
+  "tools.database.peekEditViewDefault": "د لید تلواله سمه کړئ",
   "tools.database.defaultTitleProperty": "سرلیک",
   "tools.database.defaultSourceTitleProperty": "نوم",
   "tools.database.defaultStatusProperty": "حالت",

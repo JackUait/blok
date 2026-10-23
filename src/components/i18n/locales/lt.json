@@ -762,6 +762,8 @@
   "tools.database.peekFavorite": "Mėgstamas",
   "tools.database.peekFavoriteHint": "Pridėti prie mėgstamiausių",
   "tools.database.peekUnfavoriteHint": "Pašalinti iš mėgstamiausių",
+  "tools.database.peekActionsHint": "Puslapio nustatymai ir veiksmai",
+  "tools.database.peekEditViewDefault": "Redaguoti rodinio numatytąjį",
   "tools.database.defaultTitleProperty": "Pavadinimas",
   "tools.database.defaultSourceTitleProperty": "Pavadinimas",
   "tools.database.defaultStatusProperty": "Būsena",

@@ -706,7 +706,7 @@ describe('DatabaseCardDrawer', () => {
   });
 
   describe('styling', () => {
-    it('close button contains chevron SVG icons', () => {
+    it('close button holds one double-chevron glyph', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
       const row = makeRow();
@@ -715,7 +715,8 @@ describe('DatabaseCardDrawer', () => {
 
       const closeBtn = options.wrapper.querySelector('[data-blok-database-drawer-close]') as HTMLElement;
 
-      expect(closeBtn.querySelectorAll('svg').length).toBe(2);
+      expect(closeBtn.querySelectorAll('svg')).toHaveLength(1);
+      expect(closeBtn.querySelectorAll('svg path')).toHaveLength(2);
     });
 
     // feel/findings-rowpage R25: Notion's empty row page title reads "New page".

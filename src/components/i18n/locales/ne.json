@@ -760,6 +760,8 @@
   "tools.database.peekFavorite": "मनपर्ने",
   "tools.database.peekFavoriteHint": "मनपर्नेमा थप्नुहोस्",
   "tools.database.peekUnfavoriteHint": "मनपर्नेबाट हटाउनुहोस्",
+  "tools.database.peekActionsHint": "पृष्ठ सेटिङ र कार्यहरू",
+  "tools.database.peekEditViewDefault": "दृश्यको पूर्वनिर्धारित सम्पादन गर्नुहोस्",
   "tools.database.defaultTitleProperty": "शीर्षक",
   "tools.database.defaultSourceTitleProperty": "नाम",
   "tools.database.defaultStatusProperty": "स्थिति",

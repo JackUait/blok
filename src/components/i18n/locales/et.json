@@ -749,6 +749,8 @@
   "tools.database.peekFavorite": "Lemmik",
   "tools.database.peekFavoriteHint": "Lisa lemmikutesse",
   "tools.database.peekUnfavoriteHint": "Eemalda lemmikutest",
+  "tools.database.peekActionsHint": "Lehe sätted ja toimingud",
+  "tools.database.peekEditViewDefault": "Muuda vaate vaikesätet",
   "tools.database.defaultTitleProperty": "Pealkiri",
   "tools.database.defaultSourceTitleProperty": "Nimi",
   "tools.database.defaultStatusProperty": "Olek",

@@ -762,6 +762,8 @@
   "tools.database.peekFavorite": "즐겨찾기",
   "tools.database.peekFavoriteHint": "즐겨찾기에 추가",
   "tools.database.peekUnfavoriteHint": "즐겨찾기에서 제거",
+  "tools.database.peekActionsHint": "페이지 설정 및 작업",
+  "tools.database.peekEditViewDefault": "보기 기본값 편집",
   "tools.database.defaultTitleProperty": "제목",
   "tools.database.defaultSourceTitleProperty": "이름",
   "tools.database.defaultStatusProperty": "상태",

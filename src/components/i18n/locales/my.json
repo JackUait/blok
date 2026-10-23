@@ -760,6 +760,8 @@
   "tools.database.peekFavorite": "အကြိုက်ဆုံး",
   "tools.database.peekFavoriteHint": "အကြိုက်ဆုံးများသို့ ထည့်ရန်",
   "tools.database.peekUnfavoriteHint": "အကြိုက်ဆုံးများမှ ဖယ်ရှားရန်",
+  "tools.database.peekActionsHint": "စာမျက်နှာ ဆက်တင်များနှင့် လုပ်ဆောင်ချက်များ",
+  "tools.database.peekEditViewDefault": "မြင်ကွင်း၏ မူလကို တည်းဖြတ်ရန်",
   "tools.database.defaultTitleProperty": "ခေါင်းစဉ်",
   "tools.database.defaultSourceTitleProperty": "အမည်",
   "tools.database.defaultStatusProperty": "အခြေအနေ",

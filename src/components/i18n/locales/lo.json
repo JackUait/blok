@@ -762,6 +762,8 @@
   "tools.database.peekFavorite": "ລາຍການທີ່ມັກ",
   "tools.database.peekFavoriteHint": "ເພີ່ມໃສ່ລາຍການທີ່ມັກ",
   "tools.database.peekUnfavoriteHint": "ລຶບອອກຈາກລາຍການທີ່ມັກ",
+  "tools.database.peekActionsHint": "ການຕັ້ງຄ່າ ແລະ ການກະທຳຂອງໜ້າ",
+  "tools.database.peekEditViewDefault": "ແກ້ໄຂຄ່າເລີ່ມຕົ້ນຂອງມຸມມອງ",
   "tools.database.defaultTitleProperty": "ຫົວຂໍ້",
   "tools.database.defaultSourceTitleProperty": "ຊື່",
   "tools.database.defaultStatusProperty": "ສະຖານະ",

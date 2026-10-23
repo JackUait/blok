@@ -749,6 +749,8 @@
   "tools.database.peekFavorite": "ياقتۇرغان",
   "tools.database.peekFavoriteHint": "ياقتۇرغانلارغا قوشۇش",
   "tools.database.peekUnfavoriteHint": "ياقتۇرغانلاردىن چىقىرىۋېتىش",
+  "tools.database.peekActionsHint": "بەت تەڭشىكى ۋە مەشغۇلاتلار",
+  "tools.database.peekEditViewDefault": "كۆرۈنۈش سۈكۈتتىكىسىنى تەھرىرلەش",
   "tools.database.defaultTitleProperty": "ماۋزۇ",
   "tools.database.defaultSourceTitleProperty": "ئىسىم",
   "tools.database.defaultStatusProperty": "ھالەت",

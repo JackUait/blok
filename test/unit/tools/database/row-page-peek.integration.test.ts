@@ -570,7 +570,8 @@ describe('row page peek modes', () => {
     });
   });
 
-  it('switches the mode from the peek header and saves it on the view', async () => {
+  // feel/findings-rowpage R19: in Notion a pick changes only this peek; "Edit view default" changes the view.
+  it('switches only the open peek from the header, leaving the view default alone', async () => {
     await make(doc());
     await openRow('r1');
     await click(q('[data-blok-database-peek-mode]'));
@@ -581,7 +582,27 @@ describe('row page peek modes', () => {
     await click(center ?? null);
 
     expect(drawer()?.getAttribute('data-peek-mode')).toBe('center');
-    expect((await savedView())?.openPagesIn).toBe('center');
+    expect((await savedView())?.openPagesIn).toBeUndefined();
+
+    await key({ key: 'Escape' });
+    await openRow('r2');
+
+    expect(drawer()?.getAttribute('data-peek-mode')).toBe('side');
+  });
+
+  it('lists the three modes by title only, then "Edit view default", which opens the view\'s Layout settings', async () => {
+    await make(doc());
+    await openRow('r1');
+    await click(q('[data-blok-database-peek-mode]'));
+    const menu = document.querySelector<HTMLElement>('[data-blok-popover-opened]');
+    const items = [...(menu?.querySelectorAll<HTMLElement>('[data-blok-popover-item]') ?? [])];
+
+    expect(items.map((item) => item.textContent?.trim())).toStrictEqual(['Side peek', 'Center peek', 'Full page', 'Edit view default']);
+    expect(menu?.querySelector('[data-blok-database-peek-mode-description]')).toBeNull();
+
+    await click(items[3] ?? null);
+
+    expect(document.querySelector('[data-blok-popover-opened]')?.textContent).toContain('Open pages in');
   });
 
   // One Escape = one layer: the menu first, the peek on the next press.

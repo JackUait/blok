@@ -749,6 +749,8 @@
   "tools.database.peekFavorite": "Favori",
   "tools.database.peekFavoriteHint": "Favorilere ekle",
   "tools.database.peekUnfavoriteHint": "Favorilerden kaldır",
+  "tools.database.peekActionsHint": "Sayfa ayarları ve eylemler",
+  "tools.database.peekEditViewDefault": "Görünüm varsayılanını düzenle",
   "tools.database.defaultTitleProperty": "Başlık",
   "tools.database.defaultSourceTitleProperty": "Ad",
   "tools.database.defaultStatusProperty": "Durum",

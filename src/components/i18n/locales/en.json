@@ -867,6 +867,8 @@
   "tools.database.peekFavorite": "Favorite",
   "tools.database.peekFavoriteHint": "Add to your favorites",
   "tools.database.peekUnfavoriteHint": "Remove from your favorites",
+  "tools.database.peekActionsHint": "Page settings & actions",
+  "tools.database.peekEditViewDefault": "Edit view default",
   "tools.database.defaultTitleProperty": "Title",
   "tools.database.defaultSourceTitleProperty": "Name",
   "tools.database.defaultStatusProperty": "Status",

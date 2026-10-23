@@ -749,6 +749,8 @@
   "tools.database.peekFavorite": "ਮਨਪਸੰਦ",
   "tools.database.peekFavoriteHint": "ਮਨਪਸੰਦ ਵਿੱਚ ਸ਼ਾਮਲ ਕਰੋ",
   "tools.database.peekUnfavoriteHint": "ਮਨਪਸੰਦ ਵਿੱਚੋਂ ਹਟਾਓ",
+  "tools.database.peekActionsHint": "ਪੰਨੇ ਦੀਆਂ ਸੈਟਿੰਗਾਂ ਅਤੇ ਕਾਰਵਾਈਆਂ",
+  "tools.database.peekEditViewDefault": "ਦ੍ਰਿਸ਼ ਦਾ ਮੂਲ ਸੰਪਾਦਿਤ ਕਰੋ",
   "tools.database.defaultTitleProperty": "ਸਿਰਲੇਖ",
   "tools.database.defaultSourceTitleProperty": "ਨਾਮ",
   "tools.database.defaultStatusProperty": "ਸਥਿਤੀ",

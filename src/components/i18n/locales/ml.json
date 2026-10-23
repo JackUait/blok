@@ -760,6 +760,8 @@
   "tools.database.peekFavorite": "പ്രിയപ്പെട്ടത്",
   "tools.database.peekFavoriteHint": "പ്രിയപ്പെട്ടവയിലേക്ക് ചേർക്കുക",
   "tools.database.peekUnfavoriteHint": "പ്രിയപ്പെട്ടവയിൽ നിന്ന് നീക്കം ചെയ്യുക",
+  "tools.database.peekActionsHint": "പേജ് ക്രമീകരണങ്ങളും പ്രവർത്തനങ്ങളും",
+  "tools.database.peekEditViewDefault": "കാഴ്ചയുടെ സ്ഥിരസ്ഥിതി തിരുത്തുക",
   "tools.database.defaultTitleProperty": "ശീർഷകം",
   "tools.database.defaultSourceTitleProperty": "പേര്",
   "tools.database.defaultStatusProperty": "സ്ഥിതി",

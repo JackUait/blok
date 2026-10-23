@@ -751,6 +751,8 @@
   "tools.database.peekFavorite": "Favorit",
   "tools.database.peekFavoriteHint": "Adaugă la favorite",
   "tools.database.peekUnfavoriteHint": "Elimină din favorite",
+  "tools.database.peekActionsHint": "Setările și acțiunile paginii",
+  "tools.database.peekEditViewDefault": "Editează valoarea implicită a vizualizării",
   "tools.database.defaultTitleProperty": "Titlu",
   "tools.database.defaultSourceTitleProperty": "Nume",
   "tools.database.defaultStatusProperty": "Stare",

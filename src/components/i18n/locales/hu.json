@@ -749,6 +749,8 @@
   "tools.database.peekFavorite": "Kedvenc",
   "tools.database.peekFavoriteHint": "Hozzáadás a kedvencekhez",
   "tools.database.peekUnfavoriteHint": "Eltávolítás a kedvencek közül",
+  "tools.database.peekActionsHint": "Oldalbeállítások és műveletek",
+  "tools.database.peekEditViewDefault": "Nézet alapértelmezésének szerkesztése",
   "tools.database.defaultTitleProperty": "Cím",
   "tools.database.defaultSourceTitleProperty": "Név",
   "tools.database.defaultStatusProperty": "Állapot",

@@ -749,6 +749,8 @@
   "tools.database.peekFavorite": "علاقه‌مندی",
   "tools.database.peekFavoriteHint": "افزودن به علاقه‌مندی‌ها",
   "tools.database.peekUnfavoriteHint": "حذف از علاقه‌مندی‌ها",
+  "tools.database.peekActionsHint": "تنظیمات و اقدامات صفحه",
+  "tools.database.peekEditViewDefault": "ویرایش پیش‌فرض نما",
   "tools.database.defaultTitleProperty": "عنوان",
   "tools.database.defaultSourceTitleProperty": "نام",
   "tools.database.defaultStatusProperty": "وضعیت",

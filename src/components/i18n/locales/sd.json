@@ -751,6 +751,8 @@
   "tools.database.peekFavorite": "پسنديده",
   "tools.database.peekFavoriteHint": "پسنديده ۾ شامل ڪريو",
   "tools.database.peekUnfavoriteHint": "پسنديده مان هٽايو",
+  "tools.database.peekActionsHint": "صفحي جون سيٽنگون ۽ عمل",
+  "tools.database.peekEditViewDefault": "ويو جي ڊفالٽ ۾ ترميم ڪريو",
   "tools.database.defaultTitleProperty": "عنوان",
   "tools.database.defaultSourceTitleProperty": "نالو",
   "tools.database.defaultStatusProperty": "حالت",

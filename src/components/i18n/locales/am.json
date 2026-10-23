@@ -751,6 +751,8 @@
   "tools.database.peekFavorite": "ተወዳጅ",
   "tools.database.peekFavoriteHint": "ወደ ተወዳጆች አክል",
   "tools.database.peekUnfavoriteHint": "ከተወዳጆች አስወግድ",
+  "tools.database.peekActionsHint": "የገጽ ቅንብሮች እና እርምጃዎች",
+  "tools.database.peekEditViewDefault": "የዕይታ ነባሪን አርትዕ",
   "tools.database.defaultTitleProperty": "ርዕስ",
   "tools.database.defaultSourceTitleProperty": "ስም",
   "tools.database.defaultStatusProperty": "ሁኔታ",

@@ -749,6 +749,8 @@
   "tools.database.peekFavorite": "पसंदीदा",
   "tools.database.peekFavoriteHint": "पसंदीदा में जोड़ें",
   "tools.database.peekUnfavoriteHint": "पसंदीदा से हटाएं",
+  "tools.database.peekActionsHint": "पृष्ठ सेटिंग और क्रियाएँ",
+  "tools.database.peekEditViewDefault": "दृश्य का डिफ़ॉल्ट संपादित करें",
   "tools.database.defaultTitleProperty": "शीर्षक",
   "tools.database.defaultSourceTitleProperty": "नाम",
   "tools.database.defaultStatusProperty": "स्थिति",

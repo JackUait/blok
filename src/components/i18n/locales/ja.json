@@ -751,6 +751,8 @@
   "tools.database.peekFavorite": "お気に入り",
   "tools.database.peekFavoriteHint": "お気に入りに追加",
   "tools.database.peekUnfavoriteHint": "お気に入りから削除",
+  "tools.database.peekActionsHint": "ページ設定とアクション",
+  "tools.database.peekEditViewDefault": "ビューのデフォルトを編集",
   "tools.database.defaultTitleProperty": "タイトル",
   "tools.database.defaultSourceTitleProperty": "名前",
   "tools.database.defaultStatusProperty": "ステータス",

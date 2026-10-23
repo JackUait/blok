@@ -749,6 +749,8 @@
   "tools.database.peekFavorite": "Favoriet",
   "tools.database.peekFavoriteHint": "Toevoegen aan favorieten",
   "tools.database.peekUnfavoriteHint": "Verwijderen uit favorieten",
+  "tools.database.peekActionsHint": "Pagina-instellingen en acties",
+  "tools.database.peekEditViewDefault": "Standaard van weergave bewerken",
   "tools.database.defaultTitleProperty": "Titel",
   "tools.database.defaultSourceTitleProperty": "Naam",
   "tools.database.defaultStatusProperty": "Status",

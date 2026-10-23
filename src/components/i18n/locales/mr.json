@@ -760,6 +760,8 @@
   "tools.database.peekFavorite": "आवडते",
   "tools.database.peekFavoriteHint": "आवडींमध्ये जोडा",
   "tools.database.peekUnfavoriteHint": "आवडींमधून काढा",
+  "tools.database.peekActionsHint": "पृष्ठ सेटिंग्ज आणि क्रिया",
+  "tools.database.peekEditViewDefault": "दृश्याचे डीफॉल्ट संपादित करा",
   "tools.database.defaultTitleProperty": "शीर्षक",
   "tools.database.defaultSourceTitleProperty": "नाव",
   "tools.database.defaultStatusProperty": "स्थिती",

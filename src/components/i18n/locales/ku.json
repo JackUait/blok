@@ -762,6 +762,8 @@
   "tools.database.peekFavorite": "Bijarte",
   "tools.database.peekFavoriteHint": "Li bijartiyan zêde bike",
   "tools.database.peekUnfavoriteHint": "Ji bijartiyan rake",
+  "tools.database.peekActionsHint": "ڕێکخستن و کردارەکانی پەڕە",
+  "tools.database.peekEditViewDefault": "دەستکاریکردنی بنەڕەتی بینین",
   "tools.database.defaultTitleProperty": "ناونیشان",
   "tools.database.defaultSourceTitleProperty": "ناو",
   "tools.database.defaultStatusProperty": "دۆخ",

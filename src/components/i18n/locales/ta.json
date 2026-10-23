@@ -749,6 +749,8 @@
   "tools.database.peekFavorite": "பிடித்தது",
   "tools.database.peekFavoriteHint": "பிடித்தவையில் சேர்",
   "tools.database.peekUnfavoriteHint": "பிடித்தவையிலிருந்து அகற்று",
+  "tools.database.peekActionsHint": "பக்க அமைப்புகளும் செயல்களும்",
+  "tools.database.peekEditViewDefault": "காட்சியின் இயல்பைத் திருத்து",
   "tools.database.defaultTitleProperty": "தலைப்பு",
   "tools.database.defaultSourceTitleProperty": "பெயர்",
   "tools.database.defaultStatusProperty": "நிலை",

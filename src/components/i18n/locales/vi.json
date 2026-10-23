@@ -749,6 +749,8 @@
   "tools.database.peekFavorite": "Yêu thích",
   "tools.database.peekFavoriteHint": "Thêm vào mục yêu thích",
   "tools.database.peekUnfavoriteHint": "Xóa khỏi mục yêu thích",
+  "tools.database.peekActionsHint": "Cài đặt và thao tác trang",
+  "tools.database.peekEditViewDefault": "Chỉnh sửa mặc định của chế độ xem",
   "tools.database.defaultTitleProperty": "Tiêu đề",
   "tools.database.defaultSourceTitleProperty": "Tên",
   "tools.database.defaultStatusProperty": "Trạng thái",

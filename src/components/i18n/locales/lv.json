@@ -760,6 +760,8 @@
   "tools.database.peekFavorite": "Izlase",
   "tools.database.peekFavoriteHint": "Pievienot izlasei",
   "tools.database.peekUnfavoriteHint": "Noņemt no izlases",
+  "tools.database.peekActionsHint": "Lapas iestatījumi un darbības",
+  "tools.database.peekEditViewDefault": "Rediģēt skata noklusējumu",
   "tools.database.defaultTitleProperty": "Nosaukums",
   "tools.database.defaultSourceTitleProperty": "Nosaukums",
   "tools.database.defaultStatusProperty": "Statuss",

@@ -760,6 +760,8 @@
   "tools.database.peekFavorite": "Омилено",
   "tools.database.peekFavoriteHint": "Додај во омилени",
   "tools.database.peekUnfavoriteHint": "Отстрани од омилени",
+  "tools.database.peekActionsHint": "Поставки и дејства на страницата",
+  "tools.database.peekEditViewDefault": "Уреди стандардно за приказот",
   "tools.database.defaultTitleProperty": "Наслов",
   "tools.database.defaultSourceTitleProperty": "Име",
   "tools.database.defaultStatusProperty": "Статус",

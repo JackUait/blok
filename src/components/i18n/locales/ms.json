@@ -760,6 +760,8 @@
   "tools.database.peekFavorite": "Kegemaran",
   "tools.database.peekFavoriteHint": "Tambah ke Kegemaran",
   "tools.database.peekUnfavoriteHint": "Alih keluar daripada Kegemaran",
+  "tools.database.peekActionsHint": "Tetapan & tindakan halaman",
+  "tools.database.peekEditViewDefault": "Sunting lalai paparan",
   "tools.database.defaultTitleProperty": "Tajuk",
   "tools.database.defaultSourceTitleProperty": "Nama",
   "tools.database.defaultStatusProperty": "Status",

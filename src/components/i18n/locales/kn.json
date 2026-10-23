@@ -762,6 +762,8 @@
   "tools.database.peekFavorite": "ಮೆಚ್ಚಿನದು",
   "tools.database.peekFavoriteHint": "ಮೆಚ್ಚಿನವುಗಳಿಗೆ ಸೇರಿಸಿ",
   "tools.database.peekUnfavoriteHint": "ಮೆಚ್ಚಿನವುಗಳಿಂದ ತೆಗೆದುಹಾಕಿ",
+  "tools.database.peekActionsHint": "ಪುಟದ ಸೆಟ್ಟಿಂಗ್‌ಗಳು ಮತ್ತು ಕ್ರಿಯೆಗಳು",
+  "tools.database.peekEditViewDefault": "ವೀಕ್ಷಣೆಯ ಡೀಫಾಲ್ಟ್ ಸಂಪಾದಿಸಿ",
   "tools.database.defaultTitleProperty": "ಶೀರ್ಷಿಕೆ",
   "tools.database.defaultSourceTitleProperty": "ಹೆಸರು",
   "tools.database.defaultStatusProperty": "ಸ್ಥಿತಿ",

@@ -751,6 +751,8 @@
   "tools.database.peekFavorite": "المفضلة",
   "tools.database.peekFavoriteHint": "إضافة إلى المفضلة",
   "tools.database.peekUnfavoriteHint": "إزالة من المفضلة",
+  "tools.database.peekActionsHint": "إعدادات الصفحة والإجراءات",
+  "tools.database.peekEditViewDefault": "تعديل الإعداد الافتراضي للعرض",
   "tools.database.defaultTitleProperty": "العنوان",
   "tools.database.defaultSourceTitleProperty": "الاسم",
   "tools.database.defaultStatusProperty": "الحالة",

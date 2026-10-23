@@ -361,6 +361,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/customize-layout': exempt('cut-v1', VIEW_LAYOUT_CUT),
   'menu:database/row-tab-customize-layout': exempt('cut-v1', VIEW_LAYOUT_CUT),
   'menu:database/row-page-customize-layout': exempt('cut-v1', VIEW_LAYOUT_CUT),
+  'menu:database/row-page-edit-view-default': exempt('cut-v1', VIEW_SETTING_CUT),
   'menu:database/row-tab-copy-link-to-view': exempt('view-only', 'Copies a link to the row page with this view tab selected; the document does not change.'),
   'menu:database/backlink-*': exempt('view-only', 'Goes to a page that mentions the row; the document does not change.'),
   'menu:database/preview-*': exempt('cut-v1', VIEW_LAYOUT_CUT),

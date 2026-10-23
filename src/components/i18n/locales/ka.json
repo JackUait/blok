@@ -751,6 +751,8 @@
   "tools.database.peekFavorite": "რჩეული",
   "tools.database.peekFavoriteHint": "რჩეულებში დამატება",
   "tools.database.peekUnfavoriteHint": "რჩეულებიდან წაშლა",
+  "tools.database.peekActionsHint": "გვერდის პარამეტრები და მოქმედებები",
+  "tools.database.peekEditViewDefault": "ხედის ნაგულისხმევის რედაქტირება",
   "tools.database.defaultTitleProperty": "სათაური",
   "tools.database.defaultSourceTitleProperty": "სახელი",
   "tools.database.defaultStatusProperty": "სტატუსი",

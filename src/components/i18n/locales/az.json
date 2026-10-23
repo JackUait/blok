@@ -751,6 +751,8 @@
   "tools.database.peekFavorite": "Seçilmiş",
   "tools.database.peekFavoriteHint": "Seçilmişlərə əlavə et",
   "tools.database.peekUnfavoriteHint": "Seçilmişlərdən sil",
+  "tools.database.peekActionsHint": "Səhifə ayarları və əməliyyatlar",
+  "tools.database.peekEditViewDefault": "Görünüşün standartını redaktə et",
   "tools.database.defaultTitleProperty": "Başlıq",
   "tools.database.defaultSourceTitleProperty": "Ad",
   "tools.database.defaultStatusProperty": "Status",

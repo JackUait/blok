@@ -751,6 +751,8 @@
   "tools.database.peekFavorite": "Favorit",
   "tools.database.peekFavoriteHint": "Dodaj u favorite",
   "tools.database.peekUnfavoriteHint": "Ukloni iz favorita",
+  "tools.database.peekActionsHint": "Postavke i radnje stranice",
+  "tools.database.peekEditViewDefault": "Uredi podrazumijevano za prikaz",
   "tools.database.defaultTitleProperty": "Naslov",
   "tools.database.defaultSourceTitleProperty": "Naziv",
   "tools.database.defaultStatusProperty": "Stanje",

@@ -4183,6 +4183,9 @@ span[data-blok-slash-search] {
   --blok-database-peek-title: var(--blok-database-ink);
   --blok-database-peek-hover-bg: rgba(33, 27, 23, 0.051);
   --blok-database-peek-value-hover-bg: transparent;
+  --blok-database-peek-glyph: rgb(142, 139, 134);
+  --blok-database-peek-glyph-strong: rgb(56, 56, 54);
+  --blok-database-peek-separator: rgba(55, 53, 47, 0.09);
   --blok-database-fill-handle-bg: #ffffff;
   --blok-database-peek-shadow: rgba(25, 25, 25, 0.027) 0 8px 12px, rgba(25, 25, 25, 0.027) 0 2px 6px, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   --blok-database-chart-blue: #2a78d6;
@@ -4427,6 +4430,9 @@ span[data-blok-slash-search] {
   --blok-database-peek-value-hover-bg: transparent;
   --blok-database-peek-hover-bg: var(--blok-database-hover-bg);
   --blok-database-peek-backdrop: rgba(15, 15, 15, 0.8);
+  --blok-database-peek-glyph: rgb(173, 169, 163);
+  --blok-database-peek-glyph-strong: rgb(230, 229, 227);
+  --blok-database-peek-separator: rgba(255, 255, 235, 0.1);
   --blok-database-chart-blue: #3987e5;
   --blok-database-chart-orange: #d95926;
   --blok-database-chart-teal: #199e70;
@@ -4668,6 +4674,9 @@ span[data-blok-slash-search] {
   --blok-database-peek-value-hover-bg: transparent;
   --blok-database-peek-hover-bg: var(--blok-database-hover-bg);
   --blok-database-peek-backdrop: rgba(15, 15, 15, 0.8);
+  --blok-database-peek-glyph: rgb(173, 169, 163);
+  --blok-database-peek-glyph-strong: rgb(230, 229, 227);
+  --blok-database-peek-separator: rgba(255, 255, 235, 0.1);
   --blok-database-fill-handle-bg: rgb(25, 25, 25);
   --blok-database-chart-blue: #3987e5;
   --blok-database-chart-orange: #d95926;
@@ -5191,10 +5200,6 @@ span[data-blok-slash-search] {
   display: none;
 }
 
-[data-blok-database-drawer][data-peek-mode="full"] [data-blok-database-drawer-toolbar] {
-  border-bottom: none;
-}
-
 [data-blok-database-drawer][data-peek-mode="full"] [data-blok-database-drawer-content] {
   padding-inline: 0;
   overflow: visible;
@@ -5207,29 +5212,49 @@ span[data-blok-slash-search] {
   margin-inline: auto;
 }
 
-[data-blok-database-peek-expand], [data-blok-database-peek-mode], [data-blok-database-peek-prev], [data-blok-database-peek-next], [data-blok-database-peek-page-info], [data-blok-database-peek-favorite], [data-blok-database-peek-actions] {
+[data-blok-database-peek-expand], [data-blok-database-peek-mode], [data-blok-database-peek-prev], [data-blok-database-peek-next], [data-blok-database-peek-copy-link], [data-blok-database-peek-page-info], [data-blok-database-peek-favorite], [data-blok-database-peek-actions] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   width: 24px;
   height: 24px;
   padding: 0;
   border: none;
   border-radius: var(--blok-radius-control-sm);
   background: none;
-  color: var(--blok-database-add-text);
+  color: var(--blok-database-peek-glyph);
   cursor: pointer;
 }
 
-[data-blok-database-peek-expand][hidden], [data-blok-database-peek-page-info][hidden], [data-blok-database-peek-favorite][hidden], [data-blok-database-peek-actions][hidden] {
-  display: none;
-}
-
-[data-blok-database-peek-page-info], [data-blok-database-peek-favorite], [data-blok-database-peek-actions] {
+[data-blok-database-peek-copy-link], [data-blok-database-peek-page-info], [data-blok-database-peek-favorite], [data-blok-database-peek-actions] {
+  width: 28px;
+  height: 28px;
+  color: var(--blok-database-peek-glyph-strong);
   margin-inline-start: auto;
 }
 
-[data-blok-database-peek-page-info]:not([hidden]) ~ [data-blok-database-peek-favorite], [data-blok-database-peek-page-info]:not([hidden]) ~ [data-blok-database-peek-actions], [data-blok-database-peek-favorite]:not([hidden]) ~ [data-blok-database-peek-actions] {
+[data-blok-database-peek-separator] {
+  flex-shrink: 0;
+  width: 1px;
+  height: 14px;
+  margin-inline: var(--blok-space-1-75);
+  background-color: var(--blok-database-peek-separator);
+}
+
+[data-blok-database-peek-mode], [data-blok-database-peek-separator], [data-blok-database-peek-prev], [data-blok-database-peek-next] {
+  transition: opacity 150ms linear;
+}
+
+[@media (hover: hover)] [data-blok-database-drawer-toolbar]:not(:hover):not(:has(:focus-visible)) :is([data-blok-database-peek-mode], [data-blok-database-peek-separator], [data-blok-database-peek-prev], [data-blok-database-peek-next]) {
+  opacity: 0;
+}
+
+[data-blok-database-drawer-close][hidden], [data-blok-database-peek-copy-link][hidden], [data-blok-database-peek-expand][hidden], [data-blok-database-peek-page-info][hidden], [data-blok-database-peek-favorite][hidden], [data-blok-database-peek-actions][hidden] {
+  display: none;
+}
+
+[data-blok-database-peek-copy-link]:not([hidden]) ~ :is([data-blok-database-peek-page-info], [data-blok-database-peek-favorite], [data-blok-database-peek-actions]), [data-blok-database-peek-page-info]:not([hidden]) ~ [data-blok-database-peek-favorite], [data-blok-database-peek-page-info]:not([hidden]) ~ [data-blok-database-peek-actions], [data-blok-database-peek-favorite]:not([hidden]) ~ [data-blok-database-peek-actions] {
   margin-inline-start: 0;
 }
 
@@ -5242,9 +5267,14 @@ span[data-blok-slash-search] {
   color: var(--blok-database-favorite-star);
 }
 
-[data-blok-database-peek-expand] svg, [data-blok-database-peek-mode] svg, [data-blok-database-peek-prev] svg, [data-blok-database-peek-next] svg, [data-blok-database-peek-page-info] svg, [data-blok-database-peek-favorite] svg, [data-blok-database-peek-actions] svg {
-  width: 16px;
-  height: 16px;
+[data-blok-database-peek-expand] svg, [data-blok-database-peek-mode] svg, [data-blok-database-peek-prev] svg, [data-blok-database-peek-next] svg, [data-blok-database-peek-copy-link] svg, [data-blok-database-peek-page-info] svg, [data-blok-database-peek-favorite] svg {
+  width: 20px;
+  height: 20px;
+}
+
+[data-blok-database-peek-actions] svg {
+  width: 22px;
+  height: 22px;
 }
 
 [data-blok-database-peek-prev] svg {
@@ -5260,18 +5290,8 @@ span[data-blok-slash-search] {
   cursor: default;
 }
 
-[@media (hover: hover)] [data-blok-database-peek-expand]:hover, [data-blok-database-peek-mode]:hover, [data-blok-database-peek-prev]:not(:disabled):hover, [data-blok-database-peek-next]:not(:disabled):hover, [data-blok-database-peek-page-info]:hover, [data-blok-database-peek-favorite]:hover, [data-blok-database-peek-actions]:hover {
-  background-color: var(--blok-database-drawer-border);
-}
-
-[data-blok-database-peek-mode-label] {
-  display: flex;
-  flex-direction: column;
-}
-
-[data-blok-database-peek-mode-description] {
-  color: var(--blok-database-ink-secondary);
-  font-size: 12px;
+[@media (hover: hover)] [data-blok-database-peek-expand]:hover, [data-blok-database-peek-mode]:hover, [data-blok-database-peek-prev]:not(:disabled):hover, [data-blok-database-peek-next]:not(:disabled):hover, [data-blok-database-peek-copy-link]:hover, [data-blok-database-peek-page-info]:hover, [data-blok-database-peek-favorite]:hover, [data-blok-database-peek-actions]:hover {
+  background-color: var(--blok-database-peek-hover-bg);
 }
 
 [data-blok-interface=blok][data-blok-database-peek] {
@@ -5286,35 +5306,35 @@ span[data-blok-slash-search] {
 [data-blok-database-drawer-toolbar] {
   display: flex;
   align-items: center;
-  padding: var(--blok-space-2) var(--blok-space-3);
+  gap: var(--blok-space-0-5);
+  height: 44px;
+  padding-block: 0;
+  padding-inline: var(--blok-space-3) var(--blok-space-2-5);
   flex-shrink: 0;
-  border-bottom: 1px solid var(--blok-database-drawer-border);
 }
 
 [data-blok-database-drawer-close] {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
   background: none;
   border: none;
   cursor: pointer;
-  padding: var(--blok-space-1);
+  padding: 0;
   border-radius: var(--blok-radius-control-sm);
-  color: var(--blok-database-add-text);
-  gap: calc(-1 * var(--blok-space-1));
+  color: var(--blok-database-peek-glyph);
 }
 
-[data-blok-database-drawer-close]:hover {
-  background-color: var(--blok-database-drawer-border);
+[@media (hover: hover)] [data-blok-database-drawer-close]:hover {
+  background-color: var(--blok-database-peek-hover-bg);
 }
 
 [data-blok-database-drawer-close] svg {
-  width: 14px;
-  height: 14px;
-  margin-inline-start: calc(-1 * var(--blok-space-1-5));
-}
-
-[data-blok-database-drawer-close] svg:first-child {
-  margin-inline-start: 0;
+  width: 20px;
+  height: 20px;
 }
 
 [dir="rtl"] [data-blok-database-drawer-close] svg {

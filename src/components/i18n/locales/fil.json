@@ -337,6 +337,7 @@
   "tools.callout.emojiCategorySymbols": "Simbolo",
   "tools.callout.emojiCategoryFlags": "Bandila",
   "tools.database.addColumn": "Magdagdag ng kolum",
+  "tools.database.newGroup": "Bagong grupo",
   "tools.database.renameColumn": "Palitan ang pangalan ng kolum",
   "tools.database.deleteColumn": "Tanggalin ang kolum",
   "tools.database.addCard": "Magdagdag ng card",

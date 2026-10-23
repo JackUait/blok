@@ -350,6 +350,7 @@
   "tools.database.addCard": "Pievienot kartīti",
   "tools.database.newPage": "Jauna lapa",
   "tools.database.addColumn": "Pievienot kolonnu",
+  "tools.database.newGroup": "Jauna grupa",
   "tools.database.cardTitlePlaceholder": "Tukša lapa",
   "tools.database.cardNamePlaceholder": "Ierakstiet nosaukumu…",
   "tools.database.columnTitlePlaceholder": "Kolonna",

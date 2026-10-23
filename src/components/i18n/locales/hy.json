@@ -339,6 +339,7 @@
   "tools.database.addCard": "Ավելացնել քարտ",
   "tools.database.newPage": "Նոր էջ",
   "tools.database.addColumn": "Ավելացնել սյունակ",
+  "tools.database.newGroup": "Նոր խումբ",
   "tools.database.cardTitlePlaceholder": "Դատարկ էջ",
   "tools.database.cardNamePlaceholder": "Մուտքագրեք անուն…",
   "tools.database.columnTitlePlaceholder": "Սյունակ",

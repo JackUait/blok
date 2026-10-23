@@ -339,6 +339,7 @@
   "tools.database.addCard": "Shto kartë",
   "tools.database.newPage": "Faqe e re",
   "tools.database.addColumn": "Shto kolonë",
+  "tools.database.newGroup": "Grup i ri",
   "tools.database.cardTitlePlaceholder": "Faqe boshe",
   "tools.database.cardNamePlaceholder": "Shkruaj një emër…",
   "tools.database.columnTitlePlaceholder": "Kolonë",

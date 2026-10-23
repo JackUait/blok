@@ -348,6 +348,7 @@
   "tools.callout.emojiCategorySymbols": "သင်္ကေတ",
   "tools.callout.emojiCategoryFlags": "အလံ",
   "tools.database.addColumn": "ကော်လံထည့်ရန်",
+  "tools.database.newGroup": "အုပ်စုအသစ်",
   "tools.database.renameColumn": "ကော်လံအမည်ပြောင်းရန်",
   "tools.database.deleteColumn": "ကော်လံဖျက်ရန်",
   "tools.database.addCard": "ကတ်ထည့်ရန်",

@@ -337,6 +337,7 @@
   "tools.callout.emojiCategorySymbols": "Simvollar",
   "tools.callout.emojiCategoryFlags": "Bayraqlar",
   "tools.database.addColumn": "Sütun əlavə et",
+  "tools.database.newGroup": "Yeni qrup",
   "tools.database.renameColumn": "Sütunu yenidən adlandır",
   "tools.database.deleteColumn": "Sütunu sil",
   "tools.database.addCard": "Kart əlavə et",

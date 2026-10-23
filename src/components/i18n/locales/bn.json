@@ -337,6 +337,7 @@
   "tools.callout.emojiCategorySymbols": "প্রতীক",
   "tools.callout.emojiCategoryFlags": "পতাকা",
   "tools.database.addColumn": "কলাম যোগ করুন",
+  "tools.database.newGroup": "নতুন গোষ্ঠী",
   "tools.database.renameColumn": "কলামের নাম পরিবর্তন",
   "tools.database.deleteColumn": "কলাম মুছুন",
   "tools.database.addCard": "কার্ড যোগ করুন",

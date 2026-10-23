@@ -339,6 +339,7 @@
   "tools.database.addCard": "ڪارڊ شامل ڪريو",
   "tools.database.newPage": "نئون صفحو",
   "tools.database.addColumn": "ڪالم شامل ڪريو",
+  "tools.database.newGroup": "نئون گروپ",
   "tools.database.cardTitlePlaceholder": "خالي صفحو",
   "tools.database.cardNamePlaceholder": "ڪو نالو لکو…",
   "tools.database.columnTitlePlaceholder": "ڪالم",

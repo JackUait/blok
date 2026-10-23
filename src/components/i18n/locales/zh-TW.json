@@ -358,6 +358,7 @@
   "tools.callout.emojiCategorySymbols": "符號",
   "tools.callout.emojiCategoryFlags": "旗幟",
   "tools.database.addColumn": "新增欄",
+  "tools.database.newGroup": "新增群組",
   "tools.database.renameColumn": "重新命名欄",
   "tools.database.deleteColumn": "刪除欄",
   "tools.database.addCard": "新增卡片",

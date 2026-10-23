@@ -339,6 +339,7 @@
   "tools.database.addCard": "Tambah kartu",
   "tools.database.newPage": "Halaman baru",
   "tools.database.addColumn": "Tambah kolom",
+  "tools.database.newGroup": "Grup baru",
   "tools.database.cardTitlePlaceholder": "Halaman kosong",
   "tools.database.cardNamePlaceholder": "Ketik nama…",
   "tools.database.columnTitlePlaceholder": "Kolom",

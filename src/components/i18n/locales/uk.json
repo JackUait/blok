@@ -339,6 +339,7 @@
   "tools.database.addCard": "Додати картку",
   "tools.database.newPage": "Нова сторінка",
   "tools.database.addColumn": "Додати стовпець",
+  "tools.database.newGroup": "Нова група",
   "tools.database.cardTitlePlaceholder": "Порожня сторінка",
   "tools.database.cardNamePlaceholder": "Введіть назву…",
   "tools.database.columnTitlePlaceholder": "Стовпець",

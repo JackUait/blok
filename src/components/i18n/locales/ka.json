@@ -339,6 +339,7 @@
   "tools.database.addCard": "ბარათის დამატება",
   "tools.database.newPage": "ახალი გვერდი",
   "tools.database.addColumn": "სვეტის დამატება",
+  "tools.database.newGroup": "ახალი ჯგუფი",
   "tools.database.cardTitlePlaceholder": "ცარიელი გვერდი",
   "tools.database.cardNamePlaceholder": "აკრიფეთ სახელი…",
   "tools.database.columnTitlePlaceholder": "სვეტი",

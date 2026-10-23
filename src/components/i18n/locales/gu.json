@@ -337,6 +337,7 @@
   "tools.callout.emojiCategorySymbols": "પ્રતીકો",
   "tools.callout.emojiCategoryFlags": "ધ્વજ",
   "tools.database.addColumn": "કૉલમ ઉમેરો",
+  "tools.database.newGroup": "નવું જૂથ",
   "tools.database.renameColumn": "કૉલમનું નામ બદલો",
   "tools.database.deleteColumn": "કૉલમ કાઢી નાખો",
   "tools.database.addCard": "કાર્ડ ઉમેરો",

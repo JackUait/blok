@@ -339,6 +339,7 @@
   "tools.database.addCard": "Kártya hozzáadása",
   "tools.database.newPage": "Új oldal",
   "tools.database.addColumn": "Oszlop hozzáadása",
+  "tools.database.newGroup": "Új csoport",
   "tools.database.cardTitlePlaceholder": "Üres oldal",
   "tools.database.cardNamePlaceholder": "Adjon meg egy nevet…",
   "tools.database.columnTitlePlaceholder": "Oszlop",

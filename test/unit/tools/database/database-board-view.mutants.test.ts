@@ -187,8 +187,8 @@ describe('DatabaseBoardView — mutation coverage', () => {
         text: addColumnBtn.textContent,
         label: addColumnBtn.getAttribute('aria-label'),
       }).toStrictEqual({
-        text: '+ T(tools.database.addColumn)',
-        label: 'T(tools.database.addColumn)',
+        text: '+ T(tools.database.newGroup)',
+        label: 'T(tools.database.newGroup)',
       });
     });
   });

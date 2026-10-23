@@ -350,6 +350,7 @@
   "tools.database.addCard": "카드 추가",
   "tools.database.newPage": "새 페이지",
   "tools.database.addColumn": "열 추가",
+  "tools.database.newGroup": "새 그룹",
   "tools.database.cardTitlePlaceholder": "빈 페이지",
   "tools.database.cardNamePlaceholder": "이름 입력…",
   "tools.database.columnTitlePlaceholder": "열",

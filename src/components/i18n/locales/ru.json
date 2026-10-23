@@ -339,6 +339,7 @@
   "tools.database.addCard": "Добавить карточку",
   "tools.database.newPage": "Новая страница",
   "tools.database.addColumn": "Добавить столбец",
+  "tools.database.newGroup": "Новая группа",
   "tools.database.cardTitlePlaceholder": "Пустая страница",
   "tools.database.cardNamePlaceholder": "Введите название…",
   "tools.database.columnTitlePlaceholder": "Столбец",

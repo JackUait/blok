@@ -339,6 +339,7 @@
   "tools.database.addCard": "कार्ड जोड़ें",
   "tools.database.newPage": "नया पृष्ठ",
   "tools.database.addColumn": "कॉलम जोड़ें",
+  "tools.database.newGroup": "नया समूह",
   "tools.database.cardTitlePlaceholder": "खाली पेज",
   "tools.database.cardNamePlaceholder": "कोई नाम लिखें…",
   "tools.database.columnTitlePlaceholder": "कॉलम",

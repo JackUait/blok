@@ -190,8 +190,8 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       const addColumnBtn = document.createElement('button');
 
       addColumnBtn.setAttribute('data-blok-database-add-column', '');
-      addColumnBtn.setAttribute('aria-label', this.i18n.t('tools.database.addColumn'));
-      addColumnBtn.textContent = '+ ' + this.i18n.t('tools.database.addColumn');
+      addColumnBtn.setAttribute('aria-label', this.i18n.t('tools.database.newGroup'));
+      addColumnBtn.textContent = '+ ' + this.i18n.t('tools.database.newGroup');
       addColumnBtn.style.minWidth = '260px';
       addColumnBtn.style.flex = '0 0 260px';
       buttonRow.appendChild(addColumnBtn);

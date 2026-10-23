@@ -350,6 +350,7 @@
   "tools.database.addCard": "Додај картичка",
   "tools.database.newPage": "Нова страница",
   "tools.database.addColumn": "Додај колона",
+  "tools.database.newGroup": "Нова група",
   "tools.database.cardTitlePlaceholder": "Празна страница",
   "tools.database.cardNamePlaceholder": "Внесете име…",
   "tools.database.columnTitlePlaceholder": "Колона",

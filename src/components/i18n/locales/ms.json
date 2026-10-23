@@ -350,6 +350,7 @@
   "tools.database.addCard": "Tambah kad",
   "tools.database.newPage": "Halaman baharu",
   "tools.database.addColumn": "Tambah lajur",
+  "tools.database.newGroup": "Kumpulan baharu",
   "tools.database.cardTitlePlaceholder": "Halaman kosong",
   "tools.database.cardNamePlaceholder": "Taip nama…",
   "tools.database.columnTitlePlaceholder": "Lajur",

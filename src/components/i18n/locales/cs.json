@@ -339,6 +339,7 @@
   "tools.database.addCard": "Přidat kartu",
   "tools.database.newPage": "Nová stránka",
   "tools.database.addColumn": "Přidat sloupec",
+  "tools.database.newGroup": "Nová skupina",
   "tools.database.cardTitlePlaceholder": "Prázdná stránka",
   "tools.database.cardNamePlaceholder": "Zadejte název…",
   "tools.database.columnTitlePlaceholder": "Sloupec",

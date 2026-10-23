@@ -339,6 +339,7 @@
   "tools.database.addCard": "Kaart toevoegen",
   "tools.database.newPage": "Nieuwe pagina",
   "tools.database.addColumn": "Kolom toevoegen",
+  "tools.database.newGroup": "Nieuwe groep",
   "tools.database.cardTitlePlaceholder": "Lege pagina",
   "tools.database.cardNamePlaceholder": "Typ een naam…",
   "tools.database.columnTitlePlaceholder": "Kolom",

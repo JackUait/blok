@@ -339,6 +339,7 @@
   "tools.database.addCard": "הוסף כרטיס",
   "tools.database.newPage": "דף חדש",
   "tools.database.addColumn": "הוסף עמודה",
+  "tools.database.newGroup": "קבוצה חדשה",
   "tools.database.cardTitlePlaceholder": "דף ריק",
   "tools.database.cardNamePlaceholder": "הקלד שם…",
   "tools.database.columnTitlePlaceholder": "עמודה",

@@ -339,6 +339,7 @@
   "tools.database.addCard": "カードを追加",
   "tools.database.newPage": "新しいページ",
   "tools.database.addColumn": "列を追加",
+  "tools.database.newGroup": "新しいグループ",
   "tools.database.cardTitlePlaceholder": "空のページ",
   "tools.database.cardNamePlaceholder": "名前を入力…",
   "tools.database.columnTitlePlaceholder": "列",

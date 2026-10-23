@@ -339,6 +339,7 @@
   "tools.database.addCard": "Lisää kortti",
   "tools.database.newPage": "Uusi sivu",
   "tools.database.addColumn": "Lisää sarake",
+  "tools.database.newGroup": "Uusi ryhmä",
   "tools.database.cardTitlePlaceholder": "Tyhjä sivu",
   "tools.database.cardNamePlaceholder": "Kirjoita nimi…",
   "tools.database.columnTitlePlaceholder": "Sarake",

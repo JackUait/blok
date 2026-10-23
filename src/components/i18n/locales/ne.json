@@ -348,6 +348,7 @@
   "tools.callout.emojiCategorySymbols": "चिन्हहरू",
   "tools.callout.emojiCategoryFlags": "झण्डाहरू",
   "tools.database.addColumn": "स्तम्भ थप्नुहोस्",
+  "tools.database.newGroup": "नयाँ समूह",
   "tools.database.renameColumn": "स्तम्भको नाम बदल्नुहोस्",
   "tools.database.deleteColumn": "स्तम्भ मेट्नुहोस्",
   "tools.database.addCard": "कार्ड थप्नुहोस्",

@@ -348,6 +348,7 @@
   "tools.callout.emojiCategorySymbols": "ສັນຍາລັກ",
   "tools.callout.emojiCategoryFlags": "ທຸງ",
   "tools.database.addColumn": "ເພີ່ມຖັນ",
+  "tools.database.newGroup": "ກຸ່ມໃໝ່",
   "tools.database.renameColumn": "ປ່ຽນຊື່ຖັນ",
   "tools.database.deleteColumn": "ລຶບຖັນ",
   "tools.database.addCard": "ເພີ່ມບັດ",

@@ -337,6 +337,7 @@
   "tools.callout.emojiCategorySymbols": "សញ្ញា",
   "tools.callout.emojiCategoryFlags": "ទង់ជាតិ",
   "tools.database.addColumn": "បន្ថែមជួរឈរ",
+  "tools.database.newGroup": "ក្រុមថ្មី",
   "tools.database.renameColumn": "ប្ដូរឈ្មោះជួរឈរ",
   "tools.database.deleteColumn": "លុបជួរឈរ",
   "tools.database.addCard": "បន្ថែមកាត",

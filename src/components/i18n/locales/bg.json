@@ -339,6 +339,7 @@
   "tools.database.addCard": "Добави карта",
   "tools.database.newPage": "Нова страница",
   "tools.database.addColumn": "Добави колона",
+  "tools.database.newGroup": "Нова група",
   "tools.database.cardTitlePlaceholder": "Празна страница",
   "tools.database.cardNamePlaceholder": "Въведете име…",
   "tools.database.columnTitlePlaceholder": "Колона",

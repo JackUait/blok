@@ -337,6 +337,7 @@
   "tools.callout.emojiCategorySymbols": "చిహ్నాలు",
   "tools.callout.emojiCategoryFlags": "జెండాలు",
   "tools.database.addColumn": "నిలువు వరుస జోడించండి",
+  "tools.database.newGroup": "కొత్త సమూహం",
   "tools.database.renameColumn": "నిలువు వరుస పేరు మార్చండి",
   "tools.database.deleteColumn": "నిలువు వరుస తొలగించండి",
   "tools.database.addCard": "కార్డ్ జోడించండి",

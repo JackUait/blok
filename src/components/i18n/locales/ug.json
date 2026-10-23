@@ -339,6 +339,7 @@
   "tools.database.addCard": "كارتا قوشۇش",
   "tools.database.newPage": "يېڭى بەت",
   "tools.database.addColumn": "ئىستون قوشۇش",
+  "tools.database.newGroup": "يېڭى گۇرۇپپا",
   "tools.database.cardTitlePlaceholder": "بوش بەت",
   "tools.database.cardNamePlaceholder": "ئات كىرگۈزۈڭ…",
   "tools.database.columnTitlePlaceholder": "ئىستون",

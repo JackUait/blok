@@ -339,6 +339,7 @@
   "tools.database.addCard": "Ajouter une carte",
   "tools.database.newPage": "Nouvelle page",
   "tools.database.addColumn": "Ajouter une colonne",
+  "tools.database.newGroup": "Nouveau groupe",
   "tools.database.cardTitlePlaceholder": "Page vide",
   "tools.database.cardNamePlaceholder": "Saisissez un nom…",
   "tools.database.columnTitlePlaceholder": "Colonne",

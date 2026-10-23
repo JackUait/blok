@@ -358,6 +358,7 @@
   "tools.callout.emojiCategorySymbols": "Symbols",
   "tools.callout.emojiCategoryFlags": "Flags",
   "tools.database.addColumn": "Add column",
+  "tools.database.newGroup": "New group",
   "tools.database.renameColumn": "Rename column",
   "tools.database.deleteColumn": "Delete column",
   "tools.database.addCard": "Add card",

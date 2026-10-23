@@ -348,6 +348,7 @@
   "tools.callout.emojiCategorySymbols": "चिन्हे",
   "tools.callout.emojiCategoryFlags": "ध्वज",
   "tools.database.addColumn": "स्तंभ जोडा",
+  "tools.database.newGroup": "नवीन गट",
   "tools.database.renameColumn": "स्तंभाचे नाव बदला",
   "tools.database.deleteColumn": "स्तंभ हटवा",
   "tools.database.addCard": "कार्ड जोडा",

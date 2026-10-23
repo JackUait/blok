@@ -339,6 +339,7 @@
   "tools.database.addCard": "Lägg till kort",
   "tools.database.newPage": "Ny sida",
   "tools.database.addColumn": "Lägg till kolumn",
+  "tools.database.newGroup": "Ny grupp",
   "tools.database.cardTitlePlaceholder": "Tom sida",
   "tools.database.cardNamePlaceholder": "Skriv ett namn…",
   "tools.database.columnTitlePlaceholder": "Kolumn",

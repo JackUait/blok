@@ -877,7 +877,8 @@ describe('DatabaseBoardView', () => {
 
       const addColBtn = board.querySelector('[data-blok-database-add-column]');
 
-      expect(addColBtn?.getAttribute('aria-label')).toBe('tools.database.addColumn');
+      // findings-board B32: Notion's label is "New group".
+      expect(addColBtn?.getAttribute('aria-label')).toBe('tools.database.newGroup');
     });
   });
 

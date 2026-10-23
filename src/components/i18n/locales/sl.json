@@ -339,6 +339,7 @@
   "tools.database.addCard": "Dodaj kartico",
   "tools.database.newPage": "Nova stran",
   "tools.database.addColumn": "Dodaj stolpec",
+  "tools.database.newGroup": "Nova skupina",
   "tools.database.cardTitlePlaceholder": "Prazna stran",
   "tools.database.cardNamePlaceholder": "Vnesite ime…",
   "tools.database.columnTitlePlaceholder": "Stolpec",

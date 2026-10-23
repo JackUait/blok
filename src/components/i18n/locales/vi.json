@@ -339,6 +339,7 @@
   "tools.database.addCard": "Thêm thẻ",
   "tools.database.newPage": "Trang mới",
   "tools.database.addColumn": "Thêm cột",
+  "tools.database.newGroup": "Nhóm mới",
   "tools.database.cardTitlePlaceholder": "Trang trống",
   "tools.database.cardNamePlaceholder": "Nhập tên…",
   "tools.database.columnTitlePlaceholder": "Cột",

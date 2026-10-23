@@ -339,6 +339,7 @@
   "tools.database.addCard": "کارڈ شامل کریں",
   "tools.database.newPage": "نیا صفحہ",
   "tools.database.addColumn": "کالم شامل کریں",
+  "tools.database.newGroup": "نیا گروپ",
   "tools.database.cardTitlePlaceholder": "خالی صفحہ",
   "tools.database.cardNamePlaceholder": "کوئی نام ٹائپ کریں…",
   "tools.database.columnTitlePlaceholder": "کالم",

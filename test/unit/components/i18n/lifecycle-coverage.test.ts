@@ -270,7 +270,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1873 + 126 + 488 + 4 closure for all 2491 keys', () => {
+  it('rebuilds a disjoint 1874 + 126 + 488 + 4 closure for all 2492 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -284,7 +284,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2491);
+    expect(lifecycle.size).toBe(2492);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -440,7 +440,7 @@ describe('current English catalog lifecycle coverage', () => {
       // +2: rowEditedTodayAt and feedCreatedAt (research/35 §19).
       // +1: the form's respondent chip, formRespondentPill (research/36 §13).
       // +1: tools.file.preview, called by literal for the form's Preview button.
-      'executable-literal': 1873,
+      'executable-literal': 1874,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

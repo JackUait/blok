@@ -339,6 +339,7 @@
   "tools.database.addCard": "添加卡片",
   "tools.database.newPage": "新页面",
   "tools.database.addColumn": "添加列",
+  "tools.database.newGroup": "新建分组",
   "tools.database.cardTitlePlaceholder": "空白页面",
   "tools.database.cardNamePlaceholder": "输入名称…",
   "tools.database.columnTitlePlaceholder": "列",

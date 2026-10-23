@@ -339,6 +339,7 @@
   "tools.database.addCard": "Ongeza kadi",
   "tools.database.newPage": "Ukurasa mpya",
   "tools.database.addColumn": "Ongeza safu wima",
+  "tools.database.newGroup": "Kikundi kipya",
   "tools.database.cardTitlePlaceholder": "Ukurasa tupu",
   "tools.database.cardNamePlaceholder": "Andika jina…",
   "tools.database.columnTitlePlaceholder": "Safu wima",

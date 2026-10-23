@@ -350,6 +350,7 @@
   "tools.database.addCard": "کارت زیاد بکە",
   "tools.database.newPage": "پەڕەی نوێ",
   "tools.database.addColumn": "ستوون زیاد بکە",
+  "tools.database.newGroup": "گرووپی نوێ",
   "tools.database.cardTitlePlaceholder": "پەڕەی بەتاڵ",
   "tools.database.cardNamePlaceholder": "ناوێک بنووسە…",
   "tools.database.columnTitlePlaceholder": "ستوون",

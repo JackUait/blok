@@ -350,6 +350,7 @@
   "tools.database.addCard": "Карт нэмэх",
   "tools.database.newPage": "Шинэ хуудас",
   "tools.database.addColumn": "Багана нэмэх",
+  "tools.database.newGroup": "Шинэ бүлэг",
   "tools.database.cardTitlePlaceholder": "Хоосон хуудас",
   "tools.database.cardNamePlaceholder": "Нэр оруулна уу…",
   "tools.database.columnTitlePlaceholder": "Багана",

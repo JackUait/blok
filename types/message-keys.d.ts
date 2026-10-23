@@ -1185,6 +1185,7 @@ export type BlokMessageKey =
   | 'tools.database.newDataSource'
   | 'tools.database.newDataSourceNamed'
   | 'tools.database.newDataSourceSearch'
+  | 'tools.database.newGroup'
   | 'tools.database.newPage'
   | 'tools.database.newRow'
   | 'tools.database.newView'

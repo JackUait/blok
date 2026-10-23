@@ -339,6 +339,7 @@
   "tools.database.addCard": "افزودن کارت",
   "tools.database.newPage": "صفحه جدید",
   "tools.database.addColumn": "افزودن ستون",
+  "tools.database.newGroup": "گروه جدید",
   "tools.database.cardTitlePlaceholder": "صفحه خالی",
   "tools.database.cardNamePlaceholder": "یک نام تایپ کنید…",
   "tools.database.columnTitlePlaceholder": "ستون",

@@ -339,6 +339,7 @@
   "tools.database.addCard": "Karte hinzufügen",
   "tools.database.newPage": "Neue Seite",
   "tools.database.addColumn": "Spalte hinzufügen",
+  "tools.database.newGroup": "Neue Gruppe",
   "tools.database.cardTitlePlaceholder": "Leere Seite",
   "tools.database.cardNamePlaceholder": "Namen eingeben…",
   "tools.database.columnTitlePlaceholder": "Spalte",

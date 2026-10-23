@@ -337,6 +337,7 @@
   "tools.callout.emojiCategorySymbols": "ਚਿੰਨ੍ਹ",
   "tools.callout.emojiCategoryFlags": "ਝੰਡੇ",
   "tools.database.addColumn": "ਕਾਲਮ ਜੋੜੋ",
+  "tools.database.newGroup": "ਨਵਾਂ ਸਮੂਹ",
   "tools.database.renameColumn": "ਕਾਲਮ ਦਾ ਨਾਮ ਬਦਲੋ",
   "tools.database.deleteColumn": "ਕਾਲਮ ਮਿਟਾਓ",
   "tools.database.addCard": "ਕਾਰਡ ਜੋੜੋ",

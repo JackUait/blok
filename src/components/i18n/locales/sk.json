@@ -339,6 +339,7 @@
   "tools.database.addCard": "Pridať kartu",
   "tools.database.newPage": "Nová stránka",
   "tools.database.addColumn": "Pridať stĺpec",
+  "tools.database.newGroup": "Nová skupina",
   "tools.database.cardTitlePlaceholder": "Prázdna stránka",
   "tools.database.cardNamePlaceholder": "Zadajte názov…",
   "tools.database.columnTitlePlaceholder": "Stĺpec",

@@ -339,6 +339,7 @@
   "tools.database.addCard": "ކާޑެއް އިތުރުކުރޭ",
   "tools.database.newPage": "އައު ޞަފްޙާ",
   "tools.database.addColumn": "ކޮލަމެއް އިތުރުކުރޭ",
+  "tools.database.newGroup": "އައު ގްރޫޕް",
   "tools.database.cardTitlePlaceholder": "ހުސް ޞަފްޙާ",
   "tools.database.cardNamePlaceholder": "ނަމެއް ލިޔޭ…",
   "tools.database.columnTitlePlaceholder": "ކޮލަމު",

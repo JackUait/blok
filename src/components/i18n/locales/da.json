@@ -339,6 +339,7 @@
   "tools.database.addCard": "Tilføj kort",
   "tools.database.newPage": "Ny side",
   "tools.database.addColumn": "Tilføj kolonne",
+  "tools.database.newGroup": "Ny gruppe",
   "tools.database.cardTitlePlaceholder": "Tom side",
   "tools.database.cardNamePlaceholder": "Skriv et navn…",
   "tools.database.columnTitlePlaceholder": "Kolonne",

@@ -339,6 +339,7 @@
   "tools.database.addCard": "Kart ekle",
   "tools.database.newPage": "Yeni sayfa",
   "tools.database.addColumn": "Sütun ekle",
+  "tools.database.newGroup": "Yeni grup",
   "tools.database.cardTitlePlaceholder": "Boş sayfa",
   "tools.database.cardNamePlaceholder": "Bir ad yazın…",
   "tools.database.columnTitlePlaceholder": "Sütun",

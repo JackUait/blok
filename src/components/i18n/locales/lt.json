@@ -350,6 +350,7 @@
   "tools.database.addCard": "Pridėti kortelę",
   "tools.database.newPage": "Naujas puslapis",
   "tools.database.addColumn": "Pridėti stulpelį",
+  "tools.database.newGroup": "Nauja grupė",
   "tools.database.cardTitlePlaceholder": "Tuščias puslapis",
   "tools.database.cardNamePlaceholder": "Įveskite pavadinimą…",
   "tools.database.columnTitlePlaceholder": "Stulpelis",

@@ -337,6 +337,7 @@
   "tools.callout.emojiCategorySymbols": "ምልክቶች",
   "tools.callout.emojiCategoryFlags": "ባንዲራዎች",
   "tools.database.addColumn": "አምድ ጨምር",
+  "tools.database.newGroup": "አዲስ ቡድን",
   "tools.database.renameColumn": "አምድ ዳግም ሰይም",
   "tools.database.deleteColumn": "አምድ ሰርዝ",
   "tools.database.addCard": "ካርድ ጨምር",

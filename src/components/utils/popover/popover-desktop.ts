@@ -2096,7 +2096,8 @@ export class PopoverDesktop extends PopoverAbstract {
     const attr = kind === 'topLevel' ? DATA_ATTR.topLevelGroupLabel : DATA_ATTR.promotedGroupLabel;
 
     el.setAttribute(attr, '');
-    el.setAttribute('role', 'separator');
+    // A listbox may own only options and groups (axe: aria-required-children), as Toolbox#buildSectionHeaderItem notes.
+    el.setAttribute('role', this.params.listbox === true ? 'presentation' : 'separator');
     // Same no-/50 contrast rule as Toolbox#buildSectionHeaderItem, whose visual
     // language this shares.
     el.className = 'pl-2 pr-3 pt-2.5 pb-2 text-xs font-medium text-menu-section-label cursor-default';

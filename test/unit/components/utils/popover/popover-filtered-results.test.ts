@@ -49,6 +49,18 @@ describe('"Filtered results" header in the "/" search (N10)', () => {
     expect(header(popover)).toBeNull();
   });
 
+  it('is not a separator inside a listbox, which may own only options and groups', () => {
+    const popover = new PopoverDesktop({
+      items: [item('Table view', 'tableView')],
+      messages: { filteredResults: 'Filtered results' },
+      listbox: true,
+    });
+
+    popover.filterItems('table');
+
+    expect(header(popover)?.getAttribute('role')).toBe('presentation');
+  });
+
   it('leaves a popover without the message unchanged', () => {
     const popover = build();
 

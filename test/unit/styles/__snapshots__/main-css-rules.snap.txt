@@ -4208,6 +4208,7 @@ span[data-blok-slash-search] {
   --blok-database-new-text: rgb(243, 249, 253);
   --blok-database-new-divider: rgba(28, 19, 1, 0.11);
   --blok-database-dependency-line: rgb(142, 139, 134);
+  --blok-database-timeline-link-ring: rgb(173, 169, 163);
   --blok-database-dependency-conflict: rgb(229, 100, 88);
   --blok-database-tab-bg-active: rgba(33, 27, 23, 0.05);
   --blok-database-tab-bg-hover: var(--blok-database-hover-bg);
@@ -4447,6 +4448,7 @@ span[data-blok-slash-search] {
   --blok-database-new-text: rgb(243, 249, 253);
   --blok-database-new-divider: rgba(255, 255, 235, 0.1);
   --blok-database-dependency-line: rgb(125, 122, 117);
+  --blok-database-timeline-link-ring: rgb(125, 122, 117);
   --blok-database-dependency-conflict: rgb(229, 100, 88);
   --blok-database-tab-bg-active: rgba(255, 255, 255, 0.055);
   --blok-database-tab-bg-hover: rgba(255, 255, 235, 0.1);
@@ -4687,6 +4689,7 @@ span[data-blok-slash-search] {
   --blok-database-new-text: rgb(243, 249, 253);
   --blok-database-new-divider: rgba(255, 255, 235, 0.1);
   --blok-database-dependency-line: rgb(125, 122, 117);
+  --blok-database-timeline-link-ring: rgb(125, 122, 117);
   --blok-database-dependency-conflict: rgb(229, 100, 88);
   --blok-database-tab-bg-active: rgba(255, 255, 255, 0.055);
   --blok-database-tab-bg-hover: rgba(255, 255, 235, 0.1);
@@ -13542,6 +13545,70 @@ textarea[data-blok-database-cell-input] {
   opacity: 0.4;
 }
 
+[data-blok-database-timeline]:is([data-dragging="start"], [data-dragging="end"]) [data-blok-database-timeline-bar][data-dragging] {
+  opacity: 1;
+}
+
+[data-blok-database-timeline]:is([data-dragging="start"], [data-dragging="end"]) [data-blok-database-timeline-bar][data-dragging]::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-start-start-radius: inherit;
+  border-start-end-radius: inherit;
+  border-end-start-radius: inherit;
+  border-end-end-radius: inherit;
+  background-color: var(--blok-icon-active-bg);
+  pointer-events: none;
+}
+
+[data-blok-database-timeline][data-dragging="start"] [data-blok-database-timeline-bar][data-dragging] [data-blok-database-timeline-resize="start"]::after, [data-blok-database-timeline][data-dragging="end"] [data-blok-database-timeline-bar][data-dragging] [data-blok-database-timeline-resize="end"]::after {
+  content: "";
+  position: absolute;
+  inset-block: var(--blok-space-1-5);
+  inline-size: 4px;
+  border-radius: var(--blok-radius-pill);
+  background-color: var(--blok-database-timeline-text);
+}
+
+[data-blok-database-timeline-resize="start"]::after {
+  inset-inline-start: 4px;
+}
+
+[data-blok-database-timeline-resize="end"]::after {
+  inset-inline-start: 0;
+}
+
+[data-blok-database-timeline-edge-readout] {
+  position: absolute;
+  inset-block-start: 50%;
+  translate: 0 -50%;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 400;
+  color: var(--blok-database-timeline-text);
+  pointer-events: none;
+}
+
+[data-blok-database-timeline-edge-readout="end"] {
+  inset-inline-start: calc(100% + 8px);
+}
+
+[data-blok-database-timeline-edge-readout="start"] {
+  inset-inline-end: calc(100% + 8px);
+}
+
+[data-blok-database-timeline-range] {
+  position: absolute;
+  inset-block-end: 3px;
+  block-size: 22px;
+  border-radius: var(--blok-radius-pill);
+  background-color: var(--blok-database-timeline-weekend-bg);
+}
+
+[data-blok-database-timeline-units] > [data-range-edge] {
+  color: var(--blok-database-timeline-text);
+}
+
 [data-blok-database-timeline-bar-title] {
   flex: none;
   font-size: 14px;
@@ -14889,6 +14956,40 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-database-timeline-bar]:hover [data-blok-database-timeline-link-handle], [data-blok-database-timeline][data-dragging="link"] [data-blok-database-timeline-link-handle] {
   opacity: 1;
+}
+
+[data-blok-database-timeline]:is([data-dragging="start"], [data-dragging="end"]) [data-blok-database-timeline-link-handle] {
+  opacity: 0;
+}
+
+[data-blok-database-timeline-link-handle]::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: 100%;
+  inline-size: 6px;
+  border-block-start: 1px solid var(--blok-database-dependency-line);
+}
+
+[data-blok-database-timeline-link-handle] svg {
+  display: none;
+}
+
+[data-blok-database-timeline-link-handle]:hover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: 2px solid var(--blok-database-timeline-link-ring);
+  background-color: var(--blok-database-timeline-bar-bg);
+}
+
+[data-blok-database-timeline-link-handle]:hover svg {
+  display: block;
+  inline-size: 8px;
+  block-size: 8px;
+  margin: -1px;
+  color: var(--blok-database-timeline-muted-text);
 }
 
 [data-blok-database-timeline-bar][data-link-target] {

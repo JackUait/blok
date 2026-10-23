@@ -878,6 +878,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       // Just past the end edge, so it never takes the resize zone.
       link.setAttribute('data-blok-database-timeline-link-handle', '');
       link.setAttribute('aria-hidden', 'true');
+      link.innerHTML = IconChevronRight;
       el.appendChild(link);
     }
 
@@ -1257,9 +1258,56 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
 
     barEl.style.insetInlineStart = `${ghost ? offset + drag.overPx - drag.grabPx : offset}px`;
     barEl.style.width = `${width}px`;
-    if (this.zoom === 'hours' && drag.mode !== 'move' && drag.active) {
+    if (!drag.active) {
+      return;
+    }
+    // The pill spans whole days, whatever inset the bar has.
+    this.showRange(span, this.zoom === 'hours' ? { offset, width } : barGeometry(span, this.window.start, this.zoom));
+    if (this.zoom === 'hours' && drag.mode !== 'move') {
       this.showEdgeReadout(barEl, drag.mode, values, span);
     }
+    if (this.zoom !== 'hours' && drag.mode !== 'move') {
+      this.showDayReadout(barEl, drag.mode, span);
+    }
+  }
+
+  /** findings C15: a pill over the dragged range's day numbers; its first and last day in ink. */
+  private showRange(span: EventSpan, { offset, width }: { offset: number; width: number }): void {
+    const header = this.root?.querySelector('[data-blok-database-timeline-header]');
+
+    if (header === null || header === undefined) {
+      return;
+    }
+    const pill = header.querySelector<HTMLElement>('[data-blok-database-timeline-range]') ?? document.createElement('div');
+
+    pill.setAttribute('data-blok-database-timeline-range', '');
+    pill.style.insetInlineStart = `${offset}px`;
+    pill.style.width = `${width}px`;
+    if (!pill.isConnected) {
+      header.prepend(pill);
+    }
+    header.querySelectorAll('[data-blok-database-timeline-units] > [data-day]').forEach((label) => {
+      const day = label.getAttribute('data-day');
+
+      label.toggleAttribute('data-range-edge', day === span.start || day === span.end);
+    });
+  }
+
+  /** findings C15: the moving edge's day in 12px ink just outside the bar. */
+  private showDayReadout(barEl: HTMLElement, edge: 'start' | 'end', span: EventSpan): void {
+    const readout = barEl.querySelector<HTMLElement>('[data-blok-database-timeline-edge-readout]') ?? document.createElement('span');
+
+    readout.setAttribute('data-blok-database-timeline-edge-readout', edge);
+    readout.setAttribute('aria-hidden', 'true');
+    readout.textContent = formatShortDatePart(span[edge], resolveLocale(this.options.locale));
+    if (!readout.isConnected) {
+      barEl.appendChild(readout);
+    }
+  }
+
+  private clearDragMarks(): void {
+    this.root?.querySelectorAll('[data-blok-database-timeline-range], [data-blok-database-timeline-edge-readout]').forEach((el) => el.remove());
+    this.root?.querySelectorAll('[data-range-edge]').forEach((el) => el.removeAttribute('data-range-edge'));
   }
 
   private showEdgeReadout(barEl: HTMLElement, edge: 'start' | 'end', values: BarValues, span: EventSpan): void {
@@ -1446,6 +1494,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       if (drag.kind === 'bar' && drag.active && drag.mode !== 'move') {
         hideReadout();
       }
+      this.clearDragMarks();
     }
     this.root?.removeAttribute('data-dragging');
     this.drag = null;

@@ -5858,7 +5858,7 @@ export class DatabaseTool implements BlockTool {
           this.galleryShown.set(viewConfig.id, shown);
           this.rerenderView({ keepDrawer: true });
         },
-        ...(arrowsProperty?.type === 'relation' ? { link: (from: string, to: string) => this.linkDependency(arrowsProperty.id, from, to) } : {}),
+        ...this.timelineLink(arrowsProperty),
       },
     });
 
@@ -6852,6 +6852,23 @@ export class DatabaseTool implements BlockTool {
   /** Database settings → Dependencies: the "Blocked by" / "Blocking" pair. */
   setDependenciesEnabled(on: boolean): void {
     this.setRelationPairEnabled(on, 'blockedBy', 'blocking', 'tools.database.dependenciesBlockedByName', 'tools.database.dependenciesBlockingName', false);
+  }
+
+  /** The bars' link handle: onto the view's relation, else (findings C16) onto a new dependency pair. */
+  private timelineLink(arrowsProperty: PropertyDefinition | undefined): { link?: (from: string, to: string) => void } {
+    if (arrowsProperty?.type === 'relation') {
+      return { link: (from, to) => this.linkDependency(arrowsProperty.id, from, to) };
+    }
+
+    return this.readOnly ? {} : { link: (from, to) => this.linkNewDependency(from, to) };
+  }
+
+  /** findings C16: a link drawn before dependencies exist turns them on, then links. */
+  private linkNewDependency(from: string, to: string): void {
+    if (this.dependencyPair() === undefined) this.setDependenciesEnabled(true);
+    const pair = this.dependencyPair();
+
+    if (pair !== undefined) this.linkDependency(pair.forward, from, to);
   }
 
   /** A link drawn on the timeline: `from` blocks `to`. Both sides in one undo step. */

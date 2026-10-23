@@ -114,6 +114,29 @@ describe('DatabaseTool — dependencies', () => {
     Reflect.deleteProperty(document, 'elementFromPoint');
   });
 
+  // findings C16: Notion shows the connector on every bar, before any dependency exists.
+  it('with dependencies off, a bar still has the link handle, and drawing a link turns them on and links', () => {
+    const doc = chain();
+    const { el, tool } = buildDatabase(doc, 'db', data(pair().slice(0, 2)));
+    const handle = bar(el, 'b')?.querySelector<HTMLElement>('[data-blok-database-timeline-link-handle]');
+    const target = bar(el, 'c');
+
+    expect(handle).not.toBeNull();
+    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => target });
+    handle?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, clientX: 10, clientY: 10 }));
+    document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 60, clientY: 40 }));
+    document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 60, clientY: 40 }));
+    Reflect.deleteProperty(document, 'elementFromPoint');
+
+    const schema = tool.save(document.createElement('div')).schema;
+    const blockedBy = schema.find((p) => p.relation?.role === 'blockedBy');
+    const blocking = schema.find((p) => p.relation?.role === 'blocking');
+
+    expect(blockedBy).toBeDefined();
+    expect(doc.row('c').properties[blockedBy?.id ?? '']).toEqual([{ id: 'b' }]);
+    expect(doc.row('b').properties[blocking?.id ?? '']).toEqual([{ id: 'c' }]);
+  });
+
   it('moving a blocker shifts what it blocks in the same undo step', () => {
     const doc = chain();
     const { tool } = buildDatabase(doc, 'db', data(pair('maintain')));

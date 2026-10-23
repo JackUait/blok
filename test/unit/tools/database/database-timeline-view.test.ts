@@ -722,6 +722,50 @@ describe('DatabaseTimelineView', () => {
     });
   });
 
+  describe('drag feedback (findings C15)', () => {
+    const layOut = (root: HTMLElement): void => {
+      rect(canvas(root), 0, 0, timelineWindow(CENTER, 'month').days * 40, 400);
+    };
+    const xOf = (day: string): number => px(day) + 20;
+    const range = (root: HTMLElement): HTMLElement | null => root.querySelector<HTMLElement>('[data-blok-database-timeline-range]');
+    const edges = (root: HTMLElement): Array<string | null> =>
+      [...root.querySelectorAll('[data-blok-database-timeline-units] > [data-range-edge]')].map((el) => el.getAttribute('data-day'));
+
+    it('marks the resized range in the header and reads the moving edge beside it', () => {
+      const { root } = mount();
+      const handle = bar(root, 'r1').querySelector('[data-blok-database-timeline-resize="end"]');
+
+      layOut(root);
+      if (handle === null) throw new Error('no handle');
+      pointer('pointerdown', handle, xOf('2026-10-09'), 50);
+      pointer('pointermove', document, xOf('2026-10-11'), 50);
+
+      expect(range(root)?.style.insetInlineStart).toBe(`${px('2026-10-09')}px`);
+      expect(range(root)?.style.width).toBe(`${3 * TIMELINE_DAY_WIDTH.month}px`);
+      expect(edges(root)).toEqual(['2026-10-09', '2026-10-11']);
+      expect(bar(root, 'r1').querySelector('[data-blok-database-timeline-edge-readout="end"]')?.textContent).toBe('Oct 11');
+
+      pointer('pointerup', document, xOf('2026-10-11'), 50);
+      expect(range(root)).toBeNull();
+      expect(edges(root)).toEqual([]);
+      expect(root.querySelector('[data-blok-database-timeline-edge-readout]')).toBeNull();
+    });
+
+    it('marks the moved range too, with no readout', () => {
+      const { root } = mount();
+
+      layOut(root);
+      pointer('pointerdown', bar(root, 'r2'), xOf('2026-10-12'), 50);
+      pointer('pointermove', document, xOf('2026-10-14'), 50);
+
+      expect(range(root)?.style.insetInlineStart).toBe(`${px('2026-10-14')}px`);
+      expect(edges(root)).toEqual(['2026-10-14', '2026-10-16']);
+      expect(root.querySelector('[data-blok-database-timeline-edge-readout]')).toBeNull();
+      key(document, 'Escape');
+      expect(range(root)).toBeNull();
+    });
+  });
+
   describe('hours zoom: 15-minute snap (research/22 §9)', () => {
     const hoursStart = timelineWindow(CENTER, 'hours').start;
     /** Canvas pixels to midnight of CENTER; hours zoom draws one pixel per minute. */

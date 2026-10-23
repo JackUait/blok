@@ -742,6 +742,15 @@ export class DatabaseTableView implements DatabaseViewRenderer {
 
       return fragment;
     }
+    if (rows.length === 0 && group === undefined) {
+      if (this.editable) {
+        fragment.appendChild(this.createBlankLine(this.createAddRow(groupKey)));
+      }
+      fragment.append(this.createBlankLine(null), this.createBlankLine(null));
+      fragment.appendChild(this.createFooter(rows));
+
+      return fragment;
+    }
     if (shown < rows.length) {
       const more = document.createElement('button');
 
@@ -772,6 +781,34 @@ export class DatabaseTableView implements DatabaseViewRenderer {
     add.append(icon, this.t('tools.database.tableNewPage'));
 
     return add;
+  }
+
+  /**
+   * One line of Notion's empty grid: column-sized blank cells with the grid
+   * lines. Not a row, so the keyboard, selection and row count skip it.
+   */
+  private createBlankLine(content: HTMLElement | null): HTMLElement {
+    const line = document.createElement('div');
+
+    line.setAttribute('data-blok-database-table-blank-row', '');
+    if (content === null) {
+      line.setAttribute('aria-hidden', 'true');
+    }
+    this.columns.forEach((column, index) => {
+      const cell = document.createElement('div');
+
+      cell.setAttribute('data-blok-database-table-blank-cell', '');
+      this.sizeCell(cell, column);
+      if (index === 0 && content !== null) {
+        cell.appendChild(content);
+      } else if (content !== null) {
+        cell.setAttribute('aria-hidden', 'true');
+      }
+      line.appendChild(cell);
+    });
+    line.appendChild(this.createFiller());
+
+    return line;
   }
 
   private createAddSubItem(parentId: string, depth: number): HTMLElement {

@@ -101,4 +101,14 @@ describe('database table view styles', () => {
     expect(labelled).toMatch(/font-size:\s*14px/);
     expect(labelled).toMatch(/line-height:\s*16.8px/);
   });
+
+  it('draws blank lines 37px tall with the row bottom line and the column dividers (feel T08)', () => {
+    expect(ruleBody('[data-blok-database-table-blank-row]')).toMatch(/display:\s*flex/);
+    const cell = ruleBody('[data-blok-database-table-blank-cell]');
+
+    expect(cell).toMatch(/min-height:\s*37px/);
+    expect(cell).toContain('border-block-end: 1px solid var(--blok-database-table-border)');
+    expect(ruleBody('[data-blok-database-table-blank-row] > [data-blok-database-table-filler]')).toContain('border-block-end: 1px solid var(--blok-database-table-border)');
+    expect(ruleBody('[data-blok-database-table-grid][data-vertical-lines="true"] [data-blok-database-table-blank-cell]')).toContain('border-inline-end');
+  });
 });

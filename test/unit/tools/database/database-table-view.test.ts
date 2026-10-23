@@ -442,6 +442,37 @@ describe('DatabaseTableView', () => {
       expect(handlers.editFilters).toHaveBeenCalled();
     });
 
+    it('draws "+ New page" and two blank grid lines on a database with no rows (Notion empty table)', () => {
+      const { root } = mount({ rows: [] });
+      const lines = [...root.querySelectorAll<HTMLElement>('[data-blok-database-table-blank-row]')];
+
+      expect(lines).toHaveLength(3);
+      expect(lines[0].querySelector('[data-blok-database-table-add-row]')).not.toBeNull();
+      expect(root.querySelectorAll('[data-blok-database-table-add-row]')).toHaveLength(1);
+      lines.forEach((line) => {
+        const cells = [...line.querySelectorAll<HTMLElement>('[data-blok-database-table-blank-cell]')];
+
+        expect(cells.map((c) => c.style.width)).toEqual(['280px', '200px', '200px', '200px', '200px']);
+        expect(line.querySelectorAll('[role]')).toHaveLength(0);
+      });
+      expect(lines[1].getAttribute('aria-hidden')).toBe('true');
+      expect(lines[0].hasAttribute('aria-hidden')).toBe(false);
+      expect(grid(root).querySelectorAll('[data-blok-database-table-row]')).toHaveLength(0);
+    });
+
+    it('draws no blank lines once a row exists, or when filters hide every row', () => {
+      expect(mount().root.querySelector('[data-blok-database-table-blank-row]')).toBeNull();
+      expect(mount({ rows: [], view: tableView({ filters: [{ propertyId: 'p-amount', operator: 'is_not_empty', value: null }] }) })
+        .root.querySelector('[data-blok-database-table-blank-row]')).toBeNull();
+    });
+
+    it('draws the blank lines without "+ New page" when read-only', () => {
+      const { root } = mount({ rows: [], readOnly: true });
+
+      expect(root.querySelectorAll('[data-blok-database-table-blank-row]')).toHaveLength(2);
+      expect(root.querySelector('[data-blok-database-table-add-row]')).toBeNull();
+    });
+
     it('shows a count over 99 as 99+ when the column caps counts', () => {
       const many = Array.from({ length: 120 }, (_, i) => row(`r${String(i).padStart(3, '1')}`, `Row ${i}`));
       const { root } = mount({ rows: many, view: tableView({ calculations: [{ id: 'p-notes', fn: 'count', capCounts: true }, { id: 'p-title', fn: 'count' }] }) });

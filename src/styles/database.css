@@ -7266,6 +7266,25 @@ textarea[data-blok-database-cell-input] {
   height: 16px;
 }
 
+[data-blok-database-table-blank-row] {
+  display: flex;
+}
+
+[data-blok-database-table-blank-cell] {
+  flex: none;
+  box-sizing: border-box;
+  min-height: 37px;
+  border-block-end: 1px solid var(--blok-database-table-border);
+}
+
+[data-blok-database-table-blank-row] > [data-blok-database-table-filler] {
+  border-block-end: 1px solid var(--blok-database-table-border);
+}
+
+[data-blok-database-table-grid][data-vertical-lines="true"] [data-blok-database-table-blank-cell] {
+  border-inline-end: 1px solid var(--blok-database-table-border);
+}
+
 [data-blok-database-table-load-more] {
   align-self: flex-start;
   height: 32px;

@@ -5993,16 +5993,16 @@ export class DatabaseTool implements BlockTool {
       ? [...options, noValue]
       : [...options.slice(0, index), noValue, ...options.slice(index)];
 
-    const counts = (): Map<string, number> => new Map(this.model.queryGroups({ ...view, groupBy: groupByPropId }, { search }).map((g) => [g.key, g.count]));
+    const counts = (shown: DatabaseViewConfig): Map<string, number> => new Map(this.model.queryGroups({ ...shown, groupBy: groupByPropId }, { search }).map((g) => [g.key, g.count]));
 
     if (view?.groupSettings?.hideEmptyGroups === true) {
-      const counted = counts();
+      const counted = counts(view);
 
       return all.filter((option) => (counted.get(option.id) ?? 0) > 0);
     }
 
     // findings-board B03: a status grouping shows "No Status" only while a row has no status.
-    if (property?.type === 'status' && view !== undefined && (counts().get(NO_VALUE_GROUP_KEY) ?? 0) === 0) {
+    if (property?.type === 'status' && view !== undefined && (counts(view).get(NO_VALUE_GROUP_KEY) ?? 0) === 0) {
       return all.filter((option) => option.id !== NO_VALUE_GROUP_KEY);
     }
 

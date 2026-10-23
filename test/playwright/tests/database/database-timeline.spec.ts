@@ -122,15 +122,17 @@ test.describe('timeline', () => {
   test('draws a 34px bar per dated row in 36px rows, sized by its days', async ({ page }) => {
     await mount(page, blocks({ type: 'timeline', name: 'Timeline' }));
 
-    await expect(page.locator('[data-blok-database-timeline-row]')).toHaveCount(3);
+    // findings C03: with the table hidden, the undated row has no lane.
+    await expect(page.locator('[data-blok-database-timeline-row]')).toHaveCount(2);
     await expect(page.locator('[data-blok-database-timeline-bar]')).toHaveCount(2);
 
     const one = await bar(page, 'r1').boundingBox();
     const three = await bar(page, 'r2').boundingBox();
 
     expect(one?.height).toBeCloseTo(34, 0);
-    expect(one?.width).toBeCloseTo(40, 0);
-    expect(three?.width).toBeCloseTo(120, 0);
+    // findings C23: 1.5px in from each day edge.
+    expect(one?.width).toBeCloseTo(37, 0);
+    expect(three?.width).toBeCloseTo(117, 0);
     await expect(bar(page, 'r1')).toHaveCSS('border-radius', '6px');
     expect((await page.locator('[data-blok-database-timeline-row]').first().boundingBox())?.height).toBeCloseTo(36, 0);
   });
@@ -204,7 +206,7 @@ test.describe('timeline', () => {
     await mount(page, blocks({ type: 'timeline', timelineBy: 'p-due', timelineEndBy: 'p-end' }, rows));
     const box = await bar(page, 'r1').boundingBox();
 
-    expect(box?.width).toBeCloseTo(120, 0);
+    expect(box?.width).toBeCloseTo(117, 0);
     if (box === null) throw new Error('no bar');
     await drag(page, { x: box.x + box.width / 2, y: box.y + box.height / 2 }, { x: box.x + box.width / 2 - 40, y: box.y + box.height / 2 });
 

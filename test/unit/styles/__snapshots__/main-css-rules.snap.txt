@@ -15091,6 +15091,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   inset-inline-end: 100%;
   inline-size: 6px;
   border-block-start: 1px solid var(--blok-database-dependency-line);
+  pointer-events: none;
 }
 
 [data-blok-database-timeline-link-handle] svg {

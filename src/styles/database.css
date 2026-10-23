@@ -12302,6 +12302,8 @@ button[data-blok-database-feed-reaction]:hover,
   inset-inline-end: 100%;
   inline-size: 6px;
   border-block-start: 1px solid var(--blok-database-dependency-line);
+  /* It overlaps the end resize handle; a press there must resize. */
+  pointer-events: none;
 }
 
 [data-blok-database-timeline-link-handle] svg {

@@ -772,7 +772,14 @@ export class DatabaseListView implements DatabaseViewRenderer {
 
     addRowBtn.setAttribute('data-blok-database-add-row', '');
     addRowBtn.setAttribute('aria-label', this.i18n.t('tools.database.addRow'));
-    addRowBtn.textContent = '+ ' + this.i18n.t('tools.database.newPage');
+    // findings-listgallery L18: Notion's plus glyph, then "New page".
+    const icon = document.createElement('span');
+    const label = document.createElement('span');
+
+    icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML = IconPlus;
+    label.textContent = this.i18n.t('tools.database.newPage');
+    addRowBtn.append(icon, label);
 
     if (optionId !== undefined) {
       addRowBtn.setAttribute('data-option-id', optionId);

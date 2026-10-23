@@ -64,8 +64,9 @@ const rowHtml = (rowId: string, title: string, tabindex = '0'): string =>
   + rowPropsHtml(rowId)
   + '</div>';
 
-const ADD_ROW_HTML =
-  '<button data-blok-database-add-row="" aria-label="T(tools.database.addRow)">+ T(tools.database.newPage)</button>';
+const ADD_ROW_INNER = `<span aria-hidden="true">${serialized(IconPlus)}</span><span>T(tools.database.newPage)</span>`;
+
+const ADD_ROW_HTML = `<button data-blok-database-add-row="" aria-label="T(tools.database.addRow)">${ADD_ROW_INNER}</button>`;
 
 const FLAT_HTML =
   '<div data-blok-database-list="" data-blok-keyboard-owner="">'
@@ -228,9 +229,7 @@ describe('createView — grouped branch', () => {
         + '<div data-blok-database-list-rows="" role="list">'
         + rowHtml('row-1', 'Fix bug')
         + '</div>'
-        + '<button data-blok-database-add-row="" aria-label="T(tools.database.addRow)" data-option-id="opt-a">'
-        + '+ T(tools.database.newPage)'
-        + '</button>'
+        + `<button data-blok-database-add-row="" aria-label="T(tools.database.addRow)" data-option-id="opt-a">${ADD_ROW_INNER}</button>`
         + '</div>'
         + '</div>'
       );

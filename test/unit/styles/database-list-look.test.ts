@@ -48,13 +48,21 @@ describe('list rows (research/07)', () => {
     expect(body).not.toContain('background');
   });
 
-  it('shrinks option pills in a list row to 18px, 0 8px, 13px/18px; status pills keep their size', () => {
-    const body = ruleBody(database, '[data-blok-database-list-row-property] [data-blok-database-option-pill]:not([data-status-group])');
+  it('shrinks option pills in a list row to 18px, 0 8px, 13px/18px', () => {
+    const body = ruleBody(database, '[data-blok-database-list-row-property] [data-blok-database-option-pill]');
 
     expect(body).toContain('height: 18px');
     expect(body).toContain('padding: 0 var(--blok-space-2)');
     expect(body).toContain('font-size: 13px');
     expect(body).toContain('line-height: 18px');
+  });
+
+  // findings-listgallery L17: a status pill takes the list size too, padded 0 11px 0 9px.
+  it('draws a status pill in a list row 18px tall, 13px/18px, padded 0 11px 0 9px', () => {
+    const body = ruleBody(database, '[data-blok-database-list-row-property] [data-blok-database-option-pill][data-status-group]');
+
+    expect(body).toContain('padding-inline: 9px 11px');
+    expect(ruleBody(database, '[data-blok-database-list-row-property] [data-blok-database-option-pill]:not([data-status-group])')).toBe('');
   });
 
   it('rings a focused row or property only after keyboard use', () => {
@@ -65,9 +73,9 @@ describe('list rows (research/07)', () => {
     expect(ruleBody(database, '[data-blok-database-list-row]:focus')).toBe('');
   });
 
-  it('highlights an editable property on hover', () => {
-    expect(ruleBody(database, '[data-blok-database-list-row-property][data-editable]:hover'))
-      .toContain('background-color: var(--blok-database-add-hover-bg)');
+  // findings-listgallery L19: only the row fills on hover; a property has no fill of its own.
+  it('gives a hovered property no fill of its own', () => {
+    expect(ruleBody(database, '[data-blok-database-list-row-property][data-editable]:hover')).toBe('');
   });
 });
 
@@ -170,6 +178,34 @@ describe('grouped list (findings-listgallery L08, L10)', () => {
     expect(header).toContain('margin-bottom: 12px');
     expect(ruleBody(database, '[data-blok-database-list-group]')).toContain('margin-bottom: 28px');
     expect(ruleBody(database, '[data-blok-database-list-rows]')).not.toContain('padding-inline-start');
+  });
+});
+
+describe('list "+ New page" (findings-listgallery L18)', () => {
+  const rule = (suffix = ''): string => ruleBody(database, `[data-blok-database-list] > [data-blok-database-add-row]${suffix}`);
+
+  it('is a 30px row padded 0 8px 0 6px in 14px/21px muted ink, right under the last row', () => {
+    const body = rule();
+
+    expect(body).toContain('height: 30px');
+    expect(body).toContain('padding: 0 var(--blok-space-2) 0 6px');
+    expect(body).toContain('font-size: 14px');
+    expect(body).toContain('line-height: 21px');
+    expect(body).toContain('color: var(--blok-database-table-muted-text)');
+    expect(body).not.toContain('margin-top');
+  });
+
+  it('draws a 16px gray plus with a 1px 8px margin', () => {
+    expect(ruleBody(database, '[data-blok-database-add-row] > span[aria-hidden="true"]')).toContain('margin: 1px var(--blok-space-2)');
+    expect(ruleBody(database, '[data-blok-database-add-row] > span[aria-hidden="true"]')).toContain('color: var(--blok-database-table-gutter-icon)');
+    expect(ruleBody(database, '[data-blok-database-add-row] > span[aria-hidden="true"] svg')).toContain('width: 16px');
+  });
+
+  it('fills on hover and keeps its muted ink', () => {
+    const hover = rule(':hover');
+
+    expect(hover).toContain('background-color: var(--blok-database-hover-bg)');
+    expect(hover).not.toMatch(/(^|[;\s])color:/);
   });
 });
 

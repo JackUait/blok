@@ -167,7 +167,8 @@ describe('DatabaseListView', () => {
       expect(addRowBtn).toBeNull();
     });
 
-    it('add-row button text prefixed with +', () => {
+    // findings-listgallery L18: Notion's plusSmall glyph, then "New page".
+    it('draws "+ New page" as the plus glyph and the label', () => {
       const view = new DatabaseListView({
         readOnly: false, i18n, rows: [], titlePropertyId: 'title', schema: makeSchema(), visiblePropertyIds: [],
       });
@@ -175,7 +176,8 @@ describe('DatabaseListView', () => {
 
       const addRowBtn = list.querySelector('[data-blok-database-add-row]');
 
-      expect(addRowBtn?.textContent).toMatch(/^\+ /);
+      expect(addRowBtn?.querySelector(':scope > span[aria-hidden="true"] > svg')).not.toBeNull();
+      expect(addRowBtn?.textContent?.trim()).toBe('tools.database.newPage');
     });
 
     // findings-listgallery L03/L04: Notion's row has no buttons at its end.

@@ -90,6 +90,8 @@ const contrast = (ink: string, surface: number[]): number => {
 };
 
 const WHITE = [255, 255, 255];
+/** Blok's dark page #191919, and #1d1d1c, which hosts can keep by setting --blok-bg-primary. Inks must pass on both. */
+const DARK_PAGES = [[25, 25, 25], [29, 29, 28]];
 const LIGHT_HOVER = over([33, 27, 23, 0.051], WHITE);
 const DARK_PAGE = [25, 25, 25];
 const DARK_MENU = [37, 37, 37];
@@ -388,11 +390,11 @@ describe('pass 2: research/33 §4 colour dump', () => {
     both('--blok-database-column-brown-ring', 'rgba(255, 174, 122, 0.133)');
   });
 
-  // Worst surfaces: the hovered count (tint and the 0.055 hover over Blok's dark page, 29) and, where measured,
+  // Worst surfaces: the hovered count (tint and the 0.055 hover over each dark page) and, where measured,
   // the hovered "+ New" row, which takes the hovered card's fill (research/36 §11).
-  const DARK_ADD_HOVER = (tint: number[]): number[] => over([255, 255, 255, 0.055], over(tint, [29, 29, 28]));
+  const DARK_ADD_HOVER = (tint: number[]): number[][] => DARK_PAGES.map((page) => over([255, 255, 255, 0.055], over(tint, page)));
   const DARK_ROW_HOVER: Record<string, number[]> = { red: [73, 44, 42] };
-  const darkSurfaces = (color: string, tint: number[]): number[][] => [DARK_ADD_HOVER(tint), ...(color in DARK_ROW_HOVER ? [DARK_ROW_HOVER[color]] : [])];
+  const darkSurfaces = (color: string, tint: number[]): number[][] => [...DARK_ADD_HOVER(tint), ...(color in DARK_ROW_HOVER ? [DARK_ROW_HOVER[color]] : [])];
   const passesAll = (ink: string, surfaces: number[][]): boolean => surfaces.every((surface) => contrast(ink, surface) >= 4.5);
 
   it.each([
@@ -482,11 +484,11 @@ describe('round 13: research/35 §1.1-§1.3, §1.8', () => {
     expect(value(dbAttr, name)).toBe(dark);
   };
   const LIGHT_TINT = over([66, 35, 3, 0.03], WHITE);
-  const DARK_TINT = over([252, 252, 252, 0.03], [29, 29, 28]);
+  const DARK_TINTS = DARK_PAGES.map((page) => over([252, 252, 252, 0.03], page));
   // Worst surfaces: the hovered "+ New" row and the hovered count button.
   const LIGHT_SURFACES = [over([54, 29, 2, 0.031], LIGHT_TINT), over([33, 27, 23, 0.051], LIGHT_TINT)];
   // research/36 §11: a hovered gray "+ New" row is the hovered card, 50,50,49.
-  const DARK_SURFACES = [over([255, 255, 255, 0.055], DARK_TINT), [50, 50, 49]];
+  const DARK_SURFACES = [...DARK_TINTS.map((tint) => over([255, 255, 255, 0.055], tint)), [50, 50, 49]];
   const passes = (ink: string, surfaces: number[][]): boolean => surfaces.every((s) => contrast(ink, s) >= 4.5);
   const shift = (ink: string, by: number): string => `rgb(${channels(ink).map((c) => c + by).join(', ')})`;
 

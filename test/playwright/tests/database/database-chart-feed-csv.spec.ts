@@ -308,7 +308,7 @@ test.describe('chart view', () => {
     await openSaveChartAs(page);
     await page.getByRole('button', { name: 'Download PNG' }).click();
 
-    expect(await cornerPixel(page, readFileSync(await (await download).path()))).toEqual([29, 29, 28, 255]);
+    expect(await cornerPixel(page, readFileSync(await (await download).path()))).toEqual([25, 25, 25, 255]);
   });
 
   test('downloads a transparent PNG with the background switched off, and the switch resets', async ({ page }) => {

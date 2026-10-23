@@ -695,7 +695,7 @@
     --blok-code-bg: #222221;
 
     /* Generic surface / text / accent tokens (image tool + reusable). */
-    --blok-bg-primary: #1d1d1c;
+    --blok-bg-primary: #191919;
     --blok-bg-hover: rgba(255, 255, 255, 0.04);
     --blok-border-subtle: #2a2a28;
     --blok-border-primary: #333331;
@@ -898,7 +898,7 @@
   --blok-code-bg: #222221;
 
   /* Generic surface / text / accent tokens (image tool + reusable). */
-  --blok-bg-primary: #1d1d1c;
+  --blok-bg-primary: #191919;
   --blok-bg-hover: rgba(255, 255, 255, 0.04);
   --blok-border-subtle: #2a2a28;
   --blok-border-primary: #333331;

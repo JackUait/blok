@@ -153,7 +153,8 @@ describe('select pills in dark (research/22 §12)', () => {
 /** Notion's dark tertiary ink (research/21 §1a); it fails AA on Blok's dark surfaces. */
 const NOTION_DARK_TERTIARY = 'rgb(125, 122, 117)';
 const DARK_MENU = 'rgb(37, 37, 37)';
-const DARK_PAGE = 'rgb(29, 29, 28)';
+/** Blok's dark page #191919, and #1d1d1c, which hosts can keep by setting --blok-bg-primary. */
+const DARK_PAGES = ['rgb(25, 25, 25)', 'rgb(29, 29, 28)'];
 
 /** One shared AA step; database-notion-colours.test.ts pins why it is this value. */
 const darkTertiary = (): string => {
@@ -216,8 +217,10 @@ describe('"+ Filter" in dark (research/21 §1c)', () => {
 
     expect(light).toBe(TERTIARY_TOKEN);
     expect(dark).toEqual([TERTIARY_TOKEN, TERTIARY_TOKEN]);
-    expect(contrast(NOTION_DARK_TERTIARY, DARK_PAGE)).toBeLessThan(4.5);
-    expect(contrast(darkTertiary(), DARK_PAGE)).toBeGreaterThanOrEqual(4.5);
+    for (const page of DARK_PAGES) {
+      expect(contrast(NOTION_DARK_TERTIARY, page)).toBeLessThan(4.5);
+      expect(contrast(darkTertiary(), page)).toBeGreaterThanOrEqual(4.5);
+    }
   });
 });
 

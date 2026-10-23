@@ -2558,7 +2558,7 @@
   --blok-bg-secondary: rgba(255, 255, 255, 0.04);
   --blok-border-secondary: rgba(255, 255, 255, 0.08);
   --blok-code-bg: #222221;
-  --blok-bg-primary: #1d1d1c;
+  --blok-bg-primary: #191919;
   --blok-bg-hover: rgba(255, 255, 255, 0.04);
   --blok-border-subtle: #2a2a28;
   --blok-border-primary: #333331;
@@ -2725,7 +2725,7 @@
   --blok-bg-secondary: rgba(255, 255, 255, 0.04);
   --blok-border-secondary: rgba(255, 255, 255, 0.08);
   --blok-code-bg: #222221;
-  --blok-bg-primary: #1d1d1c;
+  --blok-bg-primary: #191919;
   --blok-bg-hover: rgba(255, 255, 255, 0.04);
   --blok-border-subtle: #2a2a28;
   --blok-border-primary: #333331;

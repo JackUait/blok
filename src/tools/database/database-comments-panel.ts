@@ -39,6 +39,8 @@ export interface CommentsPanelOptions {
   /** Asks first ("Delete this comment?"); resolves once answered. */
   onDelete: (id: string) => Promise<void>;
   now?: () => number;
+  /** The viewer's name: the composer starts with their avatar (feel/findings-rowpage R14). */
+  viewerName?: () => string;
 }
 
 export interface CommentsPanel {
@@ -127,6 +129,7 @@ const composer = (options: CommentsPanelOptions, onSend: (text: string) => void,
     submit();
   });
   send.addEventListener('click', submit);
+  if (options.viewerName !== undefined) row.append(avatar(options.viewerName()));
   row.append(input, send);
 
   return { element: row, input };

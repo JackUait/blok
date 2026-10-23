@@ -212,6 +212,17 @@ describe('built-in database comments', () => {
     expect((await savedComments())[0]?.data).not.toHaveProperty('propertyId');
   });
 
+  // feel/findings-rowpage R14: the composer starts with the viewer's avatar, as Notion's.
+  it('the composer shows the viewer avatar before the field', async () => {
+    await make({ people: { list: () => Promise.resolve([{ id: 'u1', name: 'Ada Lovelace' }]), me: () => 'u1' } });
+    holder?.querySelector<HTMLElement>('[data-blok-database-table-open]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await quiet();
+    const composer = holder?.querySelector<HTMLElement>('[data-blok-database-comments-section] [data-blok-database-comment-composer]');
+
+    expect(composer?.firstElementChild?.hasAttribute('data-blok-database-comment-avatar')).toBe(true);
+    expect(composer?.firstElementChild?.textContent).toBe('A');
+  });
+
   it('Delete asks "Delete this comment?" first and deletes only on confirm', async () => {
     await make();
     titleCell().dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));

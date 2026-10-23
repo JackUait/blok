@@ -7138,6 +7138,15 @@ textarea[data-blok-database-cell-input] {
   gap: var(--blok-space-1);
 }
 
+/* feel/findings-rowpage R14: the viewer's 24px avatar leads the composer. */
+[data-blok-database-comment-composer] > [data-blok-database-comment-avatar] {
+  position: static;
+  align-self: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+}
+
 [data-blok-database-comment-input] {
   flex: 1;
   min-height: 24px;

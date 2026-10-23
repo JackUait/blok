@@ -224,6 +224,7 @@ export class BuiltInCommentsUi {
       threads,
       nameOf: (comment) => this.nameOf(comment),
       isOwn: (comment) => this.isOwn(comment),
+      viewerName: () => this.author().authorName ?? api.i18n.t('tools.database.commentAnonymous'),
       onAdd: (text) => { this.store.add(rowId, text, propertyId); },
       onReply: (threadId, text) => { this.store.reply(threadId, text); },
       onEdit: (id, text) => this.store.edit(id, text),

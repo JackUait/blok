@@ -3735,7 +3735,8 @@ describe('DatabaseTool', () => {
             id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-stage',
             sorts: [], filters: [], visibleProperties: [], ...view,
           }],
-        });
+        // A row with no status, so the no-value column shows (findings-board B03).
+        }, {}, { childBlocks: [createMockRowBlock({ id: 'row-none', properties: { 'prop-title': 'Loose' }, position: 'a0' })] });
         const tool = new DatabaseTool(options);
         const element = tool.render();
 

@@ -99,7 +99,11 @@ describe('a status property\'s default option (research/30 §10f, research/31 §
   });
 
   it('a column\'s add button keeps that column\'s option; the no-value column stays empty', () => {
-    const doc = seed();
+    const doc = makeDoc([
+      { id: 'db', name: 'database', parentId: null, data: {} },
+      rowSeed('r1', 'db', { properties: { title: 'One', st: 'ns' }, position: 'a0' }),
+      rowSeed('r2', 'db', { properties: { title: 'Two' }, position: 'a1' }),
+    ]);
     const { el } = buildDatabase(doc, 'db', data('board', 'ns'));
     const add = (optionId: string): string | undefined => {
       const before = doc.childrenOf('db');
@@ -153,5 +157,32 @@ describe('a status property\'s default option (research/30 §10f, research/31 §
 
     expect(column?.getAttribute('data-color')).toBe('gray');
     expect(column?.querySelector('[data-blok-database-column-dot]')).not.toBeNull();
+  });
+
+  // findings-board B03: Notion's Status board has no "No Status" column while every row has a status.
+  describe('the no-value group of a status grouping', () => {
+    const noValue = '[data-blok-database-column][data-option-id="__blok-no-value-group__"]';
+
+    it('is left out while every row has a status, in the board and in Edit groups', () => {
+      const { el } = buildDatabase(seed(), 'db', data('board', 'ns'));
+
+      popovers.items.length = 0;
+      el.querySelector<HTMLElement>('[data-blok-database-column-menu][data-option-id="ns"]')?.click();
+      const editGroups = (popovers.items.at(-1) ?? []).find((item) => item.name === 'edit-groups') as { children?: { items: Array<{ name?: string }> } } | undefined;
+
+      expect(el.querySelector(noValue)).toBeNull();
+      expect(editGroups?.children?.items.map((item) => item.name)).not.toContain('group-__blok-no-value-group__');
+    });
+
+    it('shows once a row has no status', () => {
+      const doc = makeDoc([
+        { id: 'db', name: 'database', parentId: null, data: {} },
+        rowSeed('r1', 'db', { properties: { title: 'One', st: 'ns' }, position: 'a0' }),
+        rowSeed('r2', 'db', { properties: { title: 'Two' }, position: 'a1' }),
+      ]);
+      const { el } = buildDatabase(doc, 'db', data('board', 'ns'));
+
+      expect(el.querySelector(noValue)?.querySelectorAll('[data-blok-database-card]').length).toBe(1);
+    });
   });
 });

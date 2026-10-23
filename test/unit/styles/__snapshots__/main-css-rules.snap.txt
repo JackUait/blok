@@ -7808,8 +7808,11 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 }
 
 [data-blok-database-confirm-action]:focus-visible {
-  outline: 2px solid var(--blok-focus-ring);
-  outline-offset: 2px;
+  outline: none;
+}
+
+[data-blok-database-confirm-action]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
+  box-shadow: 0 0 0 2px var(--blok-bg-primary), 0 0 0 4px var(--blok-focus-ring), 0 0 0 6px var(--blok-bg-primary);
 }
 
 [data-blok-database-confirm-action][data-destructive] {

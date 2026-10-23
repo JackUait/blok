@@ -257,6 +257,15 @@ describe('database confirm dialog css', () => {
     expect(tokenValues('--blok-database-confirm-choice-dot')).toEqual(['rgb(240, 239, 237)', 'rgb(240, 239, 237)', 'rgb(240, 239, 237)']);
   });
 
+  // research/37 §4.1 (dark Reset, after Tab): page bg 2px, blue 4px, page bg 6px. Light is not read; its page bg stands in.
+  it('rings a keyboard-focused button in page bg, blue, page bg, and never after a pointer press', () => {
+    const KEYBOARD = '[data-blok-database-confirm-action]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *)';
+
+    expect(ruleBody(database, '[data-blok-database-confirm-action]:focus-visible')).toContain('outline: none');
+    expect(ruleBody(database, KEYBOARD))
+      .toContain('box-shadow: 0 0 0 2px var(--blok-bg-primary), 0 0 0 4px var(--blok-focus-ring), 0 0 0 6px var(--blok-bg-primary)');
+  });
+
   it('drops the entrance under reduced motion', () => {
     expect(database).toMatch(/@media \(prefers-reduced-motion: reduce\) \{[^@]*\[data-blok-database-confirm-dialog\][^{]*\{ animation: none; \}/);
   });

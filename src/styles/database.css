@@ -4464,10 +4464,13 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   background-color: var(--blok-database-hover-bg);
 }
 
-/* preflight.css hides outline rings after a pointer press. */
+/* research/37 §4.1. preflight.css cannot reach a box-shadow, so the ring carries the modality guard. */
 [data-blok-database-confirm-action]:focus-visible {
-  outline: 2px solid var(--blok-focus-ring);
-  outline-offset: 2px;
+  outline: none;
+}
+
+[data-blok-database-confirm-action]:focus-visible:where(:root:not([data-blok-modality="pointer"]) *) {
+  box-shadow: 0 0 0 2px var(--blok-bg-primary), 0 0 0 4px var(--blok-focus-ring), 0 0 0 6px var(--blok-bg-primary);
 }
 
 [data-blok-database-confirm-action][data-destructive] {

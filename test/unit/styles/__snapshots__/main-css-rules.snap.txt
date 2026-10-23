@@ -11542,11 +11542,18 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-starter-tile] {
-  inline-size: 32px;
-  block-size: 32px;
+  display: inline-flex;
+  flex: none;
+  inline-size: 30px;
+  block-size: 30px;
   align-items: center;
   justify-content: center;
   border-radius: var(--blok-radius-control);
+}
+
+[data-blok-database-panel-icon][data-blok-database-starter-tile] svg {
+  width: 20px;
+  height: 20px;
 }
 
 [data-blok-database-starter-tile="green"] {
@@ -12288,10 +12295,37 @@ textarea[data-blok-database-cell-input] {
   white-space: nowrap;
 }
 
-[data-blok-database-panel-icon], [data-blok-database-panel-chevron], [data-blok-database-panel-external], [data-blok-database-panel-check] {
+[data-blok-database-panel-icon]:not([data-blok-database-starter-tile]), [data-blok-database-panel-chevron], [data-blok-database-panel-external], [data-blok-database-panel-check] {
   display: inline-flex;
   flex: 0 0 auto;
   color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-database-panel-tiled] {
+  min-height: 44px;
+}
+
+[data-blok-database-panel-tiled=""] > [data-blok-database-panel-icon]:not([data-blok-database-starter-tile]) {
+  inline-size: 30px;
+  block-size: 30px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-starter-tile-gray-bg);
+}
+
+[data-blok-database-creation-panel] [data-blok-database-panel-icon] {
+  inline-size: 30px;
+  justify-content: center;
+}
+
+[data-blok-database-panel-tiled="bare"] > [data-blok-database-panel-icon] svg, [data-blok-database-source-row] > [data-blok-database-panel-icon] svg {
+  width: 20px;
+  height: 20px;
+}
+
+[data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-container]:has([data-blok-database-creation-panel]) {
+  border-radius: var(--blok-radius-surface);
 }
 
 [data-blok-database-panel-external] {

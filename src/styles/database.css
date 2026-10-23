@@ -8560,13 +8560,20 @@ textarea[data-blok-database-cell-input] {
   height: 14px;
 }
 
-/* "Suggested" template rows (research/26 §2): the glyph sits in a 32x32 tinted tile. */
+/* "Suggested" template rows (findings-creation N03): the glyph sits in a 30x30 tinted tile, in the tint's ink. */
 [data-blok-database-starter-tile] {
-  inline-size: 32px;
-  block-size: 32px;
+  display: inline-flex;
+  flex: none;
+  inline-size: 30px;
+  block-size: 30px;
   align-items: center;
   justify-content: center;
   border-radius: var(--blok-radius-control);
+}
+
+[data-blok-database-panel-icon][data-blok-database-starter-tile] svg {
+  width: 20px;
+  height: 20px;
 }
 
 [data-blok-database-starter-tile="green"] {
@@ -9344,13 +9351,45 @@ textarea[data-blok-database-cell-input] {
   white-space: nowrap;
 }
 
-[data-blok-database-panel-icon],
+[data-blok-database-panel-icon]:not([data-blok-database-starter-tile]),
 [data-blok-database-panel-chevron],
 [data-blok-database-panel-external],
 [data-blok-database-panel-check] {
   display: inline-flex;
   flex: 0 0 auto;
   color: var(--blok-database-table-header-icon);
+}
+
+/* "New empty data source" and the templates (findings-creation N03, N19): 44px rows, the glyph in a 30px tile. */
+[data-blok-database-panel-tiled] {
+  min-height: 44px;
+}
+
+[data-blok-database-panel-tiled=""] > [data-blok-database-panel-icon]:not([data-blok-database-starter-tile]) {
+  inline-size: 30px;
+  block-size: 30px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-starter-tile-gray-bg);
+}
+
+/* Import CSV keeps the row height without a tile; its download arrow and a source row's glyph are 20px (N03, N19). */
+/* In the creation panels every glyph centres in the tile column, so all labels line up. */
+[data-blok-database-creation-panel] [data-blok-database-panel-icon] {
+  inline-size: 30px;
+  justify-content: center;
+}
+
+[data-blok-database-panel-tiled="bare"] > [data-blok-database-panel-icon] svg,
+[data-blok-database-source-row] > [data-blok-database-panel-icon] svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* The creation panels' box is 10px round, as Notion's menus (research/08:267). The panel is a short list. */
+[data-blok-popover-custom-class~='blok-database-cell-editor'] [data-blok-popover-container]:has([data-blok-database-creation-panel]) {
+  border-radius: var(--blok-radius-surface);
 }
 
 /* research/26 §3d: the "leaves this app" arrow is lighter than a chevron. */

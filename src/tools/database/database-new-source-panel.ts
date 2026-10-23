@@ -1,4 +1,4 @@
-import { IconArrowDiagonal, IconArrowUp, IconDatabase, IconDotsHorizontal, IconEmojiSparkles, IconPlus, IconUpload } from '../../components/icons';
+import { IconArrowDiagonal, IconArrowDownLine, IconArrowUp, IconDatabase, IconDotsHorizontal, IconEmojiSparkles, IconPlus } from '../../components/icons';
 import { DatabasePanel, panelCloseButton, panelInput, panelLabel, panelRow, panelSeparator } from './database-panel';
 import type { LinkedPickerSource } from './database-linked-picker';
 
@@ -169,7 +169,11 @@ export const openNewSourcePanel = (options: NewSourcePanelOptions): DatabasePane
 
     // research/26 §2: a query replaces the first row and never hides Import CSV.
     if (query === '') {
-      rows.push(panelRow({ label: empty, testId: 'database-new-source-empty', icon: IconPlus, onClick: () => panel.close() }));
+      const row = panelRow({ label: empty, testId: 'database-new-source-empty', icon: IconPlus, onClick: () => panel.close() });
+
+      // A new database's row is 44px with the plus in a 30px gray tile (findings-creation N03).
+      if (options.newDatabase === true) row.setAttribute('data-blok-database-panel-tiled', '');
+      rows.push(row);
     } else if (nameSource !== undefined) {
       rows.push(panelRow({
         label: t('tools.database.newDataSourceNamed', { query }),
@@ -184,15 +188,18 @@ export const openNewSourcePanel = (options: NewSourcePanelOptions): DatabasePane
     if (options.importCsv !== undefined) {
       const importCsv = options.importCsv;
 
-      rows.push(panelRow({
+      const row = panelRow({
         label: csv,
         testId: 'database-new-source-csv',
-        icon: IconUpload,
+        icon: IconArrowDownLine,
         onClick: () => {
           panel.close();
           importCsv();
         },
-      }));
+      });
+
+      if (options.newDatabase === true) row.setAttribute('data-blok-database-panel-tiled', 'bare');
+      rows.push(row);
     }
     const starters = options.starters;
 
@@ -208,6 +215,7 @@ export const openNewSourcePanel = (options: NewSourcePanelOptions): DatabasePane
           },
         });
 
+        row.setAttribute('data-blok-database-panel-tiled', '');
         row.querySelector('[data-blok-database-panel-icon]')?.setAttribute('data-blok-database-starter-tile', starter.tint);
 
         return row;
@@ -272,6 +280,7 @@ export const openNewSourcePanel = (options: NewSourcePanelOptions): DatabasePane
     ...(options.onClose !== undefined ? { onClose: options.onClose } : {}),
   });
 
+  panel.root.setAttribute('data-blok-database-creation-panel', '');
   panel.open();
 
   return panel;

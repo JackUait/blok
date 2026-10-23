@@ -1,5 +1,5 @@
 import { IconDatabase, IconDotsHorizontal, IconPlus } from '../../components/icons';
-import { DatabasePanel, panelInput, panelLabel, panelRow } from './database-panel';
+import { DatabasePanel, panelCloseButton, panelInput, panelLabel, panelRow, panelSeparator } from './database-panel';
 import type { PanelPage } from './database-panel';
 import { VIEW_ICONS } from './database-tab-bar';
 import type { DatabaseViewConfig } from './types';
@@ -29,6 +29,15 @@ export interface LinkedPickerOptions {
   copyView: (view: DatabaseViewConfig) => void;
   onClose?: () => void;
 }
+
+/** A source row: its glyph draws at 20px (findings-creation N19). */
+const sourceRow = (options: Parameters<typeof panelRow>[0]): HTMLButtonElement => {
+  const row = panelRow(options);
+
+  row.setAttribute('data-blok-database-source-row', '');
+
+  return row;
+};
 
 /** Rows before "Show more" (research 20 §2a, 41-linked-picker.png). */
 const FIRST_ROWS = 3;
@@ -110,14 +119,18 @@ export const openLinkedPicker = (options: LinkedPickerOptions): DatabasePanel =>
     const rows: HTMLElement[] = [];
 
     if (query === '') {
-      rows.push(panelRow({ label: t('tools.database.linkedNewEmpty'), testId: 'database-linked-new-empty', icon: IconPlus, onClick: () => {
+      const empty = panelRow({ label: t('tools.database.linkedNewEmpty'), testId: 'database-linked-new-empty', icon: IconPlus, onClick: () => {
         panel.close();
         options.newEmpty('');
-      } }));
+      } });
+
+      // research: Notion's row is 44px with the plus in a 30px gray tile (findings-creation N19).
+      empty.setAttribute('data-blok-database-panel-tiled', '');
+      rows.push(empty);
     }
     if (shown.length > 0) rows.push(panelLabel(t('tools.database.layoutExistingDataSources')));
     for (const source of shown) {
-      rows.push(panelRow({
+      rows.push(sourceRow({
         label: source.title === '' ? untitled : source.title,
         description: source.parent,
         testId: `database-linked-source-${source.id}`,
@@ -153,6 +166,7 @@ export const openLinkedPicker = (options: LinkedPickerOptions): DatabasePanel =>
 
   const sourcePage: PanelPage = {
     title: t('tools.database.linkedPanelTitle'),
+    headerAction: (panel) => panelCloseButton(panel, t('tools.database.close')),
     build: (panel) => {
       const search = panelInput({
         value: state.query,
@@ -171,7 +185,7 @@ export const openLinkedPicker = (options: LinkedPickerOptions): DatabasePanel =>
       // Back from "New view" rebuilds this page: the host's answer is kept.
       if (!state.asked) askHost(panel);
 
-      return [search, list];
+      return [search, panelSeparator(), list];
     },
   };
 
@@ -187,7 +201,14 @@ export const openLinkedPicker = (options: LinkedPickerOptions): DatabasePanel =>
     },
   });
 
+  panel.root.setAttribute('data-blok-database-creation-panel', '');
   panel.open();
+  // A fresh insert puts the caret in the block after the picker opened; the search takes it back.
+  requestAnimationFrame(() => {
+    const search = panel.root.querySelector<HTMLElement>('[data-blok-testid="database-linked-search"]');
+
+    if (!state.closed && search !== null && !panel.root.contains(document.activeElement)) search.focus();
+  });
 
   return panel;
 };

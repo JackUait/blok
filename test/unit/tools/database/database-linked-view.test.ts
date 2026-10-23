@@ -327,7 +327,9 @@ describe('DatabaseTool — linked view, research 20 §2', () => {
     buildDatabase(doc, 'linked', { initialView: 'table', linkPicker: true } as unknown as DatabaseData);
     const panel = panelById('database-linked-picker');
 
-    expect(panel?.querySelector('[data-blok-database-panel-header]')?.textContent).toBe('tools.database.linkedPanelTitle');
+    // The header also holds the × (findings-creation N19).
+    expect(panel?.querySelector('[data-blok-database-panel-header]')?.textContent?.trim()).toBe('tools.database.linkedPanelTitle');
+    expect(panel?.querySelector('[data-blok-database-panel-close]')).not.toBeNull();
     expect(panel?.querySelector('input')?.placeholder).toBe('tools.database.linkedSearch');
     expect(panel?.querySelector('[data-blok-database-panel-section]')?.textContent).toBe('tools.database.layoutExistingDataSources');
     expect(rowLabels(panel)).toEqual(['tools.database.linkedNewEmpty', 'Tasks', 'Notes', 'People', 'tools.database.linkedShowMore']);

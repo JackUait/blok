@@ -209,6 +209,17 @@ describe('list "+ New page" (findings-listgallery L18)', () => {
   });
 });
 
+describe('list file thumbnail (findings-listgallery L02)', () => {
+  it('draws an image file 30x20, rounded 4px, cropped to fill', () => {
+    const body = ruleBody(database, '[data-blok-database-list-file-thumb]');
+
+    expect(body).toContain('width: 30px');
+    expect(body).toContain('height: 20px');
+    expect(body).toContain('border-radius: var(--blok-radius-control-sm)');
+    expect(body).toContain('object-fit: cover');
+  });
+});
+
 describe('conditional color on calendar, timeline and feed (research/05 §6.2)', () => {
   const PAINTED = ':is([data-blok-database-calendar-event], [data-blok-database-timeline-bar], [data-blok-database-feed-card])[data-blok-database-color]';
 

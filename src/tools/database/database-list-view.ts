@@ -2,7 +2,8 @@ import { pageIconElement, pagePlaceholderIcon } from './page-icon';
 import type { I18n } from '../../../types';
 import type { DatabaseRow, PropertyDefinition, PropertyValue, SelectOption } from './types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
-import { readPropertyValue } from './property-values';
+import { filesOf, readPropertyValue } from './property-values';
+import { safeImageSrc } from '../../components/utils/sanitize-url';
 import { createOptionPill, renderCellValue } from './cells';
 import { shownStatusOption } from './cells/option-colors';
 import { rowCellContext } from './reminders';
@@ -730,6 +731,9 @@ export class DatabaseListView implements DatabaseViewRenderer {
     if (cell.hasAttribute('data-empty') || !cell.hasChildNodes()) {
       return null;
     }
+    if (propDef.type === 'files') {
+      showImageThumbnails(cell, value);
+    }
     // Notion's list shows a person as the avatar alone; the name stays for screen readers.
     cell.querySelectorAll('[data-blok-database-person-chip]').forEach((chip) => {
       chip.childNodes.forEach((node) => {
@@ -788,6 +792,28 @@ export class DatabaseListView implements DatabaseViewRenderer {
     return addRowBtn;
   }
 }
+
+/** Image file names and data URLs; any other file keeps its chip. */
+const IMAGE_FILE = /(\.(png|jpe?g|gif|webp|avif|svg|bmp)([?#].*)?$)|^data:image\//i;
+
+/** findings-listgallery L02: Notion's list shows an image file as a 30x20 thumbnail. */
+const showImageThumbnails = (cell: HTMLElement, value: PropertyValue | undefined): void => {
+  for (const file of filesOf(value)) {
+    const chip = cell.querySelector(`[data-blok-database-file-chip][data-file-id="${CSS.escape(file.id)}"]`);
+    const src = IMAGE_FILE.test(file.name) || IMAGE_FILE.test(file.url) ? safeImageSrc(file.url) : null;
+
+    if (chip !== null && src !== null) {
+      const img = document.createElement('img');
+
+      img.setAttribute('data-blok-database-list-file-thumb', '');
+      img.alt = file.name;
+      img.loading = 'lazy';
+      img.draggable = false;
+      img.src = src;
+      chip.replaceWith(img);
+    }
+  }
+};
 
 type Band = { left: number; top: number; right: number; bottom: number };
 

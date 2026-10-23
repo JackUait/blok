@@ -6494,6 +6494,14 @@ button[data-blok-database-column-count]:hover {
   white-space: nowrap;
 }
 
+[data-blok-database-list-file-thumb] {
+  display: block;
+  width: 30px;
+  height: 20px;
+  border-radius: var(--blok-radius-control-sm);
+  object-fit: cover;
+}
+
 [data-blok-database-list-row-property] [data-blok-database-cell] > * {
   flex-shrink: 0;
 }

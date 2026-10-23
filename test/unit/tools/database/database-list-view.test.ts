@@ -492,6 +492,27 @@ describe('DatabaseListView', () => {
       expect(slot(list, 'due')?.getAttribute('data-type')).toBe('date');
     });
 
+    // findings-listgallery L02: Notion's list shows an image file as a 30x20 thumbnail.
+    it('shows an image file as a thumbnail and keeps any other file as its chip', () => {
+      const filesSchema: PropertyDefinition[] = [
+        { id: 'title', name: 'Title', type: 'title', position: 'a0' },
+        { id: 'fl', name: 'Files', type: 'files', position: 'a1' },
+      ];
+      const list = new DatabaseListView({
+        readOnly: false, i18n, titlePropertyId: 'title', schema: filesSchema, visiblePropertyIds: ['fl'],
+        rows: [makeRow({ properties: { title: 'Row', fl: [
+          { id: 'f1', name: 'photo.png', url: 'https://example.com/photo.png' },
+          { id: 'f2', name: 'notes.pdf', url: 'https://example.com/notes.pdf' },
+        ] } })],
+      }).createView();
+      const thumb = list.querySelector<HTMLImageElement>('[data-property-id="fl"] img[data-blok-database-list-file-thumb]');
+
+      expect(thumb?.getAttribute('src')).toBe('https://example.com/photo.png');
+      expect(thumb?.alt).toBe('photo.png');
+      expect(list.querySelector('[data-property-id="fl"] [data-blok-database-file-chip][data-file-id="f1"]')).toBeNull();
+      expect(list.querySelector('[data-property-id="fl"] [data-blok-database-file-chip][data-file-id="f2"]')?.textContent).toBe('notes.pdf');
+    });
+
     it('leaves out a property with no value', () => {
       expect(slot(make(), 'notes')).toBeNull();
     });

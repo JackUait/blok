@@ -439,7 +439,8 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
   });
 
   describe('outside click', () => {
-    it('closes when mousedown lands on an element outside the drawer', () => {
+    // findings-rowpage R31: Notion's side peek stays open on a click beside it.
+    it('stays open when mousedown lands on an element outside a side peek', () => {
       const options = createOptions();
       const drawer = makeDrawer(options);
 
@@ -450,7 +451,7 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
       document.body.appendChild(outside);
       outside.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
 
-      expect(drawer.isOpen).toBe(false);
+      expect(drawer.isOpen).toBe(true);
     });
 
     it('stays open when mousedown lands inside the drawer', () => {

@@ -28,7 +28,7 @@ const iconOf = (kind: StarterChoice['kind']): string =>
 
 const counter = { next: 0 };
 
-const TAB_ICONS: Partial<Record<ViewType, string>> = { ...VIEW_ICONS, list: IconList };
+const TAB_ICONS: Partial<Record<ViewType, string>> = { ...VIEW_ICONS, list: IconListBulleted };
 
 /** A preview glyph: Blok's own icon constants, never user text. */
 const glyphOf = (svg: string): HTMLElement => {

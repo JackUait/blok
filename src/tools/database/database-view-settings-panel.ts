@@ -244,6 +244,23 @@ const SHOWN_IN_KEYS: Partial<Record<ViewType, string>> = {
   feed: 'settingsShownInFeed',
 };
 
+/** A picker's search text, kept across page redraws. */
+interface QueryState {
+  get: () => string;
+  set: (value: string) => void;
+}
+
+const queryState = (): QueryState => {
+  const box = { value: '' };
+
+  return {
+    get: () => box.value,
+    set: (value) => {
+      box.value = value;
+    },
+  };
+};
+
 /** The option colors Notion offers (research/08). */
 const COLORS = ['default', 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'] as const;
 
@@ -1296,28 +1313,88 @@ export class ViewSettingsPages {
   // ─── Property picker ───
 
   private pickProperty(title: string, types: readonly PropertyType[], onPick: (property: PropertyDefinition) => void): PanelPage {
+    const query = queryState();
+
     return {
       title,
-      build: () => this.ctx.schema()
-        .filter((p) => types.includes(p.type))
-        .map((property) => panelRow({
-          label: property.name,
-          testId: `database-pick-property-${property.id}`,
-          onClick: () => onPick(property),
-        })),
+      build: () => this.propertyPicker(query, types, onPick),
     };
+  }
+
+  /**
+   * findings V15: a search over the properties, Name first, then A→Z. Only
+   * the list redraws on input, so the field keeps its caret.
+   */
+  private propertyPicker(
+    query: QueryState,
+    types: readonly PropertyType[],
+    onPick: (property: PropertyDefinition) => void,
+    options: { leading?: () => HTMLElement[]; disabled?: boolean } = {}
+  ): HTMLElement[] {
+    const list = document.createElement('div');
+    const fill = (): void => {
+      const needle = query.get().trim().toLowerCase();
+      const choices = this.ctx.schema()
+        .filter((p) => types.includes(p.type) && p.name.toLowerCase().includes(needle))
+        .sort((a, b) => Number(b.type === 'title') - Number(a.type === 'title') || a.name.localeCompare(b.name));
+
+      list.replaceChildren(...(options.leading?.() ?? []), ...choices.map((property) => panelRow({
+        label: property.name,
+        testId: `database-pick-property-${property.id}`,
+        icon: propertyTypeMeta(property.type).icon,
+        disabled: options.disabled === true,
+        onClick: () => onPick(property),
+      })));
+    };
+    const search = panelInput({
+      value: query.get(),
+      placeholder: this.t('settingsSearchProperty'),
+      label: this.t('settingsSearchProperty'),
+      testId: 'database-property-picker-search',
+      onInput: (value) => {
+        query.set(value);
+        fill();
+      },
+    });
+
+    search.autofocus = true;
+    fill();
+
+    return [search, list];
   }
 
   // ─── Filters ───
 
   /** The Filter page: simple filters (reorderable), then the advanced filter. */
   filters(): PanelPage {
+    const pickState = queryState();
+
     return {
       title: this.t('settingsFilter'),
       build: (panel) => {
         const view = this.ctx.view();
         const schema = this.ctx.schema();
         const filters = withEntryIds(view.filters);
+
+        // findings V15: with no filter yet, the page is the property picker, the advanced filter at its foot.
+        if (filters.length === 0 && countFilterRules(view.filterTree) === 0) {
+          return [
+            ...this.propertyPicker(pickState, FILTERABLE_TYPES, (property) => {
+              const filter = defaultFilterFor(property);
+
+              this.ctx.updatePersonal({ filters: [filter] });
+              panel.push(this.simpleFilter(filter.id));
+            }),
+            panelSeparator(),
+            panelRow({
+              label: this.t('filterAdvanced'),
+              testId: 'database-filter-advanced',
+              icon: IconPlus,
+              muted: true,
+              onClick: () => panel.push(this.advanced()),
+            }),
+          ];
+        }
         const items = filters.flatMap((filter) => {
           const property = schema.find((p) => p.id === filter.propertyId);
 
@@ -1808,6 +1885,8 @@ export class ViewSettingsPages {
   // ─── Sorts ───
 
   sorts(): PanelPage {
+    const pickState = queryState();
+
     return {
       title: this.t('settingsSort'),
       build: (panel) => {
@@ -1817,6 +1896,11 @@ export class ViewSettingsPages {
           this.ctx.updatePersonal({ sorts: next });
           panel.refresh();
         };
+
+        // findings V15: with no sort yet, the page is the property picker.
+        if (sorts.length === 0) {
+          return this.propertyPicker(pickState, GROUPABLE_TYPES, (property) => write([{ id: nanoid(), propertyId: property.id, direction: 'asc' }]));
+        }
         const items = sorts.flatMap((sort) => {
           const property = schema.find((p) => p.id === sort.propertyId);
 
@@ -1903,6 +1987,7 @@ export class ViewSettingsPages {
     const setSettings = (patch: Partial<GroupSettings>): void =>
       this.ctx.updateView({ [settingsKey]: { ...settings(), ...patch } });
     const stateKey = (key: string): string => (sub ? `sub:${key}` : key);
+    const pickState = queryState();
 
     return {
       title: this.t(sub ? 'settingsSubGroup' : 'settingsGroup'),
@@ -1910,6 +1995,17 @@ export class ViewSettingsPages {
         const view = this.ctx.view();
         const property = this.property(sub ? view.subGroupBy : view.groupBy);
         const disabled = !this.shared;
+
+        // findings V15 (26-notion-group.png): ungrouped, the page is None, then the property picker.
+        if (!sub && property === undefined) {
+          return this.propertyPicker(pickState, GROUPABLE_TYPES, (picked) => {
+            this.ctx.updateView(groupByChange(this.ctx.view(), picked));
+            panel.refresh();
+          }, {
+            disabled,
+            leading: () => [panelRow({ label: this.t('settingsNone'), testId: 'database-group-none', checked: true, onClick: () => undefined })],
+          });
+        }
         const refreshAfter = (write: () => void): (() => void) => () => {
           write();
           panel.refresh();

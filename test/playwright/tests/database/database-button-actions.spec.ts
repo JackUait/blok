@@ -225,7 +225,7 @@ test.describe('button property: Edit pages in a data source', () => {
 
     const panel = page.getByTestId('database-button-filter');
 
-    await panel.getByRole('button', { name: 'Add filter' }).click();
+    // An empty filter list is the property picker (feel/findings-toolbar V15).
     await panel.getByTestId('database-pick-property-q-open').click();
 
     await expect.poll(async () => {

@@ -275,6 +275,68 @@ describe('view settings panel', () => {
     expect(exists('database-settings-duplicate')).toBe(false);
   });
 
+  // findings V15 (13-notion-filterpage.png, 26-notion-group.png): an empty Filter, Sort or Group is the property picker.
+  describe('empty Filter, Sort and Group pages', () => {
+    const picks = (): string[] => [...document.querySelectorAll<HTMLElement>('[data-blok-testid^="database-pick-property-"]')]
+      .map((row) => row.getAttribute('data-blok-testid')?.replace('database-pick-property-', '') ?? '');
+
+    it('Filter lists the properties, Name first then A→Z, with the advanced filter at the foot', () => {
+      harness().open();
+      click('database-settings-filter');
+
+      expect(picks()).toEqual(['title', 'num', 'due', 'owner', 'prog', 'stage']);
+      expect(exists('database-filter-add')).toBe(false);
+      expect(exists('database-filter-advanced')).toBe(true);
+    });
+
+    it('a Filter pick makes the filter and opens its editor; Back shows the filter list', () => {
+      const h = harness();
+
+      h.open();
+      click('database-settings-filter');
+      click('database-pick-property-num');
+
+      expect(h.state.view.filters).toHaveLength(1);
+      expect(document.querySelector('[data-blok-database-panel-header]')?.textContent).not.toContain('tools.database.settingsFilter');
+      click('database-panel-back');
+      expect(exists('database-filter-add')).toBe(true);
+    });
+
+    it('a Filter page opened straight from the toolbar keeps the panel open after a pick', () => {
+      const h = harness();
+      const panel = h.open('filter');
+
+      click('database-pick-property-num');
+      expect(h.state.view.filters).toHaveLength(1);
+      expect(panel.depth).toBe(2);
+    });
+
+    it('Sort lists the properties in the same order, and a pick makes the sort', () => {
+      const h = harness();
+
+      h.open();
+      click('database-settings-sort');
+      expect(picks()).toEqual(['title', 'num', 'due', 'owner', 'prog', 'stage']);
+      click('database-pick-property-due');
+
+      expect(h.state.view.sorts.map((sort) => sort.propertyId)).toEqual(['due']);
+      expect(exists('database-sort-add')).toBe(true);
+    });
+
+    it('Group lists None (checked), then Name, then A→Z; a pick groups', () => {
+      const h = harness();
+
+      h.open();
+      click('database-settings-group');
+      expect(document.querySelector('[data-blok-testid="database-group-none"]')?.getAttribute('aria-checked')).toBe('true');
+      expect(picks()).toEqual(['title', 'num', 'due', 'owner', 'prog', 'stage']);
+      click('database-pick-property-stage');
+
+      expect(h.state.view.groupBy).toBe('stage');
+      expect(exists('database-group-by')).toBe(true);
+    });
+  });
+
   it('lists Notion\'s settings rows (research/08)', () => {
     harness().open();
 
@@ -703,7 +765,6 @@ describe('view settings panel', () => {
     const h = harness();
 
     h.open('sort');
-    click('database-sort-add');
     click('database-pick-property-num');
 
     expect(h.ctx.updatePersonal).toHaveBeenCalled();
@@ -774,7 +835,6 @@ describe('view settings panel', () => {
     const h = harness();
 
     h.open('filter');
-    click('database-filter-add');
     click('database-pick-property-stage');
     click('database-filter-option-o1');
 
@@ -791,7 +851,6 @@ describe('view settings panel', () => {
 
     h.ctx.schema = () => [...schema, ...extra];
     h.open('filter');
-    click('database-filter-add');
 
     expect(exists('database-pick-property-att')).toBe(true);
     expect(exists('database-pick-property-uid')).toBe(true);
@@ -888,7 +947,6 @@ describe('view settings panel', () => {
     const h = harness();
 
     h.open('filter');
-    click('database-filter-add');
     click('database-pick-property-due');
     // A new date filter starts as "is within this week"; "Is" brings the value rows.
     click('database-filter-operator');
@@ -1299,7 +1357,6 @@ describe('view settings panel', () => {
 
     h.ctx.people = () => [{ id: 'u1', name: 'Ada' }];
     h.open('filter');
-    click('database-filter-add');
     click('database-pick-property-owner');
     click('database-filter-person-me');
     click('database-filter-person-u1');
@@ -1315,7 +1372,6 @@ describe('view settings panel', () => {
     h.ctx.relatedRows = () => [{ id: 'r1', title: 'One' }];
     h.ctx.thisPageDatabase = () => 'a';
     h.open('filter');
-    click('database-filter-add');
     click('database-pick-property-back');
     const rows = [...document.querySelectorAll('[data-blok-testid^="database-filter-related-"]')].map((el) => el.getAttribute('data-blok-testid'));
 
@@ -1333,7 +1389,6 @@ describe('view settings panel', () => {
     h.ctx.relatedRows = () => [{ id: 'c1', title: 'Uno' }];
     h.ctx.thisPageDatabase = () => 'a';
     h.open('filter');
-    click('database-filter-add');
     click('database-pick-property-toc');
 
     expect(document.querySelector('[data-blok-testid="database-filter-related-c1"]')).not.toBeNull();
@@ -1362,7 +1417,6 @@ describe('view settings panel', () => {
     h.ctx.schema = () => [...schema, related];
     h.ctx.relatedRows = () => [{ id: 'r1', title: 'One' }];
     h.open('filter');
-    click('database-filter-add');
     click('database-pick-property-back');
 
     expect(document.querySelector('[data-blok-testid="database-filter-related-this-page"]')).toBeNull();
@@ -1398,7 +1452,6 @@ describe('view settings panel', () => {
     click('database-panel-back');
 
     click('database-settings-filter');
-    click('database-filter-add');
     click('database-pick-property-num');
 
     expect(h.state.view.filters).toHaveLength(1);

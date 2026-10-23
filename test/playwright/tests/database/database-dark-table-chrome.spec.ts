@@ -254,6 +254,8 @@ for (const path of paths) {
       // The dark tertiary AA step: Notion's rgb(125, 122, 117) is 3.6:1 on the menu.
       await expect(page.getByTestId('database-settings-layout').locator('[data-blok-database-panel-value]')).toHaveCSS('color', 'rgb(143, 140, 135)');
       await page.getByTestId('database-settings-sort').click();
+      // An empty Sort page is the property picker; "Add sort" shows once a sort exists (feel/findings-toolbar V15).
+      await page.locator('[data-blok-testid^="database-pick-property-"]:not([data-blok-testid$="-search"])').first().click();
       await expect(page.getByTestId('database-sort-add')).toHaveCSS('color', 'rgb(173, 169, 163)');
     });
 

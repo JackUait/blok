@@ -146,6 +146,19 @@ describe('DatabasePropertyMenu', () => {
     menu.destroy();
   });
 
+  // feel/findings-table T11: every row of Notion's column header menu has a glyph.
+  it.each<PropertyType>([
+    'title', 'text', 'number', 'select', 'multiSelect', 'status', 'date', 'person', 'files', 'checkbox', 'url', 'email', 'phone',
+    'formula', 'relation', 'rollup', 'createdTime', 'createdBy', 'lastEditedTime', 'lastEditedBy', 'button', 'uniqueId', 'place',
+  ])('gives every %s property row an icon', (type) => {
+    const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: true, ...callbacks() });
+
+    menu.open(prop(type, type === 'status' ? { status: createDefaultStatusSettings() } : {}), document.createElement('button'));
+
+    expect(lastItems().filter((i) => (i.type ?? 'default') === 'default' && (i.icon ?? '') === '').map((i) => i.title)).toEqual([]);
+    menu.destroy();
+  });
+
   it('has no Customize layout without the host lever', () => {
     const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks() });
 

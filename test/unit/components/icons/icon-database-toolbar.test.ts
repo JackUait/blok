@@ -5,7 +5,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { IconFilter, IconSort } from '../../../../src/components/icons';
+import { IconFilter, IconSigma, IconSort } from '../../../../src/components/icons';
 
 const paths = (markup: string): string[] =>
   [ ...markup.matchAll(/<path d="([^"]+)"/g) ].map((m) => m[1]);
@@ -50,5 +50,22 @@ describe('database toolbar icons', () => {
     const flipped = upPoints.map(([x, y]) => [x + 6, 20 - y]);
 
     expect(new Set(downPoints.map((p) => p.join()))).toEqual(new Set(flipped.map((p) => p.join())));
+  });
+
+  it('Sigma: one stroke on the type cap and baseline, centred on x 10, its halves mirrored', () => {
+    const all = paths(IconSigma);
+    const at = { x: 0, y: 0 };
+    const points = [ ...all[0].matchAll(/([MLH])([\d.]+)(?: ([\d.]+))?/g) ].map(([, cmd, a, b]) => {
+      at.x = Number(a);
+      at.y = cmd === 'H' ? at.y : Number(b);
+
+      return [at.x, at.y];
+    });
+    const key = (list: number[][]): string[] => list.map((p) => p.join()).sort();
+
+    expect(all).toHaveLength(1);
+    expect([Math.min(...points.map(([, y]) => y)), Math.max(...points.map(([, y]) => y))]).toEqual([5, 15]);
+    expect((Math.min(...points.map(([x]) => x)) + Math.max(...points.map(([x]) => x))) / 2).toBe(10);
+    expect(key(points.map(([x, y]) => [x, 20 - y]))).toEqual(key(points));
   });
 });

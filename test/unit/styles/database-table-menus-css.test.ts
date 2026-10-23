@@ -29,3 +29,22 @@ describe('column header menu (T11)', () => {
     expect(declared(`${HEADER} [data-blok-popover-container]`, '--max-height')).toEqual(['calc(100dvh - 2 * var(--blok-space-3))']);
   });
 });
+
+describe('add property menu (T12)', () => {
+  it('is 400 wide with a two-column type grid', () => {
+    expect(declared('[data-blok-database-property-type-popover]', 'width')).toEqual(['400px']);
+    expect(declared('[data-blok-database-property-type-grid]', 'grid-template-columns')).toEqual(['repeat(2, minmax(0, 1fr))']);
+  });
+
+  it('caps its height and scrolls the types inside, so it never runs off screen', () => {
+    expect(declared('[data-blok-database-property-type-popover]', 'max-height')).toEqual(['min(360px, calc(100dvh - 2 * var(--blok-space-3)))']);
+    expect(declared('[data-blok-database-property-type-body]', 'overflow-y')).toEqual(['auto']);
+  });
+
+  it('has 32px rows with 20px glyphs and a sentence-case label', () => {
+    expect(declared('[data-blok-database-property-type-option]', 'min-height')).toEqual(['32px']);
+    expect(declared('[data-blok-database-property-type-option-icon] svg', 'width')).toEqual(['20px']);
+    expect(declared('[data-blok-database-property-type-heading]', 'text-transform')).toEqual([]);
+    expect(declared('[data-blok-database-property-type-heading]', 'font-size')).toEqual(['12px']);
+  });
+});

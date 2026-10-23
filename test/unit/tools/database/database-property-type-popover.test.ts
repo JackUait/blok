@@ -155,6 +155,21 @@ describe('DatabasePropertyTypePopover', () => {
       flow.destroy();
     });
 
+    // feel/findings-table T12: Notion's name field heads the menu; the types sit in a grid that scrolls under it.
+    it('puts the name field in a header and the types in one scrolling grid', () => {
+      const flow = new DatabasePropertyTypePopover({ onSelect: vi.fn(), withNameField: true });
+
+      flow.open(anchor);
+      const root = document.querySelector('[data-blok-database-property-type-popover]');
+      const header = root?.querySelector(':scope > [data-blok-database-property-type-header]');
+      const grid = root?.querySelector(':scope > [data-blok-database-property-type-body] > [data-blok-database-property-type-grid]');
+
+      expect(header?.querySelector('[data-blok-database-property-name-input]')).not.toBeNull();
+      expect(grid?.querySelectorAll(':scope > [data-blok-database-property-type-option]').length).toBeGreaterThan(10);
+      expect(root?.querySelector('[data-blok-database-property-type-body] > [data-blok-database-property-type-heading]')).not.toBeNull();
+      flow.destroy();
+    });
+
     it('does not render title or richText options', () => {
       popover.open(anchor);
       expect(document.querySelector('[data-blok-database-property-type-option="title"]')).toBeNull();

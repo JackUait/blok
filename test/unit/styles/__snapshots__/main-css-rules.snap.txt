@@ -7636,7 +7636,11 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 }
 
 [data-blok-database-property-type-popover] {
-  min-width: 210px;
+  display: flex;
+  flex-direction: column;
+  width: 400px;
+  max-width: calc(100vw - 2 * var(--blok-space-3));
+  max-height: min(360px, calc(100dvh - 2 * var(--blok-space-3)));
   background: var(--blok-database-popover-bg);
   border-radius: var(--blok-radius-surface);
   box-shadow: var(--blok-database-popover-shadow);
@@ -7650,12 +7654,27 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   transform-origin: top right;
 }
 
+[data-blok-database-property-type-header] {
+  display: flex;
+  flex-shrink: 0;
+}
+
+[data-blok-database-property-type-body] {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+[data-blok-database-property-type-grid] {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--blok-space-1);
+}
+
 [data-blok-database-property-type-heading] {
   padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--blok-database-add-text);
   user-select: none;
 }
@@ -7663,11 +7682,12 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 [data-blok-database-property-type-option] {
   display: flex;
   align-items: center;
-  gap: var(--blok-space-2-5);
-  padding: var(--blok-space-1-5) var(--blok-space-2);
+  gap: var(--blok-space-2);
+  min-height: 32px;
+  padding: 0 var(--blok-space-2);
   border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   cursor: pointer;
-  font-size: 13.5px;
+  font-size: 14px;
   color: var(--blok-database-tab-text-active);
   transition: background-color 100ms ease;
   user-select: none;
@@ -7685,8 +7705,8 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 20px;
+  height: 20px;
   color: var(--blok-database-tab-text-active);
   flex-shrink: 0;
   transition: color 100ms ease;
@@ -7697,8 +7717,8 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 }
 
 [data-blok-database-property-type-option-icon] svg {
-  width: 14px;
-  height: 14px;
+  width: 20px;
+  height: 20px;
 }
 
 [data-blok-database-confirm] {

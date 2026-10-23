@@ -51,17 +51,29 @@ export class DatabasePropertyTypePopover {
     const nameField = this.withNameField ? document.createElement('input') : null;
 
     if (nameField !== null) {
+      const header = document.createElement('div');
+
+      header.setAttribute('data-blok-database-property-type-header', '');
       nameField.type = 'text';
       nameField.setAttribute('data-blok-database-property-name-input', '');
       nameField.placeholder = this.i18n?.t('tools.database.propertyNamePlaceholder') ?? 'tools.database.propertyNamePlaceholder';
       nameField.setAttribute('aria-label', this.i18n?.t('tools.database.propertyName') ?? 'tools.database.propertyName');
-      popover.appendChild(nameField);
+      header.appendChild(nameField);
+      popover.appendChild(header);
     }
+
+    // The name field stays put; only the types scroll (feel/findings-table T12).
+    const body = document.createElement('div');
+    const grid = document.createElement('div');
+
+    body.setAttribute('data-blok-database-property-type-body', '');
+    grid.setAttribute('data-blok-database-property-type-grid', '');
 
     const heading = document.createElement('div');
     heading.setAttribute('data-blok-database-property-type-heading', '');
     heading.textContent = this.i18n?.t('tools.database.propertyTypeHeading') ?? 'tools.database.propertyTypeHeading';
-    popover.appendChild(heading);
+    body.append(heading, grid);
+    popover.appendChild(body);
 
     for (const type of addablePropertyTypes(this.hasPeople)) {
       const meta = propertyTypeMeta(type);
@@ -82,7 +94,7 @@ export class DatabasePropertyTypePopover {
         this.close();
       });
 
-      popover.appendChild(item);
+      grid.appendChild(item);
     }
 
     // Inside a top-layer modal (the layout builder): on body the top layer covers the menu and the focus trap takes the name field.

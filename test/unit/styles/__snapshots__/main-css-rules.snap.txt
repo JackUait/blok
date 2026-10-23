@@ -5806,6 +5806,11 @@ button[data-blok-database-column-count]:hover {
   background-color: var(--blok-database-pressed-bg);
 }
 
+[data-blok-database-template-menu] > [data-blok-popover-container] [data-blok-popover-item] {
+  height: 28px;
+  padding-block: 0;
+}
+
 [data-blok-popover][popover][data-blok-popover-custom-class~='blok-database-menu'] {
   transition: display 200ms allow-discrete, overlay 200ms allow-discrete;
 }

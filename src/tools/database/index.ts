@@ -6188,6 +6188,7 @@ export class DatabaseTool implements BlockTool {
     if (this.groupMenuPopover !== null) {
       this.groupMenuPopover.escapeClosesSubmenuFirst = true;
       this.groupMenuPopover.arrowLeftClosesSubmenu = false;
+      this.groupMenuPopover.getElement().setAttribute('data-blok-database-template-menu', '');
     }
   }
 

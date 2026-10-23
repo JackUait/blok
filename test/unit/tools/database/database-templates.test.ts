@@ -16,7 +16,7 @@ vi.mock('../../../../src/blok', () => ({
 
 interface MockItem { name?: string; element?: HTMLElement; onActivate?: () => void }
 
-const popovers = vi.hoisted(() => ({ items: [] as MockItem[][], made: [] as Array<{ escapeClosesSubmenuFirst: boolean; arrowLeftClosesSubmenu: boolean }> }));
+const popovers = vi.hoisted(() => ({ items: [] as MockItem[][], made: [] as Array<{ escapeClosesSubmenuFirst: boolean; arrowLeftClosesSubmenu: boolean; getElement: () => HTMLElement }> }));
 
 vi.mock('../../../../src/components/utils/popover', () => {
   class MockPopoverDesktop {
@@ -39,8 +39,10 @@ vi.mock('../../../../src/components/utils/popover', () => {
 
     off(): void {}
 
+    private readonly element = document.createElement('div');
+
     getElement(): HTMLElement {
-      return document.createElement('div');
+      return this.element;
     }
   }
 
@@ -261,6 +263,16 @@ describe('DatabaseTool — templates', () => {
     el.querySelector<HTMLButtonElement>('[data-blok-testid="database-toolbar-new-menu"]')?.click();
 
     expect(popovers.made.at(-1)?.escapeClosesSubmenuFirst).toBe(true);
+  });
+
+  // research/35 §1.8 (r35:150): the templates menu's rows are 28px; its own attribute scopes that to this menu.
+  it('marks the New menu as the templates menu', () => {
+    const { el } = buildDatabase(seed(), 'db', data(), { people });
+
+    popovers.made.length = 0;
+    el.querySelector<HTMLButtonElement>('[data-blok-testid="database-toolbar-new-menu"]')?.click();
+
+    expect(popovers.made.at(-1)?.getElement().hasAttribute('data-blok-database-template-menu')).toBe(true);
   });
 
   // research/36 §3.1: ArrowLeft leaves a template's "…" submenu open; only Escape closes it.

@@ -581,6 +581,15 @@ describe('round 13: research/35 §1.1-§1.3, §1.8', () => {
     expect(ruleBody("[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [aria-expanded=\"true\"] > [data-blok-popover-item-more]"))
       .toContain('background-color: var(--blok-database-hover-bg)');
   });
+
+  // r35:150: rows 352x28 with the "…" 2px below the row top. Only the templates menu's own rows: its submenu is a child popover.
+  it('templates menu rows are 28px, and no other menu\'s rows change', () => {
+    const ROW = '[data-blok-database-template-menu] > [data-blok-popover-container] [data-blok-popover-item]';
+
+    expect(ruleBody(ROW)).toContain('height: 28px');
+    expect(ruleBody(ROW)).toContain('padding-block: 0');
+    expect(ruleBody("[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover-item]")).toBe('');
+  });
 });
 
 describe('research/35 §9 and 36 §7: the place editor after a pick', () => {

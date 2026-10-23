@@ -163,4 +163,90 @@ describe('DatabaseCardDrawer shell', () => {
       drawer.destroy();
     });
   });
+
+  // R31: the page beside a side peek stays usable; only the center peek's backdrop closes on a click.
+  describe('clicks outside the peek', () => {
+    it('leave a side peek open', () => {
+      const page = document.createElement('p');
+
+      document.body.appendChild(page);
+      const drawer = new DatabaseCardDrawer(createOptions());
+
+      drawer.open(ROW, 'side');
+      page.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+
+      expect(drawer.isOpen).toBe(true);
+      drawer.destroy();
+    });
+
+    it('on the backdrop close a center peek', () => {
+      const onClose = vi.fn();
+      const drawer = new DatabaseCardDrawer(createOptions({ onClose }));
+
+      drawer.open(ROW, 'center');
+      q('[data-blok-database-peek-backdrop]')?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+
+      expect(drawer.isOpen).toBe(false);
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+  });
+
+  // Clicks beside a side peek reach other databases, so one page holds one peek, as in Notion.
+  describe('one peek per page', () => {
+    const shareHost = (): { host: HTMLElement; options: () => CardDrawerOptions } => {
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+        cb(0);
+
+        return 0;
+      });
+      vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1000);
+      const host = document.createElement('div');
+
+      vi.spyOn(host, 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 0, 800, 800));
+      document.body.appendChild(host);
+
+      return {
+        host,
+        options: () => {
+          const options = createOptions({ peekHost: () => host });
+
+          host.appendChild(options.wrapper);
+
+          return options;
+        },
+      };
+    };
+
+    it('closes the peek another database has open', () => {
+      const { options } = shareHost();
+      const onClose = vi.fn();
+      const first = new DatabaseCardDrawer({ ...options(), onClose });
+      const second = new DatabaseCardDrawer(options());
+
+      first.open(ROW, 'side');
+      second.open({ ...ROW, id: 'row-2' }, 'side');
+
+      expect(first.isOpen).toBe(false);
+      expect(onClose).toHaveBeenCalledOnce();
+      expect(second.isOpen).toBe(true);
+      second.destroy();
+      first.destroy();
+    });
+
+    it('keeps the page inset of the new peek when the old one finishes sliding out', () => {
+      const { host, options } = shareHost();
+      const firstOptions = options();
+      const first = new DatabaseCardDrawer(firstOptions);
+      const second = new DatabaseCardDrawer(options());
+
+      first.open(ROW, 'side');
+      second.open({ ...ROW, id: 'row-2' }, 'side');
+      firstOptions.wrapper.querySelector('[data-blok-database-drawer]')?.dispatchEvent(new Event('transitionend'));
+
+      expect(host.hasAttribute('data-blok-database-peek')).toBe(true);
+      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('656px');
+      second.destroy();
+      first.destroy();
+    });
+  });
 });

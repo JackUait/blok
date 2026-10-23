@@ -84,6 +84,10 @@ const PEEK_RESIZE_STEP = 16;
 const PEEK_WIDTH_KEY = 'blok:database-peek-width';
 /** Notion's pin arrows scroll 400px per click (research/09 §4). */
 const PIN_SCROLL_STEP = 400;
+/** One peek per page: opening one closes the other database's. */
+const openPeek: { drawer: DatabaseCardDrawer | null } = { drawer: null };
+/** The drawer whose inset a page shows; a peek still sliding out must not undo a newer one's. */
+const peekHostOwners = new WeakMap<HTMLElement, DatabaseCardDrawer>();
 
 /**
  * Runs `done` once, when the drawer's slide ends. Reduced motion turns that
@@ -665,6 +669,11 @@ export class DatabaseCardDrawer {
       return;
     }
 
+    if (openPeek.drawer !== null && openPeek.drawer !== this) {
+      openPeek.drawer.close();
+    }
+    openPeek.drawer = this;
+
     // Remove any drawer still animating out from a previous close
     const exiting = this.wrapper.querySelector('[data-blok-database-drawer]');
 
@@ -840,7 +849,8 @@ export class DatabaseCardDrawer {
     this.outsideClickHandler = (e: MouseEvent): void => {
       const target = e.target as Node | null;
 
-      if ((target && drawer.contains(target)) || this.mode === 'full' || (target !== null && this.builder?.contains(target) === true)) {
+      // Only the center peek closes on a click outside; the page beside a side peek stays usable.
+      if ((target && drawer.contains(target)) || this.mode !== 'center' || (target !== null && this.builder?.contains(target) === true)) {
         return;
       }
 
@@ -976,6 +986,9 @@ export class DatabaseCardDrawer {
 
     this.currentRowId = null;
     this.currentRow = null;
+    if (openPeek.drawer === this) {
+      openPeek.drawer = null;
+    }
 
     if (wasOpen) {
       this.onClose();
@@ -1019,6 +1032,9 @@ export class DatabaseCardDrawer {
 
     this.currentRowId = null;
     this.currentRow = null;
+    if (openPeek.drawer === this) {
+      openPeek.drawer = null;
+    }
   }
 
   /** The 12px col-resize handle on the side peek's inner edge (research/22 §10). */
@@ -1182,11 +1198,17 @@ export class DatabaseCardDrawer {
     const covered = getElementDirection(this.wrapper) === 'rtl' ? width - rect.left : rect.right - (window.innerWidth - width);
 
     this.peekHost = host;
+    peekHostOwners.set(host, this);
     host.setAttribute('data-blok-database-peek', '');
     host.style.setProperty('--_blok-peek-inset', `${Math.max(0, Math.round(covered))}px`);
   }
 
   private releasePeekHost(): void {
+    if (this.peekHost !== null && peekHostOwners.get(this.peekHost) !== this) {
+      this.peekHost = null;
+
+      return;
+    }
     this.peekHost?.removeAttribute('data-blok-database-peek');
     this.peekHost?.removeAttribute('data-blok-database-peek-resizing');
     this.peekHost?.style.removeProperty('--_blok-peek-inset');

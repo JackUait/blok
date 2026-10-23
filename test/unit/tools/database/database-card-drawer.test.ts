@@ -1516,13 +1516,13 @@ describe('DatabaseCardDrawer', () => {
   });
 
   describe('click outside to close', () => {
-    it('closes drawer when mousedown fires outside the drawer', () => {
+    it('closes a center peek when mousedown fires outside it', () => {
       const onClose = vi.fn();
       const options = createOptions({ onClose });
       const drawer = new DatabaseCardDrawer(options);
       const row = makeRow();
 
-      drawer.open(row);
+      drawer.open(row, 'center');
       onClose.mockClear();
 
        

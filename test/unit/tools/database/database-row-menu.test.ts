@@ -10,7 +10,7 @@ import type { DatabaseRow, PropertyDefinition } from '../../../../src/tools/data
 
 interface Item {
   title?: string;
-  icon?: string;
+  icon?: string | HTMLElement;
   type?: string;
   secondaryLabel?: string;
   element?: HTMLElement;

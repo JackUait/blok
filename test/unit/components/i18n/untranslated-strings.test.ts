@@ -712,7 +712,7 @@ for (const [locale, keys] of Object.entries(DATABASE_CHART_CSV_COGNATE_RETENTION
  */
 const DATABASE_AUTOMATION_COGNATE_RETENTIONS: Record<string, string[]> = {
   fil: ['tools.database.automationTarget'],
-  nl: ['tools.database.automationMode', 'tools.database.templateRepeatPresetWeek', 'tools.database.templateRepeatUnitWeek_one'],
+  nl: ['tools.database.automationMode', 'tools.database.templateRepeatPresetWeek', 'tools.database.templateRepeatUnitWeek_one', 'tools.database.filterUnitOneWeek'],
 };
 
 for (const [locale, keys] of Object.entries(DATABASE_AUTOMATION_COGNATE_RETENTIONS)) {

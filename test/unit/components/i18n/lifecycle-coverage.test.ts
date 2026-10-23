@@ -270,7 +270,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1875 + 126 + 488 + 4 closure for all 2493 keys', () => {
+  it('rebuilds a disjoint 1878 + 126 + 500 + 4 closure for all 2508 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -284,7 +284,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2493);
+    expect(lifecycle.size).toBe(2508);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -440,7 +440,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +2: rowEditedTodayAt and feedCreatedAt (research/35 §19).
       // +1: the form's respondent chip, formRespondentPill (research/36 §13).
       // +1: tools.file.preview, called by literal for the form's Preview button.
-      'executable-literal': 1875,
+      // +3: the relative date chip's "This" label (filterDateThisMonth / filterDateThisYear) and the search empty state's searchClear, called by literal.
+      'executable-literal': 1878,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -501,7 +502,9 @@ describe('current English catalog lifecycle coverage', () => {
       // -1: tools.file.preview moved to executable-literal (form Preview).
       // +1: the feed's Property visibility header, settingsShownInFeed, via the panel's prefixing t.
       // +1: Edit cadence's "Discard unsaved changes?" (templateRepeatDiscardTitle), via the panel's prefixing t.
-      'registered-namespace-compatible': 488,
+      // +12: the relative date filter, filter bar minimize and template menu heading keys,
+      // called through the database's prefixing t() (filterOperator.isBetween is composed from a short name).
+      'registered-namespace-compatible': 500,
       'catalog-only': 4,
     });
     expect(

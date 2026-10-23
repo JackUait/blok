@@ -287,19 +287,18 @@ test.describe('peek modes', () => {
     await expect(page.getByRole('grid')).toBeHidden();
   });
 
-  test('the header mode menu switches to a center peek and saves it on the view', async ({ page }) => {
+  // feel/findings-rowpage R19: titles only, and a pick changes this peek, not the view default.
+  test('the header mode menu switches this peek to a center peek and leaves the view default alone', async ({ page }) => {
     await mount(page, blocks());
     await openRow(page, 'r1');
     await page.getByRole('button', { name: 'Open pages in' }).click();
-    await expect(page.getByText('Open pages in a focused, centered modal.')).toBeVisible();
+    await expect(page.getByText('Open pages in a focused, centered modal.')).toHaveCount(0);
     await page.getByText('Center peek').click();
 
     await expect(peek(page)).toHaveAttribute('data-peek-mode', 'center');
-    await expect.poll(async () => {
-      const db = (await saved(page)).find((b) => b.id === 'db-1');
+    const db = (await saved(page)).find((b) => b.id === 'db-1');
 
-      return (db?.data.views as Array<Record<string, unknown>>)[0].openPagesIn;
-    }).toBe('center');
+    expect((db?.data.views as Array<Record<string, unknown>>)[0].openPagesIn).toBeUndefined();
   });
 
   test('steps between rows with the arrows and the shortcuts', async ({ page }) => {

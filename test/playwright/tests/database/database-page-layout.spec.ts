@@ -1278,7 +1278,7 @@ test.describe('row page layout', () => {
     await expect(title).toBeVisible();
     expect(await width()).toBeGreaterThan(720);
 
-    await peek(page).getByRole('button', { name: 'Actions' }).click();
+    await peek(page).getByRole('button', { name: 'Page settings & actions' }).click();
     const fullWidth = page.getByRole('switch', { name: 'Full width' });
 
     await expect(fullWidth).toHaveAttribute('aria-checked', 'true');

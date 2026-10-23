@@ -245,7 +245,7 @@ const openRowPage = async (page: Page, title: string): Promise<void> => {
 test('a duplicated page keeps its reminder, without the sent stamp, so the copy reminds too', async ({ page }) => {
   await mount(page, undefined, { 'p-due': { remind: '1_day_before', timeZone: 'Europe/Berlin', sentFor: '2027-06-14T07:00:00.000Z' } });
   await openRowPage(page, 'Alpha');
-  await page.getByRole('button', { name: 'Actions' }).click();
+  await page.getByRole('button', { name: 'Page settings & actions' }).click();
   await page.getByRole('menuitem', { name: 'Duplicate' }).click();
 
   await expect.poll(() => page.evaluate(async () => {

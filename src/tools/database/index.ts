@@ -6346,6 +6346,7 @@ export class DatabaseTool implements BlockTool {
       locale: editorLocale(this.api.i18n),
       cellContext: this.cellContext(),
       onPropertyEdit: (rowId, propertyId, anchor) => this.editCardProperty(rowId, propertyId, anchor),
+      ...(this.readOnly ? {} : { lassoRows: (rowIds: string[]) => this.selectRows(rowIds) }),
       ...(lanes !== null ? { subGroups: lanes.lanes } : {}),
       ...(viewConfig !== undefined ? { onLaneToggle: (key: string, collapsed: boolean) => this.saveGroupCollapse(viewConfig.id, `sub:${key}`, collapsed) } : {}),
       ...this.commentBadgeLever(),
@@ -8012,6 +8013,7 @@ export class DatabaseTool implements BlockTool {
       onPropertyEdit: (rowId: string, propertyId: string, anchor: HTMLElement) =>
         this.editCardProperty(rowId, propertyId, anchor, () => this.focusListProperty(rowId, propertyId, context), context),
       onNewBelow: (rowId: string, groupKey: string | null) => this.addListRowBelow(rowId, groupKey, context),
+      ...(context === undefined && !this.readOnly ? { lassoRows: (rowIds: string[]) => this.selectRows(rowIds) } : {}),
       onTitleEdit: (rowId: string, title: string) => {
         if (context !== undefined && !context.writable()) return;
         this.updateRowTitleBlock(rowId, titlePropId, title);
@@ -9711,7 +9713,7 @@ export class DatabaseTool implements BlockTool {
     this.pickRow(rowId, false, []);
   }
 
-  /** Gallery arrow keys and the calendar lasso: the selection becomes exactly these rows. */
+  /** Gallery arrow keys and the board, list and calendar lassos: the selection becomes exactly these rows. */
   private selectRows(rowIds: string[]): void {
     this.rowSelection.clear();
     rowIds.forEach((id) => this.rowSelection.add(id));

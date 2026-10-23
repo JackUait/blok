@@ -283,7 +283,8 @@ test.describe('a lasso from the page margin', () => {
     });
   }
 
-  test('across a board still selects the database block, as before', async ({ page }) => {
+  // research/35:237-238: a drag box picks board cards and list rows, never the database block.
+  test('across a board picks every card it touches, and not the block', async ({ page }) => {
     await mount(page, blocks({ type: 'board', groupBy: 'p-stage' }));
     const cardBox = await item(page, '[data-blok-database-card]', 'r1').boundingBox();
     const holder = await page.locator('[data-blok-editor]').boundingBox();
@@ -294,7 +295,45 @@ test.describe('a lasso from the page margin', () => {
 
     await lasso(page, { x: holder.x - 20, y: cardBox.y - 4 }, { x: cardBox.x + cardBox.width / 2, y: cardBox.y + cardBox.height / 2 });
 
-    await expect(database(page)).toHaveAttribute('data-blok-selected', 'true');
+    expect(await picked(page)).toEqual(['r1']);
+    await expect(database(page)).not.toHaveAttribute('data-blok-selected', 'true');
+  });
+
+  test('from the right margin across a list picks every row it touches, and not the block', async ({ page }) => {
+    await mount(page, blocks({ type: 'list' }));
+    const first = await item(page, '[data-blok-database-list-row]', 'r1').boundingBox();
+    const second = await item(page, '[data-blok-database-list-row]', 'r2').boundingBox();
+    const holder = await page.locator('[data-blok-editor]').boundingBox();
+
+    if (first === null || second === null || holder === null) {
+      throw new Error('no boxes');
+    }
+
+    await lasso(page, { x: holder.x + holder.width + 20, y: first.y + 4 }, { x: first.x + first.width - 40, y: second.y + second.height / 2 });
+
+    expect(await picked(page)).toEqual(['r1', 'r2']);
+    await expect(database(page)).not.toHaveAttribute('data-blok-selected', 'true');
+  });
+
+  test('started on empty board space, picks every card it touches and selects no text', async ({ page }) => {
+    await mount(page, blocks({ type: 'board', groupBy: 'p-stage' }));
+    const first = await item(page, '[data-blok-database-card]', 'r1').boundingBox();
+    const ship = await page.locator('[data-blok-database-column][data-option-id="o-ship"]').boundingBox();
+
+    if (first === null || ship === null) {
+      throw new Error('no boxes');
+    }
+
+    // From the empty board space under the shorter Ship column, up and left into the Idea column.
+    await lasso(page, { x: ship.x + 20, y: ship.y + ship.height + 10 }, { x: first.x + 20, y: first.y + first.height / 2 });
+
+    expect(await picked(page)).toEqual(['r1', 'r2', 'r3']);
+    await expect(database(page)).not.toHaveAttribute('data-blok-selected', 'true');
+    await expect(page.locator('[data-blok-database-board-lasso]')).toHaveCount(0);
+    await expect(page.locator('[data-blok-database-drawer]')).toHaveCount(0);
+    expect(await page.evaluate(() => window.getSelection()?.toString() ?? '')).toBe('');
+
+    await page.keyboard.press('Escape');
     expect(await picked(page)).toEqual([]);
   });
 });

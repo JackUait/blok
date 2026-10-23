@@ -57,6 +57,8 @@ interface DatabaseBoardViewOptions {
   commentBadges?: CommentBadges;
   /** The add-card label: the default template's name (research/27 shot 04). Absent: "New page". */
   addCardLabel?: string;
+  /** A lasso from the margin or a drag box over empty board space: these cards become the selection. Absent when read-only. */
+  lassoRows?: (rowIds: string[]) => void;
 }
 
 export interface BoardLane {
@@ -73,6 +75,24 @@ const CARD_WIDTH: Record<CardSize, number> = { small: 220, medium: 260, large: 3
 /** The column's 8px padding on each side (research/07). */
 const COLUMN_PADDING = 16;
 const CELL_LINK = 'a[data-blok-database-cell-link]';
+/** Presses that belong to something else: a card, a header, a control. */
+const BOX_START_BLOCKERS = [
+  '[data-blok-database-card]', '[data-blok-database-column-header]', '[data-blok-database-board-heads]', '[data-blok-database-board-lane-header]',
+  'button', 'a', 'input', 'textarea', '[role="button"]', '[contenteditable="true"]',
+].join(', ');
+/** Pixels a press must move before it draws a box, as in the calendar. */
+const BOX_THRESHOLD = 4;
+
+type Band = { left: number; top: number; right: number; bottom: number };
+
+const isBand = (value: unknown): value is Band =>
+  typeof value === 'object' && value !== null && 'left' in value && 'top' in value && 'right' in value && 'bottom' in value;
+
+const touches = (el: Element, band: Band): boolean => {
+  const r = el.getBoundingClientRect();
+
+  return r.right > band.left && r.left < band.right && r.bottom > band.top && r.top < band.bottom;
+};
 
 /**
  * DOM rendering layer for the kanban board.
@@ -90,8 +110,9 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
   private readonly hiddenGroupCount: number;
   private readonly aggregate: ((optionId: string) => string) | undefined;
   private readonly aggregateHint: string | undefined;
-  private readonly settings: Pick<DatabaseBoardViewOptions, 'view' | 'schema' | 'bodyOf' | 'locale' | 'onPropertyEdit' | 'subGroups' | 'onLaneToggle' | 'cellContext' | 'getTotal' | 'onLoadMore' | 'commentBadges' | 'addCardLabel'>;
+  private readonly settings: Pick<DatabaseBoardViewOptions, 'view' | 'schema' | 'bodyOf' | 'locale' | 'onPropertyEdit' | 'subGroups' | 'onLaneToggle' | 'cellContext' | 'getTotal' | 'onLoadMore' | 'commentBadges' | 'addCardLabel' | 'lassoRows'>;
   private root: HTMLElement | null = null;
+  private box: { startX: number; startY: number; el: HTMLElement | null; picked: string | null } | null = null;
 
   constructor({
     readOnly, i18n, options, getRows, titlePropertyId, onTitleEdit, hideCounts, hiddenGroupCount, aggregate, aggregateHint, ...settings
@@ -177,9 +198,107 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     boardArea.querySelector<HTMLElement>('[data-blok-database-card]')?.setAttribute('tabindex', '0');
     boardArea.addEventListener('click', this.onCardPropertyClick);
     boardArea.addEventListener('keydown', this.onCardKeyDown);
+    if (!this.readOnly && this.settings.lassoRows !== undefined) {
+      // Core leaves Shift-click inside to the tool and hands a margin lasso to onLasso.
+      boardArea.setAttribute('data-blok-selection-owner', '');
+      boardArea.addEventListener('blok-lasso', this.onLasso);
+      boardArea.addEventListener('pointerdown', this.onBoxStart);
+    }
     this.root = wrapper;
 
     return wrapper;
+  }
+
+  private readonly onLasso = (event: Event): void => {
+    const detail: unknown = event instanceof CustomEvent ? event.detail : null;
+    const band = typeof detail === 'object' && detail !== null && 'rect' in detail ? detail.rect : null;
+
+    if (isBand(band)) {
+      event.preventDefault();
+    }
+    this.settings.lassoRows?.(isBand(band) ? this.cardsIn(band) : []);
+  };
+
+  /** research/35:237: a drag box from empty board space picks every card it touches. */
+  private readonly onBoxStart = (event: PointerEvent): void => {
+    const target = event.target instanceof Element ? event.target : null;
+    const area = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+
+    if (target === null || area === null || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey
+      || target.closest(BOX_START_BLOCKERS) !== null
+      // The area's own horizontal scrollbar sits below its client height.
+      || (target === area && event.clientY >= area.getBoundingClientRect().top + area.clientHeight)) {
+      return;
+    }
+    this.box = { startX: event.clientX, startY: event.clientY, el: null, picked: null };
+    document.addEventListener('pointermove', this.onBoxMove);
+    document.addEventListener('pointerup', this.endBox);
+    document.addEventListener('pointercancel', this.endBox);
+    document.addEventListener('selectstart', this.preventDefault);
+  };
+
+  private readonly preventDefault = (event: Event): void => {
+    event.preventDefault();
+  };
+
+  private readonly onBoxMove = (event: PointerEvent): void => {
+    const box = this.box;
+
+    if (box === null) {
+      return;
+    }
+    if (box.el === null) {
+      if (Math.hypot(event.clientX - box.startX, event.clientY - box.startY) < BOX_THRESHOLD) {
+        return;
+      }
+      box.el = document.createElement('div');
+      box.el.setAttribute('data-blok-database-board-lasso', '');
+      box.el.setAttribute('aria-hidden', 'true');
+      // Fixed, in client coordinates: the board area scrolls sideways and is not positioned.
+      Object.assign(box.el.style, { position: 'fixed', zIndex: '2', pointerEvents: 'none', backgroundColor: 'var(--blok-selection-highlight)' });
+      this.root?.appendChild(box.el);
+    }
+
+    const band = {
+      left: Math.min(box.startX, event.clientX),
+      top: Math.min(box.startY, event.clientY),
+      right: Math.max(box.startX, event.clientX),
+      bottom: Math.max(box.startY, event.clientY),
+    };
+
+    Object.assign(box.el.style, {
+      left: `${band.left}px`, top: `${band.top}px`, width: `${band.right - band.left}px`, height: `${band.bottom - band.top}px`,
+    });
+
+    const touched = this.cardsIn(band);
+    const key = touched.join(' ');
+
+    if (key !== box.picked) {
+      box.picked = key;
+      this.settings.lassoRows?.(touched);
+    }
+  };
+
+  private readonly endBox = (): void => {
+    this.box?.el?.remove();
+    this.box = null;
+    document.removeEventListener('pointermove', this.onBoxMove);
+    document.removeEventListener('pointerup', this.endBox);
+    document.removeEventListener('pointercancel', this.endBox);
+    document.removeEventListener('selectstart', this.preventDefault);
+  };
+
+  destroy(): void {
+    this.endBox();
+  }
+
+  /** Row ids of the shown cards a client-coordinate band touches, in board order. */
+  private cardsIn(band: Band): string[] {
+    const touched = [...(this.root?.querySelectorAll<HTMLElement>('[data-blok-database-card]') ?? [])]
+      .filter((cardEl) => cardEl.closest('[data-blok-database-board-lane][data-collapsed]') === null && touches(cardEl, band))
+      .map((cardEl) => cardEl.getAttribute('data-row-id') ?? '');
+
+    return [...new Set(touched)];
   }
 
   /** Redraws these cards' property lines from the given rows, as a bulk edit types (research/35:234). */

@@ -43,6 +43,8 @@ interface DatabaseListViewOptions {
   getTotal?: (optionId: string) => number;
   /** "Load more" for a group, or `''` for the flat list. */
   onLoadMore?: (groupKey: string) => void;
+  /** A lasso from the page margin: these rows become the selection. Absent when read-only. */
+  lassoRows?: (rowIds: string[]) => void;
 }
 
 /** Types without an editor: computed, or written by Blok itself. */
@@ -71,7 +73,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
   private readonly showPageIcon: boolean;
   private readonly onToggleCollapse: ((optionId: string, collapsed: boolean) => void) | undefined;
   private readonly settings: Pick<DatabaseListViewOptions,
-    'cellContext' | 'commentBadges' | 'locale' | 'onPropertyEdit' | 'onNewBelow' | 'onTitleEdit' | 'total' | 'getTotal' | 'onLoadMore'>;
+    'cellContext' | 'commentBadges' | 'locale' | 'onPropertyEdit' | 'onNewBelow' | 'onTitleEdit' | 'total' | 'getTotal' | 'onLoadMore' | 'lassoRows'>;
   private wrapper: HTMLDivElement | null = null;
 
   constructor({ readOnly, i18n, rows, titlePropertyId, schema, visiblePropertyIds, options, getRows, collapsedGroupIds, onToggleCollapse, showPageIcon, ...settings }: DatabaseListViewOptions) {
@@ -135,10 +137,33 @@ export class DatabaseListView implements DatabaseViewRenderer {
     wrapper.querySelector(ROW_SELECTOR)?.setAttribute('tabindex', '0');
     wrapper.addEventListener('click', this.onClick);
     wrapper.addEventListener('keydown', this.onKeyDown);
+    if (!this.readOnly && this.settings.lassoRows !== undefined) {
+      // Core leaves Shift-click inside to the tool and hands a margin lasso to onLasso.
+      wrapper.setAttribute('data-blok-selection-owner', '');
+      wrapper.addEventListener('blok-lasso', this.onLasso);
+    }
     this.wrapper = wrapper;
 
     return wrapper;
   }
+
+  /** research/35:238: a lasso from the right margin picks every row it touches. */
+  private readonly onLasso = (event: Event): void => {
+    const detail: unknown = event instanceof CustomEvent ? event.detail : null;
+    const band = typeof detail === 'object' && detail !== null && 'rect' in detail ? detail.rect : null;
+
+    if (!isBand(band)) {
+      this.settings.lassoRows?.([]);
+
+      return;
+    }
+    event.preventDefault();
+    const touched = [...(this.wrapper?.querySelectorAll<HTMLElement>(ROW_SELECTOR) ?? [])]
+      .filter((rowEl) => rowEl.closest('[data-blok-database-list-group][data-collapsed]') === null && touches(rowEl, band))
+      .map((rowEl) => rowEl.getAttribute('data-row-id') ?? '');
+
+    this.settings.lassoRows?.([...new Set(touched)]);
+  };
 
   /** Redraws these rows' properties from the given rows, as a bulk edit types (research/35:235). */
   showDraft(rows: DatabaseRow[]): void {
@@ -640,3 +665,14 @@ export class DatabaseListView implements DatabaseViewRenderer {
     return addRowBtn;
   }
 }
+
+type Band = { left: number; top: number; right: number; bottom: number };
+
+const isBand = (value: unknown): value is Band =>
+  typeof value === 'object' && value !== null && 'left' in value && 'top' in value && 'right' in value && 'bottom' in value;
+
+const touches = (el: Element, band: Band): boolean => {
+  const r = el.getBoundingClientRect();
+
+  return r.right > band.left && r.left < band.right && r.bottom > band.top && r.top < band.bottom;
+};

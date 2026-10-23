@@ -2627,7 +2627,7 @@ describe('DatabaseTool', () => {
       expect(insertCall[2]).toMatchObject({ parentId: 'test-block-id', position: 'end' });
     });
 
-    it('clicking delete-row button calls api.blocks.delete', () => {
+    it('the row menu\'s Move to Trash, opened from the ⋮⋮, calls api.blocks.delete', () => {
       const childBlocks = makeListChildBlocks();
       const options = createDatabaseOptions(makeListData(), {}, { childBlocks });
 
@@ -2636,11 +2636,11 @@ describe('DatabaseTool', () => {
       const tool = new DatabaseTool(options);
       const element = tool.render();
       tool.rendered();
-      const deleteBtn = queryByData(element, 'data-blok-database-delete-row')!;
-      deleteBtn.click();
+      queryByData(element, 'data-blok-database-list-row-handle')!.click();
+      queryByData(document.body, 'data-mock-popover-action', /movetotrash/)!.click();
+      expect(options.api.blocks.getBlockIndex).toHaveBeenCalledWith('row-1');
       expect(options.api.blocks.delete).toHaveBeenCalledTimes(1);
-      // Observable behavior: the row should be removed from the model
-      expect(queryAllByData(element, 'data-blok-database-list-row')).toHaveLength(1);
+      queryByData(document.body, 'data-mock-popover')?.remove();
     });
 
     it('clicking a list row opens the card drawer', () => {

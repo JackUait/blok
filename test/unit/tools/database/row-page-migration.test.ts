@@ -65,6 +65,10 @@ const databaseData: DatabaseData = {
   activeViewId: 'view-1',
 };
 
+/** Deletes rows as the row menu's Move to Trash does; the list has no delete button. */
+const deleteRows = (tool: DatabaseTool, rowIds: string[]): void =>
+  (tool as unknown as { deleteTableRows: (ids: string[]) => void }).deleteTableRows(rowIds);
+
 const deferred = <T>(): { promise: Promise<T>; resolve(value: T): void; reject(reason: Error): void } => {
   let resolve: ((value: T) => void) | undefined;
   let reject: ((reason: Error) => void) | undefined;
@@ -546,10 +550,7 @@ describe('database row page migration', () => {
       expect(adapter.createProperty).toHaveBeenCalledTimes(1);
       expect(adapter.updateRow).not.toHaveBeenCalled();
 
-      const deleteButton = queryAllByAttribute('data-blok-database-delete-row', harness.databaseElement, '')[0];
-
-      if (deleteButton === undefined) throw new Error('row delete button was not rendered');
-      deleteButton.click();
+      deleteRows(harness.tool, ['row-1']);
       await vi.waitFor(() => {
         expect(adapter.deleteRow).toHaveBeenCalledWith({ rowId: 'row-1' });
         expect(persistedRows.has('row-1')).toBe(false);
@@ -559,9 +560,8 @@ describe('database row page migration', () => {
 
       if (createdProperty === undefined) throw new Error('body property was not created');
       creation.resolve(createdProperty);
-      await vi.waitFor(() => {
-        expect(harness.editorHolder.hasAttribute('inert')).toBe(false);
-      });
+      // Move to Trash closes the row's page, so its editor is never released; let the creation settle.
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(persistedRows.has('row-1')).toBe(false);
       expect(adapter.updateRow).not.toHaveBeenCalled();
@@ -587,11 +587,7 @@ describe('database row page migration', () => {
     };
     const harness = await openLegacyRowWithBody(rowPages, legacy, (data) => {
       if (data.pageId !== 'row-page') return;
-      const deleteButton = queryAllByAttribute('data-blok-database-delete-row', harness.databaseElement, '')
-        .find((button) => button.getAttribute('data-row-id') === 'row-1');
-
-      if (deleteButton === undefined) throw new Error('row delete button was not rendered');
-      deleteButton.click();
+      deleteRows(harness.tool, ['row-1']);
     }, undefined, listData, true);
 
     try {

@@ -72,11 +72,14 @@ describe('list rows (research/07)', () => {
 });
 
 describe('list row widths (findings-listgallery L01)', () => {
-  it('keeps the title at least 120px wide and lets it grow', () => {
-    const body = ruleBody(database, '[data-blok-database-list-row-title]');
+  // The title box holds the title and the Edit pencil right after its text (L04).
+  it('keeps the title box at least 120px wide and lets it grow; the title hugs its text', () => {
+    const box = ruleBody(database, '[data-blok-database-list-row-main]');
 
-    expect(body).toContain('flex: 1 1 auto');
-    expect(body).toContain('min-width: 120px');
+    expect(box).toContain('flex: 1 1 auto');
+    expect(box).toContain('min-width: 120px');
+    expect(ruleBody(database, '[data-blok-database-list-row-title]')).toContain('flex: 0 1 auto');
+    expect(ruleBody(database, '[data-blok-database-list-row-title]')).toContain('min-width: 0');
   });
 
   it('lets the properties shrink and clip inside the row', () => {
@@ -102,6 +105,48 @@ describe('list row widths (findings-listgallery L01)', () => {
     for (const type of ['date', 'number']) {
       expect(ruleBody(database, `[data-blok-database-list-row-property][data-type="${type}"]`)).toContain('max-width: max(150px, 14%)');
     }
+  });
+});
+
+describe('list row hover chrome (findings-listgallery L03, L04)', () => {
+  it('draws the gutter "+" 24px square beside the 18x24 ⋮⋮', () => {
+    expect(ruleBody(database, '[data-blok-database-list-row-add]')).toContain('width: 24px');
+    expect(ruleBody(database, '[data-blok-database-list-row-add]')).toContain('height: 24px');
+  });
+
+  it('shows the white 26x20 Edit pencil only while the row is hovered', () => {
+    const body = ruleBody(database, '[data-blok-database-list-row-edit]');
+
+    expect(body).toContain('display: none');
+    expect(body).toContain('width: 26px');
+    expect(body).toContain('height: 20px');
+    expect(body).toContain('border-radius: var(--blok-radius-control)');
+    expect(body).toContain('background: var(--blok-database-card-actions-bg)');
+    expect(body).toContain('box-shadow: var(--blok-database-card-actions-shadow)');
+    expect(ruleBody(database, '[data-blok-database-list-row]:hover [data-blok-database-list-row-edit]')).toContain('display: inline-flex');
+  });
+
+  it('keeps no open or delete button styles for the list', () => {
+    expect(database).not.toContain('[data-blok-database-list-row-open]');
+    expect(database).not.toContain('[data-blok-database-list-row-properties] [data-blok-database-delete-row]');
+  });
+});
+
+describe('list title edit (findings-listgallery L05)', () => {
+  it('edits the title in place at its own type, with a gray placeholder', () => {
+    const body = ruleBody(database, '[data-blok-database-list-title-input]');
+
+    expect(body).toContain('flex: 1 1 auto');
+    expect(body).toContain('font-size: 14px');
+    expect(body).toContain('line-height: 21px');
+    expect(body).toContain('font-weight: 500');
+    expect(body).toContain('border: none');
+    expect(ruleBody(database, '[data-blok-database-list-title-input]::placeholder')).toContain('color: var(--blok-database-add-text)');
+  });
+
+  it('keeps Open in side peek and the page glyph showing while the title is edited', () => {
+    expect(ruleBody(database, '[data-blok-database-list-row][data-editing] [data-blok-database-list-row-edit]')).toContain('display: inline-flex');
+    expect(ruleBody(database, '[data-blok-database-list-row] > [data-blok-database-page-icon-placeholder]')).toContain('width: 18px');
   });
 });
 

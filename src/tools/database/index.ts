@@ -8086,6 +8086,7 @@ export class DatabaseTool implements BlockTool {
       onPropertyEdit: (rowId: string, propertyId: string, anchor: HTMLElement) =>
         this.editCardProperty(rowId, propertyId, anchor, () => this.focusListProperty(rowId, propertyId, context), context),
       onNewBelow: (rowId: string, groupKey: string | null) => this.addListRowBelow(rowId, groupKey, context),
+      onOpenRow: (rowId: string) => (context === undefined ? this.handleRowClick(rowId) : context.openRow(rowId)),
       ...(context === undefined && !this.readOnly ? { lassoRows: (rowIds: string[]) => this.selectRows(rowIds) } : {}),
       onTitleEdit: (rowId: string, title: string) => {
         if (context !== undefined && !context.writable()) return;
@@ -8654,7 +8655,15 @@ export class DatabaseTool implements BlockTool {
       position: rowData.position,
     });
     this.markFresh(rowData.id);
-    this.openIfFiltered(rowData.id, context);
+    if (this.openIfFiltered(rowData.id, context)) return;
+    // findings-listgallery L05: the new row opens with its title being edited. A widget redraws first.
+    if (context !== undefined) {
+      const state = context.state;
+
+      state.pendingTitle = rowData.id;
+    } else if (renderer instanceof DatabaseListView) {
+      renderer.editTitle(rowData.id);
+    }
   }
 
   /** The clicked group's value wins over a filter on the same property. */

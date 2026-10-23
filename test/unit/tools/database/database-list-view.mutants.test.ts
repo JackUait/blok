@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { IconChevronDown, IconMenu } from '../../../../src/components/icons';
+import { IconChevronDown, IconMenu, IconPencil, IconPlus } from '../../../../src/components/icons';
 import { DatabaseListView } from '../../../../src/tools/database/database-list-view';
 import type { DatabaseRow, PropertyDefinition, SelectOption } from '../../../../src/tools/database/types';
 import type { I18n } from '../../../../types';
@@ -37,27 +37,30 @@ const createI18n = (): I18n => ({
 const attrs = (el: Element): Record<string, string> =>
   Object.fromEntries(Array.from(el.attributes).map((attr): [string, string] => [attr.name, attr.value]));
 
-const rowPropsHtml = (rowId: string): string =>
-  '<div data-blok-database-list-row-properties="">'
-  + '<button data-blok-database-list-row-open="" aria-label="T(tools.database.openRow)"></button>'
-  + `<button data-blok-database-delete-row="" data-row-id="${rowId}" aria-label="T(tools.database.deleteRow)">×</button>`
-  + '</div>';
+const rowPropsHtml = (_rowId: string): string => '<div data-blok-database-list-row-properties=""></div>';
 
-/** The editable row's ⋮⋮, as the DOM serializes it. */
-const gutterHtml = (rowId: string): string => {
+/** An icon string as the DOM serializes it. */
+const serialized = (svg: string): string => {
   const icon = document.createElement('div');
 
-  icon.innerHTML = IconMenu;
+  icon.innerHTML = svg;
 
-  return '<div data-blok-database-list-row-gutter="">'
-    + `<button type="button" data-blok-database-list-row-handle="" data-row-id="${rowId}" aria-label="T(tools.database.tableDragHandle)" tabindex="-1">${icon.innerHTML}</button>`
-    + '</div>';
+  return icon.innerHTML;
 };
+
+/** The editable row's "+" and ⋮⋮, as the DOM serializes them. */
+const gutterHtml = (rowId: string): string =>
+  '<div data-blok-database-list-row-gutter="">'
+  + `<button type="button" data-blok-database-list-row-add="" aria-label="T(tools.database.tableAddBelow)" tabindex="-1">${serialized(IconPlus)}</button>`
+  + `<button type="button" data-blok-database-list-row-handle="" data-row-id="${rowId}" aria-label="T(tools.database.tableDragHandle)" tabindex="-1">${serialized(IconMenu)}</button>`
+  + '</div>';
+
+const EDIT_HTML = `<button type="button" data-blok-database-list-row-edit="" aria-label="T(tools.database.editCardTitle)" tabindex="-1">${serialized(IconPencil)}</button>`;
 
 const rowHtml = (rowId: string, title: string, tabindex = '0'): string =>
   `<div data-blok-database-list-row="" data-row-id="${rowId}" role="listitem" tabindex="${tabindex}">`
   + gutterHtml(rowId)
-  + `<div data-blok-database-list-row-title="">${title}</div>`
+  + `<div data-blok-database-list-row-main=""><div data-blok-database-list-row-title="">${title}</div>${EDIT_HTML}</div>`
   + rowPropsHtml(rowId)
   + '</div>';
 
@@ -445,6 +448,7 @@ describe('createView — grouped branch', () => {
       expect(attrs(badge ?? document.createElement('span'))).toStrictEqual({
         'data-blok-database-list-row-property': '',
         'data-property-id': 'done',
+        'data-type': 'checkbox',
         'data-editable': '',
         tabindex: '-1',
         role: 'button',
@@ -537,6 +541,7 @@ describe('createView — grouped branch', () => {
       expect(attrs(badge ?? document.createElement('span'))).toStrictEqual({
         'data-blok-database-list-row-property': '',
         'data-property-id': 'status',
+        'data-type': 'select',
       });
     });
 

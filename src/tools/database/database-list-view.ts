@@ -1,4 +1,4 @@
-import { pageIconElement } from './page-icon';
+import { pageIconElement, pagePlaceholderIcon } from './page-icon';
 import type { I18n } from '../../../types';
 import type { DatabaseRow, PropertyDefinition, PropertyValue, SelectOption } from './types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
@@ -6,7 +6,7 @@ import { readPropertyValue } from './property-values';
 import { renderCellValue } from './cells';
 import { rowCellContext } from './reminders';
 import type { CellContext } from './cells';
-import { IconChevronDown, IconMenu } from '../../components/icons';
+import { IconChevronDown, IconMenu, IconPencil, IconPlus, IconSidebarRight } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
 import { onHover } from '../../components/utils/tooltip';
 import { propertyHint } from './property-hint';
@@ -37,6 +37,8 @@ interface DatabaseListViewOptions {
   /** Shift+Enter on a row: a new item below it, in the same group (`null` when ungrouped). */
   onNewBelow?: (rowId: string, groupKey: string | null) => void;
   onTitleEdit?: (rowId: string, title: string) => void;
+  /** Open in side peek on a title being edited. Saving the title may redraw the view, so a bubbling click is not enough. */
+  onOpenRow?: (rowId: string) => void;
   /** Rows the flat list holds in all, when `rows` is only the first page (load limit). */
   total?: number;
   /** A group's full row count when `getRows` gives only the first page. */
@@ -73,7 +75,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
   private readonly showPageIcon: boolean;
   private readonly onToggleCollapse: ((optionId: string, collapsed: boolean) => void) | undefined;
   private readonly settings: Pick<DatabaseListViewOptions,
-    'cellContext' | 'commentBadges' | 'locale' | 'onPropertyEdit' | 'onNewBelow' | 'onTitleEdit' | 'total' | 'getTotal' | 'onLoadMore' | 'lassoRows'>;
+    'cellContext' | 'commentBadges' | 'locale' | 'onPropertyEdit' | 'onNewBelow' | 'onTitleEdit' | 'onOpenRow' | 'total' | 'getTotal' | 'onLoadMore' | 'lassoRows'>;
   private wrapper: HTMLDivElement | null = null;
 
   constructor({ readOnly, i18n, rows, titlePropertyId, schema, visiblePropertyIds, options, getRows, collapsedGroupIds, onToggleCollapse, showPageIcon, ...settings }: DatabaseListViewOptions) {
@@ -136,6 +138,14 @@ export class DatabaseListView implements DatabaseViewRenderer {
 
     wrapper.querySelector(ROW_SELECTOR)?.setAttribute('tabindex', '0');
     wrapper.addEventListener('click', this.onClick);
+    // Open in side peek keeps the caret in the title until its click lands.
+    wrapper.addEventListener('mousedown', (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+
+      if ((target?.closest('[data-blok-database-list-row][data-editing] [data-blok-database-list-row-edit]') ?? null) !== null) {
+        event.preventDefault();
+      }
+    });
     wrapper.addEventListener('keydown', this.onKeyDown);
     if (!this.readOnly && this.settings.lassoRows !== undefined) {
       // Core leaves Shift-click inside to the tool and hands a margin lasso to onLasso.
@@ -173,7 +183,11 @@ export class DatabaseListView implements DatabaseViewRenderer {
     });
   }
 
-  /** Swaps a row's title for an input; Enter or blur commits through `onTitleEdit`. */
+  /**
+   * Swaps a row's title for an input; Enter or blur commits through `onTitleEdit`.
+   * While it is open the row shows the page glyph, and the pencil turns into
+   * Open in side peek (findings-listgallery L05).
+   */
   editTitle(rowId: string): void {
     const rowEl = this.rowElement(rowId);
     const titleEl = rowEl?.querySelector<HTMLElement>('[data-blok-database-list-row-title]');
@@ -182,6 +196,16 @@ export class DatabaseListView implements DatabaseViewRenderer {
       return;
     }
     const original = titleEl.hasAttribute('data-placeholder') ? '' : titleEl.textContent ?? '';
+    const edit = rowEl.querySelector<HTMLElement>('[data-blok-database-list-row-edit]');
+    const glyph = rowEl.querySelector('[data-blok-database-page-icon]') === null ? pagePlaceholderIcon() : null;
+    const endEditing = (): void => {
+      rowEl.removeAttribute('data-editing');
+      glyph?.remove();
+      if (edit !== null) {
+        edit.innerHTML = IconPencil;
+        edit.setAttribute('aria-label', this.i18n.t('tools.database.editCardTitle'));
+      }
+    };
 
     startInlineRename({
       target: titleEl,
@@ -190,16 +214,29 @@ export class DatabaseListView implements DatabaseViewRenderer {
       label: this.i18n.t('tools.database.editCardTitle'),
       configureInput: (input) => {
         input.setAttribute('data-blok-database-list-title-input', '');
+        input.setAttribute('placeholder', this.i18n.t('tools.database.cardNamePlaceholder'));
       },
       buildRestored: (title) => this.createTitleElement(title),
       onCommit: (title) => {
+        endEditing();
         if (title !== original) {
           this.settings.onTitleEdit?.(rowId, title);
         }
         this.focusRow(rowEl);
       },
-      onCancel: () => this.focusRow(rowEl),
+      onCancel: () => {
+        endEditing();
+        this.focusRow(rowEl);
+      },
     });
+    rowEl.setAttribute('data-editing', '');
+    if (glyph !== null) {
+      rowEl.querySelector('[data-blok-database-list-row-main]')?.before(glyph);
+    }
+    if (edit !== null) {
+      edit.innerHTML = IconSidebarRight;
+      edit.setAttribute('aria-label', this.i18n.t('tools.page.openInSidePeek'));
+    }
   }
 
   private rowElement(rowId: string): HTMLElement | null {
@@ -226,6 +263,28 @@ export class DatabaseListView implements DatabaseViewRenderer {
 
     if (more !== null && more !== undefined) {
       this.settings.onLoadMore?.(more.getAttribute('data-group-key') ?? '');
+
+      return;
+    }
+    const rowEl = target?.closest<HTMLElement>(ROW_SELECTOR);
+
+    // The gutter "+" and the Edit pencil act here, so the row never opens.
+    if (rowEl !== null && rowEl !== undefined && target?.closest('[data-blok-database-list-row-add]') !== null) {
+      event.stopPropagation();
+      this.newBelow(rowEl);
+
+      return;
+    }
+    if (rowEl !== null && rowEl !== undefined && target?.closest('[data-blok-database-list-row-edit]') !== null) {
+      event.stopPropagation();
+      // While editing it is Open in side peek: save the title, then open the row.
+      if (rowEl.hasAttribute('data-editing')) {
+        rowEl.querySelector<HTMLInputElement>('[data-blok-database-list-title-input]')?.blur();
+        this.settings.onOpenRow?.(rowEl.getAttribute('data-row-id') ?? '');
+
+        return;
+      }
+      this.editTitle(rowEl.getAttribute('data-row-id') ?? '');
 
       return;
     }
@@ -514,8 +573,15 @@ export class DatabaseListView implements DatabaseViewRenderer {
       rowEl.appendChild(icon);
     }
     const titleEl = this.createTitleElement(title);
+    // Notion's title box: the title, then the Edit pencil, with a 120px floor (findings-listgallery L01, L04).
+    const main = document.createElement('div');
 
-    rowEl.appendChild(titleEl);
+    main.setAttribute('data-blok-database-list-row-main', '');
+    main.appendChild(titleEl);
+    if (!this.readOnly) {
+      main.appendChild(this.createEditButton());
+    }
+    rowEl.appendChild(main);
     if (this.settings.commentBadges !== undefined) syncCommentBadge(titleEl, row.id, this.settings.commentBadges, this.i18n);
 
     const propertiesEl = this.createPropertiesElement(row);
@@ -531,6 +597,14 @@ export class DatabaseListView implements DatabaseViewRenderer {
     const handle = document.createElement('button');
 
     gutter.setAttribute('data-blok-database-list-row-gutter', '');
+    const add = document.createElement('button');
+
+    add.type = 'button';
+    add.setAttribute('data-blok-database-list-row-add', '');
+    add.setAttribute('aria-label', this.i18n.t('tools.database.tableAddBelow'));
+    add.tabIndex = -1;
+    add.innerHTML = IconPlus;
+    gutter.appendChild(add);
     handle.type = 'button';
     handle.setAttribute('data-blok-database-list-row-handle', '');
     handle.setAttribute('data-row-id', rowId);
@@ -540,6 +614,19 @@ export class DatabaseListView implements DatabaseViewRenderer {
     gutter.appendChild(handle);
 
     return gutter;
+  }
+
+  /** Notion's white "Edit" pencil after the title: renames the row in place (findings-listgallery L04). */
+  private createEditButton(): HTMLButtonElement {
+    const edit = document.createElement('button');
+
+    edit.type = 'button';
+    edit.setAttribute('data-blok-database-list-row-edit', '');
+    edit.setAttribute('aria-label', this.i18n.t('tools.database.editCardTitle'));
+    edit.tabIndex = -1;
+    edit.innerHTML = IconPencil;
+
+    return edit;
   }
 
   private createTitleElement(title: string): HTMLDivElement {
@@ -558,7 +645,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
   }
 
   /**
-   * Creates the properties container with badges, open button, and delete button.
+   * Creates the properties container with the filled property slots.
    */
   private createPropertiesElement(row: DatabaseRow): HTMLDivElement {
     const propertiesEl = document.createElement('div');
@@ -577,22 +664,6 @@ export class DatabaseListView implements DatabaseViewRenderer {
       if (badge !== null) {
         propertiesEl.appendChild(badge);
       }
-    }
-
-    const openBtn = document.createElement('button');
-
-    openBtn.setAttribute('data-blok-database-list-row-open', '');
-    openBtn.setAttribute('aria-label', this.i18n.t('tools.database.openRow'));
-    propertiesEl.appendChild(openBtn);
-
-    if (!this.readOnly) {
-      const deleteBtn = document.createElement('button');
-
-      deleteBtn.setAttribute('data-blok-database-delete-row', '');
-      deleteBtn.setAttribute('data-row-id', row.id);
-      deleteBtn.setAttribute('aria-label', this.i18n.t('tools.database.deleteRow'));
-      deleteBtn.textContent = '\u00d7';
-      propertiesEl.appendChild(deleteBtn);
     }
 
     return propertiesEl;

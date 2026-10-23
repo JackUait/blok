@@ -173,6 +173,26 @@ describe('Database list view (tool)', () => {
     expect(holder?.querySelectorAll('[data-blok-database-list-row]')).toHaveLength(3);
   });
 
+  // findings-listgallery L05: the new row opens with its title being edited.
+  it('"+ New page" opens the new row\'s title for typing; Enter saves it', async () => {
+    await make(doc());
+    q('[data-blok-database-add-row]')?.click();
+    await quiet();
+
+    const rows = [...(holder?.querySelectorAll('[data-blok-database-list-row]') ?? [])];
+    const newId = rows.at(-1)?.getAttribute('data-row-id') ?? '';
+    const input = q<HTMLInputElement>(`[data-row-id="${newId}"] [data-blok-database-list-title-input]`);
+
+    expect(input).not.toBeNull();
+    expect(input).toHaveFocus();
+    if (input === null) return;
+    input.value = 'Fresh';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await quiet();
+
+    expect(propsOf((await savedRows()).find((block) => block.id === newId)).t).toBe('Fresh');
+  });
+
   it('shows the load limit, then the rest after "Load more"', async () => {
     await make(doc(12, { loadLimit: 10 }));
 

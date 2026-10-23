@@ -178,30 +178,72 @@ describe('DatabaseListView', () => {
       expect(addRowBtn?.textContent).toMatch(/^\+ /);
     });
 
-    it('renders [data-blok-database-delete-row] button on each row when NOT read-only', () => {
-      const rows = [makeRow({ id: 'row-1' })];
-      const view = new DatabaseListView({
-        readOnly: false, i18n, rows, titlePropertyId: 'title', schema: makeSchema(), visiblePropertyIds: [],
-      });
-      const list = view.createView();
+    // findings-listgallery L03/L04: Notion's row has no buttons at its end.
+    it('draws no open or delete button at the row end', () => {
+      const list = new DatabaseListView({
+        readOnly: false, i18n, rows: [makeRow()], titlePropertyId: 'title', schema: makeSchema(), visiblePropertyIds: [],
+      }).createView();
 
-      const deleteBtns = list.querySelectorAll('[data-blok-database-delete-row]');
-
-      expect(deleteBtns).toHaveLength(1);
-      expect(deleteBtns[0].getAttribute('data-row-id')).toBe('row-1');
-      expect(deleteBtns[0].textContent).toBe('\u00d7');
+      expect(list.querySelector('[data-blok-database-delete-row]')).toBeNull();
+      expect(list.querySelector('[data-blok-database-list-row-open]')).toBeNull();
     });
 
-    it('does not render delete-row button in read-only mode', () => {
-      const rows = [makeRow({ id: 'row-1' })];
-      const view = new DatabaseListView({
-        readOnly: true, i18n, rows, titlePropertyId: 'title', schema: makeSchema(), visiblePropertyIds: [],
-      });
-      const list = view.createView();
+    it('puts a "+" before the ⋮⋮ in the gutter that adds an item below the row, without opening it', () => {
+      const onNewBelow = vi.fn();
+      const opened = vi.fn();
+      const list = new DatabaseListView({
+        readOnly: false, i18n, rows: [makeRow()], titlePropertyId: 'title', schema: makeSchema(), visiblePropertyIds: [], onNewBelow,
+      }).createView();
+      const gutter = list.querySelector('[data-blok-database-list-row-gutter]');
+      const add = gutter?.querySelector<HTMLButtonElement>(':scope > [data-blok-database-list-row-add]');
 
-      const deleteBtns = list.querySelectorAll('[data-blok-database-delete-row]');
+      expect(gutter?.firstElementChild).toBe(add);
+      expect(add?.getAttribute('aria-label')).toBe('tools.database.tableAddBelow');
+      expect(add?.type).toBe('button');
+      expect(add?.tabIndex).toBe(-1);
+      document.body.appendChild(list);
+      document.body.addEventListener('click', opened);
+      add?.click();
+      document.body.removeEventListener('click', opened);
+      list.remove();
 
-      expect(deleteBtns).toHaveLength(0);
+      expect(onNewBelow).toHaveBeenCalledWith('row-1', null);
+      expect(opened).not.toHaveBeenCalled();
+    });
+
+    it('puts an Edit pencil after the title that renames the row in place, without opening it', () => {
+      const onTitleEdit = vi.fn();
+      const opened = vi.fn();
+      const list = new DatabaseListView({
+        readOnly: false, i18n, rows: [makeRow()], titlePropertyId: 'title', schema: makeSchema(), visiblePropertyIds: [], onTitleEdit,
+      }).createView();
+      const edit = list.querySelector<HTMLButtonElement>('[data-blok-database-list-row-title] + [data-blok-database-list-row-edit]');
+
+      expect(edit?.getAttribute('aria-label')).toBe('tools.database.editCardTitle');
+      expect(edit?.type).toBe('button');
+      document.body.appendChild(list);
+      document.body.addEventListener('click', opened);
+      edit?.click();
+      document.body.removeEventListener('click', opened);
+      const input = list.querySelector<HTMLInputElement>('[data-row-id="row-1"] input');
+
+      expect(opened).not.toHaveBeenCalled();
+      expect(input?.value).toBe('Fix bug');
+      if (input === null) return;
+      input.value = 'Renamed';
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      list.remove();
+
+      expect(onTitleEdit).toHaveBeenCalledWith('row-1', 'Renamed');
+    });
+
+    it('draws no "+" or Edit pencil in a read-only list', () => {
+      const list = new DatabaseListView({
+        readOnly: true, i18n, rows: [makeRow()], titlePropertyId: 'title', schema: makeSchema(), visiblePropertyIds: [],
+      }).createView();
+
+      expect(list.querySelector('[data-blok-database-list-row-add]')).toBeNull();
+      expect(list.querySelector('[data-blok-database-list-row-edit]')).toBeNull();
     });
 
     it('each row element has role="listitem"', () => {
@@ -226,19 +268,6 @@ describe('DatabaseListView', () => {
       const rowEl = list.querySelector('[data-blok-database-list-row]') as HTMLElement;
 
       expect(rowEl).not.toBeNull();
-    });
-
-    it('renders open button inside properties area', () => {
-      const rows = [makeRow({ id: 'row-1' })];
-      const view = new DatabaseListView({
-        readOnly: false, i18n, rows, titlePropertyId: 'title', schema: makeSchema(), visiblePropertyIds: [],
-      });
-      const list = view.createView();
-
-      const propertiesEl = list.querySelector('[data-blok-database-list-row-properties]');
-      const openBtn = propertiesEl?.querySelector('[data-blok-database-list-row-open]');
-
-      expect(openBtn).not.toBeNull();
     });
   });
 
@@ -653,6 +682,63 @@ describe('DatabaseListView', () => {
       input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 
       expect(onTitleEdit).toHaveBeenCalledWith('r2', 'Renamed');
+    });
+  });
+
+  describe('title edit look (findings-listgallery L05)', () => {
+    const make = (): { view: DatabaseListView; list: HTMLElement } => {
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows: [makeRow({ properties: { title: '' } })], titlePropertyId: 'title', schema: makeSchema(), visiblePropertyIds: [],
+      });
+      const list = view.createView();
+
+      document.body.appendChild(list);
+
+      return { view, list };
+    };
+
+    it('shows "Type a name…", the page glyph and Open in side peek while the title is edited', () => {
+      const { view, list } = make();
+
+      view.editTitle('row-1');
+      const row = list.querySelector<HTMLElement>('[data-blok-database-list-row]');
+      const input = list.querySelector<HTMLInputElement>('[data-blok-database-list-title-input]');
+      const edit = list.querySelector<HTMLElement>('[data-blok-database-list-row-edit]');
+
+      expect(input?.placeholder).toBe('tools.database.cardNamePlaceholder');
+      expect(input?.value).toBe('');
+      expect(row?.hasAttribute('data-editing')).toBe(true);
+      expect(row?.querySelector('[data-blok-database-page-icon-placeholder]')).not.toBeNull();
+      expect(edit?.getAttribute('aria-label')).toBe('tools.page.openInSidePeek');
+      list.remove();
+    });
+
+    it('Open in side peek saves the title, then opens the row; the pencil comes back', () => {
+      const onTitleEdit = vi.fn();
+      const onOpenRow = vi.fn();
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows: [makeRow({ properties: { title: '' } })], titlePropertyId: 'title', schema: makeSchema(), visiblePropertyIds: [], onTitleEdit, onOpenRow,
+      });
+      const list = view.createView();
+      const opened = vi.fn();
+
+      document.body.appendChild(list);
+      view.editTitle('row-1');
+      const input = list.querySelector<HTMLInputElement>('[data-blok-database-list-title-input]');
+
+      if (input !== null) input.value = 'Named';
+      document.body.addEventListener('click', opened);
+      list.querySelector<HTMLElement>('[data-blok-database-list-row-edit]')?.click();
+      document.body.removeEventListener('click', opened);
+
+      expect(onTitleEdit).toHaveBeenCalledWith('row-1', 'Named');
+      expect(onOpenRow).toHaveBeenCalledWith('row-1');
+      expect(onTitleEdit.mock.invocationCallOrder[0]).toBeLessThan(onOpenRow.mock.invocationCallOrder[0]);
+      expect(opened).not.toHaveBeenCalled();
+      expect(list.querySelector('[data-blok-database-list-row]')?.hasAttribute('data-editing')).toBe(false);
+      expect(list.querySelector('[data-blok-database-page-icon-placeholder]')).toBeNull();
+      expect(list.querySelector('[data-blok-database-list-row-edit]')?.getAttribute('aria-label')).toBe('tools.database.editCardTitle');
+      list.remove();
     });
   });
 

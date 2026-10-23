@@ -48,9 +48,9 @@ describe('database comment badge css', () => {
     expect(rulesFor('[data-blok-database-comment-badge]:hover')).toContain('background-color: var(--blok-database-hover-bg)');
   });
 
-  // The list title grows to fill the row, which would push the badge to the properties.
+  // The list title hugs its text inside the growing title box, so the badge follows the text.
   it('sits right after a list row title', () => {
-    expect(rulesFor('[data-blok-database-list-row-title]:has(+ [data-blok-database-comment-badge])')).toContain('flex: 0 1 auto');
-    expect(rulesFor('[data-blok-database-list-row-title] + [data-blok-database-comment-badge]')).toContain('margin-inline-end: auto');
+    expect(rulesFor('[data-blok-database-list-row-title]')).toContain('flex: 0 1 auto');
+    expect(rulesFor('[data-blok-database-list-row-title] + [data-blok-database-comment-badge]')).toBe('');
   });
 });

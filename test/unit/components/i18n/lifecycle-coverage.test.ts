@@ -270,7 +270,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1886 + 126 + 507 + 4 closure for all 2523 keys', () => {
+  it('rebuilds a disjoint 1884 + 126 + 509 + 4 closure for all 2523 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -445,7 +445,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +2: the timeline's ‹ › labels, timelinePrevious / timelineNext (findings-caltimeline C05).
       // +2: the row page's "…" hint (peekActionsHint) and its "Edit view default" item, by literal.
       // +1: popover.filteredResults, the "/" menu's search header.
-      'executable-literal': 1886,
+      // -2: tools.database.openRow and deleteRow; the list row lost its "›" and "×" (findings-listgallery L03).
+      'executable-literal': 1884,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -510,7 +511,8 @@ describe('current English catalog lifecycle coverage', () => {
       // called through the database's prefixing t() (filterOperator.isBetween is composed from a short name).
       // +7: the other layouts' Property visibility headers (settingsShownIn<Layout>) and its search
       // (settingsSearchProperty), via the panel's prefixing t.
-      'registered-namespace-compatible': 507,
+      // +2: tools.database.openRow and deleteRow (see executable-literal).
+      'registered-namespace-compatible': 509,
       'catalog-only': 4,
     });
     expect(

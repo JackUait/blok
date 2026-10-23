@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "Μηνιαίο διπλότυπο",
   "tools.database.templateRepeatHintYearly": "Ετήσιο διπλότυπο",
   "tools.database.templateRepeatCancel": "Ακύρωση επανάληψης",
+  "tools.database.templateRepeatDiscardTitle": "Απόρριψη μη αποθηκευμένων αλλαγών;",
   "tools.database.templateRepeatOnThe": "Την",
   "tools.database.templateRepeatOrdinalOne": "{day}η",
   "tools.database.templateRepeatOrdinalTwo": "{day}η",

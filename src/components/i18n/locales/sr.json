@@ -1912,6 +1912,7 @@
   "tools.database.templateRepeatHintMonthly": "Дуплирај месечно",
   "tools.database.templateRepeatHintYearly": "Дуплирај годишње",
   "tools.database.templateRepeatCancel": "Откажи понављање",
+  "tools.database.templateRepeatDiscardTitle": "Одбацити несачуване измене?",
   "tools.database.templateRepeatOnThe": "На",
   "tools.database.templateRepeatOrdinalOne": "{day}.",
   "tools.database.templateRepeatOrdinalTwo": "{day}.",

@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "ކޮންމެ މަހަކު ކޮޕީ ހަދާ",
   "tools.database.templateRepeatHintYearly": "ކޮންމެ އަހަރަކު ކޮޕީ ހަދާ",
   "tools.database.templateRepeatCancel": "ތަކުރާރުކުރުން ކެންސަލްކުރޭ",
+  "tools.database.templateRepeatDiscardTitle": "ސޭވް ނުކުރާ ބަދަލުތައް ދޫކޮށްލަންތޯ؟",
   "tools.database.templateRepeatOnThe": "މަހުގެ",
   "tools.database.templateRepeatOrdinalOne": "{day} ވަނަ",
   "tools.database.templateRepeatOrdinalTwo": "{day} ވަނަ",

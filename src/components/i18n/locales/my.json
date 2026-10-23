@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "လစဉ် မိတ္တူပွားရန်",
   "tools.database.templateRepeatHintYearly": "နှစ်စဉ် မိတ္တူပွားရန်",
   "tools.database.templateRepeatCancel": "ထပ်လုပ်ခြင်းကို ပယ်ဖျက်ရန်",
+  "tools.database.templateRepeatDiscardTitle": "မသိမ်းရသေးသော အပြောင်းအလဲများကို စွန့်ပစ်မလား။",
   "tools.database.templateRepeatOnThe": "လ၏",
   "tools.database.templateRepeatOrdinalOne": "{day}",
   "tools.database.templateRepeatOrdinalTwo": "{day}",

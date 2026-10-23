@@ -544,6 +544,94 @@ describe('template menu', () => {
 
       ['at', 'starting', 'ending'].forEach((row) => expect(field(items, row)?.closest('[data-blok-keyboard-owner]')).not.toBeNull());
     });
+
+    // research/35 §13 (r35:406): Escape on an unsaved panel asks "Discard unsaved changes?".
+    describe('Escape on an unsaved panel', () => {
+      const mounted: HTMLElement[] = [];
+      /** The panel inside a popover root, as the group popover draws it. */
+      const mount = (h: TemplateRepeatHost, draft?: TemplateRepeat): ReturnType<typeof panel> => {
+        const shown = panel(h, draft);
+        const root = document.createElement('div');
+
+        root.setAttribute('data-blok-popover', '');
+        root.append(shown.el);
+        document.body.append(root);
+        mounted.push(root);
+
+        return shown;
+      };
+      const escape = (): KeyboardEvent => {
+        const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+
+        document.body.dispatchEvent(event);
+
+        return event;
+      };
+      const dialog = (): HTMLElement | null => document.querySelector('[data-blok-database-confirm-dialog]');
+      const action = (name: 'confirm' | 'cancel'): HTMLButtonElement | null => document.querySelector(`[data-blok-database-confirm-action="${name}"]`);
+      const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+
+      afterEach(() => {
+        action('cancel')?.click();
+        mounted.splice(0).forEach((root) => root.remove());
+      });
+
+      it('asks before a preset draft is dropped, with a red filled Discard focused', () => {
+        const h = repeatHost();
+        const event = (mount(h, { frequency: 'daily', start: tomorrowMidnight, timeZone: 'Europe/Berlin' }), escape());
+
+        expect(dialog()?.textContent).toContain('Discard unsaved changes?');
+        expect(event.defaultPrevented).toBe(true);
+        expect(action('confirm')?.textContent).toBe('Discard');
+        expect(action('confirm')?.hasAttribute('data-destructive')).toBe(true);
+        expect(action('confirm')?.hasAttribute('data-filled')).toBe(true);
+        expect(action('confirm')).toHaveFocus();
+        expect(h.close).not.toHaveBeenCalled();
+      });
+
+      it('Discard closes the panel and saves nothing', async () => {
+        const h = repeatHost();
+
+        mount(h, { frequency: 'daily', start: tomorrowMidnight, timeZone: 'Europe/Berlin' });
+        escape();
+        action('confirm')?.click();
+        await settle();
+
+        expect(h.close).toHaveBeenCalledTimes(1);
+        expect(h.setRepeat).not.toHaveBeenCalled();
+        expect(dialog()).toBeNull();
+      });
+
+      it('Cancel keeps the panel and its draft', async () => {
+        const h = repeatHost({ repeat: () => weekly });
+        const { q } = mount(h);
+
+        type(q('input'), '3');
+        escape();
+        action('cancel')?.click();
+        await settle();
+
+        expect(h.close).not.toHaveBeenCalled();
+        expect(dialog()).toBeNull();
+        save(q);
+        expect(h.setRepeat).toHaveBeenCalledWith({ ...weekly, interval: 3 });
+      });
+
+      it('lets Escape close an unchanged panel without asking', () => {
+        const event = (mount(repeatHost({ repeat: () => weekly })), escape());
+
+        expect(dialog()).toBeNull();
+        expect(event.defaultPrevented).toBe(false);
+      });
+
+      it('stops listening once the panel is gone', () => {
+        const shown = mount(repeatHost(), { frequency: 'daily', start: tomorrowMidnight, timeZone: 'Europe/Berlin' });
+
+        shown.el.remove();
+        expect(escape().defaultPrevented).toBe(false);
+        expect(dialog()).toBeNull();
+      });
+    });
   });
 
   it('edits, duplicates and deletes a template', () => {

@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "মাসিক প্রতিলিপি",
   "tools.database.templateRepeatHintYearly": "বার্ষিক প্রতিলিপি",
   "tools.database.templateRepeatCancel": "পুনরাবৃত্তি বাতিল করুন",
+  "tools.database.templateRepeatDiscardTitle": "অসংরক্ষিত পরিবর্তনগুলো বাদ দেবেন?",
   "tools.database.templateRepeatOnThe": "মাসের",
   "tools.database.templateRepeatOrdinalOne": "{day}ম",
   "tools.database.templateRepeatOrdinalTwo": "{day}য়",

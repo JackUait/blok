@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "ស្ទួនប្រចាំខែ",
   "tools.database.templateRepeatHintYearly": "ស្ទួនប្រចាំឆ្នាំ",
   "tools.database.templateRepeatCancel": "បោះបង់ការធ្វើម្ដងទៀត",
+  "tools.database.templateRepeatDiscardTitle": "លុបចោលការផ្លាស់ប្ដូរដែលមិនទាន់រក្សាទុកឬ?",
   "tools.database.templateRepeatOnThe": "នៅ",
   "tools.database.templateRepeatOrdinalOne": "ទី{day}",
   "tools.database.templateRepeatOrdinalTwo": "ទី{day}",

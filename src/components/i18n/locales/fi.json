@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "Monista kuukausittain",
   "tools.database.templateRepeatHintYearly": "Monista vuosittain",
   "tools.database.templateRepeatCancel": "Peru toistuvuus",
+  "tools.database.templateRepeatDiscardTitle": "Hylätäänkö tallentamattomat muutokset?",
   "tools.database.templateRepeatOnThe": "Kuukauden",
   "tools.database.templateRepeatOrdinalOne": "{day}.",
   "tools.database.templateRepeatOrdinalTwo": "{day}.",

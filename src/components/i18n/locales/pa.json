@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "ਮਹੀਨਾਵਾਰ ਨਕਲ ਬਣਾਓ",
   "tools.database.templateRepeatHintYearly": "ਸਾਲਾਨਾ ਨਕਲ ਬਣਾਓ",
   "tools.database.templateRepeatCancel": "ਦੁਹਰਾਅ ਰੱਦ ਕਰੋ",
+  "tools.database.templateRepeatDiscardTitle": "ਕੀ ਬਿਨਾਂ ਸੰਭਾਲੇ ਬਦਲਾਅ ਤਿਆਗਣੇ ਹਨ?",
   "tools.database.templateRepeatOnThe": "ਮਹੀਨੇ ਦਾ",
   "tools.database.templateRepeatOrdinalOne": "{day}ਵਾਂ",
   "tools.database.templateRepeatOrdinalTwo": "{day}ਵਾਂ",

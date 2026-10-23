@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "Megkettőzés havonta",
   "tools.database.templateRepeatHintYearly": "Megkettőzés évente",
   "tools.database.templateRepeatCancel": "Ismétlés megszüntetése",
+  "tools.database.templateRepeatDiscardTitle": "Elveti a nem mentett módosításokat?",
   "tools.database.templateRepeatOnThe": "A hónap",
   "tools.database.templateRepeatOrdinalOne": "{day}.",
   "tools.database.templateRepeatOrdinalTwo": "{day}.",

@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "මාසිකව අනුපිටපත් කරන්න",
   "tools.database.templateRepeatHintYearly": "වාර්ෂිකව අනුපිටපත් කරන්න",
   "tools.database.templateRepeatCancel": "පුනරාවර්තනය අවලංගු කරන්න",
+  "tools.database.templateRepeatDiscardTitle": "නොසුරැකි වෙනස්කම් ඉවත දමන්නද?",
   "tools.database.templateRepeatOnThe": "මාසයේ",
   "tools.database.templateRepeatOrdinalOne": "{day} වන",
   "tools.database.templateRepeatOrdinalTwo": "{day} වන",

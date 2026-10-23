@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "മാസംതോറും പകർപ്പുണ്ടാക്കുക",
   "tools.database.templateRepeatHintYearly": "വർഷംതോറും പകർപ്പുണ്ടാക്കുക",
   "tools.database.templateRepeatCancel": "ആവർത്തനം റദ്ദാക്കുക",
+  "tools.database.templateRepeatDiscardTitle": "സംരക്ഷിക്കാത്ത മാറ്റങ്ങൾ ഉപേക്ഷിക്കണോ?",
   "tools.database.templateRepeatOnThe": "മാസത്തിലെ",
   "tools.database.templateRepeatOrdinalOne": "{day}-ാം",
   "tools.database.templateRepeatOrdinalTwo": "{day}-ാം",

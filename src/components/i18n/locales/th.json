@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "ทำซ้ำรายเดือน",
   "tools.database.templateRepeatHintYearly": "ทำซ้ำรายปี",
   "tools.database.templateRepeatCancel": "ยกเลิกการเกิดซ้ำ",
+  "tools.database.templateRepeatDiscardTitle": "ละทิ้งการเปลี่ยนแปลงที่ยังไม่ได้บันทึกหรือไม่?",
   "tools.database.templateRepeatOnThe": "ใน",
   "tools.database.templateRepeatOrdinalOne": "{day}",
   "tools.database.templateRepeatOrdinalTwo": "{day}",

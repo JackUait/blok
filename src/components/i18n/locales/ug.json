@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "ئايلىق كۆپەيتىش",
   "tools.database.templateRepeatHintYearly": "يىللىق كۆپەيتىش",
   "tools.database.templateRepeatCancel": "تەكرارلاشنى بىكار قىلىش",
+  "tools.database.templateRepeatDiscardTitle": "ساقلانمىغان ئۆزگەرتىشلەرنى تاشلامسىز؟",
   "tools.database.templateRepeatOnThe": "ئاينىڭ",
   "tools.database.templateRepeatOrdinalOne": "{day}-",
   "tools.database.templateRepeatOrdinalTwo": "{day}-",

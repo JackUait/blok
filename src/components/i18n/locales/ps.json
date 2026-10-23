@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "میاشتنۍ کاپي جوړه کړئ",
   "tools.database.templateRepeatHintYearly": "کلنۍ کاپي جوړه کړئ",
   "tools.database.templateRepeatCancel": "تکرار لغوه کړئ",
+  "tools.database.templateRepeatDiscardTitle": "ناخوندي شوي بدلونونه دې پرېښودل شي؟",
   "tools.database.templateRepeatOnThe": "په",
   "tools.database.templateRepeatOrdinalOne": "{day}م",
   "tools.database.templateRepeatOrdinalTwo": "{day}م",

@@ -2,7 +2,9 @@ import type { I18n } from '../../../types';
 import type { PopoverItemParams } from '../../../types/utils/popover/popover-item';
 import { IconCopy, IconPage, IconPencil, IconPlayerLoop, IconPlus, IconTrash } from '../../components/icons';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
+import { hasEscapeLayer } from '../../components/utils/dismissable-layer';
 import { onHover } from '../../components/utils/tooltip';
+import { openDatabaseConfirm } from './database-confirm-dialog';
 import { resolveLocale, timeZones, zoneCity, zoneOffsetText } from './cells/date-format';
 import { wallTime, zonedToEpoch } from './formula/dates';
 import { nextRun, repeatWeekdays, repeatZone } from './templates';
@@ -199,7 +201,7 @@ const fieldItem = (name: string, ...controls: Node[]): PopoverItemParams => {
  * so they hold Blok's controls: a time field, a date field, Never or a date,
  * and a searchable zone list.
  */
-const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: CadenceContext): { panel: HTMLElement; settings: PopoverItemParams[]; next: HTMLElement } => {
+const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: CadenceContext, unsaved: boolean): { panel: HTMLElement; settings: PopoverItemParams[]; next: HTMLElement } => {
   const { t } = c;
   // The Timezone submenu changes it.
   const live = { zone: initial.timeZone === undefined ? c.viewerZone : repeatZone(initial) };
@@ -448,6 +450,36 @@ const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: Cade
   panel.setAttribute('data-blok-keyboard-owner', '');
   panel.append(header, everyRow);
   refresh();
+  const pristine = JSON.stringify(draft);
+  // Window capture runs before the popover registry's Escape backstop, as CellPopover does.
+  const onEscape = (event: KeyboardEvent): void => {
+    if (!panel.isConnected) {
+      window.removeEventListener('keydown', onEscape, true);
+
+      return;
+    }
+    // The open dialog's own layer takes this Escape.
+    if (event.key !== 'Escape' || event.isComposing || hasEscapeLayer() || (!unsaved && JSON.stringify(draft) === pristine)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const root = panel.closest<HTMLElement>('[data-blok-popover]');
+
+    void openDatabaseConfirm({
+      title: t('templateRepeatDiscardTitle'),
+      confirmLabel: t('layoutDiscard'),
+      cancelLabel: t('layoutCancel'),
+      destructive: true,
+      filled: true,
+      focusConfirm: true,
+      directionSource: panel,
+      // Inside the popover: focus on a dialog outside it would close the popover.
+      ...(root === null ? {} : { container: root }),
+    }).then((discard) => {
+      if (discard) host.close();
+    });
+  };
+
+  window.addEventListener('keydown', onEscape, true);
 
   return { panel, settings, next };
 };
@@ -480,7 +512,8 @@ export const templateRepeatItems = (host: TemplateRepeatHost, draft?: TemplateRe
       }),
     }));
   }
-  const { panel, settings, next } = cadencePanel(host, editing, c);
+  // A preset's draft is unsaved from the start.
+  const { panel, settings, next } = cadencePanel(host, editing, c, draft !== undefined);
 
   return [
     { type: PopoverItemType.Html, element: panel, name: 'template-repeat-cadence' },

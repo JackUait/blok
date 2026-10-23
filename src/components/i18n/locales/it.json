@@ -1912,6 +1912,7 @@
   "tools.database.templateRepeatHintMonthly": "Duplica mensilmente",
   "tools.database.templateRepeatHintYearly": "Duplica annualmente",
   "tools.database.templateRepeatCancel": "Annulla ricorrenza",
+  "tools.database.templateRepeatDiscardTitle": "Scartare le modifiche non salvate?",
   "tools.database.templateRepeatOnThe": "Il",
   "tools.database.templateRepeatOrdinalOne": "{day}º",
   "tools.database.templateRepeatOrdinalTwo": "{day}º",

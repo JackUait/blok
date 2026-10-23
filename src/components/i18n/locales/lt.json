@@ -1922,6 +1922,7 @@
   "tools.database.templateRepeatHintMonthly": "Dubliuoti kas mėnesį",
   "tools.database.templateRepeatHintYearly": "Dubliuoti kasmet",
   "tools.database.templateRepeatCancel": "Atšaukti kartojimą",
+  "tools.database.templateRepeatDiscardTitle": "Atmesti neišsaugotus pakeitimus?",
   "tools.database.templateRepeatOnThe": "Mėnesio",
   "tools.database.templateRepeatOrdinalOne": "{day}-ą",
   "tools.database.templateRepeatOrdinalTwo": "{day}-ą",

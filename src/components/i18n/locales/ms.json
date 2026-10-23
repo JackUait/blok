@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "Gandakan bulanan",
   "tools.database.templateRepeatHintYearly": "Gandakan tahunan",
   "tools.database.templateRepeatCancel": "Batalkan ulangan",
+  "tools.database.templateRepeatDiscardTitle": "Buang perubahan yang belum disimpan?",
   "tools.database.templateRepeatOnThe": "Pada",
   "tools.database.templateRepeatOrdinalOne": "ke-{day}",
   "tools.database.templateRepeatOrdinalTwo": "ke-{day}",

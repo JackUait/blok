@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "تکثیر ماهانه",
   "tools.database.templateRepeatHintYearly": "تکثیر سالانه",
   "tools.database.templateRepeatCancel": "لغو تکرار",
+  "tools.database.templateRepeatDiscardTitle": "تغییرات ذخیره‌نشده دور انداخته شود؟",
   "tools.database.templateRepeatOnThe": "در",
   "tools.database.templateRepeatOrdinalOne": "{day}م",
   "tools.database.templateRepeatOrdinalTwo": "{day}م",

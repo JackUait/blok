@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "Dyfisho çdo muaj",
   "tools.database.templateRepeatHintYearly": "Dyfisho çdo vit",
   "tools.database.templateRepeatCancel": "Anulo përsëritjen",
+  "tools.database.templateRepeatDiscardTitle": "Të hidhen poshtë ndryshimet e paruajtura?",
   "tools.database.templateRepeatOnThe": "Në",
   "tools.database.templateRepeatOrdinalOne": "{day}-rë",
   "tools.database.templateRepeatOrdinalTwo": "{day}-të",

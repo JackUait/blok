@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "ماہانہ نقل بنائیں",
   "tools.database.templateRepeatHintYearly": "سالانہ نقل بنائیں",
   "tools.database.templateRepeatCancel": "تکرار منسوخ کریں",
+  "tools.database.templateRepeatDiscardTitle": "غیر محفوظ شدہ تبدیلیاں رد کریں؟",
   "tools.database.templateRepeatOnThe": "مہینے کی",
   "tools.database.templateRepeatOrdinalOne": "{day}",
   "tools.database.templateRepeatOrdinalTwo": "{day}",

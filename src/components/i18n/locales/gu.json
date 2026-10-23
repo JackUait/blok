@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "દર મહિને નકલ બનાવો",
   "tools.database.templateRepeatHintYearly": "દર વર્ષે નકલ બનાવો",
   "tools.database.templateRepeatCancel": "પુનરાવર્તન રદ કરો",
+  "tools.database.templateRepeatDiscardTitle": "સાચવ્યા વગરના ફેરફારો કાઢી નાખવા છે?",
   "tools.database.templateRepeatOnThe": "મહિનાનો",
   "tools.database.templateRepeatOrdinalOne": "{day}લો",
   "tools.database.templateRepeatOrdinalTwo": "{day}જો",

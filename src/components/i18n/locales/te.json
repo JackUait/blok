@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "నెలకోసారి నకలు చేయండి",
   "tools.database.templateRepeatHintYearly": "సంవత్సరానికోసారి నకలు చేయండి",
   "tools.database.templateRepeatCancel": "పునరావృతాన్ని రద్దు చేయండి",
+  "tools.database.templateRepeatDiscardTitle": "సేవ్ చేయని మార్పులను విస్మరించాలా?",
   "tools.database.templateRepeatOnThe": "నెలలో",
   "tools.database.templateRepeatOrdinalOne": "{day}వ",
   "tools.database.templateRepeatOrdinalTwo": "{day}వ",

@@ -270,7 +270,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1873 + 126 + 487 + 4 closure for all 2490 keys', () => {
+  it('rebuilds a disjoint 1873 + 126 + 488 + 4 closure for all 2491 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -284,7 +284,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2490);
+    expect(lifecycle.size).toBe(2491);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -500,7 +500,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: the template row's "…" hint, tools.database.templateMore (research/30 X1).
       // -1: tools.file.preview moved to executable-literal (form Preview).
       // +1: the feed's Property visibility header, settingsShownInFeed, via the panel's prefixing t.
-      'registered-namespace-compatible': 487,
+      // +1: Edit cadence's "Discard unsaved changes?" (templateRepeatDiscardTitle), via the panel's prefixing t.
+      'registered-namespace-compatible': 488,
       'catalog-only': 4,
     });
     expect(

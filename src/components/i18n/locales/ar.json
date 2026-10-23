@@ -1942,6 +1942,7 @@
   "tools.database.templateRepeatHintMonthly": "تكرار شهري",
   "tools.database.templateRepeatHintYearly": "تكرار سنوي",
   "tools.database.templateRepeatCancel": "إلغاء التكرار الدوري",
+  "tools.database.templateRepeatDiscardTitle": "تجاهل التغييرات غير المحفوظة؟",
   "tools.database.templateRepeatOnThe": "في",
   "tools.database.templateRepeatOrdinalOne": "{day}",
   "tools.database.templateRepeatOrdinalTwo": "{day}",

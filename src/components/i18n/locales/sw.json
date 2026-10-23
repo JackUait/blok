@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "Rudufu kila mwezi",
   "tools.database.templateRepeatHintYearly": "Rudufu kila mwaka",
   "tools.database.templateRepeatCancel": "Ghairi urudiaji",
+  "tools.database.templateRepeatDiscardTitle": "Ungependa kutupa mabadiliko ambayo hayajahifadhiwa?",
   "tools.database.templateRepeatOnThe": "Tarehe",
   "tools.database.templateRepeatOrdinalOne": "{day}",
   "tools.database.templateRepeatOrdinalTwo": "{day}",

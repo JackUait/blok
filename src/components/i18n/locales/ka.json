@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "ყოველთვიური დუბლირება",
   "tools.database.templateRepeatHintYearly": "ყოველწლიური დუბლირება",
   "tools.database.templateRepeatCancel": "გამეორების გაუქმება",
+  "tools.database.templateRepeatDiscardTitle": "უარვყოთ შეუნახავი ცვლილებები?",
   "tools.database.templateRepeatOnThe": "თვის",
   "tools.database.templateRepeatOrdinalOne": "{day}-ლი",
   "tools.database.templateRepeatOrdinalTwo": "მე-{day}",

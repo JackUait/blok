@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "Nhân bản hằng tháng",
   "tools.database.templateRepeatHintYearly": "Nhân bản hằng năm",
   "tools.database.templateRepeatCancel": "Hủy lặp lại",
+  "tools.database.templateRepeatDiscardTitle": "Bỏ các thay đổi chưa lưu?",
   "tools.database.templateRepeatOnThe": "Vào",
   "tools.database.templateRepeatOrdinalOne": "thứ {day}",
   "tools.database.templateRepeatOrdinalTwo": "thứ {day}",

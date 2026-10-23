@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "मासिक प्रतिलिपि बनाएँ",
   "tools.database.templateRepeatHintYearly": "वार्षिक प्रतिलिपि बनाएँ",
   "tools.database.templateRepeatCancel": "पुनरावृत्ति रद्द करें",
+  "tools.database.templateRepeatDiscardTitle": "बिना सहेजे बदलाव छोड़ें?",
   "tools.database.templateRepeatOnThe": "महीने का",
   "tools.database.templateRepeatOrdinalOne": "{day}ला",
   "tools.database.templateRepeatOrdinalTwo": "{day}रा",

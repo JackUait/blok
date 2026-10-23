@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "مهينيوار نقل ٺاهيو",
   "tools.database.templateRepeatHintYearly": "سالياني نقل ٺاهيو",
   "tools.database.templateRepeatCancel": "ورجاءُ منسوخ ڪريو",
+  "tools.database.templateRepeatDiscardTitle": "محفوظ نه ڪيل تبديليون ڇڏي ڏجن؟",
   "tools.database.templateRepeatOnThe": "تي",
   "tools.database.templateRepeatOrdinalOne": "{day}",
   "tools.database.templateRepeatOrdinalTwo": "{day}",

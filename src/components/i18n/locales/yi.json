@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "דופּליקירן חודשלעך",
   "tools.database.templateRepeatHintYearly": "דופּליקירן יערלעך",
   "tools.database.templateRepeatCancel": "אָפּשאַפֿן די איבערחזרונג",
+  "tools.database.templateRepeatDiscardTitle": "ניט־געהיטע ענדערונגען אַוועקוואַרפֿן?",
   "tools.database.templateRepeatOnThe": "אויף דעם",
   "tools.database.templateRepeatOrdinalOne": "{day}טן",
   "tools.database.templateRepeatOrdinalTwo": "{day}טן",

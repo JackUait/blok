@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "በየወሩ አባዛ",
   "tools.database.templateRepeatHintYearly": "በየዓመቱ አባዛ",
   "tools.database.templateRepeatCancel": "ድግግሞሹን ሰርዝ",
+  "tools.database.templateRepeatDiscardTitle": "ያልተቀመጡ ለውጦች ይወገዱ?",
   "tools.database.templateRepeatOnThe": "በ",
   "tools.database.templateRepeatOrdinalOne": "{day}ኛው",
   "tools.database.templateRepeatOrdinalTwo": "{day}ኛው",

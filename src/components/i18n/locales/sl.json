@@ -1922,6 +1922,7 @@
   "tools.database.templateRepeatHintMonthly": "Podvoji mesečno",
   "tools.database.templateRepeatHintYearly": "Podvoji letno",
   "tools.database.templateRepeatCancel": "Prekliči ponavljanje",
+  "tools.database.templateRepeatDiscardTitle": "Želite zavreči neshranjene spremembe?",
   "tools.database.templateRepeatOnThe": "Na",
   "tools.database.templateRepeatOrdinalOne": "{day}.",
   "tools.database.templateRepeatOrdinalTwo": "{day}.",

@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "Dupliser månedlig",
   "tools.database.templateRepeatHintYearly": "Dupliser årlig",
   "tools.database.templateRepeatCancel": "Avbryt gjentakelse",
+  "tools.database.templateRepeatDiscardTitle": "Vil du forkaste endringer som ikke er lagret?",
   "tools.database.templateRepeatOnThe": "Den",
   "tools.database.templateRepeatOrdinalOne": "{day}.",
   "tools.database.templateRepeatOrdinalTwo": "{day}.",

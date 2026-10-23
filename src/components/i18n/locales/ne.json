@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "मासिक नक्कल बनाउनुहोस्",
   "tools.database.templateRepeatHintYearly": "वार्षिक नक्कल बनाउनुहोस्",
   "tools.database.templateRepeatCancel": "पुनरावृत्ति रद्द गर्नुहोस्",
+  "tools.database.templateRepeatDiscardTitle": "सुरक्षित नगरिएका परिवर्तनहरू खारेज गर्ने हो?",
   "tools.database.templateRepeatOnThe": "महिनाको",
   "tools.database.templateRepeatOrdinalOne": "{day}औं",
   "tools.database.templateRepeatOrdinalTwo": "{day}औं",

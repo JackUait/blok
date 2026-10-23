@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "Aylıq dublikat",
   "tools.database.templateRepeatHintYearly": "İllik dublikat",
   "tools.database.templateRepeatCancel": "Təkrarlanmanı ləğv et",
+  "tools.database.templateRepeatDiscardTitle": "Yadda saxlanmamış dəyişikliklər atılsın?",
   "tools.database.templateRepeatOnThe": "Ayın",
   "tools.database.templateRepeatOrdinalOne": "{day}.",
   "tools.database.templateRepeatOrdinalTwo": "{day}.",

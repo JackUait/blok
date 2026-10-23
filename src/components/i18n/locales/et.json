@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "Dubleeri igakuiselt",
   "tools.database.templateRepeatHintYearly": "Dubleeri igaaastaselt",
   "tools.database.templateRepeatCancel": "Tühista kordus",
+  "tools.database.templateRepeatDiscardTitle": "Kas loobuda salvestamata muudatustest?",
   "tools.database.templateRepeatOnThe": "Kuu",
   "tools.database.templateRepeatOrdinalOne": "{day}.",
   "tools.database.templateRepeatOrdinalTwo": "{day}.",

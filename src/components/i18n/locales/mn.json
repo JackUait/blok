@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "Сар тутам хувилах",
   "tools.database.templateRepeatHintYearly": "Жил тутам хувилах",
   "tools.database.templateRepeatCancel": "Давталтыг цуцлах",
+  "tools.database.templateRepeatDiscardTitle": "Хадгалаагүй өөрчлөлтийг хаях уу?",
   "tools.database.templateRepeatOnThe": "Сарын",
   "tools.database.templateRepeatOrdinalOne": "{day}-ны",
   "tools.database.templateRepeatOrdinalTwo": "{day}-ны",

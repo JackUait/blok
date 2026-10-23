@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "Duplicera månadsvis",
   "tools.database.templateRepeatHintYearly": "Duplicera årsvis",
   "tools.database.templateRepeatCancel": "Avbryt upprepning",
+  "tools.database.templateRepeatDiscardTitle": "Förkasta osparade ändringar?",
   "tools.database.templateRepeatOnThe": "Den",
   "tools.database.templateRepeatOrdinalOne": "{day}:a",
   "tools.database.templateRepeatOrdinalTwo": "{day}:a",

@@ -2005,6 +2005,7 @@ export type BlokMessageKey =
   | 'tools.database.templateRepeatAt'
   | 'tools.database.templateRepeatCancel'
   | 'tools.database.templateRepeatDayOfMonth'
+  | 'tools.database.templateRepeatDiscardTitle'
   | 'tools.database.templateRepeatEditCadence'
   | 'tools.database.templateRepeatEnding'
   | 'tools.database.templateRepeatEvery'

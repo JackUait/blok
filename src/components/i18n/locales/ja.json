@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "毎月複製",
   "tools.database.templateRepeatHintYearly": "毎年複製",
   "tools.database.templateRepeatCancel": "繰り返しを解除",
+  "tools.database.templateRepeatDiscardTitle": "保存されていない変更を破棄しますか？",
   "tools.database.templateRepeatOnThe": "毎月",
   "tools.database.templateRepeatOrdinalOne": "{day}",
   "tools.database.templateRepeatOrdinalTwo": "{day}",

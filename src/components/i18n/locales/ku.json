@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "دووبارەکردنەوەی مانگانە",
   "tools.database.templateRepeatHintYearly": "دووبارەکردنەوەی ساڵانە",
   "tools.database.templateRepeatCancel": "هەڵوەشاندنەوەی دووبارەبوونەوە",
+  "tools.database.templateRepeatDiscardTitle": "واز لە گۆڕانکارییە پاشەکەوتنەکراوەکان دەهێنیت؟",
   "tools.database.templateRepeatOnThe": "لە",
   "tools.database.templateRepeatOrdinalOne": "{day}ەم",
   "tools.database.templateRepeatOrdinalTwo": "{day}ەم",

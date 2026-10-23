@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "मासिक प्रत बनवा",
   "tools.database.templateRepeatHintYearly": "वार्षिक प्रत बनवा",
   "tools.database.templateRepeatCancel": "पुनरावृत्ती रद्द करा",
+  "tools.database.templateRepeatDiscardTitle": "जतन न केलेले बदल टाकून द्यायचे?",
   "tools.database.templateRepeatOnThe": "महिन्याचा",
   "tools.database.templateRepeatOrdinalOne": "{day}ला",
   "tools.database.templateRepeatOrdinalTwo": "{day}रा",

@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "Maandelijks dupliceren",
   "tools.database.templateRepeatHintYearly": "Jaarlijks dupliceren",
   "tools.database.templateRepeatCancel": "Herhaling annuleren",
+  "tools.database.templateRepeatDiscardTitle": "Niet-opgeslagen wijzigingen negeren?",
   "tools.database.templateRepeatOnThe": "Op de",
   "tools.database.templateRepeatOrdinalOne": "{day}e",
   "tools.database.templateRepeatOrdinalTwo": "{day}e",

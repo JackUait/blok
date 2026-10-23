@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "每月创建一次副本",
   "tools.database.templateRepeatHintYearly": "每年创建一次副本",
   "tools.database.templateRepeatCancel": "取消重复",
+  "tools.database.templateRepeatDiscardTitle": "要放弃未保存的更改吗？",
   "tools.database.templateRepeatOnThe": "每月第",
   "tools.database.templateRepeatOrdinalOne": "{day}",
   "tools.database.templateRepeatOrdinalTwo": "{day}",

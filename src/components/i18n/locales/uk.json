@@ -1922,6 +1922,7 @@
   "tools.database.templateRepeatHintMonthly": "Дублювати щомісяця",
   "tools.database.templateRepeatHintYearly": "Дублювати щороку",
   "tools.database.templateRepeatCancel": "Скасувати повторення",
+  "tools.database.templateRepeatDiscardTitle": "Відхилити незбережені зміни?",
   "tools.database.templateRepeatOnThe": "У",
   "tools.database.templateRepeatOrdinalOne": "{day}-й",
   "tools.database.templateRepeatOrdinalTwo": "{day}-й",

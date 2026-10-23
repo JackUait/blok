@@ -1912,6 +1912,7 @@
   "tools.database.templateRepeatHintMonthly": "שכפל מדי חודש",
   "tools.database.templateRepeatHintYearly": "שכפל מדי שנה",
   "tools.database.templateRepeatCancel": "בטל חזרה",
+  "tools.database.templateRepeatDiscardTitle": "להשליך את השינויים שלא נשמרו?",
   "tools.database.templateRepeatOnThe": "ב־",
   "tools.database.templateRepeatOrdinalOne": "{day}",
   "tools.database.templateRepeatOrdinalTwo": "{day}",

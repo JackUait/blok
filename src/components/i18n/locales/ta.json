@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "மாதந்தோறும் நகலெடு",
   "tools.database.templateRepeatHintYearly": "ஆண்டுதோறும் நகலெடு",
   "tools.database.templateRepeatCancel": "மீண்டும் நிகழ்வதை ரத்துசெய்",
+  "tools.database.templateRepeatDiscardTitle": "சேமிக்காத மாற்றங்களை நிராகரிக்கவா?",
   "tools.database.templateRepeatOnThe": "மாதத்தின்",
   "tools.database.templateRepeatOrdinalOne": "{day}வது",
   "tools.database.templateRepeatOrdinalTwo": "{day}வது",

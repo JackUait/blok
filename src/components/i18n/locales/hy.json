@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "Կրկնօրինակել ամեն ամիս",
   "tools.database.templateRepeatHintYearly": "Կրկնօրինակել ամեն տարի",
   "tools.database.templateRepeatCancel": "Չեղարկել կրկնությունը",
+  "tools.database.templateRepeatDiscardTitle": "Հրաժարվե՞լ չպահպանված փոփոխություններից",
   "tools.database.templateRepeatOnThe": "Ամսվա",
   "tools.database.templateRepeatOrdinalOne": "{day}-ին",
   "tools.database.templateRepeatOrdinalTwo": "{day}-րդ",

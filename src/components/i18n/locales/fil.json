@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "Gumawa ng kopya buwanan",
   "tools.database.templateRepeatHintYearly": "Gumawa ng kopya taun-taon",
   "tools.database.templateRepeatCancel": "Kanselahin ang pag-ulit",
+  "tools.database.templateRepeatDiscardTitle": "Itapon ang mga hindi na-save na pagbabago?",
   "tools.database.templateRepeatOnThe": "Sa",
   "tools.database.templateRepeatOrdinalOne": "ika-{day}",
   "tools.database.templateRepeatOrdinalTwo": "ika-{day}",

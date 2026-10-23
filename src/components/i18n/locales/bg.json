@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "Дублирай ежемесечно",
   "tools.database.templateRepeatHintYearly": "Дублирай ежегодно",
   "tools.database.templateRepeatCancel": "Отмени повторението",
+  "tools.database.templateRepeatDiscardTitle": "Да се отхвърлят ли незапазените промени?",
   "tools.database.templateRepeatOnThe": "На",
   "tools.database.templateRepeatOrdinalOne": "{day}",
   "tools.database.templateRepeatOrdinalTwo": "{day}",

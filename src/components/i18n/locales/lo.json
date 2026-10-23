@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "ເຮັດສຳເນົາລາຍເດືອນ",
   "tools.database.templateRepeatHintYearly": "ເຮັດສຳເນົາລາຍປີ",
   "tools.database.templateRepeatCancel": "ຍົກເລີກການເຮັດຊ້ຳ",
+  "tools.database.templateRepeatDiscardTitle": "ລະທິ້ງການປ່ຽນແປງທີ່ຍັງບໍ່ໄດ້ບັນທຶກບໍ່?",
   "tools.database.templateRepeatOnThe": "ໃນ",
   "tools.database.templateRepeatOrdinalOne": "ທີ {day}",
   "tools.database.templateRepeatOrdinalTwo": "ທີ {day}",

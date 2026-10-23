@@ -1922,6 +1922,7 @@
   "tools.database.templateRepeatHintMonthly": "Duplikovať mesačne",
   "tools.database.templateRepeatHintYearly": "Duplikovať ročne",
   "tools.database.templateRepeatCancel": "Zrušiť opakovanie",
+  "tools.database.templateRepeatDiscardTitle": "Zahodiť neuložené zmeny?",
   "tools.database.templateRepeatOnThe": "V",
   "tools.database.templateRepeatOrdinalOne": "{day}.",
   "tools.database.templateRepeatOrdinalTwo": "{day}.",

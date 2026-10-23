@@ -1902,6 +1902,7 @@
   "tools.database.templateRepeatHintMonthly": "Aylık çoğalt",
   "tools.database.templateRepeatHintYearly": "Yıllık çoğalt",
   "tools.database.templateRepeatCancel": "Yinelemeyi iptal et",
+  "tools.database.templateRepeatDiscardTitle": "Kaydedilmemiş değişiklikler atılsın mı?",
   "tools.database.templateRepeatOnThe": "Ayın",
   "tools.database.templateRepeatOrdinalOne": "{day}.",
   "tools.database.templateRepeatOrdinalTwo": "{day}.",

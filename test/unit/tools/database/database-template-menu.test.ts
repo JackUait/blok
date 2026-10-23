@@ -7,7 +7,7 @@ import { LightweightI18n } from '../../../../src/components/i18n/lightweight-i18
 
 vi.mock('../../../../src/components/utils/tooltip', () => ({ onHover: vi.fn() }));
 
-interface Item { name?: string; title?: string; titleEl?: HTMLElement; isActive?: boolean | (() => boolean); element?: HTMLElement; onActivate?: () => void; closeOnActivate?: boolean; children?: { items?: Item[]; searchable?: boolean; moreButton?: { label: string } } }
+interface Item { name?: string; title?: string; titleEl?: HTMLElement; isActive?: boolean | (() => boolean); element?: HTMLElement; onActivate?: () => void; closeOnActivate?: boolean; children?: { items?: Item[]; searchable?: boolean; moreButton?: { label: string }; onOpen?: () => void; width?: string } }
 
 const host = (patch: Partial<TemplateMenuHost> = {}): TemplateMenuHost => ({
   i18n: { t: (key: string) => key },
@@ -293,7 +293,9 @@ describe('template menu', () => {
       const zones = find(items, 'template-repeat-timezone')?.children?.items ?? [];
       const tokyo = zones.find((entry) => entry.name === 'template-repeat-zone-Asia/Tokyo');
 
-      expect(active(zones.find((entry) => entry.name === 'template-repeat-zone-Europe/Berlin'))).toBe(true);
+      // The viewer's zone is checked once, under "Current timezone".
+      expect(active(find(items, 'template-repeat-timezone', 'template-repeat-current-zone'))).toBe(true);
+      expect(active(zones.find((entry) => entry.name === 'template-repeat-zone-Europe/Berlin'))).toBe(false);
       expect(tokyo?.title).toBe('Tokyo');
       // research/35 §13: the same zone list and names as the date picker.
       expect(zones.filter((entry) => entry.name?.startsWith('template-repeat-zone-'))).toHaveLength(568);
@@ -307,6 +309,46 @@ describe('template menu', () => {
       save(q);
       // 09:30 in Tokyo on Oct 5 is 00:30Z.
       expect(h.setRepeat).toHaveBeenCalledWith({ ...weekly, start: '2026-10-05T00:30:00.000Z', timeZone: 'Asia/Tokyo' });
+    });
+
+    // research/35 §13 (r35:402): the date editor's search placeholder, "Current timezone" checked, then "Select a timezone".
+    it('groups the Timezone submenu as the date editor does', () => {
+      const h = repeatHost({ repeat: () => weekly });
+      const { items } = panel(h);
+      const timezone = find(items, 'template-repeat-timezone');
+      const zones = timezone?.children?.items ?? [];
+      const current = find(items, 'template-repeat-timezone', 'template-repeat-current-zone');
+      const heading = (name: string): string | null | undefined => zones.find((entry) => entry.name === name)?.element?.textContent;
+
+      expect(zones.slice(0, 4).map((entry) => entry.name)).toEqual([
+        'template-repeat-timezone-current-heading',
+        'template-repeat-current-zone',
+        'template-repeat-timezone-select-heading',
+        'template-repeat-zone-Africa/Abidjan',
+      ]);
+      expect(heading('template-repeat-timezone-current-heading')).toBe('Current timezone');
+      expect(heading('template-repeat-timezone-select-heading')).toBe('Select a timezone');
+      expect(current?.title).toBe('Berlin');
+      expect(active(current)).toBe(true);
+
+      // The submenu's search field takes the date editor's placeholder when it opens.
+      const root = document.createElement('div');
+      const search = document.createElement('div');
+      const input = document.createElement('input');
+
+      root.setAttribute('data-blok-popover', '');
+      search.setAttribute('data-blok-field', 'search');
+      search.append(input);
+      root.append(search, ...zones.flatMap((entry) => (entry.element === undefined ? [] : [entry.element])));
+      timezone?.children?.onOpen?.();
+      expect(input.placeholder).toBe('Search cities, timezones…');
+
+      // Another zone moves the check to its row; the current row picks the viewer's zone back.
+      zones.find((entry) => entry.name === 'template-repeat-zone-Asia/Tokyo')?.onActivate?.();
+      expect(active(current)).toBe(false);
+      current?.onActivate?.();
+      expect(active(current)).toBe(true);
+      expect(value(items, 'timezone')).toBe('GMT+2');
     });
 
     it('a zone pick keeps the end on the same last day', () => {

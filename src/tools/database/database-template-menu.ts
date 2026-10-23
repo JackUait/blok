@@ -399,18 +399,27 @@ const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: Cade
   });
 
   const zones = timeZones();
-  const zoneItem = (id: string): PopoverItemParams => {
+  const zoneHeading = (key: string): HTMLElement => {
+    const heading = el('div', 'data-blok-database-date-zone-heading', t(key));
+
+    heading.setAttribute('role', 'presentation');
+
+    return heading;
+  };
+  const currentHeading = zoneHeading('timeZoneCurrent');
+  const zoneItem = (id: string, name = `template-repeat-zone-${id}`): PopoverItemParams => {
     const city = zoneCity(id);
     const titleEl = el('span', 'data-blok-database-template-cadence-zone', city);
 
     titleEl.append(el('span', 'data-blok-database-template-cadence-zone-offset', zoneOffsetText(id, c.now())));
 
     return {
-      name: `template-repeat-zone-${id}`,
+      name,
       title: city,
       titleEl,
       searchTerms: [id],
-      isActive: () => live.zone === id,
+      // One check: the viewer's zone is checked under "Current timezone" only.
+      isActive: () => live.zone === id && id !== c.viewerZone,
       onActivate: () => {
         // A new zone keeps the start's wall time and the end's last day, and moves the instants.
         const w = startWall();
@@ -443,7 +452,21 @@ const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: Cade
       name: 'template-repeat-timezone',
       title: t('templateRepeatTimezone'),
       titleEl: settingTitle('timezone', t('templateRepeatTimezone'), zoneValue),
-      children: { searchable: true, items: (zones.includes(live.zone) ? zones : [live.zone, ...zones]).map(zoneItem) },
+      children: {
+        searchable: true,
+        // The search field's placeholder comes from the parent popover's messages; this submenu reads as the date editor's.
+        onOpen: () => {
+          const search = currentHeading.closest('[data-blok-popover]')?.querySelector('[data-blok-field="search"] input');
+
+          if (search instanceof HTMLInputElement) search.placeholder = t('timeZoneSearch');
+        },
+        items: [
+          { type: PopoverItemType.Html, element: currentHeading, name: 'template-repeat-timezone-current-heading' },
+          { ...zoneItem(c.viewerZone, 'template-repeat-current-zone'), isActive: () => live.zone === c.viewerZone },
+          { type: PopoverItemType.Html, element: zoneHeading('timeZoneSelect'), name: 'template-repeat-timezone-select-heading' },
+          ...(zones.includes(live.zone) ? zones : [live.zone, ...zones]).map((id) => zoneItem(id)),
+        ],
+      },
     },
   ];
 

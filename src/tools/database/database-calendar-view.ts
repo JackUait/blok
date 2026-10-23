@@ -83,6 +83,9 @@ interface DragState {
   startY: number;
   active: boolean;
   overDay: string | null;
+  /** The press point inside the event, so the ghost keeps it under the pointer. */
+  grabOffset: { x: number; y: number };
+  ghost: HTMLElement | null;
 }
 
 /**
@@ -94,6 +97,8 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
   private readonly options: DatabaseCalendarViewOptions;
   private root: HTMLElement | null = null;
   private drag: DragState | null = null;
+  /** A resize in progress: the row's would-be date, drawn live. */
+  private preview: { rowId: string; value: string } | null = null;
   /** A drag box started on empty grid space (research/23 §2c). */
   private box: { startX: number; startY: number; el: HTMLElement | null; picked: string | null } | null = null;
   private suppressClick = false;
@@ -388,7 +393,7 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     }
 
     return this.options.rows.flatMap((row) => {
-      const span = eventSpan(row.properties[dateId]);
+      const span = eventSpan(this.preview?.rowId === row.id ? this.preview.value : row.properties[dateId]);
 
       return span === null ? [] : [{ id: row.id, ...span }];
     });
@@ -692,7 +697,7 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     const undated = event.target.closest('[data-blok-database-calendar-no-date-item]')?.getAttribute('data-row-id');
 
     if (undated !== null && undated !== undefined) {
-      this.drag = { rowId: undated, mode: 'place', grabDay: '', startX: event.clientX, startY: event.clientY, active: false, overDay: null };
+      this.drag = { rowId: undated, mode: 'place', grabDay: '', startX: event.clientX, startY: event.clientY, active: false, overDay: null, grabOffset: { x: 0, y: 0 }, ghost: null };
       this.listenForDrag();
 
       return;
@@ -714,9 +719,10 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     const edge = event.target.closest('[data-blok-database-calendar-resize]')?.getAttribute('data-blok-database-calendar-resize');
     const grabDay = this.dayAt(event.clientX, event.clientY);
 
-    if (rowId === null || rowId === undefined || grabDay === null) {
+    if (rowId === null || rowId === undefined || grabDay === null || eventEl === null) {
       return;
     }
+    const box = eventEl.getBoundingClientRect();
 
     this.drag = {
       rowId,
@@ -726,6 +732,8 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
       startY: event.clientY,
       active: false,
       overDay: grabDay,
+      grabOffset: { x: event.clientX - box.left, y: event.clientY - box.top },
+      ghost: null,
     };
     this.listenForDrag();
   };
@@ -848,10 +856,22 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
       this.root?.setAttribute('data-dragging', drag.mode);
       this.eventParts(drag.rowId).forEach((el) => el.setAttribute('data-dragging', ''));
       this.root?.querySelector(`[data-blok-database-calendar-no-date-item][data-row-id="${CSS.escape(drag.rowId)}"]`)?.setAttribute('data-dragging', '');
+      if (drag.mode === 'move') {
+        drag.ghost = this.createGhost(drag.rowId);
+      }
     }
 
     const over = this.dayAt(event.clientX, event.clientY);
 
+    if (drag.mode === 'start' || drag.mode === 'end') {
+      if (over !== null && over !== drag.overDay) {
+        drag.overDay = over;
+        this.previewResize(drag);
+      }
+
+      return;
+    }
+    this.placeGhost(drag, event.clientX, event.clientY);
     if (over !== drag.overDay) {
       if (drag.overDay !== null) {
         this.dayCell(drag.overDay)?.removeAttribute('data-drop');
@@ -862,6 +882,67 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
       this.dayCell(over)?.setAttribute('data-drop', '');
     }
   };
+
+  /** A faded copy of the event that follows the pointer unsnapped (Notion's move). */
+  private createGhost(rowId: string): HTMLElement | null {
+    const source = this.eventParts(rowId)[0];
+    const grid = this.root?.querySelector('[data-blok-database-calendar-grid]');
+
+    if (source === undefined || grid === null || grid === undefined) {
+      return null;
+    }
+    const box = source.getBoundingClientRect();
+    const ghost = document.createElement('div');
+
+    ghost.setAttribute('data-blok-database-calendar-ghost', '');
+    ghost.setAttribute('aria-hidden', 'true');
+    ghost.style.width = `${box.width}px`;
+    ghost.style.height = `${box.height}px`;
+    ghost.append(...[...source.childNodes].map((node) => node.cloneNode(true)));
+    ghost.querySelectorAll('[data-blok-database-calendar-resize], [data-blok-database-comment-badge]').forEach((el) => el.remove());
+    grid.appendChild(ghost);
+
+    return ghost;
+  }
+
+  private placeGhost(drag: DragState, x: number, y: number): void {
+    const ghost = drag.ghost;
+    const origin = ghost?.parentElement?.getBoundingClientRect();
+
+    if (ghost === null || origin === undefined) {
+      return;
+    }
+    Object.assign(ghost.style, {
+      left: `${x - drag.grabOffset.x - origin.left}px`,
+      top: `${y - drag.grabOffset.y - origin.top}px`,
+    });
+  }
+
+  /** Redraws the events with the dragged edge on `overDay`. */
+  private previewResize(drag: DragState): void {
+    const dateId = this.options.datePropertyId;
+    const value = dateId === undefined ? undefined : this.options.rows.find((r) => r.id === drag.rowId)?.properties[dateId];
+    const next = drag.overDay === null || drag.mode === 'move' || drag.mode === 'place' ? null : resizeDateValue(value, drag.mode, drag.overDay);
+
+    this.preview = next === null ? null : { rowId: drag.rowId, value: next };
+    this.redrawEvents();
+    this.eventParts(drag.rowId).forEach((el) => el.setAttribute('data-dragging', ''));
+  }
+
+  /** Lays the events out again in the drawn day cells, so the cells keep their focus and layout. */
+  private redrawEvents(): void {
+    this.root?.querySelectorAll<HTMLElement>('[data-blok-database-calendar-week]').forEach((weekEl) => {
+      const cells = [...weekEl.querySelectorAll<HTMLElement>(':scope > [data-blok-database-calendar-day]')];
+      const week = cells.map((cell) => cell.getAttribute('data-day') ?? '');
+      const placed = layoutWeek(week, this.events());
+
+      weekEl.style.setProperty('--blok-database-calendar-lanes', String(placed.reduce((max, p) => Math.max(max, p.lane + 1), 0)));
+      cells.forEach((cell, col) => {
+        cell.querySelectorAll(':scope > [data-blok-database-calendar-event]').forEach((el) => el.remove());
+        placed.filter((p) => p.startCol === col).forEach((p) => cell.appendChild(this.createEvent(p)));
+      });
+    });
+  }
 
   private eventParts(rowId: string): HTMLElement[] {
     return [...(this.root?.querySelectorAll<HTMLElement>('[data-blok-database-calendar-event]') ?? [])]
@@ -927,6 +1008,11 @@ export class DatabaseCalendarView implements DatabaseViewRenderer {
     if (drag !== null) {
       if (drag.overDay !== null) {
         this.dayCell(drag.overDay)?.removeAttribute('data-drop');
+      }
+      drag.ghost?.remove();
+      if (this.preview !== null) {
+        this.preview = null;
+        this.redrawEvents();
       }
       this.eventParts(drag.rowId).forEach((el) => el.removeAttribute('data-dragging'));
       this.root?.querySelectorAll('[data-blok-database-calendar-no-date-item][data-dragging]').forEach((el) => el.removeAttribute('data-dragging'));

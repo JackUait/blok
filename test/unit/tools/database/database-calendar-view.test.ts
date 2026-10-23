@@ -713,6 +713,57 @@ describe('DatabaseCalendarView', () => {
       expect(handlers.setDate).toHaveBeenCalledWith('r1', '2026-10-09/2026-10-12');
     });
 
+    it('stretches the event live while its edge is dragged, with no day tint, and snaps back on Escape', () => {
+      const { root } = mount();
+
+      layOut(root);
+      const handle = events(root, 'r1')[0].querySelector<HTMLElement>('[data-blok-database-calendar-resize="end"]');
+
+      pointer('pointerdown', handle ?? root, 595, 110);
+      pointer('pointermove', document, 150, 210);
+
+      // Fri 9 → Mon 12 crosses the week break: two parts of two days.
+      const parts = events(root, 'r1');
+
+      expect(parts.map((el) => el.style.getPropertyValue('--blok-database-calendar-span'))).toEqual(['2', '2']);
+      expect(parts[0].hasAttribute('data-continues-after')).toBe(true);
+      expect(root.querySelector('[data-drop]')).toBeNull();
+      expect(root.getAttribute('data-dragging')).toBe('end');
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      expect(events(root, 'r1').map((el) => el.style.getPropertyValue('--blok-database-calendar-span'))).toEqual(['1']);
+    });
+
+    it('a move keeps the event in place and drags a ghost copy that follows the pointer', () => {
+      const { root } = mount();
+
+      layOut(root);
+      const grid = root.querySelector<HTMLElement>('[data-blok-database-calendar-grid]');
+
+      if (grid !== null) rect(grid, 0, 0, 700, 600);
+      const launch = events(root, 'r1')[0];
+
+      rect(launch, 504, 132, 92, 28);
+      launch.setAttribute('data-blok-database-row-selected', '');
+      pointer('pointerdown', launch, 550, 140);
+      pointer('pointermove', document, 357, 213);
+
+      const ghost = root.querySelector<HTMLElement>('[data-blok-database-calendar-ghost]');
+
+      expect(ghost).not.toBeNull();
+      expect(ghost?.getAttribute('aria-hidden')).toBe('true');
+      expect(ghost?.hasAttribute('data-blok-database-row-selected')).toBe(false);
+      expect(ghost?.hasAttribute('data-blok-database-calendar-event')).toBe(false);
+      // Unsnapped: the grab point stays under the pointer.
+      expect(ghost?.style.left).toBe('311px');
+      expect(ghost?.style.top).toBe('205px');
+      expect(events(root, 'r1')).toEqual([launch]);
+      expect(day(root, '2026-10-14').getAttribute('data-drop')).toBe('');
+
+      pointer('pointerup', document, 357, 213);
+      expect(root.querySelector('[data-blok-database-calendar-ghost]')).toBeNull();
+    });
+
     it('drags the start edge earlier', () => {
       const { root, handlers } = mount();
 

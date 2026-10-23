@@ -10074,7 +10074,6 @@ textarea[data-blok-database-cell-input] {
   align-content: flex-start;
   column-gap: var(--blok-space-1-5);
   padding: var(--blok-space-0-5) var(--blok-space-1-5);
-  overflow: hidden;
   white-space: nowrap;
   border-radius: var(--blok-radius-control);
   background-color: var(--blok-database-calendar-event-bg);
@@ -10111,8 +10110,29 @@ textarea[data-blok-database-cell-input] {
   outline: 2px solid var(--blok-focus-ring);
 }
 
+/* findings C01/C02: the dragged event stays opaque with its hover fill; a move drags a faded ghost. */
 [data-blok-database-calendar-event][data-dragging] {
+  background-color: var(--blok-database-calendar-event-hover-bg);
+}
+
+[data-blok-database-calendar-ghost] {
+  position: absolute;
+  z-index: 3;
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  align-content: flex-start;
+  column-gap: var(--blok-space-1-5);
+  padding: var(--blok-space-0-5) var(--blok-space-1-5);
+  overflow: hidden;
+  white-space: nowrap;
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-calendar-event-bg);
+  box-shadow: var(--blok-database-calendar-event-shadow);
+  color: var(--blok-database-calendar-day-text);
   opacity: 0.4;
+  pointer-events: none;
 }
 
 /* A bar cut by the week edge runs flush into the next row. */
@@ -10167,19 +10187,20 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-calendar-event-muted-text);
 }
 
+/* findings C01: 12px, centred on the edge. */
 [data-blok-database-calendar-resize] {
   position: absolute;
   inset-block: 0;
-  inline-size: 6px;
-  cursor: ew-resize;
+  inline-size: 12px;
+  cursor: col-resize;
 }
 
 [data-blok-database-calendar-resize="start"] {
-  inset-inline-start: 0;
+  inset-inline-start: -6px;
 }
 
 [data-blok-database-calendar-resize="end"] {
-  inset-inline-end: 0;
+  inset-inline-end: -6px;
 }
 
 [data-blok-database-calendar][data-dragging="move"] {
@@ -10188,7 +10209,7 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-calendar][data-dragging="start"],
 [data-blok-database-calendar][data-dragging="end"] {
-  cursor: ew-resize;
+  cursor: col-resize;
 }
 
 @media (prefers-reduced-motion: reduce) {

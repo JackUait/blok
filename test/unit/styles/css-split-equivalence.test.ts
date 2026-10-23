@@ -1077,6 +1077,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_FILTER_LIST_ACTIVE_BYTES = 45;
     // database.css: feel/findings-toolbar V16–V29: the chip bar, chip and date popovers, sort panel, search box and match tint, the New ▾ head, Clear search.
     const DATABASE_FILTER_SORT_FEEL_BYTES = 5_634;
+    // database.css: feel/findings-caltimeline: calendar live resize and move ghost.
+    const DATABASE_CAL_TIMELINE_FEEL_BYTES = 700;
     // database.css: feel/findings-table T13: the uncapped board and list bar still hides the whole toolbar.
     const DATABASE_SELECTION_BAR_BOARD_BYTES = 233;
     // database.css: feel/findings-toolbar V09: view settings docks at the window's end edge with radius 10.
@@ -1321,7 +1323,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_VIEW_SETTINGS_LAYOUT_TILES_BYTES
       + DATABASE_VIEW_SETTINGS_PROPERTY_EYES_BYTES
       + DATABASE_VIEW_SETTINGS_BACK_BYTES
-      + DATABASE_ROW_PAGE_PROPS_BYTES;
+      + DATABASE_ROW_PAGE_PROPS_BYTES
+      + DATABASE_CAL_TIMELINE_FEEL_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

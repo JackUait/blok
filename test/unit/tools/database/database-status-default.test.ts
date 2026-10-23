@@ -120,6 +120,31 @@ describe('a status property\'s default option (research/30 §10f, research/31 §
     expect(doc.row(none ?? '').properties.st ?? null).toBeNull();
   });
 
+  // findings-listgallery L07: Notion's new row shows "Not started", the status default.
+  it('a status added from the UI makes Not started its default, so each add path stamps it', () => {
+    const doc = seed();
+    const { tool, el } = buildDatabase(doc, 'db', {
+      schema: [{ id: 'title', name: 'Name', type: 'title', position: 'a0' }],
+      views: [{ id: 'v', name: 'View', type: 'list', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+      activeViewId: 'v',
+    });
+    const added = tool.addProperty({ name: 'Status', type: 'status' });
+    const notStarted = added?.config?.options.find((option) => option.groupId === 'todo');
+
+    expect(notStarted).toBeDefined();
+    expect(added?.status?.defaultOptionId).toBe(notStarted?.id);
+
+    const fromTool = tool.newRow();
+    const before = doc.childrenOf('db');
+
+    el.querySelector<HTMLElement>('[data-blok-database-add-row]')?.click();
+    const fromList = newRowId(doc, before);
+
+    expect(doc.row(fromTool ?? '').properties[added?.id ?? '']).toBe(notStarted?.id);
+    expect(fromList).toBeDefined();
+    expect(doc.row(fromList ?? '').properties[added?.id ?? '']).toBe(notStarted?.id);
+  });
+
   it('a template\'s own status wins over the default', () => {
     const doc = makeDoc([
       { id: 'db', name: 'database', parentId: null, data: {} },

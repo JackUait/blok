@@ -10608,8 +10608,12 @@ export class DatabaseTool implements BlockTool {
         }),
       }
       : undefined;
+    // findings-listgallery L07: Notion's new status starts every new row at Not started, its first option.
+    const notStarted = config?.options[0]?.id;
     // A relation starts as a self-relation; "Related to" then picks the database.
-    const settings: PropertySettingsV2 = isStatus ? { status: createDefaultStatusSettings() } : {};
+    const settings: PropertySettingsV2 = isStatus
+      ? { status: { ...createDefaultStatusSettings(), ...(notStarted === undefined ? {} : { defaultOptionId: notStarted }) } }
+      : {};
 
     if (params.type === 'relation') settings.relation = { targetDatabaseId: this.dataId };
     const prop = this.model.addProperty(name, params.type, config, { afterId: params.afterId, beforeId: params.beforeId }, settings);

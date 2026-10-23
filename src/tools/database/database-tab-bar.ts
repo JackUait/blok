@@ -1,5 +1,5 @@
 import { generateKeyBetween } from 'fractional-indexing';
-import { IconBoard, IconCalendar, IconChart, IconGallery, IconList, IconMessage, IconTable, IconTimeline, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconColumns, IconListChecklist, IconMap, IconTabs, IconPreview, IconDatabase } from '../../components/icons';
+import { IconBoard, IconChart, IconGallery, IconList, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconColumns, IconMap, IconTabs, IconPreview, IconDatabase, IconViewCalendar, IconViewFeed, IconViewForm, IconViewTimeline } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
 import { PopoverDesktop } from '../../components/utils/popover';
@@ -41,11 +41,11 @@ export const VIEW_ICONS: Record<string, string> = {
   list: IconList,
   table: IconTable,
   gallery: IconGallery,
-  calendar: IconCalendar,
-  timeline: IconTimeline,
+  calendar: IconViewCalendar,
+  timeline: IconViewTimeline,
   chart: IconChart,
-  feed: IconMessage,
-  form: IconListChecklist,
+  feed: IconViewFeed,
+  form: IconViewForm,
   map: IconMap,
   dashboard: IconColumns,
 };

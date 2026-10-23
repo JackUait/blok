@@ -870,6 +870,81 @@ export const IconTimeline = `
 </svg>
 `;
 
+// Feed view: a newspaper, a sheet with a fold-out column (Notion "newspaper").
+export const IconViewFeed = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M6 15V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8h3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M9 6.5h5M9 10h5M9 13.5h3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Calendar view: the panel with a filled header band and a dot grid (Notion "viewCalendar").
+export const IconViewCalendar = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3 6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2H3V6Z" fill="currentColor" stroke="none"/>
+  <circle cx="6.5" cy="10.75" r=".85" fill="currentColor" stroke="none"/>
+  <circle cx="10" cy="10.75" r=".85" fill="currentColor" stroke="none"/>
+  <circle cx="13.5" cy="10.75" r=".85" fill="currentColor" stroke="none"/>
+  <circle cx="6.5" cy="13.25" r=".85" fill="currentColor" stroke="none"/>
+  <circle cx="10" cy="13.25" r=".85" fill="currentColor" stroke="none"/>
+  <circle cx="13.5" cy="13.25" r=".85" fill="currentColor" stroke="none"/>
+</svg>
+`;
+
+// Timeline view: two staggered bars in the panel (Notion "viewTimeline").
+export const IconViewTimeline = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6 8.5h5M9 11.5h5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Form: question lines over an answer pill (Notion "inlineBlockDouble").
+export const IconViewForm = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3.5 4h13M3.5 7.5h10M3.5 11h13" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="3.5" y="13.5" width="8" height="3.5" rx="1.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Database - Inline: a table framed by corner brackets (Notion "databaseEmbed").
+export const IconDatabaseInline = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3 6V5a2 2 0 0 1 2-2h1M14 3h1a2 2 0 0 1 2 2v1M17 14v1a2 2 0 0 1-2 2h-1M6 17H5a2 2 0 0 1-2-2v-1" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="6" y="6" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6 9h8M9 6v8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Linked view of data source: the table glyph with an arrow out of its corner (Notion "collectionArrow").
+export const IconDatabaseLinked = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M17 10V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3 8h14" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M8 4v12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12 17l4.5-4.5M13.5 12.5h3v3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// An unlinked linked view: a folder with a question mark (Notion "folderQuestionMark").
+export const IconFolderQuestion = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M5 9V5a1 1 0 0 1 1-1h3.5L11 5.5h4a2 2 0 0 1 2 2V13a2 2 0 0 1-2 2h-3.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="6.5" cy="13.5" r="3.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M5.4 12.6a1.1 1.1 0 1 1 1.6 1c-.35.15-.5.4-.5.7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="6.5" cy="15.6" r=".6" fill="currentColor" stroke="none"/>
+</svg>
+`;
+
+// Templates: a sheet in front of another (the templates gallery label).
+export const IconTemplates = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <rect x="3" y="6" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6 3h9a2 2 0 0 1 2 2v9" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Calendar icon (date property type)
 export const IconCalendar = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

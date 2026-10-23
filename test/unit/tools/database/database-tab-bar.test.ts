@@ -143,7 +143,7 @@ vi.mock('../../../../src/tools/database/database-view-popover', () => {
 });
 
 import { DatabaseTabBar } from '../../../../src/tools/database/database-tab-bar';
-import { IconCalendar, IconChart, IconGallery, IconMessage, IconTable } from '../../../../src/components/icons';
+import { IconChart, IconGallery, IconTable, IconViewCalendar, IconViewFeed } from '../../../../src/components/icons';
 import { resyncPortalDirections } from '../../../../src/components/utils/portal-direction';
 import type { DatabaseViewConfig, ViewType } from '../../../../src/tools/database/types';
 import type { API } from '../../../../types';
@@ -226,7 +226,7 @@ describe('DatabaseTabBar', () => {
       const calendar = makeView({ id: 'c', type: 'calendar', position: 'a2' });
       const el = createTabBar([gallery, calendar], gallery.id).render();
       const icons = [...el.querySelectorAll('[data-blok-database-tab-name]')].map((name) => name.parentElement?.firstElementChild?.innerHTML);
-      const expected = [IconGallery, IconCalendar].map((icon) => {
+      const expected = [IconGallery, IconViewCalendar].map((icon) => {
         const span = document.createElement('span');
 
         span.innerHTML = icon;
@@ -242,7 +242,7 @@ describe('DatabaseTabBar', () => {
       const feed = makeView({ id: 'fe', type: 'feed', position: 'a2' });
       const el = createTabBar([chart, feed], chart.id).render();
       const icons = [...el.querySelectorAll('[data-blok-database-tab-name]')].map((name) => name.parentElement?.firstElementChild?.innerHTML);
-      const expected = [IconChart, IconMessage].map((icon) => {
+      const expected = [IconChart, IconViewFeed].map((icon) => {
         const span = document.createElement('span');
 
         span.innerHTML = icon;

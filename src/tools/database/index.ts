@@ -125,7 +125,7 @@ import type { DrawerBacklink, LayoutTab, LayoutTabsDraft, LayoutTabsHost } from 
 import { relatedTabSources, thisPageFilter } from './layout-tab-relations';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar, VIEW_ICONS } from './database-tab-bar';
-import { IconArrowDiagonal, IconCalendar, IconCreditCard, IconCurrency, IconDatabase, IconFanDeck, IconPackage, IconPaintBrush, IconTicket, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile, IconFileDoc, IconMap, IconMessage, IconTrash, IconCheck, IconChevronRight, IconCopy, IconDownload, IconImage, IconListChecklist, IconMergeCells, IconPageLayout, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
+import { IconArrowDiagonal, IconCalendar, IconCreditCard, IconCurrency, IconDatabase, IconDatabaseInline, IconDatabaseLinked, IconFanDeck, IconPackage, IconPaintBrush, IconTicket, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile, IconFileDoc, IconMap, IconMessage, IconTrash, IconCheck, IconChevronRight, IconCopy, IconDownload, IconImage, IconListChecklist, IconMergeCells, IconPageLayout, IconTable, IconTimeline, IconUpload, IconWand } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -1877,7 +1877,7 @@ export class DatabaseTool implements BlockTool {
       // No "New database" panel (§3): the form opens on its builder.
       view({ name: 'databaseForm', titleKey: 'tools.database.viewTypeForm', layout: 'form', searchTerms: ['form', 'survey', 'database'], render: renderFormPreview, descriptionKey: 'toolbox.preview.form' }),
       {
-        icon: IconDatabase,
+        icon: IconDatabaseInline,
         titleKey: 'databaseInline',
         name: 'database',
         searchTerms: ['database', 'inline', 'database inline'],
@@ -1886,7 +1886,7 @@ export class DatabaseTool implements BlockTool {
         data: { [INITIAL_VIEW_KEY]: 'table' },
       },
       {
-        icon: IconDatabase,
+        icon: IconDatabaseLinked,
         titleKey: 'linkedDatabase',
         name: 'linkedDatabase',
         searchTerms: ['linked', 'linked view', 'database', 'view'],

@@ -4295,7 +4295,7 @@ span[data-blok-slash-search] {
   --blok-database-form-respondent-bg: rgba(255, 255, 255, 0.03);
   --blok-database-card-bg: rgb(32, 32, 32);
   --blok-database-card-bg-hover: rgb(38, 38, 38);
-  --blok-database-table-bg: var(--blok-bg-primary);
+  --blok-database-table-bg: rgb(25, 25, 25);
   --blok-database-table-border: rgba(255, 255, 243, 0.082);
   --blok-database-table-header-text: rgb(173, 169, 163);
   --blok-database-table-header-icon: rgb(173, 169, 163);
@@ -4535,7 +4535,7 @@ span[data-blok-slash-search] {
   --blok-database-form-respondent-bg: rgba(255, 255, 255, 0.03);
   --blok-database-card-bg: rgb(32, 32, 32);
   --blok-database-card-bg-hover: rgb(38, 38, 38);
-  --blok-database-table-bg: var(--blok-bg-primary);
+  --blok-database-table-bg: rgb(25, 25, 25);
   --blok-database-table-border: rgba(255, 255, 243, 0.082);
   --blok-database-table-header-text: rgb(173, 169, 163);
   --blok-database-table-header-icon: rgb(173, 169, 163);
@@ -8806,6 +8806,16 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   white-space: nowrap;
 }
 
+[data-blok-database-file-chip-icon] {
+  display: inline-flex;
+  flex: none;
+}
+
+[data-blok-database-file-chip-icon] svg {
+  width: 20px;
+  height: 20px;
+}
+
 [data-blok-database-property-menu-name], [data-blok-database-files-link], [data-blok-database-property-menu-field] {
   display: flex;
   align-items: center;
@@ -8971,6 +8981,11 @@ textarea[data-blok-database-property-description][data-blok-field] {
 
 textarea[data-blok-database-cell-input] {
   white-space: break-spaces;
+}
+
+[data-blok-database-cell-input="title"] {
+  min-height: 38px;
+  font-weight: 500;
 }
 
 [data-blok-database-cell-input="number"] {
@@ -9705,6 +9720,7 @@ textarea[data-blok-database-cell-input] {
   font-weight: 400;
   cursor: pointer;
   background-color: var(--blok-database-table-bg);
+  box-shadow: inset 0 -1px 0 var(--blok-database-table-border);
   transition: background-color 20ms ease-in;
 }
 
@@ -9778,6 +9794,16 @@ textarea[data-blok-database-cell-input] {
   transition: background-color 100ms ease-in-out;
 }
 
+[data-blok-database-table-add-property][data-labelled] {
+  gap: var(--blok-space-1-5);
+  width: auto;
+  padding-inline: var(--blok-space-1-5);
+  color: var(--blok-database-table-header-text);
+  font-size: 14px;
+  line-height: 16.8px;
+  white-space: nowrap;
+}
+
 [data-blok-database-table-add-property]:hover {
   background-color: var(--blok-database-table-header-hover-bg);
 }
@@ -9835,7 +9861,7 @@ textarea[data-blok-database-cell-input] {
   cursor: default;
 }
 
-[data-blok-database-table-grid][data-vertical-lines="true"] [data-blok-database-table-cell], [data-blok-database-table-grid][data-vertical-lines="true"] [data-blok-database-table-column-header], [data-blok-database-table-row-ghost][data-vertical-lines="true"] [data-blok-database-table-cell], [data-blok-database-table-column-ghost][data-vertical-lines="true"] {
+[data-blok-database-table-grid][data-vertical-lines="true"] [data-blok-database-table-cell], [data-blok-database-table-row-ghost][data-vertical-lines="true"] [data-blok-database-table-cell], [data-blok-database-table-column-ghost][data-vertical-lines="true"] {
   border-inline-end: 1px solid var(--blok-database-table-border);
 }
 
@@ -9846,6 +9872,23 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-table-cell][data-type="title"] {
   font-weight: 500;
+}
+
+[data-blok-database-table-cell] > [data-blok-database-page-icon], [data-blok-database-table-cell] > [data-blok-database-page-icon-placeholder] {
+  float: inline-start;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-block-start: calc(-1 * var(--blok-space-0-5));
+  margin-inline: calc(-1 * var(--blok-space-0-5)) var(--blok-space-0-75);
+  color: var(--blok-database-table-header-icon);
+}
+
+[data-blok-database-page-icon-placeholder] svg {
+  width: 18px;
+  height: 18px;
 }
 
 [data-blok-database-table-cell][data-type="number"] {
@@ -10371,6 +10414,25 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-table-add-row] svg {
   width: 16px;
   height: 16px;
+}
+
+[data-blok-database-table-blank-row] {
+  display: flex;
+}
+
+[data-blok-database-table-blank-cell] {
+  flex: none;
+  box-sizing: border-box;
+  min-height: 37px;
+  border-block-end: 1px solid var(--blok-database-table-border);
+}
+
+[data-blok-database-table-blank-row] > [data-blok-database-table-filler] {
+  border-block-end: 1px solid var(--blok-database-table-border);
+}
+
+[data-blok-database-table-grid][data-vertical-lines="true"] [data-blok-database-table-blank-cell] {
+  border-inline-end: 1px solid var(--blok-database-table-border);
 }
 
 [data-blok-database-table-load-more] {

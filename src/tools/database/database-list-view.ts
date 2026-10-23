@@ -140,6 +140,14 @@ export class DatabaseListView implements DatabaseViewRenderer {
     return wrapper;
   }
 
+  /** Redraws these rows' properties from the given rows, as a bulk edit types (research/35:235). */
+  showDraft(rows: DatabaseRow[]): void {
+    rows.forEach((row) => {
+      this.wrapper?.querySelectorAll(`${ROW_SELECTOR}[data-row-id="${CSS.escape(row.id)}"] > [data-blok-database-list-row-properties]`)
+        .forEach((old) => old.replaceWith(this.createPropertiesElement(row)));
+    });
+  }
+
   /** Swaps a row's title for an input; Enter or blur commits through `onTitleEdit`. */
   editTitle(rowId: string): void {
     const rowEl = this.rowElement(rowId);

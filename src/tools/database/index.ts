@@ -9806,6 +9806,15 @@ export class DatabaseTool implements BlockTool {
     const displayChanged = { any: false };
     const written = { any: false };
     const closeKey = watchBulkCloseKey();
+    // research/35:234-235: the picked cards and rows show each key; the write waits for the close.
+    const showDraft = (text?: string): void => {
+      if (!(this.view instanceof DatabaseBoardView || this.view instanceof DatabaseListView)) return;
+      this.view.showDraft(rowIds.flatMap((rowId) => {
+        const row = this.model.getRow(rowId);
+
+        return row === undefined ? [] : [text === undefined ? row : { ...row, properties: { ...row.properties, [propertyId]: text } }];
+      }));
+    };
 
     this.bulkEditor = openCellEditor(property, bulkStartValue(property, rowIds.map((rowId) => this.model.getRow(rowId))), anchor, {
       ...this.cellContext(),
@@ -9822,6 +9831,7 @@ export class DatabaseTool implements BlockTool {
         : {}),
       options: this.model.getProperty(propertyId)?.config?.options ?? [],
       onOptionsChange: (options) => this.handleTableOptionsChange(propertyId, options),
+      ...(property.type === 'text' ? { onDraft: showDraft } : {}),
       onCommit: (value) => {
         written.any = true;
         this.commitTableCells(rowIds.map((rowId) => ({ rowId, propertyId, value })), []);
@@ -9829,6 +9839,7 @@ export class DatabaseTool implements BlockTool {
       onClose: () => {
         closeKey.stop();
         this.bulkEditor = null;
+        if (property.type === 'text' && !written.any) showDraft();
         if (bulkCloseClearsSelection(property.type, closeKey.key(), written.any)) this.clearRowSelection();
         if (displayChanged.any) this.rerenderView({ keepDrawer: true });
       },

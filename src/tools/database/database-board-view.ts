@@ -91,6 +91,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
   private readonly aggregate: ((optionId: string) => string) | undefined;
   private readonly aggregateHint: string | undefined;
   private readonly settings: Pick<DatabaseBoardViewOptions, 'view' | 'schema' | 'bodyOf' | 'locale' | 'onPropertyEdit' | 'subGroups' | 'onLaneToggle' | 'cellContext' | 'getTotal' | 'onLoadMore' | 'commentBadges' | 'addCardLabel'>;
+  private root: HTMLElement | null = null;
 
   constructor({
     readOnly, i18n, options, getRows, titlePropertyId, onTitleEdit, hideCounts, hiddenGroupCount, aggregate, aggregateHint, ...settings
@@ -176,8 +177,27 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     boardArea.querySelector<HTMLElement>('[data-blok-database-card]')?.setAttribute('tabindex', '0');
     boardArea.addEventListener('click', this.onCardPropertyClick);
     boardArea.addEventListener('keydown', this.onCardKeyDown);
+    this.root = wrapper;
 
     return wrapper;
+  }
+
+  /** Redraws these cards' property lines from the given rows, as a bulk edit types (research/35:234). */
+  showDraft(rows: DatabaseRow[]): void {
+    rows.forEach((row) => {
+      this.root?.querySelectorAll<HTMLElement>(`[data-blok-database-card][data-row-id="${CSS.escape(row.id)}"]`).forEach((cardEl) => {
+        const next = this.createCardProperties(row);
+        const old = cardEl.querySelector(':scope > [data-blok-database-card-properties]');
+
+        if (next === null) {
+          old?.remove();
+        } else if (old !== null) {
+          old.replaceWith(next);
+        } else {
+          cardEl.insertBefore(next, cardEl.querySelector(':scope > [data-blok-database-card-actions]'));
+        }
+      });
+    });
   }
 
   /** Sub-grouped boards show each column header once, above every lane. */

@@ -61,6 +61,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/columns-shared.ts': cmds(['column_list.setWidths'], 'Resize and equalize column widths.'),
   'ui-file:src/tools/database/database-board-view.ts': cmds(['database.addRow', 'database.setRowValues', 'database.addOption', 'block.delete'], 'Board cards and columns.'),
   'ui-file:src/tools/database/database-card-drag.ts': cmds(['database.moveRow'], 'Drag a card between groups or within one.'),
+  'ui-file:src/tools/database/database-filter-chip.ts': exempt('cut-v1', VIEW_SETTING_CUT),
   'ui-file:src/tools/database/database-comments-panel.ts': exempt('cut-v1', 'D6 cut: comments are written by people, not agents (user decision 2026-10-16, design 18); no agent comment tools for now.'),
   'ui-file:src/tools/database/database-comments.ts': exempt('cut-v1', 'D6 cut: the feed card comment box writes the same built-in comments; agents skip comments (user decision 2026-10-16, design 18).'),
   'ui-file:src/tools/database/database-template-menu.ts': cmd('database.setTemplateRepeat'),

@@ -104,6 +104,12 @@ describe('DatabaseGalleryView', () => {
     expect(mount().root.hasAttribute('data-fit-image')).toBe(false);
   });
 
+  // findings-listgallery L22: the gallery takes the board's Card layout too; List is the default.
+  it('marks the card layout, List by default', () => {
+    expect(mount({ view: galleryView({ cardLayout: 'compact' }) }).root.getAttribute('data-card-layout')).toBe('compact');
+    expect(mount().root.getAttribute('data-card-layout')).toBe('list');
+  });
+
   describe('card preview', () => {
     const image: BodyBlock = { type: 'image', data: { url: 'https://example.com/cover.png' } };
     const text: BodyBlock = { type: 'paragraph', data: { text: 'Body line' } };

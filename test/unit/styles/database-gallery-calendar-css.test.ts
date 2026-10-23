@@ -72,6 +72,14 @@ describe('database gallery and calendar styles', () => {
     expect(ruleBody('[data-blok-database-gallery-grid]')).not.toContain('align-items');
   });
 
+  // findings-listgallery L22: a compact gallery card sets its properties side by side, as a compact board card.
+  it('sets a compact gallery card\'s properties side by side', () => {
+    const body = ruleBody('[data-blok-database-gallery][data-card-layout="compact"] [data-blok-database-gallery-properties]');
+
+    expect(body).toContain('flex-direction: row');
+    expect(body).toContain('flex-wrap: wrap');
+  });
+
   // findings-listgallery L14: the "+ New page" tile is a card-size tile with the card ring, 15px gray.
   it('draws the "+ New page" tile at card height with the card ring', () => {
     const tile = ruleBody('[data-blok-database-gallery-new]');

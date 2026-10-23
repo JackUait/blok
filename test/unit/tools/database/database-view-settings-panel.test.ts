@@ -614,6 +614,16 @@ describe('view settings panel', () => {
       expect(tiles().map((tile) => tile.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
     });
 
+    // findings-listgallery L22: Notion's gallery Layout page has the same Card layout box.
+    it('ends a gallery\'s layout page with the same "Card layout" box', () => {
+      harness({ type: 'gallery' }).open();
+      click('database-settings-layout');
+      const box = document.querySelector<HTMLElement>('[data-blok-testid="database-settings-card-layout"]');
+
+      expect(box?.parentElement?.lastElementChild).toBe(box);
+      expect(tiles().map((tile) => tile.getAttribute('aria-pressed'))).toEqual(['false', 'true']);
+    });
+
     it('is not on a table, and its tiles are disabled while the view is locked', () => {
       harness().open();
       click('database-settings-layout');

@@ -958,7 +958,7 @@ export class ViewSettingsPages {
           openPages,
           loadLimit,
           ...this.layoutRows(panel),
-          ...(view.type === 'board' ? [this.cardLayoutBox(panel)] : []),
+          ...(view.type === 'board' || view.type === 'gallery' ? [this.cardLayoutBox(panel)] : []),
         ];
       },
     };

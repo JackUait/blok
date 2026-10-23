@@ -8,7 +8,7 @@ import type { CellContext } from './cells';
 import { createCardPreview } from './database-card-preview';
 import { readPropertyValue } from './property-values';
 import type { BodyBlock } from './row-body';
-import { resolveCardPreview, resolveCardSize, resolveFitImage, resolveViewProperties } from './view-settings';
+import { resolveCardLayout, resolveCardPreview, resolveCardSize, resolveFitImage, resolveViewProperties } from './view-settings';
 import { syncCommentBadge } from './database-comment-badge';
 import type { CommentBadges } from './database-comment-badge';
 import { getElementDirection } from '../../components/utils/direction';
@@ -137,6 +137,7 @@ export class DatabaseGalleryView implements DatabaseViewRenderer {
 
     root.setAttribute('data-blok-database-gallery', '');
     root.setAttribute('data-card-size', resolveCardSize(this.options.view));
+    root.setAttribute('data-card-layout', resolveCardLayout(this.options.view));
     if (resolveFitImage(this.options.view)) {
       root.setAttribute('data-fit-image', '');
     }

@@ -10042,9 +10042,17 @@ textarea[data-blok-database-cell-input] {
   display: flex;
   flex-direction: column;
   padding-inline: var(--blok-space-2-5);
+  padding-block-end: var(--blok-space-2);
   font-size: 12px;
   line-height: 18px;
   color: var(--blok-database-gallery-title-text);
+}
+
+/* findings-listgallery L22: a compact card sets its properties side by side, as on a board. */
+[data-blok-database-gallery][data-card-layout="compact"] [data-blok-database-gallery-properties] {
+  flex-direction: row;
+  flex-wrap: wrap;
+  column-gap: var(--blok-space-1-5);
 }
 
 [data-blok-database-gallery-property] {

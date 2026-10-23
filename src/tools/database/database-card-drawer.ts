@@ -3272,8 +3272,8 @@ export class DatabaseCardDrawer {
       i18n: { t: (key) => this.t(key) },
       readOnly: this.readOnly,
       options: shownOptions.list,
-      // Only Place was measured over its value on the row page (research/35:348, research/36:139).
-      ...(def.type === 'place' ? { coverCell: true } : {}),
+      // Every editor opens over its value, so the value seems to turn editable in place.
+      coverCell: true,
       ...(reminder !== undefined ? { reminder } : {}),
       ...(onDateDisplayChange !== undefined ? { onDateDisplayChange } : {}),
       ...(def.type === 'date' && onReminderChange !== undefined

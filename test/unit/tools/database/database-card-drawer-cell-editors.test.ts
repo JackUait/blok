@@ -375,6 +375,25 @@ describe('DatabaseCardDrawer — link values', () => {
     expect(actionIn(options, 'prop-link', 'tools.database.cellCopy')).not.toBeNull();
   });
 
+  it.each([
+    ['text', { id: 'prop-note', name: 'Note', type: 'text', position: 'a4' }],
+    ['number', { id: 'prop-note', name: 'Note', type: 'number', position: 'a4' }],
+    ['select', { id: 'prop-note', name: 'Note', type: 'select', position: 'a4', config: { options: STATUS_OPTIONS } }],
+    ['date', { id: 'prop-note', name: 'Note', type: 'date', position: 'a4' }],
+  ] satisfies Array<[string, PropertyDefinition]>)('the %s editor opens over its value, not below it, as measured', (_type, def) => {
+    const options = createOptions({ schema: [...SCHEMA, def] });
+
+    new DatabaseCardDrawer(options).open(makeRow());
+    const value = valueOf(options, 'prop-note');
+
+    vi.spyOn(value, 'getBoundingClientRect').mockReturnValue(new DOMRect(50, 100, 435, 30));
+    value.click();
+    const box = editor()?.closest<HTMLElement>('[data-blok-popover]');
+
+    expect(box?.style.top).toBe('99px');
+    expect(box?.style.left).toBe('49px');
+  });
+
   it('the Place editor opens over its value and takes its width, as measured (research/35:348, research/36:139)', () => {
     const where: PropertyDefinition = { id: 'prop-where', name: 'Where', type: 'place', position: 'a4' };
     const options = createOptions({ schema: [...SCHEMA, where] });

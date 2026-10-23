@@ -68,8 +68,11 @@ describe('database gallery and calendar styles', () => {
     }
   });
 
-  it('uses the measured calendar sizes: 140px day cells, 28px event cards, 24px today circle', () => {
-    expect(ruleBody('[data-blok-database-calendar-day]')).toMatch(/140px/);
+  it('uses the measured calendar sizes: 124px day cells inline, 140px wide, 28px event cards, 24px today circle', () => {
+    // findings C09: 124px at a 98.7px column (inline), research/07: 140px at a 175.9px column.
+    expect(ruleBody('[data-blok-database-calendar-day]')).toMatch(/max\(124px,/);
+    expect(css).toMatch(/@container blok-calendar \(min-width: 960px\)\s*\{\s*\[data-blok-database-calendar-day\]\s*\{[^}]*max\(140px,/);
+    expect(ruleBody('[data-blok-database-calendar]')).toContain('container: blok-calendar / inline-size');
     expect(ruleBody('[data-blok-database-calendar-event]')).toMatch(/min-block-size:\s*28px/);
     expect(ruleBody('[data-blok-database-calendar-event-title]')).toMatch(/font-weight:\s*600/);
     expect(ruleBody('[data-blok-database-calendar-day][data-today] [data-blok-database-calendar-day-number]')).toContain('var(--blok-database-today)');
@@ -90,7 +93,41 @@ describe('database gallery and calendar styles', () => {
     // The base cell wraps (pre-wrap flex): a plain date would take two lines and spill out of the card.
     expect(ruleBody('[data-blok-database-calendar-event-property] > [data-blok-database-cell]')).toMatch(/white-space:\s*nowrap/);
     expect(ruleBody('[data-blok-database-calendar-event-property] > [data-blok-database-cell]')).toMatch(/flex-wrap:\s*nowrap/);
-    expect(css).toMatch(/--blok-database-calendar-lane-pitch:\s*calc\(30px \+ var\(--blok-database-calendar-event-lines, 0\) \* 24px\)/);
+    // findings C10: a 28px card and a 6px gap.
+    expect(css).toMatch(/--blok-database-calendar-lane-pitch:\s*calc\(34px \+ var\(--blok-database-calendar-event-lines, 0\) \* 24px\)/);
+  });
+
+  it('makes a week-range row 372px tall (findings C08)', () => {
+    expect(ruleBody('[data-blok-database-calendar][data-range="week"] [data-blok-database-calendar-day]')).toMatch(/max\(372px,/);
+  });
+
+  it('starts the first card 33px below the cell top (findings C10)', () => {
+    expect(css).toMatch(/--blok-database-calendar-number-row:\s*33px/);
+  });
+
+  it('draws the day "+" 20px at 8px from the corner, with a 20px glyph (findings C11)', () => {
+    const add = ruleBody('[data-blok-database-calendar-add]');
+
+    expect(add).toMatch(/inset-block-start:\s*8px/);
+    expect(add).toMatch(/inset-inline-start:\s*8px/);
+    expect(add).toMatch(/inline-size:\s*20px/);
+    expect(add).toMatch(/block-size:\s*20px/);
+    expect(ruleBody('[data-blok-database-calendar-add] svg')).toMatch(/inline-size:\s*20px/);
+  });
+
+  it('draws ‹ and › as 24px squares (findings C12)', () => {
+    const arrows = ruleBody('[data-blok-database-calendar-nav] [data-blok-database-calendar-prev]');
+
+    expect(arrows).toMatch(/padding:\s*0/);
+    expect(arrows).toMatch(/inline-size:\s*24px/);
+  });
+
+  it('insets an event 6px from each side of its cell (findings C13)', () => {
+    const event = ruleBody('[data-blok-database-calendar-event]');
+
+    expect(event).toMatch(/inset-inline-start:\s*6px/);
+    expect(event).toMatch(/inline-size:\s*calc\(var\(--blok-database-calendar-span, 1\) \* 100% - 12px\)/);
+    expect(ruleBody('[data-blok-database-calendar-event][data-continues-before]')).toMatch(/- 6px\)/);
   });
 
   it('paints a drop target gray, never blue (D3)', () => {

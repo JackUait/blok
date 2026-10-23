@@ -1081,7 +1081,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // +468: the toolbar "No date (N)" and its popover rows, less the old inline list.
     // +1_694: the timeline's month, ‹ ›, one-row header, "+ New" lane and the new bar's title field.
     // +3_583: the timeline drag range pill, edge marker and readout, and the dependency connector.
-    const DATABASE_CAL_TIMELINE_FEEL_BYTES = 700 + 468 + 1_694 + 3_583;
+    // +1050: calendar sizes (week row, inline/full-width cells, lane pitch, "+", arrows, event inset).
+    const DATABASE_CAL_TIMELINE_FEEL_BYTES = 700 + 468 + 1_694 + 3_583 + 1050;
     // database.css: feel/findings-table T13: the uncapped board and list bar still hides the whole toolbar.
     const DATABASE_SELECTION_BAR_BOARD_BYTES = 233;
     // database.css: feel/findings-toolbar V09: view settings docks at the window's end edge with radius 10.

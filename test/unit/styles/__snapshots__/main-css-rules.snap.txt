@@ -12827,8 +12827,9 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-calendar] {
-  --blok-database-calendar-number-row: 32px;
-  --blok-database-calendar-lane-pitch: calc(30px + var(--blok-database-calendar-event-lines, 0) * 24px);
+  --blok-database-calendar-number-row: 33px;
+  --blok-database-calendar-lane-pitch: calc(34px + var(--blok-database-calendar-event-lines, 0) * 24px);
+  container: blok-calendar / inline-size;
   --blok-database-calendar-columns: 7;
   --blok-database-calendar-event-lines: 0;
   --blok-database-calendar-lanes: 0;
@@ -12878,6 +12879,8 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-calendar-nav] [data-blok-database-calendar-prev], [data-blok-database-calendar-nav] [data-blok-database-calendar-next] {
+  inline-size: 24px;
+  padding: 0;
   color: var(--blok-database-calendar-nav-icon);
 }
 
@@ -12939,10 +12942,18 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-calendar-day] {
   position: relative;
-  min-block-size: max(140px, calc(var(--blok-database-calendar-number-row) + var(--blok-database-calendar-lanes, 0) * var(--blok-database-calendar-lane-pitch) + 8px));
+  min-block-size: max(124px, calc(var(--blok-database-calendar-number-row) + var(--blok-database-calendar-lanes, 0) * var(--blok-database-calendar-lane-pitch) + 8px));
   border-inline-end: 1px solid var(--blok-database-calendar-border);
   border-block-end: 1px solid var(--blok-database-calendar-border);
   outline-offset: -2px;
+}
+
+[@container blok-calendar (min-width: 960px)] [data-blok-database-calendar-day] {
+  min-block-size: max(140px, calc(var(--blok-database-calendar-number-row) + var(--blok-database-calendar-lanes, 0) * var(--blok-database-calendar-lane-pitch) + 8px));
+}
+
+[data-blok-database-calendar][data-range="week"] [data-blok-database-calendar-day] {
+  min-block-size: max(372px, calc(var(--blok-database-calendar-number-row) + var(--blok-database-calendar-lanes, 0) * var(--blok-database-calendar-lane-pitch) + 8px));
 }
 
 [data-blok-database-calendar-day][data-weekend] {
@@ -12983,13 +12994,13 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-calendar-add] {
   position: absolute;
-  inset-block-start: 4px;
-  inset-inline-start: 6px;
+  inset-block-start: 8px;
+  inset-inline-start: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  inline-size: 24px;
-  block-size: 24px;
+  inline-size: 20px;
+  block-size: 20px;
   padding: 0;
   border: none;
   border-radius: var(--blok-radius-control);
@@ -13001,8 +13012,8 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-calendar-add] svg {
-  inline-size: 16px;
-  block-size: 16px;
+  inline-size: 20px;
+  block-size: 20px;
 }
 
 [data-blok-database-calendar-day]:hover [data-blok-database-calendar-add] {
@@ -13021,8 +13032,8 @@ textarea[data-blok-database-cell-input] {
   position: absolute;
   z-index: 1;
   inset-block-start: calc(var(--blok-database-calendar-number-row) + var(--blok-database-calendar-lane, 0) * var(--blok-database-calendar-lane-pitch));
-  inset-inline-start: 4px;
-  inline-size: calc(var(--blok-database-calendar-span, 1) * 100% - 8px);
+  inset-inline-start: 6px;
+  inline-size: calc(var(--blok-database-calendar-span, 1) * 100% - 12px);
   min-block-size: 28px;
   box-sizing: border-box;
   display: flex;
@@ -13091,13 +13102,13 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-calendar-event][data-continues-before] {
   inset-inline-start: 0;
-  inline-size: calc(var(--blok-database-calendar-span, 1) * 100% - 4px);
+  inline-size: calc(var(--blok-database-calendar-span, 1) * 100% - 6px);
   border-start-start-radius: 0;
   border-end-start-radius: 0;
 }
 
 [data-blok-database-calendar-event][data-continues-after] {
-  inline-size: calc(var(--blok-database-calendar-span, 1) * 100% - 4px);
+  inline-size: calc(var(--blok-database-calendar-span, 1) * 100% - 6px);
   border-start-end-radius: 0;
   border-end-end-radius: 0;
 }

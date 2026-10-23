@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { IconChevronDown, IconMenu, IconPencil, IconPlus } from '../../../../src/components/icons';
+import { IconChevronDown, IconDotsHorizontal, IconMenu, IconPencil, IconPlus } from '../../../../src/components/icons';
 import { DatabaseListView } from '../../../../src/tools/database/database-list-view';
 import type { DatabaseRow, PropertyDefinition, SelectOption } from '../../../../src/tools/database/types';
 import type { I18n } from '../../../../types';
@@ -200,7 +200,7 @@ const chevronHtml = (): string => {
 };
 
 describe('createView — grouped branch', () => {
-    it('serializes a whole group: markers on group, header, toggle, dot, title, count and rows container', () => {
+    it('serializes a whole group: markers on group, header, caret button, label, actions and rows container', () => {
       const view = new DatabaseListView({
         readOnly: false,
         i18n,
@@ -218,10 +218,12 @@ describe('createView — grouped branch', () => {
         '<div data-blok-database-list="" data-blok-keyboard-owner="">'
         + '<div data-blok-database-list-group="" data-option-id="opt-a">'
         + '<div data-blok-database-list-group-header="">'
-        + `<span data-blok-database-list-group-toggle="">${chevronHtml()}</span>`
-        + '<span data-blok-database-list-group-dot="" style="background-color: var(--blok-color-red-text);"></span>'
-        + '<span data-blok-database-list-group-title="">Alpha</span>'
-        + '<span data-blok-database-list-group-count="">1</span>'
+        + `<button type="button" data-blok-database-list-group-toggle="" aria-expanded="true" aria-label="T(tools.database.tableCollapseGroup)">${chevronHtml()}</button>`
+        + '<span data-blok-database-list-group-label=""><span data-blok-database-list-group-title="">Alpha</span></span>'
+        + '<span data-blok-database-list-group-actions="">'
+        + `<button type="button" data-blok-database-column-menu="" data-option-id="opt-a" aria-label="T(tools.database.groupMenuLabel)" aria-haspopup="menu">${serialized(IconDotsHorizontal)}</button>`
+        + `<button type="button" data-blok-database-list-group-add="" aria-label="T(tools.database.newPage)">${serialized(IconPlus)}</button>`
+        + '</span>'
         + '</div>'
         + '<div data-blok-database-list-rows="" role="list">'
         + rowHtml('row-1', 'Fix bug')
@@ -232,27 +234,6 @@ describe('createView — grouped branch', () => {
         + '</div>'
         + '</div>'
       );
-    });
-
-    it('leaves the group dot unstyled when the option carries no color', () => {
-      const view = new DatabaseListView({
-        readOnly: false,
-        i18n,
-        rows: [],
-        titlePropertyId: 'title',
-        schema: [TITLE_PROP],
-        visiblePropertyIds: [],
-        options: [{ id: 'opt-a', label: 'Alpha', position: 'a0' }],
-        getRows: () => [],
-      });
-
-      const list = view.createView();
-      const dot = list.querySelector('[data-blok-database-list-group-dot]');
-
-      expect(dot?.outerHTML).toBe('<span data-blok-database-list-group-dot=""></span>');
-      expect(attrs(dot ?? document.createElement('span'))).toStrictEqual({
-        'data-blok-database-list-group-dot': '',
-      });
     });
 
     it('collapses a read-only group without touching the add-row button it never created', () => {

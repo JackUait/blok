@@ -150,6 +150,29 @@ describe('list title edit (findings-listgallery L05)', () => {
   });
 });
 
+describe('grouped list (findings-listgallery L08, L10)', () => {
+  it('draws the caret as a 24px ink button and the "…" and "+" as 24px buttons shown on header hover', () => {
+    const toggle = ruleBody(database, '[data-blok-database-list-group-toggle]');
+
+    expect(toggle).toContain('width: 24px');
+    expect(toggle).toContain('height: 24px');
+    expect(toggle).toContain('color: var(--blok-database-ink)');
+    expect(ruleBody(database, '[data-blok-database-list-group-actions] button')).toContain('width: 24px');
+    expect(ruleBody(database, '[data-blok-database-list-group-actions] button')).toContain('height: 24px');
+    expect(ruleBody(database, '[data-blok-database-list-group-actions]')).toContain('opacity: 0');
+    expect(ruleBody(database, '[data-blok-database-list-group-header]:hover [data-blok-database-list-group-actions]')).toContain('opacity: 1');
+  });
+
+  it('puts the first row 37px below the header top and 28px between groups, with no indent', () => {
+    const header = ruleBody(database, '[data-blok-database-list-group-header]');
+
+    expect(header).toContain('height: 24px');
+    expect(header).toContain('margin-bottom: 12px');
+    expect(ruleBody(database, '[data-blok-database-list-group]')).toContain('margin-bottom: 28px');
+    expect(ruleBody(database, '[data-blok-database-list-rows]')).not.toContain('padding-inline-start');
+  });
+});
+
 describe('conditional color on calendar, timeline and feed (research/05 §6.2)', () => {
   const PAINTED = ':is([data-blok-database-calendar-event], [data-blok-database-timeline-bar], [data-blok-database-feed-card])[data-blok-database-color]';
 

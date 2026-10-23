@@ -3,10 +3,11 @@ import type { I18n } from '../../../types';
 import type { DatabaseRow, PropertyDefinition, PropertyValue, SelectOption } from './types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { readPropertyValue } from './property-values';
-import { renderCellValue } from './cells';
+import { createOptionPill, renderCellValue } from './cells';
+import { shownStatusOption } from './cells/option-colors';
 import { rowCellContext } from './reminders';
 import type { CellContext } from './cells';
-import { IconChevronDown, IconMenu, IconPencil, IconPlus, IconSidebarRight } from '../../components/icons';
+import { IconChevronDown, IconDotsHorizontal, IconMenu, IconPencil, IconPlus, IconSidebarRight } from '../../components/icons';
 import { startInlineRename } from '../../components/utils/inline-rename';
 import { onHover } from '../../components/utils/tooltip';
 import { propertyHint } from './property-hint';
@@ -417,40 +418,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
     groupEl.setAttribute('data-blok-database-list-group', '');
     groupEl.setAttribute('data-option-id', option.id);
 
-    // Header
-    const header = document.createElement('div');
-
-    header.setAttribute('data-blok-database-list-group-header', '');
-
-    const toggle = document.createElement('span');
-
-    toggle.setAttribute('data-blok-database-list-group-toggle', '');
-    toggle.innerHTML = IconChevronDown;
-
-    const dot = document.createElement('span');
-
-    dot.setAttribute('data-blok-database-list-group-dot', '');
-
-    if (option.color !== undefined) {
-      dot.style.backgroundColor = `var(--blok-color-${option.color}-text)`;
-    }
-
-    const title = document.createElement('span');
-
-    title.setAttribute('data-blok-database-list-group-title', '');
-    title.textContent = option.label;
-
-    const count = document.createElement('span');
-
-    count.setAttribute('data-blok-database-list-group-count', '');
-    const total = this.settings.getTotal?.(option.id);
-
-    count.textContent = String(total ?? rows.length);
-
-    header.appendChild(toggle);
-    header.appendChild(dot);
-    header.appendChild(title);
-    header.appendChild(count);
+    const header = this.createGroupHeader(option);
 
     // Rows container
     const rowsContainer = document.createElement('div');
@@ -464,15 +432,18 @@ export class DatabaseListView implements DatabaseViewRenderer {
       rowsContainer.appendChild(rowEl);
     }
 
-    const more = this.createLoadMore(option.id, rows.length, total);
+    const more = this.createLoadMore(option.id, rows.length, this.settings.getTotal?.(option.id));
 
     // Add-row button
     const addRowBtn = this.readOnly ? null : this.createAddRowButton(option.id);
 
     // Rows show and hide at once; only the caret turns (database.css, research/08).
+    const toggle = header.querySelector<HTMLElement>('[data-blok-database-list-group-toggle]');
     const setCollapsed = (collapsed: boolean): void => {
       rowsContainer.style.display = collapsed ? 'none' : '';
       groupEl.toggleAttribute('data-collapsed', collapsed);
+      toggle?.setAttribute('aria-expanded', String(!collapsed));
+      toggle?.setAttribute('aria-label', this.i18n.t(collapsed ? 'tools.database.tableExpandGroup' : 'tools.database.tableCollapseGroup'));
       if (more !== null) {
         more.style.display = collapsed ? 'none' : '';
       }
@@ -486,7 +457,17 @@ export class DatabaseListView implements DatabaseViewRenderer {
       setCollapsed(true);
     }
 
-    header.addEventListener('click', () => {
+    header.addEventListener('click', (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+
+      if ((target?.closest('[data-blok-database-list-group-actions]') ?? null) !== null) {
+        // "+" adds through the group's own "+ New page"; "…" is the host's group menu.
+        if (target.closest('[data-blok-database-list-group-add]') !== null) {
+          groupEl.querySelector<HTMLElement>(':scope > [data-blok-database-add-row]')?.click();
+        }
+
+        return;
+      }
       const collapsed = !groupEl.hasAttribute('data-collapsed');
 
       setCollapsed(collapsed);
@@ -504,6 +485,69 @@ export class DatabaseListView implements DatabaseViewRenderer {
     }
 
     return groupEl;
+  }
+
+  /** The board header's parts (findings-listgallery L08): caret, the value as its pill, then "…" and "+". */
+  private createGroupHeader(option: SelectOption): HTMLDivElement {
+    const header = document.createElement('div');
+    const toggle = document.createElement('button');
+    const label = document.createElement('span');
+
+    header.setAttribute('data-blok-database-list-group-header', '');
+    toggle.type = 'button';
+    toggle.setAttribute('data-blok-database-list-group-toggle', '');
+    toggle.setAttribute('aria-expanded', 'true');
+    toggle.setAttribute('aria-label', this.i18n.t('tools.database.tableCollapseGroup'));
+    toggle.innerHTML = IconChevronDown;
+    label.setAttribute('data-blok-database-list-group-label', '');
+    label.appendChild(this.groupValue(option));
+    header.append(toggle, label);
+
+    if (!this.readOnly) {
+      const actions = document.createElement('span');
+      const menu = document.createElement('button');
+      const add = document.createElement('button');
+
+      actions.setAttribute('data-blok-database-list-group-actions', '');
+      menu.type = 'button';
+      // The board's group menu attribute: the host opens the same menu.
+      menu.setAttribute('data-blok-database-column-menu', '');
+      menu.setAttribute('data-option-id', option.id);
+      menu.setAttribute('aria-label', this.i18n.t('tools.database.groupMenuLabel'));
+      menu.setAttribute('aria-haspopup', 'menu');
+      menu.innerHTML = IconDotsHorizontal;
+      add.type = 'button';
+      add.setAttribute('data-blok-database-list-group-add', '');
+      add.setAttribute('aria-label', this.i18n.t('tools.database.newPage'));
+      add.innerHTML = IconPlus;
+      actions.append(menu, add);
+      header.appendChild(actions);
+    }
+
+    return header;
+  }
+
+  /** An option group shows the pill a cell draws; any other group, its label. */
+  private groupValue(option: SelectOption): HTMLElement {
+    const property = this.schema.find((p) => p.config?.options.some((o) => o.id === option.id) === true);
+
+    if (property?.type === 'status') {
+      const pill = createOptionPill(shownStatusOption(option));
+      const kind = property.status?.groups.find((group) => group.id === option.groupId)?.kind;
+
+      pill.setAttribute('data-status-group', kind ?? 'todo');
+
+      return pill;
+    }
+    if (property !== undefined) {
+      return createOptionPill(option);
+    }
+    const title = document.createElement('span');
+
+    title.setAttribute('data-blok-database-list-group-title', '');
+    title.textContent = option.label;
+
+    return title;
   }
 
   /**

@@ -765,14 +765,13 @@ describe('DatabaseListView', () => {
       expect(list.querySelector('[data-blok-database-list-load-more]')).toBeNull();
     });
 
-    it('counts a group\'s total in its header, and loads more for that group', () => {
+    it('loads more for a group that holds more rows than it shows', () => {
       const onLoadMore = vi.fn();
       const list = new DatabaseListView({
         readOnly: false, i18n, rows: [], titlePropertyId: 'title', schema: makeSchema(), visiblePropertyIds: [],
         options: [{ id: 'g1', label: 'G', position: 'a0' }], getRows: () => many.slice(0, 1), getTotal: () => 3, onLoadMore,
       }).createView();
 
-      expect(list.querySelector('[data-blok-database-list-group-count]')?.textContent).toBe('3');
       list.querySelector<HTMLButtonElement>('[data-blok-database-list-load-more][data-group-key="g1"]')?.click();
       expect(onLoadMore).toHaveBeenCalledWith('g1');
     });
@@ -913,40 +912,6 @@ describe('DatabaseListView', () => {
       expect(groups[1].getAttribute('data-option-id')).toBe('opt-done');
     });
 
-    it('renders group header with toggle, dot, title, and count', () => {
-      const { options, getRows } = makeGroupedOptions();
-      const view = new DatabaseListView({
-        readOnly: false, i18n, rows: [], titlePropertyId: 'prop-title', schema: makeSchema(), visiblePropertyIds: [],
-        options, getRows,
-      });
-      const list = view.createView();
-
-      const firstGroup = list.querySelector('[data-blok-database-list-group]');
-      const header = firstGroup?.querySelector('[data-blok-database-list-group-header]');
-
-      expect(header).not.toBeNull();
-      expect(header?.querySelector('[data-blok-database-list-group-toggle]')).not.toBeNull();
-      expect(header?.querySelector('[data-blok-database-list-group-dot]')).not.toBeNull();
-      expect(header?.querySelector('[data-blok-database-list-group-title]')).not.toBeNull();
-      expect(header?.querySelector('[data-blok-database-list-group-count]')).not.toBeNull();
-    });
-
-    it('renders correct row count per group', () => {
-      const { options, getRows } = makeGroupedOptions();
-      const view = new DatabaseListView({
-        readOnly: false, i18n, rows: [], titlePropertyId: 'prop-title', schema: makeSchema(), visiblePropertyIds: [],
-        options, getRows,
-      });
-      const list = view.createView();
-
-      const groups = list.querySelectorAll('[data-blok-database-list-group]');
-      const todoCount = groups[0].querySelector('[data-blok-database-list-group-count]');
-      const doneCount = groups[1].querySelector('[data-blok-database-list-group-count]');
-
-      expect(todoCount?.textContent).toBe('1');
-      expect(doneCount?.textContent).toBe('2');
-    });
-
     it('renders rows inside [data-blok-database-list-rows] within each group', () => {
       const { options, getRows } = makeGroupedOptions();
       const view = new DatabaseListView({
@@ -981,20 +946,77 @@ describe('DatabaseListView', () => {
       expect(doneAddBtn?.getAttribute('data-option-id')).toBe('opt-done');
     });
 
-    it('applies color dot with correct background color', () => {
+    // findings-listgallery L08: the board header's parts, no count.
+    it('draws the header as a 24px caret button, the value as its pill, then "…" and "+", with no count', () => {
       const { options, getRows } = makeGroupedOptions();
-      const view = new DatabaseListView({
+      const schema = makeSchema([{ id: 'prop-status', name: 'Stage', type: 'select', config: { options } }]);
+      const list = new DatabaseListView({
+        readOnly: false, i18n, rows: [], titlePropertyId: 'prop-title', schema, visiblePropertyIds: [],
+        options, getRows,
+      }).createView();
+      const header = list.querySelector('[data-blok-database-list-group-header]');
+      const toggle = header?.querySelector<HTMLButtonElement>('button[data-blok-database-list-group-toggle]');
+      const pill = header?.querySelector('[data-blok-database-list-group-label] [data-blok-database-option-pill]');
+      const menu = header?.querySelector<HTMLButtonElement>('button[data-blok-database-column-menu]');
+      const add = header?.querySelector<HTMLButtonElement>('button[data-blok-database-list-group-add]');
+
+      expect(toggle?.getAttribute('aria-expanded')).toBe('true');
+      expect(toggle?.getAttribute('aria-label')).toBe('tools.database.tableCollapseGroup');
+      expect(pill?.textContent).toBe('Todo');
+      expect(pill?.getAttribute('data-color')).toBe('gray');
+      expect(menu?.getAttribute('data-option-id')).toBe('opt-todo');
+      expect(menu?.getAttribute('aria-label')).toBe('tools.database.groupMenuLabel');
+      expect(add?.getAttribute('aria-label')).toBe('tools.database.newPage');
+      expect(header?.querySelector('[data-blok-database-list-group-count]')).toBeNull();
+      expect(header?.querySelector('[data-blok-database-list-group-dot]')).toBeNull();
+    });
+
+    it('draws a status group\'s value as the status pill a cell draws', () => {
+      const schema: PropertyDefinition[] = [
+        { id: 'prop-title', name: 'Name', type: 'title', position: 'a0' },
+        {
+          id: 'st', name: 'Status', type: 'status', position: 'a1', status: createDefaultStatusSettings(),
+          config: { options: [{ id: 'ns', label: 'Not started', position: 'a0', groupId: 'todo' }, { id: 'dn', label: 'Done', color: 'green', position: 'a1', groupId: 'complete' }] },
+        },
+      ];
+      const list = new DatabaseListView({
+        readOnly: false, i18n, rows: [], titlePropertyId: 'prop-title', schema, visiblePropertyIds: [],
+        options: [{ id: 'ns', label: 'Not started', position: 'a0', groupId: 'todo' }, { id: 'dn', label: 'Done', color: 'green', position: 'a1', groupId: 'complete' }],
+        getRows: () => [],
+      }).createView();
+      const pills = [...list.querySelectorAll('[data-blok-database-list-group-label] [data-blok-database-option-pill]')];
+
+      expect(pills.map((pill) => pill.getAttribute('data-status-group'))).toEqual(['todo', 'complete']);
+      expect(pills[0]?.getAttribute('data-color')).toBe('gray');
+    });
+
+    it('the header "+" adds a row to its group and "…" is left to the host; neither collapses the group', () => {
+      const { options, getRows } = makeGroupedOptions();
+      const list = new DatabaseListView({
         readOnly: false, i18n, rows: [], titlePropertyId: 'prop-title', schema: makeSchema(), visiblePropertyIds: [],
         options, getRows,
-      });
-      const list = view.createView();
+      }).createView();
+      const group = list.querySelector<HTMLElement>('[data-blok-database-list-group]');
+      const bottomAdd = group?.querySelector<HTMLElement>(':scope > [data-blok-database-add-row]');
+      const added = vi.fn();
 
-      const groups = list.querySelectorAll('[data-blok-database-list-group]');
-      const todoDot = groups[0].querySelector('[data-blok-database-list-group-dot]') as HTMLElement;
-      const doneDot = groups[1].querySelector('[data-blok-database-list-group-dot]') as HTMLElement;
+      bottomAdd?.addEventListener('click', added);
+      group?.querySelector<HTMLElement>('[data-blok-database-list-group-add]')?.click();
+      group?.querySelector<HTMLElement>('[data-blok-database-column-menu]')?.click();
 
-      expect(todoDot.style.backgroundColor).toBe('var(--blok-color-gray-text)');
-      expect(doneDot.style.backgroundColor).toBe('var(--blok-color-green-text)');
+      expect(added).toHaveBeenCalledTimes(1);
+      expect(group?.hasAttribute('data-collapsed')).toBe(false);
+    });
+
+    it('a read-only header has no "…" or "+"', () => {
+      const { options, getRows } = makeGroupedOptions();
+      const list = new DatabaseListView({
+        readOnly: true, i18n, rows: [], titlePropertyId: 'prop-title', schema: makeSchema(), visiblePropertyIds: [],
+        options, getRows,
+      }).createView();
+
+      expect(list.querySelector('[data-blok-database-column-menu]')).toBeNull();
+      expect(list.querySelector('[data-blok-database-list-group-add]')).toBeNull();
     });
 
     it('grouped wrapper does NOT have role="list"', () => {

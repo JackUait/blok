@@ -153,7 +153,7 @@ describe('database list and drawer', () => {
     expect(radiusOf('database.css', '[data-blok-database-list-row]')).toEqual([role('control')]);
     // A 30px property slot (research/07) is a control, not a small tag.
     expect(radiusOf('database.css', '[data-blok-database-list-row-property]')).toEqual([role('control')]);
-    expect(radiusOf('database.css', '[data-blok-database-list-group-header]')).toEqual([role('control')]);
+    expect(radiusOf('database.css', '[data-blok-database-list-group-toggle], [data-blok-database-list-group-actions] button')).toEqual([role('control-sm')]);
     expect(radiusOf('database.css', '[data-blok-database-drawer-add-prop]')).toEqual([role('control')]);
     expect(radiusOf(
       'database.css',

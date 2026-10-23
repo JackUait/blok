@@ -14,6 +14,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   isPromotedToTopLayer,
+  overlayMountFor,
   promoteToTopLayer,
   removeFromTopLayer,
   supportsPopoverAPI,
@@ -288,6 +289,32 @@ describe('Top Layer helper', () => {
 
         expect(isPromotedToTopLayer(el)).toBe(false);
       });
+    });
+  });
+
+  // A z-index overlay on body paints under a top-layer panel, so one opened from inside the panel mounts in it.
+  describe('overlayMountFor', () => {
+    afterEach(() => {
+      document.body.innerHTML = '';
+    });
+
+    it('is the nearest top-layer ancestor of the anchor', () => {
+      const panel = document.createElement('div');
+      const anchor = document.createElement('button');
+
+      panel.setAttribute(TOP_LAYER_MARKER_ATTR, 'true');
+      panel.appendChild(anchor);
+      document.body.appendChild(panel);
+
+      expect(overlayMountFor(anchor)).toBe(panel);
+    });
+
+    it('is the body for an anchor outside the top layer', () => {
+      const anchor = document.createElement('button');
+
+      document.body.appendChild(anchor);
+
+      expect(overlayMountFor(anchor)).toBe(document.body);
     });
   });
 });

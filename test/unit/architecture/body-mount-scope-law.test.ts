@@ -46,8 +46,9 @@ const SRC_DIR = resolve(__dirname, '../../../src');
 
 /**
  * Matches any call that physically mounts a node onto document.body.
+ * `overlayMountFor(anchor)` (utils/top-layer.ts) returns body outside the top layer.
  */
-const BODY_MOUNT_RE = /document\.body\.(?:appendChild|append|prepend|insertBefore)\s*\(/;
+const BODY_MOUNT_RE = /document\.body\.(?:appendChild|append|prepend|insertBefore)\s*\(|overlayMountFor\([^)]*\)\.(?:appendChild|append)\s*\(/;
 
 /**
  * Matches setting a bare scope attribute. The closing quote / comma right

@@ -127,6 +127,28 @@ describe('DatabasePropertyMenu', () => {
     document.body.innerHTML = '';
   });
 
+  // A row page peek is in the top layer: an icon picker on body would paint under it.
+  it('opens the icon picker inside the top-layer panel the menu was opened from', () => {
+    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
+    const peek = document.createElement('div');
+    const anchor = document.createElement('button');
+
+    peek.setAttribute('data-blok-top-layer', 'true');
+    peek.appendChild(anchor);
+    document.body.appendChild(peek);
+    const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks() });
+
+    menu.open(prop('text'), anchor);
+    const name = lastItems().find((i) => i.name === 'name')?.element;
+
+    document.body.appendChild(name ?? document.createElement('div'));
+    name?.querySelector<HTMLElement>('[data-blok-database-property-menu-icon]')?.click();
+
+    expect(document.querySelector('[data-blok-emoji-picker]')?.closest('[data-blok-top-layer]')).toBe(peek);
+    menu.destroy();
+    vi.unstubAllGlobals();
+  });
+
   // research/09 §1b: a row page property menu ends with "Customize layout".
   it('ends the menu with Customize layout after a separator when the host offers it', () => {
     const onCustomizeLayout = vi.fn();

@@ -2249,8 +2249,10 @@ describe('DatabaseCardDrawer', () => {
       expect(addPropBtn).not.toBeNull();
     });
 
-    it('clicking the button opens a DatabasePropertyTypePopover ([data-blok-database-property-type-popover] appears in document.body)', () => {
+    it('clicking the button opens a DatabasePropertyTypePopover in the peek', () => {
       const options = createOptions({ readOnly: false, schema: [] });
+      // The menu mounts in the peek, which is in the document.
+      document.body.appendChild(options.wrapper);
       const drawer = new DatabaseCardDrawer(options);
       const row = makeRow({ properties: { 'prop-title': 'Card' } });
 
@@ -2271,6 +2273,8 @@ describe('DatabaseCardDrawer', () => {
     it('selecting a type from the popover calls onAddProperty(type)', () => {
       const onAddProperty = vi.fn();
       const options = createOptions({ readOnly: false, schema: [], onAddProperty });
+      // The menu mounts in the peek, which is in the document.
+      document.body.appendChild(options.wrapper);
       const drawer = new DatabaseCardDrawer(options);
       const row = makeRow({ properties: { 'prop-title': 'Card' } });
 
@@ -2293,6 +2297,8 @@ describe('DatabaseCardDrawer', () => {
 
     it('selecting a type from the popover closes the popover', () => {
       const options = createOptions({ readOnly: false, schema: [] });
+      // The menu mounts in the peek, which is in the document.
+      document.body.appendChild(options.wrapper);
       const drawer = new DatabaseCardDrawer(options);
       const row = makeRow({ properties: { 'prop-title': 'Card' } });
 
@@ -2316,6 +2322,8 @@ describe('DatabaseCardDrawer', () => {
     it('does not throw when onAddProperty is not provided and user selects a type', () => {
       const options = createOptions({ readOnly: false, schema: [] });
       // no onAddProperty callback
+      // The menu mounts in the peek, which is in the document.
+      document.body.appendChild(options.wrapper);
       const drawer = new DatabaseCardDrawer(options);
       const row = makeRow({ properties: { 'prop-title': 'Card' } });
 
@@ -2430,6 +2438,8 @@ describe('DatabaseCardDrawer', () => {
 
     it('destroy() cleans up the propertyTypePopover if it was opened', () => {
       const options = createOptions({ readOnly: false, schema: [] });
+      // The menu mounts in the peek, which is in the document.
+      document.body.appendChild(options.wrapper);
       const drawer = new DatabaseCardDrawer(options);
       const row = makeRow({ properties: { 'prop-title': 'Card' } });
 

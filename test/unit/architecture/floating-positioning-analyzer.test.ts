@@ -26,6 +26,8 @@ describe('floating-positioning AST analyzer', () => {
       `const root = document['body']; root?.['appendChild'](menu);`,
       `const root = document.body; const alias = root; alias.prepend(menu);`,
       `document.body.insertBefore(menu, document.body.firstChild);`,
+      // utils/top-layer.ts: body unless the anchor sits in a top-layer panel.
+      `overlayMountFor(anchor).appendChild(menu);`,
     ];
 
     fixtures.forEach((source) => expectKinds(source, ['root-mount']));

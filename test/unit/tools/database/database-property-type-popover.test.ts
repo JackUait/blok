@@ -55,7 +55,21 @@ describe('DatabasePropertyTypePopover', () => {
       expect(document.querySelector('[data-blok-database-property-type-popover]')).toBeNull();
     });
 
-    it('stays on body for a modal outside the top layer, like the center peek', () => {
+    // The side peek is in the top layer but not modal: on body the menu would paint under it.
+    it('mounts inside a top-layer panel that is not modal, like the side peek', () => {
+      const peek = document.createElement('div');
+
+      peek.setAttribute('data-blok-top-layer', 'true');
+      peek.appendChild(anchor);
+      document.body.appendChild(peek);
+      popover.open(anchor);
+
+      expect(document.querySelector('[data-blok-database-property-type-popover]')?.parentElement).toBe(peek);
+      popover.destroy();
+      peek.remove();
+    });
+
+    it('stays on body for a modal outside the top layer', () => {
       const peek = document.createElement('div');
 
       peek.setAttribute('aria-modal', 'true');

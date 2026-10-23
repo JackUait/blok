@@ -222,6 +222,11 @@ export const analyzeFloatingSource = (
       return true;
     }
 
+    // utils/top-layer.ts returns document.body outside a top-layer panel.
+    if (ts.isCallExpression(unwrapped) && callTargetName(unwrapped.expression) === 'overlayMountFor') {
+      return true;
+    }
+
     const access = memberAccess(unwrapped);
 
     return access?.name !== undefined

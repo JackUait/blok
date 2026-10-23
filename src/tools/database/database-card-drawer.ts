@@ -32,6 +32,7 @@ import { isEscapeConsumed } from '../../components/utils/consumed-escape';
 import { getElementDirection, logicalArrow } from '../../components/utils/direction';
 import { prefersReducedMotion } from '../../components/utils/reduced-motion';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
+import { isPromotedToTopLayer, overlayMountFor, promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
 import { DatabasePropertyTypePopover } from './database-property-type-popover';
 import { propertyTypeMeta } from './database-property-types';
 import { rowDescription } from './row-body';
@@ -1521,7 +1522,7 @@ export class DatabaseCardDrawer {
     const element = this.emojiPicker.getElement();
 
     if (!element.isConnected) {
-      document.body.appendChild(element);
+      overlayMountFor(anchor).appendChild(element);
     }
     void this.emojiPicker.open(anchor, undefined, handlers);
   }
@@ -1868,6 +1869,12 @@ export class DatabaseCardDrawer {
     } else {
       this.removeBackdrop();
     }
+    // Peeks go to the top layer, above host chrome and out of any transformed ancestor's containing block.
+    if (mode === 'full') {
+      removeFromTopLayer(drawer);
+    } else if (!isPromotedToTopLayer(drawer)) {
+      promoteToTopLayer(drawer);
+    }
     if (mode === 'side' && drawer.hasAttribute('data-open')) {
       this.narrowPeekHost();
     }
@@ -1897,6 +1904,12 @@ export class DatabaseCardDrawer {
       this.backdrop = backdrop;
     }
     drawer.before(this.backdrop);
+    if (isPromotedToTopLayer(this.backdrop)) {
+      return;
+    }
+    // The top layer stacks in show order: the peek leaves it and comes back above the backdrop.
+    removeFromTopLayer(drawer);
+    promoteToTopLayer(this.backdrop);
   }
 
   private removeBackdrop(): void {

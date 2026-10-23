@@ -17,6 +17,7 @@ import { offersAutofill } from './database-autofill-setup';
 import { DATABASE_HEADER_MENU_CLASS, SHOW_PAGE_ICON_ITEM } from './database-table-menus';
 import { reminderLabel, remindersFor } from './reminders';
 import { DATE_FORMATS, HOUR_CYCLES, TIME_FORMATS, resolveHourCycle, resolveLocale, timeZones } from './cells/date-format';
+import { overlayMountFor } from '../../components/utils/top-layer';
 import type {
   DateDisplay,
   DateReminderOffset,
@@ -157,6 +158,8 @@ export class DatabasePropertyMenu {
   /** The open property with localized option and group names, for display only. Patches come from the saved one. */
   private shown: PropertyDefinition | null = null;
   private emojiPicker: EmojiPicker | null = null;
+  /** What the menu opened from; the icon picker mounts beside it. */
+  private anchor: HTMLElement | null = null;
   /** Saves the open menu's description field if it changed. */
   private saveDescription: (() => void) | null = null;
 
@@ -190,6 +193,7 @@ export class DatabasePropertyMenu {
   open(property: PropertyDefinition, anchor: HTMLElement, viewItems: PopoverItemParams[] = [], shown: PropertyDefinition = property): void {
     this.close();
     this.shown = shown;
+    this.anchor = anchor;
     const entries = propertyMenuEntries(property);
     const head = entries.filter((entry) => HEAD_ENTRIES.has(entry));
     const tail = entries.filter((entry) => !HEAD_ENTRIES.has(entry));
@@ -463,7 +467,7 @@ export class DatabasePropertyMenu {
     const element = this.emojiPicker.getElement();
 
     if (!element.isConnected) {
-      document.body.appendChild(element);
+      overlayMountFor(this.anchor ?? anchor).appendChild(element);
     }
     void this.emojiPicker.open(anchor, undefined, handlers);
   }

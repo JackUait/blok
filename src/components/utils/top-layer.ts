@@ -165,3 +165,11 @@ export const isPromotedToTopLayer = (el: HTMLElement): boolean => {
 export const stripPopoverAttribute = (el: HTMLElement): void => {
   el.removeAttribute(POPOVER_ATTR);
 };
+
+/**
+ * Where a z-index overlay (one not in the top layer itself) mounts for `anchor`.
+ * On body it would paint under a top-layer panel the anchor sits in, so it goes
+ * into that panel instead. A panel with a transform would shift a fixed child.
+ */
+export const overlayMountFor = (anchor: Element): HTMLElement =>
+  anchor.closest<HTMLElement>(`[${TOP_LAYER_MARKER_ATTR}]`) ?? document.body;

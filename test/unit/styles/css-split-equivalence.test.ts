@@ -1119,6 +1119,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_CARD_GHOST_ROWS_BYTES = 410;
     // database.css: the board card title placeholders take an AA ink.
     const DATABASE_CARD_PLACEHOLDER_AA_BYTES = 74;
+    // database.css: feel/findings-rowpage: the peeks' box in the top layer (R02).
+    const DATABASE_PEEK_SHELL_BYTES = 709;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1332,7 +1334,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_VIEW_SETTINGS_PROPERTY_EYES_BYTES
       + DATABASE_VIEW_SETTINGS_BACK_BYTES
       + DATABASE_ROW_PAGE_PROPS_BYTES
-      + DATABASE_CAL_TIMELINE_FEEL_BYTES;
+      + DATABASE_CAL_TIMELINE_FEEL_BYTES
+      + DATABASE_PEEK_SHELL_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

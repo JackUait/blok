@@ -5152,6 +5152,30 @@ span[data-blok-slash-search] {
   background-color: var(--blok-database-peek-backdrop);
 }
 
+[data-blok-database-drawer][data-blok-top-layer][popover] {
+  top: 0;
+  bottom: auto;
+  inset-inline-start: auto;
+  inset-inline-end: 0;
+  height: 100%;
+  width: min(var(--_blok-peek-width, 756px), 100vw);
+  overflow: hidden;
+  color: inherit;
+}
+
+[data-blok-database-drawer][data-peek-mode="center"][data-blok-top-layer][popover] {
+  top: 72px;
+  inset-inline: 0;
+  margin-inline: auto;
+  width: min(960px, calc(100vw - 2 * var(--blok-space-4)));
+  height: auto;
+  max-height: calc(100vh - 144px);
+}
+
+[data-blok-database-peek-backdrop][data-blok-top-layer][popover] {
+  inset: 0;
+}
+
 [data-blok-database-drawer][data-peek-mode="full"] {
   position: static;
   width: auto;

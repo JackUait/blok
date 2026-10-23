@@ -308,7 +308,8 @@ describe('view settings panel', () => {
     click('database-settings-vertical-lines');
     click('database-settings-page-icon');
 
-    expect(h.ctx.updateView).toHaveBeenCalledWith({ wrapCells: true });
+    // A table wraps by default, so the switch turns it off.
+    expect(h.ctx.updateView).toHaveBeenCalledWith({ wrapCells: false });
     expect(h.ctx.updateView).toHaveBeenCalledWith({ showVerticalLines: false });
     expect(h.ctx.updateView).toHaveBeenCalledWith({ showPageIcon: false });
   });

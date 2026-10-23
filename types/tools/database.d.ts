@@ -883,7 +883,7 @@ export interface DatabaseViewConfig {
    * Listed entries keep their order. Absent: unlisted properties go last.
    */
   propertyOrder?: 'alphabetical';
-  /** Wrap every cell. Default false. */
+  /** Wrap every cell. Default true for a table, false otherwise. */
   wrapCells?: boolean;
   /** Columns, from the start, that stay put on horizontal scroll. Default 0. */
   frozenColumnCount?: number;

@@ -342,12 +342,29 @@ describe('DatabaseTableView', () => {
     });
 
     it('marks wrapped columns and hides vertical lines when the view says so', () => {
-      const view = tableView({ showVerticalLines: false, properties: [{ id: 'p-title', visible: true }, { id: 'p-notes', visible: true, wrap: true }] });
+      const view = tableView({ showVerticalLines: false, properties: [{ id: 'p-title', visible: true }, { id: 'p-notes', visible: true, wrap: true }, { id: 'p-amount', visible: true, wrap: false }] });
       const { root } = mount({ view });
 
       expect(cell(root, 'r1', 'p-notes').hasAttribute('data-wrap')).toBe(true);
       expect(cell(root, 'r1', 'p-amount').hasAttribute('data-wrap')).toBe(false);
       expect(grid(root).getAttribute('data-vertical-lines')).toBe('false');
+    });
+
+    it('wraps every column of a view saved with no wrap fields (the v1.16.1 shape)', () => {
+      const { root } = mount({ view: tableView({ visibleProperties: ['p-title', 'p-notes', 'p-amount'] }) });
+
+      expect(cell(root, 'r1', 'p-title').hasAttribute('data-wrap')).toBe(true);
+      expect(cell(root, 'r1', 'p-notes').hasAttribute('data-wrap')).toBe(true);
+      expect(cell(root, 'r1', 'p-amount').hasAttribute('data-wrap')).toBe(true);
+    });
+
+    it('offers "Unwrap content" on a default column, and it writes wrap false', () => {
+      const { view, handlers, root } = mount();
+      const items = view.headerItems('p-notes', root.querySelector<HTMLElement>('[role="columnheader"][data-property-id="p-notes"]') ?? root) as Array<{ title?: string; onActivate?: () => void }>;
+
+      expect(items.some((item) => item.title === 'tools.database.tableWrap')).toBe(false);
+      items.find((item) => item.title === 'tools.database.tableUnwrap')?.onActivate?.();
+      expect(vi.mocked(handlers.updateView).mock.lastCall?.[0].properties?.find((p) => p.id === 'p-notes')?.wrap).toBe(false);
     });
 
     it('freezes the first columns at their running offset', () => {
@@ -1154,8 +1171,8 @@ describe('DatabaseTableView', () => {
       expect(handlers.updateView).toHaveBeenLastCalledWith({ frozenColumnCount: 2 });
       pick('tools.database.tableHide');
       expect(vi.mocked(handlers.updateView).mock.lastCall?.[0].properties?.find((p) => p.id === 'p-notes')?.visible).toBe(false);
-      pick('tools.database.tableWrap');
-      expect(vi.mocked(handlers.updateView).mock.lastCall?.[0].properties?.find((p) => p.id === 'p-notes')?.wrap).toBe(true);
+      pick('tools.database.tableUnwrap');
+      expect(vi.mocked(handlers.updateView).mock.lastCall?.[0].properties?.find((p) => p.id === 'p-notes')?.wrap).toBe(false);
       pick('tools.database.tableInsertLeft');
       expect(handlers.addProperty).toHaveBeenCalledWith(anchor, { propertyId: 'p-notes', side: 'left' });
       pick('tools.database.tableInsertRight');

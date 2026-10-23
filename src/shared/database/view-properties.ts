@@ -54,7 +54,9 @@ export const legacyEntries = (view: DatabaseViewConfig, schema: PropertyDefiniti
   ];
 };
 
-export const resolveWrapCells = (view: DatabaseViewConfig): boolean => view.wrapCells === true;
+/** A table wraps unless told not to, like Notion's ("Unwrap content"); other views do not. */
+export const resolveWrapCells = (view: DatabaseViewConfig): boolean =>
+  typeof view.wrapCells === 'boolean' ? view.wrapCells : view.type === 'table';
 
 const validWidth = (width: unknown): number | undefined =>
   typeof width === 'number' && Number.isFinite(width) && width > 0 ? width : undefined;

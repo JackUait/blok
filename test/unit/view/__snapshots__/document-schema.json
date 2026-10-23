@@ -3066,7 +3066,7 @@
               },
               "wrapCells": {
                 "type": "boolean",
-                "description": "Wrap every cell. Default false."
+                "description": "Wrap every cell. Default true for a table, false otherwise."
               },
               "frozenColumnCount": {
                 "type": "integer",

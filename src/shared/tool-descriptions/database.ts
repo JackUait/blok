@@ -650,7 +650,7 @@ export const DATABASE_DATA = {
               },
             },
           },
-          wrapCells: { type: 'boolean', description: 'Wrap every cell. Default false.' },
+          wrapCells: { type: 'boolean', description: 'Wrap every cell. Default true for a table, false otherwise.' },
           frozenColumnCount: { type: 'integer', minimum: 0, description: 'Columns from the start that stay put on horizontal scroll. Default 0.' },
           showVerticalLines: { type: 'boolean', description: 'Default true.' },
           loadLimit: { type: 'integer', enum: [10, 25, 50, 100], description: 'Rows shown before "Load more".' },

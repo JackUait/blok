@@ -237,10 +237,17 @@ describe('view-settings', () => {
   });
 
   describe('view-wide settings', () => {
-    it('defaults wrap off, vertical lines on and no frozen columns', () => {
-      expect(resolveWrapCells(view())).toBe(false);
+    it('defaults wrap on, vertical lines on and no frozen columns', () => {
+      expect(resolveWrapCells(view())).toBe(true);
       expect(resolveShowVerticalLines(view())).toBe(true);
       expect(resolveFrozenColumnCount(view())).toBe(0);
+    });
+
+    it('wraps a table by default (research/08:188, "Unwrap content"), but not a board or gallery', () => {
+      expect(resolveWrapCells(view({ type: 'board' }))).toBe(false);
+      expect(resolveWrapCells(view({ type: 'gallery' }))).toBe(false);
+      expect(resolveWrapCells(view({ wrapCells: false }))).toBe(false);
+      expect(resolveViewProperties(view(), schema).every((p) => p.wrap)).toBe(true);
     });
 
     it('reads stored values', () => {

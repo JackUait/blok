@@ -318,6 +318,8 @@ describe('map pins (research/23 §5b)', () => {
   it('paint a green rule\'s pin rgb(70, 161, 113) in both themes, and keep the rest Notion blue', () => {
     expect(ruleBody('[data-blok-database-map-pin][data-color="green"]')).toContain('--_blok-database-map-pin: var(--blok-database-status-dot-green)');
     expect(tokenValues('--blok-database-status-dot-green')).toStrictEqual(['rgb(70, 161, 113)', 'rgb(70, 161, 113)', 'rgb(70, 161, 113)']);
-    expect(ruleBody('[data-blok-database-map-pin]')).toContain('--_blok-database-map-pin: var(--blok-color-accent)');
+    expect(ruleBody('[data-blok-database-map-pin]')).toContain('--_blok-database-map-pin: var(--blok-database-map-pin-fill)');
+    // research/35 B21 and 37 §4.2: #2383E2 in dark too, not the lighter dark accent.
+    expect(tokenValues('--blok-database-map-pin-fill')).toStrictEqual(['rgb(35, 131, 226)']);
   });
 });

@@ -4034,6 +4034,7 @@ span[data-blok-slash-search] {
   --blok-database-option-red-bg: rgba(206, 24, 0, 0.165);
   --blok-database-option-red-text: rgb(109, 53, 49);
   --blok-database-map-pin-shadow: rgba(0, 0, 0, 0.35);
+  --blok-database-map-pin-fill: rgb(35, 131, 226);
   --blok-database-checkbox-border: rgba(27, 21, 0, 0.19);
   --blok-database-status-dot-gray: rgb(142, 139, 134);
   --blok-database-status-dot-blue: rgb(39, 131, 222);
@@ -4302,9 +4303,9 @@ span[data-blok-slash-search] {
   --blok-database-cell-link-underline: rgba(255, 255, 235, 0.1);
   --blok-database-sort-button-bg: rgb(25, 25, 25);
   --blok-database-place-map-link-bg: rgb(25, 25, 25);
-  --blok-database-place-map-link-shadow: none;
-  --blok-database-place-map-link-icon: var(--blok-database-table-cell-text);
-  --blok-database-place-map-link-hover-bg: var(--blok-database-place-map-link-bg);
+  --blok-database-place-map-link-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
+  --blok-database-place-map-link-icon: rgb(173, 169, 163);
+  --blok-database-place-map-link-hover-bg: rgb(38, 38, 38);
   --blok-database-sort-button-hover-bg: rgb(38, 38, 38);
   --blok-database-property-icon-button-ink: rgb(211, 211, 211);
   --blok-database-property-icon-button-hover-bg: rgb(32, 32, 32);
@@ -4539,9 +4540,9 @@ span[data-blok-slash-search] {
   --blok-database-cell-link-underline: rgba(255, 255, 235, 0.1);
   --blok-database-sort-button-bg: rgb(25, 25, 25);
   --blok-database-place-map-link-bg: rgb(25, 25, 25);
-  --blok-database-place-map-link-shadow: none;
-  --blok-database-place-map-link-icon: var(--blok-database-table-cell-text);
-  --blok-database-place-map-link-hover-bg: var(--blok-database-place-map-link-bg);
+  --blok-database-place-map-link-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
+  --blok-database-place-map-link-icon: rgb(173, 169, 163);
+  --blok-database-place-map-link-hover-bg: rgb(38, 38, 38);
   --blok-database-sort-button-hover-bg: rgb(38, 38, 38);
   --blok-database-property-icon-button-ink: rgb(211, 211, 211);
   --blok-database-property-icon-button-hover-bg: rgb(32, 32, 32);
@@ -14523,7 +14524,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [data-blok-database-map-pin] {
-  --_blok-database-map-pin: var(--blok-color-accent);
+  --_blok-database-map-pin: var(--blok-database-map-pin-fill);
   display: block;
   inline-size: 22px;
   block-size: 26px;

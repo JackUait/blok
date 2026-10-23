@@ -590,22 +590,24 @@ describe('research/35 §9 and 36 §7: the place editor after a pick', () => {
     expect(themed('--blok-database-place-map-link-bg')).toEqual({ light: 'rgb(255, 255, 255)', dark: 'rgb(25, 25, 25)', attr: 'rgb(25, 25, 25)' });
     expect(ruleBody(LINK)).toContain('background-color: var(--blok-database-place-map-link-bg)');
     expect(ruleBody(LINK)).toContain('box-shadow: var(--blok-database-place-map-link-shadow)');
-    // Dark shadow is unmeasured: none, as before.
+    // research/37 §4.2: in dark a 1px ring and a soft drop.
     expect(themed('--blok-database-place-map-link-shadow')).toEqual({
       light: 'rgba(25, 25, 25, 0.027) 0 8px 12px, rgba(25, 25, 25, 0.027) 0 2px 6px, rgba(42, 28, 0, 0.07) 0 0 0 1px',
-      dark: 'none',
-      attr: 'none',
+      dark: 'rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px',
+      attr: 'rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px',
     });
   });
 
   it('"Open in Google Maps" draws its glyph 142,139,134 and hovers to 244,243,243 in light', () => {
     expect(ruleBody(`${LINK} svg`)).toContain('color: var(--blok-database-place-map-link-icon)');
     expect(ruleBody(`${LINK}:hover`)).toContain('background-color: var(--blok-database-place-map-link-hover-bg)');
-    // Dark glyph and hover are unmeasured: the old ink and no hover change.
-    expect(themed('--blok-database-place-map-link-icon')).toEqual({ light: 'rgb(142, 139, 134)', dark: 'var(--blok-database-table-cell-text)', attr: 'var(--blok-database-table-cell-text)' });
-    expect(themed('--blok-database-place-map-link-hover-bg')).toEqual({ light: 'rgb(244, 243, 243)', dark: 'var(--blok-database-place-map-link-bg)', attr: 'var(--blok-database-place-map-link-bg)' });
-    // A glyph needs 3:1; both surfaces pass.
+    // research/37 §4.2: dark glyph 173,169,163; hover lightens 25 to 38.
+    expect(themed('--blok-database-place-map-link-icon')).toEqual({ light: 'rgb(142, 139, 134)', dark: 'rgb(173, 169, 163)', attr: 'rgb(173, 169, 163)' });
+    expect(themed('--blok-database-place-map-link-hover-bg')).toEqual({ light: 'rgb(244, 243, 243)', dark: 'rgb(38, 38, 38)', attr: 'rgb(38, 38, 38)' });
+    // A glyph needs 3:1, at rest and on hover, in both themes.
     expect(contrast('rgb(142, 139, 134)', [244, 243, 243])).toBeGreaterThanOrEqual(3);
+    expect(contrast('rgb(173, 169, 163)', [25, 25, 25])).toBeGreaterThanOrEqual(3);
+    expect(contrast('rgb(173, 169, 163)', [38, 38, 38])).toBeGreaterThanOrEqual(3);
   });
 
   it('"Open in Google Maps" sits 8px from the map\'s end and 10px from its bottom', () => {

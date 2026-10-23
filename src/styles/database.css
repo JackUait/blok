@@ -1975,6 +1975,16 @@
   margin-inline-start: -53px;
 }
 
+/*
+ * feel/findings-rowpage R26: Notion's body placeholder is warm gray; this is its AA step.
+ * A host's --blok-placeholder-color still wins; declaring that token here would shadow it.
+ */
+/* contenteditable + :empty out-rank the placeholder utilities' class + :empty + :focus. */
+[data-blok-database-drawer-editor] [contenteditable][data-placeholder]:empty::before,
+[data-blok-database-drawer-editor] [contenteditable][data-blok-placeholder-active]:empty::before {
+  color: var(--blok-placeholder-color, var(--blok-database-ink-tertiary));
+}
+
 /* The row holder is the page body here, not the nested editor: no toolbar gutter to make room for. */
 [data-blok-database-drawer-editor]:has(> [data-blok-element]) {
   margin-inline-start: 0;
@@ -1985,8 +1995,9 @@
   display: none;
 }
 
+/* feel/findings-rowpage R15: Notion's prompt box is 56 tall, padding 8px 0 24px 8px. */
 [data-blok-database-row-empty] {
-  padding-block: var(--blok-block-padding-top, 7px) var(--blok-block-padding-bottom, 7px);
+  padding: var(--blok-space-2) 0 var(--blok-space-6) var(--blok-space-2);
   color: var(--blok-database-ink-tertiary);
   cursor: text;
   user-select: none;
@@ -5579,6 +5590,20 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* feel/findings-rowpage R29, R32: on the row page a chip is at most 200 wide and its name ends in "…". */
+[data-blok-database-drawer-prop-value] [data-blok-database-file-chip] {
+  max-width: 200px;
+}
+
+[data-blok-database-drawer-prop-value] [data-blok-database-file-chip] > [data-blok-database-cell-link] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: inherit;
+  text-decoration: none;
 }
 
 /* research/08:278: a 20px page glyph in the chip ink, as Notion's 20px box. */

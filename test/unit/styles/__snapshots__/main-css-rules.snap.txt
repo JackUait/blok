@@ -5597,6 +5597,10 @@ span[data-blok-slash-search] {
   margin-inline-start: -53px;
 }
 
+[data-blok-database-drawer-editor] [contenteditable][data-placeholder]:empty::before, [data-blok-database-drawer-editor] [contenteditable][data-blok-placeholder-active]:empty::before {
+  color: var(--blok-placeholder-color, var(--blok-database-ink-tertiary));
+}
+
 [data-blok-database-drawer-editor]:has(> [data-blok-element]) {
   margin-inline-start: 0;
 }
@@ -5606,7 +5610,7 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-database-row-empty] {
-  padding-block: var(--blok-block-padding-top, 7px) var(--blok-block-padding-bottom, 7px);
+  padding: var(--blok-space-2) 0 var(--blok-space-6) var(--blok-space-2);
   color: var(--blok-database-ink-tertiary);
   cursor: text;
   user-select: none;
@@ -8909,6 +8913,19 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+[data-blok-database-drawer-prop-value] [data-blok-database-file-chip] {
+  max-width: 200px;
+}
+
+[data-blok-database-drawer-prop-value] [data-blok-database-file-chip] > [data-blok-database-cell-link] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: inherit;
+  text-decoration: none;
 }
 
 [data-blok-database-file-chip-icon] {

@@ -323,3 +323,28 @@ describe('map pins (research/23 §5b)', () => {
     expect(tokenValues('--blok-database-map-pin-fill')).toStrictEqual(['rgb(35, 131, 226)']);
   });
 });
+
+// feel/findings-rowpage R29, R32: a row page file chip is at most 200 wide; its name ends in "…" and is not underlined.
+describe('row page file chip', () => {
+  it('caps the chip at 200px and ellipsizes the name at its end', () => {
+    const chip = '[data-blok-database-drawer-prop-value] [data-blok-database-file-chip]';
+    const name = ruleBody(`${chip} > [data-blok-database-cell-link]`);
+
+    expect(ruleBody(chip)).toContain('max-width: 200px');
+    expect(name).toContain('min-width: 0');
+    expect(name).toContain('text-overflow: ellipsis');
+    expect(name).toContain('text-decoration: none');
+  });
+});
+
+// feel/findings-rowpage R15, R26: the empty page prompt box is padding 8px 0 24px 8px; the body placeholder is warm gray.
+describe('row page body start', () => {
+  it('pads the empty page prompt as Notion', () => {
+    expect(ruleBody('[data-blok-database-row-empty]')).toContain('padding: var(--blok-space-2) 0 var(--blok-space-6) var(--blok-space-2)');
+  });
+
+  it('inks the body placeholder with the warm AA gray', () => {
+    // A host's --blok-placeholder-color still wins (host-customization-tokens law).
+    expect(ruleBody('[data-blok-database-drawer-editor] [contenteditable][data-blok-placeholder-active]:empty::before')).toContain('color: var(--blok-placeholder-color, var(--blok-database-ink-tertiary))');
+  });
+});

@@ -116,4 +116,9 @@ describe('cell editor CSS', () => {
       expect(declared('textarea[data-blok-database-cell-input]', 'white-space')).toEqual(['break-spaces']);
     });
   });
+
+  it('keeps the title weight (500) in the title editor, in a 38px one-line box (feel T19)', () => {
+    expect(declared('[data-blok-database-cell-input="title"]', 'font-weight')).toEqual(['500']);
+    expect(declared('[data-blok-database-cell-input="title"]', 'min-height')).toEqual(['38px']);
+  });
 });

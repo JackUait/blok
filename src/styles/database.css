@@ -5653,6 +5653,12 @@ textarea[data-blok-database-cell-input] {
   white-space: break-spaces;
 }
 
+/* Notion's title editor keeps the cell's 500 and is 38px tall (feel T19). */
+[data-blok-database-cell-input="title"] {
+  min-height: 38px;
+  font-weight: 500;
+}
+
 [data-blok-database-cell-input="number"] {
   min-height: 38px;
   text-align: end;

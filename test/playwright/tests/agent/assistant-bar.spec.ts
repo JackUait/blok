@@ -472,23 +472,27 @@ test.describe('in-editor assistant', () => {
 
     await expect(written).toBeVisible();
     await expect(slot).toBeVisible();
-    await expect.poll(gapped).toEqual(['empty', 'Landed first']);
+    // The bar heads what it wrote, and the slots sit under it: one holder holds both gaps.
+    await expect.poll(gapped).toEqual(['Landed first']);
 
+    const box = await bar.boundingBox();
     const block = await written.boundingBox();
     const slotBox = await slot.boundingBox();
     const next = await page.getByText('Second').boundingBox();
 
-    if (block === null || slotBox === null || next === null) {
+    if (box === null || block === null || slotBox === null || next === null) {
       throw new Error('no layout');
     }
+    expect(block.y).toBeGreaterThanOrEqual(box.y + box.height);
     expect(slotBox.y).toBeGreaterThanOrEqual(block.y + block.height);
     expect(next.y).toBeGreaterThanOrEqual(slotBox.y + slotBox.height);
 
     await page.evaluate(() => window.assistantRelease?.());
     await expect(bar.getByText('Done.')).toBeVisible();
     await expect(slot).toBeHidden();
-    // The run used up the empty paragraph, so the bar's own gap is all that is left, under what it wrote.
+    // The run used up the empty paragraph, so the bar's own gap is all that is left, over what it wrote.
     await expect.poll(gapped).toEqual(['Landed first']);
+    await expect(written).toHaveAttribute('data-blok-ai-gap', 'start');
   });
 
   test('after an answer, a follow-up field under it takes a question with a visible caret', async ({ page }) => {

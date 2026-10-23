@@ -784,6 +784,14 @@
 }
 
 /*
+  New content took this empty block's place; the run deletes it when it ends.
+  Only the content goes: the holder keeps a real box, so a preview placed next to it still measures.
+*/
+[data-blok-element][data-blok-ai-consumed] > [data-blok-element-content] {
+  display: none;
+}
+
+/*
   A block being rewritten: its text fields hide but keep their box, so nothing
   moves; live-preview.ts draws the new text over them. Markers, checkboxes and
   icons stay. A nested child block's fields are turned back on by the longer rule.

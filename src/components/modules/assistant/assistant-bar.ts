@@ -8,7 +8,8 @@ import { onHover } from '../../utils/tooltip';
 import { promoteToTopLayer, removeFromTopLayer } from '../../utils/top-layer';
 
 import type { AssistantAction } from './actions';
-import { releaseGap, reserveGap } from './gap';
+import { gapSize, releaseGap, reserveGap } from './gap';
+import type { GapSide } from './gap';
 
 export interface AssistantBarCallbacks {
   onSubmit(prompt: string): void;
@@ -208,14 +209,17 @@ export class AssistantBar {
   private readonly slots: HTMLElement;
   /** The block the slots sit under; null: under the bar. */
   private slotsUnder: HTMLElement | null = null;
-  /** The holder whose gap the slots hold now. */
+  /** The holder whose gap the slots hold now, and on which side. */
   private slotsHolder: HTMLElement | null = null;
+  private slotsSide: GapSide = 'end';
   /** The bar's height when it began floating over its anchor; null when it sits under it. */
   private inPlaceHeight: number | null = null;
   private view: AssistantBarView = { kind: 'prompt' };
   /** A prompt typed but not sent: the next open shows it again. */
   private draft = '';
   private anchor: HTMLElement | null = null;
+  /** Under the anchor (end), or over it (start). */
+  private side: GapSide = 'end';
   /** The bar's top at its spot in the page, before pinning it inside the window. */
   private homeTop = 0;
   private thinkingView: AssistantThinkingView | null = null;
@@ -370,11 +374,16 @@ export class AssistantBar {
    * @param anchor - the block holder to sit under
    * @param column - the content column, in viewport px
    * @param inPlace - float over the anchor (hidden meanwhile): the page moves only for what the bar grows by
+   * @param range.side - 'start' holds the gap over the anchor instead of under it
+   * @param range.end - the last block of the part the bar heads: pinned at the window's top, it stops just under it
    */
-  public place(anchor: HTMLElement, column: AssistantBarColumn, inPlace = false): void {
-    if (this.anchor !== anchor) {
+  public place(anchor: HTMLElement, column: AssistantBarColumn, inPlace = false, range: { side?: GapSide; end?: HTMLElement | null } = {}): void {
+    const side = range.side ?? 'end';
+
+    if (this.anchor !== anchor || this.side !== side) {
       this.release();
       this.anchor = anchor;
+      this.side = side;
     }
     // Hidden before measuring, so the open animation never shows it through the bar.
     anchor.toggleAttribute(DATA_ATTR.aiReplaced, inPlace);
@@ -395,29 +404,36 @@ export class AssistantBar {
     const under = this.slots.hidden || this.slotsUnder?.isConnected !== true ? null : this.slotsUnder;
     const slotsUnderBar = !this.slots.hidden && under === null;
     const offset = base === null
-      ? reserveGap(anchor, BAR_GAP, SPACE_BEFORE + height + SPACE_AFTER)
+      ? reserveGap(anchor, BAR_GAP, SPACE_BEFORE + height + SPACE_AFTER, side)
       : reserveGap(anchor, BAR_GAP, Math.max(0, height - base) + (slotsUnderBar ? below + SPACE_AFTER : 0));
     const slotsHolder = this.slots.hidden ? null : under ?? anchor;
+    // Slots under the bar share its gap; slots under a block sit below it.
+    const slotsSide = under === null ? side : 'end';
 
-    if (this.slotsHolder !== null && this.slotsHolder !== slotsHolder) {
-      releaseGap(this.slotsHolder, SLOTS_GAP);
+    if (this.slotsHolder !== null && (this.slotsHolder !== slotsHolder || this.slotsSide !== slotsSide)) {
+      releaseGap(this.slotsHolder, SLOTS_GAP, this.slotsSide);
     }
     this.slotsHolder = slotsHolder;
+    this.slotsSide = slotsSide;
 
     if (slotsHolder !== null) {
       // Slots use em, like the preview: size them as a block here would be.
       this.slots.style.fontSize = getComputedStyle(slotsHolder).fontSize;
     }
 
-    const slotsOffset = slotsHolder === null ? 0 : reserveGap(slotsHolder, SLOTS_GAP, this.slots.getBoundingClientRect().height);
+    const slotsOffset = slotsHolder === null ? 0 : reserveGap(slotsHolder, SLOTS_GAP, this.slots.getBoundingClientRect().height, slotsSide);
 
-    this.homeTop = top ?? rect.bottom + offset + SPACE_BEFORE;
+    // A start gap is a margin over the holder: its keys stack down from the gap's top.
+    this.homeTop = top ?? (side === 'start' ? rect.top - gapSize(anchor, 'start') : rect.bottom) + offset + SPACE_BEFORE;
     // Pinned inside the window, over the text, when its spot leaves it. Only this write:
     // the gaps above follow the spot, or every scroll would resize them.
     // client sizes leave out classic scrollbars; they are 0 only with no layout (jsdom).
     const view = document.documentElement.clientHeight || window.innerHeight;
 
-    const barTop = Math.max(WINDOW_EDGE, Math.min(this.homeTop, view - WINDOW_EDGE - height));
+    const pinned = Math.max(WINDOW_EDGE, Math.min(this.homeTop, view - WINDOW_EDGE - height));
+    const end = range.end?.isConnected === true ? range.end.getBoundingClientRect().bottom + SPACE_BEFORE : Infinity;
+    // Past the part's end the bar leaves the window's top with it, but never rises over its spot.
+    const barTop = Math.min(pinned, Math.max(this.homeTop, end));
 
     this.element.style.top = `${barTop}px`;
     // Under a block, the slots sit in its gap; the stylesheet puts them under the bar otherwise.
@@ -700,10 +716,10 @@ export class AssistantBar {
     if (this.anchor !== null) {
       this.anchor.removeAttribute(DATA_ATTR.aiReplaced);
       this.inPlaceHeight = null;
-      releaseGap(this.anchor, BAR_GAP);
+      releaseGap(this.anchor, BAR_GAP, this.side);
     }
     if (this.slotsHolder !== null) {
-      releaseGap(this.slotsHolder, SLOTS_GAP);
+      releaseGap(this.slotsHolder, SLOTS_GAP, this.slotsSide);
     }
     this.slotsHolder = null;
     this.anchor = null;

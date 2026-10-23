@@ -44,6 +44,8 @@ export const DATA_ATTR: {
   readonly aiGap: 'data-blok-ai-gap';
   /** On a block holder the Ask AI bar sits in place of. Its content is hidden meanwhile. */
   readonly aiReplaced: 'data-blok-ai-replaced';
+  /** On the empty block Ask AI's new content replaces: it takes no room until the run deletes it. */
+  readonly aiConsumed: 'data-blok-ai-consumed';
   /** On a block holder whose content an Ask AI rewrite preview covers. */
   readonly aiRewriting: 'data-blok-ai-rewriting';
   /** One Ask AI live preview box (a wrapper child, never inside the redactor). */

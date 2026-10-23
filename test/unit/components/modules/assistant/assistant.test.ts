@@ -293,6 +293,9 @@ const holderOf = (id: string): HTMLElement => {
 
 const gapOf = (id: string): string => holderOf(id).style.getPropertyValue('--blok-ai-gap');
 
+/** The gap held over a holder: the bar heads a part it wrote from there. */
+const startGap = (holder: Element | null): string => (holder instanceof HTMLElement ? holder.style.getPropertyValue('--blok-ai-gap-start') : '');
+
 /** Ids of the holders that hold any Ask AI gap. */
 const gapped = (): string[] => [...document.querySelectorAll('[data-blok-ai-gap]')].map((holder) => holder.getAttribute('data-blok-id') ?? '');
 
@@ -814,9 +817,11 @@ describe('in-editor assistant bar', () => {
       // The call commits at its tool_end, before the model's answer, and the preview hands off.
       await waitFor(async () => expect(await texts(editor)).toEqual(['Hello', 'Fresh words here']));
       await waitFor(() => expect(document.querySelector(PREVIEW)).toBeNull());
-      // Only the bar's own space is left: the preview's share of the gap is gone.
-      expect(gapped()).toEqual(['p1']);
-      expect(gapOf('p1')).toBe(`${BAR_GAP}px`);
+      // Only the bar's own space is left, over what it wrote: the preview's share of the gap is gone.
+      const written = document.querySelector('[data-blok-id]:not([data-blok-id="p1"])');
+
+      expect(gapped()).toEqual([written?.getAttribute('data-blok-id')]);
+      expect(startGap(written)).toBe(`${BAR_GAP}px`);
       expect(revealed()).toEqual([]);
 
       live.finish(call.use);
@@ -2053,17 +2058,17 @@ describe('in-editor assistant bar', () => {
         await waitFor(() => expect(holderWithText('Table here')).toBeTruthy());
         await settle();
 
+        const written = holderWithText('Table here');
+
         expect(slotsShown()).toBe(false);
-        expect(gapped()).toEqual(['p2']);
-        expect(gapOf('p2')).toBe(`${BAR_GAP}px`);
+        expect(gapped()).toEqual([written.getAttribute('data-blok-id')]);
+        expect(startGap(written)).toBe(`${BAR_GAP}px`);
 
         emit({ type: 'tool_start', index: 1, id: 'c2', name: 'blok_execute' });
         await settle();
 
-        const written = holderWithText('Table here');
-
         expect(slotsShown()).toBe(true);
-        expect(gapOf('p2')).toBe(`${BAR_GAP}px`);
+        expect(startGap(written)).toBe(`${BAR_GAP}px`);
         expect(written.style.getPropertyValue('--blok-ai-gap')).toBe(`${SLOTS_HEIGHT}px`);
       });
 
@@ -2080,7 +2085,7 @@ describe('in-editor assistant bar', () => {
         await settle();
 
         expect(slotsShown()).toBe(true);
-        expect(gapOf('p2')).toBe(`${BAR_GAP}px`);
+        expect(startGap(holderWithText('Table here'))).toBe(`${BAR_GAP}px`);
         expect(holderWithText('Table here').style.getPropertyValue('--blok-ai-gap')).toBe(`${SLOTS_HEIGHT}px`);
       });
 
@@ -2102,7 +2107,9 @@ describe('in-editor assistant bar', () => {
 
         expect(slotsShown()).toBe(true);
         expect(table()?.style.getPropertyValue('--blok-ai-gap')).toBe(`${SLOTS_HEIGHT}px`);
-        expect(gapped()).toHaveLength(2);
+        // The bar over the table, the slots under it: one holder holds both.
+        expect(startGap(table()?.closest('[data-blok-element]') ?? null)).toBe(`${BAR_GAP}px`);
+        expect(gapped()).toHaveLength(1);
       });
 
       it('leaves no gap under what it wrote once the run ends', async () => {
@@ -2119,7 +2126,8 @@ describe('in-editor assistant bar', () => {
         await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
 
         expect(slotsShown()).toBe(false);
-        expect(gapped()).toEqual(['p2']);
+        expect(gapped()).toEqual([holderWithText('Table here').getAttribute('data-blok-id')]);
+        expect(holderWithText('Table here').getAttribute('data-blok-ai-gap')).toBe('start');
       });
     });
 

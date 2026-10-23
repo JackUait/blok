@@ -139,6 +139,9 @@ export class Assistant extends Module {
   private readonly reveals = new Map<HTMLElement, ReturnType<typeof setTimeout>>();
   /** The block the bar sits under, and its neighbours when last placed: where it goes if the block is removed. */
   private anchor: { id: string; next?: string; prev?: string } | null = null;
+  /** The block the bar opened at, and the first block of the part written next to it once it is found. */
+  private originId: string | null = null;
+  private partFirstId: string | null = null;
   private placing = false;
   /** The empty block the bar covers, when Space opened it there. */
   private inPlaceId: string | null = null;
@@ -232,6 +235,8 @@ export class Assistant extends Module {
       const block = caret === undefined ? undefined : this.anchorFor(caret);
 
       this.anchor = block === undefined ? null : { id: block.id };
+      this.originId = block?.id ?? null;
+      this.partFirstId = null;
       this.inPlaceId = options.inPlace === true ? block?.id ?? null : null;
       // Only the block the model is told the caret is in: content goes next to it.
       this.emptyId = caret !== undefined && caret.id === this.context.blockIds[0] && caret.isEmpty
@@ -293,7 +298,12 @@ export class Assistant extends Module {
     this.bar?.close();
     clearSelectionTint(this);
     this.Blok.Toolbar.setSuppressed(false);
+    if (this.emptyId !== null) {
+      this.Blok.BlockManager.getBlockById(this.emptyId)?.holder.removeAttribute(DATA_ATTR.aiConsumed);
+    }
     this.anchor = null;
+    this.originId = null;
+    this.partFirstId = null;
     this.inPlaceId = null;
     this.emptyId = null;
     this.created.clear();
@@ -595,22 +605,14 @@ export class Assistant extends Module {
       return;
     }
 
-    const siblings = block.parentId === null
-      ? manager.blocks.filter((other) => other.parentId === null).map((other) => other.id)
-      : manager.getBlockById(block.parentId)?.contentIds ?? [];
+    const siblings = this.siblingIds(block);
     const index = siblings.indexOf(block.id);
-    const isCreated = (id: string | undefined): id is string => id !== undefined && this.created.has(id);
-    const after = siblings.slice(index + 1);
-    const stop = after.findIndex((id) => !isCreated(id));
-    // The last new block touching it: the end of the run below, else the one above.
-    const runEnd = isCreated(after[0]) ? after[(stop === -1 ? after.length : stop) - 1] : siblings[index - 1];
+    const neighbours = [siblings[index - 1], siblings[index + 1]];
 
-    if (!isCreated(runEnd)) {
+    if (!neighbours.some((id) => id !== undefined && this.created.has(id))) {
       return;
     }
     this.emptyId = null;
-    // The block is the bar's anchor. Without this the bar falls back to the block after it: the first new one.
-    this.anchor = { id: runEnd };
     await this.Blok.AgentAPI.executeInRun({ commands: [{ name: 'block.delete', args: { id: block.id } }] });
   }
 
@@ -819,9 +821,12 @@ export class Assistant extends Module {
     return id === undefined ? null : manager.getBlockById(id)?.holder ?? null;
   }
 
-  /** The bar's anchor while open; else the block the bar opened at, else the current one, else the last. */
+  /**
+   * Where an insert with no position yet waits: under the part the answer wrote,
+   * else under the bar's anchor while open, else the block the bar opened at, else the current one, else the last.
+   */
   private anchorHolder(): HTMLElement | null {
-    const open = this.bar?.anchorHolder;
+    const open = this.generatedPart()?.last.holder ?? this.bar?.anchorHolder;
 
     if (open !== null && open !== undefined) {
       return open;
@@ -943,6 +948,65 @@ export class Assistant extends Module {
     return block.id === this.inPlaceId && block.isEmpty;
   }
 
+  /** Ids of the block and its siblings, in order. */
+  private siblingIds(block: Block): string[] {
+    const manager = this.Blok.BlockManager;
+
+    return block.parentId === null
+      ? manager.blocks.filter((other) => other.parentId === null).map((other) => other.id)
+      : manager.getBlockById(block.parentId)?.contentIds ?? [];
+  }
+
+  /**
+   * The part this answer wrote at the bar's spot: the new blocks in a row right
+   * after the block it opened at. Right before it counts too when that block is
+   * the empty one the part replaces; before a block with text, the part is not under the bar.
+   * Once the empty block is gone, the part is found from its first block.
+   */
+  private generatedPart(): { first: Block; last: Block } | null {
+    const manager = this.Blok.BlockManager;
+    const seed = [this.originId, this.partFirstId]
+      .map((id) => (id === null ? undefined : manager.getBlockById(id)))
+      .find((block) => block?.holder.isConnected === true);
+
+    if (seed === undefined) {
+      return null;
+    }
+
+    const siblings = this.siblingIds(seed);
+    const at = siblings.indexOf(seed.id);
+    const isCreated = (index: number): boolean => this.created.has(siblings[index] ?? '');
+    const from = [at, at + 1, ...(seed.id === this.emptyId ? [at - 1] : [])].find(isCreated);
+
+    if (from === undefined) {
+      return null;
+    }
+
+    const edge = (index: number, step: number): number => (isCreated(index + step) ? edge(index + step, step) : index);
+    const first = manager.getBlockById(siblings[edge(from, -1)] ?? '');
+    const last = manager.getBlockById(siblings[edge(from, 1)] ?? '');
+
+    return first === undefined || last === undefined ? null : { first, last };
+  }
+
+  /**
+   * The empty block the part was written next to takes no room from now on.
+   * consumeEmpty deletes it when the run ends; collapsed already, nothing moves then.
+   */
+  private collapseEmpty(part: { first: Block; last: Block } | null): void {
+    const empty = this.emptyId === null ? undefined : this.Blok.BlockManager.getBlockById(this.emptyId);
+
+    if (empty === undefined) {
+      return;
+    }
+
+    const siblings = this.siblingIds(empty);
+    const index = siblings.indexOf(empty.id);
+    const next = part !== null && empty.isEmpty && (siblings[index + 1] === part.first.id || siblings[index - 1] === part.last.id);
+
+    empty.holder.toggleAttribute(DATA_ATTR.aiConsumed, next);
+  }
+
   /** Re-place the bar at its anchor, re-anchoring if the block is gone. */
   private placeBar(): void {
     const bar = this.bar;
@@ -951,7 +1015,9 @@ export class Assistant extends Module {
       return;
     }
 
-    const block = this.anchorBlock();
+    // Over the part it wrote, from its first block to its last.
+    const part = this.generatedPart();
+    const block = part?.first ?? this.anchorBlock();
 
     if (block === undefined) {
       return;
@@ -961,11 +1027,20 @@ export class Assistant extends Module {
 
     this.placing = true;
     try {
-      bar.place(block.holder, this.columnOf(block.holder), this.coversBlock(block));
+      if (part === null) {
+        bar.place(block.holder, this.columnOf(block.holder), this.coversBlock(block));
+      } else {
+        bar.place(block.holder, this.columnOf(block.holder), false, { side: 'start', end: part.last.holder });
+      }
     } finally {
       this.placing = false;
     }
-    this.remember(block);
+    if (part === null) {
+      this.remember(block);
+    } else {
+      this.partFirstId = part.first.id;
+    }
+    this.collapseEmpty(part);
     if (moved) {
       this.watchers?.resize?.disconnect();
       this.watchers?.resize?.observe(bar.element);

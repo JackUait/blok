@@ -53,7 +53,13 @@ const texts = async (editor: TestEditor): Promise<string[]> =>
 // Save leaves out empty paragraphs, so the page is read from its holders.
 const hasEmpty = (): boolean => document.querySelector('[data-blok-id="empty"]') !== null;
 
-const createEditor = async (model: AgentModel): Promise<TestEditor> => {
+const PAGE = [
+  { id: 'before', type: 'paragraph', data: { text: 'Before' } },
+  { id: 'empty', type: 'paragraph', data: { text: '' } },
+  { id: 'after', type: 'paragraph', data: { text: 'After' } },
+];
+
+const createEditor = async (model: AgentModel, blocks = PAGE): Promise<TestEditor> => {
   const holder = document.createElement('div');
 
   document.body.appendChild(holder);
@@ -62,11 +68,7 @@ const createEditor = async (model: AgentModel): Promise<TestEditor> => {
     holder,
     tools: { paragraph: Paragraph },
     data: {
-      blocks: [
-        { id: 'before', type: 'paragraph', data: { text: 'Before' } },
-        { id: 'empty', type: 'paragraph', data: { text: '' } },
-        { id: 'after', type: 'paragraph', data: { text: 'After' } },
-      ],
+      blocks,
     },
     agent: { assistant: { model } },
   }) as unknown as TestEditor;
@@ -77,9 +79,31 @@ const createEditor = async (model: AgentModel): Promise<TestEditor> => {
   return editor;
 };
 
-// The bar opens its gap under the block it sits under.
-const gapHolderText = (): string | null =>
-  document.querySelector('[data-blok-ai-gap]')?.textContent ?? null;
+/** The text of the block the bar's gap sits over: null if none holds a gap at its start. */
+const barOver = (): string | null =>
+  document.querySelector('[data-blok-ai-gap~="start"]')?.textContent ?? null;
+
+/** A model whose final answer waits until `release` is called. */
+const held = (...responses: AgentModelResponse[]): { model: AgentModel; release: () => void } => {
+  let release: () => void = () => undefined;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const model: AgentModel = async () => {
+    const next = responses.shift();
+
+    if (next === undefined) {
+      throw new Error('unscripted model call');
+    }
+    if (next.stop_reason === 'end_turn') {
+      await gate;
+    }
+
+    return next;
+  };
+
+  return { model, release };
+};
 
 const input = (id: string): HTMLElement => {
   const element = document.querySelector<HTMLElement>(`[data-blok-id="${id}"] [data-blok-tool="paragraph"]`);
@@ -173,27 +197,68 @@ describe('Ask AI in an empty block', () => {
     expect(await texts(editor)).toEqual(['Before', 'Next', 'After']);
   });
 
-  it('sits under the last line written in place of the empty block', async () => {
-    const editor = await createEditor(scripted(insertAt({ after: 'empty' }, 'One', 'Two', 'Three'), answer('Done.')));
-
-    openAt('empty');
-    submit('Write three lines');
-
-    await waitFor(() => expect(within(bar()).getByText('Done.')).toBeTruthy());
-    const written = (await texts(editor)).slice(1, -1);
-
-    expect(written).toHaveLength(3);
-    await waitFor(() => expect(gapHolderText()).toBe(written.at(-1)));
-  }, 20_000);
-
-  it('sits under the content written just above the empty block', async () => {
-    await createEditor(scripted(insertAt({ before: 'empty' }, 'One', 'Two'), answer('Done.')));
+  it('heads the content it writes under the empty block, while it writes and after', async () => {
+    const run = held(insertAt({ after: 'empty' }, 'One', 'Two'), answer('Done.'));
+    const editor = await createEditor(run.model);
 
     openAt('empty');
     submit('Write two lines');
 
+    await waitFor(() => expect(document.querySelectorAll('[data-blok-id]')).toHaveLength(5));
+    const [first] = (await texts(editor)).slice(1, -1);
+
+    await waitFor(() => expect(barOver()).toBe(first));
+    // It gives up its line now, not when the run ends: the bar and the content stay put then.
+    expect(document.querySelector('[data-blok-id="empty"]')?.hasAttribute('data-blok-ai-consumed')).toBe(true);
+
+    run.release();
     await waitFor(() => expect(within(bar()).getByText('Done.')).toBeTruthy());
-    await waitFor(() => expect(gapHolderText()).toBe('Two'));
+    expect(hasEmpty()).toBe(false);
+    expect(barOver()).toBe(first);
+  }, 20_000);
+
+  it('heads the content it writes over the empty block', async () => {
+    const run = held(insertAt({ before: 'empty' }, 'One', 'Two'), answer('Done.'));
+
+    await createEditor(run.model);
+    openAt('empty');
+    submit('Write two lines');
+
+    await waitFor(() => expect(barOver()).toBe('One'));
+
+    run.release();
+    await waitFor(() => expect(within(bar()).getByText('Done.')).toBeTruthy());
+    expect(barOver()).toBe('One');
+  }, 20_000);
+
+  it('heads the content on a page that held only the empty block', async () => {
+    const run = held(insertAt({ after: 'empty' }, 'Only'), answer('Done.'));
+
+    await createEditor(run.model, [{ id: 'empty', type: 'paragraph', data: { text: '' } }]);
+    openAt('empty');
+    submit('Write a line');
+
+    await waitFor(() => expect(barOver()).toBe('Only'));
+
+    run.release();
+    await waitFor(() => expect(within(bar()).getByText('Done.')).toBeTruthy());
+    expect(hasEmpty()).toBe(false);
+    expect(barOver()).toBe('Only');
+  }, 20_000);
+
+  it('heads the content when Space opened it over the empty block', async () => {
+    const run = held(insertAt({ after: 'empty' }, 'One'), answer('Done.'));
+
+    await createEditor(run.model);
+    putCaret(input('empty'));
+    input('empty').dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, cancelable: true }));
+    submit('Write a line');
+
+    await waitFor(() => expect(barOver()).toBe('One'));
+
+    run.release();
+    await waitFor(() => expect(within(bar()).getByText('Done.')).toBeTruthy());
+    expect(barOver()).toBe('One');
   }, 20_000);
 
   it('puts an inserted answer in place of the empty block', async () => {

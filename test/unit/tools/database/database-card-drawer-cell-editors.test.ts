@@ -161,7 +161,10 @@ describe('DatabaseCardDrawer — cell editors', () => {
 
   // feel/findings-rowpage R21: Tab commits and opens the next property's editor, skipping Checkbox; Shift+Tab the previous one.
   describe('Tab between editors', () => {
-    const NOTE: PropertyDefinition = { id: 'prop-note', name: 'Note', type: 'text', position: 'a4' };
+    // The row page lists properties by name (R12): these names keep Status, Score, Done, Note in that order.
+    const NOTE: PropertyDefinition = { id: 'prop-note', name: 'D note', type: 'text', position: 'a4' };
+    const NAMES: Record<string, string> = { 'prop-status': 'A status', 'prop-score': 'B score', 'prop-done': 'C done' };
+    const ORDERED = SCHEMA.map((p) => (NAMES[p.id] === undefined ? p : { ...p, name: NAMES[p.id] }));
     const tab = (shiftKey = false): KeyboardEvent => {
       const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true });
       const target = editor()?.querySelector<HTMLElement>('input, textarea') ?? editor() ?? document.body;
@@ -172,7 +175,7 @@ describe('DatabaseCardDrawer — cell editors', () => {
     };
 
     it('Tab commits the number and opens the next editable value, past the checkbox', () => {
-      const options = createOptions({ schema: [...SCHEMA, NOTE] });
+      const options = createOptions({ schema: [...ORDERED, NOTE] });
 
       new DatabaseCardDrawer(options).open(makeRow({ 'prop-score': 3 }));
       valueOf(options, 'prop-score').click();
@@ -189,7 +192,7 @@ describe('DatabaseCardDrawer — cell editors', () => {
     });
 
     it('Shift+Tab opens the previous editable value', () => {
-      const options = createOptions();
+      const options = createOptions({ schema: ORDERED });
 
       new DatabaseCardDrawer(options).open(makeRow());
       valueOf(options, 'prop-score').click();
@@ -200,7 +203,7 @@ describe('DatabaseCardDrawer — cell editors', () => {
     });
 
     it('Tab on the last editable value closes the editor and keeps focus on that value', () => {
-      const options = createOptions({ schema: [...SCHEMA, NOTE] });
+      const options = createOptions({ schema: [...ORDERED, NOTE] });
 
       new DatabaseCardDrawer(options).open(makeRow());
       valueOf(options, 'prop-note').click();
@@ -212,7 +215,7 @@ describe('DatabaseCardDrawer — cell editors', () => {
 
     // feel/findings-rowpage R22: one Tab from the title opens the first editable value's editor.
     it('Tab in the title opens the first editable value', () => {
-      const options = createOptions();
+      const options = createOptions({ schema: ORDERED });
 
       new DatabaseCardDrawer(options).open(makeRow());
       const title = options.wrapper.querySelector<HTMLTextAreaElement>('[data-blok-database-drawer-title]');

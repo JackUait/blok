@@ -33,6 +33,7 @@ describe('column header menu (T11)', () => {
 describe('add property menu (T12)', () => {
   it('is 400 wide with a two-column type grid', () => {
     expect(declared('[data-blok-database-property-type-popover]', 'width')).toEqual(['400px']);
+    expect(declared('[data-blok-database-property-type-popover]', 'box-sizing')).toEqual(['border-box']);
     expect(declared('[data-blok-database-property-type-grid]', 'grid-template-columns')).toEqual(['repeat(2, minmax(0, 1fr))']);
   });
 
@@ -46,5 +47,18 @@ describe('add property menu (T12)', () => {
     expect(declared('[data-blok-database-property-type-option-icon] svg', 'width')).toEqual(['20px']);
     expect(declared('[data-blok-database-property-type-heading]', 'text-transform')).toEqual([]);
     expect(declared('[data-blok-database-property-type-heading]', 'font-size')).toEqual(['12px']);
+  });
+});
+
+describe('row menu (T15)', () => {
+  const ROW = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-menu']";
+
+  it('has 29px rows, as Notion', () => {
+    expect(declared(`${ROW} [data-blok-popover-item]`, 'height')).toEqual(['29px']);
+  });
+
+  it('ends with a 12px gray "Last edited" footer', () => {
+    expect(declared('[data-blok-database-row-menu-footer]', 'font-size')).toEqual(['12px']);
+    expect(declared('[data-blok-database-row-menu-footer]', 'color')).toEqual(['var(--blok-database-ink-secondary)']);
   });
 });

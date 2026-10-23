@@ -1065,6 +1065,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // database.css: feel/findings-table T11: the column header menu's 28px rows and no 400px cap.
     const DATABASE_HEADER_MENU_BYTES = 473;
     // database.css: feel/findings-table T12: the add property menu's 400-wide type grid and height cap.
+    // database.css: feel/findings-table T15: the row menu's 29px rows and 12px gray footer (+ the add property menu's border-box).
+    const DATABASE_ROW_MENU_BYTES = 437;
     const DATABASE_ADD_PROPERTY_GRID_BYTES = 514;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
@@ -1256,7 +1258,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_TOOLBAR_DISABLED_BYTES
       + DATABASE_TABLE_GRID_FEEL_BYTES
       + DATABASE_HEADER_MENU_BYTES
-      + DATABASE_ADD_PROPERTY_GRID_BYTES;
+      + DATABASE_ADD_PROPERTY_GRID_BYTES
+      + DATABASE_ROW_MENU_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

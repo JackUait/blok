@@ -133,16 +133,18 @@ export const calculationItems = (
 
 /** A column header menu: 28px rows and no 400px cap (database.css). */
 export const DATABASE_HEADER_MENU_CLASS = `${DATABASE_MENU_CLASS} blok-database-header-menu`;
+/** The table row menu: 29px rows (database.css). */
+const DATABASE_ROW_MENU_CLASS = `${DATABASE_MENU_CLASS} blok-database-row-menu`;
 
 export interface OpenMenuOptions {
   searchable?: boolean;
   searchPlaceholder?: string;
   onClose?: () => void;
-  /** Which database menu this is: its row size comes from the class. */
-  kind?: 'header';
+  /** Which database menu this is: its row size comes from the class. A row menu opens left of its ⋮⋮. */
+  kind?: 'header' | 'row';
 }
 
-const MENU_CLASS = { header: DATABASE_HEADER_MENU_CLASS } as const;
+const MENU_CLASS = { header: DATABASE_HEADER_MENU_CLASS, row: DATABASE_ROW_MENU_CLASS } as const;
 
 /** Opens a menu under `anchor`; `data-popover-open` marks the anchor while it is up. */
 export const openMenu = (
@@ -153,6 +155,7 @@ export const openMenu = (
   const menuClass = options.kind === undefined ? DATABASE_MENU_CLASS : MENU_CLASS[options.kind];
   const popover = new PopoverDesktop({
     class: menuClass,
+    ...(options.kind === 'row' ? { placeLeftOfAnchor: true, viewportMargin: 8 } : {}),
     animateClose: true,
     trigger: anchor,
     items,

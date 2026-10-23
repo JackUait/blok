@@ -1340,6 +1340,18 @@ describe('DatabaseTableView', () => {
 
     const rect = (top: number): DOMRect => ({ top, bottom: top + 37, left: 0, right: 600, width: 600, height: 37, x: 0, y: top, toJSON: () => ({}) });
 
+    // feel/findings-table T15: Notion's row menu has its own row size and opens beside ⋮⋮.
+    it('opens the row menu from ⋮⋮ as the row menu', () => {
+      const { root } = mount();
+
+      root.querySelector<HTMLElement>('[data-row-id="r1"] [data-blok-database-table-row-handle]')?.click();
+
+      const menu = document.querySelector('[data-blok-popover-custom-class~="blok-database-row-menu"]');
+
+      expect(menu).not.toBeNull();
+      expect(menu?.querySelector('[data-blok-database-row-menu-footer]')).not.toBeNull();
+    });
+
     it('drops a row between two others and ignores the click on release', () => {
       const { root, handlers } = mount();
       const rowEls = [...root.querySelectorAll<HTMLElement>('[data-blok-database-table-row]')];

@@ -5839,6 +5839,18 @@ button[data-blok-database-column-count]:hover {
   --max-height: calc(100dvh - 2 * var(--blok-space-3));
 }
 
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-menu'] [data-blok-popover-item] {
+  height: 29px;
+  padding-block: 0;
+}
+
+[data-blok-database-row-menu-footer] {
+  padding: var(--blok-space-1) var(--blok-space-2);
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--blok-database-ink-secondary);
+}
+
 [data-blok-database-add-view] {
   display: flex;
   align-items: center;
@@ -7638,6 +7650,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 [data-blok-database-property-type-popover] {
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
   width: 400px;
   max-width: calc(100vw - 2 * var(--blok-space-3));
   max-height: min(360px, calc(100dvh - 2 * var(--blok-space-3)));

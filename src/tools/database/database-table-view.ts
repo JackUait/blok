@@ -1774,7 +1774,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
         this.state.selection = null;
         handlers.deleteRows([rowId]);
       },
-    }), { searchable: true, searchPlaceholder: this.t('tools.database.searchActions') });
+    }), { searchable: true, searchPlaceholder: this.t('tools.database.searchActions'), kind: 'row' });
   }
 
   // ─── Columns ───

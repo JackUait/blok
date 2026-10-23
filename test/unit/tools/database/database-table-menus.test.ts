@@ -39,6 +39,13 @@ describe('table view menus', () => {
     expect(constructed[0]?.class).toBe('blok-database-menu');
   });
 
+  it('opens a row menu to the left of its handle, centred on it, with the row menu size', () => {
+    openMenu(document.createElement('button'), [], { kind: 'row' });
+
+    expect(String(constructed[0]?.class).split(' ')).toEqual(['blok-database-menu', 'blok-database-row-menu']);
+    expect(constructed[0]?.placeLeftOfAnchor).toBe(true);
+  });
+
   it('marks a column header menu, so only it takes the header row size', () => {
     openMenu(document.createElement('button'), [], { kind: 'header' });
 

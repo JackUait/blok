@@ -327,7 +327,9 @@ test.describe('drag ghosts look like their source', () => {
     test(`a table column ghost preserves vertical lines set to ${showVerticalLines}`, async ({ page }) => {
       await mount(page, blocks({ showVerticalLines }));
       const header = page.getByRole('columnheader', { name: 'Notes' });
-      const source = await header.evaluate((el) => {
+      // The header has no divider (Notion); a body cell carries the column's line.
+      const notesCell = page.getByRole('gridcell').and(page.locator('[data-property-id="p-notes"]')).first();
+      const source = await notesCell.evaluate((el) => {
         const style = getComputedStyle(el);
 
         return { width: style.borderInlineEndWidth, style: style.borderInlineEndStyle, color: style.borderInlineEndColor };

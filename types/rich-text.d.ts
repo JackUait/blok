@@ -18,11 +18,17 @@ export interface RichTextMarks {
   code?: true;
   sup?: true;
   sub?: true;
-  /** A `<mark>` with no colour of its own. */
+  /**
+   * A `<mark>` with no colour of its own, as read from older documents.
+   * An agent command stores a new one as `background: 'yellow'` instead.
+   */
   highlight?: true;
-  /** A Blok preset name (`'red'`) or any CSS colour value. */
+  /**
+   * A Blok preset name (`'red'`) or any CSS colour value. An agent command
+   * stores a hex, rgb or hsl value as the nearest preset and drops a non-colour.
+   */
   color?: string;
-  /** A Blok preset name (`'red'`) or any CSS colour value. */
+  /** Same values as `color`. An agent command also drops a white or transparent background. */
   background?: string;
   link?: RichTextLink;
   [customMark: `tag:${string}`]: Record<string, string>;

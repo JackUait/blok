@@ -652,7 +652,7 @@
         },
         "marks": {
           "type": "object",
-          "description": "Formatting on one run. Unknown keys are dropped, except `tag:<name>` keys from custom inline tools.",
+          "description": "Formatting on one run. Unknown keys are dropped, except custom `tag:<name>` marks.",
           "properties": {
             "bold": {
               "const": true
@@ -678,15 +678,15 @@
             },
             "highlight": {
               "const": true,
-              "description": "Stored as background \"yellow\", the marker's highlight."
+              "description": "Stored as background \"yellow\"."
             },
             "color": {
               "type": "string",
-              "description": "\"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\", or a CSS colour, stored as the nearest of them. A non-colour is dropped."
+              "description": "\"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\". A hex, rgb or hsl value is stored as the nearest of them. A non-colour is dropped."
             },
             "background": {
               "type": "string",
-              "description": "The same values as color."
+              "description": "Like color. White and transparent are dropped."
             },
             "link": {
               "type": "object",

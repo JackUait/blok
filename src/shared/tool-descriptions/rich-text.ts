@@ -11,7 +11,7 @@ export const ALIGNMENT = ['left', 'center', 'right'] as const;
 /** Formatting on one run of rich text. */
 export const RICH_TEXT_MARKS = {
   type: 'object',
-  description: 'Formatting on one run. Unknown keys are dropped, except `tag:<name>` keys from custom inline tools.',
+  description: 'Formatting on one run. Unknown keys are dropped, except custom `tag:<name>` marks.',
   properties: {
     bold: { const: true },
     italic: { const: true },
@@ -20,9 +20,9 @@ export const RICH_TEXT_MARKS = {
     code: { const: true },
     sup: { const: true, description: 'Not with sub on one run: sup wins.' },
     sub: { const: true },
-    highlight: { const: true, description: `Stored as background "${DEFAULT_HIGHLIGHT_BACKGROUND}", the marker's highlight.` },
-    color: { type: 'string', description: `${PRESET_NAMES}, or a CSS colour, stored as the nearest of them. A non-colour is dropped.` },
-    background: { type: 'string', description: 'The same values as color.' },
+    highlight: { const: true, description: `Stored as background "${DEFAULT_HIGHLIGHT_BACKGROUND}".` },
+    color: { type: 'string', description: `${PRESET_NAMES}. A hex, rgb or hsl value is stored as the nearest of them. A non-colour is dropped.` },
+    background: { type: 'string', description: 'Like color. White and transparent are dropped.' },
     link: {
       type: 'object',
       description: 'Missing target and rel get the Link tool\'s defaults.',
@@ -77,7 +77,7 @@ export const richText = (description: string): Record<string, unknown> => ({
 export const RICH_TEXT_PRIMER = [
   'Rich text is a list of segments: { text, marks? } or { embed, marks? }. A plain string is plain text, HTML tags included.',
   `Marks: ${Object.keys(RICH_TEXT_MARKS.properties).join(', ')}, and tag:<name> for a custom inline tool. sup and sub cannot share a run.`,
-  `highlight is stored as background "${DEFAULT_HIGHLIGHT_BACKGROUND}". color and background take a preset: ${PRESET_NAMES}. Another CSS colour is stored as the nearest preset; a value that is not a colour is dropped.`,
+  `highlight is stored as background "${DEFAULT_HIGHLIGHT_BACKGROUND}". color and background take a preset: ${PRESET_NAMES}. A hex, rgb or hsl colour is stored as the nearest preset; a CSS colour name stays as written. A value that is not a colour, and a white or transparent background, is dropped.`,
   'A link needs href. Missing target and rel get the Link tool\'s defaults.',
   'Embeds: { equation: { expression } } is inline LaTeX; { page: { id } } mentions a page block.',
   // UNSET_ALL and UNSET_TAGS in agent/rich-text-ops.ts: importing them drags the sanitizers into the headless snapshot.

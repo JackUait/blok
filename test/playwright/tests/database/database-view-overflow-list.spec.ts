@@ -291,13 +291,14 @@ test.describe('database view overflow list', () => {
     await expect(list.getByRole('option', { name: 'New view' })).toBeVisible();
   });
 
+  // findings-toolbar V08: Rename opens View settings with the view's name field focused.
   test('"•••" opens the view menu and Rename renames the view in its row', async ({ page }) => {
     await mount(page);
     const list = await openList(page);
 
     await rowOf(list, 'Eighth').getByRole('button', { name: 'More actions' }).click();
     await page.getByRole('menuitem', { name: 'Rename' }).click();
-    const input = list.getByRole('textbox', { name: 'Rename' });
+    const input = page.getByRole('textbox', { name: 'View name' });
 
     await expect(input).toBeFocused();
     await input.fill('Renamed');

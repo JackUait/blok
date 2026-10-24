@@ -3988,6 +3988,10 @@ span[data-blok-slash-search] {
   --blok-database-page-divider: rgba(55, 53, 47, 0.09);
   --blok-database-checkbox-checked-bg: rgb(39, 131, 222);
   --blok-database-switch-on-bg: rgb(39, 131, 222);
+  --blok-database-switch-off-bg: var(--blok-toggle-off-bg);
+  --blok-database-switch-knob-bg: var(--blok-toggle-thumb-on-bg);
+  --blok-database-name-field-bg: var(--blok-item-hover-bg);
+  --blok-database-name-field-ring: transparent;
   --blok-database-tpl-border: rgb(230, 229, 227);
   --blok-database-calendar-event-muted-text: rgb(112, 109, 104);
   --blok-database-column-default-bg: var(--blok-database-column-bg);
@@ -4219,7 +4223,7 @@ span[data-blok-slash-search] {
   --blok-database-source-picker-border: var(--blok-database-table-border);
   --blok-database-tab-text: var(--blok-database-ink-secondary);
   --blok-database-tab-text-active: rgb(44, 44, 43);
-  --blok-database-card-actions-bg: var(--blok-database-table-open-bg);
+  --blok-database-card-actions-bg: var(--blok-database-popover-bg);
   --blok-database-card-actions-shadow: var(--blok-database-table-open-shadow);
   --blok-database-card-actions-icon: rgb(125, 122, 117);
   --blok-database-card-menu-hover-bg: var(--blok-database-hover-bg);
@@ -4327,7 +4331,11 @@ span[data-blok-slash-search] {
   --blok-database-panel-row-active-bg: rgba(255, 255, 255, 0.11);
   --blok-database-confirm-close-bg: rgba(255, 255, 243, 0.082);
   --blok-database-ai-prompt-placeholder: var(--blok-database-ink-tertiary);
-  --blok-database-table-open-bg: rgb(37, 37, 37);
+  --blok-database-table-open-bg: rgb(32, 32, 32);
+  --blok-database-switch-off-bg: rgba(202, 204, 206, 0.3);
+  --blok-database-switch-knob-bg: rgb(255, 255, 255);
+  --blok-database-name-field-bg: rgba(252, 252, 252, 0.03);
+  --blok-database-name-field-ring: rgba(255, 255, 235, 0.1);
   --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-table-selection-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-popover-bg: rgb(37, 37, 37);
@@ -4464,7 +4472,7 @@ span[data-blok-slash-search] {
   --blok-database-source-picker-border: rgba(255, 255, 235, 0.1);
   --blok-database-tab-text: rgb(173, 169, 163);
   --blok-database-tab-text-active: rgb(240, 239, 237);
-  --blok-database-card-actions-bg: var(--blok-database-table-open-bg);
+  --blok-database-card-actions-bg: var(--blok-database-popover-bg);
   --blok-database-card-actions-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-card-actions-icon: rgb(173, 169, 163);
   --blok-database-card-menu-hover-bg: rgba(255, 255, 255, 0.055);
@@ -4573,7 +4581,11 @@ span[data-blok-slash-search] {
   --blok-database-panel-row-active-bg: rgba(255, 255, 255, 0.11);
   --blok-database-confirm-close-bg: rgba(255, 255, 243, 0.082);
   --blok-database-ai-prompt-placeholder: var(--blok-database-ink-tertiary);
-  --blok-database-table-open-bg: rgb(37, 37, 37);
+  --blok-database-table-open-bg: rgb(32, 32, 32);
+  --blok-database-switch-off-bg: rgba(202, 204, 206, 0.3);
+  --blok-database-switch-knob-bg: rgb(255, 255, 255);
+  --blok-database-name-field-bg: rgba(252, 252, 252, 0.03);
+  --blok-database-name-field-ring: rgba(255, 255, 235, 0.1);
   --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-table-selection-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-popover-bg: rgb(37, 37, 37);
@@ -4710,7 +4722,7 @@ span[data-blok-slash-search] {
   --blok-database-source-picker-border: rgba(255, 255, 235, 0.1);
   --blok-database-tab-text: rgb(173, 169, 163);
   --blok-database-tab-text-active: rgb(240, 239, 237);
-  --blok-database-card-actions-bg: var(--blok-database-table-open-bg);
+  --blok-database-card-actions-bg: var(--blok-database-popover-bg);
   --blok-database-card-actions-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-card-actions-icon: rgb(173, 169, 163);
   --blok-database-card-menu-hover-bg: rgba(255, 255, 255, 0.055);
@@ -9126,6 +9138,18 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   flex-wrap: wrap;
 }
 
+[data-blok-database-property-menu-name] > [data-blok-database-property-menu-name-input] {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  height: 28px;
+  padding-block: var(--blok-space-0-75);
+  padding-inline: var(--blok-space-1-5);
+  border-color: var(--blok-database-name-field-ring);
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-name-field-bg);
+}
+
 [data-blok-database-property-menu-name-error] {
   flex-basis: 100%;
   padding-inline-start: calc(28px + var(--blok-space-1-5));
@@ -9337,7 +9361,7 @@ textarea[data-blok-database-cell-input] {
   height: 12px;
 }
 
-[data-blok-database-select-search], [data-blok-database-person-search], [data-blok-database-files-link-input], [data-blok-database-property-name-input], [data-blok-database-property-menu-name-input], [data-blok-database-property-menu-field] input, [data-blok-database-option-name], [data-blok-database-date-input], [data-blok-database-date-time] {
+[data-blok-database-select-search], [data-blok-database-person-search], [data-blok-database-files-link-input], [data-blok-database-property-name-input], [data-blok-database-property-menu-field] input, [data-blok-database-option-name], [data-blok-database-date-input], [data-blok-database-date-time] {
   flex: 1;
   min-width: 60px;
   border: none;
@@ -9747,7 +9771,7 @@ textarea[data-blok-database-cell-input] {
   display: flex;
   flex-direction: column;
   padding-top: var(--blok-space-1);
-  border-top: 1px solid var(--blok-database-drawer-border);
+  border-top: 1px solid var(--blok-database-table-border);
 }
 
 [data-blok-database-date-end-toggle], [data-blok-database-date-time-toggle] {
@@ -9770,7 +9794,7 @@ textarea[data-blok-database-cell-input] {
   height: 18px;
   flex-shrink: 0;
   border-radius: var(--blok-radius-pill);
-  background-color: var(--blok-toggle-off-bg);
+  background-color: var(--blok-database-switch-off-bg);
   transition: background-color 0.2s;
 }
 
@@ -9781,7 +9805,7 @@ textarea[data-blok-database-cell-input] {
   width: 14px;
   height: 14px;
   border-radius: var(--blok-radius-pill);
-  background-color: var(--blok-toggle-thumb-on-bg);
+  background-color: var(--blok-database-switch-knob-bg);
   transition: transform 0.2s ease-out;
 }
 
@@ -9841,7 +9865,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-date-remind] + [data-blok-database-date-clear] {
-  border-top: 1px solid var(--blok-database-drawer-border);
+  border-top: 1px solid var(--blok-database-table-border);
   border-radius: 0;
   padding-top: var(--blok-space-1);
 }
@@ -9849,7 +9873,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-date-help-footer] {
   display: flex;
   flex-direction: column;
-  border-top: 1px solid var(--blok-database-drawer-border);
+  border-top: 1px solid var(--blok-database-table-border);
   padding-top: var(--blok-space-1);
 }
 
@@ -10957,7 +10981,7 @@ textarea[data-blok-database-cell-input] {
   gap: var(--blok-space-0-25);
   height: 32px;
   border-radius: var(--blok-radius-control);
-  background-color: var(--blok-database-table-open-bg);
+  background-color: var(--blok-database-popover-bg);
   box-shadow: var(--blok-database-table-selection-shadow);
 }
 

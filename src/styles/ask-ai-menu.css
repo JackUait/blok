@@ -17,43 +17,15 @@
   --blok-ask-ai-index: 0;
 }
 
-/* The ink icon and its coloured copy share one cell. */
+/* The ink icon and its coloured copy share one cell (ask-ai-icons.css). */
 [data-blok-ask-ai-glyph] {
   display: grid;
   place-items: center;
 }
 
-[data-blok-ask-ai-glyph] svg {
-  grid-area: 1 / 1;
-  overflow: visible;
-}
-
-[data-blok-ask-ai-glyph] svg * {
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-[data-blok-ask-ai-hue],
-[data-blok-ask-ai-scribble],
-[data-blok-ask-ai-spark] {
-  opacity: 0;
-}
-
-[data-blok-ask-ai-skill]:hover [data-blok-ask-ai-hue],
-[data-blok-ask-ai-skill][data-blok-focused="true"] [data-blok-ask-ai-hue] {
-  opacity: 1;
-}
-
-[data-blok-ask-ai-skill]:hover svg:not([data-blok-ask-ai-hue]),
-[data-blok-ask-ai-skill][data-blok-focused="true"] svg:not([data-blok-ask-ai-hue]) {
-  opacity: 0;
-}
-
 /* The three stops walk the hue loop, as on the bar's light. */
 [data-blok-ask-ai-open]:hover stop,
-[data-blok-ask-ai-open][data-blok-focused="true"] stop,
-[data-blok-ask-ai-skill]:hover stop,
-[data-blok-ask-ai-skill][data-blok-focused="true"] stop {
+[data-blok-ask-ai-open][data-blok-focused="true"] stop {
   stop-color: var(--blok-ai-hue-1);
 }
 
@@ -80,32 +52,6 @@
     radial-gradient(50% 40% at 95% 95%, color-mix(in srgb, var(--blok-ai-hue-4) 12%, transparent), transparent 70%);
 }
 
-/* The simplify act clips the T's serifs away. Both shapes have the same points, so the clip can move. */
-[data-blok-ask-ai-act="simplify"] [data-blok-ask-ai-hue] {
-  clip-path: polygon(0 0, 100% 0, 100% 29%, 100% 29%, 100% 38%, 100% 38%, 100% 100%, 0 100%, 0 38%, 0 38%, 0 29%, 0 29%);
-}
-
-[data-blok-ask-ai-act="simplify"]:hover [data-blok-ask-ai-hue],
-[data-blok-ask-ai-act="simplify"][data-blok-focused="true"] [data-blok-ask-ai-hue] {
-  clip-path: polygon(0 0, 100% 0, 100% 29%, 70% 29%, 70% 38%, 100% 38%, 100% 100%, 0 100%, 0 38%, 30% 38%, 30% 29%, 0 29%);
-}
-
-/* Scaled from the baseline, so the letter stays on its line. */
-[data-blok-ask-ai-act="shrink"] [data-blok-ask-ai-hue] path,
-[data-blok-ask-ai-act="grow"] [data-blok-ask-ai-hue] path {
-  transform-origin: 50% 100%;
-}
-
-[data-blok-ask-ai-act="shrink"]:hover [data-blok-ask-ai-hue] path,
-[data-blok-ask-ai-act="shrink"][data-blok-focused="true"] [data-blok-ask-ai-hue] path {
-  transform: scale(0.72);
-}
-
-[data-blok-ask-ai-act="grow"]:hover [data-blok-ask-ai-hue] path,
-[data-blok-ask-ai-act="grow"][data-blok-focused="true"] [data-blok-ask-ai-hue] path {
-  transform: scale(1.22);
-}
-
 /* Only motion below. Reduced motion keeps everything above, still. */
 @media (prefers-reduced-motion: no-preference) {
   /* pathLength is 100, so a 14 + 36 dash repeats twice per lap. */
@@ -123,19 +69,15 @@
   }
 
   [data-blok-ask-ai-open]:hover stop,
-  [data-blok-ask-ai-open][data-blok-focused="true"] stop,
-  [data-blok-ask-ai-skill]:hover stop,
-  [data-blok-ask-ai-skill][data-blok-focused="true"] stop {
+  [data-blok-ask-ai-open][data-blok-focused="true"] stop {
     animation: blok-assistant-light-hue 4s linear infinite;
   }
 
-  [data-blok-ask-ai-open]:hover stop:nth-child(2),
-  [data-blok-ask-ai-skill]:hover stop:nth-child(2) {
+  [data-blok-ask-ai-open]:hover stop:nth-child(2) {
     animation-delay: -1s;
   }
 
-  [data-blok-ask-ai-open]:hover stop:nth-child(3),
-  [data-blok-ask-ai-skill]:hover stop:nth-child(3) {
+  [data-blok-ask-ai-open]:hover stop:nth-child(3) {
     animation-delay: -3s;
   }
 
@@ -182,63 +124,14 @@
     animation-delay: calc(var(--blok-ask-ai-index) * 38ms);
   }
 
-  [data-blok-ask-ai-skill] svg:not([data-blok-ask-ai-hue]) [pathLength="1"]:not([data-blok-ask-ai-scribble]) {
+  [data-blok-ask-ai-skill] [data-blok-ask-ai-ink] [pathLength="1"] {
     animation: blok-ask-ai-draw 700ms ease-out both;
     animation-delay: calc(var(--blok-ask-ai-index) * 38ms + 120ms);
   }
 
-  [data-blok-ask-ai-skill] svg:not([data-blok-ask-ai-hue]) [fill="currentColor"]:not([data-blok-ask-ai-spark]) {
+  [data-blok-ask-ai-skill] [data-blok-ask-ai-ink] [fill="currentColor"] {
     animation: blok-ask-ai-dot-in 300ms ease-out both;
     animation-delay: calc(var(--blok-ask-ai-index) * 38ms + 520ms);
-  }
-
-  [data-blok-ask-ai-glyph] svg {
-    transition: opacity 220ms ease;
-  }
-
-  /* Acts play on the coloured copy, which is the one showing on hover. */
-  [data-blok-ask-ai-act="write"]:hover [data-blok-ask-ai-hue] path:not([data-blok-ask-ai-scribble]),
-  [data-blok-ask-ai-act="write"][data-blok-focused="true"] [data-blok-ask-ai-hue] path:not([data-blok-ask-ai-scribble]) {
-    animation: blok-ask-ai-write 900ms ease-in-out both;
-  }
-
-  [data-blok-ask-ai-act="write"]:hover [data-blok-ask-ai-hue] [data-blok-ask-ai-scribble],
-  [data-blok-ask-ai-act="write"][data-blok-focused="true"] [data-blok-ask-ai-hue] [data-blok-ask-ai-scribble] {
-    opacity: 1;
-    animation: blok-ask-ai-draw 900ms ease-in-out both;
-  }
-
-  [data-blok-ask-ai-act="sparkle"]:hover [data-blok-ask-ai-hue] path,
-  [data-blok-ask-ai-act="sparkle"][data-blok-focused="true"] [data-blok-ask-ai-hue] path {
-    animation: blok-ask-ai-spin 650ms cubic-bezier(0.3, 1.4, 0.5, 1) both;
-  }
-
-  [data-blok-ask-ai-act="sparkle"]:hover [data-blok-ask-ai-hue] [data-blok-ask-ai-spark],
-  [data-blok-ask-ai-act="sparkle"][data-blok-focused="true"] [data-blok-ask-ai-hue] [data-blok-ask-ai-spark] {
-    animation: blok-ask-ai-pop 700ms ease-out both;
-  }
-
-  [data-blok-ask-ai-act="sparkle"]:hover [data-blok-ask-ai-hue] [data-blok-ask-ai-spark]:last-of-type {
-    animation-delay: 140ms;
-  }
-
-  [data-blok-ask-ai-act="shrink"] [data-blok-ask-ai-hue] path,
-  [data-blok-ask-ai-act="grow"] [data-blok-ask-ai-hue] path {
-    transition: transform 420ms cubic-bezier(0.3, 1.6, 0.4, 1);
-  }
-
-  [data-blok-ask-ai-act="simplify"] [data-blok-ask-ai-hue] {
-    transition: opacity 220ms ease, clip-path 300ms ease-in;
-  }
-
-  [data-blok-ask-ai-act="explain"]:hover [data-blok-ask-ai-hue] path,
-  [data-blok-ask-ai-act="explain"][data-blok-focused="true"] [data-blok-ask-ai-hue] path {
-    animation: blok-ask-ai-tilt 700ms ease-in-out both;
-  }
-
-  [data-blok-ask-ai-act="explain"]:hover [data-blok-ask-ai-hue] circle[fill],
-  [data-blok-ask-ai-act="explain"][data-blok-focused="true"] [data-blok-ask-ai-hue] circle[fill] {
-    animation: blok-ask-ai-hop 700ms cubic-bezier(0.3, 1.6, 0.4, 1) both;
   }
 }
 
@@ -288,67 +181,5 @@
   from {
     opacity: 0;
     transform: scale(0);
-  }
-}
-
-/* The scribble is 6 units long, so the pen ends 6 units right. */
-@keyframes blok-ask-ai-write {
-  25% {
-    transform: translate(1.6px, -0.6px) rotate(-3deg);
-  }
-
-  50% {
-    transform: translate(3.2px, 0.4px);
-  }
-
-  75% {
-    transform: translate(4.8px, -0.6px) rotate(-3deg);
-  }
-
-  to {
-    transform: translate(6px, 0);
-  }
-}
-
-@keyframes blok-ask-ai-spin {
-  50% {
-    transform: rotate(45deg) scale(1.12);
-  }
-
-  to {
-    transform: rotate(90deg);
-  }
-}
-
-@keyframes blok-ask-ai-pop {
-  from {
-    opacity: 0;
-    transform: scale(0);
-  }
-
-  40% {
-    opacity: 1;
-    transform: scale(1.4);
-  }
-
-  to {
-    opacity: 0;
-    transform: scale(0.6) translateY(-2px);
-  }
-}
-
-@keyframes blok-ask-ai-tilt {
-  30% {
-    transform: rotate(-16deg);
-  }
-
-  65% {
-    transform: rotate(8deg);
-  }
-}
-
-@keyframes blok-ask-ai-hop {
-  35% {
-    transform: translateY(-2.2px);
   }
 }

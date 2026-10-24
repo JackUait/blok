@@ -72,46 +72,17 @@ describe('AskAiInlineTool — motion', () => {
     expect(gradientOf(first)).not.toBe(gradientOf(second));
   });
 
-  it('gives each built-in skill the act its icon plays, and its place in the cascade', () => {
+  it('gives each built-in skill its place in the cascade', () => {
     const rows = skills(render());
 
-    expect(rows.map((row) => row.getAttribute('data-blok-ask-ai-act'))).toEqual(['write', 'sparkle', 'shrink', 'grow', 'simplify', 'explain']);
     expect(rows.map((row) => row.style.getPropertyValue('--blok-ask-ai-index'))).toEqual(['0', '1', '2', '3', '4', '5']);
   });
 
-
-  it('draws a coloured copy of each skill icon over its ink, with a gradient of its own', () => {
+  it('dresses each skill icon so it acts out its skill on hover, as the bar\'s chips do', () => {
     const rows = skills(render());
-    const ids = rows.map((row) => {
-      const ink = row.querySelector('svg:not([data-blok-ask-ai-hue])');
-      const hue = row.querySelector('svg[data-blok-ask-ai-hue]');
-      const stroke = hue?.querySelector('[stroke^="url("]')?.getAttribute('stroke');
 
-      expect(ink?.querySelector('[stroke]')?.getAttribute('stroke')).toBe('currentColor');
-      expect(hue?.querySelector('[stroke="currentColor"]')).toBeNull();
-      expect(hue?.querySelector('[fill="currentColor"]')).toBeNull();
-      expect(hue?.getAttribute('aria-hidden')).toBe('true');
-
-      return stroke;
-    });
-
-    expect(ids.every((id) => id !== undefined && id !== null)).toBe(true);
-    expect(new Set(ids).size).toBe(rows.length);
-  });
-
-  it('measures every stroke of a skill icon as one, so the icon can draw itself in', () => {
-    const [improve] = skills(render());
-    const strokes = [...improve.querySelectorAll('svg path, svg circle')].filter((shape) => shape.getAttribute('fill') !== 'currentColor');
-
-    expect(strokes.length).toBeGreaterThan(0);
-    expect(strokes.every((shape) => shape.getAttribute('pathLength') === '1')).toBe(true);
-  });
-
-  it('gives the pencil a line to write and the star two sparks to throw', () => {
-    const [improve, proofread] = skills(render());
-
-    expect(improve.querySelectorAll('svg:not([data-blok-ask-ai-hue]) [data-blok-ask-ai-scribble]')).toHaveLength(1);
-    expect(proofread.querySelectorAll('svg:not([data-blok-ask-ai-hue]) [data-blok-ask-ai-spark]')).toHaveLength(2);
+    expect(rows.map((row) => row.querySelector('[data-blok-ask-ai-glyph] > svg[data-blok-ask-ai-ink] + svg[data-blok-ask-ai-hue]')?.getAttribute('data-blok-ask-ai-act')))
+      .toEqual(['improve', 'proofread', 'shorter', 'longer', 'simplify', 'explain']);
   });
 
   it('lights the rule above it once the toolbar mounts it', async () => {

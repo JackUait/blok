@@ -1,13 +1,14 @@
 import type { AgentAssistantAction } from '../../../../types/api';
 import {
-  IconAlignLeft,
-  IconHelp,
-  IconListChecklist,
-  IconPencil,
-  IconText,
-  IconTextSizeLarge,
-  IconTextSizeSmall,
-  IconWand,
+  IconAskAiActionItems,
+  IconAskAiContinue,
+  IconAskAiExplain,
+  IconAskAiImprove,
+  IconAskAiLonger,
+  IconAskAiProofread,
+  IconAskAiShorter,
+  IconAskAiSimplify,
+  IconAskAiSummarize,
 } from '../../icons';
 
 /** Where the bar opened: over selected text, at a caret, or on a page with no text. */
@@ -28,18 +29,18 @@ const REPLACE = 'Replace the selected text with the result.';
 
 const BUILT_IN: Record<Exclude<ActionContext, 'empty'>, Array<[labelKey: string, icon: string, prompt: string]>> = {
   selection: [
-    ['assistant.action.improve', IconPencil, `Improve the writing of the selected text: clearer and smoother, with the same meaning. ${REPLACE}`],
-    ['assistant.action.proofread', IconWand, `Fix spelling, grammar and punctuation in the selected text. Change nothing else. ${REPLACE}`],
-    ['assistant.action.shorter', IconTextSizeSmall, `Make the selected text shorter. Keep its meaning. ${REPLACE}`],
-    ['assistant.action.longer', IconTextSizeLarge, `Make the selected text longer, with more detail. Keep its meaning. ${REPLACE}`],
-    ['assistant.action.simplify', IconText, `Rewrite the selected text in simpler words. Keep its meaning. ${REPLACE}`],
-    ['assistant.action.explain', IconHelp, `Explain the selected text in your reply. ${ANSWER_ONLY}`],
+    ['assistant.action.improve', IconAskAiImprove, `Improve the writing of the selected text: clearer and smoother, with the same meaning. ${REPLACE}`],
+    ['assistant.action.proofread', IconAskAiProofread, `Fix spelling, grammar and punctuation in the selected text. Change nothing else. ${REPLACE}`],
+    ['assistant.action.shorter', IconAskAiShorter, `Make the selected text shorter. Keep its meaning. ${REPLACE}`],
+    ['assistant.action.longer', IconAskAiLonger, `Make the selected text longer, with more detail. Keep its meaning. ${REPLACE}`],
+    ['assistant.action.simplify', IconAskAiSimplify, `Rewrite the selected text in simpler words. Keep its meaning. ${REPLACE}`],
+    ['assistant.action.explain', IconAskAiExplain, `Explain the selected text in your reply. ${ANSWER_ONLY}`],
   ],
   caret: [
-    ['assistant.action.summarize', IconAlignLeft, `Summarize the whole document in your reply, in a few sentences. ${ANSWER_ONLY}`],
-    ['assistant.action.actionItems', IconListChecklist, `List the action items and next steps from the document in your reply, as a Markdown list. ${ANSWER_ONLY}`],
-    ['assistant.action.proofread', IconWand, 'Fix spelling, grammar and punctuation across the whole document. Change nothing else.'],
-    ['assistant.action.continue', IconPencil, 'Continue writing from the user\'s place, in the same style. Add a paragraph or two.'],
+    ['assistant.action.summarize', IconAskAiSummarize, `Summarize the whole document in your reply, in a few sentences. ${ANSWER_ONLY}`],
+    ['assistant.action.actionItems', IconAskAiActionItems, `List the action items and next steps from the document in your reply, as a Markdown list. ${ANSWER_ONLY}`],
+    ['assistant.action.proofread', IconAskAiProofread, 'Fix spelling, grammar and punctuation across the whole document. Change nothing else.'],
+    ['assistant.action.continue', IconAskAiContinue, 'Continue writing from the user\'s place, in the same style. Add a paragraph or two.'],
   ],
 };
 

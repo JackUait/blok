@@ -156,6 +156,15 @@ describe('Ask AI action buttons', () => {
     expect(firstMessage(model.requests[0])).toMatch(/^Summarize the whole document/);
   });
 
+  it('dresses each built-in chip icon so it acts out its skill on hover', async () => {
+    await createEditor(scripted());
+    putCaret(paragraphInput());
+    pressModJ(paragraphInput());
+
+    expect([...group().querySelectorAll('[data-blok-assistant-action-icon] > svg[data-blok-ask-ai-hue]')].map((hue) => hue.getAttribute('data-blok-ask-ai-act')))
+      .toEqual(['summarize', 'actionItems', 'proofread', 'continue']);
+  });
+
   it('offers edits of the selection when text is selected', async () => {
     await createEditor(scripted());
     selectWord(paragraphInput());

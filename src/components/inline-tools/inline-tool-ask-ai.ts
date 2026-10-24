@@ -2,8 +2,9 @@ import { BUILT_IN_INLINE_DESCRIPTIONS } from '../../shared/tool-descriptions/inl
 import type { API, InlineTool } from '../../../types';
 import type { MenuConfig } from '../../../types/tools';
 import { DATA_ATTR } from '../constants/data-attributes';
-import { IconChevronDown, IconHelp, IconPencil, IconRose, IconText, IconTextSizeLarge, IconTextSizeSmall, IconWand } from '../icons';
+import { IconChevronDown, IconRose } from '../icons';
 import { assistantActions } from '../modules/assistant/actions';
+import { dressSkillIcon } from '../modules/assistant/skill-icons';
 import { generateBlockId } from '../utils/id-generator';
 import { css as popoverItemCls } from '../utils/popover/components/popover-item/popover-item-default/popover-item-default.const';
 import { PopoverItemType } from '../utils/popover';
@@ -13,17 +14,7 @@ const BUTTON = 'flex items-center gap-2 h-7 px-2 rounded-(--blok-radius-inner,va
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-// ask-ai-menu.css plays each act. An icon not listed here plays none.
-const ACTS = new Map([
-  [IconPencil, 'write'],
-  [IconWand, 'sparkle'],
-  [IconTextSizeSmall, 'shrink'],
-  [IconTextSizeLarge, 'grow'],
-  [IconText, 'simplify'],
-  [IconHelp, 'explain'],
-]);
-
-const svgElement = (tag: 'path' | 'circle' | 'stop', attributes: Record<string, string>): SVGElement => {
+const svgElement = (tag: 'path' | 'stop', attributes: Record<string, string>): SVGElement => {
   const element = document.createElementNS(SVG_NS, tag);
 
   Object.entries(attributes).forEach(([key, value]) => element.setAttribute(key, value));
@@ -54,40 +45,6 @@ const addLight = (svg: SVGSVGElement): void => {
     stroke: addGradient(svg),
     'data-blok-assistant-light': '',
   }));
-};
-
-/** Gives a skill icon the parts its act needs, and a coloured copy laid over it for hover. */
-const dressSkillIcon = (svg: SVGSVGElement, act: string | undefined): void => {
-  if (act === 'write') {
-    svg.append(svgElement('path', {
-      d: 'M3.6 17.6c1-.9 2-.9 3 0s2 .9 3 0',
-      stroke: 'currentColor',
-      'stroke-width': '1.25',
-      'stroke-linecap': 'round',
-      'data-blok-ask-ai-scribble': '',
-    }));
-  }
-  if (act === 'sparkle') {
-    svg.append(
-      svgElement('circle', { cx: '16.2', cy: '4', r: '0.8', fill: 'currentColor', 'data-blok-ask-ai-spark': '' }),
-      svgElement('circle', { cx: '4', cy: '16', r: '0.7', fill: 'currentColor', 'data-blok-ask-ai-spark': '' })
-    );
-  }
-  // One unit per stroke lets CSS draw each icon in with a dash.
-  svg.querySelectorAll('path, circle').forEach((shape) => {
-    if (shape.getAttribute('fill') !== 'currentColor') {
-      shape.setAttribute('pathLength', '1');
-    }
-  });
-
-  const hue = svg.cloneNode(true) as SVGSVGElement;
-  const paint = addGradient(hue);
-
-  hue.setAttribute('data-blok-ask-ai-hue', '');
-  hue.setAttribute('aria-hidden', 'true');
-  hue.querySelectorAll('[stroke="currentColor"]').forEach((shape) => shape.setAttribute('stroke', paint));
-  hue.querySelectorAll('[fill="currentColor"]').forEach((shape) => shape.setAttribute('fill', paint));
-  svg.after(hue);
 };
 
 /**
@@ -145,20 +102,12 @@ export class AskAiInlineTool implements InlineTool {
     skills.setAttribute('data-blok-ask-ai-skills', '');
     skills.hidden = true;
     skills.append(...assistantActions('selection', t).map(({ label, prompt, icon }, index) => {
-      const skill = this.button(icon, label, () => this.run(prompt));
-      const act = icon === undefined ? undefined : ACTS.get(icon);
-      const svg = skill.querySelector('svg');
+      const skill = this.button(icon === undefined ? undefined : dressSkillIcon(icon), label, () => this.run(prompt));
 
       // The card is five cells wide, so a long label wraps.
       skill.className = `${BUTTON} h-auto min-h-7 py-1 text-left`;
       skill.setAttribute('data-blok-ask-ai-skill', '');
       skill.style.setProperty('--blok-ask-ai-index', String(index));
-      if (act !== undefined) {
-        skill.setAttribute('data-blok-ask-ai-act', act);
-      }
-      if (svg) {
-        dressSkillIcon(svg, act);
-      }
 
       return skill;
     }));

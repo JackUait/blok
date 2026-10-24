@@ -675,6 +675,90 @@ export const IconRose = `
 </svg>
 `;
 
+// Ask AI skill icons. Each one draws a line of text and the change its skill makes.
+// skill-icons.ts tags their shapes by order for the hover acts: keep the order when redrawing.
+
+/** Summarize: three strands join into one line. */
+export const IconAskAiSummarize = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3 4.5C7.5 4.5 7.5 10 12 10" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3 15.5C7.5 15.5 7.5 10 12 10" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3 10H17" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+/** Find action items: two empty checkboxes, each with its line. */
+export const IconAskAiActionItems = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M4 4.75h1.5a1 1 0 0 1 1 1v1.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-1.5a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4 11.75h1.5a1 1 0 0 1 1 1v1.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-1.5a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M9 6.5H17M9 13.5H17" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+/** Fix spelling and grammar: a line over a wavy underline. */
+export const IconAskAiProofread = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3 6.5H17" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3 13.5q1.25-2.6 2.5 0t2.5 0 2.5 0 2.5 0" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+/** Continue writing: text that trails off into three dots. */
+export const IconAskAiContinue = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3 6.5H17" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3 13.5H8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="11" cy="13.5" r="0.8" fill="currentColor"/>
+  <circle cx="13.5" cy="13.5" r="0.8" fill="currentColor"/>
+  <circle cx="16" cy="13.5" r="0.8" fill="currentColor"/>
+</svg>
+`;
+
+/** Improve writing: a gem outline, drawn rough by hand. */
+export const IconAskAiImprove = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M6.6 4.7C8.6 4.1 11.4 5.1 13.4 4.4C14.7 5.7 15.6 7.1 16.8 8.6C14.6 11.1 12.3 13.7 10.1 16.4C8 13.9 5.3 11.6 3.2 8.4C4.3 7.1 5.3 5.7 6.6 4.7Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+/** Make shorter: three lines, with arrows pointing in. */
+export const IconAskAiShorter = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3 5.5H12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3 10H12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3 14.5H12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M14 4.5l1.5 1.5 1.5-1.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M14 15.5l1.5-1.5 1.5 1.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+/** Make longer: two lines, with arrows pointing out. */
+export const IconAskAiLonger = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3 7.75H12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3 12.25H12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M14 6l1.5-1.5 1.5 1.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M14 14l1.5 1.5 1.5-1.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+/** Simplify language: a tangled line. */
+export const IconAskAiSimplify = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3 13C6 13 8.5 10 10.5 7.2C11.6 5.6 13.4 5.8 13.4 7.4C13.4 9.4 9.6 10.4 9.6 12.4C9.6 14.2 12 14.6 13.5 12.8C14.6 11.5 15.6 10 17 10" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+/** Explain: a speech bubble with a question mark. */
+export const IconAskAiExplain = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M5 3.5H15a2 2 0 0 1 2 2V12a2 2 0 0 1-2 2H9.5L6.5 16.5V14H5a2 2 0 0 1-2-2V5.5a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M8.25 6.9a1.75 1.75 0 1 1 2.98 1.24c-.52.52-1.23.83-1.23 1.36" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="10" cy="11.4" r="0.7" fill="currentColor"/>
+</svg>
+`;
+
 // Emoji Picker Category Icons
 
 export const IconEmojiSparkles = `

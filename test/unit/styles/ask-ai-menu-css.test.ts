@@ -15,9 +15,6 @@ const bodyOf = (selector: string, source = CSS): string =>
     .map(([, , body]) => body)
     .join(';');
 
-const HOVER = '[data-blok-ask-ai-skill]:hover';
-const FOCUSED = '[data-blok-ask-ai-skill][data-blok-focused="true"]';
-
 describe('Ask AI menu CSS', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -41,16 +38,8 @@ describe('Ask AI menu CSS', () => {
     expect(CSS).not.toMatch(/filter|drop-shadow|text-shadow|box-shadow/);
   });
 
-  it('shows the coloured icon copy only on the hovered or focused skill', () => {
-    expect(bodyOf('[data-blok-ask-ai-hue]')).toMatch(/opacity:\s*0\b/);
-    expect(bodyOf(`${HOVER} [data-blok-ask-ai-hue]`)).toMatch(/opacity:\s*1\b/);
-    expect(bodyOf(`${FOCUSED} [data-blok-ask-ai-hue]`)).toMatch(/opacity:\s*1\b/);
-  });
-
-  it('gives every act a move on hover', () => {
-    for (const act of ['write', 'sparkle', 'shrink', 'grow', 'simplify', 'explain']) {
-      expect(CSS).toContain(`[data-blok-ask-ai-act="${act}"]:hover [data-blok-ask-ai-hue]`);
-    }
+  it('leaves the skill icons\' acts to ask-ai-icons.css, which the bar\'s chips share', () => {
+    expect(CSS).not.toMatch(/data-blok-ask-ai-(act|hue|scribble|spark)\b/);
   });
 
   it('cascades the skills in by their place in the list', () => {

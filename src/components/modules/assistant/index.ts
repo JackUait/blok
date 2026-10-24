@@ -16,6 +16,7 @@ import { syncPortalDirection } from '../../utils/portal-direction';
 import { prefersReducedMotion } from '../../utils/reduced-motion';
 
 import { assistantActions, type ActionContext } from './actions';
+import { dressSkillIcon } from './skill-icons';
 import { AssistantBar, type AssistantBarColumn } from './assistant-bar';
 import { onGapChange } from './gap';
 import { createLivePreview, type LivePreview } from './live-preview';
@@ -244,7 +245,8 @@ export class Assistant extends Module {
         : null;
       this.created.clear();
       // Here, before the field takes focus and the selection collapses.
-      bar.setActions(assistantActions(this.actionContext(), (key) => this.Blok.I18n.t(key), this.config.agent?.assistant?.actions));
+      bar.setActions(assistantActions(this.actionContext(), (key) => this.Blok.I18n.t(key), this.config.agent?.assistant?.actions)
+        .map((action) => ({ ...action, icon: action.icon === undefined ? undefined : dressSkillIcon(action.icon) })));
       if (this.selectionEndBlockId() !== undefined) {
         paintSelectionTint(this, window.getSelection()?.getRangeAt(0) ?? document.createRange());
       }

@@ -1,0 +1,311 @@
+/* Ask AI skill icons (skill-icons.ts), on the bar's chips and in the inline toolbar's Ask AI menu.
+   On hover the ink icon gives way to a coloured copy that acts out its skill. The hues come from
+   the bar root and the menu root, which both declare --blok-ai-hue-*. */
+
+[data-blok-ask-ai-ink],
+[data-blok-ask-ai-hue] {
+  grid-area: 1 / 1;
+  overflow: visible;
+}
+
+[data-blok-ask-ai-hue] {
+  opacity: 0;
+}
+
+[data-blok-ask-ai-hue] * {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+:is([data-blok-assistant-action]:hover, [data-blok-assistant-action]:focus-visible, [data-blok-ask-ai-skill]:hover, [data-blok-ask-ai-skill][data-blok-focused="true"]) [data-blok-ask-ai-hue] {
+  opacity: 1;
+}
+
+:is([data-blok-assistant-action]:hover, [data-blok-assistant-action]:focus-visible, [data-blok-ask-ai-skill]:hover, [data-blok-ask-ai-skill][data-blok-focused="true"]) [data-blok-ask-ai-ink] {
+  opacity: 0;
+}
+
+:is([data-blok-assistant-action]:hover, [data-blok-assistant-action]:focus-visible, [data-blok-ask-ai-skill]:hover, [data-blok-ask-ai-skill][data-blok-focused="true"]) [data-blok-ask-ai-hue] stop {
+  stop-color: var(--blok-ai-hue-1);
+}
+
+/* An icon that acts does not also tilt; a host's icon keeps the tilt from assistant.css. */
+[data-blok-assistant-action]:hover [data-blok-assistant-action-icon]:has([data-blok-ask-ai-hue]) {
+  transform: none;
+}
+
+/* pathLength is 1: a 1-long dash moved by 1 hides a stroke, and the act draws it in. */
+[data-blok-ask-ai-draw="in"] {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+[data-blok-ask-ai-part="improve-spark"] {
+  opacity: 0;
+}
+
+/* Each act's end. With reduced motion the icon jumps straight to it. */
+:is([data-blok-assistant-action]:hover, [data-blok-assistant-action]:focus-visible, [data-blok-ask-ai-skill]:hover, [data-blok-ask-ai-skill][data-blok-focused="true"]) [data-blok-ask-ai-draw="in"] {
+  stroke-dashoffset: 0;
+}
+
+:is([data-blok-assistant-action]:hover, [data-blok-assistant-action]:focus-visible, [data-blok-ask-ai-skill]:hover, [data-blok-ask-ai-skill][data-blok-focused="true"]) :is([data-blok-ask-ai-draw="out"], [data-blok-ask-ai-part="explain-q"], [data-blok-ask-ai-part^="continue-dot"]) {
+  opacity: 0;
+}
+
+:is([data-blok-assistant-action]:hover, [data-blok-assistant-action]:focus-visible, [data-blok-ask-ai-skill]:hover, [data-blok-ask-ai-skill][data-blok-focused="true"]) :is([data-blok-ask-ai-part="shorter-top"], [data-blok-ask-ai-part="longer-bottom"]) {
+  transform: translateY(2.25px);
+}
+
+:is([data-blok-assistant-action]:hover, [data-blok-assistant-action]:focus-visible, [data-blok-ask-ai-skill]:hover, [data-blok-ask-ai-skill][data-blok-focused="true"]) :is([data-blok-ask-ai-part="shorter-bottom"], [data-blok-ask-ai-part="longer-top"]) {
+  transform: translateY(-2.25px);
+}
+
+/* Only motion below. Reduced motion keeps everything above, still. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-blok-ask-ai-ink],
+  [data-blok-ask-ai-hue] {
+    transition: opacity 220ms ease;
+  }
+
+  /* The chips' icons draw themselves in as the row opens, one after another. */
+  [data-blok-assistant-action] [data-blok-ask-ai-ink] [pathLength="1"] {
+    animation: blok-ask-ai-draw 700ms ease-out both;
+    animation-delay: calc(var(--blok-assistant-action-index) * 45ms + 140ms);
+  }
+
+  [data-blok-assistant-action] [data-blok-ask-ai-ink] [fill="currentColor"] {
+    animation: blok-ask-ai-dot-in 300ms ease-out both;
+    animation-delay: calc(var(--blok-assistant-action-index) * 45ms + 520ms);
+  }
+
+  /* The three stops walk the hue loop, as on the bar's light. */
+  :is([data-blok-assistant-action]:hover, [data-blok-assistant-action]:focus-visible, [data-blok-ask-ai-skill]:hover, [data-blok-ask-ai-skill][data-blok-focused="true"]) [data-blok-ask-ai-hue] stop {
+    animation: blok-assistant-light-hue 4s linear infinite;
+  }
+
+  :is([data-blok-assistant-action]:hover, [data-blok-assistant-action]:focus-visible, [data-blok-ask-ai-skill]:hover, [data-blok-ask-ai-skill][data-blok-focused="true"]) [data-blok-ask-ai-hue] stop:nth-child(2) {
+    animation-delay: -1s;
+  }
+
+  :is([data-blok-assistant-action]:hover, [data-blok-assistant-action]:focus-visible, [data-blok-ask-ai-skill]:hover, [data-blok-ask-ai-skill][data-blok-focused="true"]) [data-blok-ask-ai-hue] stop:nth-child(3) {
+    animation-delay: -3s;
+  }
+
+  /* Hover only names the animation, so it restarts on each hover. The timings below hold all the time. */
+  :is([data-blok-assistant-action]:hover, [data-blok-assistant-action]:focus-visible, [data-blok-ask-ai-skill]:hover, [data-blok-ask-ai-skill][data-blok-focused="true"]) [data-blok-ask-ai-draw="in"],
+  :is([data-blok-assistant-action]:hover, [data-blok-assistant-action]:focus-visible, [data-blok-ask-ai-skill]:hover, [data-blok-ask-ai-skill][data-blok-focused="true"]) [data-blok-ask-ai-part="summarize-line"] {
+    animation-name: blok-ask-ai-draw;
+  }
+
+  :is([data-blok-assistant-action]:hover, [data-blok-assistant-action]:focus-visible, [data-blok-ask-ai-skill]:hover, [data-blok-ask-ai-skill][data-blok-focused="true"]) [data-blok-ask-ai-draw="out"] {
+    animation-name: blok-ask-ai-undraw;
+  }
+
+  :is([data-blok-assistant-action]:hover, [data-blok-assistant-action]:focus-visible, [data-blok-ask-ai-skill]:hover, [data-blok-ask-ai-skill][data-blok-focused="true"]) [data-blok-ask-ai-part^="continue-dot"] {
+    animation-name: blok-ask-ai-pop-out;
+  }
+
+  :is([data-blok-assistant-action]:hover, [data-blok-assistant-action]:focus-visible, [data-blok-ask-ai-skill]:hover, [data-blok-ask-ai-skill][data-blok-focused="true"]) [data-blok-ask-ai-part="improve-spark"] {
+    animation-name: blok-ask-ai-pop;
+  }
+
+  :is([data-blok-assistant-action]:hover, [data-blok-assistant-action]:focus-visible, [data-blok-ask-ai-skill]:hover, [data-blok-ask-ai-skill][data-blok-focused="true"]) [data-blok-ask-ai-part="explain-bubble"] {
+    animation-name: blok-ask-ai-hop;
+  }
+
+  :is([data-blok-assistant-action]:hover, [data-blok-assistant-action]:focus-visible, [data-blok-ask-ai-skill]:hover, [data-blok-ask-ai-skill][data-blok-focused="true"]) [data-blok-ask-ai-part="explain-q"] {
+    animation-name: blok-ask-ai-turnover;
+  }
+
+  [data-blok-ask-ai-hue] :is([data-blok-ask-ai-part], [data-blok-ask-ai-draw]) {
+    animation-duration: 350ms;
+    animation-timing-function: ease-out;
+    animation-fill-mode: both;
+  }
+
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-draw="out"] {
+    animation-duration: 300ms;
+    animation-timing-function: ease-in;
+  }
+
+  /* Summarize: the strands zip into one line, left to right. */
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="summarize-strand"] {
+    animation-duration: 450ms;
+  }
+
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="summarize-strand2"] {
+    animation-duration: 450ms;
+    animation-delay: 120ms;
+  }
+
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="summarize-line"] {
+    animation-duration: 550ms;
+    animation-delay: 120ms;
+  }
+
+  /* Find action items: each box turns into a tick, one row after the other. */
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="actionItems-box2"] {
+    animation-delay: 220ms;
+  }
+
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="actionItems-tick"] {
+    animation-delay: 200ms;
+  }
+
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="actionItems-tick2"] {
+    animation-delay: 420ms;
+  }
+
+  /* Fix spelling and grammar: the wave pulls straight, then a tick. */
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="proofread-flat"] {
+    animation-duration: 400ms;
+    animation-delay: 120ms;
+  }
+
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="proofread-ok"] {
+    animation-delay: 450ms;
+  }
+
+  /* Continue writing: the line writes on, and each dot pops as the line reaches it. */
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="continue-trail"] {
+    animation-duration: 600ms;
+    animation-timing-function: linear;
+  }
+
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="continue-dot"] {
+    animation-duration: 300ms;
+    animation-delay: 170ms;
+  }
+
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="continue-dot2"] {
+    animation-duration: 300ms;
+    animation-delay: 330ms;
+  }
+
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="continue-dot3"] {
+    animation-duration: 300ms;
+    animation-delay: 500ms;
+  }
+
+  /* Improve writing: the rough outline is cut into a gem, and it sparkles. */
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="improve-rough"] {
+    animation-duration: 350ms;
+  }
+
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="improve-cut"] {
+    animation-duration: 450ms;
+    animation-delay: 200ms;
+  }
+
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="improve-facet"] {
+    animation-delay: 450ms;
+  }
+
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="improve-spark"] {
+    animation-duration: 700ms;
+    animation-delay: 700ms;
+  }
+
+  /* Make shorter and Make longer: the lines move together or apart, and the middle line goes or comes. */
+  [data-blok-ask-ai-hue] :is([data-blok-ask-ai-part^="shorter-"], [data-blok-ask-ai-part^="longer-"]) {
+    transition: transform 500ms cubic-bezier(0.3, 1.4, 0.4, 1);
+  }
+
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="shorter-mid"] {
+    animation-duration: 250ms;
+  }
+
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="longer-mid"] {
+    animation-delay: 180ms;
+  }
+
+  /* Simplify language: the tangle unwinds into one straight line. */
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="simplify-tangle"] {
+    animation-duration: 450ms;
+  }
+
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="simplify-line"] {
+    animation-duration: 450ms;
+    animation-delay: 150ms;
+  }
+
+  /* Explain: the question turns over and an answer is written in its place. */
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="explain-bubble"] {
+    animation-duration: 500ms;
+    animation-timing-function: cubic-bezier(0.3, 1.6, 0.4, 1);
+  }
+
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="explain-q"] {
+    animation-duration: 400ms;
+    animation-timing-function: ease-in;
+  }
+
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="explain-answer"] {
+    animation-delay: 300ms;
+  }
+
+  [data-blok-ask-ai-hue] [data-blok-ask-ai-part="explain-answer2"] {
+    animation-delay: 450ms;
+  }
+}
+
+/* An erased stroke fades at its end: a zero-length dash still paints its round cap as a dot. */
+@keyframes blok-ask-ai-undraw {
+  from {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+  }
+
+  99% {
+    opacity: 1;
+  }
+
+  to {
+    stroke-dasharray: 1;
+    stroke-dashoffset: -1;
+    opacity: 0;
+  }
+}
+
+@keyframes blok-ask-ai-pop-out {
+  40% {
+    opacity: 1;
+    transform: scale(1.7);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(0);
+  }
+}
+
+@keyframes blok-ask-ai-pop {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+
+  40% {
+    opacity: 1;
+    transform: scale(1.4);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+@keyframes blok-ask-ai-turnover {
+  to {
+    opacity: 0;
+    transform: rotateY(90deg) scale(0.6);
+  }
+}
+
+@keyframes blok-ask-ai-hop {
+  40% {
+    transform: translateY(-1px);
+  }
+}

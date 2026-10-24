@@ -1047,6 +1047,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const ASSISTANT_ACTIONS_FOLD_BYTES = 667;
     // ask-ai-menu.css + its import: the Ask AI menu's rose light, unfold, icon acts, hue ink, shine and seam.
     const ASK_AI_MENU_MOTION_BYTES = 10_499;
+    // ask-ai-icons.css + its import: the Ask AI skill icons' acts, shared by the bar's chips and the menu, less the menu acts it replaces.
+    const ASK_AI_SKILL_ICONS_BYTES = 5_887;
     // bookmark.css: a cover that fails to load is drawn as a page sketch whose corner peels back on hover.
     const BOOKMARK_PEEL_COVER_BYTES = 5_955;
     // isolation.css: --blok-font-sans is Notion's longer font stack.
@@ -1318,7 +1320,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_PLACE_CARD_MAP_BYTES
       + DATABASE_ROUND14_COLOURS_BYTES
       + ASSISTANT_SELECTION_TINT_BYTES + DATABASE_PLAIN_CONFIRM_BYTES + ASSISTANT_ACTIONS_FOLD_BYTES
-      + ASK_AI_MENU_MOTION_BYTES + BOOKMARK_PEEL_COVER_BYTES
+      + ASK_AI_MENU_MOTION_BYTES + ASK_AI_SKILL_ICONS_BYTES + BOOKMARK_PEEL_COVER_BYTES
       + NOTION_FONT_STACK_BYTES
       + DATABASE_DARK_RESET_MAP_BYTES
       + DATABASE_TEMPLATE_MENU_ROWS_BYTES

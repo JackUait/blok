@@ -68,7 +68,7 @@ describe('database date reminder css', () => {
     const footer = rulesFor('[data-blok-database-date-help-footer]');
     const link = rulesFor('[data-blok-database-date-help]');
 
-    expect(footer).toContain('border-top: 1px solid var(--blok-database-drawer-border)');
+    expect(footer).toContain('border-top: 1px solid var(--blok-database-table-border)');
     expect(footer).toContain('padding-top: var(--blok-space-1)');
     expect(link).toContain('min-height: 28px');
     expect(link).toContain('color: var(--blok-database-date-help-text)');

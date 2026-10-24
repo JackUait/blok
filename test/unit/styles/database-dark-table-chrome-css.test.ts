@@ -120,7 +120,8 @@ describe('OPEN button in dark (research/22 §12)', () => {
     const shadow = 'rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px';
 
     expect(tokenValues('--blok-database-table-open-shadow').slice(1)).toEqual([shadow, shadow]);
-    expect(tokenValues('--blok-database-table-open-bg').slice(1)).toEqual([MENU_BG_DARK, MENU_BG_DARK]);
+    // findings K06 (live): the pill is rgb(32, 32, 32), darker than the menus.
+    expect(tokenValues('--blok-database-table-open-bg').slice(1)).toEqual(['rgb(32, 32, 32)', 'rgb(32, 32, 32)']);
   });
 });
 

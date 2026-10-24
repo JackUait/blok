@@ -78,7 +78,7 @@ describe('board card (research/07:132-135, 08:73, 317)', () => {
     expect(body).toContain('background: var(--blok-database-card-actions-bg)');
     expect(body).toContain('box-shadow: var(--blok-database-card-actions-shadow)');
     expect(body).toContain('transition: opacity 200ms ease');
-    expect(tokenValues('--blok-database-card-actions-bg')).toEqual(Array(3).fill('var(--blok-database-table-open-bg)'));
+    expect(tokenValues('--blok-database-card-actions-bg')).toEqual(Array(3).fill('var(--blok-database-popover-bg)'));
     expect(ruleBody('[data-blok-database-card-menu]')).toContain('height: 24px');
   });
 

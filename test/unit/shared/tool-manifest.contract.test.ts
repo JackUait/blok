@@ -359,7 +359,19 @@ describe('buildAgentContract', () => {
     const contract = buildAgentContract(manifest, {}, where);
 
     expect(contract.guidance.commands['table.custom']).toBe('- Keep one.');
-    expect(contract.guidance.general).toBe('');
+  });
+
+  it('primes the model on rich text by default', () => {
+    const { general } = buildAgentContract(buildToolManifest(snapshot()), {}, where).guidance;
+
+    for (const fact of [
+      'segments', '{ text, marks? }', 'bold', 'strikethrough', 'sup', 'sub', 'tag:<name>', 'background "yellow"',
+      '"gray"', '"red"', 'nearest preset', 'dropped', 'href', 'target and rel', '{ equation: { expression } }',
+      '{ page: { id } }', 'unset ["*"]', '"tag:*"', 'markdown.insert', 'underline',
+    ]) {
+      expect(general).toContain(fact);
+    }
+    expect(general.split('\n').length).toBeLessThanOrEqual(8);
   });
 
   it('does not restore hidden actions or actions withheld in reserved namespaces', () => {

@@ -72,3 +72,15 @@ export const richText = (description: string): Record<string, unknown> => ({
     { type: 'string', description: 'Plain text: HTML tags stay literal. Use segments for formatting. Saved data from older documents may hold inline HTML here.' },
   ],
 });
+
+/** The contract's default general guidance: how to write every inline format. */
+export const RICH_TEXT_PRIMER = [
+  'Rich text is a list of segments: { text, marks? } or { embed, marks? }. A plain string is plain text, HTML tags included.',
+  `Marks: ${Object.keys(RICH_TEXT_MARKS.properties).join(', ')}, and tag:<name> for a custom inline tool. sup and sub cannot share a run.`,
+  `highlight is stored as background "${DEFAULT_HIGHLIGHT_BACKGROUND}". color and background take a preset: ${PRESET_NAMES}. Another CSS colour is stored as the nearest preset; a value that is not a colour is dropped.`,
+  'A link needs href. Missing target and rel get the Link tool\'s defaults.',
+  'Embeds: { equation: { expression } } is inline LaTeX; { page: { id } } mentions a page block.',
+  // UNSET_ALL and UNSET_TAGS in agent/rich-text-ops.ts: importing them drags the sanitizers into the headless snapshot.
+  'text.format with unset ["*"] clears every mark; "tag:*" clears every custom mark.',
+  'markdown.insert cannot write underline, sup, sub, highlight or colours: insert the text, then use text.format.',
+].join('\n');

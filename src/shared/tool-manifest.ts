@@ -22,7 +22,7 @@ import { deepEqual } from './deep-equal';
 import { OPAQUE_TAGS } from './rich-text/html-to-segments';
 import { ownEntry } from './own-entry';
 import { validPattern } from './schema/validate';
-import { RICH_TEXT_MARKS, richText } from './tool-descriptions/rich-text';
+import { RICH_TEXT_MARKS, RICH_TEXT_PRIMER, richText } from './tool-descriptions/rich-text';
 
 export const RESERVED_NAMESPACES = ['doc', 'block', 'text', 'markdown', 'history'] as const;
 
@@ -471,7 +471,7 @@ export const buildAgentContract = (
   manifest: BlokToolManifest,
   core: CoreCommandTable,
   where: ContractWhere,
-  general = ''
+  general = RICH_TEXT_PRIMER
 ): AgentContract => {
   const customMarks = customMarkProperties(manifest);
   const marks: BlokSchema | null = Object.keys(customMarks).length === 0

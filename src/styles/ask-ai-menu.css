@@ -1,10 +1,9 @@
 /* Ask AI in the inline toolbar (inline-tool-ask-ai.ts). The rose's light and
    the hue walk reuse the bar's keyframes from assistant.css. */
 
-/* The bar declares these on its own root, so the menu and its rule need their own copy.
+/* The bar declares these on its own root, so the menu needs its own copy.
    A rule of only custom properties would leak into view.css, which keeps those wholesale. */
-[data-blok-ask-ai],
-[data-blok-ask-ai-seam] {
+[data-blok-ask-ai] {
   position: relative;
   --blok-ai-hue-1: #e8609e;
   --blok-ai-hue-2: #eba84a;
@@ -21,11 +20,6 @@
 [data-blok-ask-ai-open]:hover stop,
 [data-blok-ask-ai-open][data-blok-focused="true"] stop {
   stop-color: var(--blok-ai-hue-1);
-}
-
-/* The rule above Ask AI holds a light that runs along it once the card opens. */
-[data-blok-ask-ai-seam] {
-  overflow: hidden;
 }
 
 /* Only motion below. Reduced motion keeps everything above, still. */
@@ -57,34 +51,6 @@
     animation-delay: -3s;
   }
 
-  /* The label shines once as the card opens. Both ends of the gradient are the label's own colour, so it rests as plain text. */
-  [data-blok-ask-ai-open] [data-blok-ask-ai-label] {
-    background:
-      linear-gradient(
-        100deg,
-        currentColor 0 38%,
-        var(--blok-ai-hue-1) 44%,
-        var(--blok-ai-hue-2) 48%,
-        var(--blok-ai-hue-3) 52%,
-        var(--blok-ai-hue-4) 56%,
-        currentColor 62% 100%
-      )
-      0 0 / 320% 100%;
-    background-clip: text;
-    /* Not color: currentColor must stay the label's colour for the gradient. */
-    -webkit-text-fill-color: transparent;
-    animation: blok-ask-ai-shine 1.4s cubic-bezier(0.4, 0, 0.2, 1) 0.15s both;
-  }
-
-  [data-blok-ask-ai-seam]::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, transparent, var(--blok-ai-hue-1), var(--blok-ai-hue-2), var(--blok-ai-hue-3), var(--blok-ai-hue-4), transparent);
-    transform: translateX(100%);
-    animation: blok-ask-ai-sweep 1.3s cubic-bezier(0.4, 0, 0.2, 1) both;
-  }
-
   [data-blok-ask-ai-toggle] svg {
     transition-duration: 520ms;
     transition-timing-function: cubic-bezier(0.3, 1.6, 0.4, 1);
@@ -104,22 +70,6 @@
   [data-blok-ask-ai-skill] [data-blok-ask-ai-ink] [fill="currentColor"] {
     animation: blok-ask-ai-dot-in 300ms ease-out both;
     animation-delay: calc(var(--blok-ask-ai-index) * 38ms + 520ms);
-  }
-}
-
-@keyframes blok-ask-ai-shine {
-  from {
-    background-position: 100% 0;
-  }
-
-  to {
-    background-position: 0 0;
-  }
-}
-
-@keyframes blok-ask-ai-sweep {
-  from {
-    transform: translateX(-100%);
   }
 }
 

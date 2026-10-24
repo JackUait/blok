@@ -44,15 +44,6 @@
   from { opacity: 0; transform: translateY(-6px) scale(0.98) }
 }
 
-@keyframes blok-ask-ai-shine {
-  from { background-position: 100% 0 }
-  to { background-position: 0 0 }
-}
-
-@keyframes blok-ask-ai-sweep {
-  from { transform: translateX(-100%) }
-}
-
 @keyframes blok-ask-ai-turnover {
   to { opacity: 0; transform: rotateY(90deg) scale(0.6) }
 }

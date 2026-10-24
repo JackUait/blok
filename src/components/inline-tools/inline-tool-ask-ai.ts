@@ -1,7 +1,6 @@
 import { BUILT_IN_INLINE_DESCRIPTIONS } from '../../shared/tool-descriptions/inline';
 import type { API, InlineTool } from '../../../types';
 import type { MenuConfig } from '../../../types/tools';
-import { DATA_ATTR } from '../constants/data-attributes';
 import { IconChevronDown, IconRose } from '../icons';
 import { assistantActions } from '../modules/assistant/actions';
 import { dressSkillIcon } from '../modules/assistant/skill-icons';
@@ -120,15 +119,6 @@ export class AskAiInlineTool implements InlineTool {
 
     row.append(open, toggle);
     root.append(row, skills);
-
-    // The popover mounts the item after render; the rule above it then exists.
-    requestAnimationFrame(() => {
-      const rule = root.parentElement?.previousElementSibling;
-
-      if (rule?.hasAttribute(DATA_ATTR.popoverItemSeparator) === true) {
-        rule.querySelector(`[${DATA_ATTR.popoverItemSeparatorLine}]`)?.setAttribute('data-blok-ask-ai-seam', '');
-      }
-    });
 
     return { type: PopoverItemType.Html, element: root, name: 'askAi' };
   }

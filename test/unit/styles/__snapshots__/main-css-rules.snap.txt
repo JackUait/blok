@@ -28021,7 +28021,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   transition: none;
 }
 
-[data-blok-ask-ai], [data-blok-ask-ai-seam] {
+[data-blok-ask-ai] {
   position: relative;
   --blok-ai-hue-1: #e8609e;
   --blok-ai-hue-2: #eba84a;
@@ -28036,10 +28036,6 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [data-blok-ask-ai-open]:hover stop, [data-blok-ask-ai-open][data-blok-focused="true"] stop {
   stop-color: var(--blok-ai-hue-1);
-}
-
-[data-blok-ask-ai-seam] {
-  overflow: hidden;
 }
 
 [@media (prefers-reduced-motion: no-preference)] [data-blok-ask-ai-open]:hover [data-blok-assistant-light], [data-blok-ask-ai-open][data-blok-focused="true"] [data-blok-assistant-light] {
@@ -28063,22 +28059,6 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 
 [@media (prefers-reduced-motion: no-preference)] [data-blok-ask-ai-open]:hover stop:nth-child(3) {
   animation-delay: -3s;
-}
-
-[@media (prefers-reduced-motion: no-preference)] [data-blok-ask-ai-open] [data-blok-ask-ai-label] {
-  background: linear-gradient( 100deg, currentColor 0 38%, var(--blok-ai-hue-1) 44%, var(--blok-ai-hue-2) 48%, var(--blok-ai-hue-3) 52%, var(--blok-ai-hue-4) 56%, currentColor 62% 100% ) 0 0 / 320% 100%;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: blok-ask-ai-shine 1.4s cubic-bezier(0.4, 0, 0.2, 1) 0.15s both;
-}
-
-[@media (prefers-reduced-motion: no-preference)] [data-blok-ask-ai-seam]::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, var(--blok-ai-hue-1), var(--blok-ai-hue-2), var(--blok-ai-hue-3), var(--blok-ai-hue-4), transparent);
-  transform: translateX(100%);
-  animation: blok-ask-ai-sweep 1.3s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 [@media (prefers-reduced-motion: no-preference)] [data-blok-ask-ai-toggle] svg {

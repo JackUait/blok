@@ -25,7 +25,7 @@ describe('Ask AI menu CSS', () => {
   });
 
   it('ships in the main stylesheet', () => {
-    expect(readMainCss()).toContain('[data-blok-ask-ai-seam]');
+    expect(readMainCss()).toContain('[data-blok-ask-ai-open]');
   });
 
   it('runs the bar\'s light round the rose while Ask AI is hovered or focused, with no glow', () => {
@@ -46,11 +46,12 @@ describe('Ask AI menu CSS', () => {
     expect(bodyOf('[data-blok-ask-ai-skill]')).toMatch(/animation-delay:\s*calc\(var\(--blok-ask-ai-index\)/);
   });
 
-  it('keeps the AI colours where the menu and its rule can read them', () => {
-    const body = bodyOf('[data-blok-ask-ai-seam]');
-
-    expect(body).toMatch(/--blok-ai-hue-1:/);
+  it('keeps the AI colours where the menu can read them', () => {
     expect(bodyOf('[data-blok-ask-ai]')).toMatch(/--blok-ai-hue-1:/);
+  });
+
+  it('opens with no light along the rule and no shine on the label', () => {
+    expect(CSS).not.toMatch(/data-blok-ask-ai-seam|blok-ask-ai-sweep|blok-ask-ai-shine|text-fill-color/);
   });
 
   it('lays no colour wash under the open skills', () => {

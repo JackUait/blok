@@ -85,25 +85,12 @@ describe('AskAiInlineTool — motion', () => {
       .toEqual(['improve', 'proofread', 'shorter', 'longer', 'simplify', 'explain']);
   });
 
-  it('lights the rule above it once the toolbar mounts it', async () => {
+  it('leaves the rule above it unlit', async () => {
     const root = render();
     const line = mountAfterRule(root);
 
     await new Promise((resolve) => requestAnimationFrame(resolve));
 
-    expect(line.hasAttribute('data-blok-ask-ai-seam')).toBe(true);
-  });
-
-  it('lights nothing when no rule sits above it', async () => {
-    const root = render();
-    const before = document.createElement('div');
-    const item = document.createElement('div');
-
-    item.append(root);
-    document.body.append(before, item);
-
-    await new Promise((resolve) => requestAnimationFrame(resolve));
-
-    expect(document.querySelector('[data-blok-ask-ai-seam]')).toBeNull();
+    expect(line.hasAttribute('data-blok-ask-ai-seam')).toBe(false);
   });
 });

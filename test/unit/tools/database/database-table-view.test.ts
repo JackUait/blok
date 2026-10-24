@@ -649,6 +649,22 @@ describe('DatabaseTableView', () => {
       expect(anchorCell(root)).toBe('r2/p-amount');
     });
 
+    it('keeps Home, End and Space on a checkbox from scrolling the page, and Space leaves the box alone (findings K07)', () => {
+      const { root, handlers } = mount();
+
+      selectCell(root, 'r1', 'p-amount');
+      press(grid(root), 'ArrowRight');
+      press(grid(root), 'ArrowRight');
+      expect(anchorCell(root)).toBe('r1/p-done');
+
+      expect(press(grid(root), 'Home').defaultPrevented).toBe(true);
+      expect(press(grid(root), 'End').defaultPrevented).toBe(true);
+      expect(press(grid(root), ' ').defaultPrevented).toBe(true);
+      expect(anchorCell(root)).toBe('r1/p-done');
+      expect(handlers.commitCell).not.toHaveBeenCalled();
+      expect(editor()).toBeNull();
+    });
+
     it('Tab moves right; Shift+Tab extends the range left and keeps the anchor', () => {
       const { root } = mount();
 

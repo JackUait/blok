@@ -930,17 +930,27 @@ export class DatabaseTableGrid {
         this.clearRange();
 
         return;
+      // Notion keeps the selection put; unprevented, the page scrolls (findings K07).
+      case 'Home':
+      case 'End':
+        event.preventDefault();
+
+        return;
       default:
         break;
     }
 
-    if (isPrintableKey(event) && !this.readOnly) {
-      const property = this.columns.find((p) => p.id === selection.anchor.propertyId);
+    if (!isPrintableKey(event) || this.readOnly) {
+      return;
+    }
+    const property = this.columns.find((p) => p.id === selection.anchor.propertyId);
 
-      if (property?.type === 'checkbox') {
-        return;
-      }
-      event.preventDefault();
+    // Notion: Enter toggles a checkbox, Space does nothing (and must not scroll).
+    if (property?.type === 'checkbox' && event.key !== ' ') {
+      return;
+    }
+    event.preventDefault();
+    if (property?.type !== 'checkbox') {
       this.openEditor(selection.anchor, event.key);
     }
   }

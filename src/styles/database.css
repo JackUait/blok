@@ -6572,7 +6572,7 @@ textarea[data-blok-database-cell-input] {
   display: flex;
   flex-direction: column;
   padding-top: var(--blok-space-1);
-  border-top: 1px solid var(--blok-database-drawer-border);
+  border-top: 1px solid var(--blok-database-table-border);
 }
 
 /* Switch: 30×18 track and 14px knob, as measured on Notion's toggles (research/08). */
@@ -6683,7 +6683,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-date-remind] + [data-blok-database-date-clear] {
-  border-top: 1px solid var(--blok-database-drawer-border);
+  border-top: 1px solid var(--blok-database-table-border);
   border-radius: 0;
   padding-top: var(--blok-space-1);
 }
@@ -6692,7 +6692,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-date-help-footer] {
   display: flex;
   flex-direction: column;
-  border-top: 1px solid var(--blok-database-drawer-border);
+  border-top: 1px solid var(--blok-database-table-border);
   padding-top: var(--blok-space-1);
 }
 

@@ -1,5 +1,5 @@
 /**
- * Dark database chrome from feel/findings-darkkeys (K06, K11).
+ * Dark database chrome from feel/findings-darkkeys (K06, K11, K12).
  * jsdom has no CSS, so these read the authored source.
  */
 import { readFileSync } from 'node:fs';
@@ -42,5 +42,15 @@ describe('database switches in dark (findings K11, live)', () => {
 
   it('keeps the on track blue (user decision: the switch stays blue)', () => {
     expect(ruleBody('[aria-checked="true"] > [data-blok-database-switch-track]')).toContain('background-color: var(--blok-database-switch-on-bg)');
+  });
+});
+
+describe('date picker dividers (findings K12, research/33 §4.1)', () => {
+  it.each([
+    '[data-blok-database-date-options]',
+    '[data-blok-database-date-remind] + [data-blok-database-date-clear]',
+    '[data-blok-database-date-help-footer]',
+  ])('%s draws Notion\'s menu divider, the table border', (selector) => {
+    expect(ruleBody(selector)).toContain('border-top: 1px solid var(--blok-database-table-border)');
   });
 });

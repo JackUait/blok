@@ -1,8 +1,10 @@
 import type { BlokCustomToolsFile, BlokSchema, SanitizerConfig, ToolRegistrySnapshot } from '../../types';
 import { INLINE_TEXT_SANITIZE } from './inline-text-sanitize';
+import { INLINE_TOOL_ORDER } from './inline-tool-order';
 import { validateAgainst } from './schema/validate';
 import { composeToolSanitize } from './tool-actions/runtime';
 import type { ToolRuntimeRegistry } from './tool-actions/runtime';
+import { BUILT_IN_BLOCK_SANITIZE } from './tool-descriptions/sanitize/blocks';
 import { BUILT_IN_INLINE_SANITIZE } from './tool-descriptions/sanitize/inline';
 
 const STRING_SCHEMA: BlokSchema = { type: 'string' };
@@ -122,6 +124,26 @@ const FILE_SCHEMA: BlokSchema = {
         },
       },
     },
+    inlineTools: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['name', 'sanitize'],
+        properties: {
+          name: { type: 'string', minLength: 1 },
+          title: STRING_SCHEMA,
+          sanitize: {
+            type: 'object',
+            additionalProperties: false,
+            patternProperties: {
+              '^[a-z][a-z0-9-]*$': {
+                oneOf: [{ const: true }, { type: 'object', additionalProperties: { type: ['boolean', 'string'] } }],
+              },
+            },
+          },
+        },
+      },
+    },
   },
 };
 
@@ -141,6 +163,8 @@ export const readCustomToolsFile = (value: unknown): BlokCustomToolsFile => {
   return value;
 };
 
+const customInline = (file: BlokCustomToolsFile): NonNullable<BlokCustomToolsFile['inlineTools']> => file.inlineTools ?? [];
+
 export const snapshotWithCustomTools = (
   base: ToolRegistrySnapshot,
   file?: BlokCustomToolsFile
@@ -150,22 +174,44 @@ export const snapshotWithCustomTools = (
   }
 
   const customNames = new Set(file.blocks.map(block => block.name));
+  const inline = customInline(file);
+  const inlineNames = new Set(inline.map(tool => tool.name));
+  const inlineTools: ToolRegistrySnapshot['inlineTools'] = [
+    ...base.inlineTools.filter(tool => !inlineNames.has(tool.name)),
+    ...inline.map(tool => {
+      const tags = Object.keys(tool.sanitize);
+      const [onlyTag] = tags;
+
+      return {
+        name: tool.name,
+        title: tool.title ?? tool.name,
+        description: null,
+        sanitizeTags: tags,
+        ...(tags.length === 1 && onlyTag !== undefined ? { sanitizeRule: tool.sanitize[onlyTag] } : {}),
+      };
+    }),
+  ];
+  // Code lists no inline tools; every other built-in takes the host's ones too, as in the editor.
+  const withInline = (names: string[]): string[] => (names.length === 0
+    ? names
+    : [...names.filter(name => !inlineNames.has(name)), ...inline.map(tool => tool.name)]);
 
   return {
     ...base,
     blocks: [
-      ...base.blocks.filter(block => !customNames.has(block.name)),
+      ...base.blocks.filter(block => !customNames.has(block.name)).map(block => ({ ...block, inlineTools: withInline(block.inlineTools) })),
       ...file.blocks.map(block => ({
         name: block.name,
         title: block.statics.toolbox[0]?.title ?? block.name,
         description: block.description,
         statics: block.statics,
         insertable: true,
-        inlineTools: base.inlineTools.map(tool => tool.name),
+        inlineTools: inlineTools.map(tool => tool.name),
         tunes: [],
         handlers: [],
       })),
     ],
+    inlineTools,
   };
 };
 
@@ -177,8 +223,26 @@ export const runtimesWithCustomTools = (
     return base;
   }
 
-  const inline = Object.values(BUILT_IN_INLINE_SANITIZE).map(factory => factory());
+  // Built-ins first, then the host's tools: the editor composes them in registration order.
+  const hostInline: SanitizerConfig[] = customInline(file).map(tool => ({ ...tool.sanitize }));
+  const inline = [...Object.values(BUILT_IN_INLINE_SANITIZE).map(factory => factory()), ...hostInline];
   const merged = new Map(base);
+
+  const builtInInline = INLINE_TOOL_ORDER.flatMap(name => {
+    const factory = BUILT_IN_INLINE_SANITIZE[name];
+
+    return factory === undefined ? [] : [factory()];
+  });
+  // Code opts out of inline tools, as in BUILT_IN_TOOL_RUNTIMES.
+  const takesHostInline = Object.entries(BUILT_IN_BLOCK_SANITIZE).filter(([name]) => hostInline.length > 0 && name !== 'code');
+
+  for (const [name, own] of takesHostInline) {
+    const runtime = merged.get(name);
+
+    if (runtime !== undefined) {
+      merged.set(name, { ...runtime, sanitize: composeToolSanitize(own(), [...builtInInline, ...hostInline]) });
+    }
+  }
 
   for (const block of file.blocks) {
     const own: SanitizerConfig = {};

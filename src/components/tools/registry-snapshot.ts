@@ -1,4 +1,4 @@
-import type { HostService, SnapshotBlock, ToolConfig, ToolRegistrySnapshot } from '../../../types';
+import type { CustomInlineSanitizeRule, HostService, SanitizerConfig, SnapshotBlock, ToolConfig, ToolRegistrySnapshot } from '../../../types';
 import { BUILT_IN_RUNTIME_PARTS } from '../../shared/tool-actions';
 import type { ToolRuntime, ToolRuntimeRegistry } from '../../shared/tool-actions/runtime';
 import { AudioTool } from '../../tools/audio';
@@ -21,6 +21,29 @@ import type { I18nInstance } from '../utils/tools';
 import type { BlockToolAdapter } from './block';
 import type { InlineToolAdapter } from './inline';
 import type { BlockTuneAdapter } from './tune';
+
+/** The tool's only tag rule, when it is JSON (a function rule names no attributes). */
+const jsonRuleOf = (config: SanitizerConfig): { sanitizeRule?: CustomInlineSanitizeRule } => {
+  const tags = Object.keys(config);
+  const rule: unknown = tags.length === 1 ? config[tags[0]] : undefined;
+
+  if (rule === true) {
+    return { sanitizeRule: true };
+  }
+  if (typeof rule !== 'object' || rule === null || Array.isArray(rule)) {
+    return {};
+  }
+  const attributes: Record<string, boolean | string> = {};
+
+  for (const [attribute, value] of Object.entries(rule)) {
+    if (typeof value !== 'boolean' && typeof value !== 'string') {
+      return {};
+    }
+    attributes[attribute] = value;
+  }
+
+  return { sanitizeRule: attributes };
+};
 
 export interface ToolsLike {
   blockTools: ReadonlyMap<string, BlockToolAdapter>;
@@ -100,13 +123,19 @@ export const snapshotFromTools = (
       handlers: Object.keys(toolClass.actionHandlers ?? {}),
     };
   }),
-  inlineTools: [...tools.inlineTools.values()].map(tool => ({
-    name: tool.name,
-    title: tool.title,
-    description: describeSafely(tool.name, tool.toolClass, tool.settings),
-    sanitizeTags: Object.keys(tool.sanitizeConfig),
-    ...(tool.shortcut === undefined ? {} : { shortcut: tool.shortcut }),
-  })),
+  inlineTools: [...tools.inlineTools.values()].map(tool => {
+    const description = describeSafely(tool.name, tool.toolClass, tool.settings);
+
+    return {
+      name: tool.name,
+      title: tool.title,
+      description,
+      sanitizeTags: Object.keys(tool.sanitizeConfig),
+      // Only a tool with no description is read from its sanitizer.
+      ...(description === null ? jsonRuleOf(tool.sanitizeConfig) : {}),
+      ...(tool.shortcut === undefined ? {} : { shortcut: tool.shortcut }),
+    };
+  }),
   tunes: [...tools.blockTunes.values()].map(tune => ({
     name: tune.name,
     description: describeSafely(tune.name, tune.toolClass, tune.settings),

@@ -26,9 +26,13 @@ export const describeContract = (
   query: { tool?: string; command?: string } = {}
 ): AgentContract | ContractSlice => {
   // Models often pass a command name as tool; answer it rather than spend another call.
+  const inlineTool = contract.manifest.blocks.some(entry => entry.name === query.tool)
+    ? undefined
+    : contract.manifest.inlineTools.find(entry => entry.name === query.tool);
   const commandName = query.command
     ?? (query.tool !== undefined
       && !contract.manifest.blocks.some(entry => entry.name === query.tool)
+      && inlineTool === undefined
       && contract.commands.some(entry => entry.name === query.tool) ? query.tool : undefined);
 
   if (commandName !== undefined) {
@@ -40,6 +44,9 @@ export const describeContract = (
 
     return { command: described(contract, command) };
   }
+  if (query.command === undefined && inlineTool !== undefined) {
+    return { inlineTool };
+  }
   if (query.tool !== undefined) {
     const tool = contract.manifest.blocks.find(entry => entry.name === query.tool);
 
@@ -47,8 +54,9 @@ export const describeContract = (
       const hint = variantSentence(query.tool, matchVariants(query.tool, contract.manifest.blocks, validateAgainst))
         || titleSentence(query.tool, contract.manifest.blocks);
       const known = contract.manifest.blocks.map(entry => entry.name).join(', ');
+      const inline = contract.manifest.inlineTools.map(entry => entry.name).join(', ');
 
-      throw failure('UNKNOWN_TOOL', `No block tool "${query.tool}".${hint} Known: ${known}.`);
+      throw failure('UNKNOWN_TOOL', `No tool "${query.tool}".${hint} Known: ${known}.${inline === '' ? '' : ` Inline tools: ${inline}.`}`);
     }
 
     const { actions: _actions, ...entry } = tool;

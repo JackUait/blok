@@ -28,6 +28,13 @@ export interface BlokCustomToolsFile {
     /** Object and boolean sanitize rules only. */
     sanitize?: Record<string, unknown>;
   }>;
+  /** The host's own inline tools. Their marks are `tag:<tag>` keys. */
+  inlineTools?: Array<{
+    name: string;
+    title?: string;
+    /** The tool's `static sanitize` as JSON: tag to `true` or to its attributes. */
+    sanitize: Record<string, true | Record<string, boolean | string>>;
+  }>;
 }
 
 export interface BlokMcpOptions {

@@ -118,7 +118,15 @@ export interface ToolRegistrySnapshot {
   defaultBlock: string;
   services: HostService[];
   blocks: SnapshotBlock[];
-  inlineTools: Array<{ name: string; title: string; description: InlineToolDescription | null; sanitizeTags: string[]; shortcut?: string }>;
+  inlineTools: Array<{
+    name: string;
+    title: string;
+    description: InlineToolDescription | null;
+    sanitizeTags: string[];
+    /** The JSON rule of a tool's only tag, when it has one: the attributes its mark may carry. */
+    sanitizeRule?: CustomInlineSanitizeRule;
+    shortcut?: string;
+  }>;
   tunes: Array<{ name: string; description: BlockTuneDescription | null }>;
 }
 
@@ -162,4 +170,14 @@ export interface BlokCustomToolsFile {
     /** JSON object/boolean rules only; absent rich-field rules use global inline rules. */
     sanitize?: Record<string, unknown>;
   }>;
+  /** The host's own inline tools. Their marks are `tag:<tag>` and survive on every rich-text block but code. */
+  inlineTools?: Array<{
+    name: string;
+    title?: string;
+    /** The tool's `static sanitize` as JSON: tag to `true` or to its attributes. Function rules cannot be written here. */
+    sanitize: Record<string, CustomInlineSanitizeRule>;
+  }>;
 }
+
+/** `true` keeps the tag with its safe attributes; a map names each attribute (`true`, or the one value it may have). */
+export type CustomInlineSanitizeRule = true | Record<string, boolean | string>;

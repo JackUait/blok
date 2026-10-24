@@ -1,7 +1,7 @@
 import type { BlockPosition } from './api/blocks';
 import type { OutputBlockData } from './data-formats/output-data';
 import type { RichText, RichTextMarks } from './rich-text';
-import type { AgentContract, BlockToolManifestEntry, CommandEntry } from './tool-manifest';
+import type { AgentContract, BlockToolManifestEntry, CommandEntry, InlineToolManifestEntry } from './tool-manifest';
 import type { PageIcon } from './tools/page';
 
 export type CoreCommandName =
@@ -219,6 +219,8 @@ export type ContractSlice =
   | { index: { tools: { name: string; summary: string }[]; commands: { name: CommandName; summary: string }[]; guidance: string } }
   /** The tool's actions are its commands, listed once under commands. */
   | { tool: Omit<BlockToolManifestEntry, 'actions'>; commands: DescribedCommand[] }
+  /** An inline tool: its effect names the mark (or embed) a segment writes. */
+  | { inlineTool: InlineToolManifestEntry }
   | { command: DescribedCommand };
 
 export interface AgentSession {

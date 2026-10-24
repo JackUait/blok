@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildBuiltInSnapshot } from '../../../src/shared/built-in-snapshot';
 import { readCustomToolsFile, runtimesWithCustomTools, snapshotWithCustomTools } from '../../../src/shared/custom-tools-file';
-import { INLINE_TEXT_SANITIZE } from '../../../src/shared/inline-text-sanitize';
 import { validateAgainst } from '../../../src/shared/schema/validate';
 import { getEffectiveRuleForString } from '../../../src/shared/sanitize-walk';
 import { BUILT_IN_TOOL_RUNTIMES } from '../../../src/shared/tool-actions';
@@ -436,7 +435,9 @@ describe('runtimesWithCustomTools', () => {
     if (typeof question !== 'object' || question === null) {
       throw new Error('The default rich-field config is missing');
     }
-    expect(question).toMatchObject({ br: true, b: {}, em: {}, span: INLINE_TEXT_SANITIZE.span });
+    expect(question).toMatchObject({ br: true, b: {}, em: {} });
+    // span is composed from the field's rule and the equation tool's: an equation stays, a bare span unwraps.
+    expect(cleanField(runtime, 'question', '<span data-latex="x">x</span><span>y</span>')).toBe('<span data-latex="x">x</span>y');
     expect(runtime.actions).toEqual({});
     for (const [name, original] of baseEntries) {
       expect(runtimes.get(name), name).toBe(original);
@@ -505,5 +506,44 @@ describe('runtimesWithCustomTools', () => {
     expect(existing.actions.oldAction?.run).toBeDefined();
     expect(sanitizeState(existing.sanitize)).toBe(before);
     expect(file).toEqual(fileBefore);
+  });
+});
+
+describe('custom inline tools in the file', () => {
+  const withKbd = (sanitize: unknown): unknown => ({
+    formatVersion: 1,
+    blocks: [],
+    inlineTools: [{ name: 'kbd', title: 'Keyboard', sanitize }],
+  });
+
+  it('accepts a tool whose tags map to true or to attributes', () => {
+    expect(() => readCustomToolsFile(withKbd({ kbd: { 'data-key': true, class: 'k' }, samp: true }))).not.toThrow();
+  });
+
+  it('refuses a tag that is not a plain tag name and a rule that is neither true nor attributes', () => {
+    expect(() => readCustomToolsFile(withKbd({ 'img src=x': true }))).toThrow(TypeError);
+    expect(() => readCustomToolsFile(withKbd({ kbd: false }))).toThrow(TypeError);
+    expect(() => readCustomToolsFile(withKbd({ kbd: { 'data-key': 1 } }))).toThrow(TypeError);
+  });
+
+  it('adds the tool to the snapshot and to every built-in that takes inline tools, but not to code', () => {
+    const snapshot = snapshotWithCustomTools(
+      buildBuiltInSnapshot({ blokVersion: '0.0.0' }),
+      readCustomToolsFile(withKbd({ kbd: { 'data-key': true } }))
+    );
+
+    expect(snapshot.inlineTools.find(tool => tool.name === 'kbd')).toEqual({
+      name: 'kbd', title: 'Keyboard', description: null, sanitizeTags: ['kbd'], sanitizeRule: { 'data-key': true },
+    });
+    expect(snapshot.blocks.find(block => block.name === 'paragraph')?.inlineTools).toContain('kbd');
+    expect(snapshot.blocks.find(block => block.name === 'code')?.inlineTools).toEqual([]);
+  });
+
+  it('keeps the tool\'s tag on built-in rich fields, and leaves code alone', () => {
+    const runtimes = runtimesWithCustomTools(BUILT_IN_TOOL_RUNTIMES, readCustomToolsFile(withKbd({ kbd: { 'data-key': true } })));
+
+    expect(cleanField(runtimeOf(runtimes, 'paragraph'), 'text', '<kbd data-key="k" onclick="x">K</kbd>')).toBe('<kbd data-key="k">K</kbd>');
+    expect(cleanField(runtimeOf(runtimes, 'header'), 'text', '<kbd>K</kbd>')).toBe('<kbd>K</kbd>');
+    expect(runtimeOf(runtimes, 'code')).toBe(BUILT_IN_TOOL_RUNTIMES.get('code'));
   });
 });

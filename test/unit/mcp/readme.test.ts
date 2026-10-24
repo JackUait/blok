@@ -49,6 +49,11 @@ describe('@bloklabs/mcp README', () => {
     expect(readme).toContain('`client:<client_id>`');
   });
 
+  it('states how to declare custom inline tools in the custom tools file', () => {
+    expect(readme).toContain('`inlineTools`');
+    expect(readme).toMatch(/Function rules cannot go in a JSON file/);
+  });
+
   it('states that flag values are separate arguments and unknown flags are refused', () => {
     expect(readme).toContain('`--auth=oauth`');
     expect(readme).toMatch(/unknown flag.*refuse/i);

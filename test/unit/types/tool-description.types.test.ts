@@ -13,6 +13,7 @@ import type {
   BlokToolManifest,
   CommandEntry,
   CommandName,
+  CustomInlineSanitizeRule,
   HostService,
   InlineToolConstructable,
   InlineToolDescription,
@@ -232,6 +233,7 @@ describe('published tool description types', () => {
         title: string;
         description: InlineToolDescription | null;
         sanitizeTags: string[];
+        sanitizeRule?: CustomInlineSanitizeRule;
         shortcut?: string;
       }>;
       tunes: Array<{ name: string; description: BlockTuneDescription | null }>;
@@ -247,7 +249,13 @@ describe('published tool description types', () => {
         statics: SnapshotBlockStatics;
         sanitize?: Record<string, unknown>;
       }>;
+      inlineTools?: Array<{
+        name: string;
+        title?: string;
+        sanitize: Record<string, CustomInlineSanitizeRule>;
+      }>;
     }>();
+    expectTypeOf<CustomInlineSanitizeRule>().toEqualTypeOf<true | Record<string, boolean | string>>();
     expectTypeOf<BlokCustomToolsFile['blocks'][number]['statics']>()
       .toEqualTypeOf<ToolRegistrySnapshot['blocks'][number]['statics']>();
   });

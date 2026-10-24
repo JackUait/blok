@@ -6,6 +6,7 @@ import type {
   BlokSchema,
   BlokToolManifest,
   CommandEntry,
+  CustomInlineSanitizeRule,
   HostService,
   InlineToolDescription,
   InlineToolManifestEntry,
@@ -20,7 +21,7 @@ import type {
 import { deepEqual } from './deep-equal';
 import { ownEntry } from './own-entry';
 import { validPattern } from './schema/validate';
-import { richText } from './tool-descriptions/rich-text';
+import { RICH_TEXT_MARKS, richText } from './tool-descriptions/rich-text';
 
 export const RESERVED_NAMESPACES = ['doc', 'block', 'text', 'markdown', 'history'] as const;
 
@@ -254,6 +255,24 @@ const blockEntry = (
   };
 };
 
+/** Tags the segment reader turns into built-in marks, so a `tag:` mark on them would not survive a save. */
+const BUILT_IN_MARK_TAGS = new Set(['strong', 'b', 'em', 'i', 'u', 's', 'del', 'strike', 'code', 'sup', 'sub', 'a', 'mark', 'br']);
+
+/** A `tag:` mark's attributes: the ones the tool's rule names, or any string attribute for `true` and function rules. */
+const tagMarkValue = (rule: CustomInlineSanitizeRule | undefined): BlokSchema => (isRecord(rule)
+  ? {
+    type: 'object',
+    additionalProperties: false,
+    properties: Object.fromEntries(Object.entries(rule).flatMap(([attribute, allowed]): Array<[string, BlokSchema]> => {
+      if (allowed === false) {
+        return [];
+      }
+
+      return [[attribute, typeof allowed === 'string' ? { const: allowed } : { type: 'string' }]];
+    })),
+  }
+  : { type: 'object', additionalProperties: { type: 'string' } });
+
 const inlineEntry = (tool: ToolRegistrySnapshot['inlineTools'][number], warn: (message: string) => void): InlineToolManifestEntry => {
   const base = { name: tool.name, title: tool.title, ...(tool.shortcut === undefined ? {} : { shortcut: tool.shortcut }) };
   const description = acceptDescription(tool.name, tool.description, isInlineDescription, warn);
@@ -264,8 +283,8 @@ const inlineEntry = (tool: ToolRegistrySnapshot['inlineTools'][number], warn: (m
 
   const [tag] = tool.sanitizeTags;
 
-  return tool.sanitizeTags.length === 1 && tag !== undefined
-    ? { ...base, summary: `Custom inline tool ${tool.name}.`, level: 'structural', effect: { mark: `tag:${tag}`, value: { type: 'object', additionalProperties: { type: 'string' } } } }
+  return tool.sanitizeTags.length === 1 && tag !== undefined && !BUILT_IN_MARK_TAGS.has(tag)
+    ? { ...base, summary: `Custom inline tool ${tool.name}.`, level: 'structural', effect: { mark: `tag:${tag}`, value: tagMarkValue(tool.sanitizeRule) } }
     : { ...base, summary: `Custom inline tool ${tool.name}. Leave its marks as they are.`, level: 'structural' };
 };
 
@@ -404,12 +423,53 @@ const typedArgs = (name: string, args: BlokSchema, manifest: BlokToolManifest): 
   return args;
 };
 
+/** The host's `tag:` marks, as properties of the marks schema. */
+const customMarkProperties = (manifest: BlokToolManifest): Record<string, BlokSchema> => Object.fromEntries(
+  manifest.inlineTools.flatMap((tool): Array<[string, BlokSchema]> => {
+    const effect = tool.effect;
+
+    if (effect === undefined || !('mark' in effect) || !effect.mark.startsWith('tag:')) {
+      return [];
+    }
+
+    return [[effect.mark, { ...effect.value, description: `${tool.title || tool.name}: the host's inline tool "${tool.name}". Blocks that do not enable it drop it.` }]];
+  })
+);
+
+/** Every rich-text marks schema in a command or block schema, with the host's marks named in it. */
+const withCustomMarks = (value: unknown, marks: BlokSchema): unknown => {
+  if (Array.isArray(value)) {
+    return value.map(item => withCustomMarks(item, marks));
+  }
+  if (!isRecord(value)) {
+    return value;
+  }
+  if (deepEqual(value, RICH_TEXT_MARKS)) {
+    return marks;
+  }
+
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, withCustomMarks(item, marks)]));
+};
+
+const specializeMarks = (schema: BlokSchema, marks: BlokSchema | null): BlokSchema => {
+  if (marks === null) {
+    return schema;
+  }
+  const specialized = withCustomMarks(schema, marks);
+
+  return isRecord(specialized) ? specialized : schema;
+};
+
 export const buildAgentContract = (
   manifest: BlokToolManifest,
   core: CoreCommandTable,
   where: ContractWhere,
   general = ''
 ): AgentContract => {
+  const customMarks = customMarkProperties(manifest);
+  const marks: BlokSchema | null = Object.keys(customMarks).length === 0
+    ? null
+    : { ...RICH_TEXT_MARKS, properties: { ...RICH_TEXT_MARKS.properties, ...customMarks } };
   const coreCommands = Object.entries(core).map<CommandEntry>(([name, command]) => {
     if (!isToolCommandName(name)) {
       throw new Error(`Core command names must contain a dot: ${name}.`);
@@ -422,7 +482,7 @@ export const buildAgentContract = (
       name,
       summary: command.summary,
       ...(command.guidance === undefined ? {} : { guidance: command.guidance }),
-      args: typedArgs(name, command.argsSchema, manifest),
+      args: specializeMarks(typedArgs(name, command.argsSchema, manifest), marks),
       ...(command.resultSchema === undefined ? {} : { result: command.resultSchema }),
       readOnly: command.readOnly,
       runtime: command.runtime,
@@ -438,7 +498,7 @@ export const buildAgentContract = (
         name: action.command,
         summary: action.summary,
         ...(action.guidance === undefined ? {} : { guidance: action.guidance }),
-        args: withTarget(action),
+        args: specializeMarks(withTarget(action), marks),
         ...(action.result === undefined ? {} : { result: action.result }),
         readOnly: false,
         runtime: action.runtime ?? 'any',
@@ -452,7 +512,7 @@ export const buildAgentContract = (
     });
 
     return {
-      manifest: { ...block, actions: actions.map(action => action.manifest) },
+      manifest: { ...block, data: specializeMarks(block.data, marks), actions: actions.map(action => action.manifest) },
       commands: actions.map(action => action.command),
     };
   });

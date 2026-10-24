@@ -128,7 +128,21 @@ Stored mode is refused when `--sync-url` is set. A sync service owns those docum
 
 ## Custom tools
 
-- `--manifest <file>` loads your custom block tools, as a `BlokCustomToolsFile`.
+- `--manifest <file>` loads your custom block and inline tools, as a `BlokCustomToolsFile`.
+- List each custom inline tool under `inlineTools`. Give its `name`, an optional `title`, and its `sanitize` rules.
+  - Copy `sanitize` from the tool's `static sanitize`. Each tag maps to `true` or to its attributes, like `{"kbd":{"data-key":true}}`.
+  - Function rules cannot go in a JSON file. Write the attributes out instead.
+  - Its marks are `tag:<tag>` keys. Agents see them in the schema, and `blok_describe` answers for the tool by name.
+  - Without this entry, the server removes the tool's marks when it writes the block.
+
+```json
+{
+  "formatVersion": 1,
+  "blocks": [],
+  "inlineTools": [{ "name": "kbd", "title": "Keyboard", "sanitize": { "kbd": { "data-key": true } } }]
+}
+```
+
 - `--manifest-overrides <file>` hides tools or actions, or adds guidance.
 - `--rich-text-fields` (or `BLOK_RICH_TEXT_FIELDS`) names rich text fields as JSON, like `{"callout":["title"]}`. It is used only for block types missing from the manifest.
 - Custom tool action handlers do not run here. Custom tools get structural commands and field writes.
@@ -157,7 +171,7 @@ Pass a value as the next argument: `--auth oauth`, not `--auth=oauth`. An unknow
 | `--oauth-jwks <url>` | | none | Issuer's JWKS URL. |
 | `--authorize <module\|url>` | | none | Per-document access hook. |
 | `--principal <name>` | | `local` | Who the caller is over stdio. |
-| `--manifest <file>` | | none | Custom block tools. |
+| `--manifest <file>` | | none | Custom block and inline tools. |
 | `--manifest-overrides <file>` | | none | Tool and action overrides. |
 | `--rich-text-fields <json>` | `BLOK_RICH_TEXT_FIELDS` | none | Rich text fields for unknown block types. |
 | `--page-titles off\|page-map` | | `off` | Headless page rename and icon. |

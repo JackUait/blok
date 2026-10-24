@@ -18,7 +18,7 @@ export const RICH_TEXT_MARKS = {
     underline: { const: true },
     strikethrough: { const: true },
     code: { const: true },
-    sup: { const: true, description: 'Not with sub on one run: sup wins.' },
+    sup: { const: true, description: 'Not with sub on one run.' },
     sub: { const: true },
     highlight: { const: true, description: `Stored as background "${DEFAULT_HIGHLIGHT_BACKGROUND}".` },
     color: { type: 'string', description: `${PRESET_NAMES}. A hex, rgb or hsl value is stored as the nearest of them. A non-colour is dropped.` },
@@ -69,7 +69,7 @@ export const richText = (description: string): Record<string, unknown> => ({
       description: 'Rich-text segments, in order. Preferred: this is the shape Blok saves.',
       items: { anyOf: [TEXT_SEGMENT, EMBED_SEGMENT] },
     },
-    { type: 'string', description: 'Plain text: HTML tags stay literal. Use segments for formatting. Saved data from older documents may hold inline HTML here.' },
+    { type: 'string', description: 'In saved data, inline HTML. An agent command stores a string as plain text, tags and all: use segments for formatting.' },
   ],
 });
 

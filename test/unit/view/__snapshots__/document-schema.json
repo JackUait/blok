@@ -657,7 +657,7 @@
                           },
                           "sup": {
                             "const": true,
-                            "description": "Not with sub on one run: sup wins."
+                            "description": "Not with sub on one run."
                           },
                           "sub": {
                             "const": true
@@ -791,7 +791,7 @@
                           },
                           "sup": {
                             "const": true,
-                            "description": "Not with sub on one run: sup wins."
+                            "description": "Not with sub on one run."
                           },
                           "sub": {
                             "const": true
@@ -844,7 +844,7 @@
             },
             {
               "type": "string",
-              "description": "Plain text: HTML tags stay literal. Use segments for formatting. Saved data from older documents may hold inline HTML here."
+              "description": "In saved data, inline HTML. An agent command stores a string as plain text, tags and all: use segments for formatting."
             }
           ]
         },
@@ -907,7 +907,7 @@
                           },
                           "sup": {
                             "const": true,
-                            "description": "Not with sub on one run: sup wins."
+                            "description": "Not with sub on one run."
                           },
                           "sub": {
                             "const": true
@@ -1041,7 +1041,7 @@
                           },
                           "sup": {
                             "const": true,
-                            "description": "Not with sub on one run: sup wins."
+                            "description": "Not with sub on one run."
                           },
                           "sub": {
                             "const": true
@@ -1094,7 +1094,7 @@
             },
             {
               "type": "string",
-              "description": "Plain text: HTML tags stay literal. Use segments for formatting. Saved data from older documents may hold inline HTML here."
+              "description": "In saved data, inline HTML. An agent command stores a string as plain text, tags and all: use segments for formatting."
             }
           ]
         },
@@ -1173,7 +1173,7 @@
                           },
                           "sup": {
                             "const": true,
-                            "description": "Not with sub on one run: sup wins."
+                            "description": "Not with sub on one run."
                           },
                           "sub": {
                             "const": true
@@ -1307,7 +1307,7 @@
                           },
                           "sup": {
                             "const": true,
-                            "description": "Not with sub on one run: sup wins."
+                            "description": "Not with sub on one run."
                           },
                           "sub": {
                             "const": true
@@ -1360,7 +1360,7 @@
             },
             {
               "type": "string",
-              "description": "Plain text: HTML tags stay literal. Use segments for formatting. Saved data from older documents may hold inline HTML here."
+              "description": "In saved data, inline HTML. An agent command stores a string as plain text, tags and all: use segments for formatting."
             }
           ]
         },
@@ -1561,7 +1561,7 @@
                           },
                           "sup": {
                             "const": true,
-                            "description": "Not with sub on one run: sup wins."
+                            "description": "Not with sub on one run."
                           },
                           "sub": {
                             "const": true
@@ -1695,7 +1695,7 @@
                           },
                           "sup": {
                             "const": true,
-                            "description": "Not with sub on one run: sup wins."
+                            "description": "Not with sub on one run."
                           },
                           "sub": {
                             "const": true
@@ -1748,7 +1748,7 @@
             },
             {
               "type": "string",
-              "description": "Plain text: HTML tags stay literal. Use segments for formatting. Saved data from older documents may hold inline HTML here."
+              "description": "In saved data, inline HTML. An agent command stores a string as plain text, tags and all: use segments for formatting."
             }
           ]
         },
@@ -4239,7 +4239,7 @@
                           },
                           "sup": {
                             "const": true,
-                            "description": "Not with sub on one run: sup wins."
+                            "description": "Not with sub on one run."
                           },
                           "sub": {
                             "const": true
@@ -4373,7 +4373,7 @@
                           },
                           "sup": {
                             "const": true,
-                            "description": "Not with sub on one run: sup wins."
+                            "description": "Not with sub on one run."
                           },
                           "sub": {
                             "const": true
@@ -4426,7 +4426,7 @@
             },
             {
               "type": "string",
-              "description": "Plain text: HTML tags stay literal. Use segments for formatting. Saved data from older documents may hold inline HTML here."
+              "description": "In saved data, inline HTML. An agent command stores a string as plain text, tags and all: use segments for formatting."
             }
           ]
         },

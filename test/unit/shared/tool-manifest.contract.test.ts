@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { UNSET_ALL, UNSET_TAGS } from '../../../src/shared/agent/rich-text-ops';
 import { validateAgainst } from '../../../src/shared/schema/validate';
 import { BLOCK_POSITION_SCHEMA, buildAgentContract, buildToolManifest } from '../../../src/shared/tool-manifest';
 import type { ContractWhere, CoreCommandTable } from '../../../src/shared/tool-manifest';
@@ -367,7 +368,7 @@ describe('buildAgentContract', () => {
     for (const fact of [
       'segments', '{ text, marks? }', 'bold', 'strikethrough', 'sup', 'sub', 'tag:<name>', 'background "yellow"',
       '"gray"', '"red"', 'nearest preset', 'dropped', 'href', 'target and rel', '{ equation: { expression } }',
-      '{ page: { id } }', 'unset ["*"]', '"tag:*"', 'markdown.insert', 'underline',
+      '{ page: { id } }', `unset ["${UNSET_ALL}"]`, `"${UNSET_TAGS}"`, 'markdown.insert', 'underline',
     ]) {
       expect(general).toContain(fact);
     }

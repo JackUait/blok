@@ -671,7 +671,7 @@
             },
             "sup": {
               "const": true,
-              "description": "Not with sub on one run: sup wins."
+              "description": "Not with sub on one run."
             },
             "sub": {
               "const": true

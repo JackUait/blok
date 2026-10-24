@@ -40,8 +40,8 @@ describe('richText', () => {
   it('says a plain string is plain text, not HTML', () => {
     const text = JSON.stringify(richText('Body.'));
 
-    expect(text).not.toContain('Inline HTML');
-    expect(text).toContain('Plain text');
+    expect(text).not.toContain('Accepted on input');
+    expect(text).toContain('An agent command stores a string as plain text');
   });
 
   it('keeps the shared constants', () => {

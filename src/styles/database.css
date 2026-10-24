@@ -326,7 +326,7 @@
   --blok-database-tab-text: var(--blok-database-ink-secondary);
   --blok-database-tab-text-active: rgb(44, 44, 43);
   /* Card hover actions: white with the menu shadow (research/07:135, 08:317); hover is Notion's menu item (08:266). */
-  --blok-database-card-actions-bg: var(--blok-database-table-open-bg);
+  --blok-database-card-actions-bg: var(--blok-database-popover-bg);
   --blok-database-card-actions-shadow: var(--blok-database-table-open-shadow);
   --blok-database-card-actions-icon: rgb(125, 122, 117);
   --blok-database-card-menu-hover-bg: var(--blok-database-hover-bg);
@@ -456,7 +456,7 @@
     --blok-database-panel-row-active-bg: rgba(255, 255, 255, 0.11);
     --blok-database-confirm-close-bg: rgba(255, 255, 243, 0.082);
     --blok-database-ai-prompt-placeholder: var(--blok-database-ink-tertiary);
-    --blok-database-table-open-bg: rgb(37, 37, 37);
+    --blok-database-table-open-bg: rgb(32, 32, 32);
     --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
     /* Measured in dark (research/21 §1e): the selection bar and the database menus (§1a). */
     --blok-database-table-selection-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
@@ -612,7 +612,7 @@
     --blok-database-source-picker-border: rgba(255, 255, 235, 0.1);
     --blok-database-tab-text: rgb(173, 169, 163);
     --blok-database-tab-text-active: rgb(240, 239, 237);
-    --blok-database-card-actions-bg: var(--blok-database-table-open-bg);
+    --blok-database-card-actions-bg: var(--blok-database-popover-bg);
   /* Card action pill shadow: research/21 §1f. */
   --blok-database-card-actions-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
     --blok-database-card-actions-icon: rgb(173, 169, 163);
@@ -737,7 +737,7 @@
   --blok-database-panel-row-active-bg: rgba(255, 255, 255, 0.11);
   --blok-database-confirm-close-bg: rgba(255, 255, 243, 0.082);
   --blok-database-ai-prompt-placeholder: var(--blok-database-ink-tertiary);
-  --blok-database-table-open-bg: rgb(37, 37, 37);
+  --blok-database-table-open-bg: rgb(32, 32, 32);
   --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   /* Measured in dark (research/21 §1e): the selection bar and the database menus (§1a). */
   --blok-database-table-selection-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
@@ -892,7 +892,7 @@
   --blok-database-source-picker-border: rgba(255, 255, 235, 0.1);
   --blok-database-tab-text: rgb(173, 169, 163);
   --blok-database-tab-text-active: rgb(240, 239, 237);
-  --blok-database-card-actions-bg: var(--blok-database-table-open-bg);
+  --blok-database-card-actions-bg: var(--blok-database-popover-bg);
   /* Card action pill shadow: research/21 §1f. */
   --blok-database-card-actions-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   --blok-database-card-actions-icon: rgb(173, 169, 163);
@@ -7905,7 +7905,7 @@ textarea[data-blok-database-cell-input] {
   gap: var(--blok-space-0-25);
   height: 32px;
   border-radius: var(--blok-radius-control);
-  background-color: var(--blok-database-table-open-bg);
+  background-color: var(--blok-database-popover-bg);
   box-shadow: var(--blok-database-table-selection-shadow);
 }
 

@@ -44,6 +44,24 @@ describe('assistant bar: the note after an edit', () => {
     await waitFor(() => expect(summaryOf(bar)).toBe('Added a paragraph and a callout about saving water.'));
   });
 
+  it('never shows a lead-in to a list it hides: the note must make sense alone', async () => {
+    bar.render({ kind: 'answered', reply: 'Добавил в статью разные блоки:\n- Заголовок\n- Цитату', changed: true, edited: true });
+
+    await waitFor(() => expect(summaryOf(bar)).toBe('assistant.edited'));
+  });
+
+  it('treats a full-width colon as a lead-in too', async () => {
+    bar.render({ kind: 'answered', reply: '我添加了以下内容：\n- 标题', changed: true, edited: true });
+
+    await waitFor(() => expect(summaryOf(bar)).toBe('assistant.edited'));
+  });
+
+  it('never shows a list item as the note', async () => {
+    bar.render({ kind: 'answered', reply: '- Added a heading\n- Added a quote', changed: true, edited: true });
+
+    await waitFor(() => expect(summaryOf(bar)).toBe('assistant.edited'));
+  });
+
   it('never cuts the answer to a question', async () => {
     const reply = 'The page talks about water shortages in southern Europe and how saving water is the cheapest source.';
 

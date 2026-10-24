@@ -125,6 +125,7 @@
   "assistant.continue": "ດຳເນີນການຕໍ່",
   "assistant.insert": "ແຊກ",
   "assistant.inserted": "ເພີ່ມໃສ່ໜ້າແລ້ວ.",
+  "assistant.edited": "ອັບເດດໜ້າແລ້ວ.",
   "assistant.actions": "ຄຳແນະນຳ",
   "assistant.action.improve": "ປັບປຸງການຂຽນ",
   "assistant.action.proofread": "ແກ້ການສະກົດ ແລະ ໄວຍາກອນ",

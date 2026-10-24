@@ -170,6 +170,7 @@
   "assistant.continue": "Продължи",
   "assistant.insert": "Вмъкни",
   "assistant.inserted": "Добавено в страницата.",
+  "assistant.edited": "Страницата е обновена.",
   "assistant.actions": "Предложения",
   "assistant.action.improve": "Подобри текста",
   "assistant.action.proofread": "Поправи правописа и граматиката",

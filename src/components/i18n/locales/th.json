@@ -136,6 +136,7 @@
   "assistant.continue": "ดำเนินการต่อ",
   "assistant.insert": "แทรก",
   "assistant.inserted": "เพิ่มลงในหน้าแล้ว",
+  "assistant.edited": "อัปเดตหน้าแล้ว",
   "assistant.actions": "คำแนะนำ",
   "assistant.action.improve": "ปรับปรุงการเขียน",
   "assistant.action.proofread": "แก้คำสะกดและไวยากรณ์",

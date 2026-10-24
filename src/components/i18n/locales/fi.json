@@ -142,6 +142,7 @@
   "assistant.continue": "Jatka",
   "assistant.insert": "Lisää",
   "assistant.inserted": "Lisätty sivulle.",
+  "assistant.edited": "Sivu päivitetty.",
   "assistant.actions": "Ehdotukset",
   "assistant.action.improve": "Paranna tekstiä",
   "assistant.action.proofread": "Korjaa oikeinkirjoitus ja kielioppi",

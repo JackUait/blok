@@ -170,6 +170,7 @@
   "assistant.continue": "続行",
   "assistant.insert": "挿入",
   "assistant.inserted": "ページに追加しました。",
+  "assistant.edited": "ページを更新しました。",
   "assistant.actions": "候補",
   "assistant.action.improve": "文章を改善",
   "assistant.action.proofread": "スペルと文法を修正",

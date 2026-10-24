@@ -85,6 +85,8 @@ const WINDOW_EDGE = 16;
 /** The actions row unfolds, and folds after a beat, so the chips fade first. */
 const UNFOLD = { duration: 260, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' };
 const FOLD = { duration: 340, delay: 60, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' };
+/** One short beat: the bar fades while the page closes its gap, so nobody waits on it. */
+const EXIT = { duration: 140, easing: 'ease-out' };
 
 const canMove = (element: HTMLElement): boolean => typeof element.animate === 'function'
   && !(typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -112,6 +114,9 @@ const splitReply = (reply: string): { summary: string; rest: string } => {
     ? { summary: text, rest: '' }
     : { summary: text.slice(0, end).trim(), rest: text.slice(end + 1).trim() };
 };
+
+/** A line that leads into a list, or is a list item or heading: it does not make sense alone. */
+const LEAD_IN = /[:：]$|^(?:[-*+]|\d+[.)]|#+)\s/;
 
 const BLOCK_WRAPPERS = new Set(['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'UL', 'OL', 'LI', 'BLOCKQUOTE']);
 
@@ -205,6 +210,10 @@ export class AssistantBar {
   private readonly actions: HTMLElement;
   /** The actions row's height while it unfolds or folds; the bar's gap follows it. */
   private actionsMotion: Animation | null = null;
+  /** The bar's fade while it leaves. */
+  private leaving: Animation | null = null;
+  /** The gap the bar held, shrinking; it may outlast the fade. */
+  private gapMotion: Animation | null = null;
   private readonly thinking: HTMLButtonElement;
   private readonly slots: HTMLElement;
   /** The block the slots sit under; null: under the bar. */
@@ -312,7 +321,7 @@ export class AssistantBar {
   }
 
   public get isOpen(): boolean {
-    return !this.element.hidden;
+    return !this.element.hidden && this.leaving === null;
   }
 
   /** The anchor holder the bar sits under, while open. */
@@ -340,6 +349,9 @@ export class AssistantBar {
     if (!this.element.isConnected) {
       document.body.appendChild(this.element);
     }
+    this.endLeaving();
+    this.gapMotion?.cancel();
+    this.gapMotion = null;
     // The draft first: a bar that opens with text must not unfold the actions and fold them at once.
     if (this.view.kind === 'prompt' && this.field.value === '') {
       this.field.value = this.draft;
@@ -359,14 +371,76 @@ export class AssistantBar {
   }
 
   public close(): void {
-    this.element.hidden = true;
+    if (this.leaving !== null) {
+      return;
+    }
+
+    const holder = this.anchor;
+    const held = holder === null ? 0 : gapSize(holder);
+    const moving = holder !== null && this.isOpen && canMove(this.element);
+    const covered = holder?.hasAttribute(DATA_ATTR.aiReplaced) === true;
+
     this.thinkingMenu?.hide();
     // A follow-up typed after an answer belongs to that run, which ends here.
     this.draft = this.view.kind === 'prompt' ? this.field.value : '';
+    this.release();
+    if (moving) {
+      this.leave(holder, held, covered);
+    } else {
+      this.hide();
+    }
+  }
+
+  /**
+   * Fade the bar out while the page closes the gap it held.
+   * @param holder - the anchor holder, its gap already released
+   * @param held - the gap it held, in px
+   * @param covered - the bar sat over this block, which shows again from now
+   */
+  private leave(holder: HTMLElement, held: number, covered: boolean): void {
+    const rest = parseFloat(getComputedStyle(holder).marginBlockEnd) || 0;
+
+    if (held > 0 && held !== rest) {
+      const gap = holder.animate([{ marginBlockEnd: `${held}px` }, { marginBlockEnd: `${rest}px` }], EXIT);
+
+      this.gapMotion = gap;
+      gap.onfinish = () => {
+        if (this.gapMotion === gap) {
+          this.gapMotion = null;
+        }
+      };
+    }
+    // Shown now, not after the fade: the caret goes back into it, and a hidden block takes no focus.
+    if (covered) {
+      holder.querySelector(`[${DATA_ATTR.elementContent}]`)?.animate([{ opacity: 0 }, { opacity: 1 }], EXIT);
+    }
+
+    const fade = this.element.animate([{ opacity: 1 }, { opacity: 0 }], { ...EXIT, fill: 'forwards' });
+
+    this.element.inert = true;
+    this.leaving = fade;
+    fade.onfinish = () => {
+      if (this.leaving === fade) {
+        this.endLeaving();
+      }
+    };
+  }
+
+  private endLeaving(): void {
+    if (this.leaving === null) {
+      return;
+    }
+    this.leaving.cancel();
+    this.leaving = null;
+    this.element.inert = false;
+    this.hide();
+  }
+
+  private hide(): void {
+    this.element.hidden = true;
     this.field.value = '';
     removeFromTopLayer(this.element);
     this.render({ kind: 'prompt' });
-    this.release();
   }
 
   /**

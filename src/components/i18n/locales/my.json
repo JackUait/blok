@@ -159,6 +159,7 @@
   "assistant.continue": "ဆက်လုပ်ရန်",
   "assistant.insert": "ထည့်သွင်းရန်",
   "assistant.inserted": "စာမျက်နှာထဲ ထည့်ပြီးပါပြီ။",
+  "assistant.edited": "စာမျက်နှာကို ပြင်ဆင်ပြီးပါပြီ။",
   "assistant.actions": "အကြံပြုချက်များ",
   "assistant.action.improve": "အရေးအသား ပိုကောင်းအောင်လုပ်ရန်",
   "assistant.action.proofread": "စာလုံးပေါင်းနှင့် သဒ္ဒါ ပြင်ရန်",

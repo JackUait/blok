@@ -142,6 +142,7 @@
   "assistant.continue": "继续",
   "assistant.insert": "插入",
   "assistant.inserted": "已添加到页面。",
+  "assistant.edited": "已更新页面。",
   "assistant.actions": "建议",
   "assistant.action.improve": "改进写作",
   "assistant.action.proofread": "修正拼写和语法",

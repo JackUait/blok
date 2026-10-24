@@ -173,6 +173,7 @@
   "assistant.continue": "Continue",
   "assistant.insert": "Insert",
   "assistant.inserted": "Added to the page.",
+  "assistant.edited": "Updated the page.",
   "assistant.actions": "Suggestions",
   "assistant.action.improve": "Improve writing",
   "assistant.action.proofread": "Fix spelling and grammar",

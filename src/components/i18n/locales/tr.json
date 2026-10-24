@@ -136,6 +136,7 @@
   "assistant.continue": "Devam",
   "assistant.insert": "Ekle",
   "assistant.inserted": "Sayfaya eklendi.",
+  "assistant.edited": "Sayfa güncellendi.",
   "assistant.actions": "Öneriler",
   "assistant.action.improve": "Yazımı iyileştir",
   "assistant.action.proofread": "Yazım ve dilbilgisini düzelt",

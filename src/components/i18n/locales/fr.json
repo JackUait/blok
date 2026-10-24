@@ -142,6 +142,7 @@
   "assistant.continue": "Continuer",
   "assistant.insert": "Insérer",
   "assistant.inserted": "Ajouté à la page.",
+  "assistant.edited": "Page mise à jour.",
   "assistant.actions": "Suggestions",
   "assistant.action.improve": "Améliorer la rédaction",
   "assistant.action.proofread": "Corriger l’orthographe et la grammaire",

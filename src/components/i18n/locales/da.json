@@ -170,6 +170,7 @@
   "assistant.continue": "Fortsæt",
   "assistant.insert": "Indsæt",
   "assistant.inserted": "Tilføjet til siden.",
+  "assistant.edited": "Siden er opdateret.",
   "assistant.actions": "Forslag",
   "assistant.action.improve": "Forbedr teksten",
   "assistant.action.proofread": "Ret stavning og grammatik",

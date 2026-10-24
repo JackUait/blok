@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, within } from '@testing-library/dom';
 
 import { AssistantBar } from '../../../../../src/components/modules/assistant/assistant-bar';
+import { gapSize } from '../../../../../src/components/modules/assistant/gap';
 
 const callbacks = {
   onSubmit: vi.fn(),
@@ -25,10 +26,13 @@ const ACTIONS = [
 
 /** The chips' row at full height, in px. */
 const FULL = 38;
+/** The field row, in px. */
+const ROW = 44;
 
 interface Motion {
   target: Element;
   keyframes: Keyframe[];
+  options: KeyframeAnimationOptions;
   onfinish: ((event: AnimationPlaybackEvent) => void) | null;
   cancel: () => void;
   cancelled: boolean;
@@ -64,10 +68,11 @@ describe('assistant bar: the actions row unfolds and folds', () => {
     Object.defineProperty(HTMLElement.prototype, 'animate', {
       configurable: true,
       writable: true,
-      value(this: Element, keyframes: Keyframe[]): Animation {
+      value(this: Element, keyframes: Keyframe[], options: KeyframeAnimationOptions): Animation {
         const motion: Motion = {
           target: this,
           keyframes,
+          options,
           onfinish: null,
           cancelled: false,
           cancel() {
@@ -81,6 +86,10 @@ describe('assistant bar: the actions row unfolds and folds', () => {
       },
     });
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (this.matches('[data-blok-assistant]')) {
+        return new DOMRect(0, 0, 600, ROW + FULL);
+      }
+
       return new DOMRect(0, 0, 600, this.matches('[data-blok-assistant-actions]') ? FULL : 0);
     });
 
@@ -160,5 +169,96 @@ describe('assistant bar: the actions row unfolds and folds', () => {
 
     expect(groupMotions()).toHaveLength(0);
     expect(group().hidden).toBe(true);
+  });
+
+  describe('closing', () => {
+    const motionOf = (target: Element): Motion => [...motions].reverse().find((motion) => motion.target === target) ?? fail('it did not move');
+
+    beforeEach(() => {
+      finish(last());
+      bar.close();
+      motions = [];
+      // In place: the bar covers the empty block and holds a gap only for the chips.
+      bar.open(anchor, { left: 0, width: 600 }, true);
+      finish(last());
+    });
+
+    it('fades out in one short beat: opacity only, closed and untouchable meanwhile', () => {
+      bar.close();
+
+      const fade = motionOf(bar.element);
+
+      expect(bar.element.hidden).toBe(false);
+      expect(bar.isOpen).toBe(false);
+      expect(bar.element.inert).toBe(true);
+      expect(Number(fade.options.duration)).toBeLessThanOrEqual(160);
+      expect(fade.options.delay ?? 0).toBe(0);
+      expect(fade.keyframes.at(-1)?.opacity).toBe(0);
+      fade.keyframes.forEach((keyframe) => {
+        expect(keyframe.transform).toBeUndefined();
+        expect(keyframe.filter).toBeUndefined();
+      });
+
+      finish(fade);
+
+      expect(bar.element.hidden).toBe(true);
+      expect(bar.element.inert).toBe(false);
+    });
+
+    it('hands the covered block back at once, so the caret can return to it, and fades it in with the bar', () => {
+      const content = document.createElement('div');
+
+      content.setAttribute('data-blok-element-content', '');
+      anchor.append(content);
+      bar.close();
+
+      // A hidden block cannot take focus back.
+      expect(anchor.hasAttribute('data-blok-ai-replaced')).toBe(false);
+      expect(motionOf(content).keyframes[0]?.opacity).toBe(0);
+      expect(motionOf(content).options.duration).toBe(motionOf(bar.element).options.duration);
+    });
+
+    it('closes the gap in the same beat as the fade, with no fold first', () => {
+      const held = gapSize(anchor);
+
+      expect(held).toBe(FULL);
+      bar.close();
+
+      const gap = motionOf(anchor);
+      const fade = motionOf(bar.element);
+
+      expect(gapSize(anchor)).toBe(0);
+      expect(gap.keyframes[0]?.marginBlockEnd).toBe(`${held}px`);
+      expect(gap.keyframes.at(-1)?.marginBlockEnd).toBe('0px');
+      expect(gap.options).toMatchObject({ duration: fade.options.duration, easing: fade.options.easing });
+      expect(gap.options.delay ?? 0).toBe(0);
+      expect(groupMotions()).toHaveLength(0);
+    });
+
+    it('opening again cuts the exit short', () => {
+      bar.close();
+      const fade = motionOf(bar.element);
+      const gap = motionOf(anchor);
+
+      bar.open(anchor, { left: 0, width: 600 }, true);
+
+      expect(fade.cancelled).toBe(true);
+      expect(gap.cancelled).toBe(true);
+      expect(bar.isOpen).toBe(true);
+      expect(bar.element.inert).toBe(false);
+
+      finish(fade);
+      expect(bar.element.hidden).toBe(false);
+    });
+
+    it('vanishes at once with reduced motion', () => {
+      vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduce') }));
+      motions = [];
+
+      bar.close();
+
+      expect(bar.element.hidden).toBe(true);
+      expect(motions).toHaveLength(0);
+    });
   });
 });

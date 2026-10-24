@@ -136,6 +136,7 @@
   "assistant.continue": "გაგრძელება",
   "assistant.insert": "ჩასმა",
   "assistant.inserted": "დაემატა გვერდზე.",
+  "assistant.edited": "გვერდი განახლდა.",
   "assistant.actions": "შემოთავაზებები",
   "assistant.action.improve": "ტექსტის გაუმჯობესება",
   "assistant.action.proofread": "მართლწერისა და გრამატიკის გასწორება",

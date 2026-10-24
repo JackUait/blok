@@ -15,7 +15,7 @@ export const BUILT_IN_INLINE_DESCRIPTIONS: Readonly<Record<string, () => InlineT
   strikethrough: mark('strikethrough', 'Struck-through text. The "strikethrough" mark.'),
   inlineCode: mark('code', 'Inline code. The "code" mark.'),
   marker: () => ({
-    summary: 'Text colour, background colour or a plain highlight. Colours are a preset name or any CSS colour.',
+    summary: 'Text colour, background colour or a plain highlight. Colours are a preset name; hex, rgb and hsl snap to the nearest preset.',
     effect: { marks: ['color', 'background', 'highlight'], value: { type: ['string', 'boolean'] } },
   }),
   link: () => ({

@@ -370,7 +370,7 @@
                         "items": {
                           "type": "string"
                         },
-                        "description": "Mark names to clear. \"*\" clears every mark first; set then applies."
+                        "description": "To remove a mark, list it here. \"*\" clears all, \"tag:*\" custom marks; set then applies."
                       }
                     },
                     "required": [

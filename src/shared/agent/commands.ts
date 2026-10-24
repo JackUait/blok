@@ -100,7 +100,7 @@ export const COMMANDS: Record<CoreCommandName, CoreCommandSpec> = {
   'text.replace': write('Replace a range, or the whole field.', obj({ id, field: { type: 'string' }, range, with: richOrString }, ['id', 'with'])),
   'text.format': write('Set or clear marks on a range.', obj({
     id, field: { type: 'string' }, range, set: RICH_TEXT_MARKS,
-    unset: { type: 'array', items: { type: 'string' }, description: 'Mark names to clear. "*" clears every mark first; set then applies.' },
+    unset: { type: 'array', items: { type: 'string' }, description: 'To remove a mark, list it here. "*" clears all, "tag:*" custom marks; set then applies.' },
   }, ['id', 'range'])),
   'markdown.insert': write('Convert Markdown into blocks and insert them. Additive.', obj({
     markdown: { type: 'string', description: 'Gives bold, italic, strikethrough, inline code and links. '

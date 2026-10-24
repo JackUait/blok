@@ -258,11 +258,14 @@ const blockEntry = (
 /** Tags the segment reader turns into built-in marks, so a `tag:` mark on them would not survive a save. */
 const BUILT_IN_MARK_TAGS = new Set(['strong', 'b', 'em', 'i', 'u', 's', 'del', 'strike', 'code', 'sup', 'sub', 'a', 'mark', 'br']);
 
-/** A `tag:` mark's attributes: the ones the tool's rule names, or any string attribute for `true` and function rules. */
+/**
+ * A `tag:` mark's attributes: the ones the tool's rule names. Others stay allowed here, because a read
+ * can return them and writing that text back must not fail; the sanitizer drops them.
+ */
 const tagMarkValue = (rule: CustomInlineSanitizeRule | undefined): BlokSchema => (isRecord(rule)
   ? {
     type: 'object',
-    additionalProperties: false,
+    additionalProperties: { type: 'string' },
     properties: Object.fromEntries(Object.entries(rule).flatMap(([attribute, allowed]): Array<[string, BlokSchema]> => {
       if (allowed === false) {
         return [];

@@ -161,21 +161,29 @@ describe('MCP with a custom inline tool in the custom tools file (stored)', () =
     expect(result.warnings).toBeUndefined();
   });
 
-  it('writes the custom mark with its declared attribute, and refuses an undeclared one by name', async () => {
+  it('writes the custom mark with its declared attribute and drops an undeclared one', async () => {
     const { connection, saved } = await storedServer();
     const handle = handleOf(await connection.call('blok_open', { documentId: 'doc', write: true }));
-    const refused = await connection.call('blok_execute', { handle, commands: [
+    const result = await connection.call('blok_execute', { handle, commands: [
       { name: 'block.insert', args: { type: 'paragraph', id: 'p', data: { text: 'Press Ctrl' } } },
-      { name: 'text.format', args: { id: 'p', range: { find: 'Ctrl' }, set: { 'tag:kbd': { 'data-other': 'x' } } } },
-    ] });
-    const written = await connection.call('blok_execute', { handle, commands: [
-      { name: 'block.insert', args: { type: 'paragraph', id: 'p', data: { text: 'Press Ctrl' } } },
-      { name: 'text.format', args: { id: 'p', range: { find: 'Ctrl' }, set: { 'tag:kbd': { 'data-key': 'ctrl' } } } },
+      { name: 'text.format', args: { id: 'p', range: { find: 'Ctrl' }, set: { 'tag:kbd': { 'data-key': 'ctrl', 'data-other': 'x' } } } },
     ] });
 
-    expect(refused.error).toMatchObject({ code: 'INVALID_ARGS', message: expect.stringContaining('accepted fields: data-key') });
-    expect(written.error).toBeUndefined();
+    expect(result.error).toBeUndefined();
     expect(saved()).toEqual([{ id: 'p', text: [{ text: 'Press ' }, { text: 'Ctrl', marks: { 'tag:kbd': { 'data-key': 'ctrl' } } }] }]);
+  });
+
+  it('accepts read text back when a stored mark carries an attribute the tool does not declare', async () => {
+    const { connection, saved } = await storedServer({ blocks: [{ id: 'p', type: 'paragraph', data: { text: [
+      { text: 'Ctrl', marks: { 'tag:kbd': { 'data-key': 'ctrl', 'data-old': 'x' } } },
+    ] } }] });
+    const handle = handleOf(await connection.call('blok_open', { documentId: 'doc', write: true }));
+    const result = await connection.call('blok_execute', { handle, commands: [
+      { name: 'block.update', args: { id: 'p', data: { text: [{ text: 'Ctrl', marks: { 'tag:kbd': { 'data-key': 'ctrl', 'data-old': 'x' } } }] } } },
+    ] });
+
+    expect(result.error).toBeUndefined();
+    expect(saved()).toEqual([{ id: 'p', text: [{ text: 'Ctrl', marks: { 'tag:kbd': { 'data-key': 'ctrl' } } }] }]);
   });
 
   it('tells the model about the custom mark in the tool list and in blok_describe', async () => {

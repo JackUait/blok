@@ -44,13 +44,14 @@ export const createActionContext = (state: PlanState, block: SnapBlock | undefin
       return found === undefined ? null : view(found);
     },
     insert: input => {
-      const { parentId, position, ...spec } = input;
+      const { parentId, position, copy, ...spec } = input;
 
       claimMinted(spec.children ?? []);
       const placement = state.place(parentId, position ?? 'end');
-      const planned = buildPlannedBlock(state, spec, { id: placement.parentId }, '', false, undefined, {
+      const build = (): PlannedBlock => buildPlannedBlock(state, spec, { id: placement.parentId }, '', false, undefined, {
         allowSelfPlaced: true, tool, isScopedContainer,
       });
+      const planned = copy === true ? state.copyStored(build) : build();
       const nodes: Array<{ block: PlannedBlock; path: string }> = [{ block: planned, path: '' }];
 
       for (const node of nodes) {

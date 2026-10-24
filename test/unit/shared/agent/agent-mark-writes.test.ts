@@ -1,7 +1,9 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { openJsonSession, openStoreSession } from '../../agent/harness';
+import { createDocumentAgentSession } from '../../../../src/shared/agent';
+import { createHeadlessAgentSetup, loadStoredDocument } from '../../../../src/view/agent-runtime';
+import { openJsonSession, openStoreSession, TEST_ACTOR } from '../../agent/harness';
 
 import type { AgentBatch, AgentResult, AgentSession, OutputData } from '../../../../types';
 
@@ -480,6 +482,126 @@ describe.each(sessions)('agent mark writes match what a reload shows (%s session
 
       expect(result.ok ? null : result.error).toBeNull();
       expect(texts.filter(text => JSON.stringify(text) === JSON.stringify(stored))).toHaveLength(2);
+      expect(codes(result)).not.toContain('CORRECTED');
+    } finally {
+      await session.close();
+    }
+  });
+
+  it.each<[string, Record<string, unknown>, Record<string, unknown>]>([
+    ['Note', { highlight: true }, { background: 'yellow' }],
+    ['Error', { color: '#ff0000' }, { color: 'red' }],
+    ['site', { link: { href: 'https://e.com' } }, { link: { href: 'https://e.com', target: '_blank', rel: 'nofollow' } }],
+    ['x2', { sup: true, sub: true }, { sup: true }],
+  ])('writes a new "%s" run the same way when an old block holds the same run as stored', async (text, marks, expected) => {
+    const session = open({ blocks: [{ id: 'old', type: 'paragraph', data: { text: [{ text, marks }] } }] });
+
+    try {
+      const result = await run(session, [{ name: 'block.insert', args: { id: 'n', type: 'paragraph', data: { text: [{ text, marks }] } } }]);
+
+      expect(await textOf(session, 'n')).toEqual([{ text, marks: expected }]);
+      expect(await textOf(session, 'old')).toEqual([{ text, marks }]);
+      expect(result.ok).toBe(true);
+    } finally {
+      await session.close();
+    }
+  });
+
+  it('writes a block.update run the same way when another block holds the same run as stored', async () => {
+    const run1 = { text: 'Note', marks: { highlight: true } };
+    const session = open({ blocks: [
+      { id: 'old', type: 'paragraph', data: { text: [run1] } },
+      { id: 'p', type: 'paragraph', data: { text: [{ text: 'Hello' }] } },
+    ] });
+
+    try {
+      await run(session, [{ name: 'block.update', args: { id: 'p', data: { text: [run1] } } }]);
+
+      expect(await textOf(session, 'p')).toEqual([{ text: 'Note', marks: { background: 'yellow' } }]);
+    } finally {
+      await session.close();
+    }
+  });
+
+  it('keeps an old run next to a new run with the same marks as stored when block.update sends it back', async () => {
+    const old = { text: 'old', marks: { highlight: true } };
+    const session = open({ blocks: [{ id: 'p', type: 'paragraph', data: { text: [old] } }] });
+
+    try {
+      await run(session, [{ name: 'block.update', args: { id: 'p', data: { text: [old, { text: ' new', marks: { highlight: true } }] } } }]);
+
+      expect(await textOf(session, 'p')).toEqual([old, { text: ' new', marks: { background: 'yellow' } }]);
+    } finally {
+      await session.close();
+    }
+  });
+
+  it('leaves an old raw-coloured run alone when text.replace and text.insert edit around it', async () => {
+    const old = { text: 'red', marks: { color: '#ff0000' } };
+    const session = open({ blocks: [{ id: 'p', type: 'paragraph', data: { text: [old, { text: ' tail' }] } }] });
+
+    try {
+      await run(session, [
+        { name: 'text.replace', args: { id: 'p', range: { find: 'tail' }, with: 'end' } },
+        { name: 'text.insert', args: { id: 'p', at: 0, text: '> ' } },
+      ]);
+
+      expect(await textOf(session, 'p')).toEqual([{ text: '> ' }, old, { text: ' end' }]);
+    } finally {
+      await session.close();
+    }
+  });
+
+});
+
+// A host's inline tool, so the sanitizer keeps the custom mark and only the agent's checks can refuse it.
+const openWithCustomTool = (doc: OutputData): AgentSession => {
+  const setup = createHeadlessAgentSetup({
+    runtime: 'node',
+    customTools: { formatVersion: 1, blocks: [], inlineTools: [{ name: 'num', sanitize: { span: { 'data-n': true } } }] },
+  });
+
+  return createDocumentAgentSession({
+    document: loadStoredDocument(structuredClone(doc), setup.richTextFieldsFor),
+    tools: setup.tools, contract: setup.contract, actor: TEST_ACTOR, ports: setup.ports, services: {},
+  });
+};
+
+// Stored data an agent could not write as is: a number attribute, and a highlight with no colour.
+const odd = [{ text: 'tagged', marks: { 'tag:span': { 'data-n': 1 } } }, { text: ' old', marks: { highlight: true } }];
+
+describe('stored marks the agent schema would refuse', () => {
+  // The agent's checks must not refuse or rewrite them. What the sanitizer keeps of the number is its own business.
+  const kept = { text: ' old', marks: { highlight: true } };
+
+  it('keeps them when block.update sends the field back as read', async () => {
+    const session = openWithCustomTool({ blocks: [{ id: 'p', type: 'paragraph', data: { text: odd } }] });
+
+    try {
+      const result = await run(session, [{ name: 'block.update', args: { id: 'p', data: { text: await textOf(session, 'p') } } }]);
+
+      expect(result.ok ? null : result.error).toBeNull();
+      expect(await textOf(session, 'p')).toContainEqual(kept);
+      expect(codes(result)).not.toContain('CORRECTED');
+    } finally {
+      await session.close();
+    }
+  });
+
+  it('copies them as they are when block.duplicate copies a block and its children', async () => {
+    const session = openWithCustomTool({ blocks: [
+      { id: 't', type: 'toggle', data: { text: odd }, content: ['c'] },
+      { id: 'c', type: 'paragraph', parent: 't', data: { text: odd } },
+    ] });
+
+    try {
+      const result = await run(session, [{ name: 'block.duplicate', args: { id: 't' } }]);
+      const after = await session.read({ detail: 'full' });
+      const copyId = result.ok ? result.changed.created[0] : '';
+
+      expect(result.ok ? null : result.error).toBeNull();
+      expect(after.blocks.find(block => block.id === copyId)?.data?.text).toContainEqual(kept);
+      expect(after.blocks.find(block => block.parentId === copyId)?.data?.text).toContainEqual(kept);
       expect(codes(result)).not.toContain('CORRECTED');
     } finally {
       await session.close();

@@ -76,7 +76,8 @@ export interface ToolActionContext {
   tool: string;
   block?: { id: string; type: string; data: Readonly<Record<string, unknown>>; children: readonly string[] };
   read(id: string): { id: string; type: string; data: unknown; parentId: string | null; children: readonly string[] } | null;
-  insert(input: { type: string; data?: Record<string, unknown>; parentId?: string | null; position?: BlockPosition; children?: InsertSpec[] }): string;
+  /** `copy`: the data is a copy of stored blocks, kept as stored instead of read as agent input. */
+  insert(input: { type: string; data?: Record<string, unknown>; parentId?: string | null; position?: BlockPosition; children?: InsertSpec[]; copy?: boolean }): string;
   /** Null and undefined remove a key. */
   update(id: string, patch: Record<string, unknown>): void;
   setRichText(id: string, field: string, value: RichText): void;

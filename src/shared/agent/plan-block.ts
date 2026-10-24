@@ -502,7 +502,7 @@ export const emitPatch = (
   const removed = Object.entries(patch).filter(([, value]) => value === null || value === undefined).map(([key]) => key);
   const written = input === undefined ? {} : state.prepareData(
     block.type, Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== null && value !== undefined)),
-    '/data', block.id, { normalize: false, stored }
+    '/data', block.id, { normalize: false, stored, current: block.data }
   );
   const merged = { ...cloneRecord(block.data), ...written };
 
@@ -822,7 +822,7 @@ export const planDuplicate = (state: PlanState, args: Record<string, unknown>): 
       children: block.content.map(id => toSpec(state.requireBlock(id, '/id'))),
     };
   };
-  const planned = buildPlannedBlock(state, toSpec(source), { id: placement.parentId }, '', false);
+  const planned = state.copyStored(() => buildPlannedBlock(state, toSpec(source), { id: placement.parentId }, '', false));
 
   state.emit({ op: 'insert', block: planned, parentId: placement.parentId, afterId: placement.afterId });
 

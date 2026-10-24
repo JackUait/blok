@@ -67,6 +67,7 @@ export class PlanState {
   public lastRange?: TextRangeRef;
 
   private readonly reserved = new Map<string, string>();
+  private copyingStored = false;
   private readonly allocated = new Set<string>();
 
   constructor(
@@ -75,6 +76,18 @@ export class PlanState {
     public readonly warnings: AgentWarning[],
     private readonly stamp: EditStamp
   ) {}
+
+  /** Runs `build` with every rich field read as stored: a copy of stored blocks is not agent input. */
+  public copyStored<T>(build: () => T): T {
+    const previous = this.copyingStored;
+
+    this.copyingStored = true;
+    try {
+      return build();
+    } finally {
+      this.copyingStored = previous;
+    }
+  }
 
   public setCommandIndex(index: number): void {
     this.index = index;
@@ -319,7 +332,7 @@ export class PlanState {
     raw: Record<string, unknown>,
     path: string,
     blockId: string,
-    options: { normalize?: boolean; stored?: readonly string[] } = {}
+    options: { normalize?: boolean; stored?: readonly string[]; current?: Readonly<Record<string, unknown>> } = {}
   ): Record<string, unknown> {
     const tool = this.tool(type);
     const input = cloneRecord(raw);
@@ -334,7 +347,10 @@ export class PlanState {
       const literal = typeof value === 'string' && value !== '' ? [{ text: value }] : [];
       const rich = typeof value === 'string'
         ? literal
-        : this.readRichInput(value, `${path}/${pointerKey(field)}`, blockId, field, options.stored?.includes(field) === true);
+        : this.readRichInput(value, `${path}/${pointerKey(field)}`, blockId, field, {
+          stored: this.copyingStored || options.stored?.includes(field) === true,
+          current: options.current?.[field],
+        });
 
       input[field] = rich;
       if (looksLikeMarkdown(this.ctx.richText.plainText(rich))) {
@@ -356,8 +372,15 @@ export class PlanState {
   /**
    * A `stored` field was rebuilt from the draft, plus input already read here, or
    * by a tool's normalizer: runs the agent did not write keep their marks as stored.
+   * `current` is the field's value before this write: a run equal to one of its runs was sent back as read.
    */
-  private readRichInput(value: unknown, path: string, blockId: string, field: string, stored: boolean): RichText {
+  private readRichInput(
+    value: unknown,
+    path: string,
+    blockId: string,
+    field: string,
+    { stored, current }: { stored: boolean; current: unknown }
+  ): RichText {
     if (!isArray(value)) {
       this.fail('INVALID_ARGS', `"${field}" takes plain text or rich-text segments.`, path);
     }
@@ -385,25 +408,17 @@ export class PlanState {
       this.fail('INVALID_ARGS', 'Expected rich-text segments.', path);
     }
 
+    // Built per field read from this block's own value, so the cost does not grow with the doc.
+    const echoed = new Set(isRichText(current) ? current.filter(segment => segment.marks !== undefined).map(runKey) : []);
     const notes = new Set<string>();
-    const read: RichText = value.map((segment, index) => {
-      if (segment.marks === undefined) {
-        return segment;
+    const resolveLink = this.ctx.ports.resolveLink ?? defaultLinkResolver;
+    const read: RichText = value.flatMap((segment, index) => {
+      // A run sent back as stored keeps its marks, before any check: the agent did not write them.
+      if (segment.marks === undefined || stored || (echoed.size > 0 && echoed.has(runKey(segment)))) {
+        return stored ? [this.withKnownMarks(segment, blockId, field)] : [segment];
       }
 
-      const unknown = Object.keys(segment.marks).filter(key => !KNOWN_MARKS.has(key) && !key.startsWith('tag:'));
-
-      if (unknown.length > 0) {
-        this.warn('UNKNOWN_MARK_DROPPED', `Unknown mark(s) ${unknown.join(', ')} dropped. Marks: ${[...KNOWN_MARKS].join(', ')}, or tag:<name> for a custom inline tool.`, { blockId, field });
-      }
-
-      const known: RichTextMarks = { ...segment.marks };
-
-      unknown.forEach(key => Reflect.deleteProperty(known, key));
-      if (stored) {
-        return { ...segment, marks: known };
-      }
-
+      const known = this.withKnownMarks(segment, blockId, field).marks ?? {};
       const loose = looseMarkInput(known);
       // The same check text.format's `set` gets from its command schema.
       const problem = this.ctx.validate(RICH_TEXT_MARKS, loose.marks)[0];
@@ -414,47 +429,41 @@ export class PlanState {
       loose.notes.forEach(note => notes.add(note));
 
       // Checked against RICH_TEXT_MARKS just above.
-      return { ...segment, marks: loose.marks as RichTextMarks };
-    });
+      const clean = this.ctx.richText.canonicalize([{ ...segment, marks: loose.marks as RichTextMarks }])[0];
 
-    if (stored) {
-      return this.ctx.richText.canonicalize(read);
-    }
-
-    const resolveLink = this.ctx.ports.resolveLink ?? defaultLinkResolver;
-    const kept = this.storedRunKeys();
-    const rich = this.ctx.richText.canonicalize(read).map(segment => {
-      // A run already in the document (a copy, or a field sent back as read) keeps its stored marks.
-      if (segment.marks === undefined || kept.has(runKey(segment))) {
-        return segment;
+      if (clean?.marks === undefined) {
+        return clean === undefined ? [] : [clean];
       }
 
-      const normalized = normalizeAgentMarks(segment.marks, resolveLink);
-      const repaired = dropLinkOnPageMention({ ...segment, marks: normalized.marks });
+      const normalized = normalizeAgentMarks(clean.marks, resolveLink);
+      const repaired = dropLinkOnPageMention({ ...clean, marks: normalized.marks });
 
       [...normalized.notes, ...(repaired.note === undefined ? [] : [repaired.note])].forEach(note => notes.add(note));
 
-      return repaired.segment;
+      return [repaired.segment];
     });
 
     notes.forEach(note => this.warn('CORRECTED', `"${field}": ${note}`, { blockId, field }));
 
-    return this.ctx.richText.canonicalize(rich);
+    return this.ctx.richText.canonicalize(read);
   }
 
-  /** Every marked run the draft holds, keyed by {@link runKey}. */
-  private storedRunKeys(): Set<string> {
-    const runs = this.draft.ids().flatMap(id => {
-      const block = this.draft.get(id);
-      const fields = block === undefined ? [] : this.tool(block.type)?.entry.richTextFields ?? [];
+  /** The segment without marks Blok does not know, with a warning naming them. */
+  private withKnownMarks(segment: RichTextSegment, blockId: string, field: string): RichTextSegment {
+    if (segment.marks === undefined) {
+      return segment;
+    }
 
-      return fields.flatMap(name => {
-        const stored = block?.data[name];
+    const unknown = Object.keys(segment.marks).filter(key => !KNOWN_MARKS.has(key) && !key.startsWith('tag:'));
 
-        return isRichText(stored) ? stored.filter(segment => segment.marks !== undefined) : [];
-      });
-    });
+    if (unknown.length > 0) {
+      this.warn('UNKNOWN_MARK_DROPPED', `Unknown mark(s) ${unknown.join(', ')} dropped. Marks: ${[...KNOWN_MARKS].join(', ')}, or tag:<name> for a custom inline tool.`, { blockId, field });
+    }
 
-    return new Set(runs.map(runKey));
+    const known: RichTextMarks = { ...segment.marks };
+
+    unknown.forEach(key => Reflect.deleteProperty(known, key));
+
+    return { ...segment, marks: known };
   }
 }

@@ -84,14 +84,17 @@ const resolve = (state: PlanState, t: Target, range: TextRange, path: string): {
   }
 };
 
-const input = (state: PlanState, t: Target, value: unknown, path: string, marks?: unknown): RichText => {
+/** `echo`: runs equal to one already in the field keep their stored marks (text.replace sends text back). */
+const input = (state: PlanState, t: Target, value: unknown, path: string, marks?: unknown, echo = false): RichText => {
   const literal = typeof value === 'string' && value !== ''
     ? [{ text: value, ...(marks !== undefined && { marks }) }]
     : [];
   const raw = typeof value === 'string' ? literal : value;
   const clean: unknown = (() => {
     try {
-      return state.prepareData(t.type, { [t.field]: raw }, '', t.id, { normalize: false })[t.field];
+      return state.prepareData(t.type, { [t.field]: raw }, '', t.id, {
+        normalize: false, ...(echo && { current: { [t.field]: t.value } }),
+      })[t.field];
     } catch (error) {
       if (!(error instanceof AgentFailure)) {
         throw error;
@@ -183,7 +186,7 @@ export const planTextDelete = (state: PlanState, args: Record<string, unknown>):
 export const planTextReplace = (state: PlanState, args: Record<string, unknown>): unknown => {
   const t = target(state, args);
   const { start, end } = resolve(state, t, readRange(state, args.range ?? 'all'), '/range');
-  const inserted = input(state, t, args.with, '/with');
+  const inserted = input(state, t, args.with, '/with', undefined, true);
   const length = state.ctx.richText.length(inserted);
   const removed = state.ctx.richText.remove(t.value, start, end);
 

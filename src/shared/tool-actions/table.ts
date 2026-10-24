@@ -64,7 +64,7 @@ const jsonCopy = (value: unknown): Record<string, unknown> =>
 
 export const copyBlockTree = (ctx: ToolActionContext, sourceId: string, parentId: string, position?: BlockPosition): string => {
   const source = ctx.read(sourceId) ?? ctx.fail('PRECONDITION_FAILED', `Block ${sourceId} does not exist.`);
-  const id = ctx.insert({ type: source.type, data: jsonCopy(source.data), parentId, position });
+  const id = ctx.insert({ type: source.type, data: jsonCopy(source.data), parentId, position, copy: true });
 
   source.children.forEach(child => copyBlockTree(ctx, child, id));
 

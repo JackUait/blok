@@ -185,6 +185,39 @@ export class KeyboardController extends Controller {
     KeyboardController.lastActive = this;
   };
 
+  /** Whether the last input was a pointer press rather than a key. */
+  private lastInputWasPointer = false;
+
+  /**
+   * A block whose field lost focus to a key (a field that blurs itself on
+   * Tab or Enter), leaving focus on the page while the block stays current.
+   * Tab from outside the editor must not move that block.
+   */
+  private blockLeftByKey: Block | null = null;
+
+  private readonly pointerdownHandler = (): void => {
+    this.lastInputWasPointer = true;
+    this.blockLeftByKey = null;
+  };
+
+  private readonly focusoutHandler = (event: Event): void => {
+    const { currentBlock } = this.Blok.BlockManager;
+    const target = event.target;
+
+    // A focusin inside the editor follows and clears the mark, so focus that moves on within the editor never counts.
+    if (this.lastInputWasPointer || currentBlock === undefined || !(target instanceof Element)) {
+      return;
+    }
+
+    if (currentBlock.holder.contains(target) && (isInsideEditable(target) || target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) {
+      this.blockLeftByKey = currentBlock;
+    }
+  };
+
+  private readonly focusinHandler = (): void => {
+    this.blockLeftByKey = null;
+  };
+
   private readonly redactorBeforeinputHandler = (event: Event): void => {
     if (event instanceof InputEvent && (event.inputType === 'historyUndo' || event.inputType === 'historyRedo')) {
       this.handleNativeHistory(event);
@@ -297,6 +330,9 @@ export class KeyboardController extends Controller {
     if (this.wrapperElement) {
       this.readOnlyMutableListeners.on(this.wrapperElement, 'pointerdown', this.markActiveHandler, true);
       this.readOnlyMutableListeners.on(this.wrapperElement, 'focusin', this.markActiveHandler, true);
+      this.readOnlyMutableListeners.on(this.wrapperElement, 'focusout', this.focusoutHandler);
+      this.readOnlyMutableListeners.on(this.wrapperElement, 'focusin', this.focusinHandler);
+      this.readOnlyMutableListeners.on(document, 'pointerdown', this.pointerdownHandler, true);
     }
   }
 
@@ -326,6 +362,8 @@ export class KeyboardController extends Controller {
     if (this.isDisabled) {
       return;
     }
+
+    this.lastInputWasPointer = false;
 
     const target = event.target;
     const key = shortcutLetter(event);
@@ -1047,6 +1085,12 @@ export class KeyboardController extends Controller {
      * Otherwise, let the default behavior handle it (e.g., toolbar navigation)
      */
     if (!BlockSelection.anyBlockSelected) {
+      if (this.isTabAfterKeyLeftBlock(event)) {
+        event.preventDefault();
+
+        return;
+      }
+
       this.handleDefault(event);
 
       return;
@@ -1068,6 +1112,15 @@ export class KeyboardController extends Controller {
      */
     event.preventDefault();
     event.stopPropagation();
+  }
+
+  /** Tab from outside the editor while the current block is one a key just left. */
+  private isTabAfterKeyLeftBlock(event: KeyboardEvent): boolean {
+    const { currentBlock } = this.Blok.BlockManager;
+    const target = event.target;
+    const fromOutside = !(target instanceof Node) || this.wrapperElement?.contains(target) !== true;
+
+    return fromOutside && currentBlock !== undefined && currentBlock === this.blockLeftByKey;
   }
 
   /**

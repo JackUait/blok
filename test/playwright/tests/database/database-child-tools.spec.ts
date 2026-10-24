@@ -84,6 +84,35 @@ test('Tab on the paragraph right after a database does not nest it', async ({ pa
   expect((await savedBlock(page, 'db-1'))?.content).toEqual(['r1']);
 });
 
+test('Tab after editing the database title leaves the database where it is', async ({ page }) => {
+  await mount(page, [{ id: 'above', type: 'paragraph', data: { text: 'Above' } }, ...database()] as OutputBlockData[]);
+  await expect(page.getByRole('grid')).toBeVisible();
+
+  await page.locator('[data-blok-database-title]').click();
+  await page.keyboard.press('End');
+  await page.keyboard.press('Tab');
+  await expect(page.locator('[data-blok-database-title]')).not.toBeFocused();
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
+
+  expect((await savedBlock(page, 'db-1'))?.parent ?? null).toBeNull();
+  expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
+});
+
+test('Tab after clicking a divider still nests it under the block above', async ({ page }) => {
+  await mount(page, [
+    { id: 'above', type: 'paragraph', data: { text: 'Above' } },
+    { id: 'hr', type: 'divider', data: {} },
+  ] as OutputBlockData[]);
+  await page.locator('[contenteditable="true"]', { hasText: 'Above' }).click();
+  await page.keyboard.press('End');
+  await page.locator(`[data-blok-id="hr"]`).click();
+  await page.keyboard.press('Tab');
+
+  expect((await savedBlock(page, 'hr'))?.parent).toBe('above');
+});
+
 test('Tab on the paragraph right after a tabs block does not nest it', async ({ page }) => {
   await mount(page, [
     { id: 'tabs1', type: 'tabs', data: {}, content: ['t1'] },

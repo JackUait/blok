@@ -1583,6 +1583,68 @@ describe('KeyboardController — mutation coverage', () => {
     });
   });
 
+  describe('Tab after the caret left the current block', () => {
+    const blockWithField = (redactor: HTMLElement, state: EditorState): HTMLElement => {
+      const block = makeBlock('db');
+      const field = document.createElement('div');
+
+      field.setAttribute('contenteditable', 'true');
+      field.tabIndex = 0;
+      block.holder.appendChild(field);
+      redactor.appendChild(block.holder);
+      Object.assign(state, { currentBlock: block });
+
+      return field;
+    };
+
+    it('does not move the block when a key blurred its field and Tab comes from outside', () => {
+      const harness = enabledHarness();
+      const field = blockWithField(harness.redactor, harness.state);
+
+      field.focus();
+      harness.press(field, { key: 'Tab' });
+      field.blur();
+
+      const { event } = harness.press(document.body, { key: 'Tab' });
+      const shifted = harness.press(document.body, { key: 'Tab', shiftKey: true });
+
+      expect(harness.blok.BlockEvents.keydown).not.toHaveBeenCalledWith(event);
+      expect(harness.blok.BlockEvents.keydown).not.toHaveBeenCalledWith(shifted.event);
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('still forwards Tab when a click made the block current', () => {
+      const harness = enabledHarness();
+      const field = blockWithField(harness.redactor, harness.state);
+
+      field.focus();
+      harness.press(field, { key: 'a' });
+      field.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      field.blur();
+
+      const { event } = harness.press(document.body, { key: 'Tab' });
+
+      expect(harness.blok.BlockEvents.keydown).toHaveBeenCalledWith(event);
+    });
+
+    it('forwards Tab again once the caret is back in the block', () => {
+      const harness = enabledHarness();
+      const field = blockWithField(harness.redactor, harness.state);
+
+      field.focus();
+      harness.press(field, { key: 'Tab' });
+      field.blur();
+      field.focus();
+      harness.press(field, { key: 'Escape' });
+      field.blur();
+      harness.state.currentBlock = makeBlock('other');
+
+      const { event } = harness.press(document.body, { key: 'Tab' });
+
+      expect(harness.blok.BlockEvents.keydown).toHaveBeenCalledWith(event);
+    });
+  });
+
   describe('undo and redo', () => {
     it('undoes on Ctrl+Z and swallows the keystroke', () => {
       const harness = enabledHarness();

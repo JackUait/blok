@@ -28034,31 +28034,12 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   --blok-ask-ai-index: 0;
 }
 
-[data-blok-ask-ai-glyph] {
-  display: grid;
-  place-items: center;
-}
-
 [data-blok-ask-ai-open]:hover stop, [data-blok-ask-ai-open][data-blok-focused="true"] stop {
   stop-color: var(--blok-ai-hue-1);
 }
 
 [data-blok-ask-ai-seam] {
   overflow: hidden;
-}
-
-[data-blok-ask-ai-skills] {
-  position: relative;
-  isolation: isolate;
-}
-
-[data-blok-ask-ai-skills]::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: radial-gradient(60% 45% at 15% 100%, color-mix(in srgb, var(--blok-ai-hue-1) 12%, transparent), transparent 70%), radial-gradient(55% 45% at 60% 105%, color-mix(in srgb, var(--blok-ai-hue-2) 10%, transparent), transparent 70%), radial-gradient(50% 40% at 95% 95%, color-mix(in srgb, var(--blok-ai-hue-4) 12%, transparent), transparent 70%);
 }
 
 [@media (prefers-reduced-motion: no-preference)] [data-blok-ask-ai-open]:hover [data-blok-assistant-light], [data-blok-ask-ai-open][data-blok-focused="true"] [data-blok-assistant-light] {
@@ -28103,10 +28084,6 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 [@media (prefers-reduced-motion: no-preference)] [data-blok-ask-ai-toggle] svg {
   transition-duration: 520ms;
   transition-timing-function: cubic-bezier(0.3, 1.6, 0.4, 1);
-}
-
-[@media (prefers-reduced-motion: no-preference)] [data-blok-ask-ai-skills]::before {
-  animation: blok-ask-ai-fade 0.6s ease-out both;
 }
 
 [@media (prefers-reduced-motion: no-preference)] [data-blok-ask-ai-skill] {

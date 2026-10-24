@@ -25,10 +25,6 @@
   to { stroke-dasharray: 1; stroke-dashoffset: 0 }
 }
 
-@keyframes blok-ask-ai-fade {
-  from { opacity: 0 }
-}
-
 @keyframes blok-ask-ai-hop {
   40% { transform: translateY(-1px) }
 }

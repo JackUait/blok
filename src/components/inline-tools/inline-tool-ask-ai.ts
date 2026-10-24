@@ -8,6 +8,7 @@ import { dressSkillIcon } from '../modules/assistant/skill-icons';
 import { generateBlockId } from '../utils/id-generator';
 import { css as popoverItemCls } from '../utils/popover/components/popover-item/popover-item-default/popover-item-default.const';
 import { PopoverItemType } from '../utils/popover';
+import { twMerge } from '../utils/tw';
 
 // Same hover and keyboard-focus tints as the toolbar's own cells.
 const BUTTON = 'flex items-center gap-2 h-7 px-2 rounded-(--blok-radius-inner,var(--blok-radius-control)) text-popover-item-label bg-transparent border-none outline-hidden select-none can-hover:hover:cursor-pointer can-hover:hover:bg-item-hover-bg data-[blok-focused="true"]:bg-item-focus-bg mobile:h-10';
@@ -105,7 +106,7 @@ export class AskAiInlineTool implements InlineTool {
       const skill = this.button(icon === undefined ? undefined : dressSkillIcon(icon), label, () => this.run(prompt));
 
       // The card is five cells wide, so a long label wraps.
-      skill.className = `${BUTTON} h-auto min-h-7 py-1 text-left`;
+      skill.className = `${BUTTON} h-auto min-h-7 py-0.5 text-left`;
       skill.setAttribute('data-blok-ask-ai-skill', '');
       skill.style.setProperty('--blok-ask-ai-index', String(index));
 
@@ -150,7 +151,8 @@ export class AskAiInlineTool implements InlineTool {
     button.type = 'button';
     button.setAttribute('role', 'menuitem');
     button.className = BUTTON;
-    glyph.className = popoverItemCls.icon;
+    // Grid stacks a skill's ink icon and its coloured copy. A host's own .flex would beat a CSS rule.
+    glyph.className = twMerge(popoverItemCls.icon, 'grid place-items-center');
     glyph.setAttribute('aria-hidden', 'true');
     glyph.setAttribute('data-blok-ask-ai-glyph', '');
     // Icons are Blok's own SVG constants, never host input.

@@ -53,6 +53,10 @@ describe('Ask AI menu CSS', () => {
     expect(bodyOf('[data-blok-ask-ai]')).toMatch(/--blok-ai-hue-1:/);
   });
 
+  it('lays no colour wash under the open skills', () => {
+    expect(CSS).not.toMatch(/\[data-blok-ask-ai-skills\]::before/);
+  });
+
   it('keeps every animation and transition inside the motion block, so reduced motion is still', () => {
     const motion = CSS.match(/@media \(prefers-reduced-motion: no-preference\) \{([\s\S]*?)\n\}\n/)?.[1] ?? '';
     const outside = CSS.replace(motion, '').replace(/@keyframes[\s\S]*$/, '');

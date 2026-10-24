@@ -17,12 +17,6 @@
   --blok-ask-ai-index: 0;
 }
 
-/* The ink icon and its coloured copy share one cell (ask-ai-icons.css). */
-[data-blok-ask-ai-glyph] {
-  display: grid;
-  place-items: center;
-}
-
 /* The three stops walk the hue loop, as on the bar's light. */
 [data-blok-ask-ai-open]:hover stop,
 [data-blok-ask-ai-open][data-blok-focused="true"] stop {
@@ -32,24 +26,6 @@
 /* The rule above Ask AI holds a light that runs along it once the card opens. */
 [data-blok-ask-ai-seam] {
   overflow: hidden;
-}
-
-/* The open list rests on a faint wash of the AI hues. */
-[data-blok-ask-ai-skills] {
-  position: relative;
-  isolation: isolate;
-}
-
-[data-blok-ask-ai-skills]::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(60% 45% at 15% 100%, color-mix(in srgb, var(--blok-ai-hue-1) 12%, transparent), transparent 70%),
-    radial-gradient(55% 45% at 60% 105%, color-mix(in srgb, var(--blok-ai-hue-2) 10%, transparent), transparent 70%),
-    radial-gradient(50% 40% at 95% 95%, color-mix(in srgb, var(--blok-ai-hue-4) 12%, transparent), transparent 70%);
 }
 
 /* Only motion below. Reduced motion keeps everything above, still. */
@@ -115,10 +91,6 @@
   }
 
   /* Unfold: rows drop in one after another and each ink icon draws itself. */
-  [data-blok-ask-ai-skills]::before {
-    animation: blok-ask-ai-fade 0.6s ease-out both;
-  }
-
   [data-blok-ask-ai-skill] {
     animation: blok-ask-ai-row-in 420ms cubic-bezier(0.2, 0.9, 0.25, 1.15) both;
     animation-delay: calc(var(--blok-ask-ai-index) * 38ms);
@@ -148,12 +120,6 @@
 @keyframes blok-ask-ai-sweep {
   from {
     transform: translateX(-100%);
-  }
-}
-
-@keyframes blok-ask-ai-fade {
-  from {
-    opacity: 0;
   }
 }
 

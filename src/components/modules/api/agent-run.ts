@@ -11,6 +11,7 @@ import type {
   AgentTurn,
 } from '../../../../types/api';
 import { runAssistantLoop } from '../../../agent/assistant-loop';
+import { isLongNote, shortenNote } from '../../../agent/note';
 
 export interface AgentRunDeps {
   turn: AgentTurn;
@@ -68,6 +69,7 @@ export function createAgentRun(prompt: string | Promise<string>, deps: AgentRunD
       try {
         messages.push({ role: 'user', content: await text });
         const { system, tools } = await setup;
+        const before = deps.changed().join();
         const outcome = await runAssistantLoop({
           model: deps.model,
           system,
@@ -86,7 +88,16 @@ export function createAgentRun(prompt: string | Promise<string>, deps: AgentRunD
           onToolDone: deps.onToolDone,
         });
 
-        return { ...outcome, changed: deps.changed() };
+        const edited = deps.changed().join() !== before;
+
+        if (outcome.status !== 'done' || !edited || !isLongNote(outcome.reply)) {
+          return { ...outcome, changed: deps.changed() };
+        }
+        deps.onActivity?.('thinking');
+
+        const short = await shortenNote(deps.model, outcome.reply, tools, controller.signal);
+
+        return { ...outcome, reply: short ?? outcome.reply, changed: deps.changed() };
       } catch (thrown) {
         return {
           status: 'failed',

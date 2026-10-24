@@ -12,7 +12,7 @@ const IN_APP_RULES = [
   '- Put related edits in one blok_execute call. The user can undo your work with Cmd+Z.',
   '- You cannot move the user\'s caret, selection or scroll.',
   '- When the user asks a question, answer it in your reply. Edit the document only when they ask for a change.',
-  '- After you edit, end with one friendly sentence of under 10 words on what you did, in the user\'s language, like "Added a short paragraph about how YouTube began." Say what, never where: no caret, position, block names or ids. No lists, tables or Markdown.',
+  '- After you edit, your whole reply is one friendly sentence of under 10 words on what you did, in the user\'s language, like "Added a short paragraph about how YouTube began." It must make sense on its own: never end it with a colon, never introduce a list, write nothing before or after it. Say what, never where: no caret, position, block names or ids. No lists, tables or Markdown.',
 ].join('\n');
 
 const PAGE_RULE = '- A page block points at a sub-page with its own document. To write inside one, call blok_read or blok_execute with `page` set to the page block\'s id; there doc.setTitle and doc.setIcon name the sub-page. Insert the page block first if it does not exist.';

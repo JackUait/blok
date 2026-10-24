@@ -24,6 +24,9 @@ const bodyOf = (selector: string): string => rulesFor(selector.match(/data-blok-
   .map(([, body]) => body)
   .join(';');
 
+/** The head once an answer shows in it. */
+const LANDED = '[data-blok-assistant-head]:has([data-blok-assistant-summary]:not([hidden]))';
+
 const PAINT = /(?:^|;)\s*(color|background|background-color)\s*:\s*([^;]+)/g;
 
 const declarations = (token: string): string[] =>
@@ -209,6 +212,40 @@ describe('Ask AI bar colours', () => {
   it('under reduced motion the halo, the Stop arc and the rise-in stay still', () => {
     ['[data-blok-assistant-working] [data-blok-assistant-icon] svg',
       '[data-blok-assistant-send]::before', '[data-blok-assistant-stop]::before', '[data-blok-assistant-keep]::before', '[data-blok-assistant-keep]:hover svg path', '[data-blok-assistant-action]']
+      .forEach((selector) => expect(reducedRule(selector), selector).toMatch(/animation:\s*none/));
+  });
+
+  it('a long answer keeps the rose and the buttons at the top, not centred on the text', () => {
+    expect(bodyOf('[data-blok-assistant-head]')).toMatch(/align-items:\s*flex-start/);
+    expect(bodyOf('[data-blok-assistant-row]')).toMatch(/align-items:\s*center/);
+  });
+
+  it('when the answer lands, the light draws the whole rose once, then sinks back to ink', () => {
+    const bloom = bodyOf(`${LANDED} [data-blok-assistant-light]`);
+    const draw = ASSISTANT_CSS.match(/@keyframes blok-assistant-bloom\s*\{([\s\S]*?\})\s*\}/)?.[1] ?? '';
+
+    expect(bloom).toMatch(/display:\s*inline/);
+    expect(bloom).toMatch(/animation:\s*blok-assistant-bloom\s/);
+    expect(bloom).not.toMatch(/infinite/);
+    expect(draw).toMatch(/stroke-dashoffset:\s*100/);
+    expect(draw).toMatch(/opacity:\s*0/);
+    expect(bodyOf(`${LANDED} [data-blok-assistant-icon] svg`)).toMatch(/animation:\s*blok-assistant-bloom-pop\s[^;]*both/);
+  });
+
+  it('the answer reveals left to right, from soft to sharp, in one pass', () => {
+    const summary = bodyOf('[data-blok-assistant-summary]');
+    const reveal = ASSISTANT_CSS.match(/@keyframes blok-assistant-reveal\s*\{([\s\S]*?\})\s*\}/)?.[1] ?? '';
+
+    expect(summary).toMatch(/mask-image:\s*linear-gradient\(90deg/);
+    expect(summary).toMatch(/animation:\s*blok-assistant-reveal\s[^;]*both/);
+    expect(summary).not.toMatch(/infinite/);
+    expect(reveal).toMatch(/mask-position/);
+    expect(reveal).toMatch(/filter:\s*blur\(/);
+  });
+
+  it('under reduced motion the answer lands still', () => {
+    expect(reducedRule(`${LANDED} [data-blok-assistant-light]`)).toMatch(/display:\s*none/);
+    [`${LANDED} [data-blok-assistant-icon] svg`, '[data-blok-assistant-summary]']
       .forEach((selector) => expect(reducedRule(selector), selector).toMatch(/animation:\s*none/));
   });
 

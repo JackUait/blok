@@ -533,6 +533,52 @@ test.describe('in-editor assistant', () => {
     expect(await savedTexts(page)).toEqual(['The quick brown fox', 'Second', 'Draft one']);
   });
 
+  test('a long answer keeps the rose and the buttons level with its first line', async ({ page }) => {
+    const note = 'Готово: собрал статью «История пиццы: от неаполитанской лепёшки до доставки дроном» с четырьмя фотографиями из Wikimedia, встроенным видео с YouTube, инлайн-ссылками в тексте и блоком «Что почитать и посмотреть» в конце.';
+
+    await setup(page, [insertCall('Draft one'), reply(note)]);
+
+    await page.getByText('Second').click();
+    await page.keyboard.press(`${MOD}+j`);
+
+    const bar = page.getByRole('dialog', { name: 'Ask AI' });
+
+    await bar.getByRole('textbox').fill('Write an article');
+    await page.keyboard.press('Enter');
+
+    const summary = bar.locator('[data-blok-assistant-summary]');
+
+    await expect(summary).toHaveText(note);
+
+    const geometry = await bar.evaluate((element) => {
+      const text = element.querySelector('[data-blok-assistant-summary]');
+      const rose = element.querySelector('[data-blok-assistant-head] [data-blok-assistant-icon]');
+      const keep = element.querySelector('[data-blok-assistant-keep]');
+      const line = text === null ? 0 : parseFloat(getComputedStyle(text).lineHeight);
+      const box = (node: Element | null): DOMRect | undefined => node?.getBoundingClientRect();
+
+      return { line, text: box(text), rose: box(rose), keep: box(keep) };
+    });
+    const middle = (rect: DOMRect | undefined): number => (rect?.top ?? 0) + (rect?.height ?? 0) / 2;
+    const firstLine = (geometry.text?.top ?? 0) + geometry.line / 2;
+
+    expect(geometry.text?.height ?? 0).toBeGreaterThan(geometry.line * 2);
+    expect(Math.abs(middle(geometry.rose) - firstLine)).toBeLessThanOrEqual(2);
+    expect(Math.abs(middle(geometry.keep) - firstLine)).toBeLessThanOrEqual(2);
+
+    // The bloom ends with the whole answer shown, sharp.
+    const settled = await summary.evaluate(async (element) => {
+      await Promise.all(element.getAnimations().map((animation) => animation.finished));
+
+      const style = getComputedStyle(element);
+
+      return { filter: style.filter, mask: style.maskPosition };
+    });
+
+    expect(settled.filter).toMatch(/^(none|blur\(0px\))$/);
+    expect(settled.mask).toMatch(/^0(%|px) 0(%|px)$/);
+  });
+
   test('Discard removes what the assistant wrote', async ({ page }) => {
     await setup(page, [insertCall('Draft one'), insertCall('Draft two'), reply('Wrote two drafts.')]);
 

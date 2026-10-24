@@ -32,6 +32,9 @@
   overflow: visible;
   /* The sparkle and send are this round size; the panel lines up after the sparkle. */
   --_blok-assistant-dot: 26px;
+  /* Discard and Keep, and the plainer Insert and Continue: the head lines up on the taller one. */
+  --_blok-assistant-pill: 30px;
+  --_blok-assistant-button: 28px;
   /* The rose's light uses the hues as they are. */
   --blok-ai-hue-1: #e8609e;
   --blok-ai-hue-2: #eba84a;
@@ -77,6 +80,23 @@
 [data-blok-assistant-answer] {
   flex: 1 1 auto;
   min-width: 0;
+}
+
+/* A long answer wraps down; the rose and the buttons stay level with its first line. */
+[data-blok-assistant-head] {
+  align-items: flex-start;
+}
+
+[data-blok-assistant-head] [data-blok-assistant-answer] {
+  padding-block: calc((var(--_blok-assistant-pill) - 1lh) / 2);
+}
+
+[data-blok-assistant-head] [data-blok-assistant-icon] {
+  margin-block-start: calc((var(--_blok-assistant-pill) - var(--_blok-assistant-dot)) / 2);
+}
+
+[data-blok-assistant-head] [data-blok-assistant-button] {
+  margin-block-start: calc((var(--_blok-assistant-pill) - var(--_blok-assistant-button)) / 2);
 }
 
 [data-blok-assistant-icon] {
@@ -233,16 +253,78 @@
   }
 }
 
+/* The answer reveals left to right, from soft to sharp, as the rose blooms.
+   A mask, not a span per word: the text stays one node for find, copy and screen readers. */
 [data-blok-assistant-summary] {
-  animation: blok-assistant-fade 0.3s ease both;
+  mask-image: linear-gradient(90deg, #000 40%, transparent 60%);
+  mask-size: 250% 100%;
+  mask-repeat: no-repeat;
+  animation: blok-assistant-reveal 0.9s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
 }
 
-@keyframes blok-assistant-fade {
+@keyframes blok-assistant-reveal {
   from {
-    opacity: 0;
-    transform: translateY(2px);
+    mask-position: 100% 0;
+    filter: blur(4px);
+  }
+
+  to {
+    mask-position: 0 0;
+    filter: blur(0);
   }
 }
+
+/* The answer lands: the light finishes as the whole rose drawn in colour, then sinks back to ink. */
+[data-blok-assistant-head]:has([data-blok-assistant-summary]:not([hidden])) [data-blok-assistant-light] {
+  display: inline;
+  stroke-width: 1.5;
+  stroke-dasharray: 100 100;
+  animation: blok-assistant-bloom 2s cubic-bezier(0.6, 0, 0.2, 1) both;
+}
+
+@keyframes blok-assistant-bloom {
+  from {
+    stroke-dashoffset: 100;
+  }
+
+  45%,
+  55% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+[data-blok-assistant-head]:has([data-blok-assistant-summary]:not([hidden])) [data-blok-assistant-icon] path:not([data-blok-assistant-light]) {
+  animation: blok-assistant-bloom-ink 2s ease both;
+}
+
+@keyframes blok-assistant-bloom-ink {
+  from,
+  60% {
+    opacity: 0.25;
+  }
+}
+
+/* The rose swings upright with a small pop as it blooms. */
+[data-blok-assistant-head]:has([data-blok-assistant-summary]:not([hidden])) [data-blok-assistant-icon] svg {
+  animation: blok-assistant-bloom-pop 1.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes blok-assistant-bloom-pop {
+  from {
+    transform: rotate(-90deg) scale(0.86);
+  }
+
+  55% {
+    transform: scale(1.14);
+  }
+}
+
 
 [data-blok-assistant-alert] {
   color: var(--blok-color-danger);
@@ -384,7 +466,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--blok-space-1-5);
-  height: 30px;
+  height: var(--_blok-assistant-pill);
   padding-inline: var(--blok-space-2-5) var(--blok-space-3);
   border-radius: var(--blok-radius-pill);
   font-size: var(--blok-font-size-ui-compact);
@@ -478,7 +560,7 @@
 
 /* Continue (after the step limit) and Insert: quiet text buttons. */
 [data-blok-assistant-button] {
-  height: 28px;
+  height: var(--_blok-assistant-button);
   padding-inline: var(--blok-space-2-5);
   border-radius: var(--blok-radius-inner);
   background: var(--blok-icon-bg);
@@ -706,6 +788,8 @@
   [data-blok-assistant],
   [data-blok-assistant][data-blok-top-layer][popover],
   [data-blok-assistant-summary],
+  [data-blok-assistant-head]:has([data-blok-assistant-summary]:not([hidden])) [data-blok-assistant-icon] svg,
+  [data-blok-assistant-head]:has([data-blok-assistant-summary]:not([hidden])) [data-blok-assistant-icon] path:not([data-blok-assistant-light]),
   [data-blok-assistant-working] [data-blok-assistant-icon] svg,
   [data-blok-assistant-send]::before,
   [data-blok-assistant-stop]::before,
@@ -716,7 +800,8 @@
     animation: none;
   }
 
-  [data-blok-assistant-working] [data-blok-assistant-light] {
+  [data-blok-assistant-working] [data-blok-assistant-light],
+  [data-blok-assistant-head]:has([data-blok-assistant-summary]:not([hidden])) [data-blok-assistant-light] {
     display: none;
   }
 

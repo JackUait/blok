@@ -69,16 +69,27 @@
   to { transform: translate(6px, 0) }
 }
 
+@keyframes blok-assistant-bloom {
+  from { stroke-dashoffset: 100 }
+  45%, 55% { stroke-dashoffset: 0; opacity: 1 }
+  to { stroke-dashoffset: 0; opacity: 0 }
+}
+
+@keyframes blok-assistant-bloom-ink {
+  from, 60% { opacity: 0.25 }
+}
+
+@keyframes blok-assistant-bloom-pop {
+  from { transform: rotate(-90deg) scale(0.86) }
+  55% { transform: scale(1.14) }
+}
+
 @keyframes blok-assistant-dissolve {
   to { opacity: 0; transform: translateY(-4px) scale(0.94); filter: blur(3px) }
 }
 
 @keyframes blok-assistant-draw {
   from { stroke-dashoffset: 16 }
-}
-
-@keyframes blok-assistant-fade {
-  from { opacity: 0; transform: translateY(2px) }
 }
 
 @keyframes blok-assistant-in {
@@ -94,6 +105,11 @@
   25% { stop-color: var(--blok-ai-hue-2) }
   50% { stop-color: var(--blok-ai-hue-3) }
   75% { stop-color: var(--blok-ai-hue-4) }
+}
+
+@keyframes blok-assistant-reveal {
+  from { mask-position: 100% 0; filter: blur(4px) }
+  to { mask-position: 0 0; filter: blur(0) }
 }
 
 @keyframes blok-assistant-rise {

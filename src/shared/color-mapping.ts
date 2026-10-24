@@ -107,14 +107,16 @@ export function parseColor(cssColor: string): [number, number, number] | null {
   const rgba = /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*[\d.]+\s*)?\)$/i.exec(cssColor);
 
   if (rgba) {
-    return [Number(rgba[1]), Number(rgba[2]), Number(rgba[3])];
+    // CSS clamps out-of-range channels, so the browser paints rgb(300, 0, 0) as red.
+    return [Math.min(255, Number(rgba[1])), Math.min(255, Number(rgba[2])), Math.min(255, Number(rgba[3]))];
   }
 
   /* hsl() and hsla() — alpha component is optional and ignored */
   const hsla = /^hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*(?:,\s*[\d.]+\s*)?\)$/i.exec(cssColor);
 
   if (hsla) {
-    return hslToRgb(Number(hsla[1]), Number(hsla[2]), Number(hsla[3]));
+    // CSS clamps saturation and lightness to 0..100%; the hue wraps instead.
+    return hslToRgb(Number(hsla[1]), Math.min(100, Number(hsla[2])), Math.min(100, Number(hsla[3])));
   }
 
   return null;
@@ -337,7 +339,9 @@ const functionalRgb = (value: string): [number, number, number] | null => {
 
   const degrees = ((parseFloat(hue[1]) * HUE_UNIT_DEGREES[(hue[2] ?? '').toLowerCase()]) % 360 + 360) % 360;
 
-  return parseColor(`hsl(${degrees}, ${parseFloat(second)}%, ${parseFloat(third)}%)`);
+  const percent = (part: string): number => Math.max(0, Math.min(100, parseFloat(part)));
+
+  return parseColor(`hsl(${degrees}, ${percent(second)}%, ${percent(third)}%)`);
 };
 
 /**

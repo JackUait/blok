@@ -298,6 +298,34 @@ describe.each(sessions)('agent mark writes match what a reload shows (%s session
     }
   });
 
+  it.each([
+    [{ color: 'hsl(0 150% 50%)' }, { color: 'red' }],
+    [{ color: 'rgb(300, 0, 0)' }, { color: 'red' }],
+  ])('reads an out-of-range colour %o the way the browser clamps it', async (set, expected) => {
+    const session = open(seed);
+
+    try {
+      await run(session, formatWith(set));
+
+      expect(await textOf(session, 'p')).toEqual([{ text: 'Hello ' }, { text: 'world', marks: expected }]);
+    } finally {
+      await session.close();
+    }
+  });
+
+  it('drops a background whose lightness above 100% makes it the white page', async () => {
+    const session = open(seed);
+
+    try {
+      const result = await run(session, formatWith({ background: 'hsl(0 0% 150%)' }));
+
+      expect(await textOf(session, 'p')).toEqual([{ text: 'Hello world' }]);
+      expect(result.warnings).toContainEqual(expect.objectContaining({ code: 'CORRECTED', message: expect.stringContaining('page background') }));
+    } finally {
+      await session.close();
+    }
+  });
+
   it('treats false and null mark values as not set, with a warning', async () => {
     const session = open(seed);
 

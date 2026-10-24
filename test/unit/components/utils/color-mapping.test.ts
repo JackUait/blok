@@ -1,7 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import { parseColor, mapToNearestPresetColor, mapToNearestPresetName } from '../../../../src/components/utils/color-mapping';
+import { parseAnyCssColor } from '../../../../src/shared/color-mapping';
 
 describe('parseColor', () => {
+  // CSS clamps these, so the browser paints hsl(0, 150%, 50%) as red and hsl(0, 0%, 150%) as white.
+  it.each<[string, [number, number, number]]>([
+    ['hsl(0, 150%, 50%)', [255, 0, 0]],
+    ['hsl(0, 0%, 150%)', [255, 255, 255]],
+    ['rgb(300, 0, 999)', [255, 0, 255]],
+  ])('clamps out-of-range channels in %s like CSS', (color, expected) => {
+    expect(parseColor(color)).toEqual(expected);
+  });
+
   it('parses 6-digit hex color', () => {
     expect(parseColor('#ff0000')).toEqual([255, 0, 0]);
   });
@@ -92,6 +102,17 @@ describe('parseColor', () => {
 
   it('parses white', () => {
     expect(parseColor('#ffffff')).toEqual([255, 255, 255]);
+  });
+});
+
+describe('parseAnyCssColor', () => {
+  it.each<[string, [number, number, number]]>([
+    ['hsl(0 150% 50%)', [255, 0, 0]],
+    ['hsl(0 -50% 50%)', [128, 128, 128]],
+    ['hsl(0 0% 150%)', [255, 255, 255]],
+    ['hsl(0 100% -10%)', [0, 0, 0]],
+  ])('clamps saturation and lightness in %s like CSS', (color, expected) => {
+    expect(parseAnyCssColor(color)).toEqual(expected);
   });
 });
 

@@ -123,17 +123,40 @@ function blockquoteDegradation(node: RootContent): MarkdownDegradation | null {
 }
 
 /**
+ * Whether a paragraph's text goes into one block as is, so math in it stays an
+ * equation: a list item's first paragraph and a plain quote's paragraphs. Must
+ * match the `phrasing` calls in mdast-to-blocks; every other paragraph goes
+ * through `handleParagraph`, which splits at math.
+ * @param paragraph - the paragraph
+ * @param container - its parent, or null at the top level
+ */
+function keepsParagraphWhole(paragraph: RootContent, container: RootContent | null): boolean {
+  if (container?.type === 'blockquote') {
+    return matchAlert(container) === null;
+  }
+
+  return container?.type === 'listItem' && container.children.find((child) => child.type === 'paragraph') === paragraph;
+}
+
+/**
  * Whether a node that is lossy elsewhere arrives intact here: a bare `<br>`, or
- * inline math in a table cell or heading, which keep it as an equation mark.
+ * inline math that is not a direct child of a splitting paragraph. Only those
+ * direct children split; math in a heading, a table cell, or inside emphasis
+ * or a link stays an equation.
  * @param node - the node to inspect
  * @param parent - its parent, or null at the top level
+ * @param grandparent - the parent's parent, or null
  */
-function keptInline(node: RootContent, parent: RootContent | null): boolean {
+function keptInline(node: RootContent, parent: RootContent | null, grandparent: RootContent | null): boolean {
   if (node.type === 'html') {
     return isBareBreak(node.value);
   }
 
-  return node.type === 'inlineMath' && (parent?.type === 'tableCell' || parent?.type === 'heading');
+  if (node.type !== 'inlineMath' || parent === null) {
+    return false;
+  }
+
+  return parent.type !== 'paragraph' || keepsParagraphWhole(parent, grandparent);
 }
 
 /**
@@ -149,9 +172,10 @@ function collectImportWarnings(tree: Root): MarkdownDegradation[] {
    * Visit one node and its children.
    * @param node - the node to visit
    * @param parent - its parent, or null at the top level
+   * @param grandparent - the parent's parent, or null
    */
-  const visit = (node: RootContent, parent: RootContent | null): void => {
-    const degradation = keptInline(node, parent)
+  const visit = (node: RootContent, parent: RootContent | null, grandparent: RootContent | null): void => {
+    const degradation = keptInline(node, parent, grandparent)
       ? null
       : IMPORT_DEGRADATIONS[node.type] ?? unsafeUrlDegradation(node) ?? blockquoteDegradation(node);
 
@@ -160,11 +184,11 @@ function collectImportWarnings(tree: Root): MarkdownDegradation[] {
     }
 
     if ('children' in node && Array.isArray(node.children)) {
-      node.children.forEach((child: RootContent) => visit(child, node));
+      node.children.forEach((child: RootContent) => visit(child, node, parent));
     }
   };
 
-  tree.children.forEach((child) => visit(child, null));
+  tree.children.forEach((child) => visit(child, null, null));
 
   return warnings;
 }

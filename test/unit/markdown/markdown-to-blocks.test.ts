@@ -369,6 +369,31 @@ describe('markdownToBlocks — currency is not math', () => {
       { construct: 'inlineMath', action: 'degraded', detail: expect.stringContaining('paragraph') },
     ]);
   });
+
+  it.each([
+    ['a list item', '- a $x$ b', 'list'],
+    ['a nested list item', '- a\n  - b $x$ c', 'list'],
+    ['a quote', '> a $x$ b', 'quote'],
+    ['emphasis', 'a *b $x$* c', 'paragraph'],
+    ['a link', '[l $x$](https://e.test)', 'paragraph'],
+  ])('keeps math inline in %s and reports nothing', async (_where, md, type) => {
+    const { blocks, warnings } = await markdownToSegmentBlocksWithReport(md);
+
+    expect(warnings).toEqual([]);
+    expect(blocks.find(b => b.type === type && JSON.stringify(b.data.text).includes('equation'))).toBeDefined();
+  });
+
+  it.each([
+    ['a list item\'s second paragraph', '- a\n\n  b $x$ c'],
+    ['an alert', '> [!NOTE]\n> a $x$ b'],
+  ])('still reports the split in %s, where the paragraph does split', async (_where, md) => {
+    const { blocks, warnings } = await markdownToSegmentBlocksWithReport(md);
+
+    expect(blocks.some(b => b.type === 'code' && b.data.language === 'latex')).toBe(true);
+    expect(warnings).toEqual([
+      { construct: 'inlineMath', action: 'degraded', detail: expect.stringContaining('paragraph') },
+    ]);
+  });
 });
 
 describe('markdownToBlocks — inline math in a table cell', () => {

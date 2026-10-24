@@ -1201,7 +1201,7 @@ export class BlockSelection extends Module {
     }
 
     const { BlockManager } = this.Blok;
-    const nextIndex = this.navigationFocusIndexNow() + 1;
+    const nextIndex = this.navigableIndexFrom(this.navigationFocusIndexNow() + 1, 1);
 
     if (nextIndex >= BlockManager.blocks.length) {
       return false;
@@ -1221,7 +1221,7 @@ export class BlockSelection extends Module {
       return false;
     }
 
-    const prevIndex = this.navigationFocusIndexNow() - 1;
+    const prevIndex = this.navigableIndexFrom(this.navigationFocusIndexNow() - 1, -1);
 
     if (prevIndex < 0) {
       return false;
@@ -1230,6 +1230,22 @@ export class BlockSelection extends Module {
     this.setNavigationFocus(prevIndex);
 
     return true;
+  }
+
+  /**
+   * The first index from `index` in `step` direction whose block is not in a
+   * container's `hidden` slot (a database keeps its rows there). Out of range when none.
+   */
+  private navigableIndexFrom(index: number, step: 1 | -1): number {
+    const { blocks } = this.Blok.BlockManager;
+    const ahead = step > 0 ? blocks.slice(Math.max(index, 0)) : blocks.slice(0, Math.max(index + 1, 0)).reverse();
+    const found = ahead.find((block) => block.holder.parentElement?.closest('[hidden]') == null);
+
+    if (found !== undefined) {
+      return blocks.indexOf(found);
+    }
+
+    return step > 0 ? blocks.length : -1;
   }
 
   /**

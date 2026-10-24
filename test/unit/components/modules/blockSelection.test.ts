@@ -1801,6 +1801,37 @@ describe('BlockSelection', () => {
       });
     });
 
+    describe('blocks a container keeps hidden', () => {
+      const hideMiddle = (blocks: Block[]): void => {
+        const pool = document.createElement('div');
+
+        pool.hidden = true;
+        pool.appendChild(blocks[1].holder);
+      };
+
+      it('steps over a block inside a hidden slot on ArrowDown', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+
+        hideMiddle(blocks);
+        (modules.BlockManager as unknown as { currentBlockIndex: number }).currentBlockIndex = 0;
+        blockSelection.enableNavigationMode();
+
+        expect(blockSelection.navigateNext()).toBe(true);
+        expect(blockSelection.navigationFocusedBlock).toBe(blocks[2]);
+      });
+
+      it('steps over a block inside a hidden slot on ArrowUp', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+
+        hideMiddle(blocks);
+        (modules.BlockManager as unknown as { currentBlockIndex: number }).currentBlockIndex = 2;
+        blockSelection.enableNavigationMode();
+
+        expect(blockSelection.navigatePrevious()).toBe(true);
+        expect(blockSelection.navigationFocusedBlock).toBe(blocks[0]);
+      });
+    });
+
     describe('focus survives blocks inserted above it', () => {
       it('keeps the focused block when a block is inserted above it', () => {
         const { blockSelection, blocks, modules } = createBlockSelection();

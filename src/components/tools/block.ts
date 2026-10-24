@@ -1,4 +1,5 @@
 import { composeBaseSanitizeConfig } from '../../shared/sanitize-schema';
+import { composeFieldSanitize } from '../../shared/sanitize-composition';
 import { isEmpty, isObject } from '../utils';
 import { log } from '../utils/logger';
 import { safeHref } from '../utils/sanitize-url';
@@ -596,7 +597,7 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
        * Otherwise pass as it is
        */
       if (isObject(rule)) {
-        toolConfig[fieldName] = Object.assign({}, baseConfig, rule);
+        toolConfig[fieldName] = composeFieldSanitize(baseConfig, rule);
       } else {
         toolConfig[fieldName] = rule;
       }

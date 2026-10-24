@@ -1,5 +1,5 @@
 import { isObject } from '../type-guards';
-import { composeBaseSanitizeConfig } from '../sanitize-composition';
+import { composeBaseSanitizeConfig, composeFieldSanitize } from '../sanitize-composition';
 
 import type { SanitizerConfig } from '../../../types';
 import type { InsertSpec } from '../../../types/agent';
@@ -43,7 +43,7 @@ export const composeToolSanitize = (own: SanitizerConfig, inline: SanitizerConfi
   const composed: SanitizerConfig = {};
 
   for (const [field, rule] of Object.entries(own)) {
-    composed[field] = isObject(rule) ? Object.assign({}, base, rule) : rule;
+    composed[field] = isObject(rule) ? composeFieldSanitize(base, rule) : rule;
   }
 
   return composed;

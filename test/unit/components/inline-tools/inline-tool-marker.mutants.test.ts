@@ -626,17 +626,28 @@ describe('MarkerInlineTool — mutation targets', () => {
       expect(saveSpy).toHaveBeenCalledTimes(1);
     });
 
+    it.each([
+      ['text', 'marker-swatch-color-red'],
+      ['background', 'marker-swatch-background-color-red'],
+    ])('keeps the gray selected fill, like Bold, once a %s color is set', (_kind, swatch) => {
+      container.innerHTML = 'selected fill';
+      select(requireNode(container.firstChild), 0, 3);
+
+      clickSwatch(swatch);
+
+      expect(markerBtn.style.getPropertyValue('background-color')).toBe('');
+    });
+
     it('paints the button with the neutral text token for a background-only color', () => {
       container.innerHTML = 'bg paint';
       select(requireNode(container.firstChild), 0, 3);
 
       clickSwatch('marker-swatch-background-color-red');
 
-      // Only a background is set, so the text token suppresses the active-state blue.
       expect(markerBtn.style.getPropertyValue('color')).toBe('var(--blok-text-primary)');
       // The colour itself is clipped to the rounded square via the SVG rect.
       expect(requireElement(markerBtn.querySelector<SVGRectElement>('svg rect')).style.fill).toBe(RED_BG_RGB);
-      expect(markerBtn.style.getPropertyValue('background-color')).toBe('transparent');
+      expect(markerBtn.style.getPropertyValue('background-color')).toBe('');
     });
 
     it('paints the button with a neutral rect fill for a text-only color', () => {
@@ -649,7 +660,7 @@ describe('MarkerInlineTool — mutation targets', () => {
       expect(requireElement(markerBtn.querySelector<SVGRectElement>('svg rect')).style.fill).toBe(
         'var(--blok-swatch-neutral-bg)'
       );
-      expect(markerBtn.style.getPropertyValue('background-color')).toBe('transparent');
+      expect(markerBtn.style.getPropertyValue('background-color')).toBe('');
     });
 
     it('clears both the inline color and the rect fill when the Default swatch resets it', () => {
@@ -676,7 +687,7 @@ describe('MarkerInlineTool — mutation targets', () => {
       select(requireNode(container.firstChild), 0, 3);
 
       expect(() => clickSwatch('marker-swatch-background-color-red')).not.toThrow();
-      expect(markerBtn.style.getPropertyValue('background-color')).toBe('transparent');
+      expect(markerBtn.style.getPropertyValue('background-color')).toBe('');
     });
 
     it('tolerates a toolbar button with no SVG rect (text color)', () => {

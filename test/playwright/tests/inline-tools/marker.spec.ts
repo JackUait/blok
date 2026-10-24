@@ -537,6 +537,32 @@ test.describe('inline tool marker', () => {
     await expect(isActive).toHaveAttribute('data-blok-popover-item-active', 'true');
   });
 
+  for (const style of ['color: rgb(212, 76, 71);', 'background-color: rgb(251, 236, 221);']) {
+    test(`marker button shows the same gray selected fill as Bold (${style})`, async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: `<b><mark style="${style}">marked text</mark></b> and normal`,
+          },
+        },
+      ]);
+
+      await selectText(page.locator(PARAGRAPH_SELECTOR), 'marked text');
+
+      const markerButton = page.locator(MARKER_BUTTON_SELECTOR);
+      const boldButton = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="bold"]`);
+
+      await expect(markerButton).toHaveAttribute('data-blok-popover-item-active', 'true');
+      await expect(boldButton).toHaveAttribute('data-blok-popover-item-active', 'true');
+
+      const boldFill = await boldButton.evaluate((el) => getComputedStyle(el).backgroundColor);
+
+      expect(boldFill).not.toBe('rgba(0, 0, 0, 0)');
+      await expect(markerButton).toHaveCSS('background-color', boldFill);
+    });
+  }
+
   test('marker button is not active when selection contains no mark ancestor', async ({ page }) => {
     await createBlokWithBlocks(page, [
       {

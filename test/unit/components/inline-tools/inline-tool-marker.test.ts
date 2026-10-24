@@ -1630,7 +1630,7 @@ describe('MarkerInlineTool', () => {
       const rect = markerBtn.querySelector<SVGRectElement>('svg rect');
 
       expect(rect?.style.fill).toBe(hexToRgb(RED.bg));
-      expect(markerBtn.style.backgroundColor).toBe('transparent');
+      expect(markerBtn.style.backgroundColor).toBe('');
     });
 
     it('sets both color and background-color independently when both are applied', () => {
@@ -1649,7 +1649,7 @@ describe('MarkerInlineTool', () => {
 
       expect(markerBtn.style.color).toBe(hexToRgb(RED.text));
       expect(rect?.style.fill).toBe(hexToRgb(ORANGE.bg));
-      expect(markerBtn.style.backgroundColor).toBe('transparent');
+      expect(markerBtn.style.backgroundColor).toBe('');
     });
 
     it('removes color from button when default text swatch is clicked', () => {
@@ -1669,7 +1669,7 @@ describe('MarkerInlineTool', () => {
       expect(markerBtn.style.color).toBe('');
     });
 
-    it('removes background-color from button when default bg swatch is clicked', () => {
+    it('clears the roller fill when default bg swatch is clicked', () => {
       container.innerHTML = 'hello';
       const range = document.createRange();
 
@@ -1678,12 +1678,14 @@ describe('MarkerInlineTool', () => {
       window.getSelection()!.removeAllRanges();
       window.getSelection()!.addRange(range);
 
+      const rect = markerBtn.querySelector<SVGRectElement>('svg rect');
+
       pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-background-color-red"]')!.click();
-      expect(markerBtn.style.backgroundColor).not.toBe('');
+      expect(rect?.style.fill).not.toBe('');
 
       pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-background-color-default"]')!.click();
 
-      expect(markerBtn.style.backgroundColor).toBe('');
+      expect(rect?.style.fill).toBe('');
     });
 
     it('reapplies text color to toolbar button via isActive() when toolbar reopens on colored selection', () => {
@@ -1726,10 +1728,10 @@ describe('MarkerInlineTool', () => {
       const rect = markerBtn.querySelector<SVGRectElement>('svg rect');
 
       expect(rect?.style.fill).toBe(hexToRgb(ORANGE.bg));
-      expect(markerBtn.style.backgroundColor).toBe('transparent');
+      expect(markerBtn.style.backgroundColor).toBe('');
     });
 
-    it('sets transparent background on toolbar button when only text color is active (suppresses active-state blue)', () => {
+    it('keeps the gray selected fill when only text color is active', () => {
       container.innerHTML = `<mark style="color: ${RED.text}; background-color: transparent">hello</mark>`;
 
       const markEl = container.querySelector('mark')!;
@@ -1745,15 +1747,13 @@ describe('MarkerInlineTool', () => {
 
       isActiveFn();
 
-      // button.backgroundColor is transparent to suppress active-state CSS;
-      // the neutral bg is rendered via SVG rect fill so the A letter remains visible.
       const rect = markerBtn.querySelector<SVGRectElement>('svg rect');
 
-      expect(markerBtn.style.backgroundColor).toBe('transparent');
+      expect(markerBtn.style.backgroundColor).toBe('');
       expect(rect?.style.fill).toBe('var(--blok-swatch-neutral-bg)');
     });
 
-    it('sets neutral background on toolbar button after clicking a text color swatch (keeps color visible)', () => {
+    it('fills the roller head with the neutral swatch after clicking a text color swatch', () => {
       container.innerHTML = 'hello';
       const range = document.createRange();
 
@@ -1767,7 +1767,7 @@ describe('MarkerInlineTool', () => {
       const rect = markerBtn.querySelector<SVGRectElement>('svg rect');
 
       expect(rect?.style.fill).toBe('var(--blok-swatch-neutral-bg)');
-      expect(markerBtn.style.backgroundColor).toBe('transparent');
+      expect(markerBtn.style.backgroundColor).toBe('');
     });
   });
 

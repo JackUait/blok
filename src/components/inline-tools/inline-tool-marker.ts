@@ -322,9 +322,9 @@ export class MarkerInlineTool implements InlineTool {
   /**
    * Update the color indicator on the inline toolbar marker button.
    * Background color is applied via SVG rect fill so it stays clipped to the rounded square.
-   * Button background-color is set to transparent to suppress active-state Tailwind selectors.
+   * The button keeps its gray selected fill, like Bold.
    * @param textColor - CSS color value for the icon/text, or null to reset
-   * @param bgColor - CSS color value for the button background, or null to reset
+   * @param bgColor - CSS color value for the roller head, or null to reset
    */
   private updateToolbarColors(textColor: string | null, bgColor: string | null): void {
     const btn = document.querySelector<HTMLElement>('[data-blok-item-name="marker"]');
@@ -336,7 +336,6 @@ export class MarkerInlineTool implements InlineTool {
     if (textColor !== null) {
       btn.style.setProperty('color', textColor);
     } else if (bgColor !== null) {
-      // Suppress active-state blue (text-icon-active-text) when only a background color is set.
       btn.style.setProperty('color', 'var(--blok-text-primary)');
     } else {
       btn.style.removeProperty('color');
@@ -344,26 +343,17 @@ export class MarkerInlineTool implements InlineTool {
 
     const rect = btn.querySelector<SVGRectElement>('svg rect');
 
+    if (!rect) {
+      return;
+    }
+
     if (bgColor !== null) {
-      // Fill the SVG rect so the color is clipped to the rounded square shape.
-      // Transparent on the button suppresses active-state bg-icon-active-bg.
-      if (rect) {
-        rect.style.fill = bgColor;
-      }
-      btn.style.setProperty('background-color', 'transparent');
+      rect.style.fill = bgColor;
     } else if (textColor !== null) {
-      // Use a neutral fill when only text color is applied so that:
-      // (a) the active-state blue (data-blok-popover-item-active:bg-icon-active-bg) is suppressed, and
-      // (b) light text colors remain visible regardless of the toolbar's own background.
-      if (rect) {
-        rect.style.fill = 'var(--blok-swatch-neutral-bg)';
-      }
-      btn.style.setProperty('background-color', 'transparent');
+      // Keeps a light text color readable on the toolbar.
+      rect.style.fill = 'var(--blok-swatch-neutral-bg)';
     } else {
-      if (rect) {
-        rect.style.fill = '';
-      }
-      btn.style.removeProperty('background-color');
+      rect.style.fill = '';
     }
   }
 

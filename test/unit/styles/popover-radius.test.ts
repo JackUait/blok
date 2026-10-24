@@ -96,14 +96,16 @@ describe('popover card', () => {
     expect(popoverCss.items).not.toMatch(/\bp[tb]-1\.5\b/);
   });
 
-  it('inline toolbar card pads 8px and publishes the floor for its children', () => {
+  it('inline toolbar card pads 8px and rounds its children like the other menus\' rows', () => {
     expect(popoverInlineCss.popoverContainerOpened.split(' ')).toEqual(
       expect.arrayContaining(['px-(--blok-space-2)', 'pt-(--blok-space-2)', 'pb-(--blok-space-2)'])
     );
 
     const body = squash(ruleBody(popoverAnimation, '[data-blok-popover-inline] > [data-blok-popover-container]'));
 
-    expect(body).toContain(`${inner('surface', '--blok-space-2')};`);
+    // Surface minus 8px is only 2px, so the formula would floor rows at 4px.
+    // Control is the 6px the 4px-padded menus get, so every card's rows match.
+    expect(body).toContain('--blok-radius-inner: var(--blok-radius-control);');
   });
 
   it('block settings, convert and dense menus publish the inner radius for their smallest corner gap', () => {

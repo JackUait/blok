@@ -36,9 +36,10 @@
   --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-1)));
 }
 
-/* The inline toolbar card pads 8px (cssInline in popover.const.ts). */
+/* The inline toolbar card pads 8px, so surface minus padding would floor its
+   rows at 4px. Control gives them the 6px rows of the 4px-padded menus. */
 [data-blok-popover-inline] > [data-blok-popover-container] {
-  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-2)));
+  --blok-radius-inner: var(--blok-radius-control);
 }
 
 /* Only a field at the card's edge follows the card; fields deeper inside keep their role. */

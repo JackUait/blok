@@ -22,7 +22,7 @@
 }
 
 [data-blok-popover-inline] > [data-blok-popover-container] {
-  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-2)));
+  --blok-radius-inner: var(--blok-radius-control);
 }
 
 [data-blok-popover-container] > [data-blok-field] {

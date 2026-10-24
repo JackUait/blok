@@ -96,7 +96,12 @@ export const COMMANDS: Record<CoreCommandName, CoreCommandSpec> = {
   }, ['id', 'range'])),
   'markdown.insert': write('Convert Markdown into blocks and insert them. Additive.', obj({
     markdown: { type: 'string' }, parentId, position,
-  }, ['markdown'])),
+  }, ['markdown']), 'Inline Markdown gives bold (** or __), italic (* or _), strikethrough (~~ or ~), inline code and links. '
+    + '~x~ is strikethrough, not subscript. ==, ^ and inline HTML such as <u>, <sup>, <sub>, <mark> and <span> stay literal text. '
+    + '$x$ is an inline equation in a heading, list item, quote or table cell. In a plain paragraph it becomes its own LaTeX code block. '
+    + '$$x$$ is always a LaTeX code block. '
+    + 'Markdown cannot write the marks "underline", "sup", "sub", "highlight", "color" or "background": insert the text, then set them with text.format. '
+    + 'For an equation inside a paragraph, write segments with { "embed": { "equation": { "expression": "x" } } }.'),
   'markdown.export': read('Export the document or a subtree as Markdown.', obj({ rootId: id })),
   'history.undo': write("Undo this session's last step. Never the user's.", obj({})),
   'history.redo': write("Redo this session's last undone step.", obj({})),

@@ -397,7 +397,7 @@ export class PlanState {
         this.warn('UNKNOWN_MARK_DROPPED', `Unknown mark(s) ${unknown.join(', ')} dropped. Marks: ${[...KNOWN_MARKS].join(', ')}.`, { blockId, field });
       }
 
-      const known: Record<string, unknown> = { ...segment.marks };
+      const known: RichTextMarks = { ...segment.marks };
 
       unknown.forEach(key => Reflect.deleteProperty(known, key));
       if (stored) {

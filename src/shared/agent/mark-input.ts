@@ -136,11 +136,12 @@ const LINK_FIELDS: ReadonlySet<string> = new Set(['href', 'target', 'rel']);
  * keeps only href, target and rel. Other wrong types are left for validation.
  * @param marks - one run's marks as the agent sent them
  */
-export const looseMarkInput = (marks: Record<string, unknown>): { marks: Record<string, unknown>; notes: string[] } => {
+export const looseMarkInput = (marks: RichTextMarks): { marks: Record<string, unknown>; notes: string[] } => {
   const notes: string[] = [];
   const next: Record<string, unknown> = {};
+  const entries: Array<[string, unknown]> = Object.entries(marks);
 
-  for (const [key, value] of Object.entries(marks)) {
+  for (const [key, value] of entries) {
     if (value === false || value === null) {
       notes.push(`${key}: ${String(value)} means not set, so it was left off.`);
     } else if (key === 'link' && typeof value === 'object' && !Array.isArray(value)) {

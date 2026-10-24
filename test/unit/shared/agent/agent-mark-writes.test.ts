@@ -342,7 +342,7 @@ describe.each(sessions)('agent mark writes match what a reload shows (%s session
     }
   });
 
-  it.each([
+  it.each<[`${string}.${string}`, Record<string, unknown>]>([
     ['table.duplicateRows', { at: 0 }],
     ['table.duplicateColumns', { at: 0 }],
     ['table.fillCells', { range: { fromRow: 0, fromCol: 0, toRow: 1, toCol: 0 }, direction: 'down' }],

@@ -59,13 +59,13 @@ const SEED: OutputData = {
 
 const insertBatch: AgentBatch = { commands: [
   ...MARKS.map(([, marks], index) => ({
-    name: 'block.insert', args: { id: `i${index}`, type: 'paragraph', data: { text: [{ text: 'Hi ' }, { text: 'there', marks }] } },
+    name: 'block.insert' as const, args: { id: `i${index}`, type: 'paragraph', data: { text: [{ text: 'Hi ' }, { text: 'there', marks }] } },
   })),
-  ...EMBEDS.map(([, text], index) => ({ name: 'block.insert', args: { id: `e${index}`, type: 'paragraph', data: { text } } })),
+  ...EMBEDS.map(([, text], index) => ({ name: 'block.insert' as const, args: { id: `e${index}`, type: 'paragraph', data: { text } } })),
 ] };
 
 const formatBatch: AgentBatch = { commands: MARKS.map(([, set], index) => ({
-  name: 'text.format', args: { id: `f${index}`, range: { find: 'world' }, set },
+  name: 'text.format' as const, args: { id: `f${index}`, range: { find: 'world' }, set },
 })) };
 
 const written = [

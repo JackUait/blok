@@ -129,8 +129,9 @@ const FILE_SCHEMA: BlokSchema = {
       items: {
         type: 'object',
         required: ['name', 'sanitize'],
+        additionalProperties: false,
         properties: {
-          name: { type: 'string', minLength: 1 },
+          name: { type: 'string', pattern: '^[A-Za-z][A-Za-z0-9_-]*$' },
           title: STRING_SCHEMA,
           sanitize: {
             type: 'object',
@@ -147,8 +148,33 @@ const FILE_SCHEMA: BlokSchema = {
   },
 };
 
+// Tags whose content is code or a document, never a run of text.
+const REFUSED_INLINE_TAGS = new Set(['script', 'style', 'iframe', 'frame', 'frameset', 'object', 'embed', 'template', 'noscript', 'base', 'link', 'meta']);
+const ATTRIBUTE_NAME = /^[a-z_:][a-z0-9_.:-]*$/i;
+// Event handlers run script; srcdoc is a whole document.
+const isRefusedAttribute = (name: string): boolean => /^on/i.test(name) || name.toLowerCase() === 'srcdoc' || !ATTRIBUTE_NAME.test(name);
+
+/** Rules a JSON schema cannot say: the tags and attribute names a host inline tool may not allow. */
+const inlineToolProblems = (value: unknown): Array<{ path: string; message: string }> => {
+  const tools = typeof value === 'object' && value !== null && 'inlineTools' in value && Array.isArray(value.inlineTools) ? value.inlineTools : [];
+
+  return tools.flatMap((tool: unknown, index: number) => {
+    const sanitize: unknown = typeof tool === 'object' && tool !== null && 'sanitize' in tool ? tool.sanitize : undefined;
+
+    return Object.entries(typeof sanitize === 'object' && sanitize !== null ? sanitize : {}).flatMap(([tag, rule]: [string, unknown]) => [
+      ...(REFUSED_INLINE_TAGS.has(tag) ? [{ path: `/inlineTools/${index}/sanitize/${tag}`, message: 'is a tag an inline tool may not allow' }] : []),
+      ...Object.keys(typeof rule === 'object' && rule !== null ? rule : {})
+        .filter(isRefusedAttribute)
+        .map(attribute => ({ path: `/inlineTools/${index}/sanitize/${tag}/${attribute}`, message: 'is an attribute an inline tool may not allow' })),
+    ]);
+  });
+};
+
 const assertCustomToolsFile: (value: unknown) => asserts value is BlokCustomToolsFile = (value) => {
-  const problems = validateAgainst(FILE_SCHEMA, value);
+  const problems = [
+    ...validateAgainst(FILE_SCHEMA, value),
+    ...inlineToolProblems(value),
+  ];
 
   if (problems.length > 0) {
     throw new TypeError(

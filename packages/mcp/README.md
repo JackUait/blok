@@ -134,6 +134,8 @@ Stored mode is refused when `--sync-url` is set. A sync service owns those docum
   - Function rules cannot go in a JSON file. Write the attributes out instead.
   - Its marks are `tag:<tag>` keys. Agents see them in the schema, and `blok_describe` answers for the tool by name.
   - Without this entry, the server removes the tool's marks when it writes the block.
+  - The tool applies to every built-in block but code, and to your custom blocks. The file cannot limit it to some blocks.
+  - Event handler attributes (`on*`), `srcdoc`, and tags like `script` or `iframe` are refused.
 
 ```json
 {

@@ -90,6 +90,16 @@ describe('custom inline tools in the editor agent', { timeout: 30_000 }, () => {
     expect(result).toMatchObject({ ok: true, warnings: [] });
   });
 
+  it('drops an attribute the custom tool does not declare when the agent writes its mark', async () => {
+    const { session } = await boot();
+
+    await session.execute({ commands: [
+      { name: 'text.format', args: { id: 'p', range: { find: 'now' }, set: { 'tag:kbd': { 'data-key': 'n', 'data-other': 'x' } } } },
+    ] });
+
+    expect(await textOf(session)).toEqual([...TEXT.slice(0, 4), { text: ' ' }, { text: 'now', marks: { 'tag:kbd': { 'data-key': 'n' } } }]);
+  });
+
   it('lists each custom mark, with its attributes, in the rendered tools', async () => {
     const { core } = await boot();
     const contract = liveContractSource(core.moduleInstances).contract();

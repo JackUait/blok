@@ -19,6 +19,7 @@ import type {
   TuneManifestEntry,
 } from '../../types';
 import { deepEqual } from './deep-equal';
+import { OPAQUE_TAGS } from './rich-text/html-to-segments';
 import { ownEntry } from './own-entry';
 import { validPattern } from './schema/validate';
 import { RICH_TEXT_MARKS, richText } from './tool-descriptions/rich-text';
@@ -255,8 +256,11 @@ const blockEntry = (
   };
 };
 
-/** Tags the segment reader turns into built-in marks, so a `tag:` mark on them would not survive a save. */
-const BUILT_IN_MARK_TAGS = new Set(['strong', 'b', 'em', 'i', 'u', 's', 'del', 'strike', 'code', 'sup', 'sub', 'a', 'mark', 'br']);
+/**
+ * Tags the segment reader turns into built-in marks or opaque embeds (OPAQUE_TAGS), so a `tag:` mark
+ * on them would not survive a save.
+ */
+const NOT_A_TAG_MARK = new Set(['strong', 'b', 'em', 'i', 'u', 's', 'del', 'strike', 'code', 'sup', 'sub', 'a', 'mark', 'br', ...OPAQUE_TAGS]);
 
 /**
  * A `tag:` mark's attributes: the ones the tool's rule names. Others stay allowed here, because a read
@@ -286,7 +290,7 @@ const inlineEntry = (tool: ToolRegistrySnapshot['inlineTools'][number], warn: (m
 
   const [tag] = tool.sanitizeTags;
 
-  return tool.sanitizeTags.length === 1 && tag !== undefined && !BUILT_IN_MARK_TAGS.has(tag)
+  return tool.sanitizeTags.length === 1 && tag !== undefined && !NOT_A_TAG_MARK.has(tag)
     ? { ...base, summary: `Custom inline tool ${tool.name}.`, level: 'structural', effect: { mark: `tag:${tag}`, value: tagMarkValue(tool.sanitizeRule) } }
     : { ...base, summary: `Custom inline tool ${tool.name}. Leave its marks as they are.`, level: 'structural' };
 };

@@ -26,7 +26,9 @@ export const describeContract = (
   query: { tool?: string; command?: string } = {}
 ): AgentContract | ContractSlice => {
   // Models often pass a command name as tool; answer it rather than spend another call.
+  // Block tools and commands win a name collision with an inline tool.
   const inlineTool = contract.manifest.blocks.some(entry => entry.name === query.tool)
+    || contract.commands.some(entry => entry.name === query.tool)
     ? undefined
     : contract.manifest.inlineTools.find(entry => entry.name === query.tool);
   const commandName = query.command

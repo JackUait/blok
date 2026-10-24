@@ -3443,7 +3443,7 @@ app.post('/api/ai', async (req, res) => {
         name: "agent.guidance()",
         returnType: "Promise<string>",
         description:
-          "Text for your system prompt. It tells the model how to address blocks, how to add Markdown and how to recover from errors.",
+          "Text for your system prompt. It tells the model how to address blocks, how to write rich text, how to add Markdown and how to recover from errors. The rich-text part lists every mark, the colour presets, link defaults, and the equation and page embeds.",
         example: `const system = await editor.agent.guidance();`,
       },
       {

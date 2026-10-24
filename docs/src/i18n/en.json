@@ -1109,7 +1109,7 @@
             "description": "Tool definitions for `blok_read`, `blok_describe` and `blok_execute`. Pass them to your model as they are.\n\n- `format`: `'anthropic'` or `'openai'` (the Responses API).\n- `schema`: how `blok_execute` describes its commands.\n  - `'mixed'` (default) gives the common commands their full arguments and names the rest.\n  - `'envelope'` names every command.\n  - `'full'` lists every command's arguments and throws `AgentToolsTooLargeError` when the result is too big.\n- `strict`: adds `strict: true` to `blok_read` and `blok_describe`. It throws `AgentToolsStrictError` when a schema cannot be strict. `blok_execute` never gets it."
           },
           "guidance": {
-            "description": "Text for your system prompt. It tells the model how to address blocks, how to add Markdown and how to recover from errors."
+            "description": "Text for your system prompt. It tells the model how to address blocks, how to write rich text, how to add Markdown and how to recover from errors. The rich-text part lists every mark, the colour presets, link defaults, and the equation and page embeds."
           },
           "begin": {
             "description": "Opens a turn and returns it. Only one turn can be open per editor, so a second call throws `AgentTurnOpenError`.\n\n- `agent`: the agent's `id`, `name` and optional `color`. Users see the name, and the id is saved as `lastEditedBy`.\n- `follow`: scrolls to the agent's block until the user scrolls, types or clicks. Default `false`.\n- `attributeTo`: `'user'` keeps the user's id in `lastEditedBy`."

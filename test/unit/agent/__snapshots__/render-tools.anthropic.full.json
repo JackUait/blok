@@ -3497,7 +3497,8 @@
                     "type": "object",
                     "properties": {
                       "markdown": {
-                        "type": "string"
+                        "type": "string",
+                        "description": "Gives bold, italic, strikethrough, inline code and links. Underline, sup, sub, highlight and colours stay literal: set them with text.format. describe has the rest."
                       },
                       "parentId": {
                         "oneOf": [

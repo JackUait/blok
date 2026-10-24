@@ -40,6 +40,23 @@ describe('markdown.insert inline formats', () => {
     expect(text).toContain('{ "embed": { "equation": { "expression": "x" } } }');
   });
 
+  it('puts the rule in the markdown argument, which ships in the tool schema', () => {
+    const slice = describeContract(nodeContract(), { command: 'markdown.insert' });
+    const args = 'command' in slice ? JSON.stringify(slice.command.args) : '';
+
+    expect(args).toContain('text.format');
+    expect(args).toContain('Underline');
+  });
+
+  it('keeps an equation embed written with block.insert', async () => {
+    const session = openJsonSession({ blocks: [] });
+    const text = [{ text: 'a ' }, { embed: { equation: { expression: 'x' } } }];
+    const result = await session.execute({ commands: [{ name: 'block.insert', args: { type: 'paragraph', position: 'end', data: { text } } }] });
+
+    expect(result.ok ? null : result.error).toBeNull();
+    expect(session.output().blocks[0].data.text).toEqual(text);
+  });
+
   it('reads __ as bold and _ as italic, never underline', async () => {
     const [block] = await insert('__b__ _i_');
 

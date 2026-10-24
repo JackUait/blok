@@ -129,10 +129,11 @@ describe('DatabaseTool — view settings', () => {
     expect((q('database-settings-view-name') as HTMLInputElement).value).toBe('Two');
   });
 
-  it('draws the toolbar beside the tabs', () => {
+  // One view: the toolbar shares the title row (feel/findings-toolbar V01).
+  it('draws the toolbar in the title row of a one-view database', () => {
     const { root } = mount();
 
-    expect(root.querySelector('[data-blok-database-view-bar] [data-blok-database-view-toolbar]')).not.toBeNull();
+    expect(root.querySelector('[data-blok-database-title-row] [data-blok-database-view-toolbar]')).not.toBeNull();
     expect(q('database-toolbar-settings')).not.toBeNull();
   });
 

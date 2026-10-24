@@ -554,13 +554,13 @@ describe('New data source: a view bound to a second source in the same block', (
     document.querySelector<HTMLButtonElement>(`[data-blok-database-confirm-action="${name}"]`);
   const choiceCards = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>('[data-blok-database-confirm-choice]')];
 
-  // Delete lives in the tab menu only (feel/findings-toolbar V12).
+  // Delete lives in the tab menu only (feel/findings-toolbar V12), labelled "Delete view" (V07).
   const deleteFromTabMenu = async (): Promise<void> => {
     own('[data-blok-database-tab][data-view-id="vb"]').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
     await quiet();
-    const item = [...document.querySelectorAll<HTMLElement>('[data-blok-popover-item], [role="menuitem"]')].find((el) => el.textContent?.trim() === 'Delete');
+    const item = [...document.querySelectorAll<HTMLElement>('[data-blok-popover-item], [role="menuitem"]')].find((el) => el.textContent?.trim() === 'Delete view');
 
-    if (item === undefined) throw new Error('no Delete in the tab menu');
+    if (item === undefined) throw new Error('no Delete view in the tab menu');
     item.click();
     await quiet();
   };

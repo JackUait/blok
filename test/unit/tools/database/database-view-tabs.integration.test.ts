@@ -14,6 +14,7 @@ interface TestEditor {
   destroy(): void;
   blocks: API['blocks'];
   history: API['history'];
+  readOnly: API['readOnly'];
 }
 
 let editor: Blok | undefined;
@@ -147,7 +148,10 @@ describe('view tabs (feel/findings-toolbar)', () => {
     it('a view added by code opens nothing', async () => {
       const api = await make(doc());
 
-      api.blocks.getById('db')?.call('addView', 'board');
+      const block = api.blocks.getById('db');
+
+      // BlockAPI.call types its argument as an object; addView takes the layout name.
+      if (block !== null) Reflect.apply(block.call, block, ['addView', 'board']);
       await quiet();
 
       expect(settingsPanel()).toBeNull();
@@ -174,8 +178,9 @@ describe('view tabs (feel/findings-toolbar)', () => {
     });
 
     it('a read-only database opens no menu', async () => {
-      await make(doc());
-      await editor?.readOnly.set(true);
+      const api = await make(doc());
+
+      await api.readOnly.set(true);
       await quiet();
 
       tab('v1').click();
@@ -290,8 +295,9 @@ describe('view tabs (feel/findings-toolbar)', () => {
       expect(titleMore()).toBeNull();
       editor?.destroy();
       editor = undefined;
-      await make(doc([table('v1', 'a0')]));
-      await editor?.readOnly.set(true);
+      const api = await make(doc([table('v1', 'a0')]));
+
+      await api.readOnly.set(true);
       await quiet();
 
       expect(titleMore()).toBeNull();

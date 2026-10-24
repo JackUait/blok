@@ -38,6 +38,14 @@ describe('Ask AI menu CSS', () => {
     expect(CSS).not.toMatch(/filter|drop-shadow|text-shadow|box-shadow/);
   });
 
+  it('eases the rose into its hover look instead of snapping', () => {
+    for (const state of [':hover', '[data-blok-focused="true"]']) {
+      expect(bodyOf(`[data-blok-ask-ai-open]${state} [data-blok-assistant-light]`)).toMatch(/blok-ask-ai-light-in\s+\d+ms/);
+    }
+    expect(CSS).toMatch(/@keyframes blok-ask-ai-light-in\s*\{\s*from\s*\{\s*opacity:\s*0;?\s*\}/);
+    expect(bodyOf('[data-blok-ask-ai-open] [data-blok-ask-ai-glyph] path:not([data-blok-assistant-light])')).toMatch(/transition:\s*opacity\s+\d+ms/);
+  });
+
   it('leaves the skill icons\' acts to ask-ai-icons.css, which the bar\'s chips share', () => {
     expect(CSS).not.toMatch(/data-blok-ask-ai-(act|hue|scribble|spark)\b/);
   });

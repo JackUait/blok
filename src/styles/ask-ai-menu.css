@@ -30,7 +30,14 @@
     display: inline;
     stroke-width: 1.5;
     stroke-dasharray: 14 36;
-    animation: blok-assistant-light 5s linear infinite;
+    animation:
+      blok-assistant-light 5s linear infinite,
+      blok-ask-ai-light-in 450ms ease-out both;
+  }
+
+  /* The rose dims as the light fades in, and comes back as gently. */
+  [data-blok-ask-ai-open] [data-blok-ask-ai-glyph] path:not([data-blok-assistant-light]) {
+    transition: opacity 450ms ease-out;
   }
 
   [data-blok-ask-ai-open]:hover [data-blok-ask-ai-glyph] path:not([data-blok-assistant-light]),
@@ -70,6 +77,12 @@
   [data-blok-ask-ai-skill] [data-blok-ask-ai-ink] [fill="currentColor"] {
     animation: blok-ask-ai-dot-in 300ms ease-out both;
     animation-delay: calc(var(--blok-ask-ai-index) * 38ms + 520ms);
+  }
+}
+
+@keyframes blok-ask-ai-light-in {
+  from {
+    opacity: 0;
   }
 }
 

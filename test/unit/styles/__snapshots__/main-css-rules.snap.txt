@@ -28042,7 +28042,11 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   display: inline;
   stroke-width: 1.5;
   stroke-dasharray: 14 36;
-  animation: blok-assistant-light 5s linear infinite;
+  animation: blok-assistant-light 5s linear infinite, blok-ask-ai-light-in 450ms ease-out both;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-ask-ai-open] [data-blok-ask-ai-glyph] path:not([data-blok-assistant-light]) {
+  transition: opacity 450ms ease-out;
 }
 
 [@media (prefers-reduced-motion: no-preference)] [data-blok-ask-ai-open]:hover [data-blok-ask-ai-glyph] path:not([data-blok-assistant-light]), [data-blok-ask-ai-open][data-blok-focused="true"] [data-blok-ask-ai-glyph] path:not([data-blok-assistant-light]) {

@@ -38,6 +38,9 @@ const MARKS: Array<[string, RichTextMarks | Record<string, unknown>]> = [
   ['background preset', { background: 'yellow' }],
   ['background raw', { background: 'rgb(255, 0, 255)' }],
   ['background white', { background: '#ffffff' }],
+  ['background dark colour', { background: '#000080' }],
+  ['background dark page', { background: '#191918' }],
+  ['background zero alpha', { background: 'rgba(255, 0, 0, 0)' }],
   ['highlight and color', { highlight: true, color: 'red' }],
   ['sup and sub', { sup: true, sub: true }],
   ['link href', { link: { href: 'https://example.com' } }],
@@ -139,6 +142,16 @@ describe('agent marks read the same after save and reload', () => {
     const reloaded = await boot(await editor.save(), config);
 
     expect(pick(await editorRead(reloaded))).toEqual(before);
+  }, TIMEOUT);
+
+  it('in the editor, a host link config replaces the target and rel the agent gave', async () => {
+    const editor = await boot(SEED, { link: { target: '_self', rel: 'noopener' } });
+
+    await editorWrite(editor, [{ commands: [{
+      name: 'text.format', args: { id: 'f0', range: { find: 'world' }, set: { link: { href: 'https://e.com', target: '_blank', rel: 'nofollow' } } },
+    }] }]);
+
+    expect((await editorRead(editor)).f0).toEqual([{ text: 'Hello ' }, { text: 'world', marks: { link: { href: 'https://e.com', target: '_self', rel: 'noopener' } } }]);
   }, TIMEOUT);
 
   it.each([

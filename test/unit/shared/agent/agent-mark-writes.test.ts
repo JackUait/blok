@@ -354,6 +354,79 @@ describe.each(sessions)('agent mark writes match what a reload shows (%s session
     }
   });
 
+  it.each(['#0000ff', 'rgb(0, 0, 255)', 'hsl(240 100% 50%)', '#4b0082', '#000080'])('snaps the dark colour %s to a preset background instead of dropping it', async (background) => {
+    const session = open(seed);
+
+    try {
+      const result = await run(session, formatWith({ background }));
+      const marks = JSON.stringify(await textOf(session, 'p'));
+
+      expect(marks).toMatch(/"background":"(gray|brown|orange|yellow|green|blue|purple|pink|red)"/);
+      expect(result.warnings).toContainEqual(expect.objectContaining({ code: 'CORRECTED', message: expect.stringContaining('nearest preset') }));
+    } finally {
+      await session.close();
+    }
+  });
+
+  it('drops the neutral dark page background and says so', async () => {
+    const session = open(seed);
+
+    try {
+      const result = await run(session, formatWith({ background: '#191918' }));
+
+      expect(await textOf(session, 'p')).toEqual([{ text: 'Hello world' }]);
+      expect(result.warnings).toContainEqual(expect.objectContaining({ code: 'CORRECTED', message: expect.stringContaining('page background') }));
+    } finally {
+      await session.close();
+    }
+  });
+
+  it.each([
+    [{ background: 'rgba(255, 0, 0, 0)' }],
+    [{ color: 'rgb(255 0 0 / 0)' }],
+    [{ background: '#ff000000' }],
+  ])('drops a fully transparent colour %j', async (set) => {
+    const session = open(seed);
+
+    try {
+      await run(session, formatWith(set));
+
+      expect(await textOf(session, 'p')).toEqual([{ text: 'Hello world' }]);
+    } finally {
+      await session.close();
+    }
+  });
+
+  it('drops a colour syntax Blok does not read, naming the ones it does', async () => {
+    const session = open(seed);
+
+    try {
+      const result = await run(session, formatWith({ color: 'oklch(0.6 0.2 30)' }));
+
+      expect(await textOf(session, 'p')).toEqual([{ text: 'Hello world' }]);
+      expect(result.warnings).toContainEqual(expect.objectContaining({ code: 'CORRECTED', message: expect.stringContaining('hex, rgb, hsl') }));
+      expect(result.warnings).not.toContainEqual(expect.objectContaining({ message: expect.stringContaining('is not a colour') }));
+    } finally {
+      await session.close();
+    }
+  });
+
+  it.each([
+    [{ href: 'https://e.com' }, { href: 'https://e.com', target: '_blank', rel: 'nofollow' }],
+    [{ href: '#top' }, { href: '#top', target: '_self', rel: 'nofollow' }],
+    [{ href: 'https://e.com', target: '_self', rel: 'noopener' }, { href: 'https://e.com', target: '_self', rel: 'noopener' }],
+  ])('fills link %j with the Link tool defaults', async (link, expected) => {
+    const session = open(seed);
+
+    try {
+      await run(session, formatWith({ link }));
+
+      expect(await textOf(session, 'p')).toEqual([{ text: 'Hello ' }, { text: 'world', marks: { link: expected } }]);
+    } finally {
+      await session.close();
+    }
+  });
+
   // The sanitizer's HTML round trip still drops it (nested anchors cannot exist): that is
   // reported as SANITIZED, not blamed on the agent's write.
   it('does not correct a stored link on a page mention outside the range it formats', async () => {

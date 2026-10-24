@@ -266,6 +266,16 @@ export function mapToNearestPresetName(cssColor: string, mode: 'text' | 'bg'): s
     return null;
   }
 
+  return nearestPresetName(cssColor, mode);
+}
+
+/**
+ * {@link mapToNearestPresetName} without the page-background guard: a dark
+ * chromatic background (`#000080`) still finds its preset.
+ * @param cssColor - CSS color string (hex or rgb)
+ * @param mode - 'text' for text color presets, 'bg' for background presets
+ */
+export function nearestPresetName(cssColor: string, mode: 'text' | 'bg'): string | null {
   const rgb = parseColor(cssColor);
 
   if (rgb === null) {

@@ -1,5 +1,5 @@
 import { COLOR_PRESETS } from '../color-presets';
-import { mapToNearestPresetName, parseAnyCssColor } from '../color-mapping';
+import { nearestPresetName, parseAnyCssColor } from '../color-mapping';
 import { isSafeCssColor } from '../css-color';
 import { isDefaultDarkBackground, isDefaultWhiteBackground } from '../default-page-colors';
 import { DEFAULT_LINK_REL, DEFAULT_LINK_TARGET, SAME_PAGE_LINK_TARGET } from '../link-defaults';
@@ -20,8 +20,29 @@ const PRESET_VAR = /^var\(--blok-color-([a-z]+)-(text|bg)\)$/;
 
 type ColorMode = 'text' | 'bg';
 
-/** migrateMarkColors strips exactly these backgrounds on load. */
-const isPageBackground = (color: string): boolean => isDefaultWhiteBackground(color) || isDefaultDarkBackground(color);
+/** Page backgrounds are gray: the dark one (#191918) has a channel spread of 1. */
+const NEUTRAL_MAX_SPREAD = 10;
+
+/** White, or the near-black, near-gray dark page background. A dark blue is a colour, not the page. */
+const isPageBackground = (color: string, rgb: readonly number[] | null): boolean => isDefaultWhiteBackground(color)
+  || (isDefaultDarkBackground(color) && rgb !== null && Math.max(...rgb) - Math.min(...rgb) <= NEUTRAL_MAX_SPREAD);
+
+const HEX_ALPHA = /^#(?:[0-9a-f]{3}([0-9a-f])|[0-9a-f]{6}([0-9a-f]{2}))$/i;
+const LAST_NUMBER = /([+-]?(?:\d+(?:\.\d+)?|\.\d+))%?\s*\)$/;
+
+/** An alpha of 0 in #rgba, #rrggbbaa, `rgb(r, g, b, a)` or `rgb(r g b / a)`. */
+const isFullyTransparent = (raw: string): boolean => {
+  const hex = HEX_ALPHA.exec(raw);
+
+  if (hex !== null) {
+    return /^0+$/.test(hex[1] ?? hex[2]);
+  }
+
+  const hasAlpha = raw.includes('/') || (raw.match(/,/g)?.length ?? 0) === 3;
+  const alpha = hasAlpha ? LAST_NUMBER.exec(raw) : null;
+
+  return alpha !== null && Number(alpha[1]) <= 0;
+};
 
 /**
  * What the editor's load path (migrateMarkColors, then the reader) makes of a
@@ -40,22 +61,24 @@ const snapColor = (value: string, mode: ColorMode): { value?: string; note?: str
     return { value: preset[1] };
   }
   if (!isSafeCssColor(raw)) {
-    return { note: `"${value}" is not a colour, so it was dropped. Use a preset name.` };
+    return { note: `"${value}" was dropped: Blok reads a preset name, hex, rgb, hsl, a CSS colour name or var(--name).` };
   }
   if (raw.startsWith('var(')) {
     return { value: raw };
+  }
+  if (lower === 'transparent' || isFullyTransparent(raw)) {
+    return { note: `"${value}" is see-through, so it was dropped.` };
   }
 
   const rgb = parseAnyCssColor(raw);
   const rgbText = rgb === null ? undefined : `rgb(${rgb.join(', ')})`;
 
-  if (lower === 'transparent'
-    || (mode === 'bg' && (isPageBackground(raw) || (rgbText !== undefined && isPageBackground(rgbText))))) {
-    return { note: `"${value}" shows no ${mode === 'bg' ? 'background' : 'colour'}, so it was dropped.` };
+  if (mode === 'bg' && (isPageBackground(raw, rgb) || (rgbText !== undefined && isPageBackground(rgbText, rgb)))) {
+    return { note: `"${value}" is the page background, so it was dropped.` };
   }
 
   // A named colour (or currentcolor) stays as written, as it does on load.
-  const name = rgbText === undefined ? null : mapToNearestPresetName(rgbText, mode);
+  const name = rgbText === undefined ? null : nearestPresetName(rgbText, mode);
 
   return name === null
     ? { value: rgbText === undefined ? lower : raw }

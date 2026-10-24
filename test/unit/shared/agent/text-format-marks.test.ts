@@ -29,7 +29,7 @@ describe('text.format marks', () => {
     }
   });
 
-  it('applies a link given as { href }', async () => {
+  it('applies a link given as { href }, with the Link tool defaults', async () => {
     const session = openJsonSession(seed);
 
     try {
@@ -38,7 +38,7 @@ describe('text.format marks', () => {
       ] });
 
       expect(result.ok).toBe(true);
-      expect(session.output().blocks[0]?.data.text).toContainEqual({ text: 'report', marks: { link: { href: 'https://example.com' } } });
+      expect(session.output().blocks[0]?.data.text).toContainEqual({ text: 'report', marks: { link: { href: 'https://example.com', target: '_blank', rel: 'nofollow' } } });
     } finally {
       session.close();
     }

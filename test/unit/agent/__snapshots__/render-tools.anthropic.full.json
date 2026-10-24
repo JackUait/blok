@@ -5371,7 +5371,8 @@
                         "type": "array",
                         "items": {
                           "type": "string"
-                        }
+                        },
+                        "description": "Mark names to clear. \"*\" clears every mark first; set then applies."
                       }
                     },
                     "required": [
@@ -5440,7 +5441,69 @@
                         ]
                       },
                       "marks": {
-                        "type": "object"
+                        "type": "object",
+                        "description": "Formatting on one run. A key Blok does not know is dropped on load, except `tag:<name>` keys from custom inline tools.",
+                        "properties": {
+                          "bold": {
+                            "const": true
+                          },
+                          "italic": {
+                            "const": true
+                          },
+                          "underline": {
+                            "const": true
+                          },
+                          "strikethrough": {
+                            "const": true
+                          },
+                          "code": {
+                            "const": true
+                          },
+                          "sup": {
+                            "const": true
+                          },
+                          "sub": {
+                            "const": true
+                          },
+                          "highlight": {
+                            "const": true,
+                            "description": "A highlight with no colour of its own."
+                          },
+                          "color": {
+                            "type": "string",
+                            "description": "Preset name (\"red\") or any CSS colour."
+                          },
+                          "background": {
+                            "type": "string",
+                            "description": "Preset name (\"red\") or any CSS colour."
+                          },
+                          "link": {
+                            "type": "object",
+                            "required": [
+                              "href"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "href": {
+                                "type": "string"
+                              },
+                              "target": {
+                                "type": "string"
+                              },
+                              "rel": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "patternProperties": {
+                          "^tag:": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "string"
+                            }
+                          }
+                        }
                       }
                     },
                     "required": [

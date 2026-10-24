@@ -1,7 +1,9 @@
 import { isRichText, readEmbed } from '../rich-text/guards';
 import { failure, warning } from './errors';
 import { applyEdits } from './json-applier';
+import { RICH_TEXT_MARKS } from '../tool-descriptions/rich-text';
 import { looksLikeMarkdown } from './markdown-lookalike';
+import { defaultLinkResolver, dropLinkOnPageMention, normalizeAgentMarks } from './mark-input';
 import { snapshotTree } from './placement-rules';
 import { KNOWN_MARKS } from './rich-text-ops';
 import { cloneRecord, copyValue } from './snapshot';
@@ -60,6 +62,7 @@ export class PlanState {
   public lastRange?: TextRangeRef;
 
   private readonly reserved = new Map<string, string>();
+  private copyingStored = false;
   private readonly allocated = new Set<string>();
 
   constructor(
@@ -68,6 +71,18 @@ export class PlanState {
     public readonly warnings: AgentWarning[],
     private readonly stamp: EditStamp
   ) {}
+
+  /** Runs `build` with every rich field read as stored: block.duplicate copies stored blocks. */
+  public copyStored<T>(build: () => T): T {
+    const previous = this.copyingStored;
+
+    this.copyingStored = true;
+    try {
+      return build();
+    } finally {
+      this.copyingStored = previous;
+    }
+  }
 
   public setCommandIndex(index: number): void {
     this.index = index;
@@ -312,7 +327,7 @@ export class PlanState {
     raw: Record<string, unknown>,
     path: string,
     blockId: string,
-    options: { normalize?: boolean } = {}
+    options: { normalize?: boolean; stored?: readonly string[] } = {}
   ): Record<string, unknown> {
     const tool = this.tool(type);
     const input = cloneRecord(raw);
@@ -327,7 +342,7 @@ export class PlanState {
       const literal = typeof value === 'string' && value !== '' ? [{ text: value }] : [];
       const rich = typeof value === 'string'
         ? literal
-        : this.readRichInput(value, `${path}/${pointerKey(field)}`, blockId, field);
+        : this.readRichInput(value, `${path}/${pointerKey(field)}`, blockId, field, this.copyingStored || options.stored?.includes(field) === true);
 
       input[field] = rich;
       if (looksLikeMarkdown(this.ctx.richText.plainText(rich))) {
@@ -346,7 +361,11 @@ export class PlanState {
     return options.normalize === false || tool?.runtime.normalize === undefined ? sanitized : tool.runtime.normalize(sanitized);
   }
 
-  private readRichInput(value: unknown, path: string, blockId: string, field: string): RichText {
+  /**
+   * A `stored` field was rebuilt from the draft, plus input already read here, or
+   * by a tool's normalizer: runs the agent did not write keep their marks as stored.
+   */
+  private readRichInput(value: unknown, path: string, blockId: string, field: string, stored: boolean): RichText {
     if (!isArray(value)) {
       this.fail('INVALID_ARGS', `"${field}" takes plain text or rich-text segments.`, path);
     }
@@ -369,11 +388,19 @@ export class PlanState {
       if (!isRichText([segment])) {
         this.fail('INVALID_ARGS', 'Expected one text or embed segment with no extra fields.', at);
       }
+      // The same check text.format's `set` gets from its command schema.
+      const problem = stored || segment.marks === undefined ? undefined : this.ctx.validate(RICH_TEXT_MARKS, segment.marks)[0];
+
+      if (problem !== undefined) {
+        this.fail('INVALID_ARGS', `Mark ${problem.path.slice(1) || 'value'}: ${problem.message}`, `${at}/marks${problem.path}`);
+      }
     }
     if (!isRichText(value)) {
       this.fail('INVALID_ARGS', 'Expected rich-text segments.', path);
     }
 
+    const notes = new Set<string>();
+    const resolveLink = this.ctx.ports.resolveLink ?? defaultLinkResolver;
     const rich: RichText = value.map(segment => {
       if (segment.marks === undefined) {
         return segment;
@@ -381,17 +408,27 @@ export class PlanState {
 
       const unknown = Object.keys(segment.marks).filter(key => !KNOWN_MARKS.has(key) && !key.startsWith('tag:'));
 
-      if (unknown.length === 0) {
-        return segment;
+      if (unknown.length > 0) {
+        this.warn('UNKNOWN_MARK_DROPPED', `Unknown mark(s) ${unknown.join(', ')} dropped. Marks: ${[...KNOWN_MARKS].join(', ')}.`, { blockId, field });
       }
-      this.warn('UNKNOWN_MARK_DROPPED', `Unknown mark(s) ${unknown.join(', ')} dropped. Marks: ${[...KNOWN_MARKS].join(', ')}.`, { blockId, field });
 
-      const marks = { ...segment.marks };
+      const known = { ...segment.marks };
 
-      unknown.forEach(key => Reflect.deleteProperty(marks, key));
+      unknown.forEach(key => Reflect.deleteProperty(known, key));
 
-      return { ...segment, marks };
+      if (stored) {
+        return { ...segment, marks: known };
+      }
+
+      const normalized = normalizeAgentMarks(known, resolveLink);
+      const repaired = dropLinkOnPageMention({ ...segment, marks: normalized.marks });
+
+      [...normalized.notes, ...(repaired.note === undefined ? [] : [repaired.note])].forEach(note => notes.add(note));
+
+      return repaired.segment;
     });
+
+    notes.forEach(note => this.warn('CORRECTED', `"${field}": ${note}`, { blockId, field }));
 
     return this.ctx.richText.canonicalize(rich);
   }

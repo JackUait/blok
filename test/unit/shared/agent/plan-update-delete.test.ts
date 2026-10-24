@@ -498,15 +498,13 @@ describe('block.update planning', () => {
     expect(draft.get('h')?.tunes).toEqual({ align: { side: 'left' } });
   });
 
-  it('normalizes recognized mark values without replacing the shared canonicalizer policy', () => {
-    const { draft } = planOn(doc, [{
+  it('refuses a mark value that text.format would refuse', () => {
+    expect(failOf(() => planOn(doc, [{
       name: 'block.update', args: { id: 'h', data: { text: [
-        { text: 'A', marks: { bold: false, color: 7, italic: true } },
-        { text: 'B', marks: { bold: null, background: null, italic: true } },
+        { text: 'A', marks: { italic: true } },
+        { text: 'B', marks: { color: 7 } },
       ] } },
-    }]);
-
-    expect(draft.get('h')?.data.text).toEqual([{ text: 'AB', marks: { italic: true } }]);
+    }]))).toMatchObject({ code: 'INVALID_ARGS', commandIndex: 0, path: '/commands/0/args/data/text/1/marks/color' });
   });
 
   it('retains warnings from a successful update when a later command fails', () => {

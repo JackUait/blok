@@ -1,6 +1,7 @@
 import type { BlokConfig } from '../../../types';
 
 import { isSamePageLink } from '../../tools/link/registry';
+import { DEFAULT_LINK_REL, DEFAULT_LINK_TARGET, SAME_PAGE_LINK_TARGET } from '../../shared/link-defaults';
 
 type LinkConfig = NonNullable<BlokConfig['link']>;
 
@@ -41,8 +42,8 @@ export function resolveLinkAttributes(
   element: HTMLAnchorElement,
   link: LinkConfig,
 ): ResolvedLinkAttributes {
-  const defaultTarget = isSamePageLink(originalHref) ? '_self' : (link.target ?? '_blank');
-  const defaultRel = link.rel ?? 'nofollow';
+  const defaultTarget = isSamePageLink(originalHref) ? SAME_PAGE_LINK_TARGET : (link.target ?? DEFAULT_LINK_TARGET);
+  const defaultRel = link.rel ?? DEFAULT_LINK_REL;
 
   if (link.transform !== undefined) {
     const result = link.transform({

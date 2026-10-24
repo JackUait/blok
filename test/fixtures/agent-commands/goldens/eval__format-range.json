@@ -35,7 +35,9 @@
               "text": "report",
               "marks": {
                 "link": {
-                  "href": "https://example.com"
+                  "href": "https://example.com",
+                  "rel": "nofollow",
+                  "target": "_blank"
                 }
               }
             },

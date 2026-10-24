@@ -2,7 +2,7 @@ import type {
   AgentActor, AgentBatch, AgentSession, AgentWarning, ChangedSet, Edit, InsertSpec, RichTextHelpers, TextRangeRef,
 } from '../../../types/agent';
 import type { OutputBlockData, OutputData } from '../../../types/data-formats/output-data';
-import type { RichText } from '../../../types/rich-text';
+import type { RichText, RichTextLink } from '../../../types/rich-text';
 import type { ToolActionImpl } from '../../../types/tools/tool-description';
 
 export type JsonSchema = { readonly [keyword: string]: unknown };
@@ -55,6 +55,8 @@ export interface AgentPorts {
   markdownToBlocks(md: string): Promise<{ blocks: OutputBlockData[]; warnings: AgentWarning[] }>;
   blocksToMarkdown(doc: OutputData): { markdown: string; warnings: AgentWarning[] };
   newId(): string;
+  /** The editor's `link` config; without it a link gets the Link tool defaults. */
+  resolveLink?(link: RichTextLink): RichTextLink;
   openPageDocument?(pageId: string, actor: AgentActor): Promise<AgentSession & { close(): void }>;
 }
 

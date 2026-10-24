@@ -86,12 +86,13 @@ export const COMMANDS: Record<CoreCommandName, CoreCommandSpec> = {
   'block.duplicate': write('Deep-copy a block with new ids.', obj({ id, position }, ['id'])),
   'text.insert': write('Insert text into a rich-text field.', obj({
     id, field: { type: 'string' }, at: { oneOf: [{ type: 'integer', minimum: 0 }, obj({ after: { type: 'string', minLength: 1 } }, ['after'])] },
-    text: richOrString, marks: { type: 'object' },
+    text: richOrString, marks: RICH_TEXT_MARKS,
   }, ['id', 'at', 'text'])),
   'text.delete': write('Delete a range of text.', obj({ id, field: { type: 'string' }, range }, ['id', 'range'])),
   'text.replace': write('Replace a range, or the whole field.', obj({ id, field: { type: 'string' }, range, with: richOrString }, ['id', 'with'])),
   'text.format': write('Set or clear marks on a range.', obj({
-    id, field: { type: 'string' }, range, set: RICH_TEXT_MARKS, unset: { type: 'array', items: { type: 'string' } },
+    id, field: { type: 'string' }, range, set: RICH_TEXT_MARKS,
+    unset: { type: 'array', items: { type: 'string' }, description: 'Mark names to clear. "*" clears every mark first; set then applies.' },
   }, ['id', 'range'])),
   'markdown.insert': write('Convert Markdown into blocks and insert them. Additive.', obj({
     markdown: { type: 'string' }, parentId, position,

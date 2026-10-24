@@ -87,7 +87,8 @@ describe('text command planning', () => {
       { text: 'a😀', marks: { bold: true } },
       { text: 'X😀', marks: { italic: true } },
       { embed: { equation: { expression: 'x^2' } }, marks: { underline: true } },
-      { embed: { html: '<img src="image.png">' }, marks: { link: { href: '/image' } } },
+      // The new link gets the Link tool's defaults; the stored one stays as it was.
+      { embed: { html: '<img src="image.png">' }, marks: { link: { href: '/image', target: '_blank', rel: 'nofollow' } } },
       { embed: { page: { id: 'page-1' } }, marks: { link: { href: '/page', target: '_self', rel: 'author' } } },
       { text: '\nz' },
     ];

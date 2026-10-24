@@ -10,6 +10,7 @@ import {
 } from '../../../shared/rich-text/block-data';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 import { generateBlockId } from '../../utils/id-generator';
+import { resolveLinkAttributes } from '../../utils/resolve-link-attributes';
 import { htmlToSegmentsDom } from '../../utils/rich-text-dom';
 
 export const editorRichTextFieldsFor = (Blok: Pick<BlokModules, 'Tools'>): (type: string) => string[] =>
@@ -77,5 +78,14 @@ export const createEditorPorts = (Blok: BlokModules): AgentPorts => {
       return { markdown, warnings: warnings.map(degraded) };
     },
     newId: generateBlockId,
+    resolveLink: (link) => {
+      const config = Blok.API.methods.config.link;
+      const resolved = resolveLinkAttributes(link.href, document.createElement('a'), config ?? {});
+
+      // A reload forces the host's link config onto every anchor (Renderer); with none set it keeps the stored target and rel.
+      return config === undefined
+        ? { href: link.href, target: link.target ?? resolved.target, rel: link.rel ?? resolved.rel }
+        : { href: resolved.href, target: resolved.target, rel: resolved.rel };
+    },
   };
 };

@@ -15,6 +15,7 @@ import { createColorPicker } from '../shared/color-picker';
 import type { ColorPickerHandle } from '../shared/color-picker';
 import { colorVarName } from '../shared/color-presets';
 import { mapToNearestPresetName } from '../utils/color-mapping';
+import { DEFAULT_HIGHLIGHT_BACKGROUND } from '../../shared/agent/mark-input';
 
 /**
  * Color mode type — either text color or background color
@@ -78,7 +79,7 @@ export class MarkerInlineTool implements InlineTool {
    */
   private static readonly DEFAULT_SHORTCUT_COLOR: { mode: ColorMode; value: string } = {
     mode: 'background-color',
-    value: colorVarName('yellow', 'bg'),
+    value: colorVarName(DEFAULT_HIGHLIGHT_BACKGROUND, 'bg'),
   };
 
   /**

@@ -696,20 +696,13 @@ describe('block.insert controlling corrections', () => {
     expect(error.path === pointer || error.path?.startsWith(`${pointer}/`)).toBe(true);
   });
 
-  it('keeps the existing normalization of recognized mark values', () => {
-    const raw = [{ text: 'x', marks: {
-      bold: false, italic: null, sup: true, color: 3, background: 'red',
-      link: { href: 3 }, 'tag:span': { title: 'kept', ignored: 3 },
-    } }];
+  it('refuses a mark value that text.format would refuse, without changing the input', () => {
+    const raw = [{ text: 'x', marks: { bold: false, sup: true } }];
     const before = structuredClone(raw);
-    const { draft, warnings } = planOn(doc, [{
-      name: 'block.insert', args: { type: 'paragraph', data: { text: raw } },
-    }]);
 
-    expect(draft.get('n1')?.data.text).toEqual([{
-      text: 'x', marks: { sup: true, background: 'red', 'tag:span': { title: 'kept' } },
-    }]);
-    expect(warnings.filter(item => item.code === 'UNKNOWN_MARK_DROPPED')).toEqual([]);
+    expect(failOf(() => planOn(doc, [{
+      name: 'block.insert', args: { type: 'paragraph', data: { text: raw } },
+    }]))).toMatchObject({ code: 'INVALID_ARGS', commandIndex: 0, path: '/commands/0/args/data/text/0/marks/bold' });
     expect(raw).toEqual(before);
   });
 

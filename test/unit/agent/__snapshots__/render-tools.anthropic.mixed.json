@@ -429,7 +429,8 @@
                         "type": "array",
                         "items": {
                           "type": "string"
-                        }
+                        },
+                        "description": "Mark names to clear. \"*\" clears every mark first; set then applies."
                       }
                     },
                     "required": [

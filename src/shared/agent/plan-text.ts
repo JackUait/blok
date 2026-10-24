@@ -1,6 +1,8 @@
 import { isRichText } from '../rich-text/guards';
 import { AgentFailure, failure } from './errors';
+import { defaultLinkResolver, dropLinkOnPageMention, normalizeAgentMarks } from './mark-input';
 import { planUpdate } from './plan-block';
+import { KNOWN_MARKS, UNSET_ALL } from './rich-text-ops';
 
 import type { TextRange } from '../../../types/agent';
 import type { RichText } from '../../../types/rich-text';
@@ -118,7 +120,7 @@ const write = (state: PlanState, t: Target, value: RichText, start: number, end:
   const intendedText = state.ctx.richText.plainText(value);
 
   try {
-    planUpdate(state, { id: t.id, data: { [t.field]: value } });
+    planUpdate(state, { id: t.id, data: { [t.field]: value } }, [t.field]);
   } finally {
     const warned = { value: false };
     const warnings = state.warnings.filter(entry => {
@@ -190,6 +192,9 @@ export const planTextReplace = (state: PlanState, args: Record<string, unknown>)
   return { length };
 };
 
+/** Setting one of these turns the other off, as the sup/sub tool does. */
+const EXCLUSIVE: Record<string, string> = { sup: 'sub', sub: 'sup' };
+
 export const planTextFormat = (state: PlanState, args: Record<string, unknown>): unknown => {
   const t = target(state, args);
   const { start, end } = resolve(state, t, readRange(state, args.range), '/range');
@@ -202,7 +207,30 @@ export const planTextFormat = (state: PlanState, args: Record<string, unknown>):
     state.fail('INVALID_ARGS', 'Expected a list of mark names.', '/unset');
   }
 
-  write(state, t, state.ctx.richText.format(t.value, start, end, marked[0]?.marks, args.unset), start, end);
+  const given = marked[0]?.marks;
+  const normalized = given === undefined ? undefined : normalizeAgentMarks(given, state.ctx.ports.resolveLink ?? defaultLinkResolver);
+  const set = normalized?.marks;
+  const unknown = (args.unset ?? []).filter(key => key !== UNSET_ALL && !KNOWN_MARKS.has(key) && !key.startsWith('tag:'));
+  const unset = [
+    ...(args.unset ?? []),
+    // A highlight is stored as a background, so clearing it clears that.
+    ...(args.unset?.includes('highlight') === true ? ['background'] : []),
+    ...Object.keys(EXCLUSIVE).filter(key => set?.[key as keyof typeof set] === true).map(key => EXCLUSIVE[key]),
+  ];
+
+  if (unknown.length > 0) {
+    state.warn('UNKNOWN_MARK_DROPPED', `Unknown mark(s) ${unknown.join(', ')} in unset were ignored. Marks: ${[...KNOWN_MARKS].join(', ')}, "${UNSET_ALL}" for all.`, { blockId: t.id, field: t.field });
+  }
+  normalized?.notes.forEach(note => state.warn('CORRECTED', `"${t.field}": ${note}`, { blockId: t.id, field: t.field }));
+
+  const formatted = state.ctx.richText.format(t.value, start, end, set, unset).map(segment => dropLinkOnPageMention(segment));
+  const dropped = formatted.find(item => item.note !== undefined)?.note;
+
+  if (dropped !== undefined) {
+    state.warn('CORRECTED', `"${t.field}": ${dropped}`, { blockId: t.id, field: t.field });
+  }
+
+  write(state, t, state.ctx.richText.canonicalize(formatted.map(item => item.segment)), start, end);
 
   return {};
 };

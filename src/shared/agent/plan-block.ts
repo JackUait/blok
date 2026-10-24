@@ -442,7 +442,8 @@ const sameField = (left: Record<string, unknown>, right: Record<string, unknown>
   Object.hasOwn(left, field) === Object.hasOwn(right, field) &&
   (!Object.hasOwn(left, field) || JSON.stringify(left[field]) === JSON.stringify(right[field]));
 
-export const planUpdate = (state: PlanState, args: Record<string, unknown>): unknown => {
+/** `stored` names fields rebuilt from the draft (see PlanState.prepareData). */
+export const planUpdate = (state: PlanState, args: Record<string, unknown>, stored: readonly string[] = []): unknown => {
   const block = state.requireBlock(args.id, '/id');
   const tool = requireTool(state, block);
   const patch = args.data === undefined ? {} : args.data;
@@ -472,7 +473,7 @@ export const planUpdate = (state: PlanState, args: Record<string, unknown>): unk
     }
   }
 
-  emitPatch(state, block, args.data === undefined ? undefined : patch, tunes);
+  emitPatch(state, block, args.data === undefined ? undefined : patch, tunes, stored);
 
   return { id: block.id };
 };
@@ -481,7 +482,8 @@ export const emitPatch = (
   state: PlanState,
   block: SnapBlock,
   input: Record<string, unknown> | undefined,
-  tunes?: Record<string, unknown>
+  tunes?: Record<string, unknown>,
+  stored: readonly string[] = []
 ): void => {
   const tool = requireTool(state, block);
   const patch = input === undefined ? {} : input;
@@ -500,7 +502,7 @@ export const emitPatch = (
   const removed = Object.entries(patch).filter(([, value]) => value === null || value === undefined).map(([key]) => key);
   const written = input === undefined ? {} : state.prepareData(
     block.type, Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== null && value !== undefined)),
-    '/data', block.id, { normalize: false }
+    '/data', block.id, { normalize: false, stored }
   );
   const merged = { ...cloneRecord(block.data), ...written };
 
@@ -527,7 +529,7 @@ export const emitPatch = (
   const effective: Record<string, unknown> = {
     ...Object.fromEntries(Object.entries(normalized).filter(([key]) => !Object.hasOwn(produced, key))),
     ...(Object.keys(produced).length === 0 ? {} : state.prepareData(
-      block.type, produced, '/data', block.id, { normalize: false }
+      block.type, produced, '/data', block.id, { normalize: false, stored: Object.keys(produced) }
     )),
   };
 
@@ -715,7 +717,7 @@ export const planConvert = (state: PlanState, args: Record<string, unknown>): un
     ...(target.entry.defaultData ?? {}),
     [to]: carried ?? (target.entry.richTextFields.includes(to) ? [] : ''),
     ...overrides,
-  }, '/data', block.id, { normalize: false });
+  }, '/data', block.id, { normalize: false, stored: Object.hasOwn(overrides, to) ? [] : [to] });
   const normalized = target.runtime.normalize === undefined ? prepared : target.runtime.normalize(cloneRecord(prepared));
 
   if (!isRecord(normalized)) {
@@ -729,7 +731,7 @@ export const planConvert = (state: PlanState, args: Record<string, unknown>): un
   const data: Record<string, unknown> = {
     ...Object.fromEntries(Object.entries(normalized).filter(([key]) => !Object.hasOwn(produced, key))),
     ...(Object.keys(produced).length === 0 ? {} : state.prepareData(
-      targetType, produced, '/data', block.id, { normalize: false }
+      targetType, produced, '/data', block.id, { normalize: false, stored: Object.keys(produced) }
     )),
   };
 
@@ -820,7 +822,8 @@ export const planDuplicate = (state: PlanState, args: Record<string, unknown>): 
       children: block.content.map(id => toSpec(state.requireBlock(id, '/id'))),
     };
   };
-  const planned = buildPlannedBlock(state, toSpec(source), { id: placement.parentId }, '', false);
+  const spec = toSpec(source);
+  const planned = state.copyStored(() => buildPlannedBlock(state, spec, { id: placement.parentId }, '', false));
 
   state.emit({ op: 'insert', block: planned, parentId: placement.parentId, afterId: placement.afterId });
 

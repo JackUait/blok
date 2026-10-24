@@ -46,7 +46,12 @@ const slice = (value: RichText, start: number, end: number): RichText => splitAt
 
 const isMarkKey = (key: string): key is keyof RichTextMarks => KNOWN_MARKS.has(key) || key.startsWith('tag:');
 
+/** Unset key that clears every mark, custom tags too. */
+export const UNSET_ALL = '*';
+
 const withMarks = (segment: RichTextSegment, set: RichTextMarks | undefined, unset: string[] | undefined): RichTextSegment => {
+  // "*" clears what the run had; `set` still applies on top.
+  const base = unset?.includes(UNSET_ALL) === true ? {} : segment.marks;
   const marks = (unset ?? []).reduce<RichTextMarks>((current, key) => {
     if (!isMarkKey(key)) {
       return current;
@@ -55,7 +60,7 @@ const withMarks = (segment: RichTextSegment, set: RichTextMarks | undefined, uns
     const { [key]: _removed, ...remaining } = current;
 
     return remaining;
-  }, { ...segment.marks, ...set });
+  }, { ...base, ...set });
 
   const marked = Object.keys(marks).length === 0 ? {} : { marks };
 

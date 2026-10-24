@@ -2,6 +2,7 @@
 
 import { DEFAULT_HIGHLIGHT_BACKGROUND } from '../agent/mark-input';
 import { COLOR_PRESETS } from '../color-presets';
+import { DEFAULT_LINK_REL, DEFAULT_LINK_TARGET, SAME_PAGE_LINK_TARGET } from '../link-defaults';
 
 const PRESET_NAMES = COLOR_PRESETS.map(preset => `"${preset.name}"`).join(', ');
 
@@ -11,7 +12,7 @@ export const ALIGNMENT = ['left', 'center', 'right'] as const;
 /** Formatting on one run of rich text. */
 export const RICH_TEXT_MARKS = {
   type: 'object',
-  description: 'Formatting on one run. Unknown keys are dropped, except custom `tag:<name>` marks.',
+  description: 'Formatting on one run. Unknown keys drop, except custom `tag:<name>` marks.',
   properties: {
     bold: { const: true },
     italic: { const: true },
@@ -20,12 +21,12 @@ export const RICH_TEXT_MARKS = {
     code: { const: true },
     sup: { const: true, description: 'Not with sub on one run.' },
     sub: { const: true },
-    highlight: { const: true, description: `Stored as background "${DEFAULT_HIGHLIGHT_BACKGROUND}".` },
-    color: { type: 'string', description: `${PRESET_NAMES}. A hex, rgb or hsl value is stored as the nearest of them. A non-colour is dropped.` },
-    background: { type: 'string', description: 'Like color. White and transparent are dropped.' },
+    highlight: { const: true, description: `Stored as background "${DEFAULT_HIGHLIGHT_BACKGROUND}" unless background is set.` },
+    color: { type: 'string', description: `${PRESET_NAMES}. Hex, rgb, hsl snap to the nearest; names and var() stay; other syntaxes drop.` },
+    background: { type: 'string', description: 'Like color; page backgrounds drop.' },
     link: {
       type: 'object',
-      description: 'Missing target and rel get the Link tool\'s defaults.',
+      description: `Default "${DEFAULT_LINK_TARGET}"/"${DEFAULT_LINK_REL}", "${SAME_PAGE_LINK_TARGET}" for #anchors.`,
       required: ['href'],
       additionalProperties: false,
       properties: { href: { type: 'string' }, target: { type: 'string' }, rel: { type: 'string' } },
@@ -50,15 +51,14 @@ export const EMBED_SEGMENT = {
   properties: {
     embed: {
       oneOf: [
-        { type: 'object', required: ['equation'], additionalProperties: false, properties: { equation: { type: 'object', required: ['expression'], properties: { expression: { type: 'string', description: 'LaTeX.' } } } } },
-        { type: 'object', required: ['page'], additionalProperties: false, properties: { page: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } } } },
-        { type: 'object', required: ['html'], additionalProperties: false, properties: { html: { type: 'string', description: 'Inline markup with no segment shape, kept verbatim.' } } },
+        { type: 'object', required: ['equation'], additionalProperties: false, properties: { equation: { type: 'object', required: ['expression'], additionalProperties: false, properties: { expression: { type: 'string', description: 'LaTeX.' } } } } },
+        { type: 'object', required: ['page'], additionalProperties: false, properties: { page: { type: 'object', required: ['id'], additionalProperties: false, properties: { id: { type: 'string' } } } } },
+        { type: 'object', required: ['html'], additionalProperties: false, properties: { html: { type: 'string', description: 'Kept verbatim.' } } },
       ],
     },
     marks: RICH_TEXT_MARKS,
   },
 } as const;
-
 
 /** A rich-text field: an array of segments (types/rich-text.d.ts), or a plain string. */
 export const richText = (description: string): Record<string, unknown> => ({
@@ -77,8 +77,8 @@ export const richText = (description: string): Record<string, unknown> => ({
 export const RICH_TEXT_PRIMER = [
   'Rich text is a list of segments: { text, marks? } or { embed, marks? }. A plain string is plain text, HTML tags included.',
   `Marks: ${Object.keys(RICH_TEXT_MARKS.properties).join(', ')}, and tag:<name> for a custom inline tool. sup and sub cannot share a run.`,
-  `highlight is stored as background "${DEFAULT_HIGHLIGHT_BACKGROUND}". color and background take a preset: ${PRESET_NAMES}. A hex, rgb or hsl colour is stored as the nearest preset; a CSS colour name stays as written. A value that is not a colour, and a white or transparent background, is dropped.`,
-  'A link needs href. Missing target and rel get the Link tool\'s defaults.',
+  `highlight alone is stored as background "${DEFAULT_HIGHLIGHT_BACKGROUND}"; with a background, as that background. color and background take a preset: ${PRESET_NAMES}. Hex, rgb and hsl are stored as the nearest preset. A CSS colour name is lowercased and kept, and so is var(--name). Other syntaxes (oklch, lab, hwb, color()) are dropped, as are a transparent colour and a white or dark-grey page background.`,
+  `A link needs href. With no target or rel it gets target "${DEFAULT_LINK_TARGET}" and rel "${DEFAULT_LINK_REL}"; an "#anchor" href gets target "${SAME_PAGE_LINK_TARGET}". A target or rel you give is kept, but in the editor a host link config replaces both.`,
   'Embeds: { equation: { expression } } is inline LaTeX; { page: { id } } mentions a page block.',
   // UNSET_ALL and UNSET_TAGS in agent/rich-text-ops.ts: importing them drags the sanitizers into the headless snapshot.
   'text.format with unset ["*"] clears every mark; "tag:*" clears every custom mark.',

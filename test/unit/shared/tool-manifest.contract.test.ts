@@ -367,7 +367,8 @@ describe('buildAgentContract', () => {
 
     for (const fact of [
       'segments', '{ text, marks? }', 'bold', 'strikethrough', 'sup', 'sub', 'tag:<name>', 'background "yellow"',
-      '"gray"', '"red"', 'nearest preset', 'dropped', 'href', 'target and rel', '{ equation: { expression } }',
+      '"gray"', '"red"', 'nearest preset', 'lowercased', 'var(--name)', 'oklch', 'dark-grey page background', 'href',
+      'target "_blank"', 'rel "nofollow"', 'target "_self"', 'host link config', '{ equation: { expression } }',
       '{ page: { id } }', `unset ["${UNSET_ALL}"]`, `"${UNSET_TAGS}"`, 'markdown.insert', 'underline',
     ]) {
       expect(general).toContain(fact);

@@ -76,7 +76,7 @@ export const COMMANDS: Record<CoreCommandName, CoreCommandSpec> = {
     ...insertSpec,
     properties: {
       ...insertProperties,
-      data: { type: 'object', description: 'The tool\'s data. Its rich-text fields take what text.replace "with" takes.' },
+      data: { type: 'object', description: 'Rich-text fields take what text.replace "with" takes.' },
       parentId, position, demote: { type: 'boolean' },
     },
     $defs: { insertSpec },

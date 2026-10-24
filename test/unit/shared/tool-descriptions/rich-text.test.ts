@@ -32,9 +32,11 @@ describe('richText', () => {
     }
     expect(background.description).toContain('color');
     expect(color.description).toContain('nearest');
-    expect(color.description).toContain('dropped');
+    expect(color.description).toContain('var()');
+    expect(color.description).toContain('other syntaxes drop');
+    expect(highlight.description).toContain('unless background is set');
     expect(sup.description).toContain('sub');
-    expect(link.description).toContain('target and rel');
+    expect(link.description).toContain('"_blank"/"nofollow", "_self" for #anchors');
   });
 
   it('says a plain string is plain text, not HTML', () => {
@@ -42,6 +44,13 @@ describe('richText', () => {
 
     expect(text).not.toContain('Accepted on input');
     expect(text).toContain('An agent command stores a string as plain text');
+  });
+
+  it('refuses extra fields inside an equation or page embed, as the runtime does', () => {
+    const schema = richText('Body.');
+
+    expect(validateAgainst(schema, [{ embed: { equation: { expression: 'x', size: 2 } } }]).length).toBeGreaterThan(0);
+    expect(validateAgainst(schema, [{ embed: { page: { id: 'p', title: 'T' } } }]).length).toBeGreaterThan(0);
   });
 
   it('keeps the shared constants', () => {

@@ -154,7 +154,7 @@
                       },
                       "data": {
                         "type": "object",
-                        "description": "The tool's data. Its rich-text fields take what text.replace \"with\" takes."
+                        "description": "Rich-text fields take what text.replace \"with\" takes."
                       },
                       "tunes": {
                         "type": "object"
@@ -451,6 +451,7 @@
                                               "required": [
                                                 "expression"
                                               ],
+                                              "additionalProperties": false,
                                               "properties": {
                                                 "expression": {
                                                   "type": "string",
@@ -472,6 +473,7 @@
                                               "required": [
                                                 "id"
                                               ],
+                                              "additionalProperties": false,
                                               "properties": {
                                                 "id": {
                                                   "type": "string"
@@ -489,7 +491,7 @@
                                           "properties": {
                                             "html": {
                                               "type": "string",
-                                              "description": "Inline markup with no segment shape, kept verbatim."
+                                              "description": "Kept verbatim."
                                             }
                                           }
                                         }
@@ -652,7 +654,7 @@
         },
         "marks": {
           "type": "object",
-          "description": "Formatting on one run. Unknown keys are dropped, except custom `tag:<name>` marks.",
+          "description": "Formatting on one run. Unknown keys drop, except custom `tag:<name>` marks.",
           "properties": {
             "bold": {
               "const": true
@@ -678,19 +680,19 @@
             },
             "highlight": {
               "const": true,
-              "description": "Stored as background \"yellow\"."
+              "description": "Stored as background \"yellow\" unless background is set."
             },
             "color": {
               "type": "string",
-              "description": "\"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\". A hex, rgb or hsl value is stored as the nearest of them. A non-colour is dropped."
+              "description": "\"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\". Hex, rgb, hsl snap to the nearest; names and var() stay; other syntaxes drop."
             },
             "background": {
               "type": "string",
-              "description": "Like color. White and transparent are dropped."
+              "description": "Like color; page backgrounds drop."
             },
             "link": {
               "type": "object",
-              "description": "Missing target and rel get the Link tool's defaults.",
+              "description": "Default \"_blank\"/\"nofollow\", \"_self\" for #anchors.",
               "required": [
                 "href"
               ],

@@ -24,6 +24,8 @@
   --blok-database-page-divider: rgba(55, 53, 47, 0.09);
   --blok-database-checkbox-checked-bg: rgb(39, 131, 222);
   --blok-database-switch-on-bg: rgb(39, 131, 222);
+  --blok-database-switch-off-bg: var(--blok-toggle-off-bg);
+  --blok-database-switch-knob-bg: var(--blok-toggle-thumb-on-bg);
   /* "More templates" card and search borders (research/26 §2). Dark is unmeasured: Blok's border. */
   --blok-database-tpl-border: rgb(230, 229, 227);
   /* Event cards: the hover fill rgba(84, 72, 49, 0.08) puts the light step at 4.41:1; one step darker passes. */
@@ -457,6 +459,9 @@
     --blok-database-confirm-close-bg: rgba(255, 255, 243, 0.082);
     --blok-database-ai-prompt-placeholder: var(--blok-database-ink-tertiary);
     --blok-database-table-open-bg: rgb(32, 32, 32);
+    /* findings K11 (live): the off track and a white knob in both states; on stays blue (user decision). */
+    --blok-database-switch-off-bg: rgba(202, 204, 206, 0.3);
+    --blok-database-switch-knob-bg: rgb(255, 255, 255);
     --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
     /* Measured in dark (research/21 §1e): the selection bar and the database menus (§1a). */
     --blok-database-table-selection-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
@@ -738,6 +743,9 @@
   --blok-database-confirm-close-bg: rgba(255, 255, 243, 0.082);
   --blok-database-ai-prompt-placeholder: var(--blok-database-ink-tertiary);
   --blok-database-table-open-bg: rgb(32, 32, 32);
+  /* findings K11 (live): the off track and a white knob in both states; on stays blue (user decision). */
+  --blok-database-switch-off-bg: rgba(202, 204, 206, 0.3);
+  --blok-database-switch-knob-bg: rgb(255, 255, 255);
   --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   /* Measured in dark (research/21 §1e): the selection bar and the database menus (§1a). */
   --blok-database-table-selection-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
@@ -6589,7 +6597,7 @@ textarea[data-blok-database-cell-input] {
   height: 18px;
   flex-shrink: 0;
   border-radius: var(--blok-radius-pill);
-  background-color: var(--blok-toggle-off-bg);
+  background-color: var(--blok-database-switch-off-bg);
   transition: background-color 0.2s;
 }
 
@@ -6600,7 +6608,7 @@ textarea[data-blok-database-cell-input] {
   width: 14px;
   height: 14px;
   border-radius: var(--blok-radius-pill);
-  background-color: var(--blok-toggle-thumb-on-bg);
+  background-color: var(--blok-database-switch-knob-bg);
   /* Measured in research/08: the knob moves 12px over 200ms ease-out. */
   transition: transform 0.2s ease-out;
 }

@@ -1,5 +1,5 @@
 /**
- * Dark database chrome from feel/findings-darkkeys (K06).
+ * Dark database chrome from feel/findings-darkkeys (K06, K11).
  * jsdom has no CSS, so these read the authored source.
  */
 import { readFileSync } from 'node:fs';
@@ -29,5 +29,18 @@ describe('OPEN pill in dark (findings K06, live)', () => {
   it('leaves the card hover pill and the selection bar on the menu fill, rgb(37, 37, 37) in dark, as measured', () => {
     expect(tokenValues('--blok-database-card-actions-bg')).toEqual(Array(3).fill('var(--blok-database-popover-bg)'));
     expect(ruleBody('[data-blok-database-table-selection-bar]')).toContain('background-color: var(--blok-database-popover-bg)');
+  });
+});
+
+describe('database switches in dark (findings K11, live)', () => {
+  it('draw the off track at Notion\'s gray and keep the knob white in both states', () => {
+    expect(tokenValues('--blok-database-switch-off-bg')).toEqual(['var(--blok-toggle-off-bg)', 'rgba(202, 204, 206, 0.3)', 'rgba(202, 204, 206, 0.3)']);
+    expect(tokenValues('--blok-database-switch-knob-bg')).toEqual(['var(--blok-toggle-thumb-on-bg)', 'rgb(255, 255, 255)', 'rgb(255, 255, 255)']);
+    expect(ruleBody('[data-blok-database-switch-track]')).toContain('background-color: var(--blok-database-switch-off-bg)');
+    expect(ruleBody('[data-blok-database-switch-track] > span')).toContain('background-color: var(--blok-database-switch-knob-bg)');
+  });
+
+  it('keeps the on track blue (user decision: the switch stays blue)', () => {
+    expect(ruleBody('[aria-checked="true"] > [data-blok-database-switch-track]')).toContain('background-color: var(--blok-database-switch-on-bg)');
   });
 });

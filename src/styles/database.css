@@ -26,8 +26,8 @@
   --blok-database-switch-on-bg: rgb(39, 131, 222);
   --blok-database-switch-off-bg: var(--blok-toggle-off-bg);
   --blok-database-switch-knob-bg: var(--blok-toggle-thumb-on-bg);
-  /* The property menu's name field at rest. Light is unmeasured: the shared field fill (field.css). */
-  --blok-database-name-field-bg: var(--blok-item-hover-bg);
+  /* The property menu's name field at rest. Light is unmeasured: the hover fill, as the shared field's. */
+  --blok-database-name-field-bg: var(--blok-database-hover-bg);
   --blok-database-name-field-ring: transparent;
   /* "More templates" card and search borders (research/26 §2). Dark is unmeasured: Blok's border. */
   --blok-database-tpl-border: rgb(230, 229, 227);

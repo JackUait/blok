@@ -1132,8 +1132,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // +297: the side peek's page starts 4px under its bar (R11), measured after the rebase onto rowpage-props.
     const DATABASE_PEEK_SHELL_BYTES = 709 + 1_847 + 1_741 + 313 + 297;
     // database.css: keys and dark views (findings-darkkeys): no ring on a selected timeline bar (K10).
-    // +1_722: the property menu name field (K04), dark OPEN pill (K06), switches (K11) and date picker dividers (K12).
-    const DATABASE_KEYS_VIEWS_BYTES = 233 + 1_722;
+    // +1_730: the property menu name field (K04), dark OPEN pill (K06), switches (K11) and date picker dividers (K12).
+    const DATABASE_KEYS_VIEWS_BYTES = 233 + 1_730;
     // database.css: creation panels (findings-creation N03, N19): 44px tile rows, 30px tiles, 20px glyphs, the 10px box.
     // +1_449: the unlinked linked view's pill, folder glyph, "New table" and its dark border token (N18, N22).
     // +884: the empty feed's ringed "+ New page" tile (N20).

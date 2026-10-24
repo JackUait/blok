@@ -73,7 +73,7 @@ describe('property menu name field (findings K04)', () => {
 
     expect(rest).toContain('background-color: var(--blok-database-name-field-bg)');
     expect(rest).toContain('border-color: var(--blok-database-name-field-ring)');
-    expect(tokenValues('--blok-database-name-field-bg')).toEqual(['var(--blok-item-hover-bg)', 'rgba(252, 252, 252, 0.03)', 'rgba(252, 252, 252, 0.03)']);
+    expect(tokenValues('--blok-database-name-field-bg')).toEqual(['var(--blok-database-hover-bg)', 'rgba(252, 252, 252, 0.03)', 'rgba(252, 252, 252, 0.03)']);
     expect(tokenValues('--blok-database-name-field-ring')).toEqual(['transparent', 'rgba(255, 255, 235, 0.1)', 'rgba(255, 255, 235, 0.1)']);
   });
 

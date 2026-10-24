@@ -2,6 +2,7 @@ import { CLIENT_INFO_META_KEY, McpServer, ProtocolError, ProtocolErrorCode } fro
 
 import type { Tool } from '@modelcontextprotocol/server';
 
+import { RICH_TEXT_PRIMER } from '../shared/tool-descriptions/rich-text';
 import { safeClientName } from './actor';
 import { UnknownToolError } from './dispatcher';
 import type { Caller, CallOptions, ToolOutcome } from './dispatcher';
@@ -26,7 +27,8 @@ export const buildSdkServer = (input: {
   if (!tools.every((tool): tool is McpTool & Tool => tool.inputSchema.type === 'object')) {
     throw new TypeError('MCP tool input schemas must have an object root.');
   }
-  const mcp = new McpServer({ name: 'blok-mcp', version: input.version });
+  // Clients put instructions in the model's context; otherwise the primer is only in blok_describe().
+  const mcp = new McpServer({ name: 'blok-mcp', version: input.version }, { instructions: `How to write rich text in Blok:\n${RICH_TEXT_PRIMER}` });
   const server = mcp.server;
   const byName = new Map(tools.map(tool => [tool.name, tool]));
 

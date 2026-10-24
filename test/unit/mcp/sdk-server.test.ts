@@ -9,6 +9,7 @@ import { buildMcpContracts } from '../../../src/mcp/contract';
 import { UnknownToolError } from '../../../src/mcp/dispatcher';
 import { buildSdkServer } from '../../../src/mcp/sdk-server';
 import { listMcpTools } from '../../../src/mcp/tools';
+import { RICH_TEXT_PRIMER } from '../../../src/shared/tool-descriptions/rich-text';
 
 import type { Caller, ToolOutcome } from '../../../src/mcp/dispatcher';
 import type { Dispatch } from '../../../src/mcp/sdk-server';
@@ -120,6 +121,14 @@ describe.each(ERAS)('buildSdkServer over real SDK stdio (%s)', era => {
       expect(listed.tools).toHaveLength(6);
       expect(client.getServerVersion()).toMatchObject({ name: 'blok-mcp', version: '0.0.0-test' });
       expect(dispatch).not.toHaveBeenCalled();
+    });
+  });
+
+  it('sends the rich-text primer as its instructions on initialize', async () => {
+    const dispatch = vi.fn<Dispatch>(async () => gone);
+
+    await withClient(era, deploymentTools(), dispatch, async client => {
+      expect(client.getInstructions()).toContain(RICH_TEXT_PRIMER);
     });
   });
 

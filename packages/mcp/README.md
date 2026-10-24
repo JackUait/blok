@@ -20,7 +20,7 @@ A document opens in one of two modes:
 - **Live**: the agent joins the document's sync room as a participant. People see it work.
 - **Stored**: the agent loads the saved document, edits it, and saves it back after every batch.
 
-Agents write rich text with commands. They never write Markdown or HTML into block data.
+Agents write rich text with commands. They never write Markdown or HTML into block data. On initialize the server sends `instructions` with the rich-text rules: the marks, colour presets, link defaults, and equation and page embeds.
 
 ## Install and run locally
 

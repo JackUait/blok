@@ -135,7 +135,9 @@ Stored mode is refused when `--sync-url` is set. A sync service owns those docum
   - Its marks are `tag:<tag>` keys. Agents see them in the schema, and `blok_describe` answers for the tool by name.
   - Without this entry, the server removes the tool's marks when it writes the block.
   - The tool applies to every built-in block but code, and to your custom blocks. The file cannot limit it to some blocks.
-  - Event handler attributes (`on*`), `srcdoc`, and tags like `script` or `iframe` are refused.
+  - Only text-formatting tags are allowed: `kbd`, `abbr`, `cite`, `dfn`, `q`, `small`, `samp`, `var`, `time`, `data`, `span`, `mark`, `code`, `a`, `ruby`, `rt`, `rp`, `bdi`, `bdo`, `ins`, `del`, `s`, `u`, `b`, `i`, `strong`, `em`, `sup`, `sub`.
+  - Only plain attributes are allowed: `class`, `id`, `title`, `lang`, `dir`, `role`, `translate`, `datetime`, `value`, `data-*` and `aria-*`. A link (`a`) may also have `href`, `target` and `rel`. Its `href` gets the same unsafe-URL check as Blok's own links.
+  - Anything else is refused, because the server cannot check it for unsafe URLs. That includes `style`, `on*`, `cite`, `xlink:href` and `data-blok-*`.
 
 ```json
 {

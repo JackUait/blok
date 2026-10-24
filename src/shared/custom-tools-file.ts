@@ -148,13 +148,23 @@ const FILE_SCHEMA: BlokSchema = {
   },
 };
 
-// Tags whose content is code or a document, never a run of text.
-const REFUSED_INLINE_TAGS = new Set(['script', 'style', 'iframe', 'frame', 'frameset', 'object', 'embed', 'template', 'noscript', 'base', 'link', 'meta']);
-const ATTRIBUTE_NAME = /^[a-z_:][a-z0-9_.:-]*$/i;
-// Event handlers run script; srcdoc is a whole document.
-const isRefusedAttribute = (name: string): boolean => /^on/i.test(name) || name.toLowerCase() === 'srcdoc' || !ATTRIBUTE_NAME.test(name);
+/**
+ * The phrasing tags a host inline tool may allow: text formatting with no URL or script attributes of
+ * its own. Anything else (svg, form, button, media) can carry a URL the sanitizer does not check.
+ */
+const INLINE_TOOL_TAGS = new Set([
+  'kbd', 'abbr', 'cite', 'dfn', 'q', 'small', 'samp', 'var', 'time', 'data', 'span', 'mark', 'code', 'a',
+  'ruby', 'rt', 'rp', 'bdi', 'bdo', 'ins', 'del', 's', 'u', 'b', 'i', 'strong', 'em', 'sup', 'sub',
+]);
+// No URL-bearing attribute (cite, action, xlink:href, srcset) and no style; data-blok-* is Blok's own.
+const PLAIN_ATTRIBUTE = /^(?:class|id|title|lang|dir|role|translate|datetime|value|data-(?!blok-)[a-z0-9_.-]+|aria-[a-z0-9-]+)$/i;
+// The link's href goes through the same unsafe-URL strip as the built-in link tool's.
+const LINK_ATTRIBUTE = /^(?:href|target|rel)$/i;
 
-/** Rules a JSON schema cannot say: the tags and attribute names a host inline tool may not allow. */
+const isAllowedAttribute = (tag: string, name: string): boolean =>
+  PLAIN_ATTRIBUTE.test(name) || (tag === 'a' && LINK_ATTRIBUTE.test(name));
+
+/** Rules a JSON schema cannot say: the tags and attribute names a host inline tool may allow. */
 const inlineToolProblems = (value: unknown): Array<{ path: string; message: string }> => {
   const tools = typeof value === 'object' && value !== null && 'inlineTools' in value && Array.isArray(value.inlineTools) ? value.inlineTools : [];
 
@@ -162,9 +172,9 @@ const inlineToolProblems = (value: unknown): Array<{ path: string; message: stri
     const sanitize: unknown = typeof tool === 'object' && tool !== null && 'sanitize' in tool ? tool.sanitize : undefined;
 
     return Object.entries(typeof sanitize === 'object' && sanitize !== null ? sanitize : {}).flatMap(([tag, rule]: [string, unknown]) => [
-      ...(REFUSED_INLINE_TAGS.has(tag) ? [{ path: `/inlineTools/${index}/sanitize/${tag}`, message: 'is a tag an inline tool may not allow' }] : []),
+      ...(INLINE_TOOL_TAGS.has(tag) ? [] : [{ path: `/inlineTools/${index}/sanitize/${tag}`, message: 'is a tag an inline tool may not allow' }]),
       ...Object.keys(typeof rule === 'object' && rule !== null ? rule : {})
-        .filter(isRefusedAttribute)
+        .filter(attribute => !isAllowedAttribute(tag, attribute))
         .map(attribute => ({ path: `/inlineTools/${index}/sanitize/${tag}/${attribute}`, message: 'is an attribute an inline tool may not allow' })),
     ]);
   });

@@ -35,6 +35,31 @@ describe('custom inline tools file: what it refuses', () => {
     expect(() => readCustomToolsFile(fileWith([{ name: 'kbd', sanitize }]))).toThrow(TypeError);
   });
 
+  it.each([
+    ['an svg tag', { svg: true, a: { href: true }, text: true }],
+    ['an animate tag', { animate: { attributename: true, to: true } }],
+    ['a button with formaction', { button: { formaction: true } }],
+    ['a form with action', { form: { action: true } }],
+    ['xlink:href', { a: { 'xlink:href': true } }],
+    ['a style attribute', { span: { style: true } }],
+    ['a cite URL attribute', { q: { cite: true } }],
+    ['srcset', { span: { srcset: true } }],
+    ['href on a tag that is not a link', { kbd: { href: true } }],
+    ['a data-blok-* attribute', { kbd: { 'data-blok-id': true } }],
+  ])('refuses %s (allowlist)', (_label, sanitize) => {
+    expect(() => readCustomToolsFile(fileWith([{ name: 'kbd', sanitize }]))).toThrow(TypeError);
+  });
+
+  it('accepts phrasing tags with plain attributes, and a link with href, target and rel', () => {
+    expect(() => readCustomToolsFile(fileWith([
+      { name: 'kbd', sanitize: { kbd: { class: true, 'data-key': true, 'aria-label': true, title: true } } },
+      { name: 'when', sanitize: { time: { datetime: true } } },
+      { name: 'spark', sanitize: { span: { class: 'cdx-spark' } } },
+      { name: 'ref', sanitize: { a: { href: true, target: true, rel: true, 'data-ref': true } } },
+      { name: 'abbr', sanitize: { abbr: true } },
+    ]))).not.toThrow();
+  });
+
   it('refuses a tool name that is not a plain identifier, and unknown keys', () => {
     expect(() => readCustomToolsFile(fileWith([{ name: 'a b', sanitize: { kbd: true } }]))).toThrow(TypeError);
     expect(() => readCustomToolsFile(fileWith([{ name: 'kbd', sanitize: { kbd: true }, extra: 1 }]))).toThrow(TypeError);

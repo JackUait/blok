@@ -259,7 +259,9 @@ export class PageTitle extends Module {
     this.iconControl?.destroy();
     this.iconControl = null;
     this.dom?.title.removeEventListener('focusin', this.onFocusIn);
-    this.eventsDispatcher.off(I18nChanged, this.relabel);
+    if (this.resolved !== null) {
+      this.eventsDispatcher.off(I18nChanged, this.relabel);
+    }
     this.dom?.header.remove();
     this.dom = null;
   }

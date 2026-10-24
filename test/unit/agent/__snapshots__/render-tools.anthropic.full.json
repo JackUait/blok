@@ -3498,7 +3498,7 @@
                     "properties": {
                       "markdown": {
                         "type": "string",
-                        "description": "Gives bold, italic, strikethrough, inline code and links. Underline, sup, sub, highlight and colours stay literal: set them with text.format. describe has the rest."
+                        "description": "Gives bold, italic, strikethrough, inline code and links. Markdown has no syntax for underline, sup, sub, highlight or colours, and their HTML stays literal: set them with text.format. Call describe({ command: 'markdown.insert' }) for the rest."
                       },
                       "parentId": {
                         "oneOf": [

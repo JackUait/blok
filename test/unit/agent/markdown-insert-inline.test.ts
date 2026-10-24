@@ -45,7 +45,8 @@ describe('markdown.insert inline formats', () => {
     const args = 'command' in slice ? JSON.stringify(slice.command.args) : '';
 
     expect(args).toContain('text.format');
-    expect(args).toContain('Underline');
+    expect(args).toContain('no syntax for underline');
+    expect(args).toContain("describe({ command: 'markdown.insert' })");
   });
 
   it('keeps an equation embed written with block.insert', async () => {
@@ -91,9 +92,30 @@ describe('markdown.insert inline formats', () => {
     }
   );
 
-  it('makes $$math$$ a latex code block even on one line', async () => {
-    const [block] = await insert('$$x$$');
+  it.each([['a heading', '# a $$x$$'], ['a list item', '- a $$x$$']])(
+    'keeps $$math$$ an inline equation in %s, like $math$',
+    async (_where, markdown) => {
+      const [block] = await insert(markdown);
 
-    expect(block).toMatchObject({ type: 'code', data: { code: 'x', language: 'latex' } });
+      expect(block.data.text).toEqual([{ text: 'a ' }, { embed: { equation: { expression: 'x' } } }]);
+    }
+  );
+
+  it.each([['on its own line', '$$x$$'], ['inside a paragraph', 'a $$x$$ b'], ['fenced', '$$\nx\n$$']])(
+    'makes $$math$$ %s a latex code block',
+    async (_where, markdown) => {
+      const blocks = await insert(markdown);
+
+      expect(blocks.find((block) => block.type === 'code')?.data).toMatchObject({ code: 'x', language: 'latex' });
+    }
+  );
+
+  it('states the $$ rule the importer follows', () => {
+    const text = guidance();
+
+    expect(text).toContain('$$x$$ follows the same rule as $x$');
+    expect(text).toContain('A fenced $$ block is always a LaTeX code block');
+    expect(text).toContain('sits directly in any other paragraph');
+    expect(text).not.toContain('$$x$$ is always');
   });
 });

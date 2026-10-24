@@ -96,13 +96,14 @@ export const COMMANDS: Record<CoreCommandName, CoreCommandSpec> = {
   }, ['id', 'range'])),
   'markdown.insert': write('Convert Markdown into blocks and insert them. Additive.', obj({
     markdown: { type: 'string', description: 'Gives bold, italic, strikethrough, inline code and links. '
-      + 'Underline, sup, sub, highlight and colours stay literal: set them with text.format. describe has the rest.' },
+      + 'Markdown has no syntax for underline, sup, sub, highlight or colours, and their HTML stays literal: set them with text.format. '
+      + "Call describe({ command: 'markdown.insert' }) for the rest." },
     parentId, position,
   }, ['markdown']), 'Inline Markdown gives bold (** or __), italic (* or _), strikethrough (~~ or ~), inline code and links. '
     + '~x~ is strikethrough, not subscript. ==, ^ and inline HTML such as <u>, <sup>, <sub>, <mark> and <span> stay literal text. '
     + '$x$ is an inline equation in a heading, table cell, quote (not an alert) or the first paragraph of a list item. '
-    + 'In any other paragraph it becomes its own LaTeX code block. '
-    + '$$x$$ is always a LaTeX code block. '
+    + 'When it sits directly in any other paragraph, it becomes its own LaTeX code block. '
+    + '$$x$$ follows the same rule as $x$. A fenced $$ block is always a LaTeX code block. '
     + 'Markdown cannot write the marks "underline", "sup", "sub", "highlight", "color" or "background": insert the text, then set them with text.format. '
     + 'For an equation inside a paragraph, use block.insert, text.insert or text.replace with the segment { "embed": { "equation": { "expression": "x" } } }.'),
   'markdown.export': read('Export the document or a subtree as Markdown.', obj({ rootId: id })),

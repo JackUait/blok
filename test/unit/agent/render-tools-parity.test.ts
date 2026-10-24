@@ -213,6 +213,55 @@ describe('renderAgentTools mixed schema', () => {
   });
 });
 
+describe('renderAgentTools mixed rich text', () => {
+  const raw = rawSchemaOf(executeTool(renderAgentTools(editor, { format: 'anthropic', schema: 'mixed' })));
+  const mixed = inlineRefs(raw);
+  const argsOf = (root: unknown, name: string): Record<string, unknown> => {
+    const commands = isRecord(root) && isRecord(root.properties) ? root.properties.commands : undefined;
+    const items = isRecord(commands) ? commands.items : undefined;
+    const branches = isRecord(items) && Array.isArray(items.oneOf) ? items.oneOf : [];
+    const branch = branches.find(entry => asSchema(entry).properties?.name?.const === name);
+    const args = isRecord(branch) && isRecord(branch.properties) ? branch.properties.args : undefined;
+
+    return isRecord(args) ? args : {};
+  };
+  const propertyOf = (args: Record<string, unknown>, key: string): unknown =>
+    (isRecord(args.properties) ? args.properties[key] : undefined);
+
+  it('text.replace with shows the segment shape: marks and the equation and page embeds', () => {
+    const json = JSON.stringify(propertyOf(argsOf(mixed, 'text.replace'), 'with'));
+
+    for (const word of ['"bold"', '"background"', '"link"', '"equation"', '"expression"', '"page"']) {
+      expect(json).toContain(word);
+    }
+  });
+
+  // Data differs per tool, so it points at text.replace rather than repeat the segment schema.
+  it('block.insert data points rich-text fields at the text.replace segments', () => {
+    const data = propertyOf(argsOf(mixed, 'block.insert'), 'data');
+
+    expect(isRecord(data) ? data.description : undefined).toContain('text.replace "with"');
+  });
+
+  it('text.insert text shows the segment shape when described', () => {
+    const textInsert = editor.commands.find(entry => entry.name === 'text.insert');
+    const json = JSON.stringify(isRecord(textInsert?.args.properties) ? textInsert.args.properties.text : undefined);
+
+    for (const word of ['"bold"', '"link"', '"equation"', '"page"']) {
+      expect(json).toContain(word);
+    }
+  });
+
+  it('text.format set and segment marks share one definition', () => {
+    const set = propertyOf(argsOf(raw, 'text.format'), 'set');
+    const ref = isRecord(set) ? set.$ref : undefined;
+
+    expect(typeof ref).toBe('string');
+    // text.format set, plus the text and embed segments of text.replace.
+    expect(JSON.stringify(raw).split(`"${String(ref)}"`).length - 1).toBeGreaterThanOrEqual(3);
+  });
+});
+
 describe('renderAgentTools mixed size', () => {
   it('stays a small fraction of the full schema, which is too big to send on every call', () => {
     const size = (schema: 'full' | 'mixed'): number =>

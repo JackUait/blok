@@ -313,6 +313,47 @@ describe.each(sessions)('agent mark writes match what a reload shows (%s session
     }
   });
 
+  it.each<[string, AgentBatch['commands'][number]['args']]>([
+    ['text.replace', { id: 'p', range: { find: 'world' }, with: [{ text: 'there', marks: { bold: false, color: null, italic: true, link: { href: 'https://e.com', title: 'x' } } }] }],
+    ['text.insert', { id: 'p', at: { after: 'Hello ' }, text: [{ text: 'there', marks: { bold: false, color: null, italic: true, link: { href: 'https://e.com', title: 'x' } } }] }],
+  ])('%s treats false and null mark values in segments as not set, like block.insert', async (name, args) => {
+    const session = open(seed);
+
+    try {
+      const result = await run(session, [{ name: name === 'text.replace' ? 'text.replace' : 'text.insert', args }]);
+
+      expect(result.ok ? null : result.error).toBeNull();
+      expect(JSON.stringify(await textOf(session, 'p'))).toContain('"marks":{"link":{"href":"https://e.com","target":"_blank","rel":"nofollow"},"italic":true}');
+      expect(result.warnings).toContainEqual(expect.objectContaining({ code: 'CORRECTED', message: expect.stringContaining('bold') }));
+    } finally {
+      await session.close();
+    }
+  });
+
+  it('stores HTML in a plain string as literal text, not as marks', async () => {
+    const session = open(seed);
+
+    try {
+      await run(session, [{ name: 'block.insert', args: { id: 'n', type: 'paragraph', data: { text: 'a <b>bold</b> word' } } }]);
+
+      expect(await textOf(session, 'n')).toEqual([{ text: 'a <b>bold</b> word' }]);
+    } finally {
+      await session.close();
+    }
+  });
+
+  it('names custom tag:<name> marks when it drops an unknown mark', async () => {
+    const session = open(seed);
+
+    try {
+      const result = await run(session, insertWith({ blink: true }));
+
+      expect(result.warnings).toContainEqual(expect.objectContaining({ code: 'UNKNOWN_MARK_DROPPED', message: expect.stringContaining('tag:<name>') }));
+    } finally {
+      await session.close();
+    }
+  });
+
   // The sanitizer's HTML round trip still drops it (nested anchors cannot exist): that is
   // reported as SANITIZED, not blamed on the agent's write.
   it('does not correct a stored link on a page mention outside the range it formats', async () => {

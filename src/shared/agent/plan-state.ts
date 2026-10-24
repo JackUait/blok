@@ -394,7 +394,7 @@ export class PlanState {
       const unknown = Object.keys(segment.marks).filter(key => !KNOWN_MARKS.has(key) && !key.startsWith('tag:'));
 
       if (unknown.length > 0) {
-        this.warn('UNKNOWN_MARK_DROPPED', `Unknown mark(s) ${unknown.join(', ')} dropped. Marks: ${[...KNOWN_MARKS].join(', ')}.`, { blockId, field });
+        this.warn('UNKNOWN_MARK_DROPPED', `Unknown mark(s) ${unknown.join(', ')} dropped. Marks: ${[...KNOWN_MARKS].join(', ')}, or tag:<name> for a custom inline tool.`, { blockId, field });
       }
 
       const known: RichTextMarks = { ...segment.marks };

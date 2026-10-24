@@ -294,7 +294,8 @@
                         "description": "A block tool: paragraph, header, list, table, toggle, callout, database, database-row, database-comment, divider, spacer, table_of_contents, quote, code, image, file, audio, video, column_list, column, tabs, tab, embed, bookmark, page, page-link, rating. A variant sets these data fields; the tool's other required fields still go in data: header {level: 1|2|3|4|5|6, isToggleable: true}, list {style: \"unordered\"|\"ordered\"|\"checklist\"}."
                       },
                       "data": {
-                        "type": "object"
+                        "type": "object",
+                        "description": "The tool's data. Its rich-text fields take what text.replace \"with\" takes."
                       },
                       "tunes": {
                         "type": "object"
@@ -3711,7 +3712,7 @@
                                         },
                                         "marks": {
                                           "type": "object",
-                                          "description": "Formatting on one run. A key Blok does not know is dropped on load, except `tag:<name>` keys from custom inline tools.",
+                                          "description": "Formatting on one run. Unknown keys are dropped, except `tag:<name>` keys from custom inline tools.",
                                           "properties": {
                                             "bold": {
                                               "const": true
@@ -3729,25 +3730,27 @@
                                               "const": true
                                             },
                                             "sup": {
-                                              "const": true
+                                              "const": true,
+                                              "description": "Not with sub on one run: sup wins."
                                             },
                                             "sub": {
                                               "const": true
                                             },
                                             "highlight": {
                                               "const": true,
-                                              "description": "A highlight with no colour of its own."
+                                              "description": "Stored as background \"yellow\", the marker's highlight."
                                             },
                                             "color": {
                                               "type": "string",
-                                              "description": "Preset name (\"red\") or any CSS colour."
+                                              "description": "\"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\", or a CSS colour, stored as the nearest of them. A non-colour is dropped."
                                             },
                                             "background": {
                                               "type": "string",
-                                              "description": "Preset name (\"red\") or any CSS colour."
+                                              "description": "The same values as color."
                                             },
                                             "link": {
                                               "type": "object",
+                                              "description": "Missing target and rel get the Link tool's defaults.",
                                               "required": [
                                                 "href"
                                               ],
@@ -3799,7 +3802,8 @@
                                                   ],
                                                   "properties": {
                                                     "expression": {
-                                                      "type": "string"
+                                                      "type": "string",
+                                                      "description": "LaTeX."
                                                     }
                                                   }
                                                 }
@@ -3834,7 +3838,7 @@
                                               "properties": {
                                                 "html": {
                                                   "type": "string",
-                                                  "description": "Inline markup the segment model has no slot for, kept verbatim."
+                                                  "description": "Inline markup with no segment shape, kept verbatim."
                                                 }
                                               }
                                             }
@@ -3842,7 +3846,7 @@
                                         },
                                         "marks": {
                                           "type": "object",
-                                          "description": "Formatting on one run. A key Blok does not know is dropped on load, except `tag:<name>` keys from custom inline tools.",
+                                          "description": "Formatting on one run. Unknown keys are dropped, except `tag:<name>` keys from custom inline tools.",
                                           "properties": {
                                             "bold": {
                                               "const": true
@@ -3860,25 +3864,27 @@
                                               "const": true
                                             },
                                             "sup": {
-                                              "const": true
+                                              "const": true,
+                                              "description": "Not with sub on one run: sup wins."
                                             },
                                             "sub": {
                                               "const": true
                                             },
                                             "highlight": {
                                               "const": true,
-                                              "description": "A highlight with no colour of its own."
+                                              "description": "Stored as background \"yellow\", the marker's highlight."
                                             },
                                             "color": {
                                               "type": "string",
-                                              "description": "Preset name (\"red\") or any CSS colour."
+                                              "description": "\"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\", or a CSS colour, stored as the nearest of them. A non-colour is dropped."
                                             },
                                             "background": {
                                               "type": "string",
-                                              "description": "Preset name (\"red\") or any CSS colour."
+                                              "description": "The same values as color."
                                             },
                                             "link": {
                                               "type": "object",
+                                              "description": "Missing target and rel get the Link tool's defaults.",
                                               "required": [
                                                 "href"
                                               ],
@@ -3912,7 +3918,7 @@
                               },
                               {
                                 "type": "string",
-                                "description": "Inline HTML: <b>, <i>, <u>, <s>, <a>, <code>, <mark>, <sup>, <sub>, <br>. Accepted on input."
+                                "description": "Plain text: HTML tags stay literal. Use segments for formatting. Saved data from older documents may hold inline HTML here."
                               }
                             ]
                           }
@@ -4243,7 +4249,7 @@
                                         },
                                         "marks": {
                                           "type": "object",
-                                          "description": "Formatting on one run. A key Blok does not know is dropped on load, except `tag:<name>` keys from custom inline tools.",
+                                          "description": "Formatting on one run. Unknown keys are dropped, except `tag:<name>` keys from custom inline tools.",
                                           "properties": {
                                             "bold": {
                                               "const": true
@@ -4261,25 +4267,27 @@
                                               "const": true
                                             },
                                             "sup": {
-                                              "const": true
+                                              "const": true,
+                                              "description": "Not with sub on one run: sup wins."
                                             },
                                             "sub": {
                                               "const": true
                                             },
                                             "highlight": {
                                               "const": true,
-                                              "description": "A highlight with no colour of its own."
+                                              "description": "Stored as background \"yellow\", the marker's highlight."
                                             },
                                             "color": {
                                               "type": "string",
-                                              "description": "Preset name (\"red\") or any CSS colour."
+                                              "description": "\"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\", or a CSS colour, stored as the nearest of them. A non-colour is dropped."
                                             },
                                             "background": {
                                               "type": "string",
-                                              "description": "Preset name (\"red\") or any CSS colour."
+                                              "description": "The same values as color."
                                             },
                                             "link": {
                                               "type": "object",
+                                              "description": "Missing target and rel get the Link tool's defaults.",
                                               "required": [
                                                 "href"
                                               ],
@@ -4331,7 +4339,8 @@
                                                   ],
                                                   "properties": {
                                                     "expression": {
-                                                      "type": "string"
+                                                      "type": "string",
+                                                      "description": "LaTeX."
                                                     }
                                                   }
                                                 }
@@ -4366,7 +4375,7 @@
                                               "properties": {
                                                 "html": {
                                                   "type": "string",
-                                                  "description": "Inline markup the segment model has no slot for, kept verbatim."
+                                                  "description": "Inline markup with no segment shape, kept verbatim."
                                                 }
                                               }
                                             }
@@ -4374,7 +4383,7 @@
                                         },
                                         "marks": {
                                           "type": "object",
-                                          "description": "Formatting on one run. A key Blok does not know is dropped on load, except `tag:<name>` keys from custom inline tools.",
+                                          "description": "Formatting on one run. Unknown keys are dropped, except `tag:<name>` keys from custom inline tools.",
                                           "properties": {
                                             "bold": {
                                               "const": true
@@ -4392,25 +4401,27 @@
                                               "const": true
                                             },
                                             "sup": {
-                                              "const": true
+                                              "const": true,
+                                              "description": "Not with sub on one run: sup wins."
                                             },
                                             "sub": {
                                               "const": true
                                             },
                                             "highlight": {
                                               "const": true,
-                                              "description": "A highlight with no colour of its own."
+                                              "description": "Stored as background \"yellow\", the marker's highlight."
                                             },
                                             "color": {
                                               "type": "string",
-                                              "description": "Preset name (\"red\") or any CSS colour."
+                                              "description": "\"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\", or a CSS colour, stored as the nearest of them. A non-colour is dropped."
                                             },
                                             "background": {
                                               "type": "string",
-                                              "description": "Preset name (\"red\") or any CSS colour."
+                                              "description": "The same values as color."
                                             },
                                             "link": {
                                               "type": "object",
+                                              "description": "Missing target and rel get the Link tool's defaults.",
                                               "required": [
                                                 "href"
                                               ],
@@ -4444,7 +4455,7 @@
                               },
                               {
                                 "type": "string",
-                                "description": "Inline HTML: <b>, <i>, <u>, <s>, <a>, <code>, <mark>, <sup>, <sub>, <br>. Accepted on input."
+                                "description": "Plain text: HTML tags stay literal. Use segments for formatting. Saved data from older documents may hold inline HTML here."
                               }
                             ]
                           }
@@ -4515,7 +4526,7 @@
                                         },
                                         "marks": {
                                           "type": "object",
-                                          "description": "Formatting on one run. A key Blok does not know is dropped on load, except `tag:<name>` keys from custom inline tools.",
+                                          "description": "Formatting on one run. Unknown keys are dropped, except `tag:<name>` keys from custom inline tools.",
                                           "properties": {
                                             "bold": {
                                               "const": true
@@ -4533,25 +4544,27 @@
                                               "const": true
                                             },
                                             "sup": {
-                                              "const": true
+                                              "const": true,
+                                              "description": "Not with sub on one run: sup wins."
                                             },
                                             "sub": {
                                               "const": true
                                             },
                                             "highlight": {
                                               "const": true,
-                                              "description": "A highlight with no colour of its own."
+                                              "description": "Stored as background \"yellow\", the marker's highlight."
                                             },
                                             "color": {
                                               "type": "string",
-                                              "description": "Preset name (\"red\") or any CSS colour."
+                                              "description": "\"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\", or a CSS colour, stored as the nearest of them. A non-colour is dropped."
                                             },
                                             "background": {
                                               "type": "string",
-                                              "description": "Preset name (\"red\") or any CSS colour."
+                                              "description": "The same values as color."
                                             },
                                             "link": {
                                               "type": "object",
+                                              "description": "Missing target and rel get the Link tool's defaults.",
                                               "required": [
                                                 "href"
                                               ],
@@ -4603,7 +4616,8 @@
                                                   ],
                                                   "properties": {
                                                     "expression": {
-                                                      "type": "string"
+                                                      "type": "string",
+                                                      "description": "LaTeX."
                                                     }
                                                   }
                                                 }
@@ -4638,7 +4652,7 @@
                                               "properties": {
                                                 "html": {
                                                   "type": "string",
-                                                  "description": "Inline markup the segment model has no slot for, kept verbatim."
+                                                  "description": "Inline markup with no segment shape, kept verbatim."
                                                 }
                                               }
                                             }
@@ -4646,7 +4660,7 @@
                                         },
                                         "marks": {
                                           "type": "object",
-                                          "description": "Formatting on one run. A key Blok does not know is dropped on load, except `tag:<name>` keys from custom inline tools.",
+                                          "description": "Formatting on one run. Unknown keys are dropped, except `tag:<name>` keys from custom inline tools.",
                                           "properties": {
                                             "bold": {
                                               "const": true
@@ -4664,25 +4678,27 @@
                                               "const": true
                                             },
                                             "sup": {
-                                              "const": true
+                                              "const": true,
+                                              "description": "Not with sub on one run: sup wins."
                                             },
                                             "sub": {
                                               "const": true
                                             },
                                             "highlight": {
                                               "const": true,
-                                              "description": "A highlight with no colour of its own."
+                                              "description": "Stored as background \"yellow\", the marker's highlight."
                                             },
                                             "color": {
                                               "type": "string",
-                                              "description": "Preset name (\"red\") or any CSS colour."
+                                              "description": "\"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\", or a CSS colour, stored as the nearest of them. A non-colour is dropped."
                                             },
                                             "background": {
                                               "type": "string",
-                                              "description": "Preset name (\"red\") or any CSS colour."
+                                              "description": "The same values as color."
                                             },
                                             "link": {
                                               "type": "object",
+                                              "description": "Missing target and rel get the Link tool's defaults.",
                                               "required": [
                                                 "href"
                                               ],
@@ -4716,7 +4732,7 @@
                               },
                               {
                                 "type": "string",
-                                "description": "Inline HTML: <b>, <i>, <u>, <s>, <a>, <code>, <mark>, <sup>, <sub>, <br>. Accepted on input."
+                                "description": "Plain text: HTML tags stay literal. Use segments for formatting. Saved data from older documents may hold inline HTML here."
                               }
                             ]
                           }
@@ -5305,7 +5321,7 @@
                       },
                       "set": {
                         "type": "object",
-                        "description": "Formatting on one run. A key Blok does not know is dropped on load, except `tag:<name>` keys from custom inline tools.",
+                        "description": "Formatting on one run. Unknown keys are dropped, except `tag:<name>` keys from custom inline tools.",
                         "properties": {
                           "bold": {
                             "const": true
@@ -5323,25 +5339,27 @@
                             "const": true
                           },
                           "sup": {
-                            "const": true
+                            "const": true,
+                            "description": "Not with sub on one run: sup wins."
                           },
                           "sub": {
                             "const": true
                           },
                           "highlight": {
                             "const": true,
-                            "description": "A highlight with no colour of its own."
+                            "description": "Stored as background \"yellow\", the marker's highlight."
                           },
                           "color": {
                             "type": "string",
-                            "description": "Preset name (\"red\") or any CSS colour."
+                            "description": "\"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\", or a CSS colour, stored as the nearest of them. A non-colour is dropped."
                           },
                           "background": {
                             "type": "string",
-                            "description": "Preset name (\"red\") or any CSS colour."
+                            "description": "The same values as color."
                           },
                           "link": {
                             "type": "object",
+                            "description": "Missing target and rel get the Link tool's defaults.",
                             "required": [
                               "href"
                             ],
@@ -5428,7 +5446,7 @@
                         ]
                       },
                       "text": {
-                        "description": "Plain text, or rich-text segments. Never Markdown.",
+                        "description": "Plain text (HTML tags stay literal), or rich-text segments. Never Markdown.",
                         "oneOf": [
                           {
                             "type": "string"
@@ -5436,14 +5454,232 @@
                           {
                             "type": "array",
                             "items": {
-                              "type": "object"
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "text"
+                                  ],
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "text": {
+                                      "type": "string",
+                                      "description": "Line breaks are \"\\n\"."
+                                    },
+                                    "marks": {
+                                      "type": "object",
+                                      "description": "Formatting on one run. Unknown keys are dropped, except `tag:<name>` keys from custom inline tools.",
+                                      "properties": {
+                                        "bold": {
+                                          "const": true
+                                        },
+                                        "italic": {
+                                          "const": true
+                                        },
+                                        "underline": {
+                                          "const": true
+                                        },
+                                        "strikethrough": {
+                                          "const": true
+                                        },
+                                        "code": {
+                                          "const": true
+                                        },
+                                        "sup": {
+                                          "const": true,
+                                          "description": "Not with sub on one run: sup wins."
+                                        },
+                                        "sub": {
+                                          "const": true
+                                        },
+                                        "highlight": {
+                                          "const": true,
+                                          "description": "Stored as background \"yellow\", the marker's highlight."
+                                        },
+                                        "color": {
+                                          "type": "string",
+                                          "description": "\"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\", or a CSS colour, stored as the nearest of them. A non-colour is dropped."
+                                        },
+                                        "background": {
+                                          "type": "string",
+                                          "description": "The same values as color."
+                                        },
+                                        "link": {
+                                          "type": "object",
+                                          "description": "Missing target and rel get the Link tool's defaults.",
+                                          "required": [
+                                            "href"
+                                          ],
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "href": {
+                                              "type": "string"
+                                            },
+                                            "target": {
+                                              "type": "string"
+                                            },
+                                            "rel": {
+                                              "type": "string"
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "patternProperties": {
+                                        "^tag:": {
+                                          "type": "object",
+                                          "additionalProperties": {
+                                            "type": "string"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "embed"
+                                  ],
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "embed": {
+                                      "oneOf": [
+                                        {
+                                          "type": "object",
+                                          "required": [
+                                            "equation"
+                                          ],
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "equation": {
+                                              "type": "object",
+                                              "required": [
+                                                "expression"
+                                              ],
+                                              "properties": {
+                                                "expression": {
+                                                  "type": "string",
+                                                  "description": "LaTeX."
+                                                }
+                                              }
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "type": "object",
+                                          "required": [
+                                            "page"
+                                          ],
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "page": {
+                                              "type": "object",
+                                              "required": [
+                                                "id"
+                                              ],
+                                              "properties": {
+                                                "id": {
+                                                  "type": "string"
+                                                }
+                                              }
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "type": "object",
+                                          "required": [
+                                            "html"
+                                          ],
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "html": {
+                                              "type": "string",
+                                              "description": "Inline markup with no segment shape, kept verbatim."
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    "marks": {
+                                      "type": "object",
+                                      "description": "Formatting on one run. Unknown keys are dropped, except `tag:<name>` keys from custom inline tools.",
+                                      "properties": {
+                                        "bold": {
+                                          "const": true
+                                        },
+                                        "italic": {
+                                          "const": true
+                                        },
+                                        "underline": {
+                                          "const": true
+                                        },
+                                        "strikethrough": {
+                                          "const": true
+                                        },
+                                        "code": {
+                                          "const": true
+                                        },
+                                        "sup": {
+                                          "const": true,
+                                          "description": "Not with sub on one run: sup wins."
+                                        },
+                                        "sub": {
+                                          "const": true
+                                        },
+                                        "highlight": {
+                                          "const": true,
+                                          "description": "Stored as background \"yellow\", the marker's highlight."
+                                        },
+                                        "color": {
+                                          "type": "string",
+                                          "description": "\"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\", or a CSS colour, stored as the nearest of them. A non-colour is dropped."
+                                        },
+                                        "background": {
+                                          "type": "string",
+                                          "description": "The same values as color."
+                                        },
+                                        "link": {
+                                          "type": "object",
+                                          "description": "Missing target and rel get the Link tool's defaults.",
+                                          "required": [
+                                            "href"
+                                          ],
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "href": {
+                                              "type": "string"
+                                            },
+                                            "target": {
+                                              "type": "string"
+                                            },
+                                            "rel": {
+                                              "type": "string"
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "patternProperties": {
+                                        "^tag:": {
+                                          "type": "object",
+                                          "additionalProperties": {
+                                            "type": "string"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "object"
+                                }
+                              ]
                             }
                           }
                         ]
                       },
                       "marks": {
                         "type": "object",
-                        "description": "Formatting on one run. A key Blok does not know is dropped on load, except `tag:<name>` keys from custom inline tools.",
+                        "description": "Formatting on one run. Unknown keys are dropped, except `tag:<name>` keys from custom inline tools.",
                         "properties": {
                           "bold": {
                             "const": true
@@ -5461,25 +5697,27 @@
                             "const": true
                           },
                           "sup": {
-                            "const": true
+                            "const": true,
+                            "description": "Not with sub on one run: sup wins."
                           },
                           "sub": {
                             "const": true
                           },
                           "highlight": {
                             "const": true,
-                            "description": "A highlight with no colour of its own."
+                            "description": "Stored as background \"yellow\", the marker's highlight."
                           },
                           "color": {
                             "type": "string",
-                            "description": "Preset name (\"red\") or any CSS colour."
+                            "description": "\"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\", or a CSS colour, stored as the nearest of them. A non-colour is dropped."
                           },
                           "background": {
                             "type": "string",
-                            "description": "Preset name (\"red\") or any CSS colour."
+                            "description": "The same values as color."
                           },
                           "link": {
                             "type": "object",
+                            "description": "Missing target and rel get the Link tool's defaults.",
                             "required": [
                               "href"
                             ],
@@ -5584,7 +5822,7 @@
                         ]
                       },
                       "with": {
-                        "description": "Plain text, or rich-text segments. Never Markdown.",
+                        "description": "Plain text (HTML tags stay literal), or rich-text segments. Never Markdown.",
                         "oneOf": [
                           {
                             "type": "string"
@@ -5592,7 +5830,225 @@
                           {
                             "type": "array",
                             "items": {
-                              "type": "object"
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "text"
+                                  ],
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "text": {
+                                      "type": "string",
+                                      "description": "Line breaks are \"\\n\"."
+                                    },
+                                    "marks": {
+                                      "type": "object",
+                                      "description": "Formatting on one run. Unknown keys are dropped, except `tag:<name>` keys from custom inline tools.",
+                                      "properties": {
+                                        "bold": {
+                                          "const": true
+                                        },
+                                        "italic": {
+                                          "const": true
+                                        },
+                                        "underline": {
+                                          "const": true
+                                        },
+                                        "strikethrough": {
+                                          "const": true
+                                        },
+                                        "code": {
+                                          "const": true
+                                        },
+                                        "sup": {
+                                          "const": true,
+                                          "description": "Not with sub on one run: sup wins."
+                                        },
+                                        "sub": {
+                                          "const": true
+                                        },
+                                        "highlight": {
+                                          "const": true,
+                                          "description": "Stored as background \"yellow\", the marker's highlight."
+                                        },
+                                        "color": {
+                                          "type": "string",
+                                          "description": "\"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\", or a CSS colour, stored as the nearest of them. A non-colour is dropped."
+                                        },
+                                        "background": {
+                                          "type": "string",
+                                          "description": "The same values as color."
+                                        },
+                                        "link": {
+                                          "type": "object",
+                                          "description": "Missing target and rel get the Link tool's defaults.",
+                                          "required": [
+                                            "href"
+                                          ],
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "href": {
+                                              "type": "string"
+                                            },
+                                            "target": {
+                                              "type": "string"
+                                            },
+                                            "rel": {
+                                              "type": "string"
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "patternProperties": {
+                                        "^tag:": {
+                                          "type": "object",
+                                          "additionalProperties": {
+                                            "type": "string"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "embed"
+                                  ],
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "embed": {
+                                      "oneOf": [
+                                        {
+                                          "type": "object",
+                                          "required": [
+                                            "equation"
+                                          ],
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "equation": {
+                                              "type": "object",
+                                              "required": [
+                                                "expression"
+                                              ],
+                                              "properties": {
+                                                "expression": {
+                                                  "type": "string",
+                                                  "description": "LaTeX."
+                                                }
+                                              }
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "type": "object",
+                                          "required": [
+                                            "page"
+                                          ],
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "page": {
+                                              "type": "object",
+                                              "required": [
+                                                "id"
+                                              ],
+                                              "properties": {
+                                                "id": {
+                                                  "type": "string"
+                                                }
+                                              }
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "type": "object",
+                                          "required": [
+                                            "html"
+                                          ],
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "html": {
+                                              "type": "string",
+                                              "description": "Inline markup with no segment shape, kept verbatim."
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    "marks": {
+                                      "type": "object",
+                                      "description": "Formatting on one run. Unknown keys are dropped, except `tag:<name>` keys from custom inline tools.",
+                                      "properties": {
+                                        "bold": {
+                                          "const": true
+                                        },
+                                        "italic": {
+                                          "const": true
+                                        },
+                                        "underline": {
+                                          "const": true
+                                        },
+                                        "strikethrough": {
+                                          "const": true
+                                        },
+                                        "code": {
+                                          "const": true
+                                        },
+                                        "sup": {
+                                          "const": true,
+                                          "description": "Not with sub on one run: sup wins."
+                                        },
+                                        "sub": {
+                                          "const": true
+                                        },
+                                        "highlight": {
+                                          "const": true,
+                                          "description": "Stored as background \"yellow\", the marker's highlight."
+                                        },
+                                        "color": {
+                                          "type": "string",
+                                          "description": "\"gray\", \"brown\", \"orange\", \"yellow\", \"green\", \"blue\", \"purple\", \"pink\", \"red\", or a CSS colour, stored as the nearest of them. A non-colour is dropped."
+                                        },
+                                        "background": {
+                                          "type": "string",
+                                          "description": "The same values as color."
+                                        },
+                                        "link": {
+                                          "type": "object",
+                                          "description": "Missing target and rel get the Link tool's defaults.",
+                                          "required": [
+                                            "href"
+                                          ],
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "href": {
+                                              "type": "string"
+                                            },
+                                            "target": {
+                                              "type": "string"
+                                            },
+                                            "rel": {
+                                              "type": "string"
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "patternProperties": {
+                                        "^tag:": {
+                                          "type": "object",
+                                          "additionalProperties": {
+                                            "type": "string"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "object"
+                                }
+                              ]
                             }
                           }
                         ]

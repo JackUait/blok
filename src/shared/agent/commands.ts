@@ -1,5 +1,5 @@
 import type { CoreCommandName } from '../../../types/agent';
-import { RICH_TEXT_MARKS } from '../tool-descriptions/rich-text';
+import { EMBED_SEGMENT, RICH_TEXT_MARKS, TEXT_SEGMENT } from '../tool-descriptions/rich-text';
 import type { JsonSchema } from './types';
 
 export interface CoreCommandSpec {
@@ -22,8 +22,12 @@ const position: JsonSchema = {
 };
 const parentId: JsonSchema = { oneOf: [id, { type: 'null' }] };
 const richOrString: JsonSchema = {
-  description: 'Plain text, or rich-text segments. Never Markdown.',
-  oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'object' } }],
+  description: 'Plain text (HTML tags stay literal), or rich-text segments. Never Markdown.',
+  oneOf: [
+    { type: 'string' },
+    // The open branch keeps the planner the one judge of a segment: it treats false marks as not set.
+    { type: 'array', items: { anyOf: [TEXT_SEGMENT, EMBED_SEGMENT, { type: 'object' }] } },
+  ],
 };
 const range: JsonSchema = {
   oneOf: [
@@ -70,7 +74,11 @@ export const COMMANDS: Record<CoreCommandName, CoreCommandSpec> = {
   } }, ['icon'])),
   'block.insert': write('Insert a block, with optional children.', {
     ...insertSpec,
-    properties: { ...insertProperties, parentId, position, demote: { type: 'boolean' } },
+    properties: {
+      ...insertProperties,
+      data: { type: 'object', description: 'The tool\'s data. Its rich-text fields take what text.replace "with" takes.' },
+      parentId, position, demote: { type: 'boolean' },
+    },
     $defs: { insertSpec },
   }, 'Rich-text fields take segments or plain text, never Markdown. Use markdown.insert for Markdown.'),
   'block.update': write('Merge data or tunes into a block. A key set to null is removed.', obj({

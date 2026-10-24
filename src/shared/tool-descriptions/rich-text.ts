@@ -1,25 +1,31 @@
 /** Rich-text schema pieces shared by every tool description and by blokDocumentSchema. */
 
+import { DEFAULT_HIGHLIGHT_BACKGROUND } from '../agent/mark-input';
+import { COLOR_PRESETS } from '../color-presets';
+
+const PRESET_NAMES = COLOR_PRESETS.map(preset => `"${preset.name}"`).join(', ');
+
 /** Horizontal placement, shared by the media and embed tools. */
 export const ALIGNMENT = ['left', 'center', 'right'] as const;
 
 /** Formatting on one run of rich text. */
 export const RICH_TEXT_MARKS = {
   type: 'object',
-  description: 'Formatting on one run. A key Blok does not know is dropped on load, except `tag:<name>` keys from custom inline tools.',
+  description: 'Formatting on one run. Unknown keys are dropped, except `tag:<name>` keys from custom inline tools.',
   properties: {
     bold: { const: true },
     italic: { const: true },
     underline: { const: true },
     strikethrough: { const: true },
     code: { const: true },
-    sup: { const: true },
+    sup: { const: true, description: 'Not with sub on one run: sup wins.' },
     sub: { const: true },
-    highlight: { const: true, description: 'A highlight with no colour of its own.' },
-    color: { type: 'string', description: 'Preset name ("red") or any CSS colour.' },
-    background: { type: 'string', description: 'Preset name ("red") or any CSS colour.' },
+    highlight: { const: true, description: `Stored as background "${DEFAULT_HIGHLIGHT_BACKGROUND}", the marker's highlight.` },
+    color: { type: 'string', description: `${PRESET_NAMES}, or a CSS colour, stored as the nearest of them. A non-colour is dropped.` },
+    background: { type: 'string', description: 'The same values as color.' },
     link: {
       type: 'object',
+      description: 'Missing target and rel get the Link tool\'s defaults.',
       required: ['href'],
       additionalProperties: false,
       properties: { href: { type: 'string' }, target: { type: 'string' }, rel: { type: 'string' } },
@@ -28,39 +34,41 @@ export const RICH_TEXT_MARKS = {
   patternProperties: { '^tag:': { type: 'object', additionalProperties: { type: 'string' } } },
 } as const;
 
-/** A rich-text field: an array of segments (types/rich-text.d.ts), or inline HTML. */
+/** One run of text with its marks. */
+export const TEXT_SEGMENT = {
+  type: 'object',
+  required: ['text'],
+  additionalProperties: false,
+  properties: { text: { type: 'string', description: 'Line breaks are "\\n".' }, marks: RICH_TEXT_MARKS },
+} as const;
+
+/** An inline equation, page mention or kept markup, in the flow of the text. */
+export const EMBED_SEGMENT = {
+  type: 'object',
+  required: ['embed'],
+  additionalProperties: false,
+  properties: {
+    embed: {
+      oneOf: [
+        { type: 'object', required: ['equation'], additionalProperties: false, properties: { equation: { type: 'object', required: ['expression'], properties: { expression: { type: 'string', description: 'LaTeX.' } } } } },
+        { type: 'object', required: ['page'], additionalProperties: false, properties: { page: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } } } },
+        { type: 'object', required: ['html'], additionalProperties: false, properties: { html: { type: 'string', description: 'Inline markup with no segment shape, kept verbatim.' } } },
+      ],
+    },
+    marks: RICH_TEXT_MARKS,
+  },
+} as const;
+
+
+/** A rich-text field: an array of segments (types/rich-text.d.ts), or a plain string. */
 export const richText = (description: string): Record<string, unknown> => ({
   description,
   oneOf: [
     {
       type: 'array',
       description: 'Rich-text segments, in order. Preferred: this is the shape Blok saves.',
-      items: {
-        anyOf: [
-          {
-            type: 'object',
-            required: ['text'],
-            additionalProperties: false,
-            properties: { text: { type: 'string', description: 'Line breaks are "\\n".' }, marks: RICH_TEXT_MARKS },
-          },
-          {
-            type: 'object',
-            required: ['embed'],
-            additionalProperties: false,
-            properties: {
-              embed: {
-                oneOf: [
-                  { type: 'object', required: ['equation'], additionalProperties: false, properties: { equation: { type: 'object', required: ['expression'], properties: { expression: { type: 'string' } } } } },
-                  { type: 'object', required: ['page'], additionalProperties: false, properties: { page: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } } } },
-                  { type: 'object', required: ['html'], additionalProperties: false, properties: { html: { type: 'string', description: 'Inline markup the segment model has no slot for, kept verbatim.' } } },
-                ],
-              },
-              marks: RICH_TEXT_MARKS,
-            },
-          },
-        ],
-      },
+      items: { anyOf: [TEXT_SEGMENT, EMBED_SEGMENT] },
     },
-    { type: 'string', description: 'Inline HTML: <b>, <i>, <u>, <s>, <a>, <code>, <mark>, <sup>, <sub>, <br>. Accepted on input.' },
+    { type: 'string', description: 'Plain text: HTML tags stay literal. Use segments for formatting. Saved data from older documents may hold inline HTML here.' },
   ],
 });

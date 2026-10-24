@@ -359,6 +359,7 @@ export class DatabasePropertyMenu {
     input.type = 'text';
     input.value = property.name;
     input.setAttribute('data-blok-database-property-menu-name-input', '');
+    input.setAttribute('data-blok-field', 'text');
     input.setAttribute('aria-label', this.t('tools.database.propertyName'));
     // research/27 §7: arrows leave the field for the items, and ArrowRight/Enter act on a highlighted item.
     input.setAttribute('data-blok-flipper-navigation-target', 'true');

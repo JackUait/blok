@@ -1,5 +1,5 @@
 /**
- * Dark database chrome from feel/findings-darkkeys (K06, K11, K12).
+ * Dark database chrome from feel/findings-darkkeys (K04, K06, K11, K12).
  * jsdom has no CSS, so these read the authored source.
  */
 import { readFileSync } from 'node:fs';
@@ -52,5 +52,32 @@ describe('date picker dividers (findings K12, research/33 §4.1)', () => {
     '[data-blok-database-date-help-footer]',
   ])('%s draws Notion\'s menu divider, the table border', (selector) => {
     expect(ruleBody(selector)).toContain('border-top: 1px solid var(--blok-database-table-border)');
+  });
+});
+
+describe('property menu name field (findings K04)', () => {
+  const field = '[data-blok-database-property-menu-name] > [data-blok-database-property-menu-name-input]';
+
+  it('takes Notion\'s box: 28px tall, radius 6px, padding 3px 6px, beside the icon', () => {
+    const body = ruleBody(field);
+
+    expect(body).toContain('height: 28px');
+    expect(body).toContain('border-radius: var(--blok-radius-control)');
+    expect(body).toContain('padding-block: var(--blok-space-0-75)');
+    expect(body).toContain('padding-inline: var(--blok-space-1-5)');
+    expect(body).toContain('flex: 1 1 auto');
+  });
+
+  it('fills and rings at rest with Notion\'s dark values; light keeps the shared field look', () => {
+    const rest = ruleBody(field);
+
+    expect(rest).toContain('background-color: var(--blok-database-name-field-bg)');
+    expect(rest).toContain('border-color: var(--blok-database-name-field-ring)');
+    expect(tokenValues('--blok-database-name-field-bg')).toEqual(['var(--blok-item-hover-bg)', 'rgba(252, 252, 252, 0.03)', 'rgba(252, 252, 252, 0.03)']);
+    expect(tokenValues('--blok-database-name-field-ring')).toEqual(['transparent', 'rgba(255, 255, 235, 0.1)', 'rgba(255, 255, 235, 0.1)']);
+  });
+
+  it('is no longer reset to a bare input', () => {
+    expect(ruleBody('[data-blok-database-property-menu-name-input]')).not.toContain('background: transparent');
   });
 });

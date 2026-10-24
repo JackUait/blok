@@ -199,6 +199,13 @@ describe('DatabasePropertyMenu', () => {
     return cb;
   };
 
+  it('draws the name as a field box: Blok\'s shared text field (findings K04)', () => {
+    open(prop('text'));
+    const root = byName(lastItems(), 'name').element as HTMLElement;
+
+    expect(root.querySelector('[data-blok-database-property-menu-name-input]')?.getAttribute('data-blok-field')).toBe('text');
+  });
+
   it('opens and closes with the database menu motion, like the other database menus', () => {
     open(prop('text'));
 

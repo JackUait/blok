@@ -26,6 +26,9 @@
   --blok-database-switch-on-bg: rgb(39, 131, 222);
   --blok-database-switch-off-bg: var(--blok-toggle-off-bg);
   --blok-database-switch-knob-bg: var(--blok-toggle-thumb-on-bg);
+  /* The property menu's name field at rest. Light is unmeasured: the shared field fill (field.css). */
+  --blok-database-name-field-bg: var(--blok-item-hover-bg);
+  --blok-database-name-field-ring: transparent;
   /* "More templates" card and search borders (research/26 §2). Dark is unmeasured: Blok's border. */
   --blok-database-tpl-border: rgb(230, 229, 227);
   /* Event cards: the hover fill rgba(84, 72, 49, 0.08) puts the light step at 4.41:1; one step darker passes. */
@@ -462,6 +465,9 @@
     /* findings K11 (live): the off track and a white knob in both states; on stays blue (user decision). */
     --blok-database-switch-off-bg: rgba(202, 204, 206, 0.3);
     --blok-database-switch-knob-bg: rgb(255, 255, 255);
+    /* findings K04 (live): Notion's name field fill and 1px ring. */
+    --blok-database-name-field-bg: rgba(252, 252, 252, 0.03);
+    --blok-database-name-field-ring: rgba(255, 255, 235, 0.1);
     --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
     /* Measured in dark (research/21 §1e): the selection bar and the database menus (§1a). */
     --blok-database-table-selection-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
@@ -746,6 +752,9 @@
   /* findings K11 (live): the off track and a white knob in both states; on stays blue (user decision). */
   --blok-database-switch-off-bg: rgba(202, 204, 206, 0.3);
   --blok-database-switch-knob-bg: rgb(255, 255, 255);
+  /* findings K04 (live): Notion's name field fill and 1px ring. */
+  --blok-database-name-field-bg: rgba(252, 252, 252, 0.03);
+  --blok-database-name-field-ring: rgba(255, 255, 235, 0.1);
   --blok-database-table-open-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
   /* Measured in dark (research/21 §1e): the selection bar and the database menus (§1a). */
   --blok-database-table-selection-shadow: rgb(56, 56, 54) 0 0 0 1px, rgba(25, 25, 25, 0.08) 0 4px 12px -2px;
@@ -5851,6 +5860,21 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   flex-wrap: wrap;
 }
 
+/* findings K04: Notion's field box, beside the icon. The ring is the field's
+   border, not a shadow. Kept below field.css's focus rule in specificity, so
+   focus still swaps the border and fill there. */
+[data-blok-database-property-menu-name] > [data-blok-database-property-menu-name-input] {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  height: 28px;
+  padding-block: var(--blok-space-0-75);
+  padding-inline: var(--blok-space-1-5);
+  border-color: var(--blok-database-name-field-ring);
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-name-field-bg);
+}
+
 [data-blok-database-property-menu-name-error] {
   flex-basis: 100%;
   padding-inline-start: calc(28px + var(--blok-space-1-5));
@@ -6098,7 +6122,6 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-person-search],
 [data-blok-database-files-link-input],
 [data-blok-database-property-name-input],
-[data-blok-database-property-menu-name-input],
 [data-blok-database-property-menu-field] input,
 [data-blok-database-option-name],
 [data-blok-database-date-input],

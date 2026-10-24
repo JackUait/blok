@@ -113,6 +113,14 @@ describe('rich text helpers', () => {
     expect(rt.format(rich, 0, 3, { italic: true }, ['*'])).toStrictEqual([{ text: 'abc', marks: { italic: true } }]);
   });
 
+  it('applies custom marks given in set after "tag:*" clears the old ones, as "*" does', () => {
+    const rich: RichText = [{ text: 'abc', marks: { bold: true, 'tag:kbd': {} } }];
+
+    expect(rt.format(rich, 0, 3, { 'tag:abbr': { title: 't' } }, ['tag:*'])).toStrictEqual([
+      { text: 'abc', marks: { bold: true, 'tag:abbr': { title: 't' } } },
+    ]);
+  });
+
   it('unsets marks and merges newly equal neighbours', () => {
     expect(rt.format(value, 0, 15, undefined, ['bold'])).toStrictEqual([
       { text: 'Hello bold' },

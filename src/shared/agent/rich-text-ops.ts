@@ -52,12 +52,11 @@ export const UNSET_ALL = '*';
 export const UNSET_TAGS = 'tag:*';
 
 const withMarks = (segment: RichTextSegment, set: RichTextMarks | undefined, unset: string[] | undefined): RichTextSegment => {
-  // "*" clears what the run had; `set` still applies on top.
-  const base = unset?.includes(UNSET_ALL) === true ? {} : segment.marks;
+  // "*" and "tag:*" clear what the run had; `set` still applies on top.
+  const base = unset?.includes(UNSET_ALL) === true
+    ? {}
+    : Object.fromEntries(Object.entries(segment.marks ?? {}).filter(([name]) => unset?.includes(UNSET_TAGS) !== true || !name.startsWith('tag:')));
   const marks = (unset ?? []).reduce<RichTextMarks>((current, key) => {
-    if (key === UNSET_TAGS) {
-      return Object.fromEntries(Object.entries(current).filter(([name]) => !name.startsWith('tag:')));
-    }
     if (!isMarkKey(key)) {
       return current;
     }

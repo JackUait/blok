@@ -2200,7 +2200,7 @@
  * feel/findings-rowpage R26: Notion's body placeholder is warm gray; this is its AA step.
  * A host's --blok-placeholder-color still wins; declaring that token here would shadow it.
  */
-/* contenteditable + :empty out-rank the placeholder utilities' class + :empty + :focus. */
+/* contenteditable + :empty out-rank the placeholder utilities' class + :empty + focus. */
 [data-blok-database-drawer-editor] [contenteditable][data-placeholder]:empty::before,
 [data-blok-database-drawer-editor] [contenteditable][data-blok-placeholder-active]:empty::before {
   color: var(--blok-placeholder-color, var(--blok-database-ink-tertiary));

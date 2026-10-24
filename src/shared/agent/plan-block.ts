@@ -822,8 +822,7 @@ export const planDuplicate = (state: PlanState, args: Record<string, unknown>): 
       children: block.content.map(id => toSpec(state.requireBlock(id, '/id'))),
     };
   };
-  const spec = toSpec(source);
-  const planned = state.copyStored(() => buildPlannedBlock(state, spec, { id: placement.parentId }, '', false));
+  const planned = buildPlannedBlock(state, toSpec(source), { id: placement.parentId }, '', false);
 
   state.emit({ op: 'insert', block: planned, parentId: placement.parentId, afterId: placement.afterId });
 

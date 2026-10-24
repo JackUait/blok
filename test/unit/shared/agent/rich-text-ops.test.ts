@@ -106,6 +106,13 @@ describe('rich text helpers', () => {
     ]);
   });
 
+  it('clears custom marks only with "tag:*", and every mark with "*"', () => {
+    const rich: RichText = [{ text: 'abc', marks: { bold: true, 'tag:kbd': {}, 'tag:abbr': { title: 't' } } }];
+
+    expect(rt.format(rich, 0, 3, undefined, ['tag:*'])).toStrictEqual([{ text: 'abc', marks: { bold: true } }]);
+    expect(rt.format(rich, 0, 3, { italic: true }, ['*'])).toStrictEqual([{ text: 'abc', marks: { italic: true } }]);
+  });
+
   it('unsets marks and merges newly equal neighbours', () => {
     expect(rt.format(value, 0, 15, undefined, ['bold'])).toStrictEqual([
       { text: 'Hello bold' },

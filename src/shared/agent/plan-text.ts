@@ -2,7 +2,7 @@ import { isRichText } from '../rich-text/guards';
 import { AgentFailure, failure } from './errors';
 import { defaultLinkResolver, dropLinkOnPageMention, normalizeAgentMarks } from './mark-input';
 import { planUpdate } from './plan-block';
-import { KNOWN_MARKS, UNSET_ALL } from './rich-text-ops';
+import { KNOWN_MARKS, UNSET_ALL, UNSET_TAGS } from './rich-text-ops';
 
 import type { TextRange } from '../../../types/agent';
 import type { RichText } from '../../../types/rich-text';
@@ -210,7 +210,7 @@ export const planTextFormat = (state: PlanState, args: Record<string, unknown>):
   const given = marked[0]?.marks;
   const normalized = given === undefined ? undefined : normalizeAgentMarks(given, state.ctx.ports.resolveLink ?? defaultLinkResolver);
   const set = normalized?.marks;
-  const unknown = (args.unset ?? []).filter(key => key !== UNSET_ALL && !KNOWN_MARKS.has(key) && !key.startsWith('tag:'));
+  const unknown = (args.unset ?? []).filter(key => key !== UNSET_ALL && key !== UNSET_TAGS && !KNOWN_MARKS.has(key) && !key.startsWith('tag:'));
   const unset = [
     ...(args.unset ?? []),
     // A highlight is stored as a background, so clearing it clears that.
@@ -219,18 +219,29 @@ export const planTextFormat = (state: PlanState, args: Record<string, unknown>):
   ];
 
   if (unknown.length > 0) {
-    state.warn('UNKNOWN_MARK_DROPPED', `Unknown mark(s) ${unknown.join(', ')} in unset were ignored. Marks: ${[...KNOWN_MARKS].join(', ')}, "${UNSET_ALL}" for all.`, { blockId: t.id, field: t.field });
+    state.warn('UNKNOWN_MARK_DROPPED', `Unknown mark(s) ${unknown.join(', ')} in unset were ignored. Marks: ${[...KNOWN_MARKS].join(', ')}, "${UNSET_ALL}" for all, "${UNSET_TAGS}" for custom marks.`, { blockId: t.id, field: t.field });
   }
   normalized?.notes.forEach(note => state.warn('CORRECTED', `"${t.field}": ${note}`, { blockId: t.id, field: t.field }));
 
-  const formatted = state.ctx.richText.format(t.value, start, end, set, unset).map(segment => dropLinkOnPageMention(segment));
-  const dropped = formatted.find(item => item.note !== undefined)?.note;
+  const formatted = state.ctx.richText.format(t.value, start, end, set, unset);
+  const dropped: string[] = [];
+  // Only runs this command formats: a stored link elsewhere in the field is not the agent's.
+  const repaired = set?.link === undefined ? formatted : formatted.reduce<{ at: number; out: RichText }>((acc, segment) => {
+    const size = 'text' in segment && typeof segment.text === 'string' ? segment.text.length : 1;
+    const fixed = acc.at >= start && acc.at < end ? dropLinkOnPageMention(segment) : { segment };
 
-  if (dropped !== undefined) {
-    state.warn('CORRECTED', `"${t.field}": ${dropped}`, { blockId: t.id, field: t.field });
+    if (fixed.note !== undefined) {
+      dropped.push(fixed.note);
+    }
+
+    return { at: acc.at + size, out: [...acc.out, fixed.segment] };
+  }, { at: 0, out: [] }).out;
+
+  if (dropped[0] !== undefined) {
+    state.warn('CORRECTED', `"${t.field}": ${dropped[0]}`, { blockId: t.id, field: t.field });
   }
 
-  write(state, t, state.ctx.richText.canonicalize(formatted.map(item => item.segment)), start, end);
+  write(state, t, state.ctx.richText.canonicalize(repaired), start, end);
 
   return {};
 };

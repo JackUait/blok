@@ -230,7 +230,7 @@ describe.each(sessions)('agent mark writes match what a reload shows (%s session
   });
 
   it.each([
-    ['block.insert', [{ name: 'block.insert', args: { type: 'paragraph', data: { text: [{ text: 'x', marks: { bold: false } }] } } }], '/commands/0/args/data/text/0/marks/bold'],
+    ['block.insert', [{ name: 'block.insert', args: { type: 'paragraph', data: { text: [{ text: 'x', marks: { bold: 'yes' } }] } } }], '/commands/0/args/data/text/0/marks/bold'],
     ['block.update', [{ name: 'block.update', args: { id: 'p', data: { text: [{ text: 'x', marks: { color: 7 } }] } } }], '/commands/0/args/data/text/0/marks/color'],
     ['text.replace', [{ name: 'text.replace', args: { id: 'p', with: [{ text: 'x', marks: { link: 'https://e.com' } }] } }], '/commands/0/args/with/0/marks/link'],
     ['text.insert', [{ name: 'text.insert', args: { id: 'p', at: 0, text: 'x', marks: { italic: 'yes' } } }], '/commands/0/args/marks/italic'],
@@ -271,6 +271,101 @@ describe.each(sessions)('agent mark writes match what a reload shows (%s session
       const copy = result.ok ? result.changed.created[0] : undefined;
 
       expect(await textOf(session, copy ?? '')).toEqual(stored);
+      expect(codes(result)).not.toContain('CORRECTED');
+    } finally {
+      await session.close();
+    }
+  });
+
+  it.each([
+    ['hsl(0deg 100% 50%)', 'red'],
+    ['hsla(0, 100%, 50%, 50%)', 'red'],
+    ['rgb(100% 0% 0%)', 'red'],
+    ['rgb(255 0 0 / 50%)', 'red'],
+    ['Red', 'red'],
+    ['NAVY', 'navy'],
+  ])('keeps the valid colour %s, as the preset or name the load path reads', async (color, expected) => {
+    const session = open(seed);
+
+    try {
+      await run(session, formatWith({ color }));
+
+      expect(await textOf(session, 'p')).toEqual([{ text: 'Hello ' }, { text: 'world', marks: { color: expected } }]);
+    } finally {
+      await session.close();
+    }
+  });
+
+  it('treats false and null mark values as not set, with a warning', async () => {
+    const session = open(seed);
+
+    try {
+      const result = await run(session, insertWith({ bold: false, color: null, italic: true, link: { href: 'https://e.com', title: 'x' } }));
+
+      expect(result.ok).toBe(true);
+      expect(await textOf(session, 'n')).toEqual([{ text: 'Hi ' }, { text: 'there', marks: {
+        link: { href: 'https://e.com', target: '_blank', rel: 'nofollow' }, italic: true,
+      } }]);
+      expect(result.warnings).toContainEqual(expect.objectContaining({ code: 'CORRECTED', message: expect.stringContaining('title') }));
+      expect(result.warnings).toContainEqual(expect.objectContaining({ code: 'CORRECTED', message: expect.stringContaining('bold') }));
+    } finally {
+      await session.close();
+    }
+  });
+
+  // The sanitizer's HTML round trip still drops it (nested anchors cannot exist): that is
+  // reported as SANITIZED, not blamed on the agent's write.
+  it('does not correct a stored link on a page mention outside the range it formats', async () => {
+    const stored = [{ embed: { page: { id: 'pg1' } }, marks: { link: { href: 'https://k.k' } } }, { text: ' tail' }];
+    const session = open({ blocks: [{ id: 'p', type: 'paragraph', data: { text: stored } }] });
+
+    try {
+      const result = await run(session, [{ name: 'text.format', args: { id: 'p', range: { find: 'tail' }, set: { bold: true } } }]);
+
+      expect(codes(result)).not.toContain('CORRECTED');
+    } finally {
+      await session.close();
+    }
+  });
+
+  it('leaves runs a block.update sends back unchanged as they are stored', async () => {
+    const stored = [{ text: 'old', marks: { highlight: true } }, { text: ' red', marks: { color: '#ff0000' } }];
+    const session = open({ blocks: [{ id: 'p', type: 'paragraph', data: { text: stored } }] });
+
+    try {
+      const result = await run(session, [{ name: 'block.update', args: { id: 'p', data: { text: [...stored, { text: ' new', marks: { highlight: true } }] } } }]);
+
+      expect(await textOf(session, 'p')).toEqual([...stored, { text: ' new', marks: { background: 'yellow' } }]);
+      expect(result.warnings.filter(item => item.code === 'CORRECTED')).toHaveLength(1);
+    } finally {
+      await session.close();
+    }
+  });
+
+  it.each([
+    ['table.duplicateRows', { at: 0 }],
+    ['table.duplicateColumns', { at: 0 }],
+    ['table.fillCells', { range: { fromRow: 0, fromCol: 0, toRow: 1, toCol: 0 }, direction: 'down' }],
+  ])('%s copies stored cell marks as they are', async (name, args) => {
+    const stored = [{ text: 'cell', marks: { link: { href: 'https://k.k' }, highlight: true } }];
+    const maker = openJsonSession({ blocks: [] });
+    const made = await run(maker, [{ name: 'table.create', args: { rows: 2, cols: 2 } }]);
+    const tableId = made.ok ? made.changed.created[0] : '';
+    const doc = maker.output();
+    const firstCell = doc.blocks.find(block => block.parent === tableId);
+
+    maker.close();
+    if (firstCell !== undefined) {
+      firstCell.data = { text: stored };
+    }
+    const session = open(doc);
+
+    try {
+      const result = await run(session, [{ name, args: { id: tableId, ...args } }]);
+      const texts = (await session.read({ detail: 'full' })).blocks.filter(block => block.parentId === tableId).map(block => block.data?.text);
+
+      expect(result.ok ? null : result.error).toBeNull();
+      expect(texts.filter(text => JSON.stringify(text) === JSON.stringify(stored))).toHaveLength(2);
       expect(codes(result)).not.toContain('CORRECTED');
     } finally {
       await session.close();

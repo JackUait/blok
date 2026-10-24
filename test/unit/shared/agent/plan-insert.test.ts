@@ -697,7 +697,7 @@ describe('block.insert controlling corrections', () => {
   });
 
   it('refuses a mark value that text.format would refuse, without changing the input', () => {
-    const raw = [{ text: 'x', marks: { bold: false, sup: true } }];
+    const raw = [{ text: 'x', marks: { bold: 'yes', sup: true } }];
     const before = structuredClone(raw);
 
     expect(failOf(() => planOn(doc, [{

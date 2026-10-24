@@ -1,5 +1,5 @@
-import { COLOR_PRESETS } from '../../components/shared/color-presets';
-import { mapToNearestPresetName, parseColor } from '../color-mapping';
+import { COLOR_PRESETS } from '../color-presets';
+import { mapToNearestPresetName, parseAnyCssColor } from '../color-mapping';
 import { isSafeCssColor } from '../css-color';
 import { isDefaultDarkBackground, isDefaultWhiteBackground } from '../default-page-colors';
 import { DEFAULT_LINK_REL, DEFAULT_LINK_TARGET, SAME_PAGE_LINK_TARGET } from '../link-defaults';
@@ -18,10 +18,6 @@ export type LinkResolver = (link: RichTextLink) => RichTextLink;
 const PRESETS: ReadonlySet<string> = new Set(COLOR_PRESETS.map(preset => preset.name));
 const PRESET_VAR = /^var\(--blok-color-([a-z]+)-(text|bg)\)$/;
 
-/** parseColor reads only the comma syntax; the browser serializes `rgb(1 2 3 / 50%)` to it before the load path maps it. */
-const commaSyntax = (value: string): string => value.replace(/^(rgba?|hsla?)\(\s*([^,)]*?)\s*\)$/i, (whole, fn: string, body: string) =>
-  body.includes(',') ? whole : `${fn}(${body.split(/\s*\/\s*|\s+/).join(', ')})`);
-
 type ColorMode = 'text' | 'bg';
 
 /** migrateMarkColors strips exactly these backgrounds on load. */
@@ -33,10 +29,12 @@ const isPageBackground = (color: string): boolean => isDefaultWhiteBackground(co
  */
 const snapColor = (value: string, mode: ColorMode): { value?: string; note?: string } => {
   const raw = value.trim();
+  // CSS colour keywords ignore case; the browser serializes them in lower case.
+  const lower = raw.toLowerCase();
   const preset = PRESET_VAR.exec(raw);
 
-  if (PRESETS.has(raw)) {
-    return { value: raw };
+  if (PRESETS.has(lower)) {
+    return { value: lower };
   }
   if (preset !== null && preset[2] === mode && PRESETS.has(preset[1])) {
     return { value: preset[1] };
@@ -48,23 +46,19 @@ const snapColor = (value: string, mode: ColorMode): { value?: string; note?: str
     return { value: raw };
   }
 
-  const rgb = parseColor(commaSyntax(raw));
+  const rgb = parseAnyCssColor(raw);
   const rgbText = rgb === null ? undefined : `rgb(${rgb.join(', ')})`;
 
-  if (raw.toLowerCase() === 'transparent'
+  if (lower === 'transparent'
     || (mode === 'bg' && (isPageBackground(raw) || (rgbText !== undefined && isPageBackground(rgbText))))) {
     return { note: `"${value}" shows no ${mode === 'bg' ? 'background' : 'colour'}, so it was dropped.` };
   }
 
-  if (rgbText === undefined && raw.includes('(')) {
-    return { note: `"${value}" is a colour form Blok does not store. Use a preset name or a #rrggbb value.` };
-  }
-
-  // A named colour stays as written, as it does on load.
+  // A named colour (or currentcolor) stays as written, as it does on load.
   const name = rgbText === undefined ? null : mapToNearestPresetName(rgbText, mode);
 
-  return name === null || name === raw
-    ? { value: raw }
+  return name === null
+    ? { value: rgbText === undefined ? lower : raw }
     : { value: name, note: `"${value}" was stored as the nearest preset, "${name}".` };
 };
 
@@ -133,4 +127,31 @@ export const dropLinkOnPageMention = (segment: RichTextSegment): { segment: Rich
     segment: { embed: segment.embed, ...(Object.keys(rest).length === 0 ? {} : { marks: rest }) },
     note: 'A page mention is a link already, so the link mark on it was dropped.',
   };
+};
+
+const LINK_FIELDS: ReadonlySet<string> = new Set(['href', 'target', 'rel']);
+
+/**
+ * `false` and `null` mean "not set" (a host may write `bold: false`), and a link
+ * keeps only href, target and rel. Other wrong types are left for validation.
+ * @param marks - one run's marks as the agent sent them
+ */
+export const looseMarkInput = (marks: Record<string, unknown>): { marks: Record<string, unknown>; notes: string[] } => {
+  const notes: string[] = [];
+  const next: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(marks)) {
+    if (value === false || value === null) {
+      notes.push(`${key}: ${String(value)} means not set, so it was left off.`);
+    } else if (key === 'link' && typeof value === 'object' && !Array.isArray(value)) {
+      const extra = Object.keys(value).filter(field => !LINK_FIELDS.has(field));
+
+      notes.push(...extra.map(field => `link: "${field}" dropped. A link keeps only href, target and rel.`));
+      next[key] = Object.fromEntries(Object.entries(value).filter(([field]) => LINK_FIELDS.has(field)));
+    } else if (value !== undefined) {
+      next[key] = value;
+    }
+  }
+
+  return { marks: next, notes };
 };

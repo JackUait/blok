@@ -48,11 +48,16 @@ const isMarkKey = (key: string): key is keyof RichTextMarks => KNOWN_MARKS.has(k
 
 /** Unset key that clears every mark, custom tags too. */
 export const UNSET_ALL = '*';
+/** Unset key that clears every custom `tag:` mark. */
+export const UNSET_TAGS = 'tag:*';
 
 const withMarks = (segment: RichTextSegment, set: RichTextMarks | undefined, unset: string[] | undefined): RichTextSegment => {
   // "*" clears what the run had; `set` still applies on top.
   const base = unset?.includes(UNSET_ALL) === true ? {} : segment.marks;
   const marks = (unset ?? []).reduce<RichTextMarks>((current, key) => {
+    if (key === UNSET_TAGS) {
+      return Object.fromEntries(Object.entries(current).filter(([name]) => !name.startsWith('tag:')));
+    }
     if (!isMarkKey(key)) {
       return current;
     }

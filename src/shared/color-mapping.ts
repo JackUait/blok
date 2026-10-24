@@ -1,4 +1,4 @@
-import { COLOR_PRESETS, COLOR_PRESETS_DARK } from '../components/shared/color-presets';
+import { COLOR_PRESETS, COLOR_PRESETS_DARK } from './color-presets';
 import { isDefaultDarkBackground, isDefaultWhiteBackground } from './default-page-colors';
 
 /**
@@ -295,4 +295,46 @@ export function mapToNearestPresetName(cssColor: string, mode: 'text' | 'bg'): s
   );
 
   return best?.name ?? null;
+}
+
+const HUE_UNIT_DEGREES: Record<string, number> = { '': 1, deg: 1, grad: 0.9, rad: 180 / Math.PI, turn: 360 };
+const HUE = /^([+-]?(?:\d+(?:\.\d+)?|\.\d+))(deg|grad|rad|turn)?$/i;
+
+/**
+ * Channels of the rgb()/hsl() forms parseColor does not read: space syntax, `/ alpha`,
+ * percent channels, hue units. The browser serializes these to rgb() before
+ * migrateMarkColors maps them. Alpha is ignored, as in parseColor.
+ */
+const functionalRgb = (value: string): [number, number, number] | null => {
+  const match = /^(rgba?|hsla?)\((.*)\)$/i.exec(value);
+  const [first, second, third] = match === null ? [] : match[2].trim().split(/\s*[,/]\s*|\s+/);
+
+  if (match === null || first === undefined || second === undefined || third === undefined) {
+    return null;
+  }
+  if (match[1].toLowerCase().startsWith('rgb')) {
+    const channel = (part: string): number =>
+      Math.max(0, Math.min(255, Math.round(part.endsWith('%') ? parseFloat(part) * 2.55 : parseFloat(part))));
+
+    return [channel(first), channel(second), channel(third)];
+  }
+
+  const hue = HUE.exec(first);
+
+  if (hue === null) {
+    return null;
+  }
+
+  const degrees = ((parseFloat(hue[1]) * HUE_UNIT_DEGREES[(hue[2] ?? '').toLowerCase()]) % 360 + 360) % 360;
+
+  return parseColor(`hsl(${degrees}, ${parseFloat(second)}%, ${parseFloat(third)}%)`);
+};
+
+/**
+ * Like {@link parseColor}, plus every rgb()/hsl() form `isSafeCssColor` accepts.
+ * Kept apart so parseColor's paste callers keep their behaviour.
+ * @param cssColor - CSS colour string
+ */
+export function parseAnyCssColor(cssColor: string): [number, number, number] | null {
+  return parseColor(cssColor) ?? functionalRgb(cssColor.trim());
 }

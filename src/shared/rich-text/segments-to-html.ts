@@ -1,4 +1,4 @@
-import { COLOR_PRESETS, colorVarName } from '../../components/shared/color-presets';
+import { COLOR_PRESETS, colorVarName } from '../color-presets';
 import { PAGE_REFERENCE_ATTR, PAGE_REFERENCE_FALLBACK } from '../page-reference';
 import { EQUATION_SOURCE_ATTR } from '../equation-mark';
 import { canonicalizeSegments, isTextSegment } from './html-to-segments';

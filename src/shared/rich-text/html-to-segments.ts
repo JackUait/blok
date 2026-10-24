@@ -1,4 +1,4 @@
-import { COLOR_PRESETS } from '../../components/shared/color-presets';
+import { COLOR_PRESETS } from '../color-presets';
 import { PAGE_REFERENCE_ATTR } from '../page-reference';
 import { EQUATION_SOURCE_ATTR } from '../equation-mark';
 import type { InlineNode } from './inline-tree';

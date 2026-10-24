@@ -30,6 +30,10 @@ const MARKS: Array<[string, RichTextMarks | Record<string, unknown>]> = [
   ['color preset', { color: 'red' }],
   ['color raw', { color: '#ff0000' }],
   ['color named', { color: 'navy' }],
+  ['color mixed case', { color: 'Red' }],
+  ['color hsl units', { color: 'hsl(0.5turn 100% 25%)' }],
+  ['color rgb percent', { color: 'rgb(100% 0% 0%)' }],
+  ['background slash alpha', { background: 'rgb(255 0 0 / 50%)' }],
   ['color invalid', { color: 'notacolor' }],
   ['background preset', { background: 'yellow' }],
   ['background raw', { background: 'rgb(255, 0, 255)' }],
@@ -37,6 +41,7 @@ const MARKS: Array<[string, RichTextMarks | Record<string, unknown>]> = [
   ['highlight and color', { highlight: true, color: 'red' }],
   ['sup and sub', { sup: true, sub: true }],
   ['link href', { link: { href: 'https://example.com' } }],
+  ['link anchor', { link: { href: '#top' } }],
   ['link full', { link: { href: 'https://example.com', target: '_self', rel: 'noopener' } }],
   ['combined', { link: { href: 'https://example.com' }, color: 'red', background: 'blue', bold: true, italic: true, underline: true, strikethrough: true }],
 ];

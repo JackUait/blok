@@ -2476,7 +2476,7 @@ export const openViewSettings = (
   anchor: HTMLElement,
   ctx: ViewSettingsContext,
   start: ViewSettingsStart = 'root',
-  onClose?: () => void
+  onClose?: (escape: boolean) => void
 ): DatabasePanel => {
   const pages = new ViewSettingsPages(ctx);
   const root = {

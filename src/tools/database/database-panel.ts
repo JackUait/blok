@@ -30,7 +30,8 @@ export interface DatabasePanelOptions {
   docked?: boolean;
   /** With `docked`: every sub-page header ends in a × with this name (findings V25). */
   closeLabel?: string;
-  onClose?: () => void;
+  /** `escape` is true when Escape closed the first page. */
+  onClose?: (escape: boolean) => void;
 }
 
 const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex="0"]';
@@ -60,7 +61,7 @@ export class DatabasePanel {
       anchor: options.anchor,
       content: this.element,
       ...(options.docked === true ? { docked: true } : {}),
-      onEscape: () => this.back(),
+      onEscape: () => this.back(true),
       onDismiss: () => this.finish(),
     });
   }
@@ -86,9 +87,9 @@ export class DatabasePanel {
   }
 
   /** Steps back a page, or closes on the first one. */
-  back(): void {
+  back(escape = false): void {
     if (this.stack.length <= 1) {
-      this.close();
+      this.close(escape);
 
       return;
     }
@@ -119,16 +120,16 @@ export class DatabasePanel {
     }
   }
 
-  close(): void {
+  close(escape = false): void {
     if (this.closed) return;
     this.popover.close();
-    this.finish();
+    this.finish(escape);
   }
 
-  private finish(): void {
+  private finish(escape = false): void {
     if (this.closed) return;
     this.closed = true;
-    this.options.onClose?.();
+    this.options.onClose?.(escape);
   }
 
   private render(): void {

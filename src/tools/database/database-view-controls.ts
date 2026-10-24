@@ -246,6 +246,7 @@ export class DatabaseViewControls {
       event.preventDefault();
       event.stopPropagation();
       this.hideSearch();
+      if (!this.searchButton.hidden) this.searchButton.focus();
     });
     this.searchInput.addEventListener('blur', () => {
       if (this.query === '') this.hideSearch();
@@ -415,7 +416,7 @@ export class DatabaseViewControls {
 
   openSettings(anchor: HTMLElement, start: ViewSettingsStart): void {
     this.panel?.close();
-    this.panel = openViewSettings(anchor, this.settingsContext(), start, () => this.panelClosed(anchor));
+    this.panel = openViewSettings(anchor, this.settingsContext(), start, (escape) => this.panelClosed(anchor, escape));
     anchor.setAttribute('data-popover-open', '');
   }
 
@@ -507,9 +508,11 @@ export class DatabaseViewControls {
     panel.open();
   }
 
-  private panelClosed(anchor: HTMLElement): void {
+  /** Escape hands focus back to the button that opened the panel (findings K03), as Add view does. */
+  private panelClosed(anchor: HTMLElement, escape = false, opener: HTMLElement = anchor): void {
     anchor.removeAttribute('data-popover-open');
     this.panel = null;
+    if (escape && opener.isConnected) opener.focus();
   }
 
   private openPill(filterId: string, anchor: HTMLElement): void {
@@ -616,7 +619,7 @@ export class DatabaseViewControls {
       testId,
       width: 290,
       backLabel: this.t('settingsBack'),
-      onClose: () => this.panelClosed(anchor),
+      onClose: (escape) => this.panelClosed(anchor, escape),
     });
 
     anchor.setAttribute('data-popover-open', '');
@@ -638,7 +641,7 @@ export class DatabaseViewControls {
     }
     const chip = this.filterBar.querySelector<HTMLElement>('[data-blok-testid="database-sort-pill"]');
 
-    this.openSortPanel(chip !== null && chip.isConnected && !this.filterBar.hidden ? chip : this.sortButton);
+    this.openSortPanel(chip !== null && chip.isConnected && !this.filterBar.hidden ? chip : this.sortButton, this.sortButton);
   }
 
   /**
@@ -646,7 +649,7 @@ export class DatabaseViewControls {
    * has a drag handle, a property button and a direction button that open
    * lists, and a ×. Then "+ Add sort" and "Delete sort".
    */
-  private openSortPanel(anchor: HTMLElement): void {
+  private openSortPanel(anchor: HTMLElement, opener: HTMLElement = anchor): void {
     const sorts = (): Array<SortConfig & { id: string }> => withEntryIds(this.view()?.sorts ?? []);
     const write = (next: SortConfig[]): void => this.updatePersonal({ sorts: next });
     const chevron = (row: HTMLElement): HTMLElement => {
@@ -763,7 +766,7 @@ export class DatabaseViewControls {
       testId: 'database-sort-panel',
       width: 290,
       backLabel: this.t('settingsBack'),
-      onClose: () => this.panelClosed(anchor),
+      onClose: (escape) => this.panelClosed(anchor, escape, opener),
     });
 
     // Notion's panel sizes to its words, so no label is cut.

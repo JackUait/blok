@@ -677,6 +677,65 @@ describe('DatabaseViewControls', () => {
       expect(q('database-toolbar-search')?.hidden).toBe(false);
     });
   });
+  describe('Escape gives focus back to the button that opened the popover (findings K03)', () => {
+    const escape = (): void => {
+      (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    };
+
+    it('Filter', () => {
+      setup();
+      click('database-toolbar-filter');
+      expect(q('database-filter-picker')).not.toBeNull();
+      escape();
+
+      expect(q('database-filter-picker')).toBeNull();
+      expect(q('database-toolbar-filter')).toHaveFocus();
+    });
+
+    it('Sort, with no rule and with one', () => {
+      const { saved } = setup();
+
+      click('database-toolbar-sort');
+      escape();
+      expect(q('database-sort-picker')).toBeNull();
+      expect(q('database-toolbar-sort')).toHaveFocus();
+
+      saved.view = { ...saved.view, sorts: [{ propertyId: 'num', direction: 'asc' }] };
+      click('database-toolbar-sort');
+      expect(q('database-sort-panel')).not.toBeNull();
+      escape();
+      expect(q('database-sort-panel')).toBeNull();
+      expect(q('database-toolbar-sort')).toHaveFocus();
+    });
+
+    it('View settings', () => {
+      setup();
+      click('database-toolbar-settings');
+      expect(q('database-view-settings')).not.toBeNull();
+      escape();
+
+      expect(q('database-view-settings')).toBeNull();
+      expect(q('database-toolbar-settings')).toHaveFocus();
+    });
+
+    it('Search', () => {
+      setup({ rows: 3 });
+      click('database-toolbar-search');
+      escape();
+
+      expect(q('database-search-input')).toBeNull();
+      expect(q('database-toolbar-search')).toHaveFocus();
+    });
+
+    it('leaves the focus alone when a pick closes the picker', () => {
+      setup();
+      click('database-toolbar-sort');
+      click('database-pick-property-num');
+
+      expect(q('database-toolbar-sort')).not.toHaveFocus();
+    });
+  });
+
   describe('search match highlight (Notion: matched text tinted, the DOM untouched)', () => {
     class FakeHighlight {
       readonly ranges: Range[];

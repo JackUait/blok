@@ -564,6 +564,20 @@ describe.each(sessions)('agent mark writes match what a reload shows (%s session
     }
   });
 
+  it('leaves runs a text.replace sends back as read as they are stored', async () => {
+    const stored = [{ text: 'old', marks: { highlight: true } }, { text: ' red', marks: { color: '#ff0000' } }];
+    const session = open({ blocks: [{ id: 'p', type: 'paragraph', data: { text: stored } }] });
+
+    try {
+      const result = await run(session, [{ name: 'text.replace', args: { id: 'p', range: 'all', with: await textOf(session, 'p') } }]);
+
+      expect(await textOf(session, 'p')).toEqual(stored);
+      expect(codes(result)).not.toContain('CORRECTED');
+    } finally {
+      await session.close();
+    }
+  });
+
   it('leaves an old raw-coloured run alone when text.replace and text.insert edit around it', async () => {
     const old = { text: 'red', marks: { color: '#ff0000' } };
     const session = open({ blocks: [{ id: 'p', type: 'paragraph', data: { text: [old, { text: ' tail' }] } }] });

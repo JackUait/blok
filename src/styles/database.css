@@ -10987,6 +10987,11 @@ textarea[data-blok-database-cell-input] {
   background-image: none;
 }
 
+/* Arrows focus and select a bar at once: the gray halo marks it, not a ring (findings K10). */
+[data-blok-database-timeline-row][data-blok-database-row-selected] [data-blok-database-timeline-bar]:focus-visible {
+  outline: none;
+}
+
 [data-blok-database-timeline-row][data-blok-database-row-selected] [data-blok-database-timeline-bar]::after {
   content: "";
   position: absolute;

@@ -1131,6 +1131,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // (colors.css, database.css, popover-animation.css) so a peek inherits the host's tokens.
     // +297: the side peek's page starts 4px under its bar (R11), measured after the rebase onto rowpage-props.
     const DATABASE_PEEK_SHELL_BYTES = 709 + 1_847 + 1_741 + 313 + 297;
+    // database.css: keys and dark views (findings-darkkeys): no ring on a selected timeline bar (K10).
+    const DATABASE_KEYS_VIEWS_BYTES = 233;
     // database.css: creation panels (findings-creation N03, N19): 44px tile rows, 30px tiles, 20px glyphs, the 10px box.
     // +1_449: the unlinked linked view's pill, folder glyph, "New table" and its dark border token (N18, N22).
     // +884: the empty feed's ringed "+ New page" tile (N20).
@@ -1355,7 +1357,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_CAL_TIMELINE_FEEL_BYTES
       + DATABASE_PEEK_SHELL_BYTES
       + DATABASE_CREATION_FEEL_BYTES
-      + ASSISTANT_BLOOM_BYTES;
+      + ASSISTANT_BLOOM_BYTES
+      + DATABASE_KEYS_VIEWS_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

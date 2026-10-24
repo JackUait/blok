@@ -13842,6 +13842,10 @@ textarea[data-blok-database-cell-input] {
   background-image: none;
 }
 
+[data-blok-database-timeline-row][data-blok-database-row-selected] [data-blok-database-timeline-bar]:focus-visible {
+  outline: none;
+}
+
 [data-blok-database-timeline-row][data-blok-database-row-selected] [data-blok-database-timeline-bar]::after {
   content: "";
   position: absolute;

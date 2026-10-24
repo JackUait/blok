@@ -135,6 +135,10 @@ const key = (target: EventTarget, name: string): KeyboardEvent => {
   return event;
 };
 
+const shiftKey = (target: EventTarget, name: string): void => {
+  target.dispatchEvent(new KeyboardEvent('keydown', { key: name, shiftKey: true, bubbles: true, cancelable: true }));
+};
+
 const windowStart = timelineWindow(CENTER, 'month').start;
 /** Pixels from the canvas start to the start of `day` at month zoom. */
 const px = (day: string): number => daysBetween(windowStart, day) * TIMELINE_DAY_WIDTH.month;
@@ -492,24 +496,40 @@ describe('DatabaseTimelineView', () => {
       expect(bar(root, 'r1')).toHaveFocus();
     });
 
-    it('pans with Left and Right, flipped in a right-to-left editor', () => {
-      const { root } = mount();
+    it('selects the bar Up and Down reach, and Shift extends the selection, as the list does (findings K10)', () => {
+      const lassoRows = vi.fn();
+      const { root } = mount({ handlers: { ...makeHandlers(), lassoRows } });
+
+      bar(root, 'r1').focus();
+      key(bar(root, 'r1'), 'ArrowDown');
+      expect(lassoRows).toHaveBeenLastCalledWith(['r2']);
+      shiftKey(bar(root, 'r2'), 'ArrowUp');
+      expect(bar(root, 'r1')).toHaveFocus();
+      expect(lassoRows).toHaveBeenLastCalledWith(['r1', 'r2']);
+      key(bar(root, 'r1'), 'ArrowDown');
+      expect(lassoRows).toHaveBeenLastCalledWith(['r2']);
+    });
+
+    it('selects nothing in a read-only timeline', () => {
+      const lassoRows = vi.fn();
+      const { root } = mount({ readOnly: true, handlers: { ...makeHandlers(), lassoRows } });
+
+      key(bar(root, 'r1'), 'ArrowDown');
+      expect(bar(root, 'r2')).toHaveFocus();
+      expect(lassoRows).not.toHaveBeenCalled();
+    });
+
+    it('leaves the canvas and the selection alone on Left and Right: panning is Shift+wheel and drag (findings K10)', () => {
+      const lassoRows = vi.fn();
+      const { root } = mount({ handlers: { ...makeHandlers(), lassoRows } });
       const el = scroller(root);
 
       el.scrollLeft = 500;
-      key(el, 'ArrowRight');
-      expect(el.scrollLeft).toBeGreaterThan(500);
-      key(el, 'ArrowLeft');
-      key(el, 'ArrowLeft');
-      expect(el.scrollLeft).toBeLessThan(500);
-
-      document.body.innerHTML = '';
-      const rtl = mount();
-
-      rtl.root.setAttribute('dir', 'rtl');
-      scroller(rtl.root).scrollLeft = -500;
-      key(scroller(rtl.root), 'ArrowRight');
-      expect(scroller(rtl.root).scrollLeft).toBeGreaterThan(-500);
+      expect(key(el, 'ArrowRight').defaultPrevented).toBe(true);
+      expect(el.scrollLeft).toBe(500);
+      expect(key(bar(root, 'r1'), 'ArrowLeft').defaultPrevented).toBe(true);
+      expect(el.scrollLeft).toBe(500);
+      expect(lassoRows).not.toHaveBeenCalled();
     });
 
     it('zooms in with + or = and out with -', () => {

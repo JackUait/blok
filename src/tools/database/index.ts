@@ -5857,7 +5857,10 @@ export class DatabaseTool implements BlockTool {
       ...this.calendarLever(this.dataId, viewConfig.id),
       handlers: {
         openRow: (rowId) => this.handleRowClick(rowId),
-        ...(this.readOnly ? {} : { pickRow: (rowId: string, range: boolean) => this.pickRow(rowId, range) }),
+        ...(this.readOnly ? {} : {
+          pickRow: (rowId: string, range: boolean) => this.pickRow(rowId, range),
+          lassoRows: (rowIds: string[]) => this.selectRows(rowIds),
+        }),
         addRow: (groupKey, write) => {
           const rowId = this.addTimelineRow(groupKey, write, startId, endId);
 

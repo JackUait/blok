@@ -300,7 +300,7 @@ test.describe('timeline', () => {
     await expect(page.locator('[data-blok-database-timeline]')).toHaveAttribute('data-zoom', 'month');
   });
 
-  test('arrow keys pan the timeline', async ({ page }) => {
+  test('Left and Right leave the timeline where it is: panning is Shift+wheel and drag (findings K10)', async ({ page }) => {
     await mount(page, blocks({ type: 'timeline' }));
     const scroller = page.locator('[data-blok-database-timeline-scroller]');
     const before = await scroller.evaluate((el) => el.scrollLeft);
@@ -308,7 +308,32 @@ test.describe('timeline', () => {
     await scroller.focus();
     await page.keyboard.press('ArrowRight');
 
-    expect(await scroller.evaluate((el) => el.scrollLeft)).toBeGreaterThan(before);
+    expect(await scroller.evaluate((el) => el.scrollLeft)).toBe(before);
+  });
+
+  test('arrows select bars, Shift extends, Escape clears, with the gray halo and no ring (findings K10)', async ({ page }) => {
+    const rows = [
+      { id: 'r1', properties: { 'p-title': 'One', 'p-due': '2026-10-09' } },
+      { id: 'r2', properties: { 'p-title': 'Two', 'p-due': '2026-10-10' } },
+      { id: 'r3', properties: { 'p-title': 'Three', 'p-due': '2026-10-11' } },
+    ];
+
+    await mount(page, blocks({ type: 'timeline' }, rows));
+    const line = (id: string): Locator => page.locator(`[data-blok-database-timeline-row][data-row-id="${id}"]`);
+    const bar = (id: string): Locator => page.locator(`[data-blok-database-timeline-bar][data-row-id="${id}"]`);
+
+    await bar('r1').focus();
+    await page.keyboard.press('ArrowDown');
+    await expect(line('r2')).toHaveAttribute('data-blok-database-row-selected', '');
+    await expect(line('r1')).not.toHaveAttribute('data-blok-database-row-selected', '');
+    expect(await bar('r2').evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('none');
+
+    await page.keyboard.press('Shift+ArrowDown');
+    await expect(line('r2')).toHaveAttribute('data-blok-database-row-selected', '');
+    await expect(line('r3')).toHaveAttribute('data-blok-database-row-selected', '');
+
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-blok-database-timeline-row][data-blok-database-row-selected]')).toHaveCount(0);
   });
 
   test('an off-screen arrow jumps to its bar', async ({ page }) => {

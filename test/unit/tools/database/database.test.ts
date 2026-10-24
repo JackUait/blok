@@ -6184,6 +6184,23 @@ describe('DatabaseTool', () => {
         tool.destroy();
       });
 
+      it('arrows select a bar with the gray halo and Escape clears it (findings K10)', () => {
+        const { tool, element } = timelineTool();
+        const selected = (): Array<string | null> => queryAllByData(element, 'data-blok-database-timeline-row')
+          .filter((line) => line.hasAttribute('data-blok-database-row-selected'))
+          .map((line) => line.getAttribute('data-row-id'));
+        const first = queryAllByData(element, 'data-blok-database-timeline-bar')[0];
+
+        first.focus();
+        first.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+        expect(selected()).toEqual(['row-2']);
+
+        document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+        expect(selected()).toEqual([]);
+
+        tool.destroy();
+      });
+
       it('names a new timeline view and gives it an empty table panel list', () => {
         const { tool, element } = galleryTool();
 

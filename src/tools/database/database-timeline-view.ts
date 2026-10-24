@@ -57,6 +57,8 @@ export interface TimelineHandlers {
   openRow: (rowId: string) => void;
   /** Cmd/Ctrl- or Shift-click on a row: add it to the selection instead of opening it. */
   pickRow?: (rowId: string, range: boolean) => void;
+  /** Arrow keys on the bars: the selection becomes exactly these rows, as in the list and gallery. */
+  lassoRows?: (rowIds: string[]) => void;
   /** Group key, or null when the timeline is not grouped; the new bar's dates. */
   addRow: (groupKey: string | null, write: BarWrite) => void;
   /** A title typed into a new bar. */
@@ -111,7 +113,6 @@ const DAY_MINUTES = 24 * 60;
 const BAR_INSET = 1.5;
 /** findings C07: Notion's "+ New" made a 5-day bar. */
 const NEW_BAR_DAYS = 5;
-const PAN_PX = 160;
 /** Within this share of either canvas end, a scroll redraws around a new centre. */
 const EDGE_SHARE = 0.1;
 /** Zooms whose days are wide enough to shade weekends one by one. */
@@ -176,6 +177,7 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
   private scroller: HTMLElement | null = null;
   private drag: BarDrag | RowDrag | LinkDrag | null = null;
   private suppressClick = false;
+  private selectionAnchor: HTMLElement | null = null;
   private recentring = false;
   private noDatePanel: DatabasePanel | null = null;
 
@@ -1124,9 +1126,9 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       return;
     }
 
+    // Notion: Left and Right leave the bars and the canvas alone. Panning is Shift+wheel and drag.
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
       event.preventDefault();
-      this.scrollStart = this.scrollStart + ((event.key === 'ArrowRight') !== this.rtl ? PAN_PX : -PAN_PX);
 
       return;
     }
@@ -1139,9 +1141,25 @@ export class DatabaseTimelineView implements DatabaseViewRenderer {
       if (next !== undefined) {
         all.forEach((el) => el.setAttribute('tabindex', el === next ? '0' : '-1'));
         next.focus();
+        this.selectByKey(all, next, event.shiftKey ? this.selectionAnchor ?? target : next);
       }
     }
   };
+
+  /** Arrows select the bar they reach; Shift+Arrow selects from the anchor to it. The halo is the gray selection. */
+  private selectByKey(bars: HTMLElement[], target: HTMLElement, anchor: HTMLElement): void {
+    const lasso = this.options.handlers?.lassoRows;
+
+    if (this.options.readOnly || lasso === undefined) {
+      return;
+    }
+    // A redraw may have dropped the old anchor: start again from the target.
+    const start = bars.includes(anchor) ? anchor : target;
+    const [from, to] = [bars.indexOf(start), bars.indexOf(target)].sort((a, b) => a - b);
+
+    this.selectionAnchor = start;
+    lasso(bars.slice(from, to + 1).map((el) => el.getAttribute('data-row-id') ?? ''));
+  }
 
   /** Pixels from the canvas start to a pointer, from the canvas box. */
   private canvasOffset(x: number): number {

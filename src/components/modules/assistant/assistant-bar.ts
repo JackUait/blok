@@ -83,7 +83,7 @@ const OVERHANG = 12;
 const WINDOW_EDGE = 16;
 
 /** The actions row unfolds, and folds after a beat, so the chips fade first. */
-const UNFOLD = { duration: 420, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' };
+const UNFOLD = { duration: 260, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' };
 const FOLD = { duration: 340, delay: 60, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' };
 
 const canMove = (element: HTMLElement): boolean => typeof element.animate === 'function'

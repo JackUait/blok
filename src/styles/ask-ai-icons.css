@@ -70,13 +70,13 @@
 
   /* The chips' icons draw themselves in as the row opens, one after another. */
   [data-blok-assistant-action] [data-blok-ask-ai-ink] [pathLength="1"] {
-    animation: blok-ask-ai-draw 700ms ease-out both;
-    animation-delay: calc(var(--blok-assistant-action-index) * 45ms + 140ms);
+    animation: blok-ask-ai-draw 320ms ease-out both;
+    animation-delay: calc(var(--blok-assistant-action-index) * 25ms + 40ms);
   }
 
   [data-blok-assistant-action] [data-blok-ask-ai-ink] [fill="currentColor"] {
-    animation: blok-ask-ai-dot-in 300ms ease-out both;
-    animation-delay: calc(var(--blok-assistant-action-index) * 45ms + 520ms);
+    animation: blok-ask-ai-dot-in 180ms ease-out both;
+    animation-delay: calc(var(--blok-assistant-action-index) * 25ms + 200ms);
   }
 
   /* The three stops walk the hue loop, as on the bar's light. */

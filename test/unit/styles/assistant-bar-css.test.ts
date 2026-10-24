@@ -281,6 +281,39 @@ describe('Ask AI bar colours', () => {
     expect(body).toMatch(/animation-delay:\s*calc\(var\(--blok-assistant-action-index\)/);
   });
 
+  it('the bar opens, chips and icon drawings included, in about half a second', () => {
+    const ms = (time: string): number => time.endsWith('ms') ? parseFloat(time) : parseFloat(time) * 1000;
+    const iconsCss = readFileSync(resolve(__dirname, '../../../src/styles/ask-ai-icons.css'), 'utf8');
+    const barTs = readFileSync(resolve(__dirname, '../../../src/components/modules/assistant/assistant-bar.ts'), 'utf8');
+    /** The fourth chip, the last to arrive. */
+    const last = 3;
+    /** When `animation` plus `calc(index * step + offset)` ends for the last chip. */
+    const endOf = (css: string, keyframes: string): number => {
+      const match = css.match(new RegExp(`animation:\\s*${keyframes}\\s+([\\d.]+m?s)[^;]*;\\s*animation-delay:\\s*calc\\(var\\(--blok-assistant-action-index\\)\\s*\\*\\s*([\\d.]+m?s)(?:\\s*\\+\\s*([\\d.]+m?s))?\\)`));
+
+      expect(match, keyframes).not.toBeNull();
+
+      const [, duration, step, offset] = match ?? ['', '0ms', '0ms', undefined];
+
+      return ms(duration) + last * ms(step) + (offset === undefined ? 0 : ms(offset));
+    };
+    const barIn = ASSISTANT_CSS.match(/animation:\s*blok-assistant-in\s+([\d.]+m?s)/)?.[1] ?? '';
+    const unfold = Number(barTs.match(/const UNFOLD = \{ duration: (\d+)/)?.[1]);
+
+    const ends = [
+      ms(barIn),
+      unfold,
+      endOf(ASSISTANT_CSS, 'blok-assistant-rise'),
+      endOf(iconsCss, 'blok-ask-ai-draw'),
+      endOf(iconsCss, 'blok-ask-ai-dot-in'),
+    ];
+
+    ends.forEach((end) => {
+      expect(end).toBeGreaterThan(0);
+      expect(end).toBeLessThanOrEqual(480);
+    });
+  });
+
   it('the bar is not docked to the bottom of the window', () => {
     const bar = rulesFor('[data-blok-assistant]').filter(([selector]) => /^\[data-blok-assistant\](?:,|\[|$)/.test(selector));
 

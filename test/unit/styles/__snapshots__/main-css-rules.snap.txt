@@ -27337,7 +27337,7 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   --blok-ai-aura-2: color-mix(in srgb, var(--blok-ai-hue-2) 70%, var(--blok-popover-bg));
   --blok-ai-aura-3: color-mix(in srgb, var(--blok-ai-hue-3) 70%, var(--blok-popover-bg));
   --blok-ai-aura-4: color-mix(in srgb, var(--blok-ai-hue-4) 70%, var(--blok-popover-bg));
-  animation: blok-assistant-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: blok-assistant-in 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 [data-blok-assistant-head], [data-blok-assistant-row] {
@@ -27731,8 +27731,8 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   font-size: var(--blok-font-size-ui-compact);
   font-weight: var(--blok-font-weight-medium);
   white-space: nowrap;
-  animation: blok-assistant-rise 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  animation-delay: calc(var(--blok-assistant-action-index) * 45ms);
+  animation: blok-assistant-rise 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--blok-assistant-action-index) * 25ms);
 }
 
 [data-blok-assistant-action]:hover {
@@ -28141,13 +28141,13 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
 }
 
 [@media (prefers-reduced-motion: no-preference)] [data-blok-assistant-action] [data-blok-ask-ai-ink] [pathLength="1"] {
-  animation: blok-ask-ai-draw 700ms ease-out both;
-  animation-delay: calc(var(--blok-assistant-action-index) * 45ms + 140ms);
+  animation: blok-ask-ai-draw 320ms ease-out both;
+  animation-delay: calc(var(--blok-assistant-action-index) * 25ms + 40ms);
 }
 
 [@media (prefers-reduced-motion: no-preference)] [data-blok-assistant-action] [data-blok-ask-ai-ink] [fill="currentColor"] {
-  animation: blok-ask-ai-dot-in 300ms ease-out both;
-  animation-delay: calc(var(--blok-assistant-action-index) * 45ms + 520ms);
+  animation: blok-ask-ai-dot-in 180ms ease-out both;
+  animation-delay: calc(var(--blok-assistant-action-index) * 25ms + 200ms);
 }
 
 [@media (prefers-reduced-motion: no-preference)] :is([data-blok-assistant-action]:hover, [data-blok-assistant-action]:focus-visible, [data-blok-ask-ai-skill]:hover, [data-blok-ask-ai-skill][data-blok-focused="true"]) [data-blok-ask-ai-hue] stop {

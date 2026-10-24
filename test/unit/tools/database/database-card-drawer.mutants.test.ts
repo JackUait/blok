@@ -4,6 +4,7 @@ import type { CardDrawerOptions } from '../../../../src/tools/database/database-
 import type { DatabaseRow, PropertyDefinition, SelectOption } from '../../../../src/tools/database/types';
 import { englishDictionary } from '../../../../src/components/i18n/lightweight-i18n';
 import type { I18n, OutputData } from '../../../../types';
+import { isEscapeConsumed } from '../../../../src/components/utils/consumed-escape';
 
 interface NestedBlokConfig {
   holder: HTMLElement;
@@ -416,6 +417,23 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
 
       expect(drawer.isOpen).toBe(true);
       expect(options.onClose).not.toHaveBeenCalled();
+    });
+
+    it('closes on an Escape from the peek title before the block holder above it sees the press', () => {
+      const options = createOptions();
+      const drawer = makeDrawer(options);
+      const seenByHolder: boolean[] = [];
+
+      // The block holder's keydown pipeline turns an unclaimed Escape into a block selection.
+      options.wrapper.addEventListener('keydown', (event) => seenByHolder.push(isEscapeConsumed(event)));
+      drawer.open(makeRow());
+
+      const title = query(options.wrapper, '[data-blok-database-drawer] textarea');
+
+      title.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(seenByHolder).toEqual([true]);
+      expect(drawer.isOpen).toBe(false);
     });
 
     it('drops its Escape listener when the drawer closes', () => {

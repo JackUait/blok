@@ -180,7 +180,8 @@ test.describe('page body as child blocks', () => {
     await page.keyboard.press('Escape');
 
     await expect(peek(page)).toHaveCount(0);
-    await expect(page.locator('[data-blok-id="db-1"]')).toHaveAttribute('data-blok-navigation-focused', 'true');
+    // One Escape = one layer: the peek closes and the database stays unselected (findings-darkkeys K01).
+    await expect(page.locator('[data-blok-id="db-1"]')).not.toHaveAttribute('data-blok-selected', 'true');
   });
 
   test('undo after a click on a button in the peek still undoes the title', async ({ page }) => {

@@ -28,7 +28,7 @@ import { fileChipIcon } from './page-icon';
 import { openCoverPicker, validateCoverFile } from '../audio/cover-picker';
 import type { CoverPickerHandle } from '../audio/cover-picker';
 import { safeImageSrc } from '../../components/utils/sanitize-url';
-import { isEscapeConsumed } from '../../components/utils/consumed-escape';
+import { isEscapeConsumed, markEscapeConsumed } from '../../components/utils/consumed-escape';
 import { getElementDirection, logicalArrow } from '../../components/utils/direction';
 import { prefersReducedMotion } from '../../components/utils/reduced-motion';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
@@ -840,12 +840,17 @@ export class DatabaseCardDrawer {
       }
       const rowId = this.currentRowId;
 
+      markEscapeConsumed(e);
       this.close();
       if (rowId !== null) {
         this.onEscapeClose?.(rowId);
       }
     };
     document.addEventListener('keydown', this.escapeHandler);
+    // The peek sits inside the database's block holder, whose keydown turns an unclaimed Escape into a block selection.
+    drawer.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') this.escapeHandler?.(e);
+    });
     this.resizeHandler = (): void => this.syncDetailsDock();
     window.addEventListener('resize', this.resizeHandler);
 

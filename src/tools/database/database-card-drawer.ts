@@ -1195,7 +1195,9 @@ export class DatabaseCardDrawer {
   }
 
   /**
-   * Insets the page by the part the drawer (at the inline end) covers. database.css turns the inset into padding that eases with the slide.
+   * Keeps the page's width when the drawer (at the inline end) covers part of it, and gives the window room to scroll that part out.
+   * The window cannot scroll past its own start, so an RTL page in an LTR window narrows by the covered part instead.
+   * database.css turns the inset into a spacer past the page's end, or into padding.
    */
   private narrowPeekHost(): void {
     const host = this.findPeekHost?.() ?? null;
@@ -1205,12 +1207,18 @@ export class DatabaseCardDrawer {
     }
     const width = Math.min(this.peekWidth, window.innerWidth);
     const rect = host.getBoundingClientRect();
-    const covered = getElementDirection(this.wrapper) === 'rtl' ? width - rect.left : rect.right - (window.innerWidth - width);
+    const rtl = getElementDirection(this.wrapper) === 'rtl';
+    // Measured as if unscrolled: a resize drag re-measures, and a page scrolled toward the drawer must keep its room.
+    const covered = rtl ? width - (rect.left + window.scrollX) : rect.right + window.scrollX - (window.innerWidth - width);
+    const scrolls = getElementDirection(document.documentElement) === getElementDirection(this.wrapper);
+    // Scrolled all the way, the page's end must reach the drawer's inner edge, so the room is the drawer's whole width.
+    const room = covered > 0 ? width : 0;
+    const inset = scrolls ? room : Math.max(0, Math.round(covered));
 
     this.peekHost = host;
     peekHostOwners.set(host, this);
-    host.setAttribute('data-blok-database-peek', '');
-    host.style.setProperty('--_blok-peek-inset', `${Math.max(0, Math.round(covered))}px`);
+    host.setAttribute('data-blok-database-peek', scrolls ? 'scroll' : 'narrow');
+    host.style.setProperty('--_blok-peek-inset', `${inset}px`);
   }
 
   private releasePeekHost(): void {

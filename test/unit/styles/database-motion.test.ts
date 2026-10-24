@@ -95,22 +95,34 @@ describe('side peek', () => {
     expect(body(outsideReducedMotion, '[dir="rtl"] [data-blok-database-drawer]')).toContain('transform: translateX(-100%)');
   });
 
-  it('narrows the page beside it over the same 200ms', () => {
+  it('keeps the page beside it and adds scroll room past its end', () => {
+    // The host is the editor wrapper; its `all: initial !important` reset does not reach ::after.
+    const room = body(outsideReducedMotion, '[data-blok-interface=blok][data-blok-database-peek="scroll"]::after');
+
+    expect(room).toContain("content: ''");
+    expect(room).toContain('position: absolute');
+    expect(room).toContain('inset-inline-start: 100%');
+    expect(room).toContain('inline-size: var(--_blok-peek-inset, 0px)');
+    expect(room).toContain('pointer-events: none');
+    expect(body(outsideReducedMotion, '[data-blok-interface=blok][data-blok-database-peek="scroll"]')).not.toContain('padding-inline-end');
+  });
+
+  it('narrows a page that cannot scroll toward the peek over the same 200ms', () => {
     // The host is the editor wrapper; its `all: initial !important` reset beats anything weaker.
-    const host = body(outsideReducedMotion, '[data-blok-interface=blok][data-blok-database-peek]');
+    const host = body(outsideReducedMotion, '[data-blok-interface=blok][data-blok-database-peek="narrow"]');
 
     expect(host).toContain('padding-inline-end: var(--_blok-peek-inset, 0px) !important');
     expect(host).toContain('transition: padding-inline-end 200ms ease !important');
   });
 
   it('lets the page follow a resize drag at once', () => {
-    expect(body(outsideReducedMotion, '[data-blok-interface=blok][data-blok-database-peek][data-blok-database-peek-resizing]'))
+    expect(body(outsideReducedMotion, '[data-blok-interface=blok][data-blok-database-peek="narrow"][data-blok-database-peek-resizing]'))
       .toContain('transition: none !important');
   });
 
   it('neither slides nor narrows gradually under reduced motion', () => {
     expect(body(reducedMotion, '[data-blok-database-drawer]')).toContain('transition: none');
-    expect(body(reducedMotion, '[data-blok-interface=blok][data-blok-database-peek]')).toContain('transition: none !important');
+    expect(body(reducedMotion, '[data-blok-interface=blok][data-blok-database-peek="narrow"]')).toContain('transition: none !important');
   });
 });
 

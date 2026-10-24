@@ -249,7 +249,7 @@ describe('DatabaseCardDrawer shell', () => {
       firstOptions.wrapper.querySelector('[data-blok-database-drawer]')?.dispatchEvent(new Event('transitionend'));
 
       expect(host.hasAttribute('data-blok-database-peek')).toBe(true);
-      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('656px');
+      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('756px');
       second.destroy();
       first.destroy();
     });

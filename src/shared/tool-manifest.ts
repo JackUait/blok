@@ -439,7 +439,7 @@ const customMarkProperties = (manifest: BlokToolManifest): Record<string, BlokSc
       return [];
     }
 
-    return [[effect.mark, { ...effect.value, description: `${tool.title || tool.name}: the host's inline tool "${tool.name}". Blocks that do not enable it drop it.` }]];
+    return [[effect.mark, { ...effect.value, description: `${tool.title || tool.name}: host tool "${tool.name}", kept only in blocks that enable it.` }]];
   })
 );
 

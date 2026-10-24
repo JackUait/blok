@@ -76,7 +76,7 @@ export interface ToolActionContext {
   tool: string;
   block?: { id: string; type: string; data: Readonly<Record<string, unknown>>; children: readonly string[] };
   read(id: string): { id: string; type: string; data: unknown; parentId: string | null; children: readonly string[] } | null;
-  /** `copy`: the data is a copy of stored blocks, kept as stored instead of read as agent input. */
+  /** `copy`: the data is a copy of stored blocks, kept as stored instead of read as agent input. Only pass data you got from `read`, never model args: it skips the mark checks. */
   insert(input: { type: string; data?: Record<string, unknown>; parentId?: string | null; position?: BlockPosition; children?: InsertSpec[]; copy?: boolean }): string;
   /** Null and undefined remove a key. */
   update(id: string, patch: Record<string, unknown>): void;

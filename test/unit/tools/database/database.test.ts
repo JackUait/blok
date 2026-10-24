@@ -5927,9 +5927,9 @@ describe('DatabaseTool', () => {
       type Toast = { message: string; actions?: Array<{ label: string; onClick: () => void }> };
       type Step = API['history'] extends { latestStep: () => infer S } ? NonNullable<S> : never;
 
-      const trashTool = (): { tool: DatabaseTool; element: HTMLElement; options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>; show: Mock<(options: unknown) => void>; history: { undo: Mock<() => void>; latestStep: Mock<() => Step | undefined>; undoStep: Mock<(step: Step) => boolean> }; deleteStep: Step } => {
+      const trashTool = (view: Partial<DatabaseViewConfig> = {}): { tool: DatabaseTool; element: HTMLElement; options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>; show: Mock<(options: unknown) => void>; history: { undo: Mock<() => void>; latestStep: Mock<() => Step | undefined>; undoStep: Mock<(step: Step) => boolean> }; deleteStep: Step } => {
         const rows = rowsWithDates();
-        const { tool, element, options } = galleryTool({}, rows);
+        const { tool, element, options } = galleryTool(view, rows);
         const before = Object.freeze({}) as Step;
         const deleteStep = Object.freeze({}) as Step;
         const state = { top: before };
@@ -6050,6 +6050,52 @@ describe('DatabaseTool', () => {
         expect(history.undoStep).toHaveBeenCalledExactlyOnceWith(deleteStep);
 
         tool.destroy();
+      });
+      describe('the same toast for a keyboard Delete of list and table rows (findings K05)', () => {
+        it('list: Delete on picked rows shows "Moved to Trash" whose Restore undoes that delete', () => {
+          const { tool, element, show, history, deleteStep } = trashTool({ id: 'view-list', type: 'list' });
+
+          queryAllByData(element, 'data-blok-database-list-row')
+            .find((row) => row.getAttribute('data-row-id') === 'row-1')
+            ?.dispatchEvent(new MouseEvent('click', { bubbles: true, metaKey: true }));
+          pressDelete('Delete');
+
+          const toast = trashToast(show);
+
+          expect(toast?.actions?.map((action) => action.label)).toEqual(['tools.database.restore']);
+          toast?.actions?.[0].onClick();
+          expect(history.undoStep).toHaveBeenCalledExactlyOnceWith(deleteStep);
+
+          tool.destroy();
+        });
+
+        it('table: Delete on selected rows shows "Moved to Trash" whose Restore undoes that delete', () => {
+          const { tool, element, show, history, deleteStep } = trashTool({ id: 'view-table', type: 'table' });
+
+          element.querySelector<HTMLElement>('[data-row-id="row-1"] [data-blok-database-table-row-checkbox]')?.click();
+          element.querySelector<HTMLElement>('[role="grid"]')
+            ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true }));
+
+          const toast = trashToast(show);
+
+          expect(toast?.actions?.map((action) => action.label)).toEqual(['tools.database.restore']);
+          toast?.actions?.[0].onClick();
+          expect(history.undoStep).toHaveBeenCalledExactlyOnceWith(deleteStep);
+
+          tool.destroy();
+        });
+
+        it('table: the selection bar\'s delete shows no toast, as before', () => {
+          const { tool, element, show, options } = trashTool({ id: 'view-table', type: 'table' });
+
+          element.querySelector<HTMLElement>('[data-row-id="row-1"] [data-blok-database-table-row-checkbox]')?.click();
+          document.querySelector<HTMLElement>('[data-blok-database-table-selection-delete]')?.click();
+
+          expect(options.api.blocks.delete).toHaveBeenCalled();
+          expect(trashToast(show)).toBeUndefined();
+
+          tool.destroy();
+        });
       });
     });
 

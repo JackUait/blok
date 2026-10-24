@@ -60,7 +60,8 @@ export interface GridCallbacks {
   /** A date's Remind choice. Without it the date picker has no Remind row. */
   commitReminder?: (rowId: string, propertyId: string, reminder: DateReminderOffset | null) => void;
   editEnded: () => void;
-  deleteRows: (rowIds: string[]) => void;
+  /** `byKey`: Delete or Backspace on selected rows, which shows the Trash toast. */
+  deleteRows: (rowIds: string[], byKey?: boolean) => void;
   duplicateRows: (rowIds: string[]) => void;
   optionsChange?: (propertyId: string, options: SelectOption[]) => void;
   /** A cell editor's "Edit property" footer. */
@@ -849,7 +850,7 @@ export class DatabaseTableGrid {
     if (selection?.kind !== 'cell') {
       if ((event.key === 'Backspace' || event.key === 'Delete') && selection?.kind === 'rows' && !this.readOnly) {
         event.preventDefault();
-        this.callbacks.deleteRows(selection.rowIds);
+        this.callbacks.deleteRows(selection.rowIds, true);
       }
 
       return;

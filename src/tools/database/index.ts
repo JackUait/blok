@@ -7011,7 +7011,11 @@ export class DatabaseTool implements BlockTool {
       dateDisplayChanger: (propertyId) => this.dateDisplayChanger(propertyId, context),
       editEnded: () => context === undefined ? this.redrawWhenIdle() : context.redraw(),
       addRow: (groupKey, afterRowId) => this.addTableRow(groupKey, afterRowId, context),
-      deleteRows: (rowIds) => { if (writable()) this.deleteTableRows(rowIds); },
+      deleteRows: (rowIds, byKey) => {
+        if (!writable()) return;
+        if (byKey === true) this.trashWithToast(() => this.deleteTableRows(rowIds), rowIds.length);
+        else this.deleteTableRows(rowIds);
+      },
       duplicateRow: (rowId) => { if (writable()) this.duplicateTableRow(rowId); },
       openRow: (rowId, mode) => context === undefined ? this.handleRowClick(rowId, mode) : context.openRow(rowId, mode),
       copyRowLink: (rowId) => this.copyRowLink(rowId),
@@ -9993,18 +9997,23 @@ export class DatabaseTool implements BlockTool {
     this.rerenderView({ keepDrawer: true });
   }
 
-  /**
-   * Gallery cards trashed by key get one "Moved to Trash" toast whose Restore
-   * undoes the delete (research/22 §2, research/23 §2b for several cards).
-   */
+  /** Gallery cards and list rows trashed by key get the "Moved to Trash" toast (findings K05). */
   private trashSelectionFromKeys(): void {
-    const toast = this.shownView()?.type === 'gallery';
-    const before = this.api.history.latestStep();
-    const count = this.rowSelection.size;
+    const type = this.shownView()?.type;
 
-    // One undo step, so Restore brings every card back.
-    if (this.api.blocks.transact !== undefined) this.api.blocks.transact(() => this.trashSelection());
-    else this.trashSelection();
+    this.trashWithToast(() => this.trashSelection(), this.rowSelection.size, type === 'gallery' || type === 'list');
+  }
+
+  /**
+   * Runs a delete as one undo step, then shows one "Moved to Trash" toast whose
+   * Restore undoes that step (research/22 §2, research/23 §2b for several rows).
+   */
+  private trashWithToast(remove: () => void, count: number, toast = true): void {
+    const before = this.api.history.latestStep();
+
+    // One undo step, so Restore brings every row back.
+    if (this.api.blocks.transact !== undefined) this.api.blocks.transact(remove);
+    else remove();
     if (!toast) {
       return;
     }

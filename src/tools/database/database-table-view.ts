@@ -91,7 +91,8 @@ export interface TableHandlers {
   editEnded: () => void;
   /** Adds a row to a group ('' or null when ungrouped), after `afterRowId` when given. Returns its id. */
   addRow: (groupKey: string | null, afterRowId?: string) => string | null;
-  deleteRows: (rowIds: string[]) => void;
+  /** `byKey`: Delete or Backspace on selected rows, which shows the Trash toast. */
+  deleteRows: (rowIds: string[], byKey?: boolean) => void;
   duplicateRow: (rowId: string) => void;
   /** Opens a row page, in `mode` when the row menu's "Open in" names one. */
   openRow: (rowId: string, mode?: OpenPagesIn) => void;
@@ -409,7 +410,7 @@ export class DatabaseTableView implements DatabaseViewRenderer {
           ? { commitReminder: (rowId: string, propertyId: string, reminder: DateReminderOffset | null) => this.handlers?.commitReminder?.(rowId, propertyId, reminder) }
           : {}),
         editEnded: () => this.handlers?.editEnded(),
-        deleteRows: (rowIds) => this.handlers?.deleteRows(rowIds),
+        deleteRows: (...args) => this.handlers?.deleteRows(...args),
         duplicateRows: (rowIds) => rowIds.forEach((rowId) => this.handlers?.duplicateRow(rowId)),
         selectionChanged: () => this.syncSelectionChrome(),
         commitCells: (changes, newRows) => this.handlers?.commitCells(changes, newRows),

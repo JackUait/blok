@@ -198,7 +198,7 @@ describe('PopoverInline', () => {
       expect(items?.className).not.toContain('flex-wrap');
     });
 
-    it('draws the card with the inline toolbar shadow and 8px padding, its radius left to CSS', () => {
+    it('draws the card with the inline toolbar shadow, 8px side and 6px top and bottom padding, its radius left to CSS', () => {
       const popover = createGridPopover();
 
       popover.show();
@@ -208,8 +208,8 @@ describe('PopoverInline', () => {
       expect(container?.style.boxShadow).toBe('var(--blok-inline-toolbar-shadow)');
       expect(container?.className).not.toMatch(/(^|\s)rounded/);
       expect(container?.className).toContain('px-(--blok-space-2)');
-      expect(container?.className).toContain('pt-(--blok-space-2)');
-      expect(container?.className).toContain('pb-(--blok-space-2)');
+      expect(container?.className).toContain('pt-(--blok-space-1-5)');
+      expect(container?.className).toContain('pb-(--blok-space-1-5)');
     });
 
     it('pushes the convert row chevron to the right edge', () => {

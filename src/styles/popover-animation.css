@@ -36,7 +36,7 @@
   --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-1)));
 }
 
-/* The inline toolbar card pads 8px, so surface minus padding would floor its
+/* The inline toolbar card pads 6–8px, so surface minus padding would floor its
    rows at 4px. Control gives them the 6px rows of the 4px-padded menus. */
 [data-blok-popover-inline] > [data-blok-popover-container] {
   --blok-radius-inner: var(--blok-radius-control);

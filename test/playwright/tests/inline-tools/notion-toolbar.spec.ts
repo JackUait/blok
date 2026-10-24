@@ -88,7 +88,7 @@ test('cells sit in Notion order, five per row', async ({ page }) => {
   expect(tops[5]).toBeGreaterThan(tops[0]);
 });
 
-test('desktop cells are 32x28 with 4px gaps inside an 8px-padded, 14px-round card', async ({ page }) => {
+test('desktop cells are 32x28 with 4px gaps inside a 10px-round card padded 8px at the sides and 6px top and bottom', async ({ page }) => {
   await mount(page, 1280);
   await selectParagraph(page);
   await settle(page);
@@ -99,9 +99,9 @@ test('desktop cells are 32x28 with 4px gaps inside an 8px-padded, 14px-round car
   expect(bold.height).toBeCloseTo(28, 0);
   expect(italic.x - (bold.x + bold.width)).toBeCloseTo(4, 0);
   await expect(card(page)).toHaveCSS('border-top-left-radius', '10px');
-  await expect(card(page)).toHaveCSS('padding-top', '8px');
+  await expect(card(page)).toHaveCSS('padding-top', '6px');
   await expect(card(page)).toHaveCSS('padding-left', '8px');
-  await expect(card(page)).toHaveCSS('padding-bottom', '8px');
+  await expect(card(page)).toHaveCSS('padding-bottom', '6px');
   await expect(card(page)).toHaveCSS('box-shadow', /rgba\(42, 28, 0, 0\.07\)/);
 });
 

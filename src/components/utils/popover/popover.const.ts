@@ -70,9 +70,8 @@ export const cssInline = {
   items: 'grid grid-cols-[repeat(5,2rem)] mobile:grid-cols-[repeat(5,2.5rem)] gap-1 pt-0 pb-0',
 
   // The shared opened state sets px and pb-0. Per-side classes, because the
-  // house twMerge does not let a later p-2 override px/pb. --blok-space-2 is
-  // the gap the inline card's --blok-radius-inner subtracts.
-  popoverContainerOpened: 'px-(--blok-space-2) pt-(--blok-space-2) pb-(--blok-space-2)',
+  // house twMerge does not let a later p-2 override px/pb.
+  popoverContainerOpened: 'px-(--blok-space-2) pt-(--blok-space-1-5) pb-(--blok-space-1-5)',
 };
 
 /**

@@ -26,12 +26,6 @@
     }
   },
   "expectByRunner": {
-    "jint": {
-      "errorCode": "COMMAND_UNAVAILABLE"
-    },
-    "room": {
-      "errorCode": "COMMAND_UNAVAILABLE"
-    },
     "mcp-stored": {
       "against": "json-without-services",
       "reason": "blok-mcp gives the agent no linkMetadata host service (src/mcp/contract.ts), so a bookmark keeps only its url, as in any host without one. The golden assumes the case's fixed preview."

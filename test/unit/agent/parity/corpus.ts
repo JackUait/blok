@@ -35,7 +35,10 @@ export interface ParityCase {
   batches: CorpusBatch[];
   expect?: Expectation;
   expectByRunner?: RunnerExpectations;
-  /** Fixed host services. Runners that cannot provide one declare it in expectByRunner. */
+  /**
+   * Fixed host services. Runners that cannot provide one declare it in expectByRunner.
+   * The C# runners have none and skip the case (AgentParityCorpus.cs), so pair it with a case without services.
+   */
   services?: CaseServices;
 }
 

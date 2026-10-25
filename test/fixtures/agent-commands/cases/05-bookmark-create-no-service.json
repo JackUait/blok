@@ -1,0 +1,19 @@
+{
+  "name": "05-bookmark-create-no-service",
+  "seed": {
+    "blocks": []
+  },
+  "batches": [
+    {
+      "commands": [
+        {
+          "name": "bookmark.create",
+          "args": {
+            "url": "https://example.com",
+            "position": "end"
+          }
+        }
+      ]
+    }
+  ]
+}

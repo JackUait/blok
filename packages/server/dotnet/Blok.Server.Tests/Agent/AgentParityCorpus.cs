@@ -109,6 +109,13 @@ internal static partial class AgentParityCorpus
     {
       var json = JsonNode.Parse(File.ReadAllText(file))!.AsObject();
 
+      // The Jint runtime gets service names but no host bridge, so it cannot answer a case's
+      // fixed services. Each such case has a twin without services that the C# runners do run.
+      if (json["services"] is not null)
+      {
+        continue;
+      }
+
       list.Add(new ParityCaseData(
           json["name"]!.GetValue<string>(),
           json["seed"]!.AsObject(),

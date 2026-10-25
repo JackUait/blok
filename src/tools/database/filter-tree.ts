@@ -63,11 +63,4 @@ export const updateFilterRule = (
 export const setFilterConjunction = (tree: FilterGroup, groupId: string, conjunction: FilterConjunction): FilterGroup =>
   mapGroups(tree, (group) => (group.id === groupId ? { ...group, conjunction } : group));
 
-/**
- * Gives every entry an id. Old documents hold filters and sorts without one;
- * every write adds them so two peers' entries pair by id. The id comes from
- * the entry's place in the stored list, so every read (and every peer)
- * derives the same one: a pill drawn from one read finds its filter in the next.
- */
-export const withEntryIds = <T extends { id?: string }>(entries: readonly T[]): Array<T & { id: string }> =>
-  entries.map((entry, index) => (typeof entry.id === 'string' && entry.id !== '' ? entry as T & { id: string } : { ...entry, id: `legacy-${index}` }));
+export { withEntryIds } from '../../shared/database/view-changes';

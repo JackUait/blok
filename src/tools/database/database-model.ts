@@ -3,7 +3,6 @@ import type {
   DatabaseData,
   DatabaseRow,
   DatabaseViewConfig,
-  DatabaseViewSettingKey,
   GroupSettings,
   PageLayoutFields,
   PropertyConfig,
@@ -20,19 +19,18 @@ import { queryGroups, queryRows, rowOrderKey } from './database-query';
 import { orderedStatusOptions, personIdsOf, readPropertyValue, statusGroupOf, statusGroupsOf, withEmptyLists } from './property-values';
 import { shownStatusOption } from './cells/option-colors';
 import type { GroupCount, QueryRowsRequest, QueryRowsResult, QuerySource } from './database-query';
-import { visibleRowPropertyIds } from './view-settings';
 import { NO_VALUE_GROUP_KEY, groupKeysFor, orderGroupKeys } from './group-keys';
 import { parentMap, relationPair } from './sub-items';
 import { comparePositions } from './positions';
 import { createDefaultSchema, createDefaultView, freePropertyName, newView, positionBetween } from '../../shared/database/schema-ops';
 import { createSeedDefinition } from '../../shared/database/seed-layouts';
 import type { ViewCreateConfig } from '../../shared/database/schema-ops';
+import { applyViewChanges } from '../../shared/database/view-changes';
+import type { ViewChanges } from '../../shared/database/view-changes';
 
 export type { ViewCreateConfig };
 
-export type ViewChanges = Partial<Pick<DatabaseViewConfig,
-  'name' | 'type' | 'position' | 'groupBy' | 'sorts' | 'filters' | 'visibleProperties' | 'rowOrder' | DatabaseViewSettingKey
->>;
+export type { ViewChanges };
 
 export interface DatabaseModelOptions {
   /** Layout of the view a database without views starts with. */
@@ -546,10 +544,7 @@ export class DatabaseModel {
   updateView(viewId: string, changes: ViewChanges): void {
     const view = this.views.find((v) => v.id === viewId);
     if (view === undefined) return;
-    Object.assign(view, structuredClone(changes));
-    if (changes.properties !== undefined) {
-      view.visibleProperties = visibleRowPropertyIds(view, this.schema);
-    }
+    applyViewChanges(view, structuredClone(changes), this.schema);
   }
 
   deleteView(viewId: string): void {

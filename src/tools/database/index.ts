@@ -69,6 +69,7 @@ import type { GalleryGroup } from './database-gallery-view';
 import { DatabaseCalendarView } from './database-calendar-view';
 import { addDays, eventSpan } from './calendar-dates';
 import { formatDateValue } from '../../shared/database/date-value';
+import { OPTION_GROUP_TYPES, layoutChange } from '../../shared/database/view-changes';
 import { DatabaseTimelineView, timelineZoomLabelKey } from './database-timeline-view';
 import type { TimelineGroup } from './database-timeline-view';
 import type { BarWrite } from './timeline-dates';
@@ -300,7 +301,6 @@ const RENDERED_LAYOUTS: readonly ViewType[] = ['table', 'board', 'gallery', 'lis
 const WIDGET_LAYOUTS: readonly ViewType[] = ['table', 'list'];
 
 /** Select-like groups: their columns are options (or status groups) the user can rename and move. */
-const OPTION_GROUP_TYPES: readonly PropertyType[] = ['select', 'multiSelect', 'status'];
 
 const hasGroup = (list: Array<{ id: string }> | undefined, key: string): boolean => (list ?? []).some((group) => group.id === key);
 
@@ -6333,18 +6333,11 @@ export class DatabaseTool implements BlockTool {
     if (view === undefined || view.type === type) return;
     // The grouping and the place property come from the rows the view shows.
     const data = this.activeSource();
-    const schema = data.model.getSchema();
-    const groupable = (p: PropertyDefinition): boolean => p.type !== 'title' && GROUPABLE_TYPES.includes(p.type);
-    const groupBy = type === 'board' && view.groupBy === undefined
-      ? (schema.find((p) => OPTION_GROUP_TYPES.includes(p.type)) ?? schema.find(groupable))?.id
-      : undefined;
+    const change = layoutChange(view, type, data.model.getSchema());
 
-    if (type === 'board' && view.groupBy === undefined && groupBy === undefined) return;
-    if (type === 'map') data.ensurePlaceProperty();
-    // Born empty with the switch: two peers adding the first column would race to create the key.
-    const tableProperties = type === 'timeline' && !Array.isArray(view.tableProperties) ? { tableProperties: [] } : {};
-
-    this.updateActiveView({ type, ...(groupBy !== undefined ? { groupBy } : {}), ...tableProperties });
+    if (change === undefined) return;
+    if (change.needsPlace) data.ensurePlaceProperty();
+    this.updateActiveView(change.changes);
     this.rebuildTabBar();
   }
 

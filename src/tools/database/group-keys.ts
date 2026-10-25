@@ -1,7 +1,7 @@
 import { parseDateValue } from './cells/date-value';
 import { toLocalDay } from './relative-dates';
 import { personIdsOf } from './property-values';
-import type { DatabaseViewConfig, GroupSettings, GroupSort, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
+import type { GroupSettings, GroupSort, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
 
 /**
  * Group key for rows with no value. Not '' because card drag reads a missing
@@ -9,11 +9,7 @@ import type { DatabaseViewConfig, GroupSettings, GroupSort, PropertyDefinition, 
  */
 export const NO_VALUE_GROUP_KEY = '__blok-no-value-group__';
 
-/** Rich text holds a document, which has no group. Notion also leaves out Files, Button and ID (research/08). */
-export const GROUPABLE_TYPES: readonly PropertyType[] = [
-  'title', 'text', 'number', 'select', 'multiSelect', 'status', 'date', 'checkbox', 'url', 'email', 'phone',
-  'person', 'createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy', 'relation', 'formula', 'rollup',
-];
+export { GROUPABLE_TYPES, groupByChange, subGroupByChange } from '../../shared/database/view-changes';
 
 const DATE_LIKE: readonly PropertyType[] = ['date', 'createdTime', 'lastEditedTime'];
 
@@ -30,34 +26,6 @@ export const defaultGroupSort = (type: PropertyType): GroupSort =>
 
 /** Notion's Range defaults: 0 to 1000, every 100 (research/22 §7). */
 export const DEFAULT_RANGE = { start: 0, end: 1000, size: 100 };
-
-/**
- * The write when people pick what a view groups by. A switch to another
- * property starts from that type's defaults (research/23 §2e): a number hides
- * empty groups, a select does not. Re-picking the same property keeps them.
- */
-export const groupByChange = (
-  view: DatabaseViewConfig | undefined,
-  property: PropertyDefinition
-): Pick<DatabaseViewConfig, 'groupBy' | 'groupSettings'> => {
-  if (property.id === view?.groupBy) return { groupBy: property.id };
-
-  return { groupBy: property.id, groupSettings: property.type === 'number' ? { hideEmptyGroups: true } : {} };
-};
-
-/**
- * The write when people pick a board's sub-group. Notion hid the bands with no
- * cards right after the pick (research/30 B26); the switch itself was not read.
- * Re-picking the same property keeps the settings.
- */
-export const subGroupByChange = (
-  view: DatabaseViewConfig | undefined,
-  property: PropertyDefinition
-): Pick<DatabaseViewConfig, 'subGroupBy' | 'subGroupSettings'> => {
-  if (property.id === view?.subGroupBy) return { subGroupBy: property.id };
-
-  return { subGroupBy: property.id, subGroupSettings: { hideEmptyGroups: true } };
-};
 
 /** Values below the range start or past its end. */
 export const OUT_OF_RANGE_KEY = 'range:out';

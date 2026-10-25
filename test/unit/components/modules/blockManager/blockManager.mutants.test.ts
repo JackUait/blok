@@ -2395,7 +2395,8 @@ describe('BlockManager block-change to Yjs data flush', () => {
 
     expect(harness.yjs.updateBlockData).toHaveBeenCalledWith('b', 'text', 'y', undefined);
     expect(harness.yjs.pruneBlockData).toHaveBeenCalledWith('b', new Set(['text']), undefined);
-    expect(harness.yjs.updateBlockMetadata).toHaveBeenCalledWith('b', expect.any(Number), null);
+    // No agent wrote this edit, so no co-editor is passed and the store drops any old one.
+    expect(harness.yjs.updateBlockMetadata).toHaveBeenCalledWith('b', expect.any(Number), null, undefined);
     expect(block.lastEditedAt).toEqual(expect.any(Number));
   });
 

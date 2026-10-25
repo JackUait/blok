@@ -706,6 +706,7 @@ describe('BlocksAPI — mutation coverage', () => {
         contentIds: undefined,
         lastEditedAt: undefined,
         lastEditedBy: undefined,
+        lastEditedWith: undefined,
         origin: 'api',
       });
     });

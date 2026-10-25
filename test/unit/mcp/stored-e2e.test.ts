@@ -41,7 +41,7 @@ describe('stored mode through the MCP dispatcher', () => {
     vi.restoreAllMocks();
   });
 
-  it('inserts a paragraph, saves it, and stamps lastEditedBy with the agent id', async () => {
+  it('inserts a paragraph, saves it, and credits the principal with the agent as co-editor', async () => {
     const handle = await openWrite('doc');
     const outcome = await mcp.dispatch('blok_execute', {
       handle,
@@ -49,10 +49,11 @@ describe('stored mode through the MCP dispatcher', () => {
     }, caller);
 
     expect(outcome.structuredContent).toMatchObject({ ok: true, delivery: { durable: true } });
-    const saved = file('doc') as { blocks: Array<{ id: string; lastEditedBy?: string; data: { text: unknown } }> };
+    const saved = file('doc') as { blocks: Array<{ id: string; lastEditedBy?: string; lastEditedWith?: string; data: { text: unknown } }> };
 
     expect(saved.blocks.map((block) => block.id)).toEqual(['p1']);
-    expect(saved.blocks[0].lastEditedBy).toBe('agent:alice:e2e');
+    expect(saved.blocks[0].lastEditedBy).toBe('alice');
+    expect(saved.blocks[0].lastEditedWith).toBe('agent:alice:e2e');
     expect(Array.isArray(saved.blocks[0].data.text)).toBe(true);
   });
 

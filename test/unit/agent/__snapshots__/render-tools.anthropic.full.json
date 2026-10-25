@@ -2941,7 +2941,7 @@
                       "changes": {
                         "type": "object",
                         "additionalProperties": false,
-                        "description": "View keys to change, in the saved view shape. A key given replaces its whole value; null removes it (back to its default). Keys not given stay.",
+                        "description": "View keys to change, in the saved view shape. A key given replaces its whole value (form merges); null removes it (back to its default). Keys not given stay.",
                         "properties": {
                           "name": {
                             "type": "string"

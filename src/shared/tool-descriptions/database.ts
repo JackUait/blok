@@ -821,7 +821,7 @@ const MERGED_VIEW_SETTINGS = new Set(['form']);
 const VIEW_CHANGES = {
   type: 'object',
   additionalProperties: false,
-  description: 'View keys to change, in the saved view shape. A key given replaces its whole value; null removes it (back to its default). Keys not given stay.',
+  description: 'View keys to change, in the saved view shape. A key given replaces its whole value (form merges); null removes it (back to its default). Keys not given stay.',
   properties: Object.fromEntries(Object.entries(VIEW_SETTING_ARGS)
     .filter(([key]) => !NOT_VIEW_SETTINGS.has(key))
     .map(([key, setting]) => [key, REQUIRED_VIEW_SETTINGS.has(key) || MERGED_VIEW_SETTINGS.has(key) ? setting : { anyOf: [setting, { type: 'null' }] }])),
@@ -909,7 +909,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
   {
     name: 'updateView',
     summary: 'Change a view\'s saved settings: filters, sorts, grouping, calculations, columns, card, calendar, timeline, chart, map and form texts. It applies for everyone.',
-    guidance: 'Only the keys in changes change. Each key replaces its whole value, so read the view first: to hide one column, send the full properties list with that entry visible false. null removes a key. '
+    guidance: 'Only the keys in changes change. Each key replaces its whole value, so read the view first: to hide one column, send the full properties list with that entry visible false. form is the exception: its texts merge into the saved form. null removes a key (not form). '
       + 'Grouping by another property resets groupSettings (subGroupBy: subGroupSettings) to that type\'s defaults unless changes also sets them. A filter or sort without an id gets one. '
       + 'Change the layout type with database.setLayout. Sharing and access settings (who can fill out a form, calendar sync) are not writable.',
     target: 'block',

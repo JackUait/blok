@@ -322,6 +322,114 @@ describe('editor.agent.ask', () => {
     run.end();
   });
 
+  describe('with more than one block selected', () => {
+    const boot = async (model: AgentModel): Promise<BootedEditor> => {
+      const holder = document.createElement('div');
+
+      document.body.appendChild(holder);
+      const editor = new BootedEditor({
+        holder,
+        tools: { paragraph: Paragraph },
+        data: { blocks: [
+          { id: 'p1', type: 'paragraph', data: { text: 'First paragraph' } },
+          { id: 'p2', type: 'paragraph', data: { text: 'Second paragraph' } },
+          { id: 'p3', type: 'paragraph', data: { text: 'Third paragraph' } },
+        ] },
+        agent: { assistant: { model, name: 'Writer' } },
+      });
+
+      editors.push(editor as unknown as TestEditor);
+      await editor.isReady;
+      await settle();
+      // jsdom does not reflect contentEditable to the attribute the editing-host lookup reads.
+      document.querySelectorAll('[data-blok-tool="paragraph"]').forEach((input) => input.setAttribute('contenteditable', 'true'));
+
+      return editor;
+    };
+
+    const textIn = (id: string): Node => {
+      const node = document.querySelector(`[data-blok-id="${id}"] [data-blok-tool="paragraph"]`)?.firstChild ?? null;
+
+      if (node === null) {
+        throw new Error(`${id} has no editable text`);
+      }
+
+      return node;
+    };
+
+    const select = (from: [string, number], to: [string, number]): void => {
+      const range = document.createRange();
+
+      range.setStart(textIn(from[0]), from[1]);
+      range.setEnd(textIn(to[0]), to[1]);
+      document.getSelection()?.removeAllRanges();
+      document.getSelection()?.addRange(range);
+    };
+
+    const firstMessage = async (editor: BootedEditor, model: ReturnType<typeof scripted>): Promise<unknown> => {
+      const run = (editor as unknown as TestEditor).agent.ask('Rewrite this');
+
+      await run.result;
+      run.end();
+
+      return model.requests[0].messages[0].content;
+    };
+
+    it('names every block a text selection spans and quotes each one on its own', async () => {
+      const model = scripted(answer('ok'));
+      const editor = await boot(model);
+
+      select(['p1', 6], ['p3', 5]);
+
+      expect(await firstMessage(editor, model)).toEqual(expect.stringContaining(
+        '(Editor context: the user selected text across blocks p1, p2, p3. In block p1: "paragraph". In block p2: "Second paragraph". In block p3: "Third". "This" in the request means that text.)'
+      ));
+    });
+
+    it('treats a triple-click that ends at the start of the next block as one block', async () => {
+      const model = scripted(answer('ok'));
+      const editor = await boot(model);
+
+      select(['p1', 0], ['p2', 0]);
+
+      expect(await firstMessage(editor, model)).toEqual(expect.stringContaining('selected this text in block p1: "First paragraph"'));
+    });
+
+    it('names the blocks of a block selection', async () => {
+      const model = scripted(answer('ok'));
+      const editor = await boot(model);
+      const modules = editor.moduleGraph;
+
+      if (modules === undefined) {
+        throw new Error('no module graph');
+      }
+      document.getSelection()?.removeAllRanges();
+      modules.BlockSelection.selectBlockByIndex(1);
+      modules.BlockSelection.selectBlockByIndex(2);
+
+      expect(await firstMessage(editor, model)).toEqual(expect.stringContaining(
+        '(Editor context: the user selected whole blocks p2, p3. "This" in the request means those blocks.)'
+      ));
+    });
+
+    it('keeps a block selection when the bar opens with a prompt', async () => {
+      const model = scripted(answer('ok'));
+      const editor = await boot(model);
+      const modules = editor.moduleGraph;
+
+      if (modules === undefined) {
+        throw new Error('no module graph');
+      }
+      document.getSelection()?.removeAllRanges();
+      modules.BlockSelection.selectBlockByIndex(0);
+      modules.BlockSelection.selectBlockByIndex(1);
+      (editor as unknown as TestEditor).agent.openAssistant({ prompt: 'Rewrite this' });
+
+      await vi.waitFor(() => expect(model.requests).toHaveLength(1));
+      expect(model.requests[0].messages[0].content).toEqual(expect.stringContaining('the user selected whole blocks p1, p2.'));
+    });
+  });
+
   it('the caret context asks the model to write after the caret block', async () => {
     const model = scripted(answer('ok'));
     const editor = await createEditor(model);

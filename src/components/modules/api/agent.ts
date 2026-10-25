@@ -253,6 +253,36 @@ export class AgentAPI extends Module {
    * the selection, so it travels as text.
    */
   private editorContext(): UserPlace {
+    const selectedBlocks = this.Blok.BlockSelection.selectedBlocks;
+
+    // A block selection leaves no native range, or a stray one.
+    if (selectedBlocks.length > 0) {
+      const ids = selectedBlocks.map((block) => block.id);
+
+      return {
+        text: `(Editor context: the user selected whole blocks ${ids.join(', ')}. "This" in the request means those blocks.)`,
+        blockIds: ids,
+      };
+    }
+
+    const quotes = new Map<string, string[]>();
+
+    // An empty share is a triple-click's end at the start of the next block.
+    this.Blok.CrossBlockSelection.textSelection?.subRanges
+      .map(({ block, range }) => ({ id: block.id, text: range.toString() }))
+      .filter(({ text }) => text !== '')
+      .forEach(({ id, text }) => quotes.set(id, [...quotes.get(id) ?? [], text]));
+
+    if (quotes.size > 1) {
+      const ids = [...quotes.keys()];
+      const quoted = [...quotes].map(([id, parts]) => `In block ${id}: ${JSON.stringify(parts.join('\n'))}.`).join(' ');
+
+      return {
+        text: `(Editor context: the user selected text across blocks ${ids.join(', ')}. ${quoted} "This" in the request means that text.)`,
+        blockIds: ids,
+      };
+    }
+
     const selection = document.getSelection();
     const anchor = selection?.anchorNode ?? null;
 

@@ -514,9 +514,16 @@ export const emitPatch = (
     }
   }
 
-  const removed = Object.entries(patch).filter(([, value]) => value === null || value === undefined).map(([key]) => key);
+  const cleared = tool.runtime.cleared ?? {};
+  // A removed key with a cleared value is written as that value: deleting it would let the tool
+  // refill it on load with a default the user did not ask for.
+  const clearing = Object.fromEntries(Object.entries(patch)
+    .filter(([key, value]) => (value === null || value === undefined) && Object.hasOwn(cleared, key))
+    .map(([key]) => [key, cleared[key]]));
+  const removed = Object.entries(patch)
+    .filter(([key, value]) => (value === null || value === undefined) && !Object.hasOwn(clearing, key)).map(([key]) => key);
   const written = input === undefined ? {} : state.prepareData(
-    block.type, Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== null && value !== undefined)),
+    block.type, { ...Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== null && value !== undefined)), ...clearing },
     '/data', block.id, { normalize: false, stored, current: block.data }
   );
   const merged = { ...cloneRecord(block.data), ...written };

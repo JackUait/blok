@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BUILT_IN_TOOL_RUNTIMES } from '../../../../src/shared/tool-actions';
+import { DEFAULT_LANGUAGE } from '../../../../src/tools/code/constants';
 
 const normalize = (tool: string, data: Record<string, unknown>): Record<string, unknown> => {
   const run = BUILT_IN_TOOL_RUNTIMES.get(tool)?.normalize;
@@ -55,5 +56,26 @@ describe('load defaults the editor saves', () => {
     expect(first.automations).not.toBe(second.automations);
     expect(normalize('database', { automations: { version: 1, definitions: [{ id: 'a' }] } }).automations)
       .toEqual({ version: 1, definitions: [{ id: 'a' }] });
+  });
+});
+
+// USER RULING 2026-10-25: a cleared field never comes back as a default the user did not ask for.
+describe('cleared values a removal writes', () => {
+  const cleared = (tool: string): Readonly<Record<string, unknown>> | undefined => BUILT_IN_TOOL_RUNTIMES.get(tool)?.cleared;
+
+  it('turns code line numbers off, and falls back to the base language and empty code', () => {
+    expect(cleared('code')).toEqual({ lineNumbers: false, language: DEFAULT_LANGUAGE, code: '' });
+  });
+
+  it('gives a quote its base size', () => {
+    expect(cleared('quote')).toEqual({ size: 'default' });
+  });
+
+  it('hides the callout emoji instead of bringing back the lightbulb', () => {
+    expect(cleared('callout')).toEqual({ emoji: '' });
+  });
+
+  it('unchecks a checklist item', () => {
+    expect(cleared('list')).toEqual({ checked: false });
   });
 });

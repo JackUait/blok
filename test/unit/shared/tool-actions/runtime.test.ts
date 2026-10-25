@@ -8,7 +8,9 @@ import { COLUMN_DEFAULT_CHILDREN, COLUMN_LIST_ACTION_HANDLERS, COLUMN_LIST_DEFAU
 import { DATABASE_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/database';
 import { IMAGE_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/image';
 import { LINK_ACTION_HANDLERS, normalizeEmbed, rejectBookmarkWrite, rejectEmbedWrite } from '../../../../src/shared/tool-actions/link';
-import { normalizeCallout, normalizeCode, normalizeDatabase, normalizeList, normalizeQuote } from '../../../../src/shared/tool-actions/load-defaults';
+import {
+  CALLOUT_CLEARED, CODE_CLEARED, LIST_CLEARED, normalizeCallout, normalizeCode, normalizeDatabase, normalizeList, normalizeQuote, QUOTE_CLEARED,
+} from '../../../../src/shared/tool-actions/load-defaults';
 import { MEDIA_ACTION_HANDLERS, MEDIA_REJECT_WRITE } from '../../../../src/shared/tool-actions/media';
 import { PAGE_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/page';
 import { buildToolRuntimes, composeToolSanitize } from '../../../../src/shared/tool-actions/runtime';
@@ -287,7 +289,7 @@ describe('BUILT_IN_TOOL_RUNTIMES', () => {
     expect(typeof normalize).toBe('function');
     expect(BUILT_IN_RUNTIME_PARTS).toEqual({
       table: { normalize, actions: TABLE_ACTION_HANDLERS },
-      callout: { normalize: normalizeCallout, defaultChildren },
+      callout: { normalize: normalizeCallout, cleared: CALLOUT_CLEARED, defaultChildren },
       column_list: { defaultChildren: COLUMN_LIST_DEFAULT_CHILDREN, actions: COLUMN_LIST_ACTION_HANDLERS },
       column: { defaultChildren: COLUMN_DEFAULT_CHILDREN },
       page: { actions: PAGE_ACTION_HANDLERS },
@@ -299,9 +301,9 @@ describe('BUILT_IN_TOOL_RUNTIMES', () => {
       embed: { normalize: normalizeEmbed, rejectWrite: rejectEmbedWrite, actions: LINK_ACTION_HANDLERS.embed },
       bookmark: { rejectWrite: rejectBookmarkWrite, actions: LINK_ACTION_HANDLERS.bookmark },
       database: { normalize: normalizeDatabase, actions: DATABASE_ACTION_HANDLERS },
-      code: { normalize: normalizeCode },
-      quote: { normalize: normalizeQuote },
-      list: { normalize: normalizeList, conversion: { export: 'text', import: 'text' } },
+      code: { normalize: normalizeCode, cleared: CODE_CLEARED },
+      quote: { normalize: normalizeQuote, cleared: QUOTE_CLEARED },
+      list: { normalize: normalizeList, cleared: LIST_CLEARED, conversion: { export: 'text', import: 'text' } },
     });
     expect(BUILT_IN_TOOL_RUNTIMES.get('table')?.normalize).toBe(normalize);
     expect(BUILT_IN_TOOL_RUNTIMES.get('callout')?.defaultChildren)

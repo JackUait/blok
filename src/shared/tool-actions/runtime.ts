@@ -9,6 +9,8 @@ export interface ToolRuntime {
   name: string;
   sanitize: SanitizerConfig;
   normalize?(data: Record<string, unknown>): Record<string, unknown>;
+  /** The value a removed key gets instead of being deleted, so the tool does not refill it on load. */
+  cleared?: Readonly<Record<string, unknown>>;
   /** Why data an agent wrote cannot be saved, or undefined. `written` names the fields it set. */
   rejectWrite?(data: Record<string, unknown>, written: readonly string[]): string | undefined;
   defaultChildren?: InsertSpec[];
@@ -27,6 +29,7 @@ export interface RuntimeBlockInput {
   ownSanitize: SanitizerConfig;
   inlineSanitize: SanitizerConfig[];
   normalize?: ToolRuntime['normalize'];
+  cleared?: ToolRuntime['cleared'];
   rejectWrite?: ToolRuntime['rejectWrite'];
   defaultChildren?: InsertSpec[];
   actions?: Readonly<Record<string, ToolActionImpl>>;
@@ -54,6 +57,7 @@ export const buildToolRuntimes = (blocks: RuntimeBlockInput[]): ToolRuntimeRegis
     name: block.name,
     sanitize: composeToolSanitize(block.ownSanitize, block.inlineSanitize),
     ...(block.normalize === undefined ? {} : { normalize: block.normalize }),
+    ...(block.cleared === undefined ? {} : { cleared: block.cleared }),
     ...(block.rejectWrite === undefined ? {} : { rejectWrite: block.rejectWrite }),
     ...(block.defaultChildren === undefined ? {} : { defaultChildren: block.defaultChildren }),
     actions: block.actions ?? {},

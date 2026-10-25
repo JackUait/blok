@@ -181,6 +181,7 @@ export const runtimesFromTools = (tools: ToolsLike): ToolRuntimeRegistry => new 
         name: tool.name,
         sanitize: tool.sanitizeConfig,
         ...(parts?.normalize === undefined ? {} : { normalize: parts.normalize }),
+        ...(parts?.cleared === undefined ? {} : { cleared: parts.cleared }),
         ...(parts?.rejectWrite === undefined ? {} : { rejectWrite: parts.rejectWrite }),
         ...(parts?.defaultChildren === undefined ? {} : { defaultChildren: parts.defaultChildren }),
         actions: toolClass.actionHandlers ?? {},

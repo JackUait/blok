@@ -1450,7 +1450,28 @@ describe('bounded action ownership under controller ruling C2', () => {
   });
 });
 
+// C4: an explicit removal beats a normalizer default. USER RULING 2026-10-25 adds: a key the tool
+// declares a cleared value for gets that value, so the clear survives a reload that would refill it.
 describe('explicit removal precedence under controller ruling C4', () => {
+  it.each([
+    { path: 'core', label: 'null', value: null },
+    { path: 'action', label: 'undefined', value: undefined },
+  ])('writes the tool\'s cleared value for a $path $label removal, not its load default', ({ path, value }) => {
+    const setup = withActions('header', {
+      clear: { run: (ctx: ToolActionContext) => ctx.update(blockOf(ctx).id, { flag: value }) },
+    }, {}, { data: {
+      ...registered('header').entry.data,
+      properties: { ...recordOf(registered('header').entry.data.properties), flag: { type: 'boolean' } },
+    } }, { normalize: data => ({ ...data, flag: data.flag ?? true }), cleared: { flag: false } });
+    const command: AgentCommand = path === 'core'
+      ? { name: 'block.update', args: { id: 'h', data: { flag: value } } }
+      : { name: 'header.clear', args: { id: 'h' } };
+    const { plan, draft } = planOn(doc, [command], setup);
+
+    expect(draft.get('h')?.data.flag).toBe(false);
+    expect(plan.edits).toEqual([{ op: 'setData', id: 'h', patch: { flag: false } }]);
+  });
+
   it.each([
     { path: 'core', label: 'null', value: null },
     { path: 'core', label: 'undefined', value: undefined },

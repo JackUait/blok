@@ -16,7 +16,7 @@ import { builtInEditorTools } from '../shared/tool-descriptions/built-in-tools';
  * editor as the same object.
  */
 
-const PART_KEYS = ['normalize', 'rejectWrite', 'defaultChildren', 'conversion'] as const;
+const PART_KEYS = ['normalize', 'cleared', 'rejectWrite', 'defaultChildren', 'conversion'] as const;
 
 const destroyCore = (core: Core): void => {
   const modules: unknown[] = Object.values(core.moduleInstances);

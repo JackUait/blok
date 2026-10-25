@@ -44,6 +44,8 @@ export type PlannerActionImpl = ToolActionImpl;
 
 export interface PlannerToolRuntime {
   normalize?(data: Record<string, unknown>): Record<string, unknown>;
+  /** The value a removed key gets instead of being deleted, so the tool does not refill it on load. */
+  cleared?: Readonly<Record<string, unknown>>;
   rejectWrite?(data: Record<string, unknown>, written: readonly string[]): string | undefined;
   defaultChildren?: InsertSpec[];
   actions: Readonly<Record<string, ToolActionImpl>>;

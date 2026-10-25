@@ -7,6 +7,18 @@ import type { DatabaseSavedAutomations } from '../database/types';
 export const CODE_LOAD_DEFAULTS = { lineNumbers: true } as const;
 export const QUOTE_LOAD_DEFAULTS = { size: 'default' } as const;
 export const CALLOUT_LOAD_DEFAULTS = { textColor: null, backgroundColor: null } as const;
+/*
+ * What an agent's removal of a key writes, when the tool would refill that key on load with a
+ * default the user did not ask for (USER RULING 2026-10-25). Every engine plans through these.
+ * A key a tool loads as none when absent needs no entry. Code's language must equal the code
+ * tool's DEFAULT_LANGUAGE.
+ */
+export const CODE_CLEARED = { lineNumbers: false, language: 'plain text', code: '' } as const;
+export const QUOTE_CLEARED = { size: QUOTE_LOAD_DEFAULTS.size } as const;
+/** "" hides the emoji; an absent one loads as the lightbulb. */
+export const CALLOUT_CLEARED = { emoji: '' } as const;
+/** normalizeList drops checked again when the item is not a checklist. */
+export const LIST_CLEARED = { checked: false } as const;
 /** Cloned on every use: a shared object would tie two databases' automations together. */
 export const DATABASE_EMPTY_AUTOMATIONS: Readonly<DatabaseSavedAutomations> = { version: 1, definitions: [] };
 /** A list item saves `start` only when it differs from this. */

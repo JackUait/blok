@@ -78,10 +78,14 @@ const NO_CASE: Record<string, string> = {
 const UPDATES: Record<string, CorpusCommand[]> = {
   'code update': [insert('code', { code: 'x' }), update({ code: 'y' })],
   'code null lineNumbers': [insert('code', { code: 'x', lineNumbers: false }), update({ lineNumbers: null })],
+  'code null lineNumbers when on': [insert('code', { code: 'x', lineNumbers: true }), update({ lineNumbers: null })],
+  'code null language': [insert('code', { code: 'x', language: 'python' }), update({ language: null })],
+  'code null code': [insert('code', { code: 'x' }), update({ code: null })],
   'quote update': [insert('quote', { text: 'x' }), update({ text: 'y' })],
   'quote null size': [insert('quote', { text: 'x', size: 'large' }), update({ size: null })],
   'callout update': [insert('callout'), update({ emoji: 'x' })],
   'callout null textColor': [insert('callout', { emoji: 'x', textColor: 'red' }), update({ textColor: null })],
+  'callout null emoji': [insert('callout', { emoji: 'x' }), update({ emoji: null })],
   'checklist item': [insert('list', { text: 'a', style: 'checklist' })],
   'checklist null checked': [insert('list', { text: 'a', style: 'checklist', checked: true }), update({ checked: null })],
   'list to checklist': [insert('list', { text: 'a', style: 'unordered' }), update({ style: 'checklist' })],
@@ -102,15 +106,29 @@ const EDITOR_ONLY_KEYS: Record<string, { keys: string[]; reason: string }> = {
 };
 
 /**
- * Updates that set a defaulted key to null. Controller ruling C4 (test/unit/shared/agent/tool-actions.test.ts)
- * keeps an explicit removal above the normalizer's default, so the headless engines drop the key while the
- * editor reloads it with its default. These keys are left out of the compare for these cases only.
+ * Updates whose saved data still differs by a key. Every other null update writes the key's
+ * cleared value (load-defaults.ts CLEARED_VALUES), so every engine saves the same data.
  */
 const REMOVAL_GAPS: Record<string, { keys: string[]; reason: string }> = {
-  'code null lineNumbers': { keys: ['lineNumbers'], reason: 'C4: removal wins; the editor reloads it as true.' },
-  'quote null size': { keys: ['size'], reason: 'C4: removal wins; the editor reloads it as "default".' },
-  'callout null textColor': { keys: ['textColor'], reason: 'C4: removal wins; the editor reloads it as null. A top-level null in setData also means "remove".' },
-  'checklist null checked': { keys: ['checked'], reason: 'C4: removal wins; the editor reloads it as false.' },
+  'callout null textColor': {
+    keys: ['textColor'],
+    reason: 'A setData null means "remove the key", so the headless engines store no textColor while the editor saves null. The callout loads both as no colour, so the clear survives reload.',
+  },
+};
+
+/**
+ * USER RULING 2026-10-25: a field an agent clears stays cleared, in every engine and after
+ * save then reload. It never comes back as a default the user did not ask for.
+ */
+const CLEARS: Record<string, { type: string; key: string; cleared: unknown }> = {
+  'code null lineNumbers': { type: 'code', key: 'lineNumbers', cleared: false },
+  'code null lineNumbers when on': { type: 'code', key: 'lineNumbers', cleared: false },
+  'code null language': { type: 'code', key: 'language', cleared: 'plain text' },
+  'code null code': { type: 'code', key: 'code', cleared: '' },
+  'quote null size': { type: 'quote', key: 'size', cleared: 'default' },
+  'callout null textColor': { type: 'callout', key: 'textColor', cleared: null },
+  'callout null emoji': { type: 'callout', key: 'emoji', cleared: '' },
+  'checklist null checked': { type: 'list', key: 'checked', cleared: false },
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -199,8 +217,8 @@ const destroyCore = (instance: Core): void => {
   destroyTooltip();
 };
 
-const runEditor = async (commands: CorpusCommand[]): Promise<{ result: AgentResult; saved: OutputData | undefined }> => {
-  core = new Core({ holder, tabSync: false, dataModel: 'hierarchical', i18n: { locale: 'en' }, tools: builtInEditorTools(), data: SEED });
+const runEditor = async (commands: CorpusCommand[], data: OutputData = SEED): Promise<{ result: AgentResult; saved: OutputData | undefined }> => {
+  core = new Core({ holder, tabSync: false, dataModel: 'hierarchical', i18n: { locale: 'en' }, tools: builtInEditorTools(), data });
   await core.isReady;
   const editor = core.moduleInstances;
 
@@ -266,5 +284,56 @@ describe('agent engine saved-data parity law', () => {
     expect(savedNew(storeSaved, gapKeys), 'store vs json saved data').toBe(savedNew(jsonSaved, gapKeys));
     expect(rowsOf(editorResult, gapKeys), 'editor vs json result rows').toBe(rowsOf(jsonResult, gapKeys));
     expect(rowsOf(storeResult, gapKeys), 'store vs json result rows').toBe(rowsOf(jsonResult, gapKeys));
+  }, 30_000);
+
+  it.each(Object.entries(CLEARS))('%s stays cleared in every engine and after reload', async (name, { type, key, cleared }) => {
+    const commands = UPDATES[name];
+    const valueIn = (doc: OutputData | undefined): unknown => {
+      const data = doc?.blocks.find(block => block.type === type)?.data;
+
+      if (data !== undefined && Object.hasOwn(data, key)) {
+        return data[key];
+      }
+
+      // The editor loads an absent callout colour as null: both mean no colour.
+      return cleared === null ? null : '<absent>';
+    };
+    const rowValue = (result: AgentResult): unknown => {
+      const row = result.ok ? result.blocks?.find(block => block.type === type) : undefined;
+      const fields = row?.data ?? row?.attrs;
+
+      return fields === undefined || !Object.hasOwn(fields, key) ? '<absent>' : fields[key];
+    };
+
+    const json = openJsonSession(SEED, undefined, SERVICES);
+    const jsonResult = await json.execute({ commands });
+    const jsonSaved = json.output();
+
+    json.close();
+
+    const store = openStoreSession(SEED, undefined, SERVICES);
+    const storeResult = await store.execute({ commands } as AgentBatch);
+    const storeSaved = store.output();
+
+    await store.close();
+
+    const { result: editorResult, saved: editorSaved } = await runEditor(commands);
+    const reloaded = async (doc: OutputData | undefined): Promise<OutputData | undefined> => {
+      await editorSession?.close();
+      if (core !== undefined) {
+        destroyCore(core);
+      }
+
+      return (await runEditor([], doc)).saved;
+    };
+
+    expect(valueIn(jsonSaved), 'json saved').toEqual(cleared);
+    expect(valueIn(storeSaved), 'store saved').toEqual(cleared);
+    expect(valueIn(editorSaved), 'editor saved').toEqual(cleared);
+    expect(valueIn(await reloaded(jsonSaved)), 'json saved, reloaded in the editor').toEqual(cleared);
+    expect(valueIn(await reloaded(storeSaved)), 'store saved, reloaded in the editor').toEqual(cleared);
+    expect(valueIn(await reloaded(editorSaved)), 'editor saved, reloaded').toEqual(cleared);
+    expect(rowValue(editorResult), 'editor vs json result row').toEqual(rowValue(jsonResult));
+    expect(rowValue(storeResult), 'store vs json result row').toEqual(rowValue(jsonResult));
   }, 30_000);
 });

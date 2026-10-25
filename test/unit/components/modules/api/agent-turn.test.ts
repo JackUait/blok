@@ -135,7 +135,7 @@ describe('createAgentTurn dispatch', () => {
 
     expect(message.trim()).not.toBe('');
     expect(message).toMatch(/\b(?:json|object)\b/i);
-    expect(parseContent(result.content)).toMatchObject({ ok: false, error: { code: 'INVALID_ARGS' }, warnings: [] });
+    expect(parseContent(result.content)).toEqual({ ok: false, error: expect.objectContaining({ code: 'INVALID_ARGS', retryable: false }) });
     expect(result.isError).toBe(true);
     expect(session.execute).not.toHaveBeenCalled();
     expect(session.read).not.toHaveBeenCalled();
@@ -146,13 +146,13 @@ describe('createAgentTurn dispatch', () => {
     { input: {}, path: '/commands' },
     { input: { commands: 'block.insert' }, path: '/commands' },
     { input: { commands: BATCH.commands, expectRevision: 5 }, path: '/expectRevision' },
-  ])('rejects a malformed execute envelope at $path', async ({ input, path }) => {
-    const session = makeSession();
+    { input: { commands: [null] }, path: '/commands/0' },
+  ])('leaves a malformed execute envelope to core, which refuses it at $path', async ({ input, path }) => {
+    const session = openDocumentSession();
     const result = await createAgentTurn(session, makeHooks()).call('blok_execute', input);
 
-    expect(parseContent(result.content)).toMatchObject({ error: { code: 'INVALID_ARGS', path } });
+    expect(parseContent(result.content)).toMatchObject({ ok: false, revision: session.revision(), error: { code: 'INVALID_ARGS', path, retryable: false } });
     expect(result.isError).toBe(true);
-    expect(session.execute).not.toHaveBeenCalled();
   });
 
   it('lists the valid tools for an unknown tool name', async () => {
@@ -160,8 +160,9 @@ describe('createAgentTurn dispatch', () => {
     const result = await createAgentTurn(session, makeHooks()).call('table.insertRows', {});
 
     expect(parseContent(result.content)).toMatchObject({
-      ok: false, error: { code: 'UNKNOWN_COMMAND', details: { valid: ['blok_read', 'blok_describe', 'blok_execute'] } }, warnings: [],
+      error: { code: 'UNKNOWN_COMMAND', details: { valid: ['blok_read', 'blok_describe', 'blok_execute'] } },
     });
+    expect(parseContent(result.content)).not.toHaveProperty('ok');
     expect(result.isError).toBe(true);
     expect(session.execute).not.toHaveBeenCalled();
     expect(session.read).not.toHaveBeenCalled();
@@ -224,12 +225,12 @@ describe('createAgentTurn dispatch', () => {
   });
 
   // Adapters turn tool arguments that are not valid JSON into { invalidJson } (src/agent-models/shared.ts).
-  it.each(['blok_read', 'blok_describe', 'blok_execute'])('tells the model its %s arguments were not valid JSON, and lets it retry', async name => {
+  it.each(['blok_read', 'blok_describe', 'blok_execute'])('tells the model its %s arguments were not valid JSON', async name => {
     const session = makeSession();
     const result = await createAgentTurn(session, makeHooks()).call(name, { invalidJson: '{"commands": [{"args"' });
 
     expect(result.isError).toBe(true);
-    expect(parseContent(result.content)).toMatchObject({ error: { code: 'INVALID_ARGS', retryable: true } });
+    expect(parseContent(result.content)).toMatchObject({ error: { code: 'INVALID_ARGS', retryable: false } });
     expect(errorMessage(result.content)).toMatch(/not valid JSON/);
     expect(session.read).not.toHaveBeenCalled();
     expect(session.describe).not.toHaveBeenCalled();
@@ -284,7 +285,9 @@ describe('createAgentTurn lifecycle', () => {
     for (const name of ['blok_read', 'blok_describe', 'blok_execute']) {
       const result = await turn.call(name, {});
 
-      expect(parseContent(result.content)).toMatchObject({ ok: false, error: { code: 'CANCELLED' }, warnings: [] });
+      expect(parseContent(result.content)).toEqual(name === 'blok_execute'
+        ? { ok: false, error: expect.objectContaining({ code: 'CANCELLED' }) }
+        : { error: expect.objectContaining({ code: 'CANCELLED' }) });
       expect(result.isError).toBe(true);
     }
     expect(session.read).not.toHaveBeenCalled();
@@ -430,7 +433,10 @@ describe('createAgentTurn with real session validation', () => {
     const hooks = makeHooks();
     const result = await createAgentTurn(session, hooks).call(name, input);
 
-    expect(parseContent(result.content)).toMatchObject({ ok: false, error: { code, retryable: false } });
+    // blok_read and blok_describe answer a bare { error }; only a batch has ok.
+    expect(parseContent(result.content)).toEqual(name === 'blok_execute'
+      ? expect.objectContaining({ ok: false, error: expect.objectContaining({ code, retryable: false }) })
+      : { error: expect.objectContaining({ code, retryable: false }) });
     expect(result.isError).toBe(true);
     expect(session.output()).toMatchObject({ title: 'Original', blocks: [] });
     expect(hooks.onExecuted).not.toHaveBeenCalled();
@@ -461,7 +467,7 @@ describe('createAgentTurn with real session validation', () => {
     session.describe.mockImplementation(() => { throw thrown; });
     const result = await createAgentTurn(session, makeHooks()).call(name, {});
 
-    expect(result).toEqual({ content: JSON.stringify({ ok: false, error, warnings: [] }), isError: true });
+    expect(result).toEqual({ content: JSON.stringify({ error }), isError: true });
   });
 
   it.each(['blok_read', 'blok_describe'])('does not hide an unexpected host exception from %s', async name => {
@@ -733,7 +739,7 @@ describe('createAgentTurn — queue and stop', () => {
     const readResult = await queuedRead;
 
     expect(parseContent(executeResult.content)).toMatchObject({ ok: false, error: { code: 'CANCELLED' } });
-    expect(parseContent(readResult.content)).toMatchObject({ ok: false, error: { code: 'CANCELLED' }, warnings: [] });
+    expect(parseContent(readResult.content)).toEqual({ error: expect.objectContaining({ code: 'CANCELLED' }) });
     expect(executeResult.isError).toBe(true);
     expect(readResult.isError).toBe(true);
     expect(await running).toEqual({ content: JSON.stringify(modelAnswer(enteredResult)), isError: false });

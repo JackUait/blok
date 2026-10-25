@@ -256,6 +256,28 @@ describe('runAssistantLoop', () => {
     });
   });
 
+  it.each([
+    ['blok_execute', { ok: false, error: { code: 'CANCELLED', message: 'The output was cut off. This call was not run.', retryable: false } }],
+    ['blok_read', { error: { code: 'CANCELLED', message: 'The output was cut off. This call was not run.', retryable: false } }],
+  ])('answers a cut-off %s call in the envelope that tool answers errors in', async (name, answer) => {
+    const messages: AgentModelMessage[] = [{ role: 'user', content: 'x' }];
+
+    await runAssistantLoop({
+      model: scripted(reply([{ type: 'tool_use', id: 't', name, input: {} }], 'max_tokens')),
+      system: '',
+      tools: [],
+      messages,
+      call: vi.fn(async () => ok()),
+      signal: new AbortController().signal,
+      maxSteps: 5,
+    });
+
+    const last = messages.at(-1);
+    const block = Array.isArray(last?.content) ? last.content[0] : undefined;
+
+    expect(JSON.parse(String(block?.content))).toEqual(answer);
+  });
+
   it('re-sends after pause_turn without adding a user message', async () => {
     const model = scripted(
       reply([{ type: 'text', text: 'Working' }], 'pause_turn'),

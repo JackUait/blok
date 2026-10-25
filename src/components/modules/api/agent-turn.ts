@@ -2,10 +2,13 @@ import type { AgentBatch, AgentError, AgentResult, AgentSession, DocumentView, V
 import type { AgentToolResult, AgentTurn } from '../../../../types/api';
 import { AgentFailure } from '../../../shared/agent/errors';
 import { modelAnswer } from '../../../shared/agent/model-answer';
+import { parseToolCall, refusedBatch, toolErrorAnswer, type ToolCall } from '../../../shared/agent/tool-call';
 
 export const AGENT_TOOL_NAMES = ['blok_read', 'blok_describe', 'blok_execute'] as const;
 
 const TOOL_NAMES = new Set<string>(AGENT_TOOL_NAMES);
+
+const isToolName = (name: string): name is typeof AGENT_TOOL_NAMES[number] => TOOL_NAMES.has(name);
 
 type TurnSession = Omit<AgentSession, 'execute'> & {
   // The real executor validates unknown wire input, not only typed batches.
@@ -20,77 +23,20 @@ export interface AgentTurnHooks {
   openPage?(blockId: string): Promise<TurnSession & { close(): void }>;
 }
 
-type Parsed<T> = { ok: true; value: T } | { ok: false; error: AgentError };
-
-const invalid = (message: string, path?: string): Parsed<never> => ({
-  ok: false,
-  error: { code: 'INVALID_ARGS', message, retryable: true, ...(path === undefined ? {} : { path }) },
-});
-
 export const cancelledError = (): AgentError => ({
   code: 'CANCELLED',
   message: 'This turn was stopped or ended. Nothing was applied.',
   retryable: false,
 });
 
-const asToolError = (error: AgentError): AgentToolResult => ({
-  content: JSON.stringify({ ok: false, error, warnings: [] }),
+const asToolError = (name: string, error: AgentError): AgentToolResult => ({
+  content: JSON.stringify(toolErrorAnswer(name, error)),
   isError: true,
 });
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
+const answered = (value: unknown): AgentToolResult => ({ content: JSON.stringify(value), isError: false });
 
-const parseInput = (input: unknown): Parsed<Record<string, unknown>> => {
-  const state: { raw: unknown } = { raw: input ?? {} };
-
-  if (typeof input === 'string') {
-    try {
-      state.raw = input.trim() === '' ? {} : JSON.parse(input);
-    } catch {
-      return invalid('The tool input is not valid JSON. Send a JSON object.');
-    }
-  }
-
-  if (!isRecord(state.raw)) {
-    return invalid('The tool input must be a JSON object.');
-  }
-
-  // parseArguments (src/agent-models/shared.ts) and the dev AI route send this for arguments that did not parse.
-  if (Object.hasOwn(state.raw, 'invalidJson')) {
-    return invalid('The tool input is not valid JSON, so nothing ran. Send the call again as a JSON object.');
-  }
-
-  return { ok: true, value: state.raw };
-};
-
-const toQuery = (value: Record<string, unknown>): Parsed<{ tool?: string; command?: string }> => {
-  const { tool, command } = value;
-
-  if (tool !== undefined && typeof tool !== 'string') {
-    return invalid('`tool` must be a string.', '/tool');
-  }
-  if (command !== undefined && typeof command !== 'string') {
-    return invalid('`command` must be a string.', '/command');
-  }
-
-  return {
-    ok: true,
-    value: { ...(tool === undefined ? {} : { tool }), ...(command === undefined ? {} : { command }) },
-  };
-};
-
-const toBatch = (value: Record<string, unknown>): Parsed<Record<string, unknown>> => {
-  if (!Array.isArray(value.commands)) {
-    return invalid('`commands` must be an array of { name, args }.', '/commands');
-  }
-  if (value.expectRevision !== undefined && typeof value.expectRevision !== 'string') {
-    return invalid('`expectRevision` must be a string.', '/expectRevision');
-  }
-
-  // Command validation belongs to the executor, including malformed array entries.
-  return { ok: true, value };
-};
+const batchAnswer = (result: AgentResult): AgentToolResult => ({ content: JSON.stringify(modelAnswer(result)), isError: !result.ok });
 
 export function createAgentTurn(session: TurnSession, hooks: AgentTurnHooks): AgentTurn {
   const controller = new AbortController();
@@ -109,7 +55,7 @@ export function createAgentTurn(session: TurnSession, hooks: AgentTurnHooks): Ag
 
     return enqueue(async (): Promise<AgentResult> => {
       if (!accepted || controller.signal.aborted) {
-        return { ok: false, error: cancelledError(), warnings: [] };
+        return refusedBatch(cancelledError());
       }
 
       const result = await session.execute(batch, { signal: controller.signal });
@@ -164,10 +110,10 @@ export function createAgentTurn(session: TurnSession, hooks: AgentTurnHooks): Ag
       throw new Error('editor.agent: the editor was destroyed. Open a new turn on a live editor.');
     }
     if (state.closed) {
-      return asToolError(cancelledError());
+      return asToolError(name, cancelledError());
     }
-    if (!TOOL_NAMES.has(name)) {
-      return asToolError({
+    if (!isToolName(name)) {
+      return asToolError(name, {
         code: 'UNKNOWN_COMMAND',
         message: `There is no tool "${name}". The tools are blok_read, blok_describe and blok_execute.`,
         retryable: false,
@@ -175,96 +121,66 @@ export function createAgentTurn(session: TurnSession, hooks: AgentTurnHooks): Ag
       });
     }
 
-    const parsed = parseInput(input);
+    const parsed = parseToolCall(name, input, { pages: hooks.openPage !== undefined });
 
     if (!parsed.ok) {
-      return asToolError(parsed.error);
-    }
-    if (parsed.value.page !== undefined && name !== 'blok_describe') {
-      return callPage(name, parsed.value);
+      return asToolError(name, parsed.error);
     }
 
     try {
-      if (name === 'blok_read') {
-        return { content: JSON.stringify(await read(parsed.value)), isError: false };
-      }
-      if (name === 'blok_describe') {
-        const query = toQuery(parsed.value);
-
-        return query.ok
-          ? {
-            content: JSON.stringify(await enqueue(() => {
-              if (controller.signal.aborted) {
-                throw new AgentFailure(cancelledError());
-              }
-
-              return Promise.resolve(session.describe(query.value));
-            })),
-            isError: false,
-          }
-          : asToolError(query.error);
-      }
-
-      const batch = toBatch(parsed.value);
-
-      if (!batch.ok) {
-        return asToolError(batch.error);
-      }
-      const result = await execute(batch.value);
-
-      return { content: JSON.stringify(modelAnswer(result)), isError: !result.ok };
+      return await runCall(parsed.call);
     } catch (error) {
       if (error instanceof AgentFailure) {
-        return asToolError(error.error);
+        return asToolError(name, error.error);
       }
 
       throw error;
     }
   };
 
-  /** A read or batch on a sub-page's own document. It opens, runs and closes in the turn's queue. */
-  const callPage = async (name: string, value: Record<string, unknown>): Promise<AgentToolResult> => {
-    const { page, ...rest } = value;
+  const runCall = async (toolCall: ToolCall): Promise<AgentToolResult> => {
+    if (toolCall.name === 'blok_describe') {
+      const { query } = toolCall;
 
-    if (typeof page !== 'string' || page === '') {
-      return asToolError({ code: 'INVALID_ARGS', message: '`page` must be the id of a page block.', retryable: true, path: '/page' });
-    }
-    if (hooks.openPage === undefined) {
-      return asToolError({ code: 'COMMAND_UNAVAILABLE', message: 'This editor cannot open sub-page documents. Omit `page`.', retryable: false });
-    }
-    const batch = name === 'blok_execute' ? toBatch(rest) : null;
-
-    if (batch !== null && !batch.ok) {
-      return asToolError(batch.error);
-    }
-    const open = hooks.openPage;
-    const accepted = !state.closed;
-
-    try {
-      return await enqueue(async (): Promise<AgentToolResult> => {
-        if (!accepted || controller.signal.aborted) {
+      return answered(await enqueue(() => {
+        if (controller.signal.aborted) {
           throw new AgentFailure(cancelledError());
         }
-        const session = await open(page);
 
-        try {
-          if (batch === null) {
-            return { content: JSON.stringify(await session.read(rest)), isError: false };
-          }
-          const result = await session.execute(batch.value, { signal: controller.signal });
-
-          return { content: JSON.stringify(modelAnswer(result)), isError: !result.ok };
-        } finally {
-          session.close();
-        }
-      });
-    } catch (error) {
-      if (error instanceof AgentFailure) {
-        return asToolError(error.error);
-      }
-
-      throw error;
+        return Promise.resolve(session.describe(query));
+      }));
     }
+    if (toolCall.page !== undefined && hooks.openPage !== undefined) {
+      return onPage(hooks.openPage, toolCall.page, toolCall);
+    }
+
+    return toolCall.name === 'blok_read'
+      ? answered(await read(toolCall.view))
+      : batchAnswer(await execute(toolCall.batch));
+  };
+
+  /** A read or batch on a sub-page's own document. It opens, runs and closes in the turn's queue. */
+  const onPage = (
+    open: NonNullable<AgentTurnHooks['openPage']>,
+    page: string,
+    toolCall: Exclude<ToolCall, { name: 'blok_describe' }>,
+  ): Promise<AgentToolResult> => {
+    const accepted = !state.closed;
+
+    return enqueue(async (): Promise<AgentToolResult> => {
+      if (!accepted || controller.signal.aborted) {
+        throw new AgentFailure(cancelledError());
+      }
+      const pageSession = await open(page);
+
+      try {
+        return toolCall.name === 'blok_read'
+          ? answered(await pageSession.read(toolCall.view))
+          : batchAnswer(await pageSession.execute(toolCall.batch, { signal: controller.signal }));
+      } finally {
+        pageSession.close();
+      }
+    });
   };
 
   return {

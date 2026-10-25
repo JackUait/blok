@@ -7,7 +7,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderAgentTools } from '../../../src/agent/render-tools';
 import { orError } from '../../../src/agent/result-schemas';
+import { createToolDispatcher, LIFECYCLE_ARGUMENTS } from '../../../src/mcp/dispatcher';
+import { HandleRegistry } from '../../../src/mcp/handles';
+import type { HandleSession } from '../../../src/mcp/session';
 import { CORE_TOOL_NAMES, LIFECYCLE_TOOL_NAMES, listMcpTools, type McpTool } from '../../../src/mcp/tools';
+import { createDocumentAgentSession } from '../../../src/shared/agent';
+import { TOOL_ARGUMENTS } from '../../../src/shared/agent/tool-call';
 import { validateAgainst } from '../../../src/shared/schema/validate';
 import { createHeadlessAgentSetup } from '../../../src/view/agent-runtime';
 import type { HostService } from '../../../types/tools/tool-description';
@@ -415,4 +420,111 @@ describe('MCP lifecycle outputs use the renderer error branch', () => {
       expect(validateAgainst(bareError, { error: { ...failure.error, details: 'details' } })).not.toEqual([]);
     });
   }
+});
+
+describe('MCP error outputs match each tool\'s outputSchema', () => {
+  const setup = createHeadlessAgentSetup({ runtime: 'node' });
+  const caller = { principal: 'alice', clientName: 'test', scopes: null };
+  const registries: HandleRegistry<HandleSession>[] = [];
+  const agents: Array<ReturnType<typeof createDocumentAgentSession>> = [];
+
+  afterEach(async () => {
+    await Promise.all(registries.splice(0).map(registry => registry.closeAll(async () => undefined)));
+    agents.splice(0).forEach(agent => agent.close());
+  });
+
+  const openDispatcher = async (): Promise<{ call: (name: string, args: Record<string, unknown>) => ReturnType<ReturnType<typeof createToolDispatcher>> }> => {
+    const agent = createDocumentAgentSession({
+      document: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: [{ text: 'Hello' }] } }] },
+      tools: setup.tools,
+      contract: setup.contract,
+      ports: setup.ports,
+      actor: { id: 'agent', name: 'Agent', kind: 'agent' },
+    });
+
+    agents.push(agent);
+    const session: HandleSession = {
+      mode: 'stored',
+      write: true,
+      durability: 'saved-on-execute',
+      contractRevision: setup.contract.revision,
+      read: args => agent.read(args),
+      describe: query => agent.describe(query),
+      execute: async batch => ({ ...await agent.execute(batch), delivery: { durable: false, pending: false, serverSequence: null, savedVersion: null } }),
+      close: async () => ({ unsavedBatches: 0, hostRecordLags: false }),
+    };
+    const handles = new HandleRegistry<HandleSession>({ idleMs: 600_000, maxPerPrincipal: 8, onExpire: async () => undefined });
+
+    registries.push(handles);
+    const dispatch = createToolDispatcher({
+      handles,
+      open: async () => session,
+      list: async () => ({ documents: [], nextCursor: null, supported: true }),
+      stillAllowed: async () => true,
+      handleIdleMs: 600_000,
+    });
+    const opened = await dispatch('blok_open', { documentId: 'doc', write: true }, caller);
+    const handle = String(opened.structuredContent.handle);
+
+    return { call: (name, args) => dispatch(name, { ...args, ...(name === 'blok_list_documents' || name === 'blok_open' ? {} : { handle }) }, caller) };
+  };
+
+  // validateAgainst has no not evaluator, so an orError output is checked against its error branch.
+  const errorSchemaOf = (tool: McpTool): Record<string, unknown> => {
+    const branches: unknown[] = Array.isArray(tool.outputSchema.oneOf) ? tool.outputSchema.oneOf : [];
+    const bare = branches.map(record).find(branch => branch.additionalProperties === false
+      && Array.isArray(branch.required) && branch.required.includes('error'));
+
+    return bare ?? tool.outputSchema;
+  };
+
+  for (const schema of ['envelope', 'full', 'mixed'] as const) {
+    it(`${schema}: every tool's accepted arguments are its inputSchema properties`, () => {
+      for (const tool of listMcpTools(setup.contract, { schema, handleIdleMs: 600_000 })) {
+        const properties = Object.keys(record(tool.inputSchema.properties)).sort();
+        // doc.read's own schema checks the view arguments.
+        const readArguments = Object.keys(record(record(setup.contract.commands.find(entry => entry.name === 'doc.read')?.args).properties));
+        const core: Record<string, readonly string[]> = {
+          blok_read: ['handle', ...readArguments],
+          blok_describe: ['handle', ...TOOL_ARGUMENTS.blok_describe],
+          blok_execute: ['handle', ...TOOL_ARGUMENTS.blok_execute],
+        };
+        const accepted = core[tool.name] ?? LIFECYCLE_ARGUMENTS[tool.name];
+
+        expect(properties, tool.name).toEqual([...accepted].sort());
+      }
+    });
+  }
+
+  it.each(listMcpTools(setup.contract, { schema: 'envelope', handleIdleMs: 600_000 }).map(tool => [tool.name, tool] as const))(
+    '%s refuses an unknown argument with INVALID_ARGS, in its declared error shape',
+    async (name, tool) => {
+      const { call } = await openDispatcher();
+      const outcome = await call(name, { notAnArgument: 1 });
+
+      // blok_read's arguments go to doc.read, whose path is /commands/0/args/notAnArgument.
+      expect(outcome.structuredContent).toMatchObject({ error: { code: 'INVALID_ARGS', path: expect.stringMatching(/\/notAnArgument$/) } });
+      expect(outcome.isError).toBe(true);
+      expect(validateAgainst(errorSchemaOf(tool), outcome.structuredContent)).toEqual([]);
+    },
+  );
+
+  it.each([
+    ['blok_read', { page: 'p1' }],
+    ['blok_read', { invalidJson: '{' }],
+    ['blok_describe', { tool: 123 }],
+    ['blok_describe', { tool: 'nope' }],
+    ['blok_execute', { page: 'p1', commands: [] }],
+    ['blok_execute', { invalidJson: '{' }],
+    ['blok_execute', { commands: [] }],
+    ['blok_execute', { commands: [null] }],
+    ['blok_execute', { commands: [{ name: 'block.delete', args: { id: 'zzz' } }] }],
+  ])('%s answers %o with an error its outputSchema accepts', async (name, args) => {
+    const tool = byName(listMcpTools(setup.contract, { schema: 'envelope', handleIdleMs: 600_000 }), name);
+    const { call } = await openDispatcher();
+    const outcome = await call(name, args);
+
+    expect(outcome.isError).toBe(true);
+    expect(validateAgainst(errorSchemaOf(tool), outcome.structuredContent)).toEqual([]);
+  });
 });

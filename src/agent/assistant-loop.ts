@@ -8,6 +8,7 @@ import type {
   AgentThinkingLevel,
   AgentToolResult,
 } from '../../types/api';
+import { toolErrorAnswer } from '../shared/agent/tool-call';
 
 export type AssistantLoopStatus = 'done' | 'stopped' | 'refused' | 'truncated' | 'step-limit' | 'failed';
 
@@ -65,7 +66,7 @@ const isResponse = (value: unknown): value is AgentModelResponse =>
 const unanswered = (use: ToolUse, why: string): AgentModelContentBlock => ({
   type: 'tool_result',
   tool_use_id: use.id,
-  content: JSON.stringify({ ok: false, error: { code: 'CANCELLED', message: why, retryable: false } }),
+  content: JSON.stringify(toolErrorAnswer(use.name, { code: 'CANCELLED', message: why, retryable: false })),
   is_error: true,
 });
 

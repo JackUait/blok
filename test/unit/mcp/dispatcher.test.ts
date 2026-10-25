@@ -146,7 +146,6 @@ const expectFailure = (outcome: ToolOutcome, code: string, execute = false): voi
       structuredContent: {
         ok: false,
         error: expect.objectContaining({ code }),
-        warnings: [],
         delivery: { durable: false, pending: false, serverSequence: null, savedVersion: null },
       },
     });
@@ -613,14 +612,15 @@ describe('createToolDispatcher', () => {
 
   const malformedEntries: unknown[] = [null, 'doc.read', ['doc.read'], {}, { name: 7 }, { name: null }];
 
-  it.each(malformedEntries)('refuses command entry %j before authorization or execute', async entry => {
-    const { deps, session, dispatch } = fixture();
+  // Core's checkEnvelope refuses them, naming every bad entry, as it does for Ask AI.
+  it.each(malformedEntries)('passes command entry %j through for core to refuse', async entry => {
+    const { session, dispatch } = fixture();
     const handle = handleFrom(await invoke(dispatch, 'blok_open', { documentId: 'doc-1', write: true }));
-    const outcome = await invoke(dispatch, 'blok_execute', { handle, commands: [{ name: 'doc.read', args: {} }, entry] });
+    const commands = [{ name: 'doc.read', args: {} }, entry];
 
-    expectFailure(outcome, 'INVALID_ARGS', true);
-    expect(deps.stillAllowed).not.toHaveBeenCalled();
-    expect(session.execute).not.toHaveBeenCalled();
+    await invoke(dispatch, 'blok_execute', { handle, commands });
+
+    expect(session.execute).toHaveBeenCalledExactlyOnceWith({ commands });
   });
 
   it.each([5, null, false])('passes non-string expectRevision %j through for core to refuse', async expectRevision => {
@@ -633,14 +633,14 @@ describe('createToolDispatcher', () => {
 
   const malformedCommands: unknown[] = [undefined, null, 'not-an-array', {}, 42];
 
-  it.each(malformedCommands)('refuses non-array commands %# before authorization or execute', async commands => {
-    const { deps, session, dispatch } = fixture();
+  it.each(malformedCommands)('passes non-array commands %# through for core to refuse', async commands => {
+    const { session, dispatch } = fixture();
     const handle = handleFrom(await invoke(dispatch, 'blok_open', { documentId: 'doc-1', write: true }));
-    const outcome = await invoke(dispatch, 'blok_execute', { handle, ...(commands !== undefined && { commands }) });
+    const batch = commands === undefined ? {} : { commands };
 
-    expectFailure(outcome, 'INVALID_ARGS', true);
-    expect(deps.stillAllowed).not.toHaveBeenCalled();
-    expect(session.execute).not.toHaveBeenCalled();
+    await invoke(dispatch, 'blok_execute', { handle, ...batch });
+
+    expect(session.execute).toHaveBeenCalledExactlyOnceWith(batch);
   });
 
   const scopedTools = [

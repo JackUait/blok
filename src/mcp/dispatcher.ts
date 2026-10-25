@@ -1,8 +1,9 @@
-import type { AgentBatch, AgentCommand, AgentError, ViewArgs } from '../../types/agent';
+import type { AgentBatch, AgentError } from '../../types/agent';
 import { AgentFailure, failure } from '../shared/agent/errors';
 import { modelAnswer } from '../shared/agent/model-answer';
+import { parseToolCall, toolErrorAnswer, unknownArgument, type AgentToolName, type ToolCall } from '../shared/agent/tool-call';
 
-import { failedResult, isMcpSurfaceError, surfaceError } from './errors';
+import { isMcpSurfaceError, NO_DELIVERY, surfaceError } from './errors';
 import type { HandleRegistry } from './handles';
 import type { HandleSession } from './session';
 
@@ -74,8 +75,32 @@ const MODES: ReadonlySet<unknown> = new Set(['auto', 'live', 'stored']);
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-const isCommandShaped = (value: unknown): boolean =>
-  isPlainObject(value) && typeof value.name === 'string';
+/**
+ * The arguments each lifecycle tool takes: its inputSchema properties (src/mcp/tools.ts). Others are refused.
+ * The core tools take `handle` plus what src/shared/agent/tool-call.ts accepts.
+ */
+export const LIFECYCLE_ARGUMENTS: Readonly<Record<string, readonly string[]>> = {
+  blok_list_documents: ['query', 'cursor', 'limit'],
+  blok_open: ['documentId', 'query', 'mode', 'write', 'view'],
+  blok_close: ['handle'],
+};
+
+const refuseUnknownArguments = (name: string, args: Record<string, unknown>): void => {
+  const accepted = Object.hasOwn(LIFECYCLE_ARGUMENTS, name) ? LIFECYCLE_ARGUMENTS[name] : undefined;
+  const extra = accepted === undefined ? null : unknownArgument(name, args, accepted);
+
+  if (extra !== null) {
+    throw new AgentFailure(extra);
+  }
+};
+
+const CORE_SCOPES: Readonly<Record<AgentToolName, 'blok.read' | 'blok.write'>> = {
+  blok_read: 'blok.read',
+  blok_describe: 'blok.read',
+  blok_execute: 'blok.write',
+};
+
+const isCoreTool = (name: string): name is AgentToolName => Object.hasOwn(CORE_SCOPES, name);
 
 // Core throws AgentFailure for model-fixable input (a bad view, an unknown tool).
 const modelFixable = (thrown: unknown): AgentError | null => {
@@ -206,29 +231,38 @@ export const createToolDispatcher = (
     }
   };
 
-  const executeBatch = async (args: Record<string, unknown>, caller: Caller): Promise<ToolOutcome> => {
-    requireScope(caller, 'blok.write');
-    if (!Array.isArray(args.commands)) {
-      throw surfaceError('INVALID_ARGS', 'commands must be an array of { name, args }.');
-    }
-    const badIndex = args.commands.findIndex(command => !isCommandShaped(command));
+  // MCP reaches a sub-page with blok_open on its pageId, so `page` is refused here as Ask AI refuses it without sub-pages.
+  const coreCall = async (name: AgentToolName, args: Record<string, unknown>, caller: Caller): Promise<ToolOutcome> => {
+    requireScope(caller, CORE_SCOPES[name]);
+    const handle = handleOf(args);
+    const parsed = parseToolCall(name, Object.fromEntries(Object.entries(args).filter(([key]) => key !== 'handle')), { pages: false });
 
-    // Sessions read command.name before core validates the batch.
-    if (badIndex !== -1) {
-      throw surfaceError('INVALID_ARGS', `commands[${badIndex}] must be an object with a string name.`);
+    if (!parsed.ok) {
+      throw new AgentFailure(parsed.error);
     }
-    // A non-string is passed on so core refuses it instead of dropping the guard.
-    const batch = {
-      commands: args.commands as AgentCommand[],
-      ...(args.expectRevision !== undefined && { expectRevision: args.expectRevision }),
-    } as AgentBatch;
-    const result = await onHandle(caller, handleOf(args), true, session => session.execute(batch));
+
+    return onHandle(caller, handle, name === 'blok_execute', session => runCall(session, parsed.call));
+  };
+
+  const runCall = async (session: HandleSession, call: ToolCall): Promise<ToolOutcome> => {
+    if (call.name === 'blok_read') {
+      return ok({ ...await session.read(call.view) });
+    }
+    if (call.name === 'blok_describe') {
+      return ok({ ...session.describe(call.query) });
+    }
+    // Unchecked on purpose: core's checkEnvelope refuses a malformed batch, as it does for Ask AI.
+    const result = await session.execute(call.batch as unknown as AgentBatch);
 
     return { structuredContent: modelAnswer(result), isError: !result.ok };
   };
 
   return async (name, args, caller, options = {}): Promise<ToolOutcome> => {
     try {
+      refuseUnknownArguments(name, args);
+      if (isCoreTool(name)) {
+        return await coreCall(name, args, caller);
+      }
       switch (name) {
         case 'blok_list_documents': {
           requireScope(caller, 'blok.read');
@@ -237,25 +271,6 @@ export const createToolDispatcher = (
         }
         case 'blok_open':
           return await openDocument(args, caller, options.signal);
-        case 'blok_read': {
-          requireScope(caller, 'blok.read');
-          const viewArgs = Object.fromEntries(Object.entries(args).filter(([key]) => key !== 'handle'));
-          const view = await onHandle(caller, handleOf(args), false, session => session.read(viewArgs as ViewArgs));
-
-          return ok({ ...view });
-        }
-        case 'blok_describe': {
-          requireScope(caller, 'blok.read');
-          const query = {
-            ...(typeof args.tool === 'string' && { tool: args.tool }),
-            ...(typeof args.command === 'string' && { command: args.command }),
-          };
-          const slice = await onHandle(caller, handleOf(args), false, async session => session.describe(query));
-
-          return ok({ ...slice });
-        }
-        case 'blok_execute':
-          return await executeBatch(args, caller);
         case 'blok_close': {
           requireScope(caller, 'blok.read');
           const handle = handleOf(args);
@@ -278,7 +293,7 @@ export const createToolDispatcher = (
       }
 
       return {
-        structuredContent: name === 'blok_execute' ? failedResult(error) : { error },
+        structuredContent: name === 'blok_execute' ? { ...toolErrorAnswer(name, error), delivery: NO_DELIVERY } : toolErrorAnswer(name, error),
         isError: true,
       };
     }

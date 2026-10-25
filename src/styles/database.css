@@ -1481,6 +1481,15 @@
   inset: 0;
 }
 
+/*
+  A full row page takes over its editor (row-page-takeover.ts): blocks off its path
+  and the end-of-page area hide. Blocks inside the row page stay.
+*/
+[data-blok-database-row-page] [data-blok-element]:not([data-blok-database-row-page-path], [data-blok-database-full-page] [data-blok-element]),
+[data-blok-database-row-page] > [data-blok-bottom-zone] {
+  display: none;
+}
+
 /* Full page: the row page takes the database's place in the editor. */
 [data-blok-database-drawer][data-peek-mode="full"] {
   position: static;
@@ -1695,7 +1704,14 @@
   The host is the editor wrapper. Its isolation reset is `all: initial !important`
   (isolation.css), so only an !important rule with more specificity gets through.
   It is already position: relative there, so the offset never reflows the page.
+  The offset is written on every wheel. Inherited, it restyles the whole page each time (~80ms).
 */
+@property --_blok-peek-offset {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
 [data-blok-interface=blok][data-blok-database-peek] {
   inset-inline-start: calc(-1 * var(--_blok-peek-offset, 0px)) !important;
   transition: inset-inline-start 200ms ease !important;

@@ -651,7 +651,7 @@ describe('blokDocumentSchema', () => {
           blocks: [
             {
               id: 'c1', type: 'callout', data: { emoji: '💡' },
-              lastEditedAt: 1712880000000, lastEditedBy: 'u1',
+              lastEditedAt: 1712880000000, lastEditedBy: 'u1', createdAt: 1712870000000, createdBy: 'u0',
             },
             { id: 'p1', type: 'paragraph', parent: 'c1', data: { text: 'Hi' }, tunes: { indent: { level: 1 } } },
           ],
@@ -669,7 +669,7 @@ describe('blokDocumentSchema', () => {
         expect(typeof saved.time).toBe('number');
         expect(typeof saved.version).toBe('string');
 
-        // The union across the fixture covers all eight saved block keys, so a
+        // The union across the fixture covers all ten saved block keys, so a
         // key the saver emits but the schema omits fails here.
         const savedBlockKeys = new Set(saved.blocks.flatMap(entry => Object.keys(entry)));
 

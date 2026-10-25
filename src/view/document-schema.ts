@@ -110,7 +110,15 @@ export const blokDocumentSchema = {
           },
           lastEditedBy: {
             type: 'string',
-            description: 'Identifier of the user who last edited this block.',
+            description: 'Identifier of the user, or agent, who last edited this block.',
+          },
+          createdAt: {
+            type: 'integer',
+            description: 'Unix epoch milliseconds when this block was created.',
+          },
+          createdBy: {
+            type: 'string',
+            description: 'Identifier of the user, or agent, who created this block.',
           },
         },
         allOf: [

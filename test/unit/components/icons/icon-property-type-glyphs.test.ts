@@ -118,6 +118,21 @@ describe('property type glyphs (Notion shapes on the Blok Line grid)', () => {
       expect(x - cursor[0][0]).toBeCloseTo((base[i][0] - base[0][0]) * 0.6, 5);
       expect(y - cursor[0][1]).toBeCloseTo((base[i][1] - base[0][1]) * 0.6, 5);
     });
+
+    // The button's open ends stay one stroke plus one stroke of gap from every cursor edge.
+    const button = points(icons.IconCursorButton, 0);
+    const ends = [button[0], button[button.length - 1]];
+    const toSegment = ([px, py]: number[], [ax, ay]: number[], [bx, by]: number[]): number => {
+      const t = Math.max(0, Math.min(1, ((px - ax) * (bx - ax) + (py - ay) * (by - ay)) / ((bx - ax) ** 2 + (by - ay) ** 2)));
+
+      return Math.hypot(px - (ax + t * (bx - ax)), py - (ay + t * (by - ay)));
+    };
+
+    for (const end of ends) {
+      const nearest = Math.min(...cursor.map((a, i) => toSegment(end, a, cursor[(i + 1) % cursor.length])));
+
+      expect(nearest).toBeGreaterThanOrEqual(2.5);
+    }
   });
 
   it('the handset is symmetric about the anti-diagonal', () => {

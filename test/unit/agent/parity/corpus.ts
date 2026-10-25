@@ -2,6 +2,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import type { OutputBlockData, OutputData } from '../../../../types';
+import type { HostService } from '../../../../types/tools/tool-description';
 
 export type RunnerName = 'editor' | 'json' | 'store' | 'jint' | 'room';
 export type Expectation = 'ok' | { errorCode: string };
@@ -174,7 +175,7 @@ export const callerChosenIds = (c: ParityCase): Set<string> => {
 
 export interface HostServices {
   /** For the contract: which services exist. */
-  names: Array<'linkMetadata'>;
+  names: HostService[];
   /** For the session: the service objects. */
   impl: { linkMetadata?: { fetch(url: string): Promise<LinkPreview & { url: string }> } };
 }

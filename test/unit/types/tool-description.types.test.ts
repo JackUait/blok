@@ -143,6 +143,7 @@ describe('published tool description types', () => {
       guidance?: string;
       level: 'described' | 'structural';
       insertable: boolean;
+      insertUnavailableReason?: 'runtime';
       variants: Array<{ name: string; title: string; data: Record<string, unknown> }>;
       data: BlokSchema;
       defaultData?: Record<string, unknown>;

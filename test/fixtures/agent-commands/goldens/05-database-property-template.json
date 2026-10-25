@@ -3,6 +3,7 @@
   "document": {
     "blocks": [
       {
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "db1",
         "type": "database",
@@ -145,6 +146,7 @@
         "parent": "db1"
       },
       {
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "tpl1",
         "type": "database-row",
@@ -164,6 +166,9 @@
         "parent": "db1"
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b0.3",
         "type": "database-row",

@@ -15,6 +15,9 @@
         }
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "n1",
         "type": "paragraph",

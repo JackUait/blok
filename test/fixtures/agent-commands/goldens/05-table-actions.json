@@ -3,6 +3,7 @@
   "document": {
     "blocks": [
       {
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "ta1",
         "type": "table",
@@ -162,6 +163,9 @@
         "parent": "ta1"
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b0.1",
         "type": "paragraph",
@@ -195,6 +199,9 @@
         "parent": "ta1"
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b0.4",
         "type": "paragraph",
@@ -208,6 +215,9 @@
         "parent": "ta1"
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b0.5",
         "type": "paragraph",
@@ -221,6 +231,9 @@
         "parent": "ta1"
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b0.6",
         "type": "paragraph",
@@ -234,6 +247,9 @@
         "parent": "ta1"
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b0.7",
         "type": "paragraph",
@@ -247,6 +263,9 @@
         "parent": "ta1"
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b0.8",
         "type": "paragraph",
@@ -260,6 +279,9 @@
         "parent": "ta1"
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b0.9",
         "type": "paragraph",
@@ -281,6 +303,9 @@
         "parent": "ta1"
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b0.11",
         "type": "paragraph",
@@ -294,6 +319,9 @@
         "parent": "ta1"
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b0.12",
         "type": "paragraph",
@@ -303,6 +331,9 @@
         "parent": "ta1"
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b0.13",
         "type": "paragraph",
@@ -348,6 +379,9 @@
         "parent": "ta1"
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b0.17",
         "type": "paragraph",
@@ -361,6 +395,9 @@
         "parent": "ta1"
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b0.18",
         "type": "paragraph",

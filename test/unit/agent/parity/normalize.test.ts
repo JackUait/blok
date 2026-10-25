@@ -158,7 +158,20 @@ describe('normalizeForParity', () => {
     });
   });
 
-  it('compares editor-created output with JSON insertion without a creation-time mismatch', () => {
+  it('compares whether a block carries its timestamps, not their values', () => {
+    const stamped = (createdAt: number, lastEditedAt: number): OutputData => ({
+      blocks: [{ id: 'p1', type: 'paragraph', data: { text: [{ text: 'New' }] }, createdAt, lastEditedAt }],
+    });
+    const keepIds = new Set(['p1']);
+    const bare = normalizeForParity({ blocks: [{ id: 'p1', type: 'paragraph', data: { text: [{ text: 'New' }] } }] }, keepIds);
+
+    expect(normalizeForParity(stamped(1, 2), keepIds)).toEqual(normalizeForParity(stamped(30, 40), keepIds));
+    expect(normalizeForParity(stamped(1, 2), keepIds)).not.toEqual(bare);
+    expect(bare.blocks[0]).not.toHaveProperty('createdAt');
+    expect(bare.blocks[0]).not.toHaveProperty('lastEditedAt');
+  });
+
+  it('sees an editor-created block whose JSON twin has no creation time', () => {
     const manager = new YjsManager({
       config: {},
       eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
@@ -178,13 +191,9 @@ describe('normalizeForParity', () => {
           id: 'p1', type: 'paragraph', data: { text: [{ text: 'New' }] }, children: [],
         },
       }], null);
-      const editorOutput: OutputData = { blocks: manager.toJSON() };
-      const jsonOutput = json.toOutput();
       const keepIds = new Set(['p1']);
 
-      expect(normalizeForParity(editorOutput, keepIds)).toEqual(normalizeForParity(jsonOutput, keepIds));
-      expect(typeof editorOutput.blocks[0]?.createdAt).toBe('number');
-      expect(jsonOutput.blocks[0]).not.toHaveProperty('createdAt');
+      expect(normalizeForParity({ blocks: manager.toJSON() }, keepIds)).not.toEqual(normalizeForParity(json.toOutput(), keepIds));
     } finally {
       manager.destroy();
     }

@@ -3,6 +3,9 @@
   "document": {
     "blocks": [
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b0",
         "type": "bookmark",

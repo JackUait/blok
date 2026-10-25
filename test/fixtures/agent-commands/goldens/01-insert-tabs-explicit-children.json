@@ -63,6 +63,9 @@
         }
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "ts",
         "type": "tabs",
@@ -72,6 +75,9 @@
         ]
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "ts1",
         "type": "tab",
@@ -84,6 +90,9 @@
         ]
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "ts1p",
         "type": "paragraph",

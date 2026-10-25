@@ -20,6 +20,9 @@
         "parent": "tb1"
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b0.1",
         "type": "tab",
@@ -29,6 +32,9 @@
         "parent": "tb1"
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b1",
         "type": "tabs",
@@ -39,6 +45,9 @@
         ]
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b1.0",
         "type": "tab",
@@ -48,6 +57,9 @@
         "parent": "b1"
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b1.1",
         "type": "tab",

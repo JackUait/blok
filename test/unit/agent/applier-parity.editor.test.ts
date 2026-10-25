@@ -198,6 +198,8 @@ describe.each(cases)('editor runner: $name', (c) => {
         }
       },
       tabSync: false,
+      // A configured user is how the editor credits a block to the human, so the corpus sees a wrong creator.
+      user: { id: 'human-1' },
       dataModel: 'hierarchical',
       i18n: { locale: 'en' },
       tools: {

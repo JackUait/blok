@@ -3,6 +3,7 @@
   "document": {
     "blocks": [
       {
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "p1",
         "type": "list",
@@ -27,6 +28,7 @@
         }
       },
       {
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "p3",
         "type": "list",

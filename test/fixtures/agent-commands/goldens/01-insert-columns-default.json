@@ -63,6 +63,9 @@
         }
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "cl",
         "type": "column_list",
@@ -73,6 +76,9 @@
         ]
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b4.0",
         "type": "column",
@@ -83,6 +89,9 @@
         ]
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b4.0.0",
         "type": "paragraph",
@@ -92,6 +101,9 @@
         "parent": "b4.0"
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b4.1",
         "type": "column",
@@ -102,6 +114,9 @@
         ]
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b4.1.0",
         "type": "paragraph",

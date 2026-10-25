@@ -163,6 +163,8 @@ const canonicalDatabases = (blocks: OutputBlockData[]): OutputBlockData[] => {
   });
 };
 
+const TIMESTAMP_PLACEHOLDER = 0;
+
 export const normalizeForParity = (input: OutputData, keepIds: ReadonlySet<string>): ParityDocument => {
   const doc = { ...input, blocks: canonicalDatabases(input.blocks) };
   const byId = new Map<string, number>();
@@ -245,8 +247,13 @@ export const normalizeForParity = (input: OutputData, keepIds: ReadonlySet<strin
       ...(block.content !== undefined && { content: block.content.map(rename) }),
     };
 
-    delete normalized.lastEditedAt;
-    delete normalized.createdAt;
+    // Clocks differ per runner: compare that a stamp is there, not its value.
+    if (normalized.lastEditedAt !== undefined) {
+      normalized.lastEditedAt = TIMESTAMP_PLACEHOLDER;
+    }
+    if (normalized.createdAt !== undefined) {
+      normalized.createdAt = TIMESTAMP_PLACEHOLDER;
+    }
 
     return normalized;
   });

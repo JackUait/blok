@@ -63,6 +63,9 @@
         }
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "th",
         "type": "header",
@@ -80,6 +83,9 @@
         ]
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "th1",
         "type": "paragraph",

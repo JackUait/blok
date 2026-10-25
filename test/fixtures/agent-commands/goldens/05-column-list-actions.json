@@ -12,6 +12,7 @@
         ]
       },
       {
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "co3",
         "type": "column",
@@ -30,6 +31,9 @@
         "parent": "co3"
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b0.1",
         "type": "column",
@@ -40,6 +44,9 @@
         ]
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b0.1.0",
         "type": "paragraph",
@@ -49,6 +56,9 @@
         "parent": "b0.1"
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b1",
         "type": "column_list",
@@ -60,6 +70,9 @@
         ]
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b1.0",
         "type": "column",
@@ -70,6 +83,9 @@
         ]
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b1.0.0",
         "type": "paragraph",
@@ -79,6 +95,9 @@
         "parent": "b1.0"
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b1.1",
         "type": "column",
@@ -89,6 +108,9 @@
         ]
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b1.1.0",
         "type": "paragraph",
@@ -98,6 +120,9 @@
         "parent": "b1.1"
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b1.2",
         "type": "column",
@@ -108,6 +133,9 @@
         ]
       },
       {
+        "createdAt": 0,
+        "createdBy": "agent-test",
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "b1.2.0",
         "type": "paragraph",

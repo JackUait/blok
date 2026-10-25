@@ -14,6 +14,7 @@
         }
       },
       {
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "p2",
         "type": "paragraph",
@@ -36,8 +37,8 @@
               "marks": {
                 "link": {
                   "href": "https://example.com",
-                  "rel": "nofollow",
-                  "target": "_blank"
+                  "target": "_blank",
+                  "rel": "nofollow"
                 }
               }
             },

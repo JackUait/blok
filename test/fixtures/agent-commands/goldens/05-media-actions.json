@@ -3,6 +3,7 @@
   "document": {
     "blocks": [
       {
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "img",
         "type": "image",
@@ -22,6 +23,7 @@
         }
       },
       {
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "aud",
         "type": "audio",
@@ -31,6 +33,7 @@
         }
       },
       {
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "vid",
         "type": "video",
@@ -39,6 +42,7 @@
         }
       },
       {
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "fil",
         "type": "file",
@@ -47,6 +51,7 @@
         }
       },
       {
+        "lastEditedAt": 0,
         "lastEditedBy": "agent-test",
         "id": "emb",
         "type": "embed",

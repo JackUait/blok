@@ -810,8 +810,8 @@ class Tooltip {
       return placement;
     }
 
-    const spaceRight = viewportWidth - rect.right - this.offsetRight;
-    const spaceLeft = rect.left - this.offsetLeft;
+    const spaceRight = viewportWidth - rect.right - gap;
+    const spaceLeft = rect.left - gap;
     const preferred = placement === 'right' ? spaceRight : spaceLeft;
     const alternate = placement === 'right' ? spaceLeft : spaceRight;
 
@@ -882,13 +882,13 @@ class Tooltip {
    * @param {HTMLElement} element - target element
    * @param {TooltipOptions} showingOptions - placement options
    */
-  private placeLeft(element: HTMLElement, showingOptions: TooltipOptions): void {
+  private placeLeft(element: HTMLElement, showingOptions: HintOptions): void {
     if (!this.nodes.wrapper) {
       return;
     }
 
     const elementCoords = element.getBoundingClientRect();
-    const left = elementCoords.left - this.nodes.wrapper.offsetWidth - this.offsetLeft - (showingOptions.marginLeft ?? 0);
+    const left = elementCoords.left - this.nodes.wrapper.offsetWidth - (showingOptions.gap ?? this.offsetLeft) - (showingOptions.marginLeft ?? 0);
     const top = elementCoords.top + this.getScrollTop() + element.clientHeight / 2 - this.nodes.wrapper.offsetHeight / 2;
 
     this.applyPlacement('left', left, top);
@@ -899,13 +899,13 @@ class Tooltip {
    * @param {HTMLElement} element - target element
    * @param {TooltipOptions} showingOptions - placement options
    */
-  private placeRight(element: HTMLElement, showingOptions: TooltipOptions): void {
+  private placeRight(element: HTMLElement, showingOptions: HintOptions): void {
     if (!this.nodes.wrapper) {
       return;
     }
 
     const elementCoords = element.getBoundingClientRect();
-    const left = elementCoords.right + this.offsetRight + (showingOptions.marginRight ?? 0);
+    const left = elementCoords.right + (showingOptions.gap ?? this.offsetRight) + (showingOptions.marginRight ?? 0);
     const top = elementCoords.top + this.getScrollTop() + element.clientHeight / 2 - this.nodes.wrapper.offsetHeight / 2;
 
     this.applyPlacement('right', left, top);

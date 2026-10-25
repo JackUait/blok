@@ -973,6 +973,26 @@ describe('Tooltip utility', () => {
       expect(placed(wrapper)).toEqual({ left: '200px', top: '42px' });
     });
 
+    it('keeps the given gap between the trigger and a bubble on its left', () => {
+      const { target, wrapper } = setUp();
+
+      showReadout(target, 'x', { placement: 'left', gap: 6 });
+
+      // left = 200 - 80 - 6
+      expect(wrapper.getAttribute('data-blok-placement')).toBe('left');
+      expect(wrapper.style.left).toBe('114px');
+    });
+
+    it('keeps the given gap between the trigger and a bubble on its right', () => {
+      const { target, wrapper } = setUp();
+
+      showReadout(target, 'x', { placement: 'right', gap: 6 });
+
+      // left = 200 + 160 + 6
+      expect(wrapper.getAttribute('data-blok-placement')).toBe('right');
+      expect(wrapper.style.left).toBe('366px');
+    });
+
     it('drops the content padding, centring and line height for bare content', () => {
       const { target } = setUp();
       const content = document.querySelector<HTMLElement>('[data-blok-testid="tooltip-content"]');

@@ -101,12 +101,16 @@ const EDITOR_ONLY_KEYS: Record<string, { keys: string[]; reason: string }> = {
   },
 };
 
-/** Cases where one key may be null in the editor and absent headless, and why. */
-const NULL_OR_ABSENT: Record<string, { keys: string[]; reason: string }> = {
-  'callout null textColor': {
-    keys: ['textColor'],
-    reason: 'A top-level null in a setData patch means "remove the key", so the planner cannot write the null default back. The callout reads an absent colour as null, so both render the same.',
-  },
+/**
+ * Updates that set a defaulted key to null. Controller ruling C4 (test/unit/shared/agent/tool-actions.test.ts)
+ * keeps an explicit removal above the normalizer's default, so the headless engines drop the key while the
+ * editor reloads it with its default. These keys are left out of the compare for these cases only.
+ */
+const REMOVAL_GAPS: Record<string, { keys: string[]; reason: string }> = {
+  'code null lineNumbers': { keys: ['lineNumbers'], reason: 'C4: removal wins; the editor reloads it as true.' },
+  'quote null size': { keys: ['size'], reason: 'C4: removal wins; the editor reloads it as "default".' },
+  'callout null textColor': { keys: ['textColor'], reason: 'C4: removal wins; the editor reloads it as null. A top-level null in setData also means "remove".' },
+  'checklist null checked': { keys: ['checked'], reason: 'C4: removal wins; the editor reloads it as false.' },
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -145,15 +149,21 @@ const withoutEditorOnly = (type: string, data: Record<string, unknown>): Record<
 const richFields = (type: string): string[] =>
   Object.prototype.hasOwnProperty.call(CURRENT_RICH_TEXT_FIELDS, type) ? CURRENT_RICH_TEXT_FIELDS[type] : [];
 
-const withoutNulls = (data: Record<string, unknown>, keys: string[]): Record<string, unknown> =>
-  Object.fromEntries(Object.entries(data).filter(([key, value]) => !keys.includes(key) || value !== null));
+const withoutGapKeys = (data: Record<string, unknown>, keys: string[]): Record<string, unknown> =>
+  Object.fromEntries(Object.entries(data).filter(([key]) => !keys.includes(key)));
 
-const savedNew = (doc: OutputData | undefined, nullable: string[] = []): string => stableStringify(canonical(
+const rowAttrs = (type: string, attrs: Record<string, unknown>, keys: string[]): Record<string, unknown> | undefined => {
+  const kept = withoutGapKeys(withoutEditorOnly(type, attrs), keys);
+
+  return Object.keys(kept).length === 0 ? undefined : kept;
+};
+
+const savedNew = (doc: OutputData | undefined, gapKeys: string[] = []): string => stableStringify(canonical(
   outputBlocksToCanonicalSegments(doc?.blocks ?? [], richFields, htmlToSegmentsNode)
-    .map(block => ({ type: block.type, data: withoutNulls(withoutEditorOnly(block.type, block.data), nullable) }))
+    .map(block => ({ type: block.type, data: withoutGapKeys(withoutEditorOnly(block.type, block.data), gapKeys) }))
 ));
 
-const rowsOf = (result: AgentResult, nullable: string[] = []): string => {
+const rowsOf = (result: AgentResult, gapKeys: string[] = []): string => {
   if (!result.ok) {
     return stableStringify({ error: result.error.code });
   }
@@ -162,8 +172,8 @@ const rowsOf = (result: AgentResult, nullable: string[] = []): string => {
     .map(row => ({
       type: row.type,
       depth: row.depth,
-      attrs: row.attrs === undefined ? undefined : withoutNulls(withoutEditorOnly(row.type, row.attrs), nullable),
-      data: row.data === undefined ? undefined : withoutNulls(withoutEditorOnly(row.type, row.data), nullable),
+      attrs: row.attrs === undefined ? undefined : rowAttrs(row.type, row.attrs, gapKeys),
+      data: row.data === undefined ? undefined : withoutGapKeys(withoutEditorOnly(row.type, row.data), gapKeys),
     }))));
 };
 
@@ -234,7 +244,7 @@ describe('agent engine saved-data parity law', () => {
   });
 
   it.each(Object.entries({ ...MINIMAL, ...UPDATES }))('%s saves the same data and rows in the editor, json and store engines', async (name, commands) => {
-    const nullable = NULL_OR_ABSENT[name]?.keys ?? [];
+    const gapKeys = REMOVAL_GAPS[name]?.keys ?? [];
 
     const json = openJsonSession(SEED, undefined, SERVICES);
     const jsonResult = await json.execute({ commands });
@@ -251,9 +261,9 @@ describe('agent engine saved-data parity law', () => {
     const { result: editorResult, saved: editorSaved } = await runEditor(commands);
 
     expect(jsonResult.ok, JSON.stringify(jsonResult)).toBe(true);
-    expect(savedNew(editorSaved, nullable), 'editor vs json saved data').toBe(savedNew(jsonSaved, nullable));
-    expect(savedNew(storeSaved, nullable), 'store vs json saved data').toBe(savedNew(jsonSaved, nullable));
-    expect(rowsOf(editorResult, nullable), 'editor vs json result rows').toBe(rowsOf(jsonResult, nullable));
-    expect(rowsOf(storeResult, nullable), 'store vs json result rows').toBe(rowsOf(jsonResult, nullable));
+    expect(savedNew(editorSaved, gapKeys), 'editor vs json saved data').toBe(savedNew(jsonSaved, gapKeys));
+    expect(savedNew(storeSaved, gapKeys), 'store vs json saved data').toBe(savedNew(jsonSaved, gapKeys));
+    expect(rowsOf(editorResult, gapKeys), 'editor vs json result rows').toBe(rowsOf(jsonResult, gapKeys));
+    expect(rowsOf(storeResult, gapKeys), 'store vs json result rows').toBe(rowsOf(jsonResult, gapKeys));
   }, 30_000);
 });

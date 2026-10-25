@@ -88,7 +88,7 @@ export const COMMANDS: Record<CoreCommandName, CoreCommandSpec> = {
     },
     $defs: { insertSpec },
   }, 'Rich-text fields take segments or plain text, never Markdown. Use markdown.insert for Markdown.'),
-  'block.update': write('Merge data or tunes into a block. A key set to null is removed, or goes back to its default when the tool has one.', obj({
+  'block.update': write('Merge data or tunes into a block. A key set to null is removed.', obj({
     id, data: { type: 'object' }, tunes: { type: 'object' },
   }, ['id'])),
   'block.delete': write('Delete a block. Children move up unless the tool deletes them.', obj({ id }, ['id'])),

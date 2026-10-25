@@ -8,6 +8,7 @@ import { COLUMN_DEFAULT_CHILDREN, COLUMN_LIST_ACTION_HANDLERS, COLUMN_LIST_DEFAU
 import { DATABASE_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/database';
 import { IMAGE_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/image';
 import { LINK_ACTION_HANDLERS, normalizeEmbed, rejectBookmarkWrite, rejectEmbedWrite } from '../../../../src/shared/tool-actions/link';
+import { normalizeCallout, normalizeCode, normalizeDatabase, normalizeList, normalizeQuote } from '../../../../src/shared/tool-actions/load-defaults';
 import { MEDIA_ACTION_HANDLERS, MEDIA_REJECT_WRITE } from '../../../../src/shared/tool-actions/media';
 import { PAGE_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/page';
 import { buildToolRuntimes, composeToolSanitize } from '../../../../src/shared/tool-actions/runtime';
@@ -286,7 +287,7 @@ describe('BUILT_IN_TOOL_RUNTIMES', () => {
     expect(typeof normalize).toBe('function');
     expect(BUILT_IN_RUNTIME_PARTS).toEqual({
       table: { normalize, actions: TABLE_ACTION_HANDLERS },
-      callout: { defaultChildren },
+      callout: { normalize: normalizeCallout, defaultChildren },
       column_list: { defaultChildren: COLUMN_LIST_DEFAULT_CHILDREN, actions: COLUMN_LIST_ACTION_HANDLERS },
       column: { defaultChildren: COLUMN_DEFAULT_CHILDREN },
       page: { actions: PAGE_ACTION_HANDLERS },
@@ -297,8 +298,10 @@ describe('BUILT_IN_TOOL_RUNTIMES', () => {
       file: { rejectWrite: MEDIA_REJECT_WRITE.file, actions: MEDIA_ACTION_HANDLERS.file },
       embed: { normalize: normalizeEmbed, rejectWrite: rejectEmbedWrite, actions: LINK_ACTION_HANDLERS.embed },
       bookmark: { rejectWrite: rejectBookmarkWrite, actions: LINK_ACTION_HANDLERS.bookmark },
-      database: { actions: DATABASE_ACTION_HANDLERS },
-      list: { conversion: { export: 'text', import: 'text' } },
+      database: { normalize: normalizeDatabase, actions: DATABASE_ACTION_HANDLERS },
+      code: { normalize: normalizeCode },
+      quote: { normalize: normalizeQuote },
+      list: { normalize: normalizeList, conversion: { export: 'text', import: 'text' } },
     });
     expect(BUILT_IN_TOOL_RUNTIMES.get('table')?.normalize).toBe(normalize);
     expect(BUILT_IN_TOOL_RUNTIMES.get('callout')?.defaultChildren)
@@ -309,7 +312,7 @@ describe('BUILT_IN_TOOL_RUNTIMES', () => {
 
       expect(runtime.actions, runtime.name).toEqual(expectedActions);
 
-      if (runtime.name !== 'table' && runtime.name !== 'embed') {
+      if (!['table', 'embed', 'callout', 'database', 'code', 'quote', 'list'].includes(runtime.name)) {
         expect(runtime, runtime.name).not.toHaveProperty('normalize');
       }
 

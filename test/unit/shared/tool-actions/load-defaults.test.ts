@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BUILT_IN_TOOL_RUNTIMES } from '../../../../src/shared/tool-actions';
-import { openJsonSession } from '../../agent/harness';
 
 const normalize = (tool: string, data: Record<string, unknown>): Record<string, unknown> => {
   const run = BUILT_IN_TOOL_RUNTIMES.get(tool)?.normalize;
@@ -46,19 +45,6 @@ describe('load defaults the editor saves', () => {
   it('drops an ordered list start of 1, which the editor never saves', () => {
     expect(normalize('list', { text: [], style: 'ordered', start: 1 })).toEqual({ text: [], style: 'ordered' });
     expect(normalize('list', { text: [], style: 'ordered', start: 3 }).start).toBe(3);
-  });
-
-  it('sets a defaulted key back to its default when an update removes it, as the editor does', async () => {
-    const session = openJsonSession({ blocks: [{ id: 'c', type: 'code', data: { code: 'x', language: 'plain text', lineNumbers: false } }] });
-
-    try {
-      const result = await session.execute({ commands: [{ name: 'block.update', args: { id: 'c', data: { lineNumbers: null } } }] });
-
-      expect(result.ok).toBe(true);
-      expect(session.output().blocks[0].data).toEqual({ code: 'x', language: 'plain text', lineNumbers: true });
-    } finally {
-      session.close();
-    }
   });
 
   it('gives each database its own empty automations slot', () => {

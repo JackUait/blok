@@ -23,7 +23,8 @@ const fillMissing = (defaults: Readonly<Record<string, unknown>>) =>
     ...data,
     ...Object.fromEntries(Object.entries(defaults)
       .filter(([key]) => data[key] === undefined)
-      .map(([key, value]) => [key, structuredClone(value)])),
+      // JSON copy, not structuredClone: the Jint bundle runs this code and has no structuredClone.
+      .map(([key, value]) => [key, JSON.parse(JSON.stringify(value)) as unknown])),
   });
 
 export const normalizeCode = fillMissing(CODE_LOAD_DEFAULTS);

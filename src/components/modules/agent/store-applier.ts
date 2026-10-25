@@ -59,7 +59,7 @@ export class StoreApplier implements AgentApplier {
 
       this.store.transact(() => {
         for (const edit of plan.edits) {
-          this.applyOne(edit);
+          this.applyOne(edit, at);
         }
         for (const id of plan.touched) {
           if (this.store.getBlockById(id) !== undefined) {
@@ -81,16 +81,22 @@ export class StoreApplier implements AgentApplier {
     this.unsubscribe();
   }
 
-  private insertTree(block: PlannedBlock, parentId: string | null, afterId: string | null): void {
+  private insertTree(block: PlannedBlock, parentId: string | null, afterId: string | null, at: number): void {
+    // Same rule as YjsManager.withCreationStamp: an anonymous answer and its body name no creator.
+    const anonymous = (block.type === 'database-row' && block.data.anonymous === true)
+      || this.store.isInAnonymousAnswer(undefined, parentId);
+
     this.store.addBlockAt({
       id: block.id,
       type: block.type,
       data: block.data,
       ...(block.tunes === undefined ? {} : { tunes: block.tunes }),
+      createdAt: at,
+      ...(anonymous || this.options.actorId === '' ? {} : { createdBy: this.options.actorId }),
     }, { parentId, afterId });
 
     for (const [index, child] of block.children.entries()) {
-      this.insertTree(child, block.id, block.children[index - 1]?.id ?? null);
+      this.insertTree(child, block.id, block.children[index - 1]?.id ?? null, at);
     }
   }
 
@@ -98,10 +104,10 @@ export class StoreApplier implements AgentApplier {
     return this.store.toJSON().find(block => block.id === id)?.content ?? [];
   }
 
-  private applyOne(edit: Edit): void {
+  private applyOne(edit: Edit, at: number): void {
     switch (edit.op) {
       case 'insert':
-        this.insertTree(edit.block, edit.parentId, edit.afterId);
+        this.insertTree(edit.block, edit.parentId, edit.afterId, at);
         break;
       case 'remove': {
         if (edit.withChildren) {

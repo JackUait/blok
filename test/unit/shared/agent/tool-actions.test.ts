@@ -421,7 +421,7 @@ describe('recording context reads and inserts', () => {
     expect(draft.cellOf('n1')).toEqual({ tableId: 'tbl', row: 1, col: 0 });
     expect(plan.changed).toEqual({ created: ['n1'], updated: ['tbl'], moved: [], removed: [] });
     expect([...plan.touched]).toEqual(['n1', 'tbl']);
-    expect(draft.get('n1')?.rest).toEqual({ lastEditedBy: 'agent', lastEditedAt: 1 });
+    expect(draft.get('n1')?.rest).toEqual({ createdBy: 'agent', createdAt: 1, lastEditedBy: 'agent', lastEditedAt: 1 });
   });
 
   const positions: Array<{

@@ -716,8 +716,8 @@ describe('block.duplicate planning', () => {
     expect(draft.get('n2')?.data).toEqual({ text: [{ text: 'K' }] });
     expect(plan.changed).toEqual({ created: ['n1', 'n2'], updated: [], moved: [], removed: [] });
     expect([...plan.touched]).toEqual(['n1', 'n2']);
-    expect(draft.get('n1')?.rest).toEqual({ lastEditedBy: 'agent', lastEditedAt: 1 });
-    expect(draft.get('n2')?.rest).toEqual({ lastEditedBy: 'agent', lastEditedAt: 1 });
+    expect(draft.get('n1')?.rest).toEqual({ createdBy: 'agent', createdAt: 1, lastEditedBy: 'agent', lastEditedAt: 1 });
+    expect(draft.get('n2')?.rest).toEqual({ createdBy: 'agent', createdAt: 1, lastEditedBy: 'agent', lastEditedAt: 1 });
     expect(draft.get('tg')?.rest).toEqual({ lastEditedBy: 'human', lastEditedAt: 8 });
     expect(draft.get('k')?.rest).toEqual({ lastEditedBy: 'child', lastEditedAt: 7 });
   });

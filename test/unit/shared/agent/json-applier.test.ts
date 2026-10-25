@@ -107,8 +107,9 @@ describe('applyEdits supplied scenarios', () => {
 
     expect(snap.childrenOf(null)).toEqual(['t', 'n', 'z']);
     expect(snap.childrenOf('n')).toEqual(['n1']);
-    expect(requireBlock(snap, 'n').rest).toEqual({ lastEditedBy: 'agent-1', lastEditedAt: 42 });
-    expect(requireBlock(snap, 'n1').rest).toEqual({ lastEditedBy: 'agent-1', lastEditedAt: 42 });
+    for (const id of ['n', 'n1']) {
+      expect(requireBlock(snap, id).rest, id).toEqual({ createdBy: 'agent-1', createdAt: 42, lastEditedBy: 'agent-1', lastEditedAt: 42 });
+    }
     expect(requireBlock(snap, 'n1').parent).toBe('n');
     for (const id of ['t', 'a', 'b', 'z']) {
       expect(requireBlock(snap, id).rest).toEqual({});
@@ -127,6 +128,17 @@ describe('applyEdits supplied scenarios', () => {
     expect(requireBlock(lifted, 'a').parent).toBeNull();
     expect(requireBlock(lifted, 'b').parent).toBeNull();
     expect(lifted.has('t')).toBe(false);
+  });
+
+  it('names no creator when the stamp has no actor', () => {
+    const snap = base();
+
+    applyEdits(snap, [{
+      op: 'insert', parentId: null, afterId: null, block: { id: 'n', type: 'paragraph', data: {}, children: [] },
+    }], { actorId: '', at: 42 });
+
+    expect(requireBlock(snap, 'n').rest).not.toHaveProperty('createdBy');
+    expect(requireBlock(snap, 'n').rest).toMatchObject({ createdAt: 42 });
   });
 
   it('moves into a sibling slot and stamps only the moved block', () => {
@@ -210,9 +222,10 @@ describe('applyEdits attribution', () => {
         { op: 'move', id: 'q', parentId: 'r', afterId: 'n' },
       ], stamp);
 
-      for (const id of ['r', 'p', 'n', 'q']) {
+      for (const id of ['r', 'p', 'q']) {
         expect(requireBlock(snap, id).rest, id).toEqual({ lastEditedAt: 42 });
       }
+      expect(requireBlock(snap, 'n').rest).toEqual({ createdAt: 42, lastEditedAt: 42 });
     });
 
     it('drops both ids from a signed block and its child moved under it', () => {
@@ -376,7 +389,7 @@ describe('applyEdits attribution', () => {
       { op: 'setData', id: 'a', patch: { extra: 'x' } },
     ], { actorId: 'agent-zero', at: 0 });
 
-    expect(requireBlock(snap, 'n').rest).toEqual({ lastEditedBy: 'agent-zero', lastEditedAt: 0 });
+    expect(requireBlock(snap, 'n').rest).toEqual({ createdBy: 'agent-zero', createdAt: 0, lastEditedBy: 'agent-zero', lastEditedAt: 0 });
     expect(requireBlock(snap, 'a').rest).toMatchObject({ lastEditedBy: 'agent-zero', lastEditedAt: 0 });
   });
 
@@ -488,7 +501,7 @@ describe('applyEdits ordering and patch semantics', () => {
     expect(snap.childrenOf('h2')).toEqual(['deep']);
     expect(snap.childrenOf('t')).toEqual(['first', 'a', 'b']);
     for (const id of ['head', 'h1', 'h2', 'deep', 'first']) {
-      expect(requireBlock(snap, id).rest).toEqual({ lastEditedBy: 'agent-1', lastEditedAt: 42 });
+      expect(requireBlock(snap, id).rest).toEqual({ createdBy: 'agent-1', createdAt: 42, lastEditedBy: 'agent-1', lastEditedAt: 42 });
     }
   });
 

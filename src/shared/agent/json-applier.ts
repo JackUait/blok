@@ -70,6 +70,17 @@ const stampOn = (snap: DocSnapshot, block: SnapBlock | undefined, stamp: EditSta
   Object.assign(block.rest, { lastEditedAt: stamp.at, lastEditedBy: stamp.actorId });
 };
 
+// Same rule as YjsManager.withCreationStamp: the creating actor, never inside an anonymous answer.
+const stampCreation = (snap: DocSnapshot, block: SnapBlock, stamp: EditStamp | null): void => {
+  if (stamp === null) {
+    return;
+  }
+  Object.assign(block.rest, {
+    createdAt: stamp.at,
+    ...(stamp.actorId !== '' && !inAnonymousAnswer(snap, block) && { createdBy: stamp.actorId }),
+  });
+};
+
 const insertTree = (snap: DocSnapshot, planned: PlannedBlock, parentId: string | null, afterId: string | null, stamp: EditStamp | null): void => {
   const block: SnapBlock = {
     id: planned.id,
@@ -83,6 +94,7 @@ const insertTree = (snap: DocSnapshot, planned: PlannedBlock, parentId: string |
 
   snap.put(block);
   snap.link(block.id, parentId, afterId);
+  stampCreation(snap, block, stamp);
   stampOn(snap, block, stamp);
   planned.children.reduce<string | null>((previous, child) => {
     insertTree(snap, child, planned.id, previous, stamp);

@@ -113,7 +113,7 @@ describe('runBatch preparation review regressions', () => {
       { id: 'container', type: 'container', data: {}, content: ['child'] },
       {
         id: 'child', type: 'paragraph', data: {}, parent: 'container',
-        lastEditedBy: 'agent-1', lastEditedAt: 7,
+        createdBy: 'agent-1', createdAt: 7, lastEditedBy: 'agent-1', lastEditedAt: 7,
       },
     ] });
     expect(result).toMatchObject({
@@ -179,7 +179,7 @@ describe('runBatch preparation review regressions', () => {
       { id: 'container', type: 'container', data: {}, content: ['child'] },
       {
         id: 'child', type: 'record', data: { count: 2 }, parent: 'container',
-        lastEditedBy: 'agent-1', lastEditedAt: 7,
+        createdBy: 'agent-1', createdAt: 7, lastEditedBy: 'agent-1', lastEditedAt: 7,
       },
     ] });
     expect(result).toMatchObject({

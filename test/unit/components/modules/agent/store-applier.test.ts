@@ -222,9 +222,28 @@ describe('StoreApplier', () => {
     for (const id of ['n', 'n1', 'n2', 'n3', 'a']) {
       expect(requireBlock(snapshot, id).rest).toMatchObject({ lastEditedAt: at, lastEditedBy: actor.id });
     }
+    for (const id of ['n', 'n1', 'n2', 'n3']) {
+      expect(requireBlock(snapshot, id).rest, id).toMatchObject({ createdAt: at, createdBy: actor.id });
+    }
     expect(requireBlock(snapshot, 'a').rest).toMatchObject({ createdAt: 1, createdBy: 'creator-1' });
     for (const id of ['tg', 'b', 'z']) {
       expect(requireBlock(snapshot, id).rest).toEqual(originalStamp);
+    }
+  });
+
+  it('names no creator on a block added inside an anonymous form answer, nor on a new anonymous row', async () => {
+    const store = createStore([
+      { id: 'r', type: 'database-row', data: { properties: {}, anonymous: true } },
+    ]);
+    const applier = createApplier(store);
+
+    await apply(applier, [
+      { op: 'insert', parentId: 'r', afterId: null, block: { id: 'n', type: 'paragraph', data: { text: [] }, children: [] } },
+      { op: 'insert', parentId: null, afterId: 'r', block: { id: 'q', type: 'database-row', data: { properties: {}, anonymous: true }, children: [] } },
+    ], ['n', 'q']);
+
+    for (const id of ['n', 'q']) {
+      expect(requireBlock(applier.snapshot(), id).rest, id).toEqual({ createdAt: at, lastEditedAt: at });
     }
   });
 

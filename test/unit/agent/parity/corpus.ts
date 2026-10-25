@@ -4,8 +4,20 @@ import { join } from 'node:path';
 import type { OutputBlockData, OutputData } from '../../../../types';
 import type { HostService } from '../../../../types/tools/tool-description';
 
-export type RunnerName = 'editor' | 'json' | 'store' | 'jint' | 'room';
+export type RunnerName = 'editor' | 'json' | 'store' | 'jint' | 'room' | 'mcp-stored' | 'mcp-live';
 export type Expectation = 'ok' | { errorCode: string };
+export type McpRunnerName = 'mcp-stored' | 'mcp-live';
+
+/**
+ * Why real blok-mcp cannot match the case. `against` compares the saved
+ * document and answers with the json engine given only blok-mcp's host
+ * services (none), since the golden needs one blok-mcp does not have.
+ */
+export type McpExemption =
+  | { errorCode: string; reason: string }
+  | { against: 'json-without-services'; reason: string };
+
+type RunnerExpectations = Partial<Record<Exclude<RunnerName, McpRunnerName>, Expectation> & Record<McpRunnerName, McpExemption>>;
 
 export interface CorpusCommand {
   name: string;
@@ -22,7 +34,7 @@ export interface ParityCase {
   seed: OutputData;
   batches: CorpusBatch[];
   expect?: Expectation;
-  expectByRunner?: Partial<Record<RunnerName, Expectation>>;
+  expectByRunner?: RunnerExpectations;
   /** Fixed host services. Runners that cannot provide one declare it in expectByRunner. */
   services?: CaseServices;
 }
@@ -38,7 +50,7 @@ interface EvalFixture {
   id: string;
   seed: OutputData;
   reference: CorpusBatch[];
-  referenceExpectByRunner?: Partial<Record<RunnerName, Expectation>>;
+  referenceExpectByRunner?: RunnerExpectations;
   parityExcluded?: string;
 }
 
@@ -79,9 +91,20 @@ const isBatches = (value: unknown): value is CorpusBatch[] =>
 const isExpectation = (value: unknown): value is Expectation =>
   value === 'ok' || (isRecord(value) && typeof value.errorCode === 'string');
 
-const isRunnerExpectations = (value: unknown): value is Partial<Record<RunnerName, Expectation>> =>
-  isRecord(value) && ['editor', 'json', 'store', 'jint', 'room'].every((runner) =>
-    value[runner] === undefined || isExpectation(value[runner]));
+const ENGINE_RUNNERS = new Set(['editor', 'json', 'store', 'jint', 'room']);
+const MCP_RUNNERS = new Set(['mcp-stored', 'mcp-live']);
+
+const hasReason = (value: Record<string, unknown>): boolean =>
+  typeof value.reason === 'string' && value.reason.trim() !== '';
+
+const isMcpExemption = (value: unknown): value is McpExemption =>
+  isRecord(value) && hasReason(value) && Object.keys(value).length === 2
+  && (typeof value.errorCode === 'string' || value.against === 'json-without-services');
+
+const isRunnerExpectations = (value: unknown): value is RunnerExpectations =>
+  isRecord(value) && Object.entries(value).every(([runner, expectation]) =>
+    (ENGINE_RUNNERS.has(runner) && isExpectation(expectation))
+    || (MCP_RUNNERS.has(runner) && isMcpExemption(expectation)));
 
 const PREVIEW_KEYS = new Set(['title', 'description', 'image', 'favicon', 'domain']);
 
@@ -139,8 +162,22 @@ export const loadParityCases = (): ParityCase[] => [
     })),
 ];
 
-export const expectationFor = (c: ParityCase, runner: RunnerName): Expectation =>
-  c.expectByRunner?.[runner] ?? c.expect ?? 'ok';
+export const mcpExemption = (c: ParityCase, runner: McpRunnerName): McpExemption | undefined =>
+  c.expectByRunner?.[runner];
+
+export const expectationFor = (c: ParityCase, runner: RunnerName): Expectation => {
+  if (runner === 'mcp-stored' || runner === 'mcp-live') {
+    const exemption = mcpExemption(c, runner);
+
+    if (exemption !== undefined) {
+      return 'errorCode' in exemption ? { errorCode: exemption.errorCode } : 'ok';
+    }
+
+    return c.expect ?? 'ok';
+  }
+
+  return c.expectByRunner?.[runner] ?? c.expect ?? 'ok';
+};
 
 export const goldenPath = (name: string): string =>
   join(CORPUS_ROOT, 'goldens', `${name.replace(/[^a-zA-Z0-9_-]/g, '__')}.json`);

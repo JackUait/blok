@@ -33,7 +33,7 @@ vi.mock('node:fs', async (importOriginal) => {
 });
 
 import {
-  CORPUS_ROOT, callerChosenIds, expectationFor, goldenPath, hostServicesFor, loadParityCases,
+  CORPUS_ROOT, callerChosenIds, expectationFor, goldenPath, hostServicesFor, loadParityCases, mcpExemption,
 } from './corpus';
 import type { ParityCase, RunnerName } from './corpus';
 
@@ -45,7 +45,7 @@ const addFile = (directory: 'cases' | 'evals', name: string, fixture: unknown): 
 };
 
 const emptyCase: ParityCase = { name: 'empty', seed: { blocks: [] }, batches: [] };
-const runners: RunnerName[] = ['editor', 'json', 'store', 'jint', 'room'];
+const runners: RunnerName[] = ['editor', 'json', 'store', 'jint', 'room', 'mcp-stored', 'mcp-live'];
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -161,7 +161,51 @@ describe('expectationFor', () => {
     expect(runners.map((runner) => expectationFor(fixture, runner))).toEqual([
       { errorCode: 'DEFAULT_ERROR' }, 'ok', { errorCode: 'DEFAULT_ERROR' },
       { errorCode: 'JINT_ERROR' }, { errorCode: 'DEFAULT_ERROR' },
+      { errorCode: 'DEFAULT_ERROR' }, { errorCode: 'DEFAULT_ERROR' },
     ]);
+  });
+});
+
+describe('MCP runner exemptions', () => {
+  const withMcp = (entry: unknown): Record<string, unknown> => ({
+    name: 'mcp', seed: { blocks: [] }, batches: [], expectByRunner: { 'mcp-live': entry },
+  });
+
+  it('loads an error exemption with its reason and expects only the code', () => {
+    addFile('cases', 'mcp.json', withMcp({ errorCode: 'COMMAND_UNAVAILABLE', reason: 'A live handle has no history.' }));
+
+    const [loaded] = loadParityCases();
+
+    expect(expectationFor(loaded, 'mcp-live')).toEqual({ errorCode: 'COMMAND_UNAVAILABLE' });
+    expect(mcpExemption(loaded, 'mcp-live')).toEqual({ errorCode: 'COMMAND_UNAVAILABLE', reason: 'A live handle has no history.' });
+    expect(mcpExemption(loaded, 'mcp-stored')).toBeUndefined();
+  });
+
+  it('loads a services exemption, which still expects ok', () => {
+    addFile('cases', 'mcp.json', withMcp({ against: 'json-without-services', reason: 'blok-mcp has no linkMetadata.' }));
+
+    const [loaded] = loadParityCases();
+
+    expect(expectationFor(loaded, 'mcp-live')).toBe('ok');
+    expect(mcpExemption(loaded, 'mcp-live')).toEqual({ against: 'json-without-services', reason: 'blok-mcp has no linkMetadata.' });
+  });
+
+  it.each([
+    ['no reason', { errorCode: 'COMMAND_UNAVAILABLE' }],
+    ['an empty reason', { errorCode: 'COMMAND_UNAVAILABLE', reason: '' }],
+    ['a blank reason', { against: 'json-without-services', reason: '   ' }],
+    ['a bare ok', 'ok'],
+    ['an unknown kind', { against: 'golden', reason: 'Because.' }],
+  ])('rejects an MCP exemption with %s', (_label, entry) => {
+    addFile('cases', 'mcp.json', withMcp(entry));
+
+    expect(() => loadParityCases()).toThrow(/mcp\.json/);
+  });
+
+  it('rejects a runner name it does not know, so a typo cannot hide an expectation', () => {
+    addFile('cases', 'typo.json', { name: 'typo', seed: { blocks: [] }, batches: [], expectByRunner: { 'mcp-stord': 'ok' } });
+
+    expect(() => loadParityCases()).toThrow(/typo\.json/);
   });
 });
 

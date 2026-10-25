@@ -49,6 +49,10 @@
     },
     "room": {
       "errorCode": "COMMAND_UNAVAILABLE"
+    },
+    "mcp-live": {
+      "errorCode": "COMMAND_UNAVAILABLE",
+      "reason": "A live handle has no history: the node-live contract marks history.* unavailable, and blok_open lists them in unavailableCommands (src/mcp/live/open-live.ts)."
     }
   }
 }

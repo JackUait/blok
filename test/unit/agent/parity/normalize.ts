@@ -167,7 +167,12 @@ const canonicalDatabases = (blocks: OutputBlockData[]): OutputBlockData[] => {
 
 const TIMESTAMP_PLACEHOLDER = 0;
 
-export const normalizeForParity = (input: OutputData, keepIds: ReadonlySet<string>): ParityDocument => {
+/** answerRows: rows a model reads, so load defaults and the rich-text form stay as sent. */
+export const normalizeForParity = (
+  input: OutputData,
+  keepIds: ReadonlySet<string>,
+  options: { answerRows?: boolean } = {}
+): ParityDocument => {
   const doc = { ...input, blocks: canonicalDatabases(input.blocks) };
   const byId = new Map<string, number>();
 
@@ -227,7 +232,8 @@ export const normalizeForParity = (input: OutputData, keepIds: ReadonlySet<strin
   const rename = (value: string): string => names.get(value) ?? value;
   const cleaned = ordered.map(({ block }): OutputBlockData => {
     const minted = Object.prototype.hasOwnProperty.call(TOOL_MINTED, block.type) ? TOOL_MINTED[block.type] : undefined;
-    let data = withoutLoadDefaults(block.type, minted === undefined ? block.data : minted.strip(block.data));
+    const stripped = minted === undefined ? block.data : minted.strip(block.data);
+    let data = options.answerRows === true ? stripped : withoutLoadDefaults(block.type, stripped);
     const content = data.content;
 
     if (block.type === 'table' && isArray(content)) {
@@ -261,7 +267,7 @@ export const normalizeForParity = (input: OutputData, keepIds: ReadonlySet<strin
   });
 
   return {
-    blocks: outputBlocksToCanonicalSegments(cleaned, richFields, htmlToSegmentsNode),
+    blocks: options.answerRows === true ? cleaned : outputBlocksToCanonicalSegments(cleaned, richFields, htmlToSegmentsNode),
     ...(doc.title !== undefined && { title: doc.title }),
     ...(doc.icon !== undefined && { icon: doc.icon }),
   };

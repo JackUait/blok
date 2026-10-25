@@ -1228,7 +1228,7 @@ test.describe('row page layout', () => {
     await openRow(page, 'r1');
     const picker = peek(page).locator('[data-blok-database-row-picker]');
 
-    await expect(peek(page).getByText('Press Enter to continue with an empty page, or pick a template (use ↑ and ↓ to select)')).toBeVisible();
+    await expect(peek(page).getByText('Press ‘enter’ to continue with an empty page, or pick a template (use ↑ and ↓ to select)')).toBeVisible();
     await expect(picker.getByRole('button')).toHaveText(['Tmpl A', 'Empty', 'New template']);
     const first = picker.getByRole('button', { name: 'Tmpl A' });
 

@@ -519,7 +519,7 @@ describe('row page layout through the database tool', () => {
       await make(doc());
       await openRow('r1');
 
-      expect(prompt()?.textContent).toBe('Press Enter to continue with an empty page, or create a template');
+      expect(prompt()?.textContent).toBe('Press ‘enter’ to continue with an empty page, or create a template');
       await click(prompt()?.querySelector('[data-blok-database-row-create-template]') ?? null);
 
       const saved = await editor?.save();
@@ -527,7 +527,7 @@ describe('row page layout through the database tool', () => {
 
       expect(templates).toHaveLength(1);
       expect(q('[data-blok-database-template-banner]')).not.toBeNull();
-      expect(prompt()?.textContent).toBe('Press Enter to continue with an empty page');
+      expect(prompt()?.textContent).toBe('Press ‘enter’ to continue with an empty page');
     });
 
     it('lists templates, Empty and New template on an empty page when templates are on', async () => {
@@ -535,7 +535,7 @@ describe('row page layout through the database tool', () => {
       await openRow('r1');
 
       expect(prompt()?.querySelector('[data-blok-database-row-empty-text]')?.textContent)
-        .toBe('Press Enter to continue with an empty page, or pick a template (use ↑ and ↓ to select)');
+        .toBe('Press ‘enter’ to continue with an empty page, or pick a template (use ↑ and ↓ to select)');
       expect(picks()).toEqual(['tA', 'empty', 'new']);
       expect([...(drawer()?.querySelectorAll('[data-blok-database-row-pick-label]') ?? [])].map((el) => el.textContent)).toEqual(['Tmpl A', 'Empty', 'New template']);
     });
@@ -580,7 +580,7 @@ describe('row page layout through the database tool', () => {
       await click(document.querySelector('[data-blok-database-confirm-action="confirm"]'));
 
       expect(await savedTitle()).not.toHaveProperty('pageLayoutTemplates');
-      expect(prompt()?.textContent).toBe('Press Enter to continue with an empty page, or create a template');
+      expect(prompt()?.textContent).toBe('Press ‘enter’ to continue with an empty page, or create a template');
     });
 
     it('shows the picker on an empty row once the first template is added', async () => {
@@ -603,7 +603,7 @@ describe('row page layout through the database tool', () => {
       await click(item('template-tB')?.querySelector('[data-blok-popover-item-more]') ?? null);
       await click(item('template-tB-edit'));
 
-      expect(prompt()?.textContent).toBe('Press Enter to continue with an empty page');
+      expect(prompt()?.textContent).toBe('Press ‘enter’ to continue with an empty page');
       expect(picks()).toEqual([]);
     });
 

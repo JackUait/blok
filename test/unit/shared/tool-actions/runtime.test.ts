@@ -9,7 +9,7 @@ import { DATABASE_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/da
 import { IMAGE_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/image';
 import { LINK_ACTION_HANDLERS, normalizeEmbed, rejectBookmarkWrite, rejectEmbedWrite } from '../../../../src/shared/tool-actions/link';
 import {
-  CALLOUT_CLEARED, CODE_CLEARED, LIST_CLEARED, normalizeCallout, normalizeCode, normalizeDatabase, normalizeList, normalizeQuote, QUOTE_CLEARED,
+  CALLOUT_CLEARED, CODE_CLEARED, LIST_CLEARED, normalizeCallout, normalizeCode, normalizeDatabase, normalizeList, normalizeQuote, QUOTE_CLEARED, SPACER_CLEARED,
 } from '../../../../src/shared/tool-actions/load-defaults';
 import { MEDIA_ACTION_HANDLERS, MEDIA_REJECT_WRITE } from '../../../../src/shared/tool-actions/media';
 import { PAGE_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/page';
@@ -303,6 +303,7 @@ describe('BUILT_IN_TOOL_RUNTIMES', () => {
       database: { normalize: normalizeDatabase, actions: DATABASE_ACTION_HANDLERS },
       code: { normalize: normalizeCode, cleared: CODE_CLEARED },
       quote: { normalize: normalizeQuote, cleared: QUOTE_CLEARED },
+      spacer: { cleared: SPACER_CLEARED },
       list: { normalize: normalizeList, cleared: LIST_CLEARED, conversion: { export: 'text', import: 'text' } },
     });
     expect(BUILT_IN_TOOL_RUNTIMES.get('table')?.normalize).toBe(normalize);

@@ -88,6 +88,10 @@ const UPDATES: Record<string, CorpusCommand[]> = {
   'callout null emoji': [insert('callout', { emoji: 'x' }), update({ emoji: null })],
   'checklist item': [insert('list', { text: 'a', style: 'checklist' })],
   'checklist null checked': [insert('list', { text: 'a', style: 'checklist', checked: true }), update({ checked: null })],
+  'list null text': [insert('list', { text: 'a', style: 'unordered' }), update({ text: null })],
+  'paragraph null text': [insert('paragraph', { text: 'a' }), update({ text: null })],
+  'header null text': [insert('header', { text: 'a', level: 3 }), update({ text: null })],
+  'spacer null height': [insert('spacer', { height: 100 }), update({ height: null })],
   'list to checklist': [insert('list', { text: 'a', style: 'unordered' }), update({ style: 'checklist' })],
   'checklist to bulleted': [insert('list', { text: 'a', style: 'checklist', checked: true }), update({ style: 'unordered' })],
   'ordered start 1': [insert('list', { text: 'a', style: 'ordered', start: 1 })],
@@ -129,6 +133,20 @@ const CLEARS: Record<string, { type: string; key: string; cleared: unknown }> = 
   'callout null textColor': { type: 'callout', key: 'textColor', cleared: null },
   'callout null emoji': { type: 'callout', key: 'emoji', cleared: '' },
   'checklist null checked': { type: 'list', key: 'checked', cleared: false },
+  'list null text': { type: 'list', key: 'text', cleared: [] },
+  'paragraph null text': { type: 'paragraph', key: 'text', cleared: [] },
+  'header null text': { type: 'header', key: 'text', cleared: [] },
+  'spacer null height': { type: 'spacer', key: 'height', cleared: 38 },
+};
+
+/**
+ * Clears every engine refuses, because the field is required and has no cleared value: a page
+ * link needs its page, and the base heading level and list style come from host config.
+ */
+const REFUSED_CLEARS: Record<string, CorpusCommand[]> = {
+  'page-link null pageId': [insert('page-link', { pageId: 'pg1' }), update({ pageId: null })],
+  'header null level': [insert('header', { text: 'a', level: 3 }), update({ level: null })],
+  'list null style': [insert('list', { text: 'a', style: 'ordered' }), update({ style: null })],
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -286,10 +304,34 @@ describe('agent engine saved-data parity law', () => {
     expect(rowsOf(storeResult, gapKeys), 'store vs json result rows').toBe(rowsOf(jsonResult, gapKeys));
   }, 30_000);
 
-  it.each(Object.entries(CLEARS))('%s stays cleared in every engine and after reload', async (name, { type, key, cleared }) => {
+  it.each(Object.entries(REFUSED_CLEARS))('%s is refused the same way in every engine', async (_name, commands) => {
+    const json = openJsonSession(SEED, undefined, SERVICES);
+    const jsonResult = await json.execute({ commands });
+    const jsonSaved = json.output();
+
+    json.close();
+
+    const store = openStoreSession(SEED, undefined, SERVICES);
+    const storeResult = await store.execute({ commands } as AgentBatch);
+    const storeSaved = store.output();
+
+    await store.close();
+
+    const { result: editorResult, saved: editorSaved } = await runEditor(commands);
+
+    expect(rowsOf(jsonResult), 'json result').toBe(stableStringify({ error: 'INVALID_ARGS' }));
+    expect(rowsOf(storeResult), 'store result').toBe(rowsOf(jsonResult));
+    expect(rowsOf(editorResult), 'editor result').toBe(rowsOf(jsonResult));
+    expect(savedNew(jsonSaved), 'json saved').toBe(savedNew(SEED));
+    expect(savedNew(storeSaved), 'store saved').toBe(savedNew(SEED));
+    expect(savedNew(editorSaved), 'editor saved').toBe(savedNew(SEED));
+  }, 30_000);
+
+  it.each(Object.entries(CLEARS))('%s stays cleared in every engine and after reload', async (name, { key, cleared }) => {
     const commands = UPDATES[name];
     const valueIn = (doc: OutputData | undefined): unknown => {
-      const data = doc?.blocks.find(block => block.type === type)?.data;
+      // Canonical segments: the store saves empty rich text as "", the json engine as [].
+      const data = outputBlocksToCanonicalSegments(doc?.blocks ?? [], richFields, htmlToSegmentsNode).find(block => block.id === 'n1')?.data;
 
       if (data !== undefined && Object.hasOwn(data, key)) {
         return data[key];
@@ -299,7 +341,7 @@ describe('agent engine saved-data parity law', () => {
       return cleared === null ? null : '<absent>';
     };
     const rowValue = (result: AgentResult): unknown => {
-      const row = result.ok ? result.blocks?.find(block => block.type === type) : undefined;
+      const row = result.ok ? result.blocks?.find(block => block.id === 'n1') : undefined;
       const fields = row?.data ?? row?.attrs;
 
       return fields === undefined || !Object.hasOwn(fields, key) ? '<absent>' : fields[key];

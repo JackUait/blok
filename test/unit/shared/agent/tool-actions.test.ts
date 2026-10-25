@@ -590,8 +590,6 @@ describe('recording context patches and rich text', () => {
   it.each([
     { label: 'ordinary undefined', patch: { old: undefined }, removed: 'old', retained: { text: [{ text: 'Before' }], options: { first: 1, second: 2 } } },
     { label: 'ordinary null', patch: { old: null }, removed: 'old', retained: { text: [{ text: 'Before' }], options: { first: 1, second: 2 } } },
-    { label: 'rich undefined', patch: { text: undefined }, removed: 'text', retained: { old: 'remove', options: { first: 1, second: 2 } } },
-    { label: 'rich null', patch: { text: null }, removed: 'text', retained: { old: 'remove', options: { first: 1, second: 2 } } },
   ])('encodes $label removal with a JSON-surviving null marker', ({ patch, removed, retained }) => {
     const setup = withActions('paragraph', {
       clear: { run: (ctx: ToolActionContext) => {
@@ -607,6 +605,26 @@ describe('recording context patches and rich text', () => {
     expect(JSON.stringify(plan.edits)).toBe(JSON.stringify([{ op: 'setData', id: 'p', patch: { [removed]: null } }]));
     expect(draft.get('p')?.data).toEqual(retained);
     expect(recordOf(plan.results[0]).data).toEqual(retained);
+  });
+
+  // USER RULING 2026-10-25: a cleared field stays cleared. A deleted rich field let the editor keep its old text.
+  it.each([
+    { label: 'undefined', patch: { text: undefined } },
+    { label: 'null', patch: { text: null } },
+  ])('clears a rich field removed with $label to no text', ({ patch }) => {
+    const setup = withActions('paragraph', {
+      clear: { run: (ctx: ToolActionContext) => {
+        ctx.update(blockOf(ctx).id, patch);
+
+        return ctx.read(blockOf(ctx).id);
+      } },
+    });
+    const { plan, draft } = planOn(doc, [{ name: 'paragraph.clear', args: { id: 'p' } }], setup);
+    const cleared = { text: [], old: 'remove', options: { first: 1, second: 2 } };
+
+    expect(plan.edits).toEqual([{ op: 'setRichText', id: 'p', field: 'text', value: [] }]);
+    expect(draft.get('p')?.data).toEqual(cleared);
+    expect(recordOf(plan.results[0]).data).toEqual(cleared);
   });
 
   it('uses the same ordinary removal encoding for block.update and ctx.update', () => {
@@ -1495,8 +1513,12 @@ describe('explicit removal precedence under controller ruling C4', () => {
       : { name: 'header.clear', args: { id: 'h' } };
     const { plan, draft } = planOn(doc, [command], setup);
 
-    expect(draft.get('h')?.data).toEqual({ level: 5, extra: 'Kept' });
-    expect(plan.edits).toEqual([{ op: 'setData', id: 'h', patch: { old: null, text: null, extra: 'Kept' } }]);
+    // The rich field clears to no text rather than its default (see the cleared-rich-field test).
+    expect(draft.get('h')?.data).toEqual({ text: [], level: 5, extra: 'Kept' });
+    expect(plan.edits).toEqual([
+      { op: 'setRichText', id: 'h', field: 'text', value: [] },
+      { op: 'setData', id: 'h', patch: { old: null, extra: 'Kept' } },
+    ]);
   });
 });
 

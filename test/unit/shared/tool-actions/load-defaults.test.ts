@@ -78,4 +78,8 @@ describe('cleared values a removal writes', () => {
   it('unchecks a checklist item', () => {
     expect(cleared('list')).toEqual({ checked: false });
   });
+
+  it('gives a spacer its base height', () => {
+    expect(cleared('spacer')).toEqual({ height: 38 });
+  });
 });

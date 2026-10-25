@@ -13,6 +13,7 @@ import { Bookmark } from '../../tools/link/bookmark';
 import { Embed } from '../../tools/link/embed';
 import { ListItem } from '../../tools/list';
 import { Quote } from '../../tools/quote';
+import { SpacerTool } from '../../tools/spacer';
 import { TabsTool } from '../../tools/tabs';
 import { SELF_PLACING_PARENTS } from '../../tools/nested-blocks';
 import { Table } from '../../tools/table';
@@ -158,6 +159,7 @@ const PART_OWNERS = new Map<unknown, string>([
   [CalloutTool, 'callout'],
   [CodeTool, 'code'],
   [Quote, 'quote'],
+  [SpacerTool, 'spacer'],
   [DatabaseTool, 'database'],
   [Embed, 'embed'],
   [Bookmark, 'bookmark'],

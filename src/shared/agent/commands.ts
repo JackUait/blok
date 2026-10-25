@@ -88,7 +88,7 @@ export const COMMANDS: Record<CoreCommandName, CoreCommandSpec> = {
     },
     $defs: { insertSpec },
   }, 'Rich-text fields take segments or plain text, never Markdown. Use markdown.insert for Markdown.'),
-  'block.update': write('Merge data or tunes into a block. A key set to null is cleared: removed, or set to its off or empty value (code lineNumbers false, callout emoji "") where the tool would otherwise refill a default.', obj({
+  'block.update': write('Merge data or tunes into a block. A key set to null is cleared: removed, or set to its empty or off value (rich text [], code lineNumbers false, callout emoji "") where the tool would otherwise refill a default. A required field with no such value (a heading level, a list style) cannot be cleared.', obj({
     id, data: { type: 'object' }, tunes: { type: 'object' },
   }, ['id'])),
   'block.delete': write('Delete a block. Children move up unless the tool deletes them.', obj({ id }, ['id'])),

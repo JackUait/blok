@@ -102,14 +102,24 @@ describe('block.update planning', () => {
     expect(plan.edits).toEqual([{ op: 'setData', id: 'img', patch: { options: { second: 3 } } }]);
   });
 
-  it('removes a rich field through a null patch without converting null into segments', () => {
+  // USER RULING 2026-10-25: a cleared field stays cleared. A deleted rich field let the editor keep the old text.
+  it('clears a rich field to empty segments through a null patch', () => {
     const { plan, draft } = planOn(doc, [{
       name: 'block.update', args: { id: 'h', data: { text: null } },
     }]);
 
-    expect(Object.hasOwn(draft.get('h')?.data ?? {}, 'text')).toBe(false);
-    expect(plan.edits).toEqual([{ op: 'setData', id: 'h', patch: { text: null } }]);
-    expect(draft.get('h')?.data).toEqual({ level: 2, old: 'x' });
+    expect(plan.edits).toEqual([{ op: 'setRichText', id: 'h', field: 'text', value: [] }]);
+    expect(draft.get('h')?.data).toEqual({ text: [], level: 2, old: 'x' });
+  });
+
+  it('refuses to clear a required field that has no cleared value', () => {
+    const header = registered('header');
+    const tools = new Map(TOOLS);
+
+    tools.set('header', { ...header, entry: { ...header.entry, data: { ...header.entry.data, required: ['text', 'level'] } } });
+
+    expect(failOf(() => planOn(doc, [{ name: 'block.update', args: { id: 'h', data: { level: null } } }], { tools })))
+      .toMatchObject({ code: 'INVALID_ARGS', path: '/commands/0/args/data/level' });
   });
 
   it('stores an empty string as empty rich text rather than deleting the field', () => {

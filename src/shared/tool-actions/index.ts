@@ -5,7 +5,7 @@ import { COLUMN_DEFAULT_CHILDREN, COLUMN_LIST_ACTION_HANDLERS, COLUMN_LIST_DEFAU
 import { DATABASE_ACTION_HANDLERS } from './database';
 import { IMAGE_ACTION_HANDLERS } from './image';
 import {
-  CALLOUT_CLEARED, CODE_CLEARED, LIST_CLEARED, normalizeCallout, normalizeCode, normalizeDatabase, normalizeList, normalizeQuote, QUOTE_CLEARED,
+  CALLOUT_CLEARED, CODE_CLEARED, LIST_CLEARED, normalizeCallout, normalizeCode, normalizeDatabase, normalizeList, normalizeQuote, QUOTE_CLEARED, SPACER_CLEARED,
 } from './load-defaults';
 import { LINK_ACTION_HANDLERS, normalizeEmbed, rejectBookmarkWrite, rejectEmbedWrite } from './link';
 import { MEDIA_ACTION_HANDLERS, MEDIA_REJECT_WRITE } from './media';
@@ -32,6 +32,7 @@ export const BUILT_IN_RUNTIME_PARTS: Readonly<Record<string, Pick<RuntimeBlockIn
   database: { normalize: normalizeDatabase, actions: DATABASE_ACTION_HANDLERS },
   code: { normalize: normalizeCode, cleared: CODE_CLEARED },
   quote: { normalize: normalizeQuote, cleared: QUOTE_CLEARED },
+  spacer: { cleared: SPACER_CLEARED },
   // The list's conversionConfig is functions (they carry a to-do's checked state in the editor).
   // Its text field is `text` both ways, which is what those functions read and write.
   list: { normalize: normalizeList, cleared: LIST_CLEARED, conversion: { export: 'text', import: 'text' } },

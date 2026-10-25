@@ -514,7 +514,11 @@ export const emitPatch = (
     }
   }
 
-  const cleared = tool.runtime.cleared ?? {};
+  // A removed rich field clears to no text: deleted, the editor kept the old text.
+  const cleared: Readonly<Record<string, unknown>> = {
+    ...Object.fromEntries(tool.entry.richTextFields.map(field => [field, []])),
+    ...tool.runtime.cleared,
+  };
   // A removed key with a cleared value is written as that value: deleting it would let the tool
   // refill it on load with a default the user did not ask for.
   const clearing = Object.fromEntries(Object.entries(patch)
@@ -542,6 +546,14 @@ export const emitPatch = (
 
   if (reason !== undefined) {
     state.fail('DATA_REJECTED', reason, '/data');
+  }
+
+  const required = isArray(tool.entry.data.required) ? tool.entry.data.required : [];
+  // The editor drops or refills a required field it loads without, so no engine deletes one.
+  const lost = removed.find(key => required.includes(key));
+
+  if (lost !== undefined) {
+    state.fail('INVALID_ARGS', `"${lost}" is required, so it cannot be cleared. Write a new value instead.`, `/data/${pointerKey(lost)}`);
   }
 
   const rich = tool.entry.richTextFields;

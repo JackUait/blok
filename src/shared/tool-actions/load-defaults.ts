@@ -6,6 +6,7 @@ import type { DatabaseSavedAutomations } from '../database/types';
  */
 export const CODE_LOAD_DEFAULTS = { lineNumbers: true } as const;
 export const QUOTE_LOAD_DEFAULTS = { size: 'default' } as const;
+export const SPACER_LOAD_DEFAULTS = { height: 38 } as const;
 export const CALLOUT_LOAD_DEFAULTS = { textColor: null, backgroundColor: null } as const;
 /*
  * What an agent's removal of a key writes, when the tool would refill that key on load with a
@@ -19,6 +20,8 @@ export const QUOTE_CLEARED = { size: QUOTE_LOAD_DEFAULTS.size } as const;
 export const CALLOUT_CLEARED = { emoji: '' } as const;
 /** normalizeList drops checked again when the item is not a checklist. */
 export const LIST_CLEARED = { checked: false } as const;
+/** The spacer loads an absent height as this one. */
+export const SPACER_CLEARED = { height: SPACER_LOAD_DEFAULTS.height } as const;
 /** Cloned on every use: a shared object would tie two databases' automations together. */
 export const DATABASE_EMPTY_AUTOMATIONS: Readonly<DatabaseSavedAutomations> = { version: 1, definitions: [] };
 /** A list item saves `start` only when it differs from this. */

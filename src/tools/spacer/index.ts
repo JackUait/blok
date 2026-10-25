@@ -1,5 +1,6 @@
 import { describeSpacer } from '../../shared/tool-descriptions/spacer';
 import { spacerSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
+import { SPACER_LOAD_DEFAULTS } from '../../shared/tool-actions/load-defaults';
 import type {
   API,
   BlockTool,
@@ -24,7 +25,7 @@ import { COLUMNS_ATTR } from '../columns-shared';
  */
 const MIN_HEIGHT = 38;
 const MAX_HEIGHT = 600;
-const DEFAULT_HEIGHT = 38;
+const DEFAULT_HEIGHT = SPACER_LOAD_DEFAULTS.height;
 
 /**
  * Keyboard resize step for ArrowUp/ArrowDown on a grip (px).

@@ -181,6 +181,7 @@
   "assistant.stepLimit": "অনেক বেশি ধাপের পরে AI থেমে গেছে। চালিয়ে যেতে আবার জিজ্ঞাসা করুন।",
   "assistant.failed": "AI উত্তর দিতে পারেনি: {error}",
   "assistant.discardBlocked": "কিছুই পূর্বাবস্থায় ফেরানো হয়নি: AI-এর পরে আপনি সম্পাদনা করেছেন। পিছিয়ে যেতে পূর্বাবস্থায় ফেরান ব্যবহার করুন।",
+  "assistant.discardPartial": "AI-এর কিছু সম্পাদনা রাখা হয়েছে: AI করার পরে সেগুলো বদলানো হয়েছে।",
   "a11y.dropPosition": "{total}টির মধ্যে {position} নম্বর অবস্থানে রাখা হবে",
   "a11y.dropCancelled": "টানা বাতিল হয়েছে",
   "a11y.blockMoved": "ব্লক {total}টির মধ্যে {position} অবস্থানে সরানো হয়েছে",

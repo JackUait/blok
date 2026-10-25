@@ -3548,7 +3548,7 @@ summarizeButton.onclick = () => editor.agent.openAssistant({ prompt: 'Summarize 
         name: "run.discard()",
         returnType: "Promise<boolean>",
         description:
-          "Stops the run, undoes its edits and ends it. It resolves to `true` when something was undone.\n\nIt undoes the run's steps from the newest one down. It stops at the first step that is not the run's, so text the user typed afterwards is never undone.",
+          "Stops the run, undoes its edits and ends it. It resolves to `true` only when every edit the run made was reverted.\n\nIt undoes the run's steps from the newest one down. It stops at the first step that is not the run's, so text the user typed afterwards is never undone. It writes each sub-page the run saved back the way it was. A sub-page that changed after the run last saved it is kept as it is, so nobody's later edit is lost. When a step or a sub-page is kept, it resolves to `false`.",
         example: `const undone = await run.discard();`,
       },
       {

@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Blok } from '../../../src/blok';
+import type { Core } from '../../../src/components/core';
+import type { BlokModules } from '../../../src/types-internal/blok-modules';
 import { Header, Image, Page, Paragraph } from '../../../src/tools';
-import type { Agent, BlokConfig, OutputData } from '../../../types';
+import type { Agent, API, BlokConfig, OutputData } from '../../../types';
 import type { AgentModel, AgentModelResponse } from '../../../types/api';
 import type { PageConfig } from '../../../types/tools/page';
 
@@ -11,10 +13,21 @@ interface TestEditor {
   destroy: () => void;
   agent: Agent;
   save: () => Promise<OutputData>;
+  blocks: API['blocks'];
   readOnly: { toggle(state?: boolean): Promise<boolean> };
 }
 
 const editors: TestEditor[] = [];
+
+/** Exposes the modules, so a test can start a user gesture. */
+class BootedEditor extends Blok {
+  public moduleGraph: BlokModules | undefined;
+
+  public override exportAPI(core: Core): void {
+    this.moduleGraph = core.moduleInstances;
+    super.exportAPI(core);
+  }
+}
 
 /** A host that keeps each page's document in a map. */
 const host = (pages: Map<string, OutputData>): PageConfig & Record<string, unknown> => ({
@@ -33,7 +46,7 @@ const boot = async (page: PageConfig & Record<string, unknown>, model?: AgentMod
   const holder = document.createElement('div');
 
   document.body.appendChild(holder);
-  const editor = new Blok({
+  const editor = new BootedEditor({
     holder,
     data: { blocks: [{ id: 'pg', type: 'page', data: { pageId: 'sub' } }, { id: 'p', type: 'paragraph', data: { text: 'Main' } }] },
     tools: { paragraph: { class: Paragraph }, header: { class: Header }, image: { class: Image }, page: { class: Page, config: page } },
@@ -239,6 +252,90 @@ describe('the agent edits a sub-page through the host page documents', () => {
     await run.discard();
 
     expect(sub(pages)).toEqual(before);
+  });
+
+  const scriptedModel = (replies: AgentModelResponse[]): AgentModel => async () => {
+    const next = replies.shift();
+
+    if (next === undefined) {
+      throw new Error('unscripted model call');
+    }
+
+    return next;
+  };
+  const subInsert = (id: string, text: string): AgentModelResponse => ({
+    stop_reason: 'tool_use',
+    content: [{ type: 'tool_use', id, name: 'blok_execute', input: { page: 'pg', commands: [
+      { name: 'block.insert', args: { type: 'paragraph', data: { text }, position: 'end' } },
+    ] } }],
+  });
+  const done: AgentModelResponse = { stop_reason: 'end_turn', content: [{ type: 'text', text: 'Done.' }] };
+  const texts = (data: OutputData): unknown[] => data.blocks.map((block) => block.data.text);
+  const userTypes = (pages: Map<string, OutputData>, text: string): void => {
+    const current = sub(pages);
+
+    pages.set('sub', { ...current, blocks: [...current.blocks, { id: `u-${text}`, type: 'paragraph', data: { text: [{ text }] } }] });
+  };
+
+  it('discard keeps a sub-page someone edited after the agent last saved it', async () => {
+    const pages = new Map<string, OutputData>([['sub', { blocks: [{ id: 'old', type: 'paragraph', data: { text: [{ text: 'Old' }] } }] }]]);
+    const editor = await boot(host(pages), scriptedModel([subInsert('c1', 'SubNew'), done]));
+    const run = editor.agent.ask('Fill the sub-page');
+
+    await run.result;
+    userTypes(pages, 'UserTyped');
+
+    await expect(run.discard()).resolves.toBe(false);
+    expect(texts(sub(pages))).toEqual([[{ text: 'Old' }], [{ text: 'SubNew' }], [{ text: 'UserTyped' }]]);
+  });
+
+  it('discard keeps a sub-page someone edited between two agent writes', async () => {
+    const pages = new Map<string, OutputData>([['sub', { blocks: [{ id: 'old', type: 'paragraph', data: { text: [{ text: 'Old' }] } }] }]]);
+    const replies = [subInsert('c1', 'First'), done, subInsert('c2', 'Second'), done];
+    const editor = await boot(host(pages), scriptedModel(replies));
+    const run = editor.agent.ask('Fill the sub-page');
+
+    await run.result;
+    userTypes(pages, 'UserTyped');
+    await run.followUp('More');
+
+    await expect(run.discard()).resolves.toBe(false);
+    expect(texts(sub(pages))).toEqual([[{ text: 'Old' }], [{ text: 'First' }], [{ text: 'UserTyped' }], [{ text: 'Second' }]]);
+  });
+
+  it('discard is false when the user typed after the agent in the main document, though the sub-page is restored', async () => {
+    const pages = new Map<string, OutputData>([['sub', { blocks: [{ id: 'old', type: 'paragraph', data: { text: [{ text: 'Old' }] } }] }]]);
+    const mainInsert: AgentModelResponse = {
+      stop_reason: 'tool_use',
+      content: [{ type: 'tool_use', id: 'm1', name: 'blok_execute', input: { commands: [
+        { name: 'block.insert', args: { type: 'paragraph', data: { text: 'MainNew' }, position: 'end' } },
+      ] } }],
+    };
+    const editor = await boot(host(pages), scriptedModel([subInsert('c1', 'SubNew'), mainInsert, done]));
+    const run = editor.agent.ask('Write both');
+
+    await run.result;
+    // A user edit: its own undo step.
+    (editor as unknown as BootedEditor).moduleGraph?.YjsManager.beginGesture('discrete');
+    editor.blocks.insert('paragraph', { text: 'UserTyped' });
+    await new Promise((resolve) => {
+      setTimeout(resolve, 20);
+    });
+
+    await expect(run.discard()).resolves.toBe(false);
+    expect(texts(sub(pages))).toEqual([[{ text: 'Old' }]]);
+    expect((await editor.save()).blocks.map((block) => block.data.text)).toContainEqual([{ text: 'MainNew' }]);
+  });
+
+  it('discard restores a sub-page the host stored as HTML and nobody touched after the agent', async () => {
+    const pages = new Map<string, OutputData>([['sub', { blocks: [{ id: 'old', type: 'paragraph', data: { text: 'Old' } }] }]]);
+    const editor = await boot(host(pages), scriptedModel([subInsert('c1', 'SubNew'), done]));
+    const run = editor.agent.ask('Fill the sub-page');
+
+    await run.result;
+
+    await expect(run.discard()).resolves.toBe(true);
+    expect(texts(sub(pages))).toEqual(['Old']);
   });
 
   it('a read-only editor reads a sub-page but does not write it', async () => {

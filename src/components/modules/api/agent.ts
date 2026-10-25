@@ -31,7 +31,7 @@ import { createPageDocuments, type PageDocuments } from '../agent/page-documents
 import { isBlockReadOnly } from '../../utils/read-only-blocks';
 import type { Block } from '../../block';
 import { AgentFailure, failure } from '../../../shared/agent/errors';
-import { createAgentRun } from './agent-run';
+import { createAgentRun, type DiscardOutcome, type PageRestore } from './agent-run';
 import { createAgentTurn } from './agent-turn';
 import { askAiSessionOptions } from './agent-session-options';
 
@@ -62,6 +62,16 @@ export interface AssistantRunHooks {
   onToolDone?(id: string, name: string, result: AgentToolResult): void;
   /** After each applied batch. */
   onExecuted?(changed: ChangedSet): void;
+  onDiscarded?(outcome: DiscardOutcome): void;
+}
+
+interface TurnPage {
+  /** The page before the turn's first save. */
+  original: OutputData;
+  /** What the agent saved last. */
+  saved?: OutputData;
+  /** Someone wrote the page between two agent saves. */
+  kept: boolean;
 }
 
 /** Options only Blok's own assistant bar passes to begin(). */
@@ -89,8 +99,8 @@ export class AgentAPI extends Module {
   private serviceCache: Partial<Record<HostService, unknown>> | null = null;
   /** Undefined until first asked; null when no page tool has loadDocument and saveDocument. */
   private pageDocs: PageDocuments | null | undefined;
-  /** Each sub-page the open turn saved, as it was before the turn's first save. Discard writes them back. */
-  private turnPages = new Map<string, OutputData>();
+  /** Each sub-page the open turn saved. Discard writes `original` back unless someone else changed the page. */
+  private turnPages = new Map<string, TurnPage>();
   /** PageIds an agent left on a page block. Kept across turns: such an id could name any document. */
   private readonly agentPageIds = new Set<string>();
   /** PageIds the host's create gave. Trusted though the agent's insert writes them too. */
@@ -223,6 +233,11 @@ export class AgentAPI extends Module {
     const place = options.context === false ? captured : this.editorContext();
     const name = assistant.name?.trim() || 'AI';
     const agent = { id: 'blok-assistant', name };
+    const { YjsManager } = this.Blok;
+
+    // Typing still pending would land above the base and look like a later user edit.
+    YjsManager.flushPendingBlockWrites();
+    const base = YjsManager.topUndoToken();
     const turn = this.begin({ agent }, internal);
     const pagesSaved = this.turnPages;
     const session = this.turnSession;
@@ -242,6 +257,12 @@ export class AgentAPI extends Module {
       changed: () => [...this.turnLog.changed],
       restorePages: () => this.restorePages(pagesSaved),
       sealSteps: () => session?.sealSteps(),
+      undoneAll: () => {
+        YjsManager.flushPendingBlockWrites();
+
+        return YjsManager.topUndoToken() === base;
+      },
+      onDiscarded: hooks.onDiscarded,
       onActivity: hooks.onActivity,
       onStream: hooks.onStream,
       onToolDone: hooks.onToolDone,
@@ -373,9 +394,24 @@ export class AgentAPI extends Module {
   private pages(): PageDocuments | null {
     if (this.pageDocs === undefined) {
       this.pageDocs = createPageDocuments(this.Blok, this.config.documentId, {
-        onBeforeSave: (pageId, loaded) => {
-          if (!this.turnPages.has(pageId)) {
-            this.turnPages.set(pageId, loaded);
+        beforeSave: (pageId, loaded) => {
+          const page = this.turnPages.get(pageId);
+
+          if (page === undefined) {
+            this.turnPages.set(pageId, { original: loaded, kept: false });
+
+            return;
+          }
+          // Someone wrote the page between two agent saves: this save carries their edit.
+          if (page.saved === undefined || this.pageDocs?.same(loaded, page.saved) !== true) {
+            page.kept = true;
+          }
+        },
+        saved: (pageId, saved) => {
+          const page = this.turnPages.get(pageId);
+
+          if (page !== undefined) {
+            page.saved = saved;
           }
         },
         contractSource: () => this.source(),
@@ -388,17 +424,31 @@ export class AgentAPI extends Module {
     return this.pageDocs;
   }
 
-  /** Writes back each sub-page a turn saved. True when there was one. */
-  private async restorePages(saved: Map<string, OutputData>): Promise<boolean> {
+  /**
+   * Writes back each sub-page a turn saved. A page someone changed after the
+   * agent's last save is kept as it is, so their edit survives.
+   */
+  private async restorePages(pages: Map<string, TurnPage>): Promise<PageRestore> {
     const docs = this.pages();
+    const outcome: PageRestore = { restored: 0, kept: [] };
 
-    if (docs === null || saved.size === 0) {
-      return false;
+    if (docs === null) {
+      return outcome;
     }
-    await Promise.all([...saved].map(([pageId, data]) => docs.save(pageId, data)));
-    saved.clear();
+    await Promise.all([...pages].map(async ([pageId, page]) => {
+      const current = page.kept || page.saved === undefined ? null : await docs.load(pageId);
 
-    return true;
+      if (current === null || page.saved === undefined || !docs.same(current, page.saved)) {
+        outcome.kept.push(pageId);
+
+        return;
+      }
+      await docs.save(pageId, page.original);
+      outcome.restored += 1;
+    }));
+    pages.clear();
+
+    return outcome;
   }
 
   /** The sub-page document a page block in this document points at. */

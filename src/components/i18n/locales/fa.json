@@ -193,6 +193,7 @@
   "assistant.stepLimit": "هوش مصنوعی پس از مراحل بیش از حد متوقف شد. برای ادامه دوباره بپرسید.",
   "assistant.failed": "هوش مصنوعی نتوانست پاسخ دهد: {error}",
   "assistant.discardBlocked": "چیزی واگرد نشد: شما پس از هوش مصنوعی ویرایش کردید. برای برگشتن از واگرد استفاده کنید.",
+  "assistant.discardPartial": "برخی ویرایش‌های هوش مصنوعی نگه داشته شد: پس از آن تغییر کرده‌اند.",
   "a11y.dropPosition": "در موقعیت {position} از {total} رها می‌شود",
   "a11y.dropCancelled": "کشیدن لغو شد",
   "a11y.blockMoved": "بلوک به موقعیت {position} از {total} منتقل شد",

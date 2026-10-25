@@ -4,7 +4,8 @@ import type { PageConfig } from '../../../../types/tools/page';
 import { createDocumentAgentSession } from '../../../shared/agent/document-session';
 import { failure } from '../../../shared/agent/errors';
 import type { AgentPorts } from '../../../shared/agent/types';
-import { outputBlocksToSegments } from '../../../shared/rich-text/block-data';
+import { deepEqual } from '../../../shared/deep-equal';
+import { outputBlocksToCanonicalSegments, outputBlocksToSegments } from '../../../shared/rich-text/block-data';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 import { htmlToSegmentsDom } from '../../utils/rich-text-dom';
 import type { HostService } from '../../../../types/tools/tool-description';
@@ -28,11 +29,17 @@ export interface PageDocuments {
   open(pageId: string, actor: AgentActor, options?: { created?: boolean }): Promise<AgentSession & { close(): void }>;
   /** Writes a whole document back, as Discard does with the one a run started from. */
   save(pageId: string, data: OutputData): Promise<void>;
+  /** The document as the host has it now. Null when the host has none. */
+  load(pageId: string): Promise<OutputData | null>;
+  /** Same content, title and icon. HTML and segment text compare equal; time and version are ignored. */
+  same(left: OutputData, right: OutputData): boolean;
 }
 
 export interface PageDocumentsOptions {
-  /** Gets the document as loaded, before each agent save. */
-  onBeforeSave?(pageId: string, loaded: OutputData): void;
+  /** Before each agent save: the document as this session loaded it, or as it last saved it. */
+  beforeSave?(pageId: string, loaded: OutputData): void;
+  /** Gets what the agent saved. */
+  saved?(pageId: string, saved: OutputData): void;
   /** The main session's contract source, so a sub-page sees the same overrides and services. */
   contractSource?(): ContractSource;
   /** The main session's host services. Read at open: building them needs these page documents. */
@@ -90,7 +97,7 @@ export const createPageDocuments = (
     if (loaded === null) {
       throw failure('BLOCK_NOT_FOUND', `The host has no document for page "${pageId}".`, { details: { pageId } });
     }
-    const original = structuredClone(loaded);
+    const base = { data: structuredClone(loaded) };
     const fieldsFor = editorRichTextFieldsFor(Blok);
     // Stored text may still be HTML; the session works on segments.
     const document: OutputData = { ...loaded, blocks: outputBlocksToSegments(loaded.blocks, fieldsFor, htmlToSegmentsDom) };
@@ -116,11 +123,15 @@ export const createPageDocuments = (
         const result = await session.execute(batch, runOptions);
 
         if (result.ok && result.revision !== before) {
-          [...pagePointers(session.output())]
+          const output = session.output();
+
+          [...pagePointers(output)]
             .filter(([blockId, pointed]) => pointersBefore.get(blockId) !== pointed && !created.has(pointed))
             .forEach(([, pointed]) => options.onPagePointed?.(pointed));
-          options.onBeforeSave?.(pageId, original);
-          await hooks.saveDocument(pageId, session.output());
+          options.beforeSave?.(pageId, base.data);
+          await hooks.saveDocument(pageId, output);
+          base.data = structuredClone(output);
+          options.saved?.(pageId, base.data);
         }
 
         return result;
@@ -133,5 +144,16 @@ export const createPageDocuments = (
     ? Promise.reject(failure('INVALID_ARGS', 'This page block points at a page an agent set, not one the host created. It cannot be opened.', { details: { pageId } }))
     : open(pageId, actor, { created: created.has(pageId) }));
 
-  return { open, save: async (pageId, data) => hooks.saveDocument(pageId, data) };
+  const comparable = (data: OutputData): unknown => ({
+    blocks: outputBlocksToCanonicalSegments(data.blocks, editorRichTextFieldsFor(Blok), htmlToSegmentsDom),
+    title: data.title ?? null,
+    icon: data.icon ?? null,
+  });
+
+  return {
+    open,
+    save: async (pageId, data) => hooks.saveDocument(pageId, data),
+    load: async (pageId) => (await hooks.loadDocument(pageId)) ?? null,
+    same: (left, right) => deepEqual(comparable(left), comparable(right)),
+  };
 };

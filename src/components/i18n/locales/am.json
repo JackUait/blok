@@ -181,6 +181,7 @@
   "assistant.stepLimit": "AI ከብዙ እርምጃዎች በኋላ ቆሟል። ለመቀጠል እንደገና ጠይቅ።",
   "assistant.failed": "AI መመለስ አልቻለም፦ {error}",
   "assistant.discardBlocked": "ምንም አልተቀለበሰም፦ ከAI በኋላ አርትዕ አድርገዋል። ወደ ኋላ ለመመለስ መቀልበስን ይጠቀሙ።",
+  "assistant.discardPartial": "ከAI አርትዖቶች ጥቂቶቹ ተጠብቀዋል፦ AI ካደረጋቸው በኋላ ተቀይረዋል።",
   "a11y.dropPosition": "በ{total} ውስጥ በቦታ {position} ይጣላል",
   "a11y.dropCancelled": "መጎተት ተሰርዟል",
   "a11y.blockMoved": "ብሎክ ወደ ቦታ {position} ከ{total} ተዛወረ",

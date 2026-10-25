@@ -221,6 +221,7 @@
   "assistant.stepLimit": "AI له ډېرو ګامونو وروسته ودرېد. د دوام لپاره بیا وپوښتئ.",
   "assistant.failed": "AI ځواب ورنکړای شو: {error}",
   "assistant.discardBlocked": "هیڅ شی بېرته نه شو: تاسو له AI وروسته سمون کړی. شاته تګ لپاره بېرته راګرځول وکاروئ.",
+  "assistant.discardPartial": "د AI ځینې سمونونه وساتل شول: له AI وروسته بدل شوي.",
   "a11y.dropPosition": "په {position} ځای کې به پرېښودل شي (ټول ځایونه: {total})",
   "a11y.dropCancelled": "کشول لغوه شو",
   "a11y.blockMoved": "بلاک {position} ځای ته ولېږدول شو (ټول ځایونه: {total})",

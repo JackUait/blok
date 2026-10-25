@@ -9,6 +9,7 @@ import type { Block } from '../../block';
 import type { AgentModelStreamEvent, AgentRun, AgentRunResult, AgentThinkingLevel, AgentToolResult } from '../../../../types/api';
 import type { ThinkingChoice } from '../../../agent/thinking';
 import type { UserPlace } from '../api/agent';
+import type { DiscardOutcome } from '../api/agent-run';
 import { Module } from '../../__module';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { getUserOS } from '../../utils/browser';
@@ -103,6 +104,8 @@ export class Assistant extends Module {
   /** Bumps on every answer, so a late result of a stopped one is ignored. */
   private answerId = 0;
   private changed = false;
+  /** How the last Discard went: picks its message. */
+  private discarded: DiscardOutcome = 'none';
   /** This answer changed the document. `changed` covers the whole run. */
   private edited = false;
   /** The answer in the bar, while Insert can put it into the page. */
@@ -508,6 +511,9 @@ export class Assistant extends Module {
         onStream: (event) => this.stream(event),
         onToolDone: (id, _name, result) => this.toolDone(id, result),
         onExecuted: (changed) => this.executed(changed),
+        onDiscarded: (outcome) => {
+          this.discarded = outcome;
+        },
       });
 
       return this.run.result;
@@ -618,15 +624,20 @@ export class Assistant extends Module {
     this.run = null;
 
     const undone = run === null ? true : await run.discard();
+    const partial = this.discarded === 'partial';
+
+    this.discarded = 'none';
 
     if (undone) {
       this.close();
 
       return;
     }
-    // The user edited after the assistant, so its steps are no longer on top.
+    // Someone edited after the assistant, so some or all of its edits stay.
     this.changed = false;
-    this.bar?.render({ kind: 'error', message: this.Blok.I18n.t('assistant.discardBlocked'), changed: false });
+    const key = partial ? 'assistant.discardPartial' : 'assistant.discardBlocked';
+
+    this.bar?.render({ kind: 'error', message: this.Blok.I18n.t(key), changed: false });
     this.bar?.focusField();
   }
 

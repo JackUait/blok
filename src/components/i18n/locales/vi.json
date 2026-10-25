@@ -221,6 +221,7 @@
   "assistant.stepLimit": "AI đã dừng sau quá nhiều bước. Hãy hỏi lại để tiếp tục.",
   "assistant.failed": "AI không thể trả lời: {error}",
   "assistant.discardBlocked": "Không có gì được hoàn tác: bạn đã chỉnh sửa sau AI. Hãy dùng hoàn tác để quay lại.",
+  "assistant.discardPartial": "Một số chỉnh sửa của AI được giữ lại: chúng đã thay đổi sau AI.",
   "a11y.dropPosition": "Sẽ thả vào vị trí {position} trên tổng số {total}",
   "a11y.dropCancelled": "Đã hủy kéo",
   "a11y.blockMoved": "Khối đã được di chuyển đến vị trí {position} trên tổng số {total}",

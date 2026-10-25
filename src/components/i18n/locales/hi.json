@@ -193,6 +193,7 @@
   "assistant.stepLimit": "बहुत अधिक चरणों के बाद AI रुक गया। जारी रखने के लिए फिर से पूछें।",
   "assistant.failed": "AI जवाब नहीं दे सका: {error}",
   "assistant.discardBlocked": "कुछ भी पूर्ववत नहीं हुआ: आपने AI के बाद संपादन किया। पीछे जाने के लिए पूर्ववत करें का उपयोग करें।",
+  "assistant.discardPartial": "AI के कुछ संपादन रखे गए: AI के बाद उनमें बदलाव हुआ।",
   "a11y.dropPosition": "{total} में से {position} पर रखा जाएगा",
   "a11y.dropCancelled": "खींचना रद्द किया गया",
   "a11y.blockMoved": "ब्लॉक {total} में से {position} पर ले जाया गया",

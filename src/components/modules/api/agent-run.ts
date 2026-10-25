@@ -13,6 +13,15 @@ import type {
 import { runAssistantLoop } from '../../../agent/assistant-loop';
 import { isLongNote, shortenNote } from '../../../agent/note';
 
+/** What Discard did with the sub-pages: restored, or kept because someone changed them after the agent. */
+export interface PageRestore {
+  restored: number;
+  kept: string[];
+}
+
+/** 'partial': some of the run's edits stay. 'none': nothing was reverted. */
+export type DiscardOutcome = 'all' | 'partial' | 'none';
+
 export interface AgentRunDeps {
   turn: AgentTurn;
   model: AgentModel;
@@ -23,8 +32,12 @@ export interface AgentRunDeps {
   prepare(): Promise<{ system: string; tools: AgentModelTool[] }>;
   /** Ids the turn changed so far. */
   changed(): string[];
-  /** Discard: write back each sub-page document the run saved. True when there was one. */
-  restorePages?(): Promise<boolean>;
+  /** Discard: write back each sub-page document the run saved, unless someone changed it since. */
+  restorePages?(): Promise<PageRestore>;
+  /** After Discard's undo loop: true when none of the run's steps is left in the editor's undo history. */
+  undoneAll(): boolean;
+  /** How Discard went, for the prompt bar's message. */
+  onDiscarded?(outcome: DiscardOutcome): void;
   /** Discard: join the run's batch steps first, so one redo brings the whole run back. */
   sealSteps?(): void;
   /** Read once per prompt, so a run already answering keeps its level. */
@@ -159,11 +172,15 @@ export function createAgentRun(prompt: string | Promise<string>, deps: AgentRunD
         }
         undone.count += 1;
       }
-      const restored = await deps.restorePages?.() ?? false;
+      const pages = await deps.restorePages?.() ?? { restored: 0, kept: [] };
+      const all = deps.undoneAll() && pages.kept.length === 0;
+      const some = undone.count > 0 || pages.restored > 0;
+      const outcome: DiscardOutcome = some ? 'partial' : 'none';
 
+      deps.onDiscarded?.(all ? 'all' : outcome);
       end();
 
-      return undone.count > 0 || restored;
+      return all;
     },
     end,
   };

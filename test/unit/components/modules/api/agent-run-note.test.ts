@@ -48,6 +48,7 @@ const runWith = (model: AgentModel): { result: ReturnType<typeof createAgentRun>
     maxSteps: 5,
     prepare: async () => ({ system: 'system', tools: [{ name: 'blok_execute', description: '', input_schema: { type: 'object' } }] }),
     changed: () => [...changed],
+    undoneAll: () => true,
     thinking: () => undefined,
     onActivity: (step) => activity.push(step),
   };

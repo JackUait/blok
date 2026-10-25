@@ -244,6 +244,60 @@ describe('editor.agent.ask', () => {
     expect(await texts(editor)).toEqual(['First line here', 'One', 'Two', 'Three', 'Four']);
   });
 
+  describe('discard() is true only when the whole run was reverted', () => {
+    const bootWithModules = async (model: AgentModel): Promise<{ editor: TestEditor; modules: BlokModules }> => {
+      const holder = document.createElement('div');
+
+      document.body.appendChild(holder);
+      const booted = new BootedEditor({
+        holder,
+        tools: { paragraph: Paragraph },
+        data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'First line here' } }] },
+        agent: { assistant: { model, name: 'Writer' } },
+      });
+      const editor = booted as unknown as TestEditor;
+
+      editors.push(editor);
+      await editor.isReady;
+      await settle();
+      if (booted.moduleGraph === undefined) {
+        throw new Error('The ready editor has no modules.');
+      }
+
+      return { editor, modules: booted.moduleGraph };
+    };
+    // A user edit: its own undo step, under the user's origin.
+    const userEdits = async (editor: TestEditor, modules: BlokModules, text: string): Promise<void> => {
+      modules.YjsManager.beginGesture('discrete');
+      await editor.blocks.update('p1', { text });
+      await settle(10);
+    };
+
+    it('true when the user typed before the run', async () => {
+      const { editor, modules } = await bootWithModules(scripted(insertBatch('One'), answer('ok')));
+
+      await userEdits(editor, modules, 'Typed first');
+      const run = editor.agent.ask('Add one');
+
+      await run.result;
+
+      await expect(run.discard()).resolves.toBe(true);
+      expect(await texts(editor)).toEqual(['Typed first']);
+    });
+
+    it('false when the user typed between the run and a follow-up, and the first answer stays', async () => {
+      const { editor, modules } = await bootWithModules(scripted(insertBatch('One'), answer('ok'), insertBatch('Two'), answer('ok2')));
+      const run = editor.agent.ask('Add one');
+
+      await run.result;
+      await userEdits(editor, modules, 'Human');
+      await run.followUp('Add two');
+
+      await expect(run.discard()).resolves.toBe(false);
+      expect(await texts(editor)).toEqual(['Human', 'One']);
+    });
+  });
+
   it('followUp() continues the same conversation', async () => {
     const model = scripted(insertBatch('Draft'), answer('Wrote a draft.'), answer('Shorter now.'));
     const editor = await createEditor(model);

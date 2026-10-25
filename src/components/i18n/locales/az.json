@@ -209,6 +209,7 @@
   "assistant.stepLimit": "Süni intellekt çoxlu addımdan sonra dayandı. Davam etmək üçün yenidən soruşun.",
   "assistant.failed": "Süni intellekt cavab verə bilmədi: {error}",
   "assistant.discardBlocked": "Heç nə geri qaytarılmadı: siz süni intellektdən sonra redaktə etdiniz. Geri qayıtmaq üçün ləğv etmədən istifadə edin.",
+  "assistant.discardPartial": "Süni intellektin bəzi düzəlişləri saxlanıldı: onlar edildikdən sonra dəyişdirilib.",
   "a11y.dropPosition": "Buraxılacaq mövqe: {position}. Cəmi: {total}.",
   "a11y.dropCancelled": "Dartma ləğv edildi",
   "a11y.blockMoved": "Blok köçürüldü. Mövqe: {position}. Cəmi: {total}.",

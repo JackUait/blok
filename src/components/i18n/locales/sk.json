@@ -187,6 +187,7 @@
   "assistant.stepLimit": "AI sa zastavila po príliš mnohých krokoch. Ak chcete pokračovať, opýtajte sa znova.",
   "assistant.failed": "AI nemohla odpovedať: {error}",
   "assistant.discardBlocked": "Nič sa nevrátilo: po AI ste vykonali úpravy. Krok späť urobte pomocou Späť.",
+  "assistant.discardPartial": "Niektoré úpravy AI zostali: po AI sa zmenili.",
   "a11y.dropPosition": "Umiestni sa na pozíciu {position} z {total}",
   "a11y.dropCancelled": "Presun zrušený",
   "a11y.blockMoved": "Blok presunutý na pozíciu {position} z {total}",

@@ -193,6 +193,7 @@
   "assistant.stepLimit": "AI 在执行过多步骤后停止。再次提问即可继续。",
   "assistant.failed": "AI 无法回答：{error}",
   "assistant.discardBlocked": "未撤销任何内容：你在 AI 之后进行了编辑。请使用撤销来后退。",
+  "assistant.discardPartial": "已保留 AI 的部分编辑：它们在 AI 之后有所更改。",
   "a11y.dropPosition": "将放置在第 {position} 位，共 {total} 个",
   "a11y.dropCancelled": "已取消拖动",
   "a11y.blockMoved": "内容块已移动至第 {position} 位，共 {total} 个",

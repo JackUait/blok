@@ -181,6 +181,7 @@
   "assistant.stepLimit": "ઘણાં બધાં પગલાં પછી AI અટકી ગયું. ચાલુ રાખવા ફરી પૂછો.",
   "assistant.failed": "AI જવાબ આપી શક્યું નહીં: {error}",
   "assistant.discardBlocked": "કંઈ પૂર્વવત્ થયું નથી: તમે AI પછી સંપાદન કર્યું. પાછા જવા માટે પૂર્વવત્ કરોનો ઉપયોગ કરો.",
+  "assistant.discardPartial": "AIના કેટલાક સંપાદનો રાખવામાં આવ્યા: AI પછી તે બદલાયા.",
   "a11y.dropPosition": "{total} માંથી {position} સ્થાને મૂકવામાં આવશે",
   "a11y.dropCancelled": "ખેંચવાનું રદ કર્યું",
   "a11y.blockMoved": "બ્લોક {total} માંથી {position} સ્થાને ખસેડાયો",

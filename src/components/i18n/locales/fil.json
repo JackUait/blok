@@ -209,6 +209,7 @@
   "assistant.stepLimit": "Huminto ang AI matapos ang napakaraming hakbang. Magtanong ulit para magpatuloy.",
   "assistant.failed": "Hindi nakasagot ang AI: {error}",
   "assistant.discardBlocked": "Walang na-undo: nag-edit ka pagkatapos ng AI. Gamitin ang undo para bumalik.",
+  "assistant.discardPartial": "Pinanatili ang ilang edit ng AI: nabago ang mga ito pagkatapos ng AI.",
   "a11y.dropPosition": "Ilalagay sa posisyon {position} sa kabuuang {total}",
   "a11y.dropCancelled": "Kinansela ang pag-drag",
   "a11y.blockMoved": "Inilipat ang block sa posisyon {position} sa kabuuang {total}",

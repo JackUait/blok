@@ -187,6 +187,7 @@
   "assistant.stepLimit": "DI sustojo po per daug žingsnių. Paklauskite dar kartą, kad tęstų.",
   "assistant.failed": "DI nepavyko atsakyti: {error}",
   "assistant.discardBlocked": "Niekas neatšaukta: redagavote po DI. Norėdami grįžti atgal, naudokite atšaukimą.",
+  "assistant.discardPartial": "Dalis DI pakeitimų palikta: jie pakeisti po DI.",
   "a11y.dropPosition": "Bus numesta į poziciją {position} iš {total}",
   "a11y.dropCancelled": "Vilkimas atšauktas",
   "a11y.blockMoved": "Blokas perkeltas į poziciją {position} iš {total}",

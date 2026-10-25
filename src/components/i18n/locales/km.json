@@ -209,6 +209,7 @@
   "assistant.stepLimit": "AI បានឈប់បន្ទាប់ពីជំហានច្រើនពេក។ សួរម្ដងទៀតដើម្បីបន្ត។",
   "assistant.failed": "AI មិនអាចឆ្លើយបានទេ៖ {error}",
   "assistant.discardBlocked": "គ្មានអ្វីត្រូវបានមិនធ្វើវិញទេ៖ អ្នកបានកែសម្រួលបន្ទាប់ពី AI។ ប្រើការមិនធ្វើវិញដើម្បីថយក្រោយ។",
+  "assistant.discardPartial": "ការកែសម្រួលខ្លះរបស់ AI ត្រូវបានរក្សាទុក៖ វាបានផ្លាស់ប្ដូរបន្ទាប់ពី AI។",
   "a11y.dropPosition": "នឹងដាក់នៅទីតាំង {position} នៃ {total}",
   "a11y.dropCancelled": "បានបោះបង់ការអូស",
   "a11y.blockMoved": "ប្លុកបានផ្លាស់ទីទៅទីតាំង {position} នៃ {total}",

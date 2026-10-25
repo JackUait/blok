@@ -193,6 +193,7 @@
   "assistant.stepLimit": "Tekoäly pysähtyi liian monen vaiheen jälkeen. Jatka kysymällä uudelleen.",
   "assistant.failed": "Tekoäly ei voinut vastata: {error}",
   "assistant.discardBlocked": "Mitään ei kumottu: muokkasit tekoälyn jälkeen. Palaa taaksepäin kumoamalla.",
+  "assistant.discardPartial": "Osa tekoälyn muokkauksista säilytettiin: niitä muutettiin tekoälyn jälkeen.",
   "a11y.dropPosition": "Pudotetaan kohtaan {position}/{total}",
   "a11y.dropCancelled": "Vetäminen peruutettu",
   "a11y.blockMoved": "Lohko siirretty kohtaan {position}/{total}",

@@ -187,6 +187,7 @@
   "assistant.stepLimit": "AI s-a oprit după prea mulți pași. Întreabă din nou pentru a continua.",
   "assistant.failed": "AI nu a putut răspunde: {error}",
   "assistant.discardBlocked": "Nu s-a anulat nimic: ai editat după AI. Folosește Anulează pentru a reveni.",
+  "assistant.discardPartial": "Unele modificări ale AI au fost păstrate: s-au schimbat după AI.",
   "a11y.dropPosition": "Poziție de plasare: {position} din {total}",
   "a11y.dropCancelled": "Mutare anulată",
   "a11y.blockMoved": "Bloc mutat la poziția {position} din {total}",

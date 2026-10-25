@@ -221,6 +221,7 @@
   "assistant.stepLimit": "ВИ запре по премногу чекори. Прашајте повторно за да продолжи.",
   "assistant.failed": "ВИ не можеше да одговори: {error}",
   "assistant.discardBlocked": "Ништо не е вратено: уредувавте по ВИ. Користете „Врати“ за да се вратите чекор назад.",
+  "assistant.discardPartial": "Некои измени на ВИ се задржани: тие се променети по ВИ.",
   "a11y.dropPosition": "Ќе се постави на позиција {position} од {total}",
   "a11y.dropCancelled": "Влечењето е откажано",
   "a11y.blockMoved": "Блокот е преместен на позиција {position} од {total}",

@@ -224,7 +224,11 @@ export interface AgentRun {
   followUp(prompt: string): Promise<AgentRunResult>;
   /** Stop the running answer. Edits already applied stay. The run stays open. */
   stop(): void;
-  /** Undo the run's edits that are still the newest undo steps, then end. True when something was undone. */
+  /**
+   * Undo the run's edits that are still the newest undo steps, write back the
+   * sub-pages it saved, then end. A sub-page changed after the run's last save
+   * is kept. True only when every edit of the run was reverted.
+   */
   discard(): Promise<boolean>;
   /** Keep the edits and close the run. */
   end(): void;

@@ -187,6 +187,7 @@
   "assistant.stepLimit": "MI apstājās pēc pārāk daudziem soļiem. Jautājiet vēlreiz, lai turpinātu.",
   "assistant.failed": "MI nevarēja atbildēt: {error}",
   "assistant.discardBlocked": "Nekas netika atsaukts: jūs rediģējāt pēc MI. Lai atgrieztos, izmantojiet atsaukšanu.",
+  "assistant.discardPartial": "Daži MI labojumi tika saglabāti: tie mainīti pēc MI.",
   "a11y.dropPosition": "Nomešanas pozīcija: {position} no {total}",
   "a11y.dropCancelled": "Vilkšana atcelta",
   "a11y.blockMoved": "Bloks pārvietots uz pozīciju {position} no {total}",

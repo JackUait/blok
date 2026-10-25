@@ -457,6 +457,35 @@ describe('in-editor assistant bar', () => {
     expect(editor.agent.state.status).toBe('idle');
   });
 
+  it('Discard stays open and says so when a sub-page changed after the assistant wrote it', async () => {
+    const pages: Record<string, OutputData> = { sub: { blocks: [] } };
+    const subCall: AgentModelResponse = { stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 's1', name: 'blok_execute', input: {
+      page: 'pg', commands: [{ name: 'block.insert', args: { type: 'paragraph', data: { text: 'Sub words' }, position: 'end' } }],
+    } }] };
+    const editor = await createEditor(scripted(subCall, insertBatch('From AI'), answer('Done.')), undefined, {
+      tools: {
+        paragraph: Paragraph,
+        page: { class: PageTool, config: {
+          loadDocument: (pageId: string) => structuredClone(pages[pageId] ?? null),
+          saveDocument: (pageId: string, data: OutputData) => {
+            pages[pageId] = structuredClone(data);
+          },
+        } },
+      },
+      data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'Hello' } }, { id: 'pg', type: 'page', data: { pageId: 'sub' } }] },
+    });
+
+    editor.agent.openAssistant();
+    submit('Write');
+    await waitFor(() => expect(within(bar()).getByRole('button', { name: 'Discard' })).toBeVisible());
+    pages.sub = { blocks: [...pages.sub.blocks, { id: 'u', type: 'paragraph', data: { text: [{ text: 'Typed' }] } }] };
+    within(bar()).getByRole('button', { name: 'Discard' }).click();
+
+    await waitFor(() => expect(within(bar()).getByRole('alert')).toHaveTextContent('Some of AI\'s edits were kept'));
+    expect(pages.sub.blocks.map((block) => plain(block.data.text))).toEqual(['Sub words', 'Typed']);
+    expect((await editor.save()).blocks.map((block) => block.id)).toEqual(['p1', 'pg']);
+  });
+
   it('shows Stop while working, and Stop ends the answer without closing', async () => {
     const editor = await createEditor(gated(answer('late')).model);
 

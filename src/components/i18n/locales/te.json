@@ -175,6 +175,7 @@
   "assistant.stepLimit": "చాలా దశల తర్వాత AI ఆగిపోయింది. కొనసాగించడానికి మళ్లీ అడగండి.",
   "assistant.failed": "AI సమాధానం ఇవ్వలేకపోయింది: {error}",
   "assistant.discardBlocked": "ఏదీ రద్దు చేయబడలేదు: AI తర్వాత మీరు సవరించారు. వెనక్కి వెళ్లడానికి రద్దు చేయిని ఉపయోగించండి.",
+  "assistant.discardPartial": "AI చేసిన కొన్ని సవరణలు ఉంచబడ్డాయి: AI తర్వాత అవి మారాయి.",
   "a11y.dropPosition": "వదలబడే స్థానం: {position}. మొత్తం: {total}.",
   "a11y.dropCancelled": "లాగడం రద్దు చేయబడింది",
   "a11y.blockMoved": "బ్లాక్ తరలించబడింది. స్థానం: {position}. మొత్తం: {total}.",

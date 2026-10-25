@@ -193,6 +193,7 @@
   "assistant.stepLimit": "L’IA s’est arrêtée après trop d’étapes. Redemandez pour continuer.",
   "assistant.failed": "L’IA n’a pas pu répondre : {error}",
   "assistant.discardBlocked": "Rien n’a été annulé : vous avez modifié après l’IA. Utilisez Annuler pour revenir en arrière.",
+  "assistant.discardPartial": "Certaines modifications de l’IA ont été conservées : elles ont changé après l’IA.",
   "a11y.dropPosition": "Sera placé en position {position} sur {total}",
   "a11y.dropCancelled": "Déplacement annulé",
   "a11y.blockMoved": "Bloc déplacé en position {position} sur {total}",

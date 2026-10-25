@@ -175,6 +175,7 @@
   "assistant.stepLimit": "AI ຢຸດຫຼັງຈາກຫຼາຍຂັ້ນຕອນເກີນໄປ. ຖາມອີກຄັ້ງເພື່ອສືບຕໍ່.",
   "assistant.failed": "AI ບໍ່ສາມາດຕອບໄດ້: {error}",
   "assistant.discardBlocked": "ບໍ່ມີຫຍັງຖືກຍົກເລີກ: ທ່ານແກ້ໄຂຫຼັງຈາກ AI. ໃຊ້ການຍົກເລີກເພື່ອຖອຍຫຼັງ.",
+  "assistant.discardPartial": "ບາງການແກ້ໄຂຂອງ AI ຖືກເກັບໄວ້: ມັນຖືກປ່ຽນຫຼັງຈາກ AI.",
   "a11y.dropPosition": "ຈະວາງຢູ່ຕຳແໜ່ງ {position} ຈາກ {total}",
   "a11y.dropCancelled": "ຍົກເລີກການລາກ",
   "a11y.blockMoved": "ບລັອກຍ້າຍໄປຕຳແໜ່ງ {position} ຈາກ {total}",

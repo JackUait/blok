@@ -209,6 +209,7 @@
   "assistant.stepLimit": "വളരെയധികം ഘട്ടങ്ങൾക്ക് ശേഷം AI നിർത്തി. തുടരാൻ വീണ്ടും ചോദിക്കുക.",
   "assistant.failed": "AI-ക്ക് ഉത്തരം നൽകാനായില്ല: {error}",
   "assistant.discardBlocked": "ഒന്നും പഴയപടിയാക്കിയില്ല: AI-ക്ക് ശേഷം നിങ്ങൾ എഡിറ്റ് ചെയ്തു. പിന്നോട്ട് പോകാൻ പഴയപടിയാക്കുക ഉപയോഗിക്കുക.",
+  "assistant.discardPartial": "AI-യുടെ ചില എഡിറ്റുകൾ നിലനിർത്തി: AI-ക്ക് ശേഷം അവ മാറി.",
   "a11y.dropPosition": "ഇടുന്ന സ്ഥാനം: {position}. ആകെ: {total}.",
   "a11y.dropCancelled": "വലിച്ചിടൽ റദ്ദാക്കി",
   "a11y.blockMoved": "ബ്ലോക്ക് നീക്കി. സ്ഥാനം: {position}. ആകെ: {total}.",

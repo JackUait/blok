@@ -187,6 +187,7 @@
   "assistant.stepLimit": "AI หยุดหลังจากทำหลายขั้นตอนเกินไป ถามอีกครั้งเพื่อดำเนินการต่อ",
   "assistant.failed": "AI ตอบไม่ได้: {error}",
   "assistant.discardBlocked": "ไม่มีสิ่งใดถูกเลิกทำ: คุณแก้ไขหลังจาก AI ใช้การเลิกทำเพื่อย้อนกลับ",
+  "assistant.discardPartial": "การแก้ไขบางส่วนของ AI ถูกเก็บไว้: มีการเปลี่ยนแปลงหลังจาก AI",
   "a11y.dropPosition": "จะวางที่ตำแหน่ง {position} จาก {total}",
   "a11y.dropCancelled": "ยกเลิกการลาก",
   "a11y.blockMoved": "ย้ายบล็อกไปยังตำแหน่ง {position} จากทั้งหมด {total} แล้ว",

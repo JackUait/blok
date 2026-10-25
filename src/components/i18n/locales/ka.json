@@ -187,6 +187,7 @@
   "assistant.stepLimit": "AI შეჩერდა ზედმეტად ბევრი ნაბიჯის შემდეგ. გასაგრძელებლად კვლავ ჰკითხეთ.",
   "assistant.failed": "AI-მ ვერ უპასუხა: {error}",
   "assistant.discardBlocked": "არაფერი გაუქმებულა: AI-ის შემდეგ თქვენ შეასწორეთ. უკან დასაბრუნებლად გამოიყენეთ დაბრუნება.",
+  "assistant.discardPartial": "AI-ის ზოგიერთი ცვლილება შენარჩუნდა: ისინი AI-ის შემდეგ შეიცვალა.",
   "a11y.dropPosition": "ჩაიდება პოზიციაზე: {total}-დან {position}",
   "a11y.dropCancelled": "გადატანა გაუქმდა",
   "a11y.blockMoved": "ბლოკი გადატანილია პოზიციაზე: {total}-დან {position}",

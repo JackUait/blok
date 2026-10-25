@@ -221,6 +221,7 @@
   "assistant.stepLimit": "Die KI hat nach zu vielen Schritten angehalten. Frag erneut, um fortzufahren.",
   "assistant.failed": "Die KI konnte nicht antworten: {error}",
   "assistant.discardBlocked": "Nichts wurde rückgängig gemacht: Du hast nach der KI bearbeitet. Nutze „Rückgängig“, um einen Schritt zurückzugehen.",
+  "assistant.discardPartial": "Einige Änderungen der KI wurden behalten: Sie wurden danach noch bearbeitet.",
   "a11y.dropPosition": "Wird an Position {position} von {total} eingefügt",
   "a11y.dropCancelled": "Verschieben abgebrochen",
   "a11y.blockMoved": "Block an Position {position} von {total} verschoben",

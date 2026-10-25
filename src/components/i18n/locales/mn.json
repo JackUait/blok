@@ -221,6 +221,7 @@
   "assistant.stepLimit": "Хэт олон алхмын дараа AI зогслоо. Үргэлжлүүлэхийн тулд дахин асууна уу.",
   "assistant.failed": "AI хариулж чадсангүй: {error}",
   "assistant.discardBlocked": "Юу ч буцаагдсангүй: та AI-ийн дараа засвар хийсэн. Буцахын тулд буцаах үйлдлийг ашиглана уу.",
+  "assistant.discardPartial": "AI-ийн зарим засварыг хадгалсан: AI-ийн дараа өөрчлөгдсөн.",
   "a11y.dropPosition": "Тавих байрлал: {position}. Нийт: {total}.",
   "a11y.dropCancelled": "Чирэлтийг цуцаллаа",
   "a11y.blockMoved": "Блок зөөгдлөө. Байрлал: {position}. Нийт: {total}.",

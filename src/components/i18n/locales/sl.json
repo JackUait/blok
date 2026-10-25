@@ -221,6 +221,7 @@
   "assistant.stepLimit": "UI se je ustavila po preveč korakih. Za nadaljevanje vprašajte znova.",
   "assistant.failed": "UI ni mogla odgovoriti: {error}",
   "assistant.discardBlocked": "Nič ni bilo razveljavljeno: urejali ste po UI. Za korak nazaj uporabite razveljavitev.",
+  "assistant.discardPartial": "Nekatere spremembe UI so ostale: po UI so se spremenile.",
   "a11y.dropPosition": "Spust na položaj {position} od {total}",
   "a11y.dropCancelled": "Vlečenje preklicano",
   "a11y.blockMoved": "Blok premaknjen na položaj {position} od {total}",

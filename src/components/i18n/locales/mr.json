@@ -175,6 +175,7 @@
   "assistant.stepLimit": "खूप जास्त पायऱ्यांनंतर AI थांबले. सुरू ठेवण्यासाठी पुन्हा विचारा.",
   "assistant.failed": "AI उत्तर देऊ शकले नाही: {error}",
   "assistant.discardBlocked": "काहीही पूर्ववत झाले नाही: AI नंतर तुम्ही संपादन केले. मागे जाण्यासाठी पूर्ववत करा वापरा.",
+  "assistant.discardPartial": "AI ची काही संपादने ठेवली: AI नंतर ती बदलली.",
   "a11y.dropPosition": "{total} पैकी {position} स्थानावर सोडले जाईल",
   "a11y.dropCancelled": "हलवणे रद्द केले",
   "a11y.blockMoved": "ब्लॉक {total} पैकी {position} स्थानावर हलवला",

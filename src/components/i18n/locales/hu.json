@@ -221,6 +221,7 @@
   "assistant.stepLimit": "Az MI túl sok lépés után leállt. A folytatáshoz kérdezz újra.",
   "assistant.failed": "Az MI nem tudott válaszolni: {error}",
   "assistant.discardBlocked": "Semmi sem lett visszavonva: az MI után szerkesztettél. A visszalépéshez használd a Visszavonást.",
+  "assistant.discardPartial": "Az MI néhány szerkesztése megmaradt: az MI után módosultak.",
   "a11y.dropPosition": "A blokk célpozíciója: {position}; pozíciók száma: {total}.",
   "a11y.dropCancelled": "Áthelyezés megszakítva",
   "a11y.blockMoved": "A blokk áthelyezve. Új pozíció: {position}; pozíciók száma: {total}.",

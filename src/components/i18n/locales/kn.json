@@ -209,6 +209,7 @@
   "assistant.stepLimit": "ಹಲವಾರು ಹಂತಗಳ ನಂತರ AI ನಿಂತಿದೆ. ಮುಂದುವರಿಸಲು ಮತ್ತೆ ಕೇಳಿ.",
   "assistant.failed": "AI ಉತ್ತರಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ: {error}",
   "assistant.discardBlocked": "ಯಾವುದನ್ನೂ ರದ್ದುಗೊಳಿಸಲಾಗಿಲ್ಲ: AI ನಂತರ ನೀವು ಸಂಪಾದಿಸಿದ್ದೀರಿ. ಹಿಂದಕ್ಕೆ ಹೋಗಲು ರದ್ದುಗೊಳಿಸು ಬಳಸಿ.",
+  "assistant.discardPartial": "AI ನ ಕೆಲವು ಸಂಪಾದನೆಗಳನ್ನು ಉಳಿಸಲಾಗಿದೆ: AI ನಂತರ ಅವು ಬದಲಾಗಿವೆ.",
   "a11y.dropPosition": "ಒಟ್ಟು {total} ರಲ್ಲಿ {position}ನೇ ಸ್ಥಾನದಲ್ಲಿ ಬಿಡಲಾಗುವುದು",
   "a11y.dropCancelled": "ಎಳೆಯುವಿಕೆ ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ",
   "a11y.blockMoved": "ಬ್ಲಾಕ್ ಅನ್ನು ಒಟ್ಟು {total} ರಲ್ಲಿ {position}ನೇ ಸ್ಥಾನಕ್ಕೆ ಸರಿಸಲಾಗಿದೆ",

@@ -223,6 +223,7 @@
   "assistant.stepLimit": "AI 在執行過多步驟後停止。再次詢問即可繼續。",
   "assistant.failed": "AI 無法回答：{error}",
   "assistant.discardBlocked": "未復原任何內容：你在 AI 之後進行了編輯。請使用復原來返回上一步。",
+  "assistant.discardPartial": "已保留 AI 的部分編輯：它們在 AI 之後有所變更。",
   "a11y.dropPosition": "將放置於第 {position} 個位置，共 {total} 個",
   "a11y.dropCancelled": "已取消拖曳",
   "a11y.blockMoved": "區塊已移動至第 {position} 個位置，共 {total} 個",

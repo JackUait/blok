@@ -221,6 +221,7 @@
   "assistant.stepLimit": "ステップが多すぎるためAIが停止しました。続けるにはもう一度質問してください。",
   "assistant.failed": "AIが回答できませんでした: {error}",
   "assistant.discardBlocked": "何も元に戻されませんでした: AIの後に編集が行われています。戻るには「元に戻す」を使ってください。",
+  "assistant.discardPartial": "AIの編集の一部は残されました: AIの後に変更されています。",
   "a11y.dropPosition": "ドロップ位置：全{total}個中{position}番目",
   "a11y.dropCancelled": "ドラッグをキャンセルしました",
   "a11y.blockMoved": "ブロックを{total}個中{position}番目に移動しました",

@@ -43,4 +43,52 @@ public sealed class JintComputedReadTests
         JsonNode.Parse("""{"f":42,"rel":[{"id":"r2"}],"ru":5,"ct":"2026-01-02T03:04:05.000Z","uid":"T-1"}"""),
         row["computed"]), row.ToJsonString());
   }
+
+  // Near the reader's row cap, a full read must still finish inside the engine's default deadline.
+  [Fact]
+  public async Task AFullReadOfADatabaseAtTheRowCapFinishes()
+  {
+    const int rows = 3000;
+    var blocks = new JsonArray();
+    var content = new JsonArray();
+    for (var i = 0; i < rows; i++)
+    {
+      content.Add($"r{i}");
+    }
+    blocks.Add(JsonNode.Parse("""
+        {"id":"db","type":"database","data":{"title":"Big","activeViewId":"v1",
+          "views":[{"id":"v1","name":"Table","type":"table","position":"a0","filters":[],"sorts":[],"visibleProperties":[]}],
+          "schema":[
+            {"id":"t","name":"Name","type":"title","position":"a0"},
+            {"id":"n","name":"Est","type":"number","position":"a1"},
+            {"id":"f","name":"Double","type":"formula","position":"a2","formula":{"expression":"prop(\"Est\") * 2"}},
+            {"id":"uid","name":"ID","type":"uniqueId","position":"a3"}]}}
+        """));
+    Assert.IsType<JsonObject>(blocks[0])["content"] = content;
+    for (var i = 0; i < rows; i++)
+    {
+      blocks.Add(new JsonObject
+      {
+        ["id"] = $"r{i}",
+        ["type"] = "database-row",
+        ["parent"] = "db",
+        ["data"] = new JsonObject
+        {
+          ["position"] = $"a{i:D5}",
+          ["properties"] = new JsonObject { ["t"] = $"Row {i}", ["n"] = i },
+        },
+      });
+    }
+    var document = new JsonObject { ["blocks"] = blocks }.ToJsonString();
+    IBlokAgentExecutor executor = BlokDocuments.CreateAgentExecutor(poolSize: 1);
+
+    var execution = await executor.ExecuteAsync(
+        document, """{"commands":[{"name":"doc.read","args":{"ids":["r2999"]}}]}""", Actor);
+
+    var result = Assert.IsType<JsonObject>(JsonNode.Parse(execution.ResultJson));
+    Assert.True(result["ok"]?.GetValue<bool>(), execution.ResultJson);
+    var view = Assert.IsType<JsonObject>(Assert.IsType<JsonArray>(result["results"])[0]);
+    var row = Assert.IsType<JsonObject>(Assert.Single(Assert.IsType<JsonArray>(view["blocks"])));
+    Assert.True(JsonNode.DeepEquals(JsonNode.Parse("""{"f":5998,"uid":3000}"""), row["computed"]), row.ToJsonString());
+  }
 }

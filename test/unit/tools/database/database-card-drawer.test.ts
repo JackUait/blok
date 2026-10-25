@@ -214,14 +214,13 @@ describe('DatabaseCardDrawer', () => {
   });
 
   describe('side peek keeps the page beside it and makes it scrollable', () => {
-    const openWithHost = (hostRect: { left: number; right: number }, scrollX = 0): { host: HTMLElement; drawer: DatabaseCardDrawer; options: CardDrawerOptions } => {
+    const openWithHost = (hostRect: { left: number; right: number }): { host: HTMLElement; drawer: DatabaseCardDrawer; options: CardDrawerOptions } => {
       vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
         cb(0);
 
         return 0;
       });
       vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1000);
-      vi.spyOn(window, 'scrollX', 'get').mockReturnValue(scrollX);
 
       const host = document.createElement('div');
 
@@ -237,78 +236,57 @@ describe('DatabaseCardDrawer', () => {
       return { host, drawer, options };
     };
 
+    const travel = (): string | undefined => document.querySelector<HTMLElement>('[data-blok-database-peek-scrollbar]')?.style.getPropertyValue('--_blok-peek-travel');
+
     afterEach(() => {
       document.body.innerHTML = '';
-      document.documentElement.removeAttribute('dir');
     });
 
-    it('gives the window room to scroll the page out from under the 756px drawer', () => {
+    it('gives the part under the 756px drawer a scrollbar', () => {
       const { host, drawer } = openWithHost({ left: 100, right: 900 });
 
-      // The page ends under the drawer, so the window scrolls past it by the drawer's width.
-      expect(host.getAttribute('data-blok-database-peek')).toBe('scroll');
-      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('756px');
+      // The drawer covers x 244..1000; the page reaches 900, so 656px is under it.
+      expect(host.hasAttribute('data-blok-database-peek')).toBe(true);
+      expect(host.style.getPropertyValue('--_blok-peek-offset')).toBe('0px');
+      expect(travel()).toBe('656px');
 
       drawer.destroy();
     });
 
-    it('gives no room when the page ends before the drawer starts', () => {
-      const { host, drawer } = openWithHost({ left: 0, right: 200 });
+    it('shows no scrollbar when the page ends before the drawer starts', () => {
+      const { drawer } = openWithHost({ left: 0, right: 200 });
 
-      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('0px');
-
-      drawer.destroy();
-    });
-
-    it('keeps the room while the window is scrolled toward the drawer', () => {
-      // Scrolled 300px right, so the page sits at -200..600 in the viewport.
-      const { host, drawer } = openWithHost({ left: -200, right: 600 }, 300);
-
-      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('756px');
+      expect(travel()).toBeUndefined();
 
       drawer.destroy();
     });
 
-    it('narrows an RTL page in an LTR window, which cannot scroll left', () => {
-      const { host, drawer, options } = openWithHost({ left: 100, right: 900 });
+    it('measures from the left edge in RTL, where the drawer sits on the left', () => {
+      const { drawer, options } = openWithHost({ left: 100, right: 900 });
 
       drawer.close();
       options.wrapper.setAttribute('dir', 'rtl');
       drawer.open(makeRow());
 
       // The drawer covers x 0..756; the page starts at 100, so 656px is under it.
-      expect(host.getAttribute('data-blok-database-peek')).toBe('narrow');
-      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('656px');
+      expect(travel()).toBe('656px');
 
       drawer.destroy();
     });
 
-    it('gives an RTL page in an RTL window scroll room', () => {
-      document.documentElement.setAttribute('dir', 'rtl');
-      const { host, drawer, options } = openWithHost({ left: 100, right: 900 });
-
-      drawer.close();
-      options.wrapper.setAttribute('dir', 'rtl');
-      drawer.open(makeRow());
-
-      expect(host.getAttribute('data-blok-database-peek')).toBe('scroll');
-      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('756px');
-
-      drawer.destroy();
-    });
-
-    it('drops the room as the drawer slides out, then drops its marks', () => {
+    it('puts the page back as the drawer slides out, then drops its marks', () => {
       const { host, drawer, options } = openWithHost({ left: 100, right: 900 });
 
       drawer.close();
 
-      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('0px');
+      expect(host.style.getPropertyValue('--_blok-peek-offset')).toBe('0px');
       expect(host.hasAttribute('data-blok-database-peek')).toBe(true);
+      expect(travel()).toBeUndefined();
 
       options.wrapper.querySelector('[data-blok-database-drawer]')?.dispatchEvent(new Event('transitionend'));
 
       expect(host.hasAttribute('data-blok-database-peek')).toBe(false);
-      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('');
+      expect(host.style.getPropertyValue('--_blok-peek-offset')).toBe('');
     });
 
     it('drops its marks at once on destroy', () => {
@@ -317,7 +295,8 @@ describe('DatabaseCardDrawer', () => {
       drawer.destroy();
 
       expect(host.hasAttribute('data-blok-database-peek')).toBe(false);
-      expect(host.style.getPropertyValue('--_blok-peek-inset')).toBe('');
+      expect(host.style.getPropertyValue('--_blok-peek-offset')).toBe('');
+      expect(travel()).toBeUndefined();
     });
   });
 

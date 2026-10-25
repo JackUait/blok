@@ -1691,32 +1691,43 @@
 }
 
 /*
-  The page beside the side peek keeps its width. A spacer past its end gives the
-  window room to scroll the covered part out; the drawer sets the inset.
-  The host is the editor wrapper, whose position: relative places the spacer.
+  The page beside the side peek keeps its width and moves by an offset (peek-page-pan.ts).
+  The host is the editor wrapper. Its isolation reset is `all: initial !important`
+  (isolation.css), so only an !important rule with more specificity gets through.
+  It is already position: relative there, so the offset never reflows the page.
 */
-[data-blok-interface=blok][data-blok-database-peek="scroll"]::after {
-  content: '';
-  position: absolute;
-  inset-block-start: 0;
-  inset-inline-start: 100%;
-  inline-size: var(--_blok-peek-inset, 0px);
-  block-size: 1px;
-  pointer-events: none;
+[data-blok-interface=blok][data-blok-database-peek] {
+  inset-inline-start: calc(-1 * var(--_blok-peek-offset, 0px)) !important;
+  transition: inset-inline-start 200ms ease !important;
+}
+
+[data-blok-interface=blok][data-blok-database-peek][data-blok-database-peek-resizing],
+[data-blok-interface=blok][data-blok-database-peek][data-blok-database-peek-panning] {
+  transition: none !important;
 }
 
 /*
-  A window cannot scroll past its own start, so a page the drawer covers there narrows instead.
-  Its isolation reset is `all: initial !important` (isolation.css), so only an !important rule
-  with more specificity gets through.
+  The bar that pans the page. It spans only the part the peek leaves uncovered, so it never
+  runs under the peek; its child is wider by the covered part. It sits in the top layer, whose
+  reset in main.css (0,2,0) clears inset, margin, size and overflow, so the box is set here.
 */
-[data-blok-interface=blok][data-blok-database-peek="narrow"] {
-  padding-inline-end: var(--_blok-peek-inset, 0px) !important;
-  transition: padding-inline-end 200ms ease !important;
+[data-blok-database-peek-scrollbar][data-blok-top-layer][popover] {
+  position: fixed;
+  inset-block-end: 0;
+  inset-inline-start: 0;
+  width: calc(100vw - min(var(--_blok-peek-width, 756px), 100vw));
+  /* An overlay scrollbar (macOS) paints inside the box, so the box must fit a hovered one. */
+  min-height: 15px;
+  /* A standard value makes Chrome skip the ::-webkit-scrollbar rules in main.css, which leave no visible thumb. */
+  scrollbar-width: thin;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: transparent;
 }
 
-[data-blok-interface=blok][data-blok-database-peek="narrow"][data-blok-database-peek-resizing] {
-  transition: none !important;
+[data-blok-database-peek-scrollbar] > div {
+  width: calc(100% + var(--_blok-peek-travel, 0px));
+  height: 1px;
 }
 
 /**
@@ -5674,7 +5685,7 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
 
 /* The drawer has a timeout fallback for the transitionend this removes (database-card-drawer.ts). */
 @media (prefers-reduced-motion: reduce) {
-  [data-blok-interface=blok][data-blok-database-peek="narrow"] {
+  [data-blok-interface=blok][data-blok-database-peek] {
     transition: none !important;
   }
 

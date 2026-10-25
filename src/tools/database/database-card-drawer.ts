@@ -33,6 +33,7 @@ import { getElementDirection, logicalArrow } from '../../components/utils/direct
 import { prefersReducedMotion } from '../../components/utils/reduced-motion';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { isPromotedToTopLayer, overlayMountFor, promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
+import { PeekPagePan } from './peek-page-pan';
 import { DatabasePropertyTypePopover } from './database-property-type-popover';
 import { propertyTypeMeta } from './database-property-types';
 import { rowDescription } from './row-body';
@@ -311,8 +312,8 @@ export interface CardDrawerOptions {
   /** The expand button. True when the host took the page (its full page); else the drawer goes full. */
   onExpand?: (rowId: string) => boolean;
   /**
-   * The page beside the side peek (the editor wrapper). It narrows by the part
-   * the half-viewport drawer covers, as Notion's page does (research/08).
+   * The page beside the side peek (the editor wrapper). It keeps its width,
+   * moves into the free space at its start, and pans the rest out from under the drawer.
    */
   peekHost?: () => HTMLElement | null;
   /**
@@ -446,8 +447,9 @@ const createBodyChangeCheck = (initial: OutputData | undefined, fieldsOf: Fields
 export class DatabaseCardDrawer {
   private readonly wrapper: HTMLElement;
   private readonly findPeekHost: (() => HTMLElement | null) | undefined;
-  /** The element the open drawer inset, so close and destroy undo that one. */
+  /** The page the open drawer moved, so close and destroy undo that one. */
   private peekHost: HTMLElement | null = null;
+  private readonly pagePan = new PeekPagePan();
   private readonly readOnly: boolean;
   private readonly i18n: I18n | undefined;
   private readonly toolsConfig: ToolsConfig | undefined;
@@ -982,7 +984,7 @@ export class DatabaseCardDrawer {
 
       this.drawer = null;
       drawer.removeAttribute('data-open');
-      this.peekHost?.style.setProperty('--_blok-peek-inset', '0px');
+      this.pagePan.leave();
       afterSlide(drawer, () => {
         this.releaseLeavingBody();
         drawer.remove();
@@ -1194,31 +1196,16 @@ export class DatabaseCardDrawer {
     this.setPeekWidth(this.peekWidth + (widen ? PEEK_DETAILS_WIDTH : -PEEK_DETAILS_WIDTH), !widen);
   }
 
-  /**
-   * Keeps the page's width when the drawer (at the inline end) covers part of it, and gives the window room to scroll that part out.
-   * The window cannot scroll past its own start, so an RTL page in an LTR window narrows by the covered part instead.
-   * database.css turns the inset into a spacer past the page's end, or into padding.
-   */
+  /** Fits the page beside the side peek to the part the drawer leaves uncovered (peek-page-pan.ts). */
   private narrowPeekHost(): void {
     const host = this.findPeekHost?.() ?? null;
 
     if (host === null) {
       return;
     }
-    const width = Math.min(this.peekWidth, window.innerWidth);
-    const rect = host.getBoundingClientRect();
-    const rtl = getElementDirection(this.wrapper) === 'rtl';
-    // Measured as if unscrolled: a resize drag re-measures, and a page scrolled toward the drawer must keep its room.
-    const covered = rtl ? width - (rect.left + window.scrollX) : rect.right + window.scrollX - (window.innerWidth - width);
-    const scrolls = getElementDirection(document.documentElement) === getElementDirection(this.wrapper);
-    // Scrolled all the way, the page's end must reach the drawer's inner edge, so the room is the drawer's whole width.
-    const room = covered > 0 ? width : 0;
-    const inset = scrolls ? room : Math.max(0, Math.round(covered));
-
     this.peekHost = host;
     peekHostOwners.set(host, this);
-    host.setAttribute('data-blok-database-peek', scrolls ? 'scroll' : 'narrow');
-    host.style.setProperty('--_blok-peek-inset', `${inset}px`);
+    this.pagePan.fit(host, this.wrapper, Math.min(this.peekWidth, window.innerWidth), getElementDirection(this.wrapper) === 'rtl');
   }
 
   private releasePeekHost(): void {
@@ -1227,9 +1214,8 @@ export class DatabaseCardDrawer {
 
       return;
     }
-    this.peekHost?.removeAttribute('data-blok-database-peek');
     this.peekHost?.removeAttribute('data-blok-database-peek-resizing');
-    this.peekHost?.style.removeProperty('--_blok-peek-inset');
+    this.pagePan.release();
     this.peekHost = null;
   }
 

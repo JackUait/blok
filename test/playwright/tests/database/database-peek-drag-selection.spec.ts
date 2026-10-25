@@ -1,6 +1,6 @@
 /**
  * Layout checks read from the browser, not from the CSS source:
- * - the side peek keeps the page beside it and lets the window scroll it out from under the peek;
+ * - the side peek keeps the page beside it, moves it into the free space, and pans the rest with a bar beside the peek;
  * - drag ghosts look like their source, at opacity 0.4 with no rotation
  *   (research/08 "Card drag start", "Row drag");
  * - a drop in a sorted table asks "Would you like to remove sorting?" (D7);
@@ -174,9 +174,12 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('side peek', () => {
-  test('keeps the page beside it and lets the window scroll it out from under the peek', async ({ page }) => {
+  test('keeps the page beside it, moves it into the free space and pans the rest with a bar beside the peek', async ({ page }) => {
     await mount(page, blocks());
     const database = page.locator('[data-blok-database-wrapper]');
+    const wrapper = page.locator('[data-blok-interface=blok]').first();
+    const bar = page.locator('[data-blok-database-peek-scrollbar]');
+    const drawer = page.locator('[data-blok-database-drawer]');
     const before = await database.boundingBox();
     // The 756px peek's inner edge at a 1400px window (research/22 §10).
     const edge = 1400 - 756;
@@ -186,23 +189,39 @@ test.describe('side peek', () => {
 
     await tableRow(page, 'r1').hover();
     await tableRow(page, 'r1').locator('[data-blok-database-table-open]').click();
-    await expect(page.locator('[data-blok-database-drawer]')).toHaveAttribute('data-peek-mode', 'side');
-    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeGreaterThan(1400);
+    await expect(drawer).toHaveAttribute('data-peek-mode', 'side');
+    await expect(bar).toBeVisible();
 
-    const opened = await database.boundingBox();
+    // The page moves left but keeps its width, and the window itself never scrolls sideways.
+    await expect.poll(async () => Math.round((await database.boundingBox())?.x ?? 0)).toBeLessThan(Math.round(before?.x ?? 0));
+    expect(Math.round((await database.boundingBox())?.width ?? 0)).toBe(Math.round(before?.width ?? 0));
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(1400);
+    expect(Math.round((await drawer.boundingBox())?.width ?? 0)).toBe(756);
 
-    expect(Math.round(opened?.x ?? 0)).toBe(Math.round(before?.x ?? 0));
-    expect(Math.round(opened?.width ?? 0)).toBe(Math.round(before?.width ?? 0));
-    expect(Math.round((await page.locator('[data-blok-database-drawer]').boundingBox())?.width ?? 0)).toBe(756);
+    // The bar runs only under the uncovered part.
+    const barBox = await bar.boundingBox();
 
-    // Scrolled all the way, the page's end clears the peek's inner edge.
-    await page.evaluate(() => window.scrollTo({ left: document.documentElement.scrollWidth }));
-    const scrolled = await page.locator('[data-blok-interface=blok]').boundingBox();
+    expect(Math.round(barBox?.x ?? -1)).toBe(0);
+    expect(Math.round((barBox?.x ?? 0) + (barBox?.width ?? 0))).toBeLessThanOrEqual(edge + 1);
 
-    expect(Math.round((scrolled?.x ?? 0) + (scrolled?.width ?? 0))).toBeLessThanOrEqual(edge + 1);
+    // A sideways wheel over the page pans it.
+    const resting = (await wrapper.boundingBox())?.x ?? 0;
+
+    await page.mouse.move(100, 450);
+    await page.mouse.wheel(120, 0);
+    await expect.poll(async () => (await wrapper.boundingBox())?.x ?? 0).toBeLessThan(resting);
+
+    // With the bar at its end, the page's end meets the peek's inner edge.
+    await bar.evaluate((el) => el.scrollTo({ left: el.scrollWidth }));
+    await expect.poll(async () => {
+      const box = await wrapper.boundingBox();
+
+      return Math.round((box?.x ?? 0) + (box?.width ?? 0));
+    }).toBe(edge);
 
     await page.keyboard.press('Escape');
-    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBe(1400);
+    await expect(bar).toHaveCount(0);
+    await expect.poll(async () => Math.round((await database.boundingBox())?.x ?? 0)).toBe(Math.round(before?.x ?? 0));
   });
 });
 

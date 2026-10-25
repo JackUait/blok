@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { composeGuidance, IN_APP_INTRO, IN_APP_RULES, PAGE_RULE, SHARED_RULES } from '../../../src/agent/guidance';
+import { composeGuidance, IN_APP_INTRO, IN_APP_RULES, PAGE_CREATE_RULE, PAGE_RULE, SHARED_RULES } from '../../../src/agent/guidance';
 import { buildMcpContracts } from '../../../src/mcp/contract';
 import type { Caller } from '../../../src/mcp/dispatcher';
 import { MCP_RULES, mcpInstructions } from '../../../src/mcp/instructions';
@@ -19,7 +19,7 @@ const contract = buildMcpContracts({ pageTitles: 'off' }).stored;
 
 describe('agent guidance parity law', () => {
   it('declares disjoint lists, so a rule lives in exactly one of them', () => {
-    const all = [...SHARED_RULES, ...IN_APP_RULES, ...MCP_RULES, PAGE_RULE];
+    const all = [...SHARED_RULES, ...IN_APP_RULES, ...MCP_RULES, PAGE_RULE, PAGE_CREATE_RULE];
 
     expect(new Set(all).size).toBe(all.length);
     expect(SHARED_RULES.length).toBeGreaterThan(0);
@@ -48,6 +48,19 @@ describe('agent guidance parity law', () => {
 
     expect(composeGuidance(contract)).toBe(base.join('\n'));
     expect(composeGuidance(contract, { pages: true })).toBe([...base, PAGE_RULE].join('\n'));
+  });
+
+  it('both surfaces tell the model how to make a sub-page in the same words, exactly where a page block inserts', () => {
+    const creating = buildMcpContracts({ pageTitles: 'page-map', createsPages: true }).stored;
+    const base = [creating.guidance.general.trim(), '', IN_APP_INTRO, '', ...SHARED_RULES, ...IN_APP_RULES];
+
+    expect(mcpInstructions(creating)).toBe([
+      'How to write rich text in Blok:', creating.guidance.general.trim(), '', 'Rules for editing a Blok document:',
+      ...SHARED_RULES, PAGE_CREATE_RULE, ...MCP_RULES,
+    ].join('\n'));
+    expect(composeGuidance(creating, { pages: true })).toBe([...base, PAGE_CREATE_RULE, PAGE_RULE].join('\n'));
+    expect(mcpInstructions(contract)).not.toContain(PAGE_CREATE_RULE);
+    expect(composeGuidance(contract, { pages: true })).not.toContain(PAGE_CREATE_RULE);
   });
 
   it('assembleMcp sends the instructions built from its own stored contract', async () => {

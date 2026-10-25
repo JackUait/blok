@@ -49,7 +49,7 @@ export interface BlokMcpOptions {
   source?: { kind: 'endpoint'; url: string; endpointAuth: string; list?: string } | { kind: 'files'; dir: string };
   /** Host custom tool descriptions, as `--manifest <file>` loads them. */
   manifest?: BlokCustomToolsFile;
-  /** 'page-map' turns on headless page.rename / page.setIcon. Default 'off'. */
+  /** 'page-map' turns on headless page.rename / page.setIcon, and in stored mode inserting a page block (it creates the page document). Default 'off'. */
   pageTitles?: 'off' | 'page-map';
   /** Same shape as `--manifest-overrides <file>`. */
   overrides?: ManifestOverrides;

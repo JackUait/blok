@@ -25,6 +25,7 @@ Agents write rich text with commands. They never write Markdown or HTML into blo
 - The rich-text rules: the marks, colour presets, link defaults, and equation and page embeds.
 - The editing rules the in-app assistant gets too, such as "change only the blocks the request is about" and "put related edits in one `blok_execute` call".
 - How to reach a sub-page: open the page block's `data.pageId` with `blok_open`.
+- How to make a sub-page, where the server can: insert a page block. See `--page-titles page-map`.
 
 ## Prompts
 
@@ -154,6 +155,9 @@ Stored mode is refused when `--sync-url` is set. A sync service owns those docum
   - It runs before every open, and again on each later call.
   - `blok_list_documents` shows only the documents it allows the caller to read. Without it, the list is unfiltered.
 - `--page-titles page-map` lets agents rename other pages and set their icons. It shows up only if your host reads each page's title from that page document's title.
+  - In stored mode it also lets agents make sub-pages. Inserting a page block saves an empty document under a new id, and the block's `data.pageId` names it. The agent then names it with `page.rename` and fills it with `blok_open`.
+  - The new id must pass `--authorize` as a write first. If it does not, nothing is saved and the insert fails with `FORBIDDEN`.
+  - With `--sync-url` a page block is not insertable. The sync service owns every document, so the server cannot create one.
 
 ## Custom tools
 
@@ -207,7 +211,7 @@ Pass a value as the next argument: `--auth oauth`, not `--auth=oauth`. An unknow
 | `--manifest <file>` | | none | Custom block and inline tools. |
 | `--manifest-overrides <file>` | | none | Tool and action overrides. |
 | `--rich-text-fields <json>` | `BLOK_RICH_TEXT_FIELDS` | none | Rich text fields for unknown block types. |
-| `--page-titles off\|page-map` | | `off` | Headless page rename and icon. |
+| `--page-titles off\|page-map` | | `off` | Headless page rename and icon, and new sub-pages in stored mode. |
 | `--schema mixed\|envelope\|full` | | `mixed` | How `blok_execute` describes its commands. `mixed` gives the full arguments of the common commands, so the model needs no `blok_describe` call for them. |
 | `--handle-idle-ms <ms>` | | `600000` | Idle time before a handle expires. |
 | `--max-handles <n>` | | `8` | Open handles per principal. |

@@ -336,6 +336,8 @@ export type CoreCommandTable = Readonly<Record<string, {
 export interface ContractWhere {
   runtime: 'editor' | 'node' | 'jint' | 'node-live' | 'csharp-live';
   services: HostService[];
+  /** Block types a headless host prepares itself, as blok-mcp creates a page's document. */
+  prepares?: readonly string[];
 }
 
 export const BLOCK_POSITION_SCHEMA: BlokSchema = {
@@ -349,7 +351,7 @@ export const BLOCK_POSITION_SCHEMA: BlokSchema = {
 
 /**
  * Runtimes whose applier runs a tool's prepareInsert. Only the editor has the tool class; a headless
- * runtime cannot make what the hook makes (a page's document), so a type that needs it is not insertable there.
+ * runtime inserts such a type only when its host prepares it (ContractWhere.prepares).
  * Keep in step with AgentApplier.prepareInsert (src/shared/agent/executor.ts).
  */
 export const PREPARES_INSERT: Readonly<Record<ContractWhere['runtime'], boolean>> = {
@@ -360,7 +362,8 @@ const insertableHere = (
   block: BlockToolManifestEntry,
   where: ContractWhere
 ): Pick<BlockToolManifestEntry, 'insertable' | 'insertUnavailableReason'> => (
-  block.insertable && (block.insertRequires?.length ?? 0) > 0 && !PREPARES_INSERT[where.runtime]
+  block.insertable && (block.insertRequires?.length ?? 0) > 0
+    && !PREPARES_INSERT[where.runtime] && where.prepares?.includes(block.name) !== true
     ? { insertable: false, insertUnavailableReason: 'runtime' }
     : { insertable: block.insertable }
 );

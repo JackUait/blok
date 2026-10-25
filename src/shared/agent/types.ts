@@ -64,6 +64,8 @@ export interface AgentPorts {
   /** The editor's `link` config; without it a link gets the Link tool defaults. */
   resolveLink?(link: RichTextLink): RichTextLink;
   openPageDocument?(pageId: string, actor: AgentActor): Promise<AgentSession & { close(): void }>;
+  /** Creates an empty page document for a new page block. Contracts list `page` as insertable only with it. */
+  createPageDocument?(actor: AgentActor): Promise<{ pageId: string }>;
 }
 
 export interface PlannerContext {

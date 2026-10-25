@@ -15,6 +15,8 @@ export const buildMcpContracts = (input: {
   manifest?: BlokCustomToolsFile;
   overrides?: ManifestOverrides;
   pageTitles: 'off' | 'page-map';
+  /** Stored opens can create page documents, so a page block inserts there. */
+  createsPages?: boolean;
   richTextFields?: Record<string, string[]>;
 }): McpContracts => {
   const services: HostService[] = input.pageTitles === 'page-map' ? ['pageBackend'] : [];
@@ -23,6 +25,7 @@ export const buildMcpContracts = (input: {
     overrides: input.overrides,
     services,
     runtime: 'node',
+    ...(input.createsPages === true && input.pageTitles === 'page-map' && { prepares: ['page'] }),
   });
   const live = createHeadlessAgentSetup({
     customTools: input.manifest,

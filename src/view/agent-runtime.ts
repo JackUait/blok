@@ -72,6 +72,7 @@ export const createHeadlessPorts = (input: {
   richTextFieldsFor(type: string): string[];
   globalSanitizer?: SanitizerConfig;
   openPageDocument?: AgentPorts['openPageDocument'];
+  createPageDocument?: AgentPorts['createPageDocument'];
   newId?: () => string;
 }): AgentPorts => {
   const global = input.globalSanitizer ?? {};
@@ -119,6 +120,7 @@ export const createHeadlessPorts = (input: {
     },
     newId: input.newId ?? (() => mintId()),
     ...(input.openPageDocument !== undefined && { openPageDocument: input.openPageDocument }),
+    ...(input.createPageDocument !== undefined && { createPageDocument: input.createPageDocument }),
   };
 };
 
@@ -197,6 +199,8 @@ export const createHeadlessAgentSetup = (options: {
   runtime?: 'node' | 'jint' | 'node-live';
   globalSanitizer?: SanitizerConfig;
   openPageDocument?: AgentPorts['openPageDocument'];
+  /** Block types the host prepares itself; pass the matching port to the session. */
+  prepares?: readonly string[];
 } = {}): {
   contract: AgentContract;
   tools: ToolRuntimeRegistry;
@@ -209,7 +213,9 @@ export const createHeadlessAgentSetup = (options: {
     options.customTools
   );
   const manifest = buildToolManifest(snapshot, options.overrides);
-  const contract = buildAgentContract(manifest, COMMANDS, { runtime: options.runtime ?? 'node', services });
+  const contract = buildAgentContract(manifest, COMMANDS, {
+    runtime: options.runtime ?? 'node', services, ...(options.prepares !== undefined && { prepares: options.prepares }),
+  });
   const tools = runtimesWithCustomTools(BUILT_IN_TOOL_RUNTIMES, options.customTools);
   const richTextFieldsFor = (type: string): string[] =>
     manifest.blocks.find(entry => entry.name === type)?.richTextFields ?? [];

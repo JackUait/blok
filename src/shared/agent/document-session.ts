@@ -3,7 +3,7 @@ import { plannerContextFrom } from './context';
 import { describeContract } from './describe';
 import { buildDocumentView } from './document-view';
 import { checkEnvelope } from './envelope';
-import { AgentFailure, failure } from './errors';
+import { AgentFailure, failure, notPreparedHere } from './errors';
 import { planHostBatch, runBatch } from './executor';
 import { contentRevision } from './revision';
 import { DocSnapshot } from './snapshot';
@@ -103,6 +103,7 @@ export const createDocumentAgentSession = (input: {
     services.pageBackend = createPageMapBackend(input.ports.openPageDocument, input.actor, blockId => state.current.get(blockId));
   }
   const ctx = plannerContextFrom(input.contract, input.tools, input.ports, input.validate ?? validateAgainst, services);
+  const createPage = input.pageTitles === 'page-map' ? input.ports.createPageDocument : undefined;
 
   const applier: AgentApplier = {
     runtime: input.runtime ?? 'node',
@@ -119,6 +120,16 @@ export const createDocumentAgentSession = (input: {
 
       return hashed.revision;
     },
+    ...(createPage !== undefined && {
+      // Only the pageId: the planned data keeps the rest, and a host id must win over one the agent wrote.
+      prepareInsert: async (type: string) => {
+        if (type !== 'page') {
+          throw failure('COMMAND_UNAVAILABLE', notPreparedHere(type), { details: { reason: 'runtime' } });
+        }
+
+        return { pageId: (await createPage(input.actor)).pageId };
+      },
+    }),
     apply: (plan, draft) => {
       past.push(state.current);
       future.length = 0;

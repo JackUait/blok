@@ -47,7 +47,9 @@ const CREATE_ARGS: Record<string, Record<string, unknown>> = {
   embed: { url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
 };
 
-const created = async (session: AgentSession, type: string): Promise<Record<string, unknown>> => {
+type Executes = Pick<AgentSession, 'execute'>;
+
+const created = async (session: Executes, type: string): Promise<Record<string, unknown>> => {
   const result = await session.execute({ commands: [{ name: `${type}.create`, args: { ...CREATE_ARGS[type], position: 'end' } }] });
   const data = result.ok ? result.blocks?.find(block => block.type === type)?.data : undefined;
 
@@ -59,7 +61,7 @@ const created = async (session: AgentSession, type: string): Promise<Record<stri
 };
 
 /** 'ok' when block.insert makes the block, else the error code. */
-export const insertOutcome = async (session: AgentSession, type: string): Promise<string> => {
+export const insertOutcome = async (session: Executes, type: string): Promise<string> => {
   const data = HARVEST.has(type) ? await created(session, type) : DATA[type];
   const result = await session.execute({ commands: [{ name: 'block.insert', args: { type, ...(data === undefined ? {} : { data }), position: 'end' } }] });
 

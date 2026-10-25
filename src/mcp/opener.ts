@@ -1,13 +1,15 @@
 import type { AgentActor } from '../../types/agent';
 import type { OutputData } from '../../types/data-formats/output-data';
 import { createDocumentAgentSession } from '../shared/agent/document-session';
+import { AgentFailure } from '../shared/agent/errors';
 import type { AgentPorts } from '../shared/agent/types';
+import { mintId } from '../shared/mint-id';
 import { loadStoredDocument } from '../view/agent-runtime';
 
 import { defaultAgentActor } from './actor';
 import type { McpContracts } from './contract';
 import type { Caller, DispatcherDeps, ListResult, OpenRequest } from './dispatcher';
-import { surfaceError } from './errors';
+import { isMcpSurfaceError, surfaceError } from './errors';
 import { resolveMode } from './mode';
 import type { BlokMcpOptions } from './options';
 import type { HandleSession } from './session';
@@ -34,7 +36,12 @@ export interface OpenerDeps {
 
 export const createOpener = (
   deps: OpenerDeps,
-): { open: DispatcherDeps['open']; list: DispatcherDeps['list']; actorFor(caller: Caller): AgentActor } => {
+): {
+  open: DispatcherDeps['open'];
+  list: DispatcherDeps['list'];
+  actorFor(caller: Caller): AgentActor;
+  createPage(caller: Caller): Promise<{ pageId: string }>;
+} => {
   const syncConfigured = deps.options.sync !== undefined;
   const actorFor = (caller: Caller): AgentActor =>
     (deps.options.agentActor ?? defaultAgentActor)(caller.principal, caller.clientName);
@@ -99,5 +106,32 @@ export const createOpener = (
     };
   };
 
-  return { open, list, actorFor };
+  /** An empty stored document under a fresh id, for a new page block. Authorized like a write open. */
+  const createPage = async (caller: Caller): Promise<{ pageId: string }> => {
+    const source = deps.source;
+    const pageId = mintId();
+
+    try {
+      if (source === null) {
+        throw surfaceError('SOURCE_UNAVAILABLE', 'No document source is configured, so no page document can be created.');
+      }
+      if (authorize !== undefined && !(await authorize(caller.principal, pageId, true))) {
+        throw surfaceError('FORBIDDEN', 'You may not create a page document here.');
+      }
+      const loaded = await source.load(pageId);
+
+      // The endpoint source saves without a version check, so this is its only guard against an overwrite.
+      if (loaded.missing !== true) {
+        throw surfaceError('SOURCE_UNAVAILABLE', 'The new page id is taken. Try again.');
+      }
+      await source.save(pageId, { blocks: [] }, { ifVersion: loaded.version });
+    } catch (thrown) {
+      // The executor keeps only an AgentFailure's code.
+      throw isMcpSurfaceError(thrown) ? new AgentFailure({ ...thrown.agentError, details: { ...thrown.agentError.details, pageId } }) : thrown;
+    }
+
+    return { pageId };
+  };
+
+  return { open, list, actorFor, createPage };
 };

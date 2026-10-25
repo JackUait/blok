@@ -23,7 +23,13 @@ export const IN_APP_RULES: readonly string[] = [
   '- After you edit, your whole reply is one friendly sentence of under 10 words on what you did, in the user\'s language, like "Added a short paragraph about how YouTube began." It must make sense on its own: never end it with a colon, never introduce a list, write nothing before or after it. Say what, never where: no caret, position, block names or ids. No lists, tables or Markdown.',
 ];
 
-export const PAGE_RULE = '- A page block points at a sub-page with its own document. To write inside one, call blok_read or blok_execute with `page` set to the page block\'s id; there doc.setTitle and doc.setIcon name the sub-page. Insert the page block first if it does not exist.';
+export const PAGE_RULE = '- A page block points at a sub-page with its own document. To write inside one, call blok_read or blok_execute with `page` set to the page block\'s id; there doc.setTitle and doc.setIcon name the sub-page.';
+
+/** Both surfaces send it exactly when their contract lets a page block insert. */
+export const PAGE_CREATE_RULE = '- To make a new sub-page, insert a page block without data.pageId. Blok creates its document and sets data.pageId. Then write inside it.';
+
+export const pagesInsert = (contract: AgentContract): boolean =>
+  contract.manifest.blocks.some(block => block.name === 'page' && block.insertable);
 
 export function composeGuidance(contract: AgentContract, options: { pages?: boolean } = {}): string {
   return [
@@ -33,6 +39,6 @@ export function composeGuidance(contract: AgentContract, options: { pages?: bool
     '',
     ...SHARED_RULES,
     ...IN_APP_RULES,
-    ...(options.pages === true ? [PAGE_RULE] : []),
+    ...(options.pages === true ? [...(pagesInsert(contract) ? [PAGE_CREATE_RULE] : []), PAGE_RULE] : []),
   ].join('\n');
 }

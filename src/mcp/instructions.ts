@@ -1,5 +1,5 @@
 import type { AgentContract } from '../../types/tool-manifest';
-import { SHARED_RULES } from '../agent/guidance';
+import { PAGE_CREATE_RULE, pagesInsert, SHARED_RULES } from '../agent/guidance';
 
 /** Rules only an MCP agent gets: it opens sub-pages itself. */
 export const MCP_RULES: readonly string[] = [
@@ -13,5 +13,6 @@ export const mcpInstructions = (contract: AgentContract): string => [
   '',
   'Rules for editing a Blok document:',
   ...SHARED_RULES,
+  ...(pagesInsert(contract) ? [PAGE_CREATE_RULE] : []),
   ...MCP_RULES,
 ].join('\n');

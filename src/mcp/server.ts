@@ -55,10 +55,15 @@ const drain = async (sets: Set<Promise<unknown>>[], seen = new Set<Promise<unkno
 
 export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): AssembledMcp => {
   const handleIdleMs = options.handleIdleMs ?? DEFAULTS.handleIdleMs;
+  const pageMap = (options.pageTitles ?? DEFAULTS.pageTitles) === 'page-map';
+  const source = createSource(options.source);
+  // A sync service owns every document (spec §3.6), so only a stored-only server creates pages.
+  const createsPages = pageMap && source !== null && options.sync === undefined;
   const contracts = buildMcpContracts({
     manifest: options.manifest,
     overrides: options.overrides,
     pageTitles: options.pageTitles ?? DEFAULTS.pageTitles,
+    createsPages,
     richTextFields: options.richTextFields,
   });
   // page.rename / page.setIcon close their page session without waiting, so stop waits for those closes.
@@ -68,8 +73,9 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
     void closing.catch(() => undefined).finally(() => pageCloses.delete(closing));
   };
   // portsFor needs the opener and the opener needs portsFor: bind the open late.
-  const late: { open: DispatcherDeps['open'] | null } = { open: null };
-  const pageMap = (options.pageTitles ?? DEFAULTS.pageTitles) === 'page-map';
+  const late: { open: DispatcherDeps['open'] | null; createPage: ((caller: Caller) => Promise<{ pageId: string }>) | null } = {
+    open: null, createPage: null,
+  };
   const portsFor = (caller: Caller, _actor?: AgentActor, isOpenDocument?: (pageId: string) => Promise<boolean>): AgentPorts => createHeadlessPorts({
     sanitizeFor: (type) => contracts.runtimes.get(type)?.sanitize,
     richTextFieldsFor: contracts.richTextFieldsFor,
@@ -86,6 +92,15 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
         isOpenDocument,
         track: trackPageClose,
       }),
+    }),
+    ...(createsPages && {
+      createPageDocument: () => {
+        if (late.createPage === null) {
+          throw new Error('blok-mcp: the opener is not ready');
+        }
+
+        return late.createPage(caller);
+      },
     }),
   });
   const tickets = options.tickets === undefined ? undefined : createTicketProvider(options.tickets);
@@ -108,9 +123,10 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
       }),
     }),
   });
-  const opener = createOpener({ options, contracts, source: createSource(options.source), openLive, portsFor });
+  const opener = createOpener({ options, contracts, source, openLive, portsFor });
 
   late.open = opener.open;
+  late.createPage = opener.createPage;
   const tools = listMcpTools(contracts.stored, { schema: options.schema ?? DEFAULTS.schema, handleIdleMs });
   const handles = new HandleRegistry<HandleSession>({
     idleMs: handleIdleMs,

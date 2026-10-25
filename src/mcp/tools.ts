@@ -1,5 +1,6 @@
 import type { AgentContract } from '../../types/tool-manifest';
 
+import { pagesInsert } from '../agent/guidance';
 import { renderAgentTools } from '../agent/render-tools';
 import { orError } from '../agent/result-schemas';
 
@@ -79,6 +80,7 @@ export const listMcpTools = (
         'Then it returns that documentId and title. Otherwise it opens nothing and returns the documents to choose from, listed the way blok_list_documents lists them; open one by its documentId.',
         'In stored mode an unknown documentId opens a new, empty document (exists: false), so pass only ids you were given or saw listed.',
         "A page block's data.pageId is the documentId of that sub-page: open it to read or edit the sub-page. The block id is not.",
+        ...(pagesInsert(contract) ? ['A page block you insert gets a new, empty sub-page document, under the pageId the insert result shows.'] : []),
         'mode "auto" joins the live room when one is configured, else edits the stored document.',
         'Pass write: true if you will edit; a read-only handle refuses blok_execute.',
         'unavailableCommands names the blok_execute commands this handle refuses, such as history.undo in live mode; do not send them.',

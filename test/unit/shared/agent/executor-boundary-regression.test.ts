@@ -189,7 +189,7 @@ describe('runBatch fresh-placement and runtime failure boundaries', () => {
     expect(applier.applied).toBe(0);
     expect(sanitizedTypes).toEqual(['record', 'alternate_record']);
     expect(prepareInsert).toHaveBeenCalledOnce();
-    expect(prepareInsert).toHaveBeenCalledWith('record');
+    expect(prepareInsert.mock.calls.map(call => call[0])).toContain('record');
   });
 
   it('reports a settle rejection with the returned preparation receipt and applies nothing', async () => {
@@ -227,7 +227,7 @@ describe('runBatch fresh-placement and runtime failure boundaries', () => {
     }]);
     expect(applier.applied).toBe(0);
     expect(prepareInsert).toHaveBeenCalledOnce();
-    expect(prepareInsert).toHaveBeenCalledWith('record');
+    expect(prepareInsert.mock.calls.map(call => call[0])).toContain('record');
     expect(settle).toHaveBeenCalledOnce();
   });
 

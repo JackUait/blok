@@ -371,8 +371,10 @@ export interface BlockToolConstructable extends BaseToolConstructable {
    * nothing. Other inserts never call it.
    *
    * @param config - the Tool's config
+   * @param data - the picked toolbox entry's `data`, or the data passed to
+   *   `blocks.create`. Lets one Tool's entries prepare different things.
    */
-  prepareInsert?(config: ToolConfig): Promise<BlockToolData>;
+  prepareInsert?(config: ToolConfig, data?: BlockToolData): Promise<BlockToolData>;
 
   /**
    * How this Tool's block menu is laid out.

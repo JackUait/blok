@@ -85,8 +85,8 @@ export class EditorApplier implements AgentApplier {
   }
 
   /** The same host hook a toolbox insert waits for, e.g. a page's `create`. */
-  public async prepareInsert(type: string): Promise<Record<string, unknown> | undefined> {
-    const data = await this.Blok.Tools.blockTools.get(type)?.prepareInsert();
+  public async prepareInsert(type: string, planned?: Record<string, unknown>): Promise<Record<string, unknown> | undefined> {
+    const data = await this.Blok.Tools.blockTools.get(type)?.prepareInsert(planned);
 
     if (data !== undefined) {
       this.options.onPrepared?.(type, data);

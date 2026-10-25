@@ -1297,7 +1297,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       return;
     }
 
-    const prepared = this.tools.get(toolName)?.prepareInsert();
+    const prepared = this.tools.get(toolName)?.prepareInsert(blockDataOverrides);
 
     if (prepared === undefined) {
       await this.insertBlock(toolName, blockDataOverrides);

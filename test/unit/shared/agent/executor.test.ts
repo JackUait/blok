@@ -800,6 +800,23 @@ describe('runBatch contract', () => {
     expect(applier.applied).toBe(0);
   });
 
+  it("hands the inserted block's data to prepareInsert", async () => {
+    const seen: unknown[] = [];
+    const applier = memoryApplier({
+      prepareInsert: (_type, data) => {
+        seen.push(data);
+
+        return Promise.resolve({ count: 2 });
+      },
+    });
+    const result = await run({ commands: [
+      { name: 'block.insert', args: { id: 'new', type: 'record', data: { count: 7 } } },
+    ] }, applier, { ctx: preparedInsertContext() });
+
+    expect(result).toMatchObject({ ok: true });
+    expect(seen).toEqual([{ count: 7 }]);
+  });
+
   it('merges prepared insert data and resolves a later ref against the real planned block', async () => {
     const calls: string[] = [];
     const applier = memoryApplier({

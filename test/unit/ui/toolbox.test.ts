@@ -47,6 +47,7 @@ const mockPopoverInstance = vi.hoisted(() => ({
   hasFocus: vi.fn(() => false),
   filterItems: vi.fn(),
   toggleItemHiddenByName: vi.fn(),
+  setItemBusyByName: vi.fn(),
   updatePosition: vi.fn(),
   setLeftAlignElement: vi.fn(),
   onCurrentItemChange: vi.fn(() => () => {}),
@@ -92,6 +93,7 @@ vi.mock('../../../src/components/utils/popover', () => {
       public hasFocus = mockPopoverInstance.hasFocus;
       public filterItems = mockPopoverInstance.filterItems;
       public toggleItemHiddenByName = mockPopoverInstance.toggleItemHiddenByName;
+      public setItemBusyByName = mockPopoverInstance.setItemBusyByName;
       public updatePosition = mockPopoverInstance.updatePosition;
       public setLeftAlignElement = mockPopoverInstance.setLeftAlignElement;
       public onCurrentItemChange = mockPopoverInstance.onCurrentItemChange;
@@ -108,6 +110,7 @@ vi.mock('../../../src/components/utils/popover', () => {
       public hasFocus = mockPopoverInstance.hasFocus;
       public filterItems = mockPopoverInstance.filterItems;
       public toggleItemHiddenByName = mockPopoverInstance.toggleItemHiddenByName;
+      public setItemBusyByName = mockPopoverInstance.setItemBusyByName;
       public updatePosition = mockPopoverInstance.updatePosition;
       public setLeftAlignElement = mockPopoverInstance.setLeftAlignElement;
       public onCurrentItemChange = mockPopoverInstance.onCurrentItemChange;
@@ -2292,6 +2295,33 @@ describe('Toolbox', () => {
       await toolbox.toolButtonActivated('testTool', {});
 
       expect(mocks.api.blocks.insert).toHaveBeenCalled();
+    });
+  });
+
+  describe('prepareInsert', () => {
+    it("hands the picked entry's data to prepareInsert", async () => {
+      const prepareInsert = vi.fn(() => Promise.resolve({ pageId: 'host-1', kind: 'database' }));
+      const pageAdapter = {
+        name: 'page',
+        toolbox: [
+          { title: 'Page', icon: '<svg>page</svg>' },
+          { title: 'Database - Full page', icon: '<svg>db</svg>', name: 'databaseFullPage', data: { kind: 'database' } },
+        ],
+        prepareInsert,
+      } as unknown as BlockToolAdapter;
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: createToolsCollection([
+          ['testTool', mocks.blockToolAdapter],
+          ['page', pageAdapter],
+        ]),
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      await toolbox.toolButtonActivated('page', { kind: 'database' });
+
+      expect(prepareInsert).toHaveBeenCalledWith({ kind: 'database' });
     });
   });
 

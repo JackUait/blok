@@ -624,7 +624,7 @@ export class BlocksAPI extends Module {
     // which would be orphaned if the insert then failed.
     resolvePlacement(this.tree, placement.parentId, placement.position ?? 'end');
 
-    const prepared = await tool.prepareInsert();
+    const prepared = await tool.prepareInsert(data);
 
     return this.placeBlock(toolName, prepared === undefined ? data : { ...data, ...prepared }, placement, 'user');
   };

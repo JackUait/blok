@@ -217,7 +217,7 @@ describe('runBatch preparation review regressions', () => {
     ]);
     expect(applier.applied).toBe(1);
     expect(prepareInsert).toHaveBeenCalledOnce();
-    expect(prepareInsert).toHaveBeenCalledWith('record');
+    expect(prepareInsert.mock.calls.map(call => call[0])).toContain('record');
   });
 
   it('attributes an index-less typed preparation error to command 1 without replacing a supplied index', async () => {
@@ -277,8 +277,8 @@ describe('runBatch preparation review regressions', () => {
     ]);
     expect(suppliedApplier.applied).toBe(0);
     expect(prepareInsert).toHaveBeenCalledOnce();
-    expect(prepareInsert).toHaveBeenCalledWith('record');
+    expect(prepareInsert.mock.calls.map(call => call[0])).toContain('record');
     expect(suppliedPrepare).toHaveBeenCalledOnce();
-    expect(suppliedPrepare).toHaveBeenCalledWith('record');
+    expect(suppliedPrepare.mock.calls.map(call => call[0])).toContain('record');
   });
 });

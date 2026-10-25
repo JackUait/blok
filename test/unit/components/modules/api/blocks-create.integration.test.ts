@@ -22,7 +22,7 @@ interface TestEditor {
 }
 
 const origins: BlockOrigin[] = [];
-const prepare = vi.fn<() => Promise<Record<string, unknown>>>();
+const prepare = vi.fn<(data?: Record<string, unknown>) => Promise<Record<string, unknown>>>();
 
 /** Records how it was created; its `prepareInsert` is the test's `prepare`. */
 class Prepared {
@@ -33,8 +33,8 @@ class Prepared {
     this.data = options.data;
   }
 
-  public static prepareInsert(): Promise<Record<string, unknown>> {
-    return prepare();
+  public static prepareInsert(_config: unknown, data?: Record<string, unknown>): Promise<Record<string, unknown>> {
+    return prepare(data);
   }
 
   public render(): HTMLElement {
@@ -135,6 +135,15 @@ describe('blocks.create', () => {
     expect(saved?.data).toEqual({ pageId: 'host-1', extra: 1 });
     expect(origins).toEqual(['user']);
     expect(prepare).toHaveBeenCalledTimes(1);
+  });
+
+  it("hands the caller's data to prepareInsert", async () => {
+    prepare.mockResolvedValue({ pageId: 'host-1' });
+    const instance = await boot();
+
+    await instance.blocks.create('prepared', { id: 'n', data: { kind: 'database' } });
+
+    expect(prepare).toHaveBeenCalledWith({ kind: 'database' });
   });
 
   it('inserts nothing and rejects when prepareInsert rejects', async () => {

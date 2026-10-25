@@ -19,7 +19,8 @@ export interface AgentApplier {
   snapshot(): DocSnapshot;
   revision(): string;
   apply(plan: Plan, draft: DocSnapshot): Promise<void>;
-  prepareInsert?(type: string): Promise<Record<string, unknown> | undefined>;
+  /** `data`: the planned block's data, so a toolbox variant (e.g. a full-page database) prepares the right thing. */
+  prepareInsert?(type: string, data?: Record<string, unknown>): Promise<Record<string, unknown> | undefined>;
   undo?(): Promise<void>;
   redo?(): Promise<void>;
 }
@@ -54,7 +55,7 @@ const actionFor = (ctx: BatchInput['ctx'], name: string): PlannerActionImpl | un
     ? actions[split.action] : undefined;
 };
 
-const insertedType = (plan: Plan, index: number): string => {
+const insertedBlock = (plan: Plan, index: number): { type: string; data?: Record<string, unknown> } => {
   const result = plan.results[index];
   const id = isRecord(result) && typeof result.id === 'string' ? result.id : undefined;
   const insert = plan.edits.find(edit => edit.op === 'insert' && edit.block.id === id);
@@ -63,7 +64,7 @@ const insertedType = (plan: Plan, index: number): string => {
     throw failure('PRECONDITION_FAILED', 'The insert plan has no created block.', { commandIndex: index });
   }
 
-  return insert.block.type;
+  return insert.block;
 };
 
 const preparationsFor = (
@@ -106,7 +107,8 @@ const preparationsFor = (
       return;
     }
 
-    const type = command.name === 'block.insert' ? insertedType(plan, index) : undefined;
+    const inserted = command.name === 'block.insert' ? insertedBlock(plan, index) : undefined;
+    const type = inserted?.type;
     const requires = type === undefined ? undefined : input.ctx.tools.get(type)?.entry.insertRequires;
 
     if (type !== undefined && requires !== undefined && requires.length > 0) {
@@ -117,7 +119,7 @@ const preparationsFor = (
           });
         }
 
-        const prepared = await input.applier.prepareInsert(type);
+        const prepared = await input.applier.prepareInsert(type, inserted?.data);
 
         orphaned.push({ command: 'block.insert', type, prepared });
         insertTypes.set(index, type);
@@ -416,7 +418,7 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
       if (command.name !== 'block.insert') {
         return;
       }
-      const type = insertedType(plan, index);
+      const type = insertedBlock(plan, index).type;
       const preparedType = insertTypes.get(index);
       const requires = input.ctx.tools.get(type)?.entry.insertRequires;
 

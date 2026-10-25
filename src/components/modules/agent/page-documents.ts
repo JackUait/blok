@@ -104,8 +104,9 @@ export const createPageDocuments = (
     const source = options.contractSource?.() ?? liveContractSource(Blok);
     const contract = source.contract();
     // The main pageBackend looks blocks up in this editor. A sub-page renames its own page blocks
-    // through their documents instead, as MCP's page-map does.
-    const { pageBackend: _mainPageBackend, ...services } = options.services?.() ?? {};
+    // through their documents instead, as MCP's page-map does. The version history is the main
+    // document's, so a sub-page has none.
+    const { pageBackend: _mainPageBackend, versionHistory: _mainHistory, ...services } = options.services?.() ?? {};
     const session = createDocumentAgentSession({
       document, tools: source.runtimes(contract), contract, actor, services,
       ports: { ...createEditorPorts(Blok), openPageDocument: openNested, createPageDocument },

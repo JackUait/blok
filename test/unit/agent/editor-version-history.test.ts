@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Blok } from '../../../src/blok';
-import { Paragraph } from '../../../src/tools';
+import { Page, Paragraph } from '../../../src/tools';
 import type { Agent, AgentVersion, AgentVersionHistory, OutputData } from '../../../types';
 import type { CommandEntry } from '../../../types/tool-manifest';
 
@@ -86,6 +86,33 @@ describe('editor agent version history', () => {
 
     expect(isCommandEntry(command) && [command.available, command.unavailableReason]).toEqual([false, 'service']);
     expect(!result.ok && [result.error.code, result.error.details?.reason]).toEqual(['COMMAND_UNAVAILABLE', 'service']);
+  });
+
+  it('does not read the main document history from a sub-page', async () => {
+    const history = fakeHistory();
+    const holder = document.createElement('div');
+
+    document.body.appendChild(holder);
+    const pages = new Map<string, OutputData>([['sub', { blocks: [] }]]);
+    const editor = new Blok({
+      holder,
+      data: { blocks: [{ id: 'pg', type: 'page', data: { pageId: 'sub' } }] },
+      tools: {
+        paragraph: { class: Paragraph },
+        page: { class: Page, config: { loadDocument: (pageId: string) => structuredClone(pages.get(pageId) ?? null), saveDocument: () => undefined } },
+      },
+      agent: { versionHistory: history },
+    }) as unknown as TestEditor;
+
+    editors.push(editor);
+    await editor.isReady;
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const result = await turn.call('blok_execute', { page: 'pg', commands: [{ name: 'history.versions', args: {} }] });
+
+    turn.end();
+    expect(result.isError).toBe(true);
+    expect(JSON.parse(result.content)).toMatchObject({ error: { code: 'COMMAND_UNAVAILABLE', details: { reason: 'service' } } });
+    expect(history.list).not.toHaveBeenCalled();
   });
 
   it('never writes: reads still work while the editor is read-only', async () => {

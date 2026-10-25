@@ -318,6 +318,45 @@ describe('the agent edits a sub-page through the host page documents', () => {
     expect(made?.blocks.map((block) => block.data.text)).toEqual([[{ text: 'Inside' }]]);
   });
 
+  it('a page the agent inserts inside a sub-page gets a document from the host create', async () => {
+    const pages = new Map<string, OutputData>([['sub', { blocks: [] }]]);
+    const editor = await boot({ ...host(pages), create: () => {
+      pages.set('made', { blocks: [] });
+
+      return { pageId: 'made' };
+    } });
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const written = await turn.call('blok_execute', { page: 'pg', commands: [
+      { name: 'block.insert', args: { type: 'page', id: 'inner', position: 'end' } },
+    ] });
+
+    turn.end();
+    expect(written.isError, written.content).toBe(false);
+    expect(sub(pages).blocks).toMatchObject([{ id: 'inner', type: 'page', data: { pageId: 'made' } }]);
+  });
+
+  it('a page inserted inside a sub-page can be renamed there when the host has no create', async () => {
+    const pages = new Map<string, OutputData>([['sub', { blocks: [] }]]);
+    const editor = await boot({
+      loadDocument: (pageId: string) => structuredClone(pages.get(pageId) ?? null),
+      saveDocument: (pageId: string, data: OutputData) => {
+        pages.set(pageId, structuredClone(data));
+      },
+    });
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const inserted = await turn.call('blok_execute', { page: 'pg', commands: [
+      { name: 'block.insert', args: { type: 'page', id: 'inner', position: 'end' } },
+    ] });
+    const renamed = await turn.call('blok_execute', { page: 'pg', commands: [{ name: 'page.rename', args: { id: 'inner', title: 'Deep' } }] });
+
+    turn.end();
+    const pageId = sub(pages).blocks.find((block) => block.id === 'inner')?.data.pageId;
+
+    expect(renamed.isError, renamed.content).toBe(false);
+    expect(inserted.isError).toBe(false);
+    expect(pages.get(String(pageId))?.title).toBe('Deep');
+  });
+
   it('a pageId the agent wrote in an earlier turn still does not open that document', async () => {
     const pages = new Map<string, OutputData>([['sub', { blocks: [] }], ['other', { title: 'Private', blocks: [] }]]);
     const editor = await boot(host(pages));

@@ -64,6 +64,20 @@ export const createPageDocuments = (
   if (hooks === undefined || hooks === null) {
     return null;
   }
+  /** PageIds the page tool's create gave a sub-page insert: the host made them, so they are not agent pointers. */
+  const created = new Set<string>();
+  // The same hook a toolbox insert runs, so a page inserted in a sub-page gets a host document too.
+  const createPageDocument: AgentPorts['createPageDocument'] = async () => {
+    const data = await Blok.Tools.blockTools.get('page')?.prepareInsert();
+    const pageId = data?.pageId;
+
+    if (typeof pageId !== 'string') {
+      throw failure('COMMAND_UNAVAILABLE', 'The page tool gave no pageId for the new page.', { details: { reason: 'runtime' } });
+    }
+    created.add(pageId);
+
+    return { pageId };
+  };
 
   const open = async (pageId: string, actor: AgentActor, openOptions: { created?: boolean } = {}): Promise<AgentSession & { close(): void }> => {
     // Two writers on one document: the editor and this session.
@@ -87,7 +101,7 @@ export const createPageDocuments = (
     const { pageBackend: _mainPageBackend, ...services } = options.services?.() ?? {};
     const session = createDocumentAgentSession({
       document, tools: source.runtimes(contract), contract, actor, services,
-      ports: { ...createEditorPorts(Blok), openPageDocument: openNested },
+      ports: { ...createEditorPorts(Blok), openPageDocument: openNested, createPageDocument },
       pageTitles: 'page-map',
     });
 
@@ -103,7 +117,7 @@ export const createPageDocuments = (
 
         if (result.ok && result.revision !== before) {
           [...pagePointers(session.output())]
-            .filter(([blockId, pointed]) => pointersBefore.get(blockId) !== pointed)
+            .filter(([blockId, pointed]) => pointersBefore.get(blockId) !== pointed && !created.has(pointed))
             .forEach(([, pointed]) => options.onPagePointed?.(pointed));
           options.onBeforeSave?.(pageId, original);
           await hooks.saveDocument(pageId, session.output());
@@ -117,7 +131,7 @@ export const createPageDocuments = (
   // The same rule as page blocks in this document: a pageId an agent wrote could name any document.
   const openNested: OpenPageDocument = (pageId, actor) => (options.isAgentPageId?.(pageId) === true
     ? Promise.reject(failure('INVALID_ARGS', 'This page block points at a page an agent set, not one the host created. It cannot be opened.', { details: { pageId } }))
-    : open(pageId, actor));
+    : open(pageId, actor, { created: created.has(pageId) }));
 
   return { open, save: async (pageId, data) => hooks.saveDocument(pageId, data) };
 };

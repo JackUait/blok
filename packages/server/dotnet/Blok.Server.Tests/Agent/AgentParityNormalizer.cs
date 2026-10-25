@@ -248,8 +248,14 @@ internal static class AgentParityNormalizer
     var type = copy["type"]?.GetValue<string>();
     string Rename(string id) => names.GetValueOrDefault(id, id);
 
-    copy.Remove("lastEditedAt");
-    copy.Remove("createdAt");
+    // Clocks differ per runner: compare that a stamp is there, not its value. Same as normalize.ts.
+    foreach (var stamp in (string[])["lastEditedAt", "createdAt"])
+    {
+      if (copy.ContainsKey(stamp))
+      {
+        copy[stamp] = 0;
+      }
+    }
 
     // Only structural references are renamed; payload strings stay as written.
     if (IdOf(copy) is { } own)

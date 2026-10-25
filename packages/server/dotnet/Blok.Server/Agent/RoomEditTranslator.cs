@@ -46,7 +46,7 @@ internal static class RoomEditTranslator
       switch (Text(edit["op"]))
       {
         case "insert":
-          InsertTree(Object(edit["block"]), Text(edit["parentId"]), Text(edit["afterId"]), ops);
+          InsertTree(Object(edit["block"]), Text(edit["parentId"]), Text(edit["afterId"]), blocks, ops);
           break;
         case "remove" when id is not null:
           // The JSON applier lifts the children into the slot; Remove alone takes the subtree.
@@ -111,7 +111,12 @@ internal static class RoomEditTranslator
     return ops;
   }
 
-  private static void InsertTree(JsonObject planned, string? parentId, string? afterId, List<CollabEditOp> ops)
+  private static void InsertTree(
+      JsonObject planned,
+      string? parentId,
+      string? afterId,
+      Dictionary<string, JsonObject> blocks,
+      List<CollabEditOp> ops)
   {
     var id = Text(planned["id"]) ?? throw new InvalidDataException("A planned block has no id.");
     var block = new JsonObject { ["type"] = planned["type"]?.DeepClone(), ["data"] = Object(planned["data"]).DeepClone() };
@@ -119,6 +124,20 @@ internal static class RoomEditTranslator
     if (planned["tunes"] is JsonObject tunes)
     {
       block["tunes"] = tunes.DeepClone();
+    }
+
+    // The creation stamp the JSON applier wrote, so the room saves the same metadata.
+    if (blocks.TryGetValue(id, out var drafted))
+    {
+      if (drafted["createdAt"] is JsonValue createdAt && createdAt.GetValueKind() == JsonValueKind.Number)
+      {
+        block["createdAt"] = createdAt.DeepClone();
+      }
+
+      if (Text(drafted["createdBy"]) is { } createdBy)
+      {
+        block["createdBy"] = createdBy;
+      }
     }
 
     ops.Add(new CollabEditOp.Insert(id, block, afterId, parentId));
@@ -129,7 +148,7 @@ internal static class RoomEditTranslator
     {
       var childBlock = Object(child);
 
-      InsertTree(childBlock, id, previous, ops);
+      InsertTree(childBlock, id, previous, blocks, ops);
       previous = Text(childBlock["id"]);
     }
   }

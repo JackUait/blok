@@ -133,6 +133,22 @@ describe('DatabasePropertyTypePopover', () => {
       expect(el.style.top).toBe('496px');
     });
 
+    // Notion 2026-10-25: too tall for either side, the menu slides up over its button and stays on screen.
+    it('slides up over the anchor when it fits neither below nor above', () => {
+      vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(717);
+      vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue(
+        rect({ top: 390, bottom: 424, left: 50, right: 182, width: 132, height: 34 })
+      );
+      vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function getOffsetHeight(this: HTMLElement): number {
+        return this.hasAttribute('data-blok-database-property-type-popover') ? 600 : 0;
+      });
+
+      popover.open(anchor);
+      const el = document.querySelector('[data-blok-database-property-type-popover]') as HTMLElement;
+
+      expect(el.style.top).toBe('105px');
+    });
+
     it('renders every user-addable property type', () => {
       popover.open(anchor);
       const types: PropertyType[] = ['text', 'number', 'select', 'multiSelect', 'status', 'date', 'files', 'checkbox', 'url', 'phone', 'email', 'uniqueId', 'createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy'];

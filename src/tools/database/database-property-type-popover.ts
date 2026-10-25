@@ -12,6 +12,8 @@ import {
   type PositionTracker,
 } from '../../components/utils/popover/anchored-position';
 
+const VIEWPORT_MARGIN = 12;
+
 export interface PropertyTypePopoverOptions {
   /** `name` is the name field's text, '' without the field. */
   onSelect: (type: PropertyType, name: string) => void;
@@ -132,6 +134,13 @@ export class DatabasePropertyTypePopover {
     overlayMountFor(anchor).appendChild(popover);
     const reposition = (): void => {
       positionFixedAnchored(popover, anchor, { side: 'bottom', offset: 4 });
+      // Too tall for either side, Notion's menu slides up over its button. 12px matches the CSS max-height margin.
+      const top = Number.parseFloat(popover.style.top);
+      const bottomLimit = window.innerHeight - VIEWPORT_MARGIN;
+
+      if (top + popover.offsetHeight > bottomLimit) {
+        popover.style.top = `${Math.max(VIEWPORT_MARGIN, bottomLimit - popover.offsetHeight)}px`;
+      }
     };
 
     // The anchor mirrors with the editor, so a flip re-places the menu.

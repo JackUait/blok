@@ -69,7 +69,7 @@ test.beforeEach(async ({ page }) => {
 
 test('adding "Notes" again names the new column "Notes 1"', async ({ page }) => {
   await page.getByRole('button', { name: 'Add property' }).click();
-  await page.getByPlaceholder('Type property name…').fill('Notes');
+  await page.getByPlaceholder('Property name').fill('Notes');
   await page.locator('[data-blok-database-property-type-option="text"]').click();
 
   await expect(page.getByRole('columnheader', { name: 'Notes 1', exact: true })).toBeVisible();

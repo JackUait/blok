@@ -1,5 +1,6 @@
 import { isRichText } from '../rich-text/guards';
 import { findTextMatches } from '../text-match';
+import { LOAD_DEFAULT_FILLS } from '../tool-actions/load-defaults';
 import { failure } from './errors';
 
 import type { DocumentView, ViewArgs, ViewBlock } from '../../../types/agent';
@@ -56,9 +57,12 @@ const viewBlock = (
   const tool = ctx.tools.get(block.type);
   const text = tool === undefined ? undefined : textOf(block, ctx);
   const textLimit = args.textLimit ?? 120;
+  // A stored block can lack defaults the editor fills on load; show it as the editor would. A copy: reads never write.
+  const fill = tool?.runtime.normalize;
+  const data = fill !== undefined && LOAD_DEFAULT_FILLS.has(fill) ? fill(block.data) : block.data;
   const attrs = Object.fromEntries((tool?.entry.summaryFields ?? [])
-    .filter(key => block.data[key] !== undefined)
-    .map((key): [string, unknown] => [key, block.data[key]]));
+    .filter(key => data[key] !== undefined)
+    .map((key): [string, unknown] => [key, data[key]]));
   const cell = snap.cellOf(block.id);
   const entry: ViewBlock = { id: block.id, type: block.type, depth };
 
@@ -86,7 +90,7 @@ const viewBlock = (
     entry.cell = { row: cell.row, col: cell.col };
   }
   if (args.ids !== undefined || args.detail === 'full') {
-    entry.data = block.data;
+    entry.data = data;
     if (block.tunes !== undefined) {
       entry.tunes = block.tunes;
     }

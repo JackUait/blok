@@ -4,11 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Core } from '../../../src/components/core';
 import { createEditorAgentSession, liveContractSource } from '../../../src/components/modules/agent/editor-session';
 import { askAiSessionOptions } from '../../../src/components/modules/api/agent-session-options';
+import { createAgentTurn } from '../../../src/components/modules/api/agent-turn';
 import { Listeners } from '../../../src/components/utils/listeners';
 import { destroy as destroyTooltip } from '../../../src/components/utils/tooltip';
 import { Audio, Bold, Bookmark, Callout, Code, Column, ColumnList, Database, DatabaseRow, Embed, File, Header, Image, Italic, List, Paragraph, Quote, Table, TabsTool, TabTool, Toggle, Video } from '../../../src/tools';
 import type { BlokModules } from '../../../src/types-internal/blok-modules';
 import type { AgentActor, AgentSession } from '../../../types/agent';
+import { caseStrings, projectAnswers, recordAnswers, referenceAnswers } from './parity/answers';
 import { callerChosenIds, expectationFor, hostServicesFor, loadParityCases } from './parity/corpus';
 import { normalizeForParity } from './parity/normalize';
 import { compareToGolden, runCorpusCase } from './parity/run-case';
@@ -245,7 +247,22 @@ describe.each(cases)('editor runner: $name', (c) => {
 
     session = activeSession;
     await settle(editor, activeSession);
-    const outcome = await runCorpusCase(activeSession, c);
+    // Batches go through the turn's call(), the same wire Ask AI's model uses.
+    const turn = createAgentTurn(activeSession, {
+      onExecuted: () => undefined,
+      onClosed: () => undefined,
+      isEditorDestroyed: () => false,
+    });
+    const recorder = recordAnswers(async (batch) => {
+      const answer: unknown = JSON.parse((await turn.call('blok_execute', { commands: batch.commands })).content);
+
+      if (typeof answer !== 'object' || answer === null || Array.isArray(answer)) {
+        throw new Error(`${c.name}: blok_execute did not answer an object.`);
+      }
+
+      return { ...answer };
+    });
+    const outcome = await runCorpusCase(recorder, c);
 
     await settle(editor, activeSession);
     if (c.name === '01-delete-everything') {
@@ -262,5 +279,8 @@ describe.each(cases)('editor runner: $name', (c) => {
     }
     expect(process.env.BLOK_UPDATE_GOLDENS, 'Only the json runner generates goldens.').not.toBe('1');
     compareToGolden(c, normalizeForParity(saved, callerChosenIds(c)));
+    // The json engine's answers stand in for MCP's: the MCP runners compare to the same reference.
+    expect(projectAnswers(recorder.answers, caseStrings(c)), `${c.name}: Ask AI's answers differ from the json engine's`)
+      .toEqual(projectAnswers(await referenceAnswers(c, services), caseStrings(c)));
   }, CASE_TIMEOUT_MS);
 });

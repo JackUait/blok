@@ -32,6 +32,14 @@ export const normalizeQuote = fillMissing(QUOTE_LOAD_DEFAULTS);
 export const normalizeCallout = fillMissing(CALLOUT_LOAD_DEFAULTS);
 export const normalizeDatabase = fillMissing({ automations: DATABASE_EMPTY_AUTOMATIONS });
 
+/**
+ * Normalizers that only fill missing keys. A read shows a stored block through these, as the
+ * editor shows it after load. normalizeList is left out: it also drops stored keys.
+ */
+export const LOAD_DEFAULT_FILLS: ReadonlySet<(data: Record<string, unknown>) => Record<string, unknown>> = new Set([
+  normalizeCode, normalizeQuote, normalizeCallout, normalizeDatabase,
+]);
+
 export const normalizeList = (data: Record<string, unknown>): Record<string, unknown> => {
   const { checked, start, ...rest } = data;
 

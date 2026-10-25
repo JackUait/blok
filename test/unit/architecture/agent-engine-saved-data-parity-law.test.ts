@@ -44,7 +44,6 @@ const MINIMAL: Record<string, CorpusCommand[]> = {
     { name: 'database.create', args: { title: 'D', position: 'end' }, ref: 'd' },
     { name: 'database.addRow', args: { id: '$d' } },
   ],
-  'database-comment': [insert('database-comment', { text: 'hi', createdAt: 1 })],
   divider: [insert('divider')],
   spacer: [insert('spacer')],
   table_of_contents: [insert('table_of_contents')],
@@ -71,7 +70,8 @@ const MINIMAL: Record<string, CorpusCommand[]> = {
 
 /** Tools with no case, and why. */
 const NO_CASE: Record<string, string> = {
-  page: 'Inserting a page needs the pageBackend host service, which the headless engines refuse without (COMMAND_UNAVAILABLE).',
+  page: 'Only the editor can create the sub-page document a page needs, so the headless engines refuse the insert (COMMAND_UNAVAILABLE).',
+  'database-comment': 'Not insertable by an agent: people write comments in the editor, so every engine refuses the insert.',
 };
 
 /** Writes after the insert that leave defaulted keys out, set them to null, or change what they depend on. */

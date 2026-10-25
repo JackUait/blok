@@ -149,6 +149,42 @@ describe('the agent edits a sub-page through the host page documents', () => {
     expect(pages.get('nested')?.title).toBe('Deep');
   });
 
+  it('page.rename in a sub-page does not reach a pageId the agent wrote there in the same call', async () => {
+    const pages = new Map<string, OutputData>([
+      ['sub', { blocks: [{ id: 'deep', type: 'page', data: { pageId: 'nested' } }] }],
+      ['nested', { blocks: [] }],
+      ['other', { title: 'Private', blocks: [] }],
+    ]);
+    const editor = await boot(host(pages));
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+
+    await turn.call('blok_execute', { page: 'pg', commands: [{ name: 'block.update', args: { id: 'deep', data: { pageId: 'other' } } }] });
+    const renamed = await turn.call('blok_execute', { page: 'pg', commands: [{ name: 'page.rename', args: { id: 'deep', title: 'Taken' } }] });
+
+    turn.end();
+    expect(renamed.isError).toBe(true);
+    expect(pages.get('other')?.title).toBe('Private');
+  });
+
+  it('page.rename in a sub-page does not reach a pageId the agent wrote there in an earlier turn', async () => {
+    const pages = new Map<string, OutputData>([
+      ['sub', { blocks: [{ id: 'deep', type: 'page', data: { pageId: 'nested' } }] }],
+      ['nested', { blocks: [] }],
+      ['other', { title: 'Private', blocks: [] }],
+    ]);
+    const editor = await boot(host(pages));
+    const first = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+
+    await first.call('blok_execute', { page: 'pg', commands: [{ name: 'block.update', args: { id: 'deep', data: { pageId: 'other' } } }] });
+    first.end();
+    const second = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const renamed = await second.call('blok_execute', { page: 'pg', commands: [{ name: 'page.rename', args: { id: 'deep', title: 'Taken' } }] });
+
+    second.end();
+    expect(renamed.isError).toBe(true);
+    expect(pages.get('other')?.title).toBe('Private');
+  });
+
   it('page must name a page block', async () => {
     const editor = await boot(host(new Map([['sub', { blocks: [] }]])));
     const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });

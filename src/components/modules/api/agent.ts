@@ -350,6 +350,8 @@ export class AgentAPI extends Module {
         },
         contractSource: () => this.source(),
         services: () => this.services(),
+        onPagePointed: (pageId) => this.agentPageIds.add(pageId),
+        isAgentPageId: (pageId) => this.agentPageIds.has(pageId),
       });
     }
 

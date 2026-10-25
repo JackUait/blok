@@ -36,7 +36,16 @@ export interface PageDocumentsOptions {
   contractSource?(): ContractSource;
   /** The main session's host services. Read at open: building them needs these page documents. */
   services?(): Partial<Record<HostService, unknown>>;
+  /** A pageId an agent write left on a page block inside a sub-page. */
+  onPagePointed?(pageId: string): void;
+  /** True for a pageId an agent wrote. A page block inside a sub-page with one does not open. */
+  isAgentPageId?(pageId: string): boolean;
 }
+
+const pagePointers = (data: OutputData): Map<string, string> => new Map(data.blocks.flatMap((block) =>
+  block.type === 'page' && typeof block.id === 'string' && typeof block.data.pageId === 'string'
+    ? [[block.id, block.data.pageId] as const]
+    : []));
 
 /**
  * Opens a sub-page's own document through the page tool's loadDocument and
@@ -76,7 +85,7 @@ export const createPageDocuments = (
     const { pageBackend: _mainPageBackend, ...services } = options.services?.() ?? {};
     const session = createDocumentAgentSession({
       document, tools: source.runtimes(contract), contract, actor, services,
-      ports: { ...createEditorPorts(Blok), openPageDocument: open },
+      ports: { ...createEditorPorts(Blok), openPageDocument: openNested },
       pageTitles: 'page-map',
     });
 
@@ -87,9 +96,13 @@ export const createPageDocuments = (
           throw failure('READ_ONLY', 'The editor is read-only now. Reads still work.', { details: { pageId } });
         }
         const before = session.revision();
+        const pointersBefore = pagePointers(session.output());
         const result = await session.execute(batch, runOptions);
 
         if (result.ok && result.revision !== before) {
+          [...pagePointers(session.output())]
+            .filter(([blockId, pointed]) => pointersBefore.get(blockId) !== pointed)
+            .forEach(([, pointed]) => options.onPagePointed?.(pointed));
           options.onBeforeSave?.(pageId, original);
           await hooks.saveDocument(pageId, session.output());
         }
@@ -98,6 +111,11 @@ export const createPageDocuments = (
       },
     };
   };
+
+  // The same rule as page blocks in this document: a pageId an agent wrote could name any document.
+  const openNested: OpenPageDocument = (pageId, actor) => (options.isAgentPageId?.(pageId) === true
+    ? Promise.reject(failure('INVALID_ARGS', 'This page block points at a page an agent set, not one the host created. It cannot be opened.', { details: { pageId } }))
+    : open(pageId, actor));
 
   return { open, save: async (pageId, data) => hooks.saveDocument(pageId, data) };
 };

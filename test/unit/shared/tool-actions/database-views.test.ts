@@ -127,6 +127,19 @@ describe('database view actions', () => {
     expect(data().activeViewId).toBe(viewId);
   });
 
+  it.each([
+    [{ form: { public: true } }, /form\.public/],
+    [{ form: { submitLabel: 'Go', anonymous: true } }, /form\.anonymous/],
+    [{ calendarSync: { enabled: true } }, /calendarSync/],
+    [{ form: null }, /form/],
+  ])('updateView refuses sharing and access settings even past the schema: %j', (changes, field) => {
+    const { doc, id, data } = make();
+
+    expect(() => run(doc, id, 'updateView', { viewId: data().views[0].id, changes })).toThrow(FakeFailure);
+    expect(() => run(doc, id, 'updateView', { viewId: data().views[0].id, changes })).toThrow(field);
+    expect(() => run(doc, id, 'updateView', { viewId: data().views[0].id, changes })).toThrow(/sharing and access/);
+  });
+
   it('refuses view changes on a locked database', () => {
     const { doc, id, data } = make();
     const ctx = createFakeCtx(doc, id);

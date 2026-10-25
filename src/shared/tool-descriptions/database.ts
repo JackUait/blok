@@ -782,8 +782,13 @@ const VIEW_ID = { type: 'string', minLength: 1, description: 'Id of a view in vi
 /**
  * Not view settings: id and position are the view's own, the layout type is database.setLayout,
  * rowOrder follows row moves, visibleProperties follows properties, and only a relation tab's birth sets propertyOrder.
+ * calendarSync is an access setting (below).
  */
-const NOT_VIEW_SETTINGS = new Set(['id', 'position', 'type', 'visibleProperties', 'rowOrder', 'propertyOrder']);
+const NOT_VIEW_SETTINGS = new Set(['id', 'position', 'type', 'visibleProperties', 'rowOrder', 'propertyOrder', 'calendarSync']);
+
+/** Who can see or submit stays with the person (security review); updateView refuses these. */
+export const ACCESS_VIEW_SETTINGS: readonly string[] = ['calendarSync'];
+export const ACCESS_FORM_SETTINGS: readonly string[] = ['closed', 'anonymous', 'public', 'submissionAccess'];
 
 /** Saved on every view: a change can replace them, never remove them. */
 const REQUIRED_VIEW_SETTINGS = new Set(['name', 'sorts', 'filters']);
@@ -802,7 +807,16 @@ const VIEW_SETTING_ARGS: Record<string, unknown> = {
   filterTree: { type: 'object', description: 'Advanced filter: { conjunction: "and" | "or", filterRules: [rule or group] }, a rule being { propertyId, operator, value } and a group nesting the same shape, three layers deep. Ids are filled in when missing. Rows must match it and every simple filter.' },
   dashboard: { type: 'object', description: 'Dashboard slot, same shape as the saved view field. Blok draws no dashboard yet.' },
   colorRules: { ...VIEW_PROPERTIES.colorRules, items: withOptionalId(VIEW_PROPERTIES.colorRules.items as Record<string, unknown>) },
+  form: {
+    type: 'object',
+    additionalProperties: false,
+    description: 'Form view texts, merged into the saved form settings; null removes one. Who can fill the form out stays with the person.',
+    properties: { submitLabel: { anyOf: [{ type: 'string' }, { type: 'null' }] }, confirmation: { anyOf: [{ type: 'string' }, { type: 'null' }] } },
+  },
 };
+
+/** Merged, not replaced, so the access settings beside the texts stay. */
+const MERGED_VIEW_SETTINGS = new Set(['form']);
 
 const VIEW_CHANGES = {
   type: 'object',
@@ -810,7 +824,7 @@ const VIEW_CHANGES = {
   description: 'View keys to change, in the saved view shape. A key given replaces its whole value; null removes it (back to its default). Keys not given stay.',
   properties: Object.fromEntries(Object.entries(VIEW_SETTING_ARGS)
     .filter(([key]) => !NOT_VIEW_SETTINGS.has(key))
-    .map(([key, setting]) => [key, REQUIRED_VIEW_SETTINGS.has(key) ? setting : { anyOf: [setting, { type: 'null' }] }])),
+    .map(([key, setting]) => [key, REQUIRED_VIEW_SETTINGS.has(key) || MERGED_VIEW_SETTINGS.has(key) ? setting : { anyOf: [setting, { type: 'null' }] }])),
 };
 
 /** The title property's row page layout fields, settable through updateProperty. */
@@ -894,10 +908,10 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
   },
   {
     name: 'updateView',
-    summary: 'Change a view\'s saved settings: filters, sorts, grouping, calculations, columns, card, calendar, timeline, chart, map and form options. It applies for everyone.',
+    summary: 'Change a view\'s saved settings: filters, sorts, grouping, calculations, columns, card, calendar, timeline, chart, map and form texts. It applies for everyone.',
     guidance: 'Only the keys in changes change. Each key replaces its whole value, so read the view first: to hide one column, send the full properties list with that entry visible false. null removes a key. '
       + 'Grouping by another property resets groupSettings (subGroupBy: subGroupSettings) to that type\'s defaults unless changes also sets them. A filter or sort without an id gets one. '
-      + 'Change the layout type with database.setLayout.',
+      + 'Change the layout type with database.setLayout. Sharing and access settings (who can fill out a form, calendar sync) are not writable.',
     target: 'block',
     preconditions: ['The database is not locked.', 'Every property a setting names exists, and has a type that setting can use.'],
     args: closed({ viewId: VIEW_ID, changes: VIEW_CHANGES }, ['viewId', 'changes']),

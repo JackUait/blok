@@ -183,6 +183,34 @@ describe.each(sessions)('database view settings on a %s session', (_name, open) 
     }
   });
 
+  it.each([
+    [{ form: { public: true } }],
+    [{ form: { anonymous: true } }],
+    [{ form: { submissionAccess: 'edit' } }],
+    [{ form: { closed: false } }],
+    [{ calendarSync: { enabled: true } }],
+  ])('refuses a sharing or access setting: %j', async (changes) => {
+    const session = open(seedOf(databaseBlock([{ ...baseView, type: 'form', form: { public: false } }])));
+
+    try {
+      expect(errorOf(await update(session, changes))?.code).toBe('INVALID_ARGS');
+      expect((await viewOf(session)).form).toEqual({ public: false });
+    } finally {
+      await session.close();
+    }
+  });
+
+  it('form texts merge into the form settings and keep who can fill it out', async () => {
+    const session = open(seedOf(databaseBlock([{ ...baseView, type: 'form', form: { public: true, submitLabel: 'Go' } }])));
+
+    try {
+      expect(errorOf(await update(session, { form: { confirmation: 'Thanks', submitLabel: null } }))).toBeUndefined();
+      expect((await viewOf(session)).form).toEqual({ public: true, confirmation: 'Thanks' });
+    } finally {
+      await session.close();
+    }
+  });
+
   it('a board keeps its grouping', async () => {
     const session = open(seedOf(databaseBlock([{ ...baseView, type: 'board', groupBy: 'st' }])));
 

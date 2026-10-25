@@ -13,6 +13,7 @@ import {
 } from '../database/schema-ops';
 import { applyViewChanges, GROUPABLE_TYPES, groupByChange, layoutChange, subGroupByChange, withEntryIds } from '../database/view-changes';
 import { revealedInLegacyView } from '../database/view-properties';
+import { ACCESS_FORM_SETTINGS, ACCESS_VIEW_SETTINGS } from '../tool-descriptions/database';
 
 import type { BlockPosition } from '../../../types/api/blocks';
 import type { ToolActionContext, ToolActionImpl } from '../../../types/tools/tool-description';
@@ -366,10 +367,26 @@ const updateView: ToolActionImpl<{ viewId: string; changes: Record<string, unkno
     if (Object.keys(args.changes).length === 0) {
       ctx.fail('INVALID_ARGS', 'changes is empty: pass at least one view key.');
     }
+    const form = isRecord(args.changes.form) ? args.changes.form : {};
+    const access = [
+      ...ACCESS_VIEW_SETTINGS.filter(key => key in args.changes),
+      ...ACCESS_FORM_SETTINGS.filter(key => key in form).map(key => `form.${key}`),
+    ];
+
+    if (access.length > 0 || args.changes.form === null) {
+      ctx.fail('PRECONDITION_FAILED', `${access.length > 0 ? access.join(', ') : 'form'}: sharing and access settings stay with the person; an agent cannot change who can see or submit.`);
+    }
     const { block, state } = openDatabase(ctx);
     const index = viewIndex(ctx, state, args.viewId);
     const view = state.views[index] ?? ctx.fail('PRECONDITION_FAILED', `This database has no view ${args.viewId}.`);
     const changes: Record<string, unknown> = jsonCopy(args.changes);
+
+    if (isRecord(changes.form)) {
+      // Merged: the access settings beside the texts stay as the person set them.
+      const merged: Record<string, unknown> = { ...(view.form ?? {}), ...changes.form };
+
+      changes.form = Object.fromEntries(Object.entries(merged).filter(([, value]) => value !== null));
+    }
     const schema = referenceSchema(ctx, block, state, 'dataSourceId' in changes ? changes.dataSourceId : view.dataSourceId);
 
     if (schema !== undefined) {

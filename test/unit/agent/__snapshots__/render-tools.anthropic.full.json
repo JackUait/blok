@@ -4007,48 +4007,31 @@
                             ]
                           },
                           "form": {
-                            "anyOf": [
-                              {
-                                "type": "object",
-                                "description": "Form view settings. The public link is the host's.",
-                                "additionalProperties": false,
-                                "properties": {
-                                  "closed": {
-                                    "type": "boolean",
-                                    "description": "The form takes no answers. Default false."
-                                  },
-                                  "anonymous": {
-                                    "type": "boolean",
-                                    "description": "Answers carry no respondent. Default false."
-                                  },
-                                  "public": {
-                                    "type": "boolean",
-                                    "description": "Anyone on the web with the link can fill it out. Default false: workspace members only."
-                                  },
-                                  "submissionAccess": {
-                                    "type": "string",
-                                    "enum": [
-                                      "none",
-                                      "view",
-                                      "comment",
-                                      "edit",
-                                      "full"
-                                    ],
-                                    "description": "What a respondent may do with the page their answer becomes. Default none."
-                                  },
-                                  "submitLabel": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "description": "Form view texts, merged into the saved form settings; null removes one. Who can fill the form out stays with the person.",
+                            "properties": {
+                              "submitLabel": {
+                                "anyOf": [
+                                  {
                                     "type": "string"
                                   },
-                                  "confirmation": {
-                                    "type": "string",
-                                    "description": "Text shown after a submit."
+                                  {
+                                    "type": "null"
                                   }
-                                }
+                                ]
                               },
-                              {
-                                "type": "null"
+                              "confirmation": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
                               }
-                            ]
+                            }
                           },
                           "mapBy": {
                             "anyOf": [
@@ -4083,26 +4066,6 @@
                               {
                                 "type": "object",
                                 "description": "Dashboard slot, same shape as the saved view field. Blok draws no dashboard yet."
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "calendarSync": {
-                            "anyOf": [
-                              {
-                                "type": "object",
-                                "description": "Calendar sync slot, for the host. Blok syncs nothing.",
-                                "additionalProperties": false,
-                                "properties": {
-                                  "enabled": {
-                                    "type": "boolean"
-                                  },
-                                  "calendarId": {
-                                    "type": "string"
-                                  }
-                                }
                               },
                               {
                                 "type": "null"

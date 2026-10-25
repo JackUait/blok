@@ -96,7 +96,8 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/database/database-confirm-dialog.ts': exempt('chrome', 'Confirm or cancel of a destructive action; the confirmed action has its own id.'),
   'ui-file:src/tools/database/database-feed-view.ts': exempt('view-only', 'Loads more rows or opens a row in the feed; the document does not change.'),
   'ui-file:src/tools/database/database-form-view.ts': cmds(['database.addRow', 'database.updateView'], 'Submitting the form adds a row. Question settings are the view\'s properties entries.'),
-  'ui-file:src/tools/database/database-form-share.ts': cmds(['database.updateView'], 'Writes the form view\'s Share settings (form: closed, public, anonymous, submissionAccess). Copying the host\'s link changes nothing.'),
+  // The law wants D6 named in every cut-v1 reason.
+  'ui-file:src/tools/database/database-form-share.ts': exempt('cut-v1', 'Sharing and access settings stay with the person; user decision pending. Kept out of the D6 revisit: database.updateView refuses form.closed, public, anonymous and submissionAccess.'),
   'ui-file:src/tools/database/database-formula-editor.ts': cmds(['database.updateProperty'], 'Edits a formula property: writes its formula settings.'),
   'ui-file:src/tools/database/database-maplibre.ts': exempt('chrome', 'Draws Blok\'s map: a pin opens its row, and a map click goes to the map view\'s Add pin path, ledgered there.'),
   'ui-file:src/tools/database/database-map-view.ts': cmds(['database.addRow'], 'Add pin mode adds a row at a map point; the "No place" list only opens rows.'),
@@ -106,7 +107,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/database/database-property-menu.ts': cmds(['database.updateProperty'], 'Rename a property and pick its icon.'),
   'ui-file:src/tools/database/database-selection-bar.ts': cmds(['database.setRowValues', 'block.delete'], 'Edit a property on the selected rows, or delete them.'),
   'ui-file:src/tools/database/database-table-column-drag.ts': cmds(['database.updateView'], 'A column drag writes the order of the view\'s properties list.'),
-  'ui-file:src/tools/database/database-view-settings-panel.ts': cmds(['database.updateView', 'database.setLayout', 'database.setLock'], 'Every saved view setting, the layout type, and Lock database.'),
+  'ui-file:src/tools/database/database-view-settings-panel.ts': cmds(['database.updateView', 'database.setLayout', 'database.setLock'], 'Every saved view setting but sharing and access, the layout type, and Lock database.'),
   'ui-file:src/tools/database/database-table-grid.ts': cmds(['database.setRowValues'], 'Cell keys, paste and fill-drag write cell values.'),
   'ui-file:src/tools/database/database-table-resize.ts': cmds(['database.updateView'], 'A column resize writes the width of the view\'s properties entry.'),
   'ui-file:src/tools/database/database-table-row-drag.ts': cmds(['database.moveRow'], 'Reorder rows in the table view.'),

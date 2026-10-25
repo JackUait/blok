@@ -296,16 +296,14 @@ const CASES: Case[] = [
   { setting: 'groupByStatus', view: 'board', ui: () => ({ groupByStatus: 'group' }), agent: { groupByStatus: 'group' }, drawn: false },
   {
     setting: 'form', view: 'form',
-    ui: () => ({ form: { closed: true, submitLabel: 'Send', confirmation: 'Thanks' } }), agent: { form: { closed: true, submitLabel: 'Send', confirmation: 'Thanks' } },
+    ui: () => ({ form: { submitLabel: 'Send', confirmation: 'Thanks' } }), agent: { form: { submitLabel: 'Send', confirmation: 'Thanks' } },
   },
-  { setting: 'form share settings', view: 'form', ui: () => ({ form: { public: true, anonymous: true, submissionAccess: 'view' } }), agent: { form: { public: true, anonymous: true, submissionAccess: 'view' } }, drawn: false },
   {
     setting: 'form questions', view: 'form',
     ui: (v, s) => ({ properties: withPropertySetting(v, s, 'n', { required: true, description: 'How big', questionName: 'Size?' }) }),
     agent: { properties: [{ id: 't', visible: true }, { id: 'st', visible: true }, { id: 'n', visible: true, required: true, description: 'How big', questionName: 'Size?' }, { id: 'd', visible: true }, { id: 'e', visible: true }, { id: 'c', visible: true }, { id: 'dep', visible: true }] },
   },
   { setting: 'mapHeight', view: 'map', ui: () => ({ mapHeight: 'large' }), agent: { mapHeight: 'large' }, drawn: false },
-  { setting: 'calendarSync', view: 'calendar', ui: () => ({ calendarSync: { enabled: true, calendarId: 'cal' } }), agent: { calendarSync: { enabled: true, calendarId: 'cal' } }, drawn: false },
   {
     setting: 'dashboard', view: 'dashboard',
     ui: () => ({ dashboard: { rows: [{ id: 'row', widgets: [{ id: 'w', viewId: 'v1', width: 12 }] }] } }),

@@ -47,7 +47,8 @@ const databaseFixtures = loadBlockStates().flatMap((entry) => entry.states.flatM
 const makeTool = (data: DatabaseData): DatabaseTool => new DatabaseTool({
   data,
   config: {},
-  api: { events: { on: vi.fn(), off: vi.fn() } } as unknown as API,
+  // A linked view looks its source up on construction; none is found here.
+  api: { events: { on: vi.fn(), off: vi.fn() }, blocks: { getById: vi.fn() } } as unknown as API,
   block: { id: 'fixture', dispatchChange: vi.fn() } as unknown as BlockAPI,
   readOnly: false,
 });

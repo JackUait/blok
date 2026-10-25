@@ -385,6 +385,8 @@
     .block-states-tabs {
       position: sticky;
       top: 96px;
+      max-height: calc(100vh - 112px);
+      overflow-y: auto;
       display: flex;
       flex-direction: column;
       gap: 2px;
@@ -499,7 +501,7 @@
 
     @media (max-width: 1100px) {
       .block-states-layout { display: block; }
-      .block-states-tabs { position: static; flex-direction: row; flex-wrap: wrap; gap: 8px; margin-bottom: 32px; }
+      .block-states-tabs { position: static; max-height: none; overflow: visible; flex-direction: row; flex-wrap: wrap; gap: 8px; margin-bottom: 32px; }
       .block-states-tabs__pill { display: none; }
       .block-states-tab { border: 1px solid var(--pg-line-strong); border-radius: 999px; padding: 7px 14px; font-size: 13px; color: var(--pg-ink); }
       .block-states-tab[aria-selected="true"],
@@ -1804,7 +1806,7 @@
     // `data-blok-tool` on its blocks — an unscoped import would double-style the
     // editor. Scoping keeps the sheet affecting only the Blok View render.
     import viewCssText from './view.css?raw';
-    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, DatabaseComment, Divider, Spacer, TableOfContents, Quote, Code, Image, File as FileBlock, Video, Audio, ColumnList, Column, TabsTool, TabTool, Embed, Bookmark, Page, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode, Equation, ClearFormat, SupSub } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, DatabaseComment, Divider, Spacer, TableOfContents, Quote, Code, Image, File as FileBlock, Video, Audio, ColumnList, Column, TabsTool, TabTool, Embed, Bookmark, Page, PageLink, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode, Equation, ClearFormat, SupSub } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
     import { ALL_LOCALE_CODES, getDirection } from './src/components/i18n/locales/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
@@ -3257,6 +3259,7 @@
         readOnly: state.readOnly,
         editorConfig: state.editorConfig,
         width: state.width,
+        demoPick: state.demoPick,
         // A typed draft is filled into the first block's URL field after mount.
         drafts: state.draft ? [{ id: state.blocks[0].id, ...state.draft }] : [],
       }));
@@ -3272,6 +3275,8 @@
           { label: 'Filled', blocks: [{ id: 'p-filled', type: 'paragraph', data: { text: 'The quick brown fox jumps over the lazy dog.' } }] },
           { label: 'Rich text', blocks: [{ id: 'p-rich', type: 'paragraph', data: { text: 'Mix of <b>bold</b>, <i>italic</i>, <u>underline</u>, and <a href="#">links</a>.' } }] },
           { label: 'Long text', blocks: [{ id: 'p-long', type: 'paragraph', data: { text: 'Blocks are the universal primitive in Blok. Every content entity — from a paragraph to a database row — implements the BlockTool interface.' } }] },
+          { label: 'Colored text', blocks: [{ id: 'p-color', type: 'paragraph', data: { text: 'Red text, set on the whole block.', textColor: 'red' } }] },
+          { label: 'Colored bg', blocks: [{ id: 'p-bg', type: 'paragraph', data: { text: 'Yellow background on the whole block.', backgroundColor: 'yellow' } }] },
         ],
       },
       {
@@ -3293,6 +3298,10 @@
             { id: 'th-closed', type: 'header', data: { text: 'Toggle heading (closed)', level: 2, isToggleable: true, isOpen: false }, content: ['th-closed-child'] },
             { id: 'th-closed-child', type: 'paragraph', data: { text: 'Hidden child' }, parent: 'th-closed' },
           ] },
+          { label: 'Colored text', blocks: [{ id: 'h-color', type: 'header', data: { text: 'Colored heading', level: 2, textColor: 'blue' } }] },
+          { label: 'Colored bg', blocks: [{ id: 'h-bg', type: 'header', data: { text: 'Highlighted heading', level: 2, backgroundColor: 'purple' } }] },
+          { label: 'Toggle H2 · empty', blocks: [{ id: 'h-tg-empty', type: 'header', data: { text: 'Toggle heading, no children', level: 2, isToggleable: true } }] },
+          { label: 'Toggle H2 · open, empty', blocks: [{ id: 'h-tg-empty-open', type: 'header', data: { text: 'Open toggle heading, no children', level: 2, isToggleable: true, isOpen: true } }] },
         ],
       },
       {
@@ -3328,7 +3337,8 @@
             { id: 'lnb-header', type: 'header', data: { text: 'Nested header', level: 3 }, indent: 1 },
             { id: 'lnb-para', type: 'paragraph', data: { text: 'A paragraph nested one level into the list.' }, indent: 1 },
             { id: 'lnb-quote', type: 'quote', data: { text: 'A quote, nested in the list.', size: 'default' }, indent: 1 },
-            { id: 'lnb-callout', type: 'callout', data: { text: 'A callout, nested.', emoji: '💡' }, indent: 1 },
+            { id: 'lnb-callout', type: 'callout', data: { emoji: '💡' }, content: ['lnb-callout-p'], indent: 1 },
+            { id: 'lnb-callout-p', type: 'paragraph', data: { text: 'A callout, nested.' }, parent: 'lnb-callout' },
             { id: 'lnb-code', type: 'code', data: { code: 'const nested = true;', language: 'javascript', lineNumbers: true }, indent: 1 },
             { id: 'lnb-divider', type: 'divider', data: {}, indent: 1 },
             { id: 'lnb-image', type: 'image', data: { url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400', alt: 'Nested image', width: 40, alignment: 'left' }, indent: 1 },
@@ -3359,6 +3369,22 @@
             { id: 'lnb-db-r1', type: 'database-row', data: { properties: { title: 'Nested row', status: 'done' }, position: 'a0' }, parent: 'lnb-db' },
           ] },
           { label: 'Empty', blocks: [{ id: 'ul-empty', type: 'list', data: { style: 'unordered', text: '' } }] },
+          { label: 'Ordered · start 5', blocks: [
+            { id: 'ul-start-1', type: 'list', data: { style: 'ordered', text: 'Fifth step', start: 5 } },
+            { id: 'ul-start-2', type: 'list', data: { style: 'ordered', text: 'Sixth step' } },
+            { id: 'ul-start-3', type: 'list', data: { style: 'ordered', text: 'Seventh step' } },
+          ] },
+          { label: 'Nested ordered', blocks: [
+            { id: 'ul-onest-1', type: 'list', data: { style: 'ordered', text: 'Plan' } },
+            { id: 'ul-onest-2', type: 'list', data: { style: 'ordered', text: 'Draft', depth: 1 } },
+            { id: 'ul-onest-3', type: 'list', data: { style: 'ordered', text: 'Review', depth: 1 } },
+            { id: 'ul-onest-4', type: 'list', data: { style: 'ordered', text: 'Fix typos', depth: 2 } },
+            { id: 'ul-onest-5', type: 'list', data: { style: 'ordered', text: 'Ship' } },
+          ] },
+          { label: 'Checklist · read-only', readOnly: true, blocks: [
+            { id: 'ul-ro-1', type: 'list', data: { style: 'checklist', text: 'Done item', checked: true } },
+            { id: 'ul-ro-2', type: 'list', data: { style: 'checklist', text: 'Open item' } },
+          ] },
         ],
       },
       {
@@ -3380,6 +3406,45 @@
             ['Revenue', '$10K', '$14K'],
             ['Costs', '$6K', '$7K'],
           ] } }] },
+          { label: 'Merged cells', blocks: [{ id: 't-merge', type: 'table', data: { withHeadings: false, content: [
+            [{ blocks: [], text: 'Spans 2×2', colspan: 2, rowspan: 2 }, { blocks: [], text: '', mergedInto: [0, 0] }, { blocks: [], text: 'C1' }],
+            [{ blocks: [], text: '', mergedInto: [0, 0] }, { blocks: [], text: '', mergedInto: [0, 0] }, { blocks: [], text: 'C2' }],
+            [{ blocks: [], text: 'A3' }, { blocks: [], text: 'B3' }, { blocks: [], text: 'C3' }],
+          ] } }] },
+          { label: 'Cell colors', blocks: [{ id: 't-color', type: 'table', data: { withHeadings: true, content: [
+            [{ blocks: [], text: 'Task' }, { blocks: [], text: 'Status' }, { blocks: [], text: 'Owner' }],
+            [{ blocks: [], text: 'Launch' }, { blocks: [], text: 'Done', color: 'var(--blok-color-green-bg)', textColor: 'var(--blok-color-green-text)' }, { blocks: [], text: 'Ada' }],
+            [{ blocks: [], text: 'Audit' }, { blocks: [], text: 'Blocked', color: 'var(--blok-color-red-bg)', textColor: 'var(--blok-color-red-text)' }, { blocks: [], text: 'Linus', textColor: 'var(--blok-color-blue-text)' }],
+          ] } }] },
+          { label: 'Comfortable text', blocks: [{ id: 't-comfy', type: 'table', data: { textSize: 'comfortable', content: [['Name', 'Role', 'Team'], ['Ada', 'Engineer', 'Core'], ['Linus', 'Designer', 'Tools']] } }] },
+          { label: 'Custom widths (scrolls)', blocks: [{ id: 't-wide', type: 'table', data: { colWidths: [240, 240, 240, 240], content: [
+            ['Region', 'Q1', 'Q2', 'Q3'], ['North', '$10K', '$12K', '$15K'], ['South', '$8K', '$9K', '$11K'],
+          ] } }] },
+          { label: 'Full width', blocks: [{ id: 't-stretch', type: 'table', data: { stretched: true, content: [['Name', 'Role', 'Team'], ['Ada', 'Engineer', 'Core'], ['Linus', 'Designer', 'Tools']] } }] },
+          { label: 'Cell alignment', blocks: [
+            { id: 't-place', type: 'table', data: { withHeadings: false, content: [
+              [{ blocks: ['t-place-a1', 't-place-a2', 't-place-a3'] }, { blocks: ['t-place-b'], placement: 'middle-center' }, { blocks: ['t-place-c'], placement: 'bottom-right' }],
+            ] }, content: ['t-place-a1', 't-place-a2', 't-place-a3', 't-place-b', 't-place-c'] },
+            { id: 't-place-a1', type: 'paragraph', data: { text: 'A tall' }, parent: 't-place' },
+            { id: 't-place-a2', type: 'paragraph', data: { text: 'three-line' }, parent: 't-place' },
+            { id: 't-place-a3', type: 'paragraph', data: { text: 'cell' }, parent: 't-place' },
+            { id: 't-place-b', type: 'paragraph', data: { text: 'Middle center' }, parent: 't-place' },
+            { id: 't-place-c', type: 'paragraph', data: { text: 'Bottom right' }, parent: 't-place' },
+          ] },
+          { label: 'List in a cell', blocks: [
+            { id: 't-list', type: 'table', data: { withHeadings: true, content: [
+              [{ blocks: ['t-list-h1'] }, { blocks: ['t-list-h2'] }],
+              [{ blocks: ['t-list-p'] }, { blocks: ['t-list-l1', 't-list-l2', 't-list-l3'] }],
+            ] }, content: ['t-list-h1', 't-list-h2', 't-list-p', 't-list-l1', 't-list-l2', 't-list-l3'] },
+            { id: 't-list-h1', type: 'paragraph', data: { text: 'Step' }, parent: 't-list' },
+            { id: 't-list-h2', type: 'paragraph', data: { text: 'Checks' }, parent: 't-list' },
+            { id: 't-list-p', type: 'paragraph', data: { text: 'Release' }, parent: 't-list' },
+            { id: 't-list-l1', type: 'list', data: { text: 'Tests green', style: 'checklist', checked: true }, parent: 't-list' },
+            { id: 't-list-l2', type: 'list', data: { text: 'Notes written', style: 'checklist' }, parent: 't-list' },
+            { id: 't-list-l3', type: 'list', data: { text: 'Sub-item', style: 'checklist', depth: 1 }, parent: 't-list' },
+          ] },
+          { label: 'Read-only', readOnly: true, blocks: [{ id: 't-ro', type: 'table', data: { withHeadings: true, content: [['Name', 'Role', 'Team'], ['Ada', 'Engineer', 'Core'], ['Linus', 'Designer', 'Tools']] } }] },
+          { label: 'Right-to-left', editorConfig: { i18n: { direction: 'rtl' } }, blocks: [{ id: 't-rtl', type: 'table', data: { withHeadings: true, content: [['שם', 'תפקיד', 'צוות'], ['עדה', 'מהנדסת', 'ליבה'], ['לינוס', 'מעצב', 'כלים']] } }] },
         ],
       },
       {
@@ -3396,6 +3461,15 @@
             { id: 'tg-closed-c', type: 'paragraph', data: { text: 'Hidden child' }, parent: 'tg-closed' },
           ] },
           { label: 'Empty (no children)', blocks: [{ id: 'tg-empty', type: 'toggle', data: { text: 'Empty toggle', isOpen: true } }] },
+          { label: 'Open, empty', blocks: [{ id: 'tg-empty-open', type: 'toggle', data: { text: 'Open toggle, no children', isOpen: true } }] },
+          { label: 'Colored text', blocks: [
+            { id: 'tg-color', type: 'toggle', data: { text: 'Colored toggle', textColor: 'green' }, content: ['tg-color-c'] },
+            { id: 'tg-color-c', type: 'paragraph', data: { text: 'Child.' }, parent: 'tg-color' },
+          ] },
+          { label: 'Colored bg', blocks: [
+            { id: 'tg-bg', type: 'toggle', data: { text: 'Toggle with a background', backgroundColor: 'orange' }, content: ['tg-bg-c'] },
+            { id: 'tg-bg-c', type: 'paragraph', data: { text: 'Child.' }, parent: 'tg-bg' },
+          ] },
         ],
       },
       {
@@ -3419,8 +3493,18 @@
             { id: 'c-text-p', type: 'paragraph', data: { text: 'Red text on plain background.' }, parent: 'c-text' },
           ] },
           { label: 'Both colors', blocks: [
-            { id: 'c-both', type: 'callout', data: { emoji: '✨', backgroundColor: 'blue', textColor: 'white' }, content: ['c-both-p'] },
+            { id: 'c-both', type: 'callout', data: { emoji: '✨', backgroundColor: 'blue', textColor: 'purple' }, content: ['c-both-p'] },
             { id: 'c-both-p', type: 'paragraph', data: { text: 'Both colors set.' }, parent: 'c-both' },
+          ] },
+          { label: 'Rich body', blocks: [
+            { id: 'c-rich', type: 'callout', data: { emoji: '📌', backgroundColor: 'gray' }, content: ['c-rich-p', 'c-rich-l1', 'c-rich-l2'] },
+            { id: 'c-rich-p', type: 'header', data: { text: 'Before you start', level: 3 }, parent: 'c-rich' },
+            { id: 'c-rich-l1', type: 'list', data: { style: 'unordered', text: 'Install the package' }, parent: 'c-rich' },
+            { id: 'c-rich-l2', type: 'list', data: { style: 'unordered', text: 'Register the tools' }, parent: 'c-rich' },
+          ] },
+          { label: 'Empty body', blocks: [
+            { id: 'c-empty', type: 'callout', data: { emoji: '💡' }, content: ['c-empty-p'] },
+            { id: 'c-empty-p', type: 'paragraph', data: { text: '' }, parent: 'c-empty' },
           ] },
         ],
       },
@@ -3460,6 +3544,19 @@
             { id: 'colr-b-l1', type: 'list', data: { style: 'checklist', text: 'Headers', checked: true }, parent: 'colr-b' },
             { id: 'colr-b-l2', type: 'list', data: { style: 'checklist', text: 'Lists', checked: true }, parent: 'colr-b' },
           ] },
+          { label: 'Five columns', blocks: [
+            { id: 'col5', type: 'column_list', data: {}, content: ['col5-a', 'col5-b', 'col5-c', 'col5-d', 'col5-e'] },
+            { id: 'col5-a', type: 'column', data: {}, parent: 'col5', content: ['col5-a-p'] },
+            { id: 'col5-a-p', type: 'paragraph', data: { text: 'One' }, parent: 'col5-a' },
+            { id: 'col5-b', type: 'column', data: {}, parent: 'col5', content: ['col5-b-p'] },
+            { id: 'col5-b-p', type: 'paragraph', data: { text: 'Two' }, parent: 'col5-b' },
+            { id: 'col5-c', type: 'column', data: {}, parent: 'col5', content: ['col5-c-p'] },
+            { id: 'col5-c-p', type: 'paragraph', data: { text: 'Three' }, parent: 'col5-c' },
+            { id: 'col5-d', type: 'column', data: {}, parent: 'col5', content: ['col5-d-p'] },
+            { id: 'col5-d-p', type: 'paragraph', data: { text: 'Four' }, parent: 'col5-d' },
+            { id: 'col5-e', type: 'column', data: {}, parent: 'col5', content: ['col5-e-p'] },
+            { id: 'col5-e-p', type: 'paragraph', data: { text: 'Five' }, parent: 'col5-e' },
+          ] },
         ],
       },
       {
@@ -3487,6 +3584,13 @@
             { id: 'tabse-a', type: 'tab', data: { title: 'Empty' }, parent: 'tabse' },
             { id: 'tabse-b', type: 'tab', data: { title: 'Filled' }, content: ['tabse-b-p'], parent: 'tabse' },
             { id: 'tabse-b-p', type: 'paragraph', data: { text: 'Only this tab has content.' }, parent: 'tabse-b' },
+          ] },
+          // Read-only hides the empty tab's placeholder, so the panel is blank.
+          { label: 'Empty tab · read-only', readOnly: true, blocks: [
+            { id: 'tabsero', type: 'tabs', data: {}, content: ['tabsero-a', 'tabsero-b'] },
+            { id: 'tabsero-a', type: 'tab', data: { title: 'Empty' }, parent: 'tabsero' },
+            { id: 'tabsero-b', type: 'tab', data: { title: 'Filled' }, content: ['tabsero-b-p'], parent: 'tabsero' },
+            { id: 'tabsero-b-p', type: 'paragraph', data: { text: 'Only this tab has content.' }, parent: 'tabsero-b' },
           ] },
           { label: 'Single tab', blocks: [
             { id: 'tabs1', type: 'tabs', data: {}, content: ['tabs1-a'] },
@@ -3547,7 +3651,8 @@
             { id: 'tabsr-code', type: 'code', data: { code: 'yarn release 1.16.0', language: 'bash' }, parent: 'tabsr-a' },
             { id: 'tabsr-b', type: 'tab', data: { title: 'Notes', icon: '📝' }, content: ['tabsr-b-q', 'tabsr-b-c'], parent: 'tabsr' },
             { id: 'tabsr-b-q', type: 'quote', data: { text: 'Ship small, ship often.', size: 'default' }, parent: 'tabsr-b' },
-            { id: 'tabsr-b-c', type: 'callout', data: { text: 'Every tab holds ordinary blocks.', emoji: '💡' }, parent: 'tabsr-b' },
+            { id: 'tabsr-b-c', type: 'callout', data: { emoji: '💡' }, content: ['tabsr-b-c-p'], parent: 'tabsr-b' },
+            { id: 'tabsr-b-c-p', type: 'paragraph', data: { text: 'Every tab holds ordinary blocks.' }, parent: 'tabsr-b-c' },
           ] },
           { label: 'Tabs inside a tab', blocks: [
             { id: 'tabsn', type: 'tabs', data: {}, content: ['tabsn-a', 'tabsn-b'] },
@@ -3635,6 +3740,841 @@
               activeViewId: 'v1',
             } },
           ] },
+          {
+            label: 'Table view · every stored property type',
+            toolConfig: { database: { people: { list: async () => [{ id: 'u-ada', name: 'Ada Lovelace' }, { id: 'u-alan', name: 'Alan Turing' }] } } },
+            blocks: [
+              {
+                id: 'db-table',
+                type: 'database',
+                data: {
+                  schema: [
+                    { id: 'title', name: 'Name', type: 'title', position: 'a0' },
+                    {
+                      id: 'status',
+                      name: 'Status',
+                      type: 'status',
+                      position: 'a1',
+                      status: {
+                        groups: [
+                          { id: 'todo', kind: 'todo', name: 'To-do', color: 'gray', position: 'a0' },
+                          { id: 'inProgress', kind: 'inProgress', name: 'In progress', color: 'blue', position: 'a1' },
+                          { id: 'complete', kind: 'complete', name: 'Complete', color: 'green', position: 'a2' }
+                        ]
+                      },
+                      config: {
+                        options: [
+                          { id: 'st-ns', label: 'Not started', position: 'a0', groupId: 'todo' },
+                          { id: 'st-ip', label: 'In progress', color: 'blue', position: 'a0', groupId: 'inProgress' },
+                          { id: 'st-dn', label: 'Done', color: 'green', position: 'a0', groupId: 'complete' }
+                        ]
+                      }
+                    },
+                    {
+                      id: 'tags',
+                      name: 'Tags',
+                      type: 'multiSelect',
+                      position: 'a2',
+                      config: {
+                        options: [
+                          { id: 'tg-ui', label: 'UI', color: 'purple', position: 'a0' },
+                          { id: 'tg-api', label: 'API', color: 'blue', position: 'a1' },
+                          { id: 'tg-bug', label: 'Bug', color: 'red', position: 'a2' }
+                        ]
+                      }
+                    },
+                    { id: 'owner', name: 'Owner', type: 'person', position: 'a3' },
+                    { id: 'due', name: 'Due', type: 'date', position: 'a4' },
+                    { id: 'points', name: 'Points', type: 'number', position: 'a5' },
+                    { id: 'shipped', name: 'Shipped', type: 'checkbox', position: 'a6' },
+                    { id: 'notes', name: 'Notes', type: 'text', position: 'a7' },
+                    { id: 'link', name: 'Link', type: 'url', position: 'a8' },
+                    { id: 'email', name: 'Email', type: 'email', position: 'a9' },
+                    { id: 'phone', name: 'Phone', type: 'phone', position: 'b0' },
+                    { id: 'files', name: 'Files', type: 'files', position: 'b1' }
+                  ],
+                  views: [
+                    {
+                      id: 'v1',
+                      type: 'table',
+                      name: 'Table',
+                      position: 'a0',
+                      sorts: [],
+                      filters: [],
+                      visibleProperties: [
+                        'status', 'tags',
+                        'owner',  'due',
+                        'points', 'shipped',
+                        'notes',  'link',
+                        'email',  'phone',
+                        'files'
+                      ]
+                    }
+                  ],
+                  activeViewId: 'v1'
+                },
+                content: [ 'db-table-r1', 'db-table-r2', 'db-table-r3' ]
+              },
+              {
+                id: 'db-table-r1',
+                type: 'database-row',
+                data: {
+                  properties: {
+                    title: 'Login page',
+                    status: 'st-ip',
+                    tags: [ 'tg-ui', 'tg-bug' ],
+                    owner: [ { id: 'u-ada' } ],
+                    due: '2026-10-28',
+                    points: 5,
+                    shipped: false,
+                    notes: 'Waiting on copy',
+                    link: 'https://example.com/login',
+                    email: 'ada@example.com',
+                    phone: '+1 555 0100',
+                    files: [ { id: 'f1', name: 'spec.pdf', url: 'https://example.com/spec.pdf' } ]
+                  },
+                  position: 'a0'
+                },
+                parent: 'db-table'
+              },
+              {
+                id: 'db-table-r2',
+                type: 'database-row',
+                data: {
+                  properties: {
+                    title: 'Search API',
+                    status: 'st-dn',
+                    tags: [ 'tg-api' ],
+                    owner: [ { id: 'u-alan' } ],
+                    due: '2026-10-14/2026-10-20',
+                    points: 8,
+                    shipped: true,
+                    notes: '',
+                    link: '',
+                    email: '',
+                    phone: '',
+                    files: []
+                  },
+                  position: 'a1'
+                },
+                parent: 'db-table'
+              },
+              {
+                id: 'db-table-r3',
+                type: 'database-row',
+                data: { properties: { title: 'Onboarding', status: 'st-ns', tags: [], owner: [], due: null, points: null, shipped: false }, position: 'a2' },
+                parent: 'db-table'
+              }
+            ]
+          },
+          {
+            label: 'Several views (tab strip)',
+            blocks: [
+              {
+                id: 'db-tabs',
+                type: 'database',
+                data: {
+                  schema: [
+                    { id: 'title', name: 'Name', type: 'title', position: 'a0' },
+                    {
+                      id: 'status',
+                      name: 'Status',
+                      type: 'select',
+                      position: 'a1',
+                      config: {
+                        options: [
+                          { id: 'todo', label: 'Todo', color: 'gray', position: 'a0' },
+                          { id: 'doing', label: 'Doing', color: 'yellow', position: 'a1' },
+                          { id: 'done', label: 'Done', color: 'green', position: 'a2' }
+                        ]
+                      }
+                    }
+                  ],
+                  views: [
+                    { id: 'v1', type: 'table', name: 'Table', position: 'a0', sorts: [], filters: [], visibleProperties: [ 'status' ] },
+                    { id: 'v2', type: 'board', name: 'Board', position: 'a1', sorts: [], filters: [], visibleProperties: [], groupBy: 'status' },
+                    { id: 'v3', type: 'list', name: 'List', position: 'a2', sorts: [], filters: [], visibleProperties: [ 'status' ] },
+                    { id: 'v4', type: 'gallery', name: 'Gallery', position: 'a3', sorts: [], filters: [], visibleProperties: [] }
+                  ],
+                  activeViewId: 'v1'
+                },
+                content: [ 'db-tabs-r1', 'db-tabs-r2' ]
+              },
+              { id: 'db-tabs-r1', type: 'database-row', data: { properties: { title: 'Plan', status: 'todo' }, position: 'a0' }, parent: 'db-tabs' },
+              { id: 'db-tabs-r2', type: 'database-row', data: { properties: { title: 'Ship', status: 'done' }, position: 'a1' }, parent: 'db-tabs' }
+            ]
+          },
+          {
+            label: 'Title and icon',
+            blocks: [
+              {
+                id: 'db-titled',
+                type: 'database',
+                data: {
+                  title: 'Roadmap',
+                  icon: { glyph: 'timeline', color: 'blue' },
+                  schema: [
+                    { id: 'title', name: 'Name', type: 'title', position: 'a0' },
+                    {
+                      id: 'status',
+                      name: 'Status',
+                      type: 'select',
+                      position: 'a1',
+                      config: {
+                        options: [
+                          { id: 'todo', label: 'Todo', color: 'gray', position: 'a0' },
+                          { id: 'doing', label: 'Doing', color: 'yellow', position: 'a1' },
+                          { id: 'done', label: 'Done', color: 'green', position: 'a2' }
+                        ]
+                      }
+                    }
+                  ],
+                  views: [ { id: 'v1', type: 'table', name: 'Table', position: 'a0', sorts: [], filters: [], visibleProperties: [ 'status' ] } ],
+                  activeViewId: 'v1'
+                },
+                content: [ 'db-titled-r1' ]
+              },
+              { id: 'db-titled-r1', type: 'database-row', data: { properties: { title: 'Q4 launch', status: 'doing' }, position: 'a0' }, parent: 'db-titled' }
+            ]
+          },
+          {
+            label: 'Gallery view',
+            blocks: [
+              {
+                id: 'db-gallery',
+                type: 'database',
+                data: {
+                  schema: [
+                    { id: 'title', name: 'Name', type: 'title', position: 'a0' },
+                    {
+                      id: 'status',
+                      name: 'Status',
+                      type: 'select',
+                      position: 'a1',
+                      config: {
+                        options: [
+                          { id: 'todo', label: 'Todo', color: 'gray', position: 'a0' },
+                          { id: 'doing', label: 'Doing', color: 'yellow', position: 'a1' },
+                          { id: 'done', label: 'Done', color: 'green', position: 'a2' }
+                        ]
+                      }
+                    }
+                  ],
+                  views: [ { id: 'v1', type: 'gallery', name: 'Gallery', position: 'a0', sorts: [], filters: [], visibleProperties: [ 'status' ], cardPreview: 'none' } ],
+                  activeViewId: 'v1'
+                },
+                content: [ 'db-gal-r1', 'db-gal-r2', 'db-gal-r3' ]
+              },
+              { id: 'db-gal-r1', type: 'database-row', data: { properties: { title: 'Brand refresh', status: 'doing' }, position: 'a0' }, parent: 'db-gallery' },
+              { id: 'db-gal-r2', type: 'database-row', data: { properties: { title: 'Docs site', status: 'done' }, position: 'a1' }, parent: 'db-gallery' },
+              { id: 'db-gal-r3', type: 'database-row', data: { properties: { title: 'Mobile app', status: 'todo' }, position: 'a2' }, parent: 'db-gallery' }
+            ]
+          },
+          {
+            label: 'Gallery · cover preview',
+            blocks: [
+              {
+                id: 'db-gal-cover',
+                type: 'database',
+                data: {
+                  schema: [ { id: 'title', name: 'Name', type: 'title', position: 'a0' } ],
+                  views: [ { id: 'v1', type: 'gallery', name: 'Gallery', position: 'a0', sorts: [], filters: [], visibleProperties: [], cardPreview: 'cover', cardSize: 'medium' } ],
+                  activeViewId: 'v1'
+                },
+                content: [ 'db-galc-r1', 'db-galc-r2' ]
+              },
+              {
+                id: 'db-galc-r1',
+                type: 'database-row',
+                data: { properties: { title: 'Mountains' }, position: 'a0', cover: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800' },
+                parent: 'db-gal-cover'
+              },
+              { id: 'db-galc-r2', type: 'database-row', data: { properties: { title: 'No cover' }, position: 'a1' }, parent: 'db-gal-cover' }
+            ]
+          },
+          {
+            label: 'Calendar view',
+            blocks: [
+              {
+                id: 'db-calendar',
+                type: 'database',
+                data: {
+                  schema: [ { id: 'title', name: 'Name', type: 'title', position: 'a0' }, { id: 'when', name: 'Date', type: 'date', position: 'a1' } ],
+                  views: [ { id: 'v1', type: 'calendar', name: 'Calendar', position: 'a0', sorts: [], filters: [], visibleProperties: [], calendarBy: 'when' } ],
+                  activeViewId: 'v1'
+                },
+                content: [ 'db-cal-r1', 'db-cal-r2' ]
+              },
+              { id: 'db-cal-r1', type: 'database-row', data: { properties: { title: 'Kickoff', when: '2026-10-06' }, position: 'a0' }, parent: 'db-calendar' },
+              { id: 'db-cal-r2', type: 'database-row', data: { properties: { title: 'Offsite', when: '2026-10-14/2026-10-16' }, position: 'a1' }, parent: 'db-calendar' }
+            ]
+          },
+          {
+            label: 'Calendar · no date property',
+            blocks: [
+              {
+                id: 'db-cal-nodate',
+                type: 'database',
+                data: {
+                  schema: [ { id: 'title', name: 'Name', type: 'title', position: 'a0' } ],
+                  views: [ { id: 'v1', type: 'calendar', name: 'Calendar', position: 'a0', sorts: [], filters: [], visibleProperties: [] } ],
+                  activeViewId: 'v1'
+                }
+              }
+            ]
+          },
+          {
+            label: 'Timeline view',
+            blocks: [
+              {
+                id: 'db-timeline',
+                type: 'database',
+                data: {
+                  schema: [ { id: 'title', name: 'Name', type: 'title', position: 'a0' }, { id: 'span', name: 'Dates', type: 'date', position: 'a1' } ],
+                  views: [
+                    {
+                      id: 'v1',
+                      type: 'timeline',
+                      name: 'Timeline',
+                      position: 'a0',
+                      sorts: [],
+                      filters: [],
+                      visibleProperties: [],
+                      timelineBy: 'span',
+                      timelineZoom: 'week',
+                      timelineCenter: '2026-10-12'
+                    }
+                  ],
+                  activeViewId: 'v1'
+                },
+                content: [ 'db-tl-r1', 'db-tl-r2' ]
+              },
+              { id: 'db-tl-r1', type: 'database-row', data: { properties: { title: 'Research', span: '2026-10-05/2026-10-09' }, position: 'a0' }, parent: 'db-timeline' },
+              { id: 'db-tl-r2', type: 'database-row', data: { properties: { title: 'Build', span: '2026-10-08/2026-10-16' }, position: 'a1' }, parent: 'db-timeline' }
+            ]
+          },
+          {
+            label: 'Chart · column',
+            blocks: [
+              {
+                id: 'db-chart',
+                type: 'database',
+                data: {
+                  schema: [
+                    { id: 'title', name: 'Name', type: 'title', position: 'a0' },
+                    {
+                      id: 'status',
+                      name: 'Status',
+                      type: 'select',
+                      position: 'a1',
+                      config: {
+                        options: [
+                          { id: 'todo', label: 'Todo', color: 'gray', position: 'a0' },
+                          { id: 'doing', label: 'Doing', color: 'yellow', position: 'a1' },
+                          { id: 'done', label: 'Done', color: 'green', position: 'a2' }
+                        ]
+                      }
+                    }
+                  ],
+                  views: [ { id: 'v1', type: 'chart', name: 'Chart', position: 'a0', sorts: [], filters: [], visibleProperties: [], groupBy: 'status', chartType: 'column' } ],
+                  activeViewId: 'v1'
+                },
+                content: [ 'db-ch-r1', 'db-ch-r2', 'db-ch-r3', 'db-ch-r4' ]
+              },
+              { id: 'db-ch-r1', type: 'database-row', data: { properties: { title: 'A', status: 'todo' }, position: 'a0' }, parent: 'db-chart' },
+              { id: 'db-ch-r2', type: 'database-row', data: { properties: { title: 'B', status: 'doing' }, position: 'a1' }, parent: 'db-chart' },
+              { id: 'db-ch-r3', type: 'database-row', data: { properties: { title: 'C', status: 'doing' }, position: 'a2' }, parent: 'db-chart' },
+              { id: 'db-ch-r4', type: 'database-row', data: { properties: { title: 'D', status: 'done' }, position: 'a3' }, parent: 'db-chart' }
+            ]
+          },
+          {
+            label: 'Chart · donut',
+            blocks: [
+              {
+                id: 'db-donut',
+                type: 'database',
+                data: {
+                  schema: [
+                    { id: 'title', name: 'Name', type: 'title', position: 'a0' },
+                    {
+                      id: 'status',
+                      name: 'Status',
+                      type: 'select',
+                      position: 'a1',
+                      config: {
+                        options: [
+                          { id: 'todo', label: 'Todo', color: 'gray', position: 'a0' },
+                          { id: 'doing', label: 'Doing', color: 'yellow', position: 'a1' },
+                          { id: 'done', label: 'Done', color: 'green', position: 'a2' }
+                        ]
+                      }
+                    }
+                  ],
+                  views: [ { id: 'v1', type: 'chart', name: 'Chart', position: 'a0', sorts: [], filters: [], visibleProperties: [], groupBy: 'status', chartType: 'donut' } ],
+                  activeViewId: 'v1'
+                },
+                content: [ 'db-dn-r1', 'db-dn-r2', 'db-dn-r3' ]
+              },
+              { id: 'db-dn-r1', type: 'database-row', data: { properties: { title: 'A', status: 'todo' }, position: 'a0' }, parent: 'db-donut' },
+              { id: 'db-dn-r2', type: 'database-row', data: { properties: { title: 'B', status: 'doing' }, position: 'a1' }, parent: 'db-donut' },
+              { id: 'db-dn-r3', type: 'database-row', data: { properties: { title: 'C', status: 'done' }, position: 'a2' }, parent: 'db-donut' }
+            ]
+          },
+          {
+            label: 'Chart · number',
+            blocks: [
+              {
+                id: 'db-chnum',
+                type: 'database',
+                data: {
+                  schema: [ { id: 'title', name: 'Name', type: 'title', position: 'a0' } ],
+                  views: [ { id: 'v1', type: 'chart', name: 'Chart', position: 'a0', sorts: [], filters: [], visibleProperties: [], chartType: 'number' } ],
+                  activeViewId: 'v1'
+                },
+                content: [ 'db-cn-r1', 'db-cn-r2' ]
+              },
+              { id: 'db-cn-r1', type: 'database-row', data: { properties: { title: 'A' }, position: 'a0' }, parent: 'db-chnum' },
+              { id: 'db-cn-r2', type: 'database-row', data: { properties: { title: 'B' }, position: 'a1' }, parent: 'db-chnum' }
+            ]
+          },
+          {
+            label: 'Chart · no data',
+            blocks: [
+              {
+                id: 'db-chempty',
+                type: 'database',
+                data: {
+                  schema: [
+                    { id: 'title', name: 'Name', type: 'title', position: 'a0' },
+                    {
+                      id: 'status',
+                      name: 'Status',
+                      type: 'select',
+                      position: 'a1',
+                      config: {
+                        options: [
+                          { id: 'todo', label: 'Todo', color: 'gray', position: 'a0' },
+                          { id: 'doing', label: 'Doing', color: 'yellow', position: 'a1' },
+                          { id: 'done', label: 'Done', color: 'green', position: 'a2' }
+                        ]
+                      }
+                    }
+                  ],
+                  views: [ { id: 'v1', type: 'chart', name: 'Chart', position: 'a0', sorts: [], filters: [], visibleProperties: [], groupBy: 'status', chartOmitZero: true } ],
+                  activeViewId: 'v1'
+                }
+              }
+            ]
+          },
+          {
+            label: 'Feed view',
+            blocks: [
+              {
+                id: 'db-feed',
+                type: 'database',
+                data: {
+                  schema: [ { id: 'title', name: 'Name', type: 'title', position: 'a0' } ],
+                  views: [ { id: 'v1', type: 'feed', name: 'Feed', position: 'a0', sorts: [], filters: [], visibleProperties: [] } ],
+                  activeViewId: 'v1'
+                },
+                content: [ 'db-feed-r1', 'db-feed-r2' ]
+              },
+              { id: 'db-feed-r1', type: 'database-row', data: { properties: { title: 'Weekly update' }, position: 'a0', bodyBlocks: true }, parent: 'db-feed', content: [ 'db-feed-r1-p' ] },
+              { id: 'db-feed-r1-p', type: 'paragraph', data: { text: 'Shipped search and fixed three bugs.' }, parent: 'db-feed-r1' },
+              { id: 'db-feed-r2', type: 'database-row', data: { properties: { title: 'Design review' }, position: 'a1', bodyBlocks: true }, parent: 'db-feed', content: [ 'db-feed-r2-p' ] },
+              { id: 'db-feed-r2-p', type: 'paragraph', data: { text: 'New card layout approved.' }, parent: 'db-feed-r2' }
+            ]
+          },
+          {
+            label: 'Form view',
+            blocks: [
+              {
+                id: 'db-form',
+                type: 'database',
+                data: {
+                  schema: [
+                    { id: 'title', name: 'Name', type: 'title', position: 'a0' },
+                    {
+                      id: 'status',
+                      name: 'Status',
+                      type: 'select',
+                      position: 'a1',
+                      config: {
+                        options: [
+                          { id: 'todo', label: 'Todo', color: 'gray', position: 'a0' },
+                          { id: 'doing', label: 'Doing', color: 'yellow', position: 'a1' },
+                          { id: 'done', label: 'Done', color: 'green', position: 'a2' }
+                        ]
+                      }
+                    },
+                    { id: 'notes', name: 'Notes', type: 'text', position: 'a2' }
+                  ],
+                  views: [ { id: 'v1', type: 'form', name: 'Form', position: 'a0', sorts: [], filters: [], visibleProperties: [ 'status', 'notes' ], form: { submitLabel: 'Send' } } ],
+                  activeViewId: 'v1'
+                }
+              }
+            ]
+          },
+          {
+            label: 'Form · closed',
+            blocks: [
+              {
+                id: 'db-form-closed',
+                type: 'database',
+                data: {
+                  schema: [ { id: 'title', name: 'Name', type: 'title', position: 'a0' }, { id: 'notes', name: 'Notes', type: 'text', position: 'a1' } ],
+                  views: [ { id: 'v1', type: 'form', name: 'Form', position: 'a0', sorts: [], filters: [], visibleProperties: [ 'notes' ], form: { closed: true } } ],
+                  activeViewId: 'v1'
+                }
+              }
+            ]
+          },
+          {
+            label: 'Map · no map style',
+            blocks: [
+              {
+                id: 'db-map',
+                type: 'database',
+                data: {
+                  schema: [ { id: 'title', name: 'Name', type: 'title', position: 'a0' }, { id: 'where', name: 'Place', type: 'place', position: 'a1' } ],
+                  views: [ { id: 'v1', type: 'map', name: 'Map', position: 'a0', sorts: [], filters: [], visibleProperties: [], mapBy: 'where' } ],
+                  activeViewId: 'v1'
+                },
+                content: [ 'db-map-r1' ]
+              },
+              { id: 'db-map-r1', type: 'database-row', data: { properties: { title: 'Office', where: { name: 'London', lat: 51.5072, lon: -0.1276 } }, position: 'a0' }, parent: 'db-map' }
+            ]
+          },
+          {
+            label: 'Map · no place property',
+            blocks: [
+              {
+                id: 'db-map-noplace',
+                type: 'database',
+                data: {
+                  schema: [ { id: 'title', name: 'Name', type: 'title', position: 'a0' } ],
+                  views: [ { id: 'v1', type: 'map', name: 'Map', position: 'a0', sorts: [], filters: [], visibleProperties: [] } ],
+                  activeViewId: 'v1'
+                }
+              }
+            ]
+          },
+          {
+            label: 'Dashboard',
+            blocks: [
+              {
+                id: 'db-dash',
+                type: 'database',
+                data: {
+                  schema: [ { id: 'title', name: 'Name', type: 'title', position: 'a0' }, { id: 'done', name: 'Done', type: 'checkbox', position: 'a1' } ],
+                  views: [
+                    { id: 'open', type: 'table', name: 'Open', position: 'a0', sorts: [], filters: [ { propertyId: 'done', operator: 'equals', value: false } ], visibleProperties: [ 'done' ] },
+                    { id: 'closed', type: 'list', name: 'Closed', position: 'a1', sorts: [], filters: [ { propertyId: 'done', operator: 'equals', value: true } ], visibleProperties: [] },
+                    {
+                      id: 'dash',
+                      type: 'dashboard',
+                      name: 'Dashboard',
+                      position: 'a2',
+                      sorts: [],
+                      filters: [],
+                      visibleProperties: [],
+                      dashboard: { rows: [ { id: 'row1', widgets: [ { id: 'w-open', viewId: 'open', width: 7 }, { id: 'w-closed', viewId: 'closed', width: 5 } ] } ] }
+                    }
+                  ],
+                  activeViewId: 'dash'
+                },
+                content: [ 'db-dash-r1', 'db-dash-r2' ]
+              },
+              { id: 'db-dash-r1', type: 'database-row', data: { properties: { title: 'Write brief', done: false }, position: 'a0' }, parent: 'db-dash' },
+              { id: 'db-dash-r2', type: 'database-row', data: { properties: { title: 'Book venue', done: true }, position: 'a1' }, parent: 'db-dash' }
+            ]
+          },
+          {
+            label: 'List · grouped',
+            blocks: [
+              {
+                id: 'db-list-grouped',
+                type: 'database',
+                data: {
+                  schema: [
+                    { id: 'title', name: 'Name', type: 'title', position: 'a0' },
+                    {
+                      id: 'status',
+                      name: 'Status',
+                      type: 'select',
+                      position: 'a1',
+                      config: {
+                        options: [
+                          { id: 'todo', label: 'Todo', color: 'gray', position: 'a0' },
+                          { id: 'doing', label: 'Doing', color: 'yellow', position: 'a1' },
+                          { id: 'done', label: 'Done', color: 'green', position: 'a2' }
+                        ]
+                      }
+                    }
+                  ],
+                  views: [ { id: 'v1', type: 'list', name: 'By status', position: 'a0', sorts: [], filters: [], visibleProperties: [ 'status' ], groupBy: 'status' } ],
+                  activeViewId: 'v1'
+                },
+                content: [ 'db-lg-r1', 'db-lg-r2', 'db-lg-r3' ]
+              },
+              { id: 'db-lg-r1', type: 'database-row', data: { properties: { title: 'Plan', status: 'todo' }, position: 'a0' }, parent: 'db-list-grouped' },
+              { id: 'db-lg-r2', type: 'database-row', data: { properties: { title: 'Design', status: 'doing' }, position: 'a1' }, parent: 'db-list-grouped' },
+              { id: 'db-lg-r3', type: 'database-row', data: { properties: { title: 'Ship', status: 'done' }, position: 'a2' }, parent: 'db-list-grouped' }
+            ]
+          },
+          {
+            label: 'Filter and sort applied',
+            blocks: [
+              {
+                id: 'db-filtered',
+                type: 'database',
+                data: {
+                  schema: [
+                    { id: 'title', name: 'Name', type: 'title', position: 'a0' },
+                    {
+                      id: 'status',
+                      name: 'Status',
+                      type: 'select',
+                      position: 'a1',
+                      config: {
+                        options: [
+                          { id: 'todo', label: 'Todo', color: 'gray', position: 'a0' },
+                          { id: 'doing', label: 'Doing', color: 'yellow', position: 'a1' },
+                          { id: 'done', label: 'Done', color: 'green', position: 'a2' }
+                        ]
+                      }
+                    }
+                  ],
+                  views: [
+                    {
+                      id: 'v1',
+                      type: 'table',
+                      name: 'Open work',
+                      position: 'a0',
+                      sorts: [ { id: 's1', propertyId: 'title', direction: 'asc' } ],
+                      filters: [ { id: 'f1', propertyId: 'status', operator: 'does_not_equal', value: 'done' } ],
+                      visibleProperties: [ 'status' ]
+                    }
+                  ],
+                  activeViewId: 'v1'
+                },
+                content: [ 'db-flt-r1', 'db-flt-r2', 'db-flt-r3' ]
+              },
+              { id: 'db-flt-r1', type: 'database-row', data: { properties: { title: 'Write tests', status: 'doing' }, position: 'a0' }, parent: 'db-filtered' },
+              { id: 'db-flt-r2', type: 'database-row', data: { properties: { title: 'Archive', status: 'done' }, position: 'a1' }, parent: 'db-filtered' },
+              { id: 'db-flt-r3', type: 'database-row', data: { properties: { title: 'Audit', status: 'todo' }, position: 'a2' }, parent: 'db-filtered' }
+            ]
+          },
+          {
+            label: 'Table · calculations and colour rule',
+            blocks: [
+              {
+                id: 'db-calc',
+                type: 'database',
+                data: {
+                  schema: [ { id: 'title', name: 'Name', type: 'title', position: 'a0' }, { id: 'amount', name: 'Amount', type: 'number', position: 'a1', number: { format: 'dollar' } } ],
+                  views: [
+                    {
+                      id: 'v1',
+                      type: 'table',
+                      name: 'Budget',
+                      position: 'a0',
+                      sorts: [],
+                      filters: [],
+                      visibleProperties: [ 'amount' ],
+                      calculations: [ { id: 'amount', fn: 'sum' } ],
+                      colorRules: [ { id: 'cr1', propertyId: 'amount', operator: 'greater_than', value: 1000, color: 'red' } ]
+                    }
+                  ],
+                  activeViewId: 'v1'
+                },
+                content: [ 'db-calc-r1', 'db-calc-r2' ]
+              },
+              { id: 'db-calc-r1', type: 'database-row', data: { properties: { title: 'Hosting', amount: 240 }, position: 'a0' }, parent: 'db-calc' },
+              { id: 'db-calc-r2', type: 'database-row', data: { properties: { title: 'Hardware', amount: 1800 }, position: 'a1' }, parent: 'db-calc' }
+            ]
+          },
+          {
+            label: 'Number as bar and ring',
+            blocks: [
+              {
+                id: 'db-gauges',
+                type: 'database',
+                data: {
+                  schema: [
+                    { id: 'title', name: 'Name', type: 'title', position: 'a0' },
+                    { id: 'progress', name: 'Progress', type: 'number', position: 'a1', number: { format: 'percent', showAs: 'bar', color: 'green', divideBy: 1 } },
+                    { id: 'score', name: 'Score', type: 'number', position: 'a2', number: { showAs: 'ring', color: 'blue', divideBy: 10 } }
+                  ],
+                  views: [ { id: 'v1', type: 'table', name: 'Table', position: 'a0', sorts: [], filters: [], visibleProperties: [ 'progress', 'score' ] } ],
+                  activeViewId: 'v1'
+                },
+                content: [ 'db-gg-r1', 'db-gg-r2' ]
+              },
+              { id: 'db-gg-r1', type: 'database-row', data: { properties: { title: 'Alpha', progress: 0.3, score: 4 }, position: 'a0' }, parent: 'db-gauges' },
+              { id: 'db-gg-r2', type: 'database-row', data: { properties: { title: 'Beta', progress: 0.85, score: 9 }, position: 'a1' }, parent: 'db-gauges' }
+            ]
+          },
+          {
+            label: 'Locked database',
+            blocks: [
+              {
+                id: 'db-locked',
+                type: 'database',
+                data: {
+                  schema: [
+                    { id: 'title', name: 'Name', type: 'title', position: 'a0', databaseLocked: true },
+                    {
+                      id: 'status',
+                      name: 'Status',
+                      type: 'select',
+                      position: 'a1',
+                      config: {
+                        options: [
+                          { id: 'todo', label: 'Todo', color: 'gray', position: 'a0' },
+                          { id: 'doing', label: 'Doing', color: 'yellow', position: 'a1' },
+                          { id: 'done', label: 'Done', color: 'green', position: 'a2' }
+                        ]
+                      }
+                    }
+                  ],
+                  views: [ { id: 'v1', type: 'table', name: 'Table', position: 'a0', sorts: [], filters: [], visibleProperties: [ 'status' ] } ],
+                  activeViewId: 'v1'
+                },
+                content: [ 'db-lock-r1' ]
+              },
+              { id: 'db-lock-r1', type: 'database-row', data: { properties: { title: 'Frozen spec', status: 'done' }, position: 'a0' }, parent: 'db-locked' }
+            ]
+          },
+          {
+            label: 'Read-only',
+            readOnly: true,
+            blocks: [
+              {
+                id: 'db-readonly',
+                type: 'database',
+                data: {
+                  schema: [
+                    { id: 'title', name: 'Name', type: 'title', position: 'a0' },
+                    {
+                      id: 'status',
+                      name: 'Status',
+                      type: 'select',
+                      position: 'a1',
+                      config: {
+                        options: [
+                          { id: 'todo', label: 'Todo', color: 'gray', position: 'a0' },
+                          { id: 'doing', label: 'Doing', color: 'yellow', position: 'a1' },
+                          { id: 'done', label: 'Done', color: 'green', position: 'a2' }
+                        ]
+                      }
+                    }
+                  ],
+                  views: [ { id: 'v1', type: 'table', name: 'Table', position: 'a0', sorts: [], filters: [], visibleProperties: [ 'status' ] } ],
+                  activeViewId: 'v1'
+                },
+                content: [ 'db-ro-r1', 'db-ro-r2' ]
+              },
+              { id: 'db-ro-r1', type: 'database-row', data: { properties: { title: 'Write tests', status: 'done' }, position: 'a0' }, parent: 'db-readonly' },
+              { id: 'db-ro-r2', type: 'database-row', data: { properties: { title: 'Build feature', status: 'doing' }, position: 'a1' }, parent: 'db-readonly' }
+            ]
+          },
+          {
+            label: 'Linked view · source deleted',
+            blocks: [
+              {
+                id: 'db-linked-missing',
+                type: 'database',
+                data: {
+                  source: { databaseId: 'db-gone' },
+                  schema: [ { id: 'title', name: 'Name', type: 'title', position: 'a0' } ],
+                  views: [ { id: 'v1', type: 'table', name: 'Table', position: 'a0', sorts: [], filters: [], visibleProperties: [] } ],
+                  activeViewId: 'v1'
+                }
+              }
+            ]
+          },
+          {
+            label: 'Rows with comments',
+            blocks: [
+              {
+                id: 'db-comments',
+                type: 'database',
+                data: {
+                  schema: [
+                    { id: 'title', name: 'Name', type: 'title', position: 'a0' },
+                    {
+                      id: 'status',
+                      name: 'Status',
+                      type: 'select',
+                      position: 'a1',
+                      config: {
+                        options: [
+                          { id: 'todo', label: 'Todo', color: 'gray', position: 'a0' },
+                          { id: 'doing', label: 'Doing', color: 'yellow', position: 'a1' },
+                          { id: 'done', label: 'Done', color: 'green', position: 'a2' }
+                        ]
+                      }
+                    }
+                  ],
+                  views: [ { id: 'v1', type: 'list', name: 'All', position: 'a0', sorts: [], filters: [], visibleProperties: [ 'status' ] } ],
+                  activeViewId: 'v1'
+                },
+                content: [ 'db-cmt-r1', 'db-cmt-r2' ]
+              },
+              { id: 'db-cmt-r1', type: 'database-row', data: { properties: { title: 'Pricing page', status: 'doing' }, position: 'a0' }, parent: 'db-comments', content: [ 'db-cmt-c1' ] },
+              {
+                id: 'db-cmt-c1',
+                type: 'database-comment',
+                data: { text: 'Can we drop the annual toggle?', createdAt: 1761400000000, authorName: 'Ada Lovelace' },
+                content: [ 'db-cmt-c2' ],
+                parent: 'db-cmt-r1'
+              },
+              { id: 'db-cmt-c2', type: 'database-comment', data: { text: 'Yes, ship monthly only.', createdAt: 1761403600000, authorName: 'Alan Turing' }, parent: 'db-cmt-c1' },
+              { id: 'db-cmt-r2', type: 'database-row', data: { properties: { title: 'FAQ', status: 'todo' }, position: 'a1' }, parent: 'db-comments' }
+            ]
+          },
+          {
+            label: 'Table · filter matches nothing',
+            blocks: [
+              {
+                id: 'db-nomatch',
+                type: 'database',
+                data: {
+                  schema: [
+                    { id: 'title', name: 'Name', type: 'title', position: 'a0' },
+                    {
+                      id: 'status',
+                      name: 'Status',
+                      type: 'select',
+                      position: 'a1',
+                      config: {
+                        options: [
+                          { id: 'todo', label: 'Todo', color: 'gray', position: 'a0' },
+                          { id: 'doing', label: 'Doing', color: 'yellow', position: 'a1' },
+                          { id: 'done', label: 'Done', color: 'green', position: 'a2' }
+                        ]
+                      }
+                    }
+                  ],
+                  views: [
+                    {
+                      id: 'v1',
+                      type: 'table',
+                      name: 'Done only',
+                      position: 'a0',
+                      sorts: [],
+                      filters: [ { id: 'f1', propertyId: 'status', operator: 'equals', value: 'done' } ],
+                      visibleProperties: [ 'status' ]
+                    }
+                  ],
+                  activeViewId: 'v1'
+                },
+                content: [ 'db-nm-r1' ]
+              },
+              { id: 'db-nm-r1', type: 'database-row', data: { properties: { title: 'Still open', status: 'todo' }, position: 'a0' }, parent: 'db-nomatch' }
+            ]
+          },
         ],
       },
       {
@@ -3675,6 +4615,18 @@
             { id: 'toc-color', type: 'table_of_contents', data: { backgroundColor: 'gray' } },
             { id: 'toc-color-h', type: 'header', data: { text: 'Overview', level: 2 } },
           ] },
+          { label: 'Colored text', blocks: [
+            { id: 'toc-text', type: 'table_of_contents', data: { textColor: 'blue' } },
+            { id: 'toc-text-h', type: 'header', data: { text: 'Overview', level: 2 } },
+          ] },
+          { label: 'Deep outline', blocks: [
+            { id: 'toc-deep', type: 'table_of_contents', data: {} },
+            { id: 'toc-deep-h1', type: 'header', data: { text: 'Guide', level: 1 } },
+            { id: 'toc-deep-h2', type: 'header', data: { text: 'Install', level: 2 } },
+            { id: 'toc-deep-h3', type: 'header', data: { text: 'From npm', level: 3 } },
+            { id: 'toc-deep-h4', type: 'header', data: { text: 'Peer dependencies', level: 4 } },
+            { id: 'toc-deep-h2b', type: 'header', data: { text: 'Configure', level: 2 } },
+          ] },
         ],
       },
       {
@@ -3694,6 +4646,13 @@
           { label: 'TypeScript', blocks: [{ id: 'cd-ts', type: 'code', data: { code: 'interface Block {\n  id: string;\n  type: string;\n}', language: 'typescript', lineNumbers: true } }] },
           { label: 'Plain text', blocks: [{ id: 'cd-plain', type: 'code', data: { code: 'just some plain text\nno highlighting', language: 'plain text', lineNumbers: true } }] },
           { label: 'Empty', blocks: [{ id: 'cd-empty', type: 'code', data: { code: '', language: 'javascript', lineNumbers: true } }] },
+          { label: 'No line numbers', blocks: [{ id: 'cd-nolines', type: 'code', data: { code: 'const a = 1;\nconst b = 2;', language: 'javascript', lineNumbers: false } }] },
+          { label: 'With filename', blocks: [{ id: 'cd-file', type: 'code', data: { code: 'export const answer = 42;', language: 'typescript', lineNumbers: true, filename: 'answer.ts' } }] },
+          { label: 'Mermaid preview', blocks: [{ id: 'cd-mermaid', type: 'code', data: { code: 'graph LR\n  A[Write] --> B[Review] --> C[Ship]', language: 'mermaid' } }] },
+          { label: 'LaTeX preview', blocks: [{ id: 'cd-latex', type: 'code', data: { code: 'E = mc^2', language: 'latex' } }] },
+          { label: 'Mermaid · side by side', blocks: [{ id: 'cd-mermaid-split', type: 'code', data: { code: 'graph LR\n  A[Write] --> B[Review] --> C[Ship]', language: 'mermaid' } }] },
+          { label: 'Read-only', readOnly: true, blocks: [{ id: 'cd-ro', type: 'code', data: { code: 'yarn add @jackuait/blok', language: 'bash', lineNumbers: true, filename: 'install.sh' } }] },
+          { label: 'Read-only Mermaid', readOnly: true, blocks: [{ id: 'cd-ro-mermaid', type: 'code', data: { code: 'graph LR\n  A[Write] --> B[Review] --> C[Ship]', language: 'mermaid' } }] },
         ],
       },
       {
@@ -3705,7 +4664,6 @@
           { label: 'Empty · link only', toolConfig: { image: { sources: 'url' } }, blocks: [{ id: 'im-empty-link', type: 'image', data: {} }] },
           { label: 'Loaded', blocks: [{ id: 'im-loaded', type: 'image', data: {
             url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800',
-            caption: 'Mountain vista',
             alt: 'Mountain landscape',
             width: 80,
             alignment: 'center',
@@ -3742,10 +4700,26 @@
             width: 40,
             alignment: 'center',
           } }] },
-          // A real failed upload (see failDemoUpload), so the card is the product's own.
-          { label: 'Upload failed', toolConfig: { image: { uploader: {
+          // A real failed upload (see pickDemoFile), so the card is the product's own.
+          { label: 'Upload failed', demoPick: 'png', toolConfig: { image: { uploader: {
             uploadByFile: () => Promise.reject(new Error('Playground: this upload always fails')),
           } } }, blocks: [{ id: 'im-upload-error', type: 'image', data: {} }] },
+          { label: 'Uploading', demoPick: 'png', toolConfig: { image: { uploader: { uploadByFile: (file, ctx) => { ctx?.onProgress?.(64); return new Promise(() => {}); } } } }, blocks: [{ id: 'im-uploading', type: 'image', data: {} }] },
+          { label: 'Too large', demoPick: 'png', toolConfig: { image: { maxSize: 50 * 1024 } }, blocks: [{ id: 'im-too-large', type: 'image', data: {} }] },
+          { label: 'Right aligned', blocks: [{ id: 'im-right', type: 'image', data: { url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800', alt: 'Right', width: 40, alignment: 'right' } }] },
+          { label: 'Size preset', blocks: [{ id: 'im-size-sm', type: 'image', data: { url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800', alt: 'Small preset', size: 'sm' } }] },
+          { label: 'Border frame', blocks: [{ id: 'im-frame-border', type: 'image', data: { url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800', alt: 'Border', width: 60, frame: 'border' } }] },
+          { label: 'Shadow frame', blocks: [{ id: 'im-frame-shadow', type: 'image', data: { url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800', alt: 'Shadow', width: 60, frame: 'shadow' } }] },
+          { label: 'Square corners', blocks: [{ id: 'im-square', type: 'image', data: { url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800', alt: 'Square', width: 60, rounded: false } }] },
+          { label: 'Caption hidden', blocks: [{ id: 'im-caption-off', type: 'image', data: { url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800', alt: 'No caption', width: 60, captionVisible: false } }] },
+          { label: 'Circle crop', blocks: [{ id: 'im-crop-circle', type: 'image', data: { url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800', alt: 'Cropped', width: 40, crop: { x: 20, y: 0, w: 60, h: 100, shape: 'circle' } } }] },
+          { label: 'Rotated', blocks: [{ id: 'im-rotated', type: 'image', data: { url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800', alt: 'Rotated', width: 40, rotation: 90 } }] },
+          { label: 'Filter', blocks: [{ id: 'im-filter', type: 'image', data: { url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800', alt: 'Noir', width: 60, filter: 'noir', adjust: { contrast: 20 } } }] },
+          { label: 'Markup', blocks: [{ id: 'im-markup', type: 'image', data: { url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800', alt: 'Annotated', width: 60, markup: [
+            { id: 'a', type: 'text', color: '#ffffff', x: 0.5, y: 0.5, text: 'Hi', size: 0.06, style: 'outline' },
+            { id: 'b', type: 'rect', color: '#ff3b30', x1: 0.1, y1: 0.1, x2: 0.4, y2: 0.4, size: 0.012, fill: true },
+          ] } }] },
+          { label: 'Read-only', readOnly: true, blocks: [{ id: 'im-readonly', type: 'image', data: { url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800', alt: 'Read-only', width: 60, caption: 'Read-only caption', captionVisible: true } }] },
         ],
       },
       {
@@ -3782,6 +4756,12 @@
             width: 45,
             alignment: 'center',
           } }] },
+          { label: 'Uploading', demoPick: 'mp4', toolConfig: { video: { uploader: { uploadByFile: (file, ctx) => { ctx?.onProgress?.(64); return new Promise(() => {}); } } } }, blocks: [{ id: 'vd-uploading', type: 'video', data: {} }] },
+          { label: 'Failed to load', blocks: [{ id: 'vd-broken', type: 'video', data: { url: '/this-video-does-not-exist.mp4', width: 45 } }] },
+          { label: 'Right aligned', blocks: [{ id: 'vd-right', type: 'video', data: { url: '/samples/big-buck-bunny.mp4', width: 45, alignment: 'right' } }] },
+          { label: 'No controls', blocks: [{ id: 'vd-no-controls', type: 'video', data: { url: '/samples/big-buck-bunny.mp4', width: 60, hideControls: true } }] },
+          { label: 'Read-only', readOnly: true, blocks: [{ id: 'vd-readonly', type: 'video', data: { url: '/samples/sintel.mp4', width: 60, caption: 'Sintel', captionVisible: true } }] },
+          { label: 'Read-only failed', readOnly: true, blocks: [{ id: 'vd-readonly-broken', type: 'video', data: { url: '/this-video-does-not-exist.mp4', width: 45 } }] },
         ],
       },
       {
@@ -3811,6 +4791,27 @@
             peaks: [0.03,0.06,0.11,0.14,0.17,0.19,0.22,0.21,0.2,0.25,0.28,0.29,0.24,0.23,0.25,0.25,0.34,0.33,0.29,0.24,0.26,0.35,0.32,0.34,0.3,0.27,0.29,0.3,0.26,0.25,0.27,0.27,0.27,0.25,0.25,0.21,0.2,0.19,0.22,0.19,0.17,0.18,0.2,0.17,0.2,0.2,0.18,0.81,0.84,0.75,0.82,0.82,0.84,0.8,0.78,0.83,0.83,0.83,0.78,0.77,0.81,0.78,0.82,0.8,0.79,0.82,0.8,0.85,0.84,0.78,0.83,0.79,0.77,0.83,0.76,0.85,0.81,0.75,0.78,0.77,0.84,0.78,0.81,0.78,0.84,0.84,0.87,0.8,0.82,0.83,0.79,0.82,0.82,0.86,0.94,0.97,0.86,0.97,0.93,0.8,0.96,0.91,0.83,0.9,0.74,0.95,0.93,0.68,0.9,0.89,0.88,0.82,0.96,0.84,0.96,0.93,0.82,0.96,0.97,0.8,0.97,0.88,0.84,0.93,0.97,0.84,0.97,0.83,0.85,0.97,0.92,0.9,0.99,0.88,0.93,0.85,0.93,0.84,0.92,0.83,0.93,0.92,0.94,0.92,0.96,0.92,0.94,0.89,0.94,0.98,0.94,0.85,0.93,0.93,0.93,0.88,0.93,0.93,0.96,0.95,0.93,0.9,0.97,0.86,0.89,0.98,0.89,0.85,0.91,0.83,0.83,0.9,0.9,0.86,0.88,0.78,0.85,0.91,0.87,0.86,0.96,0.97,0.87,0.96,0.85,0.85,0.94,0.83,0.88,0.99,0.92,0.99,0.95,0.95,0.77,0.91,0.95,0.92,0.92,0.85,0.93,0.98,0.81,0.92,0.9,0.96,0.91,0.95,0.91,0.96,0.93,0.91,0.96,0.91,0.76,0.99,0.84,0.88,0.92,0.92,0.85,0.9,0.96,0.84,0.94,0.95,0.91,0.93,0.94,0.95,0.9,0.96,0.88,0.97,0.93,0.89,0.95,0.98,0.84,0.9,0.89,0.95,0.87,0.96,0.88,0.93,0.79,0.86,0.91,0.97,0.88,0.98,0.94,0.93,0.91,0.97,0.92,0.94,0.91,0.92,1,0.97,0.94,0.95,0.92,0.91,0.96,0.88,0.85,0.92,0.92,0.94,0.96,0.88,0.95,0.97,0.99,1,0.92,0.95,0.88,0.97,0.93,0.94,0.96,0.81,0.95,0.86,0.96,0.95,0.93,0.92,0.98,0.84,0.92,0.97,0.64,0.38,0.27,0.14],
           } }] },
           { label: 'Google Drive error', blocks: [{ id: 'au-drive-error', type: 'audio', data: { url: '' } }] },
+          { label: 'Uploading', demoPick: 'mp3', toolConfig: { audio: { uploader: { uploadByFile: (file, ctx) => { ctx?.onProgress?.(64); return new Promise(() => {}); } } } }, blocks: [{ id: 'au-uploading', type: 'audio', data: { url: '' } }] },
+          { label: 'Upload failed', demoPick: 'mp3', toolConfig: { audio: { uploader: { uploadByFile: () => Promise.reject(new Error('Playground: this upload always fails')) } } }, blocks: [{ id: 'au-upload-error', type: 'audio', data: { url: '' } }] },
+          { label: 'With caption', blocks: [{ id: 'au-caption', type: 'audio', data: {
+            url: '/samples/soundhelix-song-1.mp3',
+            title: 'SoundHelix Song 1',
+            artist: 'SoundHelix',
+            coverUrl: '/samples/soundhelix-song-1-cover.png',
+            duration: 90,
+            peaks: [0.03,0.06,0.11,0.14,0.17,0.19,0.22,0.21,0.2,0.25,0.28,0.29,0.24,0.23,0.25,0.25,0.34,0.33,0.29,0.24,0.26,0.35,0.32,0.34,0.3,0.27,0.29,0.3,0.26,0.25,0.27,0.27,0.27,0.25,0.25,0.21,0.2,0.19,0.22,0.19,0.17,0.18,0.2,0.17,0.2,0.2,0.18,0.81,0.84,0.75,0.82,0.82,0.84,0.8,0.78,0.83,0.83,0.83,0.78,0.77,0.81,0.78,0.82,0.8,0.79,0.82,0.8,0.85,0.84,0.78,0.83,0.79,0.77,0.83,0.76,0.85,0.81,0.75,0.78,0.77,0.84,0.78,0.81,0.78,0.84,0.84,0.87,0.8,0.82,0.83,0.79,0.82,0.82,0.86,0.94,0.97,0.86,0.97,0.93,0.8,0.96,0.91,0.83,0.9,0.74,0.95,0.93,0.68,0.9,0.89,0.88,0.82,0.96,0.84,0.96,0.93,0.82,0.96,0.97,0.8,0.97,0.88,0.84,0.93,0.97,0.84,0.97,0.83,0.85,0.97,0.92,0.9,0.99,0.88,0.93,0.85,0.93,0.84,0.92,0.83,0.93,0.92,0.94,0.92,0.96,0.92,0.94,0.89,0.94,0.98,0.94,0.85,0.93,0.93,0.93,0.88,0.93,0.93,0.96,0.95,0.93,0.9,0.97,0.86,0.89,0.98,0.89,0.85,0.91,0.83,0.83,0.9,0.9,0.86,0.88,0.78,0.85,0.91,0.87,0.86,0.96,0.97,0.87,0.96,0.85,0.85,0.94,0.83,0.88,0.99,0.92,0.99,0.95,0.95,0.77,0.91,0.95,0.92,0.92,0.85,0.93,0.98,0.81,0.92,0.9,0.96,0.91,0.95,0.91,0.96,0.93,0.91,0.96,0.91,0.76,0.99,0.84,0.88,0.92,0.92,0.85,0.9,0.96,0.84,0.94,0.95,0.91,0.93,0.94,0.95,0.9,0.96,0.88,0.97,0.93,0.89,0.95,0.98,0.84,0.9,0.89,0.95,0.87,0.96,0.88,0.93,0.79,0.86,0.91,0.97,0.88,0.98,0.94,0.93,0.91,0.97,0.92,0.94,0.91,0.92,1,0.97,0.94,0.95,0.92,0.91,0.96,0.88,0.85,0.92,0.92,0.94,0.96,0.88,0.95,0.97,0.99,1,0.92,0.95,0.88,0.97,0.93,0.94,0.96,0.81,0.95,0.86,0.96,0.95,0.93,0.92,0.98,0.84,0.92,0.97,0.64,0.38,0.27,0.14],
+            caption: 'Live session take',
+            captionVisible: true,
+          } }] },
+          { label: 'Untitled · no waveform', blocks: [{ id: 'au-bare', type: 'audio', data: { url: '/samples/soundhelix-song-1.mp3' } }] },
+          { label: 'Read-only', readOnly: true, blocks: [{ id: 'au-readonly', type: 'audio', data: {
+            url: '/samples/soundhelix-song-1.mp3',
+            title: 'SoundHelix Song 1',
+            artist: 'SoundHelix',
+            coverUrl: '/samples/soundhelix-song-1-cover.png',
+            duration: 90,
+            peaks: [0.03,0.06,0.11,0.14,0.17,0.19,0.22,0.21,0.2,0.25,0.28,0.29,0.24,0.23,0.25,0.25,0.34,0.33,0.29,0.24,0.26,0.35,0.32,0.34,0.3,0.27,0.29,0.3,0.26,0.25,0.27,0.27,0.27,0.25,0.25,0.21,0.2,0.19,0.22,0.19,0.17,0.18,0.2,0.17,0.2,0.2,0.18,0.81,0.84,0.75,0.82,0.82,0.84,0.8,0.78,0.83,0.83,0.83,0.78,0.77,0.81,0.78,0.82,0.8,0.79,0.82,0.8,0.85,0.84,0.78,0.83,0.79,0.77,0.83,0.76,0.85,0.81,0.75,0.78,0.77,0.84,0.78,0.81,0.78,0.84,0.84,0.87,0.8,0.82,0.83,0.79,0.82,0.82,0.86,0.94,0.97,0.86,0.97,0.93,0.8,0.96,0.91,0.83,0.9,0.74,0.95,0.93,0.68,0.9,0.89,0.88,0.82,0.96,0.84,0.96,0.93,0.82,0.96,0.97,0.8,0.97,0.88,0.84,0.93,0.97,0.84,0.97,0.83,0.85,0.97,0.92,0.9,0.99,0.88,0.93,0.85,0.93,0.84,0.92,0.83,0.93,0.92,0.94,0.92,0.96,0.92,0.94,0.89,0.94,0.98,0.94,0.85,0.93,0.93,0.93,0.88,0.93,0.93,0.96,0.95,0.93,0.9,0.97,0.86,0.89,0.98,0.89,0.85,0.91,0.83,0.83,0.9,0.9,0.86,0.88,0.78,0.85,0.91,0.87,0.86,0.96,0.97,0.87,0.96,0.85,0.85,0.94,0.83,0.88,0.99,0.92,0.99,0.95,0.95,0.77,0.91,0.95,0.92,0.92,0.85,0.93,0.98,0.81,0.92,0.9,0.96,0.91,0.95,0.91,0.96,0.93,0.91,0.96,0.91,0.76,0.99,0.84,0.88,0.92,0.92,0.85,0.9,0.96,0.84,0.94,0.95,0.91,0.93,0.94,0.95,0.9,0.96,0.88,0.97,0.93,0.89,0.95,0.98,0.84,0.9,0.89,0.95,0.87,0.96,0.88,0.93,0.79,0.86,0.91,0.97,0.88,0.98,0.94,0.93,0.91,0.97,0.92,0.94,0.91,0.92,1,0.97,0.94,0.95,0.92,0.91,0.96,0.88,0.85,0.92,0.92,0.94,0.96,0.88,0.95,0.97,0.99,1,0.92,0.95,0.88,0.97,0.93,0.94,0.96,0.81,0.95,0.86,0.96,0.95,0.93,0.92,0.98,0.84,0.92,0.97,0.64,0.38,0.27,0.14],
+          } }] },
         ],
       },
       {
@@ -3904,6 +4905,9 @@
           { label: 'URL only (no metadata)', blocks: [{ id: 'fl-bare', type: 'file', data: {
             url: 'https://example.com/files/attachment.bin',
           } }] },
+          { label: 'Upload failed', demoPick: 'png', toolConfig: { file: { uploader: { uploadByFile: () => Promise.reject(new Error('Playground: this upload always fails')) } } }, blocks: [{ id: 'fl-upload-error', type: 'file', data: { url: '' } }] },
+          { label: 'Too large', demoPick: 'png', toolConfig: { file: { maxSize: 50 * 1024 } }, blocks: [{ id: 'fl-too-large', type: 'file', data: { url: '' } }] },
+          { label: 'Image', blocks: [{ id: 'fl-image', type: 'file', data: { url: '/samples/soundhelix-song-1-cover.png', fileName: 'album-cover.png', size: 86369, mimeType: 'image/png' } }] },
         ],
       },
       {
@@ -3932,6 +4936,20 @@
           } }] },
           { label: 'URL only', blocks: [{ id: 'bm-url-only', type: 'bookmark', data: {
             url: 'https://example.com/bare-link-no-metadata',
+          } }] },
+          { label: 'Failed cover', blocks: [{ id: 'bm-broken-cover', type: 'bookmark', data: {
+            url: 'https://github.com/jackuait/blok',
+            title: 'Blok — headless block-based rich text editor',
+            description: 'The cover image failed to load, so a drawn page stands in.',
+            image: '/this-image-does-not-exist.png',
+            favicon: 'https://github.com/favicon.ico',
+            domain: 'github.com',
+          } }] },
+          { label: 'Long text (clamped)', blocks: [{ id: 'bm-long', type: 'bookmark', data: {
+            url: 'https://example.com/articles/2025/a-very-long-path/that-keeps-going-to-show-truncation?ref=newsletter',
+            title: 'A remarkably long bookmark title that runs well past the width of the card and has to be cut short',
+            description: 'Blocks are the universal primitive in Blok. Every content entity, from a paragraph to a database row, is a block. Containers hold their children by id. The saver and renderer handle every block the same way. This description runs long on purpose, so the card has to clamp it.',
+            image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800',
           } }] },
         ],
       },
@@ -4001,6 +5019,13 @@
             embed: 'https://twitter.com/i/status/20',
             kind: 'script',
           } }] },
+          { label: 'Right aligned', blocks: [{ id: 'em-right', type: 'embed', data: { service: 'youtube', source: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', embed: 'https://www.youtube.com/embed/aqz-KE-bpKQ', width: 580, height: 320, widthPercent: 50, alignment: 'right' } }] },
+          { label: 'Caption (empty)', blocks: [{ id: 'em-caption-empty', type: 'embed', data: { service: 'youtube', source: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', embed: 'https://www.youtube.com/embed/aqz-KE-bpKQ', width: 580, height: 320, caption: '', captionVisible: true } }] },
+          { label: 'Google Docs (fixed height)', blocks: [{ id: 'em-gdocs', type: 'embed', data: { service: 'googledocs', source: 'https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz/edit', embed: 'https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz/preview', width: 580, height: 480 } }] },
+          { label: 'TikTok (fixed width)', blocks: [{ id: 'em-tiktok', type: 'embed', data: { service: 'tiktok', source: 'https://www.tiktok.com/@scout2015/video/6718335390845095173', embed: 'https://www.tiktok.com/embed/v2/6718335390845095173', width: 325, height: 580 } }] },
+          { label: 'Telegram (script)', blocks: [{ id: 'em-telegram', type: 'embed', data: { service: 'telegram', source: 'https://t.me/durov/43', embed: 'https://t.me/durov/43', kind: 'script' } }] },
+          { label: 'Threads (script)', blocks: [{ id: 'em-threads', type: 'embed', data: { service: 'threads', source: 'https://www.threads.com/@zuck/post/C1a2B3c4D5e', embed: 'https://www.threads.com/@zuck/post/C1a2B3c4D5e', kind: 'script' } }] },
+          { label: 'Read-only', readOnly: true, blocks: [{ id: 'em-readonly-caption', type: 'embed', data: { service: 'youtube', source: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', embed: 'https://www.youtube.com/embed/aqz-KE-bpKQ', width: 580, height: 320, caption: 'Big Buck Bunny', captionVisible: true } }] },
         ],
       },
       {
@@ -4016,6 +5041,31 @@
           { label: 'Loading', blocks: [{ id: 'pg-loading', type: 'page', data: { pageId: 'pg-state-loading' } }] },
           { label: 'Missing', blocks: [{ id: 'pg-missing', type: 'page', data: { pageId: 'pg-state-missing' } }] },
           { label: 'No access', blocks: [{ id: 'pg-denied', type: 'page', data: { pageId: 'pg-state-denied' } }] },
+          { label: 'Draft', blocks: [{ id: 'pg-draft', type: 'page', data: { pageId: 'pg-state-draft' } }] },
+          { label: 'Colored', blocks: [{ id: 'pg-colored', type: 'page', data: { pageId: 'pg-state-titled', textColor: 'red', backgroundColor: 'yellow' } }] },
+          // The page block is born on an api insert after mount (see mountStateSegment); create never answers.
+          { label: 'Creating', toolConfig: { page: { create: () => new Promise(() => {}) } }, blocks: [{ id: 'pg-creating', type: 'paragraph', data: { text: '' } }] },
+        ],
+      },
+      {
+        tool: 'page-link',
+        label: 'Page link',
+        states: [
+          { label: 'Page', blocks: [{ id: 'pl-titled', type: 'page-link', data: { pageId: 'pg-state-titled' } }] },
+          { label: 'Emoji icon', blocks: [{ id: 'pl-emoji', type: 'page-link', data: { pageId: 'pg-state-emoji' } }] },
+          { label: 'Image icon', blocks: [{ id: 'pl-image', type: 'page-link', data: { pageId: 'pg-state-image' } }] },
+          { label: 'Untitled', blocks: [{ id: 'pl-untitled', type: 'page-link', data: { pageId: 'pg-state-untitled' } }] },
+          { label: 'Loading', blocks: [{ id: 'pl-loading', type: 'page-link', data: { pageId: 'pg-state-loading' } }] },
+          { label: 'Missing', blocks: [{ id: 'pl-missing', type: 'page-link', data: { pageId: 'pg-state-missing' } }] },
+          { label: 'No access', blocks: [{ id: 'pl-denied', type: 'page-link', data: { pageId: 'pg-state-denied' } }] },
+        ],
+      },
+      {
+        tool: 'stub',
+        label: 'Unknown block',
+        states: [
+          // No tool is registered for this type, so core renders its Stub in its place.
+          { label: 'Unknown block type', blocks: [{ id: 'stub-unknown', type: 'kanban', data: { columns: [] } }] },
         ],
       },
     ];
@@ -4029,6 +5079,7 @@
       'pg-state-untitled': { title: '' },
       'pg-state-missing': null,
       'pg-state-denied': { access: 'none' },
+      'pg-state-draft': { title: 'Launch plan', status: 'draft', path: ['Workspace'] },
     };
 
     const PAGE_STATE_PREVIEW = [
@@ -4044,7 +5095,7 @@
       segments.forEach((segment) => mountStateSegment(container, segment));
     }
 
-    function mountStateSegment(container, { blocks, toolConfig = {}, readOnly = false, editorConfig = {}, width, drafts = [] }) {
+    function mountStateSegment(container, { blocks, toolConfig = {}, readOnly = false, editorConfig = {}, width, drafts = [], demoPick }) {
       const holder = document.createElement('div');
       if (width) holder.style.maxWidth = `${width}px`;
       container.appendChild(holder);
@@ -4114,6 +5165,7 @@
               preview: () => PAGE_STATE_PREVIEW,
             },
           },
+          'page-link': { class: PageLink, config: { href: (id) => `#${id}`, open: () => {}, resolve: (id) => PAGE_STATE_INFO[id] } },
           marker: Marker,
           bold: Bold,
           italic: Italic,
@@ -4133,6 +5185,11 @@
         const base = typeof entry === 'function' ? { class: entry } : entry;
         tools[name] = { ...base, config: { ...(base.config ?? {}), ...override } };
       });
+
+      // The calendar reads its saved month while it draws, so this must land before mount.
+      try {
+        if (blocks.some((block) => block.id === 'db-calendar')) localStorage.setItem('blok:database-calendar:db-calendar:v1', '2026-10-01');
+      } catch {}
 
       const instance = new Blok({
         ...editorConfig,
@@ -4177,8 +5234,17 @@
           figure.setAttribute('data-loading', 'true');
         }
 
-        const uploadErrBlock = holder.querySelector('[data-blok-id="im-upload-error"]');
-        if (uploadErrBlock) failDemoUpload(uploadErrBlock);
+        // Load ignores a saved isOpen; open state lives in viewState.
+        blocks.filter((block) => block.data?.isOpen === true).forEach((block) => instance.viewState.set(block.id, 'open', true));
+
+        // Picks a real file, so the upload card is the product's own.
+        if (demoPick) pickDemoFile(holder, DEMO_FILES[demoPick]);
+
+        // Split view is only reachable from the mode button.
+        holder.querySelector('[data-blok-id="cd-mermaid-split"] [data-blok-testid="code-mode-split"]')?.click();
+
+        // A page block is "new" only on an api or user insert, never on load.
+        if (blocks.some((block) => block.id === 'pg-creating')) instance.blocks.insert('page', {}, {}, 0, false, true);
 
         // Force a video "upload failed" error state demo by replacing the tool DOM.
         const videoErrRoot = holder.querySelector('[data-blok-id="vd-upload-error"] [data-blok-tool="video"]');
@@ -4216,6 +5282,7 @@
             fileName: 'tracemonkey-paper.pdf',
             labels: { uploading: 'Uploading', cancel: 'Cancel', progress: 'Upload progress' },
             onCancel: () => {},
+            preview: 'file',
           });
           uploadingEl.setProgress(64);
           fileUploadingRoot.appendChild(uploadingEl);
@@ -4223,13 +5290,19 @@
       });
     }
 
-    // Picks a real picture in the block's empty state; the playground uploader rejects it.
-    async function failDemoUpload(block) {
-      const blob = await (await fetch('/samples/soundhelix-song-1-cover.png')).blob();
-      const input = block.querySelector('[data-blok-testid="file-input"]');
+    // Video and audio check the file type before upload, so each picks its own kind.
+    const DEMO_FILES = {
+      png: { url: '/samples/soundhelix-song-1-cover.png', name: 'album-cover.png', type: 'image/png' },
+      mp4: { url: '/samples/big-buck-bunny.mp4', name: 'big-buck-bunny.mp4', type: 'video/mp4' },
+      mp3: { url: '/samples/soundhelix-song-1.mp3', name: 'soundhelix-song-1.mp3', type: 'audio/mpeg' },
+    };
+
+    async function pickDemoFile(holder, { url, name, type }) {
+      const blob = await (await fetch(url)).blob();
+      const input = holder.querySelector('[data-blok-testid="file-input"]');
       if (!input) return;
       const picked = new DataTransfer();
-      picked.items.add(new File([blob], 'album-cover.png', { type: 'image/png' }));
+      picked.items.add(new File([blob], name, { type }));
       input.files = picked.files;
       input.dispatchEvent(new Event('change', { bubbles: true }));
     }

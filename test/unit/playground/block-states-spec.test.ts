@@ -361,11 +361,118 @@ describe('playground block states spec (index.html)', () => {
       const section = sectionFor('callout');
       const callouts = section.match(/type: 'callout'[^\n]*/g) ?? [];
 
-      expect(callouts).toHaveLength(5);
+      expect(callouts.length).toBeGreaterThanOrEqual(5);
       callouts.forEach((line) => {
-        expect(line).toMatch(/content: \['c-[a-z]+-p'\]/);
+        expect(line).toMatch(/content: \['c-[a-z]+-p'/);
         expect(line).not.toContain('text:');
       });
     });
+  });
+});
+
+describe('block states gallery covers every state a block can show', () => {
+  interface RawState { label: string; blocks: Array<{ id: string; type: string; data?: Record<string, unknown> }>; readOnly?: boolean }
+  interface RawEntry { tool: string; label: string; states: RawState[] }
+
+  const html = readFileSync(resolve(__dirname, '../../../index.html'), 'utf-8');
+  const raw = runInNewContext(
+    `${html.slice(html.indexOf('const BLOCK_STATES_RAW = ['), html.indexOf('const BLOCK_STATES_SPEC'))}; BLOCK_STATES_RAW`
+  ) as RawEntry[];
+  const entry = (tool: string): RawEntry | undefined => raw.find((e) => e.tool === tool);
+  const mountStart = html.indexOf('function mountStateSegment');
+  const mountCode = html.slice(mountStart, html.indexOf('function initBlockStatesGallery', mountStart));
+
+  test.each([
+    ['paragraph', [ 'Colored text', 'Colored bg' ]],
+    ['header', [ 'Colored text', 'Colored bg', 'Toggle H2 · empty', 'Toggle H2 · open, empty' ]],
+    ['list', [ 'Ordered · start 5', 'Nested ordered', 'Checklist · read-only' ]],
+    ['toggle', [ 'Open, empty', 'Colored text', 'Colored bg' ]],
+    ['callout', [ 'Rich body', 'Empty body' ]],
+    ['code', [ 'No line numbers', 'With filename', 'Mermaid preview', 'LaTeX preview', 'Mermaid · side by side', 'Read-only', 'Read-only Mermaid' ]],
+    ['table', [ 'Merged cells', 'Cell colors', 'Comfortable text', 'Custom widths (scrolls)', 'Full width', 'Cell alignment', 'List in a cell', 'Read-only', 'Right-to-left' ]],
+    ['column_list', [ 'Five columns' ]],
+    ['tabs', [ 'Empty tab · read-only' ]],
+    ['table_of_contents', [ 'Colored text', 'Deep outline' ]],
+    ['image', [ 'Uploading', 'Too large', 'Right aligned', 'Size preset', 'Border frame', 'Shadow frame', 'Square corners', 'Caption hidden', 'Circle crop', 'Rotated', 'Filter', 'Markup', 'Read-only' ]],
+    ['video', [ 'Uploading', 'Failed to load', 'Right aligned', 'No controls', 'Read-only', 'Read-only failed' ]],
+    ['audio', [ 'Uploading', 'Upload failed', 'With caption', 'Untitled · no waveform', 'Read-only' ]],
+    ['file', [ 'Upload failed', 'Too large', 'Image' ]],
+    ['bookmark', [ 'Failed cover', 'Long text (clamped)' ]],
+    ['embed', [ 'Right aligned', 'Caption (empty)', 'Google Docs (fixed height)', 'TikTok (fixed width)', 'Telegram (script)', 'Threads (script)', 'Read-only' ]],
+    ['page', [ 'Draft', 'Colored', 'Creating' ]],
+    ['page-link', [ 'Page', 'Emoji icon', 'Image icon', 'Untitled', 'Loading', 'Missing', 'No access' ]],
+    ['stub', [ 'Unknown block type' ]],
+    ['database', [ 'Table view · every stored property type', 'Several views (tab strip)', 'Title and icon', 'Gallery view', 'Gallery · cover preview', 'Calendar view', 'Calendar · no date property', 'Timeline view', 'Chart · column', 'Chart · donut', 'Chart · number', 'Chart · no data', 'Feed view', 'Form view', 'Form · closed', 'Map · no map style', 'Map · no place property', 'Dashboard', 'List · grouped', 'Filter and sort applied', 'Table · calculations and colour rule', 'Number as bar and ring', 'Locked database', 'Read-only', 'Linked view · source deleted', 'Rows with comments', 'Table · filter matches nothing' ]],
+  ])('the %s tab shows its missing states', (tool, labels) => {
+    const found = entry(tool);
+
+    expect(found, `tab '${tool}'`).toBeDefined();
+    expect(found?.states.map((s) => s.label)).toEqual(expect.arrayContaining(labels));
+  });
+
+  test('every state label is unique within its tab', () => {
+    raw.forEach(({ tool, states }) => {
+      const labels = states.map((s) => s.label);
+
+      expect(new Set(labels).size, `duplicate label in '${tool}'`).toBe(labels.length);
+    });
+  });
+
+  test('block ids are unique across the gallery', () => {
+    const ids = raw.flatMap((e) => e.states.flatMap((s) => s.blocks.map((b) => b.id)));
+
+    expect(ids.filter((id, i) => ids.indexOf(id) !== i)).toEqual([]);
+  });
+
+  test('block colours name a real preset, or the colour is silently dropped', () => {
+    const presets = [ ...readFileSync(resolve(__dirname, '../../../src/shared/color-presets.ts'), 'utf-8')
+      .slice(0, 1200).matchAll(/name: '([a-z]+)'/g) ].map((m) => m[1]);
+    const colors = raw.flatMap((e) => e.states.flatMap((s) => s.blocks.flatMap((b) =>
+      [ b.data?.textColor, b.data?.backgroundColor ].filter((c): c is string => typeof c === 'string'))));
+
+    expect(presets).toContain('red');
+    expect(colors.filter((c) => !presets.includes(c))).toEqual([]);
+  });
+
+  test('the image "Loaded" state has no caption, so it differs from "With caption"', () => {
+    const loaded = entry('image')?.states.find((s) => s.label === 'Loaded');
+
+    expect(loaded?.blocks[0].data?.caption).toBeUndefined();
+  });
+
+  test('a nested callout keeps its text in a child block, the only body it renders', () => {
+    const blocks = raw.flatMap((e) => e.states.flatMap((s) => s.blocks));
+    const callouts = blocks.filter((b) => b.type === 'callout');
+
+    callouts.forEach((b) => expect(b.data?.text, b.id).toBeUndefined());
+  });
+
+  test('toggles saved as open are opened after mount, because load ignores isOpen', () => {
+    expect(mountCode).toContain("viewState.set(");
+  });
+
+  test('the gallery registers page-link and resolves it from the shared page fixture', () => {
+    expect(mountCode).toContain("'page-link': { class: PageLink");
+    expect(html).toMatch(/import \{[^}]*\bPageLink\b[^}]*\} from/);
+  });
+
+  test('the calendar state opens on its own events month, which load reads before mount', () => {
+    expect(mountCode).toMatch(/localStorage\.setItem\('blok:database-calendar:db-calendar:v1'[\s\S]*?new Blok\(/);
+  });
+
+  test('the file uploading demo draws the file preview, like the real upload path', () => {
+    expect(mountCode).toMatch(/renderFileUploadingState\(\{[\s\S]*?preview: 'file'/);
+  });
+});
+
+describe('block states tab rail', () => {
+  test('the sticky rail scrolls itself, so every tab stays reachable on a short screen', () => {
+    const html = readFileSync(resolve(__dirname, '../../../index.html'), 'utf-8');
+    const start = html.indexOf('    .block-states-tabs {');
+    const rule = html.slice(start, html.indexOf('}', start));
+
+    expect(rule).toContain('position: sticky');
+    expect(rule).toMatch(/max-height: calc\(100vh - /);
+    expect(rule).toContain('overflow-y: auto');
   });
 });

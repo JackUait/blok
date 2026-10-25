@@ -44,7 +44,12 @@ export interface BlokMcpOptions {
   sync?: { url: string; origin?: string };
   tickets?: { kind: 'secret'; secret: string } | { kind: 'url'; url: string; hostToken: string };
   authorize?: (principal: string, documentId: string, write: boolean) => Promise<boolean>;
-  /** Builds the session's actor. The ticket `user` must equal the returned `id`. */
+  /**
+   * Builds the session's actor. The ticket `user` must equal the returned `id`.
+   * Blocks the agent writes name `onBehalfOf` in `createdBy`/`lastEditedBy` and the
+   * actor's `id` in `createdWith`/`lastEditedWith`. Leave `onBehalfOf` out and the
+   * agent's id is named alone. The default actor sets it to the principal.
+   */
   agentActor?: (principal: string, clientName: string) => AgentActor;
   source?: { kind: 'endpoint'; url: string; endpointAuth: string; list?: string } | { kind: 'files'; dir: string };
   /** Host custom tool descriptions, as `--manifest <file>` loads them. */

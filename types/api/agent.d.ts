@@ -49,7 +49,13 @@ export interface AgentTurnOptions {
   agent: AgentIdentity;
   /** Follow the agent's block until the user scrolls, types or clicks. Default false. */
   follow?: boolean;
-  /** Who `createdBy` and `lastEditedBy` name. `detail.agent` is set either way. Default 'agent'. */
+  /**
+   * Who a block the agent writes is credited to. `detail.agent` is set either way.
+   * - 'agent' (default): co-authored. `createdBy`/`lastEditedBy` name the person
+   *   (`agent.onBehalfOf`, else the editor's `user.id`) and `createdWith`/`lastEditedWith`
+   *   name the agent. With no person known, the agent's id goes in `...By` and no `...With` is written.
+   * - 'user': only the person is named, with no `...With`.
+   */
   attributeTo?: 'agent' | 'user';
 }
 

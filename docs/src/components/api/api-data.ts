@@ -3450,7 +3450,7 @@ app.post('/api/ai', async (req, res) => {
         name: "agent.begin(options)",
         returnType: "AgentTurn",
         description:
-          "Opens a turn and returns it. Only one turn can be open per editor, so a second call throws `AgentTurnOpenError`.\n\n- `agent`: the agent's `id`, `name` and optional `color`. Users see the name, and the id is saved as `createdBy` on the blocks it adds and `lastEditedBy` on the blocks it changes.\n- `follow`: scrolls to the agent's block until the user scrolls, types or clicks. Default `false`.\n- `attributeTo`: `'user'` saves the user's id in `createdBy` and `lastEditedBy` instead.",
+          "Opens a turn and returns it. Only one turn can be open per editor, so a second call throws `AgentTurnOpenError`.\n\n- `agent`: the agent's `id`, `name` and optional `color` and `onBehalfOf`. Users see the name. A block the agent adds or changes is co-authored: `createdBy` and `lastEditedBy` hold the person (`onBehalfOf`, else your `user.id`), and `createdWith` and `lastEditedWith` hold the agent's id. With no person known, the agent's id goes in `createdBy` and `lastEditedBy` alone.\n- `follow`: scrolls to the agent's block until the user scrolls, types or clicks. Default `false`.\n- `attributeTo`: `'user'` names only the person and writes no `createdWith` or `lastEditedWith`.",
         example: `const tools = await editor.agent.tools({ format: 'anthropic' });
 const system = await editor.agent.guidance();
 const turn = editor.agent.begin({ agent: { id: 'assistant', name: 'Assistant' } });
@@ -4002,7 +4002,7 @@ interface OutputData {
         name: "equalsOutputData(a, b, options?)",
         returnType: "boolean",
         description:
-          "Structural equality for saved documents, exported from the main entry. It compares the page `title` and `icon` and the `blocks` arrays deeply. An absent, `null` or `''` title counts as no title, and an absent or `null` icon as no icon.\n\n- The volatile `time` and `version` envelope fields are ignored, so a document round-tripped through save() compares equal to its echo.\n- Block ids count only when BOTH sides carry one.\n  - The editor mints fresh ids for id-less content, so a legacy document (or a backend that strips ids) still compares equal to its saved echo. You need no id-stripping wrapper on the consumer side.\n- Edit metadata (`lastEditedAt` / `lastEditedBy` / `createdAt` / `createdBy`) never counts either.\n  - It records who touched a block and when, not what it says, so a document whose only delta is a stamp counts as unchanged.\n- Nullish documents and loose wire shapes are accepted: `null`/`undefined` compares equal to `{ blocks: [] }`, and a DTO's `parent: null` / `content: null` equals the saved shape that omits them.\n\nThe third argument is `EqualsOutputDataOptions`, also exported from the main entry. Its `ignoreEmptyDefaultBlocks` option (default `false`) drops empty blocks of the DEFAULT block tool from both sides before comparing.\n\nA pristine editor holding one empty paragraph then equals a saved-empty baseline, which is the flag to use for dirty-vs-baseline checks. Empty NON-default blocks (a content-less divider, an empty image) are kept.",
+          "Structural equality for saved documents, exported from the main entry. It compares the page `title` and `icon` and the `blocks` arrays deeply. An absent, `null` or `''` title counts as no title, and an absent or `null` icon as no icon.\n\n- The volatile `time` and `version` envelope fields are ignored, so a document round-tripped through save() compares equal to its echo.\n- Block ids count only when BOTH sides carry one.\n  - The editor mints fresh ids for id-less content, so a legacy document (or a backend that strips ids) still compares equal to its saved echo. You need no id-stripping wrapper on the consumer side.\n- Edit metadata (`lastEditedAt` / `lastEditedBy` / `lastEditedWith` / `createdAt` / `createdBy` / `createdWith`) never counts either.\n  - It records who touched a block and when, not what it says, so a document whose only delta is a stamp counts as unchanged.\n- Nullish documents and loose wire shapes are accepted: `null`/`undefined` compares equal to `{ blocks: [] }`, and a DTO's `parent: null` / `content: null` equals the saved shape that omits them.\n\nThe third argument is `EqualsOutputDataOptions`, also exported from the main entry. Its `ignoreEmptyDefaultBlocks` option (default `false`) drops empty blocks of the DEFAULT block tool from both sides before comparing.\n\nA pristine editor holding one empty paragraph then equals a saved-empty baseline, which is the flag to use for dirty-vs-baseline checks. Empty NON-default blocks (a content-less divider, an empty image) are kept.",
         example: `import { equalsOutputData } from '@bloklabs/core';
 
 const saved = await editor.save();
@@ -4310,9 +4310,11 @@ interface OutputBlockData {
   content?: string[]; // Ids of child blocks (flat-with-references nesting)
   indent?: number;    // Nesting/indent level
   lastEditedAt?: number; // Timestamp (ms since epoch) of the last edit — omitted until the block is actually edited
-  lastEditedBy?: string; // Id of the user (from user.id config) or agent who last edited this block
+  lastEditedBy?: string; // Id of the user (from user.id config) who last edited this block, or of the agent when no person is known
+  lastEditedWith?: string; // Id of the agent that made the last edit together with lastEditedBy
   createdAt?: number; // Timestamp (ms since epoch) the block was created, stamped once
-  createdBy?: string; // Id of the user (from user.id config) or agent who created this block
+  createdBy?: string; // Id of the user (from user.id config) who created this block, or of the agent when no person is known
+  createdWith?: string; // Id of the agent that created this block together with createdBy
 }
 
 // Example blocks:
@@ -4394,7 +4396,13 @@ const listItemBlock: OutputBlockData = {
         option: "lastEditedBy",
         type: "string (optional)",
         default: "—",
-        description: "Id of the user who last edited this block (from the user.id config), or of the agent for an agent's edit",
+        description: "Id of the user who last edited this block (from the user.id config). For an agent's edit it is the person the agent acts for. It is the agent's id only when no person is known.",
+      },
+      {
+        option: "lastEditedWith",
+        type: "string (optional)",
+        default: "—",
+        description: "Id of the agent that made the last edit together with lastEditedBy. It is set only when an agent edits for a known person. A later edit without an agent removes it. equalsOutputData ignores this field.",
       },
       {
         option: "createdAt",
@@ -4407,7 +4415,13 @@ const listItemBlock: OutputBlockData = {
         option: "createdBy",
         type: "string (optional)",
         default: "—",
-        description: "Id of the user who created this block (from the user.id config), or of the agent for a block an agent added",
+        description: "Id of the user who created this block (from the user.id config). For a block an agent added it is the person the agent acts for. It is the agent's id only when no person is known.",
+      },
+      {
+        option: "createdWith",
+        type: "string (optional)",
+        default: "—",
+        description: "Id of the agent that created this block together with createdBy. It is set only when an agent adds a block for a known person, and later edits never change it. equalsOutputData ignores this field.",
       },
     ],
   },

@@ -194,6 +194,7 @@ export interface AgentActor {
   id: string;
   name: string;
   kind: 'agent';
+  /** The person the agent acts for. Blocks the agent writes name them in createdBy/lastEditedBy, with the agent in createdWith/lastEditedWith. */
   onBehalfOf?: string;
   color?: string;
 }

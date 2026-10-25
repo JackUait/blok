@@ -843,8 +843,8 @@ describe('DatabaseCardDrawer', () => {
   });
 
   describe('properties section', () => {
-    // research/35 §4: a row page label hints its name, plus the description when there is one, left of it.
-    it('a property label hints its name and description, or its name alone', () => {
+    // research/35 §4: a row page label hints its name, plus the description when there is one, left of its cell.
+    it('a property label cell hints its name and description, or its name alone', () => {
       destroyTooltip();
       vi.useFakeTimers();
       try {
@@ -855,20 +855,46 @@ describe('DatabaseCardDrawer', () => {
 
         document.body.appendChild(options.wrapper);
         drawer.open(makeRow({ properties: { 'prop-title': 'Card', 'prop-tag': 'a', 'prop-date': 'b' } }));
-        const label = (id: string): HTMLElement | null =>
-          options.wrapper.querySelector<HTMLElement>(`[data-blok-database-drawer-prop-label][data-property-id="${id}"]`);
+        const cell = (id: string): HTMLElement | null | undefined =>
+          options.wrapper.querySelector<HTMLElement>(`[data-blok-database-drawer-prop-label][data-property-id="${id}"]`)?.parentElement;
 
-        hover(label('prop-tag'));
+        hover(cell('prop-tag'));
         vi.advanceTimersByTime(HINT_DELAY - 1);
         expect(shownHint()).toBeNull();
         vi.advanceTimersByTime(1);
         expect(shownHint()).toEqual({ text: 'TagLine one\nline two', placement: 'left' });
 
-        label('prop-tag')?.dispatchEvent(new MouseEvent('mouseleave'));
+        cell('prop-tag')?.dispatchEvent(new MouseEvent('mouseleave'));
         vi.advanceTimersByTime(1000);
-        hover(label('prop-date'));
+        hover(cell('prop-date'));
         vi.advanceTimersByTime(HINT_DELAY);
         expect(shownHint()).toEqual({ text: 'Date', placement: 'left' });
+      } finally {
+        vi.useRealTimers();
+        document.body.innerHTML = '';
+      }
+    });
+
+    // Notion: the hint sits 6px left of the 160x34 label cell, clear of the type icon, centred on the row.
+    it('puts a property hint 6px left of the label cell, not over its icon', () => {
+      destroyTooltip();
+      vi.useFakeTimers();
+      try {
+        const tag = makePropertyDef({ id: 'prop-tag', name: 'Tag', type: 'text' });
+        const options = createOptions({ schema: [tag] });
+        const drawer = new DatabaseCardDrawer(options);
+
+        document.body.appendChild(options.wrapper);
+        drawer.open(makeRow({ properties: { 'prop-title': 'Card', 'prop-tag': 'a' } }));
+        const head = options.wrapper.querySelector<HTMLElement>('[data-blok-database-drawer-prop-label][data-property-id="prop-tag"]')?.parentElement;
+
+        expect(head?.hasAttribute('data-blok-database-drawer-prop-head')).toBe(true);
+        hover(head);
+        vi.advanceTimersByTime(HINT_DELAY);
+
+        // jsdom gives the bubble no width: its right edge is its left, 6px before the cell at x=600.
+        expect(document.querySelector<HTMLElement>('[data-blok-testid="tooltip"]')?.style.left).toBe('594px');
+        expect(head?.getAttribute('aria-describedby')).not.toBeNull();
       } finally {
         vi.useRealTimers();
         document.body.innerHTML = '';

@@ -33,9 +33,10 @@ export const propertyHint = (name: string, description?: string): HTMLElement =>
  * research/35 §4: the hint sits on the inline-start side of a card value or
  * drawer label, like the peek handle hint: the left, or the right in RTL.
  */
-export const onPropertyHover = (trigger: HTMLElement, name: string, description?: string): void => {
+export const onPropertyHover = (trigger: HTMLElement, name: string, description?: string, gap?: number): void => {
   onHover(trigger, propertyHint(name, description), {
     bare: true,
+    gap,
     // A getter: the trigger is not in the page yet when this binds, so its direction is read on hover.
     get placement(): string {
       return getElementDirection(trigger) === 'rtl' ? 'right' : 'left';

@@ -3639,12 +3639,12 @@ export class DatabaseCardDrawer {
     label.setAttribute('data-blok-database-drawer-prop-label', '');
     label.setAttribute('data-property-id', def.id);
     label.textContent = def.name;
-    // research/35 §4: the name, plus the description, on the label's inline-start side.
-    onPropertyHover(label, def.name, def.description);
     const head = document.createElement('div');
     const valueEl = document.createElement('div');
 
     head.setAttribute('data-blok-database-drawer-prop-head', '');
+    // research/35 §4: the name, plus the description. Notion puts it 6px outside the cell, clear of the icon.
+    onPropertyHover(head, def.name, def.description, 6);
     // Outside the label: callers read the label's text as the property name.
     if (this.propertyIcons) {
       head.appendChild(this.propertyIcon(def));

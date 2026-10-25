@@ -457,6 +457,62 @@ describe('in-editor assistant bar', () => {
     expect(editor.agent.state.status).toBe('idle');
   });
 
+  it('a run that only writes a sub-page shows Discard, not Insert, and Discard takes the sub-page back', async () => {
+    const pages: Record<string, OutputData> = { sub: { blocks: [] } };
+    const subCall: AgentModelResponse = { stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 's1', name: 'blok_execute', input: {
+      page: 'pg', commands: [{ name: 'block.insert', args: { type: 'paragraph', data: { text: 'Sub words' }, position: 'end' } }],
+    } }] };
+    const editor = await createEditor(scripted(subCall, answer('Wrote the sub-page.')), undefined, {
+      tools: {
+        paragraph: Paragraph,
+        page: { class: PageTool, config: {
+          loadDocument: (pageId: string) => structuredClone(pages[pageId] ?? null),
+          saveDocument: (pageId: string, data: OutputData) => {
+            pages[pageId] = structuredClone(data);
+          },
+        } },
+      },
+      data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'Hello' } }, { id: 'pg', type: 'page', data: { pageId: 'sub' } }] },
+    });
+
+    editor.agent.openAssistant();
+    submit('Write the sub-page');
+    await waitFor(() => expect(within(bar()).getByRole('button', { name: 'Discard' })).toBeVisible());
+    expect(within(bar()).queryByRole('button', { name: 'Insert' })).toBeNull();
+    within(bar()).getByRole('button', { name: 'Discard' }).click();
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Ask AI' })).toBeNull());
+    expect(pages.sub).toEqual({ blocks: [] });
+  });
+
+  it('a run that only renames a page through the host hook shows Discard, and Discard takes the title back', async () => {
+    const titles: Record<string, string> = { sub: 'Old' };
+    const renameCall: AgentModelResponse = { stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'r1', name: 'blok_execute', input: {
+      commands: [{ name: 'page.rename', args: { id: 'pg', title: 'New' } }],
+    } }] };
+    const editor = await createEditor(scripted(renameCall, answer('Renamed it.')), undefined, {
+      tools: {
+        paragraph: Paragraph,
+        page: { class: PageTool, config: {
+          resolve: (pageId: string) => ({ title: titles[pageId] }),
+          rename: (pageId: string, title: string) => {
+            titles[pageId] = title;
+          },
+        } },
+      },
+      data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'Hello' } }, { id: 'pg', type: 'page', data: { pageId: 'sub' } }] },
+    });
+
+    editor.agent.openAssistant();
+    submit('Rename it');
+    await waitFor(() => expect(within(bar()).getByRole('button', { name: 'Discard' })).toBeVisible());
+    expect(within(bar()).queryByRole('button', { name: 'Insert' })).toBeNull();
+    within(bar()).getByRole('button', { name: 'Discard' }).click();
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Ask AI' })).toBeNull());
+    expect(titles.sub).toBe('Old');
+  });
+
   it('Discard stays open with the partial message when the host rename hook cannot take the title back', async () => {
     const titles: Record<string, string> = { sub: 'Old' };
     const renames = { count: 0 };

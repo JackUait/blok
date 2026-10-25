@@ -514,6 +514,7 @@ export class Assistant extends Module {
         onDiscarded: (outcome) => {
           this.discarded = outcome;
         },
+        onPageWritten: () => this.pageWritten(),
       });
 
       return this.run.result;
@@ -722,6 +723,15 @@ export class Assistant extends Module {
     this.edited = this.edited || [changed.created, changed.updated, changed.moved, changed.removed].some((ids) => ids.length > 0);
     // Block heights changed, so boxes of other calls move.
     this.preview?.relayout();
+  }
+
+  /** A write to another page has no block to show, but Discard can take it back. */
+  private pageWritten(): void {
+    if (!this.listening) {
+      return;
+    }
+    this.changed = true;
+    this.edited = true;
   }
 
   private toolDone(id: string, result: AgentToolResult): void {

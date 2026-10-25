@@ -64,6 +64,8 @@ export interface AssistantRunHooks {
   /** After each applied batch. */
   onExecuted?(changed: ChangedSet): void;
   onDiscarded?(outcome: DiscardOutcome): void;
+  /** After the run writes another page: a sub-page's document, or its title or icon through a host hook. */
+  onPageWritten?(): void;
 }
 
 interface TurnPage {
@@ -104,6 +106,8 @@ export class AgentAPI extends Module {
   private turnPages = new Map<string, TurnPage>();
   /** Each page title or icon the open turn wrote through a host hook, by `pageId field`: the first write and the last. */
   private turnHostWrites = new Map<string, { first: HostPageWrite; last: HostPageWrite }>();
+  /** The open run's onPageWritten. */
+  private turnPageWritten: (() => void) | undefined;
   /** PageIds an agent left on a page block. Kept across turns: such an id could name any document. */
   private readonly agentPageIds = new Set<string>();
   /** PageIds the host's create gave. Trusted though the agent's insert writes them too. */
@@ -244,6 +248,8 @@ export class AgentAPI extends Module {
     const turn = this.begin({ agent }, internal);
     const pagesSaved = this.turnPages;
     const hostWrites = this.turnHostWrites;
+
+    this.turnPageWritten = hooks.onPageWritten;
     const session = this.turnSession;
 
     return createAgentRun(composeFirstMessage(prompt, place.text, turn.read, place.blockIds), {
@@ -340,6 +346,7 @@ export class AgentAPI extends Module {
       const seen = this.turnHostWrites.get(key);
 
       this.turnHostWrites.set(key, { first: seen?.first ?? write, last: write });
+      this.turnPageWritten?.();
     });
 
     return this.serviceCache;
@@ -422,6 +429,7 @@ export class AgentAPI extends Module {
           if (page !== undefined) {
             page.saved = saved;
           }
+          this.turnPageWritten?.();
         },
         contractSource: () => this.source(),
         services: () => this.services(),
@@ -544,6 +552,7 @@ export class AgentAPI extends Module {
     this.actor = { ...identity, kind: 'agent' };
     this.turnPages = new Map();
     this.turnHostWrites = new Map();
+    this.turnPageWritten = undefined;
     this.startPageIds = new Map();
     for (const block of this.Blok.BlockManager.blocks) {
       const pageId = block.name === 'page' ? block.preservedData.pageId : undefined;

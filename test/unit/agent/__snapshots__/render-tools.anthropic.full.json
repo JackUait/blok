@@ -291,7 +291,7 @@
                       "type": {
                         "type": "string",
                         "minLength": 1,
-                        "description": "A block tool: paragraph, header, list, table, toggle, callout, database, database-row, database-comment, divider, spacer, table_of_contents, quote, code, image, file, audio, video, column_list, column, tabs, tab, embed, bookmark, page, page-link, rating. A variant sets these data fields; the tool's other required fields still go in data: header {level: 1|2|3|4|5|6, isToggleable: true}, list {style: \"unordered\"|\"ordered\"|\"checklist\"}."
+                        "description": "A block tool: paragraph, header, list, table, toggle, callout, database, database-row, divider, spacer, table_of_contents, quote, code, image, file, audio, video, column_list, column, tabs, tab, embed, bookmark, page, page-link, rating. A variant sets these data fields; the tool's other required fields still go in data: header {level: 1|2|3|4|5|6, isToggleable: true}, list {style: \"unordered\"|\"ordered\"|\"checklist\"}."
                       },
                       "data": {
                         "type": "object",
@@ -484,6 +484,77 @@
                       "id"
                     ],
                     "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "bookmark.create"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "url"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "url": {
+                        "type": "string",
+                        "pattern": "^https?://"
+                      },
+                      "parentId": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "description": "Parent block id. Omit or null for the document root."
+                      },
+                      "position": {
+                        "description": "Where the new block goes among its siblings. Default: the end.",
+                        "oneOf": [
+                          {
+                            "enum": [
+                              "start",
+                              "end"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "required": [
+                              "before"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "before": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "required": [
+                              "after"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "after": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
                   }
                 },
                 "required": [

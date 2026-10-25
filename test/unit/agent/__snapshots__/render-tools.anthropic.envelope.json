@@ -91,6 +91,7 @@
                   "block.insert",
                   "block.move",
                   "block.update",
+                  "bookmark.create",
                   "column_list.addColumn",
                   "column_list.create",
                   "column_list.removeColumn",

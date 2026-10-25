@@ -84,8 +84,28 @@ const executeNames = (tool: RenderedTool): string[] => {
 const differing = (a: AgentContract, b: AgentContract): Set<string> =>
   new Set(a.commands.filter((x) => b.commands.find((y) => y.name === x.name)?.available !== x.available).map((x) => x.name));
 
+/** Block types one contract can insert and the other cannot (a page needs the editor's prepareInsert). */
+const insertableIn = (a: AgentContract, b: AgentContract): Set<string> =>
+  new Set(a.manifest.blocks.filter((x) => b.manifest.blocks.find((y) => y.name === x.name)?.insertable !== x.insertable).map((x) => x.name));
+
+const BLOCK_LIST = /^A block tool: ([^.]*)\./;
+
+/** block.insert's type description lists insertable types; drop the ones only one side lists. */
+const withoutTypes = (value: unknown, types: Set<string>): unknown => {
+  if (typeof value === 'string') {
+    return value.replace(BLOCK_LIST, (_all, list: string) =>
+      `A block tool: ${list.split(', ').filter((name) => !types.has(name)).join(', ')}.`);
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => withoutTypes(item, types));
+  }
+
+  return isRecord(value) ? Object.fromEntries(Object.entries(value).map(([key, item]) => [key, withoutTypes(item, types)])) : value;
+};
+
 const withoutDeclaredDifferences = (tool: RenderedTool, skip: Set<string>): Record<string, unknown> => {
-  const copy = structuredClone(rawSchemaOf(tool));
+  const scrubbed = withoutTypes(structuredClone(rawSchemaOf(tool)), insertableIn(editor, node));
+  const copy = isRecord(scrubbed) ? scrubbed : {};
   const properties = isRecord(copy.properties) ? copy.properties : {};
 
   // The MCP surface adds the session `handle` (04); it is the one declared extra.

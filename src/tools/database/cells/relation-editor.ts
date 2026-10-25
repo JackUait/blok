@@ -1,6 +1,6 @@
 import type { PropertyDefinition, PropertyValue, RelationValue } from '../types';
 import { relationIdsOf } from '../relation-values';
-import { CellPopover } from './cell-popover';
+import { CellPopover, coverMinWidth } from './cell-popover';
 import type { CellEditorContext, CellEditorHandle } from './types';
 
 const listIds = { next: 0 };
@@ -74,9 +74,9 @@ class RelationEditor implements CellEditorHandle {
 
     this.popover = new CellPopover({
       anchor,
-      cover: ctx.coverCell === true,
+      cover: ctx.coverCell,
       content: this.root,
-      minWidth: `${Math.max(anchor.getBoundingClientRect().width, 300)}px`,
+      minWidth: coverMinWidth(anchor, ctx.coverCell, 300),
       onEscape: () => this.finish(true),
       onDismiss: () => this.finish(false),
     });

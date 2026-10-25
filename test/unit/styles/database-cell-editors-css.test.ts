@@ -115,6 +115,11 @@ describe('cell editor CSS', () => {
     it('keeps typed spaces in a text editor', () => {
       expect(declared('textarea[data-blok-database-cell-input]', 'white-space')).toEqual(['break-spaces']);
     });
+
+    it('is 38px tall over a row page value, text and number alike (notion-spec §7)', () => {
+      expect(declared("[data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-cell-input]", 'min-height'))
+        .toEqual(['38px']);
+    });
   });
 
   it('keeps the title weight (500) in the title editor, in a 38px one-line box (feel T19)', () => {

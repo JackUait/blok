@@ -9466,6 +9466,10 @@ textarea[data-blok-database-cell-input] {
   text-align: end;
 }
 
+[data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-cell-input] {
+  min-height: 38px;
+}
+
 [data-blok-database-cell-input][aria-invalid="true"] {
   color: var(--blok-color-red-text);
 }

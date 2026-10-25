@@ -4,7 +4,7 @@ import { IconCheck, IconCross, IconDotsHorizontal, IconMenu, IconSliders } from 
 import { DatabaseModel } from '../database-model';
 import { orderedStatusOptions, personIdsOf, statusGroupOf, statusGroupsOf } from '../property-values';
 import type { PropertyDefinition, PropertyValue, SelectOption } from '../types';
-import { CellPopover } from './cell-popover';
+import { CellPopover, coverMinWidth } from './cell-popover';
 import { createOptionPill, optionsFor } from './display';
 import { pickOptionColor, shownStatusOption } from './option-colors';
 import { OptionDrag, buildDeletePrompt, buildOptionPanel, placeDroppedOption } from './option-editing';
@@ -104,10 +104,10 @@ class SelectEditor {
 
     this.popover = new CellPopover({
       anchor,
-      cover: ctx.coverCell === true,
+      cover: ctx.coverCell,
       content: this.root,
       // Notion: 300 wide beside a 200px cell (research/08:306); status is 240 (feel/findings-table T17).
-      minWidth: `${Math.max(anchor.getBoundingClientRect().width, property.type === 'status' ? 240 : 300)}px`,
+      minWidth: coverMinWidth(anchor, ctx.coverCell, property.type === 'status' ? 240 : 300),
       onEscape: () => {
         if (this.deletePromptOpen) {
           this.renderPanel();

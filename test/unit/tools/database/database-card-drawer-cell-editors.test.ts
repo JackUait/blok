@@ -465,17 +465,17 @@ describe('DatabaseCardDrawer — link values', () => {
     ['number', { id: 'prop-note', name: 'Note', type: 'number', position: 'a4' }],
     ['select', { id: 'prop-note', name: 'Note', type: 'select', position: 'a4', config: { options: STATUS_OPTIONS } }],
     ['date', { id: 'prop-note', name: 'Note', type: 'date', position: 'a4' }],
-  ] satisfies Array<[string, PropertyDefinition]>)('the %s editor opens over its value, not below it, as measured', (_type, def) => {
+  ] satisfies Array<[string, PropertyDefinition]>)('the %s editor opens over its value, level with its top and 1px left, as measured (notion-spec §7)', (_type, def) => {
     const options = createOptions({ schema: [...SCHEMA, def] });
 
     new DatabaseCardDrawer(options).open(makeRow());
     const value = valueOf(options, 'prop-note');
 
-    vi.spyOn(value, 'getBoundingClientRect').mockReturnValue(new DOMRect(50, 100, 435, 30));
+    vi.spyOn(value, 'getBoundingClientRect').mockReturnValue(new DOMRect(50, 100, 434, 34));
     value.click();
     const box = editor()?.closest<HTMLElement>('[data-blok-popover]');
 
-    expect(box?.style.top).toBe('99px');
+    expect(box?.style.top).toBe('100px');
     expect(box?.style.left).toBe('49px');
   });
 
@@ -486,11 +486,12 @@ describe('DatabaseCardDrawer — link values', () => {
     new DatabaseCardDrawer(options).open(makeRow());
     const value = valueOf(options, 'prop-where');
 
-    vi.spyOn(value, 'getBoundingClientRect').mockReturnValue(new DOMRect(50, 100, 435, 30));
+    // research/35 §9: a 435 box at x 1001 over the 434 value at x 1002 (notion-spec §7).
+    vi.spyOn(value, 'getBoundingClientRect').mockReturnValue(new DOMRect(50, 100, 434, 34));
     value.click();
     const box = editor()?.closest<HTMLElement>('[data-blok-popover]');
 
-    expect(box?.style.top).toBe('99px');
+    expect(box?.style.top).toBe('100px');
     expect(box?.style.left).toBe('49px');
     expect(box?.style.getPropertyValue('--width')).toBe('435px');
   });

@@ -3487,7 +3487,7 @@ export class DatabaseCardDrawer {
       readOnly: this.readOnly,
       options: shownOptions.list,
       // Every editor opens over its value, so the value seems to turn editable in place.
-      coverCell: true,
+      coverCell: 'value',
       ...(reminder !== undefined ? { reminder } : {}),
       ...(onDateDisplayChange !== undefined ? { onDateDisplayChange } : {}),
       ...(def.type === 'date' && onReminderChange !== undefined

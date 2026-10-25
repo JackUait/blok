@@ -1,7 +1,7 @@
 import { IconCross } from '../../../components/icons';
 import type { DatabasePerson, PersonValue, PropertyDefinition, PropertyValue } from '../types';
 import { personIdsOf } from '../property-values';
-import { CellPopover } from './cell-popover';
+import { CellPopover, coverMinWidth } from './cell-popover';
 import type { CellEditorContext, CellEditorHandle } from './types';
 
 const listIds = { next: 0 };
@@ -73,9 +73,9 @@ class PersonEditor implements CellEditorHandle {
 
     this.popover = new CellPopover({
       anchor,
-      cover: ctx.coverCell === true,
+      cover: ctx.coverCell,
       content: this.root,
-      minWidth: `${Math.max(anchor.getBoundingClientRect().width, 240)}px`,
+      minWidth: coverMinWidth(anchor, ctx.coverCell, 240),
       onEscape: () => this.finish(true),
       onDismiss: () => this.finish(false),
     });

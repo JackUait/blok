@@ -3,7 +3,7 @@ import { IconCross } from '../../../components/icons';
 import { safeHref } from '../../../components/utils/sanitize-url';
 import type { FileValue, PropertyDefinition, PropertyValue } from '../types';
 import { filesOf } from '../property-values';
-import { CellPopover } from './cell-popover';
+import { CellPopover, coverMinWidth } from './cell-popover';
 import type { CellEditorContext, CellEditorHandle } from './types';
 
 /** A file's name from its URL: the last path segment, decoded. */
@@ -52,9 +52,9 @@ class FilesEditor implements CellEditorHandle {
 
     this.popover = new CellPopover({
       anchor,
-      cover: ctx.coverCell === true,
+      cover: ctx.coverCell,
       content: this.root,
-      minWidth: `${Math.max(anchor.getBoundingClientRect().width, 280)}px`,
+      minWidth: coverMinWidth(anchor, ctx.coverCell, 280),
       onEscape: () => this.finish(true),
       onDismiss: () => this.finish(false),
     });

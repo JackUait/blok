@@ -7,8 +7,8 @@ export interface CellPopoverOptions {
   anchor: HTMLElement;
   content: HTMLElement;
   minWidth?: string;
-  /** Open over the anchor (a table cell) instead of below it. */
-  cover?: boolean;
+  /** Open over the anchor instead of below it (see CellEditorContext.coverCell). */
+  cover?: boolean | 'value';
   /** Dock at the window's end edge, top level with the anchor, like Notion's view settings (research/26 §1a). */
   docked?: boolean;
   /** Escape pressed while open. The owner decides: close, or step back a panel. */
@@ -19,6 +19,8 @@ export interface CellPopoverOptions {
 
 /** Styles the box: radius, shadow and padding live in database.css. */
 const CELL_EDITOR_CLASS = 'blok-database-cell-editor';
+/** The row page's look on top of it (database.css). */
+const VALUE_EDITOR_CLASS = 'blok-database-value-editor';
 
 /**
  * research/22 §4: the box's corner sits 1px past the cell's, so its 1px ring
@@ -28,20 +30,32 @@ const CELL_EDITOR_CLASS = 'blok-database-cell-editor';
 const COVER_OUTSET = 1;
 const COVER_VIEWPORT_MARGIN = 12;
 
-const coverPlacement = (anchor: HTMLElement): Pick<PopoverParams, 'cover' | 'viewportMargin'> & { position: DOMRect; positionContext: HTMLElement } => {
+const coverPlacement = (anchor: HTMLElement, value: boolean): Pick<PopoverParams, 'cover' | 'viewportMargin'> & { position: DOMRect; positionContext: HTMLElement } => {
   const cell = anchor.getBoundingClientRect();
+  // notion-spec §7: a row page value has no border to land on, so the box keeps its top.
+  const top = value ? 0 : COVER_OUTSET;
 
   return {
     cover: true,
     viewportMargin: COVER_VIEWPORT_MARGIN,
     position: new DOMRect(
       cell.x - COVER_OUTSET,
-      cell.y - COVER_OUTSET,
+      cell.y - top,
       cell.width + 2 * COVER_OUTSET,
-      cell.height + 2 * COVER_OUTSET
+      cell.height + 2 * top
     ),
     positionContext: anchor,
   };
+};
+
+/**
+ * An editor's min-width: the cell's width, never under `floor`. Over a row
+ * page value the box starts 1px left and still ends on the value's right edge.
+ */
+export const coverMinWidth = (anchor: HTMLElement, cover: boolean | 'value' | undefined, floor: number): string => {
+  const width = anchor.getBoundingClientRect().width + (cover === 'value' ? COVER_OUTSET : 0);
+
+  return `${Math.max(width, floor)}px`;
 };
 
 /** research/26 §1a: the panel ends at x 1500 of a 1512 window. */
@@ -89,10 +103,10 @@ export class CellPopover {
       flippable: false,
       width: 'auto',
       autoFocusFirstItem: false,
-      class: docked === true ? `${CELL_EDITOR_CLASS} ${DOCKED_CLASS}` : CELL_EDITOR_CLASS,
+      class: [CELL_EDITOR_CLASS, ...(docked === true ? [DOCKED_CLASS] : []), ...(cover === 'value' ? [VALUE_EDITOR_CLASS] : [])].join(' '),
       ...(this.options.minWidth !== undefined ? { minWidth: this.options.minWidth } : {}),
     };
-    const coverOrNone = cover === true ? coverPlacement(anchor) : {};
+    const coverOrNone = cover === true || cover === 'value' ? coverPlacement(anchor, cover === 'value') : {};
     const placement = docked === true ? dockPlacement(anchor) : coverOrNone;
     const popover = new PopoverDesktop({ ...base, ...placement });
 

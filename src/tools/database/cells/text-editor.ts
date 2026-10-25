@@ -1,5 +1,5 @@
 import type { PropertyDefinition, PropertyValue } from '../types';
-import { CellPopover } from './cell-popover';
+import { CellPopover, coverMinWidth } from './cell-popover';
 import type { CellEditorContext, CellEditorHandle } from './types';
 
 type Outcome = { kind: 'commit'; value: PropertyValue } | { kind: 'cancel' };
@@ -76,9 +76,9 @@ export const openTextEditor = (
   const state = { open: true };
   const popover = new CellPopover({
     anchor,
-    cover: ctx.coverCell === true,
+    cover: ctx.coverCell,
     content,
-    minWidth: `${Math.max(anchor.getBoundingClientRect().width, 240)}px`,
+    minWidth: coverMinWidth(anchor, ctx.coverCell, 240),
     onEscape: () => finish(!escapeCancels && escapeCommits(property.type) ? resolve() ?? { kind: 'cancel' } : { kind: 'cancel' }),
     onDismiss: () => finish(resolve() ?? { kind: 'cancel' }, false),
   });

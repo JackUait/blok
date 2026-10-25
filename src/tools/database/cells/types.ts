@@ -66,8 +66,12 @@ export interface CellContext {
    * to the host, which edits the value.
    */
   followLinks?: boolean;
-  /** The table (research/22 §4): an editor opens over its cell, not below it. */
-  coverCell?: boolean;
+  /**
+   * An editor opens over its cell, not below it. `true` is the table cell
+   * (research/22 §4); 'value' is the row page's value (notion-spec §7):
+   * level with its top, its right edge on the value's.
+   */
+  coverCell?: boolean | 'value';
   /** The table (research/16 §4): a url shows without its http(s) scheme. */
   shortUrls?: boolean;
   /** Date: the cell's stored reminder. The cell shows an alarm and the date in the accent. */

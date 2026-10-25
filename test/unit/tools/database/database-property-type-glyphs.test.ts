@@ -4,7 +4,8 @@ import { propertyTypeMeta } from '../../../../src/tools/database/database-proper
 import type { PropertyType } from '../../../../src/tools/database/types';
 
 // Notion's type glyphs, read from its "Select type" menu and column headers
-// (feel/findings-table T04, T21; shots 02-notion-addprop-menu, 13-notion-header-ctx).
+// (feel/findings-table T04, T21; shots 02-notion-addprop-menu, 13-notion-header-ctx),
+// and its add-property menu for the advanced types. Drawn in Blok's line style.
 const NOTION_GLYPHS: Array<[PropertyType, string]> = [
   ['title', 'IconLetterCase'],
   ['text', 'IconTextLines'],
@@ -16,10 +17,20 @@ const NOTION_GLYPHS: Array<[PropertyType, string]> = [
   ['date', 'IconCalendar'],
   ['person', 'IconPeople'],
   ['files', 'IconPaperclip'],
-  ['checkbox', 'IconCheckboxFilled'],
+  ['checkbox', 'IconCheckbox'],
   ['url', 'IconLink'],
   ['phone', 'IconPhone'],
   ['email', 'IconAt'],
+  ['formula', 'IconSigma'],
+  ['relation', 'IconArrowDiagonal'],
+  ['rollup', 'IconSearch'],
+  ['createdTime', 'IconClock'],
+  ['lastEditedTime', 'IconClock'],
+  ['createdBy', 'IconUserCircle'],
+  ['lastEditedBy', 'IconUserCircle'],
+  ['button', 'IconCursorButton'],
+  ['place', 'IconEmojiMap'],
+  ['uniqueId', 'IconNumero'],
 ];
 
 const iconByName = (name: string): string | undefined =>

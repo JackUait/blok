@@ -63,6 +63,63 @@ describe('property type glyphs (Notion shapes on the Blok Line grid)', () => {
     expect(fill?.getAttribute('fill-rule')).toBe('evenodd');
   });
 
+  it('Select\'s mark is a line chevron, not a filled caret', () => {
+    const mark = svg(icons.IconSelectCircle).querySelector('path');
+
+    expect(mark?.getAttribute('fill')).toBeNull();
+    expect(mark?.getAttribute('d')).toBe('M7.75 9L10 11.25L12.25 9');
+  });
+
+  it('Clock and user circle sit on the standalone circle', () => {
+    for (const icon of [icons.IconClock, icons.IconUserCircle]) {
+      const ring = svg(icon).querySelector('circle');
+
+      expect([num(ring, 'cx'), num(ring, 'cy'), num(ring, 'r')]).toEqual([10, 10, 6.5]);
+    }
+  });
+
+  it('the user circle keeps a full stroke between head, ring and shoulders, and the shoulders meet the ring', () => {
+    const [ring, head] = [...svg(icons.IconUserCircle).querySelectorAll('circle')];
+    const d = svg(icons.IconUserCircle).querySelector('path')?.getAttribute('d') ?? '';
+    const ends = [d.match(/^M([\d.]+) ([\d.]+)/), d.match(/([\d.]+) ([\d.]+)$/)].map((m) => [Number(m?.[1]), Number(m?.[2])]);
+    const shoulderTop = Number(d.match(/C[\d. ]+ ([\d.]+) 10 ([\d.]+)C/)?.[2]);
+
+    for (const [x, y] of ends) {
+      expect(Math.hypot(x - 10, y - 10)).toBeCloseTo(6.5, 1);
+    }
+    expect(num(head, 'cy') - num(head, 'r') - (num(ring, 'cy') - num(ring, 'r')) - 1.25).toBeGreaterThanOrEqual(1.25);
+    expect(shoulderTop - (num(head, 'cy') + num(head, 'r')) - 1.25).toBeGreaterThanOrEqual(1.25);
+  });
+
+  it('the checkbox is the 13-unit box as a line, with a line check', () => {
+    const root = svg(icons.IconCheckbox);
+    const frame = root.querySelector('rect');
+
+    expect([num(frame, 'x'), num(frame, 'y'), num(frame, 'width'), num(frame, 'height')]).toEqual([3.5, 3.5, 13, 13]);
+    expect(root.querySelector('[fill="currentColor"]')).toBeNull();
+    expect(root.querySelector('path')?.getAttribute('stroke')).toBe('currentColor');
+  });
+
+  it('the numero N stands on the type grid (cap 5, baseline 15)', () => {
+    const d = svg(icons.IconNumero).querySelector('path')?.getAttribute('d') ?? '';
+
+    expect(d).toBe('M3.5 15V5L9.5 15V5');
+  });
+
+  it('the button cursor is IconCursor at 0.6 scale, a full stroke clear of the button', () => {
+    const points = (markup: string, index: number): number[][] =>
+      [...(svg(markup).querySelectorAll('path')[index]?.getAttribute('d') ?? '').matchAll(/([\d.]+) ([\d.]+)/g)]
+        .map((m) => [Number(m[1]), Number(m[2])]);
+    const base = points(icons.IconCursor, 0);
+    const cursor = points(icons.IconCursorButton, 1);
+
+    expect(cursor).toHaveLength(base.length);
+    cursor.forEach(([x, y], i) => {
+      expect(x - cursor[0][0]).toBeCloseTo((base[i][0] - base[0][0]) * 0.6, 5);
+      expect(y - cursor[0][1]).toBeCloseTo((base[i][1] - base[0][1]) * 0.6, 5);
+    });
+  });
+
   it('the handset is symmetric about the anti-diagonal', () => {
     const d = svg(icons.IconPhone).querySelector('path')?.getAttribute('d') ?? '';
 

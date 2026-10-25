@@ -1,28 +1,26 @@
 import {
   IconArrowDiagonal,
   IconAt,
-  IconBookmark,
   IconCalendar,
   IconCheck,
-  IconCheckboxFilled,
-  IconCursor,
-  IconEmojiWink,
-  IconEquation,
+  IconCheckbox,
+  IconClock,
+  IconCursorButton,
+  IconEmojiMap,
   IconHash,
   IconLetterCase,
   IconLink,
   IconListBulleted,
-  IconMap,
+  IconNumero,
   IconPaperclip,
-  IconPencil,
   IconPeople,
   IconPhone,
-  IconPlayerPlay,
-  IconPlus,
   IconSearch,
   IconSelectCircle,
+  IconSigma,
   IconStatusCircle,
   IconTextLines,
+  IconUserCircle,
 } from '../../components/icons';
 import type { PropertyType } from './types';
 
@@ -31,7 +29,7 @@ export interface PropertyTypeMeta {
   labelKey: string;
 }
 
-/** Icon and label per type. The basic types take the glyphs of Notion's "Select type" menu; the rest are unmeasured. */
+/** Icon and label per type: Notion's glyph for each type, drawn in Blok Line. */
 export const PROPERTY_TYPE_META: Readonly<Record<PropertyType, PropertyTypeMeta>> = {
   title: { icon: IconLetterCase, labelKey: 'tools.database.propertyTypeTitle' },
   text: { icon: IconTextLines, labelKey: 'tools.database.propertyTypeText' },
@@ -43,20 +41,20 @@ export const PROPERTY_TYPE_META: Readonly<Record<PropertyType, PropertyTypeMeta>
   date: { icon: IconCalendar, labelKey: 'tools.database.propertyTypeDate' },
   person: { icon: IconPeople, labelKey: 'tools.database.propertyTypePerson' },
   files: { icon: IconPaperclip, labelKey: 'tools.database.propertyTypeFiles' },
-  checkbox: { icon: IconCheckboxFilled, labelKey: 'tools.database.propertyTypeCheckbox' },
+  checkbox: { icon: IconCheckbox, labelKey: 'tools.database.propertyTypeCheckbox' },
   url: { icon: IconLink, labelKey: 'tools.database.propertyTypeUrl' },
   phone: { icon: IconPhone, labelKey: 'tools.database.propertyTypePhone' },
   email: { icon: IconAt, labelKey: 'tools.database.propertyTypeEmail' },
-  uniqueId: { icon: IconBookmark, labelKey: 'tools.database.propertyTypeUniqueId' },
-  createdTime: { icon: IconPlus, labelKey: 'tools.database.propertyTypeCreatedTime' },
-  lastEditedTime: { icon: IconPencil, labelKey: 'tools.database.propertyTypeLastEditedTime' },
-  createdBy: { icon: IconEmojiWink, labelKey: 'tools.database.propertyTypeCreatedBy' },
-  lastEditedBy: { icon: IconCursor, labelKey: 'tools.database.propertyTypeLastEditedBy' },
+  uniqueId: { icon: IconNumero, labelKey: 'tools.database.propertyTypeUniqueId' },
+  createdTime: { icon: IconClock, labelKey: 'tools.database.propertyTypeCreatedTime' },
+  lastEditedTime: { icon: IconClock, labelKey: 'tools.database.propertyTypeLastEditedTime' },
+  createdBy: { icon: IconUserCircle, labelKey: 'tools.database.propertyTypeCreatedBy' },
+  lastEditedBy: { icon: IconUserCircle, labelKey: 'tools.database.propertyTypeLastEditedBy' },
   relation: { icon: IconArrowDiagonal, labelKey: 'tools.database.propertyTypeRelation' },
   rollup: { icon: IconSearch, labelKey: 'tools.database.propertyTypeRollup' },
-  formula: { icon: IconEquation, labelKey: 'tools.database.propertyTypeFormula' },
-  button: { icon: IconPlayerPlay, labelKey: 'tools.database.propertyTypeButton' },
-  place: { icon: IconMap, labelKey: 'tools.database.propertyTypePlace' },
+  formula: { icon: IconSigma, labelKey: 'tools.database.propertyTypeFormula' },
+  button: { icon: IconCursorButton, labelKey: 'tools.database.propertyTypeButton' },
+  place: { icon: IconEmojiMap, labelKey: 'tools.database.propertyTypePlace' },
   verification: { icon: IconCheck, labelKey: 'tools.database.propertyTypeVerification' },
 };
 

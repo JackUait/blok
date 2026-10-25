@@ -254,6 +254,7 @@ export const describeImage = (config: Record<string, unknown> = {}): BlockToolDe
     ? { ...IMAGE_DATA, properties: { ...IMAGE_DATA.properties, filter: { type: 'string', enum: filterNames(config.filters) } } }
     : IMAGE_DATA,
   summaryFields: ['alignment', 'size', 'width'],
+  findFields: ['caption'],
   guardedFields: { markup: 'image.*Markup' },
   actions: IMAGE_ACTIONS,
 });

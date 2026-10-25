@@ -6,8 +6,8 @@
  * (database views, file names) never lives in an input at all.
  */
 import { DATA_ATTR } from '../../constants/data-attributes';
-import type { FindOptions } from './match-text';
-import { findTextMatches } from './match-text';
+import type { FindOptions } from '../../../shared/text-match';
+import { findTextMatches } from '../../../shared/text-match';
 
 /**
  * Elements whose text forms one searchable run. A match never crosses from one

@@ -16,7 +16,7 @@ import { FindBar } from './find-bar';
 import { hopSourceFromRange, type HopSource } from './find-motion';
 import { FindLens } from './find-lens';
 import { clearFindHighlights, paintFindHighlights } from './find-highlight';
-import type { FindOptions } from './match-text';
+import type { FindOptions } from '../../../shared/text-match';
 import { getCaretPositionFromPoint } from '../../utils/caret/navigation';
 import { isInPreviewedBlock, isPreviewMutation, ReplacePreview } from './replace-preview';
 import { editableHostOf, replaceRangeText } from './replace-text';

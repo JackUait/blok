@@ -1,6 +1,7 @@
 import type { RichTextHelpers, TextRange } from '../../../types/agent';
 import type { RichText, RichTextMarks, RichTextSegment } from '../../../types/rich-text';
 import { canonicalizeSegments, isTextSegment } from '../rich-text/html-to-segments';
+import { findTextMatches } from '../text-match';
 import { failure } from './errors';
 
 export const KNOWN_MARKS: ReadonlySet<string> = new Set<keyof RichTextMarks>([
@@ -71,28 +72,34 @@ const withMarks = (segment: RichTextSegment, set: RichTextMarks | undefined, uns
   return isTextSegment(segment) ? { text: segment.text, ...marked } : { embed: segment.embed, ...marked };
 };
 
-const findRange = (text: string, range: Extract<TextRange, { find: string }>): { start: number; end: number } => {
+type FindRange = Extract<TextRange, { find: string }>;
+
+/** Every hit of a find range in `text`, in order, matched as the find bar matches. */
+export const findHits = (text: string, range: FindRange): Array<{ start: number; end: number }> => {
   if (range.find.trim() === '') {
     throw failure('INVALID_ARGS', '`find` must contain non-space text.');
   }
+
+  return findTextMatches(text, range.find, {
+    matchCase: range.matchCase === true, wholeWord: range.wholeWord === true, keepEdgeSpaces: true,
+  });
+};
+
+const findRange = (text: string, range: FindRange): { start: number; end: number } => {
   if (range.occurrence !== undefined && (!Number.isInteger(range.occurrence) || range.occurrence < 1)) {
     throw failure('INVALID_ARGS', '`occurrence` counts from 1.');
   }
 
   const occurrence = range.occurrence ?? 1;
-  const search = { at: -1, count: 0 };
+  const hit = findHits(text, range)[occurrence - 1];
 
-  while (search.count < occurrence) {
-    search.at = text.indexOf(range.find, search.at + 1);
-    if (search.at < 0) {
-      throw failure('RANGE_NOT_FOUND', `"${range.find}" occurs fewer than ${occurrence} time(s). Read the field text in details and retry.`, {
-        details: { text },
-      });
-    }
-    search.count += 1;
+  if (hit === undefined) {
+    throw failure('RANGE_NOT_FOUND', `"${range.find}" occurs fewer than ${occurrence} time(s). Read the field text in details and retry.`, {
+      details: { text },
+    });
   }
 
-  return { start: search.at, end: search.at + range.find.length };
+  return hit;
 };
 
 const resolve = (value: RichText, range: TextRange): { start: number; end: number } => {

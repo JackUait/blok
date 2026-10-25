@@ -2,7 +2,7 @@ import { isRichText } from '../rich-text/guards';
 import { AgentFailure, failure } from './errors';
 import { defaultLinkResolver, dropLinkOnPageMention, normalizeAgentMarks } from './mark-input';
 import { planUpdate } from './plan-block';
-import { KNOWN_MARKS, UNSET_ALL, UNSET_TAGS } from './rich-text-ops';
+import { findHits, KNOWN_MARKS, UNSET_ALL, UNSET_TAGS } from './rich-text-ops';
 
 import type { TextRange } from '../../../types/agent';
 import type { RichText } from '../../../types/rich-text';
@@ -54,8 +54,17 @@ const readRange = (state: PlanState, value: unknown): TextRange => {
     return value;
   }
   if (isRecord(value)) {
-    if (typeof value.find === 'string' && (value.occurrence === undefined || typeof value.occurrence === 'number')) {
-      return { find: value.find, ...(value.occurrence !== undefined && { occurrence: value.occurrence }) };
+    const flag = (key: string): boolean => value[key] === undefined || typeof value[key] === 'boolean';
+
+    if (typeof value.find === 'string' && (value.occurrence === undefined || typeof value.occurrence === 'number')
+        && flag('matchCase') && flag('wholeWord') && flag('all')) {
+      return {
+        find: value.find,
+        ...(value.occurrence !== undefined && { occurrence: value.occurrence }),
+        ...(value.matchCase === true && { matchCase: true }),
+        ...(value.wholeWord === true && { wholeWord: true }),
+        ...(value.all === true && { all: true }),
+      };
     }
     if (typeof value.start === 'number' && typeof value.end === 'number' &&
         (value.expectText === undefined || typeof value.expectText === 'string')) {
@@ -183,23 +192,66 @@ export const planTextDelete = (state: PlanState, args: Record<string, unknown>):
   return { removed };
 };
 
+const isReplaceAll = (range: TextRange): range is Extract<TextRange, { find: string }> =>
+  typeof range === 'object' && 'find' in range && range.all === true;
+
 export const planTextReplace = (state: PlanState, args: Record<string, unknown>): unknown => {
   const t = target(state, args);
   const range = readRange(state, args.range ?? 'all');
+
+  if (isReplaceAll(range)) {
+    return replaceAll(state, t, range, args.with);
+  }
+
   const { start, end } = resolve(state, t, range, '/range');
   const typed = input(state, t, args.with, '/with', undefined, true);
-  // Plain text takes the marks where the range starts, as the user's Find & replace does.
-  // Only a found or offset range: "all" rewrites the field, and an empty range is an insert.
-  const startMarks = typeof args.with === 'string' && range !== 'all' && end > start
-    ? state.ctx.richText.slice(t.value, start, start + 1)[0]?.marks
-    : undefined;
-  const inserted = startMarks === undefined ? typed : typed.map(segment => ({ ...segment, marks: { ...startMarks, ...segment.marks } }));
+  const inserted = withMarksAt(state, t, typed, typeof args.with === 'string' && range !== 'all' && end > start ? start : undefined);
   const length = state.ctx.richText.length(inserted);
   const removed = state.ctx.richText.remove(t.value, start, end);
 
   write(state, t, state.ctx.richText.insert(removed, start, inserted), start, start + length);
 
   return { length };
+};
+
+/**
+ * Plain text takes the marks at `at`, as the user's Find & replace does.
+ * Only a found or offset range passes it: "all" rewrites the field, and an empty range is an insert.
+ */
+const withMarksAt = (state: PlanState, t: Target, typed: RichText, at: number | undefined): RichText => {
+  const marks = at === undefined ? undefined : state.ctx.richText.slice(t.value, at, at + 1)[0]?.marks;
+
+  return marks === undefined ? typed : typed.map(segment => ({ ...segment, marks: { ...marks, ...segment.marks } }));
+};
+
+/** Every hit is found in the text before any change, so a replacement never matches its own output. */
+const replaceAll = (state: PlanState, t: Target, range: Extract<TextRange, { find: string }>, value: unknown): unknown => {
+  if (range.occurrence !== undefined) {
+    state.fail('INVALID_ARGS', '`all` replaces every hit. Leave out `occurrence`.', '/range/occurrence');
+  }
+
+  const { all: _all, ...single } = range;
+
+  // Fails as a single find would when there is no hit.
+  resolve(state, t, single, '/range');
+
+  const hits = findHits(state.ctx.richText.plainText(t.value), single);
+  const typed = input(state, t, value, '/with', undefined, true);
+  const first = hits[0] ?? { start: 0, end: 0 };
+
+  // Right to left, so earlier offsets stay valid.
+  const next = [...hits].reverse().reduce((current, hit) => {
+    const inserted = withMarksAt(state, t, typed, typeof value === 'string' ? hit.start : undefined);
+
+    return state.ctx.richText.insert(state.ctx.richText.remove(current, hit.start, hit.end), hit.start, inserted);
+  }, t.value);
+  const delta = state.ctx.richText.length(next) - state.ctx.richText.length(t.value);
+  const last = hits[hits.length - 1] ?? first;
+  const length = state.ctx.richText.length(typed);
+
+  write(state, t, next, first.start, last.end + delta);
+
+  return { length, count: hits.length };
 };
 
 /** Setting one of these turns the other off, as the sup/sub tool does. */

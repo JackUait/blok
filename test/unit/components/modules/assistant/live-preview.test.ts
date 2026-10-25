@@ -613,6 +613,26 @@ describe('createLivePreview', () => {
       expect(boxText()).toBe('one cat two dog three');
     });
 
+    it('find replace previews the span commit replaces: case folds, and Whole word skips a longer word', () => {
+      const preview = make();
+
+      field(state.holders[0], 'Cat catalog');
+      preview.update('c1', execute({ name: 'text.replace', args: { id: 'b1', range: { find: 'cat', wholeWord: true }, with: 'dog' } }));
+      vi.advanceTimersByTime(35 * 3);
+
+      expect(boxText()).toBe('dog catalog');
+    });
+
+    it('a replace-all shows no single-span preview', () => {
+      const preview = make();
+      const b1 = state.holders[0];
+
+      field(b1, 'one cat two cat');
+      preview.update('c1', execute({ name: 'text.replace', args: { id: 'b1', range: { find: 'cat', all: true }, with: 'dog' } }));
+
+      expect(state.layer.querySelector(PREVIEW)).toBeNull();
+    });
+
     it('a find that is not in the text shows no preview', () => {
       const preview = make();
       const b1 = state.holders[0];

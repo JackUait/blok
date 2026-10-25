@@ -421,8 +421,8 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'key:Mod+Z': cmd('history.undo'),
   'key:Mod+Shift+Z': cmd('history.redo'),
   'key:Ctrl+Y': cmd('history.redo'),
-  'key:Mod+F': exempt('view-only', 'Opens find and highlights matches; the document does not change.'),
-  'key:Replace': cmd('text.replace'),
+  'key:Mod+F': cmds(['doc.find'], 'Finds text as the find bar does: case, accent and space folding, Match case, Whole word, every hit with offsets.'),
+  'key:Replace': cmds(['text.replace'], 'Replace is a found range; Replace all is range { find, all: true }, in one pass.'),
 
   // typing — markdownShortcuts.ts handlers and *Trigger composers
   'typing:handleListShortcut': cmd('block.convert'),

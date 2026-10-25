@@ -18,6 +18,7 @@ import { DATA_ATTR } from '../../constants/data-attributes';
 import { colorVarName } from '../../shared/color-presets';
 import { prefersReducedMotion } from '../../utils/reduced-motion';
 import { safeImageSrc } from '../../utils/sanitize-url';
+import { findTextMatches } from '../../../shared/text-match';
 
 import { gapSize, holdGapChanges, releaseGap, reserveGap } from './gap';
 import type { GapSide } from './gap';
@@ -1304,7 +1305,7 @@ class RewriteBox implements Placed {
   }
 }
 
-type RewriteRange = 'all' | { start: number; end: number } | { find: string; occurrence: number };
+type RewriteRange = 'all' | { start: number; end: number } | { find: string; occurrence: number; matchCase: boolean; wholeWord: boolean };
 
 /** `drawable: false`: the new text holds an embed, which plain overlay text cannot show. */
 interface RewriteSpec { id: string; field?: string; strictField: boolean; range: RewriteRange; text: string; complete: boolean; drawable: boolean }
@@ -1326,8 +1327,9 @@ const rangeOf = (value: unknown): RewriteRange | null => {
   // The executor rejects an occurrence that is not a whole number from 1.
   const occurrence = value.occurrence ?? 1;
 
-  if (typeof value.find === 'string' && value.find.trim() !== '' && Number.isInteger(occurrence) && Number(occurrence) >= 1) {
-    return { find: value.find, occurrence: Number(occurrence) };
+  // A replace-all changes many spans; one overlay cannot show it.
+  if (typeof value.find === 'string' && value.find.trim() !== '' && Number.isInteger(occurrence) && Number(occurrence) >= 1 && value.all !== true) {
+    return { find: value.find, occurrence: Number(occurrence), matchCase: value.matchCase === true, wholeWord: value.wholeWord === true };
   }
 
   return null;
@@ -1341,17 +1343,9 @@ const locate = (text: string, range: RewriteRange): { start: number; end: number
   if ('start' in range) {
     return range.start >= 0 && range.start <= range.end && range.end <= text.length ? range : null;
   }
-  const search = { at: -1, count: 0 };
+  const { matchCase, wholeWord } = range;
 
-  while (search.count < range.occurrence) {
-    search.at = text.indexOf(range.find, search.at + 1);
-    if (search.at < 0) {
-      return null;
-    }
-    search.count += 1;
-  }
-
-  return { start: search.at, end: search.at + range.find.length };
+  return findTextMatches(text, range.find, { matchCase, wholeWord, keepEdgeSpaces: true })[range.occurrence - 1] ?? null;
 };
 
 /** A rewrite whose target and range are final; null while they may still change, or for no rewrite. */

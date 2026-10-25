@@ -108,10 +108,14 @@ export type PlacementRefusalReason =
   | 'NOT_A_CHILD' | 'OWN_SUBTREE' | 'TABLE_CELL_BOUNDARY' | 'TAKES_NO_CHILDREN'
   | 'OWNS_CHILDREN' | 'CHILD_NOT_ALLOWED' | 'RESTRICTED_IN_CELL' | 'SELF_PLACED_PARENT';
 
-/** UTF-16 code units; embeds use one unit. Occurrence is 1-based. */
+/**
+ * UTF-16 code units; embeds use one unit. Occurrence is 1-based.
+ * `find` matches as the find bar does: case, accents and space runs fold unless `matchCase`.
+ * `all` (text.replace only) replaces every hit in one pass.
+ */
 export type TextRange =
   | { start: number; end: number; expectText?: string }
-  | { find: string; occurrence?: number }
+  | { find: string; occurrence?: number; matchCase?: boolean; wholeWord?: boolean; all?: boolean }
   | 'all';
 
 export interface InsertSpec {

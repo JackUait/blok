@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findTextMatches } from '../../../../../src/components/modules/find/match-text';
+import { findTextMatches } from '../../../src/shared/text-match';
 
 const texts = (text: string, query: string, options = {}): string[] =>
   findTextMatches(text, query, options).map(({ start, end }) => text.slice(start, end));

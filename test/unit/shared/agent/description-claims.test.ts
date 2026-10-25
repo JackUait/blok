@@ -56,3 +56,34 @@ describe('what the model is told about inline formats is true', () => {
     }
   });
 });
+
+describe('what the model is told about find and replace is true', () => {
+  it('says plain text keeps the marks where the range starts, and it does', async () => {
+    expect(COMMANDS['text.replace'].summary).toMatch(/Plain text takes the marks/);
+
+    const session = openJsonSession({ blocks: [{ id: 'p', type: 'paragraph', data: { text: [{ text: 'Hello ' }, { text: 'world', marks: { bold: true } }] } }] });
+
+    try {
+      await session.execute({ commands: [{ name: 'text.replace', args: { id: 'p', range: { find: 'world' }, with: 'there' } }] });
+
+      expect(await textOf(session, 'p')).toEqual([{ text: 'Hello ' }, { text: 'there', marks: { bold: true } }]);
+    } finally {
+      await session.close();
+    }
+  });
+
+  it('says a find folds case unless matchCase, and replace-all is one pass, and both hold', async () => {
+    expect(COMMANDS['text.replace'].guidance).toMatch(/case.*fold.*unless matchCase/);
+    expect(COMMANDS['text.replace'].guidance).toContain('all: true');
+
+    const session = openJsonSession({ blocks: [{ id: 'p', type: 'paragraph', data: { text: [{ text: 'Cat cat' }] } }] });
+
+    try {
+      await session.execute({ commands: [{ name: 'text.replace', args: { id: 'p', range: { find: 'cat', all: true }, with: 'concat' } }] });
+
+      expect(await textOf(session, 'p')).toEqual([{ text: 'concat concat' }]);
+    } finally {
+      await session.close();
+    }
+  });
+});

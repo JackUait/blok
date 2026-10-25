@@ -1,4 +1,5 @@
 import { isRichText } from '../rich-text/guards';
+import { findTextMatches } from '../text-match';
 import { failure } from './errors';
 
 import type { DocumentView, ViewArgs, ViewBlock } from '../../../types/agent';
@@ -162,11 +163,24 @@ export const viewRows = (
   return { rows, more: Math.max(0, order.length - limit) };
 };
 
+/** One doc.find hit. No id: the document title. `edit` names the command for a field text.replace cannot change. */
+export interface FindHit {
+  id?: string;
+  type?: string;
+  field?: string;
+  edit?: 'block.update' | 'doc.setTitle';
+  start?: number;
+  end?: number;
+  snippet?: string;
+}
+
+const SNIPPET_CONTEXT = 20;
+
 export const findBlocks = (
   snap: DocSnapshot,
-  args: { text?: string; type?: string; rootId?: string; limit?: number },
+  args: { text?: string; type?: string; rootId?: string; limit?: number; matchCase?: boolean; wholeWord?: boolean },
   ctx: ViewContext
-): { matches: Array<{ id: string; type: string; snippet: string }> } => {
+): { count: number; matches: FindHit[] } => {
   if (args.text === undefined && args.type === undefined) {
     throw failure('INVALID_ARGS', 'Give text, type, or both.');
   }
@@ -174,34 +188,42 @@ export const findBlocks = (
     throw failure('BLOCK_NOT_FOUND', `Block "${args.rootId}" does not exist.`, { path: '/rootId', details: { id: args.rootId } });
   }
 
-  const needle = args.text?.toLowerCase();
-  const matches: Array<{ id: string; type: string; snippet: string }> = [];
-
-  for (const { id } of contentOrder(snap, args.rootId ?? null, ctx)) {
+  const query = args.text;
+  const options = { matchCase: args.matchCase === true, wholeWord: args.wholeWord === true, keepEdgeSpaces: true };
+  const hitsIn = (text: string, hit: FindHit): FindHit[] => query === undefined
+    ? []
+    : findTextMatches(text, query, options).map(({ start, end }) => ({
+      ...hit, start, end, snippet: text.slice(Math.max(0, start - SNIPPET_CONTEXT), end + SNIPPET_CONTEXT),
+    }));
+  // The find bar searches the page title too; a subtree has none.
+  const title = args.rootId === undefined && args.type === undefined && snap.title !== undefined
+    ? hitsIn(snap.title, { field: 'title', edit: 'doc.setTitle' })
+    : [];
+  const blocks = contentOrder(snap, args.rootId ?? null, ctx).flatMap(({ id }): FindHit[] => {
     const block = snap.get(id);
 
     if (block === undefined) {
       throw failure('BLOCK_NOT_FOUND', `Block "${id}" does not exist.`, { details: { id } });
     }
     if (args.type !== undefined && block.type !== args.type) {
-      continue;
+      return [];
+    }
+    if (query === undefined) {
+      return [{ id, type: block.type }];
     }
 
-    const text = (ctx.tools.get(block.type)?.entry.richTextFields ?? [])
-      .map(field => textOf(block, ctx, field) ?? '').join(' ');
-    const at = needle === undefined ? 0 : text.toLowerCase().indexOf(needle);
+    const entry = ctx.tools.get(block.type)?.entry;
+    const rich = (entry?.richTextFields ?? []).flatMap(field =>
+      hitsIn(textOf(block, ctx, field) ?? '', { id, type: block.type, field }));
+    const plain = (entry?.findFields ?? []).flatMap(field => {
+      const value = block.data[field];
 
-    if (at < 0) {
-      continue;
-    }
-    matches.push({
-      id, type: block.type,
-      snippet: text.slice(Math.max(0, at - 20), at + (needle?.length ?? 0) + 20),
+      return typeof value === 'string' ? hitsIn(value, { id, type: block.type, field, edit: 'block.update' }) : [];
     });
-    if (matches.length >= (args.limit ?? 20)) {
-      break;
-    }
-  }
 
-  return { matches };
+    return [...rich, ...plain];
+  });
+  const matches = [...title, ...blocks];
+
+  return { count: matches.length, matches: matches.slice(0, args.limit ?? 20) };
 };

@@ -12,6 +12,8 @@ export interface FindOptions {
   matchCase?: boolean;
   /** Only match when the hit is not part of a longer word. */
   wholeWord?: boolean;
+  /** Keep spaces at the query's ends. The find bar trims what the user typed; an agent's query is exact. */
+  keepEdgeSpaces?: boolean;
 }
 
 export interface TextMatch {
@@ -126,7 +128,7 @@ const isWordCharAfter = (text: string, index: number): boolean => {
  */
 export const findTextMatches = (text: string, query: string, options: FindOptions = {}): TextMatch[] => {
   const matchCase = options.matchCase === true;
-  const needle = fold(query.trim(), matchCase).value;
+  const needle = fold(options.keepEdgeSpaces === true ? query : query.trim(), matchCase).value;
 
   if (needle === '' || text === '') {
     return [];

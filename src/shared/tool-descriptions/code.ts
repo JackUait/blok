@@ -22,4 +22,5 @@ export const describeCode = (_config: Record<string, unknown> = {}): BlockToolDe
   fillMissing: ['language'],
   examples: [{ code: 'const a = 1;', language: 'javascript', filename: 'a.js' }],
   summaryFields: ['language', 'filename'],
+  findFields: ['code'],
 });

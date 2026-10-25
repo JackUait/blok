@@ -29,19 +29,20 @@ const richOrString: JsonSchema = {
     { type: 'array', items: { anyOf: [TEXT_SEGMENT, EMBED_SEGMENT, { type: 'object' }] } },
   ],
 };
-const range: JsonSchema = {
-  oneOf: [
-    { const: 'all' },
-    {
-      type: 'object',
-      properties: { start: { type: 'integer', minimum: 0 }, end: { type: 'integer', minimum: 0 }, expectText: { type: 'string' } },
-      required: ['start', 'end'], additionalProperties: false,
-    },
-    {
-      type: 'object', properties: { find: { type: 'string', minLength: 1 }, occurrence: { type: 'integer', minimum: 1 } },
-      required: ['find'], additionalProperties: false,
-    },
-  ],
+// The find bar's options; without matchCase, case, accents and space runs fold.
+const FIND_OPTIONS: Record<string, JsonSchema> = { matchCase: { type: 'boolean' }, wholeWord: { type: 'boolean' } };
+const offsets: JsonSchema = {
+  type: 'object',
+  properties: { start: { type: 'integer', minimum: 0 }, end: { type: 'integer', minimum: 0 }, expectText: { type: 'string' } },
+  required: ['start', 'end'], additionalProperties: false,
+};
+const findRange = (extra: Record<string, JsonSchema> = {}): JsonSchema => ({
+  type: 'object', properties: { find: { type: 'string', minLength: 1 }, occurrence: { type: 'integer', minimum: 1 }, ...FIND_OPTIONS, ...extra },
+  required: ['find'], additionalProperties: false,
+});
+const range: JsonSchema = { oneOf: [{ const: 'all' }, offsets, findRange()] };
+const replaceRange: JsonSchema = {
+  oneOf: [{ const: 'all' }, offsets, findRange({ all: { type: 'boolean', description: 'Replace every hit in one pass. Not with occurrence.' } })],
 };
 const obj = (properties: Record<string, JsonSchema>, required: string[] = []): JsonSchema =>
   ({ type: 'object', properties, required, additionalProperties: false });
@@ -61,8 +62,8 @@ export const COMMANDS: Record<CoreCommandName, CoreCommandSpec> = {
     rootId: parentId, depth: { type: 'integer', minimum: 0 }, ids: { type: 'array', items: id }, detail: { enum: ['outline', 'full'] },
     limit: { type: 'integer', minimum: 1, maximum: 1000 }, cursor: { type: 'string' }, textLimit: { type: 'integer', minimum: 0 },
   })),
-  'doc.find': read('Find blocks by text or type.', obj({
-    text: { type: 'string', minLength: 1 }, type: { type: 'string' }, rootId: id, limit: { type: 'integer', minimum: 1 },
+  'doc.find': read('Find text as the find bar does: every hit with its field and offsets, and a count. Or list blocks by type.', obj({
+    text: { type: 'string', minLength: 1 }, ...FIND_OPTIONS, type: { type: 'string' }, rootId: id, limit: { type: 'integer', minimum: 1 },
   })),
   'doc.setTitle': write("Set this document's title. '' clears it.", obj({ title: { type: 'string' } }, ['title'])),
   'doc.setIcon': write("Set this document's icon. null clears it.", obj({ icon: {
@@ -97,7 +98,11 @@ export const COMMANDS: Record<CoreCommandName, CoreCommandSpec> = {
     text: richOrString, marks: RICH_TEXT_MARKS,
   }, ['id', 'at', 'text'])),
   'text.delete': write('Delete a range of text.', obj({ id, field: { type: 'string' }, range }, ['id', 'range'])),
-  'text.replace': write('Replace a range, or the whole field.', obj({ id, field: { type: 'string' }, range, with: richOrString }, ['id', 'with'])),
+  'text.replace': write('Replace a range, or the whole field. Plain text takes the marks where a found or offset range starts.', obj({
+    id, field: { type: 'string' }, range: replaceRange, with: richOrString,
+  }, ['id', 'with']), 'A find range matches as the find bar and doc.find do: case, accents and runs of spaces fold, unless matchCase. '
+    + 'wholeWord skips a hit inside a longer word. { find, all: true } replaces every hit in the field in one pass. '
+    + 'Plain text inside a link stays in that link. Segments keep only their own marks.'),
   'text.format': write('Set or clear marks on a range.', obj({
     id, field: { type: 'string' }, range, set: RICH_TEXT_MARKS,
     unset: { type: 'array', items: { type: 'string' }, description: 'To remove a mark, list it here. "*" clears all, "tag:*" custom marks; set then applies.' },

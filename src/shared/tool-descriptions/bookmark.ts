@@ -42,5 +42,6 @@ export const describeBookmark = (_config: Record<string, unknown> = {}): BlockTo
   guidance: 'Create one with bookmark.create: it fetches title, description and image. Do not invent preview fields.',
   data: BOOKMARK_DATA,
   summaryFields: ['url', 'title'],
+  findFields: ['title'],
   actions: BOOKMARK_ACTIONS,
 });

@@ -46,6 +46,8 @@ export interface BlockToolDescription {
   fillMissing?: string[];
   /** Entry i maps DOM input i; absent: one rich field maps to input 0, else block-level. */
   inputFields?: string[];
+  /** Plain-text fields the user's find bar searches, beside the rich-text fields. */
+  findFields?: string[];
   /** Per-person fields agents must never write. */
   viewState?: string[];
   /** Plain writes must use the mapped command instead. */

@@ -40,6 +40,7 @@ const FILE_SCHEMA: BlokSchema = {
               summaryFields: STRING_LIST_SCHEMA,
               fillMissing: STRING_LIST_SCHEMA,
               inputFields: STRING_LIST_SCHEMA,
+              findFields: STRING_LIST_SCHEMA,
               viewState: STRING_LIST_SCHEMA,
               guardedFields: { type: 'object', additionalProperties: STRING_SCHEMA },
               actions: {

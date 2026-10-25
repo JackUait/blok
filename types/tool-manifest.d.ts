@@ -45,6 +45,8 @@ export interface BlockToolManifestEntry {
   /** Required fields the planner fills from defaultData when a write leaves them out. */
   fillMissing?: string[];
   inputFields?: string[];
+  /** Plain-text fields doc.find searches, beside the rich-text fields. */
+  findFields?: string[];
   convertsTo: string[];
   conversion: { import?: string; export?: string };
   assetKind?: 'image' | 'video' | 'audio' | 'file';

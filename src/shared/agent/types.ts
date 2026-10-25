@@ -29,6 +29,7 @@ export interface PlannerToolEntry {
   restrictedInTableCell: boolean;
   summaryFields?: string[];
   fillMissing?: string[];
+  findFields?: string[];
   conversion: { import?: string; export?: string };
   data: JsonSchema;
   defaultData?: Record<string, unknown>;

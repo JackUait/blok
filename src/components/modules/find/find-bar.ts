@@ -10,7 +10,7 @@ import { createTooltipContent } from '../toolbar/tooltip';
 
 import { bloom, cornerOf, hop, HOP_DELAY, HOP_MS, springEasing, SPRINGS, stretch, type Corner, type Hop, type HopSource } from './find-motion';
 
-import type { FindOptions } from './match-text';
+import type { FindOptions } from '../../../shared/text-match';
 
 export interface FindBarCallbacks {
   onQueryChange(query: string): void;

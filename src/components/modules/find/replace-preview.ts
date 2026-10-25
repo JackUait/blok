@@ -7,7 +7,7 @@
  * tool root, so no block sees a mutation: nothing is saved, synced or undone.
  */
 import { DATA_ATTR } from '../../constants/data-attributes';
-import type { FindOptions } from './match-text';
+import type { FindOptions } from '../../../shared/text-match';
 import { editableHostOf } from './replace-text';
 import { findRanges } from './text-index';
 

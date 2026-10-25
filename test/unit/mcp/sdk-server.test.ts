@@ -133,6 +133,24 @@ describe.each(ERAS)('buildSdkServer over real SDK stdio (%s)', era => {
     });
   });
 
+  it('delivers blok_open\'s unavailableCommands to the client', async () => {
+    const opened: ToolOutcome = {
+      structuredContent: {
+        handle: 'h1', mode: 'live', write: true, durability: 'acknowledged', expiresAfterIdleMs: 600_000, contractRevision: 'r',
+        unavailableCommands: [{ name: 'history.undo', reason: 'runtime' }],
+      },
+      isError: false,
+    };
+    const dispatch = vi.fn<Dispatch>(async () => opened);
+
+    await withClient(era, deploymentTools(), dispatch, async client => {
+      await client.listTools(undefined, REQUEST);
+      const result = await client.callTool({ name: 'blok_open', arguments: { documentId: 'doc', write: true } }, REQUEST);
+
+      expect(result.structuredContent).toEqual(opened.structuredContent);
+    });
+  });
+
   it('preserves a tool error and emits exactly its JSON as text', async () => {
     const dispatch = vi.fn<Dispatch>(async () => gone);
 

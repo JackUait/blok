@@ -41,7 +41,6 @@ const BLANK_IS_CONTENT: Record<string, string> = {
   tabs: 'Tabs are seeded as child blocks.',
   tab: 'An untitled tab is a real tab.',
   'database-row': 'A row with no values is a real row.',
-  'database-comment': 'Comment text is edited in place.',
 };
 
 /** The field whose blank or bad value renders the placeholder. */

@@ -275,7 +275,8 @@ describe('runAssistantLoop', () => {
     const last = messages.at(-1);
     const block = Array.isArray(last?.content) ? last.content[0] : undefined;
 
-    expect(JSON.parse(String(block?.content))).toEqual(answer);
+    expect(block?.type).toBe('tool_result');
+    expect(JSON.parse(String(block !== undefined && 'content' in block ? block.content : undefined))).toEqual(answer);
   });
 
   it('re-sends after pause_turn without adding a user message', async () => {

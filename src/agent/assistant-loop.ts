@@ -44,7 +44,8 @@ type ToolUse = { type: 'tool_use'; id: string; name: string; input: unknown };
 const isToolUse = (block: AgentModelContentBlock): block is ToolUse =>
   block.type === 'tool_use' && typeof block.id === 'string' && typeof block.name === 'string';
 
-const isCited = (block: AgentModelContentBlock | undefined): boolean => Array.isArray(block?.citations);
+const isCited = (block: AgentModelContentBlock | undefined): boolean =>
+  block !== undefined && 'citations' in block && Array.isArray(block.citations);
 
 // Anthropic web search splits one sentence into adjacent text blocks around each cited block.
 const textOf = (content: AgentModelContentBlock[]): string => content

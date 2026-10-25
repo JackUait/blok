@@ -337,6 +337,10 @@
   --blok-database-card-menu-hover-bg: var(--blok-database-hover-bg);
   /* Side peek property label (research/08:329). */
   --blok-database-peek-label: var(--blok-database-ink-secondary);
+  /* The label's type icon and its hover handle: Notion's ink, 3.39:1 on white, 3.07:1 on the hover fill. */
+  --blok-database-peek-label-icon: rgb(142, 139, 134);
+  /* "Add a property" plus: Notion's rgb(173, 169, 163) is 2.34:1, so the type icon ink stands in. */
+  --blok-database-peek-add-icon: rgb(142, 139, 134);
   /* Favorited row page star (research/22 §14). Dark is unmeasured, so it has no dark value. */
   --blok-database-favorite-star: rgb(246, 192, 80);
   /* Comment badge count and icon (research/21 §1o). */
@@ -631,6 +635,8 @@
   /* List row hover, research/21 §1g. Overrides colors.css. */
   --blok-database-add-hover-bg: rgba(255, 255, 255, 0.055);
     --blok-database-peek-label: rgb(173, 169, 163);
+    --blok-database-peek-label-icon: rgb(173, 169, 163);
+    --blok-database-peek-add-icon: var(--blok-database-ink-tertiary);
     --blok-database-comment-badge-text: rgb(240, 239, 237);
     --blok-database-comment-badge-icon: rgb(173, 169, 163);
     --blok-database-select-head-bg: rgba(255, 255, 255, 0.03);
@@ -917,6 +923,8 @@
   /* List row hover, research/21 §1g. Overrides colors.css. */
   --blok-database-add-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-peek-label: rgb(173, 169, 163);
+  --blok-database-peek-label-icon: rgb(173, 169, 163);
+  --blok-database-peek-add-icon: var(--blok-database-ink-tertiary);
   --blok-database-comment-badge-text: rgb(240, 239, 237);
   --blok-database-comment-badge-icon: rgb(173, 169, 163);
   --blok-database-select-head-bg: rgba(255, 255, 255, 0.03);
@@ -2131,8 +2139,8 @@
 }
 
 /*
- * research/21 §1m: the hover box is the whole 160x34 label cell, radius 6px (read in dark;
- * the value column sits at the same x in the light side peek). Padding is unmeasured.
+ * research/21 §1m: the hover box is the whole 160x34 label cell, radius 6px.
+ * Padding 0 6px and the 18x24 icon slot put the label text 30px in (live, 2026-10-25).
  * Pins stack label over value, so they keep their own head.
  */
 [data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-head] {
@@ -2140,7 +2148,15 @@
   box-sizing: border-box;
   min-inline-size: 160px;
   min-height: 34px;
+  padding-inline: var(--blok-space-1-5);
   border-radius: var(--blok-radius-control);
+}
+
+[data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-head] > [data-blok-database-drawer-prop-icon] {
+  inline-size: 18px;
+  block-size: 24px;
+  color: var(--blok-database-peek-label-icon);
+  transition: opacity 0.15s;
 }
 
 /* The details panel's width is unmeasured: it keeps Blok's narrower label column. */
@@ -2197,6 +2213,29 @@
 
   [data-blok-database-drawer-prop-row]:hover > [data-blok-database-drawer-prop-head] > [data-blok-database-drawer-prop-handle] + [data-blok-database-drawer-prop-icon] {
     display: none;
+  }
+
+  /* Notion: the handle lies over the icon's slot and the two crossfade. A row with no icon keeps the swap above. */
+  [data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-head] > [data-blok-database-drawer-prop-handle]:has(+ [data-blok-database-drawer-prop-icon]) {
+    display: inline-flex;
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: var(--blok-space-1-5);
+    margin-block: auto;
+    inline-size: 18px;
+    block-size: 24px;
+    color: var(--blok-database-peek-label-icon);
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  [data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]):hover > [data-blok-database-drawer-prop-head] > [data-blok-database-drawer-prop-handle]:has(+ [data-blok-database-drawer-prop-icon]) {
+    opacity: 1;
+  }
+
+  [data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]):hover > [data-blok-database-drawer-prop-head] > [data-blok-database-drawer-prop-handle] + [data-blok-database-drawer-prop-icon] {
+    display: inline-flex;
+    opacity: 0;
   }
 }
 
@@ -3385,6 +3424,9 @@ button[data-blok-database-column-count]:hover {
   inline-size: 16px;
   block-size: 16px;
   flex-shrink: 0;
+  /* Notion's plusFillSmall sits 1px low. */
+  margin-top: var(--blok-space-0-25);
+  color: var(--blok-database-peek-add-icon);
 }
 
 [data-blok-database-drawer-add-prop]:hover {
@@ -5838,9 +5880,10 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   white-space: inherit;
 }
 
-/* Status pill: 20px, padding 0 9px 0 7px, radius 10px, 8px dot (research/08). */
+/* Status pill: 20px, padding 0 9px 0 7px, radius 10px, 8px dot 5px before the text (research/07:97, 08).
+   The pill role draws 10px on a 20px box. */
 [data-blok-database-option-pill][data-status-group] {
-  gap: var(--blok-space-1);
+  gap: var(--blok-space-1-25);
   padding-block: 0;
   padding-inline: var(--blok-database-status-pill-pad-start) var(--blok-database-status-pill-pad-end);
   border-radius: var(--blok-radius-pill);
@@ -6118,9 +6161,11 @@ textarea[data-blok-database-property-description][data-blok-field] {
   border-radius: var(--blok-radius-control);
 }
 
-/* research/22 §3: a 34px value row, level with the label cell. Label-less pins stay 30px (research/10 §4). */
+/* research/22 §3: a 34px value row, level with the label cell. Label-less pins stay 30px (research/10 §4).
+   Notion rounds this cell 4px (live, 2026-10-25); its 34px height would pick the 6px role. */
 [data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-value] {
   min-height: 34px;
+  border-radius: var(--blok-radius-control-sm);
 }
 
 [data-blok-database-drawer-prop-value][role="button"] {

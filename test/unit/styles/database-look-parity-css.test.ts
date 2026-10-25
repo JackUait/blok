@@ -326,14 +326,78 @@ describe('map pins (research/23 §5b)', () => {
 
 // feel/findings-rowpage R09: on row hover the type glyph turns into a 16px ⋮⋮ with a grab cursor.
 describe('row page property drag handle', () => {
-  it('is hidden at rest and replaces the glyph while the row is hovered', () => {
-    const shown = '[data-blok-database-drawer-prop-row]:hover > [data-blok-database-drawer-prop-head] > [data-blok-database-drawer-prop-handle]';
+  const head = '[data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-head]';
+  const hoveredHead = '[data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]):hover > [data-blok-database-drawer-prop-head]';
+  const overIcon = '[data-blok-database-drawer-prop-handle]:has(+ [data-blok-database-drawer-prop-icon])';
 
+  it('is hidden at rest, so touch screens never get one', () => {
     expect(ruleBody('[data-blok-database-drawer-prop-handle]')).toContain('display: none');
     expect(ruleBody('[data-blok-database-drawer-prop-handle]')).toContain('cursor: grab');
     expect(ruleBody('[data-blok-database-drawer-prop-handle] svg')).toContain('inline-size: 16px');
+  });
+
+  it('replaces the glyph on row hover when the row has no type icon to cover', () => {
+    const shown = '[data-blok-database-drawer-prop-row]:hover > [data-blok-database-drawer-prop-head] > [data-blok-database-drawer-prop-handle]';
+
     expect(ruleBody(shown)).toContain('display: inline-flex');
     expect(ruleBody(`${shown} + [data-blok-database-drawer-prop-icon]`)).toContain('display: none');
+  });
+
+  // Notion's dragHandleFillSmall: in the 18x24 icon slot, opacity 0 → 1 over 0.15s while the icon fades out.
+  it('crossfades with the type icon in the same 18x24 slot', () => {
+    const handle = ruleBody(`${head} > ${overIcon}`);
+
+    expect(handle).toContain('display: inline-flex');
+    expect(handle).toContain('position: absolute');
+    expect(handle).toContain('inset-inline-start: var(--blok-space-1-5)');
+    expect(handle).toContain('inline-size: 18px');
+    expect(handle).toContain('block-size: 24px');
+    expect(handle).toContain('opacity: 0');
+    expect(handle).toContain('transition: opacity 0.15s');
+    expect(handle).toContain('color: var(--blok-database-peek-label-icon)');
+    expect(handle).not.toContain('display: none');
+    expect(ruleBody(`${hoveredHead} > ${overIcon}`)).toContain('opacity: 1');
+
+    const icon = ruleBody(`${hoveredHead} > [data-blok-database-drawer-prop-handle] + [data-blok-database-drawer-prop-icon]`);
+
+    expect(icon).toContain('display: inline-flex');
+    expect(icon).toContain('opacity: 0');
+    expect(ruleBody(`${head} > [data-blok-database-drawer-prop-icon]`)).toContain('transition: opacity 0.15s');
+  });
+
+  it('only crossfades where a pointer can hover', () => {
+    const hoverOnly = [ ...database.matchAll(/@media \(hover: hover\) \{((?:[^{}]*\{[^{}]*\})*[^{}]*)\}/g) ].map((m) => m[1]).join(' ');
+
+    expect(hoverOnly).toContain(`${head} > ${overIcon}`);
+  });
+});
+
+// Notion: cell padding 0 6px, an 18x24 icon slot, 6px gap, so the label text starts 30px in.
+describe('row page label cell', () => {
+  const head = '[data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-head]';
+
+  it('pads the cell 6px on each side', () => {
+    expect(ruleBody(head)).toContain('padding-inline: var(--blok-space-1-5)');
+  });
+
+  it('gives the type icon an 18x24 slot in its own lighter ink', () => {
+    const icon = ruleBody(`${head} > [data-blok-database-drawer-prop-icon]`);
+
+    expect(icon).toContain('inline-size: 18px');
+    expect(icon).toContain('block-size: 24px');
+    expect(icon).toContain('color: var(--blok-database-peek-label-icon)');
+  });
+
+  // Light: Notion's rgb(142, 139, 134), 3.39:1 on white and 3.07:1 on the hover fill. Dark: research/21 §1m.
+  it('inks the icon rgb(142, 139, 134) in light and rgb(173, 169, 163) in dark, apart from the label', () => {
+    expect(tokenValues('--blok-database-peek-label-icon')).toEqual(['rgb(142, 139, 134)', 'rgb(173, 169, 163)', 'rgb(173, 169, 163)']);
+    expect(tokenValues('--blok-database-peek-label')[0]).toBe('var(--blok-database-ink-secondary)');
+  });
+
+  it('rounds the value cell 4px', () => {
+    const value = ruleBody('[data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-value]');
+
+    expect(value).toContain('border-radius: var(--blok-radius-control-sm)');
   });
 });
 
@@ -355,6 +419,15 @@ describe('row page Add a property', () => {
     expect(body).toContain('align-self: flex-start');
     expect(ruleBody('[data-blok-database-drawer-add-prop]:hover')).not.toContain('border-color');
     expect(ruleBody('[data-blok-database-drawer-add-prop] svg')).toContain('inline-size: 16px');
+  });
+
+  // Notion's plusFillSmall: 1px lower than centre. Its rgb(173, 169, 163) is 2.34:1 on white, so the icon takes 142,139,134 (3.39:1).
+  it('draws the plus 1px low in the type icon ink, apart from the text', () => {
+    const svg = ruleBody('[data-blok-database-drawer-add-prop] svg');
+
+    expect(svg).toContain('margin-top: var(--blok-space-0-25)');
+    expect(svg).toContain('color: var(--blok-database-peek-add-icon)');
+    expect(tokenValues('--blok-database-peek-add-icon')).toEqual(['rgb(142, 139, 134)', 'var(--blok-database-ink-tertiary)', 'var(--blok-database-ink-tertiary)']);
   });
 });
 
@@ -422,5 +495,17 @@ describe('row page value actions pill', () => {
 describe('row page title placeholder', () => {
   it('uses the title placeholder token', () => {
     expect(ruleBody('[data-blok-database-drawer-title]::placeholder')).toContain('color: var(--blok-database-title-placeholder)');
+  });
+});
+
+// research/07:97 and the live peek: every status pill puts 5px between its dot and its text.
+describe('status pill', () => {
+  it('puts 5px between the dot and the text', () => {
+    expect(ruleBody('[data-blok-database-option-pill][data-status-group]')).toContain('gap: var(--blok-space-1-25)');
+  });
+
+  // Notion's 10px is half the 20px height: the pill role renders the same, and the radius law wants a role.
+  it('keeps the pill radius role, which a 20px pill draws at 10px', () => {
+    expect(ruleBody('[data-blok-database-option-pill][data-status-group]')).toContain('border-radius: var(--blok-radius-pill)');
   });
 });

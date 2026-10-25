@@ -4228,6 +4228,8 @@ span[data-blok-slash-search] {
   --blok-database-card-actions-icon: rgb(125, 122, 117);
   --blok-database-card-menu-hover-bg: var(--blok-database-hover-bg);
   --blok-database-peek-label: var(--blok-database-ink-secondary);
+  --blok-database-peek-label-icon: rgb(142, 139, 134);
+  --blok-database-peek-add-icon: rgb(142, 139, 134);
   --blok-database-favorite-star: rgb(246, 192, 80);
   --blok-database-comment-badge-text: rgb(44, 44, 43);
   --blok-database-comment-badge-icon: rgb(142, 139, 134);
@@ -4478,6 +4480,8 @@ span[data-blok-slash-search] {
   --blok-database-card-menu-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-add-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-peek-label: rgb(173, 169, 163);
+  --blok-database-peek-label-icon: rgb(173, 169, 163);
+  --blok-database-peek-add-icon: var(--blok-database-ink-tertiary);
   --blok-database-comment-badge-text: rgb(240, 239, 237);
   --blok-database-comment-badge-icon: rgb(173, 169, 163);
   --blok-database-select-head-bg: rgba(255, 255, 255, 0.03);
@@ -4728,6 +4732,8 @@ span[data-blok-slash-search] {
   --blok-database-card-menu-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-add-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-database-peek-label: rgb(173, 169, 163);
+  --blok-database-peek-label-icon: rgb(173, 169, 163);
+  --blok-database-peek-add-icon: var(--blok-database-ink-tertiary);
   --blok-database-comment-badge-text: rgb(240, 239, 237);
   --blok-database-comment-badge-icon: rgb(173, 169, 163);
   --blok-database-select-head-bg: rgba(255, 255, 255, 0.03);
@@ -5705,7 +5711,15 @@ span[data-blok-slash-search] {
   box-sizing: border-box;
   min-inline-size: 160px;
   min-height: 34px;
+  padding-inline: var(--blok-space-1-5);
   border-radius: var(--blok-radius-control);
+}
+
+[data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-head] > [data-blok-database-drawer-prop-icon] {
+  inline-size: 18px;
+  block-size: 24px;
+  color: var(--blok-database-peek-label-icon);
+  transition: opacity 0.15s;
 }
 
 [data-blok-database-drawer-details] [data-blok-database-drawer-prop-row] > [data-blok-database-drawer-prop-head] {
@@ -5756,6 +5770,28 @@ span[data-blok-slash-search] {
 
 [@media (hover: hover)] [data-blok-database-drawer-prop-row]:hover > [data-blok-database-drawer-prop-head] > [data-blok-database-drawer-prop-handle] + [data-blok-database-drawer-prop-icon] {
   display: none;
+}
+
+[@media (hover: hover)] [data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-head] > [data-blok-database-drawer-prop-handle]:has(+ [data-blok-database-drawer-prop-icon]) {
+  display: inline-flex;
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: var(--blok-space-1-5);
+  margin-block: auto;
+  inline-size: 18px;
+  block-size: 24px;
+  color: var(--blok-database-peek-label-icon);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+[@media (hover: hover)] [data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]):hover > [data-blok-database-drawer-prop-head] > [data-blok-database-drawer-prop-handle]:has(+ [data-blok-database-drawer-prop-icon]) {
+  opacity: 1;
+}
+
+[@media (hover: hover)] [data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]):hover > [data-blok-database-drawer-prop-head] > [data-blok-database-drawer-prop-handle] + [data-blok-database-drawer-prop-icon] {
+  display: inline-flex;
+  opacity: 0;
 }
 
 [data-blok-database-drawer-prop-row][data-dragging] {
@@ -6800,6 +6836,8 @@ button[data-blok-database-column-count]:hover {
   inline-size: 16px;
   block-size: 16px;
   flex-shrink: 0;
+  margin-top: var(--blok-space-0-25);
+  color: var(--blok-database-peek-add-icon);
 }
 
 [data-blok-database-drawer-add-prop]:hover {
@@ -9042,7 +9080,7 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
 }
 
 [data-blok-database-option-pill][data-status-group] {
-  gap: var(--blok-space-1);
+  gap: var(--blok-space-1-25);
   padding-block: 0;
   padding-inline: var(--blok-database-status-pill-pad-start) var(--blok-database-status-pill-pad-end);
   border-radius: var(--blok-radius-pill);
@@ -9349,6 +9387,7 @@ textarea[data-blok-database-property-description][data-blok-field] {
 
 [data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-value] {
   min-height: 34px;
+  border-radius: var(--blok-radius-control-sm);
 }
 
 [data-blok-database-drawer-prop-value][role="button"] {

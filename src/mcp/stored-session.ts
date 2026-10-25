@@ -2,7 +2,7 @@ import type { AgentBatch, AgentSession } from '../../types/agent';
 import type { OutputData } from '../../types/data-formats/output-data';
 import type { AgentContract } from '../../types/tool-manifest';
 
-import { failedResult, isMcpSurfaceError, NO_DELIVERY, surfaceError } from './errors';
+import { failedResult, isMcpSurfaceError, isWriteBatch, NO_DELIVERY, surfaceError } from './errors';
 import type { HandleSession, McpExecuteResult } from './session';
 import type { DocumentSource } from './sources/types';
 
@@ -21,8 +21,7 @@ export interface StoredSessionInput {
 
 export const openStoredSession = async (input: StoredSessionInput): Promise<HandleSession> => {
   const readOnlyByName = new Map(input.contract.commands.map((entry) => [entry.name, entry.readOnly]));
-  // Unknown names do not count as writes; 01 answers them with UNKNOWN_COMMAND.
-  const writes = (batch: AgentBatch): boolean => batch.commands.some((command) => readOnlyByName.get(command.name) === false);
+  const writes = (batch: AgentBatch): boolean => isWriteBatch(batch, readOnlyByName);
 
   const load = async (): Promise<{ agent: StoredAgent; version: string | null; missing: boolean }> => {
     const loaded = await input.source.load(input.documentId);

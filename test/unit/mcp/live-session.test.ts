@@ -308,6 +308,18 @@ describe('createLiveSession', () => {
     expect(await live.execute({ commands: [{ name: 'doc.read', args: {} }] })).toMatchObject({ ok: true });
   });
 
+  it.each([
+    ['commands is not an array', { commands: 5 }],
+    ['an entry is null', { commands: [null, { args: {} }] }],
+  ])('hands a malformed batch to core when %s, instead of throwing', async (_label, batch) => {
+    const refusal = { ok: false as const, error: { code: 'INVALID_ARGS' as const, message: 'core', retryable: false }, warnings: [] };
+
+    agentExecute.mockResolvedValueOnce(refusal);
+    const live = session(false);
+
+    expect(await live.execute(batch as never)).toMatchObject({ ok: false, error: { code: 'INVALID_ARGS', message: 'core' } });
+  });
+
   it('announces presence on open, clears it and closes the room on close', async () => {
     const live = session();
 

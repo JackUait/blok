@@ -28,3 +28,17 @@ export const failedResult = (error: AgentError, warnings: AgentResult['warnings'
   warnings,
   delivery: NO_DELIVERY,
 });
+
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
+
+/**
+ * Whether a batch holds a known writing command. The batch is unchecked wire input: core's
+ * checkEnvelope refuses a malformed one later, so this must not throw on it.
+ * Unknown names do not count as writes; core answers them with UNKNOWN_COMMAND.
+ */
+export const isWriteBatch = (batch: unknown, readOnlyByName: ReadonlyMap<string, boolean | undefined>): boolean => {
+  const commands = isRecord(batch) ? batch.commands : undefined;
+
+  return Array.isArray(commands) && commands.some((command: unknown) =>
+    isRecord(command) && typeof command.name === 'string' && readOnlyByName.get(command.name) === false);
+};

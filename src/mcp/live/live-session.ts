@@ -3,7 +3,7 @@ import type { BatchDelivery } from '../../components/modules/collaboration/track
 import type { CollabTerminalError } from '../../components/modules/collaboration/types';
 import type { AgentContract } from '../../../types/tool-manifest';
 import type { AgentBatch, AgentError, AgentResult, AgentSession } from '../../../types/agent';
-import { failedResult, NO_DELIVERY, surfaceError } from '../errors';
+import { failedResult, isWriteBatch, NO_DELIVERY, surfaceError } from '../errors';
 import type { HandleSession, McpExecuteResult } from '../session';
 
 export interface PresenceSink { announce(): void; afterBatch(result: AgentResult): void; clear(): void }
@@ -84,8 +84,7 @@ export const createLiveSession = (input: LiveSessionInput): HandleSession => {
     if (end !== null) {
       return failedResult(endError(end));
     }
-    // Unknown names do not count as writes; 01 answers them with UNKNOWN_COMMAND.
-    const writing = batch.commands.some((command) => readOnlyByName.get(command.name) === false);
+    const writing = isWriteBatch(batch, readOnlyByName);
 
     if (writing && state.readOnly) {
       return failedResult(surfaceError('READ_ONLY', 'This handle cannot write to the room.').agentError);

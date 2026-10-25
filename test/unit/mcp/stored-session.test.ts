@@ -90,6 +90,20 @@ describe('openStoredSession', () => {
     expect(result.delivery).toEqual({ durable: false, pending: false, serverSequence: null, savedVersion: null });
   });
 
+  it.each([
+    ['commands is not an array', { commands: 5 }],
+    ['an entry is null', { commands: [null, { args: {} }] }],
+  ])('hands a malformed batch to core when %s, instead of throwing', async (_label, batch) => {
+    const refusal = { ok: false as const, error: { code: 'INVALID_ARGS' as const, message: 'core', retryable: false }, warnings: [] };
+    const session = await openStoredSession({
+      documentId: 'doc', write: false, source, contract, loadDocument: raw => raw as never,
+      createAgentSession: document => ({ ...agent(document), execute: vi.fn(async () => refusal) }),
+    });
+
+    expect(await session.execute(batch as never)).toMatchObject({ ok: false, error: { code: 'INVALID_ARGS', message: 'core' } });
+    expect(source.save).not.toHaveBeenCalled();
+  });
+
   it('refuses writes on a read-only handle without running them', async () => {
     const session = await open(false);
     const result = await session.execute({ commands: [{ name: 'block.insert', args: {} }] });

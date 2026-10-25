@@ -4,7 +4,7 @@ import { failure, warning } from './errors';
 import { applyEdits } from './json-applier';
 import { RICH_TEXT_MARKS } from '../tool-descriptions/rich-text';
 import { looksLikeMarkdown } from './markdown-lookalike';
-import { defaultLinkResolver, dropLinkOnPageMention, looseMarkInput, normalizeAgentMarks } from './mark-input';
+import { BLOCK_COLOR_FIELDS, defaultLinkResolver, dropLinkOnPageMention, looseMarkInput, normalizeAgentMarks, snapBlockColor } from './mark-input';
 import { snapshotTree } from './placement-rules';
 import { KNOWN_MARKS } from './rich-text-ops';
 import { cloneRecord, copyValue } from './snapshot';
@@ -358,6 +358,26 @@ export class PlanState {
       input[field] = rich;
       if (looksLikeMarkdown(this.ctx.richText.plainText(rich))) {
         this.warn('LOOKS_LIKE_MARKDOWN', `"${field}" looks like Markdown. It was saved as literal text. Use marks for formatting, or markdown.insert to convert Markdown.`, { blockId, field });
+      }
+    }
+
+    for (const [field, mode] of Object.entries(BLOCK_COLOR_FIELDS)) {
+      const value = input[field];
+
+      // Stored and copied colours stay as they are: the editor keeps them too.
+      if (typeof value !== 'string' || this.copyingStored || options.stored?.includes(field) === true) {
+        continue;
+      }
+
+      const snapped = snapBlockColor(value, mode);
+
+      if (snapped.note !== undefined) {
+        this.warn('CORRECTED', `${field}: ${snapped.note}`, { blockId, field });
+      }
+      if (snapped.value === undefined) {
+        Reflect.deleteProperty(input, field);
+      } else {
+        input[field] = snapped.value;
       }
     }
 

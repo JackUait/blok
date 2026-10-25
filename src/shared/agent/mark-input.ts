@@ -85,6 +85,39 @@ const snapColor = (value: string, mode: ColorMode): { value?: string; note?: str
     : { value: name, note: `"${value}" was stored as the nearest preset, "${name}".` };
 };
 
+/** Data fields every tool reads as block colour: the toolbox colour commands write them on any tool that keeps them. */
+export const BLOCK_COLOR_FIELDS = { textColor: 'text', backgroundColor: 'bg' } as const;
+
+/**
+ * A block colour as the block colour menu would save it: always a preset name.
+ * A colour becomes the nearest preset; anything else is dropped. A note means the value changed.
+ */
+export const snapBlockColor = (value: string, mode: ColorMode): { value?: string; note?: string } => {
+  const raw = value.trim();
+  const lower = raw.toLowerCase();
+  const preset = PRESET_VAR.exec(raw);
+
+  if (PRESETS.has(lower)) {
+    return { value: lower };
+  }
+  if (preset !== null && preset[2] === mode && PRESETS.has(preset[1])) {
+    return { value: preset[1] };
+  }
+
+  const rgb = isSafeCssColor(raw) && !isFullyTransparent(raw) ? parseAnyCssColor(raw) : null;
+  const rgbText = rgb === null ? undefined : `rgb(${rgb.join(', ')})`;
+
+  if (mode === 'bg' && rgbText !== undefined && (isPageBackground(raw, rgb) || isPageBackground(rgbText, rgb))) {
+    return { note: `"${value}" is the page background, so it was dropped.` };
+  }
+
+  const name = rgbText === undefined ? null : nearestPresetName(rgbText, mode);
+
+  return name === null
+    ? { note: `"${value}" was dropped: a block colour is a preset name (${[...PRESETS].join(', ')}).` }
+    : { value: name, note: `"${value}" was stored as the nearest preset, "${name}".` };
+};
+
 /** Defaults of the Link tool when the host sets no `link` config. */
 export const defaultLinkResolver: LinkResolver = link => ({
   href: link.href,

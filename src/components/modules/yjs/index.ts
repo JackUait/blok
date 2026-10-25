@@ -92,6 +92,9 @@ export class YjsManager extends Module {
   /** Above zero inside `withoutAuthor`: new blocks get no `createdBy`. */
   private anonymousDepth = 0;
 
+  /** Set inside an agent write: names the agent as creator of the blocks it adds. */
+  private creationAuthor: ((blockId: string) => string | undefined) | null = null;
+
   /**
    * One token per `block.save()` round-trip in flight between a DOM mutation
    * and the `enqueueBlockDataWrite` it will produce. The flush barrier cannot
@@ -437,7 +440,8 @@ export class YjsManager extends Module {
       return { ...unsigned, createdAt: blockData.createdAt ?? Date.now() };
     }
 
-    const userId = this.anonymousDepth > 0 ? undefined : this.config.user?.id;
+    const agentId = typeof blockData.id === 'string' ? this.creationAuthor?.(blockData.id) : undefined;
+    const userId = this.anonymousDepth > 0 ? undefined : agentId ?? this.config.user?.id;
 
     return {
       ...blockData,
@@ -467,6 +471,21 @@ export class YjsManager extends Module {
     } finally {
       this.anonymousDepth -= 1;
     }
+  }
+
+  /**
+   * Names `author` as creator of the blocks added until the release runs.
+   * @param author - the creator's id for a block id, or undefined to fall back to the user
+   * @returns release
+   */
+  public authorBlocksAs(author: (blockId: string) => string | undefined): () => void {
+    this.creationAuthor = author;
+
+    return () => {
+      if (this.creationAuthor === author) {
+        this.creationAuthor = null;
+      }
+    };
   }
 
   /**

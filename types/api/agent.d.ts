@@ -49,7 +49,7 @@ export interface AgentTurnOptions {
   agent: AgentIdentity;
   /** Follow the agent's block until the user scrolls, types or clicks. Default false. */
   follow?: boolean;
-  /** Who `lastEditedBy` names. `detail.agent` is set either way. Default 'agent'. */
+  /** Who `createdBy` and `lastEditedBy` name. `detail.agent` is set either way. Default 'agent'. */
   attributeTo?: 'agent' | 'user';
 }
 

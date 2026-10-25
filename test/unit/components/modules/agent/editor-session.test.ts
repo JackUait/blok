@@ -558,7 +558,7 @@ describe('createEditorAgentSession', () => {
   it.each([
     { mode: 'default', optOut: false, expectedEditor: 'agent-1' },
     { mode: 'user', optOut: true, expectedEditor: 'human-1' },
-  ])('keeps $mode insert and update attribution while preserving human creation authorship', async ({ optOut, expectedEditor }) => {
+  ])('names the $mode as creator and editor of what the session inserts and updates', async ({ optOut, expectedEditor }) => {
     const editor = await boot();
     const details = new Map<string, unknown>();
     const onChange = (payload: unknown): void => {
@@ -605,8 +605,8 @@ describe('createEditorAgentSession', () => {
     expect(updatedLive?.lastEditedBy).toBe(expectedEditor);
     expect(updatedShared?.lastEditedBy).toBe(expectedEditor);
     expect(updatedSaved?.lastEditedBy).toBe(expectedEditor);
-    expect(insertedShared?.createdBy).toBe('human-1');
-    expect(insertedSaved?.createdBy).toBe('human-1');
+    expect(insertedShared?.createdBy).toBe(expectedEditor);
+    expect(insertedSaved?.createdBy).toBe(expectedEditor);
     await vi.waitFor(() => {
       expect(details.get(BlockAddedMutationType + ':inserted')).toMatchObject({
         target: { id: 'inserted' }, origin: 'local',

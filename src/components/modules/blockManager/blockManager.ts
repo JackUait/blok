@@ -71,11 +71,15 @@ export class BlockManager extends Module {
 
   public attributeTo(scope: { ids: ReadonlySet<string>; actor: { id: string; name: string }; turnId: string; stampLastEditedBy?: boolean }): () => void {
     this.agentScope = scope;
+    const releaseAuthor = scope.stampLastEditedBy === false
+      ? undefined
+      : this.Blok.YjsManager.authorBlocksAs((id) => (scope.ids.has(id) ? scope.actor.id : undefined));
 
     return () => {
       if (this.agentScope === scope) {
         this.agentScope = null;
       }
+      releaseAuthor?.();
     };
   }
 

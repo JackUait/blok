@@ -108,13 +108,13 @@ export interface BlockAPI {
   /** When the block was created (ms since epoch). Undefined for a block created before this was recorded. */
   readonly createdAt?: number;
 
-  /** Id of the user who created the block, when a user was configured. */
+  /** Id of the user, or agent, who created the block. */
   readonly createdBy?: string;
 
   /** When the block was last edited (ms since epoch). Undefined until its first edit. */
   readonly lastEditedAt?: number;
 
-  /** Id of the user who last edited the block, when a user was configured. */
+  /** Id of the user, or agent, who last edited the block. */
   readonly lastEditedBy?: string;
 
   /**

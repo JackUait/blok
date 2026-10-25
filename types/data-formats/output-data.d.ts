@@ -102,7 +102,8 @@ export interface OutputBlockData<Type extends string = string, Data extends obje
 
   /**
    * ID of the user who last edited this block.
-   * Set from the `user.id` config option. Omit if no user is configured.
+   * Set from the `user.id` config option, or the agent's id for an agent's
+   * edit (see `AgentTurnOptions.attributeTo`). Omit if no one is named.
    */
   lastEditedBy?: string;
 
@@ -114,8 +115,9 @@ export interface OutputBlockData<Type extends string = string, Data extends obje
   createdAt?: number;
 
   /**
-   * ID of the user who created this block, from the `user.id` config option.
-   * Omit if no user was configured.
+   * ID of the user who created this block, from the `user.id` config option,
+   * or the agent's id for a block an agent added (see
+   * `AgentTurnOptions.attributeTo`). Omit if no one is named.
    */
   createdBy?: string;
 }

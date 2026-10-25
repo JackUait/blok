@@ -3450,7 +3450,7 @@ app.post('/api/ai', async (req, res) => {
         name: "agent.begin(options)",
         returnType: "AgentTurn",
         description:
-          "Opens a turn and returns it. Only one turn can be open per editor, so a second call throws `AgentTurnOpenError`.\n\n- `agent`: the agent's `id`, `name` and optional `color`. Users see the name, and the id is saved as `lastEditedBy`.\n- `follow`: scrolls to the agent's block until the user scrolls, types or clicks. Default `false`.\n- `attributeTo`: `'user'` keeps the user's id in `lastEditedBy`.",
+          "Opens a turn and returns it. Only one turn can be open per editor, so a second call throws `AgentTurnOpenError`.\n\n- `agent`: the agent's `id`, `name` and optional `color`. Users see the name, and the id is saved as `createdBy` on the blocks it adds and `lastEditedBy` on the blocks it changes.\n- `follow`: scrolls to the agent's block until the user scrolls, types or clicks. Default `false`.\n- `attributeTo`: `'user'` saves the user's id in `createdBy` and `lastEditedBy` instead.",
         example: `const tools = await editor.agent.tools({ format: 'anthropic' });
 const system = await editor.agent.guidance();
 const turn = editor.agent.begin({ agent: { id: 'assistant', name: 'Assistant' } });
@@ -4310,9 +4310,9 @@ interface OutputBlockData {
   content?: string[]; // Ids of child blocks (flat-with-references nesting)
   indent?: number;    // Nesting/indent level
   lastEditedAt?: number; // Timestamp (ms since epoch) of the last edit — omitted until the block is actually edited
-  lastEditedBy?: string; // Id of the user who last edited this block (from user.id config)
+  lastEditedBy?: string; // Id of the user (from user.id config) or agent who last edited this block
   createdAt?: number; // Timestamp (ms since epoch) the block was created, stamped once
-  createdBy?: string; // Id of the user who created this block (from user.id config)
+  createdBy?: string; // Id of the user (from user.id config) or agent who created this block
 }
 
 // Example blocks:
@@ -4394,7 +4394,7 @@ const listItemBlock: OutputBlockData = {
         option: "lastEditedBy",
         type: "string (optional)",
         default: "—",
-        description: "Id of the user who last edited this block (from the user.id config)",
+        description: "Id of the user who last edited this block (from the user.id config), or of the agent for an agent's edit",
       },
       {
         option: "createdAt",
@@ -4407,7 +4407,7 @@ const listItemBlock: OutputBlockData = {
         option: "createdBy",
         type: "string (optional)",
         default: "—",
-        description: "Id of the user who created this block (from the user.id config)",
+        description: "Id of the user who created this block (from the user.id config), or of the agent for a block an agent added",
       },
     ],
   },

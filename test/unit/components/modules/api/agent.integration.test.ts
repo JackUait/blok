@@ -201,6 +201,37 @@ describe('agent attribution', () => {
     expect(events.some((event) => event.detail.agent?.id === 'bot')).toBe(true);
   });
 
+  it.each([
+    { name: 'the agent by default, with a user configured', attributeTo: undefined, user: { id: 'human' }, by: 'bot' },
+    { name: 'the agent by default, with no user configured', attributeTo: undefined, user: undefined, by: 'bot' },
+    { name: 'the user with attributeTo: user', attributeTo: 'user' as const, user: { id: 'human' }, by: 'human' },
+  ])('a block the agent creates names $name as creator and last editor', async ({ attributeTo, user, by }) => {
+    const editor = await createRealEditor(user === undefined ? {} : { user });
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' }, ...(attributeTo === undefined ? {} : { attributeTo }) });
+
+    await turn.execute({ commands: [{ name: 'block.insert', args: { id: 'n1', type: 'paragraph', data: { text: 'New' }, position: 'end' } }] });
+    turn.end();
+    await settle(MUTATION_WINDOW_MS);
+    const block = await savedBlock(editor, 'n1');
+
+    expect(block?.createdBy).toBe(by);
+    expect(block?.lastEditedBy).toBe(by);
+    expect(typeof block?.createdAt).toBe('number');
+    expect(typeof block?.lastEditedAt).toBe('number');
+  });
+
+  it('a block the user adds while a turn is open still names the user as creator', async () => {
+    const editor = await createRealEditor({ user: { id: 'human' } });
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+
+    await turn.execute({ commands: [{ name: 'block.insert', args: { id: 'n1', type: 'paragraph', data: { text: 'New' }, position: 'end' } }] });
+    await editor.blocks.insert('paragraph', { text: 'Mine' }, undefined, undefined, undefined, undefined, 'h1');
+    turn.end();
+    await settle(MUTATION_WINDOW_MS);
+
+    expect((await savedBlock(editor, 'h1'))?.createdBy).toBe('human');
+  });
+
   it('outside a turn nothing is attributed to an agent', async () => {
     const { config, events } = collect();
     const editor = await createRealEditor(config);

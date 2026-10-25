@@ -203,6 +203,56 @@ describe('applyEdits supplied scenarios', () => {
   });
 });
 
+describe('applyEdits co-authorship', () => {
+  const coStamp: EditStamp = { actorId: 'human-1', with: 'agent-1', at: 42 };
+
+  it('credits the person and names the agent as co-author on an insert', () => {
+    const snap = base();
+
+    applyEdits(snap, [{
+      op: 'insert', parentId: null, afterId: null, block: { id: 'n', type: 'paragraph', data: {}, children: [] },
+    }], coStamp);
+
+    expect(requireBlock(snap, 'n').rest).toEqual({
+      createdBy: 'human-1', createdWith: 'agent-1', createdAt: 42,
+      lastEditedBy: 'human-1', lastEditedWith: 'agent-1', lastEditedAt: 42,
+    });
+  });
+
+  it('names the agent as co-editor on an update and keeps the creation stamp', () => {
+    const snap = DocSnapshot.fromOutput({ blocks: [
+      { id: 'a', type: 'paragraph', data: {}, createdBy: 'human-2', createdAt: 1 },
+    ] });
+
+    applyEdits(snap, [{ op: 'setData', id: 'a', patch: { keep: 1 } }], coStamp);
+
+    expect(requireBlock(snap, 'a').rest).toEqual({
+      createdBy: 'human-2', createdAt: 1, lastEditedBy: 'human-1', lastEditedWith: 'agent-1', lastEditedAt: 42,
+    });
+  });
+
+  it('drops an old co-editor when the agent alone edits', () => {
+    const snap = DocSnapshot.fromOutput({ blocks: [
+      { id: 'a', type: 'paragraph', data: {}, lastEditedBy: 'human-1', lastEditedWith: 'agent-0', lastEditedAt: 1 },
+    ] });
+
+    applyEdits(snap, [{ op: 'setData', id: 'a', patch: { keep: 1 } }], stamp);
+
+    expect(requireBlock(snap, 'a').rest).toEqual({ lastEditedBy: 'agent-1', lastEditedAt: 42 });
+  });
+
+  it('drops both co-author ids from a block moved into an anonymous answer', () => {
+    const snap = DocSnapshot.fromOutput({ blocks: [
+      { id: 'r', type: 'database-row', data: { properties: {}, anonymous: true } },
+      { id: 'x', type: 'paragraph', data: {}, createdBy: 'h', createdWith: 'a', lastEditedBy: 'h', lastEditedWith: 'a', createdAt: 1 },
+    ] });
+
+    applyEdits(snap, [{ op: 'move', id: 'x', parentId: 'r', afterId: null }], coStamp);
+
+    expect(requireBlock(snap, 'x').rest).toEqual({ createdAt: 1, lastEditedAt: 42 });
+  });
+});
+
 describe('applyEdits attribution', () => {
   // An anonymous form answer (research/23 §6) and its page body never carry an editor id.
   describe('inside an anonymous form answer', () => {

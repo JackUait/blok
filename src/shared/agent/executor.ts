@@ -1,4 +1,5 @@
 import { isRichText } from '../rich-text/guards';
+import { agentAttribution } from './attribution';
 import { viewRows } from './document-view';
 import { checkEnvelope } from './envelope';
 import { preflightProblems } from './batch-preflight';
@@ -244,7 +245,8 @@ const pendingPlan = (
   batch: AgentBatch,
   warnings: AgentWarning[]
 ): { plan: Plan; snapshot: DocSnapshot; stamp: EditStamp } => {
-  const stamp = { actorId: input.actor.id, at: (input.now ?? Date.now)() };
+  const { by, with: coAuthor } = agentAttribution(input.actor);
+  const stamp = { actorId: by ?? '', ...(coAuthor !== undefined && { with: coAuthor }), at: (input.now ?? Date.now)() };
   const pending = new Map<number, unknown>();
 
   batch.commands.forEach((command, index) => {

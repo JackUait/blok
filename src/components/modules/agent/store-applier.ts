@@ -6,6 +6,7 @@ import { stripNul } from '../yjs/serializer';
 
 import type { Edit, PlannedBlock } from '../../../../types/agent';
 import type { RichText } from '../../../../types/rich-text';
+import type { Attribution } from '../../../shared/agent/attribution';
 import type { AgentApplier } from '../../../shared/agent/executor';
 import type { Plan } from '../../../shared/agent/types';
 import type { DocumentStore } from '../yjs/document-store';
@@ -19,7 +20,8 @@ export class StoreApplier implements AgentApplier {
   public constructor(
     private readonly store: DocumentStore,
     private readonly options: {
-      actorId: string;
+      /** Who the writes are credited to (agentAttribution). */
+      attribution: Attribution;
       richTextFieldsFor(type: string): string[];
       htmlToSegments(html: string): RichText;
     }
@@ -63,7 +65,7 @@ export class StoreApplier implements AgentApplier {
         }
         for (const id of plan.touched) {
           if (this.store.getBlockById(id) !== undefined) {
-            this.store.updateBlockMetadata(id, at, this.options.actorId);
+            this.store.updateBlockMetadata(id, at, this.options.attribution.by ?? null, this.options.attribution.with);
           }
         }
       }, 'local');
@@ -85,6 +87,7 @@ export class StoreApplier implements AgentApplier {
     // Same rule as YjsManager.withCreationStamp: an anonymous answer and its body name no creator.
     const anonymous = (block.type === 'database-row' && block.data.anonymous === true)
       || this.store.isInAnonymousAnswer(undefined, parentId);
+    const { by, with: coAuthor } = this.options.attribution;
 
     this.store.addBlockAt({
       id: block.id,
@@ -92,7 +95,7 @@ export class StoreApplier implements AgentApplier {
       data: block.data,
       ...(block.tunes === undefined ? {} : { tunes: block.tunes }),
       createdAt: at,
-      ...(anonymous || this.options.actorId === '' ? {} : { createdBy: this.options.actorId }),
+      ...(anonymous || by === undefined ? {} : { createdBy: by, ...(coAuthor !== undefined && { createdWith: coAuthor }) }),
     }, { parentId, afterId });
 
     for (const [index, child] of block.children.entries()) {

@@ -134,6 +134,48 @@ describe('block creation metadata', () => {
     expect([block.createdAt, block.createdBy, block.lastEditedAt, block.lastEditedBy]).toEqual([5, 'u1', 9, 'u2']);
   });
 
+  it('keeps a loaded block\'s co-author ids through save, and does not count them as a content change', async () => {
+    const loaded: OutputData['blocks'] = [{
+      id: 'co', type: 'paragraph', data: { text: [{ text: 'Co' }] },
+      createdAt: 1000, createdBy: 'u-grace', createdWith: 'agent-1',
+      lastEditedAt: 2000, lastEditedBy: 'u-grace', lastEditedWith: 'agent-1',
+    }];
+    const instance = await createEditor(loaded);
+
+    await flush();
+    const saved = await instance.save();
+
+    expect(saved.blocks.find((b) => b.id === 'co')).toMatchObject({
+      createdBy: 'u-grace', createdWith: 'agent-1', lastEditedBy: 'u-grace', lastEditedWith: 'agent-1',
+    });
+    expect(equalsOutputData({ blocks: [{ id: 'co', type: 'paragraph', data: { text: [{ text: 'Co' }] } }] }, saved)).toBe(true);
+  });
+
+  it('reads the co-author ids through the block API', async () => {
+    const instance = await createEditor([{
+      id: 'b', type: 'paragraph', data: { text: 'x' },
+      createdAt: 5, createdBy: 'u1', createdWith: 'a1', lastEditedAt: 9, lastEditedBy: 'u2', lastEditedWith: 'a2',
+    }]);
+    const block = instance.blocks.getById('b') as BlockAPI;
+
+    expect([block.createdWith, block.lastEditedWith]).toEqual(['a1', 'a2']);
+  });
+
+  it('drops the co-editor when a person edits a block an agent co-edited', async () => {
+    const instance = await createEditor([{
+      id: 'b', type: 'paragraph', data: { text: 'x' },
+      createdAt: 5, createdBy: 'u1', createdWith: 'a1', lastEditedAt: 9, lastEditedBy: 'u1', lastEditedWith: 'a1',
+    }], { id: 'u-ada' });
+
+    await instance.blocks.update('b', { text: 'edited' });
+    await flush();
+    const saved = (await instance.save()).blocks.find((b) => b.id === 'b');
+
+    expect(saved).toMatchObject({ createdBy: 'u1', createdWith: 'a1', lastEditedBy: 'u-ada' });
+    expect(saved).not.toHaveProperty('lastEditedWith');
+    expect((instance.blocks.getById('b') as BlockAPI).lastEditedWith).toBeUndefined();
+  });
+
   it('is not an undo step of its own: one undo removes the inserted block, stamp and all', async () => {
     const instance = await createEditor([{ id: 'a1', type: 'paragraph', data: { text: 'Hello' } }], { id: 'u-ada' });
     const inserted = instance.blocks.insert('paragraph', { text: 'New' });
@@ -160,6 +202,40 @@ describe('block creation metadata in the shared document', () => {
     b.applyRemoteUpdate(a.encodeStateAsUpdate());
 
     expect(b.toJSON().find((block) => block.id === 'n')).toMatchObject({ createdAt: 77, createdBy: 'u1' });
+  });
+
+  it('carries the co-author ids to a peer', () => {
+    const a = new DocumentStore(new YBlockSerializer());
+    const b = new DocumentStore(new YBlockSerializer());
+
+    a.fromJSON([]);
+    a.addBlock({ id: 'n', type: 'paragraph', data: {}, createdAt: 77, createdBy: 'u1', createdWith: 'a1', lastEditedAt: 78, lastEditedBy: 'u1', lastEditedWith: 'a1' });
+    b.applyRemoteUpdate(a.encodeStateAsUpdate());
+
+    expect(b.toJSON().find((block) => block.id === 'n')).toMatchObject({ createdWith: 'a1', lastEditedWith: 'a1' });
+    expect(b.blockCreation('n')).toEqual({ createdAt: 77, createdBy: 'u1', createdWith: 'a1' });
+  });
+
+  it('sets the co-editor with the editor, and a later edit with none removes it', () => {
+    const store = new DocumentStore(new YBlockSerializer());
+
+    store.fromJSON([{ id: 'n', type: 'paragraph', data: {} }]);
+    store.updateBlockMetadata('n', 5, 'u1', 'a1');
+    expect(store.toJSON()[0]).toMatchObject({ lastEditedBy: 'u1', lastEditedWith: 'a1' });
+
+    expect(store.updateBlockMetadata('n', 5, 'u1')).toBe(true);
+    expect(store.toJSON()[0]).toMatchObject({ lastEditedBy: 'u1' });
+    expect(store.toJSON()[0]).not.toHaveProperty('lastEditedWith');
+  });
+
+  it('round-trips the co-author ids through the serializer', () => {
+    const serializer = new YBlockSerializer();
+    const doc = new Y.Doc();
+    const map = doc.getMap<Y.Map<unknown>>('blocks');
+
+    map.set('x', serializer.outputDataToYBlock({ id: 'x', type: 'paragraph', data: {}, createdBy: 'u9', createdWith: 'a9', lastEditedBy: 'u9', lastEditedWith: 'a9' }));
+
+    expect(serializer.yBlockToOutputData(map.get('x') as Y.Map<unknown>)).toMatchObject({ createdWith: 'a9', lastEditedWith: 'a9' });
   });
 
   it('round-trips through the serializer', () => {

@@ -168,7 +168,7 @@ describe('agent attribution', () => {
 
   afterEach(teardown);
 
-  it('test 4: a block the agent changes names the agent, and its event carries detail.agent', async () => {
+  it('test 4: a block the agent changes names the user with the agent, and its event carries detail.agent', async () => {
     const { config, events } = collect();
     const editor = await createRealEditor(config);
     const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
@@ -177,7 +177,7 @@ describe('agent attribution', () => {
     turn.end();
     await settle(MUTATION_WINDOW_MS);
 
-    expect((await savedBlock(editor, 'p1'))?.lastEditedBy).toBe('bot');
+    expect(await savedBlock(editor, 'p1')).toMatchObject({ lastEditedBy: 'human', lastEditedWith: 'bot' });
 
     const forP1 = events.filter((event) => event.detail.target.id === 'p1');
 
@@ -202,12 +202,13 @@ describe('agent attribution', () => {
   });
 
   it.each([
-    { name: 'the agent by default, with a user configured', attributeTo: undefined, user: { id: 'human' }, by: 'bot' },
-    { name: 'the agent by default, with no user configured', attributeTo: undefined, user: undefined, by: 'bot' },
-    { name: 'the user with attributeTo: user', attributeTo: 'user' as const, user: { id: 'human' }, by: 'human' },
-  ])('a block the agent creates names $name as creator and last editor', async ({ attributeTo, user, by }) => {
+    { name: 'the user, with the agent, by default', attributeTo: undefined, user: { id: 'human' }, agent: {}, by: 'human', with: 'bot' },
+    { name: 'the agent alone, with no user configured', attributeTo: undefined, user: undefined, agent: {}, by: 'bot', with: undefined },
+    { name: 'the user alone with attributeTo: user', attributeTo: 'user' as const, user: { id: 'human' }, agent: {}, by: 'human', with: undefined },
+    { name: 'the host\'s onBehalfOf over the configured user', attributeTo: undefined, user: { id: 'human' }, agent: { onBehalfOf: 'boss' }, by: 'boss', with: 'bot' },
+  ])('a block the agent creates names $name', async ({ attributeTo, user, agent, by, with: coAuthor }) => {
     const editor = await createRealEditor(user === undefined ? {} : { user });
-    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' }, ...(attributeTo === undefined ? {} : { attributeTo }) });
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot', ...agent }, ...(attributeTo === undefined ? {} : { attributeTo }) });
 
     await turn.execute({ commands: [{ name: 'block.insert', args: { id: 'n1', type: 'paragraph', data: { text: 'New' }, position: 'end' } }] });
     turn.end();
@@ -216,8 +217,32 @@ describe('agent attribution', () => {
 
     expect(block?.createdBy).toBe(by);
     expect(block?.lastEditedBy).toBe(by);
+    expect(block?.createdWith).toBe(coAuthor);
+    expect(block?.lastEditedWith).toBe(coAuthor);
     expect(typeof block?.createdAt).toBe('number');
     expect(typeof block?.lastEditedAt).toBe('number');
+  });
+
+  it('an agent update names the user with the agent, and the user\'s own edit after it drops the agent', async () => {
+    const editor = await createRealEditor({
+      user: { id: 'human' },
+      data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'Old' }, createdBy: 'other', createdAt: 1 }] },
+    });
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+
+    await turn.execute({ commands: [{ name: 'block.update', args: { id: 'p1', data: { text: 'By bot' } } }] });
+    turn.end();
+    await settle(MUTATION_WINDOW_MS);
+
+    expect(await savedBlock(editor, 'p1')).toMatchObject({ createdBy: 'other', lastEditedBy: 'human', lastEditedWith: 'bot' });
+    expect(await savedBlock(editor, 'p1')).not.toHaveProperty('createdWith');
+
+    await editor.blocks.update('p1', { text: 'By human' });
+    await settle(MUTATION_WINDOW_MS);
+    const after = await savedBlock(editor, 'p1');
+
+    expect(after).toMatchObject({ lastEditedBy: 'human' });
+    expect(after).not.toHaveProperty('lastEditedWith');
   });
 
   it('a block the user adds while a turn is open still names the user as creator', async () => {
@@ -264,8 +289,9 @@ describe('agent attribution', () => {
     await settle(MUTATION_WINDOW_MS);
 
     expect((await savedBlock(editor, 'p2'))?.lastEditedBy).toBe('human');
+    expect(await savedBlock(editor, 'p2')).not.toHaveProperty('lastEditedWith');
     expect(events.filter((event) => event.detail.target.id === 'p2').every((event) => event.detail.agent === undefined)).toBe(true);
-    expect((await savedBlock(editor, 'p1'))?.lastEditedBy).toBe('bot');
+    expect(await savedBlock(editor, 'p1')).toMatchObject({ lastEditedBy: 'human', lastEditedWith: 'bot' });
   });
 });
 

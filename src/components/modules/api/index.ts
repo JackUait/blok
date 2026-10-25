@@ -29,7 +29,7 @@ export class API extends Module {
    * A block's creation stamp from the document. BlockAPI reads it here.
    * @param id - the block id
    */
-  public blockCreation(id: string): { createdAt?: number; createdBy?: string } {
+  public blockCreation(id: string): { createdAt?: number; createdBy?: string; createdWith?: string } {
     return this.Blok.YjsManager.getBlockCreation(id);
   }
 

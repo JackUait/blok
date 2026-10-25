@@ -100,11 +100,17 @@ interface BlockConstructorOptions {
   /** ID of the user who last edited this block */
   lastEditedBy?: string | null;
 
+  /** The agent that made the last edit with `lastEditedBy` */
+  lastEditedWith?: string | null;
+
   /** When the block was created, as the stored data says (ms since epoch) */
   createdAt?: number;
 
   /** Who created the block, as the stored data says */
   createdBy?: string;
+
+  /** The agent that created the block with `createdBy`, as the stored data says */
+  createdWith?: string;
 
   /**
    * Why this Block is being constructed — a creation the author just made, or a
@@ -188,18 +194,23 @@ export class Block extends EventsDispatcher<BlockEvents> {
   /** ID of the user who last edited. Updated by BlockManager on mutation. */
   public lastEditedBy: string | null;
 
+  /** The agent that made the last edit with `lastEditedBy`. Updated with it. */
+  public lastEditedWith: string | null;
+
   /**
    * The persisted creation stamp the block was loaded with. Distinct from
    * `createdAt` above, which is this instance's construction time and never
    * saved. A block made in this editor gets its stamp in the document instead
    * (YjsManager.addBlock), so the saver reads the document first.
    */
-  public readonly creation: { createdAt?: number; createdBy?: string };
+  public readonly creation: { createdAt?: number; createdBy?: string; createdWith?: string };
 
   /** Forget who made and last edited this block (it is now inside an anonymous answer). */
   public unsign(): void {
     this.lastEditedBy = null;
+    this.lastEditedWith = null;
     Reflect.deleteProperty(this.creation, 'createdBy');
+    Reflect.deleteProperty(this.creation, 'createdWith');
   }
 
   /**
@@ -337,8 +348,10 @@ export class Block extends EventsDispatcher<BlockEvents> {
     bindMutationWatchersImmediately = false,
     lastEditedAt,
     lastEditedBy,
+    lastEditedWith,
     createdAt,
     createdBy,
+    createdWith,
     origin = 'api',
     replaySource,
   }: BlockConstructorOptions, eventBus?: EventsDispatcher<BlokEventMap>) {
@@ -361,9 +374,11 @@ export class Block extends EventsDispatcher<BlockEvents> {
     this.contentIds = Array.isArray(contentIds) ? [ ...contentIds ] : [];
     this.lastEditedAt = lastEditedAt;
     this.lastEditedBy = lastEditedBy ?? null;
+    this.lastEditedWith = lastEditedWith ?? null;
     this.creation = {
       ...(typeof createdAt === 'number' ? { createdAt } : {}),
       ...(typeof createdBy === 'string' ? { createdBy } : {}),
+      ...(typeof createdWith === 'string' ? { createdWith } : {}),
     };
     this.settings = tool.settings;
     this.config = this.settings;

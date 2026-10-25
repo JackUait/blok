@@ -519,6 +519,14 @@ export class YBlockSerializer {
       yblock.set('createdBy', stripNul(blockData.createdBy));
     }
 
+    if (typeof blockData.createdWith === 'string') {
+      yblock.set('createdWith', stripNul(blockData.createdWith));
+    }
+
+    if (typeof blockData.lastEditedWith === 'string') {
+      yblock.set('lastEditedWith', stripNul(blockData.lastEditedWith));
+    }
+
     return yblock;
   }
 
@@ -597,6 +605,18 @@ export class YBlockSerializer {
 
     if (typeof createdBy === 'string') {
       block.createdBy = createdBy;
+    }
+
+    const createdWith = yblock.get('createdWith');
+
+    if (typeof createdWith === 'string') {
+      block.createdWith = createdWith;
+    }
+
+    const lastEditedWith = yblock.get('lastEditedWith');
+
+    if (typeof lastEditedWith === 'string') {
+      block.lastEditedWith = lastEditedWith;
     }
 
     return block;

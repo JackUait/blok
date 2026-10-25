@@ -111,11 +111,17 @@ export interface BlockAPI {
   /** Id of the user, or agent, who created the block. */
   readonly createdBy?: string;
 
+  /** Id of the agent that created the block with `createdBy`, when there was one. */
+  readonly createdWith?: string;
+
   /** When the block was last edited (ms since epoch). Undefined until its first edit. */
   readonly lastEditedAt?: number;
 
   /** Id of the user, or agent, who last edited the block. */
   readonly lastEditedBy?: string;
+
+  /** Id of the agent that made the last edit with `lastEditedBy`, when there was one. */
+  readonly lastEditedWith?: string;
 
   /**
    * The url a copy of this block links to, from its tool's `copyAsLink`

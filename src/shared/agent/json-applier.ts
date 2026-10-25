@@ -2,7 +2,10 @@ import type { Edit, PlannedBlock } from '../../../types/agent';
 import type { DocSnapshot, SnapBlock } from './snapshot';
 
 export interface EditStamp {
+  /** Who `createdBy`/`lastEditedBy` name; '' names no one. See agentAttribution. */
   actorId: string;
+  /** The co-author `createdWith`/`lastEditedWith` name, when there is one. */
+  with?: string;
   at: number;
 }
 
@@ -38,6 +41,8 @@ const inAnonymousAnswer = (snap: DocSnapshot, block: SnapBlock | undefined, seen
   return isAnonymousAnswer(block) || (block.parent !== null && inAnonymousAnswer(snap, snap.get(block.parent), seen));
 };
 
+const SIGNED_KEYS = ['createdBy', 'createdWith', 'lastEditedBy', 'lastEditedWith'] as const;
+
 // A block moved into an anonymous answer drops the ids it was made with, as DocumentStore.applyPlacement does.
 const unsignTree = (snap: DocSnapshot, id: string, seen = new Set<string>()): void => {
   const block = seen.has(id) ? undefined : snap.get(id);
@@ -46,8 +51,9 @@ const unsignTree = (snap: DocSnapshot, id: string, seen = new Set<string>()): vo
     return;
   }
   seen.add(id);
-  Reflect.deleteProperty(block.rest, 'createdBy');
-  Reflect.deleteProperty(block.rest, 'lastEditedBy');
+  for (const key of SIGNED_KEYS) {
+    Reflect.deleteProperty(block.rest, key);
+  }
   block.content.forEach((child) => unsignTree(snap, child, seen));
 };
 
@@ -61,13 +67,19 @@ const stampOn = (snap: DocSnapshot, block: SnapBlock | undefined, stamp: EditSta
   if (block === undefined || stamp === null) {
     return;
   }
+  // An old co-editor never outlives a later edit.
+  Reflect.deleteProperty(block.rest, 'lastEditedWith');
   if (inAnonymousAnswer(snap, block)) {
     Reflect.deleteProperty(block.rest, 'lastEditedBy');
     Object.assign(block.rest, { lastEditedAt: stamp.at });
 
     return;
   }
-  Object.assign(block.rest, { lastEditedAt: stamp.at, lastEditedBy: stamp.actorId });
+  Object.assign(block.rest, {
+    lastEditedAt: stamp.at,
+    lastEditedBy: stamp.actorId,
+    ...(stamp.with !== undefined && { lastEditedWith: stamp.with }),
+  });
 };
 
 // Same rule as YjsManager.withCreationStamp: the creating actor, never inside an anonymous answer.
@@ -77,7 +89,10 @@ const stampCreation = (snap: DocSnapshot, block: SnapBlock, stamp: EditStamp | n
   }
   Object.assign(block.rest, {
     createdAt: stamp.at,
-    ...(stamp.actorId !== '' && !inAnonymousAnswer(snap, block) && { createdBy: stamp.actorId }),
+    ...(stamp.actorId !== '' && !inAnonymousAnswer(snap, block) && {
+      createdBy: stamp.actorId,
+      ...(stamp.with !== undefined && { createdWith: stamp.with }),
+    }),
   });
 };
 

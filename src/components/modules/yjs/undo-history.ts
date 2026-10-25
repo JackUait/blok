@@ -32,7 +32,7 @@ const keepWithParents = (item: Y.Item | null): void => {
  * @returns whether it is a block's edit metadata (see DocumentStore.updateBlockMetadata)
  */
 const isEditMetadata = (item: Y.Item): boolean =>
-  (item.parentSub === 'lastEditedAt' || item.parentSub === 'lastEditedBy')
+  (item.parentSub === 'lastEditedAt' || item.parentSub === 'lastEditedBy' || item.parentSub === 'lastEditedWith')
   && item.parent instanceof Y.Map && item.parent.get('data') instanceof Y.Map;
 
 /**

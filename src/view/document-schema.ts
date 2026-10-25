@@ -112,6 +112,10 @@ export const blokDocumentSchema = {
             type: 'string',
             description: 'Identifier of the user, or agent, who last edited this block.',
           },
+          lastEditedWith: {
+            type: 'string',
+            description: 'Identifier of the agent that made the last edit together with lastEditedBy.',
+          },
           createdAt: {
             type: 'integer',
             description: 'Unix epoch milliseconds when this block was created.',
@@ -119,6 +123,10 @@ export const blokDocumentSchema = {
           createdBy: {
             type: 'string',
             description: 'Identifier of the user, or agent, who created this block.',
+          },
+          createdWith: {
+            type: 'string',
+            description: 'Identifier of the agent that created this block together with createdBy.',
           },
         },
         allOf: [

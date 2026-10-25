@@ -437,7 +437,12 @@ export class AgentAPI extends Module {
       throw new AgentTurnOpenError();
     }
 
-    const identity = readIdentity(options?.agent);
+    const given = readIdentity(options?.agent);
+    const userId = this.config.user?.id;
+    // The person at this editor is who the agent acts for, unless the host named one.
+    const identity: AgentIdentity = given.onBehalfOf === undefined && typeof userId === 'string' && userId !== ''
+      ? { ...given, onBehalfOf: userId }
+      : given;
 
     this.actor = { ...identity, kind: 'agent' };
     this.turnPages = new Map();

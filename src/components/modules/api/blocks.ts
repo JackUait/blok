@@ -845,7 +845,7 @@ export class BlocksAPI extends Module {
     // (null data/ids) is normalized first.
     const normalizedBlocks = normalizeTableChildParents(normalizeOutputBlocks(blocks));
 
-    const blocksToInsert = normalizedBlocks.map(({ id, type, data, tunes, parent, content, lastEditedAt, lastEditedBy }) => {
+    const blocksToInsert = normalizedBlocks.map(({ id, type, data, tunes, parent, content, lastEditedAt, lastEditedBy, lastEditedWith }) => {
       const tool = type || (this.config.defaultBlock as string);
 
       return this.Blok.BlockManager.composeBlock({
@@ -857,6 +857,7 @@ export class BlocksAPI extends Module {
         contentIds: content,
         lastEditedAt,
         lastEditedBy,
+        lastEditedWith,
         origin: 'api',
       });
     });

@@ -21,7 +21,7 @@ const initial = (): OutputBlockData[] => [
   { ...originalStamp, id: 'q', type: 'paragraph', data: { text: [{ text: 'Q' }] } },
 ];
 
-const open = (blocks: OutputBlockData[] = initial()) => {
+const open = (blocks: OutputBlockData[] = initial(), sessionActor: AgentActor = actor) => {
   const setup = createHeadlessAgentSetup({ runtime: 'node-live' });
   const serializer = new YBlockSerializer({
     htmlToSegments: htmlToSegmentsNode,
@@ -32,7 +32,7 @@ const open = (blocks: OutputBlockData[] = initial()) => {
   stores.push(store);
   store.fromJSON(blocks);
   const session = createStoreAgentSession({
-    store, tools: setup.tools, contract: setup.contract, actor, ports: setup.ports,
+    store, tools: setup.tools, contract: setup.contract, actor: sessionActor, ports: setup.ports,
     richTextFieldsFor: setup.richTextFieldsFor,
   });
 
@@ -93,6 +93,23 @@ describe('createStoreAgentSession', () => {
     expect(storedBlock(store, 'q')).toEqual(untouched);
     expect(result).toMatchObject({ ok: true, changed: { updated: ['p'] } });
     expect(result.revision).toBe((await session.read()).revision);
+  });
+
+  it('credits the person the agent acts for, with the agent, on an insert and an update', async () => {
+    const { store, session } = open(initial(), { ...actor, onBehalfOf: 'human-9' });
+    const result = await session.execute({ commands: [
+      { name: 'block.update', args: { id: 'p', data: { text: 'edited' } } },
+      { name: 'block.insert', ref: 'n', args: { type: 'paragraph', data: { text: 'new' } } },
+    ] });
+
+    if (!result.ok) {
+      throw new Error(result.error.message);
+    }
+    expect(storedBlock(store, 'p')).toMatchObject({ createdBy: 'creator-1', lastEditedBy: 'human-9', lastEditedWith: actor.id });
+    expect(storedBlock(store, 'p')).not.toHaveProperty('createdWith');
+    expect(storedBlock(store, String(result.refs.n))).toMatchObject({
+      createdBy: 'human-9', createdWith: actor.id, lastEditedBy: 'human-9', lastEditedWith: actor.id,
+    });
   });
 
   it.each(history)('reports %s as unavailable for the live runtime without changing content', async name => {

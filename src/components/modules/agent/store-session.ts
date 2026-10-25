@@ -1,3 +1,4 @@
+import { agentAttribution } from '../../../shared/agent/attribution';
 import { plannerContextFrom } from '../../../shared/agent/context';
 import { describeContract } from '../../../shared/agent/describe';
 import { buildDocumentView } from '../../../shared/agent/document-view';
@@ -27,7 +28,7 @@ export const createStoreAgentSession = (input: {
 }): AgentSession => {
   const id = `store-session-${++storeSessions.count}`;
   const applier = new StoreApplier(input.store, {
-    actorId: input.actor.id,
+    attribution: agentAttribution(input.actor),
     richTextFieldsFor: input.richTextFieldsFor,
     htmlToSegments: input.ports.htmlToSegments,
   });

@@ -321,7 +321,7 @@ export class Renderer extends Module {
      * Create Blocks instances
      */
     const blocks = processedBlocks.map((blockData: OutputBlockData) => {
-      const { tunes, parent, content, lastEditedAt, lastEditedBy, createdAt, createdBy } = blockData;
+      const { tunes, parent, content, lastEditedAt, lastEditedBy, lastEditedWith, createdAt, createdBy, createdWith } = blockData;
       // Wire DTOs may carry `id: null` — normalize to undefined so the block
       // factory generates a fresh id and null ids never collide as "duplicates".
       const incomingId = blockData.id ?? undefined;
@@ -384,8 +384,10 @@ export class Renderer extends Module {
             contentIds: content,
             lastEditedAt,
             lastEditedBy,
+            lastEditedWith,
             createdAt,
             createdBy,
+            createdWith,
             // Restoring a stored document: whatever children the data declares
             // are authoritative, so container tools must not seed defaults.
             origin: 'load',
@@ -410,8 +412,10 @@ export class Renderer extends Module {
             contentIds: content,
             lastEditedAt,
             lastEditedBy,
+            lastEditedWith,
             createdAt,
             createdBy,
+            createdWith,
             origin: 'load',
           });
         }

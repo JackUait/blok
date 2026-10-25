@@ -4,6 +4,7 @@ import type { RichText } from '../../../../types/rich-text';
 import type { PageIcon } from '../../../../types/tools/page';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 import type { ModuleConfig } from '../../../types-internal/module-config';
+import type { Attribution } from '../../../shared/agent/attribution';
 import { modificationsObserverBatchTimeout } from '../../constants';
 import { Module } from '../../__module';
 import { logLabeled } from '../../utils';
@@ -94,8 +95,8 @@ export class YjsManager extends Module {
   /** Above zero inside `withoutAuthor`: new blocks get no `createdBy`. */
   private anonymousDepth = 0;
 
-  /** Set inside an agent write: names the agent as creator of the blocks it adds. */
-  private creationAuthor: ((blockId: string) => string | undefined) | null = null;
+  /** Set inside an agent write: who is credited with the blocks it adds (see agentAttribution). */
+  private creationAuthor: ((blockId: string) => Attribution | undefined) | null = null;
 
   /**
    * One token per `block.save()` round-trip in flight between a DOM mutation
@@ -438,18 +439,25 @@ export class YjsManager extends Module {
     const isAnonymousAnswer = blockData.type === 'database-row' && (blockData.data as Record<string, unknown> | null)?.anonymous === true;
 
     if (isAnonymousAnswer || this.documentStore.isInAnonymousAnswer(undefined, parentId)) {
-      const { createdBy: _createdBy, lastEditedBy: _lastEditedBy, ...unsigned } = blockData;
+      const { createdBy: _createdBy, createdWith: _createdWith, lastEditedBy: _lastEditedBy, lastEditedWith: _lastEditedWith, ...unsigned } = blockData;
 
       return { ...unsigned, createdAt: blockData.createdAt ?? Date.now() };
     }
 
-    const agentId = typeof blockData.id === 'string' ? this.creationAuthor?.(blockData.id) : undefined;
-    const userId = this.anonymousDepth > 0 ? undefined : agentId ?? this.config.user?.id;
+    const agent = typeof blockData.id === 'string' ? this.creationAuthor?.(blockData.id) : undefined;
+    const userId = this.anonymousDepth > 0 ? undefined : agent?.by ?? this.config.user?.id;
+    const coAuthor = this.anonymousDepth > 0 ? undefined : agent?.with;
+
+    // A stamp the data carries wins whole: never a co-author on someone else's createdBy.
+    if (blockData.createdBy !== undefined || typeof userId !== 'string' || userId === '') {
+      return { ...blockData, createdAt: blockData.createdAt ?? Date.now() };
+    }
 
     return {
       ...blockData,
       createdAt: blockData.createdAt ?? Date.now(),
-      ...(blockData.createdBy === undefined && typeof userId === 'string' && userId !== '' ? { createdBy: userId } : {}),
+      createdBy: userId,
+      ...(coAuthor !== undefined && { createdWith: coAuthor }),
     };
   }
 
@@ -477,11 +485,11 @@ export class YjsManager extends Module {
   }
 
   /**
-   * Names `author` as creator of the blocks added until the release runs.
-   * @param author - the creator's id for a block id, or undefined to fall back to the user
+   * Credits `author` with the blocks added until the release runs.
+   * @param author - who is credited for a block id, or undefined to fall back to the user
    * @returns release
    */
-  public authorBlocksAs(author: (blockId: string) => string | undefined): () => void {
+  public authorBlocksAs(author: (blockId: string) => Attribution | undefined): () => void {
     this.creationAuthor = author;
 
     return () => {
@@ -496,7 +504,7 @@ export class YjsManager extends Module {
    * @param id - Block id
    * @returns the stamp; absent fields are undefined
    */
-  public getBlockCreation(id: string): { createdAt?: number; createdBy?: string } {
+  public getBlockCreation(id: string): { createdAt?: number; createdBy?: string; createdWith?: string } {
     return this.documentStore.blockCreation(id);
   }
 
@@ -672,12 +680,13 @@ export class YjsManager extends Module {
    * @param id - Block id
    * @param lastEditedAt - Timestamp in milliseconds
    * @param lastEditedBy - User ID, or null
+   * @param lastEditedWith - the agent that edited with them; omitted removes the old one
    */
-  public updateBlockMetadata(id: string, lastEditedAt: number, lastEditedBy: string | null): boolean {
+  public updateBlockMetadata(id: string, lastEditedAt: number, lastEditedBy: string | null, lastEditedWith?: string): boolean {
     // Same barrier as updateBlockData — see there.
     this.flushPendingBlockWrites();
 
-    return this.documentStore.updateBlockMetadata(id, lastEditedAt, lastEditedBy);
+    return this.documentStore.updateBlockMetadata(id, lastEditedAt, lastEditedBy, lastEditedWith);
   }
 
   // ========== Public API: Typing write coalescing ==========

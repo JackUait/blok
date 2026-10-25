@@ -47,7 +47,8 @@ function normalizeOutputBlock(block: OutputBlockData | LooseOutputBlockData): Ou
  * mints a fresh id whenever content arrives without one, so an id-less origin
  * document must still compare equal to its saved echo.
  *
- * Edit metadata (`lastEditedAt`/`lastEditedBy`, `createdAt`/`createdBy`) never
+ * Edit metadata (`lastEditedAt`/`lastEditedBy`/`lastEditedWith`,
+ * `createdAt`/`createdBy`/`createdWith`) never
  * participates: it records WHO touched the block and WHEN, not what it says, so
  * a document whose only delta is a stamp is not a content change.
  * @param a - first block to compare
@@ -58,8 +59,8 @@ function equalsOutputBlock(
   a: OutputBlockData | LooseOutputBlockData,
   b: OutputBlockData | LooseOutputBlockData
 ): boolean {
-  const { id: idA, lastEditedAt: _editedAtA, lastEditedBy: _editedByA, createdAt: _createdAtA, createdBy: _createdByA, ...restA } = normalizeOutputBlock(a);
-  const { id: idB, lastEditedAt: _editedAtB, lastEditedBy: _editedByB, createdAt: _createdAtB, createdBy: _createdByB, ...restB } = normalizeOutputBlock(b);
+  const { id: idA, lastEditedAt: _editedAtA, lastEditedBy: _editedByA, lastEditedWith: _editedWithA, createdAt: _createdAtA, createdBy: _createdByA, createdWith: _createdWithA, ...restA } = normalizeOutputBlock(a);
+  const { id: idB, lastEditedAt: _editedAtB, lastEditedBy: _editedByB, lastEditedWith: _editedWithB, createdAt: _createdAtB, createdBy: _createdByB, createdWith: _createdWithB, ...restB } = normalizeOutputBlock(b);
 
   const hasIdA = typeof idA === 'string' && idA !== '';
   const hasIdB = typeof idB === 'string' && idB !== '';
@@ -133,7 +134,7 @@ function comparableBlocks(
  * document round-tripped through `save()` compares equal to its echo. Block
  * ids are compared only when both sides carry one — the editor mints fresh
  * ids for id-less content, so a legacy document still equals its saved echo.
- * Edit metadata (`lastEditedAt`/`lastEditedBy`) is ignored for the same reason:
+ * Edit metadata (`lastEditedAt`, `createdAt` and who made them) is ignored for the same reason:
  * it records who touched a block and when, not what it says. Nullish documents
  * compare equal to `{ blocks: [] }`.
  *

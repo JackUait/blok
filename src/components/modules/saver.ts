@@ -49,10 +49,14 @@ type SaverValidatedData = ValidatedData & {
    * Identifier of the user who last edited this block
    */
   lastEditedBy?: string | null;
+  /** The agent that made the last edit with `lastEditedBy` */
+  lastEditedWith?: string | null;
   /** When the block was created, from the document */
   createdAt?: number;
   /** Who created the block, from the document */
   createdBy?: string;
+  /** The agent that created the block with `createdBy`, from the document */
+  createdWith?: string;
 };
 
 type SanitizableBlockData = SaverValidatedData & Pick<SavedData, 'data' | 'tool'>;
@@ -1055,6 +1059,7 @@ export class Saver extends Module {
       contentIds: derivedContentIds,
       lastEditedAt: block.lastEditedAt,
       lastEditedBy: block.lastEditedBy,
+      lastEditedWith: block.lastEditedWith,
       ...block.creation,
       ...this.Blok.YjsManager.getBlockCreation(block.id),
     };
@@ -1064,9 +1069,9 @@ export class Saver extends Module {
     }
 
     // The in-memory copy may still hold an id from an older save or a move in.
-    const { createdBy: _createdBy, ...unsigned } = validated;
+    const { createdBy: _createdBy, createdWith: _createdWith, ...unsigned } = validated;
 
-    return { ...unsigned, lastEditedBy: null };
+    return { ...unsigned, lastEditedBy: null, lastEditedWith: null };
   }
 
   /**
@@ -1172,7 +1177,7 @@ export class Saver extends Module {
   private makeOutput(allExtractedData: SaverValidatedData[], dialect: 'host' | 'internal'): OutputData {
     const extractedBlocks: OutputData['blocks'] = [];
 
-    allExtractedData.forEach(({ id, tool, data, tunes, isValid, parentId, contentIds, lastEditedAt, lastEditedBy, createdAt, createdBy }) => {
+    allExtractedData.forEach(({ id, tool, data, tunes, isValid, parentId, contentIds, lastEditedAt, lastEditedBy, lastEditedWith, createdAt, createdBy, createdWith }) => {
       const hasParent = parentId !== undefined && parentId !== null;
       const hasContent = contentIds !== undefined && contentIds.length > 0;
 
@@ -1225,11 +1230,17 @@ export class Saver extends Module {
         ...hasLastEditedBy && {
           lastEditedBy,
         },
+        ...hasLastEditedBy && typeof lastEditedWith === 'string' && {
+          lastEditedWith,
+        },
         ...createdAt !== undefined && {
           createdAt,
         },
         ...createdBy !== undefined && {
           createdBy,
+        },
+        ...createdBy !== undefined && createdWith !== undefined && {
+          createdWith,
         },
       };
 

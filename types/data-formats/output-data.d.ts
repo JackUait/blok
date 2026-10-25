@@ -101,11 +101,19 @@ export interface OutputBlockData<Type extends string = string, Data extends obje
   lastEditedAt?: number;
 
   /**
-   * ID of the user who last edited this block.
-   * Set from the `user.id` config option, or the agent's id for an agent's
-   * edit (see `AgentTurnOptions.attributeTo`). Omit if no one is named.
+   * ID of the user who last edited this block, from the `user.id` config
+   * option. For an agent's edit it is the person the agent acts for
+   * (`AgentActor.onBehalfOf`), or the agent's id when no person is known.
+   * Omit if no one is named.
    */
   lastEditedBy?: string;
+
+  /**
+   * ID of the agent that made the last edit together with `lastEditedBy`.
+   * Set only when an agent edited for a known person. A later edit without
+   * an agent removes it.
+   */
+  lastEditedWith?: string;
 
   /**
    * Timestamp (milliseconds since epoch) the block was created. Stamped once,
@@ -115,11 +123,18 @@ export interface OutputBlockData<Type extends string = string, Data extends obje
   createdAt?: number;
 
   /**
-   * ID of the user who created this block, from the `user.id` config option,
-   * or the agent's id for a block an agent added (see
-   * `AgentTurnOptions.attributeTo`). Omit if no one is named.
+   * ID of the user who created this block, from the `user.id` config option.
+   * For a block an agent added it is the person the agent acts for
+   * (`AgentActor.onBehalfOf`), or the agent's id when no person is known.
+   * Omit if no one is named.
    */
   createdBy?: string;
+
+  /**
+   * ID of the agent that created this block together with `createdBy`.
+   * Set only when an agent created it for a known person.
+   */
+  createdWith?: string;
 }
 
 export interface OutputData {

@@ -59,6 +59,7 @@ interface BlockRecord {
   parentId: string | undefined;
   lastEditedAt: number | undefined;
   lastEditedBy: string | null;
+  lastEditedWith: string | null;
 }
 
 interface AtomicOperationOptions {
@@ -1239,7 +1240,7 @@ export class BlockYjsSync {
     const tunes = record.tunes !== undefined
       ? stripUnsafeUrlsDeep(this.dependencies.YjsManager.yMapToObject(record.tunes))
       : {};
-    const { lastEditedAt, lastEditedBy } = record;
+    const { lastEditedAt, lastEditedBy, lastEditedWith } = record;
 
     // Mirror a parentId the doc changed BEFORE any recreate below, so a
     // replacement never carries a stale parent. A missing key is "no
@@ -1298,7 +1299,7 @@ export class BlockYjsSync {
 
       this.markRewrittenFromDocument(blockId, data);
       this.withAtomicOperation(() => {
-        this.rematerialize(block, { tool: yjsType, data, tunes, lastEditedAt, lastEditedBy, replaySource: replaySourceOf(origin) });
+        this.rematerialize(block, { tool: yjsType, data, tunes, lastEditedAt, lastEditedBy, lastEditedWith, replaySource: replaySourceOf(origin) });
       }, { extendThroughRAF: true, blockId });
 
       return;
@@ -1309,7 +1310,7 @@ export class BlockYjsSync {
     if (!equals(tunes, block.preservedTunes)) {
       this.markRewrittenFromDocument(blockId, data);
       this.withAtomicOperation(() => {
-        this.rematerialize(block, { tool: block.name, data, tunes, lastEditedAt, lastEditedBy, replaySource: replaySourceOf(origin) });
+        this.rematerialize(block, { tool: block.name, data, tunes, lastEditedAt, lastEditedBy, lastEditedWith, replaySource: replaySourceOf(origin) });
       }, { extendThroughRAF: true, blockId });
 
       return;
@@ -1332,6 +1333,7 @@ export class BlockYjsSync {
     if (lastEditedAt !== undefined) {
       block.lastEditedAt = lastEditedAt;
       block.lastEditedBy = lastEditedBy;
+      block.lastEditedWith = lastEditedWith;
     }
 
     // Nothing in the data changed — a peer touching a record key outside
@@ -1397,6 +1399,7 @@ export class BlockYjsSync {
             tunes: block.preservedTunes,
             lastEditedAt,
             lastEditedBy,
+            lastEditedWith,
             replaySource: replaySourceOf(origin),
           });
         });
@@ -1524,6 +1527,7 @@ export class BlockYjsSync {
       tunes: Record<string, unknown>;
       lastEditedAt: number | undefined;
       lastEditedBy: string | null;
+      lastEditedWith: string | null;
       replaySource: 'history' | 'remote' | undefined;
     }
   ): void {
@@ -1551,6 +1555,7 @@ export class BlockYjsSync {
       replaySource: record.replaySource,
       lastEditedAt: record.lastEditedAt,
       lastEditedBy: record.lastEditedBy,
+      lastEditedWith: record.lastEditedWith,
     });
 
     const oldHolder = target.holder;
@@ -1850,6 +1855,7 @@ export class BlockYjsSync {
     const parentId = yblock.get('parentId');
     const lastEditedAt = yblock.get('lastEditedAt');
     const lastEditedBy = yblock.get('lastEditedBy');
+    const lastEditedWith = yblock.get('lastEditedWith');
 
     return {
       type,
@@ -1858,6 +1864,7 @@ export class BlockYjsSync {
       parentId: typeof parentId === 'string' ? parentId : undefined,
       lastEditedAt: typeof lastEditedAt === 'number' ? lastEditedAt : undefined,
       lastEditedBy: typeof lastEditedBy === 'string' ? lastEditedBy : null,
+      lastEditedWith: typeof lastEditedWith === 'string' ? lastEditedWith : null,
     };
   }
 
@@ -1914,7 +1921,7 @@ export class BlockYjsSync {
     }
 
     const data = this.sanitizeToolData(toolName, this.dependencies.YjsManager.yMapToObject(record.data));
-    const { parentId, lastEditedAt, lastEditedBy } = record;
+    const { parentId, lastEditedAt, lastEditedBy, lastEditedWith } = record;
 
     const order = this.docOrderKnownToMemory(new Set([blockId]));
     const placement = this.docPlacementInMemory(blockId, parentId ?? null, order);
@@ -1941,6 +1948,7 @@ export class BlockYjsSync {
         replaySource: replaySourceOf(origin),
         lastEditedAt,
         lastEditedBy,
+        lastEditedWith,
       });
 
       // A root block after a nested one would land in that block's slot (see
@@ -2080,7 +2088,7 @@ export class BlockYjsSync {
    */
   private handleYjsBatchAdd(blockIds: string[], origin?: BlockChangeEvent['origin']): void {
     // Collect blocks to create — skip any that already exist
-    const candidates: Array<{ blockId: string; toolName: string; data: Record<string, unknown>; parentId: string | undefined; lastEditedAt: number | undefined; lastEditedBy: string | null }> = [];
+    const candidates: Array<{ blockId: string; toolName: string; data: Record<string, unknown>; parentId: string | undefined; lastEditedAt: number | undefined; lastEditedBy: string | null; lastEditedWith: string | null }> = [];
 
     for (const blockId of blockIds) {
       if (this.repository.getBlockById(blockId) !== undefined) {
@@ -2106,9 +2114,9 @@ export class BlockYjsSync {
       }
 
       const data = this.sanitizeToolData(toolName, this.dependencies.YjsManager.yMapToObject(record.data));
-      const { parentId, lastEditedAt, lastEditedBy } = record;
+      const { parentId, lastEditedAt, lastEditedBy, lastEditedWith } = record;
 
-      candidates.push({ blockId, toolName, data, parentId, lastEditedAt, lastEditedBy });
+      candidates.push({ blockId, toolName, data, parentId, lastEditedAt, lastEditedBy, lastEditedWith });
     }
 
     // ONE basis snapshot for the whole batch (see docOrderKnownToMemory): pass 1
@@ -2156,6 +2164,7 @@ export class BlockYjsSync {
           replaySource: replaySourceOf(origin),
           lastEditedAt: entry.lastEditedAt,
           lastEditedBy: entry.lastEditedBy,
+          lastEditedWith: entry.lastEditedWith,
         });
 
         this.blocksStore.addToArray(targetIndex, block);

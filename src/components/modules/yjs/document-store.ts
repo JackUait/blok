@@ -342,6 +342,8 @@ export class DocumentStore {
     this.rewriteOptionalField(yblock, 'lastEditedBy', stripNulIfString(block.lastEditedBy));
     this.rewriteOptionalField(yblock, 'createdAt', block.createdAt);
     this.rewriteOptionalField(yblock, 'createdBy', stripNulIfString(block.createdBy));
+    this.rewriteOptionalField(yblock, 'createdWith', stripNulIfString(block.createdWith));
+    this.rewriteOptionalField(yblock, 'lastEditedWith', stripNulIfString(block.lastEditedWith));
   }
 
   /**
@@ -390,14 +392,16 @@ export class DocumentStore {
    * @param id - Block id
    * @returns the stamp; fields the block lacks are undefined
    */
-  public blockCreation(id: string): { createdAt?: number; createdBy?: string } {
+  public blockCreation(id: string): { createdAt?: number; createdBy?: string; createdWith?: string } {
     const yblock = this.yBlocksMap.get(id);
     const createdAt: unknown = yblock?.get('createdAt');
     const createdBy: unknown = yblock?.get('createdBy');
+    const createdWith: unknown = yblock?.get('createdWith');
 
     return {
       ...(typeof createdAt === 'number' ? { createdAt } : {}),
       ...(typeof createdBy === 'string' ? { createdBy } : {}),
+      ...(typeof createdWith === 'string' ? { createdWith } : {}),
     };
   }
 
@@ -1023,7 +1027,9 @@ export class DocumentStore {
 
       seen.add(next);
       yblock?.delete('createdBy');
+      yblock?.delete('createdWith');
       yblock?.delete('lastEditedBy');
+      yblock?.delete('lastEditedWith');
       queue.push(...(children.get(next) ?? []).filter((child) => !seen.has(child)));
     }
     this.onUnsigned?.(queue);
@@ -2373,22 +2379,26 @@ export class DocumentStore {
    * @param id - Block id
    * @param lastEditedAt - Timestamp in milliseconds
    * @param editor - User ID, or null; dropped inside an anonymous answer
+   * @param coEditor - the agent that edited with `editor`; omitted removes the old one
    */
-  public updateBlockMetadata(id: string, lastEditedAt: number, editor: string | null): boolean {
+  public updateBlockMetadata(id: string, lastEditedAt: number, editor: string | null, coEditor?: string): boolean {
     const yblock = this.getBlockById(id);
 
     if (yblock === undefined) {
       return false;
     }
 
-    const lastEditedBy = this.isInAnonymousAnswer(id) ? null : editor;
+    const anonymous = this.isInAnonymousAnswer(id);
+    const lastEditedBy = anonymous ? null : editor;
+    const lastEditedWith = anonymous || lastEditedBy === null ? null : coEditor ?? null;
 
-    // Defensive equality guard — if both fields already match, skip the write to avoid
+    // Defensive equality guard — if every field already matches, skip the write to avoid
     // adding an empty/no-op entry to the Yjs undo stack.
     const currentEditedAt = yblock.get('lastEditedAt');
     const currentEditedBy = yblock.get('lastEditedBy') ?? null;
+    const currentEditedWith = yblock.get('lastEditedWith') ?? null;
 
-    if (currentEditedAt === lastEditedAt && currentEditedBy === lastEditedBy) {
+    if (currentEditedAt === lastEditedAt && currentEditedBy === lastEditedBy && currentEditedWith === lastEditedWith) {
       return false;
     }
 
@@ -2401,6 +2411,11 @@ export class DocumentStore {
         yblock.delete('lastEditedBy');
       } else {
         yblock.set('lastEditedBy', stripNulIfString(lastEditedBy));
+      }
+      if (lastEditedWith === null) {
+        yblock.delete('lastEditedWith');
+      } else {
+        yblock.set('lastEditedWith', stripNulIfString(lastEditedWith));
       }
     }, 'local');
 

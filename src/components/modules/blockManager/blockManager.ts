@@ -44,6 +44,16 @@ import type { BlocksStore, BlockMutationEventDetailWithoutTarget, ComposeBlockOp
 import { BlockYjsSync } from './yjs-sync';
 import { carriesReadOnly } from '../../utils/read-only-blocks';
 import { captureDataKeySnapshot, type DataKeySnapshot } from '../yjs/document-store';
+import { agentAttribution, type Attribution } from '../../../shared/agent/attribution';
+
+interface AgentScopeInput {
+  ids: ReadonlySet<string>;
+  actor: { id: string; name: string; onBehalfOf?: string };
+  turnId: string;
+  stampLastEditedBy?: boolean;
+}
+
+type AgentScope = AgentScopeInput & { attribution: Attribution };
 
 type BlocksStoreProxy = BlocksStore & {
   [index: number]: Block | undefined;
@@ -67,19 +77,26 @@ interface SyncBlockDataOptions {
  * @property {Proxy} _blocks - Proxy for Blocks instance {@link Blocks}
  */
 export class BlockManager extends Module {
-  private agentScope: { ids: ReadonlySet<string>; actor: { id: string; name: string }; turnId: string; stampLastEditedBy?: boolean } | null = null;
+  private agentScope: AgentScope | null = null;
 
-  public attributeTo(scope: { ids: ReadonlySet<string>; actor: { id: string; name: string }; turnId: string; stampLastEditedBy?: boolean }): () => void {
-    this.agentScope = scope;
-    const releaseAuthor = scope.stampLastEditedBy === false
-      ? undefined
-      : this.Blok.YjsManager.authorBlocksAs((id) => (scope.ids.has(id) ? scope.actor.id : undefined));
+  /**
+   * Credits the blocks in `scope.ids` per agentAttribution until the release runs.
+   * stampLastEditedBy false is attributeTo 'user': only the person is named.
+   * @param scope - the blocks, the agent and the turn
+   * @returns release
+   */
+  public attributeTo(scope: AgentScopeInput): () => void {
+    const attribution = agentAttribution(scope.actor, scope.stampLastEditedBy === false ? 'user' : 'agent');
+    const current: AgentScope = { ...scope, attribution };
+
+    this.agentScope = current;
+    const releaseAuthor = this.Blok.YjsManager.authorBlocksAs((id) => (scope.ids.has(id) ? attribution : undefined));
 
     return () => {
-      if (this.agentScope === scope) {
+      if (this.agentScope === current) {
         this.agentScope = null;
       }
-      releaseAuthor?.();
+      releaseAuthor();
     };
   }
 
@@ -93,12 +110,17 @@ export class BlockManager extends Module {
 
   public stampBlockEdit(block: Block, at = Date.now()): void {
     const editedBlock = block;
-    const agentId = this.agentScope?.stampLastEditedBy === false ? undefined : this.agentFor(editedBlock.id)?.id;
+    const scope = this.agentScope;
+    const attribution = scope !== null && scope.ids.has(editedBlock.id) ? scope.attribution : undefined;
+    const anonymous = this.Blok.YjsManager.isInAnonymousAnswer(editedBlock.id);
+    const by = attribution?.by ?? this.config.user?.id ?? null;
 
     editedBlock.lastEditedAt = at;
-    // The saver reads this copy, not the document, so it must drop the id too.
-    editedBlock.lastEditedBy = this.Blok.YjsManager.isInAnonymousAnswer(editedBlock.id) ? null : agentId ?? this.config.user?.id ?? null;
-    this.Blok.YjsManager.updateBlockMetadata(editedBlock.id, editedBlock.lastEditedAt, editedBlock.lastEditedBy);
+    // The saver reads this copy, not the document, so it must drop the ids too.
+    editedBlock.lastEditedBy = anonymous ? null : by;
+    // A person's own edit names no agent, so it clears the old co-editor.
+    editedBlock.lastEditedWith = anonymous || attribution?.by === undefined ? null : attribution.with ?? null;
+    this.Blok.YjsManager.updateBlockMetadata(editedBlock.id, editedBlock.lastEditedAt, editedBlock.lastEditedBy, editedBlock.lastEditedWith ?? undefined);
   }
 
   /**
@@ -806,6 +828,7 @@ export class BlockManager extends Module {
         ...(block.contentIds.length > 0 && { content: block.contentIds }),
         ...(block.lastEditedAt !== undefined && { lastEditedAt: block.lastEditedAt }),
         ...(typeof block.lastEditedBy === 'string' && { lastEditedBy: block.lastEditedBy }),
+        ...(typeof block.lastEditedWith === 'string' && { lastEditedWith: block.lastEditedWith }),
         ...block.creation,
       };
     });

@@ -144,12 +144,20 @@ const BlockAPIConstructor = function BlockAPI(
       return api.isInAnonymousAnswer(block.id) ? undefined : api.blockCreation(block.id).createdBy ?? block.creation.createdBy;
     },
 
+    get createdWith(): string | undefined {
+      return api.isInAnonymousAnswer(block.id) ? undefined : api.blockCreation(block.id).createdWith ?? block.creation.createdWith;
+    },
+
     get lastEditedAt(): number | undefined {
       return block.lastEditedAt;
     },
 
     get lastEditedBy(): string | undefined {
       return api.isInAnonymousAnswer(block.id) ? undefined : block.lastEditedBy ?? undefined;
+    },
+
+    get lastEditedWith(): string | undefined {
+      return api.isInAnonymousAnswer(block.id) ? undefined : block.lastEditedWith ?? undefined;
     },
 
     /**

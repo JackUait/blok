@@ -14,6 +14,7 @@ import { plannerContext } from '../../../shared/agent/fixtures';
 import type { AgentApplier } from '../../../../../src/shared/agent/executor';
 import type { DocSnapshot, SnapBlock } from '../../../../../src/shared/agent/snapshot';
 import type { Plan } from '../../../../../src/shared/agent/types';
+import type { Attribution } from '../../../../../src/shared/agent/attribution';
 import type { AgentActor, AgentCommand, Edit } from '../../../../../types/agent';
 import type { OutputBlockData } from '../../../../../types/data-formats/output-data';
 
@@ -62,9 +63,9 @@ const createStore = (blocks = base()): DocumentStore => {
   return store;
 };
 
-const createApplier = (store: DocumentStore): StoreApplier => {
+const createApplier = (store: DocumentStore, attribution: Attribution = { by: actor.id }): StoreApplier => {
   const applier = new StoreApplier(store, {
-    actorId: actor.id,
+    attribution,
     richTextFieldsFor: fields,
     htmlToSegments: htmlToSegmentsNode,
   });
@@ -229,6 +230,32 @@ describe('StoreApplier', () => {
     for (const id of ['tg', 'b', 'z']) {
       expect(requireBlock(snapshot, id).rest).toEqual(originalStamp);
     }
+  });
+
+  it('credits the person with the agent on an insert and an update', async () => {
+    const store = createStore();
+    const applier = createApplier(store, { by: 'human-1', with: actor.id });
+
+    await apply(applier, [
+      { op: 'insert', parentId: null, afterId: null, block: { id: 'n', type: 'paragraph', data: { text: [] }, children: [] } },
+      { op: 'setData', id: 'z', patch: { keep: 2 } },
+    ], ['n', 'z']);
+
+    expect(requireBlock(applier.snapshot(), 'n').rest).toEqual({
+      createdAt: at, createdBy: 'human-1', createdWith: actor.id, lastEditedAt: at, lastEditedBy: 'human-1', lastEditedWith: actor.id,
+    });
+    expect(requireBlock(applier.snapshot(), 'z').rest).toEqual({
+      ...originalStamp, lastEditedAt: at, lastEditedBy: 'human-1', lastEditedWith: actor.id,
+    });
+  });
+
+  it('drops an old co-editor when the agent edits alone', async () => {
+    const store = createStore([{ id: 'z', type: 'paragraph', data: { text: [] }, lastEditedWith: 'agent-0' }]);
+    const applier = createApplier(store);
+
+    await apply(applier, [{ op: 'setData', id: 'z', patch: { keep: 2 } }], ['z']);
+
+    expect(requireBlock(applier.snapshot(), 'z').rest).toEqual({ ...originalStamp, lastEditedAt: at, lastEditedBy: actor.id });
   });
 
   it('names no creator on a block added inside an anonymous form answer, nor on a new anonymous row', async () => {

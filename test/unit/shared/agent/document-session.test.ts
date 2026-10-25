@@ -315,12 +315,42 @@ describe('stored document session', () => {
     expect(result.results[1]).toMatchObject({ revision: result.revision });
     const inserted = session.output().blocks.find(block => block.id === result.refs.created);
 
-    expect(inserted).toMatchObject({ data: { text: [{ text: 'new' }] }, lastEditedBy: actor.id });
+    expect(inserted).toMatchObject({
+      data: { text: [{ text: 'new' }] },
+      createdBy: 'owner', createdWith: actor.id, lastEditedBy: 'owner', lastEditedWith: actor.id,
+    });
     if (inserted === undefined || typeof inserted.lastEditedAt !== 'number') {
       throw new Error('Expected a timestamp on the inserted block.');
     }
     expect(inserted.lastEditedAt).toBeGreaterThan(1);
     expect(session.output().blocks.find(block => block.id === 'p')).toMatchObject({ lastEditedBy: 'owner', lastEditedAt: 1 });
+  });
+
+  it('credits the person with the agent on an update, and the agent alone when no person is known', async () => {
+    const coAuthored = track(open());
+    const alone = createDocumentAgentSession({
+      document: initial(), tools: runtimes, contract: contractFor(), ports: stubPorts(),
+      actor: { id: 'agent-1', name: 'Agent', kind: 'agent' },
+    });
+
+    sessions.push(alone);
+    const batch: AgentBatch = { commands: [
+      { name: 'block.update', args: { id: 'p', data: { text: 'edited' } } },
+      { name: 'block.insert', ref: 'created', args: { type: 'paragraph', data: { text: 'new' } } },
+    ] };
+
+    expect((await coAuthored.execute(batch)).ok).toBe(true);
+    expect((await alone.execute(batch)).ok).toBe(true);
+
+    expect(coAuthored.output().blocks.find(block => block.id === 'p')).toMatchObject({ lastEditedBy: 'owner', lastEditedWith: 'agent-1' });
+    const soloEdited = alone.output().blocks.find(block => block.id === 'p');
+    const soloCreated = alone.output().blocks.find(block => block.id !== 'p');
+
+    expect(soloEdited).toMatchObject({ lastEditedBy: 'agent-1' });
+    expect(soloEdited).not.toHaveProperty('lastEditedWith');
+    expect(soloCreated).toMatchObject({ createdBy: 'agent-1', lastEditedBy: 'agent-1' });
+    expect(soloCreated).not.toHaveProperty('createdWith');
+    expect(soloCreated).not.toHaveProperty('lastEditedWith');
   });
 
   it('hashes each document state once across a write, a failed write and the reads after them', async () => {
@@ -358,7 +388,7 @@ describe('stored document session', () => {
     expect(edits).toEqual(expectedEdits);
     expect(result).toMatchObject({ ok: true, revision: contentRevision(session.output()) });
     expect(session.output()).toMatchObject({
-      title: 'Written', blocks: [{ id: 'p', data: { text }, lastEditedBy: actor.id }],
+      title: 'Written', blocks: [{ id: 'p', data: { text }, lastEditedBy: 'owner', lastEditedWith: actor.id }],
     });
   });
 

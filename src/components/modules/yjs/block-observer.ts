@@ -506,7 +506,7 @@ export class BlockObserver {
       const changedKeys = [...event.changes.keys.keys()];
 
       // Edit stamps do not own exported data keys.
-      if (changedKeys.length > 0 && changedKeys.every((key) => key === 'lastEditedAt' || key === 'lastEditedBy')) return;
+      if (changedKeys.length > 0 && changedKeys.every((key) => key === 'lastEditedAt' || key === 'lastEditedBy' || key === 'lastEditedWith')) return;
     }
 
     const keys: ReplayKeys = buckets.replayKeys.get(blockId) ?? { scope: 'keys', changes: [] };

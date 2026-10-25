@@ -16,6 +16,7 @@ const editors: TestEditor[] = [];
 
 const PAGES: Record<string, PageInfo | null> = {
   roadmap: { title: 'Roadmap' },
+  other: { title: 'Other' },
   secret: { title: 'Payroll', access: 'none' },
   gone: null,
 };
@@ -75,6 +76,32 @@ describe('the editor agent reads the page titles its page blocks show', () => {
       expect(blocks.sub?.pageTitle).toBe('Roadmap');
       expect(blocks.hidden).not.toHaveProperty('pageTitle');
       expect(blocks.missing).not.toHaveProperty('pageTitle');
+    } finally {
+      turn.end();
+    }
+  });
+});
+
+describe('a page title read never names another page', () => {
+  it('gives no stale title in the batch that repoints a page-link', async () => {
+    const editor = await boot(DOC);
+
+    await vi.waitFor(() => expect(document.body.textContent).toContain('Roadmap'));
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+
+    try {
+      const result = await turn.execute({ commands: [
+        { name: 'block.update', args: { id: 'link', data: { pageId: 'other' } } },
+        { name: 'doc.read', args: { ids: ['link'] } },
+      ] });
+
+      expect(result.ok).toBe(true);
+      const view = result.ok ? result.results[1] as { blocks: Array<{ pageTitle?: string }> } : undefined;
+
+      expect(view?.blocks[0]?.pageTitle).not.toBe('Roadmap');
+      const changed = result.ok ? result.blocks?.find(block => block.id === 'link') : undefined;
+
+      expect(changed?.pageTitle).not.toBe('Roadmap');
     } finally {
       turn.end();
     }

@@ -88,9 +88,9 @@ export class PageLink implements BlockTool {
     return { pageId: this.data.pageId };
   }
 
-  /** Agent reads: the title the link shows now, only when it shows one. Never resolves. */
-  public readPageTitle(param: { receive: (title: string) => void }): void {
-    if (this.state === 'normal' && typeof this.info?.title === 'string') param.receive(this.info.title);
+  /** Agent reads: the title shown now for `pageId`, only when it shows one. Never resolves. */
+  public readPageTitle(param: { pageId: string; receive: (title: string) => void }): void {
+    if (param.pageId === this.data.pageId && this.state === 'normal' && typeof this.info?.title === 'string') param.receive(this.info.title);
   }
 
   public validate(data: PageLinkData): boolean {

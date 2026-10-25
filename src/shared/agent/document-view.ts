@@ -111,7 +111,9 @@ const viewBlock = (
   if (Object.keys(attrs).length > 0) {
     entry.attrs = attrs;
   }
-  const pageTitle = PAGE_TYPES.has(block.type) ? ctx.ports?.pageTitle?.(block.id) : undefined;
+  // The read may be of a draft that repoints the block: ask for the page it names.
+  const pageId = block.data.pageId;
+  const pageTitle = PAGE_TYPES.has(block.type) && typeof pageId === 'string' ? ctx.ports?.pageTitle?.(block.id, pageId) : undefined;
 
   if (pageTitle !== undefined) {
     entry.pageTitle = pageTitle;

@@ -291,9 +291,9 @@ export class PageTool implements BlockTool {
     return { ...this.data };
   }
 
-  /** Agent reads: the title the block shows now, only when it shows one. Never resolves. */
-  public readPageTitle(param: { receive: (title: string) => void }): void {
-    if (this.state === 'normal' && typeof this.info?.title === 'string') param.receive(this.info.title);
+  /** Agent reads: the title shown now for `pageId`, only when it shows one. Never resolves. */
+  public readPageTitle(param: { pageId: string; receive: (title: string) => void }): void {
+    if (param.pageId === this.data.pageId && this.state === 'normal' && typeof this.info?.title === 'string') param.receive(this.info.title);
   }
 
   /** A block failing this is dropped on save, so only an empty id fails. */

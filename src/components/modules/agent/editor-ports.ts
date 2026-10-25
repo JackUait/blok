@@ -78,10 +78,10 @@ export const createEditorPorts = (Blok: BlokModules): AgentPorts => {
       return { markdown, warnings: warnings.map(degraded) };
     },
     newId: generateBlockId,
-    pageTitle: (blockId) => {
+    pageTitle: (blockId, pageId) => {
       const titles: string[] = [];
 
-      Blok.BlockManager.getBlockById(blockId)?.call('readPageTitle', { receive: (title: string) => titles.push(title) });
+      Blok.BlockManager.getBlockById(blockId)?.call('readPageTitle', { pageId, receive: (title: string) => titles.push(title) });
 
       return titles[0];
     },

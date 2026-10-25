@@ -58,10 +58,10 @@ export const PROPERTY_TYPE_META: Readonly<Record<PropertyType, PropertyTypeMeta>
   verification: { icon: IconCheck, labelKey: 'tools.database.propertyTypeVerification' },
 };
 
-/** Notion's "Select type" order (research/08), limited to the types Blok has. */
+/** Notion's "Type" list order (measured 2026-10-25), limited to the types Blok has. Notion has no Verification. */
 const ADDABLE_ORDER: readonly PropertyType[] = [
-  'text', 'number', 'select', 'multiSelect', 'status', 'date', 'person', 'files', 'checkbox', 'url', 'phone', 'email',
-  'relation', 'rollup', 'formula', 'button', 'uniqueId', 'place', 'createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy',
+  'text', 'number', 'select', 'multiSelect', 'status', 'date', 'person', 'files', 'checkbox', 'url', 'email', 'phone',
+  'formula', 'relation', 'rollup', 'createdTime', 'createdBy', 'lastEditedTime', 'lastEditedBy', 'button', 'place', 'uniqueId',
   'verification',
 ];
 

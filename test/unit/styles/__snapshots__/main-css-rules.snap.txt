@@ -8061,9 +8061,9 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  width: 400px;
+  width: 290px;
   max-width: calc(100vw - 2 * var(--blok-space-3));
-  max-height: min(360px, calc(100dvh - 2 * var(--blok-space-3)));
+  max-height: calc(100dvh - 2 * var(--blok-space-3));
   background: var(--blok-database-popover-bg);
   border-radius: var(--blok-radius-surface);
   box-shadow: var(--blok-database-popover-shadow);
@@ -8079,7 +8079,28 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 
 [data-blok-database-property-type-header] {
   display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
   flex-shrink: 0;
+  padding: var(--blok-space-1) var(--blok-space-2);
+}
+
+[data-blok-database-property-type-glyph] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--blok-database-table-control-border);
+  border-radius: var(--blok-radius-control);
+  color: var(--blok-database-property-icon-button-ink);
+}
+
+[data-blok-database-property-type-glyph] svg {
+  width: 20px;
+  height: 20px;
 }
 
 [data-blok-database-property-type-body] {
@@ -8090,8 +8111,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 
 [data-blok-database-property-type-grid] {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: var(--blok-space-1);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 [data-blok-database-property-type-heading] {
@@ -8106,7 +8126,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   display: flex;
   align-items: center;
   gap: var(--blok-space-2);
-  min-height: 32px;
+  min-height: 28px;
   padding: 0 var(--blok-space-2);
   border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   cursor: pointer;
@@ -8142,6 +8162,32 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
 [data-blok-database-property-type-option-icon] svg {
   width: 20px;
   height: 20px;
+}
+
+[data-blok-database-property-autofill-option] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  min-height: 28px;
+  padding: 0 var(--blok-space-2);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--blok-database-tab-text-active);
+  user-select: none;
+}
+
+[data-blok-database-property-autofill-option]:hover {
+  background-color: var(--blok-database-popover-hover);
+}
+
+[data-blok-database-property-autofill-tag] {
+  padding: 0 var(--blok-space-1);
+  border-radius: var(--blok-radius-mark);
+  background: var(--blok-database-option-gray-bg);
+  color: var(--blok-database-option-gray-text);
+  font-size: 12px;
+  line-height: 18px;
 }
 
 [data-blok-database-confirm] {
@@ -9292,7 +9338,7 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   flex-wrap: wrap;
 }
 
-[data-blok-database-property-menu-name] > [data-blok-database-property-menu-name-input] {
+[data-blok-database-property-menu-name] > [data-blok-database-property-menu-name-input], [data-blok-database-property-type-header] > [data-blok-database-property-name-input] {
   flex: 1 1 auto;
   width: auto;
   min-width: 0;
@@ -9382,10 +9428,6 @@ textarea[data-blok-database-property-description][data-blok-field] {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-[data-blok-database-property-name-input] {
-  margin: var(--blok-space-1) var(--blok-space-2);
 }
 
 [data-blok-database-drawer-prop-value] {

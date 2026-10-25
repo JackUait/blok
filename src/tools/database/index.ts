@@ -56,7 +56,7 @@ import type { StarterPicks } from './database-starter-modal';
 import type { LinkedPickerSource } from './database-linked-picker';
 import { newRowValues, rowOrderKey, sortRows } from './database-query';
 import { openDatabaseChoice, openDatabaseConfirm } from './database-confirm-dialog';
-import { openAutofillSetup } from './database-autofill-setup';
+import { draftOf, openAutofillSetup, presetDraft } from './database-autofill-setup';
 import type { AutofillDraft } from './database-autofill-setup';
 import { DATABASE_MENU_CLASS, groupMenuItems } from './database-group-menu';
 import { groupCalculationHint, groupCalculationItems, groupCalculationText } from './database-board-calculation';
@@ -11489,6 +11489,18 @@ export class DatabaseTool implements BlockTool {
         // research/08: Relation opens "Related to" right away.
         if (created?.type === 'relation') this.openRelatedToPicker(created.id, anchor);
       },
+      // research/12 §2: a preset makes a Text property and opens its setup at once, as a draft.
+      ...(this.config.ai?.autofill === undefined ? {} : {
+        onAutofill: (mode: 'summary' | 'translate', name: string) => {
+          if (!writable()) return;
+          const created = this.addProperty({ name, type: 'text' }, context);
+
+          if (created === null) return;
+          onAdded?.(created);
+          this.autofillDrafts.set(created.id, { ...draftOf(undefined), ...presetDraft(mode, this.api.i18n) });
+          this.openAutofillSetup(created.id, created.name, anchor, context);
+        },
+      }),
     });
 
     this.addPropertyPopover = popover;

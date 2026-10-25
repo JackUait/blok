@@ -31,22 +31,30 @@ describe('column header menu (T11)', () => {
 });
 
 describe('add property menu (T12)', () => {
-  it('is 400 wide with a two-column type grid', () => {
-    expect(declared('[data-blok-database-property-type-popover]', 'width')).toEqual(['400px']);
+  // Notion 2026-10-25: 290 wide, one column of types.
+  it('is 290 wide with one column of types', () => {
+    expect(declared('[data-blok-database-property-type-popover]', 'width')).toEqual(['290px']);
     expect(declared('[data-blok-database-property-type-popover]', 'box-sizing')).toEqual(['border-box']);
-    expect(declared('[data-blok-database-property-type-grid]', 'grid-template-columns')).toEqual(['repeat(2, minmax(0, 1fr))']);
+    expect(declared('[data-blok-database-property-type-grid]', 'grid-template-columns')).toEqual(['minmax(0, 1fr)']);
   });
 
-  it('caps its height and scrolls the types inside, so it never runs off screen', () => {
-    expect(declared('[data-blok-database-property-type-popover]', 'max-height')).toEqual(['min(360px, calc(100dvh - 2 * var(--blok-space-3)))']);
+  it('grows to the viewport and scrolls the types inside, so it never runs off screen', () => {
+    expect(declared('[data-blok-database-property-type-popover]', 'max-height')).toEqual(['calc(100dvh - 2 * var(--blok-space-3))']);
     expect(declared('[data-blok-database-property-type-body]', 'overflow-y')).toEqual(['auto']);
   });
 
-  it('has 32px rows with 20px glyphs and a sentence-case label', () => {
-    expect(declared('[data-blok-database-property-type-option]', 'min-height')).toEqual(['32px']);
+  it('has 28px rows of 14px text with 20px glyphs and a sentence-case label', () => {
+    expect(declared('[data-blok-database-property-type-option]', 'min-height')).toEqual(['28px']);
+    expect(declared('[data-blok-database-property-type-option]', 'font-size')).toEqual(['14px']);
     expect(declared('[data-blok-database-property-type-option-icon] svg', 'width')).toEqual(['20px']);
     expect(declared('[data-blok-database-property-type-heading]', 'text-transform')).toEqual([]);
     expect(declared('[data-blok-database-property-type-heading]', 'font-size')).toEqual(['12px']);
+  });
+
+  it('heads the menu with the type glyph beside the name field', () => {
+    expect(declared('[data-blok-database-property-type-header]', 'align-items')).toEqual(['center']);
+    expect(declared('[data-blok-database-property-type-glyph]', 'width')).toEqual(['28px']);
+    expect(declared('[data-blok-database-property-type-glyph]', 'height')).toEqual(['28px']);
   });
 });
 

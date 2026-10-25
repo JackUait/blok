@@ -1,3 +1,4 @@
+import { IconAskAiSummarize, IconGlobe } from '../../components/icons';
 import { syncPortalDirection } from '../../components/utils/portal-direction';
 import { overlayMountFor } from '../../components/utils/top-layer';
 import { markEscapeConsumed } from '../../components/utils/consumed-escape';
@@ -17,8 +18,10 @@ export interface PropertyTypePopoverOptions {
   i18n?: I18n;
   /** Offer Person: the host gave a people directory. */
   hasPeople?: boolean;
-  /** Show Notion's "Type property name…" field above the types. */
+  /** Show Notion's "Property name" field above the types. */
   withNameField?: boolean;
+  /** The host has AI Autofill: Summarize and Translate head the list. `name` as in onSelect. */
+  onAutofill?: (mode: 'summary' | 'translate', name: string) => void;
 }
 
 export class DatabasePropertyTypePopover {
@@ -26,6 +29,7 @@ export class DatabasePropertyTypePopover {
   private readonly i18n: I18n | undefined;
   private readonly hasPeople: boolean;
   private readonly withNameField: boolean;
+  private readonly onAutofill: PropertyTypePopoverOptions['onAutofill'];
   private popoverEl: HTMLElement | null = null;
   private boundOutsideClick: ((e: MouseEvent) => void) | null = null;
   private positionTracker: PositionTracker | null = null;
@@ -35,6 +39,7 @@ export class DatabasePropertyTypePopover {
     this.i18n = options.i18n;
     this.hasPeople = options.hasPeople === true;
     this.withNameField = options.withNameField === true;
+    this.onAutofill = options.onAutofill;
   }
 
   get isOpen(): boolean {
@@ -65,9 +70,16 @@ export class DatabasePropertyTypePopover {
       const header = document.createElement('div');
 
       header.setAttribute('data-blok-database-property-type-header', '');
+      const glyph = document.createElement('div');
+
+      // A new property starts as Text.
+      glyph.setAttribute('data-blok-database-property-type-glyph', '');
+      glyph.innerHTML = propertyTypeMeta('text').icon;
+      header.appendChild(glyph);
       nameField.type = 'text';
       nameField.setAttribute('data-blok-database-property-name-input', '');
-      nameField.placeholder = this.i18n?.t('tools.database.propertyNamePlaceholder') ?? 'tools.database.propertyNamePlaceholder';
+      nameField.setAttribute('data-blok-field', 'text');
+      nameField.placeholder = this.i18n?.t('tools.database.propertyName') ?? 'tools.database.propertyName';
       nameField.setAttribute('aria-label', this.i18n?.t('tools.database.propertyName') ?? 'tools.database.propertyName');
       header.appendChild(nameField);
       popover.appendChild(header);
@@ -83,6 +95,14 @@ export class DatabasePropertyTypePopover {
     const heading = document.createElement('div');
     heading.setAttribute('data-blok-database-property-type-heading', '');
     heading.textContent = this.i18n?.t('tools.database.propertyTypeHeading') ?? 'tools.database.propertyTypeHeading';
+    const onAutofill = this.onAutofill;
+
+    if (onAutofill !== undefined) {
+      body.appendChild(this.autofillSection((mode) => {
+        onAutofill(mode, nameField?.value.trim() ?? '');
+        this.close();
+      }));
+    }
     body.append(heading, grid);
     popover.appendChild(body);
 
@@ -132,6 +152,40 @@ export class DatabasePropertyTypePopover {
 
     document.addEventListener('mousedown', this.boundOutsideClick);
     nameField?.focus();
+  }
+
+  /** Notion's "AI Autofill" rows: a glyph, the preset's name and a gray "Basic" tag. */
+  private autofillSection(pick: (mode: 'summary' | 'translate') => void): HTMLElement {
+    const t = (key: string): string => this.i18n?.t(key) ?? key;
+    const section = document.createElement('div');
+    const heading = document.createElement('div');
+
+    heading.setAttribute('data-blok-database-property-type-heading', '');
+    heading.textContent = t('tools.database.aiAutofill');
+    section.appendChild(heading);
+    const presets = [
+      { mode: 'summary', icon: IconAskAiSummarize, labelKey: 'tools.database.aiAutofillSummarize' },
+      { mode: 'translate', icon: IconGlobe, labelKey: 'tools.database.aiAutofillTranslate' },
+    ] as const;
+
+    for (const preset of presets) {
+      const item = document.createElement('div');
+      const iconEl = document.createElement('div');
+      const label = document.createElement('span');
+      const tag = document.createElement('span');
+
+      item.setAttribute('data-blok-database-property-autofill-option', preset.mode);
+      iconEl.setAttribute('data-blok-database-property-type-option-icon', '');
+      iconEl.innerHTML = preset.icon;
+      label.textContent = t(preset.labelKey);
+      tag.setAttribute('data-blok-database-property-autofill-tag', '');
+      tag.textContent = t('tools.database.aiAutofillBasic');
+      item.append(iconEl, label, tag);
+      item.addEventListener('click', () => pick(preset.mode));
+      section.appendChild(item);
+    }
+
+    return section;
   }
 
   close(): void {

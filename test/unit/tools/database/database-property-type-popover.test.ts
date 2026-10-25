@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DatabasePropertyTypePopover } from '../../../../src/tools/database/database-property-type-popover';
 import type { PropertyType } from '../../../../src/tools/database/types';
+import type { I18n } from '../../../../types';
+import { propertyTypeMeta } from '../../../../src/tools/database/database-property-types';
 
 const rect = (overrides: Partial<DOMRect>): DOMRect => ({
   x: 0, y: 0, width: 0, height: 0, top: 0, right: 0, bottom: 0, left: 0,
@@ -181,6 +183,44 @@ describe('DatabasePropertyTypePopover', () => {
       expect(header?.querySelector('[data-blok-database-property-name-input]')).not.toBeNull();
       expect(grid?.querySelectorAll(':scope > [data-blok-database-property-type-option]').length).toBeGreaterThan(10);
       expect(root?.querySelector('[data-blok-database-property-type-body] > [data-blok-database-property-type-heading]')).not.toBeNull();
+      flow.destroy();
+    });
+
+    // Notion 2026-10-25: a Text glyph, then "Property name".
+    it('heads the menu with a Text glyph and a "Property name" field', () => {
+      const i18n = { t: (key: string) => `i18n:${key}`, has: () => true } as unknown as I18n;
+      const flow = new DatabasePropertyTypePopover({ onSelect: vi.fn(), withNameField: true, i18n });
+
+      flow.open(anchor);
+      const root = document.querySelector('[data-blok-database-property-type-popover]');
+      const header = root?.querySelector('[data-blok-database-property-type-header]');
+      const glyph = header?.querySelector(':scope > [data-blok-database-property-type-glyph]');
+      const field = header?.querySelector<HTMLInputElement>('[data-blok-database-property-name-input]');
+
+      expect(glyph?.nextElementSibling).toBe(field);
+      const textIcon = document.createElement('div');
+
+      textIcon.innerHTML = propertyTypeMeta('text').icon;
+      expect(glyph?.innerHTML).toBe(textIcon.innerHTML);
+      expect(field?.placeholder).toBe('i18n:tools.database.propertyName');
+      // The shared field look draws the box and its focus ring.
+      expect(field?.getAttribute('data-blok-field')).toBe('text');
+      expect(root?.querySelector('[data-blok-database-property-type-heading]')?.textContent).toBe('i18n:tools.database.propertyTypeHeading');
+      flow.destroy();
+    });
+
+    it('lists the types in Notion\'s order, one per row', () => {
+      const flow = new DatabasePropertyTypePopover({ onSelect: vi.fn(), hasPeople: true });
+
+      flow.open(anchor);
+      const order = [...document.querySelectorAll('[data-blok-database-property-type-option]')]
+        .map((option) => option.getAttribute('data-blok-database-property-type-option'));
+
+      expect(order).toEqual([
+        'text', 'number', 'select', 'multiSelect', 'status', 'date', 'person', 'files', 'checkbox', 'url', 'email', 'phone',
+        'formula', 'relation', 'rollup', 'createdTime', 'createdBy', 'lastEditedTime', 'lastEditedBy', 'button', 'place', 'uniqueId',
+        'verification',
+      ]);
       flow.destroy();
     });
 

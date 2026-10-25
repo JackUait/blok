@@ -94,6 +94,18 @@ export const languageName = (tag: string, uiLocale: string): string => {
   }
 };
 
+/** A preset's mode, language and prompt: Translate into the UI's language, or a one-paragraph summary. */
+export const presetDraft = (
+  mode: 'translate' | 'summary',
+  i18n: Pick<I18n, 't' | 'getLocale'>
+): Pick<AutofillDraft, 'mode' | 'language' | 'instruction'> => {
+  if (mode === 'summary') return { mode, instruction: i18n.t('tools.database.aiAutofillParagraphPrompt') };
+  const locale = i18n.getLocale();
+  const language = languageTag(locale);
+
+  return { mode, language, instruction: i18n.t('tools.database.aiAutofillTranslatePrompt', { language: languageName(language, locale) }) };
+};
+
 /**
  * The AI Autofill setup, Basic tab. It edits a draft only; Save writes
  * `property.autofill`, and Generate and Run go through `config.ai.autofill`.
@@ -177,10 +189,7 @@ export const openAutofillSetup = (options: AutofillSetupOptions): { close: () =>
   };
 
   button(presets, i18n.t('tools.database.aiAutofillTranslate'), () => {
-    const locale = i18n.getLocale();
-    const language = languageTag(locale);
-
-    update({ mode: 'translate', language, instruction: i18n.t('tools.database.aiAutofillTranslatePrompt', { language: languageName(language, locale) }) });
+    update(presetDraft('translate', i18n));
   });
   button(presets, i18n.t('tools.database.aiAutofillSummarize'), (el) => {
     menu(el, [{
@@ -188,7 +197,7 @@ export const openAutofillSetup = (options: AutofillSetupOptions): { close: () =>
       name: 'database-autofill-summary-paragraph',
       title: i18n.t('tools.database.aiAutofillParagraph'),
       closeOnActivate: true,
-      onActivate: () => update({ mode: 'summary', language: undefined, instruction: i18n.t('tools.database.aiAutofillParagraphPrompt') }),
+      onActivate: () => update({ ...presetDraft('summary', i18n), language: undefined }),
     }]);
   });
 

@@ -166,7 +166,7 @@ export class EditorApplier implements AgentApplier {
     const token = YjsManager.topRedoToken();
 
     if (token === undefined) {
-      throw failure('NOTHING_TO_UNDO', 'There is nothing to redo.');
+      throw failure('NOTHING_TO_REDO', 'There is nothing to redo.');
     }
     if (YjsManager.undoStepTag(token)?.sessionId !== this.options.sessionId) {
       throw failure('UNDO_NOT_OWN', 'The next redo step is not this session\'s.');

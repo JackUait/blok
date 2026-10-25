@@ -27,6 +27,7 @@ const retryability: { [Code in AgentErrorCode]: readonly [Code, boolean] } = {
   CONFLICT: ['CONFLICT', true],
   UNDO_NOT_OWN: ['UNDO_NOT_OWN', false],
   NOTHING_TO_UNDO: ['NOTHING_TO_UNDO', false],
+  NOTHING_TO_REDO: ['NOTHING_TO_REDO', false],
   UNDO_OTHER_DOCUMENT: ['UNDO_OTHER_DOCUMENT', false],
   CANCELLED: ['CANCELLED', true],
   TOOL_ACTION_FAILED: ['TOOL_ACTION_FAILED', false],

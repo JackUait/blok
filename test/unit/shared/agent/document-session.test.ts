@@ -444,7 +444,7 @@ describe('stored document session', () => {
     expect(await session.execute({ commands: [{ name: 'history.undo', args: {} }] })).toMatchObject({ ok: false, error: { code: 'NOTHING_TO_UNDO' } });
     expect(await session.execute({ commands: [{ name: 'history.redo', args: {} }] })).toMatchObject({ ok: true, revision: contentRevision(written) });
     expect(session.output()).toEqual(written);
-    expect(await session.execute({ commands: [{ name: 'history.redo', args: {} }] })).toMatchObject({ ok: false, error: { code: 'NOTHING_TO_UNDO' } });
+    expect(await session.execute({ commands: [{ name: 'history.redo', args: {} }] })).toMatchObject({ ok: false, error: { code: 'NOTHING_TO_REDO' } });
   });
 
   it('keeps reads, rejected batches and cancellation out of stored undo history', async () => {
@@ -490,7 +490,7 @@ describe('stored document session', () => {
     expect(session.output()).toEqual(first);
     await session.execute({ commands: [{ name: 'history.undo', args: {} }] });
     expect(await session.execute({ commands: [{ name: 'doc.setTitle', args: { title: 'Second' } }] })).toMatchObject({ ok: true });
-    expect(await session.execute({ commands: [{ name: 'history.redo', args: {} }] })).toMatchObject({ ok: false, error: { code: 'NOTHING_TO_UNDO' } });
+    expect(await session.execute({ commands: [{ name: 'history.redo', args: {} }] })).toMatchObject({ ok: false, error: { code: 'NOTHING_TO_REDO' } });
     expect(session.output().title).toBe('Second');
   });
 

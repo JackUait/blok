@@ -29,7 +29,6 @@ const competingActors: AgentActor[] = [
   actor,
   { id: 'agent-2', name: 'Other agent', kind: 'agent' },
 ];
-const historyCommands: Array<'history.undo' | 'history.redo'> = ['history.undo', 'history.redo'];
 const original = [{ id: 'p', type: 'paragraph', text: [{ text: 'P' }] }];
 const withA = [
   ...original,
@@ -421,7 +420,7 @@ describe('createEditorAgentSession', () => {
     ]);
   }, 60_000);
 
-  it.each(historyCommands)('returns NOTHING_TO_UNDO for %s after reads with empty history', async (name) => {
+  it.each([['history.undo', 'NOTHING_TO_UNDO'], ['history.redo', 'NOTHING_TO_REDO']] as const)('%s returns %s after reads with empty history', async (name, code) => {
     const editor = await boot();
     const session = openSession(editor);
     const view = await session.read({ detail: 'full' });
@@ -430,7 +429,7 @@ describe('createEditorAgentSession', () => {
 
     await settle(editor);
 
-    expect(result).toMatchObject({ ok: false, error: { code: 'NOTHING_TO_UNDO' } });
+    expect(result).toMatchObject({ ok: false, error: { code } });
     expect(saved(editor)).toEqual(original);
     expect(editor.YjsManager.canUndo()).toBe(false);
     expect(editor.YjsManager.canRedo()).toBe(false);

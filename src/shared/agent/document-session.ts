@@ -153,7 +153,7 @@ export const createDocumentAgentSession = (input: {
       const next = future.pop();
 
       if (next === undefined) {
-        return Promise.reject(failure('NOTHING_TO_UNDO', 'This session has no undone step to redo.'));
+        return Promise.reject(failure('NOTHING_TO_REDO', 'This session has no undone step to redo.'));
       }
       past.push(state.current);
       state.current = next;

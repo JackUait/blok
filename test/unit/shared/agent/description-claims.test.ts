@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { COMMANDS } from '../../../../src/shared/agent/commands';
 import { BUILT_IN_BLOCK_DESCRIPTIONS } from '../../../../src/shared/tool-descriptions';
 import { BUILT_IN_INLINE_DESCRIPTIONS } from '../../../../src/shared/tool-descriptions/inline';
+import { describeDatabase } from '../../../../src/shared/tool-descriptions/database';
 import { RICH_TEXT_PRIMER } from '../../../../src/shared/tool-descriptions/rich-text';
+import { COMPUTED_DB } from '../../agent/fixtures/computed-database';
 import { openJsonSession } from '../../agent/harness';
 
 import type { OutputData } from '../../../../types';
@@ -145,6 +147,58 @@ describe('what the model is told about block.convert is true', () => {
       await session.execute({ commands: [{ name: 'block.convert', args: { id: 'c', type: 'paragraph' } }] });
 
       expect(session.output().blocks).toEqual([expect.objectContaining({ id: 'c', type: 'paragraph', data: { text: [{ text: 'line' }] } })]);
+    } finally {
+      await session.close();
+    }
+  });
+});
+
+describe('what the model is told about computed database values is true', () => {
+  const guidance = describeDatabase().guidance ?? '';
+
+  it('says a full read of a row has read-only computed values by property id, outside data, and it does', async () => {
+    expect(guidance).toMatch(/full read of a row adds computed: the read-only values its cells show, by property id/);
+
+    const session = openJsonSession(COMPUTED_DB);
+
+    try {
+      const [row] = (await session.read({ ids: ['r1'] })).blocks;
+
+      expect(row?.computed).toMatchObject({ f: 42 });
+      expect(row?.data).not.toHaveProperty('computed');
+      const write = await session.execute({ commands: [{ name: 'database.setRowValues', args: { id: 'db', rowId: 'r1', values: { f: 1 } } }] });
+      const [after] = (await session.read({ ids: ['r1'] })).blocks;
+
+      // Writing a formula id does not change what the cell shows.
+      expect(write.ok === false || after?.computed?.f === 42).toBe(true);
+    } finally {
+      await session.close();
+    }
+  });
+
+  it('says how times, people and IDs read, and they read that way', async () => {
+    expect(guidance).toContain('times as ISO instants, people as [{ "id" }], a unique ID as shown ("T-1")');
+
+    const session = openJsonSession(COMPUTED_DB);
+
+    try {
+      const [row] = (await session.read({ ids: ['r1'] })).blocks;
+
+      expect(row?.computed).toMatchObject({ ct: '2026-01-02T03:04:05.000Z', cb: [{ id: 'u1' }], uid: 'T-1' });
+    } finally {
+      await session.close();
+    }
+  });
+
+  it('says a value it cannot work out is { unavailable: reason }, and a cross-document rollup is', async () => {
+    expect(guidance).toContain('{ "unavailable": reason }');
+
+    const session = openJsonSession(COMPUTED_DB);
+
+    try {
+      const [row] = (await session.read({ ids: ['r1'] })).blocks;
+
+      expect(row?.computed?.xru).toEqual({ unavailable: expect.any(String) });
     } finally {
       await session.close();
     }

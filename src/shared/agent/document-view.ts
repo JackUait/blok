@@ -1,3 +1,4 @@
+import { createComputedReader } from '../database/computed-read';
 import { isRichText } from '../rich-text/guards';
 import { findTextMatches } from '../text-match';
 import { LOAD_DEFAULT_FILLS } from '../tool-actions/load-defaults';
@@ -8,6 +9,9 @@ import type { DocSnapshot, SnapBlock } from './snapshot';
 import type { PlannerContext } from './types';
 
 type ViewContext = Pick<PlannerContext, 'tools' | 'richText'>;
+type ComputedFor = ReturnType<typeof createComputedReader>;
+
+const computedReader = (snap: DocSnapshot): ComputedFor => createComputedReader(id => snap.get(id));
 
 const textOf = (block: SnapBlock, ctx: ViewContext, field?: string): string | undefined => {
   const entry = ctx.tools.get(block.type)?.entry;
@@ -78,7 +82,8 @@ const viewBlock = (
   block: SnapBlock,
   depth: number,
   args: ViewArgs,
-  ctx: ViewContext
+  ctx: ViewContext,
+  computedFor: ComputedFor
 ): ViewBlock => {
   const tool = ctx.tools.get(block.type);
   const text = tool === undefined ? undefined : textOf(block, ctx);
@@ -120,6 +125,11 @@ const viewBlock = (
     if (block.tunes !== undefined) {
       entry.tunes = block.tunes;
     }
+    const computed = computedFor(block.id, block.parent);
+
+    if (computed !== undefined) {
+      entry.computed = computed;
+    }
   }
 
   return entry;
@@ -151,6 +161,7 @@ export const buildDocumentView = (
 
   const limit = args.limit ?? 200;
   const next = order[start + limit];
+  const computedFor = computedReader(snap);
   const blocks = order.slice(start, start + limit).map(({ id, depth }) => {
     const block = snap.get(id);
 
@@ -158,7 +169,7 @@ export const buildDocumentView = (
       throw failure('BLOCK_NOT_FOUND', `Block "${id}" does not exist.`, { details: { id } });
     }
 
-    return viewBlock(snap, block, depth, args, ctx);
+    return viewBlock(snap, block, depth, args, ctx, computedFor);
   });
 
   return {
@@ -180,10 +191,11 @@ export const viewRows = (
   limit: number
 ): { rows: ViewBlock[]; more: number } => {
   const order = contentOrder(snap, null, ctx).filter(item => ids.has(item.id));
+  const computedFor = computedReader(snap);
   const rows = order.slice(0, limit).flatMap(({ id, depth }) => {
     const block = snap.get(id);
 
-    return block === undefined ? [] : [viewBlock(snap, block, depth, { detail: 'full' }, ctx)];
+    return block === undefined ? [] : [viewBlock(snap, block, depth, { detail: 'full' }, ctx, computedFor)];
   });
 
   return { rows, more: Math.max(0, order.length - limit) };

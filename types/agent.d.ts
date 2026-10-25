@@ -179,6 +179,11 @@ export interface ViewBlock {
   /** Full detail only; rich fields use segments. */
   data?: OutputBlockData['data'];
   tunes?: OutputBlockData['tunes'];
+  /**
+   * Full detail, database rows only: read-only values the cells show but the
+   * row does not store, by property id. `{ unavailable }` says why one is missing.
+   */
+  computed?: Record<string, unknown>;
 }
 
 export interface DocumentView {

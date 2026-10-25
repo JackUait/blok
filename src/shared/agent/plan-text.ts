@@ -185,8 +185,15 @@ export const planTextDelete = (state: PlanState, args: Record<string, unknown>):
 
 export const planTextReplace = (state: PlanState, args: Record<string, unknown>): unknown => {
   const t = target(state, args);
-  const { start, end } = resolve(state, t, readRange(state, args.range ?? 'all'), '/range');
-  const inserted = input(state, t, args.with, '/with', undefined, true);
+  const range = readRange(state, args.range ?? 'all');
+  const { start, end } = resolve(state, t, range, '/range');
+  const typed = input(state, t, args.with, '/with', undefined, true);
+  // Plain text takes the marks where the range starts, as the user's Find & replace does.
+  // Only a found or offset range: "all" rewrites the field, and an empty range is an insert.
+  const startMarks = typeof args.with === 'string' && range !== 'all' && end > start
+    ? state.ctx.richText.slice(t.value, start, start + 1)[0]?.marks
+    : undefined;
+  const inserted = startMarks === undefined ? typed : typed.map(segment => ({ ...segment, marks: { ...startMarks, ...segment.marks } }));
   const length = state.ctx.richText.length(inserted);
   const removed = state.ctx.richText.remove(t.value, start, end);
 

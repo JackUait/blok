@@ -421,9 +421,10 @@ describe('block.update planning', () => {
       { text: 'A', marks: { bold: true } },
       { embed: { page: { id: 'page-1' } }, marks: { italic: true } },
     ]);
-    expect(plan.warnings).toEqual([expect.objectContaining({
-      code: 'UNKNOWN_MARK_DROPPED', commandIndex: 0, blockId: 'h', field: 'text',
-    })]);
+    expect(plan.warnings).toEqual([
+      expect.objectContaining({ code: 'UNVERIFIED_PAGE', commandIndex: 0, blockId: 'h', field: 'text' }),
+      expect.objectContaining({ code: 'UNKNOWN_MARK_DROPPED', commandIndex: 0, blockId: 'h', field: 'text' }),
+    ]);
   });
 
   it('preserves earlier edit payloads and caller data through later updates and draft mutation', () => {

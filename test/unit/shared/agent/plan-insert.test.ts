@@ -276,9 +276,10 @@ describe('block.insert planning', () => {
       { text: 'ab', marks: { bold: true, 'tag:span': { title: 'kept' } } },
       { embed: { page: { id: 'pg' } }, marks: { italic: true } },
     ]);
-    expect(warnings).toEqual([expect.objectContaining({
-      code: 'UNKNOWN_MARK_DROPPED', commandIndex: 0, blockId: 'n1', field: 'text',
-    })]);
+    expect(warnings).toEqual([
+      expect.objectContaining({ code: 'UNVERIFIED_PAGE', commandIndex: 0, blockId: 'n1', field: 'text' }),
+      expect.objectContaining({ code: 'UNKNOWN_MARK_DROPPED', commandIndex: 0, blockId: 'n1', field: 'text' }),
+    ]);
     expect(raw).toEqual(before);
   });
 

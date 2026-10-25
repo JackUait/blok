@@ -78,6 +78,7 @@ export const listMcpTools = (
         'Called without documentId, it opens a document only when exactly one fits: with no query, the only document there is; with a query, the one document whose id or title equals query (case and outer spaces ignored).',
         'Then it returns that documentId and title. Otherwise it opens nothing and returns the documents to choose from, listed the way blok_list_documents lists them; open one by its documentId.',
         'In stored mode an unknown documentId opens a new, empty document (exists: false), so pass only ids you were given or saw listed.',
+        "A page block's data.pageId is the documentId of that sub-page: open it to read or edit the sub-page. The block id is not.",
         'mode "auto" joins the live room when one is configured, else edits the stored document.',
         'Pass write: true if you will edit; a read-only handle refuses blok_execute.',
         'unavailableCommands names the blok_execute commands this handle refuses, such as history.undo in live mode; do not send them.',

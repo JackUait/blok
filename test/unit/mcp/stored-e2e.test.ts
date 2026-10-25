@@ -88,6 +88,12 @@ describe('stored mode through the MCP dispatcher', () => {
     expect(open?.description).toMatch(/new, empty document/);
   });
 
+  it('tells the model a page block\'s pageId is a documentId it can open', () => {
+    const open = mcp.tools.find((tool) => tool.name === 'blok_open');
+
+    expect(open?.description).toMatch(/page block's data\.pageId is the documentId of that sub-page/);
+  });
+
   it('writes the page title into OutputData.title (01 D-1)', async () => {
     const handle = await openWrite('doc');
 

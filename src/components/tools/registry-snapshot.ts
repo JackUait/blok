@@ -3,13 +3,16 @@ import { BUILT_IN_RUNTIME_PARTS } from '../../shared/tool-actions';
 import type { ToolRuntime, ToolRuntimeRegistry } from '../../shared/tool-actions/runtime';
 import { AudioTool } from '../../tools/audio';
 import { CalloutTool } from '../../tools/callout';
+import { CodeTool } from '../../tools/code';
 import { Column } from '../../tools/column';
 import { ColumnList } from '../../tools/column-list';
+import { DatabaseTool } from '../../tools/database';
 import { FileTool } from '../../tools/file';
 import { ImageTool } from '../../tools/image';
 import { Bookmark } from '../../tools/link/bookmark';
 import { Embed } from '../../tools/link/embed';
 import { ListItem } from '../../tools/list';
+import { Quote } from '../../tools/quote';
 import { TabsTool } from '../../tools/tabs';
 import { SELF_PLACING_PARENTS } from '../../tools/nested-blocks';
 import { Table } from '../../tools/table';
@@ -153,6 +156,9 @@ const PART_OWNERS = new Map<unknown, string>([
   [Column, 'column'],
   [TabsTool, 'tabs'],
   [CalloutTool, 'callout'],
+  [CodeTool, 'code'],
+  [Quote, 'quote'],
+  [DatabaseTool, 'database'],
   [Embed, 'embed'],
   [Bookmark, 'bookmark'],
   [ImageTool, 'image'],

@@ -1,3 +1,4 @@
+import { CODE_LOAD_DEFAULTS } from '../../shared/tool-actions/load-defaults';
 import { describeCode } from '../../shared/tool-descriptions/code';
 import { codeSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
@@ -105,7 +106,7 @@ export class CodeTool implements BlockTool {
   private _dom: CodeDOMRefs | null = null;
   // A read-only build lacks the editable structure, so leaving read-only must rebuild it.
   private _builtReadOnly = false;
-  private _lineNumbers = true;
+  private _lineNumbers: boolean = CODE_LOAD_DEFAULTS.lineNumbers;
   private _picker: PopoverDesktop | null = null;
   private _viewMode: CodeViewMode = 'preview';
   private _previewContainer: HTMLElement | null = null;
@@ -134,7 +135,7 @@ export class CodeTool implements BlockTool {
       lineNumbers: data?.lineNumbers,
       ...(data?.filename ? { filename: data.filename } : {}),
     };
-    this._lineNumbers = data?.lineNumbers ?? true;
+    this._lineNumbers = data?.lineNumbers ?? CODE_LOAD_DEFAULTS.lineNumbers;
   }
 
   public render(): HTMLElement {
@@ -619,7 +620,7 @@ export class CodeTool implements BlockTool {
     this._dom.codeElement.textContent = this._data.code;
     this.syncTrailingBr();
 
-    this._lineNumbers = newData.lineNumbers ?? true;
+    this._lineNumbers = newData.lineNumbers ?? CODE_LOAD_DEFAULTS.lineNumbers;
     this._dom.gutterElement.hidden = !this._lineNumbers;
     this.updateGutter();
 

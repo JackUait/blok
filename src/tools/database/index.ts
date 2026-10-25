@@ -1,5 +1,6 @@
 import { openModalDialog } from '../../components/utils/modal-dialog';
 import type { ModalDialogHandle } from '../../components/utils/modal-dialog';
+import { DATABASE_EMPTY_AUTOMATIONS } from '../../shared/tool-actions/load-defaults';
 import { describeDatabase } from '../../shared/tool-descriptions/database';
 import { DATABASE_ACTION_HANDLERS } from '../../shared/tool-actions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
@@ -2298,7 +2299,7 @@ export class DatabaseTool implements BlockTool {
       ...structuredClone(this.unknown),
       ...this.model.snapshot(),
       // Written even when empty: two peers that each create this key keep only one (serializer.ts objectToYMap).
-      automations: structuredClone(this.savedAutomations ?? { version: 1, definitions: [] }),
+      automations: structuredClone(this.savedAutomations ?? DATABASE_EMPTY_AUTOMATIONS),
       // Linked: a reference, never a copy of the source's schema.
       ...(this.source !== undefined ? { schema: structuredClone(this.stubSchema), source: { ...this.source } } : {}),
       ...(this.dataSourceTitlesHidden ? { hideDataSourceTitles: true } : {}),

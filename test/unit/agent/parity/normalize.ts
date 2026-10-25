@@ -1,5 +1,6 @@
 import { outputBlocksToCanonicalSegments } from '../../../../src/shared/rich-text/block-data';
 import { CURRENT_RICH_TEXT_FIELDS } from '../../../../src/shared/rich-text/fields';
+import { BUILT_IN_TOOL_RUNTIMES } from '../../../../src/shared/tool-actions';
 import { htmlToSegmentsNode } from '../../../../src/view/rich-text-parse5';
 import type { OutputBlockData, OutputData } from '../../../../types';
 
@@ -14,21 +15,41 @@ const isArray = (value: unknown): value is unknown[] => Array.isArray(value);
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !isArray(value);
 
-/** Removes each key whose value equals the default a tool's constructor fills on load. */
-const withoutLoadDefaults = (defaults: Record<string, unknown>) =>
-  (data: Record<string, unknown>): Record<string, unknown> =>
-    Object.fromEntries(Object.entries(data).filter(([key, value]) =>
-      !Object.prototype.hasOwnProperty.call(defaults, key) || stableStringify(value) !== stableStringify(defaults[key])));
+// Tools whose normalize only fills load defaults. Table and embed normalizers derive data, so they stay out.
+const LOAD_DEFAULT_TOOLS = new Set(['code', 'quote', 'callout', 'list', 'database']);
 
+/**
+ * Seed blocks keep their stored data in the headless engines; the editor fills each tool's
+ * load defaults on load and saves them. Both sides go through the tool's own
+ * ToolRuntime.normalize, then each key it would fill again with the same value is dropped.
+ * Written blocks already get the defaults in every engine (agent-engine-saved-data-parity-law).
+ */
+const withoutLoadDefaults = (type: string, data: Record<string, unknown>): Record<string, unknown> => {
+  const fill = LOAD_DEFAULT_TOOLS.has(type) ? BUILT_IN_TOOL_RUNTIMES.get(type)?.normalize : undefined;
+
+  if (fill === undefined) {
+    return data;
+  }
+
+  const filled = fill(data);
+
+  return Object.fromEntries(Object.entries(filled).filter(([key, value]) => {
+    const refilled = fill(Object.fromEntries(Object.entries(filled).filter(([other]) => other !== key)));
+
+    return !Object.hasOwn(refilled, key) || stableStringify(refilled[key]) !== stableStringify(value);
+  }));
+};
+
+/** Values only one engine mints, by tool. */
 export const TOOL_MINTED: Record<string, {
   reason: string;
   strip(data: Record<string, unknown>): Record<string, unknown>;
 }> = {
   table: {
-    reason: 'Table cell ids and row ids are random until ToolRuntime.normalize ships (06 C17). The editor also saves stretched false (src/tools/table/table-operations.ts:674) and an initialColWidth measured from layout (src/tools/table/index.ts:867-872): 0 in jsdom, real pixels in a browser, never set by headless appliers.',
+    reason: 'Table cell ids and row ids are random. The editor also saves an initialColWidth measured from layout (src/tools/table/index.ts): 0 in jsdom, real pixels in a browser. Its stretched falls back to the host table config (src/tools/table/table-operations.ts), which headless appliers do not know, so it is not a load default the planner can fill.',
     strip: (raw) => {
-      const { initialColWidth: _measured, ...rest } = raw;
-      const data = withoutLoadDefaults({ stretched: false })(rest);
+      const { initialColWidth: _measured, stretched, ...rest } = raw;
+      const data = stretched === false || stretched === undefined ? rest : { ...rest, stretched };
       const content = data.content;
 
       if (!isArray(content)) {
@@ -44,22 +65,6 @@ export const TOOL_MINTED: Record<string, {
           : row),
       };
     },
-  },
-  code: {
-    reason: 'The editor fills lineNumbers true on load and saves it (src/tools/code/index.ts:137, :594); headless appliers keep data as given. Leaves when code ships ToolRuntime.normalize (06 C17).',
-    strip: withoutLoadDefaults({ lineNumbers: true }),
-  },
-  quote: {
-    reason: 'The editor fills size "default" on load and saves it (src/tools/quote/index.ts:53, :140); headless appliers keep data as given. Leaves when quote ships ToolRuntime.normalize (06 C17).',
-    strip: withoutLoadDefaults({ size: 'default' }),
-  },
-  callout: {
-    reason: 'The editor fills textColor and backgroundColor null on load and saves them (src/tools/callout/index.ts:159-160, :338-339); headless appliers keep data as given. Leaves when callout ships ToolRuntime.normalize (06 C17).',
-    strip: withoutLoadDefaults({ textColor: null, backgroundColor: null }),
-  },
-  list: {
-    reason: 'The editor saves checked false on every checklist item that lacks it (src/tools/list/block-operations.ts:100); headless appliers keep data as given.',
-    strip: withoutLoadDefaults({ checked: false }),
   },
 };
 
@@ -77,8 +82,6 @@ const richFields = (type: string): string[] =>
  */
 const DATABASE = 'database';
 const DATABASE_ROW = 'database-row';
-// The editor saves an empty automations slot on every database (src/tools/database/index.ts:888); headless appliers do not.
-const DATABASE_LOAD_DEFAULTS = { automations: { version: 1, definitions: [] } };
 
 const records = (value: unknown): Array<Record<string, unknown>> => (isArray(value) ? value.filter(isRecord) : []);
 
@@ -156,8 +159,7 @@ const canonicalDatabases = (blocks: OutputBlockData[]): OutputBlockData[] => {
       return block;
     }
 
-    const relabelled = relabel(block.data, labels, ranks);
-    const data = isRecord(relabelled) && block.type === DATABASE ? withoutLoadDefaults(DATABASE_LOAD_DEFAULTS)(relabelled) : relabelled;
+    const data = relabel(block.data, labels, ranks);
 
     return isRecord(data) ? { ...block, data } : block;
   });
@@ -225,7 +227,7 @@ export const normalizeForParity = (input: OutputData, keepIds: ReadonlySet<strin
   const rename = (value: string): string => names.get(value) ?? value;
   const cleaned = ordered.map(({ block }): OutputBlockData => {
     const minted = Object.prototype.hasOwnProperty.call(TOOL_MINTED, block.type) ? TOOL_MINTED[block.type] : undefined;
-    let data = minted === undefined ? block.data : minted.strip(block.data);
+    let data = withoutLoadDefaults(block.type, minted === undefined ? block.data : minted.strip(block.data));
     const content = data.content;
 
     if (block.type === 'table' && isArray(content)) {

@@ -523,13 +523,12 @@ export const emitPatch = (
 
   removed.forEach(key => Reflect.deleteProperty(merged, key));
 
+  // A removed key the normalizer fills again is a load default: it goes back to that default, as in the editor.
   const normalized = tool.runtime.normalize === undefined ? merged : tool.runtime.normalize(cloneRecord(merged));
 
   if (!isRecord(normalized)) {
     state.fail('INVALID_ARGS', 'Normalized block data must be a record.', '/data');
   }
-  // Explicit removals must survive normalizer defaults.
-  removed.forEach(key => Reflect.deleteProperty(normalized, key));
 
   const reason = tool.runtime.rejectWrite?.(normalized, Object.keys(patch));
 
@@ -547,8 +546,6 @@ export const emitPatch = (
       block.type, produced, '/data', block.id, { normalize: false, stored: Object.keys(produced) }
     )),
   };
-
-  removed.forEach(key => Reflect.deleteProperty(effective, key));
 
   for (const field of tool.entry.viewState) {
     if (!sameField(block.data, effective, field)) {

@@ -6,6 +6,7 @@
 
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import { stripFakeBackgroundElements } from '../../components/utils';
+import { listItemSavedFlags } from '../../shared/tool-actions/load-defaults';
 
 import { applyChecklistCheckedState, buildListItem } from './dom-builder';
 import type { ListItemStyle, ListItemData, StyleConfig } from './types';
@@ -97,12 +98,8 @@ export const saveListItem = (
   const result: ListItemData = {
     text,
     style: data.style,
-    ...(data.style === 'checklist' ? { checked: Boolean(data.checked) } : {}),
+    ...listItemSavedFlags(data.style, data.checked, data.start),
   };
-
-  if (data.start !== undefined && data.start !== 1) {
-    result.start = data.start;
-  }
 
   const effectiveDepth = depth ?? data.depth ?? 0;
 

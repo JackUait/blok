@@ -4,6 +4,7 @@ import { BUILT_IN_INLINE_SANITIZE } from '../tool-descriptions/sanitize/inline';
 import { COLUMN_DEFAULT_CHILDREN, COLUMN_LIST_ACTION_HANDLERS, COLUMN_LIST_DEFAULT_CHILDREN } from './columns';
 import { DATABASE_ACTION_HANDLERS } from './database';
 import { IMAGE_ACTION_HANDLERS } from './image';
+import { normalizeCallout, normalizeCode, normalizeDatabase, normalizeList, normalizeQuote } from './load-defaults';
 import { LINK_ACTION_HANDLERS, normalizeEmbed, rejectBookmarkWrite, rejectEmbedWrite } from './link';
 import { MEDIA_ACTION_HANDLERS, MEDIA_REJECT_WRITE } from './media';
 import { PAGE_ACTION_HANDLERS } from './page';
@@ -15,7 +16,7 @@ import type { RuntimeBlockInput, ToolRuntimeRegistry } from './runtime';
 
 export const BUILT_IN_RUNTIME_PARTS: Readonly<Record<string, Pick<RuntimeBlockInput, 'normalize' | 'rejectWrite' | 'defaultChildren' | 'actions' | 'conversion'>>> = {
   table: { normalize: (data) => normalizeTable(data), actions: TABLE_ACTION_HANDLERS },
-  callout: { defaultChildren: [{ type: 'paragraph', data: { text: [] } }] },
+  callout: { normalize: normalizeCallout, defaultChildren: [{ type: 'paragraph', data: { text: [] } }] },
   column_list: { defaultChildren: COLUMN_LIST_DEFAULT_CHILDREN, actions: COLUMN_LIST_ACTION_HANDLERS },
   column: { defaultChildren: COLUMN_DEFAULT_CHILDREN },
   page: { actions: PAGE_ACTION_HANDLERS },
@@ -26,10 +27,12 @@ export const BUILT_IN_RUNTIME_PARTS: Readonly<Record<string, Pick<RuntimeBlockIn
   file: { rejectWrite: MEDIA_REJECT_WRITE.file, actions: MEDIA_ACTION_HANDLERS.file },
   embed: { normalize: normalizeEmbed, rejectWrite: rejectEmbedWrite, actions: LINK_ACTION_HANDLERS.embed },
   bookmark: { rejectWrite: rejectBookmarkWrite, actions: LINK_ACTION_HANDLERS.bookmark },
-  database: { actions: DATABASE_ACTION_HANDLERS },
+  database: { normalize: normalizeDatabase, actions: DATABASE_ACTION_HANDLERS },
+  code: { normalize: normalizeCode },
+  quote: { normalize: normalizeQuote },
   // The list's conversionConfig is functions (they carry a to-do's checked state in the editor).
   // Its text field is `text` both ways, which is what those functions read and write.
-  list: { conversion: { export: 'text', import: 'text' } },
+  list: { normalize: normalizeList, conversion: { export: 'text', import: 'text' } },
 };
 
 // convertTo and the internal tunes contribute no rules. Code opts out in defaultBlockTools.

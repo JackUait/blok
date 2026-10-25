@@ -1,3 +1,4 @@
+import { QUOTE_LOAD_DEFAULTS } from '../../shared/tool-actions/load-defaults';
 import { describeQuote } from '../../shared/tool-descriptions/quote';
 import { quoteSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type {
@@ -50,7 +51,7 @@ export class Quote implements BlockTool {
     this.readOnly = readOnly;
     this._data = {
       text: data?.text ?? '',
-      size: data?.size ?? 'default',
+      size: data?.size ?? QUOTE_LOAD_DEFAULTS.size,
     };
 
     this.onKeyUp = this.onKeyUp.bind(this);

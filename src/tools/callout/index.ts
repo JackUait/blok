@@ -1,3 +1,4 @@
+import { CALLOUT_LOAD_DEFAULTS } from '../../shared/tool-actions/load-defaults';
 import { describeCallout } from '../../shared/tool-descriptions/callout';
 import { calloutSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 // src/tools/callout/index.ts
@@ -156,8 +157,8 @@ export class CalloutTool implements BlockTool {
 
     return {
       emoji: typeof data.emoji === 'string' ? data.emoji : DEFAULT_EMOJI,
-      textColor: typeof data.textColor === 'string' ? data.textColor : null,
-      backgroundColor: typeof data.backgroundColor === 'string' ? data.backgroundColor : null,
+      textColor: typeof data.textColor === 'string' ? data.textColor : CALLOUT_LOAD_DEFAULTS.textColor,
+      backgroundColor: typeof data.backgroundColor === 'string' ? data.backgroundColor : CALLOUT_LOAD_DEFAULTS.backgroundColor,
     };
   }
 

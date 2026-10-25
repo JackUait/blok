@@ -78,7 +78,8 @@ const fakeSession = (id = 'turn-1', actor: AgentActor = ACTOR) => ({
   execute: vi.fn<AgentSession['execute']>().mockResolvedValue(RESULT),
   log: vi.fn<AgentSession['log']>().mockReturnValue([]),
   close: vi.fn<AgentSession['close']>(),
-}) satisfies AgentSession;
+  sealSteps: vi.fn<() => void>(),
+}) satisfies AgentSession & { sealSteps(): void };
 
 const sourceOf = (contract: AgentContract) => ({
   contract: vi.fn<ContractSource['contract']>().mockReturnValue(contract),

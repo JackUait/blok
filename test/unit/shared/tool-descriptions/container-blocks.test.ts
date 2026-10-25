@@ -59,8 +59,8 @@ describe('container self-description discovery', () => {
 
     expect(describeTable({}).guardedFields).toEqual({ content: 'table.*' });
     expect(describeDatabase({}).guardedFields).toEqual({
-      schema: 'database.addProperty, database.updateProperty or another database.* property action',
-      views: 'database.updateView for settings, database.setLayout for the layout type, or another database.* view action',
+      schema: 'database.*Property',
+      views: 'database.*View',
     });
   });
 });
@@ -99,8 +99,8 @@ const CONTAINER_DESCRIPTIONS: Array<{
       guidance: 'Add rows with database.addRow and change their values with database.setRowValues. Delete, copy or move a row with database.deleteRow, database.duplicateRow and database.moveRowTo; block.delete and block.duplicate on a row do the same as the first two. While the database is locked, automations, source, hideDataSourceTitles and starter cannot change either. Change a view\'s settings (filters, sorts, grouping, columns, layout options) with database.updateView and its layout type with database.setLayout; add, rename, move, duplicate and delete views with the other database.* view actions. Change properties and options with the database.* property actions, and lock or unlock with database.setLock. schema and views cannot be written directly.',
       summaryFields: ['title', 'activeViewId'],
       guardedFields: {
-        schema: 'database.addProperty, database.updateProperty or another database.* property action',
-        views: 'database.updateView for settings, database.setLayout for the layout type, or another database.* view action',
+        schema: 'database.*Property',
+        views: 'database.*View',
       },
     },
   },
@@ -112,7 +112,7 @@ const CONTAINER_DESCRIPTIONS: Array<{
     expected: {
       summary: 'One row of a database. Its child blocks are its page body. An optional pageId points to a separate body document instead.',
       guidance: 'Write row values with database.setRowValues on the parent database: the title mirrors the title property. block.delete and block.duplicate on a row run database.deleteRow and database.duplicateRow.',
-      guardedFields: { properties: 'database.setRowValues on the parent database' },
+      guardedFields: { properties: 'database.setRowValues' },
       summaryFields: ['title'],
     },
   },

@@ -83,6 +83,6 @@ export const describeDatabaseRow = (_config: Record<string, unknown> = {}): Bloc
   summary: 'One row of a database. Its child blocks are its page body. An optional pageId points to a separate body document instead.',
   guidance: 'Write row values with database.setRowValues on the parent database: the title mirrors the title property. block.delete and block.duplicate on a row run database.deleteRow and database.duplicateRow.',
   data: DATABASE_ROW_DATA,
-  guardedFields: { properties: 'database.setRowValues on the parent database' },
+  guardedFields: { properties: 'database.setRowValues' },
   summaryFields: ['title'],
 });

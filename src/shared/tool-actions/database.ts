@@ -296,7 +296,7 @@ const referenceSchema = (ctx: ToolActionContext, block: TargetBlock, state: Data
   };
 
   if (typeof dataSourceId === 'string' && dataSourceId !== '' && dataSourceId !== block.id) {
-    return schemaOf(dataSourceId) ?? ctx.fail('PRECONDITION_FAILED', `dataSourceId ${dataSourceId} is not a database block in this document.`);
+    return schemaOf(dataSourceId) ?? ctx.fail('PRECONDITION_FAILED', `dataSourceId ${dataSourceId} is not a database block in the document you read.`);
   }
   const source = block.data.source;
 
@@ -1269,7 +1269,7 @@ const moveRowTo: ToolActionImpl<{ rowId: string; databaseId: string }> = {
     const targetSchema = schemaOf(ctx, args.databaseId);
 
     if (args.databaseId === block.id || target === null || target.type !== block.type || targetSchema === undefined || (isRecord(target.data) && isRecord(target.data.source))) {
-      ctx.fail('PRECONDITION_FAILED', `${args.databaseId} is not another database of this document. A linked view of a database is not one either.`);
+      ctx.fail('PRECONDITION_FAILED', `${args.databaseId} is not another database of this document; a linked view of a database is not one either.`);
     }
     const rows = rowsOf(ctx, block.id);
     const pair = relationPair(state.schema, block.id, 'parentItem', 'subItems');
@@ -1384,7 +1384,7 @@ const twoWayPairing = (
   if (input.targetDocumentId !== undefined) {
     return ctx.fail('PRECONDITION_FAILED', 'A relation to a database in another document cannot be two-way.');
   }
-  const targetSchema = schemaOf(ctx, target) ?? ctx.fail('PRECONDITION_FAILED', `${target} is not a database block in this document.`);
+  const targetSchema = schemaOf(ctx, target) ?? ctx.fail('PRECONDITION_FAILED', `${target} is not a database block in the document you read.`);
   const held = property.relation?.syncedPropertyId;
   const live = held === undefined ? undefined : syncedMirror(ctx, block.id, { ...property, relation: { ...(input as unknown as RelationSettings), syncedPropertyId: held } });
 

@@ -126,10 +126,13 @@ describe('tool description law', () => {
     }));
   });
 
-  it('guardedFields name a core command, a <tool>.* family or a <tool>.*Suffix family', () => {
+  // A child block's field can be kept by its parent's action (database-row.properties → database.setRowValues).
+  it('guardedFields name a core command, a <tool>.* family, a <tool>.*Suffix family or one tool action', () => {
+    const actions = new Set(descriptions.flatMap(([tool, each]) => (each?.actions ?? []).map(action => `${tool}.${action.name}`)));
+
     descriptions.forEach(([name, description]) => Object.entries(description?.guardedFields ?? {}).forEach(([field, use]) => {
       const family = /^([a-z_-]+)\.\*(\w*)$/.exec(use);
-      const ok = CORE_COMMANDS.includes(use)
+      const ok = CORE_COMMANDS.includes(use) || actions.has(use)
         || (family !== null && family[1] === name && (description?.actions ?? []).some(action => action.name.endsWith(family[2])));
 
       expect(ok, `${name}.${field} → ${use}`).toBe(true);

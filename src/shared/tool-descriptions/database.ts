@@ -1131,8 +1131,8 @@ export const describeDatabase = (_config: Record<string, unknown> = {}): BlockTo
   inputFields: ['title'],
   summaryFields: ['title', 'activeViewId'],
   guardedFields: {
-    schema: 'database.addProperty, database.updateProperty or another database.* property action',
-    views: 'database.updateView for settings, database.setLayout for the layout type, or another database.* view action',
+    schema: 'database.*Property',
+    views: 'database.*View',
   },
   actions: DATABASE_ACTIONS,
 });

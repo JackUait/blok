@@ -10,6 +10,11 @@ export const COMPUTED_TYPES: ReadonlySet<PropertyType> = new Set<PropertyType>([
 
 export const isComputedType = (type: PropertyType): boolean => COMPUTED_TYPES.has(type);
 
+/** Types a person cannot edit in a cell. */
+const READ_ONLY_TYPES: ReadonlySet<PropertyType> = new Set<PropertyType>([...COMPUTED_TYPES, 'uniqueId', 'button']);
+
+export const isReadOnlyType = (type: PropertyType): boolean => READ_ONLY_TYPES.has(type);
+
 /** research/08: the header menus that list AI Autofill. Checkbox is read off its row ("as Select, minus…"). */
 const AUTOFILL_TYPES: ReadonlySet<PropertyType> = new Set<PropertyType>([
   'title', 'text', 'number', 'select', 'multiSelect', 'status', 'date', 'person', 'relation', 'checkbox',

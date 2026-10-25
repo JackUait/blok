@@ -168,6 +168,30 @@ describe('DatabaseTool — sub-items', () => {
     expect(doc.row('a').properties.subs).toEqual([{ id: 'b' }, { id: copies[0] }]);
   });
 
+  it('a one-page Parent item keeps the other side to the parent it kept', () => {
+    const doc = tree();
+    const { tool } = buildDatabase(doc, 'db', data());
+
+    (tool as unknown as { commitTableCell: (rowId: string, propertyId: string, value: unknown) => void })
+      .commitTableCell('c', 'parent', [{ id: 'b' }, { id: 'd' }]);
+
+    expect(doc.row('c').properties.parent).toEqual([{ id: 'd' }]);
+    expect(doc.row('b').properties.subs).toEqual([]);
+    expect(doc.row('d').properties.subs).toEqual([{ id: 'c' }]);
+  });
+
+  it('a one-page Parent item given two pages at once mirrors only the one it kept', () => {
+    const doc = tree();
+    const { tool } = buildDatabase(doc, 'db', data());
+
+    (tool as unknown as { commitTableCell: (rowId: string, propertyId: string, value: unknown) => void })
+      .commitTableCell('d', 'parent', [{ id: 'a' }, { id: 'b' }]);
+
+    expect(doc.row('d').properties.parent).toEqual([{ id: 'b' }]);
+    expect(doc.row('a').properties.subs).toEqual([{ id: 'b' }]);
+    expect(doc.row('b').properties.subs).toEqual([{ id: 'c' }, { id: 'd' }]);
+  });
+
   it('a list shows the whole tree, each sub-item one step in', () => {
     const doc = tree();
     const { el } = buildDatabase(doc, 'db', data(pairSchema, 'list'));

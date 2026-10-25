@@ -1,10 +1,10 @@
 import { nanoid } from 'nanoid';
 import { safeHref } from '../../components/utils/sanitize-url';
 import {
-  COMPUTED_TYPES,
   filesOf,
   isComputedType,
   isFileValue,
+  isReadOnlyType,
   offersAutofill,
   personIdsOf,
   readPropertyValue,
@@ -24,12 +24,7 @@ import type {
   StatusGroup,
 } from './types';
 
-/** Types a person cannot edit in a cell. */
-const READ_ONLY_TYPES: ReadonlySet<PropertyType> = new Set<PropertyType>([...COMPUTED_TYPES, 'uniqueId', 'button']);
-
-export const isReadOnlyType = (type: PropertyType): boolean => READ_ONLY_TYPES.has(type);
-
-export { isListValueType, createDefaultStatusSettings, filesOf, isComputedType, isFileValue, offersAutofill, personIdsOf, readPropertyValue };
+export { isListValueType, isReadOnlyType, createDefaultStatusSettings, filesOf, isComputedType, isFileValue, offersAutofill, personIdsOf, readPropertyValue };
 
 /** A naive host `target[id] = value` swaps its prototype on these ids. */
 const UNSAFE_PROPERTY_IDS: ReadonlySet<string> = new Set(['__proto__', 'constructor', 'prototype']);

@@ -23,7 +23,7 @@ import { ComputedProperties } from './computed-properties';
 import { openFormulaEditor } from './database-formula-editor';
 import type { FormulaEditorHandle } from './database-formula-editor';
 import type { DatabaseSource } from './computed-properties';
-import { addRelated as addRelatedIds, relationIdsOf, removeRelated as removeRelatedIds } from './relation-values';
+import { addRelated as addRelatedIds, relationEdit, relationIdsOf, removeRelated as removeRelatedIds } from './relation-values';
 import { askConfirmations, needsConfirmation, runButtonActions } from './database-button';
 import { buttonHasError } from './database-button-menu';
 import { dueRun, isTemplateData, nextRun } from './templates';
@@ -10525,15 +10525,13 @@ export class DatabaseTool implements BlockTool {
     const settings = property?.relation;
 
     if (property === undefined || row === undefined || settings === undefined) return;
-    const shown = relationIdsOf(row.computed?.[propertyId] ?? row.properties[propertyId]);
-    const next = relationIdsOf(input);
-    const added = next.filter((id) => !shown.includes(id));
-    const removed = shown.filter((id) => !next.includes(id));
+    const edit = relationEdit(
+      relationIdsOf(row.properties[propertyId]), relationIdsOf(row.computed?.[propertyId] ?? row.properties[propertyId]), input, settings.limit,
+    );
 
-    if (added.length === 0 && removed.length === 0) return;
-    const stored = relationIdsOf(row.properties[propertyId]);
-    const kept = [...stored.filter((id) => !removed.includes(id)), ...added.filter((id) => !stored.includes(id))];
-    const own = (settings.limit === 1 ? kept.slice(-1) : kept).map((id) => ({ id }));
+    if (edit === null) return;
+    const { link, unlink, removed } = edit;
+    const own = edit.own.map((id) => ({ id }));
     const target = settings.targetDatabaseId;
     const synced = this.syncedMirror(property);
 
@@ -10548,8 +10546,8 @@ export class DatabaseTool implements BlockTool {
     const write = (): void => {
       this.updateRowBlock(rowId, { [propertyId]: own });
       if (synced !== undefined) {
-        added.forEach((id) => this.writeForeignRow(target, id, { [synced]: addRelatedIds(this.storedRelationOf(target, id, synced), rowId, null) }));
-        removed.forEach((id) => this.writeForeignRow(target, id, { [synced]: removeRelatedIds(this.storedRelationOf(target, id, synced), rowId) }));
+        link.forEach((id) => this.writeForeignRow(target, id, { [synced]: addRelatedIds(this.storedRelationOf(target, id, synced), rowId, null) }));
+        unlink.forEach((id) => this.writeForeignRow(target, id, { [synced]: removeRelatedIds(this.storedRelationOf(target, id, synced), rowId) }));
       } else if (target === this.dataId) {
         // A one-way self-relation shows both ways: drop the pointer on the other row too.
         removed

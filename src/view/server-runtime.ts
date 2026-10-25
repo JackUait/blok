@@ -1,6 +1,6 @@
 import type { HostService, ManifestOverrides } from '../../types';
 import type { LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData } from '../../types/data-formats/output-data';
-import type { AgentActor } from '../../types/agent';
+import type { AgentActor, AgentVersion, AgentVersionHistory } from '../../types/agent';
 // Imported by file rather than through `src/components/utils`: the barrel
 // reaches the DOM, this module does not.
 import { getBlokVersion } from '../components/utils/version';
@@ -432,6 +432,10 @@ const isStoredDocument = (value: unknown): value is OutputData =>
   && (value.title === undefined || typeof value.title === 'string')
   && (value.icon === undefined || readPageIcon(value.icon) !== undefined);
 
+const isAgentVersion = (value: unknown): value is AgentVersion =>
+  isRecord(value) && typeof value.version === 'string' && Array.isArray(value.actors)
+  && (value.savedAt === null || typeof value.savedAt === 'number');
+
 const isAgentActor = (value: unknown): value is AgentActor =>
   isRecord(value)
   && typeof value.id === 'string' && typeof value.name === 'string' && value.kind === 'agent'
@@ -446,6 +450,27 @@ const isBatchEnvelope = (value: unknown): boolean =>
     && (command.ref === undefined || typeof command.ref === 'string'))
   && (value.expectRevision === undefined || typeof value.expectRevision === 'string');
 
+/**
+ * Jint cannot call back into the host, so the host loads what one history
+ * read needs before the call: `versions`, `documents` keyed by version (null:
+ * no such version), or `failed` with why it could not.
+ */
+const loadedVersionHistory = (value: unknown): AgentVersionHistory | undefined => {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const { versions, documents, failed } = value;
+  const refuse = (what: string): Promise<never> =>
+    Promise.reject(new Error(typeof failed === 'string' ? failed : `The host did not load ${what}.`));
+
+  return {
+    list: () => Array.isArray(versions) ? Promise.resolve(versions.filter(isAgentVersion)) : refuse('the version list'),
+    read: version => isRecord(documents) && Object.hasOwn(documents, version)
+      ? Promise.resolve(isStoredDocument(documents[version]) ? documents[version] : null)
+      : refuse(`version "${version}"`),
+  };
+};
+
 const createServerAgentSession = (
   input: Record<string, unknown>,
   document: OutputData,
@@ -454,7 +479,8 @@ const createServerAgentSession = (
   const customTools = input.customTools === undefined ? undefined : readCustomToolsFile(input.customTools);
   const services = Array.isArray(input.services)
     ? input.services.filter((service: unknown): service is HostService =>
-      service === 'uploader' || service === 'linkMetadata' || service === 'pageBackend' || service === 'host')
+      service === 'uploader' || service === 'linkMetadata' || service === 'pageBackend' || service === 'host'
+      || service === 'versionHistory')
     : [];
   const overrides: ManifestOverrides = Object.fromEntries(
     Object.entries(isRecord(input.overrides) ? input.overrides : {})
@@ -469,10 +495,12 @@ const createServerAgentSession = (
       })
   );
   const setup = createHeadlessAgentSetup({ customTools, overrides, services, runtime: 'jint' });
+  const versionHistory = loadedVersionHistory(input.versionHistory);
 
   return createDocumentAgentSession({
     document: loadStoredDocument(document, setup.richTextFieldsFor),
     tools: setup.tools, contract: setup.contract, actor, ports: setup.ports, runtime: 'jint',
+    ...(versionHistory !== undefined && { services: { versionHistory } }),
   });
 };
 
@@ -632,7 +660,8 @@ export const invoke = async (operation: string, inputJson: string): Promise<stri
       const customTools = input.customTools === undefined ? undefined : readCustomToolsFile(input.customTools);
       const services = Array.isArray(input.services)
         ? input.services.filter((service: unknown): service is HostService =>
-          service === 'uploader' || service === 'linkMetadata' || service === 'pageBackend' || service === 'host')
+          service === 'uploader' || service === 'linkMetadata' || service === 'pageBackend' || service === 'host'
+      || service === 'versionHistory')
         : [];
       const overrides: ManifestOverrides = Object.fromEntries(
         Object.entries(isRecord(input.overrides) ? input.overrides : {})

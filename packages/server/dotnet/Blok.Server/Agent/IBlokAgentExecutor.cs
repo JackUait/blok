@@ -14,12 +14,24 @@ public interface IBlokAgentExecutor
       string documentJson, string batchJson, BlokAgentActor actor,
       BlokAgentOptions? options = null, CancellationToken cancellationToken = default);
 
-  /// <summary>Returns the command contract for this runtime.</summary>
+  /// <summary>Returns the command contract for <see cref="ExecuteAsync"/>.</summary>
   /// <param name="options">The host's agent options.</param>
   /// <param name="cancellationToken">Cancels the runtime call.</param>
   /// <returns>The agent contract as JSON.</returns>
   ValueTask<string> GetContractAsync(
       BlokAgentOptions? options = null, CancellationToken cancellationToken = default);
+
+  /// <summary>
+  /// Returns the command contract for <see cref="ExecuteInRoomAsync"/>. Blok's
+  /// executor adds the version history reads when the journal keeps history.
+  /// Defaults to <see cref="GetContractAsync"/>, so a host's own executor still builds.
+  /// </summary>
+  /// <param name="options">The host's agent options.</param>
+  /// <param name="cancellationToken">Cancels the runtime call.</param>
+  /// <returns>The agent contract as JSON.</returns>
+  ValueTask<string> GetRoomContractAsync(
+      BlokAgentOptions? options = null, CancellationToken cancellationToken = default) =>
+      GetContractAsync(options, cancellationToken);
 
   /// <summary>Runs a room batch when collaboration is supported.</summary>
   /// <param name="docId">The room's document ID.</param>

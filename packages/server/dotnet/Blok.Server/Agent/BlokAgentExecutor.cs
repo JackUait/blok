@@ -189,6 +189,17 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
         ?? throw new InvalidOperationException("The Blok runtime returned no agent contract.");
   }
 
+  public async ValueTask<string> GetRoomContractAsync(
+      BlokAgentOptions? options = null, CancellationToken cancellationToken = default)
+  {
+    var output = JsonNode.Parse(await runtime.InvokeAsync(
+        "manifest", RoomCommon(options).ToJsonString(), cancellationToken: cancellationToken))
+        ?? throw new InvalidOperationException("The Blok runtime returned no agent contract.");
+
+    return output["contract"]?.ToJsonString()
+        ?? throw new InvalidOperationException("The Blok runtime returned no agent contract.");
+  }
+
   /// <summary>
   /// Plans the batch inside the room lane: export the live doc, run Jint
   /// <c>agentExecute</c>, translate its edits into room ops (01 §3.14). The
@@ -221,9 +232,14 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
       }
     }
 
-    var input = Common(options);
+    var input = RoomCommon(options);
     input["batch"] = batch is null ? JsonNode.Parse(batchJson) : batch.DeepClone();
     input["actor"] = ActorNode(actor);
+
+    if (VersionCommand(input["batch"]) is { } read)
+    {
+      return await RunVersionReadAsync(docId, input, read.Name, read.Args, expect, cancellationToken);
+    }
 
     // The source room is only read; the host action writes the target.
     if (options is { PageTitles: true, PageTarget: { } pages } && HasPageAction(input["batch"]))
@@ -308,6 +324,125 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
         return Failure("APPLY_FAILED", $"The room refused the edit ({edit.Status}). Nothing was written.", retryable,
             new JsonObject { ["status"] = edit.Status.ToString() }, head);
     }
+  }
+
+  private static (string Name, JsonObject Args)? VersionCommand(JsonNode? batch) =>
+      batch is JsonObject source && source["commands"] is JsonArray { Count: > 0 } commands
+      && commands[0] is JsonObject first
+      && first["name"] is JsonValue name && name.TryGetValue<string>(out var value)
+      && value is "history.versions" or "history.read" or "history.changes"
+          ? (value, first["args"] as JsonObject ?? [])
+          : null;
+
+  /// <summary>
+  /// A version history read: the journal's answer is loaded into the Jint
+  /// input, which shapes it as every runtime does. Outside the edit lane: it writes nothing.
+  /// </summary>
+  private async ValueTask<BlokAgentExecution> RunVersionReadAsync(
+      string docId, JsonObject input, string name, JsonObject args, CollabEditPrecondition? expect,
+      CancellationToken cancellationToken)
+  {
+    var (document, current) = await RoomStateAsync(docId, cancellationToken);
+
+    if (document is null)
+    {
+      return Failure("APPLY_FAILED", "The room could not be read. Nothing was written.", true, null);
+    }
+
+    if (expect is not null && $"{expect.Lineage}:{expect.Sequence}" != current)
+    {
+      return Failure("STALE", "The room changed since you read it. Read it again, then retry.", true,
+          new JsonObject { ["revision"] = current }, current);
+    }
+
+    // No history journal: the contract says unavailable and Jint refuses it.
+    if (rooms!.HasHistory)
+    {
+      input["versionHistory"] = await LoadVersionsAsync(docId, name, args, cancellationToken);
+    }
+
+    input["document"] = document;
+    var output = JsonNode.Parse(await runtime.InvokeAsync("agentExecute", input.ToJsonString(), cancellationToken: cancellationToken))
+        ?? throw new InvalidOperationException("The Blok runtime returned no agent execution.");
+    var result = output["result"] as JsonObject
+        ?? throw new InvalidOperationException("The Blok runtime returned no agent result.");
+
+    return WithHead(new BlokAgentExecution(result.ToJsonString(), null, current), current);
+  }
+
+  /// <summary>What one read needs: the version list, or the documents it names (null when there is no such version).</summary>
+  private async ValueTask<JsonObject> LoadVersionsAsync(
+      string docId, string name, JsonObject args, CancellationToken cancellationToken)
+  {
+    if (name == "history.versions")
+    {
+      var minutes = args["group"] is JsonValue group && group.TryGetValue<int>(out var value) && value is 1 or 15 or 60
+          ? TimeSpan.FromMinutes(value)
+          : (TimeSpan?)null;
+      var list = await rooms!.HistoryAsync(docId, minutes, cancellationToken);
+
+      if (list.Status != CollabHistoryStatus.Ready)
+      {
+        return new JsonObject { ["failed"] = $"The version history could not be read ({list.Status})." };
+      }
+
+      var current = list.Lineages.Where(lineage => lineage.Current).Select(lineage => lineage.Lineage).ToHashSet(StringComparer.Ordinal);
+
+      return new JsonObject
+      {
+        ["versions"] = new JsonArray([.. list.Versions.Select(version =>
+        {
+          var entry = new JsonObject
+          {
+            ["version"] = $"{version.Lineage}:{version.Sequence}",
+            ["savedAt"] = version.SavedAt?.ToUnixTimeMilliseconds(),
+            ["startedAt"] = version.StartedAt?.ToUnixTimeMilliseconds(),
+            ["actors"] = new JsonArray([.. version.Actors.Select(actor => (JsonNode)actor)]),
+          };
+
+          if (!current.Contains(version.Lineage))
+          {
+            entry["beforeReset"] = true;
+          }
+
+          return (JsonNode)entry;
+        })]),
+      };
+    }
+
+    var names = (name == "history.read" ? new[] { args["version"] } : new[] { args["from"], args["to"] })
+        .OfType<JsonValue>()
+        .Select(node => node.TryGetValue<string>(out var text) ? text : null)
+        .OfType<string>()
+        .Distinct(StringComparer.Ordinal);
+    var documents = new JsonObject();
+
+    foreach (var version in names)
+    {
+      var colon = version.LastIndexOf(':');
+
+      if (colon <= 0 || !ulong.TryParse(version.AsSpan(colon + 1), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var sequence))
+      {
+        documents[version] = null;
+        continue;
+      }
+
+      var read = await rooms!.ReadVersionAsync(docId, version[..colon], sequence, cancellationToken);
+
+      switch (read.Status)
+      {
+        case CollabHistoryStatus.Ready:
+          documents[version] = JsonNode.Parse(read.Json);
+          break;
+        case CollabHistoryStatus.NotFound:
+          documents[version] = null;
+          break;
+        default:
+          return new JsonObject { ["failed"] = $"Version \"{version}\" could not be read ({read.Status})." };
+      }
+    }
+
+    return new JsonObject { ["documents"] = documents };
   }
 
   /// <summary>
@@ -461,6 +596,19 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
     if (options?.OverridesJson is { } overrides)
     {
       input["overrides"] = JsonNode.Parse(overrides);
+    }
+
+    return input;
+  }
+
+  /// <summary>Room calls also read the version history when the journal keeps it.</summary>
+  private JsonObject RoomCommon(BlokAgentOptions? options)
+  {
+    var input = Common(options);
+
+    if (rooms is { HasHistory: true })
+    {
+      ((JsonArray)input["services"]!).Add("versionHistory");
     }
 
     return input;

@@ -357,6 +357,9 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
   /// <summary>Without a journal, an edit with no ops still persists and schedules an export.</summary>
   internal bool HasJournal => operationStore is not null;
 
+  /// <summary>The journal keeps versions: <see cref="HistoryAsync"/> and <see cref="ReadVersionAsync"/> can answer.</summary>
+  internal bool HasHistory => operationStore is ICollabOperationHistoryStore;
+
   /// <summary>Block-level HTTP edit with the endpoint's idempotency receipt.</summary>
   internal async ValueTask<CollabEditResult> EditAsync(
       string docId,

@@ -377,6 +377,16 @@ export interface BlockToolConstructable extends BaseToolConstructable {
   prepareInsert?(config: ToolConfig, data?: BlockToolData): Promise<BlockToolData>;
 
   /**
+   * Drops toolbox entries this config does not support, e.g. an entry that
+   * needs a host hook the host has not opted into. Gets the entries after the
+   * user's `toolbox` override; returns the ones to show.
+   *
+   * @param entries - the Tool's toolbox entries
+   * @param config - the Tool's config
+   */
+  filterToolbox?(entries: ToolboxConfigEntry[], config: ToolConfig): ToolboxConfigEntry[];
+
+  /**
    * How this Tool's block menu is laid out.
    * `titled` heads the menu with the Tool's toolbox title and puts Turn into
    * before the Tool's own items, like Notion's page menu.

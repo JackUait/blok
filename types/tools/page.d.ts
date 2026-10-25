@@ -2,7 +2,7 @@ import { ConversionConfig, SanitizerConfig } from '../configs';
 import { BlockTool, BlockToolConstructorOptions } from './block-tool';
 import { BlockToolData } from './block-tool-data';
 import { OutputBlockData, OutputData } from '../data-formats/output-data';
-import { ToolboxConfig } from './tool-settings';
+import { ToolboxConfig, ToolboxConfigEntry } from './tool-settings';
 
 /** What `create` may answer: the id the host gave the page, or nothing to keep Blok's. */
 export type PageCreateResult = void | { pageId: string };
@@ -67,6 +67,12 @@ export interface PageSearchResult {
  * Page Tool's configuration. The host owns pages; Blok only links to them.
  */
 export interface PageConfig {
+  /**
+   * Offers "Database - Full page" in the toolbox. Default false. Turn it on
+   * only when `create` stores `document` as the new page's content and the
+   * `database` tool is registered.
+   */
+  databasePages?: boolean;
   /** Searches visible pages for an inline reference. */
   search?(query: string): Promise<readonly PageSearchResult[]>;
   /**
@@ -197,6 +203,8 @@ export declare class Page implements BlockTool {
   /** A titled "Page" menu with Turn into first; Delete reads "Move to Trash". */
   static blockMenu?: { titled: boolean; trash: boolean };
 
+  /** Hides "Database - Full page" unless `config.databasePages` is true. */
+  static filterToolbox(entries: ToolboxConfigEntry[], config: PageConfig): ToolboxConfigEntry[];
   /**
    * Asks `config.create` for a new page, for the toolbox to insert.
    * `data.kind === 'database'` makes a full-page database.

@@ -622,6 +622,31 @@ describe('BlockToolAdapter', () => {
   });
 
   describe('toolbox configuration', () => {
+    it("lets the tool's filterToolbox drop entries by its config", () => {
+      const { options } = createBlockTool();
+      const filterToolbox = vi.fn((entries: Array<{ name?: string }>, config: { extra?: boolean }) =>
+        config.extra === true ? entries : entries.filter(entry => entry.name !== 'extra'));
+      const constructable = class {
+        public static toolbox = [{ title: 'Base', name: 'base' }, { title: 'Extra', name: 'extra' }];
+        public static filterToolbox = filterToolbox;
+        public render(): HTMLElement {
+          return document.createElement('div');
+        }
+        public save(): Record<string, never> {
+          return {};
+        }
+      } as unknown as BlockToolAdapterOptions['constructable'];
+      const build = (config: Record<string, unknown>): BlockToolAdapter => new BlockToolAdapter({
+        ...options,
+        constructable,
+        config: { config },
+      });
+
+      expect(build({}).toolbox?.map(entry => entry.name)).toEqual(['base']);
+      expect(build({ extra: true }).toolbox?.map(entry => entry.name)).toEqual(['base', 'extra']);
+      expect(filterToolbox).toHaveBeenCalledWith(expect.any(Array), { extra: true });
+    });
+
     it('returns user defined toolbox config wrapped in array', () => {
       const { tool, options } = createBlockTool();
 

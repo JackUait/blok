@@ -400,7 +400,12 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
     const mergedEntries = this.mergeToolboxSettings(toolToolboxSettings, userToolboxSettings);
     const filteredByStyles = this.filterToolboxEntriesByStyles(mergedEntries);
 
-    return this.filterToolboxEntriesByLevels(filteredByStyles);
+    const entries = this.filterToolboxEntriesByLevels(filteredByStyles);
+    const filterToolbox = (this.constructable as unknown as Record<string, unknown>)[InternalBlockToolSettings.FilterToolbox];
+
+    return typeof filterToolbox === 'function'
+      ? filterToolbox.call(this.constructable, entries, this.settings) as ToolboxConfigEntry[]
+      : entries;
   }
 
   /**

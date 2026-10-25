@@ -118,6 +118,11 @@ export enum InternalBlockToolSettings {
    */
   PrepareInsert = 'prepareInsert',
   /**
+   * Drops toolbox entries the tool's config does not support (an entry that
+   * needs a host hook the host did not opt into).
+   */
+  FilterToolbox = 'filterToolbox',
+  /**
    * The block menu layout: `{ titled, trash }`. Titled heads the menu with the
    * tool's name and puts Turn into first; trash reads Delete as "Move to Trash".
    */

@@ -11,6 +11,7 @@ import type {
   OutputData,
   SanitizerConfig,
   ToolboxConfig,
+  ToolboxConfigEntry,
 } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import {
@@ -185,6 +186,11 @@ export class PageTool implements BlockTool {
     preparedPageIds.add(pageId);
 
     return { pageId, ...kind };
+  }
+
+  /** "Database - Full page" needs a host whose `create` stores `document`, so it is opt-in. */
+  public static filterToolbox(entries: ToolboxConfigEntry[], config: PageConfig): ToolboxConfigEntry[] {
+    return config.databasePages === true ? entries : entries.filter((entry) => entry.data?.kind !== 'database');
   }
 
   public static get toolbox(): ToolboxConfig {

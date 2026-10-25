@@ -1654,6 +1654,13 @@ describe('Page tool', () => {
       expect(database).toHaveProperty('searchTerms', expect.arrayContaining(['database', 'full page']));
     });
 
+    it('offers "Database - Full page" only to a host that opts in with databasePages', () => {
+      const entries = Array.isArray(PageTool.toolbox) ? PageTool.toolbox : [PageTool.toolbox];
+
+      expect(PageTool.filterToolbox(entries, {}).map(entry => entry.name ?? 'page')).toEqual(['page']);
+      expect(PageTool.filterToolbox(entries, { databasePages: true }).map(entry => entry.name ?? 'page')).toEqual(['page', 'databaseFullPage']);
+    });
+
     it('supports read-only mode in place', () => {
       const tool = new PageTool(createOptions());
 

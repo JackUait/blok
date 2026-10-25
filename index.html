@@ -2035,9 +2035,12 @@
           ...(remotePages !== null ? remotePages.pageTool(pageId) : {
             resolve: (id) => pages.info(id),
             subscribe: (id, onChange) => pages.subscribe(id, onChange),
+            databasePages: true,
             create: ({ pageId: id, document }) => {
               createdHere.add(id);
               pages.create(id, pageId, document);
+              // Under collaboration the room is the page's body: its first connect seeds these.
+              if (document !== undefined) heldDocuments.hold(id, document.blocks);
             },
             preview: (id) => pages.get(id)?.blocks,
             // Ask AI reads and writes sub-pages through these.

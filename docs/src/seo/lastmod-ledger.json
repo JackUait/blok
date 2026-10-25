@@ -20,8 +20,8 @@
     "date": "2026-10-18"
   },
   "/docs/agent-api": {
-    "hash": "f9731c71a07eb3f7",
-    "date": "2026-10-20"
+    "hash": "b68672a8268b99c8",
+    "date": "2026-10-25"
   },
   "/docs/audio": {
     "hash": "b24af5f207524c40",
@@ -92,8 +92,8 @@
     "date": "2026-09-08"
   },
   "/docs/database": {
-    "hash": "59b570f7604a0396",
-    "date": "2026-10-18"
+    "hash": "0924e85077219122",
+    "date": "2026-10-25"
   },
   "/docs/database-comment": {
     "hash": "477f7b5d1545fcb4",
@@ -184,8 +184,8 @@
     "date": "2026-10-12"
   },
   "/docs/page": {
-    "hash": "ceacb8667f8b90c6",
-    "date": "2026-10-06"
+    "hash": "210c12bd3f812e60",
+    "date": "2026-10-25"
   },
   "/docs/page-link": {
     "hash": "f5c919bb6b2d7fe9",
@@ -276,8 +276,8 @@
     "date": "2026-09-26"
   },
   "/docs/tools-api": {
-    "hash": "abea4e721ea9fbbe",
-    "date": "2026-09-24"
+    "hash": "914ee91ca56b1c8a",
+    "date": "2026-10-25"
   },
   "/docs/tooltip-api": {
     "hash": "ae6cf1cd5cfcf272",
@@ -352,8 +352,8 @@
     "date": "2026-10-18"
   },
   "/ru/docs/agent-api": {
-    "hash": "8b2a48843264a39b",
-    "date": "2026-10-20"
+    "hash": "43103d8f33a90abb",
+    "date": "2026-10-25"
   },
   "/ru/docs/audio": {
     "hash": "6e78dc793dd15388",
@@ -424,8 +424,8 @@
     "date": "2026-09-08"
   },
   "/ru/docs/database": {
-    "hash": "5304e223614ba21d",
-    "date": "2026-10-18"
+    "hash": "36d33369a29f0061",
+    "date": "2026-10-25"
   },
   "/ru/docs/database-comment": {
     "hash": "b2202e88a335bb34",
@@ -516,8 +516,8 @@
     "date": "2026-10-12"
   },
   "/ru/docs/page": {
-    "hash": "56ca3e0d6e92c693",
-    "date": "2026-10-06"
+    "hash": "f21959c44bc3bfa2",
+    "date": "2026-10-25"
   },
   "/ru/docs/page-link": {
     "hash": "5326132ec3321d28",
@@ -608,8 +608,8 @@
     "date": "2026-09-26"
   },
   "/ru/docs/tools-api": {
-    "hash": "0839fd75647e3fac",
-    "date": "2026-09-24"
+    "hash": "5bb6e367476111de",
+    "date": "2026-10-25"
   },
   "/ru/docs/tooltip-api": {
     "hash": "9b906a484c38ff4f",

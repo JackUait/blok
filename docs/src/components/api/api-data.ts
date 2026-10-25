@@ -3812,6 +3812,43 @@ export const Segments = createReactBlock({
 });`,
       },
       {
+        name: "BlockToolConstructable.prepareInsert",
+        returnType: "Promise<BlockToolData>",
+        description:
+          "A static on your tool CLASS that gives a block picked from the toolbox its starting data. Use it for data only the host can give, like a page id from your backend.\n\nThe toolbox waits for it and shows the item as busy, then inserts the block. If it rejects, nothing is inserted. `blocks.create` calls it too. Other inserts never do.\n\nIt gets the tool's config and the picked toolbox entry's `data`, or the data passed to `blocks.create`. So each of a tool's entries can prepare something different. The built-in Page tool makes a full-page database when `data.kind` is `'database'`.",
+        example: `import { IconTable } from '@bloklabs/core/icons';
+
+class Report {
+  static get toolbox() {
+    return [
+      { title: 'Sales report', icon: IconTable, data: { kind: 'sales' } },
+      { title: 'Stock report', icon: IconTable, data: { kind: 'stock' } },
+    ];
+  }
+
+  // config is this tool's config, data is the picked entry's data.
+  static async prepareInsert(config, data) {
+    const report = await config.createReport(data?.kind);
+
+    return { reportId: report.id, kind: data?.kind };
+  }
+}`,
+      },
+      {
+        name: "BlockToolConstructable.filterToolbox",
+        returnType: "ToolboxConfigEntry[]",
+        description:
+          "A static on your tool CLASS that drops toolbox entries its config does not support. Use it for an entry that needs a host hook the host has not turned on.\n\nIt gets the entries after the user's `toolbox` override, and the tool's config. It returns the entries to show. The built-in Page tool uses it to hide \"Database - Full page\" unless `databasePages` is true.",
+        example: `class Report {
+  // Show "Stock report" only to hosts that turned it on.
+  static filterToolbox(entries, config) {
+    return config.stockReports === true
+      ? entries
+      : entries.filter((entry) => entry.data?.kind !== 'stock');
+  }
+}`,
+      },
+      {
         name: "setData(newData)",
         returnType: "boolean | void | Promise<boolean | void>",
         description:

@@ -449,6 +449,7 @@ const editor = new Blok({
                                        // ('table' and 'gallery' exist in the ViewType union
                                        // but fall back to the board renderer)
   activeViewId: string;                // Currently active view ID
+  fullPage?: boolean;                  // The database is a whole page; the page title is its title
 }
 // Rows are NOT stored here — they are child database-row blocks.`,
     saveDataExample: `{
@@ -1150,10 +1151,17 @@ const editor = new Blok({
       },
       {
         option: 'create',
-        type: '(init: { pageId: string }) => void | { pageId: string } | Promise<…>',
+        type: '(init: { pageId: string; document?: OutputData }) => void | { pageId: string } | Promise<…>',
         default: 'undefined',
         description:
-          'Makes the page in your app. Blok calls it once per new page, with an id it minted. It is never called on load, paste, undo, redo or a collaborator\'s change, or in read-only mode.\n\nWhen a user picks Page in the toolbox, Blok waits for it. The item shows a spinner, and the block appears once it resolves. Return `{ pageId }` to use your backend\'s id instead of Blok\'s. If it throws, no block is inserted; show the error yourself. Closing the menu while it runs does not cancel the insert.\n\nWhen your code inserts a page through the API without a `pageId`, the block appears at once with Blok\'s id. A different returned id is ignored with a warning, so pass your own `pageId` to `insert` instead. If it throws, the block shows "Page not found". Blok still asks `resolve`, so a page your app made after all shows up.',
+          'Makes the page in your app. Blok calls it once per new page, with an id it minted. It is never called on load, paste, undo, redo or a collaborator\'s change, or in read-only mode.\n\nWhen a user picks Page in the toolbox, Blok waits for it. The item shows a spinner, and the block appears once it resolves. Return `{ pageId }` to use your backend\'s id instead of Blok\'s. If it throws, no block is inserted; show the error yourself. Closing the menu while it runs does not cancel the insert.\n\nWhen your code inserts a page through the API without a `pageId`, the block appears at once with Blok\'s id. A different returned id is ignored with a warning, so pass your own `pageId` to `insert` instead. If it throws, the block shows "Page not found". Blok still asks `resolve`, so a page your app made after all shows up.\n\n`init.document`, when present, is the new page\'s starting content. Store it as the page\'s document. "Database - Full page" sends one `database` block with `fullPage: true`. The database finishes its setup when the page opens.',
+      },
+      {
+        option: 'databasePages',
+        type: 'boolean',
+        default: 'false',
+        description:
+          'Offers "Database - Full page" in the toolbox\'s Database section. It makes a sub-page that holds a new database and opens it. The link shows a table glyph until the page gets an icon.\n\nTurn it on only when `create` stores `document` as the new page\'s content and the `database` tool is registered.',
       },
       {
         option: 'search',
@@ -1176,6 +1184,7 @@ const editor = new Blok({
     ],
     saveDataShape: `interface PageData {
   pageId: string;
+  kind?: 'database';  // Set by "Database - Full page"
 }`,
     saveDataExample: `{
   "id": "pg001",

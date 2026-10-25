@@ -52,6 +52,8 @@ export interface PageSearchResult {
 
 /** Page tool config. Every hook is optional. */
 export interface PageConfig {
+  /** Offers "Database - Full page" in the toolbox. Needs a `create` that stores `document`. */
+  databasePages?: boolean;
   /** Searches visible pages for an inline reference. */
   search?(query: string): Promise<readonly PageSearchResult[]>;
   /** The page's URL. Without it the link has no href. */

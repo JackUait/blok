@@ -26,6 +26,30 @@ Agents write rich text with commands. They never write Markdown or HTML into blo
 - The editing rules the in-app assistant gets too, such as "change only the blocks the request is about" and "put related edits in one `blok_execute` call".
 - How to reach a sub-page: open the page block's `data.pageId` with `blok_open`.
 
+## Prompts
+
+The server also offers the built-in Ask AI buttons as MCP prompts. A client lists them with `prompts/list` and shows them, for example as slash commands. The prompt text is the one Ask AI sends.
+
+| Prompt | What it does |
+|---|---|
+| `improve` | Improve writing |
+| `proofread` | Fix spelling and grammar |
+| `shorter` | Make shorter |
+| `longer` | Make longer |
+| `simplify` | Simplify language |
+| `explain` | Explain |
+| `summarize` | Summarize |
+| `actionItems` | Find action items |
+| `continue` | Continue writing |
+
+The arguments:
+
+- `documentId`: the document to work on. Without it, `blok_open` lists the documents to choose from.
+- `selection`: the selected text, word for word. `improve`, `shorter`, `longer`, `simplify` and `explain` need it. With it, `proofread` fixes only that text; without it, the whole document.
+- `blockId`: the block the selection is in, or, for `continue`, the block to write after.
+
+The prompt tells the model to open the document with `blok_open`, find the text with `doc.find` and edit with `blok_execute`. Host buttons set in `agent.assistant.actions` are not served.
+
 ## Install and run locally
 
 Run it against a folder of JSON documents:

@@ -4,6 +4,7 @@ import type { Tool } from '@modelcontextprotocol/server';
 
 import { safeClientName } from './actor';
 import { UnknownToolError } from './dispatcher';
+import { getMcpPrompt, listMcpPrompts } from './prompts';
 import type { Caller, CallOptions, ToolOutcome } from './dispatcher';
 import type { McpTool } from './tools';
 
@@ -32,8 +33,11 @@ export const buildSdkServer = (input: {
   const server = mcp.server;
   const byName = new Map(tools.map(tool => [tool.name, tool]));
 
-  server.registerCapabilities({ tools: {} });
+  server.registerCapabilities({ tools: {}, prompts: {} });
   server.setRequestHandler('tools/list', async () => ({ tools }));
+  // Ask AI's skills, so an MCP client can offer the same buttons.
+  server.setRequestHandler('prompts/list', async () => ({ prompts: listMcpPrompts() }));
+  server.setRequestHandler('prompts/get', async request => getMcpPrompt(request.params.name, request.params.arguments));
   server.setRequestHandler('tools/call', async (request, ctx) => {
     const name = request.params.name;
     const tool = byName.get(name);

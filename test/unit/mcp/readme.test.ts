@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AGENT_SKILLS } from '../../../src/shared/skills';
+
 const ROOT = resolve(__dirname, '../../..');
 
 const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -57,6 +59,10 @@ describe('@bloklabs/mcp README', () => {
   it('states that flag values are separate arguments and unknown flags are refused', () => {
     expect(readme).toContain('`--auth=oauth`');
     expect(readme).toMatch(/unknown flag.*refuse/i);
+  });
+
+  it.each(AGENT_SKILLS.map((skill) => skill.id))('documents the %s prompt', (id) => {
+    expect(readme).toContain(`| \`${id}\` |`);
   });
 
   it('states the version lockstep and the Markdown rule', () => {

@@ -6169,6 +6169,19 @@ button[data-blok-database-column-count]:hover {
   --max-height: calc(100dvh - 2 * var(--blok-space-3));
 }
 
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-title] {
+  font-size: 14px;
+  font-weight: 400;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-separator] {
+  padding-block: var(--blok-space-0-75) var(--blok-space-1);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item]:last-child {
+  margin-bottom: 0;
+}
+
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-menu'] [data-blok-popover-item] {
   height: 29px;
   padding-block: 0;

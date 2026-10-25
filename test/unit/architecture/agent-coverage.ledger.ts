@@ -321,6 +321,9 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/*@src/tools/database/database-property-menu.ts': cmds(['database.updateProperty', 'database.duplicateProperty', 'database.deleteProperty'], PROPERTY_SETTINGS),
   'menu:database/displayAs-*': cmd('database.updateProperty'),
   'menu:database/visibility-*': cmd('database.updateProperty'),
+  // The row page's Rename and Edit property open the Edit property panel.
+  'menu:database/rename': cmd('database.updateProperty'),
+  'menu:database/editProperty': cmd('database.updateProperty'),
   'menu:database/relatedTo-*': cmd('database.updateProperty'),
   'menu:database/limit-*': cmd('database.updateProperty'),
   'menu:database/twoWay': cmd('database.updateProperty'),

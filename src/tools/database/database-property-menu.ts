@@ -1,4 +1,4 @@
-import { IconCalendar, IconCopy, IconEmojiSmile, IconEyeSlash, IconInfo, IconMessage, IconPencil, IconSliders, IconTrash, IconEmojiSparkles, IconPageLayout, IconWand } from '../../components/icons';
+import { IconCalendar, IconCheck, IconCopy, IconEmojiSmile, IconEyeSlash, IconInfo, IconMessage, IconPencil, IconSliders, IconTrash, IconEmojiSparkles, IconPageLayout, IconWand } from '../../components/icons';
 import { nameTakenError } from './database-name-taken-error';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
@@ -132,6 +132,9 @@ export interface PropertyMenuOptions extends PropertyMenuCallbacks {
 const SHOW_AS: readonly NumberShowAs[] = ['number', 'bar', 'ring'];
 const VISIBILITY: readonly PageVisibility[] = ['always', 'hideWhenEmpty', 'hidden'];
 
+/** The row page's menu and Edit property panel: the header menu's rows, in Notion's row page look. */
+const ROW_PAGE_MENU_CLASS = `${DATABASE_HEADER_MENU_CLASS} blok-database-row-page-menu`;
+
 const withoutLimit = ({ limit: _limit, ...rest }: RelationSettings): RelationSettings => rest;
 
 /** Person "Edit property" rows (research/16 §5). The first choice of each is what an absent key means. */
@@ -222,6 +225,52 @@ export class DatabasePropertyMenu {
   openRowPage(property: PropertyDefinition, anchor: HTMLElement, extras: { onComment?: () => void } = {}): void {
     this.close();
     this.shown = property;
+    const has = (entry: PropertyMenuEntry): boolean => propertyMenuEntries(property).includes(entry);
+    // Notion: Rename and Edit property both open the Edit property panel.
+    const edit = (): void => this.openRowPageEdit(property, anchor);
+    const onComment = extras.onComment;
+    const items: PopoverItemParams[] = [
+      { name: 'rename', title: this.t('tools.database.renameView'), icon: IconPencil, onActivate: edit },
+      { name: 'editProperty', title: this.t('tools.database.editProperty'), icon: IconSliders, onActivate: edit },
+      ...(onComment === undefined ? [] : [{ name: 'comment', title: this.t('tools.database.tableComment'), icon: IconMessage, closeOnActivate: true, onActivate: () => onComment() }]),
+      { type: PopoverItemType.Separator },
+      ...(has('visibility') ? [this.rowPageVisibility(property)] : []),
+      ...(['duplicate', 'delete'] as const).filter(has).map((entry) => this.entry(entry, property)),
+      ...this.customizeItem(),
+    ];
+
+    this.show(items, anchor, '220px', ROW_PAGE_MENU_CLASS);
+  }
+
+  /** Notion's row page submenu: 180 wide, a check on the right of the current choice. */
+  private rowPageVisibility(property: PropertyDefinition): PopoverItemParams {
+    const current = property.pageVisibility ?? 'always';
+
+    return {
+      name: 'visibility',
+      title: this.t('tools.database.pageVisibility'),
+      // feel/findings-rowpage R07: the row page draws it with an eye-slash.
+      icon: IconEyeSlash,
+      children: {
+        width: '180px',
+        items: VISIBILITY.map((visibility) => ({
+          name: `visibility-${visibility}`,
+          title: this.t(`tools.database.pageVisibility.${visibility}`),
+          ...(current === visibility ? { trailingIcon: IconCheck } : {}),
+          closeOnActivate: true,
+          onActivate: () => this.options.onUpdate(property.id, { pageVisibility: visibility }),
+        })),
+      },
+    };
+  }
+
+  /** The row page's Edit property panel, in place of its menu, with the name selected (Notion). */
+  private openRowPageEdit(property: PropertyDefinition, anchor: HTMLElement): void {
+    const previous = this.popover;
+
+    // A swap, not a close: onClose would tell the host the menu is gone and its writes would stop.
+    this.popover = null;
+    previous?.destroy();
     const entries = propertyMenuEntries(property);
     const has = (entry: PropertyMenuEntry): boolean => entries.includes(entry);
     const update = (patch: Partial<PropertySettingsV2>): void => this.options.onUpdate(property.id, patch);
@@ -231,34 +280,31 @@ export class DatabasePropertyMenu {
       settings.push(...(property.type === 'formula' ? [this.entry('editProperty', property)] : this.editItems(property, update)));
     }
     const typeItems = (['changeType', 'displayAs'] as const).filter(has).map((entry) => this.entry(entry, property));
-    const onComment = extras.onComment;
+    const tail = (['duplicate', 'delete'] as const).filter(has).map((entry) => this.entry(entry, property));
+    const name = this.nameField(property, property.type !== 'title');
+    const separator = { type: PopoverItemType.Separator } as const;
     const items: PopoverItemParams[] = [
-      {
-        name: 'rename',
-        title: this.t('tools.database.renameView'),
-        icon: IconPencil,
-        children: { items: [{ type: PopoverItemType.Html, element: this.nameField(property, false), name: 'name' }] },
-      },
-      {
-        name: 'editProperty',
-        title: this.t('tools.database.editProperty'),
-        icon: IconSliders,
-        children: { items: [...typeItems, ...(typeItems.length > 0 && settings.length > 0 ? [{ type: PopoverItemType.Separator } as const] : []), ...settings] },
-      },
-      ...(onComment === undefined ? [] : [{ name: 'comment', title: this.t('tools.database.tableComment'), icon: IconMessage, closeOnActivate: true, onActivate: () => onComment() }]),
-      { type: PopoverItemType.Separator },
-      // feel/findings-rowpage R07: the row page draws it with an eye-slash.
-      ...(['visibility'] as const).filter(has).map((entry) => ({ ...this.entry(entry, property), icon: IconEyeSlash }) as PopoverItemParams),
-      { type: PopoverItemType.Separator },
-      ...(['duplicate', 'delete'] as const).filter(has).map((entry) => this.entry(entry, property)),
-      ...this.customizeItem(),
+      { type: PopoverItemType.Html, element: name, name: 'name' },
+      ...typeItems,
+      ...(typeItems.length > 0 && settings.length > 0 ? [separator] : []),
+      ...settings,
+      ...(tail.length > 0 ? [separator, ...tail] : []),
     ];
 
-    this.show(items, anchor, '220px');
+    this.show(items, anchor, '290px', ROW_PAGE_MENU_CLASS);
+    const input = name.querySelector('input');
+
+    input?.focus();
+    input?.select();
   }
 
-  private show(items: PopoverItemParams[], anchor: HTMLElement, minWidth: string): void {
-    const popover = new PopoverDesktop({ class: DATABASE_HEADER_MENU_CLASS, animateClose: true, items, trigger: anchor, width: 'auto', minWidth, flippable: true, autoFocusFirstItem: false });
+  private show(items: PopoverItemParams[], anchor: HTMLElement, minWidth: string, className = DATABASE_HEADER_MENU_CLASS): void {
+    const rowPage = className === ROW_PAGE_MENU_CLASS;
+    const popover = new PopoverDesktop({
+      class: className, animateClose: true, items, trigger: anchor, width: 'auto', minWidth, flippable: true, autoFocusFirstItem: false,
+      // Notion opens the row page menu 1px under the label.
+      ...(rowPage ? { offset: 1 } : {}),
+    });
 
     // research/27 §7: Escape closes the Edit property submenu only; a second Escape closes the menu.
     popover.escapeClosesSubmenuFirst = true;

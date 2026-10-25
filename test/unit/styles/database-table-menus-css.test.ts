@@ -102,3 +102,17 @@ describe('filter property list (T27)', () => {
     expect(declared('[data-blok-database-panel-row][data-active]', 'background-color')).toEqual(['var(--blok-database-table-header-hover-bg)']);
   });
 });
+
+describe('row page property menu (research parity row 9)', () => {
+  const ROW_PAGE = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu']";
+
+  it('reads 14px regular, as Notion', () => {
+    expect(declared(`${ROW_PAGE} [data-blok-popover-item-title]`, 'font-size')).toEqual(['14px']);
+    expect(declared(`${ROW_PAGE} [data-blok-popover-item-title]`, 'font-weight')).toEqual(['400']);
+  });
+
+  it('has 8px separators and no gap under the last row: Notion\'s 197px menu', () => {
+    expect(declared(`${ROW_PAGE} [data-blok-popover-item-separator]`, 'padding-block')).toEqual(['var(--blok-space-0-75) var(--blok-space-1)']);
+    expect(declared(`${ROW_PAGE} [data-blok-popover-item]:last-child`, 'margin-bottom')).toEqual(['0']);
+  });
+});

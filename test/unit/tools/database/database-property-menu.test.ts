@@ -9,13 +9,14 @@ interface CapturedItem {
   title?: string;
   icon?: string;
   secondaryLabel?: string;
+  trailingIcon?: string;
   type?: string;
   isActive?: boolean | (() => boolean);
   isDestructive?: boolean;
   element?: HTMLElement;
   onActivate?: (item: CapturedItem) => void;
   confirmation?: { onActivate: (item: CapturedItem) => void; title?: string };
-  children?: { items: CapturedItem[]; searchable?: boolean };
+  children?: { items: CapturedItem[]; searchable?: boolean; width?: string };
 }
 
 interface CapturedPopover { items: CapturedItem[]; destroyed: boolean; params: Record<string, unknown>; activated: string[]; closed?: () => void; hide: () => void }
@@ -39,7 +40,12 @@ vi.mock('../../../../src/components/utils/popover', () => ({
       this.record.activated.push(name);
     }
 
-    show(): void {}
+    show(): void {
+      // Mounts the html rows so a test can see what has focus.
+      for (const item of this.record.items) {
+        if (item.type === 'html' && item.element !== undefined) document.body.appendChild(item.element);
+      }
+    }
 
     on(_event: string, handler: () => void): void {
       this.record.closed = handler;
@@ -879,6 +885,86 @@ describe('row page property menu', () => {
     menu.destroy();
   });
 
+  it('groups Property visibility with Duplicate and Delete, as Notion does', () => {
+    const { menu } = rowMenu(prop('checkbox'));
+
+    expect(lastItems().map((i) => (i.type === 'separator' ? '--' : i.name))).toEqual(['rename', 'editProperty', '--', 'visibility', 'duplicate', 'delete', '--', 'customize-layout']);
+    menu.destroy();
+  });
+
+  it('draws Rename and Edit property as plain actions with no submenu', () => {
+    const { menu } = rowMenu(prop('number'));
+
+    expect(byName(lastItems(), 'rename').children).toBeUndefined();
+    expect(byName(lastItems(), 'editProperty').children).toBeUndefined();
+    menu.destroy();
+  });
+
+  it('opens 1px under the label, in the row page look', () => {
+    const { menu } = rowMenu(prop('number'));
+    const params = captured.popovers[0]?.params;
+
+    expect(params?.offset).toBe(1);
+    expect(String(params?.class)).toContain('blok-database-row-page-menu');
+    menu.destroy();
+  });
+
+  it('marks the current visibility with a check on the right, in a 180px submenu, and no fill', () => {
+    const { menu } = rowMenu(prop('number', { pageVisibility: 'hideWhenEmpty' }));
+    const visibility = byName(lastItems(), 'visibility');
+    const choices = visibility.children?.items ?? [];
+
+    expect(visibility.children?.width).toBe('180px');
+    expect(choices.map((i) => i.trailingIcon !== undefined)).toEqual([false, true, false]);
+    expect(choices.every((i) => i.isActive !== true)).toBe(true);
+    menu.destroy();
+  });
+
+  it.each(['rename', 'editProperty'])('%s swaps the menu for the Edit property panel with the name selected', (entry) => {
+    const onClose = vi.fn();
+    const cb = callbacks();
+    const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...cb, onClose, onCustomizeLayout: vi.fn() });
+
+    menu.openRowPage(prop('number'), document.createElement('div'));
+    const item = byName(lastItems(), entry);
+
+    item.onActivate?.(item);
+
+    expect(captured.popovers).toHaveLength(2);
+    expect(captured.popovers[0]?.destroyed).toBe(true);
+    // The host keeps the menu: a swap is no close.
+    expect(onClose).not.toHaveBeenCalled();
+    expect(menu.isOpen).toBe(true);
+    const items = lastItems();
+    const input = items[0]?.element?.querySelector<HTMLInputElement>('input');
+
+    expect(items.map((i) => (i.type === 'separator' ? '--' : i.name))).toEqual(expect.arrayContaining(['name', 'changeType', 'duplicate', 'delete']));
+    expect(items.some((i) => i.name === 'visibility' || i.name === 'customize-layout' || i.name === 'rename')).toBe(false);
+    expect(captured.popovers[1]?.params.offset).toBe(1);
+    expect(input).toHaveFocus();
+    expect(input?.selectionStart).toBe(0);
+    expect(input?.selectionEnd).toBe('Amount'.length);
+    menu.destroy();
+  });
+
+  it('the Edit property panel renames on Enter and holds the type settings inline', () => {
+    const { cb, menu } = rowMenu(prop('number'));
+    const rename = byName(lastItems(), 'rename');
+
+    rename.onActivate?.(rename);
+    const items = lastItems();
+    const input = items[0]?.element?.querySelector<HTMLInputElement>('input');
+
+    if (input === null || input === undefined) throw new Error('no name input');
+    expect(items.findIndex((i) => i.name === 'changeType')).toBeLessThan(items.findIndex((i) => i.name === 'duplicate'));
+    expect(items.length).toBeGreaterThan(6);
+    input.value = 'Memo';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+
+    expect(cb.onRename).toHaveBeenCalledWith('p', 'Memo');
+    menu.destroy();
+  });
+
   it('has no Comment without a comment lever, and no Duplicate on a relation', () => {
     const { menu } = rowMenu(prop('relation'));
 
@@ -893,28 +979,6 @@ describe('row page property menu', () => {
     byName(lastItems(), 'comment').onActivate?.(byName(lastItems(), 'comment'));
 
     expect(onComment).toHaveBeenCalledTimes(1);
-    menu.destroy();
-  });
-
-  it('Rename holds the name field, and Enter renames', () => {
-    const { cb, menu } = rowMenu(prop('text'));
-    const field = byName(lastItems(), 'rename').children?.items[0]?.element;
-    const input = field?.querySelector<HTMLInputElement>('input');
-
-    if (input === null || input === undefined) throw new Error('no name input');
-    input.value = 'Memo';
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
-
-    expect(cb.onRename).toHaveBeenCalledWith('p', 'Memo');
-    menu.destroy();
-  });
-
-  it('Edit property holds Change type and the type settings', () => {
-    const { menu } = rowMenu(prop('number'));
-    const inside = byName(lastItems(), 'editProperty').children?.items.map((i) => i.name) ?? [];
-
-    expect(inside[0]).toBe('changeType');
-    expect(inside.length).toBeGreaterThan(1);
     menu.destroy();
   });
 });

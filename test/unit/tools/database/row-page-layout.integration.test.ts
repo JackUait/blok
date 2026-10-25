@@ -309,6 +309,25 @@ describe('row page layout through the database tool', () => {
     expect(names.some((name) => /filter|sort|freeze|insert|hide/i.test(name ?? ''))).toBe(false);
   });
 
+  it.each(['rename', 'editProperty'])('%s opens the Edit property panel with the name selected, and a rename saves', async (entry) => {
+    await make(doc());
+    await openRow('r2');
+    await click(q('[data-blok-database-drawer-prop-label][data-property-id="due"]'));
+    await click(item(entry));
+    const input = document.querySelector<HTMLInputElement>('[data-blok-popover-opened] [data-blok-database-property-menu-name-input]');
+
+    expect(input).not.toBeNull();
+    expect(input).toHaveFocus();
+    expect([input?.selectionStart, input?.selectionEnd]).toEqual([0, 'Due'.length]);
+    expect(item('visibility')).toBeNull();
+    if (input === null) return;
+    input.value = 'Deadline';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await quiet();
+
+    expect((await editorSchema()).find((p) => p.id === 'due')?.name).toBe('Deadline');
+  });
+
   it('offers no Customize layout in the column header menu', async () => {
     await make(doc());
     await click(q('[data-blok-database-table-column-header][data-property-id="due"]'));

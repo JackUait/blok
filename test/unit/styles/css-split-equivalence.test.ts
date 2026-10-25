@@ -1109,6 +1109,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // database.css: feel/findings-rowpage R09-R16, R26, R29: the row page's property handle, Add a property,
     // header hover row, comment avatar, value pill, body start and file chip.
     const DATABASE_ROW_PAGE_PROPS_BYTES = 3278;
+    // database.css: the row page property menu: 14px regular titles, 8px separators, no gap under the last row.
+    const DATABASE_ROW_PAGE_MENU_BYTES = 574;
     const DATABASE_ADD_PROPERTY_GRID_BYTES = 514;
     // database.css: board columns (findings-board): the status header pill, the AA count inks, "+ New page" type.
     const DATABASE_BOARD_COLUMNS_BYTES = 540;
@@ -1363,6 +1365,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_VIEW_SETTINGS_PROPERTY_EYES_BYTES
       + DATABASE_VIEW_SETTINGS_BACK_BYTES
       + DATABASE_ROW_PAGE_PROPS_BYTES
+      + DATABASE_ROW_PAGE_MENU_BYTES
       + DATABASE_CAL_TIMELINE_FEEL_BYTES
       + DATABASE_PEEK_SHELL_BYTES
       + DATABASE_CREATION_FEEL_BYTES

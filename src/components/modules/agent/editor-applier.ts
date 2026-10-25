@@ -49,6 +49,8 @@ export class EditorApplier implements AgentApplier {
   private undone: CaretHistoryEntry[] = [];
   private lastToken: CaretHistoryEntry | undefined;
   private gesturesAtClose = -1;
+  /** True while a batch applies, so its own writes do not seal the run. */
+  private applying = false;
   private readonly stopListening: () => void;
 
   public constructor(

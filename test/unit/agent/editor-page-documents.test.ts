@@ -108,7 +108,7 @@ describe('the agent edits a sub-page through the host page documents', () => {
     const pages = new Map<string, OutputData>([['sub', { blocks: [] }]]);
     const editor = await boot(host(pages), undefined, { agent: { overrides: { header: { hidden: true } } } });
     const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
-    const insert = { name: 'block.insert', args: { type: 'header', data: { text: 'Hidden', level: 2 }, position: 'end' } };
+    const insert = { name: 'block.insert', args: { type: 'header', data: { text: 'Hidden', level: 2 }, position: 'end' } } as const;
     const main = await turn.execute({ commands: [insert] });
     const inSub = await turn.call('blok_execute', { page: 'pg', commands: [insert] });
 

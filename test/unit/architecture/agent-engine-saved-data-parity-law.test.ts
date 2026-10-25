@@ -8,7 +8,7 @@ import { outputBlocksToCanonicalSegments } from '../../../src/shared/rich-text/b
 import { CURRENT_RICH_TEXT_FIELDS } from '../../../src/shared/rich-text/fields';
 import { htmlToSegmentsNode } from '../../../src/view/rich-text-parse5';
 import type { OutputData } from '../../../types';
-import type { AgentResult, AgentSession } from '../../../types/agent';
+import type { AgentBatch, AgentResult, AgentSession } from '../../../types/agent';
 import { openJsonSession, openStoreSession, TEST_ACTOR } from '../agent/harness';
 import { stableStringify } from '../agent/parity/normalize';
 import type { CorpusCommand } from '../agent/parity/corpus';
@@ -177,7 +177,7 @@ const rowsOf = (result: AgentResult, gapKeys: string[] = []): string => {
     }))));
 };
 
-const SERVICES = { names: ['linkMetadata' as const], impl: { linkMetadata: { fetch: async () => ({ title: 'T' }) } } };
+const SERVICES = { names: ['linkMetadata' as const], impl: { linkMetadata: { fetch: async (url: string) => ({ url, title: 'T' }) } } };
 
 let holder: HTMLDivElement;
 let core: Core | undefined;
@@ -205,7 +205,7 @@ const runEditor = async (commands: CorpusCommand[]): Promise<{ result: AgentResu
   const editor = core.moduleInstances;
 
   editorSession = createEditorAgentSession(editor, TEST_ACTOR, { services: SERVICES.impl });
-  const result = await editorSession.execute({ commands });
+  const result = await editorSession.execute({ commands } as AgentBatch);
 
   editor.YjsManager.flushPendingBlockWrites();
   await vi.waitFor(() => {
@@ -253,7 +253,8 @@ describe('agent engine saved-data parity law', () => {
     json.close();
 
     const store = openStoreSession(SEED, undefined, SERVICES);
-    const storeResult = await store.execute({ commands });
+    // Corpus commands are wire input; the store session checks them like any batch.
+    const storeResult = await store.execute({ commands } as AgentBatch);
     const storeSaved = store.output();
 
     await store.close();

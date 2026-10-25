@@ -6511,6 +6511,32 @@ textarea[data-blok-database-cell-input] {
   opacity: 1;
 }
 
+/* Over a row page value (notion-spec §7): head text, hint, headings and status pills start 12px into the box. */
+[data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-select-chips] {
+  min-height: 39px;
+  padding: var(--blok-space-1) var(--blok-space-3);
+}
+
+[data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-select-hint] {
+  padding-inline: var(--blok-space-3);
+}
+
+[data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-select-option] {
+  padding-inline-start: var(--blok-space-2);
+}
+
+/* Notion's select shows its handle at rest, the pill 8px after it. */
+[data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-select-option-handle] {
+  opacity: 1;
+  margin-inline-end: var(--blok-space-1);
+}
+
+/* Notion's status rows have no handle and no check mark; the head pill names the current one. */
+[data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-select-editor="status"] [data-blok-database-select-option-handle],
+[data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-select-editor="status"] [data-blok-database-select-option-check] {
+  display: none;
+}
+
 [data-blok-database-select-option][data-dragging] {
   opacity: 0.5;
 }

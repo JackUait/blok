@@ -122,6 +122,36 @@ describe('cell editor CSS', () => {
     });
   });
 
+  // notion-spec §7, scratchpad n/11-status.png and n/12-select.png: text, pills and headings start 12px into the box.
+  describe('select and status pickers over a row page value', () => {
+    const VALUE = "[data-blok-popover-custom-class~='blok-database-value-editor']";
+
+    it('gives the search head a 39px row with its text 12px in', () => {
+      expect(declared(`${VALUE} [data-blok-database-select-chips]`, 'min-height')).toEqual(['39px']);
+      expect(declared(`${VALUE} [data-blok-database-select-chips]`, 'padding')).toEqual(['var(--blok-space-1) var(--blok-space-3)']);
+    });
+
+    it('starts the hint 12px in, level with the group headings', () => {
+      expect(declared(`${VALUE} [data-blok-database-select-hint]`, 'padding-inline')).toEqual(['var(--blok-space-3)']);
+    });
+
+    it('starts each option row 8px in, so a status pill sits under its heading', () => {
+      expect(declared(`${VALUE} [data-blok-database-select-option]`, 'padding-inline-start')).toEqual(['var(--blok-space-2)']);
+    });
+
+    it('shows a select option\'s handle at rest, 8px before its pill', () => {
+      expect(declared(`${VALUE} [data-blok-database-select-option-handle]`, 'opacity')).toEqual(['1']);
+      expect(declared(`${VALUE} [data-blok-database-select-option-handle]`, 'margin-inline-end')).toEqual(['var(--blok-space-1)']);
+    });
+
+    it('draws a status option without a handle or a check mark', () => {
+      const STATUS = `${VALUE} [data-blok-database-select-editor="status"]`;
+
+      expect(declared(`${STATUS} [data-blok-database-select-option-handle]`, 'display')).toEqual(['none']);
+      expect(declared(`${STATUS} [data-blok-database-select-option-check]`, 'display')).toEqual(['none']);
+    });
+  });
+
   it('keeps the title weight (500) in the title editor, in a 38px one-line box (feel T19)', () => {
     expect(declared('[data-blok-database-cell-input="title"]', 'font-weight')).toEqual(['500']);
     expect(declared('[data-blok-database-cell-input="title"]', 'min-height')).toEqual(['38px']);

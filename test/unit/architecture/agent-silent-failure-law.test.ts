@@ -23,6 +23,7 @@ const EXEMPT: Record<string, { count: number; reason: string }> = {
   'shared/agent/plan-text.ts': { count: 1, reason: 'input: after envelope validation, sanitized-away input is empty rich text; prepareData records SANITIZED' },
   'shared/agent/executor.ts': { count: 1, reason: 'staleContext omits blocks not named by the batch; the caller reports STALE' },
   'shared/agent/batch-preflight.ts': { count: 6, reason: 'extra problems for an already failed batch: [] means nothing more to add, never success' },
+  'components/modules/agent/page-documents.ts': { count: 1, reason: 'createPageDocuments: null means no page tool has loadDocument and saveDocument; the tools then offer no `page` and openPage refuses it' },
 };
 
 beforeEach(() => {

@@ -6,7 +6,7 @@
  * sanitizer (`src/view/sanitize.ts`). Pure module: no DOM access and no
  * parse5 import — it is part of the editor bundle graph.
  */
-import { isSafeRasterImageDataUrl, safeImageSrc, stripIgnoredUrlChars } from '../components/utils/sanitize-url';
+import { isSafeRasterImageDataUrl, safeImageSrc, stripIgnoredUrlChars } from './sanitize-url';
 
 /**
  * Script-capable schemes hard-stripped from href/src regardless of tool

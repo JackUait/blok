@@ -2,7 +2,7 @@ import { isRichText } from '../rich-text/guards';
 import { viewRows } from './document-view';
 import { checkEnvelope } from './envelope';
 import { preflightProblems } from './batch-preflight';
-import { AgentFailure, failure, withOthers } from './errors';
+import { AgentFailure, failure, notPreparedHere, withOthers } from './errors';
 import { splitCommandName } from './names';
 import { PREPARE_PENDING } from './plan-state';
 import { planBatch } from './planner';
@@ -114,8 +114,8 @@ const preparationsFor = (
     if (type !== undefined && requires !== undefined && requires.length > 0) {
       preparations.set(index, async () => {
         if (input.applier.prepareInsert === undefined) {
-          throw failure('COMMAND_UNAVAILABLE', `Inserting "${type}" needs the host (${requires.join(', ')}), which is absent here.`, {
-            commandIndex: index, details: { reason: 'service', requires },
+          throw failure('COMMAND_UNAVAILABLE', notPreparedHere(type), {
+            commandIndex: index, details: { reason: 'runtime', requires },
           });
         }
 

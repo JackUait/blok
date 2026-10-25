@@ -346,6 +346,24 @@ export const BLOCK_POSITION_SCHEMA: BlokSchema = {
   ],
 };
 
+/**
+ * Runtimes whose applier runs a tool's prepareInsert. Only the editor has the tool class; a headless
+ * runtime cannot make what the hook makes (a page's document), so a type that needs it is not insertable there.
+ * Keep in step with AgentApplier.prepareInsert (src/shared/agent/executor.ts).
+ */
+export const PREPARES_INSERT: Readonly<Record<ContractWhere['runtime'], boolean>> = {
+  editor: true, node: false, jint: false, 'node-live': false, 'csharp-live': false,
+};
+
+const insertableHere = (
+  block: BlockToolManifestEntry,
+  where: ContractWhere
+): Pick<BlockToolManifestEntry, 'insertable' | 'insertUnavailableReason'> => (
+  block.insertable && (block.insertRequires?.length ?? 0) > 0 && !PREPARES_INSERT[where.runtime]
+    ? { insertable: false, insertUnavailableReason: 'runtime' }
+    : { insertable: block.insertable }
+);
+
 // Jint calls and live rooms have no session-local undo history.
 const UNDO_COMMANDS = new Set(['history.undo', 'history.redo']);
 const UNDO_RUNNERS = new Set<ContractWhere['runtime']>(['editor', 'node']);
@@ -419,7 +437,7 @@ const withTypeDescription = (args: BlokSchema, blocks: BlokToolManifest['blocks'
 
 const typedArgs = (name: string, args: BlokSchema, manifest: BlokToolManifest): BlokSchema => {
   if (name === 'block.insert') {
-    return withTypeDescription(args, manifest.blocks);
+    return withTypeDescription(args, manifest.blocks.filter(block => block.insertable));
   }
   if (name === 'block.convert') {
     const targets = new Set(manifest.blocks.flatMap(block => block.convertsTo));
@@ -468,11 +486,12 @@ const specializeMarks = (schema: BlokSchema, marks: BlokSchema | null): BlokSche
 };
 
 export const buildAgentContract = (
-  manifest: BlokToolManifest,
+  given: BlokToolManifest,
   core: CoreCommandTable,
   where: ContractWhere,
   general = RICH_TEXT_PRIMER
 ): AgentContract => {
+  const manifest = { ...given, blocks: given.blocks.map(block => ({ ...block, ...insertableHere(block, where) })) };
   const customMarks = customMarkProperties(manifest);
   const marks: BlokSchema | null = Object.keys(customMarks).length === 0
     ? null

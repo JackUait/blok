@@ -33,6 +33,9 @@ export interface PlannerToolEntry {
   data: JsonSchema;
   defaultData?: Record<string, unknown>;
   insertRequires?: string[];
+  /** Optional so hand-built entries may leave it out; only false refuses block.insert. */
+  insertable?: boolean;
+  insertUnavailableReason?: 'runtime';
   variants?: Array<{ name: string; title: string; data: Record<string, unknown> }>;
 }
 

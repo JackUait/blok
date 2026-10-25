@@ -20,6 +20,8 @@ export interface BlockToolManifestEntry {
   guidance?: string;
   level: 'described' | 'structural';
   insertable: boolean;
+  /** Why a contract marks a tool not insertable: `runtime` when it needs prepareInsert, which only the editor runs. */
+  insertUnavailableReason?: 'runtime';
   variants: Array<{ name: string; title: string; data: Record<string, unknown> }>;
   data: BlokSchema;
   defaultData?: Record<string, unknown>;

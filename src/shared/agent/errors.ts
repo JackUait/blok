@@ -73,3 +73,8 @@ export const withOthers = (primary: AgentError, others: readonly AgentProblem[])
 
   return { ...error, message: `${error.message} ${count}${where}. Fix them all, then retry.`, others: listed };
 };
+
+/** Why block.insert of a type with a prepareInsert hook fails outside the editor. */
+export const notPreparedHere = (type: string): string => `This runtime cannot insert "${type}": ${type === 'page'
+  ? 'a new page needs its own document, and only the editor\'s page tool can create one'
+  : 'its tool prepares the block first (prepareInsert), and only the editor runs that'}.`;

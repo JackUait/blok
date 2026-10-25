@@ -5,6 +5,7 @@ import { PREPARE_PENDING } from './plan-state';
 import { createActionContext } from './tool-action-context';
 import { matchVariants, titleSentence, variantSentence } from './variant-hint';
 import { cloneRecord } from './snapshot';
+import { notPreparedHere } from './errors';
 
 import type { AgentBatch, Edit, InsertSpec, PlannedBlock } from '../../../types/agent';
 import type { Refusal } from './placement-rules';
@@ -303,6 +304,15 @@ export const withRequiredDefaults = (
   return filled.length === 0 ? data : { ...Object.fromEntries(filled.map(field => [field, defaults[field]])), ...data };
 };
 
+const refuseInsert = (state: PlanState, entry: PlannerTool['entry'], path: string): never => {
+  if (entry.insertUnavailableReason === 'runtime') {
+    return state.fail('COMMAND_UNAVAILABLE', notPreparedHere(entry.name), path, { reason: 'runtime' });
+  }
+
+  return state.fail('COMMAND_UNAVAILABLE', `"${entry.name}" is not insertable: ${entry.children.annotation === true
+    ? 'people write it in the editor' : 'the host hides it from the toolbox'}.`, path, { reason: 'not-insertable' });
+};
+
 export const failUnknownTool = (state: PlanState, type: string, path: string): never => {
   const known = [...state.ctx.tools.keys()];
   const entries = [...state.ctx.tools.values()].map(tool => tool.entry);
@@ -346,6 +356,11 @@ const buildBlock = (
   }
 
   const tool = state.tool(type) ?? failUnknownTool(state, type, `${path}/type`);
+
+  // The contract's word: a type it calls not insertable never inserts, so describe and the runtime agree.
+  if (coreInsert && tool.entry.insertable === false) {
+    refuseInsert(state, tool.entry, `${path}/type`);
+  }
 
   for (const field of options === undefined ? [] : tool.entry.viewState) {
     if (Object.hasOwn(spec.data ?? {}, field)) {

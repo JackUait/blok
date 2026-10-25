@@ -22,8 +22,13 @@ export const nodeContract = (runtime: 'node' | 'node-live' = 'node'): AgentContr
 
 const NO_SERVICES: HostServices = { names: [], impl: {} };
 
-export const openJsonSession = (seed: OutputData, actor: AgentActor = TEST_ACTOR, services: HostServices = NO_SERVICES) => {
-  const setup = createHeadlessAgentSetup({ runtime: 'node', services: services.names });
+export const openJsonSession = (
+  seed: OutputData,
+  actor: AgentActor = TEST_ACTOR,
+  services: HostServices = NO_SERVICES,
+  customTools?: BlokCustomToolsFile
+) => {
+  const setup = createHeadlessAgentSetup({ runtime: 'node', services: services.names, customTools });
 
   return createDocumentAgentSession({
     document: loadStoredDocument(structuredClone(seed), setup.richTextFieldsFor),
@@ -48,9 +53,10 @@ const storeToOutput = (store: DocumentStore): OutputData => ({
 export const openStoreSession = (
   seed: OutputData,
   actor: AgentActor = TEST_ACTOR,
-  services: HostServices = NO_SERVICES
+  services: HostServices = NO_SERVICES,
+  customTools?: BlokCustomToolsFile
 ): AgentSession & { output(): OutputData } => {
-  const setup = createHeadlessAgentSetup({ runtime: 'node-live', services: services.names });
+  const setup = createHeadlessAgentSetup({ runtime: 'node-live', services: services.names, customTools });
   // Node has no DOM: the serializer's default HTML parser needs one.
   const store = new DocumentStore(new YBlockSerializer({
     htmlToSegments: htmlToSegmentsNode,

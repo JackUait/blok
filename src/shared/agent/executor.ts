@@ -4,9 +4,10 @@ import { viewRows } from './document-view';
 import { checkEnvelope } from './envelope';
 import { preflightProblems } from './batch-preflight';
 import { AgentFailure, failure, notPreparedHere, withOthers } from './errors';
-import { splitCommandName } from './names';
+import { isVersionCommand, splitCommandName } from './names';
 import { PREPARE_PENDING } from './plan-state';
 import { planBatch } from './planner';
+import { runVersionCommand } from './version-history';
 
 import type { AgentActor, AgentBatch, AgentError, AgentErrorCode, AgentResult, AgentWarning, CommandLogEntry } from '../../../types/agent';
 import type { EditStamp } from './json-applier';
@@ -422,6 +423,23 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
 
       return {
         ok: true, revision, results: [{}], refs: {},
+        changed: { created: [], updated: [], moved: [], removed: [] }, warnings,
+      };
+    }
+
+    if (first !== undefined && isVersionCommand(first.name)) {
+      const result = await runVersionCommand(first.name, first.args, input.ctx, () => input.applier.snapshot())
+        .catch((error: unknown) => {
+          throw error instanceof AgentFailure && error.error.commandIndex === undefined
+            ? new AgentFailure({ ...error.error, commandIndex: 0, path: `/commands/0/args${error.error.path ?? ''}` })
+            : error;
+        });
+
+      checkCancel(input.signal);
+      record([result], null);
+
+      return {
+        ok: true, revision: input.applier.revision(), results: [result], refs: {},
         changed: { created: [], updated: [], moved: [], removed: [] }, warnings,
       };
     }

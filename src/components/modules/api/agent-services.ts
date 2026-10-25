@@ -148,6 +148,12 @@ export const createEditorServices = (
     break;
   }
 
+  const versionHistory = config.agent?.versionHistory;
+
+  if (versionHistory !== undefined) {
+    services.versionHistory = versionHistory;
+  }
+
   const uploader = config.uploader;
   const uploadByUrl = uploader?.uploadByUrl;
 

@@ -1,5 +1,5 @@
 import type { BlockPosition } from './api/blocks';
-import type { OutputBlockData } from './data-formats/output-data';
+import type { OutputBlockData, OutputData } from './data-formats/output-data';
 import type { RichText, RichTextMarks } from './rich-text';
 import type { AgentContract, BlockToolManifestEntry, CommandEntry, InlineToolManifestEntry } from './tool-manifest';
 import type { PageIcon } from './tools/page';
@@ -10,7 +10,8 @@ export type CoreCommandName =
   | 'block.convert' | 'block.duplicate'
   | 'text.insert' | 'text.delete' | 'text.replace' | 'text.format'
   | 'markdown.insert' | 'markdown.export'
-  | 'history.undo' | 'history.redo';
+  | 'history.undo' | 'history.redo'
+  | 'history.versions' | 'history.read' | 'history.changes';
 
 export type ToolCommandName = `${string}.${string}`;
 export type CommandName = CoreCommandName | ToolCommandName;
@@ -235,6 +236,31 @@ export type ContractSlice =
   /** An inline tool: its effect names the mark (or embed) a segment writes. */
   | { inlineTool: InlineToolManifestEntry }
   | { command: DescribedCommand };
+
+/** One saved version of a document, as `history.versions` lists it. */
+export interface AgentVersion {
+  /** Opaque id that `history.read` and `history.changes` take. */
+  version: string;
+  /** Unix ms of the version's last edit, or null when unknown. */
+  savedAt: number | null;
+  /** Unix ms of its first edit, or null when unknown. */
+  startedAt?: number | null;
+  /** Who edited in this version, as the host names them. */
+  actors: string[];
+  /** The version is from before the document's history was reset. */
+  beforeReset?: boolean;
+}
+
+/**
+ * A document's saved versions, as a host's version history shows them to its users.
+ * Read-only: restoring a version stays with the user.
+ */
+export interface AgentVersionHistory {
+  /** Newest first; the first one is the current document. `group` is minutes per version. */
+  list(options: { group?: 1 | 15 | 60 }): Promise<AgentVersion[]>;
+  /** One version's saved document, or null when there is no such version. */
+  read(version: string): Promise<OutputData | null>;
+}
 
 export interface AgentSession {
   readonly id: string;

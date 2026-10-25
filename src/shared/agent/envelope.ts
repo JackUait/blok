@@ -1,5 +1,5 @@
 import { AgentFailure, failure, problemOf, warning } from './errors';
-import { carriesRef, splitCommandName } from './names';
+import { carriesRef, splitCommandName, VERSION_COMMANDS } from './names';
 
 import type { AgentBatch, AgentCommand, AgentWarning } from '../../../types/agent';
 import type { PlannerCommand, SchemaValidator } from './types';
@@ -100,6 +100,9 @@ const attempt = <T>(run: () => T): T | AgentFailure => {
   }
 };
 
+// Run before planning, so they cannot share a batch.
+const ALONE_COMMANDS: ReadonlySet<string> = new Set(['history.undo', 'history.redo', ...VERSION_COMMANDS]);
+
 export const checkEnvelope = (
   batch: unknown,
   commands: ReadonlyMap<string, PlannerCommand>,
@@ -128,7 +131,7 @@ export const checkEnvelope = (
   }
 
   entries.forEach(({ command, entry, index }) => {
-    if ((entry.effects === 'host' || command.name === 'history.undo' || command.name === 'history.redo') && list.length > 1) {
+    if ((entry.effects === 'host' || ALONE_COMMANDS.has(command.name)) && list.length > 1) {
       problems.push(failure('INVALID_ARGS', `"${command.name}" must be the only command in its batch. Send the other commands in a separate execute call.`, {
         commandIndex: index, path: `/commands/${index}/name`,
       }));

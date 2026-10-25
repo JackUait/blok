@@ -20,7 +20,7 @@ describe('published agent types', () => {
     vi.restoreAllMocks();
   });
 
-  it('names every core command from 06 §3.1', () => {
+  it('names every core command from 06 §3.1, plus the version-history reads', () => {
     expectTypeOf<CoreCommandName>().toEqualTypeOf<
       | 'doc.read' | 'doc.find' | 'doc.setTitle' | 'doc.setIcon'
       | 'block.insert' | 'block.update' | 'block.delete' | 'block.move'
@@ -28,6 +28,7 @@ describe('published agent types', () => {
       | 'text.insert' | 'text.delete' | 'text.replace' | 'text.format'
       | 'markdown.insert' | 'markdown.export'
       | 'history.undo' | 'history.redo'
+      | 'history.versions' | 'history.read' | 'history.changes'
     >();
     expectTypeOf<'caret.set'>().not.toMatchTypeOf<CoreCommandName>();
   });

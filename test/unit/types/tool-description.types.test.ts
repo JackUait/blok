@@ -53,7 +53,7 @@ describe('published tool description types', () => {
 
   it('keeps schemas readonly and host services closed', () => {
     expectTypeOf<BlokSchema>().toEqualTypeOf<{ readonly [keyword: string]: unknown }>();
-    expectTypeOf<HostService>().toEqualTypeOf<'uploader' | 'linkMetadata' | 'pageBackend' | 'host'>();
+    expectTypeOf<HostService>().toEqualTypeOf<'uploader' | 'linkMetadata' | 'pageBackend' | 'host' | 'versionHistory'>();
   });
 
   it('declares action schemas, targets, runtime and host dependencies', () => {

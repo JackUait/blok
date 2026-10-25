@@ -113,6 +113,21 @@ const registryCases: RegistryCase[] = [
     valid: [{}],
     invalid: [{ id: 'a' }],
   },
+  {
+    name: 'history.versions', readOnly: true,
+    valid: [{}, { group: 15 }],
+    invalid: [{ group: 5 }, { version: 'L:1' }],
+  },
+  {
+    name: 'history.read', readOnly: true,
+    valid: [{ version: 'L:1' }, { version: 'L:1', ids: ['a'], detail: 'full' }],
+    invalid: [{}, { version: '' }, { version: 'L:1', group: 1 }],
+  },
+  {
+    name: 'history.changes', readOnly: true,
+    valid: [{ from: 'L:1' }, { from: 'L:1', to: 'L:3' }],
+    invalid: [{}, { to: 'L:3' }, { from: 'L:1', since: 0 }],
+  },
 ];
 
 const fails = (
@@ -159,11 +174,11 @@ afterEach(() => {
 });
 
 describe('COMMANDS', () => {
-  it('exposes exactly the 18 public core command names', () => {
+  it('exposes exactly the 21 public core command names', () => {
     expect(Object.keys(COMMANDS).sort()).toStrictEqual([
       'block.convert', 'block.delete', 'block.duplicate', 'block.insert', 'block.move', 'block.update',
       'doc.find', 'doc.read', 'doc.setIcon', 'doc.setTitle',
-      'history.redo', 'history.undo', 'markdown.export', 'markdown.insert',
+      'history.changes', 'history.read', 'history.redo', 'history.undo', 'history.versions', 'markdown.export', 'markdown.insert',
       'text.delete', 'text.format', 'text.insert', 'text.replace',
     ]);
   });
@@ -512,6 +527,7 @@ describe('checkEnvelope', () => {
   it.each([
     { name: 'history.undo', index: 0 }, { name: 'history.undo', index: 1 },
     { name: 'history.redo', index: 0 }, { name: 'history.redo', index: 1 },
+    { name: 'history.versions', index: 0 }, { name: 'history.versions', index: 1 },
     { name: 'page.rename', index: 0 }, { name: 'page.rename', index: 1 },
   ])('refuses $name mixed with reads at index $index', ({ name, index }) => {
     const commands = coreCommandMap();

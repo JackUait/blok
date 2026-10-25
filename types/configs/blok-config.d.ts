@@ -10,6 +10,7 @@ import type { UserInfo } from './user-info';
 import type { BlokUploader } from './uploader';
 import type { ManifestOverrides } from '../tool-manifest';
 import type { AgentAssistantConfig } from '../api/agent';
+import type { AgentVersionHistory } from '../agent';
 import type { MediaConfig } from './media';
 import type { NotifierPosition, NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions } from './notifier';
 
@@ -1349,6 +1350,13 @@ export interface BlokMountOptions {
      * unless `placeholder` is set) and "Ask AI" in the inline toolbar. Off when absent.
      */
     assistant?: AgentAssistantConfig;
+    /**
+     * This document's saved versions, as your version history shows them to
+     * users. With it, agents can list versions, read one, and see what
+     * changed (`history.versions`, `history.read`, `history.changes`).
+     * Without it those commands are unavailable. Agents never restore a version.
+     */
+    versionHistory?: AgentVersionHistory;
   };
 
   /**

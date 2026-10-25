@@ -1,4 +1,5 @@
 import type { CoreCommandName } from '../../../types/agent';
+import type { HostService } from '../../../types/tools/tool-description';
 import { EMBED_SEGMENT, RICH_TEXT_MARKS, TEXT_SEGMENT } from '../tool-descriptions/rich-text';
 import type { JsonSchema } from './types';
 
@@ -9,6 +10,8 @@ export interface CoreCommandSpec {
   runtime: 'any' | 'editor';
   summary: string;
   guidance?: string;
+  /** A missing service makes the command unavailable. */
+  requires?: HostService[];
 }
 
 const id: JsonSchema = { type: 'string', minLength: 1, description: 'A block id, or "$" plus the ref of a block an earlier command created.' };
@@ -62,12 +65,17 @@ const write = (summary: string, argsSchema: JsonSchema, guidance?: string): Core
   ({ argsSchema, readOnly: false, runtime: 'any', summary, ...(guidance === undefined ? {} : { guidance }) });
 const read = (summary: string, argsSchema: JsonSchema): CoreCommandSpec =>
   ({ argsSchema, readOnly: true, runtime: 'any', summary });
+const versionRead = (summary: string, argsSchema: JsonSchema, guidance: string): CoreCommandSpec =>
+  ({ ...read(summary, argsSchema), guidance, requires: ['versionHistory'] });
+const READ_ARGS: Record<string, JsonSchema> = {
+  rootId: parentId, depth: { type: 'integer', minimum: 0 }, ids: { type: 'array', items: id }, detail: { enum: ['outline', 'full'] },
+  limit: { type: 'integer', minimum: 1, maximum: 1000 }, cursor: { type: 'string' }, textLimit: { type: 'integer', minimum: 0 },
+};
+const version: JsonSchema = { type: 'string', minLength: 1, description: 'A version from history.versions.' };
+const from: JsonSchema = { ...version, description: 'The older version, from history.versions.' };
 
 export const COMMANDS: Record<CoreCommandName, CoreCommandSpec> = {
-  'doc.read': read('Read the document as an outline, a subtree, or chosen blocks in full.', obj({
-    rootId: parentId, depth: { type: 'integer', minimum: 0 }, ids: { type: 'array', items: id }, detail: { enum: ['outline', 'full'] },
-    limit: { type: 'integer', minimum: 1, maximum: 1000 }, cursor: { type: 'string' }, textLimit: { type: 'integer', minimum: 0 },
-  })),
+  'doc.read': read('Read the document as an outline, a subtree, or chosen blocks in full.', obj(READ_ARGS)),
   'doc.find': read('Find text as the find bar does: every hit with its field and offsets, and a count. Or list blocks by type.', obj({
     text: { type: 'string', minLength: 1 }, ...FIND_OPTIONS, type: { type: 'string' }, rootId: id, limit: { type: 'integer', minimum: 1 },
   })),
@@ -128,4 +136,12 @@ export const COMMANDS: Record<CoreCommandName, CoreCommandSpec> = {
   'markdown.export': read('Export the document or a subtree as Markdown.', obj({ rootId: id })),
   'history.undo': write("Undo this session's last step. Never the user's. A page.rename or page.setIcon step wrote another document and cannot be undone.", obj({})),
   'history.redo': write("Redo this session's last undone step.", obj({})),
+  'history.versions': versionRead('List the saved versions of this document, newest first, with who edited and when.', obj({
+    group: { enum: [1, 15, 60], description: 'Minutes per version.' },
+  }), 'The first version is what the document is now. Read-only: the user restores a version, never the agent.'),
+  'history.read': versionRead('Read one saved version, in the shape doc.read gives.', obj({ version, ...READ_ARGS }, ['version']),
+    'Block ids are the ids the version had. Never pass the result as expectRevision.'),
+  'history.changes': versionRead('What changed between two versions: added, removed, changed and moved blocks.', obj({
+    from, to: { ...version, description: 'Omit it to compare with the document as it is now.' },
+  }, ['from']), "To see one version's own edits, pass the version listed after it as from and the version as to."),
 };

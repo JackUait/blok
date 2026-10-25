@@ -487,6 +487,9 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'key:TAB': cmd('block.move'),
   'key:/': exempt('gesture-alias', 'Opens the toolbox, which inserts a block: the same effect as insert:paragraph and the other insert ids.'),
   'key:Mod+/': exempt('chrome', 'Opens the block settings menu; each item there has its own tune or menu id.'),
+  // No row can name the version history: it is the host's UI (src/playground/history-drawer.ts) over the
+  // sync server, and the scan reads only src/tools, keys and types/api/blocks.d.ts. history.versions,
+  // history.read and history.changes cover it; restore stays with the user.
   'key:Mod+Z': cmd('history.undo'),
   'key:Mod+Shift+Z': cmd('history.redo'),
   'key:Ctrl+Y': cmd('history.redo'),

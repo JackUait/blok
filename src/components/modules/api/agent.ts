@@ -356,7 +356,7 @@ export class AgentAPI extends Module {
     // Keep tool definitions and every session on the same live source.
     this.contractSource ??= liveContractSource(this.Blok, {
       services: Object.keys(this.services()).filter((name): name is HostService =>
-        name === 'uploader' || name === 'linkMetadata' || name === 'pageBackend'
+        name === 'uploader' || name === 'linkMetadata' || name === 'pageBackend' || name === 'versionHistory'
       ),
       overrides: this.config.agent?.overrides,
     });

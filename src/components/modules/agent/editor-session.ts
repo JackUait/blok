@@ -60,7 +60,8 @@ export const createEditorAgentSession = (
   const id = `editor-session-${++editorSessions.count}`;
   const services: Partial<Record<HostService, unknown>> = options.services ?? {};
   const serviceNames = Object.keys(services).filter((name): name is HostService =>
-    (name === 'uploader' || name === 'linkMetadata' || name === 'pageBackend' || name === 'host') && services[name] !== undefined
+    (name === 'uploader' || name === 'linkMetadata' || name === 'pageBackend' || name === 'host' || name === 'versionHistory')
+    && services[name] !== undefined
   );
   const source = options.contractSource ?? liveContractSource(editor, { services: serviceNames });
   const ports = createEditorPorts(editor);

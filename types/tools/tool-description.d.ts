@@ -6,8 +6,11 @@ import type { ToolConfig } from './tool-config';
 /** Only Blok schema-profile keywords are valid. */
 export type BlokSchema = { readonly [keyword: string]: unknown };
 
-/** 'host' covers custom prepareInsert needs that Blok cannot inspect. */
-export type HostService = 'uploader' | 'linkMetadata' | 'pageBackend' | 'host';
+/**
+ * 'host' covers custom prepareInsert needs that Blok cannot inspect.
+ * 'versionHistory' serves the history.versions, history.read and history.changes commands.
+ */
+export type HostService = 'uploader' | 'linkMetadata' | 'pageBackend' | 'host' | 'versionHistory';
 
 export interface ToolActionDeclaration {
   /** camelCase; core prefixes the registry key. */

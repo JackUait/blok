@@ -331,6 +331,7 @@ export type CoreCommandTable = Readonly<Record<string, {
   runtime: 'any' | 'editor';
   summary: string;
   guidance?: string;
+  requires?: HostService[];
 }>>;
 
 export interface ContractWhere {
@@ -507,6 +508,8 @@ export const buildAgentContract = (
 
     const runtimeBlocked = (command.runtime === 'editor' && where.runtime !== 'editor')
       || (UNDO_COMMANDS.has(name) && !UNDO_RUNNERS.has(where.runtime));
+    const serviceMissing = !runtimeBlocked
+      && (command.requires ?? []).some(service => !where.services.includes(service));
 
     return {
       name,
@@ -517,8 +520,10 @@ export const buildAgentContract = (
       readOnly: command.readOnly,
       runtime: command.runtime,
       source: 'core',
-      available: !runtimeBlocked,
+      ...(command.requires === undefined ? {} : { requires: command.requires }),
+      available: !runtimeBlocked && !serviceMissing,
       ...(runtimeBlocked ? { unavailableReason: 'runtime' } : {}),
+      ...(serviceMissing ? { unavailableReason: 'service' } : {}),
     };
   });
 

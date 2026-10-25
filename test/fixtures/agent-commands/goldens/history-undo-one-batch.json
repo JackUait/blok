@@ -1,0 +1,30 @@
+{
+  "reviewed": "askai-lane, pending JackUait",
+  "document": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "keep"
+            }
+          ]
+        }
+      },
+      {
+        "lastEditedBy": "agent-test",
+        "id": "a",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "first"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -137,7 +137,7 @@ const boot = async (): Promise<BlokModules> => {
 const openSession = (
   editor: BlokModules,
   options: { mergeSteps?: 'batch' | 'turn' } = {}
-): AgentSession => {
+): AgentSession & { sealSteps(): void } => {
   const session = createEditorAgentSession(editor, actor, options);
 
   sessions.push(session);
@@ -259,11 +259,38 @@ describe('agent turn merge through real Core modules', () => {
     expect(saved(editor)).toEqual(original);
     expect(editor.YjsManager.canUndo()).toBe(false);
     expect(editor.YjsManager.topUndoToken()).toBeUndefined();
-    expect(secondToken).toBe(firstToken);
+    // The batches stay separate steps until the user's undo joins them.
+    expect(secondToken).not.toBe(firstToken);
     expect(editor.YjsManager.topRedoToken()).toBe(firstToken);
     expect(editor.YjsManager.undoStepTag(editor.YjsManager.topRedoToken())).toEqual({
       actorId: actor.id, sessionId: session.id,
     });
+  }, 60_000);
+
+  it('history.undo takes back one batch of a turn, and a human gesture joins the rest into one step', async () => {
+    const editor = await boot();
+    const session = openSession(editor, { mergeSteps: 'turn' });
+
+    const tokens = [];
+
+    for (const id of ['a', 'b', 'c']) {
+      expect(await session.execute({ commands: [
+        { name: 'block.insert', args: { id, type: 'paragraph', position: 'end', data: { text: id.toUpperCase() } } },
+      ] })).toMatchObject({ ok: true });
+      await settle(editor);
+      tokens.push(editor.YjsManager.topUndoToken());
+      await nextTask();
+    }
+    expect(await session.execute({ commands: [{ name: 'history.undo', args: {} }] })).toMatchObject({ ok: true });
+    await settle(editor);
+    expect(saved(editor)).toEqual(withAB);
+
+    editor.YjsManager.beginGesture('discrete');
+    expect(editor.YjsManager.topUndoToken()).toBe(tokens[0]);
+    editor.YjsManager.undo();
+    await settle(editor);
+    expect(saved(editor)).toEqual(original);
+    expect(editor.YjsManager.canUndo()).toBe(false);
   }, 60_000);
 
   it('R-U3: a human gesture splits the turn even without a content write', async () => {
@@ -632,6 +659,7 @@ describe('agent turn merge through real Core modules', () => {
       expect(blockHolder?.parentElement).toBe(editor.UI.nodes.redactor);
     }
 
+    session.sealSteps();
     const otherSession = openSession(editor, { mergeSteps: 'turn' });
     const tokenBeforeOtherUndo = editor.YjsManager.topUndoToken();
     const otherUndo = await otherSession.execute({ commands: [{ name: 'history.undo', args: {} }] });
@@ -770,6 +798,7 @@ describe('agent turn merge through real Core modules', () => {
     expect(editor.YjsManager.getBlockPlacement('b')).toEqual({ parentId: null, afterId: 'a' });
     expect(result).toMatchObject({ ok: false, error: { code: 'APPLY_FAILED' } });
     expect(sawPartial).toBe(true);
+    session.sealSteps();
     expect(editor.YjsManager.topUndoToken()).toBe(token);
     expect(editor.YjsManager.undoStepTag(editor.YjsManager.topUndoToken())).toEqual({
       actorId: actor.id, sessionId: session.id,
@@ -1001,6 +1030,7 @@ describe('agent turn merge through real Core modules', () => {
       { id: 'a', type: 'paragraph', text: [{ text: 'A' }] },
       { id: 'b', type: 'paragraph', text: [{ text: 'B' }] },
     ]);
+    session.sealSteps();
     expect(editor.YjsManager.topUndoToken()).toBe(firstToken);
     const undone = await session.execute({ commands: [{ name: 'history.undo', args: {} }] });
 
@@ -1357,6 +1387,7 @@ describe('agent turn merge through real Core modules', () => {
     ] })).toMatchObject({ ok: true });
     await settle(editor);
     expect(saved(editor)).toEqual(afterTurn);
+    session.sealSteps();
     expect(editor.YjsManager.topUndoToken()).toBe(token);
     await nextTask();
     editor.API.methods.blocks.moveTo('r', { parentId: null, position: 'start' });

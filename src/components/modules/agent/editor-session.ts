@@ -56,7 +56,7 @@ export const createEditorAgentSession = (
     onPrepared?(type: string, data: Record<string, unknown>): void;
     onPagePointed?(pageId: string): void;
   } = {}
-): AgentSession => {
+): AgentSession & { sealSteps(): void } => {
   const id = `editor-session-${++editorSessions.count}`;
   const services: Partial<Record<HostService, unknown>> = options.services ?? {};
   const serviceNames = Object.keys(services).filter((name): name is HostService =>
@@ -102,6 +102,8 @@ export const createEditorAgentSession = (
       batch, ctx: context(), applier, actor, signal: opts.signal, log, batchNo: ++state.batchNo,
     }),
     log: () => [...log],
+    // mergeSteps 'turn': join this turn's batch steps into one native step now.
+    sealSteps: () => applier.seal(),
     close: () => applier.dispose(),
   };
 };

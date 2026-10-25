@@ -368,6 +368,9 @@ export class UndoHistory {
     // No-op until YjsManager wires the write buffer.
   };
 
+  /** Runs as a gesture starts, before it closes the open step. */
+  private beforeGestureHook: () => void = () => undefined;
+
   constructor(
     scope: UndoScopeType[],
     blok: BlokModules
@@ -1218,6 +1221,10 @@ export class UndoHistory {
    */
   public setFlushPendingWritesHook(hook: () => void): void {
     this.flushPendingWritesHook = hook;
+  }
+
+  public setBeforeGestureHook(hook: () => void): void {
+    this.beforeGestureHook = hook;
   }
 
   /**
@@ -2530,6 +2537,7 @@ export class UndoHistory {
       return false;
     }
 
+    this.beforeGestureHook();
     this.gestures++;
     this.gesturesDriveSteps = true;
     this.openGestureTask();

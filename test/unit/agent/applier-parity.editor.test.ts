@@ -2,7 +2,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Core } from '../../../src/components/core';
-import { createEditorAgentSession } from '../../../src/components/modules/agent/editor-session';
+import { createEditorAgentSession, liveContractSource } from '../../../src/components/modules/agent/editor-session';
+import { askAiSessionOptions } from '../../../src/components/modules/api/agent-session-options';
 import { Listeners } from '../../../src/components/utils/listeners';
 import { destroy as destroyTooltip } from '../../../src/components/utils/tooltip';
 import { Audio, Bold, Bookmark, Callout, Code, Column, ColumnList, Database, DatabaseRow, Embed, File, Header, Image, Italic, List, Paragraph, Quote, Table, TabsTool, TabTool, Toggle, Video } from '../../../src/tools';
@@ -235,7 +236,12 @@ describe.each(cases)('editor runner: $name', (c) => {
       throw new Error('Editor parity boot completed after teardown began.');
     }
     const editor = instance.moduleInstances;
-    const activeSession = createEditorAgentSession(editor, actor, { services: hostServicesFor(c).impl });
+    const services = hostServicesFor(c);
+    // Ask AI's own options, so the corpus also checks its per-turn undo merging.
+    const activeSession = createEditorAgentSession(editor, actor, askAiSessionOptions({
+      contractSource: liveContractSource(editor, { services: services.names }),
+      services: services.impl,
+    }));
 
     session = activeSession;
     await settle(editor, activeSession);

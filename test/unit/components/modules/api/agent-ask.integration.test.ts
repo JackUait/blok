@@ -20,6 +20,7 @@ interface TestEditor {
   save: () => Promise<OutputData>;
   agent: Agent;
   blocks: API['blocks'];
+  history: API['history'];
 }
 
 const settle = (ms = 0): Promise<void> => new Promise((resolve) => {
@@ -207,6 +208,40 @@ describe('editor.agent.ask', () => {
     await expect(run.discard()).resolves.toBe(true);
     expect(await texts(editor)).toEqual(['First line here']);
     expect(editor.agent.state.status).toBe('idle');
+  });
+
+  it('the model\'s own history.undo takes back only its last batch, as in MCP', async () => {
+    const undo: AgentModelResponse = { stop_reason: 'tool_use', content: [{
+      type: 'tool_use', id: 'use-undo', name: 'blok_execute', input: { commands: [{ name: 'history.undo', args: {} }] },
+    }] };
+    const editor = await createEditor(scripted(insertBatch('One'), insertBatch('Two'), undo, answer('Done')));
+    const run = editor.agent.ask('Add two, then undo one');
+
+    await run.result;
+    expect(await texts(editor)).toEqual(['First line here', 'One']);
+    run.end();
+  });
+
+  it('one undo after the run takes the whole run back, and one redo after discard() brings it all back', async () => {
+    const editor = await createEditor(scripted(insertBatch('One'), insertBatch('Two'), answer('Done'), insertBatch('Three'), insertBatch('Four'), answer('Done')));
+    const first = editor.agent.ask('Add two');
+
+    await first.result;
+    first.end();
+    editor.history.undo();
+    await settle();
+    expect(await texts(editor)).toEqual(['First line here']);
+
+    editor.history.redo();
+    await settle();
+    const second = editor.agent.ask('Add two more');
+
+    await second.result;
+    await second.discard();
+    expect(await texts(editor)).toEqual(['First line here', 'One', 'Two']);
+    editor.history.redo();
+    await settle();
+    expect(await texts(editor)).toEqual(['First line here', 'One', 'Two', 'Three', 'Four']);
   });
 
   it('followUp() continues the same conversation', async () => {

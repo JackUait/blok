@@ -1,0 +1,69 @@
+{
+  "name": "history-undo-one-batch",
+  "seed": {
+    "blocks": [
+      {
+        "id": "p",
+        "type": "paragraph",
+        "data": {
+          "text": [
+            {
+              "text": "keep"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "batches": [
+    {
+      "commands": [
+        {
+          "name": "block.insert",
+          "args": {
+            "id": "a",
+            "type": "paragraph",
+            "data": {
+              "text": "first"
+            },
+            "position": "end"
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "block.insert",
+          "args": {
+            "id": "b",
+            "type": "paragraph",
+            "data": {
+              "text": "second"
+            },
+            "position": "end"
+          }
+        }
+      ]
+    },
+    {
+      "commands": [
+        {
+          "name": "history.undo",
+          "args": {}
+        }
+      ]
+    }
+  ],
+  "expectByRunner": {
+    "jint": {
+      "errorCode": "COMMAND_UNAVAILABLE"
+    },
+    "store": {
+      "errorCode": "COMMAND_UNAVAILABLE"
+    },
+    "room": {
+      "errorCode": "COMMAND_UNAVAILABLE"
+    }
+  }
+}

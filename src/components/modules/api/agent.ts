@@ -102,6 +102,9 @@ export class AgentAPI extends Module {
 
   private contractSource: ContractSource | null = null;
 
+  /** The open turn's session, for Discard to join its steps. */
+  private turnSession: { sealSteps(): void } | null = null;
+
   private presenceLayer: AgentPresence | null = null;
 
   /** What the open turn changed, for one screen reader summary when it closes. */
@@ -222,6 +225,7 @@ export class AgentAPI extends Module {
     const agent = { id: 'blok-assistant', name };
     const turn = this.begin({ agent }, internal);
     const pagesSaved = this.turnPages;
+    const session = this.turnSession;
 
     return createAgentRun(composeFirstMessage(prompt, place.text, turn.read, place.blockIds), {
       turn,
@@ -237,6 +241,7 @@ export class AgentAPI extends Module {
       },
       changed: () => [...this.turnLog.changed],
       restorePages: () => this.restorePages(pagesSaved),
+      sealSteps: () => session?.sealSteps(),
       onActivity: hooks.onActivity,
       onStream: hooks.onStream,
       onToolDone: hooks.onToolDone,
@@ -370,7 +375,7 @@ export class AgentAPI extends Module {
     const block = this.Blok.BlockManager.getBlockById(blockId);
 
     if (docs === null) {
-      throw new AgentFailure({ code: 'COMMAND_UNAVAILABLE', message: 'This editor cannot open sub-page documents. Omit `page`.', retryable: false });
+      throw new AgentFailure({ code: 'COMMAND_UNAVAILABLE', message: 'This editor cannot open sub-page documents. Omit `page`.', retryable: false, path: '/page' });
     }
     if (block === undefined) {
       throw failure('BLOCK_NOT_FOUND', `No block "${blockId}".`, { details: { blockId } });
@@ -427,6 +432,7 @@ export class AgentAPI extends Module {
         onPagePointed: (pageId) => this.agentPageIds.add(pageId),
       })
     );
+    this.turnSession = session;
     this.turnLog = { agentName: identity.name, changed: new Set<string>() };
 
     const turn = createAgentTurn(session, {
@@ -461,6 +467,7 @@ export class AgentAPI extends Module {
     }
 
     this.current.turn = null;
+    this.turnSession = null;
     this.presence().stop();
 
     const count = this.turnLog.changed.size;

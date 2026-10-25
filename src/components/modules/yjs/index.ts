@@ -82,6 +82,8 @@ export class YjsManager extends Module {
   /** The page map {@link onPageChanged} watches; swapped by a lineage reset. */
   private observedPage: Y.Map<unknown> | null = null;
 
+  private readonly beforeUserStep = new Set<() => void>();
+
   /**
    * Coalescing buffer for typing-driven block data writes (leading + trailing
    * flush on the 400ms mutation batch window). Drained synchronously by
@@ -204,6 +206,7 @@ export class YjsManager extends Module {
     // Barrier inside UndoHistory so the internal 100ms word-boundary timer's
     // stopCapturing also flushes buffered typing writes before splitting.
     this.undoHistory.setFlushPendingWritesHook(() => this.flushPendingBlockWrites());
+    this.undoHistory.setBeforeGestureHook(() => this.beforeUserStep.forEach((listener) => listener()));
 
     // A trailing flush lands up to 400ms after the typing it carries. Anchor
     // the undo captureTimeout at the typing time, not the flush time —
@@ -1006,13 +1009,29 @@ export class YjsManager extends Module {
    * Undo the last operation.
    */
   public undo(): void {
+    this.beforeUserStep.forEach((listener) => listener());
     this.undoHistory.undo();
+  }
+
+  /**
+   * Runs as a gesture or API call starts and before each undo or redo (not
+   * undoStep/redoStep), so an agent turn can join its batch steps into one first.
+   * @param listener - called before the step
+   * @returns stops listening
+   */
+  public onBeforeUserStep(listener: () => void): () => void {
+    this.beforeUserStep.add(listener);
+
+    return () => {
+      this.beforeUserStep.delete(listener);
+    };
   }
 
   /**
    * Redo the last undone operation.
    */
   public redo(): void {
+    this.beforeUserStep.forEach((listener) => listener());
     this.undoHistory.redo();
   }
 

@@ -40,8 +40,16 @@ const rollbackRefused = (error: unknown): Error => {
 export class EditorApplier implements AgentApplier {
   public readonly runtime: 'editor' = 'editor';
   private readonly counter: ReturnType<typeof createRevisionCounter>;
+  /**
+   * mergeSteps 'turn': this turn's batch steps, oldest first, still separate so history.undo
+   * takes back one batch, as in MCP. seal() joins them into one native step.
+   */
+  private run: CaretHistoryEntry[] = [];
+  /** Steps of the run that history.undo took back, newest last, for history.redo. */
+  private undone: CaretHistoryEntry[] = [];
   private lastToken: CaretHistoryEntry | undefined;
   private gesturesAtClose = -1;
+  private readonly stopListening: () => void;
 
   public constructor(
     private readonly Blok: BlokModules,
@@ -58,6 +66,36 @@ export class EditorApplier implements AgentApplier {
     }
   ) {
     this.counter = createRevisionCounter(Blok);
+    // Once the user acts or presses Cmd+Z, the turn so far is one step.
+    this.stopListening = options.mergeSteps === 'turn'
+      ? Blok.YjsManager.onBeforeUserStep(() => {
+        if (!this.applying) {
+          this.seal();
+        }
+      })
+      : () => undefined;
+  }
+
+  /** Joins the run's batch steps into one native step. Undo and Discard then take the turn back at once. */
+  public seal(): void {
+    const { YjsManager } = this.Blok;
+    const tag = { actorId: this.options.actor.id, sessionId: this.options.sessionId };
+
+    while (this.run.length > 1) {
+      const current = this.run[this.run.length - 1];
+      const previous = this.run[this.run.length - 2];
+
+      if (YjsManager.topUndoToken() !== current
+        || !YjsManager.mergeTopUndoSteps(previous, current, { ...tag, gestureCount: YjsManager.gestureCount() })) {
+        break;
+      }
+      this.run.pop();
+      if (this.lastToken === current) {
+        this.lastToken = previous;
+      }
+    }
+    this.run = [];
+    this.undone = [];
   }
 
   public isReadOnly(): boolean {
@@ -111,6 +149,10 @@ export class EditorApplier implements AgentApplier {
     if (!YjsManager.undoStep(token)) {
       throw failure('CONFLICT', 'The last step can no longer be undone. Re-read the document before retrying.');
     }
+    if (this.run.at(-1) === token) {
+      this.run.pop();
+      this.undone.push(token);
+    }
     await this.settle();
   }
 
@@ -127,8 +169,14 @@ export class EditorApplier implements AgentApplier {
     if (YjsManager.undoStepTag(token)?.sessionId !== this.options.sessionId) {
       throw failure('UNDO_NOT_OWN', 'The next redo step is not this session\'s.');
     }
+    const top = YjsManager.topUndoToken();
+
     if (!YjsManager.redoStep(token)) {
       throw failure('CONFLICT', 'The next step can no longer be redone. Re-read the document before retrying.');
+    }
+    if (this.undone.at(-1) === token) {
+      this.undone.pop();
+      this.run = top !== undefined && this.run.at(-1) === top ? [...this.run, token] : [token];
     }
     await this.settle();
   }
@@ -142,11 +190,21 @@ export class EditorApplier implements AgentApplier {
     const previous = YjsManager.topUndoToken();
     const previousTag = YjsManager.undoStepTag(previous);
     const joins = this.options.mergeSteps === 'turn'
-      && previous !== undefined && previous === this.lastToken
+      && previous !== undefined && previous === this.run.at(-1)
       && previousTag?.actorId === tag.actorId && previousTag.sessionId === tag.sessionId
       && YjsManager.gestureCount() === this.gesturesAtClose;
 
-    YjsManager.beginApiCall();
+    if (!joins) {
+      // The user acted since the last batch: that batch's run is a closed step now.
+      this.seal();
+    }
+
+    this.applying = true;
+    try {
+      YjsManager.beginApiCall();
+    } finally {
+      this.applying = false;
+    }
     // Consecutive batches can start in the same gesture task.
     YjsManager.startSubStep();
     BlockManager.beginToolTransaction();
@@ -180,9 +238,12 @@ export class EditorApplier implements AgentApplier {
 
     if (token !== undefined && token !== before) {
       YjsManager.tagTopUndoStep(tag);
-      this.lastToken = joins && previous !== undefined && before === previous
-        && YjsManager.mergeTopUndoSteps(previous, token, { ...tag, gestureCount: gesturesAtOpen })
-        ? previous : token;
+      this.undone = [];
+      // A gesture during the batch leaves what came before as its own step.
+      const stillJoins = joins && before === previous && YjsManager.gestureCount() === gesturesAtOpen;
+
+      this.run = stillJoins ? [...this.run, token] : [token];
+      this.lastToken = token;
       this.gesturesAtClose = YjsManager.gestureCount();
     }
   }
@@ -260,6 +321,8 @@ export class EditorApplier implements AgentApplier {
   }
 
   public dispose(): void {
+    this.seal();
+    this.stopListening();
     this.counter.dispose();
   }
 

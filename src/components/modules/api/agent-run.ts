@@ -25,6 +25,8 @@ export interface AgentRunDeps {
   changed(): string[];
   /** Discard: write back each sub-page document the run saved. True when there was one. */
   restorePages?(): Promise<boolean>;
+  /** Discard: join the run's batch steps first, so one redo brings the whole run back. */
+  sealSteps?(): void;
   /** Read once per prompt, so a run already answering keeps its level. */
   thinking(): AgentThinkingLevel | undefined;
   /** What the run does now, for the prompt bar's status line. */
@@ -144,6 +146,7 @@ export function createAgentRun(prompt: string | Promise<string>, deps: AgentRunD
       state.controller?.abort();
       await state.result;
 
+      deps.sealSteps?.();
       const undone = { count: 0 };
 
       // Each successful batch can be its own step when the user acted between them.

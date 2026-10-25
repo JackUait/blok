@@ -80,7 +80,7 @@ describe('Ask AI skills law: Ask AI and MCP offer the same skills', () => {
 
   it.each(pairs)('MCP prompt $id for a $context carries the shared prompt', async ({ id, context, prompt }) => {
     await withClient(async client => {
-      const args = context === 'selection' ? { selection: 'Teh cat sat.', blockId: 'b1' } : { blockId: 'b1' };
+      const args: Record<string, string> = context === 'selection' ? { selection: 'Teh cat sat.', blockId: 'b1' } : { blockId: 'b1' };
       const result = await client.getPrompt({ name: id, arguments: { documentId: 'doc-1', ...args } }, REQ);
       const text = result.messages.map(message => (message.content.type === 'text' ? message.content.text : '')).join('\n');
 

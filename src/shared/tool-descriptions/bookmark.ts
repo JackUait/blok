@@ -18,9 +18,10 @@ export const BOOKMARK_DATA = {
 export const BOOKMARK_ACTIONS: ToolActionDeclaration[] = [
   {
     name: 'create',
-    summary: 'Create a link preview card. The host fetches its title, description and image.',
+    summary: 'Create a link preview card. When the host fetches link previews, it fills the title, description and image.',
     target: 'create',
-    requires: ['linkMetadata'],
+    // Without the service the card keeps just the url, so the command works everywhere.
+    uses: ['linkMetadata'],
     args: {
       type: 'object',
       required: ['url'],

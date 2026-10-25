@@ -45,10 +45,11 @@ describe('bookmark.create', () => {
     expect(ctx.read(id)).toMatchObject({ type: 'card', data: { url: 'https://a.b' } });
   });
 
-  it('is declared as a create action that requires link metadata, and wired', () => {
+  it('is declared as a create action that uses link metadata when present, and wired', () => {
     const action = describeBookmark().actions?.find(candidate => candidate.name === 'create');
 
-    expect(action).toMatchObject({ target: 'create', requires: ['linkMetadata'] });
+    expect(action).toMatchObject({ target: 'create', uses: ['linkMetadata'] });
+    expect(action).not.toHaveProperty('requires');
     expect(validateAgainst(action?.args ?? {}, { url: 'https://a.b' })).toEqual([]);
     expect(validateAgainst(action?.args ?? {}, { url: 'ftp://a.b' }).length).toBeGreaterThan(0);
     expect(BUILT_IN_TOOL_RUNTIMES.get('bookmark')?.actions.create).toBe(LINK_ACTION_HANDLERS.bookmark.create);

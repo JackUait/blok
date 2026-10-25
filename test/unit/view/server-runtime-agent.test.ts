@@ -225,7 +225,10 @@ describe('server runtime agentExecute', () => {
       ...before,
       blocks: [
         ...before.blocks,
-        { id: 'q', type: 'quiz', data: { score: 1 }, lastEditedBy: actor.id, lastEditedAt: 1234 },
+        {
+          id: 'q', type: 'quiz', data: { score: 1 },
+          createdBy: actor.id, createdAt: 1234, lastEditedBy: actor.id, lastEditedAt: 1234,
+        },
       ],
     };
     const expectedEdits: Edit[] = [{

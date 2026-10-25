@@ -157,13 +157,16 @@ describe('new sub-pages through page-map', () => {
     expect(JSON.stringify(outcome)).toContain('--page-titles page-map');
   });
 
-  it('tells the agent how to make a sub-page only where it can, not with a sync service, which owns every document', async () => {
+  it('tells the agent how to make a sub-page in stored mode and next to a sync service, and not without page-map', async () => {
     const live = pageMap({ sync: { url: 'wss://sync.test/sync' }, tickets: { kind: 'secret', secret: 'x'.repeat(32) } });
+    const off = assembleMcp({ transport: { kind: 'stdio' }, auth: { kind: 'none' }, sync: { url: 'wss://sync.test/sync' } });
 
     try {
-      expect(live.instructions).not.toContain(PAGE_CREATE_RULE);
+      expect(live.instructions).toContain(PAGE_CREATE_RULE);
+      expect(off.instructions).not.toContain(PAGE_CREATE_RULE);
     } finally {
       await live.stop();
+      await off.stop();
     }
     mcp = pageMap();
     expect(mcp.instructions).toContain(PAGE_CREATE_RULE);

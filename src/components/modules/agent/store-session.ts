@@ -2,7 +2,7 @@ import { agentAttribution } from '../../../shared/agent/attribution';
 import { plannerContextFrom } from '../../../shared/agent/context';
 import { describeContract } from '../../../shared/agent/describe';
 import { buildDocumentView } from '../../../shared/agent/document-view';
-import { createPageMapBackend } from '../../../shared/agent/document-session';
+import { createPageMapBackend, pagePrepareInsert } from '../../../shared/agent/document-session';
 import { checkEnvelope } from '../../../shared/agent/envelope';
 import { runBatch } from '../../../shared/agent/executor';
 import { validateAgainst } from '../../../shared/schema/validate';
@@ -27,10 +27,12 @@ export const createStoreAgentSession = (input: {
   richTextFieldsFor(type: string): string[];
 }): AgentSession => {
   const id = `store-session-${++storeSessions.count}`;
+  const createPage = input.pageTitles === 'page-map' ? input.ports.createPageDocument : undefined;
   const applier = new StoreApplier(input.store, {
     attribution: agentAttribution(input.actor),
     richTextFieldsFor: input.richTextFieldsFor,
     htmlToSegments: input.ports.htmlToSegments,
+    ...(createPage !== undefined && { prepareInsert: pagePrepareInsert(createPage, input.actor) }),
   });
   const services: Partial<Record<string, unknown>> = { ...(input.services ?? {}) };
 

@@ -155,9 +155,12 @@ Stored mode is refused when `--sync-url` is set. A sync service owns those docum
   - It runs before every open, and again on each later call.
   - `blok_list_documents` shows only the documents it allows the caller to read. Without it, the list is unfiltered.
 - `--page-titles page-map` lets agents rename other pages and set their icons. It shows up only if your host reads each page's title from that page document's title.
-  - In stored mode it also lets agents make sub-pages. Inserting a page block saves an empty document under a new id, and the block's `data.pageId` names it. The agent then names it with `page.rename` and fills it with `blok_open`.
-  - The new id must pass `--authorize` as a write first. If it does not, nothing is saved and the insert fails with `FORBIDDEN`.
-  - With `--sync-url` a page block is not insertable. The sync service owns every document, so the server cannot create one.
+  - It also lets agents make sub-pages. Inserting a page block creates a document under a new id, and the block's `data.pageId` names it. The agent then names it with `page.rename` and fills it with `blok_open`.
+  - The new id must pass `--authorize` as a write first. If it does not, nothing is created and the insert fails with `FORBIDDEN`.
+  - In stored mode the server saves an empty document there.
+  - With `--sync-url` the server joins the new page's room once and leaves. The sync service loads it empty and seeds it, so its ticket and `IBlokAuthorization` must let the agent open an id it has never seen, and your document endpoint must answer `null` for it. If the room is refused, the insert fails with `FORBIDDEN` or `SOURCE_UNAVAILABLE`.
+  - In live mode your document endpoint gets no PUT for the new page yet. It gets one when someone writes in the page, or under a journal when the room is opened again.
+  - The document stays, empty, if the batch fails after it was made or the insert is undone. When a later command in that batch fails, `error.details.orphaned` lists it. A save or a room that refuses the batch does not. Delete it yourself if you do not want it.
 
 ## Custom tools
 
@@ -211,7 +214,7 @@ Pass a value as the next argument: `--auth oauth`, not `--auth=oauth`. An unknow
 | `--manifest <file>` | | none | Custom block and inline tools. |
 | `--manifest-overrides <file>` | | none | Tool and action overrides. |
 | `--rich-text-fields <json>` | `BLOK_RICH_TEXT_FIELDS` | none | Rich text fields for unknown block types. |
-| `--page-titles off\|page-map` | | `off` | Headless page rename and icon, and new sub-pages in stored mode. |
+| `--page-titles off\|page-map` | | `off` | Headless page rename and icon, and new sub-pages. |
 | `--schema mixed\|envelope\|full` | | `mixed` | How `blok_execute` describes its commands. `mixed` gives the full arguments of the common commands, so the model needs no `blok_describe` call for them. |
 | `--handle-idle-ms <ms>` | | `600000` | Idle time before a handle expires. |
 | `--max-handles <n>` | | `8` | Open handles per principal. |

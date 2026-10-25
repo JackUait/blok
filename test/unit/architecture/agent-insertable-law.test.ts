@@ -4,6 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { decode, encode } from '../../../src/components/modules/collaboration/sync-wire';
+import type { CollabSocketFactory, SyncWireFrame, WebSocketLike } from '../../../src/components/modules/collaboration/types';
 import { buildMcpContracts } from '../../../src/mcp/contract';
 import type { Caller } from '../../../src/mcp/dispatcher';
 import { assembleMcp } from '../../../src/mcp/server';
@@ -122,6 +124,90 @@ describe('blok-mcp stored with --page-titles page-map creates page documents', (
       expect(opened.contractRevision).toBe(stored.revision);
       expect(stored.manifest.blocks.find(block => block.name === 'page')?.insertable).toBe(true);
       expect(outcomes).toEqual(Object.fromEntries(stored.manifest.blocks.map(block => [block.name, block.insertable ? 'ok' : 'COMMAND_UNAVAILABLE'])));
+    } finally {
+      await mcp.stop();
+    }
+  }, 60_000);
+});
+
+/** A sync service whose every room opens empty and acknowledges each operation. */
+class EmptyRoomSocket implements WebSocketLike {
+  public binaryType = 'blob';
+  public readyState = 0;
+  public protocol = '';
+  public onopen: ((event: unknown) => void) | null = null;
+  public onmessage: ((event: { data: unknown }) => void) | null = null;
+  public onclose: ((event: { code: number; reason: string }) => void) | null = null;
+  public onerror: ((event: unknown) => void) | null = null;
+  private sequence = 0;
+
+  public send(data: ArrayBufferLike | ArrayBufferView): void {
+    const bytes = ArrayBuffer.isView(data) ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength) : new Uint8Array(data);
+    const frame = decode(bytes);
+
+    if (frame.type === 'operation') {
+      this.sequence += 1;
+      const ack: SyncWireFrame = { type: 'acknowledgement', lineage: frame.lineage, operationId: frame.operationId, serverSequence: String(this.sequence) };
+
+      queueMicrotask(() => this.deliver(ack));
+    }
+  }
+
+  public close(): void {
+    this.readyState = 3;
+  }
+
+  public deliver(frame: SyncWireFrame): void {
+    this.onmessage?.({ data: encode(frame).slice().buffer });
+  }
+}
+
+const emptyRooms: CollabSocketFactory = () => {
+  const socket = new EmptyRoomSocket();
+
+  queueMicrotask(() => {
+    socket.readyState = 1;
+    socket.protocol = 'blok-sync.v2';
+    socket.onopen?.({});
+    socket.deliver({ type: 'control', tag: { format: 2, epoch: 0, lineage: '0123456789abcdef0123456789abcdef' } });
+    socket.deliver({ type: 'syncStep2', update: new Uint8Array([0, 0]) });
+  });
+
+  return socket;
+};
+
+describe('blok-mcp live with --page-titles page-map creates page documents', () => {
+  const caller: Caller = { principal: 'alice', clientName: 'law', scopes: null };
+  const { live } = buildMcpContracts({ manifest: PREPARED_CUSTOM_TOOLS, pageTitles: 'page-map', createsPages: true });
+
+  it('lists page as insertable and inserts it, with every other type as its contract says', async () => {
+    const mcp = assembleMcp(
+      { transport: { kind: 'stdio' }, auth: { kind: 'none' }, sync: { url: 'wss://sync.test/sync' }, pageTitles: 'page-map', manifest: PREPARED_CUSTOM_TOOLS },
+      { liveSocketFactory: emptyRooms, liveSyncTimeoutMs: 1000 },
+    );
+
+    try {
+      const opened = (await mcp.dispatch('blok_open', { documentId: 'doc', write: true }, caller)).structuredContent;
+      const session = {
+        execute: async (batch: unknown): Promise<AgentResult> => {
+          const answer = (await mcp.dispatch('blok_execute', { handle: opened.handle, commands: typeof batch === 'object' && batch !== null && 'commands' in batch ? batch.commands : [] }, caller)).structuredContent;
+
+          if (!isResult(answer)) {
+            throw new Error(`blok_execute gave no result: ${JSON.stringify(answer)}`);
+          }
+
+          return answer;
+        },
+      };
+      const outcomes: Record<string, string> = {};
+
+      for (const { name } of live.manifest.blocks) {
+        outcomes[name] = await insertOutcome(session, name);
+      }
+
+      expect(opened.contractRevision).toBe(live.revision);
+      expect(live.manifest.blocks.find(block => block.name === 'page')?.insertable).toBe(true);
+      expect(outcomes).toEqual(Object.fromEntries(live.manifest.blocks.map(block => [block.name, block.insertable ? 'ok' : 'COMMAND_UNAVAILABLE'])));
     } finally {
       await mcp.stop();
     }

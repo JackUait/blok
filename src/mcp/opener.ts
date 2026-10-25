@@ -106,17 +106,26 @@ export const createOpener = (
     };
   };
 
-  /** An empty stored document under a fresh id, for a new page block. Authorized like a write open. */
+  /**
+   * A new page's document under a fresh id, authorized like a write open. Stored mode saves an empty
+   * document. Live mode joins the new room once: the sync service seeds it before the join syncs, and
+   * the host's first PUT of it comes later, on an edit or a reopen.
+   */
   const createPage = async (caller: Caller): Promise<{ pageId: string }> => {
     const source = deps.source;
     const pageId = mintId();
 
     try {
-      if (source === null) {
-        throw surfaceError('SOURCE_UNAVAILABLE', 'No document source is configured, so no page document can be created.');
-      }
       if (authorize !== undefined && !(await authorize(caller.principal, pageId, true))) {
         throw surfaceError('FORBIDDEN', 'You may not create a page document here.');
+      }
+      if (syncConfigured) {
+        await createLivePage(pageId, caller);
+
+        return { pageId };
+      }
+      if (source === null) {
+        throw surfaceError('SOURCE_UNAVAILABLE', 'No document source is configured, so no page document can be created.');
       }
       const loaded = await source.load(pageId);
 
@@ -131,6 +140,25 @@ export const createOpener = (
     }
 
     return { pageId };
+  };
+
+  // The join runs the ticket mint and the service's own authorization, and loads the room.
+  const createLivePage = async (pageId: string, caller: Caller): Promise<void> => {
+    if (deps.openLive === undefined) {
+      throw surfaceError('INVALID_ARGS', 'Live mode needs blok-mcp to run with --sync-url.');
+    }
+    const session = await deps.openLive({ documentId: pageId, mode: 'live', write: true }, caller, actorFor(caller));
+
+    try {
+      const view = await session.read({});
+
+      if (view.blocks.length > 0 || view.page?.title !== undefined || view.page?.icon !== undefined) {
+        throw surfaceError('SOURCE_UNAVAILABLE', 'The new page id is taken. Try again.');
+      }
+    } finally {
+      // Awaited: this runs inside blok_execute, so nothing else waits for the socket to close.
+      await session.close('closed').catch((error: unknown) => console.error('blok-mcp: closing a new page room failed', error));
+    }
   };
 
   return { open, list, actorFor, createPage };

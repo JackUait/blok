@@ -15,23 +15,25 @@ export const buildMcpContracts = (input: {
   manifest?: BlokCustomToolsFile;
   overrides?: ManifestOverrides;
   pageTitles: 'off' | 'page-map';
-  /** Stored opens can create page documents, so a page block inserts there. */
+  /** blok-mcp can create page documents, so a page block inserts in both contracts. */
   createsPages?: boolean;
   richTextFields?: Record<string, string[]>;
 }): McpContracts => {
   const services: HostService[] = input.pageTitles === 'page-map' ? ['pageBackend'] : [];
+  const prepares = input.createsPages === true && input.pageTitles === 'page-map' ? { prepares: ['page'] } : {};
   const stored = createHeadlessAgentSetup({
     customTools: input.manifest,
     overrides: input.overrides,
     services,
     runtime: 'node',
-    ...(input.createsPages === true && input.pageTitles === 'page-map' && { prepares: ['page'] }),
+    ...prepares,
   });
   const live = createHeadlessAgentSetup({
     customTools: input.manifest,
     overrides: input.overrides,
     services,
     runtime: 'node-live',
+    ...prepares,
   });
   const fromManifest = new Map(stored.contract.manifest.blocks.map(block => [block.name, block.richTextFields ?? []]));
 

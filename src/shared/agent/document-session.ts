@@ -69,6 +69,19 @@ export const createPageMapBackend = (
 
 const sessionCount = { value: 0 };
 
+/** A headless applier's prepareInsert for a host that creates page documents. */
+export const pagePrepareInsert = (
+  createPage: NonNullable<AgentPorts['createPageDocument']>,
+  actor: AgentActor
+): NonNullable<AgentApplier['prepareInsert']> => async (type) => {
+  if (type !== 'page') {
+    throw failure('COMMAND_UNAVAILABLE', notPreparedHere(type), { details: { reason: 'runtime' } });
+  }
+
+  // Only the pageId: the planned data keeps the rest, and a host id must win over one the agent wrote.
+  return { pageId: (await createPage(actor)).pageId };
+};
+
 export const createDocumentAgentSession = (input: {
   document: OutputData;
   tools: ToolRuntimeRegistry;
@@ -120,16 +133,7 @@ export const createDocumentAgentSession = (input: {
 
       return hashed.revision;
     },
-    ...(createPage !== undefined && {
-      // Only the pageId: the planned data keeps the rest, and a host id must win over one the agent wrote.
-      prepareInsert: async (type: string) => {
-        if (type !== 'page') {
-          throw failure('COMMAND_UNAVAILABLE', notPreparedHere(type), { details: { reason: 'runtime' } });
-        }
-
-        return { pageId: (await createPage(input.actor)).pageId };
-      },
-    }),
+    ...(createPage !== undefined && { prepareInsert: pagePrepareInsert(createPage, input.actor) }),
     apply: (plan, draft) => {
       past.push(state.current);
       future.length = 0;

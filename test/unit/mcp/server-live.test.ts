@@ -5,6 +5,7 @@ import { decode, encode } from '../../../src/components/modules/collaboration/sy
 import type { CollabSocketFactory, SyncWireFrame, WebSocketLike, WorkingSetTag } from '../../../src/components/modules/collaboration/types';
 import { readTicketClaims } from '../../../src/components/utils/access-pass';
 import { DocumentStore } from '../../../src/components/modules/yjs/document-store';
+import { readPageFields } from '../../../src/components/modules/yjs/page-fields';
 import { YBlockSerializer } from '../../../src/components/modules/yjs/serializer';
 import type { Caller } from '../../../src/mcp/dispatcher';
 import { assembleMcp, type AssembledMcp } from '../../../src/mcp/server';
@@ -172,5 +173,150 @@ describe('assembleMcp with a sync URL and page-map', () => {
 
     expect(renamed.structuredContent).toMatchObject({ ok: false, error: { code: 'INVALID_ARGS', details: { pageId: 'doc' } } });
     expect(sockets).toHaveLength(1);
+  }, 5_000);
+});
+
+/** A sync service with one room per document id, that keeps and acknowledges what each room receives. */
+class RoomSocket extends ScriptedSocket {
+  private sequence = 0;
+
+  public constructor(private readonly room: DocumentStore) {
+    super();
+  }
+
+  public override send(data: ArrayBufferLike | ArrayBufferView): void {
+    super.send(data);
+    const frame = this.sent.at(-1);
+
+    if (frame?.type === 'operation') {
+      this.room.applyRemoteUpdate(frame.update, 'client');
+      this.sequence += 1;
+      const ack: SyncWireFrame = { type: 'acknowledgement', lineage: frame.lineage, operationId: frame.operationId, serverSequence: String(this.sequence) };
+
+      queueMicrotask(() => this.deliver(ack));
+    }
+  }
+}
+
+describe('assembleMcp with a sync URL and page-map creates sub-pages', () => {
+  let rooms: Map<string, DocumentStore>;
+  let joins: Array<{ docId: string; socket: RoomSocket; protocols: string[] }>;
+  let mcp: AssembledMcp;
+  // When set, every new room already holds someone's document.
+  let occupied: boolean;
+
+  const roomFor = (docId: string): DocumentStore => {
+    const existing = rooms.get(docId);
+
+    if (existing !== undefined) {
+      return existing;
+    }
+    const created = new DocumentStore(new YBlockSerializer());
+
+    if (occupied) {
+      created.fromJSON([{ id: 'theirs', type: 'page', data: { pageId: 'elsewhere' } }]);
+    }
+    rooms.set(docId, created);
+
+    return created;
+  };
+  const factory: CollabSocketFactory = (url, protocols) => {
+    const docId = decodeURIComponent(url.split('/').at(-1) ?? '');
+    const room = roomFor(docId);
+    const socket = new RoomSocket(room);
+
+    joins.push({ docId, socket, protocols: [...protocols] });
+    queueMicrotask(() => {
+      socket.readyState = 1;
+      socket.protocol = 'blok-sync.v2';
+      socket.onopen?.({});
+      socket.deliver({ type: 'control', tag: TAG });
+      socket.deliver({ type: 'syncStep2', update: room.encodeStateAsUpdate() });
+    });
+
+    return socket;
+  };
+  const live = (extra: Record<string, unknown> = {}): AssembledMcp => assembleMcp(
+    {
+      transport: { kind: 'stdio' },
+      auth: { kind: 'none' },
+      sync: { url: 'wss://sync.test/sync' },
+      tickets: { kind: 'secret', secret: 'x'.repeat(32) },
+      pageTitles: 'page-map',
+      ...extra,
+    },
+    { liveSocketFactory: factory, liveSyncTimeoutMs: 1000 },
+  );
+  const open = async (documentId: string): Promise<unknown> =>
+    (await mcp.dispatch('blok_open', { documentId, write: true }, caller)).structuredContent.handle;
+  const run = async (handle: unknown, commands: unknown[]): Promise<Record<string, unknown>> =>
+    (await mcp.dispatch('blok_execute', { handle, commands }, caller)).structuredContent;
+  const pageIdOf = (docId: string, blockId: string): unknown =>
+    rooms.get(docId)?.toJSON().find((block) => block.id === blockId)?.data.pageId;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    rooms = new Map();
+    joins = [];
+    occupied = false;
+  });
+
+  afterEach(async () => {
+    await mcp.stop();
+    vi.restoreAllMocks();
+  });
+
+  it('inserting a page block joins the new room once, and that sub-page can then be written and named live', async () => {
+    mcp = live();
+    const parent = await open('doc');
+    const inserted = await run(parent, [{ name: 'block.insert', args: { type: 'page', id: 'np', position: 'end' } }]);
+    const pageId = pageIdOf('doc', 'np');
+
+    expect(inserted).toMatchObject({ ok: true, delivery: { durable: true } });
+    expect(typeof pageId).toBe('string');
+    expect(pageId).not.toBe('doc');
+    const created = joins.filter((join) => join.docId === pageId);
+    const claims = (created[0]?.protocols ?? []).map((protocol) => readTicketClaims(protocol)).find((value) => value !== null);
+
+    expect(created).toHaveLength(1);
+    expect(claims).toMatchObject({ doc: pageId, write: true });
+    expect(created[0]?.socket.readyState).toBe(3);
+
+    const child = await open(String(pageId));
+
+    expect(await run(child, [
+      { name: 'block.insert', args: { type: 'paragraph', id: 'p1', data: { text: [{ text: 'Inside' }] } } },
+    ])).toMatchObject({ ok: true, delivery: { durable: true } });
+    expect(await run(child, [{ name: 'doc.setTitle', args: { title: 'Fresh' } }])).toMatchObject({ ok: true });
+    const room = rooms.get(String(pageId));
+
+    expect(room?.toJSON().map((block) => block.id)).toEqual(['p1']);
+    expect(room === undefined ? undefined : readPageFields(room.page).title).toBe('Fresh');
+  }, 5_000);
+
+  it('creates nothing when authorize does not let the caller write the new id', async () => {
+    mcp = live({ authorize: async (_principal: string, documentId: string) => documentId === 'doc' });
+    const outcome = await run(await open('doc'), [{ name: 'block.insert', args: { type: 'page', id: 'np', position: 'end' } }]);
+
+    expect(outcome).toMatchObject({ ok: false, error: { code: 'FORBIDDEN', details: { pageId: expect.any(String) } } });
+    expect(joins.map((join) => join.docId)).toEqual(['doc']);
+    expect(rooms.get('doc')?.toJSON()).toEqual([]);
+  }, 5_000);
+
+  it('refuses a new id whose room already holds a document, and leaves that room as it was', async () => {
+    mcp = live();
+    const parent = await open('doc');
+
+    occupied = true;
+    const outcome = await run(parent, [{ name: 'block.insert', args: { type: 'page', id: 'np', position: 'end' } }]);
+
+    expect(outcome).toMatchObject({ ok: false, error: { code: 'SOURCE_UNAVAILABLE', details: { pageId: expect.any(String) } } });
+    const theirs = joins.at(-1);
+
+    expect(theirs?.docId).not.toBe('doc');
+    expect(rooms.get(theirs?.docId ?? '')?.toJSON().map((block) => block.id)).toEqual(['theirs']);
+    expect(theirs?.socket.sent.some((frame) => frame.type === 'operation')).toBe(false);
+    expect(theirs?.socket.readyState).toBe(3);
+    expect(rooms.get('doc')?.toJSON()).toEqual([]);
   }, 5_000);
 });

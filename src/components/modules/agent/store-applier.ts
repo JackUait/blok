@@ -16,6 +16,7 @@ export class StoreApplier implements AgentApplier {
   private count = 0;
   private broken = false;
   private readonly unsubscribe: () => void;
+  public readonly prepareInsert: AgentApplier['prepareInsert'];
 
   public constructor(
     private readonly store: DocumentStore,
@@ -24,8 +25,11 @@ export class StoreApplier implements AgentApplier {
       attribution: Attribution;
       richTextFieldsFor(type: string): string[];
       htmlToSegments(html: string): RichText;
+      /** Set only where the host prepares inserts, such as blok-mcp creating a page's document. */
+      prepareInsert?: AgentApplier['prepareInsert'];
     }
   ) {
+    this.prepareInsert = options.prepareInsert;
     this.unsubscribe = store.onAnyUpdate(() => {
       this.count++;
     });

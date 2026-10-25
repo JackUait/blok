@@ -57,8 +57,8 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
   const handleIdleMs = options.handleIdleMs ?? DEFAULTS.handleIdleMs;
   const pageMap = (options.pageTitles ?? DEFAULTS.pageTitles) === 'page-map';
   const source = createSource(options.source);
-  // A sync service owns every document (spec §3.6), so only a stored-only server creates pages.
-  const createsPages = pageMap && source !== null && options.sync === undefined;
+  // Stored saves the new document through the source; live joins its room once (opener.createPage).
+  const createsPages = pageMap && (options.sync !== undefined || source !== null);
   const contracts = buildMcpContracts({
     manifest: options.manifest,
     overrides: options.overrides,

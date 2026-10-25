@@ -11,9 +11,10 @@ namespace Blok.Server.Tests.Agent;
 /// </summary>
 internal static class AgentParityNormalizer
 {
-  /// <summary>Tool fields the editor fills on load and headless appliers do not (normalize.ts TOOL_MINTED).</summary>
+  /// <summary>Load defaults from src/shared/tool-actions/load-defaults.ts, dropped as normalize.ts withoutLoadDefaults drops them.</summary>
   private static readonly Dictionary<string, Dictionary<string, JsonNode?>> LoadDefaults = new(StringComparer.Ordinal)
   {
+    ["code"] = new(StringComparer.Ordinal) { ["lineNumbers"] = JsonValue.Create(true) },
     ["quote"] = new(StringComparer.Ordinal) { ["size"] = JsonValue.Create("default") },
     ["callout"] = new(StringComparer.Ordinal) { ["textColor"] = null, ["backgroundColor"] = null },
   };
@@ -293,6 +294,22 @@ internal static class AgentParityNormalizer
         {
           data.Remove(key);
         }
+      }
+    }
+
+    // normalizeList saves checked only on a checklist and start only when not 1.
+    if (type == "list")
+    {
+      var checklist = data["style"] is JsonValue style && style.TryGetValue<string>(out var name) && name == "checklist";
+
+      if (!checklist || (data["checked"] is JsonValue checkedValue && checkedValue.TryGetValue<bool>(out var isChecked) && !isChecked))
+      {
+        data.Remove("checked");
+      }
+
+      if (data["start"] is JsonValue start && start.TryGetValue<double>(out var number) && number == 1)
+      {
+        data.Remove("start");
       }
     }
 

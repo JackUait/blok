@@ -325,6 +325,188 @@
       }
     },
     {
+      "name": "drops the code and list load defaults, keeps chosen values",
+      "keepIds": [
+        "k1",
+        "k2",
+        "l1",
+        "l2",
+        "l3",
+        "l4",
+        "l5"
+      ],
+      "input": {
+        "blocks": [
+          {
+            "id": "k1",
+            "type": "code",
+            "data": {
+              "code": "x",
+              "language": "bash",
+              "lineNumbers": true
+            }
+          },
+          {
+            "id": "k2",
+            "type": "code",
+            "data": {
+              "code": "y",
+              "language": "bash",
+              "lineNumbers": false
+            }
+          },
+          {
+            "id": "l1",
+            "type": "list",
+            "data": {
+              "text": [
+                {
+                  "text": "a"
+                }
+              ],
+              "style": "checklist",
+              "checked": false
+            }
+          },
+          {
+            "id": "l2",
+            "type": "list",
+            "data": {
+              "text": [
+                {
+                  "text": "b"
+                }
+              ],
+              "style": "checklist",
+              "checked": true
+            }
+          },
+          {
+            "id": "l3",
+            "type": "list",
+            "data": {
+              "text": [
+                {
+                  "text": "c"
+                }
+              ],
+              "style": "unordered",
+              "checked": false
+            }
+          },
+          {
+            "id": "l4",
+            "type": "list",
+            "data": {
+              "text": [
+                {
+                  "text": "d"
+                }
+              ],
+              "style": "ordered",
+              "start": 1
+            }
+          },
+          {
+            "id": "l5",
+            "type": "list",
+            "data": {
+              "text": [
+                {
+                  "text": "e"
+                }
+              ],
+              "style": "ordered",
+              "start": 3
+            }
+          }
+        ]
+      },
+      "expected": {
+        "blocks": [
+          {
+            "id": "k1",
+            "type": "code",
+            "data": {
+              "code": "x",
+              "language": "bash"
+            }
+          },
+          {
+            "id": "k2",
+            "type": "code",
+            "data": {
+              "code": "y",
+              "language": "bash",
+              "lineNumbers": false
+            }
+          },
+          {
+            "id": "l1",
+            "type": "list",
+            "data": {
+              "text": [
+                {
+                  "text": "a"
+                }
+              ],
+              "style": "checklist"
+            }
+          },
+          {
+            "id": "l2",
+            "type": "list",
+            "data": {
+              "text": [
+                {
+                  "text": "b"
+                }
+              ],
+              "style": "checklist",
+              "checked": true
+            }
+          },
+          {
+            "id": "l3",
+            "type": "list",
+            "data": {
+              "text": [
+                {
+                  "text": "c"
+                }
+              ],
+              "style": "unordered"
+            }
+          },
+          {
+            "id": "l4",
+            "type": "list",
+            "data": {
+              "text": [
+                {
+                  "text": "d"
+                }
+              ],
+              "style": "ordered"
+            }
+          },
+          {
+            "id": "l5",
+            "type": "list",
+            "data": {
+              "text": [
+                {
+                  "text": "e"
+                }
+              ],
+              "style": "ordered",
+              "start": 3
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "labels database-minted ids by first appearance and positions by sibling order",
       "keepIds": [
         "d",

@@ -66,10 +66,10 @@ describe.each(SESSIONS)('database lock, comments and reactions (%s session)', (_
     ['block.update', { id: 'thread', data: { text: 'edited' } }],
     ['block.delete', { id: 'thread' }],
     ['block.insert', { type: 'database-comment', parentId: 'thread', data: { text: 'reply', createdAt: 1 } }],
-  ])('%s on a comment thread is refused: agents cannot see comments', async (name, args) => {
+  ])('%s on a comment thread is refused with ANNOTATION_BLOCK', async (name, args) => {
     const session = open(seed(false));
 
-    expect(errorOf(await run(session, name, args))?.code).toBe('BLOCK_NOT_FOUND');
+    expect(errorOf(await run(session, name, args))?.code).toBe('ANNOTATION_BLOCK');
     expect(await dataOf(session, 'thread')).toBeUndefined();
     await session.close();
   });

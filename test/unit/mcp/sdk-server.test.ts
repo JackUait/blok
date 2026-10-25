@@ -9,7 +9,7 @@ import { buildMcpContracts } from '../../../src/mcp/contract';
 import { UnknownToolError } from '../../../src/mcp/dispatcher';
 import { buildSdkServer } from '../../../src/mcp/sdk-server';
 import { listMcpTools } from '../../../src/mcp/tools';
-import { RICH_TEXT_PRIMER } from '../../../src/shared/tool-descriptions/rich-text';
+import { mcpInstructions } from '../../../src/mcp/instructions';
 
 import type { Caller, ToolOutcome } from '../../../src/mcp/dispatcher';
 import type { Dispatch } from '../../../src/mcp/sdk-server';
@@ -52,6 +52,7 @@ const withClient = async (
   });
   const serving = serveStdio(() => buildSdkServer({
     tools,
+    instructions: mcpInstructions(buildMcpContracts({ pageTitles: 'off' }).stored),
     dispatch,
     caller: (name): Caller => ({ principal: 'local', clientName: name, scopes: null }),
     version: '0.0.0-test',
@@ -124,11 +125,11 @@ describe.each(ERAS)('buildSdkServer over real SDK stdio (%s)', era => {
     });
   });
 
-  it('sends the rich-text primer as its instructions on initialize', async () => {
+  it('sends the given instructions on initialize', async () => {
     const dispatch = vi.fn<Dispatch>(async () => gone);
 
     await withClient(era, deploymentTools(), dispatch, async client => {
-      expect(client.getInstructions()).toContain(RICH_TEXT_PRIMER);
+      expect(client.getInstructions()).toBe(mcpInstructions(buildMcpContracts({ pageTitles: 'off' }).stored));
     });
   });
 

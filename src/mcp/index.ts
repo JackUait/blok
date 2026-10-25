@@ -47,6 +47,7 @@ export const createBlokMcpServer = (options: BlokMcpOptions): { start(): Promise
     const http = await startHttpServer({
       listen,
       tools: assembled.tools,
+      instructions: assembled.instructions,
       dispatch: assembled.dispatch,
       auth: options.auth,
       principal,
@@ -76,6 +77,7 @@ export const createBlokMcpServer = (options: BlokMcpOptions): { start(): Promise
       }
       state.serving = serveStdio(() => buildSdkServer({
         tools: assembled.tools,
+        instructions: assembled.instructions,
         dispatch: assembled.dispatch,
         caller: clientName => ({ principal, clientName, scopes: null }),
         version: getBlokVersion(),

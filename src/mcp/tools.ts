@@ -80,10 +80,10 @@ export const listMcpTools = (
         'In stored mode an unknown documentId opens a new, empty document (exists: false), so pass only ids you were given or saw listed.',
         'mode "auto" joins the live room when one is configured, else edits the stored document.',
         'Pass write: true if you will edit; a read-only handle refuses blok_execute.',
+        'unavailableCommands names the blok_execute commands this handle refuses, such as history.undo in live mode; do not send them.',
         'Pass view with blok_read arguments, e.g. view: {}, to get the document back in the same call.',
         `A handle expires after ${idleDuration} without a call; then open again.`,
         'Write rich text with commands such as text.format or markdown.insert. Never put Markdown or HTML into block data.',
-        'A CORRECTED warning means Blok changed your command. Check the result is what you meant.',
       ].join(' '),
       inputSchema: {
         type: 'object',
@@ -110,6 +110,14 @@ export const listMcpTools = (
           expiresAfterIdleMs: { type: 'integer' },
           contractRevision: { type: 'string' },
           exists: { type: 'boolean' },
+          unavailableCommands: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['name', 'reason'],
+              properties: { name: { type: 'string' }, reason: { enum: ['runtime', 'service'] } },
+            },
+          },
           view: { type: 'object' },
           documents: DOCUMENTS_SCHEMA,
           nextCursor: { type: ['string', 'null'] },

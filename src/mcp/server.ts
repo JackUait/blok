@@ -14,6 +14,7 @@ import { createOpener, createSource } from './opener';
 import { createOpenPageDocument } from './page-titles';
 import { DEFAULTS } from './options';
 import type { BlokMcpOptions } from './options';
+import { mcpInstructions } from './instructions';
 import type { Dispatch } from './sdk-server';
 import type { HandleSession } from './session';
 import { listMcpTools } from './tools';
@@ -21,6 +22,8 @@ import type { McpTool } from './tools';
 
 export interface AssembledMcp {
   tools: McpTool[];
+  /** Sent on initialize; built from the contract tools/list renders. */
+  instructions: string;
   dispatch: Dispatch;
   handles: HandleRegistry<HandleSession>;
   stop(): Promise<void>;
@@ -155,6 +158,7 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
 
   return {
     tools,
+    instructions: mcpInstructions(contracts.stored),
     dispatch: tracked,
     handles,
     stop: () => {

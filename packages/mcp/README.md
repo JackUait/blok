@@ -20,7 +20,11 @@ A document opens in one of two modes:
 - **Live**: the agent joins the document's sync room as a participant. People see it work.
 - **Stored**: the agent loads the saved document, edits it, and saves it back after every batch.
 
-Agents write rich text with commands. They never write Markdown or HTML into block data. On initialize the server sends `instructions` with the rich-text rules: the marks, colour presets, link defaults, and equation and page embeds.
+Agents write rich text with commands. They never write Markdown or HTML into block data. On initialize the server sends `instructions`:
+
+- The rich-text rules: the marks, colour presets, link defaults, and equation and page embeds.
+- The editing rules the in-app assistant gets too, such as "change only the blocks the request is about" and "put related edits in one `blok_execute` call".
+- How to reach a sub-page: open the page block's `data.pageId` with `blok_open`.
 
 ## Install and run locally
 
@@ -64,6 +68,7 @@ Pass `--sync-url` to join rooms on a Blok sync service.
   - `acknowledged`: the server has a journal, and each batch waits for its acks.
   - `best-effort`: the server has no journal and makes no durability claim.
   - `saved-on-execute`: a stored document, saved after every batch.
+- `blok_open` lists the commands a live handle refuses in `unavailableCommands`, each with a `reason`. Today these are `history.undo` and `history.redo`. `blok_describe` marks them `available: false` too.
 - Each `blok_execute` result says what happened to that batch in `delivery`.
 - `blok_close` reports `hostRecordLags`. The host's stored record lags the agent's edits until the room writes it back.
 

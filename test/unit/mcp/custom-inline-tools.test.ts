@@ -75,6 +75,7 @@ interface Connected {
 const connect = async (mcp: AssembledMcp): Promise<Connected> => {
   const server = buildSdkServer({
     tools: mcp.tools,
+    instructions: mcp.instructions,
     dispatch: mcp.dispatch,
     caller: name => ({ principal: 'alice', clientName: name, scopes: null }),
     version: '0.0.0-test',

@@ -36,8 +36,8 @@ describe('startHttpServer', () => {
     return { structuredContent: { documents: [], nextCursor: null, supported: false }, isError: false };
   });
   const servers: Array<{ url: string; close(): Promise<void> }> = [];
-  const start = async (input: Omit<Parameters<typeof startHttpServer>[0], 'listen' | 'tools' | 'dispatch' | 'version'>): Promise<string> => {
-    const server = await startHttpServer({ listen: '127.0.0.1:0', tools, dispatch, version: '0', ...input });
+  const start = async (input: Omit<Parameters<typeof startHttpServer>[0], 'listen' | 'tools' | 'instructions' | 'dispatch' | 'version'>): Promise<string> => {
+    const server = await startHttpServer({ listen: '127.0.0.1:0', tools, instructions: '', dispatch, version: '0', ...input });
 
     servers.push(server);
 
@@ -100,7 +100,7 @@ describe('startHttpServer', () => {
         return { structuredContent: { documents: [], nextCursor: null, supported: false }, isError: false };
       };
 
-      void startHttpServer({ listen: '127.0.0.1:0', tools, dispatch: hanging, version: '0', auth: { kind: 'none' }, principal: 'local' })
+      void startHttpServer({ listen: '127.0.0.1:0', tools, instructions: '', dispatch: hanging, version: '0', auth: { kind: 'none' }, principal: 'local' })
         .then((server) => {
           servers.push(server);
           const client = httpRequest(`${server.url}/mcp`, {

@@ -13,6 +13,7 @@ export interface HttpServerInput {
   listen: string;
   path?: string;
   tools: McpTool[];
+  instructions: string;
   dispatch: Dispatch;
   auth: BlokMcpOptions['auth'];
   /** The caller's principal when auth is none. */
@@ -116,6 +117,7 @@ export const startHttpServer = async (input: HttpServerInput): Promise<{ url: st
 
     return buildSdkServer({
       tools: input.tools,
+      instructions: input.instructions,
       dispatch: input.dispatch,
       caller: (clientName) => (info === undefined
         ? { principal: input.principal, clientName, scopes: null }

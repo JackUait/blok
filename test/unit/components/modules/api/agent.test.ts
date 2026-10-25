@@ -64,7 +64,7 @@ const GUIDANCE = [
   '- Change only the blocks the request is about. To add something, insert a new block; do not convert or rewrite a nearby block to get it.',
   '- Put related edits in one blok_execute call.',
   '- The first message may carry the document as blok_read returns it. If it does not, call blok_read before you edit.',
-  '- The user can undo your work with Cmd+Z.',
+  '- The user can undo your edits to this document with Cmd+Z.',
   '- You cannot move the user\'s caret, selection or scroll.',
   '- When the user asks a question, answer it in your reply. Edit the document only when they ask for a change.',
   '- After you edit, your whole reply is one friendly sentence of under 10 words on what you did, in the user\'s language, like "Added a short paragraph about how YouTube began." It must make sense on its own: never end it with a colon, never introduce a list, write nothing before or after it. Say what, never where: no caret, position, block names or ids. No lists, tables or Markdown.',
@@ -473,6 +473,15 @@ describe('AgentAPI tools and guidance', () => {
     contract.guidance.general = '  \nGeneral guidance.\n  ';
 
     expect(composeGuidance(contract)).toBe(GUIDANCE);
+  });
+
+  it('tells the model that Cmd+Z does not undo its sub-page writes, only Discard does', () => {
+    const contract = makeContract();
+
+    contract.guidance.general = 'General guidance.';
+
+    expect(composeGuidance(contract, { pages: true })).toContain('Cmd+Z does not undo your writes to a sub-page. Only Discard reverts them, before the user keeps your work.');
+    expect(composeGuidance(contract)).not.toContain('sub-page');
   });
 });
 

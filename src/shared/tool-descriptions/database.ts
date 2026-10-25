@@ -650,6 +650,11 @@ export const DATABASE_DATA = {
               },
             },
           },
+          propertyOrder: {
+            type: 'string',
+            enum: ['alphabetical'],
+            description: 'alphabetical: a property properties does not list goes after the title, by name (a row page relation tab). Absent: unlisted properties go last.',
+          },
           wrapCells: { type: 'boolean', description: 'Wrap every cell. Default true for a table, false otherwise.' },
           frozenColumnCount: { type: 'integer', minimum: 0, description: 'Columns from the start that stay put on horizontal scroll. Default 0.' },
           showVerticalLines: { type: 'boolean', description: 'Default true.' },

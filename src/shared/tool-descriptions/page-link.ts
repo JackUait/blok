@@ -12,7 +12,7 @@ export const PAGE_LINK_DATA = {
 
 export const describePageLink = (_config: Record<string, unknown> = {}): BlockToolDescription => ({
   summary: 'A link to an existing page. It owns nothing.',
-  guidance: 'pageId must name a page that exists. To make a new page, insert a page block instead.',
+  guidance: 'pageId must name a page that exists. To make a new page, insert a page block instead. In the editor a read gives pageTitle, the title the block shows; other runtimes leave it out.',
   data: PAGE_LINK_DATA,
   summaryFields: ['pageId'],
 });

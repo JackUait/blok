@@ -70,6 +70,8 @@ export interface AgentPorts {
   openPageDocument?(pageId: string, actor: AgentActor): Promise<AgentSession & { close(): void }>;
   /** Creates an empty page document for a new page block. Contracts list `page` as insertable only with it. */
   createPageDocument?(actor: AgentActor): Promise<{ pageId: string }>;
+  /** The title a page or page-link block shows now, when the runtime already holds it. Must not fetch. */
+  pageTitle?(blockId: string): string | undefined;
 }
 
 export interface PlannerContext {

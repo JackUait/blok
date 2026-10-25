@@ -72,7 +72,7 @@ export const PAGE_DATA = {
 
 export const describePage = (_config: Record<string, unknown> = {}): BlockToolDescription => ({
   summary: 'A sub-page. Its body is a separate document named by pageId.',
-  guidance: 'Inserting a page asks the host to create the page document. To rename the page this block points to, or change its icon, use page.rename or page.setIcon. To change the title of the document you are editing, use doc.setTitle.',
+  guidance: 'Inserting a page asks the host to create the page document. To rename the page this block points to, or change its icon, use page.rename or page.setIcon. To change the title of the document you are editing, use doc.setTitle. In the editor a read gives pageTitle, the title the block shows; other runtimes leave it out.',
   data: PAGE_DATA,
   inputFields: [],
   summaryFields: ['pageId'],

@@ -127,7 +127,7 @@ const LINK_DESCRIPTIONS: LinkDescriptionCase[] = [
     describeTool: describePage,
     dataSchema: PAGE_DATA,
     summary: 'A sub-page. Its body is a separate document named by pageId.',
-    guidance: 'Inserting a page asks the host to create the page document. To rename the page this block points to, or change its icon, use page.rename or page.setIcon. To change the title of the document you are editing, use doc.setTitle.',
+    guidance: 'Inserting a page asks the host to create the page document. To rename the page this block points to, or change its icon, use page.rename or page.setIcon. To change the title of the document you are editing, use doc.setTitle. In the editor a read gives pageTitle, the title the block shows; other runtimes leave it out.',
     summaryFields: ['pageId'],
     starter: { pageId: 'p1' },
     accepted: [
@@ -150,7 +150,7 @@ const LINK_DESCRIPTIONS: LinkDescriptionCase[] = [
     describeTool: describePageLink,
     dataSchema: PAGE_LINK_DATA,
     summary: 'A link to an existing page. It owns nothing.',
-    guidance: 'pageId must name a page that exists. To make a new page, insert a page block instead.',
+    guidance: 'pageId must name a page that exists. To make a new page, insert a page block instead. In the editor a read gives pageTitle, the title the block shows; other runtimes leave it out.',
     summaryFields: ['pageId'],
     starter: { pageId: 'p1' },
     accepted: [

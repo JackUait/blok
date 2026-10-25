@@ -8,7 +8,9 @@ import type { DocumentView, ViewArgs, ViewBlock } from '../../../types/agent';
 import type { DocSnapshot, SnapBlock } from './snapshot';
 import type { PlannerContext } from './types';
 
-type ViewContext = Pick<PlannerContext, 'tools' | 'richText'>;
+type ViewContext = Pick<PlannerContext, 'tools' | 'richText'> & Partial<Pick<PlannerContext, 'ports'>>;
+
+const PAGE_TYPES: ReadonlySet<string> = new Set(['page', 'page-link']);
 type ComputedFor = ReturnType<typeof createComputedReader>;
 
 const computedReader = (snap: DocSnapshot): ComputedFor => createComputedReader(id => snap.get(id));
@@ -108,6 +110,11 @@ const viewBlock = (
   }
   if (Object.keys(attrs).length > 0) {
     entry.attrs = attrs;
+  }
+  const pageTitle = PAGE_TYPES.has(block.type) ? ctx.ports?.pageTitle?.(block.id) : undefined;
+
+  if (pageTitle !== undefined) {
+    entry.pageTitle = pageTitle;
   }
   const children = block.content.filter(id => !inAnnotation(snap, id, ctx));
 

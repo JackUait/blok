@@ -176,6 +176,8 @@ export interface ViewBlock {
   childCount?: number;
   opaque?: true;
   cell?: { row: number; col: number };
+  /** Page and page-link blocks: the linked page's title, when this runtime shows one. */
+  pageTitle?: string;
   /** Full detail only; rich fields use segments. */
   data?: OutputBlockData['data'];
   tunes?: OutputBlockData['tunes'];

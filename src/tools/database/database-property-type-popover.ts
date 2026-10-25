@@ -1,5 +1,7 @@
 import { syncPortalDirection } from '../../components/utils/portal-direction';
 import { overlayMountFor } from '../../components/utils/top-layer';
+import { markEscapeConsumed } from '../../components/utils/consumed-escape';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import type { I18n } from '../../../types';
 import type { PropertyType } from './types';
 import { addablePropertyTypes, propertyTypeMeta } from './database-property-types';
@@ -47,6 +49,15 @@ export class DatabasePropertyTypePopover {
     popover.setAttribute('data-blok-popover-opened', '');
     popover.setAttribute('data-blok-database-property-type-popover', '');
     popover.style.zIndex = '1000';
+    // Blok's editor keydown would blur the field on Escape instead of closing the menu.
+    popover.setAttribute(DATA_ATTR.keyboardOwner, '');
+    // One Escape closes the menu only; the mark keeps the peek under it open.
+    popover.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      markEscapeConsumed(e);
+      this.close();
+      anchor.focus({ preventScroll: true });
+    });
 
     const nameField = this.withNameField ? document.createElement('input') : null;
 

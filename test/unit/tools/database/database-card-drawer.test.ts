@@ -2492,6 +2492,29 @@ describe('DatabaseCardDrawer', () => {
 
       expect(document.body.querySelector('[data-blok-database-property-type-popover]')).toBeNull();
     });
+
+    it('one Escape in the name field closes the popover and leaves the peek open', () => {
+      const onEscapeClose = vi.fn();
+      const options = createOptions({ readOnly: false, schema: [], onEscapeClose });
+
+      document.body.appendChild(options.wrapper);
+      onTestFinished(() => options.wrapper.remove());
+      const drawer = new DatabaseCardDrawer(options);
+
+      drawer.open(makeRow({ properties: { 'prop-title': 'Card' } }));
+      (options.wrapper.querySelector('[data-blok-database-drawer-add-prop]') as HTMLButtonElement).click();
+      const nameField = document.body.querySelector<HTMLInputElement>('[data-blok-database-property-name-input]');
+
+      expect(nameField).not.toBeNull();
+      expect(nameField).toHaveFocus();
+      nameField?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+      expect(document.body.querySelector('[data-blok-database-property-type-popover]')).toBeNull();
+      expect(onEscapeClose).not.toHaveBeenCalled();
+      expect(drawer.isOpen).toBe(true);
+
+      drawer.destroy();
+    });
   });
 
   it('mounts one legacy body after opening A, B, then A before imports settle', async () => {

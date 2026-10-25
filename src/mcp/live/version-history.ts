@@ -46,14 +46,20 @@ export const createHttpVersionHistory = (input: HttpVersionHistoryInput): AgentV
         // The HTTP guard checks Origin like the WebSocket upgrade does.
         ...(input.origin !== undefined && { Origin: input.origin }),
       },
+    }).catch((error: unknown) => {
+      // No answer at all: the network may come back.
+      throw Object.assign(new Error(`The sync server could not be reached: ${error instanceof Error ? error.message : String(error)}`), { retryable: true });
     });
 
     // A ticket can expire between mints.
     return response.status === 401 && !fresh && input.tickets !== undefined ? get(url, true) : response;
   };
 
-  const refused = async (response: Response): Promise<Error> =>
-    new Error(`The sync server answered ${response.status}: ${(await response.text()).trim()}`);
+  // The status tells the agent whether a retry can help.
+  const refused = async (response: Response): Promise<Error> => Object.assign(
+    new Error(`The sync server answered ${response.status}: ${(await response.text()).trim()}`),
+    { status: response.status }
+  );
 
   return {
     list: async ({ group }) => {

@@ -342,7 +342,12 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
       string docId, JsonObject input, string name, JsonObject args, CollabEditPrecondition? expect,
       CancellationToken cancellationToken)
   {
-    var (document, current) = await RoomStateAsync(docId, cancellationToken);
+    var (document, current, status) = await RoomStatusAsync(docId, cancellationToken);
+
+    if (status == CollabStateStatus.Purged)
+    {
+      return Failure("TOOL_ACTION_FAILED", "The version history failed: this document was deleted.", false, null);
+    }
 
     if (document is null)
     {
@@ -383,7 +388,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
 
       if (list.Status != CollabHistoryStatus.Ready)
       {
-        return new JsonObject { ["failed"] = $"The version history could not be read ({list.Status})." };
+        return new JsonObject { ["failed"] = $"The version history could not be read ({list.Status}).", ["status"] = HttpStatus(list.Status) };
       }
 
       var current = list.Lineages.Where(lineage => lineage.Current).Select(lineage => lineage.Lineage).ToHashSet(StringComparer.Ordinal);
@@ -438,7 +443,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
           documents[version] = null;
           break;
         default:
-          return new JsonObject { ["failed"] = $"Version \"{version}\" could not be read ({read.Status})." };
+          return new JsonObject { ["failed"] = $"Version \"{version}\" could not be read ({read.Status}).", ["status"] = HttpStatus(read.Status) };
       }
     }
 
@@ -478,11 +483,34 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
   /// <summary>The room's export and its journal head, read in one lane hold.</summary>
   private async ValueTask<(JsonObject? Document, string Head)> RoomStateAsync(string docId, CancellationToken cancellationToken)
   {
+    var (document, head, _) = await RoomStatusAsync(docId, cancellationToken);
+
+    return (document, head);
+  }
+
+  private async ValueTask<(JsonObject? Document, string Head, CollabStateStatus Status)> RoomStatusAsync(
+      string docId, CancellationToken cancellationToken)
+  {
     var state = await rooms!.StateAsync(docId, cancellationToken);
     var head = state.Head is { } receipt ? $"{receipt.Tag.Lineage}:{receipt.ServerSequence}" : string.Empty;
 
-    return state.Status == CollabStateStatus.Ready ? (JsonNode.Parse(state.Json) as JsonObject, head) : (null, head);
+    return state.Status == CollabStateStatus.Ready
+        ? (JsonNode.Parse(state.Json) as JsonObject, head, state.Status)
+        : (null, head, state.Status);
   }
+
+  /// <summary>
+  /// What HistoryEndpoint answers for this refusal. Jint decides from it whether a
+  /// retry can help, as it does for MCP's HTTP reads, so the two must stay the same.
+  /// </summary>
+  private static int HttpStatus(CollabHistoryStatus status) => status switch
+  {
+    CollabHistoryStatus.NoHistory => 501,
+    CollabHistoryStatus.NotFound => 404,
+    CollabHistoryStatus.Purged => 403,
+    CollabHistoryStatus.Unavailable => 503,
+    _ => 500,
+  };
 
   /// <summary>
   /// Every revision a room result carries is the journal head: the top level,

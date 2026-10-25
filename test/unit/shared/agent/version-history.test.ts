@@ -150,13 +150,46 @@ describe('version history commands', () => {
     expect(!result.ok && result.error.message).toContain('must be the only command');
   });
 
-  it('reports a failing host as a retryable failure, not a broken document', async () => {
-    const history: AgentVersionHistory = { list: async () => Promise.reject(new Error('503 busy')), read: async () => null };
+  it('reports a failing host as a failure, not a broken document', async () => {
+    const history: AgentVersionHistory = { list: async () => Promise.reject(new Error('busy')), read: async () => null };
     const { agent } = session({ history });
     const result = await agent.execute({ commands: [{ name: 'history.versions', args: {} }] });
 
-    expect(!result.ok && result.error).toMatchObject({ code: 'TOOL_ACTION_FAILED', retryable: true });
-    expect(!result.ok && result.error.message).toContain('503 busy');
+    expect(!result.ok && result.error).toMatchObject({ code: 'TOOL_ACTION_FAILED', retryable: false });
+    expect(!result.ok && result.error.message).toContain('busy');
+  });
+
+  it.each([
+    { status: 403, retryable: false },
+    { status: 501, retryable: false },
+    { status: 400, retryable: false },
+    { status: 429, retryable: true },
+    { status: 500, retryable: true },
+    { status: 503, retryable: true },
+  ])('says a host failure with status $status is retryable: $retryable', async ({ status, retryable }) => {
+    const history: AgentVersionHistory = {
+      list: async () => Promise.reject(Object.assign(new Error(`HTTP ${status}`), { status })),
+      read: async () => Promise.reject(Object.assign(new Error(`HTTP ${status}`), { status })),
+    };
+    const { agent } = session({ history });
+    const listed = await agent.execute({ commands: [{ name: 'history.versions', args: {} }] });
+    const read = await agent.execute({ commands: [{ name: 'history.read', args: { version: 'L:1' } }] });
+
+    expect(!listed.ok && listed.error).toMatchObject({ code: 'TOOL_ACTION_FAILED', retryable });
+    expect(!read.ok && read.error).toMatchObject({ code: 'TOOL_ACTION_FAILED', retryable });
+  });
+
+  it('takes the host failure own retryable flag over its status', async () => {
+    const history: AgentVersionHistory = {
+      list: async () => Promise.reject(Object.assign(new Error('offline'), { retryable: true })),
+      read: async () => Promise.reject(Object.assign(new Error('gone'), { status: 503, retryable: false })),
+    };
+    const { agent } = session({ history });
+    const listed = await agent.execute({ commands: [{ name: 'history.versions', args: {} }] });
+    const read = await agent.execute({ commands: [{ name: 'history.read', args: { version: 'L:1' } }] });
+
+    expect(!listed.ok && listed.error.retryable).toBe(true);
+    expect(!read.ok && read.error.retryable).toBe(false);
   });
 
   it('works on a read-only session', async () => {

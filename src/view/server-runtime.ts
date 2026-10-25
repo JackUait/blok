@@ -453,15 +453,18 @@ const isBatchEnvelope = (value: unknown): boolean =>
 /**
  * Jint cannot call back into the host, so the host loads what one history
  * read needs before the call: `versions`, `documents` keyed by version (null:
- * no such version), or `failed` with why it could not.
+ * no such version), or `failed` with why it could not and the HTTP `status`
+ * the history routes would answer, which decides whether a retry can help.
  */
 const loadedVersionHistory = (value: unknown): AgentVersionHistory | undefined => {
   if (!isRecord(value)) {
     return undefined;
   }
-  const { versions, documents, failed } = value;
-  const refuse = (what: string): Promise<never> =>
-    Promise.reject(new Error(typeof failed === 'string' ? failed : `The host did not load ${what}.`));
+  const { versions, documents, failed, status } = value;
+  const refuse = (what: string): Promise<never> => Promise.reject(Object.assign(
+    new Error(typeof failed === 'string' ? failed : `The host did not load ${what}.`),
+    typeof status === 'number' ? { status } : {}
+  ));
 
   return {
     list: () => Array.isArray(versions) ? Promise.resolve(versions.filter(isAgentVersion)) : refuse('the version list'),

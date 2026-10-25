@@ -49,7 +49,20 @@ const viewArgs = (args: Record<string, unknown>): ViewArgs => {
 
 const messageOf = (error: unknown): string => error instanceof Error ? error.message : String(error);
 
-/** A host failure is not a broken document: the same call may work later. */
+/** Only a transient host failure may pass on a retry: 403, 501 or a deleted document never will. */
+const isTransient = (error: unknown): boolean => {
+  if (!isRecord(error)) {
+    return false;
+  }
+  if (typeof error.retryable === 'boolean') {
+    return error.retryable;
+  }
+  const status = error.status;
+
+  return typeof status === 'number' && (status === 429 || (status >= 500 && status <= 599 && status !== 501));
+};
+
+/** A host failure is not a broken document. */
 const ask = async <T>(call: () => Promise<T>): Promise<T> => {
   try {
     return await call();
@@ -59,7 +72,7 @@ const ask = async <T>(call: () => Promise<T>): Promise<T> => {
     }
     throw new AgentFailure({
       ...failure('TOOL_ACTION_FAILED', `The version history failed: ${messageOf(error)}`).error,
-      retryable: true,
+      retryable: isTransient(error),
     });
   }
 };

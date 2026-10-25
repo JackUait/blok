@@ -58,7 +58,21 @@ describe('server runtime version history', () => {
       batch: { commands: [{ name: 'history.versions', args: {} }] },
     });
 
-    expect(result).toMatchObject({ ok: false, error: { code: 'TOOL_ACTION_FAILED', retryable: true } });
+    expect(result).toMatchObject({ ok: false, error: { code: 'TOOL_ACTION_FAILED', retryable: false } });
     expect(JSON.stringify(result)).toContain('a stored version could not be read');
+  });
+
+  it.each([
+    { status: 403, retryable: false },
+    { status: 501, retryable: false },
+    { status: 500, retryable: true },
+    { status: 503, retryable: true },
+  ])('says a host load that failed with $status is retryable: $retryable', async ({ status, retryable }) => {
+    const versionHistory = { failed: 'could not', status };
+    const listed = await run({ services: ['versionHistory'], versionHistory, batch: { commands: [{ name: 'history.versions', args: {} }] } });
+    const read = await run({ services: ['versionHistory'], versionHistory, batch: { commands: [{ name: 'history.read', args: { version: 'L:2' } }] } });
+
+    expect(listed).toMatchObject({ ok: false, error: { code: 'TOOL_ACTION_FAILED', retryable } });
+    expect(read).toMatchObject({ ok: false, error: { code: 'TOOL_ACTION_FAILED', retryable } });
   });
 });

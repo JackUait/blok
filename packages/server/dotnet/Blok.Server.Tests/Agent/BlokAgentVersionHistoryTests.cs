@@ -121,6 +121,23 @@ public sealed class BlokAgentVersionHistoryTests
   }
 
   [Fact]
+  public async Task APurgedRoomIsNotRetryable()
+  {
+    var (executor, rooms) = Create(operations);
+    var lineage = (await executor.ExecuteInRoomAsync(DocId,
+        """{"commands":[{"name":"doc.setTitle","args":{"title":"One"}}]}""", Actor)).Revision.Split(':')[0];
+    await rooms.PurgeDocumentAsync(DocId, _ => ValueTask.FromResult(true));
+
+    var listed = JsonNode.Parse((await executor.ExecuteInRoomAsync(DocId,
+        """{"commands":[{"name":"history.versions","args":{}}]}""", Actor)).ResultJson)!;
+    var read = JsonNode.Parse((await executor.ExecuteInRoomAsync(DocId,
+        $$$"""{"commands":[{"name":"history.read","args":{"version":"{{{lineage}}}:0"}}]}""", Actor)).ResultJson)!;
+
+    Assert.False(listed["error"]!["retryable"]!.GetValue<bool>(), listed.ToJsonString());
+    Assert.False(read["error"]!["retryable"]!.GetValue<bool>(), read.ToJsonString());
+  }
+
+  [Fact]
   public async Task AStoredDocumentHasNoVersionHistory()
   {
     var (executor, _) = Create(operations);

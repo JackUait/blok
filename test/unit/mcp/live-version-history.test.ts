@@ -88,6 +88,14 @@ const historyServer = (seen: Seen[]): Server => createServer((request: IncomingM
 
     return;
   }
+  const refusal = /^\/sync\/doc-1\/history\/[^/]+\/(\d{3})$/.exec(request.url ?? '');
+
+  if (refusal !== null) {
+    response.writeHead(Number(refusal[1]));
+    response.end('refused\n');
+
+    return;
+  }
   response.writeHead(404);
   response.end('no such version\n');
 });
@@ -176,6 +184,34 @@ describe('blok-mcp live handles read the sync server version history', () => {
 
     expect(missing).toMatchObject({ ok: false, error: { code: 'INVALID_ARGS', path: '/commands/0/args/version' } });
     expect(seen.every((request) => request.method === 'GET')).toBe(true);
+  });
+
+  // The test server answers a read of version "L:<status>" with that status.
+  it.each([
+    { status: 403, retryable: false },
+    { status: 501, retryable: false },
+    { status: 429, retryable: true },
+    { status: 500, retryable: true },
+    { status: 503, retryable: true },
+  ])('says a $status from the sync server is retryable: $retryable', async ({ status, retryable }) => {
+    const handle = await open();
+    const read = await execute(handle, 'history.read', { version: `${LINEAGE}:${status}` });
+
+    expect(read).toMatchObject({ ok: false, error: { code: 'TOOL_ACTION_FAILED', retryable } });
+  });
+
+  it('says an unreachable sync server is retryable', async () => {
+    const handle = await open();
+
+    const closed = new Promise<void>((resolve) => server.close(() => resolve()));
+
+    server.closeAllConnections();
+    await closed;
+    const listed = await execute(handle, 'history.versions', {});
+
+    // afterEach closes it again.
+    server = historyServer(seen);
+    expect(listed).toMatchObject({ ok: false, error: { code: 'TOOL_ACTION_FAILED', retryable: true } });
   });
 
   it('names the history commands in the listed blok_execute schema', () => {

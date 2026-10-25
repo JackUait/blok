@@ -170,7 +170,7 @@ describe('what the model is told about computed database values is true', () => 
       const [after] = (await session.read({ ids: ['r1'] })).blocks;
 
       // Writing a formula id does not change what the cell shows.
-      expect(write.ok === false || after?.computed?.f === 42).toBe(true);
+      expect(!write.ok || after?.computed?.f === 42).toBe(true);
     } finally {
       await session.close();
     }

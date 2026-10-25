@@ -4,7 +4,8 @@
     "blocks": [
       {
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "img",
         "type": "image",
         "data": {
@@ -24,7 +25,8 @@
       },
       {
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "aud",
         "type": "audio",
         "data": {
@@ -34,7 +36,8 @@
       },
       {
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "vid",
         "type": "video",
         "data": {
@@ -43,7 +46,8 @@
       },
       {
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "fil",
         "type": "file",
         "data": {
@@ -52,7 +56,8 @@
       },
       {
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "emb",
         "type": "embed",
         "data": {

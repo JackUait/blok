@@ -104,7 +104,7 @@ internal static class RoomEditTranslator
           Text(block["lastEditedBy"]) is { } by &&
           block["lastEditedAt"] is JsonValue at && at.GetValueKind() == JsonValueKind.Number)
       {
-        ops.Add(new CollabEditOp.SetMetadata(stampedId, at.GetValue<double>(), by));
+        ops.Add(new CollabEditOp.SetMetadata(stampedId, at.GetValue<double>(), by, Text(block["lastEditedWith"])));
       }
     }
 
@@ -137,6 +137,11 @@ internal static class RoomEditTranslator
       if (Text(drafted["createdBy"]) is { } createdBy)
       {
         block["createdBy"] = createdBy;
+
+        if (Text(drafted["createdWith"]) is { } createdWith)
+        {
+          block["createdWith"] = createdWith;
+        }
       }
     }
 

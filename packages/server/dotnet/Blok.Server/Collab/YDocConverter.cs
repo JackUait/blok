@@ -1537,6 +1537,10 @@ internal static class YDocConverter
       return [
         EditStep.SetBlockField(op.Id, "lastEditedAt", op.LastEditedAt),
         EditStep.SetBlockField(op.Id, "lastEditedBy", NoNul(op.LastEditedBy, "an editor id")),
+        // LOCKSTEP with DocumentStore.updateBlockMetadata: an edit with no co-editor removes the old one.
+        op.LastEditedWith is { } with
+          ? EditStep.SetBlockField(op.Id, "lastEditedWith", NoNul(with, "a co-editor id"))
+          : EditStep.RemoveBlockField(op.Id, "lastEditedWith"),
       ];
     }
 
@@ -1797,6 +1801,17 @@ internal static class YDocConverter
         if (Value(blockMap, id) is YMap block)
         {
           block.Set(transaction, key, value);
+        }
+      });
+    }
+
+    internal static EditStep RemoveBlockField(string id, string key)
+    {
+      return new EditStep((transaction, blockMap, _) =>
+      {
+        if (Value(blockMap, id) is YMap block && block.TryGet(key, out var existing) && existing is not null)
+        {
+          block.Remove(transaction, key);
         }
       });
     }
@@ -3042,6 +3057,16 @@ internal static class YDocConverter
         entries.Add(Pair("createdBy", Atomic(createdBy, 1)));
       }
 
+      if (block["createdWith"] is { } createdWith && createdWith.GetValueKind() == JsonValueKind.String)
+      {
+        entries.Add(Pair("createdWith", Atomic(createdWith, 1)));
+      }
+
+      if (block["lastEditedWith"] is { } lastEditedWith && lastEditedWith.GetValueKind() == JsonValueKind.String)
+      {
+        entries.Add(Pair("lastEditedWith", Atomic(lastEditedWith, 1)));
+      }
+
       return new YMap(entries);
     }
 
@@ -3942,6 +3967,16 @@ internal static class YDocConverter
       if (Value(entry.Map, "createdBy") is string createdBy)
       {
         block["createdBy"] = createdBy;
+      }
+
+      if (Value(entry.Map, "createdWith") is string createdWith)
+      {
+        block["createdWith"] = createdWith;
+      }
+
+      if (Value(entry.Map, "lastEditedWith") is string lastEditedWith)
+      {
+        block["lastEditedWith"] = lastEditedWith;
       }
 
       return block;

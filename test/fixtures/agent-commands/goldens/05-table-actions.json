@@ -4,7 +4,8 @@
     "blocks": [
       {
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "ta1",
         "type": "table",
         "data": {
@@ -164,9 +165,11 @@
       },
       {
         "createdAt": 0,
-        "createdBy": "agent-test",
+        "createdBy": "human-1",
+        "createdWith": "agent-test",
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "b0.1",
         "type": "paragraph",
         "data": {
@@ -200,9 +203,11 @@
       },
       {
         "createdAt": 0,
-        "createdBy": "agent-test",
+        "createdBy": "human-1",
+        "createdWith": "agent-test",
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "b0.4",
         "type": "paragraph",
         "data": {
@@ -216,9 +221,11 @@
       },
       {
         "createdAt": 0,
-        "createdBy": "agent-test",
+        "createdBy": "human-1",
+        "createdWith": "agent-test",
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "b0.5",
         "type": "paragraph",
         "data": {
@@ -232,9 +239,11 @@
       },
       {
         "createdAt": 0,
-        "createdBy": "agent-test",
+        "createdBy": "human-1",
+        "createdWith": "agent-test",
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "b0.6",
         "type": "paragraph",
         "data": {
@@ -248,9 +257,11 @@
       },
       {
         "createdAt": 0,
-        "createdBy": "agent-test",
+        "createdBy": "human-1",
+        "createdWith": "agent-test",
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "b0.7",
         "type": "paragraph",
         "data": {
@@ -264,9 +275,11 @@
       },
       {
         "createdAt": 0,
-        "createdBy": "agent-test",
+        "createdBy": "human-1",
+        "createdWith": "agent-test",
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "b0.8",
         "type": "paragraph",
         "data": {
@@ -280,9 +293,11 @@
       },
       {
         "createdAt": 0,
-        "createdBy": "agent-test",
+        "createdBy": "human-1",
+        "createdWith": "agent-test",
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "b0.9",
         "type": "paragraph",
         "data": {
@@ -304,9 +319,11 @@
       },
       {
         "createdAt": 0,
-        "createdBy": "agent-test",
+        "createdBy": "human-1",
+        "createdWith": "agent-test",
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "b0.11",
         "type": "paragraph",
         "data": {
@@ -320,9 +337,11 @@
       },
       {
         "createdAt": 0,
-        "createdBy": "agent-test",
+        "createdBy": "human-1",
+        "createdWith": "agent-test",
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "b0.12",
         "type": "paragraph",
         "data": {
@@ -332,9 +351,11 @@
       },
       {
         "createdAt": 0,
-        "createdBy": "agent-test",
+        "createdBy": "human-1",
+        "createdWith": "agent-test",
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "b0.13",
         "type": "paragraph",
         "data": {
@@ -380,9 +401,11 @@
       },
       {
         "createdAt": 0,
-        "createdBy": "agent-test",
+        "createdBy": "human-1",
+        "createdWith": "agent-test",
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "b0.17",
         "type": "paragraph",
         "data": {
@@ -396,9 +419,11 @@
       },
       {
         "createdAt": 0,
-        "createdBy": "agent-test",
+        "createdBy": "human-1",
+        "createdWith": "agent-test",
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "b0.18",
         "type": "paragraph",
         "data": {

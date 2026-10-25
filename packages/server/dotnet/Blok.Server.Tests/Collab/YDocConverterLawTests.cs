@@ -295,6 +295,24 @@ public sealed class YDocConverterLawTests
   }
 
   [Fact]
+  public void SeedAndExportKeepTheCoAuthorIds()
+  {
+    // LOCKSTEP with serializer.ts: createdWith and lastEditedWith are strings on the block map.
+    var doc = new YDoc();
+
+    RichTextRuntime.Seed(doc, Blocks(
+        """{ "id": "a", "type": "paragraph", "data": {}, "createdBy": "u1", "createdWith": "a1", "lastEditedBy": "u1", "lastEditedWith": "a1" }"""));
+
+    Assert.Equal("a1", Entry(BlockOf(doc, "a"), "createdWith"));
+    Assert.Equal("a1", Entry(BlockOf(doc, "a"), "lastEditedWith"));
+
+    var exported = BlockNamed(RichTextRuntime.Export(doc), "a");
+
+    Assert.Equal("a1", (string?)exported["createdWith"]);
+    Assert.Equal("a1", (string?)exported["lastEditedWith"]);
+  }
+
+  [Fact]
   public void ExportWritesIntegralNumbersAsIntegersAndReadsBigIntegersToo()
   {
     var doc = BuildDoc(

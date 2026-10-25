@@ -4,7 +4,8 @@
     "blocks": [
       {
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "db1",
         "type": "database",
         "data": {
@@ -223,9 +224,11 @@
       },
       {
         "createdAt": 0,
-        "createdBy": "agent-test",
+        "createdBy": "human-1",
+        "createdWith": "agent-test",
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "b0.2",
         "type": "database-row",
         "data": {
@@ -239,9 +242,11 @@
       },
       {
         "createdAt": 0,
-        "createdBy": "agent-test",
+        "createdBy": "human-1",
+        "createdWith": "agent-test",
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "b1",
         "type": "database",
         "data": {

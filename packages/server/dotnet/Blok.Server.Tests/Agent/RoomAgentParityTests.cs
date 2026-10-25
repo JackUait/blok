@@ -22,7 +22,7 @@ public sealed class RoomAgentParityTests
 
     foreach (var batch in c.Batches)
     {
-      var execution = await room.Executor.ExecuteInRoomAsync(room.DocId, batch.ToJsonString(), new BlokAgentActor("agent-test", "Parity"));
+      var execution = await room.Executor.ExecuteInRoomAsync(room.DocId, batch.ToJsonString(), new BlokAgentActor("agent-test", "Parity", "human-1"));
       var result = JsonNode.Parse(execution.ResultJson)!;
 
       if (!result["ok"]!.GetValue<bool>())

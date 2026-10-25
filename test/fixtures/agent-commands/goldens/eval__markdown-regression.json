@@ -15,9 +15,11 @@
       },
       {
         "createdAt": 0,
-        "createdBy": "agent-test",
+        "createdBy": "human-1",
+        "createdWith": "agent-test",
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "h",
         "type": "header",
         "data": {
@@ -31,9 +33,11 @@
       },
       {
         "createdAt": 0,
-        "createdBy": "agent-test",
+        "createdBy": "human-1",
+        "createdWith": "agent-test",
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "i",
         "type": "paragraph",
         "data": {
@@ -49,9 +53,11 @@
       },
       {
         "createdAt": 0,
-        "createdBy": "agent-test",
+        "createdBy": "human-1",
+        "createdWith": "agent-test",
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "l1",
         "type": "list",
         "data": {
@@ -65,9 +71,11 @@
       },
       {
         "createdAt": 0,
-        "createdBy": "agent-test",
+        "createdBy": "human-1",
+        "createdWith": "agent-test",
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "l2",
         "type": "list",
         "data": {
@@ -81,9 +89,11 @@
       },
       {
         "createdAt": 0,
-        "createdBy": "agent-test",
+        "createdBy": "human-1",
+        "createdWith": "agent-test",
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "l3",
         "type": "list",
         "data": {
@@ -97,9 +107,11 @@
       },
       {
         "createdAt": 0,
-        "createdBy": "agent-test",
+        "createdBy": "human-1",
+        "createdWith": "agent-test",
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "c",
         "type": "code",
         "data": {

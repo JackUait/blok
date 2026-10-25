@@ -18,7 +18,8 @@ import { compareToGolden, runCorpusCase } from './parity/run-case';
 // Each batch re-renders through real Core in jsdom. A 12-batch table case grows the grid
 // to 5×5 and takes about 5 s, just past vitest's default.
 const CASE_TIMEOUT_MS = 30_000;
-const actor: AgentActor = { id: 'agent-test', name: 'Parity', kind: 'agent' };
+// Same actor as TEST_ACTOR in harness.ts: it acts for the configured user human-1.
+const actor: AgentActor = { id: 'agent-test', name: 'Parity', kind: 'agent', onBehalfOf: 'human-1' };
 const cases = loadParityCases();
 let holder: HTMLDivElement | undefined;
 let core: Core | undefined;

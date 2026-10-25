@@ -15,7 +15,8 @@ import type { BlokCustomToolsFile } from '../../../types/tool-manifest';
 import type { AgentActor, AgentSession } from '../../../types/agent';
 import type { HostServices } from './parity/corpus';
 
-export const TEST_ACTOR: AgentActor = { id: 'agent-test', name: 'Parity', kind: 'agent' };
+// The editor runner boots with user human-1, the person this agent acts for.
+export const TEST_ACTOR: AgentActor = { id: 'agent-test', name: 'Parity', kind: 'agent', onBehalfOf: 'human-1' };
 
 export const nodeContract = (runtime: 'node' | 'node-live' = 'node'): AgentContract =>
   createHeadlessAgentSetup({ runtime }).contract;

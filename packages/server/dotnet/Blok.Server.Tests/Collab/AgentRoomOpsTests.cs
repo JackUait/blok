@@ -151,6 +151,37 @@ public sealed class AgentRoomOpsTests
   }
 
   [Fact]
+  public void MetadataSetsTheCoEditorAndAnEditWithoutOneRemovesIt()
+  {
+    var doc = new YDoc();
+    RichTextRuntime.Seed(doc, JsonNode.Parse("""[{"id":"p","type":"paragraph","data":{}}]""")!.AsArray());
+
+    RichTextRuntime.ApplyOps(doc, [new CollabEditOp.SetMetadata("p", 42, "human-1", "agent-cs")]);
+    var p = RichTextRuntime.Export(doc).Single()!;
+    Assert.Equal(("human-1", "agent-cs"), (p["lastEditedBy"]!.GetValue<string>(), p["lastEditedWith"]!.GetValue<string>()));
+
+    RichTextRuntime.ApplyOps(doc, [new CollabEditOp.SetMetadata("p", 43, "agent-cs")]);
+    p = RichTextRuntime.Export(doc).Single()!;
+    Assert.Equal("agent-cs", p["lastEditedBy"]!.GetValue<string>());
+    Assert.False(p.AsObject().ContainsKey("lastEditedWith"));
+  }
+
+  [Fact]
+  public void AnInsertCarriesTheCoAuthorIds()
+  {
+    var doc = new YDoc();
+    RichTextRuntime.Seed(doc, []);
+
+    RichTextRuntime.ApplyOps(doc, [new CollabEditOp.Insert(
+        "n",
+        JsonNode.Parse("""{"type":"paragraph","data":{},"createdBy":"human-1","createdWith":"agent-cs"}""")!.AsObject(),
+        null,
+        null)]);
+
+    Assert.Equal("agent-cs", RichTextRuntime.Export(doc).Single()!["createdWith"]!.GetValue<string>());
+  }
+
+  [Fact]
   public void LiftThenRemoveKeepsTheChildrenInTheSlot()
   {
     var doc = new YDoc();

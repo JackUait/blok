@@ -43,6 +43,32 @@ public sealed class RoomEditTranslatorTests
   }
 
   [Fact]
+  public void CarriesTheCoAuthorIdsTheJsonApplierWrote()
+  {
+    var edits = JsonNode.Parse("""
+      [
+        {"op":"insert","parentId":null,"afterId":null,"block":{"id":"n","type":"paragraph","data":{},"children":[]}},
+        {"op":"setData","id":"p","patch":{"keep":1}}
+      ]
+      """)!.AsArray();
+    var after = JsonNode.Parse("""
+      {"blocks":[
+        {"id":"n","type":"paragraph","data":{},"createdAt":7,"createdBy":"human-1","createdWith":"agent","lastEditedAt":7,"lastEditedBy":"human-1","lastEditedWith":"agent"},
+        {"id":"p","type":"paragraph","data":{"keep":1},"lastEditedAt":7,"lastEditedBy":"human-1","lastEditedWith":"agent"}
+      ]}
+      """)!.AsObject();
+    var result = JsonNode.Parse("""{"ok":true,"changed":{"created":["n"],"updated":["p"],"moved":[],"removed":[]}}""")!.AsObject();
+
+    var ops = RoomEditTranslator.Translate(edits, after, result);
+
+    Assert.Collection(ops,
+        op => Assert.Equal(("human-1", "agent"), ((string?)((CollabEditOp.Insert)op).Block["createdBy"], (string?)((CollabEditOp.Insert)op).Block["createdWith"])),
+        op => Assert.IsType<CollabEditOp.Update>(op),
+        op => Assert.Equal(new CollabEditOp.SetMetadata("n", 7, "human-1", "agent"), op),
+        op => Assert.Equal(new CollabEditOp.SetMetadata("p", 7, "human-1", "agent"), op));
+  }
+
+  [Fact]
   public void ARemoveThatKeepsChildrenLiftsThemAndStampsThem()
   {
     var edits = JsonNode.Parse("""

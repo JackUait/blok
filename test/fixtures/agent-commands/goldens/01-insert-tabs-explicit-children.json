@@ -64,9 +64,11 @@
       },
       {
         "createdAt": 0,
-        "createdBy": "agent-test",
+        "createdBy": "human-1",
+        "createdWith": "agent-test",
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "ts",
         "type": "tabs",
         "data": {},
@@ -76,9 +78,11 @@
       },
       {
         "createdAt": 0,
-        "createdBy": "agent-test",
+        "createdBy": "human-1",
+        "createdWith": "agent-test",
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "ts1",
         "type": "tab",
         "data": {
@@ -91,9 +95,11 @@
       },
       {
         "createdAt": 0,
-        "createdBy": "agent-test",
+        "createdBy": "human-1",
+        "createdWith": "agent-test",
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "ts1p",
         "type": "paragraph",
         "data": {

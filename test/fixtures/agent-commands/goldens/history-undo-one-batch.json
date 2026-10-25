@@ -15,9 +15,11 @@
       },
       {
         "createdAt": 0,
-        "createdBy": "agent-test",
+        "createdBy": "human-1",
+        "createdWith": "agent-test",
         "lastEditedAt": 0,
-        "lastEditedBy": "agent-test",
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
         "id": "a",
         "type": "paragraph",
         "data": {

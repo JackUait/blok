@@ -66,7 +66,7 @@ const isArray = (value: unknown): value is unknown[] => Array.isArray(value);
 
 const isOutputBlock = (value: unknown): value is OutputBlockData =>
   isRecord(value) && typeof value.type === 'string' && isRecord(value.data)
-  && [value.id, value.parent, value.lastEditedBy, value.createdBy]
+  && [value.id, value.parent, value.lastEditedBy, value.lastEditedWith, value.createdBy, value.createdWith]
     .every((field) => field === undefined || typeof field === 'string')
   && [value.indent, value.lastEditedAt, value.createdAt]
     .every((field) => field === undefined || typeof field === 'number')

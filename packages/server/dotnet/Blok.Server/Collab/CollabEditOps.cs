@@ -65,8 +65,11 @@ internal abstract record CollabEditOp
   /// <summary>Agent path only. Writes each named tune; a null value deletes it.</summary>
   internal sealed record SetTunes(string Id, JsonObject Tunes) : CollabEditOp;
 
-  /// <summary>Agent path only. Writes the block's <c>lastEditedAt</c> and <c>lastEditedBy</c>.</summary>
-  internal sealed record SetMetadata(string Id, double LastEditedAt, string LastEditedBy) : CollabEditOp;
+  /// <summary>
+  /// Agent path only. Writes the block's <c>lastEditedAt</c> and <c>lastEditedBy</c>,
+  /// and <c>lastEditedWith</c>; a null <paramref name="LastEditedWith"/> deletes it.
+  /// </summary>
+  internal sealed record SetMetadata(string Id, double LastEditedAt, string LastEditedBy, string? LastEditedWith = null) : CollabEditOp;
 }
 
 /// <summary>One key of a root map: set to <paramref name="Value"/>, or deleted when <paramref name="Remove"/>.</summary>
@@ -239,6 +242,11 @@ internal static class CollabEditOps
         writer.WriteString("id", metadata.Id);
         writer.WriteNumber("lastEditedAt", metadata.LastEditedAt);
         writer.WriteString("lastEditedBy", metadata.LastEditedBy);
+        if (metadata.LastEditedWith is { } lastEditedWith)
+        {
+          writer.WriteString("lastEditedWith", lastEditedWith);
+        }
+
         writer.WriteString("op", "setMetadata");
         break;
 
@@ -351,8 +359,10 @@ internal static class CollabEditOps
         "tunes",
         "lastEditedAt",
         "lastEditedBy",
+        "lastEditedWith",
         "createdAt",
-        "createdBy");
+        "createdBy",
+        "createdWith");
 
     if (block.ContainsKey("id") && RequiredString(block, "id", index) != id)
     {
@@ -387,6 +397,16 @@ internal static class CollabEditOps
     if (block.ContainsKey("createdBy"))
     {
       RequiredString(block, "createdBy", index);
+    }
+
+    if (block.ContainsKey("createdWith"))
+    {
+      RequiredString(block, "createdWith", index);
+    }
+
+    if (block.ContainsKey("lastEditedWith"))
+    {
+      RequiredString(block, "lastEditedWith", index);
     }
 
     return block;

@@ -26,7 +26,7 @@ public sealed class JintAgentParityTests(JintAgentRuntimeFixture fixture) : ICla
 
     foreach (var batch in c.Batches)
     {
-      var execution = await fixture.Executor.ExecuteAsync(document, batch.ToJsonString(), new BlokAgentActor("agent-test", "Parity"));
+      var execution = await fixture.Executor.ExecuteAsync(document, batch.ToJsonString(), new BlokAgentActor("agent-test", "Parity", "human-1"));
       var result = JsonNode.Parse(execution.ResultJson)!;
 
       if (!result["ok"]!.GetValue<bool>())

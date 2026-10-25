@@ -174,6 +174,11 @@ export interface PopoverParamsBase {
   cover?: boolean;
 
   /**
+   * Gap in pixels between the trigger and the popover. Defaults to 8.
+   */
+  offset?: number;
+
+  /**
    * When true, the first item is focused when the popover opens (default behavior).
    * When false, no item is pre-focused — focus only appears after keyboard navigation.
    * Defaults to true. Has no effect when a search field is present (search receives focus instead).

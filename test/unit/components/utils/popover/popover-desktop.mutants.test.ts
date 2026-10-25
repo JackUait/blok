@@ -694,6 +694,24 @@ describe('PopoverDesktop — anchoring geometry', () => {
     expect(popover.getElement().style.top).toBe('148px');
   });
 
+  it('opens the given offset under the trigger instead of the default 8px', () => {
+    const trigger = document.createElement('button');
+
+    document.body.appendChild(trigger);
+    vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ top: 100, bottom: 140, left: 50, right: 90, width: 40, height: 40 })
+    );
+
+    const popover = createPopover({ trigger, offset: 1 });
+    const instance = asInternal(popover);
+
+    vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 100, width: 150 });
+
+    popover.show();
+
+    expect(popover.getElement().style.top).toBe('141px');
+  });
+
   it('docks the menu to the anchor side named by asideSide with the viewport margin floor', () => {
     const trigger = document.createElement('button');
 

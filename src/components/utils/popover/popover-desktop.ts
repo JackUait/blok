@@ -310,6 +310,9 @@ export class PopoverDesktop extends PopoverAbstract {
   /** Covers the anchor instead of opening beside it (see `PopoverParams.cover`). */
   private cover = false;
 
+  /** Gap between the trigger and the popover (see `PopoverParams.offset`). */
+  private offset = 8;
+
   /**
    * Updates the element whose left edge is used for horizontal positioning.
    * @param element - new element to align against, or undefined to fall back to trigger
@@ -412,6 +415,10 @@ export class PopoverDesktop extends PopoverAbstract {
 
     if (params.cover === true) {
       this.cover = true;
+    }
+
+    if (typeof params.offset === 'number') {
+      this.offset = params.offset;
     }
 
     if (params.nestingLevel !== undefined) {
@@ -862,7 +869,7 @@ export class PopoverDesktop extends PopoverAbstract {
       scopeBounds,
       viewportSize,
       scrollOffset: { x: window.scrollX, y: window.scrollY },
-      offset: 8,
+      offset: this.offset,
       leftAlignRect,
       direction: getElementDirection(this.nodes.popover),
       placeLeftOfAnchor: this.placeLeftOfAnchor,

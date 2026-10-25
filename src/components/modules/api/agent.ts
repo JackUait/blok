@@ -421,7 +421,7 @@ export class AgentAPI extends Module {
     if (this.startPageIds.get(blockId) !== pageId && !this.hostPageIds.has(pageId)) {
       throw failure('INVALID_ARGS', `Block "${blockId}" points at a page an agent set, not one the host created. It cannot be opened.`, { path: '/page', details: { blockId } });
     }
-    const session = await docs.open(pageId, actor);
+    const session = await docs.open(pageId, actor, { created: this.hostPageIds.has(pageId) });
     const getById = (id: string): Block | undefined => this.Blok.BlockManager.getBlockById(id);
 
     return {

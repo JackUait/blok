@@ -289,6 +289,35 @@ describe('the agent edits a sub-page through the host page documents', () => {
     expect(pages.get('made')?.title).toBe('Fresh');
   });
 
+  it('a page the agent inserted opens and takes blocks, title and icon when the host has no create', async () => {
+    const pages = new Map<string, OutputData>();
+    const editor = await boot({
+      loadDocument: (pageId: string) => structuredClone(pages.get(pageId) ?? null),
+      saveDocument: (pageId: string, data: OutputData) => {
+        pages.set(pageId, structuredClone(data));
+      },
+    });
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const inserted = await turn.execute({ commands: [{ name: 'block.insert', args: { type: 'page', id: 'np', position: 'end' } }] });
+    const written = await turn.call('blok_execute', { page: 'np', commands: [
+      { name: 'doc.setTitle', args: { title: 'Fresh' } },
+      { name: 'doc.setIcon', args: { icon: { type: 'emoji', value: '🌱' } } },
+      { name: 'block.insert', args: { type: 'paragraph', data: { text: 'Inside' }, position: 'end' } },
+    ] });
+
+    turn.end();
+    const pageId = (await editor.save()).blocks.find((block) => block.id === 'np')?.data.pageId;
+
+    expect(written.isError, written.content).toBe(false);
+    expect(inserted.ok).toBe(true);
+    expect(typeof pageId).toBe('string');
+    const made = pages.get(String(pageId));
+
+    expect(made?.title).toBe('Fresh');
+    expect(made?.icon).toEqual({ type: 'emoji', value: '🌱' });
+    expect(made?.blocks.map((block) => block.data.text)).toEqual([[{ text: 'Inside' }]]);
+  });
+
   it('a pageId the agent wrote in an earlier turn still does not open that document', async () => {
     const pages = new Map<string, OutputData>([['sub', { blocks: [] }], ['other', { title: 'Private', blocks: [] }]]);
     const editor = await boot(host(pages));

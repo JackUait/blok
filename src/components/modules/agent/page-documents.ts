@@ -24,7 +24,8 @@ const documentHooks = (settings: Record<string, unknown>): DocumentHooks | null 
 };
 
 export interface PageDocuments {
-  open: OpenPageDocument;
+  /** `created`: the host's create just gave this id, so a missing document opens empty. */
+  open(pageId: string, actor: AgentActor, options?: { created?: boolean }): Promise<AgentSession & { close(): void }>;
   /** Writes a whole document back, as Discard does with the one a run started from. */
   save(pageId: string, data: OutputData): Promise<void>;
 }
@@ -64,14 +65,15 @@ export const createPageDocuments = (
     return null;
   }
 
-  const open = async (pageId: string, actor: AgentActor): Promise<AgentSession & { close(): void }> => {
+  const open = async (pageId: string, actor: AgentActor, openOptions: { created?: boolean } = {}): Promise<AgentSession & { close(): void }> => {
     // Two writers on one document: the editor and this session.
     if (pageId === ownDocumentId) {
       throw failure('INVALID_ARGS', 'This page block points at the document you have open. Use doc.setTitle or doc.setIcon instead.', { details: { pageId } });
     }
-    const loaded = await hooks.loadDocument(pageId);
+    // A host without create, or one that stores the page later, has nothing to load yet.
+    const loaded = await hooks.loadDocument(pageId) ?? (openOptions.created === true ? { blocks: [] } : null);
 
-    if (loaded === null || loaded === undefined) {
+    if (loaded === null) {
       throw failure('BLOCK_NOT_FOUND', `The host has no document for page "${pageId}".`, { details: { pageId } });
     }
     const original = structuredClone(loaded);

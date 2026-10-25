@@ -302,46 +302,50 @@ describe('doc.read paging', () => {
 });
 
 describe('doc.find', () => {
+  const hit = (id: string, type: string, start: number, end: number, snippet: string, field = 'text') =>
+    ({ id, type, field, start, end, snippet });
+
   it('finds text case-insensitively with original-case snippets in reading order', () => {
-    expect(find({ text: 'DETAIL' })).toEqual({ matches: [
-      { id: 't1', type: 'toggle', snippet: 'Details' },
-      { id: 'cell01', type: 'paragraph', snippet: 'cell detail' },
-      { id: 'tail', type: 'paragraph', snippet: 'Tail details' },
+    expect(find({ text: 'DETAIL' })).toEqual({ count: 3, matches: [
+      hit('t1', 'toggle', 0, 6, 'Details'),
+      hit('cell01', 'paragraph', 5, 11, 'cell detail'),
+      hit('tail', 'paragraph', 5, 11, 'Tail details'),
     ] });
   });
 
   it('requires both filters when text and type are supplied', () => {
-    expect(find({ text: 'DETAIL', type: 'paragraph' })).toEqual({ matches: [
-      { id: 'cell01', type: 'paragraph', snippet: 'cell detail' },
-      { id: 'tail', type: 'paragraph', snippet: 'Tail details' },
+    expect(find({ text: 'DETAIL', type: 'paragraph' })).toEqual({ count: 2, matches: [
+      hit('cell01', 'paragraph', 5, 11, 'cell detail'),
+      hit('tail', 'paragraph', 5, 11, 'Tail details'),
     ] });
-    expect(find({ text: 'not present' })).toEqual({ matches: [] });
-    expect(find({ type: 'Paragraph' })).toEqual({ matches: [] });
+    expect(find({ text: 'not present' })).toEqual({ count: 0, matches: [] });
+    expect(find({ type: 'Paragraph' })).toEqual({ count: 0, matches: [] });
   });
 
   it('finds only descendants of the named root, including deeper levels', () => {
-    expect(find({ type: 'paragraph', rootId: 't1' })).toEqual({ matches: [
-      { id: 'leaf', type: 'paragraph', snippet: 'Deploy target' },
-      { id: 'p9', type: 'paragraph', snippet: 'x'.repeat(20) },
+    expect(find({ type: 'paragraph', rootId: 't1' })).toEqual({ count: 2, matches: [
+      { id: 'leaf', type: 'paragraph' },
+      { id: 'p9', type: 'paragraph' },
     ] });
-    expect(find({ text: 'DETAIL', rootId: 't1' })).toEqual({ matches: [] });
+    expect(find({ text: 'DETAIL', rootId: 't1' })).toEqual({ count: 0, matches: [] });
   });
 
-  it('applies an explicit result limit', () => {
-    expect(find({ text: 'DETAIL', limit: 1 })).toEqual({ matches: [{ id: 't1', type: 'toggle', snippet: 'Details' }] });
+  it('applies an explicit result limit to the list, not the count', () => {
+    expect(find({ text: 'DETAIL', limit: 1 })).toEqual({ count: 3, matches: [hit('t1', 'toggle', 0, 6, 'Details')] });
   });
 
   it('defaults to at most 20 matches', () => {
     const source: OutputData = { blocks: Array.from({ length: 21 }, (_, index) => ({ id: `p${index}`, type: 'paragraph', data: { text: [{ text: 'Match' }] } })) };
 
     expect(find({ text: 'match' }, source)).toEqual({
-      matches: Array.from({ length: 20 }, (_, index) => ({ id: `p${index}`, type: 'paragraph', snippet: 'Match' })),
+      count: 21,
+      matches: Array.from({ length: 20 }, (_, index) => hit(`p${index}`, 'paragraph', 0, 5, 'Match')),
     });
   });
 
   it('can find an opaque type without treating undeclared data as rich text', () => {
-    expect(find({ type: 'kanban' })).toEqual({ matches: [{ id: 'x4', type: 'kanban', snippet: '' }] });
-    expect(find({ text: 'Secret' })).toEqual({ matches: [] });
+    expect(find({ type: 'kanban' })).toEqual({ count: 1, matches: [{ id: 'x4', type: 'kanban' }] });
+    expect(find({ text: 'Secret' })).toEqual({ count: 0, matches: [] });
   });
 
   it('searches every declared rich field but not arbitrary data', () => {
@@ -354,19 +358,19 @@ describe('doc.find', () => {
     tools.set('card', tool('card', { richTextFields: ['heading', 'caption'] }));
 
     expect(planOn(source, [{ name: 'doc.find', args: { text: 'NEEDLE' } }], { tools }).plan.results[0]).toEqual({
-      matches: [{ id: 'card', type: 'card', snippet: 'Card Needle caption' }],
+      count: 1, matches: [hit('card', 'card', 0, 6, 'Needle caption', 'caption')],
     });
-    expect(planOn(source, [{ name: 'doc.find', args: { text: 'Hidden' } }], { tools }).plan.results[0]).toEqual({ matches: [] });
+    expect(planOn(source, [{ name: 'doc.find', args: { text: 'Hidden' } }], { tools }).plan.results[0]).toEqual({ count: 0, matches: [] });
   });
 
   it.each([
     { name: 'in the middle', text: `${'L'.repeat(30)}Needle${'R'.repeat(30)}Needle`, snippet: `${'L'.repeat(20)}Needle${'R'.repeat(20)}` },
     { name: 'at the beginning', text: `Needle${'R'.repeat(30)}`, snippet: `Needle${'R'.repeat(20)}` },
     { name: 'at the end', text: `${'L'.repeat(30)}Needle`, snippet: `${'L'.repeat(20)}Needle` },
-  ])('clips the snippet around the first match $name', ({ text, snippet }) => {
+  ])('clips the snippet around the match $name', ({ text, snippet }) => {
     const source: OutputData = { blocks: [{ id: 'p', type: 'paragraph', data: { text: [{ text }] } }] };
 
-    expect(find({ text: 'needle' }, source)).toEqual({ matches: [{ id: 'p', type: 'paragraph', snippet }] });
+    expect(find({ text: 'needle' }, source)).toMatchObject({ matches: expect.arrayContaining([expect.objectContaining({ id: 'p', start: text.indexOf('Needle'), snippet })]) });
   });
 });
 
@@ -425,7 +429,7 @@ describe('doc commands on the batch draft', () => {
           { id: 'new-child', type: 'paragraph', depth: 1, parentId: 'new-section', text: 'Needle child', data: { text: [{ text: 'Needle child' }] } },
         ],
       },
-      { matches: [{ id: 'new-child', type: 'paragraph', snippet: 'Needle child' }] },
+      { count: 1, matches: [{ id: 'new-child', type: 'paragraph', field: 'text', start: 0, end: 6, snippet: 'Needle child' }] },
     ]);
     expect(plan.refs).toEqual({ section: 'new-section' });
   });
@@ -444,7 +448,7 @@ describe('doc commands on the batch draft', () => {
 
     expect(plan.results.slice(2)).toEqual([
       { revision: '', rootId: null, blocks: [{ id: 'stay', type: 'paragraph', depth: 0, text: 'Needle updated' }] },
-      { matches: [{ id: 'stay', type: 'paragraph', snippet: 'Needle updated' }] },
+      { count: 1, matches: [{ id: 'stay', type: 'paragraph', field: 'text', start: 0, end: 6, snippet: 'Needle updated' }] },
     ]);
   });
 

@@ -287,7 +287,8 @@ describe('renderAgentTools mixed size', () => {
     const size = (schema: 'full' | 'mixed'): number =>
       JSON.stringify(executeTool(renderAgentTools(editor, { format: 'anthropic', schema }))).length;
 
-    expect(size('mixed')).toBeLessThan(10_000);
+    // Raised from 10_000 for the find options (matchCase, wholeWord, all) on text ranges.
+    expect(size('mixed')).toBeLessThan(10_200);
     expect(size('mixed') * 5).toBeLessThan(size('full'));
   });
 });

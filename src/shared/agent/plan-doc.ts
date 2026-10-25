@@ -69,12 +69,6 @@ export const planRead = (state: PlanState, args: Record<string, unknown>): unkno
   if (limit !== undefined && typeof limit !== 'number') {
     state.fail('INVALID_ARGS', 'Expected a numeric limit.', '/limit');
   }
-  if (matchCase !== undefined && typeof matchCase !== 'boolean') {
-    state.fail('INVALID_ARGS', 'Expected true or false.', '/matchCase');
-  }
-  if (wholeWord !== undefined && typeof wholeWord !== 'boolean') {
-    state.fail('INVALID_ARGS', 'Expected true or false.', '/wholeWord');
-  }
   if (cursor !== undefined && typeof cursor !== 'string') {
     state.fail('INVALID_ARGS', 'Expected a cursor string.', '/cursor');
   }

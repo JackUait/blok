@@ -36,13 +36,19 @@ const offsets: JsonSchema = {
   properties: { start: { type: 'integer', minimum: 0 }, end: { type: 'integer', minimum: 0 }, expectText: { type: 'string' } },
   required: ['start', 'end'], additionalProperties: false,
 };
-const findRange = (extra: Record<string, JsonSchema> = {}): JsonSchema => ({
-  type: 'object', properties: { find: { type: 'string', minLength: 1 }, occurrence: { type: 'integer', minimum: 1 }, ...FIND_OPTIONS, ...extra },
-  required: ['find'], additionalProperties: false,
-});
-const range: JsonSchema = { oneOf: [{ const: 'all' }, offsets, findRange()] };
-const replaceRange: JsonSchema = {
-  oneOf: [{ const: 'all' }, offsets, findRange({ all: { type: 'boolean', description: 'Replace every hit in one pass. Not with occurrence.' } })],
+const range: JsonSchema = {
+  oneOf: [
+    { const: 'all' },
+    offsets,
+    {
+      type: 'object',
+      properties: {
+        find: { type: 'string', minLength: 1 }, occurrence: { type: 'integer', minimum: 1 }, ...FIND_OPTIONS,
+        all: { type: 'boolean' },
+      },
+      required: ['find'], additionalProperties: false,
+    },
+  ],
 };
 const obj = (properties: Record<string, JsonSchema>, required: string[] = []): JsonSchema =>
   ({ type: 'object', properties, required, additionalProperties: false });
@@ -99,7 +105,7 @@ export const COMMANDS: Record<CoreCommandName, CoreCommandSpec> = {
   }, ['id', 'at', 'text'])),
   'text.delete': write('Delete a range of text.', obj({ id, field: { type: 'string' }, range }, ['id', 'range'])),
   'text.replace': write('Replace a range, or the whole field. Plain text takes the marks where a found or offset range starts.', obj({
-    id, field: { type: 'string' }, range: replaceRange, with: richOrString,
+    id, field: { type: 'string' }, range, with: richOrString,
   }, ['id', 'with']), 'A find range matches as the find bar and doc.find do: case, accents and runs of spaces fold, unless matchCase. '
     + 'wholeWord skips a hit inside a longer word. { find, all: true } replaces every hit in the field in one pass. '
     + 'Plain text inside a link stays in that link. Segments keep only their own marks.'),

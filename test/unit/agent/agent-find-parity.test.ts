@@ -146,6 +146,11 @@ describe.each(RUNTIMES)('text.replace {find} matches what doc.find found (%s)', 
     ]);
   }, TIMEOUT);
 
+  it('refuses all outside text.replace, so a format or delete never touches only the first hit', async () => {
+    expect((await run(open, { commands: [{ name: 'text.format', args: { id: 'c', range: { find: 'cat', all: true }, set: { bold: true } } }] })).result)
+      .toMatchObject({ ok: false, error: { code: 'INVALID_ARGS' } });
+  }, TIMEOUT);
+
   it('refuses all with an occurrence', async () => {
     expect((await run(open, replace('c', { find: 'cat', all: true, occurrence: 2 }, 'dog'))).result)
       .toMatchObject({ ok: false, error: { code: 'INVALID_ARGS' } });

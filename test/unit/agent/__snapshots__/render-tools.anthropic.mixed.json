@@ -791,6 +791,15 @@
                 "occurrence": {
                   "type": "integer",
                   "minimum": 1
+                },
+                "matchCase": {
+                  "type": "boolean"
+                },
+                "wholeWord": {
+                  "type": "boolean"
+                },
+                "all": {
+                  "type": "boolean"
                 }
               },
               "required": [

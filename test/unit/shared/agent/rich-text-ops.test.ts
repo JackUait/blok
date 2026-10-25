@@ -403,10 +403,11 @@ describe('rich text range resolution', () => {
     expect(rt.resolve(emoji, { find: '😀' })).toStrictEqual({ start: 1, end: 3 });
   });
 
-  it.each(['\uD83D', '\uDE00', 'a\uD83D', '\uDE00b'])('rejects a find result that splits a surrogate pair: %j', find => {
+  // The find-bar matcher compares whole code points, so half a pair never matches.
+  it.each(['\uD83D', '\uDE00', 'a\uD83D', '\uDE00b'])('never finds half of a surrogate pair: %j', find => {
     const emoji: RichText = [{ text: 'a😀b' }];
 
-    expect(failureOf(() => rt.resolve(emoji, { find })).error.code).toBe('RANGE_OUT_OF_BOUNDS');
+    expect(failureOf(() => rt.resolve(emoji, { find })).error.code).toBe('RANGE_NOT_FOUND');
   });
 
   it('resolves a repeated full emoji in UTF-16 units', () => {

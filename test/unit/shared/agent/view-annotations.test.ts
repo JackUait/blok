@@ -49,7 +49,7 @@ describe('agent reads skip annotations', () => {
   });
 
   it('never finds text in a thread', () => {
-    expect(run('doc.find', { text: 'secret' })).toEqual({ matches: [] });
+    expect(run('doc.find', { text: 'secret' })).toEqual({ count: 0, matches: [] });
   });
 
   it('keeps the thread in the saved document', () => {

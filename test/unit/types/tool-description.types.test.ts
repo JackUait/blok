@@ -84,6 +84,7 @@ describe('published tool description types', () => {
       summaryFields?: string[];
       fillMissing?: string[];
       inputFields?: string[];
+      findFields?: string[];
       viewState?: string[];
       guardedFields?: Record<string, string>;
       actions?: ToolActionDeclaration[];
@@ -165,6 +166,7 @@ describe('published tool description types', () => {
       summaryFields?: string[];
       fillMissing?: string[];
       inputFields?: string[];
+      findFields?: string[];
       convertsTo: string[];
       conversion: { import?: string; export?: string };
       assetKind?: 'image' | 'video' | 'audio' | 'file';

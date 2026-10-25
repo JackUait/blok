@@ -49,7 +49,10 @@ const target = (state: PlanState, args: Record<string, unknown>): Target => {
   return { id: block.id, type: block.type, field, value };
 };
 
-const readRange = (state: PlanState, value: unknown): TextRange => {
+const readRange = (state: PlanState, value: unknown, allowAll = false): TextRange => {
+  if (!allowAll && isRecord(value) && value.all !== undefined) {
+    state.fail('INVALID_ARGS', '`all` works only in text.replace. Send one command per hit.', '/range/all');
+  }
   if (value === 'all') {
     return value;
   }
@@ -197,7 +200,7 @@ const isReplaceAll = (range: TextRange): range is Extract<TextRange, { find: str
 
 export const planTextReplace = (state: PlanState, args: Record<string, unknown>): unknown => {
   const t = target(state, args);
-  const range = readRange(state, args.range ?? 'all');
+  const range = readRange(state, args.range ?? 'all', true);
 
   if (isReplaceAll(range)) {
     return replaceAll(state, t, range, args.with);

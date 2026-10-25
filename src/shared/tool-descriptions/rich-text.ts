@@ -52,7 +52,7 @@ export const EMBED_SEGMENT = {
     embed: {
       oneOf: [
         { type: 'object', required: ['equation'], additionalProperties: false, properties: { equation: { type: 'object', required: ['expression'], additionalProperties: false, properties: { expression: { type: 'string', description: 'LaTeX.' } } } } },
-        { type: 'object', required: ['page'], additionalProperties: false, properties: { page: { type: 'object', required: ['id'], additionalProperties: false, properties: { id: { type: 'string', description: 'The pageId of a page block (in its data), not the block id.' } } } } },
+        { type: 'object', required: ['page'], additionalProperties: false, properties: { page: { type: 'object', required: ['id'], additionalProperties: false, properties: { id: { type: 'string' } } } } },
         { type: 'object', required: ['html'], additionalProperties: false, properties: { html: { type: 'string', description: 'Kept verbatim.' } } },
       ],
     },

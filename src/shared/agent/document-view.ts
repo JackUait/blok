@@ -199,15 +199,17 @@ export const findBlocks = (
   const title = args.rootId === undefined && args.type === undefined && snap.title !== undefined
     ? hitsIn(snap.title, { field: 'title', edit: 'doc.setTitle' })
     : [];
-  const blocks = contentOrder(snap, args.rootId ?? null, ctx).flatMap(({ id }): FindHit[] => {
+  const blocks = contentOrder(snap, args.rootId ?? null, ctx).map(({ id }) => {
     const block = snap.get(id);
 
     if (block === undefined) {
       throw failure('BLOCK_NOT_FOUND', `Block "${id}" does not exist.`, { details: { id } });
     }
-    if (args.type !== undefined && block.type !== args.type) {
-      return [];
-    }
+
+    return block;
+  }).filter(block => args.type === undefined || block.type === args.type).flatMap((block): FindHit[] => {
+    const id = block.id;
+
     if (query === undefined) {
       return [{ id, type: block.type }];
     }

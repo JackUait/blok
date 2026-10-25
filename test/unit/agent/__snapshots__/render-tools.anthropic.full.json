@@ -2684,6 +2684,12 @@
                         "type": "string",
                         "minLength": 1
                       },
+                      "matchCase": {
+                        "type": "boolean"
+                      },
+                      "wholeWord": {
+                        "type": "boolean"
+                      },
                       "type": {
                         "type": "string"
                       },
@@ -5311,6 +5317,15 @@
                               "occurrence": {
                                 "type": "integer",
                                 "minimum": 1
+                              },
+                              "matchCase": {
+                                "type": "boolean"
+                              },
+                              "wholeWord": {
+                                "type": "boolean"
+                              },
+                              "all": {
+                                "type": "boolean"
                               }
                             },
                             "required": [
@@ -5387,6 +5402,15 @@
                               "occurrence": {
                                 "type": "integer",
                                 "minimum": 1
+                              },
+                              "matchCase": {
+                                "type": "boolean"
+                              },
+                              "wholeWord": {
+                                "type": "boolean"
+                              },
+                              "all": {
+                                "type": "boolean"
                               }
                             },
                             "required": [
@@ -5891,6 +5915,15 @@
                               "occurrence": {
                                 "type": "integer",
                                 "minimum": 1
+                              },
+                              "matchCase": {
+                                "type": "boolean"
+                              },
+                              "wholeWord": {
+                                "type": "boolean"
+                              },
+                              "all": {
+                                "type": "boolean"
                               }
                             },
                             "required": [

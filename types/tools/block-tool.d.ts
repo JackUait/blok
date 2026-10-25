@@ -3,7 +3,7 @@ import { BlockToolData } from './block-tool-data';
 import { BaseTool, BaseToolConstructable, BaseToolConstructorOptions } from './tool';
 import { ToolConfig } from './tool-config';
 import type { BlockToolDescription, ToolActionImpl } from './tool-description';
-import { API, BlockAPI, ToolboxConfig } from '../index';
+import { API, BlockAPI, ToolboxConfig, ToolboxConfigEntry } from '../index';
 import { PasteEvent } from './paste-events';
 import { MoveEvent } from './hook-events';
 import { MenuConfig } from './menu-config';

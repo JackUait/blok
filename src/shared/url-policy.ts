@@ -6,7 +6,7 @@
  * sanitizer (`src/view/sanitize.ts`). Pure module: no DOM access and no
  * parse5 import — it is part of the editor bundle graph.
  */
-import { isSafeRasterImageDataUrl, stripIgnoredUrlChars } from '../components/utils/sanitize-url';
+import { isSafeRasterImageDataUrl, safeImageSrc, stripIgnoredUrlChars } from '../components/utils/sanitize-url';
 
 /**
  * Script-capable schemes hard-stripped from href/src regardless of tool
@@ -43,3 +43,10 @@ export const hasUnsafeUrlProtocol = (value: string | null, attribute: string): b
 
   return attribute === 'href' && BLOB_SCHEME_PATTERN.test(normalized);
 };
+
+/**
+ * Whether an image URL is one Blok renders: http(s), relative, or raster data.
+ * The same check as the renderers' `safeImageSrc`, so a write never stores a URL that shows blank.
+ * @param url - image source
+ */
+export const isSafeImageUrl = (url: string): boolean => safeImageSrc(url) !== null;

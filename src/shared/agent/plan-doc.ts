@@ -1,4 +1,5 @@
 import { cleanPageField } from '../page-title-icon';
+import { isSafeImageUrl } from '../url-policy';
 import { buildDocumentView, findBlocks } from './document-view';
 import { buildPlannedBlock } from './plan-block';
 import { PREPARE_PENDING } from './plan-state';
@@ -122,6 +123,9 @@ export const planSetIcon = (state: PlanState, args: Record<string, unknown>): un
 
   if (icon !== null && !isPageIcon(icon)) {
     state.fail('INVALID_ARGS', 'Expected a PageIcon or null to clear it.', '/icon');
+  }
+  if (icon?.type === 'image' && !isSafeImageUrl(icon.url)) {
+    state.fail('INVALID_ARGS', 'Pass an http(s), relative or raster data: image URL.', '/icon/url');
   }
   state.emit({ op: 'setPageField', key: 'icon', value: icon === null ? null : cleanPageField(icon) });
 

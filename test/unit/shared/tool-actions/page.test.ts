@@ -332,6 +332,20 @@ describe('page actions through the shared executor', () => {
     expect(name === 'rename' ? setIcon : rename).not.toHaveBeenCalled();
   });
 
+  it('refuses a javascript: image icon before the host is called', async () => {
+    const rename = vi.fn<PageBackendService['rename']>().mockResolvedValue(undefined);
+    const setIcon = vi.fn<PageBackendService['setIcon']>().mockResolvedValue(undefined);
+    const fixture = batchFixture({ rename, setIcon });
+    const result = await runBatch({
+      ...fixture.input,
+      batch: { commands: [{ name: 'page.setIcon', args: { id: 'page-block', icon: { type: 'image', url: 'javascript:alert(1)' } } }] },
+    });
+
+    expect(result).toMatchObject({ ok: false, error: { code: 'INVALID_ARGS', commandIndex: 0 } });
+    expect(setIcon).not.toHaveBeenCalled();
+    expect(fixture.apply).not.toHaveBeenCalled();
+  });
+
   it.each(actionNames)('%s must be alone in its batch before either the host or source is touched', async name => {
     const rename = vi.fn<PageBackendService['rename']>().mockResolvedValue(undefined);
     const setIcon = vi.fn<PageBackendService['setIcon']>().mockResolvedValue(undefined);

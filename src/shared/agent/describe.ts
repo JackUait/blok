@@ -74,7 +74,9 @@ export const describeContract = (
   return {
     index: {
       tools: contract.manifest.blocks.map(entry => ({ name: entry.name, summary: entry.summary })),
-      commands: contract.commands.map(entry => ({ name: entry.name, summary: entry.summary })),
+      commands: contract.commands.map(entry => entry.available
+        ? { name: entry.name, summary: entry.summary }
+        : { name: entry.name, summary: entry.summary, available: false as const, reason: entry.unavailableReason ?? 'runtime' }),
       guidance: contract.guidance.general,
     },
   };

@@ -31,4 +31,20 @@ describe('describeContract', () => {
     });
     expect(describeContract(contract, { command: 'block.insert' })).not.toHaveProperty('command.preconditions');
   });
+
+  it('the index marks each command this runtime refuses, with the reason the refusal gives', () => {
+    const slice = describeContract(contract);
+    const listed = 'index' in slice ? slice.index.commands : [];
+    const refused = contract.commands.filter(command => !command.available);
+
+    expect(refused.length).toBeGreaterThan(0);
+    refused.forEach(command => {
+      expect(listed.find(entry => entry.name === command.name)).toEqual({
+        name: command.name, summary: command.summary, available: false, reason: command.unavailableReason,
+      });
+    });
+    contract.commands.filter(command => command.available).forEach(command => {
+      expect(listed.find(entry => entry.name === command.name)).toEqual({ name: command.name, summary: command.summary });
+    });
+  });
 });

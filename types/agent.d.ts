@@ -212,11 +212,16 @@ export interface RichTextHelpers {
   canonicalize(value: RichText): RichText;
 }
 
+/** A command in describe()'s index. A command this session refuses says so, with the reason its refusal gives. */
+export type DescribedIndexCommand =
+  | { name: CommandName; summary: string }
+  | { name: CommandName; summary: string; available: false; reason: 'runtime' | 'service' };
+
 /** A command as describe() shows it: with the plain-text conditions its handler enforces. */
 export type DescribedCommand = CommandEntry & { preconditions?: string[] };
 
 export type ContractSlice =
-  | { index: { tools: { name: string; summary: string }[]; commands: { name: CommandName; summary: string }[]; guidance: string } }
+  | { index: { tools: { name: string; summary: string }[]; commands: DescribedIndexCommand[]; guidance: string } }
   /** The tool's actions are its commands, listed once under commands. */
   | { tool: Omit<BlockToolManifestEntry, 'actions'>; commands: DescribedCommand[] }
   /** An inline tool: its effect names the mark (or embed) a segment writes. */

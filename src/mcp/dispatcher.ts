@@ -223,6 +223,7 @@ export const createToolDispatcher = (
         contractRevision: session.contractRevision,
         ...(found !== null && { documentId, title: found.title }),
         ...(session.exists !== undefined && { exists: session.exists }),
+        ...(session.unavailableCommands !== undefined && { unavailableCommands: session.unavailableCommands }),
         ...(view !== undefined && { view }),
       });
     } catch (thrown) {

@@ -17,6 +17,12 @@ export interface CloseSummary {
   hostRecordLags: boolean;
 }
 
+/** A command the listed blok_execute schema offers that this handle refuses. */
+export interface UnavailableCommand {
+  name: string;
+  reason: 'runtime' | 'service';
+}
+
 export interface HandleSession {
   readonly mode: 'live' | 'stored';
   readonly write: boolean;
@@ -24,6 +30,8 @@ export interface HandleSession {
   readonly contractRevision: string;
   /** Stored mode only: false when the open found no document and started an empty one. */
   readonly exists?: boolean;
+  /** Listed commands this handle refuses; absent when it runs them all. */
+  readonly unavailableCommands?: readonly UnavailableCommand[];
   read(args: ViewArgs): Promise<DocumentView>;
   describe(query: { tool?: string; command?: string }): AgentContract | ContractSlice;
   execute(batch: AgentBatch): Promise<McpExecuteResult>;

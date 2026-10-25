@@ -555,7 +555,9 @@ describe('stored document session', () => {
     expect(session.describe()).toEqual({
       index: {
         tools: contract.manifest.blocks.map(tool => ({ name: tool.name, summary: tool.summary })),
-        commands: contract.commands.map(command => ({ name: command.name, summary: command.summary })),
+        commands: contract.commands.map(command => command.available
+          ? { name: command.name, summary: command.summary }
+          : { name: command.name, summary: command.summary, available: false, reason: command.unavailableReason }),
         guidance,
       },
     });

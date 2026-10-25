@@ -367,7 +367,7 @@ const deletedBackendRowsOf = (adapter: DatabaseAdapter | undefined, databaseId: 
 const BACKLINKS_SETTLE_MS = 300;
 
 // `icon` and `starter` stay in the passthrough: a value this client cannot draw (a newer glyph) is saved back as it came.
-const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'schema', 'views', 'activeViewId', 'source', 'automations', 'hideDataSourceTitles', INITIAL_VIEW_KEY, LINK_PICKER_KEY, ALONE_SKIPS_PANEL_KEY]);
+const KNOWN_KEYS: ReadonlySet<string> = new Set(['title', 'schema', 'views', 'activeViewId', 'source', 'automations', 'hideDataSourceTitles', 'fullPage', INITIAL_VIEW_KEY, LINK_PICKER_KEY, ALONE_SKIPS_PANEL_KEY]);
 
 const sourceRefOf = (data: DatabaseData | undefined): DatabaseSourceRef | undefined => {
   const source = data?.source as unknown;
@@ -508,6 +508,8 @@ export class DatabaseTool implements BlockTool {
   private sourcePicker: DatabasePanel | null = null;
   /** "Hide data source titles": one setting for the whole block (per view is unmeasured). */
   private dataSourceTitlesHidden: boolean;
+  /** The database is the whole page: the page title is its title. */
+  private fullPage: boolean;
   private databaseIcon: DatabaseIcon | undefined;
   /** The Suggested template this database was made from (research/27 §1). */
   private starter: StarterId | undefined;
@@ -645,6 +647,7 @@ export class DatabaseTool implements BlockTool {
     this.title = (data as DatabaseData | undefined)?.title ?? '';
     this.unknown = unknownKeys(data);
     this.dataSourceTitlesHidden = data?.hideDataSourceTitles === true;
+    this.fullPage = data?.fullPage === true;
     this.databaseIcon = iconOf(data);
     this.starter = starterOf(data);
     this.savedAutomations = structuredClone(data?.automations);
@@ -1407,7 +1410,7 @@ export class DatabaseTool implements BlockTool {
     const saved = this.shownView();
 
     // "Show data source title" (research/20 §1f, R-2022-03-15). The title row stays: it can hold the add-view "+".
-    const hidden = this.dataSourceTitlesHidden
+    const hidden = this.fullPage || this.dataSourceTitlesHidden
       || (this.linked && saved !== undefined && this.controls.effective(saved).showDataSourceTitle === false);
     const source = this.linked ? this : this.activeSource();
 
@@ -1931,6 +1934,7 @@ export class DatabaseTool implements BlockTool {
     const wrapper = document.createElement('div');
     wrapper.setAttribute('data-blok-tool', 'database');
     wrapper.setAttribute('data-blok-database-wrapper', '');
+    wrapper.toggleAttribute('data-blok-database-page', this.fullPage);
     wrapper.style.display = 'flex';
     wrapper.style.flexDirection = 'column';
     this.element = wrapper;
@@ -2298,6 +2302,7 @@ export class DatabaseTool implements BlockTool {
       // Linked: a reference, never a copy of the source's schema.
       ...(this.source !== undefined ? { schema: structuredClone(this.stubSchema), source: { ...this.source } } : {}),
       ...(this.dataSourceTitlesHidden ? { hideDataSourceTitles: true } : {}),
+      ...(this.fullPage ? { fullPage: true } : {}),
       ...(this.databaseIcon !== undefined ? { icon: { ...this.databaseIcon } } : {}),
       ...(this.starter !== undefined ? { starter: this.starter } : {}),
       title: currentTitle,
@@ -2443,6 +2448,8 @@ export class DatabaseTool implements BlockTool {
 
     this.unknown = unknownKeys(data);
     this.dataSourceTitlesHidden = data.hideDataSourceTitles === true;
+    this.fullPage = data.fullPage === true;
+    this.element?.toggleAttribute('data-blok-database-page', this.fullPage);
     this.databaseIcon = iconOf(data);
     this.starter = starterOf(data);
     this.paintDatabaseIcon();

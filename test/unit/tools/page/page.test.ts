@@ -7,6 +7,7 @@ import { sanitizeBlocks } from '../../../../src/components/utils/sanitizer';
 import { convertBlockDataToString } from '../../../../src/components/utils/blocks';
 import type { API, BlockOrigin, BlockToolConstructorOptions } from '../../../../types';
 import { log } from '../../../../src/components/utils/logger';
+import { IconTable } from '../../../../src/components/icons';
 import type * as Logger from '../../../../src/components/utils/logger';
 
 vi.mock('../../../../src/components/utils/logger', async (importOriginal) => ({
@@ -1119,6 +1120,20 @@ describe('Page tool', () => {
       expect(data).toEqual({ pageId: create.mock.calls[0]?.[0].pageId });
     });
 
+    it('creates a database page from the "Database - Full page" entry', async () => {
+      const create = vi.fn().mockResolvedValue(undefined);
+
+      const data = await PageTool.prepareInsert({ create }, { kind: 'database' });
+
+      expect(data).toEqual({ pageId: create.mock.calls[0]?.[0].pageId, kind: 'database' });
+      expect(create).toHaveBeenCalledWith({
+        pageId: data.pageId,
+        document: {
+          blocks: [{ id: expect.stringMatching(/^[A-Za-z0-9_-]{10}$/), type: 'database', data: { initialView: 'table', fullPage: true } }],
+        },
+      });
+    });
+
     it('mints an id without a create hook', async () => {
       await expect(PageTool.prepareInsert({})).resolves.toEqual({ pageId: expect.stringMatching(/^[A-Za-z0-9_-]{10}$/) });
     });
@@ -1576,17 +1591,67 @@ describe('Page tool', () => {
     });
   });
 
+  describe('database page link', () => {
+    it('saves the database kind and draws the table glyph while the page has no icon', async () => {
+      const tool = new PageTool(createOptions({
+        data: { pageId: 'db1', kind: 'database' },
+        config: { resolve: () => ({ title: 'Tasks' }) },
+      }));
+      const root = await renderResolved(tool);
+      const link = anchorOf(root);
+
+      expect(tool.save()).toEqual({ pageId: 'db1', kind: 'database' });
+      expect(link.getAttribute('data-blok-page-kind')).toBe('database');
+      const glyph = document.createElement('span');
+
+      glyph.innerHTML = IconTable;
+      expect(root.querySelector('[data-blok-testid="page-icon"]')?.innerHTML).toBe(glyph.innerHTML);
+    });
+
+    it('shows the page icon over the table glyph', async () => {
+      const tool = new PageTool(createOptions({
+        data: { pageId: 'db1', kind: 'database' },
+        config: { resolve: () => ({ title: 'Tasks', icon: { type: 'emoji', value: '📋' } }) },
+      }));
+      const root = await renderResolved(tool);
+
+      expect(root.querySelector('[data-blok-testid="page-icon"]')?.textContent).toBe('📋');
+    });
+
+    it('drops an unknown kind', () => {
+      const tool = new PageTool(createOptions({ data: { pageId: 'p1', kind: 'bogus' } as unknown as PageData }));
+
+      expect(tool.save()).toEqual({ pageId: 'p1' });
+      tool.setData({ pageId: 'p1', kind: 'database' });
+      expect(tool.save()).toEqual({ pageId: 'p1', kind: 'database' });
+    });
+  });
+
   describe('static surface', () => {
-    it('declares a basic toolbox entry', () => {
+    it('declares a basic page entry and a "Database - Full page" entry', () => {
       const toolbox = PageTool.toolbox;
 
-      expect(Array.isArray(toolbox)).toBe(false);
-      expect(toolbox).toMatchObject({
+      if (!Array.isArray(toolbox)) {
+        throw new Error('expected two entries');
+      }
+      const [page, database] = toolbox;
+
+      expect(toolbox).toHaveLength(2);
+      expect(page).toMatchObject({
         titleKey: 'page',
         section: 'basic',
         preview: { render: renderPagePreview, descriptionKey: 'toolbox.preview.page' },
       });
-      expect(toolbox).toHaveProperty('searchTerms', expect.arrayContaining(['page', 'subpage', 'document']));
+      expect(page).toHaveProperty('searchTerms', expect.arrayContaining(['page', 'subpage', 'document']));
+      expect(page).not.toHaveProperty('data');
+      expect(database).toMatchObject({
+        name: 'databaseFullPage',
+        titleKey: 'databaseFullPage',
+        section: 'database',
+        data: { kind: 'database' },
+        preview: { descriptionKey: 'toolbox.preview.databaseFullPage' },
+      });
+      expect(database).toHaveProperty('searchTerms', expect.arrayContaining(['database', 'full page']));
     });
 
     it('supports read-only mode in place', () => {

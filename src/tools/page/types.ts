@@ -22,6 +22,8 @@ export interface PageData extends BlockToolData {
   textColor?: string;
   /** Block background color preset. */
   backgroundColor?: string;
+  /** `'database'`: the page holds a full-page database, so the link shows the table glyph. */
+  kind?: 'database';
   /** @deprecated Written only by pre-release builds; ignored on input and never saved. */
   cache?: PageCache;
 }
@@ -61,7 +63,7 @@ export interface PageConfig {
   /** Authorized metadata. `null` means missing; `undefined` means unresolved. */
   resolve?(pageId: string): PageInfo | null | undefined | Promise<PageInfo | null | undefined>;
   /** Makes the page a new page block points at. May answer with the host's own id. */
-  create?(init: { pageId: string }): PageCreateResult | Promise<PageCreateResult>;
+  create?(init: { pageId: string; document?: OutputData }): PageCreateResult | Promise<PageCreateResult>;
   /** Calls `onChange` for local-tab and remote metadata or access changes. */
   subscribe?(pageId: string, onChange: () => void): (() => void) | void;
   /** Saves a new title from the block menu's Rename. */

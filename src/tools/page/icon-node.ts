@@ -2,8 +2,8 @@ import { IconPage } from '../../components/icons';
 import { safeImageSrc } from '../../components/utils/sanitize-url';
 import type { PageIcon } from './types';
 
-/** The icon's content: an emoji, a safe image, or the page glyph. */
-export const pageIconNode = (icon: PageIcon | undefined): Node => {
+/** The icon's content: an emoji, a safe image, or the glyph (the page glyph by default). */
+export const pageIconNode = (icon: PageIcon | undefined, fallback: string = IconPage): Node => {
   if (icon?.type === 'emoji') {
     return document.createTextNode(icon.value);
   }
@@ -22,7 +22,7 @@ export const pageIconNode = (icon: PageIcon | undefined): Node => {
   const glyph = document.createElement('template');
 
   // A trusted constant from the icon module, not user input.
-  glyph.innerHTML = IconPage;
+  glyph.innerHTML = fallback;
 
   return glyph.content;
 };

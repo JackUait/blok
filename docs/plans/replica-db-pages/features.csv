@@ -1,0 +1,24 @@
+feature,area,priority,original,clone,notes
+"/" entry "Database - Full page" creates a sub-page holding a new database,create,must,yes,no,r28 label + "Add a new database as a sub-page"; blocked today by PageConfig.create having no initial content
+New full-page database opens at once,create,must,yes,no,live F01
+Parent shows a database link row with the view glyph and title,parent,must,yes,no,live S01 720x40 viewTable 22px; needs page kind from host
+Click the link opens the database page,open,must,yes,no,uses page tool open/href
+Database page: title + database only; no body blocks above or below,page,must,yes,no,live: no .notion-page-content
+Database page title is the page title (one title),page,must,yes,no,OutputData.title vs data.title must agree
+⋮⋮ "Turn into inline database" on the link,convert,must,yes,no,live label; keeps id views rows
+⋮⋮ "Turn into page" on an inline database,convert,must,yes,no,live label; keeps everything
+Rows keep opening as pages (side/center/full) on the database page,rows,must,yes,yes,already built for inline databases
+"Open as full page" ⤢ button on inline database,open,should,yes,no,live 28x28; same URL as the full page in Notion
+Sidebar tree nests the database page with its glyph,sidebar,should,yes,no,playground page-tree counts only type page
+Sidebar shows views (not rows) under a database page,sidebar,could,yes,no,live: "• Table"
+Hover preview card on the link draws a table,parent,should,yes,no,page tool has preview hook
+Header hover row: Add icon / Add cover / Add description,page,should,yes,no,Blok has no page cover yet
+Database page ••• actions (Copy link Duplicate Move to Trash Lock database),page,should,yes,no,
+Trash and restore a database page,trash,should,yes,no,PointerWatch counts only type page
+Database page wider than a text page (1050 vs 720),page,could,yes,no,unmeasured whether default or setting
+Drag inline database into the sidebar to make it a page,convert,could,yes,no,help center
+Duplicate with / without content,page,could,yes,no,help center
+Ask AI edits inside a database page,agent,could,yes,no,agent gate requires block.name page
+Multiple data sources per database,data,skip,yes,skip,Blok keeps one schema per database block
+Build with AI / templates / Import CSV in the source panel,create,skip,yes,skip,separate features
+Per-database sharing permissions,permissions,skip,yes,skip,host concern

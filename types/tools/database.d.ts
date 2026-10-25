@@ -1032,6 +1032,8 @@ export interface DatabaseData extends BlockToolData {
   source?: DatabaseSourceRef;
   /** "Hide data source titles": the title line above the tabs is hidden for every view. */
   hideDataSourceTitles?: boolean;
+  /** The database is a whole page ("Database - Full page"): it hides its own title, since the page title is it. */
+  fullPage?: boolean;
   /** The icon before the title. */
   icon?: DatabaseIcon;
   /** The Suggested template this database was made from. Removed by "Undo … database". */

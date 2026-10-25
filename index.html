@@ -2035,9 +2035,9 @@
           ...(remotePages !== null ? remotePages.pageTool(pageId) : {
             resolve: (id) => pages.info(id),
             subscribe: (id, onChange) => pages.subscribe(id, onChange),
-            create: ({ pageId: id }) => {
+            create: ({ pageId: id, document }) => {
               createdHere.add(id);
-              pages.create(id, pageId);
+              pages.create(id, pageId, document);
             },
             preview: (id) => pages.get(id)?.blocks,
             // Ask AI reads and writes sub-pages through these.

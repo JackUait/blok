@@ -1,5 +1,5 @@
 import type { OutputBlockData } from '../../types';
-import { IconChevronRight, IconCross, IconPage } from '../components/icons';
+import { IconChevronRight, IconCross, IconPage, IconTable } from '../components/icons';
 import type { PageRecord, RootRecord } from './page-host';
 import './page-tree.css';
 
@@ -13,6 +13,8 @@ export interface PageTreeNode {
   id: string | null;
   title: string;
   icon?: string;
+  /** From the pointer: a full-page database draws the table glyph. */
+  kind?: 'database';
   children: PageTreeNode[];
 }
 
@@ -26,13 +28,16 @@ const untitled = (title: string): string => (title.trim() === '' ? 'New page' : 
 
 interface PageLink {
   pageId: string;
+  kind?: 'database';
 }
 
 /** The page IDs in `blocks`. Pointer metadata is not authoritative. */
 const pageLinks = (blocks: OutputBlockData[]): PageLink[] => blocks.flatMap((block) => {
   const pageId: unknown = block.type === 'page' ? block.data?.pageId : undefined;
 
-  return typeof pageId === 'string' && pageId !== '' ? [{ pageId }] : [];
+  const kind = block.data?.kind === 'database' ? { kind: 'database' as const } : {};
+
+  return typeof pageId === 'string' && pageId !== '' ? [{ pageId, ...kind }] : [];
 });
 
 /** The page whose blocks link to `pageId`; null when no page block points at it. */
@@ -93,6 +98,7 @@ export const buildPageTree = (
       id: link.pageId,
       title: untitled(record?.title ?? ''),
       ...(record?.icon !== undefined && { icon: record.icon }),
+      ...(link.kind !== undefined && { kind: link.kind }),
       children: grow(link.pageId),
     }];
   });
@@ -250,7 +256,7 @@ export const mountPageTree = (options: PageTreeOptions): PageTree => {
       link.setAttribute('aria-current', 'page');
     }
     if (node.icon === undefined) {
-      icon.innerHTML = IconPage;
+      icon.innerHTML = node.kind === 'database' ? IconTable : IconPage;
     } else {
       icon.textContent = node.icon;
     }

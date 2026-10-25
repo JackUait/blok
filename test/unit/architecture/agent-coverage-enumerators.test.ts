@@ -185,7 +185,8 @@ describe('agent coverage enumerators', () => {
   it('insert: enumerates real toolbox entries including the host-registered page', () => {
     const capabilities = enumerateInsert();
 
-    expect(ids(capabilities)).toContain('insert:page');
+    expect(ids(capabilities)).toContain('insert:page/page');
+    expect(ids(capabilities)).toContain('insert:page/databaseFullPage');
     expect(ids(capabilities)).toContain('insert:table');
     expect(ids(capabilities)).toContain('insert:column_list/column_list-2');
     expect(capabilities).toEqual(insertIds(BLOCK_TOOL_CLASSES));

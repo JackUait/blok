@@ -8,6 +8,7 @@ import type {
   BlockToolConstructorOptions,
   ConversionConfig,
   OutputBlockData,
+  OutputData,
   SanitizerConfig,
   ToolboxConfig,
 } from '../../../types';
@@ -19,6 +20,7 @@ import {
   IconPage,
   IconPencil,
   IconSplitView,
+  IconTable,
 } from '../../components/icons';
 import { buildBlockColorTunes, type BlockColorData } from '../../components/shared/block-color';
 import { COLOR_PRESETS, colorVarName } from '../../components/shared/color-presets';
@@ -47,6 +49,7 @@ import {
 } from './constants';
 import { PageHoverPreview, pageIconNode, previewLines, type PageHoverContent, type PagePreviewLine } from './hover-preview';
 import { renderPagePreview } from './preview';
+import { renderDatabasePreview } from '../database/preview';
 import { outputBlocksToHtml } from '../../shared/rich-text/block-data';
 import { declaredRichTextFields } from '../../components/tools/base';
 import { richTextFieldsFor } from '../../shared/rich-text/fields';
@@ -89,6 +92,17 @@ const readColors = (data: Partial<PageData> | undefined): BlockColorData => {
   return colors;
 };
 
+const readKind = (data: Partial<PageData> | undefined): Pick<PageData, 'kind'> =>
+  data?.kind === 'database' ? { kind: 'database' } : {};
+
+/**
+ * A new full-page database: one database block the database tool seeds on
+ * first render. `fullPage` hides its own title, since the page title is it.
+ */
+const databasePageDocument = (): OutputData => ({
+  blocks: [{ id: generateBlockId(), type: 'database', data: { initialView: 'table', fullPage: true } }],
+});
+
 const isRenameShortcut = (event: KeyboardEvent): boolean =>
   event.code === 'KeyR' && event.shiftKey && !event.altKey && (event.metaKey || event.ctrlKey);
 
@@ -114,7 +128,7 @@ export class PageTool implements BlockTool {
   private readonly api: API;
   private readonly block: BlockAPI;
   private readonly config: PageConfig;
-  private data: { pageId: string } & BlockColorData;
+  private data: { pageId: string } & BlockColorData & Pick<PageData, 'kind'>;
   /** Minted here: this instance is the user's or the API's new page. */
   private readonly isNew: boolean;
   /** Made by `prepareInsert` before the toolbox inserted it: open it, never create it. */
@@ -149,7 +163,7 @@ export class PageTool implements BlockTool {
     this.isPrepared = origin === 'user' && !options.readOnly && preparedPageIds.delete(pageId);
     this.opensWhenCreated = origin === 'user';
     this.isProbe = origin === 'probe';
-    this.data = { pageId: this.isNew ? generateBlockId() : pageId, ...readColors(options.data) };
+    this.data = { pageId: this.isNew ? generateBlockId() : pageId, ...readColors(options.data), ...readKind(options.data) };
     this.readOnly = Boolean(options.readOnly);
   }
 
@@ -162,23 +176,36 @@ export class PageTool implements BlockTool {
    * The toolbox waits for this before it inserts a page, so the block is
    * born with the id the host's `create` answered. A rejection inserts nothing.
    */
-  public static async prepareInsert(config: PageConfig): Promise<PageData> {
+  public static async prepareInsert(config: PageConfig, data?: Partial<PageData>): Promise<PageData> {
+    const kind = readKind(data);
     const minted = generateBlockId();
-    const pageId = createdId(await config.create?.({ pageId: minted })) ?? minted;
+    const init = kind.kind === 'database' ? { pageId: minted, document: databasePageDocument() } : { pageId: minted };
+    const pageId = createdId(await config.create?.(init)) ?? minted;
 
     preparedPageIds.add(pageId);
 
-    return { pageId };
+    return { pageId, ...kind };
   }
 
   public static get toolbox(): ToolboxConfig {
-    return {
-      icon: IconPage,
-      titleKey: 'page',
-      searchTerms: ['page', 'subpage', 'sub-page', 'doc', 'document', 'new page'],
-      section: 'basic',
-      preview: { render: renderPagePreview, descriptionKey: 'toolbox.preview.page' },
-    };
+    return [
+      {
+        icon: IconPage,
+        titleKey: 'page',
+        searchTerms: ['page', 'subpage', 'sub-page', 'doc', 'document', 'new page'],
+        section: 'basic',
+        preview: { render: renderPagePreview, descriptionKey: 'toolbox.preview.page' },
+      },
+      {
+        icon: IconTable,
+        titleKey: 'databaseFullPage',
+        name: 'databaseFullPage',
+        searchTerms: ['database', 'full page', 'database full page'],
+        section: 'database',
+        preview: { render: renderDatabasePreview, descriptionKey: 'toolbox.preview.databaseFullPage' },
+        data: { kind: 'database' },
+      },
+    ];
   }
 
   /** Plain text: an HTML parse would cut a title at `<` and turn `&` into `&amp;`. */
@@ -277,7 +304,7 @@ export class PageTool implements BlockTool {
       this.info = undefined;
       this.creating = false;
     }
-    this.data = { pageId, ...readColors(data) };
+    this.data = { pageId, ...readColors(data), ...readKind(data) };
     if (moved && this.started) {
       this.listen();
       void this.refresh();
@@ -720,6 +747,9 @@ export class PageTool implements BlockTool {
     link.setAttribute(DATA_ATTR.testid, 'page-link');
     link.setAttribute(DATA_ATTR.blockContextMenu, '');
     link.setAttribute('data-blok-page-state', state);
+    if (this.data.kind !== undefined) {
+      link.setAttribute('data-blok-page-kind', this.data.kind);
+    }
     // Never focused, so Blok keeps its keys (undo, Escape, arrows). Tab is
     // Blok's indent; the keyboard opens the page from navigation mode.
     link.tabIndex = -1;
@@ -784,7 +814,7 @@ export class PageTool implements BlockTool {
     if (this.state === 'no-access') {
       slot.innerHTML = IconLock;
     } else {
-      slot.replaceChildren(pageIconNode(this.isNavigable ? readIcon(this.info?.icon) : undefined));
+      slot.replaceChildren(pageIconNode(this.isNavigable ? readIcon(this.info?.icon) : undefined, this.data.kind === 'database' ? IconTable : IconPage));
     }
 
     return slot;

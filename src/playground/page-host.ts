@@ -1,4 +1,4 @@
-import type { OutputBlockData } from '../../types';
+import type { OutputBlockData, OutputData } from '../../types';
 import type { PageInfo } from '../../types/tools/page';
 import seedPages from '../../playground-pages.json';
 
@@ -189,7 +189,8 @@ export class PageRegistry {
     };
   }
 
-  public create(pageId: string, parentId: string | null): void {
+  /** `document`: the starting content the page tool sent, e.g. a full-page database. */
+  public create(pageId: string, parentId: string | null, document?: OutputData): void {
     const before = this.captureInfo();
 
     this.mergeStored();
@@ -198,7 +199,7 @@ export class PageRegistry {
 
       return;
     }
-    const created: PageRecord = { title: '', parentId, blocks: [] };
+    const created: PageRecord = { title: document?.title ?? '', parentId, blocks: document?.blocks ?? [] };
 
     this.pages[pageId] = created;
     this.persist({ id: pageId, operation: (page) => page ?? created });

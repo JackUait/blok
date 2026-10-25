@@ -199,7 +199,9 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'insert:tabs': cmd('tabs.create'),
   'insert:embed': cmd('embed.create'),
   'insert:bookmark': cmd('bookmark.create'),
-  'insert:page': cmd('block.insert'),
+  'insert:page/page': cmd('block.insert'),
+  // block.insert with data { kind: 'database' }: prepareInsert gets the data and seeds the page.
+  'insert:page/databaseFullPage': cmd('block.insert'),
 
   // format — inline tools (src/tools/index.ts:110-121)
   'format:marker': cmd('text.format'),

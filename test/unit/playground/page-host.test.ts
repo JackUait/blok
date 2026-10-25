@@ -143,6 +143,15 @@ describe('PageRegistry', () => {
     expect(new PageRegistry(seed()).get('guide')).not.toHaveProperty('icon');
   });
 
+  it('stores the starting document a new page is created with', () => {
+    const pages = new PageRegistry(seed());
+    const database = { id: 'db1', type: 'database', data: { initialView: 'table', fullPage: true } };
+
+    pages.create('tasks', 'guide', { title: 'Tasks', blocks: [database] });
+
+    expect(pages.get('tasks')).toMatchObject({ title: 'Tasks', parentId: 'guide', blocks: [database] });
+  });
+
   it('keeps a locally created page after its first storage write fails', () => {
     const pages = new PageRegistry(seed());
 

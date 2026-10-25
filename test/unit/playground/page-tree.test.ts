@@ -109,6 +109,13 @@ describe('buildPageTree', () => {
     expect(titles(buildPageTree(pages, (id) => (id === null ? [stale] : [])).children)).toEqual(['Notes']);
   });
 
+  it('marks a database page from its pointer', () => {
+    const pages = new PageRegistry({ tasks: { title: 'Tasks', parentId: null, blocks: [] } });
+    const tree = buildPageTree(pages, (id) => (id === null ? [{ id: 'p-tasks', type: 'page', data: { pageId: 'tasks', kind: 'database' } }] : []));
+
+    expect(tree.children[0]).toMatchObject({ id: 'tasks', kind: 'database' });
+  });
+
   it('lists a page once even when its parent links it twice', () => {
     const pages = new PageRegistry(seed());
 

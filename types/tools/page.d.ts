@@ -26,6 +26,12 @@ export interface PageData extends BlockToolData {
   textColor?: string;
   /** Block background color preset name. Set from the block menu's Color. */
   backgroundColor?: string;
+  /**
+   * `'database'`: the page holds a full-page database. The link shows the
+   * table glyph while the page has no icon. Set by the "Database - Full page"
+   * toolbox entry.
+   */
+  kind?: 'database';
   /** @deprecated Written only by pre-release builds; ignored on input and never saved. */
   cache?: PageCache;
 }
@@ -106,8 +112,12 @@ export interface PageConfig {
    * a busy "creating" state (`data-blok-page-state="creating"`,
    * `aria-busy="true"`). If it throws, the block shows "Page not found" until
    * `resolve` finds the page.
+   *
+   * `document`, when present, is the page's starting content. Store it as the
+   * page's document. The "Database - Full page" entry sends one database block
+   * with `fullPage: true`; open the page to let it finish seeding.
    */
-  create?(init: { pageId: string }): PageCreateResult | Promise<PageCreateResult>;
+  create?(init: { pageId: string; document?: OutputData }): PageCreateResult | Promise<PageCreateResult>;
   /**
    * Saves a new title. Called by the block menu's Rename and Cmd/Ctrl+Shift+R
    * on the selected block. Without it, Rename is not offered. Blok shows the
@@ -187,8 +197,11 @@ export declare class Page implements BlockTool {
   /** A titled "Page" menu with Turn into first; Delete reads "Move to Trash". */
   static blockMenu?: { titled: boolean; trash: boolean };
 
-  /** Asks `config.create` for a new page, for the toolbox to insert. */
-  static prepareInsert(config: PageConfig): Promise<PageData>;
+  /**
+   * Asks `config.create` for a new page, for the toolbox to insert.
+   * `data.kind === 'database'` makes a full-page database.
+   */
+  static prepareInsert(config: PageConfig, data?: Partial<PageData>): Promise<PageData>;
 
   constructor(options: PageConstructorOptions);
 

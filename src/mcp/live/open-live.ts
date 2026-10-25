@@ -26,7 +26,7 @@ export interface OpenLiveDeps {
   ticketsFor?: (request: OpenRequest, caller: Caller, actor: AgentActor) => Promise<CollabTicketSource>;
   /** Defaults to `ws` with the configured Origin. */
   socketFactory?: CollabSocketFactory;
-  portsFor(caller: Caller, actor: AgentActor): AgentPorts;
+  portsFor(caller: Caller, actor: AgentActor, isOpenDocument?: (pageId: string) => Promise<boolean>): AgentPorts;
   /** The name peers see in presence; defaults to actor.name. */
   presenceName?: (caller: Caller, actor: AgentActor) => string;
   pageTitles?: 'off' | 'page-map';
@@ -145,7 +145,8 @@ export const createOpenLive = (deps: OpenLiveDeps) => async (request: OpenReques
       tools: deps.contracts.runtimes,
       contract: deps.contracts.live,
       actor,
-      ports: deps.portsFor(caller, actor),
+      // A room id has no aliases, so only the same id is the open document.
+      ports: deps.portsFor(caller, actor, async (pageId) => pageId === request.documentId),
       richTextFieldsFor: deps.contracts.richTextFieldsFor,
       ...(deps.pageTitles === 'page-map' && { pageTitles: 'page-map' as const }),
     });

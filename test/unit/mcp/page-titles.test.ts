@@ -44,6 +44,14 @@ describe('page titles through page-map', () => {
     expect(childTitle()).toBe('New name');
   });
 
+  it('refuses page.rename on a page block that points at the open document', async () => {
+    writeFileSync(join(dir, 'parent.json'), JSON.stringify({ blocks: [{ id: 'pb', type: 'page', data: { pageId: 'parent' } }] }));
+    mcp = assembleMcp({ transport: { kind: 'stdio' }, auth: { kind: 'none' }, source: { kind: 'files', dir }, pageTitles: 'page-map' });
+    const outcome = await mcp.dispatch('blok_execute', { handle: await openParent(), commands: [{ name: 'page.rename', args: { id: 'pb', title: 'x' } }] }, caller);
+
+    expect(outcome.structuredContent).toMatchObject({ ok: false, error: { code: 'INVALID_ARGS', details: { pageId: 'parent' } } });
+  });
+
   it('is unavailable without page-map', async () => {
     mcp = assembleMcp({ transport: { kind: 'stdio' }, auth: { kind: 'none' }, source: { kind: 'files', dir } });
     const outcome = await mcp.dispatch('blok_execute', { handle: await openParent(), commands: [{ name: 'page.rename', args: { id: 'pb', title: 'x' } }] }, caller);

@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { decode, encode } from '../../../src/components/modules/collaboration/sync-wire';
 import type { CollabSocketFactory, SyncWireFrame, WebSocketLike, WorkingSetTag } from '../../../src/components/modules/collaboration/types';
 import { readTicketClaims } from '../../../src/components/utils/access-pass';
+import { DocumentStore } from '../../../src/components/modules/yjs/document-store';
+import { YBlockSerializer } from '../../../src/components/modules/yjs/serializer';
 import type { Caller } from '../../../src/mcp/dispatcher';
 import { assembleMcp, type AssembledMcp } from '../../../src/mcp/server';
 
@@ -35,6 +37,22 @@ class ScriptedSocket implements WebSocketLike {
 
   public deliver(frame: SyncWireFrame): void {
     this.onmessage?.({ data: encode(frame).slice().buffer });
+  }
+}
+
+class AckSocket extends ScriptedSocket {
+  private sequence = 0;
+
+  public override send(data: ArrayBufferLike | ArrayBufferView): void {
+    super.send(data);
+    const frame = this.sent.at(-1);
+
+    if (frame?.type === 'operation') {
+      this.sequence += 1;
+      const ack: SyncWireFrame = { type: 'acknowledgement', lineage: frame.lineage, operationId: frame.operationId, serverSequence: String(this.sequence) };
+
+      queueMicrotask(() => this.deliver(ack));
+    }
   }
 }
 
@@ -105,4 +123,54 @@ describe('assembleMcp with a sync URL', () => {
     expect(opened.structuredContent).toMatchObject({ mode: 'live', write: false });
     expect(claims).toMatchObject({ user: 'agent:alice:claude', doc: 'doc-1', write: false });
   });
+});
+
+describe('assembleMcp with a sync URL and page-map', () => {
+  let sockets: AckSocket[];
+  let mcp: AssembledMcp;
+  // Inserting a page block needs the page backend, so the room starts with one that points at itself.
+  const seeded = (): Uint8Array => {
+    const store = new DocumentStore(new YBlockSerializer());
+
+    store.fromJSON([{ id: 'pb', type: 'page', data: { pageId: 'doc' } }]);
+
+    return store.encodeStateAsUpdate();
+  };
+
+  const factory: CollabSocketFactory = () => {
+    const socket = new AckSocket();
+
+    sockets.push(socket);
+    queueMicrotask(() => {
+      socket.readyState = 1;
+      socket.protocol = 'blok-sync.v2';
+      socket.onopen?.({});
+      socket.deliver({ type: 'control', tag: TAG });
+      socket.deliver({ type: 'syncStep2', update: seeded() });
+    });
+
+    return socket;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sockets = [];
+    mcp = assembleMcp(
+      { transport: { kind: 'stdio' }, auth: { kind: 'none' }, sync: { url: 'wss://sync.test/sync' }, pageTitles: 'page-map' },
+      { liveSocketFactory: factory, liveSyncTimeoutMs: 1000 },
+    );
+  });
+
+  afterEach(async () => {
+    await mcp.stop();
+    vi.restoreAllMocks();
+  });
+
+  it('refuses page.rename on a page block that points at the open document', async () => {
+    const handle = (await mcp.dispatch('blok_open', { documentId: 'doc', write: true }, caller)).structuredContent.handle;
+    const renamed = await mcp.dispatch('blok_execute', { handle, commands: [{ name: 'page.rename', args: { id: 'pb', title: 'x' } }] }, caller);
+
+    expect(renamed.structuredContent).toMatchObject({ ok: false, error: { code: 'INVALID_ARGS', details: { pageId: 'doc' } } });
+    expect(sockets).toHaveLength(1);
+  }, 5_000);
 });

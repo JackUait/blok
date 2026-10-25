@@ -42,6 +42,8 @@ const VIEW_STATE_CUT = 'View-state control is cut from v1 by D6 (user can revisi
 // Database surfaces added after the 2026-10-08 audit. 02 §2.6 has no route for them;
 // each command below that 02 §3.8 does not list is a gap for 02 to declare.
 const VIEW_SETTING = 'Writes saved view settings (filters, sorts, grouping, calculations, columns, layout options); they apply for everyone.';
+const ROW_COPY = 'The copy goes right after the original with its page and sub-items; block.duplicate on a row runs database.duplicateRow.';
+const ROW_DELETE = 'Deletes the row with its page and sub-items, and unlinks relations that point at it; block.delete on a row runs database.deleteRow.';
 const PAGE_LAYOUT = 'Writes the row page layout on the title property (pageLayout* fields); the agent makes the tabs children with block.insert.';
 const PROPERTY_SETTINGS = 'Writes one property definition in database.schema (format, display, relation, rollup, button or autofill settings; a type change is database.changePropertyType).';
 const CELL_EDIT = 'Writes one cell value of a row (database-row properties).';
@@ -123,7 +125,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/database/database-tab-bar.ts': cmds(['database.addView', 'database.renameView', 'database.duplicateView', 'database.deleteView', 'database.moveView', 'block.update'], 'View tabs; switching writes database.activeViewId.'),
   'ui-file:src/tools/database/database-view-popover.ts': cmds(['database.addView'], 'Choose a new view type.'),
   'ui-file:src/tools/database/index.ts': cmds(['block.update', 'database.addRow'], 'Title edit writes database.title; add-row buttons.'),
-  'ui-file:src/tools/database/database-comment-badge.ts': exempt('view-only', 'Opens the host comment thread; Blok stores no comments.'),
+  'ui-file:src/tools/database/database-comment-badge.ts': exempt('cut-v1', 'D6 cut: opens a comment thread, the host\'s or, without config.comments, Blok\'s own database-comment blocks; agents skip comments (user decision 2026-10-16).'),
   'ui-file:src/tools/database/page-layout-builder.ts': cmds(['database.updateProperty'], PAGE_LAYOUT),
   'ui-file:src/tools/file/index.ts': cmds(['file.setSource'], 'Upload or URL.'),
   'ui-file:src/tools/file/preview-modal.ts': exempt('view-only', 'Shows a preview of the file; nothing is saved.'),
@@ -430,7 +432,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/database-row-favorite': exempt('view-only', 'Hands the row to the host favorites list (config.favorites); the document does not change.'),
   'menu:database/database-row-edit-icon': fld('database-row.icon'),
   'menu:database/database-row-open-in-*': exempt('view-only', 'Opens the row page in a peek, a side panel or full page; the document does not change.'),
-  'menu:database/database-row-comment': exempt('view-only', 'Hands the row to the host comment UI; the document does not change.'),
+  'menu:database/database-row-comment': exempt('cut-v1', 'D6 cut: opens the row\'s comments. Without config.comments Blok keeps them as database-comment blocks under the row; agents skip comments (user decision 2026-10-16).'),
   'menu:database/comment': exempt('cut-v1', 'D6 cut: the row page property menu opens that value\'s comment box; agents skip comments (user decision 2026-10-16, design 18).'),
   'menu:database/database-row-view-layout': exempt('chrome', 'Opens the view settings Layout page; each setting in it has its own ledger row.'),
   'menu:database/database-row-view-properties': exempt('chrome', 'Opens the view settings Property visibility page; each setting in it has its own ledger row.'),
@@ -442,17 +444,17 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/backlink-*': exempt('view-only', 'Goes to a page that mentions the row; the document does not change.'),
   'menu:database/preview-*': exempt('view-only', 'Picks which row page the layout builder previews; nothing is saved.'),
   'menu:database/database-row-copy-link': exempt('clipboard', 'Writes a link to the row to the OS clipboard; the agent reads row ids with doc.read.'),
-  'menu:database/database-row-duplicate': cmd('block.duplicate'),
-  'menu:database/database-row-move-to-*': cmd('block.move'),
-  'menu:database/database-row-delete': cmd('block.delete'),
+  'menu:database/database-row-duplicate': cmds(['database.duplicateRow', 'block.duplicate'], ROW_COPY),
+  'menu:database/database-row-move-to-*': cmds(['database.moveRowTo'], 'Moves the row, its sub-items and their pages to another database; values follow the target\'s properties by name.'),
+  'menu:database/database-row-delete': cmds(['database.deleteRow', 'block.delete'], ROW_DELETE),
   'menu:database/database-row-full-width': fld('database-row.fullWidth'),
-  'menu:database/database-table-selection-duplicate': cmd('block.duplicate'),
+  'menu:database/database-table-selection-duplicate': cmds(['database.duplicateRow', 'block.duplicate'], ROW_COPY),
   'menu:database/database-table-selection-edit-*': cmds(['database.setRowValues'], 'Bulk-edit one property on every selected row, as the bar\'s segments do.'),
-  'menu:database/database-table-selection-delete': cmd('block.delete'),
-  'menu:database/database-selection-duplicate': cmd('block.duplicate'),
-  'menu:database/database-selection-delete': cmd('block.delete'),
+  'menu:database/database-table-selection-delete': cmds(['database.deleteRow', 'block.delete'], ROW_DELETE),
+  'menu:database/database-selection-duplicate': cmds(['database.duplicateRow', 'block.duplicate'], ROW_COPY),
+  'menu:database/database-selection-delete': cmds(['database.deleteRow', 'block.delete'], ROW_DELETE),
   'menu:database/*@src/tools/database/database-table-menus.ts': cmds(['database.updateView', 'database.addProperty'], 'The column header rows (Show page icon, Filter, Sort, Group, Freeze, Hide, Wrap) write view settings. Insert left/right is database.addProperty at a position.'),
-  'menu:database/template-*': cmds(['database.addRow', 'database.setDefaultTemplate', 'block.duplicate', 'block.delete'], 'Templates are template rows: use one, set the default, duplicate or delete it.'),
+  'menu:database/template-*': cmds(['database.addRow', 'database.applyTemplate', 'database.setDefaultTemplate', 'database.duplicateRow', 'database.deleteRow'], 'Templates are template rows: start a row from one (addRow template), apply one to an empty row page, set the default, duplicate or delete it.'),
   'menu:database/template-repeat-*': cmd('database.setTemplateRepeat'),
   'menu:database/template-repeat-cancel': cmd('database.setTemplateRepeat'),
   'menu:database/template-repeat-zone-*': cmd('database.setTemplateRepeat'),

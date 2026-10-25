@@ -13,6 +13,30 @@ import type { Plan, PlannerContext } from './types';
 
 export type CommandHandler = (state: PlanState, args: Record<string, unknown>) => unknown;
 
+/** A child whose parent declares childCommand is deleted or copied by the parent's action. */
+const viaParent = (command: 'delete' | 'duplicate', core: CommandHandler): CommandHandler => (state, args) => {
+  const block = state.requireBlock(args.id, '/id');
+  const parent = block.parent === null ? undefined : state.draft.get(block.parent);
+  const route = parent === undefined ? undefined : state.tool(parent.type)?.runtime.childCommand?.(command, block.id);
+
+  if (parent === undefined || route === undefined) {
+    return core(state, args);
+  }
+  const name = `${parent.type}.${route.action}`;
+
+  if (command === 'duplicate' && args.position !== undefined) {
+    state.fail('INVALID_ARGS', `A copy made by ${name} goes right after the original. Leave out position and move the copy after.`, '/position');
+  }
+  const result = planToolAction(state, name, { ...route.args, id: parent.id });
+  const id = isRecord(result) && typeof result.rowId === 'string' ? result.rowId : undefined;
+
+  if (command === 'duplicate') {
+    return { id, childIds: id === undefined ? [] : [...state.draft.childrenOf(id)] };
+  }
+
+  return { removedIds: isRecord(result) && isArray(result.removedIds) ? result.removedIds : [block.id], liftedIds: [] };
+};
+
 export const HANDLERS: Record<string, CommandHandler> = {
   'doc.read': planRead,
   'doc.find': planFind,
@@ -22,8 +46,8 @@ export const HANDLERS: Record<string, CommandHandler> = {
   'markdown.export': planMarkdownExport,
   'block.insert': planInsert,
   'block.update': planUpdate,
-  'block.delete': planDelete,
-  'block.duplicate': planDuplicate,
+  'block.delete': viaParent('delete', planDelete),
+  'block.duplicate': viaParent('duplicate', planDuplicate),
   'block.move': planMove,
   'block.convert': planConvert,
   'text.insert': planTextInsert,

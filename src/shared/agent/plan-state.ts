@@ -78,7 +78,7 @@ export class PlanState {
     public readonly draft: DocSnapshot,
     public readonly ctx: PlannerContext,
     public readonly warnings: AgentWarning[],
-    private readonly stamp: EditStamp
+    public readonly stamp: EditStamp
   ) {}
 
   /** Runs `build` with every rich field read as stored: a copy of stored blocks is not agent input. */

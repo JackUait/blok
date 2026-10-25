@@ -47,4 +47,6 @@ export const DATABASE_DEFAULT_TEXT = {
   submissionTimeProperty: 'Submission time',
   optionLabel: 'Option {number}',
   duplicatePropertyName: '{name} (copy)',
+  /** The other side a two-way relation adds. */
+  relationReverseName: 'Related to {name}',
 } as const;

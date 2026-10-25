@@ -1,14 +1,10 @@
 import { parseDateValue } from './cells/date-value';
 import { addToDate, parseIsoDate, wallTime, zonedToEpoch } from './formula/dates';
 import { resolveDynamicValue } from './dynamic-values';
+import { reminderFits, remindersFor } from '../../shared/database/reminder-fit';
 import type { DatabaseRow, DateReminder, DateReminderOffset, PropertyValue } from './types';
 
-/** Notion's lists, in order (research/17 §1b). None is the absence of a reminder. */
-const DATE_ONLY: readonly DateReminderOffset[] = ['on_day_of_event', '1_day_before', '2_days_before', '1_week_before'];
-const TIMED: readonly DateReminderOffset[] = [
-  'at_time_of_event', '5_minutes_before', '10_minutes_before', '15_minutes_before', '30_minutes_before',
-  '1_hour_before', '2_hours_before', '1_day_before', '2_days_before',
-];
+export { reminderFits, remindersFor };
 
 /** Days before the event; the reminder goes at 9:00 that day. */
 const MORNING_DAYS: Partial<Record<DateReminderOffset, number>> = {
@@ -21,9 +17,6 @@ const MINUTES_BEFORE: Partial<Record<DateReminderOffset, number>> = {
 
 export const REMINDER_HOUR = 9;
 
-export const remindersFor = (hasTime: boolean): readonly DateReminderOffset[] => hasTime ? TIMED : DATE_ONLY;
-
-export const reminderFits = (remind: DateReminderOffset, hasTime: boolean): boolean => remindersFor(hasTime).includes(remind);
 
 /** The reminder goes at 9:00 on a day, so its label carries "(9:00 AM)". */
 export const remindsInTheMorning = (remind: DateReminderOffset): boolean => MORNING_DAYS[remind] !== undefined;

@@ -190,6 +190,7 @@ export const runtimesFromTools = (tools: ToolsLike): ToolRuntimeRegistry => new 
         ...(parts?.defaultChildren === undefined ? {} : { defaultChildren: parts.defaultChildren }),
         actions: toolClass.actionHandlers ?? {},
         ...(parts?.conversion === undefined ? {} : { conversion: parts.conversion }),
+        ...(parts?.childCommand === undefined ? {} : { childCommand: parts.childCommand }),
       }];
     })
 );

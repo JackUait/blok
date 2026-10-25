@@ -4001,7 +4001,7 @@
       "patternProperties": {
         "^reactions:": {
           "type": "object",
-          "description": "One person's feed reactions; the key is \"reactions:\" plus their user id. Emoji to when they reacted (epoch ms).",
+          "description": "One person's feed reactions; the key is \"reactions:\" plus their user id. Emoji to when they reacted (epoch ms). An agent writes only its own key.",
           "additionalProperties": {
             "type": "number"
           }

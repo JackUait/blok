@@ -51,7 +51,11 @@ export interface PlannerToolRuntime {
   actions: Readonly<Record<string, ToolActionImpl>>;
   /** Text fields for block.convert when the manifest entry has none, and fields its import always sets. */
   conversion?: { import?: string; export?: string; base?: Readonly<Record<string, unknown>> };
+  /** A child's block.delete or block.duplicate runs this tool's action instead, so the parent keeps its invariants. */
+  childCommand?: ChildCommandRoute;
 }
+
+export type ChildCommandRoute = (command: 'delete' | 'duplicate', childId: string) => { action: string; args: Record<string, unknown> } | undefined;
 
 export interface PlannerTool { entry: PlannerToolEntry; runtime: PlannerToolRuntime }
 

@@ -8,7 +8,7 @@ export const DATABASE_ROW_DATA = {
   patternProperties: {
     '^reactions:': {
       type: 'object',
-      description: 'One person\'s feed reactions; the key is "reactions:" plus their user id. Emoji to when they reacted (epoch ms).',
+      description: 'One person\'s feed reactions; the key is "reactions:" plus their user id. Emoji to when they reacted (epoch ms). An agent writes only its own key.',
       additionalProperties: { type: 'number' },
     },
   },
@@ -81,7 +81,8 @@ export const DATABASE_ROW_DATA = {
 
 export const describeDatabaseRow = (_config: Record<string, unknown> = {}): BlockToolDescription => ({
   summary: 'One row of a database. Its child blocks are its page body. An optional pageId points to a separate body document instead.',
-  guidance: 'Write row values with database.setRowValues on the parent database: the title mirrors the title property.',
+  guidance: 'Write row values with database.setRowValues on the parent database: the title mirrors the title property. block.delete and block.duplicate on a row run database.deleteRow and database.duplicateRow.',
   data: DATABASE_ROW_DATA,
+  guardedFields: { properties: 'database.setRowValues on the parent database' },
   summaryFields: ['title'],
 });

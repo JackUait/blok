@@ -1,5 +1,11 @@
 import { DATABASE_DEFAULT_TEXT } from '../database/default-text';
 import { comparePositions } from '../database/positions';
+import { isAnnotationType } from '../annotation-blocks';
+import { resolveDynamicProperties } from '../database/dynamic-values';
+import { addRelated, relationEdit, relationIdsOf, removeRelated } from '../database/relation-values';
+import { copiedReminders } from '../database/reminder-fit';
+import { mapRowValues } from '../database/row-move';
+import { descendantsOf, relationPair } from '../database/sub-item-tree';
 import { typeConversion } from '../database/property-conversion';
 import {
   createDefaultSchema,
@@ -12,13 +18,18 @@ import {
   positionBetween,
 } from '../database/schema-ops';
 import { applyViewChanges, GROUPABLE_TYPES, groupByChange, layoutChange, subGroupByChange, withEntryIds } from '../database/view-changes';
+import { DATE_VALUE_FORMAT, parseDateValue } from '../database/date-value';
+import { isOutputData, isPlaceValue, isVerificationValue } from '../database/tier3-values';
+import { isFileValue, isReadOnlyType, personIdsOf } from '../database/value-helpers';
 import { revealedInLegacyView } from '../database/view-properties';
 import { ACCESS_FORM_SETTINGS, ACCESS_VIEW_SETTINGS } from '../tool-descriptions/database';
 
+import type { InsertSpec } from '../../../types/agent';
 import type { BlockPosition } from '../../../types/api/blocks';
 import type { ToolActionContext, ToolActionImpl } from '../../../types/tools/tool-description';
+import type { ChildCommandRoute } from '../agent/types';
 import type { ConvertibleRow } from '../database/property-conversion';
-import type { ConvertedValue, DatabaseViewConfig, PropertyDefinition, PropertyType, SelectOption, TemplateRepeat, ViewType } from '../database/types';
+import type { ConvertedValue, DatabaseViewConfig, DateReminder, PropertyDefinition, PropertyType, PropertyValue, RelationSettings, SelectOption, TemplateRepeat, ViewType } from '../database/types';
 
 type TargetBlock = NonNullable<ToolActionContext['block']>;
 
@@ -54,6 +65,18 @@ export const assertUnlocked = (ctx: ToolActionContext, state: DatabaseState): vo
   if (state.schema.some(property => property.type === 'title' && property.databaseLocked === true)) {
     ctx.fail('PRECONDITION_FAILED', 'This database is locked: its properties and views cannot change. Rows can.');
   }
+};
+
+/** Database fields the editor freezes with the schema while the database is locked (structureLocked). */
+const LOCKED_FIELDS = ['automations', 'source', 'hideDataSourceTitles', 'starter'];
+
+export const rejectDatabaseWrite = (data: Record<string, unknown>, written: readonly string[]): string | undefined => {
+  const locked = Array.isArray(data.schema) && data.schema.some(property => isRecord(property) && property.type === 'title' && property.databaseLocked === true);
+  const frozen = written.filter(field => LOCKED_FIELDS.includes(field));
+
+  return locked && frozen.length > 0
+    ? `This database is locked: ${frozen.join(', ')} cannot change. Unlock it with database.setLock first.`
+    : undefined;
 };
 
 /** The schema with `property` added, and the views only when a legacy table view had to show it. */
@@ -694,6 +717,79 @@ const deleteOption: ToolActionImpl<OptionArgs & { rows: 'delete' | 'keep' }> = {
 
 // ─── Rows ───
 
+const isText = (value: unknown): boolean => typeof value === 'string';
+
+/** What each cell editor writes, by property type. Options and relations also name ids checked below. */
+const VALUE_SHAPES: Partial<Record<PropertyType, { fits: (value: unknown, template: boolean) => boolean; shape: string }>> = {
+  title: { fits: isText, shape: 'a string; pass "" to clear it' },
+  text: { fits: isText, shape: 'a string' },
+  richText: { fits: value => isText(value) || isOutputData(value as PropertyValue), shape: 'a string, or { blocks } with the text' },
+  url: { fits: isText, shape: 'a string' },
+  email: { fits: isText, shape: 'a string' },
+  phone: { fits: isText, shape: 'a string' },
+  number: { fits: value => typeof value === 'number' && Number.isFinite(value), shape: 'a number, or null' },
+  checkbox: { fits: value => typeof value === 'boolean', shape: 'true or false' },
+  select: { fits: isText, shape: 'one option id, or null' },
+  status: { fits: isText, shape: 'one option id, or null' },
+  multiSelect: { fits: value => Array.isArray(value) && value.every(isText), shape: 'an array of option ids, or null' },
+  // A template's @today and @now fill in when a row is made from it.
+  date: {
+    fits: (value, template) => typeof value === 'string' && (parseDateValue(value) !== null || (template && (value === '@today' || value === '@now'))),
+    shape: `a date string (${DATE_VALUE_FORMAT}), or null`,
+  },
+  person: { fits: value => Array.isArray(value) && value.every(item => isRecord(item) && typeof item.id === 'string' && item.id !== ''), shape: 'an array of { id } person objects' },
+  files: { fits: value => Array.isArray(value) && value.every(isFileValue), shape: 'an array of { id, name, url } files' },
+  relation: { fits: value => Array.isArray(value) && value.every(item => isText(item) || (isRecord(item) && typeof item.id === 'string')), shape: 'an array of { id } row references' },
+  place: { fits: value => isPlaceValue(value as PropertyValue), shape: 'a { name, address, lat, lon } place, or null' },
+  verification: { fits: value => isVerificationValue(value as PropertyValue), shape: '{ state: "verified" | "unverified" }, or null' },
+};
+
+/** The ids a value names that its property does not offer: options, or rows of the related database. */
+const missingIds = (ctx: ToolActionContext, databaseId: string, property: PropertyDefinition, value: unknown): { id: string; where: string } | undefined => {
+  if (OPTION_TYPES.has(property.type)) {
+    const known = new Set((property.config?.options ?? []).map(option => option.id));
+    // The shape check before this one made every entry a string.
+    const id = (Array.isArray(value) ? value as unknown[] : [value]).filter((each): each is string => typeof each === 'string').find(each => !known.has(each));
+
+    return id === undefined ? undefined : { id, where: `Property ${property.id} has no option ${id}. Add it with database.addOption first.` };
+  }
+  const target = property.relation?.targetDatabaseId ?? databaseId;
+
+  if (property.type !== 'relation' || property.relation?.targetDocumentId !== undefined || schemaOf(ctx, target) === undefined) {
+    return undefined;
+  }
+  const rows = new Set(rowsOf(ctx, target).map(each => each.id));
+  const id = relationIdsOf(value).find(each => !rows.has(each));
+
+  return id === undefined ? undefined : { id, where: `Property ${property.id} relates to database ${target}, which has no row ${id}.` };
+};
+
+/** One value, checked as the property's cell editor would write it. Null empties a person, files or relation list to []. */
+const checkedValue = (ctx: ToolActionContext, databaseId: string, property: PropertyDefinition, value: unknown, template: boolean): unknown => {
+  const rule = VALUE_SHAPES[property.type];
+
+  if (isReadOnlyType(property.type)) {
+    return ctx.fail('PRECONDITION_FAILED', `Property ${property.id} is a ${property.type} property: Blok computes its value, so it cannot be set.`);
+  }
+  if (value === null && property.type !== 'title') {
+    return isListValueType(property.type) ? [] : null;
+  }
+  // A type from a newer Blok has no rule here: its value passes as given.
+  if (rule !== undefined && !rule.fits(value, template)) {
+    return ctx.fail('INVALID_ARGS', `Property ${property.id} is a ${property.type} property: its value is ${rule.shape}.`);
+  }
+  const missing = missingIds(ctx, databaseId, property, value);
+
+  return missing === undefined ? value : ctx.fail('PRECONDITION_FAILED', missing.where);
+};
+
+const checkedValues = (ctx: ToolActionContext, databaseId: string, state: DatabaseState, values: Record<string, unknown>, template = false): Record<string, unknown> =>
+  Object.fromEntries(Object.entries(values).map(([propertyId, value]) => {
+    const property = state.schema.find(each => each.id === propertyId) ?? ctx.fail('PRECONDITION_FAILED', `This database has no property ${propertyId}.`);
+
+    return [propertyId, checkedValue(ctx, databaseId, property, value, template)];
+  }));
+
 const titleOf = (state: DatabaseState, values: Record<string, unknown>): string | undefined => {
   const value = values[state.schema.find(property => property.type === 'title')?.id ?? ''];
 
@@ -734,43 +830,485 @@ const templateOf = (ctx: ToolActionContext, databaseId: string, templateId: stri
   templatesOf(ctx, databaseId).find(row => row.id === templateId)
     ?? ctx.fail('PRECONDITION_FAILED', `Block ${templateId} is not a template of this database.`);
 
-const addRow: ToolActionImpl<{ values?: Record<string, unknown>; group?: string } & Placement, undefined, { rowId: string }> = {
+/** Page fields a row copies from a template (writeNewRow, applyTemplate). */
+const PAGE_FIELDS = ['icon', 'cover', 'fullWidth'] as const;
+
+const rawData = (ctx: ToolActionContext, id: string): Record<string, unknown> => {
+  const data = ctx.read(id)?.data;
+
+  return isRecord(data) ? data : {};
+};
+
+/**
+ * As DatabaseTool.copyChildBlocks: the page body as insert specs, comment
+ * threads left behind. A table's cells get new ids, so its grid names them.
+ */
+const bodyOf = (ctx: ToolActionContext, fromId: string): InsertSpec[] => (ctx.read(fromId)?.children ?? []).flatMap((childId) => {
+  const child = ctx.read(childId);
+
+  if (child === null || isAnnotationType(child.type)) {
+    return [];
+  }
+  const children = bodyOf(ctx, childId);
+  const data = isRecord(child.data) ? jsonCopy(child.data) : {};
+  const ids = new Map(child.children.map((id, index) => [id, children[index]]));
+
+  if (child.type === 'table' && Array.isArray(data.content)) {
+    const renamed = (id: unknown): unknown => (typeof id === 'string' ? ids.get(id)?.id ?? id : id);
+
+    data.content = (data.content as unknown[]).map((cells): unknown => (Array.isArray(cells)
+      ? (cells as unknown[]).map((cell): unknown => (isRecord(cell) && Array.isArray(cell.blocks) ? { ...cell, blocks: (cell.blocks as unknown[]).map(renamed) } : cell))
+      : cells));
+  }
+
+  return [{ type: child.type, id: ctx.newId(), data, children }];
+});
+
+// A top-level id would stay reserved: only ids a parent names are claimed (createActionContext).
+const copyBody = (ctx: ToolActionContext, fromId: string, toId: string): void =>
+  bodyOf(ctx, fromId).forEach(({ id: _id, ...spec }) => ctx.insert({ ...spec, parentId: toId, copy: true }));
+
+const dynamicContext = (ctx: ToolActionContext): { me: string | null; now: Date } =>
+  ({ me: ctx.actorId ?? null, now: new Date(ctx.now ?? Date.now()) });
+
+/** As DatabaseModel.withStatusDefaults: a status with a default option fills a row that names no value for it. */
+const withStatusDefaults = (state: DatabaseState, properties: Record<string, unknown>): Record<string, unknown> => ({
+  ...properties,
+  ...Object.fromEntries(state.schema.flatMap((property) => {
+    const id = property.type === 'status' ? property.status?.defaultOptionId : undefined;
+
+    return id !== undefined && !(property.id in properties) && (property.config?.options ?? []).some(option => option.id === id) ? [[property.id, id]] : [];
+  })),
+});
+
+/** As DatabaseModel.withCreatedByDefaults: a person property that defaults to "Created by" starts with the agent. */
+const withCreatedBy = (ctx: ToolActionContext, state: DatabaseState, properties: Record<string, unknown>): Record<string, unknown> => {
+  const me = ctx.actorId;
+
+  return me === undefined ? properties : {
+    ...properties,
+    ...Object.fromEntries(state.schema
+      .filter(property => property.type === 'person' && property.person?.default === 'createdBy' && personIdsOf(properties[property.id] as PropertyValue).length === 0)
+      .map(property => [property.id, [{ id: me }]])),
+  };
+};
+
+interface AddRowArgs extends Placement {
+  values?: Record<string, unknown>;
+  group?: string;
+  template?: string | null;
+}
+
+/**
+ * As the toolbar New (writeNewRow): the row starts from the default template,
+ * the one `template` names, or none for null. Its values, icon, cover, page
+ * width, reminders and page body are copied; the caller's values win, except
+ * an empty title.
+ */
+const addRow: ToolActionImpl<AddRowArgs, undefined, { rowId: string }> = {
   run: (ctx, args) => {
     if (args.before !== undefined && args.after !== undefined) {
       ctx.fail('INVALID_ARGS', 'Pass before or after, not both.');
     }
     const block = databaseTarget(ctx);
     const state = readDatabase(block);
-    const properties = withEmptyLists(state, { ...(args.values ?? {}), ...groupValue(ctx, state, args.group) });
-    const title = titleOf(state, properties);
+    const titleId = state.schema.find(property => property.type === 'title')?.id;
+    const defaultId = state.schema.find(property => property.type === 'title')?.defaultTemplateId;
+    const pick = args.template === undefined ? templatesOf(ctx, block.id).find(template => template.id === defaultId) : undefined;
+    const template = args.template === null ? undefined : pick ?? (typeof args.template === 'string' ? templateOf(ctx, block.id, args.template) : undefined);
+    const given = withCreatedBy(ctx, state, { ...(titleId === undefined ? {} : { [titleId]: '' }), ...checkedValues(ctx, block.id, state, args.values ?? {}), ...groupValue(ctx, state, args.group) });
+    const chosen = Object.fromEntries(Object.entries(given)
+      .filter(([id, value]) => !(id === titleId && (value === '' || value === null)) && !(Array.isArray(value) && value.length === 0)));
+    const filled = template === undefined ? given : { ...given, ...resolveDynamicProperties(jsonCopy(template.properties) as Record<string, PropertyValue>, dynamicContext(ctx)), ...chosen };
+    const properties = withStatusDefaults(state, withEmptyLists(state, filled));
+    const page = template === undefined ? {} : rawData(ctx, template.id);
+    const reminders = template === undefined ? undefined : copiedReminders(isRecord(page.reminders) ? page.reminders as Record<string, DateReminder> : undefined, properties, dynamicContext(ctx).now);
     const rowId = ctx.insert({
       type: 'database-row',
       data: {
         properties,
         position: positionAround(ctx, rowsOf(ctx, block.id), { before: args.before, after: args.after }),
-        ...(title === undefined ? {} : { title }),
+        title: titleOf(state, properties) ?? '',
+        ...Object.fromEntries(PAGE_FIELDS.filter(field => page[field] !== undefined).map(field => [field, page[field]])),
+        ...(reminders === undefined ? {} : { reminders }),
       },
       parentId: block.id,
     });
+
+    if (template !== undefined) {
+      copyBody(ctx, template.id, rowId);
+    }
 
     return { rowId };
   },
 };
 
-const setRowValues: ToolActionImpl<{ rowId: string; values: Record<string, unknown> }> = {
+const blank = (value: unknown): boolean => value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
+
+/**
+ * As DatabaseTool.applyTemplate (a template picked on an empty row page): the
+ * template fills the row's empty values and missing icon, cover and width,
+ * adds reminders beside the dates it fills, and copies its body.
+ */
+const applyTemplate: ToolActionImpl<{ rowId: string; templateId: string }> = {
   run: (ctx, args) => {
     const block = databaseTarget(ctx);
-    // Editing a template's values is a row edit too (the editor's template page).
-    const row = rowBlocksOf(ctx, block.id).find(candidate => candidate.id === args.rowId)
-      ?? ctx.fail('PRECONDITION_FAILED', `Block ${args.rowId} is not a row of this database.`);
-    const properties = { ...row.properties, ...args.values };
-    const title = titleOf(readDatabase(block), properties);
+    const state = readDatabase(block);
+    const target = rowOf(ctx, block.id, args.rowId);
+    const template = templateOf(ctx, block.id, args.templateId);
 
-    ctx.update(args.rowId, { properties, ...(title === undefined ? {} : { title }) });
+    if ((ctx.read(target.id)?.children ?? []).some(id => !isAnnotationType(ctx.read(id)?.type))) {
+      ctx.fail('PRECONDITION_FAILED', `Row ${target.id} already has page content. A template applies to an empty page only.`);
+    }
+    const context = dynamicContext(ctx);
+    const changes = Object.fromEntries(Object.entries(resolveDynamicProperties(jsonCopy(template.properties) as Record<string, PropertyValue>, context))
+      .filter(([id, value]) => !blank(value) && blank(target.properties[id])));
+    const page = rawData(ctx, template.id);
+    const own = rawData(ctx, target.id);
+    const ownReminders = isRecord(own.reminders) ? own.reminders : {};
+    const added = Object.entries(copiedReminders(isRecord(page.reminders) ? page.reminders as Record<string, DateReminder> : undefined, changes, context.now) ?? {})
+      .filter(([propertyId]) => ownReminders[propertyId] === undefined);
+    const properties = { ...target.properties, ...changes };
+    const title = titleOf(state, properties);
+
+    ctx.update(target.id, {
+      properties,
+      ...(title === undefined ? {} : { title }),
+      ...Object.fromEntries(PAGE_FIELDS.filter(field => own[field] === undefined && page[field] !== undefined).map(field => [field, page[field]])),
+      ...(added.length === 0 ? {} : { reminders: { ...ownReminders, ...Object.fromEntries(added) } }),
+    });
+    copyBody(ctx, template.id, target.id);
 
     return undefined;
   },
 };
+
+/** A database block's schema, or undefined when `databaseId` is not one in this document. */
+const schemaOf = (ctx: ToolActionContext, databaseId: string): PropertyDefinition[] | undefined => {
+  const found = ctx.read(databaseId);
+
+  return found !== null && isRecord(found.data) && Array.isArray(found.data.schema) ? found.data.schema as PropertyDefinition[] : undefined;
+};
+
+/**
+ * As DatabaseTool.syncedMirror: the other side of a two-way relation, only
+ * while it still points back. A mirror deleted or retyped gets no writes.
+ */
+const syncedMirror = (ctx: ToolActionContext, databaseId: string, property: PropertyDefinition): string | undefined => {
+  const settings = property.relation;
+  const id = settings?.twoWay === true && settings.targetDocumentId === undefined ? settings.syncedPropertyId : undefined;
+  const mirror = id === undefined || settings === undefined ? undefined : schemaOf(ctx, settings.targetDatabaseId)?.find(each => each.id === id);
+
+  return mirror?.type === 'relation' && mirror.relation?.targetDatabaseId === databaseId && mirror.relation.syncedPropertyId === property.id
+    ? id
+    : undefined;
+};
+
+/** A row's values as they stand now, earlier writes of this action included. Undefined for a template or a missing row. */
+const liveValues = (ctx: ToolActionContext, databaseId: string, rowId: string): Record<string, unknown> | undefined => {
+  const found = ctx.read(rowId);
+
+  if (found === null || found.type !== 'database-row' || found.parentId !== databaseId || !isRecord(found.data) || found.data.template === true) {
+    return undefined;
+  }
+
+  return isRecord(found.data.properties) ? { ...found.data.properties } : {};
+};
+
+/** As DatabaseTool.writeForeignRow: one relation value on another row, skipped when that row is gone. */
+const writeRelated = (ctx: ToolActionContext, databaseId: string, rowId: string, propertyId: string, change: (value: unknown) => unknown): void => {
+  const values = liveValues(ctx, databaseId, rowId);
+
+  if (values !== undefined) {
+    ctx.update(rowId, { properties: { ...values, [propertyId]: change(values[propertyId]) } });
+  }
+};
+
+const asRelation = (ids: string[]): Array<{ id: string }> => ids.map(id => ({ id }));
+
+/**
+ * As DatabaseTool.commitRelation: the row's own new list (a one-page limit keeps
+ * the last id) and, to run after the row is written, the other side.
+ */
+const relationWrite = (
+  ctx: ToolActionContext, databaseId: string, property: PropertyDefinition, row: RowRef, value: unknown
+): { value: Array<{ id: string }>; after: () => void } => {
+  const settings = property.relation;
+  const stored = relationIdsOf(row.properties[property.id]);
+  const edit = relationEdit(stored, stored, value, settings?.limit);
+
+  if (edit === null || settings === undefined) {
+    return { value: asRelation(edit?.own ?? stored), after: () => undefined };
+  }
+  // A template is no row: the editor writes no other side for one.
+  const synced = row.template ? undefined : syncedMirror(ctx, databaseId, property);
+  const target = settings.targetDatabaseId;
+  const after = (): void => {
+    if (synced !== undefined) {
+      edit.link.forEach(id => writeRelated(ctx, target, id, synced, current => addRelated(current, row.id, null)));
+      edit.unlink.forEach(id => writeRelated(ctx, target, id, synced, current => removeRelated(current, row.id)));
+    } else if (target === databaseId && !row.template) {
+      // A one-way self-relation shows both ways: the other row's pointer goes too.
+      edit.removed
+        .filter(id => relationIdsOf(liveValues(ctx, databaseId, id)?.[property.id]).includes(row.id))
+        .forEach(id => writeRelated(ctx, databaseId, id, property.id, current => removeRelated(current, row.id)));
+    }
+  };
+
+  return { value: asRelation(edit.own), after };
+};
+
+const setRowValues: ToolActionImpl<{ rowId: string; values: Record<string, unknown> }> = {
+  run: (ctx, args) => {
+    const block = databaseTarget(ctx);
+    const state = readDatabase(block);
+    // Editing a template's values is a row edit too (the editor's template page).
+    const row = rowBlocksOf(ctx, block.id).find(candidate => candidate.id === args.rowId)
+      ?? ctx.fail('PRECONDITION_FAILED', `Block ${args.rowId} is not a row of this database.`);
+    const effects: Array<() => void> = [];
+    const values = Object.fromEntries(Object.entries(checkedValues(ctx, block.id, state, args.values, row.template)).map(([propertyId, value]) => {
+      const property = state.schema.find(each => each.id === propertyId);
+
+      if (property?.type !== 'relation') {
+        return [propertyId, value];
+      }
+      const write = relationWrite(ctx, block.id, property, row, value);
+
+      effects.push(write.after);
+
+      return [propertyId, write.value];
+    }));
+    const properties = { ...row.properties, ...values };
+    const title = titleOf(state, properties);
+    // As updateRowBlock: a cleared date takes its reminder along in the same write.
+    const reminders = rawData(ctx, row.id).reminders;
+    const kept = isRecord(reminders) ? Object.fromEntries(Object.entries(reminders).filter(([propertyId]) => values[propertyId] !== null)) : undefined;
+    const dropped = isRecord(reminders) && kept !== undefined && Object.keys(kept).length < Object.keys(reminders).length;
+
+    ctx.update(args.rowId, {
+      properties,
+      ...(title === undefined ? {} : { title }),
+      ...(dropped ? { reminders: Object.keys(kept).length === 0 ? undefined : kept } : {}),
+    });
+    effects.forEach(effect => effect());
+
+    return undefined;
+  },
+};
+
+/** As DatabaseTool.unlinkDeletedRow: the row leaves the relations of this database that point at it, and their other sides. */
+const unlinkRow = (ctx: ToolActionContext, databaseId: string, schema: PropertyDefinition[], rowId: string): void => {
+  const values = liveValues(ctx, databaseId, rowId) ?? {};
+
+  for (const property of schema) {
+    const settings = property.relation;
+
+    if (property.type !== 'relation' || settings === undefined) {
+      continue;
+    }
+    const synced = syncedMirror(ctx, databaseId, property);
+
+    if (synced !== undefined) {
+      relationIdsOf(values[property.id]).forEach(id => writeRelated(ctx, settings.targetDatabaseId, id, synced, current => removeRelated(current, rowId)));
+    }
+    if (settings.targetDatabaseId === databaseId) {
+      rowsOf(ctx, databaseId)
+        .filter(other => other.id !== rowId && relationIdsOf(other.properties[property.id]).includes(rowId))
+        .forEach(other => writeRelated(ctx, databaseId, other.id, property.id, current => removeRelated(current, rowId)));
+    }
+  }
+};
+
+const subtreeOf = (ctx: ToolActionContext, id: string): string[] =>
+  [id, ...(ctx.read(id)?.children ?? []).flatMap(child => subtreeOf(ctx, child))];
+
+/**
+ * As the editor's row delete (deleteRowBlock): a parent's sub-items go too, and
+ * every relation pointing at a deleted row lets go of it. A template is
+ * deleteTemplate: it stops being the default.
+ */
+const deleteRow: ToolActionImpl<{ rowId: string }, undefined, { removedIds: string[] }> = {
+  run: (ctx, args) => {
+    const block = databaseTarget(ctx);
+    const state = readDatabase(block);
+    const target = rowBlocksOf(ctx, block.id).find(candidate => candidate.id === args.rowId)
+      ?? ctx.fail('PRECONDITION_FAILED', `Block ${args.rowId} is not a row of this database.`);
+
+    if (target.template) {
+      const removedIds = subtreeOf(ctx, target.id);
+
+      if (state.schema.some(property => property.type === 'title' && property.defaultTemplateId === target.id)) {
+        ctx.update(block.id, {
+          schema: state.schema.map((property) => {
+            if (property.defaultTemplateId !== target.id) {
+              return property;
+            }
+            const { defaultTemplateId: _gone, ...rest } = property;
+
+            return rest;
+          }),
+        });
+      }
+      ctx.remove(target.id, { withChildren: true });
+
+      return { removedIds };
+    }
+    const pair = relationPair(state.schema, block.id, 'parentItem', 'subItems');
+    const subItems = pair === undefined ? [] : descendantsOf(target.id, rowsOf(ctx, block.id), pair.forward);
+    const doomed = [...[...subItems].reverse(), target.id];
+    const removedIds = [target.id, ...subItems].flatMap(id => subtreeOf(ctx, id));
+
+    doomed.forEach((id) => {
+      unlinkRow(ctx, block.id, state.schema, id);
+      ctx.remove(id, { withChildren: true });
+    });
+
+    return { removedIds };
+  },
+};
+
+/** The data a copy of a row or template carries over: values aside, its page fields and reminders. */
+const copiedPage = (ctx: ToolActionContext, sourceId: string, properties: Record<string, unknown>): Record<string, unknown> => {
+  const page = rawData(ctx, sourceId);
+  const reminders = copiedReminders(isRecord(page.reminders) ? page.reminders as Record<string, DateReminder> : undefined, properties, dynamicContext(ctx).now);
+
+  return {
+    ...Object.fromEntries(PAGE_FIELDS.filter(field => page[field] !== undefined).map(field => [field, page[field]])),
+    ...(reminders === undefined ? {} : { reminders }),
+  };
+};
+
+/**
+ * As the row menu's Duplicate (duplicateTableRow): the copy goes right after
+ * the original with its page body, and a parent's sub-items are copied under
+ * the copy. A template copy is duplicateTemplate: it stays a template.
+ */
+const duplicateRow: ToolActionImpl<{ rowId: string }, undefined, { rowId: string }> = {
+  run: (ctx, args) => {
+    const block = databaseTarget(ctx);
+    const state = readDatabase(block);
+    const source = rowBlocksOf(ctx, block.id).find(candidate => candidate.id === args.rowId)
+      ?? ctx.fail('PRECONDITION_FAILED', `Block ${args.rowId} is not a row of this database.`);
+    const siblings = source.template ? templatesOf(ctx, block.id) : rowsOf(ctx, block.id);
+    const ordered = sortedByPosition(siblings);
+    const next = ordered[ordered.findIndex(each => each.id === source.id) + 1]?.position ?? null;
+    const pair = source.template ? undefined : relationPair(state.schema, block.id, 'parentItem', 'subItems');
+    const family = [source.id, ...(pair === undefined ? [] : descendantsOf(source.id, rowsOf(ctx, block.id), pair.forward))];
+    const copies = new Map(family.map(id => [id, ctx.newId()]));
+    const remap = (value: unknown): Array<{ id: string }> =>
+      relationIdsOf(value).flatMap(id => (copies.has(id) ? [{ id: copies.get(id) ?? id }] : []));
+    const cursor = { after: source.position };
+
+    for (const sourceId of family) {
+      const original = siblings.find(each => each.id === sourceId);
+      const id = copies.get(sourceId);
+
+      if (original === undefined || id === undefined) {
+        continue;
+      }
+      // Inside the copied family, its own links point at the copies; the top copy keeps its parent.
+      const links = pair === undefined ? {} : {
+        [pair.backward]: remap(original.properties[pair.backward]),
+        ...(sourceId === source.id ? {} : { [pair.forward]: remap(original.properties[pair.forward]) }),
+      };
+      const properties = { ...withEmptyLists(state, jsonCopy(original.properties)), ...links };
+      const position = positionBetween(cursor.after, next);
+
+      cursor.after = position;
+      ctx.insert({
+        type: 'database-row',
+        id,
+        data: {
+          properties,
+          position,
+          title: titleOf(state, properties) ?? '',
+          ...(source.template ? { template: true } : {}),
+          ...copiedPage(ctx, sourceId, properties),
+        },
+        parentId: block.id,
+      });
+      copyBody(ctx, sourceId, id);
+    }
+    const copy = copies.get(source.id) ?? source.id;
+    const parent = pair === undefined ? undefined : relationIdsOf(source.properties[pair.forward]).pop();
+
+    // The copy sits beside the original: its parent lists it too.
+    if (pair !== undefined && parent !== undefined) {
+      writeRelated(ctx, block.id, parent, pair.backward, current => addRelated(current, copy, null));
+    }
+
+    return { rowId: copy };
+  },
+};
+
+/** For each two-way relation of `schema` to another database: every row the values name there, with the mirror property. */
+const eachOtherSide = (
+  ctx: ToolActionContext, databaseId: string, schema: PropertyDefinition[], values: Record<string, unknown>,
+  visit: (database: string, rowId: string, mirror: string) => void
+): void => schema.forEach((property) => {
+  const settings = property.relation;
+  const mirror = syncedMirror(ctx, databaseId, property);
+
+  if (settings !== undefined && mirror !== undefined && settings.targetDatabaseId !== databaseId) {
+    relationIdsOf(values[property.id]).forEach(id => visit(settings.targetDatabaseId, id, mirror));
+  }
+});
+
+/**
+ * As the row menu's Move to (moveRowTo): the row and its sub-items go to the
+ * end of another database of this document with their pages. Values follow
+ * the target's properties by name and type, options by label; the rest stays
+ * behind. Two-way relations let go of the rows here and pick them up there.
+ */
+const moveRowTo: ToolActionImpl<{ rowId: string; databaseId: string }> = {
+  run: (ctx, args) => {
+    const block = databaseTarget(ctx);
+    const state = readDatabase(block);
+    const moving = rowOf(ctx, block.id, args.rowId);
+    const target = ctx.read(args.databaseId);
+    const targetSchema = schemaOf(ctx, args.databaseId);
+
+    if (args.databaseId === block.id || target === null || target.type !== block.type || targetSchema === undefined || (isRecord(target.data) && isRecord(target.data.source))) {
+      ctx.fail('PRECONDITION_FAILED', `${args.databaseId} is not another database of this document. A linked view of a database is not one either.`);
+    }
+    const rows = rowsOf(ctx, block.id);
+    const pair = relationPair(state.schema, block.id, 'parentItem', 'subItems');
+    const family = new Set([moving.id, ...(pair === undefined ? [] : descendantsOf(moving.id, rows, pair.forward))]);
+    const targetPair = relationPair(targetSchema ?? [], args.databaseId, 'parentItem', 'subItems');
+    const cursor = { after: sortedByPosition(rowsOf(ctx, args.databaseId)).at(-1)?.position ?? null };
+    const moved = rows.filter(each => family.has(each.id)).map((each) => {
+      const properties: Record<string, unknown> = mapRowValues(each.properties as Record<string, PropertyValue>, state.schema, targetSchema ?? []);
+
+      if (pair !== undefined && targetPair !== undefined) {
+        properties[targetPair.forward] = asRelation(relationIdsOf(each.properties[pair.forward]).filter(id => family.has(id)));
+        properties[targetPair.backward] = asRelation(relationIdsOf(each.properties[pair.backward]).filter(id => family.has(id)));
+      }
+      const position = positionBetween(cursor.after, null);
+
+      cursor.after = position;
+
+      return { id: each.id, before: each.properties, properties: withEmptyLists({ ...state, schema: targetSchema ?? [] }, properties), position };
+    });
+
+    for (const row of moved) {
+      eachOtherSide(ctx, block.id, state.schema, row.before, (database, id, mirror) =>
+        writeRelated(ctx, database, id, mirror, current => removeRelated(current, row.id)));
+      eachOtherSide(ctx, args.databaseId, targetSchema ?? [], row.properties, (database, id, mirror) =>
+        writeRelated(ctx, database, id, mirror, current => addRelated(current, row.id, null)));
+    }
+    for (const row of moved) {
+      const title = titleOf({ ...state, schema: targetSchema ?? [] }, row.properties);
+
+      ctx.update(row.id, { properties: row.properties, position: row.position, title: title ?? '' });
+      ctx.move(row.id, { parentId: args.databaseId, position: 'end' });
+    }
+
+    return undefined;
+  },
+};
+
+export const DATABASE_CHILD_COMMAND: ChildCommandRoute = (command, childId) =>
+  ({ action: command === 'delete' ? 'deleteRow' : 'duplicateRow', args: { rowId: childId } });
 
 const moveRow: ToolActionImpl<{ rowId: string; group?: string } & Placement> = {
   run: (ctx, args) => {
@@ -822,6 +1360,48 @@ const checkPageLayout = (ctx: ToolActionContext, block: TargetBlock, state: Data
   }
 };
 
+/**
+ * As DatabaseTool.setRelationTwoWay. Two-way on, with no syncedPropertyId and
+ * no live mirror yet, makes the other side: a relation on the target database
+ * (this one for a self-relation) that points back. Off drops the link on this
+ * side; the mirror stays as a one-way relation.
+ */
+const twoWayPairing = (
+  ctx: ToolActionContext, block: TargetBlock, property: PropertyDefinition, input: Record<string, unknown>
+): { relation: Record<string, unknown>; target: string; mirror?: PropertyDefinition } => {
+  const target = typeof input.targetDatabaseId === 'string' ? input.targetDatabaseId : property.relation?.targetDatabaseId ?? block.id;
+
+  if (input.twoWay !== true) {
+    const { twoWay: _twoWay, syncedPropertyId: _synced, ...oneWay } = input;
+
+    return { relation: input.twoWay === false ? oneWay : input, target };
+  }
+  if (typeof input.syncedPropertyId === 'string') {
+    return { relation: input, target };
+  }
+  if (input.targetDocumentId !== undefined) {
+    return ctx.fail('PRECONDITION_FAILED', 'A relation to a database in another document cannot be two-way.');
+  }
+  const targetSchema = schemaOf(ctx, target) ?? ctx.fail('PRECONDITION_FAILED', `${target} is not a database block in this document.`);
+  const held = property.relation?.syncedPropertyId;
+  const live = held === undefined ? undefined : syncedMirror(ctx, block.id, { ...property, relation: { ...(input as unknown as RelationSettings), syncedPropertyId: held } });
+
+  if (live !== undefined) {
+    return { relation: { ...input, syncedPropertyId: live }, target };
+  }
+  const title = typeof block.data.title === 'string' && block.data.title !== '' ? block.data.title : property.name;
+  const names = (target === block.id ? readDatabase(block).schema : targetSchema).map(each => each.name);
+  const mirror: PropertyDefinition = {
+    id: ctx.newId(),
+    name: freePropertyName(names, DATABASE_DEFAULT_TEXT.relationReverseName.replace('{name}', title)),
+    type: 'relation',
+    position: positionAround(ctx, target === block.id ? readDatabase(block).schema : targetSchema),
+    relation: { targetDatabaseId: block.id, twoWay: true, syncedPropertyId: property.id },
+  };
+
+  return { relation: { ...input, syncedPropertyId: mirror.id }, target, mirror };
+};
+
 /** As DatabaseModel.updateProperty: a key given as null is removed, any other value replaces it. */
 const updateProperty: ToolActionImpl<{ propertyId: string; name?: string; settings?: Record<string, unknown> }> = {
   run: (ctx, args) => {
@@ -849,7 +1429,11 @@ const updateProperty: ToolActionImpl<{ propertyId: string; name?: string; settin
       }
       checkPageLayout(ctx, block, state, property, args.settings ?? {});
     }
-    const settings = Object.entries(args.settings ?? {}).filter(([key]) => SETTING_KEYS.some(known => known === key) || layout.includes(key));
+    const given = Object.entries(args.settings ?? {}).filter(([key]) => SETTING_KEYS.some(known => known === key) || layout.includes(key));
+    const pairing = property?.type === 'relation' && isRecord(args.settings?.relation)
+      ? twoWayPairing(ctx, block, property, args.settings.relation)
+      : undefined;
+    const settings = pairing === undefined ? given : given.map(([key, value]): [string, unknown] => [key, key === 'relation' ? pairing.relation : value]);
     const schema = state.schema.map((property, i) => (i !== index
       ? property
       : {
@@ -857,8 +1441,32 @@ const updateProperty: ToolActionImpl<{ propertyId: string; name?: string; settin
         ...Object.fromEntries(settings.filter(([, value]) => value !== null)),
         ...(name === undefined ? {} : { name }),
       } as PropertyDefinition));
+    const mirror = pairing?.mirror;
 
-    ctx.update(block.id, { schema });
+    if (mirror === undefined || pairing === undefined) {
+      ctx.update(block.id, { schema });
+
+      return undefined;
+    }
+    if (pairing.target === block.id) {
+      ctx.update(block.id, withNewProperty({ ...state, schema }, mirror));
+    } else {
+      ctx.update(block.id, { schema });
+      const target = ctx.read(pairing.target);
+      const data = isRecord(target?.data) ? target.data : {};
+
+      ctx.update(pairing.target, withNewProperty({
+        schema: schemaOf(ctx, pairing.target) ?? [],
+        views: Array.isArray(data.views) ? data.views as DatabaseViewConfig[] : [],
+        activeViewId: '',
+      }, mirror));
+    }
+    // The other side starts empty on every row, then holds each row this side names.
+    rowsOf(ctx, pairing.target)
+      .filter(each => each.properties[mirror.id] === undefined || each.properties[mirror.id] === null)
+      .forEach(each => writeRelated(ctx, pairing.target, each.id, mirror.id, () => []));
+    rowsOf(ctx, block.id).forEach(each => relationIdsOf(each.properties[args.propertyId])
+      .forEach(id => writeRelated(ctx, pairing.target, id, mirror.id, current => addRelated(current, each.id, null))));
 
     return undefined;
   },
@@ -1043,7 +1651,7 @@ const changePropertyType: ToolActionImpl<{ propertyId: string; type: PropertyTyp
 export const DATABASE_ACTION_HANDLERS: Readonly<Record<string, ToolActionImpl>> = {
   create, addView, renameView, duplicateView, deleteView, moveView, updateView, setLayout, setLock,
   addProperty, addOption, renameOption, moveOption, deleteOption,
-  addRow, moveRow, setRowValues,
+  addRow, moveRow, setRowValues, deleteRow, applyTemplate, duplicateRow, moveRowTo,
   updateProperty, duplicateProperty, deleteProperty, recolorOption,
   addTemplate, setDefaultTemplate, setTemplateRepeat, changePropertyType,
 };

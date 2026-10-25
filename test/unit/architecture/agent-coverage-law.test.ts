@@ -34,6 +34,10 @@ const UNCORPUSED_COMMANDS: Record<string, string> = {
   'database.updateView': 'Corpus case proposed, awaiting user review. test/unit/shared/agent/database-view-settings.test.ts runs it on the json and store sessions.',
   'database.setLayout': 'Corpus case proposed, awaiting user review. test/unit/shared/agent/database-view-settings.test.ts runs it on the json and store sessions.',
   'database.setLock': 'Corpus case proposed, awaiting user review. test/unit/shared/agent/database-view-settings.test.ts runs it on the json and store sessions.',
+  'database.deleteRow': 'Corpus case proposed, awaiting user review. test/unit/agent/database-row-delete.test.ts runs it on the json and store sessions.',
+  'database.applyTemplate': 'Corpus case proposed, awaiting user review. test/unit/agent/database-row-templates.test.ts runs it on the json and store sessions.',
+  'database.duplicateRow': 'Corpus case proposed, awaiting user review. test/unit/agent/database-row-copy.test.ts runs it on the json and store sessions.',
+  'database.moveRowTo': 'Corpus case proposed, awaiting user review. test/unit/agent/database-row-copy.test.ts runs it on the json and store sessions.',
 };
 
 const ID_TOKEN = /\b[a-z-]+:[^\s,;)]+/g;

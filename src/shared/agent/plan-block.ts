@@ -459,6 +459,8 @@ const sameField = (left: Record<string, unknown>, right: Record<string, unknown>
   Object.hasOwn(left, field) === Object.hasOwn(right, field) &&
   (!Object.hasOwn(left, field) || JSON.stringify(left[field]) === JSON.stringify(right[field]));
 
+const REACTIONS_PREFIX = 'reactions:';
+
 /** `stored` names fields rebuilt from the draft (see PlanState.prepareData). */
 export const planUpdate = (state: PlanState, args: Record<string, unknown>, stored: readonly string[] = []): unknown => {
   const block = state.requireBlock(args.id, '/id');
@@ -486,6 +488,12 @@ export const planUpdate = (state: PlanState, args: Record<string, unknown>, stor
 
       state.fail('FIELD_NOT_WRITABLE', `"${field}" keeps an invariant. Use ${use} instead.`, path, {
         reason: 'guarded', field, use,
+      });
+    }
+    // A feed reaction key names its person (database-row "reactions:<user id>").
+    if (field.startsWith(REACTIONS_PREFIX) && field !== `${REACTIONS_PREFIX}${state.stamp.actorId}`) {
+      state.fail('FIELD_NOT_WRITABLE', `"${field}" holds another person's reactions. An agent writes only "${REACTIONS_PREFIX}${state.stamp.actorId}".`, path, {
+        reason: 'other-person', field,
       });
     }
   }

@@ -47,6 +47,7 @@ const KEYS: Record<keyof typeof DATABASE_DEFAULT_TEXT, string> = {
   submissionTimeProperty: 'tools.database.seedSubmissionTime',
   optionLabel: 'tools.database.seedOption',
   duplicatePropertyName: 'tools.database.duplicatePropertyName',
+  relationReverseName: 'tools.database.relationReverseName',
 };
 
 const english: Record<string, unknown> = en;

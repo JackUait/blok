@@ -4,6 +4,7 @@ import { composeBaseSanitizeConfig, composeFieldSanitize } from '../sanitize-com
 import type { SanitizerConfig } from '../../../types';
 import type { InsertSpec } from '../../../types/agent';
 import type { ToolActionImpl } from '../../../types/tools/tool-description';
+import type { ChildCommandRoute } from '../agent/types';
 
 export interface ToolRuntime {
   name: string;
@@ -21,6 +22,7 @@ export interface ToolRuntime {
    * `base` is what that import function always sets besides the text.
    */
   conversion?: { import?: string; export?: string; base?: Readonly<Record<string, unknown>> };
+  childCommand?: ChildCommandRoute;
 }
 
 export type ToolRuntimeRegistry = ReadonlyMap<string, ToolRuntime>;
@@ -35,6 +37,7 @@ export interface RuntimeBlockInput {
   defaultChildren?: InsertSpec[];
   actions?: Readonly<Record<string, ToolActionImpl>>;
   conversion?: ToolRuntime['conversion'];
+  childCommand?: ChildCommandRoute;
 }
 
 export const composeToolSanitize = (own: SanitizerConfig, inline: SanitizerConfig[]): SanitizerConfig => {
@@ -63,5 +66,6 @@ export const buildToolRuntimes = (blocks: RuntimeBlockInput[]): ToolRuntimeRegis
     ...(block.defaultChildren === undefined ? {} : { defaultChildren: block.defaultChildren }),
     actions: block.actions ?? {},
     ...(block.conversion === undefined ? {} : { conversion: block.conversion }),
+    ...(block.childCommand === undefined ? {} : { childCommand: block.childCommand }),
   }])
 );

@@ -86,7 +86,16 @@ export const createActionContext = (state: PlanState, block: SnapBlock | undefin
       }
       emitPatch(state, target, { [field]: value });
     },
-    move: (id, to) => emitMove(state, id, to.parentId, to.position, { allowSelfPlaced: true, isScopedContainer }),
+    move: (id, to) => {
+      // A child of this action's own block may go to another block of the same tool (a row to another database), nowhere else.
+      const handOver = block !== undefined && state.draft.parentOf(id) === block.id && typeof to.parentId === 'string'
+        && state.draft.get(to.parentId)?.type === tool;
+
+      emitMove(state, id, to.parentId, to.position, {
+        allowSelfPlaced: true,
+        isScopedContainer: target => isScopedContainer(target) || (handOver && target === to.parentId),
+      });
+    },
     remove: (id, opts = {}) => {
       const target = state.requireBlock(id, '/id');
       const entry = state.tool(target.type)?.entry;
@@ -103,6 +112,8 @@ export const createActionContext = (state: PlanState, block: SnapBlock | undefin
 
       return id;
     },
+    ...(state.stamp.actorId === '' ? {} : { actorId: state.stamp.actorId }),
+    now: state.stamp.at,
     richText: state.ctx.richText,
     fail: (code, message) => state.fail(code, message),
   };

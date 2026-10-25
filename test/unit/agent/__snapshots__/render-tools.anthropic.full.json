@@ -961,6 +961,17 @@
                         "minLength": 1,
                         "description": "Id of a database-row child block."
                       },
+                      "template": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
                       "id": {
                         "type": "string",
                         "description": "Id of the block to act on."
@@ -1040,6 +1051,46 @@
                       "groupBy": {
                         "type": "string",
                         "description": "Property id to group by."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.applyTemplate"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "rowId",
+                      "templateId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "rowId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a database-row child block."
+                      },
+                      "templateId": {
+                        "type": "string",
+                        "minLength": 1
                       },
                       "id": {
                         "type": "string",
@@ -1278,6 +1329,41 @@
                 "type": "object",
                 "properties": {
                   "name": {
+                    "const": "database.deleteRow"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "rowId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "rowId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a database-row child block."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
                     "const": "database.deleteView"
                   },
                   "args": {
@@ -1327,6 +1413,41 @@
                         "type": "string",
                         "minLength": 1,
                         "description": "Id of a property in schema."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.duplicateRow"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "rowId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "rowId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a database-row child block."
                       },
                       "id": {
                         "type": "string",
@@ -1493,6 +1614,46 @@
                         ]
                       }
                     ]
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.moveRowTo"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "rowId",
+                      "databaseId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "rowId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a database-row child block."
+                      },
+                      "databaseId": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
                   },
                   "ref": {
                     "type": "string"

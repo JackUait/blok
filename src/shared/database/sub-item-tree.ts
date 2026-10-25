@@ -1,8 +1,8 @@
 import { relationIdsOf } from './relation-values';
 
-import type { DatabaseRow, PropertyDefinition, RelationRole } from './types';
+import type { PropertyDefinition, RelationRole } from './types';
 
-type RowValues = Pick<DatabaseRow, 'id' | 'properties'>;
+type RowValues = { id: string; properties: Readonly<Record<string, unknown>> };
 
 /** The two sides of a self-relation pair, by their roles. */
 export const relationPair = (

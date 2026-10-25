@@ -5,7 +5,7 @@ import { sanitizeBlocks } from '../../../../src/components/utils/sanitizer';
 import { destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { BUILT_IN_RUNTIME_PARTS, BUILT_IN_TOOL_RUNTIMES } from '../../../../src/shared/tool-actions';
 import { COLUMN_DEFAULT_CHILDREN, COLUMN_LIST_ACTION_HANDLERS, COLUMN_LIST_DEFAULT_CHILDREN } from '../../../../src/shared/tool-actions/columns';
-import { DATABASE_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/database';
+import { DATABASE_ACTION_HANDLERS, DATABASE_CHILD_COMMAND, rejectDatabaseWrite } from '../../../../src/shared/tool-actions/database';
 import { IMAGE_ACTION_HANDLERS } from '../../../../src/shared/tool-actions/image';
 import { LINK_ACTION_HANDLERS, normalizeEmbed, rejectBookmarkWrite, rejectEmbedWrite } from '../../../../src/shared/tool-actions/link';
 import {
@@ -302,7 +302,7 @@ describe('BUILT_IN_TOOL_RUNTIMES', () => {
       file: { rejectWrite: MEDIA_REJECT_WRITE.file, actions: MEDIA_ACTION_HANDLERS.file },
       embed: { normalize: normalizeEmbed, rejectWrite: rejectEmbedWrite, actions: LINK_ACTION_HANDLERS.embed },
       bookmark: { rejectWrite: rejectBookmarkWrite, actions: LINK_ACTION_HANDLERS.bookmark },
-      database: { normalize: normalizeDatabase, actions: DATABASE_ACTION_HANDLERS },
+      database: { normalize: normalizeDatabase, rejectWrite: rejectDatabaseWrite, actions: DATABASE_ACTION_HANDLERS, childCommand: DATABASE_CHILD_COMMAND },
       code: { normalize: normalizeCode, cleared: CODE_CLEARED },
       quote: { normalize: normalizeQuote, cleared: QUOTE_CLEARED },
       spacer: { cleared: SPACER_CLEARED },

@@ -82,13 +82,17 @@ export interface ToolActionContext {
   block?: { id: string; type: string; data: Readonly<Record<string, unknown>>; children: readonly string[] };
   read(id: string): { id: string; type: string; data: unknown; parentId: string | null; children: readonly string[] } | null;
   /** `copy`: the data is a copy of stored blocks, kept as stored instead of read as agent input. Only pass data you got from `read`, never model args: it skips the mark checks. */
-  insert(input: { type: string; data?: Record<string, unknown>; parentId?: string | null; position?: BlockPosition; children?: InsertSpec[]; copy?: boolean }): string;
+  insert(input: { type: string; id?: string; data?: Record<string, unknown>; parentId?: string | null; position?: BlockPosition; children?: InsertSpec[]; copy?: boolean }): string;
   /** Null and undefined remove a key. */
   update(id: string, patch: Record<string, unknown>): void;
   setRichText(id: string, field: string, value: RichText): void;
   move(id: string, to: { parentId?: string | null; position: BlockPosition }): void;
   remove(id: string, opts?: { withChildren?: boolean }): void;
   newId(): string;
+  /** The agent's id, as saved on the blocks it edits. Absent when the runtime has none. */
+  actorId?: string;
+  /** The batch's time in epoch ms, one value for every command in it. */
+  now?: number;
   richText: RichTextHelpers;
   fail(code: 'PRECONDITION_FAILED' | 'INVALID_ARGS', message: string): never;
 }

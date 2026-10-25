@@ -245,7 +245,7 @@ describe('block.convert to and from a callout gives the same document in the edi
 });
 
 describe('one undo takes back a whole agent convert in the editor', () => {
-  it.each([
+  it.each<[string, OutputData, AgentBatch]>([
     ['a toggle heading that releases its child', {
       blocks: [
         { id: 'h', type: 'header', data: { text: 'H', level: 2, isToggleable: true }, content: ['k'] },
@@ -270,7 +270,7 @@ describe('one undo takes back a whole agent convert in the editor', () => {
     ['a paragraph that becomes a callout', {
       blocks: [{ id: 'a', type: 'paragraph', data: { text: 'hi' } }],
     }, convert('a', 'callout')],
-  ] as const)('%s', async (_name, seed, batch) => {
+  ])('%s', async (_name, seed, batch) => {
     const { error, doc } = await runEditor(seed, batch, true);
     const ids = keepIds(seed);
     const strip = (output: OutputData): OutputData => ({ blocks: output.blocks.map(({ lastEditedBy: _by, ...block }) => block) });

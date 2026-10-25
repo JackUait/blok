@@ -23,7 +23,7 @@ const SHOWN: ReadonlySet<string> = new Set([
   'formula', 'rollup', 'relation', 'uniqueId', 'createdTime', 'createdBy', 'lastEditedTime', 'lastEditedBy',
 ]);
 
-const REMOTE_ROLLUP = 'Rolls up a database in another document. Not computed here.';
+const REMOTE_ROLLUP = 'Rolls up a database stored in another document; not computed here.';
 const CYCLE = 'Depends on a database that depends on this one. Not computed here.';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>

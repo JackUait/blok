@@ -78,7 +78,7 @@ export const COMPUTED_DB: OutputData = {
   ],
 };
 
-const REMOTE = { unavailable: 'Rolls up a database in another document. Not computed here.' };
+const REMOTE = { unavailable: 'Rolls up a database stored in another document; not computed here.' };
 
 /** What a read shows in `computed` for each row of COMPUTED_DB. */
 export const COMPUTED_DB_EXPECTED: Record<string, Record<string, unknown>> = {

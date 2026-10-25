@@ -52,7 +52,7 @@ export const EMBED_SEGMENT = {
     embed: {
       oneOf: [
         { type: 'object', required: ['equation'], additionalProperties: false, properties: { equation: { type: 'object', required: ['expression'], additionalProperties: false, properties: { expression: { type: 'string', description: 'LaTeX.' } } } } },
-        { type: 'object', required: ['page'], additionalProperties: false, properties: { page: { type: 'object', required: ['id'], additionalProperties: false, properties: { id: { type: 'string' } } } } },
+        { type: 'object', required: ['page'], additionalProperties: false, properties: { page: { type: 'object', required: ['id'], additionalProperties: false, properties: { id: { type: 'string', description: 'The pageId of a page block (in its data), not the block id.' } } } } },
         { type: 'object', required: ['html'], additionalProperties: false, properties: { html: { type: 'string', description: 'Kept verbatim.' } } },
       ],
     },
@@ -79,7 +79,7 @@ export const RICH_TEXT_PRIMER = [
   `Marks: ${Object.keys(RICH_TEXT_MARKS.properties).join(', ')}, and tag:<name> for a custom inline tool. sup and sub cannot share a run.`,
   `highlight alone is stored as background "${DEFAULT_HIGHLIGHT_BACKGROUND}"; with a background, as that background. color and background take a preset: ${PRESET_NAMES}. Hex, rgb and hsl are stored as the nearest preset. A CSS colour name is lowercased and kept, and so is var(--name). Other syntaxes (oklch, lab, hwb, color()) are dropped, as are a transparent colour and a white or dark-grey page background.`,
   `A link needs href. With no target or rel it gets target "${DEFAULT_LINK_TARGET}" and rel "${DEFAULT_LINK_REL}"; an "#anchor" href gets target "${SAME_PAGE_LINK_TARGET}". A target or rel you give is kept, but in the editor a host link config replaces both.`,
-  'Embeds: { equation: { expression } } is inline LaTeX; { page: { id } } mentions a page block.',
+  'Embeds: { equation: { expression } } is inline LaTeX; { page: { id } } mentions a page: id is the pageId in a page block\'s data, not the block id.',
   // UNSET_ALL and UNSET_TAGS in agent/rich-text-ops.ts: importing them drags the sanitizers into the headless snapshot.
   'text.format with unset ["*"] clears every mark; "tag:*" clears every custom mark.',
   'markdown.insert cannot write underline, sup, sub, highlight or colours: insert the text, then use text.format.',

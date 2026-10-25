@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { COMMANDS } from '../../../../src/shared/agent/commands';
 import { BUILT_IN_INLINE_DESCRIPTIONS } from '../../../../src/shared/tool-descriptions/inline';
+import { RICH_TEXT_PRIMER } from '../../../../src/shared/tool-descriptions/rich-text';
 import { openJsonSession } from '../../agent/harness';
 
 import type { OutputData } from '../../../../types';
@@ -82,6 +83,27 @@ describe('what the model is told about find and replace is true', () => {
       await session.execute({ commands: [{ name: 'text.replace', args: { id: 'p', range: { find: 'cat', all: true }, with: 'concat' } }] });
 
       expect(await textOf(session, 'p')).toEqual([{ text: 'concat concat' }]);
+    } finally {
+      await session.close();
+    }
+  });
+});
+
+describe('what the model is told about page mentions is true', () => {
+  it('says a mention takes the pageId, not the block id, and a block id is refused', async () => {
+    expect(RICH_TEXT_PRIMER).toMatch(/pageId in a page block's data, not the block id/);
+
+    const session = openJsonSession({ blocks: [
+      { id: 'pl', type: 'page', data: { pageId: 'pg-1' } },
+      { id: 'p', type: 'paragraph', data: { text: [{ text: 'See ' }] } },
+    ] });
+
+    try {
+      const byBlock = await session.execute({ commands: [{ name: 'text.insert', args: { id: 'p', at: 4, text: [{ embed: { page: { id: 'pl' } } }] } }] });
+      const byPage = await session.execute({ commands: [{ name: 'text.insert', args: { id: 'p', at: 4, text: [{ embed: { page: { id: 'pg-1' } } }] } }] });
+
+      expect(byBlock.ok).toBe(false);
+      expect(byPage).toMatchObject({ ok: true, warnings: [] });
     } finally {
       await session.close();
     }

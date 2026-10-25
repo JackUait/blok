@@ -15,6 +15,9 @@ import type { PlacementTree } from './placement-rules';
 import type { DocSnapshot, SnapBlock } from './snapshot';
 import type { PlannerContext, PlannerTool } from './types';
 
+const pageIdOf = (segment: RichTextSegment): string[] =>
+  'embed' in segment && 'page' in segment.embed ? [segment.embed.page.id] : [];
+
 export const PREPARE_PENDING: unique symbol = Symbol('prepare-pending');
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -412,6 +415,20 @@ export class PlanState {
     const echoed = new Set(isRichText(current) ? current.filter(segment => segment.marks !== undefined).map(runKey) : []);
     const notes = new Set<string>();
     const resolveLink = this.ctx.ports.resolveLink ?? defaultLinkResolver;
+    const mentioned = new Set(isRichText(current) ? current.flatMap(pageIdOf) : []);
+    const unverified = new Set<string>();
+
+    if (!stored) {
+      value.forEach((segment, index) => {
+        const id = pageIdOf(segment)[0];
+
+        if (id !== undefined && !mentioned.has(id) && !this.isKnownPage(id, `${path}/${index}/embed/page/id`)) {
+          unverified.add(id);
+        }
+      });
+    }
+    unverified.forEach(id => this.warn('UNVERIFIED_PAGE', `"${field}": no page block here has pageId "${id}", so Blok cannot check it. If no page has this id, the mention shows as missing.`, { blockId, field }));
+
     const read: RichText = value.flatMap((segment, index) => {
       // A run sent back as stored keeps its marks, before any check: the agent did not write them.
       if (segment.marks === undefined || stored || (echoed.size > 0 && echoed.has(runKey(segment)))) {
@@ -446,6 +463,23 @@ export class PlanState {
     notes.forEach(note => this.warn('CORRECTED', `"${field}": ${note}`, { blockId, field }));
 
     return this.ctx.richText.canonicalize(read);
+  }
+
+  /** True when a page block in the document has this pageId. A block id fails: a mention takes a pageId. */
+  private isKnownPage(id: string, path: string): boolean {
+    const block = this.draft.get(id);
+
+    if (block !== undefined) {
+      const pageId = block.type === 'page' && typeof block.data.pageId === 'string' ? block.data.pageId : undefined;
+
+      this.fail('INVALID_ARGS', `"${id}" is a block id. A page mention takes the pageId of a page block${pageId === undefined ? '' : `; this one's is "${pageId}"`}.`, path);
+    }
+
+    return this.draft.ids().some(other => {
+      const candidate = this.draft.get(other);
+
+      return candidate?.type === 'page' && candidate.data.pageId === id;
+    });
   }
 
   /** The segment without marks Blok does not know, with a warning naming them. */

@@ -72,8 +72,11 @@ export interface AgentProblem {
   path?: string;
 }
 
-/** CORRECTED: the batch had a slip with one sure meaning; it ran as meant and the message says what was changed. */
-export type AgentWarningCode = 'SANITIZED' | 'DEMOTED' | 'LOOKS_LIKE_MARKDOWN' | 'MARKDOWN_DEGRADED' | 'UNKNOWN_MARK_DROPPED' | 'CORRECTED';
+/**
+ * CORRECTED: the batch had a slip with one sure meaning; it ran as meant and the message says what was changed.
+ * UNVERIFIED_PAGE: a page mention names a pageId no page block in the document has, so it was kept unchecked.
+ */
+export type AgentWarningCode = 'SANITIZED' | 'DEMOTED' | 'LOOKS_LIKE_MARKDOWN' | 'MARKDOWN_DEGRADED' | 'UNKNOWN_MARK_DROPPED' | 'CORRECTED' | 'UNVERIFIED_PAGE';
 
 export interface AgentWarning {
   code: AgentWarningCode;

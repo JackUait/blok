@@ -220,9 +220,11 @@ describe('server runtime agentExecute', () => {
       commands: [{ name: 'block.insert', args: { id: 'q', type: 'quiz', data: { score: 1 } } }],
     };
     const output = await executeWire({ document, actor: { ...actor, onBehalfOf: 'human-7' }, batch, customTools });
-    const inserted = output.document.blocks.find(block => block.id === 'q');
-
-    expect(inserted).toMatchObject({ createdBy: 'human-7', createdWith: actor.id, lastEditedBy: 'human-7', lastEditedWith: actor.id });
+    expect(output.document).toMatchObject({
+      blocks: expect.arrayContaining([
+        expect.objectContaining({ id: 'q', createdBy: 'human-7', createdWith: actor.id, lastEditedBy: 'human-7', lastEditedWith: actor.id }),
+      ]),
+    });
   });
 
   it('reads a custom tool file and accepts declared services when inserting a custom block', async () => {

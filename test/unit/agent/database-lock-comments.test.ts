@@ -29,11 +29,12 @@ describe.each(SESSIONS)('database lock, comments and reactions (%s session)', (_
     ['hideDataSourceTitles', true],
   ])('a locked database refuses a block.update of %s', async (field, value) => {
     const session = open(seed(true));
+    const before = (await dataOf(session, 'D'))?.[field];
     const error = errorOf(await run(session, 'block.update', { id: 'D', data: { [field]: value } }));
 
     expect(error?.code).toBe('DATA_REJECTED');
     expect(error?.message).toContain('locked');
-    expect(await dataOf(session, 'D')).not.toHaveProperty(field);
+    expect((await dataOf(session, 'D'))?.[field]).toEqual(before);
     await session.close();
   });
 

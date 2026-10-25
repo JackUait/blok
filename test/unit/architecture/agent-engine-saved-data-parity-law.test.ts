@@ -173,7 +173,8 @@ const canonical = (value: unknown, labels = new Map<string, string>()): unknown 
     return value;
   }
 
-  return Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key], labels)]));
+  // A key that is an id seen before (a row's values keyed by property id) takes its label too.
+  return Object.fromEntries(Object.keys(value).sort().map(key => [labels.get(key) ?? key, canonical(value[key], labels)]));
 };
 
 const withoutEditorOnly = (type: string, data: Record<string, unknown>): Record<string, unknown> => {

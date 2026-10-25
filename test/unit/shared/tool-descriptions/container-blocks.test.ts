@@ -96,7 +96,7 @@ const CONTAINER_DESCRIPTIONS: Array<{
     data: DATABASE_DATA,
     expected: {
       summary: 'A database: a schema of properties and saved views. Rows are child database-row blocks.',
-      guidance: 'Add rows with database.addRow and change their values with database.setRowValues. Change a view\'s settings (filters, sorts, grouping, columns, layout options) with database.updateView and its layout type with database.setLayout; add, rename, move, duplicate and delete views with the other database.* view actions. Change properties and options with the database.* property actions, and lock or unlock with database.setLock. schema and views cannot be written directly.',
+      guidance: 'Add rows with database.addRow and change their values with database.setRowValues. Delete, copy or move a row with database.deleteRow, database.duplicateRow and database.moveRowTo; block.delete and block.duplicate on a row do the same as the first two. While the database is locked, automations, source, hideDataSourceTitles and starter cannot change either. Change a view\'s settings (filters, sorts, grouping, columns, layout options) with database.updateView and its layout type with database.setLayout; add, rename, move, duplicate and delete views with the other database.* view actions. Change properties and options with the database.* property actions, and lock or unlock with database.setLock. schema and views cannot be written directly.',
       summaryFields: ['title', 'activeViewId'],
       guardedFields: {
         schema: 'database.addProperty, database.updateProperty or another database.* property action',
@@ -111,7 +111,8 @@ const CONTAINER_DESCRIPTIONS: Array<{
     data: DATABASE_ROW_DATA,
     expected: {
       summary: 'One row of a database. Its child blocks are its page body. An optional pageId points to a separate body document instead.',
-      guidance: 'Write row values with database.setRowValues on the parent database: the title mirrors the title property.',
+      guidance: 'Write row values with database.setRowValues on the parent database: the title mirrors the title property. block.delete and block.duplicate on a row run database.deleteRow and database.duplicateRow.',
+      guardedFields: { properties: 'database.setRowValues on the parent database' },
       summaryFields: ['title'],
     },
   },
@@ -724,7 +725,7 @@ describe('container self-description schema and metadata', () => {
     const snapshot = readFileSync(resolve(__dirname, '../../view/__snapshots__/document-schema.json'), 'utf8');
 
     expect(createHash('sha256').update(snapshot).digest('hex'))
-      .toBe('3d31adadf6049ee83b071c1a8cd1cc507dc1606eba9581ae396664f84210cd13');
+      .toBe('654b4a64cb8fa055d0eb8adacf12ce6779f5a649f7c7efad1c3e726c5562becd');
 
     const published: unknown = JSON.parse(snapshot);
 

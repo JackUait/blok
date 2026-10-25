@@ -457,6 +457,39 @@ describe('in-editor assistant bar', () => {
     expect(editor.agent.state.status).toBe('idle');
   });
 
+  it('Discard stays open with the partial message when the host rename hook cannot take the title back', async () => {
+    const titles: Record<string, string> = { sub: 'Old' };
+    const renames = { count: 0 };
+    const renameCall: AgentModelResponse = { stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'r1', name: 'blok_execute', input: {
+      commands: [{ name: 'page.rename', args: { id: 'pg', title: 'New' } }],
+    } }] };
+    const editor = await createEditor(scripted(renameCall, insertBatch('From AI'), answer('Done.')), undefined, {
+      tools: {
+        paragraph: Paragraph,
+        page: { class: PageTool, config: {
+          resolve: (pageId: string) => ({ title: titles[pageId] }),
+          rename: (pageId: string, title: string) => {
+            renames.count += 1;
+            if (renames.count > 1) {
+              throw new Error('offline');
+            }
+            titles[pageId] = title;
+          },
+        } },
+      },
+      data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'Hello' } }, { id: 'pg', type: 'page', data: { pageId: 'sub' } }] },
+    });
+
+    editor.agent.openAssistant();
+    submit('Rename it');
+    await waitFor(() => expect(within(bar()).getByRole('button', { name: 'Discard' })).toBeVisible());
+    within(bar()).getByRole('button', { name: 'Discard' }).click();
+
+    await waitFor(() => expect(within(bar()).getByRole('alert')).toHaveTextContent('Some of AI\'s edits were kept'));
+    expect(titles.sub).toBe('New');
+    expect((await editor.save()).blocks.map((block) => block.id)).toEqual(['p1', 'pg']);
+  });
+
   it('Discard stays open and says so when a sub-page changed after the assistant wrote it', async () => {
     const pages: Record<string, OutputData> = { sub: { blocks: [] } };
     const subCall: AgentModelResponse = { stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 's1', name: 'blok_execute', input: {

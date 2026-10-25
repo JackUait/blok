@@ -6,7 +6,7 @@ import type { BlokModules } from '../../../src/types-internal/blok-modules';
 import { Header, Image, Page, Paragraph } from '../../../src/tools';
 import type { Agent, API, BlokConfig, OutputData } from '../../../types';
 import type { AgentModel, AgentModelResponse } from '../../../types/api';
-import type { PageConfig } from '../../../types/tools/page';
+import type { PageConfig, PageIcon } from '../../../types/tools/page';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -531,5 +531,99 @@ describe('the agent edits a sub-page through the host page documents', () => {
     second.end();
     expect(styled.ok).toBe(true);
     expect(read.isError).toBe(false);
+  });
+});
+
+describe('Discard and a page write through the host rename and setIcon hooks', () => {
+  type Info = { title?: string; icon?: PageIcon };
+  const ROSE: PageIcon = { type: 'emoji', value: '🌹' };
+  const PIZZA: PageIcon = { type: 'emoji', value: '🍕' };
+  /** A host that keeps page titles and icons itself, as a page tree does. */
+  const hookHost = (info: Map<string, Info>, overrides: Partial<PageConfig> = {}): PageConfig & Record<string, unknown> => ({
+    ...host(new Map([['sub', { blocks: [] }]])),
+    resolve: (pageId) => structuredClone(info.get(pageId) ?? null),
+    rename: (pageId, title) => {
+      info.set(pageId, { ...info.get(pageId), title });
+    },
+    setIcon: (pageId, icon) => {
+      info.set(pageId, { ...info.get(pageId), icon: icon ?? undefined });
+    },
+    ...overrides,
+  });
+  const call = (id: string, name: string, args: Record<string, unknown>): AgentModelResponse => ({
+    stop_reason: 'tool_use',
+    content: [{ type: 'tool_use', id, name: 'blok_execute', input: { commands: [{ name, args }] } }],
+  });
+  const done: AgentModelResponse = { stop_reason: 'end_turn', content: [{ type: 'text', text: 'Done.' }] };
+  const model = (replies: AgentModelResponse[]): AgentModel => async () => {
+    const next = replies.shift();
+
+    if (next === undefined) {
+      throw new Error('unscripted model call');
+    }
+
+    return next;
+  };
+
+  it('calls the hooks again with the old title and icon, and resolves true', async () => {
+    const info = new Map<string, Info>([['sub', { title: 'Old', icon: ROSE }]]);
+    const editor = await boot(hookHost(info), model([
+      call('c1', 'page.rename', { id: 'pg', title: 'New' }),
+      call('c2', 'page.setIcon', { id: 'pg', icon: PIZZA }),
+      done,
+    ]));
+    const run = editor.agent.ask('Rename the page');
+
+    await run.result;
+    expect(info.get('sub')).toEqual({ title: 'New', icon: PIZZA });
+
+    await expect(run.discard()).resolves.toBe(true);
+    expect(info.get('sub')).toEqual({ title: 'Old', icon: ROSE });
+  });
+
+  it('keeps a title someone changed after the agent, and resolves false', async () => {
+    const info = new Map<string, Info>([['sub', { title: 'Old' }]]);
+    const editor = await boot(hookHost(info), model([call('c1', 'page.rename', { id: 'pg', title: 'New' }), done]));
+    const run = editor.agent.ask('Rename the page');
+
+    await run.result;
+    info.set('sub', { title: 'Mine' });
+
+    await expect(run.discard()).resolves.toBe(false);
+    expect(info.get('sub')).toEqual({ title: 'Mine' });
+  });
+
+  it('resolves false when the revert hook throws', async () => {
+    const info = new Map<string, Info>([['sub', { title: 'Old' }]]);
+    const calls = { count: 0 };
+    const editor = await boot(hookHost(info, {
+      rename: (pageId, title) => {
+        calls.count += 1;
+        if (calls.count > 1) {
+          throw new Error('offline');
+        }
+        info.set(pageId, { title });
+      },
+    }), model([call('c1', 'page.rename', { id: 'pg', title: 'New' }), done]));
+    const run = editor.agent.ask('Rename the page');
+
+    await run.result;
+
+    await expect(run.discard()).resolves.toBe(false);
+    expect(info.get('sub')).toEqual({ title: 'New' });
+  });
+
+  it('resolves false when the host has no resolve hook, so the old title is unknown', async () => {
+    const info = new Map<string, Info>([['sub', { title: 'Old' }]]);
+    const config = hookHost(info);
+
+    delete config.resolve;
+    const editor = await boot(config, model([call('c1', 'page.rename', { id: 'pg', title: 'New' }), done]));
+    const run = editor.agent.ask('Rename the page');
+
+    await run.result;
+
+    await expect(run.discard()).resolves.toBe(false);
+    expect(info.get('sub')).toEqual({ title: 'New' });
   });
 });

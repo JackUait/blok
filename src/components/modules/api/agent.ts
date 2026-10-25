@@ -26,7 +26,8 @@ import { isThinkingLevel, readThinkingConfig, type ThinkingChoice } from '../../
 
 import { createAgentPresence, type AgentPresence } from './agent-presence';
 
-import { createEditorServices } from './agent-services';
+import { deepEqual } from '../../../shared/deep-equal';
+import { createEditorServices, type HostPageWrite } from './agent-services';
 import { createPageDocuments, type PageDocuments } from '../agent/page-documents';
 import { isBlockReadOnly } from '../../utils/read-only-blocks';
 import type { Block } from '../../block';
@@ -101,6 +102,8 @@ export class AgentAPI extends Module {
   private pageDocs: PageDocuments | null | undefined;
   /** Each sub-page the open turn saved. Discard writes `original` back unless someone else changed the page. */
   private turnPages = new Map<string, TurnPage>();
+  /** Each page title or icon the open turn wrote through a host hook, by `pageId field`: the first write and the last. */
+  private turnHostWrites = new Map<string, { first: HostPageWrite; last: HostPageWrite }>();
   /** PageIds an agent left on a page block. Kept across turns: such an id could name any document. */
   private readonly agentPageIds = new Set<string>();
   /** PageIds the host's create gave. Trusted though the agent's insert writes them too. */
@@ -240,6 +243,7 @@ export class AgentAPI extends Module {
     const base = YjsManager.topUndoToken();
     const turn = this.begin({ agent }, internal);
     const pagesSaved = this.turnPages;
+    const hostWrites = this.turnHostWrites;
     const session = this.turnSession;
 
     return createAgentRun(composeFirstMessage(prompt, place.text, turn.read, place.blockIds), {
@@ -255,7 +259,7 @@ export class AgentAPI extends Module {
         return { tools: [...tools, ...offered], system };
       },
       changed: () => [...this.turnLog.changed],
-      restorePages: () => this.restorePages(pagesSaved),
+      restorePages: () => this.restorePages(pagesSaved, hostWrites),
       sealSteps: () => session?.sealSteps(),
       undoneAll: () => {
         YjsManager.flushPendingBlockWrites();
@@ -331,7 +335,12 @@ export class AgentAPI extends Module {
   }
 
   private services(): Partial<Record<HostService, unknown>> {
-    this.serviceCache ??= createEditorServices(this.Blok, this.config, () => this.actor, this.pages());
+    this.serviceCache ??= createEditorServices(this.Blok, this.config, () => this.actor, this.pages(), (write) => {
+      const key = `${write.pageId} ${write.field}`;
+      const seen = this.turnHostWrites.get(key);
+
+      this.turnHostWrites.set(key, { first: seen?.first ?? write, last: write });
+    });
 
     return this.serviceCache;
   }
@@ -425,28 +434,66 @@ export class AgentAPI extends Module {
   }
 
   /**
-   * Writes back each sub-page a turn saved. A page someone changed after the
-   * agent's last save is kept as it is, so their edit survives.
+   * Writes back each sub-page a turn saved, and calls the host's rename and
+   * setIcon hooks again with the old value. A page someone changed after the
+   * agent's last write is kept as it is, so their edit survives. A write that
+   * cannot be reverted is kept too.
    */
-  private async restorePages(pages: Map<string, TurnPage>): Promise<PageRestore> {
+  private async restorePages(
+    pages: Map<string, TurnPage>,
+    hostWrites: Map<string, { first: HostPageWrite; last: HostPageWrite }>
+  ): Promise<PageRestore> {
     const docs = this.pages();
     const outcome: PageRestore = { restored: 0, kept: [] };
-
-    if (docs === null) {
-      return outcome;
-    }
-    await Promise.all([...pages].map(async ([pageId, page]) => {
-      const current = page.kept || page.saved === undefined ? null : await docs.load(pageId);
-
-      if (current === null || page.saved === undefined || !docs.same(current, page.saved)) {
+    const keep = (pageId: string): void => {
+      if (!outcome.kept.includes(pageId)) {
         outcome.kept.push(pageId);
+      }
+    };
+    const restoreDocument = async (pageId: string, page: TurnPage): Promise<boolean> => {
+      if (docs === null || page.kept || page.saved === undefined) {
+        return false;
+      }
+      const current = await docs.load(pageId);
 
-        return;
+      if (current === null || !docs.same(current, page.saved)) {
+        return false;
       }
       await docs.save(pageId, page.original);
-      outcome.restored += 1;
-    }));
+
+      return true;
+    };
+    const revertHostWrite = async ({ first, last }: { first: HostPageWrite; last: HostPageWrite }): Promise<boolean> => {
+      const current = await last.current();
+
+      if (first.before === undefined || current === undefined) {
+        return false;
+      }
+      const now = last.field === 'title' ? current.title ?? '' : current.icon ?? null;
+
+      if (!deepEqual(now, last.written)) {
+        return false;
+      }
+      await first.revert();
+
+      return true;
+    };
+    const attempt = async (pageId: string, run: () => Promise<boolean>): Promise<void> => {
+      const reverted = await run().catch(() => false);
+
+      if (reverted) {
+        outcome.restored += 1;
+      } else {
+        keep(pageId);
+      }
+    };
+
+    await Promise.all([
+      ...[...pages].map(([pageId, page]) => attempt(pageId, () => restoreDocument(pageId, page))),
+      ...[...hostWrites.values()].map((write) => attempt(write.last.pageId, () => revertHostWrite(write))),
+    ]);
     pages.clear();
+    hostWrites.clear();
 
     return outcome;
   }
@@ -496,6 +543,7 @@ export class AgentAPI extends Module {
 
     this.actor = { ...identity, kind: 'agent' };
     this.turnPages = new Map();
+    this.turnHostWrites = new Map();
     this.startPageIds = new Map();
     for (const block of this.Blok.BlockManager.blocks) {
       const pageId = block.name === 'page' ? block.preservedData.pageId : undefined;

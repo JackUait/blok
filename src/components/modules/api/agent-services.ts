@@ -1,6 +1,6 @@
 import type { BlokConfig } from '../../../../types';
 import type { AgentActor } from '../../../../types/agent';
-import type { PageConfig } from '../../../../types/tools/page';
+import type { PageConfig, PageIcon, PageInfo } from '../../../../types/tools/page';
 import type { HostService } from '../../../../types/tools/tool-description';
 import type { LinkMetadataService, PageBackendService, UploaderService } from '../../../shared/tool-actions/services';
 import { createPageMapBackend } from '../../../shared/agent/document-session';
@@ -15,11 +15,41 @@ const isRename = (value: unknown): value is NonNullable<PageConfig['rename']> =>
 const isSetIcon = (value: unknown): value is NonNullable<PageConfig['setIcon']> =>
   typeof value === 'function';
 
+/** A page title or icon the agent wrote through the host's own rename or setIcon hook. */
+export interface HostPageWrite {
+  pageId: string;
+  field: 'title' | 'icon';
+  /** What the host's resolve said before the write. Undefined when it could not say. */
+  before: PageInfo | undefined;
+  written: string | PageIcon | null;
+  /** The host's resolve now. Undefined when it cannot say. */
+  current(): Promise<PageInfo | undefined>;
+  /** Calls the same hook with `before`'s value. */
+  revert(): Promise<void>;
+}
+
+const isResolve = (value: unknown): value is NonNullable<PageConfig['resolve']> =>
+  typeof value === 'function';
+
+const resolveInfo = async (settings: Record<string, unknown>, pageId: string): Promise<PageInfo | undefined> => {
+  const { resolve } = settings;
+
+  if (!isResolve(resolve)) {
+    return undefined;
+  }
+  try {
+    return (await resolve(pageId)) ?? undefined;
+  } catch {
+    return undefined;
+  }
+};
+
 export const createEditorServices = (
   Blok: BlokModules,
   config: BlokConfig,
   actor: () => AgentActor = () => ({ id: 'agent', name: 'Agent', kind: 'agent' }),
-  pages: PageDocuments | null = null
+  pages: PageDocuments | null = null,
+  onHostPageWrite?: (write: HostPageWrite) => void
 ): Partial<Record<HostService, unknown>> => {
   const services: Partial<Record<HostService, unknown>> = {};
   const tools = Array.from(Blok.Tools.blockTools.values());
@@ -60,10 +90,19 @@ export const createEditorServices = (
         if (fallback !== null) {
           return fallback.rename({ blockId, title });
         }
-        if (!isRename(settings.rename)) {
+        const rename = settings.rename;
+
+        if (!isRename(rename)) {
           throw new Error(`Block "${blockId}" has no rename hook.`);
         }
-        await settings.rename(pageId, title);
+        const before = await resolveInfo(settings, pageId);
+
+        await rename(pageId, title);
+        onHostPageWrite?.({
+          pageId, field: 'title', before, written: title,
+          current: () => resolveInfo(settings, pageId),
+          revert: async () => rename(pageId, before?.title ?? ''),
+        });
 
         return { pageId, applied: true };
       },
@@ -74,10 +113,19 @@ export const createEditorServices = (
         if (fallback !== null) {
           return fallback.setIcon({ blockId, icon });
         }
-        if (!isSetIcon(settings.setIcon)) {
+        const setIcon = settings.setIcon;
+
+        if (!isSetIcon(setIcon)) {
           throw new Error(`Block "${blockId}" has no setIcon hook.`);
         }
-        await settings.setIcon(pageId, icon);
+        const before = await resolveInfo(settings, pageId);
+
+        await setIcon(pageId, icon);
+        onHostPageWrite?.({
+          pageId, field: 'icon', before, written: icon,
+          current: () => resolveInfo(settings, pageId),
+          revert: async () => setIcon(pageId, before?.icon ?? null),
+        });
 
         return { pageId, applied: true };
       },

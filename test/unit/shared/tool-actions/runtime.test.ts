@@ -285,11 +285,13 @@ describe('BUILT_IN_TOOL_RUNTIMES', () => {
     expect(BUILT_IN_TOOL_RUNTIMES.get('callout')?.defaultChildren).toEqual(defaultChildren);
 
     const normalize = BUILT_IN_RUNTIME_PARTS.table?.normalize;
+    const normalizeHeader = BUILT_IN_RUNTIME_PARTS.header?.normalize;
 
     expect(typeof normalize).toBe('function');
     expect(BUILT_IN_RUNTIME_PARTS).toEqual({
       table: { normalize, actions: TABLE_ACTION_HANDLERS },
-      callout: { normalize: normalizeCallout, cleared: CALLOUT_CLEARED, defaultChildren },
+      callout: { normalize: normalizeCallout, cleared: CALLOUT_CLEARED, defaultChildren, conversion: { base: { textColor: null, backgroundColor: null } } },
+      header: { normalize: normalizeHeader },
       column_list: { defaultChildren: COLUMN_LIST_DEFAULT_CHILDREN, actions: COLUMN_LIST_ACTION_HANDLERS },
       column: { defaultChildren: COLUMN_DEFAULT_CHILDREN },
       page: { actions: PAGE_ACTION_HANDLERS },
@@ -307,6 +309,8 @@ describe('BUILT_IN_TOOL_RUNTIMES', () => {
       list: { normalize: normalizeList, cleared: LIST_CLEARED, conversion: { export: 'text', import: 'text' } },
     });
     expect(BUILT_IN_TOOL_RUNTIMES.get('table')?.normalize).toBe(normalize);
+    expect(normalizeHeader?.({ text: [], level: 2, isToggleable: false })).toEqual({ text: [], level: 2 });
+    expect(normalizeHeader?.({ text: [], level: 2, isToggleable: true })).toEqual({ text: [], level: 2, isToggleable: true });
     expect(BUILT_IN_TOOL_RUNTIMES.get('callout')?.defaultChildren)
       .toBe(BUILT_IN_RUNTIME_PARTS.callout?.defaultChildren);
 
@@ -315,7 +319,7 @@ describe('BUILT_IN_TOOL_RUNTIMES', () => {
 
       expect(runtime.actions, runtime.name).toEqual(expectedActions);
 
-      if (!['table', 'embed', 'callout', 'database', 'code', 'quote', 'list'].includes(runtime.name)) {
+      if (!['table', 'embed', 'callout', 'database', 'code', 'quote', 'list', 'header'].includes(runtime.name)) {
         expect(runtime, runtime.name).not.toHaveProperty('normalize');
       }
 

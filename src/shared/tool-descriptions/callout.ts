@@ -15,7 +15,7 @@ export const CALLOUT_DATA = {
 
 export const describeCallout = (_config: Record<string, unknown> = {}): BlockToolDescription => ({
   summary: 'A highlighted panel with an emoji. Its body is child blocks.',
-  guidance: `The panel holds no text itself: insert the body as child blocks. emoji is one emoji or "" to hide it. textColor and backgroundColor take a preset name (${COLOR_PRESET_NAMES}) or null.`,
+  guidance: `The panel holds no text itself: insert the body as child blocks. block.convert into a callout puts the text in its first line; out of a callout it takes the first line as the text, and the other lines move out unless the new block is a toggle or toggle heading. emoji is one emoji or "" to hide it. textColor and backgroundColor take a preset name (${COLOR_PRESET_NAMES}) or null.`,
   data: CALLOUT_DATA,
   inputFields: [],
   defaultData: { emoji: '💡' },

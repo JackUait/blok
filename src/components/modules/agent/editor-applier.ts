@@ -4,6 +4,7 @@ import { AgentFailure, failure } from '../../../shared/agent/errors';
 import type { AgentApplier } from '../../../shared/agent/executor';
 import type { DocSnapshot } from '../../../shared/agent/snapshot';
 import type { Plan } from '../../../shared/agent/types';
+import { textLivesInFirstChild } from '../../../shared/turn-into';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 import type { Block } from '../../block';
 import { ConvertConflictError } from '../../errors/convert-conflict';
@@ -515,7 +516,12 @@ export class EditorApplier implements AgentApplier {
           break;
         }
         try {
-          await this.keepingCaret(block, () => this.Blok.API.methods.blocks.convert(edit.id, edit.type, edit.data));
+          // The plan already did the structural part (src/shared/turn-into.ts). A target whose
+          // text lives in its first child gets that child from the plan, so it must not seed one.
+          const planned = { origin: textLivesInFirstChild(edit.type) ? 'paste' as const : 'convert' as const };
+
+          YjsManager.beginApiCall();
+          await this.keepingCaret(block, () => BlockManager.convert(block, edit.type, this.Blok.BlocksAPI.hostDataForTool(edit.type, edit.data), { planned }));
         } catch (error) {
           throw error instanceof ConvertConflictError
             ? failure('CONFLICT', `Block «${error.blockId}» is being edited by someone else. Re-read the document before retrying.`, {

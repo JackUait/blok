@@ -723,11 +723,11 @@ describe('EditorApplier', () => {
     let liveInsertAtRefusal = false;
     let storedInsertAtRefusal = false;
 
-    vi.spyOn(blocks, 'convert').mockImplementation(id => {
+    vi.spyOn(modules.BlockManager, 'convert').mockImplementation(block => {
       liveInsertAtRefusal = modules.BlockManager.getBlockById('n')?.name === 'paragraph';
-      storedInsertAtRefusal = modules.YjsManager.toJSON().some(block => block.id === 'n');
+      storedInsertAtRefusal = modules.YjsManager.toJSON().some(stored => stored.id === 'n');
 
-      return Promise.reject(new ConvertConflictError(id));
+      return Promise.reject(new ConvertConflictError(block.id));
     });
 
     const rejection: unknown = await apply(applier, [

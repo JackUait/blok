@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { COMMANDS } from '../../../../src/shared/agent/commands';
+import { BUILT_IN_BLOCK_DESCRIPTIONS } from '../../../../src/shared/tool-descriptions';
 import { BUILT_IN_INLINE_DESCRIPTIONS } from '../../../../src/shared/tool-descriptions/inline';
 import { RICH_TEXT_PRIMER } from '../../../../src/shared/tool-descriptions/rich-text';
 import { openJsonSession } from '../../agent/harness';
@@ -104,6 +105,46 @@ describe('what the model is told about page mentions is true', () => {
 
       expect(byBlock.ok).toBe(false);
       expect(byPage).toMatchObject({ ok: true, warnings: [] });
+    } finally {
+      await session.close();
+    }
+  });
+});
+
+describe('what the model is told about block.convert is true', () => {
+  it('says a heading turned into a toggle heading nests the blocks after it, and it does', async () => {
+    expect(BUILT_IN_BLOCK_DESCRIPTIONS.header().guidance).toMatch(/turning it on nests the blocks after it/);
+
+    const session = openJsonSession({
+      blocks: [
+        { id: 'h', type: 'header', data: { text: 'H', level: 2 } },
+        { id: 's', type: 'paragraph', data: { text: 'body' } },
+      ],
+    });
+
+    try {
+      await session.execute({ commands: [{ name: 'block.convert', args: { id: 'h', type: 'header', data: { isToggleable: true } } }] });
+
+      expect(session.output().blocks.find(block => block.id === 's')?.parent).toBe('h');
+    } finally {
+      await session.close();
+    }
+  });
+
+  it('says a callout gives and takes its text as its first line, and it does', async () => {
+    expect(BUILT_IN_BLOCK_DESCRIPTIONS.callout().guidance).toMatch(/first line/);
+
+    const session = openJsonSession({
+      blocks: [
+        { id: 'c', type: 'callout', data: { emoji: '💡' }, content: ['l'] },
+        { id: 'l', type: 'paragraph', data: { text: 'line' }, parent: 'c' },
+      ],
+    });
+
+    try {
+      await session.execute({ commands: [{ name: 'block.convert', args: { id: 'c', type: 'paragraph' } }] });
+
+      expect(session.output().blocks).toEqual([expect.objectContaining({ id: 'c', type: 'paragraph', data: { text: [{ text: 'line' }] } })]);
     } finally {
       await session.close();
     }

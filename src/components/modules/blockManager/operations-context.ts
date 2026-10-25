@@ -7,7 +7,7 @@
  * helpers. The workers receive it as an `OperationsContext` so they can read
  * and mutate that shared state without each re-implementing it.
  */
-import type { BlockToolData, BlokConfig } from '../../../../types';
+import type { BlockOrigin, BlockToolData, BlokConfig } from '../../../../types';
 import type { BlockMutationType } from '../../../../types/events/block';
 import type { Block } from '../../block';
 import type { BlokEventMap } from '../../events';
@@ -99,7 +99,7 @@ export interface OperationsContext {
   removeBlock(block: Block, addLastBlock: boolean, skipYjsSync: boolean, blocksStore: BlocksStore): Promise<void>;
 
   /** Replace a block with a new tool (delegated to BlockMutation) */
-  replace(block: Block, newTool: string, data: BlockToolData, blocksStore: BlocksStore): Block;
+  replace(block: Block, newTool: string, data: BlockToolData, blocksStore: BlocksStore, origin?: BlockOrigin): Block;
 
   /**
    * Attach `newBlock` to the old parent in place of the old block id,

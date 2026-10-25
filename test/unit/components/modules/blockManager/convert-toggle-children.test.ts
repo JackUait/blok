@@ -90,7 +90,7 @@ describe('BlockManager.convert — toggle children handling (Notion parity M-5)'
     // Children must NOT be released to the document root.
     expect(setBlockParentSpy).not.toHaveBeenCalled();
     // The generic convert path (which re-nests children) still runs.
-    expect(convertSpy).toHaveBeenCalledWith(source, 'paragraph', expect.anything(), undefined, undefined);
+    expect(convertSpy).toHaveBeenCalledWith(source, 'paragraph', expect.anything(), undefined, undefined, undefined);
   });
 
   it('keeps children nested when converting a TOGGLE LIST to a heading', async () => {

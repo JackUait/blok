@@ -49,8 +49,8 @@ export interface PlannerToolRuntime {
   rejectWrite?(data: Record<string, unknown>, written: readonly string[]): string | undefined;
   defaultChildren?: InsertSpec[];
   actions: Readonly<Record<string, ToolActionImpl>>;
-  /** Text fields for block.convert when the manifest entry has none. */
-  conversion?: { import?: string; export?: string };
+  /** Text fields for block.convert when the manifest entry has none, and fields its import always sets. */
+  conversion?: { import?: string; export?: string; base?: Readonly<Record<string, unknown>> };
 }
 
 export interface PlannerTool { entry: PlannerToolEntry; runtime: PlannerToolRuntime }

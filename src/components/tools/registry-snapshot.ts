@@ -8,6 +8,7 @@ import { Column } from '../../tools/column';
 import { ColumnList } from '../../tools/column-list';
 import { DatabaseTool } from '../../tools/database';
 import { FileTool } from '../../tools/file';
+import { Header } from '../../tools/header';
 import { ImageTool } from '../../tools/image';
 import { Bookmark } from '../../tools/link/bookmark';
 import { Embed } from '../../tools/link/embed';
@@ -167,6 +168,7 @@ const PART_OWNERS = new Map<unknown, string>([
   [VideoTool, 'video'],
   [AudioTool, 'audio'],
   [FileTool, 'file'],
+  [Header, 'header'],
   // Feeds only the agent planner; in-editor conversion still runs the list's conversionConfig functions.
   [ListItem, 'list'],
 ]);

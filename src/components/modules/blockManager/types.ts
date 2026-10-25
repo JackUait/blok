@@ -18,6 +18,15 @@ export interface InsertInsideParentOptions extends PublicInsertInsideParentOptio
 }
 
 /**
+ * A convert the agent planner already shaped: it removed a callout's first
+ * line, released and adopted children, and seeds any child itself. The
+ * convert only swaps the tool. `origin` is handed to the new tool.
+ */
+export interface PlannedConvert {
+  origin?: BlockOrigin;
+}
+
+/**
  * Block creation options
  */
 /**

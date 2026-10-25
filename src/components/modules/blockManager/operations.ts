@@ -9,7 +9,7 @@
  *   - BlockMutation  — update / replace / move / merge / convert
  * @module BlockOperations
  */
-import type { BlockToolData, PasteEvent, OutputBlockData } from '../../../../types';
+import type { BlockOrigin, BlockToolData, PasteEvent, OutputBlockData } from '../../../../types';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import type { Block } from '../../block';
 import { logLabeled } from '../../utils';
@@ -27,7 +27,7 @@ import type {
   OperationsContext,
 } from './operations-context';
 import type { BlockRepository } from './repository';
-import type { InsertBlockOptions, InsertInsideParentOptions, BlocksStore, DerivedSource } from './types';
+import type { InsertBlockOptions, InsertInsideParentOptions, BlocksStore, DerivedSource, PlannedConvert } from './types';
 import type { BlockYjsSync } from './yjs-sync';
 
 export type { BlockOperationsDependencies, BlockDidMutated } from './operations-context';
@@ -452,8 +452,8 @@ export class BlockOperations implements OperationsContext {
    * @param data - New Tool data
    * @param blocksStore - The blocks store to modify
    */
-  public replace(block: Block, newTool: string, data: BlockToolData, blocksStore: BlocksStore): Block {
-    return this.runOperation('replace', () => this.mutation.replace(block, newTool, data, blocksStore));
+  public replace(block: Block, newTool: string, data: BlockToolData, blocksStore: BlocksStore, origin?: BlockOrigin): Block {
+    return this.runOperation('replace', () => this.mutation.replace(block, newTool, data, blocksStore, origin));
   }
 
   /**
@@ -494,16 +494,19 @@ export class BlockOperations implements OperationsContext {
    * @param targetToolName - Name of the Tool to convert to
    * @param blocksStore - The blocks store to modify
    * @param blockDataOverrides - Optional new Block data overrides
+   * @param beforeReplace - runs inside the convert's undo entry, right before the swap
+   * @param planned - see BlockMutation.convert
    */
   public convert(
     blockToConvert: Block,
     targetToolName: string,
     blocksStore: BlocksStore,
     blockDataOverrides?: BlockToolData,
-    beforeReplace?: () => void
+    beforeReplace?: () => void,
+    planned?: PlannedConvert
   ): Promise<Block> {
     return this.runOperation('convert', () =>
-      this.mutation.convert(blockToConvert, targetToolName, blocksStore, blockDataOverrides, beforeReplace));
+      this.mutation.convert(blockToConvert, targetToolName, blocksStore, blockDataOverrides, beforeReplace, planned));
   }
 
   /**

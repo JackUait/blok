@@ -18,8 +18,9 @@ export interface ToolRuntime {
   /**
    * Text fields for block.convert when the tool's own conversionConfig is functions, which a
    * registry snapshot cannot carry. Headless only: the editor keeps the tool's functions.
+   * `base` is what that import function always sets besides the text.
    */
-  conversion?: { import?: string; export?: string };
+  conversion?: { import?: string; export?: string; base?: Readonly<Record<string, unknown>> };
 }
 
 export type ToolRuntimeRegistry = ReadonlyMap<string, ToolRuntime>;

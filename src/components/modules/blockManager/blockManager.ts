@@ -26,6 +26,7 @@ import { sanitizeBlocks } from '../../utils/sanitizer';
 import { acceptsChildren, isChildToolAllowed } from '../../utils/child-tools';
 import { assertHierarchy, validateHierarchy } from '../../utils/hierarchy-invariant';
 import { findOwn } from '../../utils/own-element';
+import { adoptsSectionOnConvert, endsSection } from '../../../shared/turn-into';
 import { releasesChildrenOnTurnInto } from '../../utils/turn-into-children';
 import type { TreePlacement } from '../../utils/tree-order';
 import { lastChildBefore } from '../api/block-placement';
@@ -40,7 +41,7 @@ import { hideUnderCollapsedParent, isSelfPlacedParent } from './new-block-placem
 import { BlockOperations } from './operations';
 import { BlockRepository } from './repository';
 import { BlockShortcuts } from './shortcuts';
-import type { BlocksStore, BlockMutationEventDetailWithoutTarget, ComposeBlockOptions, DerivedSource, InsertBlockOptions, InsertInsideParentOptions } from './types';
+import type { BlocksStore, BlockMutationEventDetailWithoutTarget, ComposeBlockOptions, DerivedSource, InsertBlockOptions, InsertInsideParentOptions, PlannedConvert } from './types';
 import { BlockYjsSync } from './yjs-sync';
 import { carriesReadOnly } from '../../utils/read-only-blocks';
 import { captureDataKeySnapshot, type DataKeySnapshot } from '../yjs/document-store';
@@ -1801,13 +1802,15 @@ export class BlockManager extends Module {
    * @param options - options.skipSectionAdoption disables the toggle-heading
    *   section adoption; the multi-select convert loop passes it so each block
    *   in the selection becomes its OWN toggle heading instead of the earlier
-   *   conversions swallowing the later ones.
+   *   conversions swallowing the later ones. options.planned marks a convert
+   *   the agent planner already shaped (see PlannedConvert): no release, no
+   *   adoption, no first-line hoist here.
    */
   public async convert(
     block: Block,
     targetToolName: string,
     blockDataOverrides?: BlockToolData,
-    options: { skipSectionAdoption?: boolean } = {}
+    options: { skipSectionAdoption?: boolean; planned?: PlannedConvert } = {}
   ): Promise<Block> {
     /**
      * Notion parity: turning a TOGGLE HEADING into a non-toggle target via the
@@ -1827,17 +1830,17 @@ export class BlockManager extends Module {
      * replace. Children go to the heading's own parent (a callout keeps them),
      * inside the convert's undo entry.
      */
+    const { planned } = options;
     const sourceIsToggle = findOwn(block.holder, '[data-blok-toggle-open]') !== null;
-    const targetIsToggleHeader = targetToolName === 'header' && blockDataOverrides?.isToggleable === true;
-
-    const releasesChildren = releasesChildrenOnTurnInto(block, targetToolName, blockDataOverrides);
+    const releasesChildren = planned === undefined && releasesChildrenOnTurnInto(block, targetToolName, blockDataOverrides);
 
     const newBlock = await this.operations.convert(
       block,
       targetToolName,
       this.blocksStore,
       blockDataOverrides,
-      releasesChildren ? () => this.releaseChildrenToOwnLevel(block) : undefined
+      releasesChildren ? () => this.releaseChildrenToOwnLevel(block) : undefined,
+      planned
     );
 
     /**
@@ -1848,7 +1851,7 @@ export class BlockManager extends Module {
      * a toggle (toggle heading level change, toggle list) keep exactly the
      * children they had and adopt nothing new.
      */
-    if (targetIsToggleHeader && !sourceIsToggle && options.skipSectionAdoption !== true) {
+    if (planned === undefined && options.skipSectionAdoption !== true && adoptsSectionOnConvert(sourceIsToggle, targetToolName, blockDataOverrides)) {
       this.adoptFollowingSectionIntoToggleHeading(newBlock);
     }
 
@@ -1895,9 +1898,7 @@ export class BlockManager extends Module {
         break;
       }
 
-      const candidateLevel = this.resolveHeadingLevel(candidate);
-
-      if (candidateLevel !== null && candidateLevel <= level) {
+      if (endsSection(this.resolveHeadingLevel(candidate), level)) {
         break;
       }
 

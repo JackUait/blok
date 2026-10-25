@@ -20,6 +20,7 @@ const EXEMPT: Record<string, { count: number; reason: string }> = {
   'shared/agent/placement-rules.ts': { count: 4, reason: 'checkChildType and checkMove: null means placement is allowed' },
   'shared/agent/names.ts': { count: 1, reason: 'splitCommandName: null means no usable namespace/action split; envelope reports UNKNOWN_COMMAND' },
   'shared/agent/plan-block.ts': { count: 1, reason: 'childRefusal: null means no child-placement refusal for a planned parent' },
+  'shared/agent/plan-convert.ts': { count: 1, reason: 'headingLevel: null means the block is not a heading, so it ends no section' },
   'shared/agent/plan-text.ts': { count: 1, reason: 'input: after envelope validation, sanitized-away input is empty rich text; prepareData records SANITIZED' },
   'shared/agent/executor.ts': { count: 1, reason: 'staleContext omits blocks not named by the batch; the caller reports STALE' },
   'shared/agent/batch-preflight.ts': { count: 6, reason: 'extra problems for an already failed batch: [] means nothing more to add, never success' },

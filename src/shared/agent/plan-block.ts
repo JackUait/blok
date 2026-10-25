@@ -1,5 +1,7 @@
 import { isRichText } from '../rich-text/guards';
 import { cleanupEmptiedColumnList } from '../tool-actions/columns';
+import { carriedBlockColors } from '../turn-into';
+import { convertMissing, convertShape, emitAfterSwap, emitBeforeSwap } from './plan-convert';
 import { checkChildType, checkMove, satisfiesChildTools } from './placement-rules';
 import { PREPARE_PENDING } from './plan-state';
 import { createActionContext } from './tool-action-context';
@@ -690,16 +692,16 @@ export const planConvert = (state: PlanState, args: Record<string, unknown>): un
   }
 
   const target = state.tool(targetType) ?? failUnknownTool(state, targetType, '/type');
-  // The runtime copy covers tools whose own conversionConfig is functions (list), which the manifest cannot carry.
-  const from = source.entry.conversion.export ?? source.runtime.conversion?.export;
-  const to = target.entry.conversion.import ?? target.runtime.conversion?.import;
+  const overrides = args.data === undefined ? {} : args.data;
 
-  if (typeof from !== 'string' || typeof to !== 'string') {
-    const missing = [
-      typeof from !== 'string' ? block.type : null,
-      typeof to !== 'string' ? targetType : null,
-    ].filter((type): type is string => type !== null);
+  if (!isRecord(overrides)) {
+    state.fail('INVALID_ARGS', 'Block data must be a record.', '/data');
+  }
 
+  const shape = convertShape(state, block, source, targetType, target, overrides);
+  const missing = convertMissing(block, targetType, shape);
+
+  if (missing.length > 0) {
     state.fail('CONVERSION_UNSUPPORTED', `Conversion from "${block.type}" to "${targetType}" is not possible: ${missing.join(' and ')} cannot convert here.`, '/type', { missing });
   }
 
@@ -708,19 +710,13 @@ export const planConvert = (state: PlanState, args: Record<string, unknown>): un
     ?? (inCell && target.entry.restrictedInTableCell
       ? { reason: 'RESTRICTED_IN_CELL', message: `"${targetType}" is not allowed inside a table cell` }
       : null)
-    ?? block.content.map(id => childRefusal(state, { type: targetType, inCell }, state.requireBlock(id, '/id').type))
+    ?? shape.kept.map(id => childRefusal(state, { type: targetType, inCell }, state.requireBlock(id, '/id').type))
       .find(value => value !== null);
 
   if (refusal !== undefined && refusal !== null) {
     state.fail('PLACEMENT_REFUSED', `${refusal.message}.`, '/type', {
       reason: refusal.reason, ...(refusal.allowed !== undefined && { allowed: refusal.allowed }),
     });
-  }
-
-  const overrides = args.data === undefined ? {} : args.data;
-
-  if (!isRecord(overrides)) {
-    state.fail('INVALID_ARGS', 'Block data must be a record.', '/data');
   }
 
   for (const field of Object.keys(overrides)) {
@@ -740,18 +736,28 @@ export const planConvert = (state: PlanState, args: Record<string, unknown>): un
     }
   }
 
-  const text = block.data[from];
-  const plainSegments = !target.entry.richTextFields.includes(to) && isArray(text) ? text : undefined;
+  const from = shape.textFrom.field;
+  const to = shape.textTo.field ?? '';
+  const toRich = shape.textTo.tool?.entry.richTextFields.includes(to) === true;
+  const text = from === undefined ? undefined : shape.textFrom.block.data[from];
+  const plainSegments = !toRich && isArray(text) ? text : undefined;
 
   if (plainSegments !== undefined && !isRichText(plainSegments)) {
     state.fail('INVALID_ARGS', `"${from}" must contain rich-text segments.`, '/id');
   }
-  const carried = plainSegments === undefined ? text : state.ctx.richText.plainText(plainSegments);
-  const prepared = state.prepareData(targetType, {
+  const carried = (plainSegments === undefined ? text : state.ctx.richText.plainText(plainSegments)) ?? (toRich ? [] : '');
+  const seedType = shape.textTo.seedType;
+  const base = {
     ...(target.entry.defaultData ?? {}),
-    [to]: carried ?? (target.entry.richTextFields.includes(to) ? [] : ''),
-    ...overrides,
-  }, '/data', block.id, { normalize: false, stored: Object.hasOwn(overrides, to) ? [] : [to] });
+    ...(target.runtime.conversion?.base ?? {}),
+    ...(seedType === undefined && { [to]: carried }),
+  };
+  const keepsField = (field: string): boolean => isRecord(target.entry.data.properties) && Object.hasOwn(target.entry.data.properties, field);
+  const colors = carriedBlockColors(block.data, { ...base, ...overrides }, keepsField);
+  const prepared = state.prepareData(targetType, { ...base, ...colors, ...overrides }, '/data', block.id, {
+    normalize: false,
+    stored: [...(seedType !== undefined || Object.hasOwn(overrides, to) ? [] : [to]), ...Object.keys(colors)],
+  });
   const normalized = target.runtime.normalize === undefined ? prepared : target.runtime.normalize(cloneRecord(prepared));
 
   if (!isRecord(normalized)) {
@@ -781,7 +787,11 @@ export const planConvert = (state: PlanState, args: Record<string, unknown>): un
       state.fail('INVALID_ARGS', `"${field}" must contain rich-text segments.`, `/data/${pointerKey(field)}`);
     }
   }
+  emitBeforeSwap(state, block, shape);
   state.emit({ op: 'replaceType', id: block.id, type: targetType, data });
+  emitAfterSwap(state, block, shape, targetType, overrides, seedType === undefined ? undefined : {
+    type: seedType, data: { ...(shape.textTo.tool?.entry.defaultData ?? {}), [to]: carried },
+  });
 
   return { id: block.id };
 };

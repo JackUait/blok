@@ -93,7 +93,7 @@ export const COMMANDS: Record<CoreCommandName, CoreCommandSpec> = {
   }, ['id'])),
   'block.delete': write('Delete a block. Children move up unless the tool deletes them.', obj({ id }, ['id'])),
   'block.move': write('Move a block and its subtree.', obj({ id, parentId, position }, ['id', 'position'])),
-  'block.convert': write('Turn a block into another type. Its text carries over; data sets only the new type\'s other fields. '
+  'block.convert': write('Turn a block into another type. Its text carries over, and its block colour onto a text block that has one; data sets only the new type\'s other fields. '
     + 'A style or level, such as a heading 2, is a variant: pass the tool as type and the variant\'s data, '
     + 'e.g. { "type": "header", "data": { "level": 2 } }. describe({ tool }) lists each tool\'s variants.', obj({
     id, type: { type: 'string', minLength: 1 }, data: { type: 'object' },

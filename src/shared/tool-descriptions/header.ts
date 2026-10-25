@@ -30,7 +30,7 @@ export const describeHeader = (config: Record<string, unknown> = {}): BlockToolD
 
   return {
     summary: 'A heading. With isToggleable it collapses and owns the blocks nested under it.',
-    guidance: `${RICH_TEXT_GUIDANCE} Turn a heading into a toggle heading, or back, with block.convert, never by writing isToggleable: turning it off must release its children. textColor and backgroundColor take a preset name: ${COLOR_PRESET_NAMES}.`,
+    guidance: `${RICH_TEXT_GUIDANCE} Turn a heading into a toggle heading, or back, with block.convert, never by writing isToggleable: turning it off releases its children, and turning it on nests the blocks after it, up to the next heading of the same or a higher level. textColor and backgroundColor take a preset name: ${COLOR_PRESET_NAMES}.`,
     data: levels.length === 0
       ? HEADER_DATA
       : { ...HEADER_DATA, properties: { ...HEADER_DATA.properties, level: { type: 'integer', enum: levels } } },

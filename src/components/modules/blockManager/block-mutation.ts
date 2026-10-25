@@ -3,7 +3,7 @@
  * @classdesc In-place block mutations: update, replace, move, merge and convert.
  * @module BlockMutation
  */
-import type { BlockToolData, SanitizerConfig } from '../../../../types';
+import type { BlockOrigin, BlockToolData, SanitizerConfig } from '../../../../types';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import { BlockChangedMutationType } from '../../../../types/events/block/BlockChanged';
 import { BlockMovedMutationType } from '../../../../types/events/block/BlockMoved';
@@ -14,6 +14,7 @@ import { announce } from '../../utils/announcer';
 import { convertStringToBlockData, isBlockConvertable } from '../../utils/blocks';
 import { isToolConvertable } from '../../utils/tools';
 import { isChildToolAllowed } from '../../utils/child-tools';
+import { carriedBlockColors } from '../../../shared/turn-into';
 import { canAdoptChild, releasesChildrenOnTurnInto, textLivesInFirstChild } from '../../utils/turn-into-children';
 import { sanitizeBlocks, clean, composeSanitizerConfig, stripUnsafeUrlsDeep, PLAINTEXT } from '../../utils/sanitizer';
 import { htmlToPlainText, plainTextToHtml } from '../../utils/plain-text';
@@ -29,7 +30,7 @@ import type { BlockFactory } from './factory';
 import type { BlockHierarchy } from './hierarchy';
 import type { BlockRepository } from './repository';
 import type { BlockDidMutated, BlockOperationsDependencies, OperationsContext } from './operations-context';
-import type { BlocksStore, DerivedSource } from './types';
+import type { BlocksStore, DerivedSource, PlannedConvert } from './types';
 import type { BlockYjsSync } from './yjs-sync';
 
 /**
@@ -702,7 +703,7 @@ export class BlockMutation {
    * @param data - New Tool data
    * @param blocksStore - The blocks store to modify
    */
-  public replace(block: Block, newTool: string, data: BlockToolData, blocksStore: BlocksStore): Block {
+  public replace(block: Block, newTool: string, data: BlockToolData, blocksStore: BlocksStore, origin: BlockOrigin = 'convert'): Block {
     /**
      * Layer 16: stale-source guard (regression: wrong-block-dropped family).
      *
@@ -778,7 +779,7 @@ export class BlockMutation {
       // A turn-into IS a creation of the target tool — but the replaced block's
       // children are re-homed onto it right below, so a container tool sees
       // them and never reaches its seed path.
-      origin: 'convert',
+      origin,
     }, blocksStore);
 
     // Transfer hierarchy to new block.
@@ -1684,13 +1685,15 @@ export class BlockMutation {
    * @param blocksStore - The blocks store to modify
    * @param blockDataOverrides - Optional new Block data overrides
    * @param beforeReplace - runs inside the convert's undo entry, right before the swap
+   * @param planned - set when the agent planner already did the structural part
    */
   public async convert(
     blockToConvert: Block,
     targetToolName: string,
     blocksStore: BlocksStore,
     blockDataOverrides?: BlockToolData,
-    beforeReplace?: () => void
+    beforeReplace?: () => void,
+    planned?: PlannedConvert
   ): Promise<Block> {
     /**
      * At first, we get current Block data — through the instance that is still
@@ -1731,7 +1734,8 @@ export class BlockMutation {
     }
 
     // A callout's text is its first line: that child gives the text and goes.
-    const firstLine = textLivesInFirstChild(source) ? await this.readFirstLine(source) : null;
+    // A planned convert already removed the first line and put its text in the overrides.
+    const firstLine = planned === undefined && textLivesInFirstChild(source) ? await this.readFirstLine(source) : null;
 
     const cleanData = prepareImportString(
       firstLine?.exported ?? exportedData,
@@ -1769,13 +1773,7 @@ export class BlockMutation {
      */
     const targetSanitize = replacingTool.sanitizeConfig;
 
-    for (const colorField of ['textColor', 'backgroundColor'] as const) {
-      const sourceValue = savedBlock.data[colorField];
-
-      if (typeof sourceValue === 'string' && newBlockData[colorField] === undefined && colorField in targetSanitize) {
-        newBlockData[colorField] = sourceValue;
-      }
-    }
+    Object.assign(newBlockData, carriedBlockColors(savedBlock.data, newBlockData, field => field in targetSanitize));
 
     /**
      * Preserve the to-do `checked` state across a turn-into round trip
@@ -1860,7 +1858,7 @@ export class BlockMutation {
       beforeReplace?.();
 
       return this.yjsSync.withAtomicOperation(
-        () => this.ctx.replace(source, replacingTool.name, newBlockData, blocksStore),
+        () => this.ctx.replace(source, replacingTool.name, newBlockData, blocksStore, planned?.origin),
         { extendThroughRAF: true }
       );
     } finally {

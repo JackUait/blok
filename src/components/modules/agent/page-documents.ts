@@ -7,7 +7,8 @@ import type { AgentPorts } from '../../../shared/agent/types';
 import { outputBlocksToSegments } from '../../../shared/rich-text/block-data';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 import { htmlToSegmentsDom } from '../../utils/rich-text-dom';
-import { liveContractSource } from './editor-session';
+import type { HostService } from '../../../../types/tools/tool-description';
+import { liveContractSource, type ContractSource } from './editor-session';
 import { createEditorPorts, editorRichTextFieldsFor } from './editor-ports';
 
 export type OpenPageDocument = NonNullable<AgentPorts['openPageDocument']>;
@@ -28,15 +29,23 @@ export interface PageDocuments {
   save(pageId: string, data: OutputData): Promise<void>;
 }
 
+export interface PageDocumentsOptions {
+  /** Gets the document as loaded, before each agent save. */
+  onBeforeSave?(pageId: string, loaded: OutputData): void;
+  /** The main session's contract source, so a sub-page sees the same overrides and services. */
+  contractSource?(): ContractSource;
+  /** The main session's host services. Read at open: building them needs these page documents. */
+  services?(): Partial<Record<HostService, unknown>>;
+}
+
 /**
  * Opens a sub-page's own document through the page tool's loadDocument and
  * saveDocument hooks. Null when no page tool has both.
- * @param onBeforeSave - gets the document as loaded, before each agent save
  */
 export const createPageDocuments = (
   Blok: BlokModules,
   ownDocumentId: string | undefined,
-  onBeforeSave?: (pageId: string, loaded: OutputData) => void
+  options: PageDocumentsOptions = {}
 ): PageDocuments | null => {
   const hooks = [...Blok.Tools.blockTools.values()]
     .map((tool) => documentHooks(tool.settings))
@@ -60,23 +69,28 @@ export const createPageDocuments = (
     const fieldsFor = editorRichTextFieldsFor(Blok);
     // Stored text may still be HTML; the session works on segments.
     const document: OutputData = { ...loaded, blocks: outputBlocksToSegments(loaded.blocks, fieldsFor, htmlToSegmentsDom) };
-    const source = liveContractSource(Blok);
+    const source = options.contractSource?.() ?? liveContractSource(Blok);
     const contract = source.contract();
+    // The main pageBackend looks blocks up in this editor. A sub-page renames its own page blocks
+    // through their documents instead, as MCP's page-map does.
+    const { pageBackend: _mainPageBackend, ...services } = options.services?.() ?? {};
     const session = createDocumentAgentSession({
-      document, tools: source.runtimes(contract), contract, actor, ports: createEditorPorts(Blok),
+      document, tools: source.runtimes(contract), contract, actor, services,
+      ports: { ...createEditorPorts(Blok), openPageDocument: open },
+      pageTitles: 'page-map',
     });
 
     return {
       ...session,
-      execute: async (batch, options) => {
+      execute: async (batch, runOptions) => {
         if (Blok.ReadOnly.isEnabled) {
           throw failure('READ_ONLY', 'The editor is read-only now. Reads still work.', { details: { pageId } });
         }
         const before = session.revision();
-        const result = await session.execute(batch, options);
+        const result = await session.execute(batch, runOptions);
 
         if (result.ok && result.revision !== before) {
-          onBeforeSave?.(pageId, original);
+          options.onBeforeSave?.(pageId, original);
           await hooks.saveDocument(pageId, session.output());
         }
 

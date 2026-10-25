@@ -33,6 +33,7 @@ import type { Block } from '../../block';
 import { AgentFailure, failure } from '../../../shared/agent/errors';
 import { createAgentRun } from './agent-run';
 import { createAgentTurn } from './agent-turn';
+import { askAiSessionOptions } from './agent-session-options';
 
 export class AgentTurnOpenError extends Error {
   public constructor() {
@@ -336,10 +337,14 @@ export class AgentAPI extends Module {
 
   private pages(): PageDocuments | null {
     if (this.pageDocs === undefined) {
-      this.pageDocs = createPageDocuments(this.Blok, this.config.documentId, (pageId, loaded) => {
-        if (!this.turnPages.has(pageId)) {
-          this.turnPages.set(pageId, loaded);
-        }
+      this.pageDocs = createPageDocuments(this.Blok, this.config.documentId, {
+        onBeforeSave: (pageId, loaded) => {
+          if (!this.turnPages.has(pageId)) {
+            this.turnPages.set(pageId, loaded);
+          }
+        },
+        contractSource: () => this.source(),
+        services: () => this.services(),
       });
     }
 
@@ -410,18 +415,17 @@ export class AgentAPI extends Module {
     const session = createEditorAgentSession(
       this.Blok,
       { ...identity, kind: 'agent' },
-      {
+      askAiSessionOptions({
         contractSource: this.source(),
         services: this.services(),
-        mergeSteps: 'turn',
-        attributeLastEditedBy: options.attributeTo !== 'user',
+        attributeTo: options.attributeTo,
         onPrepared: (type, data) => {
           if (type === 'page' && typeof data.pageId === 'string') {
             this.hostPageIds.add(data.pageId);
           }
         },
         onPagePointed: (pageId) => this.agentPageIds.add(pageId),
-      }
+      })
     );
     this.turnLog = { agentName: identity.name, changed: new Set<string>() };
 

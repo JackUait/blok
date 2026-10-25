@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Blok } from '../../../src/blok';
-import { Page, Paragraph } from '../../../src/tools';
-import type { Agent, OutputData } from '../../../types';
+import { Header, Image, Page, Paragraph } from '../../../src/tools';
+import type { Agent, BlokConfig, OutputData } from '../../../types';
 import type { AgentModel, AgentModelResponse } from '../../../types/api';
 import type { PageConfig } from '../../../types/tools/page';
 
@@ -29,15 +29,16 @@ const host = (pages: Map<string, OutputData>): PageConfig & Record<string, unkno
 
 const sub = (pages: Map<string, OutputData>): OutputData => pages.get('sub') ?? { blocks: [] };
 
-const boot = async (page: PageConfig & Record<string, unknown>, model?: AgentModel): Promise<TestEditor> => {
+const boot = async (page: PageConfig & Record<string, unknown>, model?: AgentModel, extra: Partial<BlokConfig> = {}): Promise<TestEditor> => {
   const holder = document.createElement('div');
 
   document.body.appendChild(holder);
   const editor = new Blok({
     holder,
     data: { blocks: [{ id: 'pg', type: 'page', data: { pageId: 'sub' } }, { id: 'p', type: 'paragraph', data: { text: 'Main' } }] },
-    tools: { paragraph: { class: Paragraph }, page: { class: Page, config: page } },
-    ...(model === undefined ? {} : { agent: { assistant: { model } } }),
+    tools: { paragraph: { class: Paragraph }, header: { class: Header }, image: { class: Image }, page: { class: Page, config: page } },
+    ...extra,
+    agent: { ...extra.agent, ...(model === undefined ? {} : { assistant: { model } }) },
   }) as unknown as TestEditor;
 
   editors.push(editor);
@@ -101,6 +102,51 @@ describe('the agent edits a sub-page through the host page documents', () => {
     expect(read.isError).toBe(false);
     expect(read.content).toContain('Body text');
     expect((await editor.save()).blocks.map((block) => block.id)).toEqual(['pg', 'p']);
+  });
+
+  it('a sub-page follows the agent.overrides of this editor', async () => {
+    const pages = new Map<string, OutputData>([['sub', { blocks: [] }]]);
+    const editor = await boot(host(pages), undefined, { agent: { overrides: { header: { hidden: true } } } });
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const insert = { name: 'block.insert', args: { type: 'header', data: { text: 'Hidden', level: 2 }, position: 'end' } };
+    const main = await turn.execute({ commands: [insert] });
+    const inSub = await turn.call('blok_execute', { page: 'pg', commands: [insert] });
+
+    turn.end();
+    expect(main).toMatchObject({ ok: false, error: { code: 'UNKNOWN_TOOL' } });
+    expect(inSub.isError).toBe(true);
+    expect(inSub.content).toContain('UNKNOWN_TOOL');
+    expect(sub(pages).blocks).toEqual([]);
+  });
+
+  it('a sub-page re-hosts media through the host uploader', async () => {
+    const pages = new Map<string, OutputData>([['sub', { blocks: [{ id: 'img', type: 'image', data: { url: 'https://old.example/a.png' } }] }]]);
+    const uploadByUrl = vi.fn(async (url: string) => ({ url: `https://cdn.example/${url.split('/').pop() ?? ''}` }));
+    const editor = await boot(host(pages), undefined, { uploader: { uploadByUrl } });
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const result = await turn.call('blok_execute', { page: 'pg', commands: [
+      { name: 'image.setSource', args: { id: 'img', url: 'https://elsewhere.example/b.png' } },
+    ] });
+
+    turn.end();
+    expect(result.isError).toBe(false);
+    expect(sub(pages).blocks[0]?.data.url).toBe('https://cdn.example/b.png');
+  });
+
+  it('page.rename works on a page block inside a sub-page', async () => {
+    const pages = new Map<string, OutputData>([
+      ['sub', { blocks: [{ id: 'deep', type: 'page', data: { pageId: 'nested' } }] }],
+      ['nested', { blocks: [] }],
+    ]);
+    const editor = await boot(host(pages));
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const result = await turn.call('blok_execute', { page: 'pg', commands: [
+      { name: 'page.rename', args: { id: 'deep', title: 'Deep' } },
+    ] });
+
+    turn.end();
+    expect(result.isError).toBe(false);
+    expect(pages.get('nested')?.title).toBe('Deep');
   });
 
   it('page must name a page block', async () => {

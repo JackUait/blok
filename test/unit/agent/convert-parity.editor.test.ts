@@ -273,7 +273,8 @@ describe('one undo takes back a whole agent convert in the editor', () => {
   ])('%s', async (_name, seed, batch) => {
     const { error, doc } = await runEditor(seed, batch, true);
     const ids = keepIds(seed);
-    const strip = (output: OutputData): OutputData => ({ blocks: output.blocks.map(({ lastEditedBy: _by, ...block }) => block) });
+    // Undo restores the structure; the edit stamps are not part of this check.
+    const strip = (output: OutputData): OutputData => ({ blocks: output.blocks.map(({ lastEditedBy: _by, lastEditedAt: _at, ...block }) => block) });
 
     expect(error).toBeNull();
     expect(normalizeForParity(strip(doc), ids)).toEqual(normalizeForParity(strip((await runHeadless(openJsonSession, seed, { commands: [] })).doc), ids));

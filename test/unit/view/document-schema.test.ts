@@ -163,7 +163,7 @@ const savedData: Record<string, Record<string, unknown>> = {
   })).save(contentElement('')),
 
   toggle: ((): Record<string, unknown> => {
-    const tool = new Toggle(options({ text: 'Summary' }));
+    const tool = new Toggle(options({ text: 'Summary', textColor: 'red', backgroundColor: 'blue' }));
 
     tool.render();
 

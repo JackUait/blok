@@ -1776,6 +1776,14 @@
             }
           ]
         },
+        "textColor": {
+          "type": "string",
+          "description": "Text color preset name, e.g. \"red\"."
+        },
+        "backgroundColor": {
+          "type": "string",
+          "description": "Background color preset name."
+        },
         "isOpen": {
           "type": "boolean",
           "deprecated": true,

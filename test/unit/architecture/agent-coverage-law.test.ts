@@ -26,10 +26,10 @@ const UNNAMED_MENU_ITEMS: Record<string, string> = {};
 const UNCORPUSED_COMMANDS: Record<string, string> = {
   'page.rename': 'Headless form writes another document; one document per case cannot hold it (05 §3.2.1). 01 and 04 test it.',
   'page.setIcon': 'Headless form writes another document; one document per case cannot hold it (05 §3.2.1). 01 and 04 test it.',
-  // A case holds one document and no host history to read versions from.
-  'history.versions': 'Reads the host version history, which a one-document case has none of. version-history tests cover every runtime.',
-  'history.read': 'Reads the host version history, which a one-document case has none of. version-history tests cover every runtime.',
-  'history.changes': 'Reads the host version history, which a one-document case has none of. version-history tests cover every runtime.',
+  // A case needs a versionHistory fixture in every runner (json, store, editor, Jint, room), and a golden only the user reviews.
+  'history.versions': 'No corpus runner has a versionHistory fixture yet. The version-history tests cover node, editor, MCP live and C#.',
+  'history.read': 'No corpus runner has a versionHistory fixture yet. The version-history tests cover node, editor, MCP live and C#.',
+  'history.changes': 'No corpus runner has a versionHistory fixture yet. The version-history tests cover node, editor, MCP live and C#.',
 };
 
 const ID_TOKEN = /\b[a-z-]+:[^\s,;)]+/g;

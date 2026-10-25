@@ -31,6 +31,13 @@ describe('stepStatusKey', () => {
     expect(stepStatusKey('blok_execute', insert('my-custom-tool'), noBlocks)).toBe('assistant.status.block');
   });
 
+  it('says a version history read is reading, not editing', () => {
+    for (const name of ['history.versions', 'history.read', 'history.changes']) {
+      expect(stepStatusKey('blok_execute', execute({ name, args: {} }), noBlocks)).toBe('assistant.status.reading');
+    }
+    expect(stepStatusKey('blok_execute', execute({ name: 'history.undo', args: {} }), noBlocks)).toBe('assistant.status.editing');
+  });
+
   it('names the target type of a convert', () => {
     expect(stepStatusKey('blok_execute', execute({ name: 'block.convert', args: { id: 'b1', type: 'callout' } }), noBlocks))
       .toBe('assistant.status.callout');

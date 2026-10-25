@@ -31,6 +31,8 @@ const COMMAND_KEYS: Record<string, string> = {
 };
 
 const READ_COMMANDS = new Set(['doc.read', 'doc.find', 'markdown.export']);
+// Each runs alone in its batch, so it names the whole step.
+const VERSION_READS = new Set(['history.versions', 'history.read', 'history.changes']);
 
 type Command = { name: string; args: Record<string, unknown> };
 
@@ -59,6 +61,10 @@ const executeKey = (input: unknown, typeOf: (id: string) => string | undefined):
   }
 
   const { name, args } = command;
+
+  if (VERSION_READS.has(name)) {
+    return 'assistant.status.reading';
+  }
 
   // hasOwn: a model-sent "toString" must not find Object.prototype.
   if (name === 'block.insert' || name === 'block.convert') {

@@ -178,7 +178,7 @@ describe('header and list config narrowing', () => {
     expect(description.summaryFields).toEqual(['level', 'isToggleable']);
     expect(description.guidance).toContain(RICH_TEXT_GUIDANCE);
     expect(description.guidance).toContain('block.convert');
-    expect(description.guidance).toContain('release its children');
+    expect(description.guidance).toContain('releases its children');
     expect(description.guidance).toContain(COLOR_PRESET_NAMES);
   });
 

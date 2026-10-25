@@ -7,11 +7,11 @@ import type { Agent, AgentBatch, OutputData } from '../../../types';
 import { openJsonSession, openStoreSession, TEST_ACTOR } from './harness';
 import { normalizeForParity } from './parity/normalize';
 
-interface TestEditor { isReady: Promise<unknown>; destroy: () => void; agent: Agent; save: () => Promise<OutputData> }
+interface TestEditor { isReady: Promise<unknown>; destroy: () => void; agent: Agent; save: () => Promise<OutputData>; history: { undo: () => void } }
 
 const editors: TestEditor[] = [];
 
-const runEditor = async (seed: OutputData, batch: AgentBatch): Promise<{ error: unknown; doc: OutputData; created: string[] }> => {
+const runEditor = async (seed: OutputData, batch: AgentBatch, undo = false): Promise<{ error: unknown; doc: OutputData; created: string[] }> => {
   const holder = document.createElement('div');
 
   document.body.appendChild(holder);
@@ -31,17 +31,18 @@ const runEditor = async (seed: OutputData, batch: AgentBatch): Promise<{ error: 
   await editor.isReady;
 
   const turn = editor.agent.begin({ agent: { id: TEST_ACTOR.id, name: TEST_ACTOR.name } });
+  const settle = (): Promise<void> => new Promise((done) => setTimeout(done, 50));
+  const result = await turn.execute(batch);
 
-  try {
-    const result = await turn.execute(batch);
-
-    // Let the convert's deferred writes (callout seed, first save) settle.
-    await new Promise((done) => setTimeout(done, 50));
-
-    return { error: result.ok ? null : result.error, doc: await editor.save(), created: result.ok ? result.changed.created : [] };
-  } finally {
-    turn.end();
+  turn.end();
+  // Let the convert's deferred writes (callout seed, first save) settle.
+  await settle();
+  if (undo) {
+    editor.history.undo();
+    await settle();
   }
+
+  return { error: result.ok ? null : result.error, doc: await editor.save(), created: result.ok ? result.changed.created : [] };
 };
 
 const runHeadless = async (open: typeof openJsonSession | typeof openStoreSession, seed: OutputData, batch: AgentBatch): Promise<{ error: unknown; doc: OutputData }> => {
@@ -220,6 +221,19 @@ describe('block.convert to and from a callout gives the same document in the edi
     expect(contentOf(doc, 'c')).toEqual(['c2', 'z']);
   });
 
+  // A heading, not a paragraph: the editor's save skips an empty paragraph (Paragraph.validate).
+  it('releases every line when the first line has lines of its own', async () => {
+    const doc = await expectSameEverywhere({
+      blocks: [
+        { id: 'c', type: 'callout', data: { emoji: '💡' }, content: ['c1'] },
+        { id: 'c1', type: 'toggle', data: { text: 'one' }, parent: 'c', content: ['g'] },
+        { id: 'g', type: 'paragraph', data: { text: 'g' }, parent: 'c1' },
+      ],
+    }, convert('c', 'header'));
+
+    expect(doc.blocks.map((block) => [block.id, block.parent ?? null])).toEqual([['c', null], ['c1', null], ['g', 'c1']]);
+  });
+
   it('turns a one-line callout into a list item', async () => {
     await expectSameEverywhere({
       blocks: [
@@ -227,5 +241,41 @@ describe('block.convert to and from a callout gives the same document in the edi
         { id: 'c1', type: 'paragraph', data: { text: 'one' }, parent: 'c' },
       ],
     }, convert('c', 'list'));
+  });
+});
+
+describe('one undo takes back a whole agent convert in the editor', () => {
+  it.each([
+    ['a toggle heading that releases its child', {
+      blocks: [
+        { id: 'h', type: 'header', data: { text: 'H', level: 2, isToggleable: true }, content: ['k'] },
+        { id: 'k', type: 'paragraph', data: { text: 'hi' }, parent: 'h' },
+        { id: 'z', type: 'paragraph', data: { text: 'after' } },
+      ],
+    }, convert('h', 'paragraph')],
+    ['a callout that gives its first line', {
+      blocks: [
+        { id: 'c', type: 'callout', data: { emoji: '💡' }, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'paragraph', data: { text: 'one' }, parent: 'c' },
+        { id: 'c2', type: 'paragraph', data: { text: 'two' }, parent: 'c' },
+      ],
+    }, convert('c', 'paragraph')],
+    ['a heading that adopts its section', {
+      blocks: [
+        { id: 'h', type: 'header', data: { text: 'H', level: 2 } },
+        { id: 's1', type: 'paragraph', data: { text: 'one' } },
+        { id: 'h2', type: 'header', data: { text: 'Next', level: 2 } },
+      ],
+    }, convert('h', 'header', { isToggleable: true })],
+    ['a paragraph that becomes a callout', {
+      blocks: [{ id: 'a', type: 'paragraph', data: { text: 'hi' } }],
+    }, convert('a', 'callout')],
+  ] as const)('%s', async (_name, seed, batch) => {
+    const { error, doc } = await runEditor(seed, batch, true);
+    const ids = keepIds(seed);
+    const strip = (output: OutputData): OutputData => ({ blocks: output.blocks.map(({ lastEditedBy: _by, ...block }) => block) });
+
+    expect(error).toBeNull();
+    expect(normalizeForParity(strip(doc), ids)).toEqual(normalizeForParity(strip((await runHeadless(openJsonSession, seed, { commands: [] })).doc), ids));
   });
 });

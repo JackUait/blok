@@ -769,4 +769,45 @@ describe('page-map backend', () => {
     expect(target.output()).toEqual({ blocks: [] });
     expect(session.output()).toEqual(before);
   });
+  describe('history.undo after a batch that only wrote another document', () => {
+    const insert = (text: string): AgentBatch => ({ commands: [{ name: 'block.insert', args: { type: 'paragraph', data: { text: [{ text }] }, position: 'end' } }] });
+    const undo: AgentBatch = { commands: [{ name: 'history.undo', args: {} }] };
+    const pageSession = (): { session: StoredSession; target: StoredSession } => {
+      const target = track(open({ blocks: [] }));
+      const { openPage } = targetPort(target);
+      const session = track(open(sourceDocument(), {
+        ports: stubPorts({ openPageDocument: openPage }), pageTitles: 'page-map', contract: contractFor('node', ['pageBackend']),
+      }));
+
+      return { session, target };
+    };
+    const blockCount = (session: StoredSession): number => session.output().blocks.length;
+
+    it('refuses with UNDO_OTHER_DOCUMENT and keeps the batch before it', async () => {
+      const { session, target } = pageSession();
+
+      await session.execute(insert('A'));
+      const withA = blockCount(session);
+
+      expect(await session.execute({ commands: [{ name: 'page.rename', args: { id: 'pb', title: 'New' } }] })).toMatchObject({ ok: true });
+      expect(await session.execute(undo)).toMatchObject({ ok: false, error: { code: 'UNDO_OTHER_DOCUMENT' } });
+      expect(blockCount(session)).toBe(withA);
+      expect(target.output().title).toBe('New');
+    });
+
+    it('still undoes a later batch, then refuses at the other-document write', async () => {
+      const { session } = pageSession();
+
+      await session.execute(insert('A'));
+      const withA = blockCount(session);
+
+      await session.execute({ commands: [{ name: 'page.setIcon', args: { id: 'pb', icon } }] });
+      await session.execute(insert('B'));
+
+      expect(await session.execute(undo)).toMatchObject({ ok: true });
+      expect(blockCount(session)).toBe(withA);
+      expect(await session.execute(undo)).toMatchObject({ ok: false, error: { code: 'UNDO_OTHER_DOCUMENT' } });
+      expect(blockCount(session)).toBe(withA);
+    });
+  });
 });

@@ -126,6 +126,6 @@ export const COMMANDS: Record<CoreCommandName, CoreCommandSpec> = {
     + 'Markdown cannot write the marks "underline", "sup", "sub", "highlight", "color" or "background": insert the text, then set them with text.format. '
     + 'For an equation inside a paragraph, use block.insert, text.insert or text.replace with the segment { "embed": { "equation": { "expression": "x" } } }.'),
   'markdown.export': read('Export the document or a subtree as Markdown.', obj({ rootId: id })),
-  'history.undo': write("Undo this session's last step. Never the user's.", obj({})),
+  'history.undo': write("Undo this session's last step. Never the user's. A page.rename or page.setIcon step wrote another document and cannot be undone.", obj({})),
   'history.redo': write("Redo this session's last undone step.", obj({})),
 };

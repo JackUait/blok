@@ -145,6 +145,28 @@ const prepareAt = async (prepare: Preparation, index: number): Promise<unknown> 
   }
 };
 
+/**
+ * The session's write batches in undo order. 'other' is a batch that wrote only
+ * another document (a host action such as page.rename): the applier keeps no
+ * step for it, so without this mark history.undo would undo the batch before it.
+ */
+interface HistoryMarks { past: Array<'own' | 'other'>; future: Array<'own' | 'other'> }
+
+const historyMarks = new WeakMap<AgentApplier, HistoryMarks>();
+
+const marksOf = (applier: AgentApplier): HistoryMarks => {
+  const found = historyMarks.get(applier);
+
+  if (found !== undefined) {
+    return found;
+  }
+  const marks: HistoryMarks = { past: [], future: [] };
+
+  historyMarks.set(applier, marks);
+
+  return marks;
+};
+
 const historyStep = (applier: AgentApplier, name: 'history.undo' | 'history.redo'): (() => Promise<void>) => {
   const step = name === 'history.undo' ? applier.undo : applier.redo;
 
@@ -154,7 +176,20 @@ const historyStep = (applier: AgentApplier, name: 'history.undo' | 'history.redo
     });
   }
 
-  return step.bind(applier);
+  const marks = marksOf(applier);
+
+  if (name === 'history.undo' && marks.past.at(-1) === 'other') {
+    throw failure('UNDO_OTHER_DOCUMENT', 'The last batch wrote another document (a sub-page title or icon). history.undo cannot undo it. To revert it, run that command again with the old value.', {
+      commandIndex: 0,
+    });
+  }
+
+  return async () => {
+    await step.call(applier);
+    const [from, to] = name === 'history.undo' ? [marks.past, marks.future] : [marks.future, marks.past];
+
+    to.push(from.pop() ?? 'own');
+  };
 };
 
 const failureRevision = (applier: AgentApplier): string | undefined => {
@@ -432,6 +467,12 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
     });
     if (plan.edits.length > 0) {
       await input.applier.apply(plan, draft);
+      const marks = marksOf(input.applier);
+
+      marks.past.push('own');
+      marks.future = [];
+    } else if (batch.commands.some(command => input.ctx.commands.get(command.name)?.effects === 'host')) {
+      marksOf(input.applier).past.push('other');
     }
 
     const result = planResult(batch, plan, input.applier.revision(), warnings, changedRows(input, plan));

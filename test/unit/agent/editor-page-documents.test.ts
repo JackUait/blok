@@ -277,6 +277,36 @@ describe('the agent edits a sub-page through the host page documents', () => {
     pages.set('sub', { ...current, blocks: [...current.blocks, { id: `u-${text}`, type: 'paragraph', data: { text: [{ text }] } }] });
   };
 
+  it('history.undo after page.rename refuses with UNDO_OTHER_DOCUMENT and keeps the batch before it', async () => {
+    const pages = new Map<string, OutputData>([['sub', { title: 'Old', blocks: [] }]]);
+    const editor = await boot(host(pages));
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+
+    await turn.execute({ commands: [{ name: 'block.insert', args: { type: 'paragraph', data: { text: 'A' }, position: 'end' } }] });
+    expect(await turn.execute({ commands: [{ name: 'page.rename', args: { id: 'pg', title: 'New' } }] })).toMatchObject({ ok: true });
+
+    expect(await turn.execute({ commands: [{ name: 'history.undo', args: {} }] })).toMatchObject({ ok: false, error: { code: 'UNDO_OTHER_DOCUMENT' } });
+    turn.end();
+    expect((await editor.save()).blocks).toHaveLength(3);
+    expect(sub(pages).title).toBe('New');
+  });
+
+  it('history.undo undoes a batch after page.rename, then refuses at the rename', async () => {
+    const pages = new Map<string, OutputData>([['sub', { title: 'Old', blocks: [] }]]);
+    const editor = await boot(host(pages));
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const insert = (text: string): Parameters<typeof turn.execute>[0] => ({ commands: [{ name: 'block.insert', args: { type: 'paragraph', data: { text }, position: 'end' } }] });
+
+    await turn.execute(insert('A'));
+    await turn.execute({ commands: [{ name: 'page.rename', args: { id: 'pg', title: 'New' } }] });
+    await turn.execute(insert('B'));
+
+    expect(await turn.execute({ commands: [{ name: 'history.undo', args: {} }] })).toMatchObject({ ok: true });
+    expect(await turn.execute({ commands: [{ name: 'history.undo', args: {} }] })).toMatchObject({ ok: false, error: { code: 'UNDO_OTHER_DOCUMENT' } });
+    turn.end();
+    expect((await editor.save()).blocks).toHaveLength(3);
+  });
+
   it('discard keeps a sub-page someone edited after the agent last saved it', async () => {
     const pages = new Map<string, OutputData>([['sub', { blocks: [{ id: 'old', type: 'paragraph', data: { text: [{ text: 'Old' }] } }] }]]);
     const editor = await boot(host(pages), scriptedModel([subInsert('c1', 'SubNew'), done]));

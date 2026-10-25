@@ -979,14 +979,15 @@ describe('runBatch contract', () => {
     expect(applier.current.toOutput()).toEqual(doc);
   });
 
-  it('reports a missing prepareInsert provider as unavailable service', async () => {
+  it('reports a runtime without prepareInsert as the cause, not a missing service', async () => {
     const applier = memoryApplier();
     const result = await run({ commands: [
       { name: 'block.insert', args: { type: 'record' } },
     ] }, applier, { ctx: preparedInsertContext() });
 
     expect(result).toMatchObject({ ok: false, error: {
-      code: 'COMMAND_UNAVAILABLE', commandIndex: 0, details: { reason: 'service', requires: ['host'] },
+      code: 'COMMAND_UNAVAILABLE', commandIndex: 0, details: { reason: 'runtime', requires: ['host'] },
+      message: 'This runtime cannot insert "record": its tool prepares the block first (prepareInsert), and only the editor runs that.',
     } });
     expect(applier.applied).toBe(0);
     expect(applier.current.toOutput()).toEqual(doc);

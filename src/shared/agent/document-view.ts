@@ -26,22 +26,48 @@ const textOf = (block: SnapBlock, ctx: ViewContext, field?: string): string | un
   return typeof exported === 'string' ? exported : undefined;
 };
 
-/** Not page content (a comment thread), or under one: reads leave it out. */
-const inAnnotation = (snap: DocSnapshot, id: string, ctx: ViewContext): boolean => {
+/** The comment thread the block is, or sits under; undefined for page content. */
+export const annotationOf = (
+  snap: DocSnapshot,
+  id: string,
+  isAnnotation: (type: string) => boolean
+): SnapBlock | undefined => {
   const seen = new Set<string>();
   const cursor: { id: string | null } = { id };
 
   while (cursor.id !== null && !seen.has(cursor.id)) {
-    const type = snap.get(cursor.id)?.type;
+    const block = snap.get(cursor.id);
 
-    if (type !== undefined && ctx.tools.get(type)?.entry.children.annotation === true) {
-      return true;
+    if (block !== undefined && isAnnotation(block.type)) {
+      return block;
     }
     seen.add(cursor.id);
     cursor.id = snap.parentOf(cursor.id);
   }
 
-  return false;
+  return undefined;
+};
+
+/** Agents skip comment threads (user decision 2026-10-16), so naming one fails, but not as a missing block. */
+export const annotationMessage = (id: string, thread: SnapBlock): string =>
+  `${thread.id === id ? `Block "${id}" is a ${thread.type} block` : `Block "${id}" is inside ${thread.type} block "${thread.id}"`}, a comment people left. Agents do not read or write comments.`;
+
+const isAnnotationIn = (ctx: ViewContext) => (type: string): boolean => ctx.tools.get(type)?.entry.children.annotation === true;
+
+/** Not page content (a comment thread), or under one: reads leave it out. */
+const inAnnotation = (snap: DocSnapshot, id: string, ctx: ViewContext): boolean =>
+  annotationOf(snap, id, isAnnotationIn(ctx)) !== undefined;
+
+/** Fails when the id is not there, or is a comment thread or under one. */
+const requireContent = (snap: DocSnapshot, id: string, ctx: ViewContext, path: string): void => {
+  if (!snap.has(id)) {
+    throw failure('BLOCK_NOT_FOUND', `Block "${id}" does not exist.`, { path, details: { id } });
+  }
+  const thread = annotationOf(snap, id, isAnnotationIn(ctx));
+
+  if (thread !== undefined) {
+    throw failure('ANNOTATION_BLOCK', annotationMessage(id, thread), { path, details: { id } });
+  }
 };
 
 const contentOrder = (snap: DocSnapshot, rootId: string | null, ctx: ViewContext): Array<{ id: string; depth: number }> =>
@@ -109,14 +135,10 @@ export const buildDocumentView = (
   const snap = source.clone();
   const rootId = args.rootId ?? null;
 
-  if (rootId !== null && !snap.has(rootId)) {
-    throw failure('BLOCK_NOT_FOUND', `Block "${rootId}" does not exist.`, { path: '/rootId', details: { id: rootId } });
+  if (rootId !== null) {
+    requireContent(snap, rootId, ctx, '/rootId');
   }
-  args.ids?.forEach((id, index) => {
-    if (!snap.has(id)) {
-      throw failure('BLOCK_NOT_FOUND', `Block "${id}" does not exist.`, { path: `/ids/${index}`, details: { id } });
-    }
-  });
+  args.ids?.forEach((id, index) => requireContent(snap, id, ctx, `/ids/${index}`));
 
   const ids = args.ids === undefined ? undefined : new Set(args.ids);
   const order = contentOrder(snap, rootId, ctx).filter(item =>
@@ -188,8 +210,8 @@ export const findBlocks = (
   if (args.text === undefined && args.type === undefined) {
     throw failure('INVALID_ARGS', 'Give text, type, or both.');
   }
-  if (args.rootId !== undefined && !snap.has(args.rootId)) {
-    throw failure('BLOCK_NOT_FOUND', `Block "${args.rootId}" does not exist.`, { path: '/rootId', details: { id: args.rootId } });
+  if (args.rootId !== undefined) {
+    requireContent(snap, args.rootId, ctx, '/rootId');
   }
 
   const query = args.text;

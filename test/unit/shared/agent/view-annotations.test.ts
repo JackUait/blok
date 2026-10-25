@@ -58,24 +58,45 @@ describe('agent reads skip annotations', () => {
     expect(ids).toEqual(['t1', 'b1', 'n1', 'n2']);
   });
 
+  const failureOf = (name: `${string}.${string}`, args: Record<string, unknown>): AgentFailure['error'] | undefined => {
+    try {
+      run(name, args);
+    } catch (error: unknown) {
+      if (error instanceof AgentFailure) return error.error;
+      throw error;
+    }
+
+    return undefined;
+  };
+
   it.each([
-    ['block.update', { id: 'n1', data: { text: [{ text: 'x' }] } }],
-    ['block.delete', { id: 'n2' }],
-    ['block.move', { id: 'n1', position: 'end' }],
-    ['block.insert', { type: 'paragraph', parentId: 'n1' }],
-    ['text.replace', { id: 'n2', field: 'text', with: 'x' }],
-  ])('refuses %s on a thread or a reply as a block it cannot see', (name, args) => {
-    const code = ((): string | undefined => {
-      try {
-        run(name as `${string}.${string}`, args);
-      } catch (error: unknown) {
-        if (error instanceof AgentFailure) return error.error.code;
-        throw error;
-      }
+    ['block.update', { id: 'n1', data: { text: [{ text: 'x' }] } }, 'n1'],
+    ['block.delete', { id: 'n2' }, 'n2'],
+    ['block.move', { id: 'n1', position: 'end' }, 'n1'],
+    ['block.insert', { type: 'paragraph', parentId: 'n1' }, 'n1'],
+    ['text.replace', { id: 'n2', field: 'text', with: 'x' }, 'n2'],
+    ['doc.read', { ids: ['b1', 'n1'] }, 'n1'],
+    ['doc.read', { rootId: 'n2' }, 'n2'],
+    ['doc.find', { text: 'secret', rootId: 'n1' }, 'n1'],
+  ])('refuses %s on a thread or a reply as a comment, not a missing block', (name, args, id) => {
+    expect(failureOf(name as `${string}.${string}`, args)).toMatchObject({
+      code: 'ANNOTATION_BLOCK',
+      message: expect.stringMatching(/comment.*Agents do not read or write comments/),
+      details: { id },
+    });
+  });
 
-      return undefined;
-    })();
+  it('names the thread a reply sits in', () => {
+    expect(failureOf('block.delete', { id: 'n2' })?.message).toBe(
+      'Block "n2" is inside note block "n1", a comment people left. Agents do not read or write comments.'
+    );
+    expect(failureOf('block.delete', { id: 'n1' })?.message).toBe(
+      'Block "n1" is a note block, a comment people left. Agents do not read or write comments.'
+    );
+  });
 
-    expect(code).toBe('BLOCK_NOT_FOUND');
+  it('still says a block that is not there does not exist', () => {
+    expect(failureOf('block.delete', { id: 'zz' })?.code).toBe('BLOCK_NOT_FOUND');
+    expect(failureOf('doc.read', { ids: ['zz'] })?.code).toBe('BLOCK_NOT_FOUND');
   });
 });

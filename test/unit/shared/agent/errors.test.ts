@@ -12,6 +12,7 @@ const retryability: { [Code in AgentErrorCode]: readonly [Code, boolean] } = {
   UNKNOWN_COMMAND: ['UNKNOWN_COMMAND', false],
   UNKNOWN_TOOL: ['UNKNOWN_TOOL', false],
   BLOCK_NOT_FOUND: ['BLOCK_NOT_FOUND', false],
+  ANNOTATION_BLOCK: ['ANNOTATION_BLOCK', false],
   FIELD_NOT_RICH_TEXT: ['FIELD_NOT_RICH_TEXT', false],
   FIELD_NOT_WRITABLE: ['FIELD_NOT_WRITABLE', false],
   RANGE_OUT_OF_BOUNDS: ['RANGE_OUT_OF_BOUNDS', false],

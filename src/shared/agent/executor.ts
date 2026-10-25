@@ -297,7 +297,7 @@ const planResult = (
 
 // Problems in the batch itself. A stale, read-only or runtime failure says nothing about the other commands.
 const BATCH_PROBLEM_CODES: ReadonlySet<AgentErrorCode> = new Set<AgentErrorCode>([
-  'INVALID_ARGS', 'UNKNOWN_COMMAND', 'COMMAND_UNAVAILABLE', 'BLOCK_NOT_FOUND', 'UNKNOWN_TOOL',
+  'INVALID_ARGS', 'UNKNOWN_COMMAND', 'COMMAND_UNAVAILABLE', 'BLOCK_NOT_FOUND', 'ANNOTATION_BLOCK', 'UNKNOWN_TOOL',
   'PLACEMENT_REFUSED', 'FIELD_NOT_WRITABLE', 'CONVERSION_UNSUPPORTED', 'DATA_REJECTED',
 ]);
 

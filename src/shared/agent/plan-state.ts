@@ -1,4 +1,5 @@
 import { isRichText, readEmbed } from '../rich-text/guards';
+import { annotationMessage, annotationOf } from './document-view';
 import { failure, warning } from './errors';
 import { applyEdits } from './json-applier';
 import { RICH_TEXT_MARKS } from '../tool-descriptions/rich-text';
@@ -191,10 +192,16 @@ export class PlanState {
       return this.fail('BLOCK_NOT_FOUND', this.unresolvedRefMessage(ref), path, { ref });
     }
 
-    // Agents skip comment threads (user decision 2026-10-16): one is a block they cannot see.
-    return this.draft.has(value) && !this.inAnnotation(value)
-      ? value
-      : this.fail('BLOCK_NOT_FOUND', `Block "${value}" does not exist. Read the document for current ids.`, path, { id: value });
+    if (!this.draft.has(value)) {
+      return this.fail('BLOCK_NOT_FOUND', `Block "${value}" does not exist. Read the document for current ids.`, path, { id: value });
+    }
+    const thread = this.annotationOf(value);
+
+    if (thread !== undefined) {
+      return this.fail('ANNOTATION_BLOCK', annotationMessage(value, thread), path, { id: value });
+    }
+
+    return value;
   }
 
   /**
@@ -222,18 +229,11 @@ export class PlanState {
 
   /** The block is not page content (a comment thread) or sits under one. */
   private inAnnotation(id: string): boolean {
-    const seen = new Set<string>();
-    const cursor: { id: string | null } = { id };
+    return this.annotationOf(id) !== undefined;
+  }
 
-    while (cursor.id !== null && !seen.has(cursor.id)) {
-      const type = this.draft.get(cursor.id)?.type;
-
-      if (type !== undefined && this.tool(type)?.entry.children.annotation === true) return true;
-      seen.add(cursor.id);
-      cursor.id = this.draft.parentOf(cursor.id);
-    }
-
-    return false;
+  private annotationOf(id: string): SnapBlock | undefined {
+    return annotationOf(this.draft, id, type => this.tool(type)?.entry.children.annotation === true);
   }
 
   public requireBlock(value: unknown, path: string): SnapBlock {

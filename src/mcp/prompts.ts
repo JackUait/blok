@@ -7,7 +7,7 @@ import type { AgentSkill, SkillContext } from '../shared/skills';
 
 /** What an MCP client's model does on top of a skill's request; Ask AI's editor does this for its model. */
 export const MCP_SKILL_STEPS = 'Use the Blok tools: open the document with blok_open (pass write: true if you will edit it), '
-  + 'read it with blok_read, find the selected text with the doc.find command in blok_execute, '
+  + 'read it with blok_read, find the text the request is about with the doc.find command in blok_execute, '
   + 'and make every edit with blok_execute.';
 
 const argumentsOf = (skill: AgentSkill): NonNullable<Prompt['arguments']> => [

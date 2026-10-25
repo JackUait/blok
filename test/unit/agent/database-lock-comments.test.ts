@@ -73,6 +73,43 @@ describe.each(SESSIONS)('database lock, comments and reactions (%s session)', (_
     await session.close();
   });
 
+  it.each([
+    ['block.insert at the top level', 'block.insert', { type: 'database-row', data: { properties: {}, position: 'a9', 'reactions:u1': { '🎉': 3 } } }],
+    ['block.insert into a row page', 'block.insert', { type: 'paragraph', parentId: 'r', data: { text: 'x', 'reactions:u1': { '🎉': 3 } } }],
+    ['setRowValues', 'database.setRowValues', { id: 'D', rowId: 'r', values: { 'reactions:u1': { '🎉': 3 } } }],
+    ['addRow', 'database.addRow', { id: 'D', values: { 'reactions:u1': { '🎉': 3 } } }],
+  ])('%s cannot write another person\'s reactions', async (_path, name, args) => {
+    const session = open(seed(false));
+
+    expect(errorOf(await run(session, name, args))).toBeDefined();
+    const forged = (await session.read({ detail: 'full' })).blocks.filter(block => block.id !== 'r' && block.data !== undefined && 'reactions:u1' in block.data);
+
+    expect(forged).toEqual([]);
+    expect(await dataOf(session, 'r')).toMatchObject({ 'reactions:u1': { '🎉': 2 } });
+    await session.close();
+  });
+
+  it.each([
+    ['block.move', { id: 'thread', parentId: null, position: 'end' }],
+    ['block.duplicate', { id: 'thread' }],
+    ['database.setRowValues', { id: 'D', rowId: 'thread', values: { tx: 'x' } }],
+    ['database.deleteRow', { id: 'D', rowId: 'thread' }],
+  ])('%s on a comment thread is refused', async (name, args) => {
+    const session = open(seed(false));
+
+    expect(errorOf(await run(session, name, args))).toBeDefined();
+    await session.close();
+  });
+
+  it('copying a row leaves its comment thread behind', async () => {
+    const session = open(seed(false));
+    const before = (await session.read({ detail: 'full' })).blocks.length;
+
+    expect(errorOf(await run(session, 'block.duplicate', { id: 'r' }))).toBeUndefined();
+    expect((await session.read({ detail: 'full' })).blocks).toHaveLength(before + 1);
+    await session.close();
+  });
+
   it('writes the agent\'s own feed reactions and refuses another person\'s', async () => {
     const session = open(seed(false));
 

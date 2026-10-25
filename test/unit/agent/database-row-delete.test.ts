@@ -84,6 +84,19 @@ describe.each(SESSIONS)('database row delete (%s session)', (_label, open) => {
     await session.close();
   });
 
+  it('block.delete on a tabs child of a database still deletes just that block', async () => {
+    const seed = tree();
+
+    seed.blocks.push({ id: 'tabs', type: 'tabs', data: {}, parent: 'S' });
+    (seed.blocks[0] as { content: string[] }).content.push('tabs');
+    const session = open(seed);
+
+    expect(errorOf(await run(session, 'block.delete', { id: 'tabs' }))).toBeUndefined();
+    expect(await idsOf(session)).not.toContain('tabs');
+    expect(await idsOf(session)).toContain('p');
+    await session.close();
+  });
+
   it('database.deleteRow does the same as block.delete', async () => {
     const session = open(twoWay());
 

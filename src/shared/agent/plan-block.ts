@@ -373,6 +373,8 @@ const buildBlock = (
   }
 
   const id = state.newBlockId(spec.id, `${path}/id`);
+
+  refuseOthersReactions(state, Object.keys(spec.data ?? {}), `${path}/data`);
   const given = spec.data === undefined ? tool.entry.defaultData ?? {} : withRequiredDefaults(tool, spec.data, (field, value) => {
     state.warn('CORRECTED', `Required field "${field}" was missing, so it got its default ${JSON.stringify(value)}.`, { blockId: id, field });
   });
@@ -461,6 +463,22 @@ const sameField = (left: Record<string, unknown>, right: Record<string, unknown>
 
 const REACTIONS_PREFIX = 'reactions:';
 
+/**
+ * A feed reaction key names its person (database-row "reactions:<user id>"): an
+ * agent writes only its own. Every insert and data write passes here; a copy of
+ * stored blocks keeps the reactions it carries.
+ */
+const refuseOthersReactions = (state: PlanState, fields: readonly string[], path: string): void => {
+  const own = `${REACTIONS_PREFIX}${state.stamp.actorId}`;
+  const field = state.copying ? undefined : fields.find(each => each.startsWith(REACTIONS_PREFIX) && each !== own);
+
+  if (field !== undefined) {
+    state.fail('FIELD_NOT_WRITABLE', `"${field}" holds another person's reactions. An agent writes only "${own}".`, `${path}/${pointerKey(field)}`, {
+      reason: 'other-person', field,
+    });
+  }
+};
+
 /** `stored` names fields rebuilt from the draft (see PlanState.prepareData). */
 export const planUpdate = (state: PlanState, args: Record<string, unknown>, stored: readonly string[] = []): unknown => {
   const block = state.requireBlock(args.id, '/id');
@@ -488,12 +506,6 @@ export const planUpdate = (state: PlanState, args: Record<string, unknown>, stor
 
       state.fail('FIELD_NOT_WRITABLE', `"${field}" keeps an invariant. Use ${use} instead.`, path, {
         reason: 'guarded', field, use,
-      });
-    }
-    // A feed reaction key names its person (database-row "reactions:<user id>").
-    if (field.startsWith(REACTIONS_PREFIX) && field !== `${REACTIONS_PREFIX}${state.stamp.actorId}`) {
-      state.fail('FIELD_NOT_WRITABLE', `"${field}" holds another person's reactions. An agent writes only "${REACTIONS_PREFIX}${state.stamp.actorId}".`, path, {
-        reason: 'other-person', field,
       });
     }
   }
@@ -524,6 +536,7 @@ export const emitPatch = (
     }
   }
 
+  refuseOthersReactions(state, Object.keys(patch), '/data');
   // A removed rich field clears to no text: deleted, the editor kept the old text.
   const cleared: Readonly<Record<string, unknown>> = {
     ...Object.fromEntries(tool.entry.richTextFields.map(field => [field, []])),

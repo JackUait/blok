@@ -81,6 +81,11 @@ export class PlanState {
     public readonly stamp: EditStamp
   ) {}
 
+  /** True while a copy of stored blocks is built: its data is not agent input. */
+  public get copying(): boolean {
+    return this.copyingStored;
+  }
+
   /** Runs `build` with every rich field read as stored: a copy of stored blocks is not agent input. */
   public copyStored<T>(build: () => T): T {
     const previous = this.copyingStored;

@@ -109,4 +109,25 @@ describe('database rows through the editor agent session', () => {
     expect((blocks.get('p')?.data.properties as Record<string, unknown>).sub).toEqual([{ id: 'c' }, { id: copy }]);
     session.close();
   }, 30_000);
+  it('database.moveRowTo moves a row into another database that then shows it', async () => {
+    const data = seed();
+
+    data.blocks.push({
+      id: 'db2', type: 'database',
+      data: {
+        schema: [{ id: 't2', name: 'Title', type: 'title', position: 'a0' }],
+        views: [{ id: 'v2', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+        activeViewId: 'v2',
+      },
+    });
+    const Blok = await boot(data);
+    const session = createEditorAgentSession(Blok, actor);
+    const result: AgentResult = await session.execute({ commands: [{ name: 'database.moveRowTo', args: { id: 'db', rowId: 'z', databaseId: 'db2' } }] });
+
+    expect(result.ok).toBe(true);
+    expect(saved(Blok).get('z')).toMatchObject({ parent: 'db2', data: { title: 'z', properties: { t2: 'z' } } });
+    expect(Blok.API.methods.blocks.getChildren('db2').map(block => block.id)).toEqual(['z']);
+    expect(Blok.BlockManager.getBlockById('db2')?.holder.querySelector('[data-row-id="z"]')).not.toBeNull();
+    session.close();
+  }, 30_000);
 });

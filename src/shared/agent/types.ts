@@ -55,7 +55,7 @@ export interface PlannerToolRuntime {
   childCommand?: ChildCommandRoute;
 }
 
-export type ChildCommandRoute = (command: 'delete' | 'duplicate', childId: string) => { action: string; args: Record<string, unknown> } | undefined;
+export type ChildCommandRoute = (command: 'delete' | 'duplicate', child: { id: string; type: string }) => { action: string; args: Record<string, unknown> } | undefined;
 
 export interface PlannerTool { entry: PlannerToolEntry; runtime: PlannerToolRuntime }
 

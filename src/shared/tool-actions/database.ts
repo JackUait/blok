@@ -1307,8 +1307,10 @@ const moveRowTo: ToolActionImpl<{ rowId: string; databaseId: string }> = {
   },
 };
 
-export const DATABASE_CHILD_COMMAND: ChildCommandRoute = (command, childId) =>
-  ({ action: command === 'delete' ? 'deleteRow' : 'duplicateRow', args: { rowId: childId } });
+// Rows and templates only: a tabs layout block or a nested database is an ordinary child.
+export const DATABASE_CHILD_COMMAND: ChildCommandRoute = (command, child) => (child.type === 'database-row'
+  ? { action: command === 'delete' ? 'deleteRow' : 'duplicateRow', args: { rowId: child.id } }
+  : undefined);
 
 const moveRow: ToolActionImpl<{ rowId: string; group?: string } & Placement> = {
   run: (ctx, args) => {

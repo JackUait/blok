@@ -17,7 +17,7 @@ export type CommandHandler = (state: PlanState, args: Record<string, unknown>) =
 const viaParent = (command: 'delete' | 'duplicate', core: CommandHandler): CommandHandler => (state, args) => {
   const block = state.requireBlock(args.id, '/id');
   const parent = block.parent === null ? undefined : state.draft.get(block.parent);
-  const route = parent === undefined ? undefined : state.tool(parent.type)?.runtime.childCommand?.(command, block.id);
+  const route = parent === undefined ? undefined : state.tool(parent.type)?.runtime.childCommand?.(command, { id: block.id, type: block.type });
 
   if (parent === undefined || route === undefined) {
     return core(state, args);

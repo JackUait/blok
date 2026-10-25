@@ -116,6 +116,11 @@ export const DATA_ATTR = {
    *  Public styling hook — drives the gutter auto-collapse (the gutter
    *  exists solely to house the toolbar's +/⠿ controls). */
   toolbarHidden: 'data-blok-toolbar-hidden',
+  /**
+   * On a block holder: that block gets no block controls (+ and drag handle).
+   * A full database row page sets it on its database's holder.
+   */
+  noControls: 'data-blok-no-controls',
   /** Which gutter the floating block controls occupy: 'left' (default,
    *  inline-start) or 'right' (inline-end). Written on the editor wrapper from
    *  config.toolbarPosition and kept in sync by `toolbar.setPosition()`.

@@ -58,6 +58,7 @@ import {
 import type { PageLayoutData, PageLayoutDraft, PageLayoutOp, ResolvedPageLayout } from './page-layout';
 import { nanoid } from 'nanoid';
 import { PageLayoutBuilder } from './page-layout-builder';
+import { RowPageTakeover } from './row-page-takeover';
 import { OverflowList, tabsThatFit } from '../../components/utils/overflow-list';
 import type { BuilderTabs, PageLayoutModuleEntry } from './page-layout-builder';
 
@@ -449,6 +450,7 @@ export class DatabaseCardDrawer {
   private readonly findPeekHost: (() => HTMLElement | null) | undefined;
   /** The page the open drawer moved, so close and destroy undo that one. */
   private peekHost: HTMLElement | null = null;
+  private readonly takeover: RowPageTakeover;
   private readonly pagePan = new PeekPagePan();
   private readonly readOnly: boolean;
   private readonly i18n: I18n | undefined;
@@ -569,6 +571,7 @@ export class DatabaseCardDrawer {
 
   constructor(options: CardDrawerOptions) {
     this.wrapper = options.wrapper;
+    this.takeover = new RowPageTakeover(options.wrapper);
     this.findPeekHost = options.peekHost;
     this.readOnly = options.readOnly;
     this.i18n = options.i18n;
@@ -908,6 +911,7 @@ export class DatabaseCardDrawer {
 
     this.currentRowId = row.id;
     this.currentRow = row;
+    this.syncTakeover();
     this.updateActiveCard(row.id);
     this.syncStepButtons();
     this.syncActionsButton();
@@ -972,6 +976,7 @@ export class DatabaseCardDrawer {
     this.coverPicker = null;
     this.removeBackdrop();
     this.wrapper.removeAttribute('data-blok-database-full-page');
+    this.takeover.leave();
 
     // Only the side peek slides out; center and full page leave at once.
     if (this.drawer !== null && this.mode !== 'side') {
@@ -1025,6 +1030,7 @@ export class DatabaseCardDrawer {
     this.coverPicker = null;
     this.removeBackdrop();
     this.wrapper.removeAttribute('data-blok-database-full-page');
+    this.takeover.release();
     this.cancelCellEditor();
     this.cleanupListeners();
     this.cleanupEditor();
@@ -1965,6 +1971,7 @@ export class DatabaseCardDrawer {
       drawer.setAttribute('aria-modal', 'true');
     }
     this.wrapper.toggleAttribute('data-blok-database-full-page', mode === 'full');
+    this.syncTakeover();
 
     if (mode === 'center') {
       this.ensureBackdrop(drawer);
@@ -2016,6 +2023,15 @@ export class DatabaseCardDrawer {
     this.syncActionsButton();
     this.syncFavoriteButton();
     this.syncDetailsDock();
+  }
+
+  /** A full page takes over its editor and the URL (row-page-takeover.ts); a peek gives both back. */
+  private syncTakeover(): void {
+    if (this.mode === 'full' && this.drawer !== null && this.currentRowId !== null) {
+      this.takeover.enter(this.currentRowId);
+    } else {
+      this.takeover.leave();
+    }
   }
 
   private ensureBackdrop(drawer: HTMLElement): void {

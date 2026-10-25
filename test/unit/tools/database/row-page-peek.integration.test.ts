@@ -153,6 +153,52 @@ describe('row page peek modes', () => {
     expect(q('[data-blok-database-wrapper]')?.hasAttribute('data-blok-database-full-page')).toBe(false);
   });
 
+  describe('a full row page takes over the editor', () => {
+    afterEach(() => {
+      window.history.replaceState(null, '', window.location.pathname);
+    });
+
+    it('hides the rest of the editor and names the row in the URL; its Back undoes both', async () => {
+      await make([{ id: 'p', type: 'paragraph', data: { text: 'Above' } }, ...doc()]);
+      await openRow('r2');
+      await click(q('[data-blok-database-peek-expand]'));
+
+      expect(drawer()?.getAttribute('data-peek-mode')).toBe('full');
+      expect(q('[data-blok-editor]')?.hasAttribute('data-blok-database-row-page')).toBe(true);
+      expect(q('[data-blok-id="db"]')?.hasAttribute('data-blok-database-row-page-path')).toBe(true);
+      expect(q('[data-blok-id="p"]')?.hasAttribute('data-blok-database-row-page-path')).toBe(false);
+      expect(window.location.hash).toBe('#r2?full');
+
+      await click(q('[data-blok-database-drawer-close]'));
+      await quiet();
+
+      expect(q('[data-blok-editor]')?.hasAttribute('data-blok-database-row-page')).toBe(false);
+      expect(window.location.hash).toBe('');
+    });
+
+    it('closes when the browser goes back', async () => {
+      await make(doc({ openPagesIn: 'full' }));
+      await openRow('r2');
+
+      expect(window.location.hash).toBe('#r2?full');
+      window.history.replaceState(null, '', window.location.pathname);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+      await quiet();
+
+      expect(q('[data-blok-database-drawer][data-open]')).toBeNull();
+      expect(q('[data-blok-editor]')?.hasAttribute('data-blok-database-row-page')).toBe(false);
+    });
+
+    it('reopens as a full page from its URL', async () => {
+      window.history.replaceState(null, '', '#r2?full');
+      await make(doc());
+
+      expect(drawer()?.getAttribute('data-peek-mode')).toBe('full');
+      expect(shownTitle()).toBe('Two');
+      expect(q('[data-blok-editor]')?.hasAttribute('data-blok-database-row-page')).toBe(true);
+    });
+  });
+
   it('hands a full page to the host navigate lever instead of drawing it', async () => {
     const navigate = vi.fn();
 

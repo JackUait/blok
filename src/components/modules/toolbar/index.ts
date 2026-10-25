@@ -678,6 +678,12 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     const targetBlock = this.resolveTableCellBlock(unresolvedBlock);
 
+    if (targetBlock.holder.hasAttribute(DATA_ATTR.noControls)) {
+      this.close({ setExplicitlyClosed: false });
+
+      return;
+    }
+
     /**
      * Read-only keeps the settings toggler so a reader can hover a block and copy a
      * link to it. But a block that paints nothing has nothing to point at: the

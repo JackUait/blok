@@ -5200,6 +5200,10 @@ span[data-blok-slash-search] {
   inset: 0;
 }
 
+[data-blok-database-row-page] [data-blok-element]:not([data-blok-database-row-page-path], [data-blok-database-full-page] [data-blok-element]), [data-blok-database-row-page] > [data-blok-bottom-zone] {
+  display: none;
+}
+
 [data-blok-database-drawer][data-peek-mode="full"] {
   position: static;
   width: auto;

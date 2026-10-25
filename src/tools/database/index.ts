@@ -122,6 +122,7 @@ import { DatabaseColumnControls } from './database-column-controls';
 import { DatabaseListRowDrag } from './database-list-row-drag';
 import type { ListRowDragResult } from './database-list-row-drag';
 import { DatabaseCardDrawer } from './database-card-drawer';
+import { readRowPageHash } from './row-page-takeover';
 import type { DrawerBacklink, LayoutTab, LayoutTabsDraft, LayoutTabsHost } from './database-card-drawer';
 import { relatedTabSources, thisPageFilter } from './layout-tab-relations';
 import { DatabaseKeyboard } from './database-keyboard';
@@ -2160,6 +2161,7 @@ export class DatabaseTool implements BlockTool {
     this.queueDraftCleanup();
     this.dueWatching = true;
     document.addEventListener('visibilitychange', this.handleDueVisibility);
+    window.addEventListener('popstate', this.followRowPageHistory);
     this.offerDue();
     this.openLinkedRow();
     if (this.sampleCardsPending) {
@@ -2343,6 +2345,7 @@ export class DatabaseTool implements BlockTool {
     this.dueWatching = false;
     this.scheduleDue();
     document.removeEventListener('visibilitychange', this.handleDueVisibility);
+    window.removeEventListener('popstate', this.followRowPageHistory);
     this.api.events.off(DATABASE_RENDERED_EVENT, this.handleDatabaseRendered);
     this.api.events.off('collaboration:status', this.handleCollaborationStatus);
     if (this.draftGraceTimer !== null) clearTimeout(this.draftGraceTimer);
@@ -7940,6 +7943,23 @@ export class DatabaseTool implements BlockTool {
     this.scheduleDue();
   }
 
+  /** Back closes a full row page; Forward (or a typed `#rowId?full`) opens it again. */
+  private readonly followRowPageHistory = (): void => {
+    if (this.source !== undefined || this.destroyed) return;
+    const link = readRowPageHash();
+    const drawer = this.cardDrawer;
+    const shownFull = drawer?.isOpen === true && drawer.openMode === 'full' ? drawer.openRowId : null;
+    const wanted = link?.full === true && this.model.getRow(link.rowId) !== undefined ? link.rowId : null;
+
+    if (shownFull === wanted) return;
+    if (wanted === null) {
+      drawer?.close();
+
+      return;
+    }
+    this.handleRowClick(wanted, 'full');
+  };
+
   private readonly handleDueVisibility = (): void => {
     // A sleeping laptop holds timers back; waking up checks at once.
     if (document.visibilityState === 'visible' && this.dueWatching) this.offerDue();
@@ -8038,22 +8058,13 @@ export class DatabaseTool implements BlockTool {
 
     // A later render (undo, a peer replace) must not reopen a page the user closed.
     if (hash === rowLink.closed) return;
-    // Split before decoding: an encoded "?" in a row id is not the separator.
-    const split = hash.indexOf('?');
-    const rawRowId = split === -1 ? hash : hash.slice(0, split);
-    const tabId = split === -1 ? null : new URLSearchParams(hash.slice(split + 1)).get('v');
-    // A malformed escape in someone else's hash must not break the render.
-    const rowId = ((): string => {
-      try {
-        return decodeURIComponent(rawRowId);
-      } catch {
-        return '';
-      }
-    })();
+    const link = readRowPageHash();
+    const rowId = link?.rowId ?? '';
+    const tabId = link?.tabId ?? null;
 
     if (this.source === undefined && rowId !== '' && this.model.getRow(rowId) !== undefined) {
       this.openedRowLink = hash;
-      this.handleRowClick(rowId);
+      this.handleRowClick(rowId, link?.full === true ? 'full' : undefined);
       // A host's full page (rowPages.navigate) gets the row only: its drawer did not open.
       if (tabId !== null && tabId !== '' && this.cardDrawer?.openRowId === rowId) this.cardDrawer.showTab(tabId);
     }

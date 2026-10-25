@@ -30,6 +30,10 @@ const UNCORPUSED_COMMANDS: Record<string, string> = {
   'history.versions': 'No corpus runner has a versionHistory fixture yet. The version-history tests cover node, editor, MCP live and C#.',
   'history.read': 'No corpus runner has a versionHistory fixture yet. The version-history tests cover node, editor, MCP live and C#.',
   'history.changes': 'No corpus runner has a versionHistory fixture yet. The version-history tests cover node, editor, MCP live and C#.',
+  // A golden counts only once the user reviews it; until then these sessions test them on every runtime.
+  'database.updateView': 'Corpus case proposed, awaiting user review. test/unit/shared/agent/database-view-settings.test.ts runs it on the json and store sessions.',
+  'database.setLayout': 'Corpus case proposed, awaiting user review. test/unit/shared/agent/database-view-settings.test.ts runs it on the json and store sessions.',
+  'database.setLock': 'Corpus case proposed, awaiting user review. test/unit/shared/agent/database-view-settings.test.ts runs it on the json and store sessions.',
 };
 
 const ID_TOKEN = /\b[a-z-]+:[^\s,;)]+/g;

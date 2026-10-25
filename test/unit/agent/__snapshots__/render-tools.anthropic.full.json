@@ -1748,6 +1748,89 @@
                 "type": "object",
                 "properties": {
                   "name": {
+                    "const": "database.setLayout"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "viewId",
+                      "type"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "viewId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a view in views."
+                      },
+                      "type": {
+                        "enum": [
+                          "board",
+                          "table",
+                          "list",
+                          "gallery",
+                          "calendar",
+                          "timeline",
+                          "chart",
+                          "feed",
+                          "form",
+                          "map"
+                        ]
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.setLock"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "locked"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "locked": {
+                        "type": "boolean"
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
                     "const": "database.setRowValues"
                   },
                   "args": {
@@ -2647,6 +2730,1390 @@
                                     "type": "boolean"
                                   }
                                 }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "pageLayoutStructure": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "simple",
+                                  "tabbed"
+                                ],
+                                "description": "Read on the title property only: the row page structure. Default simple."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "pageLayoutGroupIn": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "page",
+                                  "panel"
+                                ],
+                                "description": "Read on the title property only: where the row page property group sits. Default page."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "pageLayoutPropertyIcons": {
+                            "anyOf": [
+                              {
+                                "type": "boolean",
+                                "enum": [
+                                  false
+                                ],
+                                "description": "Read on the title property only: false hides the icon beside each row page property label. Absent means shown."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "pageLayoutPropertyLabels": {
+                            "anyOf": [
+                              {
+                                "type": "boolean",
+                                "enum": [
+                                  false
+                                ],
+                                "description": "Read on the title property only: false hides the property labels in the row page heading. Absent means shown."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "pageLayoutTemplates": {
+                            "anyOf": [
+                              {
+                                "type": "boolean",
+                                "enum": [
+                                  false
+                                ],
+                                "description": "Read on the title property only: false hides the database templates on an empty row page. Absent means shown."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "pageLayoutFullWidth": {
+                            "anyOf": [
+                              {
+                                "type": "boolean",
+                                "enum": [
+                                  true
+                                ],
+                                "description": "Read on the title property only: true lays every row page out full width. Absent means off."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "pageLayoutTabsId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "Read on the title property only: id of the tabs child of this database that holds the row page view tabs (first tab is Content; each other tab holds one linked database). Kept while Simple. Absent means none yet. A tab or tabs child carrying `draft` is someone's unapplied layout draft, not part of the layout."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "pageLayoutPlacements": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "description": "Read on the title property only: where properties sit on the row page. A property with no entry sits in the property group.",
+                                "items": {
+                                  "type": "object",
+                                  "required": [
+                                    "id",
+                                    "place"
+                                  ],
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "description": "The property id."
+                                    },
+                                    "place": {
+                                      "type": "string",
+                                      "enum": [
+                                        "heading",
+                                        "page",
+                                        "panel",
+                                        "section",
+                                        "group"
+                                      ],
+                                      "description": "heading pins it under the title; page and panel give it a module of its own; group keeps it in the property group, ahead of the properties with no entry."
+                                    },
+                                    "sectionId": {
+                                      "type": "string",
+                                      "description": "With place \"section\": the section it sits in."
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "pageLayoutSections": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "description": "Read on the title property only: named sections of the row page property group.",
+                                "items": {
+                                  "type": "object",
+                                  "required": [
+                                    "id",
+                                    "name"
+                                  ],
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.updateView"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "viewId",
+                      "changes"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "viewId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a view in views."
+                      },
+                      "changes": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "description": "View keys to change, in the saved view shape. A key given replaces its whole value; null removes it (back to its default). Keys not given stay.",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "groupBy": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "Property id. Required for a board view."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "groupByStatus": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "group",
+                                  "option"
+                                ],
+                                "description": "Grouping by a status: one group per status group or per option. Default option."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sorts": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "propertyId",
+                                "direction"
+                              ],
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "propertyId": {
+                                  "type": "string"
+                                },
+                                "direction": {
+                                  "type": "string",
+                                  "enum": [
+                                    "asc",
+                                    "desc"
+                                  ]
+                                }
+                              }
+                            }
+                          },
+                          "filters": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "propertyId",
+                                "operator",
+                                "value"
+                              ],
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "propertyId": {
+                                  "type": "string"
+                                },
+                                "operator": {
+                                  "type": "string",
+                                  "description": "Notion API operator. Dates add past_week, next_month, this_week, relative_to_today and others."
+                                },
+                                "value": {
+                                  "description": "Any property value; shape follows the property type."
+                                }
+                              }
+                            }
+                          },
+                          "properties": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "description": "Per-property settings in this view; array order is column order. Wins over visibleProperties.",
+                                "items": {
+                                  "type": "object",
+                                  "required": [
+                                    "id"
+                                  ],
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "description": "Property id."
+                                    },
+                                    "visible": {
+                                      "type": "boolean"
+                                    },
+                                    "width": {
+                                      "type": "number",
+                                      "exclusiveMinimum": 0,
+                                      "description": "Column width in pixels."
+                                    },
+                                    "wrap": {
+                                      "type": "boolean"
+                                    },
+                                    "required": {
+                                      "type": "boolean",
+                                      "description": "Form: the question must be answered."
+                                    },
+                                    "description": {
+                                      "type": "string",
+                                      "description": "Form: help text under the question."
+                                    },
+                                    "questionName": {
+                                      "type": "string",
+                                      "description": "Form: a detached question label; absent follows the property name."
+                                    },
+                                    "longAnswer": {
+                                      "type": "boolean",
+                                      "description": "Form: a multi-line text answer; absent means a one-line answer."
+                                    },
+                                    "maxSelections": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "description": "Form: maximum multi-select, people or relation selections."
+                                    },
+                                    "showOptionsAs": {
+                                      "type": "string",
+                                      "enum": [
+                                        "list",
+                                        "dropdown"
+                                      ],
+                                      "description": "Form: how a choice question lists its options; absent is list for multi-select, dropdown for select and status."
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "wrapCells": {
+                            "anyOf": [
+                              {
+                                "type": "boolean",
+                                "description": "Wrap every cell. Default true for a table, false otherwise."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "frozenColumnCount": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 0,
+                                "description": "Columns from the start that stay put on horizontal scroll. Default 0."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "showVerticalLines": {
+                            "anyOf": [
+                              {
+                                "type": "boolean",
+                                "description": "Default true."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "loadLimit": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "enum": [
+                                  10,
+                                  25,
+                                  50,
+                                  100
+                                ],
+                                "description": "Rows shown before \"Load more\"."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "calculations": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "description": "Footer calculations, one per property.",
+                                "items": {
+                                  "type": "object",
+                                  "required": [
+                                    "id",
+                                    "fn"
+                                  ],
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "description": "Property id."
+                                    },
+                                    "fn": {
+                                      "type": "string",
+                                      "enum": [
+                                        "count",
+                                        "count_values",
+                                        "unique",
+                                        "empty",
+                                        "not_empty",
+                                        "percent_empty",
+                                        "percent_not_empty",
+                                        "sum",
+                                        "average",
+                                        "median",
+                                        "min",
+                                        "max",
+                                        "range",
+                                        "earliest_date",
+                                        "latest_date",
+                                        "date_range",
+                                        "checked",
+                                        "unchecked",
+                                        "percent_checked",
+                                        "percent_unchecked"
+                                      ]
+                                    },
+                                    "capCounts": {
+                                      "type": "boolean",
+                                      "description": "Show a count above 99 as \"99+\". Default false."
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "openPagesIn": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "side",
+                                  "center",
+                                  "full"
+                                ],
+                                "description": "Where a row page opens. Default side; center for gallery and calendar."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "cardSize": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "small",
+                                  "medium",
+                                  "large"
+                                ],
+                                "description": "Gallery or board card size. Default medium."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "cardPreview": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^(none|cover|content|property:.+)$",
+                                "description": "What a gallery or board card shows above its title: none, the page cover, the page content, or \"property:<id>\". Default content on a gallery, none on a board."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "fitImage": {
+                            "anyOf": [
+                              {
+                                "type": "boolean",
+                                "description": "Gallery or board: show the whole image instead of cropping it. Default false."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "cardLayout": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "compact",
+                                  "list"
+                                ],
+                                "description": "Board: list puts each card property on its own line, compact sets them side by side. Default list."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "calendarBy": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "Calendar: the date property id that places each row. Default the first date property."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "calendarRange": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "month",
+                                  "week"
+                                ],
+                                "description": "Calendar range. Default month."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "showWeekends": {
+                            "anyOf": [
+                              {
+                                "type": "boolean",
+                                "description": "Calendar. Default true."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "timelineBy": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "Timeline: the date property id that places each bar. Default the first date property."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "timelineEndBy": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "Timeline: a second date property id that ends each bar. Absent means timelineBy holds the range."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "timelineZoom": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "hours",
+                                  "day",
+                                  "week",
+                                  "bi_week",
+                                  "month",
+                                  "quarter",
+                                  "year",
+                                  "5_years"
+                                ],
+                                "description": "Timeline zoom. Default month."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "timelineCenter": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                "description": "Timeline: the shared centre day (YYYY-MM-DD). A person's own last centre wins over it."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "showTimelineTable": {
+                            "anyOf": [
+                              {
+                                "type": "boolean",
+                                "description": "Timeline: show the table panel. Default false."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "tableProperties": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "description": "Timeline table panel columns, apart from the bar properties; array order is column order.",
+                                "items": {
+                                  "type": "object",
+                                  "required": [
+                                    "id"
+                                  ],
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "description": "Property id."
+                                    },
+                                    "visible": {
+                                      "type": "boolean"
+                                    },
+                                    "width": {
+                                      "type": "number",
+                                      "exclusiveMinimum": 0,
+                                      "description": "Column width in pixels."
+                                    },
+                                    "wrap": {
+                                      "type": "boolean"
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "arrowsBy": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "Timeline: the self-relation property id that draws dependency arrows."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "chartType": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "column",
+                                  "bar",
+                                  "line",
+                                  "donut",
+                                  "number"
+                                ],
+                                "description": "Chart: the chart type. The X axis (donut: each slice) is groupBy; the series are subGroupBy. Default column."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "chartMeasure": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^(count|[a-z_]+:.+)$",
+                                "description": "Chart: the Y axis, \"count\" or \"<calculation>:<property id>\" such as \"sum:p1\". Default count."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "chartSort": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "manual",
+                                  "xAscending",
+                                  "xDescending",
+                                  "yAscending",
+                                  "yDescending"
+                                ],
+                                "description": "Chart: bar order. Default manual (the group order)."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "chartOmitZero": {
+                            "anyOf": [
+                              {
+                                "type": "boolean",
+                                "description": "Chart: drop groups whose value is zero. Default false."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "chartCumulative": {
+                            "anyOf": [
+                              {
+                                "type": "boolean",
+                                "description": "Chart: running total. Applies only to count or sum with chartSort xAscending. Default false."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "chartColor": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "auto",
+                                  "colorful",
+                                  "gray",
+                                  "blue",
+                                  "yellow",
+                                  "green",
+                                  "purple",
+                                  "teal",
+                                  "orange",
+                                  "pink",
+                                  "red"
+                                ],
+                                "description": "Chart color palette. Default auto."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "chartHeight": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "small",
+                                  "medium",
+                                  "large",
+                                  "extraLarge"
+                                ],
+                                "description": "Chart height. Default medium."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "chartGridLines": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "none",
+                                  "horizontal",
+                                  "vertical",
+                                  "both"
+                                ],
+                                "description": "Chart grid lines. Default horizontal."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "chartAxisNames": {
+                            "anyOf": [
+                              {
+                                "type": "boolean",
+                                "description": "Chart: show axis names. Default false."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "chartDataLabels": {
+                            "anyOf": [
+                              {
+                                "type": "boolean",
+                                "description": "Chart: show a value on each bar, point or slice. Default false."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "chartSmooth": {
+                            "anyOf": [
+                              {
+                                "type": "boolean",
+                                "description": "Line chart: smooth curve. Default false."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "chartGradient": {
+                            "anyOf": [
+                              {
+                                "type": "boolean",
+                                "description": "Line chart: shade the area under the line. Default false."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "chartCenterValue": {
+                            "anyOf": [
+                              {
+                                "type": "boolean",
+                                "description": "Donut chart: show the total in the center. Default true."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "chartLegend": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "off",
+                                  "bottom",
+                                  "side"
+                                ],
+                                "description": "Chart legend position. Default bottom."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "noValueGroupPosition": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "Where the no-value group sits among the groups. Absent means last."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "groupOrder": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "additionalProperties": {
+                                  "type": "string"
+                                },
+                                "description": "This view's own manual group order: option id to a fractional key, compared with option positions. An option without a key uses its position."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "hiddenGroups": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "required": [
+                                    "id"
+                                  ],
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "description": "Option id of the group."
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "collapsedGroups": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "required": [
+                                    "id"
+                                  ],
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "description": "Option id of the group."
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "hideGroupAggregation": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "groupCalculation": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "required": [
+                                  "id",
+                                  "fn"
+                                ],
+                                "additionalProperties": false,
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "description": "Property id."
+                                  },
+                                  "fn": {
+                                    "type": "string",
+                                    "enum": [
+                                      "count",
+                                      "count_values",
+                                      "unique",
+                                      "empty",
+                                      "not_empty",
+                                      "percent_empty",
+                                      "percent_not_empty",
+                                      "sum",
+                                      "average",
+                                      "median",
+                                      "min",
+                                      "max",
+                                      "range",
+                                      "earliest_date",
+                                      "latest_date",
+                                      "date_range",
+                                      "checked",
+                                      "unchecked",
+                                      "percent_checked",
+                                      "percent_unchecked"
+                                    ]
+                                  },
+                                  "capCounts": {
+                                    "type": "boolean",
+                                    "description": "Show a count above 99 as \"99+\". Default false."
+                                  }
+                                },
+                                "description": "Board: the calculation beside every group name. Absent means count all rows, shown as \"99+\" above 99. fn count is saved only to keep that cap off."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "filterTree": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "description": "Advanced filter: { conjunction: \"and\" | \"or\", filterRules: [rule or group] }, a rule being { propertyId, operator, value } and a group nesting the same shape, three layers deep. Ids are filled in when missing. Rows must match it and every simple filter."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "groupSettings": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "sort": {
+                                    "type": "string",
+                                    "enum": [
+                                      "manual",
+                                      "ascending",
+                                      "descending"
+                                    ]
+                                  },
+                                  "dateBy": {
+                                    "type": "string",
+                                    "enum": [
+                                      "relative",
+                                      "day",
+                                      "week",
+                                      "month",
+                                      "year"
+                                    ]
+                                  },
+                                  "weekStart": {
+                                    "type": "integer",
+                                    "enum": [
+                                      0,
+                                      1
+                                    ],
+                                    "description": "0 is Sunday, 1 is Monday."
+                                  },
+                                  "numberBy": {
+                                    "type": "string",
+                                    "enum": [
+                                      "unique",
+                                      "range"
+                                    ]
+                                  },
+                                  "rangeStart": {
+                                    "type": "number"
+                                  },
+                                  "rangeEnd": {
+                                    "type": "number"
+                                  },
+                                  "rangeSize": {
+                                    "type": "number",
+                                    "minimum": 1
+                                  },
+                                  "textBy": {
+                                    "type": "string",
+                                    "enum": [
+                                      "exact",
+                                      "alphabet"
+                                    ]
+                                  },
+                                  "hideEmptyGroups": {
+                                    "type": "boolean"
+                                  },
+                                  "colorColumns": {
+                                    "type": "boolean",
+                                    "description": "Board only. Default true."
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "subGroupBy": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "Board only: property id of a second grouping inside each column. Its keys in hiddenGroups/collapsedGroups start with \"sub:\"."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "subGroupSettings": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "sort": {
+                                    "type": "string",
+                                    "enum": [
+                                      "manual",
+                                      "ascending",
+                                      "descending"
+                                    ]
+                                  },
+                                  "dateBy": {
+                                    "type": "string",
+                                    "enum": [
+                                      "relative",
+                                      "day",
+                                      "week",
+                                      "month",
+                                      "year"
+                                    ]
+                                  },
+                                  "weekStart": {
+                                    "type": "integer",
+                                    "enum": [
+                                      0,
+                                      1
+                                    ],
+                                    "description": "0 is Sunday, 1 is Monday."
+                                  },
+                                  "numberBy": {
+                                    "type": "string",
+                                    "enum": [
+                                      "unique",
+                                      "range"
+                                    ]
+                                  },
+                                  "rangeStart": {
+                                    "type": "number"
+                                  },
+                                  "rangeEnd": {
+                                    "type": "number"
+                                  },
+                                  "rangeSize": {
+                                    "type": "number",
+                                    "minimum": 1
+                                  },
+                                  "textBy": {
+                                    "type": "string",
+                                    "enum": [
+                                      "exact",
+                                      "alphabet"
+                                    ]
+                                  },
+                                  "hideEmptyGroups": {
+                                    "type": "boolean"
+                                  },
+                                  "colorColumns": {
+                                    "type": "boolean",
+                                    "description": "Board only. Default true."
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "colorRules": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "description": "Conditional color. The first matching rule colors a row.",
+                                "items": {
+                                  "type": "object",
+                                  "required": [
+                                    "propertyId",
+                                    "operator",
+                                    "value",
+                                    "color"
+                                  ],
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "propertyId": {
+                                      "type": "string"
+                                    },
+                                    "operator": {
+                                      "type": "string"
+                                    },
+                                    "value": {
+                                      "description": "Any property value; shape follows the property type."
+                                    },
+                                    "color": {
+                                      "type": "string"
+                                    },
+                                    "applyTo": {
+                                      "type": "string",
+                                      "enum": [
+                                        "row",
+                                        "property"
+                                      ],
+                                      "description": "Table only. Default row."
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "showPageIcon": {
+                            "anyOf": [
+                              {
+                                "type": "boolean",
+                                "description": "Default true."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "showDataSourceTitle": {
+                            "anyOf": [
+                              {
+                                "type": "boolean",
+                                "description": "Linked views only: show the source title. Default true."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "subItemsDisplay": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "nested",
+                                  "card",
+                                  "flattened"
+                                ],
+                                "description": "Sub-items: nested (table, list, timeline) or card (board, calendar, gallery) by default, or flattened."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "subItemsFilter": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "parents",
+                                  "parentsAndSubItems",
+                                  "subItems"
+                                ],
+                                "description": "Sub-items: which rows show. Default parents."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "form": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "description": "Form view settings. The public link is the host's.",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "closed": {
+                                    "type": "boolean",
+                                    "description": "The form takes no answers. Default false."
+                                  },
+                                  "anonymous": {
+                                    "type": "boolean",
+                                    "description": "Answers carry no respondent. Default false."
+                                  },
+                                  "public": {
+                                    "type": "boolean",
+                                    "description": "Anyone on the web with the link can fill it out. Default false: workspace members only."
+                                  },
+                                  "submissionAccess": {
+                                    "type": "string",
+                                    "enum": [
+                                      "none",
+                                      "view",
+                                      "comment",
+                                      "edit",
+                                      "full"
+                                    ],
+                                    "description": "What a respondent may do with the page their answer becomes. Default none."
+                                  },
+                                  "submitLabel": {
+                                    "type": "string"
+                                  },
+                                  "confirmation": {
+                                    "type": "string",
+                                    "description": "Text shown after a submit."
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "mapBy": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "Map: the place property id. Default the first place property."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "mapHeight": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "small",
+                                  "medium",
+                                  "large",
+                                  "extraLarge"
+                                ],
+                                "description": "Map height: 300, 400, 600 or 800 px. Default medium."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "dashboard": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "description": "Dashboard slot, same shape as the saved view field. Blok draws no dashboard yet."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "calendarSync": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "description": "Calendar sync slot, for the host. Blok syncs nothing.",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "enabled": {
+                                    "type": "boolean"
+                                  },
+                                  "calendarId": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "dataSourceId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "Multi-source slot: the database block whose rows this view shows. Absent means this database. Blok reads only its own rows yet."
                               },
                               {
                                 "type": "null"

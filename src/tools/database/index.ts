@@ -4550,6 +4550,10 @@ export class DatabaseTool implements BlockTool {
     }
 
     this.titleRowElement.querySelector(':scope > [data-blok-database-title-more]')?.remove();
+    // A rebuild makes a new button; the old one stays in the title row unless it goes here.
+    this.titleRowElement.querySelectorAll('[data-blok-database-add-view]').forEach((el) => {
+      el.remove();
+    });
     if (single && !this.readOnly && !this.structureLocked() && addBtn !== null) {
       this.titleRowElement.insertBefore(addBtn, toolbar);
       this.titleRowElement.insertBefore(this.tabBar.createTitleMoreButton(), toolbar);
@@ -4557,12 +4561,6 @@ export class DatabaseTool implements BlockTool {
         tabBarEl.style.display = 'none';
       }
     } else {
-      // Remove all stale addBtn(s) from titleRow before re-attaching cleanly
-      const staleInTitleRow = this.titleRowElement.querySelectorAll('[data-blok-database-add-view]');
-      staleInTitleRow.forEach((el) => {
-        el.remove();
-      });
-
       if (!this.readOnly && !this.structureLocked() && addBtn !== null && tabBarEl !== null && !tabBarEl.contains(addBtn)) {
         tabBarEl.appendChild(addBtn);
       }

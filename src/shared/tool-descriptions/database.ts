@@ -779,6 +779,44 @@ export const DATABASE_DATA = {
 
 const VIEW_ID = { type: 'string', minLength: 1, description: 'Id of a view in views.' };
 
+/**
+ * Not view settings: id and position are the view's own, the layout type is database.setLayout,
+ * rowOrder follows row moves, visibleProperties follows properties, and only a relation tab's birth sets propertyOrder.
+ */
+const NOT_VIEW_SETTINGS = new Set(['id', 'position', 'type', 'visibleProperties', 'rowOrder', 'propertyOrder']);
+
+/** Saved on every view: a change can replace them, never remove them. */
+const REQUIRED_VIEW_SETTINGS = new Set(['name', 'sorts', 'filters']);
+
+const VIEW_PROPERTIES: Record<string, Record<string, unknown>> = DATABASE_DATA.properties.views.items.properties;
+
+/** Ids are optional here: updateView fills them in. */
+const withOptionalId = (items: Record<string, unknown>): Record<string, unknown> => ({
+  ...items,
+  required: (items.required as string[]).filter(key => key !== 'id'),
+});
+
+const VIEW_SETTING_ARGS: Record<string, unknown> = {
+  ...VIEW_PROPERTIES,
+  // Spelled out, these take the agent tool schema past the OpenAI depth limit (src/agent/render-tools.ts); the saved view is still checked whole.
+  filterTree: { type: 'object', description: 'Advanced filter: { conjunction: "and" | "or", filterRules: [rule or group] }, a rule being { propertyId, operator, value } and a group nesting the same shape, three layers deep. Ids are filled in when missing. Rows must match it and every simple filter.' },
+  dashboard: { type: 'object', description: 'Dashboard slot, same shape as the saved view field. Blok draws no dashboard yet.' },
+  colorRules: { ...VIEW_PROPERTIES.colorRules, items: withOptionalId(VIEW_PROPERTIES.colorRules.items as Record<string, unknown>) },
+};
+
+const VIEW_CHANGES = {
+  type: 'object',
+  additionalProperties: false,
+  description: 'View keys to change, in the saved view shape. A key given replaces its whole value; null removes it (back to its default). Keys not given stay.',
+  properties: Object.fromEntries(Object.entries(VIEW_SETTING_ARGS)
+    .filter(([key]) => !NOT_VIEW_SETTINGS.has(key))
+    .map(([key, setting]) => [key, REQUIRED_VIEW_SETTINGS.has(key) ? setting : { anyOf: [setting, { type: 'null' }] }])),
+};
+
+/** The title property's row page layout fields, settable through updateProperty. */
+const PAGE_LAYOUT_SETTINGS = Object.fromEntries(Object.entries(DATABASE_DATA.properties.schema.items.properties)
+  .filter(([key]) => key.startsWith('pageLayout')));
+
 const PROPERTY_ID = { type: 'string', minLength: 1, description: 'Id of a property in schema.' };
 
 const OPTION_ID = { type: 'string', minLength: 1, description: 'Id of an option in the property\'s config.options.' };
@@ -814,7 +852,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
   {
     name: 'addView',
     summary: 'Add a view at the end and open it.',
-    guidance: 'A board or chart groups by groupBy, else by the first select property. A board needs a select property.',
+    guidance: 'A board or chart groups by groupBy, else by the first select property. A board needs a select property. A map adds a Place property when there is none. Change its settings with database.updateView.',
     target: 'block',
     args: closed({ type: { enum: ADDABLE_VIEW_TYPES }, name: { type: 'string' }, groupBy: { type: 'string', description: 'Property id to group by.' } }, ['type']),
     result: closed({ viewId: { type: 'string' } }, ['viewId']),
@@ -852,6 +890,33 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
       // oneOf over `required` only: core adds `id` to these properties for the block target.
       oneOf: [{ required: ['before'] }, { required: ['after'] }],
     },
+    mirrors: [],
+  },
+  {
+    name: 'updateView',
+    summary: 'Change a view\'s saved settings: filters, sorts, grouping, calculations, columns, card, calendar, timeline, chart, map and form options. It applies for everyone.',
+    guidance: 'Only the keys in changes change. Each key replaces its whole value, so read the view first: to hide one column, send the full properties list with that entry visible false. null removes a key. '
+      + 'Grouping by another property resets groupSettings (subGroupBy: subGroupSettings) to that type\'s defaults unless changes also sets them. A filter or sort without an id gets one. '
+      + 'Change the layout type with database.setLayout.',
+    target: 'block',
+    preconditions: ['The database is not locked.', 'Every property a setting names exists, and has a type that setting can use.'],
+    args: closed({ viewId: VIEW_ID, changes: VIEW_CHANGES }, ['viewId', 'changes']),
+    mirrors: [],
+  },
+  {
+    name: 'setLayout',
+    summary: 'Change a view\'s layout type, as the view settings Layout menu does.',
+    guidance: 'A board without a grouping groups by the first select, multi-select or status property, else the first property it can group by. A map adds a Place property when there is none. A timeline starts with no table columns.',
+    target: 'block',
+    preconditions: ['The database is not locked.', 'A board needs a property it can group by.'],
+    args: closed({ viewId: VIEW_ID, type: { enum: ADDABLE_VIEW_TYPES } }, ['viewId', 'type']),
+    mirrors: [],
+  },
+  {
+    name: 'setLock',
+    summary: 'Lock or unlock the database. A locked database\'s properties and views cannot change; rows can.',
+    target: 'block',
+    args: closed({ locked: { type: 'boolean' } }, ['locked']),
     mirrors: [],
   },
   {
@@ -932,8 +997,8 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
   },
   {
     name: 'updateProperty',
-    summary: 'Rename a property or change its settings (description, icon, page visibility, number, date, status, ID, formula, relation, rollup, button, dependency, autofill).',
-    guidance: 'settings keys follow schema; null removes one. The type cannot change here.',
+    summary: 'Rename a property or change its settings (description, icon, page visibility, number, date, status, ID, formula, relation, rollup, button, dependency, autofill), or the row page layout on the title property.',
+    guidance: 'settings keys follow schema; null removes one. The type cannot change here. The pageLayout* keys go on the title property only; pageLayoutTabsId names a tabs child block of this database that you make with block.insert.',
     target: 'block',
     preconditions: ['The new name is not the name of another property (exact match, case-sensitive).'],
     args: closed({
@@ -942,7 +1007,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
       settings: {
         type: 'object',
         additionalProperties: false,
-        properties: Object.fromEntries(Object.entries(PROPERTY_SETTINGS).map(([key, setting]) => [key, { anyOf: [setting, { type: 'null' }] }])),
+        properties: Object.fromEntries(Object.entries({ ...PROPERTY_SETTINGS, ...PAGE_LAYOUT_SETTINGS }).map(([key, setting]) => [key, { anyOf: [setting, { type: 'null' }] }])),
       },
     }, ['propertyId']),
     mirrors: [],
@@ -1014,10 +1079,13 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
 
 export const describeDatabase = (_config: Record<string, unknown> = {}): BlockToolDescription => ({
   summary: 'A database: a schema of properties and saved views. Rows are child database-row blocks.',
-  guidance: 'Add rows with database.addRow and change their values with database.setRowValues. Change views, properties and select options with the database.* actions; schema and views cannot be written directly.',
+  guidance: 'Add rows with database.addRow and change their values with database.setRowValues. Change a view\'s settings (filters, sorts, grouping, columns, layout options) with database.updateView and its layout type with database.setLayout; add, rename, move, duplicate and delete views with the other database.* view actions. Change properties and options with the database.* property actions, and lock or unlock with database.setLock. schema and views cannot be written directly.',
   data: DATABASE_DATA,
   inputFields: ['title'],
   summaryFields: ['title', 'activeViewId'],
-  guardedFields: { schema: 'database.*', views: 'database.*' },
+  guardedFields: {
+    schema: 'database.addProperty, database.updateProperty or another database.* property action',
+    views: 'database.updateView for settings, database.setLayout for the layout type, or another database.* view action',
+  },
   actions: DATABASE_ACTIONS,
 });

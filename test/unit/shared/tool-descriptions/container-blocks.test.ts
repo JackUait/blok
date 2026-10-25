@@ -58,7 +58,10 @@ describe('container self-description discovery', () => {
     }
 
     expect(describeTable({}).guardedFields).toEqual({ content: 'table.*' });
-    expect(describeDatabase({}).guardedFields).toEqual({ schema: 'database.*', views: 'database.*' });
+    expect(describeDatabase({}).guardedFields).toEqual({
+      schema: 'database.addProperty, database.updateProperty or another database.* property action',
+      views: 'database.updateView for settings, database.setLayout for the layout type, or another database.* view action',
+    });
   });
 });
 
@@ -93,9 +96,12 @@ const CONTAINER_DESCRIPTIONS: Array<{
     data: DATABASE_DATA,
     expected: {
       summary: 'A database: a schema of properties and saved views. Rows are child database-row blocks.',
-      guidance: 'Add rows with database.addRow and change their values with database.setRowValues. Change views, properties and select options with the database.* actions; schema and views cannot be written directly.',
+      guidance: 'Add rows with database.addRow and change their values with database.setRowValues. Change a view\'s settings (filters, sorts, grouping, columns, layout options) with database.updateView and its layout type with database.setLayout; add, rename, move, duplicate and delete views with the other database.* view actions. Change properties and options with the database.* property actions, and lock or unlock with database.setLock. schema and views cannot be written directly.',
       summaryFields: ['title', 'activeViewId'],
-      guardedFields: { schema: 'database.*', views: 'database.*' },
+      guardedFields: {
+        schema: 'database.addProperty, database.updateProperty or another database.* property action',
+        views: 'database.updateView for settings, database.setLayout for the layout type, or another database.* view action',
+      },
     },
   },
   {

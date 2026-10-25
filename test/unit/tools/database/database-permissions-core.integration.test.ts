@@ -738,6 +738,14 @@ describe('database permissions reach core block actions', () => {
       expect(await run(instance, { commands: [{ name: 'database.addRow', args: { id: 'db', values: { t: 'Agent row' } } }] })).toBeNull();
     });
 
+    it('the agent cannot change a view\'s settings or layout, or lock the database', async () => {
+      const instance = await boot(['editStructure']);
+
+      expect(await run(instance, { commands: [{ name: 'database.updateView', args: { id: 'db', viewId: 'v1', changes: { frozenColumnCount: 1 } } }] })).toBe('PRECONDITION_FAILED');
+      expect(await run(instance, { commands: [{ name: 'database.setLayout', args: { id: 'db', viewId: 'v1', type: 'list' } }] })).toBe('PRECONDITION_FAILED');
+      expect(await run(instance, { commands: [{ name: 'database.setLock', args: { id: 'db', locked: true } }] })).toBe('PRECONDITION_FAILED');
+    });
+
     it('the agent can still edit a row body block', async () => {
       const instance = await boot(['editStructure']);
 

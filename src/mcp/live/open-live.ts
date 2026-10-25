@@ -18,6 +18,7 @@ import type { HandleSession, UnavailableCommand } from '../session';
 import { createLiveSession, terminalToError } from './live-session';
 import { nodeSocketFactory } from './node-socket';
 import { AgentPresence } from './presence';
+import { createHttpVersionHistory } from './version-history';
 
 export interface OpenLiveDeps {
   sync: { url: string; origin?: string };
@@ -164,6 +165,9 @@ export const createOpenLive = (deps: OpenLiveDeps) => async (request: OpenReques
       ports: deps.portsFor(caller, actor, async (pageId) => pageId === request.documentId),
       richTextFieldsFor: deps.contracts.richTextFieldsFor,
       ...(deps.pageTitles === 'page-map' && { pageTitles: 'page-map' as const }),
+      services: {
+        versionHistory: createHttpVersionHistory({ roomUrl: url, origin: deps.sync.origin, tickets: ticketSource }),
+      },
     });
     const presence = new AgentPresence(
       { setAwarenessField: (field, value) => room.store.setAwarenessField(field, value), sendActivity: () => room.sendActivity() },

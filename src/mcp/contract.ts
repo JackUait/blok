@@ -18,8 +18,14 @@ export const buildMcpContracts = (input: {
   /** blok-mcp can create page documents, so a page block inserts in both contracts. */
   createsPages?: boolean;
   richTextFields?: Record<string, string[]>;
+  /** A sync URL is set: live handles read the room's version history. */
+  versionHistory?: boolean;
 }): McpContracts => {
-  const services: HostService[] = input.pageTitles === 'page-map' ? ['pageBackend'] : [];
+  // With a sync URL every handle is live (resolveMode), so the listed stored contract may name the history reads too.
+  const services: HostService[] = [
+    ...(input.pageTitles === 'page-map' ? ['pageBackend' as const] : []),
+    ...(input.versionHistory === true ? ['versionHistory' as const] : []),
+  ];
   const prepares = input.createsPages === true && input.pageTitles === 'page-map' ? { prepares: ['page'] } : {};
   const stored = createHeadlessAgentSetup({
     customTools: input.manifest,

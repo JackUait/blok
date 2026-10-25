@@ -65,6 +65,7 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
     pageTitles: options.pageTitles ?? DEFAULTS.pageTitles,
     createsPages,
     richTextFields: options.richTextFields,
+    versionHistory: options.sync !== undefined,
   });
   // page.rename / page.setIcon close their page session without waiting, so stop waits for those closes.
   const pageCloses = new Set<Promise<unknown>>();

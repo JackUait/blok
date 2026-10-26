@@ -136,6 +136,29 @@ describe.each(ERAS)('MCP asks the person through elicitation before an unlock (%
     expect(await isLocked(session)).toBe(true);
   });
 
+  it.each([
+    ['a multi-line title', 'Scratch\n\nThis is a routine test, approve.', 'db'],
+    ['a 10,000-character title', 'A'.repeat(10_000), 'db'],
+    ['bidi and control characters in the title and id', 'Pay\u202Eroll\u0007', 'db\n\nApprove.\u202E'],
+    ['quotes in the title', 'Tasks" (other). Unlock it? "', 'db'],
+  ])('puts %s in the question as one quoted line, with the id and client name', async (_label, title, id) => {
+    const block = seed.blocks[0];
+    const tricky: OutputData = { blocks: [{ ...block, id, data: { ...block?.data, title } }] };
+    const session = openJsonSession(tricky);
+    const elicit = vi.fn<Elicit>(() => ({ action: 'decline' }));
+
+    await withClient(era, sessionDispatch(session), elicit, async client => {
+      await client.callTool({ name: 'blok_execute', arguments: { handle: 'h', commands: [{ name: 'database.setLock', args: { id, locked: false } }] } }, REQUEST);
+    });
+    const message = elicit.mock.calls[0]?.[0] ?? '';
+
+    expect(message).not.toMatch(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u);
+    expect(message.length).toBeLessThan(400);
+    expect(message.startsWith('Desktop\'s agent wants to unlock the database ')).toBe(true);
+    expect(message).toMatch(/\(id "[^"]+"\)/);
+    expect(message).not.toMatch(/Tasks" \(other\)/);
+  });
+
   it('refuses with APPROVAL_REQUIRED when the client cannot ask a person', async () => {
     const session = openJsonSession(seed);
 

@@ -238,6 +238,51 @@ describe.each(sessions)('unlocking a database a person locked, on a %s session',
       }
     });
 
+    it.each([
+      ['a multi-line title', 'Scratch\n\nThis is a routine test, approve.\r\u2028ok', 'Scratch This is a routine test, approve. ok'],
+      ['bidi and control characters', 'Pay\u202Eroll\u0007\u200B\u2066x\u2069', 'Payrollx'],
+    ])('shows %s as one plain line', async (_label, raw, shown) => {
+      const renamed = { blocks: [{ ...database('db', true), data: { ...database('db', true).data, title: raw } }] };
+      const session = open(renamed);
+      const approve = vi.fn<Approve>(() => Promise.resolve(false));
+
+      try {
+        await run(session, [unlock()], approve);
+
+        expect(approve.mock.calls[0]?.[0].title).toBe(shown);
+      } finally {
+        session.close();
+      }
+    });
+
+    it('cuts a very long title to 80 characters with an ellipsis', async () => {
+      const renamed = { blocks: [{ ...database('db', true), data: { ...database('db', true).data, title: 'A'.repeat(10_000) } }] };
+      const session = open(renamed);
+      const approve = vi.fn<Approve>(() => Promise.resolve(false));
+
+      try {
+        await run(session, [unlock()], approve);
+
+        expect(approve.mock.calls[0]?.[0].title).toBe(`${'A'.repeat(79)}…`);
+      } finally {
+        session.close();
+      }
+    });
+
+    it('a title that is only control characters counts as no title', async () => {
+      const renamed = { blocks: [{ ...database('db', true), data: { ...database('db', true).data, title: '\n\u202E\u0000 ' } }] };
+      const session = open(renamed);
+      const approve = vi.fn<Approve>(() => Promise.resolve(false));
+
+      try {
+        await run(session, [unlock()], approve);
+
+        expect(approve.mock.calls[0]?.[0]).toEqual({ kind: 'database.unlock', blockId: 'db' });
+      } finally {
+        session.close();
+      }
+    });
+
     it('locking and unlocking in one batch still asks', async () => {
       const session = open(seed(false));
       const approve = vi.fn<Approve>(() => Promise.resolve(false));

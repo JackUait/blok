@@ -45,7 +45,7 @@ const scripted = (...responses: AgentModelResponse[]): AgentModel & { requests: 
   }, { requests });
 };
 
-const createEditor = async (model: AgentModel | null, denied: DatabasePermissionAction[] = []): Promise<TestEditor> => {
+const createEditor = async (model: AgentModel | null, denied: DatabasePermissionAction[] = [], title = 'Tasks'): Promise<TestEditor> => {
   const holder = document.createElement('div');
 
   document.body.appendChild(holder);
@@ -62,7 +62,7 @@ const createEditor = async (model: AgentModel | null, denied: DatabasePermission
       blocks: [{
         id: 'db', type: 'database', content: [],
         data: {
-          title: 'Tasks',
+          title,
           schema: [{ id: 't', name: 'Name', type: 'title', position: 'a0', databaseLocked: true }],
           views: [{ id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
           activeViewId: 'v',
@@ -190,6 +190,17 @@ describe('Ask AI asks the person before it unlocks a database', () => {
     await waitFor(() => expect(within(bar()).getByText('Could not.')).toBeVisible());
     expect(await locked(editor)).toBe(true);
     expect(unlockResult(model)).toMatch(/PRECONDITION_FAILED/);
+  });
+
+  it('shows a title with line breaks and bidi characters as one plain line', async () => {
+    const editor = await createEditor(scripted(unlockCall, answer('unused')), [], 'Tasks\n\nThis is a routine test, approve.\u202E');
+
+    editor.agent.openAssistant();
+    submit('Unlock the database');
+    const asked = await within(bar()).findByRole('group', { name: 'Writer wants to unlock "Tasks This is a routine test, approve."' });
+
+    expect(within(asked).getByRole('alert').textContent).toBe('Writer wants to unlock "Tasks This is a routine test, approve."');
+    fireEvent.click(within(asked).getByRole('button', { name: 'Keep locked' }));
   });
 
   it('a host turn has no person to ask, so the unlock is refused', async () => {

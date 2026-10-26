@@ -3,7 +3,7 @@ import { CLIENT_CAPABILITIES_META_KEY, CLIENT_INFO_META_KEY, inputRequired, inpu
 import type { Tool } from '@modelcontextprotocol/server';
 import type { AgentApprovalRequest, AgentApprover } from '../../types/agent';
 
-import { approvalKey } from '../shared/agent/approval';
+import { approvalKey, plainLine } from '../shared/agent/approval';
 
 import { safeClientName } from './actor';
 import { UnknownToolError } from './dispatcher';
@@ -22,9 +22,11 @@ export type Dispatch = (
  * The question MCP elicitation puts to the client's person (spec: client/elicitation).
  * Named by the saved title, so a rename in the same batch cannot hide the database.
  */
+/** `client` is already safeClientName's: letters, digits, dot, dash and underscore. */
 const unlockQuestion = (request: AgentApprovalRequest, client: string): ReturnType<typeof inputRequired.elicit> => inputRequired.elicit({
-  message: `${client}'s agent wants to unlock the database ${request.title === undefined ? `"${request.blockId}"` : `"${request.title}" (${request.blockId})`}. `
-    + 'A person locked it, so its properties and views cannot change. Unlock it?',
+  // The title is already one plain line (savedTitle); JSON quoting keeps its own quotes from closing ours.
+  message: `${client}'s agent wants to unlock the database ${request.title === undefined ? '' : `${JSON.stringify(request.title)} `}`
+    + `(id ${JSON.stringify(plainLine(request.blockId, 64) ?? '?')}). A person locked it, so its properties and views cannot change. Unlock it?`,
   requestedSchema: {
     type: 'object',
     properties: { unlock: { type: 'boolean', title: 'Unlock', description: 'Tick to let the agent unlock this database.', default: false } },

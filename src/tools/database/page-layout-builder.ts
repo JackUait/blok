@@ -1590,7 +1590,7 @@ export class PageLayoutBuilder {
         type: PopoverItemType.Default,
         name: 'reset',
         title: this.label('tools.database.layoutReset'),
-        secondaryLabel: this.label('tools.database.layoutResetDescription'),
+        valueLabel: this.label('tools.database.layoutResetDescription'),
         closeOnActivate: true,
         onActivate: () => this.askReset(),
       }] as PopoverItemParams[],

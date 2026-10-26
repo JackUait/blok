@@ -144,6 +144,9 @@ describe('openCsvImportDialog (research/26 §2, research/27 §2)', () => {
     expect(item('database-csv-type-skip')).not.toBeNull();
     expect(item('database-csv-type-title')?.textContent).toContain('Name');
     expect(item('database-csv-type-title')?.textContent).toContain('tools.database.propertyTypeTitle');
+    // A value, not a shortcut: secondaryLabel would draw glyphs and set aria-keyshortcuts.
+    expect(item('database-csv-type-title')?.querySelector('[data-blok-popover-item-value]')?.textContent).toBe('tools.database.propertyTypeTitle');
+    expect(item('database-csv-type-title')?.hasAttribute('aria-keyshortcuts')).toBe(false);
     item('database-csv-type-new')?.click();
     await flush();
 

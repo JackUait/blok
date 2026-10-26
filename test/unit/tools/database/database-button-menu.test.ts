@@ -16,7 +16,7 @@ const schema: PropertyDefinition[] = [
 
 const button: PropertyDefinition = { id: 'btn', name: 'Act', type: 'button', position: 'a6', button: { label: 'Go', buttonActions: [{ id: 'a1', type: 'openPage' }] } };
 
-interface Item { name?: string; title?: string; secondaryLabel?: string; element?: HTMLElement; isActive?: boolean | (() => boolean); onActivate?: () => void; children?: { items?: Item[] } }
+interface Item { name?: string; title?: string; secondaryLabel?: string; valueLabel?: string; element?: HTMLElement; isActive?: boolean | (() => boolean); onActivate?: () => void; children?: { items?: Item[] } }
 
 const find = (items: PopoverItemParams[] | Item[] | undefined, ...path: string[]): Item | undefined => {
   let level = items as Item[] | undefined;
@@ -181,7 +181,7 @@ describe('button settings items — Notion actions', () => {
     const target = find(itemsFor(actions), 'buttonAction-b', 'buttonAction-b-target')?.children?.items ?? [];
 
     expect(target.map((i) => i.name)).toEqual(['buttonTarget-b-thisPage', 'buttonTarget-b-step-a', 'buttonTarget-b-db', 'buttonTarget-b-other']);
-    expect(target[1].secondaryLabel).toBe('tools.database.buttonPageAddedTo {"name":"Other"}');
+    expect(target[1].valueLabel).toBe('tools.database.buttonPageAddedTo {"name":"Other"}');
   });
 
   it('Edit pages in: a data source edits all pages until a filter is set, and the filter row opens the filter editor', () => {
@@ -206,6 +206,25 @@ describe('button settings items — Notion actions', () => {
     find(itemsFor(added, ctx), `buttonAction-${added[0].id}`, `buttonAction-${added[0].id}-addVariable`)?.onActivate?.();
 
     expect(lastActions(ctx.update)[0]).toMatchObject({ variables: [{ name: 'tools.database.buttonVariableName {"n":1}' }, { name: 'tools.database.buttonVariableName {"n":2}' }] });
+  });
+
+  // secondaryLabel draws a keyboard shortcut (glyphs, aria-keyshortcuts). These rows show values, so they use valueLabel.
+  it('shows each row\'s current pick as a plain value, never as a shortcut', () => {
+    const actions: ButtonAction[] = [
+      { id: 'a', type: 'addPage', databaseId: 'other' },
+      { id: 'o', type: 'openPage', stepId: 'a' },
+      { id: 'b', type: 'editPages', target: { type: 'database', databaseId: 'other' } },
+      { id: 'v', type: 'defineVariables', variables: [{ id: 'x', name: 'X', kind: 'text', value: 'hello' }] },
+      { id: 'n', type: 'sendNotification', recipients: { type: 'property', propertyId: 'owner' } },
+    ];
+    const all = (items: Item[]): Item[] => items.flatMap((item) => [item, ...all(item.children?.items ?? [])]);
+    const items = itemsFor(actions) as Item[];
+
+    expect(all(items).filter((item) => item.secondaryLabel !== undefined).map((item) => item.name)).toEqual([]);
+    expect(find(items, 'buttonAction-a', 'buttonAction-a-source')?.valueLabel).toBe('Other');
+    expect(find(items, 'buttonAction-b', 'buttonAction-b-target')?.valueLabel).toBe('Other');
+    expect(find(items, 'buttonAction-v', 'buttonVariable-v-x')?.valueLabel).toBe('hello');
+    expect(find(items, 'buttonAction-n', 'buttonAction-n-recipients')?.valueLabel).toBe('Owner');
   });
 
   it('Send notification: picks up to 20 specific people, or a person property', () => {

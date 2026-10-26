@@ -288,7 +288,7 @@ export const buttonEditItems = (property: PropertyDefinition, ctx: ButtonMenuCon
               ...earlier.map((step) => ({
                 name: `buttonOpen-${action.id}-step-${step.id}`,
                 title: t('tools.database.automationPageAdded'),
-                secondaryLabel: t('tools.database.buttonPageAddedTo', { name: sourceTitle(step.databaseId) }),
+                valueLabel: t('tools.database.buttonPageAddedTo', { name: sourceTitle(step.databaseId) }),
                 isActive: action.stepId === step.id,
                 closeOnActivate: true,
                 onActivate: () => replace({ id: action.id, type: 'openPage', stepId: step.id }),
@@ -309,7 +309,7 @@ export const buttonEditItems = (property: PropertyDefinition, ctx: ButtonMenuCon
         {
           name: `buttonAction-${action.id}-source`,
           title: t('tools.database.buttonDataSource'),
-          secondaryLabel: sourceTitle(action.databaseId),
+          valueLabel: sourceTitle(action.databaseId),
           children: {
             items: sourceItems(action, (databaseId) => {
               const { databaseId: _old, edits: _edits, ...rest } = action;
@@ -343,7 +343,7 @@ export const buttonEditItems = (property: PropertyDefinition, ctx: ButtonMenuCon
         {
           name: `buttonAction-${action.id}-target`,
           title: t('tools.database.buttonDataSource'),
-          ...(target === undefined ? {} : { secondaryLabel: targetLabels[target.type]() }),
+          ...(target === undefined ? {} : { valueLabel: targetLabels[target.type]() }),
           children: {
             items: [
               {
@@ -356,7 +356,7 @@ export const buttonEditItems = (property: PropertyDefinition, ctx: ButtonMenuCon
               ...addedBefore(action).map((step) => ({
                 name: `buttonTarget-${action.id}-step-${step.id}`,
                 title: t('tools.database.automationPageAdded'),
-                secondaryLabel: t('tools.database.buttonPageAddedTo', { name: sourceTitle(step.databaseId) }),
+                valueLabel: t('tools.database.buttonPageAddedTo', { name: sourceTitle(step.databaseId) }),
                 isActive: target?.type === 'addedPage' && target.stepId === step.id,
                 closeOnActivate: true,
                 onActivate: () => pick({ type: 'addedPage', stepId: step.id }),
@@ -398,7 +398,7 @@ export const buttonEditItems = (property: PropertyDefinition, ctx: ButtonMenuCon
           return {
             name: `buttonVariable-${action.id}-${variable.id}`,
             title: variable.name,
-            ...(variable.value === undefined || variable.value === '' ? {} : { secondaryLabel: variable.value }),
+            ...(variable.value === undefined || variable.value === '' ? {} : { valueLabel: variable.value }),
             children: {
               items: [
                 textField(`buttonVariable-${variable.id}-name`, t('tools.database.buttonCallbackName'), variable.name, (name) => { if (name !== '') change({ name }); }),
@@ -454,7 +454,7 @@ export const buttonEditItems = (property: PropertyDefinition, ctx: ButtonMenuCon
         {
           name: `buttonAction-${action.id}-recipients`,
           title: t('tools.database.buttonSelectRecipients'),
-          ...(recipientsLabel === undefined ? {} : { secondaryLabel: recipientsLabel }),
+          ...(recipientsLabel === undefined ? {} : { valueLabel: recipientsLabel }),
           children: {
             items: [
               ...(people === undefined ? [] : [{

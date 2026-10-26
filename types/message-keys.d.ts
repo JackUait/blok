@@ -1014,6 +1014,7 @@ export type BlokMessageKey =
   | 'tools.database.formula.error.unterminatedString'
   | 'tools.database.formulaDone'
   | 'tools.database.formulaLabel'
+  | 'tools.database.formulaLimitReached'
   | 'tools.database.formulaPlaceholder'
   | 'tools.database.formulaReference'
   | 'tools.database.galleryCardEdit'

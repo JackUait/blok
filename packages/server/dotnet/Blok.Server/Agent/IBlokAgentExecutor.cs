@@ -92,12 +92,31 @@ public sealed class BlokAgentOptions
 /// <summary>Resolves a target page's stored document or live room.</summary>
 public interface IBlokPageTarget
 {
-  /// <summary>Finds the document behind a page ID.</summary>
+  /// <summary>Finds the document behind a page ID, for an agent that renames it or sets its icon.</summary>
   /// <param name="pageId">The target page ID.</param>
+  /// <param name="actor">The agent asking, with the person it acts for. Check that they may write the page.</param>
   /// <param name="cancellationToken">Cancels the lookup.</param>
-  /// <returns>The page location, or null when it is not found.</returns>
+  /// <returns>The page location, or null when it is not found or this actor may not write it.</returns>
   ValueTask<BlokPageLocation?> ResolveAsync(
-      string pageId, CancellationToken cancellationToken = default);
+      string pageId, BlokAgentActor actor, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// A page target that also creates the document for a new sub-page, as the editor's page
+/// tool <c>create</c> does. With it and <see cref="BlokAgentOptions.PageTitles"/>, agents can
+/// insert page blocks. Deleting a page block never calls the host: the page stays, and its
+/// trash belongs to the host, as when a person deletes the block.
+/// </summary>
+public interface IBlokPageCreator : IBlokPageTarget
+{
+  /// <summary>
+  /// Creates an empty page document for a new page block, stored or as a live room, that
+  /// <paramref name="actor"/> (and the person it acts for) may write.
+  /// </summary>
+  /// <param name="actor">The agent asking, with the person it acts for.</param>
+  /// <param name="cancellationToken">Cancels the create.</param>
+  /// <returns>The new page ID, or null when this actor may not create a page; the batch then fails with FORBIDDEN.</returns>
+  ValueTask<string?> CreateAsync(BlokAgentActor actor, CancellationToken cancellationToken = default);
 }
 
 /// <summary>A target page's stored document or live room.</summary>

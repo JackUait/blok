@@ -199,7 +199,7 @@ public sealed class BlokAgentSessionTests
   {
     private string document = """{"blocks":[]}""";
 
-    public ValueTask<BlokPageLocation?> ResolveAsync(string pageId, CancellationToken cancellationToken = default) =>
+    public ValueTask<BlokPageLocation?> ResolveAsync(string pageId, BlokAgentActor actor, CancellationToken cancellationToken = default) =>
         ValueTask.FromResult<BlokPageLocation?>(new BlokPageLocation.Stored(
             _ => ValueTask.FromResult(document),
             (json, _) =>

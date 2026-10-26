@@ -1,13 +1,15 @@
 import type { HostService, ManifestOverrides } from '../../types';
 import type { LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData } from '../../types/data-formats/output-data';
-import type { AgentActor, AgentVersion, AgentVersionHistory } from '../../types/agent';
+import type { AgentActor, AgentResult, AgentVersion, AgentVersionHistory } from '../../types/agent';
 // Imported by file rather than through `src/components/utils`: the barrel
 // reaches the DOM, this module does not.
 import { getBlokVersion } from '../components/utils/version';
 import { markdownToBlocksWithReport } from '../markdown';
 import { COMMANDS } from '../shared/agent/commands';
 import { createDocumentAgentSession, type CarriedHistory } from '../shared/agent/document-session';
+import { failure } from '../shared/agent/errors';
 import { contentRevision } from '../shared/agent/revision';
+import type { AgentPorts } from '../shared/agent/types';
 import { DocSnapshot } from '../shared/agent/snapshot';
 import { buildBuiltInSnapshot } from '../shared/built-in-snapshot';
 import { readCustomToolsFile, snapshotWithCustomTools } from '../shared/custom-tools-file';
@@ -487,9 +489,15 @@ const loadedVersionHistory = (value: unknown, onRestore?: (version: string) => v
   };
 };
 
+/** `prepares: ['page']`: the C# page target creates page documents, so a page block inserts. */
+const createsPages = (input: Record<string, unknown>): boolean =>
+  Array.isArray(input.prepares) && input.prepares.includes('page');
+
 /** A C# room keeps the agent's steps on the server; a stored call has them only when its session sends them. */
-const contractWhere = (input: Record<string, unknown>): { runtime: 'jint' | 'csharp-live'; carriesHistory?: true } =>
-  (input.runtime === 'csharp-live' ? { runtime: 'csharp-live' } : { runtime: 'jint', ...('history' in input && { carriesHistory: true as const }) });
+const contractWhere = (input: Record<string, unknown>): { runtime: 'jint' | 'csharp-live'; carriesHistory?: true; prepares?: string[] } => ({
+  ...(input.runtime === 'csharp-live' ? { runtime: 'csharp-live' as const } : { runtime: 'jint' as const, ...('history' in input && { carriesHistory: true as const }) }),
+  ...(createsPages(input) && { prepares: ['page'] }),
+});
 
 const isCarriedEntry = (value: unknown): value is OutputData | 'other' => value === 'other' || isStoredDocument(value);
 
@@ -518,11 +526,59 @@ const carriedHistory = (
   return { past: past.map(loaded), future: future.map(loaded), lost };
 };
 
+/**
+ * Jint cannot wait on the host, so C# creates the pages first (agentPagesNeeded counts them)
+ * and sends their ids as `createdPages`. Each page insert takes the next one, in batch order.
+ */
+const createdPagesPort = (input: Record<string, unknown>): { port: NonNullable<AgentPorts['createPageDocument']>; unused: string[] } => {
+  const unused = Array.isArray(input.createdPages)
+    ? input.createdPages.filter((id: unknown): id is string => typeof id === 'string' && id !== '')
+    : [];
+
+  return {
+    unused,
+    port: () => {
+      const pageId = unused.shift();
+
+      return pageId === undefined
+        ? Promise.reject(failure('STALE', 'The document changed while its new pages were created, so this batch needs more pages than were made. Read it again, then retry.'))
+        : Promise.resolve({ pageId });
+    },
+  };
+};
+
+/** A created page the batch did not point at: the batch fails, and the host is told to clean it up. */
+const withUnusedPages = (result: AgentResult, unused: readonly string[]): AgentResult => {
+  if (unused.length === 0) {
+    return result;
+  }
+  const stranded = unused.map(pageId => ({ command: 'block.insert', type: 'page', prepared: { pageId } }));
+
+  if (!result.ok && result.error.code === 'ORPHANED_SIDE_EFFECT') {
+    const orphaned: readonly unknown[] = Array.isArray(result.error.details?.orphaned) ? result.error.details.orphaned : [];
+
+    return { ...result, error: { ...result.error, details: { ...result.error.details, orphaned: [...orphaned, ...stranded] } } };
+  }
+  const cause = result.ok
+    ? failure('STALE', 'The document changed while its new pages were created, so this batch needed fewer pages than were made. Read it again, then retry.').error
+    : result.error;
+
+  return {
+    ok: false,
+    ...(result.revision !== undefined && { revision: result.revision }),
+    error: failure('ORPHANED_SIDE_EFFECT', `The batch failed after the host did work for it (${cause.message}). Clean up the listed items.`, {
+      details: { orphaned: stranded, cause },
+    }).error,
+    warnings: result.warnings,
+  };
+};
+
 const createServerAgentSession = (
   input: Record<string, unknown>,
   document: OutputData,
   actor: AgentActor,
-  onRestore?: (version: string) => void
+  onRestore?: (version: string) => void,
+  createPage?: AgentPorts['createPageDocument']
 ): ReturnType<typeof createDocumentAgentSession> => {
   const customTools = input.customTools === undefined ? undefined : readCustomToolsFile(input.customTools);
   const services = Array.isArray(input.services)
@@ -551,7 +607,9 @@ const createServerAgentSession = (
 
   return createDocumentAgentSession({
     document: loaded,
-    tools: setup.tools, contract: setup.contract, actor, ports: setup.ports, runtime: 'jint',
+    tools: setup.tools, contract: setup.contract, actor, runtime: 'jint',
+    ports: createPage === undefined ? setup.ports : { ...setup.ports, createPageDocument: createPage },
+    ...(createPage !== undefined && { pageTitles: 'page-map' as const }),
     ...(versionHistory !== undefined && { services: { versionHistory } }),
     ...(history !== undefined && { history }),
   });
@@ -572,12 +630,19 @@ const agentExecuteResult = async (inputJson: string): Promise<string> => {
   }
 
   const restoring: { version?: string } = {};
+  const pages = createsPages(input) ? createdPagesPort(input) : undefined;
   const session = createServerAgentSession(input, document, actor, (version) => {
     restoring.version = version;
-  });
+  }, pages?.port);
 
   try {
-    const result = await session.execute(batch);
+    const ran = await session.execute(batch);
+    const result = withUnusedPages(ran, pages?.unused ?? []);
+
+    // A batch failed for an unused page wrote nothing C# keeps: answer as if it never ran.
+    if (ran.ok && !result.ok) {
+      return JSON.stringify({ result, document, edits: [], ...('history' in input && { history: input.history }) });
+    }
     // Only a C# session asks for its steps back; a plain call keeps none.
     const history = 'history' in input ? { history: { ...session.history(), revision: session.revision() } } : {};
 
@@ -585,6 +650,39 @@ const agentExecuteResult = async (inputJson: string): Promise<string> => {
       result, document: session.output(), edits: session.lastEdits(), ...history,
       ...(result.ok && restoring.version !== undefined && { restore: restoring.version }),
     });
+  } finally {
+    session.close();
+  }
+};
+
+/**
+ * How many pages the batch creates, found by running it on a copy with placeholder ids.
+ * A refused batch answers its result instead, so the host creates nothing for it.
+ */
+const agentPagesNeededResult = async (inputJson: string): Promise<string> => {
+  const input = parseRecord(inputJson);
+  const { document, actor, batch } = input;
+
+  if (!isStoredDocument(document)) {
+    throw new TypeError('agentPagesNeeded input requires a `document` with a valid `blocks` array.');
+  }
+  if (!isAgentActor(actor)) {
+    throw new TypeError('agentPagesNeeded input requires an `actor` with string `id`, string `name` and kind `agent`.');
+  }
+  if (!isBatchEnvelope(batch)) {
+    throw new TypeError('agentPagesNeeded input requires a `batch` with a `commands` array of command objects.');
+  }
+  const counted = { count: 0 };
+  const session = createServerAgentSession(input, document, actor, undefined, () => {
+    counted.count += 1;
+
+    return Promise.resolve({ pageId: `planned-page-${counted.count}` });
+  });
+
+  try {
+    const result = await session.execute(batch);
+
+    return JSON.stringify(result.ok ? { count: counted.count } : { count: 0, result });
   } finally {
     session.close();
   }
@@ -770,6 +868,8 @@ export const invoke = async (operation: string, inputJson: string): Promise<stri
       return agentExecuteResult(inputJson);
     case 'agentPlanHost':
       return agentPlanHostResult(inputJson);
+    case 'agentPagesNeeded':
+      return agentPagesNeededResult(inputJson);
     default:
       throw new TypeError(`Unsupported Blok runtime operation: ${operation}`);
   }

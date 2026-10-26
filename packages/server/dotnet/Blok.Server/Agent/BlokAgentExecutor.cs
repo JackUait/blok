@@ -64,6 +64,11 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
           : WroteAnotherDocument(history));
     }
 
+    if (await CreatePagesAsync(input, options, actor, cancellationToken) is { Refusal: { } refusal })
+    {
+      return (refusal, history);
+    }
+
     if (history is not null)
     {
       input["history"] = history.DeepClone();
@@ -106,6 +111,87 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
     return next;
   }
 
+  /// <summary>
+  /// Jint cannot wait on the host, so the pages a batch inserts are made first: Jint counts them on a
+  /// copy (a refused batch makes none), the host creates each one for the actor, and the ids go in as
+  /// <c>createdPages</c>, which Jint hands out in batch order.
+  /// </summary>
+  private async ValueTask<(JsonArray? Created, BlokAgentExecution? Refusal)> CreatePagesAsync(
+      JsonObject input, BlokAgentOptions? options, BlokAgentActor actor, CancellationToken cancellationToken)
+  {
+    if (options is not { PageTitles: true, PageTarget: IBlokPageCreator creator } || !HasInsert(input["batch"]))
+    {
+      return (null, null);
+    }
+
+    var needed = JsonNode.Parse(await runtime.InvokeAsync("agentPagesNeeded", input.ToJsonString(), cancellationToken: cancellationToken)) as JsonObject
+        ?? throw new InvalidOperationException("The Blok runtime returned no page count.");
+
+    if (needed["result"] is JsonObject refused)
+    {
+      return (null, new BlokAgentExecution(refused.ToJsonString(), null, refused["revision"]?.GetValue<string>() ?? string.Empty));
+    }
+
+    var created = new JsonArray();
+    var count = needed["count"]?.GetValue<int>() ?? 0;
+
+    for (var index = 0; index < count; index++)
+    {
+      string? pageId;
+
+      try
+      {
+        cancellationToken.ThrowIfCancellationRequested();
+        pageId = await creator.CreateAsync(actor, cancellationToken);
+      }
+      catch (OperationCanceledException) when (created.Count > 0)
+      {
+        return (null, Failure("CANCELLED", "The batch was cancelled after the host created pages for it. Clean up the listed pages.", false,
+            new JsonObject { ["orphaned"] = Orphaned(created) }));
+      }
+
+      if (string.IsNullOrEmpty(pageId))
+      {
+        var forbidden = Failure("FORBIDDEN", "The host does not let this agent create a page here. Nothing was written.", false, null);
+
+        return (null, created.Count == 0 ? forbidden : Stranded(forbidden, created));
+      }
+      created.Add(pageId);
+    }
+
+    input["createdPages"] = created;
+
+    return (created, null);
+  }
+
+  private static JsonArray Orphaned(JsonArray created) =>
+      [.. created.Select(pageId => (JsonNode)new JsonObject
+      {
+        ["command"] = "block.insert", ["type"] = "page", ["prepared"] = new JsonObject { ["pageId"] = pageId?.DeepClone() },
+      })];
+
+  /// <summary>A failure after the host created pages: the batch wrote nothing, and the host is told which pages to clean up.</summary>
+  private static BlokAgentExecution Stranded(BlokAgentExecution failed, JsonArray created)
+  {
+    var result = JsonNode.Parse(failed.ResultJson) as JsonObject
+        ?? throw new InvalidOperationException("The agent result is not an object.");
+
+    if (result["error"] is not JsonObject cause || cause["code"]?.GetValue<string>() == "ORPHANED_SIDE_EFFECT")
+    {
+      return failed;
+    }
+
+    var details = new JsonObject { ["orphaned"] = Orphaned(created), ["cause"] = cause.DeepClone() };
+
+    return Failure("ORPHANED_SIDE_EFFECT", $"The batch failed after the host did work for it ({cause["message"]?.GetValue<string>()}). Clean up the listed items.",
+        false, details, failed.Revision);
+  }
+
+  private static bool HasInsert(JsonNode? batch) =>
+      batch is JsonObject source && source["commands"] is JsonArray commands
+      && commands.Any(command => command is JsonObject entry
+          && entry["name"] is JsonValue name && name.TryGetValue<string>(out var value) && value == "block.insert");
+
   private static bool HasPageAction(JsonNode? batch) =>
       batch is JsonObject source && source["commands"] is JsonArray commands
       && commands.Any(command => command is JsonObject entry
@@ -133,7 +219,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
     var pageId = value is JsonValue page && page.TryGetValue<string>(out var id) ? id : null;
 
     cancellationToken.ThrowIfCancellationRequested();
-    var location = pageId is null ? null : await pages.ResolveAsync(pageId, cancellationToken);
+    var location = pageId is null ? null : await pages.ResolveAsync(pageId, actor, cancellationToken);
 
     if (pageId is null || location is null)
     {
@@ -355,6 +441,35 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
       return await RunRoomHistoryAsync(docId, historyName == "history.undo", actor, expect, cancellationToken);
     }
 
+    JsonArray? created = null;
+
+    if (options is { PageTitles: true, PageTarget: IBlokPageCreator } && HasInsert(input["batch"]))
+    {
+      var (state, current) = await RoomStateAsync(docId, cancellationToken);
+
+      if (state is null)
+      {
+        return Failure("APPLY_FAILED", "The room could not be read. Nothing was written.", true, null);
+      }
+
+      // Jint never sees expectRevision here, so a stale batch must stop before the host creates pages.
+      if (expect is not null && $"{expect.Lineage}:{expect.Sequence}" != current)
+      {
+        return await StaleAsync(docId, input, current, cancellationToken);
+      }
+
+      // Made outside the room lane, so a slow host never holds the room. The lane run checks the count again.
+      input["document"] = state;
+      var made = await CreatePagesAsync(input, options, actor, cancellationToken);
+
+      input.Remove("document");
+      if (made.Refusal is { } refusal)
+      {
+        return WithHead(refusal, string.Empty);
+      }
+      created = made.Created;
+    }
+
     JsonObject? planned = null;
     JsonObject? before = null;
     CollabPageMaps? beforeMaps = null;
@@ -419,6 +534,11 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
 
     var head = edit.Receipt is { } receipt ? $"{receipt.Tag.Lineage}:{receipt.ServerSequence}" : string.Empty;
 
+    if (created is { Count: > 0 } && edit.Status != CollabEditStatus.Applied)
+    {
+      return Stranded(await RoomRefusalAsync(edit, docId, input, head, cancellationToken), created);
+    }
+
     switch (edit.Status)
     {
       case CollabEditStatus.Applied when planned is not null:
@@ -428,6 +548,17 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
         }
 
         return WithHead(new BlokAgentExecution(planned.ToJsonString(), null, head), head);
+      default:
+        return await RoomRefusalAsync(edit, docId, input, head, cancellationToken);
+    }
+  }
+
+  /// <summary>The answer for a batch edit the room did not apply.</summary>
+  private async ValueTask<BlokAgentExecution> RoomRefusalAsync(
+      CollabEditResult edit, string docId, JsonObject input, string head, CancellationToken cancellationToken)
+  {
+    switch (edit.Status)
+    {
       case CollabEditStatus.PreconditionFailed:
         return await StaleAsync(docId, input, head, cancellationToken);
       case CollabEditStatus.PreconditionRequired:
@@ -974,6 +1105,12 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
     }
 
     var input = new JsonObject { ["services"] = services };
+
+    // Jint inserts a page only with ids C# made first (createdPages), so it lists page as prepared.
+    if (options is { PageTitles: true, PageTarget: IBlokPageCreator })
+    {
+      input["prepares"] = new JsonArray("page");
+    }
 
     if (options?.CustomToolsJson is { } tools)
     {

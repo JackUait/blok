@@ -499,7 +499,7 @@ public sealed class BlokAgentExecutorTests
   {
     internal int Calls { get; private set; }
 
-    public ValueTask<BlokPageLocation?> ResolveAsync(string pageId, CancellationToken cancellationToken = default)
+    public ValueTask<BlokPageLocation?> ResolveAsync(string pageId, BlokAgentActor actor, CancellationToken cancellationToken = default)
     {
       Calls++;
 

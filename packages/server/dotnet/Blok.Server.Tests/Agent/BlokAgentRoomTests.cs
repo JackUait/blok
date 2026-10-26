@@ -264,7 +264,7 @@ public sealed class BlokAgentRoomTests
 
   private sealed class RoomTarget(string docId) : IBlokPageTarget
   {
-    public ValueTask<BlokPageLocation?> ResolveAsync(string pageId, CancellationToken cancellationToken = default) =>
+    public ValueTask<BlokPageLocation?> ResolveAsync(string pageId, BlokAgentActor actor, CancellationToken cancellationToken = default) =>
         ValueTask.FromResult<BlokPageLocation?>(new BlokPageLocation.Room(docId));
   }
 

@@ -509,7 +509,7 @@ public sealed class BlokAgentPageActionTests
     internal List<string> Saved { get; } = [];
     internal List<CancellationToken> Tokens { get; } = [];
 
-    public ValueTask<BlokPageLocation?> ResolveAsync(string pageId, CancellationToken cancellationToken = default)
+    public ValueTask<BlokPageLocation?> ResolveAsync(string pageId, BlokAgentActor actor, CancellationToken cancellationToken = default)
     {
       Events.Add($"resolve:{pageId}");
       Tokens.Add(cancellationToken);

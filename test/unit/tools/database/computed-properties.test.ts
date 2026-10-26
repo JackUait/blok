@@ -272,6 +272,30 @@ describe('ComputedProperties', () => {
       expect(engine.valueProperty(total).type).toBe('number');
     });
 
+    // notion-spec-2 §13: Show original of a Number keeps its list value but draws with the rollup's number settings.
+    it('shows Show original of a Number as text carrying the rollup\'s number settings', () => {
+      const list = { ...rollup('list', 'tasks', 'hours', 'show_original'), number: { format: 'dollar' as const, decimals: 2 } };
+      const bare = rollup('bare', 'tasks', 'hours', 'show_original');
+      const engine = new ComputedProperties('db');
+      const rows = engine.apply([title, tasks, list, bare], [row('p1', { tasks: [{ id: 't1' }, { id: 't2' }] })], ctx);
+
+      expect(valueOf(rows, 'p1', list)).toBe('2, 5');
+      expect(engine.valueProperty(list)).toMatchObject({ type: 'text', number: { format: 'dollar', decimals: 2 } });
+      expect(engine.valueProperty(bare)).toMatchObject({ type: 'text', number: {} });
+    });
+
+    it('drops number settings left on a list rollup whose target is not a Number', () => {
+      const names = { ...rollup('names', 'tasks', 'title', 'show_original'), number: { format: 'dollar' as const } };
+      const unique = { ...rollup('unique', 'tasks', 'hours', 'show_unique'), number: { format: 'dollar' as const } };
+      const engine = new ComputedProperties('db');
+
+      engine.apply([title, tasks, names, unique], [row('p1', { tasks: [{ id: 't1' }] })], ctx);
+
+      expect(engine.valueProperty(names)).toMatchObject({ type: 'text' });
+      expect(engine.valueProperty(names).number).toBeUndefined();
+      expect(engine.valueProperty(unique).number).toBeUndefined();
+    });
+
     it('rolls up a formula of the related database', () => {
       const total = rollup('total', 'tasks', 'double', 'max');
       const engine = new ComputedProperties('db');

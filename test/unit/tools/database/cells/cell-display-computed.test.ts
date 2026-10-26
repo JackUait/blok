@@ -43,6 +43,48 @@ describe('renderCellValue — computed property types', () => {
     expect(cell.textContent).toBe('50%');
   });
 
+  describe('Show original of a Number (notion-spec-2 §13)', () => {
+    const list: PropertyDefinition = { ...rollup, rollup: { relationPropertyId: 'rel', targetPropertyId: 'n', function: 'show_original' } };
+    const asList = (number: NonNullable<PropertyDefinition['number']>) => ctx({ valueProperty: (p) => ({ ...p, type: 'text', number }) });
+
+    it('formats each number on its own, comma separated', () => {
+      const cell = renderCellValue(list, '50, 1234.5', asList({ format: 'dollar', decimals: 2 }));
+
+      expect(cell.textContent).toBe('$50.00, $1,234.50');
+      expect(cell.hasAttribute('data-blok-database-number-list')).toBe(true);
+    });
+
+    it('draws each number with its own bar, and no comma', () => {
+      const cell = renderCellValue(list, '50, 200', asList({ showAs: 'bar', color: 'green' }));
+      const items = [...cell.querySelectorAll('[data-blok-database-number-item]')];
+
+      expect(items.map((item) => item.querySelector('[data-blok-database-number-text]')?.textContent)).toEqual(['50', '200']);
+      expect(items.map((item) => (item.querySelector<HTMLElement>('[data-blok-database-number-bar]'))?.style.getPropertyValue('--blok-database-number-fill'))).toEqual(['50%', '100%']);
+      expect(cell.textContent).toBe('50200');
+    });
+
+    it('draws only the rings when Show number is off', () => {
+      const cell = renderCellValue(list, '25, 75', asList({ showAs: 'ring', showNumber: false }));
+
+      expect(cell.querySelectorAll('[data-blok-database-number-ring]')).toHaveLength(2);
+      expect(cell.querySelector('[data-blok-database-number-text]')).toBeNull();
+    });
+
+    it('leaves a list with no number settings as text', () => {
+      const cell = renderCellValue(list, '12, 34', ctx({ valueProperty: (p) => ({ ...p, type: 'text' }) }));
+
+      expect(cell.textContent).toBe('12, 34');
+      expect(cell.hasAttribute('data-blok-database-number-list')).toBe(false);
+    });
+
+    it('shows an empty list as empty', () => {
+      const cell = renderCellValue(list, '', asList({ format: 'dollar' }));
+
+      expect(cell.textContent).toBe('');
+      expect(cell.hasAttribute('data-empty')).toBe(true);
+    });
+  });
+
   it('falls back to text without a value property', () => {
     expect(renderCellValue(formula, 'abc', ctx()).textContent).toBe('abc');
   });

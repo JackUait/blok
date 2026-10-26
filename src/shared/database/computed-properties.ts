@@ -5,7 +5,7 @@ import type { TextContext } from './formula/values';
 import { isDate, isRef } from './formula/types';
 import { MIXED_FORMULA, readPropertyValue } from './value-helpers';
 import { relationIdsOf } from './relation-values';
-import { computeRollup, rollupResultType } from './rollup';
+import { computeRollup, isNumberList, rollupResultType } from './rollup';
 import type { DatabaseRow, PropertyDefinition, PropertyValue } from './types';
 
 /** A database in this document, as another database reads it. */
@@ -175,6 +175,14 @@ export class ComputedProperties {
 
       if (target === undefined || settings === undefined || target.type === 'rollup') return { ...property, type: 'text' };
       const shape = rollupResultType(settings.function, target);
+
+      // A Show original of a Number marks itself by carrying `number` (notion-spec-2 §13); other lists drop any left behind.
+      if (isNumberList(settings.function, this.rollupTarget(property, false) ?? target)) return { ...property, ...shape, number: property.number ?? {} };
+      if (shape.type !== 'number') {
+        const { number: _stale, ...rest } = property;
+
+        return { ...rest, ...shape, config: shape.config ?? property.config };
+      }
       const number = property.number ?? shape.number;
 
       return { ...property, ...shape, ...(number !== undefined ? { number } : {}), config: shape.config ?? property.config };
@@ -231,7 +239,8 @@ export class ComputedProperties {
     return this.ctx.resolveDatabase?.(databaseId);
   }
 
-  private rollupTarget(property: PropertyDefinition): PropertyDefinition | undefined {
+  /** The rollup's target; a formula target as its result unless `resolve` is false. */
+  private rollupTarget(property: PropertyDefinition, resolve = true): PropertyDefinition | undefined {
     const settings = property.rollup;
     const relation = this.schema.find((p) => p.id === settings?.relationPropertyId);
     const databaseId = relation?.relation?.targetDatabaseId;
@@ -240,7 +249,7 @@ export class ComputedProperties {
 
     if (target === undefined) return undefined;
 
-    return target.type === 'formula' ? source?.valueProperty?.(target) ?? target : target;
+    return resolve && target.type === 'formula' ? source?.valueProperty?.(target) ?? target : target;
   }
 
   /** Self-relations without a synced property show both ways: who points at each row. */

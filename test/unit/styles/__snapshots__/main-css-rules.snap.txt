@@ -9421,6 +9421,27 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   --blok-database-number-ink: var(--blok-database-status-dot-red);
 }
 
+[data-blok-database-number-item] {
+  display: inline-flex;
+  flex: 1 0 auto;
+  align-items: center;
+  gap: var(--blok-space-2);
+}
+
+[data-blok-database-number-item] > [data-blok-database-number-text] {
+  flex: none;
+}
+
+[data-blok-database-drawer-prop-value] > [data-blok-database-cell][data-blok-database-number-list] {
+  flex: 1 1 auto;
+}
+
+[data-blok-database-number-item] > [data-blok-database-number-bar] {
+  flex: 1 1 auto;
+  inline-size: auto;
+  max-inline-size: 160px;
+}
+
 [data-blok-database-cell="uniqueId"] {
   color: var(--blok-database-ink-tertiary);
 }
@@ -9899,6 +9920,23 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item][data-blok-item-name="color"] [data-blok-popover-item-icon-chevron-right], [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item][data-blok-item-name="color"] [data-blok-popover-item-icon-chevron-right] {
   margin-inline-start: var(--blok-space-2);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item][data-blok-item-name="color"], [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item][data-blok-item-name="color"] {
+  block-size: 28px;
+  padding-block: 0;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item][data-blok-item-name="color"] [data-blok-popover-item-dropdown-button], [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item][data-blok-item-name="color"] [data-blok-popover-item-dropdown-button] {
+  align-self: stretch;
+  margin-block: calc(-1 * var(--blok-space-1));
+  margin-inline-end: calc(-1 * var(--blok-space-2));
+  padding: var(--blok-space-1) var(--blok-space-2);
+  border-radius: var(--blok-radius-control);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item][data-blok-item-name="color"] [data-blok-popover-item-dropdown-button]:hover, [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item][data-blok-item-name="color"][data-blok-popover-item-children-open] [data-blok-popover-item-dropdown-button], [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item][data-blok-item-name="color"] [data-blok-popover-item-dropdown-button]:hover, [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item][data-blok-item-name="color"][data-blok-popover-item-children-open] [data-blok-popover-item-dropdown-button] {
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-html][data-blok-item-name="divideBy"], [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item-html][data-blok-item-name="divideBy"] {
@@ -10942,6 +10980,18 @@ textarea[data-blok-database-cell-input] {
   flex-wrap: nowrap;
   justify-content: flex-end;
   gap: var(--blok-space-2);
+}
+
+[data-blok-database-table-cell] > [data-blok-database-cell][data-blok-database-number-list] {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  gap: var(--blok-space-2);
+  text-align: end;
+}
+
+[data-blok-database-table-cell] > [data-blok-database-cell] > [data-blok-database-number-item] {
+  justify-content: flex-end;
 }
 
 [data-blok-database-table-cell][data-frozen], [data-blok-database-table-column-header][data-frozen], [data-blok-database-table-calc][data-frozen] {

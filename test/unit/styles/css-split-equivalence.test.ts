@@ -1191,6 +1191,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_SWITCH_OFF_TRACK_BYTES = 176;
     // database.css: one 14px rule for every header-look menu, Notion's 296px Color list, the reset glyph's ink.
     const DATABASE_MENU_FOLLOWUPS_BYTES = 500;
+    // database.css: Show original of a Number as one gauge per value, and the Color button's fill while its list is open.
+    const DATABASE_ROLLUP_LIST_COLOR_BUTTON_BYTES = 3_239;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1433,7 +1435,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_LAYOUT_RESET_ROW_BYTES
       + DATABASE_SWATCH_RING_BYTES
       + DATABASE_SWITCH_OFF_TRACK_BYTES
-      + DATABASE_MENU_FOLLOWUPS_BYTES;
+      + DATABASE_MENU_FOLLOWUPS_BYTES
+      + DATABASE_ROLLUP_LIST_COLOR_BUTTON_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

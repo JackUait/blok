@@ -6204,6 +6204,29 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
 [data-blok-database-number-bar][data-color="pink"], [data-blok-database-number-ring][data-color="pink"] { --blok-database-number-ink: var(--blok-database-status-dot-pink); }
 [data-blok-database-number-bar][data-color="red"], [data-blok-database-number-ring][data-color="red"] { --blok-database-number-ink: var(--blok-database-status-dot-red); }
 
+/* notion-spec-2 §13: Show original of a Number as Bar or Ring, one number and gauge per item. The bar grows to 160. */
+[data-blok-database-number-item] {
+  display: inline-flex;
+  flex: 1 0 auto;
+  align-items: center;
+  gap: var(--blok-space-2);
+}
+
+[data-blok-database-number-item] > [data-blok-database-number-text] {
+  flex: none;
+}
+
+/* The side peek splits its width between the items. */
+[data-blok-database-drawer-prop-value] > [data-blok-database-cell][data-blok-database-number-list] {
+  flex: 1 1 auto;
+}
+
+[data-blok-database-number-item] > [data-blok-database-number-bar] {
+  flex: 1 1 auto;
+  inline-size: auto;
+  max-inline-size: 160px;
+}
+
 /* ID: tertiary ink (research/08). */
 [data-blok-database-cell="uniqueId"] {
   color: var(--blok-database-ink-tertiary);
@@ -6762,6 +6785,30 @@ textarea[data-blok-database-cell-input] {
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item][data-blok-item-name="color"] [data-blok-popover-item-icon-chevron-right],
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item][data-blok-item-name="color"] [data-blok-popover-item-icon-chevron-right] {
   margin-inline-start: var(--blok-space-2);
+}
+
+/* notion-spec-2 §11, §12: the value and chevron are Notion's button, 8px past them and 4px past the 28px row
+   (popover-desktop's dropdownButtonRect opens the list on the same box). It fills on hover and while its list is open. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item][data-blok-item-name="color"],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item][data-blok-item-name="color"] {
+  block-size: 28px;
+  padding-block: 0;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item][data-blok-item-name="color"] [data-blok-popover-item-dropdown-button],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item][data-blok-item-name="color"] [data-blok-popover-item-dropdown-button] {
+  align-self: stretch;
+  margin-block: calc(-1 * var(--blok-space-1));
+  margin-inline-end: calc(-1 * var(--blok-space-2));
+  padding: var(--blok-space-1) var(--blok-space-2);
+  border-radius: var(--blok-radius-control);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item][data-blok-item-name="color"] [data-blok-popover-item-dropdown-button]:hover,
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item][data-blok-item-name="color"][data-blok-popover-item-children-open] [data-blok-popover-item-dropdown-button],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item][data-blok-item-name="color"] [data-blok-popover-item-dropdown-button]:hover,
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item][data-blok-item-name="color"][data-blok-popover-item-children-open] [data-blok-popover-item-dropdown-button] {
+  background-color: var(--blok-database-hover-bg);
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-html][data-blok-item-name="divideBy"],
@@ -7916,6 +7963,19 @@ textarea[data-blok-database-cell-input] {
   flex-wrap: nowrap;
   justify-content: flex-end;
   gap: var(--blok-space-2);
+}
+
+/* notion-spec-2 §13: in the table a Show original of a Number sits at the cell's end, on one line. */
+[data-blok-database-table-cell] > [data-blok-database-cell][data-blok-database-number-list] {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  gap: var(--blok-space-2);
+  text-align: end;
+}
+
+[data-blok-database-table-cell] > [data-blok-database-cell] > [data-blok-database-number-item] {
+  justify-content: flex-end;
 }
 
 [data-blok-database-table-cell][data-frozen],

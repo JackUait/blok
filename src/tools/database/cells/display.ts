@@ -363,6 +363,30 @@ const attachPlaceCard = (cell: HTMLElement, place: PlaceValue, ctx: CellContext)
 };
 
 /**
+ * Show original of a Number (notion-spec-2 §13): the value is the ", "-joined
+ * list, and String() of a finite number never holds ", ". Each number takes
+ * the rollup's format; a gauge draws one item per number, with no comma.
+ */
+const renderNumberList = (cell: HTMLElement, property: PropertyDefinition, value: PropertyValue | undefined, ctx: CellContext): void => {
+  const display = property.number ?? {};
+  const numbers = (typeof value === 'string' && value !== '' ? value.split(', ') : []).map(toNumber);
+
+  cell.setAttribute('data-blok-database-number-list', '');
+  if (display.showAs !== 'bar' && display.showAs !== 'ring') {
+    cell.replaceChildren(numbers.map((n) => (n === undefined ? '' : formatNumberValue(n, display, resolveLocale(ctx.locale)))).join(', '));
+
+    return;
+  }
+  numbers.forEach((n) => {
+    const item = document.createElement('span');
+
+    item.setAttribute('data-blok-database-number-item', '');
+    renderNumber(item, property, n, ctx);
+    cell.appendChild(item);
+  });
+};
+
+/**
  * Read-only display of one cell value. Never parses the value as HTML. The
  * element carries `data-blok-database-cell="<type>"`, and `data-empty` when
  * there is no value.
@@ -371,6 +395,11 @@ export const renderCellValue = (property: PropertyDefinition, value: PropertyVal
   if (property.type === 'formula' || property.type === 'rollup') {
     const shown = ctx.valueProperty?.(property) ?? { ...property, type: 'text' };
     const computed = renderCellValue(shown.type === property.type ? { ...shown, type: 'text' } : shown, value, ctx);
+
+    if (property.type === 'rollup' && shown.type === 'text' && shown.number !== undefined) {
+      computed.replaceChildren();
+      renderNumberList(computed, shown, value, ctx);
+    }
 
     computed.setAttribute('data-blok-database-cell', property.type);
     computed.setAttribute('data-result-type', shown.type);

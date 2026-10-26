@@ -472,6 +472,19 @@ export class PopoverItemDefault extends PopoverItem {
       root.appendChild(chevronEl);
       this.nodes.chevron = chevronEl;
     }
+
+    const valueEl = root.querySelector(`:scope > [${DATA_ATTR.popoverItemValue}]`);
+
+    if (this.childrenPlacement === 'dropdown' && valueEl !== null && this.nodes.chevron !== null) {
+      // No role or tabindex: a control inside a menuitem would nest controls.
+      const button = document.createElement('div');
+
+      button.className = 'ms-auto shrink-0 flex items-center';
+      button.setAttribute(DATA_ATTR.popoverItemDropdownButton, '');
+      valueEl.classList.remove('ms-auto', 'ps-3');
+      root.insertBefore(button, valueEl);
+      button.append(valueEl, this.nodes.chevron);
+    }
   }
 
 

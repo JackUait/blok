@@ -10,7 +10,7 @@ import { EmojiPicker } from '../callout/emoji-picker';
 import { NUMBER_FORMATS, MAX_DECIMALS } from './cells/number-format';
 import { OPTION_COLORS, optionColorLabelKey, optionSwatch } from './cells/option-colors';
 import { addablePropertyTypes, propertyTypeMeta } from './database-property-types';
-import { ROLLUP_FUNCTIONS, rollupFunctionsFor, rollupResultType } from './rollup';
+import { ROLLUP_FUNCTIONS, isNumberList, rollupFunctionsFor, rollupResultType } from './rollup';
 import { buttonEditItems } from './database-button-menu';
 import { createOptionsEditor } from './cells/options-editor';
 import { offersAutofill } from './database-autofill-setup';
@@ -821,7 +821,7 @@ export class DatabasePropertyMenu {
           })),
         },
       },
-      ...(target !== undefined && rollupResultType(settings.function, target).type === 'number'
+      ...(target !== undefined && (rollupResultType(settings.function, target).type === 'number' || isNumberList(settings.function, target))
         ? [...this.numberItems(property, (number) => update({ number }), !COUNT_FNS.has(settings.function)), this.allViewsNote()]
         : []),
     ];

@@ -37,6 +37,8 @@ vi.mock('../../../../src/components/utils/popover', () => ({
 
     activateItemByName(): void {}
 
+    focusItemByName(): void {}
+
     on(): void {}
 
     hide(): void {}
@@ -242,6 +244,26 @@ describe('property menu — computed types', () => {
     const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
 
     expect(edit.map((item) => item.name ?? item.type)).toEqual(['rollupRelation', 'rollupProperty', 'rollupFunction']);
+  });
+
+  // notion-spec-2 §3: Show original of a Number keeps Number's rows and the Show as tiles.
+  it('rollup: Show original of a Number shows Number format, Decimal places and the Show as tiles', () => {
+    openMenu(prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'show_original' } }));
+    const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+    expect(edit.map((item) => item.name ?? item.type)).toEqual([
+      'rollupRelation', 'rollupProperty', 'rollupFunction', 'numberFormat', 'decimals', 'separator', 'showAs', 'all-views-note',
+    ]);
+  });
+
+  it('rollup: picking a Number format on Show original of a Number saves it on the rollup', () => {
+    const { cb } = openMenu(prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'show_original' } }));
+    const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
+    const commas = byName(byName(edit, 'numberFormat').children?.items ?? [], 'format-number_with_commas');
+
+    commas.onActivate?.(commas);
+
+    expect(cb.onUpdate).toHaveBeenCalledWith('p', { number: { format: 'number_with_commas' } });
   });
 
   // notion-spec-2 §3: Relation, Target property and Calculate show their current pick on the right.

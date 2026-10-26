@@ -56,6 +56,14 @@ const listShape = (target: PropertyDefinition): RollupShape => {
   return { type: 'text' };
 };
 
+/**
+ * Show original of a Number target: the value stays the ", "-joined list,
+ * but each number draws with the rollup's number settings. A number formula
+ * target does not count (not measured in Notion).
+ */
+export const isNumberList = (fn: RollupFunction, target: Pick<PropertyDefinition, 'type'>): boolean =>
+  fn === 'show_original' && target.type === 'number';
+
 export const rollupResultType = (fn: RollupFunction, target: PropertyDefinition): RollupShape => {
   if (fn === 'show_original' || fn === 'show_unique') return listShape(target);
   if (fn === 'count_per_group' || fn === 'percent_per_group') return { type: 'text' };

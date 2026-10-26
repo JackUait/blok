@@ -63,6 +63,21 @@ describe('Popover: children.placement dropdown', () => {
     vi.restoreAllMocks();
   });
 
+  // notion-spec-2 §11: the value and chevron are one button, so its fill can show while the list is open.
+  it('wraps the value and chevron in one button box, marked open while the list is', () => {
+    open();
+    const button = itemEl('color')?.querySelector('[data-blok-popover-item-dropdown-button]');
+
+    expect(button?.querySelector('[data-blok-popover-item-value]')).not.toBeNull();
+    expect(button?.querySelector('[data-blok-popover-item-icon-chevron-right]')).not.toBeNull();
+    expect(button?.getAttribute('role')).toBeNull();
+    expect(itemEl('other')?.querySelector('[data-blok-popover-item-dropdown-button]')).toBeNull();
+
+    itemEl('color')?.click();
+
+    expect(button?.closest('[data-blok-popover-item-children-open]')).toBe(itemEl('color'));
+  });
+
   it('hovering the row never opens the list', () => {
     vi.useFakeTimers();
     open();

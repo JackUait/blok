@@ -105,9 +105,11 @@
   --blok-database-status-dot-pink: rgb(219, 105, 153);
   --blok-database-status-dot-red: rgb(229, 100, 88);
   --blok-database-avatar-ring: rgba(42, 28, 0, 0.07);
-  /* notion-spec-2 §7: Number Bar and Ring track and Default fill. Other fills are the status dots, the same in dark. */
+  /* notion-spec-2 §7: Number Bar and Ring track, Default and Yellow fills. Other fills are the status dots, the same in dark. */
   --blok-database-number-track: rgba(42, 28, 0, 0.07);
   --blok-database-number-default: rgb(56, 56, 54);
+  /* Notion's yellow, rgb(216, 163, 47), is 2.28:1 on white. HSL-darkened to the first 3:1 step, same hue. */
+  --blok-database-number-yellow: rgb(189, 141, 35);
   --blok-database-status-pill-pad-start: 7px;
   --blok-database-status-pill-pad-end: 9px;
   --blok-database-checkbox-check: #ffffff;
@@ -438,6 +440,7 @@
     --blok-database-avatar-ring: rgba(255, 255, 243, 0.082);
     --blok-database-number-track: rgba(255, 255, 235, 0.1);
     --blok-database-number-default: rgb(230, 229, 227);
+    --blok-database-number-yellow: rgb(216, 163, 47);
     --blok-database-checkbox-check: #ffffff;
     --blok-database-today: rgb(229, 100, 88);
     /* Re-set here, not in colors.css, so view.css keeps the shipped values. Measured in dark (research/08). */
@@ -730,6 +733,7 @@
   --blok-database-avatar-ring: rgba(255, 255, 243, 0.082);
   --blok-database-number-track: rgba(255, 255, 235, 0.1);
   --blok-database-number-default: rgb(230, 229, 227);
+  --blok-database-number-yellow: rgb(216, 163, 47);
   --blok-database-checkbox-check: #ffffff;
   --blok-database-today: rgb(229, 100, 88);
   /* Re-set here, not in colors.css, so view.css keeps the shipped values. Measured in dark (research/08). */
@@ -6111,7 +6115,7 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
 [data-blok-database-number-bar][data-color="gray"], [data-blok-database-number-ring][data-color="gray"] { --blok-database-number-ink: var(--blok-database-status-dot-gray); }
 [data-blok-database-number-bar][data-color="brown"], [data-blok-database-number-ring][data-color="brown"] { --blok-database-number-ink: var(--blok-database-status-dot-brown); }
 [data-blok-database-number-bar][data-color="orange"], [data-blok-database-number-ring][data-color="orange"] { --blok-database-number-ink: var(--blok-database-status-dot-orange); }
-[data-blok-database-number-bar][data-color="yellow"], [data-blok-database-number-ring][data-color="yellow"] { --blok-database-number-ink: var(--blok-database-status-dot-yellow); }
+[data-blok-database-number-bar][data-color="yellow"], [data-blok-database-number-ring][data-color="yellow"] { --blok-database-number-ink: var(--blok-database-number-yellow); }
 [data-blok-database-number-bar][data-color="green"], [data-blok-database-number-ring][data-color="green"] { --blok-database-number-ink: var(--blok-database-status-dot-green); }
 [data-blok-database-number-bar][data-color="blue"], [data-blok-database-number-ring][data-color="blue"] { --blok-database-number-ink: var(--blok-database-status-dot-blue); }
 [data-blok-database-number-bar][data-color="purple"], [data-blok-database-number-ring][data-color="purple"] { --blok-database-number-ink: var(--blok-database-status-dot-purple); }

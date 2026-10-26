@@ -5,7 +5,7 @@ import { describeContract } from './describe';
 import { buildDocumentView } from './document-view';
 import { checkEnvelope } from './envelope';
 import { AgentFailure, failure, notPreparedHere } from './errors';
-import { marksOf, planHostBatch, runBatch, type HistoryMark } from './executor';
+import { marksOf, planHostBatch, runBatch, type AgentApplier, type HistoryBound, type HistoryMark, type HostBatchPlan } from './executor';
 import { contentRevision } from './revision';
 import { DocSnapshot } from './snapshot';
 
@@ -14,7 +14,6 @@ import type { OutputData } from '../../../types/data-formats/output-data';
 import type { AgentContract } from '../../../types/tool-manifest';
 import type { ToolRuntimeRegistry } from '../tool-actions/runtime';
 import type { PageBackendService } from '../tool-actions/services';
-import type { AgentApplier, HistoryBound, HostBatchPlan } from './executor';
 import type { AgentPorts, SchemaValidator } from './types';
 
 type ReadBlock = (blockId: string) => { type: string; data: Record<string, unknown> } | undefined;

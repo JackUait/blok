@@ -34,7 +34,7 @@ export const localLinkedSource = (type: string, data: unknown): LocalSource | un
 
 /**
  * Where a linked view's rows live, as the editor's `dataId` reads it: its
- * source database in this document. Undefined when the block is not a linked
+ * source database in this document; undefined when the block is not a linked
  * view. A source in another document, or one that is not a plain database
  * here, gives a refusal: the editor shows no rows to add to there either.
  * @param block - the database block
@@ -52,7 +52,7 @@ export const linkedRowHome = (
   const remote = typeof raw === 'object' && typeof (raw as Record<string, unknown>).documentId === 'string' && (raw as Record<string, unknown>).documentId !== '';
 
   if (remote) {
-    return { refusal: `Database ${block.id} is a linked view of a database in another document. Its rows are read-only here, as they are for a person in the editor: open that document and edit its database there.` };
+    return { refusal: `Database ${block.id} is a linked view of a database in another document, so its rows are read-only here, as they are for a person in the editor. Edit them in the document that holds the source database.` };
   }
   const source = localLinkedSource(block.type, block.data);
   const found = source === undefined || source.databaseId === block.id ? undefined : lookup(source.databaseId);

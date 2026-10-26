@@ -491,7 +491,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'key:Mod+/': exempt('chrome', 'Opens the block settings menu; each item there has its own tune or menu id.'),
   // No row can name the version history: it is the host's UI (src/playground/history-drawer.ts) over the
   // sync server, and the scan reads only src/tools, keys and types/api/blocks.d.ts. history.versions,
-  // history.read and history.changes cover it; restore stays with the user.
+  // history.read, history.changes and history.restore cover it.
   'key:Mod+Z': cmd('history.undo'),
   'key:Mod+Shift+Z': cmd('history.redo'),
   'key:Ctrl+Y': cmd('history.redo'),

@@ -4,10 +4,10 @@ import { viewRows } from './document-view';
 import { checkEnvelope } from './envelope';
 import { preflightProblems } from './batch-preflight';
 import { AgentFailure, failure, notPreparedHere, withOthers } from './errors';
-import { isVersionCommand, splitCommandName } from './names';
+import { isVersionRead, splitCommandName } from './names';
 import { PREPARE_PENDING } from './plan-state';
 import { planBatch } from './planner';
-import { runVersionCommand } from './version-history';
+import { runRestore, runVersionCommand } from './version-history';
 
 import type { AgentActor, AgentBatch, AgentError, AgentErrorCode, AgentResult, AgentWarning, CommandLogEntry } from '../../../types/agent';
 import type { EditStamp } from './json-applier';
@@ -174,7 +174,9 @@ const prepareAt = async (prepare: Preparation, index: number): Promise<unknown> 
  * another document (a host action such as page.rename): the applier keeps no
  * step for it, so without this mark history.undo would undo the batch before it.
  */
-export interface HistoryMarks { past: Array<'own' | 'other'>; future: Array<'own' | 'other'> }
+export type HistoryMark = 'own' | 'other' | { restored: string | undefined };
+
+export interface HistoryMarks { past: HistoryMark[]; future: HistoryMark[] }
 
 const historyMarks = new WeakMap<AgentApplier, HistoryMarks>();
 
@@ -203,8 +205,20 @@ const historyStep = (applier: AgentApplier, name: 'history.undo' | 'history.redo
 
   const marks = marksOf(applier);
 
-  if (name === 'history.undo' && marks.past.at(-1) === 'other') {
+  const last = marks.past.at(-1);
+
+  if (name === 'history.undo' && last === 'other') {
     throw failure('UNDO_OTHER_DOCUMENT', 'The last batch wrote another document (a sub-page title or icon). history.undo cannot undo it. To revert it, run that command again with the old value.', {
+      commandIndex: 0,
+    });
+  }
+  if (typeof last === 'object') {
+    // The applier's own redo step is from before the restore: replaying it would rewrite what the restore wrote.
+    if (name === 'history.redo') {
+      throw failure('NOTHING_TO_REDO', 'The last batch restored a version. There is nothing to redo after it.', { commandIndex: 0 });
+    }
+    throw failure('UNDO_RESTORED', `The last batch restored a version. history.undo cannot undo a restore.${
+      last.restored === undefined ? '' : ` To go back, history.restore "${last.restored}", the version that was current before.`}`, {
       commandIndex: 0,
     });
   }
@@ -451,13 +465,29 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
       };
     }
 
-    if (first !== undefined && isVersionCommand(first.name)) {
+    const atCommand = (error: unknown): never => {
+      throw error instanceof AgentFailure && error.error.commandIndex === undefined
+        ? new AgentFailure({ ...error.error, commandIndex: 0, path: `/commands/0/args${error.error.path ?? ''}` })
+        : error;
+    };
+
+    if (first?.name === 'history.restore') {
+      const restored = await runRestore(first.args, input.ctx, () => input.applier.snapshot()).catch(atCommand);
+      const marks = marksOf(input.applier);
+
+      marks.past.push({ restored: restored.result.previous });
+      marks.future = [];
+      await input.applier.settle?.();
+      record([restored.result], null);
+
+      return {
+        ok: true, revision: input.applier.revision(), results: [restored.result], refs: {}, changed: restored.changed, warnings,
+      };
+    }
+
+    if (first !== undefined && isVersionRead(first.name)) {
       const result = await runVersionCommand(first.name, first.args, input.ctx, () => input.applier.snapshot())
-        .catch((error: unknown) => {
-          throw error instanceof AgentFailure && error.error.commandIndex === undefined
-            ? new AgentFailure({ ...error.error, commandIndex: 0, path: `/commands/0/args${error.error.path ?? ''}` })
-            : error;
-        });
+        .catch(atCommand);
 
       checkCancel(input.signal);
       record([result], null);

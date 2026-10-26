@@ -341,6 +341,8 @@ export interface ContractWhere {
   prepares?: readonly string[];
   /** A Jint call that carries a C# session's steps, so history.* can replay them. */
   carriesHistory?: boolean;
+  /** The host's versionHistory can restore a version. */
+  restores?: boolean;
 }
 
 export const BLOCK_POSITION_SCHEMA: BlokSchema = {
@@ -512,6 +514,7 @@ export const buildAgentContract = (
       || (UNDO_COMMANDS.has(name) && !UNDO_RUNNERS.has(where.runtime) && where.carriesHistory !== true);
     const serviceMissing = !runtimeBlocked
       && (command.requires ?? []).some(service => !where.services.includes(service));
+    const hostMissing = !runtimeBlocked && !serviceMissing && name === 'history.restore' && where.restores !== true;
 
     return {
       name,
@@ -523,9 +526,10 @@ export const buildAgentContract = (
       runtime: command.runtime,
       source: 'core',
       ...(command.requires === undefined ? {} : { requires: command.requires }),
-      available: !runtimeBlocked && !serviceMissing,
+      available: !runtimeBlocked && !serviceMissing && !hostMissing,
       ...(runtimeBlocked ? { unavailableReason: 'runtime' } : {}),
       ...(serviceMissing ? { unavailableReason: 'service' } : {}),
+      ...(hostMissing ? { unavailableReason: 'host' } : {}),
     };
   });
 

@@ -132,7 +132,7 @@ describe('published tool description types', () => {
       requires?: HostService[];
       effects?: 'host';
       available: boolean;
-      unavailableReason?: 'runtime' | 'service';
+      unavailableReason?: 'runtime' | 'service' | 'host';
     }>();
   });
 

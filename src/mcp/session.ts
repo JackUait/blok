@@ -20,7 +20,7 @@ export interface CloseSummary {
 /** A command the listed blok_execute schema offers that this handle refuses. */
 export interface UnavailableCommand {
   name: string;
-  reason: 'runtime' | 'service';
+  reason: 'runtime' | 'service' | 'host';
 }
 
 export interface HandleSession {

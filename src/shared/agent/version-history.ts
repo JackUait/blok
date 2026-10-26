@@ -4,9 +4,9 @@ import { buildDocumentView, viewRows } from './document-view';
 import { AgentFailure, failure } from './errors';
 import { DocSnapshot } from './snapshot';
 
-import type { AgentVersionHistory, DocumentView, ViewArgs, ViewBlock } from '../../../types/agent';
+import type { AgentVersionHistory, ChangedSet, DocumentView, ViewArgs, ViewBlock } from '../../../types/agent';
 import type { OutputData } from '../../../types/data-formats/output-data';
-import type { VersionCommandName } from './names';
+import type { VersionCommandName, VersionReadName } from './names';
 import type { PlannerContext } from './types';
 
 type VersionContext = Omit<PlannerContext, 'prepared'>;
@@ -118,8 +118,6 @@ const changes = (before: DocSnapshot, after: DocSnapshot, ctx: VersionContext): 
     richTextFields: type => ctx.tools.get(type)?.entry.richTextFields ?? [],
     htmlToSegments: ctx.ports.htmlToSegments,
   });
-  const idsOf = (blocks: Array<{ id?: string }>): string[] =>
-    blocks.flatMap(block => block.id === undefined ? [] : [block.id]);
   const added = rows(after, idsOf(diff.added), ctx);
   const removed = rows(before, idsOf(diff.removed), ctx);
   const moved = rows(after, idsOf(diff.moved), ctx);
@@ -145,13 +143,7 @@ const changes = (before: DocSnapshot, after: DocSnapshot, ctx: VersionContext): 
   };
 };
 
-/** Runs one version-history read against the host's service. */
-export const runVersionCommand = async (
-  name: VersionCommandName,
-  args: Record<string, unknown>,
-  ctx: VersionContext,
-  current: () => DocSnapshot
-): Promise<unknown> => {
+const historyOf = (name: VersionCommandName, ctx: VersionContext): AgentVersionHistory => {
   const history = ctx.services.versionHistory;
 
   if (!isVersionHistory(history)) {
@@ -159,6 +151,66 @@ export const runVersionCommand = async (
       commandIndex: 0, details: { reason: 'service', requires: ['versionHistory'] },
     });
   }
+
+  return history;
+};
+
+const notFound = (version: string): AgentFailure =>
+  failure('VERSION_NOT_FOUND', `There is no version "${version}". history.versions lists them.`, { path: '/version' });
+
+const idsOf = (blocks: Array<{ id?: string }>): string[] =>
+  blocks.flatMap(block => block.id === undefined ? [] : [block.id]);
+
+/**
+ * Restores one version through the host, as its own Restore button does. `previous` is the
+ * version that was current before: restoring it is the way back, since history.undo cannot.
+ */
+export const runRestore = async (
+  args: Record<string, unknown>,
+  ctx: VersionContext,
+  current: () => DocSnapshot
+): Promise<{ result: { version: string; previous?: string }; changed: ChangedSet }> => {
+  const history = historyOf('history.restore', ctx);
+  const restore = history.restore;
+
+  if (typeof restore !== 'function') {
+    throw failure('COMMAND_UNAVAILABLE', 'history.restore needs a version history that can restore, and this host\'s cannot.', {
+      commandIndex: 0, details: { reason: 'host', requires: ['versionHistory'] },
+    });
+  }
+  const version = String(args.version);
+  const previous = (await ask(() => history.list({})))[0]?.version;
+  const target = await ask(() => history.read(version));
+
+  if (!isOutputData(target)) {
+    throw notFound(version);
+  }
+  const blocks = outputBlocksToSegments(target.blocks, type => ctx.tools.get(type)?.entry.richTextFields ?? [], ctx.ports.htmlToSegments);
+  const diff = diffOutput(current().toOutput(), { ...target, blocks }, {
+    richTextFields: type => ctx.tools.get(type)?.entry.richTextFields ?? [],
+    htmlToSegments: ctx.ports.htmlToSegments,
+  });
+
+  if (!await ask(() => restore.call(history, version))) {
+    throw notFound(version);
+  }
+
+  return {
+    result: { version, ...(previous !== undefined && { previous }) },
+    changed: {
+      created: idsOf(diff.added), updated: diff.changed.map(change => change.id), moved: idsOf(diff.moved), removed: idsOf(diff.removed),
+    },
+  };
+};
+
+/** Runs one version-history read against the host's service. */
+export const runVersionCommand = async (
+  name: VersionReadName,
+  args: Record<string, unknown>,
+  ctx: VersionContext,
+  current: () => DocSnapshot
+): Promise<unknown> => {
+  const history = historyOf(name, ctx);
 
   if (name === 'history.versions') {
     const group = args.group === 1 || args.group === 15 || args.group === 60 ? args.group : undefined;

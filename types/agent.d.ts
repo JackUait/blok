@@ -11,7 +11,7 @@ export type CoreCommandName =
   | 'text.insert' | 'text.delete' | 'text.replace' | 'text.format'
   | 'markdown.insert' | 'markdown.export' | 'html.insert'
   | 'history.undo' | 'history.redo'
-  | 'history.versions' | 'history.read' | 'history.changes';
+  | 'history.versions' | 'history.read' | 'history.changes' | 'history.restore';
 
 export type ToolCommandName = `${string}.${string}`;
 export type CommandName = CoreCommandName | ToolCommandName;
@@ -47,11 +47,11 @@ export type AgentErrorCode =
   | 'FIELD_NOT_RICH_TEXT' | 'FIELD_NOT_WRITABLE' | 'RANGE_OUT_OF_BOUNDS' | 'RANGE_NOT_FOUND'
   | 'PLACEMENT_REFUSED' | 'CONVERSION_UNSUPPORTED' | 'DATA_REJECTED'
   | 'PRECONDITION_FAILED' | 'COMMAND_UNAVAILABLE' | 'READ_ONLY' | 'STALE' | 'CONFLICT'
-  | 'UNDO_NOT_OWN' | 'NOTHING_TO_UNDO' | 'NOTHING_TO_REDO' | 'UNDO_OTHER_DOCUMENT' | 'CANCELLED'
+  | 'UNDO_NOT_OWN' | 'NOTHING_TO_UNDO' | 'NOTHING_TO_REDO' | 'UNDO_OTHER_DOCUMENT' | 'UNDO_RESTORED' | 'CANCELLED'
   | 'TOOL_ACTION_FAILED' | 'ORPHANED_SIDE_EFFECT' | 'APPLY_FAILED'
   | 'UNKNOWN_HANDLE' | 'HANDLE_LIMIT' | 'FORBIDDEN' | 'ROOM_SYNC_TIMEOUT' | 'ROOM_RESET'
   | 'REJECTED' | 'VERSION_SKEW' | 'DOCUMENT_CHANGED' | 'STORED_WRITE_FORBIDDEN'
-  | 'SOURCE_UNAVAILABLE';
+  | 'SOURCE_UNAVAILABLE' | 'VERSION_NOT_FOUND';
 
 export interface AgentError {
   code: AgentErrorCode;
@@ -260,10 +260,7 @@ export interface AgentVersion {
 
 /**
  * A document's saved versions, as a host's version history shows them to its users.
- * Read-only: restoring a version stays with the user.
- */
-/**
- * A rejected call is a failed history read. The agent is told it may retry only when the
+ * A rejected call is a failed history call. The agent is told it may retry only when the
  * error carries `retryable: true`, or a `status` of 429 or 5xx other than 501.
  */
 export interface AgentVersionHistory {
@@ -271,6 +268,12 @@ export interface AgentVersionHistory {
   list(options: { group?: 1 | 15 | 60 }): Promise<AgentVersion[]>;
   /** One version's saved document, or null when there is no such version. */
   read(version: string): Promise<OutputData | null>;
+  /**
+   * Makes the document equal this version, the way the host's own Restore does. Resolves
+   * false when there is no such version. The restored content reaches the agent's session
+   * the way any other edit by the host does. Without it, agents cannot restore.
+   */
+  restore?(version: string): Promise<boolean>;
 }
 
 export interface AgentSession {

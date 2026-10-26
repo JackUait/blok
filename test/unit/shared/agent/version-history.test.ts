@@ -55,6 +55,7 @@ describe('version history commands', () => {
     expect(entries.map(entry => [entry.name, entry.available, entry.unavailableReason]).sort()).toEqual([
       ['history.changes', false, 'service'],
       ['history.read', false, 'service'],
+      ['history.restore', false, 'service'],
       ['history.versions', false, 'service'],
     ]);
     const result = await agent.execute({ commands: [{ name: 'history.versions', args: {} }] });
@@ -199,5 +200,113 @@ describe('version history commands', () => {
     const result = await agent.execute({ commands: [{ name: 'history.versions', args: {} }] });
 
     expect(result.ok).toBe(true);
+  });
+});
+
+describe('history.restore', () => {
+  const restoring = () => {
+    const history = { ...fakeHistory(), restore: vi.fn(async (version: string) => STORED[version] !== undefined) };
+    const setup = createHeadlessAgentSetup({ services: ['versionHistory'], runtime: 'node', restores: true });
+    const agent = createDocumentAgentSession({
+      document: current(), tools: setup.tools, contract: setup.contract, actor, ports: setup.ports,
+      services: { versionHistory: history },
+    });
+
+    return { history, setup, agent };
+  };
+
+  it('restores through the host port and says what the restore changes', async () => {
+    const { history, agent } = restoring();
+    const result = await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });
+
+    expect(history.restore).toHaveBeenCalledWith('L:1');
+    expect(result.ok && result.results).toEqual([{ version: 'L:1', previous: 'L:3' }]);
+    expect(result.ok && result.changed).toEqual({ created: ['gone'], updated: ['a'], moved: [], removed: ['b', 'c'] });
+  });
+
+  it('says VERSION_NOT_FOUND for an unknown version and never calls the host restore', async () => {
+    const { history, agent } = restoring();
+    const result = await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:99' } }] });
+
+    expect(!result.ok && [result.error.code, result.error.path, result.error.retryable]).toEqual(['VERSION_NOT_FOUND', '/commands/0/args/version', false]);
+    expect(history.restore).not.toHaveBeenCalled();
+  });
+
+  it('says VERSION_NOT_FOUND when the host finds no such version to restore', async () => {
+    const { history, agent } = restoring();
+
+    history.restore.mockResolvedValueOnce(false);
+    const result = await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });
+
+    expect(!result.ok && result.error.code).toBe('VERSION_NOT_FOUND');
+  });
+
+  it('is unavailable with reason host when the version history cannot restore', async () => {
+    const { setup, agent } = session({ history: fakeHistory() });
+    const entry = setup.contract.commands.find(command => command.name === 'history.restore');
+    const result = await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });
+
+    expect(entry).toMatchObject({ available: false, unavailableReason: 'host', readOnly: false, requires: ['versionHistory'] });
+    expect(!result.ok && [result.error.code, result.error.details?.reason]).toEqual(['COMMAND_UNAVAILABLE', 'host']);
+  });
+
+  it('is unavailable with reason service without a version history', async () => {
+    const { setup, agent } = session({ services: [] });
+    const entry = setup.contract.commands.find(command => command.name === 'history.restore');
+    const result = await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });
+
+    expect(entry).toMatchObject({ available: false, unavailableReason: 'service' });
+    expect(!result.ok && [result.error.code, result.error.details?.reason]).toEqual(['COMMAND_UNAVAILABLE', 'service']);
+  });
+
+  it('is a write: refused as READ_ONLY on a read-only session', async () => {
+    const { history, agent } = restoring();
+
+    agent.close();
+    const result = await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });
+
+    expect(!result.ok && result.error.code).toBe('READ_ONLY');
+    expect(history.restore).not.toHaveBeenCalled();
+  });
+
+  it('runs alone in its batch', async () => {
+    const { agent } = restoring();
+    const result = await agent.execute({ commands: [
+      { name: 'history.restore', args: { version: 'L:1' } },
+      { name: 'doc.read', args: {} },
+    ] });
+
+    expect(!result.ok && result.error.message).toContain('must be the only command');
+  });
+
+  it('history.undo refuses to undo a restore and names the version to restore instead', async () => {
+    const { agent } = restoring();
+
+    await agent.execute({ commands: [{ name: 'block.delete', args: { id: 'c' } }] });
+    await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });
+    const undo = await agent.execute({ commands: [{ name: 'history.undo', args: {} }] });
+
+    expect(!undo.ok && undo.error.code).toBe('UNDO_RESTORED');
+    expect(!undo.ok && undo.error.message).toContain('"L:3"');
+  });
+
+  it('history.redo after a restore never replays a step from before it', async () => {
+    const { agent } = restoring();
+
+    await agent.execute({ commands: [{ name: 'block.delete', args: { id: 'c' } }] });
+    await agent.execute({ commands: [{ name: 'history.undo', args: {} }] });
+    await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });
+    const redo = await agent.execute({ commands: [{ name: 'history.redo', args: {} }] });
+
+    expect(!redo.ok && redo.error.code).toBe('NOTHING_TO_REDO');
+  });
+
+  it('reports a failing host restore with the retry rule of the reads', async () => {
+    const { history, agent } = restoring();
+
+    history.restore.mockRejectedValueOnce(Object.assign(new Error('HTTP 503'), { status: 503 }));
+    const result = await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });
+
+    expect(!result.ok && result.error).toMatchObject({ code: 'TOOL_ACTION_FAILED', retryable: true });
   });
 });

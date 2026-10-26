@@ -128,6 +128,11 @@ const registryCases: RegistryCase[] = [
     valid: [{ from: 'L:1' }, { from: 'L:1', to: 'L:3' }],
     invalid: [{}, { to: 'L:3' }, { from: 'L:1', since: 0 }],
   },
+  {
+    name: 'history.restore', readOnly: false,
+    valid: [{ version: 'L:1' }],
+    invalid: [{}, { version: '' }, { version: 'L:1', group: 1 }],
+  },
 ];
 
 const fails = (
@@ -174,11 +179,11 @@ afterEach(() => {
 });
 
 describe('COMMANDS', () => {
-  it('exposes exactly the 22 public core command names', () => {
+  it('exposes exactly the 23 public core command names', () => {
     expect(Object.keys(COMMANDS).sort()).toStrictEqual([
       'block.convert', 'block.delete', 'block.duplicate', 'block.insert', 'block.move', 'block.update',
       'doc.find', 'doc.read', 'doc.setIcon', 'doc.setTitle',
-      'history.changes', 'history.read', 'history.redo', 'history.undo', 'history.versions', 'html.insert', 'markdown.export', 'markdown.insert',
+      'history.changes', 'history.read', 'history.redo', 'history.restore', 'history.undo', 'history.versions', 'html.insert', 'markdown.export', 'markdown.insert',
       'text.delete', 'text.format', 'text.insert', 'text.replace',
     ]);
   });

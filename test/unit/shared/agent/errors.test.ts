@@ -29,6 +29,7 @@ const retryability: { [Code in AgentErrorCode]: readonly [Code, boolean] } = {
   NOTHING_TO_UNDO: ['NOTHING_TO_UNDO', false],
   NOTHING_TO_REDO: ['NOTHING_TO_REDO', false],
   UNDO_OTHER_DOCUMENT: ['UNDO_OTHER_DOCUMENT', false],
+  UNDO_RESTORED: ['UNDO_RESTORED', false],
   CANCELLED: ['CANCELLED', true],
   TOOL_ACTION_FAILED: ['TOOL_ACTION_FAILED', false],
   ORPHANED_SIDE_EFFECT: ['ORPHANED_SIDE_EFFECT', false],
@@ -43,6 +44,7 @@ const retryability: { [Code in AgentErrorCode]: readonly [Code, boolean] } = {
   DOCUMENT_CHANGED: ['DOCUMENT_CHANGED', false],
   STORED_WRITE_FORBIDDEN: ['STORED_WRITE_FORBIDDEN', false],
   SOURCE_UNAVAILABLE: ['SOURCE_UNAVAILABLE', false],
+  VERSION_NOT_FOUND: ['VERSION_NOT_FOUND', false],
 };
 
 beforeEach(() => {
@@ -171,14 +173,14 @@ describe('agent warnings', () => {
 });
 
 describe('command names', () => {
-  it('lists exactly the 22 core commands', () => {
+  it('lists exactly the 23 core commands', () => {
     const expected = [
       'doc.read', 'doc.find', 'doc.setTitle', 'doc.setIcon',
       'block.insert', 'block.update', 'block.delete', 'block.move', 'block.convert', 'block.duplicate',
       'text.insert', 'text.delete', 'text.replace', 'text.format',
       'markdown.insert', 'markdown.export', 'html.insert',
       'history.undo', 'history.redo',
-      'history.versions', 'history.read', 'history.changes',
+      'history.versions', 'history.read', 'history.changes', 'history.restore',
     ] satisfies readonly CoreCommandName[];
 
     expect(CORE_COMMAND_NAMES).toStrictEqual(expected);

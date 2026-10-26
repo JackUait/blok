@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Blok } from '../../../src/blok';
 import { Page, Paragraph } from '../../../src/tools';
 import type { Agent, AgentVersion, AgentVersionHistory, OutputData } from '../../../types';
+import type { AgentModel, AgentModelResponse } from '../../../types/api';
 import type { CommandEntry } from '../../../types/tool-manifest';
 
 interface TestEditor {
@@ -24,7 +25,12 @@ const fakeHistory = (): AgentVersionHistory => ({
   read: vi.fn(async (version: string) => version === 'L:1' ? structuredClone(OLD) : null),
 });
 
-const boot = async (versionHistory?: AgentVersionHistory): Promise<TestEditor> => {
+const restoringHistory = (): AgentVersionHistory & { restore: ReturnType<typeof vi.fn> } => ({
+  ...fakeHistory(),
+  restore: vi.fn(async (version: string) => version === 'L:1'),
+});
+
+const boot = async (versionHistory?: AgentVersionHistory, model?: AgentModel): Promise<TestEditor> => {
   const holder = document.createElement('div');
 
   document.body.appendChild(holder);
@@ -32,7 +38,11 @@ const boot = async (versionHistory?: AgentVersionHistory): Promise<TestEditor> =
     holder,
     data: { blocks: [{ id: 'p', type: 'paragraph', data: { text: 'New text' } }] },
     tools: { paragraph: { class: Paragraph } },
-    ...(versionHistory === undefined ? {} : { agent: { versionHistory } }),
+    user: { id: 'human-1' },
+    agent: {
+      ...(versionHistory === undefined ? {} : { versionHistory }),
+      ...(model === undefined ? {} : { assistant: { model } }),
+    },
   }) as unknown as TestEditor;
 
   editors.push(editor);
@@ -124,5 +134,104 @@ describe('editor agent version history', () => {
 
     turn.end();
     expect(result.ok).toBe(true);
+  });
+});
+
+const call = (commands: unknown[]): AgentModelResponse => ({
+  stop_reason: 'tool_use',
+  content: [{ type: 'tool_use', id: `use-${JSON.stringify(commands).length}-${Math.random()}`, name: 'blok_execute', input: { commands } }],
+});
+
+const scripted = (...responses: AgentModelResponse[]): AgentModel => async () => {
+  const next = responses.shift();
+
+  if (next === undefined) {
+    throw new Error('unscripted model call');
+  }
+
+  return next;
+};
+
+const restoreCall = call([{ name: 'history.restore', args: { version: 'L:1' } }]);
+const insertCall = (text: string): AgentModelResponse =>
+  call([{ name: 'block.insert', args: { type: 'paragraph', data: { text }, position: 'end' } }]);
+
+describe('editor agent version restore', () => {
+  it('restores through agent.versionHistory.restore and lists the command as available', async () => {
+    const history = restoringHistory();
+    const editor = await boot(history);
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const described = turn.describe({ command: 'history.restore' });
+    const result = await turn.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });
+
+    turn.end();
+    const command = 'command' in described ? described.command : undefined;
+
+    expect(isCommandEntry(command) && command.available).toBe(true);
+    expect(history.restore).toHaveBeenCalledWith('L:1');
+    expect(result.ok && result.results).toEqual([{ version: 'L:1', previous: 'L:2' }]);
+    expect(result.ok && result.changed.updated).toEqual(['p']);
+  });
+
+  it('says COMMAND_UNAVAILABLE with reason host when the version history has no restore', async () => {
+    const history = fakeHistory();
+    const editor = await boot(history);
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const described = turn.describe({ command: 'history.restore' });
+    const result = await turn.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });
+
+    turn.end();
+    const command = 'command' in described ? described.command : undefined;
+
+    expect(isCommandEntry(command) && [command.available, command.unavailableReason]).toEqual([false, 'host']);
+    expect(!result.ok && [result.error.code, result.error.details?.reason]).toEqual(['COMMAND_UNAVAILABLE', 'host']);
+  });
+
+  it('says VERSION_NOT_FOUND for a version the history does not have', async () => {
+    const history = restoringHistory();
+    const editor = await boot(history);
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const result = await turn.execute({ commands: [{ name: 'history.restore', args: { version: 'L:9' } }] });
+
+    turn.end();
+    expect(!result.ok && result.error.code).toBe('VERSION_NOT_FOUND');
+    expect(history.restore).not.toHaveBeenCalled();
+  });
+
+  it('is refused as READ_ONLY while the editor is read-only', async () => {
+    const history = restoringHistory();
+    const editor = await boot(history);
+
+    await editor.readOnly.toggle(true);
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const result = await turn.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });
+
+    turn.end();
+    expect(!result.ok && result.error.code).toBe('READ_ONLY');
+    expect(history.restore).not.toHaveBeenCalled();
+  });
+
+  it('history.undo after a restore says how to go back instead of undoing an older step', async () => {
+    const editor = await boot(restoringHistory());
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+
+    await turn.execute({ commands: [{ name: 'block.insert', args: { type: 'paragraph', data: { text: 'Mine' } } }] });
+    await turn.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });
+    const undo = await turn.execute({ commands: [{ name: 'history.undo', args: {} }] });
+
+    turn.end();
+    expect(!undo.ok && undo.error.code).toBe('UNDO_RESTORED');
+    expect(!undo.ok && undo.error.message).toContain('"L:2"');
+  });
+
+  it('Discard after Ask AI restored a version does not claim it took the whole run back', async () => {
+    const history = restoringHistory();
+    const editor = await boot(history, scripted(restoreCall, insertCall('After'), { stop_reason: 'end_turn', content: [{ type: 'text', text: 'Done' }] }));
+    const run = editor.agent.ask('Restore the old version and add a line');
+
+    await run.result;
+
+    await expect(run.discard()).resolves.toBe(false);
+    expect(history.restore).toHaveBeenCalledTimes(1);
   });
 });

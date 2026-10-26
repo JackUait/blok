@@ -148,10 +148,16 @@ export const COMMANDS: Record<CoreCommandName, CoreCommandSpec> = {
   'history.redo': write("Redo this session's last undone step. CONFLICT as for history.undo.", obj({})),
   'history.versions': versionRead('List the saved versions of this document, newest first, with who edited and when.', obj({
     group: { enum: [1, 15, 60], description: 'Minutes per version.' },
-  }), 'The first version is what the document is now. Read-only: the user restores a version, never the agent.'),
+  }), 'The first version is what the document is now.'),
   'history.read': versionRead('Read one saved version, in the shape doc.read gives.', obj({ version, ...READ_ARGS }, ['version']),
     'Block ids are the ids the version had. Never pass the result as expectRevision.'),
   'history.changes': versionRead('What changed between two versions: added, removed, changed and moved blocks.', obj({
     from, to: { ...version, description: 'Omit it to compare with the document as it is now.' },
   }, ['from']), "To see one version's own edits, pass the version listed after it as from and the version as to."),
+  'history.restore': {
+    ...write('Restore a saved version, as the version history\'s Restore does: the document becomes that version, title and icon too.', obj({ version }, ['version']),
+      'Only when the user asks for it. Sub-pages keep their own history. No other version is deleted. history.undo cannot undo a restore: '
+      + 'to go back, restore the result\'s previous version. Read the document again before your next write.'),
+    requires: ['versionHistory'],
+  },
 };

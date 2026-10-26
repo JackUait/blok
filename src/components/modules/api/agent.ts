@@ -14,12 +14,12 @@ import type {
   AgentTurnOptions,
 } from '../../../../types/api';
 import type { OutputData } from '../../../../types';
-import type { AgentActor, AgentBatch, AgentResult, AgentSession, ChangedSet } from '../../../../types/agent';
+import type { AgentActor, AgentBatch, AgentResult, AgentSession, AgentVersionHistory, ChangedSet } from '../../../../types/agent';
 import type { HostService } from '../../../../types/tools/tool-description';
 import { Module } from '../../__module';
 import { announce } from '../../utils/announcer';
 import { prefersReducedMotion } from '../../utils/reduced-motion';
-import { createEditorAgentSession, liveContractSource, type ContractSource } from '../agent/editor-session';
+import { canRestore, createEditorAgentSession, liveContractSource, type ContractSource } from '../agent/editor-session';
 import { inputIndexForField } from '../collaboration/agent-placement';
 import { composeFirstMessage } from '../../../agent/first-message';
 import { isThinkingLevel, readThinkingConfig, type ThinkingChoice } from '../../../agent/thinking';
@@ -106,6 +106,8 @@ export class AgentAPI extends Module {
   private turnPages = new Map<string, TurnPage>();
   /** Each page title or icon the open turn wrote through a host hook, by `pageId field`: the first write and the last. */
   private turnHostWrites = new Map<string, { first: HostPageWrite; last: HostPageWrite }>();
+  /** The open turn restored a version: a write no undo reaches, so Discard cannot take it back. */
+  private turnRestored = false;
   /** The open run's onPageWritten. */
   private turnPageWritten: (() => void) | undefined;
   /** PageIds an agent left on a page block. Kept across turns: such an id could name any document. */
@@ -267,6 +269,7 @@ export class AgentAPI extends Module {
       changed: () => [...this.turnLog.changed],
       restorePages: () => this.restorePages(pagesSaved, hostWrites),
       sealSteps: () => session?.sealSteps(),
+      restored: () => this.turnRestored,
       undoneAll: () => {
         YjsManager.flushPendingBlockWrites();
 
@@ -348,6 +351,22 @@ export class AgentAPI extends Module {
       this.turnHostWrites.set(key, { first: seen?.first ?? write, last: write });
       this.turnPageWritten?.();
     });
+    const history = this.config.agent?.versionHistory;
+    const restore = history?.restore;
+
+    if (history !== undefined && restore !== undefined && this.serviceCache.versionHistory === history) {
+      this.serviceCache.versionHistory = {
+        list: (options) => history.list(options),
+        read: (version) => history.read(version),
+        restore: async (version) => {
+          const restored = await restore.call(history, version);
+
+          this.turnRestored ||= restored;
+
+          return restored;
+        },
+      } satisfies AgentVersionHistory;
+    }
 
     return this.serviceCache;
   }
@@ -358,6 +377,7 @@ export class AgentAPI extends Module {
       services: Object.keys(this.services()).filter((name): name is HostService =>
         name === 'uploader' || name === 'linkMetadata' || name === 'pageBackend' || name === 'versionHistory'
       ),
+      restores: canRestore(this.services().versionHistory),
       overrides: this.config.agent?.overrides,
     });
 
@@ -552,6 +572,7 @@ export class AgentAPI extends Module {
     this.actor = { ...identity, kind: 'agent' };
     this.turnPages = new Map();
     this.turnHostWrites = new Map();
+    this.turnRestored = false;
     this.turnPageWritten = undefined;
     this.startPageIds = new Map();
     for (const block of this.Blok.BlockManager.blocks) {

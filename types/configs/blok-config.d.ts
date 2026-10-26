@@ -1354,7 +1354,8 @@ export interface BlokMountOptions {
      * This document's saved versions, as your version history shows them to
      * users. With it, agents can list versions, read one, and see what
      * changed (`history.versions`, `history.read`, `history.changes`).
-     * Without it those commands are unavailable. Agents never restore a version.
+     * With `restore`, they can also restore one (`history.restore`), the way
+     * your Restore button does. Without it those commands are unavailable.
      */
     versionHistory?: AgentVersionHistory;
   };

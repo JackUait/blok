@@ -9,16 +9,18 @@ export const CORE_COMMAND_NAMES: readonly CoreCommandName[] = [
   'text.insert', 'text.delete', 'text.replace', 'text.format',
   'markdown.insert', 'markdown.export', 'html.insert',
   'history.undo', 'history.redo',
-  'history.versions', 'history.read', 'history.changes',
+  'history.versions', 'history.read', 'history.changes', 'history.restore',
 ];
 
-/** Reads of the host's version history; the executor runs them, not the planner. */
-export const VERSION_COMMANDS = ['history.versions', 'history.read', 'history.changes'] as const;
+/** Calls on the host's version history; the executor runs them, not the planner. */
+export const VERSION_COMMANDS = ['history.versions', 'history.read', 'history.changes', 'history.restore'] as const;
 
 export type VersionCommandName = typeof VERSION_COMMANDS[number];
 
-export const isVersionCommand = (name: string): name is VersionCommandName =>
-  VERSION_COMMANDS.some(command => command === name);
+export type VersionReadName = Exclude<VersionCommandName, 'history.restore'>;
+
+export const isVersionRead = (name: string): name is VersionReadName =>
+  name !== 'history.restore' && VERSION_COMMANDS.some(command => command === name);
 
 export const isReservedNamespace = (namespace: string): boolean =>
   RESERVED_NAMESPACES.some(reserved => reserved === namespace);

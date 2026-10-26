@@ -25,7 +25,7 @@ export interface ContractSource {
 
 export const liveContractSource = (
   Blok: BlokModules,
-  options: { services?: HostService[]; overrides?: ManifestOverrides } = {}
+  options: { services?: HostService[]; overrides?: ManifestOverrides; restores?: boolean } = {}
 ): ContractSource => {
   const services = options.services ?? [];
   const snapshot = () => snapshotFromTools(Blok.Tools, {
@@ -37,10 +37,17 @@ export const liveContractSource = (
   });
 
   return {
-    contract: () => buildAgentContract(buildToolManifest(snapshot(), options.overrides), COMMANDS, { runtime: 'editor', services }),
+    contract: () => buildAgentContract(buildToolManifest(snapshot(), options.overrides), COMMANDS, {
+      runtime: 'editor', services, ...(options.restores === true && { restores: true }),
+    }),
     runtimes: () => runtimesFromTools(Blok.Tools),
   };
 };
+
+/** Whether a host's versionHistory service can restore a version. */
+export const canRestore = (versionHistory: unknown): boolean =>
+  typeof versionHistory === 'object' && versionHistory !== null
+  && 'restore' in versionHistory && typeof versionHistory.restore === 'function';
 
 const editorSessions = { count: 0 };
 
@@ -63,7 +70,7 @@ export const createEditorAgentSession = (
     (name === 'uploader' || name === 'linkMetadata' || name === 'pageBackend' || name === 'host' || name === 'versionHistory')
     && services[name] !== undefined
   );
-  const source = options.contractSource ?? liveContractSource(editor, { services: serviceNames });
+  const source = options.contractSource ?? liveContractSource(editor, { services: serviceNames, restores: canRestore(services.versionHistory) });
   const ports = createEditorPorts(editor);
   const applier = new EditorApplier(editor, {
     actor, sessionId: id, turnId: options.turnId ?? id, attributeLastEditedBy: options.attributeLastEditedBy,

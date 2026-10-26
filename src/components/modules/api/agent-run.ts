@@ -34,6 +34,8 @@ export interface AgentRunDeps {
   changed(): string[];
   /** Discard: write back each sub-page document the run saved, unless someone changed it since. */
   restorePages?(): Promise<PageRestore>;
+  /** The run restored a version. No undo reaches a restore, so Discard keeps it. */
+  restored?(): boolean;
   /** After Discard's undo loop: true when none of the run's steps is left in the editor's undo history. */
   undoneAll(): boolean;
   /** How Discard went, for the prompt bar's message. */
@@ -173,8 +175,10 @@ export function createAgentRun(prompt: string | Promise<string>, deps: AgentRunD
         undone.count += 1;
       }
       const pages = await deps.restorePages?.() ?? { restored: 0, kept: [] };
-      const all = deps.undoneAll() && pages.kept.length === 0;
-      const some = undone.count > 0 || pages.restored > 0;
+      const restored = deps.restored?.() === true;
+      const all = deps.undoneAll() && pages.kept.length === 0 && !restored;
+      // A kept restore is an edit of the run that stays.
+      const some = undone.count > 0 || pages.restored > 0 || restored;
       const outcome: DiscardOutcome = some ? 'partial' : 'none';
 
       deps.onDiscarded?.(all ? 'all' : outcome);

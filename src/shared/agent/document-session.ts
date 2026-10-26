@@ -4,7 +4,7 @@ import { describeContract } from './describe';
 import { buildDocumentView } from './document-view';
 import { checkEnvelope } from './envelope';
 import { AgentFailure, failure, notPreparedHere } from './errors';
-import { marksOf, planHostBatch, runBatch } from './executor';
+import { marksOf, planHostBatch, runBatch, type HistoryMark } from './executor';
 import { contentRevision } from './revision';
 import { DocSnapshot } from './snapshot';
 
@@ -76,7 +76,7 @@ const sessionCount = { value: 0 };
  */
 export const AGENT_HISTORY_LIMITS = { steps: 100, bytes: 4 * 1024 * 1024 } as const;
 
-type HistoryMarksList = Array<'own' | 'other'>;
+type HistoryMarksList = HistoryMark[];
 
 const lostHistory = (): Error => failure('CONFLICT', "Someone else saved this document after this session's last step, so its steps can no longer be undone or redone. Read the document again.");
 
@@ -237,7 +237,8 @@ export const createDocumentAgentSession = (input: {
     const next = { index: 0 };
 
     return kinds.map(kind => {
-      const snapshot = kind === 'other' ? undefined : snapshots[next.index++];
+      // A restore keeps no snapshot; carried on, it refuses undo as any write elsewhere does.
+      const snapshot = kind === 'own' ? snapshots[next.index++] : undefined;
 
       if (kind === 'own' && snapshot === undefined) {
         throw new Error('Each own step has a snapshot.');

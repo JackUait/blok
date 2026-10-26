@@ -13,7 +13,7 @@ export interface PlannerCommand {
   args: JsonSchema;
   readOnly: boolean;
   available: boolean;
-  unavailableReason?: 'runtime' | 'service';
+  unavailableReason?: 'runtime' | 'service' | 'host';
   requires?: string[];
   effects?: 'host';
   source: 'core' | { tool: string; target: 'block' | 'create' };

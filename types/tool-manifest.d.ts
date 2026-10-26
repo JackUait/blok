@@ -148,7 +148,8 @@ export interface CommandEntry {
   requires?: HostService[];
   effects?: 'host';
   available: boolean;
-  unavailableReason?: 'runtime' | 'service';
+  /** 'host': the host gives the service but not this part of it (a version history that cannot restore). */
+  unavailableReason?: 'runtime' | 'service' | 'host';
 }
 
 export interface AgentGuidance {

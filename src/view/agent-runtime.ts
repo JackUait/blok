@@ -202,6 +202,8 @@ export const createHeadlessAgentSetup = (options: {
   /** Block types the host prepares itself; pass the matching port to the session. */
   prepares?: readonly string[];
   carriesHistory?: boolean;
+  /** The versionHistory service passed to the session can restore. */
+  restores?: boolean;
 } = {}): {
   contract: AgentContract;
   tools: ToolRuntimeRegistry;
@@ -217,6 +219,7 @@ export const createHeadlessAgentSetup = (options: {
   const contract = buildAgentContract(manifest, COMMANDS, {
     runtime: options.runtime ?? 'node', services, ...(options.prepares !== undefined && { prepares: options.prepares }),
     ...(options.carriesHistory === true && { carriesHistory: true }),
+    ...(options.restores === true && { restores: true }),
   });
   const tools = runtimesWithCustomTools(BUILT_IN_TOOL_RUNTIMES, options.customTools);
   const richTextFieldsFor = (type: string): string[] =>

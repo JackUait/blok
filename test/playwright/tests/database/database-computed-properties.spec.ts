@@ -153,9 +153,16 @@ test.describe('formula', () => {
     expect(await savedProperties(page, 'r1')).not.toHaveProperty('p-who');
   });
 
-  test('the editor shows names, saves ids, and survives a rename', async ({ page }) => {
+  // A number formula's Edit property is a submenu (Notion): its formula row opens the editor.
+  const openFormulaEditor = async (page: Page): Promise<void> => {
     await header(page, 'p-double').click();
-    await page.getByRole('menuitem', { name: 'Edit property' }).click();
+    // Playwright's role query still sees the inert, fading menu.
+    await page.locator('[data-blok-popover-opened="true"]').getByRole('menuitem', { name: 'Edit property' }).click();
+    await page.locator('[data-blok-popover-opened="true"] [data-blok-item-name="editFormula"]').click();
+  };
+
+  test('the editor shows names, saves ids, and survives a rename', async ({ page }) => {
+    await openFormulaEditor(page);
     const input = page.locator('[data-blok-database-formula-input]');
 
     await expect(input).toHaveValue('prop("Amount") * 2');
@@ -174,15 +181,12 @@ test.describe('formula', () => {
     await name.press('Enter');
 
     await expect(cell(page, 'r3', 'p-double')).toHaveText('104');
-    await header(page, 'p-double').click();
-    // Playwright's role query still sees the inert, fading menu.
-    await page.locator('[data-blok-popover-opened="true"]').getByRole('menuitem', { name: 'Edit property' }).click();
+    await openFormulaEditor(page);
     await expect(page.locator('[data-blok-database-formula-input]')).toHaveValue('prop("Price") + 100');
   });
 
   test('a compile error shows its message and keeps the saved formula', async ({ page }) => {
-    await header(page, 'p-double').click();
-    await page.getByRole('menuitem', { name: 'Edit property' }).click();
+    await openFormulaEditor(page);
     const input = page.locator('[data-blok-database-formula-input]');
 
     await input.fill('prop("Nope") + 1');

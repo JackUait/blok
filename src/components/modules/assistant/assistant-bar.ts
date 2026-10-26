@@ -754,7 +754,8 @@ export class AssistantBar {
   private showReply(reply: string, brief: boolean): void {
     const token = this.replyToken + 1;
     const split = splitReply(reply);
-    const summary = split.summary;
+    // Checked on the raw markdown: rendering drops the list marker.
+    const summary = brief && LEAD_IN.test(split.summary) ? this.t('assistant.edited') : split.summary;
     const rest = brief ? '' : split.rest;
 
     this.replyToken = token;

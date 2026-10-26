@@ -84,6 +84,9 @@ const EXEMPTIONS: Record<string, Exemption> = {
   'components/utils/announcer.ts': {
     reason: 'ARIA live region, visually hidden via inline SR_ONLY_STYLE — no class-based styling at all',
   },
+  'components/modules/paste/html-import.ts': {
+    reason: 'Hidden holder of the scratch editor html.insert pastes into: inline styles only, never shown. The editor inside scopes its own wrapper (ui.ts sets data-blok-interface).',
+  },
   'components/utils/caret/boundaries.ts': {
     reason: 'hidden measurement div styled inline, appended and removed synchronously',
   },

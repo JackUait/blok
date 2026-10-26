@@ -150,7 +150,7 @@ export const pasteHtmlAsBlocks = async (config: BlokConfig, html: string): Promi
   const before = selection === null ? [] : Array.from({ length: selection.rangeCount }, (_, index) => selection.getRangeAt(index));
   const holder = document.createElement('div');
 
-  holder.setAttribute('aria-hidden', 'true');
+  // Hidden also keeps it out of the accessibility tree.
   holder.style.cssText = 'position:fixed;left:-10000px;top:0;width:800px;visibility:hidden;pointer-events:none;';
   document.body.appendChild(holder);
   // Lazy: blok.ts imports this module's own editor graph.

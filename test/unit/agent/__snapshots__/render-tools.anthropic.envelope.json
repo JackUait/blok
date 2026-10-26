@@ -134,6 +134,7 @@
                   "file.setSource",
                   "history.redo",
                   "history.undo",
+                  "html.insert",
                   "image.addMarkup",
                   "image.crop",
                   "image.flip",

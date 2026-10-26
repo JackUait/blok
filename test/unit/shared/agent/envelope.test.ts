@@ -174,11 +174,11 @@ afterEach(() => {
 });
 
 describe('COMMANDS', () => {
-  it('exposes exactly the 21 public core command names', () => {
+  it('exposes exactly the 22 public core command names', () => {
     expect(Object.keys(COMMANDS).sort()).toStrictEqual([
       'block.convert', 'block.delete', 'block.duplicate', 'block.insert', 'block.move', 'block.update',
       'doc.find', 'doc.read', 'doc.setIcon', 'doc.setTitle',
-      'history.changes', 'history.read', 'history.redo', 'history.undo', 'history.versions', 'markdown.export', 'markdown.insert',
+      'history.changes', 'history.read', 'history.redo', 'history.undo', 'history.versions', 'html.insert', 'markdown.export', 'markdown.insert',
       'text.delete', 'text.format', 'text.insert', 'text.replace',
     ]);
   });

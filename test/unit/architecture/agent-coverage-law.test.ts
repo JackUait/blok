@@ -37,6 +37,8 @@ const UNCORPUSED_COMMANDS: Record<string, string> = {
   'database.deleteRow': 'Corpus case proposed, awaiting user review. test/unit/agent/database-row-delete.test.ts runs it on the json and store sessions.',
   'database.applyTemplate': 'Corpus case proposed, awaiting user review. test/unit/agent/database-row-templates.test.ts runs it on the json and store sessions.',
   'database.duplicateRow': 'Corpus case proposed, awaiting user review. test/unit/agent/database-row-copy.test.ts runs it on the json and store sessions.',
+  // An editor-only command: the json, store, Jint and room runners list it as unavailable.
+  'html.insert': 'Editor only, so a case could not run on every runner. test/unit/agent/html-insert.editor.test.ts compares it with a real paste; test/unit/shared/agent/html-insert-runtime.test.ts pins it unavailable headless.',
   'database.moveRowTo': 'Corpus case proposed, awaiting user review. test/unit/agent/database-row-copy.test.ts runs it on the json and store sessions.',
 };
 

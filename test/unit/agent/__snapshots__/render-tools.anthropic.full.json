@@ -4633,6 +4633,84 @@
                 "type": "object",
                 "properties": {
                   "name": {
+                    "const": "html.insert"
+                  },
+                  "args": {
+                    "type": "object",
+                    "properties": {
+                      "html": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "HTML, as a clipboard carries it. Scripts, event handlers and unsafe URLs are removed, as in a paste."
+                      },
+                      "parentId": {
+                        "oneOf": [
+                          {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "position": {
+                        "description": "'start' | 'end' | { before: id } | { after: id }",
+                        "oneOf": [
+                          {
+                            "enum": [
+                              "start",
+                              "end"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "before": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
+                              }
+                            },
+                            "required": [
+                              "before"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "after": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "A block id, or \"$\" plus the ref of a block an earlier command created."
+                              }
+                            },
+                            "required": [
+                              "after"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "html"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
                     "const": "image.addMarkup"
                   },
                   "args": {

@@ -9,7 +9,14 @@ import { defaultBlockTools, defaultInlineTools } from '../../../src/tools';
 import {
   actionUnionIds,
   apiIds,
+  colorPickerModes,
+  colorIds,
   dragIds,
+  featureAnchorProblems,
+  pasteHandlerIds,
+  pasteMenuIds,
+  pastePreprocessorIds,
+  slashColorIds,
   enumerateActionUnions,
   enumerateInsert,
   enumerateTunes,
@@ -417,5 +424,142 @@ describe('api and ui-file enumerators', () => {
   it('ui-file: a file with a click/pointerdown/mousedown/keydown listener (mutation check)', () => {
     expect(ids(uiFileIds(parseSource(`el.addEventListener('pointerdown', fn);`), 'src/tools/a.ts'))).toEqual(['ui-file:src/tools/a.ts']);
     expect(uiFileIds(parseSource(`el.addEventListener('focus', fn);`), 'src/tools/b.ts')).toEqual([]);
+  });
+
+  it('ui-file: change and input listeners count too (mutation check)', () => {
+    expect(ids(uiFileIds(parseSource(`input.addEventListener('change', fn);`), 'src/tools/a.ts'))).toEqual(['ui-file:src/tools/a.ts']);
+    expect(ids(uiFileIds(parseSource(`input.addEventListener('input', fn);`), 'src/tools/b.ts'))).toEqual(['ui-file:src/tools/b.ts']);
+  });
+
+  it('ui-file: a handler passed to a control builder counts (mutation check + near misses)', () => {
+    const at = (code: string): number[] => uiFileIds(parseSource(code), 'src/tools/a.ts').map((c) => c.line);
+
+    expect(at(`\nrow({ label, onClick: () => run() });`)).toEqual([2]);
+    expect(at(`field({ onInput(value) { save(value); } });`)).toEqual([1]);
+    expect(at(`toggle({ onToggle: async (next) => save(next) });`)).toEqual([1]);
+    // A type, a parameter, a menu item (scanMenus owns it), a passed-through reference and an internal callback are not handlers.
+    expect(at(`animate({ onSettle: () => done() });`)).toEqual([]);
+    expect(at(`interface Host { onChange: () => void; }`)).toEqual([]);
+    expect(at(`const f = (onChange: (v: string) => void) => onChange('x');`)).toEqual([]);
+    expect(at(`const item = { name: 'x', onActivate: () => {} };`)).toEqual([]);
+    expect(at(`build({ onClick: options.onClick });`)).toEqual([]);
+  });
+});
+
+describe('color enumerator', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('reads the mode keys of a createColorPicker call', () => {
+    const source = parseSource(`const h = createColorPicker({ i18n, modes: [{ key: 'textColor' }, { key: 'backgroundColor' }] });`);
+
+    expect(colorPickerModes(source)).toEqual(['textColor', 'backgroundColor']);
+  });
+
+  it('a block colour menu and a direct colour picker in a tool file (mutation check + near miss)', () => {
+    const source = parseSource(`
+      const tunes = buildBlockColorTunes({ data, i18n, onPick });
+      const picker = createColorPicker({ modes: [{ key: 'color' }, { key: 'background-color' }] });
+      const other = createSwatchRow({ modes: [{ key: 'nope' }] });
+    `);
+
+    expect(ids(colorIds(source, 'src/tools/callout/index.ts', ['textColor', 'backgroundColor']))).toEqual([
+      'color:callout/background-color',
+      'color:callout/backgroundColor',
+      'color:callout/color',
+      'color:callout/textColor',
+    ]);
+    expect(colorIds(parseSource('const x = 1;'), 'src/tools/quote/index.ts', ['textColor'])).toEqual([]);
+  });
+
+  it('slash colour commands: one id per axis of getBlockColorToolboxEntries (mutation check + near miss)', () => {
+    const source = parseSource(`
+      export const getBlockColorToolboxEntries = (i18n) => {
+        const axes = [{ field: 'textColor', mode: 'text' }, { field: 'backgroundColor', mode: 'bg' }];
+        return axes;
+      };
+      const unrelated = [{ field: 'nope' }];
+    `);
+
+    expect(ids(slashColorIds(source, 'src/components/shared/block-color.ts'))).toEqual([
+      'color:slash/backgroundColor',
+      'color:slash/textColor',
+    ]);
+  });
+});
+
+describe('paste enumerator', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('each class that extends BasePasteHandler (mutation check + near miss)', () => {
+    const source = parseSource(`
+      export class HtmlHandler extends BasePasteHandler implements PasteHandler {}
+      export class Helper extends Other {}
+      export abstract class BasePasteHandler {}
+    `);
+
+    expect(ids(pasteHandlerIds(source, 'src/components/modules/paste/handlers/html-handler.ts'))).toEqual(['paste:handler/HtmlHandler']);
+  });
+
+  it('each preprocessor the pasted-HTML chain imports (mutation check + near miss)', () => {
+    const source = parseSource(`
+      import { preprocessNotionHtml } from './notion-preprocessor';
+      import { recoverGfmToggles } from './gfm-toggle-recovery';
+      import { protectPastedCellBlocks } from '../../../tools/table/table-cell-paste';
+      import type { Options } from './types';
+    `);
+
+    expect(ids(pastePreprocessorIds(source, 'src/components/modules/paste/preprocess-pasted-html.ts'))).toEqual([
+      'paste:html/gfm-toggle-recovery',
+      'paste:html/notion-preprocessor',
+      'paste:html/table-cell-paste',
+    ]);
+  });
+
+  it('each paste-as menu choice (mutation check + near miss)', () => {
+    const source = parseSource(`
+      export type PasteMenuActionType = 'embed' | 'bookmark' | 'plain';
+      export type Other = 'nope';
+    `);
+
+    expect(ids(pasteMenuIds(source, 'src/tools/link/paste-menu/options.ts'))).toEqual([
+      'paste:menu/bookmark',
+      'paste:menu/embed',
+      'paste:menu/plain',
+    ]);
+  });
+});
+
+describe('feature anchors', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('a hand anchor whose export is gone is reported (mutation check)', () => {
+    const anchors = {
+      'feature:database/button-press': 'src/tools/database/database-button.ts#runButtonActions',
+      'feature:database/gone': 'src/tools/database/database-button.ts#pressEverything',
+      'feature:database/no-file': 'src/tools/database/no-such-file.ts#x',
+    };
+
+    expect(featureAnchorProblems(anchors)).toEqual([
+      'feature:database/gone: src/tools/database/database-button.ts exports no "pressEverything"',
+      'feature:database/no-file: src/tools/database/no-such-file.ts does not exist',
+    ]);
   });
 });

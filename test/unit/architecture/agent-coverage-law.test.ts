@@ -5,7 +5,8 @@ import { nodeContract } from '../agent/harness';
 import { loadParityCases } from '../agent/parity/corpus';
 import { LEDGER, isExempt } from './agent-coverage.ledger';
 import type { Coverage } from './agent-coverage.ledger';
-import { ENUMERATORS, SCAN_FLOORS, enumerateTunes, scanToolMenus } from './agent-coverage/enumerators';
+import { ENUMERATORS, HAND_FEATURES, SCAN_FLOORS, enumerateTunes, featureAnchorProblems, scanToolMenus } from './agent-coverage/enumerators';
+import { KNOWN_GAPS } from './agent-coverage/probes';
 import type { Capability } from './agent-coverage/scan';
 import type { CapabilitySource } from './agent-coverage/enumerators';
 import { isInstrumented } from '../helpers/instrumented';
@@ -278,6 +279,10 @@ describe('agent coverage law', () => {
 
       const problem = fieldProblem(coverage.field);
 
+      if (KNOWN_GAPS[id] !== undefined) {
+        return problem === null ? [`${id}: ${coverage.field} is now a valid field write; drop it from KNOWN_GAPS`] : [];
+      }
+
       if (coverage.pending === undefined && problem !== null) {
         return [`${id}: ${coverage.field}: ${problem}`];
       }
@@ -288,5 +293,9 @@ describe('agent coverage law', () => {
     });
 
     expect(problems).toEqual([]);
+  });
+
+  it('every hand feature anchor still names an export of its file', () => {
+    expect(featureAnchorProblems(HAND_FEATURES)).toEqual([]);
   });
 });

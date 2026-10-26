@@ -1,4 +1,4 @@
-import { readdirSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import ts from 'typescript';
@@ -380,21 +380,33 @@ export const apiIds = (source: ts.SourceFile, repoPath: string): Capability[] =>
   return out;
 };
 
-const UI_EVENTS = new Set(['click', 'pointerdown', 'mousedown', 'keydown']);
+const UI_EVENTS = new Set(['click', 'pointerdown', 'mousedown', 'keydown', 'change', 'input', 'submit', 'dblclick', 'contextmenu']);
+
+// Input callbacks a control builder takes (`panelRow({ onClick })`). Not onActivate: a menu item, scanMenus
+// owns it. Not every on*: onSettle, onProgress and the like are internal callbacks, not a person's input.
+const HANDLER_PROPS = new Set(['onClick', 'onInput', 'onChange', 'onToggle', 'onSubmit']);
+
+const isHandlerProp = (node: ts.Node): boolean => {
+  if (ts.isMethodDeclaration(node) && ts.isObjectLiteralExpression(node.parent)) {
+    return ts.isIdentifier(node.name) && HANDLER_PROPS.has(node.name.text);
+  }
+
+  return ts.isPropertyAssignment(node) && ts.isIdentifier(node.name) && HANDLER_PROPS.has(node.name.text) &&
+    (ts.isArrowFunction(node.initializer) || ts.isFunctionExpression(node.initializer));
+};
 
 export const uiFileIds = (source: ts.SourceFile, repoPath: string): Capability[] => {
   let line = 0;
 
   visit(source, (node) => {
-    if (
-      line === 0 &&
-      ts.isCallExpression(node) &&
+    const listens = ts.isCallExpression(node) &&
       ts.isPropertyAccessExpression(node.expression) &&
       node.expression.name.text === 'addEventListener' &&
       node.arguments[0] !== undefined &&
       ts.isStringLiteral(node.arguments[0]) &&
-      UI_EVENTS.has(node.arguments[0].text)
-    ) {
+      UI_EVENTS.has(node.arguments[0].text);
+
+    if (line === 0 && (listens || isHandlerProp(node))) {
       line = lineOf(source, node);
     }
   });
@@ -402,8 +414,206 @@ export const uiFileIds = (source: ts.SourceFile, repoPath: string): Capability[]
   return line === 0 ? [] : [{ id: `ui-file:${repoPath}`, file: repoPath, line }];
 };
 
+const isCallTo = (node: ts.Node, name: string): node is ts.CallExpression =>
+  ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === name;
+
+const stringProp = (literal: ts.ObjectLiteralExpression, key: string): string | null => {
+  const property = propertyNamed(literal, key);
+
+  return property !== undefined && ts.isPropertyAssignment(property) && ts.isStringLiteral(property.initializer)
+    ? property.initializer.text
+    : null;
+};
+
+const modeKeysOf = (call: ts.CallExpression): string[] => {
+  const options = call.arguments[0];
+  const modes = options !== undefined && ts.isObjectLiteralExpression(options) ? propertyNamed(options, 'modes') : undefined;
+
+  if (modes === undefined || !ts.isPropertyAssignment(modes) || !ts.isArrayLiteralExpression(modes.initializer)) {
+    return [];
+  }
+
+  return modes.initializer.elements.flatMap((mode) => {
+    const key = ts.isObjectLiteralExpression(mode) ? stringProp(mode, 'key') : null;
+
+    return key === null ? [] : [key];
+  });
+};
+
+/** Mode keys of every createColorPicker call in a file, in source order. */
+export const colorPickerModes = (source: ts.SourceFile): string[] => {
+  const keys: string[] = [];
+
+  visit(source, (node) => {
+    if (isCallTo(node, 'createColorPicker')) {
+      keys.push(...modeKeysOf(node));
+    }
+  });
+
+  return keys;
+};
+
+/**
+ * Colour pickers inside a tool: the block settings Color menu (buildBlockColorTunes,
+ * whose modes are `blockModes`) and a picker the tool builds itself. Neither is an
+ * onActivate item, so scanMenus never sees them.
+ */
+export const colorIds = (source: ts.SourceFile, repoPath: string, blockModes: string[]): Capability[] => {
+  const tool = toolOf(repoPath);
+  const out: Capability[] = [];
+
+  visit(source, (node) => {
+    const keys = isCallTo(node, 'buildBlockColorTunes') ? [...blockModes] : [];
+
+    if (isCallTo(node, 'createColorPicker')) {
+      keys.push(...modeKeysOf(node));
+    }
+
+    keys.forEach((key) => out.push({ id: `color:${tool}/${key}`, file: repoPath, line: lineOf(source, node) }));
+  });
+
+  return out;
+};
+
+/** The "/" colour commands: one id per axis (`field`) of getBlockColorToolboxEntries. */
+export const slashColorIds = (source: ts.SourceFile, repoPath: string): Capability[] => {
+  const out: Capability[] = [];
+
+  visit(source, (node) => {
+    if (!ts.isVariableDeclaration(node) || !ts.isIdentifier(node.name) || node.name.text !== 'getBlockColorToolboxEntries') {
+      return;
+    }
+
+    visit(node, (inner) => {
+      const field = ts.isObjectLiteralExpression(inner) ? stringProp(inner, 'field') : null;
+
+      if (field !== null) {
+        out.push({ id: `color:slash/${field}`, file: repoPath, line: lineOf(source, inner) });
+      }
+    });
+  });
+
+  return out;
+};
+
+const BLOCK_COLOR_FILE = 'components/shared/block-color.ts';
+
+export const enumerateColor = (): Capability[] => {
+  const blockColor = join(SRC_ROOT, BLOCK_COLOR_FILE);
+  const blockModes = colorPickerModes(parseFile(blockColor));
+  const toolbox = parseFile(join(SRC_ROOT, 'components/ui/toolbox.ts'));
+  let slashShown = false;
+
+  visit(toolbox, (node) => {
+    slashShown ||= isCallTo(node, 'getBlockColorToolboxEntries');
+  });
+
+  return [
+    ...walkTs(join(SRC_ROOT, 'tools')).flatMap((file) => colorIds(parseFile(file), toRepoPath(file), blockModes)),
+    ...(slashShown ? slashColorIds(parseFile(blockColor), toRepoPath(blockColor)) : []),
+  ];
+};
+
+/** Each paste handler: a class that extends BasePasteHandler. */
+export const pasteHandlerIds = (source: ts.SourceFile, repoPath: string): Capability[] =>
+  source.statements.flatMap((statement) => {
+    const extendsBase = ts.isClassDeclaration(statement) && (statement.heritageClauses ?? []).some((clause) =>
+      clause.token === ts.SyntaxKind.ExtendsKeyword &&
+      clause.types.some((type) => ts.isIdentifier(type.expression) && type.expression.text === 'BasePasteHandler'));
+
+    return extendsBase && statement.name !== undefined
+      ? [{ id: `paste:handler/${statement.name.text}`, file: repoPath, line: lineOf(source, statement) }]
+      : [];
+  });
+
+/** Each step of the pasted-HTML chain: a value import of preprocess-pasted-html.ts, named by its file. */
+export const pastePreprocessorIds = (source: ts.SourceFile, repoPath: string): Capability[] =>
+  source.statements.flatMap((statement) => {
+    if (!ts.isImportDeclaration(statement) || statement.importClause?.isTypeOnly === true ||
+      !ts.isStringLiteral(statement.moduleSpecifier)) {
+      return [];
+    }
+
+    const file = statement.moduleSpecifier.text.split('/').pop() ?? '';
+
+    return [{ id: `paste:html/${file}`, file: repoPath, line: lineOf(source, statement) }];
+  });
+
+/** Each paste-as choice for a pasted URL: a member of PasteMenuActionType. */
+export const pasteMenuIds = (source: ts.SourceFile, repoPath: string): Capability[] =>
+  source.statements.flatMap((statement) => {
+    if (!ts.isTypeAliasDeclaration(statement) || statement.name.text !== 'PasteMenuActionType' || !ts.isUnionTypeNode(statement.type)) {
+      return [];
+    }
+
+    return statement.type.types.flatMap((member) => {
+      const value = literalTypeText(member);
+
+      return value === null ? [] : [{ id: `paste:menu/${value}`, file: repoPath, line: lineOf(source, member) }];
+    });
+  });
+
+const PASTE_DIR = 'components/modules/paste';
+
+export const enumeratePaste = (): Capability[] => [
+  ...walkTs(join(SRC_ROOT, PASTE_DIR, 'handlers')).flatMap((file) => pasteHandlerIds(parseFile(file), toRepoPath(file))),
+  ...fromFile(`${PASTE_DIR}/preprocess-pasted-html.ts`, pastePreprocessorIds),
+  ...fromFile('tools/link/paste-menu/options.ts', pasteMenuIds),
+  // Pasted CSV text offers to make a database (paste/index.ts calls it with no listener of its own).
+  { id: 'paste:csv-database-offer', file: `src/${PASTE_DIR}/csv-database-offer.ts`, line: 0 },
+];
+
+/**
+ * Tool features with no UI of their own: a listener in a big file (database
+ * index.ts) calls them. Keyed id → `<repo path>#<exported name>`; keep in sync
+ * by hand, featureAnchorProblems fails when an anchor no longer resolves.
+ */
+export const HAND_FEATURES: Record<string, string> = {
+  'feature:database/button-press': 'src/tools/database/database-button.ts#runButtonActions',
+  'feature:database/csv-export': 'src/tools/database/database-csv.ts#serializeCsv',
+  'feature:database/csv-paste': 'src/tools/database/database-csv.ts#pastedTable',
+  'feature:database/csv-import': 'src/tools/database/database-csv.ts#csvDatabaseBlocks',
+  'feature:database/csv-merge': 'src/tools/database/database-csv.ts#planCsvMerge',
+  'feature:database/ai-setup': 'src/tools/database/database-ai-setup.ts#planAiSetup',
+  'feature:database/built-in-comments': 'src/tools/database/database-comments-store.ts#BuiltInComments',
+};
+
+const exportedNames = (source: ts.SourceFile): Set<string> => {
+  const names = new Set<string>();
+
+  source.statements.forEach((statement) => {
+    if (!isExported(statement)) {
+      return;
+    }
+
+    if (ts.isVariableStatement(statement)) {
+      statement.declarationList.declarations.forEach((d) => ts.isIdentifier(d.name) && names.add(d.name.text));
+    } else if ((ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) && statement.name !== undefined) {
+      names.add(statement.name.text);
+    }
+  });
+
+  return names;
+};
+
+export const featureAnchorProblems = (anchors: Record<string, string>): string[] =>
+  Object.entries(anchors).flatMap(([id, anchor]) => {
+    const [file, name] = anchor.split('#');
+    const full = join(REPO_ROOT, file);
+
+    if (!existsSync(full)) {
+      return [`${id}: ${file} does not exist`];
+    }
+
+    return exportedNames(parseFile(full)).has(name) ? [] : [`${id}: ${file} exports no "${name}"`];
+  });
+
+export const enumerateFeatures = (): Capability[] =>
+  Object.entries(HAND_FEATURES).map(([id, anchor]) => ({ id, file: anchor.split('#')[0], line: 0 }));
+
 export type CapabilitySource =
-  | 'insert' | 'format' | 'tune' | 'menu' | 'action' | 'shortcut' | 'key' | 'typing' | 'drag' | 'api' | 'ui-file';
+  | 'insert' | 'format' | 'tune' | 'menu' | 'action' | 'shortcut' | 'key' | 'typing' | 'drag' | 'api' | 'ui-file'
+  | 'color' | 'paste' | 'feature';
 
 // walkTs skips .d.ts, so the api source is parsed directly.
 const enumerateApi = (): Capability[] => {
@@ -424,6 +634,9 @@ export const ENUMERATORS: Record<CapabilitySource, () => Capability[]> = {
   drag: enumerateDrag,
   api: enumerateApi,
   'ui-file': () => walkTs(join(SRC_ROOT, 'tools')).flatMap((file) => uiFileIds(parseFile(file), toRepoPath(file))),
+  color: enumerateColor,
+  paste: enumeratePaste,
+  feature: enumerateFeatures,
 };
 
 /**
@@ -442,6 +655,10 @@ export const SCAN_FLOORS: Record<CapabilitySource, number> = {
   drag: 6,
   api: 20,
   'ui-file': 50,
+  // Set at ~80% of the count on 2026-10-25.
+  color: 12,
+  paste: 15,
+  feature: 7,
 };
 
 export const enumerateAll = (): Map<string, Capability> => {

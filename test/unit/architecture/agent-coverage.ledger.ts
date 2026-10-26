@@ -171,6 +171,72 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/video/ui.ts': cmds(['video.setSource', 'block.update'], 'Upload/URL and caption: video.caption.'),
 };
 
+const HTML_IMPORT_CUT = 'D6 cut, user decision pending (review TD-4): agents have no HTML import, so the paste pipeline that cleans this source never runs for them. An agent writes blocks with block.insert or markdown.insert instead.';
+const UPLOAD_CUT = 'D6 cut, user decision pending: agents place media by URL only (*.setSource); there is no file or byte transport for a pasted or dropped file.';
+
+// Ids the 2026-10-25 parity review found the law could not see (color, paste, feature, and ui-files it missed).
+const REVIEW_ROWS: Record<CapabilityId, Coverage> = {
+  // color — block settings Color menu, tool colour pickers, and the "/" colour commands
+  'color:paragraph/textColor': fld('paragraph.textColor'),
+  'color:paragraph/backgroundColor': fld('paragraph.backgroundColor'),
+  'color:header/textColor': fld('header.textColor'),
+  'color:header/backgroundColor': fld('header.backgroundColor'),
+  'color:page/textColor': fld('page.textColor'),
+  'color:page/backgroundColor': fld('page.backgroundColor'),
+  'color:table-of-contents/textColor': fld('table_of_contents.textColor'),
+  'color:table-of-contents/backgroundColor': fld('table_of_contents.backgroundColor'),
+  'color:toggle/textColor': fld('toggle.textColor'),
+  'color:toggle/backgroundColor': fld('toggle.backgroundColor'),
+  'color:callout/color': fld('callout.textColor'),
+  'color:callout/background-color': fld('callout.backgroundColor'),
+  'color:table/textColor': cmd('table.styleCells'),
+  'color:table/backgroundColor': cmd('table.styleCells'),
+  'color:slash/textColor': exempt('gesture-alias', 'A "/red text" command colours the current block, the same write as color:paragraph/textColor and the other color ids.'),
+  'color:slash/backgroundColor': exempt('gesture-alias', 'A "/red background" command colours the current block, the same write as color:paragraph/backgroundColor and the other color ids.'),
+
+  // paste — handlers, the pasted-HTML chain, and the paste-as choices for a URL
+  'paste:handler/BlokDataHandler': cmd('block.insert'),
+  'paste:handler/TextHandler': cmds(['text.insert', 'block.insert'], 'Plain text goes into the caret block, and each further line becomes a new block.'),
+  'paste:handler/PatternHandler': cmds(['embed.create', 'bookmark.create'], 'A pasted URL that a tool claims by pattern becomes that block.'),
+  'paste:handler/TableCellsHandler': cmds(['table.insertRows', 'table.insertColumns', 'block.insert'], 'Pasted cells grow the grid as needed; each cell body is child blocks of the cell.'),
+  'paste:handler/HtmlHandler': exempt('cut-v1', HTML_IMPORT_CUT),
+  'paste:handler/FilesHandler': exempt('cut-v1', UPLOAD_CUT),
+  'paste:html/google-docs-preprocessor': exempt('cut-v1', HTML_IMPORT_CUT),
+  'paste:html/notion-preprocessor': exempt('cut-v1', HTML_IMPORT_CUT),
+  'paste:html/ai-chat-preprocessor': exempt('cut-v1', HTML_IMPORT_CUT),
+  'paste:html/gfm-toggle-recovery': exempt('cut-v1', HTML_IMPORT_CUT),
+  'paste:html/div-lines-preprocessor': exempt('cut-v1', HTML_IMPORT_CUT),
+  'paste:html/table-direction-preprocessor': exempt('cut-v1', HTML_IMPORT_CUT),
+  'paste:html/excel-class-styles-preprocessor': exempt('cut-v1', HTML_IMPORT_CUT),
+  'paste:html/word-list-preprocessor': exempt('cut-v1', HTML_IMPORT_CUT),
+  'paste:html/table-cell-format-preprocessor': exempt('cut-v1', HTML_IMPORT_CUT),
+  'paste:html/table-cell-paste': exempt('cut-v1', HTML_IMPORT_CUT),
+  'paste:csv-database-offer': cmds(['database.create', 'database.addProperty', 'database.addRow'], 'Pasted CSV text offers to become a database; an agent makes it, its properties and rows itself.'),
+  'paste:menu/embed': cmd('embed.create'),
+  'paste:menu/bookmark': cmd('bookmark.create'),
+  'paste:menu/mention': cmd('text.insert'),
+  'paste:menu/plain': cmd('text.format'),
+
+  // feature — tool features a listener in a big file calls (HAND_FEATURES)
+  'feature:database/button-press': exempt('cut-v1', 'D6 cut, user decision pending (review F13): no database.pressButton yet. An agent can redo each write with setRowValues and addRow, but the host callback and notification never fire for it.'),
+  'feature:database/csv-export': exempt('view-only', 'Exports the rows as a CSV file; the document does not change. Agents read rows with doc.read.'),
+  'feature:database/csv-paste': cmds(['database.addRow', 'database.setRowValues'], 'A table of text pasted into the grid fills cells and adds rows.'),
+  'feature:database/csv-import': cmds(['database.create', 'database.addProperty', 'database.addRow'], 'Importing a CSV makes a database; an agent makes it, its typed properties and rows itself.'),
+  'feature:database/csv-merge': cmds(['database.addProperty', 'database.addRow', 'database.setRowValues'], 'Merging a CSV into a database adds the new properties and rows and fills matched cells.'),
+  'feature:database/ai-setup': cmds(['database.addProperty', 'database.updateProperty', 'database.addView'], 'The New database AI prompt asks the host model for a plan; an agent adds the properties and views itself.'),
+  'feature:database/built-in-comments': exempt('cut-v1', 'D6 cut: comments are written by people, not agents (user decision 2026-10-16, design 18); this is the store behind the built-in comment UI.'),
+
+  // ui-file — files the listener-only scan missed
+  'ui-file:src/tools/database/database-automations-panel.ts': cmds(['block.update'], 'Create, edit, pause and delete automations: writes database.automations. Whether agent edits fire them is a user decision pending (review F1).'),
+  'ui-file:src/tools/database/database-button-menu.ts': cmd('database.updateProperty'),
+  'ui-file:src/tools/database/database-chart-export.ts': exempt('view-only', 'Copies the chart as PNG or downloads it as PNG or SVG; the document does not change.'),
+  'ui-file:src/tools/database/database-linked-picker.ts': cmds(['block.insert', 'block.update', 'database.addView'], 'A new linked database is block.insert with database.source; relinking writes database.source; New view is database.addView.'),
+  'ui-file:src/tools/list/block-operations.ts': fld('list.checked'),
+  'ui-file:src/tools/list/list-lifecycle.ts': fld('list.checked'),
+  'ui-file:src/tools/table/table-row-col-popover.ts': cmds(['block.update', 'table.styleCells'], 'Heading toggles write table.withHeadings and table.withHeadingColumn; the colour item is table.styleCells.'),
+  'ui-file:src/tools/video/index.ts': fld('video.caption'),
+};
+
 export const LEDGER: Record<CapabilityId, Coverage> = {
   // insert — toolbox entries (src/tools/*/index.ts `static get toolbox`)
   'insert:paragraph': cmd('block.insert'),
@@ -258,7 +324,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:embed/embed-open-original': exempt('view-only', OPEN_ORIGINAL),
   'menu:embed/embed-replace': cmd('embed.setUrl'),
   'menu:embed/embed-copy-url': exempt('clipboard', COPY_URL),
-  'menu:paste-menu/paste-menu-*': cmds(['bookmark.create', 'embed.setUrl', 'text.format'], 'Paste-as choices for a pasted URL: a bookmark block, an embed block, or a plain link mark.'),
+  'menu:paste-menu/paste-menu-*': exempt('gesture-alias', 'Each paste-as menu item is one choice of paste:menu/embed, paste:menu/bookmark, paste:menu/mention or paste:menu/plain.'),
   'menu:page/page-open-new-tab': exempt('view-only', 'Opens the linked page in a new tab; this document does not change.'),
   'menu:page/page-open-side-peek': exempt('view-only', 'Opens another page in a panel; this document does not change.'),
   'menu:table/table-heading-row': fld('table.withHeadings'),
@@ -485,4 +551,5 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
 
   // ui-file — interactive tool files (see the per-file table below)
   ...UI_FILE_ROWS,
+  ...REVIEW_ROWS,
 };

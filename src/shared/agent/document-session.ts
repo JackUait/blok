@@ -80,7 +80,7 @@ type HistoryMarksList = Array<'own' | 'other'>;
 
 const lostHistory = (): Error => failure('CONFLICT', "Someone else saved this document after this session's last step, so its steps can no longer be undone or redone. Read the document again.");
 
-/** A session's undo and redo steps, oldest first: the document before a step, or 'other' for a step that wrote another document. */
+/** A session's undo and redo steps, oldest first: the document before a step, or 'other' when a step wrote elsewhere. */
 export interface CarriedHistory {
   past: Array<OutputData | 'other'>;
   future: Array<OutputData | 'other'>;

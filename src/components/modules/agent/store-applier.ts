@@ -217,7 +217,7 @@ export class StoreApplier implements AgentApplier {
         const block = blocks.get(id);
 
         if (block === undefined) {
-          return null;
+          return 'gone';
         }
 
         // The slot too: replaying a move a peer redid in the same parent lists the block twice.

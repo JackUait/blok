@@ -512,6 +512,8 @@ describe('PageLayoutBuilder', () => {
     glyph.innerHTML = IconUndo;
     expect(reset?.querySelector('[data-blok-popover-item-icon] svg')?.innerHTML).toBe(glyph.querySelector('svg')?.innerHTML);
     expect(reset?.closest('[data-blok-popover-custom-class]')?.getAttribute('data-blok-popover-custom-class')).toContain('blok-database-layout-reset-menu');
+    // notion-spec-2 §11: Notion's menu is 254 wide.
+    expect(reset?.closest<HTMLElement>('[data-blok-popover-custom-class]')?.style.getPropertyValue('--width')).toBe('254px');
     drawer.destroy();
   });
 

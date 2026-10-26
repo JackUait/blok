@@ -1584,7 +1584,8 @@ export class PageLayoutBuilder {
       class: `${DATABASE_MENU_CLASS} blok-database-layout-reset-menu`,
       trigger: anchor,
       width: 'auto',
-      minWidth: '220px',
+      // notion-spec-2 §11: Notion's menu is 254 wide.
+      minWidth: '254px',
       autoFocusFirstItem: false,
       items: [{
         type: PopoverItemType.Default,

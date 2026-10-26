@@ -119,9 +119,10 @@ describe('filter property list (T27)', () => {
 describe('row page property menu (research parity row 9)', () => {
   const ROW_PAGE = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu']";
 
-  it('reads 14px regular, as Notion', () => {
-    expect(declared(`${ROW_PAGE} [data-blok-popover-item-title]`, 'font-size')).toEqual(['14px']);
-    expect(declared(`${ROW_PAGE} [data-blok-popover-item-title]`, 'font-weight')).toEqual(['400']);
+  // Its class carries the header class, whose 14px regular rule it reads (notion-spec-2 §12).
+  it('reads 14px regular through the header class, with no rule of its own', () => {
+    expect(declared(`${ROW_PAGE} [data-blok-popover-item-title]`, 'font-size')).toEqual([]);
+    expect(declared(`${HEADER} [data-blok-popover-item-title]`, 'font-size')).toEqual(['14px']);
   });
 
   it('has 8px separators and no gap under the last row: Notion\'s 197px menu', () => {
@@ -132,8 +133,8 @@ describe('row page property menu (research parity row 9)', () => {
   // notion-spec-2 §1: "Type › Number": 14/16.8 value, 6px to the chevron, chevron 8px from the row end.
   // Notion's value ink rgb(161,158,153) fails AA, so the value keeps Blok's secondary ink.
   it('shows a row\'s value at 14px, 6px before its chevron, with the chevron 8px from the row end', () => {
-    expect(declared(`${ROW_PAGE} [data-blok-popover-item-value]`, 'font-size')).toEqual(['14px']);
-    expect(declared(`${ROW_PAGE} [data-blok-popover-item-value]`, 'line-height')).toEqual(['1.2']);
+    expect(declared(`${HEADER} [data-blok-popover-item-value]`, 'font-size')).toEqual(['14px']);
+    expect(declared(`${HEADER} [data-blok-popover-item-value]`, 'line-height')).toEqual(['1.2']);
     expect(declared(`${ROW_PAGE} [data-blok-popover-item-value] + [data-blok-popover-item-icon-chevron-right]`, 'margin-inline-start')).toEqual(['var(--blok-space-1-5)']);
     expect(declared(`${ROW_PAGE} [data-blok-popover-item]:has(> [data-blok-popover-item-value])`, 'padding-inline-end')).toEqual(['var(--blok-space-2)']);
   });
@@ -253,11 +254,14 @@ describe('database submenus (notion-spec-2 §11)', () => {
     expect(declared(`[data-blok-theme="dark"] ${NESTED}`, '--blok-item-hover-bg')).toEqual(['rgba(255, 255, 255, 0.055)']);
   });
 
-  it('reads 14px regular in the column header submenus, as Notion', () => {
-    expect(declared(`${SUB} [data-blok-popover-item-title]`, 'font-size')).toEqual(['14px']);
-    expect(declared(`${SUB} [data-blok-popover-item-title]`, 'font-weight')).toEqual(['400']);
-    expect(declared(`${SUB} [data-blok-popover-item-value]`, 'font-size')).toEqual(['14px']);
-    expect(declared(`${SUB} [data-blok-popover-item-value]`, 'line-height')).toEqual(['1.2']);
+  // notion-spec-2 §11, §12: the column header menu, its submenus, the peek's "•••" and peek mode menus
+  // all read 14px regular. They share the header class, so one rule covers them.
+  it('reads 14px regular in every menu with the header look, as Notion', () => {
+    expect(declared(`${HEADER} [data-blok-popover-item-title]`, 'font-size')).toEqual(['14px']);
+    expect(declared(`${HEADER} [data-blok-popover-item-title]`, 'font-weight')).toEqual(['400']);
+    expect(declared(`${HEADER} [data-blok-popover-item-value]`, 'font-size')).toEqual(['14px']);
+    expect(declared(`${HEADER} [data-blok-popover-item-value]`, 'line-height')).toEqual(['1.2']);
+    expect(declared(`${SUB} [data-blok-popover-item-title]`, 'font-size')).toEqual([]);
   });
 });
 
@@ -280,10 +284,40 @@ describe('layout reset row (notion-spec-2 §11)', () => {
     expect(declared(`${RESET} [data-blok-popover-item-icon]`, 'margin-inline-end')).toEqual(['var(--blok-space-2)']);
   });
 
+  // Notion's glyph ink is its strong glyph grey, rgb(56,56,54).
+  it('inks the glyph in the strong glyph grey', () => {
+    expect(declared(`${RESET} [data-blok-popover-item-icon]`, 'color')).toEqual(['var(--blok-database-peek-glyph-strong)']);
+  });
+
   it('reads 14/20 regular on both lines', () => {
     for (const line of ['[data-blok-popover-item-title]', '[data-blok-popover-item-description]']) {
       expect(declared(`${RESET} ${line}`, 'font-size')).toEqual(['14px']);
       expect(declared(`${RESET} ${line}`, 'font-weight')).toEqual(['400']);
     }
+  });
+});
+
+// notion-spec-2 §12: Notion's Color list is 296 tall: padding 8px 0 and ten full-width 28px rows, no gap.
+// A row pads 8px, a 20px swatch slot, then the name 8px on: the swatches line up with the button's.
+describe('Color list (notion-spec-2 §12)', () => {
+  const LIST = `${HEADER} [data-blok-popover][data-blok-nested]:has(> [data-blok-popover-container] [data-blok-item-name='color-default'])`;
+  const COLOR = `${HEADER} [data-blok-popover-item][data-blok-item-name="color"]`;
+
+  it('has Notion\'s 296px box: full-width rows, 8px above and below', () => {
+    expect(declared(`${LIST} [data-blok-popover-container]`, 'padding-inline')).toEqual(['0']);
+    expect(declared(`${LIST} [data-blok-popover-items]`, 'padding-block')).toEqual(['var(--blok-space-2)']);
+    expect(declared(`${LIST} [data-blok-popover-item]`, 'margin-block-end')).toEqual(['0']);
+    expect(declared(`${LIST} [data-blok-popover-item]`, 'padding-inline')).toEqual(['var(--blok-space-2)']);
+  });
+
+  it('draws each swatch in a 20px slot, 8px before the name', () => {
+    expect(declared(`${LIST} [data-blok-popover-item-icon]`, 'inline-size')).toEqual(['20px']);
+    expect(declared(`${LIST} [data-blok-popover-item-icon]`, 'block-size')).toEqual(['20px']);
+    expect(declared(`${LIST} [data-blok-popover-item-icon]`, 'margin-inline-end')).toEqual(['var(--blok-space-2)']);
+  });
+
+  // The button's swatch sits in a 20px slot too, so the list's swatches line up with it.
+  it('gives the button\'s swatch the same 20px slot', () => {
+    expect(declared(`${COLOR} [data-blok-popover-item-value] > [data-blok-database-option-swatch]`, 'margin-inline')).toEqual(['var(--blok-space-0-25)']);
   });
 });

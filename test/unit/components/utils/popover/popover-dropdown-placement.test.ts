@@ -92,6 +92,19 @@ describe('Popover: children.placement dropdown', () => {
     expect(listBox()?.style.top).toBe('252px');
   });
 
+  // The button wraps the value's content: a padded value does not push the list left.
+  it('measures the button from the value\'s content, past its padding', () => {
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(900);
+    const popover = open();
+
+    placeRow(popover);
+    itemEl('color')?.querySelector<HTMLElement>('[data-blok-popover-item-value]')?.style.setProperty('padding-left', '12px');
+    itemEl('color')?.click();
+
+    // Content left 409 + 12, button 8 before it: 413, in the menu's space 133.
+    expect(listBox()?.style.left).toBe('133px');
+  });
+
   it('opens over the button when there is no room under it', () => {
     vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(436);
     const popover = open();

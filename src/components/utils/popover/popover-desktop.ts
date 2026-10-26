@@ -1752,13 +1752,20 @@ export class PopoverDesktop extends PopoverAbstract {
    */
   private dropdownButtonRect(item: PopoverItem): { left: number; right: number; top: number; bottom: number } | undefined {
     const row = item.getElement();
-    const value = row?.querySelector(`[${DATA_ATTR.popoverItemValue}]`)?.getBoundingClientRect();
+    const valueEl = row?.querySelector(`[${DATA_ATTR.popoverItemValue}]`);
     const chevron = row?.querySelector(`[${DATA_ATTR.popoverItemIconChevronRight}]`)?.getBoundingClientRect();
     const rowRect = row?.getBoundingClientRect();
 
-    if (value === undefined || rowRect === undefined) {
+    if (valueEl === null || valueEl === undefined || rowRect === undefined) {
       return undefined;
     }
+    // The button wraps the value's content, not its padding.
+    const box = valueEl.getBoundingClientRect();
+    const style = window.getComputedStyle(valueEl);
+    const value = {
+      left: box.left + (parseFloat(style.paddingLeft) || 0),
+      right: box.right - (parseFloat(style.paddingRight) || 0),
+    };
     const end = chevron !== undefined && chevron.width > 0 ? chevron : value;
 
     return {

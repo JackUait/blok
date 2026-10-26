@@ -6208,19 +6208,37 @@ button[data-blok-database-column-count]:hover {
   --max-height: calc(100dvh - 2 * var(--blok-space-3));
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item-title] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover-item-title] {
   font-size: 14px;
   font-weight: 400;
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item-value] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover-item-value] {
   font-size: 14px;
   line-height: 1.2;
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-title] {
-  font-size: 14px;
-  font-weight: 400;
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested]:has(> [data-blok-popover-container] [data-blok-item-name='color-default']) [data-blok-popover-container] {
+  padding-inline: 0;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested]:has(> [data-blok-popover-container] [data-blok-item-name='color-default']) [data-blok-popover-items] {
+  padding-block: var(--blok-space-2);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested]:has(> [data-blok-popover-container] [data-blok-item-name='color-default']) [data-blok-popover-item] {
+  margin-block-end: 0;
+  padding-inline: var(--blok-space-2);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested]:has(> [data-blok-popover-container] [data-blok-item-name='color-default']) [data-blok-popover-item-icon] {
+  inline-size: 20px;
+  block-size: 20px;
+  margin-inline-end: var(--blok-space-2);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover-item][data-blok-item-name="color"] [data-blok-popover-item-value] > [data-blok-database-option-swatch] {
+  margin-inline: var(--blok-space-0-25);
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-separator] {
@@ -6229,11 +6247,6 @@ button[data-blok-database-column-count]:hover {
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item]:last-child {
   margin-block-end: 0;
-}
-
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-value] {
-  font-size: 14px;
-  line-height: 1.2;
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-value] + [data-blok-popover-item-icon-chevron-right] {
@@ -7206,6 +7219,7 @@ button[data-blok-database-column-count]:hover {
   inline-size: 20px;
   block-size: 20px;
   margin-inline-end: var(--blok-space-2);
+  color: var(--blok-database-peek-glyph-strong);
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-layout-reset-menu'] [data-blok-popover-item-title] {

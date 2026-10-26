@@ -182,6 +182,7 @@
   "assistant.failed": "AI nije mogao odgovoriti: {error}",
   "assistant.discardBlocked": "Ništa nije poništeno: uređivali ste nakon AI-ja. Koristite poništavanje da se vratite korak nazad.",
   "assistant.discardPartial": "Neke izmjene AI-ja su zadržane: promijenjene su nakon što ih je AI napravio.",
+  "assistant.discardRestored": "AI je vratio verziju i „Odbaci“ to ne može poništiti. Da se vratite, vratite raniju verziju.",
   "a11y.dropPosition": "Pozicija ispuštanja: {position} od {total}",
   "a11y.dropCancelled": "Povlačenje je otkazano",
   "a11y.blockMoved": "Blok je premješten na poziciju {position} od {total}",

@@ -188,6 +188,7 @@
   "assistant.failed": "AI ตอบไม่ได้: {error}",
   "assistant.discardBlocked": "ไม่มีสิ่งใดถูกเลิกทำ: คุณแก้ไขหลังจาก AI ใช้การเลิกทำเพื่อย้อนกลับ",
   "assistant.discardPartial": "การแก้ไขบางส่วนของ AI ถูกเก็บไว้: มีการเปลี่ยนแปลงหลังจาก AI",
+  "assistant.discardRestored": "AI กู้คืนเวอร์ชันหนึ่งแล้ว และ \"ทิ้ง\" ไม่สามารถเลิกทำได้ หากต้องการย้อนกลับ ให้กู้คืนเวอร์ชันก่อนหน้า",
   "a11y.dropPosition": "จะวางที่ตำแหน่ง {position} จาก {total}",
   "a11y.dropCancelled": "ยกเลิกการลาก",
   "a11y.blockMoved": "ย้ายบล็อกไปยังตำแหน่ง {position} จากทั้งหมด {total} แล้ว",

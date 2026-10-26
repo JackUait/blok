@@ -68,6 +68,7 @@ export type BlokMessageKey =
   | 'assistant.discard'
   | 'assistant.discardBlocked'
   | 'assistant.discardPartial'
+  | 'assistant.discardRestored'
   | 'assistant.edited'
   | 'assistant.failed'
   | 'assistant.followUp'

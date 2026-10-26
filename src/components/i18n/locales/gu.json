@@ -182,6 +182,7 @@
   "assistant.failed": "AI જવાબ આપી શક્યું નહીં: {error}",
   "assistant.discardBlocked": "કંઈ પૂર્વવત્ થયું નથી: તમે AI પછી સંપાદન કર્યું. પાછા જવા માટે પૂર્વવત્ કરોનો ઉપયોગ કરો.",
   "assistant.discardPartial": "AIના કેટલાક સંપાદનો રાખવામાં આવ્યા: AI પછી તે બદલાયા.",
+  "assistant.discardRestored": "AIએ એક સંસ્કરણ પુનઃસ્થાપિત કર્યું, અને \"રદ કરો\" તેને પાછું લઈ શકતું નથી. પાછા જવા માટે પહેલાંનું સંસ્કરણ પુનઃસ્થાપિત કરો.",
   "a11y.dropPosition": "{total} માંથી {position} સ્થાને મૂકવામાં આવશે",
   "a11y.dropCancelled": "ખેંચવાનું રદ કર્યું",
   "a11y.blockMoved": "બ્લોક {total} માંથી {position} સ્થાને ખસેડાયો",

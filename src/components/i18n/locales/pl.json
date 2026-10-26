@@ -222,6 +222,7 @@
   "assistant.failed": "AI nie mogła odpowiedzieć: {error}",
   "assistant.discardBlocked": "Nic nie zostało cofnięte: edytowano po AI. Użyj cofania, aby wrócić.",
   "assistant.discardPartial": "Część zmian AI została zachowana: zmieniono je po AI.",
+  "assistant.discardRestored": "AI przywróciła wersję, a „Odrzuć” nie może tego cofnąć. Aby wrócić, przywróć wcześniejszą wersję.",
   "a11y.dropPosition": "Pozycja docelowa: {position} z {total}",
   "a11y.dropCancelled": "Przeciąganie anulowane",
   "a11y.blockMoved": "Blok przeniesiony na pozycję {position} z {total}",

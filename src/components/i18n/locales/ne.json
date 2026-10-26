@@ -176,6 +176,7 @@
   "assistant.failed": "AI ले जवाफ दिन सकेन: {error}",
   "assistant.discardBlocked": "केही पनि अनडू भएन: तपाईंले AI पछि सम्पादन गर्नुभयो। पछाडि जान अनडू प्रयोग गर्नुहोस्।",
   "assistant.discardPartial": "AI का केही सम्पादनहरू राखिए: AI पछि ती परिवर्तन भए।",
+  "assistant.discardRestored": "AI ले एउटा संस्करण पुनर्स्थापित गर्‍यो, र \"खारेज गर्नुहोस्\" ले यसलाई उल्टाउन सक्दैन। फर्कन अघिल्लो संस्करण पुनर्स्थापित गर्नुहोस्।",
   "a11y.dropPosition": "{total} मध्ये स्थान {position} मा राखिनेछ",
   "a11y.dropCancelled": "तान्ने कार्य रद्द भयो",
   "a11y.blockMoved": "ब्लक {total} मध्ये स्थान {position} मा सारियो",

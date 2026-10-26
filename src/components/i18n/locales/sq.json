@@ -222,6 +222,7 @@
   "assistant.failed": "AI nuk mundi të përgjigjet: {error}",
   "assistant.discardBlocked": "Asgjë nuk u zhbë: ju redaktuat pas AI-së. Përdorni zhbërjen për t’u kthyer pas.",
   "assistant.discardPartial": "Disa ndryshime të AI-së u mbajtën: ato ndryshuan pas AI-së.",
+  "assistant.discardRestored": "AI rikthoi një version dhe «Hidh poshtë» nuk mund ta zhbëjë këtë. Për t’u kthyer, rikthe versionin e mëparshëm.",
   "a11y.dropPosition": "Pozicioni i vendosjes: {position} nga {total}",
   "a11y.dropCancelled": "Tërheqja u anulua",
   "a11y.blockMoved": "Blloku u lëviz në pozicionin {position} nga {total}",

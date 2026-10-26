@@ -546,6 +546,32 @@ describe('in-editor assistant bar', () => {
     expect((await editor.save()).blocks.map((block) => block.id)).toEqual(['p1', 'pg']);
   });
 
+  it('Discard stays open and says a restore stays when the assistant restored a version', async () => {
+    const restoreCall: AgentModelResponse = { stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'v1', name: 'blok_execute', input: {
+      commands: [{ name: 'history.restore', args: { version: 'L:1' } }],
+    } }] };
+    const model = scripted(restoreCall, answer('Restored it.'));
+    const restore = vi.fn(async () => true);
+    const editor = await createEditor(model, undefined, {
+      agent: {
+        assistant: { model, name: 'Writer' },
+        versionHistory: {
+          list: async () => [{ version: 'L:2', savedAt: 2, actors: [] }, { version: 'L:1', savedAt: 1, actors: [] }],
+          read: async () => ({ blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'Older' } }] }),
+          restore,
+        },
+      },
+    });
+
+    editor.agent.openAssistant();
+    submit('Restore the older version');
+    await waitFor(() => expect(within(bar()).getByRole('button', { name: 'Discard' })).toBeVisible());
+    within(bar()).getByRole('button', { name: 'Discard' }).click();
+
+    await waitFor(() => expect(within(bar()).getByRole('alert')).toHaveTextContent('AI restored a version, and Discard cannot undo it.'));
+    expect(restore).toHaveBeenCalledTimes(1);
+  }, 15_000);
+
   it('Discard stays open and says so when a sub-page changed after the assistant wrote it', async () => {
     const pages: Record<string, OutputData> = { sub: { blocks: [] } };
     const subCall: AgentModelResponse = { stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 's1', name: 'blok_execute', input: {

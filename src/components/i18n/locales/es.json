@@ -222,6 +222,7 @@
   "assistant.failed": "La IA no pudo responder: {error}",
   "assistant.discardBlocked": "No se deshizo nada: editaste después de la IA. Usa deshacer para retroceder.",
   "assistant.discardPartial": "Se conservaron algunos cambios de la IA: se modificaron después.",
+  "assistant.discardRestored": "La IA restauró una versión y «Descartar» no puede deshacerlo. Para volver, restaura la versión anterior.",
   "a11y.dropPosition": "Se colocará en la posición {position} de {total}",
   "a11y.dropCancelled": "Arrastre cancelado",
   "a11y.blockMoved": "Bloque movido a la posición {position} de {total}",

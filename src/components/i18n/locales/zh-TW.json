@@ -224,6 +224,7 @@
   "assistant.failed": "AI 無法回答：{error}",
   "assistant.discardBlocked": "未復原任何內容：你在 AI 之後進行了編輯。請使用復原來返回上一步。",
   "assistant.discardPartial": "已保留 AI 的部分編輯：它們在 AI 之後有所變更。",
+  "assistant.discardRestored": "AI 已還原某個版本，「捨棄」無法復原此操作。若要返回，請還原先前的版本。",
   "a11y.dropPosition": "將放置於第 {position} 個位置，共 {total} 個",
   "a11y.dropCancelled": "已取消拖曳",
   "a11y.blockMoved": "區塊已移動至第 {position} 個位置，共 {total} 個",

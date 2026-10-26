@@ -188,6 +188,7 @@
   "assistant.failed": "MI nevarēja atbildēt: {error}",
   "assistant.discardBlocked": "Nekas netika atsaukts: jūs rediģējāt pēc MI. Lai atgrieztos, izmantojiet atsaukšanu.",
   "assistant.discardPartial": "Daži MI labojumi tika saglabāti: tie mainīti pēc MI.",
+  "assistant.discardRestored": "MI atjaunoja versiju, un “Atmest” to nevar atsaukt. Lai atgrieztos, atjaunojiet iepriekšējo versiju.",
   "a11y.dropPosition": "Nomešanas pozīcija: {position} no {total}",
   "a11y.dropCancelled": "Vilkšana atcelta",
   "a11y.blockMoved": "Bloks pārvietots uz pozīciju {position} no {total}",

@@ -222,6 +222,7 @@
   "assistant.failed": "Az MI nem tudott válaszolni: {error}",
   "assistant.discardBlocked": "Semmi sem lett visszavonva: az MI után szerkesztettél. A visszalépéshez használd a Visszavonást.",
   "assistant.discardPartial": "Az MI néhány szerkesztése megmaradt: az MI után módosultak.",
+  "assistant.discardRestored": "Az MI visszaállított egy verziót, és az Elvetés ezt nem tudja visszavonni. A visszalépéshez állítsa vissza a korábbi verziót.",
   "a11y.dropPosition": "A blokk célpozíciója: {position}; pozíciók száma: {total}.",
   "a11y.dropCancelled": "Áthelyezés megszakítva",
   "a11y.blockMoved": "A blokk áthelyezve. Új pozíció: {position}; pozíciók száma: {total}.",

@@ -222,6 +222,7 @@
   "assistant.failed": "KI kunne ikke svare: {error}",
   "assistant.discardBlocked": "Ingenting ble angret: du redigerte etter KI. Bruk Angre for å gå et steg tilbake.",
   "assistant.discardPartial": "Noen av KI-endringene ble beholdt: de ble endret etter KI.",
+  "assistant.discardRestored": "KI gjenopprettet en versjon, og Forkast kan ikke angre det. Gjenopprett den tidligere versjonen for å gå tilbake.",
   "a11y.dropPosition": "Slippes på posisjon {position} av {total}",
   "a11y.dropCancelled": "Flytting avbrutt",
   "a11y.blockMoved": "Blokk flyttet til posisjon {position} av {total}",

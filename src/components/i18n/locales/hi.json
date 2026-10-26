@@ -194,6 +194,7 @@
   "assistant.failed": "AI जवाब नहीं दे सका: {error}",
   "assistant.discardBlocked": "कुछ भी पूर्ववत नहीं हुआ: आपने AI के बाद संपादन किया। पीछे जाने के लिए पूर्ववत करें का उपयोग करें।",
   "assistant.discardPartial": "AI के कुछ संपादन रखे गए: AI के बाद उनमें बदलाव हुआ।",
+  "assistant.discardRestored": "AI ने एक संस्करण पुनर्स्थापित किया, और \"हटाएं\" इसे पूर्ववत नहीं कर सकता। वापस जाने के लिए पिछला संस्करण पुनर्स्थापित करें।",
   "a11y.dropPosition": "{total} में से {position} पर रखा जाएगा",
   "a11y.dropCancelled": "खींचना रद्द किया गया",
   "a11y.blockMoved": "ब्लॉक {total} में से {position} पर ले जाया गया",

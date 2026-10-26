@@ -222,6 +222,7 @@
   "assistant.failed": "AI نەیتوانی وەڵام بداتەوە: {error}",
   "assistant.discardBlocked": "هیچ شتێک پاشگەز نەکرایەوە: تۆ دوای AI دەستکاریت کرد. بۆ گەڕانەوە پاشگەزبوونەوە بەکاربهێنە.",
   "assistant.discardPartial": "هەندێک لە دەستکارییەکانی AI هێڵرانەوە: دوای AI گۆڕدراون.",
+  "assistant.discardRestored": "AI وەشانێکی گەڕاندەوە، و «وازهێنان» ناتوانێت ئەوە هەڵبوەشێنێتەوە. بۆ گەڕانەوە، وەشانی پێشوو بگەڕێنەوە.",
   "a11y.dropPosition": "دەخرێتە شوێن {position} لە {total}",
   "a11y.dropCancelled": "ڕاکێشان هەڵوەشایەوە",
   "a11y.blockMoved": "بلۆک گوازرایەوە بۆ شوێن {position} لە {total}",

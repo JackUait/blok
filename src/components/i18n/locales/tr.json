@@ -188,6 +188,7 @@
   "assistant.failed": "Yapay zekâ yanıt veremedi: {error}",
   "assistant.discardBlocked": "Hiçbir şey geri alınmadı: yapay zekâdan sonra düzenleme yaptınız. Geri gitmek için geri almayı kullanın.",
   "assistant.discardPartial": "Yapay zekânın bazı düzenlemeleri korundu: yapay zekâdan sonra değiştirildiler.",
+  "assistant.discardRestored": "Yapay zekâ bir sürümü geri yükledi ve Vazgeç bunu geri alamaz. Geri dönmek için önceki sürümü geri yükleyin.",
   "a11y.dropPosition": "{total} içinden {position}. konuma bırakılacak",
   "a11y.dropCancelled": "Sürükleme iptal edildi",
   "a11y.blockMoved": "Blok {total} içinden {position}. konuma taşındı",

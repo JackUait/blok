@@ -222,6 +222,7 @@
   "assistant.failed": "A IA não conseguiu responder: {error}",
   "assistant.discardBlocked": "Nada foi desfeito: você editou depois da IA. Use desfazer para voltar.",
   "assistant.discardPartial": "Algumas edições da IA foram mantidas: elas mudaram depois da IA.",
+  "assistant.discardRestored": "A IA restaurou uma versão, e Descartar não pode desfazer isso. Para voltar, restaure a versão anterior.",
   "a11y.dropPosition": "Posição de destino: {position} de {total}",
   "a11y.dropCancelled": "Arrasto cancelado",
   "a11y.blockMoved": "Bloco movido para a posição {position} de {total}",

@@ -222,6 +222,7 @@
   "assistant.failed": "ה-AI לא הצליח לענות: {error}",
   "assistant.discardBlocked": "שום דבר לא בוטל: ערכת אחרי ה-AI. השתמש בביטול פעולה כדי לחזור צעד אחורה.",
   "assistant.discardPartial": "חלק מהעריכות של ה-AI נשמרו: הן השתנו אחרי ה-AI.",
+  "assistant.discardRestored": "ה-AI שחזר גרסה, ו„בטל” לא יכול לבטל זאת. כדי לחזור, שחזרו את הגרסה הקודמת.",
   "a11y.dropPosition": "ישוחרר במיקום {position} מתוך {total}",
   "a11y.dropCancelled": "הגרירה בוטלה",
   "a11y.blockMoved": "הבלוק הועבר למיקום {position} מתוך {total}",

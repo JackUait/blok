@@ -224,6 +224,7 @@
   "assistant.failed": "AI could not answer: {error}",
   "assistant.discardBlocked": "Nothing was undone: you edited after AI did. Use undo to step back.",
   "assistant.discardPartial": "Some of AI's edits were kept: they changed after AI made them.",
+  "assistant.discardRestored": "AI restored a version, and Discard cannot undo it. To go back, restore the earlier version.",
   "a11y.dropPosition": "Will drop at position {position} of {total}",
   "a11y.dropCancelled": "Drag canceled",
   "a11y.blockMoved": "Block moved to position {position} of {total}",

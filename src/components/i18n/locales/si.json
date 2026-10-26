@@ -176,6 +176,7 @@
   "assistant.failed": "AI ට පිළිතුරු දිය නොහැකි විය: {error}",
   "assistant.discardBlocked": "කිසිවක් අහෝසි නොකෙරිණි: ඔබ AI ට පසු සංස්කරණය කළා. ආපසු යාමට අහෝසි කරන්න භාවිත කරන්න.",
   "assistant.discardPartial": "AI හි සංස්කරණ සමහරක් තබා ගැනිණි: ඒවා AI ට පසු වෙනස් විය.",
+  "assistant.discardRestored": "AI අනුවාදයක් ප්‍රතිසාධනය කළ අතර, \"ඉවතලන්න\" මගින් එය අහෝසි කළ නොහැක. ආපසු යාමට පෙර අනුවාදය ප්‍රතිසාධනය කරන්න.",
   "a11y.dropPosition": "{total}න් {position} ස්ථානයේ තබනු ඇත",
   "a11y.dropCancelled": "ඇදීම අවලංගු කරන ලදී",
   "a11y.blockMoved": "කොටස {total}න් {position} ස්ථානයට ගෙන යන ලදී",

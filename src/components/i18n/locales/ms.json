@@ -222,6 +222,7 @@
   "assistant.failed": "AI tidak dapat menjawab: {error}",
   "assistant.discardBlocked": "Tiada apa-apa dibuat asal: anda menyunting selepas AI. Gunakan buat asal untuk berundur.",
   "assistant.discardPartial": "Sebahagian suntingan AI dikekalkan: ia berubah selepas AI.",
+  "assistant.discardRestored": "AI memulihkan satu versi, dan Buang tidak dapat membuat asalnya. Untuk kembali, pulihkan versi sebelumnya.",
   "a11y.dropPosition": "Akan dilepaskan pada kedudukan {position} daripada {total}",
   "a11y.dropCancelled": "Seretan dibatalkan",
   "a11y.blockMoved": "Blok dialihkan ke kedudukan {position} daripada {total}",

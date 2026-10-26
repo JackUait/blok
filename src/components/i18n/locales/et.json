@@ -222,6 +222,7 @@
   "assistant.failed": "Tehisintellekt ei saanud vastata: {error}",
   "assistant.discardBlocked": "Midagi ei võetud tagasi: muutsid pärast tehisintellekti. Sammu tagasi minemiseks kasuta tagasivõtmist.",
   "assistant.discardPartial": "Osa tehisintellekti muudatusi jäi alles: neid muudeti hiljem.",
+  "assistant.discardRestored": "Tehisintellekt taastas versiooni ja „Loobu“ ei saa seda tagasi võtta. Tagasi minekuks taastage varasem versioon.",
   "a11y.dropPosition": "Asetatakse positsioonile {position}, kokku {total}",
   "a11y.dropCancelled": "Lohistamine tühistatud",
   "a11y.blockMoved": "Plokk teisaldatud positsioonile {position}, kokku {total}",

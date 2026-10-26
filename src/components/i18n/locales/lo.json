@@ -176,6 +176,7 @@
   "assistant.failed": "AI ບໍ່ສາມາດຕອບໄດ້: {error}",
   "assistant.discardBlocked": "ບໍ່ມີຫຍັງຖືກຍົກເລີກ: ທ່ານແກ້ໄຂຫຼັງຈາກ AI. ໃຊ້ການຍົກເລີກເພື່ອຖອຍຫຼັງ.",
   "assistant.discardPartial": "ບາງການແກ້ໄຂຂອງ AI ຖືກເກັບໄວ້: ມັນຖືກປ່ຽນຫຼັງຈາກ AI.",
+  "assistant.discardRestored": "AI ໄດ້ກູ້ຄືນເວີຊັນໜຶ່ງ, ແລະ \"ຍົກເລີກ\" ບໍ່ສາມາດຍ້ອນມັນໄດ້. ເພື່ອກັບຄືນ, ໃຫ້ກູ້ຄືນເວີຊັນກ່ອນໜ້າ.",
   "a11y.dropPosition": "ຈະວາງຢູ່ຕຳແໜ່ງ {position} ຈາກ {total}",
   "a11y.dropCancelled": "ຍົກເລີກການລາກ",
   "a11y.blockMoved": "ບລັອກຍ້າຍໄປຕຳແໜ່ງ {position} ຈາກ {total}",

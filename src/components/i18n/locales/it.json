@@ -222,6 +222,7 @@
   "assistant.failed": "L’IA non è riuscita a rispondere: {error}",
   "assistant.discardBlocked": "Nulla è stato annullato: hai modificato dopo l’IA. Usa Annulla per tornare indietro.",
   "assistant.discardPartial": "Alcune modifiche dell’IA sono state mantenute: sono cambiate dopo l’IA.",
+  "assistant.discardRestored": "L’IA ha ripristinato una versione e «Scarta» non può annullarlo. Per tornare indietro, ripristina la versione precedente.",
   "a11y.dropPosition": "Posizione di rilascio: {position} di {total}",
   "a11y.dropCancelled": "Trascinamento annullato",
   "a11y.blockMoved": "Blocco spostato alla posizione {position} di {total}",

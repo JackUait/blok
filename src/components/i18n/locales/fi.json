@@ -194,6 +194,7 @@
   "assistant.failed": "Tekoäly ei voinut vastata: {error}",
   "assistant.discardBlocked": "Mitään ei kumottu: muokkasit tekoälyn jälkeen. Palaa taaksepäin kumoamalla.",
   "assistant.discardPartial": "Osa tekoälyn muokkauksista säilytettiin: niitä muutettiin tekoälyn jälkeen.",
+  "assistant.discardRestored": "Tekoäly palautti version, eikä Hylkää voi perua sitä. Palaa takaisin palauttamalla aiempi versio.",
   "a11y.dropPosition": "Pudotetaan kohtaan {position}/{total}",
   "a11y.dropCancelled": "Vetäminen peruutettu",
   "a11y.blockMoved": "Lohko siirretty kohtaan {position}/{total}",

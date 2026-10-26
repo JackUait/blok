@@ -222,6 +222,7 @@
   "assistant.failed": "AI kunde inte svara: {error}",
   "assistant.discardBlocked": "Inget ångrades: du redigerade efter AI. Använd Ångra för att gå tillbaka.",
   "assistant.discardPartial": "Vissa av AI:s ändringar behölls: de ändrades efter AI.",
+  "assistant.discardRestored": "AI återställde en version, och Förkasta kan inte ångra det. Återställ den tidigare versionen för att gå tillbaka.",
   "a11y.dropPosition": "Släpps på position {position} av {total}",
   "a11y.dropCancelled": "Dragning avbruten",
   "a11y.blockMoved": "Block flyttat till position {position} av {total}",

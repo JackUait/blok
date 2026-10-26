@@ -222,6 +222,7 @@
   "assistant.failed": "AI tidak dapat menjawab: {error}",
   "assistant.discardBlocked": "Tidak ada yang dibatalkan: Anda mengedit setelah AI. Gunakan urungkan untuk mundur.",
   "assistant.discardPartial": "Sebagian suntingan AI dipertahankan: suntingan itu berubah setelah AI.",
+  "assistant.discardRestored": "AI memulihkan sebuah versi, dan Buang tidak dapat membatalkannya. Untuk kembali, pulihkan versi sebelumnya.",
   "a11y.dropPosition": "Akan diletakkan di posisi {position} dari {total}",
   "a11y.dropCancelled": "Penyeretan dibatalkan",
   "a11y.blockMoved": "Blok dipindahkan ke posisi {position} dari {total}",

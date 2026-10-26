@@ -222,6 +222,7 @@
   "assistant.failed": "AI kunne ikke svare: {error}",
   "assistant.discardBlocked": "Intet blev fortrudt: du redigerede efter AI. Brug Fortryd for at gå et trin tilbage.",
   "assistant.discardPartial": "Nogle af AI's ændringer blev beholdt: de blev ændret, efter AI lavede dem.",
+  "assistant.discardRestored": "AI gendannede en version, og Kassér kan ikke fortryde det. Gendan den tidligere version for at gå tilbage.",
   "a11y.dropPosition": "Placeres på position {position} af {total}",
   "a11y.dropCancelled": "Træk annulleret",
   "a11y.blockMoved": "Blok flyttet til position {position} af {total}",

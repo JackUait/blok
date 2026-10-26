@@ -222,6 +222,7 @@
   "assistant.failed": "AI جواب نه ڏئي سگهيو: {error}",
   "assistant.discardBlocked": "ڪجهه به واپس نه ٿيو: توهان AI کانپوءِ ايڊٽ ڪيو. پوئتي وڃڻ لاءِ واپس ڪريو استعمال ڪريو.",
   "assistant.discardPartial": "AI جون ڪجهه ترميمون رکيون ويون: اهي AI کانپوءِ بدليون.",
+  "assistant.discardRestored": "AI هڪ ورزن بحال ڪيو، ۽ \"رد ڪريو\" ان کي واپس نٿو ڪري سگهي. واپس وڃڻ لاءِ اڳوڻو ورزن بحال ڪريو.",
   "a11y.dropPosition": "ڪل {total} مان پوزيشن {position} تي رکيو ويندو",
   "a11y.dropCancelled": "ڇڪڻ منسوخ ٿيو",
   "a11y.blockMoved": "بلاڪ ڪل {total} مان پوزيشن {position} تي منتقل ٿيو",

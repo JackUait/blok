@@ -176,6 +176,7 @@
   "assistant.failed": "AI ਜਵਾਬ ਨਹੀਂ ਦੇ ਸਕਿਆ: {error}",
   "assistant.discardBlocked": "ਕੁਝ ਵੀ ਅਣਕੀਤਾ ਨਹੀਂ ਹੋਇਆ: ਤੁਸੀਂ AI ਤੋਂ ਬਾਅਦ ਸੰਪਾਦਨ ਕੀਤਾ। ਪਿੱਛੇ ਜਾਣ ਲਈ ਅਣਕੀਤਾ ਕਰੋ ਵਰਤੋ।",
   "assistant.discardPartial": "AI ਦੇ ਕੁਝ ਸੰਪਾਦਨ ਰੱਖੇ ਗਏ: AI ਤੋਂ ਬਾਅਦ ਉਹ ਬਦਲ ਗਏ।",
+  "assistant.discardRestored": "AI ਨੇ ਇੱਕ ਸੰਸਕਰਣ ਮੁੜ-ਬਹਾਲ ਕੀਤਾ, ਅਤੇ \"ਰੱਦ ਕਰੋ\" ਇਸਨੂੰ ਵਾਪਸ ਨਹੀਂ ਕਰ ਸਕਦਾ। ਵਾਪਸ ਜਾਣ ਲਈ ਪਿਛਲਾ ਸੰਸਕਰਣ ਮੁੜ-ਬਹਾਲ ਕਰੋ।",
   "a11y.dropPosition": "{total} ਵਿੱਚੋਂ {position} ਸਥਾਨ 'ਤੇ ਛੱਡਿਆ ਜਾਵੇਗਾ",
   "a11y.dropCancelled": "ਖਿੱਚਣਾ ਰੱਦ ਕੀਤਾ ਗਿਆ",
   "a11y.blockMoved": "ਬਲਾਕ {total} ਵਿੱਚੋਂ {position} ਸਥਾਨ 'ਤੇ ਹਿਲਾਇਆ ਗਿਆ",

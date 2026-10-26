@@ -625,7 +625,7 @@ export class Assistant extends Module {
     this.run = null;
 
     const undone = run === null ? true : await run.discard();
-    const partial = this.discarded === 'partial';
+    const outcome = this.discarded;
 
     this.discarded = 'none';
 
@@ -634,9 +634,10 @@ export class Assistant extends Module {
 
       return;
     }
-    // Someone edited after the assistant, so some or all of its edits stay.
+    // Someone edited after the assistant, or it restored a version: some or all of its edits stay.
     this.changed = false;
-    const key = partial ? 'assistant.discardPartial' : 'assistant.discardBlocked';
+    const keys = { restored: 'assistant.discardRestored', partial: 'assistant.discardPartial' } as const;
+    const key = outcome === 'restored' || outcome === 'partial' ? keys[outcome] : 'assistant.discardBlocked';
 
     this.bar?.render({ kind: 'error', message: this.Blok.I18n.t(key), changed: false });
     this.bar?.focusField();

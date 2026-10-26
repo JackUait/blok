@@ -222,6 +222,7 @@
   "assistant.failed": "AI haikuweza kujibu: {error}",
   "assistant.discardBlocked": "Hakuna kilichotenduliwa: ulihariri baada ya AI. Tumia tendua kurudi nyuma.",
   "assistant.discardPartial": "Baadhi ya mabadiliko ya AI yamebaki: yalibadilishwa baada ya AI.",
+  "assistant.discardRestored": "AI imerejesha toleo, na Tupa haiwezi kulitendua. Ili kurudi, rejesha toleo la awali.",
   "a11y.dropPosition": "Nafasi ya kudondosha: {position} kati ya {total}",
   "a11y.dropCancelled": "Uburutaji umeghairiwa",
   "a11y.blockMoved": "Kizuizi kimesogezwa hadi nafasi {position} ya {total}",

@@ -19,8 +19,8 @@ export interface PageRestore {
   kept: string[];
 }
 
-/** 'partial': some of the run's edits stay. 'none': nothing was reverted. */
-export type DiscardOutcome = 'all' | 'partial' | 'none';
+/** 'partial': some of the run's edits stay. 'none': nothing was reverted. 'restored': the run restored a version, which stays. */
+export type DiscardOutcome = 'all' | 'partial' | 'none' | 'restored';
 
 export interface AgentRunDeps {
   turn: AgentTurn;
@@ -177,11 +177,11 @@ export function createAgentRun(prompt: string | Promise<string>, deps: AgentRunD
       const pages = await deps.restorePages?.() ?? { restored: 0, kept: [] };
       const restored = deps.restored?.() === true;
       const all = deps.undoneAll() && pages.kept.length === 0 && !restored;
-      // A kept restore is an edit of the run that stays.
-      const some = undone.count > 0 || pages.restored > 0 || restored;
-      const outcome: DiscardOutcome = some ? 'partial' : 'none';
+      const some = undone.count > 0 || pages.restored > 0;
+      const kept: DiscardOutcome = some ? 'partial' : 'none';
+      const outcome: DiscardOutcome = all ? 'all' : kept;
 
-      deps.onDiscarded?.(all ? 'all' : outcome);
+      deps.onDiscarded?.(restored ? 'restored' : outcome);
       end();
 
       return all;

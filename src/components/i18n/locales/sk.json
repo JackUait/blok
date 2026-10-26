@@ -188,6 +188,7 @@
   "assistant.failed": "AI nemohla odpovedať: {error}",
   "assistant.discardBlocked": "Nič sa nevrátilo: po AI ste vykonali úpravy. Krok späť urobte pomocou Späť.",
   "assistant.discardPartial": "Niektoré úpravy AI zostali: po AI sa zmenili.",
+  "assistant.discardRestored": "AI obnovila verziu a „Zahodiť“ to nemôže vrátiť. Ak sa chcete vrátiť, obnovte predchádzajúcu verziu.",
   "a11y.dropPosition": "Umiestni sa na pozíciu {position} z {total}",
   "a11y.dropCancelled": "Presun zrušený",
   "a11y.blockMoved": "Blok presunutý na pozíciu {position} z {total}",

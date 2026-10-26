@@ -188,6 +188,7 @@
   "assistant.failed": "AI جواب نہیں دے سکا: {error}",
   "assistant.discardBlocked": "کچھ بھی کالعدم نہیں ہوا: آپ نے AI کے بعد ترمیم کی۔ پیچھے جانے کے لیے کالعدم کریں استعمال کریں۔",
   "assistant.discardPartial": "AI کی کچھ ترامیم رکھی گئیں: وہ AI کے بعد بدل گئیں۔",
+  "assistant.discardRestored": "AI نے ایک ورژن بحال کیا، اور \"رد کریں\" اسے واپس نہیں کر سکتا۔ واپس جانے کے لیے پچھلا ورژن بحال کریں۔",
   "a11y.dropPosition": "کل {total} میں سے پوزیشن {position} پر رکھا جائے گا",
   "a11y.dropCancelled": "گھسیٹنا منسوخ",
   "a11y.blockMoved": "بلاک کو کل {total} میں سے پوزیشن {position} پر منتقل کر دیا گیا",

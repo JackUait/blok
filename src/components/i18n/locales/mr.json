@@ -176,6 +176,7 @@
   "assistant.failed": "AI उत्तर देऊ शकले नाही: {error}",
   "assistant.discardBlocked": "काहीही पूर्ववत झाले नाही: AI नंतर तुम्ही संपादन केले. मागे जाण्यासाठी पूर्ववत करा वापरा.",
   "assistant.discardPartial": "AI ची काही संपादने ठेवली: AI नंतर ती बदलली.",
+  "assistant.discardRestored": "AI ने एक आवृत्ती पुनर्संचयित केली, आणि \"टाकून द्या\" ते पूर्ववत करू शकत नाही. परत जाण्यासाठी आधीची आवृत्ती पुनर्संचयित करा.",
   "a11y.dropPosition": "{total} पैकी {position} स्थानावर सोडले जाईल",
   "a11y.dropCancelled": "हलवणे रद्द केले",
   "a11y.blockMoved": "ब्लॉक {total} पैकी {position} स्थानावर हलवला",

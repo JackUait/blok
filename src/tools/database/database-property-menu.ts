@@ -172,6 +172,8 @@ export class DatabasePropertyMenu {
   private anchor: HTMLElement | null = null;
   /** Saves the open menu's description field if it changed. */
   private saveDescription: (() => void) | null = null;
+  /** The row whose list the next number pick comes from: it keeps the highlight after the redraw (notion-spec-2 §8). */
+  private pickedRow: string | null = null;
 
   constructor(private readonly options: PropertyMenuOptions) {}
 
@@ -260,9 +262,13 @@ export class DatabasePropertyMenu {
       if (patch.number === undefined) return;
       const input = name.querySelector('input');
 
+      const row = this.pickedRow;
+
+      this.pickedRow = null;
       // The old field goes away without a blur: save its name first, as leaving it would.
       input?.dispatchEvent(new Event('change'));
       redraw(patch.number, input?.value);
+      if (row !== null) this.popover?.focusItemByName(row);
     };
   }
 
@@ -1005,7 +1011,7 @@ export class DatabasePropertyMenu {
             name: `format-${format}`,
             title: this.t(`tools.database.numberFormat.${format}`),
             isActive: (number.format ?? 'number') === format,
-            onActivate: () => set({ ...latest.number, format }),
+            onActivate: () => this.pickFrom('numberFormat', () => set({ ...latest.number, format })),
           })),
         },
       },
@@ -1019,13 +1025,13 @@ export class DatabasePropertyMenu {
               name: 'decimals-default',
               title: this.t('tools.database.decimalPlacesDefault'),
               isActive: number.decimals === undefined,
-              onActivate: () => set(without(latest.number, 'decimals')),
+              onActivate: () => this.pickFrom('decimals', () => set(without(latest.number, 'decimals'))),
             },
             ...Array.from({ length: MAX_DECIMALS + 1 }, (_, decimals) => ({
               name: `decimals-${decimals}`,
               title: String(decimals),
               isActive: number.decimals === decimals,
-              onActivate: () => set({ ...latest.number, decimals }),
+              onActivate: () => this.pickFrom('decimals', () => set({ ...latest.number, decimals })),
             })),
           ],
         },
@@ -1062,6 +1068,12 @@ export class DatabasePropertyMenu {
         ]
         : []),
     ];
+  }
+
+  private pickFrom(row: string, write: () => void): void {
+    this.pickedRow = row;
+    write();
+    this.pickedRow = null;
   }
 
   /** 08-rename.png: a "Show as" heading over Number ("42"), Bar and Ring tiles. */

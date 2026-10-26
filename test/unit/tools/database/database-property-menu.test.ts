@@ -20,7 +20,7 @@ interface CapturedItem {
   children?: { items: CapturedItem[]; searchable?: boolean; width?: string; minWidth?: string };
 }
 
-interface CapturedPopover { items: CapturedItem[]; destroyed: boolean; params: Record<string, unknown>; activated: string[]; closed?: () => void; hide: () => void; transitionAtShow?: string }
+interface CapturedPopover { items: CapturedItem[]; destroyed: boolean; params: Record<string, unknown>; activated: string[]; focused: string[]; closed?: () => void; hide: () => void; transitionAtShow?: string }
 
 const captured = vi.hoisted((): { popovers: CapturedPopover[] } => ({ popovers: [] }));
 
@@ -30,7 +30,7 @@ vi.mock('../../../../src/components/utils/popover', () => ({
     readonly element = document.createElement('div');
 
     constructor(params: { items: CapturedItem[] }) {
-      this.record = { items: params.items, destroyed: false, params, activated: [], hide: () => this.hide() };
+      this.record = { items: params.items, destroyed: false, params, activated: [], focused: [], hide: () => this.hide() };
       this.element.appendChild(document.createElement('div')).setAttribute('data-blok-popover-container', '');
       captured.popovers.push(this.record);
     }
@@ -45,6 +45,12 @@ vi.mock('../../../../src/components/utils/popover', () => ({
 
     activateItemByName(name: string): void {
       this.record.activated.push(name);
+    }
+
+    focusItemByName(name: string): boolean {
+      this.record.focused.push(name);
+
+      return true;
     }
 
     show(): void {
@@ -781,6 +787,31 @@ describe('DatabasePropertyMenu', () => {
       expect(onClose).not.toHaveBeenCalled();
       expect(menu.isOpen).toBe(true);
       expect(byName(lastItems(), 'numberFormat').valueLabel).toBe('tools.database.numberFormat.euro');
+      menu.destroy();
+    });
+
+    // notion-spec-2 §8, §9: after a format or decimals pick the row it came from stays highlighted; a colour pick highlights nothing.
+    it('after a pick in the header submenu, the picked row keeps the highlight', () => {
+      const { menu } = headerMenu(prop('number', { number: { showAs: 'bar' } }));
+
+      pick('numberFormat', 'format-percent');
+      expect(captured.popovers[captured.popovers.length - 1]?.focused).toEqual(['numberFormat']);
+      pick('decimals', 'decimals-2');
+      expect(captured.popovers[captured.popovers.length - 1]?.focused).toEqual(['decimals']);
+      pick('color', 'color-red');
+      expect(captured.popovers[captured.popovers.length - 1]?.focused).toEqual([]);
+      menu.destroy();
+    });
+
+    it('after a pick on the row page panel, the picked row keeps the highlight', () => {
+      const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks() });
+
+      menu.openRowPage(prop('number'), document.createElement('div'), { edit: true });
+      const rows = byName(lastItems(), 'decimals').children?.items ?? [];
+
+      byName(rows, 'decimals-1').onActivate?.(byName(rows, 'decimals-1'));
+
+      expect(captured.popovers[captured.popovers.length - 1]?.focused).toEqual(['decimals']);
       menu.destroy();
     });
 

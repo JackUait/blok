@@ -1070,6 +1070,27 @@ export class PopoverDesktop extends PopoverAbstract {
   }
 
   /**
+   * Puts the cursor on the row named `name`: in the open submenu if it has
+   * that row, else in this menu. A menu drawn again after a pick uses it to
+   * keep the row the pick came from highlighted.
+   * @param name - the row's `name`
+   * @returns false when no shown row has that name
+   */
+  public focusItemByName(name: string): boolean {
+    if (this.nestedPopover?.focusItemByName(name) === true) {
+      return true;
+    }
+    const index = this.flippableElements.findIndex((item) => item.getAttribute(DATA_ATTR.itemName) === name);
+
+    if (index < 0 || this.flipper === undefined) {
+      return false;
+    }
+    this.flipper.focusItem(index, { skipNextTab: false });
+
+    return true;
+  }
+
+  /**
    * Arms the synthesized-hover suppression: records the pointer position
    * at the moment `show()` was called and schedules a safety rAF that
    * clears the flag even if no mouseover ever arrives. Idempotent —

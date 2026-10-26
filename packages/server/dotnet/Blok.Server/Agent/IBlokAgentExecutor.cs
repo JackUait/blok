@@ -14,7 +14,11 @@ public interface IBlokAgentExecutor
       string documentJson, string batchJson, BlokAgentActor actor,
       BlokAgentOptions? options = null, CancellationToken cancellationToken = default);
 
-  /// <summary>Returns the command contract for <see cref="ExecuteAsync"/>.</summary>
+  /// <summary>
+  /// Returns the command contract for <see cref="ExecuteAsync"/>. A plain call keeps no
+  /// steps, so <c>history.undo</c> and <c>history.redo</c> are unavailable; a
+  /// <see cref="BlokAgentSession"/> offers them.
+  /// </summary>
   /// <param name="options">The host's agent options.</param>
   /// <param name="cancellationToken">Cancels the runtime call.</param>
   /// <returns>The agent contract as JSON.</returns>

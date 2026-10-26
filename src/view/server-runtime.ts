@@ -476,9 +476,9 @@ const loadedVersionHistory = (value: unknown): AgentVersionHistory | undefined =
   };
 };
 
-/** A C# live room keeps no per-agent undo history, so its contract differs from a stored call's. */
-const contractRuntime = (input: Record<string, unknown>): 'jint' | 'csharp-live' =>
-  (input.runtime === 'csharp-live' ? 'csharp-live' : 'jint');
+/** A C# room keeps the agent's steps on the server; a stored call has them only when its session sends them. */
+const contractWhere = (input: Record<string, unknown>): { runtime: 'jint' | 'csharp-live'; carriesHistory?: true } =>
+  (input.runtime === 'csharp-live' ? { runtime: 'csharp-live' } : { runtime: 'jint', ...('history' in input && { carriesHistory: true as const }) });
 
 const isCarriedEntry = (value: unknown): value is OutputData | 'other' => value === 'other' || isStoredDocument(value);
 
@@ -530,7 +530,7 @@ const createServerAgentSession = (
             && override.hiddenActions.every((action: unknown) => typeof action === 'string')));
       })
   );
-  const setup = createHeadlessAgentSetup({ customTools, overrides, services, runtime: contractRuntime(input) });
+  const setup = createHeadlessAgentSetup({ customTools, overrides, services, ...contractWhere(input) });
   const versionHistory = loadedVersionHistory(input.versionHistory);
   const load = (raw: OutputData): OutputData => loadStoredDocument(raw, setup.richTextFieldsFor);
   const loaded = load(document);
@@ -723,7 +723,7 @@ export const invoke = async (operation: string, inputJson: string): Promise<stri
       );
       const manifest = buildToolManifest(snapshot, overrides);
 
-      return JSON.stringify({ manifest, contract: buildAgentContract(manifest, COMMANDS, { runtime: contractRuntime(input), services }) });
+      return JSON.stringify({ manifest, contract: buildAgentContract(manifest, COMMANDS, { ...contractWhere(input), services }) });
     }
     case 'extractTexts': {
       const { document, options } = parseTextsRequest(inputJson);

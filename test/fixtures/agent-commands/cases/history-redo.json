@@ -47,10 +47,5 @@
         }
       ]
     }
-  ],
-  "expectByRunner": {
-    "room": {
-      "errorCode": "COMMAND_UNAVAILABLE"
-    }
-  }
+  ]
 }

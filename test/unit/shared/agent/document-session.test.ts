@@ -587,8 +587,8 @@ describe('stored document session', () => {
     expect(session.output()).toEqual(initial());
   });
 
-  it('uses the C# room contract to make history unavailable while retaining stored content hashes', async () => {
-    const session = track(open(initial(), { runtime: 'jint', contract: contractFor('csharp-live') }));
+  it('uses the plain Jint contract to make history unavailable while retaining stored content hashes', async () => {
+    const session = track(open(initial(), { runtime: 'jint', contract: contractFor('jint') }));
 
     expect(await session.execute({ commands: [{ name: 'doc.setTitle', args: { title: 'Jint' } }] })).toMatchObject({ ok: true });
     expect(await session.execute({ commands: [{ name: 'history.undo', args: {} }] }))

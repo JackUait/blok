@@ -260,8 +260,8 @@ describe('buildServerRuntime', () => {
     expect(result).toMatchObject({
       contract: {
         commands: expect.arrayContaining([
-          expect.objectContaining({ name: 'history.undo', available: true }),
-          expect.objectContaining({ name: 'history.redo', available: true }),
+          expect.objectContaining({ name: 'history.undo', available: false, unavailableReason: 'runtime' }),
+          expect.objectContaining({ name: 'history.redo', available: false, unavailableReason: 'runtime' }),
         ]),
       },
     });

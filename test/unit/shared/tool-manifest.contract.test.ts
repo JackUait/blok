@@ -101,9 +101,9 @@ const customContract = (args: BlokSchema, target: 'block' | 'create'): AgentCont
 const runtimeCases: Array<{ runtime: ContractWhere['runtime']; editorAvailable: boolean; historyAvailable: boolean }> = [
   { runtime: 'editor', editorAvailable: true, historyAvailable: true },
   { runtime: 'node', editorAvailable: false, historyAvailable: true },
-  { runtime: 'jint', editorAvailable: false, historyAvailable: true },
+  { runtime: 'jint', editorAvailable: false, historyAvailable: false },
   { runtime: 'node-live', editorAvailable: false, historyAvailable: true },
-  { runtime: 'csharp-live', editorAvailable: false, historyAvailable: false },
+  { runtime: 'csharp-live', editorAvailable: false, historyAvailable: true },
 ];
 
 const coreChanges: Array<{ label: string; change: Partial<CoreCommandTable[string]> }> = [
@@ -285,8 +285,16 @@ describe('buildAgentContract', () => {
     expect(commandFor(contract, 'doc.read').available).toBe(true);
   });
 
+  it('offers history in a Jint call that carries a session\'s steps', () => {
+    const contract = buildAgentContract(buildToolManifest(snapshot()), core, { runtime: 'jint', services: [], carriesHistory: true });
+
+    for (const name of ['history.undo', 'history.redo']) {
+      expect(commandFor(contract, name).available).toBe(true);
+    }
+  });
+
   it('preserves runtime and service restrictions in a read-only document', () => {
-    const contract = buildAgentContract(buildToolManifest(snapshot({ readOnly: true })), core, { runtime: 'csharp-live', services: [] });
+    const contract = buildAgentContract(buildToolManifest(snapshot({ readOnly: true })), core, { runtime: 'jint', services: [] });
 
     for (const name of ['history.undo', 'history.redo', 'doc.find', 'table.local', 'table.unsupported']) {
       expect(commandFor(contract, name)).toMatchObject({ available: false, unavailableReason: 'runtime' });

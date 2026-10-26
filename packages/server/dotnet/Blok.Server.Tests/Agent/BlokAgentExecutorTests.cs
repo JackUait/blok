@@ -101,9 +101,12 @@ public sealed class BlokAgentExecutorTests
     Assert.True(Value<bool>(Command(contract, "block.insert")["available"]));
     Assert.Equal(1, Value<int>(contract["formatVersion"]));
     Assert.False(string.IsNullOrEmpty(Value<string>(contract["revision"])));
+    // A plain call keeps no steps; a BlokAgentSession's contract offers history.
     foreach (var name in new[] { "history.undo", "history.redo" })
     {
-      Assert.True(Value<bool>(Command(contract, name)["available"]));
+      var command = Command(contract, name);
+      Assert.False(Value<bool>(command["available"]));
+      Assert.Equal("runtime", Value<string>(command["unavailableReason"]));
     }
     Assert.IsType<JsonObject>(contract["manifest"]);
     Assert.False(contract.ContainsKey("contract"));
@@ -136,7 +139,7 @@ public sealed class BlokAgentExecutorTests
   [Theory]
   [InlineData("history.undo")]
   [InlineData("history.redo")]
-  public async Task APlainCallHasNoStepToReplayAndNothingToSave(string name)
+  public async Task APlainCallRefusesHistoryAndHasNothingToSave(string name)
   {
     IBlokAgentExecutor executor = BlokDocuments.CreateAgentExecutor(poolSize: 1);
     var batch = new JsonObject
@@ -149,7 +152,8 @@ public sealed class BlokAgentExecutorTests
     Assert.Null(execution.DocumentJson);
     var result = ParseObject(execution.ResultJson);
     var error = Assert.IsType<JsonObject>(result["error"]);
-    Assert.Equal(name == "history.undo" ? "NOTHING_TO_UNDO" : "NOTHING_TO_REDO", Value<string>(error["code"]));
+    Assert.Equal("COMMAND_UNAVAILABLE", Value<string>(error["code"]));
+    Assert.Equal("runtime", Value<string>(Assert.IsType<JsonObject>(error["details"])["reason"]));
     Assert.False(Value<bool>(result["ok"]));
     Assert.False(Value<bool>(error["retryable"]));
     Assert.False(string.IsNullOrWhiteSpace(Value<string>(error["message"])));

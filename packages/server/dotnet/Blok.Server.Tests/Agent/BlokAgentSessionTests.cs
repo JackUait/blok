@@ -106,16 +106,17 @@ public sealed class BlokAgentSessionTests
   }
 
   [Fact]
-  public async Task OffersHistoryInTheStoredContractButNotInARoom()
+  public async Task OffersHistoryInASessionAndARoomButNotInAPlainCall()
   {
-    var stored = JsonNode.Parse(await Executor.Value.GetContractAsync())!;
+    var plain = JsonNode.Parse(await Executor.Value.GetContractAsync())!;
+    var session = JsonNode.Parse(await Executor.Value.OpenSession(Actor).GetContractAsync())!;
     var room = JsonNode.Parse(await Executor.Value.GetRoomContractAsync())!;
 
     foreach (var name in new[] { "history.undo", "history.redo" })
     {
-      Assert.True(Command(stored, name)["available"]!.GetValue<bool>());
-      Assert.False(Command(room, name)["available"]!.GetValue<bool>());
-      Assert.Equal("runtime", Command(room, name)["unavailableReason"]!.GetValue<string>());
+      Assert.False(Command(plain, name)["available"]!.GetValue<bool>());
+      Assert.True(Command(session, name)["available"]!.GetValue<bool>());
+      Assert.True(Command(room, name)["available"]!.GetValue<bool>());
     }
   }
 

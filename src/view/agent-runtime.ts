@@ -201,6 +201,7 @@ export const createHeadlessAgentSetup = (options: {
   openPageDocument?: AgentPorts['openPageDocument'];
   /** Block types the host prepares itself; pass the matching port to the session. */
   prepares?: readonly string[];
+  carriesHistory?: boolean;
 } = {}): {
   contract: AgentContract;
   tools: ToolRuntimeRegistry;
@@ -215,6 +216,7 @@ export const createHeadlessAgentSetup = (options: {
   const manifest = buildToolManifest(snapshot, options.overrides);
   const contract = buildAgentContract(manifest, COMMANDS, {
     runtime: options.runtime ?? 'node', services, ...(options.prepares !== undefined && { prepares: options.prepares }),
+    ...(options.carriesHistory === true && { carriesHistory: true }),
   });
   const tools = runtimesWithCustomTools(BUILT_IN_TOOL_RUNTIMES, options.customTools);
   const richTextFieldsFor = (type: string): string[] =>

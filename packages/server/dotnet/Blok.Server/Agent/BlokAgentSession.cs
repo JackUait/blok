@@ -30,6 +30,15 @@ public sealed class BlokAgentSession
   /// <summary>The agent identity every batch runs as.</summary>
   public BlokAgentActor Actor { get; }
 
+  /// <summary>
+  /// The command contract for this session. Unlike a plain call's, it offers
+  /// <c>history.undo</c> and <c>history.redo</c>.
+  /// </summary>
+  /// <param name="cancellationToken">Cancels the runtime call.</param>
+  /// <returns>The agent contract as JSON.</returns>
+  public ValueTask<string> GetContractAsync(CancellationToken cancellationToken = default) =>
+      executor.GetSessionContractAsync(options, cancellationToken);
+
   /// <summary>Runs a batch. Returns a document to save only when the batch succeeds.</summary>
   /// <param name="documentJson">The stored document, as the session last returned it.</param>
   /// <param name="batchJson">The command batch.</param>

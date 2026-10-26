@@ -556,11 +556,12 @@ internal sealed class CollabRoom : IDisposable
       ReadOnlyMemory<byte> digest,
       string? actorId,
       CollabEditPrecondition? expect,
+      Func<YDoc, CancellationToken, ValueTask>? applied,
       CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(planOps);
 
-    return EditCoreAsync(planOps, gateFrameSize: true, operationId, digest, actorId, expect, cancellationToken);
+    return EditCoreAsync(planOps, gateFrameSize: true, operationId, digest, actorId, expect, applied, cancellationToken);
   }
 
   /// <summary>
@@ -589,6 +590,7 @@ internal sealed class CollabRoom : IDisposable
         digest,
         actorId,
         expect,
+        null,
         cancellationToken);
   }
 
@@ -599,6 +601,7 @@ internal sealed class CollabRoom : IDisposable
       ReadOnlyMemory<byte> digest,
       string? actorId,
       CollabEditPrecondition? expect,
+      Func<YDoc, CancellationToken, ValueTask>? applied,
       CancellationToken cancellationToken)
   {
     return RunAsync<CollabEditResult?>(
@@ -759,6 +762,11 @@ internal sealed class CollabRoom : IDisposable
 
             MarkDirtyLocked();
 
+            if (applied is not null)
+            {
+              await applied(doc!, lifetime.Token);
+            }
+
             return new CollabEditResult(CollabEditStatus.Applied, null);
           }
 
@@ -773,6 +781,11 @@ internal sealed class CollabRoom : IDisposable
             if (localUpdates.Count == 0 && doc!.EncodeStateVector().AsSpan().SequenceEqual(stateBefore))
             {
               UpdateEvictionLocked();
+
+              if (applied is not null)
+              {
+                await applied(doc!, lifetime.Token);
+              }
 
               return new CollabEditResult(
                   CollabEditStatus.Applied,
@@ -835,6 +848,12 @@ internal sealed class CollabRoom : IDisposable
           SchedulePersistLocked();
           MarkDirtyLocked();
           UpdateEvictionLocked();
+
+          // In the lane, so no peer write lands between the edit and what the caller reads here.
+          if (applied is not null)
+          {
+            await applied(doc!, lifetime.Token);
+          }
 
           return new CollabEditResult(
               CollabEditStatus.Applied,

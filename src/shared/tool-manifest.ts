@@ -339,6 +339,8 @@ export interface ContractWhere {
   services: HostService[];
   /** Block types a headless host prepares itself, as blok-mcp creates a page's document. */
   prepares?: readonly string[];
+  /** A Jint call that carries a C# session's steps, so history.* can replay them. */
+  carriesHistory?: boolean;
 }
 
 export const BLOCK_POSITION_SCHEMA: BlokSchema = {
@@ -369,9 +371,9 @@ const insertableHere = (
     : { insertable: block.insertable }
 );
 
-// A C# live room keeps no per-agent undo history.
+// A plain Jint call keeps no steps; only one that carries a session's (ContractWhere.carriesHistory) can undo.
 const UNDO_COMMANDS = new Set(['history.undo', 'history.redo']);
-const UNDO_RUNNERS = new Set<ContractWhere['runtime']>(['editor', 'node', 'node-live', 'jint']);
+const UNDO_RUNNERS = new Set<ContractWhere['runtime']>(['editor', 'node', 'node-live', 'csharp-live']);
 
 const isToolCommandName = (name: string): name is ToolCommandName => name.includes('.');
 
@@ -507,7 +509,7 @@ export const buildAgentContract = (
     }
 
     const runtimeBlocked = (command.runtime === 'editor' && where.runtime !== 'editor')
-      || (UNDO_COMMANDS.has(name) && !UNDO_RUNNERS.has(where.runtime));
+      || (UNDO_COMMANDS.has(name) && !UNDO_RUNNERS.has(where.runtime) && where.carriesHistory !== true);
     const serviceMissing = !runtimeBlocked
       && (command.requires ?? []).some(service => !where.services.includes(service));
 

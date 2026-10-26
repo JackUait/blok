@@ -131,7 +131,7 @@ describe('server runtime agentExecute', () => {
   });
 
   it.each(['history.undo', 'history.redo'] satisfies AgentBatch['commands'][number]['name'][])(
-    'answers %s with nothing to replay when the call carries no session history',
+    'refuses %s as unavailable when the call carries no session history',
     async name => {
       const expectedDocument = normalizedDocument();
       const batch: AgentBatch = { commands: [{ name, args: {} }] };
@@ -139,7 +139,7 @@ describe('server runtime agentExecute', () => {
 
       expect(output.result).toMatchObject({
         ok: false, revision: contentRevision(expectedDocument),
-        error: { code: name === 'history.undo' ? 'NOTHING_TO_UNDO' : 'NOTHING_TO_REDO' },
+        error: { code: 'COMMAND_UNAVAILABLE', details: { reason: 'runtime' } },
       });
       expect(output.edits).toEqual([]);
       expect(output.document).toEqual(expectedDocument);
@@ -201,9 +201,10 @@ describe('server runtime agentExecute', () => {
     });
   });
 
-  it('keeps history.undo unavailable in a C# live room', async () => {
-    const manifest: unknown = JSON.parse(await invoke('manifest', JSON.stringify({ runtime: 'csharp-live' })));
-    const stored: unknown = JSON.parse(await invoke('manifest', JSON.stringify({})));
+  it('offers history.undo to a C# session and a C# room, not to a plain call', async () => {
+    const room: unknown = JSON.parse(await invoke('manifest', JSON.stringify({ runtime: 'csharp-live' })));
+    const session: unknown = JSON.parse(await invoke('manifest', JSON.stringify({ history: {} })));
+    const plain: unknown = JSON.parse(await invoke('manifest', JSON.stringify({})));
     const commandIn = (value: unknown, name: string): unknown => {
       const contract = isObject(value) && isObject(value.contract) ? value.contract : {};
 
@@ -211,10 +212,9 @@ describe('server runtime agentExecute', () => {
         .find((entry: unknown) => isObject(entry) && entry.name === name);
     };
 
-    expect(commandIn(manifest, 'history.undo')).toMatchObject({ available: false, unavailableReason: 'runtime' });
-    expect(commandIn(stored, 'history.undo')).toMatchObject({ available: true });
-    expect((await executeWire({ document, actor, batch: { commands: [{ name: 'history.undo', args: {} }] }, runtime: 'csharp-live' })).result)
-      .toMatchObject({ ok: false, error: { code: 'COMMAND_UNAVAILABLE', details: { reason: 'runtime' } } });
+    expect(commandIn(room, 'history.undo')).toMatchObject({ available: true });
+    expect(commandIn(session, 'history.undo')).toMatchObject({ available: true });
+    expect(commandIn(plain, 'history.undo')).toMatchObject({ available: false, unavailableReason: 'runtime' });
   });
 
   it.each([

@@ -396,6 +396,7 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
       ReadOnlyMemory<byte> digest,
       string? actorId,
       CollabEditPrecondition? expect,
+      Func<YDoc, CancellationToken, ValueTask>? applied = null,
       CancellationToken cancellationToken = default)
   {
     ArgumentException.ThrowIfNullOrEmpty(docId);
@@ -410,7 +411,7 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
 
     return await EditInRoomAsync(
         docId,
-        room => room.EditAsync(planOps, operationId, digest, actorId, expect, cancellationToken));
+        room => room.EditAsync(planOps, operationId, digest, actorId, expect, applied, cancellationToken));
   }
 
   private async ValueTask<CollabEditResult> EditInRoomAsync(
@@ -788,6 +789,7 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
               digest,
               actorId,
               expect,
+              null,
               cancellationToken));
     }
     catch (RestorePointMissingException)

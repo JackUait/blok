@@ -11,6 +11,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
 
   private readonly CollabRoomManager? rooms;
   private readonly ICollabDocConverter? converter;
+  private readonly RoomAgentHistory roomHistory = new(TimeProvider.System);
 
   /// <summary>With rooms, <see cref="ExecuteInRoomAsync"/> edits live documents.</summary>
   internal BlokAgentExecutor(IBlokRuntime runtime, CollabRoomManager? rooms, ICollabDocConverter? converter)
@@ -236,6 +237,21 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
         ?? throw new InvalidOperationException("The Blok runtime returned no agent contract.");
   }
 
+  /// <summary>The contract of a <see cref="BlokAgentSession"/>: a call that carries its steps offers history.*.</summary>
+  internal async ValueTask<string> GetSessionContractAsync(BlokAgentOptions? options, CancellationToken cancellationToken)
+  {
+    var input = Common(options);
+
+    input["history"] = new JsonObject();
+
+    var output = JsonNode.Parse(await runtime.InvokeAsync(
+        "manifest", input.ToJsonString(), cancellationToken: cancellationToken))
+        ?? throw new InvalidOperationException("The Blok runtime returned no agent contract.");
+
+    return output["contract"]?.ToJsonString()
+        ?? throw new InvalidOperationException("The Blok runtime returned no agent contract.");
+  }
+
   public async ValueTask<string> GetRoomContractAsync(
       BlokAgentOptions? options = null, CancellationToken cancellationToken = default)
   {
@@ -306,10 +322,25 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
 
       input["document"] = document;
 
-      return WithHead(await RunPageActionAsync(input, actor, pages, cancellationToken), current);
+      var acted = await RunPageActionAsync(input, actor, pages, cancellationToken);
+
+      if (JsonNode.Parse(acted.ResultJson)?["ok"]?.GetValue<bool>() == true)
+      {
+        roomHistory.Add(docId, actor.Id, new RoomAgentHistory.Step { Other = true });
+      }
+
+      return WithHead(acted, current);
+    }
+
+    if (HistoryCommand(input["batch"]) is { } historyName)
+    {
+      return await RunRoomHistoryAsync(docId, historyName == "history.undo", actor, expect, cancellationToken);
     }
 
     JsonObject? planned = null;
+    JsonObject? before = null;
+    CollabPageMaps? beforeMaps = null;
+    var wrote = false;
     var operationId = Guid.NewGuid().ToString("N");
     var digest = System.Security.Cryptography.SHA256.HashData(
         System.Text.Encoding.UTF8.GetBytes($"agent\n{actor.Id}\n{batchJson}"));
@@ -319,7 +350,9 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
     {
       edit = await rooms.AgentEditAsync(docId, async (doc, token) =>
       {
-        input["document"] = await converter.ExportAsync(doc, token);
+        before = await converter.ExportAsync(doc, token) as JsonObject;
+        beforeMaps = YDocConverter.ReadPageMaps(doc);
+        input["document"] = before?.DeepClone();
 
         var output = JsonNode.Parse(await runtime.InvokeAsync("agentExecute", input.ToJsonString(), cancellationToken: token)) as JsonObject
             ?? throw new InvalidOperationException("The Blok runtime returned no agent execution.");
@@ -345,8 +378,18 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
           throw new NoRoomWriteException();
         }
 
+        // A read is no step, as the shared executor marks only batches with edits.
+        wrote = output["edits"] is JsonArray { Count: > 0 };
+
         return ops;
-      }, operationId, digest, actor.Id, expect, cancellationToken);
+      }, operationId, digest, actor.Id, expect, async (doc, token) =>
+      {
+        if (wrote && before is not null && beforeMaps is not null
+            && await converter.ExportAsync(doc, token) is JsonObject after)
+        {
+          roomHistory.Add(docId, actor.Id, RoomAgentHistory.Between(before, beforeMaps, after, YDocConverter.ReadPageMaps(doc)));
+        }
+      }, cancellationToken);
     }
     catch (NoRoomWriteException) when (planned is not null)
     {
@@ -371,6 +414,127 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
         return Failure("APPLY_FAILED", $"The room refused the edit ({edit.Status}). Nothing was written.", retryable,
             new JsonObject { ["status"] = edit.Status.ToString() }, head);
     }
+  }
+
+  /// <summary>A batch that is only history.undo or history.redo with no args; anything else goes to Jint, which checks it.</summary>
+  private static string? HistoryCommand(JsonNode? batch) =>
+      batch is JsonObject source && source["commands"] is JsonArray { Count: 1 } commands
+      && commands[0] is JsonObject first && first.Count <= 2
+      && first["name"] is JsonValue name && name.TryGetValue<string>(out var value)
+      && value is "history.undo" or "history.redo"
+      && first["args"] is JsonObject { Count: 0 }
+          ? value
+          : null;
+
+  /// <summary>
+  /// Undo or redo of this actor's last room step (<see cref="RoomAgentHistory"/>), planned in
+  /// the room lane like a version restore, so a peer write cannot land between check and apply.
+  /// </summary>
+  private async ValueTask<BlokAgentExecution> RunRoomHistoryAsync(
+      string docId, bool undo, BlokAgentActor actor, CollabEditPrecondition? expect, CancellationToken cancellationToken)
+  {
+    var verb = undo ? "undone" : "redone";
+    RoomAgentHistory.Step? step = null;
+    CollabEditResult edit;
+
+    try
+    {
+      edit = await rooms!.AgentEditAsync(docId, async (doc, token) =>
+      {
+        var steps = roomHistory.Find(docId, actor.Id);
+        step = (undo ? steps?.Done : steps?.Undone)?.LastOrDefault();
+
+        if (step is null)
+        {
+          throw undo
+              ? new HistoryRefusal("NOTHING_TO_UNDO", "This session has no step to undo.")
+              : new HistoryRefusal("NOTHING_TO_REDO", "This session has no undone step to redo.");
+        }
+
+        if (step.Other)
+        {
+          throw new HistoryRefusal("UNDO_OTHER_DOCUMENT", "The last batch wrote another document (a sub-page title or icon). history.undo cannot undo it. To revert it, run that command again with the old value.");
+        }
+
+        var export = await converter!.ExportAsync(doc, token) as JsonObject ?? [];
+        var maps = YDocConverter.ReadPageMaps(doc);
+
+        if (!RoomAgentHistory.Same(RoomAgentHistory.Project(export, maps, step.Ids, step.PageKeys), undo ? step.After : step.Before))
+        {
+          throw new HistoryRefusal("CONFLICT", $"Someone else changed what this step wrote, so it can no longer be {verb}. Re-read the document before retrying.", retryable: true);
+        }
+
+        var (blocks, target) = RoomAgentHistory.Restore(
+            export, maps, step, undo ? step.Before : step.After, undo ? step.PageBefore : step.PageAfter);
+
+        var wanted = undo ? step.Before : step.After;
+
+        return [
+          .. CollabRestorePlanner.Plan(export["blocks"] as JsonArray ?? [], YDocConverter.DescribeStructure(doc), blocks, maps, target),
+          .. RoomAgentHistory.Stamps(wanted),
+        ];
+      }, Guid.NewGuid().ToString("N"), System.Security.Cryptography.SHA256.HashData(
+          System.Text.Encoding.UTF8.GetBytes($"agent-{verb}\n{actor.Id}\n{Guid.NewGuid():N}")), actor.Id, expect,
+      async (doc, token) =>
+      {
+        var steps = roomHistory.Find(docId, actor.Id);
+
+        if (step is null || steps is null || await converter!.ExportAsync(doc, token) is not JsonObject now)
+        {
+          return;
+        }
+
+        // What the room holds now is what the opposite replay checks against.
+        var actual = RoomAgentHistory.Project(now, YDocConverter.ReadPageMaps(doc), step.Ids, step.PageKeys);
+
+        if (undo)
+        {
+          step.Before = actual;
+          steps.Done.Remove(step);
+          steps.Undone.Add(step);
+        }
+        else
+        {
+          step.After = actual;
+          steps.Undone.Remove(step);
+          steps.Done.Add(step);
+        }
+      }, cancellationToken);
+    }
+    catch (HistoryRefusal refusal)
+    {
+      return Failure(refusal.Code, refusal.Message, refusal.Retryable, null);
+    }
+
+    var head = edit.Receipt is { } receipt ? $"{receipt.Tag.Lineage}:{receipt.ServerSequence}" : string.Empty;
+
+    if (edit.Status == CollabEditStatus.Applied)
+    {
+      var result = new JsonObject
+      {
+        ["ok"] = true,
+        ["revision"] = head,
+        ["results"] = new JsonArray(new JsonObject()),
+        ["refs"] = new JsonObject(),
+        ["changed"] = new JsonObject { ["created"] = new JsonArray(), ["updated"] = new JsonArray(), ["moved"] = new JsonArray(), ["removed"] = new JsonArray() },
+        ["warnings"] = new JsonArray(),
+      };
+
+      return WithHead(new BlokAgentExecution(result.ToJsonString(), null, head), head);
+    }
+
+    return edit.Status == CollabEditStatus.PreconditionFailed
+        ? Failure("STALE", "The room changed since you read it. Read it again, then retry.", true, new JsonObject { ["revision"] = head }, head)
+        : Failure("APPLY_FAILED", $"The room refused the {(undo ? "undo" : "redo")} ({edit.Status}). Nothing was written.",
+            edit.Status is CollabEditStatus.Overloaded or CollabEditStatus.Unavailable or CollabEditStatus.Draining or CollabEditStatus.SeedFailed,
+            new JsonObject { ["status"] = edit.Status.ToString() }, head);
+  }
+
+  /// <summary>Thrown in the room lane when a replay must not write; the room writes nothing.</summary>
+  private sealed class HistoryRefusal(string code, string message, bool retryable = false) : Exception(message)
+  {
+    internal string Code { get; } = code;
+    internal bool Retryable { get; } = retryable;
   }
 
   private static (string Name, JsonObject Args)? VersionCommand(JsonNode? batch) =>

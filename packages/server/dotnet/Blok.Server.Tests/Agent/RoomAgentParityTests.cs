@@ -65,7 +65,7 @@ internal sealed class AgentRoomForTests : IAsyncDisposable
 
   internal IBlokAgentExecutor Executor { get; }
 
-  private CollabRoomManager Manager { get; }
+  internal CollabRoomManager Manager { get; }
 
   internal static AgentRoomForTests Seed(string docId, JsonObject seed)
   {

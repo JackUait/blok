@@ -115,16 +115,6 @@ public sealed class BlokAgentRoomTests
   }
 
   [Fact]
-  public async Task UndoIsUnavailableInARoom()
-  {
-    var (executor, _) = Create(operations);
-
-    var execution = await executor.ExecuteInRoomAsync(DocId, """{"commands":[{"name":"history.undo","args":{}}]}""", new BlokAgentActor("a", "A"));
-
-    Assert.Equal("COMMAND_UNAVAILABLE", JsonNode.Parse(execution.ResultJson)!["error"]!["code"]!.GetValue<string>());
-  }
-
-  [Fact]
   public async Task DeletingAToggleKeepsItsChildInTheSlot()
   {
     var (executor, rooms) = Create(operations);

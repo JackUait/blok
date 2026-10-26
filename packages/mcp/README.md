@@ -162,6 +162,11 @@ Stored mode is refused when `--sync-url` is set. A sync service owns those docum
   - With `--sync-url` the server joins the new page's room once and leaves. The sync service loads it empty and seeds it, so its ticket and `IBlokAuthorization` must let the agent open an id it has never seen, and your document endpoint must answer `null` for it. If the room is refused, the insert fails with `FORBIDDEN` or `SOURCE_UNAVAILABLE`.
   - In live mode your document endpoint gets no PUT for the new page yet. It gets one when someone writes in the page, or under a journal when the room is opened again.
   - The document stays, empty, if the batch fails after it was made or the insert is undone. When a later command in that batch fails, `error.details.orphaned` lists it. A save or a room that refuses the batch does not. Delete it yourself if you do not want it.
+  - Without `page-map`, a page insert fails with `COMMAND_UNAVAILABLE`, reason `host`. The page entry in `blok_describe` says the same: `insertUnavailableReason: "host"`.
+  - One batch inserts at most 25 pages. A longer batch fails with `INVALID_ARGS` before any page is made.
+  - Insert each page with its own `block.insert`. A page inside another block's `children` fails with `INVALID_ARGS`. A `block.update` that changes `data.pageId` fails with `FIELD_NOT_WRITABLE`.
+  - `block.delete` on a page block removes only the link, as a person's Move to Trash does. The page document is never opened or changed, so trash and clean-up stay with your host. Undo brings back the same `pageId`, and redo makes no new page.
+- An agent never deletes a database a person locked, or a block that holds one. That delete fails with `PRECONDITION_FAILED`, reason `locked`. A person can still delete it in the editor.
 
 ## Uploads
 

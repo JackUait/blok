@@ -9442,6 +9442,24 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   max-inline-size: 160px;
 }
 
+:is([data-blok-database-card-property], [data-blok-database-gallery-property]) > [data-blok-database-cell]:has(> [data-blok-database-number-bar]:only-child) {
+  flex: 1 1 auto;
+}
+
+:is([data-blok-database-card-property], [data-blok-database-gallery-property]) [data-blok-database-number-bar]:only-child {
+  flex: 1 1 100%;
+  inline-size: auto;
+}
+
+:is([data-blok-database-card-property], [data-blok-database-gallery-property]) [data-blok-database-number-ring]:only-child {
+  inline-size: 18px;
+  block-size: 18px;
+}
+
+:is([data-blok-database-card-property], [data-blok-database-gallery-property]) > [data-blok-database-cell][data-blok-database-number-list] {
+  gap: var(--blok-space-1) var(--blok-space-1-5);
+}
+
 [data-blok-database-cell="uniqueId"] {
   color: var(--blok-database-ink-tertiary);
 }
@@ -11267,14 +11285,34 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-comments-section] {
-  margin-block: var(--blok-space-2);
+  margin-block: var(--blok-space-5) 0;
+  padding-inline-start: var(--blok-space-1-5);
 }
 
 [data-blok-database-comments-label] {
-  margin-bottom: var(--blok-space-1);
+  padding-block: var(--blok-space-0-75);
   color: var(--blok-database-peek-label);
   font-size: 13px;
+  line-height: 18px;
   font-weight: 500;
+}
+
+[data-blok-database-comments-section] [data-blok-database-comment-composer] {
+  padding-block: var(--blok-space-2) var(--blok-space-3);
+  padding-inline: 0 var(--blok-space-1);
+}
+
+[data-blok-database-comments-section] [data-blok-database-comment-composer] > [data-blok-database-comment-avatar] {
+  align-self: flex-start;
+}
+
+[data-blok-database-comments-section] [data-blok-database-comment-input] {
+  padding-block: 3.5px var(--blok-space-0-75);
+  padding-inline: var(--blok-space-1);
+}
+
+[data-blok-database-comments-section]:not([hidden]) + hr {
+  margin-block-end: var(--blok-space-2);
 }
 
 [data-blok-database-comments-section] [data-blok-database-comments] {
@@ -13716,7 +13754,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-gallery-properties] {
   display: flex;
   flex-direction: column;
-  padding-inline: var(--blok-space-2-5);
+  padding-inline: var(--blok-space-1-5);
   padding-block-end: var(--blok-space-2);
   font-size: 12px;
   line-height: 18px;
@@ -13732,7 +13770,9 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-gallery-property] {
   display: flex;
   align-items: center;
-  min-height: 24px;
+  box-sizing: border-box;
+  min-block-size: 28px;
+  padding: var(--blok-space-1-25);
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;

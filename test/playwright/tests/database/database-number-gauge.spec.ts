@@ -380,3 +380,106 @@ for (const theme of THEMES) {
     }
   });
 }
+
+/** notion-spec-2 §14.3 and §14.11: a card with Show number off, and two rollup items on a card. */
+const CARD_SCHEMA = [
+  { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
+  { id: 'p-stage', name: 'Stage', type: 'select', position: 'a1', config: { options: [ { id: 'o-plan', label: 'Plan', color: 'blue', position: 'a0' } ] } },
+  { id: 'p-link', name: 'Link', type: 'relation', position: 'a2', relation: { targetDatabaseId: 'db-1' } },
+  { id: 'p-num', name: 'Num', type: 'number', position: 'a3' },
+  { id: 'p-list', name: 'List', type: 'rollup', position: 'a4', rollup: { relationPropertyId: 'p-link', targetPropertyId: 'p-num', function: 'show_original' }, number: { showAs: 'ring', color: 'green', divideBy: 100 } },
+  { id: 'p-quiet-bar', name: 'Quiet bar', type: 'number', position: 'b0', number: { showAs: 'bar', color: 'green', divideBy: 100, showNumber: false } },
+  { id: 'p-quiet-ring', name: 'Quiet ring', type: 'number', position: 'b1', number: { showAs: 'ring', color: 'green', divideBy: 100, showNumber: false } },
+];
+
+const cardBlocks = (view: Record<string, unknown>): OutputBlockData[] => [
+  {
+    id: 'db-1',
+    type: 'database',
+    data: {
+      schema: CARD_SCHEMA,
+      views: [ { id: 'v1', name: 'View', position: 'a0', sorts: [], filters: [], visibleProperties: [ 'p-quiet-bar', 'p-quiet-ring', 'p-list' ], ...view } ],
+      activeViewId: 'v1',
+    },
+    content: [ 'r1', 'r2' ],
+  },
+  { id: 'r1', type: 'database-row', parent: 'db-1', data: { position: 'a0', properties: { 'p-title': 'A', 'p-num': 50, 'p-quiet-bar': 50, 'p-quiet-ring': 50, 'p-stage': 'o-plan', 'p-link': [ { id: 'r1' }, { id: 'r2' } ] } } },
+  { id: 'r2', type: 'database-row', parent: 'db-1', data: { position: 'a1', properties: { 'p-title': 'B', 'p-num': 1234.5, 'p-quiet-bar': 1234.5, 'p-quiet-ring': 1234.5, 'p-stage': 'o-plan' } } },
+];
+
+interface CardGeometry {
+  /** Each line's start from the card's start, and its height. */
+  lineStart: number;
+  lineHeight: number;
+  bar: { start: number; width: number; trackFromLine: number };
+  ring: { start: number; size: number; fromLine: number };
+  /** The card's width less 11px each side. */
+  content: number;
+  /** Space between the two rollup items. */
+  listGap: number;
+}
+
+const cardGeometry = async (page: Page, card: string, line: string): Promise<CardGeometry> => {
+  const first = page.locator(card).filter({ hasText: 'A' }).first();
+
+  await expect(first.locator(BAR)).toBeVisible();
+
+  return first.evaluate((el, lineSelector) => {
+    const round = (n: number): number => Math.round(n * 10) / 10;
+    const box = el.getBoundingClientRect();
+    const lineOf = (id: string): DOMRect => {
+      const found = el.querySelector(`${lineSelector}[data-property-id="${id}"]`);
+
+      if (found === null) throw new Error(`no line ${id}`);
+
+      return found.getBoundingClientRect();
+    };
+    const rect = (selector: string): DOMRect => {
+      const found = el.querySelector(selector);
+
+      if (found === null) throw new Error(`no ${selector}`);
+
+      return found.getBoundingClientRect();
+    };
+    const barLine = lineOf('p-quiet-bar');
+    const ringLine = lineOf('p-quiet-ring');
+    const bar = rect('[data-property-id="p-quiet-bar"] [data-blok-database-number-bar]');
+    const ring = rect('[data-property-id="p-quiet-ring"] [data-blok-database-number-ring]');
+    const items = [ ...el.querySelectorAll('[data-property-id="p-list"] [data-blok-database-number-item]') ].map((item) => item.getBoundingClientRect());
+
+    if (items.length !== 2) throw new Error('expected two rollup items');
+
+    return {
+      lineStart: round(barLine.left - box.left),
+      lineHeight: round(ringLine.height),
+      bar: { start: round(bar.left - box.left), width: round(bar.width), trackFromLine: round(bar.top - barLine.top) },
+      ring: { start: round(ring.left - box.left), size: round(ring.width), fromLine: round(ring.top - ringLine.top) },
+      content: round(box.width - 22),
+      listGap: round(items[1].left - items[0].right),
+    };
+  }, line);
+};
+
+for (const theme of THEMES) {
+  for (const view of [
+    { name: 'gallery', data: { type: 'gallery' }, card: '[data-blok-database-gallery-card]', line: '[data-blok-database-gallery-property]' },
+    { name: 'board', data: { type: 'board', groupBy: 'p-stage' }, card: '[data-blok-database-card]', line: '[data-blok-database-card-property]' },
+  ]) {
+    test(`a ${view.name} card with Show number off: a full-width bar, an 18px ring, 11px in, ${theme.name}`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: theme.name });
+      await mount(page, cardBlocks(view.data));
+      const geometry = await cardGeometry(page, view.card, view.line);
+
+      // The bar has no 160 cap on a card: it fills the content width.
+      expect(geometry.bar.width).toBe(geometry.content);
+      expect(geometry.bar.start).toBe(11);
+      // An 18px box with the 4px track centred: 5 + 7 below the line top.
+      expect(geometry.bar.trackFromLine).toBe(12);
+      expect(geometry.ring).toEqual({ start: 11, size: 18, fromLine: 5 });
+      expect(geometry.lineStart).toBe(6);
+      expect(geometry.lineHeight).toBe(28);
+      // §14.11: the card's rollup list wrapper is `gap: 4px 6px`.
+      expect(geometry.listGap).toBe(6);
+    });
+  }
+}

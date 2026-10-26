@@ -6227,6 +6227,26 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   max-inline-size: 160px;
 }
 
+/* notion-spec-2 §14.3: on a card, a gauge with no number is a bar across the line or an 18px ring. */
+:is([data-blok-database-card-property], [data-blok-database-gallery-property]) > [data-blok-database-cell]:has(> [data-blok-database-number-bar]:only-child) {
+  flex: 1 1 auto;
+}
+
+:is([data-blok-database-card-property], [data-blok-database-gallery-property]) [data-blok-database-number-bar]:only-child {
+  flex: 1 1 100%;
+  inline-size: auto;
+}
+
+:is([data-blok-database-card-property], [data-blok-database-gallery-property]) [data-blok-database-number-ring]:only-child {
+  inline-size: 18px;
+  block-size: 18px;
+}
+
+/* §14.11: a card's rollup items sit 6px apart. */
+:is([data-blok-database-card-property], [data-blok-database-gallery-property]) > [data-blok-database-cell][data-blok-database-number-list] {
+  gap: var(--blok-space-1) var(--blok-space-1-5);
+}
+
 /* ID: tertiary ink (research/08). */
 [data-blok-database-cell="uniqueId"] {
   color: var(--blok-database-ink-tertiary);
@@ -8271,17 +8291,38 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-hover-bg);
 }
 
-/* The row page section sits under the properties. */
+/* notion-spec-2 §14.2: 20px under "Add a property", 84px in from the peek like the title. */
 [data-blok-database-comments-section] {
-  margin-block: var(--blok-space-2);
+  margin-block: var(--blok-space-5) 0;
+  padding-inline-start: var(--blok-space-1-5);
 }
 
-/* research/09 §1 (light) and research/21 §1m (dark): the property label ink. */
+/* Notion's rgb(125, 122, 117) is under 4.5:1 on white; the label token is its AA step. */
 [data-blok-database-comments-label] {
-  margin-bottom: var(--blok-space-1);
+  padding-block: var(--blok-space-0-75);
   color: var(--blok-database-peek-label);
   font-size: 13px;
+  line-height: 18px;
   font-weight: 500;
+}
+
+[data-blok-database-comments-section] [data-blok-database-comment-composer] {
+  padding-block: var(--blok-space-2) var(--blok-space-3);
+  padding-inline: 0 var(--blok-space-1);
+}
+
+[data-blok-database-comments-section] [data-blok-database-comment-composer] > [data-blok-database-comment-avatar] {
+  align-self: flex-start;
+}
+
+[data-blok-database-comments-section] [data-blok-database-comment-input] {
+  padding-block: 3.5px var(--blok-space-0-75);
+  padding-inline: var(--blok-space-1);
+}
+
+/* The divider is the section's bottom line; the body starts 8px under it. */
+[data-blok-database-comments-section]:not([hidden]) + hr {
+  margin-block-end: var(--blok-space-2);
 }
 
 [data-blok-database-comments-section] [data-blok-database-comments] {
@@ -10877,7 +10918,8 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-gallery-properties] {
   display: flex;
   flex-direction: column;
-  padding-inline: var(--blok-space-2-5);
+  /* notion-spec-2 §14.3: with each line's 5px, content starts 11px in, as on a board card. */
+  padding-inline: var(--blok-space-1-5);
   padding-block-end: var(--blok-space-2);
   font-size: 12px;
   line-height: 18px;
@@ -10894,7 +10936,9 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-gallery-property] {
   display: flex;
   align-items: center;
-  min-height: 24px;
+  box-sizing: border-box;
+  min-block-size: 28px;
+  padding: var(--blok-space-1-25);
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;

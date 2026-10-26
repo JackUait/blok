@@ -163,6 +163,14 @@ Stored mode is refused when `--sync-url` is set. A sync service owns those docum
   - In live mode your document endpoint gets no PUT for the new page yet. It gets one when someone writes in the page, or under a journal when the room is opened again.
   - The document stays, empty, if the batch fails after it was made or the insert is undone. When a later command in that batch fails, `error.details.orphaned` lists it. A save or a room that refuses the batch does not. Delete it yourself if you do not want it.
 
+## Locked databases
+
+An agent unlocks a database a person locked only after a person says yes.
+
+- If your client supports MCP elicitation, the server asks there. The person sees which database it is, and only ticking Unlock lets the agent go on. If they say no, nothing in that call is applied.
+- If your client does not support elicitation, the unlock fails with `APPROVAL_REQUIRED`. The person can unlock it in the editor.
+- Blok trusts the client to show the question to a person. The model cannot answer it through tool arguments.
+
 ## Custom tools
 
 - `--manifest <file>` loads your custom block and inline tools, as a `BlokCustomToolsFile`.

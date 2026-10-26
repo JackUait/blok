@@ -161,6 +161,31 @@ const historyOf = (name: VersionCommandName, ctx: VersionContext): AgentVersionH
 const notFound = (version: string): AgentFailure =>
   failure('VERSION_NOT_FOUND', `There is no version "${version}". history.versions lists them.`, { path: '/version' });
 
+const isLockedDatabase = (block: { type: string; data: Record<string, unknown> } | undefined): boolean =>
+  block?.type === 'database' && Array.isArray(block.data.schema)
+  && block.data.schema.some(property => isRecord(property) && property.type === 'title' && property.databaseLocked === true);
+
+/**
+ * A restore must not unlock a database a person locked: that needs their approval, and a
+ * restore has no way to ask. Kept in step with database.setLock's unlock gate.
+ */
+const refuseUnlocks = (before: DocSnapshot, target: OutputData): void => {
+  const unlocked = target.blocks.find(block => block.id !== undefined
+    && isLockedDatabase(before.get(block.id)) && !isLockedDatabase(block));
+
+  if (unlocked?.id === undefined) {
+    return;
+  }
+  const title = typeof unlocked.data.title === 'string' && unlocked.data.title.trim() !== '' ? unlocked.data.title : undefined;
+  const named = title === undefined ? `database "${unlocked.id}"` : `database "${title}" (${unlocked.id})`;
+
+  throw failure('APPROVAL_REQUIRED', `A person locked ${named}, and this version has it unlocked. `
+    + 'Restoring it needs a person\'s explicit approval, and nothing here can ask one. Nothing was restored. '
+    + 'Ask the person to restore this version themselves from the version history.', {
+    details: { reason: 'no-channel', approval: { kind: 'database.unlock', blockId: unlocked.id, ...(title !== undefined && { title }) } },
+  });
+};
+
 const idsOf = (blocks: Array<{ id?: string }>): string[] =>
   blocks.flatMap(block => block.id === undefined ? [] : [block.id]);
 
@@ -189,8 +214,11 @@ export const runRestore = async (
   if (!isOutputData(target)) {
     throw notFound(version);
   }
+  const now = current();
+
+  refuseUnlocks(now, target);
   const blocks = outputBlocksToSegments(target.blocks, type => ctx.tools.get(type)?.entry.richTextFields ?? [], ctx.ports.htmlToSegments);
-  const diff = diffOutput(current().toOutput(), { ...target, blocks }, {
+  const diff = diffOutput(now.toOutput(), { ...target, blocks }, {
     richTextFields: type => ctx.tools.get(type)?.entry.richTextFields ?? [],
     htmlToSegments: ctx.ports.htmlToSegments,
   });

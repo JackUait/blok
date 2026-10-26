@@ -121,4 +121,18 @@ describe('server runtime version history', () => {
     expect(output.restore).toBeUndefined();
     expect(output.result).toMatchObject({ ok: false, error: { code: 'COMMAND_UNAVAILABLE', details: { reason: 'host' } } });
   });
+
+  it('hands the host no restore that would unlock a locked database', async () => {
+    const db = (locked: boolean): Record<string, unknown> => ({
+      id: 'db', type: 'database', data: { schema: [{ id: 't', name: 'Name', type: 'title', position: 'a0', ...(locked && { databaseLocked: true }) }] },
+    });
+    const output = await execute({
+      document: { blocks: [db(true)] },
+      services: ['versionHistory'], restores: true, versionHistory: { versions, documents: { 'L:1': { blocks: [db(false)] } } },
+      batch: { commands: [{ name: 'history.restore', args: { version: 'L:1' } }] },
+    });
+
+    expect(output.restore).toBeUndefined();
+    expect(output.result).toMatchObject({ ok: false, error: { code: 'APPROVAL_REQUIRED', details: { reason: 'no-channel' } } });
+  });
 });

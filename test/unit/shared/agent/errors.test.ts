@@ -45,6 +45,7 @@ const retryability: { [Code in AgentErrorCode]: readonly [Code, boolean] } = {
   STORED_WRITE_FORBIDDEN: ['STORED_WRITE_FORBIDDEN', false],
   SOURCE_UNAVAILABLE: ['SOURCE_UNAVAILABLE', false],
   VERSION_NOT_FOUND: ['VERSION_NOT_FOUND', false],
+  APPROVAL_REQUIRED: ['APPROVAL_REQUIRED', false],
 };
 
 beforeEach(() => {

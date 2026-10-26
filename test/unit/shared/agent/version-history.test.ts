@@ -316,6 +316,49 @@ describe('history.restore', () => {
     expect(history.restore).not.toHaveBeenCalled();
   });
 
+  describe('a version that would unlock a database a person locked', () => {
+    const database = (locked: boolean): OutputData['blocks'][number] => ({
+      id: 'db', type: 'database', data: {
+        title: 'Roadmap',
+        schema: [{ id: 't', name: 'Name', type: 'title', position: 'a0', ...(locked && { databaseLocked: true }) }],
+      },
+    });
+    const withDatabase = (versionLocked: boolean) => {
+      const versions: Record<string, OutputData> = { 'L:1': { blocks: [paragraph('a', 'Old'), database(versionLocked)] } };
+      const history = {
+        list: vi.fn(async () => VERSIONS),
+        read: vi.fn(async (version: string) => versions[version] ?? null),
+        restore: vi.fn(async () => true),
+      };
+      const setup = createHeadlessAgentSetup({ services: ['versionHistory'], runtime: 'node', restores: true });
+      const agent = createDocumentAgentSession({
+        document: { blocks: [paragraph('a', 'Now'), database(true)] },
+        tools: setup.tools, contract: setup.contract, actor, ports: setup.ports, services: { versionHistory: history },
+      });
+
+      return { history, agent };
+    };
+
+    it('is refused with APPROVAL_REQUIRED, and the host never restores', async () => {
+      const { history, agent } = withDatabase(false);
+      const result = await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });
+
+      expect(!result.ok && result.error.code).toBe('APPROVAL_REQUIRED');
+      expect(!result.ok && result.error.details).toMatchObject({
+        reason: 'no-channel', approval: { kind: 'database.unlock', blockId: 'db', title: 'Roadmap' },
+      });
+      expect(history.restore).not.toHaveBeenCalled();
+    });
+
+    it('restores when the database stays locked', async () => {
+      const { history, agent } = withDatabase(true);
+      const result = await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });
+
+      expect(result.ok).toBe(true);
+      expect(history.restore).toHaveBeenCalledWith('L:1');
+    });
+  });
+
   it('reports a failing host restore with the retry rule of the reads', async () => {
     const { history, agent } = restoring();
 

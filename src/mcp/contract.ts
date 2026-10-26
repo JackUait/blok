@@ -20,16 +20,20 @@ export const buildMcpContracts = (input: {
   richTextFields?: Record<string, string[]>;
   /** A sync URL is set: live handles read the room's version history. */
   versionHistory?: boolean;
+  /** The host gave an uploader: `<tool>.uploadFile` runs. */
+  uploadsFiles?: boolean;
 }): McpContracts => {
   // With a sync URL every handle is live (resolveMode), so the listed stored contract may name the history reads too.
   const services: HostService[] = [
     ...(input.pageTitles === 'page-map' ? ['pageBackend' as const] : []),
     ...(input.versionHistory === true ? ['versionHistory' as const] : []),
+    ...(input.uploadsFiles === true ? ['uploader' as const] : []),
   ];
   const prepares = {
     ...(input.createsPages === true && input.pageTitles === 'page-map' && { prepares: ['page'] }),
     // The sync server's history restores too.
     ...(input.versionHistory === true && { restores: true }),
+    ...(input.uploadsFiles === true && { uploadsFiles: true }),
   };
   const stored = createHeadlessAgentSetup({
     customTools: input.manifest,

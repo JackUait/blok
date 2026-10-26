@@ -225,7 +225,28 @@ const hostOf = (listen: string): string => listen.startsWith('[')
   ? listen.slice(0, listen.indexOf(']') + 1)
   : listen.slice(0, listen.lastIndexOf(':'));
 
+const checkUploads = (options: BlokMcpOptions): void => {
+  const uploads = options.uploads;
+
+  if (uploads === undefined) {
+    return;
+  }
+  if (typeof uploads.uploader?.uploadByFile !== 'function') {
+    throw new McpConfigError('uploads.uploader needs an uploadByFile function');
+  }
+  for (const [kind, limit] of Object.entries(uploads.limits ?? {})) {
+    if (limit?.maxSize !== undefined && (!Number.isInteger(limit.maxSize) || limit.maxSize < 1)) {
+      throw new McpConfigError(`uploads.limits.${kind}.maxSize must be a positive whole number of bytes`);
+    }
+  }
+  // Over HTTP the caller is remote, and a path would read this machine's disk for them.
+  if (uploads.root !== undefined && options.transport.kind === 'http') {
+    throw new McpConfigError('uploads.root reads local files, so it works over stdio only');
+  }
+};
+
 export const checkOptionSafety = (options: BlokMcpOptions): void => {
+  checkUploads(options);
   if (options.tickets?.kind === 'url'
     && (options.tickets.hostToken === undefined || options.tickets.hostToken === '')) {
     throw new McpConfigError('--ticket-url needs BLOK_MCP_HOST_TOKEN');

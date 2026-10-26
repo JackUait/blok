@@ -1,4 +1,5 @@
 import type { AgentActor } from '../../types/agent';
+import type { UploadContext, UploadedAsset } from '../../types/configs/uploader';
 import type { BlokCustomToolsFile, ManifestOverrides } from '../../types/tool-manifest';
 
 export interface BlokMcpOptions {
@@ -17,6 +18,19 @@ export interface BlokMcpOptions {
   handleIdleMs?: number;
   maxHandlesPerPrincipal?: number;
   principal?: string;
+  uploads?: McpUploads;
+}
+
+/** The host's own uploader, which `<tool>.uploadFile` sends files through. */
+export interface McpUploads {
+  uploader: {
+    uploadByFile(file: File, ctx: UploadContext): Promise<UploadedAsset & { size?: number; mimeType?: string }>;
+    uploadByUrl?(url: string, ctx: UploadContext): Promise<UploadedAsset>;
+  };
+  /** A folder the agent may upload files from by path. stdio only. Absent: bytes only. */
+  root?: string;
+  /** Per kind, as a media tool's `types` and `maxSize`. Absent: the tool's defaults. */
+  limits?: Partial<Record<'image' | 'video' | 'audio' | 'file', { types?: string[]; maxSize?: number }>>;
 }
 
 export const DEFAULTS: {

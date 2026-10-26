@@ -18,6 +18,7 @@ import { mcpInstructions } from './instructions';
 import type { Dispatch } from './sdk-server';
 import type { HandleSession } from './session';
 import { listMcpTools } from './tools';
+import { createUploaderService } from './uploads';
 import type { McpTool } from './tools';
 
 export interface AssembledMcp {
@@ -66,7 +67,9 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
     createsPages,
     richTextFields: options.richTextFields,
     versionHistory: options.sync !== undefined,
+    uploadsFiles: options.uploads !== undefined,
   });
+  const uploader = options.uploads === undefined ? undefined : createUploaderService(options.uploads);
   // page.rename / page.setIcon close their page session without waiting, so stop waits for those closes.
   const pageCloses = new Set<Promise<unknown>>();
   const trackPageClose = (closing: Promise<unknown>): void => {
@@ -112,6 +115,7 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
     socketFactory: deps.liveSocketFactory,
     syncTimeoutMs: deps.liveSyncTimeoutMs,
     portsFor,
+    ...(uploader !== undefined && { uploader }),
     presenceName: (caller, actor) =>
       agentPresenceName({ customActor: options.agentActor !== undefined, clientName: caller.clientName, actor }),
     ...(tickets !== undefined && {
@@ -124,7 +128,7 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
       }),
     }),
   });
-  const opener = createOpener({ options, contracts, source, openLive, portsFor });
+  const opener = createOpener({ options, contracts, source, openLive, portsFor, ...(uploader !== undefined && { uploader }) });
 
   late.open = opener.open;
   late.createPage = opener.createPage;

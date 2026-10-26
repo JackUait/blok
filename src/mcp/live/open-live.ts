@@ -32,6 +32,8 @@ export interface OpenLiveDeps {
   presenceName?: (caller: Caller, actor: AgentActor) => string;
   pageTitles?: 'off' | 'page-map';
   syncTimeoutMs?: number;
+  /** The host's file uploader, for `<tool>.uploadFile`. */
+  uploader?: unknown;
 }
 
 // encodeURIComponent keeps "." and "..", which the URL parser resolves as path steps to another route.
@@ -167,6 +169,7 @@ export const createOpenLive = (deps: OpenLiveDeps) => async (request: OpenReques
       ...(deps.pageTitles === 'page-map' && { pageTitles: 'page-map' as const }),
       services: {
         versionHistory: createHttpVersionHistory({ roomUrl: url, origin: deps.sync.origin, tickets: ticketSource }),
+        ...(deps.uploader !== undefined && { uploader: deps.uploader }),
       },
     });
     const presence = new AgentPresence(

@@ -32,6 +32,8 @@ export interface OpenerDeps {
   source: DocumentSource | null;
   openLive?: (request: OpenRequest, caller: Caller, actor: AgentActor) => Promise<HandleSession>;
   portsFor(caller: Caller, actor: AgentActor, isOpenDocument?: (pageId: string) => Promise<boolean>): AgentPorts;
+  /** The host's file uploader, for `<tool>.uploadFile`. */
+  uploader?: unknown;
 }
 
 export const createOpener = (
@@ -84,6 +86,7 @@ export const createOpener = (
           pageId === request.documentId || (await source.sameDocument?.(pageId, request.documentId) ?? false)),
         // 01 builds the Node pageBackend only with this flag and the openPageDocument port (Task 26).
         ...(deps.options.pageTitles === 'page-map' && { pageTitles: 'page-map' as const }),
+        ...(deps.uploader !== undefined && { services: { uploader: deps.uploader } }),
       }),
     });
   };

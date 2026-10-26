@@ -163,6 +163,24 @@ Stored mode is refused when `--sync-url` is set. A sync service owns those docum
   - In live mode your document endpoint gets no PUT for the new page yet. It gets one when someone writes in the page, or under a journal when the room is opened again.
   - The document stays, empty, if the batch fails after it was made or the insert is undone. When a later command in that batch fails, `error.details.orphaned` lists it. A save or a room that refuses the batch does not. Delete it yourself if you do not want it.
 
+## Uploads
+
+An agent can upload a file with `image.uploadFile`, `video.uploadFile`, `audio.uploadFile` or `file.uploadFile`. Each inserts a new block, the same block a person's upload gives.
+
+- Only when you embed the server and pass `uploads` to `createBlokMcpServer`. There is no flag for it. Without it, these commands answer `COMMAND_UNAVAILABLE` with reason `host`.
+- `uploads.uploader.uploadByFile(file, { kind, tool })` is your own uploader. It gets a `File` and returns `{ url, fileName? }`. A file card also keeps `size` and `mimeType` when you return them.
+- The agent sends the bytes as base64 `data` with a `fileName`. Over HTTP the request body is capped at 4 MiB, so large files need stdio.
+- `uploads.root` lets the agent send a `path` instead. The server reads only regular files under that folder.
+  - A path that leaves the folder, through `..`, an absolute path or a symlink, is refused.
+  - FIFOs, devices and folders are refused.
+  - It works over stdio only. Over HTTP the caller is remote, so the server refuses to start with it.
+- The type comes from the file name's extension, as a browser sets it. A `mimeType` that disagrees is refused.
+- `uploads.limits` sets `types` and `maxSize` per kind, like a media tool's own config. The defaults are the tools' defaults: `image/*`, `audio/*` and `video/*`, any type for files; 30 MiB, and 100 MiB for video.
+  - The size is checked before the bytes are decoded.
+- An SVG is sent unchanged, as a person's upload sends it. Leave `image/svg+xml` out of `types` if your storage serves it on your own origin.
+- An upload runs alone in its batch. When the batch fails after the upload, `error.details.orphaned` names the stored file. Delete it yourself.
+- The server does not compress images, turn GIFs into video, read audio tags or make variants. The editor does those in the browser.
+
 ## Locked databases
 
 An agent unlocks a database a person locked only after a person says yes.
@@ -230,7 +248,7 @@ Pass a value as the next argument: `--auth oauth`, not `--auth=oauth`. An unknow
 
 ## Limits
 
-- No uploads. Add media by URL.
+- Uploads need an embedded server with `uploads` (see Uploads). The CLI adds media by URL only.
 - No Docker image.
 - A handle expires after 10 minutes idle.
 - A principal may hold 8 open handles.

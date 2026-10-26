@@ -68,6 +68,30 @@ export interface BlokMcpOptions {
   maxHandlesPerPrincipal?: number;
   /** stdio and auth 'none' only: who the caller is. Default 'local'. */
   principal?: string;
+  /** Turns on `image.uploadFile`, `video.uploadFile`, `audio.uploadFile` and `file.uploadFile`. */
+  uploads?: McpUploads;
+}
+
+export type McpAssetKind = 'image' | 'video' | 'audio' | 'file';
+
+/** Copies core's `UploadContext`, without the progress and variant fields an agent upload never sends. */
+export interface McpUploadContext {
+  kind: McpAssetKind;
+  tool?: string;
+}
+
+/** The host's own uploader, which an agent's upload goes through. */
+export interface McpUploads {
+  uploader: {
+    /** A file card keeps `size` and `mimeType` when the host returns them. */
+    uploadByFile(file: File, ctx: McpUploadContext): Promise<{ url: string; fileName?: string; size?: number; mimeType?: string }>;
+    /** When set, `<tool>.setSource` copies a linked file to the host too. */
+    uploadByUrl?(url: string, ctx: McpUploadContext): Promise<{ url: string; fileName?: string }>;
+  };
+  /** A folder the agent may upload from by path. stdio only; symlinks out of it are refused. Absent: base64 bytes only. */
+  root?: string;
+  /** Per kind, like a media tool's `types` and `maxSize`. Defaults: image/*, audio/* and video/* only; 30 MiB, video 100 MiB. */
+  limits?: Partial<Record<McpAssetKind, { types?: string[]; maxSize?: number }>>;
 }
 
 export declare function createBlokMcpServer(options: BlokMcpOptions): { start(): Promise<void>; stop(): Promise<void> };

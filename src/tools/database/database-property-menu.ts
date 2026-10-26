@@ -252,12 +252,12 @@ export class DatabasePropertyMenu {
    * Writes a settings patch. A number pick (Show as, format, decimals, color) draws
    * the menu again through `redraw`: its list closes, Edit property stays open with
    * the new value (notion-spec-2 §8), and Color and Divide by come or go with Show as.
-   * A Divide by write does not redraw: it lands on blur, often from a click elsewhere in the menu.
+   * Divide by writes through `numberItems`' quiet path instead: it lands on blur, often from a click elsewhere in the menu.
    */
   private showAsUpdate(property: PropertyDefinition, name: HTMLElement, redraw: (number: NumberDisplay, typed: string | undefined) => void): (patch: Partial<PropertySettingsV2>) => void {
     return (patch) => {
       this.options.onUpdate(property.id, patch);
-      if (patch.number === undefined || patch.number.divideBy !== property.number?.divideBy) return;
+      if (patch.number === undefined) return;
       const input = name.querySelector('input');
 
       // The old field goes away without a blur: save its name first, as leaving it would.
@@ -603,7 +603,8 @@ export class DatabasePropertyMenu {
           name: entry,
           title: this.t(property.type === 'button' ? 'tools.database.editAutomation' : 'tools.database.editProperty'),
           icon: IconPencil,
-          children: { items: this.editItems(property, update) },
+          // research/27 §7: 300 wide. The all-views note wraps rather than widening it.
+          children: { items: this.editItems(property, update), minWidth: '300px' },
         };
       case 'displayAs': {
         const status = property.status;
@@ -813,7 +814,7 @@ export class DatabasePropertyMenu {
         },
       },
       ...(target !== undefined && rollupResultType(settings.function, target).type === 'number'
-        ? [...this.numberItems(property.number ?? {}, (number) => update({ number }), !COUNT_FNS.has(settings.function)), this.allViewsNote()]
+        ? [...this.numberItems(property, (number) => update({ number }), !COUNT_FNS.has(settings.function)), this.allViewsNote()]
         : []),
     ];
   }
@@ -871,7 +872,7 @@ export class DatabasePropertyMenu {
       return this.rollupItems(property, update);
     }
     if (property.type === 'formula') {
-      return [this.editFormulaItem(property.id, 'editFormula'), ...this.numberItems(property.number ?? {}, (number) => update({ number })), this.allViewsNote()];
+      return [this.editFormulaItem(property.id, 'editFormula'), ...this.numberItems(property, (number) => update({ number })), this.allViewsNote()];
     }
     if (property.type === 'button') {
       const computed = this.options.computed;
@@ -890,7 +891,7 @@ export class DatabasePropertyMenu {
       });
     }
     if (property.type === 'number') {
-      return this.numberItems(property.number ?? {}, (number) => update({ number }));
+      return this.numberItems(property, (number) => update({ number }));
     }
     if (property.type === 'uniqueId') {
       return [this.inputItem('prefix', property.uniqueId?.prefix ?? '', 'tools.database.idPrefix', (prefix) => update({ uniqueId: prefix === '' ? {} : { prefix } }))];
@@ -984,10 +985,13 @@ export class DatabasePropertyMenu {
   }
 
   /** `formats`: the Number format and Decimal places rows, which a count has not (notion-spec-2 §3). */
-  private numberItems(number: NumberDisplay, set: (number: NumberDisplay) => void, formats = true): PopoverItemParams[] {
+  private numberItems(property: PropertyDefinition, set: (number: NumberDisplay) => void, formats = true): PopoverItemParams[] {
+    const number = property.number ?? {};
+    // Divide by saves without a redraw, so later picks build on this, not on the drawn `number`.
+    const latest = { number };
     const showAs = number.showAs ?? 'number';
     const gauge = showAs === 'bar' || showAs === 'ring';
-    const pick = (value: NumberShowAs): void => set(value === 'number' ? without(number, 'showAs') : { ...number, showAs: value });
+    const pick = (value: NumberShowAs): void => set(value === 'number' ? without(latest.number, 'showAs') : { ...latest.number, showAs: value });
 
     const formatItems: PopoverItemParams[] = [
       {
@@ -1000,7 +1004,7 @@ export class DatabasePropertyMenu {
             name: `format-${format}`,
             title: this.t(`tools.database.numberFormat.${format}`),
             isActive: (number.format ?? 'number') === format,
-            onActivate: () => set({ ...number, format }),
+            onActivate: () => set({ ...latest.number, format }),
           })),
         },
       },
@@ -1014,13 +1018,13 @@ export class DatabasePropertyMenu {
               name: 'decimals-default',
               title: this.t('tools.database.decimalPlacesDefault'),
               isActive: number.decimals === undefined,
-              onActivate: () => set(without(number, 'decimals')),
+              onActivate: () => set(without(latest.number, 'decimals')),
             },
             ...Array.from({ length: MAX_DECIMALS + 1 }, (_, decimals) => ({
               name: `decimals-${decimals}`,
               title: String(decimals),
               isActive: number.decimals === decimals,
-              onActivate: () => set({ ...number, decimals }),
+              onActivate: () => set({ ...latest.number, decimals }),
             })),
           ],
         },
@@ -1042,15 +1046,17 @@ export class DatabasePropertyMenu {
                 name: `color-${color}`,
                 title: this.t(optionColorLabelKey(color)),
                 isActive: (number.color ?? 'default') === color,
-                onActivate: () => set({ ...number, color }),
+                onActivate: () => set({ ...latest.number, color }),
               })),
             },
           },
           this.inputItem('divideBy', number.divideBy === undefined ? '' : String(number.divideBy), 'tools.database.divideBy', (text) => {
             const divideBy = Number(text);
-            const next: NumberDisplay = text === '' || !Number.isFinite(divideBy) || divideBy <= 0 ? without(number, 'divideBy') : { ...number, divideBy };
+            const next: NumberDisplay = text === '' || !Number.isFinite(divideBy) || divideBy <= 0 ? without(latest.number, 'divideBy') : { ...latest.number, divideBy };
 
-            if (next.divideBy !== number.divideBy) set(next);
+            if (next.divideBy === latest.number.divideBy) return;
+            latest.number = next;
+            this.options.onUpdate(property.id, { number: next });
           }),
         ]
         : []),

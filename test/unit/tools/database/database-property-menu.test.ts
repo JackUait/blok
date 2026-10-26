@@ -17,7 +17,7 @@ interface CapturedItem {
   element?: HTMLElement;
   onActivate?: (item: CapturedItem) => void;
   confirmation?: { onActivate: (item: CapturedItem) => void; title?: string };
-  children?: { items: CapturedItem[]; searchable?: boolean; width?: string };
+  children?: { items: CapturedItem[]; searchable?: boolean; width?: string; minWidth?: string };
 }
 
 interface CapturedPopover { items: CapturedItem[]; destroyed: boolean; params: Record<string, unknown>; activated: string[]; closed?: () => void; hide: () => void; transitionAtShow?: string }
@@ -739,6 +739,31 @@ describe('DatabasePropertyMenu', () => {
       expect(byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'color').valueLabel).toBe('tools.colorPicker.color.red');
       expect(onClose).not.toHaveBeenCalled();
       expect(menu.isOpen).toBe(true);
+      menu.destroy();
+    });
+
+    // Divide by saves on blur without a redraw, so a later pick must not write the old value back.
+    it('a color picked after typing Divide by keeps the typed Divide by and still redraws', () => {
+      const { cb, menu } = headerMenu(prop('number', { number: { showAs: 'bar', divideBy: 100 } }));
+      const input = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'divideBy').element?.querySelector('input');
+
+      if (input === null || input === undefined) throw new Error('no divide by input');
+      input.value = '50';
+      input.dispatchEvent(new Event('change'));
+      const drawn = captured.popovers.length;
+
+      pick('color', 'color-red');
+
+      expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { number: { showAs: 'bar', divideBy: 50, color: 'red' } });
+      expect(captured.popovers.length).toBe(drawn + 1);
+      menu.destroy();
+    });
+
+    // research/27 §7: the header's Edit property submenu is 300 wide; the all-views note no longer sets it.
+    it('opens the header Edit property submenu at least 300 wide', () => {
+      const { menu } = headerMenu(prop('number'));
+
+      expect(byName(lastItems(), 'editProperty').children?.minWidth).toBe('300px');
       menu.destroy();
     });
 

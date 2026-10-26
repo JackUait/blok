@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import type { PropertyDefinition, PropertyType } from '../../../../src/tools/database/types';
 import { createDefaultStatusSettings } from '../../../../src/tools/database/property-values';
-import { IconInfo, IconPageLayout, IconReplace } from '../../../../src/components/icons';
+import { IconCheck, IconInfo, IconPageLayout, IconReplace } from '../../../../src/components/icons';
 
 interface CapturedItem {
   name?: string;
@@ -18,7 +18,7 @@ interface CapturedItem {
   element?: HTMLElement;
   onActivate?: (item: CapturedItem) => void;
   confirmation?: { onActivate: (item: CapturedItem) => void; title?: string };
-  children?: { items: CapturedItem[]; searchable?: boolean; width?: string; minWidth?: string };
+  children?: { items: CapturedItem[]; searchable?: boolean; width?: string; minWidth?: string; placement?: string };
 }
 
 interface CapturedPopover { items: CapturedItem[]; destroyed: boolean; params: Record<string, unknown>; activated: string[]; focused: string[]; closed?: () => void; hide: () => void; transitionAtShow?: string }
@@ -628,6 +628,19 @@ describe('DatabasePropertyMenu', () => {
 
       byName(items, 'showAs').element?.querySelector<HTMLElement>('[data-blok-database-show-as-tile="ring"]')?.click();
       expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { number: { format: 'euro', showAs: 'ring' } });
+    });
+
+    // notion-spec-2 §11: Notion's Color list is a 150px dropdown on the button, with a check on the current colour.
+    it('opens the Color list as a dropdown with a check on the current colour', () => {
+      const color = byName(editItems(prop('number', { number: { showAs: 'bar', color: 'green' } })), 'color');
+      const list = color.children?.items ?? [];
+
+      expect(color.children?.placement).toBe('dropdown');
+      expect(color.children?.minWidth).toBe('150px');
+      expect(byName(list, 'color-green').trailingIcon).toBe(IconCheck);
+      expect(byName(list, 'color-red').trailingIcon).toBeUndefined();
+      // No row lights up on open: the check marks the current one.
+      expect(list.some((item) => 'isActive' in item && item.isActive === true)).toBe(false);
     });
 
     it('offers color and divide-by only for a bar or ring', () => {

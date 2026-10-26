@@ -1063,11 +1063,13 @@ export class DatabasePropertyMenu {
             valueLabel: this.t(optionColorLabelKey(current)),
             valueIcon: optionSwatch(current),
             children: {
+              placement: 'dropdown' as const,
+              minWidth: '150px',
               items: OPTION_COLORS.map((color) => ({
                 name: `color-${color}`,
                 title: this.t(optionColorLabelKey(color)),
                 icon: optionSwatch(color),
-                isActive: (number.color ?? 'default') === color,
+                trailingIcon: (number.color ?? 'default') === color ? IconCheck : undefined,
                 onActivate: () => set({ ...latest.number, color }),
               })),
             },

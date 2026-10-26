@@ -436,6 +436,7 @@ export class PopoverDesktop extends PopoverAbstract {
     if (this.nodes.popoverContainer !== null) {
       this.listeners.on(this.nodes.popoverContainer, 'mouseover', (event: Event) => this.handleHover(event));
       this.listeners.on(this.nodes.popoverContainer, 'mouseleave', (event: Event) => this.handleMouseLeave(event));
+      this.listeners.on(this.nodes.popoverContainer, 'click', (event: Event) => this.closeDropdownOnClickAway(event));
     }
 
     if (params.searchable) {
@@ -1329,6 +1330,10 @@ export class PopoverDesktop extends PopoverAbstract {
         return;
       }
 
+      if (this.nestedPopoverTriggerItem?.childrenPlacement === 'dropdown') {
+        return;
+      }
+
       this.scheduleNestedClose();
 
       if (item.opensOnHover) {
@@ -1407,6 +1412,11 @@ export class PopoverDesktop extends PopoverAbstract {
    */
   private scheduleNestedClose(): void {
     if (this.nestedPopover === undefined || this.nestedPopover === null) {
+      return;
+    }
+
+    // A dropdown closes on a pick, a click outside it, or a key, never on pointer moves.
+    if (this.nestedPopoverTriggerItem?.childrenPlacement === 'dropdown') {
       return;
     }
 
@@ -1688,7 +1698,7 @@ export class PopoverDesktop extends PopoverAbstract {
     // observe it and re-clamp its position as the content grows or shrinks.
     // The observer's initial fire also settles any drift between the pre-show
     // clone measurement and the real rendered size.
-    if (item.childrenPlacement === 'below' && typeof ResizeObserver !== 'undefined') {
+    if (item.childrenPlacement !== 'beside' && typeof ResizeObserver !== 'undefined') {
       const nestedContainerEl = nestedPopoverEl.querySelector(`[${DATA_ATTR.popoverContainer}]`);
 
       if (nestedContainerEl instanceof HTMLElement) {
@@ -1713,6 +1723,50 @@ export class PopoverDesktop extends PopoverAbstract {
     this.flipper?.deactivate();
 
     return this.nestedPopover;
+  }
+
+  /**
+   * A click in this menu outside the open dropdown's row closes the dropdown.
+   * The list itself mounts outside the container, so its clicks never land here.
+   * @param event - click inside the container
+   */
+  private closeDropdownOnClickAway(event: Event): void {
+    const trigger = this.nestedPopoverTriggerItem;
+
+    if (trigger?.childrenPlacement !== 'dropdown') {
+      return;
+    }
+    const row = trigger.getElement();
+
+    if (row !== null && event.composedPath().includes(row)) {
+      return;
+    }
+    this.destroyNestedPopoverIfExists(false);
+  }
+
+  /**
+   * The box a dropdown list opens on: Notion's select button around the
+   * item's value, 8px past it on each side and 4px past the 28px row
+   * (its 36px button, notion-spec-2 §11).
+   * @param item - the row whose value opens the list
+   */
+  private dropdownButtonRect(item: PopoverItem): { left: number; right: number; top: number; bottom: number } | undefined {
+    const row = item.getElement();
+    const value = row?.querySelector(`[${DATA_ATTR.popoverItemValue}]`)?.getBoundingClientRect();
+    const chevron = row?.querySelector(`[${DATA_ATTR.popoverItemIconChevronRight}]`)?.getBoundingClientRect();
+    const rowRect = row?.getBoundingClientRect();
+
+    if (value === undefined || rowRect === undefined) {
+      return undefined;
+    }
+    const end = chevron !== undefined && chevron.width > 0 ? chevron : value;
+
+    return {
+      left: Math.min(value.left, end.left) - 8,
+      right: Math.max(value.right, end.right) + 8,
+      top: rowRect.top - 4,
+      bottom: rowRect.bottom + 4,
+    };
   }
 
   /**
@@ -1749,7 +1803,7 @@ export class PopoverDesktop extends PopoverAbstract {
     // popover instead (the inline toolbar's submenus). The card sits under the
     // parent but lines up with its trigger item, flipping above only when the
     // viewport leaves no room below.
-    if (triggerItem.childrenPlacement === 'below') {
+    if (triggerItem.childrenPlacement !== 'beside') {
       // The link field sizes its input to the typed content, so the card must
       // not stay frozen at the show()-time --width: the container follows its
       // content live, and the resize observer attached in showNestedPopover
@@ -1768,16 +1822,19 @@ export class PopoverDesktop extends PopoverAbstract {
         : this.nestedPopover?.size.height ?? 0;
 
       // In RTL the card's right edge lines up with the trigger's right edge.
-      const triggerRect = triggerItem.getElement()?.getBoundingClientRect();
+      // A dropdown opens on the item's value instead, flush with it.
+      const button = triggerItem.childrenPlacement === 'dropdown' ? this.dropdownButtonRect(triggerItem) : undefined;
+      const anchor = button ?? triggerItem.getElement()?.getBoundingClientRect();
       const anchorLeft = isRtl
-        ? (triggerRect?.right ?? parentRect.right) - nestedWidth
-        : triggerRect?.left ?? parentRect.left;
+        ? (anchor?.right ?? parentRect.right) - nestedWidth
+        : anchor?.left ?? parentRect.left;
       const { left, top, side } = resolveNestedPopoverBelowPlacement({
-        parentRect: { left: anchorLeft, top: parentRect.top, bottom: parentRect.bottom },
+        parentRect: { left: anchorLeft, top: button?.top ?? parentRect.top, bottom: button?.bottom ?? parentRect.bottom },
         nestedWidth,
         nestedHeight,
         viewportWidth: window.innerWidth,
         viewportHeight: window.innerHeight,
+        gap: button === undefined ? undefined : 0,
       });
 
       // A left below anchorLeft means the right-viewport clamp engaged.

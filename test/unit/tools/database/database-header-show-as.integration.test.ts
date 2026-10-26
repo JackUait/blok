@@ -84,4 +84,34 @@ describe('the table header Edit property submenu: Show as', () => {
     expect(PopoverRegistry.instance.triggerOf(name)).toBe(live);
     expect(document.querySelector('[data-blok-item-name="divideBy"]')).not.toBeNull();
   });
+
+  // notion-spec-2 §6: a formula that gives a number has Number's Show as tiles; Ring saves on it.
+  it('a number formula offers the Show as tiles, and Ring is saved on the formula', async () => {
+    const blocks: OutputBlockData[] = [
+      { ...doc[0], data: { ...doc[0].data, schema: [
+        { id: 't', name: 'Name', type: 'title', position: 'a0' },
+        { id: 'n', name: 'Total', type: 'formula', position: 'a1', formula: { expression: '1 + 1' } },
+      ] } },
+      doc[1],
+    ];
+
+    editor = new Blok({
+      holder, dataModel: 'hierarchical',
+      tools: { paragraph: Paragraph, database: DatabaseTool, 'database-row': DatabaseRowTool },
+      data: { blocks },
+    });
+    await editor.isReady;
+    await quiet();
+    header().click();
+    await quiet();
+    element(document, '[data-blok-item-name="editProperty"]').click();
+    await quiet();
+    element(document, '[data-blok-database-show-as-tile="ring"]').click();
+    await quiet();
+
+    const saved = await (editor as unknown as { save: () => Promise<{ blocks: OutputBlockData[] }> }).save();
+    const schema = (saved.blocks.find((block) => block.id === 'db')?.data as { schema: Array<{ id: string; number?: unknown }> }).schema;
+
+    expect(schema.find((p) => p.id === 'n')?.number).toEqual({ showAs: 'ring' });
+  });
 });

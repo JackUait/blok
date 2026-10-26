@@ -29,6 +29,7 @@ import type {
   PropertySettingsV2,
   PropertyType,
   RelationSettings,
+  RollupFunction,
   SelectOption,
 } from './types';
 
@@ -95,6 +96,8 @@ export interface ComputedMenuHost {
   /** The schema of a database in this document. */
   targetSchema: (databaseId: string) => PropertyDefinition[];
   onEditFormula: (propertyId: string) => void;
+  /** A formula as its result type: a number one gets Number's rows and Show as. */
+  valueProperty?: (property: PropertyDefinition) => PropertyDefinition;
   /** Turns a relation's mirroring property on the target database on or off. */
   onSetTwoWay: (propertyId: string, twoWay: boolean) => void;
   /** The host set `config.buttons.onAction`: buttons may call it. */
@@ -132,6 +135,8 @@ export interface PropertyMenuOptions extends PropertyMenuCallbacks {
 }
 
 const SHOW_AS: readonly NumberShowAs[] = ['number', 'bar', 'ring'];
+/** Notion's Count group: its result has no Number format or Decimal places. */
+const COUNT_FNS: ReadonlySet<RollupFunction> = new Set<RollupFunction>(['count', 'count_values', 'unique', 'empty', 'not_empty']);
 const VISIBILITY: readonly PageVisibility[] = ['always', 'hideWhenEmpty', 'hidden'];
 
 /** The row page's menu and Edit property panel: the header menu's rows, in Notion's row page look. */
@@ -322,13 +327,13 @@ export class DatabasePropertyMenu {
     const settings: PopoverItemParams[] = [];
 
     if (EDITABLE_SETTINGS.has(property.type)) {
-      settings.push(...(property.type === 'formula' ? [this.entry('editProperty', property)] : this.editItems(property, update)));
+      settings.push(...(property.type === 'formula' && !this.isNumberFormula(property) ? [this.entry('editProperty', property)] : this.editItems(property, update)));
     }
     const typeItems = (['changeType', 'displayAs'] as const).filter(has).map((entry) => this.entry(entry, property, true));
     const tail = (['duplicate', 'delete'] as const).filter(has).map((entry) => this.entry(entry, property));
     const separator = { type: PopoverItemType.Separator } as const;
-    // 08-rename.png: a number's format rows sit under Type with no rule; its rule comes before Show as.
-    const ruled = typeItems.length > 0 && settings.length > 0 && property.type !== 'number';
+    // 08-rename.png, notion-spec-2 §3, §6: number, rollup and formula rows sit under Type with no rule.
+    const ruled = typeItems.length > 0 && settings.length > 0 && !(['number', 'rollup', 'formula'] as PropertyType[]).includes(property.type);
     const items: PopoverItemParams[] = [
       { type: PopoverItemType.Html, element: name, name: 'name' },
       ...typeItems,
@@ -587,8 +592,8 @@ export class DatabasePropertyMenu {
 
     switch (entry) {
       case 'editProperty':
-        if (property.type === 'formula') {
-          return { name: entry, title: this.t('tools.database.editProperty'), icon: IconPencil, closeOnActivate: true, onActivate: () => this.options.computed?.onEditFormula(id) };
+        if (property.type === 'formula' && !this.isNumberFormula(property)) {
+          return this.editFormulaItem(id, entry);
         }
 
         // research/08: Notion names a button's settings "Edit automation".
@@ -765,6 +770,7 @@ export class DatabasePropertyMenu {
       {
         name: 'rollupRelation',
         title: this.t('tools.database.rollupRelation'),
+        ...(relation === undefined ? {} : { valueLabel: relation.name }),
         children: {
           items: relations.map((p) => ({
             name: `rollupRelation-${p.id}`,
@@ -778,6 +784,7 @@ export class DatabasePropertyMenu {
       {
         name: 'rollupProperty',
         title: this.t('tools.database.rollupProperty'),
+        ...(target === undefined ? {} : { valueLabel: target.name }),
         children: {
           // H-rr: a rollup of a rollup is not offered.
           items: targets.filter((p) => p.type !== 'rollup').map((p) => ({
@@ -792,6 +799,7 @@ export class DatabasePropertyMenu {
       {
         name: 'rollupFunction',
         title: this.t('tools.database.rollupFunction'),
+        valueLabel: this.t(`tools.database.rollupFn.${settings.function}`),
         children: {
           items: (target === undefined ? ROLLUP_FUNCTIONS : rollupFunctionsFor(target)).map((fn) => ({
             name: `rollupFunction-${fn}`,
@@ -803,9 +811,17 @@ export class DatabasePropertyMenu {
         },
       },
       ...(target !== undefined && rollupResultType(settings.function, target).type === 'number'
-        ? this.numberItems(property.number ?? {}, (number) => update({ number }))
+        ? [...this.numberItems(property.number ?? {}, (number) => update({ number }), !COUNT_FNS.has(settings.function)), this.allViewsNote()]
         : []),
     ];
+  }
+
+  private isNumberFormula(property: PropertyDefinition): boolean {
+    return property.type === 'formula' && this.options.computed?.valueProperty?.(property).type === 'number';
+  }
+
+  private editFormulaItem(propertyId: string, name: string): PopoverItemParams {
+    return { name, title: this.t('tools.database.editProperty'), icon: IconPencil, closeOnActivate: true, onActivate: () => this.options.computed?.onEditFormula(propertyId) };
   }
 
   private editItems(property: PropertyDefinition, update: (patch: Partial<PropertySettingsV2>) => void): PopoverItemParams[] {
@@ -851,6 +867,9 @@ export class DatabasePropertyMenu {
     if (property.type === 'rollup') {
       return this.rollupItems(property, update);
     }
+    if (property.type === 'formula') {
+      return [this.editFormulaItem(property.id, 'editFormula'), ...this.numberItems(property.number ?? {}, (number) => update({ number })), this.allViewsNote()];
+    }
     if (property.type === 'button') {
       const computed = this.options.computed;
 
@@ -868,7 +887,7 @@ export class DatabasePropertyMenu {
       });
     }
     if (property.type === 'number') {
-      return this.numberItems(property.number ?? {}, (number) => update({ number }), true);
+      return this.numberItems(property.number ?? {}, (number) => update({ number }));
     }
     if (property.type === 'uniqueId') {
       return [this.inputItem('prefix', property.uniqueId?.prefix ?? '', 'tools.database.idPrefix', (prefix) => update({ uniqueId: prefix === '' ? {} : { prefix } }))];
@@ -961,13 +980,13 @@ export class DatabasePropertyMenu {
     };
   }
 
-  /** `tiles`: Show as as Notion's three tiles (measured for a number property only; a rollup keeps its list). */
-  private numberItems(number: NumberDisplay, set: (number: NumberDisplay) => void, tiles = false): PopoverItemParams[] {
+  /** `formats`: the Number format and Decimal places rows, which a count has not (notion-spec-2 §3). */
+  private numberItems(number: NumberDisplay, set: (number: NumberDisplay) => void, formats = true): PopoverItemParams[] {
     const showAs = number.showAs ?? 'number';
     const gauge = showAs === 'bar' || showAs === 'ring';
     const pick = (value: NumberShowAs): void => set(value === 'number' ? without(number, 'showAs') : { ...number, showAs: value });
 
-    return [
+    const formatItems: PopoverItemParams[] = [
       {
         name: 'numberFormat',
         title: this.t('tools.database.numberFormat'),
@@ -1006,19 +1025,12 @@ export class DatabasePropertyMenu {
           ],
         },
       },
-      ...(tiles ? [{ type: PopoverItemType.Separator } as const, this.showAsTiles(showAs, pick)] : [{
-        name: 'showAs',
-        title: this.t('tools.database.showAs'),
-        children: {
-          items: SHOW_AS.map((value) => ({
-            name: `showAs-${value}`,
-            title: this.t(`tools.database.showAs.${value}`),
-            isActive: showAs === value,
-            closeOnActivate: true,
-            onActivate: () => pick(value),
-          })),
-        },
-      }]),
+    ];
+
+    return [
+      ...(formats ? formatItems : []),
+      { type: PopoverItemType.Separator },
+      this.showAsTiles(showAs, pick),
       ...(gauge
         ? [
           {

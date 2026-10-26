@@ -5,6 +5,7 @@ import type { PropertyDefinition, PropertyType } from '../../../../src/tools/dat
 interface CapturedItem {
   name?: string;
   title?: string;
+  valueLabel?: string;
   type?: string;
   isActive?: boolean | (() => boolean);
   isDestructive?: boolean;
@@ -76,6 +77,8 @@ const taskSchema: PropertyDefinition[] = [
 ];
 
 const computed = () => ({
+  // A formula whose expression is "1" reads as a number; any other as text.
+  valueProperty: (property: PropertyDefinition): PropertyDefinition => (property.formula?.expression === '1' ? { ...property, type: 'number' } : { ...property, type: 'text' }),
   schema: () => schema,
   databases: () => [{ id: 'db', title: 'Projects' }, { id: 'db-tasks', title: 'Tasks' }],
   targetSchema: (databaseId: string) => (databaseId === 'db-tasks' ? taskSchema : []),
@@ -120,6 +123,28 @@ describe('property menu — computed types', () => {
     expect(extras.onEditFormula).toHaveBeenCalledWith('p');
   });
 
+  // notion-spec-2 §6: a number formula's Edit property has the formula row, then Number's rows and tiles.
+  it('formula: a number result shows the formula row, Number format, Decimal places and the Show as tiles', () => {
+    const { extras } = openMenu(prop('formula', { formula: { expression: '1' } }));
+    const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+    expect(edit.map((item) => item.name ?? item.type)).toEqual([
+      'editFormula', 'numberFormat', 'decimals', 'separator', 'showAs', 'all-views-note',
+    ]);
+    byName(edit, 'editFormula').onActivate?.(byName(edit, 'editFormula'));
+    expect(extras.onEditFormula).toHaveBeenCalledWith('p');
+  });
+
+  it('formula: picking the Ring tile saves it and brings in Color and Divide by', () => {
+    const { cb } = openMenu(prop('formula', { formula: { expression: '1' } }));
+    const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+    byName(edit, 'showAs').element?.querySelector<HTMLElement>('[data-blok-database-show-as-tile="ring"]')?.click();
+
+    expect(cb.onUpdate).toHaveBeenCalledWith('p', { number: { showAs: 'ring' } });
+    expect((byName(lastItems(), 'editProperty').children?.items ?? []).map((item) => item.name)).toEqual(expect.arrayContaining(['color', 'divideBy']));
+  });
+
   it('relation: picks the related database, the limit and two-way', () => {
     const relation = prop('relation', { relation: { targetDatabaseId: 'db' } });
     const { cb, extras } = openMenu(relation);
@@ -152,16 +177,53 @@ describe('property menu — computed types', () => {
     expect(cb.onUpdate).toHaveBeenCalledWith('p', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'sum' } });
   });
 
-  it('rollup: picking Bar in Show as brings in Color and Divide by at once', () => {
+  it('rollup: picking the Bar tile brings in Color and Divide by at once', () => {
     const rollup = prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'sum' } });
     const { cb } = openMenu(rollup);
     const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
-    const bar = byName(byName(edit, 'showAs').children?.items ?? [], 'showAs-bar');
 
-    bar.onActivate?.(bar);
+    byName(edit, 'showAs').element?.querySelector<HTMLElement>('[data-blok-database-show-as-tile="bar"]')?.click();
 
     expect(cb.onUpdate).toHaveBeenCalledWith('p', { number: { showAs: 'bar' } });
     expect((byName(lastItems(), 'editProperty').children?.items ?? []).map((item) => item.name)).toEqual(expect.arrayContaining(['color', 'divideBy']));
+  });
+
+  // notion-spec-2 §3: a Sum keeps the number rows; Show as is tiles, then the all-views note.
+  it('rollup: a Sum shows Number format, Decimal places and the Show as tiles', () => {
+    openMenu(prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'sum' } }));
+    const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+    expect(edit.map((item) => item.name ?? item.type)).toEqual([
+      'rollupRelation', 'rollupProperty', 'rollupFunction', 'numberFormat', 'decimals', 'separator', 'showAs', 'all-views-note',
+    ]);
+    expect(byName(edit, 'showAs').element?.querySelectorAll('[data-blok-database-show-as-tile]')).toHaveLength(3);
+  });
+
+  // notion-spec-2 §3: Count all on a title has the tiles but no number format.
+  it('rollup: a count shows the Show as tiles with no Number format or Decimal places', () => {
+    openMenu(prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: 't-title', function: 'count' } }));
+    const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+    expect(edit.map((item) => item.name ?? item.type)).toEqual([
+      'rollupRelation', 'rollupProperty', 'rollupFunction', 'separator', 'showAs', 'all-views-note',
+    ]);
+  });
+
+  it('rollup: a list result has no Show as', () => {
+    openMenu(prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: 't-title', function: 'show_original' } }));
+    const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+    expect(edit.map((item) => item.name ?? item.type)).toEqual(['rollupRelation', 'rollupProperty', 'rollupFunction']);
+  });
+
+  // notion-spec-2 §3: Relation, Target property and Calculate show their current pick on the right.
+  it('rollup: the Relation, Target property and Calculate rows show their current value', () => {
+    openMenu(prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'sum' } }));
+    const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+    expect(['rollupRelation', 'rollupProperty', 'rollupFunction'].map((name) => byName(edit, name).valueLabel)).toEqual([
+      'Tasks', 'Hours', 'tools.database.rollupFn.sum',
+    ]);
   });
 
   it('rollup: offers only the functions the target property type has', () => {
@@ -173,5 +235,32 @@ describe('property menu — computed types', () => {
 
     expect(names).not.toContain('rollupFunction-sum');
     expect(names).toContain('rollupFunction-show_original');
+  });
+
+  describe('the row page Edit property panel', () => {
+    const panel = (property: PropertyDefinition): Array<string | undefined> => {
+      const menu = new DatabasePropertyMenu({ ...callbacks(), i18n, hasPeople: false, computed: computed() });
+
+      menu.openRowPage(property, document.createElement('div'), { edit: true });
+      const items = lastItems().map((i) => (i.type === 'separator' ? '--' : i.name));
+
+      menu.destroy();
+
+      return items;
+    };
+
+    // notion-spec-2 §3: no rule between Type and the rollup's rows.
+    it('lays a Sum rollup out as Notion\'s', () => {
+      expect(panel(prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'sum' } }))).toEqual([
+        'name', 'changeType', 'rollupRelation', 'rollupProperty', 'rollupFunction', 'numberFormat', 'decimals', '--', 'showAs', 'all-views-note', '--', 'duplicate', 'delete',
+      ]);
+    });
+
+    // notion-spec-2 §6: Type, the formula row, Number's rows, Show as.
+    it('lays a number formula out as Notion\'s', () => {
+      expect(panel(prop('formula', { formula: { expression: '1' } }))).toEqual([
+        'name', 'changeType', 'editFormula', 'numberFormat', 'decimals', '--', 'showAs', 'all-views-note', '--', 'duplicate', 'delete',
+      ]);
+    });
   });
 });

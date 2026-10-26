@@ -187,9 +187,9 @@ export class DatabasePropertyTypePopover {
       field.addEventListener('input', () => {
         const query = field.value.trim().toLowerCase();
 
-        grid.querySelectorAll<HTMLElement>('[data-blok-database-property-type-option]').forEach((option) => {
+        for (const option of grid.querySelectorAll<HTMLElement>('[data-blok-database-property-type-option]')) {
           option.hidden = !(option.textContent ?? '').toLowerCase().includes(query);
-        });
+        }
       });
       heading.replaceChildren(field);
       field.focus();

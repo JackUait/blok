@@ -91,7 +91,9 @@ describe.each(SESSIONS)('row commands on a linked view go to its source, as in t
     const rowId = rowIdOf(result);
     const view = ((await dataOf(session, 'L'))?.views as Array<{ rowOrder?: Record<string, string> }>)[0];
 
-    expect(view.rowOrder?.[rowId] > 'a0' && view.rowOrder?.[rowId] < 'a1').toBe(true);
+    const key = view.rowOrder?.[rowId] ?? '';
+
+    expect(key > 'a0' && key < 'a1').toBe(true);
     expect((await dataOf(session, 'S'))?.views).toEqual([VIEW]);
     await session.close();
   });

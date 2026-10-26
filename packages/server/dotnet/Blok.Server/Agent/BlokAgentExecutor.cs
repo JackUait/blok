@@ -535,9 +535,19 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
         var export = await converter!.ExportAsync(doc, token) as JsonObject ?? [];
         var maps = YDocConverter.ReadPageMaps(doc);
 
-        if (!RoomAgentHistory.Same(RoomAgentHistory.Project(export, maps, step.Ids, step.PageKeys), undo ? step.After : step.Before))
+        var projected = RoomAgentHistory.Project(export, maps, step.Ids, step.PageKeys);
+
+        if (!RoomAgentHistory.Same(projected, undo ? step.After : step.Before))
         {
           throw new HistoryRefusal("CONFLICT", $"Someone else changed what this step wrote, so it can no longer be {verb}. Re-read the document before retrying.", retryable: true);
+        }
+
+        // Undoing a lock or redoing an unlock unlocks; the server has no person to approve it.
+        if (RoomAgentHistory.Unlocks(projected, undo ? step.Before : step.After) is { } unlocked)
+        {
+          throw new HistoryRefusal("APPROVAL_REQUIRED",
+              $"This {(undo ? "undo" : "redo")} would unlock database \"{unlocked}\". Unlocking needs a person's explicit approval, and nothing here can ask one. Nothing was written. Ask the person to unlock it themselves.",
+              details: new JsonObject { ["reason"] = "no-channel", ["approval"] = new JsonObject { ["kind"] = "database.unlock", ["blockId"] = unlocked } });
         }
 
         var (blocks, target) = RoomAgentHistory.Restore(
@@ -565,7 +575,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
     }
     catch (HistoryRefusal refusal)
     {
-      return Failure(refusal.Code, refusal.Message, refusal.Retryable, null);
+      return Failure(refusal.Code, refusal.Message, refusal.Retryable, refusal.Details);
     }
 
     var head = edit.Receipt is { } receipt ? $"{receipt.Tag.Lineage}:{receipt.ServerSequence}" : string.Empty;
@@ -593,9 +603,10 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
   }
 
   /// <summary>Thrown in the room lane when a replay must not write; the room writes nothing.</summary>
-  private sealed class HistoryRefusal(string code, string message, bool retryable = false) : Exception(message)
+  private sealed class HistoryRefusal(string code, string message, bool retryable = false, JsonObject? details = null) : Exception(message)
   {
     internal string Code { get; } = code;
+    internal JsonObject? Details { get; } = details;
     internal bool Retryable { get; } = retryable;
   }
 

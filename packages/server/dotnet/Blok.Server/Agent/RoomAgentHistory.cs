@@ -248,6 +248,26 @@ internal sealed class RoomAgentHistory(TimeProvider time)
     return new JsonObject { ["blocks"] = blocks, ["order"] = order, ["page"] = page, ["stamps"] = stamps };
   }
 
+  /// <summary>
+  /// A database the replay would unlock: locked in <paramref name="now"/>, still there and unlocked in
+  /// <paramref name="wanted"/>. Mirrors unlockedBetween in src/shared/agent/approval.ts.
+  /// </summary>
+  internal static string? Unlocks(JsonObject now, JsonObject wanted)
+  {
+    static bool Locked(JsonNode? entry) =>
+        entry?["block"] is JsonObject block && block["type"]?.GetValue<string>() == "database"
+        && block["data"]?["schema"] is JsonArray schema
+        && schema.Any(property => property?["type"]?.GetValue<string>() == "title" && property["databaseLocked"]?.GetValue<bool>() == true);
+
+    if (now["blocks"] is not JsonObject current || wanted["blocks"] is not JsonObject target)
+    {
+      return null;
+    }
+
+    return current.Where(entry => Locked(entry.Value) && target[entry.Key]?["block"] is JsonObject && !Locked(target[entry.Key]))
+        .Select(entry => entry.Key).FirstOrDefault();
+  }
+
   /// <summary>Whether two projections hold the same blocks, slots and page keys; edit stamps do not count.</summary>
   internal static bool Same(JsonObject left, JsonObject right) =>
       left["blocks"]?.ToJsonString() == right["blocks"]?.ToJsonString()

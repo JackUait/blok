@@ -73,6 +73,30 @@ public sealed class BlokAgentRoomHistoryTests
     Assert.Equal(CollabEditStatus.Applied, edit.Status);
   }
 
+  private static bool Locked(JsonObject export) =>
+      export["blocks"]!.AsArray().Single(block => block!["id"]!.GetValue<string>() == "db")!["data"]!["schema"]!.AsArray()
+          .Any(property => property!["databaseLocked"]?.GetValue<bool>() == true);
+
+  // Undoing a lock unlocks, and a room has no person to ask, so it is refused like database.setLock.
+  [Fact]
+  public async Task RefusesToUndoALockBecauseNoPersonCanApproveTheUnlock()
+  {
+    await using var room = AgentRoomForTests.Seed($"history-{Guid.NewGuid():N}", JsonNode.Parse("""
+        {"blocks":[{"id":"db","type":"database","content":[],"data":{"title":"Tasks","activeViewId":"v",
+          "views":[{"id":"v","name":"Table","type":"table","position":"a0","filters":[],"sorts":[],"visibleProperties":[]}],
+          "schema":[{"id":"t","name":"Name","type":"title","position":"a0"}]}}]}
+        """)!.AsObject());
+
+    await OkAsync(room, """{"commands":[{"name":"database.setLock","args":{"id":"db","locked":true}}]}""");
+    Assert.True(Locked(await room.ExportAsync()));
+
+    var result = await RunAsync(room, Undo);
+
+    Assert.Equal("APPROVAL_REQUIRED", Code(result));
+    Assert.Equal("no-channel", result["error"]!["details"]!["reason"]!.GetValue<string>());
+    Assert.True(Locked(await room.ExportAsync()));
+  }
+
   [Fact]
   public async Task UndoesAndRedoesOnlyTheLastBatch()
   {

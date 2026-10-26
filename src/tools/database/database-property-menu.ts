@@ -1,4 +1,4 @@
-import { IconCalendar, IconCheck, IconCopy, IconEmojiSmile, IconEyeSlash, IconInfo, IconMessage, IconPencil, IconSliders, IconTrash, IconEmojiSparkles, IconPageLayout, IconWand } from '../../components/icons';
+import { IconCalendar, IconCheck, IconCopy, IconEmojiSmile, IconEyeSlash, IconInfo, IconMessage, IconPencil, IconReplace, IconSliders, IconTrash, IconEmojiSparkles, IconPageLayout, IconWand } from '../../components/icons';
 import { nameTakenError } from './database-name-taken-error';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
@@ -270,7 +270,7 @@ export class DatabasePropertyMenu {
   }
 
   /** The row page's Edit property panel, in place of its menu, with the name selected (Notion). */
-  private openRowPageEdit(property: PropertyDefinition, anchor: HTMLElement): void {
+  private openRowPageEdit(property: PropertyDefinition, anchor: HTMLElement, focusName = true): void {
     const previous = this.popover;
 
     // A swap, not a close: onClose would tell the host the menu is gone and its writes would stop.
@@ -278,25 +278,39 @@ export class DatabasePropertyMenu {
     previous?.destroy();
     const entries = propertyMenuEntries(property);
     const has = (entry: PropertyMenuEntry): boolean => entries.includes(entry);
-    const update = (patch: Partial<PropertySettingsV2>): void => this.options.onUpdate(property.id, patch);
+    const gauge = (number: NumberDisplay | undefined): boolean => number?.showAs === 'bar' || number?.showAs === 'ring';
+    const update = (patch: Partial<PropertySettingsV2>): void => {
+      this.options.onUpdate(property.id, patch);
+      // Bar and Ring bring their Color and Divide by rows: redraw the panel with them.
+      if (patch.number !== undefined && gauge(patch.number) !== gauge(property.number)) {
+        this.openRowPageEdit({ ...property, number: patch.number }, anchor, false);
+      }
+    };
     const settings: PopoverItemParams[] = [];
 
     if (EDITABLE_SETTINGS.has(property.type)) {
       settings.push(...(property.type === 'formula' ? [this.entry('editProperty', property)] : this.editItems(property, update)));
     }
-    const typeItems = (['changeType', 'displayAs'] as const).filter(has).map((entry) => this.entry(entry, property));
+    // research/10 L16: the panel's row is "Type" with the current type on the right; the header menu keeps "Change type".
+    const typeRow = (entry: 'changeType' | 'displayAs'): PopoverItemParams => entry === 'changeType'
+      ? { ...this.entry(entry, property), title: this.t('tools.database.propertyTypeListHeading'), icon: IconReplace, secondaryLabel: this.t(propertyTypeMeta(property.type).labelKey) }
+      : this.entry(entry, property);
+    const typeItems = (['changeType', 'displayAs'] as const).filter(has).map(typeRow);
     const tail = (['duplicate', 'delete'] as const).filter(has).map((entry) => this.entry(entry, property));
     const name = this.nameField(property, property.type !== 'title');
     const separator = { type: PopoverItemType.Separator } as const;
+    // 08-rename.png: a number's format rows sit under Type with no rule; its rule comes before Show as.
+    const ruled = typeItems.length > 0 && settings.length > 0 && property.type !== 'number';
     const items: PopoverItemParams[] = [
       { type: PopoverItemType.Html, element: name, name: 'name' },
       ...typeItems,
-      ...(typeItems.length > 0 && settings.length > 0 ? [separator] : []),
+      ...(ruled ? [separator] : []),
       ...settings,
       ...(tail.length > 0 ? [separator, ...tail] : []),
     ];
 
     this.show(items, anchor, '290px', ROW_PAGE_MENU_CLASS);
+    if (!focusName) return;
     const input = name.querySelector('input');
 
     input?.focus();
@@ -810,7 +824,7 @@ export class DatabasePropertyMenu {
       });
     }
     if (property.type === 'number') {
-      return this.numberItems(property.number ?? {}, (number) => update({ number }));
+      return this.numberItems(property.number ?? {}, (number) => update({ number }), true);
     }
     if (property.type === 'uniqueId') {
       return [this.inputItem('prefix', property.uniqueId?.prefix ?? '', 'tools.database.idPrefix', (prefix) => update({ uniqueId: prefix === '' ? {} : { prefix } }))];
@@ -903,14 +917,17 @@ export class DatabasePropertyMenu {
     };
   }
 
-  private numberItems(number: NumberDisplay, set: (number: NumberDisplay) => void): PopoverItemParams[] {
+  /** `tiles`: Show as as Notion's three tiles (measured for a number property only; a rollup keeps its list). */
+  private numberItems(number: NumberDisplay, set: (number: NumberDisplay) => void, tiles = false): PopoverItemParams[] {
     const showAs = number.showAs ?? 'number';
     const gauge = showAs === 'bar' || showAs === 'ring';
+    const pick = (value: NumberShowAs): void => set(value === 'number' ? without(number, 'showAs') : { ...number, showAs: value });
 
     return [
       {
         name: 'numberFormat',
         title: this.t('tools.database.numberFormat'),
+        secondaryLabel: this.t(`tools.database.numberFormat.${number.format ?? 'number'}`),
         children: {
           searchable: true,
           items: NUMBER_FORMATS.map((format) => ({
@@ -925,6 +942,7 @@ export class DatabasePropertyMenu {
       {
         name: 'decimals',
         title: this.t('tools.database.decimalPlaces'),
+        secondaryLabel: number.decimals === undefined ? this.t('tools.database.decimalPlacesDefault') : String(number.decimals),
         children: {
           items: [
             {
@@ -944,7 +962,7 @@ export class DatabasePropertyMenu {
           ],
         },
       },
-      {
+      ...(tiles ? [{ type: PopoverItemType.Separator } as const, this.showAsTiles(showAs, pick)] : [{
         name: 'showAs',
         title: this.t('tools.database.showAs'),
         children: {
@@ -953,10 +971,10 @@ export class DatabasePropertyMenu {
             title: this.t(`tools.database.showAs.${value}`),
             isActive: showAs === value,
             closeOnActivate: true,
-            onActivate: () => set(value === 'number' ? without(number, 'showAs') : { ...number, showAs: value }),
+            onActivate: () => pick(value),
           })),
         },
-      },
+      }]),
       ...(gauge
         ? [
           {
@@ -980,6 +998,51 @@ export class DatabasePropertyMenu {
         ]
         : []),
     ];
+  }
+
+  /** 08-rename.png: a "Show as" heading over Number ("42"), Bar and Ring tiles. */
+  private showAsTiles(current: NumberShowAs, pick: (value: NumberShowAs) => void): PopoverItemParams {
+    const root = document.createElement('div');
+    const heading = document.createElement('div');
+    const group = document.createElement('div');
+
+    root.setAttribute('data-blok-database-show-as', '');
+    heading.setAttribute('data-blok-database-show-as-heading', '');
+    heading.textContent = this.t('tools.database.showAs');
+    group.setAttribute('role', 'radiogroup');
+    group.setAttribute('aria-label', this.t('tools.database.showAs'));
+    group.setAttribute('data-blok-database-show-as-tiles', '');
+    for (const value of SHOW_AS) {
+      const tile = document.createElement('button');
+      const glyph = document.createElement('span');
+      const label = document.createElement('span');
+
+      tile.type = 'button';
+      tile.setAttribute('role', 'radio');
+      tile.setAttribute('aria-checked', String(value === current));
+      tile.setAttribute('data-blok-database-show-as-tile', value);
+      glyph.setAttribute('data-blok-database-show-as-glyph', '');
+      if (value === 'number') {
+        glyph.textContent = '42';
+      } else {
+        // The cell's own gauge, part filled, as Notion draws its tiles.
+        const gauge = document.createElement('span');
+
+        gauge.setAttribute(value === 'bar' ? 'data-blok-database-number-bar' : 'data-blok-database-number-ring', '');
+        gauge.style.setProperty('--blok-database-number-fill', value === 'bar' ? '50%' : '75%');
+        glyph.appendChild(gauge);
+      }
+      label.textContent = this.t(`tools.database.showAs.${value}`);
+      tile.append(glyph, label);
+      tile.addEventListener('click', () => {
+        for (const other of group.querySelectorAll('[role="radio"]')) other.setAttribute('aria-checked', String(other === tile));
+        pick(value);
+      });
+      group.appendChild(tile);
+    }
+    root.append(heading, group);
+
+    return { type: PopoverItemType.Html, element: root, name: 'showAs' };
   }
 
   private inputItem(name: string, value: string, labelKey: string, onChange: (value: string) => void): PopoverItemParams {

@@ -297,6 +297,18 @@ describe('database row page layout css', () => {
   // research/10 §2: 117x80 cards. Notion rings the selected one blue; the blue law makes it neutral.
   // Labels as measured: light 115,114,110 / 29,27,22 (research/10 §2), dark white (research/21 §1n).
   // Dark's measured 90,90,90 fails AA, so the dark label is the tertiary ink's AA step.
+  // 08-rename.png: Notion rings the picked Show as tile blue; Blok draws it like the Structure cards.
+  it('marks the picked Show as tile with a neutral ring and no fill', () => {
+    const tile = ruleBody('[data-blok-database-show-as-tile]');
+    const picked = ruleBody('[data-blok-database-show-as-tile][aria-checked="true"]');
+
+    expect(tile).toContain('background-color: var(--blok-database-builder-tile-bg)');
+    expect(tile).toContain('color: var(--blok-database-builder-tile-text)');
+    expect(picked).toContain('var(--blok-database-card-border-active)');
+    expect(picked).toContain('color: var(--blok-database-builder-tile-text-active)');
+    expect(picked).not.toMatch(/background|accent|blue|focus-ring|#2383e2|toggle-on/i);
+  });
+
   it('marks the selected Structure card with the measured label inks and no blue', () => {
     const card = ruleBody('[data-blok-database-layout-structure-card]');
     const selected = ruleBody('[data-blok-database-layout-structure-card][aria-pressed="true"]');

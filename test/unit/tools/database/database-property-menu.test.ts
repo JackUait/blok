@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import type { PropertyDefinition, PropertyType } from '../../../../src/tools/database/types';
 import { createDefaultStatusSettings } from '../../../../src/tools/database/property-values';
-import { IconInfo, IconPageLayout } from '../../../../src/components/icons';
+import { IconInfo, IconPageLayout, IconReplace } from '../../../../src/components/icons';
 
 interface CapturedItem {
   name?: string;
@@ -611,9 +611,7 @@ describe('DatabasePropertyMenu', () => {
       byName(decimals, 'decimals-2').onActivate?.(byName(decimals, 'decimals-2'));
       expect(cb.onUpdate).toHaveBeenCalledWith('p', { number: { format: 'euro', showAs: 'bar', decimals: 2 } });
 
-      const showAs = byName(items, 'showAs').children?.items ?? [];
-
-      byName(showAs, 'showAs-ring').onActivate?.(byName(showAs, 'showAs-ring'));
+      byName(items, 'showAs').element?.querySelector<HTMLElement>('[data-blok-database-show-as-tile="ring"]')?.click();
       expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { number: { format: 'euro', showAs: 'ring' } });
     });
 
@@ -944,6 +942,101 @@ describe('row page property menu', () => {
     expect(input).toHaveFocus();
     expect(input?.selectionStart).toBe(0);
     expect(input?.selectionEnd).toBe('Amount'.length);
+    menu.destroy();
+  });
+
+  const editPanel = (property: PropertyDefinition): { cb: ReturnType<typeof callbacks>; menu: InstanceType<typeof DatabasePropertyMenu>; items: CapturedItem[] } => {
+    const cb = callbacks();
+    const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...cb });
+
+    menu.openRowPage(property, document.createElement('div'), { edit: true });
+
+    return { cb, menu, items: lastItems() };
+  };
+  const tile = (items: CapturedItem[], value: string): HTMLElement => {
+    const found = byName(items, 'showAs').element?.querySelector<HTMLElement>(`[role="radio"][data-blok-database-show-as-tile="${value}"]`);
+
+    if (found === null || found === undefined) throw new Error(`no ${value} tile`);
+
+    return found;
+  };
+
+  // research/10 L16 + 08-rename.png: Type and its settings in one block, a rule above Show as and above Duplicate.
+  it('lays a number\'s Edit property panel out as Notion\'s', () => {
+    const { menu, items } = editPanel(prop('number'));
+
+    expect(items.map((i) => (i.type === 'separator' ? '--' : i.name))).toEqual([
+      'name', 'changeType', 'numberFormat', 'decimals', '--', 'showAs', 'all-views-note', '--', 'duplicate', 'delete',
+    ]);
+    menu.destroy();
+  });
+
+  it('names the type row "Type", with the current type on the right', () => {
+    const { menu, items } = editPanel(prop('number'));
+    const type = byName(items, 'changeType');
+
+    expect(type.title).toBe('tools.database.propertyTypeListHeading');
+    expect(type.secondaryLabel).toBe('tools.database.propertyTypeNumber');
+    expect(type.icon).toBe(IconReplace);
+    menu.destroy();
+  });
+
+  it('keeps "Change type" in the table header menu', () => {
+    const cb = callbacks();
+    const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...cb });
+
+    menu.open(prop('number'), document.createElement('button'));
+    expect(byName(lastItems(), 'changeType').title).toBe('tools.database.changeType');
+    menu.destroy();
+  });
+
+  it('shows the number format and decimal places on the right of their rows', () => {
+    const plain = editPanel(prop('number'));
+
+    expect(byName(plain.items, 'numberFormat').secondaryLabel).toBe('tools.database.numberFormat.number');
+    expect(byName(plain.items, 'decimals').secondaryLabel).toBe('tools.database.decimalPlacesDefault');
+    plain.menu.destroy();
+    const set = editPanel(prop('number', { number: { format: 'euro', decimals: 2 } }));
+
+    expect(byName(set.items, 'numberFormat').secondaryLabel).toBe('tools.database.numberFormat.euro');
+    expect(byName(set.items, 'decimals').secondaryLabel).toBe('2');
+    set.menu.destroy();
+  });
+
+  it('draws Show as as three tiles, the current one checked', () => {
+    const { menu, items } = editPanel(prop('number', { number: { showAs: 'bar' } }));
+    const group = byName(items, 'showAs').element?.querySelector('[role="radiogroup"]');
+
+    expect(group).toBeInstanceOf(HTMLElement);
+    expect(group?.getAttribute('aria-label')).toBe('tools.database.showAs');
+    expect([...(group?.querySelectorAll('[role="radio"]') ?? [])].map((r) => [r.getAttribute('data-blok-database-show-as-tile'), r.getAttribute('aria-checked')])).toEqual([
+      ['number', 'false'], ['bar', 'true'], ['ring', 'false'],
+    ]);
+    expect(tile(items, 'number').textContent).toContain('42');
+    expect(tile(items, 'bar').querySelector('[data-blok-database-number-bar]')).toBeInstanceOf(HTMLElement);
+    expect(tile(items, 'ring').querySelector('[data-blok-database-number-ring]')).toBeInstanceOf(HTMLElement);
+    menu.destroy();
+  });
+
+  it('a Show as tile writes the choice, keeping the other number settings', () => {
+    const { cb, menu, items } = editPanel(prop('number', { number: { format: 'euro', showAs: 'bar' } }));
+
+    tile(items, 'ring').click();
+    expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { number: { format: 'euro', showAs: 'ring' } });
+    tile(items, 'number').click();
+    expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { number: { format: 'euro' } });
+    menu.destroy();
+  });
+
+  it('picking Bar in the row page panel brings in Color and Divide by at once', () => {
+    const { menu, items } = editPanel(prop('number'));
+
+    tile(items, 'bar').click();
+    const now = lastItems().map((i) => i.name);
+
+    expect(now).toEqual(expect.arrayContaining(['color', 'divideBy']));
+    expect(tile(lastItems(), 'bar').getAttribute('aria-checked')).toBe('true');
+    expect(menu.isOpen).toBe(true);
     menu.destroy();
   });
 

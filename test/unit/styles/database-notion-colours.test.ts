@@ -651,3 +651,30 @@ describe('research/35 §9 and 36 §7: the place editor after a pick', () => {
     expect(ruleBody('[data-blok-database-place-view] [data-blok-database-place-clear]:hover')).toContain('background-color: var(--blok-database-hover-bg)');
   });
 });
+
+// notion-spec-2 §11: Notion rings every colour swatch (Color list, Color value, option colour menu)
+// with 1px of its own colour: the fill itself in light (Default takes Gray's), a fainter step in dark.
+describe('colour swatch ring', () => {
+  const DARK_RING: Record<string, string> = {
+    default: 'rgba(255, 255, 235, 0.1)',
+    gray: 'rgba(255, 255, 235, 0.1)',
+    brown: 'rgba(255, 177, 129, 0.192)',
+    orange: 'rgba(255, 147, 75, 0.28)',
+    yellow: 'rgba(255, 205, 75, 0.24)',
+    green: 'rgba(108, 255, 172, 0.157)',
+    blue: 'rgba(67, 155, 255, 0.24)',
+    purple: 'rgba(200, 125, 255, 0.2)',
+    pink: 'rgba(255, 103, 177, 0.23)',
+    red: 'rgba(255, 104, 92, 0.24)',
+  };
+
+  it.each(Object.keys(DARK_RING))('rings %s in its own colour, light and dark', (color) => {
+    const lightRing = color === 'default' ? 'gray' : color;
+
+    expect(ruleBody(`[data-blok-database-option-swatch][data-color="${color}"]`))
+      .toContain(`box-shadow: inset 0 0 0 1px var(--blok-database-option-${color}-ring, var(--blok-database-option-${lightRing}-bg))`);
+    expect(value(dbLight, `--blok-database-option-${color}-ring`)).toBeUndefined();
+    expect(value(dbMedia, `--blok-database-option-${color}-ring`)).toBe(DARK_RING[color]);
+    expect(value(dbAttr, `--blok-database-option-${color}-ring`)).toBe(DARK_RING[color]);
+  });
+});

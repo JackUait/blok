@@ -137,4 +137,37 @@ describe('row page property menu (research parity row 9)', () => {
     expect(declared(`${ROW_PAGE} [data-blok-popover-item-value] + [data-blok-popover-item-icon-chevron-right]`, 'margin-inline-start')).toEqual(['var(--blok-space-1-5)']);
     expect(declared(`${ROW_PAGE} [data-blok-popover-item]:has(> [data-blok-popover-item-value])`, 'padding-inline-end')).toEqual(['var(--blok-space-2)']);
   });
+
+  // notion-spec-2 §2: the note wraps inside Notion's 290 panel instead of widening it (Blok drew 303).
+  it('never widens the menu with the all-views note', () => {
+    expect(declared('[data-blok-database-property-menu-note]', 'contain')).toEqual(['inline-size']);
+  });
+
+  // notion-spec-2 §2: the note sits 30px in from the panel (items start 4px in), 12px under the tiles, 12/18.
+  it('insets the all-views note 30px from the panel, as Notion', () => {
+    const note = `${ROW_PAGE} [data-blok-database-property-menu-note]`;
+
+    expect(declared(note, 'padding')).toEqual(['var(--blok-space-3) calc(var(--blok-space-6) + var(--blok-space-0-5)) 0']);
+    expect(declared(note, 'line-height')).toEqual(['18px']);
+  });
+
+  // notion-spec-2 §2: Color and Divide by sit in one box, 234 wide in the 290 panel (24 in from the items),
+  // 12px under the tiles (the Show as padding gives 8 of it), padding 12px 0, rows 8px apart and 16px in, on rgba(84,72,49,0.04).
+  it('boxes Color and Divide by, as Notion', () => {
+    const color = `${ROW_PAGE} [data-blok-popover-item][data-blok-item-name="color"]`;
+    const divide = `${ROW_PAGE} [data-blok-popover-item-html][data-blok-item-name="divideBy"]`;
+
+    expect(declared(color, 'margin')).toEqual(['var(--blok-space-4) var(--blok-space-6) 0']);
+    expect(declared(color, 'padding-inline')).toEqual(['var(--blok-space-4)']);
+    expect(declared(color, 'background-color')).toEqual(['var(--blok-database-gauge-box-bg)']);
+    expect(declared(`${color}::before`, 'block-size')).toEqual(['var(--blok-space-3)']);
+    expect(declared(`${color}::before`, 'background-color')).toEqual(['var(--blok-database-gauge-box-bg)']);
+    expect(declared(divide, 'margin-inline')).toEqual(['var(--blok-space-6)']);
+    expect(declared(divide, 'padding-block')).toEqual(['var(--blok-space-2) var(--blok-space-3)']);
+    expect(declared(divide, 'background-color')).toEqual(['var(--blok-database-gauge-box-bg)']);
+    expect(declared(divide, 'contain')).toEqual(['inline-size']);
+    expect(declared(`${divide} > [data-blok-database-property-menu-field]`, 'padding')).toEqual(['0 var(--blok-space-4)']);
+    expect(declared(`${divide} > [data-blok-database-property-menu-field]`, 'gap')).toEqual(['var(--blok-space-4)']);
+    expect(database).toContain('--blok-database-gauge-box-bg: rgba(84, 72, 49, 0.04);');
+  });
 });

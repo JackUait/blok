@@ -22,7 +22,23 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
 
   public async ValueTask<BlokAgentExecution> ExecuteAsync(
       string documentJson, string batchJson, BlokAgentActor actor,
-      BlokAgentOptions? options = null, CancellationToken cancellationToken = default)
+      BlokAgentOptions? options = null, CancellationToken cancellationToken = default) =>
+      (await RunAsync(documentJson, batchJson, actor, options, null, cancellationToken)).Execution;
+
+  public BlokAgentSession OpenSession(BlokAgentActor actor, BlokAgentOptions? options = null)
+  {
+    ArgumentNullException.ThrowIfNull(actor);
+
+    return new BlokAgentSession(this, actor, options);
+  }
+
+  /// <summary>
+  /// A stored batch. With <paramref name="history"/>, Jint takes the session's steps and
+  /// hands them back with the batch applied; C# only carries them between calls.
+  /// </summary>
+  internal async ValueTask<(BlokAgentExecution Execution, JsonObject? History)> RunAsync(
+      string documentJson, string batchJson, BlokAgentActor actor,
+      BlokAgentOptions? options, JsonObject? history, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(documentJson);
     ArgumentNullException.ThrowIfNull(batchJson);
@@ -35,7 +51,16 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
 
     if (options is { PageTitles: true, PageTarget: { } pages } && HasPageAction(input["batch"]))
     {
-      return await RunPageActionAsync(input, actor, pages, cancellationToken);
+      var done = await RunPageActionAsync(input, actor, pages, cancellationToken);
+
+      return (done, history is null || JsonNode.Parse(done.ResultJson)?["ok"]?.GetValue<bool>() != true
+          ? history
+          : WroteAnotherDocument(history));
+    }
+
+    if (history is not null)
+    {
+      input["history"] = history.DeepClone();
     }
 
     var output = JsonNode.Parse(await runtime.InvokeAsync(
@@ -48,9 +73,31 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
         ? output["document"]?.ToJsonString()
             ?? throw new InvalidOperationException("The Blok runtime returned no document.")
         : null;
+    var next = history is null
+        ? null
+        : output["history"]?.DeepClone() as JsonObject
+            ?? throw new InvalidOperationException("The Blok runtime returned no session history.");
 
-    return new BlokAgentExecution(
-        result.ToJsonString(), document, result["revision"]?.GetValue<string>() ?? string.Empty);
+    return (new BlokAgentExecution(
+        result.ToJsonString(), document, result["revision"]?.GetValue<string>() ?? string.Empty), next);
+  }
+
+  /// <summary>
+  /// A page action writes the target, not this document, so its step holds no snapshot.
+  /// "other" makes history.undo answer UNDO_OTHER_DOCUMENT, as the shared executor marks it.
+  /// </summary>
+  private static JsonObject WroteAnotherDocument(JsonObject history)
+  {
+    var next = (JsonObject)history.DeepClone();
+
+    if (next["past"] is not JsonArray past)
+    {
+      past = [];
+      next["past"] = past;
+    }
+    past.Add("other");
+
+    return next;
   }
 
   private static bool HasPageAction(JsonNode? batch) =>
@@ -633,6 +680,9 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
   private JsonObject RoomCommon(BlokAgentOptions? options)
   {
     var input = Common(options);
+
+    // A room keeps no per-agent undo history, so its contract says so.
+    input["runtime"] = "csharp-live";
 
     if (rooms is { HasHistory: true })
     {

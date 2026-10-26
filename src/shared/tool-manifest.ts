@@ -369,9 +369,9 @@ const insertableHere = (
     : { insertable: block.insertable }
 );
 
-// Jint calls and C# live rooms have no session-local undo history.
+// A C# live room keeps no per-agent undo history.
 const UNDO_COMMANDS = new Set(['history.undo', 'history.redo']);
-const UNDO_RUNNERS = new Set<ContractWhere['runtime']>(['editor', 'node', 'node-live']);
+const UNDO_RUNNERS = new Set<ContractWhere['runtime']>(['editor', 'node', 'node-live', 'jint']);
 
 const isToolCommandName = (name: string): name is ToolCommandName => name.includes('.');
 

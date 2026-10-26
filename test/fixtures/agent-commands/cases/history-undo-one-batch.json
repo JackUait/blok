@@ -56,9 +56,6 @@
     }
   ],
   "expectByRunner": {
-    "jint": {
-      "errorCode": "COMMAND_UNAVAILABLE"
-    },
     "room": {
       "errorCode": "COMMAND_UNAVAILABLE"
     }

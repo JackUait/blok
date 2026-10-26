@@ -151,11 +151,12 @@ const prepareAt = async (prepare: Preparation, index: number): Promise<unknown> 
  * another document (a host action such as page.rename): the applier keeps no
  * step for it, so without this mark history.undo would undo the batch before it.
  */
-interface HistoryMarks { past: Array<'own' | 'other'>; future: Array<'own' | 'other'> }
+export interface HistoryMarks { past: Array<'own' | 'other'>; future: Array<'own' | 'other'> }
 
 const historyMarks = new WeakMap<AgentApplier, HistoryMarks>();
 
-const marksOf = (applier: AgentApplier): HistoryMarks => {
+/** The live marks, so a session that outlives its applier (a Jint call) can carry them. */
+export const marksOf = (applier: AgentApplier): HistoryMarks => {
   const found = historyMarks.get(applier);
 
   if (found !== undefined) {

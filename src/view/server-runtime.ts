@@ -6,7 +6,9 @@ import type { AgentActor, AgentVersion, AgentVersionHistory } from '../../types/
 import { getBlokVersion } from '../components/utils/version';
 import { markdownToBlocksWithReport } from '../markdown';
 import { COMMANDS } from '../shared/agent/commands';
-import { createDocumentAgentSession } from '../shared/agent/document-session';
+import { createDocumentAgentSession, type CarriedHistory } from '../shared/agent/document-session';
+import { contentRevision } from '../shared/agent/revision';
+import { DocSnapshot } from '../shared/agent/snapshot';
 import { buildBuiltInSnapshot } from '../shared/built-in-snapshot';
 import { readCustomToolsFile, snapshotWithCustomTools } from '../shared/custom-tools-file';
 import { buildAgentContract, buildToolManifest } from '../shared/tool-manifest';
@@ -474,6 +476,37 @@ const loadedVersionHistory = (value: unknown): AgentVersionHistory | undefined =
   };
 };
 
+/** A C# live room keeps no per-agent undo history, so its contract differs from a stored call's. */
+const contractRuntime = (input: Record<string, unknown>): 'jint' | 'csharp-live' =>
+  (input.runtime === 'csharp-live' ? 'csharp-live' : 'jint');
+
+const isCarriedEntry = (value: unknown): value is OutputData | 'other' => value === 'other' || isStoredDocument(value);
+
+/**
+ * The steps a C# session carries between calls. They hold only while the document is the one the
+ * last call returned: a revision that differs means someone else saved it, so the steps are lost.
+ */
+const carriedHistory = (
+  value: unknown,
+  document: OutputData,
+  load: (raw: OutputData) => OutputData
+): CarriedHistory | undefined => {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const past = Array.isArray(value.past) ? value.past.filter(isCarriedEntry) : [];
+  const future = Array.isArray(value.future) ? value.future.filter(isCarriedEntry) : [];
+
+  const lost = value.lost === true;
+
+  if (value.revision !== contentRevision(DocSnapshot.fromOutput(document).toOutput())) {
+    return { past: [], future: [], lost: lost || past.length + future.length > 0 };
+  }
+  const loaded = (entry: OutputData | 'other'): OutputData | 'other' => entry === 'other' ? entry : load(entry);
+
+  return { past: past.map(loaded), future: future.map(loaded), lost };
+};
+
 const createServerAgentSession = (
   input: Record<string, unknown>,
   document: OutputData,
@@ -497,13 +530,17 @@ const createServerAgentSession = (
             && override.hiddenActions.every((action: unknown) => typeof action === 'string')));
       })
   );
-  const setup = createHeadlessAgentSetup({ customTools, overrides, services, runtime: 'jint' });
+  const setup = createHeadlessAgentSetup({ customTools, overrides, services, runtime: contractRuntime(input) });
   const versionHistory = loadedVersionHistory(input.versionHistory);
+  const load = (raw: OutputData): OutputData => loadStoredDocument(raw, setup.richTextFieldsFor);
+  const loaded = load(document);
+  const history = carriedHistory(input.history, loaded, load);
 
   return createDocumentAgentSession({
-    document: loadStoredDocument(document, setup.richTextFieldsFor),
+    document: loaded,
     tools: setup.tools, contract: setup.contract, actor, ports: setup.ports, runtime: 'jint',
     ...(versionHistory !== undefined && { services: { versionHistory } }),
+    ...(history !== undefined && { history }),
   });
 };
 
@@ -525,8 +562,10 @@ const agentExecuteResult = async (inputJson: string): Promise<string> => {
 
   try {
     const result = await session.execute(batch);
+    // Only a C# session asks for its steps back; a plain call keeps none.
+    const history = 'history' in input ? { history: { ...session.history(), revision: session.revision() } } : {};
 
-    return JSON.stringify({ result, document: session.output(), edits: session.lastEdits() });
+    return JSON.stringify({ result, document: session.output(), edits: session.lastEdits(), ...history });
   } finally {
     session.close();
   }
@@ -684,7 +723,7 @@ export const invoke = async (operation: string, inputJson: string): Promise<stri
       );
       const manifest = buildToolManifest(snapshot, overrides);
 
-      return JSON.stringify({ manifest, contract: buildAgentContract(manifest, COMMANDS, { runtime: 'jint', services }) });
+      return JSON.stringify({ manifest, contract: buildAgentContract(manifest, COMMANDS, { runtime: contractRuntime(input), services }) });
     }
     case 'extractTexts': {
       const { document, options } = parseTextsRequest(inputJson);

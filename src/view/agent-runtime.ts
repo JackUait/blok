@@ -196,7 +196,7 @@ export const createHeadlessAgentSetup = (options: {
   customTools?: BlokCustomToolsFile;
   overrides?: ManifestOverrides;
   services?: HostService[];
-  runtime?: 'node' | 'jint' | 'node-live';
+  runtime?: 'node' | 'jint' | 'node-live' | 'csharp-live';
   globalSanitizer?: SanitizerConfig;
   openPageDocument?: AgentPorts['openPageDocument'];
   /** Block types the host prepares itself; pass the matching port to the session. */

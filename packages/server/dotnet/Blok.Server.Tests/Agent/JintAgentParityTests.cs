@@ -23,10 +23,12 @@ public sealed class JintAgentParityTests(JintAgentRuntimeFixture fixture) : ICla
     var c = AgentParityCorpus.Get(name);
     var document = c.Seed.ToJsonString();
     string? error = null;
+    // One session per case, as the store runner keeps one, so history.* replays earlier batches.
+    var session = fixture.Executor.OpenSession(new BlokAgentActor("agent-test", "Parity", "human-1"));
 
     foreach (var batch in c.Batches)
     {
-      var execution = await fixture.Executor.ExecuteAsync(document, batch.ToJsonString(), new BlokAgentActor("agent-test", "Parity", "human-1"));
+      var execution = await session.ExecuteAsync(document, batch.ToJsonString());
       var result = JsonNode.Parse(execution.ResultJson)!;
 
       if (!result["ok"]!.GetValue<bool>())

@@ -66,17 +66,16 @@ describe('createHeadlessAgentSetup', () => {
       .toMatchObject({ available: true });
   });
 
-  it('marks undo available in a stored or live session and unavailable in a Jint call', () => {
-    const stored = createHeadlessAgentSetup({ runtime: 'node' });
-    const live = createHeadlessAgentSetup({ runtime: 'node-live' });
-    const jint = createHeadlessAgentSetup({ runtime: 'jint' });
+  it('marks undo available everywhere but a C# live room', () => {
+    const available = ['node', 'node-live', 'jint'] as const;
+    const room = createHeadlessAgentSetup({ runtime: 'csharp-live' });
 
     for (const name of ['history.undo', 'history.redo']) {
-      expect(live.contract.commands.find(entry => entry.name === name))
-        .toMatchObject({ available: true });
-      expect(stored.contract.commands.find(entry => entry.name === name))
-        .toMatchObject({ available: true });
-      expect(jint.contract.commands.find(entry => entry.name === name))
+      for (const runtime of available) {
+        expect(createHeadlessAgentSetup({ runtime }).contract.commands.find(entry => entry.name === name))
+          .toMatchObject({ available: true });
+      }
+      expect(room.contract.commands.find(entry => entry.name === name))
         .toMatchObject({ available: false, unavailableReason: 'runtime' });
     }
   });

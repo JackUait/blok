@@ -131,7 +131,7 @@ describe('server runtime agentExecute', () => {
   });
 
   it.each(['history.undo', 'history.redo'] satisfies AgentBatch['commands'][number]['name'][])(
-    'returns structured runtime unavailability for %s',
+    'answers %s with nothing to replay when the call carries no session history',
     async name => {
       const expectedDocument = normalizedDocument();
       const batch: AgentBatch = { commands: [{ name, args: {} }] };
@@ -139,12 +139,83 @@ describe('server runtime agentExecute', () => {
 
       expect(output.result).toMatchObject({
         ok: false, revision: contentRevision(expectedDocument),
-        error: { code: 'COMMAND_UNAVAILABLE', details: { reason: 'runtime' } },
+        error: { code: name === 'history.undo' ? 'NOTHING_TO_UNDO' : 'NOTHING_TO_REDO' },
       });
       expect(output.edits).toEqual([]);
       expect(output.document).toEqual(expectedDocument);
+      expect(output).not.toHaveProperty('history');
     }
   );
+
+  describe('session history carried between calls', () => {
+    const undo: AgentBatch = { commands: [{ name: 'history.undo', args: {} }] };
+    const redo: AgentBatch = { commands: [{ name: 'history.redo', args: {} }] };
+    const rename = (title: string): AgentBatch => ({ commands: [{ name: 'doc.setTitle', args: { title } }] });
+
+    it('undoes and redoes the batches of earlier calls', async () => {
+      const first = await executeWire({ document, actor, batch: rename('One'), history: {} });
+      const second = await executeWire({ document: first.document, actor, batch: rename('Two'), history: first.history });
+      const undone = await executeWire({ document: second.document, actor, batch: undo, history: second.history });
+
+      expect(undone.result).toMatchObject({ ok: true, results: [{}] });
+      expect(undone.document).toEqual(first.document);
+      const again = await executeWire({ document: undone.document, actor, batch: undo, history: undone.history });
+
+      expect(again.document).toEqual(normalizedDocument());
+      const redone = await executeWire({ document: again.document, actor, batch: redo, history: again.history });
+
+      expect(redone.result).toMatchObject({ ok: true });
+      expect(redone.document).toEqual(first.document);
+      expect(await executeWire({ document: redone.document, actor, batch: undo, history: redone.history }))
+        .toMatchObject({ result: { ok: true }, document: normalizedDocument() });
+    });
+
+    it('refuses with CONFLICT when someone else saved the document since the last step', async () => {
+      const first = await executeWire({ document, actor, batch: rename('One'), history: {} });
+      const theirs = { ...normalizedDocument(), title: 'Theirs' };
+      const refused = await executeWire({ document: theirs, actor, batch: undo, history: first.history });
+
+      expect(refused.result).toMatchObject({ ok: false, error: { code: 'CONFLICT' } });
+      expect(refused.document).toEqual(theirs);
+      const written = await executeWire({ document: theirs, actor, batch: rename('Mine'), history: refused.history });
+      const undone = await executeWire({ document: written.document, actor, batch: undo, history: written.history });
+
+      expect(undone.document).toEqual(theirs);
+      expect((await executeWire({ document: undone.document, actor, batch: undo, history: undone.history })).result)
+        .toMatchObject({ ok: false, error: { code: 'CONFLICT' } });
+    });
+
+    it('answers UNDO_OTHER_DOCUMENT when the last step wrote another document', async () => {
+      const first = await executeWire({ document, actor, batch: rename('One'), history: {} });
+      const history = first.history;
+
+      if (!isObject(history) || !Array.isArray(history.past)) {
+        throw new TypeError('agentExecute must return the session history.');
+      }
+      const refused = await executeWire({
+        document: first.document, actor, batch: undo, history: { ...history, past: [...history.past, 'other'] },
+      });
+
+      expect(refused.result).toMatchObject({ ok: false, error: { code: 'UNDO_OTHER_DOCUMENT' } });
+      expect(refused.document).toEqual(first.document);
+    });
+  });
+
+  it('keeps history.undo unavailable in a C# live room', async () => {
+    const manifest: unknown = JSON.parse(await invoke('manifest', JSON.stringify({ runtime: 'csharp-live' })));
+    const stored: unknown = JSON.parse(await invoke('manifest', JSON.stringify({})));
+    const commandIn = (value: unknown, name: string): unknown => {
+      const contract = isObject(value) && isObject(value.contract) ? value.contract : {};
+
+      return (Array.isArray(contract.commands) ? contract.commands : [])
+        .find((entry: unknown) => isObject(entry) && entry.name === name);
+    };
+
+    expect(commandIn(manifest, 'history.undo')).toMatchObject({ available: false, unavailableReason: 'runtime' });
+    expect(commandIn(stored, 'history.undo')).toMatchObject({ available: true });
+    expect((await executeWire({ document, actor, batch: { commands: [{ name: 'history.undo', args: {} }] }, runtime: 'csharp-live' })).result)
+      .toMatchObject({ ok: false, error: { code: 'COMMAND_UNAVAILABLE', details: { reason: 'runtime' } } });
+  });
 
   it.each([
     { name: 'paragraph.missing', args: {}, code: 'UNKNOWN_COMMAND' },

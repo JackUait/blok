@@ -4,7 +4,7 @@ import { describeContract } from './describe';
 import { buildDocumentView } from './document-view';
 import { checkEnvelope } from './envelope';
 import { AgentFailure, failure, notPreparedHere } from './errors';
-import { planHostBatch, runBatch } from './executor';
+import { marksOf, planHostBatch, runBatch } from './executor';
 import { contentRevision } from './revision';
 import { DocSnapshot } from './snapshot';
 
@@ -69,6 +69,18 @@ export const createPageMapBackend = (
 
 const sessionCount = { value: 0 };
 
+type HistoryMarksList = Array<'own' | 'other'>;
+
+const lostHistory = (): Error => failure('CONFLICT', "Someone else saved this document after this session's last step, so its steps can no longer be undone or redone. Read the document again.");
+
+/** A session's undo and redo steps, oldest first: the document before a step, or 'other' for a step that wrote another document. */
+export interface CarriedHistory {
+  past: Array<OutputData | 'other'>;
+  future: Array<OutputData | 'other'>;
+  /** Someone else wrote after an earlier step, so the steps before it were dropped. */
+  lost?: boolean;
+}
+
 /** A headless applier's prepareInsert for a host that creates page documents. */
 export const pagePrepareInsert = (
   createPage: NonNullable<AgentPorts['createPageDocument']>,
@@ -92,10 +104,13 @@ export const createDocumentAgentSession = (input: {
   pageTitles?: 'page-map';
   validate?: SchemaValidator;
   runtime?: 'node' | 'jint';
+  /** Steps an earlier session of this agent left. */
+  history?: CarriedHistory;
 }): AgentSession & {
   output(): OutputData;
   revision(): string;
   lastEdits(): readonly Edit[];
+  history(): CarriedHistory;
   execute(batch: unknown, options?: { signal?: AbortSignal }): Promise<AgentResult>;
   planHost(batch: unknown, options?: { signal?: AbortSignal }): Promise<HostBatchPlan & { view?: DocumentView }>;
 } => {
@@ -146,7 +161,7 @@ export const createDocumentAgentSession = (input: {
       const previous = past.pop();
 
       if (previous === undefined) {
-        return Promise.reject(failure('NOTHING_TO_UNDO', 'This session has no step to undo.'));
+        return Promise.reject(input.history?.lost === true ? lostHistory() : failure('NOTHING_TO_UNDO', 'This session has no step to undo.'));
       }
       future.push(state.current);
       state.current = previous;
@@ -157,13 +172,42 @@ export const createDocumentAgentSession = (input: {
       const next = future.pop();
 
       if (next === undefined) {
-        return Promise.reject(failure('NOTHING_TO_REDO', 'This session has no undone step to redo.'));
+        return Promise.reject(input.history?.lost === true ? lostHistory() : failure('NOTHING_TO_REDO', 'This session has no undone step to redo.'));
       }
       past.push(state.current);
       state.current = next;
 
       return Promise.resolve();
     },
+  };
+
+  if (input.history !== undefined) {
+    const marks = marksOf(applier);
+    const seed = (entries: CarriedHistory['past'], snapshots: DocSnapshot[], kinds: HistoryMarksList): void => {
+      for (const entry of entries) {
+        kinds.push(entry === 'other' ? 'other' : 'own');
+        if (entry !== 'other') {
+          snapshots.push(DocSnapshot.fromOutput(entry));
+        }
+      }
+    };
+
+    seed(input.history.past, past, marks.past);
+    seed(input.history.future, future, marks.future);
+  }
+
+  const carried = (kinds: HistoryMarksList, snapshots: readonly DocSnapshot[]): CarriedHistory['past'] => {
+    const next = { index: 0 };
+
+    return kinds.map(kind => {
+      const snapshot = kind === 'other' ? undefined : snapshots[next.index++];
+
+      if (kind === 'own' && snapshot === undefined) {
+        throw new Error('Each own step has a snapshot.');
+      }
+
+      return snapshot?.toOutput() ?? 'other';
+    });
   };
 
   return {
@@ -173,6 +217,14 @@ export const createDocumentAgentSession = (input: {
       checkEnvelope({ commands: [{ name: 'doc.read', args: { ...args } }] }, ctx.commands, ctx.validate);
 
       return buildDocumentView(state.current, args, ctx, applier.revision());
+    },
+    history: () => {
+      const marks = marksOf(applier);
+
+      return {
+        past: carried(marks.past, past), future: carried(marks.future, future),
+        ...(input.history?.lost === true && { lost: true }),
+      };
     },
     describe: query => describeContract(input.contract, query),
     execute: (batch: unknown, options: { signal?: AbortSignal } = {}) => {

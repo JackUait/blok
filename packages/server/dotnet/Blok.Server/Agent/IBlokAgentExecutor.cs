@@ -33,6 +33,18 @@ public interface IBlokAgentExecutor
       BlokAgentOptions? options = null, CancellationToken cancellationToken = default) =>
       GetContractAsync(options, cancellationToken);
 
+  /// <summary>
+  /// Opens a session for one agent on stored documents. <c>history.undo</c> and
+  /// <c>history.redo</c> take back and write again its own batches, as long as each
+  /// call passes the document the session last returned. A plain
+  /// <see cref="ExecuteAsync"/> call keeps no steps.
+  /// </summary>
+  /// <param name="actor">The agent identity.</param>
+  /// <param name="options">The host's agent options.</param>
+  /// <returns>The session.</returns>
+  BlokAgentSession OpenSession(BlokAgentActor actor, BlokAgentOptions? options = null) =>
+      throw new NotSupportedException("This executor keeps no agent sessions.");
+
   /// <summary>Runs a room batch when collaboration is supported.</summary>
   /// <param name="docId">The room's document ID.</param>
   /// <param name="batchJson">The command batch.</param>

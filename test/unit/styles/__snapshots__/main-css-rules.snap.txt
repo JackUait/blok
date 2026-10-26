@@ -5487,6 +5487,10 @@ span[data-blok-slash-search] {
   padding-inline: var(--blok-space-2);
 }
 
+[data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-title], [data-blok-database-drawer][data-peek-mode="full"] [data-blok-database-drawer-title] {
+  padding-inline-start: var(--blok-space-1-5);
+}
+
 [data-blok-database-drawer-title]::placeholder {
   color: var(--blok-database-title-placeholder);
 }

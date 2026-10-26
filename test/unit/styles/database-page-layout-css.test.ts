@@ -156,6 +156,17 @@ describe('database row page layout css', () => {
     expect(side).toContain('padding-inline-end: 68px');
   });
 
+  // notion-spec-2 §5: the side peek title's first glyph sits at peek+84, over the label icons, not the label cell edge.
+  it('starts the side peek and full page title text where the label icons start', () => {
+    const title = ruleBody(
+      '[data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-title], [data-blok-database-drawer][data-peek-mode="full"] [data-blok-database-drawer-title]'
+    );
+    const labelHead = ruleBody('[data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-head]');
+
+    expect(labelHead).toContain('padding-inline: var(--blok-space-1-5)');
+    expect(title).toContain('padding-inline-start: var(--blok-space-1-5)');
+  });
+
   // research/10 §4: an 80x30 cell, padding 0 6px; the empty one reads icon + name, 14px/400 in the empty grey.
   it('draws a label-less pin cell 30px high with a grey placeholder', () => {
     const value = ruleBody('[data-blok-database-drawer-prop-value]');

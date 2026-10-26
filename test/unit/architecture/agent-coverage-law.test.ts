@@ -45,6 +45,11 @@ const UNCORPUSED_COMMANDS: Record<string, string> = {
   'video.uploadFile': 'A case needs an uploader fixture in every runner, and only the MCP host gives one. test/unit/shared/agent/upload-file.test.ts and test/unit/mcp/uploads.test.ts run it.',
   'audio.uploadFile': 'A case needs an uploader fixture in every runner, and only the MCP host gives one. test/unit/shared/agent/upload-file.test.ts and test/unit/mcp/uploads.test.ts run it.',
   'file.uploadFile': 'A case needs an uploader fixture in every runner, and only the MCP host gives one. test/unit/shared/agent/upload-file.test.ts and test/unit/mcp/uploads.test.ts run it.',
+  'database.addComment': 'Corpus case proposed, awaiting user review. test/unit/agent/database-comments.test.ts runs it on the json and store sessions; editor-database-comments.test.ts in the editor.',
+  'database.replyToComment': 'Corpus case proposed, awaiting user review. test/unit/agent/database-comments.test.ts runs it on the json and store sessions; editor-database-comments.test.ts in the editor.',
+  'database.editComment': 'Corpus case proposed, awaiting user review. test/unit/agent/database-comments.test.ts runs it on the json and store sessions; editor-database-comments.test.ts in the editor.',
+  'database.resolveComment': 'Corpus case proposed, awaiting user review. test/unit/agent/database-comments.test.ts runs it on the json and store sessions; editor-database-comments.test.ts in the editor.',
+  'database.deleteComment': 'Corpus case proposed, awaiting user review. test/unit/agent/database-comments.test.ts runs it on the json and store sessions; editor-database-comments.test.ts in the editor.',
 };
 
 const ID_TOKEN = /\b[a-z-]+:[^\s,;)]+/g;

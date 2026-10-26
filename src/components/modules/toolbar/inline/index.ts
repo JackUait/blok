@@ -639,7 +639,7 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
         onActivate: () => {
           void this.openToolMenuDirect(name, 'toolbar');
         },
-      } as PopoverItemParams;
+      };
     });
   }
 

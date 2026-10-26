@@ -5,6 +5,7 @@ import { resolveDynamicProperties } from '../database/dynamic-values';
 import { addRelated, relationEdit, relationIdsOf, removeRelated } from '../database/relation-values';
 import { copiedReminders } from '../database/reminder-fit';
 import { mapRowValues } from '../database/row-move';
+import { newRowValues, prefillFilters } from '../database/new-row-values';
 import { descendantsOf, relationPair } from '../database/sub-item-tree';
 import { typeConversion } from '../database/property-conversion';
 import {
@@ -903,7 +904,8 @@ interface AddRowArgs extends Placement {
  * As the toolbar New (writeNewRow): the row starts from the default template,
  * the one `template` names, or none for null. Its values, icon, cover, page
  * width, reminders and page body are copied; the caller's values win, except
- * an empty title.
+ * an empty title. As newRowProperties, the open view's filters fill the values
+ * they ask for, over the template.
  */
 const addRow: ToolActionImpl<AddRowArgs, undefined, { rowId: string }> = {
   run: (ctx, args) => {
@@ -916,13 +918,16 @@ const addRow: ToolActionImpl<AddRowArgs, undefined, { rowId: string }> = {
     const defaultId = state.schema.find(property => property.type === 'title')?.defaultTemplateId;
     const pick = args.template === undefined ? templatesOf(ctx, block.id).find(template => template.id === defaultId) : undefined;
     const template = args.template === null ? undefined : pick ?? (typeof args.template === 'string' ? templateOf(ctx, block.id, args.template) : undefined);
-    const given = withCreatedBy(ctx, state, { ...(titleId === undefined ? {} : { [titleId]: '' }), ...checkedValues(ctx, block.id, state, args.values ?? {}), ...groupValue(ctx, state, args.group) });
+    const context = dynamicContext(ctx);
+    // As newRowProperties: written raw, so a filter on a deleted option does not refuse the row.
+    const prefill = newRowValues(prefillFilters(state.views.find(view => view.id === state.activeViewId)), state.schema, context.me, null, context.now);
+    const given = withCreatedBy(ctx, state, { ...(titleId === undefined ? {} : { [titleId]: '' }), ...prefill, ...checkedValues(ctx, block.id, state, args.values ?? {}), ...groupValue(ctx, state, args.group) });
     const chosen = Object.fromEntries(Object.entries(given)
       .filter(([id, value]) => !(id === titleId && (value === '' || value === null)) && !(Array.isArray(value) && value.length === 0)));
-    const filled = template === undefined ? given : { ...given, ...resolveDynamicProperties(jsonCopy(template.properties) as Record<string, PropertyValue>, dynamicContext(ctx)), ...chosen };
+    const filled = template === undefined ? given : { ...given, ...resolveDynamicProperties(jsonCopy(template.properties) as Record<string, PropertyValue>, context), ...chosen };
     const properties = withStatusDefaults(state, withEmptyLists(state, filled));
     const page = template === undefined ? {} : rawData(ctx, template.id);
-    const reminders = template === undefined ? undefined : copiedReminders(isRecord(page.reminders) ? page.reminders as Record<string, DateReminder> : undefined, properties, dynamicContext(ctx).now);
+    const reminders = template === undefined ? undefined : copiedReminders(isRecord(page.reminders) ? page.reminders as Record<string, DateReminder> : undefined, properties, context.now);
     const rowId = ctx.insert({
       type: 'database-row',
       data: {
@@ -1198,7 +1203,6 @@ const duplicateRow: ToolActionImpl<{ rowId: string }, undefined, { rowId: string
     const remap = (value: unknown): Array<{ id: string }> =>
       relationIdsOf(value).flatMap(id => (copies.has(id) ? [{ id: copies.get(id) ?? id }] : []));
     const cursor = { after: source.position };
-
     for (const sourceId of family) {
       const original = siblings.find(each => each.id === sourceId);
       const id = copies.get(sourceId);

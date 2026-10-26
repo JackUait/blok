@@ -15,9 +15,9 @@ export const property = (id: string, type: string, extra: Record<string, unknown
 export const row = (id: string, properties: Record<string, unknown>, extra: Record<string, unknown> = {}): Omit<Seeded, 'parent'> =>
   ({ id, type: 'database-row', data: { properties, position: `a${id}`, ...extra } });
 
-/** Database blocks with their rows; `children` hangs blocks under a row. */
+/** Database blocks with their rows; `view` adds settings to the one view; `children` hangs blocks under a row. */
 export const seedOf = (
-  databases: Array<{ id: string; schema: Array<Record<string, unknown>>; rows: Array<Omit<Seeded, 'parent'>> }>,
+  databases: Array<{ id: string; schema: Array<Record<string, unknown>>; rows: Array<Omit<Seeded, 'parent'>>; view?: Record<string, unknown> }>,
   children: Array<Seeded> = []
 ): OutputData => {
   const blocks: Array<Record<string, unknown>> = [
@@ -25,7 +25,7 @@ export const seedOf = (
       {
         id: database.id,
         type: 'database',
-        data: { schema: database.schema, views: [{ id: `${database.id}-v`, name: 'Table', type: 'table', position: 'a0' }], activeViewId: `${database.id}-v` },
+        data: { schema: database.schema, views: [{ id: `${database.id}-v`, name: 'Table', type: 'table', position: 'a0', ...database.view }], activeViewId: `${database.id}-v` },
         content: database.rows.map(each => each.id),
       },
       ...database.rows.map(each => ({

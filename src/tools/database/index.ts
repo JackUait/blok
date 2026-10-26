@@ -6,7 +6,7 @@ import { DATABASE_ACTION_HANDLERS } from '../../shared/tool-actions/database';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolData, OutputData, ToolboxConfig, ToolboxConfigEntry, SanitizerConfig } from '../../../types';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
-import type { AutofillSettings, DatabaseAdapter, DatabaseData, DatabaseIcon, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, DatabaseLinkedSourceSnapshot, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, FilterRule, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue } from './types';
+import type { AutofillSettings, DatabaseAdapter, DatabaseData, DatabaseIcon, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, DatabaseLinkedSourceSnapshot, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue } from './types';
 import { countFilterRules } from './filter-tree';
 import { adapterRowValues, assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, readPropertyValue, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
 import { isOutputData, isPlaceValue } from './tier3-values';
@@ -54,7 +54,7 @@ import { openStarterCustomize } from './database-starter-modal';
 import { openTemplateGallery } from './database-template-gallery';
 import type { StarterPicks } from './database-starter-modal';
 import type { LinkedPickerSource } from './database-linked-picker';
-import { newRowValues, rowOrderKey, sortRows } from './database-query';
+import { newRowValues, prefillFilters, rowOrderKey, sortRows } from './database-query';
 import { openDatabaseChoice, openDatabaseConfirm } from './database-confirm-dialog';
 import { draftOf, openAutofillSetup, presetDraft } from './database-autofill-setup';
 import type { AutofillDraft } from './database-autofill-setup';
@@ -8745,12 +8745,7 @@ export class DatabaseTool implements BlockTool {
   private newRowProperties(titlePropId: string, groupByPropId: string | undefined, optionId: string, subGroupBy?: string, selected?: DatabaseViewConfig): Record<string, PropertyValue> {
     const saved = this.shownView();
     const effective = selected ?? (saved === undefined ? undefined : this.controls.effective(saved));
-    // An AND tree's top-level rules must all hold, so they prefill like simple filters.
-    const treeRules = effective?.filterTree?.conjunction === 'and'
-      ? effective.filterTree.filterRules.filter((node): node is FilterRule => !('filterRules' in node))
-      : [];
-    const filters = [...(effective?.filters ?? []), ...treeRules]
-      .filter((f) => f.propertyId !== groupByPropId && f.propertyId !== subGroupBy);
+    const filters = prefillFilters(effective, [groupByPropId, subGroupBy]);
     const properties: Record<string, PropertyValue> = { ...newRowValues(filters, this.model.getSchema(), this.config.people?.me?.() ?? null, this.thisPage), [titlePropId]: '' };
 
     const value = groupByPropId === undefined || optionId === NO_VALUE_GROUP_KEY ? undefined : this.groupValueFor(groupByPropId, optionId, effective);

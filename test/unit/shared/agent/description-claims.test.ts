@@ -204,3 +204,36 @@ describe('what the model is told about computed database values is true', () => 
     }
   });
 });
+
+describe('what the model is told about new database rows is true', () => {
+  const action = (name: string): { summary: string; guidance?: string } | undefined =>
+    describeDatabase().actions?.find(each => each.name === name);
+  const database = (view: Record<string, unknown>): OutputData => ({
+    blocks: [
+      {
+        id: 'db', type: 'database', content: ['a', 'b'],
+        data: {
+          schema: [{ id: 't', name: 'Title', type: 'title', position: 'a0' }, { id: 'done', name: 'Done', type: 'checkbox', position: 'a1' }],
+          views: [{ id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [], ...view }],
+          activeViewId: 'v',
+        },
+      },
+      { id: 'a', type: 'database-row', parent: 'db', data: { position: 'a0', title: 'a', properties: { t: 'a', done: true } } },
+      { id: 'b', type: 'database-row', parent: 'db', data: { position: 'a1', title: 'b', properties: { t: 'b', done: true } } },
+    ] as OutputData['blocks'],
+  });
+
+  it('says addRow fills what the open view filters on, and it does', async () => {
+    expect(action('addRow')?.guidance).toMatch(/open view's filters ask for fill in/);
+    const session = openJsonSession(database({ filters: [{ id: 'f', propertyId: 'done', operator: 'equals', value: true }] }));
+
+    try {
+      const result = await session.execute({ commands: [{ name: 'database.addRow', args: { id: 'db' } }] });
+      const rowId = result.ok ? String((result.results[0] as { rowId: string }).rowId) : '';
+
+      expect(session.output().blocks.find(block => block.id === rowId)?.data.properties).toMatchObject({ done: true });
+    } finally {
+      await session.close();
+    }
+  });
+});

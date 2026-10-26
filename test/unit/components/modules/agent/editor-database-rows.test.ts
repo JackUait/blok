@@ -7,7 +7,7 @@ import type { BlokModules } from '../../../../../src/types-internal/blok-modules
 import type { OutputData } from '../../../../../types';
 import type { AgentActor, AgentResult } from '../../../../../types/agent';
 
-const actor: AgentActor = { id: 'agent-1', name: 'Agent', kind: 'agent' };
+const actor: AgentActor = { id: 'agent-1', name: 'Agent', kind: 'agent', onBehalfOf: 'human-1' };
 const booted: Array<{ core: Core; holder: HTMLDivElement }> = [];
 
 const PAIR = [
@@ -47,7 +47,11 @@ const boot = async (data: OutputData): Promise<BlokModules> => {
     holder,
     user: { id: 'human-1' },
     dataModel: 'hierarchical',
-    tools: { paragraph: { class: Paragraph }, database: { class: Database }, 'database-row': { class: DatabaseRow } },
+    tools: {
+      paragraph: { class: Paragraph },
+      database: { class: Database, config: { people: { list: () => Promise.resolve([]), me: () => 'human-1' } } },
+      'database-row': { class: DatabaseRow },
+    },
     data,
   });
 
@@ -128,6 +132,31 @@ describe('database rows through the editor agent session', () => {
     expect(saved(Blok).get('z')).toMatchObject({ parent: 'db2', data: { title: 'z', properties: { t2: 'z' } } });
     expect(Blok.API.methods.blocks.getChildren('db2').map(block => block.id)).toEqual(['z']);
     expect(Blok.BlockManager.getBlockById('db2')?.holder.querySelector('[data-row-id="z"]')).not.toBeNull();
+    session.close();
+  }, 30_000);
+  it('database.addRow fills the values the open view filters on, so the new row shows', async () => {
+    const data = seed();
+    const database = data.blocks[0];
+
+    database.data.schema = [
+      ...(database.data.schema as unknown[]),
+      { id: 'who', name: 'Owner', type: 'person', position: 'a3' },
+      { id: 'done', name: 'Done', type: 'checkbox', position: 'a4' },
+    ];
+    database.data.views = [{
+      id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], visibleProperties: [],
+      filters: [{ id: 'f1', propertyId: 'who', operator: 'contains', value: ['me'] }],
+      filterTree: { id: 'g', conjunction: 'and', filterRules: [{ id: 'r1', propertyId: 'done', operator: 'equals', value: true }] },
+    }];
+    const Blok = await boot(data);
+    const session = createEditorAgentSession(Blok, actor);
+    const result: AgentResult = await session.execute({ commands: [{ name: 'database.addRow', args: { id: 'db', values: { t: 'new' } } }] });
+
+    expect(result.ok).toBe(true);
+    const rowId = result.ok ? String((result.results[0] as { rowId: string }).rowId) : '';
+
+    expect(saved(Blok).get(rowId)?.data.properties).toMatchObject({ who: [{ id: 'human-1' }], done: true });
+    expect(Blok.BlockManager.getBlockById('db')?.holder.querySelector(`[data-row-id="${rowId}"]`)).not.toBeNull();
     session.close();
   }, 30_000);
 });

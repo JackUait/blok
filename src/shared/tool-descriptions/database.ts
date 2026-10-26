@@ -986,7 +986,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
   {
     name: 'addRow',
     summary: 'Add a row (a database-row child block), as the New button does. It goes last unless before or after names a row.',
-    guidance: 'The row starts from the default template: its values, icon, cover, reminders and page body. template names another template; null starts an empty page. values maps property ids to values and wins over the template, except an empty title. A status with a default option and a person property that defaults to Created by fill in when values leave them out. group puts the row in a column of the open board view: an option id of the property it groups by.',
+    guidance: 'The row starts from the default template: its values, icon, cover, reminders and page body. template names another template; null starts an empty page. values maps property ids to values and wins over the template, except an empty title. A status with a default option and a person property that defaults to Created by fill in when values leave them out. Values the open view\'s filters ask for fill in too (an equals filter, a person contains, a date the filter accepts), so the row shows there; values win over them, and they win over the template. group puts the row in a column of the open board view: an option id of the property it groups by.',
     target: 'block',
     args: closed({ values: ROW_VALUES, group: OPTION_ID, before: ROW_ID, after: ROW_ID, template: { anyOf: [{ type: 'string', minLength: 1 }, { type: 'null' }] } }),
     result: closed({ rowId: { type: 'string' } }, ['rowId']),

@@ -19,7 +19,7 @@ import type { HostService } from '../../../../types/tools/tool-description';
 import { Module } from '../../__module';
 import { announce } from '../../utils/announcer';
 import { prefersReducedMotion } from '../../utils/reduced-motion';
-import { canRestore, createEditorAgentSession, liveContractSource, type ContractSource } from '../agent/editor-session';
+import { createEditorAgentSession, liveContractSource, type ContractSource } from '../agent/editor-session';
 import { inputIndexForField } from '../collaboration/agent-placement';
 import { composeFirstMessage } from '../../../agent/first-message';
 import { isThinkingLevel, readThinkingConfig, type ThinkingChoice } from '../../../agent/thinking';
@@ -32,6 +32,7 @@ import { createPageDocuments, type PageDocuments } from '../agent/page-documents
 import { isBlockReadOnly } from '../../utils/read-only-blocks';
 import type { Block } from '../../block';
 import { AgentFailure, failure } from '../../../shared/agent/errors';
+import { canRestore } from '../../../shared/agent/version-history';
 import { createAgentRun, type DiscardOutcome, type PageRestore } from './agent-run';
 import { createAgentTurn } from './agent-turn';
 import { askAiSessionOptions } from './agent-session-options';
@@ -377,7 +378,7 @@ export class AgentAPI extends Module {
       services: Object.keys(this.services()).filter((name): name is HostService =>
         name === 'uploader' || name === 'linkMetadata' || name === 'pageBackend' || name === 'versionHistory'
       ),
-      restores: canRestore(this.services().versionHistory),
+      ...(canRestore(this.services().versionHistory) && { restores: true }),
       overrides: this.config.agent?.overrides,
     });
 

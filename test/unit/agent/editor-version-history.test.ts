@@ -224,6 +224,32 @@ describe('editor agent version restore', () => {
     expect(!undo.ok && undo.error.message).toContain('"L:2"');
   });
 
+  it('does not restore the main document from a sub-page', async () => {
+    const history = restoringHistory();
+    const holder = document.createElement('div');
+
+    document.body.appendChild(holder);
+    const pages = new Map<string, OutputData>([['sub', { blocks: [] }]]);
+    const editor = new Blok({
+      holder,
+      data: { blocks: [{ id: 'pg', type: 'page', data: { pageId: 'sub' } }] },
+      tools: {
+        paragraph: { class: Paragraph },
+        page: { class: Page, config: { loadDocument: (pageId: string) => structuredClone(pages.get(pageId) ?? null), saveDocument: () => undefined } },
+      },
+      agent: { versionHistory: history },
+    }) as unknown as TestEditor;
+
+    editors.push(editor);
+    await editor.isReady;
+    const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
+    const result = await turn.call('blok_execute', { page: 'pg', commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });
+
+    turn.end();
+    expect(JSON.parse(result.content)).toMatchObject({ error: { code: 'COMMAND_UNAVAILABLE', details: { reason: 'service' } } });
+    expect(history.restore).not.toHaveBeenCalled();
+  });
+
   it('Discard after Ask AI restored a version does not claim it took the whole run back', async () => {
     const history = restoringHistory();
     const editor = await boot(history, scripted(restoreCall, insertCall('After'), { stop_reason: 'end_turn', content: [{ type: 'text', text: 'Done' }] }));

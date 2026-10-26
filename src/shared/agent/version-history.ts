@@ -20,6 +20,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isVersionHistory = (value: unknown): value is AgentVersionHistory =>
   isRecord(value) && typeof value.list === 'function' && typeof value.read === 'function';
 
+/** Whether a host's versionHistory service can restore a version. */
+export const canRestore = (value: unknown): boolean => isVersionHistory(value) && typeof value.restore === 'function';
+
 const isOutputData = (value: unknown): value is OutputData =>
   isRecord(value) && Array.isArray(value.blocks)
   && value.blocks.every(block => isRecord(block) && typeof block.type === 'string' && isRecord(block.data));

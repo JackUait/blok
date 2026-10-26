@@ -7,6 +7,7 @@ import { describeContract } from '../../../shared/agent/describe';
 import { buildDocumentView } from '../../../shared/agent/document-view';
 import { checkEnvelope } from '../../../shared/agent/envelope';
 import { runBatch } from '../../../shared/agent/executor';
+import { canRestore } from '../../../shared/agent/version-history';
 import { validateAgainst } from '../../../shared/schema/validate';
 import type { ToolRuntimeRegistry } from '../../../shared/tool-actions/runtime';
 import { buildAgentContract, buildToolManifest } from '../../../shared/tool-manifest';
@@ -43,11 +44,6 @@ export const liveContractSource = (
     runtimes: () => runtimesFromTools(Blok.Tools),
   };
 };
-
-/** Whether a host's versionHistory service can restore a version. */
-export const canRestore = (versionHistory: unknown): boolean =>
-  typeof versionHistory === 'object' && versionHistory !== null
-  && 'restore' in versionHistory && typeof versionHistory.restore === 'function';
 
 const editorSessions = { count: 0 };
 

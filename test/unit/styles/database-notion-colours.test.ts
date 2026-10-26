@@ -200,8 +200,8 @@ describe('database menus built on the shared popover (research/08:267, research/
 
   // A literal per theme: the selected-state law rejects a token that aliases an alias.
   it('re-set the hover fill to Notion\'s, light and both dark shapes', () => {
-    const dark = /\[data-blok-theme="dark"\] \[data-blok-popover\]\[data-blok-popover-custom-class~='blok-database-menu'\] \{([^}]*)\}/;
-    const media = /:root:not\(\[data-blok-theme="light"\]\) \[data-blok-popover\]\[data-blok-popover-custom-class~='blok-database-menu'\] \{([^}]*)\}/;
+    const dark = /\[data-blok-theme="dark"\] \[data-blok-popover\]\[data-blok-popover-custom-class~='blok-database-menu'\][^{]*\{([^}]*)\}/;
+    const media = /:root:not\(\[data-blok-theme="light"\]\) \[data-blok-popover\]\[data-blok-popover-custom-class~='blok-database-menu'\][^{]*\{([^}]*)\}/;
 
     expect(ruleBody(MENU)).toContain('--blok-item-hover-bg: rgba(33, 27, 23, 0.051)');
     expect(rules.match(media)?.[1]).toContain('--blok-item-hover-bg: rgba(255, 255, 255, 0.055)');

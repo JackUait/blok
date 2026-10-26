@@ -238,3 +238,25 @@ describe('row page property menu (research parity row 9)', () => {
     }
   });
 });
+
+describe('database submenus (notion-spec-2 §11)', () => {
+  const MENU = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu']";
+  const NESTED = `${MENU} [data-blok-popover]`;
+  const SUB = `${HEADER} [data-blok-popover][data-blok-nested]`;
+
+  // A submenu is its own top-layer root, and colors.css resets --blok-text-primary to black there.
+  it('keeps the database inks and hover fill in a submenu', () => {
+    expect(declared(NESTED, '--blok-text-primary')).toEqual(['var(--blok-database-ink)']);
+    expect(declared(NESTED, '--blok-text-secondary')).toEqual(['var(--blok-database-ink-secondary)']);
+    expect(declared(NESTED, '--blok-icon-active-text')).toEqual(['var(--blok-database-ink)']);
+    expect(declared(NESTED, '--blok-item-hover-bg')).toEqual(['rgba(33, 27, 23, 0.051)']);
+    expect(declared(`[data-blok-theme="dark"] ${NESTED}`, '--blok-item-hover-bg')).toEqual(['rgba(255, 255, 255, 0.055)']);
+  });
+
+  it('reads 14px regular in the column header submenus, as Notion', () => {
+    expect(declared(`${SUB} [data-blok-popover-item-title]`, 'font-size')).toEqual(['14px']);
+    expect(declared(`${SUB} [data-blok-popover-item-title]`, 'font-weight')).toEqual(['400']);
+    expect(declared(`${SUB} [data-blok-popover-item-value]`, 'font-size')).toEqual(['14px']);
+    expect(declared(`${SUB} [data-blok-popover-item-value]`, 'line-height')).toEqual(['1.2']);
+  });
+});

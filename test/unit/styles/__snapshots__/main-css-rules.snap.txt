@@ -6130,7 +6130,7 @@ button[data-blok-database-column-count]:hover {
   background-color: var(--blok-database-tab-bg);
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'], [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover] {
   --blok-popover-box-shadow: var(--blok-database-cell-editor-shadow);
   --blok-text-primary: var(--blok-database-ink);
   --blok-text-secondary: var(--blok-database-ink-secondary);
@@ -6142,11 +6142,11 @@ button[data-blok-database-column-count]:hover {
   --max-height: calc(100dvh - 24px);
 }
 
-[@media (prefers-color-scheme: dark)] :root:not([data-blok-theme="light"]) [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] {
+[@media (prefers-color-scheme: dark)] :root:not([data-blok-theme="light"]) [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'], :root:not([data-blok-theme="light"]) [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover] {
   --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
 }
 
-[data-blok-theme="dark"] [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] {
+[data-blok-theme="dark"] [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'], [data-blok-theme="dark"] [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover] {
   --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
 }
 
@@ -6186,6 +6186,16 @@ button[data-blok-database-column-count]:hover {
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover-container] {
   --max-height: calc(100dvh - 2 * var(--blok-space-3));
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item-title] {
+  font-size: 14px;
+  font-weight: 400;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item-value] {
+  font-size: 14px;
+  line-height: 1.2;
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-title] {

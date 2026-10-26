@@ -2633,8 +2633,10 @@ button[data-blok-database-column-count]:hover {
 /* Database menus open from the anchor's corner (popover-animation.css sets the origin).
    The root's display/overlay hold must match, or the close is cut at 120ms. */
 /* Database menus on the shared popover take Notion's menu (research/08:267, 21:34): its shadow,
-   inks and hover fill. Re-set on the popover root, which also declares the core values. */
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] {
+   inks and hover fill. Re-set on the popover root, which also declares the core values.
+   A submenu is a root of its own, so it re-sets them too. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover] {
   --blok-popover-box-shadow: var(--blok-database-cell-editor-shadow);
   --blok-text-primary: var(--blok-database-ink);
   --blok-text-secondary: var(--blok-database-ink-secondary);
@@ -2649,12 +2651,14 @@ button[data-blok-database-column-count]:hover {
 
 /* Literals, not var(--blok-database-hover-bg): the selected-state law rejects an alias of an alias. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-blok-theme="light"]) [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] {
+  :root:not([data-blok-theme="light"]) [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'],
+  :root:not([data-blok-theme="light"]) [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover] {
     --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
   }
 }
 
-[data-blok-theme="dark"] [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] {
+[data-blok-theme="dark"] [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'],
+[data-blok-theme="dark"] [data-blok-popover][data-blok-popover-custom-class~='blok-database-menu'] [data-blok-popover] {
   --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
 }
 
@@ -2700,6 +2704,17 @@ button[data-blok-database-column-count]:hover {
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover-container] {
   --max-height: calc(100dvh - 2 * var(--blok-space-3));
+}
+
+/* notion-spec-2 §11: the column header's submenus read 14px regular, values 14/16.8. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item-title] {
+  font-size: 14px;
+  font-weight: 400;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item-value] {
+  font-size: 14px;
+  line-height: 1.2;
 }
 
 /* Notion's row page property menu: 14px regular titles, 8px separators, 197px tall. */

@@ -773,6 +773,53 @@
                 "type": "object",
                 "properties": {
                   "name": {
+                    "const": "database.addComment"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "rowId",
+                      "text"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "rowId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a database-row child block."
+                      },
+                      "text": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 10000,
+                        "description": "Plain text, not Markdown or HTML. Trimmed."
+                      },
+                      "propertyId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a property in schema."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
                     "const": "database.addOption"
                   },
                   "args": {
@@ -1246,6 +1293,41 @@
                 "type": "object",
                 "properties": {
                   "name": {
+                    "const": "database.deleteComment"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "commentId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "commentId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a thread or a reply, from the row's comments in a full read."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
                     "const": "database.deleteOption"
                   },
                   "args": {
@@ -1483,6 +1565,48 @@
                         "type": "string",
                         "minLength": 1,
                         "description": "Id of a view in views."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.editComment"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "commentId",
+                      "text"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "commentId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a thread or a reply, from the row's comments in a full read."
+                      },
+                      "text": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 10000,
+                        "description": "Plain text, not Markdown or HTML. Trimmed."
                       },
                       "id": {
                         "type": "string",
@@ -1847,6 +1971,87 @@
                       },
                       "name": {
                         "type": "string"
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.replyToComment"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "threadId",
+                      "text"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "threadId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a thread: a comment straight under a row, from the row's comments in a full read."
+                      },
+                      "text": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 10000,
+                        "description": "Plain text, not Markdown or HTML. Trimmed."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.resolveComment"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "threadId",
+                      "resolved"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "threadId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a thread: a comment straight under a row, from the row's comments in a full read."
+                      },
+                      "resolved": {
+                        "type": "boolean"
                       },
                       "id": {
                         "type": "string",

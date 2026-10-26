@@ -2311,7 +2311,8 @@ export class DatabaseCardDrawer {
     if (this.onOpenAddProperty !== undefined) {
       this.onOpenAddProperty(anchor, (id, ownSetup) => {
         if (place !== null || this.draft !== null) this.addedWhileCustomizing(id, place);
-        if (ownSetup !== true) this.editAdded(id);
+        // A section's own add is unmeasured in Notion, so it keeps writing only.
+        if (ownSetup !== true && place === null) this.editAdded(id);
       });
 
       return;

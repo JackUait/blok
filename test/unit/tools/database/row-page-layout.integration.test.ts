@@ -359,6 +359,19 @@ describe('row page layout through the database tool', () => {
     expect(document.querySelector('[data-blok-database-property-menu-name-input]')).toBeNull();
   });
 
+  // research/12 §2: Summarize opens its own setup, so it gets no Edit property panel.
+  it('an AI Autofill preset on the row page opens its setup, not the Edit property panel', async () => {
+    await make(doc(), { ai: { autofill: vi.fn(() => Promise.resolve(undefined)) } });
+    await openRow('r2');
+    await click(q('[data-blok-database-drawer-add-prop]'));
+    document.querySelector('[data-blok-database-property-autofill-option="summary"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    // Read at once: a frame later the open dialog has closed any menu.
+    expect(document.querySelector('[data-blok-database-property-menu-name-input]')).toBeNull();
+    await quiet();
+    expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Autofill');
+  });
+
   it('offers no Customize layout in the column header menu', async () => {
     await make(doc());
     await click(q('[data-blok-database-table-column-header][data-property-id="due"]'));

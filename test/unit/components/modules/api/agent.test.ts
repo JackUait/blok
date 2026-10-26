@@ -475,12 +475,12 @@ describe('AgentAPI tools and guidance', () => {
     expect(composeGuidance(contract)).toBe(GUIDANCE);
   });
 
-  it('tells the model that Cmd+Z does not undo its sub-page writes, only Discard does', () => {
+  it('tells the model that Cmd+Z does not undo its sub-page writes; Discard does, then the page\'s version history', () => {
     const contract = makeContract();
 
     contract.guidance.general = 'General guidance.';
 
-    expect(composeGuidance(contract, { pages: true })).toContain('Cmd+Z does not undo your writes to a sub-page. Only Discard reverts them, before the user keeps your work.');
+    expect(composeGuidance(contract, { pages: true })).toContain('Cmd+Z does not undo your writes to a sub-page. Discard reverts them before the user keeps your work. After that, the user can restore an earlier version from that sub-page\'s version history, if the app keeps one.');
     expect(composeGuidance(contract)).not.toContain('sub-page');
   });
 });

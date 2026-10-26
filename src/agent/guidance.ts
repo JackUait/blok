@@ -23,7 +23,7 @@ export const IN_APP_RULES: readonly string[] = [
   '- After you edit, your whole reply is one friendly sentence of under 10 words on what you did, in the user\'s language, like "Added a short paragraph about how YouTube began." It must make sense on its own: never end it with a colon, never introduce a list, write nothing before or after it. Say what, never where: no caret, position, block names or ids. No lists, tables or Markdown.',
 ];
 
-export const PAGE_RULE = '- A page block points at a sub-page with its own document. To write inside one, call blok_read or blok_execute with `page` set to the page block\'s id; there doc.setTitle and doc.setIcon name the sub-page. Cmd+Z does not undo your writes to a sub-page. Only Discard reverts them, before the user keeps your work.';
+export const PAGE_RULE = '- A page block points at a sub-page with its own document. To write inside one, call blok_read or blok_execute with `page` set to the page block\'s id; there doc.setTitle and doc.setIcon name the sub-page. Cmd+Z does not undo your writes to a sub-page. Discard reverts them before the user keeps your work. After that, the user can restore an earlier version from that sub-page\'s version history, if the app keeps one.';
 
 /** Both surfaces send it exactly when their contract lets a page block insert. */
 export const PAGE_CREATE_RULE = '- To make a new sub-page, insert a page block without data.pageId. Blok creates its document and sets data.pageId. Then write inside it.';

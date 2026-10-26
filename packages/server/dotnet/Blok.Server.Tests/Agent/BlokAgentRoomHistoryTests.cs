@@ -142,6 +142,47 @@ public sealed class BlokAgentRoomHistoryTests
   }
 
   [Fact]
+  public async Task ForgetsItsStepsWhenTheDocumentIsPurgedAndMadeAgain()
+  {
+    await using var room = Open();
+
+    await OkAsync(room, Insert("a", "Agent"));
+    await room.Manager.PurgeDocumentAsync(room.DocId, _ => ValueTask.FromResult(true));
+
+    // The id may hold a new document next; the old steps must not reach it.
+    Assert.Equal("NOTHING_TO_UNDO", Code(await RunAsync(room, Undo)));
+  }
+
+  [Fact]
+  public async Task ForgetsItsStepsWhenAVersionIsRestored()
+  {
+    await using var room = Open();
+    var head = (await room.Manager.StateAsync(room.DocId)).Head!;
+
+    await OkAsync(room, Replace("p", "Agent"));
+    var restore = await room.Manager.RestoreAsync(room.DocId, head.Tag.Lineage, head.ServerSequence, Guid.NewGuid().ToString("N"), "human-2");
+
+    Assert.Equal(CollabEditStatus.Applied, restore.Edit?.Status);
+    var before = (await room.ExportAsync())["blocks"]!.ToJsonString();
+
+    Assert.Equal("NOTHING_TO_UNDO", Code(await RunAsync(room, Undo)));
+    Assert.Equal(before, (await room.ExportAsync())["blocks"]!.ToJsonString());
+  }
+
+  [Fact]
+  public async Task ForgetsItsStepsWhenTheRoomIsReset()
+  {
+    await using var room = Open();
+
+    await OkAsync(room, Replace("p", "Agent"));
+    await room.Manager.ResetAsync(room.DocId);
+    var before = (await room.ExportAsync())["blocks"]!.ToJsonString();
+
+    Assert.Equal("NOTHING_TO_UNDO", Code(await RunAsync(room, Undo)));
+    Assert.Equal(before, (await room.ExportAsync())["blocks"]!.ToJsonString());
+  }
+
+  [Fact]
   public async Task UndoStopsAtTheOldestKeptStep()
   {
     await using var room = Open();

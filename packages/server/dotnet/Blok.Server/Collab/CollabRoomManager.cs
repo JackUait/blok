@@ -199,6 +199,13 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
 
   private readonly Dictionary<string, CollabRoom> rooms = new(StringComparer.Ordinal);
   private readonly Dictionary<string, SemaphoreSlim> purgeLanes = new(StringComparer.Ordinal);
+
+  /// <summary>
+  /// A document's content was replaced wholesale: purged, reset from the store, or
+  /// restored to a version. Agent undo steps (Agent/RoomAgentHistory.cs) listen, since
+  /// replaying one now would bring back what this replaced.
+  /// </summary>
+  internal event Action<string>? DocumentReplaced;
   private readonly Dictionary<string, CommitCooldown> cooldowns = new(StringComparer.Ordinal);
   private readonly ICollabWorkingSetStore store;
   private readonly ICollabOperationStore? operationStore;
@@ -322,6 +329,8 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
 
       if (result is not null)
       {
+        DocumentReplaced?.Invoke(docId);
+
         return result;
       }
 
@@ -797,6 +806,11 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
       return new CollabRestoreResult(CollabHistoryStatus.NotFound, null);
     }
 
+    if (edit.Status == CollabEditStatus.Applied)
+    {
+      DocumentReplaced?.Invoke(docId);
+    }
+
     return new CollabRestoreResult(CollabHistoryStatus.Ready, edit);
   }
 
@@ -1048,6 +1062,9 @@ internal sealed class CollabRoomManager : ICollabRoomManager, ICollabDocumentPur
     try
     {
       CollabRoom? room;
+
+      // Before anything is deleted: an attempt that fails halfway still leaves no step to replay.
+      DocumentReplaced?.Invoke(documentId);
 
       lock (rooms)
       {

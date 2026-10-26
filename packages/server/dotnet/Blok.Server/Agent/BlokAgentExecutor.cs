@@ -19,6 +19,11 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
   {
     this.rooms = rooms;
     this.converter = converter;
+
+    if (rooms is not null)
+    {
+      rooms.DocumentReplaced += roomHistory.Forget;
+    }
   }
 
   public async ValueTask<BlokAgentExecution> ExecuteAsync(
@@ -341,6 +346,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
     JsonObject? before = null;
     CollabPageMaps? beforeMaps = null;
     var wrote = false;
+    RoomAgentHistory.Step? recorded = null;
     var operationId = Guid.NewGuid().ToString("N");
     var digest = System.Security.Cryptography.SHA256.HashData(
         System.Text.Encoding.UTF8.GetBytes($"agent\n{actor.Id}\n{batchJson}"));
@@ -387,7 +393,8 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
         if (wrote && before is not null && beforeMaps is not null
             && await converter.ExportAsync(doc, token) is JsonObject after)
         {
-          roomHistory.Add(docId, actor.Id, RoomAgentHistory.Between(before, beforeMaps, after, YDocConverter.ReadPageMaps(doc)));
+          recorded = RoomAgentHistory.Between(before, beforeMaps, after, YDocConverter.ReadPageMaps(doc));
+          roomHistory.Add(docId, actor.Id, recorded);
         }
       }, cancellationToken);
     }
@@ -402,6 +409,11 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
     switch (edit.Status)
     {
       case CollabEditStatus.Applied when planned is not null:
+        if (recorded is not null)
+        {
+          recorded.Lineage = edit.Receipt?.Tag.Lineage;
+        }
+
         return WithHead(new BlokAgentExecution(planned.ToJsonString(), null, head), head);
       case CollabEditStatus.PreconditionFailed:
         return await StaleAsync(docId, input, head, cancellationToken);
@@ -433,9 +445,56 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
   private async ValueTask<BlokAgentExecution> RunRoomHistoryAsync(
       string docId, bool undo, BlokAgentActor actor, CollabEditPrecondition? expect, CancellationToken cancellationToken)
   {
+    // The head this call pins itself can go stale under a peer's write; the agent's own expectRevision cannot be retried.
+    for (var attempt = 0; ; attempt++)
+    {
+      var execution = await RunRoomHistoryOnceAsync(docId, undo, actor, expect, cancellationToken);
+
+      if (expect is not null || attempt == 2
+          || JsonNode.Parse(execution.ResultJson)?["error"]?["code"]?.GetValue<string>() != "STALE")
+      {
+        return execution;
+      }
+    }
+  }
+
+  private async ValueTask<BlokAgentExecution> RunRoomHistoryOnceAsync(
+      string docId, bool undo, BlokAgentActor actor, CollabEditPrecondition? expect, CancellationToken cancellationToken)
+  {
     var verb = undo ? "undone" : "redone";
     RoomAgentHistory.Step? step = null;
     CollabEditResult edit;
+    var top = (undo ? roomHistory.Find(docId, actor.Id)?.Done : roomHistory.Find(docId, actor.Id)?.Undone)?.LastOrDefault();
+
+    // Checked before the room: a purged document refuses every edit, and this answer is the true one.
+    if (top is null)
+    {
+      return undo
+          ? Failure("NOTHING_TO_UNDO", "This session has no step to undo.", false, null)
+          : Failure("NOTHING_TO_REDO", "This session has no undone step to redo.", false, null);
+    }
+
+    var lineageChanged = Failure("CONFLICT", $"The room was reset or reloaded since this step, so it can no longer be {verb}. Re-read the document.", true, null);
+    var lineage = top.Lineage;
+
+    if (lineage is not null && expect is null)
+    {
+      var (_, current, _) = await RoomStatusAsync(docId, cancellationToken);
+      var colon = current.LastIndexOf(':');
+
+      if (colon <= 0 || current[..colon] != lineage)
+      {
+        return lineageChanged;
+      }
+
+      // Pins the lineage in the lane; a peer write since this read only asks for another try.
+      expect = ParseHead(current);
+    }
+
+    if (lineage is not null && expect is not null && expect.Lineage != lineage)
+    {
+      return lineageChanged;
+    }
 
     try
     {
@@ -443,6 +502,11 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
       {
         var steps = roomHistory.Find(docId, actor.Id);
         step = (undo ? steps?.Done : steps?.Undone)?.LastOrDefault();
+
+        if (step is not null && step.Lineage is not null && step.Lineage != expect?.Lineage)
+        {
+          throw new HistoryRefusal("CONFLICT", $"The room was reset or reloaded since this step, so it can no longer be {verb}. Re-read the document.", retryable: true);
+        }
 
         if (step is null)
         {

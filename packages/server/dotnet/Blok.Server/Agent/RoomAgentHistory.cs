@@ -26,6 +26,8 @@ internal sealed class RoomAgentHistory(TimeProvider time)
   internal sealed class Step
   {
     internal bool Other { get; init; }
+    /// <summary>The journal lineage the step was written in; null in a room without a journal.</summary>
+    internal string? Lineage { get; set; }
     internal IReadOnlySet<string> Ids { get; init; } = new HashSet<string>(StringComparer.Ordinal);
     internal IReadOnlySet<string> PageKeys { get; init; } = new HashSet<string>(StringComparer.Ordinal);
     internal JsonObject Before { get; set; } = [];
@@ -59,6 +61,18 @@ internal sealed class RoomAgentHistory(TimeProvider time)
       steps.LastUsed = time.GetUtcNow();
 
       return steps;
+    }
+  }
+
+  /// <summary>Drops every actor's steps in the room.</summary>
+  internal void Forget(string docId)
+  {
+    lock (rooms)
+    {
+      foreach (var key in rooms.Keys.Where(key => key.DocId == docId).ToList())
+      {
+        rooms.Remove(key);
+      }
     }
   }
 

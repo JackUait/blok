@@ -1,6 +1,6 @@
 {
-  "measuredBytes": 1074092,
-  "maxBytes": 1134000,
-  "measuredAt": "parity/reads tip (local build on parity/reads rebased onto c8f3491c)",
-  "reason": "Computed database reads (2026-10-25): the formula, rollup and computed-value engine moved to src/shared/database so the server reads the values a row's cells show. It adds 53,127 bytes (origin/main c8f3491c builds 1,020,965); the added modules are only src/shared/database (formula parser, checker, functions, dates, rollup, calculations, computed read), no DOM, cell or locale code. Same rule as before: 1,080,000 (next 10,000) plus 5%; anything larger is a reviewed raise. Previous budget 1,029,000 at 977,406 measured."
+  "measuredBytes": 977406,
+  "maxBytes": 1029000,
+  "measuredAt": "be1cb666 (CI Unit Tests 3/5)",
+  "reason": "Agent speed work (2026-10-18): richer agent errors (accepted fields, variant hints, ref hints), execute results with changed blocks, block-type descriptions. Same rule as before: 980,000 (next 10,000) plus 5%; anything larger is a reviewed raise. Previous budget 976,500 at 924,996 measured."
 }

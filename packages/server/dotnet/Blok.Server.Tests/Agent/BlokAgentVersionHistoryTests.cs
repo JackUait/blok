@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Blok.Server.Tests.Agent;
 
-/// <summary>history.versions, history.read and history.changes in a room, against the in-memory history journal.</summary>
+/// <summary>history.versions, history.read, history.changes and history.restore in a room, against the in-memory history journal.</summary>
 public sealed class BlokAgentVersionHistoryTests
 {
   private const string DocId = "history-room";
@@ -145,5 +145,75 @@ public sealed class BlokAgentVersionHistoryTests
     var execution = await executor.ExecuteAsync("""{"blocks":[]}""", """{"commands":[{"name":"history.versions","args":{}}]}""", Actor);
 
     Assert.Equal("COMMAND_UNAVAILABLE", JsonNode.Parse(execution.ResultJson)!["error"]!["code"]!.GetValue<string>());
+  }
+
+  [Fact]
+  public async Task OnlyTheRoomContractOfAHistoryJournalOffersTheRestore()
+  {
+    var (executor, _) = Create(operations);
+    var (plain, _) = Create(null);
+
+    Assert.True(Command(JsonNode.Parse(await executor.GetRoomContractAsync())!, "history.restore")["available"]!.GetValue<bool>());
+    Assert.Equal("service", Command(JsonNode.Parse(await executor.GetContractAsync())!, "history.restore")["unavailableReason"]!.GetValue<string>());
+    Assert.Equal("service", Command(JsonNode.Parse(await plain.GetRoomContractAsync())!, "history.restore")["unavailableReason"]!.GetValue<string>());
+  }
+
+  [Fact]
+  public async Task RestoresAVersionAsOneJournalledEditThatStampsNoBlock()
+  {
+    var (executor, rooms) = Create(operations);
+    var edit = await executor.ExecuteInRoomAsync(DocId,
+        """{"commands":[{"name":"text.replace","args":{"id":"p","with":"Changed"}}]}""", Actor);
+    var lineage = edit.Revision[..edit.Revision.LastIndexOf(':')];
+    var committed = operations.Committed(DocId).Count;
+
+    var execution = await executor.ExecuteInRoomAsync(DocId,
+        $$$"""{"commands":[{"name":"history.restore","args":{"version":"{{{lineage}}}:0"}}]}""", Actor);
+    var restored = JsonNode.Parse(execution.ResultJson)!;
+
+    Assert.True(restored["ok"]!.GetValue<bool>(), restored.ToJsonString());
+    Assert.Equal(edit.Revision, restored["results"]![0]!["previous"]!.GetValue<string>());
+    Assert.Equal(committed + 1, operations.Committed(DocId).Count);
+    Assert.Equal(execution.Revision, restored["revision"]!.GetValue<string>());
+    Assert.NotEqual(edit.Revision, execution.Revision);
+    var p = JsonNode.Parse((await rooms.StateAsync(DocId)).Json!)!["blocks"]![0]!.AsObject();
+    Assert.Equal("Hello world", p["data"]!["text"]![0]!["text"]!.GetValue<string>());
+    // The version had no stamps, and a restore keeps the version's.
+    Assert.False(p.ContainsKey("lastEditedWith"), p.ToJsonString());
+    var newest = JsonNode.Parse((await executor.ExecuteInRoomAsync(DocId,
+        """{"commands":[{"name":"history.versions","args":{"group":1}}]}""", Actor)).ResultJson)!["results"]![0]!["versions"]![0]!;
+    Assert.Contains("agent-cs", newest["actors"]!.AsArray().Select(actor => actor!.GetValue<string>()));
+  }
+
+  [Fact]
+  public async Task RestoringAnUnknownVersionIsVersionNotFoundAndWritesNothing()
+  {
+    var (executor, _) = Create(operations);
+    var lineage = (await executor.ExecuteInRoomAsync(DocId,
+        """{"commands":[{"name":"doc.setTitle","args":{"title":"One"}}]}""", Actor)).Revision.Split(':')[0];
+    var committed = operations.Committed(DocId).Count;
+
+    var execution = await executor.ExecuteInRoomAsync(DocId,
+        $$$"""{"commands":[{"name":"history.restore","args":{"version":"{{{lineage}}}:99"}}]}""", Actor);
+
+    Assert.Equal("VERSION_NOT_FOUND", JsonNode.Parse(execution.ResultJson)!["error"]!["code"]!.GetValue<string>());
+    Assert.Equal(committed, operations.Committed(DocId).Count);
+  }
+
+  [Fact]
+  public async Task ARestoreAgainstAStaleRevisionIsStale()
+  {
+    var (executor, _) = Create(operations);
+    var first = await executor.ExecuteInRoomAsync(DocId,
+        """{"commands":[{"name":"doc.setTitle","args":{"title":"One"}}]}""", Actor);
+    await executor.ExecuteInRoomAsync(DocId, """{"commands":[{"name":"doc.setTitle","args":{"title":"Two"}}]}""", Actor);
+    var lineage = first.Revision.Split(':')[0];
+    var committed = operations.Committed(DocId).Count;
+
+    var execution = await executor.ExecuteInRoomAsync(DocId,
+        $$$"""{"expectRevision":"{{{first.Revision}}}","commands":[{"name":"history.restore","args":{"version":"{{{lineage}}}:0"}}]}""", Actor);
+
+    Assert.Equal("STALE", JsonNode.Parse(execution.ResultJson)!["error"]!["code"]!.GetValue<string>());
+    Assert.Equal(committed, operations.Committed(DocId).Count);
   }
 }

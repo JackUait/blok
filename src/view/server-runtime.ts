@@ -457,12 +457,15 @@ const isBatchEnvelope = (value: unknown): boolean =>
  * read needs before the call: `versions`, `documents` keyed by version (null:
  * no such version), or `failed` with why it could not and the HTTP `status`
  * the history routes would answer, which decides whether a retry can help.
+ * A restore needs both `versions` and its version in `documents`; with
+ * `restores: true` Jint checks it and names it as `restore` in the output.
  */
-const loadedVersionHistory = (value: unknown): AgentVersionHistory | undefined => {
+const loadedVersionHistory = (value: unknown, onRestore?: (version: string) => void): AgentVersionHistory | undefined => {
   if (!isRecord(value)) {
     return undefined;
   }
   const { versions, documents, failed, status } = value;
+  const loaded = (version: string): boolean => isRecord(documents) && Object.hasOwn(documents, version);
   const refuse = (what: string): Promise<never> => Promise.reject(Object.assign(
     new Error(typeof failed === 'string' ? failed : `The host did not load ${what}.`),
     typeof status === 'number' ? { status } : {}
@@ -470,9 +473,17 @@ const loadedVersionHistory = (value: unknown): AgentVersionHistory | undefined =
 
   return {
     list: () => Array.isArray(versions) ? Promise.resolve(versions.filter(isAgentVersion)) : refuse('the version list'),
-    read: version => isRecord(documents) && Object.hasOwn(documents, version)
+    read: version => isRecord(documents) && loaded(version)
       ? Promise.resolve(isStoredDocument(documents[version]) ? documents[version] : null)
       : refuse(`version "${version}"`),
+    // Jint only checks the restore; the host restores the version named in the output.
+    ...(onRestore !== undefined && {
+      restore: (version: string) => {
+        onRestore(version);
+
+        return Promise.resolve(true);
+      },
+    }),
   };
 };
 
@@ -510,7 +521,8 @@ const carriedHistory = (
 const createServerAgentSession = (
   input: Record<string, unknown>,
   document: OutputData,
-  actor: AgentActor
+  actor: AgentActor,
+  onRestore?: (version: string) => void
 ): ReturnType<typeof createDocumentAgentSession> => {
   const customTools = input.customTools === undefined ? undefined : readCustomToolsFile(input.customTools);
   const services = Array.isArray(input.services)
@@ -530,8 +542,9 @@ const createServerAgentSession = (
             && override.hiddenActions.every((action: unknown) => typeof action === 'string')));
       })
   );
-  const setup = createHeadlessAgentSetup({ customTools, overrides, services, ...contractWhere(input) });
-  const versionHistory = loadedVersionHistory(input.versionHistory);
+  const restores = input.restores === true;
+  const setup = createHeadlessAgentSetup({ customTools, overrides, services, ...contractWhere(input), restores });
+  const versionHistory = loadedVersionHistory(input.versionHistory, restores ? onRestore : undefined);
   const load = (raw: OutputData): OutputData => loadStoredDocument(raw, setup.richTextFieldsFor);
   const loaded = load(document);
   const history = carriedHistory(input.history, loaded, load);
@@ -558,14 +571,20 @@ const agentExecuteResult = async (inputJson: string): Promise<string> => {
     throw new TypeError('agentExecute input requires a `batch` with a `commands` array of command objects.');
   }
 
-  const session = createServerAgentSession(input, document, actor);
+  const restoring: { version?: string } = {};
+  const session = createServerAgentSession(input, document, actor, (version) => {
+    restoring.version = version;
+  });
 
   try {
     const result = await session.execute(batch);
     // Only a C# session asks for its steps back; a plain call keeps none.
     const history = 'history' in input ? { history: { ...session.history(), revision: session.revision() } } : {};
 
-    return JSON.stringify({ result, document: session.output(), edits: session.lastEdits(), ...history });
+    return JSON.stringify({
+      result, document: session.output(), edits: session.lastEdits(), ...history,
+      ...(result.ok && restoring.version !== undefined && { restore: restoring.version }),
+    });
   } finally {
     session.close();
   }
@@ -723,7 +742,9 @@ export const invoke = async (operation: string, inputJson: string): Promise<stri
       );
       const manifest = buildToolManifest(snapshot, overrides);
 
-      return JSON.stringify({ manifest, contract: buildAgentContract(manifest, COMMANDS, { ...contractWhere(input), services }) });
+      return JSON.stringify({ manifest, contract: buildAgentContract(manifest, COMMANDS, {
+        ...contractWhere(input), services, ...(input.restores === true && { restores: true }),
+      }) });
     }
     case 'extractTexts': {
       const { document, options } = parseTextsRequest(inputJson);

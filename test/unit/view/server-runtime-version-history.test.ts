@@ -16,8 +16,14 @@ const run = async (input: Record<string, unknown>): Promise<unknown> => {
   return isObject(response) ? response.result : undefined;
 };
 
-const contractOf = async (services: string[]): Promise<unknown> => {
-  const response: unknown = JSON.parse(await invoke('manifest', JSON.stringify({ services })));
+const execute = async (input: Record<string, unknown>): Promise<Record<string, unknown>> => {
+  const response: unknown = JSON.parse(await invoke('agentExecute', JSON.stringify({ document, actor, ...input })));
+
+  return isObject(response) ? response : {};
+};
+
+const contractOf = async (services: string[], restores = false): Promise<unknown> => {
+  const response: unknown = JSON.parse(await invoke('manifest', JSON.stringify({ services, ...(restores && { restores }) })));
 
   return isObject(response) ? response.contract : undefined;
 };
@@ -74,5 +80,45 @@ describe('server runtime version history', () => {
 
     expect(listed).toMatchObject({ ok: false, error: { code: 'TOOL_ACTION_FAILED', retryable } });
     expect(read).toMatchObject({ ok: false, error: { code: 'TOOL_ACTION_FAILED', retryable } });
+  });
+
+  it('names history.restore available only when the host says it restores', async () => {
+    const commandOf = (contract: unknown): unknown => isObject(contract) && Array.isArray(contract.commands)
+      ? contract.commands.find(entry => isObject(entry) && entry.name === 'history.restore') : undefined;
+
+    expect(commandOf(await contractOf(['versionHistory']))).toMatchObject({ available: false, unavailableReason: 'host' });
+    expect(commandOf(await contractOf(['versionHistory'], true))).toMatchObject({ available: true });
+  });
+
+  it('checks a restore and hands the host the version to restore', async () => {
+    const versionHistory = { versions, documents: { 'L:1': { blocks: [{ id: 'p', type: 'paragraph', data: { text: 'Then' } }] } } };
+    const output = await execute({
+      services: ['versionHistory'], restores: true, versionHistory,
+      batch: { commands: [{ name: 'history.restore', args: { version: 'L:1' } }] },
+    });
+
+    expect(output.restore).toBe('L:1');
+    expect(output.result).toMatchObject({ ok: true, results: [{ version: 'L:1', previous: 'L:2' }], changed: { updated: ['p'] } });
+    expect(output.edits).toEqual([]);
+  });
+
+  it('says VERSION_NOT_FOUND and hands the host nothing for a version that is not there', async () => {
+    const output = await execute({
+      services: ['versionHistory'], restores: true, versionHistory: { versions, documents: { 'L:9': null } },
+      batch: { commands: [{ name: 'history.restore', args: { version: 'L:9' } }] },
+    });
+
+    expect(output.restore).toBeUndefined();
+    expect(output.result).toMatchObject({ ok: false, error: { code: 'VERSION_NOT_FOUND' } });
+  });
+
+  it('says reason host when the host does not restore', async () => {
+    const output = await execute({
+      services: ['versionHistory'], versionHistory: { versions, documents: { 'L:1': document } },
+      batch: { commands: [{ name: 'history.restore', args: { version: 'L:1' } }] },
+    });
+
+    expect(output.restore).toBeUndefined();
+    expect(output.result).toMatchObject({ ok: false, error: { code: 'COMMAND_UNAVAILABLE', details: { reason: 'host' } } });
   });
 });

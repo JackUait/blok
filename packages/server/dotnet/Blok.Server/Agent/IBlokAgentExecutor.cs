@@ -27,7 +27,7 @@ public interface IBlokAgentExecutor
 
   /// <summary>
   /// Returns the command contract for <see cref="ExecuteInRoomAsync"/>. Blok's
-  /// executor adds the version history reads when the journal keeps history.
+  /// executor adds the version history reads and restore when the journal keeps history.
   /// Defaults to <see cref="GetContractAsync"/>, so a host's own executor still builds.
   /// </summary>
   /// <param name="options">The host's agent options.</param>

@@ -603,13 +603,15 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
       batch is JsonObject source && source["commands"] is JsonArray { Count: > 0 } commands
       && commands[0] is JsonObject first
       && first["name"] is JsonValue name && name.TryGetValue<string>(out var value)
-      && value is "history.versions" or "history.read" or "history.changes"
+      && value is "history.versions" or "history.read" or "history.changes" or "history.restore"
           ? (value, first["args"] as JsonObject ?? [])
           : null;
 
   /// <summary>
-  /// A version history read: the journal's answer is loaded into the Jint
-  /// input, which shapes it as every runtime does. Outside the edit lane: it writes nothing.
+  /// A version history call: the journal's answer is loaded into the Jint
+  /// input, which shapes it as every runtime does. A read runs outside the edit
+  /// lane and writes nothing. A restore Jint accepted then goes to the room as
+  /// the history route's restore does.
   /// </summary>
   private async ValueTask<BlokAgentExecution> RunVersionReadAsync(
       string docId, JsonObject input, string name, JsonObject args, CollabEditPrecondition? expect,
@@ -645,13 +647,85 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
     var result = output["result"] as JsonObject
         ?? throw new InvalidOperationException("The Blok runtime returned no agent result.");
 
+    if (output["restore"] is JsonValue restore && restore.TryGetValue<string>(out var version))
+    {
+      return await RestoreAsync(docId, version, result, input, expect, cancellationToken);
+    }
+
     return WithHead(new BlokAgentExecution(result.ToJsonString(), null, current), current);
+  }
+
+  /// <summary>
+  /// The restore Jint checked, as one journalled edit by the agent: the same
+  /// RestoreAsync the history route calls, so it stamps the blocks as a
+  /// person's restore does, with the version's own stamps.
+  /// </summary>
+  private async ValueTask<BlokAgentExecution> RestoreAsync(
+      string docId, string version, JsonObject result, JsonObject input, CollabEditPrecondition? expect,
+      CancellationToken cancellationToken)
+  {
+    var colon = version.LastIndexOf(':');
+    var actor = input["actor"]!["id"]!.GetValue<string>();
+    var restored = await rooms!.RestoreAsync(
+        docId,
+        version[..colon],
+        ulong.Parse(version.AsSpan(colon + 1), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture),
+        Guid.NewGuid().ToString("N"),
+        actor,
+        expect,
+        cancellationToken);
+
+    switch (restored.History)
+    {
+      case CollabHistoryStatus.Ready:
+        break;
+      case CollabHistoryStatus.NotFound:
+        return Failure("VERSION_NOT_FOUND", $"There is no version \"{version}\". history.versions lists them.", false, null);
+      default:
+        return Failure("TOOL_ACTION_FAILED", $"The version history failed: the restore could not run ({restored.History}).",
+            HttpStatus(restored.History) is 429 or (>= 500 and not 501), null);
+    }
+
+    var edit = restored.Edit ?? throw new InvalidOperationException("A ready restore carries its edit.");
+    var head = edit.Receipt is { } receipt ? $"{receipt.Tag.Lineage}:{receipt.ServerSequence}" : string.Empty;
+
+    switch (edit.Status)
+    {
+      case CollabEditStatus.Applied:
+        return WithHead(new BlokAgentExecution(result.ToJsonString(), null, head), head);
+      case CollabEditStatus.PreconditionFailed:
+        return Failure("STALE", "The room changed since you read it. Read it again, then retry.", true,
+            new JsonObject { ["revision"] = head }, head);
+      default:
+        var retryable = edit.Status is CollabEditStatus.Overloaded or CollabEditStatus.Unavailable
+            or CollabEditStatus.Draining or CollabEditStatus.SeedFailed;
+
+        return Failure("APPLY_FAILED", $"The room refused the restore ({edit.Status}). Nothing was written.", retryable,
+            new JsonObject { ["status"] = edit.Status.ToString() }, head);
+    }
   }
 
   /// <summary>What one read needs: the version list, or the documents it names (null when there is no such version).</summary>
   private async ValueTask<JsonObject> LoadVersionsAsync(
       string docId, string name, JsonObject args, CancellationToken cancellationToken)
   {
+    // A restore names the version that was current before, so it needs the list too.
+    if (name == "history.restore")
+    {
+      var listed = await LoadVersionsAsync(docId, "history.versions", [], cancellationToken);
+
+      if (listed.ContainsKey("failed"))
+      {
+        return listed;
+      }
+
+      var named = await LoadVersionsAsync(docId, "history.read", args, cancellationToken);
+
+      named["versions"] = listed["versions"]!.DeepClone();
+
+      return named;
+    }
+
     if (name == "history.versions")
     {
       var minutes = args["group"] is JsonValue group && group.TryGetValue<int>(out var value) && value is 1 or 15 or 60
@@ -913,6 +987,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
     if (rooms is { HasHistory: true })
     {
       ((JsonArray)input["services"]!).Add("versionHistory");
+      input["restores"] = true;
     }
 
     return input;

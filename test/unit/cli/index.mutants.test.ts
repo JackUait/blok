@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
@@ -18,8 +19,6 @@ const mocks = vi.hoisted(() => ({
       window: {
         DOMParser: class MockDOMParser {},
         Node: { ELEMENT_NODE: 1, TEXT_NODE: 3 },
-        // Handed back so the CLI does not blank out jsdom's own globals
-        // for the rest of this file.
         document: globalThis.document,
         HTMLElement: globalThis.HTMLElement,
         HTMLInputElement: globalThis.HTMLInputElement,

@@ -270,7 +270,8 @@ describe('InlineToolbar (mutation coverage)', () => {
 
   describe('initialization', () => {
     it('builds the toolbar DOM on its own scheduled pass, without any show call', () => {
-      vi.advanceTimersByTime(50);
+      // Fake requestIdleCallback fires at its 2000ms timeout while other timers are pending; its setTimeout(0) runs after.
+      vi.advanceTimersByTime(2001);
 
       expect(toolbar.nodes.wrapper).toBeInstanceOf(HTMLElement);
     });

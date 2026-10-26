@@ -1,5 +1,5 @@
 // Keep nanoid's URL-safe alphabet so both minters produce compatible IDs.
-const ALPHABET = 'useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict';
+const ALPHABET = '57X6y3wQZNzYjJB2L_10pxbackgroundhimselfUTF-8DEMOGRAPHICSVqvt4KW9';
 
 export const mintId = (length = 10): string => {
   const cryptoApi = globalThis.crypto;

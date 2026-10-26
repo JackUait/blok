@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { mintId } from '../../../src/shared/mint-id';
 
-const ALPHABET = 'useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict';
+const ALPHABET = '57X6y3wQZNzYjJB2L_10pxbackgroundhimselfUTF-8DEMOGRAPHICSVqvt4KW9';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -20,8 +20,8 @@ describe('mintId', () => {
     vi.stubGlobal('crypto', undefined);
     vi.spyOn(Math, 'random').mockReturnValue(0);
 
-    expect(mintId()).toBe('uuuuuuuuuu');
-    expect(mintId(12)).toBe('uuuuuuuuuuuu');
+    expect(mintId()).toBe('5555555555');
+    expect(mintId(12)).toBe('555555555555');
     expect(mintId(0)).toBe('');
   });
 
@@ -53,7 +53,7 @@ describe('mintId', () => {
       },
     });
 
-    expect(mintId(8)).toBe('ustututt');
+    expect(mintId(8)).toBe('57959599');
   });
 
   it('uses Math.random without crypto or a Uint8Array global', () => {
@@ -64,17 +64,17 @@ describe('mintId', () => {
     vi.spyOn(Math, 'random').mockImplementation(() => (index++ % 64) / 64);
 
     expect(mintId(64)).toBe(ALPHABET);
-    expect(mintId()).toBe('useandom-2');
+    expect(mintId()).toBe('57X6y3wQZN');
   });
 
   it('falls back when crypto has no callable getRandomValues', () => {
     vi.spyOn(Math, 'random').mockReturnValue(1 - Number.EPSILON);
     vi.stubGlobal('crypto', {});
 
-    expect(mintId(3)).toBe('ttt');
+    expect(mintId(3)).toBe('999');
 
     vi.stubGlobal('crypto', { getRandomValues: undefined });
 
-    expect(mintId(3)).toBe('ttt');
+    expect(mintId(3)).toBe('999');
   });
 });

@@ -249,13 +249,15 @@ export class DatabasePropertyMenu {
   }
 
   /**
-   * Writes a settings patch. A new Show as draws the menu again through `redraw`,
-   * so Color and Divide by come or go and later rows write the new choice.
+   * Writes a settings patch. A number pick (Show as, format, decimals, color) draws
+   * the menu again through `redraw`: its list closes, Edit property stays open with
+   * the new value (notion-spec-2 §8), and Color and Divide by come or go with Show as.
+   * A Divide by write does not redraw: it lands on blur, often from a click elsewhere in the menu.
    */
   private showAsUpdate(property: PropertyDefinition, name: HTMLElement, redraw: (number: NumberDisplay, typed: string | undefined) => void): (patch: Partial<PropertySettingsV2>) => void {
     return (patch) => {
       this.options.onUpdate(property.id, patch);
-      if (patch.number === undefined || patch.number.showAs === property.number?.showAs) return;
+      if (patch.number === undefined || patch.number.divideBy !== property.number?.divideBy) return;
       const input = name.querySelector('input');
 
       // The old field goes away without a blur: save its name first, as leaving it would.
@@ -998,7 +1000,6 @@ export class DatabasePropertyMenu {
             name: `format-${format}`,
             title: this.t(`tools.database.numberFormat.${format}`),
             isActive: (number.format ?? 'number') === format,
-            closeOnActivate: true,
             onActivate: () => set({ ...number, format }),
           })),
         },
@@ -1013,14 +1014,12 @@ export class DatabasePropertyMenu {
               name: 'decimals-default',
               title: this.t('tools.database.decimalPlacesDefault'),
               isActive: number.decimals === undefined,
-              closeOnActivate: true,
               onActivate: () => set(without(number, 'decimals')),
             },
             ...Array.from({ length: MAX_DECIMALS + 1 }, (_, decimals) => ({
               name: `decimals-${decimals}`,
               title: String(decimals),
               isActive: number.decimals === decimals,
-              closeOnActivate: true,
               onActivate: () => set({ ...number, decimals }),
             })),
           ],
@@ -1037,20 +1036,21 @@ export class DatabasePropertyMenu {
           {
             name: 'color',
             title: this.t('tools.database.numberColor'),
+            valueLabel: this.t(optionColorLabelKey(number.color ?? 'default')),
             children: {
               items: OPTION_COLORS.map((color) => ({
                 name: `color-${color}`,
                 title: this.t(optionColorLabelKey(color)),
                 isActive: (number.color ?? 'default') === color,
-                closeOnActivate: true,
                 onActivate: () => set({ ...number, color }),
               })),
             },
           },
           this.inputItem('divideBy', number.divideBy === undefined ? '' : String(number.divideBy), 'tools.database.divideBy', (text) => {
             const divideBy = Number(text);
+            const next: NumberDisplay = text === '' || !Number.isFinite(divideBy) || divideBy <= 0 ? without(number, 'divideBy') : { ...number, divideBy };
 
-            set(text === '' || !Number.isFinite(divideBy) || divideBy <= 0 ? without(number, 'divideBy') : { ...number, divideBy });
+            if (next.divideBy !== number.divideBy) set(next);
           }),
         ]
         : []),

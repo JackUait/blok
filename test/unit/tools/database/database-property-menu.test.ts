@@ -9,6 +9,7 @@ interface CapturedItem {
   title?: string;
   icon?: string;
   valueLabel?: string;
+  closeOnActivate?: boolean;
   trailingIcon?: string;
   type?: string;
   isActive?: boolean | (() => boolean);
@@ -704,6 +705,57 @@ describe('DatabasePropertyMenu', () => {
 
       expect(captured.popovers[0]?.transitionAtShow).toBe('');
       expect(captured.popovers[1]?.transitionAtShow).toBe('none');
+      menu.destroy();
+    });
+
+    const pick = (row: string, choice: string): void => {
+      const items = byName(byName(lastItems(), 'editProperty').children?.items ?? [], row).children?.items ?? [];
+
+      byName(items, choice).onActivate?.(byName(items, choice));
+    };
+
+    // notion-spec-2 §8: picking a format closes only the format list; Edit property stays open with the new value.
+    it('picking a format in the header submenu keeps Edit property open and shows the new format', () => {
+      const { cb, menu, onClose } = headerMenu(prop('number'));
+      const format = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'numberFormat');
+
+      expect(format.children?.items.every((i) => i.closeOnActivate !== true)).toBe(true);
+      pick('numberFormat', 'format-percent');
+
+      expect(cb.onUpdate).toHaveBeenCalledWith('p', { number: { format: 'percent' } });
+      expect(onClose).not.toHaveBeenCalled();
+      expect(menu.isOpen).toBe(true);
+      expect(captured.popovers[captured.popovers.length - 1]?.activated).toEqual(['editProperty']);
+      expect(byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'numberFormat').valueLabel).toBe('tools.database.numberFormat.percent');
+      menu.destroy();
+    });
+
+    it('picking decimal places or a color keeps Edit property open and shows the new value', () => {
+      const { menu, onClose } = headerMenu(prop('number', { number: { showAs: 'bar' } }));
+
+      pick('decimals', 'decimals-2');
+      expect(byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'decimals').valueLabel).toBe('2');
+      pick('color', 'color-red');
+      expect(byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'color').valueLabel).toBe('tools.colorPicker.color.red');
+      expect(onClose).not.toHaveBeenCalled();
+      expect(menu.isOpen).toBe(true);
+      menu.destroy();
+    });
+
+    it('picking a format on the row page panel keeps the panel open with the new format', () => {
+      const cb = callbacks();
+      const onClose = vi.fn();
+      const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...cb, onClose });
+
+      menu.openRowPage(prop('number'), document.createElement('div'), { edit: true });
+      const rows = byName(lastItems(), 'numberFormat').children?.items ?? [];
+
+      byName(rows, 'format-euro').onActivate?.(byName(rows, 'format-euro'));
+
+      expect(cb.onUpdate).toHaveBeenCalledWith('p', { number: { format: 'euro' } });
+      expect(onClose).not.toHaveBeenCalled();
+      expect(menu.isOpen).toBe(true);
+      expect(byName(lastItems(), 'numberFormat').valueLabel).toBe('tools.database.numberFormat.euro');
       menu.destroy();
     });
 

@@ -106,12 +106,7 @@ const detachCaret = (scratch: ScratchEditor, holder: HTMLElement): void => {
     }
     const selection = window.getSelection();
     const kept = selection === null ? [] : Array.from({ length: selection.rangeCount }, (_, index) => selection.getRangeAt(index));
-    const range = document.createRange();
-
-    range.selectNodeContents(input);
-    range.collapse(false);
-    selection?.removeAllRanges();
-    selection?.addRange(range);
+    selection?.collapse(input, input.childNodes.length);
     try {
       return write();
     } finally {

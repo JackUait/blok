@@ -991,7 +991,8 @@ export class DatabasePropertyMenu {
     const latest = { number };
     const showAs = number.showAs ?? 'number';
     const gauge = showAs === 'bar' || showAs === 'ring';
-    const pick = (value: NumberShowAs): void => set(value === 'number' ? without(latest.number, 'showAs') : { ...latest.number, showAs: value });
+    // A new gauge starts Green (notion-spec-2 §7); a gauge with no saved colour keeps Default.
+    const pick = (value: NumberShowAs): void => set(value === 'number' ? without(latest.number, 'showAs') : { ...latest.number, showAs: value, ...(gauge || latest.number.color !== undefined ? {} : { color: 'green' }) });
 
     const formatItems: PopoverItemParams[] = [
       {

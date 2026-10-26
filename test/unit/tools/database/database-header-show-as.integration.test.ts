@@ -112,6 +112,6 @@ describe('the table header Edit property submenu: Show as', () => {
     const saved = await (editor as unknown as { save: () => Promise<{ blocks: OutputBlockData[] }> }).save();
     const schema = (saved.blocks.find((block) => block.id === 'db')?.data as { schema: Array<{ id: string; number?: unknown }> }).schema;
 
-    expect(schema.find((p) => p.id === 'n')?.number).toEqual({ showAs: 'ring' });
+    expect(schema.find((p) => p.id === 'n')?.number).toEqual({ showAs: 'ring', color: 'green' });
   });
 });

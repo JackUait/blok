@@ -157,7 +157,7 @@ describe('property menu — computed types', () => {
 
     byName(edit, 'showAs').element?.querySelector<HTMLElement>('[data-blok-database-show-as-tile="ring"]')?.click();
 
-    expect(cb.onUpdate).toHaveBeenCalledWith('p', { number: { showAs: 'ring' } });
+    expect(cb.onUpdate).toHaveBeenCalledWith('p', { number: { showAs: 'ring', color: 'green' } });
     expect((byName(lastItems(), 'editProperty').children?.items ?? []).map((item) => item.name)).toEqual(expect.arrayContaining(['color', 'divideBy']));
   });
 
@@ -200,7 +200,7 @@ describe('property menu — computed types', () => {
 
     byName(edit, 'showAs').element?.querySelector<HTMLElement>('[data-blok-database-show-as-tile="bar"]')?.click();
 
-    expect(cb.onUpdate).toHaveBeenCalledWith('p', { number: { showAs: 'bar' } });
+    expect(cb.onUpdate).toHaveBeenCalledWith('p', { number: { showAs: 'bar', color: 'green' } });
     expect((byName(lastItems(), 'editProperty').children?.items ?? []).map((item) => item.name)).toEqual(expect.arrayContaining(['color', 'divideBy']));
   });
 

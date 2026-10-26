@@ -69,6 +69,13 @@ export const createPageMapBackend = (
 
 const sessionCount = { value: 0 };
 
+/**
+ * How many undo steps an agent session keeps, and how many characters of document JSON
+ * its snapshots may hold. The oldest steps go first; the newest is always kept.
+ * Packages/server/dotnet BlokAgentSession.cs trims to the same numbers.
+ */
+export const AGENT_HISTORY_LIMITS = { steps: 100, bytes: 4 * 1024 * 1024 } as const;
+
 type HistoryMarksList = Array<'own' | 'other'>;
 
 const lostHistory = (): Error => failure('CONFLICT', "Someone else saved this document after this session's last step, so its steps can no longer be undone or redone. Read the document again.");
@@ -196,6 +203,36 @@ export const createDocumentAgentSession = (input: {
     seed(input.history.future, future, marks.future);
   }
 
+  const sizes = new WeakMap<DocSnapshot, number>();
+  const sizeOf = (snapshot: DocSnapshot): number => {
+    const known = sizes.get(snapshot);
+
+    if (known !== undefined) {
+      return known;
+    }
+    const size = JSON.stringify(snapshot.toOutput()).length;
+
+    sizes.set(snapshot, size);
+
+    return size;
+  };
+  // Runs after the executor marked the batch, so marks and snapshots move together.
+  const trimHistory = (): void => {
+    const marks = marksOf(applier);
+    const steps = (): number => marks.past.length + marks.future.length;
+    const bytes = (): number => [...past, ...future].reduce((sum, snapshot) => sum + sizeOf(snapshot), 0);
+
+    while (steps() > AGENT_HISTORY_LIMITS.steps || (steps() > 1 && bytes() > AGENT_HISTORY_LIMITS.bytes)) {
+      const [kinds, snapshots] = marks.past.length > 0 ? [marks.past, past] : [marks.future, future];
+
+      if (kinds.shift() === 'own') {
+        snapshots.shift();
+      }
+    }
+  };
+
+  trimHistory();
+
   const carried = (kinds: HistoryMarksList, snapshots: readonly DocSnapshot[]): CarriedHistory['past'] => {
     const next = { index: 0 };
 
@@ -227,12 +264,15 @@ export const createDocumentAgentSession = (input: {
       };
     },
     describe: query => describeContract(input.contract, query),
-    execute: (batch: unknown, options: { signal?: AbortSignal } = {}) => {
+    execute: async (batch: unknown, options: { signal?: AbortSignal } = {}) => {
       applied.edits = [];
-
-      return runBatch({
+      const result = await runBatch({
         batch, ctx, applier, actor: input.actor, signal: options.signal, log, batchNo: ++state.batchNo,
       });
+
+      trimHistory();
+
+      return result;
     },
     planHost: async (batch: unknown, options: { signal?: AbortSignal } = {}) => {
       const planned = await planHostBatch({

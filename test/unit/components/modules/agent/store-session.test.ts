@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createStoreAgentSession } from '../../../../../src/components/modules/agent/store-session';
+import { AGENT_HISTORY_LIMITS } from '../../../../../src/shared/agent/document-session';
 import { DocumentStore } from '../../../../../src/components/modules/yjs/document-store';
 import { YBlockSerializer } from '../../../../../src/components/modules/yjs/serializer';
 import { createHeadlessAgentSetup } from '../../../../../src/view/agent-runtime';
@@ -177,6 +178,21 @@ describe('createStoreAgentSession', () => {
       expect(await session.execute({ commands: [{ name: 'history.undo', args: {} }] }))
         .toMatchObject({ ok: false, error: { code: 'NOTHING_TO_UNDO' } });
       expect(store.toJSON()).toEqual(before);
+    });
+
+    it('keeps the newest steps up to the step limit, so undo stops at the oldest kept one', async () => {
+      const { store, serializer, session } = open();
+      const extra = 5;
+
+      for (let index = 0; index < AGENT_HISTORY_LIMITS.steps + extra; index++) {
+        await session.execute({ commands: [{ name: 'text.replace', args: { id: 'p', with: `T${index}` } }] });
+      }
+      for (let index = 0; index < AGENT_HISTORY_LIMITS.steps; index++) {
+        expect(await session.execute({ commands: [{ name: 'history.undo', args: {} }] })).toMatchObject({ ok: true });
+      }
+      expect(textOf(store, serializer, 'p')).toEqual([{ text: `T${extra - 1}` }]);
+      expect(await session.execute({ commands: [{ name: 'history.undo', args: {} }] }))
+        .toMatchObject({ ok: false, error: { code: 'NOTHING_TO_UNDO' } });
     });
 
     it('drops the redo step once the agent writes again', async () => {

@@ -1,5 +1,6 @@
 import * as Y from 'yjs';
 
+import { AGENT_HISTORY_LIMITS } from '../../../shared/agent/document-session';
 import { failure } from '../../../shared/agent/errors';
 import { DocSnapshot } from '../../../shared/agent/snapshot';
 import { readPageFields, writePageField } from '../yjs/page-fields';
@@ -129,6 +130,15 @@ export class StoreApplier implements AgentApplier {
     step.shape = this.shape(step);
     this.done.push(step);
     this.undone.length = 0;
+    // A new step cleared the redo side, so only the oldest done steps can be over the limit.
+    while (this.done.length > AGENT_HISTORY_LIMITS.steps) {
+      const oldest = this.done.shift();
+      const at = oldest?.item === null || oldest === undefined ? -1 : this.undoManager.undoStack.indexOf(oldest.item);
+
+      if (at >= 0) {
+        this.undoManager.undoStack.splice(at, 1);
+      }
+    }
 
     return Promise.resolve();
   }

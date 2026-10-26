@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { COMMANDS } from '../../../../src/shared/agent/commands';
 import { plannerContextFrom } from '../../../../src/shared/agent/context';
 import { describeContract } from '../../../../src/shared/agent/describe';
-import { createDocumentAgentSession, createPageMapBackend } from '../../../../src/shared/agent/document-session';
+import { AGENT_HISTORY_LIMITS, createDocumentAgentSession, createPageMapBackend } from '../../../../src/shared/agent/document-session';
 import { AgentFailure, failure } from '../../../../src/shared/agent/errors';
 import { runBatch } from '../../../../src/shared/agent/executor';
 import { planBatch } from '../../../../src/shared/agent/planner';
@@ -142,7 +142,7 @@ const runtimes = buildToolRuntimes([
   { name: 'header', ownSanitize: {}, inlineSanitize: [] },
   { name: 'page', ownSanitize: {}, inlineSanitize: [], actions: pageActions },
 ]);
-const contractFor = (runtime: 'node' | 'jint' = 'node', services: HostService[] = []) =>
+const contractFor = (runtime: 'node' | 'jint' | 'csharp-live' = 'node', services: HostService[] = []) =>
   buildAgentContract(manifest, COMMANDS, { runtime, services }, guidance);
 const open = (document: OutputData = initial(), options: SessionOptions = {}): StoredSession =>
   createDocumentAgentSession({ document, tools: runtimes, contract: contractFor(), actor, ports: stubPorts(), ...options });
@@ -426,6 +426,43 @@ describe('stored document session', () => {
     expect(written.title).toBe('Written');
   });
 
+  it('keeps the newest steps up to the step limit, so undo stops at the oldest kept one', async () => {
+    const session = track(open());
+    const extra = 5;
+
+    for (let index = 0; index < AGENT_HISTORY_LIMITS.steps + extra; index++) {
+      expect(await session.execute({ commands: [{ name: 'doc.setTitle', args: { title: `T${index}` } }] })).toMatchObject({ ok: true });
+    }
+    expect(session.history().past).toHaveLength(AGENT_HISTORY_LIMITS.steps);
+    for (let index = 0; index < AGENT_HISTORY_LIMITS.steps; index++) {
+      expect(await session.execute({ commands: [{ name: 'history.undo', args: {} }] })).toMatchObject({ ok: true });
+    }
+    expect(session.output().title).toBe(`T${extra - 1}`);
+    expect(await session.execute({ commands: [{ name: 'history.undo', args: {} }] }))
+      .toMatchObject({ ok: false, error: { code: 'NOTHING_TO_UNDO' } });
+  });
+
+  it('keeps the carried snapshots under the byte limit, but always the newest step', async () => {
+    const big = 'x'.repeat(Math.ceil(AGENT_HISTORY_LIMITS.bytes / 3));
+    const session = track(open({ blocks: [{ id: 'p', type: 'paragraph', data: { text: [{ text: big }] } }] }));
+
+    for (let index = 0; index < 6; index++) {
+      expect(await session.execute({ commands: [{ name: 'doc.setTitle', args: { title: `T${index}` } }] })).toMatchObject({ ok: true });
+    }
+    const carried = session.history();
+
+    expect(JSON.stringify(carried).length).toBeLessThanOrEqual(AGENT_HISTORY_LIMITS.bytes);
+    expect(carried.past.length).toBeGreaterThan(0);
+
+    const huge = track(open({ blocks: [{ id: 'p', type: 'paragraph', data: { text: [{ text: big.repeat(4) }] } }] }));
+
+    await huge.execute({ commands: [{ name: 'doc.setTitle', args: { title: 'One' } }] });
+    await huge.execute({ commands: [{ name: 'doc.setTitle', args: { title: 'Two' } }] });
+    expect(huge.history().past).toHaveLength(1);
+    expect(await huge.execute({ commands: [{ name: 'history.undo', args: {} }] })).toMatchObject({ ok: true });
+    expect(huge.output().title).toBe('One');
+  });
+
   it('restores one pre-batch snapshot for mixed block and page writes, then redoes exactly', async () => {
     const session = track(open());
     const before = session.output();
@@ -550,8 +587,8 @@ describe('stored document session', () => {
     expect(session.output()).toEqual(initial());
   });
 
-  it('uses the Jint contract to make history unavailable while retaining stored content hashes', async () => {
-    const session = track(open(initial(), { runtime: 'jint', contract: contractFor('jint') }));
+  it('uses the C# room contract to make history unavailable while retaining stored content hashes', async () => {
+    const session = track(open(initial(), { runtime: 'jint', contract: contractFor('csharp-live') }));
 
     expect(await session.execute({ commands: [{ name: 'doc.setTitle', args: { title: 'Jint' } }] })).toMatchObject({ ok: true });
     expect(await session.execute({ commands: [{ name: 'history.undo', args: {} }] }))

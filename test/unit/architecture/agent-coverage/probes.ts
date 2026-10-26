@@ -64,6 +64,4 @@ export const KNOWN_GAPS: Record<string, string> = {
   'menu:database/database-selection-duplicate': 'F6: planDuplicate refuses a row ("database" places its own children).',
   'menu:database/database-row-move-to-*': 'F7: block.move into another database is PLACEMENT_REFUSED.',
   'menu:database/template-*': 'F6: planDuplicate refuses a template row too.',
-  'color:toggle/textColor': 'B1: the toggle schema has no textColor.',
-  'color:toggle/backgroundColor': 'B1: the toggle schema has no backgroundColor.',
 };

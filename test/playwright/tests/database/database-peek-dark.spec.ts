@@ -225,7 +225,7 @@ test('side peek handle: no hover look, and a "Close Click / Resize Drag" hint to
 
     // Sub-pixel: the 43.6px bubble is placed with its whole-pixel clientHeight.
     return next === null ? NaN : Math.abs(next.y + next.height / 2 - (box.y + 420));
-  }).toBeLessThan(1);
+  }).toBeLessThan(0.5);
 
   await page.mouse.move(box.x - 200, box.y + 420);
   await expect(tooltip).toBeHidden();

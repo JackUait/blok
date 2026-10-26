@@ -642,6 +642,7 @@
   "tools.database.viewTypeBoardDescription": "ഇനങ്ങൾ കോളങ്ങളിൽ കാണിക്കുക",
   "tools.database.viewTypeListDescription": "ഇനങ്ങൾ ഒരു ലളിതമായ ലിസ്റ്റിൽ കാണിക്കുക",
   "tools.database.propertyTypeHeading": "പ്രോപ്പർട്ടി തരം",
+  "tools.database.propertyTypeListHeading": "തരം",
   "tools.database.propertyTypeText": "ടെക്സ്റ്റ്",
   "tools.database.propertyTypeNumber": "നമ്പർ",
   "tools.database.propertyTypeSelect": "തിരഞ്ഞെടുക്കൽ",

@@ -633,6 +633,7 @@
   "tools.database.viewTypeBoardDescription": "شيون ڪالمن ۾ ڏيکاريو",
   "tools.database.viewTypeListDescription": "شيون هڪ سادي فهرست ۾ ڏيکاريو",
   "tools.database.propertyTypeHeading": "پراپرٽي جو قسم",
+  "tools.database.propertyTypeListHeading": "قسم",
   "tools.database.propertyTypeText": "متن",
   "tools.database.propertyTypeNumber": "نمبر",
   "tools.database.propertyTypeSelect": "چونڊ",

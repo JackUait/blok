@@ -749,6 +749,7 @@
   "tools.database.viewTypeBoardDescription": "以多欄顯示項目",
   "tools.database.viewTypeListDescription": "在簡單清單中顯示項目",
   "tools.database.propertyTypeHeading": "屬性類型",
+  "tools.database.propertyTypeListHeading": "類型",
   "tools.database.propertyTypeText": "文字",
   "tools.database.propertyTypeNumber": "數字",
   "tools.database.propertyTypeSelect": "單一選取",

@@ -633,6 +633,7 @@
   "tools.database.viewTypeBoardDescription": "បង្ហាញធាតុជាជួរឈរ",
   "tools.database.viewTypeListDescription": "បង្ហាញបញ្ជីសាមញ្ញ",
   "tools.database.propertyTypeHeading": "ប្រភេទលក្ខណៈ",
+  "tools.database.propertyTypeListHeading": "ប្រភេទ",
   "tools.database.propertyTypeText": "អត្ថបទ",
   "tools.database.propertyTypeNumber": "លេខ",
   "tools.database.propertyTypeSelect": "ជម្រើស",

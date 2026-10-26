@@ -8155,13 +8155,47 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   transition: color 100ms ease;
 }
 
-[data-blok-database-property-type-option]:hover [data-blok-database-property-type-option-icon] {
-  color: var(--blok-active-icon);
-}
-
 [data-blok-database-property-type-option-icon] svg {
   width: 20px;
   height: 20px;
+}
+
+[data-blok-database-property-type-list-heading] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+}
+
+[data-blok-database-property-type-search] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control-sm);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+[data-blok-database-property-type-search]:hover {
+  background-color: var(--blok-database-popover-hover);
+}
+
+[data-blok-database-property-type-search] svg {
+  width: 14px;
+  height: 14px;
+}
+
+[data-blok-database-property-type-option][hidden] {
+  display: none;
+}
+
+[data-blok-database-property-type-search-input] {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 [data-blok-database-property-autofill-option] {

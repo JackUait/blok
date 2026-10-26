@@ -631,6 +631,7 @@
   "tools.database.viewTypeBoardDescription": "แสดงรายการเป็นคอลัมน์",
   "tools.database.viewTypeListDescription": "แสดงข้อมูลเป็นรายการแบบเรียบง่าย",
   "tools.database.propertyTypeHeading": "ประเภทคุณสมบัติ",
+  "tools.database.propertyTypeListHeading": "ประเภท",
   "tools.database.propertyTypeText": "ข้อความ",
   "tools.database.propertyTypeNumber": "ตัวเลข",
   "tools.database.propertyTypeSelect": "เลือกหนึ่ง",

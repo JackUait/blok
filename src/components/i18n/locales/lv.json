@@ -642,6 +642,7 @@
   "tools.database.viewTypeBoardDescription": "Rādīt vienumus kolonnās",
   "tools.database.viewTypeListDescription": "Rādīt vienumus vienkāršā sarakstā",
   "tools.database.propertyTypeHeading": "Rekvizīta tips",
+  "tools.database.propertyTypeListHeading": "Veids",
   "tools.database.propertyTypeText": "Teksts",
   "tools.database.propertyTypeNumber": "Skaitlis",
   "tools.database.propertyTypeSelect": "Izvēle",

@@ -644,6 +644,7 @@
   "tools.database.viewTypeBoardDescription": "ಐಟಂಗಳನ್ನು ಕಾಲಮ್‌ಗಳಲ್ಲಿ ತೋರಿಸಿ",
   "tools.database.viewTypeListDescription": "ಐಟಂಗಳನ್ನು ಸರಳ ಪಟ್ಟಿಯಲ್ಲಿ ತೋರಿಸಿ",
   "tools.database.propertyTypeHeading": "ಗುಣಲಕ್ಷಣ ಪ್ರಕಾರ",
+  "tools.database.propertyTypeListHeading": "ಪ್ರಕಾರ",
   "tools.database.propertyTypeText": "ಪಠ್ಯ",
   "tools.database.propertyTypeNumber": "ಸಂಖ್ಯೆ",
   "tools.database.propertyTypeSelect": "ಆಯ್ಕೆ",

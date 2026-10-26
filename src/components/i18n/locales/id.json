@@ -633,6 +633,7 @@
   "tools.database.viewTypeBoardDescription": "Tampilkan item dalam kolom",
   "tools.database.viewTypeListDescription": "Tampilkan item dalam daftar sederhana",
   "tools.database.propertyTypeHeading": "Tipe properti",
+  "tools.database.propertyTypeListHeading": "Jenis",
   "tools.database.propertyTypeText": "Teks",
   "tools.database.propertyTypeNumber": "Angka",
   "tools.database.propertyTypeSelect": "Pilih",

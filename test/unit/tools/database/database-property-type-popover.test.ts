@@ -221,7 +221,50 @@ describe('DatabasePropertyTypePopover', () => {
       expect(field?.placeholder).toBe('i18n:tools.database.propertyName');
       // The shared field look draws the box and its focus ring.
       expect(field?.getAttribute('data-blok-field')).toBe('text');
-      expect(root?.querySelector('[data-blok-database-property-type-heading]')?.textContent).toBe('i18n:tools.database.propertyTypeHeading');
+      expect(root?.querySelector('[data-blok-database-property-type-heading]')?.textContent?.trim()).toBe('i18n:tools.database.propertyTypeListHeading');
+      flow.destroy();
+    });
+
+    // Notion 2026-10-25: the list is headed "Type" with a magnifier that turns into a filter field.
+    it('heads the list "Type" with a search button that filters the types', () => {
+      const i18n = { t: (key: string) => `i18n:${key}`, has: () => true } as unknown as I18n;
+      const flow = new DatabasePropertyTypePopover({ onSelect: vi.fn(), withNameField: true, i18n });
+
+      flow.open(anchor);
+      const root = document.querySelector('[data-blok-database-property-type-popover]');
+      const heading = root?.querySelector('[data-blok-database-property-type-list-heading]');
+      const search = heading?.querySelector<HTMLButtonElement>('button[data-blok-database-property-type-search]');
+
+      expect(heading?.textContent?.trim()).toBe('i18n:tools.database.propertyTypeListHeading');
+      expect(search?.getAttribute('aria-label')).toBe('i18n:tools.database.csvSearchTypes');
+      search?.click();
+      const field = root?.querySelector<HTMLInputElement>('[data-blok-database-property-type-search-input]');
+
+      expect(field).toHaveFocus();
+      expect(field?.getAttribute('aria-label')).toBe('i18n:tools.database.csvSearchTypes');
+      if (field === null || field === undefined) return;
+      field.value = 'TIME';
+      field.dispatchEvent(new Event('input'));
+      const shown = [...document.querySelectorAll<HTMLElement>('[data-blok-database-property-type-option]')]
+        .filter((option) => !option.hidden)
+        .map((option) => option.getAttribute('data-blok-database-property-type-option'));
+
+      // Labels here are the i18n keys; the match ignores case.
+      expect(shown).toEqual(['createdTime', 'lastEditedTime']);
+      field.value = '';
+      field.dispatchEvent(new Event('input'));
+      expect([...document.querySelectorAll<HTMLElement>('[data-blok-database-property-type-option]')].every((option) => !option.hidden)).toBe(true);
+      flow.destroy();
+    });
+
+    it('draws Summarize with the Text lines glyph', () => {
+      const flow = new DatabasePropertyTypePopover({ onSelect: vi.fn(), withNameField: true, onAutofill: vi.fn() });
+      const lines = document.createElement('div');
+
+      lines.innerHTML = propertyTypeMeta('text').icon;
+      flow.open(anchor);
+
+      expect(document.querySelector('[data-blok-database-property-autofill-option="summary"] [data-blok-database-property-type-option-icon]')?.innerHTML).toBe(lines.innerHTML);
       flow.destroy();
     });
 

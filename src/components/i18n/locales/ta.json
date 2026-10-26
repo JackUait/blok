@@ -631,6 +631,7 @@
   "tools.database.viewTypeBoardDescription": "உருப்படிகளை நெடுவரிசைகளில் காட்டு",
   "tools.database.viewTypeListDescription": "உருப்படிகளை எளிய பட்டியலில் காட்டு",
   "tools.database.propertyTypeHeading": "பண்பு வகை",
+  "tools.database.propertyTypeListHeading": "வகை",
   "tools.database.propertyTypeText": "உரை",
   "tools.database.propertyTypeNumber": "எண்",
   "tools.database.propertyTypeSelect": "தேர்வு",

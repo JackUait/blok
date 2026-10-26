@@ -1324,6 +1324,7 @@ export type BlokMessageKey =
   | 'tools.database.propertyTypeHeading'
   | 'tools.database.propertyTypeLastEditedBy'
   | 'tools.database.propertyTypeLastEditedTime'
+  | 'tools.database.propertyTypeListHeading'
   | 'tools.database.propertyTypeMultiSelect'
   | 'tools.database.propertyTypeNumber'
   | 'tools.database.propertyTypePerson'

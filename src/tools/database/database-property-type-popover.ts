@@ -1,4 +1,4 @@
-import { IconAskAiSummarize, IconGlobe } from '../../components/icons';
+import { IconGlobe, IconSearch } from '../../components/icons';
 import { syncPortalDirection } from '../../components/utils/portal-direction';
 import { overlayMountFor } from '../../components/utils/top-layer';
 import { markEscapeConsumed } from '../../components/utils/consumed-escape';
@@ -94,9 +94,7 @@ export class DatabasePropertyTypePopover {
     body.setAttribute('data-blok-database-property-type-body', '');
     grid.setAttribute('data-blok-database-property-type-grid', '');
 
-    const heading = document.createElement('div');
-    heading.setAttribute('data-blok-database-property-type-heading', '');
-    heading.textContent = this.i18n?.t('tools.database.propertyTypeHeading') ?? 'tools.database.propertyTypeHeading';
+    const heading = this.typeListHeading(grid);
     const onAutofill = this.onAutofill;
 
     if (onAutofill !== undefined) {
@@ -163,6 +161,43 @@ export class DatabasePropertyTypePopover {
     nameField?.focus();
   }
 
+  /** Notion's "Type 🔍": the magnifier turns the heading into a field that filters the type rows by name. */
+  private typeListHeading(grid: HTMLElement): HTMLElement {
+    const t = (key: string): string => this.i18n?.t(key) ?? key;
+    const heading = document.createElement('div');
+    const label = document.createElement('span');
+    const search = document.createElement('button');
+
+    heading.setAttribute('data-blok-database-property-type-heading', '');
+    heading.setAttribute('data-blok-database-property-type-list-heading', '');
+    label.textContent = t('tools.database.propertyTypeListHeading');
+    search.type = 'button';
+    search.setAttribute('data-blok-database-property-type-search', '');
+    search.setAttribute('aria-label', t('tools.database.csvSearchTypes'));
+    search.innerHTML = IconSearch;
+    heading.append(label, search);
+    search.addEventListener('click', () => {
+      const field = document.createElement('input');
+
+      field.type = 'text';
+      field.setAttribute('data-blok-database-property-type-search-input', '');
+      field.setAttribute('data-blok-field', 'text');
+      field.setAttribute('aria-label', t('tools.database.csvSearchTypes'));
+      field.placeholder = t('tools.database.csvSearchTypes');
+      field.addEventListener('input', () => {
+        const query = field.value.trim().toLowerCase();
+
+        grid.querySelectorAll<HTMLElement>('[data-blok-database-property-type-option]').forEach((option) => {
+          option.hidden = !(option.textContent ?? '').toLowerCase().includes(query);
+        });
+      });
+      heading.replaceChildren(field);
+      field.focus();
+    });
+
+    return heading;
+  }
+
   /** Notion's "AI Autofill" rows: a glyph, the preset's name and a gray "Basic" tag. */
   private autofillSection(pick: (mode: 'summary' | 'translate') => void): HTMLElement {
     const t = (key: string): string => this.i18n?.t(key) ?? key;
@@ -173,7 +208,8 @@ export class DatabasePropertyTypePopover {
     heading.textContent = t('tools.database.aiAutofill');
     section.appendChild(heading);
     const presets = [
-      { mode: 'summary', icon: IconAskAiSummarize, labelKey: 'tools.database.aiAutofillSummarize' },
+      // Notion draws Summarize with the same lines as Text.
+      { mode: 'summary', icon: propertyTypeMeta('text').icon, labelKey: 'tools.database.aiAutofillSummarize' },
       { mode: 'translate', icon: IconGlobe, labelKey: 'tools.database.aiAutofillTranslate' },
     ] as const;
 

@@ -631,6 +631,7 @@
   "tools.database.viewTypeBoardDescription": "అంశాలను నిలువు వరుసల్లో చూపండి",
   "tools.database.viewTypeListDescription": "అంశాలను సరళమైన జాబితాలో చూపండి",
   "tools.database.propertyTypeHeading": "ప్రాపర్టీ రకం",
+  "tools.database.propertyTypeListHeading": "రకం",
   "tools.database.propertyTypeText": "టెక్స్ట్",
   "tools.database.propertyTypeNumber": "సంఖ్య",
   "tools.database.propertyTypeSelect": "ఎంపిక",

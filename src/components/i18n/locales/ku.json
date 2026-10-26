@@ -644,6 +644,7 @@
   "tools.database.viewTypeBoardDescription": "بڕگەکان لە ستوونەکاندا پیشان بدە",
   "tools.database.viewTypeListDescription": "بڕگەکان لە لیستێکی سادەدا پیشان بدە",
   "tools.database.propertyTypeHeading": "جۆری تایبەتمەندی",
+  "tools.database.propertyTypeListHeading": "جۆر",
   "tools.database.propertyTypeText": "دەق",
   "tools.database.propertyTypeNumber": "ژمارە",
   "tools.database.propertyTypeSelect": "هەڵبژاردن",

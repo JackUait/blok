@@ -642,6 +642,7 @@
   "tools.database.viewTypeBoardDescription": "Зүйлсийг багануудаар харуулах",
   "tools.database.viewTypeListDescription": "Зүйлсийг энгийн жагсаалтаар харуулах",
   "tools.database.propertyTypeHeading": "Шинжийн төрөл",
+  "tools.database.propertyTypeListHeading": "Төрөл",
   "tools.database.propertyTypeText": "Текст",
   "tools.database.propertyTypeNumber": "Тоо",
   "tools.database.propertyTypeSelect": "Сонголт",

@@ -633,6 +633,7 @@
   "tools.database.viewTypeBoardDescription": "আইটেমগুলো কলামে দেখান",
   "tools.database.viewTypeListDescription": "আইটেমগুলো একটি সাধারণ তালিকায় দেখান",
   "tools.database.propertyTypeHeading": "বৈশিষ্ট্যের ধরন",
+  "tools.database.propertyTypeListHeading": "ধরন",
   "tools.database.propertyTypeText": "টেক্সট",
   "tools.database.propertyTypeNumber": "সংখ্যা",
   "tools.database.propertyTypeSelect": "নির্বাচন",

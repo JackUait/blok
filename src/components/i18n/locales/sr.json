@@ -633,6 +633,7 @@
   "tools.database.viewTypeBoardDescription": "Прикажи ставке у колонама",
   "tools.database.viewTypeListDescription": "Прикажи ставке у једноставној листи",
   "tools.database.propertyTypeHeading": "Тип својства",
+  "tools.database.propertyTypeListHeading": "Тип",
   "tools.database.propertyTypeText": "Текст",
   "tools.database.propertyTypeNumber": "Број",
   "tools.database.propertyTypeSelect": "Избор",

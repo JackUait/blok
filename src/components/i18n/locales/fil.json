@@ -631,6 +631,7 @@
   "tools.database.viewTypeBoardDescription": "Ipakita ang mga item sa mga kolum",
   "tools.database.viewTypeListDescription": "Ipakita ang mga item sa simpleng listahan",
   "tools.database.propertyTypeHeading": "Uri ng property",
+  "tools.database.propertyTypeListHeading": "Uri",
   "tools.database.propertyTypeText": "Teksto",
   "tools.database.propertyTypeNumber": "Numero",
   "tools.database.propertyTypeSelect": "Isahang pagpili",

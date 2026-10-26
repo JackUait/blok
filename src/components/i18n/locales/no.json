@@ -631,6 +631,7 @@
   "tools.database.viewTypeBoardDescription": "Vis elementer i kolonner",
   "tools.database.viewTypeListDescription": "Vis elementer i en enkel liste",
   "tools.database.propertyTypeHeading": "Egenskapstype",
+  "tools.database.propertyTypeListHeading": "Type",
   "tools.database.propertyTypeText": "Tekst",
   "tools.database.propertyTypeNumber": "Tall",
   "tools.database.propertyTypeSelect": "Valg",

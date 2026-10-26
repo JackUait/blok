@@ -642,6 +642,7 @@
   "tools.database.viewTypeBoardDescription": "Прикажи ги ставките во колони",
   "tools.database.viewTypeListDescription": "Прикажи ги ставките во едноставен список",
   "tools.database.propertyTypeHeading": "Тип на својство",
+  "tools.database.propertyTypeListHeading": "Тип",
   "tools.database.propertyTypeText": "Текст",
   "tools.database.propertyTypeNumber": "Број",
   "tools.database.propertyTypeSelect": "Избор",

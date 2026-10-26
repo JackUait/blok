@@ -631,6 +631,7 @@
   "tools.database.viewTypeBoardDescription": "Affichez les éléments dans des colonnes",
   "tools.database.viewTypeListDescription": "Affichez les éléments dans une liste simple",
   "tools.database.propertyTypeHeading": "Type de propriété",
+  "tools.database.propertyTypeListHeading": "Type",
   "tools.database.propertyTypeText": "Texte",
   "tools.database.propertyTypeNumber": "Nombre",
   "tools.database.propertyTypeSelect": "Sélection",

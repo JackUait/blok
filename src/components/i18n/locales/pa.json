@@ -631,6 +631,7 @@
   "tools.database.viewTypeBoardDescription": "ਆਈਟਮਾਂ ਨੂੰ ਕਾਲਮਾਂ ਵਿੱਚ ਦਿਖਾਓ",
   "tools.database.viewTypeListDescription": "ਆਈਟਮਾਂ ਨੂੰ ਸਧਾਰਨ ਸੂਚੀ ਵਿੱਚ ਦਿਖਾਓ",
   "tools.database.propertyTypeHeading": "ਵਿਸ਼ੇਸ਼ਤਾ ਦੀ ਕਿਸਮ",
+  "tools.database.propertyTypeListHeading": "ਕਿਸਮ",
   "tools.database.propertyTypeText": "ਟੈਕਸਟ",
   "tools.database.propertyTypeNumber": "ਨੰਬਰ",
   "tools.database.propertyTypeSelect": "ਚੋਣ",

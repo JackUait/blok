@@ -631,6 +631,7 @@
   "tools.database.viewTypeBoardDescription": "Elemek megjelenítése oszlopokban",
   "tools.database.viewTypeListDescription": "Elemek megjelenítése egyszerű listában",
   "tools.database.propertyTypeHeading": "Tulajdonság típusa",
+  "tools.database.propertyTypeListHeading": "Típus",
   "tools.database.propertyTypeText": "Szöveg",
   "tools.database.propertyTypeNumber": "Szám",
   "tools.database.propertyTypeSelect": "Választás",

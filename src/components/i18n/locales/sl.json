@@ -633,6 +633,7 @@
   "tools.database.viewTypeBoardDescription": "Prikaži elemente v stolpcih",
   "tools.database.viewTypeListDescription": "Prikaži elemente na preprostem seznamu",
   "tools.database.propertyTypeHeading": "Vrsta lastnosti",
+  "tools.database.propertyTypeListHeading": "Vrsta",
   "tools.database.propertyTypeText": "Besedilo",
   "tools.database.propertyTypeNumber": "Število",
   "tools.database.propertyTypeSelect": "Izbor",

@@ -633,6 +633,7 @@
   "tools.database.viewTypeBoardDescription": "اعرض العناصر في أعمدة",
   "tools.database.viewTypeListDescription": "اعرض العناصر في قائمة بسيطة",
   "tools.database.propertyTypeHeading": "نوع الخاصية",
+  "tools.database.propertyTypeListHeading": "النوع",
   "tools.database.propertyTypeText": "نص",
   "tools.database.propertyTypeNumber": "رقم",
   "tools.database.propertyTypeSelect": "اختيار",

@@ -642,6 +642,7 @@
   "tools.database.viewTypeBoardDescription": "वस्तुहरू स्तम्भहरूमा देखाउनुहोस्",
   "tools.database.viewTypeListDescription": "वस्तुहरू साधारण सूचीमा देखाउनुहोस्",
   "tools.database.propertyTypeHeading": "गुणको प्रकार",
+  "tools.database.propertyTypeListHeading": "प्रकार",
   "tools.database.propertyTypeText": "पाठ",
   "tools.database.propertyTypeNumber": "नम्बर",
   "tools.database.propertyTypeSelect": "छनोट",

@@ -633,6 +633,7 @@
   "tools.database.viewTypeBoardDescription": "Zobraziť položky v stĺpcoch",
   "tools.database.viewTypeListDescription": "Zobraziť položky v jednoduchom zozname",
   "tools.database.propertyTypeHeading": "Typ vlastnosti",
+  "tools.database.propertyTypeListHeading": "Typ",
   "tools.database.propertyTypeText": "Text",
   "tools.database.propertyTypeNumber": "Číslo",
   "tools.database.propertyTypeSelect": "Výber",

@@ -631,6 +631,7 @@
   "tools.database.viewTypeBoardDescription": "Items in kolommen weergeven",
   "tools.database.viewTypeListDescription": "Items in een eenvoudige lijst weergeven",
   "tools.database.propertyTypeHeading": "Eigenschapstype",
+  "tools.database.propertyTypeListHeading": "Soort",
   "tools.database.propertyTypeText": "Tekst",
   "tools.database.propertyTypeNumber": "Getal",
   "tools.database.propertyTypeSelect": "Selecteren",

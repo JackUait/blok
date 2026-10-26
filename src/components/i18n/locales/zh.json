@@ -631,6 +631,7 @@
   "tools.database.viewTypeBoardDescription": "按列显示项目",
   "tools.database.viewTypeListDescription": "在简单列表中显示项目",
   "tools.database.propertyTypeHeading": "属性类型",
+  "tools.database.propertyTypeListHeading": "类型",
   "tools.database.propertyTypeText": "文本",
   "tools.database.propertyTypeNumber": "数字",
   "tools.database.propertyTypeSelect": "单选",

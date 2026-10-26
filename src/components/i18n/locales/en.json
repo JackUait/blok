@@ -749,6 +749,7 @@
   "tools.database.viewTypeBoardDescription": "Show items in columns",
   "tools.database.viewTypeListDescription": "Show items in a simple list",
   "tools.database.propertyTypeHeading": "Property type",
+  "tools.database.propertyTypeListHeading": "Type",
   "tools.database.propertyTypeText": "Text",
   "tools.database.propertyTypeNumber": "Number",
   "tools.database.propertyTypeSelect": "Select",

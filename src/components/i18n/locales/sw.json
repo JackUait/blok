@@ -631,6 +631,7 @@
   "tools.database.viewTypeBoardDescription": "Onyesha vipengee katika safu wima",
   "tools.database.viewTypeListDescription": "Onyesha vipengee katika orodha rahisi",
   "tools.database.propertyTypeHeading": "Aina ya sifa",
+  "tools.database.propertyTypeListHeading": "Aina",
   "tools.database.propertyTypeText": "Maandishi",
   "tools.database.propertyTypeNumber": "Nambari",
   "tools.database.propertyTypeSelect": "Chaguo",

@@ -633,6 +633,7 @@
   "tools.database.viewTypeBoardDescription": "Afișează elementele în coloane",
   "tools.database.viewTypeListDescription": "Afișează elementele într-o listă simplă",
   "tools.database.propertyTypeHeading": "Tip de proprietate",
+  "tools.database.propertyTypeListHeading": "Tip",
   "tools.database.propertyTypeText": "Text",
   "tools.database.propertyTypeNumber": "Număr",
   "tools.database.propertyTypeSelect": "Selecție",

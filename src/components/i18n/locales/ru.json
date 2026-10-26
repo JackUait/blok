@@ -633,6 +633,7 @@
   "tools.database.viewTypeBoardDescription": "Показывать элементы в колонках",
   "tools.database.viewTypeListDescription": "Показывать элементы простым списком",
   "tools.database.propertyTypeHeading": "Тип свойства",
+  "tools.database.propertyTypeListHeading": "Тип",
   "tools.database.propertyTypeText": "Текст",
   "tools.database.propertyTypeNumber": "Число",
   "tools.database.propertyTypeSelect": "Выбор",

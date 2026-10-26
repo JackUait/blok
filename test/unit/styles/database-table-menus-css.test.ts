@@ -51,6 +51,11 @@ describe('add property menu (T12)', () => {
     expect(declared('[data-blok-database-property-type-heading]', 'font-size')).toEqual(['12px']);
   });
 
+  // Notion keeps the gray glyph on hover; only the row gets a fill. No blue (selected/hover law).
+  it('keeps the type glyph ink on hover', () => {
+    expect(declared('[data-blok-database-property-type-option]:hover [data-blok-database-property-type-option-icon]', 'color')).toEqual([]);
+  });
+
   it('heads the menu with the type glyph beside the name field', () => {
     expect(declared('[data-blok-database-property-type-header]', 'align-items')).toEqual(['center']);
     expect(declared('[data-blok-database-property-type-glyph]', 'width')).toEqual(['28px']);

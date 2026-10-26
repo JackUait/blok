@@ -633,6 +633,7 @@
   "tools.database.viewTypeBoardDescription": "އައިޓަމްތައް ކޮލަމްތަކުގައި ދައްކާ",
   "tools.database.viewTypeListDescription": "އައިޓަމްތައް ސާދާ ލިސްޓެއްގައި ދައްކާ",
   "tools.database.propertyTypeHeading": "ޕްރޮޕަރޓީ ޓައިޕް",
+  "tools.database.propertyTypeListHeading": "ބާވަތް",
   "tools.database.propertyTypeText": "ޓެކްސްޓް",
   "tools.database.propertyTypeNumber": "ނަންބަރު",
   "tools.database.propertyTypeSelect": "ސިލެކްޓް",

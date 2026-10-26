@@ -642,6 +642,7 @@
   "tools.database.viewTypeBoardDescription": "အကြောင်းအရာများကို ကော်လံများတွင် ပြရန်",
   "tools.database.viewTypeListDescription": "အကြောင်းအရာများကို ရိုးရှင်းသော စာရင်းတွင် ပြရန်",
   "tools.database.propertyTypeHeading": "ဂုဏ်သတ္တိအမျိုးအစား",
+  "tools.database.propertyTypeListHeading": "အမျိုးအစား",
   "tools.database.propertyTypeText": "စာသား",
   "tools.database.propertyTypeNumber": "ကိန်းဂဏန်း",
   "tools.database.propertyTypeSelect": "ရွေးချယ်မှု",

@@ -631,6 +631,7 @@
   "tools.database.viewTypeBoardDescription": "Prikaži stavke u stupcima",
   "tools.database.viewTypeListDescription": "Prikaži stavke na jednostavnom popisu",
   "tools.database.propertyTypeHeading": "Vrsta svojstva",
+  "tools.database.propertyTypeListHeading": "Vrsta",
   "tools.database.propertyTypeText": "Tekst",
   "tools.database.propertyTypeNumber": "Broj",
   "tools.database.propertyTypeSelect": "Odabir",

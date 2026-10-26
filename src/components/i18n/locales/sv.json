@@ -631,6 +631,7 @@
   "tools.database.viewTypeBoardDescription": "Visa objekt i kolumner",
   "tools.database.viewTypeListDescription": "Visa objekt i en enkel lista",
   "tools.database.propertyTypeHeading": "Egenskapstyp",
+  "tools.database.propertyTypeListHeading": "Typ",
   "tools.database.propertyTypeText": "Text",
   "tools.database.propertyTypeNumber": "Tal",
   "tools.database.propertyTypeSelect": "Val",

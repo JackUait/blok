@@ -631,6 +631,7 @@
   "tools.database.viewTypeBoardDescription": "تۈرلەرنى ئىستونلاردا كۆرسىتىش",
   "tools.database.viewTypeListDescription": "تۈرلەرنى ئاددىي تىزىملىكتە كۆرسىتىش",
   "tools.database.propertyTypeHeading": "خاسلىق تىپى",
+  "tools.database.propertyTypeListHeading": "تۈر",
   "tools.database.propertyTypeText": "تېكىست",
   "tools.database.propertyTypeNumber": "سان",
   "tools.database.propertyTypeSelect": "تاللاش",

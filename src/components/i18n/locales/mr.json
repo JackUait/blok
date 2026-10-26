@@ -642,6 +642,7 @@
   "tools.database.viewTypeBoardDescription": "आयटम स्तंभांमध्ये दाखवा",
   "tools.database.viewTypeListDescription": "आयटम साध्या यादीत दाखवा",
   "tools.database.propertyTypeHeading": "गुणधर्म प्रकार",
+  "tools.database.propertyTypeListHeading": "प्रकार",
   "tools.database.propertyTypeText": "मजकूर",
   "tools.database.propertyTypeNumber": "संख्या",
   "tools.database.propertyTypeSelect": "निवड",

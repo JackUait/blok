@@ -1151,8 +1151,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // database.css: editors over a row page value (notion-spec §7): the 38px text box,
     // plus 1_232 for the select and status pickers' 12px insets, handles and check marks.
     const DATABASE_VALUE_EDITOR_BYTES = 202 + 1_232;
-    // database.css: the add-property menu as Notion's (290px, one column, type glyph, AI Autofill rows).
-    const DATABASE_ADD_PROPERTY_MENU_BYTES = 1_351;
+    // database.css: the add-property menu as Notion's (290px, one column, type glyph, AI Autofill rows),
+    // plus 775 for the "Type" search line.
+    const DATABASE_ADD_PROPERTY_MENU_BYTES = 1_351 + 775;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

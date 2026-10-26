@@ -101,8 +101,8 @@ describe('database property type popover mutants', () => {
       popover.open(anchor);
 
       expect(
-        document.body.querySelector('[data-blok-database-property-type-heading]')?.textContent,
-      ).toBe('i18n:tools.database.propertyTypeHeading');
+        document.body.querySelector('[data-blok-database-property-type-heading]')?.textContent?.trim(),
+      ).toBe('i18n:tools.database.propertyTypeListHeading');
       expect(optionFor('multiSelect')?.querySelector('span')?.textContent)
         .toBe('i18n:tools.database.propertyTypeMultiSelect');
     });
@@ -113,8 +113,8 @@ describe('database property type popover mutants', () => {
       popover.open(anchor);
 
       expect(
-        document.body.querySelector('[data-blok-database-property-type-heading]')?.textContent,
-      ).toBe('tools.database.propertyTypeHeading');
+        document.body.querySelector('[data-blok-database-property-type-heading]')?.textContent?.trim(),
+      ).toBe('tools.database.propertyTypeListHeading');
       expect(optionFor('url')?.querySelector('span')?.textContent)
         .toBe('tools.database.propertyTypeUrl');
     });

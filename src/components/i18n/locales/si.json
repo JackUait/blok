@@ -633,6 +633,7 @@
   "tools.database.viewTypeBoardDescription": "අයිතම තීරුවල පෙන්වන්න",
   "tools.database.viewTypeListDescription": "අයිතම සරල ලැයිස්තුවක පෙන්වන්න",
   "tools.database.propertyTypeHeading": "ගුණාංග වර්ගය",
+  "tools.database.propertyTypeListHeading": "වර්ගය",
   "tools.database.propertyTypeText": "පෙළ",
   "tools.database.propertyTypeNumber": "අංකය",
   "tools.database.propertyTypeSelect": "තේරීම",

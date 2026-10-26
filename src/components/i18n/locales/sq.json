@@ -633,6 +633,7 @@
   "tools.database.viewTypeBoardDescription": "Shfaq elementet në kolona",
   "tools.database.viewTypeListDescription": "Shfaq elementet në një listë të thjeshtë",
   "tools.database.propertyTypeHeading": "Lloji i vetisë",
+  "tools.database.propertyTypeListHeading": "Lloji",
   "tools.database.propertyTypeText": "Tekst",
   "tools.database.propertyTypeNumber": "Numër",
   "tools.database.propertyTypeSelect": "Zgjedhje",

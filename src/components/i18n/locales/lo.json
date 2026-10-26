@@ -644,6 +644,7 @@
   "tools.database.viewTypeBoardDescription": "ສະແດງລາຍການເປັນຖັນ",
   "tools.database.viewTypeListDescription": "ສະແດງລາຍການເປັນລາຍຊື່ແບບງ່າຍ",
   "tools.database.propertyTypeHeading": "ປະເພດຄຸນສົມບັດ",
+  "tools.database.propertyTypeListHeading": "ປະເພດ",
   "tools.database.propertyTypeText": "ຂໍ້ຄວາມ",
   "tools.database.propertyTypeNumber": "ຕົວເລກ",
   "tools.database.propertyTypeSelect": "ເລືອກ",

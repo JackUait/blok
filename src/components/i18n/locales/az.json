@@ -633,6 +633,7 @@
   "tools.database.viewTypeBoardDescription": "Elementləri sütunlarda göstər",
   "tools.database.viewTypeListDescription": "Elementləri sadə siyahıda göstər",
   "tools.database.propertyTypeHeading": "Xüsusiyyət növü",
+  "tools.database.propertyTypeListHeading": "Növ",
   "tools.database.propertyTypeText": "Mətn",
   "tools.database.propertyTypeNumber": "Ədəd",
   "tools.database.propertyTypeSelect": "Seçim",

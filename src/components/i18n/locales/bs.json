@@ -633,6 +633,7 @@
   "tools.database.viewTypeBoardDescription": "Prikaži stavke u kolonama",
   "tools.database.viewTypeListDescription": "Prikaži stavke na jednostavnoj listi",
   "tools.database.propertyTypeHeading": "Vrsta svojstva",
+  "tools.database.propertyTypeListHeading": "Vrsta",
   "tools.database.propertyTypeText": "Tekst",
   "tools.database.propertyTypeNumber": "Broj",
   "tools.database.propertyTypeSelect": "Izbor",

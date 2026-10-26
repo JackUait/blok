@@ -633,6 +633,7 @@
   "tools.database.viewTypeBoardDescription": "Տարրերը ցուցադրել սյունակներում",
   "tools.database.viewTypeListDescription": "Տարրերը ցուցադրել պարզ ցուցակում",
   "tools.database.propertyTypeHeading": "Հատկության տեսակ",
+  "tools.database.propertyTypeListHeading": "Տեսակ",
   "tools.database.propertyTypeText": "Տեքստ",
   "tools.database.propertyTypeNumber": "Թիվ",
   "tools.database.propertyTypeSelect": "Ընտրություն",

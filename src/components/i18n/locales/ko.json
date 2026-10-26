@@ -644,6 +644,7 @@
   "tools.database.viewTypeBoardDescription": "항목을 열로 표시",
   "tools.database.viewTypeListDescription": "항목을 간단한 목록으로 표시",
   "tools.database.propertyTypeHeading": "속성 유형",
+  "tools.database.propertyTypeListHeading": "유형",
   "tools.database.propertyTypeText": "텍스트",
   "tools.database.propertyTypeNumber": "숫자",
   "tools.database.propertyTypeSelect": "선택",

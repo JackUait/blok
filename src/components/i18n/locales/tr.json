@@ -631,6 +631,7 @@
   "tools.database.viewTypeBoardDescription": "Öğeleri sütunlarda göster",
   "tools.database.viewTypeListDescription": "Öğeleri basit bir listede göster",
   "tools.database.propertyTypeHeading": "Özellik türü",
+  "tools.database.propertyTypeListHeading": "Tür",
   "tools.database.propertyTypeText": "Metin",
   "tools.database.propertyTypeNumber": "Sayı",
   "tools.database.propertyTypeSelect": "Seçim",

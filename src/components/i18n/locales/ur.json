@@ -631,6 +631,7 @@
   "tools.database.viewTypeBoardDescription": "اشیا کو کالموں میں دکھائیں",
   "tools.database.viewTypeListDescription": "اشیا کو ایک سادہ فہرست میں دکھائیں",
   "tools.database.propertyTypeHeading": "پراپرٹی کی قسم",
+  "tools.database.propertyTypeListHeading": "قسم",
   "tools.database.propertyTypeText": "متن",
   "tools.database.propertyTypeNumber": "نمبر",
   "tools.database.propertyTypeSelect": "انتخاب",

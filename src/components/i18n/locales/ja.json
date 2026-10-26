@@ -633,6 +633,7 @@
   "tools.database.viewTypeBoardDescription": "アイテムを列で表示",
   "tools.database.viewTypeListDescription": "アイテムをシンプルなリストで表示",
   "tools.database.propertyTypeHeading": "プロパティの種類",
+  "tools.database.propertyTypeListHeading": "種類",
   "tools.database.propertyTypeText": "テキスト",
   "tools.database.propertyTypeNumber": "数値",
   "tools.database.propertyTypeSelect": "セレクト",

@@ -642,6 +642,7 @@
   "tools.database.viewTypeBoardDescription": "Tunjukkan item dalam lajur",
   "tools.database.viewTypeListDescription": "Tunjukkan item dalam senarai ringkas",
   "tools.database.propertyTypeHeading": "Jenis sifat",
+  "tools.database.propertyTypeListHeading": "Jenis",
   "tools.database.propertyTypeText": "Teks",
   "tools.database.propertyTypeNumber": "Nombor",
   "tools.database.propertyTypeSelect": "Pilihan",

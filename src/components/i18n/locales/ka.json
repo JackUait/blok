@@ -633,6 +633,7 @@
   "tools.database.viewTypeBoardDescription": "ელემენტების სვეტებად ჩვენება",
   "tools.database.viewTypeListDescription": "ელემენტების მარტივ სიად ჩვენება",
   "tools.database.propertyTypeHeading": "თვისების ტიპი",
+  "tools.database.propertyTypeListHeading": "ტიპი",
   "tools.database.propertyTypeText": "ტექსტი",
   "tools.database.propertyTypeNumber": "რიცხვი",
   "tools.database.propertyTypeSelect": "არჩევანი",

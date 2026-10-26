@@ -631,6 +631,7 @@
   "tools.database.viewTypeBoardDescription": "Hiển thị mục theo cột",
   "tools.database.viewTypeListDescription": "Hiển thị các mục trong một danh sách đơn giản",
   "tools.database.propertyTypeHeading": "Loại thuộc tính",
+  "tools.database.propertyTypeListHeading": "Loại",
   "tools.database.propertyTypeText": "Văn bản",
   "tools.database.propertyTypeNumber": "Số",
   "tools.database.propertyTypeSelect": "Chọn một",

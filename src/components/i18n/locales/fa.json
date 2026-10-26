@@ -631,6 +631,7 @@
   "tools.database.viewTypeBoardDescription": "موارد را در ستون‌ها نمایش دهید",
   "tools.database.viewTypeListDescription": "موارد را در یک فهرست ساده نمایش دهید",
   "tools.database.propertyTypeHeading": "نوع ویژگی",
+  "tools.database.propertyTypeListHeading": "نوع",
   "tools.database.propertyTypeText": "متن",
   "tools.database.propertyTypeNumber": "عدد",
   "tools.database.propertyTypeSelect": "انتخاب",

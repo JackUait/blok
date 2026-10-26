@@ -631,6 +631,7 @@
   "tools.database.viewTypeBoardDescription": "הצג פריטים בעמודות",
   "tools.database.viewTypeListDescription": "הצג פריטים ברשימה פשוטה",
   "tools.database.propertyTypeHeading": "סוג מאפיין",
+  "tools.database.propertyTypeListHeading": "סוג",
   "tools.database.propertyTypeText": "טקסט",
   "tools.database.propertyTypeNumber": "מספר",
   "tools.database.propertyTypeSelect": "בחירה",

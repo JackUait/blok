@@ -633,6 +633,7 @@
   "tools.database.viewTypeBoardDescription": "Εμφάνιση στοιχείων σε στήλες",
   "tools.database.viewTypeListDescription": "Εμφάνιση στοιχείων σε απλή λίστα",
   "tools.database.propertyTypeHeading": "Τύπος ιδιότητας",
+  "tools.database.propertyTypeListHeading": "Τύπος",
   "tools.database.propertyTypeText": "Κείμενο",
   "tools.database.propertyTypeNumber": "Αριθμός",
   "tools.database.propertyTypeSelect": "Επιλογή",

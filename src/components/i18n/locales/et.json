@@ -631,6 +631,7 @@
   "tools.database.viewTypeBoardDescription": "Kuva üksused veergudes",
   "tools.database.viewTypeListDescription": "Kuva üksused lihtsas loendis",
   "tools.database.propertyTypeHeading": "Omaduse tüüp",
+  "tools.database.propertyTypeListHeading": "Tüüp",
   "tools.database.propertyTypeText": "Tekst",
   "tools.database.propertyTypeNumber": "Arv",
   "tools.database.propertyTypeSelect": "Valik",

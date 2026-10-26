@@ -631,6 +631,7 @@
   "tools.database.viewTypeBoardDescription": "Näytä kohteet sarakkeissa",
   "tools.database.viewTypeListDescription": "Näytä kohteet yksinkertaisena luettelona",
   "tools.database.propertyTypeHeading": "Ominaisuuden tyyppi",
+  "tools.database.propertyTypeListHeading": "Tyyppi",
   "tools.database.propertyTypeText": "Teksti",
   "tools.database.propertyTypeNumber": "Numero",
   "tools.database.propertyTypeSelect": "Valinta",

@@ -633,6 +633,7 @@
   "tools.database.viewTypeBoardDescription": "ንጥሎችን በአምዶች አሳይ",
   "tools.database.viewTypeListDescription": "ንጥሎችን በቀላል ዝርዝር አሳይ",
   "tools.database.propertyTypeHeading": "የንብረት አይነት",
+  "tools.database.propertyTypeListHeading": "ዓይነት",
   "tools.database.propertyTypeText": "ጽሑፍ",
   "tools.database.propertyTypeNumber": "ቁጥር",
   "tools.database.propertyTypeSelect": "ምርጫ",

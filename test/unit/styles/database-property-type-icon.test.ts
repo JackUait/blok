@@ -24,13 +24,13 @@ describe('Database property-type option icon (src/styles/database.css)', () => {
     expect(body).not.toMatch(/background/);
   });
 
-  it('has no background chip on row hover', () => {
+  // Notion: on hover only the row gets a fill; the glyph keeps its ink (no chip, no blue).
+  it('does not restyle the glyph on row hover', () => {
     const body = findRuleBody(
       css,
       '[data-blok-database-property-type-option]:hover [data-blok-database-property-type-option-icon]'
     );
 
-    expect(body).not.toBeNull();
-    expect(body).not.toMatch(/background/);
+    expect(body).toBeNull();
   });
 });

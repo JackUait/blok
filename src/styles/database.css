@@ -4904,13 +4904,49 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   transition: color 100ms ease;
 }
 
-[data-blok-database-property-type-option]:hover [data-blok-database-property-type-option-icon] {
-  color: var(--blok-active-icon);
-}
-
 [data-blok-database-property-type-option-icon] svg {
   width: 20px;
   height: 20px;
+}
+
+/* "Type" and its magnifier; the magnifier turns the line into a search field. */
+[data-blok-database-property-type-list-heading] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+}
+
+[data-blok-database-property-type-search] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control-sm);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+[data-blok-database-property-type-search]:hover {
+  background-color: var(--blok-database-popover-hover);
+}
+
+[data-blok-database-property-type-search] svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* The row sets display, which beats the hidden attribute. */
+[data-blok-database-property-type-option][hidden] {
+  display: none;
+}
+
+[data-blok-database-property-type-search-input] {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 /* An AI Autofill preset row: a type row with a gray "Basic" tag. */

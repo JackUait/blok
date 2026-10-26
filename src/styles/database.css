@@ -1857,8 +1857,11 @@
 }
 
 /* feel/findings-rowpage R11: the side peek's header row starts 4px under the 44px bar (Notion: y 48). */
+/* Notion's 756px peek: label cells 78px in, values end 76px from the edge. The 8px gutters count toward both. */
 [data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-content] {
   padding-block-start: var(--blok-space-1);
+  padding-inline-start: 70px;
+  padding-inline-end: 68px;
 }
 
 /* feel/findings-rowpage R20: the center peek's column is 708px, centred past the 8px scrollbar gutter; its title text sits 8px in. */

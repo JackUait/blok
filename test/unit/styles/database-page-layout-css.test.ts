@@ -148,6 +148,14 @@ describe('database row page layout css', () => {
     expect(ruleBody('[data-blok-database-drawer-prop-icon] svg')).toContain('flex-shrink: 0');
   });
 
+  // Notion's 756px side peek: label cells start 78px in, values end 76px from the edge. The 8px gutters add to each.
+  it('insets the side peek content 70px at the start and 68px at the end', () => {
+    const side = ruleBody('[data-blok-database-drawer][data-peek-mode="side"] [data-blok-database-drawer-content]');
+
+    expect(side).toContain('padding-inline-start: 70px');
+    expect(side).toContain('padding-inline-end: 68px');
+  });
+
   // research/10 §4: an 80x30 cell, padding 0 6px; the empty one reads icon + name, 14px/400 in the empty grey.
   it('draws a label-less pin cell 30px high with a grey placeholder', () => {
     const value = ruleBody('[data-blok-database-drawer-prop-value]');

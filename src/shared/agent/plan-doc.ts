@@ -153,10 +153,7 @@ const withoutRootListDepth = (block: OutputBlockData): OutputBlockData => {
   return { ...block, data };
 };
 
-/**
- * Inserts converted blocks. `html` blocks are what the editor's own paste made,
- * so they are read as stored data, not as marks the agent wrote.
- */
+/** Inserts converted blocks. They come from text the model sent, so they get every check agent input gets. */
 const planImport = (source: 'markdown' | 'html') => (state: PlanState, args: Record<string, unknown>): unknown => {
   const placement = state.place(args.parentId, args.position ?? 'end');
   const prepared = state.ctx.prepared.get(state.index);
@@ -257,8 +254,7 @@ const planImport = (source: 'markdown' | 'html') => (state: PlanState, args: Rec
     const previous = roots[index - 1];
     const afterId = previous === undefined ? placement.afterId
       : ids.get(previous) ?? state.fail('INVALID_ARGS', 'The imported block has no reserved ID.');
-    const build = (): ReturnType<typeof buildPlannedBlock> => buildPlannedBlock(state, toSpec(id), { id: placement.parentId }, `/${source}/${index}`, false);
-    const planned = source === 'html' ? state.copyStored(build) : build();
+    const planned = buildPlannedBlock(state, toSpec(id), { id: placement.parentId }, `/${source}/${index}`, false);
 
     state.emit({ op: 'insert', block: planned, parentId: placement.parentId, afterId });
 

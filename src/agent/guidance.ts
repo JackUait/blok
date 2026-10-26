@@ -28,6 +28,12 @@ export const PAGE_RULE = '- A page block points at a sub-page with its own docum
 /** Both surfaces send it exactly when their contract lets a page block insert. */
 export const PAGE_CREATE_RULE = '- To make a new sub-page, insert a page block without data.pageId. Blok creates its document and sets data.pageId. Then write inside it.';
 
+/** Sent only where html.insert runs: the editor. */
+export const HTML_RULE = '- To add HTML, use the html.insert command. It gives the blocks a person\'s paste of that HTML gives.';
+
+const htmlInsert = (contract: AgentContract): boolean =>
+  contract.commands.some(command => command.name === 'html.insert' && command.available);
+
 export const pagesInsert = (contract: AgentContract): boolean =>
   contract.manifest.blocks.some(block => block.name === 'page' && block.insertable);
 
@@ -39,6 +45,7 @@ export function composeGuidance(contract: AgentContract, options: { pages?: bool
     '',
     ...SHARED_RULES,
     ...IN_APP_RULES,
+    ...(htmlInsert(contract) ? [HTML_RULE] : []),
     ...(options.pages === true ? [...(pagesInsert(contract) ? [PAGE_CREATE_RULE] : []), PAGE_RULE] : []),
   ].join('\n');
 }

@@ -2,8 +2,9 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Blok } from '../../../src/blok';
-import { Bold, Callout, Code, Header, Image, Italic, Link, List, Paragraph, Quote, Table, Toggle } from '../../../src/tools';
+import { Bold, Callout, Code, Header, Image, Italic, Link, List, Marker, Paragraph, Quote, Table, Toggle, Video } from '../../../src/tools';
 import type { Agent, API, BlokConfig, OutputBlockData, OutputData } from '../../../types';
+import type { AgentResult } from '../../../types/agent';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -42,13 +43,34 @@ class MarkBox {
   }
 }
 
+/** A host block whose paste stores a reaction under the person named in the HTML. */
+class ReactBox {
+  public static get pasteConfig(): { tags: Array<Record<string, Record<string, boolean>>> } {
+    return { tags: [{ 'react-box': { 'data-who': true } }] };
+  }
+
+  private who = '';
+
+  public render(): HTMLElement {
+    return document.createElement('div');
+  }
+
+  public onPaste(event: CustomEvent<{ data: HTMLElement }>): void {
+    this.who = event.detail.data.getAttribute('data-who') ?? '';
+  }
+
+  public save(): Record<string, unknown> {
+    return { [`reactions:${this.who}`]: ['+1'] };
+  }
+}
+
 const config = (): BlokConfig => ({
   user: { id: 'human-1' },
   tools: {
     paragraph: Paragraph, header: Header, list: List, quote: Quote, table: Table, toggle: Toggle,
-    callout: Callout, code: Code, image: Image, bold: Bold, italic: Italic, link: Link, markBox: MarkBox,
+    callout: Callout, code: Code, image: Image, bold: Bold, italic: Italic, link: Link, marker: Marker, markBox: MarkBox, reactBox: ReactBox,
   },
-} as BlokConfig);
+});
 
 const editors: TestEditor[] = [];
 
@@ -58,11 +80,11 @@ const settle = (): Promise<void> => new Promise(resolve => {
 
 const holders = new Map<TestEditor, HTMLElement>();
 
-const boot = async (blocks: OutputBlockData[] = []): Promise<TestEditor> => {
+const boot = async (blocks: OutputBlockData[] = [], extra: Partial<BlokConfig> = {}): Promise<TestEditor> => {
   const holder = document.createElement('div');
 
   document.body.appendChild(holder);
-  const editor = new Blok({ ...config(), holder, data: { blocks } }) as unknown as TestEditor;
+  const editor = new Blok({ ...config(), ...extra, holder, data: { blocks } }) as unknown as TestEditor;
 
   editors.push(editor);
   holders.set(editor, holder);
@@ -75,6 +97,16 @@ const boot = async (blocks: OutputBlockData[] = []): Promise<TestEditor> => {
 // Who wrote a block and when (the agent co-authors its import), and the random ids each paste mints.
 const NOT_CONTENT = new Set(['id', 'rowId', 'createdAt', 'createdBy', 'createdWith', 'lastEditedAt', 'lastEditedBy', 'lastEditedWith']);
 
+// An agent-written link gets the Link tool's target and rel; a pasted one keeps none. Pinned on its own below.
+const withoutLinkDefaults = (link: unknown): unknown => {
+  if (link === null || typeof link !== 'object') {
+    return link;
+  }
+  const { target: _target, rel: _rel, ...rest } = link as Record<string, unknown>;
+
+  return rest;
+};
+
 /** Replaces ids with their place in save order, so two editors' saves compare. */
 const withoutIds = (blocks: OutputBlockData[]): unknown => {
   const place = new Map(blocks.map((block, index) => [block.id, `#${index}`]));
@@ -86,7 +118,7 @@ const withoutIds = (blocks: OutputBlockData[]): unknown => {
       return value.map(swap);
     }
     if (value !== null && typeof value === 'object') {
-      return Object.fromEntries(Object.entries(value).filter(([key]) => !NOT_CONTENT.has(key)).map(([key, inner]) => [key, swap(inner)]));
+      return Object.fromEntries(Object.entries(value).filter(([key]) => !NOT_CONTENT.has(key)).map(([key, inner]) => [key, key === 'link' ? withoutLinkDefaults(inner) : swap(inner)]));
     }
 
     return value;
@@ -119,13 +151,28 @@ const personPastes = async (html: string): Promise<OutputBlockData[]> => {
   }
   target.focus();
   editor.caret.setToBlock(id, 'end');
+  // The paste runs past many timers; wait for the real one to finish, not for a guess.
+  const paste = (editor as unknown as { module: { paste: { processDataTransfer(...args: unknown[]): Promise<void> } } }).module.paste;
+  const run = paste.processDataTransfer.bind(paste);
+  const pasted: Array<Promise<void>> = [];
+
+  paste.processDataTransfer = (...args) => {
+    const done = run(...args);
+
+    pasted.push(done);
+
+    return done;
+  };
   target.dispatchEvent(Object.assign(new Event('paste', { bubbles: true, cancelable: true }), {
     clipboardData: { getData: (type: string): string => (type === 'text/html' ? html : ''), types: ['text/html'] },
   }));
+  await vi.waitFor(() => expect(pasted).toHaveLength(1));
+  await Promise.all(pasted);
+
   return stableSave(editor);
 };
 
-const agentImports = async (html: string, editor?: TestEditor): Promise<{ ok: boolean; blocks: OutputBlockData[]; result: unknown }> => {
+const agentImports = async (html: string, editor?: TestEditor): Promise<{ ok: boolean; blocks: OutputBlockData[]; result: AgentResult }> => {
   const target = editor ?? await boot();
   const turn = target.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
   const result = await turn.execute({ commands: [{ name: 'html.insert', args: { html } }] });
@@ -180,7 +227,8 @@ const PASTE_CASES: Array<[string, string]> = [
   ['a host tool claimed by tag', '<p>before</p><mark-box>boxed</mark-box>'],
 ];
 
-describe('html.insert gives the blocks a person\'s paste gives', () => {
+// Two real editors boot per case; a table case takes seconds, past vitest's default.
+describe('html.insert gives the blocks a person\'s paste gives', { timeout: 30_000 }, () => {
   it.each(PASTE_CASES)('%s', async (_name, html) => {
     const reference = await personPastes(html);
     const imported = await agentImports(html);
@@ -222,6 +270,12 @@ describe('html.insert gives the blocks a person\'s paste gives', () => {
 
     expect(after?.startContainer).toBe(text);
     expect(after?.startOffset).toBe(2);
+  });
+
+  it('tells the model to paste HTML with html.insert', async () => {
+    const editor = await boot();
+
+    expect(await editor.agent.guidance()).toContain('To add HTML, use the html.insert command');
   });
 
   it('refuses text with no HTML in it, and writes nothing', async () => {
@@ -286,5 +340,127 @@ describe('html.insert is at least as safe as paste', () => {
     delete (window as unknown as Record<string, unknown>).__htmlInsertFired;
 
     expect(fired).not.toHaveBeenCalled();
+  });
+});
+
+/** The marks on every run of a block's text. */
+const marksOf = (block: OutputBlockData | undefined): unknown[] =>
+  Array.isArray(block?.data.text) ? block.data.text.map((run: { marks?: unknown }) => run.marks) : [];
+
+describe('html.insert checks what the paste made, as it checks any agent write', () => {
+  it('gives a pasted link the Link tool defaults, as every agent-written link', async () => {
+    const imported = await agentImports('<p><a href="https://example.com">x</a></p>');
+
+    expect(marksOf(imported.blocks.at(-1))).toEqual([{ link: { href: 'https://example.com', target: '_blank', rel: 'nofollow' } }]);
+  });
+
+  it('refuses a page mention that names a block id, and writes nothing', async () => {
+    const editor = await boot([{ id: 'p1', type: 'paragraph', data: { text: 'keep' } }]);
+    const before = (await editor.save()).blocks;
+    const imported = await agentImports('<p>see <a data-blok-page-id="p1">x</a></p>', editor);
+
+    expect(imported.result).toMatchObject({ ok: false, error: { code: 'INVALID_ARGS' } });
+    expect(withoutIds(imported.blocks)).toEqual(withoutIds(before));
+  });
+
+  it('warns about a page mention it cannot check', async () => {
+    const imported = await agentImports('<p>see <a data-blok-page-id="ghost">x</a></p>');
+
+    expect(imported.result.warnings.map(warning => warning.code)).toContain('UNVERIFIED_PAGE');
+  });
+
+  it('refuses data that holds another person\'s reactions', async () => {
+    const imported = await agentImports('<react-box data-who="human-2">r</react-box>');
+
+    expect(imported.result).toMatchObject({ ok: false, error: { code: 'FIELD_NOT_WRITABLE' } });
+    expect(imported.blocks.some(block => block.type === 'reactBox')).toBe(false);
+  });
+
+  it('snaps a pasted colour to a preset, as text.format does', async () => {
+    const imported = await agentImports('<p><mark style="color: rgb(18, 52, 86); background-color: transparent">x</mark></p>');
+    const colour = marksOf(imported.blocks.at(-1)).map(marks => (marks as { color?: string } | undefined)?.color);
+
+    expect(imported.result.warnings.map(warning => warning.code)).toContain('CORRECTED');
+    expect(colour.every(value => value === undefined || /^[a-z]+$/.test(value))).toBe(true);
+  });
+});
+
+/** The person's paragraph text and caret, as plain values. */
+const caretIn = (id: string): { text: string; offset: number | undefined; inside: boolean } => {
+  const input = Array.from(document.querySelectorAll<HTMLElement>(`[data-blok-id="${id}"] *`)).find(element => element.contentEditable === 'true');
+  const range = window.getSelection()?.rangeCount === 0 ? undefined : window.getSelection()?.getRangeAt(0);
+
+  return { text: input?.textContent ?? '', offset: range?.startOffset, inside: input?.contains(range?.startContainer ?? null) === true };
+};
+
+const putCaret = (id: string, offset: number): void => {
+  const input = Array.from(document.querySelectorAll<HTMLElement>(`[data-blok-id="${id}"] *`)).find(element => element.contentEditable === 'true');
+  const text = input?.firstChild;
+
+  if (text === null || text === undefined) {
+    throw new Error('no text node');
+  }
+  const range = document.createRange();
+
+  range.setStart(text, offset);
+  range.collapse(true);
+  window.getSelection()?.removeAllRanges();
+  window.getSelection()?.addRange(range);
+};
+
+describe('html.insert never writes through the person\'s caret', () => {
+  it('pastes into the hidden editor even when the caret moves into the document mid-paste', async () => {
+    // onBeforePaste runs inside the paste, before any block is written: a person clicking in then.
+    const editor = await boot([{ id: 'p1', type: 'paragraph', data: { text: 'keep' } }], {
+      onBeforePaste: (html: string) => {
+        putCaret('p1', 1);
+
+        return html;
+      },
+    });
+    const imported = await agentImports('<p>new</p>', editor);
+
+    expect(caretIn('p1')).toEqual({ text: 'keep', offset: 1, inside: true });
+    expect(imported.ok).toBe(true);
+    expect(imported.blocks.map(block => strings(block.data.text).join(''))).toEqual(['keep', 'new']);
+  });
+
+  it('keeps focus in a field outside the editor, through a block that takes no caret', async () => {
+    const editor = await boot([{ id: 'p1', type: 'paragraph', data: { text: 'keep' } }]);
+    const field = document.createElement('input');
+    const blurred = vi.fn();
+
+    document.body.appendChild(field);
+    field.focus();
+    field.addEventListener('blur', blurred);
+    const imported = await agentImports('<p>a</p><img src="https://example.com/a.png"><p>b</p>', editor);
+
+    expect(imported.ok).toBe(true);
+    expect(field).toHaveFocus();
+    expect(blurred).not.toHaveBeenCalled();
+  });
+});
+
+describe('html.insert starts no upload and no fetch', () => {
+  it('never calls an uploader or fetch for pasted image URLs', async () => {
+    const toolUpload = vi.fn(() => Promise.resolve({ url: 'https://cdn.example.com/x' }));
+    const hostUpload = vi.fn(() => Promise.resolve({ url: 'https://cdn.example.com/y' }));
+    const fetched = vi.spyOn(globalThis, 'fetch').mockImplementation(() => Promise.reject(new Error('no network')));
+    const base = config();
+    const editor = await boot([], {
+      uploader: { uploadByUrl: hostUpload, uploadByFile: hostUpload },
+      tools: { ...base.tools, image: { class: Image, config: { uploader: { uploadByUrl: toolUpload, uploadByFile: toolUpload } } }, video: Video },
+    });
+    const imported = await agentImports('<p>t</p><img src="http://example.com/a.gif"><img src="http://example.com/b.png">', editor);
+
+    for (let i = 0; i < 10; i++) {
+      await settle();
+    }
+
+    expect(toolUpload).not.toHaveBeenCalled();
+    expect(hostUpload).not.toHaveBeenCalled();
+    expect(fetched).not.toHaveBeenCalled();
+    expect(imported.ok).toBe(true);
+    expect(imported.blocks.filter(block => block.type === 'image').map(block => block.data.url)).toEqual(['http://example.com/a.gif', 'http://example.com/b.png']);
   });
 });

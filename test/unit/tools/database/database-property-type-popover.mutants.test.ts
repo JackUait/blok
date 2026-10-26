@@ -72,16 +72,27 @@ describe('database property type popover mutants', () => {
       }
     });
 
-    it('gives each type a distinct icon', () => {
+    it('gives each type a distinct icon, except the pairs Notion draws alike', () => {
       const { popover, anchor } = build();
 
       popover.open(anchor);
 
-      const icons = Array.from(
-        document.body.querySelectorAll('[data-blok-database-property-type-option-icon]'),
-      ).map((el) => el.innerHTML);
+      const iconOf = (type: string): string | undefined =>
+        optionFor(type)?.querySelector('[data-blok-database-property-type-option-icon]')?.innerHTML;
+      // Notion: one clock for both times, one user circle for both people.
+      const sharedWith: Record<string, string> = { lastEditedTime: 'createdTime', lastEditedBy: 'createdBy' };
+      const options = Array.from(
+        document.body.querySelectorAll<HTMLElement>('[data-blok-database-property-type-option]'),
+      );
+      const icons = options
+        .filter((el) => !((el.getAttribute('data-blok-database-property-type-option') ?? '') in sharedWith))
+        .map((el) => el.querySelector('[data-blok-database-property-type-option-icon]')?.innerHTML);
 
       expect(new Set(icons).size).toBe(icons.length);
+      for (const [type, twin] of Object.entries(sharedWith)) {
+        expect(iconOf(type)).toBeTruthy();
+        expect(iconOf(type)).toBe(iconOf(twin));
+      }
     });
 
     it('routes the heading and every label through i18n', () => {

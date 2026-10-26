@@ -3988,7 +3988,7 @@ span[data-blok-slash-search] {
   --blok-database-page-divider: rgba(55, 53, 47, 0.09);
   --blok-database-checkbox-checked-bg: rgb(39, 131, 222);
   --blok-database-switch-on-bg: rgb(39, 131, 222);
-  --blok-database-switch-off-bg: var(--blok-toggle-off-bg);
+  --blok-database-switch-off-bg: rgba(135, 131, 120, 0.92);
   --blok-database-switch-knob-bg: var(--blok-toggle-thumb-on-bg);
   --blok-database-name-field-bg: var(--blok-database-hover-bg);
   --blok-database-name-field-ring: transparent;

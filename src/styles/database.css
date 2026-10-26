@@ -24,7 +24,9 @@
   --blok-database-page-divider: rgba(55, 53, 47, 0.09);
   --blok-database-checkbox-checked-bg: rgb(39, 131, 222);
   --blok-database-switch-on-bg: rgb(39, 131, 222);
-  --blok-database-switch-off-bg: var(--blok-toggle-off-bg);
+  /* Notion's ink at 0.3 is 1.4:1 and the knob is white on a white menu, so the off state was invisible.
+     The first alpha that gives 3:1 on the menu and its hover fill. */
+  --blok-database-switch-off-bg: rgba(135, 131, 120, 0.92);
   --blok-database-switch-knob-bg: var(--blok-toggle-thumb-on-bg);
   /* The property menu's name field at rest. Light is unmeasured: the hover fill, as the shared field's. */
   --blok-database-name-field-bg: var(--blok-database-hover-bg);

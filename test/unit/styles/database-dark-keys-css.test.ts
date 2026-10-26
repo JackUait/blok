@@ -34,7 +34,7 @@ describe('OPEN pill in dark (findings K06, live)', () => {
 
 describe('database switches in dark (findings K11, live)', () => {
   it('draw the off track at Notion\'s gray and keep the knob white in both states', () => {
-    expect(tokenValues('--blok-database-switch-off-bg')).toEqual(['var(--blok-toggle-off-bg)', 'rgba(202, 204, 206, 0.3)', 'rgba(202, 204, 206, 0.3)']);
+    expect(tokenValues('--blok-database-switch-off-bg')).toEqual(['rgba(135, 131, 120, 0.92)', 'rgba(202, 204, 206, 0.3)', 'rgba(202, 204, 206, 0.3)']);
     expect(tokenValues('--blok-database-switch-knob-bg')).toEqual(['var(--blok-toggle-thumb-on-bg)', 'rgb(255, 255, 255)', 'rgb(255, 255, 255)']);
     expect(ruleBody('[data-blok-database-switch-track]')).toContain('background-color: var(--blok-database-switch-off-bg)');
     expect(ruleBody('[data-blok-database-switch-track] > span')).toContain('background-color: var(--blok-database-switch-knob-bg)');

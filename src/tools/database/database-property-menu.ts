@@ -1036,7 +1036,7 @@ export class DatabasePropertyMenu {
           {
             name: 'color',
             title: this.t('tools.database.numberColor'),
-            valueLabel: this.t(optionColorLabelKey(number.color ?? 'default')),
+            valueLabel: this.t(optionColorLabelKey(OPTION_COLORS.find((color) => color === number.color) ?? 'default')),
             children: {
               items: OPTION_COLORS.map((color) => ({
                 name: `color-${color}`,

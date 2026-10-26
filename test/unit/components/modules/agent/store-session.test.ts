@@ -363,6 +363,7 @@ describe('createStoreAgentSession', () => {
     expect(view.blocks).toEqual([{
       id: 'p', type: 'paragraph', depth: 0, text: 'Upd…', truncated: true,
       data: { text: [{ text: 'Updated', marks: { italic: true } }] },
+      meta: { lastEditedAt: '1970-01-01T00:00:00.007Z', lastEditedBy: { id: 'human-1' } },
     }]);
     expect(view.rootId).toBeNull();
     expect(view.page).toEqual({ title: 'Live', icon: { type: 'emoji', value: 'P' } });

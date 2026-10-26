@@ -96,7 +96,7 @@ describe('prepare-backed create recording through the public planner', () => {
       { id: 'n1' },
       {
         revision: '', rootId: null,
-        blocks: [{ id: 'n1', type: 'producer', depth: 0, data: { label: 'Draft' } }],
+        blocks: [{ id: 'n1', type: 'producer', depth: 0, data: { label: 'Draft' }, meta: { lastEditedAt: '1970-01-01T00:00:00.001Z', lastEditedBy: { id: 'agent' } } }],
       },
     ]);
     expect(plan.edits).toEqual([{

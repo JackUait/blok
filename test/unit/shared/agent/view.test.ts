@@ -7,6 +7,9 @@ import { planOn, TOOLS, tool } from './fixtures';
 
 import type { AgentCommand, DocumentView, OutputData, ViewArgs } from '../../../../types';
 
+// What planOn's stamp (agent, at 1) writes on a block, as the block menu reads it.
+const STAMPED = { lastEditedAt: '1970-01-01T00:00:00.001Z', lastEditedBy: { id: 'agent' } };
+
 const long = 'x'.repeat(130);
 const doc: OutputData = {
   title: 'Launch plan',
@@ -420,13 +423,13 @@ describe('doc commands on the batch draft', () => {
     expect(plan.results.slice(2)).toEqual([
       {
         revision: '', rootId: 'new-section', page: outline.page,
-        blocks: [{ id: 'new-child', type: 'paragraph', depth: 0, parentId: 'new-section', text: 'Needle child', data: { text: [{ text: 'Needle child' }] } }],
+        blocks: [{ id: 'new-child', type: 'paragraph', depth: 0, parentId: 'new-section', text: 'Needle child', data: { text: [{ text: 'Needle child' }] }, meta: STAMPED }],
       },
       {
         revision: '', rootId: null, page: outline.page,
         blocks: [
-          { id: 'new-section', type: 'toggle', depth: 0, text: 'Renamed section', data: { text: [{ text: 'Renamed section' }] } },
-          { id: 'new-child', type: 'paragraph', depth: 1, parentId: 'new-section', text: 'Needle child', data: { text: [{ text: 'Needle child' }] } },
+          { id: 'new-section', type: 'toggle', depth: 0, text: 'Renamed section', data: { text: [{ text: 'Renamed section' }] }, meta: STAMPED },
+          { id: 'new-child', type: 'paragraph', depth: 1, parentId: 'new-section', text: 'Needle child', data: { text: [{ text: 'Needle child' }] }, meta: STAMPED },
         ],
       },
       { count: 1, matches: [{ id: 'new-child', type: 'paragraph', field: 'text', start: 0, end: 6, snippet: 'Needle child' }] },
@@ -505,7 +508,7 @@ describe('doc.read point-in-batch consistency', () => {
       revision: '', rootId: null,
       blocks: [{
         id: 'h', type: 'header', depth: 0, text: 'After', attrs: { level },
-        data: { text: [{ text: 'After' }], level },
+        data: { text: [{ text: 'After' }], level }, meta: STAMPED,
       }],
     });
   });

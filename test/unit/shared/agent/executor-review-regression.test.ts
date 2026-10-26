@@ -144,6 +144,7 @@ describe('runBatch preparation review regressions', () => {
           revision: 'r1', rootId: null,
           blocks: [{
             id: 'child', type: 'paragraph', depth: 1, parentId: 'container', data: {},
+            meta: { lastEditedAt: '1970-01-01T00:00:00.007Z', lastEditedBy: { id: 'agent-1' } },
           }],
         },
         actorId: 'agent-1',
@@ -210,6 +211,7 @@ describe('runBatch preparation review regressions', () => {
           revision: 'r1', rootId: null,
           blocks: [{
             id: 'child', type: 'record', depth: 1, parentId: 'container', data: { count: 2 },
+            meta: { lastEditedAt: '1970-01-01T00:00:00.007Z', lastEditedBy: { id: 'agent-1' } },
           }],
         },
         actorId: 'agent-1',

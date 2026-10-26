@@ -988,6 +988,7 @@ export type BlokMessageKey =
   | 'tools.database.formula.error.pairedArguments'
   | 'tools.database.formula.error.propNeedsName'
   | 'tools.database.formula.error.propertyNotUsable'
+  | 'tools.database.formula.error.tooComplex'
   | 'tools.database.formula.error.tooDeep'
   | 'tools.database.formula.error.unexpectedCharacter'
   | 'tools.database.formula.error.unexpectedEnd'

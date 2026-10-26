@@ -62,10 +62,28 @@ export const readDatabase = (block: TargetBlock): DatabaseState => {
   };
 };
 
+const lockedSchema = (schema: unknown): boolean => Array.isArray(schema)
+  && schema.some((property: unknown) => isRecord(property) && property.type === 'title' && property.databaseLocked === true);
+
+/** A database held in another database follows that one's lock, up the chain (the editor's holderLocked). */
+const holderLocked = (ctx: ToolActionContext, id: string, seen: ReadonlySet<string> = new Set([id])): boolean => {
+  const parentId = ctx.read(id)?.parentId ?? null;
+  const parent = parentId === null || seen.has(parentId) ? null : ctx.read(parentId);
+
+  if (parentId === null || parent?.type !== 'database') {
+    return false;
+  }
+
+  return (isRecord(parent.data) && lockedSchema(parent.data.schema)) || holderLocked(ctx, parentId, new Set([...seen, parentId]));
+};
+
 /** Schema and views are frozen while the title property carries `databaseLocked` (the editor's structureLocked). */
 export const assertUnlocked = (ctx: ToolActionContext, state: DatabaseState): void => {
-  if (state.schema.some(property => property.type === 'title' && property.databaseLocked === true)) {
+  if (lockedSchema(state.schema)) {
     ctx.fail('PRECONDITION_FAILED', 'This database is locked: its properties and views cannot change. Rows can.');
+  }
+  if (ctx.block !== undefined && holderLocked(ctx, ctx.block.id)) {
+    ctx.fail('PRECONDITION_FAILED', 'This database sits inside a locked database, so its properties and views cannot change. Rows can.');
   }
 };
 

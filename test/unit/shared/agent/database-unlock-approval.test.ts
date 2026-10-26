@@ -161,6 +161,31 @@ describe.each(sessions)('unlocking a database a person locked, on a %s session',
     }
   });
 
+  it('a database held inside a locked database is locked with it, as in the editor', async () => {
+    const holder = { ...database('db', true, ['held']) };
+    const held = { ...database('held', false), parent: 'db' };
+    const session = open({ blocks: [holder, held] });
+
+    try {
+      const result = await run(session, [{ name: 'database.addProperty', args: { id: 'held', name: 'Size', type: 'number' } }]);
+
+      expect(codeOf(result)).toBe('PRECONDITION_FAILED');
+      expect(result.ok ? '' : result.error.message).toMatch(/inside a locked database/);
+    } finally {
+      session.close();
+    }
+  });
+
+  it('a held database changes freely once its holder is unlocked', async () => {
+    const session = open({ blocks: [database('db', false, ['held']), { ...database('held', false), parent: 'db' }] });
+
+    try {
+      expect(codeOf(await run(session, [{ name: 'database.addProperty', args: { id: 'held', name: 'Size', type: 'number' } }]))).toBeUndefined();
+    } finally {
+      session.close();
+    }
+  });
+
   describe('undo and redo', () => {
     const undo = { name: 'history.undo', args: {} };
     const redo = { name: 'history.redo', args: {} };

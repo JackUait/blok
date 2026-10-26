@@ -195,6 +195,13 @@ export interface PopoverItemDefaultBaseParams {
   secondaryLabel?: string;
 
   /**
+   * The item's current value, as plain grey text before the chevron
+   * (the "Number" in "Number format › Number"). Unlike secondaryLabel,
+   * it is not drawn as a keyboard shortcut.
+   */
+  valueLabel?: string;
+
+  /**
    * Grey text after the title, shown as "· <text>" only in search results.
    * Not searched and not part of the title.
    */

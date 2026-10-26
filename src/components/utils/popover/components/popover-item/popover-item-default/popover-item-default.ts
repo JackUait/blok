@@ -402,6 +402,15 @@ export class PopoverItemDefault extends PopoverItem {
       }
     }
 
+    if (params.valueLabel !== undefined && params.valueLabel !== '') {
+      const valueEl = document.createElement('div');
+
+      valueEl.className = 'ms-auto shrink-0 whitespace-nowrap ps-3 leading-5 text-text-secondary';
+      valueEl.setAttribute(DATA_ATTR.popoverItemValue, '');
+      valueEl.textContent = params.valueLabel;
+      root.appendChild(valueEl);
+    }
+
     // Trailing icon (end-side indicator, e.g. checkmark)
     if (params.trailingIcon) {
       const trailingEl = document.createElement('div');

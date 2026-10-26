@@ -8,7 +8,7 @@ interface CapturedItem {
   name?: string;
   title?: string;
   icon?: string;
-  secondaryLabel?: string;
+  valueLabel?: string;
   trailingIcon?: string;
   type?: string;
   isActive?: boolean | (() => boolean);
@@ -535,7 +535,7 @@ describe('DatabasePropertyMenu', () => {
     it('has Limit, Default and Notifications, each showing its current value', () => {
       const { items } = editItems(prop('person'));
 
-      expect(items.map((i) => [i.name, i.title, i.secondaryLabel])).toEqual([
+      expect(items.map((i) => [i.name, i.title, i.valueLabel])).toEqual([
         ['limit', 'tools.database.relationLimit', 'tools.database.relationLimitNone'],
         ['personDefault', 'tools.database.personDefault', 'tools.database.personDefaultNone'],
         ['personNotifications', 'tools.database.personNotifications', 'tools.database.personNotificationsUsersOnly'],
@@ -563,7 +563,7 @@ describe('DatabasePropertyMenu', () => {
     it('shows and checks the stored choices', () => {
       const { items } = editItems(prop('person', { person: { limit: 1, default: 'createdBy', notifications: 'none' } }));
 
-      expect(items.map((i) => i.secondaryLabel)).toEqual([
+      expect(items.map((i) => i.valueLabel)).toEqual([
         'tools.database.personLimitOne',
         'tools.database.propertyTypeCreatedBy',
         'tools.database.personNotificationsNone',
@@ -792,14 +792,14 @@ describe('DatabasePropertyMenu', () => {
       open(prop('date'));
       const untouched = byName(lastItems(), 'editProperty').children?.items ?? [];
 
-      expect(byName(untouched, 'dateFormat').secondaryLabel).toBe('tools.database.dateFormat.full');
-      expect(byName(untouched, 'timeFormat').secondaryLabel).toBe('tools.database.timeFormat.12_hour');
+      expect(byName(untouched, 'dateFormat').valueLabel).toBe('tools.database.dateFormat.full');
+      expect(byName(untouched, 'timeFormat').valueLabel).toBe('tools.database.timeFormat.12_hour');
 
       open(prop('date', { date: { dateFormat: 'relative', timeFormat: 'hidden' } }));
       const saved = byName(lastItems(), 'editProperty').children?.items ?? [];
 
-      expect(byName(saved, 'dateFormat').secondaryLabel).toBe('tools.database.dateFormat.relative');
-      expect(byName(saved, 'timeFormat').secondaryLabel).toBe('tools.database.timeFormat.hidden');
+      expect(byName(saved, 'dateFormat').valueLabel).toBe('tools.database.dateFormat.relative');
+      expect(byName(saved, 'timeFormat').valueLabel).toBe('tools.database.timeFormat.hidden');
     });
 
     // The value reaches innerHTML, and a missing i18n key comes back as the key itself.
@@ -809,8 +809,8 @@ describe('DatabasePropertyMenu', () => {
       open(prop('date', { date: { dateFormat: markup, timeFormat: markup } as never }));
       const items = byName(lastItems(), 'editProperty').children?.items ?? [];
 
-      expect(byName(items, 'dateFormat').secondaryLabel).toBe('tools.database.dateFormat.full');
-      expect(byName(items, 'timeFormat').secondaryLabel).toBe('tools.database.timeFormat.12_hour');
+      expect(byName(items, 'dateFormat').valueLabel).toBe('tools.database.dateFormat.full');
+      expect(byName(items, 'timeFormat').valueLabel).toBe('tools.database.timeFormat.12_hour');
     });
 
     it('shows 24 hour on an untouched Date property when the locale uses a 24 hour clock', () => {
@@ -819,7 +819,7 @@ describe('DatabasePropertyMenu', () => {
       menu.open(prop('date'), document.createElement('button'));
       const items = byName(lastItems(), 'editProperty').children?.items ?? [];
 
-      expect(byName(items, 'timeFormat').secondaryLabel).toBe('tools.database.timeFormat.24_hour');
+      expect(byName(items, 'timeFormat').valueLabel).toBe('tools.database.timeFormat.24_hour');
     });
 
     // research/17 §1d: Notifications, the Remind a new date starts with.
@@ -831,7 +831,7 @@ describe('DatabasePropertyMenu', () => {
 
       expect(items.map((item) => item.name).at(-1)).toBe('dateNotifications');
       expect(notifications.title).toBe('tools.database.dateNotifications');
-      expect(notifications.secondaryLabel).toBe('tools.database.dateRemind.none');
+      expect(notifications.valueLabel).toBe('tools.database.dateRemind.none');
       expect(choices.map((c) => c.name)).toEqual([
         'dateNotifications-none', 'dateNotifications-on_day_of_event', 'dateNotifications-1_day_before',
         'dateNotifications-2_days_before', 'dateNotifications-1_week_before',
@@ -846,7 +846,7 @@ describe('DatabasePropertyMenu', () => {
       const notifications = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'dateNotifications');
       const choices = notifications.children?.items ?? [];
 
-      expect(notifications.secondaryLabel).toBe('tools.database.dateRemind.1_week_before');
+      expect(notifications.valueLabel).toBe('tools.database.dateRemind.1_week_before');
       byName(choices, 'dateNotifications-none').onActivate?.(byName(choices, 'dateNotifications-none'));
       expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { date: {} });
     });
@@ -1075,7 +1075,7 @@ describe('row page property menu', () => {
     const type = byName(items, 'changeType');
 
     expect(type.title).toBe('tools.database.propertyTypeListHeading');
-    expect(type.secondaryLabel).toBe('tools.database.propertyTypeNumber');
+    expect(type.valueLabel).toBe('tools.database.propertyTypeNumber');
     expect(type.icon).toBe(IconReplace);
     menu.destroy();
   });
@@ -1092,13 +1092,13 @@ describe('row page property menu', () => {
   it('shows the number format and decimal places on the right of their rows', () => {
     const plain = editPanel(prop('number'));
 
-    expect(byName(plain.items, 'numberFormat').secondaryLabel).toBe('tools.database.numberFormat.number');
-    expect(byName(plain.items, 'decimals').secondaryLabel).toBe('tools.database.decimalPlacesDefault');
+    expect(byName(plain.items, 'numberFormat').valueLabel).toBe('tools.database.numberFormat.number');
+    expect(byName(plain.items, 'decimals').valueLabel).toBe('tools.database.decimalPlacesDefault');
     plain.menu.destroy();
     const set = editPanel(prop('number', { number: { format: 'euro', decimals: 2 } }));
 
-    expect(byName(set.items, 'numberFormat').secondaryLabel).toBe('tools.database.numberFormat.euro');
-    expect(byName(set.items, 'decimals').secondaryLabel).toBe('2');
+    expect(byName(set.items, 'numberFormat').valueLabel).toBe('tools.database.numberFormat.euro');
+    expect(byName(set.items, 'decimals').valueLabel).toBe('2');
     set.menu.destroy();
   });
 

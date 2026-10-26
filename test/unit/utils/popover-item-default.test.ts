@@ -78,6 +78,17 @@ describe('PopoverItemDefault', () => {
     expect(secondary?.textContent).toBe(secondaryLabel);
   });
 
+  it('shows valueLabel as plain text before the chevron, not as a shortcut', () => {
+    const { element } = createItem({ valueLabel: 'Number', children: { items: [{ title: 'Percent', onActivate: vi.fn() }] } });
+    const value = element.querySelector<HTMLElement>(`[${DATA_ATTR.popoverItemValue}]`);
+
+    expect(value?.textContent).toBe('Number');
+    expect(value?.querySelector('svg')).toBeNull();
+    expect(element).not.toHaveAttribute('aria-keyshortcuts');
+    expect(value?.nextElementSibling).toHaveAttribute(DATA_ATTR.popoverItemIconChevronRight, '');
+    expect(tooltip.onHover).not.toHaveBeenCalled();
+  });
+
   it('marks item as active when constructed with isActive=true', () => {
     const { element } = createItem({ isActive: true });
 

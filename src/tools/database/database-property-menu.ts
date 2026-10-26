@@ -621,7 +621,7 @@ export class DatabasePropertyMenu {
         return {
           name: entry,
           ...(panel
-            ? { title: this.t('tools.database.propertyTypeListHeading'), icon: IconReplace, secondaryLabel: this.t(propertyTypeMeta(property.type).labelKey) }
+            ? { title: this.t('tools.database.propertyTypeListHeading'), icon: IconReplace, valueLabel: this.t(propertyTypeMeta(property.type).labelKey) }
             : { title: this.t('tools.database.changeType'), icon: propertyTypeMeta(property.type).icon }),
           children: {
             items: addablePropertyTypes(this.options.hasPeople)
@@ -732,7 +732,7 @@ export class DatabasePropertyMenu {
     const row = <C extends string>(name: string, titleKey: string, choices: ReadonlyArray<readonly [C, string]>, chosen: string, pick: (choice: C) => void): PopoverItemParams => ({
       name,
       title: this.t(titleKey),
-      secondaryLabel: this.t(choices.find(([choice]) => choice === chosen)?.[1] ?? choices[0][1]),
+      valueLabel: this.t(choices.find(([choice]) => choice === chosen)?.[1] ?? choices[0][1]),
       children: {
         items: choices.map(([choice, labelKey]) => ({
           name: [name, choice].join('-'),
@@ -885,7 +885,7 @@ export class DatabasePropertyMenu {
       {
         name: 'dateFormat',
         title: this.t('tools.database.dateFormat'),
-        secondaryLabel: this.t(`tools.database.dateFormat.${shownDateFormat}`),
+        valueLabel: this.t(`tools.database.dateFormat.${shownDateFormat}`),
         icon: IconCalendar,
         children: {
           items: DATE_FORMATS.map((format) => ({
@@ -900,7 +900,7 @@ export class DatabasePropertyMenu {
       {
         name: 'timeFormat',
         title: this.t('tools.database.timeFormat'),
-        secondaryLabel: this.t(`tools.database.timeFormat.${shownTimeFormat}`),
+        valueLabel: this.t(`tools.database.timeFormat.${shownTimeFormat}`),
         children: {
           items: TIME_FORMATS.map((format) => ({
             name: `timeFormat-${format}`,
@@ -948,7 +948,7 @@ export class DatabasePropertyMenu {
     return {
       name: 'dateNotifications',
       title: this.t('tools.database.dateNotifications'),
-      secondaryLabel: reminderLabel(t, chosen, false, hourCycle),
+      valueLabel: reminderLabel(t, chosen, false, hourCycle),
       children: {
         items: choices.map((choice) => ({
           name: `dateNotifications-${choice ?? 'none'}`,
@@ -971,7 +971,7 @@ export class DatabasePropertyMenu {
       {
         name: 'numberFormat',
         title: this.t('tools.database.numberFormat'),
-        secondaryLabel: this.t(`tools.database.numberFormat.${number.format ?? 'number'}`),
+        valueLabel: this.t(`tools.database.numberFormat.${number.format ?? 'number'}`),
         children: {
           searchable: true,
           items: NUMBER_FORMATS.map((format) => ({
@@ -986,7 +986,7 @@ export class DatabasePropertyMenu {
       {
         name: 'decimals',
         title: this.t('tools.database.decimalPlaces'),
-        secondaryLabel: number.decimals === undefined ? this.t('tools.database.decimalPlacesDefault') : String(number.decimals),
+        valueLabel: number.decimals === undefined ? this.t('tools.database.decimalPlacesDefault') : String(number.decimals),
         children: {
           items: [
             {

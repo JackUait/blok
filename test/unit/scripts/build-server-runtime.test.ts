@@ -121,6 +121,20 @@ describe('buildServerRuntime', () => {
     expect(readFileSync(join(outDir, 'blok-server-runtime.js'), 'utf8').length).toBeLessThan(4 * 1024 * 1024);
   });
 
+  /** The server only parses math; KaTeX renders it and weighs ~300 KB in every Jint engine. */
+  it('leaves KaTeX out and still parses math from markdown', async () => {
+    const invoke = await buildBareRuntime(outDir);
+    const source = readFileSync(join(outDir, 'blok-server-runtime.js'), 'utf8');
+    const output: unknown = JSON.parse(await invoke('markdownToBlocks', JSON.stringify({ markdown: 'Area $a^2$\n\n$$\nE = mc^2\n$$\n' })));
+
+    expect(source.match(/KaTeX parse error/g)).toBeNull();
+    expect(output).toMatchObject({ blocks: [
+      { type: 'paragraph', data: { text: [{ text: 'Area' }] } },
+      { type: 'code', data: { code: 'a^2', language: 'latex' } },
+      { type: 'code', data: { code: 'E = mc^2', language: 'latex' } },
+    ] });
+  });
+
   /** The engine has no structuredClone; the hand clone must still keep an own `__proto__` key. */
   it('keeps a __proto__ key through injectTexts in a realm with no host globals', async () => {
     const outputPath = await buildServerRuntime(outDir);

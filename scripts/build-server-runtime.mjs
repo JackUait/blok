@@ -1,4 +1,5 @@
 import { build } from 'vite';
+import { createRequire } from 'node:module';
 import { mkdir, mkdtemp, readFile, rename, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -6,6 +7,16 @@ import { fileURLToPath } from 'node:url';
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(dirname, '..');
 const defaultOutDir = path.resolve(root, 'packages/server/dotnet/Blok.Server/Generated');
+
+/**
+ * The IIFE build inlines `import('micromark-extension-math')` as the whole
+ * namespace, so its unused `mathHtml` drags in its own KaTeX (~300 KB). The
+ * server only parses math, so point the package at its syntax half.
+ */
+const mathSyntaxOnly = path.join(
+  path.dirname(createRequire(import.meta.url).resolve('micromark-extension-math')),
+  'lib/syntax.js'
+);
 
 /**
  * Build the JavaScript resource embedded by Blok.Server.
@@ -77,6 +88,7 @@ export async function buildServerRuntime(outDir = defaultOutDir) {
       },
       resolve: {
         conditions: ['worker'],
+        alias: [{ find: /^micromark-extension-math$/, replacement: mathSyntaxOnly }],
       },
       define: {
         'NODE_ENV': JSON.stringify('production'),

@@ -1156,8 +1156,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_ADD_PROPERTY_MENU_BYTES = 1_351 + 775;
     // database.css: the date picker laid out as Notion's (field look, 20px header, 28px days, row insets and dividers).
     const DATABASE_DATE_PICKER_BYTES = 773;
-    // database.css: the row page's full-size type glyph, plus 172 for Notion's side peek insets.
-    const DATABASE_ROW_PAGE_FINISH_BYTES = 18 + 172;
+    // database.css: the row page's full-size type glyph, plus 172 for Notion's side peek insets,
+    // plus 999 for the status picker's group rhythm.
+    const DATABASE_ROW_PAGE_FINISH_BYTES = 18 + 172 + 999;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

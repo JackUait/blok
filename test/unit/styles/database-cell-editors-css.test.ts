@@ -210,6 +210,24 @@ describe('cell editor CSS', () => {
       expect(declared(`${STATUS} [data-blok-database-select-option-handle]`, 'display')).toEqual(['none']);
       expect(declared(`${STATUS} [data-blok-database-select-option-check]`, 'display')).toEqual(['none']);
     });
+
+    // n/11-status.png: groups 73px apart, each divider 12px short of both sides.
+    it('spaces the status groups like Notion, with inset dividers', () => {
+      const LIST = `${VALUE} [data-blok-database-select-editor="status"] [data-blok-database-select-list]`;
+      const HEADING = `${LIST} > [data-blok-database-status-group-heading]`;
+      const DIVIDED = `${HEADING}:not(:first-child)`;
+
+      expect(declared(HEADING, 'padding-block')).toEqual(['var(--blok-space-2-25) var(--blok-space-2)']);
+      expect(declared(HEADING, 'padding-inline')).toEqual(['0']);
+      expect(declared(HEADING, 'margin-inline')).toEqual(['var(--blok-space-2)']);
+      expect(declared(DIVIDED, 'padding-block-start')).toEqual(['var(--blok-space-2-75)']);
+      expect(declared(DIVIDED, 'margin-block-start')).toEqual(['var(--blok-space-2-25)']);
+    });
+
+    // n/18-status-hover.png: a hovered status row shows only its fill. Options are edited in Edit property.
+    it('gives a status row no edit button', () => {
+      expect(declared(`${VALUE} [data-blok-database-select-editor="status"] [data-blok-database-select-option-menu]`, 'display')).toEqual(['none']);
+    });
   });
 
   it('keeps the title weight (500) in the title editor, in a 38px one-line box (feel T19)', () => {

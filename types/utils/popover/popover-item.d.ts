@@ -202,6 +202,12 @@ export interface PopoverItemDefaultBaseParams {
   valueLabel?: string;
 
   /**
+   * An element drawn before {@link valueLabel}, such as a colour swatch.
+   * Appended as-is. Needs a valueLabel.
+   */
+  valueIcon?: HTMLElement;
+
+  /**
    * Draws the chevron on a row without children: a row that opens another
    * surface (the "Edit formula" row opens the formula editor).
    */

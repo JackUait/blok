@@ -23,3 +23,14 @@ export const optionColorLabelKey = (color: OptionColor): string =>
  */
 export const shownStatusOption = <T extends Pick<SelectOption, 'color'>>(option: T): T =>
   (option.color === undefined ? { ...option, color: 'gray' } : option);
+
+/** An 18px square of a colour, painted by the `data-blok-database-option-swatch` rules in database.css. */
+export const optionSwatch = (color: OptionColor): HTMLElement => {
+  const el = document.createElement('span');
+
+  el.setAttribute('data-blok-database-option-swatch', '');
+  el.setAttribute('data-color', color);
+  el.setAttribute('aria-hidden', 'true');
+
+  return el;
+};

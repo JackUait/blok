@@ -143,31 +143,72 @@ describe('row page property menu (research parity row 9)', () => {
     expect(declared('[data-blok-database-property-menu-note]', 'contain')).toEqual(['inline-size']);
   });
 
-  // notion-spec-2 §2: the note sits 30px in from the panel (items start 4px in), 12px under the tiles, 12/18.
-  it('insets the all-views note 30px from the panel, as Notion', () => {
-    const note = `${ROW_PAGE} [data-blok-database-property-menu-note]`;
+  const PANEL = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-property-panel']";
+  // The column header's Edit property submenu: a nested popover carries no class of its own.
+  const SUB = `${HEADER} [data-blok-popover][data-blok-nested]`;
 
-    expect(declared(note, 'padding')).toEqual(['var(--blok-space-3) calc(var(--blok-space-6) + var(--blok-space-0-5)) 0']);
-    expect(declared(note, 'line-height')).toEqual(['18px']);
+  // notion-spec-2 §1: the Edit property panel's rows sit 8px in from its edge (body padding 8px); other menus keep 4.
+  it('pads the Edit property panel 8px, as Notion', () => {
+    expect(declared(`${PANEL} [data-blok-popover-container]`, 'padding-inline')).toEqual(['var(--blok-space-2)']);
+    expect(declared(`${PANEL} [data-blok-popover-items]`, 'padding-block')).toEqual(['var(--blok-space-2)']);
+    // Keeps Show as at the panel's x + 20 and the tiles at x + 28 (§2).
+    expect(declared(`${PANEL} [data-blok-database-show-as]`, 'padding-inline')).toEqual(['var(--blok-space-3)']);
   });
 
-  // notion-spec-2 §2: Color and Divide by sit in one box, 234 wide in the 290 panel (24 in from the items),
-  // 12px under the tiles (the Show as padding gives 8 of it), padding 12px 0, rows 8px apart and 16px in, on rgba(84,72,49,0.04).
-  it('boxes Color and Divide by, as Notion', () => {
-    const color = `${ROW_PAGE} [data-blok-popover-item][data-blok-item-name="color"]`;
-    const divide = `${ROW_PAGE} [data-blok-popover-item-html][data-blok-item-name="divideBy"]`;
+  // notion-spec-2 §2: the note sits 30px in from the panel (items start 8px in), 12px under the tiles, 12/18.
+  // §9: in the header submenu it sits 18px in (items start 4px in).
+  it('insets the all-views note as Notion, on the panel and in the header submenu', () => {
+    const note = (menu: string): string => `${menu} [data-blok-database-property-menu-note]`;
 
-    expect(declared(color, 'margin')).toEqual(['var(--blok-space-4) var(--blok-space-6) 0']);
-    expect(declared(color, 'padding-inline')).toEqual(['var(--blok-space-4)']);
-    expect(declared(color, 'background-color')).toEqual(['var(--blok-database-gauge-box-bg)']);
-    expect(declared(`${color}::before`, 'block-size')).toEqual(['var(--blok-space-3)']);
-    expect(declared(`${color}::before`, 'background-color')).toEqual(['var(--blok-database-gauge-box-bg)']);
-    expect(declared(divide, 'margin-inline')).toEqual(['var(--blok-space-6)']);
-    expect(declared(divide, 'padding-block')).toEqual(['var(--blok-space-2) var(--blok-space-3)']);
-    expect(declared(divide, 'background-color')).toEqual(['var(--blok-database-gauge-box-bg)']);
-    expect(declared(divide, 'contain')).toEqual(['inline-size']);
-    expect(declared(`${divide} > [data-blok-database-property-menu-field]`, 'padding')).toEqual(['0 var(--blok-space-4)']);
-    expect(declared(`${divide} > [data-blok-database-property-menu-field]`, 'gap')).toEqual(['var(--blok-space-4)']);
+    expect(declared(note(ROW_PAGE), 'padding')).toEqual(['var(--blok-space-3) calc(var(--blok-space-5) + var(--blok-space-0-5)) 0']);
+    expect(declared(note(SUB), 'padding')).toEqual(['var(--blok-space-3) calc(var(--blok-space-3) + var(--blok-space-0-5)) 0']);
+    expect(declared(note(ROW_PAGE), 'line-height')).toEqual(['18px']);
+    expect(declared(note(SUB), 'line-height')).toEqual(['18px']);
+  });
+
+  // notion-spec-2 §2, §9: Color and Divide by sit in one box at the tiles' x, 12px under them, padding 12px 0,
+  // rows 8px apart and 16px in, on rgba(84,72,49,0.04): 234 wide on the 290 panel, 268 in the 300 header submenu.
+  it('boxes Color and Divide by, as Notion, on the panel and in the header submenu', () => {
+    for (const [menu, inset] of [[ROW_PAGE, 'var(--blok-space-5)'], [SUB, 'var(--blok-space-3)']]) {
+      const color = `${menu} [data-blok-popover-item][data-blok-item-name="color"]`;
+      const divide = `${menu} [data-blok-popover-item-html][data-blok-item-name="divideBy"]`;
+
+      // No 1px item gap under it: the box would show a seam.
+      expect(declared(color, 'margin-block')).toEqual(['var(--blok-space-4) 0']);
+      expect(declared(color, 'margin-inline')).toEqual([inset]);
+      // Notion's value is a button 8px in from the row's 16px padding: the chevron ends 24 in.
+      expect(declared(color, 'padding-inline')).toEqual(['var(--blok-space-4) var(--blok-space-6)']);
+      expect(declared(color, 'background-color')).toEqual(['var(--blok-database-gauge-box-bg)']);
+      // Popover rows clip their overflow, which hid the ::before (the box's top 12px and its radius).
+      expect(declared(color, 'overflow')).toEqual(['visible']);
+      expect(declared(`${color}::before`, 'block-size')).toEqual(['var(--blok-space-3)']);
+      expect(declared(`${color}::before`, 'background-color')).toEqual(['var(--blok-database-gauge-box-bg)']);
+      expect(declared(divide, 'margin-inline')).toEqual([inset]);
+      expect(declared(divide, 'padding-block')).toEqual(['var(--blok-space-2) var(--blok-space-3)']);
+      expect(declared(divide, 'background-color')).toEqual(['var(--blok-database-gauge-box-bg)']);
+      expect(declared(divide, 'contain')).toEqual(['inline-size']);
+      expect(declared(`${divide} > [data-blok-database-property-menu-field]`, 'padding')).toEqual(['0 var(--blok-space-4)']);
+      expect(declared(`${divide} > [data-blok-database-property-menu-field]`, 'gap')).toEqual(['var(--blok-space-4)']);
+    }
     expect(database).toContain('--blok-database-gauge-box-bg: rgba(84, 72, 49, 0.04);');
+  });
+
+  // notion-spec-2 §9: the header submenu's tiles fill a row 16px in from the panel, 6px apart (about 85 wide each).
+  it('stretches the header submenu tiles across the row, as Notion', () => {
+    expect(declared(`${SUB} [data-blok-database-show-as]`, 'padding-inline')).toEqual(['var(--blok-space-3)']);
+    expect(declared(`${SUB} [data-blok-database-show-as-tiles]`, 'padding-inline')).toEqual(['0']);
+    expect(declared(`${SUB} [data-blok-database-show-as-tiles]`, 'gap')).toEqual(['var(--blok-space-1-5)']);
+    expect(declared(`${SUB} [data-blok-database-show-as-tile]`, 'flex')).toEqual(['1']);
+  });
+
+  // notion-spec-2 §9: Notion's Color value is swatch, name, then a down chevron 8px after the name.
+  // The turn sits on the svg, so it also replaces the RTL mirror (a down chevron needs none).
+  it('draws the Color row\'s chevron pointing down, 8px after the name', () => {
+    for (const menu of [ROW_PAGE, SUB]) {
+      const chevron = `${menu} [data-blok-popover-item][data-blok-item-name="color"] [data-blok-popover-item-icon-chevron-right]`;
+
+      expect(declared(`${chevron} svg`, 'transform')).toEqual(['rotate(90deg)']);
+      expect(declared(chevron, 'margin-inline-start')).toEqual(['var(--blok-space-2)']);
+    }
   });
 });

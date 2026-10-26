@@ -9,6 +9,7 @@ interface CapturedItem {
   title?: string;
   icon?: string;
   valueLabel?: string;
+  valueIcon?: HTMLElement;
   closeOnActivate?: boolean;
   trailingIcon?: string;
   type?: string;
@@ -790,6 +791,20 @@ describe('DatabasePropertyMenu', () => {
       menu.destroy();
     });
 
+    // notion-spec-2 §9: Notion's Color value is a swatch of the colour, then its name; its list rows have swatches too.
+    it('the Color row shows a swatch of the current colour before its name', () => {
+      const { menu } = headerMenu(prop('number', { number: { showAs: 'ring', color: 'green' } }));
+      const color = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'color');
+      const swatchOf = (item: CapturedItem | undefined): string | null | undefined => item?.valueIcon?.getAttribute('data-color');
+
+      expect(color.valueIcon?.hasAttribute('data-blok-database-option-swatch')).toBe(true);
+      expect(swatchOf(color)).toBe('green');
+      expect((color.children?.items ?? []).map((item) => (item.icon as unknown as HTMLElement | undefined)?.getAttribute('data-color'))).toEqual([
+        'default', 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red',
+      ]);
+      menu.destroy();
+    });
+
     // notion-spec-2 §8, §9: after a format or decimals pick the row it came from stays highlighted; a colour pick highlights nothing.
     it('after a pick in the header submenu, the picked row keeps the highlight', () => {
       const { menu } = headerMenu(prop('number', { number: { showAs: 'bar' } }));
@@ -1111,6 +1126,19 @@ describe('row page property menu', () => {
 
     expect(params?.offset).toBe(1);
     expect(String(params?.class)).toContain('blok-database-row-page-menu');
+    expect(String(params?.class)).not.toContain('blok-database-property-panel');
+    menu.destroy();
+  });
+
+  // notion-spec-2 §1: only the Edit property panel takes Notion's 8px inset, so it gets its own class.
+  it('marks the Edit property panel, still in the row page look', () => {
+    const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks() });
+
+    menu.openRowPage(prop('number'), document.createElement('div'), { edit: true });
+    const params = captured.popovers[captured.popovers.length - 1]?.params;
+
+    expect(String(params?.class).split(' ')).toEqual(expect.arrayContaining(['blok-database-row-page-menu', 'blok-database-property-panel']));
+    expect(params?.offset).toBe(1);
     menu.destroy();
   });
 

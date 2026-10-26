@@ -2,7 +2,7 @@ import type { I18n } from '../../../types';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { IconCheck, IconEyeSlash, IconPreview, IconSliders, IconTrash } from '../../components/icons';
-import { OPTION_COLORS, optionColorLabelKey, type OptionColor } from './cells/option-colors';
+import { OPTION_COLORS, optionColorLabelKey, optionSwatch, type OptionColor } from './cells/option-colors';
 
 /**
  * PopoverDesktop `class` for the database's menus. database.css keys their
@@ -25,16 +25,6 @@ export interface GroupMenuParams {
   onTrash: () => void;
   onRecolor: (color: OptionColor) => void;
 }
-
-const swatch = (color: OptionColor): HTMLElement => {
-  const el = document.createElement('span');
-
-  // Painted by the select editor's swatch rule in database.css.
-  el.setAttribute('data-blok-database-option-swatch', '');
-  el.setAttribute('data-color', color);
-
-  return el;
-};
 
 /**
  * The board column's "More group options" menu (research/08): Edit groups,
@@ -85,7 +75,7 @@ export const groupMenuItems = (params: GroupMenuParams): PopoverItemParams[] => 
     ...OPTION_COLORS.map((color): PopoverItemParams => ({
       name: `color-${color}`,
       title: t(optionColorLabelKey(color)),
-      icon: swatch(color),
+      icon: optionSwatch(color),
       trailingIcon: color === params.color ? IconCheck : undefined,
       closeOnActivate: true,
       onActivate: () => params.onRecolor(color),

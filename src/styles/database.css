@@ -6580,24 +6580,65 @@ textarea[data-blok-database-cell-input] {
   contain: inline-size;
 }
 
-/* notion-spec-2 §2: 30px in from the panel; items start 4px in, so 26. */
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-database-property-menu-note] {
-  padding: var(--blok-space-3) calc(var(--blok-space-6) + var(--blok-space-0-5)) 0;
+/* notion-spec-2 §1: the Edit property panel's rows start 8px in (body padding 8px); other menus keep 4. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-property-panel'] [data-blok-popover-container] {
+  padding-inline: var(--blok-space-2);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-property-panel'] [data-blok-popover-items] {
+  padding-block: var(--blok-space-2);
+}
+
+/* Keeps Show as at the panel's x + 20, its tiles at x + 28 (§2). */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-property-panel'] [data-blok-database-show-as] {
+  padding-inline: var(--blok-space-3);
+}
+
+/* notion-spec-2 §9: the header submenu's tiles fill a row 16px in from the panel, 6px apart. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-database-show-as] {
+  padding-inline: var(--blok-space-3);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-database-show-as-tiles] {
+  padding-inline: 0;
+  gap: var(--blok-space-1-5);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-database-show-as-tile] {
+  flex: 1;
+}
+
+/* The all-views note: 30px in from the panel (§2), 18px in from the header submenu (§9). */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-database-property-menu-note],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-database-property-menu-note] {
   line-height: 18px;
 }
 
-/* notion-spec-2 §2: Color and Divide by share one box under the tiles, 24px in from the items.
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-database-property-menu-note] {
+  padding: var(--blok-space-3) calc(var(--blok-space-5) + var(--blok-space-0-5)) 0;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-database-property-menu-note] {
+  padding: var(--blok-space-3) calc(var(--blok-space-3) + var(--blok-space-0-5)) 0;
+}
+
+/* notion-spec-2 §2, §9: Color and Divide by share one box at the tiles' x, 12px under them.
    The Color row is the box's top; its ::before draws the 12px above it. Notion's radius is 5px. */
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item][data-blok-item-name="color"] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item][data-blok-item-name="color"],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item][data-blok-item-name="color"] {
   position: relative;
+  /* Rows clip by default; that hid the ::before. */
+  overflow: visible;
   /* 4px past the Show as padding, so the box starts 12px under the tiles. */
-  margin: var(--blok-space-4) var(--blok-space-6) 0;
-  padding-inline: var(--blok-space-4);
+  margin-block: var(--blok-space-4) 0;
+  /* Notion's value is a button 8px in from the row's 16px: its chevron ends 24 in. */
+  padding-inline: var(--blok-space-4) var(--blok-space-6);
   border-radius: 0;
   background-color: var(--blok-database-gauge-box-bg);
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item][data-blok-item-name="color"]::before {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item][data-blok-item-name="color"]::before,
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item][data-blok-item-name="color"]::before {
   content: '';
   position: absolute;
   inset-inline: 0;
@@ -6608,8 +6649,19 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-gauge-box-bg);
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-html][data-blok-item-name="divideBy"] {
-  margin-inline: var(--blok-space-6);
+/* The turn replaces the RTL mirror too: a down chevron needs none. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item][data-blok-item-name="color"] [data-blok-popover-item-icon-chevron-right] svg,
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item][data-blok-item-name="color"] [data-blok-popover-item-icon-chevron-right] svg {
+  transform: rotate(90deg);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item][data-blok-item-name="color"] [data-blok-popover-item-icon-chevron-right],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item][data-blok-item-name="color"] [data-blok-popover-item-icon-chevron-right] {
+  margin-inline-start: var(--blok-space-2);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-html][data-blok-item-name="divideBy"],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item-html][data-blok-item-name="divideBy"] {
   padding-block: var(--blok-space-2) var(--blok-space-3);
   border-end-start-radius: var(--blok-radius-control);
   border-end-end-radius: var(--blok-radius-control);
@@ -6617,14 +6669,26 @@ textarea[data-blok-database-cell-input] {
   contain: inline-size;
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-html][data-blok-item-name="divideBy"] > [data-blok-database-property-menu-field] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item][data-blok-item-name="color"],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-html][data-blok-item-name="divideBy"] {
+  margin-inline: var(--blok-space-5);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item][data-blok-item-name="color"],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item-html][data-blok-item-name="divideBy"] {
+  margin-inline: var(--blok-space-3);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-html][data-blok-item-name="divideBy"] > [data-blok-database-property-menu-field],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item-html][data-blok-item-name="divideBy"] > [data-blok-database-property-menu-field] {
   block-size: 28px;
   padding: 0 var(--blok-space-4);
   gap: var(--blok-space-4);
   color: var(--blok-database-ink);
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-html][data-blok-item-name="divideBy"] input {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-html][data-blok-item-name="divideBy"] input,
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item-html][data-blok-item-name="divideBy"] input {
   text-align: end;
 }
 
@@ -9718,7 +9782,7 @@ textarea[data-blok-database-cell-input] {
   display: flex;
   align-items: center;
   gap: var(--blok-space-1-5);
-  margin-block-start: var(--blok-space-4);
+  margin-block: var(--blok-space-4) 0;
   font-size: 14px;
   font-weight: 500;
   color: var(--blok-database-ink-secondary);
@@ -9764,7 +9828,7 @@ textarea[data-blok-database-cell-input] {
   flex-direction: column;
   align-self: stretch;
   flex: 1 1 auto;
-  margin-block-start: var(--blok-space-4);
+  margin-block: var(--blok-space-4) 0;
   padding: var(--blok-space-2) var(--blok-space-3);
   border-start-start-radius: var(--blok-radius-control-lg);
   background-color: var(--blok-database-confirm-bg);

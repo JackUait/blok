@@ -408,6 +408,10 @@ export class PopoverItemDefault extends PopoverItem {
       valueEl.className = 'ms-auto shrink-0 whitespace-nowrap ps-3 leading-5 text-text-secondary';
       valueEl.setAttribute(DATA_ATTR.popoverItemValue, '');
       valueEl.textContent = params.valueLabel;
+      if (params.valueIcon !== undefined) {
+        valueEl.classList.add('inline-flex', 'items-center', 'gap-2');
+        valueEl.prepend(params.valueIcon);
+      }
       root.appendChild(valueEl);
     }
 

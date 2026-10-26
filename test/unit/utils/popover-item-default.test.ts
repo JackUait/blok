@@ -89,6 +89,15 @@ describe('PopoverItemDefault', () => {
     expect(tooltip.onHover).not.toHaveBeenCalled();
   });
 
+  it('draws valueIcon before the value text', () => {
+    const swatch = document.createElement('span');
+    const { element } = createItem({ valueLabel: 'Green', valueIcon: swatch });
+    const value = element.querySelector<HTMLElement>(`[${DATA_ATTR.popoverItemValue}]`);
+
+    expect(value?.firstChild).toBe(swatch);
+    expect(value?.textContent).toBe('Green');
+  });
+
   it('draws the chevron on a row without children when chevron is set', () => {
     const { element } = createItem({ chevron: true });
     const { element: plain } = createItem({});

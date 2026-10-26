@@ -8,7 +8,7 @@ import { PopoverEvent } from '../../../types/utils/popover/popover-event';
 import type { I18n } from '../../../types';
 import { EmojiPicker } from '../callout/emoji-picker';
 import { NUMBER_FORMATS, MAX_DECIMALS } from './cells/number-format';
-import { OPTION_COLORS, optionColorLabelKey } from './cells/option-colors';
+import { OPTION_COLORS, optionColorLabelKey, optionSwatch } from './cells/option-colors';
 import { addablePropertyTypes, propertyTypeMeta } from './database-property-types';
 import { ROLLUP_FUNCTIONS, rollupFunctionsFor, rollupResultType } from './rollup';
 import { buttonEditItems } from './database-button-menu';
@@ -141,6 +141,8 @@ const VISIBILITY: readonly PageVisibility[] = ['always', 'hideWhenEmpty', 'hidde
 
 /** The row page's menu and Edit property panel: the header menu's rows, in Notion's row page look. */
 const ROW_PAGE_MENU_CLASS = `${DATABASE_HEADER_MENU_CLASS} blok-database-row-page-menu`;
+/** The row page's Edit property panel: Notion pads it 8px, its menus 4 (notion-spec-2 §1). */
+const PROPERTY_PANEL_CLASS = `${ROW_PAGE_MENU_CLASS} blok-database-property-panel`;
 
 const withoutLimit = ({ limit: _limit, ...rest }: RelationSettings): RelationSettings => rest;
 
@@ -350,7 +352,7 @@ export class DatabasePropertyMenu {
       ...(tail.length > 0 ? [separator, ...tail] : []),
     ];
 
-    this.show(items, anchor, '290px', ROW_PAGE_MENU_CLASS, typed !== undefined);
+    this.show(items, anchor, '290px', PROPERTY_PANEL_CLASS, typed !== undefined);
     const input = name.querySelector('input');
 
     if (typed !== undefined) {
@@ -364,7 +366,7 @@ export class DatabasePropertyMenu {
 
   /** `redraw`: stands in for the open menu, so it shows with no entrance. */
   private show(items: PopoverItemParams[], anchor: HTMLElement, minWidth: string, className = DATABASE_HEADER_MENU_CLASS, redraw = false): void {
-    const rowPage = className === ROW_PAGE_MENU_CLASS;
+    const rowPage = className.startsWith(ROW_PAGE_MENU_CLASS);
     const popover = new PopoverDesktop({
       class: className, animateClose: true, items, trigger: anchor, width: 'auto', minWidth, flippable: true, autoFocusFirstItem: false,
       // Notion opens the row page menu 1px under the label.
@@ -1007,6 +1009,7 @@ export class DatabasePropertyMenu {
     const latest = { number };
     const showAs = number.showAs ?? 'number';
     const gauge = showAs === 'bar' || showAs === 'ring';
+    const current = OPTION_COLORS.find((color) => color === number.color) ?? 'default';
     // A new gauge starts Green (notion-spec-2 §7); a gauge with no saved colour keeps Default.
     const pick = (value: NumberShowAs): void => set(value === 'number' ? without(latest.number, 'showAs') : { ...latest.number, showAs: value, ...(gauge || latest.number.color !== undefined ? {} : { color: 'green' }) });
 
@@ -1057,11 +1060,13 @@ export class DatabasePropertyMenu {
           {
             name: 'color',
             title: this.t('tools.database.numberColor'),
-            valueLabel: this.t(optionColorLabelKey(OPTION_COLORS.find((color) => color === number.color) ?? 'default')),
+            valueLabel: this.t(optionColorLabelKey(current)),
+            valueIcon: optionSwatch(current),
             children: {
               items: OPTION_COLORS.map((color) => ({
                 name: `color-${color}`,
                 title: this.t(optionColorLabelKey(color)),
+                icon: optionSwatch(color),
                 isActive: (number.color ?? 'default') === color,
                 onActivate: () => set({ ...latest.number, color }),
               })),

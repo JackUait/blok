@@ -481,6 +481,22 @@ describe('EditorApplier', () => {
     expect((await saved(modules)).blocks.find(block => block.id === 'r')?.data).toEqual({ text: [{ text: 'Record' }] });
   });
 
+  it('a step checked as "none" that appears before the step runs is STALE, never undone or redone', async () => {
+    const modules = await boot();
+    const applier = createApplier(modules);
+    const emptyUndo = applier.historyStepId('history.undo');
+    const emptyRedo = applier.historyStepId('history.redo');
+
+    expect([emptyUndo, emptyRedo]).toEqual([undefined, undefined]);
+    await apply(applier, [{ op: 'setData', id: 'r', patch: { extra: null } }], ['r']);
+    await settle(applier);
+    await expect(applier.undo({ expected: emptyUndo })).rejects.toMatchObject({ error: { code: 'STALE' } });
+    expect(applier.snapshot().get('r')?.data).not.toHaveProperty('extra');
+    await applier.undo();
+    await expect(applier.redo({ expected: emptyRedo })).rejects.toMatchObject({ error: { code: 'STALE' } });
+    expect(applier.snapshot().get('r')?.data.extra).toBe('keep');
+  });
+
   it('deletes null keys from the live tool and later saves and restores them on undo', async () => {
     const modules = await boot();
     const applier = createApplier(modules);

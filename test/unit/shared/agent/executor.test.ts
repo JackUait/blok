@@ -1372,6 +1372,28 @@ describe('runBatch contract', () => {
     expect(log[0]?.error).toEqual(result.error);
   });
 
+  it('an undo asked about an empty history, where a step appears while the person decides, is STALE', async () => {
+    const lockedDoc: OutputData = { blocks: [{ id: 'db', type: 'database', data: { schema: [{ id: 't', name: 'Name', type: 'title', position: 'a0', databaseLocked: true }] } }] };
+    const applier = memoryApplier({}, lockedDoc);
+    const top: { step: unknown } = { step: undefined };
+    const undo = vi.fn(() => Promise.resolve());
+
+    // Fails closed: nothing says what the step holds, so every locked database is asked about.
+    delete applier.pendingUnlocks;
+    applier.historyStepId = () => top.step;
+    applier.undo = undo;
+    const result = await run({ commands: [{ name: 'history.undo', args: {} }] }, applier, {
+      approve: () => {
+        top.step = { appeared: true };
+
+        return Promise.resolve(true);
+      },
+    });
+
+    expect(undo).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ ok: false, error: { code: 'STALE' } });
+  });
+
   it('routes undo once and reports its post-operation revision without planning or apply', async () => {
     let undoCalls = 0;
     const log: CommandLogEntry[] = [];

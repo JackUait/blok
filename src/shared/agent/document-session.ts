@@ -13,7 +13,7 @@ import type { OutputData } from '../../../types/data-formats/output-data';
 import type { AgentContract } from '../../../types/tool-manifest';
 import type { ToolRuntimeRegistry } from '../tool-actions/runtime';
 import type { PageBackendService } from '../tool-actions/services';
-import type { AgentApplier, HostBatchPlan } from './executor';
+import type { AgentApplier, HistoryBound, HostBatchPlan } from './executor';
 import type { AgentPorts, SchemaValidator } from './types';
 
 type ReadBlock = (blockId: string) => { type: string; data: Record<string, unknown> } | undefined;
@@ -165,8 +165,8 @@ export const createDocumentAgentSession = (input: {
       return Promise.resolve();
     },
     historyStepId: name => (name === 'history.undo' ? past.at(-1) : future.at(-1)),
-    undo: (expected?: unknown) => {
-      if (expected !== undefined && past.at(-1) !== expected) {
+    undo: (bound?: HistoryBound) => {
+      if (bound !== undefined && past.at(-1) !== bound.expected) {
         return Promise.reject(failure('STALE', 'Another step is the last one now, so nothing was undone. Read the document again, then retry.'));
       }
       const previous = past.pop();
@@ -180,8 +180,8 @@ export const createDocumentAgentSession = (input: {
       return Promise.resolve();
     },
     historyTarget: name => (name === 'history.undo' ? past.at(-1) : future.at(-1)),
-    redo: (expected?: unknown) => {
-      if (expected !== undefined && future.at(-1) !== expected) {
+    redo: (bound?: HistoryBound) => {
+      if (bound !== undefined && future.at(-1) !== bound.expected) {
         return Promise.reject(failure('STALE', 'Another step is next now, so nothing was redone. Read the document again, then retry.'));
       }
       const next = future.pop();

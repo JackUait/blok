@@ -24,9 +24,12 @@ export interface AgentApplier {
   apply(plan: Plan, draft: DocSnapshot): Promise<void>;
   /** `data`: the planned block's data, so a toolbox variant (e.g. a full-page database) prepares the right thing. */
   prepareInsert?(type: string, data?: Record<string, unknown>): Promise<Record<string, unknown> | undefined>;
-  /** `expected`: the historyStepId the caller checked; another step on top refuses with STALE and changes nothing. */
-  undo?(expected?: unknown): Promise<void>;
-  redo?(expected?: unknown): Promise<void>;
+  /**
+   * `bound.expected`: the historyStepId the caller checked, undefined meaning "there was none".
+   * Another step on top refuses with STALE and changes nothing. No `bound`: no check.
+   */
+  undo?(bound?: HistoryBound): Promise<void>;
+  redo?(bound?: HistoryBound): Promise<void>;
   /** The step history.undo or history.redo would run now, as an identity to compare. */
   historyStepId?(name: 'history.undo' | 'history.redo'): unknown;
   /** The document a history step would leave, when the applier keeps whole snapshots. */
@@ -39,6 +42,9 @@ export interface AgentApplier {
    */
   pendingUnlocks?(name: 'history.undo' | 'history.redo'): readonly string[] | undefined;
 }
+
+/** The step a caller checked. A wrapper, so "the stack was empty" is not mistaken for "no check". */
+export interface HistoryBound { expected: unknown }
 
 /** The databases a step unlocks when redone (forward) and when undone (backward). */
 export interface StepUnlocks { forward: string[]; backward: string[] }
@@ -277,7 +283,7 @@ const historyStep = (applier: AgentApplier, name: 'history.undo' | 'history.redo
   }
 
   return async () => {
-    await step.call(applier, expected);
+    await step.call(applier, { expected });
     const [from, to] = name === 'history.undo' ? [marks.past, marks.future] : [marks.future, marks.past];
 
     to.push(from.pop() ?? 'own');

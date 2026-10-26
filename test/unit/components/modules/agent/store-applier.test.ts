@@ -564,6 +564,21 @@ describe('StoreApplier', () => {
     expect(applier.snapshot().toOutput()).toEqual(before);
   });
 
+  it('a step checked as "none" that appears before the step runs is STALE, never undone or redone', async () => {
+    const store = createStore();
+    const applier = createApplier(store);
+    const emptyUndo = applier.historyStepId('history.undo');
+    const emptyRedo = applier.historyStepId('history.redo');
+
+    expect([emptyUndo, emptyRedo]).toEqual([undefined, undefined]);
+    await apply(applier, [{ op: 'setData', id: 'a', patch: { keep: 2 } }], ['a']);
+    await expect(applier.undo({ expected: emptyUndo })).rejects.toMatchObject({ error: { code: 'STALE' } });
+    expect(applier.snapshot().get('a')?.data.keep).toBe(2);
+    await applier.undo();
+    await expect(applier.redo({ expected: emptyRedo })).rejects.toMatchObject({ error: { code: 'STALE' } });
+    expect(applier.snapshot().get('a')?.data.keep).toBe(1);
+  });
+
   it("undoes its own step but not another 'local' write to the store", async () => {
     const store = createStore();
     const applier = createApplier(store);

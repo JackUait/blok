@@ -9,7 +9,7 @@ import { stripNul } from '../yjs/serializer';
 import type { Edit, PlannedBlock } from '../../../../types/agent';
 import type { RichText } from '../../../../types/rich-text';
 import type { Attribution } from '../../../shared/agent/attribution';
-import type { AgentApplier, StepUnlocks } from '../../../shared/agent/executor';
+import type { AgentApplier, HistoryBound, StepUnlocks } from '../../../shared/agent/executor';
 import type { Plan } from '../../../shared/agent/types';
 import type { DocumentStore } from '../yjs/document-store';
 
@@ -172,10 +172,10 @@ export class StoreApplier implements AgentApplier {
     return name === 'history.undo' ? this.done.at(-1) : this.undone.at(-1);
   }
 
-  public undo(expected?: unknown): Promise<void> {
+  public undo(bound?: HistoryBound): Promise<void> {
     const step = this.done.at(-1);
 
-    if (expected !== undefined && step !== expected) {
+    if (bound !== undefined && step !== bound.expected) {
       return Promise.reject(failure('STALE', 'Another step is the last one now, so nothing was undone. Read the document again, then retry.'));
     }
     if (step === undefined) {
@@ -188,10 +188,10 @@ export class StoreApplier implements AgentApplier {
     return Promise.resolve();
   }
 
-  public redo(expected?: unknown): Promise<void> {
+  public redo(bound?: HistoryBound): Promise<void> {
     const step = this.undone.at(-1);
 
-    if (expected !== undefined && step !== expected) {
+    if (bound !== undefined && step !== bound.expected) {
       return Promise.reject(failure('STALE', 'Another step is next now, so nothing was redone. Read the document again, then retry.'));
     }
     if (step === undefined) {

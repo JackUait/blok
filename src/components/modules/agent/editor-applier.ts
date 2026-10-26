@@ -1,7 +1,7 @@
 import type { BlockOrigin } from '../../../../types';
 import type { AgentActor, Edit, PlannedBlock } from '../../../../types/agent';
 import { AgentFailure, failure } from '../../../shared/agent/errors';
-import type { AgentApplier, StepUnlocks } from '../../../shared/agent/executor';
+import type { AgentApplier, HistoryBound, StepUnlocks } from '../../../shared/agent/executor';
 import type { DocSnapshot } from '../../../shared/agent/snapshot';
 import type { Plan } from '../../../shared/agent/types';
 import { textLivesInFirstChild } from '../../../shared/turn-into';
@@ -180,7 +180,7 @@ export class EditorApplier implements AgentApplier {
     return name === 'history.undo' ? this.Blok.YjsManager.topUndoToken() : this.Blok.YjsManager.topRedoToken();
   }
 
-  public async undo(expected?: unknown): Promise<void> {
+  public async undo(bound?: HistoryBound): Promise<void> {
     const { YjsManager } = this.Blok;
 
     await this.settle();
@@ -188,7 +188,7 @@ export class EditorApplier implements AgentApplier {
     const token = YjsManager.topUndoToken();
 
     // settle() yields: the person's Cmd+Z or a peer can change the top step meanwhile.
-    if (expected !== undefined && token !== expected) {
+    if (bound !== undefined && token !== bound.expected) {
       throw failure('STALE', 'Another step is the last one now, so nothing was undone. Read the document again, then retry.');
     }
 
@@ -208,14 +208,14 @@ export class EditorApplier implements AgentApplier {
     await this.settle();
   }
 
-  public async redo(expected?: unknown): Promise<void> {
+  public async redo(bound?: HistoryBound): Promise<void> {
     const { YjsManager } = this.Blok;
 
     await this.settle();
     YjsManager.flushPendingBlockWrites();
     const token = YjsManager.topRedoToken();
 
-    if (expected !== undefined && token !== expected) {
+    if (bound !== undefined && token !== bound.expected) {
       throw failure('STALE', 'Another step is next now, so nothing was redone. Read the document again, then retry.');
     }
 

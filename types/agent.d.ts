@@ -186,6 +186,32 @@ export interface ViewBlock {
    * row does not store, by property id. `{ unavailable }` says why one is missing.
    */
   computed?: Record<string, unknown>;
+  /** Database rows: the comments in open threads, as the row's badge counts them. */
+  commentCount?: number;
+  /** Full detail, database rows only: the row's comment threads, resolved ones too. Comments are not page content. */
+  comments?: ViewComment[];
+  /** Threads past the first 100, left out of comments. */
+  moreComments?: number;
+}
+
+/** One comment on a database row. A thread has replies; a reply has none. */
+export interface ViewComment {
+  id: string;
+  text: string;
+  /** The writer's name as saved with the comment. Absent for an anonymous writer. */
+  author?: string;
+  authorId?: string;
+  /** Epoch ms. */
+  createdAt: number;
+  editedAt?: number;
+  /** A thread about one cell: that property's id. */
+  propertyId?: string;
+  resolved?: true;
+  /** The person you act for wrote it, so you may edit or delete it. */
+  own?: true;
+  replies?: ViewComment[];
+  /** Replies past the first 100, left out of replies. */
+  moreReplies?: number;
 }
 
 export interface DocumentView {

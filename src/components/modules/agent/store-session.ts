@@ -49,7 +49,7 @@ export const createStoreAgentSession = (input: {
     read: async (args: ViewArgs = {}): Promise<DocumentView> => {
       checkEnvelope({ commands: [{ name: 'doc.read', args: { ...args } }] }, ctx.commands, ctx.validate);
 
-      return buildDocumentView(applier.snapshot(), args, ctx, applier.revision());
+      return buildDocumentView(applier.snapshot(), args, ctx, applier.revision(), agentAttribution(input.actor).by);
     },
     describe: query => describeContract(input.contract, query),
     execute: (batch, options = {}) => runBatch({

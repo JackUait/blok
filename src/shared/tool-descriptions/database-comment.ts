@@ -18,7 +18,7 @@ export const DATABASE_COMMENT_DATA = {
 
 export const describeDatabaseComment = (_config: Record<string, unknown> = {}): BlockToolDescription => ({
   summary: 'A comment on a database row, kept out of the row\'s page content.',
-  guidance: 'Comments are written by people in the editor. Do not insert, edit or delete them.',
+  guidance: 'Not written with block.* commands. A full read of a row lists its threads under comments; write them with database.addComment, replyToComment, editComment, resolveComment and deleteComment.',
   data: DATABASE_COMMENT_DATA,
   inputFields: [],
 });

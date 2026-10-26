@@ -312,7 +312,7 @@ const refuseInsert = (state: PlanState, entry: PlannerTool['entry'], path: strin
   }
 
   return state.fail('COMMAND_UNAVAILABLE', `"${entry.name}" is not insertable: ${entry.children.annotation === true
-    ? 'people write it in the editor' : 'the host hides it from the toolbox'}.`, path, { reason: 'not-insertable' });
+    ? 'it is a comment. Add one with database.addComment or database.replyToComment' : 'the host hides it from the toolbox'}.`, path, { reason: 'not-insertable' });
 };
 
 export const failUnknownTool = (state: PlanState, type: string, path: string): never => {

@@ -3,6 +3,7 @@ import type { ModalDialogHandle } from '../../components/utils/modal-dialog';
 import { DATABASE_EMPTY_AUTOMATIONS } from '../../shared/tool-actions/load-defaults';
 import { describeDatabase } from '../../shared/tool-descriptions/database';
 import { DATABASE_ACTION_HANDLERS } from '../../shared/tool-actions/database';
+import { DATABASE_COMMENT_HANDLERS } from '../../shared/tool-actions/database-comments';
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolData, OutputData, ToolboxConfig, ToolboxConfigEntry, SanitizerConfig } from '../../../types';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
@@ -441,7 +442,7 @@ const consumeViewLink = (owns: (viewId: string) => boolean): string | null => {
 
 export class DatabaseTool implements BlockTool {
   public static describe = describeDatabase;
-  public static actionHandlers = DATABASE_ACTION_HANDLERS;
+  public static actionHandlers = { ...DATABASE_ACTION_HANDLERS, ...DATABASE_COMMENT_HANDLERS };
   /** Rows and comments are blocks of their own; registering `database` brings both. */
   public static companionTools: Record<string, BaseToolConstructable> = {
     'database-row': DatabaseRowTool,
@@ -1705,6 +1706,15 @@ export class DatabaseTool implements BlockTool {
   /** Without editStructure the database block's own data (schema, views, title) is frozen; its rows are not. */
   isDataReadOnly(): boolean {
     return !this.permits('editStructure');
+  }
+
+  /**
+   * Whether the person at this editor could write a built-in comment here now.
+   * An agent's comment writes ask this instead of isReadOnly (editor-applier.ts):
+   * commenting needs `comment`, not `editContent`.
+   */
+  public commentsWritable(param: { receive: (writable: boolean) => void }): void {
+    param.receive(this.builtInComments.writable());
   }
 
   /** The host's comments for a row or a cell, else the built-in ones, unless permissions deny `comment`. */

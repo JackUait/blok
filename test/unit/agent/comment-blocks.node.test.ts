@@ -5,7 +5,7 @@ import { openJsonSession, openStoreSession } from './harness';
 import type { OutputData } from '../../../types';
 import type { AgentSession } from '../../../types/agent';
 
-const COMMENT = /^Block "c1" is a database-comment block, a comment people left\. Agents do not read or write comments\.$/;
+const COMMENT = /^Block "c1" is a database-comment block, a comment, not page content\. A full read of its row lists it under comments\. Change it with database\.replyToComment, database\.editComment, database\.resolveComment or database\.deleteComment\.$/;
 
 /** A database with one row, and a comment thread on that row, as the row panel saves it. */
 const seed = async (): Promise<OutputData> => {

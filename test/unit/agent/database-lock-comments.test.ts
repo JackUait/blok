@@ -51,14 +51,14 @@ describe.each(SESSIONS)('database lock, comments and reactions (%s session)', (_
     await locked.close();
   });
 
-  it('refuses an agent comment, so no comment claims a person wrote it', async () => {
+  it('refuses a comment block.insert, so no comment claims a person wrote it', async () => {
     const session = open(seed(false));
     const error = errorOf(await run(session, 'block.insert', {
       type: 'database-comment', parentId: 'r', data: { text: 'forged', createdAt: 1, authorId: 'u1', authorName: 'Jack' },
     }));
 
     expect(error?.code).toBe('COMMAND_UNAVAILABLE');
-    expect(error?.message).toContain('people write');
+    expect(error?.message).toContain('database.addComment');
     await session.close();
   });
 

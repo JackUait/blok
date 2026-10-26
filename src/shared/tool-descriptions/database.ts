@@ -1,4 +1,5 @@
 import { CONVERTIBLE_TYPES } from '../database/property-conversion';
+import { DATABASE_COMMENT_ACTIONS } from './database-comments';
 import { DATABASE_ROW_DATA } from './database-row';
 
 import type { BlockToolDescription, BlokSchema, ToolActionDeclaration } from '../../../types/tools/tool-description';
@@ -1128,7 +1129,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
 
 export const describeDatabase = (_config: Record<string, unknown> = {}): BlockToolDescription => ({
   summary: 'A database: a schema of properties and saved views. Rows are child database-row blocks.',
-  guidance: 'Add rows with database.addRow and change their values with database.setRowValues. Delete, copy or move a row with database.deleteRow, database.duplicateRow and database.moveRowTo; block.delete and block.duplicate on a row do the same as the first two. While the database is locked, automations, source, hideDataSourceTitles and starter cannot change either. Change a view\'s settings (filters, sorts, grouping, columns, layout options) with database.updateView and its layout type with database.setLayout; add, rename, move, duplicate and delete views with the other database.* view actions. Change properties and options with the database.* property actions, and lock or unlock with database.setLock. schema and views cannot be written directly. A full read of a row adds computed: the read-only values its cells show, by property id (formula, rollup, relation with back-links, unique ID, created and edited time and person). Raw values, no number format: times as ISO instants, people as [{ "id" }], a unique ID as shown ("T-1"). { "unavailable": reason } marks one it cannot work out.',
+  guidance: 'Add rows with database.addRow and change their values with database.setRowValues. Delete, copy or move a row with database.deleteRow, database.duplicateRow and database.moveRowTo; block.delete and block.duplicate on a row do the same as the first two. While the database is locked, automations, source, hideDataSourceTitles and starter cannot change either. Change a view\'s settings (filters, sorts, grouping, columns, layout options) with database.updateView and its layout type with database.setLayout; add, rename, move, duplicate and delete views with the other database.* view actions. Change properties and options with the database.* property actions, and lock or unlock with database.setLock. Comment on rows with database.addComment, replyToComment, editComment, resolveComment and deleteComment. schema and views cannot be written directly. A full read of a row adds computed: the read-only values its cells show, by property id (formula, rollup, relation with back-links, unique ID, created and edited time and person). Raw values, no number format: times as ISO instants, people as [{ "id" }], a unique ID as shown ("T-1"). { "unavailable": reason } marks one it cannot work out.',
   data: DATABASE_DATA,
   inputFields: ['title'],
   summaryFields: ['title', 'activeViewId'],
@@ -1136,5 +1137,5 @@ export const describeDatabase = (_config: Record<string, unknown> = {}): BlockTo
     schema: 'database.*Property',
     views: 'database.*View',
   },
-  actions: DATABASE_ACTIONS,
+  actions: [...DATABASE_ACTIONS, ...DATABASE_COMMENT_ACTIONS],
 });

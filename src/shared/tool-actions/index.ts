@@ -3,6 +3,7 @@ import { BUILT_IN_BLOCK_SANITIZE } from '../tool-descriptions/sanitize/blocks';
 import { BUILT_IN_INLINE_SANITIZE } from '../tool-descriptions/sanitize/inline';
 import { COLUMN_DEFAULT_CHILDREN, COLUMN_LIST_ACTION_HANDLERS, COLUMN_LIST_DEFAULT_CHILDREN } from './columns';
 import { DATABASE_ACTION_HANDLERS, DATABASE_CHILD_COMMAND, rejectDatabaseWrite } from './database';
+import { DATABASE_COMMENT_HANDLERS } from './database-comments';
 import { IMAGE_ACTION_HANDLERS } from './image';
 import {
   CALLOUT_CLEARED, CALLOUT_LOAD_DEFAULTS, CODE_CLEARED, LIST_CLEARED, normalizeCallout, normalizeCode, normalizeDatabase, normalizeList, normalizeQuote,
@@ -38,7 +39,7 @@ export const BUILT_IN_RUNTIME_PARTS: Readonly<Record<string, Pick<RuntimeBlockIn
   file: { rejectWrite: MEDIA_REJECT_WRITE.file, actions: MEDIA_ACTION_HANDLERS.file },
   embed: { normalize: normalizeEmbed, rejectWrite: rejectEmbedWrite, actions: LINK_ACTION_HANDLERS.embed },
   bookmark: { rejectWrite: rejectBookmarkWrite, actions: LINK_ACTION_HANDLERS.bookmark },
-  database: { normalize: normalizeDatabase, rejectWrite: rejectDatabaseWrite, actions: DATABASE_ACTION_HANDLERS, childCommand: DATABASE_CHILD_COMMAND },
+  database: { normalize: normalizeDatabase, rejectWrite: rejectDatabaseWrite, actions: { ...DATABASE_ACTION_HANDLERS, ...DATABASE_COMMENT_HANDLERS }, childCommand: DATABASE_CHILD_COMMAND },
   code: { normalize: normalizeCode, cleared: CODE_CLEARED },
   quote: { normalize: normalizeQuote, cleared: QUOTE_CLEARED },
   spacer: { cleared: SPACER_CLEARED },

@@ -1,4 +1,5 @@
 import { validateAgainst } from '../schema/validate';
+import { agentAttribution } from './attribution';
 import { plannerContextFrom } from './context';
 import { describeContract } from './describe';
 import { buildDocumentView } from './document-view';
@@ -262,7 +263,7 @@ export const createDocumentAgentSession = (input: {
     read: async (args: ViewArgs = {}): Promise<DocumentView> => {
       checkEnvelope({ commands: [{ name: 'doc.read', args: { ...args } }] }, ctx.commands, ctx.validate);
 
-      return buildDocumentView(state.current, args, ctx, applier.revision());
+      return buildDocumentView(state.current, args, ctx, applier.revision(), agentAttribution(input.actor).by);
     },
     history: () => {
       const marks = marksOf(applier);

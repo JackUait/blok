@@ -4,7 +4,7 @@ import { findTextMatches } from '../text-match';
 import { LOAD_DEFAULT_FILLS } from '../tool-actions/load-defaults';
 import { failure } from './errors';
 
-import type { DocumentView, ViewArgs, ViewBlock } from '../../../types/agent';
+import type { DocumentView, ViewArgs, ViewBlock, ViewComment } from '../../../types/agent';
 import type { DocSnapshot, SnapBlock } from './snapshot';
 import type { PlannerContext } from './types';
 
@@ -54,9 +54,12 @@ export const annotationOf = (
   return undefined;
 };
 
-/** Agents skip comment threads (user decision 2026-10-16), so naming one fails, but not as a missing block. */
+/** Comments are not page content: block commands and reads by id refuse them, and the comment commands take them. */
 export const annotationMessage = (id: string, thread: SnapBlock): string =>
-  `${thread.id === id ? `Block "${id}" is a ${thread.type} block` : `Block "${id}" is inside ${thread.type} block "${thread.id}"`}, a comment people left. Agents do not read or write comments.`;
+  `${thread.id === id ? `Block "${id}" is a ${thread.type} block` : `Block "${id}" is inside ${thread.type} block "${thread.id}"`}, a comment, not page content. `
+  + (thread.type === 'database-comment'
+    ? 'A full read of its row lists it under comments. Change it with database.replyToComment, database.editComment, database.resolveComment or database.deleteComment.'
+    : 'Agents do not write it.');
 
 const isAnnotationIn = (ctx: ViewContext) => (type: string): boolean => ctx.tools.get(type)?.entry.children.annotation === true;
 
@@ -79,13 +82,67 @@ const requireContent = (snap: DocSnapshot, id: string, ctx: ViewContext, path: s
 const contentOrder = (snap: DocSnapshot, rootId: string | null, ctx: ViewContext): Array<{ id: string; depth: number }> =>
   snap.readingOrder(rootId).filter(item => !inAnnotation(snap, item.id, ctx));
 
+/** Threads and replies a read lists; the rest are counted. */
+const COMMENTS_SHOWN = 100;
+
+const COMMENT_TYPE = 'database-comment';
+
+const commentsUnder = (snap: DocSnapshot, id: string): SnapBlock[] =>
+  (snap.get(id)?.content ?? []).flatMap((childId) => {
+    const child = snap.get(childId);
+
+    return child?.type === COMMENT_TYPE ? [child] : [];
+  });
+
+const viewComment = (block: SnapBlock, viewer: string | undefined): ViewComment => {
+  const { text, authorName, authorId, createdAt, editedAt, propertyId, resolved } = block.data;
+
+  return {
+    id: block.id,
+    text: typeof text === 'string' ? text : '',
+    ...(typeof authorName === 'string' && authorName !== '' && { author: authorName }),
+    ...(typeof authorId === 'string' && authorId !== '' && { authorId }),
+    createdAt: typeof createdAt === 'number' ? createdAt : 0,
+    ...(typeof editedAt === 'number' && { editedAt }),
+    ...(typeof propertyId === 'string' && propertyId !== '' && { propertyId }),
+    ...(resolved === true && { resolved: true }),
+    // As the comment panel's isOwn, and the comment actions' check: an anonymous comment is no one's.
+    ...(viewer !== undefined && viewer !== '' && authorId === viewer && { own: true }),
+  };
+};
+
+/** A row's threads as the comment panel reads them: the store's database-comment blocks, oldest first. */
+const viewThreads = (snap: DocSnapshot, rowId: string, viewer: string | undefined): Pick<ViewBlock, 'comments' | 'moreComments'> => {
+  const threads = commentsUnder(snap, rowId);
+  const comments = threads.slice(0, COMMENTS_SHOWN).map((thread): ViewComment => {
+    const replies = commentsUnder(snap, thread.id);
+
+    return {
+      ...viewComment(thread, viewer),
+      ...(replies.length > 0 && { replies: replies.slice(0, COMMENTS_SHOWN).map(reply => viewComment(reply, viewer)) }),
+      ...(replies.length > COMMENTS_SHOWN && { moreReplies: replies.length - COMMENTS_SHOWN }),
+    };
+  });
+
+  return {
+    ...(comments.length > 0 && { comments }),
+    ...(threads.length > COMMENTS_SHOWN && { moreComments: threads.length - COMMENTS_SHOWN }),
+  };
+};
+
+/** The row badge's count: every comment in a thread that is still open. */
+const openCommentCount = (snap: DocSnapshot, rowId: string): number => commentsUnder(snap, rowId)
+  .filter(thread => thread.data.resolved !== true)
+  .reduce((sum, thread) => sum + 1 + commentsUnder(snap, thread.id).length, 0);
+
 const viewBlock = (
   snap: DocSnapshot,
   block: SnapBlock,
   depth: number,
   args: ViewArgs,
   ctx: ViewContext,
-  computedFor: ComputedFor
+  computedFor: ComputedFor,
+  viewer?: string
 ): ViewBlock => {
   const tool = ctx.tools.get(block.type);
   const text = tool === undefined ? undefined : textOf(block, ctx);
@@ -140,6 +197,16 @@ const viewBlock = (
       entry.computed = computed;
     }
   }
+  if (block.type === 'database-row') {
+    const open = openCommentCount(snap, block.id);
+
+    if (open > 0) {
+      entry.commentCount = open;
+    }
+    if (args.ids !== undefined || args.detail === 'full') {
+      Object.assign(entry, viewThreads(snap, block.id, viewer));
+    }
+  }
 
   return entry;
 };
@@ -148,7 +215,9 @@ export const buildDocumentView = (
   source: DocSnapshot,
   args: ViewArgs,
   ctx: ViewContext,
-  revision: string
+  revision: string,
+  /** Who the reader acts for: their comments read as own. */
+  viewer?: string
 ): DocumentView => {
   // Later commands mutate the live draft in place.
   const snap = source.clone();
@@ -178,7 +247,7 @@ export const buildDocumentView = (
       throw failure('BLOCK_NOT_FOUND', `Block "${id}" does not exist.`, { details: { id } });
     }
 
-    return viewBlock(snap, block, depth, args, ctx, computedFor);
+    return viewBlock(snap, block, depth, args, ctx, computedFor, viewer);
   });
 
   return {

@@ -6,11 +6,17 @@ import { PREPARE_PENDING } from './plan-state';
 import { cloneRecord } from './snapshot';
 
 import type { InsertSpec, PlannedBlock } from '../../../types/agent';
-import type { ToolActionContext } from '../../../types/tools/tool-description';
+import type { ToolActionContext, ToolActionImpl } from '../../../types/tools/tool-description';
 import type { PlanState } from './plan-state';
 import type { SnapBlock } from './snapshot';
 
 export type RecordingContext = ToolActionContext;
+
+/** A built-in action that writes the comment blocks under its own block. Not on the public type: no host tool reaches comments. */
+export type AnnotationActionImpl<Args = unknown, Result = unknown> = ToolActionImpl<Args, undefined, Result> & { readonly reachesAnnotations: true };
+
+const reachesAnnotations = (impl: ToolActionImpl): impl is AnnotationActionImpl =>
+  'reachesAnnotations' in impl && impl.reachesAnnotations === true;
 
 const pointerKey = (key: string): string => key.replace(/~/g, '~0').replace(/\//g, '~1');
 const view = (block: SnapBlock): NonNullable<ReturnType<RecordingContext['read']>> => ({
@@ -161,7 +167,8 @@ export const planToolAction = (state: PlanState, name: string, args: Record<stri
   }
 
   try {
-    const result = impl.run(createActionContext(state, block, tool), args, prepared === PREPARE_PENDING ? undefined : prepared);
+    const result = state.withAnnotationScope(block !== undefined && reachesAnnotations(impl) ? block.id : null, () =>
+      impl.run(createActionContext(state, block, tool), args, prepared === PREPARE_PENDING ? undefined : prepared));
 
     if (result !== null && (typeof result === 'object' || typeof result === 'function') &&
         'then' in result && typeof result.then === 'function') {

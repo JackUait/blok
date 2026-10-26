@@ -84,7 +84,7 @@ export const planRead = (state: PlanState, args: Record<string, unknown>): unkno
     ...(limit !== undefined && { limit }),
     ...(cursor !== undefined && { cursor }),
     ...(textLimit !== undefined && { textLimit }),
-  }, state.ctx, '');
+  }, state.ctx, '', state.stamp.actorId);
 };
 
 export const planFind = (state: PlanState, args: Record<string, unknown>): unknown => {

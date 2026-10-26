@@ -1,6 +1,7 @@
 import type { AgentActor, AgentSession, CommandLogEntry, DocumentView, ViewArgs } from '../../../../types/agent';
 import type { AgentContract, ManifestOverrides } from '../../../../types/tool-manifest';
 import type { HostService } from '../../../../types/tools/tool-description';
+import { agentAttribution } from '../../../shared/agent/attribution';
 import { COMMANDS } from '../../../shared/agent/commands';
 import { plannerContextFrom } from '../../../shared/agent/context';
 import { describeContract } from '../../../shared/agent/describe';
@@ -99,7 +100,7 @@ export const createEditorAgentSession = (
       checkEnvelope({ commands: [{ name: 'doc.read', args: { ...args } }] }, ctx.commands, ctx.validate);
       await applier.settle();
 
-      return buildDocumentView(applier.snapshot(), args, ctx, applier.revision());
+      return buildDocumentView(applier.snapshot(), args, ctx, applier.revision(), agentAttribution(actor).by);
     },
     describe: query => describeContract(source.contract(), query),
     execute: (batch, opts = {}) => runBatch({

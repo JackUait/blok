@@ -81,17 +81,17 @@ describe('agent reads skip annotations', () => {
   ])('refuses %s on a thread or a reply as a comment, not a missing block', (name, args, id) => {
     expect(failureOf(name as `${string}.${string}`, args)).toMatchObject({
       code: 'ANNOTATION_BLOCK',
-      message: expect.stringMatching(/comment.*Agents do not read or write comments/),
+      message: expect.stringMatching(/a comment, not page content\. Agents do not write it\./),
       details: { id },
     });
   });
 
   it('names the thread a reply sits in', () => {
     expect(failureOf('block.delete', { id: 'n2' })?.message).toBe(
-      'Block "n2" is inside note block "n1", a comment people left. Agents do not read or write comments.'
+      'Block "n2" is inside note block "n1", a comment, not page content. Agents do not write it.'
     );
     expect(failureOf('block.delete', { id: 'n1' })?.message).toBe(
-      'Block "n1" is a note block, a comment people left. Agents do not read or write comments.'
+      'Block "n1" is a note block, a comment, not page content. Agents do not write it.'
     );
   });
 

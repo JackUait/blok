@@ -71,7 +71,7 @@ const MINIMAL: Record<string, CorpusCommand[]> = {
 /** Tools with no case, and why. */
 const NO_CASE: Record<string, string> = {
   page: 'Only the editor can create the sub-page document a page needs, so the headless engines refuse the insert (COMMAND_UNAVAILABLE).',
-  'database-comment': 'Not insertable by an agent: people write comments in the editor, so every engine refuses the insert.',
+  'database-comment': 'Not insertable by block.insert: database.addComment writes comments, so every engine refuses the insert.',
 };
 
 /** Writes after the insert that leave defaulted keys out, set them to null, or change what they depend on. */

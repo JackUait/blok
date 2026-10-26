@@ -69,6 +69,8 @@ export class PlanState {
   /** Explicit ids the batch's block.insert specs give new blocks. */
   public readonly batchIds = new Set<string>();
   public lastRange?: TextRangeRef;
+  /** While a comment action of this block runs: the comment blocks under it resolve. Every other path refuses them. */
+  private annotationScope: string | null = null;
 
   private readonly reserved = new Map<string, string>();
   private copyingStored = false;
@@ -80,6 +82,18 @@ export class PlanState {
     public readonly warnings: AgentWarning[],
     public readonly stamp: EditStamp
   ) {}
+
+  /** Runs `run` with the comment blocks under `blockId` reachable; null reaches none. */
+  public withAnnotationScope<T>(blockId: string | null, run: () => T): T {
+    const previous = this.annotationScope;
+
+    this.annotationScope = blockId;
+    try {
+      return run();
+    } finally {
+      this.annotationScope = previous;
+    }
+  }
 
   /** True while a copy of stored blocks is built: its data is not agent input. */
   public get copying(): boolean {
@@ -202,7 +216,7 @@ export class PlanState {
     }
     const thread = this.annotationOf(value);
 
-    if (thread !== undefined) {
+    if (thread !== undefined && (this.annotationScope === null || !this.draft.isUnder(value, this.annotationScope))) {
       return this.fail('ANNOTATION_BLOCK', annotationMessage(value, thread), path, { id: value });
     }
 

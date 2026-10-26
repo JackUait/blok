@@ -226,7 +226,7 @@ const REVIEW_ROWS: Record<CapabilityId, Coverage> = {
   'feature:database/built-in-comments': cmds(['database.addComment', 'database.replyToComment', 'database.editComment', 'database.resolveComment', 'database.deleteComment'], 'The store behind the built-in comment UI; the editor refuses where the person may not comment.'),
 
   // ui-file — files the listener-only scan missed
-  'ui-file:src/tools/database/database-automations-panel.ts': cmds(['block.update'], 'Create, edit, pause and delete automations: writes database.automations. Whether agent edits fire them is a user decision pending (review F1).'),
+  'ui-file:src/tools/database/database-automations-panel.ts': cmds(['block.update'], 'Create, edit, pause and delete automations: writes database.automations. In the editor, agent row edits fire them as a person\'s edits do (DatabaseTool.handleAgentRowWrite).'),
   'ui-file:src/tools/database/database-button-menu.ts': cmd('database.updateProperty'),
   'ui-file:src/tools/database/database-chart-export.ts': exempt('view-only', 'Copies the chart as PNG or downloads it as PNG or SVG; the document does not change.'),
   'ui-file:src/tools/database/database-linked-picker.ts': cmds(['block.insert', 'block.update', 'database.addView'], 'A new linked database is block.insert with database.source; relinking writes database.source; New view is database.addView.'),

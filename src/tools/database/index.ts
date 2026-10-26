@@ -723,6 +723,7 @@ export class DatabaseTool implements BlockTool {
     this.api.events.on(DATABASE_RENDERED_EVENT, this.handleDatabaseRendered);
     this.api.events.on(DATABASE_GONE_EVENT, this.handleDatabaseGone);
     this.api.events.on('block changed', this.handleBodyEdit);
+    this.api.events.on('block changed', this.handleAgentRowWrite);
     this.api.events.on('block changed', this.scheduleBacklinks);
     this.builtInComments.listen();
     this.api.events.on('block replayed', this.scheduleBacklinks);
@@ -749,6 +750,51 @@ export class DatabaseTool implements BlockTool {
     // Another database's row or a template reads no values, so it fills nothing.
     if (row !== undefined) this.hostLevers.bodyEdited(row);
   };
+
+  /**
+   * An agent's row write fires what the person's own write fires (the sync:
+   * adapter, automations, autofill). Its row changes reach the tool as block
+   * events, not through the tool's methods. Only the owning database: a
+   * linked view shows the same rows and would fire them twice.
+   */
+  private readonly handleAgentRowWrite = (payload: unknown): void => {
+    const event = (payload as { event?: { type?: unknown; detail?: { origin?: unknown; replaySource?: unknown; agent?: unknown; target?: ChangedBlock } } } | undefined)?.event;
+    const target = event?.detail?.target;
+
+    if (this.source !== undefined || event?.detail?.agent === undefined
+      || event.detail.origin !== 'local' || event.detail.replaySource !== undefined
+      || target?.name !== 'database-row' || typeof target.id !== 'string') return;
+    const rowId = target.id;
+
+    if (event.type === 'block-changed' && target.parentId === this.dataId) {
+      // Read now: the model still holds the values from before this write.
+      const before = this.model.getRow(rowId)?.properties ?? this.templates.find((template) => template.id === rowId)?.properties ?? {};
+      const data = this.liveRowData(rowId);
+      const changes = Object.fromEntries(Object.entries(data?.properties ?? {})
+        .filter(([propertyId, value]) => JSON.stringify(value) !== JSON.stringify(before[propertyId] ?? null)));
+
+      if (!this.destroyed && !this.readOnly && Object.keys(changes).length > 0) this.sync.syncUpdateRow({ rowId, properties: changes });
+
+      return;
+    }
+    if (event.type !== 'block-added') return;
+    // An insert sets the parent after its event.
+    queueMicrotask(() => {
+      const data = this.liveRowData(rowId);
+
+      if (this.destroyed || this.readOnly || data === undefined || this.api.blocks.getById(rowId)?.parentId !== this.dataId) return;
+      void this.sync.syncCreateRow({ id: rowId, properties: { ...data.properties }, position: data.position, ...(isTemplateData(data) ? { template: true } : {}) });
+    });
+  };
+
+  private liveRowData(rowId: string): DatabaseRowData | undefined {
+    const row = this.api.blocks.getById(rowId);
+    const live: DatabaseRowData[] = [];
+
+    row?.call('readData', { receive: (data: DatabaseRowData) => live.push(data) });
+
+    return live[0] ?? row?.preservedData as DatabaseRowData | undefined;
+  }
 
   /**
    * A block changed while a row page is open: count its backlinks again once
@@ -2350,6 +2396,7 @@ export class DatabaseTool implements BlockTool {
     this.api.events.off('block changed', this.handleBlockChanged);
     this.api.events.off('block replayed', this.handleBlockReplayed);
     this.api.events.off('block changed', this.handleBodyEdit);
+    this.api.events.off('block changed', this.handleAgentRowWrite);
     this.api.events.off('block changed', this.scheduleBacklinks);
     this.api.events.off('block replayed', this.scheduleBacklinks);
     if (this.backlinksTimer !== null) clearTimeout(this.backlinksTimer);

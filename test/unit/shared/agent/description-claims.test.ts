@@ -153,6 +153,52 @@ describe('what the model is told about block.convert is true', () => {
   });
 });
 
+describe('what the model is told about automations is true', () => {
+  const automated: OutputData = {
+    blocks: [
+      {
+        id: 'db', type: 'database', content: ['r1'],
+        data: {
+          title: 'Tasks',
+          schema: [
+            { id: 't', name: 'Name', type: 'title', position: 'a0' },
+            { id: 'c', name: 'Done', type: 'checkbox', position: 'a1' },
+            { id: 'notes', name: 'Notes', type: 'text', position: 'a2' },
+          ],
+          views: [{ id: 'v1', name: 'Table', type: 'table', position: 'a0', filters: [], sorts: [], visibleProperties: [] }],
+          activeViewId: 'v1',
+          automations: {
+            version: 1,
+            definitions: [{
+              id: 'done', name: 'Done', status: 'active', scope: { type: 'database' }, triggerMode: 'any',
+              triggers: [{ id: 'tr', type: 'propertyEdited', propertyId: 'c' }],
+              actions: [{ id: 'ac', type: 'editProperty', target: 'triggerRow', propertyId: 'notes', value: 'ran' }],
+            }],
+          },
+        },
+      },
+      { id: 'r1', type: 'database-row', parent: 'db', data: { title: 'One', position: 'a0', properties: { t: 'One', c: false } } },
+    ],
+  };
+
+  it('says only the editor runs automations on row edits, and a headless row edit runs none', async () => {
+    expect(describeDatabase().guidance).toMatch(/In the editor, your row edits in the open document fire what a person's edits fire: the database's automations/);
+    expect(describeDatabase().guidance).toMatch(/in every other runtime, run no automations: only the document changes/);
+
+    const session = openJsonSession(automated);
+
+    try {
+      expect((await session.execute({ commands: [{ name: 'database.setRowValues', args: { id: 'db', rowId: 'r1', values: { c: true } } }] })).ok).toBe(true);
+      await new Promise<void>((resolve) => { setTimeout(resolve, 700); });
+      const [row] = (await session.read({ ids: ['r1'], detail: 'full' })).blocks;
+
+      expect(row?.data?.properties).toEqual({ t: 'One', c: true });
+    } finally {
+      await session.close();
+    }
+  });
+});
+
 describe('what the model is told about computed database values is true', () => {
   const guidance = describeDatabase().guidance ?? '';
 

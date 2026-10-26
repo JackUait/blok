@@ -178,7 +178,8 @@ const emptyRooms: CollabSocketFactory = () => {
 
 describe('blok-mcp live with --page-titles page-map creates page documents', () => {
   const caller: Caller = { principal: 'alice', clientName: 'law', scopes: null };
-  const { live } = buildMcpContracts({ manifest: PREPARED_CUSTOM_TOOLS, pageTitles: 'page-map', createsPages: true });
+  // A sync URL gives live handles the version history, as assembleMcp sets it.
+  const { live } = buildMcpContracts({ manifest: PREPARED_CUSTOM_TOOLS, pageTitles: 'page-map', createsPages: true, versionHistory: true });
 
   it('lists page as insertable and inserts it, with every other type as its contract says', async () => {
     const mcp = assembleMcp(

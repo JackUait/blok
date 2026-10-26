@@ -1,11 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import type { PropertyDefinition, PropertyType } from '../../../../src/tools/database/types';
+import { IconPencilLine } from '../../../../src/components/icons';
 
 interface CapturedItem {
   name?: string;
   title?: string;
   valueLabel?: string;
+  icon?: string;
+  chevron?: boolean;
   type?: string;
   isActive?: boolean | (() => boolean);
   isDestructive?: boolean;
@@ -141,6 +144,15 @@ describe('property menu — computed types', () => {
     const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
 
     expect(byName(edit, 'editFormula').title).toBe('tools.database.editFormula');
+  });
+
+  // notion-spec-2 §9: Notion draws the row with pencilLine and a chevron.
+  it('formula: the Edit formula row has the pencil-line glyph and a chevron', () => {
+    openMenu(prop('formula', { formula: { expression: '1' } }));
+    const row = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'editFormula');
+
+    expect(row.icon).toBe(IconPencilLine);
+    expect(row.chevron).toBe(true);
   });
 
   // notion-spec-2 §3: Notion's rollup row reads "Target property".

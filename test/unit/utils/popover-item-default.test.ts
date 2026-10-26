@@ -89,6 +89,14 @@ describe('PopoverItemDefault', () => {
     expect(tooltip.onHover).not.toHaveBeenCalled();
   });
 
+  it('draws the chevron on a row without children when chevron is set', () => {
+    const { element } = createItem({ chevron: true });
+    const { element: plain } = createItem({});
+
+    expect(element.querySelector(`[${DATA_ATTR.popoverItemIconChevronRight}]`)).not.toBeNull();
+    expect(plain.querySelector(`[${DATA_ATTR.popoverItemIconChevronRight}]`)).toBeNull();
+  });
+
   it('marks item as active when constructed with isActive=true', () => {
     const { element } = createItem({ isActive: true });
 

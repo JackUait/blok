@@ -202,6 +202,12 @@ export interface PopoverItemDefaultBaseParams {
   valueLabel?: string;
 
   /**
+   * Draws the chevron on a row without children: a row that opens another
+   * surface (the "Edit formula" row opens the formula editor).
+   */
+  chevron?: boolean;
+
+  /**
    * Grey text after the title, shown as "· <text>" only in search results.
    * Not searched and not part of the title.
    */

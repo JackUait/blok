@@ -439,7 +439,7 @@ export class PopoverItemDefault extends PopoverItem {
     }
 
     // Chevron
-    const showChevron = this.hasChildren && !this.isChevronHidden && moreLabel === undefined;
+    const showChevron = ((this.hasChildren && !this.isChevronHidden) || params.chevron === true) && moreLabel === undefined;
 
     if (showChevron) {
       const chevronEl = document.createElement('div');

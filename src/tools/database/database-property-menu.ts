@@ -1,4 +1,4 @@
-import { IconCalendar, IconCheck, IconCopy, IconEmojiSmile, IconEyeSlash, IconInfo, IconMessage, IconPencil, IconReplace, IconSliders, IconTrash, IconEmojiSparkles, IconPageLayout, IconWand } from '../../components/icons';
+import { IconCalendar, IconCheck, IconCopy, IconEmojiSmile, IconEyeSlash, IconInfo, IconMessage, IconPencil, IconPencilLine, IconReplace, IconSliders, IconTrash, IconEmojiSparkles, IconPageLayout, IconWand } from '../../components/icons';
 import { nameTakenError } from './database-name-taken-error';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
@@ -831,7 +831,17 @@ export class DatabasePropertyMenu {
 
   /** notion-spec-2 §6: inside Edit property the row reads "Edit formula". */
   private editFormulaItem(propertyId: string, name: string, titleKey = 'tools.database.editFormula'): PopoverItemParams {
-    return { name, title: this.t(titleKey), icon: IconPencil, closeOnActivate: true, onActivate: () => this.options.computed?.onEditFormula(propertyId) };
+    // notion-spec-2 §9: Notion's Edit formula row has pencilLine and a chevron; the header's own Edit property keeps the pencil.
+    const own = name === 'editFormula';
+
+    return {
+      name,
+      title: this.t(titleKey),
+      icon: own ? IconPencilLine : IconPencil,
+      ...(own ? { chevron: true } : {}),
+      closeOnActivate: true,
+      onActivate: () => this.options.computed?.onEditFormula(propertyId),
+    };
   }
 
   private editItems(property: PropertyDefinition, update: (patch: Partial<PropertySettingsV2>) => void): PopoverItemParams[] {

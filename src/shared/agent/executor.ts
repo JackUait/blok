@@ -214,14 +214,22 @@ export const marksOf = (applier: AgentApplier): HistoryMarks => {
  * documents, a native one reads the record kept on that step. Unknown means every locked database.
  */
 const unlockedByStep = (applier: AgentApplier, name: 'history.undo' | 'history.redo'): readonly string[] => {
-  const current = applier.snapshot();
   const target = applier.historyTarget?.(name);
 
   if (target !== undefined) {
-    return unlockedBetween(current, target);
+    return unlockedBetween(applier.snapshot(), target);
   }
 
-  return applier.pendingUnlocks?.(name) ?? lockedDatabases(current);
+  return applier.pendingUnlocks?.(name) ?? lockedDatabases(applier.snapshot());
+};
+
+/** Undoing a lock or redoing an unlock asks like database.setLock does. Reads the document only when there is something to ask. */
+const approveHistoryStep = async (input: BatchInput, name: 'history.undo' | 'history.redo'): Promise<void> => {
+  const unlocks = unlockedByStep(input.applier, name);
+
+  if (unlocks.length > 0) {
+    await approveStep(unlocks, input.applier.snapshot(), input.approve, () => checkCancel(input.signal));
+  }
 };
 
 const historyStep = (applier: AgentApplier, name: 'history.undo' | 'history.redo'): (() => Promise<void>) => {
@@ -498,8 +506,7 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
     if (first?.name === 'history.undo' || first?.name === 'history.redo') {
       const step = historyStep(input.applier, first.name);
 
-      // Undoing a lock or redoing an unlock unlocks too, so it asks like database.setLock does.
-      await approveStep(unlockedByStep(input.applier, first.name), input.applier.snapshot(), input.approve, () => checkCancel(input.signal));
+      await approveHistoryStep(input, first.name);
       checkCancel(input.signal, orphaned);
       await step();
       const revision = input.applier.revision();

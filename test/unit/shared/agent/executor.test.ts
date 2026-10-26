@@ -54,6 +54,8 @@ const memoryApplier = (
       return state.current;
     },
     revision: () => state.version,
+    // Its history steps unlock nothing, so undo and redo stay a plain route here.
+    pendingUnlocks: () => [],
     apply: (plan, draft) => {
       state.events.push('apply');
       state.plans.push(plan);

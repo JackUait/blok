@@ -66,18 +66,38 @@ const isTransient = (error: unknown): boolean => {
   return typeof status === 'number' && (status === 429 || (status >= 500 && status <= 599 && status !== 501));
 };
 
-/** A host failure is not a broken document: the error says if a retry can help. */
-const ask = async <T>(call: () => Promise<T>): Promise<T> => {
+/** A plain 500, or an error that says nothing of itself: worth one more ask, then it is reported. */
+const isPlain = (error: unknown): boolean => !isRecord(error)
+  || (typeof error.retryable !== 'boolean' && (error.status === undefined || error.status === 500));
+
+const hostFailure = (error: unknown, retryable: boolean): AgentFailure => new AgentFailure({
+  ...failure('TOOL_ACTION_FAILED', `The version history failed: ${messageOf(error)}`).error,
+  retryable,
+});
+
+/**
+ * A host failure is not a broken document: the error says if a retry can help. A plain one is
+ * asked once more here, so the model is told not to retry it. `retry: false` for a write.
+ */
+const ask = async <T>(call: () => Promise<T>, checkCancel: () => void, retry = true): Promise<T> => {
   try {
     return await call();
   } catch (error) {
     if (error instanceof AgentFailure) {
       throw error;
     }
-    throw new AgentFailure({
-      ...failure('TOOL_ACTION_FAILED', `The version history failed: ${messageOf(error)}`).error,
-      retryable: isTransient(error),
-    });
+    if (!retry || !isPlain(error)) {
+      throw hostFailure(error, !isPlain(error) && isTransient(error));
+    }
+  }
+  checkCancel();
+  try {
+    return await call();
+  } catch (error) {
+    if (error instanceof AgentFailure) {
+      throw error;
+    }
+    throw hostFailure(error, false);
   }
 };
 
@@ -85,9 +105,10 @@ const readVersion = async (
   history: AgentVersionHistory,
   version: string,
   ctx: VersionContext,
-  path: string
+  path: string,
+  checkCancel: () => void
 ): Promise<DocSnapshot> => {
-  const output: unknown = await ask(() => history.read(version));
+  const output: unknown = await ask(() => history.read(version), checkCancel);
 
   if (!isOutputData(output)) {
     throw failure('INVALID_ARGS', `There is no version "${version}". history.versions lists them.`, { path });
@@ -185,8 +206,8 @@ export const runRestore = async (
     });
   }
   const version = String(args.version);
-  const previous = (await ask(() => history.list({})))[0]?.version;
-  const target = await ask(() => history.read(version));
+  const previous = (await ask(() => history.list({}), checkCancel))[0]?.version;
+  const target = await ask(() => history.read(version), checkCancel);
 
   if (!isOutputData(target)) {
     throw notFound(version);
@@ -209,7 +230,7 @@ export const runRestore = async (
 
   // The reads above can take a while; a Stop during them must leave the document alone.
   checkCancel();
-  if (!await ask(() => restore.call(history, version))) {
+  if (!await ask(() => restore.call(history, version), checkCancel, false)) {
     throw notFound(version);
   }
 
@@ -226,19 +247,20 @@ export const runVersionCommand = async (
   name: VersionReadName,
   args: Record<string, unknown>,
   ctx: VersionContext,
-  current: () => DocSnapshot
+  current: () => DocSnapshot,
+  checkCancel: () => void
 ): Promise<unknown> => {
   const history = historyOf(name, ctx);
 
   if (name === 'history.versions') {
     const group = args.group === 1 || args.group === 15 || args.group === 60 ? args.group : undefined;
 
-    return { versions: await ask(() => history.list(group === undefined ? {} : { group })) };
+    return { versions: await ask(() => history.list(group === undefined ? {} : { group }), checkCancel) };
   }
 
   if (name === 'history.read') {
     const version = String(args.version);
-    const read: Partial<DocumentView> = buildDocumentView(await readVersion(history, version, ctx, '/version'), viewArgs(args), ctx, '');
+    const read: Partial<DocumentView> = buildDocumentView(await readVersion(history, version, ctx, '/version', checkCancel), viewArgs(args), ctx, '');
 
     // Not a revision: a model would pass it back as expectRevision.
     delete read.revision;
@@ -248,8 +270,8 @@ export const runVersionCommand = async (
 
   const from = String(args.from);
   const to = typeof args.to === 'string' ? args.to : 'current';
-  const before = await readVersion(history, from, ctx, '/from');
-  const after = typeof args.to === 'string' ? await readVersion(history, args.to, ctx, '/to') : current();
+  const before = await readVersion(history, from, ctx, '/from', checkCancel);
+  const after = typeof args.to === 'string' ? await readVersion(history, args.to, ctx, '/to', checkCancel) : current();
 
   return { from, to, ...changes(before, after, ctx) };
 };

@@ -71,7 +71,8 @@ describe('server runtime version history', () => {
   it.each([
     { status: 403, retryable: false },
     { status: 501, retryable: false },
-    { status: 500, retryable: true },
+    // A C# journal that failed to load (500) fails the same on the second ask: reported, not retried.
+    { status: 500, retryable: false },
     { status: 503, retryable: true },
   ])('says a host load that failed with $status is retryable: $retryable', async ({ status, retryable }) => {
     const versionHistory = { failed: 'could not', status };

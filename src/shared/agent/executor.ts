@@ -593,7 +593,7 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
     }
 
     if (first !== undefined && isVersionRead(first.name)) {
-      const result = await runVersionCommand(first.name, first.args, input.ctx, () => input.applier.snapshot())
+      const result = await runVersionCommand(first.name, first.args, input.ctx, () => input.applier.snapshot(), () => checkCancel(input.signal))
         .catch(atCommand);
 
       checkCancel(input.signal);

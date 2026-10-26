@@ -298,8 +298,10 @@ export interface AgentVersion {
 
 /**
  * A document's saved versions, as a host's version history shows them to its users.
- * A rejected call is a failed history call. The agent is told it may retry only when the
- * error carries `retryable: true`, or a `status` of 429 or 5xx other than 501.
+ * A rejected call is a failed history call. A list or read that fails plainly (`status` 500,
+ * or no `status`, and no `retryable`) is asked once more, then reported; a restore is never
+ * asked twice. The agent is told it may retry only when the error carries `retryable: true`,
+ * or a `status` of 429 or 5xx other than 500 and 501.
  */
 export interface AgentVersionHistory {
   /** Newest first; the first one is the current document. `group` is minutes per version. */

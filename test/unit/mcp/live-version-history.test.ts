@@ -206,13 +206,21 @@ describe('blok-mcp live handles read the sync server version history', () => {
     { status: 403, retryable: false },
     { status: 501, retryable: false },
     { status: 429, retryable: true },
-    { status: 500, retryable: true },
     { status: 503, retryable: true },
   ])('says a $status from the sync server is retryable: $retryable', async ({ status, retryable }) => {
     const handle = await open();
     const read = await execute(handle, 'history.read', { version: `${LINEAGE}:${status}` });
 
     expect(read).toMatchObject({ ok: false, error: { code: 'TOOL_ACTION_FAILED', retryable } });
+    expect(seen.filter((request) => request.url.endsWith(`/${status}`))).toHaveLength(1);
+  });
+
+  it('asks again once after a plain 500 from the sync server, then says it is not retryable', async () => {
+    const handle = await open();
+    const read = await execute(handle, 'history.read', { version: `${LINEAGE}:500` });
+
+    expect(seen.filter((request) => request.url.endsWith('/500'))).toHaveLength(2);
+    expect(read).toMatchObject({ ok: false, error: { code: 'TOOL_ACTION_FAILED', retryable: false } });
   });
 
   it('says an unreachable sync server is retryable', async () => {

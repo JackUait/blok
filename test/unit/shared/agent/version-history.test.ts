@@ -165,12 +165,12 @@ describe('version history commands', () => {
     { status: 501, retryable: false },
     { status: 400, retryable: false },
     { status: 429, retryable: true },
-    { status: 500, retryable: true },
+    { status: 502, retryable: true },
     { status: 503, retryable: true },
-  ])('says a host failure with status $status is retryable: $retryable', async ({ status, retryable }) => {
-    const history: AgentVersionHistory = {
-      list: async () => Promise.reject(Object.assign(new Error(`HTTP ${status}`), { status })),
-      read: async () => Promise.reject(Object.assign(new Error(`HTTP ${status}`), { status })),
+  ])('says a host failure with status $status is retryable: $retryable, and asks the host once', async ({ status, retryable }) => {
+    const history = {
+      list: vi.fn(async () => Promise.reject(Object.assign(new Error(`HTTP ${status}`), { status }))),
+      read: vi.fn(async () => Promise.reject(Object.assign(new Error(`HTTP ${status}`), { status }))),
     };
     const { agent } = session({ history });
     const listed = await agent.execute({ commands: [{ name: 'history.versions', args: {} }] });
@@ -178,6 +178,82 @@ describe('version history commands', () => {
 
     expect(!listed.ok && listed.error).toMatchObject({ code: 'TOOL_ACTION_FAILED', retryable });
     expect(!read.ok && read.error).toMatchObject({ code: 'TOOL_ACTION_FAILED', retryable });
+    expect([history.list.mock.calls.length, history.read.mock.calls.length]).toEqual([1, 1]);
+  });
+
+  describe('a plain host failure (HTTP 500 or an Error with no status)', () => {
+    const plain: Array<[string, () => unknown]> = [
+      ['HTTP 500', () => Object.assign(new Error('HTTP 500'), { status: 500 })],
+      ['a plain Error', () => new Error('boom')],
+      ['a thrown string', () => 'boom'],
+    ];
+
+    it.each(plain)('%s is asked again once, then reported as not retryable', async (_label, make) => {
+      const history = {
+        list: vi.fn(async () => Promise.reject(make())),
+        read: vi.fn(async () => Promise.reject(make())),
+      };
+      const { agent } = session({ history });
+      const listed = await agent.execute({ commands: [{ name: 'history.versions', args: {} }] });
+      const read = await agent.execute({ commands: [{ name: 'history.read', args: { version: 'L:1' } }] });
+
+      expect([history.list.mock.calls.length, history.read.mock.calls.length]).toEqual([2, 2]);
+      expect(!listed.ok && listed.error).toMatchObject({ code: 'TOOL_ACTION_FAILED', retryable: false });
+      expect(!read.ok && read.error).toMatchObject({ code: 'TOOL_ACTION_FAILED', retryable: false });
+    });
+
+    it.each(plain)('%s that passes on the second ask answers as if it never failed', async (_label, make) => {
+      const history = fakeHistory();
+
+      history.list.mockRejectedValueOnce(make());
+      const { agent } = session({ history });
+      const listed = await agent.execute({ commands: [{ name: 'history.versions', args: {} }] });
+
+      expect(history.list).toHaveBeenCalledTimes(2);
+      expect(listed.ok && listed.results).toEqual([{ versions: VERSIONS }]);
+    });
+
+    it('is asked again with the same arguments', async () => {
+      const history = fakeHistory();
+
+      history.read.mockRejectedValueOnce(new Error('boom'));
+      const { agent } = session({ history });
+
+      await agent.execute({ commands: [{ name: 'history.read', args: { version: 'L:1' } }] });
+
+      expect(history.read.mock.calls).toEqual([['L:1'], ['L:1']]);
+    });
+
+    it.each([
+      ['its own retryable: true', () => Object.assign(new Error('offline'), { retryable: true }), true],
+      ['its own retryable: false', () => Object.assign(new Error('gone'), { retryable: false }), false],
+      ['HTTP 500 with its own retryable: false', () => Object.assign(new Error('HTTP 500'), { status: 500, retryable: false }), false],
+      ['HTTP 500 with its own retryable: true', () => Object.assign(new Error('HTTP 500'), { status: 500, retryable: true }), true],
+    ])('is not asked again when the error carries %s', async (_label, make, retryable) => {
+      const history = { list: vi.fn(async () => Promise.reject(make())), read: async () => null };
+      const { agent } = session({ history });
+      const listed = await agent.execute({ commands: [{ name: 'history.versions', args: {} }] });
+
+      expect(history.list).toHaveBeenCalledTimes(1);
+      expect(!listed.ok && listed.error.retryable).toBe(retryable);
+    });
+
+    it('is not asked again once the turn was stopped', async () => {
+      const controller = new AbortController();
+      const history = {
+        list: vi.fn(async () => {
+          controller.abort();
+
+          return Promise.reject(new Error('boom'));
+        }),
+        read: async () => null,
+      };
+      const { agent } = session({ history });
+      const listed = await agent.execute({ commands: [{ name: 'history.versions', args: {} }] }, { signal: controller.signal });
+
+      expect(history.list).toHaveBeenCalledTimes(1);
+      expect(!listed.ok && listed.error.code).toBe('CANCELLED');
+    });
   });
 
   it('takes the host failure own retryable flag over its status', async () => {
@@ -416,6 +492,16 @@ describe('history.restore', () => {
       expect(result.ok).toBe(true);
       expect(history.restore).toHaveBeenCalledWith('L:1');
     });
+  });
+
+  it('never asks the host to restore twice: a restore writes', async () => {
+    const { history, agent } = restoring();
+
+    history.restore.mockRejectedValueOnce(new Error('boom'));
+    const result = await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });
+
+    expect(history.restore).toHaveBeenCalledTimes(1);
+    expect(!result.ok && result.error).toMatchObject({ code: 'TOOL_ACTION_FAILED', retryable: false });
   });
 
   it('reports a failing host restore with the retry rule of the reads', async () => {

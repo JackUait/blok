@@ -17,7 +17,7 @@ export interface FileUploaderService extends UploaderService {
   uploadByFile(file: File, ctx: UploadContext): Promise<UploadedAsset & { size?: number; mimeType?: string }>;
   limits?(kind: AssetKind): UploadLimits | undefined;
   /** Reads a file the host allows. Rejects past `maxBytes`. Absent: the agent sends bytes only. */
-  readLocal?(path: string, maxBytes: number): Promise<{ bytes: Uint8Array; name: string }>;
+  readLocal?(path: string, maxBytes: number): Promise<{ bytes: Uint8Array<ArrayBuffer>; name: string }>;
 }
 
 export type LinkMetadataService = {

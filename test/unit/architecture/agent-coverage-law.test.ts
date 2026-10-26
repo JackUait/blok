@@ -41,6 +41,10 @@ const UNCORPUSED_COMMANDS: Record<string, string> = {
   // An editor-only command: the json, store, Jint and room runners list it as unavailable.
   'html.insert': 'Editor only, so a case could not run on every runner. test/unit/agent/html-insert.editor.test.ts compares it with a real paste; test/unit/shared/agent/html-insert-runtime.test.ts pins it unavailable headless.',
   'database.moveRowTo': 'Corpus case proposed, awaiting user review. test/unit/agent/database-row-copy.test.ts runs it on the json and store sessions.',
+  'image.uploadFile': 'A case needs an uploader fixture in every runner, and only the MCP host gives one. test/unit/shared/agent/upload-file.test.ts and test/unit/mcp/uploads.test.ts run it.',
+  'video.uploadFile': 'A case needs an uploader fixture in every runner, and only the MCP host gives one. test/unit/shared/agent/upload-file.test.ts and test/unit/mcp/uploads.test.ts run it.',
+  'audio.uploadFile': 'A case needs an uploader fixture in every runner, and only the MCP host gives one. test/unit/shared/agent/upload-file.test.ts and test/unit/mcp/uploads.test.ts run it.',
+  'file.uploadFile': 'A case needs an uploader fixture in every runner, and only the MCP host gives one. test/unit/shared/agent/upload-file.test.ts and test/unit/mcp/uploads.test.ts run it.',
 };
 
 const ID_TOKEN = /\b[a-z-]+:[^\s,;)]+/g;

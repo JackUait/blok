@@ -102,6 +102,15 @@ describe('<tool>.uploadFile sends bytes through the host uploader, as a person\'
     ]);
   });
 
+  it('decodes padded base64 to the exact bytes', async () => {
+    const host = fakeUploader();
+    const session = open(EMPTY, host);
+
+    expect(errorOf(await run(session, 'file.uploadFile', { data: btoa('hi?>~'), fileName: 'a.txt', position: 'end' }))).toBeUndefined();
+    expect(errorOf(await run(session, 'file.uploadFile', { data: btoa('ab'), fileName: 'b.txt', position: 'end' }))).toBeUndefined();
+    expect(host.uploads.map(upload => upload.text)).toEqual(['hi?>~', 'ab']);
+  });
+
   it('cleans the file name: no path, no control or bidi characters', async () => {
     const host = fakeUploader();
     const session = open(EMPTY, host);
@@ -147,14 +156,12 @@ describe('<tool>.uploadFile refuses what a person\'s upload refuses, before any 
 
   it('refuses an oversized payload from its length, before decoding it', async () => {
     const host = fakeUploader();
-    const atob = vi.spyOn(globalThis, 'atob');
     const session = open(EMPTY, { ...host, limits: () => ({ maxSize: 6 }) });
-    // Eight characters decode to at most six bytes; twelve can carry nine.
-    const error = errorOf(await run(session, 'image.uploadFile', { data: 'AAAAAAAAAAAA', fileName: 'a.png', position: 'end' }));
+    // Eight characters decode to at most six bytes. The bad character would fail a decode, so this answer comes before one.
+    const error = errorOf(await run(session, 'image.uploadFile', { data: 'AAAA*AAAAAAA', fileName: 'a.png', position: 'end' }));
 
     expect(error).toMatchObject({ code: 'PRECONDITION_FAILED' });
     expect(error?.message).toMatch(/too large/i);
-    expect(atob).not.toHaveBeenCalled();
     expect(host.uploadByFile).not.toHaveBeenCalled();
   });
 

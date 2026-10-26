@@ -92,7 +92,29 @@ const checkArgs = (args: UploadArgs): void => {
   }
 };
 
-const decode = (data: string, maxSize: number): Uint8Array => {
+const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+const SEXTET = new Map(Array.from(ALPHABET, (char, index) => [char, index]));
+
+// The Jint runtime has no atob; `data` is already checked against BASE64.
+const fromBase64 = (data: string): Uint8Array<ArrayBuffer> => {
+  const body = data.replace(/=+$/, '');
+  const bytes = new Uint8Array(Math.floor(body.length * 3 / 4));
+  const state = { bits: 0, count: 0, at: 0 };
+
+  for (const char of body) {
+    state.bits = ((state.bits << 6) | (SEXTET.get(char) ?? 0)) & 0xffff;
+    state.count += 6;
+    if (state.count >= 8) {
+      state.count -= 8;
+      bytes[state.at] = (state.bits >> state.count) & 0xff;
+      state.at += 1;
+    }
+  }
+
+  return bytes;
+};
+
+const decode = (data: string, maxSize: number): Uint8Array<ArrayBuffer> => {
   // From the length alone, before decoding: four characters carry at most three bytes.
   if (data.length > Math.ceil(maxSize / 3) * 4) {
     refused(`The file is too large: this host takes at most ${maxSize} bytes.`);
@@ -100,9 +122,7 @@ const decode = (data: string, maxSize: number): Uint8Array => {
   if (data.length % 4 !== 0 || !BASE64.test(data)) {
     invalid('data must be standard base64 (A-Z a-z 0-9 + /, padded with =).', '/data');
   }
-  const binary = atob(data);
-
-  return Uint8Array.from(binary, char => char.charCodeAt(0));
+  return fromBase64(data);
 };
 
 const checkType = (kind: AssetKind, mimeType: string, limits: UploadLimits): void => {

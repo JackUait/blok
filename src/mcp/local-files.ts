@@ -31,7 +31,7 @@ const fill = async (handle: FileHandle, buffer: Uint8Array, from: number): Promi
  * (through `..` or a symlink) outside it is refused. Only regular files are read: opening a FIFO
  * or a device could block or never end.
  */
-export const createLocalFileReader = (root: string): ((path: string, maxBytes: number) => Promise<{ bytes: Uint8Array; name: string }>) => {
+export const createLocalFileReader = (root: string): ((path: string, maxBytes: number) => Promise<{ bytes: Uint8Array<ArrayBuffer>; name: string }>) => {
   const realRoot = (() => {
     try {
       const real = realpathSync(root);

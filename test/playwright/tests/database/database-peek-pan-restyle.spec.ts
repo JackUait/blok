@@ -39,6 +39,10 @@ interface TraceEvent {
   args?: { elementCount?: number };
 }
 
+// Playwright types trace chunks as string maps, but Chrome sends objects with numbers in them.
+const isTraceEvent = (value: unknown): value is TraceEvent =>
+  typeof value === 'object' && value !== null && 'name' in value && typeof value.name === 'string';
+
 const mount = async (page: Page): Promise<void> => {
   await page.evaluate(async (data) => {
     document.getElementById('blok')?.remove();
@@ -80,7 +84,11 @@ test('panning the page beside a side peek restyles only the wrapper, not the pag
   const cdp = await page.context().newCDPSession(page);
   const events: TraceEvent[] = [];
 
-  cdp.on('Tracing.dataCollected', (chunk: { value: TraceEvent[] }) => events.push(...chunk.value));
+  cdp.on('Tracing.dataCollected', (chunk) => {
+    const values: unknown[] = chunk.value;
+
+    events.push(...values.filter(isTraceEvent));
+  });
   await cdp.send('Tracing.start', { transferMode: 'ReportEvents', traceConfig: { includedCategories: ['devtools.timeline'] } });
   // Over a paragraph: nothing under it scrolls sideways, so the wheel pans the page.
   await page.mouse.move(300, 600);

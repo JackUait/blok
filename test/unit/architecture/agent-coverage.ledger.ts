@@ -55,7 +55,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/audio/controls.ts': exempt('view-only', PLAYBACK),
   'ui-file:src/tools/audio/waveform.ts': exempt('view-only', PLAYBACK),
   'ui-file:src/tools/audio/cover-picker.ts': cmds(['audio.setCover', 'block.update'], 'Sets or removes the cover; removing writes audio.coverUrl.'),
-  'ui-file:src/tools/audio/index.ts': cmds(['audio.setSource', 'block.update'], 'Upload/URL, then audio.title, audio.artist, audio.caption edits.'),
+  'ui-file:src/tools/audio/index.ts': cmds(['audio.uploadFile', 'audio.setSource', 'block.update'], 'Upload/URL, then audio.title, audio.artist, audio.caption edits.'),
   'ui-file:src/tools/audio/ui.ts': cmds(['block.update'], 'Inline edits of audio.title, audio.artist, audio.caption.'),
   'ui-file:src/tools/callout/emoji-picker/index.ts': cmds(['block.update'], 'Picks the callout icon: writes callout.emoji.'),
   'ui-file:src/tools/code/index.ts': cmds(['block.update'], 'Language and filename: code.language, code.filename.'),
@@ -127,10 +127,10 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/database/index.ts': cmds(['block.update', 'database.addRow'], 'Title edit writes database.title; add-row buttons.'),
   'ui-file:src/tools/database/database-comment-badge.ts': exempt('cut-v1', 'D6 cut: opens a comment thread, the host\'s or, without config.comments, Blok\'s own database-comment blocks; agents skip comments (user decision 2026-10-16).'),
   'ui-file:src/tools/database/page-layout-builder.ts': cmds(['database.updateProperty'], PAGE_LAYOUT),
-  'ui-file:src/tools/file/index.ts': cmds(['file.setSource'], 'Upload or URL.'),
+  'ui-file:src/tools/file/index.ts': cmds(['file.uploadFile', 'file.setSource'], 'Upload or URL.'),
   'ui-file:src/tools/file/preview-modal.ts': exempt('view-only', 'Shows a preview of the file; nothing is saved.'),
   'ui-file:src/tools/file/ui.ts': cmds(['block.update'], 'Rename and caption: file.fileName, file.caption.'),
-  'ui-file:src/tools/file/uploading-state.ts': exempt('chrome', 'Cancel button of an in-flight upload; uploads are cut from v1 for agents (D6: URL only).'),
+  'ui-file:src/tools/file/uploading-state.ts': exempt('chrome', 'Cancel button of an in-flight upload. An agent upload (file.uploadFile) finishes before the block exists, so there is nothing to cancel.'),
   'ui-file:src/tools/header/index.ts': exempt('cut-v1', 'Opens and closes a toggle heading. View-state control is cut from v1 by D6 (user can revisit).'),
   'ui-file:src/tools/image/alt-popover.ts': cmds(['block.update'], 'Alt text: image.alt.'),
   'ui-file:src/tools/image/darkroom/adjust-panel.ts': cmds(['block.update'], 'image.adjust sliders.'),
@@ -142,10 +142,10 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/image/darkroom/markup-panel.ts': cmds(['image.addMarkup', 'image.removeMarkup'], 'Markup tools and clear all.'),
   'ui-file:src/tools/image/darkroom/mode-tabs.ts': exempt('chrome', 'Switches darkroom panels; nothing is saved.'),
   'ui-file:src/tools/image/error-state.ts': cmds(['image.setSource'], 'Retry or replace a failed image.'),
-  'ui-file:src/tools/image/index.ts': cmds(['image.setSource', 'block.update'], 'Upload/URL, caption: image.caption.'),
+  'ui-file:src/tools/image/index.ts': cmds(['image.uploadFile', 'image.setSource', 'block.update'], 'Upload/URL, caption: image.caption.'),
   'ui-file:src/tools/image/resizer.ts': cmds(['block.update'], 'Resize handles write image.width.'),
   'ui-file:src/tools/image/ui.ts': cmds(['image.setSource', 'block.update'], 'Empty state and caption: image.caption.'),
-  'ui-file:src/tools/image/uploading-state.ts': exempt('chrome', 'Cancel button of an in-flight upload; uploads are cut from v1 for agents (D6: URL only).'),
+  'ui-file:src/tools/image/uploading-state.ts': exempt('chrome', 'Cancel button of an in-flight upload. An agent upload (image.uploadFile) finishes before the block exists, so there is nothing to cancel.'),
   'ui-file:src/tools/link/embed/index.ts': cmds(['embed.setUrl', 'block.update'], 'URL entry, resize: embed.width, embed.caption.'),
   'ui-file:src/tools/link/embed/overlay.ts': exempt('chrome', 'Click shield that activates the embedded frame; nothing is saved.'),
   'ui-file:src/tools/link/paste-menu/controller.ts': exempt('chrome', 'Its only listener closes the paste-as menu on Escape; each choice is menu:paste-menu/paste-menu-*.'),
@@ -171,10 +171,8 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/toggle/dom-builder.ts': exempt('cut-v1', 'Toggle arrow opens and closes. View-state control is cut from v1 by D6 (user can revisit).'),
   'ui-file:src/tools/toggle/index.ts': exempt('cut-v1', 'Opens and closes the toggle. View-state control is cut from v1 by D6 (user can revisit).'),
   'ui-file:src/tools/video/controls.ts': exempt('view-only', PLAYBACK),
-  'ui-file:src/tools/video/ui.ts': cmds(['video.setSource', 'block.update'], 'Upload/URL and caption: video.caption.'),
+  'ui-file:src/tools/video/ui.ts': cmds(['video.uploadFile', 'video.setSource', 'block.update'], 'Upload/URL and caption: video.caption.'),
 };
-
-const UPLOAD_CUT = 'D6 cut, user decision pending: agents place media by URL only (*.setSource); there is no file or byte transport for a pasted or dropped file.';
 
 // Ids the 2026-10-25 parity review found the law could not see (color, paste, feature, and ui-files it missed).
 const REVIEW_ROWS: Record<CapabilityId, Coverage> = {
@@ -202,7 +200,7 @@ const REVIEW_ROWS: Record<CapabilityId, Coverage> = {
   'paste:handler/PatternHandler': cmds(['embed.create', 'bookmark.create'], 'A pasted URL that a tool claims by pattern becomes that block.'),
   'paste:handler/TableCellsHandler': cmds(['table.insertRows', 'table.insertColumns', 'block.insert'], 'Pasted cells grow the grid as needed; each cell body is child blocks of the cell.'),
   'paste:handler/HtmlHandler': cmd('html.insert'),
-  'paste:handler/FilesHandler': exempt('cut-v1', UPLOAD_CUT),
+  'paste:handler/FilesHandler': cmds(['image.uploadFile', 'video.uploadFile', 'audio.uploadFile', 'file.uploadFile'], 'A pasted or dropped file goes through the host uploader. Agents get it where the host gives them a file uploader (MCP uploads).'),
   'paste:html/google-docs-preprocessor': cmd('html.insert'),
   'paste:html/notion-preprocessor': cmd('html.insert'),
   'paste:html/ai-chat-preprocessor': cmd('html.insert'),

@@ -204,6 +204,8 @@ export const createHeadlessAgentSetup = (options: {
   carriesHistory?: boolean;
   /** The versionHistory service passed to the session can restore. */
   restores?: boolean;
+  /** The uploader service passed to the session has uploadByFile. */
+  uploadsFiles?: boolean;
 } = {}): {
   contract: AgentContract;
   tools: ToolRuntimeRegistry;
@@ -220,6 +222,7 @@ export const createHeadlessAgentSetup = (options: {
     runtime: options.runtime ?? 'node', services, ...(options.prepares !== undefined && { prepares: options.prepares }),
     ...(options.carriesHistory === true && { carriesHistory: true }),
     ...(options.restores === true && { restores: true }),
+    ...(options.uploadsFiles === true && { uploadsFiles: true }),
   });
   const tools = runtimesWithCustomTools(BUILT_IN_TOOL_RUNTIMES, options.customTools);
   const richTextFieldsFor = (type: string): string[] =>

@@ -343,7 +343,12 @@ export interface ContractWhere {
   carriesHistory?: boolean;
   /** The host's versionHistory can restore a version. */
   restores?: boolean;
+  /** The host gives the agent a file uploader (uploadByFile), so `uploadFile` actions run. */
+  uploadsFiles?: boolean;
 }
+
+/** An action that sends a file's bytes to the host's file uploader. */
+export const FILE_UPLOAD_ACTION = 'uploadFile';
 
 export const BLOCK_POSITION_SCHEMA: BlokSchema = {
   description: 'Where the new block goes among its siblings. Default: the end.',
@@ -412,6 +417,10 @@ const toolAvailability = (
 
   if ((action.requires ?? []).some(service => !where.services.includes(service))) {
     return { available: false, unavailableReason: 'service' };
+  }
+  // The editor lists `uploader` for uploadByUrl alone, so the service name cannot say this.
+  if (action.name === FILE_UPLOAD_ACTION && where.uploadsFiles !== true) {
+    return { available: false, unavailableReason: 'host' };
   }
 
   return { available: true };

@@ -1,6 +1,6 @@
 import type { BlockToolDescription, ToolActionDeclaration } from '../../../types/tools/tool-description';
 import { ALIGNMENT } from './rich-text';
-import { urlSourceAction } from './url-action';
+import { fileUploadAction, urlSourceAction } from './url-action';
 
 export const VIDEO_DATA = {
   type: 'object',
@@ -33,11 +33,12 @@ export const VIDEO_DATA = {
 
 export const VIDEO_ACTIONS: ToolActionDeclaration[] = [
   urlSourceAction('setSource', 'Set or replace the video from a URL.'),
+  fileUploadAction('a video block'),
 ];
 
 export const describeVideo = (_config: Record<string, unknown> = {}): BlockToolDescription => ({
   summary: 'A video player.',
-  guidance: 'Insert it with url set; replace the video with video.setSource, which also copies it to the host. caption is plain text.',
+  guidance: 'Insert it with url set, or upload a file with video.uploadFile where the host allows it; replace the video with video.setSource, which also copies it to the host. caption is plain text.',
   data: VIDEO_DATA,
   summaryFields: ['alignment', 'width', 'autoplay', 'loop'],
   actions: VIDEO_ACTIONS,

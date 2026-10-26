@@ -1,6 +1,6 @@
 import type { BlockToolDescription, ToolActionDeclaration } from '../../../types/tools/tool-description';
 import { ALIGNMENT } from './rich-text';
-import { urlSourceAction } from './url-action';
+import { fileUploadAction, urlSourceAction } from './url-action';
 
 export const IMAGE_DATA = {
   type: 'object',
@@ -150,6 +150,7 @@ const PERCENT = { type: 'number', minimum: 0, maximum: 100 };
 
 export const IMAGE_ACTIONS: ToolActionDeclaration[] = [
   urlSourceAction('setSource', 'Set or replace the image from a URL.'),
+  fileUploadAction('an image block'),
   {
     name: 'crop',
     summary: 'Crop the image to a rectangle given in percent of the turned image. The full rectangle removes the crop.',
@@ -249,7 +250,7 @@ export const IMAGE_ACTIONS: ToolActionDeclaration[] = [
 
 export const describeImage = (config: Record<string, unknown> = {}): BlockToolDescription => ({
   summary: 'An image with optional caption, crop, turn, colour look and drawings.',
-  guidance: 'Insert it with url set; replace the picture with image.setSource, which also copies it to the host. Crop, rotate, flip and straighten with image.crop, image.rotate, image.flip and image.straighten: each also turns crop and markup. Add or change drawings with image.addMarkup, image.updateMarkup and image.removeMarkup. caption and alt are plain text.',
+  guidance: 'Insert it with url set, or upload a file with image.uploadFile where the host allows it; replace the picture with image.setSource, which also copies it to the host. Crop, rotate, flip and straighten with image.crop, image.rotate, image.flip and image.straighten: each also turns crop and markup. Add or change drawings with image.addMarkup, image.updateMarkup and image.removeMarkup. caption and alt are plain text.',
   data: Array.isArray(config.filters)
     ? { ...IMAGE_DATA, properties: { ...IMAGE_DATA.properties, filter: { type: 'string', enum: filterNames(config.filters) } } }
     : IMAGE_DATA,

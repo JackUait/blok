@@ -1,6 +1,7 @@
 import type { AssetKind } from '../../../types/tools/block-tool';
 import type { ToolActionImpl } from '../../../types/tools/tool-description';
 import type { UploaderService } from './services';
+import { UPLOAD_FILE_HANDLERS } from './upload';
 
 const isHttp = (url: string): boolean => /^https?:\/\//i.test(url);
 
@@ -68,8 +69,8 @@ export const MEDIA_REJECT_WRITE = {
 } as const;
 
 export const MEDIA_ACTION_HANDLERS = {
-  image: { setSource: rehost('image', 'image', 'url') },
-  video: { setSource: rehost('video', 'video', 'url') },
-  audio: { setSource: rehost('audio', 'audio', 'url'), setCover: rehost('image', 'audio', 'coverUrl') },
-  file: { setSource: rehost('file', 'file', 'url') },
+  image: { setSource: rehost('image', 'image', 'url'), uploadFile: UPLOAD_FILE_HANDLERS.image },
+  video: { setSource: rehost('video', 'video', 'url'), uploadFile: UPLOAD_FILE_HANDLERS.video },
+  audio: { setSource: rehost('audio', 'audio', 'url'), setCover: rehost('image', 'audio', 'coverUrl'), uploadFile: UPLOAD_FILE_HANDLERS.audio },
+  file: { setSource: rehost('file', 'file', 'url'), uploadFile: UPLOAD_FILE_HANDLERS.file },
 } as const;

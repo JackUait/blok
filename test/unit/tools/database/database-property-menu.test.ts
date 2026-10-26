@@ -1040,6 +1040,19 @@ describe('row page property menu', () => {
     menu.destroy();
   });
 
+  it('picking Bar saves a name typed but not yet saved, and keeps it in the field', () => {
+    const { cb, menu, items } = editPanel(prop('number'));
+    const input = items[0]?.element?.querySelector('input');
+
+    if (input === null || input === undefined) throw new Error('no name input');
+    input.value = 'Memo';
+    tile(items, 'bar').click();
+
+    expect(cb.onRename).toHaveBeenCalledWith('p', 'Memo');
+    expect(lastItems()[0]?.element?.querySelector('input')?.value).toBe('Memo');
+    menu.destroy();
+  });
+
   it('the Edit property panel renames on Enter and holds the type settings inline', () => {
     const { cb, menu } = rowMenu(prop('number'));
     const rename = byName(lastItems(), 'rename');

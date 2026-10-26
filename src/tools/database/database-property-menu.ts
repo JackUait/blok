@@ -270,7 +270,8 @@ export class DatabasePropertyMenu {
   }
 
   /** The row page's Edit property panel, in place of its menu, with the name selected (Notion). */
-  private openRowPageEdit(property: PropertyDefinition, anchor: HTMLElement, focusName = true): void {
+  /** `typed`: a redraw's unsaved name, kept in the field, which then keeps no focus. */
+  private openRowPageEdit(property: PropertyDefinition, anchor: HTMLElement, typed?: string): void {
     const previous = this.popover;
 
     // A swap, not a close: onClose would tell the host the menu is gone and its writes would stop.
@@ -283,7 +284,11 @@ export class DatabasePropertyMenu {
       this.options.onUpdate(property.id, patch);
       // Bar and Ring bring their Color and Divide by rows: redraw the panel with them.
       if (patch.number !== undefined && gauge(patch.number) !== gauge(property.number)) {
-        this.openRowPageEdit({ ...property, number: patch.number }, anchor, false);
+        const input = name.querySelector('input');
+
+        // The old field goes away without a blur: save its name first, as leaving it would.
+        input?.dispatchEvent(new Event('change'));
+        this.openRowPageEdit({ ...property, number: patch.number }, anchor, input?.value);
       }
     };
     const settings: PopoverItemParams[] = [];
@@ -291,11 +296,7 @@ export class DatabasePropertyMenu {
     if (EDITABLE_SETTINGS.has(property.type)) {
       settings.push(...(property.type === 'formula' ? [this.entry('editProperty', property)] : this.editItems(property, update)));
     }
-    // research/10 L16: the panel's row is "Type" with the current type on the right; the header menu keeps "Change type".
-    const typeRow = (entry: 'changeType' | 'displayAs'): PopoverItemParams => entry === 'changeType'
-      ? { ...this.entry(entry, property), title: this.t('tools.database.propertyTypeListHeading'), icon: IconReplace, secondaryLabel: this.t(propertyTypeMeta(property.type).labelKey) }
-      : this.entry(entry, property);
-    const typeItems = (['changeType', 'displayAs'] as const).filter(has).map(typeRow);
+    const typeItems = (['changeType', 'displayAs'] as const).filter(has).map((entry) => this.entry(entry, property, true));
     const tail = (['duplicate', 'delete'] as const).filter(has).map((entry) => this.entry(entry, property));
     const name = this.nameField(property, property.type !== 'title');
     const separator = { type: PopoverItemType.Separator } as const;
@@ -310,9 +311,13 @@ export class DatabasePropertyMenu {
     ];
 
     this.show(items, anchor, '290px', ROW_PAGE_MENU_CLASS);
-    if (!focusName) return;
     const input = name.querySelector('input');
 
+    if (typed !== undefined) {
+      if (input !== null) input.value = typed;
+
+      return;
+    }
     input?.focus();
     input?.select();
   }
@@ -538,7 +543,8 @@ export class DatabasePropertyMenu {
     void this.emojiPicker.open(anchor, undefined, handlers);
   }
 
-  private entry(entry: PropertyMenuEntry, property: PropertyDefinition): PopoverItemParams {
+  /** `panel`: the row page's Edit property panel, whose type row reads "Type" (research/10 L16); the header menu keeps "Change type". */
+  private entry(entry: PropertyMenuEntry, property: PropertyDefinition, panel = false): PopoverItemParams {
     const id = property.id;
     const update = (patch: Partial<PropertySettingsV2>): void => this.options.onUpdate(id, patch);
 
@@ -577,8 +583,9 @@ export class DatabasePropertyMenu {
       case 'changeType':
         return {
           name: entry,
-          title: this.t('tools.database.changeType'),
-          icon: propertyTypeMeta(property.type).icon,
+          ...(panel
+            ? { title: this.t('tools.database.propertyTypeListHeading'), icon: IconReplace, secondaryLabel: this.t(propertyTypeMeta(property.type).labelKey) }
+            : { title: this.t('tools.database.changeType'), icon: propertyTypeMeta(property.type).icon }),
           children: {
             items: addablePropertyTypes(this.options.hasPeople)
               .filter((type) => type !== property.type)

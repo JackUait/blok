@@ -17,6 +17,8 @@ const runEditor = async (seed: OutputData, batch: AgentBatch, undo = false): Pro
   document.body.appendChild(holder);
   const editor = new Blok({
     holder,
+    // TEST_ACTOR acts for human-1; headless runs credit that person too.
+    user: { id: 'human-1' },
     data: structuredClone(seed),
     tools: {
       paragraph: { class: Paragraph },
@@ -274,7 +276,7 @@ describe('one undo takes back a whole agent convert in the editor', () => {
     const { error, doc } = await runEditor(seed, batch, true);
     const ids = keepIds(seed);
     // Undo restores the structure; the edit stamps are not part of this check.
-    const strip = (output: OutputData): OutputData => ({ blocks: output.blocks.map(({ lastEditedBy: _by, lastEditedAt: _at, ...block }) => block) });
+    const strip = (output: OutputData): OutputData => ({ blocks: output.blocks.map(({ lastEditedBy: _by, lastEditedAt: _at, lastEditedWith: _with, ...block }) => block) });
 
     expect(error).toBeNull();
     expect(normalizeForParity(strip(doc), ids)).toEqual(normalizeForParity(strip((await runHeadless(openJsonSession, seed, { commands: [] })).doc), ids));

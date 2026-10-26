@@ -406,7 +406,7 @@ describe('CI critical-path law', () => {
       },
       {
         name: 'Upload frontend coverage shard',
-        uses: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
+        uses: 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9',
         with: {
           name: 'frontend-coverage-${{ strategy.job-index }}',
           path: '.vitest-reports/',
@@ -438,7 +438,7 @@ describe('CI critical-path law', () => {
       setupNodeDependencies,
       {
         name: 'Download Build Artifacts',
-        uses: 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
+        uses: 'actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333',
         with: {
           name: 'dist',
           path: '.',
@@ -489,7 +489,7 @@ describe('CI critical-path law', () => {
       setupNodeDependencies,
       {
         name: 'Download frontend coverage shards',
-        uses: 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
+        uses: 'actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333',
         with: {
           pattern: 'frontend-coverage-*',
           path: '.vitest-reports',
@@ -503,7 +503,7 @@ describe('CI critical-path law', () => {
       {
         name: 'Upload coverage diagnostics',
         if: 'failure()',
-        uses: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
+        uses: 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9',
         with: {
           name: 'frontend-coverage',
           path: 'coverage/',
@@ -553,7 +553,7 @@ describe('CI critical-path law', () => {
       },
       {
         name: 'Upload build artifacts',
-        uses: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
+        uses: 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9',
         with: {
           name: 'dist',
           path: buildArtifactPaths,
@@ -645,7 +645,7 @@ describe('CI critical-path law', () => {
       setupNodeDependencies,
       {
         name: 'Download all blob reports',
-        uses: 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
+        uses: 'actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333',
         with: {
           path: 'all-blob-reports',
           pattern: 'blob-report-*',
@@ -658,7 +658,7 @@ describe('CI critical-path law', () => {
       },
       {
         name: 'Upload unified HTML report',
-        uses: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
+        uses: 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9',
         with: {
           name: 'playwright-report',
           path: 'playwright-report',
@@ -714,7 +714,7 @@ describe('CI critical-path law', () => {
       setupNodeDependencies,
       {
         name: 'Download Build Artifacts',
-        uses: 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
+        uses: 'actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333',
         with: {
           name: '${{ inputs.artifact-name }}',
           path: '.',
@@ -745,7 +745,7 @@ describe('CI critical-path law', () => {
       {
         name: 'Upload E2E Test Results',
         if: 'failure()',
-        uses: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
+        uses: 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9',
         with: {
           name: 'playwright-results-${{ inputs.project }}-${{ inputs.artifact-index }}',
           path: 'test-results/',
@@ -755,7 +755,7 @@ describe('CI critical-path law', () => {
       {
         name: 'Upload Blob Report',
         if: "always() && github.ref != 'refs/heads/main'",
-        uses: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
+        uses: 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9',
         with: {
           name: 'blob-report-${{ inputs.project }}-${{ inputs.artifact-index }}',
           path: 'blob-report/',

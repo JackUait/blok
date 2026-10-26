@@ -60,7 +60,7 @@ describe.each(SESSIONS)('database row templates (%s session)', (_label, open) =>
 
     expect(data).toMatchObject({ title: 'Bug', icon: '🐞', cover: 'https://example.com/c.png', reminders: { dd: { remind: 'on_day_of_event' } } });
     expect(data?.reminders).toEqual({ dd: { remind: 'on_day_of_event' } });
-    expect(await valuesOf(session, rowId)).toMatchObject({ tt: 'Bug', tx: 'from template', st: 'o-b', pp: [{ id: 'agent-test' }] });
+    expect(await valuesOf(session, rowId)).toMatchObject({ tt: 'Bug', tx: 'from template', st: 'o-b', pp: [{ id: 'human-1' }] });
     expect((await valuesOf(session, rowId)).dd).toMatch(DAY);
     expect(await childrenOf(session, rowId)).toEqual([{ type: 'paragraph', text: 'Template body' }]);
     await session.close();
@@ -81,7 +81,7 @@ describe.each(SESSIONS)('database row templates (%s session)', (_label, open) =>
     const rowId = rowIdOf(await run(session, 'database.addRow', { id: 'T', template: null }));
     const data = await dataOf(session, rowId);
 
-    expect(data).toMatchObject({ title: '', properties: { st: 'o-b', pp: [{ id: 'agent-test' }] } });
+    expect(data).toMatchObject({ title: '', properties: { st: 'o-b', pp: [{ id: 'human-1' }] } });
     expect(data).not.toHaveProperty('icon');
     expect(await childrenOf(session, rowId)).toEqual([]);
     await session.close();

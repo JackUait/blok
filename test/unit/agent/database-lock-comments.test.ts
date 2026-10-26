@@ -8,7 +8,7 @@ import type { OutputData } from '../../../types';
 const seed = (locked: boolean): OutputData => seedOf([{
   id: 'D',
   schema: [property('dt', 'title', locked ? { databaseLocked: true } : {}), property('tx', 'text')],
-  rows: [row('r', { dt: 'r' }, { 'reactions:agent-test': { '👍': 1 }, 'reactions:u1': { '🎉': 2 } })],
+  rows: [row('r', { dt: 'r' }, { 'reactions:human-1': { '👍': 1 }, 'reactions:u1': { '🎉': 2 } })],
 }], [
   { id: 'thread', type: 'database-comment', data: { text: 'hello', createdAt: 1, authorId: 'u1', authorName: 'Jack' }, parent: 'r' },
 ]);
@@ -114,11 +114,11 @@ describe.each(SESSIONS)('database lock, comments and reactions (%s session)', (_
   it('writes the agent\'s own feed reactions and refuses another person\'s', async () => {
     const session = open(seed(false));
 
-    expect(errorOf(await run(session, 'block.update', { id: 'r', data: { 'reactions:agent-test': { '👍': 1, '🚀': 3 } } }))).toBeUndefined();
+    expect(errorOf(await run(session, 'block.update', { id: 'r', data: { 'reactions:human-1': { '👍': 1, '🚀': 3 } } }))).toBeUndefined();
     const error = errorOf(await run(session, 'block.update', { id: 'r', data: { 'reactions:u1': null } }));
 
     expect(error?.code).toBe('FIELD_NOT_WRITABLE');
-    expect(await dataOf(session, 'r')).toMatchObject({ 'reactions:u1': { '🎉': 2 }, 'reactions:agent-test': { '🚀': 3 } });
+    expect(await dataOf(session, 'r')).toMatchObject({ 'reactions:u1': { '🎉': 2 }, 'reactions:human-1': { '🚀': 3 } });
     expect(await valuesOf(session, 'r')).toEqual({ dt: 'r' });
     await session.close();
   });

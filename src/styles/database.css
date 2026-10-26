@@ -2245,6 +2245,7 @@
 
 /* research/09 §8 L83-84: Notion scales a 16px box (group rows) and a 14px box (pins) by 1.2. */
 [data-blok-database-drawer-prop-icon] svg {
+  flex-shrink: 0;
   inline-size: 19.2px;
   block-size: 19.2px;
 }

@@ -143,6 +143,11 @@ describe('database row page layout css', () => {
     }
   });
 
+  // notion-spec §1: the 19x19 glyph keeps its size and overflows the 18px slot instead of shrinking into it.
+  it('keeps a group row glyph at full size inside its narrower slot', () => {
+    expect(ruleBody('[data-blok-database-drawer-prop-icon] svg')).toContain('flex-shrink: 0');
+  });
+
   // research/10 §4: an 80x30 cell, padding 0 6px; the empty one reads icon + name, 14px/400 in the empty grey.
   it('draws a label-less pin cell 30px high with a grey placeholder', () => {
     const value = ruleBody('[data-blok-database-drawer-prop-value]');

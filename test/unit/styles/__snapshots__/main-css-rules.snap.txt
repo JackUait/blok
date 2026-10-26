@@ -5799,6 +5799,7 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-database-drawer-prop-icon] svg {
+  flex-shrink: 0;
   inline-size: 19.2px;
   block-size: 19.2px;
 }

@@ -270,8 +270,9 @@ export interface AgentVersionHistory {
   read(version: string): Promise<OutputData | null>;
   /**
    * Makes the document equal this version, the way the host's own Restore does. Resolves
-   * false when there is no such version. The restored content reaches the agent's session
-   * the way any other edit by the host does. Without it, agents cannot restore.
+   * false when there is no such version. A live session gets the restored content as a
+   * remote edit; a session over a stored document keeps the one it loaded, so open a new
+   * one. Without it, agents cannot restore.
    */
   restore?(version: string): Promise<boolean>;
 }

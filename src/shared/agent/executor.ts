@@ -472,7 +472,8 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
     };
 
     if (first?.name === 'history.restore') {
-      const restored = await runRestore(first.args, input.ctx, () => input.applier.snapshot()).catch(atCommand);
+      const restored = await runRestore(first.args, input.ctx, () => input.applier.snapshot(), () => checkCancel(input.signal))
+        .catch(atCommand);
       const marks = marksOf(input.applier);
 
       marks.past.push({ restored: restored.result.previous });

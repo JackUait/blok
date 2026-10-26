@@ -301,6 +301,21 @@ describe('history.restore', () => {
     expect(!redo.ok && redo.error.code).toBe('NOTHING_TO_REDO');
   });
 
+  it('never restores once the turn is stopped during the version reads', async () => {
+    const { history, agent } = restoring();
+    const controller = new AbortController();
+
+    history.read.mockImplementationOnce(async (version: string) => {
+      controller.abort();
+
+      return STORED[version] ?? null;
+    });
+    const result = await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] }, { signal: controller.signal });
+
+    expect(!result.ok && result.error.code).toBe('CANCELLED');
+    expect(history.restore).not.toHaveBeenCalled();
+  });
+
   it('reports a failing host restore with the retry rule of the reads', async () => {
     const { history, agent } = restoring();
 

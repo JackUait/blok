@@ -171,7 +171,8 @@ const idsOf = (blocks: Array<{ id?: string }>): string[] =>
 export const runRestore = async (
   args: Record<string, unknown>,
   ctx: VersionContext,
-  current: () => DocSnapshot
+  current: () => DocSnapshot,
+  checkCancel: () => void
 ): Promise<{ result: { version: string; previous?: string }; changed: ChangedSet }> => {
   const history = historyOf('history.restore', ctx);
   const restore = history.restore;
@@ -194,6 +195,8 @@ export const runRestore = async (
     htmlToSegments: ctx.ports.htmlToSegments,
   });
 
+  // The reads above can take a while; a Stop during them must leave the document alone.
+  checkCancel();
   if (!await ask(() => restore.call(history, version))) {
     throw notFound(version);
   }

@@ -1,6 +1,7 @@
 import { nanoid } from 'nanoid';
 
 import { IconCheck, IconCross, IconDotsHorizontal, IconMenu, IconSliders } from '../../../components/icons';
+import { onHover } from '../../../components/utils/tooltip';
 import { DatabaseModel } from '../database-model';
 import { orderedStatusOptions, personIdsOf, statusGroupOf, statusGroupsOf } from '../property-values';
 import type { PropertyDefinition, PropertyValue, SelectOption } from '../types';
@@ -154,6 +155,11 @@ class SelectEditor {
 
   private t(key: string): string {
     return this.ctx.i18n.t(key);
+  }
+
+  /** notion-spec-2 §4: only the row page status picker names the hovered option. */
+  private get showsOptionHints(): boolean {
+    return this.property.type === 'status' && this.ctx.coverCell === 'value';
   }
 
   private get canEditOptions(): boolean {
@@ -472,6 +478,10 @@ class SelectEditor {
     }
 
     row.addEventListener('click', () => this.pick(option.id));
+    if (this.showsOptionHints) {
+      // Rows sit 4px inside the picker, so 10px here is Notion's 6px from the picker's edge.
+      onHover(row, option.label, { placement: 'left', align: 'start', gap: 10 });
+    }
 
     return row;
   }

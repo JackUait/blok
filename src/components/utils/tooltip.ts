@@ -17,7 +17,7 @@ export type { TooltipContent, TooltipOptions };
 
 /** In-repo layout options. Not on the published TooltipOptions. */
 export interface HintOptions extends TooltipOptions {
-  /** `start`: the bubble's start edge lines up with the trigger's (top and bottom only). */
+  /** `start`: the bubble's start edge lines up with the trigger's; on the left or right, their tops line up. */
   align?: 'center' | 'start';
   /** Px between trigger and bubble. Defaults to 10. */
   gap?: number;
@@ -873,6 +873,22 @@ class Tooltip {
     return window.getComputedStyle(element).direction === 'rtl' ? elementCoords.right - width : elementCoords.left;
   }
 
+  /**
+   * The bubble's top for a left or right placement.
+   * @param {HTMLElement} element - target element
+   * @param {HintOptions} showingOptions - placement options
+   * @returns {number} top in px
+   */
+  private sideTop(element: HTMLElement, showingOptions: HintOptions): number {
+    const top = element.getBoundingClientRect().top + this.getScrollTop();
+
+    if (showingOptions.align === 'start') {
+      return top;
+    }
+
+    return top + element.clientHeight / 2 - (this.nodes.wrapper?.offsetHeight ?? 0) / 2;
+  }
+
   private gapOf(showingOptions: HintOptions): number {
     return showingOptions.gap ?? this.offsetTop;
   }
@@ -889,7 +905,7 @@ class Tooltip {
 
     const elementCoords = element.getBoundingClientRect();
     const left = elementCoords.left - this.nodes.wrapper.offsetWidth - (showingOptions.gap ?? this.offsetLeft) - (showingOptions.marginLeft ?? 0);
-    const top = elementCoords.top + this.getScrollTop() + element.clientHeight / 2 - this.nodes.wrapper.offsetHeight / 2;
+    const top = this.sideTop(element, showingOptions);
 
     this.applyPlacement('left', left, top);
   }
@@ -906,7 +922,7 @@ class Tooltip {
 
     const elementCoords = element.getBoundingClientRect();
     const left = elementCoords.right + (showingOptions.gap ?? this.offsetRight) + (showingOptions.marginRight ?? 0);
-    const top = elementCoords.top + this.getScrollTop() + element.clientHeight / 2 - this.nodes.wrapper.offsetHeight / 2;
+    const top = this.sideTop(element, showingOptions);
 
     this.applyPlacement('right', left, top);
   }

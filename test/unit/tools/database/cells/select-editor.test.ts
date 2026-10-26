@@ -4,8 +4,10 @@ import { openCellEditor } from '../../../../../src/tools/database/cells';
 import type { CellEditorContext } from '../../../../../src/tools/database/cells/types';
 import { PopoverRegistry } from '../../../../../src/components/utils/popover/popover-registry';
 import type { SelectOption } from '../../../../../src/tools/database/types';
-import { editorRoot, makeAnchor, makeEditorContext, makeProperty, press } from './helpers';
+import { editorRoot, makeAnchor, makeEditorContext, makeProperty, press, pressOutside } from './helpers';
 import { IconSliders } from '../../../../../src/components/icons';
+import { DATA_ATTR, TOOLTIP_INTERFACE_VALUE } from '../../../../../src/components/constants';
+import { HINT_DELAY, destroy as destroyTooltip } from '../../../../../src/components/utils/tooltip';
 
 const OPTIONS: SelectOption[] = [
   { id: 'o2', label: 'Doing', color: 'blue', position: 'a1' },
@@ -492,5 +494,77 @@ describe('status cell editor', () => {
 
     glyph.innerHTML = IconSliders;
     expect(q('[data-blok-database-select-edit-property] svg').innerHTML).toBe(glyph.querySelector('svg')?.innerHTML);
+  });
+});
+
+// notion-spec-2 §4: over a row page value, hovering a status option shows its name left of the picker.
+describe('status picker option hint', () => {
+  const STATUS: SelectOption[] = [
+    { id: 'ns', label: 'Not started', color: 'gray', position: 'a0', groupId: 'todo' },
+    { id: 'ip', label: 'In progress', color: 'blue', position: 'a0', groupId: 'inProgress' },
+  ];
+  const hint = (): HTMLElement | null => document.querySelector(`[${DATA_ATTR.interface}="${TOOLTIP_INTERFACE_VALUE}"]`);
+  const hintShown = (): boolean => hint()?.getAttribute('aria-hidden') === 'false';
+  const open = (overrides: Partial<CellEditorContext>): void => {
+    openCellEditor(makeProperty('status', STATUS), 'ip', makeAnchor(), makeEditorContext({ options: STATUS, onOptionsChange: vi.fn(), ...overrides }));
+  };
+  const hover = (id: string): HTMLElement => {
+    const option = row(id);
+
+    vi.spyOn(option, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 933, y: 241, width: 427, height: 28 }));
+    option.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse' }));
+    option.dispatchEvent(new MouseEvent('mouseenter'));
+
+    return option;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    PopoverRegistry.resetForTests();
+    // Earlier suites empty the body under the shared tooltip.
+    destroyTooltip();
+  });
+
+  afterEach(() => {
+    destroyTooltip();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('names the hovered option after the hint delay, left of the picker and level with the row', () => {
+    open({ coverCell: 'value' });
+    hover('ns');
+
+    vi.advanceTimersByTime(HINT_DELAY - 1);
+    expect(hintShown()).toBe(false);
+    vi.advanceTimersByTime(1);
+
+    expect(hintShown()).toBe(true);
+    expect(hint()?.textContent).toBe('Not started');
+    expect(hint()?.getAttribute('data-blok-placement')).toBe('left');
+    expect(hint()?.style.top).toBe('241px');
+  });
+
+  it('closes the hint when a press outside closes the picker', async () => {
+    open({ coverCell: 'value' });
+    hover('ns');
+    vi.advanceTimersByTime(HINT_DELAY);
+    expect(hintShown()).toBe(true);
+
+    pressOutside();
+    await vi.runAllTimersAsync();
+
+    expect(editorRoot()).toBeNull();
+    expect(hintShown()).toBe(false);
+  });
+
+  it('shows no hint in a table cell status picker', () => {
+    open({});
+    hover('ns');
+    vi.advanceTimersByTime(HINT_DELAY);
+
+    expect(hintShown()).toBe(false);
   });
 });

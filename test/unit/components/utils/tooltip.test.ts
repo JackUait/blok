@@ -993,6 +993,16 @@ describe('Tooltip utility', () => {
       expect(wrapper.style.left).toBe('366px');
     });
 
+    it('lines a side bubble\'s top up with the trigger\'s top', () => {
+      const { target, wrapper } = setUp();
+
+      showReadout(target, 'x', { placement: 'left', align: 'start' });
+      expect(placed(wrapper)).toEqual({ left: '110px', top: '300px' });
+
+      showReadout(target, 'x', { placement: 'right', align: 'start' });
+      expect(placed(wrapper)).toEqual({ left: '370px', top: '300px' });
+    });
+
     it('drops the content padding, centring and line height for bare content', () => {
       const { target } = setUp();
       const content = document.querySelector<HTMLElement>('[data-blok-testid="tooltip-content"]');

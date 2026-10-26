@@ -62,7 +62,7 @@ const isTransient = (error: unknown): boolean => {
   return typeof status === 'number' && (status === 429 || (status >= 500 && status <= 599 && status !== 501));
 };
 
-/** A host failure is not a broken document. */
+/** A host failure is not a broken document: the error says if a retry can help. */
 const ask = async <T>(call: () => Promise<T>): Promise<T> => {
   try {
     return await call();

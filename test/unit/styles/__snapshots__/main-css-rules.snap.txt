@@ -6179,7 +6179,7 @@ button[data-blok-database-column-count]:hover {
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item]:last-child {
-  margin-bottom: 0;
+  margin-block-end: 0;
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-menu'] [data-blok-popover-item] {

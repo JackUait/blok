@@ -2688,7 +2688,7 @@ button[data-blok-database-column-count]:hover {
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item]:last-child {
-  margin-bottom: 0;
+  margin-block-end: 0;
 }
 
 /* Notion's row menu (research/08, shots-08/65): 29px rows, then a 12px gray footer. */

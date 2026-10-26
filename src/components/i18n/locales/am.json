@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "የተዛመደው የውሂብ ጎታ \"{name}\" የሚባል ንብረት የለውም",
   "tools.database.formula.error.circularReference": "\"{name}\" ራሱን ያመለክታል",
   "tools.database.formula.error.tooDeep": "ቀመሮች ሌሎች ቀመሮችን ማመልከት የሚችሉት እስከ 15 ደረጃዎች ጥልቀት ብቻ ነው",
+  "tools.database.formula.error.tooComplex": "ቀመሮች ቢበዛ {length} ቁምፊዎች ሊረዝሙ እና ቢበዛ {depth} ደረጃዎች ሊጠለቁ ይችላሉ",
   "tools.database.propertyTypeRelation": "ግንኙነት",
   "tools.database.propertyTypeRollup": "ማጠቃለያ",
   "tools.database.propertyTypeFormula": "ቀመር",

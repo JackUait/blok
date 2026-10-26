@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "관계된 데이터베이스에 \"{name}\" 속성이 없습니다",
   "tools.database.formula.error.circularReference": "\"{name}\"이(가) 자기 자신을 참조합니다",
   "tools.database.formula.error.tooDeep": "수식은 다른 수식을 15단계까지만 참조할 수 있습니다",
+  "tools.database.formula.error.tooComplex": "수식은 최대 {length}자, 중첩은 최대 {depth}단계까지 가능합니다",
   "tools.database.propertyTypeRelation": "관계형",
   "tools.database.propertyTypeRollup": "롤업",
   "tools.database.propertyTypeFormula": "수식",

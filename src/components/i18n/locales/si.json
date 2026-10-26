@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "සම්බන්ධිත දත්ත ගබඩාවේ \"{name}\" ගුණාංගයක් නැත",
   "tools.database.formula.error.circularReference": "\"{name}\" නැවත තමාටම යොමු වේ",
   "tools.database.formula.error.tooDeep": "සූත්‍රවලට වෙනත් සූත්‍ර වෙත යොමු විය හැක්කේ මට්ටම් 15ක් ගැඹුරට පමණි",
+  "tools.database.formula.error.tooComplex": "සූත්‍රවල උපරිම අක්ෂර {length} ක් සහ උපරිම මට්ටම් {depth} ක ගැඹුරක් දක්වා කැදැල්ල තිබිය හැක",
   "tools.database.propertyTypeRelation": "සම්බන්ධතාව",
   "tools.database.propertyTypeRollup": "සාරාංශය",
   "tools.database.propertyTypeFormula": "සූත්‍රය",

@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "پایگاه داده مرتبط ویژگی \"{name}\" را ندارد",
   "tools.database.formula.error.circularReference": "\"{name}\" به خودش ارجاع می‌دهد",
   "tools.database.formula.error.tooDeep": "فرمول‌ها فقط تا عمق 15 سطح می‌توانند به فرمول‌های دیگر ارجاع دهند",
+  "tools.database.formula.error.tooComplex": "فرمول‌ها حداکثر می‌توانند {length} نویسه طول داشته باشند و تا {depth} سطح تودرتو شوند",
   "tools.database.propertyTypeRelation": "رابطه",
   "tools.database.propertyTypeRollup": "تجمیع",
   "tools.database.propertyTypeFormula": "فرمول",

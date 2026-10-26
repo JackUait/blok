@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "داتابەیسە پەیوەندیدارەکە تایبەتمەندیی \"{name}\"ی نییە",
   "tools.database.formula.error.circularReference": "\"{name}\" ئاماژە بە خۆی دەکاتەوە",
   "tools.database.formula.error.tooDeep": "فۆرموولەکان تەنها تا 15 ئاست قووڵی دەتوانن ئاماژە بە فۆرموولەی تر بکەن",
+  "tools.database.formula.error.tooComplex": "Formul dikarin herî zêde {length} tîp dirêj bin û herî zêde {depth} ast kûr bên hêlînkirin",
   "tools.database.propertyTypeRelation": "پەیوەندی",
   "tools.database.propertyTypeRollup": "کۆکردنەوە",
   "tools.database.propertyTypeFormula": "فۆرموولە",

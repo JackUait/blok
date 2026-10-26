@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "មូលដ្ឋានទិន្នន័យដែលពាក់ព័ន្ធគ្មានលក្ខណៈ \"{name}\" ទេ",
   "tools.database.formula.error.circularReference": "\"{name}\" យោងត្រឡប់មកខ្លួនឯងវិញ",
   "tools.database.formula.error.tooDeep": "រូបមន្តអាចយោងរូបមន្តផ្សេងទៀតបានត្រឹមតែជម្រៅ 15 កម្រិតប៉ុណ្ណោះ",
+  "tools.database.formula.error.tooComplex": "រូបមន្តអាចមានប្រវែងយ៉ាងច្រើន {length} តួអក្សរ និងដាក់បញ្ចូលគ្នាយ៉ាងច្រើន {depth} កម្រិត",
   "tools.database.propertyTypeRelation": "ទំនាក់ទំនង",
   "tools.database.propertyTypeRollup": "ការសរុប",
   "tools.database.propertyTypeFormula": "រូបមន្ត",

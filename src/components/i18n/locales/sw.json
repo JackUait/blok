@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "Hifadhidata inayohusiana haina sifa \"{name}\"",
   "tools.database.formula.error.circularReference": "\"{name}\" inajirejelea yenyewe",
   "tools.database.formula.error.tooDeep": "Fomula zinaweza kurejelea fomula nyingine hadi viwango 15 tu",
+  "tools.database.formula.error.tooComplex": "Fomula zinaweza kuwa na herufi zisizozidi {length} na kuwekwa ndani hadi viwango {depth} tu",
   "tools.database.propertyTypeRelation": "Uhusiano",
   "tools.database.propertyTypeRollup": "Mjumuisho",
   "tools.database.propertyTypeFormula": "Fomula",

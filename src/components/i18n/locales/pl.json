@@ -1705,6 +1705,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "Powiązana baza danych nie ma właściwości \"{name}\"",
   "tools.database.formula.error.circularReference": "\"{name}\" odwołuje się do siebie",
   "tools.database.formula.error.tooDeep": "Formuły mogą odwoływać się do innych formuł najwyżej na 15 poziomach",
+  "tools.database.formula.error.tooComplex": "Formuły mogą mieć najwyżej {length} znaków i być zagnieżdżone najwyżej na {depth} poziomów",
   "tools.database.propertyTypeRelation": "Relacja",
   "tools.database.propertyTypeRollup": "Zestawienie",
   "tools.database.propertyTypeFormula": "Formuła",

@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "İlişkili veritabanında \"{name}\" özelliği yok",
   "tools.database.formula.error.circularReference": "\"{name}\" kendisine geri başvuruyor",
   "tools.database.formula.error.tooDeep": "Formüller diğer formüllere yalnızca 15 düzey derinliğe kadar başvurabilir",
+  "tools.database.formula.error.tooComplex": "Formüller en fazla {length} karakter uzunluğunda olabilir ve en fazla {depth} düzey iç içe geçebilir",
   "tools.database.propertyTypeRelation": "İlişki",
   "tools.database.propertyTypeRollup": "Özet",
   "tools.database.propertyTypeFormula": "Formül",

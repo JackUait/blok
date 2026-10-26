@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "Свързаната база данни няма свойство \"{name}\"",
   "tools.database.formula.error.circularReference": "\"{name}\" препраща към себе си",
   "tools.database.formula.error.tooDeep": "Формулите могат да препращат към други формули само до 15 нива в дълбочина",
+  "tools.database.formula.error.tooComplex": "Формулите могат да са дълги най-много {length} знака и да са вложени най-много {depth} нива",
   "tools.database.propertyTypeRelation": "Връзка",
   "tools.database.propertyTypeRollup": "Обобщение",
   "tools.database.propertyTypeFormula": "Формула",

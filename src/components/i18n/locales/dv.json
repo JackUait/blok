@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "ގުޅިފައިވާ ޑޭޓާބޭސްގައި \"{name}\" ޕްރޮޕަރޓީއެއް ނެތް",
   "tools.database.formula.error.circularReference": "\"{name}\" އިޝާރާތްކުރަނީ އަމިއްލައަށް",
   "tools.database.formula.error.tooDeep": "ފޯމިއުލާތަކަށް އެހެން ފޯމިއުލާތަކަށް އިޝާރާތްކުރެވޭނީ 15 ފަށަލަ އަށް އެކަނި",
+  "tools.database.formula.error.tooComplex": "ފޯމިއުލާއެއް ގިނަވެގެން {length} އަކުރު ދިގުވެ، ގިނަވެގެން {depth} ފެންވަރު ފުންކޮށް ނެސްޓް ކުރެވޭނެ",
   "tools.database.propertyTypeRelation": "ގުޅުން",
   "tools.database.propertyTypeRollup": "ޖުމްލަ",
   "tools.database.propertyTypeFormula": "ފޯމިއުލާ",

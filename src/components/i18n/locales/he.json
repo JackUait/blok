@@ -1703,6 +1703,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "במסד הנתונים המקושר אין מאפיין \"{name}\"",
   "tools.database.formula.error.circularReference": "\"{name}\" מפנה בחזרה לעצמו",
   "tools.database.formula.error.tooDeep": "נוסחאות יכולות להפנות לנוסחאות אחרות עד עומק של 15 רמות בלבד",
+  "tools.database.formula.error.tooComplex": "נוסחה יכולה להכיל עד {length} תווים ולהיות מקוננת עד {depth} רמות",
   "tools.database.propertyTypeRelation": "קשר",
   "tools.database.propertyTypeRollup": "סיכום",
   "tools.database.propertyTypeFormula": "נוסחה",

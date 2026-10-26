@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "Cơ sở dữ liệu liên quan không có thuộc tính \"{name}\"",
   "tools.database.formula.error.circularReference": "\"{name}\" tham chiếu lại chính nó",
   "tools.database.formula.error.tooDeep": "Công thức chỉ có thể tham chiếu công thức khác sâu tối đa 15 cấp",
+  "tools.database.formula.error.tooComplex": "Công thức dài tối đa {length} ký tự và lồng nhau tối đa {depth} cấp",
   "tools.database.propertyTypeRelation": "Quan hệ",
   "tools.database.propertyTypeRollup": "Tổng hợp",
   "tools.database.propertyTypeFormula": "Công thức",

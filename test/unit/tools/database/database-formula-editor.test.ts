@@ -88,6 +88,14 @@ describe('formula editor', () => {
     expect(input().getAttribute('aria-invalid')).toBe('true');
   });
 
+  it('shows a formula nested past the limit as an error, not a crash', () => {
+    open();
+    type(`${'('.repeat(100000)}1`);
+
+    expect(text('[data-blok-database-formula-error-message]')).toBe('tools.database.formula.error.tooComplex(length=10000,depth=64)');
+    expect(input().getAttribute('aria-invalid')).toBe('true');
+  });
+
   it('saves the formula with property ids on Enter', () => {
     const options = open();
 

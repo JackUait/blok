@@ -1705,6 +1705,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "Пов’язана база даних не має властивості «{name}»",
   "tools.database.formula.error.circularReference": "«{name}» посилається на себе",
   "tools.database.formula.error.tooDeep": "Формули можуть посилатися на інші формули лише на глибину 15 рівнів",
+  "tools.database.formula.error.tooComplex": "Формула може мати не більше {length} символів і не більше {depth} рівнів вкладеності",
   "tools.database.propertyTypeRelation": "Зв’язок",
   "tools.database.propertyTypeRollup": "Зведення",
   "tools.database.propertyTypeFormula": "Формула",

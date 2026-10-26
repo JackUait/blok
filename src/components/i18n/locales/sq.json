@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "Baza e lidhur e të dhënave nuk ka veti \"{name}\"",
   "tools.database.formula.error.circularReference": "\"{name}\" i referohet vetvetes",
   "tools.database.formula.error.tooDeep": "Formulat mund t'u referohen formulave të tjera vetëm deri në 15 nivele thellësi",
+  "tools.database.formula.error.tooComplex": "Formulat mund të kenë deri në {length} karaktere dhe të jenë të ndërthurura deri në {depth} nivele",
   "tools.database.propertyTypeRelation": "Lidhje",
   "tools.database.propertyTypeRollup": "Përmbledhje",
   "tools.database.propertyTypeFormula": "Formulë",

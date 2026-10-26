@@ -9,7 +9,7 @@ export const FORMULA_ERROR_CODES = [
   'cannotCompare', 'cannotAdd', 'operatorNotNumber', 'unknownFunction',
   'argumentCount', 'argumentCountRange', 'argumentCountAtLeast', 'argumentType', 'cannotConcat',
   'bindingName', 'pairedArguments', 'listExpected', 'conditionNotBoolean',
-  'unknownRelatedProperty', 'circularReference', 'tooDeep',
+  'unknownRelatedProperty', 'circularReference', 'tooDeep', 'tooComplex',
 ] as const;
 
 export type FormulaErrorCode = typeof FORMULA_ERROR_CODES[number];

@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "Basis data terkait tidak memiliki properti \"{name}\"",
   "tools.database.formula.error.circularReference": "\"{name}\" merujuk kembali ke dirinya sendiri",
   "tools.database.formula.error.tooDeep": "Rumus hanya dapat merujuk rumus lain hingga kedalaman 15 tingkat",
+  "tools.database.formula.error.tooComplex": "Rumus maksimal {length} karakter dan bertingkat maksimal {depth} level",
   "tools.database.propertyTypeRelation": "Relasi",
   "tools.database.propertyTypeRollup": "Rangkuman",
   "tools.database.propertyTypeFormula": "Rumus",

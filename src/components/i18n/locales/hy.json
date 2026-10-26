@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "Կապված տվյալների բազան չունի \"{name}\" հատկություն",
   "tools.database.formula.error.circularReference": "\"{name}\"-ը հղում է ինքն իրեն",
   "tools.database.formula.error.tooDeep": "Բանաձևերը կարող են հղել այլ բանաձևերի միայն մինչև 15 մակարդակ խորությամբ",
+  "tools.database.formula.error.tooComplex": "Բանաձևերը կարող են լինել առավելագույնը {length} նիշ և ներդրված լինել առավելագույնը {depth} մակարդակ",
   "tools.database.propertyTypeRelation": "Կապ",
   "tools.database.propertyTypeRollup": "Ամփոփում",
   "tools.database.propertyTypeFormula": "Բանաձև",

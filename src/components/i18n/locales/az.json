@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "Əlaqəli verilənlər bazasında \"{name}\" xüsusiyyəti yoxdur",
   "tools.database.formula.error.circularReference": "\"{name}\" özünə istinad edir",
   "tools.database.formula.error.tooDeep": "Düsturlar digər düsturlara yalnız 15 səviyyə dərinliyə qədər istinad edə bilər",
+  "tools.database.formula.error.tooComplex": "Düsturlar ən çox {length} simvol uzunluğunda ola və ən çox {depth} səviyyə iç-içə yerləşə bilər",
   "tools.database.propertyTypeRelation": "Əlaqə",
   "tools.database.propertyTypeRollup": "Toplama",
   "tools.database.propertyTypeFormula": "Düstur",

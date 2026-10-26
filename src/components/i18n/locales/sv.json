@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "Den relaterade databasen har ingen egenskap \"{name}\"",
   "tools.database.formula.error.circularReference": "\"{name}\" hänvisar tillbaka till sig själv",
   "tools.database.formula.error.tooDeep": "Formler kan bara referera till andra formler 15 nivåer djupt",
+  "tools.database.formula.error.tooComplex": "Formler får vara högst {length} tecken långa och nästlas högst {depth} nivåer djupt",
   "tools.database.propertyTypeRelation": "Koppling",
   "tools.database.propertyTypeRollup": "Sammanställning",
   "tools.database.propertyTypeFormula": "Formel",

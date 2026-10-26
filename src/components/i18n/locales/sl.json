@@ -1705,6 +1705,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "Povezana zbirka podatkov nima lastnosti \"{name}\"",
   "tools.database.formula.error.circularReference": "\"{name}\" se sklicuje nase",
   "tools.database.formula.error.tooDeep": "Formule se lahko sklicujejo na druge formule le do globine 15 ravni",
+  "tools.database.formula.error.tooComplex": "Formule imajo lahko največ {length} znakov in so lahko gnezdene največ {depth} ravni globoko",
   "tools.database.propertyTypeRelation": "Povezava",
   "tools.database.propertyTypeRollup": "Povzetek",
   "tools.database.propertyTypeFormula": "Formula",

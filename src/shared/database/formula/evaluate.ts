@@ -5,6 +5,7 @@ import { bindingIndexes, isLambda } from './checker';
 import type { LambdaFunction, Scope } from './checker';
 import { propertyFormulaValue } from './properties';
 import { readPropertyValue } from '../value-helpers';
+import { checkValue, valueSize } from './limits';
 import { isRef } from './types';
 import type { FormulaText, FormulaValue } from './types';
 import { compareValues, concatText, formulaValueToText, isText, num, truthy, valuesEqual } from './values';
@@ -32,15 +33,17 @@ const arithmetic = (op: string, a: number, b: number): number => {
   }
 };
 
+/** Throws `FormulaLimitExceeded` past a cap of `limits.ts`. */
 export const evaluate = (node: FormulaNode, env: EvalEnv, scope: Scope<FormulaValue>): FormulaValue => {
   const ev = (child: FormulaNode, inner: Scope<FormulaValue> = scope): FormulaValue => evaluate(child, env, inner);
 
+  env.budget.spend(1);
   switch (node.type) {
     case 'number': return node.value;
     case 'string': return node.value;
     case 'boolean': return node.value;
     case 'empty': return null;
-    case 'list': return node.items.map((item) => ev(item));
+    case 'list': return checked(env, node.items.map((item) => ev(item)));
     case 'ident': {
       const bound = scope.vars.get(node.name);
 
@@ -64,9 +67,31 @@ export const evaluate = (node: FormulaNode, env: EvalEnv, scope: Scope<FormulaVa
       return typeof operand === 'number' ? num(-operand) : null;
     }
     case 'ternary': return truthy(ev(node.test)) ? ev(node.then) : ev(node.otherwise);
-    case 'binary': return evaluateBinary(node, env, ev);
-    case 'call': return evaluateCall(node, env, scope, ev);
+    case 'binary': return checked(env, evaluateBinary(node, env, ev));
+    case 'call': return checked(env, evaluateCall(node, env, scope, ev));
   }
+};
+
+/** Caps a made value and pays for its size. */
+const checked = (env: EvalEnv, value: FormulaValue): FormulaValue => {
+  env.budget.spend(checkValue(value));
+
+  return value;
+};
+
+/** Builtins that read one item, not the whole list. */
+const LOOKUPS: ReadonlySet<string> = new Set(['at', 'first', 'last', 'empty']);
+
+/** What a builtin pays besides its result: its arguments, and the pairs `unique` compares. */
+const argumentCost = (name: string, values: FormulaValue[]): number => {
+  if (LOOKUPS.has(name)) return 1;
+  const read = values.reduce<number>((total, value) => total + valueSize(value), 0);
+  const items = Array.isArray(values[0]) ? values[0].length : 0;
+
+  if (name === 'unique') return read + items * items;
+  if (name === 'sort') return read + items * Math.ceil(Math.log2(items + 1));
+
+  return read;
 };
 
 const evaluateBinary = (
@@ -143,6 +168,7 @@ const evaluateCall = (
   const values = args.map((arg) => ev(arg));
 
   if (!def.keepEmpty && values.some((value) => value === null)) return null;
+  env.budget.spend(argumentCost(name, values));
 
   return def.run(values, env);
 };

@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "সম্পর্কিত ডেটাবেসে \"{name}\" নামে কোনো বৈশিষ্ট্য নেই",
   "tools.database.formula.error.circularReference": "\"{name}\" নিজেকেই নির্দেশ করে",
   "tools.database.formula.error.tooDeep": "সূত্রগুলো অন্য সূত্রকে কেবল 15 স্তর গভীর পর্যন্ত নির্দেশ করতে পারে",
+  "tools.database.formula.error.tooComplex": "সূত্র সর্বোচ্চ {length} অক্ষর দীর্ঘ এবং সর্বোচ্চ {depth} স্তর গভীর পর্যন্ত নেস্ট করা যায়",
   "tools.database.propertyTypeRelation": "সম্পর্ক",
   "tools.database.propertyTypeRollup": "সমষ্টি",
   "tools.database.propertyTypeFormula": "সূত্র",

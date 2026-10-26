@@ -1705,6 +1705,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "Propojená databáze nemá vlastnost \"{name}\"",
   "tools.database.formula.error.circularReference": "\"{name}\" odkazuje sám na sebe",
   "tools.database.formula.error.tooDeep": "Vzorce mohou odkazovat na jiné vzorce nejvýše do hloubky 15 úrovní",
+  "tools.database.formula.error.tooComplex": "Vzorce mohou mít nejvýše {length} znaků a být vnořené nejvýše do hloubky {depth} úrovní",
   "tools.database.propertyTypeRelation": "Propojení",
   "tools.database.propertyTypeRollup": "Souhrn",
   "tools.database.propertyTypeFormula": "Vzorec",

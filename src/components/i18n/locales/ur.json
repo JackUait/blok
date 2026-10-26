@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "متعلقہ ڈیٹابیس میں \"{name}\" نامی پراپرٹی نہیں ہے",
   "tools.database.formula.error.circularReference": "\"{name}\" خود اپنا حوالہ دیتا ہے",
   "tools.database.formula.error.tooDeep": "فارمولے دوسرے فارمولوں کا حوالہ صرف 15 درجوں کی گہرائی تک دے سکتے ہیں",
+  "tools.database.formula.error.tooComplex": "فارمولے زیادہ سے زیادہ {length} حروف طویل اور زیادہ سے زیادہ {depth} درجے گہرے نیسٹ ہو سکتے ہیں",
   "tools.database.propertyTypeRelation": "تعلق",
   "tools.database.propertyTypeRollup": "خلاصہ",
   "tools.database.propertyTypeFormula": "فارمولا",

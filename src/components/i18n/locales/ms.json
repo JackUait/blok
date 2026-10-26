@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "Pangkalan data berkaitan tiada sifat \"{name}\"",
   "tools.database.formula.error.circularReference": "\"{name}\" merujuk kembali kepada dirinya sendiri",
   "tools.database.formula.error.tooDeep": "Rumus hanya boleh merujuk rumus lain sedalam 15 tahap",
+  "tools.database.formula.error.tooComplex": "Formula boleh mempunyai paling banyak {length} aksara dan bersarang paling dalam {depth} tahap",
   "tools.database.propertyTypeRelation": "Hubungan",
   "tools.database.propertyTypeRollup": "Himpunan",
   "tools.database.propertyTypeFormula": "Rumus",

@@ -3,6 +3,9 @@ import {
 } from './dates';
 import type { DatePart } from './dates';
 import type { FormulaErrorCode, FormulaErrorParams } from './errors';
+import { FormulaLimitExceeded, MAX_REGEX_COST, checkTextLength } from './limits';
+import type { EvaluationBudget } from './limits';
+import { patternShape, regexCost } from './regex';
 import { T, elementOf, isDate, isRef, listOf, typeName, unify } from './types';
 import type { FormulaDate, FormulaText, FormulaType, FormulaValue } from './types';
 import {
@@ -14,6 +17,7 @@ export interface RunContext {
   timeZone?: string;
   rowId: string;
   people?: (id: string) => { name?: string; email?: string } | undefined;
+  budget: EvaluationBudget;
 }
 
 /**
@@ -84,13 +88,57 @@ const math = (fn: (...xs: number[]) => number, arity = 1): FunctionDef => ({
   run: (args) => num(fn(...args.map(n))),
 });
 
-const regex = (pattern: string, flags: string): RegExp | null => {
+/** Null for an invalid pattern or one that could backtrack without bound. Charges the cost of running it on `input`. */
+const regex = (pattern: string, flags: string, input: string, ctx: RunContext): RegExp | null => {
+  const shape = patternShape(pattern);
+
+  if (shape === null) return null;
   try {
-    return new RegExp(pattern, flags);
-  } catch {
+    const re = new RegExp(pattern, flags);
+
+    ctx.budget.spendRegex(regexCost(shape, input.length, MAX_REGEX_COST));
+
+    return re;
+  } catch (error) {
+    if (error instanceof FormulaLimitExceeded) throw error;
+
     return null;
   }
 };
+
+/**
+ * The longest text `replace` can build: `$&`, `$1` and `$<name>` copy at most
+ * the match, `` $` `` and `$'` at most the input.
+ */
+const replacedLength = (input: string, re: RegExp, replacement: string): number => {
+  const dollars = replacement.split('$').length - 1;
+  const copy = (match: string): number => (/\$[`']/.test(replacement) ? input.length : match.length);
+  const matches = re.global ? Array.from(input.matchAll(re), (m) => m[0]) : [input.match(re)?.[0]].filter((m) => m !== undefined);
+
+  return matches.reduce((total, match) => total + replacement.length + dollars * copy(match), input.length);
+};
+
+const replaceText = (x: FormulaValue, pattern: FormulaValue, replacement: FormulaValue, flags: string, ctx: RunContext): FormulaValue => {
+  const input = s(x);
+  const re = regex(s(pattern), flags, input, ctx);
+
+  if (re === null) return null;
+  checkTextLength(replacedLength(input, re, s(replacement)));
+
+  return input.replace(re, s(replacement));
+};
+
+/** `padStart` and `padEnd`: the target size is checked before the text is built. */
+const pad = (side: 'padStart' | 'padEnd'): FunctionDef => ({
+  params: ['text', 'number'],
+  optional: ['text'],
+  returns: T.text,
+  run: ([x, size, fill]) => {
+    checkTextLength(Math.max(s(x).length, n(size) || 0));
+
+    return s(x)[side](n(size), fill === undefined ? ' ' : s(fill));
+  },
+});
 
 /** Round half up at `places` decimals; string exponents avoid 1.005 * 100 = 100.49999. */
 const roundTo = (value: number, places: number): number => {
@@ -204,40 +252,34 @@ export const FUNCTIONS: Record<string, FunctionDef> = {
     run: ([x, start, end]) => chars(x).slice(Math.max(0, n(start)), end === undefined ? undefined : Math.max(0, n(end))).join(''),
   },
   contains: { params: ['text', 'text'], returns: T.boolean, run: ([x, search]) => s(x).includes(s(search)) },
-  test: { params: ['text', 'text'], returns: T.boolean, run: ([x, pattern]) => regex(s(pattern), '')?.test(s(x)) ?? null },
+  test: { params: ['text', 'text'], returns: T.boolean, run: ([x, pattern], ctx) => regex(s(pattern), '', s(x), ctx)?.test(s(x)) ?? null },
   match: {
     params: ['text', 'text'],
     returns: listOf(T.text),
-    run: ([x, pattern]) => {
-      const re = regex(s(pattern), 'g');
+    run: ([x, pattern], ctx) => {
+      const re = regex(s(pattern), 'g', s(x), ctx);
 
       return re === null ? null : Array.from(s(x).matchAll(re), (m) => m[0]);
     },
   },
-  replace: {
-    params: ['text', 'text', 'text'],
-    returns: T.text,
-    run: ([x, pattern, replacement]) => {
-      const re = regex(s(pattern), '');
-
-      return re === null ? null : s(x).replace(re, s(replacement));
-    },
-  },
-  replaceAll: {
-    params: ['text', 'text', 'text'],
-    returns: T.text,
-    run: ([x, pattern, replacement]) => {
-      const re = regex(s(pattern), 'g');
-
-      return re === null ? null : s(x).replace(re, s(replacement));
-    },
-  },
+  replace: { params: ['text', 'text', 'text'], returns: T.text, run: ([x, pattern, replacement], ctx) => replaceText(x, pattern, replacement, '', ctx) },
+  replaceAll: { params: ['text', 'text', 'text'], returns: T.text, run: ([x, pattern, replacement], ctx) => replaceText(x, pattern, replacement, 'g', ctx) },
   lower: { params: ['text'], returns: T.text, run: ([x]) => s(x).toLowerCase() },
   upper: { params: ['text'], returns: T.text, run: ([x]) => s(x).toUpperCase() },
   trim: { params: ['text'], returns: T.text, run: ([x]) => s(x).trim() },
-  repeat: { params: ['text', 'number'], returns: T.text, run: ([x, times]) => s(x).repeat(Math.max(0, Math.trunc(n(times)) || 0)) },
-  padStart: { params: ['text', 'number'], optional: ['text'], returns: T.text, run: ([x, size, fill]) => s(x).padStart(n(size), fill === undefined ? ' ' : s(fill)) },
-  padEnd: { params: ['text', 'number'], optional: ['text'], returns: T.text, run: ([x, size, fill]) => s(x).padEnd(n(size), fill === undefined ? ' ' : s(fill)) },
+  repeat: {
+    params: ['text', 'number'],
+    returns: T.text,
+    run: ([x, times]) => {
+      const count = Math.max(0, Math.trunc(n(times)) || 0);
+
+      checkTextLength(s(x).length * count);
+
+      return s(x).repeat(count);
+    },
+  },
+  padStart: pad('padStart'),
+  padEnd: pad('padEnd'),
   link: { params: ['text', 'text'], returns: T.text, run: ([label, url]) => ({ kind: 'richText', runs: [{ text: s(label), styles: [], link: s(url) }] }) },
   style: {
     params: ['text'],
@@ -260,7 +302,17 @@ export const FUNCTIONS: Record<string, FunctionDef> = {
     },
   },
   split: { params: ['text', 'text'], returns: listOf(T.text), run: ([x, separator]) => s(x).split(s(separator)) },
-  join: { params: ['list', 'text'], returns: T.text, run: ([items, joiner], ctx) => list(items).map((item) => formulaValueToText(item, ctx)).join(s(joiner)) },
+  join: {
+    params: ['list', 'text'],
+    returns: T.text,
+    run: ([items, joiner], ctx) => {
+      const texts = list(items).map((item) => formulaValueToText(item, ctx));
+
+      checkTextLength(texts.reduce((total, text) => total + text.length, 0) + s(joiner).length * Math.max(0, texts.length - 1));
+
+      return texts.join(s(joiner));
+    },
+  },
   formatNumber: {
     params: ['number'],
     optional: ['text', 'number'],

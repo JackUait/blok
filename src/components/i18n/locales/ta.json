@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "தொடர்புடைய தரவுத்தளத்தில் \"{name}\" என்ற பண்பு இல்லை",
   "tools.database.formula.error.circularReference": "\"{name}\" தன்னையே மீண்டும் குறிப்பிடுகிறது",
   "tools.database.formula.error.tooDeep": "சூத்திரங்கள் பிற சூத்திரங்களை 15 நிலைகள் ஆழம் வரை மட்டுமே குறிப்பிட முடியும்",
+  "tools.database.formula.error.tooComplex": "சூத்திரங்கள் அதிகபட்சம் {length} எழுத்துகள் நீளமும் அதிகபட்சம் {depth} நிலைகள் ஆழமும் கொண்டிருக்கலாம்",
   "tools.database.propertyTypeRelation": "தொடர்பு",
   "tools.database.propertyTypeRollup": "திரட்டு",
   "tools.database.propertyTypeFormula": "சூத்திரம்",

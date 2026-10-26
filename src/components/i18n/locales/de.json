@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "Die verknüpfte Datenbank hat keine Eigenschaft \"{name}\"",
   "tools.database.formula.error.circularReference": "\"{name}\" verweist auf sich selbst",
   "tools.database.formula.error.tooDeep": "Formeln können andere Formeln nur bis zu 15 Ebenen tief referenzieren",
+  "tools.database.formula.error.tooComplex": "Formeln dürfen höchstens {length} Zeichen lang sein und höchstens {depth} Ebenen tief verschachtelt werden",
   "tools.database.propertyTypeRelation": "Verknüpfung",
   "tools.database.propertyTypeRollup": "Aggregation",
   "tools.database.propertyTypeFormula": "Formel",

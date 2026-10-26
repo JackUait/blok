@@ -1703,6 +1703,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "O banco de dados relacionado não tem a propriedade \"{name}\"",
   "tools.database.formula.error.circularReference": "\"{name}\" faz referência a si mesmo",
   "tools.database.formula.error.tooDeep": "Fórmulas só podem referenciar outras fórmulas até 15 níveis de profundidade",
+  "tools.database.formula.error.tooComplex": "As fórmulas podem ter no máximo {length} caracteres e ser aninhadas em no máximo {depth} níveis",
   "tools.database.propertyTypeRelation": "Relação",
   "tools.database.propertyTypeRollup": "Agregação",
   "tools.database.propertyTypeFormula": "Fórmula",

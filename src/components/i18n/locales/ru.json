@@ -1705,6 +1705,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "В связанной базе данных нет свойства \"{name}\"",
   "tools.database.formula.error.circularReference": "\"{name}\" ссылается на себя",
   "tools.database.formula.error.tooDeep": "Формулы могут ссылаться на другие формулы не глубже 15 уровней",
+  "tools.database.formula.error.tooComplex": "Формула может быть не длиннее {length} символов и иметь не больше {depth} уровней вложенности",
   "tools.database.propertyTypeRelation": "Связь",
   "tools.database.propertyTypeRollup": "Сводка",
   "tools.database.propertyTypeFormula": "Формула",

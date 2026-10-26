@@ -1703,6 +1703,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "Povezana baza podataka nema svojstvo \"{name}\"",
   "tools.database.formula.error.circularReference": "\"{name}\" upućuje sam na sebe",
   "tools.database.formula.error.tooDeep": "Formule mogu upućivati na druge formule samo do dubine od 15 razina",
+  "tools.database.formula.error.tooComplex": "Formule mogu imati najviše {length} znakova i biti ugniježđene najviše {depth} razina duboko",
   "tools.database.propertyTypeRelation": "Relacija",
   "tools.database.propertyTypeRollup": "Sažimanje",
   "tools.database.propertyTypeFormula": "Formula",

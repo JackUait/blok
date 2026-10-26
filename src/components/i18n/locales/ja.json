@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "リレーション先のデータベースにプロパティ \"{name}\" がありません",
   "tools.database.formula.error.circularReference": "\"{name}\" が自分自身を参照しています",
   "tools.database.formula.error.tooDeep": "数式から他の数式を参照できるのは 15 階層までです",
+  "tools.database.formula.error.tooComplex": "数式は {length} 文字まで、入れ子は {depth} 階層までです",
   "tools.database.propertyTypeRelation": "リレーション",
   "tools.database.propertyTypeRollup": "ロールアップ",
   "tools.database.propertyTypeFormula": "数式",

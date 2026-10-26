@@ -1,6 +1,7 @@
-import { tokenize } from './tokenizer';
+import { tokenize, tooComplex } from './tokenizer';
 import type { FormulaError, Token } from './tokenizer';
 import { FormulaFailure } from './errors';
+import { MAX_FORMULA_DEPTH } from './limits';
 
 interface Span {
   start: number;
@@ -39,6 +40,7 @@ const BINARY_LEVELS: Array<Partial<Record<string, BinaryOp>>> = [
 
 class Parser {
   private pos = 0;
+  private depth = 0;
 
   constructor(private readonly tokens: Token[]) {}
 
@@ -78,11 +80,30 @@ class Parser {
     return this.advance();
   }
 
+  /**
+   * Counts each level the formula nests, so a deep one is a compile error
+   * instead of a stack overflow here or in the checker and evaluator. Jint's
+   * stack is far smaller than V8's: keep frames per level few (no closures,
+   * one method for every binary level).
+   */
+  private enter(levels = 1): void {
+    this.depth += levels;
+    if (this.depth <= MAX_FORMULA_DEPTH) return;
+    const { code, params, message, start, end } = tooComplex(this.peek().start, this.peek().end);
+
+    throw new FormulaFailure(code, params, message, start, end);
+  }
+
   private parseTernary(): FormulaNode {
+    this.enter();
     const test = this.parseBinary(0);
     const token = this.peek();
 
-    if (token.type !== 'op' || token.value !== '?') return test;
+    if (token.type !== 'op' || token.value !== '?') {
+      this.depth--;
+
+      return test;
+    }
     this.advance();
     const then = this.parseTernary();
     const colon = this.peek();
@@ -91,31 +112,39 @@ class Parser {
     this.advance();
     const otherwise = this.parseTernary();
 
+    this.depth--;
+
     return { type: 'ternary', test, then, otherwise, start: test.start, end: otherwise.end };
   }
 
-  private binaryOpAt(level: number): BinaryOp | undefined {
+  /** The operator at the cursor and its level, when that level is `minLevel` or tighter. */
+  private binaryOpFrom(minLevel: number): { op: BinaryOp; level: number } | undefined {
     const token = this.peek();
 
     if (token.type !== 'op' && token.type !== 'ident') return undefined;
+    const level = BINARY_LEVELS.findIndex((ops) => ops[token.value] !== undefined);
+    const op = BINARY_LEVELS[level]?.[token.value];
 
-    return BINARY_LEVELS[level][token.value];
+    return op === undefined || level < minLevel ? undefined : { op, level };
   }
 
-  private parseBinary(level: number): FormulaNode {
-    if (level >= BINARY_LEVELS.length) return this.parseUnary();
-
-    return this.continueBinary(level, this.parseBinary(level + 1));
+  /** Precedence climbing: left-associative at every level, tighter levels bind first. */
+  private parseBinary(minLevel: number): FormulaNode {
+    return this.continueBinary(minLevel, this.parseUnary());
   }
 
-  private continueBinary(level: number, left: FormulaNode): FormulaNode {
-    const op = this.binaryOpAt(level);
+  private continueBinary(minLevel: number, left: FormulaNode): FormulaNode {
+    const found = this.binaryOpFrom(minLevel);
 
-    if (op === undefined) return left;
+    if (found === undefined) return left;
     this.advance();
-    const right = this.parseBinary(level + 1);
+    this.enter();
+    const right = this.parseBinary(found.level + 1);
+    const node = this.continueBinary(minLevel, { type: 'binary', op: found.op, left, right, start: left.start, end: right.end });
 
-    return this.continueBinary(level, { type: 'binary', op, left, right, start: left.start, end: right.end });
+    this.depth--;
+
+    return node;
   }
 
   private parseUnary(): FormulaNode {
@@ -124,7 +153,10 @@ class Parser {
 
     if (isNot || (token.type === 'op' && token.value === '-')) {
       this.advance();
+      this.enter();
       const operand = this.parseUnary();
+
+      this.depth--;
 
       return { type: 'unary', op: isNot ? 'not' : '-', operand, start: token.start, end: operand.end };
     }
@@ -138,7 +170,10 @@ class Parser {
 
     if (token.type !== 'op' || token.value !== '^') return base;
     this.advance();
+    this.enter();
     const exponent = this.parseUnary();
+
+    this.depth--;
 
     return { type: 'binary', op: '^', left: base, right: exponent, start: base.start, end: exponent.end };
   }
@@ -154,12 +189,16 @@ class Parser {
 
     if (name.type !== 'ident') throw new FormulaFailure('expectedFunctionName', {}, 'Expected a function name after "."', name.start, name.end);
     this.advance();
+    this.enter();
     const args = this.isPunct('(') ? this.parseArgs() : { items: [], end: name.end };
-
-    return this.continuePostfix({
+    const call = this.continuePostfix({
       type: 'call', name: name.value, args: [node, ...args.items], method: true,
       nameStart: name.start, nameEnd: name.end, start: node.start, end: args.end,
     });
+
+    this.depth--;
+
+    return call;
   }
 
   private parseArgs(): { items: FormulaNode[]; end: number } {

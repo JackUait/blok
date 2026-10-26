@@ -1,5 +1,6 @@
 import { FormulaFailure } from './errors';
 import type { FormulaError } from './errors';
+import { MAX_FORMULA_DEPTH, MAX_FORMULA_LENGTH } from './limits';
 
 export type { FormulaError } from './errors';
 
@@ -11,6 +12,14 @@ export interface Token {
   start: number;
   end: number;
 }
+
+export const tooComplex = (start: number, end: number): FormulaError => ({
+  code: 'tooComplex',
+  params: { length: MAX_FORMULA_LENGTH, depth: MAX_FORMULA_DEPTH },
+  message: `Formulas can be at most ${MAX_FORMULA_LENGTH} characters long and nest at most ${MAX_FORMULA_DEPTH} levels deep`,
+  start,
+  end,
+});
 
 export type TokenizeResult = { ok: true; tokens: Token[] } | { ok: false; error: FormulaError };
 
@@ -108,6 +117,7 @@ class Scanner {
 }
 
 export const tokenize = (source: string): TokenizeResult => {
+  if (source.length > MAX_FORMULA_LENGTH) return { ok: false, error: tooComplex(0, source.length) };
   try {
     return { ok: true, tokens: new Scanner(source).run() };
   } catch (error) {

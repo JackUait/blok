@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "ਸੰਬੰਧਿਤ ਡਾਟਾਬੇਸ ਵਿੱਚ \"{name}\" ਨਾਮ ਦੀ ਕੋਈ ਵਿਸ਼ੇਸ਼ਤਾ ਨਹੀਂ ਹੈ",
   "tools.database.formula.error.circularReference": "\"{name}\" ਆਪਣੇ ਆਪ ਦਾ ਹਵਾਲਾ ਦਿੰਦਾ ਹੈ",
   "tools.database.formula.error.tooDeep": "ਫਾਰਮੂਲੇ ਹੋਰ ਫਾਰਮੂਲਿਆਂ ਦਾ ਹਵਾਲਾ ਸਿਰਫ਼ 15 ਪੱਧਰਾਂ ਤੱਕ ਦੇ ਸਕਦੇ ਹਨ",
+  "tools.database.formula.error.tooComplex": "ਫਾਰਮੂਲੇ ਵੱਧ ਤੋਂ ਵੱਧ {length} ਅੱਖਰ ਲੰਬੇ ਅਤੇ ਵੱਧ ਤੋਂ ਵੱਧ {depth} ਪੱਧਰ ਡੂੰਘੇ ਨੈਸਟ ਹੋ ਸਕਦੇ ਹਨ",
   "tools.database.propertyTypeRelation": "ਸੰਬੰਧ",
   "tools.database.propertyTypeRollup": "ਸੰਖੇਪ",
   "tools.database.propertyTypeFormula": "ਫਾਰਮੂਲਾ",

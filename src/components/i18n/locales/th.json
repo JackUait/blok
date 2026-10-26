@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "ฐานข้อมูลที่เกี่ยวข้องไม่มีคุณสมบัติ \"{name}\"",
   "tools.database.formula.error.circularReference": "\"{name}\" อ้างอิงกลับมาที่ตัวเอง",
   "tools.database.formula.error.tooDeep": "สูตรอ้างอิงสูตรอื่นได้ลึกสุดเพียง 15 ระดับ",
+  "tools.database.formula.error.tooComplex": "สูตรยาวได้สูงสุด {length} อักขระ และซ้อนกันได้ลึกสูงสุด {depth} ระดับ",
   "tools.database.propertyTypeRelation": "ความสัมพันธ์",
   "tools.database.propertyTypeRollup": "สรุปรวม",
   "tools.database.propertyTypeFormula": "สูตร",

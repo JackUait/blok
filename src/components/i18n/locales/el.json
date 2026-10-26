@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "Η συσχετισμένη βάση δεδομένων δεν έχει ιδιότητα \"{name}\"",
   "tools.database.formula.error.circularReference": "Το \"{name}\" αναφέρεται στον εαυτό του",
   "tools.database.formula.error.tooDeep": "Οι τύποι μπορούν να αναφέρονται σε άλλους τύπους μόνο έως 15 επίπεδα βάθος",
+  "tools.database.formula.error.tooComplex": "Οι τύποι μπορούν να έχουν έως {length} χαρακτήρες και να εμφωλεύονται έως {depth} επίπεδα",
   "tools.database.propertyTypeRelation": "Συσχέτιση",
   "tools.database.propertyTypeRollup": "Συγκεντρωτικό",
   "tools.database.propertyTypeFormula": "Τύπος",

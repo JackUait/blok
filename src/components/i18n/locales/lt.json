@@ -1705,6 +1705,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "Susietoje duomenų bazėje nėra savybės \"{name}\"",
   "tools.database.formula.error.circularReference": "\"{name}\" nurodo pats į save",
   "tools.database.formula.error.tooDeep": "Formulės gali nurodyti kitas formules tik iki 15 lygių gylio",
+  "tools.database.formula.error.tooComplex": "Formulės gali būti ne ilgesnės nei {length} simbolių ir įdėtos ne giliau nei {depth} lygių",
   "tools.database.propertyTypeRelation": "Ryšys",
   "tools.database.propertyTypeRollup": "Suvestinė",
   "tools.database.propertyTypeFormula": "Formulė",

@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "ຖານຂໍ້ມູນທີ່ກ່ຽວຂ້ອງບໍ່ມີຄຸນສົມບັດ \"{name}\"",
   "tools.database.formula.error.circularReference": "\"{name}\" ອ້າງອີງເຖິງຕົວມັນເອງ",
   "tools.database.formula.error.tooDeep": "ສູດສາມາດອ້າງອີງສູດອື່ນໄດ້ເລິກພຽງ 15 ລະດັບ",
+  "tools.database.formula.error.tooComplex": "ສູດສາມາດຍາວໄດ້ສູງສຸດ {length} ຕົວອັກສອນ ແລະ ຊ້ອນກັນໄດ້ສູງສຸດ {depth} ລະດັບ",
   "tools.database.propertyTypeRelation": "ຄວາມສຳພັນ",
   "tools.database.propertyTypeRollup": "ການສະຫຼຸບ",
   "tools.database.propertyTypeFormula": "ສູດ",

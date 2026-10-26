@@ -1709,6 +1709,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "لا تحتوي قاعدة البيانات المرتبطة على الخاصية \"{name}\"",
   "tools.database.formula.error.circularReference": "يشير \"{name}\" إلى نفسه",
   "tools.database.formula.error.tooDeep": "يمكن للصيغ الإشارة إلى صيغ أخرى بعمق 15 مستوى فقط",
+  "tools.database.formula.error.tooComplex": "يمكن أن يصل طول الصيغة إلى {length} حرف كحد أقصى وأن تتداخل حتى {depth} مستوى كحد أقصى",
   "tools.database.propertyTypeRelation": "علاقة",
   "tools.database.propertyTypeRollup": "تجميع",
   "tools.database.propertyTypeFormula": "صيغة",

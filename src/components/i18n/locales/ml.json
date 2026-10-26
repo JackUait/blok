@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "ബന്ധപ്പെട്ട ഡാറ്റാബേസിൽ \"{name}\" എന്ന പ്രോപ്പർട്ടി ഇല്ല",
   "tools.database.formula.error.circularReference": "\"{name}\" സ്വയം പരാമർശിക്കുന്നു",
   "tools.database.formula.error.tooDeep": "സൂത്രവാക്യങ്ങൾക്ക് മറ്റ് സൂത്രവാക്യങ്ങളെ 15 തലം ആഴം വരെ മാത്രമേ പരാമർശിക്കാനാകൂ",
+  "tools.database.formula.error.tooComplex": "സൂത്രവാക്യങ്ങൾക്ക് പരമാവധി {length} അക്ഷരങ്ങൾ നീളവും പരമാവധി {depth} തലം ആഴത്തിൽ നെസ്റ്റിംഗും ആകാം",
   "tools.database.propertyTypeRelation": "ബന്ധം",
   "tools.database.propertyTypeRollup": "സമാഹാരം",
   "tools.database.propertyTypeFormula": "സൂത്രവാക്യം",

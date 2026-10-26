@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "Liittyvässä tietokannassa ei ole ominaisuutta \"{name}\"",
   "tools.database.formula.error.circularReference": "\"{name}\" viittaa itseensä",
   "tools.database.formula.error.tooDeep": "Kaavat voivat viitata toisiin kaavoihin vain 15 tason syvyyteen",
+  "tools.database.formula.error.tooComplex": "Kaavat voivat olla enintään {length} merkkiä pitkiä ja sisäkkäisiä enintään {depth} tasoa syvälle",
   "tools.database.propertyTypeRelation": "Relaatio",
   "tools.database.propertyTypeRollup": "Kooste",
   "tools.database.propertyTypeFormula": "Kaava",

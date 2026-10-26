@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "सम्बन्धित डाटाबेसमा \"{name}\" गुण छैन",
   "tools.database.formula.error.circularReference": "\"{name}\" ले आफैंलाई सन्दर्भ गर्छ",
   "tools.database.formula.error.tooDeep": "सूत्रहरूले अन्य सूत्रहरूलाई 15 तहसम्म मात्र सन्दर्भ गर्न सक्छन्",
+  "tools.database.formula.error.tooComplex": "सूत्रहरू बढीमा {length} अक्षर लामो र बढीमा {depth} तह गहिरो नेस्ट हुन सक्छन्",
   "tools.database.propertyTypeRelation": "सम्बन्ध",
   "tools.database.propertyTypeRollup": "संकलन",
   "tools.database.propertyTypeFormula": "सूत्र",

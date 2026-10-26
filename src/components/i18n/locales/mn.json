@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "Холбоотой мэдээллийн санд \"{name}\" шинж байхгүй",
   "tools.database.formula.error.circularReference": "\"{name}\" өөрөө өөрийгөө заасан байна",
   "tools.database.formula.error.tooDeep": "Томьёо бусад томьёог зөвхөн 15 түвшин хүртэл гүнзгий заах боломжтой",
+  "tools.database.formula.error.tooComplex": "Томьёо хамгийн ихдээ {length} тэмдэгт урттай, хамгийн ихдээ {depth} түвшин давхцаж болно",
   "tools.database.propertyTypeRelation": "Холбоос",
   "tools.database.propertyTypeRollup": "Нэгтгэл",
   "tools.database.propertyTypeFormula": "Томьёо",

@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "Walang property na \"{name}\" ang kaugnay na database",
   "tools.database.formula.error.circularReference": "Tumutukoy pabalik sa sarili nito ang \"{name}\"",
   "tools.database.formula.error.tooDeep": "Hanggang 15 antas lang ang lalim ng pagtukoy ng mga pormula sa ibang pormula",
+  "tools.database.formula.error.tooComplex": "Ang mga formula ay hanggang {length} character lang ang haba at hanggang {depth} level lang ang lalim ng pagkaka-nest",
   "tools.database.propertyTypeRelation": "Relasyon",
   "tools.database.propertyTypeRollup": "Pagsasama-sama",
   "tools.database.propertyTypeFormula": "Pormula",

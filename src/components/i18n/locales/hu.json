@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "A kapcsolódó adatbázisnak nincs \"{name}\" tulajdonsága",
   "tools.database.formula.error.circularReference": "A(z) \"{name}\" önmagára hivatkozik",
   "tools.database.formula.error.tooDeep": "A képletek csak 15 szint mélységig hivatkozhatnak más képletekre",
+  "tools.database.formula.error.tooComplex": "A képletek legfeljebb {length} karakter hosszúak lehetnek, és legfeljebb {depth} szint mélyen ágyazhatók egymásba",
   "tools.database.propertyTypeRelation": "Kapcsolat",
   "tools.database.propertyTypeRollup": "Összesítés",
   "tools.database.propertyTypeFormula": "Képlet",

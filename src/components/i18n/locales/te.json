@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "సంబంధిత డేటాబేస్‌లో \"{name}\" ప్రాపర్టీ లేదు",
   "tools.database.formula.error.circularReference": "\"{name}\" తనను తానే సూచిస్తోంది",
   "tools.database.formula.error.tooDeep": "ఫార్ములాలు ఇతర ఫార్ములాలను 15 స్థాయిల లోతు వరకు మాత్రమే సూచించగలవు",
+  "tools.database.formula.error.tooComplex": "సూత్రాలు గరిష్ఠంగా {length} అక్షరాల పొడవు, గరిష్ఠంగా {depth} స్థాయిల లోతు వరకు నెస్ట్ కావచ్చు",
   "tools.database.propertyTypeRelation": "సంబంధం",
   "tools.database.propertyTypeRollup": "సంకలనం",
   "tools.database.propertyTypeFormula": "ఫార్ములా",

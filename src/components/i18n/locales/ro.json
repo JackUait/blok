@@ -1703,6 +1703,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "Baza de date asociată nu are proprietatea \"{name}\"",
   "tools.database.formula.error.circularReference": "\"{name}\" face referire la sine",
   "tools.database.formula.error.tooDeep": "Formulele pot face referire la alte formule doar pe 15 niveluri",
+  "tools.database.formula.error.tooComplex": "Formulele pot avea cel mult {length} caractere și pot fi imbricate pe cel mult {depth} niveluri",
   "tools.database.propertyTypeRelation": "Relație",
   "tools.database.propertyTypeRollup": "Agregare",
   "tools.database.propertyTypeFormula": "Formulă",

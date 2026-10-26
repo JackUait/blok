@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "Seotud andmebaasis pole omadust \"{name}\"",
   "tools.database.formula.error.circularReference": "\"{name}\" viitab iseendale",
   "tools.database.formula.error.tooDeep": "Valemid saavad teistele valemitele viidata ainult 15 taseme sügavuseni",
+  "tools.database.formula.error.tooComplex": "Valemid võivad olla kuni {length} märki pikad ja pesastatud kuni {depth} taset sügavale",
   "tools.database.propertyTypeRelation": "Seos",
   "tools.database.propertyTypeRollup": "Koond",
   "tools.database.propertyTypeFormula": "Valem",

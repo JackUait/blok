@@ -2,10 +2,11 @@ import { Checker, SPECIAL_FORMS, resolveProps } from './checker';
 import { FormulaFailure } from './errors';
 import type { CheckOptions, PropSpan } from './checker';
 import { evaluate } from './evaluate';
+import { EvaluationBudget, FormulaLimitExceeded } from './limits';
 import { FUNCTIONS } from './functions';
 import { parse } from './parser';
 import type { FormulaNode } from './parser';
-import { tokenize } from './tokenizer';
+import { tokenize, tooComplex } from './tokenizer';
 import type { FormulaError } from './tokenizer';
 import type { FormulaType, FormulaValue } from './types';
 import type { DatabaseRow, PropertyDefinition, PropertyValue } from '../types';
@@ -51,12 +52,16 @@ export const FORMULA_FUNCTION_NAMES: readonly string[] = [...Object.keys(FUNCTIO
 const byId = (schema: PropertyDefinition[]): Map<string, PropertyDefinition> => new Map(schema.map((p) => [p.id, p]));
 
 /** Compiles a formula written with `prop("Name")` or with stored `{{property:id}}` references. */
+/**
+ * A stack overflow is a compile error too. The parser caps one formula's
+ * depth, but a chain of formulas checks each inside the last, and Jint's
+ * stack is far smaller than V8's.
+ */
 export const compileFormula = (source: string, schema: PropertyDefinition[], options: CompileOptions = {}): CompileResult => {
-  const parsed = parse(source);
-
-  if (!parsed.ok) return parsed;
-
   try {
+    const parsed = parse(source);
+
+    if (!parsed.ok) return parsed;
     const propSpans: PropSpan[] = [];
     const node = resolveProps(parsed.node, schema, propSpans);
     const resultType = new Checker(byId(schema), options, propSpans).check(node, { vars: new Map() });
@@ -64,22 +69,31 @@ export const compileFormula = (source: string, schema: PropertyDefinition[], opt
     return { ok: true, formula: { source, node, propSpans, resultType }, resultType };
   } catch (error) {
     if (error instanceof FormulaFailure) return { ok: false, error: error.toError() };
+    if (error instanceof RangeError) return { ok: false, error: tooComplex(0, source.length) };
     throw error;
   }
 };
 
-export const evaluateFormula = (compiled: CompiledFormula, row: DatabaseRow, ctx: FormulaContext): FormulaValue =>
-  evaluate(compiled.node, {
-    row,
-    properties: byId(ctx.schema),
-    now: ctx.now.getTime(),
-    timeZone: ctx.timeZone,
-    rowId: row.id,
-    people: ctx.people,
-    propValue: ctx.propValue,
-    related: ctx.related,
-    relatedValue: ctx.relatedValue,
-  }, { vars: new Map() });
+/** A formula that passes a cap of `limits.ts`, or overflows the stack, reads empty as a runtime error does. */
+export const evaluateFormula = (compiled: CompiledFormula, row: DatabaseRow, ctx: FormulaContext): FormulaValue => {
+  try {
+    return evaluate(compiled.node, {
+      row,
+      properties: byId(ctx.schema),
+      now: ctx.now.getTime(),
+      timeZone: ctx.timeZone,
+      rowId: row.id,
+      people: ctx.people,
+      propValue: ctx.propValue,
+      related: ctx.related,
+      relatedValue: ctx.relatedValue,
+      budget: new EvaluationBudget(),
+    }, { vars: new Map() });
+  } catch (error) {
+    if (error instanceof FormulaLimitExceeded || error instanceof RangeError) return null;
+    throw error;
+  }
+};
 
 /** The form to store: the source with every property named by id, so a rename keeps working. */
 export const serializeFormula = (compiled: CompiledFormula): string =>

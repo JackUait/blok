@@ -1701,6 +1701,7 @@
   "tools.database.formula.error.unknownRelatedProperty": "關聯的資料庫沒有屬性「{name}」",
   "tools.database.formula.error.circularReference": "「{name}」參照了自己",
   "tools.database.formula.error.tooDeep": "公式最多只能巢狀參照 15 層其他公式",
+  "tools.database.formula.error.tooComplex": "公式最多 {length} 個字元，巢狀最多 {depth} 層",
   "tools.database.propertyTypeRelation": "關聯",
   "tools.database.propertyTypeRollup": "彙整",
   "tools.database.propertyTypeFormula": "公式",

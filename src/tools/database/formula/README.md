@@ -192,6 +192,14 @@ Every name the engine accepts. `readme.test.ts` fails if this table and `FORMULA
 
 Removed in 2.0 and rejected as unknown functions (H-2.0): `larger`, `largerEq`, `smaller`, `smallerEq`, `start`, `end`, and `slice` / `concat` on text.
 
+## Limits
+
+Formulas saved in a document also run on the server, when an agent reads the rows. These caps live in `../../../shared/database/formula/limits.ts`, and the editor and the server share them. They are Blok's own; Notion documents none (**unverified**).
+
+- A formula is at most 10,000 characters and nests at most 64 levels deep (brackets, operators, calls, method chains). Past that it fails to compile with `tooComplex`.
+- A text value is at most 10,000 characters and a list at most 10,000 items. One evaluation has a fixed work budget. A formula that passes either reads empty, as a runtime error does. `repeat`, `padStart`, `padEnd`, `join`, `replace` and `replaceAll` check the size before they build the text.
+- `test`, `match`, `replace` and `replaceAll` read empty for a pattern longer than 1,000 characters, or one with a backreference (`\1`, `\k<name>`), a lookaround (`(?=`, `(?!`, `(?<=`, `(?<!`), or a quantified group that holds a quantifier or `|` (`(a+)+`, `(a|b)*`; write `[ab]*`). The rest are charged their worst-case backtracking over the input, and a formula past its regex budget reads empty. A single `+` or `*` runs on 10,000 characters; three in a row run on about 100.
+
 ## Error messages
 
 Notion's pages do not quote their editor's error text, so every message here is Blok's own wording (**unverified**). Each error carries the `start`/`end` offsets of the offending source, an English `message`, and a `code` with `params`. Show `code` through i18n: the key is `tools.database.formula.error.<code>` (`formulaErrorKey`), and `params` fill its `{placeholders}`. `FORMULA_ERROR_CODES` lists every code; `errors.test.ts` fails when one has no English string.

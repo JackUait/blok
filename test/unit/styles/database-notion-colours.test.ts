@@ -678,3 +678,13 @@ describe('colour swatch ring', () => {
     expect(value(dbAttr, `--blok-database-option-${color}-ring`)).toBe(DARK_RING[color]);
   });
 });
+
+// notion-spec-2 §11, §12: the Color button keeps Notion's hover fill while its list is open.
+describe('the Color dropdown button', () => {
+  it.each([
+    "[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item][data-blok-item-name=\"color\"][data-blok-popover-item-children-open] [data-blok-popover-item-dropdown-button]",
+    "[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item][data-blok-item-name=\"color\"][data-blok-popover-item-children-open] [data-blok-popover-item-dropdown-button]",
+  ])('fills with the database hover fill while open: %s', (selector) => {
+    expect(ruleBody(selector)).toContain('background-color: var(--blok-database-hover-bg)');
+  });
+});

@@ -54,6 +54,11 @@ export class BuiltInCommentsUi {
     return this.options.permitted() && this.store.available();
   }
 
+  /** A person here could write a comment now: what the thread panel's composer needs. */
+  public writable(): boolean {
+    return this.enabled() && !this.options.readOnly();
+  }
+
   public count(rowId: string): number {
     return this.enabled() ? this.store.count(rowId) : 0;
   }

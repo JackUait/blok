@@ -320,8 +320,54 @@ export class EditorApplier implements AgentApplier {
     }
   }
 
+  /** The comment block an edit writes, or undefined when it writes page content. */
+  private commentTarget(edit: Edit): Block | undefined {
+    const { BlockManager, Tools } = this.Blok;
+
+    if (edit.op === 'insert') {
+      return Tools.blockTools.get(edit.block.type)?.isAnnotation === true && edit.parentId !== null
+        ? BlockManager.getBlockById(edit.parentId)
+        : undefined;
+    }
+    const block = edit.op === 'setPageField' ? undefined : BlockManager.getBlockById(edit.id);
+
+    return block?.isAnnotation === true ? block : undefined;
+  }
+
+  /**
+   * A comment write passes where the person could comment, as the thread panel
+   * decides (Database.commentsWritable), and nowhere else: not under host
+   * comments, a denied `comment`, or a database that cannot say.
+   */
+  private refuseClosedComments(edit: Edit, near: Block): void {
+    const { BlockManager } = this.Blok;
+    const seen = new Set<string>();
+    const cursor: { block: Block | undefined } = { block: near };
+
+    while (cursor.block !== undefined && cursor.block.name !== 'database' && !seen.has(cursor.block.id)) {
+      seen.add(cursor.block.id);
+      cursor.block = typeof cursor.block.parentId === 'string' ? BlockManager.getBlockById(cursor.block.parentId) : undefined;
+    }
+    const answer = { writable: false };
+
+    cursor.block?.call('commentsWritable', { receive: (writable: boolean) => { answer.writable = writable; } });
+    // A comment is only ever inserted, rewritten or removed; anything else is not a comment edit a person makes.
+    const kind = edit.op === 'insert' || edit.op === 'setData' || edit.op === 'remove';
+
+    if (!answer.writable || !kind) {
+      throw failure('PRECONDITION_FAILED', 'Comments are closed here: the person you act for may not comment on this database. Nothing was changed.');
+    }
+  }
+
   private refuseReadOnlyTarget(edit: Edit): void {
     if (edit.op === 'setPageField') {
+      return;
+    }
+    const comment = this.commentTarget(edit);
+
+    if (comment !== undefined) {
+      this.refuseClosedComments(edit, comment);
+
       return;
     }
     const getById = (id: string): Block | undefined => this.Blok.BlockManager.getBlockById(id);

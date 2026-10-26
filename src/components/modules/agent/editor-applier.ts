@@ -2,6 +2,8 @@ import type { BlockOrigin } from '../../../../types';
 import type { AgentActor, Edit, PlannedBlock } from '../../../../types/agent';
 import { AgentFailure, failure } from '../../../shared/agent/errors';
 import type { AgentApplier, HistoryBound, StepUnlocks } from '../../../shared/agent/executor';
+import type { ShareStep } from '../../../shared/agent/approval';
+import { joinShares } from '../../../shared/agent/approval';
 import type { DocSnapshot } from '../../../shared/agent/snapshot';
 import type { HostEffect, Plan } from '../../../shared/agent/types';
 import { textLivesInFirstChild } from '../../../shared/turn-into';
@@ -134,13 +136,33 @@ export class EditorApplier implements AgentApplier {
     return name === 'history.undo' ? known.backward : known.forward;
   }
 
-  /** A step that absorbs another unlocks whatever either did. */
+  public pendingShares(name: 'history.undo' | 'history.redo'): readonly ShareStep[] | undefined {
+    const { YjsManager } = this.Blok;
+    const token = name === 'history.undo' ? YjsManager.topUndoToken() : YjsManager.topRedoToken();
+
+    // undo() and redo() refuse these themselves.
+    if (token === undefined || YjsManager.undoStepTag(token)?.sessionId !== this.options.sessionId) {
+      return [];
+    }
+    const shares = this.unlocks.get(token)?.shares;
+
+    return name === 'history.undo' ? shares?.backward : shares?.forward;
+  }
+
+  /**
+   * A step that absorbs another unlocks whatever either did. Its sharing changes are the later
+   * step's when redone and the earlier step's when undone; a step without a record leaves them unknown.
+   */
   private joinUnlocks(token: CaretHistoryEntry, added: StepUnlocks | undefined): void {
-    const had = this.unlocks.get(token) ?? { forward: [], backward: [] };
+    const had = this.unlocks.get(token) ?? { forward: [], backward: [], shares: { forward: [], backward: [] } };
+    const shares = had.shares === undefined || added?.shares === undefined
+      ? undefined
+      : { forward: joinShares(had.shares.forward, added.shares.forward), backward: joinShares(added.shares.backward, had.shares.backward) };
 
     this.unlocks.set(token, {
       forward: [...new Set([...had.forward, ...added?.forward ?? []])],
       backward: [...new Set([...had.backward, ...added?.backward ?? []])],
+      ...(shares !== undefined && { shares }),
     });
   }
 

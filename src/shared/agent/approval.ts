@@ -1,5 +1,6 @@
-import type { AgentApprovalRequest, AgentApprover } from '../../../types/agent';
+import type { AgentApprovalRequest, AgentApprover, AgentShareChange } from '../../../types/agent';
 import type { OutputData } from '../../../types/data-formats/output-data';
+import type { FormSubmissionAccess } from '../../../types/tools/database';
 import type { DocSnapshot } from './snapshot';
 
 import { deepEqual } from '../deep-equal';
@@ -11,9 +12,17 @@ import { AgentFailure, failure } from './errors';
  * One key per change, block and shown title: a yes for one database never covers another,
  * and a yes for a name that changed while the person decided no longer counts.
  */
-export const approvalKey = (request: AgentApprovalRequest): string => JSON.stringify(request.kind === 'database.buttonConfirm'
-  ? [request.kind, request.blockId, request.title ?? null, request.message ?? null, request.confirmLabel ?? null, request.cancelLabel ?? null]
-  : [request.kind, request.blockId, request.title ?? null]);
+export const approvalKey = (request: AgentApprovalRequest): string => JSON.stringify(((): unknown[] => {
+  switch (request.kind) {
+    case 'database.share':
+      return [request.kind, request.blockId, request.title ?? null, request.viewId, request.view ?? null, request.changes];
+    case 'database.buttonConfirm':
+      return [request.kind, request.blockId, request.title ?? null, request.message ?? null, request.confirmLabel ?? null, request.cancelLabel ?? null];
+    case 'database.restore':
+    case 'database.unlock':
+      return [request.kind, request.blockId, request.title ?? null];
+  }
+})());
 
 // Longer titles push the question out of view.
 const MAX_TITLE = 80;
@@ -40,15 +49,54 @@ export const plainLine = (raw: string, max = MAX_TITLE): string | undefined => {
 export const savedTitle = (data: Readonly<Record<string, unknown>> | undefined): string | undefined =>
   (typeof data?.title === 'string' ? plainLine(data.title) : undefined);
 
-const named = (request: AgentApprovalRequest): string =>
-  request.title === undefined ? `database "${request.blockId}"` : `database "${request.title}" (${request.blockId})`;
+const named = (request: AgentApprovalRequest): string => {
+  const database = request.title === undefined ? `database "${request.blockId}"` : `database "${request.title}" (${request.blockId})`;
+
+  if (request.kind !== 'database.share') {
+    return database;
+  }
+
+  return `${request.view === undefined ? `view "${request.viewId}"` : `view "${request.view}" (${request.viewId})`} of ${database}`;
+};
+
+const ACCESS_LABELS: Record<FormSubmissionAccess, string> = {
+  none: 'No access', view: 'Can view', comment: 'Can comment', edit: 'Can edit', full: 'Full access',
+};
+
+/** One change in the Share panel's words, as the person would set it there. */
+export const describeShareChange = (change: AgentShareChange): string => {
+  switch (change.setting) {
+    case 'access':
+      return `Who can fill out: ${{ public: 'anyone on the web with the link', workspace: 'anyone in the workspace with the link', closed: 'no one (the form is closed)' }[change.to]}`;
+    case 'anonymous':
+      return `Anonymous responses: ${change.to ? 'on' : 'off'}`;
+    case 'submissionAccess':
+      return `Access to submission: ${ACCESS_LABELS[change.to]}`;
+    case 'calendarSync':
+      if (!change.to.enabled) {
+        return 'Calendar sync: off';
+      }
+
+      return change.to.calendarId === undefined ? 'Calendar sync: on' : `Calendar sync: on, to calendar ${JSON.stringify(change.to.calendarId)}`;
+  }
+};
+
+const describeChanges = (changes: readonly AgentShareChange[]): string => changes.map(describeShareChange).join('; ');
 
 /** Thrown while planning; the executor turns it into a question for the person, or a refusal. */
 export const approvalNeeded = (request: AgentApprovalRequest): AgentFailure => failure(
   'APPROVAL_REQUIRED',
-  request.kind === 'database.buttonConfirm'
-    ? `A button in ${named(request)} asks for confirmation, which only a person can give.`
-    : `Unlocking ${named(request)} needs a person's approval.`,
+  ((): string => {
+    switch (request.kind) {
+      case 'database.share':
+        return `Changing who can use ${named(request)} needs a person's approval (${describeChanges(request.changes)}).`;
+      case 'database.buttonConfirm':
+        return `A button in ${named(request)} asks for confirmation, which only a person can give.`;
+      case 'database.restore':
+      case 'database.unlock':
+        return `Unlocking ${named(request)} needs a person's approval.`;
+    }
+  })(),
   { details: { reason: 'pending', approval: request } }
 );
 
@@ -80,12 +128,32 @@ const refusedConfirmation = (request: AgentApprovalRequest, reason: 'no-channel'
   : `This button in ${named(request)} asks for confirmation, and nothing here can ask a person. Nothing was applied. `
     + 'Ask the person to press it themselves.');
 
+const refusedShare = (request: Extract<AgentApprovalRequest, { kind: 'database.share' }>, reason: 'no-channel' | 'denied'): string => (reason === 'denied'
+  ? `The person did not approve this sharing change to ${named(request)} (${describeChanges(request.changes)}), so nothing in this batch, step or restore was applied. `
+    + 'Do not try this sharing change again unless the person asks you to.'
+  : `Who can see or fill out ${named(request)} stays with the person: this change (${describeChanges(request.changes)}) needs a person's explicit approval, `
+    + 'and nothing here can ask one. Nothing in this batch, step or restore was applied. '
+    + 'Ask the person to change it themselves in the view\'s Share menu. Never try to change it another way.');
+
 const refused = (cause: AgentFailure, request: AgentApprovalRequest, reason: 'no-channel' | 'denied'): AgentFailure => {
-  const texts = { 'database.restore': refusedRestore, 'database.buttonConfirm': refusedConfirmation, 'database.unlock': refusedUnlock };
-  const message = texts[request.kind](request, reason);
+  const message = ((): string => {
+    switch (request.kind) {
+      case 'database.share':
+        return refusedShare(request, reason);
+      case 'database.restore':
+        return refusedRestore(request, reason);
+      case 'database.buttonConfirm':
+        return refusedConfirmation(request, reason);
+      case 'database.unlock':
+        return refusedUnlock(request, reason);
+    }
+  })();
 
   return new AgentFailure({ ...cause.error, message, details: { reason, approval: request } });
 };
+
+// The host gets its own copy: a host that edits it cannot change what was approved.
+const copyOf = (request: AgentApprovalRequest): AgentApprovalRequest => JSON.parse(JSON.stringify(request)) as AgentApprovalRequest;
 
 // A batch names a handful of databases; more is a loop, not a person's work.
 const MAX_ASKS = 20;
@@ -124,7 +192,7 @@ export const planWithApprovals = async <T>(
     throw refused(cause, request, 'no-channel');
   }
   // Typed loosely: a host function that resolves anything but true has not approved.
-  const answer: unknown = await approve({ ...request });
+  const answer: unknown = await approve(copyOf(request));
 
   checkCancel();
   if (answer !== true) {
@@ -161,17 +229,28 @@ export const approveStep = async (
   current: DocSnapshot,
   approve: AgentApprover | undefined,
   checkCancel: () => void,
-  kind: AgentApprovalRequest['kind'] = 'database.unlock'
+  kind: 'database.unlock' | 'database.restore' = 'database.unlock'
 ): Promise<void> => {
-  for (const blockId of ids) {
+  await approveRequests(ids.map((blockId) => {
     const title = savedTitle(current.get(blockId)?.data);
-    const request: AgentApprovalRequest = { kind, blockId, ...(title !== undefined && { title }) };
+
+    return { kind, blockId, ...(title !== undefined && { title }) };
+  }), approve, checkCancel);
+};
+
+/** Asks each request in turn, by the same rules as approveStep. */
+export const approveRequests = async (
+  requests: readonly AgentApprovalRequest[],
+  approve: AgentApprover | undefined,
+  checkCancel: () => void
+): Promise<void> => {
+  for (const request of requests) {
     const cause = approvalNeeded(request);
 
     if (approve === undefined) {
       throw refused(cause, request, 'no-channel');
     }
-    const answer: unknown = await approve({ ...request });
+    const answer: unknown = await approve(copyOf(request));
 
     checkCancel();
     if (answer !== true) {
@@ -210,4 +289,159 @@ export const restoreTouchesLocked = (now: DocSnapshot, target: OutputData): stri
     return after === undefined || after.type !== 'database'
       || LOCK_PROTECTED_FIELDS.some(field => !deepEqual(before?.data[field], data[field]));
   });
+};
+
+// ─── Sharing: who can see or fill out a view ───
+
+type Access = 'workspace' | 'public' | 'closed';
+
+/** The share settings a view holds, defaults filled in. Compared field by field. */
+interface ViewShare {
+  access: Access;
+  anonymous: boolean;
+  submissionAccess: FormSubmissionAccess;
+  calendarSync: { enabled: boolean; calendarId?: string };
+}
+
+const SUBMISSION_ACCESS: readonly FormSubmissionAccess[] = ['none', 'view', 'comment', 'edit', 'full'];
+
+const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/** As the Share form panel reads it: closed wins over public. */
+const shareOf = (view: Record<string, unknown> | undefined): ViewShare => {
+  const form = isPlainRecord(view?.form) ? view.form : {};
+  const sync = isPlainRecord(view?.calendarSync) ? view.calendarSync : {};
+  const access = typeof form.submissionAccess === 'string' && (SUBMISSION_ACCESS as readonly string[]).includes(form.submissionAccess)
+    ? form.submissionAccess as FormSubmissionAccess
+    : 'none';
+
+  const publicOrNot: Access = form.public === true ? 'public' : 'workspace';
+
+  return {
+    access: form.closed === true ? 'closed' : publicOrNot,
+    anonymous: form.anonymous === true,
+    submissionAccess: access,
+    calendarSync: {
+      enabled: sync.enabled === true,
+      ...(typeof sync.calendarId === 'string' && sync.calendarId !== '' && { calendarId: sync.calendarId }),
+    },
+  };
+};
+
+// The question names the calendar in full: a longer id would be cut there.
+const MAX_CALENDAR_ID = 64;
+
+const rawShare = (view: Record<string, unknown> | undefined): unknown[] => {
+  const form = isPlainRecord(view?.form) ? view.form : {};
+
+  return [view?.form === undefined || isPlainRecord(view.form), form.closed, form.public, form.anonymous, form.submissionAccess, view?.calendarSync];
+};
+
+const optional = (value: unknown, valid: (value: unknown) => boolean): boolean => value === undefined || valid(value);
+const isBoolean = (value: unknown): boolean => typeof value === 'boolean';
+
+/** The question can only say what a value means when Blok reads it the one way the Share panel does. */
+const readableShare = (view: Record<string, unknown>): boolean => {
+  const form = isPlainRecord(view.form) ? view.form : undefined;
+  const sync = isPlainRecord(view.calendarSync) ? view.calendarSync : undefined;
+  const id = sync?.calendarId;
+
+  return (view.form === undefined || form !== undefined)
+    && (view.calendarSync === undefined || sync !== undefined)
+    && optional(form?.closed, isBoolean) && optional(form?.public, isBoolean) && optional(form?.anonymous, isBoolean)
+    && optional(form?.submissionAccess, value => (SUBMISSION_ACCESS as readonly unknown[]).includes(value))
+    && optional(sync?.enabled, isBoolean)
+    && optional(id, value => typeof value === 'string' && plainLine(value, MAX_CALENDAR_ID) === value && Array.from(value).length <= MAX_CALENDAR_ID);
+};
+
+/** Fails closed on a sharing value that changes and that the person could not be shown as it is. */
+const checkReadable = (was: Record<string, unknown> | undefined, now: Record<string, unknown>): void => {
+  if (!deepEqual(rawShare(was), rawShare(now)) && !readableShare(now)) {
+    throw failure('INVALID_ARGS', `View "${typeof now.id === 'string' ? plainLine(now.id, 64) ?? '?' : '?'}" has a sharing setting Blok cannot read as the Share panel does `
+      + `(form closed, public and anonymous are true or false; submissionAccess is ${SUBMISSION_ACCESS.join(', ')}; calendarSync.calendarId is one plain line of at most ${MAX_CALENDAR_ID} characters). Nothing was written.`);
+  }
+};
+
+const changesBetween = (was: ViewShare, now: ViewShare): AgentShareChange[] => [
+  ...(was.access === now.access ? [] : [{ setting: 'access' as const, to: now.access }]),
+  ...(was.anonymous === now.anonymous ? [] : [{ setting: 'anonymous' as const, to: now.anonymous }]),
+  ...(was.submissionAccess === now.submissionAccess ? [] : [{ setting: 'submissionAccess' as const, to: now.submissionAccess }]),
+  ...(deepEqual(was.calendarSync, now.calendarSync) ? [] : [{ setting: 'calendarSync' as const, to: now.calendarSync }]),
+];
+
+/** One view's sharing changes, by ids: what a history step keeps, and asks about once it runs. */
+export interface ShareStep { blockId: string; viewId: string; changes: AgentShareChange[] }
+
+type DatabaseSource = (id: string) => { type: string; data: Readonly<Record<string, unknown>> } | undefined;
+
+const viewsIn = (data: Readonly<Record<string, unknown>> | undefined): Array<Record<string, unknown>> =>
+  (Array.isArray(data?.views) ? data.views.filter(isPlainRecord) : []);
+
+/**
+ * Every view whose sharing differs between two documents. A view that is new counts against the defaults,
+ * so bringing back a public form asks too. A view that goes away shares nothing, so it never asks.
+ */
+const shareSteps = (ids: readonly string[], from: DatabaseSource, to: DatabaseSource): ShareStep[] => ids.flatMap((blockId) => {
+  const after = to(blockId);
+
+  if (after?.type !== 'database') {
+    return [];
+  }
+  const before = from(blockId);
+  const was = new Map(viewsIn(before?.type === 'database' ? before.data : undefined)
+    .flatMap(view => (typeof view.id === 'string' ? [[view.id, view] as const] : [])));
+
+  return viewsIn(after.data).flatMap((view) => {
+    // A view with no id is new: it still asks, against the defaults.
+    const viewId = typeof view.id === 'string' ? view.id : '';
+    const previous = viewId === '' ? undefined : was.get(viewId);
+
+    checkReadable(previous, view);
+    const changes = changesBetween(shareOf(previous), shareOf(view));
+
+    return changes.length === 0 ? [] : [{ blockId, viewId, changes }];
+  });
+});
+
+const snapshotSource = (snapshot: DocSnapshot): DatabaseSource => id => snapshot.get(id);
+
+/** Going from one document to the other changes these views' sharing. */
+export const sharedBetween = (from: DocSnapshot, to: DocSnapshot): ShareStep[] =>
+  shareSteps(to.ids(), snapshotSource(from), snapshotSource(to));
+
+/** Restoring `target` over `now` changes these views' sharing. */
+export const restoreShares = (now: DocSnapshot, target: OutputData): ShareStep[] => {
+  const restored = new Map(target.blocks.flatMap(block => (block.id === undefined ? [] : [[block.id, block] as const])));
+
+  return shareSteps([...restored.keys()], snapshotSource(now), id => {
+    const block = restored.get(id);
+
+    return block === undefined ? undefined : { type: block.type, data: isPlainRecord(block.data) ? block.data : {} };
+  });
+};
+
+/** The question for one view, named from `named` (the document before the change). */
+export const shareRequest = (step: ShareStep, named: DocSnapshot): AgentApprovalRequest => {
+  const data = named.get(step.blockId)?.data;
+  const title = savedTitle(data);
+  const viewName = viewsIn(data).find(view => view.id === step.viewId)?.name;
+  const view = typeof viewName === 'string' ? plainLine(viewName) : undefined;
+  // Values as written: shareSteps refused any the person could not be shown as they are.
+  return { kind: 'database.share', blockId: step.blockId, ...(title !== undefined && { title }), viewId: step.viewId, ...(view !== undefined && { view }), changes: step.changes };
+};
+
+/** Two steps run as one: per view and setting, the step run last decides the value. */
+export const joinShares = (first: readonly ShareStep[], last: readonly ShareStep[]): ShareStep[] => {
+  const joined = new Map<string, ShareStep>();
+
+  for (const step of [...first, ...last]) {
+    const key = JSON.stringify([step.blockId, step.viewId]);
+    const had = joined.get(key)?.changes ?? [];
+    const settings = new Set(step.changes.map(change => change.setting));
+
+    joined.set(key, { ...step, changes: [...had.filter(change => !settings.has(change.setting)), ...step.changes] });
+  }
+
+  return [...joined.values()];
 };

@@ -97,6 +97,48 @@ public sealed class BlokAgentRoomHistoryTests
     Assert.True(Locked(await room.ExportAsync()));
   }
 
+  // Undoing the delete of a public form brings a public form back: a sharing change no one here can approve.
+  [Fact]
+  public async Task RefusesToUndoADeleteThatBringsBackAPublicForm()
+  {
+    await using var room = AgentRoomForTests.Seed($"history-{Guid.NewGuid():N}", JsonNode.Parse("""
+        {"blocks":[{"id":"db","type":"database","content":[],"data":{"title":"Tasks","activeViewId":"v",
+          "views":[{"id":"v","name":"Table","type":"table","position":"a0","filters":[],"sorts":[],"visibleProperties":[]},
+            {"id":"f","name":"Signup","type":"form","position":"a1","filters":[],"sorts":[],"visibleProperties":[],"form":{"public":true}}],
+          "schema":[{"id":"t","name":"Name","type":"title","position":"a0"}]}}]}
+        """)!.AsObject());
+
+    await OkAsync(room, """{"commands":[{"name":"database.deleteView","args":{"id":"db","viewId":"f"}}]}""");
+
+    var result = await RunAsync(room, Undo);
+    var views = (await room.ExportAsync())["blocks"]!.AsArray().Single(block => block!["id"]!.GetValue<string>() == "db")!["data"]!["views"]!.AsArray();
+
+    Assert.Equal("APPROVAL_REQUIRED", Code(result));
+    Assert.Equal("database.share", result["error"]!["details"]!["approval"]!["kind"]!.GetValue<string>());
+    Assert.DoesNotContain(views, view => view!["id"]!.GetValue<string>() == "f");
+  }
+
+  // Every view that comes back counts, as in the shared runtime: one with no id, or a value Blok cannot read.
+  [Theory]
+  [InlineData("""{"name":"Signup","type":"form","position":"a1","filters":[],"sorts":[],"visibleProperties":[],"form":{"public":true}}""")]
+  [InlineData("""{"id":"f","name":"Signup","type":"form","position":"a1","filters":[],"sorts":[],"visibleProperties":[],"form":{"submissionAccess":"everyone"}}""")]
+  [InlineData("""{"id":"f","name":"Signup","type":"form","position":"a1","filters":[],"sorts":[],"visibleProperties":[],"form":{"public":"yes"}}""")]
+  public async Task RefusesToUndoADeleteThatBringsBackAViewItCannotShowThePerson(string view)
+  {
+    await using var room = AgentRoomForTests.Seed($"history-{Guid.NewGuid():N}", JsonNode.Parse($$$"""
+        {"blocks":[{"id":"p","type":"paragraph","data":{"text":"P"}},{"id":"db","type":"database","content":[],"data":{"title":"Tasks","activeViewId":"v",
+          "views":[{"id":"v","name":"Table","type":"table","position":"a0","filters":[],"sorts":[],"visibleProperties":[]},{{{view}}}],
+          "schema":[{"id":"t","name":"Name","type":"title","position":"a0"}]}}]}
+        """)!.AsObject());
+
+    await OkAsync(room, """{"commands":[{"name":"block.delete","args":{"id":"db"}}]}""");
+
+    var result = await RunAsync(room, Undo);
+
+    Assert.Equal("APPROVAL_REQUIRED", Code(result));
+    Assert.DoesNotContain((await room.ExportAsync())["blocks"]!.AsArray(), block => block!["id"]!.GetValue<string>() == "db");
+  }
+
   [Fact]
   public async Task UndoesAndRedoesOnlyTheLastBatch()
   {

@@ -268,6 +268,60 @@ internal sealed class RoomAgentHistory(TimeProvider time)
         .Select(entry => entry.Key).FirstOrDefault();
   }
 
+  /// <summary>
+  /// A database view whose sharing the replay would change: who can fill out its form, anonymous answers,
+  /// access to submission or calendar sync. Raw values are compared, so a value Blok cannot read still
+  /// counts, and a view with no id counts against the defaults. Mirrors sharedBetween in
+  /// src/shared/agent/approval.ts, failing closed where that refuses an unreadable value.
+  /// </summary>
+  internal static (string BlockId, string ViewId)? Shares(JsonObject now, JsonObject wanted)
+  {
+    static string? Text(JsonNode? node) => node is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
+    static string ShareOf(JsonObject? view)
+    {
+      var form = view?["form"] as JsonObject;
+
+      return new JsonArray(
+          view?["form"] is null or JsonObject,
+          form?["closed"]?.DeepClone(), form?["public"]?.DeepClone(), form?["anonymous"]?.DeepClone(),
+          form?["submissionAccess"]?.DeepClone(), view?["calendarSync"]?.DeepClone()).ToJsonString();
+    }
+    static IEnumerable<JsonObject> Views(JsonNode? entry) =>
+        entry?["block"] is JsonObject block && Text(block["type"]) == "database" && block["data"]?["views"] is JsonArray views
+            ? views.OfType<JsonObject>()
+            : [];
+
+    if (now["blocks"] is not JsonObject current || wanted["blocks"] is not JsonObject target)
+    {
+      return null;
+    }
+
+    foreach (var (id, entry) in target)
+    {
+      var before = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
+
+      foreach (var view in Views(current[id]))
+      {
+        if (Text(view["id"]) is { } known)
+        {
+          before.TryAdd(known, view);
+        }
+      }
+
+      foreach (var view in Views(entry))
+      {
+        var viewId = Text(view["id"]) ?? "";
+
+        if (ShareOf(view) != ShareOf(viewId == "" ? null : before.GetValueOrDefault(viewId)))
+        {
+          return (id, viewId);
+        }
+      }
+    }
+
+    return null;
+  }
+
   /// <summary>Whether two projections hold the same blocks, slots and page keys; edit stamps do not count.</summary>
   internal static bool Same(JsonObject left, JsonObject right) =>
       left["blocks"]?.ToJsonString() == right["blocks"]?.ToJsonString()

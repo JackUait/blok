@@ -3,7 +3,7 @@ import { CLIENT_CAPABILITIES_META_KEY, CLIENT_INFO_META_KEY, inputRequired, inpu
 import type { Tool } from '@modelcontextprotocol/server';
 import type { AgentApprovalRequest, AgentApprover } from '../../types/agent';
 
-import { approvalKey, plainLine } from '../shared/agent/approval';
+import { approvalKey, describeShareChange, plainLine } from '../shared/agent/approval';
 import { failure } from '../shared/agent/errors';
 
 import { safeClientName } from './actor';
@@ -24,25 +24,53 @@ export type Dispatch = (
  * Named by the saved title, so a rename in the same batch cannot hide the database.
  */
 /** The one tick the person gives: named for what it allows. */
-const approvalField = (request: AgentApprovalRequest): 'unlock' | 'restore' => (request.kind === 'database.restore' ? 'restore' : 'unlock');
+const approvalField = (request: AgentApprovalRequest): 'unlock' | 'restore' | 'share' => {
+  switch (request.kind) {
+    case 'database.restore':
+      return 'restore';
+    case 'database.share':
+      return 'share';
+    case 'database.unlock':
+    // Never asked here (elicitationApprover says no first); named for the switch only.
+    case 'database.buttonConfirm':
+      return 'unlock';
+  }
+};
+
+const FIELDS = {
+  unlock: { title: 'Unlock', description: 'Tick to let the agent unlock this database.' },
+  restore: { title: 'Restore', description: 'Tick to let the agent restore this version.' },
+  share: { title: 'Allow', description: 'Tick to let the agent make exactly this sharing change.' },
+};
 
 /** `client` is already safeClientName's: letters, digits, dot, dash and underscore. */
 const unlockQuestion = (request: AgentApprovalRequest, client: string): ReturnType<typeof inputRequired.elicit> => {
   // The title is already one plain line (savedTitle); JSON quoting keeps its own quotes from closing ours.
   const database = `${request.title === undefined ? '' : `${JSON.stringify(request.title)} `}(id ${JSON.stringify(plainLine(request.blockId, 64) ?? '?')})`;
   const field = approvalField(request);
+  const message = ((): string => {
+    switch (request.kind) {
+      case 'database.restore':
+        return `${client}'s agent wants to restore a version that changes the locked database ${database}. `
+          + 'A person locked it; the version removes it or changes its properties, views or settings. Restore it?';
+      case 'database.share': {
+        const view = `${request.view === undefined ? '' : `${JSON.stringify(request.view)} `}(id ${JSON.stringify(plainLine(request.viewId, 64) ?? '?')})`;
+
+        return `${client}'s agent wants to change who can see or fill out the view ${view} of the database ${database}. `
+          + `After the change: ${request.changes.map(describeShareChange).join('; ')}. Allow it?`;
+      }
+      case 'database.unlock':
+        return `${client}'s agent wants to unlock the database ${database}. A person locked it, so its properties and views cannot change. Unlock it?`;
+      case 'database.buttonConfirm':
+        return `${client}'s agent wants to press a button in the database ${database} that asks for confirmation. Go on?`;
+    }
+  })();
 
   return inputRequired.elicit({
-    message: request.kind === 'database.restore'
-      ? `${client}'s agent wants to restore a version that changes the locked database ${database}. `
-        + 'A person locked it; the version removes it or changes its properties, views or settings. Restore it?'
-      : `${client}'s agent wants to unlock the database ${database}. A person locked it, so its properties and views cannot change. Unlock it?`,
+    message,
     requestedSchema: {
       type: 'object',
-      properties: { [field]: {
-        type: 'boolean', title: field === 'restore' ? 'Restore' : 'Unlock',
-        description: field === 'restore' ? 'Tick to let the agent restore this version.' : 'Tick to let the agent unlock this database.', default: false,
-      } },
+      properties: { [field]: { type: 'boolean', ...FIELDS[field], default: false } },
       required: [field],
     },
   });
@@ -66,8 +94,11 @@ const elicitationApprover = (responses: unknown, asked: AgentApprovalRequest[]):
   }
   // A retry carries only the last round's replies, so asking again here would ask about the first database forever.
   if (replies !== undefined && Object.keys(replies).length > 0) {
-    return Promise.reject(failure('APPROVAL_REQUIRED', 'Only one database can be unlocked per call, and nothing in this batch was applied. '
-      + 'Send each database.setLock that unlocks in its own blok_execute.', { details: { reason: 'one-per-call', approval: request } }));
+    return Promise.reject(failure('APPROVAL_REQUIRED', request.kind === 'database.share'
+      ? 'Only one change a person must approve can be asked per call, and nothing in this batch was applied. '
+        + 'Send the sharing change of each view, and each unlock, in its own blok_execute.'
+      : 'Only one database can be unlocked per call, and nothing in this batch was applied. '
+        + 'Send each database.setLock that unlocks in its own blok_execute.', { details: { reason: 'one-per-call', approval: request } }));
   }
   asked.push(request);
 

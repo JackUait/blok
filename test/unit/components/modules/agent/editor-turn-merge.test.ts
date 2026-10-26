@@ -1494,6 +1494,31 @@ describe('agent turn merge through real Core modules', () => {
       expect(undone).toMatchObject({ ok: false, error: { code: 'APPROVAL_REQUIRED' } });
     }, 60_000);
 
+    it('an undo of two merged batches, the earlier one a sharing change, asks with exactly what it changes back', async () => {
+      const form = { ...lockedDb(false), data: { ...lockedDb(false).data, views: [{ id: 'v', name: 'Signup', type: 'form', position: 'a0', sorts: [], filters: [], visibleProperties: [], form: {} }] } };
+      const editor = await boot([{ id: 'p', type: 'paragraph', data: { text: [{ text: 'P' }] } }, form]);
+      const session = openSession(editor, { mergeSteps: 'turn' });
+      const formOf = (): unknown => (editor.YjsManager.toJSON().find(block => block.id === 'db')?.data.views as Array<{ form?: unknown }>)[0]?.form;
+      const asked = vi.fn<AgentApprover>(() => Promise.resolve(false));
+
+      expect(await run(session, [{ name: 'database.updateView', args: { id: 'db', viewId: 'v', changes: { form: { public: true } } } }], () => Promise.resolve(true)))
+        .toMatchObject({ ok: true });
+      await settle(editor);
+      await nextTask();
+      expect(await run(session, [{ name: 'block.insert', args: { id: 'a', type: 'paragraph', position: 'end', data: { text: 'A' } } }])).toMatchObject({ ok: true });
+      await settle(editor);
+      session.sealSteps();
+
+      const undone = await run(session, [{ name: 'history.undo', args: {} }], asked);
+
+      await settle(editor);
+      expect(undone).toMatchObject({ ok: false, error: { code: 'APPROVAL_REQUIRED' } });
+      expect(asked.mock.calls[0]?.[0]).toEqual({
+        kind: 'database.share', blockId: 'db', title: 'Tasks', viewId: 'v', view: 'Signup', changes: [{ setting: 'access', to: 'workspace' }],
+      });
+      expect(formOf()).toEqual({ public: true });
+    }, 60_000);
+
     it('a redo approved for one step, after the person changed the top step, is STALE', async () => {
       const editor = await boot([{ id: 'p', type: 'paragraph', data: { text: [{ text: 'P' }] } }, lockedDb(true), { ...lockedDb(true), id: 'db2' }]);
       const session = openSession(editor);

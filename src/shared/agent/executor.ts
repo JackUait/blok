@@ -1,5 +1,8 @@
 import { isRichText } from '../rich-text/guards';
-import { approveStep, lockedDatabases, planWithApprovals, savedTitle, unlockedBetween } from './approval';
+import {
+  approvalKey, approvalNeeded, approveRequests, approveStep, lockedDatabases, planWithApprovals, savedTitle, sharedBetween, shareRequest, unlockedBetween,
+} from './approval';
+import type { ShareStep } from './approval';
 import { agentAttribution } from './attribution';
 import { viewRows } from './document-view';
 import { checkEnvelope } from './envelope';
@@ -44,13 +47,15 @@ export interface AgentApplier {
   pendingUnlocks?(name: 'history.undo' | 'history.redo'): readonly string[] | undefined;
   /** Runs the plan's host hooks after it applied. Absent: this runtime runs none. */
   runHostEffects?(effects: readonly HostEffect[]): void;
+  /** Like pendingUnlocks, for the sharing changes the step makes. Undefined (or no method) refuses the step. */
+  pendingShares?(name: 'history.undo' | 'history.redo'): readonly ShareStep[] | undefined;
 }
 
 /** The step a caller checked. A wrapper, so "the stack was empty" is not mistaken for "no check". */
 export interface HistoryBound { expected: unknown }
 
-/** The databases a step unlocks when redone (forward) and when undone (backward). */
-export interface StepUnlocks { forward: string[]; backward: string[] }
+/** The databases a step unlocks, and the views whose sharing it changes, when redone (forward) and when undone (backward). */
+export interface StepUnlocks { forward: string[]; backward: string[]; shares?: { forward: ShareStep[]; backward: ShareStep[] } }
 
 export interface BatchInput {
   batch: unknown;
@@ -244,6 +249,25 @@ const unlockedByStep = (applier: AgentApplier, name: 'history.undo' | 'history.r
   return applier.pendingUnlocks?.(name) ?? lockedDatabases(applier.snapshot());
 };
 
+/** What a history step would change in sharing. A step nobody can read is refused: the person must see what changes. */
+const sharedByStep = (applier: AgentApplier, name: 'history.undo' | 'history.redo'): readonly ShareStep[] => {
+  if (applier.historyTarget !== undefined) {
+    const target = applier.historyTarget(name);
+
+    // No target: no step, which undo and redo then refuse themselves.
+    return target === undefined ? [] : sharedBetween(applier.snapshot(), target);
+  }
+  const shares = applier.pendingShares?.(name);
+
+  if (shares === undefined) {
+    throw failure('APPROVAL_REQUIRED', `It is not known what this ${name === 'history.undo' ? 'undo' : 'redo'} would change in who can see or fill out a view, so it was not run. Ask the person to do it themselves.`, {
+      commandIndex: 0, details: { reason: 'no-channel' },
+    });
+  }
+
+  return shares;
+};
+
 const staleStep = (): AgentFailure => failure('STALE', 'The history changed while the person decided, so nothing was undone or redone. Read the document again, then retry.', {
   commandIndex: 0,
 });
@@ -255,12 +279,21 @@ const staleStep = (): AgentFailure => failure('STALE', 'The history changed whil
  */
 const approveHistoryStep = async (input: BatchInput, name: 'history.undo' | 'history.redo', expected: unknown): Promise<void> => {
   const unlocks = unlockedByStep(input.applier, name);
+  const shares = sharedByStep(input.applier, name);
 
-  if (unlocks.length === 0) {
+  if (unlocks.length === 0 && shares.length === 0) {
     return;
   }
-  await approveStep(unlocks, input.applier.snapshot(), input.approve, () => checkCancel(input.signal));
-  if (input.applier.historyStepId?.(name) !== expected || unlockedByStep(input.applier, name).some(id => !unlocks.includes(id))) {
+  const before = input.applier.snapshot();
+  const asked = shares.map(step => shareRequest(step, before));
+
+  await approveStep(unlocks, before, input.approve, () => checkCancel(input.signal));
+  await approveRequests(asked, input.approve, () => checkCancel(input.signal));
+  const keys = new Set(asked.map(approvalKey));
+  const now = input.applier.snapshot();
+
+  if (input.applier.historyStepId?.(name) !== expected || unlockedByStep(input.applier, name).some(id => !unlocks.includes(id))
+    || sharedByStep(input.applier, name).some(step => !keys.has(approvalKey(shareRequest(step, now))))) {
     throw staleStep();
   }
 };
@@ -385,6 +418,32 @@ const checkSource = (input: PlanningInput, checked: ReturnType<typeof checkEnvel
   return batch;
 };
 
+/**
+ * What a step changes in sharing each way. The write already landed, so a value that cannot be shown
+ * (a person's own unreadable setting coming back on undo) leaves it unknown: undo and redo then refuse.
+ */
+const stepShares = (before: DocSnapshot, after: DocSnapshot): StepUnlocks['shares'] => {
+  try {
+    return { forward: sharedBetween(before, after), backward: sharedBetween(after, before) };
+  } catch {
+    return undefined;
+  }
+};
+
+/**
+ * Any command that changes who can see or fill out a view (not only updateView: a duplicate, an insert)
+ * needs the person's yes for exactly that change, named from the document before the batch.
+ */
+const requireShareApprovals = (snapshot: DocSnapshot, draft: DocSnapshot, approved: ReadonlySet<string>): void => {
+  for (const step of sharedBetween(snapshot, draft)) {
+    const request = shareRequest(step, snapshot);
+
+    if (!approved.has(approvalKey(request))) {
+      throw approvalNeeded(request);
+    }
+  }
+};
+
 const pendingPlan = (
   input: PlanningInput,
   batch: AgentBatch,
@@ -406,9 +465,11 @@ const pendingPlan = (
     }
   });
   const snapshot = input.applier.snapshot();
-  const { plan } = planBatch({
+  const { plan, draft } = planBatch({
     snapshot, batch, ctx: { ...input.ctx, prepared: pending, approved, committedTitle: id => savedTitle(snapshot.get(id)?.data) }, stamp, warnings,
   });
+
+  requireShareApprovals(snapshot, draft, approved);
 
   return { plan, snapshot, stamp };
 };
@@ -631,9 +692,15 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
 
     // Only concrete warnings refer to the IDs that will be applied.
     warnings.splice(0, warnings.length, ...corrected);
-    const { plan, draft } = finalPlan(() => planBatch({
-      snapshot, batch, ctx: { ...input.ctx, prepared, approved, committedTitle: id => savedTitle(snapshot.get(id)?.data) }, stamp, warnings,
-    }), batch, current, snapshot, input.ctx);
+    const { plan, draft } = finalPlan(() => {
+      const planned = planBatch({
+        snapshot, batch, ctx: { ...input.ctx, prepared, approved, committedTitle: id => savedTitle(snapshot.get(id)?.data) }, stamp, warnings,
+      });
+
+      requireShareApprovals(snapshot, planned.draft, approved);
+
+      return planned;
+    }, batch, current, snapshot, input.ctx);
 
     checkCancel(input.signal, orphaned);
     batch.commands.forEach((command, index) => {
@@ -662,7 +729,13 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
 
       marks.past.push('own');
       marks.future = [];
-      input.applier.recordUnlocks?.({ forward: unlockedBetween(snapshot, draft), backward: unlockedBetween(draft, snapshot) });
+      const shares = stepShares(snapshot, draft);
+
+      input.applier.recordUnlocks?.({
+        forward: unlockedBetween(snapshot, draft),
+        backward: unlockedBetween(draft, snapshot),
+        ...(shares !== undefined && { shares }),
+      });
     } else if (batch.commands.some(command => input.ctx.commands.get(command.name)?.effects === 'host')) {
       marksOf(input.applier).past.push('other');
     }

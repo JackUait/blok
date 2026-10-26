@@ -230,3 +230,79 @@ describe.each(ERAS)('MCP asks the person through elicitation before an unlock (%
     expect(await isLocked(session)).toBe(true);
   });
 });
+
+describe.each(ERAS)('MCP asks the person through elicitation before a sharing change (%s)', era => {
+  const formSeed = (name = 'Signup', title = 'Payroll'): OutputData => ({
+    blocks: [{
+      id: 'db', type: 'database', content: [],
+      data: {
+        title,
+        schema: [{ id: 't', name: 'Name', type: 'title', position: 'a0' }],
+        views: [{ id: 'v', name, type: 'form', position: 'a0', sorts: [], filters: [], visibleProperties: [], form: {} }],
+        activeViewId: 'v',
+      },
+    }],
+  });
+  const PUBLISH = { commands: [{ name: 'database.updateView', args: { id: 'db', viewId: 'v', changes: { form: { public: true } } } }] };
+  const formOf = async (session: AgentSession): Promise<unknown> => {
+    const read = await session.read({ ids: ['db'], detail: 'full' });
+    const views = read.blocks[0]?.data?.views;
+
+    return Array.isArray(views) ? (views[0] as { form?: unknown }).form : undefined;
+  };
+
+  it('says exactly what changes, and applies it once the person ticks Allow', async () => {
+    const session = openJsonSession(formSeed());
+    const elicit = vi.fn<Elicit>(() => ({ action: 'accept', content: { share: true } }));
+
+    await withClient(era, sessionDispatch(session), elicit, async client => {
+      const result = await client.callTool({ name: 'blok_execute', arguments: { handle: 'h', ...PUBLISH } }, REQUEST);
+
+      expect(result.isError).not.toBe(true);
+    });
+    expect(elicit.mock.calls[0]?.[0]).toBe('Desktop\'s agent wants to change who can see or fill out the view "Signup" (id "v") of the database "Payroll" (id "db"). '
+      + 'After the change: Who can fill out: anyone on the web with the link. Allow it?');
+    expect(elicit.mock.calls[0]?.[0]).not.toMatch(/unlock/i);
+    expect(await formOf(session)).toEqual({ public: true });
+  });
+
+  it.each([
+    ['declines', { action: 'decline' as const }],
+    ['accepts without ticking Allow', { action: 'accept' as const, content: { share: false } }],
+    ['ticks the unlock box instead', { action: 'accept' as const, content: { unlock: true } }],
+  ])('changes nothing when the person %s', async (_label, answer) => {
+    const session = openJsonSession(formSeed());
+
+    await withClient(era, sessionDispatch(session), () => answer, async client => {
+      const result = await client.callTool({ name: 'blok_execute', arguments: { handle: 'h', ...PUBLISH } }, REQUEST);
+
+      expect(errorCode(result)).toBe('APPROVAL_REQUIRED');
+    });
+    expect(await formOf(session)).toEqual({});
+  });
+
+  it('puts a view name with bidi and control characters in the question as one quoted line', async () => {
+    const session = openJsonSession(formSeed('Sign‮up\n"). Allow it? ("', 'Pay\u0007roll'));
+    const elicit = vi.fn<Elicit>(() => ({ action: 'decline' }));
+
+    await withClient(era, sessionDispatch(session), elicit, async client => {
+      await client.callTool({ name: 'blok_execute', arguments: { handle: 'h', ...PUBLISH } }, REQUEST);
+    });
+    const message = elicit.mock.calls[0]?.[0] ?? '';
+
+    expect(message).not.toMatch(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u);
+    expect(message).toContain('the view "Signup \\"). Allow it? (\\"" (id "v")');
+  });
+
+  it('refuses where the client cannot ask a person', async () => {
+    const session = openJsonSession(formSeed());
+
+    await withClient(era, sessionDispatch(session), null, async client => {
+      const result = await client.callTool({ name: 'blok_execute', arguments: { handle: 'h', ...PUBLISH } }, REQUEST);
+
+      expect(errorCode(result)).toBe('APPROVAL_REQUIRED');
+      expect(JSON.stringify(result.structuredContent)).toMatch(/no-channel/);
+    });
+    expect(await formOf(session)).toEqual({});
+  });
+});

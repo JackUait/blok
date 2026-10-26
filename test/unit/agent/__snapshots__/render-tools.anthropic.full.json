@@ -4460,8 +4460,59 @@
                           "form": {
                             "type": "object",
                             "additionalProperties": false,
-                            "description": "Form view texts, merged into the saved form settings; null removes one. Who can fill the form out stays with the person.",
+                            "description": "Form view settings, merged into the saved ones; null removes one. closed, public, anonymous and submissionAccess are its Share settings: who can fill it out and what they get. Changing it asks the person first (APPROVAL_REQUIRED when they say no or cannot be asked). public: true opens a closed form, and closed: true ends a public one.",
                             "properties": {
+                              "closed": {
+                                "anyOf": [
+                                  {
+                                    "type": "boolean",
+                                    "description": "Who can fill out: no one. Changing it asks the person first (APPROVAL_REQUIRED when they say no or cannot be asked)."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "public": {
+                                "anyOf": [
+                                  {
+                                    "type": "boolean",
+                                    "description": "Who can fill out: anyone on the web with the link; false or null is workspace members only. Changing it asks the person first (APPROVAL_REQUIRED when they say no or cannot be asked)."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "anonymous": {
+                                "anyOf": [
+                                  {
+                                    "type": "boolean",
+                                    "description": "Answers carry no respondent. Changing it asks the person first (APPROVAL_REQUIRED when they say no or cannot be asked)."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "submissionAccess": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "none",
+                                      "view",
+                                      "comment",
+                                      "edit",
+                                      "full"
+                                    ],
+                                    "description": "What a respondent may do with the page their answer becomes. Default none. Changing it asks the person first (APPROVAL_REQUIRED when they say no or cannot be asked)."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "submitLabel": {
                                 "anyOf": [
                                   {
@@ -4517,6 +4568,26 @@
                               {
                                 "type": "object",
                                 "description": "Dashboard slot, same shape as the saved view field. Blok draws no dashboard yet."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "calendarSync": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "description": "Calendar sync, for the host: it sends this view's rows to an outside calendar. Changing it asks the person first (APPROVAL_REQUIRED when they say no or cannot be asked). calendarId must be one plain line.",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "enabled": {
+                                    "type": "boolean"
+                                  },
+                                  "calendarId": {
+                                    "type": "string"
+                                  }
+                                }
                               },
                               {
                                 "type": "null"

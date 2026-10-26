@@ -784,13 +784,11 @@ const VIEW_ID = { type: 'string', minLength: 1, description: 'Id of a view in vi
 /**
  * Not view settings: id and position are the view's own, the layout type is database.setLayout,
  * rowOrder follows row moves, visibleProperties follows properties, and only a relation tab's birth sets propertyOrder.
- * calendarSync is an access setting (below).
  */
-const NOT_VIEW_SETTINGS = new Set(['id', 'position', 'type', 'visibleProperties', 'rowOrder', 'propertyOrder', 'calendarSync']);
+const NOT_VIEW_SETTINGS = new Set(['id', 'position', 'type', 'visibleProperties', 'rowOrder', 'propertyOrder']);
 
-/** Who can see or submit stays with the person (security review); updateView refuses these. */
-export const ACCESS_VIEW_SETTINGS: readonly string[] = ['calendarSync'];
-export const ACCESS_FORM_SETTINGS: readonly string[] = ['closed', 'anonymous', 'public', 'submissionAccess'];
+const ASKS = 'Changing it asks the person first (APPROVAL_REQUIRED when they say no or cannot be asked).';
+const nullable = (schema: Record<string, unknown>): Record<string, unknown> => ({ anyOf: [schema, { type: 'null' }] });
 
 /** Saved on every view: a change can replace them, never remove them. */
 const REQUIRED_VIEW_SETTINGS = new Set(['name', 'sorts', 'filters']);
@@ -812,8 +810,23 @@ const VIEW_SETTING_ARGS: Record<string, unknown> = {
   form: {
     type: 'object',
     additionalProperties: false,
-    description: 'Form view texts, merged into the saved form settings; null removes one. Who can fill the form out stays with the person.',
-    properties: { submitLabel: { anyOf: [{ type: 'string' }, { type: 'null' }] }, confirmation: { anyOf: [{ type: 'string' }, { type: 'null' }] } },
+    description: 'Form view settings, merged into the saved ones; null removes one. closed, public, anonymous and submissionAccess are its Share settings: who can fill it out and what they get. '
+      + `${ASKS} public: true opens a closed form, and closed: true ends a public one.`,
+    properties: {
+      closed: nullable({ type: 'boolean', description: `Who can fill out: no one. ${ASKS}` }),
+      public: nullable({ type: 'boolean', description: `Who can fill out: anyone on the web with the link; false or null is workspace members only. ${ASKS}` }),
+      anonymous: nullable({ type: 'boolean', description: `Answers carry no respondent. ${ASKS}` }),
+      submissionAccess: nullable({
+        type: 'string', enum: ['none', 'view', 'comment', 'edit', 'full'],
+        description: `What a respondent may do with the page their answer becomes. Default none. ${ASKS}`,
+      }),
+      submitLabel: nullable({ type: 'string' }),
+      confirmation: nullable({ type: 'string' }),
+    },
+  },
+  calendarSync: {
+    ...VIEW_PROPERTIES.calendarSync,
+    description: `Calendar sync, for the host: it sends this view's rows to an outside calendar. ${ASKS} calendarId must be one plain line.`,
   },
 };
 
@@ -910,10 +923,11 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
   },
   {
     name: 'updateView',
-    summary: 'Change a view\'s saved settings: filters, sorts, grouping, calculations, columns, card, calendar, timeline, chart, map and form texts. It applies for everyone.',
-    guidance: 'Only the keys in changes change. Each key replaces its whole value, so read the view first: to hide one column, send the full properties list with that entry visible false. form is the exception: its texts merge into the saved form. null removes a key (not form). '
+    summary: 'Change a view\'s saved settings: filters, sorts, grouping, calculations, columns, card, calendar, timeline, chart, map, form texts and form sharing. It applies for everyone.',
+    guidance: 'Only the keys in changes change. Each key replaces its whole value, so read the view first: to hide one column, send the full properties list with that entry visible false. form is the exception: its keys merge into the saved form. null removes a key (not form). '
       + 'Grouping by another property resets groupSettings (subGroupBy: subGroupSettings) to that type\'s defaults unless changes also sets them. A filter or sort without an id gets one. '
-      + 'Change the layout type with database.setLayout. Sharing and access settings (who can fill out a form, calendar sync) are not writable.',
+      + 'Change the layout type with database.setLayout. A change to who can see or fill out a view (form closed, public, anonymous, submissionAccess, calendarSync) asks the person first, '
+      + 'naming each change; on APPROVAL_REQUIRED nothing in the batch was applied: send the rest without it and do not ask again unless the person asks.',
     target: 'block',
     preconditions: ['The database is not locked.', 'Every property a setting names exists, and has a type that setting can use.'],
     args: closed({ viewId: VIEW_ID, changes: VIEW_CHANGES }, ['viewId', 'changes']),

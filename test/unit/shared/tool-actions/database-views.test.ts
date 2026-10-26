@@ -127,17 +127,28 @@ describe('database view actions', () => {
     expect(data().activeViewId).toBe(viewId);
   });
 
+  // The action writes sharing settings; the executor asks the person first (database-share-approval.test.ts).
   it.each([
-    [{ form: { public: true } }, /form\.public/],
-    [{ form: { submitLabel: 'Go', anonymous: true } }, /form\.anonymous/],
-    [{ calendarSync: { enabled: true } }, /calendarSync/],
-    [{ form: null }, /form/],
-  ])('updateView refuses sharing and access settings even past the schema: %j', (changes, field) => {
+    [{ form: { public: true } }, { form: { public: true } }],
+    [{ form: { submitLabel: 'Go', anonymous: true } }, { form: { submitLabel: 'Go', anonymous: true } }],
+    [{ calendarSync: { enabled: true } }, { calendarSync: { enabled: true } }],
+  ])('updateView writes a sharing setting as the Share panel does: %j', (changes, saved) => {
+    const { doc, id, data } = make();
+
+    run(doc, id, 'updateView', { viewId: data().views[0].id, changes });
+
+    expect(data().views[0]).toMatchObject(saved);
+  });
+
+  it.each([
+    [{ form: null }, /form cannot be removed/],
+    [{ calendarSync: { enabled: true, calendarId: 'team\u202E@x' } }, /one plain line/],
+    [{ calendarSync: { enabled: true, calendarId: ' team' } }, /one plain line/],
+  ])('updateView refuses %j', (changes, message) => {
     const { doc, id, data } = make();
 
     expect(() => run(doc, id, 'updateView', { viewId: data().views[0].id, changes })).toThrow(FakeFailure);
-    expect(() => run(doc, id, 'updateView', { viewId: data().views[0].id, changes })).toThrow(field);
-    expect(() => run(doc, id, 'updateView', { viewId: data().views[0].id, changes })).toThrow(/sharing and access/);
+    expect(() => run(doc, id, 'updateView', { viewId: data().views[0].id, changes })).toThrow(message);
   });
 
   it('refuses view changes on a locked database', () => {

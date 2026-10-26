@@ -2,6 +2,7 @@ import type { BlockPosition } from './api/blocks';
 import type { OutputBlockData, OutputData } from './data-formats/output-data';
 import type { RichText, RichTextMarks } from './rich-text';
 import type { AgentContract, BlockToolManifestEntry, CommandEntry, InlineToolManifestEntry } from './tool-manifest';
+import type { FormSubmissionAccess } from './tools/database';
 import type { PageIcon } from './tools/page';
 
 export type CoreCommandName =
@@ -322,20 +323,43 @@ export interface AgentVersionHistory {
 }
 
 /**
- * A change only a person may allow: unlocking a locked database, restoring a version that
- * changes one, or going past a database button's "Show confirmation" when the agent presses it.
+* One sharing setting of a database view, as it would be after the change. `access` is the form's
+ * "Who can fill out": workspace members, anyone on the web with the link, or no one.
  */
-export interface AgentApprovalRequest {
-  kind: 'database.unlock' | 'database.restore' | 'database.buttonConfirm';
-  blockId: string;
-  /** The database's title, when it has a plain one. */
-  title?: string;
-  /** database.buttonConfirm: the confirmation the button shows, as one plain line. Absent: the button's default question. */
-  message?: string;
-  /** database.buttonConfirm: the button's own labels for going on and stopping, when it set them. */
-  confirmLabel?: string;
-  cancelLabel?: string;
-}
+export type AgentShareChange =
+  | { setting: 'access'; to: 'workspace' | 'public' | 'closed' }
+  | { setting: 'anonymous'; to: boolean }
+  | { setting: 'submissionAccess'; to: FormSubmissionAccess }
+  | { setting: 'calendarSync'; to: { enabled: boolean; calendarId?: string } };
+
+/**
+ * A change only a person may allow: unlocking a locked database, restoring a version that changes one,
+ * going past a database button's "Show confirmation" when the agent presses it, or changing who can
+ * see or fill out a view (`database.share`: by a command, an undo, a redo or a restore).
+ */
+export type AgentApprovalRequest =
+  | {
+    kind: 'database.unlock' | 'database.restore' | 'database.buttonConfirm';
+    blockId: string;
+    /** The database's title, when it has a plain one. */
+    title?: string;
+    /** database.buttonConfirm: the confirmation the button shows, as one plain line. Absent: the button's default question. */
+    message?: string;
+    /** database.buttonConfirm: the button's own labels for going on and stopping, when it set them. */
+    confirmLabel?: string;
+    cancelLabel?: string;
+  }
+  | {
+    kind: 'database.share';
+    blockId: string;
+    /** The database's title, when it has a plain one. */
+    title?: string;
+    viewId: string;
+    /** The view's name before the change, when it has a plain one. */
+    view?: string;
+    /** Every sharing setting of this view that changes, with its new value. */
+    changes: AgentShareChange[];
+  };
 
 /**
  * Asks a person before the batch applies. Resolve true only on their explicit yes.

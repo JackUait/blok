@@ -4,7 +4,8 @@
  *
  * Present only when `agent.assistant.model` is configured.
  */
-import type { AgentApprovalRequest, ChangedSet } from '../../../../types/agent';
+import type { AgentApprovalRequest, AgentShareChange, ChangedSet } from '../../../../types/agent';
+import type { FormSubmissionAccess } from '../../../../types/tools/database';
 import type { Block } from '../../block';
 import type { AgentModelStreamEvent, AgentRun, AgentRunResult, AgentThinkingLevel, AgentToolResult } from '../../../../types/api';
 import type { ThinkingChoice } from '../../../agent/thinking';
@@ -547,18 +548,65 @@ export class Assistant extends Module {
         deny: request.cancelLabel ?? I18n.t('tools.database.optionDeleteCancel'),
       }).finally(() => signal.removeEventListener('abort', stopConfirm));
     }
-    const keys = request.kind === 'database.restore'
-      ? { titled: 'assistant.restoreQuestion', untitled: 'assistant.restoreQuestionUntitled', approve: 'assistant.restoreApprove', deny: 'assistant.restoreDeny' }
-      : { titled: 'assistant.unlockQuestion', untitled: 'assistant.unlockQuestionUntitled', approve: 'assistant.unlock', deny: 'assistant.keepLocked' };
-    const question = request.title === undefined
-      ? I18n.t(keys.untitled, { agent })
-      : I18n.t(keys.titled, { agent, title: request.title });
+    const keys = ((): { titled: string; untitled: string; approve: string; deny: string } => {
+      switch (request.kind) {
+        case 'database.share':
+          return { titled: 'assistant.shareQuestion', untitled: 'assistant.shareQuestionUntitled', approve: 'assistant.shareApprove', deny: 'assistant.shareDeny' };
+        case 'database.restore':
+          return { titled: 'assistant.restoreQuestion', untitled: 'assistant.restoreQuestionUntitled', approve: 'assistant.restoreApprove', deny: 'assistant.restoreDeny' };
+        case 'database.unlock':
+        case 'database.buttonConfirm':
+          return { titled: 'assistant.unlockQuestion', untitled: 'assistant.unlockQuestionUntitled', approve: 'assistant.unlock', deny: 'assistant.keepLocked' };
+      }
+    })();
+    const question = ((): string => {
+      if (request.kind === 'database.share') {
+        const changes = request.changes.map(change => this.shareChangeText(change)).join('; ');
+
+        return request.view === undefined
+          ? I18n.t(keys.untitled, { agent, changes })
+          : I18n.t(keys.titled, { agent, title: request.view, changes });
+      }
+
+      return request.title === undefined
+        ? I18n.t(keys.untitled, { agent })
+        : I18n.t(keys.titled, { agent, title: request.title });
+    })();
     const stop = (): void => bar.settleApproval(false);
 
     signal.addEventListener('abort', stop, { once: true });
 
     return bar.askApproval(question, { approve: I18n.t(keys.approve), deny: I18n.t(keys.deny) })
       .finally(() => signal.removeEventListener('abort', stop));
+  }
+
+  /** One sharing change in the Share panel's own words: the setting, then its new value. */
+  private shareChangeText(change: AgentShareChange): string {
+    const { I18n } = this.Blok;
+    const access: Record<FormSubmissionAccess, string> = {
+      none: 'tools.database.formAccessNone',
+      view: 'tools.database.formAccessView',
+      comment: 'tools.database.formAccessComment',
+      edit: 'tools.database.formAccessEdit',
+      full: 'tools.database.formAccessFull',
+    };
+    const who = { public: 'tools.database.formWhoPublic', workspace: 'tools.database.formWhoWorkspaceGeneric', closed: 'tools.database.formWhoNone' };
+    const [label, value] = ((): [string, string] => {
+      switch (change.setting) {
+        case 'access':
+          return [I18n.t('tools.database.formWhoCanFill'), I18n.t(who[change.to])];
+        case 'anonymous':
+          return [I18n.t('tools.database.formAnonymous'), I18n.t(change.to ? 'tools.database.settingsOn' : 'tools.database.settingsOff')];
+        case 'submissionAccess':
+          return [I18n.t('tools.database.formSubmissionAccess'), I18n.t(access[change.to])];
+        case 'calendarSync':
+          return [I18n.t('assistant.shareCalendarSync'), change.to.enabled && change.to.calendarId !== undefined
+            ? `${I18n.t('tools.database.settingsOn')} (${change.to.calendarId})`
+            : I18n.t(change.to.enabled ? 'tools.database.settingsOn' : 'tools.database.settingsOff')];
+      }
+    })();
+
+    return `${label}: ${value}`;
   }
 
   private syncThinking(): void {

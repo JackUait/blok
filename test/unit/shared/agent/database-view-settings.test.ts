@@ -187,13 +187,13 @@ describe.each(sessions)('database view settings on a %s session', (_name, open) 
     [{ form: { public: true } }],
     [{ form: { anonymous: true } }],
     [{ form: { submissionAccess: 'edit' } }],
-    [{ form: { closed: false } }],
+    [{ form: { closed: true } }],
     [{ calendarSync: { enabled: true } }],
-  ])('refuses a sharing or access setting: %j', async (changes) => {
+  ])('a sharing or access setting needs a person, and none can be asked here: %j', async (changes) => {
     const session = open(seedOf(databaseBlock([{ ...baseView, type: 'form', form: { public: false } }])));
 
     try {
-      expect(errorOf(await update(session, changes))?.code).toBe('INVALID_ARGS');
+      expect(errorOf(await update(session, changes))?.code).toBe('APPROVAL_REQUIRED');
       expect((await viewOf(session)).form).toEqual({ public: false });
     } finally {
       await session.close();

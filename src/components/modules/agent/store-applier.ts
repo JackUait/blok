@@ -10,6 +10,7 @@ import type { Edit, PlannedBlock } from '../../../../types/agent';
 import type { RichText } from '../../../../types/rich-text';
 import type { Attribution } from '../../../shared/agent/attribution';
 import type { AgentApplier, HistoryBound, StepUnlocks } from '../../../shared/agent/executor';
+import type { ShareStep } from '../../../shared/agent/approval';
 import type { Plan } from '../../../shared/agent/types';
 import type { DocumentStore } from '../yjs/document-store';
 
@@ -194,6 +195,17 @@ export class StoreApplier implements AgentApplier {
     }
 
     return name === 'history.undo' ? known.backward : known.forward;
+  }
+
+  public pendingShares(name: 'history.undo' | 'history.redo'): readonly ShareStep[] | undefined {
+    const step = name === 'history.undo' ? this.done.at(-1) : this.undone.at(-1);
+
+    if (step === undefined) {
+      return [];
+    }
+    const shares = this.unlocks.get(step)?.shares;
+
+    return name === 'history.undo' ? shares?.backward : shares?.forward;
   }
 
   public historyStepId(name: 'history.undo' | 'history.redo'): unknown {

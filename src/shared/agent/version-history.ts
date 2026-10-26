@@ -1,7 +1,7 @@
 import { diffOutput } from '../output-diff';
 import { outputBlocksToSegments } from '../rich-text/block-data';
 import { buildDocumentView, viewRows } from './document-view';
-import { approveStep, restoreTouchesLocked } from './approval';
+import { approvalKey, approveRequests, approveStep, restoreShares, restoreTouchesLocked, shareRequest } from './approval';
 import { AgentFailure, failure } from './errors';
 import { DocSnapshot } from './snapshot';
 
@@ -218,9 +218,18 @@ export const runRestore = async (
   const approved = restoreTouchesLocked(now, target);
 
   await approveStep(approved, now, approve, checkCancel, 'database.restore');
+  // A version can bring back a public form: who can see or fill out a view is the person's too.
+  const shared = restoreShares(now, target).map(step => shareRequest(step, now));
+
+  await approveRequests(shared, approve, checkCancel);
   // The person answered about the document as it was; a lock that landed meanwhile was never asked about.
   if (approved.length > 0 && restoreTouchesLocked(current(), target).some(id => !approved.includes(id))) {
     throw failure('STALE', 'A database was locked while the person decided, so nothing was restored. Read the document again, then retry.', { commandIndex: 0 });
+  }
+  const asked = new Set(shared.map(approvalKey));
+
+  if (restoreShares(current(), target).some(step => !asked.has(approvalKey(shareRequest(step, current()))))) {
+    throw failure('STALE', 'A sharing setting changed while the person decided, so nothing was restored. Read the document again, then retry.', { commandIndex: 0 });
   }
   const blocks = outputBlocksToSegments(target.blocks, type => ctx.tools.get(type)?.entry.richTextFields ?? [], ctx.ports.htmlToSegments);
   const diff = diffOutput(now.toOutput(), { ...target, blocks }, {

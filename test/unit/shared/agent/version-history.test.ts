@@ -467,6 +467,97 @@ describe('history.restore', () => {
     expect(history.restore).not.toHaveBeenCalled();
   });
 
+  describe('a version that changes who can see or fill out a view', () => {
+    const formDb = (form: Record<string, unknown>): OutputData['blocks'][number] => ({
+      id: 'db', type: 'database', content: [],
+      data: {
+        title: 'Roadmap',
+        schema: [{ id: 't', name: 'Name', type: 'title', position: 'a0' }],
+        views: [{ id: 'v', name: 'Signup', type: 'form', position: 'a0', sorts: [], filters: [], visibleProperties: [], form }],
+        activeViewId: 'v',
+      },
+    });
+    const withForm = (now: Record<string, unknown>, then: Record<string, unknown>) => {
+      const history = {
+        list: vi.fn(async () => VERSIONS),
+        read: vi.fn(async (version: string) => (version === 'L:1' ? { blocks: [formDb(then)] } : null)),
+        restore: vi.fn(async () => true),
+      };
+      const setup = createHeadlessAgentSetup({ services: ['versionHistory'], runtime: 'node', restores: true });
+      const agent = createDocumentAgentSession({
+        document: { blocks: [formDb(now)] }, tools: setup.tools, contract: setup.contract, actor, ports: setup.ports, services: { versionHistory: history },
+      });
+
+      return { history, agent };
+    };
+    const RESTORE = { commands: [{ name: 'history.restore', args: { version: 'L:1' } }] };
+
+    it('asks before a restore that brings back a public form, and a no never reaches the host', async () => {
+      const { history, agent } = withForm({}, { public: true });
+      const approve = vi.fn(async () => false);
+      const result = await agent.execute(RESTORE, { approve });
+
+      expect(approve.mock.calls).toEqual([[{
+        kind: 'database.share', blockId: 'db', title: 'Roadmap', viewId: 'v', view: 'Signup', changes: [{ setting: 'access', to: 'public' }],
+      }]]);
+      expect(!result.ok && result.error.details?.reason).toBe('denied');
+      expect(history.restore).not.toHaveBeenCalled();
+    });
+
+    it('is refused where no person can be asked', async () => {
+      const { history, agent } = withForm({ public: true }, {});
+      const result = await agent.execute(RESTORE);
+
+      expect(!result.ok && result.error).toMatchObject({ code: 'APPROVAL_REQUIRED', details: { reason: 'no-channel' } });
+      expect(history.restore).not.toHaveBeenCalled();
+    });
+
+    it('restores once the person approves', async () => {
+      const { history, agent } = withForm({}, { public: true });
+      const result = await agent.execute(RESTORE, { approve: async () => true });
+
+      expect(result.ok).toBe(true);
+      expect(history.restore).toHaveBeenCalledTimes(1);
+    });
+
+    it('a sharing setting that changed while the person decided is STALE, and nothing is restored', async () => {
+      const { history, agent } = withForm({}, { public: true, anonymous: false });
+      const result = await agent.execute(RESTORE, {
+        approve: async () => {
+          await agent.execute({ commands: [{ name: 'database.updateView', args: { id: 'db', viewId: 'v', changes: { form: { anonymous: true } } } }] }, { approve: async () => true });
+
+          return true;
+        },
+      });
+
+      expect(!result.ok && result.error.code).toBe('STALE');
+      expect(history.restore).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      [{ submissionAccess: 'everyone' }],
+      [{ public: 'yes' }],
+      [{ anonymous: 1 }],
+      [{ closed: 'false' }],
+    ])('never restores a version whose sharing value Blok cannot read (%j): it fails closed', async (form) => {
+      const { history, agent } = withForm({}, form);
+      const result = await agent.execute(RESTORE, { approve: async () => true });
+
+      expect(result.ok).toBe(false);
+      expect(history.restore).not.toHaveBeenCalled();
+    });
+
+    it('asks nothing when the version shares the view the same way', async () => {
+      const { history, agent } = withForm({ public: true }, { public: true, submitLabel: 'Go' });
+      const approve = vi.fn(async () => true);
+      const result = await agent.execute(RESTORE, { approve });
+
+      expect(result.ok).toBe(true);
+      expect(approve).not.toHaveBeenCalled();
+      expect(history.restore).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('a version that would unlock a database a person locked', () => {
     const database = (locked: boolean): OutputData['blocks'][number] => ({
       id: 'db', type: 'database', data: {

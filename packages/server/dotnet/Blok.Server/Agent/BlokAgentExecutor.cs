@@ -738,6 +738,14 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
               details: new JsonObject { ["reason"] = "no-channel", ["approval"] = new JsonObject { ["kind"] = "database.unlock", ["blockId"] = unlocked } });
         }
 
+        // Who can see or fill out a view is the person's too, and the server cannot ask one.
+        if (RoomAgentHistory.Shares(projected, undo ? step.Before : step.After) is { } shared)
+        {
+          throw new HistoryRefusal("APPROVAL_REQUIRED",
+              $"This {(undo ? "undo" : "redo")} would change who can see or fill out view \"{shared.ViewId}\" of database \"{shared.BlockId}\". That needs a person's explicit approval, and nothing here can ask one. Nothing was written. Ask the person to do it themselves.",
+              details: new JsonObject { ["reason"] = "no-channel", ["approval"] = new JsonObject { ["kind"] = "database.share", ["blockId"] = shared.BlockId, ["viewId"] = shared.ViewId } });
+        }
+
         var (blocks, target) = RoomAgentHistory.Restore(
             export, maps, step, undo ? step.Before : step.After, undo ? step.PageBefore : step.PageAfter);
 

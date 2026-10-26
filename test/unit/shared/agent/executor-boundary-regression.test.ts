@@ -39,6 +39,8 @@ const memoryApplier = (
     isReadOnly: () => false,
     snapshot: () => state.current,
     revision: () => state.version,
+    // Its steps change no sharing; an applier that cannot say is refused its undo and redo.
+    pendingShares: () => [],
     apply: (_plan, draft) => {
       state.current = draft;
       state.applied++;

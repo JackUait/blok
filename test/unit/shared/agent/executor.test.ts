@@ -54,8 +54,9 @@ const memoryApplier = (
       return state.current;
     },
     revision: () => state.version,
-    // Its history steps unlock nothing, so undo and redo stay a plain route here.
+    // Its history steps unlock nothing and share nothing, so undo and redo stay a plain route here.
     pendingUnlocks: () => [],
+    pendingShares: () => [],
     apply: (plan, draft) => {
       state.events.push('apply');
       state.plans.push(plan);
@@ -1370,6 +1371,18 @@ describe('runBatch contract', () => {
       throw new Error('Expected an orphan failure.');
     }
     expect(log[0]?.error).toEqual(result.error);
+  });
+
+  it('refuses an undo when the applier cannot say what the step changes in sharing, and never runs it', async () => {
+    const applier = memoryApplier();
+    const undo = vi.fn(() => Promise.resolve());
+
+    delete applier.pendingShares;
+    applier.undo = undo;
+    const result = await run({ commands: [{ name: 'history.undo', args: {} }] }, applier, { approve: () => Promise.resolve(true) });
+
+    expect(undo).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ ok: false, error: { code: 'APPROVAL_REQUIRED' } });
   });
 
   it('an undo asked about an empty history, where a step appears while the person decides, is STALE', async () => {

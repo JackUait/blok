@@ -29,7 +29,6 @@ import { revealedInLegacyView } from '../database/view-properties';
 import { formAnswerProblem, formQuestions } from '../database/form-questions';
 import { runButtonActions } from '../database/button-actions';
 import type { FormAnswerProblem } from '../database/form-questions';
-import { ACCESS_FORM_SETTINGS, ACCESS_VIEW_SETTINGS } from '../tool-descriptions/database';
 
 import type { InsertSpec } from '../../../types/agent';
 import type { BlockPosition } from '../../../types/api/blocks';
@@ -418,14 +417,17 @@ const updateView: ToolActionImpl<{ viewId: string; changes: Record<string, unkno
     if (Object.keys(args.changes).length === 0) {
       ctx.fail('INVALID_ARGS', 'changes is empty: pass at least one view key.');
     }
-    const form = isRecord(args.changes.form) ? args.changes.form : {};
-    const access = [
-      ...ACCESS_VIEW_SETTINGS.filter(key => key in args.changes),
-      ...ACCESS_FORM_SETTINGS.filter(key => key in form).map(key => `form.${key}`),
-    ];
+    const calendarId = isRecord(args.changes.calendarSync) ? args.changes.calendarSync.calendarId : undefined;
 
-    if (access.length > 0 || args.changes.form === null) {
-      ctx.fail('PRECONDITION_FAILED', `${access.length > 0 ? access.join(', ') : 'form'}: sharing and access settings stay with the person; an agent cannot change who can see or submit.`);
+    // The person is asked about the calendar by name: one with hidden characters could be shown as another.
+    if (typeof calendarId === 'string' && (/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u.test(calendarId) || calendarId.trim() !== calendarId)) {
+      ctx.fail('INVALID_ARGS', 'calendarSync.calendarId must be one plain line, without control or format characters.');
+    }
+    if (isRecord(args.changes.form) && args.changes.form.public === true && args.changes.form.closed === true) {
+      ctx.fail('INVALID_ARGS', 'form.public and form.closed are one choice, "Who can fill out": send one of them.');
+    }
+    if (args.changes.form === null) {
+      ctx.fail('INVALID_ARGS', 'form cannot be removed: send null for one form key instead.');
     }
     const { block, state } = openDatabase(ctx);
     const index = viewIndex(ctx, state, args.viewId);
@@ -433,10 +435,17 @@ const updateView: ToolActionImpl<{ viewId: string; changes: Record<string, unkno
     const changes: Record<string, unknown> = jsonCopy(args.changes);
 
     if (isRecord(changes.form)) {
-      // Merged: the access settings beside the texts stay as the person set them.
+      // Merged: the settings not named stay as the person set them. Sharing changes ask the person (executor).
       const merged: Record<string, unknown> = { ...(view.form ?? {}), ...changes.form };
 
-      changes.form = Object.fromEntries(Object.entries(merged).filter(([, value]) => value !== null));
+      // "Who can fill out" is one choice, as the Share panel writes it.
+      if (changes.form.public === true) {
+        delete merged.closed;
+      }
+      if (changes.form.closed === true) {
+        delete merged.public;
+      }
+      changes.form = Object.fromEntries(Object.entries(merged).filter(([, value]) => value !== null && value !== false));
     }
     const schema = referenceSchema(ctx, block, state, 'dataSourceId' in changes ? changes.dataSourceId : view.dataSourceId);
 

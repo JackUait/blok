@@ -327,7 +327,7 @@ export class DatabasePropertyMenu {
     const settings: PopoverItemParams[] = [];
 
     if (EDITABLE_SETTINGS.has(property.type)) {
-      settings.push(...(property.type === 'formula' && !this.isNumberFormula(property) ? [this.entry('editProperty', property)] : this.editItems(property, update)));
+      settings.push(...(property.type === 'formula' && !this.isNumberFormula(property) ? [this.editFormulaItem(property.id, 'editFormula')] : this.editItems(property, update)));
     }
     const typeItems = (['changeType', 'displayAs'] as const).filter(has).map((entry) => this.entry(entry, property, true));
     const tail = (['duplicate', 'delete'] as const).filter(has).map((entry) => this.entry(entry, property));
@@ -593,7 +593,7 @@ export class DatabasePropertyMenu {
     switch (entry) {
       case 'editProperty':
         if (property.type === 'formula' && !this.isNumberFormula(property)) {
-          return this.editFormulaItem(id, entry);
+          return this.editFormulaItem(id, entry, 'tools.database.editProperty');
         }
 
         // research/08: Notion names a button's settings "Edit automation".
@@ -783,7 +783,7 @@ export class DatabasePropertyMenu {
       },
       {
         name: 'rollupProperty',
-        title: this.t('tools.database.rollupProperty'),
+        title: this.t('tools.database.rollupTargetProperty'),
         ...(target === undefined ? {} : { valueLabel: target.name }),
         children: {
           // H-rr: a rollup of a rollup is not offered.
@@ -820,8 +820,9 @@ export class DatabasePropertyMenu {
     return property.type === 'formula' && this.options.computed?.valueProperty?.(property).type === 'number';
   }
 
-  private editFormulaItem(propertyId: string, name: string): PopoverItemParams {
-    return { name, title: this.t('tools.database.editProperty'), icon: IconPencil, closeOnActivate: true, onActivate: () => this.options.computed?.onEditFormula(propertyId) };
+  /** notion-spec-2 §6: inside Edit property the row reads "Edit formula". */
+  private editFormulaItem(propertyId: string, name: string, titleKey = 'tools.database.editFormula'): PopoverItemParams {
+    return { name, title: this.t(titleKey), icon: IconPencil, closeOnActivate: true, onActivate: () => this.options.computed?.onEditFormula(propertyId) };
   }
 
   private editItems(property: PropertyDefinition, update: (patch: Partial<PropertySettingsV2>) => void): PopoverItemParams[] {

@@ -135,6 +135,22 @@ describe('property menu — computed types', () => {
     expect(extras.onEditFormula).toHaveBeenCalledWith('p');
   });
 
+  // notion-spec-2 §6: Notion names the row "Edit formula", so the submenu does not read "Edit property › Edit property".
+  it('formula: the formula row reads Edit formula', () => {
+    openMenu(prop('formula', { formula: { expression: '1' } }));
+    const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+    expect(byName(edit, 'editFormula').title).toBe('tools.database.editFormula');
+  });
+
+  // notion-spec-2 §3: Notion's rollup row reads "Target property".
+  it('rollup: the target row reads Target property', () => {
+    openMenu(prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'sum' } }));
+    const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+    expect(byName(edit, 'rollupProperty').title).toBe('tools.database.rollupTargetProperty');
+  });
+
   it('formula: picking the Ring tile saves it and brings in Color and Divide by', () => {
     const { cb } = openMenu(prop('formula', { formula: { expression: '1' } }));
     const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
@@ -261,6 +277,17 @@ describe('property menu — computed types', () => {
       expect(panel(prop('formula', { formula: { expression: '1' } }))).toEqual([
         'name', 'changeType', 'editFormula', 'numberFormat', 'decimals', '--', 'showAs', 'all-views-note', '--', 'duplicate', 'delete',
       ]);
+    });
+
+    // notion-spec-2 §6: the panel's formula row reads "Edit formula", also for a text formula.
+    it('names a text formula\'s row Edit formula', () => {
+      const menu = new DatabasePropertyMenu({ ...callbacks(), i18n, hasPeople: false, computed: computed() });
+
+      menu.openRowPage(prop('formula', { formula: { expression: 'x' } }), document.createElement('div'), { edit: true });
+      const row = byName(lastItems(), 'editFormula');
+
+      menu.destroy();
+      expect(row.title).toBe('tools.database.editFormula');
     });
   });
 });

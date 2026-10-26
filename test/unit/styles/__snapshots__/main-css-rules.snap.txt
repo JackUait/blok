@@ -9267,7 +9267,7 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   gap: var(--blok-space-2);
 }
 
-[data-blok-database-number-text] {
+[data-blok-database-cell]:has(> [data-blok-database-number-bar], > [data-blok-database-number-ring]) > [data-blok-database-number-text] {
   flex: none;
 }
 

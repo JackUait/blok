@@ -259,13 +259,13 @@ describe.each(sessions)('database view settings on a %s session', (_name, open) 
     }
   });
 
-  it('refuses a view change on a locked database, and unlocks with setLock', async () => {
+  it('refuses a view change on a locked database, and unlocks with setLock once a person approves', async () => {
     const locked = { ...databaseBlock(), data: { ...databaseBlock().data, schema: schema.map(p => (p.type === 'title' ? { ...p, databaseLocked: true } : p)) } };
     const session = open(seedOf(locked));
 
     try {
       expect(errorOf(await update(session, { loadLimit: 10 }))?.message).toMatch(/locked/);
-      expect(errorOf(await run(session, [{ name: 'database.setLock', args: { id: 'db', locked: false } }]))).toBeUndefined();
+      expect(errorOf(await session.execute({ commands: [{ name: 'database.setLock', args: { id: 'db', locked: false } }] }, { approve: () => Promise.resolve(true) }))).toBeUndefined();
       expect((await schemaOf(session))[0]).not.toHaveProperty('databaseLocked');
       expect(errorOf(await update(session, { loadLimit: 10 }))).toBeUndefined();
       expect(errorOf(await run(session, [{ name: 'database.setLock', args: { id: 'db', locked: true } }]))).toBeUndefined();

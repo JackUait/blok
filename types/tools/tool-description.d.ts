@@ -95,6 +95,11 @@ export interface ToolActionContext {
   now?: number;
   richText: RichTextHelpers;
   fail(code: 'PRECONDITION_FAILED' | 'INVALID_ARGS', message: string): never;
+  /**
+   * Stops the batch unless a person approved this change to `block` for this batch.
+   * Only the host's approver can approve; nothing in the model's args can.
+   */
+  requireApproval?(kind: 'database.unlock'): void;
 }
 
 export interface ToolActionImpl<Args = unknown, Prepared = unknown, Result = unknown> {

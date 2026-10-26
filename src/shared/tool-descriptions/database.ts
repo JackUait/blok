@@ -930,6 +930,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
   {
     name: 'setLock',
     summary: 'Lock or unlock the database. A locked database\'s properties and views cannot change; rows can.',
+    guidance: 'Unlocking a locked database asks the person first, and the batch waits for their answer. If they say no, or nothing can ask them, it fails with APPROVAL_REQUIRED and nothing in the batch is applied.',
     target: 'block',
     args: closed({ locked: { type: 'boolean' } }, ['locked']),
     mirrors: [],

@@ -277,12 +277,31 @@ export interface AgentVersionHistory {
   restore?(version: string): Promise<boolean>;
 }
 
+/** A change only a person may allow: unlocking a locked database. */
+export interface AgentApprovalRequest {
+  kind: 'database.unlock';
+  blockId: string;
+  /** The database's title, when it has a plain one. */
+  title?: string;
+}
+
+/**
+ * Asks a person before the batch applies. Resolve true only on their explicit yes.
+ * Each batch asks again: an answer is never kept. Without one, the change fails with APPROVAL_REQUIRED.
+ */
+export type AgentApprover = (request: AgentApprovalRequest) => Promise<boolean>;
+
+export interface AgentExecuteOptions {
+  signal?: AbortSignal;
+  approve?: AgentApprover;
+}
+
 export interface AgentSession {
   readonly id: string;
   readonly actor: AgentActor;
   read(args?: ViewArgs): Promise<DocumentView>;
   describe(query?: { tool?: string; command?: string }): AgentContract | ContractSlice;
-  execute(batch: AgentBatch, options?: { signal?: AbortSignal }): Promise<AgentResult>;
+  execute(batch: AgentBatch, options?: AgentExecuteOptions): Promise<AgentResult>;
   log(): readonly CommandLogEntry[];
   close(): void;
 }

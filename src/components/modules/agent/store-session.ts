@@ -53,7 +53,7 @@ export const createStoreAgentSession = (input: {
     },
     describe: query => describeContract(input.contract, query),
     execute: (batch, options = {}) => runBatch({
-      batch, ctx, applier, actor: input.actor, signal: options.signal, log, batchNo: ++state.batchNo,
+      batch, ctx, applier, actor: input.actor, signal: options.signal, approve: options.approve, log, batchNo: ++state.batchNo,
     }),
     log: () => [...log],
     close: () => applier.dispose(),

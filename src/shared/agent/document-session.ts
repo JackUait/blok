@@ -8,7 +8,7 @@ import { marksOf, planHostBatch, runBatch, type HistoryMark } from './executor';
 import { contentRevision } from './revision';
 import { DocSnapshot } from './snapshot';
 
-import type { AgentActor, AgentResult, AgentSession, CommandLogEntry, DocumentView, Edit, ViewArgs } from '../../../types/agent';
+import type { AgentActor, AgentExecuteOptions, AgentResult, AgentSession, CommandLogEntry, DocumentView, Edit, ViewArgs } from '../../../types/agent';
 import type { OutputData } from '../../../types/data-formats/output-data';
 import type { AgentContract } from '../../../types/tool-manifest';
 import type { ToolRuntimeRegistry } from '../tool-actions/runtime';
@@ -118,7 +118,7 @@ export const createDocumentAgentSession = (input: {
   revision(): string;
   lastEdits(): readonly Edit[];
   history(): CarriedHistory;
-  execute(batch: unknown, options?: { signal?: AbortSignal }): Promise<AgentResult>;
+  execute(batch: unknown, options?: AgentExecuteOptions): Promise<AgentResult>;
   planHost(batch: unknown, options?: { signal?: AbortSignal }): Promise<HostBatchPlan & { view?: DocumentView }>;
 } => {
   const id = `doc-session-${++sessionCount.value}`;
@@ -265,10 +265,10 @@ export const createDocumentAgentSession = (input: {
       };
     },
     describe: query => describeContract(input.contract, query),
-    execute: async (batch: unknown, options: { signal?: AbortSignal } = {}) => {
+    execute: async (batch: unknown, options: AgentExecuteOptions = {}) => {
       applied.edits = [];
       const result = await runBatch({
-        batch, ctx, applier, actor: input.actor, signal: options.signal, log, batchNo: ++state.batchNo,
+        batch, ctx, applier, actor: input.actor, signal: options.signal, approve: options.approve, log, batchNo: ++state.batchNo,
       });
 
       trimHistory();

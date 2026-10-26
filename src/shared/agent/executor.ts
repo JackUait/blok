@@ -1,4 +1,5 @@
 import { isRichText } from '../rich-text/guards';
+import { planWithApprovals } from './approval';
 import { agentAttribution } from './attribution';
 import { viewRows } from './document-view';
 import { checkEnvelope } from './envelope';
@@ -9,7 +10,7 @@ import { PREPARE_PENDING } from './plan-state';
 import { planBatch } from './planner';
 import { runRestore, runVersionCommand } from './version-history';
 
-import type { AgentActor, AgentBatch, AgentError, AgentErrorCode, AgentResult, AgentWarning, CommandLogEntry } from '../../../types/agent';
+import type { AgentActor, AgentApprover, AgentBatch, AgentError, AgentErrorCode, AgentResult, AgentWarning, CommandLogEntry } from '../../../types/agent';
 import type { EditStamp } from './json-applier';
 import type { DocSnapshot } from './snapshot';
 import type { Plan, PlannerActionImpl, PlannerContext } from './types';
@@ -33,6 +34,8 @@ export interface BatchInput {
   applier: AgentApplier;
   actor: AgentActor;
   signal?: AbortSignal;
+  /** The host's way to ask a person. Never from model input. */
+  approve?: AgentApprover;
   log: CommandLogEntry[];
   batchNo: number;
   now?: () => number;
@@ -317,7 +320,8 @@ const checkSource = (input: PlanningInput, checked: ReturnType<typeof checkEnvel
 const pendingPlan = (
   input: PlanningInput,
   batch: AgentBatch,
-  warnings: AgentWarning[]
+  warnings: AgentWarning[],
+  approved: ReadonlySet<string> = new Set()
 ): { plan: Plan; snapshot: DocSnapshot; stamp: EditStamp } => {
   const { by, with: coAuthor } = agentAttribution(input.actor);
   const stamp = { actorId: by ?? '', ...(coAuthor !== undefined && { with: coAuthor }), at: (input.now ?? Date.now)() };
@@ -335,7 +339,7 @@ const pendingPlan = (
   });
   const snapshot = input.applier.snapshot();
   const { plan } = planBatch({
-    snapshot, batch, ctx: { ...input.ctx, prepared: pending }, stamp, warnings,
+    snapshot, batch, ctx: { ...input.ctx, prepared: pending, approved }, stamp, warnings,
   });
 
   return { plan, snapshot, stamp };
@@ -413,6 +417,20 @@ const batchFailure = (
   const revision = failureRevision(input.applier);
 
   return { ok: false, ...(revision !== undefined && { revision }), error: failed, warnings };
+};
+
+/** The last plan runs in the apply's turn, so it cannot stop to ask: a new ask means someone locked a database meanwhile. */
+const finalPlan = <T>(plan: () => T, batch: AgentBatch, revision: string, snapshot: DocSnapshot, ctx: BatchInput['ctx']): T => {
+  try {
+    return plan();
+  } catch (error) {
+    if (error instanceof AgentFailure && error.error.code === 'APPROVAL_REQUIRED') {
+      throw failure('STALE', 'The document changed while this batch waited. Read it again, then retry.', {
+        details: { revision, current: staleContext(batch, snapshot, ctx) },
+      });
+    }
+    throw error;
+  }
 };
 
 export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
@@ -499,7 +517,13 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
       };
     }
 
-    const { plan: prePlan, stamp } = pendingPlan(input, batch, warnings);
+    // Asked before any prepare step, so a no leaves no host work behind. Kept for this batch only.
+    const approved = new Set<string>();
+    const { plan: prePlan, stamp } = await planWithApprovals(granted => {
+      warnings.splice(0, warnings.length, ...corrected);
+
+      return pendingPlan(input, batch, warnings, granted);
+    }, approved, input.approve, () => checkCancel(input.signal));
     const insertTypes = new Map<number, string>();
     const preparations = preparationsFor(input, batch, prePlan, orphaned, insertTypes);
     const prepared = new Map<number, unknown>();
@@ -519,9 +543,9 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
 
     // Only concrete warnings refer to the IDs that will be applied.
     warnings.splice(0, warnings.length, ...corrected);
-    const { plan, draft } = planBatch({
-      snapshot, batch, ctx: { ...input.ctx, prepared }, stamp, warnings,
-    });
+    const { plan, draft } = finalPlan(() => planBatch({
+      snapshot, batch, ctx: { ...input.ctx, prepared, approved }, stamp, warnings,
+    }), batch, current, snapshot, input.ctx);
 
     checkCancel(input.signal, orphaned);
     batch.commands.forEach((command, index) => {

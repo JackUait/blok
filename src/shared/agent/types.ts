@@ -88,6 +88,8 @@ export interface PlannerContext {
   richText: RichTextHelpers;
   prepared: ReadonlyMap<number, unknown>;
   services: Partial<Record<string, unknown>>;
+  /** approvalKey()s a person approved for this batch only. */
+  approved?: ReadonlySet<string>;
 }
 
 export interface Plan {

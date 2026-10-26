@@ -77,7 +77,7 @@ export const rejectDatabaseWrite = (data: Record<string, unknown>, written: read
   const frozen = written.filter(field => LOCKED_FIELDS.includes(field));
 
   return locked && frozen.length > 0
-    ? `This database is locked: ${frozen.join(', ')} cannot change. Unlock it with database.setLock first.`
+    ? `This database is locked: ${frozen.join(', ')} cannot change. database.setLock can unlock it once the person approves.`
     : undefined;
 };
 
@@ -484,6 +484,13 @@ const setLock: ToolActionImpl<{ locked: boolean }> = {
 
     if (title === undefined && !args.locked) {
       return undefined;
+    }
+    if (!args.locked && title?.databaseLocked === true) {
+      const requireApproval = ctx.requireApproval
+        // Fails closed in a runtime that cannot ask.
+        ?? ctx.fail('PRECONDITION_FAILED', 'Unlocking a locked database needs a person\'s approval, and this runtime cannot ask for one.');
+
+      requireApproval('database.unlock');
     }
     const titled = title === undefined
       ? [{ id: ctx.newId(), name: DATABASE_DEFAULT_TEXT.titleProperty, type: 'title' as const, position: 'a0' }, ...state.schema]

@@ -1,3 +1,4 @@
+import { approvalKey, approvalNeeded } from './approval';
 import { AgentFailure } from './errors';
 import { splitCommandName } from './names';
 import { buildPlannedBlock, emitMove, emitPatch } from './plan-block';
@@ -116,6 +117,17 @@ export const createActionContext = (state: PlanState, block: SnapBlock | undefin
     now: state.stamp.at,
     richText: state.ctx.richText,
     fail: (code, message) => state.fail(code, message),
+    requireApproval: (kind) => {
+      if (block === undefined) {
+        return state.fail('PRECONDITION_FAILED', `"${tool}" asked for approval without a block.`);
+      }
+      const title = typeof block.data.title === 'string' && block.data.title.trim() !== '' ? block.data.title : undefined;
+      const request = { kind, blockId: block.id, ...(title !== undefined && { title }) };
+
+      if (state.ctx.approved?.has(approvalKey(request)) !== true) {
+        throw approvalNeeded(request);
+      }
+    },
   };
 };
 

@@ -103,7 +103,7 @@ export const createEditorAgentSession = (
     },
     describe: query => describeContract(source.contract(), query),
     execute: (batch, opts = {}) => runBatch({
-      batch, ctx: context(), applier, actor, signal: opts.signal, log, batchNo: ++state.batchNo,
+      batch, ctx: context(), applier, actor, signal: opts.signal, approve: opts.approve, log, batchNo: ++state.batchNo,
     }),
     log: () => [...log],
     // mergeSteps 'turn': join this turn's batch steps into one native step now.

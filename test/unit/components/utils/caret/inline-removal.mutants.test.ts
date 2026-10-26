@@ -414,7 +414,7 @@ describe('inline removal observer', () => {
 
 describe('ensureInlineRemovalObserver', () => {
   it('starts observing a document that is still loading once it is parsed', async () => {
-    const doc = document.implementation.createHTMLDocument('loading');
+    const doc = makeDocument('loading');
 
     expect(doc.readyState).toBe('loading');
 

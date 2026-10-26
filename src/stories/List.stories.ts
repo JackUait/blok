@@ -91,10 +91,8 @@ const createEditor = (args: ListCustomStylesArgs): HTMLElement => {
     ? ({
         class: List,
         inlineToolbar: true,
-        config: {
-          itemColor: args.itemColor,
-          itemSize: args.itemSize,
-        },
+        itemColor: args.itemColor,
+        itemSize: args.itemSize,
       } as ToolSettings)
     : ({
         class: List,

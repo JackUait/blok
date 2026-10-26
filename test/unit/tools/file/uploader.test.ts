@@ -35,12 +35,12 @@ describe('Uploader.handleFile', () => {
 
   it('throws UNSUPPORTED_TYPE when the type is not in the allowlist', async () => {
     await expect(new Uploader({ types: ['application/pdf'] }).handleFile(makeFile('x.zip', 'application/zip')))
-      .rejects.toMatchObject({ code: 'UNSUPPORTED_TYPE' } as Partial<FileToolError>);
+      .rejects.toMatchObject({ code: 'UNSUPPORTED_TYPE' } satisfies Partial<FileToolError>);
   });
 
   it('throws FILE_TOO_LARGE when the file exceeds maxSize', async () => {
     await expect(new Uploader({ maxSize: 10 }).handleFile(makeFile('x.pdf', 'application/pdf', 100)))
-      .rejects.toMatchObject({ code: 'FILE_TOO_LARGE' } as Partial<FileToolError>);
+      .rejects.toMatchObject({ code: 'FILE_TOO_LARGE' } satisfies Partial<FileToolError>);
   });
 
   it('accepts any type but caps size at the 30 MiB default when maxSize is omitted', async () => {
@@ -49,7 +49,7 @@ describe('Uploader.handleFile', () => {
     expect(result.url).toBe('blob:ok');
 
     await expect(new Uploader({}).handleFile(makeFile('huge.bin', 'application/octet-stream', 31 * 1024 * 1024)))
-      .rejects.toMatchObject({ code: 'FILE_TOO_LARGE' } as Partial<FileToolError>);
+      .rejects.toMatchObject({ code: 'FILE_TOO_LARGE' } satisfies Partial<FileToolError>);
   });
 
   it('allows unlimited size when maxSize is Infinity', async () => {
@@ -66,7 +66,7 @@ describe('Uploader.handleFile', () => {
     expect(zip.url).toBe('blob:zip');
 
     await expect(new Uploader({ maxSize: config }).handleFile(makeFile('b.txt', 'text/plain', 4096)))
-      .rejects.toMatchObject({ code: 'FILE_TOO_LARGE' } as Partial<FileToolError>);
+      .rejects.toMatchObject({ code: 'FILE_TOO_LARGE' } satisfies Partial<FileToolError>);
   });
 });
 

@@ -39,37 +39,24 @@ describe('MapLibre runtime (lazy chunk)', () => {
     document.head.innerHTML = '';
   });
 
-  it('the installed worker imports the shared module by the one specifier Blok rewrites', () => {
+  it('the installed worker is self-contained: it has no relative static import', () => {
     const worker = readFileSync(workerFile, 'utf8');
 
-    expect(worker.split('"./maplibre-gl-shared.mjs"')).toHaveLength(2);
+    expect(worker).not.toMatch(/(?:\bfrom|\bimport)\s*["']\.{1,2}\//);
   });
 
-  it('points the worker at the shared module\'s blob URL', async () => {
-    const { linkWorker } = await runtime();
-
-    expect(linkWorker('import{a as b}from"./maplibre-gl-shared.mjs";b()', 'blob:x/1')).toBe('import{a as b}from"blob:x/1";b()');
-  });
-
-  it('refuses a worker whose shared import it cannot find, instead of starting a broken worker', async () => {
-    const { linkWorker } = await runtime();
-
-    expect(() => linkWorker('import"./other.mjs"', 'blob:x/1')).toThrow();
-  });
-
-  it('starts one self-contained worker from blob URLs, once, with no file beside the bundle', async () => {
+  it('starts one worker from a blob URL, once, with no file beside the bundle', async () => {
     const { boot } = await runtime();
 
     boot();
     boot();
 
     expect(setWorkerUrl).toHaveBeenCalledTimes(1);
-    expect(setWorkerUrl).toHaveBeenCalledWith('blob:test/2');
-    const [shared, worker] = await Promise.all(blobs.map((blob) => blob.text()));
+    expect(setWorkerUrl).toHaveBeenCalledWith('blob:test/1');
+    expect(blobs).toHaveLength(1);
+    const [worker] = await Promise.all(blobs.map((blob) => blob.text()));
 
-    expect(worker).toContain('"blob:test/1"');
-    expect(worker).not.toContain('./maplibre-gl-shared.mjs');
-    expect(shared).not.toMatch(/sourceMappingURL/);
+    expect(worker).toBe(readFileSync(workerFile, 'utf8').replace(/\s*\/\/# sourceMappingURL=\S*\s*$/, ''));
     expect(blobs.every((blob) => blob.type === 'text/javascript')).toBe(true);
   });
 

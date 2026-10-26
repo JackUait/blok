@@ -10,7 +10,7 @@ const message = (content: Anthropic.ContentBlock[], stop: Anthropic.StopReason):
   content, stop_reason: stop, stop_sequence: null, stop_details: null,
   usage: {
     cache_creation: null, cache_creation_input_tokens: null, cache_read_input_tokens: null, inference_geo: null,
-    input_tokens: 0, output_tokens: 0, output_tokens_details: null, server_tool_use: null, service_tier: null,
+    input_tokens: 0, output_tokens: 0, output_tokens_details: null, server_tool_use: null, service_tier: null, speed: null,
   },
 });
 

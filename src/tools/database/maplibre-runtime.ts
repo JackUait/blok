@@ -1,31 +1,15 @@
 import * as maplibre from 'maplibre-gl';
 import css from 'maplibre-gl/dist/maplibre-gl.css?inline';
-import sharedSource from 'maplibre-gl/dist/maplibre-gl-shared.mjs?raw';
 import workerSource from 'maplibre-gl/dist/maplibre-gl-worker.mjs?raw';
 
 /** The attribute on a map's host element. MapLibre's rules apply only below it. */
 export const MAPLIBRE_SCOPE = 'data-blok-maplibre';
 
-/** The worker's one import of the shared module. Pinned by a test against the installed file. */
-const SHARED_IMPORT = '"./maplibre-gl-shared.mjs"';
 const STYLE_ID = 'blok-maplibre-styles';
 const SOURCE_MAP = /\s*\/\/# sourceMappingURL=\S*\s*$/;
 
 const scriptUrl = (code: string): string =>
   URL.createObjectURL(new Blob([code.replace(SOURCE_MAP, '')], { type: 'text/javascript' }));
-
-/**
- * MapLibre finds its worker file next to its own module. Bundled into Blok there
- * is no such file, so the worker runs from a blob that imports the shared module
- * from another blob.
- */
-export const linkWorker = (worker: string, sharedUrl: string): string => {
-  if (worker.split(SHARED_IMPORT).length !== 2) {
-    throw new Error('MapLibre worker: shared module import not found');
-  }
-
-  return worker.replace(SHARED_IMPORT, JSON.stringify(sharedUrl));
-};
 
 /** Splits a selector list on its top-level commas only: `:not(.a, .b)` stays whole. */
 const splitSelectors = (list: string): string[] => {
@@ -71,9 +55,14 @@ const addStyles = (): void => {
 
 const state = { workerSet: false };
 
+/**
+ * MapLibre finds its worker file next to its own module. Bundled into Blok there
+ * is no such file, so the worker runs from a blob. This needs maplibre-gl >= 6.13,
+ * whose worker no longer imports maplibre-gl-shared.mjs.
+ */
 export const boot = (): typeof maplibre => {
   if (!state.workerSet) {
-    maplibre.setWorkerUrl(scriptUrl(linkWorker(workerSource, scriptUrl(sharedSource))));
+    maplibre.setWorkerUrl(scriptUrl(workerSource));
     state.workerSet = true;
   }
   addStyles();

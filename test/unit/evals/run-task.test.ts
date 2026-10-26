@@ -12,7 +12,7 @@ const reply = (text: string): Anthropic.Message => ({
   content: [{ type: 'text', text, citations: null }], stop_reason: 'end_turn', stop_sequence: null, stop_details: null,
   usage: {
     cache_creation: null, cache_creation_input_tokens: null, cache_read_input_tokens: null, inference_geo: null,
-    input_tokens: 1, output_tokens: 1, output_tokens_details: null, server_tool_use: null, service_tier: null,
+    input_tokens: 1, output_tokens: 1, output_tokens_details: null, server_tool_use: null, service_tier: null, speed: null,
   },
 });
 

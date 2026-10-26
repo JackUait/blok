@@ -49,6 +49,6 @@
     "test": "yarn run -T vitest run"
   },
   "devDependencies": {
-    "fake-indexeddb": "^6.2.5"
+    "fake-indexeddb": "^6.2.6"
   }
 }

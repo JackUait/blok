@@ -1,5 +1,5 @@
 import type { BlokConfig } from '../../../types';
-import type { InternalToolSettings, ToolSettings } from '../../../types/tools';
+import type { InternalToolSettings } from '../../../types/tools';
 import { createPassSource } from './access-pass';
 import { createFetchUploader } from './fetch-uploader';
 
@@ -30,7 +30,7 @@ const readToolConfig = (entry: ToolEntry | undefined): Record<string, unknown> |
  * @param entry - the tool as the consumer registered it, if at all
  * @param extra - config keys to fill in
  */
-const withConfig = (entry: ToolEntry | undefined, extra: Record<string, unknown>): ToolSettings => {
+const withConfig = (entry: ToolEntry | undefined, extra: Record<string, unknown>): InternalToolSettings => {
   const config = { ...readToolConfig(entry), ...extra };
 
   if (typeof entry === 'function') {

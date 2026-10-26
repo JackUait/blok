@@ -98,7 +98,7 @@ const EMPTY_DATA = {
 const bookmarkTools = {
   bookmark: {
     class: Bookmark,
-    config: { endpoint: '' },
+    endpoint: '',
   } as ToolSettings,
 };
 

@@ -409,7 +409,7 @@ describe('CI critical-path law', () => {
         uses: 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9',
         with: {
           name: 'frontend-coverage-${{ strategy.job-index }}',
-          path: '.vitest-reports/',
+          path: '.vitest/blob/',
           'if-no-files-found': 'error',
           'include-hidden-files': true,
           'retention-days': 1,
@@ -492,13 +492,13 @@ describe('CI critical-path law', () => {
         uses: 'actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333',
         with: {
           pattern: 'frontend-coverage-*',
-          path: '.vitest-reports',
+          path: '.vitest/blob',
           'merge-multiple': true,
         },
       },
       {
         name: 'Merge frontend coverage',
-        run: 'yarn vitest --merge-reports=.vitest-reports --coverage --reporter=default',
+        run: 'yarn vitest --merge-reports=.vitest/blob --coverage --reporter=default',
       },
       {
         name: 'Upload coverage diagnostics',

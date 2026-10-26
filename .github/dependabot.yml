@@ -36,20 +36,6 @@ updates:
       # Drop this once jsdom fixes the `medium` keyword resolution.
       - dependency-name: jsdom
         update-types: ["version-update:semver-major"]
-      # vitest 5 has no compatible Storybook: every published
-      # @storybook/addon-vitest peers on vitest ^3||^4 and on @vitest/runner
-      # ^3||^4, and vitest 5 stopped publishing @vitest/runner (latest is
-      # 4.1.11). The whole family is pinned together so a partial bump cannot
-      # desync the runner from the reporters.
-      # Drop this once @storybook/addon-vitest declares vitest 5 support.
-      - dependency-name: vitest
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "@vitest/coverage-v8"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "@vitest/ui"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "@vitest/browser-playwright"
-        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: /docs

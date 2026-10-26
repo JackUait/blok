@@ -14,6 +14,7 @@ export class ReadOnlyAPI extends Module {
 
 
     return {
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- the public API still ships `toggle`
       toggle: (state): Promise<boolean> => this.toggle(state),
       set: (state, options): Promise<boolean> => this.set(state, options),
       get isEnabled(): boolean {

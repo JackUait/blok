@@ -262,7 +262,7 @@ describe('BoldNormalizationPass', () => {
 
       // Should replace nbsp
       // Note: toHaveTextContent matcher from jest-dom always replaces nbsp, so we use textContent directly
-      expect(container).not.toHaveTextContent(new RegExp(nbsp));
+      expect(container.textContent).not.toContain(nbsp);
 
       // Should remove empty <strong>
       expect(container.querySelector('strong')?.textContent).toBe('Bold textMore');

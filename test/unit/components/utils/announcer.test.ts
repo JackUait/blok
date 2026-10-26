@@ -70,7 +70,7 @@ describe('Announcer', () => {
     expect(polite?.style.height).toBe('1px');
     expect(polite?.style.overflow).toBe('hidden');
     expect(polite?.style.whiteSpace).toBe('nowrap');
-    expect(polite?.style.clip).toBe('rect(0px, 0px, 0px, 0px)');
+    expect(polite?.style.clipPath).toBe('inset(50%)');
   });
 
   it('routes polite and assertive announcements to their own regions without flipping aria-live', async () => {

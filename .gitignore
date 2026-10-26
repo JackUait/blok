@@ -119,3 +119,4 @@ stryker.log
 
 # Playwright blob reports from sharded runs
 blob-report/
+.vitest/

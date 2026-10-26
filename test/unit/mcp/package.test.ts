@@ -59,8 +59,8 @@ describe('@bloklabs/mcp package boundary', () => {
     const pkg = readJson('packages/mcp/package.json');
 
     expect(pkg.dependencies).toEqual({
-      '@modelcontextprotocol/server': '2.3.1',
-      ws: '8.21.0',
+      '@modelcontextprotocol/server': '2.4.0',
+      ws: '8.22.0',
     });
     expect(pkg.peerDependencies).toBeUndefined();
   });
@@ -88,7 +88,7 @@ describe('@bloklabs/mcp package boundary', () => {
   it('pins the SDK client only as a root development dependency', () => {
     const pkg = readJson('package.json');
 
-    expect(pkg.devDependencies).toMatchObject({ '@modelcontextprotocol/client': '2.3.1' });
+    expect(pkg.devDependencies).toMatchObject({ '@modelcontextprotocol/client': '2.4.0' });
 
     if (isRecord(pkg.dependencies)) {
       expect(pkg.dependencies['@modelcontextprotocol/client']).toBeUndefined();

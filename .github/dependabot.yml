@@ -36,6 +36,14 @@ updates:
       # Drop this once jsdom fixes the `medium` keyword resolution.
       - dependency-name: jsdom
         update-types: ["version-update:semver-major"]
+      # mermaid peers katex ^0.18 and resolutions hold mermaid's and
+      # micromark-extension-math's copies on 0.18.x, so a root-only 0.19 ships
+      # two katex copies in dist (~260 KB). Move all three together.
+      - dependency-name: katex
+        versions: [">=0.19.0"]
+      # rollup 4.64+ makes the override-entries tree-shaking probe ~1.6x slower.
+      - dependency-name: rollup
+        versions: [">=4.64.0"]
 
   - package-ecosystem: npm
     directory: /docs

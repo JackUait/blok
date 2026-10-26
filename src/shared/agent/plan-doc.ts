@@ -153,7 +153,11 @@ const withoutRootListDepth = (block: OutputBlockData): OutputBlockData => {
   return { ...block, data };
 };
 
-export const planMarkdownInsert = (state: PlanState, args: Record<string, unknown>): unknown => {
+/**
+ * Inserts converted blocks. `html` blocks are what the editor's own paste made,
+ * so they are read as stored data, not as marks the agent wrote.
+ */
+const planImport = (source: 'markdown' | 'html') => (state: PlanState, args: Record<string, unknown>): unknown => {
   const placement = state.place(args.parentId, args.position ?? 'end');
   const prepared = state.ctx.prepared.get(state.index);
 
@@ -206,7 +210,7 @@ export const planMarkdownInsert = (state: PlanState, args: Record<string, unknow
 
     // Temporary IDs must not make stale references resolve to unnamed blocks.
     do {
-      temporary.id = `markdown:${temporary.next++}`;
+      temporary.id = `${source}:${temporary.next++}`;
     } while (occupied.has(temporary.id));
     occupied.add(temporary.id);
 
@@ -222,7 +226,7 @@ export const planMarkdownInsert = (state: PlanState, args: Record<string, unknow
   };
   const roots = imported.childrenOf(null);
 
-  roots.forEach((id, index) => reserveIds(id, `/markdown/${index}`));
+  roots.forEach((id, index) => reserveIds(id, `/${source}/${index}`));
 
   const toSpec = (id: string): InsertSpec => {
     const block = getBlock(id);
@@ -253,7 +257,8 @@ export const planMarkdownInsert = (state: PlanState, args: Record<string, unknow
     const previous = roots[index - 1];
     const afterId = previous === undefined ? placement.afterId
       : ids.get(previous) ?? state.fail('INVALID_ARGS', 'The imported block has no reserved ID.');
-    const planned = buildPlannedBlock(state, toSpec(id), { id: placement.parentId }, `/markdown/${index}`, false);
+    const build = (): ReturnType<typeof buildPlannedBlock> => buildPlannedBlock(state, toSpec(id), { id: placement.parentId }, `/${source}/${index}`, false);
+    const planned = source === 'html' ? state.copyStored(build) : build();
 
     state.emit({ op: 'insert', block: planned, parentId: placement.parentId, afterId });
 
@@ -262,6 +267,9 @@ export const planMarkdownInsert = (state: PlanState, args: Record<string, unknow
 
   return { ids: inserted };
 };
+
+export const planMarkdownInsert = planImport('markdown');
+export const planHtmlInsert = planImport('html');
 
 export const planMarkdownExport = (state: PlanState, args: Record<string, unknown>): unknown => {
   const rootId = args.rootId === undefined ? undefined : state.resolveId(args.rootId, '/rootId');

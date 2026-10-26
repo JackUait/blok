@@ -69,6 +69,24 @@ const insertedBlock = (plan: Plan, index: number): { type: string; data?: Record
   return insert.block;
 };
 
+const importHtml = async (ports: BatchInput['ctx']['ports'], html: unknown, index: number): Promise<unknown> => {
+  if (ports.htmlToBlocks === undefined) {
+    throw failure('COMMAND_UNAVAILABLE', 'html.insert runs only in the editor.', { commandIndex: index, details: { reason: 'runtime' } });
+  }
+  if (typeof html !== 'string') {
+    throw failure('INVALID_ARGS', 'Expected HTML text.', { commandIndex: index, path: `/commands/${index}/args/html` });
+  }
+  const imported = await ports.htmlToBlocks(html);
+
+  if (imported.blocks.length === 0) {
+    throw failure('INVALID_ARGS', 'A paste of this HTML gives no blocks. For plain text, use markdown.insert or block.insert.', {
+      commandIndex: index, path: `/commands/${index}/args/html`,
+    });
+  }
+
+  return imported;
+};
+
 const preparationsFor = (
   input: BatchInput,
   batch: AgentBatch,
@@ -88,6 +106,11 @@ const preparationsFor = (
         });
       }
       preparations.set(index, () => input.ctx.ports.markdownToBlocks(markdown));
+
+      return;
+    }
+    if (command.name === 'html.insert') {
+      preparations.set(index, () => importHtml(input.ctx.ports, command.args.html, index));
 
       return;
     }
@@ -292,7 +315,7 @@ const pendingPlan = (
     const insertPending = command.name === 'block.insert'
       && (command.args.demote === true || (requires?.length ?? 0) > 0);
 
-    if (command.name === 'markdown.insert' || actionFor(input.ctx, command.name)?.prepare !== undefined || insertPending) {
+    if (command.name === 'markdown.insert' || command.name === 'html.insert' || actionFor(input.ctx, command.name)?.prepare !== undefined || insertPending) {
       pending.set(index, PREPARE_PENDING);
     }
   });

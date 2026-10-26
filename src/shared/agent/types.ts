@@ -64,6 +64,8 @@ export interface AgentPorts {
   sanitizeBlockData(type: string, data: Record<string, unknown>): Record<string, unknown>;
   markdownToBlocks(md: string): Promise<{ blocks: OutputBlockData[]; warnings: AgentWarning[] }>;
   blocksToMarkdown(doc: OutputData): { markdown: string; warnings: AgentWarning[] };
+  /** The blocks a person's paste of `html` gives. Only the editor has it: it runs the paste pipeline. */
+  htmlToBlocks?(html: string): Promise<{ blocks: OutputBlockData[]; warnings: AgentWarning[] }>;
   newId(): string;
   /** The editor's `link` config; without it a link gets the Link tool defaults. */
   resolveLink?(link: RichTextLink): RichTextLink;

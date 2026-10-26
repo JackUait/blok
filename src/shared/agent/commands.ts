@@ -133,6 +133,16 @@ export const COMMANDS: Record<CoreCommandName, CoreCommandSpec> = {
     + '$$x$$ follows the same rule as $x$. A fenced $$ block is always a LaTeX code block. '
     + 'Markdown cannot write the marks "underline", "sup", "sub", "highlight", "color" or "background": insert the text, then set them with text.format. '
     + 'For an equation inside a paragraph, use block.insert, text.insert or text.replace with the segment { "embed": { "equation": { "expression": "x" } } }.'),
+  'html.insert': {
+    ...write("Paste HTML as blocks: the blocks a person's paste of it gives in the editor. Additive.", obj({
+      html: { type: 'string', minLength: 1, description: 'HTML, as a clipboard carries it. Scripts, event handlers and unsafe URLs are removed, as in a paste.' },
+      parentId, position,
+    }, ['html']), 'Runs the editor paste pipeline: the same cleanup of Google Docs, Notion, Word and Excel markup, the same sanitizer, '
+      + 'and the same tag-to-block rules, including each tool\'s own paste tags. A table cell keeps its lists. An image keeps its src: '
+      + 'nothing is uploaded. HTML that a paste turns into nothing (plain text, or only a script) is refused. '
+      + 'Only in the editor: elsewhere it is unavailable, so use markdown.insert or block.insert.'),
+    runtime: 'editor',
+  },
   'markdown.export': read('Export the document or a subtree as Markdown.', obj({ rootId: id })),
   'history.undo': write("Undo this session's last step. Never the user's or a peer's. A page.rename or page.setIcon step wrote another document and cannot be undone. CONFLICT: someone else changed what the step wrote; re-read and write the fix by hand.", obj({})),
   'history.redo': write("Redo this session's last undone step. CONFLICT as for history.undo.", obj({})),

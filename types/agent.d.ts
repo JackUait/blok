@@ -9,13 +9,13 @@ export type CoreCommandName =
   | 'block.insert' | 'block.update' | 'block.delete' | 'block.move'
   | 'block.convert' | 'block.duplicate'
   | 'text.insert' | 'text.delete' | 'text.replace' | 'text.format'
-  | 'markdown.insert' | 'markdown.export'
+  | 'markdown.insert' | 'markdown.export' | 'html.insert'
   | 'history.undo' | 'history.redo'
   | 'history.versions' | 'history.read' | 'history.changes';
 
 export type ToolCommandName = `${string}.${string}`;
 export type CommandName = CoreCommandName | ToolCommandName;
-export type ReservedNamespace = 'doc' | 'block' | 'text' | 'markdown' | 'history';
+export type ReservedNamespace = 'doc' | 'block' | 'text' | 'markdown' | 'html' | 'history';
 
 export interface AgentCommand {
   name: CommandName;

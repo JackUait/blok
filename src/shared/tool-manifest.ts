@@ -24,7 +24,7 @@ import { ownEntry } from './own-entry';
 import { validPattern } from './schema/validate';
 import { RICH_TEXT_MARKS, RICH_TEXT_PRIMER, richText } from './tool-descriptions/rich-text';
 
-export const RESERVED_NAMESPACES = ['doc', 'block', 'text', 'markdown', 'history'] as const;
+export const RESERVED_NAMESPACES = ['doc', 'block', 'text', 'markdown', 'html', 'history'] as const;
 
 export interface ManifestBuildOptions {
   onWarning?(message: string): void;

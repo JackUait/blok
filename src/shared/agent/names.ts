@@ -7,7 +7,7 @@ export const CORE_COMMAND_NAMES: readonly CoreCommandName[] = [
   'doc.read', 'doc.find', 'doc.setTitle', 'doc.setIcon',
   'block.insert', 'block.update', 'block.delete', 'block.move', 'block.convert', 'block.duplicate',
   'text.insert', 'text.delete', 'text.replace', 'text.format',
-  'markdown.insert', 'markdown.export',
+  'markdown.insert', 'markdown.export', 'html.insert',
   'history.undo', 'history.redo',
   'history.versions', 'history.read', 'history.changes',
 ];

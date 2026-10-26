@@ -22,6 +22,8 @@ import { TextHandler } from './handlers/text-handler';
 import { SanitizerConfigBuilder } from './sanitizer-config';
 import { ToolRegistry } from './tool-registry';
 import type { HandlerContext } from './types';
+import { pasteHtmlAsBlocks } from './html-import';
+import type { OutputBlockData } from '../../../../types/data-formats/output-data';
 
 /**
  * @class Paste
@@ -115,6 +117,14 @@ export class Paste extends Module {
     };
 
     await handler.handle(data, context);
+  }
+
+  /**
+   * The blocks a paste of `html` gives, without touching this editor.
+   * @param html - the HTML to paste
+   */
+  public blocksFromHtml(html: string): Promise<OutputBlockData[]> {
+    return pasteHtmlAsBlocks(this.config, html);
   }
 
   /**

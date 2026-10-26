@@ -174,7 +174,6 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/video/ui.ts': cmds(['video.setSource', 'block.update'], 'Upload/URL and caption: video.caption.'),
 };
 
-const HTML_IMPORT_CUT = 'D6 cut, user decision pending (review TD-4): agents have no HTML import, so the paste pipeline that cleans this source never runs for them. An agent writes blocks with block.insert or markdown.insert instead.';
 const UPLOAD_CUT = 'D6 cut, user decision pending: agents place media by URL only (*.setSource); there is no file or byte transport for a pasted or dropped file.';
 
 // Ids the 2026-10-25 parity review found the law could not see (color, paste, feature, and ui-files it missed).
@@ -202,18 +201,18 @@ const REVIEW_ROWS: Record<CapabilityId, Coverage> = {
   'paste:handler/TextHandler': cmds(['text.insert', 'block.insert'], 'Plain text goes into the caret block, and each further line becomes a new block.'),
   'paste:handler/PatternHandler': cmds(['embed.create', 'bookmark.create'], 'A pasted URL that a tool claims by pattern becomes that block.'),
   'paste:handler/TableCellsHandler': cmds(['table.insertRows', 'table.insertColumns', 'block.insert'], 'Pasted cells grow the grid as needed; each cell body is child blocks of the cell.'),
-  'paste:handler/HtmlHandler': exempt('cut-v1', HTML_IMPORT_CUT),
+  'paste:handler/HtmlHandler': cmd('html.insert'),
   'paste:handler/FilesHandler': exempt('cut-v1', UPLOAD_CUT),
-  'paste:html/google-docs-preprocessor': exempt('cut-v1', HTML_IMPORT_CUT),
-  'paste:html/notion-preprocessor': exempt('cut-v1', HTML_IMPORT_CUT),
-  'paste:html/ai-chat-preprocessor': exempt('cut-v1', HTML_IMPORT_CUT),
-  'paste:html/gfm-toggle-recovery': exempt('cut-v1', HTML_IMPORT_CUT),
-  'paste:html/div-lines-preprocessor': exempt('cut-v1', HTML_IMPORT_CUT),
-  'paste:html/table-direction-preprocessor': exempt('cut-v1', HTML_IMPORT_CUT),
-  'paste:html/excel-class-styles-preprocessor': exempt('cut-v1', HTML_IMPORT_CUT),
-  'paste:html/word-list-preprocessor': exempt('cut-v1', HTML_IMPORT_CUT),
-  'paste:html/table-cell-format-preprocessor': exempt('cut-v1', HTML_IMPORT_CUT),
-  'paste:html/table-cell-paste': exempt('cut-v1', HTML_IMPORT_CUT),
+  'paste:html/google-docs-preprocessor': cmd('html.insert'),
+  'paste:html/notion-preprocessor': cmd('html.insert'),
+  'paste:html/ai-chat-preprocessor': cmd('html.insert'),
+  'paste:html/gfm-toggle-recovery': cmd('html.insert'),
+  'paste:html/div-lines-preprocessor': cmd('html.insert'),
+  'paste:html/table-direction-preprocessor': cmd('html.insert'),
+  'paste:html/excel-class-styles-preprocessor': cmd('html.insert'),
+  'paste:html/word-list-preprocessor': cmd('html.insert'),
+  'paste:html/table-cell-format-preprocessor': cmd('html.insert'),
+  'paste:html/table-cell-paste': cmd('html.insert'),
   'paste:csv-database-offer': cmds(['database.create', 'database.addProperty', 'database.addRow'], 'Pasted CSV text offers to become a database; an agent makes it, its properties and rows itself.'),
   'paste:menu/embed': cmd('embed.create'),
   'paste:menu/bookmark': cmd('bookmark.create'),
@@ -546,7 +545,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'api:blocks.move': cmd('block.move'),
   'api:blocks.moveTo': cmd('block.move'),
   'api:blocks.render': cmds(['block.delete', 'block.insert'], 'Replace the whole document: delete the roots, then insert the new blocks.'),
-  'api:blocks.renderFromHTML': cmds(['block.delete', 'block.insert'], 'Replace the whole document from HTML: delete the roots, then insert.'),
+  'api:blocks.renderFromHTML': cmds(['block.delete', 'html.insert'], 'Replace the whole document from HTML: delete the roots, then html.insert, which runs the paste pipeline.'),
   'api:blocks.scrollToBlock': exempt('view-only', 'Moves the viewport only. caret.set is not in v1; following the agent is the host follow option (06 C14).'),
   'api:blocks.setBlockParent': cmd('block.move'),
   'api:blocks.setPointerDragActive': exempt('chrome', 'Tells core a pointer drag is running; it is UI state, not content.'),

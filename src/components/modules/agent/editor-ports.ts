@@ -41,6 +41,10 @@ export const createEditorPorts = (Blok: BlokModules): AgentPorts => {
         warnings: warnings.map(degraded),
       };
     },
+    htmlToBlocks: async (html) => ({
+      blocks: outputBlocksToSegments(await Blok.Paste.blocksFromHtml(html), fieldsFor, htmlToSegmentsDom),
+      warnings: [],
+    }),
     blocksToMarkdown: (doc) => {
       const blocks = outputBlocksToHtml(doc.blocks, fieldsFor);
       const parentOf = new Map<string, string | null>();

@@ -138,6 +138,11 @@ describe('row page property menu (research parity row 9)', () => {
     expect(declared(`${ROW_PAGE} [data-blok-popover-item]:has(> [data-blok-popover-item-value])`, 'padding-inline-end')).toEqual(['var(--blok-space-2)']);
   });
 
+  // notion-spec-2 §9: the Edit formula row has no value, but its chevron also ends 8px from the row end.
+  it('ends the Edit formula chevron 8px from the row end, as the value rows', () => {
+    expect(declared(`${ROW_PAGE} [data-blok-popover-item][data-blok-item-name="editFormula"]`, 'padding-inline-end')).toEqual(['var(--blok-space-2)']);
+  });
+
   // notion-spec-2 §2: the note wraps inside Notion's 290 panel instead of widening it (Blok drew 303).
   it('never widens the menu with the all-views note', () => {
     expect(declared('[data-blok-database-property-menu-note]', 'contain')).toEqual(['inline-size']);

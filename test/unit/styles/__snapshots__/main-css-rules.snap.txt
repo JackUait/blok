@@ -6207,7 +6207,7 @@ button[data-blok-database-column-count]:hover {
   margin-inline-start: var(--blok-space-1-5);
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item]:has(> [data-blok-popover-item-value]) {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item]:has(> [data-blok-popover-item-value]), [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item][data-blok-item-name="editFormula"] {
   padding-inline-end: var(--blok-space-2);
 }
 

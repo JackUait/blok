@@ -21,6 +21,8 @@ const day = (iso: string): HTMLElement => q(`[data-blok-database-date-day="${iso
 const monthLabel = (): string => q('[data-blok-database-date-month]').textContent ?? '';
 const weekdays = (): string[] =>
   [...(editorRoot()?.querySelectorAll('[data-blok-database-date-weekday]') ?? [])].map((w) => w.getAttribute('data-day') ?? '');
+const weekdayNames = (): string[] =>
+  [...(editorRoot()?.querySelectorAll('[data-blok-database-date-weekday]') ?? [])].map((w) => w.textContent ?? '');
 const firstGridDay = (): string =>
   editorRoot()?.querySelector('[data-blok-database-date-day]')?.getAttribute('data-blok-database-date-day') ?? '';
 
@@ -54,7 +56,7 @@ describe('date cell editor', () => {
   it('opens on the month of the value with that day selected', () => {
     openDate('2026-03-14');
 
-    expect(monthLabel()).toBe('March 2026');
+    expect(monthLabel()).toBe('Mar 2026');
     expect(day('2026-03-14').getAttribute('aria-selected')).toBe('true');
     expect(day('2026-03-15').getAttribute('aria-selected')).toBe('false');
   });
@@ -62,8 +64,42 @@ describe('date cell editor', () => {
   it('opens on the current month when empty, and marks today', () => {
     openDate(null);
 
-    expect(monthLabel()).toBe('October 2026');
+    expect(monthLabel()).toBe('Oct 2026');
     expect(day('2026-10-09').hasAttribute('data-today')).toBe(true);
+  });
+
+  // Notion's picker (research/08): "Oct 2026" over "Su Mo Tu We Th Fr Sa".
+  it('labels the month short and the weekdays with two letters', () => {
+    openDate('2026-10-09', { weekStart: 0 });
+
+    expect(monthLabel()).toBe('Oct 2026');
+    expect(weekdayNames()).toEqual(['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']);
+  });
+
+  it.each([
+    ['de', ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']],
+    ['ru', ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб']],
+    // Two letters would read "qu" twice: the short names stay.
+    ['pt-BR', ['dom.', 'seg.', 'ter.', 'qua.', 'qui.', 'sex.', 'sáb.']],
+    ['ja', ['日', '月', '火', '水', '木', '金', '土']],
+  ])('keeps %s weekday names short and distinct', (locale, names) => {
+    openDate('2026-10-09', { locale, weekStart: 0 });
+
+    expect(weekdayNames()).toEqual(names);
+  });
+
+  it('draws each date field with the shared field look', () => {
+    openDate('2026-10-09');
+
+    expect(q('[data-blok-database-date-field="start"]').getAttribute('data-blok-field')).toBe('text');
+  });
+
+  it('selects the field text on open, as Notion does', () => {
+    openDate('2026-10-09');
+    const input = q<HTMLInputElement>('[data-blok-database-date-input="start"]');
+
+    expect(input).toHaveFocus();
+    expect([input.selectionStart, input.selectionEnd]).toEqual([0, input.value.length]);
   });
 
   it('starts the week on the given day', () => {
@@ -94,10 +130,10 @@ describe('date cell editor', () => {
     openDate('2026-01-15');
 
     q('[data-blok-database-date-prev]').click();
-    expect(monthLabel()).toBe('December 2025');
+    expect(monthLabel()).toBe('Dec 2025');
     q('[data-blok-database-date-next]').click();
     q('[data-blok-database-date-next]').click();
-    expect(monthLabel()).toBe('February 2026');
+    expect(monthLabel()).toBe('Feb 2026');
   });
 
   it('Today picks today and shows its month', () => {
@@ -106,7 +142,7 @@ describe('date cell editor', () => {
     q('[data-blok-database-date-today]').click();
 
     expect(ctx.onCommit).toHaveBeenCalledWith('2026-10-09');
-    expect(monthLabel()).toBe('October 2026');
+    expect(monthLabel()).toBe('Oct 2026');
   });
 
   it('a typed date commits on Enter and moves the calendar', () => {
@@ -117,7 +153,7 @@ describe('date cell editor', () => {
     press(input, 'Enter');
 
     expect(ctx.onCommit).toHaveBeenCalledWith('2026-12-25');
-    expect(monthLabel()).toBe('December 2026');
+    expect(monthLabel()).toBe('Dec 2026');
   });
 
   it('a typed entry that is not a date is rejected', () => {
@@ -500,7 +536,7 @@ describe('date cell editor', () => {
       button.click();
 
       expect(ctx.onCommit).toHaveBeenLastCalledWith('2026-10-09T10:30');
-      expect(monthLabel()).toBe('October 2026');
+      expect(monthLabel()).toBe('Oct 2026');
       expect(q<HTMLInputElement>('[data-blok-database-date-time="start"]').value).toBe('10:30');
       q('[data-blok-database-date-time-toggle]').click();
       expect(q('[data-blok-database-date-today]').textContent).toBe('Today');
@@ -535,7 +571,7 @@ describe('date cell editor', () => {
       day('2026-10-31').focus();
       press(document.activeElement ?? document.body, 'ArrowDown');
 
-      expect(monthLabel()).toBe('November 2026');
+      expect(monthLabel()).toBe('Nov 2026');
       expect(document.activeElement?.getAttribute('data-blok-database-date-day')).toBe('2026-11-07');
     });
 

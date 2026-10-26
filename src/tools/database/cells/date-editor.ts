@@ -12,6 +12,7 @@ import {
   applyDateDisplayChange,
   formatDatePart,
   formatDayField,
+  pickerWeekdayNames,
   parseDayField,
   resolveHourCycle,
   resolveLocale,
@@ -264,7 +265,10 @@ class DateEditor {
     });
     this.render();
     this.popover.show();
-    this.root.querySelector<HTMLInputElement>('[data-blok-database-date-input="start"]')?.focus();
+    const field = this.root.querySelector<HTMLInputElement>('[data-blok-database-date-input="start"]');
+
+    field?.focus();
+    field?.select();
   }
 
   get isOpen(): boolean {
@@ -414,6 +418,7 @@ class DateEditor {
     const input = document.createElement('input');
 
     row.setAttribute('data-blok-database-date-field', which);
+    row.setAttribute('data-blok-field', 'text');
     input.type = 'text';
     input.setAttribute('data-blok-database-date-input', which);
     input.setAttribute('aria-label', this.t(which === 'start' ? 'tools.database.dateStart' : 'tools.database.dateEnd'));
@@ -519,7 +524,7 @@ class DateEditor {
     header.setAttribute('data-blok-database-date-header', '');
     label.setAttribute('data-blok-database-date-month', '');
     label.setAttribute('aria-live', 'polite');
-    label.textContent = new Intl.DateTimeFormat(this.locale, { month: 'long', year: 'numeric' })
+    label.textContent = new Intl.DateTimeFormat(this.locale, { month: 'short', year: 'numeric' })
       .format(new Date(this.viewYear, this.viewMonth, 1));
 
     today.type = 'button';
@@ -564,7 +569,7 @@ class DateEditor {
   private renderGrid(): HTMLElement {
     const grid = document.createElement('div');
     const weekdayRow = document.createElement('div');
-    const weekdayName = new Intl.DateTimeFormat(this.locale, { weekday: 'short' });
+    const weekdayNames = pickerWeekdayNames(this.locale);
 
     grid.setAttribute('role', 'grid');
     grid.setAttribute('data-blok-database-date-grid', '');
@@ -576,8 +581,7 @@ class DateEditor {
       cell.setAttribute('role', 'columnheader');
       cell.setAttribute('data-blok-database-date-weekday', '');
       cell.setAttribute('data-day', String(dow));
-      // 1 January 2023 was a Sunday.
-      cell.textContent = weekdayName.format(new Date(2023, 0, 1 + dow));
+      cell.textContent = weekdayNames[dow];
 
       return cell;
     }));

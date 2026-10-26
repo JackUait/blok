@@ -105,6 +105,21 @@ export const resolveWeekStart = (locale: string, createLocale: (tag: string) => 
   }
 };
 
+/**
+ * The date picker's weekday names, Sunday first: Notion's two letters ("Su", "Mo").
+ * Cut by grapheme, and only when the seven cuts stay distinct; else the short names
+ * ("qua."/"qui." would both read "qu").
+ */
+export const pickerWeekdayNames = (locale: string): string[] => {
+  const format = new Intl.DateTimeFormat(locale, { weekday: 'short' });
+  const segmenter = new Intl.Segmenter(locale, { granularity: 'grapheme' });
+  // 1 January 2023 was a Sunday.
+  const names = Array.from({ length: 7 }, (_, dow) => format.format(new Date(2023, 0, 1 + dow)));
+  const cut = names.map((name) => [...segmenter.segment(name)].slice(0, 2).map((part) => part.segment).join(''));
+
+  return new Set(cut).size === 7 ? cut : names;
+};
+
 /** Whether a locale writes 12-hour time. */
 export const resolveHourCycle = (locale: string): 'h12' | 'h23' => {
   try {

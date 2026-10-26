@@ -5,7 +5,7 @@ import { PopoverItemType } from '../../components/utils/popover/components/popov
 import { hasEscapeLayer } from '../../components/utils/dismissable-layer';
 import { onHover } from '../../components/utils/tooltip';
 import { openDatabaseConfirm } from './database-confirm-dialog';
-import { formatDatePart, resolveLocale, resolveWeekStart, timeZones, zoneCity, zoneOffsetText } from './cells/date-format';
+import { formatDatePart, pickerWeekdayNames, resolveLocale, resolveWeekStart, timeZones, zoneCity, zoneOffsetText } from './cells/date-format';
 import { wallTime, zonedToEpoch } from './formula/dates';
 import { nextRun, repeatWeekdays, repeatZone } from './templates';
 import type { TemplateRepeat, TemplateRepeatFrequency } from './types';
@@ -399,8 +399,8 @@ const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: Cade
   // The month the Starting grid shows. It follows the start until the arrows move it.
   const view = { year: startWall().year, month: startWall().month, start: draft.start };
   const weekStart = resolveWeekStart(c.locale);
-  const monthName = new Intl.DateTimeFormat(c.locale, { month: 'long', year: 'numeric', timeZone: 'UTC' });
-  const weekdayName = new Intl.DateTimeFormat(c.locale, { weekday: 'short', timeZone: 'UTC' });
+  const monthName = new Intl.DateTimeFormat(c.locale, { month: 'short', year: 'numeric', timeZone: 'UTC' });
+  const weekdayNames = pickerWeekdayNames(c.locale);
   const step = (attribute: string, icon: string, key: string, months: number): HTMLButtonElement => {
     const button = el('button', attribute);
 
@@ -441,8 +441,7 @@ const cadencePanel = (host: TemplateRepeatHost, initial: TemplateRepeat, c: Cade
       const cell = el('span', 'data-blok-database-date-weekday');
 
       cell.setAttribute('role', 'columnheader');
-      // 4 January 2026 was a Sunday.
-      cell.textContent = weekdayName.format(Date.UTC(2026, 0, 4 + ((weekStart + i) % 7)));
+      cell.textContent = weekdayNames[(weekStart + i) % 7];
 
       return cell;
     }));

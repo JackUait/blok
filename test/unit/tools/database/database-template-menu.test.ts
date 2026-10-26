@@ -512,16 +512,16 @@ describe('template menu', () => {
       expect(box('input')).toBeNull();
       expect(box('[data-blok-database-date-today]')).toBeNull();
       expect(starting?.children?.width).toBe('268px');
-      expect(box('[data-blok-database-date-month]')?.textContent).toBe('October 2026');
+      expect(box('[data-blok-database-date-month]')?.textContent).toBe('Oct 2026');
       // Today is Oct 20 in Berlin.
       expect(box('[data-today]')?.getAttribute('data-blok-database-date-day')).toBe('2026-10-20');
-      expect(box('[data-blok-database-date-weekday]')?.textContent).toBe('Sun');
+      expect(box('[data-blok-database-date-weekday]')?.textContent).toBe('Su');
 
       box('[data-blok-database-date-day="2026-10-28"]')?.click();
       expect(value(items, 'starting')).toBe('Oct 28');
       expect(box('[aria-selected="true"]')?.getAttribute('data-blok-database-date-day')).toBe('2026-10-28');
       box('[data-blok-database-date-prev]')?.click();
-      expect(box('[data-blok-database-date-month]')?.textContent).toBe('September 2026');
+      expect(box('[data-blok-database-date-month]')?.textContent).toBe('Sep 2026');
       save(q);
 
       // 09:30 in Berlin on Oct 28 (CET) is 08:30Z.

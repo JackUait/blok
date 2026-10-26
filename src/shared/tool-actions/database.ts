@@ -5,7 +5,8 @@ import { resolveDynamicProperties } from '../database/dynamic-values';
 import { addRelated, relationEdit, relationIdsOf, removeRelated } from '../database/relation-values';
 import { copiedReminders } from '../database/reminder-fit';
 import { mapRowValues } from '../database/row-move';
-import { newRowValues, prefillFilters } from '../database/new-row-values';
+import { linkedRowHome } from '../database/linked-source';
+import { newRowValues, prefillFilters, THIS_PAGE_FILTER_VALUE } from '../database/new-row-values';
 import { lastRowKey, pinnedRowOrders, rowOrderKey, UNORDERED_VIEW_TYPES } from '../database/row-order';
 import { descendantsOf, relationPair } from '../database/sub-item-tree';
 import { typeConversion } from '../database/property-conversion';
@@ -943,7 +944,74 @@ interface AddRowArgs extends Placement {
   values?: Record<string, unknown>;
   group?: string;
   template?: string | null;
+  page?: string;
 }
+
+/**
+ * The database whose row pages show `blockId`, as the editor's attachLayoutTab
+ * lends it: the block sits in a tab of that database's layout tabs block.
+ */
+const rowPageHost = (ctx: ToolActionContext, blockId: string): string | undefined => {
+  const tab = ctx.read(ctx.read(blockId)?.parentId ?? '');
+  const tabs = tab?.type === 'tab' ? ctx.read(tab.parentId ?? '') : null;
+  const host = tabs?.type === 'tabs' ? ctx.read(tabs.parentId ?? '') : null;
+
+  if (tabs === null || host === null || host.type !== 'database' || !isRecord(host.data)) {
+    return undefined;
+  }
+  const named = (Array.isArray(host.data.schema) ? host.data.schema as PropertyDefinition[] : []).find(property => property.type === 'title')?.pageLayoutTabsId;
+  // As layoutTabsBlock: the one the title names, else the first; a draft is nobody's layout yet.
+  const layouts = host.children.filter((id) => {
+    const child = ctx.read(id);
+
+    return child?.type === 'tabs' && !(isRecord(child.data) && child.data.draft !== undefined);
+  });
+  const layout = layouts.find(id => id === named) ?? layouts[0];
+  const draft = isRecord(tab?.data) && tab.data.draft !== undefined;
+
+  return layout === tabs.id && !draft ? host.id : undefined;
+};
+
+/**
+ * The row page a new row links to through a "This page" filter (the editor's
+ * thisPage). The agent names it, as a person opens one. Off a row page there
+ * is none: the editor then fills nothing.
+ */
+const pageOf = (ctx: ToolActionContext, blockId: string, state: DatabaseState, filters: ReturnType<typeof prefillFilters>, page: string | undefined): string | undefined => {
+  const host = rowPageHost(ctx, blockId);
+
+  if (page !== undefined) {
+    if (host === undefined) {
+      return ctx.fail('PRECONDITION_FAILED', `Database ${blockId} is not shown on a row page, so page names nothing. Leave page out.`);
+    }
+    if (!rowsOf(ctx, host).some(each => each.id === page)) {
+      return ctx.fail('PRECONDITION_FAILED', `Block ${page} is not a row of database ${host}, whose row pages show this view.`);
+    }
+
+    return page;
+  }
+  const asksPage = filters.some(filter => filter.operator === 'contains'
+    && state.schema.find(property => property.id === filter.propertyId)?.type === 'relation'
+    && personIdsOf(filter.value).includes(THIS_PAGE_FILTER_VALUE));
+
+  if (host !== undefined && asksPage) {
+    return ctx.fail('INVALID_ARGS', `Database ${blockId} is shown on the row pages of database ${host} and its filter links new rows to "This page". Pass page: the id of the row whose page you add to.`);
+  }
+
+  return undefined;
+};
+
+/** As linkPageBack: each two-way relation holding the row page gets the new row on the page's side too. */
+const linkPage = (ctx: ToolActionContext, dataId: string, schema: PropertyDefinition[], properties: Record<string, unknown>, page: string, rowId: string): void => {
+  for (const property of schema) {
+    const synced = property.type === 'relation' ? syncedMirror(ctx, dataId, property) : undefined;
+    const target = property.relation?.targetDatabaseId;
+
+    if (synced !== undefined && target !== undefined && relationIdsOf(properties[property.id]).includes(page)) {
+      writeRelated(ctx, target, page, synced, current => addRelated(current, rowId, null));
+    }
+  }
+};
 
 /**
  * As the toolbar New (writeNewRow): the row starts from the default template,
@@ -957,23 +1025,24 @@ const addRow: ToolActionImpl<AddRowArgs, undefined, { rowId: string }> = {
     if (args.before !== undefined && args.after !== undefined) {
       ctx.fail('INVALID_ARGS', 'Pass before or after, not both.');
     }
-    const block = databaseTarget(ctx);
-    const state = readDatabase(block);
+    const { block, dataId, state } = rowHome(ctx);
     const titleId = state.schema.find(property => property.type === 'title')?.id;
     const defaultId = state.schema.find(property => property.type === 'title')?.defaultTemplateId;
-    const pick = args.template === undefined ? templatesOf(ctx, block.id).find(template => template.id === defaultId) : undefined;
-    const template = args.template === null ? undefined : pick ?? (typeof args.template === 'string' ? templateOf(ctx, block.id, args.template) : undefined);
+    const pick = args.template === undefined ? templatesOf(ctx, dataId).find(template => template.id === defaultId) : undefined;
+    const template = args.template === null ? undefined : pick ?? (typeof args.template === 'string' ? templateOf(ctx, dataId, args.template) : undefined);
     const context = dynamicContext(ctx);
     // As newRowProperties: written raw, so a filter on a deleted option does not refuse the row.
-    const prefill = newRowValues(prefillFilters(state.views.find(view => view.id === state.activeViewId)), state.schema, context.me, null, context.now);
-    const given = withCreatedBy(ctx, state, { ...(titleId === undefined ? {} : { [titleId]: '' }), ...prefill, ...checkedValues(ctx, block.id, state, args.values ?? {}), ...groupValue(ctx, state, args.group) });
+    const filters = prefillFilters(state.views.find(view => view.id === state.activeViewId));
+    const rowPage = pageOf(ctx, block.id, state, filters, args.page);
+    const prefill = newRowValues(filters, state.schema, context.me, rowPage ?? null, context.now);
+    const given = withCreatedBy(ctx, state, { ...(titleId === undefined ? {} : { [titleId]: '' }), ...prefill, ...checkedValues(ctx, dataId, state, args.values ?? {}), ...groupValue(ctx, state, args.group) });
     const chosen = Object.fromEntries(Object.entries(given)
       .filter(([id, value]) => !(id === titleId && (value === '' || value === null)) && !(Array.isArray(value) && value.length === 0)));
     const filled = template === undefined ? given : { ...given, ...resolveDynamicProperties(jsonCopy(template.properties) as Record<string, PropertyValue>, context), ...chosen };
     const properties = withStatusDefaults(state, withEmptyLists(state, filled));
     const page = template === undefined ? {} : rawData(ctx, template.id);
     const reminders = template === undefined ? undefined : copiedReminders(isRecord(page.reminders) ? page.reminders as Record<string, DateReminder> : undefined, properties, context.now);
-    const rows = rowsOf(ctx, block.id);
+    const rows = rowsOf(ctx, dataId);
     const placement = { before: args.before, after: args.after };
     const anchored = args.before !== undefined || args.after !== undefined;
     // As createRowData: past every own order's keys too, so the row goes last in every view.
@@ -985,6 +1054,10 @@ const addRow: ToolActionImpl<AddRowArgs, undefined, { rowId: string }> = {
     if (anchored && view !== undefined && order !== undefined) {
       ctx.update(block.id, withRowOrders(state, { [view.id]: { ...order, [id]: keyAround(ctx, rows, order, placement) } }));
     }
+    // As linkPageBack, and before the insert: the row page lists the new row on its two-way side.
+    if (rowPage !== undefined) {
+      linkPage(ctx, dataId, state.schema, properties, rowPage, id);
+    }
     const rowId = ctx.insert({
       type: 'database-row',
       id,
@@ -995,7 +1068,7 @@ const addRow: ToolActionImpl<AddRowArgs, undefined, { rowId: string }> = {
         ...Object.fromEntries(PAGE_FIELDS.filter(field => page[field] !== undefined).map(field => [field, page[field]])),
         ...(reminders === undefined ? {} : { reminders }),
       },
-      parentId: block.id,
+      parentId: dataId,
     });
 
     if (template !== undefined) {
@@ -1015,10 +1088,9 @@ const blank = (value: unknown): boolean => value === undefined || value === null
  */
 const applyTemplate: ToolActionImpl<{ rowId: string; templateId: string }> = {
   run: (ctx, args) => {
-    const block = databaseTarget(ctx);
-    const state = readDatabase(block);
-    const target = rowOf(ctx, block.id, args.rowId);
-    const template = templateOf(ctx, block.id, args.templateId);
+    const { dataId, state } = rowHome(ctx);
+    const target = rowOf(ctx, dataId, args.rowId);
+    const template = templateOf(ctx, dataId, args.templateId);
 
     if ((ctx.read(target.id)?.children ?? []).some(id => !isAnnotationType(ctx.read(id)?.type))) {
       ctx.fail('PRECONDITION_FAILED', `Row ${target.id} already has page content. A template applies to an empty page only.`);
@@ -1051,6 +1123,25 @@ const schemaOf = (ctx: ToolActionContext, databaseId: string): PropertyDefinitio
   const found = ctx.read(databaseId);
 
   return found !== null && isRecord(found.data) && Array.isArray(found.data.schema) ? found.data.schema as PropertyDefinition[] : undefined;
+};
+
+/**
+ * As the editor's dataId: a linked view's rows, templates and schema are its
+ * source's, its views stay its own. A source this runtime cannot write is refused.
+ */
+const rowHome = (ctx: ToolActionContext): { block: TargetBlock; dataId: string; state: DatabaseState } => {
+  const block = databaseTarget(ctx);
+  const own = readDatabase(block);
+  const home = linkedRowHome(block, id => ctx.read(id));
+
+  if (home === undefined) {
+    return { block, dataId: block.id, state: own };
+  }
+  if ('refusal' in home) {
+    return ctx.fail('PRECONDITION_FAILED', home.refusal);
+  }
+
+  return { block, dataId: home.databaseId, state: { ...own, schema: jsonCopy(schemaOf(ctx, home.databaseId) ?? []) } };
 };
 
 /**
@@ -1123,19 +1214,18 @@ const relationWrite = (
 
 const setRowValues: ToolActionImpl<{ rowId: string; values: Record<string, unknown> }> = {
   run: (ctx, args) => {
-    const block = databaseTarget(ctx);
-    const state = readDatabase(block);
+    const { dataId, state } = rowHome(ctx);
     // Editing a template's values is a row edit too (the editor's template page).
-    const row = rowBlocksOf(ctx, block.id).find(candidate => candidate.id === args.rowId)
+    const row = rowBlocksOf(ctx, dataId).find(candidate => candidate.id === args.rowId)
       ?? ctx.fail('PRECONDITION_FAILED', `Block ${args.rowId} is not a row of this database.`);
     const effects: Array<() => void> = [];
-    const values = Object.fromEntries(Object.entries(checkedValues(ctx, block.id, state, args.values, row.template)).map(([propertyId, value]) => {
+    const values = Object.fromEntries(Object.entries(checkedValues(ctx, dataId, state, args.values, row.template)).map(([propertyId, value]) => {
       const property = state.schema.find(each => each.id === propertyId);
 
       if (property?.type !== 'relation') {
         return [propertyId, value];
       }
-      const write = relationWrite(ctx, block.id, property, row, value);
+      const write = relationWrite(ctx, dataId, property, row, value);
 
       effects.push(write.after);
 
@@ -1192,16 +1282,15 @@ const subtreeOf = (ctx: ToolActionContext, id: string): string[] =>
  */
 const deleteRow: ToolActionImpl<{ rowId: string }, undefined, { removedIds: string[] }> = {
   run: (ctx, args) => {
-    const block = databaseTarget(ctx);
-    const state = readDatabase(block);
-    const target = rowBlocksOf(ctx, block.id).find(candidate => candidate.id === args.rowId)
+    const { dataId, state } = rowHome(ctx);
+    const target = rowBlocksOf(ctx, dataId).find(candidate => candidate.id === args.rowId)
       ?? ctx.fail('PRECONDITION_FAILED', `Block ${args.rowId} is not a row of this database.`);
 
     if (target.template) {
       const removedIds = subtreeOf(ctx, target.id);
 
       if (state.schema.some(property => property.type === 'title' && property.defaultTemplateId === target.id)) {
-        ctx.update(block.id, {
+        ctx.update(dataId, {
           schema: state.schema.map((property) => {
             if (property.defaultTemplateId !== target.id) {
               return property;
@@ -1216,13 +1305,13 @@ const deleteRow: ToolActionImpl<{ rowId: string }, undefined, { removedIds: stri
 
       return { removedIds };
     }
-    const pair = relationPair(state.schema, block.id, 'parentItem', 'subItems');
-    const subItems = pair === undefined ? [] : descendantsOf(target.id, rowsOf(ctx, block.id), pair.forward);
+    const pair = relationPair(state.schema, dataId, 'parentItem', 'subItems');
+    const subItems = pair === undefined ? [] : descendantsOf(target.id, rowsOf(ctx, dataId), pair.forward);
     const doomed = [...[...subItems].reverse(), target.id];
     const removedIds = [target.id, ...subItems].flatMap(id => subtreeOf(ctx, id));
 
     doomed.forEach((id) => {
-      unlinkRow(ctx, block.id, state.schema, id);
+      unlinkRow(ctx, dataId, state.schema, id);
       ctx.remove(id, { withChildren: true });
     });
 
@@ -1248,15 +1337,14 @@ const copiedPage = (ctx: ToolActionContext, sourceId: string, properties: Record
  */
 const duplicateRow: ToolActionImpl<{ rowId: string }, undefined, { rowId: string }> = {
   run: (ctx, args) => {
-    const block = databaseTarget(ctx);
-    const state = readDatabase(block);
-    const source = rowBlocksOf(ctx, block.id).find(candidate => candidate.id === args.rowId)
+    const { block, dataId, state } = rowHome(ctx);
+    const source = rowBlocksOf(ctx, dataId).find(candidate => candidate.id === args.rowId)
       ?? ctx.fail('PRECONDITION_FAILED', `Block ${args.rowId} is not a row of this database.`);
-    const siblings = source.template ? templatesOf(ctx, block.id) : rowsOf(ctx, block.id);
+    const siblings = source.template ? templatesOf(ctx, dataId) : rowsOf(ctx, dataId);
     const ordered = sortedByPosition(siblings);
     const next = ordered[ordered.findIndex(each => each.id === source.id) + 1]?.position ?? null;
-    const pair = source.template ? undefined : relationPair(state.schema, block.id, 'parentItem', 'subItems');
-    const family = [source.id, ...(pair === undefined ? [] : descendantsOf(source.id, rowsOf(ctx, block.id), pair.forward))];
+    const pair = source.template ? undefined : relationPair(state.schema, dataId, 'parentItem', 'subItems');
+    const family = [source.id, ...(pair === undefined ? [] : descendantsOf(source.id, rowsOf(ctx, dataId), pair.forward))];
     const copies = new Map(family.map(id => [id, ctx.newId()]));
     const remap = (value: unknown): Array<{ id: string }> =>
       relationIdsOf(value).flatMap(id => (copies.has(id) ? [{ id: copies.get(id) ?? id }] : []));
@@ -1267,7 +1355,7 @@ const duplicateRow: ToolActionImpl<{ rowId: string }, undefined, { rowId: string
     // A view with its own order gets keys for the copies too, right after the original there.
     if (view !== undefined && order !== undefined) {
       const keyOf = (each: RowRef): string => order[each.id] ?? each.position;
-      const manual = [...rowsOf(ctx, block.id)].sort((a, b) => comparePositions(keyOf(a), keyOf(b)));
+      const manual = [...rowsOf(ctx, dataId)].sort((a, b) => comparePositions(keyOf(a), keyOf(b)));
       const after = manual[manual.findIndex(each => each.id === source.id) + 1];
       const keys = { ...order };
 
@@ -1308,7 +1396,7 @@ const duplicateRow: ToolActionImpl<{ rowId: string }, undefined, { rowId: string
           ...(source.template ? { template: true } : {}),
           ...copiedPage(ctx, sourceId, properties),
         },
-        parentId: block.id,
+        parentId: dataId,
       });
       copyBody(ctx, sourceId, id);
     }
@@ -1317,7 +1405,7 @@ const duplicateRow: ToolActionImpl<{ rowId: string }, undefined, { rowId: string
 
     // The copy sits beside the original: its parent lists it too.
     if (pair !== undefined && parent !== undefined) {
-      writeRelated(ctx, block.id, parent, pair.backward, current => addRelated(current, copy, null));
+      writeRelated(ctx, dataId, parent, pair.backward, current => addRelated(current, copy, null));
     }
 
     return { rowId: copy };
@@ -1345,17 +1433,16 @@ const eachOtherSide = (
  */
 const moveRowTo: ToolActionImpl<{ rowId: string; databaseId: string }> = {
   run: (ctx, args) => {
-    const block = databaseTarget(ctx);
-    const state = readDatabase(block);
-    const moving = rowOf(ctx, block.id, args.rowId);
+    const { block, dataId, state } = rowHome(ctx);
+    const moving = rowOf(ctx, dataId, args.rowId);
     const target = ctx.read(args.databaseId);
     const targetSchema = schemaOf(ctx, args.databaseId);
 
-    if (args.databaseId === block.id || target === null || target.type !== block.type || targetSchema === undefined || (isRecord(target.data) && isRecord(target.data.source))) {
+    if (args.databaseId === block.id || args.databaseId === dataId || target === null || target.type !== block.type || targetSchema === undefined || (isRecord(target.data) && isRecord(target.data.source))) {
       ctx.fail('PRECONDITION_FAILED', `${args.databaseId} is not another database of this document; a linked view of a database is not one either.`);
     }
-    const rows = rowsOf(ctx, block.id);
-    const pair = relationPair(state.schema, block.id, 'parentItem', 'subItems');
+    const rows = rowsOf(ctx, dataId);
+    const pair = relationPair(state.schema, dataId, 'parentItem', 'subItems');
     const family = new Set([moving.id, ...(pair === undefined ? [] : descendantsOf(moving.id, rows, pair.forward))]);
     const targetPair = relationPair(targetSchema ?? [], args.databaseId, 'parentItem', 'subItems');
     const cursor = { after: sortedByPosition(rowsOf(ctx, args.databaseId)).at(-1)?.position ?? null };
@@ -1374,7 +1461,7 @@ const moveRowTo: ToolActionImpl<{ rowId: string; databaseId: string }> = {
     });
 
     for (const row of moved) {
-      eachOtherSide(ctx, block.id, state.schema, row.before, (database, id, mirror) =>
+      eachOtherSide(ctx, dataId, state.schema, row.before, (database, id, mirror) =>
         writeRelated(ctx, database, id, mirror, current => removeRelated(current, row.id)));
       eachOtherSide(ctx, args.databaseId, targetSchema ?? [], row.properties, (database, id, mirror) =>
         writeRelated(ctx, database, id, mirror, current => addRelated(current, row.id, null)));
@@ -1403,10 +1490,9 @@ export const DATABASE_CHILD_COMMAND: ChildCommandRoute = (command, child) => (ch
 const moveRow: ToolActionImpl<{ rowId: string; group?: string } & Placement> = {
   run: (ctx, args) => {
     exactlyOnePlacement(ctx, args);
-    const block = databaseTarget(ctx);
-    const state = readDatabase(block);
-    const current = rowOf(ctx, block.id, args.rowId);
-    const others = rowsOf(ctx, block.id).filter(row => row.id !== args.rowId);
+    const { block, dataId, state } = rowHome(ctx);
+    const current = rowOf(ctx, dataId, args.rowId);
+    const others = rowsOf(ctx, dataId).filter(row => row.id !== args.rowId);
     const { view, order } = openOrder(state);
     const key = keyAround(ctx, others, order, { before: args.before, after: args.after });
     const values = args.group === undefined ? {} : { properties: { ...current.properties, ...groupValue(ctx, state, args.group) } };
@@ -1419,7 +1505,7 @@ const moveRow: ToolActionImpl<{ rowId: string; group?: string } & Placement> = {
     }
     const pinned = view === undefined
       ? []
-      : pinnedRowOrders(state.views, view.id, [current], each => !UNORDERED_VIEW_TYPES.has(each.type) && (each.dataSourceId ?? block.id) === block.id);
+      : pinnedRowOrders(state.views, view.id, [current], each => !UNORDERED_VIEW_TYPES.has(each.type) && (each.dataSourceId ?? dataId) === dataId);
 
     if (pinned.length > 0) {
       ctx.update(block.id, withRowOrders(state, Object.fromEntries(pinned.map(each => [each.viewId, each.rowOrder]))));

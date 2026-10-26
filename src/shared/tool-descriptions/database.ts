@@ -989,9 +989,12 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
   {
     name: 'addRow',
     summary: 'Add a row (a database-row child block), as the New button does. It goes last in every view, unless before or after names a row: then it goes there in the open view\'s order.',
-    guidance: 'The row starts from the default template: its values, icon, cover, reminders and page body. template names another template; null starts an empty page. values maps property ids to values and wins over the template, except an empty title. A status with a default option and a person property that defaults to Created by fill in when values leave them out. Values the open view\'s filters ask for fill in too (an equals filter, a person contains, a date the filter accepts), so the row shows there; values win over them, and they win over the template. group puts the row in a column of the open board view: an option id of the property it groups by.',
+    guidance: 'The row starts from the default template: its values, icon, cover, reminders and page body. template names another template; null starts an empty page. values maps property ids to values and wins over the template, except an empty title. A status with a default option and a person property that defaults to Created by fill in when values leave them out. Values the open view\'s filters ask for fill in too (an equals filter, a person contains, a date the filter accepts), so the row shows there; values win over them, and they win over the template. group puts the row in a column of the open board view: an option id of the property it groups by. On a linked view (data.source) the row goes to the source database, with the source\'s properties and templates and this view\'s filters, as New in that view does; every row command on a linked view acts on the source\'s rows. A source in another document is read-only here. page: for a view shown on a database\'s row pages (a tab of its page layout), the row whose page you add to; a "This page" relation filter then links the new row to it, both ways. Such a view with that filter needs page.',
     target: 'block',
-    args: closed({ values: ROW_VALUES, group: OPTION_ID, before: ROW_ID, after: ROW_ID, template: { anyOf: [{ type: 'string', minLength: 1 }, { type: 'null' }] } }),
+    args: closed({
+      values: ROW_VALUES, group: OPTION_ID, before: ROW_ID, after: ROW_ID, template: { anyOf: [{ type: 'string', minLength: 1 }, { type: 'null' }] },
+      page: { ...ROW_ID, description: 'The row whose page shows this view (a tab of its database\'s page layout).' },
+    }),
     result: closed({ rowId: { type: 'string' } }, ['rowId']),
     mirrors: ['menu:database/template-empty', 'menu:database/template-empty-use'],
   },

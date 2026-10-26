@@ -1019,6 +1019,11 @@
                           }
                         ]
                       },
+                      "page": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "The row whose page shows this view (a tab of its database's page layout)."
+                      },
                       "id": {
                         "type": "string",
                         "description": "Id of the block to act on."

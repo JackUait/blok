@@ -32,6 +32,39 @@ export const localLinkedSource = (type: string, data: unknown): LocalSource | un
   return source as LocalSource;
 };
 
+/**
+ * Where a linked view's rows live, as the editor's `dataId` reads it: its
+ * source database in this document. Undefined when the block is not a linked
+ * view. A source in another document, or one that is not a plain database
+ * here, gives a refusal: the editor shows no rows to add to there either.
+ * @param block - the database block
+ * @param lookup - reads another block of this document
+ */
+export const linkedRowHome = (
+  block: { id: string; type: string; data: unknown },
+  lookup: (id: string) => { type: string; data: unknown } | null | undefined
+): { databaseId: string } | { refusal: string } | undefined => {
+  const raw: unknown = block.type === DATABASE && typeof block.data === 'object' && block.data !== null
+    ? (block.data as Record<string, unknown>).source
+    : undefined;
+
+  if (raw === undefined || raw === null) return undefined;
+  const remote = typeof raw === 'object' && typeof (raw as Record<string, unknown>).documentId === 'string' && (raw as Record<string, unknown>).documentId !== '';
+
+  if (remote) {
+    return { refusal: `Database ${block.id} is a linked view of a database in another document. Its rows are read-only here, as they are for a person in the editor: open that document and edit its database there.` };
+  }
+  const source = localLinkedSource(block.type, block.data);
+  const found = source === undefined || source.databaseId === block.id ? undefined : lookup(source.databaseId);
+
+  if (source === undefined || found === null || found === undefined || found.type !== DATABASE
+    || (typeof found.data === 'object' && found.data !== null && (found.data as Record<string, unknown>).source !== undefined)) {
+    return { refusal: `Database ${block.id} is a linked view whose source is not a database of this document (deleted, or not a database), so it has no rows to change.` };
+  }
+
+  return { databaseId: source.databaseId };
+};
+
 type Fields = Record<string, unknown>;
 
 const isFields = (value: unknown): value is Fields => typeof value === 'object' && value !== null && !Array.isArray(value);

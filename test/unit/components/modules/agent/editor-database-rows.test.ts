@@ -206,4 +206,34 @@ describe('database rows through the editor agent session', () => {
     expect([...new Set(shown)]).toEqual(['c', 'z', rowId, 'p']);
     session.close();
   }, 30_000);
+
+  it('database.addRow on a linked view puts the row in the source, which both views then show', async () => {
+    const data = seed();
+
+    data.blocks.push({
+      id: 'lv', type: 'database',
+      data: {
+        source: { databaseId: 'db' },
+        schema: [{ id: 't', name: 'Title', type: 'title', position: 'a0' }],
+        views: [{ id: 'lv-v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+        activeViewId: 'lv-v',
+      },
+    });
+    const Blok = await boot(data);
+    const session = createEditorAgentSession(Blok, actor);
+    const result: AgentResult = await session.execute({ commands: [{ name: 'database.addRow', args: { id: 'lv', values: { t: 'new' } } }] });
+
+    expect(result.ok).toBe(true);
+    const rowId = result.ok ? String((result.results[0] as { rowId: string }).rowId) : '';
+
+    expect(saved(Blok).get(rowId)).toMatchObject({ parent: 'db', data: { title: 'new' } });
+    expect(Blok.API.methods.blocks.getChildren('lv')).toEqual([]);
+    expect(Blok.BlockManager.getBlockById('db')?.holder.querySelector(`[data-row-id="${rowId}"]`)).not.toBeNull();
+    expect(Blok.BlockManager.getBlockById('lv')?.holder.querySelector(`[data-row-id="${rowId}"]`)).not.toBeNull();
+    const removed: AgentResult = await session.execute({ commands: [{ name: 'database.deleteRow', args: { id: 'lv', rowId: 'p' } }] });
+
+    expect(removed.ok).toBe(true);
+    expect(saved(Blok).has('c')).toBe(false);
+    session.close();
+  }, 30_000);
 });

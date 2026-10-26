@@ -4,6 +4,7 @@ import { splitCommandName } from './names';
 import { buildPlannedBlock, emitMove, emitPatch } from './plan-block';
 import { PREPARE_PENDING } from './plan-state';
 import { cloneRecord } from './snapshot';
+import { linkedRowHome } from '../database/linked-source';
 
 import type { InsertSpec, PlannedBlock } from '../../../types/agent';
 import type { ToolActionContext, ToolActionImpl } from '../../../types/tools/tool-description';
@@ -28,7 +29,10 @@ const view = (block: SnapBlock): NonNullable<ReturnType<RecordingContext['read']
 });
 
 export const createActionContext = (state: PlanState, block: SnapBlock | undefined, tool: string): RecordingContext => {
-  const roots = new Set<string>(block === undefined ? [] : [block.id]);
+  const home = block === undefined ? undefined : linkedRowHome({ id: block.id, type: block.type, data: block.data }, id => state.draft.get(id));
+  // A linked view's rows live in its source: its row actions write there (tool-actions/database rowHome).
+  const homes = new Set<string>(block === undefined ? [] : [block.id, ...(home !== undefined && 'databaseId' in home ? [home.databaseId] : [])]);
+  const roots = new Set<string>(homes);
   const isScopedContainer = (id: string): boolean =>
     [...roots].some(root => id === root || state.draft.isUnder(id, root));
   // Ids from newId that a child spec may still claim, e.g. a table's cell blocks named in its content.
@@ -95,7 +99,8 @@ export const createActionContext = (state: PlanState, block: SnapBlock | undefin
     },
     move: (id, to) => {
       // A child of this action's own block may go to another block of the same tool (a row to another database), nowhere else.
-      const handOver = block !== undefined && state.draft.parentOf(id) === block.id && typeof to.parentId === 'string'
+      const parent = state.draft.parentOf(id);
+      const handOver = parent !== null && homes.has(parent) && typeof to.parentId === 'string'
         && state.draft.get(to.parentId)?.type === tool;
 
       emitMove(state, id, to.parentId, to.position, {

@@ -549,7 +549,7 @@ describe('StoreApplier', () => {
 
   const history: Array<'history.undo' | 'history.redo'> = ['history.undo', 'history.redo'];
 
-  it.each(history)('leaves %s unavailable in live mode without changing the store', async name => {
+  it.each(history)('answers %s with nothing written when the applier has no step', async name => {
     const store = createStore();
     const applier: AgentApplier = createApplier(store);
     const before = applier.snapshot().toOutput();
@@ -558,11 +558,22 @@ describe('StoreApplier', () => {
 
     expect(result).toMatchObject({
       ok: false, revision: 'l0',
-      error: { code: 'COMMAND_UNAVAILABLE', commandIndex: 0, details: { reason: 'runtime' } },
+      error: { code: name === 'history.undo' ? 'NOTHING_TO_UNDO' : 'NOTHING_TO_REDO' },
     });
-    expect(applier.undo).toBeUndefined();
-    expect(applier.redo).toBeUndefined();
     expect(origins).toEqual([]);
     expect(applier.snapshot().toOutput()).toEqual(before);
+  });
+
+  it("undoes its own step but not another 'local' write to the store", async () => {
+    const store = createStore();
+    const applier = createApplier(store);
+
+    await apply(applier, [{ op: 'setData', id: 'a', patch: { keep: 2 } }], ['a']);
+    store.updateBlockData('z', 'text', [{ text: 'Host wrote this' }]);
+    await applier.undo();
+
+    expect(applier.snapshot().get('a')?.data.keep).toBe(1);
+    expect(applier.snapshot().get('z')?.data.text).toEqual([{ text: 'Host wrote this' }]);
+    await expect(applier.undo()).rejects.toMatchObject({ error: { code: 'NOTHING_TO_UNDO' } });
   });
 });

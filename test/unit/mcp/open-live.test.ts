@@ -139,11 +139,11 @@ describe('createOpenLive', () => {
     expect(sockets[0].sent.filter((frame) => frame.type === 'awareness').length).toBeGreaterThan(awarenessBefore);
   });
 
-  it('refuses history.undo in live mode with COMMAND_UNAVAILABLE', async () => {
+  it('answers NOTHING_TO_UNDO on a live handle that has not written', async () => {
     const session = await open();
     const outcome = await session.execute({ commands: [{ name: 'history.undo', args: {} }] });
 
-    expect(outcome).toMatchObject({ ok: false, error: { code: 'COMMAND_UNAVAILABLE', details: { reason: 'runtime' } } });
+    expect(outcome).toMatchObject({ ok: false, error: { code: 'NOTHING_TO_UNDO' } });
   });
 
   it('closes the room when building the session fails after the sync', async () => {

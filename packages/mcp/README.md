@@ -93,7 +93,8 @@ Pass `--sync-url` to join rooms on a Blok sync service.
   - `acknowledged`: the server has a journal, and each batch waits for its acks.
   - `best-effort`: the server has no journal and makes no durability claim.
   - `saved-on-execute`: a stored document, saved after every batch.
-- `blok_open` lists the commands a live handle refuses in `unavailableCommands`, each with a `reason`. Today these are `history.undo` and `history.redo`. `blok_describe` marks them `available: false` too.
+- `blok_open` lists the commands a live handle refuses in `unavailableCommands`, each with a `reason`. `blok_describe` marks them `available: false` too.
+- `history.undo` and `history.redo` take back and redo the handle's own batches. They never touch what other people wrote. When someone else changed what a batch added, removed or moved, they answer `CONFLICT` and change nothing.
 - Each `blok_execute` result says what happened to that batch in `delivery`.
 - `blok_close` reports `hostRecordLags`. The host's stored record lags the agent's edits until the room writes it back.
 
@@ -221,7 +222,6 @@ Pass a value as the next argument: `--auth oauth`, not `--auth=oauth`. An unknow
 
 ## Limits
 
-- No undo in live rooms.
 - No uploads. Add media by URL.
 - No Docker image.
 - A handle expires after 10 minutes idle.

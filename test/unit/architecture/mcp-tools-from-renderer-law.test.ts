@@ -82,15 +82,15 @@ const commandFixtures: Array<{
     title: 'live without pageBackend',
     runtime: 'node-live',
     services: [],
-    available: ['block.insert'],
-    unavailable: ['history.undo', 'history.redo', 'page.rename', 'page.setIcon'],
+    available: ['block.insert', 'history.undo', 'history.redo'],
+    unavailable: ['page.rename', 'page.setIcon'],
   },
   {
     title: 'live with pageBackend',
     runtime: 'node-live',
     services: ['pageBackend'],
-    available: ['block.insert', 'page.rename', 'page.setIcon'],
-    unavailable: ['history.undo', 'history.redo'],
+    available: ['block.insert', 'page.rename', 'page.setIcon', 'history.undo', 'history.redo'],
+    unavailable: [],
   },
 ];
 

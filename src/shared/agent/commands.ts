@@ -134,8 +134,8 @@ export const COMMANDS: Record<CoreCommandName, CoreCommandSpec> = {
     + 'Markdown cannot write the marks "underline", "sup", "sub", "highlight", "color" or "background": insert the text, then set them with text.format. '
     + 'For an equation inside a paragraph, use block.insert, text.insert or text.replace with the segment { "embed": { "equation": { "expression": "x" } } }.'),
   'markdown.export': read('Export the document or a subtree as Markdown.', obj({ rootId: id })),
-  'history.undo': write("Undo this session's last step. Never the user's. A page.rename or page.setIcon step wrote another document and cannot be undone.", obj({})),
-  'history.redo': write("Redo this session's last undone step.", obj({})),
+  'history.undo': write("Undo this session's last step. Never the user's or a peer's. A page.rename or page.setIcon step wrote another document and cannot be undone. CONFLICT: someone else changed what the step wrote; re-read and write the fix by hand.", obj({})),
+  'history.redo': write("Redo this session's last undone step. CONFLICT as for history.undo.", obj({})),
   'history.versions': versionRead('List the saved versions of this document, newest first, with who edited and when.', obj({
     group: { enum: [1, 15, 60], description: 'Minutes per version.' },
   }), 'The first version is what the document is now. Read-only: the user restores a version, never the agent.'),

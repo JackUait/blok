@@ -83,7 +83,7 @@ export const listMcpTools = (
         ...(pagesInsert(contract) ? ['A page block you insert gets a new, empty sub-page document, under the pageId the insert result shows.'] : []),
         'mode "auto" joins the live room when one is configured, else edits the stored document.',
         'Pass write: true if you will edit; a read-only handle refuses blok_execute.',
-        'unavailableCommands names the blok_execute commands this handle refuses, such as history.undo in live mode; do not send them.',
+        'unavailableCommands names the blok_execute commands this handle refuses, if any; do not send them.',
         'Pass view with blok_read arguments, e.g. view: {}, to get the document back in the same call.',
         `A handle expires after ${idleDuration} without a call; then open again.`,
         'Write rich text with commands such as text.format or markdown.insert. Never put Markdown or HTML into block data.',

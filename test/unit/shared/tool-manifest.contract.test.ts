@@ -102,7 +102,7 @@ const runtimeCases: Array<{ runtime: ContractWhere['runtime']; editorAvailable: 
   { runtime: 'editor', editorAvailable: true, historyAvailable: true },
   { runtime: 'node', editorAvailable: false, historyAvailable: true },
   { runtime: 'jint', editorAvailable: false, historyAvailable: false },
-  { runtime: 'node-live', editorAvailable: false, historyAvailable: false },
+  { runtime: 'node-live', editorAvailable: false, historyAvailable: true },
   { runtime: 'csharp-live', editorAvailable: false, historyAvailable: false },
 ];
 

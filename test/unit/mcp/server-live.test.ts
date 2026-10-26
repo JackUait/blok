@@ -320,3 +320,57 @@ describe('assembleMcp with a sync URL and page-map creates sub-pages', () => {
     expect(rooms.get('doc')?.toJSON()).toEqual([]);
   }, 5_000);
 });
+
+describe('assembleMcp with a sync URL: history.undo on a live handle', () => {
+  let room: DocumentStore;
+  let mcp: AssembledMcp;
+
+  const factory: CollabSocketFactory = () => {
+    const socket = new RoomSocket(room);
+
+    queueMicrotask(() => {
+      socket.readyState = 1;
+      socket.protocol = 'blok-sync.v2';
+      socket.onopen?.({});
+      socket.deliver({ type: 'control', tag: TAG });
+      socket.deliver({ type: 'syncStep2', update: room.encodeStateAsUpdate() });
+    });
+
+    return socket;
+  };
+  const run = async (handle: unknown, commands: unknown[]): Promise<Record<string, unknown>> =>
+    (await mcp.dispatch('blok_execute', { handle, commands }, caller)).structuredContent;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    room = new DocumentStore(new YBlockSerializer());
+    room.fromJSON([{ id: 'p', type: 'paragraph', data: { text: [{ text: 'Room' }] } }]);
+    mcp = assembleMcp(
+      { transport: { kind: 'stdio' }, auth: { kind: 'none' }, sync: { url: 'wss://sync.test/sync' } },
+      { liveSocketFactory: factory, liveSyncTimeoutMs: 1000 },
+    );
+  });
+
+  afterEach(async () => {
+    await mcp.stop();
+    room.destroy();
+    vi.restoreAllMocks();
+  });
+
+  it('lists no unavailable history command, and the room receives the undo and the redo', async () => {
+    const opened = (await mcp.dispatch('blok_open', { documentId: 'doc', write: true }, caller)).structuredContent;
+    const names = (Array.isArray(opened.unavailableCommands) ? opened.unavailableCommands : [])
+      .map((entry: unknown) => (typeof entry === 'object' && entry !== null && 'name' in entry ? entry.name : null));
+
+    expect(names).not.toContain('history.undo');
+    expect(names).not.toContain('history.redo');
+    expect(await run(opened.handle, [{ name: 'block.insert', args: { type: 'paragraph', id: 'n', data: { text: 'Agent' }, position: 'end' } }]))
+      .toMatchObject({ ok: true, delivery: { durable: true } });
+    expect(room.orderedIds()).toEqual(['p', 'n']);
+
+    expect(await run(opened.handle, [{ name: 'history.undo', args: {} }])).toMatchObject({ ok: true, delivery: { durable: true } });
+    expect(room.orderedIds()).toEqual(['p']);
+    expect(await run(opened.handle, [{ name: 'history.redo', args: {} }])).toMatchObject({ ok: true, delivery: { durable: true } });
+    expect(room.orderedIds()).toEqual(['p', 'n']);
+  }, 5_000);
+});

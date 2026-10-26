@@ -56,16 +56,13 @@ describe('buildMcpContracts', () => {
     }
   });
 
-  it('disables session history for the live runtime without disabling ordinary reads', () => {
-    const { stored, live } = buildMcpContracts({ pageTitles: 'off' });
+  it('makes session history available in the live contract too', () => {
+    const { live } = buildMcpContracts({ pageTitles: 'off' });
 
     for (const name of ['history.undo', 'history.redo']) {
-      expect(command(live, name)).toMatchObject({ available: false, unavailableReason: 'runtime' });
+      expect(command(live, name)).toMatchObject({ available: true });
+      expect(command(live, name)?.unavailableReason).toBeUndefined();
     }
-    for (const name of ['history.undo', 'history.redo']) {
-      expect(command(stored, name)).toMatchObject({ available: true });
-    }
-    expect(command(live, 'doc.read')).toMatchObject({ available: true });
   });
 
   it('requires the page-map service for page.rename in both contracts', () => {

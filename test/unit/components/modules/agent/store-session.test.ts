@@ -112,24 +112,151 @@ describe('createStoreAgentSession', () => {
     });
   });
 
-  it.each(history)('reports %s as unavailable for the live runtime without changing content', async name => {
-    const { store, session } = open();
+  describe('history.undo and history.redo', () => {
+    const textOf = (store: DocumentStore, serializer: YBlockSerializer, id: string): unknown =>
+      serializer.toRichSegments(storedBlock(store, id).data.text);
 
-    expect(await session.execute({
-      commands: [{ name: 'text.format', args: { id: 'p', range: 'all', set: { bold: true } } }],
-    })).toMatchObject({ ok: true });
-    const before = store.toJSON();
-    const revision = (await session.read()).revision;
-    const result = await session.execute({ commands: [{ name, args: {} }] });
+    // A second client in the same room: its writes reach the agent's store as remote updates.
+    const joinPeer = (store: DocumentStore, serializer: YBlockSerializer) => {
+      const peer = new DocumentStore(serializer);
 
-    expect(result).toMatchObject({
-      ok: false, revision,
-      error: { code: 'COMMAND_UNAVAILABLE', details: { reason: 'runtime' } },
+      stores.push(peer);
+      peer.applyRemoteUpdate(store.encodeStateAsUpdate(peer.getStateVector()), 'agent-room');
+
+      return {
+        peer,
+        write: (fn: () => void): void => {
+          peer.applyRemoteUpdate(store.encodeStateAsUpdate(peer.getStateVector()), 'agent-room');
+          fn();
+          store.applyRemoteUpdate(peer.encodeStateAsUpdate(store.getStateVector()), peer);
+        },
+      };
+    };
+
+    it.each(history)('offers %s in the live contract', name => {
+      const { session } = open();
+
+      expect(session.describe({ command: name })).toMatchObject({ command: { name, available: true } });
     });
-    expect(store.toJSON()).toEqual(before);
-    expect((await session.read()).revision).toBe(revision);
-    expect(session.describe({ command: name })).toMatchObject({
-      command: { name, available: false, unavailableReason: 'runtime' },
+
+    it('takes back only the last batch, and redo writes it again', async () => {
+      const { store, serializer, session } = open();
+
+      expect(await session.execute({ commands: [{ name: 'text.replace', args: { id: 'p', with: 'First' } }] })).toMatchObject({ ok: true });
+      const second = await session.execute({ commands: [
+        { name: 'text.replace', args: { id: 'p', with: 'Second' } },
+        { name: 'block.insert', args: { type: 'paragraph', data: { text: 'New' }, position: { after: 'q' } } },
+        { name: 'doc.setTitle', args: { title: 'Agent title' } },
+      ] });
+
+      expect(second).toMatchObject({ ok: true });
+      const afterSecond = store.toJSON();
+      const undone = await session.execute({ commands: [{ name: 'history.undo', args: {} }] });
+
+      expect(undone).toMatchObject({ ok: true, results: [{}] });
+      expect(textOf(store, serializer, 'p')).toEqual([{ text: 'First' }]);
+      expect(store.orderedIds()).toEqual(['p', 'q']);
+      expect(store.page.get('title')).toBeUndefined();
+      expect(undone.revision).toBe((await session.read()).revision);
+
+      expect(await session.execute({ commands: [{ name: 'history.redo', args: {} }] })).toMatchObject({ ok: true });
+      expect(store.toJSON()).toEqual(afterSecond);
+      expect(store.page.get('title')).toBe('Agent title');
+    });
+
+    it('answers NOTHING_TO_UNDO and NOTHING_TO_REDO without writing', async () => {
+      const { store, session } = open();
+      const before = store.toJSON();
+
+      expect(await session.execute({ commands: [{ name: 'history.undo', args: {} }] }))
+        .toMatchObject({ ok: false, error: { code: 'NOTHING_TO_UNDO' } });
+      expect(await session.execute({ commands: [{ name: 'history.redo', args: {} }] }))
+        .toMatchObject({ ok: false, error: { code: 'NOTHING_TO_REDO' } });
+      expect(await session.execute({ commands: [{ name: 'block.delete', args: { id: 'q' } }] })).toMatchObject({ ok: true });
+      expect(await session.execute({ commands: [{ name: 'history.undo', args: {} }] })).toMatchObject({ ok: true });
+      expect(await session.execute({ commands: [{ name: 'history.undo', args: {} }] }))
+        .toMatchObject({ ok: false, error: { code: 'NOTHING_TO_UNDO' } });
+      expect(store.toJSON()).toEqual(before);
+    });
+
+    it('drops the redo step once the agent writes again', async () => {
+      const { session } = open();
+
+      await session.execute({ commands: [{ name: 'block.delete', args: { id: 'q' } }] });
+      await session.execute({ commands: [{ name: 'history.undo', args: {} }] });
+      await session.execute({ commands: [{ name: 'text.replace', args: { id: 'p', with: 'Other' } }] });
+
+      expect(await session.execute({ commands: [{ name: 'history.redo', args: {} }] }))
+        .toMatchObject({ ok: false, error: { code: 'NOTHING_TO_REDO' } });
+    });
+
+    it('puts a moved block back where it was', async () => {
+      const { store, session } = open();
+
+      expect(await session.execute({ commands: [{ name: 'block.move', args: { id: 'q', position: { before: 'p' } } }] }))
+        .toMatchObject({ ok: true });
+      expect(store.orderedIds()).toEqual(['q', 'p']);
+      expect(await session.execute({ commands: [{ name: 'history.undo', args: {} }] })).toMatchObject({ ok: true });
+      expect(store.orderedIds()).toEqual(['p', 'q']);
+      expect(await session.execute({ commands: [{ name: 'history.redo', args: {} }] })).toMatchObject({ ok: true });
+      expect(store.orderedIds()).toEqual(['q', 'p']);
+    });
+
+    it("keeps a peer's edits to other blocks when it undoes", async () => {
+      const { store, serializer, session } = open();
+      const { peer, write } = joinPeer(store, serializer);
+
+      await session.execute({ commands: [{ name: 'text.replace', args: { id: 'p', with: 'Agent' } }] });
+      write(() => {
+        peer.updateBlockData('q', 'text', [{ text: 'Peer' }]);
+        peer.transact(() => {
+          peer.addBlockAt({ id: 'r', type: 'paragraph', data: { text: [{ text: 'Peer block' }] } }, { parentId: null, afterId: 'q' });
+        }, 'local');
+      });
+
+      expect(await session.execute({ commands: [{ name: 'history.undo', args: {} }] })).toMatchObject({ ok: true });
+      expect(textOf(store, serializer, 'p')).toEqual([{ text: 'P' }]);
+      expect(textOf(store, serializer, 'q')).toEqual([{ text: 'Peer' }]);
+      expect(store.orderedIds()).toEqual(['p', 'q', 'r']);
+    });
+
+    it('refuses with CONFLICT when a peer wrote inside a block the step would take away', async () => {
+      const { store, serializer, session } = open();
+      const { peer, write } = joinPeer(store, serializer);
+      const inserted = await session.execute({ commands: [{ name: 'block.insert', args: { type: 'paragraph', data: { text: 'Agent' }, position: 'end' } }] });
+
+      if (!inserted.ok) {
+        throw new Error(inserted.error.message);
+      }
+      const created = inserted.results[0];
+      const id = typeof created === 'object' && created !== null && 'id' in created && typeof created.id === 'string' ? created.id : '';
+
+      write(() => {
+        peer.updateBlockData(id, 'text', [{ text: 'Peer typed here' }]);
+      });
+      const before = store.toJSON();
+      const refused = await session.execute({ commands: [{ name: 'history.undo', args: {} }] });
+
+      expect(refused).toMatchObject({ ok: false, error: { code: 'CONFLICT' } });
+      expect(store.toJSON()).toEqual(before);
+    });
+
+    it('refuses with CONFLICT when a peer moved a block the step moved', async () => {
+      const { store, serializer, session } = open([
+        ...initial(),
+        { ...originalStamp, id: 'r', type: 'paragraph', data: { text: [{ text: 'R' }] } },
+      ]);
+      const { peer, write } = joinPeer(store, serializer);
+
+      await session.execute({ commands: [{ name: 'block.move', args: { id: 'r', position: { before: 'p' } } }] });
+      write(() => {
+        peer.moveBlockTo('r', { parentId: null, afterId: 'q' });
+      });
+      const before = store.toJSON();
+
+      expect(await session.execute({ commands: [{ name: 'history.undo', args: {} }] }))
+        .toMatchObject({ ok: false, error: { code: 'CONFLICT' } });
+      expect(store.toJSON()).toEqual(before);
     });
   });
 

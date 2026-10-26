@@ -66,14 +66,14 @@ describe('createHeadlessAgentSetup', () => {
       .toMatchObject({ available: true });
   });
 
-  it('marks undo unavailable in a live room and available in a stored one', () => {
+  it('marks undo available in a stored or live session and unavailable in a Jint call', () => {
     const stored = createHeadlessAgentSetup({ runtime: 'node' });
     const live = createHeadlessAgentSetup({ runtime: 'node-live' });
     const jint = createHeadlessAgentSetup({ runtime: 'jint' });
 
     for (const name of ['history.undo', 'history.redo']) {
       expect(live.contract.commands.find(entry => entry.name === name))
-        .toMatchObject({ available: false, unavailableReason: 'runtime' });
+        .toMatchObject({ available: true });
       expect(stored.contract.commands.find(entry => entry.name === name))
         .toMatchObject({ available: true });
       expect(jint.contract.commands.find(entry => entry.name === name))

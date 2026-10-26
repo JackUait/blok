@@ -127,6 +127,8 @@ export interface PropertyMenuOptions extends PropertyMenuCallbacks {
   onCustomizeLayout?: () => void;
   /** Another property of this database already has `name`. Such a rename is refused (research/14 §3). */
   isNameTaken?: (propertyId: string, name: string) => boolean;
+  /** The column header the menu stands on now: a write redraws the board and replaces the one it opened from. */
+  liveAnchor?: () => HTMLElement | null;
 }
 
 const SHOW_AS: readonly NumberShowAs[] = ['number', 'bar', 'ring'];
@@ -195,8 +197,20 @@ export class DatabasePropertyMenu {
    */
   open(property: PropertyDefinition, anchor: HTMLElement, viewItems: PopoverItemParams[] = [], shown: PropertyDefinition = property): void {
     this.close();
+    this.drawHeaderMenu(property, anchor, viewItems, shown);
+  }
+
+  /** `typed`: a redraw's unsaved name, kept in the field. */
+  private drawHeaderMenu(property: PropertyDefinition, anchor: HTMLElement, viewItems: PopoverItemParams[], shown: PropertyDefinition, typed?: string): void {
     this.shown = shown;
     this.anchor = anchor;
+    const name = this.nameField(property, property.type !== 'title');
+    const update = this.showAsUpdate(property, name, (number, kept) => {
+      this.swap();
+      this.drawHeaderMenu({ ...property, number }, this.options.liveAnchor?.() ?? anchor, viewItems, { ...shown, number }, kept);
+      // The tiles live in the Edit property submenu: open it again.
+      this.popover?.activateItemByName('editProperty');
+    });
     const entries = propertyMenuEntries(property);
     const head = entries.filter((entry) => HEAD_ENTRIES.has(entry));
     const tail = entries.filter((entry) => !HEAD_ENTRIES.has(entry));
@@ -205,16 +219,44 @@ export class DatabasePropertyMenu {
     const rest = viewItems.filter((item) => !lead.includes(item));
     const items: PopoverItemParams[] = [
       // research/08: the title has no description.
-      { type: PopoverItemType.Html, element: this.nameField(property, property.type !== 'title'), name: 'name' },
+      { type: PopoverItemType.Html, element: name, name: 'name' },
       { type: PopoverItemType.Separator },
-      ...head.map((entry) => this.entry(entry, property)),
+      ...head.map((entry) => this.entry(entry, property, false, update)),
       ...lead,
       ...this.autofillItem(property),
       ...(rest.length > 0 ? [{ type: PopoverItemType.Separator } as const, ...rest, ...(tail.length > 0 ? [{ type: PopoverItemType.Separator } as const] : [])] : []),
       ...tail.map((entry) => this.entry(entry, property)),
       ...this.customizeItem(),
     ];
-    this.show(items, anchor, '240px');
+    this.show(items, anchor, '240px', DATABASE_HEADER_MENU_CLASS, typed !== undefined);
+    const input = name.querySelector('input');
+
+    if (typed !== undefined && input !== null) input.value = typed;
+  }
+
+  /** A swap, not a close: onClose would tell the host the menu is gone and its writes would stop. */
+  private swap(): void {
+    const previous = this.popover;
+
+    this.popover = null;
+    this.flushDescription();
+    previous?.destroy();
+  }
+
+  /**
+   * Writes a settings patch. A new Show as draws the menu again through `redraw`,
+   * so Color and Divide by come or go and later rows write the new choice.
+   */
+  private showAsUpdate(property: PropertyDefinition, name: HTMLElement, redraw: (number: NumberDisplay, typed: string | undefined) => void): (patch: Partial<PropertySettingsV2>) => void {
+    return (patch) => {
+      this.options.onUpdate(property.id, patch);
+      if (patch.number === undefined || patch.number.showAs === property.number?.showAs) return;
+      const input = name.querySelector('input');
+
+      // The old field goes away without a blur: save its name first, as leaving it would.
+      input?.dispatchEvent(new Event('change'));
+      redraw(patch.number, input?.value);
+    };
   }
 
   /**
@@ -272,25 +314,11 @@ export class DatabasePropertyMenu {
   /** The row page's Edit property panel, in place of its menu, with the name selected (Notion). */
   /** `typed`: a redraw's unsaved name, kept in the field, which then keeps no focus. */
   private openRowPageEdit(property: PropertyDefinition, anchor: HTMLElement, typed?: string): void {
-    const previous = this.popover;
-
-    // A swap, not a close: onClose would tell the host the menu is gone and its writes would stop.
-    this.popover = null;
-    previous?.destroy();
+    this.swap();
     const entries = propertyMenuEntries(property);
     const has = (entry: PropertyMenuEntry): boolean => entries.includes(entry);
-    const gauge = (number: NumberDisplay | undefined): boolean => number?.showAs === 'bar' || number?.showAs === 'ring';
-    const update = (patch: Partial<PropertySettingsV2>): void => {
-      this.options.onUpdate(property.id, patch);
-      // Bar and Ring bring their Color and Divide by rows: redraw the panel with them.
-      if (patch.number !== undefined && gauge(patch.number) !== gauge(property.number)) {
-        const input = name.querySelector('input');
-
-        // The old field goes away without a blur: save its name first, as leaving it would.
-        input?.dispatchEvent(new Event('change'));
-        this.openRowPageEdit({ ...property, number: patch.number }, anchor, input?.value);
-      }
-    };
+    const name = this.nameField(property, property.type !== 'title');
+    const update = this.showAsUpdate(property, name, (number, kept) => this.openRowPageEdit({ ...property, number }, anchor, kept));
     const settings: PopoverItemParams[] = [];
 
     if (EDITABLE_SETTINGS.has(property.type)) {
@@ -298,7 +326,6 @@ export class DatabasePropertyMenu {
     }
     const typeItems = (['changeType', 'displayAs'] as const).filter(has).map((entry) => this.entry(entry, property, true));
     const tail = (['duplicate', 'delete'] as const).filter(has).map((entry) => this.entry(entry, property));
-    const name = this.nameField(property, property.type !== 'title');
     const separator = { type: PopoverItemType.Separator } as const;
     // 08-rename.png: a number's format rows sit under Type with no rule; its rule comes before Show as.
     const ruled = typeItems.length > 0 && settings.length > 0 && property.type !== 'number';
@@ -310,7 +337,7 @@ export class DatabasePropertyMenu {
       ...(tail.length > 0 ? [separator, ...tail] : []),
     ];
 
-    this.show(items, anchor, '290px', ROW_PAGE_MENU_CLASS);
+    this.show(items, anchor, '290px', ROW_PAGE_MENU_CLASS, typed !== undefined);
     const input = name.querySelector('input');
 
     if (typed !== undefined) {
@@ -322,7 +349,8 @@ export class DatabasePropertyMenu {
     input?.select();
   }
 
-  private show(items: PopoverItemParams[], anchor: HTMLElement, minWidth: string, className = DATABASE_HEADER_MENU_CLASS): void {
+  /** `redraw`: stands in for the open menu, so it shows with no entrance. */
+  private show(items: PopoverItemParams[], anchor: HTMLElement, minWidth: string, className = DATABASE_HEADER_MENU_CLASS, redraw = false): void {
     const rowPage = className === ROW_PAGE_MENU_CLASS;
     const popover = new PopoverDesktop({
       class: className, animateClose: true, items, trigger: anchor, width: 'auto', minWidth, flippable: true, autoFocusFirstItem: false,
@@ -341,7 +369,12 @@ export class DatabasePropertyMenu {
         this.options.onClose?.();
       }
     });
+    // The entrance scales the menu: it would flash, and a submenu placed during it lands off its row.
+    const container = redraw ? popover.getElement().querySelector<HTMLElement>('[data-blok-popover-container]') : null;
+
+    if (container !== null) container.style.transition = 'none';
     popover.show();
+    if (container !== null) requestAnimationFrame(() => container.style.removeProperty('transition'));
   }
 
   private customizeItem(): PopoverItemParams[] {
@@ -544,9 +577,13 @@ export class DatabasePropertyMenu {
   }
 
   /** `panel`: the row page's Edit property panel, whose type row reads "Type" (research/10 L16); the header menu keeps "Change type". */
-  private entry(entry: PropertyMenuEntry, property: PropertyDefinition, panel = false): PopoverItemParams {
+  private entry(
+    entry: PropertyMenuEntry,
+    property: PropertyDefinition,
+    panel = false,
+    update: (patch: Partial<PropertySettingsV2>) => void = (patch) => this.options.onUpdate(property.id, patch),
+  ): PopoverItemParams {
     const id = property.id;
-    const update = (patch: Partial<PropertySettingsV2>): void => this.options.onUpdate(id, patch);
 
     switch (entry) {
       case 'editProperty':

@@ -19,17 +19,23 @@ interface CapturedItem {
   children?: { items: CapturedItem[]; searchable?: boolean; width?: string };
 }
 
-interface CapturedPopover { items: CapturedItem[]; destroyed: boolean; params: Record<string, unknown>; activated: string[]; closed?: () => void; hide: () => void }
+interface CapturedPopover { items: CapturedItem[]; destroyed: boolean; params: Record<string, unknown>; activated: string[]; closed?: () => void; hide: () => void; transitionAtShow?: string }
 
 const captured = vi.hoisted((): { popovers: CapturedPopover[] } => ({ popovers: [] }));
 
 vi.mock('../../../../src/components/utils/popover', () => ({
   PopoverDesktop: class {
     readonly record: CapturedPopover;
+    readonly element = document.createElement('div');
 
     constructor(params: { items: CapturedItem[] }) {
       this.record = { items: params.items, destroyed: false, params, activated: [], hide: () => this.hide() };
+      this.element.appendChild(document.createElement('div')).setAttribute('data-blok-popover-container', '');
       captured.popovers.push(this.record);
+    }
+
+    getElement(): HTMLElement {
+      return this.element;
     }
 
     closeSubmenuOnEscape(): boolean {
@@ -41,6 +47,7 @@ vi.mock('../../../../src/components/utils/popover', () => ({
     }
 
     show(): void {
+      this.record.transitionAtShow = this.element.querySelector<HTMLElement>('[data-blok-popover-container]')?.style.transition;
       // Mounts the html rows so a test can see what has focus.
       for (const item of this.record.items) {
         if (item.type === 'html' && item.element !== undefined) document.body.appendChild(item.element);
@@ -619,6 +626,98 @@ describe('DatabasePropertyMenu', () => {
       expect(editItems(prop('number')).map((i) => i.name)).not.toContain('color');
       expect(editItems(prop('number', { number: { showAs: 'bar' } })).map((i) => i.name)).toEqual(expect.arrayContaining(['color', 'divideBy']));
     });
+
+    const headerMenu = (property: PropertyDefinition): { cb: ReturnType<typeof callbacks>; menu: InstanceType<typeof DatabasePropertyMenu>; onClose: ReturnType<typeof vi.fn> } => {
+      const cb = callbacks();
+      const onClose = vi.fn();
+      const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...cb, onClose });
+
+      menu.open(property, document.createElement('button'), [{ type: 'default', name: 'view-filter', title: 'tools.database.tableFilter' } as never]);
+
+      return { cb, menu, onClose };
+    };
+    const headerTile = (value: string): HTMLElement => {
+      const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
+      const found = byName(edit, 'showAs').element?.querySelector<HTMLElement>(`[data-blok-database-show-as-tile="${value}"]`);
+
+      if (found === null || found === undefined) throw new Error(`no ${value} tile`);
+
+      return found;
+    };
+    const editNames = (): Array<string | undefined> => (byName(lastItems(), 'editProperty').children?.items ?? []).map((i) => i.name);
+
+    it('picking Bar in the header submenu brings in Color and Divide by at once, the submenu still open', () => {
+      const { menu, onClose } = headerMenu(prop('number'));
+
+      headerTile('bar').click();
+
+      expect(editNames()).toEqual(expect.arrayContaining(['color', 'divideBy']));
+      expect(captured.popovers[0]?.destroyed).toBe(true);
+      expect(onClose).not.toHaveBeenCalled();
+      expect(menu.isOpen).toBe(true);
+      expect(captured.popovers[captured.popovers.length - 1]?.activated).toEqual(['editProperty']);
+      expect(lastItems().some((i) => i.name === 'view-filter')).toBe(true);
+      expect(headerTile('bar').getAttribute('aria-checked')).toBe('true');
+      menu.destroy();
+    });
+
+    it('picking Number in the header submenu takes Color and Divide by away at once', () => {
+      const { menu } = headerMenu(prop('number', { number: { showAs: 'ring' } }));
+
+      headerTile('number').click();
+
+      expect(editNames()).not.toContain('color');
+      expect(editNames()).not.toContain('divideBy');
+      menu.destroy();
+    });
+
+    it('picking Bar in the header submenu saves a typed name and keeps it in the field', () => {
+      const { cb, menu } = headerMenu(prop('number'));
+      const input = byName(lastItems(), 'name').element?.querySelector('input');
+
+      if (input === null || input === undefined) throw new Error('no name input');
+      input.value = 'Memo';
+      headerTile('bar').click();
+
+      expect(cb.onRename).toHaveBeenCalledWith('p', 'Memo');
+      expect(byName(lastItems(), 'name').element?.querySelector('input')?.value).toBe('Memo');
+      menu.destroy();
+    });
+
+    // A write redraws the board, so the header the menu opened from is gone by then.
+    it('the header submenu redraw anchors to the column\'s live header', () => {
+      const live = document.createElement('div');
+      const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...callbacks(), liveAnchor: () => live });
+
+      menu.open(prop('number'), document.createElement('button'));
+      headerTile('bar').click();
+
+      expect(captured.popovers[captured.popovers.length - 1]?.params.trigger).toBe(live);
+      menu.destroy();
+    });
+
+    // The entrance scales the menu: a submenu placed during it lands off its row.
+    it('the header menu redraws in place, with no entrance', () => {
+      const { menu } = headerMenu(prop('number'));
+
+      headerTile('bar').click();
+
+      expect(captured.popovers[0]?.transitionAtShow).toBe('');
+      expect(captured.popovers[1]?.transitionAtShow).toBe('none');
+      menu.destroy();
+    });
+
+    it('a color picked after Bar then Ring keeps Ring', () => {
+      const { cb, menu } = headerMenu(prop('number'));
+
+      headerTile('bar').click();
+      headerTile('ring').click();
+      const colors = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'color').children?.items ?? [];
+
+      byName(colors, 'color-red').onActivate?.(byName(colors, 'color-red'));
+      expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { number: { showAs: 'ring', color: 'red' } });
+      menu.destroy();
+    });
   });
 
   describe('Edit property: Notion\'s note under the settings', () => {
@@ -1037,6 +1136,28 @@ describe('row page property menu', () => {
     expect(now).toEqual(expect.arrayContaining(['color', 'divideBy']));
     expect(tile(lastItems(), 'bar').getAttribute('aria-checked')).toBe('true');
     expect(menu.isOpen).toBe(true);
+    menu.destroy();
+  });
+
+  it('the row page panel redraws in place, with no entrance', () => {
+    const { menu, items } = editPanel(prop('number'));
+
+    tile(items, 'bar').click();
+
+    expect(captured.popovers[0]?.transitionAtShow).toBe('');
+    expect(captured.popovers[1]?.transitionAtShow).toBe('none');
+    menu.destroy();
+  });
+
+  it('a color picked in the row page panel after Bar then Ring keeps Ring', () => {
+    const { cb, menu, items } = editPanel(prop('number'));
+
+    tile(items, 'bar').click();
+    tile(lastItems(), 'ring').click();
+    const colors = byName(lastItems(), 'color').children?.items ?? [];
+
+    byName(colors, 'color-red').onActivate?.(byName(colors, 'color-red'));
+    expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { number: { showAs: 'ring', color: 'red' } });
     menu.destroy();
   });
 

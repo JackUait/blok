@@ -7080,9 +7080,9 @@ export class DatabaseTool implements BlockTool {
       // After the click that closed the editor, which would count as outside the
       // new menu; the table may have redrawn by then, so find the header late.
       editProperty: (propertyId) => setTimeout(() => {
-        const header = (context?.root ?? this.boardContainer)?.querySelector<HTMLElement>(`[data-blok-database-table-column-header][data-property-id="${CSS.escape(propertyId)}"]`);
+        const header = this.liveColumnHeader(propertyId, context);
 
-        if (header !== null && header !== undefined && writable()) this.openPropertyMenu(propertyId, header, table?.(), context);
+        if (header !== null && writable()) this.openPropertyMenu(propertyId, header, table?.(), context);
       }, 0),
       moveRowTo: (rowId, databaseId) => { if (writable()) this.moveRowTo({ rowId, databaseId }); },
       editRowIcon: (rowId) => { if (writable()) this.editRowIcon(rowId, context); },
@@ -11211,6 +11211,10 @@ export class DatabaseTool implements BlockTool {
     param.receive(prop.id);
   }
 
+  private liveColumnHeader(propertyId: string, context?: NativeWidgetContext): HTMLElement | null {
+    return (context?.root ?? this.boardContainer)?.querySelector<HTMLElement>(`[data-blok-database-table-column-header][data-property-id="${CSS.escape(propertyId)}"]`) ?? null;
+  }
+
   /** `rowPage`: opened from a row page label, so the menu is the row page's own (no view rows). */
   openPropertyMenu(propertyId: string, anchor: HTMLElement, table?: DatabaseTableView, context?: NativeWidgetContext, onCustomizeLayout?: () => void, rowPage?: { onComment?: () => void; edit?: boolean }): void {
     const hostTable = table ?? (this.view instanceof DatabaseTableView ? this.view : undefined);
@@ -11237,6 +11241,7 @@ export class DatabaseTool implements BlockTool {
       i18n: this.api.i18n,
       hasPeople: this.hasPeople,
       ...(onCustomizeLayout === undefined ? {} : { onCustomizeLayout }),
+      ...(rowPage === undefined ? { liveAnchor: () => this.liveColumnHeader(propertyId, context) } : {}),
       onClose: () => {
         if (this.titleIconMenu?.menu === menu) this.titleIconMenu = null;
         if (this.propertyMenu !== menu || menu.isIconPickerOpen) return;

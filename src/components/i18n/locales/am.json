@@ -1702,6 +1702,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" ራሱን ያመለክታል",
   "tools.database.formula.error.tooDeep": "ቀመሮች ሌሎች ቀመሮችን ማመልከት የሚችሉት እስከ 15 ደረጃዎች ጥልቀት ብቻ ነው",
   "tools.database.formula.error.tooComplex": "ቀመሮች ቢበዛ {length} ቁምፊዎች ሊረዝሙ እና ቢበዛ {depth} ደረጃዎች ሊጠለቁ ይችላሉ",
+  "tools.database.formula.error.patternTooComplex": "ይህ ንድፍ በጣም ረጅም ጊዜ ሊወስድ ይችላል። የኋላ ማጣቀሻዎችን፣ ዙሪያ ዕይታዎችን እና በተደጋገመ ቡድን ውስጥ ያሉ መጠን ጠቋሚዎችን ያስወግዱ፣ ከ{length} ቁምፊዎች በታችም ያድርጉት",
   "tools.database.propertyTypeRelation": "ግንኙነት",
   "tools.database.propertyTypeRollup": "ማጠቃለያ",
   "tools.database.propertyTypeFormula": "ቀመር",

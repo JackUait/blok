@@ -1702,6 +1702,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" verwijst naar zichzelf",
   "tools.database.formula.error.tooDeep": "Formules kunnen maar 15 niveaus diep naar andere formules verwijzen",
   "tools.database.formula.error.tooComplex": "Formules mogen maximaal {length} tekens lang zijn en maximaal {depth} niveaus diep genest worden",
+  "tools.database.formula.error.patternTooComplex": "Dit patroon kan te lang duren. Vermijd terugverwijzingen, lookarounds en kwantoren binnen een herhaalde groep, en houd het onder {length} tekens",
   "tools.database.propertyTypeRelation": "Relatie",
   "tools.database.propertyTypeRollup": "Samenvatting",
   "tools.database.propertyTypeFormula": "Formule",

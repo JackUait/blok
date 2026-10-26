@@ -1702,6 +1702,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" が自分自身を参照しています",
   "tools.database.formula.error.tooDeep": "数式から他の数式を参照できるのは 15 階層までです",
   "tools.database.formula.error.tooComplex": "数式は {length} 文字まで、入れ子は {depth} 階層までです",
+  "tools.database.formula.error.patternTooComplex": "このパターンは実行に時間がかかりすぎる可能性があります。後方参照、先読み・後読み、繰り返すグループ内の量指定子を避け、{length} 文字未満にしてください",
   "tools.database.propertyTypeRelation": "リレーション",
   "tools.database.propertyTypeRollup": "ロールアップ",
   "tools.database.propertyTypeFormula": "数式",

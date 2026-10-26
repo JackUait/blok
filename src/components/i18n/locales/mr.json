@@ -1702,6 +1702,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" स्वतःचाच संदर्भ देते",
   "tools.database.formula.error.tooDeep": "सूत्रे इतर सूत्रांचा संदर्भ फक्त 15 स्तरांपर्यंत देऊ शकतात",
   "tools.database.formula.error.tooComplex": "सूत्रे जास्तीत जास्त {length} वर्ण लांब आणि जास्तीत जास्त {depth} स्तर खोल नेस्ट होऊ शकतात",
+  "tools.database.formula.error.patternTooComplex": "हा पॅटर्न खूप वेळ चालू शकतो. बॅकरेफरन्स, लुकअराउंड आणि पुनरावृत्त गटातील क्वांटिफायर टाळा, आणि तो {length} वर्णांपेक्षा कमी ठेवा",
   "tools.database.propertyTypeRelation": "संबंध",
   "tools.database.propertyTypeRollup": "एकत्रीकरण",
   "tools.database.propertyTypeFormula": "सूत्र",

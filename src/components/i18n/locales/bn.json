@@ -1702,6 +1702,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" নিজেকেই নির্দেশ করে",
   "tools.database.formula.error.tooDeep": "সূত্রগুলো অন্য সূত্রকে কেবল 15 স্তর গভীর পর্যন্ত নির্দেশ করতে পারে",
   "tools.database.formula.error.tooComplex": "সূত্র সর্বোচ্চ {length} অক্ষর দীর্ঘ এবং সর্বোচ্চ {depth} স্তর গভীর পর্যন্ত নেস্ট করা যায়",
+  "tools.database.formula.error.patternTooComplex": "এই প্যাটার্ন খুব বেশি সময় নিতে পারে। ব্যাকরেফারেন্স, লুকঅ্যারাউন্ড এবং পুনরাবৃত্ত গ্রুপের ভেতরে কোয়ান্টিফায়ার এড়িয়ে চলুন, আর এটি {length} অক্ষরের কম রাখুন",
   "tools.database.propertyTypeRelation": "সম্পর্ক",
   "tools.database.propertyTypeRollup": "সমষ্টি",
   "tools.database.propertyTypeFormula": "সূত্র",

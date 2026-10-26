@@ -1,4 +1,6 @@
-import { FUNCTIONS, paramMismatch } from './functions';
+import { FUNCTIONS, compileRegex, paramMismatch } from './functions';
+import { MAX_PATTERN_LENGTH } from './limits';
+import { patternShape } from './regex';
 import type { ReturnError } from './functions';
 import type { FormulaNode } from './parser';
 import { propertyFormulaType } from './properties';
@@ -73,6 +75,20 @@ const isLoose = (type: FormulaType): boolean => type.kind === 'any' || type.kind
 const plural = (count: number): string => `${count} argument${count === 1 ? '' : 's'}`;
 
 /** Fails with the argument-count error that fits `min` and `max`. */
+const REGEX_FUNCTIONS: ReadonlySet<string> = new Set(['test', 'match', 'replace', 'replaceAll']);
+
+/** A literal pattern the engine would refuse at run time is a compile error, so the cell shows why. */
+const checkPattern = (name: string, pattern: FormulaNode | undefined): void => {
+  if (!REGEX_FUNCTIONS.has(name) || pattern?.type !== 'string') return;
+  if (compileRegex(pattern.value, '') === null || patternShape(pattern.value) !== null) return;
+  fail(
+    'patternTooComplex',
+    { length: MAX_PATTERN_LENGTH },
+    `This pattern could run too long: it has a backreference, a lookaround, a repeated group with a quantifier inside, or more than ${MAX_PATTERN_LENGTH} characters`,
+    pattern
+  );
+};
+
 const failArity = (name: string, min: number, max: number, got: number, node: { start: number; end: number }): never => {
   if (max === Infinity) return fail('argumentCountAtLeast', { name, min, got }, `${name}() takes at least ${plural(min)}, got ${got}`, node);
   if (min === max) return fail('argumentCount', { name, count: min, got }, `${name}() takes ${plural(min)}, got ${got}`, node);
@@ -257,6 +273,7 @@ export class Checker {
 
       if (expected !== undefined) fail('argumentType', { name, index: i + 1, expected, got: typeName(type) }, `Argument ${i + 1} of ${name}() expects ${expected}, got ${typeName(type)}`, args[i]);
     });
+    checkPattern(name, args[1]);
     const result = typeof def.returns === 'function' ? def.returns(types) : def.returns;
 
     return 'error' in result ? fail(result.error.code, result.error.params, result.error.message, node) : result;

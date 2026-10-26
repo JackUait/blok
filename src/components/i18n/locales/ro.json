@@ -1704,6 +1704,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" face referire la sine",
   "tools.database.formula.error.tooDeep": "Formulele pot face referire la alte formule doar pe 15 niveluri",
   "tools.database.formula.error.tooComplex": "Formulele pot avea cel mult {length} caractere și pot fi imbricate pe cel mult {depth} niveluri",
+  "tools.database.formula.error.patternTooComplex": "Acest model ar putea rula prea mult. Evitați referințele înapoi, verificările înainte și înapoi și cuantificatorii într-un grup repetat și păstrați-l sub {length} caractere",
   "tools.database.propertyTypeRelation": "Relație",
   "tools.database.propertyTypeRollup": "Agregare",
   "tools.database.propertyTypeFormula": "Formulă",

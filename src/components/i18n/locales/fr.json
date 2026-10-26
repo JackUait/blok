@@ -1704,6 +1704,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" fait référence à lui-même",
   "tools.database.formula.error.tooDeep": "Les formules ne peuvent référencer d’autres formules que sur 15 niveaux de profondeur",
   "tools.database.formula.error.tooComplex": "Les formules peuvent compter au plus {length} caractères et s’imbriquer sur au plus {depth} niveaux",
+  "tools.database.formula.error.patternTooComplex": "Ce motif pourrait prendre trop de temps. Évitez les références arrière, les assertions avant et arrière et les quantificateurs dans un groupe répété, et restez sous {length} caractères",
   "tools.database.propertyTypeRelation": "Relation",
   "tools.database.propertyTypeRollup": "Agrégation",
   "tools.database.propertyTypeFormula": "Formule",

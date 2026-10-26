@@ -1702,6 +1702,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" އިޝާރާތްކުރަނީ އަމިއްލައަށް",
   "tools.database.formula.error.tooDeep": "ފޯމިއުލާތަކަށް އެހެން ފޯމިއުލާތަކަށް އިޝާރާތްކުރެވޭނީ 15 ފަށަލަ އަށް އެކަނި",
   "tools.database.formula.error.tooComplex": "ފޯމިއުލާއެއް ގިނަވެގެން {length} އަކުރު ދިގުވެ، ގިނަވެގެން {depth} ފެންވަރު ފުންކޮށް ނެސްޓް ކުރެވޭނެ",
+  "tools.database.formula.error.patternTooComplex": "މި ޕެޓަރންއަށް ވަރަށް ގިނަ ވަގުތު ނެގިދާނެ. ބެކްރެފަރެންސް، ލުކްއަރައުންޑް އަދި ތަކުރާރުވާ ގްރޫޕެއްގެ ތެރޭގައި ކުއަންޓިފަޔަރ ބޭނުން ނުކުރައްވާ، އަދި {length} އަކުރަށްވުރެ ކުރުކުރައްވާ",
   "tools.database.propertyTypeRelation": "ގުޅުން",
   "tools.database.propertyTypeRollup": "ޖުމްލަ",
   "tools.database.propertyTypeFormula": "ފޯމިއުލާ",

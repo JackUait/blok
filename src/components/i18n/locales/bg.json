@@ -1702,6 +1702,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" препраща към себе си",
   "tools.database.formula.error.tooDeep": "Формулите могат да препращат към други формули само до 15 нива в дълбочина",
   "tools.database.formula.error.tooComplex": "Формулите могат да са дълги най-много {length} знака и да са вложени най-много {depth} нива",
+  "tools.database.formula.error.patternTooComplex": "Този шаблон може да работи твърде дълго. Избягвайте обратни препратки, проверки напред и назад и квантори в повтаряща се група и го дръжте под {length} знака",
   "tools.database.propertyTypeRelation": "Връзка",
   "tools.database.propertyTypeRollup": "Обобщение",
   "tools.database.propertyTypeFormula": "Формула",

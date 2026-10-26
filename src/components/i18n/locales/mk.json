@@ -1702,6 +1702,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" упатува на самото себе",
   "tools.database.formula.error.tooDeep": "Формулите можат да упатуваат на други формули само до 15 нивоа длабочина",
   "tools.database.formula.error.tooComplex": "Формулите може да имаат најмногу {length} знаци и да бидат вгнездени најмногу {depth} нивоа",
+  "tools.database.formula.error.patternTooComplex": "Овој шаблон може да работи предолго. Избегнувајте повратни референци, проверки напред и назад и квантификатори во повторувана група и чувајте го под {length} знаци",
   "tools.database.propertyTypeRelation": "Релација",
   "tools.database.propertyTypeRollup": "Сумирање",
   "tools.database.propertyTypeFormula": "Формула",

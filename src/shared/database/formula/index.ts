@@ -2,7 +2,7 @@ import { Checker, SPECIAL_FORMS, resolveProps } from './checker';
 import { FormulaFailure } from './errors';
 import type { CheckOptions, PropSpan } from './checker';
 import { evaluate } from './evaluate';
-import { EvaluationBudget, FormulaLimitExceeded } from './limits';
+import { EvaluationBudget, FormulaLimitExceeded, isStackOverflow } from './limits';
 import { FUNCTIONS } from './functions';
 import { parse } from './parser';
 import type { FormulaNode } from './parser';
@@ -44,6 +44,8 @@ export interface FormulaContext {
   related?: (databaseId: string) => PropertyDefinition[] | undefined;
   /** A property value of a row of a related database. */
   relatedValue?: (databaseId: string, rowId: string, property: PropertyDefinition) => PropertyValue | undefined;
+  /** Called when the evaluation hits a cap of `limits.ts`; the result is then null. */
+  onLimit?: () => void;
 }
 
 /** Every name a formula can call, for the README drift test and an editor's autocomplete. */
@@ -69,12 +71,15 @@ export const compileFormula = (source: string, schema: PropertyDefinition[], opt
     return { ok: true, formula: { source, node, propSpans, resultType }, resultType };
   } catch (error) {
     if (error instanceof FormulaFailure) return { ok: false, error: error.toError() };
-    if (error instanceof RangeError) return { ok: false, error: tooComplex(0, source.length) };
+    if (isStackOverflow(error)) return { ok: false, error: tooComplex(0, source.length) };
     throw error;
   }
 };
 
-/** A formula that passes a cap of `limits.ts`, or overflows the stack, reads empty as a runtime error does. */
+/**
+ * A formula that passes a cap of `limits.ts`, or overflows the stack, reads
+ * empty and calls `ctx.onLimit`: the host must not show that empty as a value.
+ */
 export const evaluateFormula = (compiled: CompiledFormula, row: DatabaseRow, ctx: FormulaContext): FormulaValue => {
   try {
     return evaluate(compiled.node, {
@@ -90,8 +95,10 @@ export const evaluateFormula = (compiled: CompiledFormula, row: DatabaseRow, ctx
       budget: new EvaluationBudget(),
     }, { vars: new Map() });
   } catch (error) {
-    if (error instanceof FormulaLimitExceeded || error instanceof RangeError) return null;
-    throw error;
+    if (!(error instanceof FormulaLimitExceeded) && !isStackOverflow(error)) throw error;
+    ctx.onLimit?.();
+
+    return null;
   }
 };
 

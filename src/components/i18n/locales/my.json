@@ -1702,6 +1702,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" သည် ၎င်းကိုယ်တိုင်ကို ပြန်ညွှန်းသည်",
   "tools.database.formula.error.tooDeep": "ဖော်မြူလာများသည် အခြားဖော်မြူလာများကို အဆင့် 15 ဆင့်အထိသာ ညွှန်းနိုင်သည်",
   "tools.database.formula.error.tooComplex": "ဖော်မြူလာများသည် အများဆုံး စာလုံး {length} လုံးအထိ ရှည်နိုင်ပြီး အဆင့် {depth} ဆင့်အထိ အထပ်ထပ် ထည့်နိုင်သည်",
+  "tools.database.formula.error.patternTooComplex": "ဤပုံစံသည် အချိန်အလွန်ကြာနိုင်သည်။ နောက်ပြန်ရည်ညွှန်းချက်များ၊ ပတ်ဝန်းကျင်ကြည့်ခြင်းများနှင့် ထပ်ခါထပ်ခါအုပ်စုအတွင်းရှိ အရေအတွက်သတ်မှတ်ချက်များကို ရှောင်ပြီး စာလုံး {length} လုံးအောက် ထားပါ",
   "tools.database.propertyTypeRelation": "ဆက်နွယ်မှု",
   "tools.database.propertyTypeRollup": "စုစည်းတွက်ချက်မှု",
   "tools.database.propertyTypeFormula": "ဖော်မြူလာ",

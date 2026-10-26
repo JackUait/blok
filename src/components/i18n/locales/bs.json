@@ -1704,6 +1704,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" upućuje sam na sebe",
   "tools.database.formula.error.tooDeep": "Formule mogu upućivati na druge formule samo do dubine od 15 nivoa",
   "tools.database.formula.error.tooComplex": "Formule mogu imati najviše {length} znakova i biti ugniježđene najviše {depth} nivoa duboko",
+  "tools.database.formula.error.patternTooComplex": "Ovaj obrazac bi mogao predugo raditi. Izbjegavajte povratne reference, provjere unaprijed i unazad i kvantifikatore unutar ponovljene grupe, i neka ima manje od {length} znakova",
   "tools.database.propertyTypeRelation": "Veza",
   "tools.database.propertyTypeRollup": "Sažetak",
   "tools.database.propertyTypeFormula": "Formula",

@@ -37,8 +37,15 @@ export const MAX_FORMULA_LENGTH = 10_000;
  */
 export const MAX_FORMULA_DEPTH = 64;
 
-/** Thrown when an evaluation passes a cap. `evaluateFormula` turns it into an empty result. */
+/** Thrown when an evaluation passes a cap. `evaluateFormula` reports it through `onLimit`. */
 export class FormulaLimitExceeded extends Error {}
+
+/**
+ * The stack ran out. V8 and Jint both say "Maximum call stack size
+ * exceeded"; any other RangeError (an invalid time zone) is not a limit.
+ */
+export const isStackOverflow = (error: unknown): boolean =>
+  error instanceof RangeError && /call stack/i.test(error.message);
 
 export class EvaluationBudget {
   private steps = MAX_EVALUATION_STEPS;

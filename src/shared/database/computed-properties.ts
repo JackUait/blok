@@ -93,10 +93,12 @@ export class ComputedProperties {
   private ctx: ComputeContext;
   private readonly compiled = new Map<string, CompileResult>();
   /** Per row: the inputs signature and the computed record it gave. */
-  private readonly memo = new Map<string, { key: string; computed: Record<string, PropertyValue> }>();
+  private readonly memo = new Map<string, { key: string; computed: Record<string, PropertyValue>; limited: string[] }>();
   /** Per apply: values worked out so far, and the ones being worked out (cycle guard). */
   private values = new Map<string, PropertyValue>();
   private raw = new Map<string, FormulaValue>();
+  /** `rowId\0propertyId` of formulas that hit a cap of formula/limits.ts, or read one that did. */
+  private limits = new Set<string>();
   private readonly busy = new Set<string>();
   private rows = new Map<string, DatabaseRow>();
   private reverse = new Map<string, Map<string, string[]>>();
@@ -122,6 +124,7 @@ export class ComputedProperties {
     }
     this.values = new Map();
     this.raw = new Map();
+    this.limits = new Set();
     this.rows = new Map(rows.map((r) => [r.id, r]));
     this.reverse = this.buildReverse(schema, rows);
     const schemaKey = signatureOf(schema);
@@ -134,13 +137,26 @@ export class ComputedProperties {
       const key = JSON.stringify([schemaKey, clock, external, row.properties, row.meta ?? null, this.relatedSignature(row, computedProps)]);
       const hit = this.memo.get(row.id);
 
-      if (hit !== undefined && hit.key === key) return { ...row, computed: hit.computed };
-      const computed = Object.fromEntries(computedProps.map((p) => [p.id, this.valueFor(row.id, p)]));
+      if (hit !== undefined && hit.key === key) {
+        hit.limited.forEach((id) => this.limits.add(`${row.id}\u0000${id}`));
 
-      this.memo.set(row.id, { key, computed });
+        return { ...row, computed: hit.computed };
+      }
+      const computed = Object.fromEntries(computedProps.map((p) => [p.id, this.valueFor(row.id, p)]));
+      const limited = computedProps.filter((p) => this.limited(row.id, p.id)).map((p) => p.id);
+
+      this.memo.set(row.id, { key, computed, limited });
 
       return { ...row, computed };
     });
+  }
+
+  /**
+   * The formula hit a cap of formula/limits.ts on this row, or read one that
+   * did. Its value is null: show it as unavailable, never as a value.
+   */
+  limited(rowId: string, propertyId: string): boolean {
+    return this.limits.has(`${rowId}\u0000${propertyId}`);
   }
 
   /**
@@ -310,6 +326,8 @@ export class ComputedProperties {
     if (property.type === 'rollup') return this.rollup(rowId, property);
     const value = this.formulaRaw(rowId, property);
 
+    if (this.limited(rowId, property.id)) return null;
+
     return value === undefined ? null : storeFormulaValue(value, this.valueProperty(property), { timeZone: this.ctx.timeZone, people: this.person });
   }
 
@@ -349,12 +367,19 @@ export class ComputedProperties {
       schema: this.schema,
       people: this.person,
       propValue: (ref) => {
-        if (ref.type === 'formula') return this.busy.has(`${rowId}\u0000${ref.id}`) ? null : this.formulaRawGuarded(rowId, ref);
+        if (ref.type === 'formula') {
+          const read = this.busy.has(`${rowId}\u0000${ref.id}`) ? null : this.formulaRawGuarded(rowId, ref);
+
+          if (this.limited(rowId, ref.id)) this.limits.add(key);
+
+          return read;
+        }
         if (ref.type === 'rollup' || ref.type === 'relation') return propertyFormulaValue(this.valueProperty(ref), this.valueFor(rowId, ref), tz);
 
         return undefined;
       },
       related: (databaseId) => this.source(databaseId)?.schema,
+      onLimit: () => this.limits.add(key),
       relatedValue: (databaseId, relatedRowId, ref) => {
         const source = this.source(databaseId);
 

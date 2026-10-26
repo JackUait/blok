@@ -1702,6 +1702,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" ख़ुद को ही संदर्भित करता है",
   "tools.database.formula.error.tooDeep": "फ़ॉर्मूले दूसरे फ़ॉर्मूलों को केवल 15 स्तर की गहराई तक संदर्भित कर सकते हैं",
   "tools.database.formula.error.tooComplex": "सूत्र अधिकतम {length} वर्ण लंबे और अधिकतम {depth} स्तर गहरे नेस्ट हो सकते हैं",
+  "tools.database.formula.error.patternTooComplex": "यह पैटर्न बहुत देर तक चल सकता है। बैकरेफ़रेंस, लुकअराउंड और दोहराए गए समूह के अंदर क्वांटिफ़ायर से बचें, और इसे {length} वर्णों से कम रखें",
   "tools.database.propertyTypeRelation": "संबंध",
   "tools.database.propertyTypeRollup": "समेकन",
   "tools.database.propertyTypeFormula": "फ़ॉर्मूला",

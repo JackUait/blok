@@ -1710,6 +1710,7 @@
   "tools.database.formula.error.circularReference": "يشير \"{name}\" إلى نفسه",
   "tools.database.formula.error.tooDeep": "يمكن للصيغ الإشارة إلى صيغ أخرى بعمق 15 مستوى فقط",
   "tools.database.formula.error.tooComplex": "يمكن أن يصل طول الصيغة إلى {length} حرف كحد أقصى وأن تتداخل حتى {depth} مستوى كحد أقصى",
+  "tools.database.formula.error.patternTooComplex": "قد يستغرق هذا النمط وقتًا طويلًا جدًا. تجنب المراجع الخلفية والنظر حول النص والمكممات داخل مجموعة متكررة، واجعله أقل من {length} حرف",
   "tools.database.propertyTypeRelation": "علاقة",
   "tools.database.propertyTypeRollup": "تجميع",
   "tools.database.propertyTypeFormula": "صيغة",

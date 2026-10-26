@@ -1702,6 +1702,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" i referohet vetvetes",
   "tools.database.formula.error.tooDeep": "Formulat mund t'u referohen formulave të tjera vetëm deri në 15 nivele thellësi",
   "tools.database.formula.error.tooComplex": "Formulat mund të kenë deri në {length} karaktere dhe të jenë të ndërthurura deri në {depth} nivele",
+  "tools.database.formula.error.patternTooComplex": "Ky model mund të zgjasë shumë. Shmangni referencat prapa, kontrollet përpara e prapa dhe sasiorët brenda një grupi të përsëritur, dhe mbajeni nën {length} karaktere",
   "tools.database.propertyTypeRelation": "Lidhje",
   "tools.database.propertyTypeRollup": "Përmbledhje",
   "tools.database.propertyTypeFormula": "Formulë",

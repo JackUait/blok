@@ -88,22 +88,28 @@ const math = (fn: (...xs: number[]) => number, arity = 1): FunctionDef => ({
   run: (args) => num(fn(...args.map(n))),
 });
 
-/** Null for an invalid pattern or one that could backtrack without bound. Charges the cost of running it on `input`. */
-const regex = (pattern: string, flags: string, input: string, ctx: RunContext): RegExp | null => {
-  const shape = patternShape(pattern);
-
-  if (shape === null) return null;
+/** A RegExp, or null when the pattern is invalid. */
+export const compileRegex = (pattern: string, flags: string): RegExp | null => {
   try {
-    const re = new RegExp(pattern, flags);
-
-    ctx.budget.spendRegex(regexCost(shape, input.length, MAX_REGEX_COST));
-
-    return re;
-  } catch (error) {
-    if (error instanceof FormulaLimitExceeded) throw error;
-
+    return new RegExp(pattern, flags);
+  } catch {
     return null;
   }
+};
+
+/**
+ * Null for an invalid pattern. A pattern that could backtrack without bound,
+ * or past the evaluation's regex budget on `input`, hits a limit.
+ */
+const regex = (pattern: string, flags: string, input: string, ctx: RunContext): RegExp | null => {
+  const re = compileRegex(pattern, flags);
+  const shape = re === null ? null : patternShape(pattern);
+
+  if (re === null) return null;
+  if (shape === null) throw new FormulaLimitExceeded();
+  ctx.budget.spendRegex(regexCost(shape, input.length, MAX_REGEX_COST));
+
+  return re;
 };
 
 /**

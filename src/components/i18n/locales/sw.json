@@ -1702,6 +1702,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" inajirejelea yenyewe",
   "tools.database.formula.error.tooDeep": "Fomula zinaweza kurejelea fomula nyingine hadi viwango 15 tu",
   "tools.database.formula.error.tooComplex": "Fomula zinaweza kuwa na herufi zisizozidi {length} na kuwekwa ndani hadi viwango {depth} tu",
+  "tools.database.formula.error.patternTooComplex": "Muundo huu unaweza kuchukua muda mrefu mno. Epuka marejeleo ya nyuma, ukaguzi wa kuzunguka na vihesabu ndani ya kikundi kinachorudiwa, na uufanye uwe chini ya herufi {length}",
   "tools.database.propertyTypeRelation": "Uhusiano",
   "tools.database.propertyTypeRollup": "Mjumuisho",
   "tools.database.propertyTypeFormula": "Fomula",

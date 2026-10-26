@@ -1702,6 +1702,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" viser tilbake til seg selv",
   "tools.database.formula.error.tooDeep": "Formler kan bare referere til andre formler 15 nivåer dypt",
   "tools.database.formula.error.tooComplex": "Formler kan være maks {length} tegn lange og nestes maks {depth} nivåer dypt",
+  "tools.database.formula.error.patternTooComplex": "Dette mønsteret kan kjøre for lenge. Unngå tilbakereferanser, lookarounds og kvantorer inne i en gjentatt gruppe, og hold det under {length} tegn",
   "tools.database.propertyTypeRelation": "Relasjon",
   "tools.database.propertyTypeRollup": "Sammendrag",
   "tools.database.propertyTypeFormula": "Formel",

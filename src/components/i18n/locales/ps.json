@@ -1702,6 +1702,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" بېرته ځان ته اشاره کوي",
   "tools.database.formula.error.tooDeep": "فورمولونه کولای شي نورو فورمولونو ته یوازې تر 15 کچو پورې اشاره وکړي",
   "tools.database.formula.error.tooComplex": "فورمولونه تر ډېره حده {length} توري اوږده او تر ډېره حده {depth} کچې ژور ځای پر ځای کېدای شي",
+  "tools.database.formula.error.patternTooComplex": "دا بېلګه کېدای شي ډېر وخت ونیسي. له شاته حوالو، شاوخوا کتنو او په تکراري ډله کې له کمیت ښوونکو ډډه وکړئ، او له {length} تورو لنډ یې وساتئ",
   "tools.database.propertyTypeRelation": "اړیکه",
   "tools.database.propertyTypeRollup": "لنډیز",
   "tools.database.propertyTypeFormula": "فورمول",

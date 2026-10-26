@@ -1702,6 +1702,7 @@
   "tools.database.formula.error.circularReference": "“{name}”引用了自身",
   "tools.database.formula.error.tooDeep": "公式最多只能嵌套引用 15 层其他公式",
   "tools.database.formula.error.tooComplex": "公式最多 {length} 个字符，嵌套最多 {depth} 层",
+  "tools.database.formula.error.patternTooComplex": "此模式可能运行过久。请避免反向引用、环视以及重复分组内的量词，并保持在 {length} 个字符以内",
   "tools.database.propertyTypeRelation": "关联",
   "tools.database.propertyTypeRollup": "汇总",
   "tools.database.propertyTypeFormula": "公式",

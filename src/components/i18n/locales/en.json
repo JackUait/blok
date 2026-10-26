@@ -1702,6 +1702,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" refers back to itself",
   "tools.database.formula.error.tooDeep": "Formulas can reference other formulas only 15 levels deep",
   "tools.database.formula.error.tooComplex": "Formulas can be at most {length} characters long and nest at most {depth} levels deep",
+  "tools.database.formula.error.patternTooComplex": "This pattern could run too long. Avoid backreferences, lookarounds and quantifiers inside a repeated group, and keep it under {length} characters",
   "tools.database.propertyTypeRelation": "Relation",
   "tools.database.propertyTypeRollup": "Rollup",
   "tools.database.propertyTypeFormula": "Formula",

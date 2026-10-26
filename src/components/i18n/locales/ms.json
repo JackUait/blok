@@ -1702,6 +1702,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" merujuk kembali kepada dirinya sendiri",
   "tools.database.formula.error.tooDeep": "Rumus hanya boleh merujuk rumus lain sedalam 15 tahap",
   "tools.database.formula.error.tooComplex": "Formula boleh mempunyai paling banyak {length} aksara dan bersarang paling dalam {depth} tahap",
+  "tools.database.formula.error.patternTooComplex": "Corak ini mungkin berjalan terlalu lama. Elakkan rujukan balik, lookaround dan pengkuantiti di dalam kumpulan berulang, dan pastikan kurang daripada {length} aksara",
   "tools.database.propertyTypeRelation": "Hubungan",
   "tools.database.propertyTypeRollup": "Himpunan",
   "tools.database.propertyTypeFormula": "Rumus",

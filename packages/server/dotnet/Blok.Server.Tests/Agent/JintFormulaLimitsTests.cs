@@ -77,18 +77,22 @@ public sealed class JintFormulaLimitsTests
   }
 
   [Fact]
-  public async Task AnEvilPatternAndAHugeRepeatReadEmptyAtOnce()
+  public async Task AnEvilPatternAndAHugeRepeatReadAsUnavailableAtOnce()
   {
     var clock = Stopwatch.StartNew();
     var computed = await ComputedOf(
         $"test(\"{new string('a', 30)}b\", \"(a+)+$\")",
         "test(repeat(\"a\", 5000) + \"b\", \"a*a*a*$\")",
         "repeat(\"ab\", 1000000000)",
-        "test(\"12-34\", \"^\\\\d+-\\\\d+$\")");
+        "test(\"12-34\", \"^\\\\d+-\\\\d+$\")",
+        "test(\"foobarfoo\", \"^(foo|bar)+$\")");
 
-    Assert.True(JsonNode.DeepEquals(
-        JsonNode.Parse("""{"f0":false,"f1":false,"f2":"","f3":true}"""),
-        computed), computed.ToJsonString());
     Assert.True(clock.Elapsed < TimeSpan.FromSeconds(5), clock.Elapsed.ToString());
+    // A literal pattern the engine refuses is a compile error, the same one the editor shows.
+    Assert.Contains("could run too long", computed["f0"]?["unavailable"]?.GetValue<string>(), StringComparison.Ordinal);
+    Assert.Contains("passed a limit", computed["f1"]?["unavailable"]?.GetValue<string>(), StringComparison.Ordinal);
+    Assert.Contains("passed a limit", computed["f2"]?["unavailable"]?.GetValue<string>(), StringComparison.Ordinal);
+    Assert.True(computed["f3"]?.GetValue<bool>(), computed.ToJsonString());
+    Assert.True(computed["f4"]?.GetValue<bool>(), computed.ToJsonString());
   }
 }

@@ -1702,6 +1702,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" ווײַזט צוריק אויף זיך אַליין",
   "tools.database.formula.error.tooDeep": "פֿאָרמלען קענען זיך באַציִען אויף אַנדערע פֿאָרמלען נאָר ביז 15 שטאַפּלען טיף",
   "tools.database.formula.error.tooComplex": "פֿאָרמולעס קענען זײַן ביז {length} אותיות לאַנג און ביז {depth} שטאַפּלען טיף אײַנגעלייגט",
+  "tools.database.formula.error.patternTooComplex": "דער מוסטער קען לויפֿן צו לאַנג. פֿאַרמײַדט צוריק־רעפֿערענצן, אַרומקוקן און קוואַנטיפֿיצירער אין אַ איבערגעחזרטער גרופּע, און האַלט אים אונטער {length} אותיות",
   "tools.database.propertyTypeRelation": "פֿאַרבינדונג",
   "tools.database.propertyTypeRollup": "צונויפֿרעכענונג",
   "tools.database.propertyTypeFormula": "פֿאָרמל",

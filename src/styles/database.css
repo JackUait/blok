@@ -3807,6 +3807,29 @@ button[data-blok-database-column-count]:hover {
   }
 }
 
+/* notion-spec-2 §11: More save options' Reset row. Notion's glyph sits 3px above the title's top. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-layout-reset-menu'] [data-blok-popover-item] {
+  align-items: flex-start;
+  margin-block-end: 0;
+  padding: var(--blok-space-0-25) var(--blok-space-1) var(--blok-space-1);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-layout-reset-menu'] [data-blok-popover-item-icon] {
+  inline-size: 20px;
+  block-size: 20px;
+  margin-inline-end: var(--blok-space-2);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-layout-reset-menu'] [data-blok-popover-item-title] {
+  margin-block-start: var(--blok-space-0-75);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-layout-reset-menu'] [data-blok-popover-item-title],
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-layout-reset-menu'] [data-blok-popover-item-description] {
+  font-size: 14px;
+  font-weight: 400;
+}
+
 [data-blok-database-layout-preview]:focus-visible,
 [data-blok-database-layout-cancel]:focus-visible,
 [data-blok-database-layout-apply]:focus-visible,

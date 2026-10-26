@@ -1581,7 +1581,7 @@ export class PageLayoutBuilder {
   /** Apply's chevron half: "Reset to original page layout" (research/10 §5). */
   private openMoreSave(anchor: HTMLElement): void {
     this.showMenu(new PopoverDesktop({
-      class: DATABASE_MENU_CLASS,
+      class: `${DATABASE_MENU_CLASS} blok-database-layout-reset-menu`,
       trigger: anchor,
       width: 'auto',
       minWidth: '220px',
@@ -1589,6 +1589,7 @@ export class PageLayoutBuilder {
       items: [{
         type: PopoverItemType.Default,
         name: 'reset',
+        icon: IconUndo,
         title: this.label('tools.database.layoutReset'),
         description: this.label('tools.database.layoutResetDescription'),
         closeOnActivate: true,

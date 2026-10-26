@@ -501,6 +501,20 @@ describe('PageLayoutBuilder', () => {
     drawer.destroy();
   });
 
+  // notion-spec-2 §11: Notion draws the u-turn glyph (arrowUTurnUpLeft) there; Blok's is IconUndo, as on the confirm.
+  it('draws the u-turn glyph on Reset, in its own menu class', () => {
+    const { drawer } = customize();
+
+    builder().querySelector<HTMLElement>('[data-blok-database-layout-more-save]')?.click();
+    const reset = q('[data-blok-popover-item][data-blok-item-name="reset"]');
+    const glyph = document.createElement('span');
+
+    glyph.innerHTML = IconUndo;
+    expect(reset?.querySelector('[data-blok-popover-item-icon] svg')?.innerHTML).toBe(glyph.querySelector('svg')?.innerHTML);
+    expect(reset?.closest('[data-blok-popover-custom-class]')?.getAttribute('data-blok-popover-custom-class')).toContain('blok-database-layout-reset-menu');
+    drawer.destroy();
+  });
+
   // research/10 §5: a confirm, then Reset applies at once and closes the builder.
   describe('Reset to original page layout', () => {
     const settle = (): Promise<void> => new Promise((resolve) => {

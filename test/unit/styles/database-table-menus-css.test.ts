@@ -260,3 +260,30 @@ describe('database submenus (notion-spec-2 §11)', () => {
     expect(declared(`${SUB} [data-blok-popover-item-value]`, 'line-height')).toEqual(['1.2']);
   });
 });
+
+// notion-spec-2 §11: Notion's reset menu is 56 tall. Its row: the u-turn glyph at x+8 and 1px down,
+// the title and sub-line 14/20 regular at x+36 from y+8. Notion's sub-line ink fails AA; Blok keeps its own.
+describe('layout reset row (notion-spec-2 §11)', () => {
+  const RESET = "[data-blok-popover][data-blok-popover-custom-class~='blok-database-layout-reset-menu']";
+
+  it('top-aligns the glyph and pads the row to 48', () => {
+    expect(declared(`${RESET} [data-blok-popover-item]`, 'align-items')).toEqual(['flex-start']);
+    expect(declared(`${RESET} [data-blok-popover-item]`, 'padding')).toEqual(['var(--blok-space-0-25) var(--blok-space-1) var(--blok-space-1)']);
+    expect(declared(`${RESET} [data-blok-popover-item-title]`, 'margin-block-start')).toEqual(['var(--blok-space-0-75)']);
+    // No row gap under it: the menu is 4 + 48 + 4.
+    expect(declared(`${RESET} [data-blok-popover-item]`, 'margin-block-end')).toEqual(['0']);
+  });
+
+  it('draws the glyph in a 20px slot, 8px before the text', () => {
+    expect(declared(`${RESET} [data-blok-popover-item-icon]`, 'inline-size')).toEqual(['20px']);
+    expect(declared(`${RESET} [data-blok-popover-item-icon]`, 'block-size')).toEqual(['20px']);
+    expect(declared(`${RESET} [data-blok-popover-item-icon]`, 'margin-inline-end')).toEqual(['var(--blok-space-2)']);
+  });
+
+  it('reads 14/20 regular on both lines', () => {
+    for (const line of ['[data-blok-popover-item-title]', '[data-blok-popover-item-description]']) {
+      expect(declared(`${RESET} ${line}`, 'font-size')).toEqual(['14px']);
+      expect(declared(`${RESET} ${line}`, 'font-weight')).toEqual(['400']);
+    }
+  });
+});

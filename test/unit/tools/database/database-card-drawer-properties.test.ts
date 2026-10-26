@@ -203,6 +203,22 @@ describe('DatabaseCardDrawer — Phase 2 properties', () => {
     expect(options.wrapper.querySelector('[data-blok-database-drawer-prop-label][data-property-id="prop-owner"]')?.textContent).toBe('Lead');
   });
 
+  // Show as Ring, chosen from the row page menu, draws there at once.
+  it('a new schema redraws a value whose display changed, keeping its slot', () => {
+    const schema: PropertyDefinition[] = [...SCHEMA, { id: 'prop-score', name: 'Score', type: 'number', position: 'a6' }];
+    const options = createOptions({ schema });
+    const drawer = new DatabaseCardDrawer(options);
+
+    drawer.open({ ...ROW, properties: { ...ROW.properties, 'prop-score': 40 } });
+    const slot = valueOf(options, 'prop-score');
+
+    expect(slot?.querySelector('[data-blok-database-number-ring]')).toBeNull();
+    drawer.setSchema(schema.map((p) => (p.id === 'prop-score' ? { ...p, number: { showAs: 'ring' } } : p)));
+
+    expect(valueOf(options, 'prop-score')).toBe(slot);
+    expect(slot?.querySelector('[data-blok-database-number-ring]')).not.toBeNull();
+  });
+
   it('hands no Comment for an empty value', () => {
     const onOpenPropertyMenu = vi.fn();
     const options = createOptions({ onOpenPropertyMenu, onCommentProperty: vi.fn() });

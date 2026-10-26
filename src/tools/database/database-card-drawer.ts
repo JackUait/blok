@@ -3361,11 +3361,26 @@ export class DatabaseCardDrawer {
 
   /** Replaces the schema without rebuilding the open properties, so an open cell editor keeps its anchor. */
   setSchema(schema: PropertyDefinition[]): void {
+    const before = this.schema;
+
     this.schema = schema;
     for (const label of this.drawer?.querySelectorAll<HTMLElement>('[data-blok-database-drawer-prop-label][data-property-id]') ?? []) {
       const name = schema.find((p) => p.id === label.getAttribute('data-property-id'))?.name;
 
       if (name !== undefined && label.textContent !== name) label.textContent = name;
+    }
+    const row = this.currentRow;
+
+    if (row === null) return;
+    // Repaints into the same slot, so the anchor survives.
+    for (const slot of this.drawer?.querySelectorAll<HTMLElement>('[data-blok-database-drawer-prop-value][data-property-id]') ?? []) {
+      const id = slot.getAttribute('data-property-id');
+      const def = schema.find((p) => p.id === id);
+      const old = before.find((p) => p.id === id);
+
+      if (def !== undefined && old !== undefined && JSON.stringify(def) !== JSON.stringify(old)) {
+        this.paintValue(slot, def, readPropertyValue(row, def));
+      }
     }
   }
 

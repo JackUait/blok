@@ -13,7 +13,7 @@ const THREAD_ID = { type: 'string', minLength: 1, description: 'Id of a thread: 
 const COMMENT_ID = { type: 'string', minLength: 1, description: 'Id of a thread or a reply, from the row\'s comments in a full read.' };
 const NEW_COMMENT = closed({ commentId: { type: 'string' } }, ['commentId']);
 const OWN_ONLY = 'Only comments marked own: the person you act for wrote them. Anyone else\'s, or an anonymous one, fails with PRECONDITION_FAILED, as the comment menu shows only on your own.';
-const MIRRORS = ['feature:database/built-in-comments', 'ui-file:src/tools/database/database-comments-panel.ts'];
+const MIRRORS = ['ui-file:src/tools/database/database-comments-panel.ts'];
 
 /** The row comment panel's actions (database-comments-panel.ts), each on a database's own rows. */
 export const DATABASE_COMMENT_ACTIONS: ToolActionDeclaration[] = [

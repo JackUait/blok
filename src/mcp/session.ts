@@ -1,4 +1,4 @@
-import type { AgentBatch, AgentResult, ContractSlice, DocumentView, ViewArgs } from '../../types/agent';
+import type { AgentBatch, AgentExecuteOptions, AgentResult, ContractSlice, DocumentView, ViewArgs } from '../../types/agent';
 import type { AgentContract } from '../../types/tool-manifest';
 
 export type Durability = 'acknowledged' | 'best-effort' | 'saved-on-execute';
@@ -34,6 +34,6 @@ export interface HandleSession {
   readonly unavailableCommands?: readonly UnavailableCommand[];
   read(args: ViewArgs): Promise<DocumentView>;
   describe(query: { tool?: string; command?: string }): AgentContract | ContractSlice;
-  execute(batch: AgentBatch): Promise<McpExecuteResult>;
+  execute(batch: AgentBatch, options?: Pick<AgentExecuteOptions, 'approve'>): Promise<McpExecuteResult>;
   close(reason: 'closed' | 'expired'): Promise<CloseSummary>;
 }

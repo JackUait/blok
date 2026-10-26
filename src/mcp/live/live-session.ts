@@ -2,7 +2,7 @@ import type { HeadlessRoom, HeadlessRoomEnd } from '../../components/modules/col
 import type { BatchDelivery } from '../../components/modules/collaboration/tracking-outbox';
 import type { CollabTerminalError } from '../../components/modules/collaboration/types';
 import type { AgentContract } from '../../../types/tool-manifest';
-import type { AgentBatch, AgentError, AgentResult, AgentSession } from '../../../types/agent';
+import type { AgentBatch, AgentError, AgentExecuteOptions, AgentResult, AgentSession } from '../../../types/agent';
 import { failedResult, isWriteBatch, NO_DELIVERY, surfaceError } from '../errors';
 import type { HandleSession, McpExecuteResult } from '../session';
 
@@ -78,7 +78,7 @@ export const createLiveSession = (input: LiveSessionInput): HandleSession => {
 
   input.presence.announce();
 
-  const execute = async (batch: AgentBatch): Promise<McpExecuteResult> => {
+  const execute = async (batch: AgentBatch, options: Pick<AgentExecuteOptions, 'approve'> = {}): Promise<McpExecuteResult> => {
     const end = room.ended();
 
     if (end !== null) {
@@ -91,7 +91,7 @@ export const createLiveSession = (input: LiveSessionInput): HandleSession => {
     }
     const mark = room.outbox.appendedCount();
     const failuresBefore = room.appendFailures();
-    const result = await input.agent.execute(batch);
+    const result = await input.agent.execute(batch, options);
 
     if (!result.ok) {
       if (result.error.code === 'APPLY_FAILED') {

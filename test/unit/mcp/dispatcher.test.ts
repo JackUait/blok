@@ -378,6 +378,18 @@ describe('createToolDispatcher', () => {
     expect(session.execute).toHaveBeenCalledExactlyOnceWith(batch);
   });
 
+  it('hands the client\'s approver to the session', async () => {
+    const { session, dispatch } = fixture();
+    const handle = handleFrom(await invoke(dispatch, 'blok_open', { documentId: 'doc-1', write: true }));
+    const batch: AgentBatch = { commands: [{ name: 'database.setLock', args: { id: 'db', locked: false } }] };
+    const approve = vi.fn(async () => true);
+
+    await dispatch('blok_execute', { handle, ...batch }, stdio, { approve });
+
+    expect(session.execute).toHaveBeenCalledExactlyOnceWith(batch, { approve });
+    expect(approve).not.toHaveBeenCalled();
+  });
+
   it('caps the ids a big delete lists, so one answer stays small', async () => {
     const removed = Array.from({ length: 500 }, (_, i) => `cell-${i}`);
     const deleted: McpExecuteResult = {

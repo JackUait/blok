@@ -1,4 +1,4 @@
-import type { AgentBatch, AgentError } from '../../types/agent';
+import type { AgentApprover, AgentBatch, AgentError } from '../../types/agent';
 import { AgentFailure, failure } from '../shared/agent/errors';
 import { modelAnswer } from '../shared/agent/model-answer';
 import { parseToolCall, toolErrorAnswer, unknownArgument, type AgentToolName, type ToolCall } from '../shared/agent/tool-call';
@@ -27,6 +27,8 @@ export interface OpenRequest {
 export interface CallOptions {
   /** Aborted when the client cancels or its connection closes. */
   signal?: AbortSignal;
+  /** The client's way to ask its person (MCP elicitation). Absent when the client has none. */
+  approve?: AgentApprover;
 }
 
 export interface ListRequest {
@@ -233,7 +235,7 @@ export const createToolDispatcher = (
   };
 
   // MCP reaches a sub-page with blok_open on its pageId, so `page` is refused here as Ask AI refuses it without sub-pages.
-  const coreCall = async (name: AgentToolName, args: Record<string, unknown>, caller: Caller): Promise<ToolOutcome> => {
+  const coreCall = async (name: AgentToolName, args: Record<string, unknown>, caller: Caller, options: CallOptions): Promise<ToolOutcome> => {
     requireScope(caller, CORE_SCOPES[name]);
     const handle = handleOf(args);
     const parsed = parseToolCall(name, Object.fromEntries(Object.entries(args).filter(([key]) => key !== 'handle')), { pages: false });
@@ -242,10 +244,10 @@ export const createToolDispatcher = (
       throw new AgentFailure(parsed.error);
     }
 
-    return onHandle(caller, handle, name === 'blok_execute', session => runCall(session, parsed.call));
+    return onHandle(caller, handle, name === 'blok_execute', session => runCall(session, parsed.call, options));
   };
 
-  const runCall = async (session: HandleSession, call: ToolCall): Promise<ToolOutcome> => {
+  const runCall = async (session: HandleSession, call: ToolCall, options: CallOptions): Promise<ToolOutcome> => {
     if (call.name === 'blok_read') {
       return ok({ ...await session.read(call.view) });
     }
@@ -253,7 +255,8 @@ export const createToolDispatcher = (
       return ok({ ...session.describe(call.query) });
     }
     // Unchecked on purpose: core's checkEnvelope refuses a malformed batch, as it does for Ask AI.
-    const result = await session.execute(call.batch as unknown as AgentBatch);
+    const batch = call.batch as unknown as AgentBatch;
+    const result = await (options.approve === undefined ? session.execute(batch) : session.execute(batch, { approve: options.approve }));
 
     return { structuredContent: modelAnswer(result), isError: !result.ok };
   };
@@ -262,7 +265,7 @@ export const createToolDispatcher = (
     try {
       refuseUnknownArguments(name, args);
       if (isCoreTool(name)) {
-        return await coreCall(name, args, caller);
+        return await coreCall(name, args, caller, options);
       }
       switch (name) {
         case 'blok_list_documents': {

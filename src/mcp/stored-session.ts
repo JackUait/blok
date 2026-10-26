@@ -57,7 +57,7 @@ export const openStoredSession = async (input: StoredSessionInput): Promise<Hand
       return state.agent.read(args);
     },
     describe: (query) => state.agent.describe(query),
-    execute: async (batch): Promise<McpExecuteResult> => {
+    execute: async (batch, options = {}): Promise<McpExecuteResult> => {
       if (state.stale) {
         await reload();
       }
@@ -68,7 +68,7 @@ export const openStoredSession = async (input: StoredSessionInput): Promise<Hand
       }
       // result.revision is the session's own hash; equal means nothing changed here.
       const before = state.agent.revision();
-      const result = await state.agent.execute(batch);
+      const result = await state.agent.execute(batch, options);
 
       // An unchanged write (page.rename edits another document) has nothing to save.
       if (!result.ok || !writing || result.revision === before) {

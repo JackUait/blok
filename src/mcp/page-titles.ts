@@ -28,8 +28,8 @@ export const createOpenPageDocument = (
     read: (args) => session.read(args ?? {}),
     describe: (query) => session.describe(query ?? {}),
     // close() follows at once and drops unacked rows, so a pending write is a failed one.
-    execute: async (batch) => {
-      const result = await session.execute(batch);
+    execute: async (batch, options) => {
+      const result = await session.execute(batch, options);
 
       return result.ok && result.delivery.pending
         ? failedResult(surfaceError('SOURCE_UNAVAILABLE', 'The room did not confirm the page write in time. It was not saved; try again.', { pending: true }).agentError, result.warnings)

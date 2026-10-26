@@ -328,6 +328,37 @@ describe('row page layout through the database tool', () => {
     expect((await editorSchema()).find((p) => p.id === 'due')?.name).toBe('Deadline');
   });
 
+  const addFromRowPage = async (name: string, type: string): Promise<void> => {
+    await openRow('r2');
+    await click(q('[data-blok-database-drawer-add-prop]'));
+    const field = document.querySelector<HTMLInputElement>('[data-blok-database-property-name-input]');
+
+    if (field !== null) field.value = name;
+    await click(document.querySelector(`[data-blok-database-property-type-option="${type}"]`));
+  };
+
+  // research/09 §3 L57: picking a type adds the property and switches to its Edit property panel.
+  it('picking a type on the row page opens the new property\'s Edit property panel, name selected', async () => {
+    await make(doc());
+    await addFromRowPage('Score', 'number');
+    const input = document.querySelector<HTMLInputElement>('[data-blok-popover-opened] [data-blok-database-property-menu-name-input]');
+
+    expect(input).toHaveFocus();
+    expect(input?.value).toBe('Score');
+    expect([input?.selectionStart, input?.selectionEnd]).toEqual([0, 'Score'.length]);
+    expect(item('numberFormat')).not.toBeNull();
+    expect((await editorSchema()).some((p) => p.name === 'Score' && p.type === 'number')).toBe(true);
+  });
+
+  // research/08 L203: a Relation opens "Related to", so it gets no Edit property panel.
+  it('a Relation picked on the row page opens no Edit property panel', async () => {
+    await make(doc());
+    await addFromRowPage('Link', 'relation');
+
+    expect((await editorSchema()).some((p) => p.name === 'Link' && p.type === 'relation')).toBe(true);
+    expect(document.querySelector('[data-blok-database-property-menu-name-input]')).toBeNull();
+  });
+
   it('offers no Customize layout in the column header menu', async () => {
     await make(doc());
     await click(q('[data-blok-database-table-column-header][data-property-id="due"]'));

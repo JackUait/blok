@@ -244,14 +244,14 @@ export interface CardDrawerOptions {
    * "+ Add a property": the database's add-property menu under `anchor`. Wins over `onAddProperty`.
    * `onAdded` gets the new property's id after the schema refresh.
    */
-  onOpenAddProperty?: (anchor: HTMLElement, onAdded?: (propertyId: string) => void) => void;
+  onOpenAddProperty?: (anchor: HTMLElement, onAdded?: (propertyId: string, ownSetup?: boolean) => void) => void;
   /** Discard in Customize layout: delete a property made while customizing. */
   onDeleteProperty?: (propertyId: string) => void;
   /**
    * A property label was clicked: open its property menu under `anchor`.
    * `onCustomizeLayout` is set when the page can be customized: the menu ends with "Customize layout".
    */
-  onOpenPropertyMenu?: (propertyId: string, anchor: HTMLElement, onCustomizeLayout?: () => void, extras?: { onComment?: () => void }) => void;
+  onOpenPropertyMenu?: (propertyId: string, anchor: HTMLElement, onCustomizeLayout?: () => void, extras?: { onComment?: () => void; edit?: boolean }) => void;
   /** Offer Person when adding a property. */
   hasPeople?: boolean;
   /** What every cell needs from the host beyond i18n: people, uploads, locale. */
@@ -2309,7 +2309,10 @@ export class DatabaseCardDrawer {
    */
   private openAddProperty(anchor: HTMLElement, place: AddedPlace | null): void {
     if (this.onOpenAddProperty !== undefined) {
-      this.onOpenAddProperty(anchor, place !== null || this.draft !== null ? (id) => this.addedWhileCustomizing(id, place) : undefined);
+      this.onOpenAddProperty(anchor, (id, ownSetup) => {
+        if (place !== null || this.draft !== null) this.addedWhileCustomizing(id, place);
+        if (ownSetup !== true) this.editAdded(id);
+      });
 
       return;
     }
@@ -2333,6 +2336,17 @@ export class DatabaseCardDrawer {
     }
 
     this.propertyTypePopover.open(anchor);
+  }
+
+  /** research/09 §3 L57: a type picked on the row page switches to the new property's Edit property panel. */
+  private editAdded(id: string): void {
+    // In the builder the live panel would skip the draft, as the label menu does.
+    if (this.draft !== null || this.onOpenPropertyMenu === undefined) return;
+    const head = this.drawer?.querySelector(`[data-blok-database-drawer-prop-label][data-property-id="${CSS.escape(id)}"]`)
+      ?.closest<HTMLElement>('[data-blok-database-drawer-prop-head]');
+
+    if (head === null || head === undefined) return;
+    this.onOpenPropertyMenu(id, head, this.customizable ? (): void => this.startCustomizing() : undefined, { edit: true });
   }
 
   private addedWhileCustomizing(id: string, place: AddedPlace | null): void {

@@ -135,6 +135,43 @@ describe('DatabaseCardDrawer — Phase 2 properties', () => {
     expect(label?.parentElement?.hasAttribute('data-blok-database-drawer-prop-head')).toBe(true);
   });
 
+  // research/09 §3 L57: picking a type adds the property and switches to its Edit property panel.
+  it('opens the Edit property panel under the new property after an add', () => {
+    const onOpenPropertyMenu = vi.fn();
+    const added: PropertyDefinition = { id: 'prop-new', name: 'Score', type: 'number', position: 'z9' };
+    const onOpenAddProperty = vi.fn();
+    const options = createOptions({ onOpenPropertyMenu, onOpenAddProperty });
+    const drawer = new DatabaseCardDrawer(options);
+
+    onOpenAddProperty.mockImplementation((_anchor: HTMLElement, onAdded?: (id: string, ownSetup?: boolean) => void) => {
+      drawer.refreshSchema([...SCHEMA, added]);
+      onAdded?.('prop-new', false);
+    });
+    drawer.open(ROW);
+    options.wrapper.querySelector<HTMLElement>('[data-blok-database-drawer-add-prop]')?.click();
+    const head = options.wrapper.querySelector('[data-blok-database-drawer-prop-label][data-property-id="prop-new"]')?.parentElement;
+
+    expect(head?.hasAttribute('data-blok-database-drawer-prop-head')).toBe(true);
+    expect(onOpenPropertyMenu).toHaveBeenCalledWith('prop-new', head, undefined, { edit: true });
+  });
+
+  it('leaves a property that opens its own setup (Relation, AI Autofill) to it', () => {
+    const onOpenPropertyMenu = vi.fn();
+    const added: PropertyDefinition = { id: 'prop-new', name: 'Summary', type: 'text', position: 'z9' };
+    const onOpenAddProperty = vi.fn();
+    const options = createOptions({ onOpenPropertyMenu, onOpenAddProperty });
+    const drawer = new DatabaseCardDrawer(options);
+
+    onOpenAddProperty.mockImplementation((_anchor: HTMLElement, onAdded?: (id: string, ownSetup?: boolean) => void) => {
+      drawer.refreshSchema([...SCHEMA, added]);
+      onAdded?.('prop-new', true);
+    });
+    drawer.open(ROW);
+    options.wrapper.querySelector<HTMLElement>('[data-blok-database-drawer-add-prop]')?.click();
+
+    expect(onOpenPropertyMenu).not.toHaveBeenCalled();
+  });
+
   // feel/findings-rowpage R07: Comment shows for a filled value (Checkbox), not for an empty Number or Text (research/09:93).
   it('hands the property menu a Comment only for a filled value with the comment lever', () => {
     const onOpenPropertyMenu = vi.fn();

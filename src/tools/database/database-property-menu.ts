@@ -222,9 +222,14 @@ export class DatabasePropertyMenu {
    * Rename, Edit property, Comment, Property visibility, Duplicate, Delete, Customize layout.
    * No view rows: the row page is no column.
    */
-  openRowPage(property: PropertyDefinition, anchor: HTMLElement, extras: { onComment?: () => void } = {}): void {
+  openRowPage(property: PropertyDefinition, anchor: HTMLElement, extras: { onComment?: () => void; edit?: boolean } = {}): void {
     this.close();
     this.shown = property;
+    if (extras.edit === true) {
+      this.openRowPageEdit(property, anchor);
+
+      return;
+    }
     const has = (entry: PropertyMenuEntry): boolean => propertyMenuEntries(property).includes(entry);
     // Notion: Rename and Edit property both open the Edit property panel.
     const edit = (): void => this.openRowPageEdit(property, anchor);

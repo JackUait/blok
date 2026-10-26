@@ -9031,9 +9031,9 @@ export class DatabaseTool implements BlockTool {
           }
         },
         onOpenPropertyMenu: (propertyId, anchor, onCustomizeLayout, extras) => this.openPropertyMenu(propertyId, anchor, undefined, undefined, onCustomizeLayout, extras ?? {}),
-        onOpenAddProperty: (anchor, onAdded) => this.openAddProperty(anchor, undefined, (created) => {
+        onOpenAddProperty: (anchor, onAdded) => this.openAddProperty(anchor, undefined, (created, ownSetup) => {
           this.cardDrawer?.refreshSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
-          onAdded?.(created.id);
+          onAdded?.(created.id, ownSetup);
         }),
         onDeleteProperty: (propertyId) => {
           this.deleteProperty(propertyId);
@@ -11221,7 +11221,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   /** `rowPage`: opened from a row page label, so the menu is the row page's own (no view rows). */
-  openPropertyMenu(propertyId: string, anchor: HTMLElement, table?: DatabaseTableView, context?: NativeWidgetContext, onCustomizeLayout?: () => void, rowPage?: { onComment?: () => void }): void {
+  openPropertyMenu(propertyId: string, anchor: HTMLElement, table?: DatabaseTableView, context?: NativeWidgetContext, onCustomizeLayout?: () => void, rowPage?: { onComment?: () => void; edit?: boolean }): void {
     const hostTable = table ?? (this.view instanceof DatabaseTableView ? this.view : undefined);
     const property = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n).find((p) => p.id === propertyId);
     const saved = this.model.getProperty(propertyId);
@@ -11465,7 +11465,7 @@ export class DatabaseTool implements BlockTool {
    * (Insert left/right), the new column lands beside that one in the active
    * view's column order.
    */
-  openAddProperty(anchor: HTMLElement, placement?: { propertyId: string; side: 'left' | 'right' }, onAdded?: (created: PropertyDefinition) => void, context?: NativeWidgetContext): void {
+  openAddProperty(anchor: HTMLElement, placement?: { propertyId: string; side: 'left' | 'right' }, onAdded?: (created: PropertyDefinition, ownSetup: boolean) => void, context?: NativeWidgetContext): void {
     if (this.destroyed || this.readOnly || this.structureLocked() || (context !== undefined && !context.writable())) return;
     const previous = this.addPropertyPopover;
 
@@ -11484,7 +11484,7 @@ export class DatabaseTool implements BlockTool {
         const created = this.addProperty({ name, type, ...(placement === undefined ? {} : { [side]: placement.propertyId }) }, context);
 
         if (created !== null) {
-          onAdded?.(created);
+          onAdded?.(created, created.type === 'relation');
         }
         // research/08: Relation opens "Related to" right away.
         if (created?.type === 'relation') this.openRelatedToPicker(created.id, anchor);
@@ -11496,7 +11496,7 @@ export class DatabaseTool implements BlockTool {
           const created = this.addProperty({ name, type: 'text' }, context);
 
           if (created === null) return;
-          onAdded?.(created);
+          onAdded?.(created, true);
           this.autofillDrafts.set(created.id, { ...draftOf(undefined), ...presetDraft(mode, this.api.i18n) });
           this.openAutofillSetup(created.id, created.name, anchor, context);
         },

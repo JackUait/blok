@@ -2,9 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Core } from '../../../../../src/components/core';
 import { createEditorAgentSession } from '../../../../../src/components/modules/agent/editor-session';
-import { Database, DatabaseRow, Paragraph } from '../../../../../src/tools';
+import { Database, DatabaseRow, Paragraph, TabsTool, TabTool } from '../../../../../src/tools';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 import type { OutputData } from '../../../../../types';
+import type { BlockToolConstructable } from '../../../../../types/tools';
 import type { AgentActor, AgentResult } from '../../../../../types/agent';
 
 const actor: AgentActor = { id: 'agent-1', name: 'Agent', kind: 'agent', onBehalfOf: 'human-1' };
@@ -51,6 +52,8 @@ const boot = async (data: OutputData): Promise<BlokModules> => {
       paragraph: { class: Paragraph },
       database: { class: Database, config: { people: { list: () => Promise.resolve([]), me: () => 'human-1' } } },
       'database-row': { class: DatabaseRow },
+      tabs: { class: TabsTool as unknown as BlockToolConstructable },
+      tab: { class: TabTool as unknown as BlockToolConstructable },
     },
     data,
   });
@@ -234,6 +237,63 @@ describe('database rows through the editor agent session', () => {
 
     expect(removed.ok).toBe(true);
     expect(saved(Blok).has('c')).toBe(false);
+    session.close();
+  }, 30_000);
+
+  it('database.addRow with page on a row page\'s linked view links the new row to that row, both ways, once', async () => {
+    const view = (id: string, extra: Record<string, unknown> = {}): Record<string, unknown> =>
+      ({ id, name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [], ...extra });
+    const data: OutputData = {
+      blocks: [
+        {
+          id: 'hd', type: 'database', content: ['r1', 'r2', 'T'],
+          data: {
+            schema: [
+              { id: 'dt', name: 'Title', type: 'title', position: 'a0', pageLayoutTabsId: 'T' },
+              { id: 'fwd', name: 'Tasks', type: 'relation', position: 'a1', relation: { targetDatabaseId: 'sd', twoWay: true, syncedPropertyId: 'back' } },
+            ],
+            views: [view('hv')],
+            activeViewId: 'hv',
+          },
+        },
+        { id: 'r1', type: 'database-row', parent: 'hd', data: { position: 'a0', title: 'r1', properties: { dt: 'r1', fwd: [] } } },
+        { id: 'r2', type: 'database-row', parent: 'hd', data: { position: 'a1', title: 'r2', properties: { dt: 'r2', fwd: [] } } },
+        { id: 'T', type: 'tabs', parent: 'hd', data: {}, content: ['tc', 'tv'] },
+        { id: 'tc', type: 'tab', parent: 'T', data: { title: '' } },
+        { id: 'tv', type: 'tab', parent: 'T', data: { title: 'Tasks' }, content: ['lv'] },
+        {
+          id: 'lv', type: 'database', parent: 'tv',
+          data: {
+            source: { databaseId: 'sd' },
+            schema: [{ id: 't', name: 'Title', type: 'title', position: 'a0' }],
+            views: [view('lvv', { filters: [{ id: 'tp', propertyId: 'back', operator: 'contains', value: ['this_page'] }] })],
+            activeViewId: 'lvv',
+          },
+        },
+        {
+          id: 'sd', type: 'database', content: [],
+          data: {
+            schema: [
+              { id: 't', name: 'Title', type: 'title', position: 'a0' },
+              { id: 'back', name: 'Project', type: 'relation', position: 'a1', relation: { targetDatabaseId: 'hd', twoWay: true, syncedPropertyId: 'fwd' } },
+            ],
+            views: [view('sv')],
+            activeViewId: 'sv',
+          },
+        },
+      ],
+    };
+    const Blok = await boot(data);
+    const session = createEditorAgentSession(Blok, actor);
+    const result: AgentResult = await session.execute({ commands: [{ name: 'database.addRow', args: { id: 'lv', page: 'r1', values: { t: 'new' } } }] });
+
+    expect(result.ok).toBe(true);
+    const rowId = result.ok ? String((result.results[0] as { rowId: string }).rowId) : '';
+    const blocks = saved(Blok);
+
+    expect(blocks.get(rowId)).toMatchObject({ parent: 'sd', data: { properties: { back: [{ id: 'r1' }] } } });
+    expect((blocks.get('r1')?.data.properties as Record<string, unknown>).fwd).toEqual([{ id: rowId }]);
+    expect((blocks.get('r2')?.data.properties as Record<string, unknown>).fwd).toEqual([]);
     session.close();
   }, 30_000);
 });

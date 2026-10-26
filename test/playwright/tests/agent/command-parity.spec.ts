@@ -56,7 +56,14 @@ for (const c of loadParityCases()) {
 
       // test.html's default paragraph sets preserveBlank, which saves the editor's
       // starting empty paragraph. The json and jsdom runners use the stock paragraph.
-      const blok = new window.Blok({ holder: 'blok', data: seed, tools: { paragraph: { class: window.BlokParagraph, inlineToolbar: true } } });
+      // The goldens credit the person human-1 with agent-test as co-author. Ask AI takes the
+      // person from user.id, as the jsdom runner's editor does.
+      const blok = new window.Blok({
+        holder: 'blok',
+        data: seed,
+        user: { id: 'human-1' },
+        tools: { paragraph: { class: window.BlokParagraph, inlineToolbar: true } },
+      });
 
       window.blokInstance = blok;
       await blok.isReady;

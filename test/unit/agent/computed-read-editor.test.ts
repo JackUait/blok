@@ -21,6 +21,7 @@ const boot = async (data: OutputData): Promise<TestEditor> => {
   const editor = new Blok({
     holder,
     data,
+    user: { id: 'human-1' },
     tools: { paragraph: { class: Paragraph }, database: { class: Database }, 'database-row': { class: DatabaseRow } },
   }) as unknown as TestEditor;
 

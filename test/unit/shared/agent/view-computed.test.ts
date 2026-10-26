@@ -85,4 +85,17 @@ describe.each(runtimes)('database rows read with computed values (%s)', (_name, 
       await session.close();
     }
   });
+
+  it('credits the person the agent acts for as the last editor of a row it writes', async () => {
+    const session = open();
+
+    try {
+      await session.execute({ commands: [{ name: 'database.setRowValues', args: { id: 'db', rowId: 'r2', values: { n: 7 } } }] });
+      const rows = rowsOf((await session.read({ ids: ['r2'] })).blocks);
+
+      expect(rows.r2?.computed).toMatchObject({ lb: [{ id: 'human-1' }] });
+    } finally {
+      await session.close();
+    }
+  });
 });

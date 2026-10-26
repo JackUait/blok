@@ -221,7 +221,8 @@ it('an MCP agent joins as its own participant and writes formatted rich text', a
       expect(agentState(human)?.caret).toBeUndefined();
 
       // Saved attribution and journal actors.
-      expect(human.store.toJSON().find((block) => block.id === 'agent-p')?.lastEditedBy).toBe(AGENT_ID);
+      // Co-authored: the person the agent acts for edits, with the agent.
+      expect(human.store.toJSON().find((block) => block.id === 'agent-p')).toMatchObject({ lastEditedBy: HUMAN, lastEditedWith: AGENT_ID });
       const history = await request('GET', `/sync/${DOC}/history`);
 
       expect(history.status).toBe(200);

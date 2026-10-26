@@ -216,4 +216,23 @@ public sealed class BlokAgentVersionHistoryTests
     Assert.Equal("STALE", JsonNode.Parse(execution.ResultJson)!["error"]!["code"]!.GetValue<string>());
     Assert.Equal(committed, operations.Committed(DocId).Count);
   }
+  [Fact]
+  public async Task AnUndoAfterTheAgentRestoredHasNothingToUndoAndWritesNothing()
+  {
+    var (executor, rooms) = Create(operations);
+    var edit = await executor.ExecuteInRoomAsync(DocId,
+        """{"commands":[{"name":"text.replace","args":{"id":"p","with":"Changed"}}]}""", Actor);
+    var lineage = edit.Revision[..edit.Revision.LastIndexOf(':')];
+    var restored = JsonNode.Parse((await executor.ExecuteInRoomAsync(DocId,
+        $$$"""{"commands":[{"name":"history.restore","args":{"version":"{{{lineage}}}:0"}}]}""", Actor)).ResultJson)!;
+    Assert.True(restored["ok"]!.GetValue<bool>(), restored.ToJsonString());
+    var committed = operations.Committed(DocId).Count;
+
+    var undo = JsonNode.Parse((await executor.ExecuteInRoomAsync(DocId,
+        """{"commands":[{"name":"history.undo","args":{}}]}""", Actor)).ResultJson)!;
+
+    Assert.Equal("NOTHING_TO_UNDO", undo["error"]?["code"]?.GetValue<string>());
+    Assert.Equal(committed, operations.Committed(DocId).Count);
+    Assert.Equal("Hello world", JsonNode.Parse((await rooms.StateAsync(DocId)).Json!)!["blocks"]![0]!["data"]!["text"]![0]!["text"]!.GetValue<string>());
+  }
 }

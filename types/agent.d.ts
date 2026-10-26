@@ -186,6 +186,12 @@ export interface ViewBlock {
    * row does not store, by property id. `{ unavailable }` says why one is missing.
    */
   computed?: Record<string, unknown>;
+  /**
+   * Full detail: the block menu's "Last edited" line. `lastEditedAt` is an ISO
+   * instant, the creation time when never edited. `name` is there only when the
+   * host's user directory knows the person.
+   */
+  meta?: { lastEditedAt?: string; lastEditedBy?: { id: string; name?: string } };
   /** Database rows: the comments in open threads, as the row's badge counts them. */
   commentCount?: number;
   /** Full detail, database rows only: the row's comment threads, resolved ones too. Comments are not page content. */

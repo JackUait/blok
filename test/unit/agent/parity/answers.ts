@@ -126,11 +126,13 @@ export const projectAnswers = (answers: Array<Record<string, unknown>>, keepIds:
         : value;
     };
     const blocks = rows.map((row, index) => {
-      const { id, parentId, data: _data, attrs: _attrs, ...rest } = row;
+      const { id, parentId, data: _data, attrs: _attrs, meta, ...rest } = row;
       const { data, attrs } = cleaned[index];
 
       return {
         ...rest,
+        // Clocks differ per runner: keep that the time is there, not its value.
+        ...(isRecord(meta) && { meta: { ...meta, ...(meta.lastEditedAt !== undefined && { lastEditedAt: 'TIME' }) } }),
         ...(typeof id === 'string' && { id: label(id) }),
         ...(typeof parentId === 'string' && { parentId: label(parentId) }),
         ...(attrs !== undefined && { attrs: mask(attrs, false) }),

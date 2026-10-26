@@ -2,7 +2,9 @@ import { createComputedReader } from '../database/computed-read';
 import { isRichText } from '../rich-text/guards';
 import { findTextMatches } from '../text-match';
 import { LOAD_DEFAULT_FILLS } from '../tool-actions/load-defaults';
+import { plainLine } from './approval';
 import { failure } from './errors';
+import { inAnonymousAnswer } from './json-applier';
 
 import type { DocumentView, ViewArgs, ViewBlock, ViewComment } from '../../../types/agent';
 import type { DocSnapshot, SnapBlock } from './snapshot';
@@ -14,6 +16,50 @@ const PAGE_TYPES: ReadonlySet<string> = new Set(['page', 'page-link']);
 type ComputedFor = ReturnType<typeof createComputedReader>;
 
 const computedReader = (snap: DocSnapshot): ComputedFor => createComputedReader(id => snap.get(id));
+
+interface Person { id: string; name?: string }
+
+// A directory name is host or peer text: one plain line, like a shown title.
+const personOf = (ctx: ViewContext, id: string, databaseId?: string): Person => {
+  const raw = ctx.ports?.userName?.(id, databaseId);
+  const name = raw === undefined ? undefined : plainLine(raw);
+
+  return name === undefined ? { id } : { id, name };
+};
+
+const PEOPLE_CELLS: ReadonlySet<string> = new Set(['createdBy', 'lastEditedBy']);
+
+/** Created by and Last edited by cells get the names their database's cells show. */
+const namedCells = (
+  snap: DocSnapshot,
+  databaseId: string,
+  computed: Record<string, unknown>,
+  ctx: ViewContext
+): Record<string, unknown> => {
+  const schema = snap.get(databaseId)?.data.schema;
+  const people = new Set((Array.isArray(schema) ? schema : []).flatMap((p: unknown) =>
+    typeof p === 'object' && p !== null && 'id' in p && 'type' in p && typeof p.type === 'string' && PEOPLE_CELLS.has(p.type) ? [p.id] : []));
+
+  return Object.fromEntries(Object.entries(computed).map(([key, value]): [string, unknown] => [key, people.has(key) && Array.isArray(value)
+    ? value.map((item: unknown) => (typeof item === 'object' && item !== null && 'id' in item && typeof item.id === 'string' ? personOf(ctx, item.id, databaseId) : item))
+    : value]));
+};
+
+const isoOf = (at: unknown): string | undefined =>
+  (typeof at === 'number' && Number.isFinite(at) ? new Date(at).toISOString() : undefined);
+
+/** What the block menu's footer shows: Last edited (by whom), dated from creation when never edited. */
+const metaOf = (snap: DocSnapshot, block: SnapBlock, ctx: ViewContext): ViewBlock['meta'] => {
+  const at = isoOf(block.rest.lastEditedAt) ?? isoOf(block.rest.createdAt);
+  const by = block.rest.lastEditedBy;
+  const named = typeof by === 'string' && by !== '' && !inAnonymousAnswer(snap, block) ? personOf(ctx, by) : undefined;
+
+  if (at === undefined && named === undefined) {
+    return undefined;
+  }
+
+  return { ...(at !== undefined && { lastEditedAt: at }), ...(named !== undefined && { lastEditedBy: named }) };
+};
 
 const textOf = (block: SnapBlock, ctx: ViewContext, field?: string): string | undefined => {
   const entry = ctx.tools.get(block.type)?.entry;
@@ -193,8 +239,13 @@ const viewBlock = (
     }
     const computed = computedFor(block.id, block.parent);
 
-    if (computed !== undefined) {
-      entry.computed = computed;
+    if (computed !== undefined && block.parent !== null) {
+      entry.computed = namedCells(snap, block.parent, computed, ctx);
+    }
+    const meta = metaOf(snap, block, ctx);
+
+    if (meta !== undefined) {
+      entry.meta = meta;
     }
   }
   if (block.type === 'database-row') {

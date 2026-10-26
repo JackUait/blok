@@ -2640,6 +2640,13 @@ export class DatabaseTool implements BlockTool {
     return { schema, rows: engine.apply(schema, rows, { databaseId, now: new Date() }), valueProperty: (property) => engine.valueProperty(property) };
   }
 
+  /** The name this database's person cells show for a user id, once its directory has loaded. */
+  readPersonName(param: { id: string; receive: (name: string) => void }): void {
+    const name = this.people?.find((person) => person.id === param.id)?.name;
+
+    if (typeof name === 'string') param.receive(name);
+  }
+
   /** Read by another database of this document: this database's schema and computed rows. */
   readRelationSource(param: { receive: (source: DatabaseSource) => void }): void {
     param.receive({

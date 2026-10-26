@@ -177,7 +177,7 @@ describe('what the model is told about computed database values is true', () => 
   });
 
   it('says how times, people and IDs read, and they read that way', async () => {
-    expect(guidance).toContain('times as ISO instants, people as [{ "id" }], a unique ID as shown ("T-1")');
+    expect(guidance).toContain('times as ISO instants, people as [{ "id", "name" }] with name only when the host\'s people directory knows them, a unique ID as shown ("T-1")');
 
     const session = openJsonSession(COMPUTED_DB);
 
@@ -185,6 +185,20 @@ describe('what the model is told about computed database values is true', () => 
       const [row] = (await session.read({ ids: ['r1'] })).blocks;
 
       expect(row?.computed).toMatchObject({ ct: '2026-01-02T03:04:05.000Z', cb: [{ id: 'u1' }], uid: 'T-1' });
+    } finally {
+      await session.close();
+    }
+  });
+
+  it('says a full read has each block\'s Last edited line, and a session with no directory gives ids only', async () => {
+    expect(COMMANDS['doc.read'].summary).toContain('A full read adds meta: when the block was last edited and by whom, as the block menu shows; a person has a name only when the host\'s user directory knows them.');
+
+    const session = openJsonSession(COMPUTED_DB);
+
+    try {
+      const [row] = (await session.read({ ids: ['r1'] })).blocks;
+
+      expect(row?.meta).toEqual({ lastEditedAt: '2026-02-03T04:05:06.000Z', lastEditedBy: { id: 'u2' } });
     } finally {
       await session.close();
     }

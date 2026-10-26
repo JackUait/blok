@@ -89,6 +89,19 @@ export const createEditorPorts = (Blok: BlokModules): AgentPorts => {
 
       return titles[0];
     },
+    userName: (userId, databaseId) => {
+      if (databaseId === undefined) {
+        return Blok.UserDirectory.known(userId)?.name;
+      }
+      const names: string[] = [];
+      const database = Blok.BlockManager.getBlockById(databaseId);
+
+      if (database?.name === 'database') {
+        database.call('readPersonName', { id: userId, receive: (name: string) => names.push(name) });
+      }
+
+      return names[0];
+    },
     resolveLink: (link) => {
       const config = Blok.API.methods.config.link;
       const resolved = resolveLinkAttributes(link.href, document.createElement('a'), config ?? {});

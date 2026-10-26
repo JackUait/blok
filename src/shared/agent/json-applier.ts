@@ -32,7 +32,7 @@ const isAnonymousAnswer = (block: SnapBlock): boolean =>
   block.type === 'database-row' && block.data.anonymous === true;
 
 // Same rule as DocumentStore.isInAnonymousAnswer, so both appliers save the same metadata.
-const inAnonymousAnswer = (snap: DocSnapshot, block: SnapBlock | undefined, seen = new Set<string>()): boolean => {
+export const inAnonymousAnswer = (snap: DocSnapshot, block: SnapBlock | undefined, seen = new Set<string>()): boolean => {
   if (block === undefined || seen.has(block.id)) {
     return false;
   }

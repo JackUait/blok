@@ -75,7 +75,8 @@ const version: JsonSchema = { type: 'string', minLength: 1, description: 'A vers
 const from: JsonSchema = { ...version, description: 'The older version, from history.versions.' };
 
 export const COMMANDS: Record<CoreCommandName, CoreCommandSpec> = {
-  'doc.read': read('Read the document as an outline, a subtree, or chosen blocks in full.', obj(READ_ARGS)),
+  'doc.read': read('Read the document as an outline, a subtree, or chosen blocks in full. '
+    + 'A full read adds meta: when the block was last edited and by whom, as the block menu shows; a person has a name only when the host\'s user directory knows them.', obj(READ_ARGS)),
   'doc.find': read('Find text as the find bar does: every hit with its field and offsets, and a count. Or list blocks by type.', obj({
     text: { type: 'string', minLength: 1 }, ...FIND_OPTIONS, type: { type: 'string' }, rootId: id, limit: { type: 'integer', minimum: 1 },
   })),

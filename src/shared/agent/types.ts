@@ -77,6 +77,11 @@ export interface AgentPorts {
    * Must not fetch. A block that now shows another page answers nothing.
    */
   pageTitle?(blockId: string, pageId: string): string | undefined;
+  /**
+   * The name the UI shows for a user id, when the runtime holds the host's directory. Must not fetch.
+   * With `databaseId`, as that database's Created by and Last edited by cells name them; without, as the block menu does.
+   */
+  userName?(userId: string, databaseId?: string): string | undefined;
 }
 
 export interface PlannerContext {

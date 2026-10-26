@@ -73,8 +73,6 @@ export const rollupResultType = (fn: RollupFunction, target: PropertyDefinition)
   if (fn === 'count_per_group' || fn === 'percent_per_group') return { type: 'text' };
   if (DATE_FNS.includes(fn)) return { type: 'date', ...(target.date !== undefined ? { date: target.date } : {}) };
   if (PERCENT_FNS.has(fn)) return { type: 'number', number: { format: 'percent' } };
-  if (NUMBER_FNS.includes(fn)) return { type: 'number', ...(target.number !== undefined ? { number: target.number } : {}) };
-
   return { type: 'number' };
 };
 

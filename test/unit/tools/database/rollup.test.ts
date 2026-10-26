@@ -159,6 +159,13 @@ describe('rollup', () => {
       expect(rollupResultType('sum', number).type).toBe('number');
     });
 
+    // notion-spec-2 §14.10: the target's Show as is not inherited; its format is stamped once at target pick.
+    it('a number function does not carry the target\'s number settings', () => {
+      const euroRing: PropertyDefinition = { ...number, number: { format: 'euro', showAs: 'ring' } };
+
+      expect(rollupResultType('sum', euroRing)).toEqual({ type: 'number' });
+    });
+
     it('percents give a number shown as a percent', () => {
       expect(rollupResultType('percent_checked', checkbox)).toMatchObject({ type: 'number', number: { format: 'percent' } });
     });

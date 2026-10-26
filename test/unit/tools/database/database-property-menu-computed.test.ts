@@ -79,6 +79,7 @@ const schema: PropertyDefinition[] = [
 const taskSchema: PropertyDefinition[] = [
   { id: 't-title', name: 'Task', type: 'title', position: 'a0' },
   { id: 'hours', name: 'Hours', type: 'number', position: 'a1' },
+  { id: 'cost', name: 'Cost', type: 'number', position: 'a2', number: { format: 'euro', showAs: 'ring' } },
 ];
 
 const computed = () => ({
@@ -205,6 +206,43 @@ describe('property menu — computed types', () => {
 
     expect(cb.onUpdate).toHaveBeenCalledWith('p', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'count' } });
     expect(cb.onUpdate).toHaveBeenCalledWith('p', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'sum' } });
+  });
+
+  // notion-spec-2 §14.10: a new rollup takes the target's Number format, not its Show as.
+  it('rollup: picking a Number target with a format saves that format on the rollup', () => {
+    const { cb } = openMenu(prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: '', function: 'show_original' } }));
+    const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
+    const cost = byName(byName(edit, 'rollupProperty').children?.items ?? [], 'rollupProperty-cost');
+
+    cost.onActivate?.(cost);
+
+    expect(cb.onUpdate).toHaveBeenCalledWith('p', {
+      rollup: { relationPropertyId: 'rel', targetPropertyId: 'cost', function: 'show_original' },
+      number: { format: 'euro' },
+    });
+  });
+
+  it('rollup: picking a Number target keeps a format the rollup already has', () => {
+    const { cb } = openMenu(prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'sum' }, number: { format: 'dollar' } }));
+    const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
+    const cost = byName(byName(edit, 'rollupProperty').children?.items ?? [], 'rollupProperty-cost');
+
+    cost.onActivate?.(cost);
+
+    expect(cb.onUpdate).toHaveBeenCalledWith('p', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'cost', function: 'sum' } });
+  });
+
+  it('rollup: the inherited format joins the Show as already saved on the rollup', () => {
+    const { cb } = openMenu(prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'sum' }, number: { showAs: 'bar', color: 'green' } }));
+    const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
+    const cost = byName(byName(edit, 'rollupProperty').children?.items ?? [], 'rollupProperty-cost');
+
+    cost.onActivate?.(cost);
+
+    expect(cb.onUpdate).toHaveBeenCalledWith('p', {
+      rollup: { relationPropertyId: 'rel', targetPropertyId: 'cost', function: 'sum' },
+      number: { showAs: 'bar', color: 'green', format: 'euro' },
+    });
   });
 
   it('rollup: picking the Bar tile brings in Color and Divide by at once', () => {

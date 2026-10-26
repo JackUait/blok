@@ -154,6 +154,13 @@ const PERSON_NOTIFICATIONS = [
   ['none', 'tools.database.personNotificationsNone'],
 ] as const;
 
+/** notion-spec-2 §14.10: a rollup picks up its Number target's format, not its Show as. A format already saved wins. */
+const inheritedFormat = (rollup: PropertyDefinition, target: PropertyDefinition): Pick<PropertySettingsV2, 'number'> => {
+  const format = target.type === 'number' ? target.number?.format : undefined;
+
+  return format === undefined || rollup.number?.format !== undefined ? {} : { number: { ...rollup.number, format } };
+};
+
 /** A copy of the settings with one key left out. */
 const without = <T extends NumberDisplay | DateDisplay, K extends keyof T>(value: T, key: K): Omit<T, K> =>
   Object.fromEntries(Object.entries(value).filter(([name]) => name !== key)) as Omit<T, K>;
@@ -818,7 +825,7 @@ export class DatabasePropertyMenu {
             title: p.name,
             isActive: p.id === settings.targetPropertyId,
             closeOnActivate: true,
-            onActivate: () => set({ targetPropertyId: p.id }),
+            onActivate: () => update({ rollup: { ...settings, targetPropertyId: p.id }, ...inheritedFormat(property, p) }),
           })),
         },
       },

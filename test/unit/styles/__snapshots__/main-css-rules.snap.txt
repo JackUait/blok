@@ -9871,8 +9871,8 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-date-editor] {
-  padding: var(--blok-space-1) var(--blok-space-2) var(--blok-space-2);
-  gap: var(--blok-space-1);
+  padding: var(--blok-space-3) var(--blok-space-3) var(--blok-space-1);
+  gap: 0;
 }
 
 [data-blok-database-date-fields] {
@@ -9881,13 +9881,9 @@ textarea[data-blok-database-cell-input] {
   gap: var(--blok-space-1);
 }
 
-[data-blok-database-date-field] {
-  display: flex;
-  gap: var(--blok-space-1);
-  min-height: 28px;
-  padding: 0 var(--blok-space-2);
-  border: 1px solid var(--blok-database-drawer-border);
-  border-radius: var(--blok-radius-control);
+[data-blok-database-date-field][data-blok-field] {
+  font-size: 14px;
+  line-height: 16.8px;
 }
 
 [data-blok-database-date-time] {
@@ -9902,14 +9898,16 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-date-header] {
   display: flex;
   align-items: center;
-  gap: var(--blok-space-0-5);
-  min-height: 32px;
+  gap: var(--blok-space-2);
+  height: 20px;
+  margin: var(--blok-space-3) 0 var(--blok-space-0-5);
 }
 
 [data-blok-database-date-month] {
   flex: 1;
-  font-weight: 600;
-  padding-inline-start: var(--blok-space-1);
+  font-weight: 500;
+  line-height: 21px;
+  padding-inline-start: var(--blok-space-1-5);
 }
 
 [data-blok-database-date-today] {
@@ -9933,11 +9931,11 @@ textarea[data-blok-database-cell-input] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   border: none;
-  border-radius: var(--blok-radius-control);
+  border-radius: var(--blok-radius-control-sm);
   background: transparent;
   color: var(--blok-database-ink-secondary);
   cursor: pointer;
@@ -9960,13 +9958,14 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-date-grid] [role="row"] {
   display: grid;
   grid-template-columns: repeat(7, 32px);
+  grid-auto-rows: 32px;
+  place-items: center;
   justify-content: space-between;
 }
 
 [data-blok-database-date-weekday] {
-  height: 24px;
   font-size: 12px;
-  line-height: 24px;
+  line-height: 18px;
   text-align: center;
   color: var(--blok-database-date-weekday-text);
 }
@@ -9977,8 +9976,8 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-date-day] {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border: none;
   border-radius: var(--blok-radius-control);
@@ -10027,8 +10026,14 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-date-options] {
   display: flex;
   flex-direction: column;
+  gap: var(--blok-space-0-25);
+  margin-top: var(--blok-space-1);
   padding-top: var(--blok-space-1);
   border-top: 1px solid var(--blok-database-table-border);
+}
+
+[data-blok-database-date-options] > :not([data-blok-database-date-help-footer]), [data-blok-database-date-help-footer] > * {
+  margin-inline: calc(-1 * var(--blok-space-2));
 }
 
 [data-blok-database-date-end-toggle], [data-blok-database-date-time-toggle] {
@@ -10097,10 +10102,6 @@ textarea[data-blok-database-cell-input] {
   cursor: pointer;
 }
 
-[data-blok-database-date-remind] {
-  margin-bottom: var(--blok-space-1);
-}
-
 [data-blok-database-date-remind-value], [data-blok-database-date-setting-value] {
   margin-inline-start: auto;
   color: var(--blok-database-date-setting-value-text);
@@ -10122,14 +10123,22 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-date-remind] + [data-blok-database-date-clear] {
+  position: relative;
+  margin-top: var(--blok-space-2);
+}
+
+[data-blok-database-date-remind] + [data-blok-database-date-clear]::before {
+  content: "";
+  position: absolute;
+  top: calc(-1 * (var(--blok-space-1) + var(--blok-space-0-25)));
+  inset-inline: var(--blok-space-2);
   border-top: 1px solid var(--blok-database-table-border);
-  border-radius: 0;
-  padding-top: var(--blok-space-1);
 }
 
 [data-blok-database-date-help-footer] {
   display: flex;
   flex-direction: column;
+  margin-top: calc(var(--blok-space-1) - var(--blok-space-0-25));
   border-top: 1px solid var(--blok-database-table-border);
   padding-top: var(--blok-space-1);
 }
@@ -10137,9 +10146,9 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-date-help] {
   display: flex;
   align-items: center;
-  gap: var(--blok-space-1-5);
+  gap: var(--blok-space-2);
   min-height: 28px;
-  padding: 0 var(--blok-space-1);
+  padding: 0 var(--blok-space-2);
   border-radius: var(--blok-radius-control);
   color: var(--blok-database-date-help-text);
   text-decoration: none;

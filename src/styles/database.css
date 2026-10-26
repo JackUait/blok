@@ -6738,10 +6738,10 @@ textarea[data-blok-database-cell-input] {
   box-shadow: inset 0 0 0 1px var(--blok-database-drawer-border);
 }
 
-/* Date picker */
+/* Date picker. Notion's, measured from its top-left: field box 12/12, header 52, grid 74, rows from 307. */
 [data-blok-database-date-editor] {
-  padding: var(--blok-space-1) var(--blok-space-2) var(--blok-space-2);
-  gap: var(--blok-space-1);
+  padding: var(--blok-space-3) var(--blok-space-3) var(--blok-space-1);
+  gap: 0;
 }
 
 [data-blok-database-date-fields] {
@@ -6750,13 +6750,10 @@ textarea[data-blok-database-cell-input] {
   gap: var(--blok-space-1);
 }
 
-[data-blok-database-date-field] {
-  display: flex;
-  gap: var(--blok-space-1);
-  min-height: 28px;
-  padding: 0 var(--blok-space-2);
-  border: 1px solid var(--blok-database-drawer-border);
-  border-radius: var(--blok-radius-control);
+/* The box is field.css's look; Notion's text is 14px/16.8px. */
+[data-blok-database-date-field][data-blok-field] {
+  font-size: 14px;
+  line-height: 16.8px;
 }
 
 [data-blok-database-date-time] {
@@ -6772,14 +6769,16 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-date-header] {
   display: flex;
   align-items: center;
-  gap: var(--blok-space-0-5);
-  min-height: 32px;
+  gap: var(--blok-space-2);
+  height: 20px;
+  margin: var(--blok-space-3) 0 var(--blok-space-0-5);
 }
 
 [data-blok-database-date-month] {
   flex: 1;
-  font-weight: 600;
-  padding-inline-start: var(--blok-space-1);
+  font-weight: 500;
+  line-height: 21px;
+  padding-inline-start: var(--blok-space-1-5);
 }
 
 /* research/26 §1d: a 20px box, padding 0 8px, 12px/14.4px 500. Notion's 3px radius has no role; the small-control
@@ -6806,11 +6805,11 @@ textarea[data-blok-database-cell-input] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   border: none;
-  border-radius: var(--blok-radius-control);
+  border-radius: var(--blok-radius-control-sm);
   background: transparent;
   color: var(--blok-database-ink-secondary);
   cursor: pointer;
@@ -6835,13 +6834,14 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-date-grid] [role="row"] {
   display: grid;
   grid-template-columns: repeat(7, 32px);
+  grid-auto-rows: 32px;
+  place-items: center;
   justify-content: space-between;
 }
 
 [data-blok-database-date-weekday] {
-  height: 24px;
   font-size: 12px;
-  line-height: 24px;
+  line-height: 18px;
   text-align: center;
   color: var(--blok-database-date-weekday-text);
 }
@@ -6854,8 +6854,8 @@ textarea[data-blok-database-cell-input] {
 
 /* The picked day is gray with primary ink (no blue selected states). */
 [data-blok-database-date-day] {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border: none;
   border-radius: var(--blok-radius-control);
@@ -6905,8 +6905,16 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-date-options] {
   display: flex;
   flex-direction: column;
+  gap: var(--blok-space-0-25);
+  margin-top: var(--blok-space-1);
   padding-top: var(--blok-space-1);
   border-top: 1px solid var(--blok-database-table-border);
+}
+
+/* Rows reach 8px past the 224px dividers, so their text starts 12px into the picker. */
+[data-blok-database-date-options] > :not([data-blok-database-date-help-footer]),
+[data-blok-database-date-help-footer] > * {
+  margin-inline: calc(-1 * var(--blok-space-2));
 }
 
 /* Switch: 30×18 track and 14px knob, as measured on Notion's toggles (research/08). */
@@ -6989,10 +6997,6 @@ textarea[data-blok-database-cell-input] {
   cursor: pointer;
 }
 
-[data-blok-database-date-remind] {
-  margin-bottom: var(--blok-space-1);
-}
-
 [data-blok-database-date-remind-value],
 [data-blok-database-date-setting-value] {
   margin-inline-start: auto;
@@ -7016,16 +7020,26 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-ink);
 }
 
+/* A 224px line 4px above Clear, outside its hover fill. */
 [data-blok-database-date-remind] + [data-blok-database-date-clear] {
+  position: relative;
+  margin-top: var(--blok-space-2);
+}
+
+[data-blok-database-date-remind] + [data-blok-database-date-clear]::before {
+  content: "";
+  position: absolute;
+  top: calc(-1 * (var(--blok-space-1) + var(--blok-space-0-25)));
+  inset-inline: var(--blok-space-2);
   border-top: 1px solid var(--blok-database-table-border);
-  border-radius: 0;
-  padding-top: var(--blok-space-1);
 }
 
 /* research/23 §1: "Learn about reminders", the picker's last row. */
+/* Its line sits 4px under Clear (the options' 1px gap plus 3px). */
 [data-blok-database-date-help-footer] {
   display: flex;
   flex-direction: column;
+  margin-top: calc(var(--blok-space-1) - var(--blok-space-0-25));
   border-top: 1px solid var(--blok-database-table-border);
   padding-top: var(--blok-space-1);
 }
@@ -7033,9 +7047,9 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-date-help] {
   display: flex;
   align-items: center;
-  gap: var(--blok-space-1-5);
+  gap: var(--blok-space-2);
   min-height: 28px;
-  padding: 0 var(--blok-space-1);
+  padding: 0 var(--blok-space-2);
   border-radius: var(--blok-radius-control);
   color: var(--blok-database-date-help-text);
   text-decoration: none;

@@ -48,7 +48,7 @@ describe('database switches in dark (findings K11, live)', () => {
 describe('date picker dividers (findings K12, research/33 §4.1)', () => {
   it.each([
     '[data-blok-database-date-options]',
-    '[data-blok-database-date-remind] + [data-blok-database-date-clear]',
+    '[data-blok-database-date-remind] + [data-blok-database-date-clear]::before',
     '[data-blok-database-date-help-footer]',
   ])('%s draws Notion\'s menu divider, the table border', (selector) => {
     expect(ruleBody(selector)).toContain('border-top: 1px solid var(--blok-database-table-border)');

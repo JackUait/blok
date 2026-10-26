@@ -122,6 +122,66 @@ describe('cell editor CSS', () => {
     });
   });
 
+  // Notion's picker, measured 2026-10-25 from its top-left: field 12/12, header 52, grid 74 (224 tall), first row 307.
+  describe('date picker geometry', () => {
+    it('pads the picker 12px, so the field box starts at 12/12', () => {
+      expect(declared('[data-blok-database-date-editor]', 'padding')).toEqual(['var(--blok-space-3) var(--blok-space-3) var(--blok-space-1)']);
+      expect(declared('[data-blok-database-date-editor]', 'gap')).toEqual(['0']);
+    });
+
+    it('draws the field with the shared look on a 14px/16.8px line', () => {
+      expect(declared('[data-blok-database-date-field]', 'border')).toEqual([]);
+      expect(declared('[data-blok-database-date-field][data-blok-field]', 'font-size')).toEqual(['14px']);
+      expect(declared('[data-blok-database-date-field][data-blok-field]', 'line-height')).toEqual(['16.8px']);
+    });
+
+    it('puts a 20px header 12px under the field and 2px over the grid', () => {
+      expect(declared('[data-blok-database-date-header]', 'height')).toEqual(['20px']);
+      expect(declared('[data-blok-database-date-header]', 'margin')).toEqual(['var(--blok-space-3) 0 var(--blok-space-0-5)']);
+      expect(declared('[data-blok-database-date-header]', 'gap')).toEqual(['var(--blok-space-2)']);
+    });
+
+    it('labels the month 14px/21px at weight 500', () => {
+      expect(declared('[data-blok-database-date-month]', 'font-weight')).toEqual(['500']);
+      expect(declared('[data-blok-database-date-month]', 'line-height')).toEqual(['21px']);
+    });
+
+    it('draws the month arrows 20x20', () => {
+      expect(declared('[data-blok-database-date-prev]', 'width')).toEqual(['20px']);
+      expect(declared('[data-blok-database-date-prev]', 'height')).toEqual(['20px']);
+    });
+
+    it('lays the grid in 32px cells: weekday row 12px/18px, 28px day buttons centred', () => {
+      expect(declared('[data-blok-database-date-grid] [role="row"]', 'grid-template-columns')).toEqual(['repeat(7, 32px)']);
+      expect(declared('[data-blok-database-date-grid] [role="row"]', 'grid-auto-rows')).toEqual(['32px']);
+      expect(declared('[data-blok-database-date-grid] [role="row"]', 'place-items')).toEqual(['center']);
+      expect(declared('[data-blok-database-date-weekday]', 'line-height')).toEqual(['18px']);
+      expect(declared('[data-blok-database-date-day]', 'width')).toEqual(['28px']);
+      expect(declared('[data-blok-database-date-day]', 'height')).toEqual(['28px']);
+    });
+
+    it('starts the rows 4px under a 224px divider, one pixel apart, their text 12px in', () => {
+      expect(declared('[data-blok-database-date-options]', 'margin-top')).toEqual(['var(--blok-space-1)']);
+      expect(declared('[data-blok-database-date-options]', 'padding-top')).toEqual(['var(--blok-space-1)']);
+      expect(declared('[data-blok-database-date-options]', 'gap')).toEqual(['var(--blok-space-0-25)']);
+      expect(declared('[data-blok-database-date-options] > :not([data-blok-database-date-help-footer])', 'margin-inline')).toEqual(['calc(-1 * var(--blok-space-2))']);
+    });
+
+    it('puts Clear 9px under Remind, its line 5px above it', () => {
+      const clear = '[data-blok-database-date-remind] + [data-blok-database-date-clear]';
+
+      expect(declared(clear, 'margin-top')).toEqual(['var(--blok-space-2)']);
+      expect(declared(`${clear}::before`, 'top')).toEqual(['calc(-1 * (var(--blok-space-1) + var(--blok-space-0-25)))']);
+      expect(declared(`${clear}::before`, 'inset-inline')).toEqual(['var(--blok-space-2)']);
+    });
+
+    it('draws the help row line 4px under Clear, the row as wide as the others', () => {
+      expect(declared('[data-blok-database-date-help-footer]', 'margin-top')).toEqual(['calc(var(--blok-space-1) - var(--blok-space-0-25))']);
+      expect(declared('[data-blok-database-date-help-footer] > *', 'margin-inline')).toEqual(['calc(-1 * var(--blok-space-2))']);
+      expect(declared('[data-blok-database-date-help]', 'gap')).toEqual(['var(--blok-space-2)']);
+    });
+  });
+
   // notion-spec §7, scratchpad n/11-status.png and n/12-select.png: text, pills and headings start 12px into the box.
   describe('select and status pickers over a row page value', () => {
     const VALUE = "[data-blok-popover-custom-class~='blok-database-value-editor']";

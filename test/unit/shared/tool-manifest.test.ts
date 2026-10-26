@@ -483,6 +483,6 @@ describe('canonicalHash', () => {
   });
 
   it('publishes the shared reserved namespace tuple', () => {
-    expect(RESERVED_NAMESPACES).toEqual(['doc', 'block', 'text', 'markdown', 'history']);
+    expect(RESERVED_NAMESPACES).toEqual(['doc', 'block', 'text', 'markdown', 'html', 'history']);
   });
 });

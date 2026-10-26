@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using Blok.Server.Agent;
 using Blok.Server.Collab;
+using Blok.Server.Runtime;
 using Xunit;
 
 namespace Blok.Server.Tests.Agent;
@@ -10,6 +11,7 @@ public sealed class BlokAgentRoomHistoryTests
   private const string Undo = """{"commands":[{"name":"history.undo","args":{}}]}""";
   private const string Redo = """{"commands":[{"name":"history.redo","args":{}}]}""";
   private static readonly BlokAgentActor Actor = new("agent-cs", "Agent");
+  private static readonly string[] LostRace = ["NOTHING_TO_UNDO", "CONFLICT"];
   private static readonly JsonObject Seed = JsonNode.Parse("""
       {"blocks":[
         {"id":"p","type":"paragraph","data":{"text":"Hello"}},
@@ -180,6 +182,59 @@ public sealed class BlokAgentRoomHistoryTests
 
     Assert.Equal("NOTHING_TO_UNDO", Code(await RunAsync(room, Undo)));
     Assert.Equal(before, (await room.ExportAsync())["blocks"]!.ToJsonString());
+  }
+
+  [Fact]
+  public async Task OnePersonCannotUndoTheBatchTheAgentWroteForAnother()
+  {
+    await using var room = Open();
+    var forA = new BlokAgentActor("agent-cs", "Agent", "person-a");
+    var forB = new BlokAgentActor("agent-cs", "Agent", "person-b");
+
+    Assert.True((await RunAsync(room, Insert("a", "For A"), forA))["ok"]!.GetValue<bool>());
+
+    Assert.Equal("NOTHING_TO_UNDO", Code(await RunAsync(room, Undo, forB)));
+    Assert.Equal(["p", "q", "a"], await IdsAsync(room));
+    Assert.True((await RunAsync(room, Undo, forA))["ok"]!.GetValue<bool>());
+  }
+
+  [Fact]
+  public async Task RefusesUndoTheContractDoesNotOffer()
+  {
+    await using var room = AgentRoomForTests.Seed($"history-{Guid.NewGuid():N}", Seed, real => new NoHistoryRuntime(real));
+
+    await OkAsync(room, Insert("a", "Agent"));
+
+    Assert.Equal("COMMAND_UNAVAILABLE", Code(await RunAsync(room, Undo)));
+    Assert.Equal(["p", "q", "a"], await IdsAsync(room));
+  }
+
+  [Fact]
+  public async Task TwoUndosAtOnceTakeTheStepBackOnce()
+  {
+    await using var room = Open();
+
+    await OkAsync(room, Insert("a", "Agent"));
+    var results = await Task.WhenAll(RunAsync(room, Undo), RunAsync(room, Undo));
+
+    Assert.Single(results, result => result["ok"]!.GetValue<bool>());
+    Assert.Contains(Code(results.Single(result => !result["ok"]!.GetValue<bool>())), LostRace);
+    Assert.Equal(["p", "q"], await IdsAsync(room));
+    await OkAsync(room, Redo);
+    Assert.Equal(["p", "q", "a"], await IdsAsync(room));
+  }
+
+  /// <summary>Answers a history batch as a contract without history.* would; everything else runs for real.</summary>
+  private sealed class NoHistoryRuntime(IBlokRuntime inner) : IBlokRuntime
+  {
+    public ValueTask<string> InvokeAsync(string operation, string inputJson, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+    {
+      var name = JsonNode.Parse(inputJson)?["batch"]?["commands"]?[0]?["name"]?.GetValue<string>();
+
+      return operation == "agentExecute" && name is "history.undo" or "history.redo"
+          ? ValueTask.FromResult("""{"result":{"ok":false,"error":{"code":"COMMAND_UNAVAILABLE","message":"\"history.undo\" is not available here.","retryable":false,"details":{"reason":"runtime"}},"warnings":[]},"document":{"blocks":[]},"edits":[]}""")
+          : inner.InvokeAsync(operation, inputJson, timeout, cancellationToken);
+    }
   }
 
   [Fact]

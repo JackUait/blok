@@ -331,7 +331,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
 
       if (JsonNode.Parse(acted.ResultJson)?["ok"]?.GetValue<bool>() == true)
       {
-        roomHistory.Add(docId, actor.Id, new RoomAgentHistory.Step { Other = true });
+        roomHistory.Add(docId, actor, new RoomAgentHistory.Step { Other = true });
       }
 
       return WithHead(acted, current);
@@ -339,6 +339,19 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
 
     if (HistoryCommand(input["batch"]) is { } historyName)
     {
+      // Jint checks the batch against the contract the host's options build; only its
+      // "nothing to replay" answer, from a session that holds no steps, lets the room replay.
+      input["document"] = new JsonObject { ["blocks"] = new JsonArray() };
+      var gate = JsonNode.Parse(await runtime.InvokeAsync("agentExecute", input.ToJsonString(), cancellationToken: cancellationToken))?["result"] as JsonObject
+          ?? throw new InvalidOperationException("The Blok runtime returned no agent result.");
+
+      if (gate["error"]?["code"]?.GetValue<string>() is not ("NOTHING_TO_UNDO" or "NOTHING_TO_REDO"))
+      {
+        gate.Remove("revision");
+
+        return new BlokAgentExecution(gate.ToJsonString(), null, string.Empty);
+      }
+
       return await RunRoomHistoryAsync(docId, historyName == "history.undo", actor, expect, cancellationToken);
     }
 
@@ -394,7 +407,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
             && await converter.ExportAsync(doc, token) is JsonObject after)
         {
           recorded = RoomAgentHistory.Between(before, beforeMaps, after, YDocConverter.ReadPageMaps(doc));
-          roomHistory.Add(docId, actor.Id, recorded);
+          roomHistory.Add(docId, actor, recorded);
         }
       }, cancellationToken);
     }
@@ -464,7 +477,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
     var verb = undo ? "undone" : "redone";
     RoomAgentHistory.Step? step = null;
     CollabEditResult edit;
-    var top = (undo ? roomHistory.Find(docId, actor.Id)?.Done : roomHistory.Find(docId, actor.Id)?.Undone)?.LastOrDefault();
+    var top = roomHistory.Top(docId, actor, undo);
 
     // Checked before the room: a purged document refuses every edit, and this answer is the true one.
     if (top is null)
@@ -500,8 +513,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
     {
       edit = await rooms!.AgentEditAsync(docId, async (doc, token) =>
       {
-        var steps = roomHistory.Find(docId, actor.Id);
-        step = (undo ? steps?.Done : steps?.Undone)?.LastOrDefault();
+        step = roomHistory.Top(docId, actor, undo);
 
         if (step is not null && step.Lineage is not null && step.Lineage != expect?.Lineage)
         {
@@ -541,28 +553,14 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
           System.Text.Encoding.UTF8.GetBytes($"agent-{verb}\n{actor.Id}\n{Guid.NewGuid():N}")), actor.Id, expect,
       async (doc, token) =>
       {
-        var steps = roomHistory.Find(docId, actor.Id);
-
-        if (step is null || steps is null || await converter!.ExportAsync(doc, token) is not JsonObject now)
+        if (step is null || await converter!.ExportAsync(doc, token) is not JsonObject now)
         {
           return;
         }
 
         // What the room holds now is what the opposite replay checks against.
-        var actual = RoomAgentHistory.Project(now, YDocConverter.ReadPageMaps(doc), step.Ids, step.PageKeys);
-
-        if (undo)
-        {
-          step.Before = actual;
-          steps.Done.Remove(step);
-          steps.Undone.Add(step);
-        }
-        else
-        {
-          step.After = actual;
-          steps.Undone.Remove(step);
-          steps.Done.Add(step);
-        }
+        roomHistory.Replayed(docId, actor, step, undo,
+            RoomAgentHistory.Project(now, YDocConverter.ReadPageMaps(doc), step.Ids, step.PageKeys));
       }, cancellationToken);
     }
     catch (HistoryRefusal refusal)

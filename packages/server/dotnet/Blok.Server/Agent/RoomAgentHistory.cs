@@ -5,7 +5,7 @@ namespace Blok.Server.Agent;
 
 /// <summary>
 /// The undo steps of agents in live rooms. A room call carries no session, so the
-/// steps belong to one actor in one room, in this process's memory, and go after
+/// steps belong to one actor acting for one person in one room, in this process's memory, and go after
 /// <see cref="IdleLimit"/> without a call. Each step keeps how its blocks and page
 /// keys looked before and after it, so undo writes back only those, and only while
 /// nobody else changed them.
@@ -17,7 +17,10 @@ internal sealed class RoomAgentHistory(TimeProvider time)
   internal const int MaxChars = 4 * 1024 * 1024;
   internal static readonly TimeSpan IdleLimit = TimeSpan.FromHours(1);
 
-  private readonly Dictionary<(string DocId, string ActorId), Steps> rooms = [];
+  // OnBehalfOf is part of the key: one agent id acting for two people keeps two histories.
+  private readonly Dictionary<(string DocId, string ActorId, string? OnBehalfOf), Steps> rooms = [];
+
+  private static (string, string, string?) Key(string docId, BlokAgentActor actor) => (docId, actor.Id, actor.OnBehalfOf);
 
   /// <summary>
   /// One batch: the projection of its blocks and page keys before and after it.
@@ -39,28 +42,64 @@ internal sealed class RoomAgentHistory(TimeProvider time)
     internal int Chars => Before.ToJsonString().Length + After.ToJsonString().Length;
   }
 
-  internal sealed class Steps
+  private sealed class Steps
   {
     internal List<Step> Done { get; } = [];
     internal List<Step> Undone { get; } = [];
     internal DateTimeOffset LastUsed { get; set; }
   }
 
-  /// <summary>The actor's steps in the room; null when it has none.</summary>
-  internal Steps? Find(string docId, string actorId)
+  /// <summary>The step an undo (or redo) would replay now; null when there is none.</summary>
+  internal Step? Top(string docId, BlokAgentActor actor, bool undo)
   {
     lock (rooms)
     {
       Prune();
 
-      if (!rooms.TryGetValue((docId, actorId), out var steps))
+      if (!rooms.TryGetValue(Key(docId, actor), out var steps))
       {
         return null;
       }
 
       steps.LastUsed = time.GetUtcNow();
 
-      return steps;
+      return (undo ? steps.Done : steps.Undone).LastOrDefault();
+    }
+  }
+
+  /// <summary>
+  /// Moves a replayed step to the other side with what the room now holds. False, and
+  /// nothing changes, when the steps were forgotten or the step is no longer on top.
+  /// </summary>
+  internal bool Replayed(string docId, BlokAgentActor actor, Step step, bool undo, JsonObject actual)
+  {
+    lock (rooms)
+    {
+      if (!rooms.TryGetValue(Key(docId, actor), out var steps))
+      {
+        return false;
+      }
+
+      var (from, to) = undo ? (steps.Done, steps.Undone) : (steps.Undone, steps.Done);
+
+      if (from.Count == 0 || !ReferenceEquals(from[^1], step))
+      {
+        return false;
+      }
+
+      if (undo)
+      {
+        step.Before = actual;
+      }
+      else
+      {
+        step.After = actual;
+      }
+
+      from.RemoveAt(from.Count - 1);
+      to.Add(step);
+
+      return true;
     }
   }
 
@@ -77,16 +116,16 @@ internal sealed class RoomAgentHistory(TimeProvider time)
   }
 
   /// <summary>A new batch: drops the redo side and the oldest steps past the caps.</summary>
-  internal void Add(string docId, string actorId, Step step)
+  internal void Add(string docId, BlokAgentActor actor, Step step)
   {
     lock (rooms)
     {
       Prune();
 
-      if (!rooms.TryGetValue((docId, actorId), out var steps))
+      if (!rooms.TryGetValue(Key(docId, actor), out var steps))
       {
         steps = new Steps();
-        rooms[(docId, actorId)] = steps;
+        rooms[Key(docId, actor)] = steps;
       }
 
       steps.LastUsed = time.GetUtcNow();

@@ -67,7 +67,8 @@ internal sealed class AgentRoomForTests : IAsyncDisposable
 
   internal CollabRoomManager Manager { get; }
 
-  internal static AgentRoomForTests Seed(string docId, JsonObject seed)
+  /// <param name="wrap">Puts a test runtime in front of the real one.</param>
+  internal static AgentRoomForTests Seed(string docId, JsonObject seed, Func<IBlokRuntime, IBlokRuntime>? wrap = null)
   {
     var endpoint = new FakeDocEndpoint();
     endpoint.HoldsDocument(docId, (JsonObject)seed.DeepClone());
@@ -81,7 +82,7 @@ internal sealed class AgentRoomForTests : IAsyncDisposable
         TimeProvider.System,
         operationStore: new FakeCollabOperationStore());
 
-    return new AgentRoomForTests(docId, manager, new BlokAgentExecutor(Runtime.Value, manager, converter));
+    return new AgentRoomForTests(docId, manager, new BlokAgentExecutor(wrap?.Invoke(Runtime.Value) ?? Runtime.Value, manager, converter));
   }
 
   internal async Task<JsonObject> ExportAsync()

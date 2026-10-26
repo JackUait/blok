@@ -26,7 +26,11 @@ export const buildMcpContracts = (input: {
     ...(input.pageTitles === 'page-map' ? ['pageBackend' as const] : []),
     ...(input.versionHistory === true ? ['versionHistory' as const] : []),
   ];
-  const prepares = input.createsPages === true && input.pageTitles === 'page-map' ? { prepares: ['page'] } : {};
+  const prepares = {
+    ...(input.createsPages === true && input.pageTitles === 'page-map' && { prepares: ['page'] }),
+    // The sync server's history restores too.
+    ...(input.versionHistory === true && { restores: true }),
+  };
   const stored = createHeadlessAgentSetup({
     customTools: input.manifest,
     overrides: input.overrides,

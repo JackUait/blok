@@ -59,11 +59,25 @@ const factory: CollabSocketFactory = () => {
   return socket;
 };
 
-interface Seen { url: string; authorization?: string; origin?: string; method?: string }
+interface Seen { url: string; authorization?: string; origin?: string; method?: string; key?: string }
+
+/** Statuses the next restore requests answer, in order; 204 once they run out. */
+const restoreAnswers: number[] = [];
 
 /** The sync server's history routes for "doc-1", with one version on each of two lineages. */
 const historyServer = (seen: Seen[]): Server => createServer((request: IncomingMessage, response) => {
-  seen.push({ url: request.url ?? '', authorization: request.headers.authorization, origin: request.headers.origin, method: request.method });
+  const key = request.headers['blok-idempotency-key'];
+
+  seen.push({
+    url: request.url ?? '', authorization: request.headers.authorization, origin: request.headers.origin, method: request.method,
+    ...(typeof key === 'string' && { key }),
+  });
+  if (request.method === 'POST' && request.url === `/sync/doc-1/history/${LINEAGE}/4/restore`) {
+    response.writeHead(restoreAnswers.shift() ?? 204);
+    response.end();
+
+    return;
+  }
   const json = (status: number, body: unknown): void => {
     response.writeHead(status, { 'content-type': 'application/json' });
     response.end(JSON.stringify(body));
@@ -108,6 +122,7 @@ describe('blok-mcp live handles read the sync server version history', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     seen = [];
+    restoreAnswers.length = 0;
     server = historyServer(seen);
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
     const address = server.address();
@@ -134,8 +149,8 @@ describe('blok-mcp live handles read the sync server version history', () => {
     vi.restoreAllMocks();
   });
 
-  const open = async (): Promise<string> => {
-    const opened = await mcp.dispatch('blok_open', { documentId: 'doc-1' }, caller);
+  const open = async (write = false): Promise<string> => {
+    const opened = await mcp.dispatch('blok_open', { documentId: 'doc-1', ...(write && { write }) }, caller);
     const handle = opened.structuredContent.handle;
 
     if (typeof handle !== 'string') {
@@ -214,9 +229,65 @@ describe('blok-mcp live handles read the sync server version history', () => {
     expect(listed).toMatchObject({ ok: false, error: { code: 'TOOL_ACTION_FAILED', retryable: true } });
   });
 
+  it('restores a version through the sync server restore route, as the history drawer does', async () => {
+    const handle = await open(true);
+    const restored = await execute(handle, 'history.restore', { version: `${LINEAGE}:4` });
+    const post = seen.find((request) => request.method === 'POST');
+
+    expect(restored).toMatchObject({ ok: true, results: [{ version: `${LINEAGE}:4`, previous: `${LINEAGE}:4` }] });
+    expect(post).toMatchObject({ url: `/sync/doc-1/history/${LINEAGE}/4/restore`, origin: ORIGIN });
+    expect(post?.key).toMatch(/^[ -~]{1,128}$/);
+    expect(readTicketClaims(post?.authorization?.replace(/^Bearer /, '') ?? '')).toMatchObject({ doc: 'doc-1', user: 'agent:alice:claude' });
+  });
+
+  it('sends the same idempotency key again when a ticket refresh retries the restore', async () => {
+    restoreAnswers.push(401);
+    const handle = await open(true);
+    const restored = await execute(handle, 'history.restore', { version: `${LINEAGE}:4` });
+    const posts = seen.filter((request) => request.method === 'POST');
+
+    expect(restored).toMatchObject({ ok: true });
+    expect(posts).toHaveLength(2);
+    expect(posts[1]?.key).toBe(posts[0]?.key);
+  });
+
+  it('says VERSION_NOT_FOUND when the version is gone, and never sends a restore', async () => {
+    const handle = await open(true);
+    const missing = await execute(handle, 'history.restore', { version: `${LINEAGE}:99` });
+
+    expect(missing).toMatchObject({ ok: false, error: { code: 'VERSION_NOT_FOUND', path: '/commands/0/args/version' } });
+    expect(seen.some((request) => request.method === 'POST')).toBe(false);
+  });
+
+  it('says VERSION_NOT_FOUND when the restore route finds no such version', async () => {
+    restoreAnswers.push(404);
+    const handle = await open(true);
+    const missing = await execute(handle, 'history.restore', { version: `${LINEAGE}:4` });
+
+    expect(missing).toMatchObject({ ok: false, error: { code: 'VERSION_NOT_FOUND' } });
+  });
+
+  it('says a refused restore is a failure the status explains', async () => {
+    restoreAnswers.push(403);
+    const handle = await open(true);
+    const refused = await execute(handle, 'history.restore', { version: `${LINEAGE}:4` });
+
+    expect(refused).toMatchObject({ ok: false, error: { code: 'TOOL_ACTION_FAILED', retryable: false } });
+    expect(JSON.stringify(refused)).toContain('403');
+  });
+
+  it('refuses a restore on a read-only handle as READ_ONLY', async () => {
+    const handle = await open();
+    const refused = await execute(handle, 'history.restore', { version: `${LINEAGE}:4` });
+
+    expect(refused).toMatchObject({ ok: false, error: { code: 'READ_ONLY' } });
+    expect(seen).toEqual([]);
+  });
+
   it('names the history commands in the listed blok_execute schema', () => {
     const execute = mcp.tools.find((tool) => tool.name === 'blok_execute');
 
     expect(JSON.stringify(execute?.inputSchema)).toContain('history.changes');
+    expect(JSON.stringify(execute?.inputSchema)).toContain('history.restore');
   });
 });

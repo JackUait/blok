@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import type { AgentVersion, AgentVersionHistory } from '../../../types/agent';
 import type { OutputData } from '../../../types/data-formats/output-data';
 import type { CollabTicketSource } from '../../components/modules/collaboration/types';
@@ -31,17 +33,27 @@ const versionsOf = (body: unknown): AgentVersion[] => {
   }));
 };
 
+/** "lineage:sequence" as its route path, or null when it is not one. */
+const pointPath = (version: string): string | null => {
+  const colon = version.lastIndexOf(':');
+  const sequence = version.slice(colon + 1);
+
+  return colon <= 0 || !/^\d+$/.test(sequence) ? null : `${encodeURIComponent(version.slice(0, colon))}/${sequence}`;
+};
+
 /**
  * The sync server's version history routes for one room, behind the room's own ticket.
- * Read-only: the restore and delete routes are never called.
+ * Restore posts what the history drawer posts. The delete route is never called.
  */
 export const createHttpVersionHistory = (input: HttpVersionHistoryInput): AgentVersionHistory => {
   const base = `${input.roomUrl.replace(/^ws(s?):/i, 'http$1:')}/history`;
 
-  const get = async (url: string, fresh = false): Promise<Response> => {
+  const send = async (url: string, init: { method?: string; headers?: Record<string, string> } = {}, fresh = false): Promise<Response> => {
     const token = input.tickets === undefined ? undefined : await input.tickets(fresh ? { forceRefresh: true } : undefined);
     const response = await fetch(url, {
+      ...(init.method !== undefined && { method: init.method }),
       headers: {
+        ...init.headers,
         ...(token !== undefined && { Authorization: `Bearer ${token}` }),
         // The HTTP guard checks Origin like the WebSocket upgrade does.
         ...(input.origin !== undefined && { Origin: input.origin }),
@@ -51,9 +63,10 @@ export const createHttpVersionHistory = (input: HttpVersionHistoryInput): AgentV
       throw Object.assign(new Error(`The sync server could not be reached: ${error instanceof Error ? error.message : String(error)}`), { retryable: true });
     });
 
-    // A ticket can expire between mints.
-    return response.status === 401 && !fresh && input.tickets !== undefined ? get(url, true) : response;
+    // A ticket can expire between mints. The retry keeps init, so a restore keeps its idempotency key.
+    return response.status === 401 && !fresh && input.tickets !== undefined ? send(url, init, true) : response;
   };
+  const get = (url: string): Promise<Response> => send(url);
 
   // The status tells the agent whether a retry can help.
   const refused = async (response: Response): Promise<Error> => Object.assign(
@@ -72,13 +85,12 @@ export const createHttpVersionHistory = (input: HttpVersionHistoryInput): AgentV
       return versionsOf(await response.json());
     },
     read: async (version) => {
-      const colon = version.lastIndexOf(':');
-      const sequence = version.slice(colon + 1);
+      const path = pointPath(version);
 
-      if (colon <= 0 || !/^\d+$/.test(sequence)) {
+      if (path === null) {
         return null;
       }
-      const response = await get(`${base}/${encodeURIComponent(version.slice(0, colon))}/${sequence}`);
+      const response = await get(`${base}/${path}`);
 
       if (response.status === 404) {
         return null;
@@ -89,6 +101,24 @@ export const createHttpVersionHistory = (input: HttpVersionHistoryInput): AgentV
       const body: unknown = await response.json();
 
       return isRecord(body) && Array.isArray(body.blocks) ? body as unknown as OutputData : null;
+    },
+    restore: async (version) => {
+      const path = pointPath(version);
+
+      if (path === null) {
+        return false;
+      }
+      // One key per restore: a retried request that already landed is answered, never applied twice.
+      const response = await send(`${base}/${path}/restore`, { method: 'POST', headers: { 'Blok-Idempotency-Key': randomUUID() } });
+
+      if (response.status === 404) {
+        return false;
+      }
+      if (!response.ok) {
+        throw await refused(response);
+      }
+
+      return true;
     },
   };
 };

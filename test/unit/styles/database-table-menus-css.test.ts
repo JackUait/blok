@@ -128,4 +128,13 @@ describe('row page property menu (research parity row 9)', () => {
     expect(declared(`${ROW_PAGE} [data-blok-popover-item-separator]`, 'padding-block')).toEqual(['var(--blok-space-0-75) var(--blok-space-1)']);
     expect(declared(`${ROW_PAGE} [data-blok-popover-item]:last-child`, 'margin-block-end')).toEqual(['0']);
   });
+
+  // notion-spec-2 §1: "Type › Number": 14/16.8 value, 6px to the chevron, chevron 8px from the row end.
+  // Notion's value ink rgb(161,158,153) fails AA, so the value keeps Blok's secondary ink.
+  it('shows a row\'s value at 14px, 6px before its chevron, with the chevron 8px from the row end', () => {
+    expect(declared(`${ROW_PAGE} [data-blok-popover-item-value]`, 'font-size')).toEqual(['14px']);
+    expect(declared(`${ROW_PAGE} [data-blok-popover-item-value]`, 'line-height')).toEqual(['1.2']);
+    expect(declared(`${ROW_PAGE} [data-blok-popover-item-value] + [data-blok-popover-item-icon-chevron-right]`, 'margin-inline-start')).toEqual(['var(--blok-space-1-5)']);
+    expect(declared(`${ROW_PAGE} [data-blok-popover-item]:has(> [data-blok-popover-item-value])`, 'padding-inline-end')).toEqual(['var(--blok-space-2)']);
+  });
 });

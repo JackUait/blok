@@ -1163,6 +1163,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_SHOW_AS_TILES_BYTES = 1_515;
     // database.css: a Number's Bar or Ring keeps its size in a block-level table cell.
     const DATABASE_NUMBER_GAUGE_BYTES = 470;
+    // database.css: the row page panel's plain-text values, plus Notion-sized tiles and gauges.
+    const DATABASE_PANEL_VALUES_TILES_BYTES = 1_069;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1390,7 +1392,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_DATE_PICKER_BYTES
       + DATABASE_ROW_PAGE_FINISH_BYTES
       + DATABASE_SHOW_AS_TILES_BYTES
-      + DATABASE_NUMBER_GAUGE_BYTES;
+      + DATABASE_NUMBER_GAUGE_BYTES
+      + DATABASE_PANEL_VALUES_TILES_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

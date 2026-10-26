@@ -297,16 +297,58 @@ describe('database row page layout css', () => {
   // research/10 §2: 117x80 cards. Notion rings the selected one blue; the blue law makes it neutral.
   // Labels as measured: light 115,114,110 / 29,27,22 (research/10 §2), dark white (research/21 §1n).
   // Dark's measured 90,90,90 fails AA, so the dark label is the tertiary ink's AA step.
-  // 08-rename.png: Notion rings the picked Show as tile blue; Blok draws it like the Structure cards.
-  it('marks the picked Show as tile with a neutral ring and no fill', () => {
+  // notion-spec-2 §2: Notion rings the picked Show as tile 2px blue; Blok keeps the 2px ring, neutral.
+  it('marks the picked Show as tile with a 2px neutral ring and no fill', () => {
     const tile = ruleBody('[data-blok-database-show-as-tile]');
     const picked = ruleBody('[data-blok-database-show-as-tile][aria-checked="true"]');
 
-    expect(tile).toContain('background-color: var(--blok-database-builder-tile-bg)');
+    expect(tile).toContain('background-color: transparent');
+    expect(tile).toContain('box-shadow: 0 0 0 1px var(--blok-database-card-ring)');
     expect(tile).toContain('color: var(--blok-database-builder-tile-text)');
-    expect(picked).toContain('var(--blok-database-card-border-active)');
+    expect(picked).toContain('box-shadow: 0 0 0 2px var(--blok-database-card-border-active)');
     expect(picked).toContain('color: var(--blok-database-builder-tile-text-active)');
     expect(picked).not.toMatch(/background|accent|blue|focus-ring|#2383e2|toggle-on/i);
+  });
+
+  // notion-spec-2 §2: 72x48 tiles 8px apart, a 48x20 glyph 4px over a 12/12 label, "42" 16/24 500.
+  it('sizes the Show as tiles as Notion\'s', () => {
+    const tile = ruleBody('[data-blok-database-show-as-tile]');
+    const glyph = ruleBody('[data-blok-database-show-as-glyph]');
+
+    expect(ruleBody('[data-blok-database-show-as-tiles]')).toContain('gap: var(--blok-space-2)');
+    expect(tile).toContain('inline-size: 72px');
+    expect(tile).toContain('block-size: 48px');
+    expect(tile).toContain('padding: var(--blok-space-1-5) var(--blok-space-3)');
+    expect(tile).toContain('line-height: 1');
+    expect(tile).not.toContain('flex: 1 1 0');
+    expect(glyph).toContain('inline-size: 48px');
+    expect(glyph).toContain('block-size: 20px');
+    expect(glyph).toContain('margin-block-end: var(--blok-space-1)');
+    expect(glyph).toContain('font-weight: 500');
+  });
+
+  // notion-spec-2 §2: a 20px ring, and gray gauges until their tile is picked (Notion turns it blue; Blok keeps the cell ink).
+  it('draws the tile gauges gray, at Notion\'s 20px ring', () => {
+    const gauges = '[data-blok-database-show-as-glyph] > [data-blok-database-number-bar], [data-blok-database-show-as-glyph] > [data-blok-database-number-ring]';
+    const picked = '[data-blok-database-show-as-tile][aria-checked="true"] [data-blok-database-show-as-glyph] > *';
+
+    expect(ruleBody(gauges)).toContain('--blok-database-number-ink: var(--blok-database-status-dot-gray)');
+    expect(ruleBody(picked)).toContain('--blok-database-number-ink: var(--blok-database-option-default-text)');
+    expect(ruleBody('[data-blok-database-show-as-glyph] > [data-blok-database-number-ring]')).toContain('inline-size: 20px');
+    expect(ruleBody('[data-blok-database-show-as-glyph] > [data-blok-database-number-ring]')).toContain('block-size: 20px');
+  });
+
+  // notion-spec-2 §2: heading 12px 500 at the panel's +20, 12px under the rule, 16px over the tiles.
+  // Notion's heading ink rgb(125,122,117) fails AA at 12px, so it keeps Blok's secondary ink.
+  it('sets the Show as heading as Notion\'s', () => {
+    const root = ruleBody('[data-blok-database-show-as]');
+    const heading = ruleBody('[data-blok-database-show-as-heading]');
+
+    expect(root).toContain('padding: var(--blok-space-2) var(--blok-space-4);');
+    expect(heading).toContain('font-weight: 500');
+    expect(heading).toContain('line-height: 1.2');
+    expect(heading).toContain('padding-block-end: var(--blok-space-4)');
+    expect(ruleBody('[data-blok-database-show-as-tiles]')).toContain('padding-inline: var(--blok-space-2)');
   });
 
   it('marks the selected Structure card with the measured label inks and no blue', () => {

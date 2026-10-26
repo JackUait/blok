@@ -222,7 +222,8 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   time.type = 'button';
   time.className = 'blok-video-controls__time';
   time.setAttribute('data-role', 'time');
-  time.setAttribute('aria-label', i18nLabel('toggleTimeDisplay', 'Switch between elapsed and remaining time'));
+  // Named by the time it shows: an aria-label would hide it (WCAG 2.5.3).
+  time.setAttribute('aria-description', i18nLabel('toggleTimeDisplay', 'Switch between elapsed and remaining time'));
   time.textContent = '0:00 / 0:00';
 
   const muteToggle = button('mute-toggle', i18nLabel('mute', 'Mute'), IconPlayerVolume);

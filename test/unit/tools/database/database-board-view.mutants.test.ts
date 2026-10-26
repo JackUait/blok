@@ -301,7 +301,7 @@ describe('DatabaseBoardView — mutation coverage', () => {
         childCount: 2,
         iconMarker: '',
         labelText: 'T(tools.database.newPage)',
-        label: 'T(tools.database.addCard)',
+        label: null,
       });
     });
   });

@@ -196,9 +196,12 @@ describe('video controls — M12 slider a11y + i18n', () => {
     expect(time.textContent).toContain('-3:00');
   });
 
-  it('uses the canonical English fallback for the time-display control', () => {
-    expect(q(h.controls, '[data-role="time"]').getAttribute('aria-label'))
-      .toBe('Switch between elapsed and remaining time');
+  it('names the time-display control by the time it shows, with the toggle as its description', () => {
+    const time = q(h.controls, '[data-role="time"]');
+
+    // An aria-label would hide the visible time (WCAG 2.5.3, axe label-content-name-mismatch).
+    expect(time.hasAttribute('aria-label')).toBe(false);
+    expect(time.getAttribute('aria-description')).toBe('Switch between elapsed and remaining time');
   });
 
   it('i18n-translates the control labels when an I18n instance is provided', () => {

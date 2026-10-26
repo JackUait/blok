@@ -204,7 +204,6 @@ export class DatabaseView {
 
       addCardBtn.setAttribute('data-blok-database-add-card', '');
       addCardBtn.setAttribute('data-column-id', col.id);
-      addCardBtn.setAttribute('aria-label', this.i18n.t('tools.database.addCard'));
       addCardBtn.textContent = '+ ' + this.i18n.t('tools.database.newPage');
       columnEl.appendChild(addCardBtn);
     }

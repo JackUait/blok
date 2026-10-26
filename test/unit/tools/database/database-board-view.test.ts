@@ -873,14 +873,15 @@ describe('DatabaseBoardView', () => {
       expect(editBtn?.getAttribute('aria-label')).toBe('tools.database.editCardTitle');
     });
 
-    it('add-card button has an aria-label', () => {
+    it('add-card button is named by its visible label, not an aria-label', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
       const board = view.createView();
 
       const addCardBtn = board.querySelector('[data-blok-database-add-card]');
 
-      expect(addCardBtn?.getAttribute('aria-label')).toBe('tools.database.addCard');
+      expect(addCardBtn?.hasAttribute('aria-label')).toBe(false);
+      expect(addCardBtn?.textContent?.trim()).toBe('tools.database.newPage');
     });
 
     it('add-column button has an aria-label', () => {

@@ -211,7 +211,8 @@ describe('video controls — built DOM contract', () => {
 
     expect(time.getAttribute('class')).toBe('blok-video-controls__time');
     expect(time.textContent).toBe('0:00 / 0:00');
-    expect(time.getAttribute('aria-label')).toBe('Switch between elapsed and remaining time');
+    expect(time.hasAttribute('aria-label')).toBe(false);
+    expect(time.getAttribute('aria-description')).toBe('Switch between elapsed and remaining time');
   });
 
   it('configures the volume slider as a 0..1 range parked at full volume', () => {
@@ -260,7 +261,7 @@ describe('video controls — label i18n keys', () => {
     expect(label('[data-action="play-toggle"]')).toBe(sentinel('play'));
     expect(label('[data-role="center-play"]')).toBe(sentinel('play'));
     expect(label('[data-role="seek"]')).toBe(sentinel('seek'));
-    expect(label('[data-role="time"]')).toBe(sentinel('toggleTimeDisplay'));
+    expect(q(h.figure, '[data-role="time"]').getAttribute('aria-description')).toBe(sentinel('toggleTimeDisplay'));
     expect(label('[data-action="mute-toggle"]')).toBe(sentinel('mute'));
     expect(label('[data-role="volume"]')).toBe(sentinel('volume'));
     expect(label('[data-action="fullscreen"]')).toBe(sentinel('fullscreen'));

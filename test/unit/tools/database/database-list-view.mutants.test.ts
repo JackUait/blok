@@ -66,7 +66,7 @@ const rowHtml = (rowId: string, title: string, tabindex = '0'): string =>
 
 const ADD_ROW_INNER = `<span aria-hidden="true">${serialized(IconPlus)}</span><span>T(tools.database.newPage)</span>`;
 
-const ADD_ROW_HTML = `<button data-blok-database-add-row="" aria-label="T(tools.database.addRow)">${ADD_ROW_INNER}</button>`;
+const ADD_ROW_HTML = `<button data-blok-database-add-row="">${ADD_ROW_INNER}</button>`;
 
 const FLAT_HTML =
   '<div data-blok-database-list="" data-blok-keyboard-owner="">'
@@ -118,7 +118,6 @@ describe('DatabaseListView — mutation coverage', () => {
       // always fired would stamp the string "undefined" here.
       expect(addRowBtn === null ? null : attrs(addRowBtn)).toStrictEqual({
         'data-blok-database-add-row': '',
-        'aria-label': 'T(tools.database.addRow)',
       });
     });
 
@@ -229,7 +228,7 @@ describe('createView — grouped branch', () => {
         + '<div data-blok-database-list-rows="" role="list">'
         + rowHtml('row-1', 'Fix bug')
         + '</div>'
-        + `<button data-blok-database-add-row="" aria-label="T(tools.database.addRow)" data-option-id="opt-a">${ADD_ROW_INNER}</button>`
+        + `<button data-blok-database-add-row="" data-option-id="opt-a">${ADD_ROW_INNER}</button>`
         + '</div>'
         + '</div>'
       );

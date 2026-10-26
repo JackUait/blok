@@ -618,7 +618,6 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
 
       addCardBtn.setAttribute('data-blok-database-add-card', '');
       addCardBtn.setAttribute('data-option-id', option.id);
-      addCardBtn.setAttribute('aria-label', this.i18n.t('tools.database.addCard'));
 
       const iconEl = document.createElement('span');
 

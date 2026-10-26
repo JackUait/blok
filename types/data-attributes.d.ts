@@ -249,6 +249,8 @@ export const DATA_ATTR: {
   readonly popoverItemSecondaryTitle: 'data-blok-popover-item-secondary-title';
   /** Item's current value, before the chevron (valueLabel) */
   readonly popoverItemValue: 'data-blok-popover-item-value';
+  /** A grey line under the item's title (description) */
+  readonly popoverItemDescription: 'data-blok-popover-item-description';
   readonly popoverItemSearchSuffix: 'data-blok-popover-item-search-suffix';
   /** Item is active/selected */
   readonly popoverItemActive: 'data-blok-popover-item-active';

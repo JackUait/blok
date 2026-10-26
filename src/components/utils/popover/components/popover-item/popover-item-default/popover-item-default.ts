@@ -261,7 +261,8 @@ export class PopoverItemDefault extends PopoverItem {
     }
 
     // Set classes
-    root.className = this.getContainerClass();
+    // A description stacks a second line under the title: the row outgrows max-h-9.
+    root.className = params.description === undefined ? this.getContainerClass() : twMerge(this.getContainerClass(), 'max-h-none');
 
     // Set data attributes
     root.setAttribute(DATA_ATTR.popoverItem, '');
@@ -346,7 +347,20 @@ export class PopoverItemDefault extends PopoverItem {
       titleEl.setAttribute('data-blok-testid', 'popover-item-title');
       PopoverItemDefault.setTitleContent(titleEl, titleHost ?? title ?? '');
 
-      root.appendChild(titleEl);
+      if (params.description === undefined) {
+        root.appendChild(titleEl);
+      } else {
+        const stack = document.createElement('div');
+        const descriptionEl = document.createElement('div');
+
+        titleEl.classList.remove('me-auto');
+        stack.className = 'me-auto flex min-w-0 flex-col';
+        descriptionEl.className = 'whitespace-nowrap text-[13px] leading-5 text-text-secondary';
+        descriptionEl.setAttribute(DATA_ATTR.popoverItemDescription, '');
+        descriptionEl.textContent = params.description;
+        stack.append(titleEl, descriptionEl);
+        root.appendChild(stack);
+      }
       this.nodes.titleEl = titleEl;
 
       if (params.searchSuffix !== undefined && params.searchSuffix !== '') {

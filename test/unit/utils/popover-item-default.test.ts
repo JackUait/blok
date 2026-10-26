@@ -98,6 +98,18 @@ describe('PopoverItemDefault', () => {
     expect(value?.textContent).toBe('Green');
   });
 
+  it('draws description as a grey line under the title', () => {
+    const { element } = createItem({ title: 'Reset', description: 'Nothing is lost' });
+    const title = element.querySelector<HTMLElement>(`[${DATA_ATTR.popoverItemTitle}]`);
+    const description = element.querySelector<HTMLElement>('[data-blok-popover-item-description]');
+
+    expect(description?.textContent).toBe('Nothing is lost');
+    expect(title?.textContent).toBe('Reset');
+    // Stacked: the two share one column, the title above.
+    expect(description?.previousElementSibling).toBe(title);
+    expect(element.className).not.toContain('max-h-9');
+  });
+
   it('draws the chevron on a row without children when chevron is set', () => {
     const { element } = createItem({ chevron: true });
     const { element: plain } = createItem({});

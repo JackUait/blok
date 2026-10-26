@@ -208,6 +208,12 @@ export interface PopoverItemDefaultBaseParams {
   valueIcon?: HTMLElement;
 
   /**
+   * A grey line under the title, such as "No properties will be deleted"
+   * under "Reset to original page layout".
+   */
+  description?: string;
+
+  /**
    * Draws the chevron on a row without children: a row that opens another
    * surface (the "Edit formula" row opens the formula editor).
    */

@@ -270,6 +270,8 @@ export const DATA_ATTR = {
   popoverItemSecondaryTitle: 'data-blok-popover-item-secondary-title',
   /** Item's current value, before the chevron (valueLabel) */
   popoverItemValue: 'data-blok-popover-item-value',
+  /** A grey line under the item's title (description) */
+  popoverItemDescription: 'data-blok-popover-item-description',
   popoverItemSearchSuffix: 'data-blok-popover-item-search-suffix',
   /** Item is active/selected */
   popoverItemActive: 'data-blok-popover-item-active',

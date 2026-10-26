@@ -494,8 +494,9 @@ describe('PageLayoutBuilder', () => {
 
     expect(reset?.textContent).toContain('Reset to original page layout');
     expect(reset?.textContent).toContain('No properties will be deleted');
-    // Plain text, not a shortcut: secondaryLabel would set aria-keyshortcuts to the sentence.
-    expect(reset?.querySelector('[data-blok-popover-item-value]')?.textContent).toBe('No properties will be deleted');
+    // research/10 §5: a line under the title, not a value on the right; plain text, not a shortcut.
+    expect(reset?.querySelector('[data-blok-popover-item-description]')?.textContent).toBe('No properties will be deleted');
+    expect(reset?.querySelector('[data-blok-popover-item-value]')).toBeNull();
     expect(reset?.hasAttribute('aria-keyshortcuts')).toBe(false);
     drawer.destroy();
   });

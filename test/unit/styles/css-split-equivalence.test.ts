@@ -1179,6 +1179,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_GAUGE_YELLOW_BYTES = 273;
     // database.css: the gauge box's Show number row and the property menu switch row.
     const DATABASE_SHOW_NUMBER_BYTES = 1_744;
+    // assistant.css: the Ask AI question before an unlock (Keep locked / Unlock) and its comment.
+    const ASSISTANT_UNLOCK_QUESTION_BYTES = 359;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1414,7 +1416,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_PANEL_INSET_HEADER_BOX_BYTES
       + DATABASE_EDIT_FORMULA_CHEVRON_BYTES
       + DATABASE_GAUGE_YELLOW_BYTES
-      + DATABASE_SHOW_NUMBER_BYTES;
+      + DATABASE_SHOW_NUMBER_BYTES
+      + ASSISTANT_UNLOCK_QUESTION_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

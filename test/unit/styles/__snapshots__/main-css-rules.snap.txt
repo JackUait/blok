@@ -28492,6 +28492,23 @@ button[data-blok-database-feed-reaction]:hover, [data-blok-database-feed-add-rea
   transition: none;
 }
 
+[data-blok-assistant-approval] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--blok-space-2);
+}
+
+[data-blok-assistant-approval][hidden] {
+  display: none;
+}
+
+[data-blok-assistant-question] {
+  flex: 1 1 auto;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 [data-blok-ask-ai] {
   position: relative;
   --blok-ai-hue-1: #e8609e;

@@ -28,6 +28,15 @@ export const isToolConvertable = (tool: BlockToolAdapter, direction: 'export' | 
 };
 
 /**
+ * Capitalized names of the tools that block a turn-into from `fromName` to `toName`; empty when it may run.
+ * blocks.convert and the agent's planned convert both check this, so neither can convert what the other refuses.
+ */
+export const unconvertibleTools = (fromName: string, from: BlockToolAdapter | undefined, toName: string, to: BlockToolAdapter): string[] => [
+  from?.conversionConfig?.export === undefined ? capitalize(fromName) : null,
+  to.conversionConfig?.import === undefined ? capitalize(toName) : null,
+].filter((name): name is string => name !== null);
+
+/**
  * Try to translate a key, supporting both full keys and toolNames namespace.
  *
  * If the key contains a dot (e.g., 'tools.header.heading1'), it's treated as a full key.

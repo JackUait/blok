@@ -16,6 +16,7 @@ import { readCaretPosition, resolveCaretRange } from '../collaboration/caret-pos
 import type { CaretHistoryEntry } from '../yjs/types';
 import { createRevisionCounter, editorSnapshot } from './editor-snapshot';
 import { isBlockReadOnly, carriesReadOnly } from '../../utils/read-only-blocks';
+import { unconvertibleTools } from '../../utils/tools';
 
 // A peer edit can make the rollback refuse. Partial writes stay, so the
 // error must not promise an unchanged document (no retryable code).
@@ -256,6 +257,17 @@ export class EditorApplier implements AgentApplier {
    * A delete, a type change or a move also stops when it would carry one along.
    * A block whose own data is frozen (BlockTool.isDataReadOnly) takes no data or type write.
    */
+  /** The planned convert skips blocks.convert, so it repeats that method's convertibility check. */
+  private refuseUnconvertible(block: Block, type: string): void {
+    const { blockTools } = this.Blok.Tools;
+    const target = blockTools.get(type);
+    const missing = target === undefined ? [type] : unconvertibleTools(block.name, blockTools.get(block.name), type, target);
+
+    if (missing.length > 0) {
+      throw failure('CONVERSION_UNSUPPORTED', `Conversion from "${block.name}" to "${type}" is not possible: ${missing.join(' and ')} cannot convert here.`, { details: { missing } });
+    }
+  }
+
   private refuseReadOnlyTarget(edit: Edit): void {
     if (edit.op === 'setPageField') {
       return;
@@ -515,6 +527,7 @@ export class EditorApplier implements AgentApplier {
         if (block === undefined) {
           break;
         }
+        this.refuseUnconvertible(block, edit.type);
         try {
           // The plan already did the structural part (src/shared/turn-into.ts). A target whose
           // text lives in its first child gets that child from the plan, so it must not seed one.

@@ -12,7 +12,7 @@ import { Module } from '../../__module';
 import { Block } from '../../block';
 import { BlockAPI } from '../../block/api';
 import { ToolNotFoundError } from '../../errors/tool-not-found';
-import { capitalize } from '../../utils';
+import { unconvertibleTools } from '../../utils/tools';
 import { richTextInputToHtml } from '../../utils/rich-text-input';
 import { sanitizeBlocks, stripUnsafeUrlsDeep } from '../../utils/sanitizer';
 import { applyBlockMigration } from '../../migration/block-migrations';
@@ -799,21 +799,15 @@ export class BlocksAPI extends Module {
       throw new ToolNotFoundError(newType, `Block Tool with type "${newType}" not found`);
     }
 
-    const originalBlockConvertable = originalBlockTool?.conversionConfig?.export !== undefined;
-    const targetBlockConvertable = targetBlockTool.conversionConfig?.import !== undefined;
+    const unsupportedBlockTypes = unconvertibleTools(blockToConvert.name, originalBlockTool, newType, targetBlockTool).join(' and ');
 
-    if (originalBlockConvertable && targetBlockConvertable) {
+    if (unsupportedBlockTypes === '') {
       this.Blok.YjsManager.beginApiCall();
       // Overrides reach the Yjs document before the factory converts anything.
       const newBlock = await BlockManager.convert(blockToConvert, newType, dataOverrides === undefined ? dataOverrides : this.hostDataForTool(newType, dataOverrides));
 
       return new BlockAPI(newBlock, this.Blok.API);
     } else {
-      const unsupportedBlockTypes = [
-        !originalBlockConvertable ? capitalize(blockToConvert.name) : false,
-        !targetBlockConvertable ? capitalize(newType) : false,
-      ].filter(Boolean).join(' and ');
-
       throw new Error(`Conversion from "${blockToConvert.name}" to "${newType}" is not possible. ${unsupportedBlockTypes} tool(s) should provide a "conversionConfig"`);
     }
   };

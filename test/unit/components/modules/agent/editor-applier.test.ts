@@ -761,6 +761,21 @@ describe('EditorApplier', () => {
     expect(modules.BlockManager.suppressStopCapturing).toBe(false);
   });
 
+  it('refuses a planned convert into a tool that cannot import, as blocks.convert does', async () => {
+    const modules = await boot();
+    const applier = createApplier(modules);
+    const seed = await saved(modules);
+
+    const rejection: unknown = await apply(applier, [
+      { op: 'replaceType', id: 'p', type: 'table', data: {} },
+    ], ['p']).catch((error: unknown) => error);
+
+    expect(rejection).toMatchObject({ error: { code: 'CONVERSION_UNSUPPORTED', details: { missing: ['Table'] } } });
+    expect(rejection).toBeInstanceOf(AgentFailure);
+    await settle(applier);
+    expect({ ...(await saved(modules)), time: 0 }).toEqual({ ...seed, time: 0 });
+  });
+
   it('does not roll back older human work when a peer makes the failed agent step refuse undo', async () => {
     const modules = await boot();
     const applier = createApplier(modules);

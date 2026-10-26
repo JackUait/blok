@@ -58,6 +58,20 @@ describe.each(SESSIONS)('rows placed in the open view\'s own order (%s session)'
     await session.close();
   });
 
+  it('database.moveRow in a view on the shared order pins the row where the other views show it', async () => {
+    const session = open(seed([{ id: 'shared' }, { id: 'other' }, { id: 'chart', type: 'chart' }]));
+
+    expect(errorOf(await run(session, 'database.moveRow', { id: 'S', rowId: 'a', after: 'c' }))).toBeUndefined();
+    expect(await manual(session, 'shared')).toEqual(['b', 'c', 'a']);
+    const views = await viewsOf(session);
+
+    expect(views.find(view => view.id === 'other')?.rowOrder).toEqual({ a: 'aa' });
+    expect(await manual(session, 'other')).toEqual(['a', 'b', 'c']);
+    expect(views.find(view => view.id === 'chart')?.rowOrder).toBeUndefined();
+    expect(views.find(view => view.id === 'shared')?.rowOrder).toBeUndefined();
+    await session.close();
+  });
+
   it('database.addRow after or before a row places it there in the view\'s own order', async () => {
     const session = open(seed([OWN]));
     const below = rowIdOf(await run(session, 'database.addRow', { id: 'S', after: 'a' }));

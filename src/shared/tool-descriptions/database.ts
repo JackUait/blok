@@ -996,7 +996,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
   },
   {
     name: 'moveRow',
-    summary: 'Move a row before or after another row in the open view, as a drag does, and optionally into another board column. In a view with its own manual order, only that order changes; otherwise the row moves for every view on the shared order.',
+    summary: 'Move a row before or after another row in the open view, as a drag does, and optionally into another board column. In a view with its own manual order, only that order changes; otherwise the row moves for every view on the shared order, and the other views keep it where they show it.',
     target: 'block',
     args: {
       ...closed({ rowId: ROW_ID, group: OPTION_ID, before: ROW_ID, after: ROW_ID }, ['rowId']),

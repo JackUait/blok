@@ -6,7 +6,7 @@ import { addRelated, relationEdit, relationIdsOf, removeRelated } from '../datab
 import { copiedReminders } from '../database/reminder-fit';
 import { mapRowValues } from '../database/row-move';
 import { newRowValues, prefillFilters } from '../database/new-row-values';
-import { lastRowKey, rowOrderKey } from '../database/row-order';
+import { lastRowKey, pinnedRowOrders, rowOrderKey, UNORDERED_VIEW_TYPES } from '../database/row-order';
 import { descendantsOf, relationPair } from '../database/sub-item-tree';
 import { typeConversion } from '../database/property-conversion';
 import {
@@ -1397,7 +1397,8 @@ export const DATABASE_CHILD_COMMAND: ChildCommandRoute = (command, child) => (ch
 
 /**
  * As placeRow (a row dropped in a view): in a view with its own order only
- * that order changes; otherwise the row's position moves.
+ * that order changes; otherwise the row's position moves, after the other
+ * views that show rows pin it where they show it.
  */
 const moveRow: ToolActionImpl<{ rowId: string; group?: string } & Placement> = {
   run: (ctx, args) => {
@@ -1415,6 +1416,13 @@ const moveRow: ToolActionImpl<{ rowId: string; group?: string } & Placement> = {
       if (args.group !== undefined) ctx.update(args.rowId, values);
 
       return undefined;
+    }
+    const pinned = view === undefined
+      ? []
+      : pinnedRowOrders(state.views, view.id, [current], each => !UNORDERED_VIEW_TYPES.has(each.type) && (each.dataSourceId ?? block.id) === block.id);
+
+    if (pinned.length > 0) {
+      ctx.update(block.id, withRowOrders(state, Object.fromEntries(pinned.map(each => [each.viewId, each.rowOrder]))));
     }
     ctx.update(args.rowId, { position: key, ...values });
 

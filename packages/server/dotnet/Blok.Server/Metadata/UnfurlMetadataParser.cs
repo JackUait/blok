@@ -29,7 +29,7 @@ internal static class UnfurlMetadataParser
 
     try
     {
-      var document = new HtmlParser().ParseDocument(
+      var document = new HtmlParser(new HtmlParserOptions { MaximumDepth = MaximumOpenElementDepth + 1 }).ParseDocument(
           Encoding.UTF8.GetString(body));
       var nodes = new Stack<(INode Node, int Depth)>();
       nodes.Push((document, 0));

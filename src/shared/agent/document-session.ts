@@ -175,6 +175,7 @@ export const createDocumentAgentSession = (input: {
 
       return Promise.resolve();
     },
+    historyTarget: name => (name === 'history.undo' ? past.at(-1) : future.at(-1)),
     redo: () => {
       const next = future.pop();
 

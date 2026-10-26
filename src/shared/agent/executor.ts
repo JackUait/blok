@@ -1,5 +1,5 @@
 import { isRichText } from '../rich-text/guards';
-import { planWithApprovals, savedTitle } from './approval';
+import { approveStep, planWithApprovals, savedTitle, unlockedBetween } from './approval';
 import { agentAttribution } from './attribution';
 import { viewRows } from './document-view';
 import { checkEnvelope } from './envelope';
@@ -26,6 +26,8 @@ export interface AgentApplier {
   prepareInsert?(type: string, data?: Record<string, unknown>): Promise<Record<string, unknown> | undefined>;
   undo?(): Promise<void>;
   redo?(): Promise<void>;
+  /** The document a history step would leave, when the applier keeps whole snapshots. */
+  historyTarget?(name: 'history.undo' | 'history.redo'): DocSnapshot | undefined;
 }
 
 export interface BatchInput {
@@ -197,6 +199,31 @@ export const marksOf = (applier: AgentApplier): HistoryMarks => {
   return marks;
 };
 
+/** Per step, the databases it unlocks when redone (forward) and when undone (backward). Kept beside the marks. */
+interface StepUnlocks { forward: string[]; backward: string[] }
+
+const stepUnlocks = new WeakMap<AgentApplier, { past: StepUnlocks[]; future: StepUnlocks[] }>();
+
+const unlocksOf = (applier: AgentApplier): { past: StepUnlocks[]; future: StepUnlocks[] } => {
+  const found = stepUnlocks.get(applier) ?? { past: [], future: [] };
+
+  stepUnlocks.set(applier, found);
+
+  return found;
+};
+
+/** What a history step would unlock. A snapshot applier answers exactly; the others read what the batch recorded. */
+const unlockedByStep = (applier: AgentApplier, name: 'history.undo' | 'history.redo'): string[] => {
+  const target = applier.historyTarget?.(name);
+
+  if (target !== undefined) {
+    return unlockedBetween(applier.snapshot(), target);
+  }
+  const recorded = unlocksOf(applier);
+
+  return (name === 'history.undo' ? recorded.past.at(-1)?.backward : recorded.future.at(-1)?.forward) ?? [];
+};
+
 const historyStep = (applier: AgentApplier, name: 'history.undo' | 'history.redo'): (() => Promise<void>) => {
   const step = name === 'history.undo' ? applier.undo : applier.redo;
 
@@ -231,6 +258,10 @@ const historyStep = (applier: AgentApplier, name: 'history.undo' | 'history.redo
     const [from, to] = name === 'history.undo' ? [marks.past, marks.future] : [marks.future, marks.past];
 
     to.push(from.pop() ?? 'own');
+    const recorded = unlocksOf(applier);
+    const [fromUnlocks, toUnlocks] = name === 'history.undo' ? [recorded.past, recorded.future] : [recorded.future, recorded.past];
+
+    toUnlocks.push(fromUnlocks.pop() ?? { forward: [], backward: [] });
   };
 };
 
@@ -471,6 +502,8 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
     if (first?.name === 'history.undo' || first?.name === 'history.redo') {
       const step = historyStep(input.applier, first.name);
 
+      // Undoing a lock or redoing an unlock unlocks too, so it asks like database.setLock does.
+      await approveStep(unlockedByStep(input.applier, first.name), input.applier.snapshot(), input.approve, () => checkCancel(input.signal));
       checkCancel(input.signal, orphaned);
       await step();
       const revision = input.applier.revision();
@@ -565,11 +598,15 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
     if (plan.edits.length > 0) {
       await input.applier.apply(plan, draft);
       const marks = marksOf(input.applier);
+      const unlocks = unlocksOf(input.applier);
 
       marks.past.push('own');
       marks.future = [];
+      unlocks.past.push({ forward: unlockedBetween(snapshot, draft), backward: unlockedBetween(draft, snapshot) });
+      unlocks.future = [];
     } else if (batch.commands.some(command => input.ctx.commands.get(command.name)?.effects === 'host')) {
       marksOf(input.applier).past.push('other');
+      unlocksOf(input.applier).past.push({ forward: [], backward: [] });
     }
 
     const result = planResult(batch, plan, input.applier.revision(), warnings, changedRows(input, plan));

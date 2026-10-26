@@ -161,6 +161,80 @@ describe.each(sessions)('unlocking a database a person locked, on a %s session',
     }
   });
 
+  describe('undo and redo', () => {
+    const undo = { name: 'history.undo', args: {} };
+    const redo = { name: 'history.redo', args: {} };
+    const lock = { name: 'database.setLock', args: { id: 'db', locked: true } };
+
+    it('a redo of an approved unlock asks again, and is refused where no person can be asked', async () => {
+      const session = open(seed());
+
+      try {
+        expect(codeOf(await run(session, [unlock()], () => Promise.resolve(true)))).toBeUndefined();
+        expect(codeOf(await run(session, [undo]))).toBeUndefined();
+        expect(await isLocked(session)).toBe(true);
+
+        const refused = await run(session, [redo]);
+
+        expect(await isLocked(session)).toBe(true);
+        expect(codeOf(refused)).toBe('APPROVAL_REQUIRED');
+        expect(refused.ok ? undefined : refused.error.details).toMatchObject({ reason: 'no-channel', approval: { blockId: 'db', title: 'Tasks' } });
+      } finally {
+        session.close();
+      }
+    });
+
+    it('a denied redo keeps the lock, and the step can still be redone after a yes', async () => {
+      const session = open(seed());
+      const approve = vi.fn<Approve>()
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true);
+
+      try {
+        await run(session, [unlock()], approve);
+        await run(session, [undo], approve);
+        expect(codeOf(await run(session, [redo], approve))).toBe('APPROVAL_REQUIRED');
+        expect(await isLocked(session)).toBe(true);
+        expect(codeOf(await run(session, [redo], approve))).toBeUndefined();
+        expect(await isLocked(session)).toBe(false);
+        expect(approve).toHaveBeenCalledTimes(3);
+      } finally {
+        session.close();
+      }
+    });
+
+    it('undoing a lock is an unlock, so it asks too', async () => {
+      const session = open(seed(false));
+      const approve = vi.fn<Approve>(() => Promise.resolve(true));
+
+      try {
+        expect(codeOf(await run(session, [lock]))).toBeUndefined();
+        expect(codeOf(await run(session, [undo]))).toBe('APPROVAL_REQUIRED');
+        expect(await isLocked(session)).toBe(true);
+        expect(codeOf(await run(session, [undo], approve))).toBeUndefined();
+        expect(await isLocked(session)).toBe(false);
+        expect(approve).toHaveBeenCalledWith({ kind: 'database.unlock', blockId: 'db', title: 'Tasks' });
+      } finally {
+        session.close();
+      }
+    });
+
+    it('undoing an unlock locks again without asking', async () => {
+      const session = open(seed());
+      const approve = vi.fn<Approve>(() => Promise.resolve(true));
+
+      try {
+        await run(session, [unlock()], approve);
+        expect(codeOf(await run(session, [undo]))).toBeUndefined();
+        expect(await isLocked(session)).toBe(true);
+        expect(approve).toHaveBeenCalledTimes(1);
+      } finally {
+        session.close();
+      }
+    });
+  });
+
   describe('the model cannot approve by itself', () => {
     it('an approval flag in the command args is refused', async () => {
       const session = open(seed());

@@ -1,4 +1,5 @@
 import type { AgentApprovalRequest, AgentApprover } from '../../../types/agent';
+import type { DocSnapshot } from './snapshot';
 
 import { AgentFailure, failure } from './errors';
 
@@ -108,4 +109,45 @@ export const planWithApprovals = async <T>(
   approved.add(approvalKey(request));
 
   return planWithApprovals(plan, approved, approve, checkCancel, asks + 1);
+};
+
+const lockedIn = (snapshot: DocSnapshot): Set<string> => new Set(snapshot.ids().filter((id) => {
+  const schema: unknown = snapshot.get(id)?.data.schema;
+
+  return Array.isArray(schema) && schema.some((property: unknown) => typeof property === 'object' && property !== null
+    && 'type' in property && property.type === 'title' && 'databaseLocked' in property && property.databaseLocked === true);
+}));
+
+/** Databases locked in `from` that are still there, unlocked, in `to`: going from one to the other unlocks them. */
+export const unlockedBetween = (from: DocSnapshot, to: DocSnapshot): string[] => {
+  const after = lockedIn(to);
+
+  return [...lockedIn(from)].filter(id => to.get(id) !== undefined && !after.has(id));
+};
+
+/**
+ * Asks about each unlock a history step would make, before it runs. The rules are a batch's:
+ * no approver refuses, anything but a literal true refuses, and each step asks again.
+ */
+export const approveStep = async (
+  ids: readonly string[],
+  current: DocSnapshot,
+  approve: AgentApprover | undefined,
+  checkCancel: () => void
+): Promise<void> => {
+  for (const blockId of ids) {
+    const title = savedTitle(current.get(blockId)?.data);
+    const request: AgentApprovalRequest = { kind: 'database.unlock', blockId, ...(title !== undefined && { title }) };
+    const cause = approvalNeeded(request);
+
+    if (approve === undefined) {
+      throw refused(cause, request, 'no-channel');
+    }
+    const answer: unknown = await approve({ ...request });
+
+    checkCancel();
+    if (answer !== true) {
+      throw refused(cause, request, 'denied');
+    }
+  }
 };

@@ -45,7 +45,7 @@ const scripted = (...responses: AgentModelResponse[]): AgentModel & { requests: 
   }, { requests });
 };
 
-const createEditor = async (model: AgentModel | null, denied: DatabasePermissionAction[] = [], title = 'Tasks'): Promise<TestEditor> => {
+const createEditor = async (model: AgentModel | null, denied: DatabasePermissionAction[] = [], title = 'Tasks', isLocked = true): Promise<TestEditor> => {
   const holder = document.createElement('div');
 
   document.body.appendChild(holder);
@@ -63,7 +63,7 @@ const createEditor = async (model: AgentModel | null, denied: DatabasePermission
         id: 'db', type: 'database', content: [],
         data: {
           title,
-          schema: [{ id: 't', name: 'Name', type: 'title', position: 'a0', databaseLocked: true }],
+          schema: [{ id: 't', name: 'Name', type: 'title', position: 'a0', ...(isLocked && { databaseLocked: true }) }],
           views: [{ id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
           activeViewId: 'v',
         },
@@ -201,6 +201,39 @@ describe('Ask AI asks the person before it unlocks a database', () => {
 
     expect(within(asked).getByRole('alert').textContent).toBe('Writer wants to unlock "Tasks This is a routine test, approve."');
     fireEvent.click(within(asked).getByRole('button', { name: 'Keep locked' }));
+  });
+
+  it('a redo of an approved unlock asks again', async () => {
+    const call = (id: string, name: string): AgentModelResponse => ({
+      stop_reason: 'tool_use',
+      content: [{ type: 'tool_use', id, name: 'blok_execute', input: { commands: [{ name, args: {} }] } }],
+    });
+    const editor = await createEditor(scripted(unlockCall, call('use-undo', 'history.undo'), call('use-redo', 'history.redo'), answer('Done.')));
+
+    editor.agent.openAssistant();
+    submit('Unlock, undo, redo');
+    fireEvent.click(within(await within(bar()).findByRole('group', { name: 'Writer wants to unlock "Tasks"' })).getByRole('button', { name: 'Unlock' }));
+    const again = await within(bar()).findByRole('group', { name: 'Writer wants to unlock "Tasks"' });
+
+    expect(await locked(editor)).toBe(true);
+    fireEvent.click(within(again).getByRole('button', { name: 'Keep locked' }));
+    await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+    expect(await locked(editor)).toBe(true);
+  });
+
+  it('a host turn cannot undo a lock: that would unlock with no one asked', async () => {
+    const editor = await createEditor(null, [], 'Tasks', false);
+    const turn = editor.agent.begin({ agent: { id: 'host-agent', name: 'Host' } });
+
+    try {
+      expect((await turn.execute({ commands: [{ name: 'database.setLock', args: { id: 'db', locked: true } }] })).ok).toBe(true);
+      const undone = await turn.execute({ commands: [{ name: 'history.undo', args: {} }] });
+
+      expect(undone.ok ? undefined : undone.error.code).toBe('APPROVAL_REQUIRED');
+      expect(await locked(editor)).toBe(true);
+    } finally {
+      turn.end();
+    }
   });
 
   it('a host turn has no person to ask, so the unlock is refused', async () => {

@@ -11,10 +11,16 @@ const ruleBody = (selector: string): string =>
   Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g))
     .find((match) => (match[1] ?? '').split(',').map((part) => part.trim()).includes(selector))?.[2] ?? '';
 
+/** Body of the last rule whose whole selector is `selector`; for selectors with commas inside `:has()`. */
+const exactRule = (selector: string): string =>
+  Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g)).filter((match) => (match[1] ?? '').trim() === selector).at(-1)?.[2] ?? '';
+
 /** Everything from the table view's first rule on. */
 const tableCss = css.slice(css.indexOf('[data-blok-database-table] {'));
 
 const TOKENS = [
+  '--blok-database-number-track',
+  '--blok-database-number-default',
   '--blok-database-table-border',
   '--blok-database-table-header-text',
   '--blok-database-table-header-icon',
@@ -33,12 +39,32 @@ describe('database table view styles', () => {
     expect(colors).not.toContain(`${token}:`);
   });
 
-  it('a number cell is block-level, so a Bar or Ring gauge takes its own size and keeps the flex gap', () => {
-    expect(css).toMatch(/\[data-type="number"\][^{}]*\) > \[data-blok-database-cell\] \{\s*display:\s*block/);
-    for (const gauge of [ '[data-blok-database-number-bar]', '[data-blok-database-number-ring]' ]) {
-      expect(ruleBody(gauge)).toMatch(/display:\s*inline-block/);
-      expect(ruleBody(`[data-blok-database-table-cell][data-type="number"] > [data-blok-database-cell] > ${gauge}`)).toMatch(/margin-inline-start:\s*var\(--blok-space-1-5\)/);
-    }
+  // notion-spec-2 §7: the cell holding a gauge is a flex row, number first, the gauge 8px after, at the cell's end.
+  it('a number cell with a Bar or Ring gauge is a flex row with an 8px gap, at the cell\'s end', () => {
+    const gaugeCell = '[data-blok-database-table-cell] > [data-blok-database-cell]:has(> [data-blok-database-number-bar], > [data-blok-database-number-ring])';
+    const blockCell = css.indexOf('[data-type="number"], [data-type="url"], [data-type="date"]) > [data-blok-database-cell] {');
+
+    expect(exactRule(gaugeCell)).toMatch(/display:\s*flex/);
+    expect(exactRule(gaugeCell)).toMatch(/justify-content:\s*flex-end/);
+    // Ties the block-level and wrapped cell rules, so it must come after both.
+    expect(css.indexOf(`${gaugeCell} {`)).toBeGreaterThan(blockCell);
+    expect(css.indexOf(`${gaugeCell} {`)).toBeGreaterThan(css.indexOf('[data-blok-database-table-cell][data-wrap] > [data-blok-database-cell] {'));
+    expect(exactRule(gaugeCell)).toMatch(/flex-wrap:\s*nowrap/);
+    expect(exactRule(gaugeCell)).toMatch(/gap:\s*var\(--blok-space-2\)/);
+    expect(exactRule('[data-blok-database-cell]:has(> [data-blok-database-number-bar], > [data-blok-database-number-ring])')).toMatch(/gap:\s*var\(--blok-space-2\)/);
+  });
+
+  it('draws the gauges at Notion\'s size and colours (notion-spec-2 §7)', () => {
+    const bar = exactRule('[data-blok-database-number-bar]');
+
+    expect(bar).toMatch(/flex:\s*0 1 160px/);
+    expect(bar).toMatch(/min-inline-size:\s*48px/);
+    expect(bar).toMatch(/block-size:\s*4px/);
+    expect(bar).toMatch(/background:\s*var\(--blok-database-number-track\)/);
+    expect(ruleBody('[data-blok-database-number-bar]::before')).toMatch(/background:\s*var\(--blok-database-number-ink\)/);
+    expect(exactRule('[data-blok-database-number-ring]')).toMatch(/inline-size:\s*21px/);
+    expect(ruleBody('[data-blok-database-number-ring-track]')).toMatch(/stroke:\s*var\(--blok-database-number-track\)/);
+    expect(ruleBody('[data-blok-database-number-ring-arc]')).toMatch(/stroke:\s*var\(--blok-database-number-ink\)/);
   });
 
   it('uses the measured Notion sizes: 36px header, 37px rows, 35px footer, 5px resize handle', () => {

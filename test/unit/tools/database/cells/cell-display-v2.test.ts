@@ -162,6 +162,27 @@ describe('renderCellValue — new property types', () => {
 
       expect(el.querySelector<HTMLElement>('[data-blok-database-number-ring]')?.style.getPropertyValue('--blok-database-number-fill')).toBe('75%');
     });
+
+    // notion-spec-2 §7: a 3px track and a round-capped arc from 12 o'clock, clockwise.
+    it('draws the ring as a track and an arc the length of the fill', () => {
+      const ring = renderCellValue(prop('number', { number: { showAs: 'ring' } }), 75, ctx()).querySelector('[data-blok-database-number-ring]');
+      const arc = ring?.querySelector('[data-blok-database-number-ring-arc]');
+
+      expect(ring?.querySelector('svg')?.getAttribute('viewBox')).toBe('0 0 14 14');
+      expect(ring?.querySelector('[data-blok-database-number-ring-track]')).not.toBeNull();
+      expect(arc?.getAttribute('pathLength')).toBe('100');
+      expect(arc?.getAttribute('stroke-dasharray')).toBe('75 100');
+      expect(arc?.getAttribute('stroke-linecap')).toBe('round');
+      expect(arc?.getAttribute('transform')).toBe('rotate(-90 7 7)');
+    });
+
+    // A round cap would draw a dot at zero.
+    it('draws no arc for an empty ring', () => {
+      const ring = renderCellValue(prop('number', { number: { showAs: 'ring' } }), 0, ctx()).querySelector('[data-blok-database-number-ring]');
+
+      expect(ring?.querySelector('[data-blok-database-number-ring-track]')).not.toBeNull();
+      expect(ring?.querySelector('[data-blok-database-number-ring-arc]')).toBeNull();
+    });
   });
 
   describe('created and last edited time', () => {

@@ -137,12 +137,48 @@ const renderNumber = (cell: HTMLElement, property: PropertyDefinition, value: Pr
   }
 
   const gauge = document.createElement('span');
+  const fill = Math.round(numberFill(n, display) * 100);
 
   gauge.setAttribute(display.showAs === 'bar' ? 'data-blok-database-number-bar' : 'data-blok-database-number-ring', '');
   gauge.setAttribute('data-color', optionColorOf({ color: display.color }));
   gauge.setAttribute('aria-hidden', 'true');
-  gauge.style.setProperty('--blok-database-number-fill', `${Math.round(numberFill(n, display) * 100)}%`);
+  gauge.style.setProperty('--blok-database-number-fill', `${fill}%`);
+  if (display.showAs === 'ring') gauge.appendChild(ringSvg(fill));
   cell.appendChild(gauge);
+};
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/** notion-spec-2 §7: viewBox 14 drawn at 21px, so the 2-unit stroke is 3px. Colours come from database.css. */
+const ringSvg = (fill: number): SVGSVGElement => {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  const circle = (attribute: string): SVGCircleElement => {
+    const c = document.createElementNS(SVG_NS, 'circle');
+
+    c.setAttribute(attribute, '');
+    c.setAttribute('cx', '7');
+    c.setAttribute('cy', '7');
+    c.setAttribute('r', '6');
+    c.setAttribute('fill', 'none');
+    c.setAttribute('stroke-width', '2');
+    svg.appendChild(c);
+
+    return c;
+  };
+
+  svg.setAttribute('viewBox', '0 0 14 14');
+  circle('data-blok-database-number-ring-track');
+  // A round cap would draw a dot at zero.
+  if (fill > 0) {
+    const arc = circle('data-blok-database-number-ring-arc');
+
+    arc.setAttribute('pathLength', '100');
+    arc.setAttribute('stroke-dasharray', `${fill} 100`);
+    arc.setAttribute('stroke-linecap', 'round');
+    arc.setAttribute('transform', 'rotate(-90 7 7)');
+  }
+
+  return svg;
 };
 
 const renderStatus = (cell: HTMLElement, property: PropertyDefinition, value: PropertyValue | undefined, ctx: CellContext): void => {

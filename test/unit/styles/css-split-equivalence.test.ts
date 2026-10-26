@@ -1163,6 +1163,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_SHOW_AS_TILES_BYTES = 1_515;
     // database.css: a Number's Bar or Ring keeps its size in a block-level table cell.
     const DATABASE_NUMBER_GAUGE_BYTES = 470;
+    // database.css: Bar and Ring at Notion's size and colours, the ring as an svg (notion-spec-2 §7).
+    const DATABASE_NUMBER_GAUGE_SPEC_BYTES = 1_231;
     // database.css: the row page panel's plain-text values, plus Notion-sized tiles and gauges.
     const DATABASE_PANEL_VALUES_TILES_BYTES = 1_069;
     // database.css: the row page title text starts over the label icons (side peek and full page).
@@ -1397,6 +1399,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_ROW_PAGE_FINISH_BYTES
       + DATABASE_SHOW_AS_TILES_BYTES
       + DATABASE_NUMBER_GAUGE_BYTES
+      + DATABASE_NUMBER_GAUGE_SPEC_BYTES
       + DATABASE_PANEL_VALUES_TILES_BYTES
       + DATABASE_ROW_PAGE_TITLE_INSET_BYTES
       + DATABASE_PANEL_GAUGE_BOX_BYTES;

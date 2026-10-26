@@ -1185,7 +1185,7 @@ const copiedPage = (ctx: ToolActionContext, sourceId: string, properties: Record
 
 /**
  * As the row menu's Duplicate (duplicateTableRow): the copy goes right after
- * the original with its page body, and a parent's sub-items are copied under
+ * the original with its page body, in the open view's own order too, and a parent's sub-items are copied under
  * the copy. A template copy is duplicateTemplate: it stays a template.
  */
 const duplicateRow: ToolActionImpl<{ rowId: string }, undefined, { rowId: string }> = {
@@ -1203,6 +1203,27 @@ const duplicateRow: ToolActionImpl<{ rowId: string }, undefined, { rowId: string
     const remap = (value: unknown): Array<{ id: string }> =>
       relationIdsOf(value).flatMap(id => (copies.has(id) ? [{ id: copies.get(id) ?? id }] : []));
     const cursor = { after: source.position };
+    const view = source.template ? undefined : state.views.find(each => each.id === state.activeViewId);
+    const order = view?.rowOrder;
+
+    // A view with its own order gets keys for the copies too, right after the original there.
+    if (view !== undefined && order !== undefined) {
+      const keyOf = (each: RowRef): string => order[each.id] ?? each.position;
+      const manual = [...rowsOf(ctx, block.id)].sort((a, b) => comparePositions(keyOf(a), keyOf(b)));
+      const after = manual[manual.findIndex(each => each.id === source.id) + 1];
+      const keys = { ...order };
+
+      family.reduce((previous, sourceId) => {
+        const key = positionBetween(previous, after === undefined ? null : keyOf(after));
+
+        keys[copies.get(sourceId) ?? sourceId] = key;
+
+        return key;
+      }, keyOf(source));
+      // Before the inserts: in the editor an insert opens a sync window that reads a later database write as an echo.
+      ctx.update(block.id, { views: state.views.map(each => (each.id === view.id ? { ...each, rowOrder: keys } : each)) });
+    }
+
     for (const sourceId of family) {
       const original = siblings.find(each => each.id === sourceId);
       const id = copies.get(sourceId);

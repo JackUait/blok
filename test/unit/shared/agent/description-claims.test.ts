@@ -205,7 +205,7 @@ describe('what the model is told about computed database values is true', () => 
   });
 });
 
-describe('what the model is told about new database rows is true', () => {
+describe('what the model is told about new and copied database rows is true', () => {
   const action = (name: string): { summary: string; guidance?: string } | undefined =>
     describeDatabase().actions?.find(each => each.name === name);
   const database = (view: Record<string, unknown>): OutputData => ({
@@ -232,6 +232,21 @@ describe('what the model is told about new database rows is true', () => {
       const rowId = result.ok ? String((result.results[0] as { rowId: string }).rowId) : '';
 
       expect(session.output().blocks.find(block => block.id === rowId)?.data.properties).toMatchObject({ done: true });
+    } finally {
+      await session.close();
+    }
+  });
+
+  it('says duplicateRow places the copy after the original in a view with its own order, and it does', async () => {
+    expect(action('duplicateRow')?.summary).toMatch(/own manual order the copy goes right after it there too/);
+    const session = openJsonSession(database({ rowOrder: { b: 'Zx', a: 'Zy' } }));
+
+    try {
+      const result = await session.execute({ commands: [{ name: 'database.duplicateRow', args: { id: 'db', rowId: 'b' } }] });
+      const copy = result.ok ? String((result.results[0] as { rowId: string }).rowId) : '';
+      const order = (session.output().blocks[0]?.data.views as Array<{ rowOrder: Record<string, string> }>)[0].rowOrder;
+
+      expect(Object.keys(order).sort((x, y) => (order[x] < order[y] ? -1 : 1))).toEqual(['b', copy, 'a']);
     } finally {
       await session.close();
     }

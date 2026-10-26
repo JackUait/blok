@@ -10,9 +10,10 @@ const PAIR = [
   property('sub', 'relation', { relation: { targetDatabaseId: 'S', twoWay: true, syncedPropertyId: 'par', role: 'subItems' } }),
 ];
 
-const seed = (): OutputData => seedOf([
+const seed = (view?: Record<string, unknown>): OutputData => seedOf([
   {
     id: 'S',
+    view,
     schema: [property('st', 'title'), ...PAIR, property('tag', 'select', { config: { options: [{ id: 's-red', label: 'Red', position: 'a0' }] } })],
     rows: [
       row('top', { st: 'top', par: [], sub: [{ id: 'p' }], tag: 's-red' }),
@@ -115,5 +116,31 @@ describe.each(SESSIONS)('database row copy and move (%s session)', (_label, open
     expect(errorOf(await run(session, 'database.moveRowTo', { id: 'S', rowId: 'p', databaseId: 'S' }))?.code).toBe('PRECONDITION_FAILED');
     expect(errorOf(await run(session, 'database.moveRowTo', { id: 'S', rowId: 'p', databaseId: 'c' }))?.code).toBe('PRECONDITION_FAILED');
     await session.close();
+  });
+  it('database.duplicateRow puts the copy and its sub-items right after the original in a view with its own order', async () => {
+    // Keys apart from the positions: a copy with no key of its own would sort last.
+    const session = open(seed({ sorts: [], filters: [], visibleProperties: [], rowOrder: { z: 'a0', top: 'a1', p: 'a2', c: 'a3' } }));
+    const result = await run(session, 'database.duplicateRow', { id: 'S', rowId: 'p' });
+
+    expect(errorOf(result)).toBeUndefined();
+    const copy = String(resultOf(result).rowId);
+    const child = ((await valuesOf(session, copy)).sub as Array<{ id: string }>)[0]?.id ?? '';
+    const order = ((await dataOf(session, 'S'))?.views as Array<{ rowOrder: Record<string, string> }>)[0].rowOrder;
+
+    expect(Object.keys(order).sort((a, b) => (order[a] < order[b] ? -1 : 1))).toEqual(['z', 'top', 'p', copy, child, 'c']);
+    await session.close();
+  });
+
+  it('database.duplicateRow leaves the views alone when they share one order, or for a template', async () => {
+    const shared = open(seed());
+
+    expect(errorOf(await run(shared, 'database.duplicateRow', { id: 'S', rowId: 'z' }))).toBeUndefined();
+    expect((await dataOf(shared, 'S'))?.views).toEqual([{ id: 'S-v', name: 'Table', type: 'table', position: 'a0' }]);
+    await shared.close();
+    const own = open(seed({ rowOrder: { z: 'a0' } }));
+
+    expect(errorOf(await run(own, 'database.duplicateRow', { id: 'S', rowId: 'tpl' }))).toBeUndefined();
+    expect((await dataOf(own, 'S'))?.views).toEqual([{ id: 'S-v', name: 'Table', type: 'table', position: 'a0', rowOrder: { z: 'a0' } }]);
+    await own.close();
   });
 });

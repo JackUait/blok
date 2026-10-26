@@ -1020,7 +1020,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
   },
   {
     name: 'duplicateRow',
-    summary: 'Copy a row right after itself with its page body, as the row menu\'s Duplicate does. A parent\'s sub-items are copied under the copy. A template copy stays a template. block.duplicate on a row does the same.',
+    summary: 'Copy a row right after itself with its page body, as the row menu\'s Duplicate does; in an open view with its own manual order the copy goes right after it there too. A parent\'s sub-items are copied under the copy. A template copy stays a template. block.duplicate on a row does the same.',
     target: 'block',
     args: closed({ rowId: ROW_ID }, ['rowId']),
     result: closed({ rowId: { type: 'string' } }, ['rowId']),

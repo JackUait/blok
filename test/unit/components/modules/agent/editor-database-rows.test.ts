@@ -159,4 +159,26 @@ describe('database rows through the editor agent session', () => {
     expect(Blok.BlockManager.getBlockById('db')?.holder.querySelector(`[data-row-id="${rowId}"]`)).not.toBeNull();
     session.close();
   }, 30_000);
+
+  it('database.duplicateRow puts the copy right after the original in a view with its own order', async () => {
+    const data = seed();
+    const database = data.blocks[0];
+
+    // Keys apart from the positions: a copy with no key of its own would sort last.
+    database.data.views = [{ id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [], rowOrder: { z: 'Zx', p: 'Zy', c: 'Zz' } }];
+    const Blok = await boot(data);
+    const session = createEditorAgentSession(Blok, actor);
+    const result: AgentResult = await session.execute({ commands: [{ name: 'database.duplicateRow', args: { id: 'db', rowId: 'z' } }] });
+
+    expect(result.ok).toBe(true);
+    const copy = result.ok ? String((result.results[0] as { rowId: string }).rowId) : '';
+    const order = ((saved(Blok).get('db')?.data.views as Array<{ rowOrder: Record<string, string> }>)[0]).rowOrder;
+    const manual = Object.keys(order).sort((a, b) => (order[a] < order[b] ? -1 : 1));
+
+    expect(manual).toEqual(['z', copy, 'p', 'c']);
+    const shown = [...(Blok.BlockManager.getBlockById('db')?.holder.querySelectorAll('[data-row-id]') ?? [])].map(el => el.getAttribute('data-row-id'));
+
+    expect([...new Set(shown)]).toEqual(['z', copy, 'p', 'c']);
+    session.close();
+  }, 30_000);
 });

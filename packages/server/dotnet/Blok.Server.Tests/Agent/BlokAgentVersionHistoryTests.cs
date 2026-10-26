@@ -235,4 +235,52 @@ public sealed class BlokAgentVersionHistoryTests
     Assert.Equal(committed, operations.Committed(DocId).Count);
     Assert.Equal("Hello world", JsonNode.Parse((await rooms.StateAsync(DocId)).Json!)!["blocks"]![0]!["data"]!["text"]![0]!["text"]!.GetValue<string>());
   }
+  /// <summary>Runs a peer's write right after Jint answers a restore, before the room restores.</summary>
+  private sealed class PeerWriteAfterRestoreCheck(IBlokRuntime inner) : IBlokRuntime
+  {
+    public Func<ValueTask>? Peer { get; set; }
+
+    public async ValueTask<string> InvokeAsync(
+        string operation, string inputJson, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+    {
+      var output = await inner.InvokeAsync(operation, inputJson, timeout, cancellationToken);
+
+      if (Peer is { } peer && operation == "agentExecute" && output.Contains("\"restore\":", StringComparison.Ordinal))
+      {
+        Peer = null;
+        await peer();
+      }
+
+      return output;
+    }
+  }
+
+  [Fact]
+  public async Task ARoomChangeBetweenTheRestoreCheckAndTheRestoreIsStaleAndWritesNothing()
+  {
+    var converter = new CollabDocConverter(time, RichTextRuntime.Reader);
+    var rooms = new CollabRoomManager(store, endpoint, converter, new CollabRoomOptions(), time, _ => { }, operations);
+    var runtime = new PeerWriteAfterRestoreCheck(Runtime.Value);
+    var executor = new BlokAgentExecutor(runtime, rooms, converter);
+    var edit = await executor.ExecuteInRoomAsync(DocId,
+        """{"commands":[{"name":"text.replace","args":{"id":"p","with":"Changed"}}]}""", Actor);
+    var lineage = edit.Revision[..edit.Revision.LastIndexOf(':')];
+
+    var afterPeer = -1;
+
+    runtime.Peer = async () =>
+    {
+      await executor.ExecuteInRoomAsync(DocId,
+          """{"commands":[{"name":"text.replace","args":{"id":"q","with":"Peer"}}]}""", new BlokAgentActor("peer", "Peer"));
+      afterPeer = operations.Committed(DocId).Count;
+    };
+    var execution = await executor.ExecuteInRoomAsync(DocId,
+        $$$"""{"commands":[{"name":"history.restore","args":{"version":"{{{lineage}}}:0"}}]}""", Actor);
+    var blocks = JsonNode.Parse((await rooms.StateAsync(DocId)).Json!)!["blocks"]!;
+
+    Assert.Equal("STALE", JsonNode.Parse(execution.ResultJson)!["error"]?["code"]?.GetValue<string>());
+    Assert.Equal("Changed", blocks[0]!["data"]!["text"]![0]!["text"]!.GetValue<string>());
+    Assert.Equal("Peer", blocks[1]!["data"]!["text"]![0]!["text"]!.GetValue<string>());
+    Assert.Equal(afterPeer, operations.Committed(DocId).Count);
+  }
 }

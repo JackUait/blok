@@ -649,7 +649,8 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
 
     if (output["restore"] is JsonValue restore && restore.TryGetValue<string>(out var version))
     {
-      return await RestoreAsync(docId, version, result, input, expect, cancellationToken);
+      // Jint checked the room at `current`; the restore must land on that head or not at all.
+      return await RestoreAsync(docId, version, result, input, expect ?? ParseHead(current), cancellationToken);
     }
 
     return WithHead(new BlokAgentExecution(result.ToJsonString(), null, current), current);

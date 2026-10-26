@@ -6,7 +6,7 @@ import { COMPUTED_DB, COMPUTED_DB_EXPECTED } from '../../agent/fixtures/computed
 
 import type { AgentSession, ViewBlock } from '../../../../types/agent';
 
-const BROKEN = { unavailable: expect.stringMatching(/^The formula has an error: .+ The cell shows nothing\.$/) };
+const BROKEN = { unavailable: expect.stringMatching(/^The formula has an error: .+ The cell shows a warning mark with the reason\.$/) };
 
 const rowsOf = (blocks: ViewBlock[]): Record<string, ViewBlock> =>
   Object.fromEntries(blocks.filter(block => block.type === 'database-row').map(block => [block.id, block]));

@@ -25,7 +25,7 @@ const SHOWN: ReadonlySet<string> = new Set([
 
 const REMOTE_ROLLUP = 'Rolls up a database stored in another document; not computed here.';
 const CYCLE = 'Depends on a database that depends on this one. Not computed here.';
-const LIMIT = 'The formula passed a limit (text or list over 10,000, too much work, or a pattern that could run too long). The cell shows nothing.';
+const LIMIT = 'The formula passed a limit (text or list over 10,000, too much work, or a pattern that could run too long). The cell shows a warning mark with the reason.';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -239,7 +239,7 @@ export const createComputedReader = (
       if (p.type === 'formula') {
         const compiled = engine.compile(p, schema);
 
-        return compiled.ok ? undefined : `The formula has an error: ${compiled.error.message}. The cell shows nothing.`;
+        return compiled.ok ? undefined : `The formula has an error: ${compiled.error.message}. The cell shows a warning mark with the reason.`;
       }
       if (p.type !== 'rollup' || relation === undefined) return undefined;
       if (relation.targetDocumentId !== undefined) return REMOTE_ROLLUP;

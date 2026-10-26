@@ -1,5 +1,5 @@
 import { compileFormula, evaluateFormula, formulaDateToStored, formulaValueToText } from './formula';
-import type { CompileResult, FormulaType, FormulaValue } from './formula';
+import type { CompileResult, FormulaErrorCode, FormulaErrorParams, FormulaType, FormulaValue } from './formula';
 import { propertyFormulaValue } from './formula/properties';
 import type { TextContext } from './formula/values';
 import { isDate, isRef } from './formula/types';
@@ -27,6 +27,11 @@ export interface ComputeContext {
   /** The host's people directory: a person turned into text prints its name, as the CSV export does. */
   people?: ReadonlyArray<{ id: string; name: string }>;
 }
+
+/** Why a formula shows no value. Text comes from i18n where it is shown. */
+export type FormulaProblem =
+  | { kind: 'error'; code: FormulaErrorCode; params: FormulaErrorParams }
+  | { kind: 'limit' };
 
 /** H-err: "Formulas can only reference other formulas 15 layers deep". */
 const MAX_FORMULA_DEPTH = 15;
@@ -165,6 +170,16 @@ export class ComputedProperties {
    */
   limited(rowId: string, propertyId: string): boolean {
     return this.limits.has(`${rowId}\u0000${propertyId}`);
+  }
+
+  /** Why a formula cell has no value: a compile error or a limit. A blank formula has none. */
+  problem(rowId: string, property: PropertyDefinition): FormulaProblem | undefined {
+    if (property.type !== 'formula' || (property.formula?.expression ?? '').trim() === '') return undefined;
+    const compiled = this.compile(property, this.schema);
+
+    if (!compiled.ok) return { kind: 'error', code: compiled.error.code, params: compiled.error.params };
+
+    return this.limited(rowId, property.id) ? { kind: 'limit' } : undefined;
   }
 
   /**

@@ -524,6 +524,20 @@ describe('DatabaseListView', () => {
       expect(button?.getAttribute('aria-label')).toBe('Stage: Not started');
     });
 
+    // notion-spec-2 §10: Show number off leaves only the gauge, whose name is the value.
+    it('names a slot whose gauge hides its number by the gauge\'s value', () => {
+      const gauged: PropertyDefinition[] = [
+        { id: 'title', name: 'Title', type: 'title', position: 'a0' },
+        { id: 'done', name: 'Done', type: 'number', position: 'a1', number: { showAs: 'bar', showNumber: false } },
+      ];
+      const list = new DatabaseListView({
+        readOnly: false, i18n, titlePropertyId: 'title', schema: gauged, visiblePropertyIds: ['done'],
+        rows: [makeRow({ properties: { title: 'Row', done: 40 } })],
+      }).createView();
+
+      expect(list.querySelector('[data-blok-database-list-row-property][data-property-id="done"]')?.getAttribute('aria-label')).toBe('Done: 40');
+    });
+
     it('never makes a slot a button when its value holds its own link (no nested controls)', () => {
       const linked: PropertyDefinition[] = [...schema, { id: 'site', name: 'Site', type: 'url', position: 'a7' }];
       const list = new DatabaseListView({

@@ -775,7 +775,10 @@ export class DatabaseListView implements DatabaseViewRenderer {
       // A value with its own link stays a plain slot: a button around a link is a nested control.
       if (cell.querySelector('a[href], button, [role="link"], [role="button"]') === null) {
         badge.setAttribute('role', 'button');
-        badge.setAttribute('aria-label', `${propDef.name}: ${(cell.textContent ?? '').trim()}`);
+        // A gauge without its number has no text; its name is the value.
+        const shown = (cell.textContent ?? '').trim() || (cell.querySelector('[role="img"][aria-label]')?.getAttribute('aria-label') ?? '');
+
+        badge.setAttribute('aria-label', `${propDef.name}: ${shown}`);
       }
     }
     badge.appendChild(cell);

@@ -1080,6 +1080,10 @@ export class DatabasePropertyMenu {
             latest.number = next;
             this.options.onUpdate(property.id, { number: next });
           }),
+          this.switchItem('showNumber', 'tools.database.showNumber', number.showNumber !== false, (on) => {
+            latest.number = on ? without(latest.number, 'showNumber') : { ...latest.number, showNumber: false };
+            this.options.onUpdate(property.id, { number: latest.number });
+          }),
         ]
         : []),
     ];
@@ -1134,6 +1138,28 @@ export class DatabasePropertyMenu {
     root.append(heading, group);
 
     return { type: PopoverItemType.Html, element: root, name: 'showAs' };
+  }
+
+  /** A label and the database switch in one button, saved without a redraw. */
+  private switchItem(name: string, labelKey: string, checked: boolean, onToggle: (on: boolean) => void): PopoverItemParams {
+    const button = document.createElement('button');
+    const track = document.createElement('span');
+
+    button.type = 'button';
+    button.setAttribute('role', 'switch');
+    button.setAttribute('aria-checked', String(checked));
+    button.setAttribute('data-blok-database-property-menu-switch', name);
+    track.setAttribute('data-blok-database-switch-track', '');
+    track.appendChild(document.createElement('span'));
+    button.append(this.t(labelKey), track);
+    button.addEventListener('click', () => {
+      const on = button.getAttribute('aria-checked') !== 'true';
+
+      button.setAttribute('aria-checked', String(on));
+      onToggle(on);
+    });
+
+    return { type: PopoverItemType.Html, element: button, name };
   }
 
   private inputItem(name: string, value: string, labelKey: string, onChange: (value: string) => void): PopoverItemParams {

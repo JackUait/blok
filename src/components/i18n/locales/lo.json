@@ -1618,6 +1618,7 @@
   "tools.database.showAs.ring": "ວົງແຫວນ",
   "tools.database.numberColor": "ສີ",
   "tools.database.divideBy": "ຫານດ້ວຍ",
+  "tools.database.showNumber": "ສະແດງຕົວເລກ",
   "tools.database.numberFormat.number": "ຕົວເລກ",
   "tools.database.numberFormat.number_with_commas": "ຕົວເລກພ້ອມຕົວຂັ້ນ",
   "tools.database.numberFormat.percent": "ເປີເຊັນ",

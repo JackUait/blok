@@ -1618,6 +1618,7 @@
   "tools.database.showAs.ring": "Ring",
   "tools.database.numberColor": "Farbe",
   "tools.database.divideBy": "Teilen durch",
+  "tools.database.showNumber": "Zahl anzeigen",
   "tools.database.numberFormat.number": "Zahl",
   "tools.database.numberFormat.number_with_commas": "Zahl mit Trennzeichen",
   "tools.database.numberFormat.percent": "Prozent",

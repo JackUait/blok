@@ -1618,6 +1618,7 @@
   "tools.database.showAs.ring": "วงแหวน",
   "tools.database.numberColor": "สี",
   "tools.database.divideBy": "หารด้วย",
+  "tools.database.showNumber": "แสดงตัวเลข",
   "tools.database.numberFormat.number": "ตัวเลข",
   "tools.database.numberFormat.number_with_commas": "ตัวเลขพร้อมตัวคั่น",
   "tools.database.numberFormat.percent": "เปอร์เซ็นต์",

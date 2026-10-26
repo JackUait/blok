@@ -1626,6 +1626,7 @@
   "tools.database.showAs.ring": "حلقة",
   "tools.database.numberColor": "اللون",
   "tools.database.divideBy": "القسمة على",
+  "tools.database.showNumber": "إظهار الرقم",
   "tools.database.numberFormat.number": "رقم",
   "tools.database.numberFormat.number_with_commas": "رقم بفواصل",
   "tools.database.numberFormat.percent": "النسبة المئوية",

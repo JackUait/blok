@@ -1618,6 +1618,7 @@
   "tools.database.showAs.ring": "Rõngas",
   "tools.database.numberColor": "Värv",
   "tools.database.divideBy": "Jagaja",
+  "tools.database.showNumber": "Kuva arv",
   "tools.database.numberFormat.number": "Arv",
   "tools.database.numberFormat.number_with_commas": "Arv tuhandeliste eraldajaga",
   "tools.database.numberFormat.percent": "Protsent",

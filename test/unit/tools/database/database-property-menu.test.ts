@@ -766,6 +766,67 @@ describe('DatabasePropertyMenu', () => {
       menu.destroy();
     });
 
+    const showNumberSwitch = (): HTMLElement => {
+      const row = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'showNumber').element;
+      const found = row?.matches('[role="switch"]') === true ? row : row?.querySelector<HTMLElement>('[role="switch"]');
+
+      if (found === null || found === undefined) throw new Error('no Show number switch');
+
+      return found;
+    };
+
+    // notion-spec-2 §2, §10: Color, Divide by, Show number.
+    it('offers Show number, on, as the gauge box\'s last row, only for a bar or ring', () => {
+      const { menu } = headerMenu(prop('number', { number: { showAs: 'ring' } }));
+      const names = editNames();
+      const toggle = showNumberSwitch();
+
+      expect(names.indexOf('showNumber')).toBe(names.indexOf('divideBy') + 1);
+      expect(toggle.getAttribute('aria-checked')).toBe('true');
+      expect(toggle.textContent).toBe('tools.database.showNumber');
+      expect(toggle.querySelector(':scope > [data-blok-database-switch-track]')).not.toBeNull();
+      menu.destroy();
+      expect(editItems(prop('number')).map((i) => i.name)).not.toContain('showNumber');
+    });
+
+    it('turning Show number off saves showNumber false; on again drops the key', () => {
+      const { cb, menu } = headerMenu(prop('number', { number: { showAs: 'bar', color: 'green' } }));
+      const drawn = captured.popovers.length;
+
+      showNumberSwitch().click();
+      expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { number: { showAs: 'bar', color: 'green', showNumber: false } });
+      expect(showNumberSwitch().getAttribute('aria-checked')).toBe('false');
+      // Like Divide by, the switch saves without a redraw: the menu stays where it is.
+      expect(captured.popovers.length).toBe(drawn);
+
+      showNumberSwitch().click();
+      expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { number: { showAs: 'bar', color: 'green' } });
+      expect(showNumberSwitch().getAttribute('aria-checked')).toBe('true');
+      menu.destroy();
+    });
+
+    it('draws Show number off when the saved display has it off', () => {
+      const { menu } = headerMenu(prop('number', { number: { showAs: 'bar', showNumber: false } }));
+
+      expect(showNumberSwitch().getAttribute('aria-checked')).toBe('false');
+      menu.destroy();
+    });
+
+    it('Show number keeps a typed Divide by, and a later colour keeps Show number off', () => {
+      const { cb, menu } = headerMenu(prop('number', { number: { showAs: 'bar', divideBy: 100 } }));
+      const input = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'divideBy').element?.querySelector('input');
+
+      if (input === null || input === undefined) throw new Error('no divide by input');
+      input.value = '50';
+      input.dispatchEvent(new Event('change'));
+      showNumberSwitch().click();
+      expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { number: { showAs: 'bar', divideBy: 50, showNumber: false } });
+
+      pick('color', 'color-red');
+      expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { number: { showAs: 'bar', divideBy: 50, showNumber: false, color: 'red' } });
+      menu.destroy();
+    });
+
     // research/27 §7: the header's Edit property submenu is 300 wide; the all-views note no longer sets it.
     it('opens the header Edit property submenu at least 300 wide', () => {
       const { menu } = headerMenu(prop('number'));

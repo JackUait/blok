@@ -1618,6 +1618,7 @@
   "tools.database.showAs.ring": "حلقہ",
   "tools.database.numberColor": "رنگ",
   "tools.database.divideBy": "تقسیم بر",
+  "tools.database.showNumber": "نمبر دکھائیں",
   "tools.database.numberFormat.number": "نمبر",
   "tools.database.numberFormat.number_with_commas": "الگ کاروں کے ساتھ نمبر",
   "tools.database.numberFormat.percent": "فیصد",

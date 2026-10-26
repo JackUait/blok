@@ -1620,6 +1620,7 @@
   "tools.database.showAs.ring": "Inel",
   "tools.database.numberColor": "Culoare",
   "tools.database.divideBy": "Împarte la",
+  "tools.database.showNumber": "Afișează numărul",
   "tools.database.numberFormat.number": "Număr",
   "tools.database.numberFormat.number_with_commas": "Număr cu separatori",
   "tools.database.numberFormat.percent": "Procent",

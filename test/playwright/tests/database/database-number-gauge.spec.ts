@@ -34,7 +34,13 @@ const SCHEMA = [
   { id: 'p-calc', name: 'Calc', type: 'formula', position: 'a9', formula: { expression: '{{property:p-bar}} + 2429' } },
   { id: 'p-link', name: 'Link', type: 'relation', position: 'a6', relation: { targetDatabaseId: 'db-1' } },
   { id: 'p-sum', name: 'Sum', type: 'rollup', position: 'a7', rollup: { relationPropertyId: 'p-link', targetPropertyId: 'p-bar', function: 'sum' }, number: { showAs: 'bar', color: 'green', divideBy: 100 } },
+  { id: 'p-quiet-bar', name: 'Quiet bar', type: 'number', position: 'b0', number: { showAs: 'bar', color: 'yellow', divideBy: 100, showNumber: false } },
+  { id: 'p-quiet-ring', name: 'Quiet ring', type: 'number', position: 'b1', number: { showAs: 'ring', color: 'yellow', divideBy: 100, showNumber: false } },
+  { id: 'p-quiet-fx', name: 'Quiet formula', type: 'formula', position: 'b2', formula: { expression: '{{property:p-bar}} * 2' }, number: { showAs: 'ring', divideBy: 100, showNumber: false } },
+  { id: 'p-quiet-sum', name: 'Quiet sum', type: 'rollup', position: 'b3', rollup: { relationPropertyId: 'p-link', targetPropertyId: 'p-bar', function: 'sum' }, number: { showAs: 'bar', divideBy: 100, showNumber: false } },
 ];
+
+const QUIET = [ 'p-quiet-bar', 'p-quiet-ring', 'p-quiet-fx', 'p-quiet-sum' ];
 
 const blocks = (view: Record<string, unknown>, visible = [ 'p-bar', 'p-ring' ]): OutputBlockData[] => [
   {
@@ -51,7 +57,7 @@ const blocks = (view: Record<string, unknown>, visible = [ 'p-bar', 'p-ring' ]):
     id: 'r1',
     type: 'database-row',
     parent: 'db-1',
-    data: { position: 'a0', properties: { 'p-title': 'Alpha', 'p-bar': 40, 'p-ring': 40, 'p-plain': 40, 'p-num': 2469, 'p-stage': 'o-plan', 'p-link': [ { id: 'r1' } ] } },
+    data: { position: 'a0', properties: { 'p-title': 'Alpha', 'p-bar': 40, 'p-ring': 40, 'p-plain': 40, 'p-quiet-bar': 40, 'p-quiet-ring': 40, 'p-num': 2469, 'p-stage': 'o-plan', 'p-link': [ { id: 'r1' } ] } },
   },
 ];
 
@@ -120,6 +126,8 @@ const colours = async (gauge: Locator): Promise<{ fill: string; track: string }>
 const BAR = '[data-blok-database-number-bar]';
 const RING = '[data-blok-database-number-ring]';
 const GREEN = 'rgb(70, 161, 113)';
+/** Notion's yellow, rgb(216, 163, 47), is 2.28:1 on white; light takes the first 3:1 step of its hue. */
+const YELLOW = { light: 'rgb(189, 141, 35)', dark: 'rgb(216, 163, 47)' };
 const RED = 'rgb(229, 100, 88)';
 
 const THEMES = [
@@ -215,6 +223,109 @@ for (const theme of THEMES) {
       expect(await measure(peekValue(drawer, 'p-sum').locator(BAR), '[data-blok-database-drawer-prop-value]')).toMatchObject({ width: 160, height: 4, gap: 8 });
     });
 
+    // notion-spec-2 §10: Show number off draws the gauge alone. Notion keeps a table Ring at the cell's end.
+    test('Show number off draws only the gauge, in the table, the row page and a formula or rollup', async ({ page }) => {
+      await mount(page, blocks({ type: 'table' }, QUIET));
+      const row = page.locator('[data-blok-database-table-row][data-row-id="r1"]');
+      const drawer = await openPeek(page);
+
+      for (const scope of [ row.locator('[data-blok-database-table-cell]'), drawer.locator('[data-blok-database-drawer-prop-value]') ]) {
+        for (const id of QUIET) {
+          const value = scope.and(page.locator(`[data-property-id="${id}"]`));
+
+          await expect(value.locator(`${id.endsWith('ring') || id.endsWith('fx') ? RING : BAR}`)).toBeVisible();
+          await expect(value.locator('[data-blok-database-number-text]')).toHaveCount(0);
+        }
+      }
+      // With no text beside it, the gauge carries the value.
+      await expect(row.locator('[data-blok-database-table-cell][data-property-id="p-quiet-ring"]').getByRole('img', { name: '40' })).toBeVisible();
+
+      const edges = await row.locator(`[data-blok-database-table-cell][data-property-id="p-quiet-ring"] ${RING}`).evaluate((el) => {
+        const cell = el.closest('[data-blok-database-table-cell]');
+
+        if (cell === null) throw new Error('no cell');
+        const style = getComputedStyle(cell);
+
+        return Math.round((cell.getBoundingClientRect().right - parseFloat(style.paddingRight) - parseFloat(style.borderRightWidth) - el.getBoundingClientRect().right) * 10) / 10;
+      });
+
+      expect(Math.abs(edges)).toBeLessThanOrEqual(0.5);
+      const peekStart = await peekValue(drawer, 'p-quiet-bar').locator(BAR).evaluate((el) => {
+        const value = el.closest('[data-blok-database-drawer-prop-value]');
+
+        if (value === null) throw new Error('no value');
+        const style = getComputedStyle(value);
+
+        return Math.round((el.getBoundingClientRect().left - value.getBoundingClientRect().left - parseFloat(style.paddingLeft) - parseFloat(style.borderLeftWidth)) * 10) / 10;
+      });
+
+      expect(Math.abs(peekStart)).toBeLessThanOrEqual(0.5);
+    });
+
+    test('a yellow gauge is drawn in the 3:1 yellow', async ({ page }) => {
+      await mount(page, blocks({ type: 'table' }, [ 'p-quiet-bar', 'p-quiet-ring' ]));
+      const row = page.locator('[data-blok-database-table-row][data-row-id="r1"]');
+
+      expect((await colours(row.locator(BAR))).fill).toBe(YELLOW[theme.name]);
+      expect((await colours(row.locator(RING))).fill).toBe(YELLOW[theme.name]);
+    });
+
+    test('Show number on the row page panel takes the number away and brings it back', async ({ page }) => {
+      await mount(page, blocks({ type: 'table' }));
+      const drawer = await openPeek(page);
+      const cell = page.locator('[data-blok-database-table-cell][data-property-id="p-bar"]');
+
+      await drawer.locator('[data-blok-database-drawer-prop-label][data-property-id="p-bar"]').click();
+      await page.locator('[data-blok-popover-opened="true"]').getByRole('menuitem', { name: 'Edit property' }).click();
+      const toggle = page.locator('[data-blok-popover-opened="true"]').getByRole('switch', { name: 'Show number' });
+
+      await expect(toggle).toHaveAttribute('aria-checked', 'true');
+      // notion-spec-2 §2: the box is 234 wide, 12 + three 28px rows 8px apart + 12 tall.
+      // The panel opens with a scale; measure after it settles.
+      await page.waitForFunction(() => document.getAnimations().every((animation) => animation.playState !== 'running'));
+      const box = await page.locator('[data-blok-popover-opened="true"]').evaluate((menu) => {
+        const color = menu.querySelector('[data-blok-item-name="color"]')?.getBoundingClientRect();
+        const show = menu.querySelector('[data-blok-item-name="showNumber"]')?.getBoundingClientRect();
+        const row = menu.querySelector('[role="switch"]')?.getBoundingClientRect();
+
+        if (color === undefined || show === undefined || row === undefined) throw new Error('no gauge box');
+
+        return { width: Math.round(show.width), height: Math.round(show.bottom - (color.top - 12)), row: Math.round(row.height), colorWidth: Math.round(color.width) };
+      });
+
+      expect(box).toEqual({ width: 234, height: 124, row: 28, colorWidth: 234 });
+
+      await toggle.click();
+      await expect(toggle).toHaveAttribute('aria-checked', 'false');
+      await expect(cell.locator('[data-blok-database-number-text]')).toHaveCount(0);
+      await expect(peekValue(drawer, 'p-bar').locator('[data-blok-database-number-text]')).toHaveCount(0);
+      await expect(peekValue(drawer, 'p-bar').locator(BAR)).toBeVisible();
+
+      await toggle.click();
+      await expect(toggle).toHaveAttribute('aria-checked', 'true');
+      await expect(cell.locator('[data-blok-database-number-text]')).toHaveText('40');
+      await expect(peekValue(drawer, 'p-bar').locator('[data-blok-database-number-text]')).toHaveText('40');
+    });
+
+    test('Show number in the column header\'s Edit property submenu toggles by click and by Space', async ({ page }) => {
+      await mount(page, blocks({ type: 'table' }));
+      const cell = page.locator('[data-blok-database-table-cell][data-property-id="p-bar"]');
+
+      await page.getByRole('columnheader', { name: 'Done' }).click();
+      await page.locator('[data-blok-popover-opened="true"]').getByRole('menuitem', { name: 'Edit property' }).click();
+      const toggle = page.getByRole('switch', { name: 'Show number' });
+
+      await toggle.click();
+      await expect(toggle).toHaveAttribute('aria-checked', 'false');
+      await expect(toggle).toBeVisible();
+      await expect(cell.locator('[data-blok-database-number-text]')).toHaveCount(0);
+
+      await toggle.focus();
+      await page.keyboard.press('Space');
+      await expect(toggle).toHaveAttribute('aria-checked', 'true');
+      await expect(cell.locator('[data-blok-database-number-text]')).toHaveText('40');
+    });
+
     for (const id of [ 'p-num', 'p-calc' ]) {
       test(`choosing Ring for a ${id === 'p-num' ? 'number' : 'number formula'} on the row page draws it there`, async ({ page }) => {
         await mount(page, blocks({ type: 'table' }, [ 'p-num', 'p-calc' ]));
@@ -225,6 +336,17 @@ for (const theme of THEMES) {
         await page.locator('[data-blok-popover-opened="true"]').getByRole('radio', { name: 'Ring' }).click();
         await expect(page.locator(`[data-blok-database-table-cell][data-property-id="${id}"] ${RING}`)).toBeVisible();
         await expect(peekValue(drawer, id).locator(RING)).toBeVisible();
+      });
+    }
+
+    for (const view of [ { type: 'board', groupBy: 'p-stage' }, { type: 'gallery' }, { type: 'list' } ]) {
+      test(`a ${view.type} card draws only the gauge when Show number is off`, async ({ page }) => {
+        await mount(page, blocks(view, [ 'p-quiet-bar', 'p-quiet-ring' ]));
+        const scope = page.locator('[data-blok-id="db-1"]');
+
+        await expect(scope.locator(BAR).first()).toBeVisible();
+        await expect(scope.locator(RING).first()).toBeVisible();
+        await expect(scope.locator('[data-blok-database-number-text]')).toHaveCount(0);
       });
     }
 

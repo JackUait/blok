@@ -1618,6 +1618,7 @@
   "tools.database.showAs.ring": "Ring",
   "tools.database.numberColor": "Kleur",
   "tools.database.divideBy": "Delen door",
+  "tools.database.showNumber": "Getal tonen",
   "tools.database.numberFormat.number": "Getal",
   "tools.database.numberFormat.number_with_commas": "Getal met scheidingstekens",
   "tools.database.numberFormat.percent": "Percentage",

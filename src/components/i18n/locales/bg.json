@@ -1618,6 +1618,7 @@
   "tools.database.showAs.ring": "Пръстен",
   "tools.database.numberColor": "Цвят",
   "tools.database.divideBy": "Раздели на",
+  "tools.database.showNumber": "Показвай числото",
   "tools.database.numberFormat.number": "Число",
   "tools.database.numberFormat.number_with_commas": "Число с разделители",
   "tools.database.numberFormat.percent": "Процент",

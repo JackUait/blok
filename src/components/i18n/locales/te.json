@@ -1618,6 +1618,7 @@
   "tools.database.showAs.ring": "వలయం",
   "tools.database.numberColor": "రంగు",
   "tools.database.divideBy": "దీనితో భాగించు",
+  "tools.database.showNumber": "సంఖ్యను చూపు",
   "tools.database.numberFormat.number": "సంఖ్య",
   "tools.database.numberFormat.number_with_commas": "విభాజకాలతో సంఖ్య",
   "tools.database.numberFormat.percent": "శాతం",

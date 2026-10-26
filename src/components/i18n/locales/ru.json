@@ -1622,6 +1622,7 @@
   "tools.database.showAs.ring": "Кольцо",
   "tools.database.numberColor": "Цвет",
   "tools.database.divideBy": "Делить на",
+  "tools.database.showNumber": "Показывать число",
   "tools.database.numberFormat.number": "Число",
   "tools.database.numberFormat.number_with_commas": "Число с разделителями",
   "tools.database.numberFormat.percent": "Процент",

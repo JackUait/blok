@@ -1618,6 +1618,7 @@
   "tools.database.showAs.ring": "रिङ",
   "tools.database.numberColor": "रङ",
   "tools.database.divideBy": "ले भाग गर्नुहोस्",
+  "tools.database.showNumber": "नम्बर देखाउनुहोस्",
   "tools.database.numberFormat.number": "नम्बर",
   "tools.database.numberFormat.number_with_commas": "विभाजकसहितको नम्बर",
   "tools.database.numberFormat.percent": "प्रतिशत",

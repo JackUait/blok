@@ -1618,6 +1618,7 @@
   "tools.database.showAs.ring": "リング",
   "tools.database.numberColor": "カラー",
   "tools.database.divideBy": "除数",
+  "tools.database.showNumber": "数値を表示",
   "tools.database.numberFormat.number": "数値",
   "tools.database.numberFormat.number_with_commas": "桁区切り付きの数値",
   "tools.database.numberFormat.percent": "パーセント",

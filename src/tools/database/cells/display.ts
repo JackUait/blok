@@ -126,24 +126,35 @@ const renderNumber = (cell: HTMLElement, property: PropertyDefinition, value: Pr
   }
 
   const display = property.number ?? {};
-  const text = document.createElement('span');
+  const shownAs = display.showAs === 'bar' || display.showAs === 'ring' ? display.showAs : undefined;
+  const label = formatNumberValue(n, display, resolveLocale(ctx.locale));
 
-  text.setAttribute('data-blok-database-number-text', '');
-  text.textContent = formatNumberValue(n, display, resolveLocale(ctx.locale));
-  cell.appendChild(text);
+  if (shownAs === undefined || display.showNumber !== false) {
+    const text = document.createElement('span');
 
-  if (display.showAs !== 'bar' && display.showAs !== 'ring') {
+    text.setAttribute('data-blok-database-number-text', '');
+    text.textContent = label;
+    cell.appendChild(text);
+  }
+
+  if (shownAs === undefined) {
     return;
   }
 
   const gauge = document.createElement('span');
   const fill = Math.round(numberFill(n, display) * 100);
 
-  gauge.setAttribute(display.showAs === 'bar' ? 'data-blok-database-number-bar' : 'data-blok-database-number-ring', '');
+  gauge.setAttribute(shownAs === 'bar' ? 'data-blok-database-number-bar' : 'data-blok-database-number-ring', '');
   gauge.setAttribute('data-color', optionColorOf({ color: display.color }));
-  gauge.setAttribute('aria-hidden', 'true');
+  if (cell.childElementCount === 0) {
+    // With no number beside it, the gauge is what a screen reader reads.
+    gauge.setAttribute('role', 'img');
+    gauge.setAttribute('aria-label', label);
+  } else {
+    gauge.setAttribute('aria-hidden', 'true');
+  }
   gauge.style.setProperty('--blok-database-number-fill', `${fill}%`);
-  if (display.showAs === 'ring') gauge.appendChild(ringSvg(fill));
+  if (shownAs === 'ring') gauge.appendChild(ringSvg(fill));
   cell.appendChild(gauge);
 };
 

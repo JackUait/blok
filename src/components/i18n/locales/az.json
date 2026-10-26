@@ -1618,6 +1618,7 @@
   "tools.database.showAs.ring": "Halqa",
   "tools.database.numberColor": "Rəng",
   "tools.database.divideBy": "Bölən",
+  "tools.database.showNumber": "Ədədi göstər",
   "tools.database.numberFormat.number": "Ədəd",
   "tools.database.numberFormat.number_with_commas": "Ayırıcılı ədəd",
   "tools.database.numberFormat.percent": "Faiz",

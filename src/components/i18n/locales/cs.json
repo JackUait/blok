@@ -1622,6 +1622,7 @@
   "tools.database.showAs.ring": "Kruh",
   "tools.database.numberColor": "Barva",
   "tools.database.divideBy": "Dělit",
+  "tools.database.showNumber": "Zobrazit číslo",
   "tools.database.numberFormat.number": "Číslo",
   "tools.database.numberFormat.number_with_commas": "Číslo s oddělovači",
   "tools.database.numberFormat.percent": "Procento",

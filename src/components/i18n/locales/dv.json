@@ -1618,6 +1618,7 @@
   "tools.database.showAs.ring": "ރިންގު",
   "tools.database.numberColor": "ކުލަ",
   "tools.database.divideBy": "ބަހާނީ",
+  "tools.database.showNumber": "ނަންބަރު ދައްކާ",
   "tools.database.numberFormat.number": "ނަންބަރު",
   "tools.database.numberFormat.number_with_commas": "ވަކިކުރާ ފާހަގަތަކާއެކު ނަންބަރު",
   "tools.database.numberFormat.percent": "ޕަސެންޓް",

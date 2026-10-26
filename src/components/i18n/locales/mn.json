@@ -1618,6 +1618,7 @@
   "tools.database.showAs.ring": "Цагираг",
   "tools.database.numberColor": "Өнгө",
   "tools.database.divideBy": "Хуваагч",
+  "tools.database.showNumber": "Тоог харуулах",
   "tools.database.numberFormat.number": "Тоо",
   "tools.database.numberFormat.number_with_commas": "Тусгаарлагчтай тоо",
   "tools.database.numberFormat.percent": "Хувь",

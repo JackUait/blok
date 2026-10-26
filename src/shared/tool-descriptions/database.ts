@@ -37,6 +37,7 @@ const PROPERTY_SETTINGS = {
       showAs: { type: 'string', enum: ['number', 'bar', 'ring'] },
       color: { type: 'string', enum: COLORS },
       divideBy: { type: 'number', exclusiveMinimum: 0 },
+      showNumber: { type: 'boolean', description: 'Bar or ring: false draws the gauge without its number. Default true.' },
     },
   },
   date: {

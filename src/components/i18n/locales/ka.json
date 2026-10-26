@@ -1618,6 +1618,7 @@
   "tools.database.showAs.ring": "რგოლი",
   "tools.database.numberColor": "ფერი",
   "tools.database.divideBy": "გამყოფი",
+  "tools.database.showNumber": "რიცხვის ჩვენება",
   "tools.database.numberFormat.number": "რიცხვი",
   "tools.database.numberFormat.number_with_commas": "რიცხვი გამყოფებით",
   "tools.database.numberFormat.percent": "პროცენტი",

@@ -1622,6 +1622,7 @@
   "tools.database.showAs.ring": "Obroč",
   "tools.database.numberColor": "Barva",
   "tools.database.divideBy": "Deli z",
+  "tools.database.showNumber": "Prikaži število",
   "tools.database.numberFormat.number": "Število",
   "tools.database.numberFormat.number_with_commas": "Število z ločili",
   "tools.database.numberFormat.percent": "Odstotek",

@@ -1618,6 +1618,7 @@
   "tools.database.showAs.ring": "Halka",
   "tools.database.numberColor": "Renk",
   "tools.database.divideBy": "Bölen",
+  "tools.database.showNumber": "Sayıyı göster",
   "tools.database.numberFormat.number": "Sayı",
   "tools.database.numberFormat.number_with_commas": "Ayırıcılı sayı",
   "tools.database.numberFormat.percent": "Yüzde",

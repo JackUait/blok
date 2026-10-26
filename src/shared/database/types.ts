@@ -124,6 +124,8 @@ export interface NumberDisplay {
   color?: string;
   /** Bar or ring: the value that fills it. Default 100 (1 for percent). */
   divideBy?: number;
+  /** Bar or ring: `false` draws the gauge without its number. Absent means shown. */
+  showNumber?: boolean;
 }
 
 export type DateFormat = 'full' | 'short' | 'month_day_year' | 'day_month_year' | 'year_month_day' | 'relative';

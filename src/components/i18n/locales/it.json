@@ -1620,6 +1620,7 @@
   "tools.database.showAs.ring": "Anello",
   "tools.database.numberColor": "Colore",
   "tools.database.divideBy": "Dividi per",
+  "tools.database.showNumber": "Mostra numero",
   "tools.database.numberFormat.number": "Numero",
   "tools.database.numberFormat.number_with_commas": "Numero con separatori",
   "tools.database.numberFormat.percent": "Percentuale",

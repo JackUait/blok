@@ -242,7 +242,7 @@ const VALID_SAVED_SHAPES: Array<{ name: ContainerName; scenario: string; data: R
           config: { options: [{ id: 's1', label: 'Not started', color: 'gray', position: 'a0', groupId: 'todo' }] },
           status: { groups: [{ id: 'todo', kind: 'todo', name: 'To-do', color: 'gray', position: 'a0' }], showAs: 'checkbox' },
         },
-        { id: 'n', name: 'Amount', type: 'number', position: 'a2', number: { format: 'dollar', decimals: 2, showAs: 'bar', color: 'green', divideBy: 500 } },
+        { id: 'n', name: 'Amount', type: 'number', position: 'a2', number: { format: 'dollar', decimals: 2, showAs: 'bar', color: 'green', divideBy: 500, showNumber: false } },
         { id: 'd', name: 'Due', type: 'date', position: 'a3', date: { dateFormat: 'relative', timeFormat: '24_hour', timeZone: 'Asia/Tokyo' } },
         { id: 'm', name: 'Mail', type: 'email', position: 'a4' },
         { id: 't', name: 'Tel', type: 'phone', position: 'a5' },
@@ -725,7 +725,7 @@ describe('container self-description schema and metadata', () => {
     const snapshot = readFileSync(resolve(__dirname, '../../view/__snapshots__/document-schema.json'), 'utf8');
 
     expect(createHash('sha256').update(snapshot).digest('hex'))
-      .toBe('654b4a64cb8fa055d0eb8adacf12ce6779f5a649f7c7efad1c3e726c5562becd');
+      .toBe('2c76a39927115cf25c3f62d6501f94db3e500c41a30c7b059a372b0b567ec661');
 
     const published: unknown = JSON.parse(snapshot);
 

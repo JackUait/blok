@@ -1618,6 +1618,7 @@
   "tools.database.showAs.ring": "Unazë",
   "tools.database.numberColor": "Ngjyra",
   "tools.database.divideBy": "Pjesëto me",
+  "tools.database.showNumber": "Shfaq numrin",
   "tools.database.numberFormat.number": "Numër",
   "tools.database.numberFormat.number_with_commas": "Numër me ndarës",
   "tools.database.numberFormat.percent": "Përqindja",

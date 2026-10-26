@@ -176,6 +176,43 @@ describe('renderCellValue — new property types', () => {
       expect(arc?.getAttribute('transform')).toBe('rotate(-90 7 7)');
     });
 
+    // notion-spec-2 §10: Show number off draws the gauge alone.
+    it.each(['bar', 'ring'] as const)('draws a %s without its number when Show number is off', (showAs) => {
+      const el = renderCellValue(prop('number', { number: { showAs, showNumber: false, format: 'percent' } }), 0.5, ctx());
+      const gauge = el.querySelector<HTMLElement>(`[data-blok-database-number-${showAs}]`);
+
+      expect(el.querySelector('[data-blok-database-number-text]')).toBeNull();
+      expect(el.textContent).toBe('');
+      expect(gauge?.style.getPropertyValue('--blok-database-number-fill')).toBe('50%');
+      // The gauge carries the value a screen reader no longer gets from the text.
+      expect(gauge?.getAttribute('role')).toBe('img');
+      expect(gauge?.getAttribute('aria-label')).toBe(formatNumberValue(0.5, { format: 'percent' }, 'en-US'));
+      expect(gauge?.hasAttribute('aria-hidden')).toBe(false);
+      expect(el.hasAttribute('data-empty')).toBe(false);
+    });
+
+    it('keeps the number of a gauge with Show number on, and keeps the gauge out of the accessibility tree', () => {
+      const el = renderCellValue(prop('number', { number: { showAs: 'bar', showNumber: true } }), 50, ctx());
+
+      expect(el.querySelector('[data-blok-database-number-text]')?.textContent).toBe('50');
+      expect(el.querySelector('[data-blok-database-number-bar]')?.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    // Picking Number keeps the rest of the display, so Show number off can outlive the gauge.
+    it('shows the number when Show number is off but no gauge is drawn', () => {
+      const el = renderCellValue(prop('number', { number: { showNumber: false } }), 50, ctx());
+
+      expect(el.querySelector('[data-blok-database-number-text]')?.textContent).toBe('50');
+    });
+
+    it('shows a gauge formula\'s number only when Show number is on', () => {
+      const shown = prop('number', { number: { showAs: 'ring', showNumber: false } });
+      const el = renderCellValue(prop('formula', { number: { showAs: 'ring', showNumber: false } }), 40, ctx({ valueProperty: () => shown }));
+
+      expect(el.querySelector('[data-blok-database-number-ring]')).not.toBeNull();
+      expect(el.querySelector('[data-blok-database-number-text]')).toBeNull();
+    });
+
     // A round cap would draw a dot at zero.
     it('draws no arc for an empty ring', () => {
       const ring = renderCellValue(prop('number', { number: { showAs: 'ring' } }), 0, ctx()).querySelector('[data-blok-database-number-ring]');

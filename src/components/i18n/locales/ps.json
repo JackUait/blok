@@ -1618,6 +1618,7 @@
   "tools.database.showAs.ring": "کړۍ",
   "tools.database.numberColor": "رنګ",
   "tools.database.divideBy": "وېشل په",
+  "tools.database.showNumber": "شمېره وښایئ",
   "tools.database.numberFormat.number": "شمېره",
   "tools.database.numberFormat.number_with_commas": "شمېره له جلاکوونکو سره",
   "tools.database.numberFormat.percent": "سلنه",

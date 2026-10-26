@@ -9434,6 +9434,22 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   padding: var(--blok-space-1) var(--blok-space-2);
 }
 
+[data-blok-database-property-menu-switch] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--blok-space-4);
+  inline-size: 100%;
+  block-size: 28px;
+  padding: 0 var(--blok-space-2);
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: var(--blok-database-ink);
+  text-align: start;
+  cursor: pointer;
+}
+
 [data-blok-database-property-menu-name] {
   flex-wrap: wrap;
 }
@@ -9821,6 +9837,12 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-html][data-blok-item-name="divideBy"], [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item-html][data-blok-item-name="divideBy"] {
+  padding-block: var(--blok-space-2) 0;
+  background-color: var(--blok-database-gauge-box-bg);
+  contain: inline-size;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-html][data-blok-item-name="showNumber"], [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item-html][data-blok-item-name="showNumber"] {
   padding-block: var(--blok-space-2) var(--blok-space-3);
   border-end-start-radius: var(--blok-radius-control);
   border-end-end-radius: var(--blok-radius-control);
@@ -9828,11 +9850,15 @@ textarea[data-blok-database-cell-input] {
   contain: inline-size;
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item][data-blok-item-name="color"], [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-html][data-blok-item-name="divideBy"] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-html][data-blok-item-name="showNumber"] > [data-blok-database-property-menu-switch], [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item-html][data-blok-item-name="showNumber"] > [data-blok-database-property-menu-switch] {
+  padding: 0 var(--blok-space-4);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item][data-blok-item-name="color"], [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-html][data-blok-item-name="divideBy"], [data-blok-popover][data-blok-popover-custom-class~='blok-database-row-page-menu'] [data-blok-popover-item-html][data-blok-item-name="showNumber"] {
   margin-inline: var(--blok-space-5);
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item][data-blok-item-name="color"], [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item-html][data-blok-item-name="divideBy"] {
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item][data-blok-item-name="color"], [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item-html][data-blok-item-name="divideBy"], [data-blok-popover][data-blok-popover-custom-class~='blok-database-header-menu'] [data-blok-popover][data-blok-nested] [data-blok-popover-item-html][data-blok-item-name="showNumber"] {
   margin-inline: var(--blok-space-3);
 }
 

@@ -1620,6 +1620,7 @@
   "tools.database.showAs.ring": "Прстен",
   "tools.database.numberColor": "Боја",
   "tools.database.divideBy": "Подели са",
+  "tools.database.showNumber": "Прикажи број",
   "tools.database.numberFormat.number": "Број",
   "tools.database.numberFormat.number_with_commas": "Број са сепараторима",
   "tools.database.numberFormat.percent": "Проценат",

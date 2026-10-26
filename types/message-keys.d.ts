@@ -1479,6 +1479,7 @@ export type BlokMessageKey =
   | 'tools.database.showAs.number'
   | 'tools.database.showAs.ring'
   | 'tools.database.showDataSourceTitles'
+  | 'tools.database.showNumber'
   | 'tools.database.sortAZ'
   | 'tools.database.sortAdd'
   | 'tools.database.sortAscending'

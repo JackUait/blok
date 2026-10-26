@@ -189,13 +189,34 @@ describe('row page property menu (research parity row 9)', () => {
       expect(declared(`${color}::before`, 'block-size')).toEqual(['var(--blok-space-3)']);
       expect(declared(`${color}::before`, 'background-color')).toEqual(['var(--blok-database-gauge-box-bg)']);
       expect(declared(divide, 'margin-inline')).toEqual([inset]);
-      expect(declared(divide, 'padding-block')).toEqual(['var(--blok-space-2) var(--blok-space-3)']);
+      expect(declared(divide, 'padding-block')).toEqual(['var(--blok-space-2) 0']);
       expect(declared(divide, 'background-color')).toEqual(['var(--blok-database-gauge-box-bg)']);
       expect(declared(divide, 'contain')).toEqual(['inline-size']);
       expect(declared(`${divide} > [data-blok-database-property-menu-field]`, 'padding')).toEqual(['0 var(--blok-space-4)']);
       expect(declared(`${divide} > [data-blok-database-property-menu-field]`, 'gap')).toEqual(['var(--blok-space-4)']);
     }
     expect(database).toContain('--blok-database-gauge-box-bg: rgba(84, 72, 49, 0.04);');
+  });
+
+  // notion-spec-2 §2, §9, §10: Show number closes the box: 8px under Divide by, 12px above the box's end,
+  // a 28px row 16px in, label at the start, Blok's 30x18 database switch at the end.
+  it('closes the gauge box with the Show number row, on the panel and in the header submenu', () => {
+    const row = '[data-blok-database-property-menu-switch]';
+
+    for (const [menu, inset] of [[ROW_PAGE, 'var(--blok-space-5)'], [SUB, 'var(--blok-space-3)']]) {
+      const show = `${menu} [data-blok-popover-item-html][data-blok-item-name="showNumber"]`;
+
+      expect(declared(show, 'margin-inline')).toEqual([inset]);
+      expect(declared(show, 'padding-block')).toEqual(['var(--blok-space-2) var(--blok-space-3)']);
+      expect(declared(show, 'border-end-start-radius')).toEqual(['var(--blok-radius-control)']);
+      expect(declared(show, 'border-end-end-radius')).toEqual(['var(--blok-radius-control)']);
+      expect(declared(show, 'background-color')).toEqual(['var(--blok-database-gauge-box-bg)']);
+      expect(declared(`${menu} [data-blok-popover-item-html][data-blok-item-name="divideBy"]`, 'border-end-start-radius')).toEqual([]);
+      expect(declared(`${show} > ${row}`, 'padding')).toEqual(['0 var(--blok-space-4)']);
+    }
+    expect(declared(row, 'block-size')).toEqual(['28px']);
+    expect(declared(row, 'justify-content')).toEqual(['space-between']);
+    expect(declared(row, 'inline-size')).toEqual(['100%']);
   });
 
   // notion-spec-2 §9: the header submenu's tiles fill a row 16px in from the panel, 6px apart (about 85 wide each).

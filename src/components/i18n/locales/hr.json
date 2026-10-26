@@ -1620,6 +1620,7 @@
   "tools.database.showAs.ring": "Prsten",
   "tools.database.numberColor": "Boja",
   "tools.database.divideBy": "Podijeli s",
+  "tools.database.showNumber": "Prikaži broj",
   "tools.database.numberFormat.number": "Broj",
   "tools.database.numberFormat.number_with_commas": "Broj s razdjelnicima",
   "tools.database.numberFormat.percent": "Postotak",

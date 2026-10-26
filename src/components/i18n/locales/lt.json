@@ -1622,6 +1622,7 @@
   "tools.database.showAs.ring": "Žiedas",
   "tools.database.numberColor": "Spalva",
   "tools.database.divideBy": "Dalyti iš",
+  "tools.database.showNumber": "Rodyti skaičių",
   "tools.database.numberFormat.number": "Skaičius",
   "tools.database.numberFormat.number_with_commas": "Skaičius su tūkstančių skyrikliais",
   "tools.database.numberFormat.percent": "Procentai",

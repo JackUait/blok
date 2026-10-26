@@ -33,6 +33,14 @@ describe('database table view styles', () => {
     expect(colors).not.toContain(`${token}:`);
   });
 
+  it('a number cell is block-level, so a Bar or Ring gauge takes its own size and keeps the flex gap', () => {
+    expect(css).toMatch(/\[data-type="number"\][^{}]*\) > \[data-blok-database-cell\] \{\s*display:\s*block/);
+    for (const gauge of [ '[data-blok-database-number-bar]', '[data-blok-database-number-ring]' ]) {
+      expect(ruleBody(gauge)).toMatch(/display:\s*inline-block/);
+      expect(ruleBody(`[data-blok-database-table-cell][data-type="number"] > [data-blok-database-cell] > ${gauge}`)).toMatch(/margin-inline-start:\s*var\(--blok-space-1-5\)/);
+    }
+  });
+
   it('uses the measured Notion sizes: 36px header, 37px rows, 35px footer, 5px resize handle', () => {
     expect(ruleBody('[data-blok-database-table-header]')).toMatch(/height:\s*36px/);
     expect(ruleBody('[data-blok-database-table-cell]')).toMatch(/min-height:\s*37px/);

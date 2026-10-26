@@ -9235,7 +9235,13 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
 [data-blok-database-number-bar], [data-blok-database-number-ring] {
   --blok-database-number-ink: var(--blok-database-option-default-text);
   --blok-database-number-fill: 0%;
+  display: inline-block;
+  vertical-align: middle;
   flex: none;
+}
+
+[data-blok-database-table-cell][data-type="number"] > [data-blok-database-cell] > [data-blok-database-number-bar], [data-blok-database-table-cell][data-type="number"] > [data-blok-database-cell] > [data-blok-database-number-ring] {
+  margin-inline-start: var(--blok-space-1-5);
 }
 
 [data-blok-database-number-bar] {

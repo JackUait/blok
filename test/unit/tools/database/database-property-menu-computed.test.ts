@@ -27,6 +27,12 @@ vi.mock('../../../../src/components/utils/popover', () => ({
 
     show(): void {}
 
+    getElement(): HTMLElement {
+      return document.createElement('div');
+    }
+
+    activateItemByName(): void {}
+
     on(): void {}
 
     hide(): void {}
@@ -144,6 +150,18 @@ describe('property menu — computed types', () => {
 
     expect(cb.onUpdate).toHaveBeenCalledWith('p', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'count' } });
     expect(cb.onUpdate).toHaveBeenCalledWith('p', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'sum' } });
+  });
+
+  it('rollup: picking Bar in Show as brings in Color and Divide by at once', () => {
+    const rollup = prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'sum' } });
+    const { cb } = openMenu(rollup);
+    const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
+    const bar = byName(byName(edit, 'showAs').children?.items ?? [], 'showAs-bar');
+
+    bar.onActivate?.(bar);
+
+    expect(cb.onUpdate).toHaveBeenCalledWith('p', { number: { showAs: 'bar' } });
+    expect((byName(lastItems(), 'editProperty').children?.items ?? []).map((item) => item.name)).toEqual(expect.arrayContaining(['color', 'divideBy']));
   });
 
   it('rollup: offers only the functions the target property type has', () => {

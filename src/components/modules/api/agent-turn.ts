@@ -1,4 +1,4 @@
-import type { AgentBatch, AgentError, AgentResult, AgentSession, DocumentView, ViewArgs } from '../../../../types/agent';
+import type { AgentApprovalRequest, AgentApprover, AgentBatch, AgentError, AgentExecuteOptions, AgentResult, AgentSession, DocumentView, ViewArgs } from '../../../../types/agent';
 import type { AgentToolResult, AgentTurn } from '../../../../types/api';
 import { AgentFailure } from '../../../shared/agent/errors';
 import { modelAnswer } from '../../../shared/agent/model-answer';
@@ -12,7 +12,7 @@ const isToolName = (name: string): name is typeof AGENT_TOOL_NAMES[number] => TO
 
 type TurnSession = Omit<AgentSession, 'execute'> & {
   // The real executor validates unknown wire input, not only typed batches.
-  execute(batch: unknown, options?: { signal?: AbortSignal }): Promise<AgentResult>;
+  execute(batch: unknown, options?: AgentExecuteOptions): Promise<AgentResult>;
 };
 
 export interface AgentTurnHooks {
@@ -21,6 +21,8 @@ export interface AgentTurnHooks {
   isEditorDestroyed(): boolean;
   /** The sub-page document a page block points at, for a call with `page`. Absent: `page` is refused. */
   openPage?(blockId: string): Promise<TurnSession & { close(): void }>;
+  /** Asks the person. `signal` aborts when the turn stops. Absent: an approval-gated command is refused. */
+  approve?(request: AgentApprovalRequest, signal: AbortSignal): Promise<boolean>;
 }
 
 export const cancelledError = (): AgentError => ({
@@ -41,6 +43,12 @@ const batchAnswer = (result: AgentResult): AgentToolResult => ({ content: JSON.s
 export function createAgentTurn(session: TurnSession, hooks: AgentTurnHooks): AgentTurn {
   const controller = new AbortController();
   const state = { closed: false, tail: Promise.resolve() };
+  const ask = hooks.approve;
+  // A stopped or ended turn never asks; the person's answer goes back to the batch.
+  const approve: AgentApprover | undefined = ask === undefined ? undefined : (request) => (state.closed || controller.signal.aborted
+    ? Promise.resolve(false)
+    : ask(request, controller.signal));
+  const runOptions: AgentExecuteOptions = { signal: controller.signal, ...(approve !== undefined && { approve }) };
 
   const enqueue = <T>(job: () => Promise<T>): Promise<T> => {
     const run = state.tail.then(job);
@@ -58,7 +66,7 @@ export function createAgentTurn(session: TurnSession, hooks: AgentTurnHooks): Ag
         return refusedBatch(cancelledError());
       }
 
-      const result = await session.execute(batch, { signal: controller.signal });
+      const result = await session.execute(batch, runOptions);
 
       // An applied result survives closure, but must not publish a late cursor.
       if (result.ok && !state.closed) {
@@ -176,7 +184,7 @@ export function createAgentTurn(session: TurnSession, hooks: AgentTurnHooks): Ag
       try {
         return toolCall.name === 'blok_read'
           ? answered(await pageSession.read(toolCall.view))
-          : batchAnswer(await pageSession.execute(toolCall.batch, { signal: controller.signal }));
+          : batchAnswer(await pageSession.execute(toolCall.batch, runOptions));
       } finally {
         pageSession.close();
       }

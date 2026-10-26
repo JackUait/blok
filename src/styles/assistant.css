@@ -1041,3 +1041,21 @@
     transition: none;
   }
 }
+
+/* Unlock or Keep locked: the question wraps, the two gray buttons follow it. */
+[data-blok-assistant-approval] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--blok-space-2);
+}
+
+[data-blok-assistant-approval][hidden] {
+  display: none;
+}
+
+[data-blok-assistant-question] {
+  flex: 1 1 auto;
+  margin: 0;
+  overflow-wrap: anywhere;
+}

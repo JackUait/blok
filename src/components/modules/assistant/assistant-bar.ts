@@ -66,6 +66,8 @@ const ATTR = {
   actionsMotion: 'data-blok-assistant-actions-motion',
   slots: 'data-blok-assistant-slots',
   working: 'data-blok-assistant-working',
+  approval: 'data-blok-assistant-approval',
+  question: 'data-blok-assistant-question',
 } as const;
 
 /** Gap keys on the anchor holder: the bar, then the shimmer slots under it. */
@@ -208,6 +210,12 @@ export class AssistantBar {
   private readonly resume: HTMLButtonElement;
   private readonly insert: HTMLButtonElement;
   private readonly actions: HTMLElement;
+  private readonly approval: HTMLElement;
+  private readonly question: HTMLElement;
+  private readonly approve: HTMLButtonElement;
+  private readonly deny: HTMLButtonElement;
+  /** Answers the open question; null when none is open. */
+  private answerApproval: ((approved: boolean) => void) | null = null;
   /** The actions row's height while it unfolds or folds; the bar's gap follows it. */
   private actionsMotion: Animation | null = null;
   /** The bar's fade while it leaves. */
@@ -273,7 +281,16 @@ export class AssistantBar {
     this.summary = build('p', { [ATTR.summary]: '' });
     this.alert = build('p', { [ATTR.alert]: '', role: 'alert' });
     field.append(this.field, this.status);
-    answer.append(this.summary, this.alert);
+    // Named by its question; the question is an alert so a screen reader hears it at once.
+    const questionId = `blok-assistant-question-${generateBlockId()}`;
+
+    this.approval = build('div', { [ATTR.approval]: '', role: 'group', 'aria-labelledby': questionId, 'data-blok-testid': 'assistant-approval' });
+    this.question = build('p', { [ATTR.question]: '', id: questionId, role: 'alert' });
+    this.deny = build('button', { type: 'button', [ATTR.button]: '' });
+    this.approve = build('button', { type: 'button', [ATTR.button]: '' });
+    this.approval.append(this.question, this.deny, this.approve);
+    this.approval.hidden = true;
+    answer.append(this.summary, this.alert, this.approval);
 
     this.send = build('button', { type: 'button', [ATTR.send]: '', 'aria-label': t('assistant.send') });
     this.send.innerHTML = IconArrowUp;
@@ -315,6 +332,15 @@ export class AssistantBar {
     this.undo.addEventListener('click', () => callbacks.onDiscard());
     this.resume.addEventListener('click', () => callbacks.onContinue());
     this.insert.addEventListener('click', () => callbacks.onInsert());
+    this.approve.addEventListener('click', () => this.settleApproval(true));
+    this.deny.addEventListener('click', () => this.settleApproval(false));
+    // Focus sits on the question's buttons, not the field, so Escape is heard here too.
+    this.approval.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        callbacks.onEscape();
+      }
+    });
 
     this.element.hidden = true;
     this.render({ kind: 'prompt' });
@@ -370,7 +396,50 @@ export class AssistantBar {
     this.field.focus({ preventScroll: true });
   }
 
+  /**
+   * Ask the person a yes or no question while the model works, such as unlocking a database.
+   * Only the approve button answers yes. A new question, a render that ends the work, or close answers no.
+   * @param question - what the agent wants, naming the thing it changes
+   * @param labels - the approve and deny button texts
+   */
+  public askApproval(question: string, labels: { approve: string; deny: string }): Promise<boolean> {
+    this.settleApproval(false);
+    this.question.textContent = question;
+    this.approve.textContent = labels.approve;
+    this.deny.textContent = labels.deny;
+    this.approval.hidden = false;
+    this.sync();
+
+    const answered = new Promise<boolean>((resolve) => {
+      this.answerApproval = resolve;
+    });
+
+    // The safe answer has focus, so a stray Enter keeps it locked.
+    this.deny.focus({ preventScroll: true });
+
+    return answered;
+  }
+
+  /** Close the open question with this answer. Does nothing when none is open. */
+  public settleApproval(approved: boolean): void {
+    const answer = this.answerApproval;
+
+    if (answer === null) {
+      return;
+    }
+    this.answerApproval = null;
+    const hadFocus = this.approval.contains(document.activeElement);
+
+    this.approval.hidden = true;
+    this.sync();
+    if (hadFocus && this.isOpen) {
+      this.focusField();
+    }
+    answer(approved);
+  }
+
   public close(): void {
+    this.settleApproval(false);
     if (this.leaving !== null) {
       return;
     }
@@ -547,6 +616,10 @@ export class AssistantBar {
   public render(view: AssistantBarView): void {
     const working = view.kind === 'working';
 
+    if (!working) {
+      this.settleApproval(false);
+    }
+
     this.view = view;
     this.element.toggleAttribute(ATTR.working, working);
     this.showReply(view.kind === 'answered' ? view.reply : '', view.kind === 'answered' && view.edited);
@@ -717,7 +790,7 @@ export class AssistantBar {
     this.resume.hidden = this.view.kind !== 'error' || this.view.resumable !== true;
     this.insert.hidden = this.view.kind !== 'answered' || this.view.edited || this.view.reply.trim() === '';
     this.showActions(kind === 'prompt' && this.field.value === '' && this.actions.childElementCount > 0);
-    this.head.hidden = this.summary.hidden && this.alert.hidden && !actions;
+    this.head.hidden = this.summary.hidden && this.alert.hidden && this.approval.hidden && !actions;
     this.element.toggleAttribute(ATTR.followUp, !this.head.hidden);
     this.field.placeholder = working ? '' : this.t(kind === 'prompt' ? 'assistant.placeholder' : 'assistant.followUp');
     this.stop.hidden = !working;

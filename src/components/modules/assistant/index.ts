@@ -4,7 +4,7 @@
  *
  * Present only when `agent.assistant.model` is configured.
  */
-import type { ChangedSet } from '../../../../types/agent';
+import type { AgentApprovalRequest, ChangedSet } from '../../../../types/agent';
 import type { Block } from '../../block';
 import type { AgentModelStreamEvent, AgentRun, AgentRunResult, AgentThinkingLevel, AgentToolResult } from '../../../../types/api';
 import type { ThinkingChoice } from '../../../agent/thinking';
@@ -515,6 +515,7 @@ export class Assistant extends Module {
           this.discarded = outcome;
         },
         onPageWritten: () => this.pageWritten(),
+        onApproval: (request, signal) => this.askApproval(request, signal),
       });
 
       return this.run.result;
@@ -524,6 +525,26 @@ export class Assistant extends Module {
 
       return null;
     }
+  }
+
+  /** The bar's Unlock or Keep locked. A closed bar, or a stopped run, answers no. */
+  private askApproval(request: AgentApprovalRequest, signal: AbortSignal): Promise<boolean> {
+    const bar = this.bar;
+
+    if (bar === null || !bar.isOpen || signal.aborted) {
+      return Promise.resolve(false);
+    }
+    const { I18n } = this.Blok;
+    const agent = this.config.agent?.assistant?.name?.trim() || 'AI';
+    const question = request.title === undefined
+      ? I18n.t('assistant.unlockQuestionUntitled', { agent })
+      : I18n.t('assistant.unlockQuestion', { agent, title: request.title });
+    const stop = (): void => bar.settleApproval(false);
+
+    signal.addEventListener('abort', stop, { once: true });
+
+    return bar.askApproval(question, { approve: I18n.t('assistant.unlock'), deny: I18n.t('assistant.keepLocked') })
+      .finally(() => signal.removeEventListener('abort', stop));
   }
 
   private syncThinking(): void {
@@ -654,6 +675,8 @@ export class Assistant extends Module {
 
   private stopAnswer(): void {
     this.endStream();
+    // Stop ends only the run, not the turn: the batch waiting on the question must hear no.
+    this.bar?.settleApproval(false);
     this.run?.stop();
   }
 

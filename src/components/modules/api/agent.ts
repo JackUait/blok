@@ -14,7 +14,7 @@ import type {
   AgentTurnOptions,
 } from '../../../../types/api';
 import type { OutputData } from '../../../../types';
-import type { AgentActor, AgentBatch, AgentResult, AgentSession, AgentVersionHistory, ChangedSet } from '../../../../types/agent';
+import type { AgentActor, AgentApprovalRequest, AgentBatch, AgentResult, AgentSession, AgentVersionHistory, ChangedSet } from '../../../../types/agent';
 import type { HostService } from '../../../../types/tools/tool-description';
 import { Module } from '../../__module';
 import { announce } from '../../utils/announcer';
@@ -67,6 +67,8 @@ export interface AssistantRunHooks {
   onDiscarded?(outcome: DiscardOutcome): void;
   /** After the run writes another page: a sub-page's document, or its title or icon through a host hook. */
   onPageWritten?(): void;
+  /** Ask the person to approve a change, such as unlocking a database. Resolve true only on their yes. */
+  onApproval?(request: AgentApprovalRequest, signal: AbortSignal): Promise<boolean>;
 }
 
 interface TurnPage {
@@ -83,6 +85,7 @@ interface InternalTurnOptions {
   /** False: publish and follow, but draw no local caret, marker or pulse. */
   drawLocal: boolean;
   onExecuted?(changed: ChangedSet): void;
+  onApproval?: AssistantRunHooks['onApproval'];
 }
 
 type ToolsOptions = AgentToolsOptions;
@@ -207,7 +210,7 @@ export class AgentAPI extends Module {
     hooks: AssistantRunHooks = {}
   ): AgentRun {
     // The live preview stands in for the local caret and pulse. No follow: the page stays where the user left it.
-    return this.ask(prompt, { context: false }, place, thinking, hooks, { drawLocal: false, onExecuted: hooks.onExecuted });
+    return this.ask(prompt, { context: false }, place, thinking, hooks, { drawLocal: false, onExecuted: hooks.onExecuted, onApproval: hooks.onApproval });
   }
 
   private ask(
@@ -558,6 +561,19 @@ export class AgentAPI extends Module {
     };
   }
 
+  /** The bar's question, unless the host would refuse the change anyway: then the person is not asked. */
+  private approver(ask: NonNullable<AssistantRunHooks['onApproval']>): NonNullable<AssistantRunHooks['onApproval']> {
+    return (request, signal) => {
+      const block = this.Blok.BlockManager.getBlockById(request.blockId);
+
+      if (block?.toolDataReadOnly === true) {
+        return Promise.reject(failure('PRECONDITION_FAILED', `Block "${request.blockId}" is read-only here: the host does not allow editing it. It stays locked.`));
+      }
+
+      return ask(request, signal);
+    };
+  }
+
   private begin(options: AgentTurnOptions, internal: InternalTurnOptions = { drawLocal: true }): AgentTurn {
     if (this.current.turn !== null) {
       throw new AgentTurnOpenError();
@@ -616,6 +632,7 @@ export class AgentAPI extends Module {
       onClosed: () => this.closeTurn(turn),
       isEditorDestroyed: () => this.isDestroyed,
       ...(this.pages() === null ? {} : { openPage: (blockId: string) => this.openPage(blockId, { ...identity, kind: 'agent' }) }),
+      ...(internal.onApproval === undefined ? {} : { approve: this.approver(internal.onApproval) }),
     });
 
     this.current.turn = turn;

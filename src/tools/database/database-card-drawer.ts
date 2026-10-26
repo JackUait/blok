@@ -3384,8 +3384,8 @@ export class DatabaseCardDrawer {
     }
   }
 
-  private t(key: string): string {
-    return this.i18n?.t(key) ?? key;
+  private t(key: string, params?: Record<string, string | number>): string {
+    return this.i18n?.t(key, params) ?? key;
   }
 
   /** Chrome labels fall back to bundled English, as the close button always did. */
@@ -3397,7 +3397,7 @@ export class DatabaseCardDrawer {
   private paintValue(slot: HTMLElement, def: PropertyDefinition, value: PropertyValue | undefined): void {
     const cell = renderCellValue(def, value, {
       ...this.cellContext(),
-      i18n: { t: (key) => this.t(key) },
+      i18n: { t: (key, params) => this.t(key, params) },
       readOnly: this.readOnly,
       followLinks: true,
       ...rowCellContext(this.currentRow ?? undefined, def.id),

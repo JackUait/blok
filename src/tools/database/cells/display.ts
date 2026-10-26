@@ -1,4 +1,4 @@
-import { IconAlarm, IconCheck } from '../../../components/icons';
+import { IconAlarm, IconCheck, IconWarning } from '../../../components/icons';
 import { DATA_ATTR } from '../../../components/constants/data-attributes';
 import { onHover } from '../../../components/utils/tooltip';
 import { safeHref, safeImageSrc, urlScheme } from '../../../components/utils/sanitize-url';
@@ -11,6 +11,8 @@ import { formatDateDisplay, resolveLocale } from './date-format';
 import { formatNumberValue, numberFill } from './number-format';
 import { optionColorOf, shownStatusOption } from './option-colors';
 import type { CellContext } from './types';
+import type { FormulaProblem } from '../computed-properties';
+import { formulaErrorKey } from '../formula';
 
 export const optionsFor = (property: PropertyDefinition, ctx: Pick<CellContext, 'options'>): SelectOption[] =>
   ctx.options ?? property.config?.options ?? [];
@@ -362,6 +364,26 @@ const attachPlaceCard = (cell: HTMLElement, place: PlaceValue, ctx: CellContext)
   onHover(cell, card);
 };
 
+/** A formula with no value: a muted mark, the reason as its label and its hover hint. */
+const renderFormulaProblem = (problem: FormulaProblem, ctx: CellContext): HTMLElement => {
+  const cell = document.createElement('span');
+  const mark = document.createElement('span');
+  const reason = problem.kind === 'limit'
+    ? ctx.i18n.t('tools.database.formulaLimitReached')
+    : ctx.i18n.t(formulaErrorKey(problem.code), problem.params);
+
+  cell.setAttribute('data-blok-database-cell', 'formula');
+  cell.setAttribute('data-formula-error', problem.kind);
+  mark.setAttribute('data-blok-database-formula-error', '');
+  mark.setAttribute('role', 'img');
+  mark.setAttribute('aria-label', reason);
+  mark.innerHTML = IconWarning;
+  cell.appendChild(mark);
+  onHover(cell, reason);
+
+  return cell;
+};
+
 /**
  * Show original or unique values of a Number (notion-spec-2 §13, §14.5): the
  * value is the ", "-joined list, and String() of a finite number never holds
@@ -393,6 +415,9 @@ const renderNumberList = (cell: HTMLElement, property: PropertyDefinition, value
  * there is no value.
  */
 export const renderCellValue = (property: PropertyDefinition, value: PropertyValue | undefined, ctx: CellContext): HTMLElement => {
+  const problem = property.type === 'formula' && ctx.rowId !== undefined ? ctx.formulaProblem?.(property, ctx.rowId) : undefined;
+
+  if (problem !== undefined) return renderFormulaProblem(problem, ctx);
   if (property.type === 'formula' || property.type === 'rollup') {
     const shown = ctx.valueProperty?.(property) ?? { ...property, type: 'text' };
     const computed = renderCellValue(shown.type === property.type ? { ...shown, type: 'text' } : shown, value, ctx);

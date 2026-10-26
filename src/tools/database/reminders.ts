@@ -73,10 +73,11 @@ export const reminderDueAt = (value: PropertyValue | undefined, remind: DateRemi
  * A row's own display context for one cell: with a reminder the date shows the
  * alarm in every view; an anonymous form answer's Created by reads "Anonymous".
  */
-export const rowCellContext = (row: DatabaseRow | undefined, propertyId: string): { reminder?: DateReminderOffset; anonymous?: boolean } => {
+export const rowCellContext = (row: DatabaseRow | undefined, propertyId: string): { rowId?: string; reminder?: DateReminderOffset; anonymous?: boolean } => {
   const remind = row?.reminders?.[propertyId]?.remind;
 
   return {
+    ...(row === undefined ? {} : { rowId: row.id }),
     ...(remind === undefined ? {} : { reminder: remind }),
     ...(row?.meta?.anonymous === true ? { anonymous: true } : {}),
   };

@@ -1,5 +1,6 @@
 import type { I18n } from '../../../../types';
 import type { DateDisplayChange } from './date-format';
+import type { FormulaProblem } from '../computed-properties';
 import type { DatabaseHelpLinks, DatabaseMap, DatabasePerson, DateReminderOffset, PropertyDefinition, PropertyValue, SelectOption } from '../types';
 
 /**
@@ -49,6 +50,10 @@ export interface CellContext {
    * Without it they show as text.
    */
   valueProperty?: (property: PropertyDefinition) => PropertyDefinition;
+  /** The row the cell belongs to. `formulaProblem` needs it. */
+  rowId?: string;
+  /** Why a formula cell has no value. The cell then shows a warning mark with the reason on hover. */
+  formulaProblem?: (property: PropertyDefinition, rowId: string) => FormulaProblem | undefined;
   /** A related row's title, '' when untitled, undefined when unknown. */
   relationTitle?: (property: PropertyDefinition, rowId: string) => string | undefined;
   /** Opens a related row. Without it a relation chip is plain text. */

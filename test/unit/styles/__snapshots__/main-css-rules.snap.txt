@@ -10757,6 +10757,17 @@ textarea[data-blok-database-cell-input] {
   height: 1.2em;
 }
 
+[data-blok-database-formula-error] {
+  display: inline-flex;
+  vertical-align: middle;
+  color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-formula-error] > svg {
+  width: 16px;
+  height: 16px;
+}
+
 [data-blok-item-name="database-show-page-icon"] {
   --blok-icon-active-bg: transparent;
   --blok-icon-active-text: var(--blok-database-ink);

@@ -510,15 +510,17 @@ describe('write chronology at each edit position', () => {
 });
 
 describe('removal and input isolation', () => {
-  it('skips top-level null removals of optional ordinary, rich and unknown keys', () => {
+  // USER RULING 2026-10-25: a cleared field stays cleared, so a rich key clears to no text, not to absent.
+  it('removes optional ordinary and unknown keys and clears a rich key to no text', () => {
     const { draft, plan } = planOn(doc, [{
       name: 'block.update', args: { id: 'h', data: { level: null, text: null, legacy: null, unknown: null } },
     }]);
 
-    expect(draft.get('h')?.data).toEqual({});
-    expect(plan.edits).toEqual([{
-      op: 'setData', id: 'h', patch: { level: null, text: null, legacy: null, unknown: null },
-    }]);
+    expect(draft.get('h')?.data).toEqual({ text: [] });
+    expect(plan.edits).toEqual([
+      { op: 'setRichText', id: 'h', field: 'text', value: [] },
+      { op: 'setData', id: 'h', patch: { level: null, legacy: null, unknown: null } },
+    ]);
   });
 
   it('validates a nested null as data, not as a top-level removal sentinel', () => {
@@ -595,16 +597,27 @@ describe('scoped projection and pending preparation', () => {
     conversion: { import: 'label', export: 'label' }, data: rootSchema,
   });
 
-  it('omits root cross-field checks on partial writes and skips required-key removal', () => {
+  it('omits root cross-field checks on partial writes', () => {
     const tools = new Map(TOOLS);
     tools.set('constrained', constrained);
     const source: OutputData = { blocks: [{ id: 'r', type: 'constrained', data: { mode: 'strict', level: 1, legacy: true } }] };
     const { draft } = planOn(source, [
       { name: 'block.update', args: { id: 'r', data: { level: 6 } } },
-      { name: 'block.update', args: { id: 'r', data: { mode: null } } },
     ], { tools });
 
-    expect(draft.get('r')?.data).toEqual({ level: 6, legacy: true });
+    expect(draft.get('r')?.data).toEqual({ mode: 'strict', level: 6, legacy: true });
+  });
+
+  // The editor refills or drops a required key it loads without, so every engine refuses the removal.
+  it('refuses to remove a required key on a partial write', () => {
+    const tools = new Map(TOOLS);
+    tools.set('constrained', constrained);
+    const source: OutputData = { blocks: [{ id: 'r', type: 'constrained', data: { mode: 'strict', level: 1, legacy: true } }] };
+
+    expect(failOf(() => planOn(source, [
+      { name: 'block.update', args: { id: 'r', data: { level: 6 } } },
+      { name: 'block.update', args: { id: 'r', data: { mode: null } } },
+    ], { tools }))).toMatchObject({ code: 'INVALID_ARGS', commandIndex: 1, message: expect.stringContaining('"mode" is required') });
   });
 
   it('omits root then when the partial write itself satisfies root if', () => {
@@ -757,7 +770,7 @@ describe('scoped projection and pending preparation', () => {
     const tools = new Map(TOOLS);
     tools.set('constrained', tool('constrained', constrained.entry, { actions: { change: { run: ctx => {
       ctx.update('r', { mode: 'strict', level: 3 });
-      ctx.update('r', { mode: null });
+      ctx.update('r', { level: 4 });
     } } } }));
     const commands = new Map(plannerContext().commands);
     commands.set('constrained.change', {
@@ -767,11 +780,27 @@ describe('scoped projection and pending preparation', () => {
     const source: OutputData = { blocks: [{ id: 'r', type: 'constrained', data: { mode: 'loose', level: 1, legacy: true } }] };
     const { draft, plan } = planOn(source, [{ name: 'constrained.change', args: { id: 'r' } }], { tools, commands });
 
-    expect(draft.get('r')?.data).toEqual({ level: 3, legacy: true });
+    expect(draft.get('r')?.data).toEqual({ mode: 'strict', level: 4, legacy: true });
     expect(plan.edits).toEqual([
       { op: 'setData', id: 'r', patch: { mode: 'strict', level: 3 } },
-      { op: 'setData', id: 'r', patch: { mode: null } },
+      { op: 'setData', id: 'r', patch: { level: 4 } },
     ]);
+  });
+
+  it('refuses an action update that removes a required key, as block.update does', () => {
+    const tools = new Map(TOOLS);
+    tools.set('constrained', tool('constrained', constrained.entry, { actions: { change: { run: ctx => {
+      ctx.update('r', { mode: null });
+    } } } }));
+    const commands = new Map(plannerContext().commands);
+    commands.set('constrained.change', {
+      name: 'constrained.change', args: { type: 'object' }, readOnly: false, available: true,
+      source: { tool: 'constrained', target: 'block' },
+    });
+    const source: OutputData = { blocks: [{ id: 'r', type: 'constrained', data: { mode: 'loose', level: 1, legacy: true } }] };
+
+    expect(failOf(() => planOn(source, [{ name: 'constrained.change', args: { id: 'r' } }], { tools, commands })))
+      .toMatchObject({ code: 'INVALID_ARGS', commandIndex: 0, message: expect.stringContaining('"mode" is required') });
   });
 
   const actionPreparation: Array<{ label: string; value: unknown }> = [

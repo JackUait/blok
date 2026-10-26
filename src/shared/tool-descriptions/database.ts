@@ -985,7 +985,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
   },
   {
     name: 'addRow',
-    summary: 'Add a row (a database-row child block), as the New button does. It goes last unless before or after names a row.',
+    summary: 'Add a row (a database-row child block), as the New button does. It goes last in every view, unless before or after names a row: then it goes there in the open view\'s order.',
     guidance: 'The row starts from the default template: its values, icon, cover, reminders and page body. template names another template; null starts an empty page. values maps property ids to values and wins over the template, except an empty title. A status with a default option and a person property that defaults to Created by fill in when values leave them out. Values the open view\'s filters ask for fill in too (an equals filter, a person contains, a date the filter accepts), so the row shows there; values win over them, and they win over the template. group puts the row in a column of the open board view: an option id of the property it groups by.',
     target: 'block',
     args: closed({ values: ROW_VALUES, group: OPTION_ID, before: ROW_ID, after: ROW_ID, template: { anyOf: [{ type: 'string', minLength: 1 }, { type: 'null' }] } }),
@@ -994,7 +994,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
   },
   {
     name: 'moveRow',
-    summary: 'Move a row before or after another row, and optionally into another board column.',
+    summary: 'Move a row before or after another row in the open view, as a drag does, and optionally into another board column. In a view with its own manual order, only that order changes; otherwise the row moves for every view on the shared order.',
     target: 'block',
     args: {
       ...closed({ rowId: ROW_ID, group: OPTION_ID, before: ROW_ID, after: ROW_ID }, ['rowId']),

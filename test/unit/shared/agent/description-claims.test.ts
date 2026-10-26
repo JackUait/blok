@@ -237,6 +237,24 @@ describe('what the model is told about new and copied database rows is true', ()
     }
   });
 
+  it('says moveRow and addRow before or after a row follow the open view\'s own order, and they do', async () => {
+    expect(action('moveRow')?.summary).toMatch(/own manual order, only that order changes/);
+    expect(action('addRow')?.summary).toMatch(/in the open view's order/);
+    const session = openJsonSession(database({ rowOrder: { b: 'Zx', a: 'Zy' } }));
+
+    try {
+      await session.execute({ commands: [{ name: 'database.moveRow', args: { id: 'db', rowId: 'a', before: 'b' } }] });
+      const result = await session.execute({ commands: [{ name: 'database.addRow', args: { id: 'db', after: 'a' } }] });
+      const rowId = result.ok ? String((result.results[0] as { rowId: string }).rowId) : '';
+      const order = (session.output().blocks[0]?.data.views as Array<{ rowOrder: Record<string, string> }>)[0].rowOrder;
+
+      expect(Object.keys(order).sort((x, y) => (order[x] < order[y] ? -1 : 1))).toEqual(['a', rowId, 'b']);
+      expect(session.output().blocks.find(block => block.id === 'a')?.data.position).toBe('a0');
+    } finally {
+      await session.close();
+    }
+  });
+
   it('says duplicateRow places the copy after the original in a view with its own order, and it does', async () => {
     expect(action('duplicateRow')?.summary).toMatch(/own manual order the copy goes right after it there too/);
     const session = openJsonSession(database({ rowOrder: { b: 'Zx', a: 'Zy' } }));

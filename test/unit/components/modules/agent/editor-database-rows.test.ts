@@ -181,4 +181,29 @@ describe('database rows through the editor agent session', () => {
     expect([...new Set(shown)]).toEqual(['z', copy, 'p', 'c']);
     session.close();
   }, 30_000);
+  it('database.moveRow and database.addRow after a row write the open view\'s own order, which the view then shows', async () => {
+    const data = seed();
+
+    // No sub-items here: the table shows a sub-item under its parent, whatever the order.
+    data.blocks = data.blocks.map(block => (block.type === 'database-row'
+      ? { ...block, data: { ...block.data, properties: { ...(block.data.properties as Record<string, unknown>), par: [], sub: [] } } }
+      : block));
+    // Keys apart from the positions: placing by position alone would not move a row in this view.
+    data.blocks[0].data.views = [{ id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [], rowOrder: { z: 'Zx', p: 'Zy', c: 'Zz' } }];
+    const Blok = await boot(data);
+    const session = createEditorAgentSession(Blok, actor);
+    const moved: AgentResult = await session.execute({ commands: [{ name: 'database.moveRow', args: { id: 'db', rowId: 'c', before: 'z' } }] });
+    const added: AgentResult = await session.execute({ commands: [{ name: 'database.addRow', args: { id: 'db', after: 'z', values: { t: 'new' } } }] });
+
+    expect(moved.ok && added.ok).toBe(true);
+    const rowId = added.ok ? String((added.results[0] as { rowId: string }).rowId) : '';
+    const order = ((saved(Blok).get('db')?.data.views as Array<{ rowOrder: Record<string, string> }>)[0]).rowOrder;
+
+    expect(Object.keys(order).sort((a, b) => (order[a] < order[b] ? -1 : 1))).toEqual(['c', 'z', rowId, 'p']);
+    expect(saved(Blok).get('c')?.data.position).toBe('a1');
+    const shown = [...(Blok.BlockManager.getBlockById('db')?.holder.querySelectorAll('[data-row-id]') ?? [])].map(el => el.getAttribute('data-row-id'));
+
+    expect([...new Set(shown)]).toEqual(['c', 'z', rowId, 'p']);
+    session.close();
+  }, 30_000);
 });

@@ -26,6 +26,7 @@ import { createDefaultSchema, createDefaultView, freePropertyName, newView, posi
 import { createSeedDefinition } from '../../shared/database/seed-layouts';
 import type { ViewCreateConfig } from '../../shared/database/schema-ops';
 import { applyViewChanges } from '../../shared/database/view-changes';
+import { lastRowKey, pinnedRowOrders } from '../../shared/database/row-order';
 import type { ViewChanges } from '../../shared/database/view-changes';
 
 export type { ViewCreateConfig };
@@ -304,20 +305,16 @@ export class DatabaseModel {
   pinRowsInOtherViews(viewId: string, rows: DatabaseRow[], shows: (view: DatabaseViewConfig) => boolean): string[] {
     if (!this.viewRowOrder) return [];
 
-    return this.views.filter((view) => view.id !== viewId && shows(view)).flatMap((view) => {
-      const missing = rows.filter((row) => view.rowOrder?.[row.id] === undefined);
+    return pinnedRowOrders(this.views, viewId, rows, shows).map(({ viewId: id, rowOrder }) => {
+      this.updateView(id, { rowOrder });
 
-      if (missing.length === 0) return [];
-      this.updateView(view.id, { rowOrder: { ...view.rowOrder, ...Object.fromEntries(missing.map((row) => [row.id, row.position])) } });
-
-      return [view.id];
+      return id;
     });
   }
 
   /** The highest row key in any view, so a row placed after it goes last everywhere. */
   lastRowKey(): string | null {
-    return [...this.rows.map((row) => row.position), ...this.views.flatMap((view) => Object.values(this.rowOrderOf(view) ?? {}))]
-      .reduce<string | null>((last, key) => (last === null || comparePositions(key, last) > 0 ? key : last), null);
+    return lastRowKey(this.rows, this.views.map((view) => this.rowOrderOf(view)));
   }
 
   /** `anonymous`: an anonymous form answer, so no person property starts with the current user. */

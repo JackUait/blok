@@ -55,6 +55,7 @@ import { openTemplateGallery } from './database-template-gallery';
 import type { StarterPicks } from './database-starter-modal';
 import type { LinkedPickerSource } from './database-linked-picker';
 import { newRowValues, prefillFilters, rowOrderKey, sortRows } from './database-query';
+import { UNORDERED_VIEW_TYPES } from '../../shared/database/row-order';
 import { openDatabaseChoice, openDatabaseConfirm } from './database-confirm-dialog';
 import { draftOf, openAutofillSetup, presetDraft } from './database-autofill-setup';
 import type { AutofillDraft } from './database-autofill-setup';
@@ -9322,11 +9323,10 @@ export class DatabaseTool implements BlockTool {
    * row order.
    */
   private pinInOtherViews(owner: DatabaseTool, viewId: string, rowIds: string[]): string[] {
-    const unordered: ReadonlySet<string> = new Set(['chart', 'dashboard', 'form']);
     const rows = rowIds.flatMap((id) => this.model.getRow(id) ?? []);
 
     return owner.model.pinRowsInOtherViews(viewId, rows,
-      (view) => !unordered.has(view.type) && (view.dataSourceId ?? owner.dataId) === this.dataId);
+      (view) => !UNORDERED_VIEW_TYPES.has(view.type) && (view.dataSourceId ?? owner.dataId) === this.dataId);
   }
 
   /**

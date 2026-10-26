@@ -6,6 +6,7 @@ import { addRelated, relationEdit, relationIdsOf, removeRelated } from '../datab
 import { copiedReminders } from '../database/reminder-fit';
 import { mapRowValues } from '../database/row-move';
 import { newRowValues, prefillFilters } from '../database/new-row-values';
+import { lastRowKey, rowOrderKey } from '../database/row-order';
 import { descendantsOf, relationPair } from '../database/sub-item-tree';
 import { typeConversion } from '../database/property-conversion';
 import {
@@ -894,6 +895,22 @@ const withCreatedBy = (ctx: ToolActionContext, state: DatabaseState, properties:
   };
 };
 
+/** The open view and its own manual order, if it keeps one. */
+const openOrder = (state: DatabaseState): { view?: DatabaseViewConfig; order?: Record<string, string> } => {
+  const view = state.views.find(each => each.id === state.activeViewId);
+
+  return { view, order: view?.rowOrder };
+};
+
+/** A key next to the row `ref` names, in a view's manual order of `rows`. */
+const keyAround = (ctx: ToolActionContext, rows: RowRef[], order: Record<string, string> | undefined, ref: Placement): string =>
+  positionAround(ctx, rows.map(each => ({ id: each.id, position: rowOrderKey(each, order) })), ref);
+
+/** The views with new own orders, by view id. */
+const withRowOrders = (state: DatabaseState, orders: Record<string, Record<string, string>>): { views: DatabaseViewConfig[] } => ({
+  views: state.views.map(each => (orders[each.id] === undefined ? each : { ...each, rowOrder: orders[each.id] })),
+});
+
 interface AddRowArgs extends Placement {
   values?: Record<string, unknown>;
   group?: string;
@@ -928,11 +945,24 @@ const addRow: ToolActionImpl<AddRowArgs, undefined, { rowId: string }> = {
     const properties = withStatusDefaults(state, withEmptyLists(state, filled));
     const page = template === undefined ? {} : rawData(ctx, template.id);
     const reminders = template === undefined ? undefined : copiedReminders(isRecord(page.reminders) ? page.reminders as Record<string, DateReminder> : undefined, properties, context.now);
+    const rows = rowsOf(ctx, block.id);
+    const placement = { before: args.before, after: args.after };
+    const anchored = args.before !== undefined || args.after !== undefined;
+    // As createRowData: past every own order's keys too, so the row goes last in every view.
+    const position = anchored ? positionAround(ctx, rows, placement) : positionBetween(lastRowKey(rows, state.views.map(view => view.rowOrder)), null);
+    const { view, order } = openOrder(state);
+    const id = ctx.newId();
+
+    // As addTableRow, and first: in the editor an insert opens a sync window that reads a later database write as an echo.
+    if (anchored && view !== undefined && order !== undefined) {
+      ctx.update(block.id, withRowOrders(state, { [view.id]: { ...order, [id]: keyAround(ctx, rows, order, placement) } }));
+    }
     const rowId = ctx.insert({
       type: 'database-row',
+      id,
       data: {
         properties,
-        position: positionAround(ctx, rowsOf(ctx, block.id), { before: args.before, after: args.after }),
+        position,
         title: titleOf(state, properties) ?? '',
         ...Object.fromEntries(PAGE_FIELDS.filter(field => page[field] !== undefined).map(field => [field, page[field]])),
         ...(reminders === undefined ? {} : { reminders }),
@@ -1337,6 +1367,10 @@ export const DATABASE_CHILD_COMMAND: ChildCommandRoute = (command, child) => (ch
   ? { action: command === 'delete' ? 'deleteRow' : 'duplicateRow', args: { rowId: child.id } }
   : undefined);
 
+/**
+ * As placeRow (a row dropped in a view): in a view with its own order only
+ * that order changes; otherwise the row's position moves.
+ */
 const moveRow: ToolActionImpl<{ rowId: string; group?: string } & Placement> = {
   run: (ctx, args) => {
     exactlyOnePlacement(ctx, args);
@@ -1344,11 +1378,17 @@ const moveRow: ToolActionImpl<{ rowId: string; group?: string } & Placement> = {
     const state = readDatabase(block);
     const current = rowOf(ctx, block.id, args.rowId);
     const others = rowsOf(ctx, block.id).filter(row => row.id !== args.rowId);
+    const { view, order } = openOrder(state);
+    const key = keyAround(ctx, others, order, { before: args.before, after: args.after });
+    const values = args.group === undefined ? {} : { properties: { ...current.properties, ...groupValue(ctx, state, args.group) } };
 
-    ctx.update(args.rowId, {
-      position: positionAround(ctx, others, { before: args.before, after: args.after }),
-      ...(args.group === undefined ? {} : { properties: { ...current.properties, ...groupValue(ctx, state, args.group) } }),
-    });
+    if (view !== undefined && order !== undefined) {
+      ctx.update(block.id, withRowOrders(state, { [view.id]: { ...order, [args.rowId]: key } }));
+      if (args.group !== undefined) ctx.update(args.rowId, values);
+
+      return undefined;
+    }
+    ctx.update(args.rowId, { position: key, ...values });
 
     return undefined;
   },

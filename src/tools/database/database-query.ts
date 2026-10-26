@@ -17,6 +17,7 @@ import { scopeSubItems } from './sub-items';
 import { isEmptyObjectValue, isOutputData, placeText } from './tier3-values';
 import { comparePositions } from './positions';
 import { ME_FILTER_VALUE, THIS_PAGE_FILTER_VALUE } from '../../shared/database/new-row-values';
+import { rowOrderKey } from '../../shared/database/row-order';
 
 export { ME_FILTER_VALUE, newRowValues, prefillFilters, THIS_PAGE_FILTER_VALUE } from '../../shared/database/new-row-values';
 
@@ -469,8 +470,7 @@ export const rowMatchesFilterTree = (
   page?: string | null
 ): boolean => tree === undefined || (evaluate(row, tree, schema, now, me, page) ?? true);
 
-/** A row's manual-order key in a view: the view's own key, else the shared `position`. */
-export const rowOrderKey = (row: DatabaseRow, order: Record<string, string> | undefined): string => order?.[row.id] ?? row.position;
+export { rowOrderKey } from '../../shared/database/row-order';
 
 /** Options compare with `<`, like getSelectOptions, so sort order matches column order. */
 const compareKeys = (a: string, b: string): number => {

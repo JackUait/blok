@@ -126,6 +126,6 @@ describe('row page property menu (research parity row 9)', () => {
 
   it('has 8px separators and no gap under the last row: Notion\'s 197px menu', () => {
     expect(declared(`${ROW_PAGE} [data-blok-popover-item-separator]`, 'padding-block')).toEqual(['var(--blok-space-0-75) var(--blok-space-1)']);
-    expect(declared(`${ROW_PAGE} [data-blok-popover-item]:last-child`, 'margin-bottom')).toEqual(['0']);
+    expect(declared(`${ROW_PAGE} [data-blok-popover-item]:last-child`, 'margin-block-end')).toEqual(['0']);
   });
 });

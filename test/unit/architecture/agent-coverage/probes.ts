@@ -48,9 +48,9 @@ export const ROUTE_PROBES: Record<string, RouteProbe> = {
   'menu:database/database-selection-duplicate': duplicateRow,
   'menu:database/database-row-move-to-*': {
     seed: TWO_DATABASES,
-    commands: [{ name: 'block.move', args: { id: 'r1', parentId: 'db2', position: 'end' } }],
+    commands: [{ name: 'database.moveRowTo', args: { id: 'db1', rowId: 'r1', databaseId: 'db2' } }],
   },
-  'menu:database/template-*': { seed: ONE_TEMPLATE, commands: [{ name: 'block.duplicate', args: { id: 't1' } }] },
+  'menu:database/template-*': { seed: ONE_TEMPLATE, commands: [{ name: 'database.duplicateRow', args: { id: 'db1', rowId: 't1' } }] },
 };
 
 /**
@@ -58,10 +58,4 @@ export const ROUTE_PROBES: Record<string, RouteProbe> = {
  * finding that proves it. The law checks they still fail, so a fix that lands
  * must drop its entry here.
  */
-export const KNOWN_GAPS: Record<string, string> = {
-  'menu:database/database-row-duplicate': 'F6: planDuplicate refuses a row ("database" places its own children).',
-  'menu:database/database-table-selection-duplicate': 'F6: planDuplicate refuses a row ("database" places its own children).',
-  'menu:database/database-selection-duplicate': 'F6: planDuplicate refuses a row ("database" places its own children).',
-  'menu:database/database-row-move-to-*': 'F7: block.move into another database is PLACEMENT_REFUSED.',
-  'menu:database/template-*': 'F6: planDuplicate refuses a template row too.',
-};
+export const KNOWN_GAPS: Record<string, string> = {};

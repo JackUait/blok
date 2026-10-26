@@ -1,7 +1,7 @@
 import type { BlockOrigin } from '../../../../types';
 import type { AgentActor, Edit, PlannedBlock } from '../../../../types/agent';
 import { AgentFailure, failure } from '../../../shared/agent/errors';
-import type { AgentApplier } from '../../../shared/agent/executor';
+import type { AgentApplier, StepUnlocks } from '../../../shared/agent/executor';
 import type { DocSnapshot } from '../../../shared/agent/snapshot';
 import type { Plan } from '../../../shared/agent/types';
 import { textLivesInFirstChild } from '../../../shared/turn-into';
@@ -50,6 +50,8 @@ export class EditorApplier implements AgentApplier {
   /** Steps of the run that history.undo took back, newest last, for history.redo. */
   private undone: CaretHistoryEntry[] = [];
   private lastToken: CaretHistoryEntry | undefined;
+  /** What each of this session's native steps unlocks, keyed by the step itself so merges and the person's Cmd+Z cannot shift it. */
+  private readonly unlocks = new WeakMap<CaretHistoryEntry, StepUnlocks>();
   private gesturesAtClose = -1;
   /** True while a batch applies, so its own writes do not seal the run. */
   private applying = false;
@@ -93,6 +95,7 @@ export class EditorApplier implements AgentApplier {
         || !YjsManager.mergeTopUndoSteps(previous, current, { ...tag, gestureCount: YjsManager.gestureCount() })) {
         break;
       }
+      this.joinUnlocks(previous, this.unlocks.get(current));
       this.run.pop();
       if (this.lastToken === current) {
         this.lastToken = previous;
@@ -100,6 +103,42 @@ export class EditorApplier implements AgentApplier {
     }
     this.run = [];
     this.undone = [];
+  }
+
+  public recordUnlocks(unlocks: StepUnlocks): void {
+    const { YjsManager } = this.Blok;
+    const token = YjsManager.topUndoToken();
+
+    if (token !== undefined && YjsManager.undoStepTag(token)?.sessionId === this.options.sessionId) {
+      this.joinUnlocks(token, unlocks);
+    }
+  }
+
+  public pendingUnlocks(name: 'history.undo' | 'history.redo'): readonly string[] | undefined {
+    const { YjsManager } = this.Blok;
+    const token = name === 'history.undo' ? YjsManager.topUndoToken() : YjsManager.topRedoToken();
+
+    // undo() and redo() refuse these themselves.
+    if (token === undefined || YjsManager.undoStepTag(token)?.sessionId !== this.options.sessionId) {
+      return [];
+    }
+    const known = this.unlocks.get(token);
+
+    if (known === undefined) {
+      return undefined;
+    }
+
+    return name === 'history.undo' ? known.backward : known.forward;
+  }
+
+  /** A step that absorbs another unlocks whatever either did. */
+  private joinUnlocks(token: CaretHistoryEntry, added: StepUnlocks | undefined): void {
+    const had = this.unlocks.get(token) ?? { forward: [], backward: [] };
+
+    this.unlocks.set(token, {
+      forward: [...new Set([...had.forward, ...added?.forward ?? []])],
+      backward: [...new Set([...had.backward, ...added?.backward ?? []])],
+    });
   }
 
   public isReadOnly(): boolean {

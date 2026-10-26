@@ -118,6 +118,9 @@ const lockedIn = (snapshot: DocSnapshot): Set<string> => new Set(snapshot.ids().
     && 'type' in property && property.type === 'title' && 'databaseLocked' in property && property.databaseLocked === true);
 }));
 
+/** Every locked database: what a step could unlock when nothing says what it holds. */
+export const lockedDatabases = (snapshot: DocSnapshot): string[] => [...lockedIn(snapshot)];
+
 /** Databases locked in `from` that are still there, unlocked, in `to`: going from one to the other unlocks them. */
 export const unlockedBetween = (from: DocSnapshot, to: DocSnapshot): string[] => {
   const after = lockedIn(to);

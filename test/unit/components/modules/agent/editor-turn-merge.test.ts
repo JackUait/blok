@@ -7,9 +7,11 @@ import { createEditorAgentSession } from '../../../../../src/components/modules/
 import { Listeners } from '../../../../../src/components/utils/listeners';
 import { destroy as destroyTooltip } from '../../../../../src/components/utils/tooltip';
 import { Paragraph } from '../../../../../src/tools/paragraph';
+import { Database, DatabaseRow } from '../../../../../src/tools';
 
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
-import type { AgentActor, AgentSession } from '../../../../../types/agent';
+import type { OutputData } from '../../../../../types';
+import type { AgentActor, AgentApprover, AgentSession } from '../../../../../types/agent';
 
 const actor: AgentActor = { id: 'agent-1', name: 'Agent', kind: 'agent' };
 const original = [
@@ -112,7 +114,7 @@ const settle = async (editor: BlokModules): Promise<void> => {
   }
 };
 
-const boot = async (): Promise<BlokModules> => {
+const boot = async (blocks: OutputData['blocks'] = [{ id: 'p', type: 'paragraph', data: { text: [{ text: 'P' }] } }]): Promise<BlokModules> => {
   if (holder === undefined || core !== undefined) {
     throw new Error('The editor fixture is not ready to boot.');
   }
@@ -122,8 +124,8 @@ const boot = async (): Promise<BlokModules> => {
     tabSync: false,
     i18n: { locale: 'en' },
     user: { id: 'human-1', name: 'Human' },
-    tools: { paragraph: { class: Paragraph } },
-    data: { blocks: [{ id: 'p', type: 'paragraph', data: { text: [{ text: 'P' }] } }] },
+    tools: { paragraph: { class: Paragraph }, database: { class: Database }, 'database-row': { class: DatabaseRow } },
+    data: { blocks },
   });
 
   core = instance;
@@ -1452,4 +1454,70 @@ describe('agent turn merge through real Core modules', () => {
       reader.destroy();
     }
   }, 60_000);
+
+
+  describe('undo and redo cannot unlock a database behind the person\'s back', () => {
+    const lockedDb = (locked: boolean): OutputData['blocks'][number] => ({
+      id: 'db', type: 'database', content: [],
+      data: {
+        title: 'Tasks',
+        schema: [{ id: 't', name: 'Name', type: 'title', position: 'a0', ...(locked && { databaseLocked: true }) }],
+        views: [{ id: 'v', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+        activeViewId: 'v',
+      },
+    });
+    const isLocked = (editor: BlokModules): boolean => {
+      const schema: unknown = editor.YjsManager.toJSON().find(block => block.id === 'db')?.data.schema;
+
+      return Array.isArray(schema) && schema.some((property: unknown) => typeof property === 'object' && property !== null
+        && 'databaseLocked' in property && property.databaseLocked === true);
+    };
+    const run = (session: AgentSession, commands: unknown[], approve?: AgentApprover) =>
+      session.execute({ commands } as never, approve === undefined ? {} : { approve });
+
+
+    it('an undo of two merged batches, the earlier one a lock, asks before it unlocks', async () => {
+      const editor = await boot([{ id: 'p', type: 'paragraph', data: { text: [{ text: 'P' }] } }, lockedDb(false)]);
+      const session = openSession(editor, { mergeSteps: 'turn' });
+
+      expect(await run(session, [{ name: 'database.setLock', args: { id: 'db', locked: true } }])).toMatchObject({ ok: true });
+      await settle(editor);
+      await nextTask();
+      expect(await run(session, [{ name: 'block.insert', args: { id: 'a', type: 'paragraph', position: 'end', data: { text: 'A' } } }])).toMatchObject({ ok: true });
+      await settle(editor);
+      session.sealSteps();
+
+      const undone = await run(session, [{ name: 'history.undo', args: {} }]);
+
+      await settle(editor);
+      expect(isLocked(editor)).toBe(true);
+      expect(undone).toMatchObject({ ok: false, error: { code: 'APPROVAL_REQUIRED' } });
+    }, 60_000);
+
+    it('a redo of an unlock the person undid natively still asks', async () => {
+      const editor = await boot([{ id: 'p', type: 'paragraph', data: { text: [{ text: 'P' }] } }, lockedDb(true)]);
+      const session = openSession(editor);
+      const approve = vi.fn<AgentApprover>(() => Promise.resolve(true));
+
+      expect(await run(session, [{ name: 'database.setLock', args: { id: 'db', locked: false } }], approve)).toMatchObject({ ok: true });
+      await settle(editor);
+      await nextTask();
+      expect(await run(session, [{ name: 'block.insert', args: { id: 'a', type: 'paragraph', position: 'end', data: { text: 'A' } } }])).toMatchObject({ ok: true });
+      await settle(editor);
+      await nextTask();
+      // The person presses Cmd+Z twice: the agent's own history marks never see it.
+      editor.YjsManager.beginGesture('discrete');
+      editor.YjsManager.undo();
+      await settle(editor);
+      editor.YjsManager.undo();
+      await settle(editor);
+      expect(isLocked(editor)).toBe(true);
+
+      const redone = await run(session, [{ name: 'history.redo', args: {} }]);
+
+      await settle(editor);
+      expect(isLocked(editor)).toBe(true);
+      expect(redone).toMatchObject({ ok: false, error: { code: 'APPROVAL_REQUIRED' } });
+    }, 60_000);
+  });
 });

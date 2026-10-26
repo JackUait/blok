@@ -1,5 +1,5 @@
 import { isRichText } from '../rich-text/guards';
-import { approveStep, planWithApprovals, savedTitle, unlockedBetween } from './approval';
+import { approveStep, lockedDatabases, planWithApprovals, savedTitle, unlockedBetween } from './approval';
 import { agentAttribution } from './attribution';
 import { viewRows } from './document-view';
 import { checkEnvelope } from './envelope';
@@ -28,7 +28,17 @@ export interface AgentApplier {
   redo?(): Promise<void>;
   /** The document a history step would leave, when the applier keeps whole snapshots. */
   historyTarget?(name: 'history.undo' | 'history.redo'): DocSnapshot | undefined;
+  /** Keeps, on the step this batch just made, what that step unlocks when redone and when undone. */
+  recordUnlocks?(unlocks: StepUnlocks): void;
+  /**
+   * What the step history.undo or history.redo would run now unlocks, read from that real step.
+   * [] when the step is not this session's (the step refuses); undefined when it cannot tell.
+   */
+  pendingUnlocks?(name: 'history.undo' | 'history.redo'): readonly string[] | undefined;
 }
+
+/** The databases a step unlocks when redone (forward) and when undone (backward). */
+export interface StepUnlocks { forward: string[]; backward: string[] }
 
 export interface BatchInput {
   batch: unknown;
@@ -199,29 +209,19 @@ export const marksOf = (applier: AgentApplier): HistoryMarks => {
   return marks;
 };
 
-/** Per step, the databases it unlocks when redone (forward) and when undone (backward). Kept beside the marks. */
-interface StepUnlocks { forward: string[]; backward: string[] }
-
-const stepUnlocks = new WeakMap<AgentApplier, { past: StepUnlocks[]; future: StepUnlocks[] }>();
-
-const unlocksOf = (applier: AgentApplier): { past: StepUnlocks[]; future: StepUnlocks[] } => {
-  const found = stepUnlocks.get(applier) ?? { past: [], future: [] };
-
-  stepUnlocks.set(applier, found);
-
-  return found;
-};
-
-/** What a history step would unlock. A snapshot applier answers exactly; the others read what the batch recorded. */
-const unlockedByStep = (applier: AgentApplier, name: 'history.undo' | 'history.redo'): string[] => {
+/**
+ * What a history step would unlock, from the step that will really run: a snapshot applier compares
+ * documents, a native one reads the record kept on that step. Unknown means every locked database.
+ */
+const unlockedByStep = (applier: AgentApplier, name: 'history.undo' | 'history.redo'): readonly string[] => {
+  const current = applier.snapshot();
   const target = applier.historyTarget?.(name);
 
   if (target !== undefined) {
-    return unlockedBetween(applier.snapshot(), target);
+    return unlockedBetween(current, target);
   }
-  const recorded = unlocksOf(applier);
 
-  return (name === 'history.undo' ? recorded.past.at(-1)?.backward : recorded.future.at(-1)?.forward) ?? [];
+  return applier.pendingUnlocks?.(name) ?? lockedDatabases(current);
 };
 
 const historyStep = (applier: AgentApplier, name: 'history.undo' | 'history.redo'): (() => Promise<void>) => {
@@ -258,10 +258,6 @@ const historyStep = (applier: AgentApplier, name: 'history.undo' | 'history.redo
     const [from, to] = name === 'history.undo' ? [marks.past, marks.future] : [marks.future, marks.past];
 
     to.push(from.pop() ?? 'own');
-    const recorded = unlocksOf(applier);
-    const [fromUnlocks, toUnlocks] = name === 'history.undo' ? [recorded.past, recorded.future] : [recorded.future, recorded.past];
-
-    toUnlocks.push(fromUnlocks.pop() ?? { forward: [], backward: [] });
   };
 };
 
@@ -598,15 +594,12 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
     if (plan.edits.length > 0) {
       await input.applier.apply(plan, draft);
       const marks = marksOf(input.applier);
-      const unlocks = unlocksOf(input.applier);
 
       marks.past.push('own');
       marks.future = [];
-      unlocks.past.push({ forward: unlockedBetween(snapshot, draft), backward: unlockedBetween(draft, snapshot) });
-      unlocks.future = [];
+      input.applier.recordUnlocks?.({ forward: unlockedBetween(snapshot, draft), backward: unlockedBetween(draft, snapshot) });
     } else if (batch.commands.some(command => input.ctx.commands.get(command.name)?.effects === 'host')) {
       marksOf(input.applier).past.push('other');
-      unlocksOf(input.applier).past.push({ forward: [], backward: [] });
     }
 
     const result = planResult(batch, plan, input.applier.revision(), warnings, changedRows(input, plan));

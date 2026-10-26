@@ -9,7 +9,7 @@ import { stripNul } from '../yjs/serializer';
 import type { Edit, PlannedBlock } from '../../../../types/agent';
 import type { RichText } from '../../../../types/rich-text';
 import type { Attribution } from '../../../shared/agent/attribution';
-import type { AgentApplier } from '../../../shared/agent/executor';
+import type { AgentApplier, StepUnlocks } from '../../../shared/agent/executor';
 import type { Plan } from '../../../shared/agent/types';
 import type { DocumentStore } from '../yjs/document-store';
 
@@ -43,6 +43,8 @@ export class StoreApplier implements AgentApplier {
   private applying = false;
   private readonly done: Step[] = [];
   private readonly undone: Step[] = [];
+  /** What each step unlocks, kept on the step so the stacks cannot shift it. */
+  private readonly unlocks = new WeakMap<Step, StepUnlocks>();
 
   public constructor(
     private readonly store: DocumentStore,
@@ -141,6 +143,29 @@ export class StoreApplier implements AgentApplier {
     }
 
     return Promise.resolve();
+  }
+
+  public recordUnlocks(unlocks: StepUnlocks): void {
+    const step = this.done.at(-1);
+
+    if (step !== undefined) {
+      this.unlocks.set(step, unlocks);
+    }
+  }
+
+  public pendingUnlocks(name: 'history.undo' | 'history.redo'): readonly string[] | undefined {
+    const step = name === 'history.undo' ? this.done.at(-1) : this.undone.at(-1);
+
+    if (step === undefined) {
+      return [];
+    }
+    const known = this.unlocks.get(step);
+
+    if (known === undefined) {
+      return undefined;
+    }
+
+    return name === 'history.undo' ? known.backward : known.forward;
   }
 
   public undo(): Promise<void> {

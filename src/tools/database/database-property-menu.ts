@@ -10,7 +10,7 @@ import { EmojiPicker } from '../callout/emoji-picker';
 import { NUMBER_FORMATS, MAX_DECIMALS } from './cells/number-format';
 import { OPTION_COLORS, optionColorLabelKey, optionSwatch } from './cells/option-colors';
 import { addablePropertyTypes, propertyTypeMeta } from './database-property-types';
-import { ROLLUP_FUNCTIONS, isNumberList, rollupFunctionsFor, rollupResultType } from './rollup';
+import { ROLLUP_FUNCTIONS, isNumberList, rollupFunctionsFor, rollupHasFormat, rollupResultType } from './rollup';
 import { buttonEditItems } from './database-button-menu';
 import { createOptionsEditor } from './cells/options-editor';
 import { offersAutofill } from './database-autofill-setup';
@@ -31,7 +31,6 @@ import type {
   PropertySettingsV2,
   PropertyType,
   RelationSettings,
-  RollupFunction,
   SelectOption,
 } from './types';
 
@@ -137,8 +136,6 @@ export interface PropertyMenuOptions extends PropertyMenuCallbacks {
 }
 
 const SHOW_AS: readonly NumberShowAs[] = ['number', 'bar', 'ring'];
-/** Notion's Count group: its result has no Number format or Decimal places. */
-const COUNT_FNS: ReadonlySet<RollupFunction> = new Set<RollupFunction>(['count', 'count_values', 'unique', 'empty', 'not_empty']);
 const VISIBILITY: readonly PageVisibility[] = ['always', 'hideWhenEmpty', 'hidden'];
 
 /** The row page's menu and Edit property panel: the header menu's rows, in Notion's row page look. */
@@ -840,7 +837,7 @@ export class DatabasePropertyMenu {
         },
       },
       ...(target !== undefined && (rollupResultType(settings.function, target).type === 'number' || isNumberList(settings.function, target))
-        ? [...this.numberItems(property, (number) => update({ number }), !COUNT_FNS.has(settings.function)), this.allViewsNote()]
+        ? [...this.numberItems(property, (number) => update({ number }), rollupHasFormat(settings.function)), this.allViewsNote()]
         : []),
     ];
   }

@@ -239,6 +239,16 @@ describe('property menu — computed types', () => {
     ]);
   });
 
+  // notion-spec-2 §14.4: Percent has the tiles but no Number format or Decimal places.
+  it.each(['percent_empty', 'percent_not_empty'] as const)('rollup: %s shows the Show as tiles with no Number format or Decimal places', (fn) => {
+    openMenu(prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: fn } }));
+    const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+    expect(edit.map((item) => item.name ?? item.type)).toEqual([
+      'rollupRelation', 'rollupProperty', 'rollupFunction', 'separator', 'showAs', 'all-views-note',
+    ]);
+  });
+
   it('rollup: a list result has no Show as', () => {
     openMenu(prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: 't-title', function: 'show_original' } }));
     const edit = byName(lastItems(), 'editProperty').children?.items ?? [];

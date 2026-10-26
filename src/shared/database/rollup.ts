@@ -26,6 +26,10 @@ const CHECK_FNS: readonly RollupFunction[] = ['checked', 'unchecked', 'percent_c
 const GROUP_FNS: readonly RollupFunction[] = ['count_per_group', 'percent_per_group'];
 
 const PERCENT_FNS: ReadonlySet<RollupFunction> = new Set<RollupFunction>(['percent_empty', 'percent_not_empty', 'percent_checked', 'percent_unchecked']);
+const COUNT_FNS: ReadonlySet<RollupFunction> = new Set<RollupFunction>(['count', 'count_values', 'unique', 'empty', 'not_empty']);
+
+/** Count and Percent results have no Number format or Decimal places (notion-spec-2 §3, §14.4). */
+export const rollupHasFormat = (fn: RollupFunction): boolean => !COUNT_FNS.has(fn) && !PERCENT_FNS.has(fn);
 
 const isDateType = (target: PropertyDefinition): boolean =>
   target.type === 'date' || target.type === 'createdTime' || target.type === 'lastEditedTime';

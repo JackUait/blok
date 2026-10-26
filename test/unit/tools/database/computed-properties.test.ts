@@ -284,6 +284,18 @@ describe('ComputedProperties', () => {
       expect(engine.valueProperty(bare)).toMatchObject({ type: 'text', number: {} });
     });
 
+    // notion-spec-2 §14.4: Percent reads 100% and Count reads 2 whatever format the rollup carries; Show as stays.
+    it('a percent or count rollup ignores its own number format but keeps its Show as', () => {
+      const percent = { ...rollup('pct', 'tasks', 'hours', 'percent_not_empty'), number: { format: 'euro' as const, decimals: 2, showAs: 'bar' as const, color: 'green' } };
+      const count = { ...rollup('cnt', 'tasks', 'hours', 'count'), number: { format: 'euro' as const, decimals: 2, showAs: 'ring' as const } };
+      const engine = new ComputedProperties('db');
+
+      engine.apply([title, tasks, percent, count], [row('p1', { tasks: [{ id: 't1' }, { id: 't2' }] })], ctx);
+
+      expect(engine.valueProperty(percent).number).toEqual({ format: 'percent', showAs: 'bar', color: 'green' });
+      expect(engine.valueProperty(count).number).toEqual({ showAs: 'ring' });
+    });
+
     it('drops number settings left on a list rollup whose target is not a Number', () => {
       const names = { ...rollup('names', 'tasks', 'title', 'show_original'), number: { format: 'dollar' as const } };
       const unique = { ...rollup('unique', 'tasks', 'hours', 'show_unique'), number: { format: 'dollar' as const } };

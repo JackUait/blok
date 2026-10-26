@@ -5,8 +5,8 @@ import type { TextContext } from './formula/values';
 import { isDate, isRef } from './formula/types';
 import { MIXED_FORMULA, readPropertyValue } from './value-helpers';
 import { relationIdsOf } from './relation-values';
-import { computeRollup, isNumberList, rollupResultType } from './rollup';
-import type { DatabaseRow, PropertyDefinition, PropertyValue } from './types';
+import { computeRollup, isNumberList, rollupHasFormat, rollupResultType } from './rollup';
+import type { DatabaseRow, NumberDisplay, PropertyDefinition, PropertyValue } from './types';
 
 /** A database in this document, as another database reads it. */
 export interface DatabaseSource {
@@ -77,6 +77,14 @@ const storeFormulaValue = (value: FormulaValue, shape: PropertyDefinition, conte
   }
 
   return formulaValueToText(value, context);
+};
+
+/** A Count or Percent rollup's display: its own Show as settings over the result's format. */
+const withoutFormat = (own: NumberDisplay | undefined, shape: NumberDisplay | undefined): NumberDisplay | undefined => {
+  const { format: _format, decimals: _decimals, ...rest } = own ?? {};
+  const number = { ...rest, ...shape };
+
+  return Object.keys(number).length === 0 ? undefined : number;
 };
 
 const signatureOf = (schema: PropertyDefinition[]): string =>
@@ -183,7 +191,7 @@ export class ComputedProperties {
 
         return { ...rest, ...shape, config: shape.config ?? property.config };
       }
-      const number = property.number ?? shape.number;
+      const number = rollupHasFormat(settings.function) ? property.number ?? shape.number : withoutFormat(property.number, shape.number);
 
       return { ...property, ...shape, ...(number !== undefined ? { number } : {}), config: shape.config ?? property.config };
     }

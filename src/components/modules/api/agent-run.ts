@@ -10,6 +10,7 @@ import type {
   AgentToolResult,
   AgentTurn,
 } from '../../../../types/api';
+import { undoForPerson } from './agent-turn';
 import { runAssistantLoop } from '../../../agent/assistant-loop';
 import { isLongNote, shortenNote } from '../../../agent/note';
 
@@ -167,7 +168,7 @@ export function createAgentRun(prompt: string | Promise<string>, deps: AgentRunD
       // Each successful batch can be its own step when the user acted between them.
       // Undo stops at the first step that is not this turn's (UNDO_NOT_OWN).
       for (;;) {
-        const step = await deps.turn.execute({ commands: [{ name: 'history.undo', args: {} }] });
+        const step = await undoForPerson(deps.turn);
 
         if (!step.ok) {
           break;

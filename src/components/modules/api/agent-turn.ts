@@ -40,6 +40,16 @@ const answered = (value: unknown): AgentToolResult => ({ content: JSON.stringify
 
 const batchAnswer = (result: AgentResult): AgentToolResult => ({ content: JSON.stringify(modelAnswer(result)), isError: !result.ok });
 
+/** Each turn's Discard undo. Kept off AgentTurn, so no tool call or host-built model loop reaches it. */
+const personUndos = new WeakMap<AgentTurn, () => Promise<AgentResult>>();
+
+/**
+ * One history.undo for the person's Discard. It puts back what the turn changed, so an unlock it
+ * makes is the person's own state coming back, and it does not ask them.
+ */
+export const undoForPerson = (turn: AgentTurn): Promise<AgentResult> =>
+  personUndos.get(turn)?.() ?? turn.execute({ commands: [{ name: 'history.undo', args: {} }] });
+
 export function createAgentTurn(session: TurnSession, hooks: AgentTurnHooks): AgentTurn {
   const controller = new AbortController();
   const state = { closed: false, tail: Promise.resolve() };
@@ -58,7 +68,7 @@ export function createAgentTurn(session: TurnSession, hooks: AgentTurnHooks): Ag
     return run;
   };
 
-  const execute = (batch: unknown): Promise<AgentResult> => {
+  const execute = (batch: unknown, options: AgentExecuteOptions = runOptions): Promise<AgentResult> => {
     const accepted = !state.closed;
 
     return enqueue(async (): Promise<AgentResult> => {
@@ -66,7 +76,7 @@ export function createAgentTurn(session: TurnSession, hooks: AgentTurnHooks): Ag
         return refusedBatch(cancelledError());
       }
 
-      const result = await session.execute(batch, runOptions);
+      const result = await session.execute(batch, options);
 
       // An applied result survives closure, but must not publish a late cursor.
       if (result.ok && !state.closed) {
@@ -191,7 +201,7 @@ export function createAgentTurn(session: TurnSession, hooks: AgentTurnHooks): Ag
     });
   };
 
-  return {
+  const turn: AgentTurn = {
     get id(): string {
       return session.id;
     },
@@ -209,4 +219,11 @@ export function createAgentTurn(session: TurnSession, hooks: AgentTurnHooks): Ag
     end: () => close('end'),
     stop: () => close('stop'),
   };
+
+  personUndos.set(turn, () => execute(
+    { commands: [{ name: 'history.undo', args: {} }] },
+    { signal: controller.signal, approve: () => Promise.resolve(true) },
+  ));
+
+  return turn;
 }

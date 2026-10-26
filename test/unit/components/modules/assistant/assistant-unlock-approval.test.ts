@@ -263,6 +263,53 @@ describe('Ask AI asks the person before it unlocks a database', () => {
     expect(restore.mock.calls.length > 0).toBe(restores);
   });
 
+  describe('Discard puts back the lock state from before the run', () => {
+    const lockCall = (id: string): AgentModelResponse => ({
+      stop_reason: 'tool_use',
+      content: [{ type: 'tool_use', id, name: 'blok_execute', input: { commands: [{ name: 'database.setLock', args: { id: 'db', locked: true } }] } }],
+    });
+    const callOf = (id: string, commands: unknown[]): AgentModelResponse => ({
+      stop_reason: 'tool_use', content: [{ type: 'tool_use', id, name: 'blok_execute', input: { commands } }],
+    });
+
+    it('the person\'s Discard unlocks what the agent locked without asking them', async () => {
+      const editor = await createEditor(scripted(lockCall('use-lock'), answer('Locked it.')), [], 'Tasks', false);
+
+      editor.agent.openAssistant();
+      submit('Lock the database');
+      await waitFor(() => expect(within(bar()).getByText('Locked it.')).toBeVisible());
+      expect(await locked(editor)).toBe(true);
+
+      fireEvent.click(within(bar()).getByRole('button', { name: 'Discard' }));
+
+      await waitFor(async () => expect(await locked(editor)).toBe(false));
+      expect(screen.queryByRole('group', { name: 'Writer wants to unlock "Tasks"' })).toBeNull();
+    });
+
+    it('the model\'s own undo of its lock still asks, and it has no command that discards', async () => {
+      const model = scripted(
+        lockCall('use-lock'),
+        callOf('use-discard', [{ name: 'assistant.discard', args: {} }]),
+        callOf('use-undo', [{ name: 'history.undo', args: {} }]),
+        answer('Done.'),
+      );
+      const editor = await createEditor(model, [], 'Tasks', false);
+
+      editor.agent.openAssistant();
+      submit('Lock, then take it back');
+      const asked = await within(bar()).findByRole('group', { name: 'Writer wants to unlock "Tasks"' });
+
+      fireEvent.click(within(asked).getByRole('button', { name: 'Keep locked' }));
+      await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+      expect(await locked(editor)).toBe(true);
+      const results = model.requests.flatMap((request) => request.messages)
+        .flatMap((message) => (Array.isArray(message.content) ? message.content : []))
+        .filter((block): block is { type: 'tool_result'; tool_use_id: string; content: string } => block.type === 'tool_result' && block.tool_use_id === 'use-discard');
+
+      expect(results[0]?.content).toMatch(/UNKNOWN_COMMAND/);
+    });
+  });
+
   it('a host turn has no person to ask, so the unlock is refused', async () => {
     const editor = await createEditor(null);
     const turn = editor.agent.begin({ agent: { id: 'host-agent', name: 'Host' } });

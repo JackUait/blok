@@ -41,12 +41,12 @@ const dateTargetValue = (operator: string, target: PropertyValue, now: Date): st
   if (operator === 'is_not_empty') {
     return todayValue(now);
   }
-  const window = relativeWindow(operator, target, now);
+  const range = relativeWindow(operator, target, now);
 
-  if (window !== undefined) {
+  if (range !== undefined) {
     const today = todayValue(now);
 
-    return window.from <= today && today <= window.to ? today : window.from;
+    return range.from <= today && today <= range.to ? today : range.from;
   }
   const day = resolveDay(target, now);
 

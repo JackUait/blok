@@ -72,9 +72,11 @@ export const PAGE_DATA = {
 
 export const describePage = (_config: Record<string, unknown> = {}): BlockToolDescription => ({
   summary: 'A sub-page. Its body is a separate document named by pageId.',
-  guidance: 'Inserting a page asks the host to create the page document. To rename the page this block points to, or change its icon, use page.rename or page.setIcon. To change the title of the document you are editing, use doc.setTitle. In the editor a read gives pageTitle, the title the block shows; other runtimes leave it out.',
+  guidance: 'Where page is insertable, inserting one makes the host create the page document: leave out data.pageId. block.delete removes only this link, as a person\'s Move to Trash does; the page document stays with the host. To rename the page this block points to, or change its icon, use page.rename or page.setIcon. To change the title of the document you are editing, use doc.setTitle. In the editor a read gives pageTitle, the title the block shows; other runtimes leave it out.',
   data: PAGE_DATA,
   inputFields: [],
   summaryFields: ['pageId'],
+  // A person never re-points a page block; a written pageId could name a page this actor cannot open.
+  guardedFields: { pageId: 'block.insert' },
   actions: PAGE_ACTIONS,
 });

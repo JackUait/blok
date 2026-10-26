@@ -163,7 +163,7 @@ describe('the agent edits a sub-page through the host page documents', () => {
     expect(pages.get('nested')?.title).toBe('Deep');
   });
 
-  it('page.rename in a sub-page does not reach a pageId the agent wrote there in the same call', async () => {
+  it('page.rename in a sub-page reaches only the page its block was given, in the same call', async () => {
     const pages = new Map<string, OutputData>([
       ['sub', { blocks: [{ id: 'deep', type: 'page', data: { pageId: 'nested' } }] }],
       ['nested', { blocks: [] }],
@@ -172,15 +172,16 @@ describe('the agent edits a sub-page through the host page documents', () => {
     const editor = await boot(host(pages));
     const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
 
-    await turn.call('blok_execute', { page: 'pg', commands: [{ name: 'block.update', args: { id: 'deep', data: { pageId: 'other' } } }] });
-    const renamed = await turn.call('blok_execute', { page: 'pg', commands: [{ name: 'page.rename', args: { id: 'deep', title: 'Taken' } }] });
+    const repointed = await turn.call('blok_execute', { page: 'pg', commands: [{ name: 'block.update', args: { id: 'deep', data: { pageId: 'other' } } }] });
+    await turn.call('blok_execute', { page: 'pg', commands: [{ name: 'page.rename', args: { id: 'deep', title: 'Taken' } }] });
 
     turn.end();
-    expect(renamed.isError).toBe(true);
+    expect(repointed.isError).toBe(true);
     expect(pages.get('other')?.title).toBe('Private');
+    expect(pages.get('nested')?.title).toBe('Taken');
   });
 
-  it('page.rename in a sub-page does not reach a pageId the agent wrote there in an earlier turn', async () => {
+  it('page.rename in a sub-page reaches only the page its block was given, in a later turn', async () => {
     const pages = new Map<string, OutputData>([
       ['sub', { blocks: [{ id: 'deep', type: 'page', data: { pageId: 'nested' } }] }],
       ['nested', { blocks: [] }],
@@ -189,14 +190,15 @@ describe('the agent edits a sub-page through the host page documents', () => {
     const editor = await boot(host(pages));
     const first = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
 
-    await first.call('blok_execute', { page: 'pg', commands: [{ name: 'block.update', args: { id: 'deep', data: { pageId: 'other' } } }] });
+    const repointed = await first.call('blok_execute', { page: 'pg', commands: [{ name: 'block.update', args: { id: 'deep', data: { pageId: 'other' } } }] });
     first.end();
     const second = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
-    const renamed = await second.call('blok_execute', { page: 'pg', commands: [{ name: 'page.rename', args: { id: 'deep', title: 'Taken' } }] });
+    await second.call('blok_execute', { page: 'pg', commands: [{ name: 'page.rename', args: { id: 'deep', title: 'Taken' } }] });
 
     second.end();
-    expect(renamed.isError).toBe(true);
+    expect(repointed.isError).toBe(true);
     expect(pages.get('other')?.title).toBe('Private');
+    expect(pages.get('nested')?.title).toBe('Taken');
   });
 
   it('page must name a page block', async () => {
@@ -407,19 +409,20 @@ describe('the agent edits a sub-page through the host page documents', () => {
     expect(sub(pages).title).toBeUndefined();
   });
 
-  it('a page block the agent pointed somewhere else in this turn does not open that document', async () => {
+  it('an agent cannot point a page block somewhere else, so this turn opens only the real page', async () => {
     const pages = new Map<string, OutputData>([['sub', { blocks: [] }], ['other', { title: 'Private', blocks: [] }]]);
     const editor = await boot(host(pages));
     const turn = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
 
-    await turn.execute({ commands: [{ name: 'block.update', args: { id: 'pg', data: { pageId: 'other' } } }] });
+    const repointed = await turn.execute({ commands: [{ name: 'block.update', args: { id: 'pg', data: { pageId: 'other' } } }] });
     const read = await turn.call('blok_read', { page: 'pg' });
-    const written = await turn.call('blok_execute', { page: 'pg', commands: [{ name: 'doc.setTitle', args: { title: 'Taken' } }] });
+    await turn.call('blok_execute', { page: 'pg', commands: [{ name: 'doc.setTitle', args: { title: 'Taken' } }] });
 
     turn.end();
+    expect(repointed).toMatchObject({ ok: false, error: { code: 'FIELD_NOT_WRITABLE' } });
     expect(read.content).not.toContain('Private');
-    expect(written.isError).toBe(true);
     expect(pages.get('other')?.title).toBe('Private');
+    expect(pages.get('sub')?.title).toBe('Taken');
   });
 
   it('a page the agent inserted in this turn opens, under the id the host gave it', async () => {
@@ -507,21 +510,22 @@ describe('the agent edits a sub-page through the host page documents', () => {
     expect(pages.get(String(pageId))?.title).toBe('Deep');
   });
 
-  it('a pageId the agent wrote in an earlier turn still does not open that document', async () => {
+  it('an agent cannot point a page block somewhere else, so a later turn opens only the real page', async () => {
     const pages = new Map<string, OutputData>([['sub', { blocks: [] }], ['other', { title: 'Private', blocks: [] }]]);
     const editor = await boot(host(pages));
     const first = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
 
-    await first.execute({ commands: [{ name: 'block.update', args: { id: 'pg', data: { pageId: 'other' } } }] });
+    const repointed = await first.execute({ commands: [{ name: 'block.update', args: { id: 'pg', data: { pageId: 'other' } } }] });
     first.end();
     const second = editor.agent.begin({ agent: { id: 'bot', name: 'Bot' } });
     const read = await second.call('blok_read', { page: 'pg' });
-    const written = await second.call('blok_execute', { page: 'pg', commands: [{ name: 'doc.setTitle', args: { title: 'Taken' } }] });
+    await second.call('blok_execute', { page: 'pg', commands: [{ name: 'doc.setTitle', args: { title: 'Taken' } }] });
 
     second.end();
+    expect(repointed).toMatchObject({ ok: false, error: { code: 'FIELD_NOT_WRITABLE' } });
     expect(read.content).not.toContain('Private');
-    expect(written.isError).toBe(true);
     expect(pages.get('other')?.title).toBe('Private');
+    expect(pages.get('sub')?.title).toBe('Taken');
   });
 
   it('a page the agent inserts with a pageId of its own does not open that document, now or later', async () => {

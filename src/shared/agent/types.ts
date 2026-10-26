@@ -36,7 +36,7 @@ export interface PlannerToolEntry {
   insertRequires?: string[];
   /** Optional so hand-built entries may leave it out; only false refuses block.insert. */
   insertable?: boolean;
-  insertUnavailableReason?: 'runtime';
+  insertUnavailableReason?: 'runtime' | 'host';
   variants?: Array<{ name: string; title: string; data: Record<string, unknown> }>;
 }
 

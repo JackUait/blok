@@ -95,7 +95,7 @@ export const pagePrepareInsert = (
   actor: AgentActor
 ): NonNullable<AgentApplier['prepareInsert']> => async (type) => {
   if (type !== 'page') {
-    throw failure('COMMAND_UNAVAILABLE', notPreparedHere(type), { details: { reason: 'runtime' } });
+    throw failure('COMMAND_UNAVAILABLE', notPreparedHere(type, []), { details: { reason: 'runtime' } });
   }
 
   // Only the pageId: the planned data keeps the rest, and a host id must win over one the agent wrote.

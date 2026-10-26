@@ -4,7 +4,7 @@ import { agentAttribution } from './attribution';
 import { viewRows } from './document-view';
 import { checkEnvelope } from './envelope';
 import { preflightProblems } from './batch-preflight';
-import { AgentFailure, failure, notPreparedHere, withOthers } from './errors';
+import { AgentFailure, failure, insertUnavailableReason, notPreparedHere, withOthers } from './errors';
 import { isVersionRead, splitCommandName } from './names';
 import { PREPARE_PENDING } from './plan-state';
 import { planBatch } from './planner';
@@ -111,6 +111,9 @@ const importHtml = async (ports: BatchInput['ctx']['ports'], html: unknown, inde
   return imported;
 };
 
+// Each prepared insert makes the host create something, like a page's document; more than this is a loop, not a person's work.
+export const MAX_PREPARED_INSERTS = 25;
+
 const preparationsFor = (
   input: BatchInput,
   batch: AgentBatch,
@@ -119,6 +122,7 @@ const preparationsFor = (
   insertTypes: Map<number, string>
 ): Map<number, Preparation> => {
   const preparations = new Map<number, Preparation>();
+  const counted = { inserts: 0 };
 
   batch.commands.forEach((command, index) => {
     if (command.name === 'markdown.insert') {
@@ -161,10 +165,15 @@ const preparationsFor = (
     const requires = type === undefined ? undefined : input.ctx.tools.get(type)?.entry.insertRequires;
 
     if (type !== undefined && requires !== undefined && requires.length > 0) {
+      if (++counted.inserts > MAX_PREPARED_INSERTS) {
+        throw failure('INVALID_ARGS', `One batch inserts at most ${MAX_PREPARED_INSERTS} blocks the host prepares, such as pages. Send the rest in another batch.`, {
+          commandIndex: index,
+        });
+      }
       preparations.set(index, async () => {
         if (input.applier.prepareInsert === undefined) {
-          throw failure('COMMAND_UNAVAILABLE', notPreparedHere(type), {
-            commandIndex: index, details: { reason: 'runtime', requires },
+          throw failure('COMMAND_UNAVAILABLE', notPreparedHere(type, requires), {
+            commandIndex: index, details: { reason: insertUnavailableReason(requires), requires },
           });
         }
 

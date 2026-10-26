@@ -7,7 +7,8 @@ import { PREPARE_PENDING } from './plan-state';
 import { createActionContext } from './tool-action-context';
 import { matchVariants, titleSentence, variantSentence } from './variant-hint';
 import { cloneRecord } from './snapshot';
-import { notPreparedHere } from './errors';
+import { lockedAmong } from './approval';
+import { insertUnavailableReason, notPreparedHere } from './errors';
 
 import type { AgentBatch, Edit, InsertSpec, PlannedBlock } from '../../../types/agent';
 import type { Refusal } from './placement-rules';
@@ -307,8 +308,10 @@ export const withRequiredDefaults = (
 };
 
 const refuseInsert = (state: PlanState, entry: PlannerTool['entry'], path: string): never => {
-  if (entry.insertUnavailableReason === 'runtime') {
-    return state.fail('COMMAND_UNAVAILABLE', notPreparedHere(entry.name), path, { reason: 'runtime' });
+  if (entry.insertUnavailableReason !== undefined) {
+    const requires = entry.insertRequires ?? [];
+
+    return state.fail('COMMAND_UNAVAILABLE', notPreparedHere(entry.name, requires), path, { reason: insertUnavailableReason(requires), requires });
   }
 
   return state.fail('COMMAND_UNAVAILABLE', `"${entry.name}" is not insertable: ${entry.children.annotation === true
@@ -362,6 +365,11 @@ const buildBlock = (
   // The contract's word: a type it calls not insertable never inserts, so describe and the runtime agree.
   if (coreInsert && tool.entry.insertable === false) {
     refuseInsert(state, tool.entry, `${path}/type`);
+  }
+  // Only the top block of a block.insert is prepared; a nested page would keep a pageId the agent wrote.
+  // A copy (block.duplicate) keeps the source's pageId, as the editor's Duplicate does.
+  if (!state.copying && !(coreInsert && path === '') && (tool.entry.insertRequires?.length ?? 0) > 0) {
+    state.fail('INVALID_ARGS', `Insert "${type}" with its own block.insert, not inside another block's children, so it is prepared like a person's.`, `${path}/type`);
   }
 
   for (const field of options === undefined ? [] : tool.entry.viewState) {
@@ -826,6 +834,13 @@ export const planDelete = (state: PlanState, args: Record<string, unknown>): unk
     removedIds: withChildren ? state.draft.subtree(block.id) : [block.id],
     liftedIds: withChildren ? [] : [...state.draft.childrenOf(block.id)],
   };
+  // Deleting and re-inserting would hand the agent an unlocked copy, so a lock's database stays.
+  const locked = lockedAmong(state.draft, result.removedIds);
+
+  if (locked.length > 0) {
+    state.fail('PRECONDITION_FAILED', `A person locked database "${locked[0]}", and this delete removes it. `
+      + 'The agent does not delete a locked database. Ask the person to delete it.', '/id', { reason: 'locked', blockIds: locked });
+  }
 
   // Explicit lifts give every applier the same move attribution.
   result.liftedIds.reduce((after, child) => {

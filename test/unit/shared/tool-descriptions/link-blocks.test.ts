@@ -127,7 +127,7 @@ const LINK_DESCRIPTIONS: LinkDescriptionCase[] = [
     describeTool: describePage,
     dataSchema: PAGE_DATA,
     summary: 'A sub-page. Its body is a separate document named by pageId.',
-    guidance: 'Inserting a page asks the host to create the page document. To rename the page this block points to, or change its icon, use page.rename or page.setIcon. To change the title of the document you are editing, use doc.setTitle. In the editor a read gives pageTitle, the title the block shows; other runtimes leave it out.',
+    guidance: 'Where page is insertable, inserting one makes the host create the page document: leave out data.pageId. block.delete removes only this link, as a person\'s Move to Trash does; the page document stays with the host. To rename the page this block points to, or change its icon, use page.rename or page.setIcon. To change the title of the document you are editing, use doc.setTitle. In the editor a read gives pageTitle, the title the block shows; other runtimes leave it out.',
     summaryFields: ['pageId'],
     starter: { pageId: 'p1' },
     accepted: [
@@ -200,7 +200,7 @@ describe('link self-description metadata and saved schemas', () => {
 
     expect(description).toEqual({
       summary, guidance, data: dataSchema, summaryFields,
-      ...(name === 'page' ? { inputFields: [], actions: PAGE_ACTIONS } : {}),
+      ...(name === 'page' ? { inputFields: [], guardedFields: { pageId: 'block.insert' }, actions: PAGE_ACTIONS } : {}),
       ...(name === 'embed' ? { actions: EMBED_ACTIONS } : {}),
       ...(name === 'bookmark' ? { actions: BOOKMARK_ACTIONS } : {}),
     });

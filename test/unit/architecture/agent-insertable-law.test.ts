@@ -83,6 +83,21 @@ describe('the runtime flag matches the applier', () => {
     expect(insertable({ runtime: 'node', services: ['pageBackend'] })).toEqual({ page: false, prepared: false });
     expect(insertable({ runtime: 'node', services: ['pageBackend'], prepares: ['page'] })).toEqual({ page: true, prepared: false });
   });
+
+  it('says a missing page backend is the host\'s, and a headless prepareInsert the runtime\'s', () => {
+    const snapshot = snapshotWithCustomTools(buildBuiltInSnapshot({ blokVersion: 'test' }), PREPARED_CUSTOM_TOOLS);
+    const manifest = buildToolManifest(snapshot);
+    const reasons = (where: Parameters<typeof buildAgentContract>[2]): Record<string, unknown> => Object.fromEntries(
+      buildAgentContract(manifest, COMMANDS, where).manifest.blocks
+        .filter(block => (block.insertRequires?.length ?? 0) > 0)
+        .map(block => [block.name, block.insertUnavailableReason])
+    );
+
+    for (const runtime of ['node', 'jint', 'node-live', 'csharp-live'] as const) {
+      expect(reasons({ runtime, services: [] })).toEqual({ page: 'host', prepared: 'runtime' });
+    }
+    expect(reasons({ runtime: 'editor', services: [] })).toEqual({ page: undefined, prepared: undefined });
+  });
 });
 
 const isResult = (value: Record<string, unknown>): value is Record<string, unknown> & AgentResult => typeof value.ok === 'boolean';

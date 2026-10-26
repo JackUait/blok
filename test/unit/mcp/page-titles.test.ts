@@ -149,12 +149,33 @@ describe('new sub-pages through page-map', () => {
     expect(readDoc('parent')).toEqual({ blocks: [] });
   });
 
+  it('deleting a page block removes only the link: the page file stays as it was and authorize is never asked about it', async () => {
+    writeFileSync(join(dir, 'parent.json'), JSON.stringify({ blocks: [{ id: 'pb', type: 'page', data: { pageId: 'kept' } }] }));
+    writeFileSync(join(dir, 'kept.json'), JSON.stringify({ blocks: [], title: 'Kept' }));
+    const asked: string[] = [];
+
+    mcp = pageMap({ authorize: async (_principal: string, documentId: string) => {
+      asked.push(documentId);
+
+      return documentId === 'parent';
+    } });
+    const before = readFileSync(join(dir, 'kept.json'), 'utf-8');
+
+    expect(await run(await open('parent'), [{ name: 'block.delete', args: { id: 'pb' } }])).toMatchObject({ ok: true });
+    expect(readDoc('parent')).toMatchObject({ blocks: [] });
+    expect(readFileSync(join(dir, 'kept.json'), 'utf-8')).toBe(before);
+    expect(asked.filter((id) => id !== 'parent')).toEqual([]);
+  });
+
   it('without page-map a page block is not insertable, and the refusal says how to turn it on', async () => {
     mcp = assembleMcp({ transport: { kind: 'stdio' }, auth: { kind: 'none' }, source: { kind: 'files', dir } });
     const outcome = await run(await open('parent'), [{ name: 'block.insert', args: { type: 'page', id: 'np', position: 'end' } }]);
 
-    expect(outcome).toMatchObject({ ok: false, error: { code: 'COMMAND_UNAVAILABLE', details: { reason: 'runtime' } } });
+    expect(outcome).toMatchObject({ ok: false, error: { code: 'COMMAND_UNAVAILABLE', details: { reason: 'host' } } });
     expect(JSON.stringify(outcome)).toContain('--page-titles page-map');
+    const described = await mcp.dispatch('blok_describe', { handle: await open('parent'), tool: 'page' }, caller);
+
+    expect(described.structuredContent).toMatchObject({ tool: { insertable: false, insertUnavailableReason: 'host' } });
   });
 
   it('tells the agent how to make a sub-page in stored mode and next to a sync service, and not without page-map', async () => {

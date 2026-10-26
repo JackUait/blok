@@ -18,6 +18,7 @@ import type {
   ToolRegistrySnapshot,
   TuneManifestEntry,
 } from '../../types';
+import { insertUnavailableReason } from './agent/errors';
 import { deepEqual } from './deep-equal';
 import { OPAQUE_TAGS } from './rich-text/html-to-segments';
 import { ownEntry } from './own-entry';
@@ -374,7 +375,7 @@ const insertableHere = (
 ): Pick<BlockToolManifestEntry, 'insertable' | 'insertUnavailableReason'> => (
   block.insertable && (block.insertRequires?.length ?? 0) > 0
     && !PREPARES_INSERT[where.runtime] && where.prepares?.includes(block.name) !== true
-    ? { insertable: false, insertUnavailableReason: 'runtime' }
+    ? { insertable: false, insertUnavailableReason: insertUnavailableReason(block.insertRequires ?? []) }
     : { insertable: block.insertable }
 );
 

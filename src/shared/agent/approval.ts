@@ -176,6 +176,13 @@ const lockedOrHeld = (snapshot: DocSnapshot, id: string, locked: ReadonlySet<str
     && lockedOrHeld(snapshot, parent, locked, new Set([...seen, id])));
 };
 
+/** The databases among `ids` that are locked, by their own lock or a holder's. */
+export const lockedAmong = (snapshot: DocSnapshot, ids: readonly string[]): string[] => {
+  const locked = lockedIn(snapshot);
+
+  return ids.filter(id => snapshot.get(id)?.type === 'database' && lockedOrHeld(snapshot, id, locked));
+};
+
 /**
  * Databases locked now (their own lock or a holder's) that the restored version removes, turns into
  * something else, or changes in any field the lock protects. A new id never stands in for an old one.

@@ -74,7 +74,13 @@ export const withOthers = (primary: AgentError, others: readonly AgentProblem[])
   return { ...error, message: `${error.message} ${count}${where}. Fix them all, then retry.`, others: listed };
 };
 
+/** A page waits only on its host creating the document; another prepared tool needs the editor itself. */
+export const insertUnavailableReason = (requires: readonly string[]): 'runtime' | 'host' =>
+  requires.includes('pageBackend') ? 'host' : 'runtime';
+
 /** Why block.insert of a type with a prepareInsert hook fails where nothing prepares it. */
-export const notPreparedHere = (type: string): string => `This runtime cannot insert "${type}": ${type === 'page'
-  ? 'a new page needs its own document, and nothing here creates one. The editor\'s page tool can, and so can blok-mcp with --page-titles page-map'
-  : 'its tool prepares the block first (prepareInsert), and only the editor runs that'}.`;
+export const notPreparedHere = (type: string, requires: readonly string[]): string => insertUnavailableReason(requires) === 'host'
+  ? `This host cannot insert "${type}": a new page needs its own document, and this host creates none. `
+    + 'The editor\'s page tool creates one, so does blok-mcp with --page-titles page-map, '
+    + 'and so does a C# host whose page target implements IBlokPageCreator.'
+  : `This runtime cannot insert "${type}": its tool prepares the block first (prepareInsert), and only the editor runs that.`;

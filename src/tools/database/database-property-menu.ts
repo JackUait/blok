@@ -31,6 +31,7 @@ import type {
   PropertySettingsV2,
   PropertyType,
   RelationSettings,
+  RollupFunction,
   SelectOption,
 } from './types';
 
@@ -99,6 +100,8 @@ export interface ComputedMenuHost {
   onEditFormula: (propertyId: string) => void;
   /** A formula as its result type: a number one gets Number's rows and Show as. */
   valueProperty?: (property: PropertyDefinition) => PropertyDefinition;
+  /** A property of a database in this document as its result type: a rollup of a number formula reads like one of a Number. */
+  targetValueProperty?: (databaseId: string, property: PropertyDefinition) => PropertyDefinition;
   /** Turns a relation's mirroring property on the target database on or off. */
   onSetTwoWay: (propertyId: string, twoWay: boolean) => void;
   /** The host set `config.buttons.onAction`: buttons may call it. */
@@ -796,8 +799,16 @@ export class DatabasePropertyMenu {
     const relations = (host?.schema() ?? []).filter((p) => p.type === 'relation');
     const relation = relations.find((p) => p.id === settings.relationPropertyId);
     const targets = relation?.relation === undefined ? [] : (host?.targetSchema(relation.relation.targetDatabaseId) ?? []);
-    const target = targets.find((p) => p.id === settings.targetPropertyId);
+    const picked = targets.find((p) => p.id === settings.targetPropertyId);
+    const target = picked?.type === 'formula' && relation?.relation !== undefined
+      ? host?.targetValueProperty?.(relation.relation.targetDatabaseId, picked) ?? picked
+      : picked;
     const set = (patch: Partial<typeof settings>): void => update({ rollup: { ...settings, ...patch } });
+    // notion-spec-2 §15.3: a new Calculate puts Show as back on Number.
+    const setFunction = (fn: RollupFunction): void => update({
+      rollup: { ...settings, function: fn },
+      ...(fn !== settings.function && property.number?.showAs !== undefined ? { number: without(property.number, 'showAs') } : {}),
+    });
 
     return [
       {
@@ -817,7 +828,7 @@ export class DatabasePropertyMenu {
       {
         name: 'rollupProperty',
         title: this.t('tools.database.rollupTargetProperty'),
-        ...(target === undefined ? {} : { valueLabel: target.name }),
+        ...(picked === undefined ? {} : { valueLabel: picked.name }),
         children: {
           // H-rr: a rollup of a rollup is not offered.
           items: targets.filter((p) => p.type !== 'rollup').map((p) => ({
@@ -839,7 +850,7 @@ export class DatabasePropertyMenu {
             title: this.t(`tools.database.rollupFn.${fn}`),
             isActive: fn === settings.function,
             closeOnActivate: true,
-            onActivate: () => set({ function: fn }),
+            onActivate: () => setFunction(fn),
           })),
         },
       },

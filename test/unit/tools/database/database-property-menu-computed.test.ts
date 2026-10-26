@@ -80,11 +80,15 @@ const taskSchema: PropertyDefinition[] = [
   { id: 't-title', name: 'Task', type: 'title', position: 'a0' },
   { id: 'hours', name: 'Hours', type: 'number', position: 'a1' },
   { id: 'cost', name: 'Cost', type: 'number', position: 'a2', number: { format: 'euro', showAs: 'ring' } },
+  { id: 'done', name: 'Done', type: 'checkbox', position: 'a3' },
+  { id: 'twice', name: 'Twice', type: 'formula', position: 'a4', formula: { expression: '1' } },
 ];
 
 const computed = () => ({
   // A formula whose expression is "1" reads as a number; any other as text.
   valueProperty: (property: PropertyDefinition): PropertyDefinition => (property.formula?.expression === '1' ? { ...property, type: 'number' } : { ...property, type: 'text' }),
+  targetValueProperty: (_databaseId: string, property: PropertyDefinition): PropertyDefinition =>
+    (property.formula?.expression === '1' ? { ...property, type: 'number' } : property),
   schema: () => schema,
   databases: () => [{ id: 'db', title: 'Projects' }, { id: 'db-tasks', title: 'Tasks' }],
   targetSchema: (databaseId: string) => (databaseId === 'db-tasks' ? taskSchema : []),
@@ -285,6 +289,48 @@ describe('property menu — computed types', () => {
     expect(edit.map((item) => item.name ?? item.type)).toEqual([
       'rollupRelation', 'rollupProperty', 'rollupFunction', 'separator', 'showAs', 'all-views-note',
     ]);
+  });
+
+  // notion-spec-2 §15.2: Checked, Unchecked and the checkbox percents have the tiles but no number format.
+  it.each(['checked', 'unchecked', 'percent_checked', 'percent_unchecked'] as const)('rollup: %s of a Checkbox shows the Show as tiles with no Number format', (fn) => {
+    openMenu(prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'done', function: fn } }));
+    const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+    expect(edit.map((item) => item.name ?? item.type)).toEqual([
+      'rollupRelation', 'rollupProperty', 'rollupFunction', 'separator', 'showAs', 'all-views-note',
+    ]);
+  });
+
+  // notion-spec-2 §15.3: a number formula target gets a Number target's Calculate list and rows.
+  it('rollup: a number formula target offers the number functions and the number rows', () => {
+    openMenu(prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'twice', function: 'show_original' } }));
+    const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+    expect((byName(edit, 'rollupFunction').children?.items ?? []).map((item) => item.name)).toContain('rollupFunction-sum');
+    expect(edit.map((item) => item.name ?? item.type)).toEqual([
+      'rollupRelation', 'rollupProperty', 'rollupFunction', 'numberFormat', 'decimals', 'separator', 'showAs', 'all-views-note',
+    ]);
+  });
+
+  // notion-spec-2 §15.3: a new Calculate puts Show as back on Number.
+  it('rollup: picking another Calculate resets Show as to Number', () => {
+    const { cb } = openMenu(prop('rollup', {
+      rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'show_original' },
+      number: { format: 'euro', showAs: 'bar', color: 'green' },
+    }));
+    const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
+    const functions = byName(edit, 'rollupFunction').children?.items ?? [];
+    const sum = byName(functions, 'rollupFunction-sum');
+    const same = byName(functions, 'rollupFunction-show_original');
+
+    sum.onActivate?.(sum);
+    same.onActivate?.(same);
+
+    expect(cb.onUpdate).toHaveBeenNthCalledWith(1, 'p', {
+      rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'sum' },
+      number: { format: 'euro', color: 'green' },
+    });
+    expect(cb.onUpdate).toHaveBeenNthCalledWith(2, 'p', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'show_original' } });
   });
 
   it('rollup: a list result has no Show as', () => {

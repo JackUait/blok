@@ -174,6 +174,12 @@ describe('rollup', () => {
       expect(rollupResultType('percent_checked', checkbox)).toMatchObject({ type: 'number', number: { format: 'percent' } });
     });
 
+    // notion-spec-2 §15.2, §14.4: checkbox percents read "50.00%", Percent empty reads "100%".
+    it('checkbox percents show two decimals, other percents none', () => {
+      expect(rollupResultType('percent_unchecked', checkbox)).toEqual({ type: 'number', number: { format: 'percent', decimals: 2 } });
+      expect(rollupResultType('percent_empty', number)).toEqual({ type: 'number', number: { format: 'percent' } });
+    });
+
     it('date functions give a date', () => {
       expect(rollupResultType('latest_date', date).type).toBe('date');
       expect(rollupResultType('date_range', date).type).toBe('date');
@@ -195,6 +201,11 @@ describe('rollup', () => {
     it('offers date functions only for a date target', () => {
       expect(rollupFunctionsFor(date)).toContain('date_range');
       expect(rollupFunctionsFor(number)).not.toContain('date_range');
+    });
+
+    // notion-spec-2 §15.2: Show original, Count all, Checked, Unchecked, Percent checked, Percent unchecked.
+    it('offers a checkbox target only its own functions', () => {
+      expect(rollupFunctionsFor(checkbox)).toEqual(['show_original', 'count', 'checked', 'unchecked', 'percent_checked', 'percent_unchecked']);
     });
 
     it('offers checked functions only for a checkbox target', () => {

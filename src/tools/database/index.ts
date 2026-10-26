@@ -11280,6 +11280,7 @@ export class DatabaseTool implements BlockTool {
         targetSchema: (databaseId) => (databaseId === this.dataId ? this.model.getSchema() : this.readDatabaseSource(databaseId)?.schema ?? []),
         onEditFormula: (id) => { if (parentWritable()) this.openFormulaEditor(id, anchor); },
         valueProperty: (p) => this.computedValues.valueProperty(p),
+        targetValueProperty: (databaseId, p) => (databaseId === this.dataId ? this.computedValues.valueProperty(p) : this.readDatabaseSource(databaseId)?.valueProperty?.(p) ?? p),
         onSetTwoWay: (id, twoWay) => { if (parentWritable()) this.setRelationTwoWay(id, twoWay, context); },
         hasHostActions: this.config.buttons?.onAction !== undefined,
         hasNotify: this.config.buttons?.onNotify !== undefined,

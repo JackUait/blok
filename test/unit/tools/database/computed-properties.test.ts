@@ -316,6 +316,16 @@ describe('ComputedProperties', () => {
       expect(engine.valueProperty(unique)).toMatchObject({ type: 'text', number: { format: 'euro' } });
     });
 
+    // notion-spec-2 §15.3: a number formula target reads like a Number target.
+    it('shows Show original of a number formula as a list carrying the rollup\'s number settings', () => {
+      const list = { ...rollup('list', 'tasks', 'double', 'show_original'), number: { format: 'euro' as const } };
+      const engine = new ComputedProperties('db');
+      const rows = engine.apply([title, tasks, list], [row('p1', { tasks: [{ id: 't1' }, { id: 't2' }] })], ctx);
+
+      expect(valueOf(rows, 'p1', list)).toBe('4, 10');
+      expect(engine.valueProperty(list)).toMatchObject({ type: 'text', number: { format: 'euro' } });
+    });
+
     it('rolls up a formula of the related database', () => {
       const total = rollup('total', 'tasks', 'double', 'max');
       const engine = new ComputedProperties('db');

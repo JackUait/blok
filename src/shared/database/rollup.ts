@@ -22,11 +22,12 @@ const GENERIC: readonly RollupFunction[] = [
 ];
 const NUMBER_FNS: readonly RollupFunction[] = ['sum', 'average', 'median', 'min', 'max', 'range'];
 const DATE_FNS: readonly RollupFunction[] = ['earliest_date', 'latest_date', 'date_range'];
-const CHECK_FNS: readonly RollupFunction[] = ['checked', 'unchecked', 'percent_checked', 'percent_unchecked'];
+/** notion-spec-2 §15.2: a Checkbox target offers only these. */
+const CHECKBOX_MENU: RollupFunction[] = ['show_original', 'count', 'checked', 'unchecked', 'percent_checked', 'percent_unchecked'];
 const GROUP_FNS: readonly RollupFunction[] = ['count_per_group', 'percent_per_group'];
 
 const PERCENT_FNS: ReadonlySet<RollupFunction> = new Set<RollupFunction>(['percent_empty', 'percent_not_empty', 'percent_checked', 'percent_unchecked']);
-const COUNT_FNS: ReadonlySet<RollupFunction> = new Set<RollupFunction>(['count', 'count_values', 'unique', 'empty', 'not_empty']);
+const COUNT_FNS: ReadonlySet<RollupFunction> = new Set<RollupFunction>(['count', 'count_values', 'unique', 'empty', 'not_empty', 'checked', 'unchecked']);
 
 /** Count and Percent results have no Number format or Decimal places (notion-spec-2 §3, §14.4). */
 export const rollupHasFormat = (fn: RollupFunction): boolean => !COUNT_FNS.has(fn) && !PERCENT_FNS.has(fn);
@@ -39,16 +40,15 @@ const isOptionType = (target: PropertyDefinition): boolean =>
 
 /**
  * The functions a target property offers. The help page groups number-only
- * and date-only functions; checked and per-group come only from the API
- * enum, so where they show is unverified.
+ * and date-only functions; per-group comes only from the API enum, so where
+ * it shows is unverified.
  */
-export const rollupFunctionsFor = (target: PropertyDefinition): RollupFunction[] => [
+export const rollupFunctionsFor = (target: PropertyDefinition): RollupFunction[] => (target.type === 'checkbox' ? CHECKBOX_MENU : [
   ...GENERIC,
   ...(target.type === 'number' ? NUMBER_FNS : []),
   ...(isDateType(target) ? DATE_FNS : []),
-  ...(target.type === 'checkbox' ? CHECK_FNS : []),
   ...(isOptionType(target) ? GROUP_FNS : []),
-];
+]);
 
 /** The shape of the list `show_original` gives for a target. */
 const listShape = (target: PropertyDefinition): RollupShape => {
@@ -63,8 +63,8 @@ const listShape = (target: PropertyDefinition): RollupShape => {
 /**
  * Show original or Show unique values of a Number target (notion-spec-2 §13,
  * §14.5): the value stays the ", "-joined list, but each number draws with
- * the rollup's number settings. A number formula target does not count (not
- * measured in Notion).
+ * the rollup's number settings. A number formula target counts too, read as
+ * its result (§15.3).
  */
 export const isNumberList = (fn: RollupFunction, target: Pick<PropertyDefinition, 'type'>): boolean =>
   (fn === 'show_original' || fn === 'show_unique') && target.type === 'number';
@@ -73,6 +73,8 @@ export const rollupResultType = (fn: RollupFunction, target: PropertyDefinition)
   if (fn === 'show_original' || fn === 'show_unique') return listShape(target);
   if (fn === 'count_per_group' || fn === 'percent_per_group') return { type: 'text' };
   if (DATE_FNS.includes(fn)) return { type: 'date', ...(target.date !== undefined ? { date: target.date } : {}) };
+  // notion-spec-2 §15.2, §14.4: "50.00%" on a Checkbox, "100%" otherwise.
+  if (fn === 'percent_checked' || fn === 'percent_unchecked') return { type: 'number', number: { format: 'percent', decimals: 2 } };
   if (PERCENT_FNS.has(fn)) return { type: 'number', number: { format: 'percent' } };
   return { type: 'number' };
 };

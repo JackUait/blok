@@ -185,7 +185,7 @@ export class ComputedProperties {
       const shape = rollupResultType(settings.function, target);
 
       // A Show original or Show unique of a Number marks itself by carrying `number` (notion-spec-2 §13, §14.5); other lists drop any left behind.
-      if (isNumberList(settings.function, this.rollupTarget(property, false) ?? target)) return { ...property, ...shape, number: property.number ?? {} };
+      if (isNumberList(settings.function, target)) return { ...property, ...shape, number: property.number ?? {} };
       if (shape.type !== 'number') {
         const { number: _stale, ...rest } = property;
 
@@ -247,8 +247,8 @@ export class ComputedProperties {
     return this.ctx.resolveDatabase?.(databaseId);
   }
 
-  /** The rollup's target; a formula target as its result unless `resolve` is false. */
-  private rollupTarget(property: PropertyDefinition, resolve = true): PropertyDefinition | undefined {
+  /** The rollup's target; a formula target as its result. */
+  private rollupTarget(property: PropertyDefinition): PropertyDefinition | undefined {
     const settings = property.rollup;
     const relation = this.schema.find((p) => p.id === settings?.relationPropertyId);
     const databaseId = relation?.relation?.targetDatabaseId;
@@ -257,7 +257,7 @@ export class ComputedProperties {
 
     if (target === undefined) return undefined;
 
-    return resolve && target.type === 'formula' ? source?.valueProperty?.(target) ?? target : target;
+    return target.type === 'formula' ? source?.valueProperty?.(target) ?? target : target;
   }
 
   /** Self-relations without a synced property show both ways: who points at each row. */

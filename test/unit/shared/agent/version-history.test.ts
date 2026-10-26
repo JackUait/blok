@@ -281,7 +281,10 @@ describe('version history commands', () => {
 
 describe('history.restore', () => {
   const restoring = () => {
-    const history = { ...fakeHistory(), restore: vi.fn(async (version: string) => STORED[version] !== undefined) };
+    const history = {
+      ...fakeHistory(),
+      restore: vi.fn(async (version: string, _options?: { expectRevision?: string }): Promise<boolean | 'stale'> => STORED[version] !== undefined),
+    };
     const setup = createHeadlessAgentSetup({ services: ['versionHistory'], runtime: 'node', restores: true });
     const agent = createDocumentAgentSession({
       document: current(), tools: setup.tools, contract: setup.contract, actor, ports: setup.ports,
@@ -295,7 +298,7 @@ describe('history.restore', () => {
     const { history, agent } = restoring();
     const result = await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });
 
-    expect(history.restore).toHaveBeenCalledWith('L:1');
+    expect(history.restore).toHaveBeenCalledWith('L:1', { expectRevision: 'L:3' });
     expect(result.ok && result.results).toEqual([{ version: 'L:1', previous: 'L:3' }]);
     expect(result.ok && result.changed).toEqual({ created: ['gone'], updated: ['a'], moved: [], removed: ['b', 'c'] });
   });
@@ -353,6 +356,78 @@ describe('history.restore', () => {
     ] });
 
     expect(!result.ok && result.error.message).toContain('must be the only command');
+  });
+
+  describe('expectRevision: restore only onto the version the agent checked', () => {
+    it('passes the version that was current when the agent checked', async () => {
+      const { history, agent } = restoring();
+
+      await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });
+
+      expect(history.restore.mock.calls).toEqual([['L:1', { expectRevision: 'L:3' }]]);
+    });
+
+    it('a host that says stale is STALE, and the session does not count a restore', async () => {
+      const { history, agent } = restoring();
+
+      await agent.execute({ commands: [{ name: 'block.delete', args: { id: 'c' } }] });
+      history.restore.mockResolvedValueOnce('stale');
+      const result = await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });
+      const undo = await agent.execute({ commands: [{ name: 'history.undo', args: {} }] });
+
+      expect(!result.ok && result.error).toMatchObject({ code: 'STALE', retryable: true, commandIndex: 0 });
+      expect(!result.ok && result.error.message).toContain('nothing was restored');
+      // The block.delete is still the last step, not a restore.
+      expect(undo.ok).toBe(true);
+    });
+
+    it('the host is asked with the version listed before the person was asked', async () => {
+      const { history, agent } = restoring();
+      const order: string[] = [];
+
+      history.list.mockImplementation(async () => {
+        order.push('list');
+
+        return VERSIONS;
+      });
+      history.restore.mockImplementation(async (_version: string, options?: { expectRevision?: string }) => {
+        order.push(`restore ${options?.expectRevision ?? '-'}`);
+
+        return true;
+      });
+      await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });
+
+      expect(order).toEqual(['list', 'restore L:3']);
+    });
+
+    it('sends no expectRevision when the host lists no version', async () => {
+      const { history, agent } = restoring();
+
+      history.list.mockResolvedValue([]);
+      await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });
+
+      expect(history.restore.mock.calls).toEqual([['L:1']]);
+    });
+
+    it('an old host whose restore takes only the version still restores', async () => {
+      const calls: unknown[][] = [];
+      const old: AgentVersionHistory = {
+        ...fakeHistory(),
+        restore: async (version: string) => {
+          calls.push([version]);
+
+          return true;
+        },
+      };
+      const setup = createHeadlessAgentSetup({ services: ['versionHistory'], runtime: 'node', restores: true });
+      const agent = createDocumentAgentSession({
+        document: current(), tools: setup.tools, contract: setup.contract, actor, ports: setup.ports, services: { versionHistory: old },
+      });
+      const result = await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });
+
+      expect(result.ok).toBe(true);
+      expect(calls).toEqual([['L:1']]);
+    });
   });
 
   it('history.undo refuses to undo a restore and names the version to restore instead', async () => {
@@ -433,7 +508,7 @@ describe('history.restore', () => {
 
       expect(result.ok).toBe(true);
       expect(approve).toHaveBeenCalledExactlyOnceWith({ kind: 'database.restore', blockId: 'db', title: 'Roadmap' });
-      expect(history.restore).toHaveBeenCalledWith('L:1');
+      expect(history.restore).toHaveBeenCalledWith('L:1', { expectRevision: 'L:3' });
     });
 
     it('a database locked while the person decided makes the restore STALE, never restored unasked', async () => {
@@ -490,7 +565,7 @@ describe('history.restore', () => {
       const result = await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });
 
       expect(result.ok).toBe(true);
-      expect(history.restore).toHaveBeenCalledWith('L:1');
+      expect(history.restore).toHaveBeenCalledWith('L:1', { expectRevision: 'L:3' });
     });
   });
 

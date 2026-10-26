@@ -168,7 +168,7 @@ describe('editor agent version restore', () => {
     const command = 'command' in described ? described.command : undefined;
 
     expect(isCommandEntry(command) && command.available).toBe(true);
-    expect(history.restore).toHaveBeenCalledWith('L:1');
+    expect(history.restore).toHaveBeenCalledWith('L:1', { expectRevision: 'L:2' });
     expect(result.ok && result.results).toEqual([{ version: 'L:1', previous: 'L:2' }]);
     expect(result.ok && result.changed.updated).toEqual(['p']);
   });
@@ -259,5 +259,18 @@ describe('editor agent version restore', () => {
 
     await expect(run.discard()).resolves.toBe(false);
     expect(history.restore).toHaveBeenCalledTimes(1);
+  });
+
+  it('a host that says the document moved on answers STALE, and Discard still takes the run back', async () => {
+    const history = restoringHistory();
+
+    history.restore.mockResolvedValueOnce('stale');
+    const editor = await boot(history, scripted(restoreCall, insertCall('After'), { stop_reason: 'end_turn', content: [{ type: 'text', text: 'Done' }] }));
+    const run = editor.agent.ask('Restore the old version and add a line');
+
+    await run.result;
+
+    expect(history.restore).toHaveBeenCalledWith('L:1', { expectRevision: 'L:2' });
+    await expect(run.discard()).resolves.toBe(true);
   });
 });

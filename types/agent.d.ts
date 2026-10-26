@@ -313,8 +313,12 @@ export interface AgentVersionHistory {
    * false when there is no such version. A live session gets the restored content as a
    * remote edit; a session over a stored document keeps the one it loaded, so open a new
    * one. Without it, agents cannot restore.
+   *
+   * `expectRevision` is the newest version `list` gave when the agent checked the restore.
+   * When the document is no longer at that version, write nothing and resolve `'stale'`.
+   * A host that ignores it still restores.
    */
-  restore?(version: string): Promise<boolean>;
+  restore?(version: string, options?: { expectRevision?: string }): Promise<boolean | 'stale'>;
 }
 
 /**

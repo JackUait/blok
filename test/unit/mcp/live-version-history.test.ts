@@ -59,7 +59,7 @@ const factory: CollabSocketFactory = () => {
   return socket;
 };
 
-interface Seen { url: string; authorization?: string; origin?: string; method?: string; key?: string }
+interface Seen { url: string; authorization?: string; origin?: string; method?: string; key?: string; ifMatch?: string }
 
 /** Statuses the next restore requests answer, in order; 204 once they run out. */
 const restoreAnswers: number[] = [];
@@ -67,10 +67,12 @@ const restoreAnswers: number[] = [];
 /** The sync server's history routes for "doc-1", with one version on each of two lineages. */
 const historyServer = (seen: Seen[]): Server => createServer((request: IncomingMessage, response) => {
   const key = request.headers['blok-idempotency-key'];
+  const ifMatch = request.headers['if-match'];
 
   seen.push({
     url: request.url ?? '', authorization: request.headers.authorization, origin: request.headers.origin, method: request.method,
     ...(typeof key === 'string' && { key }),
+    ...(typeof ifMatch === 'string' && { ifMatch }),
   });
   if (request.method === 'POST' && request.url === `/sync/doc-1/history/${LINEAGE}/4/restore`) {
     response.writeHead(restoreAnswers.shift() ?? 204);
@@ -246,6 +248,23 @@ describe('blok-mcp live handles read the sync server version history', () => {
     expect(post).toMatchObject({ url: `/sync/doc-1/history/${LINEAGE}/4/restore`, origin: ORIGIN });
     expect(post?.key).toMatch(/^[ -~]{1,128}$/);
     expect(readTicketClaims(post?.authorization?.replace(/^Bearer /, '') ?? '')).toMatchObject({ doc: 'doc-1', user: 'agent:alice:claude' });
+  });
+
+  it('pins the restore to the newest version it listed, as If-Match', async () => {
+    const handle = await open(true);
+
+    await execute(handle, 'history.restore', { version: `${LINEAGE}:4` });
+
+    expect(seen.find((request) => request.method === 'POST')?.ifMatch).toBe(`"${LINEAGE}:4"`);
+  });
+
+  it('says STALE when the room moved past that version (412), and the restore wrote nothing', async () => {
+    restoreAnswers.push(412);
+    const handle = await open(true);
+    const stale = await execute(handle, 'history.restore', { version: `${LINEAGE}:4` });
+
+    expect(stale).toMatchObject({ ok: false, error: { code: 'STALE', retryable: true } });
+    expect(seen.filter((request) => request.method === 'POST')).toHaveLength(1);
   });
 
   it('sends the same idempotency key again when a ticket refresh retries the restore', async () => {

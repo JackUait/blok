@@ -230,7 +230,15 @@ export const runRestore = async (
 
   // The reads above can take a while; a Stop during them must leave the document alone.
   checkCancel();
-  if (!await ask(() => restore.call(history, version), checkCancel, false)) {
+  // The newest version is what the checks above saw: a host that moved past it restores nothing.
+  const restored = await ask(() => (previous === undefined
+    ? restore.call(history, version)
+    : restore.call(history, version, { expectRevision: previous })), checkCancel, false);
+
+  if (restored === 'stale') {
+    throw failure('STALE', 'The document changed since the version history was read, so nothing was restored. Read it again, then retry.', { commandIndex: 0 });
+  }
+  if (!restored) {
     throw notFound(version);
   }
 

@@ -553,6 +553,42 @@ public sealed class HistoryEndpointTests
     Assert.Equal(HttpStatusCode.NoContent, current.StatusCode);
   }
 
+  /// <summary>An agent pins its restore to the newest listed version: that point is the If-Match head.</summary>
+  [Fact]
+  public async Task ARestorePinnedToTheNewestListedVersionLandsUntilTheRoomMoves()
+  {
+    await using var history = await HistoryApp.StartAsync();
+    var lineage = await history.OpenAsync();
+    await history.EditTextAsync("two");
+    await history.EditTextAsync("three");
+
+    async Task<string> NewestAsync()
+    {
+      using var list = await history.SendAsync(HttpMethod.Get, "/history");
+      var newest = JsonNode.Parse(await list.Content.ReadAsStringAsync())!["versions"]![0]!;
+
+      return $"\"{newest["lineage"]!.GetValue<string>()}:{newest["sequence"]!.GetValue<ulong>()}\"";
+    }
+
+    var checkedHead = await NewestAsync();
+
+    using var landed = await history.RestoreAsync(lineage, "1", "pinned-current", ifMatch: checkedHead);
+
+    Assert.Equal(HttpStatusCode.NoContent, landed.StatusCode);
+    var restored = (await history.BlocksAsync()).ToJsonString();
+
+    Assert.Contains("two", restored);
+    Assert.DoesNotContain("three", restored);
+
+    var again = await NewestAsync();
+
+    await history.EditTextAsync("peer");
+    using var stale = await history.RestoreAsync(lineage, "0", "pinned-stale", ifMatch: again);
+
+    await AssertError(stale, HttpStatusCode.PreconditionFailed, "the document is no longer at the If-Match head\n");
+    Assert.Contains("peer", (await history.BlocksAsync()).ToJsonString());
+  }
+
   [Fact]
   public async Task ARestoreTooLargeForOneFrameIsRefusedAndTheRoomStaysOpen()
   {

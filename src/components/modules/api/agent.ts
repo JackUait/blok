@@ -362,10 +362,10 @@ export class AgentAPI extends Module {
       this.serviceCache.versionHistory = {
         list: (options) => history.list(options),
         read: (version) => history.read(version),
-        restore: async (version) => {
-          const restored = await restore.call(history, version);
+        restore: async (version, options) => {
+          const restored = await restore.call(history, version, options);
 
-          this.turnRestored ||= restored;
+          this.turnRestored ||= restored === true;
 
           return restored;
         },

@@ -102,17 +102,30 @@ export const createHttpVersionHistory = (input: HttpVersionHistoryInput): AgentV
 
       return isRecord(body) && Array.isArray(body.blocks) ? body as unknown as OutputData : null;
     },
-    restore: async (version) => {
+    restore: async (version, options) => {
       const path = pointPath(version);
 
       if (path === null) {
         return false;
       }
+      const expect = options?.expectRevision;
+
+      // A tag the server cannot read would restore unpinned, so it never leaves here.
+      if (expect !== undefined && pointPath(expect) === null) {
+        return 'stale';
+      }
       // One key per restore: a retried request that already landed is answered, never applied twice.
-      const response = await send(`${base}/${path}/restore`, { method: 'POST', headers: { 'Blok-Idempotency-Key': randomUUID() } });
+      const response = await send(`${base}/${path}/restore`, {
+        method: 'POST',
+        headers: { 'Blok-Idempotency-Key': randomUUID(), ...(expect !== undefined && { 'If-Match': `"${expect}"` }) },
+      });
 
       if (response.status === 404) {
         return false;
+      }
+      // The room moved past the version the agent checked; nothing was written.
+      if (response.status === 412) {
+        return 'stale';
       }
       if (!response.ok) {
         throw await refused(response);

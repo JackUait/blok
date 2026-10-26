@@ -15,6 +15,7 @@ interface TestEditor {
   save: () => Promise<OutputData>;
   blocks: API['blocks'];
   readOnly: { toggle(state?: boolean): Promise<boolean> };
+  history: API['history'];
 }
 
 const editors: TestEditor[] = [];
@@ -355,6 +356,28 @@ describe('the agent edits a sub-page through the host page documents', () => {
     await expect(run.discard()).resolves.toBe(false);
     expect(texts(sub(pages))).toEqual([[{ text: 'Old' }]]);
     expect((await editor.save()).blocks.map((block) => block.data.text)).toContainEqual([{ text: 'MainNew' }]);
+  });
+
+  it('Cmd+Z in this editor leaves the agent\'s sub-page write in place, and Discard reverts it', async () => {
+    const pages = new Map<string, OutputData>([['sub', { blocks: [{ id: 'old', type: 'paragraph', data: { text: [{ text: 'Old' }] } }] }]]);
+    const mainInsert: AgentModelResponse = {
+      stop_reason: 'tool_use',
+      content: [{ type: 'tool_use', id: 'm1', name: 'blok_execute', input: { commands: [
+        { name: 'block.insert', args: { type: 'paragraph', data: { text: 'MainNew' }, position: 'end' } },
+      ] } }],
+    };
+    const editor = await boot(host(pages), scriptedModel([subInsert('c1', 'SubNew'), mainInsert, done]));
+    const run = editor.agent.ask('Write both');
+
+    await run.result;
+    editor.history.undo();
+
+    expect(texts(sub(pages))).toEqual([[{ text: 'Old' }], [{ text: 'SubNew' }]]);
+    expect((await editor.save()).blocks.map((block) => block.data.text)).not.toContainEqual([{ text: 'MainNew' }]);
+
+    await run.discard();
+
+    expect(texts(sub(pages))).toEqual([[{ text: 'Old' }]]);
   });
 
   it('discard restores a sub-page the host stored as HTML and nobody touched after the agent', async () => {

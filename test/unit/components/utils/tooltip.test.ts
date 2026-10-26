@@ -351,36 +351,19 @@ describe('Tooltip utility', () => {
     expect(wrapper?.getAttribute('data-state')).toBe('closed');
   });
 
-  it('has no transition or transform animation classes on the wrapper', () => {
+  it('fades only its opacity, in 50ms with the ease-out keyword, and never animates a transform', () => {
     const target = createTargetElement();
 
-    showReadout(target, 'No animation');
+    showReadout(target, 'Fade');
 
     const wrapper = getTooltipWrapper();
-
-    expect(wrapper).not.toBeNull();
-
     const classes = Array.from(wrapper?.classList ?? []);
 
-    // Should not have any transition classes
-    const hasTransition = classes.some(cls => cls.startsWith('transition'));
-
-    expect(hasTransition).toBe(false);
-
-    // Should not have any duration classes
-    const hasDuration = classes.some(cls => cls.startsWith('duration'));
-
-    expect(hasDuration).toBe(false);
-
-    // Should not have any ease classes
-    const hasEase = classes.some(cls => cls.startsWith('ease'));
-
-    expect(hasEase).toBe(false);
-
-    // Should not have will-change classes
-    const hasWillChange = classes.some(cls => cls.startsWith('will-change'));
-
-    expect(hasWillChange).toBe(false);
+    // Notion's hint: `opacity 0.05s ease-out`. A wider transition would slide readouts as they move.
+    expect(classes.filter(cls => cls.startsWith('transition'))).toEqual(['transition-opacity']);
+    expect(classes.filter(cls => cls.startsWith('duration'))).toEqual(['duration-[50ms]']);
+    expect(classes.filter(cls => cls.startsWith('ease'))).toEqual(['ease-[ease-out]']);
+    expect(classes.some(cls => cls.startsWith('will-change') || cls.startsWith('scale') || cls.startsWith('translate'))).toBe(false);
   });
 
   it('does not apply transform offset classes for any placement', () => {
@@ -1009,7 +992,7 @@ describe('Tooltip utility', () => {
 
       showReadout(target, 'x', { placement: 'top', bare: true });
 
-      expect(content?.className).not.toMatch(/px-2\.5|py-1\.5|text-center|leading-\[1em\]|tracking-/);
+      expect(content?.className).not.toMatch(/px-|py-|text-center|leading-|w-max|max-w-/);
       expect(content?.className).toMatch(/text-tooltip-font/);
     });
 
@@ -1022,7 +1005,7 @@ describe('Tooltip utility', () => {
 
       // left = 200 + 80 - 40; top = 300 - 24 - 10
       expect(placed(wrapper)).toEqual({ left: '240px', top: '266px' });
-      expect(content?.className).toMatch(/px-2\.5/);
+      expect(content?.className).toMatch(/px-\[8px\]/);
       expect(content?.className).toMatch(/text-center/);
     });
   });

@@ -92,12 +92,20 @@ class Tooltip {
          */
         'select-none',
         'rounded-(--blok-radius-control) shadow-tooltip',
+        // Tailwind's `ease-out` is a cubic-bezier; Notion fades with the plain keyword.
+        'transition-opacity duration-[50ms] ease-[ease-out]',
         'mobile:hidden'
       ).split(' '),
       tooltipContent: twJoin(
-        'px-2.5 py-1.5',
+        'px-[8px] py-[5px]',
         'text-tooltip-font text-xs text-center',
-        'tracking-[0.02em] leading-[1em]'
+        'leading-[16.8px]',
+        /**
+         * The width cap lives here, not on the wrapper: the top-layer reset sets
+         * `max-width: none` on it. `w-max` keeps a fixed bubble parked near the
+         * right edge from squeezing the text before it is placed.
+         */
+        'box-border w-max max-w-[300px] break-words'
       ).split(' '),
       tooltipShown: ['opacity-100'],
       tooltipBareContent: ['text-tooltip-font', 'text-xs'],

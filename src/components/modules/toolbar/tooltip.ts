@@ -44,7 +44,7 @@ export const createTooltipContent = function(lines: TooltipLine[]): HTMLElement 
 
   container.style.display = 'flex';
   container.style.flexDirection = 'column';
-  container.style.gap = '4px';
+  container.style.gap = '0px';
   container.style.color = TOOLTIP_MUTED_INK;
 
   lines.forEach((line) => {

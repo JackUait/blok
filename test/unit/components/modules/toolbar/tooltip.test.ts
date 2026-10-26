@@ -42,7 +42,7 @@ describe('createTooltipContent', () => {
 
     expect(result.style.display).toBe('flex');
     expect(result.style.flexDirection).toBe('column');
-    expect(result.style.gap).toBe('4px');
+    expect(result.style.gap).toBe('0px');
     expect(result.style.color).toBe('rgb(173, 169, 163)');
   });
 

@@ -152,16 +152,22 @@ describe('Tooltip utility — mutation coverage', () => {
         'select-none',
         'rounded-(--blok-radius-control)',
         'shadow-tooltip',
+        'transition-opacity',
+        'duration-[50ms]',
+        'ease-[ease-out]',
         'mobile:hidden',
       ]);
       expect(Array.from(content?.classList ?? [])).toEqual([
-        'px-2.5',
-        'py-1.5',
+        'px-[8px]',
+        'py-[5px]',
         'text-tooltip-font',
         'text-xs',
         'text-center',
-        'tracking-[0.02em]',
-        'leading-[1em]',
+        'leading-[16.8px]',
+        'box-border',
+        'w-max',
+        'max-w-[300px]',
+        'break-words',
       ]);
     });
 

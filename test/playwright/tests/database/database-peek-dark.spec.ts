@@ -223,8 +223,9 @@ test('side peek handle: no hover look, and a "Close Click / Resize Drag" hint to
   await expect.poll(async () => {
     const next = await tooltip.boundingBox();
 
-    return next === null ? NaN : Math.round(next.y + next.height / 2 - (box.y + 420));
-  }).toBe(0);
+    // Sub-pixel: the 43.6px bubble is placed with its whole-pixel clientHeight.
+    return next === null ? NaN : Math.abs(next.y + next.height / 2 - (box.y + 420));
+  }).toBeLessThan(1);
 
   await page.mouse.move(box.x - 200, box.y + 420);
   await expect(tooltip).toBeHidden();

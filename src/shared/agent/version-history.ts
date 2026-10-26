@@ -194,7 +194,13 @@ export const runRestore = async (
   const now = current();
 
   // A lock protects more than its flag: removing, replacing or reshaping the database needs the person's yes too.
-  await approveStep(restoreTouchesLocked(now, target), now, approve, checkCancel, 'database.restore');
+  const approved = restoreTouchesLocked(now, target);
+
+  await approveStep(approved, now, approve, checkCancel, 'database.restore');
+  // The person answered about the document as it was; a lock that landed meanwhile was never asked about.
+  if (approved.length > 0 && restoreTouchesLocked(current(), target).some(id => !approved.includes(id))) {
+    throw failure('STALE', 'A database was locked while the person decided, so nothing was restored. Read the document again, then retry.', { commandIndex: 0 });
+  }
   const blocks = outputBlocksToSegments(target.blocks, type => ctx.tools.get(type)?.entry.richTextFields ?? [], ctx.ports.htmlToSegments);
   const diff = diffOutput(now.toOutput(), { ...target, blocks }, {
     richTextFields: type => ctx.tools.get(type)?.entry.richTextFields ?? [],

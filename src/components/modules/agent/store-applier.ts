@@ -168,9 +168,16 @@ export class StoreApplier implements AgentApplier {
     return name === 'history.undo' ? known.backward : known.forward;
   }
 
-  public undo(): Promise<void> {
+  public historyStepId(name: 'history.undo' | 'history.redo'): unknown {
+    return name === 'history.undo' ? this.done.at(-1) : this.undone.at(-1);
+  }
+
+  public undo(expected?: unknown): Promise<void> {
     const step = this.done.at(-1);
 
+    if (expected !== undefined && step !== expected) {
+      return Promise.reject(failure('STALE', 'Another step is the last one now, so nothing was undone. Read the document again, then retry.'));
+    }
     if (step === undefined) {
       return Promise.reject(failure('NOTHING_TO_UNDO', 'This session has no step to undo.'));
     }
@@ -181,9 +188,12 @@ export class StoreApplier implements AgentApplier {
     return Promise.resolve();
   }
 
-  public redo(): Promise<void> {
+  public redo(expected?: unknown): Promise<void> {
     const step = this.undone.at(-1);
 
+    if (expected !== undefined && step !== expected) {
+      return Promise.reject(failure('STALE', 'Another step is next now, so nothing was redone. Read the document again, then retry.'));
+    }
     if (step === undefined) {
       return Promise.reject(failure('NOTHING_TO_REDO', 'This session has no undone step to redo.'));
     }

@@ -360,6 +360,29 @@ describe('history.restore', () => {
       expect(history.restore).toHaveBeenCalledWith('L:1');
     });
 
+    it('a database locked while the person decided makes the restore STALE, never restored unasked', async () => {
+      const second = { ...database(false), id: 'db2' };
+      const history = {
+        list: vi.fn(async () => VERSIONS),
+        read: vi.fn(async () => ({ blocks: [paragraph('a', 'Old'), database(false), { ...second, data: { ...second.data, title: 'Older' } }] })),
+        restore: vi.fn(async () => true),
+      };
+      const setup = createHeadlessAgentSetup({ services: ['versionHistory'], runtime: 'node', restores: true });
+      const agent = createDocumentAgentSession({
+        document: { blocks: [paragraph('a', 'Now'), database(true), second] },
+        tools: setup.tools, contract: setup.contract, actor, ports: setup.ports, services: { versionHistory: history },
+      });
+      const approve = vi.fn(async () => {
+        await agent.execute({ commands: [{ name: 'database.setLock', args: { id: 'db2', locked: true } }] });
+
+        return true;
+      });
+      const result = await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] }, { approve });
+
+      expect(history.restore).not.toHaveBeenCalled();
+      expect(!result.ok && result.error.code).toBe('STALE');
+    });
+
     it('a no leaves the document alone and says so', async () => {
       const { history, agent } = withDatabase(false);
       const result = await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] }, { approve: async () => false });

@@ -186,6 +186,28 @@ describe.each(sessions)('unlocking a database a person locked, on a %s session',
     }
   });
 
+  it('a database locked while the person decided is asked about too, never unlocked unasked', async () => {
+    const session = open({ blocks: [database('db', true), database('db2', false)] });
+    const approve = vi.fn<Approve>()
+      .mockImplementationOnce(async () => {
+        await run(session, [{ name: 'database.setLock', args: { id: 'db2', locked: true } }]);
+
+        return true;
+      })
+      .mockResolvedValueOnce(false);
+
+    try {
+      const result = await run(session, [unlock('db'), unlock('db2')], approve);
+
+      expect(await isLocked(session, 'db2')).toBe(true);
+      expect(await isLocked(session, 'db')).toBe(true);
+      expect(codeOf(result)).toBe('APPROVAL_REQUIRED');
+      expect(approve.mock.calls.map(([request]) => request.blockId)).toEqual(['db', 'db2']);
+    } finally {
+      session.close();
+    }
+  });
+
   describe('undo and redo', () => {
     const undo = { name: 'history.undo', args: {} };
     const redo = { name: 'history.redo', args: {} };
@@ -240,6 +262,51 @@ describe.each(sessions)('unlocking a database a person locked, on a %s session',
         expect(codeOf(await run(session, [undo], approve))).toBeUndefined();
         expect(await isLocked(session)).toBe(false);
         expect(approve).toHaveBeenCalledWith({ kind: 'database.unlock', blockId: 'db', title: 'Tasks' });
+      } finally {
+        session.close();
+      }
+    });
+
+    it('a step that changed while the person decided is STALE, never an unapproved unlock', async () => {
+      const session = open(seed(false));
+      const lockDb2 = { name: 'database.setLock', args: { id: 'db2', locked: true } };
+      const approve = vi.fn<Approve>(async () => {
+        // A new top step lands while the question is open.
+        await run(session, [lockDb2]);
+
+        return true;
+      });
+
+      try {
+        expect(codeOf(await run(session, [lock]))).toBeUndefined();
+        const undone = await run(session, [undo], approve);
+
+        expect(await isLocked(session, 'db2')).toBe(true);
+        expect(codeOf(undone)).toBe('STALE');
+        expect(await isLocked(session, 'db')).toBe(true);
+        expect(approve).toHaveBeenCalledTimes(1);
+      } finally {
+        session.close();
+      }
+    });
+
+    it('a redo whose step changed while the person decided is STALE', async () => {
+      const session = open(seed());
+      const approve = vi.fn<Approve>()
+        .mockResolvedValueOnce(true)
+        .mockImplementationOnce(async () => {
+          await run(session, [{ name: 'block.insert', args: { type: 'paragraph', data: { text: [{ text: 'new' }] }, position: 'end' } }]);
+
+          return true;
+        });
+
+      try {
+        await run(session, [unlock()], approve);
+        await run(session, [undo]);
+        const redone = await run(session, [redo], approve);
+
+        expect(await isLocked(session)).toBe(true);
+        expect(codeOf(redone)).toBe('STALE');
       } finally {
         session.close();
       }

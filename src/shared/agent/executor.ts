@@ -24,8 +24,11 @@ export interface AgentApplier {
   apply(plan: Plan, draft: DocSnapshot): Promise<void>;
   /** `data`: the planned block's data, so a toolbox variant (e.g. a full-page database) prepares the right thing. */
   prepareInsert?(type: string, data?: Record<string, unknown>): Promise<Record<string, unknown> | undefined>;
-  undo?(): Promise<void>;
-  redo?(): Promise<void>;
+  /** `expected`: the historyStepId the caller checked; another step on top refuses with STALE and changes nothing. */
+  undo?(expected?: unknown): Promise<void>;
+  redo?(expected?: unknown): Promise<void>;
+  /** The step history.undo or history.redo would run now, as an identity to compare. */
+  historyStepId?(name: 'history.undo' | 'history.redo'): unknown;
   /** The document a history step would leave, when the applier keeps whole snapshots. */
   historyTarget?(name: 'history.undo' | 'history.redo'): DocSnapshot | undefined;
   /** Keeps, on the step this batch just made, what that step unlocks when redone and when undone. */
@@ -223,16 +226,28 @@ const unlockedByStep = (applier: AgentApplier, name: 'history.undo' | 'history.r
   return applier.pendingUnlocks?.(name) ?? lockedDatabases(applier.snapshot());
 };
 
-/** Undoing a lock or redoing an unlock asks like database.setLock does. Reads the document only when there is something to ask. */
-const approveHistoryStep = async (input: BatchInput, name: 'history.undo' | 'history.redo'): Promise<void> => {
+const staleStep = (): AgentFailure => failure('STALE', 'The history changed while the person decided, so nothing was undone or redone. Read the document again, then retry.', {
+  commandIndex: 0,
+});
+
+/**
+ * Undoing a lock or redoing an unlock asks like database.setLock does. Reads the document only when
+ * there is something to ask. The yes covers that one step: if another step is on top once the person
+ * answers, or the step now unlocks more, it is STALE.
+ */
+const approveHistoryStep = async (input: BatchInput, name: 'history.undo' | 'history.redo', expected: unknown): Promise<void> => {
   const unlocks = unlockedByStep(input.applier, name);
 
-  if (unlocks.length > 0) {
-    await approveStep(unlocks, input.applier.snapshot(), input.approve, () => checkCancel(input.signal));
+  if (unlocks.length === 0) {
+    return;
+  }
+  await approveStep(unlocks, input.applier.snapshot(), input.approve, () => checkCancel(input.signal));
+  if (input.applier.historyStepId?.(name) !== expected || unlockedByStep(input.applier, name).some(id => !unlocks.includes(id))) {
+    throw staleStep();
   }
 };
 
-const historyStep = (applier: AgentApplier, name: 'history.undo' | 'history.redo'): (() => Promise<void>) => {
+const historyStep = (applier: AgentApplier, name: 'history.undo' | 'history.redo', expected: unknown): (() => Promise<void>) => {
   const step = name === 'history.undo' ? applier.undo : applier.redo;
 
   if (step === undefined) {
@@ -262,7 +277,7 @@ const historyStep = (applier: AgentApplier, name: 'history.undo' | 'history.redo
   }
 
   return async () => {
-    await step.call(applier);
+    await step.call(applier, expected);
     const [from, to] = name === 'history.undo' ? [marks.past, marks.future] : [marks.future, marks.past];
 
     to.push(from.pop() ?? 'own');
@@ -504,9 +519,14 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
     const first = batch.commands[0];
 
     if (first?.name === 'history.undo' || first?.name === 'history.redo') {
-      const step = historyStep(input.applier, first.name);
+      // The step checked, asked about and run is this one; the applier refuses another (STALE).
+      const expected = input.applier.historyStepId?.(first.name);
 
-      await approveHistoryStep(input, first.name);
+      historyStep(input.applier, first.name, expected);
+      await approveHistoryStep(input, first.name, expected);
+      // Again after the question: a restore or another document's write may have landed meanwhile.
+      const step = historyStep(input.applier, first.name, expected);
+
       checkCancel(input.signal, orphaned);
       await step();
       const revision = input.applier.revision();

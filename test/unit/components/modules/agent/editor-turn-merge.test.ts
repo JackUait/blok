@@ -1494,6 +1494,42 @@ describe('agent turn merge through real Core modules', () => {
       expect(undone).toMatchObject({ ok: false, error: { code: 'APPROVAL_REQUIRED' } });
     }, 60_000);
 
+    it('a redo approved for one step, after the person changed the top step, is STALE', async () => {
+      const editor = await boot([{ id: 'p', type: 'paragraph', data: { text: [{ text: 'P' }] } }, lockedDb(true), { ...lockedDb(true), id: 'db2' }]);
+      const session = openSession(editor);
+      const yes = vi.fn<AgentApprover>(() => Promise.resolve(true));
+      const lockedId = (id: string): boolean => {
+        const schema: unknown = editor.YjsManager.toJSON().find(block => block.id === id)?.data.schema;
+
+        return Array.isArray(schema) && schema.some((property: unknown) => typeof property === 'object' && property !== null
+          && 'databaseLocked' in property && property.databaseLocked === true);
+      };
+
+      for (const id of ['db', 'db2']) {
+        expect(await run(session, [{ name: 'database.setLock', args: { id, locked: false } }], yes)).toMatchObject({ ok: true });
+        await settle(editor);
+        await nextTask();
+      }
+      for (let i = 0; i < 2; i++) {
+        expect(await run(session, [{ name: 'history.undo', args: {} }])).toMatchObject({ ok: true });
+        await settle(editor);
+      }
+      expect([lockedId('db'), lockedId('db2')]).toEqual([true, true]);
+
+      // While the question about db is open, the person redoes it natively: db2's unlock is next now.
+      const redone = await run(session, [{ name: 'history.redo', args: {} }], async () => {
+        editor.YjsManager.beginGesture('discrete');
+        editor.YjsManager.redo();
+        await settle(editor);
+
+        return true;
+      });
+
+      await settle(editor);
+      expect(lockedId('db2')).toBe(true);
+      expect(redone).toMatchObject({ ok: false, error: { code: 'STALE' } });
+    }, 60_000);
+
     it('a redo of an unlock the person undid natively still asks', async () => {
       const editor = await boot([{ id: 'p', type: 'paragraph', data: { text: [{ text: 'P' }] } }, lockedDb(true)]);
       const session = openSession(editor);

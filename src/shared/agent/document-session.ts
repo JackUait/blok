@@ -164,7 +164,11 @@ export const createDocumentAgentSession = (input: {
 
       return Promise.resolve();
     },
-    undo: () => {
+    historyStepId: name => (name === 'history.undo' ? past.at(-1) : future.at(-1)),
+    undo: (expected?: unknown) => {
+      if (expected !== undefined && past.at(-1) !== expected) {
+        return Promise.reject(failure('STALE', 'Another step is the last one now, so nothing was undone. Read the document again, then retry.'));
+      }
       const previous = past.pop();
 
       if (previous === undefined) {
@@ -176,7 +180,10 @@ export const createDocumentAgentSession = (input: {
       return Promise.resolve();
     },
     historyTarget: name => (name === 'history.undo' ? past.at(-1) : future.at(-1)),
-    redo: () => {
+    redo: (expected?: unknown) => {
+      if (expected !== undefined && future.at(-1) !== expected) {
+        return Promise.reject(failure('STALE', 'Another step is next now, so nothing was redone. Read the document again, then retry.'));
+      }
       const next = future.pop();
 
       if (next === undefined) {

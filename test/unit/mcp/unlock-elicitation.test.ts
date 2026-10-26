@@ -191,6 +191,22 @@ describe.each(ERAS)('MCP asks the person through elicitation before an unlock (%
     expect(await isLocked(session)).toBe(true);
   });
 
+  it.each([[true, false], [false, true]])('asks about a restore that changes a locked database as a restore (tick %s)', async (tick, refused) => {
+    const elicit = vi.fn<Elicit>(() => ({ action: 'accept', content: { restore: tick } }));
+    const dispatch: Dispatch = async (_name, _args, _caller, options) => {
+      const yes = await options?.approve?.({ kind: 'database.restore', blockId: 'db', title: 'Payroll' });
+
+      return { structuredContent: yes === true ? { ok: true } : { error: { code: 'APPROVAL_REQUIRED' } }, isError: yes !== true };
+    };
+
+    await withClient(era, dispatch, elicit, async client => {
+      const result = await client.callTool({ name: 'blok_execute', arguments: { handle: 'h', commands: [] } }, REQUEST);
+
+      expect(result.isError === true).toBe(refused);
+    });
+    expect(elicit.mock.calls[0]?.[0]).toMatch(/^Desktop's agent wants to restore a version that changes the locked database "Payroll" \(id "db"\)/);
+  });
+
   it('refuses with APPROVAL_REQUIRED when the client cannot ask a person', async () => {
     const session = openJsonSession(seed);
 

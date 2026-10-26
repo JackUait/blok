@@ -1,5 +1,9 @@
 import type { AgentApprovalRequest, AgentApprover } from '../../../types/agent';
+import type { OutputData } from '../../../types/data-formats/output-data';
 import type { DocSnapshot } from './snapshot';
+
+import { deepEqual } from '../deep-equal';
+import { LOCK_PROTECTED_FIELDS } from '../tool-actions/database';
 
 import { AgentFailure, failure } from './errors';
 
@@ -52,13 +56,22 @@ const pendingRequest = (error: unknown): AgentApprovalRequest | undefined => {
   return error.error.details.approval as AgentApprovalRequest;
 };
 
+const refusedRestore = (request: AgentApprovalRequest, reason: 'no-channel' | 'denied'): string => (reason === 'denied'
+  ? `The person did not approve a restore that changes the locked ${named(request)}, so nothing was restored. `
+    + 'Do not restore this version again unless the person asks you to.'
+  : `A person locked ${named(request)}, and this version removes it or changes what the lock protects. `
+    + 'Restoring it needs a person\'s explicit approval, and nothing here can ask one. Nothing was restored. '
+    + 'Ask the person to restore this version themselves from the version history.');
+
+const refusedUnlock = (request: AgentApprovalRequest, reason: 'no-channel' | 'denied'): string => (reason === 'denied'
+  ? `The person did not approve unlocking ${named(request)}, so it stays locked. Nothing in this batch was applied. `
+    + 'Send the other commands again without this database.setLock. Do not ask to unlock it again unless the person asks you to.'
+  : `A person locked ${named(request)}. Unlocking it needs a person's explicit approval, and nothing here can ask one. `
+    + 'Nothing in this batch was applied. Ask the person to unlock it themselves (Lock database in the database\'s view menu), '
+    + 'then read it again. Never try to unlock it another way.');
+
 const refused = (cause: AgentFailure, request: AgentApprovalRequest, reason: 'no-channel' | 'denied'): AgentFailure => {
-  const message = reason === 'denied'
-    ? `The person did not approve unlocking ${named(request)}, so it stays locked. Nothing in this batch was applied. `
-      + 'Send the other commands again without this database.setLock. Do not ask to unlock it again unless the person asks you to.'
-    : `A person locked ${named(request)}. Unlocking it needs a person's explicit approval, and nothing here can ask one. `
-      + 'Nothing in this batch was applied. Ask the person to unlock it themselves (Lock database in the database\'s view menu), '
-      + 'then read it again. Never try to unlock it another way.';
+  const message = request.kind === 'database.restore' ? refusedRestore(request, reason) : refusedUnlock(request, reason);
 
   return new AgentFailure({ ...cause.error, message, details: { reason, approval: request } });
 };
@@ -136,11 +149,12 @@ export const approveStep = async (
   ids: readonly string[],
   current: DocSnapshot,
   approve: AgentApprover | undefined,
-  checkCancel: () => void
+  checkCancel: () => void,
+  kind: AgentApprovalRequest['kind'] = 'database.unlock'
 ): Promise<void> => {
   for (const blockId of ids) {
     const title = savedTitle(current.get(blockId)?.data);
-    const request: AgentApprovalRequest = { kind: 'database.unlock', blockId, ...(title !== undefined && { title }) };
+    const request: AgentApprovalRequest = { kind, blockId, ...(title !== undefined && { title }) };
     const cause = approvalNeeded(request);
 
     if (approve === undefined) {
@@ -153,4 +167,29 @@ export const approveStep = async (
       throw refused(cause, request, 'denied');
     }
   }
+};
+
+const lockedOrHeld = (snapshot: DocSnapshot, id: string, locked: ReadonlySet<string>, seen: ReadonlySet<string> = new Set()): boolean => {
+  const parent = snapshot.get(id)?.parent ?? null;
+
+  return locked.has(id) || (parent !== null && !seen.has(parent) && snapshot.get(parent)?.type === 'database'
+    && lockedOrHeld(snapshot, parent, locked, new Set([...seen, id])));
+};
+
+/**
+ * Databases locked now (their own lock or a holder's) that the restored version removes, turns into
+ * something else, or changes in any field the lock protects. A new id never stands in for an old one.
+ */
+export const restoreTouchesLocked = (now: DocSnapshot, target: OutputData): string[] => {
+  const locked = lockedIn(now);
+  const restored = new Map(target.blocks.flatMap(block => (block.id === undefined ? [] : [[block.id, block] as const])));
+
+  return now.ids().filter(id => now.get(id)?.type === 'database' && lockedOrHeld(now, id, locked)).filter((id) => {
+    const after = restored.get(id);
+    const before = now.get(id);
+    const data: Record<string, unknown> = typeof after?.data === 'object' && after.data !== null ? after.data : {};
+
+    return after === undefined || after.type !== 'database'
+      || LOCK_PROTECTED_FIELDS.some(field => !deepEqual(before?.data[field], data[field]));
+  });
 };

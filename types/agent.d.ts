@@ -277,9 +277,9 @@ export interface AgentVersionHistory {
   restore?(version: string): Promise<boolean>;
 }
 
-/** A change only a person may allow: unlocking a locked database. */
+/** A change only a person may allow: unlocking a locked database, or restoring a version that changes one. */
 export interface AgentApprovalRequest {
-  kind: 'database.unlock';
+  kind: 'database.unlock' | 'database.restore';
   blockId: string;
   /** The database's title, when it has a plain one. */
   title?: string;

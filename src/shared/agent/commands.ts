@@ -157,8 +157,8 @@ export const COMMANDS: Record<CoreCommandName, CoreCommandSpec> = {
   'history.restore': {
     ...write('Restore a saved version, as the version history\'s Restore does: the document becomes that version, title and icon too.', obj({ version }, ['version']),
       'Only when the user asks for it. Sub-pages keep their own history. No other version is deleted. history.undo cannot undo a restore: '
-      + 'to go back, restore the result\'s previous version. A version that would unlock a database a person locked is refused '
-      + '(APPROVAL_REQUIRED). Read the document again before your next write.'),
+      + 'to go back, restore the result\'s previous version. A version that removes, unlocks or reshapes a database a person locked asks '
+      + 'the person first; a no, or no way to ask, fails with APPROVAL_REQUIRED. Read the document again before your next write.'),
     requires: ['versionHistory'],
   },
 };

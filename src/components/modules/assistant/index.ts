@@ -536,14 +536,17 @@ export class Assistant extends Module {
     }
     const { I18n } = this.Blok;
     const agent = this.config.agent?.assistant?.name?.trim() || 'AI';
+    const keys = request.kind === 'database.restore'
+      ? { titled: 'assistant.restoreQuestion', untitled: 'assistant.restoreQuestionUntitled', approve: 'assistant.restoreApprove', deny: 'assistant.restoreDeny' }
+      : { titled: 'assistant.unlockQuestion', untitled: 'assistant.unlockQuestionUntitled', approve: 'assistant.unlock', deny: 'assistant.keepLocked' };
     const question = request.title === undefined
-      ? I18n.t('assistant.unlockQuestionUntitled', { agent })
-      : I18n.t('assistant.unlockQuestion', { agent, title: request.title });
+      ? I18n.t(keys.untitled, { agent })
+      : I18n.t(keys.titled, { agent, title: request.title });
     const stop = (): void => bar.settleApproval(false);
 
     signal.addEventListener('abort', stop, { once: true });
 
-    return bar.askApproval(question, { approve: I18n.t('assistant.unlock'), deny: I18n.t('assistant.keepLocked') })
+    return bar.askApproval(question, { approve: I18n.t(keys.approve), deny: I18n.t(keys.deny) })
       .finally(() => signal.removeEventListener('abort', stop));
   }
 

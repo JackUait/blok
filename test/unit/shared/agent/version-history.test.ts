@@ -323,8 +323,8 @@ describe('history.restore', () => {
         schema: [{ id: 't', name: 'Name', type: 'title', position: 'a0', ...(locked && { databaseLocked: true }) }],
       },
     });
-    const withDatabase = (versionLocked: boolean) => {
-      const versions: Record<string, OutputData> = { 'L:1': { blocks: [paragraph('a', 'Old'), database(versionLocked)] } };
+    const withDatabase = (versionLocked: boolean, versionBlocks?: OutputData['blocks']) => {
+      const versions: Record<string, OutputData> = { 'L:1': { blocks: versionBlocks ?? [paragraph('a', 'Old'), database(versionLocked)] } };
       const history = {
         list: vi.fn(async () => VERSIONS),
         read: vi.fn(async (version: string) => versions[version] ?? null),
@@ -345,9 +345,45 @@ describe('history.restore', () => {
 
       expect(!result.ok && result.error.code).toBe('APPROVAL_REQUIRED');
       expect(!result.ok && result.error.details).toMatchObject({
-        reason: 'no-channel', approval: { kind: 'database.unlock', blockId: 'db', title: 'Roadmap' },
+        reason: 'no-channel', approval: { kind: 'database.restore', blockId: 'db', title: 'Roadmap' },
       });
       expect(history.restore).not.toHaveBeenCalled();
+    });
+
+    it('restores once the person approves, asking once about the database', async () => {
+      const { history, agent } = withDatabase(false);
+      const approve = vi.fn(async () => true);
+      const result = await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] }, { approve });
+
+      expect(result.ok).toBe(true);
+      expect(approve).toHaveBeenCalledExactlyOnceWith({ kind: 'database.restore', blockId: 'db', title: 'Roadmap' });
+      expect(history.restore).toHaveBeenCalledWith('L:1');
+    });
+
+    it('a no leaves the document alone and says so', async () => {
+      const { history, agent } = withDatabase(false);
+      const result = await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] }, { approve: async () => false });
+
+      expect(!result.ok && result.error.details).toMatchObject({ reason: 'denied', approval: { kind: 'database.restore', blockId: 'db' } });
+      expect(history.restore).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['a version without the locked database', [paragraph('a', 'Old')]],
+      ['a version where it comes back under a new id', [paragraph('a', 'Old'), { ...database(false), id: 'db2' }]],
+      ['a version with a different schema under the same lock', [paragraph('a', 'Old'), {
+        ...database(true),
+        data: { ...database(true).data, schema: [...(database(true).data.schema as unknown[]), { id: 'n', name: 'Size', type: 'number', position: 'a1' }] },
+      }]],
+      ['a version with different views under the same lock', [paragraph('a', 'Old'), {
+        ...database(true), data: { ...database(true).data, views: [{ id: 'v9', name: 'Board', type: 'board', position: 'a0' }] },
+      }]],
+    ])('asks before %s', async (_label, blocks) => {
+      const { history, agent } = withDatabase(true, blocks);
+      const result = await agent.execute({ commands: [{ name: 'history.restore', args: { version: 'L:1' } }] });
+
+      expect(history.restore).not.toHaveBeenCalled();
+      expect(!result.ok && result.error.details).toMatchObject({ reason: 'no-channel', approval: { kind: 'database.restore', blockId: 'db' } });
     });
 
     it('restores when the database stays locked', async () => {

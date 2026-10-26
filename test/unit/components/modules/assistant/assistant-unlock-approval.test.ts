@@ -5,7 +5,7 @@ import { Blok } from '../../../../../src/blok';
 import { Database, DatabaseRow, Paragraph } from '../../../../../src/tools';
 import type { DatabasePermissionAction } from '../../../../../src/shared/database/types';
 import type { OutputData } from '../../../../../types';
-import type { AgentBatch } from '../../../../../types/agent';
+import type { AgentBatch, AgentVersionHistory } from '../../../../../types/agent';
 import type { Agent, AgentModel, AgentModelRequest, AgentModelResponse } from '../../../../../types/api';
 
 interface TestEditor {
@@ -45,7 +45,9 @@ const scripted = (...responses: AgentModelResponse[]): AgentModel & { requests: 
   }, { requests });
 };
 
-const createEditor = async (model: AgentModel | null, denied: DatabasePermissionAction[] = [], title = 'Tasks', isLocked = true): Promise<TestEditor> => {
+const createEditor = async (
+  model: AgentModel | null, denied: DatabasePermissionAction[] = [], title = 'Tasks', isLocked = true, versionHistory?: AgentVersionHistory
+): Promise<TestEditor> => {
   const holder = document.createElement('div');
 
   document.body.appendChild(holder);
@@ -69,7 +71,7 @@ const createEditor = async (model: AgentModel | null, denied: DatabasePermission
         },
       }],
     },
-    ...(model === null ? {} : { agent: { assistant: { model, name: 'Writer' } } }),
+    ...(model === null ? {} : { agent: { assistant: { model, name: 'Writer' }, ...(versionHistory !== undefined && { versionHistory }) } }),
   }) as unknown as TestEditor;
 
   editors.push(editor);
@@ -234,6 +236,31 @@ describe('Ask AI asks the person before it unlocks a database', () => {
     } finally {
       turn.end();
     }
+  });
+
+  it.each([
+    ['Restore', true],
+    ['Don\'t restore', false],
+  ])('asks before a restore that changes the locked database; %s answers', async (button, restores) => {
+    const restore = vi.fn(async () => true);
+    const history: AgentVersionHistory = {
+      list: vi.fn(async () => [{ version: 'v2', savedAt: 2, actors: [] }, { version: 'v1', savedAt: 1, actors: [] }]),
+      read: vi.fn(async () => ({ blocks: [{ id: 'p', type: 'paragraph', data: { text: 'Old' } }] })),
+      restore,
+    };
+    const restoreCall: AgentModelResponse = {
+      stop_reason: 'tool_use',
+      content: [{ type: 'tool_use', id: 'use-restore', name: 'blok_execute', input: { commands: [{ name: 'history.restore', args: { version: 'v1' } }] } }],
+    };
+    const editor = await createEditor(scripted(restoreCall, answer('Done.')), [], 'Tasks', true, history);
+
+    editor.agent.openAssistant();
+    submit('Restore v1');
+    const asked = await within(bar()).findByRole('group', { name: 'Writer wants to restore a version that changes the locked database "Tasks"' });
+
+    fireEvent.click(within(asked).getByRole('button', { name: button }));
+    await waitFor(() => expect(within(bar()).getByText('Done.')).toBeVisible());
+    expect(restore.mock.calls.length > 0).toBe(restores);
   });
 
   it('a host turn has no person to ask, so the unlock is refused', async () => {

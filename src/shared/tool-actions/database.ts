@@ -90,6 +90,9 @@ export const assertUnlocked = (ctx: ToolActionContext, state: DatabaseState): vo
 /** Database fields the editor freezes with the schema while the database is locked (structureLocked). */
 const LOCKED_FIELDS = ['automations', 'source', 'hideDataSourceTitles', 'starter'];
 
+/** Everything a database lock freezes: the schema (which holds the lock), the views and LOCKED_FIELDS. */
+export const LOCK_PROTECTED_FIELDS: readonly string[] = ['schema', 'views', ...LOCKED_FIELDS];
+
 export const rejectDatabaseWrite = (data: Record<string, unknown>, written: readonly string[]): string | undefined => {
   const locked = Array.isArray(data.schema) && data.schema.some(property => isRecord(property) && property.type === 'title' && property.databaseLocked === true);
   const frozen = written.filter(field => LOCKED_FIELDS.includes(field));

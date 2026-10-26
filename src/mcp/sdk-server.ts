@@ -23,17 +23,30 @@ export type Dispatch = (
  * The question MCP elicitation puts to the client's person (spec: client/elicitation).
  * Named by the saved title, so a rename in the same batch cannot hide the database.
  */
+/** The one tick the person gives: named for what it allows. */
+const approvalField = (request: AgentApprovalRequest): 'unlock' | 'restore' => (request.kind === 'database.restore' ? 'restore' : 'unlock');
+
 /** `client` is already safeClientName's: letters, digits, dot, dash and underscore. */
-const unlockQuestion = (request: AgentApprovalRequest, client: string): ReturnType<typeof inputRequired.elicit> => inputRequired.elicit({
+const unlockQuestion = (request: AgentApprovalRequest, client: string): ReturnType<typeof inputRequired.elicit> => {
   // The title is already one plain line (savedTitle); JSON quoting keeps its own quotes from closing ours.
-  message: `${client}'s agent wants to unlock the database ${request.title === undefined ? '' : `${JSON.stringify(request.title)} `}`
-    + `(id ${JSON.stringify(plainLine(request.blockId, 64) ?? '?')}). A person locked it, so its properties and views cannot change. Unlock it?`,
-  requestedSchema: {
-    type: 'object',
-    properties: { unlock: { type: 'boolean', title: 'Unlock', description: 'Tick to let the agent unlock this database.', default: false } },
-    required: ['unlock'],
-  },
-});
+  const database = `${request.title === undefined ? '' : `${JSON.stringify(request.title)} `}(id ${JSON.stringify(plainLine(request.blockId, 64) ?? '?')})`;
+  const field = approvalField(request);
+
+  return inputRequired.elicit({
+    message: request.kind === 'database.restore'
+      ? `${client}'s agent wants to restore a version that changes the locked database ${database}. `
+        + 'A person locked it; the version removes it or changes its properties, views or settings. Restore it?'
+      : `${client}'s agent wants to unlock the database ${database}. A person locked it, so its properties and views cannot change. Unlock it?`,
+    requestedSchema: {
+      type: 'object',
+      properties: { [field]: {
+        type: 'boolean', title: field === 'restore' ? 'Restore' : 'Unlock',
+        description: field === 'restore' ? 'Tick to let the agent restore this version.' : 'Tick to let the agent unlock this database.', default: false,
+      } },
+      required: [field],
+    },
+  });
+};
 
 /**
  * Answers from the person's elicitation replies on this request. With no reply yet it records
@@ -45,7 +58,7 @@ const elicitationApprover = (responses: unknown, asked: AgentApprovalRequest[]):
   const reply = inputResponse(replies, approvalKey(request));
 
   if (reply.kind === 'elicit') {
-    return Promise.resolve(reply.action === 'accept' && reply.content?.unlock === true);
+    return Promise.resolve(reply.action === 'accept' && reply.content?.[approvalField(request)] === true);
   }
   // A retry carries only the last round's replies, so asking again here would ask about the first database forever.
   if (replies !== undefined && Object.keys(replies).length > 0) {

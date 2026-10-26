@@ -244,7 +244,7 @@ export interface CardDrawerOptions {
    * "+ Add a property": the database's add-property menu under `anchor`. Wins over `onAddProperty`.
    * `onAdded` gets the new property's id after the schema refresh.
    */
-  onOpenAddProperty?: (anchor: HTMLElement, onAdded?: (propertyId: string, ownSetup?: boolean) => void) => void;
+  onOpenAddProperty?: (anchor: HTMLElement, onAdded?: (propertyId: string, ownSetup?: boolean) => HTMLElement | undefined) => void;
   /** Discard in Customize layout: delete a property made while customizing. */
   onDeleteProperty?: (propertyId: string) => void;
   /**
@@ -2313,6 +2313,9 @@ export class DatabaseCardDrawer {
         if (place !== null || this.draft !== null) this.addedWhileCustomizing(id, place);
         // A section's own add is unmeasured in Notion, so it keeps writing only.
         if (ownSetup !== true && place === null) this.editAdded(id);
+
+        // The redraw dropped `anchor`, so an own setup (Relation's "Related to") hangs on the new property's row.
+        return this.propertyHead(id) ?? this.drawer?.querySelector<HTMLElement>('[data-blok-database-drawer-add-prop]') ?? undefined;
       });
 
       return;
@@ -2343,11 +2346,15 @@ export class DatabaseCardDrawer {
   private editAdded(id: string): void {
     // In the builder the live panel would skip the draft, as the label menu does.
     if (this.draft !== null || this.onOpenPropertyMenu === undefined) return;
-    const head = this.drawer?.querySelector(`[data-blok-database-drawer-prop-label][data-property-id="${CSS.escape(id)}"]`)
-      ?.closest<HTMLElement>('[data-blok-database-drawer-prop-head]');
+    const head = this.propertyHead(id);
 
-    if (head === null || head === undefined) return;
+    if (head === undefined) return;
     this.onOpenPropertyMenu(id, head, this.customizable ? (): void => this.startCustomizing() : undefined, { edit: true });
+  }
+
+  private propertyHead(id: string): HTMLElement | undefined {
+    return this.drawer?.querySelector(`[data-blok-database-drawer-prop-label][data-property-id="${CSS.escape(id)}"]`)
+      ?.closest<HTMLElement>('[data-blok-database-drawer-prop-head]') ?? undefined;
   }
 
   private addedWhileCustomizing(id: string, place: AddedPlace | null): void {

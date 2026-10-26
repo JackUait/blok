@@ -9033,7 +9033,7 @@ export class DatabaseTool implements BlockTool {
         onOpenPropertyMenu: (propertyId, anchor, onCustomizeLayout, extras) => this.openPropertyMenu(propertyId, anchor, undefined, undefined, onCustomizeLayout, extras ?? {}),
         onOpenAddProperty: (anchor, onAdded) => this.openAddProperty(anchor, undefined, (created, ownSetup) => {
           this.cardDrawer?.refreshSchema(localizeDatabaseSchema(this.model.getSchema(), this.api.i18n));
-          onAdded?.(created.id, ownSetup);
+          return onAdded?.(created.id, ownSetup);
         }),
         onDeleteProperty: (propertyId) => {
           this.deleteProperty(propertyId);
@@ -11175,7 +11175,14 @@ export class DatabaseTool implements BlockTool {
     });
 
     popover.getElement().setAttribute('data-blok-database-related-to', '');
-    popover.on(PopoverEvent.Closed, () => queueMicrotask(() => popover.destroy()));
+    const closed = { done: false };
+
+    // destroy() hides, and a hide emits Closed again: without the flag this re-queues itself forever.
+    popover.on(PopoverEvent.Closed, () => {
+      if (closed.done) return;
+      closed.done = true;
+      queueMicrotask(() => popover.destroy());
+    });
     popover.show();
   }
 
@@ -11465,7 +11472,7 @@ export class DatabaseTool implements BlockTool {
    * (Insert left/right), the new column lands beside that one in the active
    * view's column order.
    */
-  openAddProperty(anchor: HTMLElement, placement?: { propertyId: string; side: 'left' | 'right' }, onAdded?: (created: PropertyDefinition, ownSetup: boolean) => void, context?: NativeWidgetContext): void {
+  openAddProperty(anchor: HTMLElement, placement?: { propertyId: string; side: 'left' | 'right' }, onAdded?: (created: PropertyDefinition, ownSetup: boolean) => HTMLElement | undefined | void, context?: NativeWidgetContext): void {
     if (this.destroyed || this.readOnly || this.structureLocked() || (context !== undefined && !context.writable())) return;
     const previous = this.addPropertyPopover;
 
@@ -11483,11 +11490,12 @@ export class DatabaseTool implements BlockTool {
         const side = placement?.side === 'left' ? 'beforeId' : 'afterId';
         const created = this.addProperty({ name, type, ...(placement === undefined ? {} : { [side]: placement.propertyId }) }, context);
 
-        if (created !== null) {
-          onAdded?.(created, created.type === 'relation');
-        }
+        if (created === null) return;
+        // A host that redraws `anchor` away hands back where the follow-up setup goes.
+        const setupAnchor = onAdded?.(created, created.type === 'relation') ?? anchor;
+
         // research/08: Relation opens "Related to" right away.
-        if (created?.type === 'relation') this.openRelatedToPicker(created.id, anchor);
+        if (created.type === 'relation') this.openRelatedToPicker(created.id, setupAnchor);
       },
       // research/12 §2: a preset makes a Text property and opens its setup at once, as a draft.
       ...(this.config.ai?.autofill === undefined ? {} : {

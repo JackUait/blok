@@ -359,6 +359,31 @@ describe('row page layout through the database tool', () => {
     expect(document.querySelector('[data-blok-database-property-menu-name-input]')).toBeNull();
   });
 
+  // The drawer redraw removes the "+ Add a property" button the type menu hung on.
+  it('a Relation picked on the row page opens "Related to" under the new property', async () => {
+    await make(doc());
+    await addFromRowPage('Link', 'relation');
+    await quiet();
+    const picker = document.querySelector('[data-blok-database-related-to]');
+
+    expect(picker).toBeInstanceOf(HTMLElement);
+    expect(picker?.querySelector('[role="menuitem"], [data-blok-popover-item]')).toBeInstanceOf(HTMLElement);
+  });
+
+  // Closing it used to re-close it in a microtask without end, freezing the page.
+  it('picking a database in "Related to" retargets the relation and closes the picker', async () => {
+    await make(doc());
+    await addFromRowPage('Link', 'relation');
+    await quiet();
+    const target = document.querySelector('[data-blok-database-related-to] [data-blok-popover-item]');
+
+    expect(target).toBeInstanceOf(HTMLElement);
+    await click(target);
+
+    expect(document.querySelector('[data-blok-database-related-to][data-blok-popover-opened]')).toBeNull();
+    expect((await editorSchema()).find((p) => p.name === 'Link')?.relation).toEqual({ targetDatabaseId: 'db' });
+  });
+
   // research/12 §2: Summarize opens its own setup, so it gets no Edit property panel.
   it('an AI Autofill preset on the row page opens its setup, not the Edit property panel', async () => {
     await make(doc(), { ai: { autofill: vi.fn(() => Promise.resolve(undefined)) } });

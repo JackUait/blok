@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { compileFormula, evaluateFormula } from '../../../../../src/tools/database/formula';
 import type { PropertyDefinition } from '../../../../../src/tools/database/types';
+import { MAX_REGEX_COST } from '../../../../../src/shared/database/formula/limits';
+import { patternShape, regexCost } from '../../../../../src/shared/database/formula/regex';
 import { DOC_NOW, row, run, schema } from './helpers';
 
 const longText = (length: number): string => `"${'a'.repeat(length)}"`;
@@ -121,6 +123,49 @@ describe('formula limits', () => {
       ['test("aaa", "(a|aa)+$")', true],
     ])('%s still works', (source, expected) => {
       expect(run(source)).toEqual(expected);
+    });
+
+    // Each escape reads one character, so the branches overlap like `(a|a)+$`. At 30 characters even a
+    // width of 2 is over budget, so the two-character escapes use 28.
+    it.each([
+      [String.raw`(\B\Ba|\B\Ba)+$`, 'a', 30],
+      [String.raw`(\x61|\x61)+$`, 'a', 30],
+      [String.raw`(\u0061|\u0061)+$`, 'a', 30],
+      [String.raw`(\cA|\cA)+$`, '\x01', 28],
+      [String.raw`(\01|\01)+$`, '\x01', 28],
+    ])('charges %s for each character it reads, and fails fast on a long text', (pattern, unit, count) => {
+      const text = `${unit.repeat(count)}!`;
+      const shape = patternShape(pattern);
+
+      expect(shape === null ? Infinity : regexCost(shape, text.length, MAX_REGEX_COST)).toBeGreaterThan(MAX_REGEX_COST);
+
+      const { limited, value, ms } = evaluated('test(prop("Notes"), prop("Task ID"))', { notes: text, taskId: pattern });
+
+      expect({ limited, value }).toEqual({ limited: true, value: null });
+      expect(ms).toBeLessThan(100);
+    });
+
+    it.each([
+      String.raw`(?:\b)+`,
+      String.raw`(\B){2}`,
+      '(?:^)+',
+      '(?:)+',
+      '()*',
+    ])('%s fails to compile: a repeated group that reads nothing', (pattern) => {
+      expect(compileCode(`test("aaa", ${JSON.stringify(pattern)})`)).toBe('patternTooComplex');
+    });
+
+    it.each([
+      [String.raw`replaceAll("foo bar", "\\bfoo\\b", "x")`, 'x bar'],
+      [String.raw`test("aA", "^\\u0061\\x41$")`, true],
+      [String.raw`test("foo", "(?:\\bfoo|\\bbar)+")`, true],
+    ])('%s still works', (source, expected) => {
+      expect(run(source)).toEqual(expected);
+    });
+
+    it('runs a repeated group holding \\B over a long text', () => {
+      expect(evaluated(String.raw`test(prop("Notes"), "^(?:foo\\B|bar)+$")`, { notes: 'foobar'.repeat(1000) }))
+        .toMatchObject({ limited: false, value: true });
     });
 
     it('runs (foo|bar)+ over a long text', () => {

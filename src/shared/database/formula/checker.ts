@@ -84,7 +84,7 @@ const checkPattern = (name: string, pattern: FormulaNode | undefined): void => {
   fail(
     'patternTooComplex',
     { length: MAX_PATTERN_LENGTH },
-    `This pattern could run too long: it has a backreference, a lookaround, a repeated group with a quantifier inside, or more than ${MAX_PATTERN_LENGTH} characters`,
+    `This pattern could run too long: it has a backreference, a lookaround, a repeated group with a quantifier inside or one that can match nothing, or more than ${MAX_PATTERN_LENGTH} characters`,
     pattern
   );
 };

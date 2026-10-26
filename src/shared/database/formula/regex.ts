@@ -51,6 +51,9 @@ interface Atom {
 
 const QUANTIFIER = /^(?:([*+?])|\{(\d+)(?:(,)(\d*))?\})\??/;
 
+/** One escape that reads one character. No `u` flag reaches here, so `\u{..}` and `\p{..}` are not escapes. */
+const ESCAPE = /^\\(?:x[\da-fA-F]{2}|u[\da-fA-F]{4}|c[A-Za-z]|0[0-7]{0,2}|[\s\S])/;
+
 const frame = (): Frame => ({
   quantified: false, paths: 1, nestedChoice: false, branches: 1, width: Infinity, branchWidth: 0, firsts: [], branchFirst: undefined,
 });
@@ -61,7 +64,7 @@ class Unbounded extends Error {}
 
 class PatternScanner {
   private pos = 0;
-  /** Null at the start, after `(`, `|`, `^`, `$` or another quantifier. */
+  /** Null at the start, after `(`, `|`, `^`, `$`, `\b`, `\B` or another quantifier. */
   private atom: Atom | null = null;
   private readonly frames: Frame[] = [frame()];
   readonly shape: PatternShape = { unbounded: 0, spans: [], branches: 1, choices: [] };
@@ -136,7 +139,14 @@ class PatternScanner {
     const next = this.pattern[this.pos + 1];
 
     if (next === undefined || /[1-9k]/.test(next)) throw new Unbounded();
-    this.pos += 2;
+    // `\b` and `\B` read nothing, like `^`.
+    if (next === 'b' || next === 'B') {
+      this.pos += 2;
+      this.atom = null;
+
+      return;
+    }
+    this.pos += ESCAPE.exec(this.pattern.slice(this.pos))?.[0].length ?? 2;
     this.push(SINGLE, /[A-Za-z0-9]/.test(next) ? null : next);
   }
 
@@ -190,6 +200,8 @@ class PatternScanner {
     const max = symbol === '?' ? 1 : Number(bounded ? (maxText ?? minText) : Infinity);
 
     if (max < min) throw new Unbounded();
+    // A pass that can read nothing: the width bound on passes no longer holds.
+    if (max > 1 && atom.width < 1) throw new Unbounded();
     if (atom.paths > 1 && !atom.deterministic) this.choice(atom, max);
     else if (max === Infinity) this.shape.unbounded++;
     else if (max > min) this.shape.spans.push(max - min + 1);
@@ -208,8 +220,9 @@ class PatternScanner {
 
 /**
  * Accepts only patterns whose backtracking `regexCost` can bound: no
- * backreferences, no lookarounds, and no repeated group that holds a
- * quantifier (`(a+)+`). A repeated `|` group is fine.
+ * backreferences, no lookarounds, no repeated group that holds a
+ * quantifier (`(a+)+`) or can match nothing (`(?:\b)+`). A repeated `|`
+ * group is fine.
  */
 export const patternShape = (pattern: string): PatternShape | null => {
   if (pattern.length > MAX_PATTERN_LENGTH) return null;

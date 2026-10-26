@@ -95,4 +95,23 @@ public sealed class JintFormulaLimitsTests
     Assert.True(computed["f3"]?.GetValue<bool>(), computed.ToJsonString());
     Assert.True(computed["f4"]?.GetValue<bool>(), computed.ToJsonString());
   }
+
+  [Fact]
+  public async Task ZeroWidthAndMultiCharacterEscapesReadAsUnavailableAtOnce()
+  {
+    var clock = Stopwatch.StartNew();
+    var computed = await ComputedOf(
+        $"""test("{new string('a', 30)}!", "(\\B\\Ba|\\B\\Ba)+$")""",
+        $"""test("{new string('a', 30)}!", "(\\x61|\\x61)+$")""",
+        """test("aaa", "(?:\\b)+")""",
+        """test("foo bar", "\\bbar\\b")""");
+
+    // Not false: each escape reads one character, so the choice costs like (a|a)+$.
+    Assert.Contains("passed a limit", computed["f0"]?["unavailable"]?.GetValue<string>(), StringComparison.Ordinal);
+    Assert.Contains("passed a limit", computed["f1"]?["unavailable"]?.GetValue<string>(), StringComparison.Ordinal);
+    Assert.Contains("could run too long", computed["f2"]?["unavailable"]?.GetValue<string>(), StringComparison.Ordinal);
+    Assert.True(computed["f3"]?.GetValue<bool>(), computed.ToJsonString());
+    // The clock includes starting the executor.
+    Assert.True(clock.Elapsed < TimeSpan.FromSeconds(10), clock.Elapsed.ToString());
+  }
 }

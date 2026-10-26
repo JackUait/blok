@@ -363,9 +363,10 @@ const attachPlaceCard = (cell: HTMLElement, place: PlaceValue, ctx: CellContext)
 };
 
 /**
- * Show original of a Number (notion-spec-2 §13): the value is the ", "-joined
- * list, and String() of a finite number never holds ", ". Each number takes
- * the rollup's format; a gauge draws one item per number, with no comma.
+ * Show original or unique values of a Number (notion-spec-2 §13, §14.5): the
+ * value is the ", "-joined list, and String() of a finite number never holds
+ * ", ". Each number takes the rollup's format; a gauge draws one item per
+ * number, with no comma.
  */
 const renderNumberList = (cell: HTMLElement, property: PropertyDefinition, value: PropertyValue | undefined, ctx: CellContext): void => {
   const display = property.number ?? {};

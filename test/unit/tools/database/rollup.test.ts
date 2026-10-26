@@ -132,6 +132,10 @@ describe('rollup', () => {
       expect(roll('show_unique', tags, [['a', 'b'], ['a']])).toEqual(['a', 'b']);
     });
 
+    it('show_unique of numbers drops repeats and keeps their order', () => {
+      expect(roll('show_unique', number, [50, 1234.5, 50, null])).toBe('50, 1234.5');
+    });
+
     it('joins text values with a comma', () => {
       expect(roll('show_original', text, ['x', '', 'y'])).toBe('x, y');
     });

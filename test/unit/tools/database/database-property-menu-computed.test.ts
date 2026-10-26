@@ -304,6 +304,16 @@ describe('property menu — computed types', () => {
     ]);
   });
 
+  // notion-spec-2 §14.5: Show unique values of a Number has the same rows as Show original.
+  it('rollup: Show unique values of a Number shows Number format, Decimal places and the Show as tiles', () => {
+    openMenu(prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'show_unique' } }));
+    const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
+
+    expect(edit.map((item) => item.name ?? item.type)).toEqual([
+      'rollupRelation', 'rollupProperty', 'rollupFunction', 'numberFormat', 'decimals', 'separator', 'showAs', 'all-views-note',
+    ]);
+  });
+
   it('rollup: picking a Number format on Show original of a Number saves it on the rollup', () => {
     const { cb } = openMenu(prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'show_original' } }));
     const edit = byName(lastItems(), 'editProperty').children?.items ?? [];

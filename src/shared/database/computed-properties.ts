@@ -184,7 +184,7 @@ export class ComputedProperties {
       if (target === undefined || settings === undefined || target.type === 'rollup') return { ...property, type: 'text' };
       const shape = rollupResultType(settings.function, target);
 
-      // A Show original of a Number marks itself by carrying `number` (notion-spec-2 §13); other lists drop any left behind.
+      // A Show original or Show unique of a Number marks itself by carrying `number` (notion-spec-2 §13, §14.5); other lists drop any left behind.
       if (isNumberList(settings.function, this.rollupTarget(property, false) ?? target)) return { ...property, ...shape, number: property.number ?? {} };
       if (shape.type !== 'number') {
         const { number: _stale, ...rest } = property;

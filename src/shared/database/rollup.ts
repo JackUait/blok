@@ -61,12 +61,13 @@ const listShape = (target: PropertyDefinition): RollupShape => {
 };
 
 /**
- * Show original of a Number target: the value stays the ", "-joined list,
- * but each number draws with the rollup's number settings. A number formula
- * target does not count (not measured in Notion).
+ * Show original or Show unique values of a Number target (notion-spec-2 §13,
+ * §14.5): the value stays the ", "-joined list, but each number draws with
+ * the rollup's number settings. A number formula target does not count (not
+ * measured in Notion).
  */
 export const isNumberList = (fn: RollupFunction, target: Pick<PropertyDefinition, 'type'>): boolean =>
-  fn === 'show_original' && target.type === 'number';
+  (fn === 'show_original' || fn === 'show_unique') && target.type === 'number';
 
 export const rollupResultType = (fn: RollupFunction, target: PropertyDefinition): RollupShape => {
   if (fn === 'show_original' || fn === 'show_unique') return listShape(target);

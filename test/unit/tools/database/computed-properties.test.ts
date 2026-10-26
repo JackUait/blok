@@ -298,14 +298,22 @@ describe('ComputedProperties', () => {
 
     it('drops number settings left on a list rollup whose target is not a Number', () => {
       const names = { ...rollup('names', 'tasks', 'title', 'show_original'), number: { format: 'dollar' as const } };
-      const unique = { ...rollup('unique', 'tasks', 'hours', 'show_unique'), number: { format: 'dollar' as const } };
       const engine = new ComputedProperties('db');
 
-      engine.apply([title, tasks, names, unique], [row('p1', { tasks: [{ id: 't1' }] })], ctx);
+      engine.apply([title, tasks, names], [row('p1', { tasks: [{ id: 't1' }] })], ctx);
 
       expect(engine.valueProperty(names)).toMatchObject({ type: 'text' });
       expect(engine.valueProperty(names).number).toBeUndefined();
-      expect(engine.valueProperty(unique).number).toBeUndefined();
+    });
+
+    // notion-spec-2 §14.5: Show unique values of a Number formats each value, as Show original does.
+    it('shows Show unique values of a Number as text carrying the rollup\'s number settings', () => {
+      const unique = { ...rollup('unique', 'tasks', 'hours', 'show_unique'), number: { format: 'euro' as const } };
+      const engine = new ComputedProperties('db');
+
+      engine.apply([title, tasks, unique], [row('p1', { tasks: [{ id: 't1' }] })], ctx);
+
+      expect(engine.valueProperty(unique)).toMatchObject({ type: 'text', number: { format: 'euro' } });
     });
 
     it('rolls up a formula of the related database', () => {

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { surfaceError } from '../../../src/mcp/errors';
 import type { DocumentSource } from '../../../src/mcp/sources/types';
 import { openStoredSession } from '../../../src/mcp/stored-session';
+import type { AgentBatch } from '../../../types/agent';
 
 const okResult = { ok: true as const, revision: 'r', results: [], refs: {}, changed: { created: ['p1'], updated: [], moved: [], removed: [] }, warnings: [] };
 
@@ -18,6 +19,7 @@ const contract = {
 describe('openStoredSession', () => {
   let source: DocumentSource;
   let documents: unknown[];
+  const agents: Array<{ execute: ReturnType<typeof vi.fn> }> = [];
   const agent = (doc: unknown) => ({
     id: 's', actor: { id: 'agent:x', name: 'x', kind: 'agent' as const },
     read: vi.fn(async () => ({ doc }) as never),
@@ -54,7 +56,23 @@ describe('openStoredSession', () => {
 
       return raw as never;
     },
-    createAgentSession: (document) => agent(document),
+    createAgentSession: (document) => {
+      const made = agent(document);
+
+      agents.push(made);
+
+      return made;
+    },
+  });
+
+  it('hands the client\'s approver to the agent session', async () => {
+    const session = await open();
+    const approve = vi.fn(async () => true);
+    const batch: AgentBatch = { commands: [{ name: 'block.insert', args: { type: 'paragraph' } }] };
+
+    await session.execute(batch, { approve });
+
+    expect(agents.at(-1)?.execute).toHaveBeenCalledWith(batch, { approve });
   });
 
   it('loads through 01 loader and reports its facts', async () => {

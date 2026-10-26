@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { PassThrough } from 'node:stream';
 import { Client } from '@modelcontextprotocol/client';
-import type { ElicitResult } from '@modelcontextprotocol/client';
+import type { ClientOptions, ElicitResult } from '@modelcontextprotocol/client';
 import { serveStdio, StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -46,14 +46,15 @@ const withClient = async (
   era: 'legacy' | 'modern',
   dispatch: Dispatch,
   elicit: Elicit | null,
-  verify: (client: Client) => Promise<void>
+  verify: (client: Client) => Promise<void>,
+  capability: NonNullable<NonNullable<ClientOptions['capabilities']>['elicitation']> = {}
 ): Promise<void> => {
   const toServer = new PassThrough();
   const toClient = new PassThrough();
   const serverTransport = new StdioServerTransport(toServer, toClient);
   const clientTransport = new StdioServerTransport(toClient, toServer);
   const client = new Client({ name: 'Desktop', version: '1' }, {
-    ...(elicit === null ? {} : { capabilities: { elicitation: {} } }),
+    ...(elicit === null ? {} : { capabilities: { elicitation: capability } }),
     versionNegotiation: era === 'legacy'
       ? { mode: 'legacy' }
       : { mode: { pin: '2026-07-28' }, probe: { timeoutMs: DEADLINE_MS } },
@@ -157,6 +158,37 @@ describe.each(ERAS)('MCP asks the person through elicitation before an unlock (%
     expect(message.startsWith('Desktop\'s agent wants to unlock the database ')).toBe(true);
     expect(message).toMatch(/\(id "[^"]+"\)/);
     expect(message).not.toMatch(/Tasks" \(other\)/);
+  });
+
+  it('asks about one database per call: a second unlock in the same call is refused, never asked in a loop', async () => {
+    const two: OutputData = { blocks: [...seed.blocks, { ...seed.blocks[0], id: 'db2', data: { ...seed.blocks[0]?.data, title: 'Second' } }] };
+    const session = openJsonSession(two);
+    const elicit = vi.fn<Elicit>(() => ({ action: 'accept', content: { unlock: true } }));
+
+    await withClient(era, sessionDispatch(session), elicit, async client => {
+      const result = await client.callTool({ name: 'blok_execute', arguments: { handle: 'h', commands: [
+        { name: 'database.setLock', args: { id: 'db', locked: false } },
+        { name: 'database.setLock', args: { id: 'db2', locked: false } },
+      ] } }, REQUEST);
+
+      expect(errorCode(result)).toBe('APPROVAL_REQUIRED');
+      expect(JSON.stringify(result.structuredContent)).toMatch(/its own blok_execute/);
+    });
+    expect(elicit).toHaveBeenCalledTimes(1);
+    expect(await isLocked(session)).toBe(true);
+  });
+
+  it('refuses when the client offers only URL elicitation, which cannot carry the yes', async () => {
+    const session = openJsonSession(seed);
+    const elicit = vi.fn<Elicit>(() => ({ action: 'accept' }));
+
+    await withClient(era, sessionDispatch(session), elicit, async client => {
+      const result = await client.callTool({ name: 'blok_execute', arguments: { handle: 'h', ...UNLOCK } }, REQUEST);
+
+      expect(JSON.stringify(result.structuredContent)).toMatch(/no-channel/);
+    }, { url: {} });
+    expect(elicit).not.toHaveBeenCalled();
+    expect(await isLocked(session)).toBe(true);
   });
 
   it('refuses with APPROVAL_REQUIRED when the client cannot ask a person', async () => {

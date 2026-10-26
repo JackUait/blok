@@ -4,6 +4,7 @@ import type { Tool } from '@modelcontextprotocol/server';
 import type { AgentApprovalRequest, AgentApprover } from '../../types/agent';
 
 import { approvalKey, plainLine } from '../shared/agent/approval';
+import { failure } from '../shared/agent/errors';
 
 import { safeClientName } from './actor';
 import { UnknownToolError } from './dispatcher';
@@ -40,19 +41,28 @@ const unlockQuestion = (request: AgentApprovalRequest, client: string): ReturnTy
  * The model never sees these replies: the client sends them, not the tool arguments.
  */
 const elicitationApprover = (responses: unknown, asked: AgentApprovalRequest[]): AgentApprover => (request) => {
-  const reply = inputResponse(typeof responses === 'object' && responses !== null ? responses as Record<string, unknown> : undefined, approvalKey(request));
+  const replies = typeof responses === 'object' && responses !== null ? responses as Record<string, unknown> : undefined;
+  const reply = inputResponse(replies, approvalKey(request));
 
   if (reply.kind === 'elicit') {
     return Promise.resolve(reply.action === 'accept' && reply.content?.unlock === true);
+  }
+  // A retry carries only the last round's replies, so asking again here would ask about the first database forever.
+  if (replies !== undefined && Object.keys(replies).length > 0) {
+    return Promise.reject(failure('APPROVAL_REQUIRED', 'Only one database can be unlocked per call, and nothing in this batch was applied. '
+      + 'Send each database.setLock that unlocks in its own blok_execute.', { details: { reason: 'one-per-call', approval: request } }));
   }
   asked.push(request);
 
   return Promise.resolve(false);
 };
 
-const canElicit = (capabilities: unknown): boolean =>
-  typeof capabilities === 'object' && capabilities !== null && 'elicitation' in capabilities
-  && typeof capabilities.elicitation === 'object' && capabilities.elicitation !== null;
+/** Form mode only: an empty elicitation object means form (the SDK's getSupportedElicitationModes); a URL-only client cannot send the tick back. */
+const canElicit = (capabilities: unknown): boolean => {
+  const elicitation = typeof capabilities === 'object' && capabilities !== null && 'elicitation' in capabilities ? capabilities.elicitation : undefined;
+
+  return typeof elicitation === 'object' && elicitation !== null && (Object.keys(elicitation).length === 0 || 'form' in elicitation);
+};
 
 export const buildSdkServer = (input: {
   tools: McpTool[];

@@ -121,7 +121,8 @@ export const createActionContext = (state: PlanState, block: SnapBlock | undefin
       if (block === undefined) {
         return state.fail('PRECONDITION_FAILED', `"${tool}" asked for approval without a block.`);
       }
-      const title = typeof block.data.title === 'string' && block.data.title.trim() !== '' ? block.data.title : undefined;
+      // A rename earlier in the batch must not reach the prompt, so the title is the saved one.
+      const title = state.ctx.committedTitle?.(block.id);
       const request = { kind, blockId: block.id, ...(title !== undefined && { title }) };
 
       if (state.ctx.approved?.has(approvalKey(request)) !== true) {

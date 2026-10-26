@@ -199,6 +199,45 @@ describe.each(sessions)('unlocking a database a person locked, on a %s session',
       }
     });
 
+    it('a rename in the same batch cannot change the name the person is shown', async () => {
+      const session = open(seed());
+      const approve = vi.fn<Approve>(() => Promise.resolve(false));
+
+      try {
+        const result = await run(session, [
+          { name: 'block.update', args: { id: 'db', data: { title: 'Scratch test' } } },
+          unlock(),
+        ], approve);
+
+        expect(approve).toHaveBeenCalledWith({ kind: 'database.unlock', blockId: 'db', title: 'Tasks' });
+        expect(codeOf(result)).toBe('APPROVAL_REQUIRED');
+        expect(await isLocked(session)).toBe(true);
+      } finally {
+        session.close();
+      }
+    });
+
+    it('a yes no longer counts when the saved name changed while the person decided: they are asked again', async () => {
+      const session = open(seed());
+      const approve = vi.fn<Approve>()
+        .mockImplementationOnce(async () => {
+          await run(session, [{ name: 'block.update', args: { id: 'db', data: { title: 'Payroll' } } }]);
+
+          return true;
+        })
+        .mockResolvedValueOnce(false);
+
+      try {
+        const result = await run(session, [unlock()], approve);
+
+        expect(await isLocked(session)).toBe(true);
+        expect(codeOf(result)).toBe('APPROVAL_REQUIRED');
+        expect(approve.mock.calls.map(([request]) => request.title)).toEqual(['Tasks', 'Payroll']);
+      } finally {
+        session.close();
+      }
+    });
+
     it('locking and unlocking in one batch still asks', async () => {
       const session = open(seed(false));
       const approve = vi.fn<Approve>(() => Promise.resolve(false));

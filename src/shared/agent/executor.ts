@@ -1,5 +1,5 @@
 import { isRichText } from '../rich-text/guards';
-import { planWithApprovals } from './approval';
+import { planWithApprovals, savedTitle } from './approval';
 import { agentAttribution } from './attribution';
 import { viewRows } from './document-view';
 import { checkEnvelope } from './envelope';
@@ -339,7 +339,7 @@ const pendingPlan = (
   });
   const snapshot = input.applier.snapshot();
   const { plan } = planBatch({
-    snapshot, batch, ctx: { ...input.ctx, prepared: pending, approved }, stamp, warnings,
+    snapshot, batch, ctx: { ...input.ctx, prepared: pending, approved, committedTitle: id => savedTitle(snapshot.get(id)?.data) }, stamp, warnings,
   });
 
   return { plan, snapshot, stamp };
@@ -544,7 +544,7 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
     // Only concrete warnings refer to the IDs that will be applied.
     warnings.splice(0, warnings.length, ...corrected);
     const { plan, draft } = finalPlan(() => planBatch({
-      snapshot, batch, ctx: { ...input.ctx, prepared, approved }, stamp, warnings,
+      snapshot, batch, ctx: { ...input.ctx, prepared, approved, committedTitle: id => savedTitle(snapshot.get(id)?.data) }, stamp, warnings,
     }), batch, current, snapshot, input.ctx);
 
     checkCancel(input.signal, orphaned);

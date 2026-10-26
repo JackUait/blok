@@ -90,6 +90,8 @@ export interface PlannerContext {
   services: Partial<Record<string, unknown>>;
   /** approvalKey()s a person approved for this batch only. */
   approved?: ReadonlySet<string>;
+  /** A block's title as saved before this batch. The person is shown this one, never the draft's. */
+  committedTitle?: (id: string) => string | undefined;
 }
 
 export interface Plan {

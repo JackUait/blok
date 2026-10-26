@@ -2,8 +2,15 @@ import type { AgentApprovalRequest, AgentApprover } from '../../../types/agent';
 
 import { AgentFailure, failure } from './errors';
 
-/** One key per change and block, so a yes for one database never covers another. */
-export const approvalKey = (request: Pick<AgentApprovalRequest, 'kind' | 'blockId'>): string => `${request.kind}:${request.blockId}`;
+/**
+ * One key per change, block and shown title: a yes for one database never covers another,
+ * and a yes for a name that changed while the person decided no longer counts.
+ */
+export const approvalKey = (request: AgentApprovalRequest): string => JSON.stringify([request.kind, request.blockId, request.title ?? null]);
+
+/** The title the person is shown: the saved one, plain text only. */
+export const savedTitle = (data: Readonly<Record<string, unknown>> | undefined): string | undefined =>
+  typeof data?.title === 'string' && data.title.trim() !== '' ? data.title : undefined;
 
 const named = (request: AgentApprovalRequest): string =>
   request.title === undefined ? `database "${request.blockId}"` : `database "${request.title}" (${request.blockId})`;

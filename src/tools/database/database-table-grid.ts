@@ -245,7 +245,8 @@ export class DatabaseTableGrid {
     const anchor = this.cellEl(ref);
     const row = this.rows.get(ref.rowId);
 
-    if (this.readOnly || property === undefined || anchor === null || row === undefined) {
+    // notion-spec-2 §19.6: an ID cell, like every value no one types, opens nothing.
+    if (this.readOnly || property === undefined || anchor === null || row === undefined || isReadOnlyType(property.type)) {
       return;
     }
     this.editor?.close();

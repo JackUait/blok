@@ -849,6 +849,24 @@ describe('DatabaseTableView', () => {
       expect(handlers.commitCell).not.toHaveBeenCalled();
     });
 
+    // notion-spec-2 §19.6: arrows select an ID cell; Enter and typing there do nothing.
+    it.each(['Enter', 'a', '5'])('%s on an ID cell reached by the arrows opens nothing and leaves the table free to redraw', (key) => {
+      const { root, handlers, view } = mount({
+        schema: [schema[0], { id: 'p-id', name: 'ID', type: 'uniqueId', position: 'b0' }],
+        rows: [row('r1', 'Alpha', { 'p-id': 7 })],
+      });
+
+      selectCell(root, 'r1', 'p-title');
+      press(grid(root), 'ArrowRight');
+      press(grid(root), key);
+
+      expect(view.interacting).toBe(false);
+      expect(selectedCells(root)).toEqual(['r1/p-id']);
+      expect(editor()).toBeNull();
+      expect(handlers.openRow).not.toHaveBeenCalled();
+      expect(handlers.commitCell).not.toHaveBeenCalled();
+    });
+
     it('Shift+arrows select a rectangle; Escape turns it into a selection of its rows', () => {
       const { root } = mount();
 

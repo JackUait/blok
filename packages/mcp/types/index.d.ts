@@ -70,6 +70,12 @@ export interface BlokMcpOptions {
   principal?: string;
   /** Turns on `image.uploadFile`, `video.uploadFile`, `audio.uploadFile` and `file.uploadFile`. */
   uploads?: McpUploads;
+  /**
+   * False: the editors keep comments in the host's own system (a `comments` hook). Agent
+   * comments would be invisible to people there, so the comment commands are unavailable.
+   * On by default.
+   */
+  comments?: boolean;
 }
 
 export type McpAssetKind = 'image' | 'video' | 'audio' | 'file';

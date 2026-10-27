@@ -242,8 +242,8 @@ export const headerViewItems = (ctx: HeaderMenuContext): PopoverItemParams[] => 
     icon: IconSigma,
     children: { items: calculationItems(property, ctx.calculation, i18n, ctx.onCalculate, ctx.countCap) },
   };
-  // research/08: Files and ID offer no Group; neither can group a view.
-  const groupable = property.type !== 'files' && property.type !== 'uniqueId';
+  // research/08: Files and ID offer no Group; research/20 §1d: nor does Place. None can group a view.
+  const groupable = property.type !== 'files' && property.type !== 'uniqueId' && property.type !== 'place';
   const queries: PopoverItemParams[] = queryable
     ? [
       item('database-header-filter', 'tools.database.tableFilter', ctx.onFilter, IconFilter),

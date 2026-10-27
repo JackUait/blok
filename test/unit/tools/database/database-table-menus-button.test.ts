@@ -53,6 +53,14 @@ describe('column header menu — button property', () => {
     expect(shown).toContain('tools.database.tableFilter');
   });
 
+  it('offers no Group for Place, whose column menu has none (research/20 §1d)', () => {
+    const shown = titles({ id: 'p', name: 'Place', type: 'place', position: 'a0' });
+
+    expect(shown).not.toContain('tools.database.tableGroup');
+    expect(shown).toContain('tools.database.tableFilter');
+    expect(shown).toContain('tools.database.tableSort');
+  });
+
   it('keeps them for other types', () => {
     expect(titles({ id: 'n', name: 'N', type: 'number', position: 'a0' })).toEqual(expect.arrayContaining(['tools.database.tableFilter', 'tools.database.tableSort']));
   });

@@ -344,7 +344,7 @@ test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
     // One chip, three columns (research/30 B8).
     await expect(dialog.locator('[data-blok-database-starter-preview-row="header"]')).toHaveText('IdeaCreated byPriorityCategory');
     await dialog.getByRole('button', { name: 'Upvote' }).click();
-    await dialog.getByRole('button', { name: 'Get started' }).click();
+    await dialog.getByRole('button', { name: 'Continue' }).click();
     await dialog.getByRole('button', { name: 'Done' }).click();
     await expect(dialog).toBeHidden();
 
@@ -384,7 +384,7 @@ test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
     const dialog = await openTemplate(page, 'campaign', 'Campaign Management');
 
     await expect(dialog.getByText('3 hidden properties')).toBeVisible();
-    await dialog.getByRole('button', { name: 'Get started' }).click();
+    await dialog.getByRole('button', { name: 'Continue' }).click();
     await dialog.getByRole('button', { name: 'Done' }).click();
     await expect(dialog).toBeHidden();
 
@@ -423,7 +423,7 @@ test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
     const dialog = await openTemplate(page, 'contentCalendar', 'Content Calendar');
 
     await expect(dialog.getByText('7 hidden properties')).toBeVisible();
-    await dialog.getByRole('button', { name: 'Get started' }).click();
+    await dialog.getByRole('button', { name: 'Continue' }).click();
     await dialog.getByRole('button', { name: 'Done' }).click();
     await expect(dialog).toBeHidden();
 
@@ -443,7 +443,7 @@ test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
     await dialog.getByRole('button', { name: 'Quarter' }).click();
     await dialog.getByRole('button', { name: 'Progress' }).click();
     await expect(dialog.locator('[data-blok-database-starter-preview-row="header"]')).toHaveText('Goal nameOwnerStatusDue datePriorityQuarterTeamStart valueEnd valueProgress');
-    await dialog.getByRole('button', { name: 'Get started' }).click();
+    await dialog.getByRole('button', { name: 'Continue' }).click();
     await dialog.getByRole('button', { name: 'Done' }).click();
     await expect(dialog).toBeHidden();
 
@@ -460,7 +460,7 @@ test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
     await expect(dialog.getByRole('button', { name: 'Days until due' })).toHaveAttribute('aria-pressed', 'true');
     // The preview puts it last, as measured; the created database keeps it after Due date.
     await expect(dialog.locator('[data-blok-database-starter-preview-row="header"]')).toHaveText('Goal nameOwnerStatusDue datePriorityTeamDays until due');
-    await dialog.getByRole('button', { name: 'Get started' }).click();
+    await dialog.getByRole('button', { name: 'Continue' }).click();
     await dialog.getByRole('button', { name: 'Done' }).click();
     await expect(dialog).toBeHidden();
 
@@ -491,7 +491,7 @@ test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
       const dialog = await openTemplate(page, spec.id, spec.name);
 
       await expect(dialog.getByText(`${spec.hidden} hidden properties`)).toBeVisible();
-      await dialog.getByRole('button', { name: 'Get started' }).click();
+      await dialog.getByRole('button', { name: 'Continue' }).click();
       await dialog.getByRole('button', { name: 'Done' }).click();
       await expect(dialog).toBeHidden();
 
@@ -533,7 +533,7 @@ test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
     test(`the ${id} database draws its template glyph before the title (research/33 §3.8)`, async ({ page }) => {
       const dialog = await openTemplate(page, id, ROUND12.find((spec) => spec.id === id)?.name ?? '');
 
-      await dialog.getByRole('button', { name: 'Get started' }).click();
+      await dialog.getByRole('button', { name: 'Continue' }).click();
       await dialog.getByRole('button', { name: 'Done' }).click();
       await expect(dialog).toBeHidden();
       await expect(page.locator('[data-blok-database-title-row] [data-blok-database-icon] svg path').first()).toHaveAttribute('d', d);
@@ -543,7 +543,7 @@ test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
   test('Issue Tracking opens on its Kanban: every status column is drawn and each reads "New issue"', async ({ page }) => {
     const dialog = await openTemplate(page, 'issues', 'Issue Tracking');
 
-    await dialog.getByRole('button', { name: 'Get started' }).click();
+    await dialog.getByRole('button', { name: 'Continue' }).click();
     await dialog.getByRole('button', { name: 'Done' }).click();
     // Seven statuses and No Status, all empty: Hide empty groups is saved off (research/33 §3.3).
     await expect(page.locator('[data-blok-database-add-card]')).toHaveText(Array<string>(8).fill('New issue'));
@@ -552,7 +552,7 @@ test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
   test('Event Management draws its three measured rows', async ({ page }) => {
     const dialog = await openTemplate(page, 'events', 'Event Management');
 
-    await dialog.getByRole('button', { name: 'Get started' }).click();
+    await dialog.getByRole('button', { name: 'Continue' }).click();
     await dialog.getByRole('button', { name: 'Done' }).click();
     await expect(page.getByText('Make with Notion')).toBeVisible();
     await expect(page.getByText('Fireside chat with Ivan Zhao')).toBeVisible();
@@ -566,7 +566,7 @@ test.describe('"More templates" (research/27 §1e, research/30 §10)', () => {
     await page.getByRole('dialog', { name: 'More templates' }).getByTestId('database-template-gallery-template-documentHub').click();
     const dialog = page.getByRole('dialog', { name: 'Customize Document Hub' });
 
-    await dialog.getByRole('button', { name: 'Get started' }).click();
+    await dialog.getByRole('button', { name: 'Continue' }).click();
     await dialog.getByRole('button', { name: 'All Docs' }).click();
     await expect(dialog.getByText('4 hidden properties')).toBeVisible();
     await dialog.getByRole('button', { name: 'My Docs' }).click();

@@ -140,7 +140,7 @@ test('Goals Tracker\'s By Team preview lists Account Management, Business Develo
   await gallery.getByTestId('database-template-gallery-template-goals').click();
   const dialog = page.getByRole('dialog', { name: 'Customize Goals Tracker' });
 
-  await dialog.getByRole('button', { name: 'Get started' }).click();
+  await dialog.getByRole('button', { name: 'Continue' }).click();
   await dialog.getByRole('button', { name: 'By Team' }).click();
   await expect(dialog.locator('[data-blok-database-starter-preview-group]')).toHaveText([
     'Account Management', 'Business Development', 'Human Resources', 'Product Design', 'No Team',

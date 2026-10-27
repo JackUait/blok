@@ -538,12 +538,19 @@ export class Assistant extends Module {
     const { I18n } = this.Blok;
     const agent = this.config.agent?.assistant?.name?.trim() || 'AI';
     // A button's confirmation shows its own text and labels, as the person's dialog does.
-    if (request.kind === 'database.buttonConfirm') {
+    // Its host steps show what the host would get, named as the button menu names them.
+    if (request.kind === 'database.buttonConfirm' || request.kind === 'database.buttonHooks') {
       const stopConfirm = (): void => bar.settleApproval(false);
+      const hooks = (request.hooks ?? []).map((hook) => (hook.kind === 'callback'
+        ? `${I18n.t('tools.database.buttonActionCallback')}: “${hook.name ?? ''}”`
+        : `${I18n.t('tools.database.buttonActionSendNotification')} ${hook.to.join(', ')}: “${hook.message ?? ''}”`));
+      const question = request.kind === 'database.buttonHooks'
+        ? hooks.join(' · ')
+        : request.message ?? I18n.t('tools.database.buttonConfirmDefault');
 
       signal.addEventListener('abort', stopConfirm, { once: true });
 
-      return bar.askApproval(request.message ?? I18n.t('tools.database.buttonConfirmDefault'), {
+      return bar.askApproval(question, {
         approve: request.confirmLabel ?? I18n.t('tools.database.buttonConfirmContinue'),
         deny: request.cancelLabel ?? I18n.t('tools.database.optionDeleteCancel'),
       }).finally(() => signal.removeEventListener('abort', stopConfirm));

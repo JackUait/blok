@@ -183,7 +183,8 @@ const actionsFor = (
   description: BlockToolDescription | null,
   hiddenActions: ReadonlySet<string>
 ): ManifestAction[] => (description?.actions ?? [])
-  .filter(action => !hiddenActions.has(action.name))
+  // An action that writes as a hidden one would reach what the host hid.
+  .filter(action => !hiddenActions.has(action.name) && !(action.writesAs ?? []).some(name => hiddenActions.has(name)))
   .map(action => {
     const command: ToolCommandName = `${block.name}.${action.name}`;
 

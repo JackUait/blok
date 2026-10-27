@@ -7,7 +7,7 @@ import { DATABASE_COMMENT_HANDLERS } from '../../shared/tool-actions/database-co
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolData, OutputData, ToolboxConfig, ToolboxConfigEntry, SanitizerConfig } from '../../../types';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
-import type { AutofillSettings, ButtonAction, DatabaseAdapter, DatabaseData, DatabaseIcon, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, DatabaseLinkedSourceSnapshot, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue } from './types';
+import type { AutofillSettings, ButtonAction, ButtonCallbackAction, ButtonSendNotificationAction, DatabaseAdapter, DatabaseData, DatabaseIcon, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, DatabaseLinkedSourceSnapshot, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue } from './types';
 import { countFilterRules } from './filter-tree';
 import { adapterRowValues, assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, readPropertyValue, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
 import { isOutputData, isPlaceValue } from './tier3-values';
@@ -244,6 +244,22 @@ interface AgentChangeDetail {
 /** A button step a shared action recorded (tool-actions/database pressButton). */
 const isButtonAction = <Type extends 'callback' | 'sendNotification'>(value: unknown, type: Type): value is Extract<ButtonAction, { type: Type }> =>
   typeof value === 'object' && value !== null && 'type' in value && value.type === type && 'id' in value && typeof value.id === 'string';
+
+/** Only a callback step's declared fields reach the host. */
+const callbackStep = (action: ButtonCallbackAction): ButtonCallbackAction =>
+  ({ id: action.id, type: 'callback', ...(typeof action.name === 'string' && { name: action.name }) });
+
+/** Only a notification step's declared fields reach the host. */
+const notifyStep = (action: ButtonSendNotificationAction): ButtonSendNotificationAction => {
+  const given = action.recipients;
+  const people = given?.type === 'people' && Array.isArray(given.people)
+    ? { type: 'people' as const, people: given.people.flatMap((person) => (typeof person.id === 'string' ? [{ id: person.id }] : [])) }
+    : undefined;
+  const property = given?.type === 'property' && typeof given.propertyId === 'string' ? { type: 'property' as const, propertyId: given.propertyId } : undefined;
+  const recipients = people ?? property;
+
+  return { id: action.id, type: 'sendNotification', ...(recipients !== undefined && { recipients }), ...(typeof action.message === 'string' && { message: action.message }) };
+};
 
 /** A form answer a shared action recorded (tool-actions/database submitForm). */
 const isFormSubmission = (value: unknown): value is DatabaseFormSubmission =>
@@ -5140,13 +5156,13 @@ export class DatabaseTool implements BlockTool {
 
     // As pressButton's callback and notify: the host runs these, Blok sends nothing.
     if (effect.kind === 'buttonCallback' && typeof rowId === 'string' && typeof propertyId === 'string' && isButtonAction(action, 'callback')) {
-      void Promise.resolve(this.config.buttons?.onAction?.({ databaseId: this.dataId, rowId, propertyId, action })).catch((error: unknown) => this.showBackendError(error));
+      void Promise.resolve(this.config.buttons?.onAction?.({ databaseId: this.dataId, rowId, propertyId, action: callbackStep(action) })).catch((error: unknown) => this.showBackendError(error));
 
       return;
     }
     if (effect.kind === 'buttonNotify' && typeof rowId === 'string' && typeof propertyId === 'string' && isButtonAction(action, 'sendNotification')
       && Array.isArray(effect.to) && effect.to.every((id) => typeof id === 'string') && typeof effect.message === 'string') {
-      void Promise.resolve(this.config.buttons?.onNotify?.({ databaseId: this.dataId, rowId, propertyId, action, to: effect.to, message: effect.message })).catch((error: unknown) => this.showBackendError(error));
+      void Promise.resolve(this.config.buttons?.onNotify?.({ databaseId: this.dataId, rowId, propertyId, action: notifyStep(action), to: effect.to, message: effect.message })).catch((error: unknown) => this.showBackendError(error));
 
       return;
     }

@@ -1052,11 +1052,12 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
   {
     name: 'pressButton',
     summary: 'Press a button property on a row, as a click on its cell does: the button\'s steps run in order.',
-    guidance: 'propertyId is a button property; rowId is a row of this database. Its edits, added pages and inserted blocks are written as your own edits, with the same checks as setRowValues and addRow; a step that names a property or database that is not there refuses the whole press. Each "Show confirmation" asks the person first, with the button\'s own text; if they say no, or nobody can be asked, nothing is pressed. Its host steps (a callback, a notification) run once the writes land. Opening a page or a link stays the person\'s: your press opens nothing. Editor only. Runs alone in its batch.',
+    guidance: 'propertyId is a button property; rowId is a row of this database. Its edits, added pages and inserted blocks are written as your own edits, with the same checks as setRowValues, addRow and block.insert; a step that names a property or database that is not there refuses the whole press. Each "Show confirmation" asks the person first, with the button\'s own text. A press that calls the host (a callback, a notification) asks the person first too, showing what the host would get. If they say no, or nobody can be asked, nothing is pressed; a yes covers only the steps they saw. The host steps run once the writes land. Opening a page or a link stays the person\'s: your press opens nothing. Editor only. Runs alone in its batch.',
     target: 'block',
     runtime: 'editor',
     args: closed({ rowId: ROW_ID, propertyId: { type: 'string', minLength: 1 } }, ['rowId', 'propertyId']),
     mirrors: [],
+    writesAs: ['setRowValues', 'addRow'],
   },
   {
     name: 'submitForm',
@@ -1067,6 +1068,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
     args: closed({ viewId: { type: 'string', minLength: 1 }, answers: ROW_VALUES }, ['viewId', 'answers']),
     result: closed({ rowId: { type: 'string' } }, ['rowId']),
     mirrors: [],
+    writesAs: ['addRow'],
   },
   {
     name: 'applyTemplate',

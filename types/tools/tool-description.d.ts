@@ -33,6 +33,8 @@ export interface ToolActionDeclaration {
   uses?: HostService[];
   /** Capability ids from the coverage ledger. */
   mirrors?: string[];
+  /** Actions of this tool whose writes this one makes: a host hiding any of them hides this one too. */
+  writesAs?: string[];
 }
 
 export interface BlockToolDescription {
@@ -82,7 +84,8 @@ export interface ToolActionContext {
   block?: { id: string; type: string; data: Readonly<Record<string, unknown>>; children: readonly string[] };
   read(id: string): { id: string; type: string; data: unknown; parentId: string | null; children: readonly string[] } | null;
   /** `copy`: the data is a copy of stored blocks, kept as stored instead of read as agent input. Only pass data you got from `read`, never model args: it skips the mark checks. */
-  insert(input: { type: string; id?: string; data?: Record<string, unknown>; parentId?: string | null; position?: BlockPosition; children?: InsertSpec[]; copy?: boolean }): string;
+  /** `checked`: the blocks are the agent's own, so block.insert's checks apply (insertable, no host-prepared block, the tools' write checks). */
+  insert(input: { type: string; id?: string; data?: Record<string, unknown>; parentId?: string | null; position?: BlockPosition; children?: InsertSpec[]; copy?: boolean; checked?: boolean }): string;
   /** Null and undefined remove a key. */
   update(id: string, patch: Record<string, unknown>): void;
   setRichText(id: string, field: string, value: RichText): void;
@@ -100,8 +103,17 @@ export interface ToolActionContext {
    * Only the host's approver can approve; nothing in the model's args can.
    */
   requireApproval?(kind: 'database.unlock'): void;
-  /** A button's "Show confirmation", put to the person with its own text. Only their yes goes on. */
-  requireConfirmation?(confirmation: { message?: string; confirmLabel?: string; cancelLabel?: string }): void;
+  /**
+   * A button's "Show confirmation", put to the person with its own text. Only their yes goes on.
+   * `rowId` and `steps` (the steps that will run, as JSON) bind the yes: other steps ask again.
+   */
+  requireConfirmation?(confirmation: { rowId: string; steps: string; message?: string; confirmLabel?: string; cancelLabel?: string }): void;
+  /** A button's host steps (callbacks, notifications), shown to the person as the host gets them. Only their yes runs them. */
+  requireHostHooks?(request: {
+    rowId: string;
+    steps: string;
+    hooks: Array<{ kind: 'callback'; name?: string } | { kind: 'notify'; to: string[]; message?: string }>;
+  }): void;
   /**
    * A host hook to run once the batch has applied, such as a form's onSubmit. The block's tool
    * runs it (`runAgentHostEffect`). Never for a refused, rolled-back or cancelled batch.

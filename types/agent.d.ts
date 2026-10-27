@@ -334,12 +334,13 @@ export type AgentShareChange =
 
 /**
  * A change only a person may allow: unlocking a locked database, restoring a version that changes one,
- * going past a database button's "Show confirmation" when the agent presses it, or changing who can
- * see or fill out a view (`database.share`: by a command, an undo, a redo or a restore).
+ * going past a database button's "Show confirmation" or letting it call the host (a callback, a
+ * notification) when the agent presses it, or changing who can see or fill out a view
+ * (`database.share`: by a command, an undo, a redo or a restore).
  */
 export type AgentApprovalRequest =
   | {
-    kind: 'database.unlock' | 'database.restore' | 'database.buttonConfirm';
+    kind: 'database.unlock' | 'database.restore' | 'database.buttonConfirm' | 'database.buttonHooks';
     blockId: string;
     /** The database's title, when it has a plain one. */
     title?: string;
@@ -348,6 +349,12 @@ export type AgentApprovalRequest =
     /** database.buttonConfirm: the button's own labels for going on and stopping, when it set them. */
     confirmLabel?: string;
     cancelLabel?: string;
+    /** database.buttonHooks: what the host would get, as plain lines (a callback's name, a notification's recipients and message). */
+    hooks?: Array<{ kind: 'callback'; name?: string } | { kind: 'notify'; to: string[]; message?: string }>;
+    /** Button requests: the row pressed. */
+    rowId?: string;
+    /** Button requests: the exact steps that will run, as JSON. It binds the yes; show it to no one. */
+    steps?: string;
   }
   | {
     kind: 'database.share';

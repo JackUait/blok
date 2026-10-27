@@ -27,7 +27,8 @@ import { isOutputData, isPlaceValue, isVerificationValue } from '../database/tie
 import { isFileValue, isReadOnlyType, personIdsOf } from '../database/value-helpers';
 import { revealedInLegacyView } from '../database/view-properties';
 import { formAnswerProblem, formQuestions } from '../database/form-questions';
-import { runButtonActions } from '../database/button-actions';
+import { MAX_NOTIFY_PEOPLE, runButtonActions } from '../database/button-actions';
+import { plainLine } from '../agent/approval';
 import type { FormAnswerProblem } from '../database/form-questions';
 
 import type { InsertSpec } from '../../../types/agent';
@@ -35,7 +36,7 @@ import type { BlockPosition } from '../../../types/api/blocks';
 import type { ToolActionContext, ToolActionImpl } from '../../../types/tools/tool-description';
 import type { ChildCommandRoute } from '../agent/types';
 import type { ConvertibleRow } from '../database/property-conversion';
-import type { ConvertedValue, DatabaseViewConfig, DateReminder, PropertyDefinition, PropertyType, PropertyValue, RelationSettings, SelectOption, TemplateRepeat, ViewType } from '../database/types';
+import type { ButtonCallbackAction, ButtonSendNotificationAction, ConvertedValue, DatabaseViewConfig, DateReminder, PropertyDefinition, PropertyType, PropertyValue, RelationSettings, SelectOption, TemplateRepeat, ViewType } from '../database/types';
 
 type TargetBlock = NonNullable<ToolActionContext['block']>;
 
@@ -1120,6 +1121,38 @@ const aimedAt = (ctx: ToolActionContext, databaseId: string | undefined): ToolAc
   return { ...ctx, block: { id: found.id, type: found.type, data: isRecord(found.data) ? found.data : {}, children: found.children } };
 };
 
+// A notification is a sentence or two; a longer one is cut where the person can still read it.
+const MAX_HOOK_MESSAGE = 500;
+
+type ButtonHookShown = { kind: 'callback'; name?: string } | { kind: 'notify'; to: string[]; message?: string };
+
+const cleanText = (value: unknown, max?: number): string | undefined => (typeof value === 'string' ? plainLine(value, max) : undefined);
+
+const cleanIds = (ids: readonly unknown[]): string[] =>
+  ids.flatMap(id => (typeof id === 'string' ? [cleanText(id) ?? ''] : [])).filter(id => id !== '').slice(0, MAX_NOTIFY_PEOPLE);
+
+/** A step the host gets holds only its declared fields, as plain lines: nothing the agent added rides along. */
+const cleanCallback = (action: ButtonCallbackAction): ButtonCallbackAction => {
+  const name = cleanText(action.name);
+
+  return { id: cleanText(action.id) ?? '', type: 'callback', ...(name !== undefined && { name }) };
+};
+
+const cleanNotify = (action: ButtonSendNotificationAction): ButtonSendNotificationAction => {
+  const message = cleanText(action.message, MAX_HOOK_MESSAGE);
+  const given = action.recipients;
+  const recipients = ((): ButtonSendNotificationAction['recipients'] => {
+    if (given?.type === 'people') {
+      return { type: 'people', people: cleanIds((Array.isArray(given.people) ? given.people : []).map(person => (isRecord(person) ? person.id : undefined))).map(id => ({ id })) };
+    }
+    const propertyId = given?.type === 'property' ? cleanText(given.propertyId) : undefined;
+
+    return propertyId === undefined ? undefined : { type: 'property', propertyId };
+  })();
+
+  return { id: cleanText(action.id) ?? '', type: 'sendNotification', ...(recipients !== undefined && { recipients }), ...(message !== undefined && { message }) };
+};
+
 /**
  * As DatabaseTool.pressButton, through the same runButtonActions: the button's
  * steps in order, its writes in this batch with every agent check. Each "Show
@@ -1139,11 +1172,15 @@ const pressButton: ToolActionImpl<{ rowId: string; propertyId: string }> = {
     rowOf(ctx, dataId, args.rowId);
     const actions = property.button?.buttonActions ?? [];
     const confirm = ctx.requireConfirmation ?? ((): never => ctx.fail('PRECONDITION_FAILED', 'This button asks for confirmation, and this runtime cannot ask a person.'));
+    const allowHooks = ctx.requireHostHooks ?? ((): never => ctx.fail('PRECONDITION_FAILED', 'This button calls the host, and this runtime cannot ask a person.'));
     const record = ctx.hostEffect ?? ((): never => ctx.fail('PRECONDITION_FAILED', 'This runtime cannot run a button\'s host steps.'));
+    // A yes covers this row and these exact steps: steps rewritten while the person decides ask again.
+    const bound = { rowId: args.rowId, steps: JSON.stringify(actions) };
+    const hooks: Array<{ effect: Record<string, unknown>; shown: ButtonHookShown }> = [];
 
     actions.forEach((action) => {
       if (action.type === 'showConfirmation') {
-        confirm({ message: action.message, confirmLabel: action.confirmLabel, cancelLabel: action.cancelLabel });
+        confirm({ ...bound, message: action.message, confirmLabel: action.confirmLabel, cancelLabel: action.cancelLabel });
       }
     });
     const context = dynamicContext(ctx);
@@ -1154,12 +1191,17 @@ const pressButton: ToolActionImpl<{ rowId: string; propertyId: string }> = {
       writeValues: (rowId, changes, databaseId) => {
         setRowValues.run(here(databaseId) ? ctx : aimedAt(ctx, databaseId), { rowId, values: changes }, undefined);
       },
+      // The agent's own blocks: block.insert's checks, never a copy's pass.
       insertBlocks: (rowId, blocks) => blocks.forEach((each) => {
-        ctx.insert({ type: each.type, data: jsonCopy(each.data), parentId: rowId, position: 'end', copy: true });
+        ctx.insert({ type: each.type, data: jsonCopy(each.data), parentId: rowId, position: 'end', checked: true });
       }),
       openRow: () => undefined,
       openUrl: () => undefined,
-      callback: (action) => record({ kind: 'buttonCallback', rowId: args.rowId, propertyId: property.id, action }),
+      callback: (action) => {
+        const clean = cleanCallback(action);
+
+        hooks.push({ effect: { kind: 'buttonCallback', rowId: args.rowId, propertyId: property.id, action: clean }, shown: { kind: 'callback', ...(clean.name !== undefined && { name: clean.name }) } });
+      },
       me: () => context.me,
       now: () => context.now,
       addPage: (databaseId, name, properties) => {
@@ -1175,8 +1217,21 @@ const pressButton: ToolActionImpl<{ rowId: string; propertyId: string }> = {
         return { schema: other.schema, rows: rowsOf(ctx, home).map(row => ({ id: row.id, position: row.position, properties: row.properties as Record<string, PropertyValue> })) };
       },
       rowValues: (rowId) => rowsOf(ctx, dataId).find(row => row.id === rowId)?.properties as Record<string, PropertyValue> | undefined,
-      notify: (action, to, message) => record({ kind: 'buttonNotify', rowId: args.rowId, propertyId: property.id, action, to, message }),
+      notify: (action, to, message) => {
+        const recipients = cleanIds(to);
+        const text = cleanText(message, MAX_HOOK_MESSAGE);
+
+        hooks.push({
+          effect: { kind: 'buttonNotify', rowId: args.rowId, propertyId: property.id, action: cleanNotify(action), to: recipients, message: text ?? '' },
+          shown: { kind: 'notify', to: recipients, ...(text !== undefined && { message: text }) },
+        });
+      },
     });
+    // The host hears what the person saw and allowed, after the writes it follows.
+    if (hooks.length > 0) {
+      allowHooks({ ...bound, hooks: hooks.map(hook => hook.shown) });
+      hooks.forEach(hook => record(hook.effect));
+    }
 
     return undefined;
   },

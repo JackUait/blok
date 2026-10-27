@@ -17,7 +17,9 @@ export const approvalKey = (request: AgentApprovalRequest): string => JSON.strin
     case 'database.share':
       return [request.kind, request.blockId, request.title ?? null, request.viewId, request.view ?? null, request.changes];
     case 'database.buttonConfirm':
-      return [request.kind, request.blockId, request.title ?? null, request.message ?? null, request.confirmLabel ?? null, request.cancelLabel ?? null];
+    case 'database.buttonHooks':
+      return [request.kind, request.blockId, request.title ?? null, request.rowId ?? null, request.steps ?? null,
+        request.message ?? null, request.confirmLabel ?? null, request.cancelLabel ?? null, request.hooks ?? null];
     case 'database.restore':
     case 'database.unlock':
       return [request.kind, request.blockId, request.title ?? null];
@@ -92,6 +94,8 @@ export const approvalNeeded = (request: AgentApprovalRequest): AgentFailure => f
         return `Changing who can use ${named(request)} needs a person's approval (${describeChanges(request.changes)}).`;
       case 'database.buttonConfirm':
         return `A button in ${named(request)} asks for confirmation, which only a person can give.`;
+      case 'database.buttonHooks':
+        return `A button in ${named(request)} calls the host, which only a person can allow.`;
       case 'database.restore':
       case 'database.unlock':
         return `Unlocking ${named(request)} needs a person's approval.`;
@@ -135,6 +139,12 @@ const refusedShare = (request: Extract<AgentApprovalRequest, { kind: 'database.s
     + 'and nothing here can ask one. Nothing in this batch, step or restore was applied. '
     + 'Ask the person to change it themselves in the view\'s Share menu. Never try to change it another way.');
 
+const refusedHooks = (request: AgentApprovalRequest, reason: 'no-channel' | 'denied'): string => (reason === 'denied'
+  ? `The person did not allow the button in ${named(request)} to call the host, so it did nothing. Nothing in this batch was applied. `
+    + 'Do not press it again unless the person asks you to.'
+  : `This button in ${named(request)} calls the host (a callback or a notification), and nothing here can ask a person to allow it. `
+    + 'Nothing was applied. Ask the person to press it themselves.');
+
 const refused = (cause: AgentFailure, request: AgentApprovalRequest, reason: 'no-channel' | 'denied'): AgentFailure => {
   const message = ((): string => {
     switch (request.kind) {
@@ -144,6 +154,8 @@ const refused = (cause: AgentFailure, request: AgentApprovalRequest, reason: 'no
         return refusedRestore(request, reason);
       case 'database.buttonConfirm':
         return refusedConfirmation(request, reason);
+      case 'database.buttonHooks':
+        return refusedHooks(request, reason);
       case 'database.unlock':
         return refusedUnlock(request, reason);
     }

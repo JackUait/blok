@@ -1,7 +1,7 @@
 import { approvalKey, approvalNeeded, plainLine } from './approval';
 import { AgentFailure } from './errors';
 import { splitCommandName } from './names';
-import { buildPlannedBlock, emitMove, emitPatch } from './plan-block';
+import { buildPlannedBlock, checkAgentInsert, emitMove, emitPatch } from './plan-block';
 import { PREPARE_PENDING } from './plan-state';
 import { cloneRecord } from './snapshot';
 import { linkedRowHome } from '../database/linked-source';
@@ -49,6 +49,25 @@ export const createActionContext = (state: PlanState, block: SnapBlock | undefin
     claimMinted(spec.children ?? []);
   });
 
+  /** A button question: bound to the row and the exact steps, so a yes covers only what the person saw. */
+  const askAboutButton = (
+    kind: 'database.buttonConfirm' | 'database.buttonHooks',
+    bound: { rowId: string; steps: string },
+    shown: Partial<AgentApprovalRequest>
+  ): void => {
+    if (block === undefined) {
+      return state.fail('PRECONDITION_FAILED', `"${tool}" asked a person without a block.`);
+    }
+    const title = state.ctx.committedTitle?.(block.id);
+    const request: AgentApprovalRequest = {
+      ...shown, kind, blockId: block.id, rowId: bound.rowId, steps: bound.steps, ...(title !== undefined && { title }),
+    };
+
+    if (state.ctx.approved?.has(approvalKey(request)) !== true) {
+      throw approvalNeeded(request);
+    }
+  };
+
   return {
     tool,
     ...(block !== undefined && { block: {
@@ -60,7 +79,11 @@ export const createActionContext = (state: PlanState, block: SnapBlock | undefin
       return found === undefined ? null : view(found);
     },
     insert: input => {
-      const { parentId, position, copy, ...spec } = input;
+      const { parentId, position, copy, checked, ...spec } = input;
+
+      if (checked === true && copy === true) {
+        return state.fail('PRECONDITION_FAILED', `"${tool}" inserted a block both as a copy and as the agent's own.`);
+      }
 
       claimMinted(spec.children ?? []);
       const placement = state.place(parentId, position ?? 'end');
@@ -81,6 +104,9 @@ export const createActionContext = (state: PlanState, block: SnapBlock | undefin
         node.block.children.forEach((child, index) => nodes.push({ block: child, path: `${node.path}/children/${index}` }));
       }
 
+      if (checked === true) {
+        checkAgentInsert(state, planned);
+      }
       state.emit({ op: 'insert', block: planned, parentId: placement.parentId, afterId: placement.afterId });
       nodes.forEach(node => {
         if (node.block.type === tool) {
@@ -143,24 +169,18 @@ export const createActionContext = (state: PlanState, block: SnapBlock | undefin
       state.hostEffects.push({ blockId: block.id, effect: JSON.parse(JSON.stringify(effect)) as Record<string, unknown> });
     },
     requireConfirmation: (confirmation) => {
-      if (block === undefined) {
-        return state.fail('PRECONDITION_FAILED', `"${tool}" asked for a confirmation without a block.`);
-      }
-      const title = state.ctx.committedTitle?.(block.id);
       const line = (text: string | undefined, max?: number): string | undefined => (text === undefined ? undefined : plainLine(text, max));
       const message = line(confirmation.message, MAX_CONFIRMATION);
       const confirmLabel = line(confirmation.confirmLabel);
       const cancelLabel = line(confirmation.cancelLabel);
-      const request: AgentApprovalRequest = {
-        kind: 'database.buttonConfirm', blockId: block.id,
-        ...(title !== undefined && { title }), ...(message !== undefined && { message }),
-        ...(confirmLabel !== undefined && { confirmLabel }), ...(cancelLabel !== undefined && { cancelLabel }),
-      };
 
-      if (state.ctx.approved?.has(approvalKey(request)) !== true) {
-        throw approvalNeeded(request);
-      }
+      askAboutButton('database.buttonConfirm', confirmation, {
+        ...(message !== undefined && { message }),
+        ...(confirmLabel !== undefined && { confirmLabel }), ...(cancelLabel !== undefined && { cancelLabel }),
+      });
     },
+    // The caller cleans what it shows: it is also what the host gets.
+    requireHostHooks: (request) => askAboutButton('database.buttonHooks', request, { hooks: request.hooks }),
     requireApproval: (kind) => {
       if (block === undefined) {
         return state.fail('PRECONDITION_FAILED', `"${tool}" asked for approval without a block.`);

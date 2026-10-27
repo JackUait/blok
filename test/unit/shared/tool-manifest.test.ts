@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { validateAgainst } from '../../../src/shared/schema/validate';
 import { buildToolManifest, canonicalHash, RESERVED_NAMESPACES, structuralDataSchema } from '../../../src/shared/tool-manifest';
+import { describeDatabase } from '../../../src/shared/tool-descriptions/database';
 
 import type { BlockToolDescription, BlockToolManifestEntry, ManifestOverrides, SnapshotBlock, ToolRegistrySnapshot } from '../../../types';
 
@@ -486,3 +487,29 @@ describe('canonicalHash', () => {
     expect(RESERVED_NAMESPACES).toEqual(['doc', 'block', 'text', 'markdown', 'html', 'history']);
   });
 });
+
+describe('an action that writes as another action', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const database = (): SnapshotBlock => {
+    const description = describeDatabase();
+
+    return block('database', { description, handlers: (description.actions ?? []).map(action => action.name) });
+  };
+  const actionsOf = (overrides: ManifestOverrides): string[] =>
+    (buildToolManifest(snapshot([database()]), overrides).blocks.find(entry => entry.name === 'database')?.actions ?? []).map(action => action.name);
+
+  it('is hidden with the row actions a host hides, so pressButton and submitForm cannot write rows past them', () => {
+    expect(actionsOf({})).toEqual(expect.arrayContaining(['pressButton', 'submitForm', 'setRowValues', 'addRow']));
+    expect(actionsOf({ database: { hiddenActions: ['setRowValues'] } })).not.toContain('pressButton');
+    expect(actionsOf({ database: { hiddenActions: ['setRowValues'] } })).toContain('submitForm');
+    expect(actionsOf({ database: { hiddenActions: ['addRow'] } })).toEqual(expect.not.arrayContaining(['pressButton', 'submitForm']));
+  });
+});
+

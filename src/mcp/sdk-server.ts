@@ -33,6 +33,7 @@ const approvalField = (request: AgentApprovalRequest): 'unlock' | 'restore' | 's
     case 'database.unlock':
     // Never asked here (elicitationApprover says no first); named for the switch only.
     case 'database.buttonConfirm':
+    case 'database.buttonHooks':
       return 'unlock';
   }
 };
@@ -63,6 +64,8 @@ const unlockQuestion = (request: AgentApprovalRequest, client: string): ReturnTy
         return `${client}'s agent wants to unlock the database ${database}. A person locked it, so its properties and views cannot change. Unlock it?`;
       case 'database.buttonConfirm':
         return `${client}'s agent wants to press a button in the database ${database} that asks for confirmation. Go on?`;
+      case 'database.buttonHooks':
+        return `${client}'s agent wants to press a button in the database ${database} that calls the host. Go on?`;
     }
   })();
 
@@ -83,7 +86,7 @@ const unlockQuestion = (request: AgentApprovalRequest, client: string): ReturnTy
  */
 const elicitationApprover = (responses: unknown, asked: AgentApprovalRequest[]): AgentApprover => (request) => {
   // Button presses run only in the editor; a question MCP cannot word is never asked.
-  if (request.kind === 'database.buttonConfirm') {
+  if (request.kind === 'database.buttonConfirm' || request.kind === 'database.buttonHooks') {
     return Promise.resolve(false);
   }
   const replies = typeof responses === 'object' && responses !== null ? responses as Record<string, unknown> : undefined;

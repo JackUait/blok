@@ -432,6 +432,24 @@ const rejectWrites = (state: PlanState, block: PlannedBlock, path: string): void
   block.children.forEach((child, index) => rejectWrites(state, child, `${path}/children/${index}`));
 };
 
+/**
+ * What block.insert checks beyond building, for blocks an action inserts as the agent's own:
+ * the contract's not-insertable word at every level, and the tools' write checks.
+ */
+export const checkAgentInsert = (state: PlanState, block: PlannedBlock, path = ''): void => {
+  const walk = (node: PlannedBlock, at: string): void => {
+    const tool = state.tool(node.type) ?? failUnknownTool(state, node.type, `${at}/type`);
+
+    if (tool.entry.insertable === false) {
+      refuseInsert(state, tool.entry, `${at}/type`);
+    }
+    node.children.forEach((child, index) => walk(child, `${at}/children/${index}`));
+  };
+
+  walk(block, path);
+  rejectWrites(state, block, path);
+};
+
 export const planInsert = (state: PlanState, args: Record<string, unknown>): unknown => {
   const placement = state.place(args.parentId, args.position ?? 'end');
   const spec = readInsertSpec(state, Object.fromEntries(Object.entries(args).filter(([key]) => SPEC_KEYS.has(key))), '');

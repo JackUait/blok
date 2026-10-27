@@ -5,6 +5,7 @@ import { undoForPerson } from '../../../../src/components/modules/api/agent-turn
 import { createEditorAgentSession } from '../../../../src/components/modules/agent/editor-session';
 import { destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { Paragraph } from '../../../../src/tools/paragraph';
+import { DatabaseComment, Embed, Page } from '../../../../src/tools';
 import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import type {
@@ -133,6 +134,9 @@ const boot = async (
         },
       },
       'database-row': DatabaseRowTool,
+      'database-comment': DatabaseComment,
+      page: Page,
+      embed: Embed,
     },
     data: { blocks: structuredClone(seed) },
   });
@@ -194,7 +198,8 @@ const outcome = async (turn: AgentTurn, batch: AgentBatch): Promise<string | nul
 
 /** The editor's own agent session: the one Ask AI runs, which takes a person's approver. */
 const asked = async (instance: Core, batch: AgentBatch, approve?: AgentApprover): Promise<string | null> => {
-  const session = createEditorAgentSession(instance.moduleInstances, { id: 'bot', name: 'Bot', kind: 'agent' });
+  // As Ask AI's turn: the agent acts for the editor's person, one step per turn.
+  const session = createEditorAgentSession(instance.moduleInstances, { id: 'bot', name: 'Bot', kind: 'agent', onBehalfOf: 'human-1' }, { mergeSteps: 'turn' });
 
   try {
     const result = await session.execute(batch, approve === undefined ? {} : { approve });
@@ -860,7 +865,7 @@ describe('an agent presses a database button as the person\'s click does', { tim
     hooks.length = 0;
     const { instance } = await boot(buttonSeed(STEPS), undefined, { config: buttonConfig });
 
-    expect(await runAgent(instance, press)).toBeNull();
+    expect(await asked(instance, press, () => Promise.resolve(true))).toBeNull();
     await settled();
 
     expect(personHooks.map((entry) => entry.hook)).toEqual(['onAction', 'onNotify']);
@@ -882,7 +887,10 @@ describe('an agent presses a database button as the person\'s click does', { tim
 
       if (answer === true) {
         expect(result).toBeNull();
-        expect(approve).toHaveBeenCalledWith({ kind: 'database.buttonConfirm', blockId: 'db', title: 'Tasks', message: 'Really mark it done? sure', confirmLabel: 'Do it', cancelLabel: 'Stop' });
+        expect(approve).toHaveBeenCalledWith({
+          kind: 'database.buttonConfirm', blockId: 'db', title: 'Tasks', message: 'Really mark it done? sure', confirmLabel: 'Do it', cancelLabel: 'Stop',
+          rowId: 'r1', steps: JSON.stringify(steps),
+        });
         expect(done).toBe(true);
         expect(hooks.map((entry) => entry.hook)).toEqual(['onAction']);
       } else {
@@ -917,7 +925,7 @@ describe('an agent presses a database button as the person\'s click does', { tim
   it('its edit starts the automation once, and the automation presses nothing', async () => {
     const { instance, spies } = await boot(buttonSeed([STEPS[0], STEPS[3]], SAVED), undefined, { config: buttonConfig });
 
-    expect(await runAgent(instance, press)).toBeNull();
+    expect(await asked(instance, press, () => Promise.resolve(true))).toBeNull();
     await settled();
     await settled();
 
@@ -934,6 +942,105 @@ describe('an agent presses a database button as the person\'s click does', { tim
     await settled();
 
     expect(hooks).toEqual([]);
+  });
+
+  it('adversarial: a press that would call the host asks the person first, with what the host gets, and refuses when no one can be asked', async () => {
+    const steps = [
+      { id: 'n', type: 'sendNotification', recipients: { type: 'people', people: [{ id: 'u2‮' }] }, message: 'Wire 50k\nto IBAN X' },
+      { id: 'cb', type: 'callback', name: 'Sync\u0000 CRM' },
+    ];
+    const { instance } = await boot(buttonSeed(steps), undefined, { config: buttonConfig });
+
+    expect(await runAgent(instance, press)).toMatch(/^APPROVAL_REQUIRED/);
+    await settled();
+    expect(hooks).toEqual([]);
+
+    const approve = vi.fn<AgentApprover>(() => Promise.resolve(false));
+
+    expect(await asked(instance, press, approve)).toMatch(/^APPROVAL_REQUIRED/);
+    await settled();
+
+    expect(approve).toHaveBeenCalledTimes(1);
+    expect(approve.mock.calls[0]?.[0]).toMatchObject({
+      kind: 'database.buttonHooks',
+      blockId: 'db',
+      hooks: [{ kind: 'notify', to: ['u2'], message: 'Wire 50k to IBAN X' }, { kind: 'callback', name: 'Sync CRM' }],
+    });
+    expect(hooks).toEqual([]);
+  });
+
+  it('adversarial: the host gets only the declared fields of a step, cleaned', async () => {
+    const steps = [
+      { id: 'cb', type: 'callback', name: 'Sync', url: 'javascript:alert(1)', secret: 'x' },
+      { id: 'n', type: 'sendNotification', recipients: { type: 'people', people: [{ id: 'u2', role: 'admin' }] }, message: 'Hi', url: 'javascript:alert(1)' },
+    ];
+    const { instance } = await boot(buttonSeed(steps), undefined, { config: buttonConfig });
+
+    expect(await asked(instance, press, () => Promise.resolve(true))).toBeNull();
+    await settled();
+
+    expect(hooks.map((entry) => (entry.payload as { action: unknown }).action)).toEqual([
+      { id: 'cb', type: 'callback', name: 'Sync' },
+      { id: 'n', type: 'sendNotification', recipients: { type: 'people', people: [{ id: 'u2' }] }, message: 'Hi' },
+    ]);
+  });
+
+  it('adversarial: steps changed while the person decides do not run without their new yes', async () => {
+    const { instance } = await boot(buttonSeed([STEPS[3]]), undefined, { config: buttonConfig });
+    const approve = vi.fn<AgentApprover>(async (request) => {
+      if (approve.mock.calls.length > 1) return false;
+      // Someone rewrites the button while the question is open.
+      const block = instance.moduleInstances.BlockManager.getBlockById('db');
+      const data = (await instance.moduleInstances.Saver.save())?.blocks.find((each) => each.id === 'db')?.data as { schema: PropertyDefinition[] };
+      const schema = data.schema.map((property) => (property.id === 'btn'
+        ? { ...property, button: { buttonActions: [{ id: 'evil', type: 'callback', name: 'Exfiltrate' }] } }
+        : property));
+
+      if (block !== undefined) await instance.moduleInstances.API.methods.blocks.update(block.id, { ...data, schema });
+      await quiet();
+
+      return request.kind === 'database.buttonHooks';
+    });
+
+    expect(await asked(instance, press, approve)).toMatch(/^APPROVAL_REQUIRED/);
+    await settled();
+
+    expect(approve.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(approve.mock.calls[1]?.[0]).toMatchObject({ hooks: [{ kind: 'callback', name: 'Exfiltrate' }] });
+    expect(hooks).toEqual([]);
+  });
+
+  it('adversarial: a button\'s inserted blocks get block.insert\'s checks', async () => {
+    const lockedDatabase = {
+      type: 'database',
+      data: {
+        title: 'Locked',
+        schema: [{ id: 'lt', name: 'Name', type: 'title', position: 'a0', databaseLocked: true }],
+        views: [{ id: 'lv', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+        activeViewId: 'lv',
+      },
+    };
+    const cases: Array<[string, unknown, RegExp]> = [
+      ['page', { type: 'page', data: { pageId: 'agent-chosen' } }, /^INVALID_ARGS: Insert "page" with its own block\.insert/],
+      ['locked database', lockedDatabase, /^DATA_REJECTED/],
+      ['not insertable', { type: 'database-comment', data: { text: 'x', createdAt: 1, authorId: 'human-1' } }, /^COMMAND_UNAVAILABLE: "database-comment" is not insertable/],
+      ['embed', { type: 'embed', data: { service: 'youtube', source: 'javascript:alert(1)', embed: 'javascript:alert(1)' } }, /^DATA_REJECTED/],
+    ];
+
+    const misses: string[] = [];
+
+    for (const [name, insert, expected] of cases) {
+      const { instance } = await boot(buttonSeed([{ id: 'ins', type: 'insertBlocks', blocks: [insert] }]), undefined, { config: buttonConfig });
+      const before = JSON.stringify((await instance.moduleInstances.Saver.save())?.blocks);
+
+      const refusal = await runAgent(instance, press);
+
+      await settled();
+      if (refusal === null || !expected.test(refusal) || JSON.stringify((await instance.moduleInstances.Saver.save())?.blocks) !== before) misses.push(`${name}: ${refusal ?? 'applied'}`);
+      await teardown();
+    }
+
+    expect(misses).toEqual([]);
   });
 });
 

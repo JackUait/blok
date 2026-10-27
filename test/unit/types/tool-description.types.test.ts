@@ -70,6 +70,7 @@ describe('published tool description types', () => {
       requires?: HostService[];
       uses?: HostService[];
       mirrors?: string[];
+      writesAs?: string[];
     }>();
     expectTypeOf<ToolActionDeclaration['target']>().toEqualTypeOf<'block' | 'create'>();
   });
@@ -117,6 +118,7 @@ describe('published tool description types', () => {
       requires?: HostService[];
       uses?: HostService[];
       mirrors?: string[];
+      writesAs?: string[];
       command: ToolCommandName;
       available: boolean;
     }>();

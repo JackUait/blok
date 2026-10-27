@@ -316,7 +316,8 @@ class Tooltip {
        * which would reveal the bubble at coordinates measured against an
        * element that is no longer on screen.
        */
-      if (!this.canAnchorTo(element) || this.isBehindOpenPopover(element)) {
+      // A hint never covers its trigger's own open submenu, which opens on hover before the delay ends.
+      if (!this.canAnchorTo(element) || this.isBehindOpenPopover(element) || element.getAttribute(DATA_ATTR.popoverItemChildrenOpen) === 'true') {
         this.hide();
 
         return;

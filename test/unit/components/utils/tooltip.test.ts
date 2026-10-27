@@ -676,6 +676,35 @@ describe('Tooltip utility', () => {
     hide();
   });
 
+  // A popover row opens its submenu on hover, 100ms in: the hint would cover that list.
+  it('does not reveal a delayed hint over its trigger\'s own open submenu', () => {
+    vi.useFakeTimers();
+
+    const panel = document.createElement('div');
+    const target = createTargetElement();
+
+    panel.setAttribute('data-blok-popover-opened', 'true');
+    panel.appendChild(target);
+    document.body.appendChild(panel);
+
+    onHover(target, 'row hint');
+    target.dispatchEvent(new Event('mouseenter'));
+    target.setAttribute(DATA_ATTR.popoverItemChildrenOpen, 'true');
+    vi.advanceTimersByTime(HINT_DELAY);
+
+    expect(getTooltipWrapper()?.getAttribute('data-blok-shown')).not.toBe('true');
+
+    // With its submenu closed the same row shows the hint.
+    target.removeAttribute(DATA_ATTR.popoverItemChildrenOpen);
+    target.dispatchEvent(new Event('mouseenter'));
+    vi.advanceTimersByTime(HINT_DELAY);
+
+    expect(getTooltipWrapper()?.getAttribute('data-blok-shown')).toBe('true');
+
+    panel.remove();
+    hide();
+  });
+
   it('keeps aria-hidden synchronized with CSS class changes', async () => {
     const target = createTargetElement();
 

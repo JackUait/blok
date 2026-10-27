@@ -1,5 +1,6 @@
 import path from 'node:path';
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
+import { searchForWorkspaceRoot } from 'vite';
 import { defineConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
 import { enableJsdomWebStorageGuard } from './scripts/jsdom-webstorage-guard.mjs';
@@ -43,6 +44,14 @@ export default defineConfig({
     setupFiles: ['test/unit/vitest.setup.ts'],
     testTimeout: 30000,
     hookTimeout: 30000,
+  },
+  server: {
+    fs: {
+      // Stryker's sandbox links node_modules back to the repo. Its real path is
+      // then outside the sandbox root, and Vite refuses `?inline`/`?raw` imports
+      // from there (maplibre-runtime.ts loads both).
+      allow: [searchForWorkspaceRoot(dirname), realpathSync(path.resolve(dirname, 'node_modules'))],
+    },
   },
   resolve: {
     alias: {

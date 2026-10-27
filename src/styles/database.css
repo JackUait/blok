@@ -14331,6 +14331,11 @@ button[data-blok-database-feed-reaction]:hover,
   position: relative;
 }
 
+/* It holds focus only to hear a typed key; Notion shows no ring here (research/35 §9). */
+[data-blok-database-place-view]:focus-visible {
+  outline: none;
+}
+
 [data-blok-database-place-view] [data-blok-database-place-clear] {
   width: 20px;
   height: 20px;

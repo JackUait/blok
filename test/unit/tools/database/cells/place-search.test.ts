@@ -228,6 +228,30 @@ describe('Place editor: "Search for a location..." with the host geocoder (resea
       expect(onCommit).not.toHaveBeenCalled();
     });
 
+    it('ArrowDown then Enter on the place picks nothing hidden behind it', async () => {
+      const onCommit = vi.fn();
+
+      openCellEditor(makeProperty('place'), EIFFEL, makeAnchor(), makeEditorContext({ geocode: vi.fn(), currentLocation: vi.fn().mockReturnValue({ name: 'Here' }), onCommit }));
+      const target = document.activeElement ?? document.body;
+
+      press(target, 'ArrowDown');
+      press(target, 'Enter');
+      await settle();
+
+      expect(onCommit).not.toHaveBeenCalled();
+    });
+
+    it('a key typed on the selected cell opens the search with it, not the place, and searches', async () => {
+      const geocode = vi.fn().mockResolvedValue([]);
+
+      openCellEditor(makeProperty('place'), EIFFEL, makeAnchor(), makeEditorContext({ geocode, initialText: 'L' }));
+
+      expect(view()).toBeNull();
+      expect(field().value).toBe('L');
+      await settle();
+      expect(geocode).toHaveBeenCalledWith('L');
+    });
+
     it('× clears it', () => {
       const onCommit = vi.fn();
 

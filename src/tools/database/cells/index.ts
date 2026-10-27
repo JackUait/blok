@@ -110,7 +110,8 @@ const placeSearch = (ctx: CellEditorContext, pick: (place: PlaceValue) => void):
     attach: (field, isOpen) => {
       // Capture on the parent: runs before the text editor's own Enter handler commits the typed text.
       field.parentElement?.addEventListener('keydown', (event) => {
-        if (event.isComposing) return;
+        // The place view shares this box while the search is hidden: its keys are not the search's.
+        if (event.isComposing || event.target !== field) return;
         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
           event.preventDefault();
           keys.moved = true;
@@ -299,6 +300,8 @@ const openPlaceEditor = (
 
   if (search !== undefined && field !== null && field !== undefined) {
     search.attach(field, () => handle.isOpen);
+    // The key that opened the editor searches like any other typed key.
+    if (ctx.initialText !== undefined && ctx.initialText !== '') field.dispatchEvent(new Event('input', { bubbles: true }));
     // Capture on the parent runs before the text editor's own Enter handler commits.
     field.parentElement?.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' && !event.isComposing) state.entered = true;
@@ -306,7 +309,8 @@ const openPlaceEditor = (
   }
 
   // research/35 §9: a cell that holds a place opens on it, as after a pick.
-  if (search !== undefined && place !== undefined && placeText(place) !== '') showPicked(place, true);
+  // A key typed on the selected cell (`initialText`) is a search: it skips the view.
+  if (search !== undefined && place !== undefined && placeText(place) !== '' && ctx.initialText === undefined) showPicked(place, true);
 
   if (header !== undefined) {
     const chip = placeChip(name);

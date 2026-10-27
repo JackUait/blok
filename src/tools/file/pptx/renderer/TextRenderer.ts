@@ -19,6 +19,7 @@ import { emuToPx, pctToDecimal, angleToDeg } from '../parser/units';
 import { parseOoxmlBool } from '../parser/booleans';
 import { isExternalTargetMode } from '../parser/RelParser';
 import { isAllowedExternalUrl } from '../utils/urlSafety';
+import { safeHref } from '../../../../shared/sanitize-url';
 import { findMediaByTarget, findMediaByTargetAsync, getOrCreateBlobUrl } from '../utils/media';
 import { getEffectiveBodyPrChild, parseTextPercentage } from './TextBodyProperties';
 import { cssFontFamilyStack, resolveThemeFontStack } from './fontResolver';
@@ -1706,9 +1707,9 @@ export function renderTextBody(
           ctx.onNavigate?.({ slideIndex });
         });
         element = span;
-      } else if (runStyle.hlinkClick) {
+      } else if (runStyle.hlinkClick && safeHref(runStyle.hlinkClick) !== null) {
         const a = document.createElement('a');
-        a.href = runStyle.hlinkClick;
+        a.href = safeHref(runStyle.hlinkClick) ?? '';
         a.target = '_blank';
         a.rel = 'noopener noreferrer';
         element = a;

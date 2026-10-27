@@ -82,6 +82,8 @@ const GUARDED_SINKS: FontSizeSink[] = [
  * Exempting a sink that DOES render cell text violates the law — add a
  * tables.css override and mark it GUARDED instead.
  */
+const PPTX_SLIDE_TEXT = 'pptx slide text sized from the deck itself; slides render only in the file preview modal, never inside a table cell';
+
 const EXEMPT_SINKS: FontSizeSink[] = [
   {
     file: 'src/tools/header/index.ts',
@@ -102,6 +104,31 @@ const EXEMPT_SINKS: FontSizeSink[] = [
     file: 'src/tools/image/darkroom/markup-editor.ts',
     match: 'el.style.fontSize',
     reason: 'text-edit textarea in a body-mounted image dialog, not cell body text; its size follows image zoom',
+  },
+  {
+    file: 'src/tools/file/pptx/renderer/GroupRenderer.ts',
+    match: 'fontSize',
+    reason: PPTX_SLIDE_TEXT,
+  },
+  {
+    file: 'src/tools/file/pptx/renderer/ImageRenderer.ts',
+    match: 'fontSize',
+    reason: PPTX_SLIDE_TEXT,
+  },
+  {
+    file: 'src/tools/file/pptx/renderer/ShapeRenderer.ts',
+    match: 'fontSize',
+    reason: PPTX_SLIDE_TEXT,
+  },
+  {
+    file: 'src/tools/file/pptx/renderer/SlideRenderer.ts',
+    match: 'fontSize',
+    reason: PPTX_SLIDE_TEXT,
+  },
+  {
+    file: 'src/tools/file/pptx/renderer/TextRenderer.ts',
+    match: 'fontSize',
+    reason: PPTX_SLIDE_TEXT,
   },
 ];
 

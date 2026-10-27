@@ -90,6 +90,12 @@ const EXEMPTIONS: Record<string, Exemption> = {
   'components/utils/caret/boundaries.ts': {
     reason: 'hidden measurement div styled inline, appended and removed synchronously',
   },
+  'tools/file/pptx/renderer/SlideRenderer.ts': {
+    reason: 'pptx slide is parked off-screen on body (inline fixed/hidden styles) only while it is drawn, so text can be measured, then moved back synchronously',
+  },
+  'tools/file/pptx/renderer/TextRenderer.ts': {
+    reason: 'pptx paragraph root is parked off-screen on body (inline fixed/hidden styles) for one measurement, then moved back synchronously',
+  },
   'tools/spacer/alignment-guide.ts': {
     reason: 'guide line styled 100% inline (accent color resolved to a literal beforehand)',
   },

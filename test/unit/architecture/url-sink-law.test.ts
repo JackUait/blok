@@ -97,6 +97,14 @@ const EXEMPT_SINKS: Record<string, string> = {
     'host-supplied transformHref result applied to an already-gated anchor href (config is trusted, not stored data)',
   'tools/database/database-help-link.ts » href':
     'helpLink assigns the result of safeHref(url) and returns null first when safeHref refuses the scheme',
+  'tools/file/pptx/renderer/ImageRenderer.ts » url':
+    'pptx picture: HTMLImageElement src or SVG <image href> set to a blob: URL the engine made from deck media (external media is never resolved) — image loads cannot run script',
+  'tools/file/pptx/renderer/ImageRenderer.ts » mediaUrl':
+    'pptx audio/video element src, a blob: URL the engine made from deck media — media elements do not execute javascript: URLs',
+  'tools/file/pptx/renderer/ImageRenderer.ts » canvas.toDataURL()':
+    'pptx picture effect rendered to a canvas and shown as a PNG data: image in <img> — cannot run script',
+  'tools/file/pptx/renderer/Shape3DRenderer.ts » url':
+    'pptx 3D picture plane: off-DOM HTMLImageElement decode and SVG <image href> of a blob: URL made from deck media — image loads cannot run script',
   'components/modules/pageReferences.ts » href':
     'PageReferences.href() passes the host URL through safeHref() and returns null for unsafe schemes before paint assigns this anchor href',
 };

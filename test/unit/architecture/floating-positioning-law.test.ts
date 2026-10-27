@@ -82,6 +82,8 @@ const expectExactReasonedClassification = (
 
 /** Every physical document-root mount and its non-positioning or safe contract. */
 const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
+  'tools/file/pptx/renderer/SlideRenderer.ts': 'Parks a pptx slide off-screen on body while it is drawn so its text can be measured; not a floating surface.',
+  'tools/file/pptx/renderer/TextRenderer.ts': 'Parks a pptx paragraph root off-screen on body for one text measurement; not a floating surface.',
   'components/modules/blockEvents/composers/emojiTrigger.ts': 'Mount owner for the inline ":" menu, which is the tracked emoji-picker root surface.',
   'components/modules/drag/DragController.ts': 'Pointer-following drag preview; coordinates refresh on every pointer move.',
   'components/ui/toolbox-preview.ts': 'Top-layer toolbox hover card placed beside the menu on each row change; it follows its row when the menu list scrolls and closes on any other scroll.',
@@ -124,6 +126,7 @@ const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
  * even when it is locally contained rather than root mounted.
  */
 const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
+  'tools/file/pptx/renderer/TextRenderer.ts': 'Measures pptx text and bullet boxes to fit text to its shape; the rects size slide content, they never place a floating element.',
   'tools/image/darkroom/markup-editor.ts': 'Markup selection box and text editor convert the camera plane rect into offsets local to the stage overlay they live in; refresh() re-places them on every camera paint and stage resize.',
   'tools/image/index.ts': 'Snap guides are placed at container percentages inside the block root; the container width is read only for the readout px, not to position a floating root.',
   'tools/image/tone-sampler.ts': 'Reads control and picture rects only to find which pixels sit under each control; it positions nothing.',
@@ -171,6 +174,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
 
 /** Dynamic property setters remain exact review points, never silent escapes. */
 const DYNAMIC_STYLE_ACCESS_CLASSIFICATIONS: Record<string, string> = {
+  'tools/file/pptx/renderer/TableRenderer.ts': 'Writes a pptx table cell border side picked by name (borderTop…borderLeft); never a coordinate.',
   'components/modules/collaboration/agent-marker-layer.ts': 'Writes --blok-presence-color on the holder-local agent outline and name flag; presence.css supplies their placement without root mounts or JS coordinates.',
   'components/marks/mark-engine.ts': 'Writes/strips the style properties a MarkSpec declares while applying, splitting and sanitizing marks.',
   'components/modules/blockManager/hierarchy.ts': 'Writes the block-depth multiplier custom property; the indent itself is resolved by the stylesheet, never as a coordinate.',

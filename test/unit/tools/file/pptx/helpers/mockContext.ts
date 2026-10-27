@@ -65,6 +65,7 @@ export function createMockRenderContext(
     index: 0,
     nodes: [],
     layoutIndex: '',
+    slidePath: '',
     rels: new Map(),
     showMasterSp: true,
   };

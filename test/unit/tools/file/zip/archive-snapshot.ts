@@ -44,8 +44,8 @@ export const expectedFor = (rel: string, snapshot: ArchiveSnapshot & { stage?: s
   if (rel.endsWith('/local_encoding_in_name.zip')) {
     // CP866 names without the UTF-8 flag: JSZip's decoder made control characters, TextDecoder makes U+FFFD.
     const names = [
-      '����� �����/',
-      '����� �����/���� ⥪�⮢� ���㬥��.txt',
+      '\ufffd\ufffd\ufffd\ufffd\ufffd \ufffd\ufffd\ufffd\ufffd\ufffd/',
+      '\ufffd\ufffd\ufffd\ufffd\ufffd \ufffd\ufffd\ufffd\ufffd\ufffd/\ufffd\ufffd\ufffd\ufffd \u296a\ufffd\u2ba2\ufffd \ufffd\ufffd\ufffd\u3b25\ufffd\ufffd.txt',
     ];
 
     return {

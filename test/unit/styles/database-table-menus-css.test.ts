@@ -52,6 +52,15 @@ describe('add property menu (T12)', () => {
     expect(declared('[data-blok-database-property-type-heading]', 'font-size')).toEqual(['12px']);
   });
 
+  // research/08 line 203, 267: the table header "+" menu is 400 wide, a two-column grid of 32px items.
+  it('draws the header "+" grid 400 wide in two columns of 32px items', () => {
+    const GRID = "[data-blok-database-property-type-layout='grid']";
+
+    expect(declared(GRID, 'width')).toEqual(['400px']);
+    expect(declared(`${GRID} [data-blok-database-property-type-grid]`, 'grid-template-columns')).toEqual(['repeat(2, minmax(0, 1fr))']);
+    expect(declared(`${GRID} [data-blok-database-property-type-option]`, 'min-height')).toEqual(['32px']);
+  });
+
   // notion-spec-2 §18.5: the row the arrows are on takes the hover fill, never blue.
   it('fills the arrow-highlighted type like a hovered one', () => {
     expect(declared('[data-blok-database-property-type-option-active]', 'background-color')).toEqual(['var(--blok-database-popover-hover)']);

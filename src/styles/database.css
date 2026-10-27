@@ -4981,6 +4981,19 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   grid-template-columns: minmax(0, 1fr);
 }
 
+/* research/08: the table header "+" menu, 400 wide, types in two columns of 32px items. */
+[data-blok-database-property-type-layout='grid'] {
+  width: 400px;
+}
+
+[data-blok-database-property-type-layout='grid'] [data-blok-database-property-type-grid] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+[data-blok-database-property-type-layout='grid'] [data-blok-database-property-type-option] {
+  min-height: 32px;
+}
+
 /**
  * Section label above the types: Notion's 12px/500 sentence case.
  */

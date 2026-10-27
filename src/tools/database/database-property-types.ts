@@ -65,6 +65,17 @@ const ADDABLE_ORDER: readonly PropertyType[] = [
   'verification',
 ];
 
+/** The table header "+" picker's order (research/12 §1). Notion has no Verification there either. */
+const HEADER_PICKER_ORDER: readonly PropertyType[] = [
+  'text', 'number', 'select', 'multiSelect', 'status', 'date', 'person', 'files', 'checkbox', 'url', 'phone', 'email',
+  'relation', 'rollup', 'formula', 'button', 'uniqueId', 'place', 'createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy',
+  'verification',
+];
+
+/** The table header "+" picker's types. Person needs the host's people directory. */
+export const headerPickerTypes = (hasPeople: boolean): PropertyType[] =>
+  HEADER_PICKER_ORDER.filter((type) => hasPeople || type !== 'person');
+
 /** Types a person can add or change to. Person needs the host's people directory. */
 export const addablePropertyTypes = (hasPeople: boolean): PropertyType[] =>
   ADDABLE_ORDER.filter((type) => hasPeople || type !== 'person');

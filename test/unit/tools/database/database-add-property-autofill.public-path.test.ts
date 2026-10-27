@@ -124,4 +124,12 @@ describe('AI Autofill in the add-property menu', () => {
     expect((await savedSchema()).map((p) => [p.name, p.type])).toEqual([['Name', 'title'], ['French', 'text']]);
     expect(within(dialog).getByRole('textbox', { name: 'Instructions' })).toHaveValue('Translate this page into English.');
   });
+
+  // research/08, research/12 §1, notion-spec-2 §17.9: the table's "+" is its own surface, a two-column grid under "Select type".
+  it('opens the table header "+" as the two-column type grid', async () => {
+    await mount(false);
+    const menu = openAddProperty();
+
+    expect(menu.getAttribute('data-blok-database-property-type-layout')).toBe('grid');
+  });
 });

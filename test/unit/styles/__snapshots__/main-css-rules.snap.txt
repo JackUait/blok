@@ -8215,6 +8215,18 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   grid-template-columns: minmax(0, 1fr);
 }
 
+[data-blok-database-property-type-layout='grid'] {
+  width: 400px;
+}
+
+[data-blok-database-property-type-layout='grid'] [data-blok-database-property-type-grid] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+[data-blok-database-property-type-layout='grid'] [data-blok-database-property-type-option] {
+  min-height: 32px;
+}
+
 [data-blok-database-property-type-heading] {
   padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
   font-size: 12px;

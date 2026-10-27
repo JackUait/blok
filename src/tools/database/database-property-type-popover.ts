@@ -5,7 +5,7 @@ import { markEscapeConsumed } from '../../components/utils/consumed-escape';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import type { I18n } from '../../../types';
 import type { PropertyType } from './types';
-import { addablePropertyTypes, propertyTypeMeta } from './database-property-types';
+import { addablePropertyTypes, headerPickerTypes, propertyTypeMeta } from './database-property-types';
 import {
   createPositionTracker,
   positionFixedAnchored,
@@ -32,6 +32,11 @@ export interface PropertyTypePopoverOptions {
   withNameField?: boolean;
   /** The host has AI Autofill: Summarize and Translate head the list. `name` as in onSelect. */
   onAutofill?: (mode: 'summary' | 'translate', name: string) => void;
+  /**
+   * 'grid': the table header "+" picker, 400 wide with two columns under "Select type" (research/08, research/12 §1).
+   * 'list' (default): the row page's one column under "Type" (notion-spec-2 §18.5).
+   */
+  layout?: 'list' | 'grid';
 }
 
 export class DatabasePropertyTypePopover {
@@ -40,6 +45,7 @@ export class DatabasePropertyTypePopover {
   private readonly hasPeople: boolean;
   private readonly withNameField: boolean;
   private readonly onAutofill: PropertyTypePopoverOptions['onAutofill'];
+  private readonly grid: boolean;
   private popoverEl: HTMLElement | null = null;
   private boundOutsideClick: ((e: MouseEvent) => void) | null = null;
   private positionTracker: PositionTracker | null = null;
@@ -50,6 +56,7 @@ export class DatabasePropertyTypePopover {
     this.hasPeople = options.hasPeople === true;
     this.withNameField = options.withNameField === true;
     this.onAutofill = options.onAutofill;
+    this.grid = options.layout === 'grid';
   }
 
   get isOpen(): boolean {
@@ -63,6 +70,7 @@ export class DatabasePropertyTypePopover {
     popover.setAttribute('data-blok-popover', '');
     popover.setAttribute('data-blok-popover-opened', '');
     popover.setAttribute('data-blok-database-property-type-popover', '');
+    if (this.grid) popover.setAttribute('data-blok-database-property-type-layout', 'grid');
     popover.style.zIndex = '1000';
     // Blok's editor keydown would blur the field on Escape instead of closing the menu.
     popover.setAttribute(DATA_ATTR.keyboardOwner, '');
@@ -89,7 +97,10 @@ export class DatabasePropertyTypePopover {
       nameField.type = 'text';
       nameField.setAttribute('data-blok-database-property-name-input', '');
       nameField.setAttribute('data-blok-field', 'text');
-      nameField.placeholder = this.i18n?.t('tools.database.propertyName') ?? 'tools.database.propertyName';
+      // research/14 §1: the header "+" field reads "Type property name…".
+      const placeholderKey = this.grid ? 'tools.database.propertyNamePlaceholder' : 'tools.database.propertyName';
+
+      nameField.placeholder = this.i18n?.t(placeholderKey) ?? placeholderKey;
       nameField.setAttribute('aria-label', this.i18n?.t('tools.database.propertyName') ?? 'tools.database.propertyName');
       header.appendChild(nameField);
       popover.appendChild(header);
@@ -114,7 +125,7 @@ export class DatabasePropertyTypePopover {
     body.append(heading, grid);
     popover.appendChild(body);
 
-    for (const type of addablePropertyTypes(this.hasPeople)) {
+    for (const type of this.grid ? headerPickerTypes(this.hasPeople) : addablePropertyTypes(this.hasPeople)) {
       const meta = propertyTypeMeta(type);
       const item = document.createElement('div');
       item.setAttribute('data-blok-database-property-type-option', type);
@@ -206,12 +217,19 @@ export class DatabasePropertyTypePopover {
   }
 
   private typeListHeading(grid: HTMLElement): HTMLElement {
-    return typeSearchHeading((key) => this.i18n?.t(key) ?? key, (query) => {
+    // notion-spec-2 §17.9: the grid's magnifier turns "Select type" into the field; the list adds it under "Type".
+    const t = (key: string): string => {
+      const shown = this.grid && key === 'tools.database.propertyTypeListHeading' ? 'tools.database.formSelectType' : key;
+
+      return this.i18n?.t(shown) ?? shown;
+    };
+
+    return typeSearchHeading(t, (query) => {
       for (const option of grid.querySelectorAll<HTMLElement>('[data-blok-database-property-type-option]')) {
         option.hidden = !(option.textContent ?? '').toLowerCase().includes(query);
         option.removeAttribute(OPTION_ACTIVE);
       }
-    }, true);
+    }, !this.grid);
   }
 
   /** Notion's "AI Autofill" rows: a glyph, the preset's name and a gray "Basic" tag. */

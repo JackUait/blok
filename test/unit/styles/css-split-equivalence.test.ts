@@ -1215,6 +1215,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_PLACE_ROW_HIGHLIGHT_BYTES = 257;
     // database.css: Add a property's "Search types…" field opens under the Type label (notion-spec-2 §18.5).
     const DATABASE_ADD_PROPERTY_SEARCH_BYTES = 308;
+    // database.css: the table header "+" picker's 400-wide two-column grid (research/08).
+    const DATABASE_HEADER_PICKER_GRID_BYTES = 418;
     // fonts.css: the inlined woff2 from the 04519541 dependency refresh is 148 bytes larger.
     const FONT_REFRESH_BYTES = 148;
     // database.css: the formula warning mark, inline in the secondary ink at 16px (db0d20e6, 2deaa2a2).
@@ -1478,7 +1480,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_TABLE_TABULAR_FIGURES_BYTES
       + DATABASE_TABLE_EDITOR_NO_MOTION_BYTES
       + DATABASE_PLACE_ROW_HIGHLIGHT_BYTES
-      + DATABASE_ADD_PROPERTY_SEARCH_BYTES;
+      + DATABASE_ADD_PROPERTY_SEARCH_BYTES
+      + DATABASE_HEADER_PICKER_GRID_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

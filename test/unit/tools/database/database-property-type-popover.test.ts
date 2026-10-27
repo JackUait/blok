@@ -255,6 +255,33 @@ describe('DatabasePropertyTypePopover', () => {
       flow.destroy();
     });
 
+    // research/08, research/12 §1, research/14 §1, notion-spec-2 §17.9: the table header "+" picker.
+    it('draws the grid layout with "Select type", the header order and a "Type property name…" field', () => {
+      const i18n = { t: (key: string) => `i18n:${key}`, has: () => true } as unknown as I18n;
+      const grid = new DatabasePropertyTypePopover({ onSelect: vi.fn(), withNameField: true, i18n, layout: 'grid' });
+
+      grid.open(anchor);
+      const root = document.querySelector('[data-blok-database-property-type-popover]');
+      const order = [...document.querySelectorAll('[data-blok-database-property-type-option]')]
+        .map((el) => el.getAttribute('data-blok-database-property-type-option'));
+
+      expect(root?.getAttribute('data-blok-database-property-type-layout')).toBe('grid');
+      expect(root?.querySelector('[data-blok-database-property-type-list-heading]')?.textContent?.trim()).toBe('i18n:tools.database.formSelectType');
+      expect(root?.querySelector('[data-blok-database-property-name-input]')?.getAttribute('placeholder')).toBe('i18n:tools.database.propertyNamePlaceholder');
+      expect(order).toEqual([
+        'text', 'number', 'select', 'multiSelect', 'status', 'date', 'files', 'checkbox', 'url', 'phone', 'email',
+        'relation', 'rollup', 'formula', 'button', 'uniqueId', 'place', 'createdTime', 'lastEditedTime', 'createdBy', 'lastEditedBy',
+        'verification',
+      ]);
+      grid.destroy();
+    });
+
+    it('keeps the list layout by default', () => {
+      popover.open(anchor);
+
+      expect(document.querySelector('[data-blok-database-property-type-popover]')?.hasAttribute('data-blok-database-property-type-layout')).toBe(false);
+    });
+
     // feel/findings-table T12: Notion's name field heads the menu; the types sit in a grid that scrolls under it.
     it('puts the name field in a header and the types in one scrolling grid', () => {
       const flow = new DatabasePropertyTypePopover({ onSelect: vi.fn(), withNameField: true });

@@ -11776,6 +11776,8 @@ export class DatabaseTool implements BlockTool {
       i18n: this.api.i18n,
       hasPeople: this.hasPeople,
       withNameField: true,
+      // research/08: the table's "+" and Insert left/right get Notion's header grid; the row page passes onAdded and keeps the list.
+      ...(onAdded === undefined ? { layout: 'grid' as const } : {}),
       onSelect: (type, name) => {
         if (!writable()) return;
         const side = placement?.side === 'left' ? 'beforeId' : 'afterId';

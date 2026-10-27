@@ -182,7 +182,7 @@ describe('Place editor: "Search for a location..." with the host geocoder (resea
       expect(destroy).toHaveBeenCalledTimes(1);
     });
 
-    it('× clears the place it just stored', async () => {
+    it('× clears the place it just stored at once and goes back to the search (research/31 §4a)', async () => {
       const onCommit = vi.fn();
       const destroy = vi.fn();
 
@@ -190,8 +190,14 @@ describe('Place editor: "Search for a location..." with the host geocoder (resea
       view()?.querySelector<HTMLElement>('[data-blok-database-place-clear]')?.click();
 
       expect(onCommit.mock.calls).toEqual([[EIFFEL], [null]]);
-      expect(editorRoot()).toBeNull();
       expect(destroy).toHaveBeenCalledTimes(1);
+      expect(view()).toBeNull();
+      expect(field().value).toBe('');
+      expect(field()).toHaveFocus();
+      press(window, 'Escape');
+
+      expect(editorRoot()).toBeNull();
+      expect(onCommit).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -252,13 +258,29 @@ describe('Place editor: "Search for a location..." with the host geocoder (resea
       expect(geocode).toHaveBeenCalledWith('L');
     });
 
-    it('× clears it', () => {
+    it('Enter on the place, then a typed search left by a press outside, keeps the saved place', () => {
+      const onCommit = vi.fn();
+
+      openCellEditor(makeProperty('place'), EIFFEL, makeAnchor(), makeEditorContext({ geocode: vi.fn().mockResolvedValue([]), onCommit }));
+      press(document.activeElement ?? document.body, 'Enter');
+      press(document.activeElement ?? document.body, 'B');
+      pressOutside();
+
+      expect(onCommit).not.toHaveBeenCalled();
+    });
+
+    it('× clears it at once and leaves the search open with no saved name', () => {
       const onCommit = vi.fn();
 
       openCellEditor(makeProperty('place'), EIFFEL, makeAnchor(), makeEditorContext({ geocode: vi.fn(), onCommit }));
       view()?.querySelector<HTMLElement>('[data-blok-database-place-clear]')?.click();
 
-      expect(onCommit).toHaveBeenCalledWith(null);
+      expect(onCommit.mock.calls).toEqual([[null]]);
+      expect(editorRoot()?.querySelector('[data-blok-database-place-chip]')).toBeNull();
+      expect(field()).toHaveFocus();
+      pressOutside();
+
+      expect(onCommit).toHaveBeenCalledTimes(1);
     });
   });
 

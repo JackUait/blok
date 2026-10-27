@@ -195,12 +195,28 @@ const openPlaceEditor = (
   const address = place?.address ?? '';
   const name = place?.name?.trim() ?? '';
   // `stored`: a pick was written while the editor stayed open; later outcomes write nothing.
-  const state: { cleared: boolean; entered: boolean; stored: boolean; map: { destroy(): void } | null } = {
-    cleared: false, entered: false, stored: false, map: null,
+  // `search`: the editor's search parts while the place view replaces them.
+  const state: { cleared: boolean; entered: boolean; stored: boolean; map: { destroy(): void } | null; search: { content: HTMLElement; nodes: Node[] } | null } = {
+    cleared: false, entered: false, stored: false, map: null, search: null,
   };
   const clear = (): void => {
-    state.cleared = true;
-    handle.close();
+    if (search === undefined || field === null || field === undefined) {
+      state.cleared = true;
+      handle.close();
+
+      return;
+    }
+    // research/31 §4a: × clears the cell at once and goes back to the search. Later outcomes write nothing.
+    state.map?.destroy();
+    state.map = null;
+    state.stored = true;
+    ctx.onCommit(null);
+    state.search?.content.replaceChildren(...state.search.nodes);
+    state.search = null;
+    header?.remove();
+    field.value = '';
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.focus();
   };
   const header = name === '' ? undefined : document.createElement('div');
   const search = placeSearch(ctx, (picked) => {
@@ -256,6 +272,8 @@ const openPlaceEditor = (
     const pickedLink = googleMapsLink(picked, ctx);
     const searchNodes = [...content.childNodes];
 
+    state.search = { content, nodes: searchNodes };
+
     view.setAttribute('data-blok-database-place-view', '');
     head.setAttribute('data-blok-database-place-head', '');
     head.append(placeChip(placeText(picked)), clearButton(ctx, clear));
@@ -270,6 +288,7 @@ const openPlaceEditor = (
         state.map?.destroy();
         state.map = null;
         content.replaceChildren(...searchNodes);
+        state.search = null;
         field.value = event.key;
         field.dispatchEvent(new Event('input', { bubbles: true }));
         field.focus();
@@ -304,7 +323,7 @@ const openPlaceEditor = (
     if (ctx.initialText !== undefined && ctx.initialText !== '') field.dispatchEvent(new Event('input', { bubbles: true }));
     // Capture on the parent runs before the text editor's own Enter handler commits.
     field.parentElement?.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' && !event.isComposing) state.entered = true;
+      if (event.key === 'Enter' && !event.isComposing && event.target === field) state.entered = true;
     }, true);
   }
 

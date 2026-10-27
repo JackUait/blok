@@ -189,6 +189,25 @@ describe('DatabasePropertyTypePopover', () => {
       flow.destroy();
     });
 
+    // notion-spec-2 §18.5: a typed name then Enter makes a Text property with that name.
+    it('makes a Text property from the typed name on Enter', () => {
+      const named = vi.fn<(type: PropertyType, name: string) => void>();
+      const flow = new DatabasePropertyTypePopover({ onSelect: named, withNameField: true });
+
+      flow.open(anchor);
+      const field = document.querySelector<HTMLInputElement>('[data-blok-database-property-name-input]');
+
+      if (field === null) throw new Error('no name field');
+      field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      expect(named).not.toHaveBeenCalled();
+      field.value = 'Budget';
+      field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      expect(named).toHaveBeenCalledWith('text', 'Budget');
+      expect(flow.isOpen).toBe(false);
+      flow.destroy();
+    });
+
     // feel/findings-table T12: Notion's name field heads the menu; the types sit in a grid that scrolls under it.
     it('puts the name field in a header and the types in one scrolling grid', () => {
       const flow = new DatabasePropertyTypePopover({ onSelect: vi.fn(), withNameField: true });

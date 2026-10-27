@@ -89,6 +89,15 @@ export class DatabasePropertyTypePopover {
       nameField.setAttribute('data-blok-field', 'text');
       nameField.placeholder = this.i18n?.t('tools.database.propertyName') ?? 'tools.database.propertyName';
       nameField.setAttribute('aria-label', this.i18n?.t('tools.database.propertyName') ?? 'tools.database.propertyName');
+      // notion-spec-2 §18.5: a name then Enter makes a Text property. Enter on an empty field is unmeasured, so it does nothing.
+      nameField.addEventListener('keydown', (e) => {
+        const name = nameField.value.trim();
+
+        if (e.key !== 'Enter' || e.isComposing || name === '') return;
+        e.preventDefault();
+        this.onSelect('text', name);
+        this.close();
+      });
       header.appendChild(nameField);
       popover.appendChild(header);
     }

@@ -8170,7 +8170,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   box-shadow: var(--blok-database-popover-shadow);
   padding: var(--blok-space-1);
   --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-1)));
-  animation: blok-prop-popover-in 120ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: blok-prop-popover-in 200ms ease both;
   transform-origin: top left;
 }
 

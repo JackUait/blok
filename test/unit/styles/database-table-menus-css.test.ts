@@ -52,6 +52,13 @@ describe('add property menu (T12)', () => {
     expect(declared('[data-blok-database-property-type-heading]', 'font-size')).toEqual(['12px']);
   });
 
+  // notion-spec-2 §18.5, research/08 Motion: opacity and scale 0.96 → 1 over 200ms ease, from the top-left corner.
+  it('opens like Notion\'s menus', () => {
+    // The second is the reduced-motion `none`.
+    expect(declared('[data-blok-database-property-type-popover]', 'animation')).toEqual(['blok-prop-popover-in 200ms ease both', 'none']);
+    expect(declared('[data-blok-database-property-type-popover]', 'transform-origin')).toEqual(['top left']);
+  });
+
   // notion-spec-2 §17.9: Notion's section label is its gray rgb(125,122,117), not a blue-gray. It fails AA, so it takes Blok's passing gray.
   it('draws the section labels in the database gray', () => {
     expect(declared('[data-blok-database-property-type-heading]', 'color')).toEqual(['var(--blok-database-ink-secondary)']);

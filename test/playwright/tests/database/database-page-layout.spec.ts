@@ -1251,6 +1251,8 @@ test.describe('row page layout', () => {
   // research/09 §9: Full width widens only the full page; both peeks keep their width.
   test('widens the full page and leaves both peeks alone when Full width is on', async ({ page }) => {
     const titleWidth = async (mode: 'full' | 'center' | 'side', fullWidth: boolean): Promise<number> => {
+      // A full page leaves #<row>?full in the URL, and a new editor would reopen it full (127c5fdf).
+      await page.evaluate(() => history.replaceState(history.state, '', location.pathname + location.search));
       await mount(page, withView(blocks(fullWidth ? { pageLayoutFullWidth: true } : {}), { openPagesIn: mode }));
       await openRow(page, 'r1');
       const title = peek(page).locator('[data-blok-database-drawer-title]');

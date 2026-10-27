@@ -208,6 +208,20 @@ describe('CI critical-path law', () => {
     });
   });
 
+  it('bounds every job, so a hung one cannot hold the concurrency group for six hours', () => {
+    const unbounded = [
+      ...Object.entries(ci.jobs)
+        // A reusable-workflow caller cannot take timeout-minutes; its called jobs carry it.
+        .filter(([, job]) => job.uses === undefined)
+        .map(([id, job]) => [`ci.${id}`, job] as const),
+      ...Object.entries(e2e.jobs).map(([id, job]) => [`e2e.${id}`, job] as const),
+    ]
+      .filter(([, job]) => !(typeof job['timeout-minutes'] === 'number' && job['timeout-minutes'] > 0))
+      .map(([id]) => id);
+
+    expect(unbounded).toEqual([]);
+  });
+
   it('retains the exact i18n and lint job contracts', () => {
     const i18n = getJob(ci, 'i18n');
     const lint = getJob(ci, 'lint');

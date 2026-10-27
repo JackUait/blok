@@ -395,6 +395,17 @@ describe('database CSV', () => {
       { id: 'p-tag', name: 'Tag', type: 'select', position: 'a2', config: { options: [{ id: 'o1', label: 'Red', position: 'a0' }] } },
     ];
 
+    it.each([1, 11])('adds a column to a database imported from a CSV with %i columns', (count) => {
+      // buildCsvImport keys its schema a0000, a0001, … and a0000 or a0010 ends in a zero.
+      const headers = Array.from({ length: count }, (_, i) => `C${i}`);
+      const imported = buildCsvImport([headers, headers.map(() => 'x')], { newId: ids() });
+      const plan = planCsvMerge([['Brand new'], ['v']], imported.schema, { newId: ids() });
+      const last = imported.schema.map((p) => p.position).sort().at(-1) ?? '';
+
+      expect(plan.newProperties.map((p) => p.name)).toEqual(['Brand new']);
+      expect(plan.newProperties[0].position > last).toBe(true);
+    });
+
     it('only adds rows, even when a title already exists (research/05 §9.3)', () => {
       const plan = planCsvMerge([['Name', 'Points'], ['Write', '5']], schema, { newId: () => 'o-new' });
 

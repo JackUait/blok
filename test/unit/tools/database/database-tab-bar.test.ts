@@ -627,6 +627,47 @@ describe('DatabaseTabBar', () => {
       el.remove();
     });
 
+    it('drops between neighbours whose keys the key generator rejects', () => {
+      // 'a10' ends in a zero: a host or an old document can hold it.
+      const views = [
+        makeView({ id: 'v1', position: 'a0' }),
+        makeView({ id: 'v2', position: 'a1' }),
+        makeView({ id: 'v3', position: 'a10' }),
+      ];
+      const { bar, el } = createBarWithLayout(views, 'v1');
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+
+      tab.dispatchEvent(new PointerEvent('pointerdown', { clientX: 50, clientY: 15, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 220, clientY: 15 }));
+      document.dispatchEvent(new PointerEvent('pointerup', { clientX: 220, clientY: 15 }));
+
+      expect(onReorder).toHaveBeenCalledTimes(1);
+      const key = onReorder.mock.calls[0][1];
+
+      expect(key > 'a1' && key < 'a10').toBe(true);
+      bar.destroy();
+      el.remove();
+    });
+
+    it('drops between two views that hold the same key', () => {
+      const views = [
+        makeView({ id: 'v1', position: 'a0' }),
+        makeView({ id: 'v2', position: 'a1' }),
+        makeView({ id: 'v3', position: 'a1' }),
+      ];
+      const { bar, el } = createBarWithLayout(views, 'v1');
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+
+      tab.dispatchEvent(new PointerEvent('pointerdown', { clientX: 50, clientY: 15, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 220, clientY: 15 }));
+      document.dispatchEvent(new PointerEvent('pointerup', { clientX: 220, clientY: 15 }));
+
+      expect(onReorder).toHaveBeenCalledTimes(1);
+      expect(onReorder.mock.calls[0][1] > 'a1').toBe(true);
+      bar.destroy();
+      el.remove();
+    });
+
     it('keeps Cmd+Z from the editor while a tab is dragged', () => {
       const views = [makeView({ id: 'v1', position: 'a0' }), makeView({ id: 'v2', position: 'a1' })];
       const { bar, el } = createBarWithLayout(views, 'v1');

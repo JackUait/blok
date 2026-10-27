@@ -1,4 +1,3 @@
-import { generateKeyBetween } from 'fractional-indexing';
 import { IconViewBoard, IconChart, IconGallery, IconListBulleted, IconTable, IconPencil, IconCopy, IconTrash, IconPlus, IconSliders, IconColumns, IconMap, IconTabs, IconPreview, IconDatabase, IconViewCalendar, IconViewFeed, IconViewForm, IconViewTimeline, IconLink, IconDotsHorizontal } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
 import { DATABASE_MENU_CLASS } from './database-group-menu';
@@ -14,6 +13,7 @@ import type { API } from '../../../types';
 import type { DatabaseTabDisplay, DatabaseViewConfig, ViewType } from './types';
 import { copyGhostRadius, mountGhost } from './copy-ghost-radius';
 import { isHistoryKey } from './database-keyboard';
+import { positionBetween } from '../../shared/database/schema-ops';
 
 const DRAG_THRESHOLD = 10;
 
@@ -723,7 +723,7 @@ export class DatabaseTabBar {
     const afterView = afterViewId === null ? undefined : this.views.find((v) => v.id === afterViewId);
     const beforeView = beforeViewId === null ? undefined : this.views.find((v) => v.id === beforeViewId);
 
-    this.onReorder(viewId, generateKeyBetween(afterView?.position ?? null, beforeView?.position ?? null));
+    this.onReorder(viewId, positionBetween(afterView?.position ?? null, beforeView?.position ?? null));
   }
 
   private closeOverflowDropdown(): void {

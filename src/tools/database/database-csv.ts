@@ -2,11 +2,11 @@ import type { BodyBlock } from './row-body';
 import { formatDateDisplay, toIsoDay, toIsoTime } from './cells/date-format';
 import { filesOf, personIdsOf } from './property-values';
 import { isOutputData, placeText, verificationStatus } from './tier3-values';
-import { generateKeyBetween } from 'fractional-indexing';
 
 import type { DatabaseData, DatabaseRowData, DateFormat, PropertyDefinition, PropertyType, PropertyValue, SelectOption } from './types';
 import { htmlToPlainText } from '../../components/utils/plain-text';
-import { freePropertyName, newView } from '../../shared/database/schema-ops';
+import { generateKeyBetween } from '../../shared/database/fractional-index';
+import { freePropertyName, newView, positionBetween } from '../../shared/database/schema-ops';
 import { planTypeChange } from './property-conversion';
 
 const BOM = '﻿';
@@ -566,7 +566,7 @@ export const planCsvMerge = (
   const lastPosition = [...schema].sort((a, b) => (a.position < b.position ? -1 : 1)).at(-1)?.position ?? null;
   const names = schema.map((p) => p.name);
   const fresh = targets.flatMap((target, column) => (typeof target === 'string' && target !== 'skip' ? [{ column, type: target }] : []));
-  const positions = fresh.reduce<string[]>((list) => [...list, generateKeyBetween(list.at(-1) ?? lastPosition, null)], []);
+  const positions = fresh.reduce<string[]>((list) => [...list, positionBetween(list.at(-1) ?? lastPosition, null)], []);
   const added = fresh.map((field, index) => {
     const name = freePropertyName(names, columns[field.column].name);
     const property: PropertyDefinition = { id: options.newId(), name, type: CONVERTED_TYPES.has(field.type) ? 'text' : field.type, position: positions[index] };

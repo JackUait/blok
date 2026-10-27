@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { generateKeyBetween } from 'fractional-indexing';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 
 /**
@@ -145,6 +144,7 @@ import { DatabaseTabBar, type TabBarOptions } from '../../../../src/tools/databa
 import { positionFixedAnchored } from '../../../../src/components/utils/popover/anchored-position';
 import type { DatabaseViewConfig, ViewType } from '../../../../src/tools/database/types';
 import type { API } from '../../../../types';
+import { positionBetween } from '../../../../src/shared/database/schema-ops';
 
 interface I18nStub {
   t(key: string, vars?: Record<string, string | number>): string;
@@ -1318,6 +1318,11 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
   });
 
   describe('dragging a tab', () => {
+    beforeEach(() => {
+      // An appended key ends in a random tail; the stub makes the expected key reproducible.
+      vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    });
+
     const layOutTabs = (el: HTMLElement): void => {
       const tabs = Array.from(el.querySelectorAll<HTMLElement>('[data-blok-database-tab]'));
 
@@ -1475,7 +1480,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       document.dispatchEvent(pointer('pointerup', 120));
 
       expect(onReorder).toHaveBeenCalledTimes(1);
-      expect(onReorder).toHaveBeenCalledWith('v1', generateKeyBetween(null, 'a1'));
+      expect(onReorder).toHaveBeenCalledWith('v1', positionBetween(null, 'a1'));
     });
 
     it('drops before the first neighbour rather than at the head of the row', () => {
@@ -1488,13 +1493,13 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
 
       // With the row starting at 'a0' these two keys collide, and "before the
       // first neighbour" is indistinguishable from "against nothing at all".
-      expect(generateKeyBetween(null, 'a2')).not.toBe(generateKeyBetween(null, null));
+      expect(positionBetween(null, 'a2')).not.toBe(positionBetween(null, null));
 
       dragFrom(el, 'v1', 50);
       document.dispatchEvent(pointer('pointermove', 120));
       document.dispatchEvent(pointer('pointerup', 120));
 
-      expect(onReorder).toHaveBeenCalledWith('v1', generateKeyBetween(null, 'a2'));
+      expect(onReorder).toHaveBeenCalledWith('v1', positionBetween(null, 'a2'));
     });
 
     it('drops between the two tabs the pointer sits between', () => {
@@ -1504,7 +1509,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       document.dispatchEvent(pointer('pointermove', 220));
       document.dispatchEvent(pointer('pointerup', 220));
 
-      expect(onReorder).toHaveBeenCalledWith('v1', generateKeyBetween('a1', 'a2'));
+      expect(onReorder).toHaveBeenCalledWith('v1', positionBetween('a1', 'a2'));
     });
 
     it('drops right after the shown tab on its left when folded tabs sit between', () => {
@@ -1527,7 +1532,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       document.dispatchEvent(pointer('pointermove', 220));
       document.dispatchEvent(pointer('pointerup', 220));
 
-      expect(onReorder).toHaveBeenCalledWith('v0', generateKeyBetween('a1', 'a2'));
+      expect(onReorder).toHaveBeenCalledWith('v0', positionBetween('a1', 'a2'));
     });
 
     it('drops after every view when the pointer is past a folded row', () => {
@@ -1549,7 +1554,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       document.dispatchEvent(pointer('pointermove', 350));
       document.dispatchEvent(pointer('pointerup', 350));
 
-      expect(onReorder).toHaveBeenCalledWith('v0', generateKeyBetween('a7', null));
+      expect(onReorder).toHaveBeenCalledWith('v0', positionBetween('a7', null));
     });
 
     it('drops after the last tab when the pointer is past the row', () => {
@@ -1559,7 +1564,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       document.dispatchEvent(pointer('pointermove', 350));
       document.dispatchEvent(pointer('pointerup', 350));
 
-      expect(onReorder).toHaveBeenCalledWith('v1', generateKeyBetween('a2', null));
+      expect(onReorder).toHaveBeenCalledWith('v1', positionBetween('a2', null));
     });
 
     it('the click that ends a drag of the current tab opens no menu (feel/findings-toolbar V06)', () => {
@@ -1582,7 +1587,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       document.dispatchEvent(pointer('pointermove', 250));
       document.dispatchEvent(pointer('pointerup', 250));
 
-      expect(onReorder).toHaveBeenCalledWith('v1', generateKeyBetween('a2', null));
+      expect(onReorder).toHaveBeenCalledWith('v1', positionBetween('a2', null));
     });
 
     it('reorders a lone view against nothing at all', () => {
@@ -1592,7 +1597,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       document.dispatchEvent(pointer('pointermove', 350));
       document.dispatchEvent(pointer('pointerup', 350));
 
-      expect(onReorder).toHaveBeenCalledWith('v1', generateKeyBetween(null, null));
+      expect(onReorder).toHaveBeenCalledWith('v1', positionBetween(null, null));
     });
 
     it('clears the ghost, the dragging flag and the closed slot on drop', () => {

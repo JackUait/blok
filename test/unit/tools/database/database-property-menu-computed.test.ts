@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import type { PropertyDefinition, PropertyType } from '../../../../src/tools/database/types';
 import { IconPencilLine } from '../../../../src/components/icons';
+import type * as Tooltip from '../../../../src/components/utils/tooltip';
 
 interface CapturedItem {
   name?: string;
@@ -15,8 +16,15 @@ interface CapturedItem {
   element?: HTMLElement;
   onActivate?: (item: CapturedItem) => void;
   confirmation?: { onActivate: (item: CapturedItem) => void; title?: string };
-  children?: { items: CapturedItem[]; searchable?: boolean };
+  children?: { items: CapturedItem[]; searchable?: boolean; clickOnly?: boolean; placement?: string; width?: string; onOpen?: () => void };
 }
+
+const hint = vi.hoisted(() => ({ hide: vi.fn() }));
+
+vi.mock('../../../../src/components/utils/tooltip', async (importOriginal) => ({
+  ...await importOriginal<typeof Tooltip>(),
+  hide: hint.hide,
+}));
 
 const captured = vi.hoisted((): { popovers: Array<{ items: CapturedItem[]; destroyed: boolean }> } => ({ popovers: [] }));
 
@@ -69,6 +77,11 @@ const byName = (items: CapturedItem[], name: string): CapturedItem => {
 
   return item;
 };
+
+/** `items` and every item of their submenus. */
+const flat = (items: CapturedItem[]): CapturedItem[] => items.flatMap((item) => [item, ...flat(item.children?.items ?? [])]);
+/** An item at any depth of `items`' submenus. */
+const deep = (items: CapturedItem[], name: string): CapturedItem => byName(flat(items), name);
 
 const i18n = { t: (key: string) => key, has: () => true, getLocale: () => 'en', getEnglishTranslation: (key: string) => key } as unknown as ConstructorParameters<typeof DatabasePropertyMenu>[0]['i18n'];
 
@@ -202,7 +215,7 @@ describe('property menu — computed types', () => {
     const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
     const relation = byName(byName(edit, 'rollupRelation').children?.items ?? [], 'rollupRelation-rel');
     const target = byName(byName(edit, 'rollupProperty').children?.items ?? [], 'rollupProperty-hours');
-    const sum = byName(byName(edit, 'rollupFunction').children?.items ?? [], 'rollupFunction-sum');
+    const sum = deep(byName(edit, 'rollupFunction').children?.items ?? [], 'rollupFunction-sum');
 
     relation.onActivate?.(relation);
     target.onActivate?.(target);
@@ -306,7 +319,7 @@ describe('property menu — computed types', () => {
     openMenu(prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'twice', function: 'show_original' } }));
     const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
 
-    expect((byName(edit, 'rollupFunction').children?.items ?? []).map((item) => item.name)).toContain('rollupFunction-sum');
+    expect(deep(byName(edit, 'rollupFunction').children?.items ?? [], 'rollupFunction-sum')).toBeDefined();
     expect(edit.map((item) => item.name ?? item.type)).toEqual([
       'rollupRelation', 'rollupProperty', 'rollupFunction', 'numberFormat', 'decimals', 'separator', 'showAs', 'all-views-note',
     ]);
@@ -320,8 +333,8 @@ describe('property menu — computed types', () => {
     }));
     const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
     const functions = byName(edit, 'rollupFunction').children?.items ?? [];
-    const sum = byName(functions, 'rollupFunction-sum');
-    const same = byName(functions, 'rollupFunction-show_original');
+    const sum = deep(functions, 'rollupFunction-sum');
+    const same = deep(functions, 'rollupFunction-show_original');
 
     sum.onActivate?.(sum);
     same.onActivate?.(same);
@@ -385,7 +398,7 @@ describe('property menu — computed types', () => {
 
     openMenu(rollup);
     const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
-    const names = (byName(edit, 'rollupFunction').children?.items ?? []).map((item) => item.name);
+    const names = flat(byName(edit, 'rollupFunction').children?.items ?? []).map((item) => item.name);
 
     expect(names).not.toContain('rollupFunction-sum');
     expect(names).toContain('rollupFunction-show_original');
@@ -427,5 +440,156 @@ describe('property menu — computed types', () => {
       menu.destroy();
       expect(row.title).toBe('tools.database.editFormula');
     });
+  });
+});
+
+describe('property menu — rollup picks redraw the open panel', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    captured.popovers = [];
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const empty = prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: '', function: 'show_original' } });
+
+  it('row page panel: a new target shows at once, and a Calculate picked next keeps it', () => {
+    const cb = callbacks();
+    const menu = new DatabasePropertyMenu({ ...cb, i18n, hasPeople: false, computed: computed() });
+
+    menu.openRowPage(empty, document.createElement('div'), { edit: true });
+    const hours = deep(lastItems(), 'rollupProperty-hours');
+
+    hours.onActivate?.(hours);
+
+    expect(byName(lastItems(), 'rollupProperty').valueLabel).toBe('Hours');
+    expect(lastItems().map((item) => item.name)).toContain('numberFormat');
+
+    const sum = deep(lastItems(), 'rollupFunction-sum');
+
+    sum.onActivate?.(sum);
+
+    expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'sum' } });
+    menu.destroy();
+  });
+
+  it('column header Edit property: a Calculate picked after a new target keeps the target', () => {
+    const { cb } = openMenu(empty);
+    const hours = deep(lastItems(), 'rollupProperty-hours');
+
+    hours.onActivate?.(hours);
+
+    expect(byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'rollupProperty').valueLabel).toBe('Hours');
+
+    const sum = deep(lastItems(), 'rollupFunction-sum');
+
+    sum.onActivate?.(sum);
+
+    expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'sum' } });
+  });
+});
+
+describe('property menu — click-only lists (notion-spec-2 §16.1)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    captured.popovers = [];
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const panel = (property: PropertyDefinition): CapturedItem[] => {
+    const menu = new DatabasePropertyMenu({ ...callbacks(), i18n, hasPeople: false, computed: computed() });
+
+    menu.openRowPage(property, document.createElement('div'), { edit: true });
+
+    return lastItems();
+  };
+  const sum = prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'sum' } });
+
+  it.each(['numberFormat', 'decimals', 'rollupFunction'])('%s opens on a click only, under its row', (name) => {
+    expect(byName(panel(sum), name).children).toMatchObject({ clickOnly: true, placement: 'under' });
+  });
+
+  it('Type opens on a click only', () => {
+    expect(byName(panel(sum), 'changeType').children?.clickOnly).toBe(true);
+  });
+
+  it('the Number property\'s own Number format and Decimal places open on a click only', () => {
+    const items = panel(prop('number'));
+
+    expect(byName(items, 'numberFormat').children?.clickOnly).toBe(true);
+    expect(byName(items, 'decimals').children?.clickOnly).toBe(true);
+  });
+
+  // Not measured: they keep opening on hover.
+  it.each(['rollupRelation', 'rollupProperty'])('%s still opens on hover', (name) => {
+    expect(byName(panel(sum), name).children?.clickOnly).not.toBe(true);
+  });
+
+  it('opening Decimal places hides its hint', () => {
+    byName(panel(sum), 'decimals').children?.onOpen?.();
+
+    expect(hint.hide).toHaveBeenCalled();
+  });
+
+  // notion-spec-2 §16.1: the Decimal places list is 250 wide.
+  it('Decimal places is 250 wide', () => {
+    expect(byName(panel(sum), 'decimals').children?.width).toBe('250px');
+  });
+
+  it('Calculate is 200 wide', () => {
+    expect(byName(panel(sum), 'rollupFunction').children?.width).toBe('200px');
+  });
+
+  const calculate = (targetPropertyId: string): CapturedItem[] =>
+    byName(panel(prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId, function: 'sum' } })), 'rollupFunction').children?.items ?? [];
+  const names = (items: CapturedItem[]): Array<string | undefined> => items.map((item) => item.name ?? item.title);
+  const group = (items: CapturedItem[], title: string): CapturedItem[] => {
+    const row = items.find((item) => item.title === title);
+
+    if (row === undefined) throw new Error(`no group ${title}`);
+
+    return row.children?.items ?? [];
+  };
+
+  it('Number target: Show original, Show unique values, then Count, Percent and More options groups', () => {
+    const items = calculate('hours');
+
+    expect(names(items)).toEqual([
+      'rollupFunction-show_original', 'rollupFunction-show_unique', 'rollupFunctionGroup-calcCount', 'rollupFunctionGroup-calcPercent', 'rollupFunctionGroup-calcMoreOptions',
+    ]);
+    expect(names(group(items, 'tools.database.calcCount'))).toEqual([
+      'rollupFunction-count', 'rollupFunction-count_values', 'rollupFunction-unique', 'rollupFunction-empty', 'rollupFunction-not_empty',
+    ]);
+    expect(names(group(items, 'tools.database.calcPercent'))).toEqual(['rollupFunction-percent_empty', 'rollupFunction-percent_not_empty']);
+    expect(names(group(items, 'tools.database.calcMoreOptions'))).toEqual([
+      'rollupFunction-sum', 'rollupFunction-average', 'rollupFunction-median', 'rollupFunction-min', 'rollupFunction-max', 'rollupFunction-range',
+    ]);
+  });
+
+  it('the group rows open on hover', () => {
+    const items = calculate('hours');
+
+    for (const title of ['tools.database.calcCount', 'tools.database.calcPercent', 'tools.database.calcMoreOptions']) {
+      expect(items.find((item) => item.title === title)?.children?.clickOnly).not.toBe(true);
+    }
+  });
+
+  it('Checkbox target: Show original, Count and Percent only', () => {
+    const items = calculate('done');
+
+    expect(names(items)).toEqual(['rollupFunction-show_original', 'rollupFunctionGroup-calcCount', 'rollupFunctionGroup-calcPercent']);
+    expect(names(group(items, 'tools.database.calcCount'))).toEqual(['rollupFunction-count', 'rollupFunction-checked', 'rollupFunction-unchecked']);
+    expect(names(group(items, 'tools.database.calcPercent'))).toEqual(['rollupFunction-percent_checked', 'rollupFunction-percent_unchecked']);
+  });
+
+  it('Text target: no More options', () => {
+    expect(names(calculate('t-title'))).toEqual([
+      'rollupFunction-show_original', 'rollupFunction-show_unique', 'rollupFunctionGroup-calcCount', 'rollupFunctionGroup-calcPercent',
+    ]);
   });
 });

@@ -18,7 +18,7 @@ import { DATABASE_HEADER_MENU_CLASS, SHOW_PAGE_ICON_ITEM } from './database-tabl
 import { reminderLabel, remindersFor } from './reminders';
 import { DATE_FORMATS, HOUR_CYCLES, TIME_FORMATS, resolveHourCycle, resolveLocale, timeZones } from './cells/date-format';
 import { overlayMountFor } from '../../components/utils/top-layer';
-import { onHover } from '../../components/utils/tooltip';
+import { hide as hideHint, onHover } from '../../components/utils/tooltip';
 import { getElementDirection } from '../../components/utils/direction';
 import type {
   DateDisplay,
@@ -146,6 +146,17 @@ const ROW_PAGE_MENU_CLASS = `${DATABASE_HEADER_MENU_CLASS} blok-database-row-pag
 /** The row page's Edit property panel: Notion pads it 8px, its menus 4 (notion-spec-2 §1). */
 const PROPERTY_PANEL_CLASS = `${ROW_PAGE_MENU_CLASS} blok-database-property-panel`;
 
+/** notion-spec-2 §16.1: Number format, Decimal places and Calculate open on a click only, under their row. */
+const CLICK_ONLY_UNDER = { clickOnly: true, placement: 'under' } as const;
+
+/** The Calculate menu's groups (notion-spec-2 §14.4, §15.2). */
+const CALCULATE_GROUPS: ReadonlyArray<readonly [string, readonly RollupFunction[]]> = [
+  ['tools.database.calcCount', ['count', 'count_values', 'unique', 'empty', 'not_empty', 'checked', 'unchecked', 'count_per_group']],
+  ['tools.database.calcPercent', ['percent_empty', 'percent_not_empty', 'percent_checked', 'percent_unchecked', 'percent_per_group']],
+  ['tools.database.calcMoreOptions', ['sum', 'average', 'median', 'min', 'max', 'range']],
+  ['tools.database.calcDate', ['earliest_date', 'latest_date', 'date_range']],
+];
+
 const withoutLimit = ({ limit: _limit, ...rest }: RelationSettings): RelationSettings => rest;
 
 /** Person "Edit property" rows (research/16 §5). The first choice of each is what an absent key means. */
@@ -223,9 +234,9 @@ export class DatabasePropertyMenu {
     this.shown = shown;
     this.anchor = anchor;
     const name = this.nameField(property, property.type !== 'title');
-    const update = this.showAsUpdate(property, name, (number, kept) => {
+    const update = this.showAsUpdate(property, name, (patch, kept) => {
       this.swap();
-      this.drawHeaderMenu({ ...property, number }, this.options.liveAnchor?.() ?? anchor, viewItems, { ...shown, number }, kept);
+      this.drawHeaderMenu({ ...property, ...patch }, this.options.liveAnchor?.() ?? anchor, viewItems, { ...shown, ...patch }, kept);
       // The tiles live in the Edit property submenu: open it again.
       this.popover?.activateItemByName('editProperty');
     });
@@ -262,15 +273,16 @@ export class DatabasePropertyMenu {
   }
 
   /**
-   * Writes a settings patch. A number pick (Show as, format, decimals, color) draws
-   * the menu again through `redraw`: its list closes, Edit property stays open with
-   * the new value (notion-spec-2 §8), and Color and Divide by come or go with Show as.
+   * Writes a settings patch. A number or rollup pick (Show as, format, decimals, color,
+   * relation, target, Calculate) draws the menu again through `redraw`: its list closes,
+   * Edit property stays open with the new value (notion-spec-2 §8), and rows that hang
+   * on the pick come or go. Without the redraw the next pick writes the old settings back.
    * Divide by writes through `numberItems`' quiet path instead: it lands on blur, often from a click elsewhere in the menu.
    */
-  private showAsUpdate(property: PropertyDefinition, name: HTMLElement, redraw: (number: NumberDisplay, typed: string | undefined) => void): (patch: Partial<PropertySettingsV2>) => void {
+  private showAsUpdate(property: PropertyDefinition, name: HTMLElement, redraw: (patch: Partial<PropertySettingsV2>, typed: string | undefined) => void): (patch: Partial<PropertySettingsV2>) => void {
     return (patch) => {
       this.options.onUpdate(property.id, patch);
-      if (patch.number === undefined) return;
+      if (patch.number === undefined && patch.rollup === undefined) return;
       const input = name.querySelector('input');
 
       const row = this.pickedRow;
@@ -278,7 +290,7 @@ export class DatabasePropertyMenu {
       this.pickedRow = null;
       // The old field goes away without a blur: save its name first, as leaving it would.
       input?.dispatchEvent(new Event('change'));
-      redraw(patch.number, input?.value);
+      redraw(patch, input?.value);
       if (row !== null) this.popover?.focusItemByName(row);
     };
   }
@@ -357,7 +369,7 @@ export class DatabasePropertyMenu {
     const entries = propertyMenuEntries(property);
     const has = (entry: PropertyMenuEntry): boolean => entries.includes(entry);
     const name = this.nameField(property, property.type !== 'title');
-    const update = this.showAsUpdate(property, name, (number, kept) => this.openRowPageEdit({ ...property, number }, anchor, kept));
+    const update = this.showAsUpdate(property, name, (patch, kept) => this.openRowPageEdit({ ...property, ...patch }, anchor, kept));
     const settings: PopoverItemParams[] = [];
 
     if (EDITABLE_SETTINGS.has(property.type)) {
@@ -665,6 +677,8 @@ export class DatabasePropertyMenu {
             ? { title: this.t('tools.database.propertyTypeListHeading'), icon: IconReplace, valueLabel: this.t(propertyTypeMeta(property.type).labelKey) }
             : { title: this.t('tools.database.changeType'), icon: propertyTypeMeta(property.type).icon }),
           children: {
+            // notion-spec-2 §16.1: the panel's Type opens on a click only.
+            ...(panel ? { clickOnly: true } : {}),
             items: addablePropertyTypes(this.options.hasPeople)
               .filter((type) => type !== property.type)
               .map((type) => ({
@@ -845,18 +859,42 @@ export class DatabasePropertyMenu {
         title: this.t('tools.database.rollupFunction'),
         valueLabel: this.t(`tools.database.rollupFn.${settings.function}`),
         children: {
-          items: (target === undefined ? ROLLUP_FUNCTIONS : rollupFunctionsFor(target)).map((fn) => ({
-            name: `rollupFunction-${fn}`,
-            title: this.t(`tools.database.rollupFn.${fn}`),
-            isActive: fn === settings.function,
-            closeOnActivate: true,
-            onActivate: () => setFunction(fn),
-          })),
+          ...CLICK_ONLY_UNDER,
+          width: '200px',
+          items: this.calculateItems(target === undefined ? ROLLUP_FUNCTIONS : rollupFunctionsFor(target), settings.function, setFunction),
         },
       },
       ...(target !== undefined && (rollupResultType(settings.function, target).type === 'number' || isNumberList(settings.function, target))
         ? [...this.numberItems(property, (number) => update({ number }), rollupHasFormat(settings.function)), this.allViewsNote()]
         : []),
+    ];
+  }
+
+  /**
+   * notion-spec-2 §14.4, §15.2: Show original and Show unique values, then the
+   * Count, Percent and More options groups, which open on hover. Where Date and
+   * the per-group counts sit was not measured.
+   */
+  private calculateItems(fns: readonly RollupFunction[], current: RollupFunction, pick: (fn: RollupFunction) => void): PopoverItemParams[] {
+    const leaf = (fn: RollupFunction): PopoverItemParams => ({
+      name: `rollupFunction-${fn}`,
+      title: this.t(`tools.database.rollupFn.${fn}`),
+      isActive: fn === current,
+      closeOnActivate: true,
+      onActivate: () => pick(fn),
+    });
+    const top = fns.filter((fn) => fn === 'show_original' || fn === 'show_unique');
+    const groups = CALCULATE_GROUPS
+      .map(([titleKey, members]) => [titleKey, fns.filter((fn) => members.includes(fn))] as const)
+      .filter(([, members]) => members.length > 0);
+
+    return [
+      ...top.map(leaf),
+      ...groups.map(([titleKey, members]): PopoverItemParams => ({
+        name: `rollupFunctionGroup-${titleKey.slice(titleKey.lastIndexOf('.') + 1)}`,
+        title: this.t(titleKey),
+        children: { items: members.map(leaf) },
+      })),
     ];
   }
 
@@ -1052,6 +1090,7 @@ export class DatabasePropertyMenu {
         title: this.t('tools.database.numberFormat'),
         valueLabel: this.t(`tools.database.numberFormat.${number.format ?? 'number'}`),
         children: {
+          ...CLICK_ONLY_UNDER,
           searchable: true,
           items: NUMBER_FORMATS.map((format) => ({
             name: `format-${format}`,
@@ -1066,6 +1105,10 @@ export class DatabasePropertyMenu {
         title: this.t('tools.database.decimalPlaces'),
         valueLabel: number.decimals === undefined ? this.t('tools.database.decimalPlacesDefault') : String(number.decimals),
         children: {
+          ...CLICK_ONLY_UNDER,
+          width: '250px',
+          // Its hint does not stay while the list is open, also when a key opened it.
+          onOpen: hideHint,
           items: [
             {
               name: 'decimals-default',

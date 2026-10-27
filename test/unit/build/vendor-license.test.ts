@@ -48,6 +48,15 @@ describe('dist/vendor.LICENSE.txt', () => {
     expect(elkjs?.block).toContain('Eclipse Public License')
   })
 
+  it('ships no jszip or its pako, lie and setimmediate: the in-house zip reader replaced them', () => {
+    const names = readVendorEntries().map((entry) => entry.name)
+
+    expect(names).not.toContain('jszip')
+    expect(names).not.toContain('pako')
+    expect(names).not.toContain('lie')
+    expect(names).not.toContain('setimmediate')
+  })
+
   it('lists mermaid, the package that pulls elkjs in', () => {
     expect(readVendorEntries().map((entry) => entry.name)).toContain('mermaid')
   })

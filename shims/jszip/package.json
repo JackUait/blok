@@ -1,0 +1,8 @@
+{
+  "name": "jszip",
+  "version": "3.10.2-blok.0",
+  "private": true,
+  "description": "Blok's read-only stand-in for jszip, loaded by docx-preview and pptx-renderer through a yarn resolution",
+  "type": "module",
+  "main": "./index.ts"
+}

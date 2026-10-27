@@ -1,17 +1,25 @@
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { renderAsync } from 'docx-preview';
 import { parseZip, RECOMMENDED_ZIP_LIMITS } from '@aiden0z/pptx-renderer';
-import JSZip from 'jszip';
+import JSZipShim from '../../../../../src/tools/file/zip/jszip-shim';
 
 import { DOCX_OPTIONS, OFFICE_CASES, listLikePptxRenderer, normalize } from './office-normalize';
 
-// The libraries import `jszip` themselves: today the real one, after the swap the
-// shim. Golden output was captured with jszip 3.10.2 and must not change.
+// The libraries import `jszip` themselves, which a yarn resolution points at the shim.
+// Golden output was captured with the real jszip 3.10.2 and must not change.
 const bytesOf = (rel: string): Uint8Array<ArrayBuffer> => new Uint8Array(readFileSync(resolve(__dirname, rel)));
 
 describe('office libraries read zips the same through jszip or the shim', () => {
+  it.each(['docx-preview', '@aiden0z/pptx-renderer'])('%s resolves jszip to the shim package', (library) => {
+    const fromRoot = createRequire(resolve(__dirname, '../../../../../package.json'));
+    const fromLibrary = createRequire(fromRoot.resolve(library));
+
+    expect(fromLibrary.resolve('jszip')).toBe(resolve(__dirname, '../../../../../shims/jszip/index.ts'));
+  });
+
   it('docx-preview renders the deflated docx to the golden HTML', async () => {
     const container = document.createElement('div');
 
@@ -31,8 +39,8 @@ describe('office libraries read zips the same through jszip or the shim', () => 
   it.each([
     ['pptx', OFFICE_CASES.pptx],
     ['xlsx', OFFICE_CASES.xlsx],
-  ])('the jszip import lists the %s like the golden', async (kind, rel) => {
-    const listed = await listLikePptxRenderer(await JSZip.loadAsync(bytesOf(rel)));
+  ])('the shim lists the %s like the golden', async (kind, rel) => {
+    const listed = await listLikePptxRenderer(await JSZipShim.loadAsync(bytesOf(rel)));
 
     await expect(`${JSON.stringify(listed, null, 1)}\n`).toMatchFileSnapshot(`./fixtures/golden/zip-listing-${kind}.json`);
   });

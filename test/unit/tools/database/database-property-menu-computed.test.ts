@@ -560,6 +560,12 @@ describe('property menu — click-only lists (notion-spec-2 §16.1)', () => {
     expect(byName(panel(prop('number', { number: { decimals: 8 } })), 'decimals').valueLabel).toBe('8');
   });
 
+  // notion-spec-2 §17.10: a new rollup with no relation shows "Calculate" with no value.
+  it('Calculate shows no value until a relation is picked', () => {
+    expect(byName(panel(prop('rollup')), 'rollupFunction').valueLabel).toBeUndefined();
+    expect(byName(panel(sum), 'rollupFunction').valueLabel).toBe('tools.database.rollupFn.sum');
+  });
+
   it('Calculate is 200 wide', () => {
     expect(byName(panel(sum), 'rollupFunction').children?.width).toBe('200px');
   });

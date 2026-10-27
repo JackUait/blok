@@ -130,6 +130,19 @@ test('Decimal places is 250x210 under its row: Default and 0 to 5, no scrolling'
   await expect(page.locator('[data-blok-item-name^="decimals-"]')).toHaveText(['Default', '0', '1', '2', '3', '4', '5']);
 });
 
+// §17.7 measured this list from the column header's Edit property.
+test('the column header\'s Decimal places is 250x210 too', async ({ page }) => {
+  await openPanel(page);
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await page.getByRole('columnheader', { name: 'Total' }).getByRole('button', { name: 'Total' }).click();
+  await page.getByRole('menuitem', { name: 'Edit property' }).hover();
+  await page.getByTestId('popover').locator('[data-blok-item-name="decimals"]').click();
+  const list = await listBox(page, 'decimals-default');
+
+  expect({ width: list.width, height: list.height }).toEqual({ width: 250, height: 210 });
+});
+
 test('Number format is 192 wide, its end edge on its row\'s', async ({ page }) => {
   await openPanel(page);
   const row = await box(page, 'numberFormat');

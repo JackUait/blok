@@ -951,7 +951,8 @@ export class DatabasePropertyMenu {
       {
         name: 'rollupFunction',
         title: this.t('tools.database.rollupFunction'),
-        valueLabel: this.t(`tools.database.rollupFn.${settings.function}`),
+        // §17.10: no value until a relation is picked.
+        ...(relation === undefined ? {} : { valueLabel: this.t(`tools.database.rollupFn.${settings.function}`) }),
         children: {
           ...CLICK_ONLY_UNDER,
           class: PANEL_LIST_CLASS,

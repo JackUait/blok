@@ -6776,6 +6776,11 @@ textarea[data-blok-database-cell-input] {
   padding-block: var(--blok-space-1);
 }
 
+/* The rows' 1px gap is between rows only, also where the row page's own rule does not reach. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-panel-list'] > [data-blok-popover-container] [data-blok-popover-item]:last-child {
+  margin-block-end: 0;
+}
+
 /* §17.9: the type list's "Type" line is 28 tall and 4px wider than the rows on each side. */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-property-panel'] [data-blok-database-property-type-list-heading] {
   min-height: 28px;

@@ -1202,7 +1202,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // database.css: a card's rollup list items never grow, even when the list wraps.
     const DATABASE_CARD_LIST_ITEM_BYTES = 181;
     // database.css: lists off the Edit property panel pad 4px and open on the current row in the hover tint; the type list's "Type" line.
-    const DATABASE_PANEL_LIST_BYTES = 1_556;
+    const DATABASE_PANEL_LIST_BYTES = 1_829;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

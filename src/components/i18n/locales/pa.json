@@ -1715,7 +1715,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" ਆਪਣੇ ਆਪ ਦਾ ਹਵਾਲਾ ਦਿੰਦਾ ਹੈ",
   "tools.database.formula.error.tooDeep": "ਫਾਰਮੂਲੇ ਹੋਰ ਫਾਰਮੂਲਿਆਂ ਦਾ ਹਵਾਲਾ ਸਿਰਫ਼ 15 ਪੱਧਰਾਂ ਤੱਕ ਦੇ ਸਕਦੇ ਹਨ",
   "tools.database.formula.error.tooComplex": "ਫਾਰਮੂਲੇ ਵੱਧ ਤੋਂ ਵੱਧ {length} ਅੱਖਰ ਲੰਬੇ ਅਤੇ ਵੱਧ ਤੋਂ ਵੱਧ {depth} ਪੱਧਰ ਡੂੰਘੇ ਨੈਸਟ ਹੋ ਸਕਦੇ ਹਨ",
-  "tools.database.formula.error.patternTooComplex": "ਇਹ ਪੈਟਰਨ ਬਹੁਤ ਦੇਰ ਤੱਕ ਚੱਲ ਸਕਦਾ ਹੈ। ਬੈਕਰੈਫਰੈਂਸ, ਲੁੱਕਅਰਾਊਂਡ ਅਤੇ ਦੁਹਰਾਏ ਗਰੁੱਪ ਅੰਦਰ ਕੁਆਂਟੀਫਾਇਰ ਜਾਂ ਕੁਝ ਵੀ ਨਾ ਮਿਲਾ ਸਕਣ ਵਾਲੇ ਦੁਹਰਾਏ ਗਰੁੱਪ ਤੋਂ ਬਚੋ, ਅਤੇ ਇਸਨੂੰ {length} ਅੱਖਰਾਂ ਤੋਂ ਘੱਟ ਰੱਖੋ",
+  "tools.database.formula.error.patternTooComplex": "ਇਹ ਪੈਟਰਨ ਬਹੁਤ ਦੇਰ ਤੱਕ ਚੱਲ ਸਕਦਾ ਹੈ। ਬੈਕਰੈਫਰੈਂਸ, ਲੁੱਕਅਰਾਊਂਡ ਅਤੇ ਦੁਹਰਾਏ ਗਰੁੱਪ ਅੰਦਰ ਕੁਆਂਟੀਫਾਇਰ ਜਾਂ ਖਾਲੀ ਲਿਖਤ ਨਾਲ ਮਿਲ ਸਕਣ ਵਾਲੇ ਦੁਹਰਾਏ ਗਰੁੱਪ ਤੋਂ ਬਚੋ, ਅਤੇ ਇਸਨੂੰ {length} ਅੱਖਰਾਂ ਤੋਂ ਘੱਟ ਰੱਖੋ",
   "tools.database.formulaLimitReached": "ਇਹ ਫ਼ਾਰਮੂਲਾ ਇੱਕ ਸੀਮਾ ਤੱਕ ਪਹੁੰਚ ਗਿਆ: ਇਸਦਾ ਨਤੀਜਾ ਬਹੁਤ ਵੱਡਾ ਹੈ, ਜਾਂ ਗਿਣਤੀ ਕਰਨ ਵਿੱਚ ਬਹੁਤ ਸਮਾਂ ਲੱਗਦਾ ਹੈ",
   "tools.database.propertyTypeRelation": "ਸੰਬੰਧ",
   "tools.database.propertyTypeRollup": "ਸੰਖੇਪ",

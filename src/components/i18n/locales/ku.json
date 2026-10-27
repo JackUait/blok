@@ -1715,7 +1715,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" ئاماژە بە خۆی دەکاتەوە",
   "tools.database.formula.error.tooDeep": "فۆرموولەکان تەنها تا 15 ئاست قووڵی دەتوانن ئاماژە بە فۆرموولەی تر بکەن",
   "tools.database.formula.error.tooComplex": "Formul dikarin herî zêde {length} tîp dirêj bin û herî zêde {depth} ast kûr bên hêlînkirin",
-  "tools.database.formula.error.patternTooComplex": "Ev nimûne dikare pir dirêj bixebite. Ji paşvegerandin, lêgerînên dorhêl û hejmarker di nav komek dubarekirî de an komek dubarekirî ya ku dikare tiştekî li hev neyîne dûr bisekinin, û wê ji {length} tîpan kurttir bihêlin",
+  "tools.database.formula.error.patternTooComplex": "Ev nimûne dikare pir dirêj bixebite. Ji paşvegerandin, lêgerînên dorhêl û hejmarker di nav komek dubarekirî de an komek dubarekirî ya ku dikare li nivîsa vala bê dûr bisekinin, û wê ji {length} tîpan kurttir bihêlin",
   "tools.database.formulaLimitReached": "Ev formul gihîşt sînorekê: encama wê pir mezin e, an hesabkirina wê pir dirêj dikişîne",
   "tools.database.propertyTypeRelation": "پەیوەندی",
   "tools.database.propertyTypeRollup": "کۆکردنەوە",

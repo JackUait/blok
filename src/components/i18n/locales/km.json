@@ -1715,7 +1715,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" យោងត្រឡប់មកខ្លួនឯងវិញ",
   "tools.database.formula.error.tooDeep": "រូបមន្តអាចយោងរូបមន្តផ្សេងទៀតបានត្រឹមតែជម្រៅ 15 កម្រិតប៉ុណ្ណោះ",
   "tools.database.formula.error.tooComplex": "រូបមន្តអាចមានប្រវែងយ៉ាងច្រើន {length} តួអក្សរ និងដាក់បញ្ចូលគ្នាយ៉ាងច្រើន {depth} កម្រិត",
-  "tools.database.formula.error.patternTooComplex": "លំនាំនេះអាចដំណើរការយូរពេក។ ជៀសវាងការយោងត្រឡប់ ការមើលជុំវិញ និងបរិមាណកំណត់ក្នុងក្រុមដែលធ្វើម្ដងទៀត ឬក្រុមដែលធ្វើម្ដងទៀតដែលអាចមិនផ្គូផ្គងអ្វីសោះ ហើយរក្សាវាឱ្យខ្លីជាង {length} តួអក្សរ",
+  "tools.database.formula.error.patternTooComplex": "លំនាំនេះអាចដំណើរការយូរពេក។ ជៀសវាងការយោងត្រឡប់ ការមើលជុំវិញ និងបរិមាណកំណត់ក្នុងក្រុមដែលធ្វើម្ដងទៀត ឬក្រុមដែលធ្វើម្ដងទៀតដែលអាចផ្គូផ្គងអត្ថបទទទេ ហើយរក្សាវាឱ្យខ្លីជាង {length} តួអក្សរ",
   "tools.database.formulaLimitReached": "រូបមន្តនេះបានដល់ដែនកំណត់៖ លទ្ធផលធំពេក ឬការគណនាចំណាយពេលយូរពេក",
   "tools.database.propertyTypeRelation": "ទំនាក់ទំនង",
   "tools.database.propertyTypeRollup": "ការសរុប",

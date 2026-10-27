@@ -1719,7 +1719,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" se sklicuje nase",
   "tools.database.formula.error.tooDeep": "Formule se lahko sklicujejo na druge formule le do globine 15 ravni",
   "tools.database.formula.error.tooComplex": "Formule imajo lahko največ {length} znakov in so lahko gnezdene največ {depth} ravni globoko",
-  "tools.database.formula.error.patternTooComplex": "Ta vzorec bi lahko deloval predolgo. Izogibajte se povratnim sklicem, preverjanjem naprej in nazaj ter kvantifikatorjem v ponovljeni skupini ali ponovljeni skupini, ki se morda ne ujema z ničimer, in naj bo krajši od {length} znakov",
+  "tools.database.formula.error.patternTooComplex": "Ta vzorec bi lahko deloval predolgo. Izogibajte se povratnim sklicem, preverjanjem naprej in nazaj ter kvantifikatorjem v ponovljeni skupini ali ponovljeni skupini, ki se lahko ujema s praznim besedilom, in naj bo krajši od {length} znakov",
   "tools.database.formulaLimitReached": "Ta formula je dosegla omejitev: rezultat je prevelik ali izračun traja predolgo",
   "tools.database.propertyTypeRelation": "Povezava",
   "tools.database.propertyTypeRollup": "Povzetek",

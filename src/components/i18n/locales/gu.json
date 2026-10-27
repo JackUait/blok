@@ -1715,7 +1715,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" પોતાનો જ સંદર્ભ આપે છે",
   "tools.database.formula.error.tooDeep": "ફોર્મ્યુલા અન્ય ફોર્મ્યુલાનો સંદર્ભ ફક્ત 15 સ્તર ઊંડે સુધી આપી શકે છે",
   "tools.database.formula.error.tooComplex": "સૂત્રો વધુમાં વધુ {length} અક્ષર લાંબા અને વધુમાં વધુ {depth} સ્તર ઊંડા નેસ્ટ થઈ શકે છે",
-  "tools.database.formula.error.patternTooComplex": "આ પેટર્ન ખૂબ લાંબો સમય ચાલી શકે છે. બેકરેફરન્સ, લુકઅરાઉન્ડ અને પુનરાવર્તિત જૂથની અંદરના ક્વોન્ટિફાયર અથવા કંઈ પણ ન મેળવી શકે તેવું પુનરાવર્તિત જૂથ ટાળો, અને તેને {length} અક્ષરથી ઓછું રાખો",
+  "tools.database.formula.error.patternTooComplex": "આ પેટર્ન ખૂબ લાંબો સમય ચાલી શકે છે. બેકરેફરન્સ, લુકઅરાઉન્ડ અને પુનરાવર્તિત જૂથની અંદરના ક્વોન્ટિફાયર અથવા ખાલી લખાણ સાથે મેળ ખાઈ શકે તેવું પુનરાવર્તિત જૂથ ટાળો, અને તેને {length} અક્ષરથી ઓછું રાખો",
   "tools.database.formulaLimitReached": "આ સૂત્ર મર્યાદા સુધી પહોંચ્યું: તેનું પરિણામ ખૂબ મોટું છે, અથવા ગણતરીમાં ખૂબ સમય લાગે છે",
   "tools.database.propertyTypeRelation": "સંબંધ",
   "tools.database.propertyTypeRollup": "એકત્રીકરણ",

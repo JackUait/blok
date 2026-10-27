@@ -1717,7 +1717,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" מפנה בחזרה לעצמו",
   "tools.database.formula.error.tooDeep": "נוסחאות יכולות להפנות לנוסחאות אחרות עד עומק של 15 רמות בלבד",
   "tools.database.formula.error.tooComplex": "נוסחה יכולה להכיל עד {length} תווים ולהיות מקוננת עד {depth} רמות",
-  "tools.database.formula.error.patternTooComplex": "תבנית זו עלולה לרוץ זמן רב מדי. הימנעו מהפניות לאחור, מבדיקות לפנים ולאחור ומכמתים בתוך קבוצה חוזרת או מקבוצה חוזרת שעשויה לא להתאים לכלום, ושמרו עליה קצרה מ-{length} תווים",
+  "tools.database.formula.error.patternTooComplex": "תבנית זו עלולה לרוץ זמן רב מדי. הימנעו מהפניות לאחור, מבדיקות לפנים ולאחור ומכמתים בתוך קבוצה חוזרת או מקבוצה חוזרת שעשויה להתאים לטקסט ריק, ושמרו עליה קצרה מ-{length} תווים",
   "tools.database.formulaLimitReached": "הנוסחה הגיעה למגבלה: התוצאה גדולה מדי, או שהחישוב נמשך זמן רב מדי",
   "tools.database.propertyTypeRelation": "קשר",
   "tools.database.propertyTypeRollup": "סיכום",

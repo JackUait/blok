@@ -1715,7 +1715,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" ອ້າງອີງເຖິງຕົວມັນເອງ",
   "tools.database.formula.error.tooDeep": "ສູດສາມາດອ້າງອີງສູດອື່ນໄດ້ເລິກພຽງ 15 ລະດັບ",
   "tools.database.formula.error.tooComplex": "ສູດສາມາດຍາວໄດ້ສູງສຸດ {length} ຕົວອັກສອນ ແລະ ຊ້ອນກັນໄດ້ສູງສຸດ {depth} ລະດັບ",
-  "tools.database.formula.error.patternTooComplex": "ຮູບແບບນີ້ອາດໃຊ້ເວລາດົນເກີນໄປ. ຫຼີກລ່ຽງການອ້າງອີງກັບຄືນ, ການເບິ່ງອ້ອມຂ້າງ ແລະ ຕົວກຳນົດຈຳນວນໃນກຸ່ມທີ່ຊ້ຳ ຫຼື ກຸ່ມທີ່ຊ້ຳທີ່ອາດບໍ່ກົງກັບຫຍັງເລີຍ, ແລະ ໃຫ້ສັ້ນກວ່າ {length} ຕົວອັກສອນ",
+  "tools.database.formula.error.patternTooComplex": "ຮູບແບບນີ້ອາດໃຊ້ເວລາດົນເກີນໄປ. ຫຼີກລ່ຽງການອ້າງອີງກັບຄືນ, ການເບິ່ງອ້ອມຂ້າງ ແລະ ຕົວກຳນົດຈຳນວນໃນກຸ່ມທີ່ຊ້ຳ ຫຼື ກຸ່ມທີ່ຊ້ຳທີ່ອາດກົງກັບຂໍ້ຄວາມຫວ່າງ, ແລະ ໃຫ້ສັ້ນກວ່າ {length} ຕົວອັກສອນ",
   "tools.database.formulaLimitReached": "ສູດນີ້ຮອດຂີດຈຳກັດແລ້ວ: ຜົນລັບໃຫຍ່ເກີນໄປ ຫຼື ໃຊ້ເວລາຄິດໄລ່ດົນເກີນໄປ",
   "tools.database.propertyTypeRelation": "ຄວາມສຳພັນ",
   "tools.database.propertyTypeRollup": "ການສະຫຼຸບ",

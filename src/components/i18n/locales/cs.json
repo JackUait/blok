@@ -1719,7 +1719,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" odkazuje sám na sebe",
   "tools.database.formula.error.tooDeep": "Vzorce mohou odkazovat na jiné vzorce nejvýše do hloubky 15 úrovní",
   "tools.database.formula.error.tooComplex": "Vzorce mohou mít nejvýše {length} znaků a být vnořené nejvýše do hloubky {depth} úrovní",
-  "tools.database.formula.error.patternTooComplex": "Tento vzor může běžet příliš dlouho. Vyhněte se zpětným odkazům, kontrolám dopředu a dozadu a kvantifikátorům uvnitř opakované skupiny nebo opakované skupině, která nemusí odpovídat ničemu, a držte jej pod {length} znaky",
+  "tools.database.formula.error.patternTooComplex": "Tento vzor může běžet příliš dlouho. Vyhněte se zpětným odkazům, kontrolám dopředu a dozadu a kvantifikátorům uvnitř opakované skupiny nebo opakované skupině, která může odpovídat prázdnému textu, a držte jej pod {length} znaky",
   "tools.database.formulaLimitReached": "Tento vzorec narazil na limit: výsledek je příliš velký nebo jeho výpočet trvá příliš dlouho",
   "tools.database.propertyTypeRelation": "Propojení",
   "tools.database.propertyTypeRollup": "Souhrn",

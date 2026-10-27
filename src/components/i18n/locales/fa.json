@@ -1715,7 +1715,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" به خودش ارجاع می‌دهد",
   "tools.database.formula.error.tooDeep": "فرمول‌ها فقط تا عمق 15 سطح می‌توانند به فرمول‌های دیگر ارجاع دهند",
   "tools.database.formula.error.tooComplex": "فرمول‌ها حداکثر می‌توانند {length} نویسه طول داشته باشند و تا {depth} سطح تودرتو شوند",
-  "tools.database.formula.error.patternTooComplex": "این الگو ممکن است بیش از حد طول بکشد. از ارجاع به عقب، نگاه به اطراف و کمیت‌نماها درون گروه تکراری یا گروه تکراری‌ای که ممکن است با هیچ چیز منطبق شود پرهیز کنید و آن را کمتر از {length} نویسه نگه دارید",
+  "tools.database.formula.error.patternTooComplex": "این الگو ممکن است بیش از حد طول بکشد. از ارجاع به عقب، نگاه به اطراف و کمیت‌نماها درون گروه تکراری یا گروه تکراری‌ای که ممکن است با متن خالی منطبق شود پرهیز کنید و آن را کمتر از {length} نویسه نگه دارید",
   "tools.database.formulaLimitReached": "این فرمول به یک محدودیت رسید: نتیجه‌اش خیلی بزرگ است یا محاسبه‌اش خیلی طول می‌کشد",
   "tools.database.propertyTypeRelation": "رابطه",
   "tools.database.propertyTypeRollup": "تجمیع",

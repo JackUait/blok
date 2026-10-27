@@ -1719,7 +1719,7 @@
   "tools.database.formula.error.circularReference": "«{name}» посилається на себе",
   "tools.database.formula.error.tooDeep": "Формули можуть посилатися на інші формули лише на глибину 15 рівнів",
   "tools.database.formula.error.tooComplex": "Формула може мати не більше {length} символів і не більше {depth} рівнів вкладеності",
-  "tools.database.formula.error.patternTooComplex": "Цей шаблон може виконуватися надто довго. Уникайте зворотних посилань, перевірок уперед і назад та кванторів усередині повторюваної групи або повторюваної групи, яка може нічому не відповідати, і тримайте його коротшим за {length} символів",
+  "tools.database.formula.error.patternTooComplex": "Цей шаблон може виконуватися надто довго. Уникайте зворотних посилань, перевірок уперед і назад та кванторів усередині повторюваної групи або повторюваної групи, яка може збігтися з порожнім текстом, і тримайте його коротшим за {length} символів",
   "tools.database.formulaLimitReached": "Формула досягла обмеження: результат завеликий або обчислюється надто довго",
   "tools.database.propertyTypeRelation": "Зв’язок",
   "tools.database.propertyTypeRollup": "Зведення",

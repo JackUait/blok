@@ -1715,7 +1715,7 @@
   "tools.database.formula.error.circularReference": "「{name}」參照了自己",
   "tools.database.formula.error.tooDeep": "公式最多只能巢狀參照 15 層其他公式",
   "tools.database.formula.error.tooComplex": "公式最多 {length} 個字元，巢狀最多 {depth} 層",
-  "tools.database.formula.error.patternTooComplex": "此模式可能執行過久。請避免反向參照、環視、重複群組內的量詞，以及可能不匹配任何內容的重複群組，並保持在 {length} 個字元以內",
+  "tools.database.formula.error.patternTooComplex": "此模式可能執行過久。請避免反向參照、環視、重複群組內的量詞，以及可能匹配空白內容的重複群組，並保持在 {length} 個字元以內",
   "tools.database.formulaLimitReached": "此公式已達到上限：結果過大，或計算時間過長",
   "tools.database.propertyTypeRelation": "關聯",
   "tools.database.propertyTypeRollup": "彙整",

@@ -1715,7 +1715,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" తనను తానే సూచిస్తోంది",
   "tools.database.formula.error.tooDeep": "ఫార్ములాలు ఇతర ఫార్ములాలను 15 స్థాయిల లోతు వరకు మాత్రమే సూచించగలవు",
   "tools.database.formula.error.tooComplex": "సూత్రాలు గరిష్ఠంగా {length} అక్షరాల పొడవు, గరిష్ఠంగా {depth} స్థాయిల లోతు వరకు నెస్ట్ కావచ్చు",
-  "tools.database.formula.error.patternTooComplex": "ఈ నమూనా చాలా సేపు నడవవచ్చు. బ్యాక్‌రిఫరెన్స్‌లు, లుక్‌అరౌండ్‌లు, పునరావృత గుంపులోని క్వాంటిఫైయర్‌లు లేదా దేనికీ సరిపోలకపోయే పునరావృత గుంపును నివారించండి, దానిని {length} అక్షరాల కంటే తక్కువగా ఉంచండి",
+  "tools.database.formula.error.patternTooComplex": "ఈ నమూనా చాలా సేపు నడవవచ్చు. బ్యాక్‌రిఫరెన్స్‌లు, లుక్‌అరౌండ్‌లు, పునరావృత గుంపులోని క్వాంటిఫైయర్‌లు లేదా ఖాళీ పాఠ్యానికి సరిపోలగల పునరావృత గుంపును నివారించండి, దానిని {length} అక్షరాల కంటే తక్కువగా ఉంచండి",
   "tools.database.formulaLimitReached": "ఈ ఫార్ములా పరిమితికి చేరుకుంది: దాని ఫలితం చాలా పెద్దది, లేదా లెక్కించడానికి చాలా సమయం పడుతుంది",
   "tools.database.propertyTypeRelation": "సంబంధం",
   "tools.database.propertyTypeRollup": "సంకలనం",

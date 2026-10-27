@@ -1717,7 +1717,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" hace referencia a sí misma",
   "tools.database.formula.error.tooDeep": "Las fórmulas solo pueden hacer referencia a otras fórmulas hasta 15 niveles de profundidad",
   "tools.database.formula.error.tooComplex": "Las fórmulas pueden tener como máximo {length} caracteres y anidarse como máximo {depth} niveles",
-  "tools.database.formula.error.patternTooComplex": "Este patrón podría tardar demasiado. Evita las referencias inversas, las búsquedas alrededor y los cuantificadores dentro de un grupo repetido o un grupo repetido que pueda no coincidir con nada, y mantenlo por debajo de {length} caracteres",
+  "tools.database.formula.error.patternTooComplex": "Este patrón podría tardar demasiado. Evita las referencias inversas, las búsquedas alrededor y los cuantificadores dentro de un grupo repetido o un grupo repetido que pueda coincidir con texto vacío, y mantenlo por debajo de {length} caracteres",
   "tools.database.formulaLimitReached": "Esta fórmula alcanzó un límite: su resultado es demasiado grande o tarda demasiado en calcularse",
   "tools.database.propertyTypeRelation": "Relación",
   "tools.database.propertyTypeRollup": "Agregación",

@@ -1715,7 +1715,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" อ้างอิงกลับมาที่ตัวเอง",
   "tools.database.formula.error.tooDeep": "สูตรอ้างอิงสูตรอื่นได้ลึกสุดเพียง 15 ระดับ",
   "tools.database.formula.error.tooComplex": "สูตรยาวได้สูงสุด {length} อักขระ และซ้อนกันได้ลึกสูงสุด {depth} ระดับ",
-  "tools.database.formula.error.patternTooComplex": "รูปแบบนี้อาจทำงานนานเกินไป หลีกเลี่ยงการอ้างอิงย้อนกลับ การมองรอบ และตัวระบุจำนวนภายในกลุ่มที่ซ้ำ หรือกลุ่มที่ซ้ำซึ่งอาจไม่ตรงกับอะไรเลย และให้สั้นกว่า {length} อักขระ",
+  "tools.database.formula.error.patternTooComplex": "รูปแบบนี้อาจทำงานนานเกินไป หลีกเลี่ยงการอ้างอิงย้อนกลับ การมองรอบ และตัวระบุจำนวนภายในกลุ่มที่ซ้ำ หรือกลุ่มที่ซ้ำซึ่งอาจตรงกับข้อความว่าง และให้สั้นกว่า {length} อักขระ",
   "tools.database.formulaLimitReached": "สูตรนี้ถึงขีดจำกัดแล้ว: ผลลัพธ์ใหญ่เกินไป หรือใช้เวลาคำนวณนานเกินไป",
   "tools.database.propertyTypeRelation": "ความสัมพันธ์",
   "tools.database.propertyTypeRollup": "สรุปรวม",

@@ -1723,7 +1723,7 @@
   "tools.database.formula.error.circularReference": "يشير \"{name}\" إلى نفسه",
   "tools.database.formula.error.tooDeep": "يمكن للصيغ الإشارة إلى صيغ أخرى بعمق 15 مستوى فقط",
   "tools.database.formula.error.tooComplex": "يمكن أن يصل طول الصيغة إلى {length} حرف كحد أقصى وأن تتداخل حتى {depth} مستوى كحد أقصى",
-  "tools.database.formula.error.patternTooComplex": "قد يستغرق هذا النمط وقتًا طويلًا جدًا. تجنب المراجع الخلفية والنظر حول النص والمكممات داخل مجموعة متكررة أو مجموعة متكررة قد لا تطابق شيئًا، واجعله أقل من {length} حرف",
+  "tools.database.formula.error.patternTooComplex": "قد يستغرق هذا النمط وقتًا طويلًا جدًا. تجنب المراجع الخلفية والنظر حول النص والمكممات داخل مجموعة متكررة أو مجموعة متكررة قد تطابق نصًا فارغًا، واجعله أقل من {length} حرف",
   "tools.database.formulaLimitReached": "بلغت هذه الصيغة حدًا: نتيجتها كبيرة جدًا، أو يستغرق حسابها وقتًا طويلًا جدًا",
   "tools.database.propertyTypeRelation": "علاقة",
   "tools.database.propertyTypeRollup": "تجميع",

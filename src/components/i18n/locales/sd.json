@@ -1715,7 +1715,7 @@
   "tools.database.formula.error.circularReference": "\"{name}\" پاڻ ڏانهن واپس اشارو ڪري ٿو",
   "tools.database.formula.error.tooDeep": "فارمولا ٻين فارمولن جو حوالو صرف 15 سطحن تائين ڏئي سگهن ٿا",
   "tools.database.formula.error.tooComplex": "فارمولا وڌ ۾ وڌ {length} اکر ڊگها ۽ وڌ ۾ وڌ {depth} سطح اونها نيسٽ ٿي سگهن ٿا",
-  "tools.database.formula.error.patternTooComplex": "هي نمونو تمام گهڻو وقت هلي سگهي ٿو. پوئتي حوالن، چوڌاري ڏسڻ ۽ ورجايل گروپ اندر مقدار ڏيکاريندڙن يا اهڙي ورجايل گروپ کان پاسو ڪريو جيڪو ڪنهن سان به نه ملي، ۽ ان کي {length} اکرن کان ننڍو رکو",
+  "tools.database.formula.error.patternTooComplex": "هي نمونو تمام گهڻو وقت هلي سگهي ٿو. پوئتي حوالن، چوڌاري ڏسڻ ۽ ورجايل گروپ اندر مقدار ڏيکاريندڙن يا اهڙي ورجايل گروپ کان پاسو ڪريو جيڪو خالي متن سان ملي سگهي، ۽ ان کي {length} اکرن کان ننڍو رکو",
   "tools.database.formulaLimitReached": "هي فارمولا هڪ حد تائين پهچي ويو: ان جو نتيجو تمام وڏو آهي، يا ان جي حساب ۾ تمام گهڻو وقت لڳي ٿو",
   "tools.database.propertyTypeRelation": "لاڳاپو",
   "tools.database.propertyTypeRollup": "خلاصو",

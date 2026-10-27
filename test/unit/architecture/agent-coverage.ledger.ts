@@ -389,6 +389,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   // The row page's Rename and Edit property open the Edit property panel.
   'menu:database/rename': cmd('database.updateProperty'),
   'menu:database/editProperty': cmd('database.updateProperty'),
+  'menu:database/changeType': cmd('database.updateProperty'),
   'menu:database/relatedTo-*': cmd('database.updateProperty'),
   'menu:database/limit-*': cmd('database.updateProperty'),
   'menu:database/relatedTo': exempt('chrome', 'Shows the locked related database and a hint; a click does nothing.'),

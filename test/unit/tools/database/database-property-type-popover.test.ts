@@ -523,6 +523,58 @@ describe('DatabasePropertyTypePopover', () => {
     });
   });
 
+  // notion-spec-2 §19.22: Escape plays the open in reverse (opacity → 0, scale → 0.96, ~200ms), then the menu leaves.
+  describe('close motion', () => {
+    const SELECTOR = '[data-blok-database-property-type-popover]';
+    let finish: () => void = () => undefined;
+
+    beforeEach(() => {
+      const finished = new Promise<void>((resolve) => { finish = resolve; });
+
+      Object.defineProperty(HTMLElement.prototype, 'getAnimations', {
+        configurable: true,
+        value: () => [{ finished }],
+      });
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(HTMLElement.prototype, 'getAnimations');
+    });
+
+    it('keeps the menu on screen, closed, until the Escape fade ends', async () => {
+      popover.open(anchor);
+      const el = document.querySelector<HTMLElement>(SELECTOR);
+
+      el?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(el?.isConnected).toBe(true);
+      expect(el?.hasAttribute('data-blok-closing')).toBe(true);
+      expect(el?.hasAttribute('inert')).toBe(true);
+      expect(popover.isOpen).toBe(false);
+      finish();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(el?.isConnected).toBe(false);
+    });
+
+    it('drops a fading menu at once when it opens again', () => {
+      popover.open(anchor);
+      document.querySelector<HTMLElement>(SELECTOR)?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      popover.open(anchor);
+
+      expect(document.querySelectorAll(SELECTOR)).toHaveLength(1);
+      expect(document.querySelector(SELECTOR)?.hasAttribute('data-blok-closing')).toBe(false);
+    });
+
+    it('removes the menu at once when a type is picked, so it never sits over the panel that follows', () => {
+      popover.open(anchor);
+      document.querySelector<HTMLElement>('[data-blok-database-property-type-option="number"]')?.click();
+
+      expect(document.querySelector(SELECTOR)).toBeNull();
+    });
+  });
+
   describe('destroy()', () => {
     it('removes the popover element from the DOM', () => {
       popover.open(anchor);

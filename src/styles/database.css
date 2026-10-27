@@ -4945,6 +4945,12 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   transform-origin: top right;
 }
 
+/* notion-spec-2 §19.22: the open in reverse. The script removes the menu when it ends. */
+[data-blok-database-property-type-popover][data-blok-closing] {
+  animation: blok-prop-popover-out 200ms ease both;
+  pointer-events: none;
+}
+
 [data-blok-database-property-type-header] {
   display: flex;
   align-items: center;
@@ -6022,7 +6028,8 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
     transform: none;
   }
 
-  [data-blok-database-property-type-popover] {
+  [data-blok-database-property-type-popover],
+  [data-blok-database-property-type-popover][data-blok-closing] {
     animation: none;
   }
 }

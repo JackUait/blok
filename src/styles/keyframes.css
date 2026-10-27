@@ -115,6 +115,17 @@
   }
 }
 
+@keyframes blok-prop-popover-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
 @keyframes blok-database-confirm-in {
   from { opacity: 0; transform: scale(0.97); }
   to { opacity: 1; transform: none; }

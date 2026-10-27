@@ -73,6 +73,12 @@ describe('add property menu (T12)', () => {
     expect(declared('[data-blok-database-property-type-popover]', 'transform-origin')).toEqual(['top left']);
   });
 
+  // notion-spec-2 §19.22: the close is the open in reverse, opacity 1 → 0 and scale 1 → 0.96 over ~200ms.
+  it('closes as the reverse of its open', () => {
+    // The second is the reduced-motion `none`.
+    expect(declared('[data-blok-database-property-type-popover][data-blok-closing]', 'animation')).toEqual(['blok-prop-popover-out 200ms ease both', 'none']);
+  });
+
   // notion-spec-2 §17.9: Notion's section label is its gray rgb(125,122,117), not a blue-gray. It fails AA, so it takes Blok's passing gray.
   it('draws the section labels in the database gray', () => {
     expect(declared('[data-blok-database-property-type-heading]', 'color')).toEqual(['var(--blok-database-ink-secondary)']);

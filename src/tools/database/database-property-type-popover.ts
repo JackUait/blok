@@ -21,6 +21,8 @@ const VIEWPORT_BOTTOM_MARGIN = 11;
 const ABOVE_GAP = 1;
 /** Notion's gap below the button is unmeasured. */
 const BELOW_GAP = 4;
+/** Past the 200ms close motion. */
+const CLOSE_FALLBACK_MS = 300;
 
 export interface PropertyTypePopoverOptions {
   /** `name` is the name field's text, '' without the field. */
@@ -49,6 +51,8 @@ export class DatabasePropertyTypePopover {
   private popoverEl: HTMLElement | null = null;
   private boundOutsideClick: ((e: MouseEvent) => void) | null = null;
   private positionTracker: PositionTracker | null = null;
+  /** Removes a menu still playing its close motion. */
+  private fading: (() => void) | null = null;
 
   constructor(options: PropertyTypePopoverOptions) {
     this.onSelect = options.onSelect;
@@ -65,6 +69,7 @@ export class DatabasePropertyTypePopover {
 
   open(anchor: HTMLElement): void {
     this.close();
+    this.fading?.();
 
     const popover = document.createElement('div');
     popover.setAttribute('data-blok-popover', '');
@@ -78,7 +83,7 @@ export class DatabasePropertyTypePopover {
     popover.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
       markEscapeConsumed(e);
-      this.close();
+      this.close(true);
       anchor.focus({ preventScroll: true });
     });
 
@@ -185,7 +190,8 @@ export class DatabasePropertyTypePopover {
     this.boundOutsideClick = (e: MouseEvent): void => {
       const target = e.target as HTMLElement;
       if (!popover.contains(target) && !anchor.contains(target)) {
-        this.close();
+        // Notion's fade is measured on Escape only (notion-spec-2 §19.22).
+        this.close(true);
       }
     };
 
@@ -273,21 +279,54 @@ export class DatabasePropertyTypePopover {
     return section;
   }
 
-  close(): void {
+  /**
+   * `animate`: notion-spec-2 §19.22, the open plays in reverse before the menu leaves.
+   * A pick removes it at once: the property's own panel takes its place.
+   */
+  close(animate = false): void {
     const popover = this.popoverEl;
 
     this.popoverEl = null;
     this.positionTracker?.detach();
     this.positionTracker = null;
-    popover?.remove();
     if (this.boundOutsideClick !== null) {
       document.removeEventListener('mousedown', this.boundOutsideClick);
       this.boundOutsideClick = null;
     }
+    if (popover === null) return;
+    if (!animate) {
+      popover.remove();
+
+      return;
+    }
+    // Closed for every purpose but paint: no keys, clicks or focus while it fades.
+    popover.removeAttribute('data-blok-popover-opened');
+    popover.setAttribute('data-blok-closing', '');
+    popover.setAttribute('inert', '');
+    if (document.activeElement instanceof HTMLElement && popover.contains(document.activeElement)) document.activeElement.blur();
+    // No running animation (jsdom, reduced motion): nothing to wait for.
+    const animations = popover.getAnimations?.() ?? [];
+
+    if (animations.length === 0) {
+      popover.remove();
+
+      return;
+    }
+    const remove = (): void => {
+      window.clearTimeout(timer);
+      popover.remove();
+      if (this.fading === remove) this.fading = null;
+    };
+    // A cancelled animation never settles.
+    const timer = window.setTimeout(remove, CLOSE_FALLBACK_MS);
+
+    this.fading = remove;
+    void Promise.all(animations.map((animation) => animation.finished)).then(remove, remove);
   }
 
   destroy(): void {
     this.close();
+    this.fading?.();
   }
 }
 

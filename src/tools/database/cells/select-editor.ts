@@ -4,6 +4,7 @@ import { IconCheck, IconCross, IconDotsHorizontal, IconMenu, IconSliders } from 
 import { onHover } from '../../../components/utils/tooltip';
 import { DatabaseModel } from '../database-model';
 import { orderedStatusOptions, personIdsOf, statusGroupOf, statusGroupsOf } from '../property-values';
+import { sortedSelectOptions } from '../../../shared/database/value-helpers';
 import type { PropertyDefinition, PropertyValue, SelectOption } from '../types';
 import { CellPopover, coverMinWidth } from './cell-popover';
 import { createOptionPill, optionsFor } from './display';
@@ -12,9 +13,6 @@ import { OptionDrag, buildDeletePrompt, buildOptionPanel, placeDroppedOption } f
 import type { CellEditorContext, CellEditorHandle } from './types';
 
 const listIds = { next: 0 };
-
-const byPosition = (options: SelectOption[]): SelectOption[] =>
-  [...options].sort((a, b) => (a.position < b.position ? -1 : 1));
 
 const selectedIdsOf = (value: PropertyValue | undefined): string[] => personIdsOf(value);
 
@@ -187,11 +185,11 @@ class SelectEditor {
     this.ctx.onCommit(this.multi ? [...this.selected] : this.selected[0] ?? null);
   }
 
-  /** Status options go by group, then by position; the others by position. */
+  /** Status options go by group, then by position; the others by the property's Sort. */
   private sorted(options: SelectOption[]): SelectOption[] {
     return this.property.type === 'status'
       ? orderedStatusOptions({ ...this.property, config: { ...this.property.config, options } })
-      : byPosition(options);
+      : sortedSelectOptions(this.property, options);
   }
 
   private setOptions(options: SelectOption[]): void {
@@ -447,7 +445,10 @@ class SelectEditor {
     if (this.canEditOptions) {
       const handle = iconButton('data-blok-database-select-option-handle', IconMenu, this.t('tools.database.dragOption'));
 
-      handle.addEventListener('pointerdown', (event) => this.drag.start(event, option.id));
+      // A sorted list puts a dropped option straight back, so only Manual drags.
+      handle.addEventListener('pointerdown', (event) => {
+        if (this.property.type === 'status' || this.property.optionSort === undefined) this.drag.start(event, option.id);
+      });
       handle.addEventListener('click', (event) => event.stopPropagation());
       row.appendChild(handle);
     }

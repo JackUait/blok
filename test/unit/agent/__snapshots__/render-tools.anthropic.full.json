@@ -2678,6 +2678,21 @@
                               }
                             ]
                           },
+                          "optionSort": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "alphabetical",
+                                  "reverseAlphabetical"
+                                ],
+                                "description": "Select and multi-select: the Sort of Edit property. It orders the options in Edit property and in the option picker. Absent means Manual, the options' saved order."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "uniqueId": {
                             "anyOf": [
                               {

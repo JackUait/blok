@@ -74,6 +74,16 @@ describe('select cell editor', () => {
     expect(editorRoot()?.closest<HTMLElement>('[data-blok-popover]')?.style.getPropertyValue('--width')).toBe('300px');
   });
 
+  // notion-spec-2 §17.3: the option picker follows the property's Sort.
+  it.each([
+    ['alphabetical', ['o2', 'o3', 'o1']],
+    ['reverseAlphabetical', ['o1', 'o3', 'o2']],
+  ] as const)('lists options %s when the property sorts them so', (optionSort, order) => {
+    openCellEditor({ ...makeProperty('multiSelect'), optionSort }, null, makeAnchor(), makeEditorContext({ options: OPTIONS, onOptionsChange: vi.fn() }));
+
+    expect(rowIds()).toEqual(order);
+  });
+
   it('lists options in position order and marks the selected one with a check', () => {
     openSelect('o2');
 
@@ -406,6 +416,18 @@ describe('select cell editor', () => {
 
       expect((moved?.position ?? '') > 'a2').toBe(true);
       expect(rowIds()).toEqual(['o2', 'o3', 'o1']);
+    });
+
+    it('does not drag while the property sorts its options by name', () => {
+      const ctx = makeEditorContext({ options: OPTIONS, onOptionsChange: vi.fn() });
+
+      openCellEditor({ ...makeProperty('select'), optionSort: 'alphabetical' }, null, makeAnchor(), ctx);
+      stubRows();
+      pointer(q('[data-blok-database-select-option="o1"] [data-blok-database-select-option-handle]'), 'pointerdown', 70);
+      pointer(document, 'pointermove', 5);
+      pointer(document, 'pointerup', 5);
+
+      expect(ctx.onOptionsChange).not.toHaveBeenCalled();
     });
 
     it('dragging the last option between the first two places it there', () => {

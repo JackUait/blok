@@ -188,6 +188,7 @@ export {
   FormulaSettings,
   RelationSettings,
   PersonSettings,
+  SelectOptionSort,
   RollupSettings,
   RollupFunction,
   RelationValue,

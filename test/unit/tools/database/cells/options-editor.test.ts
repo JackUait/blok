@@ -145,6 +145,36 @@ describe('options editor (Edit property for select, multi-select and status)', (
     expect(rowIds(root)).toEqual(['o3', 'o1', 'o2']);
   });
 
+  // notion-spec-2 §17.3: Edit property lists the options in the Sort order.
+  it('lists the options alphabetically when the property sorts them so', () => {
+    const { root } = mount({ ...selectProp(), optionSort: 'alphabetical' });
+
+    expect(rowIds(root)).toEqual(['o2', 'o1', 'o3']);
+  });
+
+  it('lists the options in reverse alphabetical order when the property sorts them so', () => {
+    const { root } = mount({ ...selectProp(), type: 'multiSelect', optionSort: 'reverseAlphabetical' });
+
+    expect(rowIds(root)).toEqual(['o3', 'o1', 'o2']);
+  });
+
+  // A drop would move an option the sort puts back at once.
+  it('does not drag an option while the list is sorted by name', () => {
+    const { root, onChange } = mount({ ...selectProp(), optionSort: 'alphabetical' });
+
+    ['o2', 'o1', 'o3'].forEach((id, index) => {
+      const row = root.querySelector(`[data-blok-database-select-option="${id}"]`);
+
+      if (row !== null) vi.spyOn(row, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, index * 28, 200, 28));
+    });
+    root.querySelector('[data-blok-database-select-option="o3"] [data-blok-database-select-option-handle]')
+      ?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientY: 66, button: 0 }));
+    document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientY: 5 }));
+    document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientY: 5 }));
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   describe('status', () => {
     it('shows each group with its options under it', () => {
       const { root } = mount(statusProp());

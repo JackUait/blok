@@ -4,6 +4,7 @@ import { IconDotsHorizontal, IconMenu, IconPlus } from '../../../components/icon
 import type { I18n } from '../../../../types';
 import { DatabaseModel } from '../database-model';
 import { orderedStatusOptions, statusGroupOf, statusGroupsOf } from '../property-values';
+import { sortedSelectOptions } from '../../../shared/database/value-helpers';
 import type { PropertyDefinition, SelectOption } from '../types';
 import { createOptionPill } from './display';
 import { pickOptionColor, shownStatusOption } from './option-colors';
@@ -78,7 +79,7 @@ class OptionsEditor {
   }
 
   private sorted(options: SelectOption[]): SelectOption[] {
-    return this.isStatus ? orderedStatusOptions(this.withOptions(options)) : byPosition(options);
+    return this.isStatus ? orderedStatusOptions(this.withOptions(options)) : sortedSelectOptions(this.opts.property, options);
   }
 
   private set(options: SelectOption[]): void {
@@ -203,7 +204,10 @@ class OptionsEditor {
     const menu = button('data-blok-database-select-option-menu', IconDotsHorizontal, this.t('tools.database.optionMenu'));
 
     row.setAttribute('data-blok-database-select-option', option.id);
-    handle.addEventListener('pointerdown', (event) => this.drag.start(event, option.id));
+    // A sorted list puts a dropped option straight back, so only Manual drags.
+    handle.addEventListener('pointerdown', (event) => {
+      if (this.isStatus || this.opts.property.optionSort === undefined) this.drag.start(event, option.id);
+    });
     label.setAttribute('data-blok-database-select-option-label', '');
     label.appendChild(createOptionPill(this.isStatus ? shownStatusOption(option) : option));
     // research/30 §10f: the Edit property list reads "Not started DEFAULT". Its look was not measured.

@@ -175,6 +175,9 @@ export interface StatusSettings {
 
 export type PageVisibility = 'always' | 'hideWhenEmpty' | 'hidden';
 
+/** Notion's Sort row of a select's Edit property: by label, A to Z or Z to A. */
+export type SelectOptionSort = 'alphabetical' | 'reverseAlphabetical';
+
 /**
  * Settings beside `config` on a property. Never inside `config`: a v1.16.1
  * client replaces `config` whole when it edits an option.
@@ -189,6 +192,8 @@ export interface PropertySettingsV2 {
   /** Date, created time and last edited time. Per property, as Notion's property menu sets it. */
   date?: DateDisplay;
   status?: StatusSettings;
+  /** Select and multi-select: the order their options list in. Absent means Manual, the saved order. */
+  optionSort?: SelectOptionSort;
   uniqueId?: { prefix?: string };
   formula?: FormulaSettings;
   relation?: RelationSettings;

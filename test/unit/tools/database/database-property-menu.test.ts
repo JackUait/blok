@@ -19,7 +19,7 @@ interface CapturedItem {
   element?: HTMLElement;
   onActivate?: (item: CapturedItem) => void;
   confirmation?: { onActivate: (item: CapturedItem) => void; title?: string };
-  children?: { items: CapturedItem[]; searchable?: boolean; width?: string; minWidth?: string; placement?: string };
+  children?: { items: CapturedItem[]; searchable?: boolean; width?: string; minWidth?: string; placement?: string; clickOnly?: boolean; class?: string };
 }
 
 interface CapturedPopover { items: CapturedItem[]; destroyed: boolean; params: Record<string, unknown>; activated: string[]; focused: string[]; hidden: Record<string, boolean>; closed?: () => void; hide: () => void; transitionAtShow?: string }
@@ -966,6 +966,53 @@ describe('DatabasePropertyMenu', () => {
       list?.querySelector<HTMLElement>('[data-blok-database-option-set-default]')?.click();
 
       expect(cb.onUpdate).toHaveBeenCalledWith('p', { status: { ...status, defaultOptionId: 'i' } });
+    });
+
+    // notion-spec-2 §17.3: "Sort Manual" heads a select's Edit property, a click-only 250 wide list under it.
+    it.each(['select', 'multiSelect'] as const)('%s: Sort comes first, reads Manual and opens Manual, Alphabetical and Reverse alphabetical on a click', (type) => {
+      open(prop(type, { config: { options } }));
+      const items = byName(lastItems(), 'editProperty').children?.items ?? [];
+      const sort = byName(items, 'optionSort');
+
+      expect(items[0]?.name).toBe('optionSort');
+      expect(sort.title).toBe('tools.database.groupSort');
+      expect(sort.valueLabel).toBe('tools.database.groupSortManual');
+      expect(sort.children).toMatchObject({ clickOnly: true, placement: 'under', width: '250px', class: 'blok-database-panel-list' });
+      expect(sort.children?.items.map((item) => [item.name, item.title, item.trailingIcon === IconCheck])).toEqual([
+        ['optionSort-manual', 'tools.database.groupSortManual', true],
+        ['optionSort-alphabetical', 'tools.database.groupSortAlphabetical', false],
+        ['optionSort-reverseAlphabetical', 'tools.database.groupSortReverse', false],
+      ]);
+    });
+
+    it('Sort saves the pick; Manual leaves the key out', () => {
+      const cb = open(prop('select', { config: { options }, optionSort: 'alphabetical' }));
+      const sort = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'optionSort');
+      const pick = (name: string): void => {
+        const item = byName(sort.children?.items ?? [], name);
+
+        item.onActivate?.(item);
+      };
+
+      expect(sort.valueLabel).toBe('tools.database.groupSortAlphabetical');
+      pick('optionSort-reverseAlphabetical');
+      pick('optionSort-manual');
+
+      expect(cb.onUpdate).toHaveBeenNthCalledWith(1, 'p', { optionSort: 'reverseAlphabetical' });
+      expect(cb.onUpdate).toHaveBeenNthCalledWith(2, 'p', { optionSort: undefined });
+    });
+
+    it('lists the options in the Sort order', () => {
+      open(prop('select', { config: { options }, optionSort: 'alphabetical' }));
+      const list = byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'options').element;
+
+      expect([...(list?.querySelectorAll('[data-blok-database-select-option]') ?? [])].map((row) => row.textContent?.trim())).toEqual(['Build', 'Idea']);
+    });
+
+    it('status has no Sort row', () => {
+      open(prop('status', { status: createDefaultStatusSettings(), config: { options: [] } }));
+
+      expect((byName(lastItems(), 'editProperty').children?.items ?? []).some((item) => item.name === 'optionSort')).toBe(false);
     });
 
     it('keeps its keys away from the menu', () => {

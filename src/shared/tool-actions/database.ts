@@ -1683,7 +1683,7 @@ const moveRow: ToolActionImpl<{ rowId: string; group?: string } & Placement> = {
 // ─── Property settings, option colour, templates (the editor's property and template menus) ───
 
 /** Setting keys a property menu writes (PropertySettingsV2). `type` and `config` are not settings. */
-const SETTING_KEYS = ['description', 'icon', 'pageVisibility', 'number', 'date', 'status', 'uniqueId', 'person', 'formula', 'relation', 'rollup', 'button', 'dependency', 'autofill'] as const;
+const SETTING_KEYS = ['description', 'icon', 'pageVisibility', 'number', 'date', 'status', 'optionSort', 'uniqueId', 'person', 'formula', 'relation', 'rollup', 'button', 'dependency', 'autofill'] as const;
 
 /** The row page layout (Customize layout), saved on the title property (PageLayoutFields). */
 const PAGE_LAYOUT_KEYS = [

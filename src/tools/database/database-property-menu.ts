@@ -191,6 +191,13 @@ const calculateRow = (fn: RollupFunction): string => {
 
 const withoutLimit = ({ limit: _limit, ...rest }: RelationSettings): RelationSettings => rest;
 
+/** The Sort row's choices. Manual is what an absent key means. */
+const OPTION_SORTS = [
+  ['manual', 'tools.database.groupSortManual'],
+  ['alphabetical', 'tools.database.groupSortAlphabetical'],
+  ['reverseAlphabetical', 'tools.database.groupSortReverse'],
+] as const;
+
 /** Person "Edit property" rows (research/16 §5). The first choice of each is what an absent key means. */
 const PERSON_LIMITS = [['one', 'tools.database.personLimitOne'], ['none', 'tools.database.relationLimitNone']] as const;
 const PERSON_DEFAULTS = [['none', 'tools.database.personDefaultNone'], ['createdBy', 'tools.database.propertyTypeCreatedBy']] as const;
@@ -1137,6 +1144,27 @@ export class DatabasePropertyMenu {
     return { type: PopoverItemType.Html, element: note, name: 'all-views-note' };
   }
 
+  /** notion-spec-2 §17.3: Sort orders a select's options in this list and in the option picker. */
+  private optionSortItem(property: PropertyDefinition, update: (patch: Partial<PropertySettingsV2>) => void): PopoverItemParams {
+    const current = OPTION_SORTS.find(([sort]) => sort === property.optionSort) ?? OPTION_SORTS[0];
+
+    return {
+      name: 'optionSort',
+      title: this.t('tools.database.groupSort'),
+      valueLabel: this.t(current[1]),
+      children: {
+        ...VALUE_LIST,
+        items: OPTION_SORTS.map(([sort, labelKey]) => ({
+          name: `optionSort-${sort}`,
+          title: this.t(labelKey),
+          ...checkedIf(sort === current[0]),
+          closeOnActivate: true,
+          onActivate: () => update({ optionSort: sort === 'manual' ? undefined : sort }),
+        })),
+      },
+    };
+  }
+
   private optionsItem(property: PropertyDefinition, update: (patch: Partial<PropertySettingsV2>) => void): PopoverItemParams {
     const shown = this.shown?.id === property.id ? this.shown : property;
     const status = property.status;
@@ -1153,8 +1181,11 @@ export class DatabasePropertyMenu {
   }
 
   private settingsItems(property: PropertyDefinition, update: (patch: Partial<PropertySettingsV2>) => void): PopoverItemParams[] {
-    if (OPTION_TYPES.has(property.type)) {
+    if (property.type === 'status') {
       return [this.optionsItem(property, update)];
+    }
+    if (OPTION_TYPES.has(property.type)) {
+      return [this.optionSortItem(property, update), this.optionsItem(property, update)];
     }
     if (property.type === 'relation') {
       return this.relationItems(property, update);

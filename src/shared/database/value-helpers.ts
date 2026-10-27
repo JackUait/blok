@@ -1,5 +1,5 @@
 import { createDefaultStatusSettings } from './schema-ops';
-import type { DatabaseRow, FileValue, PersonValue, PropertyDefinition, PropertyType, PropertyValue, SelectOption, StatusGroup } from './types';
+import type { DatabaseRow, FileValue, PersonValue, PropertyDefinition, PropertyType, PropertyValue, SelectOption, SelectOptionSort, StatusGroup } from './types';
 
 /*
  * Pure value helpers shared by the editor (src/tools/database/property-values.ts
@@ -107,6 +107,18 @@ export const orderedStatusOptions = (property: PropertyDefinition): SelectOption
   };
 
   return [...(property.config?.options ?? [])].sort((a, b) => rank(a) - rank(b) || byPosition(a, b));
+};
+
+// ─── Select ───
+
+const SORT_SIGN: Record<SelectOptionSort, number> = { alphabetical: 1, reverseAlphabetical: -1 };
+
+/** Select and multi-select options in their Sort order (notion-spec-2 §17.3). Equal labels keep the saved order. */
+export const sortedSelectOptions = (property: PropertyDefinition, options: SelectOption[] = property.config?.options ?? []): SelectOption[] => {
+  // An unknown saved value reads as Manual.
+  const sign = property.optionSort === undefined ? 0 : SORT_SIGN[property.optionSort] ?? 0;
+
+  return [...options].sort((a, b) => sign * a.label.localeCompare(b.label) || byPosition(a, b));
 };
 
 // ─── Unique ID ───

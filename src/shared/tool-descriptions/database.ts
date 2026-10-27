@@ -80,6 +80,11 @@ const PROPERTY_SETTINGS = {
       defaultOptionId: { type: 'string', description: 'The option id a new row starts with.' },
     },
   },
+  optionSort: {
+    type: 'string',
+    enum: ['alphabetical', 'reverseAlphabetical'],
+    description: 'Select and multi-select: the Sort of Edit property. It orders the options in Edit property and in the option picker. Absent means Manual, the options\' saved order.',
+  },
   uniqueId: { type: 'object', additionalProperties: false, properties: { prefix: { type: 'string' } } },
   person: {
     type: 'object',

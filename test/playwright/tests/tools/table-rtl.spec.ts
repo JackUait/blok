@@ -973,7 +973,8 @@ test.describe('table in RTL', () => {
         expect(geometry.left.length, `${label} wraps`).toBeGreaterThan(1);
         expect(Math.max(...offsets.map(Math.abs)), `${label}: every line on the ${physical}`).toBeLessThanOrEqual(1.5);
         // -1 sits high, 1 sits low, 0 is centred within 10px.
-        expect(Math.sign(Math.trunc((geometry.top - geometry.bottom) / 10)), `${label} vertical`).toBe(VERTICAL_LEAN[row]);
+        // `+ 0` turns -0 into 0: trunc gives -0 for a lean just above centre, and toBe tells them apart.
+        expect(Math.sign(Math.trunc((geometry.top - geometry.bottom) / 10)) + 0, `${label} vertical`).toBe(VERTICAL_LEAN[row]);
       }
     });
   }

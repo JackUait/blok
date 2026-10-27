@@ -482,6 +482,17 @@ describe('block states gallery covers every state a block can show', () => {
     });
   });
 
+  test('the every-type table passes a place search, so its Place editor can search', async () => {
+    interface MapState { label: string; toolConfig?: { database?: { map?: { geocode?: (q: string) => Promise<unknown[]> | unknown[]; currentLocation?: () => unknown } } } }
+    const states = runInNewContext(
+      `${html.slice(html.indexOf('const PLAYGROUND_PLACES'), html.indexOf('const BLOCK_STATES_SPEC'))}; BLOCK_STATES_RAW`
+    ) as Array<{ tool: string; states: MapState[] }>;
+    const map = states.find((e) => e.tool === 'database')?.states.find((s) => s.label === 'Table view · every stored property type')?.toolConfig?.database?.map;
+
+    expect(await map?.geocode?.('berl')).toEqual([expect.objectContaining({ name: 'Berlin', lat: expect.any(Number), lon: expect.any(Number) })]);
+    expect(map?.currentLocation?.()).toEqual(expect.objectContaining({ name: expect.any(String) }));
+  });
+
   test('the file uploading demo draws the file preview, like the real upload path', () => {
     expect(mountCode).toMatch(/renderFileUploadingState\(\{[\s\S]*?preview: 'file'/);
   });

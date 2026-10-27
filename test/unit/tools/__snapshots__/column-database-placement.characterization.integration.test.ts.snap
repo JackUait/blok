@@ -1311,7 +1311,7 @@ exports[`column and database placement — characterization > adds a database ro
       "n1:[]",
       "z:[]",
     ],
-    "current": -1,
+    "current": 1,
     "doc": [
       {
         "content": undefined,
@@ -1604,7 +1604,7 @@ exports[`column and database placement — characterization > adds a database ro
       "n1:[]",
       "z:[]",
     ],
-    "current": -1,
+    "current": 1,
     "doc": [
       {
         "content": undefined,
@@ -1896,7 +1896,7 @@ exports[`column and database placement — characterization > adds a database ro
       "r2:[]",
       "z:[]",
     ],
-    "current": -1,
+    "current": 1,
     "doc": [
       {
         "content": undefined,
@@ -2166,7 +2166,7 @@ exports[`column and database placement — characterization > adds a database ro
       "n1:[]",
       "z:[]",
     ],
-    "current": -1,
+    "current": 1,
     "doc": [
       {
         "content": undefined,
@@ -2457,7 +2457,7 @@ exports[`column and database placement — characterization > adds a database ro
       "n1:[]",
       "z:[]",
     ],
-    "current": -1,
+    "current": 1,
     "doc": [
       {
         "content": undefined,
@@ -2747,7 +2747,7 @@ exports[`column and database placement — characterization > adds a database ro
       "r2:[]",
       "z:[]",
     ],
-    "current": -1,
+    "current": 1,
     "doc": [
       {
         "content": undefined,

@@ -4,12 +4,14 @@ import type { PropertyDefinition, PropertyType } from '../../../../src/tools/dat
 import { createDefaultStatusSettings } from '../../../../src/tools/database/property-values';
 import { propertyTypeMeta } from '../../../../src/tools/database/database-property-types';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
+import { IconCheck } from '../../../../src/components/icons';
 
 interface CapturedItem {
   name?: string;
   title?: string;
   titleEl?: HTMLElement;
   icon?: string;
+  trailingIcon?: string;
   valueLabel?: string;
   type?: string;
   isActive?: boolean | (() => boolean);
@@ -126,7 +128,12 @@ const panel = (property: PropertyDefinition, extras = computed()): CapturedItem[
 };
 
 const names = (items: CapturedItem[]): Array<string | undefined> => items.map((item) => item.name);
-const checked = (items: CapturedItem[]): Array<string | undefined> => items.filter((item) => item.isActive === true).map((item) => item.name);
+/** Notion marks the current choice with a ✓ only: no active fill (CLAUDE.md, no blue selected states). */
+const checked = (items: CapturedItem[]): Array<string | undefined> => {
+  expect(items.filter((item) => item.isActive !== undefined)).toEqual([]);
+
+  return items.filter((item) => item.trailingIcon === IconCheck).map((item) => item.name);
+};
 
 const relation = prop('relation', { relation: { targetDatabaseId: 'db-tasks' } });
 
@@ -168,6 +175,19 @@ describe('Edit property rows with a value open on a click only, under the row', 
     new DatabasePropertyMenu({ ...callbacks(), i18n, hasPeople: false }).open(status, document.createElement('button'));
     expect(byName(lastItems(), 'displayAs').children).toMatchObject(expected);
     expect(byName(panel(status), 'displayAs').children).toMatchObject(expected);
+  });
+});
+
+describe('the current choice of a value list carries a ✓ and no fill', () => {
+  it.each<[string, PropertyDefinition, string]>([
+    ['dateFormat', prop('date'), 'dateFormat-full'],
+    ['timeFormat', prop('date', { date: { timeFormat: '24_hour' } }), 'timeFormat-24_hour'],
+    ['dateNotifications', prop('date'), 'dateNotifications-none'],
+    ['limit', prop('person'), 'limit-none'],
+    ['personDefault', prop('person'), 'personDefault-none'],
+    ['personNotifications', prop('person'), 'personNotifications-usersOnly'],
+  ])('%s', (row, property, current) => {
+    expect(checked(byName(header(property), row).children?.items ?? [])).toEqual([current]);
   });
 });
 

@@ -548,7 +548,7 @@ describe('DatabasePropertyMenu', () => {
       return { cb, items: byName(lastItems(), 'editProperty').children?.items ?? [] };
     };
     const choices = (row: CapturedItem): Array<[string | undefined, string | undefined, boolean]> =>
-      (row.children?.items ?? []).map((i) => [i.name, i.title, i.isActive === true]);
+      (row.children?.items ?? []).map((i) => [i.name, i.title, i.trailingIcon === IconCheck]);
 
     it('has Limit, Default and Notifications, each showing its current value', () => {
       const { items } = editItems(prop('person'));
@@ -586,9 +586,9 @@ describe('DatabasePropertyMenu', () => {
         'tools.database.propertyTypeCreatedBy',
         'tools.database.personNotificationsNone',
       ]);
-      expect(byName(byName(items, 'limit').children?.items ?? [], 'limit-one').isActive).toBe(true);
-      expect(byName(byName(items, 'personDefault').children?.items ?? [], 'personDefault-createdBy').isActive).toBe(true);
-      expect(byName(byName(items, 'personNotifications').children?.items ?? [], 'personNotifications-none').isActive).toBe(true);
+      expect(byName(byName(items, 'limit').children?.items ?? [], 'limit-one').trailingIcon).toBe(IconCheck);
+      expect(byName(byName(items, 'personDefault').children?.items ?? [], 'personDefault-createdBy').trailingIcon).toBe(IconCheck);
+      expect(byName(byName(items, 'personNotifications').children?.items ?? [], 'personNotifications-none').trailingIcon).toBe(IconCheck);
     });
 
     it('writes each choice and drops the key when the default comes back', () => {
@@ -1043,7 +1043,7 @@ describe('DatabasePropertyMenu', () => {
         'dateNotifications-none', 'dateNotifications-on_day_of_event', 'dateNotifications-1_day_before',
         'dateNotifications-2_days_before', 'dateNotifications-1_week_before',
       ]);
-      expect(choices.map((c) => c.isActive)).toEqual([true, false, false, false, false]);
+      expect(choices.map((c) => c.trailingIcon === IconCheck)).toEqual([true, false, false, false, false]);
       byName(choices, 'dateNotifications-1_week_before').onActivate?.(byName(choices, 'dateNotifications-1_week_before'));
       expect(cb.onUpdate).toHaveBeenLastCalledWith('p', { date: { timeFormat: '24_hour', defaultReminder: '1_week_before' } });
     });

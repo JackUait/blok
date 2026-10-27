@@ -167,6 +167,8 @@ interface RowPageExtras { onComment?: () => void; edit?: boolean }
 
 /** notion-spec-2 §17: every other Edit property row with a value opens a 250 wide list the same way. */
 const VALUE_LIST = { clickOnly: true, placement: 'under', width: '250px', class: PANEL_LIST_CLASS } as const;
+/** notion-spec-2 §17: a ✓ on the current choice. isActive keeps aria-checked; the panel list class drops its fill. */
+const checkedIf = (current: boolean): { isActive: boolean; trailingIcon?: string } => ({ isActive: current, ...(current ? { trailingIcon: IconCheck } : {}) });
 /** notion-spec-2 §17.2: a rollup's Relation and Target property lists are 280 wide and check nothing. */
 const TARGET_LIST = { clickOnly: true, placement: 'under', width: '280px', class: PANEL_LIST_CLASS } as const;
 
@@ -783,7 +785,7 @@ export class DatabasePropertyMenu {
               name: `displayAs-${showAs}`,
               title: this.t(`tools.database.statusDisplayAs.${showAs}`),
               icon: propertyTypeMeta(showAs).icon,
-              isActive: current === showAs,
+              ...checkedIf(current === showAs),
               closeOnActivate: true,
               onActivate: () => update({ status: { groups: status?.groups ?? [], ...status, showAs } }),
             })),
@@ -853,7 +855,7 @@ export class DatabasePropertyMenu {
           items: (['one', 'none'] as const).map((choice) => ({
             name: `limit-${choice}`,
             title: this.t(choice === 'one' ? 'tools.database.relationLimitOne' : 'tools.database.relationLimitNone'),
-            isActive: limit === choice,
+            ...checkedIf(limit === choice),
             closeOnActivate: true,
             onActivate: () => update({ relation: choice === 'one' ? { ...settings, limit: 1 } : withoutLimit(settings) }),
           })),
@@ -978,7 +980,7 @@ export class DatabasePropertyMenu {
         items: choices.map(([choice, labelKey]) => ({
           name: [name, choice].join('-'),
           title: this.t(labelKey),
-          isActive: choice === chosen,
+          ...checkedIf(choice === chosen),
           closeOnActivate: true,
           onActivate: () => pick(choice),
         })),
@@ -1207,7 +1209,7 @@ export class DatabasePropertyMenu {
           items: DATE_FORMATS.map((format) => ({
             name: `dateFormat-${format}`,
             title: this.t(`tools.database.dateFormat.${format}`),
-            isActive: (date.dateFormat ?? 'full') === format,
+            ...checkedIf((date.dateFormat ?? 'full') === format),
             closeOnActivate: true,
             onActivate: () => setDate({ dateFormat: format }),
           })),
@@ -1222,7 +1224,7 @@ export class DatabasePropertyMenu {
           items: TIME_FORMATS.map((format) => ({
             name: `timeFormat-${format}`,
             title: this.t(`tools.database.timeFormat.${format}`),
-            isActive: shownTimeFormat === format,
+            ...checkedIf(shownTimeFormat === format),
             closeOnActivate: true,
             onActivate: () => setDate({ timeFormat: format }),
           })),
@@ -1271,7 +1273,7 @@ export class DatabasePropertyMenu {
         items: choices.map((choice) => ({
           name: `dateNotifications-${choice ?? 'none'}`,
           title: reminderLabel(t, choice, true, hourCycle),
-          isActive: choice === chosen,
+          ...checkedIf(choice === chosen),
           closeOnActivate: true,
           onActivate: () => update({ date: choice === null ? without(date, 'defaultReminder') : { ...date, defaultReminder: choice } }),
         })),

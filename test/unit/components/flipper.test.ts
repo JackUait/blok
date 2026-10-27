@@ -616,6 +616,24 @@ describe('Flipper', () => {
 
     flipper.deactivate();
   });
+
+  it('flips on a key whose target is the document, not an element', () => {
+    const items = createItems();
+    const flipper = new Flipper({ focusedItemClass: focusedClass, items });
+    const errors: unknown[] = [];
+    const onError = (event: ErrorEvent): void => {
+      errors.push(event.error);
+      event.preventDefault();
+    };
+
+    window.addEventListener('error', onError);
+    flipper.activate();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    window.removeEventListener('error', onError);
+
+    expect(errors).toEqual([]);
+    expect(items[0]).toHaveAttribute('data-blok-focused', 'true');
+
+    flipper.deactivate();
+  });
 });
-
-

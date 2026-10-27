@@ -462,7 +462,9 @@ export class Flipper {
       return;
     }
 
-    const target = event.target as HTMLElement | null;
+    // A key sent to the document or window has no element target; a Text node reads as its parent.
+    const node = event.target instanceof Node ? event.target : null;
+    const target = node instanceof HTMLElement ? node : node?.parentElement ?? null;
 
     if (this.shouldSkipTarget(target, event)) {
       return;

@@ -555,7 +555,6 @@ export class Assistant extends Module {
         case 'database.restore':
           return { titled: 'assistant.restoreQuestion', untitled: 'assistant.restoreQuestionUntitled', approve: 'assistant.restoreApprove', deny: 'assistant.restoreDeny' };
         case 'database.unlock':
-        case 'database.buttonConfirm':
           return { titled: 'assistant.unlockQuestion', untitled: 'assistant.unlockQuestionUntitled', approve: 'assistant.unlock', deny: 'assistant.keepLocked' };
       }
     })();

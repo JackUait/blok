@@ -237,6 +237,14 @@ describe('database rows through the editor agent session', () => {
 
     expect(removed.ok).toBe(true);
     expect(saved(Blok).has('c')).toBe(false);
+    const made: AgentResult = await session.execute({ commands: [{ name: 'database.addTemplate', args: { id: 'lv' } }] });
+    const templateId = made.ok ? String((made.results[0] as { templateId: string }).templateId) : '';
+
+    expect(saved(Blok).get(templateId)).toMatchObject({ parent: 'db', data: { template: true } });
+    const chosen: AgentResult = await session.execute({ commands: [{ name: 'database.setDefaultTemplate', args: { id: 'lv', templateId } }] });
+
+    expect(chosen.ok).toBe(true);
+    expect((saved(Blok).get('db')?.data.schema as Array<Record<string, unknown>>)[0]).toMatchObject({ type: 'title', defaultTemplateId: templateId });
     session.close();
   }, 30_000);
 

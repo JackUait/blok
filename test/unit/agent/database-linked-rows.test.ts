@@ -216,9 +216,12 @@ describe.each(SESSIONS)('a linked view whose source this runtime cannot reach re
     ['database.deleteRow', { rowId: 'z' }],
     ['database.duplicateRow', { rowId: 'z' }],
     ['database.moveRow', { rowId: 'z', before: 'p' }],
+    ['database.addTemplate', {}],
+    ['database.setDefaultTemplate', { templateId: null }],
+    ['database.setTemplateRepeat', { templateId: 'z', repeat: null }],
   ];
 
-  it.each(refusing)('%s: every row command is refused and nothing changes', async (_name, add) => {
+  it.each(refusing)('%s: every row and template command is refused and nothing changes', async (_name, add) => {
     const data = seed();
 
     add(data);
@@ -241,6 +244,51 @@ describe.each(SESSIONS)('a linked view whose source this runtime cannot reach re
     const session = open(data);
 
     expect(errorOf(await run(session, 'database.addRow', { id: 'X' }))?.message).toMatch(/another document/);
+    await session.close();
+  });
+});
+
+/** S with its template tpl, and L linked to it. */
+const templateSeed = (): OutputData => {
+  const data = seed();
+
+  data.blocks.find(block => block.id === 'S')?.content?.push('tpl');
+  data.blocks.push(rowIn('S', row('tpl', { t: 'Bug' }, { template: true, title: 'Bug' })));
+
+  return data;
+};
+
+describe.each(SESSIONS)('template commands on a linked view edit the source\'s templates, as in the editor (%s session)', (_label, open) => {
+  it('database.addTemplate adds the template to the source', async () => {
+    const session = open(templateSeed());
+    const result = await run(session, 'database.addTemplate', { id: 'L' });
+
+    expect(errorOf(result)).toBeUndefined();
+    const value = result.ok ? result.results[0] : undefined;
+    const templateId = typeof value === 'object' && value !== null && 'templateId' in value ? String(value.templateId) : '';
+
+    expect((await blockOf(session, templateId))?.parent).toBe('S');
+    expect(await dataOf(session, templateId)).toMatchObject({ template: true, properties: { t: '' } });
+    expect((await blockOf(session, 'L'))?.content).toEqual([]);
+    await session.close();
+  });
+
+  it('database.setDefaultTemplate sets the default on the source, not on the view\'s stand-in schema', async () => {
+    const session = open(templateSeed());
+    const stub = (await dataOf(session, 'L'))?.schema;
+
+    expect(errorOf(await run(session, 'database.setDefaultTemplate', { id: 'L', templateId: 'tpl' }))).toBeUndefined();
+    expect(((await dataOf(session, 'S'))?.schema as Array<Record<string, unknown>>)[0]).toMatchObject({ type: 'title', defaultTemplateId: 'tpl' });
+    expect((await dataOf(session, 'L'))?.schema).toEqual(stub);
+    await session.close();
+  });
+
+  it('database.setTemplateRepeat sets the schedule on a template of the source', async () => {
+    const session = open(templateSeed());
+    const repeat = { frequency: 'daily', start: '2026-01-01T09:00:00.000Z' };
+
+    expect(errorOf(await run(session, 'database.setTemplateRepeat', { id: 'L', templateId: 'tpl', repeat }))).toBeUndefined();
+    expect(await dataOf(session, 'tpl')).toMatchObject({ repeat });
     await session.close();
   });
 });

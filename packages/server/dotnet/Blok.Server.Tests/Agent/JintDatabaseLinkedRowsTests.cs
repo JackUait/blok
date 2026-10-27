@@ -41,6 +41,22 @@ public sealed class JintDatabaseLinkedRowsTests(JintAgentRuntimeFixture fixture)
   }
 
   [Fact]
+  public async Task ATemplateAddedInALinkedViewGoesToTheSource()
+  {
+    var execution = await fixture.Executor.OpenSession(Actor).ExecuteAsync(
+        Document("""{"databaseId":"db"}"""), """{"commands":[{"name":"database.addTemplate","args":{"id":"lv"}}]}""");
+
+    var result = Assert.IsType<JsonObject>(JsonNode.Parse(execution.ResultJson));
+    Assert.True(result["ok"]?.GetValue<bool>(), execution.ResultJson);
+    var templateId = result["results"]![0]!["templateId"]!.GetValue<string>();
+    var blocks = JsonNode.Parse(execution.DocumentJson!)!["blocks"]!.AsArray();
+    var template = blocks.Single(block => block!["id"]!.GetValue<string>() == templateId)!;
+
+    Assert.Equal("db", template["parent"]?.GetValue<string>());
+    Assert.True(template["data"]!["template"]?.GetValue<bool>());
+  }
+
+  [Fact]
   public async Task ALinkedViewOfADatabaseInAnotherDocumentIsRefused()
   {
     var execution = await fixture.Executor.OpenSession(Actor).ExecuteAsync(Document("""{"databaseId":"db","documentId":"other"}"""), AddRow);

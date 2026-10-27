@@ -1720,31 +1720,30 @@ const recolorOption: ToolActionImpl<OptionArgs & { color: string }> = {
 /** As DatabaseTool.addTemplate: an empty template row after the last template. */
 const addTemplate: ToolActionImpl<Record<string, never>, undefined, { templateId: string }> = {
   run: (ctx) => {
-    const block = databaseTarget(ctx);
-    const titleId = readDatabase(block).schema.find(property => property.type === 'title')?.id;
+    const { dataId, state } = rowHome(ctx);
+    const titleId = state.schema.find(property => property.type === 'title')?.id;
     const templateId = ctx.insert({
       type: 'database-row',
       data: {
         properties: titleId === undefined ? {} : { [titleId]: '' },
-        position: positionAround(ctx, templatesOf(ctx, block.id)),
+        position: positionAround(ctx, templatesOf(ctx, dataId)),
         title: '',
         template: true,
       },
-      parentId: block.id,
+      parentId: dataId,
     });
 
     return { templateId };
   },
 };
 
-/** As DatabaseTool.setDefaultTemplate: the id lives on the title property; null clears it. */
+/** As DatabaseTool.setDefaultTemplate: the id lives on the title property; null clears it. A linked view writes its source's (adoptLinkedSchema). */
 const setDefaultTemplate: ToolActionImpl<{ templateId: string | null }> = {
   run: (ctx, args) => {
-    const block = databaseTarget(ctx);
-    const state = readDatabase(block);
+    const { dataId, state } = rowHome(ctx);
 
     if (args.templateId !== null) {
-      templateOf(ctx, block.id, args.templateId);
+      templateOf(ctx, dataId, args.templateId);
     }
     const schema = state.schema.map((property) => {
       if (property.type !== 'title') {
@@ -1755,7 +1754,7 @@ const setDefaultTemplate: ToolActionImpl<{ templateId: string | null }> = {
       return args.templateId === null ? rest : { ...rest, defaultTemplateId: args.templateId };
     });
 
-    ctx.update(block.id, { schema });
+    ctx.update(dataId, { schema });
 
     return undefined;
   },
@@ -1764,9 +1763,9 @@ const setDefaultTemplate: ToolActionImpl<{ templateId: string | null }> = {
 /** As DatabaseTool.setTemplateRepeat: Blok stores the schedule, the host runs it. null clears it. */
 const setTemplateRepeat: ToolActionImpl<{ templateId: string; repeat: TemplateRepeat | null }> = {
   run: (ctx, args) => {
-    const block = databaseTarget(ctx);
+    const { dataId } = rowHome(ctx);
 
-    templateOf(ctx, block.id, args.templateId);
+    templateOf(ctx, dataId, args.templateId);
     ctx.update(args.templateId, { repeat: args.repeat ?? undefined });
 
     return undefined;

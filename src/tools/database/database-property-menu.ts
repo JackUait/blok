@@ -165,6 +165,9 @@ const OFFERED_DECIMALS = 5;
 /** What the row page label menu needs back when the type list returns to it. */
 interface RowPageExtras { onComment?: () => void; edit?: boolean }
 
+/** notion-spec-2 §17: every other Edit property row with a value opens a 250 wide list the same way. */
+const VALUE_LIST = { clickOnly: true, placement: 'under', width: '250px' } as const;
+
 /** The Calculate menu's groups (notion-spec-2 §14.4, §15.2). */
 const CALCULATE_GROUPS: ReadonlyArray<readonly [string, readonly RollupFunction[]]> = [
   ['tools.database.calcCount', ['count', 'count_values', 'unique', 'empty', 'not_empty', 'checked', 'unchecked', 'count_per_group']],
@@ -399,10 +402,9 @@ export class DatabasePropertyMenu {
     if (EDITABLE_SETTINGS.has(property.type)) {
       settings.push(...(property.type === 'formula' && !this.isNumberFormula(property) ? [this.editFormulaItem(property.id, 'editFormula')] : this.editItems(property, update)));
     }
-    const typeItems = [
-      ...(has('changeType') ? [this.typeRow(property, anchor, extras)] : []),
-      ...(has('displayAs') ? [this.entry('displayAs', property)] : []),
-    ];
+    // notion-spec-2 §17.3: Display as comes right after the status groups.
+    if (has('displayAs')) settings.splice(settings.findIndex((item) => 'name' in item && item.name === 'options') + 1, 0, this.entry('displayAs', property));
+    const typeItems = has('changeType') ? [this.typeRow(property, anchor, extras)] : [];
     const tail = (['duplicate', 'delete'] as const).filter(has).map((entry) => this.entry(entry, property));
     const separator = { type: PopoverItemType.Separator } as const;
     // 08-rename.png, notion-spec-2 §3, §6: number, rollup and formula rows sit under Type with no rule.
@@ -766,10 +768,13 @@ export class DatabasePropertyMenu {
           name: entry,
           title: this.t('tools.database.statusDisplayAs'),
           icon: IconEmojiSparkles,
+          valueLabel: this.t(`tools.database.statusDisplayAs.${current}`),
           children: {
-            items: (['select', 'checkbox'] as const).map((showAs) => ({
+            ...VALUE_LIST,
+            items: (['checkbox', 'select'] as const).map((showAs) => ({
               name: `displayAs-${showAs}`,
               title: this.t(`tools.database.statusDisplayAs.${showAs}`),
+              icon: propertyTypeMeta(showAs).icon,
               isActive: current === showAs,
               closeOnActivate: true,
               onActivate: () => update({ status: { groups: status?.groups ?? [], ...status, showAs } }),
@@ -846,8 +851,10 @@ export class DatabasePropertyMenu {
       {
         name: 'limit',
         title: this.t('tools.database.relationLimit'),
+        valueLabel: this.t(limit === 'one' ? 'tools.database.relationLimitOne' : 'tools.database.relationLimitNone'),
         children: {
-          items: (['none', 'one'] as const).map((choice) => ({
+          ...VALUE_LIST,
+          items: (['one', 'none'] as const).map((choice) => ({
             name: `limit-${choice}`,
             title: this.t(choice === 'one' ? 'tools.database.relationLimitOne' : 'tools.database.relationLimitNone'),
             isActive: limit === choice,
@@ -883,6 +890,7 @@ export class DatabasePropertyMenu {
       title: this.t(titleKey),
       valueLabel: this.t(choices.find(([choice]) => choice === chosen)?.[1] ?? choices[0][1]),
       children: {
+        ...VALUE_LIST,
         items: choices.map(([choice, labelKey]) => ({
           name: [name, choice].join('-'),
           title: this.t(labelKey),
@@ -1106,6 +1114,7 @@ export class DatabasePropertyMenu {
         valueLabel: this.t(`tools.database.dateFormat.${shownDateFormat}`),
         icon: IconCalendar,
         children: {
+          ...VALUE_LIST,
           items: DATE_FORMATS.map((format) => ({
             name: `dateFormat-${format}`,
             title: this.t(`tools.database.dateFormat.${format}`),
@@ -1120,10 +1129,11 @@ export class DatabasePropertyMenu {
         title: this.t('tools.database.timeFormat'),
         valueLabel: this.t(`tools.database.timeFormat.${shownTimeFormat}`),
         children: {
+          ...VALUE_LIST,
           items: TIME_FORMATS.map((format) => ({
             name: `timeFormat-${format}`,
             title: this.t(`tools.database.timeFormat.${format}`),
-            isActive: date.timeFormat === format,
+            isActive: shownTimeFormat === format,
             closeOnActivate: true,
             onActivate: () => setDate({ timeFormat: format }),
           })),
@@ -1168,6 +1178,7 @@ export class DatabasePropertyMenu {
       title: this.t('tools.database.dateNotifications'),
       valueLabel: reminderLabel(t, chosen, false, hourCycle),
       children: {
+        ...VALUE_LIST,
         items: choices.map((choice) => ({
           name: `dateNotifications-${choice ?? 'none'}`,
           title: reminderLabel(t, choice, true, hourCycle),

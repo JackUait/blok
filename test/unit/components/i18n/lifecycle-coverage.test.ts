@@ -274,7 +274,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1900 + 136 + 521 + 4 closure for all 2561 keys', () => {
+  it('rebuilds a disjoint 1901 + 136 + 520 + 4 closure for all 2561 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -470,7 +470,8 @@ describe('current English catalog lifecycle coverage', () => {
       // in the select option Sort row (a71fed2d).
       // +3: the button's Send message to agent action, its busy toast and its failed toast, by literal.
       // +1: its confirmation, tools.database.buttonAgentConfirm, by literal.
-      'executable-literal': 1900,
+      // +1: tools.database.propertyNamePlaceholder is the table header "+" field's placeholder again, by literal.
+      'executable-literal': 1901,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -545,7 +546,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +2: propertyNamePlaceholder and rollupProperty (see executable-literal); still shipped.
       // -3: settingsSearchProperty, settingsOn and settingsOff (see executable-literal).
       // -4: the groupSort* keys (see executable-literal).
-      'registered-namespace-compatible': 521,
+      // -1: propertyNamePlaceholder (see executable-literal).
+      'registered-namespace-compatible': 520,
       'catalog-only': 4,
     });
     expect(

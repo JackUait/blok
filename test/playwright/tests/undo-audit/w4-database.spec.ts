@@ -336,11 +336,15 @@ const GESTURES: Gesture[] = [
     await page.locator('[data-blok-database-view-option="list"]').click();
   } },
   { id: 'W4D-C7', name: 'renaming a view', run: async (page) => {
+    // Rename opens View settings with its name field focused.
     await tabMenu(page, 'view-1', 'Rename');
-    const input = page.locator('[data-blok-database-tab-rename-input]');
+    const input = page.getByTestId('database-settings-view-name');
 
     await input.fill('Everything');
     await input.press('Enter');
+    // Close the panel, so park's click lands in the paragraph.
+    await page.keyboard.press('Escape');
+    await expect(input).toBeHidden();
   } },
   { id: 'W4D-C8', name: 'deleting a view', run: async (page) => {
     // Every delete asks first (feel/findings-toolbar V24); the menu waits behind the dialog.

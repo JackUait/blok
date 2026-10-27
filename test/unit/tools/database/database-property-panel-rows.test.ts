@@ -29,6 +29,12 @@ const drawRows = (items: CapturedItem[], into: HTMLElement): void => {
 
     row.setAttribute('data-blok-item-name', item.name);
     if (item.titleEl !== undefined) row.appendChild(document.createElement('div')).appendChild(item.titleEl);
+    if (item.valueLabel !== undefined) {
+      const value = row.appendChild(document.createElement('div'));
+
+      value.setAttribute('data-blok-popover-item-value', '');
+      value.textContent = item.valueLabel;
+    }
   }
 };
 
@@ -307,6 +313,14 @@ describe('relation Related to and Add related property (§17.1)', () => {
     enable?.click();
     expect(extras.onSetTwoWay).toHaveBeenCalledWith('p', true);
     expect(byName(header(prop('relation', { relation: { targetDatabaseId: 'db-tasks', twoWay: true } })), 'twoWay').valueLabel).toBe('tools.database.settingsOn');
+  });
+
+  it('Add related property reads On once Enable is switched on, without a redraw', () => {
+    const row = byName(panel(relation), 'twoWay');
+
+    byName(row.children?.items ?? [], 'twoWay-enable').element?.click();
+
+    expect(document.querySelector('[data-blok-item-name="twoWay"] [data-blok-popover-item-value]')?.textContent).toBe('tools.database.settingsOn');
   });
 
   it('Add related property\'s label and ? show its hint below the label, 200 wide', () => {

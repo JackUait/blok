@@ -866,7 +866,13 @@ export class DatabasePropertyMenu {
         valueLabel: this.t(twoWay ? 'tools.database.settingsOn' : 'tools.database.settingsOff'),
         children: {
           ...VALUE_LIST,
-          items: [this.switchItem('twoWay-enable', 'tools.database.relationTwoWayEnable', twoWay, (on) => host?.onSetTwoWay(property.id, on))],
+          items: [this.switchItem('twoWay-enable', 'tools.database.relationTwoWayEnable', twoWay, (on) => {
+            host?.onSetTwoWay(property.id, on);
+            // The menu is not redrawn after a two-way change, so the row's value follows the switch here.
+            const value = this.popover?.getElement().querySelector(`[${DATA_ATTR.itemName}="twoWay"] [${DATA_ATTR.popoverItemValue}]`);
+
+            if (value !== null && value !== undefined) value.textContent = this.t(on ? 'tools.database.settingsOn' : 'tools.database.settingsOff');
+          })],
         },
       },
     ];

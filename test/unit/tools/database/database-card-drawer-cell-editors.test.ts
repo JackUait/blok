@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
 
 import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
 import type { CardDrawerOptions } from '../../../../src/tools/database/database-card-drawer';
@@ -63,6 +63,11 @@ const valueOf = (options: CardDrawerOptions, propertyId: string): HTMLElement =>
 };
 
 const editor = (): HTMLElement | null => document.querySelector('[data-blok-database-cell-editor]');
+
+// A closed side peek finishes on a 300ms fallback timer. Fired after jsdom is torn down, it throws "window is not defined".
+afterAll(async () => {
+  await new Promise((resolve) => setTimeout(resolve, 350));
+});
 
 describe('DatabaseCardDrawer — cell editors', () => {
   beforeEach(() => {

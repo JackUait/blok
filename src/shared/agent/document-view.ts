@@ -10,7 +10,7 @@ import type { DocumentView, ViewArgs, ViewBlock, ViewComment, ViewComments } fro
 import type { DocSnapshot, SnapBlock } from './snapshot';
 import type { PlannerContext } from './types';
 
-type ViewContext = Pick<PlannerContext, 'tools' | 'richText'> & Partial<Pick<PlannerContext, 'ports'>>;
+type ViewContext = Pick<PlannerContext, 'tools' | 'richText'> & Partial<Pick<PlannerContext, 'ports' | 'commands'>>;
 
 const PAGE_TYPES: ReadonlySet<string> = new Set(['page', 'page-link']);
 type ComputedFor = ReturnType<typeof createComputedReader>;
@@ -277,7 +277,8 @@ const viewBlock = (
       entry.meta = meta;
     }
   }
-  if (block.type === 'database-row') {
+  // A host that keeps its own comments opted out: these blocks are invisible to people, so reads skip them too.
+  if (block.type === 'database-row' && ctx.commands?.get('database.addComment')?.available !== false) {
     const open = openCommentCount(snap, block.id);
 
     if (open > 0) {

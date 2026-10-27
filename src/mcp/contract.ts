@@ -36,7 +36,7 @@ export const buildMcpContracts = (input: {
     // The sync server's history restores too.
     ...(input.versionHistory === true && { restores: true }),
     ...(input.uploadsFiles === true && { uploadsFiles: true }),
-    ...(input.comments === true && { comments: true }),
+    ...(input.comments === false && { comments: false }),
   };
   const stored = createHeadlessAgentSetup({
     customTools: input.manifest,

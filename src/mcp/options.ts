@@ -20,8 +20,9 @@ export interface BlokMcpOptions {
   principal?: string;
   uploads?: McpUploads;
   /**
-   * The editors behind these documents keep Blok's built-in comments (no `comments` hook), and
-   * every person the agent acts for may comment. Absent: the comment commands are unavailable.
+   * False: the editors keep comments in the host's own system (a `comments` hook). Agent
+   * comments would be invisible to people there, so the comment commands are unavailable.
+   * On by default.
    */
   comments?: boolean;
 }

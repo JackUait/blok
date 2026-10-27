@@ -38,42 +38,48 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe.each<[string, (seed: OutputData, comments: boolean) => Opened]>([
-  ['json', (data, comments) => openJsonSession(data, undefined, undefined, undefined, { comments })],
-  ['store', (data, comments) => openStoreSession(data, undefined, undefined, undefined, { comments })],
-])('a headless host that does not say it keeps built-in comments (%s session)', (_label, open) => {
+describe.each<[string, (seed: OutputData, where?: { comments?: boolean }) => Opened]>([
+  ['json', (data, where) => openJsonSession(data, undefined, undefined, undefined, where)],
+  ['store', (data, where) => openStoreSession(data, undefined, undefined, undefined, where)],
+])('built-in comments in a headless host (%s session)', (_label, open) => {
   const sessions: Opened[] = [];
+  const start = (where?: { comments?: boolean }): Opened => {
+    const session = open(seed(), where);
+
+    sessions.push(session);
+
+    return session;
+  };
 
   afterEach(async () => {
     await Promise.all(sessions.splice(0).map(session => session.close?.()));
   });
 
-  it.each(WRITES)('refuses %s, so no comment lands that people cannot see', async (name, args) => {
-    const session = open(seed(), false);
+  it.each(WRITES)('runs %s by default', async (name, args) => {
+    expect(errorOf(await run(start(), name, args))).toBeUndefined();
+  });
 
-    sessions.push(session);
+  it.each(WRITES)('refuses %s once the host opts out, so no comment lands that people cannot see', async (name, args) => {
+    const session = start({ comments: false });
     const before = session.output();
-    const error = errorOf(await run(session, name, args));
+    const result = await run(session, name, args);
 
-    expect(error?.code).toBe('COMMAND_UNAVAILABLE');
+    expect(result).toMatchObject({ ok: false, error: { code: 'COMMAND_UNAVAILABLE', details: { reason: 'host' } } });
     expect(session.output()).toEqual(before);
   });
 
-  it('lists the comment commands as unavailable, for the host to turn on', async () => {
-    const session = open(seed(), false);
-
-    sessions.push(session);
-    const tools = await session.describe({ tool: 'database' });
+  it('lists the comment commands as unavailable once the host opts out', async () => {
+    const tools = await start({ comments: false }).describe({ tool: 'database' });
     const listed = 'commands' in tools ? tools.commands.filter(command => command.name.endsWith('Comment')) : [];
 
     expect(listed.map(command => [command.name, command.available]).sort()).toEqual(WRITES.map(([name]) => [name, false]).sort());
   });
 
-  it('writes comments once the host says it keeps built-in comments', async () => {
-    const session = open(seed(), true);
+  it('shows no threads and no count once the host opts out, so nothing reads as yours to edit', async () => {
+    const row = (await start({ comments: false }).read({ ids: ['r'], detail: 'full' })).blocks[0];
 
-    sessions.push(session);
-    expect(errorOf(await run(session, 'database.replyToComment', { id: 'D', threadId: 'theirs', text: 'Seen' }))).toBeUndefined();
+    expect(row).not.toHaveProperty('comments');
+    expect(row).not.toHaveProperty('commentCount');
   });
 });
 
@@ -90,19 +96,16 @@ const executeWire = async (input: Record<string, unknown>): Promise<Record<strin
 describe('the Jint runtime and built-in comments', () => {
   const actor = { id: 'agent-jint', name: 'Server agent', kind: 'agent', onBehalfOf: 'human-1' };
 
-  it.each(WRITES)('refuses %s unless the host says it keeps built-in comments', async (name, args) => {
+  it.each(WRITES)('runs %s by default', async (name, args) => {
     const output = await executeWire({ document: seed(), actor, batch: { commands: [{ name, args }] } });
 
-    expect(output.result).toMatchObject({ ok: false, error: { code: 'COMMAND_UNAVAILABLE' } });
-    expect(output.edits ?? []).toEqual([]);
+    expect(output.result).toMatchObject({ ok: true });
   });
 
-  it('writes a reply when the host says it keeps built-in comments', async () => {
-    const output = await executeWire({
-      document: seed(), actor, comments: true,
-      batch: { commands: [{ name: 'database.replyToComment', args: { id: 'D', threadId: 'theirs', text: 'Seen' } }] },
-    });
+  it.each(WRITES)('refuses %s once the host opts out', async (name, args) => {
+    const output = await executeWire({ document: seed(), actor, comments: false, batch: { commands: [{ name, args }] } });
 
-    expect(output.result).toMatchObject({ ok: true });
+    expect(output.result).toMatchObject({ ok: false, error: { code: 'COMMAND_UNAVAILABLE', details: { reason: 'host' } } });
+    expect(output.edits ?? []).toEqual([]);
   });
 });

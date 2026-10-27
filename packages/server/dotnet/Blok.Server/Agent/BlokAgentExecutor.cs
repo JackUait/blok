@@ -1179,9 +1179,9 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
       input["overrides"] = JsonNode.Parse(overrides);
     }
 
-    if (options is { BuiltInComments: true })
+    if (options is { BuiltInComments: false })
     {
-      input["comments"] = true;
+      input["comments"] = false;
     }
 
     return input;

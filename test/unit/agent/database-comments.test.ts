@@ -9,10 +9,9 @@ import type { AgentActor, AgentSession } from '../../../types/agent';
 
 type Opened = AgentSession & { output(): OutputData };
 
-// A host that keeps Blok's built-in comments says so; without it comment writes are unavailable.
 const SESSIONS: Array<[string, (seed: OutputData, actor?: AgentActor) => Opened]> = [
-  ['json', (seed, actor) => openJsonSession(seed, actor, undefined, undefined, { comments: true })],
-  ['store', (seed, actor) => openStoreSession(seed, actor, undefined, undefined, { comments: true })],
+  ['json', openJsonSession],
+  ['store', openStoreSession],
 ];
 
 /** Row r has a thread by u1 with a reply by human-1 (the person the test agent acts for). Row s is in another database. */

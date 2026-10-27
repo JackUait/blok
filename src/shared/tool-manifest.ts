@@ -348,9 +348,9 @@ export interface ContractWhere {
   /** The host gives the agent a file uploader (uploadByFile), so `uploadFile` actions run. */
   uploadsFiles?: boolean;
   /**
-   * Headless only: the host's editors keep Blok's built-in comments and its people may comment.
-   * Saved data cannot say so, and a host with its own comments never shows these blocks,
-   * so without it the comment commands are unavailable. The editor checks each database instead.
+   * Headless only. False: the host keeps comments in its own system, where these blocks never
+   * show, so the comment commands are unavailable. Saved data cannot say so. On by default;
+   * the editor checks each database instead.
    */
   comments?: boolean;
 }
@@ -430,7 +430,7 @@ const toolAvailability = (
   if (action.name === FILE_UPLOAD_ACTION && where.uploadsFiles !== true) {
     return { available: false, unavailableReason: 'host' };
   }
-  if (COMMENT_COMMANDS.has(action.command) && where.runtime !== 'editor' && where.comments !== true) {
+  if (COMMENT_COMMANDS.has(action.command) && where.runtime !== 'editor' && where.comments === false) {
     return { available: false, unavailableReason: 'host' };
   }
 

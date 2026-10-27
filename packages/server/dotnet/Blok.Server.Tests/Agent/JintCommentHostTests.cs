@@ -20,28 +20,29 @@ public sealed class JintCommentHostTests
 
   private static readonly BlokAgentActor Actor = new("agent-cs", "Server agent", "human-1");
 
-  // Saved data cannot say whether the host keeps its own comments, where these blocks would never show.
   [Fact]
-  public async Task ACommentWriteIsUnavailableUnlessTheHostKeepsBuiltInComments()
+  public async Task ACommentWriteRunsByDefault()
   {
     IBlokAgentExecutor executor = BlokDocuments.CreateAgentExecutor(poolSize: 1);
 
     var execution = await executor.ExecuteAsync(Document, Reply, Actor);
 
-    Assert.Null(execution.DocumentJson);
-    var result = Assert.IsType<JsonObject>(JsonNode.Parse(execution.ResultJson));
-    Assert.Equal("COMMAND_UNAVAILABLE", result["error"]?["code"]?.GetValue<string>());
-  }
-
-  [Fact]
-  public async Task ACommentWriteRunsWhenTheHostKeepsBuiltInComments()
-  {
-    IBlokAgentExecutor executor = BlokDocuments.CreateAgentExecutor(poolSize: 1);
-
-    var execution = await executor.ExecuteAsync(Document, Reply, Actor, new BlokAgentOptions { BuiltInComments = true });
-
     var result = Assert.IsType<JsonObject>(JsonNode.Parse(execution.ResultJson));
     Assert.True(result["ok"]?.GetValue<bool>());
     Assert.Contains("Hidden", execution.DocumentJson);
+  }
+
+  // A host that keeps comments in its own system opts out: people there would never see these blocks.
+  [Fact]
+  public async Task ACommentWriteIsUnavailableOnceTheHostOptsOut()
+  {
+    IBlokAgentExecutor executor = BlokDocuments.CreateAgentExecutor(poolSize: 1);
+
+    var execution = await executor.ExecuteAsync(Document, Reply, Actor, new BlokAgentOptions { BuiltInComments = false });
+
+    Assert.Null(execution.DocumentJson);
+    var result = Assert.IsType<JsonObject>(JsonNode.Parse(execution.ResultJson));
+    Assert.Equal("COMMAND_UNAVAILABLE", result["error"]?["code"]?.GetValue<string>());
+    Assert.Equal("host", result["error"]?["details"]?["reason"]?.GetValue<string>());
   }
 }

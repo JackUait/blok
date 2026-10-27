@@ -494,10 +494,10 @@ const createsPages = (input: Record<string, unknown>): boolean =>
   Array.isArray(input.prepares) && input.prepares.includes('page');
 
 /** A C# room keeps the agent's steps on the server; a stored call has them only when its session sends them. */
-const contractWhere = (input: Record<string, unknown>): { runtime: 'jint' | 'csharp-live'; carriesHistory?: true; prepares?: string[]; comments?: true } => ({
+const contractWhere = (input: Record<string, unknown>): { runtime: 'jint' | 'csharp-live'; carriesHistory?: true; prepares?: string[]; comments?: false } => ({
   ...(input.runtime === 'csharp-live' ? { runtime: 'csharp-live' as const } : { runtime: 'jint' as const, ...('history' in input && { carriesHistory: true as const }) }),
   ...(createsPages(input) && { prepares: ['page'] }),
-  ...(input.comments === true && { comments: true as const }),
+  ...(input.comments === false && { comments: false as const }),
 });
 
 const isCarriedEntry = (value: unknown): value is OutputData | 'other' => value === 'other' || isStoredDocument(value);

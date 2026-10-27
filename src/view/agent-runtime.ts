@@ -206,7 +206,7 @@ export const createHeadlessAgentSetup = (options: {
   restores?: boolean;
   /** The uploader service passed to the session has uploadByFile. */
   uploadsFiles?: boolean;
-  /** The host's editors keep Blok's built-in comments, and its people may comment (ContractWhere.comments). */
+  /** False: the host keeps comments in its own system (ContractWhere.comments). */
   comments?: boolean;
 } = {}): {
   contract: AgentContract;
@@ -225,7 +225,7 @@ export const createHeadlessAgentSetup = (options: {
     ...(options.carriesHistory === true && { carriesHistory: true }),
     ...(options.restores === true && { restores: true }),
     ...(options.uploadsFiles === true && { uploadsFiles: true }),
-    ...(options.comments === true && { comments: true }),
+    ...(options.comments === false && { comments: false }),
   });
   const tools = runtimesWithCustomTools(BUILT_IN_TOOL_RUNTIMES, options.customTools);
   const richTextFieldsFor = (type: string): string[] =>

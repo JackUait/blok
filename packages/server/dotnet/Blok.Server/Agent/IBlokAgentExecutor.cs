@@ -89,10 +89,10 @@ public sealed class BlokAgentOptions
   public string? OverridesJson { get; init; }
 
   /// <summary>
-  /// The editors behind these documents keep Blok's built-in comments (no <c>comments</c> hook),
-  /// and every person the agent acts for may comment. Off: the comment commands are unavailable.
+  /// On by default. Set false when the editors keep comments in your own system (a <c>comments</c>
+  /// hook): people there never see Blok's comment blocks, so the comment commands are unavailable.
   /// </summary>
-  public bool BuiltInComments { get; init; }
+  public bool BuiltInComments { get; init; } = true;
 }
 
 /// <summary>Resolves a target page's stored document or live room.</summary>

@@ -17,7 +17,8 @@ const VALUE_FLAGS = new Set([
   '--source', '--source-list', '--page-titles', '--rich-text-fields', '--schema', '--handle-idle-ms', '--max-handles',
   '--principal', '--manifest', '--manifest-overrides', '--authorize',
 ]);
-const SWITCH_FLAGS = new Set(['--public', '--comments']);
+// --comments stays a no-op: comments are on by default.
+const SWITCH_FLAGS = new Set(['--public', '--comments', '--no-comments']);
 
 // `flag()` looks names up by exact match, so `--auth=oauth` or a typo would be silently ignored.
 const checkArgs = (argv: string[]): void => {
@@ -204,7 +205,7 @@ export const parseMcpArgs = (
     handleIdleMs: positiveInt('--handle-idle-ms', flag(argv, '--handle-idle-ms')),
     maxHandlesPerPrincipal: positiveInt('--max-handles', flag(argv, '--max-handles')),
     principal: flag(argv, '--principal'),
-    ...(argv.includes('--comments') && { comments: true }),
+    ...(argv.includes('--no-comments') && { comments: false }),
   };
   const manifest = flag(argv, '--manifest');
   const overrides = flag(argv, '--manifest-overrides');

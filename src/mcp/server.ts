@@ -68,7 +68,7 @@ export const assembleMcp = (options: BlokMcpOptions, deps: AssembleDeps = {}): A
     richTextFields: options.richTextFields,
     versionHistory: options.sync !== undefined,
     uploadsFiles: options.uploads !== undefined,
-    comments: options.comments === true,
+    comments: options.comments !== false,
   });
   const uploader = options.uploads === undefined ? undefined : createUploaderService(options.uploads);
   // page.rename / page.setIcon close their page session without waiting, so stop waits for those closes.

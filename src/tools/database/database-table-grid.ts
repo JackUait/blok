@@ -334,11 +334,15 @@ export class DatabaseTableGrid {
     const fresh = ref.rowId === this.state.freshRowId || ref.rowId === this.committedFreshRowId;
 
     this.committedFreshRowId = undefined;
-    const target = key === 'Enter' && !fresh ? this.offset(ref, 1, 0) : ref;
+    // notion-spec-2 §19.4: Tab moves to the cell on the right. Shift+Tab is not measured; it mirrors Tab.
+    const tabStep: Record<string, number> = { Tab: 1, 'Shift+Tab': -1 };
+    const step = key === null ? undefined : tabStep[key];
+    const down = key === 'Enter' && !fresh ? this.offset(ref, 1, 0) : ref;
+    const target = step === undefined ? down : this.offset(ref, 0, step);
 
     this.state.selection = { kind: 'cell', anchor: target, focus: target };
     this.paint();
-    if (key === 'Enter' || key === 'Escape' || key === 'Tab' || this.root.contains(document.activeElement) || document.activeElement === document.body) {
+    if (key === 'Enter' || key === 'Escape' || step !== undefined || this.root.contains(document.activeElement) || document.activeElement === document.body) {
       this.root.focus({ preventScroll: true });
     }
     this.callbacks.editEnded();
@@ -351,7 +355,7 @@ export class DatabaseTableGrid {
   }
 
   private readonly recordKey = (event: KeyboardEvent): void => {
-    this.keyInFlight = event.key;
+    this.keyInFlight = event.key === 'Tab' && event.shiftKey ? 'Shift+Tab' : event.key;
     setTimeout(() => {
       this.keyInFlight = null;
     }, 0);

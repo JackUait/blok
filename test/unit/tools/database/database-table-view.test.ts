@@ -585,7 +585,8 @@ describe('DatabaseTableView', () => {
       expect(root.querySelector('[data-blok-database-table-selection-bar]')).toBeNull();
     });
 
-    it('Tab in a cell editor saves, closes and keeps focus on the same cell instead of leaving the database', () => {
+    // notion-spec-2 §19.4: Tab saves, closes and selects the cell to the right, no editor open.
+    it('Tab in a cell editor saves, closes and selects the cell to the right', () => {
       const { root, handlers } = mount();
 
       cell(root, 'r1', 'p-notes').click();
@@ -593,11 +594,34 @@ describe('DatabaseTableView', () => {
       editorField().dispatchEvent(new Event('input', { bubbles: true }));
       const event = press(editorField(), 'Tab');
 
+      expect(selectedCells(root)).toEqual(['r1/p-amount']);
       expect(event.defaultPrevented).toBe(true);
       expect(editor()).toBeNull();
       expect(handlers.commitCell).toHaveBeenCalledWith('r1', 'p-notes', 'typed');
-      expect(selectedCells(root)).toEqual(['r1/p-notes']);
       expect(grid(root)).toHaveFocus();
+    });
+
+    it('Tab in a Number cell editor saves and selects the cell to the right', () => {
+      const { root, handlers } = mount();
+
+      cell(root, 'r2', 'p-amount').click();
+      editorField().value = '42';
+      press(editorField(), 'Tab');
+
+      expect(selectedCells(root)).toEqual(['r2/p-stage']);
+      expect(editor()).toBeNull();
+      expect(handlers.commitCell).toHaveBeenCalledWith('r2', 'p-amount', 42);
+    });
+
+    // Shift+Tab is not measured in Notion: it mirrors Tab.
+    it('Shift+Tab in a cell editor saves and selects the cell to the left', () => {
+      const { root } = mount();
+
+      cell(root, 'r1', 'p-notes').click();
+      press(editorField(), 'Tab', { shiftKey: true });
+
+      expect(selectedCells(root)).toEqual(['r1/p-title']);
+      expect(editor()).toBeNull();
     });
 
     // feel/findings-table T13: Notion's bar shows the first 4 properties; the rest wait under "…".

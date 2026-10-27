@@ -460,6 +460,28 @@ describe('block states gallery covers every state a block can show', () => {
     expect(mountCode).toMatch(/localStorage\.setItem\('blok:database-calendar:db-calendar:v1'[\s\S]*?new Blok\(/);
   });
 
+  test('the every-type table names a user and stamps its rows, as a host\'s saved data does', async () => {
+    interface FullState extends RawState {
+      editorConfig?: { user?: { id?: string } };
+      toolConfig?: { database?: { people?: { list?: () => Promise<Array<{ id: string }>> } } };
+    }
+    const state: FullState | undefined = entry('database')?.states.find((s) => s.label === 'Table view · every stored property type');
+    const people = (await state?.toolConfig?.database?.people?.list?.()) ?? [];
+    const ids = people.map((p) => p.id);
+    const rows = state?.blocks.filter((b) => b.type === 'database-row') ?? [];
+
+    expect(ids).toContain(state?.editorConfig?.user?.id);
+    expect(rows.length).toBeGreaterThan(0);
+    rows.forEach((row) => {
+      const stamped = row as unknown as Record<string, unknown>;
+
+      expect(typeof stamped.createdAt, row.id).toBe('number');
+      expect(typeof stamped.lastEditedAt, row.id).toBe('number');
+      expect(ids, row.id).toContain(stamped.createdBy);
+      expect(ids, row.id).toContain(stamped.lastEditedBy);
+    });
+  });
+
   test('the file uploading demo draws the file preview, like the real upload path', () => {
     expect(mountCode).toMatch(/renderFileUploadingState\(\{[\s\S]*?preview: 'file'/);
   });

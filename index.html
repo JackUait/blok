@@ -3746,6 +3746,8 @@
           {
             label: 'Table view · every stored property type',
             toolConfig: { database: { people: { list: async () => [{ id: 'u-ada', name: 'Ada Lovelace' }, { id: 'u-alan', name: 'Alan Turing' }] } } },
+            // A host names who edits, and its saved rows carry their stamps: Created/Last edited by and time read them.
+            editorConfig: { user: { id: 'u-ada', name: 'Ada Lovelace' } },
             blocks: [
               {
                 id: 'db-table',
@@ -3821,6 +3823,7 @@
               {
                 id: 'db-table-r1',
                 type: 'database-row',
+                createdAt: Date.UTC(2026, 9, 9, 9, 35), createdBy: 'u-ada', lastEditedAt: Date.UTC(2026, 9, 27, 14, 5), lastEditedBy: 'u-alan',
                 data: {
                   properties: {
                     title: 'Login page',
@@ -3843,6 +3846,7 @@
               {
                 id: 'db-table-r2',
                 type: 'database-row',
+                createdAt: Date.UTC(2026, 9, 12, 16, 20), createdBy: 'u-alan', lastEditedAt: Date.UTC(2026, 9, 20, 11, 0), lastEditedBy: 'u-alan',
                 data: {
                   properties: {
                     title: 'Search API',
@@ -3865,6 +3869,7 @@
               {
                 id: 'db-table-r3',
                 type: 'database-row',
+                createdAt: Date.UTC(2026, 9, 21, 8, 10), createdBy: 'u-ada', lastEditedAt: Date.UTC(2026, 9, 21, 8, 10), lastEditedBy: 'u-ada',
                 data: { properties: { title: 'Onboarding', status: 'st-ns', tags: [], owner: [], due: null, points: null, shipped: false }, position: 'a2' },
                 parent: 'db-table'
               }

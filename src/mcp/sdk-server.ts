@@ -54,6 +54,10 @@ const unlockQuestion = (request: AgentApprovalRequest, client: string): ReturnTy
  * The model never sees these replies: the client sends them, not the tool arguments.
  */
 const elicitationApprover = (responses: unknown, asked: AgentApprovalRequest[]): AgentApprover => (request) => {
+  // Button presses run only in the editor; a question MCP cannot word is never asked.
+  if (request.kind === 'database.buttonConfirm') {
+    return Promise.resolve(false);
+  }
   const replies = typeof responses === 'object' && responses !== null ? responses as Record<string, unknown> : undefined;
   const reply = inputResponse(replies, approvalKey(request));
 

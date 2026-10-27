@@ -569,7 +569,7 @@ export const enumeratePaste = (): Capability[] => [
  * by hand, featureAnchorProblems fails when an anchor no longer resolves.
  */
 export const HAND_FEATURES: Record<string, string> = {
-  'feature:database/button-press': 'src/tools/database/database-button.ts#runButtonActions',
+  'feature:database/button-press': 'src/shared/database/button-actions.ts#runButtonActions',
   'feature:database/csv-export': 'src/tools/database/database-csv.ts#serializeCsv',
   'feature:database/csv-paste': 'src/tools/database/database-csv.ts#pastedTable',
   'feature:database/csv-import': 'src/tools/database/database-csv.ts#csvDatabaseBlocks',

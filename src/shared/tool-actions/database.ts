@@ -26,6 +26,9 @@ import { DATE_VALUE_FORMAT, parseDateValue } from '../database/date-value';
 import { isOutputData, isPlaceValue, isVerificationValue } from '../database/tier3-values';
 import { isFileValue, isReadOnlyType, personIdsOf } from '../database/value-helpers';
 import { revealedInLegacyView } from '../database/view-properties';
+import { formAnswerProblem, formQuestions } from '../database/form-questions';
+import { runButtonActions } from '../database/button-actions';
+import type { FormAnswerProblem } from '../database/form-questions';
 import { ACCESS_FORM_SETTINGS, ACCESS_VIEW_SETTINGS } from '../tool-descriptions/database';
 
 import type { InsertSpec } from '../../../types/agent';
@@ -1082,6 +1085,157 @@ const addRow: ToolActionImpl<AddRowArgs, undefined, { rowId: string }> = {
 
 const blank = (value: unknown): boolean => value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
 
+/** As DatabaseTool.insertRow (createRowData): a new last row with these values, no template, no view prefill, no status default. */
+const insertPlainRow = (ctx: ToolActionContext, dataId: string, state: DatabaseState, given: Record<string, unknown>): string => {
+  const properties = withEmptyLists(state, withCreatedBy(ctx, state, given));
+
+  return ctx.insert({
+    type: 'database-row',
+    id: ctx.newId(),
+    data: { properties, position: positionBetween(lastRowKey(rowsOf(ctx, dataId), state.views.map(each => each.rowOrder)), null), title: titleOf(state, properties) ?? '' },
+    parentId: dataId,
+  });
+};
+
+/** The same context, aimed at another database block, as a button's "in another database" step is. */
+const aimedAt = (ctx: ToolActionContext, databaseId: string | undefined): ToolActionContext => {
+  if (databaseId === undefined || databaseId === ctx.block?.id) {
+    return ctx;
+  }
+  const found = ctx.read(databaseId);
+
+  if (found?.type !== 'database') {
+    return ctx.fail('PRECONDITION_FAILED', `The button names database ${databaseId}, which is not in this document.`);
+  }
+
+  return { ...ctx, block: { id: found.id, type: found.type, data: isRecord(found.data) ? found.data : {}, children: found.children } };
+};
+
+/**
+ * As DatabaseTool.pressButton, through the same runButtonActions: the button's
+ * steps in order, its writes in this batch with every agent check. Each "Show
+ * confirmation" asks the person first; a no stops the whole press. Opening a
+ * page or a link stays the person's: an agent's press opens nothing. The host
+ * callback and notification run once the writes landed.
+ */
+const pressButton: ToolActionImpl<{ rowId: string; propertyId: string }> = {
+  run: (ctx, args) => {
+    const { dataId, state } = rowHome(ctx);
+    const property = state.schema.find(each => each.id === args.propertyId)
+      ?? ctx.fail('PRECONDITION_FAILED', `This database has no property ${args.propertyId}.`);
+
+    if (property.type !== 'button') {
+      ctx.fail('PRECONDITION_FAILED', `Property ${property.id} is a ${property.type} property, not a button.`);
+    }
+    rowOf(ctx, dataId, args.rowId);
+    const actions = property.button?.buttonActions ?? [];
+    const confirm = ctx.requireConfirmation ?? ((): never => ctx.fail('PRECONDITION_FAILED', 'This button asks for confirmation, and this runtime cannot ask a person.'));
+    const record = ctx.hostEffect ?? ((): never => ctx.fail('PRECONDITION_FAILED', 'This runtime cannot run a button\'s host steps.'));
+
+    actions.forEach((action) => {
+      if (action.type === 'showConfirmation') {
+        confirm({ message: action.message, confirmLabel: action.confirmLabel, cancelLabel: action.cancelLabel });
+      }
+    });
+    const context = dynamicContext(ctx);
+    const here = (databaseId: string | undefined): boolean => databaseId === undefined || databaseId === dataId;
+
+    runButtonActions(actions, args.rowId, {
+      oneStep: (fn) => fn(),
+      writeValues: (rowId, changes, databaseId) => {
+        setRowValues.run(here(databaseId) ? ctx : aimedAt(ctx, databaseId), { rowId, values: changes }, undefined);
+      },
+      insertBlocks: (rowId, blocks) => blocks.forEach((each) => {
+        ctx.insert({ type: each.type, data: jsonCopy(each.data), parentId: rowId, position: 'end', copy: true });
+      }),
+      openRow: () => undefined,
+      openUrl: () => undefined,
+      callback: (action) => record({ kind: 'buttonCallback', rowId: args.rowId, propertyId: property.id, action }),
+      me: () => context.me,
+      now: () => context.now,
+      addPage: (databaseId, name, properties) => {
+        const target = here(databaseId) ? { dataId, state } : rowHome(aimedAt(ctx, databaseId));
+        const titleId = target.state.schema.find(each => each.type === 'title')?.id;
+        const values = checkedValues(ctx, target.dataId, target.state, { ...properties, ...(name === '' || titleId === undefined ? {} : { [titleId]: name }) });
+
+        return insertPlainRow(ctx, target.dataId, target.state, values);
+      },
+      source: (databaseId) => {
+        const { dataId: home, state: other } = rowHome(aimedAt(ctx, databaseId));
+
+        return { schema: other.schema, rows: rowsOf(ctx, home).map(row => ({ id: row.id, position: row.position, properties: row.properties as Record<string, PropertyValue> })) };
+      },
+      rowValues: (rowId) => rowsOf(ctx, dataId).find(row => row.id === rowId)?.properties as Record<string, PropertyValue> | undefined,
+      notify: (action, to, message) => record({ kind: 'buttonNotify', rowId: args.rowId, propertyId: property.id, action, to, message }),
+    });
+
+    return undefined;
+  },
+};
+
+const FORM_PROBLEMS: Record<FormAnswerProblem, string> = {
+  required: 'is required',
+  email: 'needs an email address',
+  relationLimit: 'takes one page',
+  maxSelections: 'takes fewer selections',
+};
+
+/**
+ * As DatabaseTool.submitForm with the form's Submit checks: an answer becomes a
+ * row, answered as the person, and the host's forms.onSubmit hears of it. The
+ * form's own view holds the questions; a linked form's row goes to its source.
+ */
+const submitForm: ToolActionImpl<{ viewId: string; answers: Record<string, unknown> }, undefined, { rowId: string }> = {
+  run: (ctx, args) => {
+    const { block, dataId, state } = rowHome(ctx);
+    const view = state.views.find(each => each.id === args.viewId)
+      ?? ctx.fail('PRECONDITION_FAILED', `This database has no view ${args.viewId}.`);
+
+    if (view.type !== 'form') {
+      ctx.fail('PRECONDITION_FAILED', `View ${view.id} is a ${view.type} view, not a form.`);
+    }
+    if (view.form?.closed === true) {
+      ctx.fail('PRECONDITION_FAILED', 'This form is closed: it takes no answers.');
+    }
+    // An anonymous answer has no author, and an agent only ever answers as its person.
+    if (view.form?.anonymous === true) {
+      ctx.fail('PRECONDITION_FAILED', 'This form takes anonymous answers, and an agent answers only as the person. Ask the person to fill it out.');
+    }
+    const questions = formQuestions(view, state.schema);
+    const asked = new Set(questions.map(question => question.property.id));
+    const stray = Object.keys(args.answers).find(propertyId => !asked.has(propertyId));
+
+    if (stray !== undefined) {
+      ctx.fail('INVALID_ARGS', `Property ${stray} is not a question of this form.`);
+    }
+    // As the form's Submit: a blank answer is a question left empty.
+    const given = Object.fromEntries(Object.entries(checkedValues(ctx, dataId, state, args.answers)).filter(([, value]) => !blank(value)));
+
+    questions.forEach((question) => {
+      const problem = formAnswerProblem(question, given[question.property.id] as PropertyValue | undefined);
+
+      if (problem !== undefined) {
+        ctx.fail('PRECONDITION_FAILED', `Question ${question.property.id} ${FORM_PROBLEMS[problem]}.`);
+      }
+    });
+    const rowId = insertPlainRow(ctx, dataId, state, given);
+    const record = ctx.hostEffect ?? ctx.fail('PRECONDITION_FAILED', 'This runtime cannot tell the host about a form answer.');
+
+    record({
+      kind: 'formSubmitted',
+      submission: {
+        databaseId: block.id,
+        viewId: view.id,
+        values: given,
+        rowId,
+        sharing: { public: view.form?.public === true, anonymous: false, submissionAccess: view.form?.submissionAccess ?? 'none' },
+      },
+    });
+
+    return { rowId };
+  },
+};
+
 /**
  * As DatabaseTool.applyTemplate (a template picked on an empty row page): the
  * template fills the row's empty values and missing icon, cover and width,
@@ -1863,5 +2017,5 @@ export const DATABASE_ACTION_HANDLERS: Readonly<Record<string, ToolActionImpl>> 
   addProperty, addOption, renameOption, moveOption, deleteOption,
   addRow, moveRow, setRowValues, deleteRow, applyTemplate, duplicateRow, moveRowTo,
   updateProperty, duplicateProperty, deleteProperty, recolorOption,
-  addTemplate, setDefaultTemplate, setTemplateRepeat, changePropertyType,
+  addTemplate, setDefaultTemplate, setTemplateRepeat, changePropertyType, submitForm, pressButton,
 };

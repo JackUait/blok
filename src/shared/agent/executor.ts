@@ -14,7 +14,7 @@ import { FILE_UPLOAD_ACTION } from '../tool-manifest';
 import type { AgentActor, AgentApprover, AgentBatch, AgentError, AgentErrorCode, AgentResult, AgentWarning, CommandLogEntry } from '../../../types/agent';
 import type { EditStamp } from './json-applier';
 import type { DocSnapshot } from './snapshot';
-import type { Plan, PlannerActionImpl, PlannerContext } from './types';
+import type { HostEffect, Plan, PlannerActionImpl, PlannerContext } from './types';
 
 export interface AgentApplier {
   readonly runtime: 'editor' | 'node' | 'jint' | 'node-live';
@@ -42,6 +42,8 @@ export interface AgentApplier {
    * [] when the step is not this session's (the step refuses); undefined when it cannot tell.
    */
   pendingUnlocks?(name: 'history.undo' | 'history.redo'): readonly string[] | undefined;
+  /** Runs the plan's host hooks after it applied. Absent: this runtime runs none. */
+  runHostEffects?(effects: readonly HostEffect[]): void;
 }
 
 /** The step a caller checked. A wrapper, so "the stack was empty" is not mistaken for "no check". */
@@ -648,6 +650,12 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
         });
       }
     });
+    const hostEffects = plan.hostEffects ?? [];
+
+    // Fails closed: a write whose host hook cannot run here would land half of what the person's does.
+    if (hostEffects.length > 0 && input.applier.runHostEffects === undefined) {
+      throw failure('COMMAND_UNAVAILABLE', 'This command runs host hooks, which only the editor runs.', { details: { reason: 'runtime' } });
+    }
     if (plan.edits.length > 0) {
       await input.applier.apply(plan, draft);
       const marks = marksOf(input.applier);
@@ -657,6 +665,10 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
       input.applier.recordUnlocks?.({ forward: unlockedBetween(snapshot, draft), backward: unlockedBetween(draft, snapshot) });
     } else if (batch.commands.some(command => input.ctx.commands.get(command.name)?.effects === 'host')) {
       marksOf(input.applier).past.push('other');
+    }
+    // After the writes landed, as the person's click runs them; a turn stopped meanwhile runs none.
+    if (hostEffects.length > 0 && input.signal?.aborted !== true) {
+      input.applier.runHostEffects?.(hostEffects);
     }
 
     const result = planResult(batch, plan, input.applier.revision(), warnings, changedRows(input, plan));

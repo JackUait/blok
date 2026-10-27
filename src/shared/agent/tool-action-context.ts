@@ -1,4 +1,4 @@
-import { approvalKey, approvalNeeded } from './approval';
+import { approvalKey, approvalNeeded, plainLine } from './approval';
 import { AgentFailure } from './errors';
 import { splitCommandName } from './names';
 import { buildPlannedBlock, emitMove, emitPatch } from './plan-block';
@@ -6,7 +6,7 @@ import { PREPARE_PENDING } from './plan-state';
 import { cloneRecord } from './snapshot';
 import { linkedRowHome } from '../database/linked-source';
 
-import type { InsertSpec, PlannedBlock } from '../../../types/agent';
+import type { AgentApprovalRequest, InsertSpec, PlannedBlock } from '../../../types/agent';
 import type { ToolActionContext, ToolActionImpl } from '../../../types/tools/tool-description';
 import type { PlanState } from './plan-state';
 import type { SnapBlock } from './snapshot';
@@ -27,6 +27,11 @@ const view = (block: SnapBlock): NonNullable<ReturnType<RecordingContext['read']
   parentId: block.parent,
   children: [...block.content],
 });
+
+// A button lists a handful of callbacks and notifications; more is a loop, not a person's click.
+const MAX_HOST_EFFECTS = 20;
+// A confirmation is a sentence or two; a longer one is cut where the person can still read it.
+const MAX_CONFIRMATION = 200;
 
 export const createActionContext = (state: PlanState, block: SnapBlock | undefined, tool: string): RecordingContext => {
   const home = block === undefined ? undefined : linkedRowHome({ id: block.id, type: block.type, data: block.data }, id => state.draft.get(id));
@@ -128,6 +133,34 @@ export const createActionContext = (state: PlanState, block: SnapBlock | undefin
     now: state.stamp.at,
     richText: state.ctx.richText,
     fail: (code, message) => state.fail(code, message),
+    hostEffect: (effect) => {
+      if (block === undefined) {
+        return state.fail('PRECONDITION_FAILED', `"${tool}" asked for a host hook without a block.`);
+      }
+      if (state.hostEffects.length >= MAX_HOST_EFFECTS) {
+        return state.fail('PRECONDITION_FAILED', `One batch runs at most ${MAX_HOST_EFFECTS} host hooks.`);
+      }
+      state.hostEffects.push({ blockId: block.id, effect: JSON.parse(JSON.stringify(effect)) as Record<string, unknown> });
+    },
+    requireConfirmation: (confirmation) => {
+      if (block === undefined) {
+        return state.fail('PRECONDITION_FAILED', `"${tool}" asked for a confirmation without a block.`);
+      }
+      const title = state.ctx.committedTitle?.(block.id);
+      const line = (text: string | undefined, max?: number): string | undefined => (text === undefined ? undefined : plainLine(text, max));
+      const message = line(confirmation.message, MAX_CONFIRMATION);
+      const confirmLabel = line(confirmation.confirmLabel);
+      const cancelLabel = line(confirmation.cancelLabel);
+      const request: AgentApprovalRequest = {
+        kind: 'database.buttonConfirm', blockId: block.id,
+        ...(title !== undefined && { title }), ...(message !== undefined && { message }),
+        ...(confirmLabel !== undefined && { confirmLabel }), ...(cancelLabel !== undefined && { cancelLabel }),
+      };
+
+      if (state.ctx.approved?.has(approvalKey(request)) !== true) {
+        throw approvalNeeded(request);
+      }
+    },
     requireApproval: (kind) => {
       if (block === undefined) {
         return state.fail('PRECONDITION_FAILED', `"${tool}" asked for approval without a block.`);

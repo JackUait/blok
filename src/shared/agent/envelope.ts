@@ -100,8 +100,9 @@ const attempt = <T>(run: () => T): T | AgentFailure => {
   }
 };
 
-// Run before planning, so they cannot share a batch.
-const ALONE_COMMANDS: ReadonlySet<string> = new Set(['history.undo', 'history.redo', ...VERSION_COMMANDS]);
+// History and versions run before planning, so they cannot share a batch. A command with a host
+// hook runs alone too: an earlier command could change the form or button the person sees.
+const ALONE_COMMANDS: ReadonlySet<string> = new Set(['history.undo', 'history.redo', ...VERSION_COMMANDS, 'database.submitForm', 'database.pressButton']);
 
 export const checkEnvelope = (
   batch: unknown,

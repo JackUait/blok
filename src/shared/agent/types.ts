@@ -109,6 +109,13 @@ export interface Plan {
   touched: Set<string>;
   /** Every write is a comment command: appliers keep it out of undo, as a person's comment is. */
   commentsOnly?: true;
+  hostEffects?: HostEffect[];
+}
+
+/** A host hook a tool action asked for, run by `blockId`'s tool once the batch has applied. */
+export interface HostEffect {
+  blockId: string;
+  effect: Record<string, unknown>;
 }
 
 export type { AgentBatch };

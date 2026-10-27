@@ -100,6 +100,14 @@ export interface ToolActionContext {
    * Only the host's approver can approve; nothing in the model's args can.
    */
   requireApproval?(kind: 'database.unlock'): void;
+  /** A button's "Show confirmation", put to the person with its own text. Only their yes goes on. */
+  requireConfirmation?(confirmation: { message?: string; confirmLabel?: string; cancelLabel?: string }): void;
+  /**
+   * A host hook to run once the batch has applied, such as a form's onSubmit. The block's tool
+   * runs it (`runAgentHostEffect`). Never for a refused, rolled-back or cancelled batch.
+   * Only the editor runs them: declare such an action `runtime: 'editor'`.
+   */
+  hostEffect?(effect: Record<string, unknown>): void;
 }
 
 export interface ToolActionImpl<Args = unknown, Prepared = unknown, Result = unknown> {

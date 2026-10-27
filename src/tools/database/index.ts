@@ -7,7 +7,7 @@ import { DATABASE_COMMENT_HANDLERS } from '../../shared/tool-actions/database-co
 import { databaseSanitize } from '../../shared/tool-descriptions/sanitize/blocks';
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, BlockToolData, OutputData, ToolboxConfig, ToolboxConfigEntry, SanitizerConfig } from '../../../types';
 import type { BlockReplayCapture } from '../../../types/events/editor-events';
-import type { AutofillSettings, DatabaseAdapter, DatabaseData, DatabaseIcon, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, DatabaseLinkedSourceSnapshot, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue } from './types';
+import type { AutofillSettings, ButtonAction, DatabaseAdapter, DatabaseData, DatabaseIcon, FilterConfig, DatabaseSavedAutomations, DatabaseConfig, DatabaseFormSubmission, DatabasePerson, DatabaseRow, DatabaseRowData, DatabaseRowMeta, OpenPagesIn, FormSettings, PropertyDefinition, PropertySettingsV2, PropertyType, DatabaseSourceRef, DatabaseLinkedSourceSnapshot, RelationRole, RelationSettings, TemplateRepeat, ViewType, SelectOption, DatabaseViewConfig, PropertyValue, DatabasePermissionAction, DashboardWidget, PageVisibility, DatabaseBacklink, DateReminderOffset, DatabaseMapLngLat, PlaceValue } from './types';
 import { countFilterRules } from './filter-tree';
 import { adapterRowValues, assignUniqueIds, createDefaultStatusOptions, createDefaultStatusSettings, personIdsOf, readPropertyValue, statusGroupsOf, isListValueType, withEmptyLists, isReadOnlyType } from './property-values';
 import { isOutputData, isPlaceValue } from './tier3-values';
@@ -239,6 +239,15 @@ interface AgentChangeDetail {
   parentId?: string | null;
   oldParentId?: string | null;
 }
+
+/** A button step a shared action recorded (tool-actions/database pressButton). */
+const isButtonAction = <Type extends 'callback' | 'sendNotification'>(value: unknown, type: Type): value is Extract<ButtonAction, { type: Type }> =>
+  typeof value === 'object' && value !== null && 'type' in value && value.type === type && 'id' in value && typeof value.id === 'string';
+
+/** A form answer a shared action recorded (tool-actions/database submitForm). */
+const isFormSubmission = (value: unknown): value is DatabaseFormSubmission =>
+  typeof value === 'object' && value !== null && 'databaseId' in value && typeof value.databaseId === 'string'
+  && 'viewId' in value && typeof value.viewId === 'string' && 'values' in value && typeof value.values === 'object';
 
 /** The block a 'block changed' payload is about, if the payload carries one. */
 const changedBlock = (payload: unknown): ChangedBlock | undefined =>
@@ -5116,6 +5125,41 @@ export class DatabaseTool implements BlockTool {
     }
 
     return submission;
+  }
+
+  /**
+   * A host hook an agent's command asked for, run once its writes landed
+   * (ToolActionContext.hostEffect). The same hooks the person's Submit calls.
+   */
+  runAgentHostEffect(param: { effect: Record<string, unknown> }): void {
+    const { effect } = param;
+
+    if (this.destroyed) return;
+    const { rowId, propertyId, action } = effect;
+
+    // As pressButton's callback and notify: the host runs these, Blok sends nothing.
+    if (effect.kind === 'buttonCallback' && typeof rowId === 'string' && typeof propertyId === 'string' && isButtonAction(action, 'callback')) {
+      void Promise.resolve(this.config.buttons?.onAction?.({ databaseId: this.dataId, rowId, propertyId, action })).catch((error: unknown) => this.showBackendError(error));
+
+      return;
+    }
+    if (effect.kind === 'buttonNotify' && typeof rowId === 'string' && typeof propertyId === 'string' && isButtonAction(action, 'sendNotification')
+      && Array.isArray(effect.to) && effect.to.every((id) => typeof id === 'string') && typeof effect.message === 'string') {
+      void Promise.resolve(this.config.buttons?.onNotify?.({ databaseId: this.dataId, rowId, propertyId, action, to: effect.to, message: effect.message })).catch((error: unknown) => this.showBackendError(error));
+
+      return;
+    }
+    if (effect.kind === 'formSubmitted' && isFormSubmission(effect.submission)) {
+      const forms = this.config.forms;
+      const submission = effect.submission;
+
+      if (forms === undefined) return;
+      try {
+        void Promise.resolve(forms.onSubmit(submission)).catch(() => undefined);
+      } catch {
+        // The row is already saved; a failing host must not undo it.
+      }
+    }
   }
 
   /**

@@ -552,13 +552,13 @@ describe('feature anchors', () => {
 
   it('a hand anchor whose export is gone is reported (mutation check)', () => {
     const anchors = {
-      'feature:database/button-press': 'src/tools/database/database-button.ts#runButtonActions',
-      'feature:database/gone': 'src/tools/database/database-button.ts#pressEverything',
+      'feature:database/button-press': 'src/shared/database/button-actions.ts#runButtonActions',
+      'feature:database/gone': 'src/shared/database/button-actions.ts#pressEverything',
       'feature:database/no-file': 'src/tools/database/no-such-file.ts#x',
     };
 
     expect(featureAnchorProblems(anchors)).toEqual([
-      'feature:database/gone: src/tools/database/database-button.ts exports no "pressEverything"',
+      'feature:database/gone: src/shared/database/button-actions.ts exports no "pressEverything"',
       'feature:database/no-file: src/tools/database/no-such-file.ts does not exist',
     ]);
   });

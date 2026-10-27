@@ -15,7 +15,7 @@ import type { RichText, RichTextMarks, RichTextSegment } from '../../../types/ri
 import type { EditStamp } from './json-applier';
 import type { PlacementTree } from './placement-rules';
 import type { DocSnapshot, SnapBlock } from './snapshot';
-import type { PlannerContext, PlannerTool } from './types';
+import type { HostEffect, PlannerContext, PlannerTool } from './types';
 
 const pageIdOf = (segment: RichTextSegment): string[] =>
   'embed' in segment && 'page' in segment.embed ? [segment.embed.page.id] : [];
@@ -63,6 +63,8 @@ export class PlanState {
   public readonly refs: Record<string, string> = {};
   public readonly changed: ChangedSet = { created: [], updated: [], moved: [], removed: [] };
   public readonly touched = new Set<string>();
+  /** Host hooks to run after the batch applies, in order. See ToolActionContext.hostEffect. */
+  public readonly hostEffects: HostEffect[] = [];
   /** Plain ids that some command in the batch names as parentId. */
   public readonly filledParents = new Set<string>();
   /** Every ref the batch sets, later commands included. */

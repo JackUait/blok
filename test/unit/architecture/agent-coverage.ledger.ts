@@ -96,7 +96,7 @@ const UI_FILE_ROWS: Record<CapabilityId, Coverage> = {
   'ui-file:src/tools/database/database-starter-modal.ts': cmds(['database.addProperty', 'database.addView', 'database.addRow'], 'The Customize step of a Suggested template only picks properties and views; an agent adds them and the sample rows itself.'),
   'ui-file:src/tools/database/database-confirm-dialog.ts': exempt('chrome', 'Confirm or cancel of a destructive action; the confirmed action has its own id.'),
   'ui-file:src/tools/database/database-feed-view.ts': exempt('view-only', 'Loads more rows or opens a row in the feed; the document does not change.'),
-  'ui-file:src/tools/database/database-form-view.ts': cmds(['database.addRow', 'database.updateView'], 'Submitting the form adds a row. Question settings are the view\'s properties entries.'),
+  'ui-file:src/tools/database/database-form-view.ts': cmds(['database.submitForm', 'database.updateView'], 'Submit is database.submitForm: the form\'s checks, the row and forms.onSubmit. Question settings are the view\'s properties entries.'),
   // The law wants D6 named in every cut-v1 reason.
   'ui-file:src/tools/database/database-form-share.ts': exempt('cut-v1', 'Sharing and access settings stay with the person; user decision pending. Kept out of the D6 revisit: database.updateView refuses form.closed, public, anonymous and submissionAccess.'),
   'ui-file:src/tools/database/database-formula-editor.ts': cmds(['database.updateProperty'], 'Edits a formula property: writes its formula settings.'),
@@ -217,7 +217,6 @@ const REVIEW_ROWS: Record<CapabilityId, Coverage> = {
   'paste:menu/plain': cmd('text.format'),
 
   // feature — tool features a listener in a big file calls (HAND_FEATURES)
-  'feature:database/button-press': exempt('cut-v1', 'D6 cut, user decision pending (review F13): no database.pressButton yet. An agent can redo each write with setRowValues and addRow, but the host callback and notification never fire for it.'),
   'feature:database/csv-export': exempt('view-only', 'Exports the rows as a CSV file; the document does not change. Agents read rows with doc.read.'),
   'feature:database/csv-paste': cmds(['database.addRow', 'database.setRowValues'], 'A table of text pasted into the grid fills cells and adds rows.'),
   'feature:database/csv-import': cmds(['database.create', 'database.addProperty', 'database.addRow'], 'Importing a CSV makes a database; an agent makes it, its typed properties and rows itself.'),

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Core } from '../../../../src/components/core';
 import { undoForPerson } from '../../../../src/components/modules/api/agent-turn';
+import { createEditorAgentSession } from '../../../../src/components/modules/agent/editor-session';
 import { destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 import { Paragraph } from '../../../../src/tools/paragraph';
 import { DatabaseTool } from '../../../../src/tools/database';
@@ -107,7 +108,7 @@ const spyAdapter = (seed: OutputBlockData[], calls: string[]): DatabaseAdapter =
 const boot = async (
   seed: OutputBlockData[],
   onTrigger?: (trigger: DatabaseAutomationTrigger, ctx: DatabaseAutomationContext) => void,
-  options: { adapter?: boolean } = {},
+  options: { adapter?: boolean; config?: Record<string, unknown> } = {},
 ): Promise<{ instance: Core; spies: Spies }> => {
   const spies: Spies = { calls: [], triggers: [] };
 
@@ -121,6 +122,7 @@ const boot = async (
         class: DatabaseTool,
         config: {
           ...(options.adapter === true ? { adapter: spyAdapter(seed, spies.calls) } : {}),
+          ...options.config,
           automations: {
             onTrigger: (trigger: DatabaseAutomationTrigger, ctx: DatabaseAutomationContext) => {
               spies.calls.push(`onTrigger:${trigger.type}`);
@@ -184,11 +186,25 @@ const openTurn = (instance: Core): AgentTurn => {
   return agent.begin({ agent: { id: 'bot', name: 'Bot' } });
 };
 
-const outcome = async (turn: AgentTurn, batch: AgentBatch, approve?: AgentApprover): Promise<string | null> => {
-  const result = await turn.execute(batch, approve === undefined ? undefined : { approve });
+const outcome = async (turn: AgentTurn, batch: AgentBatch): Promise<string | null> => {
+  const result = await turn.execute(batch);
 
   return result.ok ? null : `${result.error.code}: ${result.error.message}`;
 };
+
+/** The editor's own agent session: the one Ask AI runs, which takes a person's approver. */
+const asked = async (instance: Core, batch: AgentBatch, approve?: AgentApprover): Promise<string | null> => {
+  const session = createEditorAgentSession(instance.moduleInstances, { id: 'bot', name: 'Bot', kind: 'agent' });
+
+  try {
+    const result = await session.execute(batch, approve === undefined ? {} : { approve });
+
+    return result.ok ? null : `${result.error.code}: ${result.error.message}`;
+  } finally {
+    await session.close();
+  }
+};
+
 
 const setDone = (value: boolean): AgentBatch => ({ commands: [{ name: 'database.setRowValues', args: { id: 'db', rowId: 'r1', values: { c: value } } }] });
 
@@ -327,15 +343,10 @@ describe('agent row edits fire automations as a person\'s do', { timeout: 30_000
       ran.push(ctx.run({ type: 'editProperty', rowId: trigger.rowId, propertyId: 'f1', value: true }));
     });
     const approve = vi.fn<AgentApprover>(() => Promise.resolve(true));
-    const turn = openTurn(instance);
     const before = JSON.stringify((await instance.moduleInstances.Saver.save())?.blocks.find((block) => block.id === 'db')?.data);
 
-    try {
-      expect(await outcome(turn, setDone(true), approve)).toBeNull();
-      await settled();
-    } finally {
-      turn.end();
-    }
+    expect(await asked(instance, setDone(true), approve)).toBeNull();
+    await settled();
     const saved = await instance.moduleInstances.Saver.save();
 
     expect(spies.triggers).toHaveLength(1);
@@ -628,6 +639,301 @@ describe('agent row deletes and moves reach the host adapter as a person\'s do',
 
     expect(personCalls).toContain('createRow:r1');
     expect(rowCalls(spies.calls)).toEqual(personCalls);
+  });
+});
+
+describe('an agent submits a form as the person\'s Submit does', { timeout: 60_000 }, () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(async () => {
+    await teardown();
+    vi.restoreAllMocks();
+  });
+
+  const formSchema: PropertyDefinition[] = [
+    { id: 't', name: 'Name', type: 'title', position: 'a0' },
+    { id: 'notes', name: 'Notes', type: 'text', position: 'a1' },
+    { id: 'mail', name: 'Mail', type: 'email', position: 'a2' },
+    { id: 'hidden', name: 'Hidden', type: 'text', position: 'a3' },
+    { id: 'who', name: 'Owner', type: 'person', position: 'a4', person: { default: 'createdBy' } },
+  ];
+
+  const formSeed = (form: Record<string, unknown> = {}): OutputBlockData[] => [
+    {
+      id: 'db', type: 'database', content: [],
+      data: {
+        title: 'Requests',
+        schema: formSchema,
+        views: [{
+          id: 'f1', name: 'Form', type: 'form', position: 'a0', sorts: [], filters: [], visibleProperties: [],
+          properties: [
+            { id: 't', visible: true }, { id: 'notes', visible: true, required: true }, { id: 'mail', visible: true },
+            { id: 'hidden', visible: false }, { id: 'who', visible: false },
+          ],
+          form,
+        }],
+        activeViewId: 'f1',
+        automations: { version: 1, definitions: [] },
+      },
+    },
+  ];
+
+  const submitted: unknown[] = [];
+  // The person's "Created by" default reads the host's people directory; the agent's names the same person.
+  const forms = {
+    forms: { onSubmit: (submission: unknown): void => { submitted.push(structuredClone(submission)); } },
+    people: { list: (): Promise<[]> => Promise.resolve([]), me: (): string => 'human-1' },
+  };
+
+  const submit = (answers: Record<string, unknown>, viewId = 'f1'): AgentBatch => ({ commands: [{ name: 'database.submitForm', args: { id: 'db', viewId, answers } }] });
+
+  const savedRows = async (instance: Core): Promise<Array<Record<string, unknown>>> =>
+    ((await instance.moduleInstances.Saver.save())?.blocks ?? []).filter((block) => block.type === 'database-row').map((block) => ({
+      data: block.data,
+      createdBy: (block as { createdBy?: unknown }).createdBy,
+    }));
+
+  beforeEach(() => {
+    submitted.length = 0;
+  });
+
+  it('makes the row and calls onSubmit the way the person\'s Submit does', async () => {
+    const person = await boot(formSeed(), undefined, { config: forms });
+    const field = (id: string): HTMLInputElement | HTMLTextAreaElement => {
+      const element = document.getElementById(`blok-form-f1-${id}`);
+
+      if (!(element instanceof HTMLInputElement) && !(element instanceof HTMLTextAreaElement)) throw new Error(`missing field ${id}`);
+
+      return element;
+    };
+
+    field('t').value = 'Ask';
+    field('notes').value = 'Please';
+    document.querySelector<HTMLButtonElement>('[data-blok-database-form-submit]')?.click();
+    await settled();
+    const personRows = await savedRows(person.instance);
+    const personSubmitted = structuredClone(submitted);
+
+    await teardown();
+    submitted.length = 0;
+    const { instance } = await boot(formSeed(), undefined, { config: forms });
+
+    expect(await runAgent(instance, submit({ t: 'Ask', notes: 'Please' }))).toBeNull();
+    await settled();
+    const rows = await savedRows(instance);
+    const strip = (rowsOrSubmissions: unknown[]): unknown => JSON.parse(JSON.stringify(rowsOrSubmissions, (key, value: unknown) => (key === 'position' || key === 'rowId' ? undefined : value)));
+
+    expect(personRows).toHaveLength(1);
+    expect(strip(rows)).toEqual(strip(personRows));
+    expect(personSubmitted).toHaveLength(1);
+    expect(strip(submitted)).toEqual(strip(personSubmitted));
+    expect((submitted[0] as { rowId?: unknown }).rowId).toBe(instance.moduleInstances.BlockManager.blocks.find((block) => block.name === 'database-row')?.id);
+  });
+
+  it('refuses what the form\'s Submit refuses, writes nothing and tells the host nothing', async () => {
+    const { instance } = await boot(formSeed(), undefined, { config: forms });
+    const refusals: Array<[Record<string, unknown>, string]> = [
+      [{ t: 'Ask' }, 'notes is required'],
+      [{ t: 'Ask', notes: 'x', mail: 'not-an-email' }, 'needs an email address'],
+      [{ t: 'Ask', notes: 'x', hidden: 'sneaky' }, 'is not a question of this form'],
+      [{ t: 'Ask', notes: 'x', who: [{ id: 'someone-else' }] }, 'is not a question of this form'],
+    ];
+
+    for (const [answers, reason] of refusals) {
+      expect(await runAgent(instance, submit(answers))).toContain(reason);
+    }
+    await settled();
+
+    expect(await savedRows(instance)).toEqual([]);
+    expect(submitted).toEqual([]);
+  });
+
+  it('adversarial: a closed form and an anonymous form refuse the agent', async () => {
+    for (const [form, reason] of [[{ closed: true }, 'closed'], [{ anonymous: true }, 'anonymous']] as const) {
+      const { instance } = await boot(formSeed(form), undefined, { config: forms });
+
+      expect(await runAgent(instance, submit({ t: 'Ask', notes: 'x' }))).toContain(reason);
+      await settled();
+      expect(await savedRows(instance)).toEqual([]);
+      expect(submitted).toEqual([]);
+      await teardown();
+    }
+  });
+
+  it('runs alone, and a refused or read-only batch calls no host hook', async () => {
+    const { instance } = await boot(formSeed(), undefined, { config: forms });
+    const both: AgentBatch = { commands: [...submit({ t: 'Ask', notes: 'x' }).commands, { name: 'block.update', args: { id: 'db', data: { title: 'Renamed' } } }] };
+
+    expect(await runAgent(instance, both)).toContain('must be the only command in its batch');
+    await instance.moduleInstances.API.methods.readOnly.toggle(true);
+    expect(await runAgent(instance, submit({ t: 'Ask', notes: 'x' }))).toMatch(/READ_ONLY/);
+    await settled();
+
+    expect(submitted).toEqual([]);
+  });
+
+  it('undo takes the answer\'s row back and calls the host no second time', async () => {
+    const { instance } = await boot(formSeed(), undefined, { config: forms });
+    const turn = openTurn(instance);
+
+    try {
+      expect(await outcome(turn, submit({ t: 'Ask', notes: 'x' }))).toBeNull();
+      await settled();
+      expect(await outcome(turn, { commands: [{ name: 'history.undo', args: {} }] })).toBeNull();
+      await settled();
+      expect(await outcome(turn, { commands: [{ name: 'history.redo', args: {} }] })).toBeNull();
+      await settled();
+    } finally {
+      turn.end();
+    }
+
+    expect(await savedRows(instance)).toHaveLength(1);
+    expect(submitted).toHaveLength(1);
+  });
+});
+
+describe('an agent presses a database button as the person\'s click does', { timeout: 60_000 }, () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(async () => {
+    await teardown();
+    vi.restoreAllMocks();
+  });
+
+  const hooks: Array<{ hook: string; payload: unknown }> = [];
+  const buttonConfig = {
+    buttons: {
+      onAction: (payload: unknown): void => { hooks.push({ hook: 'onAction', payload: structuredClone(payload) }); },
+      onNotify: (payload: unknown): void => { hooks.push({ hook: 'onNotify', payload: structuredClone(payload) }); },
+    },
+    people: { list: (): Promise<[]> => Promise.resolve([]), me: (): string => 'human-1' },
+  };
+
+  const buttonSeed = (buttonActions: unknown[], definitions: DatabaseSavedAutomation[] = []): OutputBlockData[] => {
+    const [database, r1] = blocks(definitions);
+    const data = database.data as { schema: PropertyDefinition[] };
+
+    data.schema = [...data.schema, { id: 'btn', name: 'Go', type: 'button', position: 'a3', button: { label: 'Go', buttonActions } } as PropertyDefinition];
+
+    return [database, r1];
+  };
+
+  const STEPS = [
+    { id: 's1', type: 'editProperty', propertyId: 'c', value: true },
+    { id: 's2', type: 'insertBlocks', blocks: [{ type: 'paragraph', data: { text: 'From the button' } }] },
+    { id: 's3', type: 'addPage', name: 'Spawned', edits: [{ propertyId: 'notes', value: 'made by the button' }] },
+    { id: 's4', type: 'callback' },
+    { id: 's5', type: 'sendNotification', recipients: { type: 'people', people: [{ id: 'u2' }] }, message: 'Pressed' },
+  ];
+
+  const press: AgentBatch = { commands: [{ name: 'database.pressButton', args: { id: 'db', rowId: 'r1', propertyId: 'btn' } }] };
+
+  const documentOf = async (instance: Core): Promise<unknown> => {
+    const saved = (await instance.moduleInstances.Saver.save())?.blocks ?? [];
+
+    return saved.filter((block) => block.type !== 'database').map((block) => ({
+      type: block.type,
+      parent: block.parent ?? null,
+      text: (block.data as { text?: unknown }).text,
+      properties: (block.data as { properties?: unknown }).properties,
+    }));
+  };
+  const withoutIds = (value: unknown): unknown => JSON.parse(JSON.stringify(value), (key, entry: unknown) => (key === 'parent' && entry !== 'db' && entry !== null ? 'row' : entry));
+
+  beforeEach(() => {
+    hooks.length = 0;
+  });
+
+  it('writes, adds and calls the host exactly as the person\'s click', async () => {
+    const person = await boot(buttonSeed(STEPS), undefined, { config: buttonConfig });
+
+    document.querySelector<HTMLButtonElement>('[data-blok-id="db"] [data-row-id="r1"] [data-blok-database-button][data-property-id="btn"]')?.click();
+    await settled();
+    const personDocument = await documentOf(person.instance);
+    const personHooks = structuredClone(hooks);
+
+    await teardown();
+    hooks.length = 0;
+    const { instance } = await boot(buttonSeed(STEPS), undefined, { config: buttonConfig });
+
+    expect(await runAgent(instance, press)).toBeNull();
+    await settled();
+
+    expect(personHooks.map((entry) => entry.hook)).toEqual(['onAction', 'onNotify']);
+    expect(withoutIds(await documentOf(instance))).toEqual(withoutIds(personDocument));
+    expect(hooks).toEqual(personHooks);
+    expect(stampOf(instance, 'r1')).toEqual({ by: 'human-1', with: 'bot' });
+  });
+
+  it('asks the person before a "Show confirmation" with the button\'s own text, and only a yes goes on', async () => {
+    const steps = [{ id: 'q', type: 'showConfirmation', message: 'Really\u202e mark it done?\nsure', confirmLabel: 'Do it', cancelLabel: 'Stop' }, STEPS[0], STEPS[3]];
+
+    for (const answer of [true, false, undefined] as const) {
+      const { instance } = await boot(buttonSeed(steps), undefined, { config: buttonConfig });
+      const approve = vi.fn<AgentApprover>(() => Promise.resolve(answer === true));
+      const result = await asked(instance, press, answer === undefined ? undefined : approve);
+
+      await settled();
+      const done = (await rowsOf(instance)).find((row) => row.id === 'r1')?.properties.c;
+
+      if (answer === true) {
+        expect(result).toBeNull();
+        expect(approve).toHaveBeenCalledWith({ kind: 'database.buttonConfirm', blockId: 'db', title: 'Tasks', message: 'Really mark it done? sure', confirmLabel: 'Do it', cancelLabel: 'Stop' });
+        expect(done).toBe(true);
+        expect(hooks.map((entry) => entry.hook)).toEqual(['onAction']);
+      } else {
+        expect(result).toMatch(/^APPROVAL_REQUIRED/);
+        expect(done).toBe(false);
+        expect(hooks).toEqual([]);
+      }
+      hooks.length = 0;
+      await teardown();
+    }
+  });
+
+  it('adversarial: a button aimed at the lock or a form\'s sharing refuses the press and asks no one', async () => {
+    for (const step of [
+      { id: 'x', type: 'editProperty', propertyId: 'databaseLocked', value: false },
+      { id: 'y', type: 'editPages', target: { type: 'thisPage' }, edits: [{ propertyId: 'public', value: true }] },
+    ]) {
+      const { instance } = await boot(buttonSeed([STEPS[0], step, STEPS[3]]), undefined, { config: buttonConfig });
+      const approve = vi.fn<AgentApprover>(() => Promise.resolve(true));
+      const before = JSON.stringify((await instance.moduleInstances.Saver.save())?.blocks);
+
+      expect(await asked(instance, press, approve)).toMatch(/^PRECONDITION_FAILED/);
+      await settled();
+
+      expect(approve).not.toHaveBeenCalled();
+      expect(hooks).toEqual([]);
+      expect(JSON.stringify((await instance.moduleInstances.Saver.save())?.blocks)).toBe(before);
+      await teardown();
+    }
+  });
+
+  it('its edit starts the automation once, and the automation presses nothing', async () => {
+    const { instance, spies } = await boot(buttonSeed([STEPS[0], STEPS[3]], SAVED), undefined, { config: buttonConfig });
+
+    expect(await runAgent(instance, press)).toBeNull();
+    await settled();
+    await settled();
+
+    expect(spies.triggers).toEqual([{ type: 'propertyEdited', rowId: 'r1', propertyId: 'c', value: true }]);
+    expect((await rowsOf(instance)).find((row) => row.id === 'r1')?.properties.notes).toBe('done-filled');
+    expect(hooks.map((entry) => entry.hook)).toEqual(['onAction']);
+  });
+
+  it('read-only refuses the press and calls no host hook', async () => {
+    const { instance } = await boot(buttonSeed([STEPS[3]]), undefined, { config: buttonConfig });
+
+    await instance.moduleInstances.API.methods.readOnly.toggle(true);
+    expect(await runAgent(instance, press)).toMatch(/READ_ONLY/);
+    await settled();
+
+    expect(hooks).toEqual([]);
   });
 });
 

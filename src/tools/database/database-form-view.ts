@@ -12,6 +12,7 @@ import { DatabasePanel, panelInput, panelLabel, panelRow, panelSwitch } from './
 import { propertyTypeMeta } from './database-property-types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { isReadOnlyType } from './property-values';
+import { FORM_ASKABLE, formAnswerProblem, formQuestions } from '../../shared/database/form-questions';
 import type { DatabasePerson, DatabaseRow, DatabaseSourceRef, DatabaseViewConfig, FormSettings, PropertyDefinition, PropertyType, PropertyValue, SelectOption, ViewPropertySetting } from './types';
 import { resolveViewProperties, withPropertySetting } from './view-settings';
 import type { ViewPropertyPatch } from './view-settings';
@@ -55,15 +56,10 @@ export interface DatabaseFormViewOptions {
   };
 }
 
-/** Status is never a question in Notion: auto-create skips it and "Existing properties" leaves it out (research/19 §3a-b). */
-const ASKABLE: readonly PropertyType[] = [
-  'title', 'text', 'richText', 'url', 'email', 'phone', 'number', 'checkbox', 'select', 'multiSelect', 'date', 'place',
-  'person', 'files', 'relation',
-];
 
 /** A property "Create N questions" counts and turns into a question. */
 export const isAutoQuestion = (property: PropertyDefinition): boolean =>
-  property.type !== 'title' && ASKABLE.includes(property.type) && !isReadOnlyType(property.type);
+  property.type !== 'title' && FORM_ASKABLE.includes(property.type) && !isReadOnlyType(property.type);
 
 /** "New question" in Notion's "Select type" and "Question type" (research/19 §3b). Select, status and relation are absent. */
 const NEW_QUESTION_TYPES: readonly PropertyType[] = [
@@ -384,19 +380,7 @@ export class DatabaseFormView implements DatabaseViewRenderer {
   updateRowTitle(_wrapper: HTMLElement, _rowId: string, _title: string): void {}
 
   private questions(): HTMLElement[] {
-    const { view, schema } = this.options;
-
-    return resolveViewProperties(view, schema)
-      .filter((entry) => entry.visible)
-      .flatMap((entry) => {
-        const property = schema.find((p) => p.id === entry.id);
-
-        if (property === undefined || isReadOnlyType(property.type) || !ASKABLE.includes(property.type)) return [];
-
-        const setting = withPropertySetting(view, schema, property.id, {}).find((stored) => stored.id === property.id) ?? entry;
-
-        return [this.question(property, setting)];
-      });
+    return formQuestions(this.options.view, this.options.schema).map(({ property, setting }) => this.question(property, setting));
   }
 
   private question(property: PropertyDefinition, setting: ViewPropertySetting): HTMLElement {
@@ -999,10 +983,9 @@ export class DatabaseFormView implements DatabaseViewRenderer {
     if (this.destroying || this.options.view.form?.closed === true) return;
     const answers = [...this.fields].map(([propertyId, { property, field, required, maxSelections }]) => {
       const value = this.answer(property, field);
-      const invalid = (required && value === undefined)
-        || (property.type === 'email' && value !== undefined && field instanceof HTMLInputElement && field.validity.typeMismatch)
-        || (property.type === 'relation' && property.relation?.limit === 1 && Array.isArray(value) && value.length > 1)
-        || (maxSelections !== undefined && Array.isArray(value) && value.length > maxSelections);
+      // The same checks an agent's database.submitForm runs, plus the browser's own email check.
+      const invalid = formAnswerProblem({ property, setting: { id: propertyId, required, maxSelections } }, value) !== undefined
+        || (property.type === 'email' && value !== undefined && field instanceof HTMLInputElement && field.validity.typeMismatch);
 
       field.closest('[data-blok-database-form-question]')?.toggleAttribute('data-invalid', invalid);
       field.setAttribute('aria-invalid', String(invalid));

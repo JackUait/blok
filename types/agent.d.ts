@@ -315,12 +315,20 @@ export interface AgentVersionHistory {
   restore?(version: string): Promise<boolean>;
 }
 
-/** A change only a person may allow: unlocking a locked database, or restoring a version that changes one. */
+/**
+ * A change only a person may allow: unlocking a locked database, restoring a version that
+ * changes one, or going past a database button's "Show confirmation" when the agent presses it.
+ */
 export interface AgentApprovalRequest {
-  kind: 'database.unlock' | 'database.restore';
+  kind: 'database.unlock' | 'database.restore' | 'database.buttonConfirm';
   blockId: string;
   /** The database's title, when it has a plain one. */
   title?: string;
+  /** database.buttonConfirm: the confirmation the button shows, as one plain line. Absent: the button's default question. */
+  message?: string;
+  /** database.buttonConfirm: the button's own labels for going on and stopping, when it set them. */
+  confirmLabel?: string;
+  cancelLabel?: string;
 }
 
 /**

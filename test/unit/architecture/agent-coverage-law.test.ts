@@ -24,6 +24,8 @@ const UNNAMED_MENU_ITEMS: Record<string, string> = {};
 
 /** Commands that are not a single-document parity case, each with the spec line that says so. */
 const UNCORPUSED_COMMANDS: Record<string, string> = {
+  'database.pressButton': 'Editor only, and its confirmations and host hooks need an approver and a buttons config no corpus runner has. test/unit/tools/database/agent-automations.integration.test.ts runs it against the person\'s click.',
+  'database.submitForm': 'Editor only, and its host hook needs a forms config no corpus runner has. test/unit/tools/database/agent-automations.integration.test.ts runs it against the person\'s Submit.',
   'page.rename': 'Headless form writes another document; one document per case cannot hold it (05 §3.2.1). 01 and 04 test it.',
   'page.setIcon': 'Headless form writes another document; one document per case cannot hold it (05 §3.2.1). 01 and 04 test it.',
   // A case needs a versionHistory fixture in every runner (json, store, editor, Jint, room), and a golden only the user reviews.

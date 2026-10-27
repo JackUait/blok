@@ -17,7 +17,10 @@ const BUILT_IN_BLOCKS = [...Object.keys(defaultBlockTools), 'page', 'page-link']
 const RESERVED_ARGS = ['id', 'parentId', 'position'];
 const CORE_COMMANDS: string[] = Object.keys(COMMANDS);
 /** runtime: 'editor' actions, each with a reason. None among built-ins (06 R3-2). */
-const EDITOR_ONLY_ACTIONS: Record<string, string> = {};
+const EDITOR_ONLY_ACTIONS: Record<string, string> = {
+  'database.pressButton': 'Runs the host\'s buttons.onAction and onNotify after the writes land, which only the editor\'s database tool runs.',
+  'database.submitForm': 'Calls the host\'s forms.onSubmit after the row lands, which only the editor\'s database tool runs.',
+};
 
 const CLASSES = new Map<string, unknown>(Object.entries(BLOCK_CLASSES));
 const descriptions = BUILT_IN_BLOCKS.map(name => [name, BUILT_IN_BLOCK_DESCRIPTIONS[name]?.({})] as const);

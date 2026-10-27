@@ -536,6 +536,17 @@ export class Assistant extends Module {
     }
     const { I18n } = this.Blok;
     const agent = this.config.agent?.assistant?.name?.trim() || 'AI';
+    // A button's confirmation shows its own text and labels, as the person's dialog does.
+    if (request.kind === 'database.buttonConfirm') {
+      const stopConfirm = (): void => bar.settleApproval(false);
+
+      signal.addEventListener('abort', stopConfirm, { once: true });
+
+      return bar.askApproval(request.message ?? I18n.t('tools.database.buttonConfirmDefault'), {
+        approve: request.confirmLabel ?? I18n.t('tools.database.buttonConfirmContinue'),
+        deny: request.cancelLabel ?? I18n.t('tools.database.optionDeleteCancel'),
+      }).finally(() => signal.removeEventListener('abort', stopConfirm));
+    }
     const keys = request.kind === 'database.restore'
       ? { titled: 'assistant.restoreQuestion', untitled: 'assistant.restoreQuestionUntitled', approve: 'assistant.restoreApprove', deny: 'assistant.restoreDeny' }
       : { titled: 'assistant.unlockQuestion', untitled: 'assistant.unlockQuestionUntitled', approve: 'assistant.unlock', deny: 'assistant.keepLocked' };

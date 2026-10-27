@@ -11,7 +11,9 @@ import { AgentFailure, failure } from './errors';
  * One key per change, block and shown title: a yes for one database never covers another,
  * and a yes for a name that changed while the person decided no longer counts.
  */
-export const approvalKey = (request: AgentApprovalRequest): string => JSON.stringify([request.kind, request.blockId, request.title ?? null]);
+export const approvalKey = (request: AgentApprovalRequest): string => JSON.stringify(request.kind === 'database.buttonConfirm'
+  ? [request.kind, request.blockId, request.title ?? null, request.message ?? null, request.confirmLabel ?? null, request.cancelLabel ?? null]
+  : [request.kind, request.blockId, request.title ?? null]);
 
 // Longer titles push the question out of view.
 const MAX_TITLE = 80;
@@ -44,7 +46,9 @@ const named = (request: AgentApprovalRequest): string =>
 /** Thrown while planning; the executor turns it into a question for the person, or a refusal. */
 export const approvalNeeded = (request: AgentApprovalRequest): AgentFailure => failure(
   'APPROVAL_REQUIRED',
-  `Unlocking ${named(request)} needs a person's approval.`,
+  request.kind === 'database.buttonConfirm'
+    ? `A button in ${named(request)} asks for confirmation, which only a person can give.`
+    : `Unlocking ${named(request)} needs a person's approval.`,
   { details: { reason: 'pending', approval: request } }
 );
 
@@ -70,8 +74,15 @@ const refusedUnlock = (request: AgentApprovalRequest, reason: 'no-channel' | 'de
     + 'Nothing in this batch was applied. Ask the person to unlock it themselves (Lock database in the database\'s view menu), '
     + 'then read it again. Never try to unlock it another way.');
 
+const refusedConfirmation = (request: AgentApprovalRequest, reason: 'no-channel' | 'denied'): string => (reason === 'denied'
+  ? `The person did not confirm the button in ${named(request)}, so it did nothing. Nothing in this batch was applied. `
+    + 'Do not press it again unless the person asks you to.'
+  : `This button in ${named(request)} asks for confirmation, and nothing here can ask a person. Nothing was applied. `
+    + 'Ask the person to press it themselves.');
+
 const refused = (cause: AgentFailure, request: AgentApprovalRequest, reason: 'no-channel' | 'denied'): AgentFailure => {
-  const message = request.kind === 'database.restore' ? refusedRestore(request, reason) : refusedUnlock(request, reason);
+  const texts = { 'database.restore': refusedRestore, 'database.buttonConfirm': refusedConfirmation, 'database.unlock': refusedUnlock };
+  const message = texts[request.kind](request, reason);
 
   return new AgentFailure({ ...cause.error, message, details: { reason, approval: request } });
 };

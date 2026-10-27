@@ -218,6 +218,7 @@ export const planBatch = (input: {
       warnings: input.warnings,
       touched: state.touched,
       ...(onlyComments && { commentsOnly: true as const }),
+      ...(state.hostEffects.length > 0 && { hostEffects: state.hostEffects }),
     },
     draft: state.draft,
   };

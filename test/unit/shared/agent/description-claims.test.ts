@@ -199,6 +199,67 @@ describe('what the model is told about automations is true', () => {
   });
 });
 
+describe('what the model is told about form answers is true', () => {
+  it('says database.submitForm is editor only, and a headless session refuses it as unavailable here', async () => {
+    const action = describeDatabase().actions?.find(each => each.name === 'submitForm');
+
+    expect(action?.runtime).toBe('editor');
+    expect(action?.guidance).toMatch(/Editor only\. Runs alone in its batch\./);
+
+    const session = openJsonSession({ blocks: [{
+      id: 'db', type: 'database', content: [],
+      data: {
+        title: 'Requests',
+        schema: [{ id: 't', name: 'Name', type: 'title', position: 'a0' }],
+        views: [{ id: 'f1', name: 'Form', type: 'form', position: 'a0', filters: [], sorts: [], visibleProperties: [] }],
+        activeViewId: 'f1',
+      },
+    }] });
+
+    try {
+      const result = await session.execute({ commands: [{ name: 'database.submitForm', args: { id: 'db', viewId: 'f1', answers: { t: 'Ask' } } }] });
+
+      expect(result.ok ? null : { code: result.error.code, reason: result.error.details?.reason }).toEqual({ code: 'COMMAND_UNAVAILABLE', reason: 'runtime' });
+      expect((await session.read({ ids: ['db'], detail: 'full' })).blocks[0]?.children ?? []).toEqual([]);
+    } finally {
+      await session.close();
+    }
+  });
+
+  it('says database.pressButton is editor only, and a headless session refuses it as unavailable here', async () => {
+    const action = describeDatabase().actions?.find(each => each.name === 'pressButton');
+
+    expect(action?.runtime).toBe('editor');
+    expect(action?.guidance).toMatch(/Editor only\. Runs alone in its batch\./);
+
+    const session = openJsonSession({ blocks: [
+      {
+        id: 'db', type: 'database', content: ['r1'],
+        data: {
+          title: 'Tasks',
+          schema: [
+            { id: 't', name: 'Name', type: 'title', position: 'a0' },
+            { id: 'c', name: 'Done', type: 'checkbox', position: 'a1' },
+            { id: 'btn', name: 'Go', type: 'button', position: 'a2', button: { buttonActions: [{ id: 's', type: 'editProperty', propertyId: 'c', value: true }] } },
+          ],
+          views: [{ id: 'v1', name: 'Table', type: 'table', position: 'a0', filters: [], sorts: [], visibleProperties: [] }],
+          activeViewId: 'v1',
+        },
+      },
+      { id: 'r1', type: 'database-row', parent: 'db', data: { title: 'One', position: 'a0', properties: { t: 'One', c: false } } },
+    ] });
+
+    try {
+      const result = await session.execute({ commands: [{ name: 'database.pressButton', args: { id: 'db', rowId: 'r1', propertyId: 'btn' } }] });
+
+      expect(result.ok ? null : { code: result.error.code, reason: result.error.details?.reason }).toEqual({ code: 'COMMAND_UNAVAILABLE', reason: 'runtime' });
+      expect((await session.read({ ids: ['r1'], detail: 'full' })).blocks[0]?.data?.properties).toEqual({ t: 'One', c: false });
+    } finally {
+      await session.close();
+    }
+  });
+});
+
 describe('what the model is told about computed database values is true', () => {
   const guidance = describeDatabase().guidance ?? '';
 

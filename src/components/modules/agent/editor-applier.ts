@@ -3,7 +3,7 @@ import type { AgentActor, Edit, PlannedBlock } from '../../../../types/agent';
 import { AgentFailure, failure } from '../../../shared/agent/errors';
 import type { AgentApplier, HistoryBound, StepUnlocks } from '../../../shared/agent/executor';
 import type { DocSnapshot } from '../../../shared/agent/snapshot';
-import type { Plan } from '../../../shared/agent/types';
+import type { HostEffect, Plan } from '../../../shared/agent/types';
 import { textLivesInFirstChild } from '../../../shared/turn-into';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 import type { Block } from '../../block';
@@ -487,6 +487,17 @@ export class EditorApplier implements AgentApplier {
 
       if (typeof pageId === 'string' && before.get(id) !== pageId) {
         report?.(pageId);
+      }
+    }
+  }
+
+  /** Each block's tool runs its own hook; one that throws does not stop the rest. */
+  public runHostEffects(effects: readonly HostEffect[]): void {
+    for (const { blockId, effect } of effects) {
+      try {
+        this.Blok.BlockManager.getBlockById(blockId)?.call('runAgentHostEffect', { effect });
+      } catch {
+        // The writes already landed; a failing host hook must not undo them.
       }
     }
   }

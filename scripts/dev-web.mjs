@@ -17,15 +17,13 @@ const MAX_BYTES = 2 * 1024 * 1024;
 const MAX_REDIRECTS = 5;
 const TIMEOUT_MS = 15_000;
 
+const ENTITIES = { nbsp: ' ', amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'" };
+
+// One pass: decoding `&amp;` first would turn `&amp;lt;` into `<`.
 const stripTags = (html) => html
   .replace(/<(script|style|noscript|svg)\b[\s\S]*?<\/\1>/gi, ' ')
   .replace(/<[^>]*>/g, ' ')
-  .replace(/&nbsp;/g, ' ')
-  .replace(/&amp;/g, '&')
-  .replace(/&lt;/g, '<')
-  .replace(/&gt;/g, '>')
-  .replace(/&quot;/g, '"')
-  .replace(/&#39;/g, "'")
+  .replace(/&(nbsp|amp|lt|gt|quot|#39);/g, (_, name) => ENTITIES[name])
   .replace(/\s+/g, ' ')
   .trim();
 

@@ -35,6 +35,22 @@ describe('webTools', () => {
     expect(text).not.toContain('<a ');
   });
 
+  it('image_search decodes each entity once, so an escaped entity stays literal', async () => {
+    const fetch = vi.fn(async () => json({ query: { pages: { 1: {
+      title: 'File:x.jpg',
+      imageinfo: [{
+        url: 'https://upload.wikimedia.org/x.jpg',
+        descriptionurl: 'https://commons.wikimedia.org/',
+        width: 1,
+        height: 1,
+        extmetadata: { Artist: { value: 'Tom &amp;lt;3 &amp;amp; Jerry &lt;b&gt;' } },
+      }],
+    } } } }));
+    const text = await webTools({ fetch, lookup })('image_search', { query: 'x' }, signal());
+
+    expect(text).toContain('Author: Tom &lt;3 &amp; Jerry <b>');
+  });
+
   it('image_search lists images in search rank, not page-id order', async () => {
     const page = (title: string, index: number): Record<string, unknown> => ({
       title: `File:${title}`,

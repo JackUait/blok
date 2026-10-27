@@ -274,7 +274,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1892 + 136 + 525 + 4 closure for all 2557 keys', () => {
+  it('rebuilds a disjoint 1896 + 136 + 521 + 4 closure for all 2557 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -466,7 +466,9 @@ describe('current English catalog lifecycle coverage', () => {
       // relationTwoWayEnable, relationTwoWayHint and rollupShowUniqueHint, by literal (1fb560cd).
       // +3: settingsSearchProperty, settingsOn and settingsOff gained literal callers in the same panel (1fb560cd).
       // +5: the Ask AI sharing question, its untitled form, Allow, Keep as is and Calendar sync, all by literal.
-      'executable-literal': 1892,
+      // +4: groupSort, groupSortManual, groupSortAlphabetical and groupSortReverse gained literal callers
+      // in the select option Sort row (a71fed2d).
+      'executable-literal': 1896,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -540,7 +542,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +2: the formula errors tooComplex and patternTooComplex, composed from formulaErrorKey.
       // +2: propertyNamePlaceholder and rollupProperty (see executable-literal); still shipped.
       // -3: settingsSearchProperty, settingsOn and settingsOff (see executable-literal).
-      'registered-namespace-compatible': 525,
+      // -4: the groupSort* keys (see executable-literal).
+      'registered-namespace-compatible': 521,
       'catalog-only': 4,
     });
     expect(

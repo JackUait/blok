@@ -9917,6 +9917,14 @@ textarea[data-blok-database-cell-input] {
   padding-block: var(--blok-space-1);
 }
 
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-panel-list'] > [data-blok-popover-container] [data-blok-popover-item][data-blok-popover-item-active] {
+  background-color: transparent;
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-panel-list'] > [data-blok-popover-container] [data-blok-popover-item][data-blok-popover-item-active]:is(:hover, [data-blok-focused="true"]) {
+  background-color: var(--blok-item-focus-bg);
+}
+
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-panel-list'] > [data-blok-popover-container] [data-blok-popover-item]:last-child {
   margin-block-end: 0;
 }

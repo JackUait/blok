@@ -109,6 +109,19 @@ test('Calculate opens with the current calculation\'s row in the hover tint, a c
   await expect(current).toHaveCSS('background-color', 'rgba(33, 27, 23, 0.05)');
   await expect(page.locator('[data-blok-item-name="rollupFunction-show_unique"]')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   await expect(current.getByTestId('popover-item-trailing-icon')).toHaveCount(1);
+  await expect(page.getByRole('menuitemcheckbox', { name: 'Show original' })).toHaveAttribute('aria-checked', 'true');
+});
+
+test('Decimal places tells a screen reader which one is current, and paints it no fill', async ({ page }) => {
+  await openPanel(page);
+  await page.locator('[data-blok-item-name="decimals"]').click();
+  const current = page.getByRole('menuitemcheckbox', { name: 'Default' });
+
+  await expect(current).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByRole('menuitemcheckbox', { name: '2' })).toHaveAttribute('aria-checked', 'false');
+  await expect(current).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await current.hover();
+  await expect(current).toHaveCSS('background-color', 'rgba(33, 27, 23, 0.05)');
 });
 
 test('the group submenus are 250 wide', async ({ page }) => {

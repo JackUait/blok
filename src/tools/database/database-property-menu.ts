@@ -977,7 +977,8 @@ export class DatabasePropertyMenu {
     const leaf = (fn: RollupFunction): PopoverItemParams => ({
       name: `rollupFunction-${fn}`,
       title: this.t(`tools.database.rollupFn.${fn}`),
-      // §17.10: a check on the current one, no fill.
+      // §17.10: a check on the current one; database.css drops the checked fill in these lists.
+      isActive: fn === current,
       ...(fn === current ? { trailingIcon: IconCheck } : {}),
       closeOnActivate: true,
       onActivate: () => pick(fn),
@@ -1221,13 +1222,15 @@ export class DatabasePropertyMenu {
             {
               name: 'decimals-default',
               title: this.t('tools.database.decimalPlacesDefault'),
-              // §17.7: a check on the current one, no fill.
+              // §17.7: a check on the current one; database.css drops the checked fill in these lists.
+              isActive: number.decimals === undefined,
               ...(number.decimals === undefined ? { trailingIcon: IconCheck } : {}),
               onActivate: () => this.pickFrom('decimals', () => set(without(latest.number, 'decimals'))),
             },
             ...Array.from({ length: OFFERED_DECIMALS + 1 }, (_, decimals) => ({
               name: `decimals-${decimals}`,
               title: String(decimals),
+              isActive: number.decimals === decimals,
               ...(number.decimals === decimals ? { trailingIcon: IconCheck } : {}),
               onActivate: () => this.pickFrom('decimals', () => set({ ...latest.number, decimals })),
             })),

@@ -677,15 +677,15 @@ describe('property menu — click-only lists (notion-spec-2 §16.1)', () => {
 
     expect(items.find((item) => item.name === 'rollupFunctionGroup-calcMoreOptions')?.trailingIcon).toBeUndefined();
     expect(more.map((item) => item.trailingIcon === IconCheck)).toEqual([true, false, false, false, false, false]);
-    // A check, not a fill (CLAUDE.md: no blue selected states; Notion draws no fill).
-    expect(more.every((item) => item.isActive === undefined)).toBe(true);
+    // Checked for screen readers too; database.css drops the fill in these lists.
+    expect(more.map((item) => item.isActive === true)).toEqual([true, false, false, false, false, false]);
   });
 
-  it('Decimal places marks the current one with a check, not a fill', () => {
+  it('Decimal places marks the current one checked, with a check', () => {
     const items = byName(panel(prop('number', { number: { decimals: 2 } })), 'decimals').children?.items ?? [];
 
     expect(items.map((item) => item.trailingIcon === IconCheck)).toEqual([false, false, false, true, false, false, false]);
-    expect(items.every((item) => item.isActive === undefined)).toBe(true);
+    expect(items.map((item) => item.isActive === true)).toEqual([false, false, false, true, false, false, false]);
   });
 
   it('Text target: no More options', () => {

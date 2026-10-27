@@ -7,11 +7,15 @@
 //
 // Outputs land in public/samples/ and are served by Vite at /samples/* (same
 // origin, no CORS) in both dev and the built playground. Assembled by hand as
-// OOXML ZIPs via JSZip — no spreadsheet/word/pptx authoring library needed.
+// OOXML ZIPs — no spreadsheet/word/pptx authoring library needed.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import JSZip from 'jszip';
+
+import { createZip } from './lib/zip-writer.mjs';
+
+// Map keeps insertion order, which becomes the zip entry order.
+const zip = (parts) => createZip([...parts].map(([name, data]) => ({ name, data })));
 
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'samples');
 mkdirSync(OUT, { recursive: true });
@@ -59,8 +63,8 @@ const docxBody = [
   ),
 ].join('');
 
-const docx = new JSZip();
-docx.file(
+const docx = new Map();
+docx.set(
   '[Content_Types].xml',
   `${XML}
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
@@ -69,21 +73,21 @@ docx.file(
 <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
 </Types>`,
 );
-docx.file(
+docx.set(
   '_rels/.rels',
   `${XML}
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
 </Relationships>`,
 );
-docx.file(
+docx.set(
   'word/document.xml',
   `${XML}
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
 <w:body>${docxBody}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1080" w:right="1080" w:bottom="1080" w:left="1080" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body>
 </w:document>`,
 );
-writeFileSync(join(OUT, 'service-agreement.docx'), await docx.generateAsync({ type: 'nodebuffer' }));
+writeFileSync(join(OUT, 'service-agreement.docx'), zip(docx));
 
 // ---- xlsx: a quarterly budget --------------------------------------------
 // 2D grid; strings become shared strings, numbers stay inline numeric. The
@@ -139,8 +143,8 @@ const rows = grid
   .join('');
 const sharedStrings = sharedList.map((s) => `<si><t xml:space="preserve">${esc(s)}</t></si>`).join('');
 
-const xlsx = new JSZip();
-xlsx.file(
+const xlsx = new Map();
+xlsx.set(
   '[Content_Types].xml',
   `${XML}
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
@@ -151,21 +155,21 @@ xlsx.file(
 <Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
 </Types>`,
 );
-xlsx.file(
+xlsx.set(
   '_rels/.rels',
   `${XML}
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
 </Relationships>`,
 );
-xlsx.file(
+xlsx.set(
   'xl/workbook.xml',
   `${XML}
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
 <sheets><sheet name="Budget" sheetId="1" r:id="rId1"/></sheets>
 </workbook>`,
 );
-xlsx.file(
+xlsx.set(
   'xl/_rels/workbook.xml.rels',
   `${XML}
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -173,21 +177,21 @@ xlsx.file(
 <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
 </Relationships>`,
 );
-xlsx.file(
+xlsx.set(
   'xl/sharedStrings.xml',
   `${XML}
 <sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${sharedList.length}" uniqueCount="${sharedList.length}">
 ${sharedStrings}
 </sst>`,
 );
-xlsx.file(
+xlsx.set(
   'xl/worksheets/sheet1.xml',
   `${XML}
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
 <sheetData>${rows}</sheetData>
 </worksheet>`,
 );
-writeFileSync(join(OUT, 'quarterly-budget.xlsx'), await xlsx.generateAsync({ type: 'nodebuffer' }));
+writeFileSync(join(OUT, 'quarterly-budget.xlsx'), zip(xlsx));
 
 // ---- pptx: a designed pitch deck -----------------------------------------
 // A short, opinionated product deck so the inline preview shows a real story:
@@ -323,14 +327,14 @@ const slideXml = (shapes) => `${XML}
 ${shapes.join('')}
 </p:spTree></p:cSld><p:clrMapOvr><a:overrideClrMapping/></p:clrMapOvr></p:sld>`;
 
-const pptx = new JSZip();
+const pptx = new Map();
 const slideOverrides = slides
   .map(
     (_, i) =>
       `<Override PartName="/ppt/slides/slide${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`,
   )
   .join('');
-pptx.file(
+pptx.set(
   '[Content_Types].xml',
   `${XML}
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
@@ -343,7 +347,7 @@ ${slideOverrides}
 <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
 </Types>`,
 );
-pptx.file(
+pptx.set(
   '_rels/.rels',
   `${XML}
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -351,7 +355,7 @@ pptx.file(
 </Relationships>`,
 );
 const sldIds = slides.map((_, i) => `<p:sldId id="${256 + i}" r:id="rId${i + 2}"/>`).join('');
-pptx.file(
+pptx.set(
   'ppt/presentation.xml',
   `${XML}
 <p:presentation xmlns:p="${NS.p}" xmlns:a="${NS.a}" xmlns:r="${NS.r}">
@@ -367,7 +371,7 @@ const presRels = slides
       `<Relationship Id="rId${i + 2}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide${i + 1}.xml"/>`,
   )
   .join('');
-pptx.file(
+pptx.set(
   'ppt/_rels/presentation.xml.rels',
   `${XML}
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -377,8 +381,8 @@ ${presRels}
 </Relationships>`,
 );
 slides.forEach((slide, i) => {
-  pptx.file(`ppt/slides/slide${i + 1}.xml`, slideXml(slide));
-  pptx.file(
+  pptx.set(`ppt/slides/slide${i + 1}.xml`, slideXml(slide));
+  pptx.set(
     `ppt/slides/_rels/slide${i + 1}.xml.rels`,
     `${XML}
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -386,7 +390,7 @@ slides.forEach((slide, i) => {
 </Relationships>`,
   );
 });
-pptx.file(
+pptx.set(
   'ppt/slideLayouts/slideLayout1.xml',
   `${XML}
 <p:sldLayout xmlns:p="${NS.p}" xmlns:a="${NS.a}" xmlns:r="${NS.r}" type="blank">
@@ -394,7 +398,7 @@ pptx.file(
 <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>
 </p:spTree></p:cSld><p:clrMapOvr><a:overrideClrMapping/></p:clrMapOvr></p:sldLayout>`,
 );
-pptx.file(
+pptx.set(
   'ppt/slideLayouts/_rels/slideLayout1.xml.rels',
   `${XML}
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -402,7 +406,7 @@ pptx.file(
 </Relationships>`,
 );
 const clrMap = `<p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>`;
-pptx.file(
+pptx.set(
   'ppt/slideMasters/slideMaster1.xml',
   `${XML}
 <p:sldMaster xmlns:p="${NS.p}" xmlns:a="${NS.a}" xmlns:r="${NS.r}">
@@ -411,7 +415,7 @@ pptx.file(
 </p:spTree></p:cSld>${clrMap}
 <p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/></p:sldLayoutIdLst></p:sldMaster>`,
 );
-pptx.file(
+pptx.set(
   'ppt/slideMasters/_rels/slideMaster1.xml.rels',
   `${XML}
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -423,11 +427,11 @@ const fontScheme = `<a:fontScheme name="Office"><a:majorFont><a:latin typeface="
 const clr = (n, v) => `<a:${n}><a:srgbClr val="${v}"/></a:${n}>`;
 const clrScheme = `<a:clrScheme name="Office"><a:dk1><a:sysClr val="windowText" lastClr="000000"/></a:dk1><a:lt1><a:sysClr val="window" lastClr="FFFFFF"/></a:lt1>${clr('dk2', '44546A')}${clr('lt2', 'E7E6E6')}${clr('accent1', '4472C4')}${clr('accent2', 'ED7D31')}${clr('accent3', 'A5A5A5')}${clr('accent4', 'FFC000')}${clr('accent5', '5B9BD5')}${clr('accent6', '70AD47')}${clr('hlink', '0563C1')}${clr('folHlink', '954F72')}</a:clrScheme>`;
 const fmtScheme = `<a:fmtScheme name="Office"><a:fillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:fillStyleLst><a:lnStyleLst><a:ln><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln><a:ln><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln><a:ln><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln></a:lnStyleLst><a:effectStyleLst><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle></a:effectStyleLst><a:bgFillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:bgFillStyleLst></a:fmtScheme>`;
-pptx.file(
+pptx.set(
   'ppt/theme/theme1.xml',
   `${XML}
 <a:theme xmlns:a="${NS.a}" name="Office Theme"><a:themeElements>${clrScheme}${fontScheme}${fmtScheme}</a:themeElements></a:theme>`,
 );
-writeFileSync(join(OUT, 'pitch-deck.pptx'), await pptx.generateAsync({ type: 'nodebuffer' }));
+writeFileSync(join(OUT, 'pitch-deck.pptx'), zip(pptx));
 
 console.log('playground office samples written to', OUT);

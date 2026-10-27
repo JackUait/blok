@@ -1,3 +1,4 @@
+// Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
 import type { SafeXmlNode } from '../../parser/XmlParser';
 import type { RenderContext } from '../RenderContext';
 import { parseOoxmlBool } from '../../parser/booleans';

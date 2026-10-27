@@ -65,7 +65,8 @@ function labelText(model: ChartModel, seriesIndex: number, i: number, share: num
   return parts.filter((p) => p !== '').join('; ');
 }
 
-/** Pies draw the first series only; doughnuts draw one ring per series, the first innermost. */
+// Pies draw only the first series; doughnuts one ring per series, the first innermost.
+// Unverified against Office: no test deck has a second series.
 export function drawPie(model: ChartModel, box: Box, root: Element, style: TextStyle): void {
   const doughnut = model.kind === 'doughnut';
   const drawn = doughnut ? model.series : model.series.slice(0, 1);

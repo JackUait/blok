@@ -1,3 +1,4 @@
+// Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
 import type { ChartNodeData } from '../model/nodes/ChartNode';
 import type { RenderContext } from './RenderContext';
 import type { Box } from './chart/legend';
@@ -52,7 +53,6 @@ function draw(node: ChartNodeData, ctx: RenderContext, frame: HTMLElement): void
   }
 }
 
-/** Draws the chart as SVG inside a frame at its slide position. */
 export function renderChart(node: ChartNodeData, ctx: RenderContext): HTMLElement {
   const frame = frameFor(node);
 

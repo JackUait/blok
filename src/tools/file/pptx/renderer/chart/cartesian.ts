@@ -1,3 +1,4 @@
+// Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
 import type { ChartModel, ChartSeries } from './model';
 import type { AxisScale } from './scale';
 import type { Box } from './legend';
@@ -375,7 +376,6 @@ function drawXY(model: ChartModel, area: Box, root: Element, style: TextStyle): 
   root.appendChild(labels);
 }
 
-/** Bars, lines, areas and scatter: axes, gridlines, series and data labels. */
 export function drawCartesian(model: ChartModel, area: Box, root: Element, style: TextStyle): void {
   if (model.kind === 'scatter') {
     drawXY(model, area, root, style);

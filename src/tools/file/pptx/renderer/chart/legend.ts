@@ -1,3 +1,4 @@
+// Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
 import type { ChartModel, ChartSeries } from './model';
 import type { TextStyle } from './svg';
 import { group, px, svg, text, textWidth } from './svg';

@@ -1,4 +1,3 @@
-/** Builds chart part XML for tests. */
 const NS = 'xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"';
 
 export function chartXml(plot: string, parts: { head?: string; tail?: string; txPr?: string } = {}): string {

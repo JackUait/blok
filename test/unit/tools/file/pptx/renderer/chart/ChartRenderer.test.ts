@@ -203,6 +203,14 @@ describe('renderChart', () => {
       expect(texts(part(frame, 'value-axis'))).toEqual(['0', '5', '10', '15', '20']);
     });
 
+    it('survives absurd axis bounds and major units from a hostile file', () => {
+      const frame = render(chartXml(`<c:barChart>${ser({ cats: ['a'], vals: [5] })}</c:barChart><c:catAx/>
+        <c:valAx><c:scaling><c:max val="1e308"/><c:min val="-1e308"/></c:scaling><c:majorUnit val="1e-300"/></c:valAx>`));
+
+      expect(seriesRects(frame)[0]).toHaveLength(1);
+      expect(texts(part(frame, 'value-axis')).length).toBeLessThanOrEqual(201);
+    });
+
     it('hides a deleted axis', () => {
       const frame = render(chartXml(`<c:barChart>${ser({ cats: ['a'], vals: [5] })}</c:barChart><c:catAx/><c:valAx><c:delete val="1"/></c:valAx>`));
 

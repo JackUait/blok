@@ -19,14 +19,24 @@ interface Frame {
   zero: number;
 }
 
-export function ticks(scale: AxisScale): number[] {
-  const count = Math.round((scale.max - scale.min) / scale.major);
+function tickCount(scale: AxisScale): number {
+  return Math.round((scale.max - scale.min) / scale.major);
+}
 
-  if (!Number.isFinite(count) || count < 1 || count > MAX_TICKS) {
-    return ticks({ ...scale, major: niceAxisInterval(scale.max, scale.min, 8) });
+function usable(count: number): boolean {
+  return Number.isFinite(count) && count >= 1 && count <= MAX_TICKS;
+}
+
+/** Tick values; a hostile major unit or range falls back to a nice step, then to the two ends. */
+export function ticks(scale: AxisScale): number[] {
+  const fallback = { ...scale, major: niceAxisInterval(scale.max, scale.min, 8) };
+  const step = [scale, fallback].find((s) => usable(tickCount(s)));
+
+  if (step === undefined) {
+    return [scale.min, scale.max];
   }
 
-  return Array.from({ length: count + 1 }, (_, k) => Number((scale.min + k * scale.major).toPrecision(12)));
+  return Array.from({ length: tickCount(step) + 1 }, (_, k) => Number((step.min + k * step.major).toPrecision(12)));
 }
 
 function linear(scale: AxisScale, from: number, to: number, reversed: boolean): (v: number) => number {

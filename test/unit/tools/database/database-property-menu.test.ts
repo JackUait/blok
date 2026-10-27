@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import type { PropertyDefinition, PropertyType } from '../../../../src/tools/database/types';
 import { createDefaultStatusSettings } from '../../../../src/tools/database/property-values';
+import { propertyTypeMeta } from '../../../../src/tools/database/database-property-types';
 import { IconCheck, IconInfo, IconPageLayout, IconReplace } from '../../../../src/components/icons';
 import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 
@@ -576,6 +577,15 @@ describe('DatabasePropertyMenu', () => {
         ['personNotifications-usersOnly', 'tools.database.personNotificationsUsersOnly', true],
         ['personNotifications-none', 'tools.database.personNotificationsNone', false],
       ]);
+    });
+
+    // notion-spec-2 §17.5: Notion draws its Created by glyph there; Blok draws its Created by type icon.
+    it('gives Created by in the Default list the Created by type icon, and No default none', () => {
+      const { items } = editItems(prop('person'));
+      const list = byName(items, 'personDefault').children?.items ?? [];
+
+      expect(byName(list, 'personDefault-createdBy').icon).toBe(propertyTypeMeta('createdBy').icon);
+      expect(byName(list, 'personDefault-none').icon).toBeUndefined();
     });
 
     it('shows and checks the stored choices', () => {

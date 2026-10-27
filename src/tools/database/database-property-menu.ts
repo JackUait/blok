@@ -1092,6 +1092,8 @@ export class DatabasePropertyMenu {
         items: choices.map(([choice, labelKey]) => ({
           name: [name, choice].join('-'),
           title: this.t(labelKey),
+          // §17.5: Created by carries its type's icon in Default's list.
+          ...(choice === 'createdBy' ? { icon: propertyTypeMeta('createdBy').icon } : {}),
           ...checkedIf(choice === chosen),
           closeOnActivate: true,
           onActivate: () => pick(choice),

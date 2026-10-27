@@ -274,7 +274,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1878 + 136 + 528 + 4 closure for all 2546 keys', () => {
+  it('rebuilds a disjoint 1887 + 136 + 525 + 4 closure for all 2552 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -288,7 +288,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2546);
+    expect(lifecycle.size).toBe(2552);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -462,7 +462,10 @@ describe('current English catalog lifecycle coverage', () => {
       // and rollupTargetProperty, all by literal.
       // -2: tools.database.propertyNamePlaceholder (58acb411) and rollupProperty (47825485) lost their literal callers.
       // +1: tools.database.formulaLimitReached, the warning mark's label on a capped formula cell, by literal.
-      'executable-literal': 1878,
+      // +6: the Edit property panel's rollupSelect, relationThisDatabase, relationRelatedToHint,
+      // relationTwoWayEnable, relationTwoWayHint and rollupShowUniqueHint, by literal (1fb560cd).
+      // +3: settingsSearchProperty, settingsOn and settingsOff gained literal callers in the same panel (1fb560cd).
+      'executable-literal': 1887,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
@@ -535,7 +538,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +2: tools.database.addCard and addRow (see above).
       // +2: the formula errors tooComplex and patternTooComplex, composed from formulaErrorKey.
       // +2: propertyNamePlaceholder and rollupProperty (see executable-literal); still shipped.
-      'registered-namespace-compatible': 528,
+      // -3: settingsSearchProperty, settingsOn and settingsOff (see executable-literal).
+      'registered-namespace-compatible': 525,
       'catalog-only': 4,
     });
     expect(

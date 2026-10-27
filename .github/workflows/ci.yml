@@ -533,8 +533,8 @@ jobs:
         uses: ./.github/actions/setup-playwright-browsers
         with:
           browsers: chromium firefox webkit
-          # apt packages are not cached, so installing them here helps no shard.
-          os-deps: "false"
+          # Fills the apt .deb cache that every E2E shard restores.
+          os-deps: "cache"
 
   e2e-tests:
     name: E2E Tests

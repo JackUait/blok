@@ -11,7 +11,7 @@ inputs:
     required: false
     default: "true"
   os-deps:
-    description: "false = skip the apt OS dependencies. Only for a job that warms the cache and runs no browser: apt packages are not cached, so installing them there helps no later job."
+    description: "true = install the apt OS dependencies, taking the .deb files from the apt cache when it has them. false = skip them. cache = fill the apt cache for these browsers and install nothing else (the Install Browsers job)."
     required: false
     default: "true"
   cache-key-prefix:
@@ -31,6 +31,51 @@ runs:
       id: pw
       shell: bash
       run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> $GITHUB_OUTPUT
+
+    # The apt mirror can serve .deb files at tens of kB/s on some runners, while
+    # actions/cache stays fast. So shards take the .debs from the cache.
+    # The image decides which packages are missing, so its version is in the key.
+    # restore-keys let another image or Playwright version reuse most .debs.
+    - name: Get apt cache key
+      id: apt-key
+      if: inputs.os-deps != 'false'
+      shell: bash
+      run: |
+        os="$(. /etc/os-release && echo "${ID}${VERSION_ID}")"
+        base="playwright-apt-${os}-${{ runner.arch }}-"
+        prefix="${base}${{ steps.pw.outputs.version }}-"
+        key="${prefix}${ImageVersion:-unknown}"
+        echo "base=${base}" >> "$GITHUB_OUTPUT"
+        echo "prefix=${prefix}" >> "$GITHUB_OUTPUT"
+        echo "key=${key}" >> "$GITHUB_OUTPUT"
+        echo "apt cache key: ${key}"
+        echo "apt mirrors:"
+        cat /etc/apt/apt-mirrors.txt 2>/dev/null || echo "(no /etc/apt/apt-mirrors.txt)"
+
+    - name: Restore apt package cache
+      id: apt-cache
+      if: inputs.os-deps != 'false'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/playwright-apt
+        key: ${{ steps.apt-key.outputs.key }}
+        restore-keys: |
+          ${{ steps.apt-key.outputs.prefix }}
+          ${{ steps.apt-key.outputs.base }}
+
+    # apt uses a .deb from its archive when the version and hash match the index,
+    # and downloads only the rest.
+    - name: Seed apt archive
+      id: apt-seed
+      if: inputs.os-deps != 'false' && steps.apt-cache.outputs.cache-matched-key != ''
+      shell: bash
+      run: |
+        shopt -s nullglob
+        debs=("$HOME"/.cache/playwright-apt/*.deb)
+        echo "Seeding ${#debs[@]} cached .deb files into /var/cache/apt/archives"
+        if (( ${#debs[@]} > 0 )); then
+          sudo cp "${debs[@]}" /var/cache/apt/archives/
+        fi
 
     - name: Cache Playwright Browsers
       if: inputs.download == 'true'
@@ -55,9 +100,42 @@ runs:
       shell: bash
       run: npx playwright install ${{ inputs.os-deps == 'true' && '--with-deps' || '' }} ${{ inputs.browsers }}
 
-    # Browser binaries are cached in ~/.cache/ms-playwright, but apt OS deps are not —
-    # so on a cache hit (and on every restore-only test job) we still install OS deps.
+    # Browser binaries are cached in ~/.cache/ms-playwright, but apt OS deps are
+    # installed per runner, so on a cache hit (and on every restore-only test job) we still install them.
     - name: Install Browser OS Dependencies
       if: inputs.os-deps == 'true' && ((inputs.download == 'true' && steps.cache.outputs.cache-hit == 'true') || inputs.download != 'true')
       shell: bash
       run: npx playwright install-deps ${{ inputs.browsers }}
+
+    # The timeout keeps a slow mirror here from holding back every E2E shard:
+    # on failure nothing is saved and shards download from the mirror as before.
+    - name: Fill apt package cache
+      id: apt-warm
+      if: inputs.os-deps == 'cache' && steps.apt-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        echo 'APT::Keep-Downloaded-Packages "true";' | sudo tee /etc/apt/apt.conf.d/99-keep-playwright-debs
+        apt-config dump | grep -iE 'keep|clean|post-invoke|dir::cache' || true
+        if ! timeout 120 npx playwright install-deps ${{ inputs.browsers }}; then
+          echo "::warning::apt install-deps failed or took over 120s; the apt cache is not saved"
+          exit 0
+        fi
+        sudo apt-get autoclean
+        shopt -s nullglob
+        debs=(/var/cache/apt/archives/*.deb)
+        if (( ${#debs[@]} == 0 )); then
+          echo "::warning::apt kept no .deb files; the apt cache is not saved"
+          exit 0
+        fi
+        rm -rf "$HOME/.cache/playwright-apt"
+        mkdir -p "$HOME/.cache/playwright-apt"
+        cp "${debs[@]}" "$HOME/.cache/playwright-apt/"
+        echo "Caching ${#debs[@]} .deb files ($(du -sh "$HOME/.cache/playwright-apt" | cut -f1))"
+        echo "save=true" >> "$GITHUB_OUTPUT"
+
+    - name: Save apt package cache
+      if: steps.apt-warm.outputs.save == 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/playwright-apt
+        key: ${{ steps.apt-key.outputs.key }}

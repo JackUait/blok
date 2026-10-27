@@ -593,8 +593,8 @@ describe('CI critical-path law', () => {
       {
         name: 'Setup Playwright Browsers',
         uses: './.github/actions/setup-playwright-browsers',
-        // apt packages are not cached, so installing them here helps no shard.
-        with: { browsers: 'chromium firefox webkit', 'os-deps': 'false' },
+        // Fills the apt .deb cache that every E2E shard restores.
+        with: { browsers: 'chromium firefox webkit', 'os-deps': 'cache' },
       },
     ]);
   });
@@ -777,5 +777,78 @@ describe('CI critical-path law', () => {
         },
       },
     ]);
+  });
+});
+
+type CompositeAction = {
+  inputs?: Record<string, WorkflowInput>;
+  runs: { using: string; steps: Step[] };
+};
+
+const browserAction = parse(
+  readFileSync(resolve(root, '.github/actions/setup-playwright-browsers/action.yml'), 'utf8'),
+) as CompositeAction;
+
+const actionStep = (id: string): Step => {
+  const step = browserAction.runs.steps.find((candidate) => candidate.id === id);
+
+  if (step === undefined) {
+    throw new Error(`Missing setup-playwright-browsers step: ${id}`);
+  }
+
+  return step;
+};
+
+const stepIndex = (predicate: (step: Step) => boolean): number =>
+  browserAction.runs.steps.findIndex(predicate);
+
+// Shards must take .debs from actions/cache: the apt mirror can stall for
+// minutes on a runner where the cache stays fast.
+describe('Playwright OS-deps apt cache law', () => {
+  it('seeds the apt archive from the cache before any step installs OS deps', () => {
+    const restore = stepIndex((step) => step.id === 'apt-cache');
+    const seed = stepIndex((step) => step.id === 'apt-seed');
+    const firstAptInstall = stepIndex(
+      (step) =>
+        step.run !== undefined &&
+        (step.run.includes('install-deps') || step.run.includes('--with-deps')),
+    );
+
+    expect(restore).toBeGreaterThanOrEqual(0);
+    expect(seed).toBeGreaterThan(restore);
+    expect(firstAptInstall).toBeGreaterThan(seed);
+    expect(actionStep('apt-cache').uses).toBe(
+      'actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9',
+    );
+    expect(actionStep('apt-cache').if).toBe("inputs.os-deps != 'false'");
+  });
+
+  it('keys the cache on the image and Playwright version, with fallbacks across both', () => {
+    const key = actionStep('apt-key').run ?? '';
+    const restore = actionStep('apt-cache').with ?? {};
+
+    expect(key).toContain('steps.pw.outputs.version');
+    expect(key).toContain('ImageVersion');
+    expect(key).toContain('/etc/os-release');
+    expect(restore.key).toBe('${{ steps.apt-key.outputs.key }}');
+    expect(restore['restore-keys']).toBe(
+      '${{ steps.apt-key.outputs.prefix }}\n${{ steps.apt-key.outputs.base }}\n',
+    );
+  });
+
+  it('saves the cache only from the warming job, only after the warm step proved it', () => {
+    const warm = actionStep('apt-warm');
+    const save = browserAction.runs.steps.find((step) =>
+      step.uses?.startsWith('actions/cache/save@'),
+    );
+
+    expect(warm.if).toBe(
+      "inputs.os-deps == 'cache' && steps.apt-cache.outputs.cache-hit != 'true'",
+    );
+    // A slow mirror here must not hold back every E2E shard.
+    expect(warm.run).toContain('timeout 120 npx playwright install-deps');
+    expect(save?.uses).toBe('actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9');
+    expect(save?.if).toBe("steps.apt-warm.outputs.save == 'true'");
+    expect(save?.with?.key).toBe('${{ steps.apt-key.outputs.key }}');
   });
 });

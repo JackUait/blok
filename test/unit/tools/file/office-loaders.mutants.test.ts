@@ -20,7 +20,7 @@ describe('office loaders mutants', () => {
   });
 
   describe('docx', () => {
-    it('renders into a wrapper of its own, class-named, shrunk to content height', async () => {
+    it('renders into a wrapper of its own, class-named, shrunk to content height, with no altChunk iframe', async () => {
       const render = await loadDocxRenderer();
       const buf = new ArrayBuffer(8);
       const container = document.createElement('div');
@@ -32,6 +32,7 @@ describe('office loaders mutants', () => {
         inWrapper: true,
         className: 'blok-docx',
         ignoreHeight: true,
+        renderAltChunks: false,
       });
     });
   });

@@ -14,6 +14,9 @@ export async function loadDocxRenderer(): Promise<
       // Shrink each page to its content height instead of enforcing the full
       // paper height — otherwise a half-page document leaves a tall white void.
       ignoreHeight: true,
+      // An altChunk renders as an unsandboxed srcdoc iframe: its scripts run in
+      // our origin the moment the preview opens.
+      renderAltChunks: false,
     });
 }
 

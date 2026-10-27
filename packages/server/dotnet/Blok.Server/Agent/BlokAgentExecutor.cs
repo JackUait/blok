@@ -493,8 +493,6 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
     CollabPageMaps? beforeMaps = null;
     var wrote = false;
     RoomAgentHistory.Step? recorded = null;
-    // Set once the room has written the edit: a later throw must not report the pages as orphans.
-    var committed = false;
     var operationId = Guid.NewGuid().ToString("N");
     var digest = System.Security.Cryptography.SHA256.HashData(
         System.Text.Encoding.UTF8.GetBytes($"agent\n{actor.Id}\n{batchJson}"));
@@ -538,7 +536,6 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
         return ops;
       }, operationId, digest, actor.Id, expect, async (doc, token) =>
       {
-        committed = true;
         if (wrote && before is not null && beforeMaps is not null
             && await converter.ExportAsync(doc, token) is JsonObject after)
         {
@@ -552,8 +549,14 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
       // A refusal, or a read with no journal head. Jint's content hash means nothing in a room.
       return WithHead(new BlokAgentExecution(planned.ToJsonString(), null, string.Empty), string.Empty);
     }
-    catch (Exception error) when (created is { Count: > 0 } && !committed && error is not NoRoomWriteException)
+    catch (Exception error) when (created is { Count: > 0 } && error is not NoRoomWriteException)
     {
+      // The room may have written before the throw, and a page it links is in use.
+      if (!await RoomLinksNoneAsync(docId, created))
+      {
+        throw;
+      }
+
       return StoppedAfterCreating(error, created);
     }
 
@@ -561,7 +564,9 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
 
     if (created is { Count: > 0 } && edit.Status != CollabEditStatus.Applied)
     {
-      return Stranded(await RoomRefusalAsync(edit, docId, input, head, cancellationToken), created);
+      var refused = await RoomRefusalAsync(edit, docId, input, head, cancellationToken);
+
+      return await RoomLinksNoneAsync(docId, created) ? Stranded(refused, created) : refused;
     }
 
     switch (edit.Status)
@@ -595,6 +600,33 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
         return Failure("APPLY_FAILED", $"The room refused the edit ({edit.Status}). Nothing was written.", retryable,
             new JsonObject { ["status"] = edit.Status.ToString() }, head);
     }
+  }
+
+  /// <summary>
+  /// True only when a fresh read of the room shows none of these pages linked. A room that
+  /// cannot be read counts as linking them, so a host never deletes a page that may be in use.
+  /// </summary>
+  private async ValueTask<bool> RoomLinksNoneAsync(string docId, JsonArray created)
+  {
+    JsonObject? document;
+
+    try
+    {
+      (document, _) = await RoomStateAsync(docId, CancellationToken.None);
+    }
+    catch (Exception error) when (error is not OutOfMemoryException)
+    {
+      return false;
+    }
+
+    if (document?["blocks"] is not JsonArray blocks)
+    {
+      return false;
+    }
+    var ids = created.Select(id => id?.GetValue<string>()).ToHashSet();
+
+    return !blocks.OfType<JsonObject>().Any(block => block["type"]?.GetValue<string>() == "page"
+        && block["data"]?["pageId"] is JsonValue value && value.TryGetValue<string>(out var pageId) && ids.Contains(pageId));
   }
 
   /// <summary>A batch that is only history.undo or history.redo with no args; anything else goes to Jint, which checks it.</summary>

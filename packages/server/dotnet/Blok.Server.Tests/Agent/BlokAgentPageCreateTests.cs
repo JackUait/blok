@@ -255,6 +255,102 @@ public sealed class BlokAgentPageCreateTests
     Assert.Empty(JsonNode.Parse((await rooms.StateAsync(RoomId)).Json)!["blocks"]!.AsArray());
   }
 
+  [Theory]
+  [InlineData(true)]
+  [InlineData(false)]
+  public async Task APageTheRoomLinksIsNeverReportedOrphanedWhenTheEditThrowsAfterWriting(bool journal)
+  {
+    var endpoint = new FakeDocEndpoint();
+    endpoint.HoldsDocument(RoomId, JsonNode.Parse(Empty)!.AsObject());
+    var time = new ManualTimeProvider();
+    var inner = new CollabDocConverter(time, RichTextRuntime.Reader);
+    var converter = new ThrowsAfterApply(inner);
+    // Without a journal the room keeps a write that threw: it is in the doc and sent to peers.
+    var rooms = new CollabRoomManager(new FakeWorkingSetStore(), endpoint, converter, new CollabRoomOptions(), time, _ => { },
+        journal ? new FakeCollabOperationStore() : null);
+    var executor = new BlokAgentExecutor(Runtime.Value, rooms, inner);
+    var pages = new Creator();
+    string? result = null;
+
+    try
+    {
+      result = (await executor.ExecuteInRoomAsync(RoomId, InsertPage, Actor, Options(pages))).ResultJson;
+    }
+    catch (InvalidOperationException)
+    {
+      // Passing the error on is fine; calling a linked page an orphan is not.
+    }
+
+    var state = await rooms.StateAsync(RoomId);
+    var linked = state.Status == CollabStateStatus.Ready
+        && System.Text.Encoding.UTF8.GetString(state.Json).Contains("host-1", StringComparison.Ordinal);
+    var orphaned = result is not null && JsonNode.Parse(result)!["error"]?["details"]?["orphaned"]?.ToJsonString().Contains("host-1", StringComparison.Ordinal) == true;
+
+    Assert.Equal(["host-1"], pages.Created);
+    Assert.False(linked && orphaned, $"The room links host-1, yet the result lists it orphaned: {result}");
+    Assert.True(linked || result is null || orphaned, $"The room does not link host-1, so the result must list it: {result}");
+  }
+
+  [Fact]
+  public async Task AThrowAfterTheRoomCommitNeverReportsTheLinkedPageOrphaned()
+  {
+    var endpoint = new FakeDocEndpoint();
+    endpoint.HoldsDocument(RoomId, JsonNode.Parse(Empty)!.AsObject());
+    var time = new ManualTimeProvider();
+    var inner = new CollabDocConverter(time, RichTextRuntime.Reader);
+    var rooms = new CollabRoomManager(new FakeWorkingSetStore(), endpoint, inner, new CollabRoomOptions(), time, _ => { }, new FakeCollabOperationStore());
+    var executor = new BlokAgentExecutor(Runtime.Value, rooms, new ThrowsOnSecondExport(inner));
+    var pages = new Creator();
+    string? result = null;
+
+    try
+    {
+      result = (await executor.ExecuteInRoomAsync(RoomId, InsertPage, Actor, Options(pages))).ResultJson;
+    }
+    catch (InvalidOperationException)
+    {
+      // Passing the error on is fine.
+    }
+
+    Assert.Equal("host-1", PageIdOf((await rooms.StateAsync(RoomId)).Json, "np"));
+    Assert.DoesNotContain("orphaned", result ?? string.Empty, StringComparison.Ordinal);
+  }
+
+  /// <summary>The executor exports before the edit and again after the room commits; the second one fails.</summary>
+  private sealed class ThrowsOnSecondExport(ICollabDocConverter inner) : ICollabDocConverter
+  {
+    private int exports;
+
+    public ValueTask SeedAsync(Blok.Server.Yjs.YDoc doc, JsonNode outputData, CancellationToken cancellationToken = default) => inner.SeedAsync(doc, outputData, cancellationToken);
+
+    public ValueTask<JsonNode> ExportAsync(Blok.Server.Yjs.YDoc doc, CancellationToken cancellationToken = default) =>
+        ++exports == 2 ? throw new InvalidOperationException("Post-processing failed.") : inner.ExportAsync(doc, cancellationToken);
+
+    public ValueTask ApplyOpsAsync(Blok.Server.Yjs.YDoc doc, IReadOnlyList<CollabEditOp> ops, CancellationToken cancellationToken = default) => inner.ApplyOpsAsync(doc, ops, cancellationToken);
+
+    public ValueTask<int> MigrateRichTextAsync(Blok.Server.Yjs.YDoc doc, CancellationToken cancellationToken = default) => inner.MigrateRichTextAsync(doc, cancellationToken);
+  }
+
+  /// <summary>Writes the ops into the doc, then fails, as an error after the room changed would.</summary>
+  private sealed class ThrowsAfterApply(ICollabDocConverter inner) : ICollabDocConverter
+  {
+    public ValueTask SeedAsync(Blok.Server.Yjs.YDoc doc, JsonNode outputData, CancellationToken cancellationToken = default) => inner.SeedAsync(doc, outputData, cancellationToken);
+
+    public ValueTask<JsonNode> ExportAsync(Blok.Server.Yjs.YDoc doc, CancellationToken cancellationToken = default) => inner.ExportAsync(doc, cancellationToken);
+
+    public async ValueTask ApplyOpsAsync(Blok.Server.Yjs.YDoc doc, IReadOnlyList<CollabEditOp> ops, CancellationToken cancellationToken = default)
+    {
+      await inner.ApplyOpsAsync(doc, ops, cancellationToken);
+      throw new InvalidOperationException("The disk filled after the write.");
+    }
+
+    public ValueTask<int> MigrateRichTextAsync(Blok.Server.Yjs.YDoc doc, CancellationToken cancellationToken = default) => inner.MigrateRichTextAsync(doc, cancellationToken);
+
+    public JsonArray ExportBlocks(Blok.Server.Yjs.YDoc doc, ISet<string> warned, out IReadOnlyList<RichTextHtmlSlot> slots) => inner.ExportBlocks(doc, warned, out slots);
+
+    public ValueTask ResolveAsync(IReadOnlyList<RichTextHtmlSlot> slots, CancellationToken cancellationToken = default) => inner.ResolveAsync(slots, cancellationToken);
+  }
+
   private static void AssertOrphaned(BlokAgentExecution execution, string cause)
   {
     var error = Error(execution);

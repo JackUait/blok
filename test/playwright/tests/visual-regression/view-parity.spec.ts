@@ -34,14 +34,14 @@ import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
  *   edge as the view so the comparison measures content parity, not chrome.
  *
  * Typography — why the iframe is given the editor's font:
- *   The editor forces `var(--blok-font-sans)` (Inter) on `[data-blok-interface=blok]`
+ *   The editor forces `var(--blok-font-sans)` on `[data-blok-interface=blok]`
  *   with `!important`; the view root is deliberately `=view` so it does NOT get
  *   that rule and instead inherits the HOST's typography (see the `root` option
  *   docs in blocks-to-html.ts). The two therefore only paint alike when the host
- *   uses the editor's font — so the harness gives the iframe the same Inter face
- *   (fonts.css inlined) and font stack, then the comparison measures what view.css
- *   actually owns: block spacing, list markers, colours, box model — not the
- *   host-supplied typeface. Colour needs no such fix: --blok-text-primary is
+ *   uses the editor's font — so the harness reads the editor's computed font
+ *   stack and gives it to the iframe (fonts.css inlined too), then the comparison
+ *   measures what view.css actually owns: block spacing, list markers, colours,
+ *   box model — not the host-supplied typeface. Colour needs no such fix: --blok-text-primary is
  *   `black` in light mode, which the view inherits anyway.
  */
 
@@ -68,13 +68,6 @@ const SCREENSHOT_OPTIONS = {
   animations: 'disabled' as const,
   caret: 'hide' as const,
 };
-
-/**
- * The editor's Inter font stack, so the isolated iframe view paints with the
- * same typeface the editor forces on `[data-blok-interface=blok]`.
- */
-const EDITOR_FONT_STACK =
-  "'Inter', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif";
 
 /**
  * The Phase A tools whose read-only render is fully CSS-driven, so view.css can
@@ -143,6 +136,11 @@ const mountViewIframe = async (
   css: string,
   fontsCss: string
 ): Promise<void> => {
+  // Read live, not copied: a hard-coded stack went stale when the default font changed.
+  const editorFontStack = await page
+    .locator('[data-blok-testid="parity-editor"] [data-blok-interface="blok"]')
+    .evaluate((el) => getComputedStyle(el).fontFamily);
+
   await page.evaluate(
     ({ viewHtml, viewCss, fonts, width, fontStack, frameTop }) => {
       document.getElementById('view-frame')?.remove();
@@ -171,7 +169,7 @@ const mountViewIframe = async (
         `</head><body>${viewHtml}</body></html>`;
       document.body.appendChild(frame);
     },
-    { viewHtml: html, viewCss: css, fonts: fontsCss, width: CONTAINER_WIDTH, fontStack: EDITOR_FONT_STACK, frameTop: VIEW_FRAME_TOP }
+    { viewHtml: html, viewCss: css, fonts: fontsCss, width: CONTAINER_WIDTH, fontStack: editorFontStack, frameTop: VIEW_FRAME_TOP }
   );
 
   // Wait for the iframe document to parse and its view root to exist.

@@ -108,11 +108,19 @@ export class SafeXmlNode {
   }
 }
 
+const DOCTYPE = /<!doctype/i;
+
 /**
  * Parse an XML string into a SafeXmlNode wrapping the document element.
  * Uses the browser's built-in DOMParser.
  */
 export function parseXml(xmlString: string): SafeXmlNode {
+  // OOXML never declares a document type. A deck that does is hostile: one internal
+  // entity referenced a few thousand times expands to gigabytes inside DOMParser.
+  if (DOCTYPE.test(xmlString)) {
+    console.warn('XML parse error: document type declarations are not allowed');
+    return new SafeXmlNode(null);
+  }
   const parser = new DOMParser();
   const doc = parser.parseFromString(xmlString, 'application/xml');
 

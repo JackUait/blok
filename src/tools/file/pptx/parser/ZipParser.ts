@@ -89,17 +89,14 @@ function readUncompressedSize(file: JSZipObject): number | undefined {
   return typeof size === 'number' && Number.isFinite(size) ? size : undefined;
 }
 
-function textByteLength(text: string): number {
-  return new TextEncoder().encode(text).byteLength;
-}
-
 interface ZipLimitState {
   limits: ZipParseLimits;
   knownSizeByPath: Map<string, number>;
   knownTotalBytes: number;
   knownMediaBytes: number;
-  unknownTotalBytes: number;
-  unknownMediaBytes: number;
+  /** Bytes actually inflated so far; zip headers can lie about sizes. */
+  inflatedTotalBytes: number;
+  inflatedMediaBytes: number;
 }
 
 interface LazyMediaEntry {
@@ -169,38 +166,94 @@ class ZipLazyMediaResolver implements MediaResolver {
   }
 }
 
-function validateDecodedEntrySize(path: string, size: number, state: ZipLimitState): void {
-  if (
-    state.limits.maxEntryUncompressedBytes !== undefined &&
-    size > state.limits.maxEntryUncompressedBytes
-  ) {
+interface ZipChunkStream {
+  on(event: 'data', listener: (chunk: Uint8Array) => void): ZipChunkStream;
+  on(event: 'end', listener: () => void): ZipChunkStream;
+  on(event: 'error', listener: (error: Error) => void): ZipChunkStream;
+  pause(): ZipChunkStream;
+  resume(): ZipChunkStream;
+}
+
+interface StreamingZipObject {
+  internalStream(type: 'uint8array'): ZipChunkStream;
+}
+
+function canStream(file: JSZipObject): file is JSZipObject & StreamingZipObject {
+  return typeof (file as Partial<StreamingZipObject>).internalStream === 'function';
+}
+
+/** Charges inflated bytes to the limits; throws once any limit is passed. */
+function chargeInflatedBytes(path: string, entryBytes: number, chunkBytes: number, state: ZipLimitState): void {
+  const { limits } = state;
+
+  if (limits.maxEntryUncompressedBytes !== undefined && entryBytes > limits.maxEntryUncompressedBytes) {
     throwZipLimitExceeded(
-      `${path} is ${size} bytes > maxEntryUncompressedBytes ${state.limits.maxEntryUncompressedBytes}`,
+      `${path} inflates past maxEntryUncompressedBytes ${limits.maxEntryUncompressedBytes}`,
     );
   }
 
-  if (state.knownSizeByPath.has(path)) return;
-
-  state.unknownTotalBytes += size;
-  const totalBytes = state.knownTotalBytes + state.unknownTotalBytes;
+  state.inflatedTotalBytes += chunkBytes;
   if (
-    state.limits.maxTotalUncompressedBytes !== undefined &&
-    totalBytes > state.limits.maxTotalUncompressedBytes
+    limits.maxTotalUncompressedBytes !== undefined &&
+    state.inflatedTotalBytes > limits.maxTotalUncompressedBytes
   ) {
     throwZipLimitExceeded(
-      `total uncompressed bytes ${totalBytes} > maxTotalUncompressedBytes ${state.limits.maxTotalUncompressedBytes}`,
+      `total uncompressed bytes ${state.inflatedTotalBytes} > maxTotalUncompressedBytes ${limits.maxTotalUncompressedBytes}`,
     );
   }
 
   if (isMediaPath(path)) {
-    state.unknownMediaBytes += size;
-    const mediaBytes = state.knownMediaBytes + state.unknownMediaBytes;
-    if (state.limits.maxMediaBytes !== undefined && mediaBytes > state.limits.maxMediaBytes) {
-      throwZipLimitExceeded(
-        `media bytes ${mediaBytes} > maxMediaBytes ${state.limits.maxMediaBytes}`,
-      );
+    state.inflatedMediaBytes += chunkBytes;
+    if (limits.maxMediaBytes !== undefined && state.inflatedMediaBytes > limits.maxMediaBytes) {
+      throwZipLimitExceeded(`media bytes ${state.inflatedMediaBytes} > maxMediaBytes ${limits.maxMediaBytes}`);
     }
   }
+}
+
+/**
+ * Inflates one entry chunk by chunk and stops as soon as a limit is passed, so an
+ * entry whose header declares 100 bytes cannot inflate gigabytes first.
+ */
+async function inflateEntry(path: string, file: JSZipObject, state: ZipLimitState): Promise<Uint8Array> {
+  if (!canStream(file)) {
+    const bytes = await file.async('uint8array');
+
+    chargeInflatedBytes(path, bytes.byteLength, bytes.byteLength, state);
+
+    return bytes;
+  }
+
+  const chunks: Uint8Array[] = [];
+  const read = { bytes: 0 };
+
+  await new Promise<void>((resolve, reject) => {
+    const stream = file.internalStream('uint8array');
+
+    stream
+      .on('data', (chunk) => {
+        read.bytes += chunk.byteLength;
+        try {
+          chargeInflatedBytes(path, read.bytes, chunk.byteLength, state);
+          chunks.push(chunk);
+        } catch (error) {
+          stream.pause();
+          reject(error);
+        }
+      })
+      .on('error', reject)
+      .on('end', resolve)
+      .resume();
+  });
+
+  const bytes = new Uint8Array(read.bytes);
+
+  chunks.reduce((offset, chunk) => {
+    bytes.set(chunk, offset);
+
+    return offset + chunk.byteLength;
+  }, 0);
+
+  return bytes;
 }
 
 async function readZipTextEntry(
@@ -208,9 +261,8 @@ async function readZipTextEntry(
   file: JSZipObject,
   state: ZipLimitState,
 ): Promise<string> {
-  const text = await file.async('string');
-  validateDecodedEntrySize(path, textByteLength(text), state);
-  return text;
+  // ignoreBOM keeps a leading BOM in the text, as JSZip's own string decoding did.
+  return new TextDecoder('utf-8', { ignoreBOM: true }).decode(await inflateEntry(path, file, state));
 }
 
 async function readZipBinaryEntry(
@@ -218,9 +270,7 @@ async function readZipBinaryEntry(
   file: JSZipObject,
   state: ZipLimitState,
 ): Promise<Uint8Array> {
-  const bytes = await file.async('uint8array');
-  validateDecodedEntrySize(path, bytes.byteLength, state);
-  return bytes;
+  return inflateEntry(path, file, state);
 }
 
 async function countUncategorizedEntryIfNeeded(
@@ -236,8 +286,7 @@ async function countUncategorizedEntryIfNeeded(
     return;
   }
 
-  const bytes = await file.async('uint8array');
-  validateDecodedEntrySize(path, bytes.byteLength, state);
+  await inflateEntry(path, file, state);
 }
 
 async function mapWithConcurrency<T>(
@@ -363,8 +412,8 @@ async function parseZipInternal(
     knownSizeByPath,
     knownTotalBytes,
     knownMediaBytes,
-    unknownTotalBytes: 0,
-    unknownMediaBytes: 0,
+    inflatedTotalBytes: 0,
+    inflatedMediaBytes: 0,
   };
   const lazyMediaEntries = new Map<string, LazyMediaEntry>();
 

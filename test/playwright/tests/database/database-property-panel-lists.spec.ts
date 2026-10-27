@@ -82,7 +82,7 @@ test.beforeEach(async ({ page }) => {
   await page.waitForFunction(() => typeof window.Blok === 'function');
 });
 
-test('Calculate is 200x152 under its row, rows 192x28 at 4px, 28 apart', async ({ page }) => {
+test('Calculate is 200x152 under its row, rows 192x28 at 4px, 29 apart', async ({ page }) => {
   await openPanel(page);
   const row = await box(page, 'rollupFunction');
 
@@ -93,10 +93,41 @@ test('Calculate is 200x152 under its row, rows 192x28 at 4px, 28 apart', async (
 
   expect({ width: list.width, height: list.height }).toEqual({ width: 200, height: 152 });
   expect({ width: first.width, height: first.height }).toEqual({ width: 192, height: 28 });
+  // §17.7: Notion's lists are 4 + rows of 28, 1px apart, + 4.
   expect(first.x - list.x).toBe(4);
-  expect(second.y - first.y).toBe(28);
+  expect(first.y - list.y).toBe(4);
+  expect(second.y - first.y).toBe(29);
   expect(list.x + list.width).toBe(row.right);
   expect(list.y).toBe(row.bottom);
+});
+
+test('Calculate opens with the current calculation\'s row in the hover tint, a check on it', async ({ page }) => {
+  await openPanel(page);
+  await page.locator('[data-blok-item-name="rollupFunction"]').click();
+  const current = page.locator('[data-blok-item-name="rollupFunction-show_original"]');
+
+  await expect(current).toHaveCSS('background-color', 'rgba(33, 27, 23, 0.05)');
+  await expect(page.locator('[data-blok-item-name="rollupFunction-show_unique"]')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(current.getByTestId('popover-item-trailing-icon')).toHaveCount(1);
+});
+
+test('the group submenus are 250 wide', async ({ page }) => {
+  await openPanel(page);
+  await page.locator('[data-blok-item-name="rollupFunction"]').click();
+  await page.locator('[data-blok-item-name="rollupFunctionGroup-calcPercent"]').hover();
+
+  expect((await listBox(page, 'rollupFunction-percent_empty')).width).toBe(250);
+});
+
+test('Decimal places is 250x210 under its row: Default and 0 to 5, no scrolling', async ({ page }) => {
+  await openPanel(page);
+  const row = await box(page, 'decimals');
+
+  await page.locator('[data-blok-item-name="decimals"]').click();
+  const list = await listBox(page, 'decimals-default');
+
+  expect(list).toEqual({ x: row.right - 250, y: row.bottom, width: 250, height: 210 });
+  await expect(page.locator('[data-blok-item-name^="decimals-"]')).toHaveText(['Default', '0', '1', '2', '3', '4', '5']);
 });
 
 test('Number format is 192 wide, its end edge on its row\'s', async ({ page }) => {
@@ -122,6 +153,11 @@ test('Type swaps the panel for the type list, fitted in the window; Escape lands
   await page.locator('[data-blok-item-name="changeType"]').click();
   await expect(page.locator('[data-blok-item-name="changeType"]')).toHaveCount(0);
   const list = await listBox(page, 'type-text');
+  // §17.9: a 282x28 "Type" line 4px in, its magnifier, then the types.
+  const heading = await page.locator('[data-blok-database-property-type-list-heading]').boundingBox();
+
+  expect({ x: (heading?.x ?? 0) - list.x, width: heading?.width, height: heading?.height }).toEqual({ x: 4, width: 282, height: 28 });
+  await expect(page.getByRole('button', { name: 'Search property types…' })).toBeVisible();
 
   expect(list.x).toBe(panel.x);
   expect(list.width).toBe(290);

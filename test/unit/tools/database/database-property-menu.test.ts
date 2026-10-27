@@ -22,7 +22,7 @@ interface CapturedItem {
   children?: { items: CapturedItem[]; searchable?: boolean; width?: string; minWidth?: string; placement?: string };
 }
 
-interface CapturedPopover { items: CapturedItem[]; destroyed: boolean; params: Record<string, unknown>; activated: string[]; focused: string[]; closed?: () => void; hide: () => void; transitionAtShow?: string }
+interface CapturedPopover { items: CapturedItem[]; destroyed: boolean; params: Record<string, unknown>; activated: string[]; focused: string[]; hidden: Record<string, boolean>; closed?: () => void; hide: () => void; transitionAtShow?: string }
 
 const captured = vi.hoisted((): { popovers: CapturedPopover[]; instances: Array<{ closeSubmenuOnEscape: () => boolean }> } => ({ popovers: [], instances: [] }));
 
@@ -32,7 +32,7 @@ vi.mock('../../../../src/components/utils/popover', () => ({
     readonly element = document.createElement('div');
 
     constructor(params: { items: CapturedItem[] }) {
-      this.record = { items: params.items, destroyed: false, params, activated: [], focused: [], hide: () => this.hide() };
+      this.record = { items: params.items, destroyed: false, params, activated: [], focused: [], hidden: {}, hide: () => this.hide() };
       this.element.appendChild(document.createElement('div')).setAttribute('data-blok-popover-container', '');
       captured.popovers.push(this.record);
       captured.instances.push(this);
@@ -48,6 +48,10 @@ vi.mock('../../../../src/components/utils/popover', () => ({
 
     activateItemByName(name: string): void {
       this.record.activated.push(name);
+    }
+
+    toggleItemHiddenByName(name: string, isHidden: boolean): void {
+      this.record.hidden[name] = isHidden;
     }
 
     focusItemByName(name: string): boolean {
@@ -1335,7 +1339,6 @@ describe('row page property menu', () => {
       expect(String(captured.popovers[2]?.params.class).split(' ')).toContain('blok-database-property-panel');
       expect(captured.popovers[2]?.params.minWidth).toBe('290px');
       expect(lastItems().map((i) => i.name)).toEqual(expect.arrayContaining(['type-text', 'type-select']));
-      expect(lastItems().map((i) => i.name)).not.toContain('type-number');
       menu.destroy();
     });
 
@@ -1348,6 +1351,50 @@ describe('row page property menu', () => {
       expect(params).toMatchObject({ cover: true, viewportMargin: 11 });
       expect(params?.positionContext).toBeInstanceOf(HTMLElement);
       expect(params?.position).toMatchObject({ x: 834, y: 279 });
+      menu.destroy();
+    });
+
+    // notion-spec-2 §17.9: no back arrow or title bar; a "Type" label with a magnifier, then the types.
+    it('starts with the "Type" label and its "Search types" magnifier, no back row', () => {
+      const { menu } = openTypes();
+      const first = lastItems()[0];
+
+      expect(first?.type).toBe('html');
+      expect(first?.element?.querySelector('[data-blok-database-property-type-list-heading] > span')?.textContent).toBe('tools.database.propertyTypeListHeading');
+      expect(first?.element?.querySelector('button')?.getAttribute('aria-label')).toBe('tools.database.csvSearchTypes');
+      expect(lastItems().slice(1).every((item) => item.name?.startsWith('type-'))).toBe(true);
+      menu.destroy();
+    });
+
+    it('the magnifier turns the label into a field that filters the types by name', () => {
+      const { menu } = openTypes();
+      const heading = lastItems()[0]?.element;
+
+      heading?.querySelector('button')?.click();
+      const field = heading?.querySelector('input');
+
+      expect(field).not.toBeNull();
+      if (field === null || field === undefined) throw new Error('no field');
+      field.value = 'multi';
+      field.dispatchEvent(new Event('input'));
+
+      const hidden = captured.popovers[2]?.hidden ?? {};
+
+      expect(hidden['type-multiSelect']).toBe(false);
+      expect(hidden['type-text']).toBe(true);
+      menu.destroy();
+    });
+
+    it('lists the current type with a check; picking it changes nothing', () => {
+      const { cb, menu } = openTypes();
+      const number = byName(lastItems(), 'type-number');
+
+      expect(number.trailingIcon).toBe(IconCheck);
+      expect(byName(lastItems(), 'type-text').trailingIcon).toBeUndefined();
+      number.onActivate?.(number);
+
+      expect(cb.onChangeType).not.toHaveBeenCalled();
+      expect(number.closeOnActivate).toBe(true);
       menu.destroy();
     });
 

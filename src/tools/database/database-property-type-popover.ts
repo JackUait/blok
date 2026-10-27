@@ -161,41 +161,12 @@ export class DatabasePropertyTypePopover {
     nameField?.focus();
   }
 
-  /** Notion's "Type 🔍": the magnifier turns the heading into a field that filters the type rows by name. */
   private typeListHeading(grid: HTMLElement): HTMLElement {
-    const t = (key: string): string => this.i18n?.t(key) ?? key;
-    const heading = document.createElement('div');
-    const label = document.createElement('span');
-    const search = document.createElement('button');
-
-    heading.setAttribute('data-blok-database-property-type-heading', '');
-    heading.setAttribute('data-blok-database-property-type-list-heading', '');
-    label.textContent = t('tools.database.propertyTypeListHeading');
-    search.type = 'button';
-    search.setAttribute('data-blok-database-property-type-search', '');
-    search.setAttribute('aria-label', t('tools.database.csvSearchTypes'));
-    search.innerHTML = IconSearch;
-    heading.append(label, search);
-    search.addEventListener('click', () => {
-      const field = document.createElement('input');
-
-      field.type = 'text';
-      field.setAttribute('data-blok-database-property-type-search-input', '');
-      field.setAttribute('data-blok-field', 'text');
-      field.setAttribute('aria-label', t('tools.database.csvSearchTypes'));
-      field.placeholder = t('tools.database.csvSearchTypes');
-      field.addEventListener('input', () => {
-        const query = field.value.trim().toLowerCase();
-
-        for (const option of grid.querySelectorAll<HTMLElement>('[data-blok-database-property-type-option]')) {
-          option.hidden = !(option.textContent ?? '').toLowerCase().includes(query);
-        }
-      });
-      heading.replaceChildren(field);
-      field.focus();
+    return typeSearchHeading((key) => this.i18n?.t(key) ?? key, (query) => {
+      for (const option of grid.querySelectorAll<HTMLElement>('[data-blok-database-property-type-option]')) {
+        option.hidden = !(option.textContent ?? '').toLowerCase().includes(query);
+      }
     });
-
-    return heading;
   }
 
   /** Notion's "AI Autofill" rows: a glyph, the preset's name and a gray "Basic" tag. */
@@ -250,3 +221,36 @@ export class DatabasePropertyTypePopover {
     this.close();
   }
 }
+
+/**
+ * Notion's "Type 🔍": the magnifier turns the heading into a field. `filter` gets
+ * its text, trimmed and lower case, on each change.
+ */
+export const typeSearchHeading = (t: (key: string) => string, filter: (query: string) => void): HTMLElement => {
+  const heading = document.createElement('div');
+  const label = document.createElement('span');
+  const search = document.createElement('button');
+
+  heading.setAttribute('data-blok-database-property-type-heading', '');
+  heading.setAttribute('data-blok-database-property-type-list-heading', '');
+  label.textContent = t('tools.database.propertyTypeListHeading');
+  search.type = 'button';
+  search.setAttribute('data-blok-database-property-type-search', '');
+  search.setAttribute('aria-label', t('tools.database.csvSearchTypes'));
+  search.innerHTML = IconSearch;
+  heading.append(label, search);
+  search.addEventListener('click', () => {
+    const field = document.createElement('input');
+
+    field.type = 'text';
+    field.setAttribute('data-blok-database-property-type-search-input', '');
+    field.setAttribute('data-blok-field', 'text');
+    field.setAttribute('aria-label', t('tools.database.csvSearchTypes'));
+    field.placeholder = t('tools.database.csvSearchTypes');
+    field.addEventListener('input', () => filter(field.value.trim().toLowerCase()));
+    heading.replaceChildren(field);
+    field.focus();
+  });
+
+  return heading;
+};

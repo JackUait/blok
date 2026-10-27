@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import type { PropertyDefinition, PropertyType } from '../../../../src/tools/database/types';
-import { IconPencilLine } from '../../../../src/components/icons';
+import { IconCheck, IconPencilLine } from '../../../../src/components/icons';
 import type * as Tooltip from '../../../../src/components/utils/tooltip';
 
 interface CapturedItem {
@@ -12,6 +12,7 @@ interface CapturedItem {
   chevron?: boolean;
   type?: string;
   isActive?: boolean | (() => boolean);
+  trailingIcon?: string;
   isDestructive?: boolean;
   element?: HTMLElement;
   onActivate?: (item: CapturedItem) => void;
@@ -26,7 +27,7 @@ vi.mock('../../../../src/components/utils/tooltip', async (importOriginal) => ({
   hide: hint.hide,
 }));
 
-const captured = vi.hoisted((): { popovers: Array<{ items: CapturedItem[]; destroyed: boolean }> } => ({ popovers: [] }));
+const captured = vi.hoisted((): { popovers: Array<{ items: CapturedItem[]; destroyed: boolean }>; focused: string[] } => ({ popovers: [], focused: [] }));
 
 vi.mock('../../../../src/components/utils/popover', () => ({
   PopoverDesktop: class {
@@ -45,7 +46,11 @@ vi.mock('../../../../src/components/utils/popover', () => ({
 
     activateItemByName(): void {}
 
-    focusItemByName(): void {}
+    focusItemByName(name: string): boolean {
+      captured.focused.push(name);
+
+      return true;
+    }
 
     on(): void {}
 
@@ -95,6 +100,7 @@ const taskSchema: PropertyDefinition[] = [
   { id: 'cost', name: 'Cost', type: 'number', position: 'a2', number: { format: 'euro', showAs: 'ring' } },
   { id: 'done', name: 'Done', type: 'checkbox', position: 'a3' },
   { id: 'twice', name: 'Twice', type: 'formula', position: 'a4', formula: { expression: '1' } },
+  { id: 'due', name: 'Due', type: 'date', position: 'a5' },
 ];
 
 const computed = () => ({
@@ -542,6 +548,18 @@ describe('property menu — click-only lists (notion-spec-2 §16.1)', () => {
     expect(byName(panel(sum), 'decimals').children?.width).toBe('250px');
   });
 
+  // notion-spec-2 §17.7: Default and 0 to 5, 250x210 in the panel's list look.
+  it('Decimal places offers Default and 0 to 5 only', () => {
+    const decimals = byName(panel(sum), 'decimals').children;
+
+    expect(decimals?.items.map((item) => item.title)).toEqual(['tools.database.decimalPlacesDefault', '0', '1', '2', '3', '4', '5']);
+    expect(decimals?.class).toBe('blok-database-panel-list');
+  });
+
+  it('a saved 8 still shows on the row, though the list stops at 5', () => {
+    expect(byName(panel(prop('number', { number: { decimals: 8 } })), 'decimals').valueLabel).toBe('8');
+  });
+
   it('Calculate is 200 wide', () => {
     expect(byName(panel(sum), 'rollupFunction').children?.width).toBe('200px');
   });
@@ -595,6 +613,73 @@ describe('property menu — click-only lists (notion-spec-2 §16.1)', () => {
     expect(names(items)).toEqual(['rollupFunction-show_original', 'rollupFunctionGroup-calcCount', 'rollupFunctionGroup-calcPercent']);
     expect(names(group(items, 'tools.database.calcCount'))).toEqual(['rollupFunction-count', 'rollupFunction-checked', 'rollupFunction-unchecked']);
     expect(names(group(items, 'tools.database.calcPercent'))).toEqual(['rollupFunction-percent_checked', 'rollupFunction-percent_unchecked']);
+  });
+
+  // notion-spec-2 §17.8: Date › (Earliest date, Latest date, Date range) in More options' place.
+  it('Date target: Count, Percent and Date groups, no More options', () => {
+    const items = calculate('due');
+
+    expect(names(items)).toEqual([
+      'rollupFunction-show_original', 'rollupFunction-show_unique', 'rollupFunctionGroup-calcCount', 'rollupFunctionGroup-calcPercent', 'rollupFunctionGroup-calcDate',
+    ]);
+    expect(names(group(items, 'tools.database.calcCount'))).toEqual([
+      'rollupFunction-count', 'rollupFunction-count_values', 'rollupFunction-unique', 'rollupFunction-empty', 'rollupFunction-not_empty',
+    ]);
+    expect(names(group(items, 'tools.database.calcPercent'))).toEqual(['rollupFunction-percent_empty', 'rollupFunction-percent_not_empty']);
+    expect(names(group(items, 'tools.database.calcDate'))).toEqual(['rollupFunction-earliest_date', 'rollupFunction-latest_date', 'rollupFunction-date_range']);
+  });
+
+  // notion-spec-2 §17.8: every group submenu is 250 wide, in the panel's list look.
+  it('group submenus are 250 wide, in the panel list look', () => {
+    for (const row of calculate('hours').filter((item) => item.name?.startsWith('rollupFunctionGroup-'))) {
+      expect(row.children).toMatchObject({ width: '250px', class: 'blok-database-panel-list' });
+    }
+  });
+
+  // notion-spec-2 §17.10: the row holding the current calculation starts highlighted, a group row too.
+  it.each([
+    ['percent_empty', 'rollupFunctionGroup-calcPercent'],
+    ['show_original', 'rollupFunction-show_original'],
+    ['sum', 'rollupFunctionGroup-calcMoreOptions'],
+  ])('Calculate on %s opens with %s highlighted', async (fn, row) => {
+    const calc = byName(panel(prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: fn as 'sum' } })), 'rollupFunction');
+
+    captured.focused = [];
+    calc.children?.onOpen?.();
+    await Promise.resolve();
+
+    expect(captured.focused).toEqual([row]);
+  });
+
+  // §14.4: a group submenu opens with the current calculation highlighted.
+  it('the group holding the current calculation opens with it highlighted; another group does not', async () => {
+    const items = byName(panel(prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'percent_empty' } })), 'rollupFunction').children?.items ?? [];
+
+    captured.focused = [];
+    items.find((item) => item.name === 'rollupFunctionGroup-calcPercent')?.children?.onOpen?.();
+    items.find((item) => item.name === 'rollupFunctionGroup-calcCount')?.children?.onOpen?.();
+    await Promise.resolve();
+
+    expect(captured.focused).toEqual(['rollupFunction-percent_empty']);
+  });
+
+  // §17.10: the check sits on the item inside the submenu, not on its group row.
+  it('the current calculation is marked inside its group, its group row is not', () => {
+    const items = calculate('hours');
+
+    const more = group(items, 'tools.database.calcMoreOptions');
+
+    expect(items.find((item) => item.name === 'rollupFunctionGroup-calcMoreOptions')?.trailingIcon).toBeUndefined();
+    expect(more.map((item) => item.trailingIcon === IconCheck)).toEqual([true, false, false, false, false, false]);
+    // A check, not a fill (CLAUDE.md: no blue selected states; Notion draws no fill).
+    expect(more.every((item) => item.isActive === undefined)).toBe(true);
+  });
+
+  it('Decimal places marks the current one with a check, not a fill', () => {
+    const items = byName(panel(prop('number', { number: { decimals: 2 } })), 'decimals').children?.items ?? [];
+
+    expect(items.map((item) => item.trailingIcon === IconCheck)).toEqual([false, false, false, true, false, false, false]);
+    expect(items.every((item) => item.isActive === undefined)).toBe(true);
   });
 
   it('Text target: no More options', () => {

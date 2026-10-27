@@ -8,9 +8,10 @@ import type { PopoverParams } from '../../../types/utils/popover/popover';
 import { PopoverEvent } from '../../../types/utils/popover/popover-event';
 import type { I18n } from '../../../types';
 import { EmojiPicker } from '../callout/emoji-picker';
-import { NUMBER_FORMATS, MAX_DECIMALS } from './cells/number-format';
+import { NUMBER_FORMATS } from './cells/number-format';
 import { OPTION_COLORS, optionColorLabelKey, optionSwatch } from './cells/option-colors';
 import { addablePropertyTypes, propertyTypeMeta } from './database-property-types';
+import { typeSearchHeading } from './database-property-type-popover';
 import { ROLLUP_FUNCTIONS, inheritedRollupFormat, isNumberList, rollupFunctionsFor, rollupHasFormat, rollupResultType } from './rollup';
 import { buttonEditItems } from './database-button-menu';
 import { createOptionsEditor } from './cells/options-editor';
@@ -149,7 +150,7 @@ const PROPERTY_PANEL_CLASS = `${ROW_PAGE_MENU_CLASS} blok-database-property-pane
 
 /** notion-spec-2 §16.1: Number format, Decimal places and Calculate open on a click only, under their row. */
 const CLICK_ONLY_UNDER = { clickOnly: true, placement: 'under' } as const;
-/** notion-spec-2 §16.1: Calculate and Number format pad 4px, not the panel's 8, with 28px rows. */
+/** notion-spec-2 §16.1, §17.7: lists off the panel pad 4px, not the panel's 8. */
 const PANEL_LIST_CLASS = 'blok-database-panel-list';
 
 /** The type list's gap to the window edges (notion-spec-2 §16.1: y 132 + 574 = 706 in a 717 window). */
@@ -157,6 +158,9 @@ const TYPE_LIST_MARGIN = 11;
 
 /** A menu laid over a spot (its start corner there), kept inside the window. */
 interface PlaceOver { cover: true; viewportMargin: number; position: DOMRect; positionContext: HTMLElement }
+
+/** notion-spec-2 §17.7: Notion offers 0 to 5. A saved 6 to 10 still shows and formats. */
+const OFFERED_DECIMALS = 5;
 
 /** What the row page label menu needs back when the type list returns to it. */
 interface RowPageExtras { onComment?: () => void; edit?: boolean }
@@ -168,6 +172,15 @@ const CALCULATE_GROUPS: ReadonlyArray<readonly [string, readonly RollupFunction[
   ['tools.database.calcMoreOptions', ['sum', 'average', 'median', 'min', 'max', 'range']],
   ['tools.database.calcDate', ['earliest_date', 'latest_date', 'date_range']],
 ];
+
+const groupRowName = (titleKey: string): string => `rollupFunctionGroup-${titleKey.slice(titleKey.lastIndexOf('.') + 1)}`;
+
+/** The Calculate row that holds `fn`: its own, or its group's. */
+const calculateRow = (fn: RollupFunction): string => {
+  const group = CALCULATE_GROUPS.find(([, members]) => members.includes(fn));
+
+  return group === undefined ? `rollupFunction-${fn}` : groupRowName(group[0]);
+};
 
 const withoutLimit = ({ limit: _limit, ...rest }: RelationSettings): RelationSettings => rest;
 
@@ -428,8 +441,8 @@ export class DatabasePropertyMenu {
   }
 
   /**
-   * notion-spec-2 §16.1: a click on Type swaps the panel for the type list.
-   * One Escape there lands on the label menu, not back on the panel.
+   * notion-spec-2 §16.1, §17.9: a click on Type swaps the panel for the type list,
+   * headed by "Type" and its magnifier. One Escape lands on the label menu, not back on the panel.
    */
   private openTypeList(property: PropertyDefinition, anchor: HTMLElement, extras: RowPageExtras): void {
     const panel = this.popover?.getElement().querySelector('[data-blok-popover-container]')?.getBoundingClientRect();
@@ -438,7 +451,33 @@ export class DatabasePropertyMenu {
     // On the panel's corner, moved up as far as it must to fit (Notion: y 132, bottom 706 of 717).
     const place: PlaceOver | undefined = panel === undefined ? undefined : { cover: true, viewportMargin: TYPE_LIST_MARGIN, position: DOMRect.fromRect({ x: panel.left, y: panel.top, width: panel.width, height: 0 }), positionContext: anchor };
 
-    this.show(this.typeChoices(property), anchor, '290px', PROPERTY_PANEL_CLASS, false, place);
+    const types = addablePropertyTypes(this.options.hasPeople);
+    const heading = document.createElement('div');
+
+    heading.appendChild(typeSearchHeading((key) => this.t(key), (query) => {
+      for (const type of types) {
+        this.popover?.toggleItemHiddenByName(`type-${type}`, !this.t(propertyTypeMeta(type).labelKey).toLowerCase().includes(query));
+      }
+    }));
+    const search = heading.querySelector<HTMLElement>('[data-blok-database-property-type-search]');
+
+    if (search !== null) onHover(search, this.t('tools.database.csvSearchTypes'));
+    // §17.9: the current type stays, with a check; picking it changes nothing.
+    const items: PopoverItemParams[] = [
+      { type: PopoverItemType.Html, element: heading, name: 'type-heading' },
+      ...types.map((type): PopoverItemParams => ({
+        name: `type-${type}`,
+        title: this.t(propertyTypeMeta(type).labelKey),
+        icon: propertyTypeMeta(type).icon,
+        closeOnActivate: true,
+        ...(type === property.type ? { trailingIcon: IconCheck } : {}),
+        onActivate: (): void => {
+          if (type !== property.type) this.options.onChangeType(property.id, type);
+        },
+      })),
+    ];
+
+    this.show(items, anchor, '290px', PROPERTY_PANEL_CLASS, false, place);
     const popover = this.popover;
 
     if (popover === null) return;
@@ -917,6 +956,8 @@ export class DatabasePropertyMenu {
           ...CLICK_ONLY_UNDER,
           class: PANEL_LIST_CLASS,
           width: '200px',
+          // §17.10: the row holding the current calculation, a group row too, opens highlighted. After show: the list is not drawn yet.
+          onOpen: () => queueMicrotask(() => this.popover?.focusItemByName(calculateRow(settings.function))),
           items: this.calculateItems(target === undefined ? ROLLUP_FUNCTIONS : rollupFunctionsFor(target), settings.function, setFunction),
         },
       },
@@ -927,15 +968,16 @@ export class DatabasePropertyMenu {
   }
 
   /**
-   * notion-spec-2 §14.4, §15.2: Show original and Show unique values, then the
-   * Count, Percent and More options groups, which open on hover. Where Date and
-   * the per-group counts sit was not measured.
+   * notion-spec-2 §14.4, §15.2, §17.8: Show original and Show unique values, then the
+   * Count, Percent and More options (or Date) groups, which open on hover. Where the
+   * per-group counts sit was not measured.
    */
   private calculateItems(fns: readonly RollupFunction[], current: RollupFunction, pick: (fn: RollupFunction) => void): PopoverItemParams[] {
     const leaf = (fn: RollupFunction): PopoverItemParams => ({
       name: `rollupFunction-${fn}`,
       title: this.t(`tools.database.rollupFn.${fn}`),
-      isActive: fn === current,
+      // §17.10: a check on the current one, no fill.
+      ...(fn === current ? { trailingIcon: IconCheck } : {}),
       closeOnActivate: true,
       onActivate: () => pick(fn),
     });
@@ -947,9 +989,15 @@ export class DatabasePropertyMenu {
     return [
       ...top.map(leaf),
       ...groups.map(([titleKey, members]): PopoverItemParams => ({
-        name: `rollupFunctionGroup-${titleKey.slice(titleKey.lastIndexOf('.') + 1)}`,
+        name: groupRowName(titleKey),
         title: this.t(titleKey),
-        children: { items: members.map(leaf) },
+        // §17.8: every group submenu is 250 wide. §14.4: the one holding the current calculation opens on it.
+        children: {
+          class: PANEL_LIST_CLASS,
+          width: '250px',
+          ...(members.includes(current) ? { onOpen: () => queueMicrotask(() => this.popover?.focusItemByName(`rollupFunction-${current}`)) } : {}),
+          items: members.map(leaf),
+        },
       })),
     ];
   }
@@ -1164,6 +1212,7 @@ export class DatabasePropertyMenu {
         valueLabel: number.decimals === undefined ? this.t('tools.database.decimalPlacesDefault') : String(number.decimals),
         children: {
           ...CLICK_ONLY_UNDER,
+          class: PANEL_LIST_CLASS,
           width: '250px',
           // Its hint does not stay while the list is open, also when a key opened it.
           onOpen: hideHint,
@@ -1171,13 +1220,14 @@ export class DatabasePropertyMenu {
             {
               name: 'decimals-default',
               title: this.t('tools.database.decimalPlacesDefault'),
-              isActive: number.decimals === undefined,
+              // §17.7: a check on the current one, no fill.
+              ...(number.decimals === undefined ? { trailingIcon: IconCheck } : {}),
               onActivate: () => this.pickFrom('decimals', () => set(without(latest.number, 'decimals'))),
             },
-            ...Array.from({ length: MAX_DECIMALS + 1 }, (_, decimals) => ({
+            ...Array.from({ length: OFFERED_DECIMALS + 1 }, (_, decimals) => ({
               name: `decimals-${decimals}`,
               title: String(decimals),
-              isActive: number.decimals === decimals,
+              ...(number.decimals === decimals ? { trailingIcon: IconCheck } : {}),
               onActivate: () => this.pickFrom('decimals', () => set({ ...latest.number, decimals })),
             })),
           ],

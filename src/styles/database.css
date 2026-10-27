@@ -6751,18 +6751,37 @@ textarea[data-blok-database-cell-input] {
   padding-block: var(--blok-space-2);
 }
 
-/* notion-spec-2 §16.1: Calculate (200x152, rows 192x28) and Number format pad 4px, rows 28 apart.
-   The ">" keeps Calculate's group submenus, mounted in its root, out. */
+/* notion-spec-2 §16.1, §17.7: lists off the panel pad 4px, not the panel's 8 (Decimal places
+   250x210 = 4 + 7 x 28 + 6 x 1 + 4). The ">" keeps a list's own submenus, mounted in its root, out. */
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-panel-list'] > [data-blok-popover-container] {
   padding-inline: var(--blok-space-1);
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-panel-list'] > [data-blok-popover-container] [data-blok-popover-items] {
-  padding-block: var(--blok-space-1-5);
+/* §17.10: the row holding the current value opens in the hover tint. Literals: the selected-state law rejects an alias of an alias. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-panel-list'] {
+  --blok-item-focus-bg: rgba(33, 27, 23, 0.051);
 }
 
-[data-blok-popover][data-blok-popover-custom-class~='blok-database-panel-list'] > [data-blok-popover-container] [data-blok-popover-item] {
-  margin-block-end: 0;
+@media (prefers-color-scheme: dark) {
+  :root:not([data-blok-theme="light"]) [data-blok-popover][data-blok-popover-custom-class~='blok-database-panel-list'] {
+    --blok-item-focus-bg: rgba(255, 255, 255, 0.055);
+  }
+}
+
+[data-blok-theme="dark"] [data-blok-popover][data-blok-popover-custom-class~='blok-database-panel-list'] {
+  --blok-item-focus-bg: rgba(255, 255, 255, 0.055);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-panel-list'] > [data-blok-popover-container] [data-blok-popover-items] {
+  padding-block: var(--blok-space-1);
+}
+
+/* §17.9: the type list's "Type" line is 28 tall and 4px wider than the rows on each side. */
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-property-panel'] [data-blok-database-property-type-list-heading] {
+  min-height: 28px;
+  margin-inline: calc(-1 * var(--blok-space-1));
+  padding-block: 0;
+  color: var(--blok-database-ink-secondary);
 }
 
 /* Keeps Show as at the panel's x + 20, its tiles at x + 28 (§2). */

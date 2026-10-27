@@ -111,6 +111,10 @@ for (const [theme, width] of [['light', 1280], ['dark', 1280], ['light', 390]] a
       await openReplace(page, theme);
       await page.getByTestId('find-input').fill('foo');
       await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
+      // The new count bumps in from translateY(2px); a box read mid-bump pokes out of the field.
+      await page.getByTestId('find-counter').evaluate(async (el) => {
+        await Promise.all(el.getAnimations({ subtree: true }).map(async (animation) => animation.finished));
+      });
 
       const [field, counter] = await Promise.all([
         page.getByTestId('find-field').boundingBox(),

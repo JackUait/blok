@@ -409,6 +409,113 @@ describe.each(sessions)('changing who can see or fill out a view, on a %s sessio
     }
   });
 
+  describe('a brand-new database that is already shared', () => {
+    const innerDb = (id: string, form: Record<string, unknown> = { public: true, anonymous: true }): OutputBlockData => ({
+      id, type: 'database', content: [],
+      data: {
+        title: 'Inner', activeViewId: `${id}-v`, schema: [{ id: 't', name: 'Name', type: 'title', position: 'a0' }],
+        views: [{ id: `${id}-v`, name: 'Signup', type: 'form', position: 'a0', sorts: [], filters: [], visibleProperties: [], form }],
+      },
+    });
+    const BOTH = [{ setting: 'access', to: 'public' }, { setting: 'anonymous', to: true }];
+    // A row with a page body holding a public form, and a template row like it.
+    const withRows = (): OutputData => ({
+      blocks: [
+        {
+          id: 'db', type: 'database', content: ['r1', 'tpl'],
+          data: { title: 'Tasks', activeViewId: 'v1', views: [formView('v1')], schema: [{ id: 't', name: 'Name', type: 'title', position: 'a0' }] },
+        },
+        { id: 'r1', type: 'database-row', parent: 'db', content: ['in1'], data: { properties: { t: 'One' }, position: 'a0' } },
+        { ...innerDb('in1'), parent: 'r1' },
+        { id: 'tpl', type: 'database-row', parent: 'db', content: ['in2'], data: { properties: { t: 'Template' }, position: 'a1', template: true } },
+        { ...innerDb('in2'), parent: 'tpl' },
+        { id: 'r2', type: 'database-row', parent: 'db', data: { properties: { t: 'Empty' }, position: 'a2' } },
+      ],
+    });
+    const databases = async (session: AgentSession): Promise<number> =>
+      (await session.read({ detail: 'outline' })).blocks.filter(block => block.type === 'database').length;
+    const expectAsked = async (session: AgentSession, commands: unknown[]): Promise<void> => {
+      const before = await databases(session);
+      const approve = vi.fn<Approve>(() => Promise.resolve(false));
+      const result = await run(session, commands, approve);
+
+      expect(codeOf(result)).toBe('APPROVAL_REQUIRED');
+      expect(approve.mock.calls[0]?.[0]).toMatchObject({ kind: 'database.share', changes: BOTH });
+      expect(await databases(session)).toBe(before);
+    };
+
+    it('block.insert of a new public, anonymous database asks first', async () => {
+      const session = open({ blocks: [] });
+
+      try {
+        const { id: _id, content: _content, ...block } = innerDb('x');
+
+        await expectAsked(session, [{ name: 'block.insert', args: { ...block, id: 'db9', position: 'end' } }]);
+      } finally {
+        session.close();
+      }
+    });
+
+    it('block.insert of one nested as a child asks first', async () => {
+      const session = open({ blocks: [] });
+
+      try {
+        await expectAsked(session, [{
+          name: 'block.insert',
+          args: { type: 'toggle', position: 'end', data: { text: [{ text: 'Forms' }] }, children: [{ type: 'database', data: innerDb('x').data }] },
+        }]);
+      } finally {
+        session.close();
+      }
+    });
+
+    it('block.duplicate of a shared database asks first', async () => {
+      const session = open({ blocks: [innerDb('src')] });
+
+      try {
+        await expectAsked(session, [{ name: 'block.duplicate', args: { id: 'src' } }]);
+      } finally {
+        session.close();
+      }
+    });
+
+    it('duplicateRow of a row whose page holds one asks first', async () => {
+      const session = open(withRows());
+
+      try {
+        await expectAsked(session, [{ name: 'database.duplicateRow', args: { id: 'db', rowId: 'r1' } }]);
+      } finally {
+        session.close();
+      }
+    });
+
+    it('applyTemplate that copies one asks first', async () => {
+      const session = open(withRows());
+
+      try {
+        await expectAsked(session, [{ name: 'database.applyTemplate', args: { id: 'db', rowId: 'r2', templateId: 'tpl' } }]);
+      } finally {
+        session.close();
+      }
+    });
+
+    it('is refused outright without the host\'s form sharing, even with a yes ready', async () => {
+      const session = openWithoutHost({ blocks: [] });
+      const approve = vi.fn<Approve>(() => Promise.resolve(true));
+
+      try {
+        const { id: _id, content: _content, ...block } = innerDb('x');
+        const result = await run(session, [{ name: 'block.insert', args: { ...block, id: 'db9', position: 'end' } }], approve);
+
+        expect(codeOf(result)).toBe('COMMAND_UNAVAILABLE');
+        expect(approve).not.toHaveBeenCalled();
+        expect(await databases(session)).toBe(0);
+      } finally {
+        session.close();
+      }
+    });
+  });
+
   describe('what the person is shown', () => {
     it('a rename in the same batch cannot change the names in the question', async () => {
       const session = open(seed());

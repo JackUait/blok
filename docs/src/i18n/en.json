@@ -2445,7 +2445,7 @@
         "description": "A blockquote with a left border accent. It supports two sizes, default and large. You switch between them in the block settings menu. Pasting a `<blockquote>` element automatically creates a quote block."
       },
       "code": {
-        "description": "A syntax-highlighted code block with a language picker, an optional line-number gutter, and a copy-to-clipboard button. It supports 30+ languages via Prism. The LaTeX and Mermaid languages include a live preview tab.\n\nPasting markdown fenced code blocks (```) or `<pre>` elements automatically creates a code block. The language comes across whenever the pasted source names it: a fence that opens with ```sql, or a labelled code block copied out of an app such as Gemini."
+        "description": "A syntax-highlighted code block with a language picker, an optional line-number gutter, and a copy-to-clipboard button. It highlights 30+ languages with its own built-in highlighter, so there is nothing extra to install. The LaTeX and Mermaid languages include a live preview tab.\n\nPasting markdown fenced code blocks (```) or `<pre>` elements automatically creates a code block. The language comes across whenever the pasted source names it: a fence that opens with ```sql, or a labelled code block copied out of an app such as Gemini."
       },
       "image": {
         "description": "Embed an image by URL, by upload, or by pasting a file.",

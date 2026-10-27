@@ -703,7 +703,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Code',
     description:
-      'A syntax-highlighted code block with a language picker, an optional line-number gutter, and a copy-to-clipboard button. It supports 30+ languages via Prism. The LaTeX and Mermaid languages include a live preview tab.\n\nPasting markdown fenced code blocks (```) or `<pre>` elements automatically creates a code block. The language comes across whenever the pasted source names it: a fence that opens with ```sql, or a labelled code block copied out of an app such as Gemini.',
+      'A syntax-highlighted code block with a language picker, an optional line-number gutter, and a copy-to-clipboard button. It highlights 30+ languages with its own built-in highlighter, so there is nothing extra to install. The LaTeX and Mermaid languages include a live preview tab.\n\nPasting markdown fenced code blocks (```) or `<pre>` elements automatically creates a code block. The language comes across whenever the pasted source names it: a fence that opens with ```sql, or a labelled code block copied out of an app such as Gemini.',
     importExample: `import { Code } from '@bloklabs/core/tools';`,
     configOptions: [],
     saveDataShape: `interface CodeData {

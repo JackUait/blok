@@ -274,7 +274,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 1877 + 136 + 528 + 4 closure for all 2545 keys', () => {
+  it('rebuilds a disjoint 1878 + 136 + 528 + 4 closure for all 2546 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -288,7 +288,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(2545);
+    expect(lifecycle.size).toBe(2546);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -461,7 +461,8 @@ describe('current English catalog lifecycle coverage', () => {
       // discardPartial, discardRestored, and the property menu's propertyTypeListHeading, editFormula, showNumber
       // and rollupTargetProperty, all by literal.
       // -2: tools.database.propertyNamePlaceholder (58acb411) and rollupProperty (47825485) lost their literal callers.
-      'executable-literal': 1877,
+      // +1: tools.database.formulaLimitReached, the warning mark's label on a capped formula cell, by literal.
+      'executable-literal': 1878,
       // +10: the tabs block calls its 9 tools.tabs.* keys and toolbox.preview.tabs by literal.
       // toolNames.page moved here from finite-dynamic when the page-reference picker called it directly.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel

@@ -4253,6 +4253,26 @@
             ]
           },
           {
+            label: 'Map view',
+            // OpenFreeMap: a public style that needs no key.
+            toolConfig: { database: { map: { styleUrl: 'https://tiles.openfreemap.org/styles/liberty' } } },
+            blocks: [
+              {
+                id: 'db-map-live',
+                type: 'database',
+                data: {
+                  schema: [ { id: 'title', name: 'Name', type: 'title', position: 'a0' }, { id: 'where', name: 'Place', type: 'place', position: 'a1' } ],
+                  views: [ { id: 'v1', type: 'map', name: 'Map', position: 'a0', sorts: [], filters: [], visibleProperties: [], mapBy: 'where' } ],
+                  activeViewId: 'v1'
+                },
+                content: [ 'db-map-live-r1', 'db-map-live-r2', 'db-map-live-r3' ]
+              },
+              { id: 'db-map-live-r1', type: 'database-row', data: { properties: { title: 'London office', where: { name: 'London', lat: 51.5072, lon: -0.1276 } }, position: 'a0' }, parent: 'db-map-live' },
+              { id: 'db-map-live-r2', type: 'database-row', data: { properties: { title: 'Paris office', where: { name: 'Paris', lat: 48.8566, lon: 2.3522 } }, position: 'a1' }, parent: 'db-map-live' },
+              { id: 'db-map-live-r3', type: 'database-row', data: { properties: { title: 'Berlin office', where: { name: 'Berlin', lat: 52.52, lon: 13.405 } }, position: 'a2' }, parent: 'db-map-live' }
+            ]
+          },
+          {
             label: 'Map · no map style',
             blocks: [
               {

@@ -220,6 +220,8 @@ describe('assistant bar: the actions row unfolds and folds', () => {
 
     it('closes the gap in the same beat as the fade, with no fold first', () => {
       const held = gapSize(anchor);
+      // The unfold from the open in beforeEach is already recorded.
+      const unfolds = groupMotions().length;
 
       expect(held).toBe(FULL);
       bar.close();
@@ -232,7 +234,7 @@ describe('assistant bar: the actions row unfolds and folds', () => {
       expect(gap.keyframes.at(-1)?.marginBlockEnd).toBe('0px');
       expect(gap.options).toMatchObject({ duration: fade.options.duration, easing: fade.options.easing });
       expect(gap.options.delay ?? 0).toBe(0);
-      expect(groupMotions()).toHaveLength(0);
+      expect(groupMotions()).toHaveLength(unfolds);
     });
 
     it('opening again cuts the exit short', () => {

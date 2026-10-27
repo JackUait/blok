@@ -908,7 +908,10 @@ export class DatabasePropertyMenu {
         items: [
           this.switchItem('twoWay-enable', 'tools.database.relationTwoWayEnable', twoWay, (on) => {
             state.on = on;
-            host?.onSetTwoWay(propertyId, on, ...(on ? [name.value()] : []));
+            // An empty field means the default mirror name.
+            const typed = name.value().trim();
+
+            host?.onSetTwoWay(propertyId, on, ...(on && typed !== '' ? [typed] : []));
             name.refresh();
             const value = this.popover?.getElement().querySelector(`[${DATA_ATTR.itemName}="twoWay"] [${DATA_ATTR.popoverItemValue}]`);
 

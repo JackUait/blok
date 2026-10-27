@@ -31,6 +31,7 @@ import { safeImageSrc } from '../../components/utils/sanitize-url';
 import { isEscapeConsumed, markEscapeConsumed } from '../../components/utils/consumed-escape';
 import { getElementDirection, logicalArrow } from '../../components/utils/direction';
 import { prefersReducedMotion } from '../../components/utils/reduced-motion';
+import { ScrollLocker } from '../../components/utils/scroll-locker';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { isPromotedToTopLayer, overlayMountFor, promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
 import { PeekPagePan } from './peek-page-pan';
@@ -452,6 +453,8 @@ export class DatabaseCardDrawer {
   private peekHost: HTMLElement | null = null;
   private readonly takeover: RowPageTakeover;
   private readonly pagePan = new PeekPagePan();
+  /** Held while a side or center peek shows: the page under it does not scroll. */
+  private readonly pageScroll = new ScrollLocker();
   private readonly readOnly: boolean;
   private readonly i18n: I18n | undefined;
   private readonly toolsConfig: ToolsConfig | undefined;
@@ -958,6 +961,7 @@ export class DatabaseCardDrawer {
       this.attachedBodyRowId = null;
       this.leavingBodyRowId = sliding;
     }
+    this.pageScroll.unlock();
     this.updateActiveCard(null);
     this.cleanupListeners();
     this.cleanupEditor();
@@ -1014,6 +1018,7 @@ export class DatabaseCardDrawer {
 
   destroy(): void {
     this.events?.off('i18n:changed', this.followOuterDirection);
+    this.pageScroll.unlock();
     this.stopWatchingPins();
     this.releasePeekHost();
     this.closeModeMenu();
@@ -1983,6 +1988,12 @@ export class DatabaseCardDrawer {
       removeFromTopLayer(drawer);
     } else if (!isPromotedToTopLayer(drawer)) {
       promoteToTopLayer(drawer);
+    }
+    // Before narrowPeekHost: the page pan measures the page without its scrollbar.
+    if (mode === 'full') {
+      this.pageScroll.unlock();
+    } else {
+      this.pageScroll.lock();
     }
     if (mode === 'side' && drawer.hasAttribute('data-open')) {
       this.narrowPeekHost();

@@ -404,6 +404,60 @@ describe('DatabaseCardDrawer shell', () => {
     });
   });
 
+  describe('page scroll under a peek', () => {
+    const pageOverflow = (): string => document.body.style.overflow;
+
+    it('locks the page while the side peek is open and frees it at once on close', () => {
+      const drawer = new DatabaseCardDrawer(createOptions());
+
+      drawer.open(ROW, 'side');
+      expect(pageOverflow()).toBe('hidden');
+
+      drawer.close();
+      expect(pageOverflow()).toBe('');
+      drawer.destroy();
+    });
+
+    it('locks the page under the center peek', () => {
+      const drawer = new DatabaseCardDrawer(createOptions());
+
+      drawer.open(ROW, 'center');
+      expect(pageOverflow()).toBe('hidden');
+      drawer.destroy();
+    });
+
+    it('frees the page on a full page and locks it again back in a peek', () => {
+      const drawer = new DatabaseCardDrawer(createOptions());
+
+      drawer.open(ROW, 'side');
+      drawer.open(ROW, 'full');
+      expect(pageOverflow()).toBe('');
+
+      drawer.open(ROW, 'side');
+      expect(pageOverflow()).toBe('hidden');
+      drawer.destroy();
+    });
+
+    it('frees the page when destroyed while open', () => {
+      const drawer = new DatabaseCardDrawer(createOptions());
+
+      drawer.open(ROW, 'side');
+      drawer.destroy();
+      expect(pageOverflow()).toBe('');
+    });
+
+    it('gives back the overflow the host set', () => {
+      const drawer = new DatabaseCardDrawer(createOptions());
+
+      document.body.style.overflow = 'clip';
+      drawer.open(ROW, 'side');
+      drawer.close();
+      expect(pageOverflow()).toBe('clip');
+      drawer.destroy();
+      document.body.style.overflow = '';
+    });
+  });
+
   // feel/findings-rowpage R17: a full page has no mode switcher or row steps, and its bar shows where it is.
   describe('full page bar', () => {
     const shown = (selector: string): boolean => [...document.querySelectorAll<HTMLElement>(selector)].some((el) => !el.hidden);

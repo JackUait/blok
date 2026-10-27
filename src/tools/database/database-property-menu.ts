@@ -1,4 +1,4 @@
-import { IconCalendar, IconCheck, IconCopy, IconEmojiSmile, IconEyeSlash, IconInfo, IconMessage, IconPencil, IconPencilLine, IconReplace, IconSliders, IconTrash, IconEmojiSparkles, IconPageLayout, IconWand } from '../../components/icons';
+import { IconCalendar, IconCheck, IconHelp, IconCopy, IconEmojiSmile, IconEyeSlash, IconInfo, IconMessage, IconPencil, IconPencilLine, IconReplace, IconSliders, IconTrash, IconEmojiSparkles, IconPageLayout, IconWand } from '../../components/icons';
 import { nameTakenError } from './database-name-taken-error';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
@@ -20,7 +20,7 @@ import { DATABASE_HEADER_MENU_CLASS, SHOW_PAGE_ICON_ITEM } from './database-tabl
 import { reminderLabel, remindersFor } from './reminders';
 import { DATE_FORMATS, HOUR_CYCLES, TIME_FORMATS, resolveHourCycle, resolveLocale, timeZones } from './cells/date-format';
 import { overlayMountFor } from '../../components/utils/top-layer';
-import { hide as hideHint, onHover } from '../../components/utils/tooltip';
+import { hide as hideHint, onHover, type HintOptions } from '../../components/utils/tooltip';
 import { getElementDirection } from '../../components/utils/direction';
 import type {
   DateDisplay,
@@ -166,7 +166,9 @@ const OFFERED_DECIMALS = 5;
 interface RowPageExtras { onComment?: () => void; edit?: boolean }
 
 /** notion-spec-2 §17: every other Edit property row with a value opens a 250 wide list the same way. */
-const VALUE_LIST = { clickOnly: true, placement: 'under', width: '250px' } as const;
+const VALUE_LIST = { clickOnly: true, placement: 'under', width: '250px', class: PANEL_LIST_CLASS } as const;
+/** notion-spec-2 §17.2: a rollup's Relation and Target property lists are 280 wide and check nothing. */
+const TARGET_LIST = { clickOnly: true, placement: 'under', width: '280px', class: PANEL_LIST_CLASS } as const;
 
 /** The Calculate menu's groups (notion-spec-2 §14.4, §15.2). */
 const CALCULATE_GROUPS: ReadonlyArray<readonly [string, readonly RollupFunction[]]> = [
@@ -217,6 +219,8 @@ export class DatabasePropertyMenu {
   private saveDescription: (() => void) | null = null;
   /** The row whose list the next number pick comes from: it keeps the highlight after the redraw (notion-spec-2 §8). */
   private pickedRow: string | null = null;
+  /** Hints for rows of the menu being drawn, bound once its rows exist. */
+  private rowHints: Array<() => void> = [];
 
   constructor(private readonly options: PropertyMenuOptions) {}
 
@@ -254,6 +258,7 @@ export class DatabasePropertyMenu {
   private drawHeaderMenu(property: PropertyDefinition, anchor: HTMLElement, viewItems: PopoverItemParams[], shown: PropertyDefinition, typed?: string): void {
     this.shown = shown;
     this.anchor = anchor;
+    this.rowHints = [];
     const name = this.nameField(property, property.type !== 'title');
     const update = this.showAsUpdate(property, name, (patch, kept) => {
       this.swap();
@@ -393,6 +398,7 @@ export class DatabasePropertyMenu {
   /** `typed`: a redraw's unsaved name, kept in the field, which then keeps no focus. */
   private openRowPageEdit(property: PropertyDefinition, anchor: HTMLElement, extras: RowPageExtras, typed?: string): void {
     this.swap();
+    this.rowHints = [];
     const entries = propertyMenuEntries(property);
     const has = (entry: PropertyMenuEntry): boolean => entries.includes(entry);
     const name = this.nameField(property, property.type !== 'title');
@@ -419,6 +425,7 @@ export class DatabasePropertyMenu {
 
     this.show(items, anchor, '290px', PROPERTY_PANEL_CLASS, typed !== undefined);
     this.rowHint('decimals', 'tools.database.decimalPlacesHint', 'end');
+    this.bindRowHints();
     const input = name.querySelector('input');
 
     if (typed !== undefined) {
@@ -758,7 +765,8 @@ export class DatabasePropertyMenu {
           title: this.t(property.type === 'button' ? 'tools.database.editAutomation' : 'tools.database.editProperty'),
           icon: IconPencil,
           // research/27 §7: 300 wide. The all-views note wraps rather than widening it.
-          children: { items: this.editItems(property, update), minWidth: '300px' },
+          // The submenu's rows mount right after onOpen.
+          children: { items: this.editItems(property, update), minWidth: '300px', onOpen: () => queueMicrotask(() => this.bindRowHints()) },
         };
       case 'displayAs': {
         const status = property.status;
@@ -832,22 +840,10 @@ export class DatabasePropertyMenu {
     const host = this.options.computed;
     const settings = property.relation ?? { targetDatabaseId: '' };
     const limit = settings.limit === 1 ? 'one' : 'none';
+    const twoWay = settings.twoWay === true;
 
     return [
-      {
-        name: 'relatedTo',
-        title: this.t('tools.database.relationRelatedTo'),
-        children: {
-          items: (host?.databases() ?? []).map((database) => ({
-            name: `relatedTo-${database.id}`,
-            title: database.title === '' ? this.t('tools.database.relationUntitledDatabase') : database.title,
-            isActive: settings.targetDatabaseId === database.id,
-            closeOnActivate: true,
-            // A new target starts one-way: the old mirror belongs to the old target.
-            onActivate: () => update({ relation: { targetDatabaseId: database.id } }),
-          })),
-        },
-      },
+      settings.targetDatabaseId === '' ? this.relatedToPicker(settings, update) : this.relatedToValue(settings),
       {
         name: 'limit',
         title: this.t('tools.database.relationLimit'),
@@ -866,11 +862,93 @@ export class DatabasePropertyMenu {
       {
         name: 'twoWay',
         title: this.t('tools.database.relationTwoWay'),
-        isActive: settings.twoWay === true,
-        closeOnActivate: true,
-        onActivate: () => host?.onSetTwoWay(property.id, settings.twoWay !== true),
+        titleEl: this.twoWayLabel(),
+        valueLabel: this.t(twoWay ? 'tools.database.settingsOn' : 'tools.database.settingsOff'),
+        children: {
+          ...VALUE_LIST,
+          items: [this.switchItem('twoWay-enable', 'tools.database.relationTwoWayEnable', twoWay, (on) => host?.onSetTwoWay(property.id, on))],
+        },
       },
     ];
+  }
+
+  /** A relation with no database yet picks one here. */
+  private relatedToPicker(settings: RelationSettings, update: (patch: Partial<PropertySettingsV2>) => void): PopoverItemParams {
+    return {
+      name: 'relatedTo',
+      title: this.t('tools.database.relationRelatedTo'),
+      children: {
+        items: (this.options.computed?.databases() ?? []).map((database) => ({
+          name: `relatedTo-${database.id}`,
+          title: database.title === '' ? this.t('tools.database.relationUntitledDatabase') : database.title,
+          isActive: settings.targetDatabaseId === database.id,
+          closeOnActivate: true,
+          // A new target starts one-way: the old mirror belongs to the old target.
+          onActivate: () => update({ relation: { targetDatabaseId: database.id } }),
+        })),
+      },
+    };
+  }
+
+  /** notion-spec-2 §17.1: once set, the related database is locked. A click does nothing; a hover says why. */
+  private relatedToValue(settings: RelationSettings): PopoverItemParams {
+    const host = this.options.computed;
+    const title = host?.databases().find((database) => database.id === settings.targetDatabaseId)?.title ?? '';
+    const named = title === '' ? this.t('tools.database.relationUntitledDatabase') : title;
+
+    this.rowHints.push(() => this.hintOnRow('relatedTo', this.t('tools.database.relationRelatedToHint'), { placement: 'top', gap: 6 }));
+
+    return {
+      name: 'relatedTo',
+      title: this.t('tools.database.relationRelatedTo'),
+      valueLabel: settings.targetDatabaseId === host?.databaseId ? this.t('tools.database.relationThisDatabase') : named,
+      onActivate: () => undefined,
+    };
+  }
+
+  /** notion-spec-2 §17.1: the label and a "?" carry the hint, below the label, 200 wide; the value part has none. */
+  private twoWayLabel(): HTMLElement {
+    const label = document.createElement('span');
+    const help = document.createElement('span');
+    const text = document.createElement('span');
+
+    label.setAttribute('data-blok-database-property-menu-help-label', '');
+    label.style.display = 'inline-flex';
+    label.style.alignItems = 'center';
+    label.style.gap = '6px';
+    help.innerHTML = IconHelp;
+    help.style.display = 'inline-flex';
+    help.style.color = 'var(--blok-text-secondary)';
+    help.querySelector('svg')?.setAttribute('width', '16');
+    help.querySelector('svg')?.setAttribute('height', '16');
+    label.append(this.t('tools.database.relationTwoWay'), help);
+    // 184 + the bubble's 8px padding on each side = 200.
+    text.style.display = 'block';
+    text.style.maxWidth = '184px';
+    text.textContent = this.t('tools.database.relationTwoWayHint');
+    onHover(label, text, { placement: 'bottom', gap: 6 });
+
+    return label;
+  }
+
+  /** notion-spec-2 §17.8: Show unique values explains itself, 6px off the Calculate menu's inline end. */
+  private showUniqueHint(): void {
+    const row = this.popover?.getElement().querySelector<HTMLElement>(`[${DATA_ATTR.itemName}="rollupFunction-show_unique"]`);
+
+    if (row === null || row === undefined) return;
+    onHover(row, this.t('tools.database.rollupShowUniqueHint'), { placement: getElementDirection(row) === 'rtl' ? 'left' : 'right', gap: 6 });
+  }
+
+  /** Binds hints to rows drawn now. Each draw makes new rows, so it runs again on every open. */
+  private bindRowHints(): void {
+    this.rowHints.forEach((bind) => bind());
+  }
+
+  /** A hint on a drawn row of this menu or of an open submenu. */
+  private hintOnRow(name: string, content: string, options: HintOptions): void {
+    const row = this.popover?.getElement().querySelector<HTMLElement>(`[${DATA_ATTR.itemName}="${name}"]`);
+
+    if (row !== null && row !== undefined) onHover(row, content, options);
   }
 
   /** Limit, Default and Notifications, each showing its current choice (research/16 §5). Default choices leave their key out. */
@@ -930,12 +1008,12 @@ export class DatabasePropertyMenu {
       {
         name: 'rollupRelation',
         title: this.t('tools.database.rollupRelation'),
-        ...(relation === undefined ? {} : { valueLabel: relation.name }),
+        valueLabel: relation?.name ?? this.t('tools.database.rollupSelect'),
         children: {
+          ...TARGET_LIST,
           items: relations.map((p) => ({
             name: `rollupRelation-${p.id}`,
             title: p.name,
-            isActive: p.id === settings.relationPropertyId,
             closeOnActivate: true,
             onActivate: () => set({ relationPropertyId: p.id }),
           })),
@@ -944,13 +1022,15 @@ export class DatabasePropertyMenu {
       {
         name: 'rollupProperty',
         title: this.t('tools.database.rollupTargetProperty'),
-        ...(picked === undefined ? {} : { valueLabel: picked.name }),
+        valueLabel: picked?.name ?? this.t('tools.database.rollupSelect'),
         children: {
+          ...TARGET_LIST,
+          searchable: true,
+          searchPlaceholder: this.t('tools.database.settingsSearchProperty'),
           // H-rr: a rollup of a rollup is not offered.
           items: targets.filter((p) => p.type !== 'rollup').map((p) => ({
             name: `rollupProperty-${p.id}`,
             title: p.name,
-            isActive: p.id === settings.targetPropertyId,
             closeOnActivate: true,
             onActivate: () => update({ rollup: { ...settings, targetPropertyId: p.id }, ...inheritedRollupFormat(property, p) }),
           })),
@@ -966,7 +1046,10 @@ export class DatabasePropertyMenu {
           class: PANEL_LIST_CLASS,
           width: '200px',
           // §17.10: the row holding the current calculation, a group row too, opens highlighted. After show: the list is not drawn yet.
-          onOpen: () => queueMicrotask(() => this.popover?.focusItemByName(calculateRow(settings.function))),
+          onOpen: () => queueMicrotask(() => {
+            this.popover?.focusItemByName(calculateRow(settings.function));
+            this.showUniqueHint();
+          }),
           items: this.calculateItems(target === undefined ? ROLLUP_FUNCTIONS : rollupFunctionsFor(target), settings.function, setFunction),
         },
       },

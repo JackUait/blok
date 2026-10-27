@@ -199,20 +199,27 @@ describe('property menu — computed types', () => {
     expect((byName(lastItems(), 'editProperty').children?.items ?? []).map((item) => item.name)).toEqual(expect.arrayContaining(['color', 'divideBy']));
   });
 
-  it('relation: picks the related database, the limit and two-way', () => {
+  it('relation: picks the limit and two-way', () => {
     const relation = prop('relation', { relation: { targetDatabaseId: 'db' } });
     const { cb, extras } = openMenu(relation);
     const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
-    const target = byName(byName(edit, 'relatedTo').children?.items ?? [], 'relatedTo-db-tasks');
     const one = byName(byName(edit, 'limit').children?.items ?? [], 'limit-one');
 
-    target.onActivate?.(target);
     one.onActivate?.(one);
-    byName(edit, 'twoWay').onActivate?.(byName(edit, 'twoWay'));
+    byName(byName(edit, 'twoWay').children?.items ?? [], 'twoWay-enable').element?.click();
 
-    expect(cb.onUpdate).toHaveBeenCalledWith('p', { relation: { targetDatabaseId: 'db-tasks' } });
     expect(cb.onUpdate).toHaveBeenCalledWith('p', { relation: { targetDatabaseId: 'db', limit: 1 } });
     expect(extras.onSetTwoWay).toHaveBeenCalledWith('p', true);
+  });
+
+  it('relation: with no database yet, Related to picks one', () => {
+    const { cb } = openMenu(prop('relation'));
+    const edit = byName(lastItems(), 'editProperty').children?.items ?? [];
+    const target = byName(byName(edit, 'relatedTo').children?.items ?? [], 'relatedTo-db-tasks');
+
+    target.onActivate?.(target);
+
+    expect(cb.onUpdate).toHaveBeenCalledWith('p', { relation: { targetDatabaseId: 'db-tasks' } });
   });
 
   it('rollup: picks the relation, the target property and the function', () => {
@@ -530,11 +537,6 @@ describe('property menu — click-only lists (notion-spec-2 §16.1)', () => {
 
     expect(byName(items, 'numberFormat').children?.clickOnly).toBe(true);
     expect(byName(items, 'decimals').children?.clickOnly).toBe(true);
-  });
-
-  // Not measured: they keep opening on hover.
-  it.each(['rollupRelation', 'rollupProperty'])('%s still opens on hover', (name) => {
-    expect(byName(panel(sum), name).children?.clickOnly).not.toBe(true);
   });
 
   it('opening Decimal places hides its hint', () => {

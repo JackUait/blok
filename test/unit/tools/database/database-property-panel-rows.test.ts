@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { PropertyDefinition, PropertyType } from '../../../../src/tools/database/types';
 import { createDefaultStatusSettings } from '../../../../src/tools/database/property-values';
 import { propertyTypeMeta } from '../../../../src/tools/database/database-property-types';
+import { HINT_DELAY, destroy as destroyTooltip } from '../../../../src/components/utils/tooltip';
 
 interface CapturedItem {
   name?: string;
@@ -73,7 +74,7 @@ const prop = (type: PropertyType, extra: Partial<PropertyDefinition> = {}): Prop
 const hints: Record<string, string> = {
   'tools.database.relationRelatedToHint': 'The related database cannot be changed after creation',
   'tools.database.relationTwoWayHint': 'When a page is related to another page in this database, show each direction of the relation in its own property',
-  'tools.database.rollupFn.show_uniqueHint': 'Shows the unique values for this property.',
+  'tools.database.rollupShowUniqueHint': 'Shows the unique values for this property.',
 };
 const i18n = { t: (key: string) => hints[key] ?? key, getLocale: () => 'en' } as never;
 
@@ -203,5 +204,159 @@ describe('date Time format (§17.4)', () => {
     const shown = row.valueLabel?.replace('tools.database.timeFormat.', '');
 
     expect(checked(row.children?.items ?? [])).toEqual([`timeFormat-${shown}`]);
+  });
+});
+
+describe('rollup Relation and Target property (§17.2)', () => {
+  const rollup = prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'show_original' } });
+
+  it.each(['rollupRelation', 'rollupProperty'])('%s opens a 280 list on a click only, under its row, with no checkmark', (name) => {
+    for (const items of [header(rollup), panel(rollup)]) {
+      const row = byName(items, name);
+
+      expect(row.children).toMatchObject({ clickOnly: true, placement: 'under', width: '280px' });
+      expect(checked(row.children?.items ?? [])).toEqual([]);
+    }
+  });
+
+  it('Target property has a "Search for a property…" field', () => {
+    expect(byName(header(rollup), 'rollupProperty').children).toMatchObject({ searchable: true, searchPlaceholder: 'tools.database.settingsSearchProperty' });
+  });
+
+  it('a new rollup reads Select on Relation and Target property', () => {
+    const items = header(prop('rollup'));
+
+    expect(byName(items, 'rollupRelation').valueLabel).toBe('tools.database.rollupSelect');
+    expect(byName(items, 'rollupProperty').valueLabel).toBe('tools.database.rollupSelect');
+  });
+});
+
+describe('relation Related to and Add related property (§17.1)', () => {
+  const tooltip = (): { text: string; placement: string | null } | null => {
+    const wrapper = document.querySelector<HTMLElement>('[data-blok-testid="tooltip"]');
+
+    return wrapper?.getAttribute('data-blok-shown') === 'true'
+      ? { text: document.querySelector('[data-blok-testid="tooltip-content"]')?.textContent ?? '', placement: wrapper.getAttribute('data-blok-placement') }
+      : null;
+  };
+  const hover = (el: Element | null | undefined): void => {
+    if (!(el instanceof HTMLElement)) throw new Error('nothing to hover');
+    vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 300, y: 300, width: 274, height: 28 }));
+    el.dispatchEvent(new MouseEvent('mouseenter'));
+    vi.advanceTimersByTime(HINT_DELAY);
+  };
+
+  beforeEach(() => {
+    destroyTooltip();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    destroyTooltip();
+    vi.useRealTimers();
+  });
+
+  it('Related to is locked once a database is set: its value, no list', () => {
+    const row = byName(header(relation), 'relatedTo');
+
+    expect(row.valueLabel).toBe('Tasks');
+    expect(row.children).toBeUndefined();
+  });
+
+  it('Related to reads "This database" for a relation to its own database', () => {
+    expect(byName(header(prop('relation', { relation: { targetDatabaseId: 'db' } })), 'relatedTo').valueLabel).toBe('tools.database.relationThisDatabase');
+  });
+
+  it('Related to keeps its list while no database is set', () => {
+    expect(names(byName(header(prop('relation')), 'relatedTo').children?.items ?? [])).toEqual(['relatedTo-db', 'relatedTo-db-tasks']);
+  });
+
+  it('Related to shows its hint above the row, 6px off, after the hover delay', async () => {
+    panel(relation);
+    await Promise.resolve();
+    const row = document.querySelector('[data-blok-item-name="relatedTo"]');
+
+    hover(row);
+
+    expect(tooltip()).toEqual({ text: hints['tools.database.relationRelatedToHint'], placement: 'top' });
+  });
+
+  it('Related to\'s hint is bound when the header menu opens Edit property', async () => {
+    new DatabasePropertyMenu({ ...callbacks(), i18n, hasPeople: false, computed: computed() }).open(relation, document.createElement('button'));
+    const menu = captured.popovers[captured.popovers.length - 1];
+    const edit = byName(menu?.items ?? [], 'editProperty');
+
+    // As the real popover: the submenu's rows mount inside the menu.
+    drawRows(edit.children?.items ?? [], menu?.element ?? document.body);
+    edit.children?.onOpen?.();
+    await Promise.resolve();
+    hover(menu?.element.querySelector('[data-blok-item-name="relatedTo"]'));
+
+    expect(tooltip()?.text).toBe(hints['tools.database.relationRelatedToHint']);
+  });
+
+  it('Add related property shows On or Off and opens a 250 list with an Enable switch', () => {
+    const extras = computed();
+    const row = byName(header(relation, extras), 'twoWay');
+    const enable = byName(row.children?.items ?? [], 'twoWay-enable').element;
+
+    expect(row.valueLabel).toBe('tools.database.settingsOff');
+    expect(row.children).toMatchObject({ clickOnly: true, placement: 'under', width: '250px' });
+    expect(enable?.getAttribute('role')).toBe('switch');
+    expect(enable?.textContent).toBe('tools.database.relationTwoWayEnable');
+    enable?.click();
+    expect(extras.onSetTwoWay).toHaveBeenCalledWith('p', true);
+    expect(byName(header(prop('relation', { relation: { targetDatabaseId: 'db-tasks', twoWay: true } })), 'twoWay').valueLabel).toBe('tools.database.settingsOn');
+  });
+
+  it('Add related property\'s label and ? show its hint below the label, 200 wide', () => {
+    const label = byName(panel(relation), 'twoWay').titleEl;
+
+    expect(label?.firstChild?.textContent).toBe('tools.database.relationTwoWay');
+    expect(label?.querySelector('svg')).not.toBeNull();
+    hover(label);
+
+    expect(tooltip()).toEqual({ text: hints['tools.database.relationTwoWayHint'], placement: 'bottom' });
+    expect(document.querySelector<HTMLElement>('[data-blok-testid="tooltip-content"] > *')?.style.maxWidth).toBe('184px');
+  });
+
+  it('the value part of Add related property shows no hint', () => {
+    panel(relation);
+    hover(document.querySelector('[data-blok-item-name="twoWay"]'));
+
+    expect(tooltip()).toBeNull();
+  });
+});
+
+describe('rollup Calculate: Show unique values hint (§17.8)', () => {
+  beforeEach(() => {
+    destroyTooltip();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    destroyTooltip();
+    vi.useRealTimers();
+  });
+
+  it('shows to the right of the row, 6px off, once Calculate opens', async () => {
+    const items = panel(prop('rollup', { rollup: { relationPropertyId: 'rel', targetPropertyId: 'hours', function: 'show_original' } }));
+    const menu = captured.popovers[captured.popovers.length - 1];
+    const calculate = byName(items, 'rollupFunction');
+
+    drawRows(calculate.children?.items ?? [], menu?.element ?? document.body);
+    calculate.children?.onOpen?.();
+    await Promise.resolve();
+    const row = menu?.element.querySelector<HTMLElement>('[data-blok-item-name="rollupFunction-show_unique"]');
+
+    if (row === null || row === undefined) throw new Error('no Show unique values row');
+    vi.spyOn(row, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 300, y: 300, width: 192, height: 28 }));
+    row.dispatchEvent(new MouseEvent('mouseenter'));
+    vi.advanceTimersByTime(HINT_DELAY);
+    const wrapper = document.querySelector<HTMLElement>('[data-blok-testid="tooltip"]');
+
+    expect(wrapper?.getAttribute('data-blok-shown')).toBe('true');
+    expect(document.querySelector('[data-blok-testid="tooltip-content"]')?.textContent).toBe(hints['tools.database.rollupShowUniqueHint']);
+    expect(wrapper?.getAttribute('data-blok-placement')).toBe('right');
   });
 });

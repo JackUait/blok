@@ -391,7 +391,7 @@ export const LEDGER: Record<CapabilityId, Coverage> = {
   'menu:database/editProperty': cmd('database.updateProperty'),
   'menu:database/relatedTo-*': cmd('database.updateProperty'),
   'menu:database/limit-*': cmd('database.updateProperty'),
-  'menu:database/twoWay': cmd('database.updateProperty'),
+  'menu:database/relatedTo': exempt('chrome', 'Shows the locked related database and a hint; a click does nothing.'),
   'menu:database/rollupRelation-*': cmd('database.updateProperty'),
   'menu:database/rollupProperty-*': cmd('database.updateProperty'),
   'menu:database/rollupFunction-*': cmd('database.updateProperty'),

@@ -245,6 +245,71 @@ describe('Place editor: "Search for a location..." with the host geocoder (resea
     expect(results().map((row) => row.name)).toEqual(['Eiffel Tower']);
   });
 
+  describe('keys over the rows (research/36 §7, research/31 §4a)', () => {
+    const active = (): string[] => [...document.querySelectorAll('[data-blok-database-place-current], [data-blok-database-place-result]')]
+      .filter((row) => row.hasAttribute('data-active'))
+      .map((row) => row.textContent ?? '');
+
+    it('"Current Location" is the highlighted row when the editor opens', () => {
+      openCellEditor(makeProperty('place'), null, makeAnchor(), makeEditorContext({ geocode: vi.fn().mockResolvedValue([]), currentLocation: vi.fn() }));
+
+      expect(active()).toEqual(['tools.database.placeCurrentLocation']);
+    });
+
+    it('ArrowDown then Enter picks the first result and saves it at once', async () => {
+      const onCommit = vi.fn();
+      const geocode = vi.fn().mockResolvedValue([EIFFEL, { name: 'Paris', address: 'Paris, France', lat: 1, lon: 2 }]);
+
+      openCellEditor(makeProperty('place'), null, makeAnchor(), makeEditorContext({ geocode, currentLocation: vi.fn(), onCommit }));
+      type('Eiffel');
+      await settle();
+      const down = press(field(), 'ArrowDown');
+
+      expect(down.defaultPrevented).toBe(true);
+      expect(active()).toEqual(['Eiffel Tower5 Avenue Anatole France, 75007 Paris, France']);
+      press(field(), 'Enter');
+
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      expect(onCommit).toHaveBeenCalledWith(EIFFEL);
+    });
+
+    it('ArrowUp moves back, and the highlight stops at the ends', async () => {
+      const geocode = vi.fn().mockResolvedValue([EIFFEL]);
+
+      openCellEditor(makeProperty('place'), null, makeAnchor(), makeEditorContext({ geocode, currentLocation: vi.fn() }));
+      type('Eiffel');
+      await settle();
+      press(field(), 'ArrowDown');
+      press(field(), 'ArrowDown');
+      expect(active()).toEqual(['Eiffel Tower5 Avenue Anatole France, 75007 Paris, France']);
+      press(field(), 'ArrowUp');
+      press(field(), 'ArrowUp');
+      expect(active()).toEqual(['tools.database.placeCurrentLocation']);
+    });
+
+    it('the pointer moves the one highlight', async () => {
+      openCellEditor(makeProperty('place'), null, makeAnchor(), makeEditorContext({ geocode: vi.fn().mockResolvedValue([EIFFEL]), currentLocation: vi.fn() }));
+      type('Eiffel');
+      await settle();
+      document.querySelector('[data-blok-database-place-result-name]')?.dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
+
+      expect(active()).toEqual(['Eiffel Tower5 Avenue Anatole France, 75007 Paris, France']);
+    });
+
+    it('without "Current Location" the first result is highlighted once results come', async () => {
+      const onCommit = vi.fn();
+
+      openCellEditor(makeProperty('place'), null, makeAnchor(), makeEditorContext({ geocode: vi.fn().mockResolvedValue([EIFFEL]), onCommit }));
+      type('Eiffel');
+      await settle();
+      expect(active()).toEqual(['Eiffel Tower5 Avenue Anatole France, 75007 Paris, France']);
+      press(field(), 'ArrowDown');
+      press(field(), 'Enter');
+
+      expect(onCommit).toHaveBeenCalledWith(EIFFEL);
+    });
+  });
+
   it('Enter still stores the typed text as an address', async () => {
     const onCommit = vi.fn();
     const geocode = vi.fn().mockResolvedValue([EIFFEL]);

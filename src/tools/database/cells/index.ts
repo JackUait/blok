@@ -86,13 +86,49 @@ const placeSearch = (ctx: CellEditorContext, pick: (place: PlaceValue) => void):
     list.appendChild(current);
   }
   list.appendChild(found);
+  // research/36 §7: "Current Location" is the highlighted row; ArrowDown + Enter picks a result (research/31 §4a).
+  const keys = { index: 0, moved: false };
+  const rows = (): HTMLElement[] => [...list.querySelectorAll<HTMLElement>('[data-blok-database-place-current], [data-blok-database-place-result]')];
+  const highlight = (index: number): void => {
+    const all = rows();
+
+    keys.index = Math.max(0, Math.min(index, all.length - 1));
+    all.forEach((row, i) => row.toggleAttribute('data-active', i === keys.index));
+  };
+
+  highlight(0);
+  // One highlighted row: the pointer moves it too.
+  list.addEventListener('pointermove', (event) => {
+    const row = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-blok-database-place-current], [data-blok-database-place-result]') : null;
+    const index = row === null ? -1 : rows().indexOf(row);
+
+    if (index !== -1 && index !== keys.index) highlight(index);
+  });
 
   return {
     list,
     attach: (field, isOpen) => {
+      // Capture on the parent: runs before the text editor's own Enter handler commits the typed text.
+      field.parentElement?.addEventListener('keydown', (event) => {
+        if (event.isComposing) return;
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+          event.preventDefault();
+          keys.moved = true;
+          highlight(keys.index + (event.key === 'ArrowDown' ? 1 : -1));
+
+          return;
+        }
+        // Enter on the row nobody moved to is unmeasured: it keeps storing the typed text.
+        if (event.key === 'Enter' && keys.moved && rows()[keys.index] !== undefined) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          rows()[keys.index].click();
+        }
+      }, true);
       if (geocode === undefined) return;
       const search = { timer: 0, latest: 0 };
       const show = (places: PlaceValue[]): void => {
+        keys.moved = false;
         found.replaceChildren(...places.map((place) => {
           const row = document.createElement('button');
           const name = document.createElement('span');
@@ -109,6 +145,7 @@ const placeSearch = (ctx: CellEditorContext, pick: (place: PlaceValue) => void):
 
           return row;
         }));
+        highlight(0);
       };
       const run = (query: string, id: number): void => {
         const loading = document.createElement('div');

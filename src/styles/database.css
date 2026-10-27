@@ -14298,7 +14298,9 @@ button[data-blok-database-feed-reaction]:hover,
 }
 
 [data-blok-database-place-current]:hover,
-[data-blok-database-place-result]:hover {
+[data-blok-database-place-result]:hover,
+[data-blok-database-place-current][data-active],
+[data-blok-database-place-result][data-active] {
   background-color: var(--blok-database-hover-bg);
 }
 

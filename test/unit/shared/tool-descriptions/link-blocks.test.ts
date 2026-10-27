@@ -202,7 +202,7 @@ describe('link self-description metadata and saved schemas', () => {
       summary, guidance, data: dataSchema, summaryFields,
       ...(name === 'page' ? { inputFields: [], guardedFields: { pageId: 'block.insert' }, actions: PAGE_ACTIONS } : {}),
       ...(name === 'embed' ? { actions: EMBED_ACTIONS } : {}),
-      ...(name === 'bookmark' ? { actions: BOOKMARK_ACTIONS } : {}),
+      ...(name === 'bookmark' ? { findFields: ['title'], actions: BOOKMARK_ACTIONS } : {}),
     });
     expect(description.guidance).not.toMatch(/<[^>]+>|\x60\x60\x60/);
   });

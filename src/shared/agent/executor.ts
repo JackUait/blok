@@ -9,6 +9,7 @@ import { isVersionRead, splitCommandName } from './names';
 import { PREPARE_PENDING } from './plan-state';
 import { planBatch } from './planner';
 import { runRestore, runVersionCommand } from './version-history';
+import { FILE_UPLOAD_ACTION } from '../tool-manifest';
 
 import type { AgentActor, AgentApprover, AgentBatch, AgentError, AgentErrorCode, AgentResult, AgentWarning, CommandLogEntry } from '../../../types/agent';
 import type { EditStamp } from './json-applier';
@@ -498,6 +499,20 @@ const finalPlan = <T>(plan: () => T, batch: AgentBatch, revision: string, snapsh
   }
 };
 
+/** Upload bytes run to ~133 MB a batch and the log is never trimmed, so it keeps their length only. Nothing replays from it. */
+const withoutUploadBytes = (name: unknown, args: unknown): unknown => {
+  if (typeof name !== 'string' || splitCommandName(name)?.action !== FILE_UPLOAD_ACTION || !isRecord(args) || typeof args.data !== 'string') {
+    return args;
+  }
+
+  return { ...args, data: `<${args.data.length} base64 characters, not logged>` };
+};
+
+const loggedBatch = (batch: unknown): unknown => isRecord(batch) && Array.isArray(batch.commands)
+  ? { ...batch, commands: batch.commands.map((command: unknown) =>
+    isRecord(command) ? { ...command, args: withoutUploadBytes(command.name, command.args) } : command) }
+  : batch;
+
 export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
   const warnings: AgentWarning[] = [];
   const orphaned: HostReceipt[] = [];
@@ -508,14 +523,14 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
 
     if (commands === undefined) {
       input.log.push({
-        batch: input.batchNo, index: error?.commandIndex ?? 0, name: '', args: input.batch,
+        batch: input.batchNo, index: error?.commandIndex ?? 0, name: '', args: loggedBatch(input.batch),
         ...(error !== null && { error }), actorId: input.actor.id,
       });
 
       return;
     }
     commands.forEach((command, index) => input.log.push({
-      batch: input.batchNo, index, name: command.name, args: command.args,
+      batch: input.batchNo, index, name: command.name, args: withoutUploadBytes(command.name, command.args),
       ...(results !== null && { result: results[index] }),
       ...(error !== null && (error.commandIndex ?? 0) === index && { error }),
       actorId: input.actor.id,

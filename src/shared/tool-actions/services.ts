@@ -15,9 +15,12 @@ export interface UploadLimits {
 export interface FileUploaderService extends UploaderService {
   /** A file tool host may also report the stored size and type. */
   uploadByFile(file: File, ctx: UploadContext): Promise<UploadedAsset & { size?: number; mimeType?: string }>;
+  /** Host values; anything left undefined keeps the tool's default. */
   limits?(kind: AssetKind): UploadLimits | undefined;
   /** Reads a file the host allows. Rejects past `maxBytes`. Absent: the agent sends bytes only. */
   readLocal?(path: string, maxBytes: number): Promise<{ bytes: Uint8Array<ArrayBuffer>; name: string }>;
+  /** Decodes base64 the BASE64 check already passed, faster than the shared fallback. */
+  decodeBase64?(data: string): Uint8Array<ArrayBuffer>;
 }
 
 export type LinkMetadataService = {

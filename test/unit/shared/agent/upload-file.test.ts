@@ -290,3 +290,74 @@ describe('the agent\'s default limits', () => {
     });
   });
 });
+
+describe('host limits that leave a field undefined or garbled', () => {
+  it('keeps the default types when the host returns types: undefined', async () => {
+    const host = fakeUploader();
+    const session = open(EMPTY, { ...host, limits: () => ({ types: undefined, maxSize: undefined }) });
+    const error = errorOf(await run(session, 'image.uploadFile', { data: btoa('<html></html>'), fileName: 'page.html', position: 'end' }));
+
+    expect(error).toMatchObject({ code: 'PRECONDITION_FAILED' });
+    expect(host.uploadByFile).not.toHaveBeenCalled();
+  });
+
+  it('keeps the default size cap when the host returns maxSize: undefined', async () => {
+    const host = fakeUploader();
+    const readLocal = vi.fn(async () => ({ bytes: PNG, name: 'cat.png' }));
+    const session = open(EMPTY, { ...host, readLocal, limits: () => ({ maxSize: undefined }) });
+
+    expect(errorOf(await run(session, 'image.uploadFile', { path: 'cat.png', position: 'end' }))).toBeUndefined();
+    // The cap the reader gets is the image tool's 30 MiB default, not undefined (which no size passes).
+    expect(readLocal).toHaveBeenCalledWith('cat.png', 30 * 1024 * 1024);
+  });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, -1, 0, 1.5, '10'])('fails closed on maxSize %s', async (maxSize) => {
+    const host = fakeUploader();
+    const session = open(EMPTY, { ...host, limits: () => ({ maxSize }) });
+    const error = errorOf(await run(session, 'image.uploadFile', { data: base64(PNG), fileName: 'a.png', position: 'end' }));
+
+    expect(error).toBeDefined();
+    expect(host.uploadByFile).not.toHaveBeenCalled();
+  });
+
+  it('fails closed on types that are not a list of strings', async () => {
+    const host = fakeUploader();
+    const session = open(EMPTY, { ...host, limits: () => ({ types: 'image/*' }) });
+    const error = errorOf(await run(session, 'image.uploadFile', { data: base64(PNG), fileName: 'a.png', position: 'end' }));
+
+    expect(error).toBeDefined();
+    expect(host.uploadByFile).not.toHaveBeenCalled();
+  });
+});
+
+describe('the session log', () => {
+  it('keeps upload bytes out of the log', async () => {
+    const host = fakeUploader();
+    const session = open(EMPTY, host);
+    const data = base64(PNG);
+
+    expect(errorOf(await run(session, 'image.uploadFile', { data, fileName: 'a.png', position: 'end' }))).toBeUndefined();
+    expect(JSON.stringify(session.log())).not.toContain(data);
+    expect(session.log()[0].args).toMatchObject({ fileName: 'a.png', data: expect.stringMatching(/16 base64 characters/) });
+  });
+
+  it('keeps upload bytes out of the log when the envelope is refused', async () => {
+    const session = open(EMPTY, fakeUploader());
+    const data = base64(PNG);
+
+    await session.execute({ commands: [{ name: 'image.uploadFile', args: { data, fileName: 'a.png' }, bogus: 1 }] } as never);
+    expect(JSON.stringify(session.log())).not.toContain(data);
+  });
+});
+
+describe('base64 decoding', () => {
+  it('uses the host\'s decoder when it has one', async () => {
+    const host = fakeUploader();
+    const decodeBase64 = vi.fn((data: string) => Uint8Array.from(atob(data), char => char.charCodeAt(0)));
+    const session = open(EMPTY, { ...host, decodeBase64 });
+
+    expect(errorOf(await run(session, 'file.uploadFile', { data: btoa('hello'), fileName: 'a.txt', position: 'end' }))).toBeUndefined();
+    expect(decodeBase64).toHaveBeenCalledWith(btoa('hello'));
+    expect(host.uploads[0].text).toBe('hello');
+  });
+});

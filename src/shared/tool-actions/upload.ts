@@ -95,7 +95,7 @@ const checkArgs = (args: UploadArgs): void => {
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 const SEXTET = new Map(Array.from(ALPHABET, (char, index) => [char, index]));
 
-// The Jint runtime has no atob; `data` is already checked against BASE64.
+// The fallback where the host gives no decoder: Jint has no atob. `data` is already checked against BASE64.
 const fromBase64 = (data: string): Uint8Array<ArrayBuffer> => {
   const body = data.replace(/=+$/, '');
   const bytes = new Uint8Array(Math.floor(body.length * 3 / 4));
@@ -114,7 +114,7 @@ const fromBase64 = (data: string): Uint8Array<ArrayBuffer> => {
   return bytes;
 };
 
-const decode = (data: string, maxSize: number): Uint8Array<ArrayBuffer> => {
+const decode = (data: string, maxSize: number, fast?: (data: string) => Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer> => {
   // From the length alone, before decoding: four characters carry at most three bytes.
   if (data.length > Math.ceil(maxSize / 3) * 4) {
     refused(`The file is too large: this host takes at most ${maxSize} bytes.`);
@@ -122,7 +122,35 @@ const decode = (data: string, maxSize: number): Uint8Array<ArrayBuffer> => {
   if (data.length % 4 !== 0 || !BASE64.test(data)) {
     invalid('data must be standard base64 (A-Z a-z 0-9 + /, padded with =).', '/data');
   }
-  return fromBase64(data);
+  return fast?.(data) ?? fromBase64(data);
+};
+
+const isByteCount = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+
+const isTypeList = (value: unknown): value is string[] => Array.isArray(value) && value.every(type => typeof type === 'string');
+
+/** The host's limits over the tool's defaults, as a person's pick reads `config.types ?? DEFAULT`. A garbled value refuses. */
+const limitsFor = (kind: AssetKind, given: unknown): UploadLimits & { maxSize: number } => {
+  const fallback = DEFAULT_UPLOAD_LIMITS[kind];
+
+  if (given === undefined) {
+    return fallback;
+  }
+  if (typeof given !== 'object' || given === null) {
+    return refused('This host\'s upload limits are not readable, so nothing is uploaded.');
+  }
+  const types: unknown = Reflect.get(given, 'types');
+  const maxSize: unknown = Reflect.get(given, 'maxSize');
+
+  if (types !== undefined && !isTypeList(types)) {
+    return refused('This host\'s upload types are not a list of MIME types, so nothing is uploaded.');
+  }
+  if (maxSize !== undefined && !isByteCount(maxSize)) {
+    return refused('This host\'s upload size limit is not a whole number of bytes, so nothing is uploaded.');
+  }
+  const kept = isTypeList(types) ? types : fallback.types;
+
+  return { ...(kept !== undefined && { types: [...kept] }), maxSize: isByteCount(maxSize) ? maxSize : fallback.maxSize };
 };
 
 const checkType = (kind: AssetKind, mimeType: string, limits: UploadLimits): void => {
@@ -147,7 +175,7 @@ const uploadFile = (kind: AssetKind, delta: (uploaded: Uploaded) => Record<strin
     if (!isFileUploader(uploader)) {
       return noUploader();
     }
-    const limits = { ...DEFAULT_UPLOAD_LIMITS[kind], ...uploader.limits?.(kind) };
+    const limits = limitsFor(kind, uploader.limits?.(kind));
     const local = args.path === undefined ? null : await (async () => {
       if (uploader.readLocal === undefined) {
         throw failure('COMMAND_UNAVAILABLE', 'This host reads no local files. Send the bytes as base64 data with a fileName.', {
@@ -164,7 +192,7 @@ const uploadFile = (kind: AssetKind, delta: (uploaded: Uploaded) => Record<strin
       invalid(`mimeType "${args.mimeType}" does not match the file name "${fileName}" (${mimeType === '' ? 'unknown type' : mimeType}).`, '/mimeType');
     }
     checkType(kind, mimeType, limits);
-    const bytes = local?.bytes ?? decode(args.data ?? '', limits.maxSize);
+    const bytes = local?.bytes ?? decode(args.data ?? '', limits.maxSize, uploader.decodeBase64);
 
     if (bytes.byteLength > limits.maxSize) {
       refused(`The file is too large: ${bytes.byteLength} bytes, and this host takes at most ${limits.maxSize}.`);

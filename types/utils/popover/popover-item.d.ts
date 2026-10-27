@@ -60,9 +60,18 @@ export interface PopoverItemChildren {
    * aligned (e.g. the inline toolbar's link field); 'dropdown' opens it under
    * the item's value, or over it when there is no room under it, like a
    * select. A 'dropdown' list opens on click or a key, never on hover, and
-   * moving the pointer over other rows leaves it open.
+   * moving the pointer over other rows leaves it open. 'under' opens it right
+   * under the item, its end edge on the item's end edge.
    */
-  placement?: 'beside' | 'below' | 'dropdown';
+  placement?: 'beside' | 'below' | 'dropdown' | 'under';
+
+  /**
+   * True if the children open on a click or a key only, never on hover.
+   * While they are open a transparent layer covers the parent popover, so
+   * hovering its other items does nothing, and a click on it closes them.
+   * False by default.
+   */
+  clickOnly?: boolean;
 
   /**
    * Width of the nested popover. Defaults to '280px'.

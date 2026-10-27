@@ -251,6 +251,8 @@ export const DATA_ATTR: {
   readonly popoverItemValue: 'data-blok-popover-item-value';
   /** A dropdown item's value and chevron, drawn as one button */
   readonly popoverItemDropdownButton: 'data-blok-popover-item-dropdown-button';
+  /** Lies over a popover while a click-only list of one of its items is open */
+  readonly popoverCover: 'data-blok-popover-cover';
   /** A grey line under the item's title (description) */
   readonly popoverItemDescription: 'data-blok-popover-item-description';
   readonly popoverItemSearchSuffix: 'data-blok-popover-item-search-suffix';

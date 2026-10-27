@@ -59,6 +59,10 @@ interface AnchorSnapshot {
   contextRect?: DOMRect;
 }
 
+/** A list that opens on a click or a key only, and ignores pointer moves while open. */
+const isClickOnly = (item: PopoverItem | null | undefined): item is PopoverItem =>
+  item?.childrenPlacement === 'dropdown' || item?.childrenClickOnly === true;
+
 const isMeasurableRect = (rect: DOMRect | undefined): rect is DOMRect =>
   rect !== undefined && (rect.width > 0 || rect.height > 0);
 
@@ -152,6 +156,9 @@ export class PopoverDesktop extends PopoverAbstract {
    * types, and unobserved growth would push the card past the viewport edge.
    */
   private nestedBelowResizeObserver: ResizeObserver | null = null;
+
+  /** The layer over this menu while a click-only list is open. */
+  private nestedCover: HTMLElement | null = null;
 
   /**
    * True while the open submenu sits in the Top Layer. Its coordinates are
@@ -1330,7 +1337,7 @@ export class PopoverDesktop extends PopoverAbstract {
         return;
       }
 
-      if (this.nestedPopoverTriggerItem?.childrenPlacement === 'dropdown') {
+      if (isClickOnly(this.nestedPopoverTriggerItem)) {
         return;
       }
 
@@ -1415,8 +1422,8 @@ export class PopoverDesktop extends PopoverAbstract {
       return;
     }
 
-    // A dropdown closes on a pick, a click outside it, or a key, never on pointer moves.
-    if (this.nestedPopoverTriggerItem?.childrenPlacement === 'dropdown') {
+    // A click-only list closes on a pick, a click outside it, or a key, never on pointer moves.
+    if (isClickOnly(this.nestedPopoverTriggerItem)) {
       return;
     }
 
@@ -1549,6 +1556,9 @@ export class PopoverDesktop extends PopoverAbstract {
 
     this.nestedKeyboard?.destroy();
     this.nestedKeyboard = null;
+
+    this.nestedCover?.remove();
+    this.nestedCover = null;
 
     this.nestedPopover.off(PopoverEvent.ClosedOnActivate, this.closeOnNestedActivate);
     this.nestedPopover.hide();
@@ -1683,6 +1693,10 @@ export class PopoverDesktop extends PopoverAbstract {
 
     this.nestedPopover.show();
 
+    if (item.childrenClickOnly) {
+      this.coverWhileNestedOpen();
+    }
+
     // A top-layer submenu is fixed to the viewport while its trigger scrolls
     // with the page, so follow the trigger on scroll and resize.
     if (this.nestedInTopLayer) {
@@ -1726,6 +1740,23 @@ export class PopoverDesktop extends PopoverAbstract {
   }
 
   /**
+   * Lays a transparent layer over this menu's items while a click-only list is
+   * open: the rows get no hover, and a click on the layer closes the list.
+   * The list mounts outside the container, so the layer never covers it.
+   */
+  private coverWhileNestedOpen(): void {
+    const cover = document.createElement('div');
+
+    cover.setAttribute(DATA_ATTR.popoverCover, '');
+    cover.style.position = 'absolute';
+    cover.style.inset = '0';
+    cover.style.zIndex = '1';
+    cover.addEventListener('click', () => this.destroyNestedPopoverIfExists(false));
+    this.nodes.popoverContainer.appendChild(cover);
+    this.nestedCover = cover;
+  }
+
+  /**
    * A click in this menu outside the open dropdown's row closes the dropdown.
    * The list itself mounts outside the container, so its clicks never land here.
    * @param event - click inside the container
@@ -1733,7 +1764,7 @@ export class PopoverDesktop extends PopoverAbstract {
   private closeDropdownOnClickAway(event: Event): void {
     const trigger = this.nestedPopoverTriggerItem;
 
-    if (trigger?.childrenPlacement !== 'dropdown') {
+    if (!isClickOnly(trigger)) {
       return;
     }
     const row = trigger.getElement();
@@ -1831,17 +1862,21 @@ export class PopoverDesktop extends PopoverAbstract {
       // In RTL the card's right edge lines up with the trigger's right edge.
       // A dropdown opens on the item's value instead, flush with it.
       const button = triggerItem.childrenPlacement === 'dropdown' ? this.dropdownButtonRect(triggerItem) : undefined;
-      const anchor = button ?? triggerItem.getElement()?.getBoundingClientRect();
-      const anchorLeft = isRtl
-        ? (anchor?.right ?? parentRect.right) - nestedWidth
-        : anchor?.left ?? parentRect.left;
+      // 'under' drops from the row itself, its end edge on the row's (notion-spec-2 §16.1).
+      const under = triggerItem.childrenPlacement === 'under' ? triggerItem.getElement()?.getBoundingClientRect() : undefined;
+      const flush = button ?? under;
+      const anchor = flush ?? triggerItem.getElement()?.getBoundingClientRect();
+      const leftAligned = anchor?.left ?? parentRect.left;
+      const rightAligned = (anchor?.right ?? parentRect.right) - nestedWidth;
+      // In RTL the edges swap: 'under' then lines up left edges, the others right edges.
+      const anchorLeft = isRtl === (under === undefined) ? rightAligned : leftAligned;
       const { left, top, side } = resolveNestedPopoverBelowPlacement({
-        parentRect: { left: anchorLeft, top: button?.top ?? parentRect.top, bottom: button?.bottom ?? parentRect.bottom },
+        parentRect: { left: anchorLeft, top: flush?.top ?? parentRect.top, bottom: flush?.bottom ?? parentRect.bottom },
         nestedWidth,
         nestedHeight,
         viewportWidth: window.innerWidth,
         viewportHeight: window.innerHeight,
-        gap: button === undefined ? undefined : 0,
+        gap: flush === undefined ? undefined : 0,
       });
 
       // A left below anchorLeft means the right-viewport clamp engaged.

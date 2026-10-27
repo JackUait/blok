@@ -146,7 +146,14 @@ export abstract class PopoverItem {
    * True if hovering the item opens its children
    */
   public get opensOnHover(): boolean {
-    return this.hasChildren && this.moreButtonLabel === undefined && this.childrenPlacement !== 'dropdown';
+    return this.hasChildren && this.moreButtonLabel === undefined && this.childrenPlacement !== 'dropdown' && !this.childrenClickOnly;
+  }
+
+  /**
+   * True if the children open on a click or a key only, with the parent covered while open
+   */
+  public get childrenClickOnly(): boolean {
+    return this.params !== undefined && 'children' in this.params && this.params.children?.clickOnly === true;
   }
 
   /**   * Returns true if the chevron icon should be hidden
@@ -204,9 +211,9 @@ export abstract class PopoverItem {
 
   /**
    * Where the children popover opens: beside the parent popover (default),
-   * below it, or as a dropdown on the item's value.
+   * below it, as a dropdown on the item's value, or under the item.
    */
-  public get childrenPlacement(): 'beside' | 'below' | 'dropdown' {
+  public get childrenPlacement(): 'beside' | 'below' | 'dropdown' | 'under' {
     if (this.params === undefined || !('children' in this.params)) {
       return 'beside';
     }

@@ -518,6 +518,9 @@ test.describe('CON database', () => {
     await createBlok(page, DB_DOC);
     await gap(page);
     await page.locator('[data-blok-database-add-card][data-option-id="opt-todo"]').click();
+    // The new card opens with its title being edited. End that, so the board shows the card as redo draws it.
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-blok-database-card-title-input]')).toHaveCount(0);
     await gap(page);
     const afterAdd = await boardCards(page);
 

@@ -2,13 +2,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { generateKeyBetween, generateNKeysBetween } from '../../../../src/shared/database/fractional-index';
-import oracle from './fixtures/fractional-indexing-4.0.0.json';
+import recorded from './fixtures/fractional-indexing-4.0.0.json';
 
 /*
  * The fixture is fractional-indexing 4.0.0's own output, recorded while the
  * package was installed. Shipped clients wrote keys with that version, so the
  * port must keep giving the same answers. A null answer means it threw.
  */
+
+interface Oracle {
+  between: Array<[string | null, string | null, string | null]>;
+  walks: { append: string[]; prepend: string[]; squeeze: string[] };
+  nKeys: Array<[string | null, string | null, number, string[] | null]>;
+}
+
+// JSON imports type tuples as mixed arrays.
+const oracle = recorded as unknown as Oracle;
 
 const outcome = (run: () => string): string | null => {
   try {

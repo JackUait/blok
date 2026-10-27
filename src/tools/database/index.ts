@@ -9651,8 +9651,8 @@ export class DatabaseTool implements BlockTool {
       ? { [subGroupBy]: this.droppedSubGroupValue(subGroupBy, rowId, result.toSubGroup) }
       : {};
 
-    // Neighbours arrive in sort order, not key order, so positionBetween would
-    // throw. A reorder inside the group asks first (D7). A move to another
+    // Neighbours arrive in sort order, not key order, so a key between them
+    // would mean nothing. A reorder inside the group asks first (D7). A move to another
     // group changes the value only: Notion's answer there is unmeasured.
     if (viewConfig !== undefined && this.controls.effective(viewConfig).sorts.length > 0) {
       const row = this.model.getRow(rowId);

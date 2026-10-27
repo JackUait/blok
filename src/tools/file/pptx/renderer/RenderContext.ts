@@ -29,6 +29,8 @@ export interface RenderContext {
   colorCache: Map<string, { color: string; alpha: number }>;
   /** Async media/rendering work that callers may await before screenshot/export. */
   asyncTasks?: Promise<void>[];
+  /** Presentation-specific embedded CSS families referenced by this render. */
+  usedEmbeddedFontFamilies?: Set<string>;
   /** Aborted when the owning slide is disposed; async renderers must stop late writes. */
   signal?: AbortSignal;
   /** Fill node from parent group's grpSpPr, used to resolve `a:grpFill` in children. */
@@ -106,6 +108,7 @@ export function createRenderContext(
     nodeOrigin: 'slide',
     groupDepth: 0,
     groupAncestorHas3dScene: false,
+    usedEmbeddedFontFamilies: new Set(),
     signal,
   };
 }

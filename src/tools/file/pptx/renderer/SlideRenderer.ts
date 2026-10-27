@@ -21,6 +21,7 @@ import { BaseNodeData } from '../model/nodes/BaseNode';
 import { SafeXmlNode } from '../parser/XmlParser';
 import type { RelEntry } from '../parser/RelParser';
 import { parseTemplateShapes } from '../model/TemplateShapes';
+import { useEmbeddedFonts } from './EmbeddedFontLoader';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -313,6 +314,9 @@ export function renderSlide(
     restoreMeasurementMount();
   }
 
+  const embeddedFontUse = useEmbeddedFonts(presentation, ctx.usedEmbeddedFontFamilies ?? new Set());
+  asyncTasks.push(embeddedFontUse.ready);
+
   // Build SlideHandle
   let disposed = false;
   const mediaUrlCache = ctx.mediaUrlCache;
@@ -322,6 +326,7 @@ export function renderSlide(
     if (disposed) return;
     disposed = true;
     abortController.abort();
+    embeddedFontUse.dispose();
 
     // Revoke blob URLs only in standalone mode (caller doesn't own a shared cache)
     if (!isSharedCache) {

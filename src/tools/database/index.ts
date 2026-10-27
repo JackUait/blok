@@ -7722,11 +7722,16 @@ export class DatabaseTool implements BlockTool {
   /** The agent can take a button's message now. If not, says why in a toast. */
   private agentCanRun(): boolean {
     const agent = this.api.agent;
-    const blocked = agent === undefined ? 'tools.database.buttonAgentFailed' : agent.state.status === 'working' ? 'tools.database.buttonAgentBusy' : null;
+    const notice = (key: string): false => {
+      this.api.notifier.show({ message: this.api.i18n.t(key), style: 'error' });
 
-    if (blocked !== null) this.api.notifier.show({ message: this.api.i18n.t(blocked), style: 'error' });
+      return false;
+    };
 
-    return blocked === null;
+    if (agent === undefined) return notice('tools.database.buttonAgentFailed');
+    if (agent.state.status === 'working') return notice('tools.database.buttonAgentBusy');
+
+    return true;
   }
 
   /**

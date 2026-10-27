@@ -6252,9 +6252,13 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   block-size: 18px;
 }
 
-/* §14.11: a card's rollup items sit 6px apart. */
+/* §14.11: a card's rollup items sit 6px apart. §16.3: they never grow, so each bar stays at 48. */
 :is([data-blok-database-card-property], [data-blok-database-gallery-property]) > [data-blok-database-cell][data-blok-database-number-list] {
   gap: var(--blok-space-1) var(--blok-space-1-5);
+}
+
+:is([data-blok-database-card-property], [data-blok-database-gallery-property]) [data-blok-database-number-item] {
+  flex: none;
 }
 
 /* ID: tertiary ink (research/08). */

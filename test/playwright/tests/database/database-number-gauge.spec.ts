@@ -721,10 +721,12 @@ const cardOnBlocks = (view: Record<string, unknown>): OutputBlockData[] => [
       views: [ { id: 'v1', name: 'View', position: 'a0', sorts: [], filters: [], visibleProperties: [ 'p-bar-on', 'p-ring-on', 'p-list-bar' ], ...view } ],
       activeViewId: 'v1',
     },
-    content: [ 'r1', 'r2' ],
+    content: [ 'r1', 'r2', 'r3', 'r4', 'r5' ],
   },
-  { id: 'r1', type: 'database-row', parent: 'db-1', data: { position: 'a0', properties: { 'p-title': 'A', 'p-num': 100, 'p-bar-on': 50, 'p-ring-on': 50, 'p-stage': 'o-plan', 'p-link': [ { id: 'r1' }, { id: 'r2' } ] } } },
+  // Five related rows, so the card's list wraps.
+  { id: 'r1', type: 'database-row', parent: 'db-1', data: { position: 'a0', properties: { 'p-title': 'A', 'p-num': 100, 'p-bar-on': 50, 'p-ring-on': 50, 'p-stage': 'o-plan', 'p-link': [ 'r1', 'r2', 'r3', 'r4', 'r5' ].map((id) => ({ id })) } } },
   { id: 'r2', type: 'database-row', parent: 'db-1', data: { position: 'a1', properties: { 'p-title': 'B', 'p-num': 2469, 'p-bar-on': 1234.5, 'p-ring-on': 1234.5, 'p-stage': 'o-plan' } } },
+  ...[ 1554, 1776, 1998 ].map((num, i): OutputBlockData => ({ id: `r${i + 3}`, type: 'database-row', parent: 'db-1', data: { position: `a${i + 2}`, properties: { 'p-title': `R${i + 3}`, 'p-num': num, 'p-stage': 'o-plan' } } })),
 ];
 
 for (const theme of THEMES) {
@@ -768,7 +770,8 @@ for (const theme of THEMES) {
 
       expect(geometry.bar).toEqual({ gap: 8, toEnd: 0, fromLine: 12 });
       expect(geometry.ring).toEqual({ gap: 8, size: 18, fromLine: 5, textFromLine: 5 });
-      expect(geometry.listBars).toEqual([ 48, 48 ]);
+      // Even when the list wraps, no item grows.
+      expect(geometry.listBars).toEqual([ 48, 48, 48, 48, 48 ]);
       expect(geometry.listGap).toBe(6);
     });
   }

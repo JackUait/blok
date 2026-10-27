@@ -9470,6 +9470,10 @@ th[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon], td[data
   gap: var(--blok-space-1) var(--blok-space-1-5);
 }
 
+:is([data-blok-database-card-property], [data-blok-database-gallery-property]) [data-blok-database-number-item] {
+  flex: none;
+}
+
 [data-blok-database-cell="uniqueId"] {
   color: var(--blok-database-ink-tertiary);
 }

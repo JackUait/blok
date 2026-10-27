@@ -1199,6 +1199,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_ROLLUP_NUMERIC_CELL_BYTES = 355;
     // database.css: the side peek's wrapped rollup list (6px lines, 21px items), a card Number's bar across the line.
     const DATABASE_PEEK_LIST_CARD_BAR_BYTES = 382;
+    // database.css: a card's rollup list items never grow, even when the list wraps.
+    const DATABASE_CARD_LIST_ITEM_BYTES = 181;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1445,7 +1447,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_ROLLUP_LIST_COLOR_BUTTON_BYTES
       + DATABASE_CARD_GAUGE_COMMENTS_HEADING_BYTES
       + DATABASE_ROLLUP_NUMERIC_CELL_BYTES
-      + DATABASE_PEEK_LIST_CARD_BAR_BYTES;
+      + DATABASE_PEEK_LIST_CARD_BAR_BYTES
+      + DATABASE_CARD_LIST_ITEM_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

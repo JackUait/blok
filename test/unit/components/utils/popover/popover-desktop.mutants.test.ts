@@ -3063,6 +3063,25 @@ describe('PopoverDesktop — nested beside placement geometry', () => {
     }
   });
 
+  // The clone `size` measures sits outside the menu's styles, so its rows can be taller than the mounted ones.
+  it('centres a submenu on its row by its mounted height, not the measuring clone\'s', () => {
+    const sizeSpy = vi.spyOn(PopoverDesktop.prototype, 'size', 'get')
+      .mockReturnValue({ width: 320, height: 107 });
+    const heightSpy = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.hasAttribute('data-blok-popover-container') ? 94 : 0;
+    });
+
+    try {
+      const { nested } = showWideSubmenu({ left: 400, right: 600 });
+
+      // Row centre 140 - 94 / 2 = 93, root top 80.
+      expect(asInternal(nested).nodes.popoverContainer.style.top).toBe('13px');
+    } finally {
+      sizeSpy.mockRestore();
+      heightSpy.mockRestore();
+    }
+  });
+
   it('starts a flipped RTL submenu 12px after the trigger\'s "…"', () => {
     const sizeSpy = vi.spyOn(PopoverDesktop.prototype, 'size', 'get')
       .mockReturnValue({ width: 320, height: 80 });

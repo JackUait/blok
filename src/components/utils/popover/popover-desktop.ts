@@ -1956,7 +1956,8 @@ export class PopoverDesktop extends PopoverAbstract {
     // so the submenu never overflows the viewport top or bottom.
     const triggerItemEl = triggerItem.getElement();
     const triggerItemRect = triggerItemEl?.getBoundingClientRect();
-    const nestedHeight = this.nestedPopover?.size.height ?? 0;
+    // The mounted box wins over `size`: its clone sits outside this menu's styles, so its rows can be taller.
+    const nestedHeight = nestedContainer.offsetHeight > 0 ? nestedContainer.offsetHeight : this.nestedPopover?.size.height ?? 0;
 
     if (triggerItemRect && nestedHeight > 0) {
       const triggerCenterY = triggerItemRect.top + triggerItemRect.height / 2;

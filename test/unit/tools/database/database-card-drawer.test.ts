@@ -2518,6 +2518,8 @@ describe('DatabaseCardDrawer', () => {
   });
 
   it('mounts one legacy body after opening A, B, then A before imports settle', async () => {
+    // An earlier test's drawer can still be importing the editor. Without this wait, this test's import stalled when run in-file.
+    await vi.dynamicImportSettled();
     vi.resetModules();
     vi.doUnmock('../../../../src/blok');
 

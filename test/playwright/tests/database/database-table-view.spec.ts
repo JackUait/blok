@@ -489,6 +489,15 @@ test.describe('property and row menus', () => {
     return (db?.data as { schema: Array<{ id: string; config?: { options: SavedOption[] } }> }).schema;
   }, databaseId);
   const openMenu = (page: Page): Locator => page.locator('[data-blok-popover-opened="true"]');
+  // Click a menu item once its menu's entrance ends. While it plays the item is "not stable", and each
+  // retry of a click scrolls the item to a new alignment (end, center, start): that scrolls this page,
+  // the menu follows a frame later, and the still pointer lands on a sibling row that closes the submenu.
+  const clickSettled = async (item: Locator): Promise<void> => {
+    await item.evaluate((element) => Promise.all(element.closest('[data-blok-popover-container]')?.getAnimations({ subtree: true })
+      .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+      .map((animation) => animation.finished.catch(() => undefined)) ?? []));
+    await item.click();
+  };
 
   test('Edit property on a select recolours an option and the menu stays open', async ({ page }) => {
     await mount(page, blocks());
@@ -586,8 +595,8 @@ test.describe('property and row menus', () => {
     await first.locator('[data-row-id="r1"]').hover();
     await first.locator('[data-row-id="r1"] [data-blok-database-table-row-handle]').click();
     await expect(openMenu(page).getByPlaceholder('Search actions…')).toBeVisible();
-    await openMenu(page).getByRole('menuitem', { name: 'Move to', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'Archive' }).click();
+    await clickSettled(openMenu(page).getByRole('menuitem', { name: 'Move to', exact: true }));
+    await clickSettled(page.getByRole('menuitem', { name: 'Archive' }));
 
     const moved = page.locator('[data-blok-id="db-2"] [data-blok-database-table-row][data-row-id="r1"]');
 

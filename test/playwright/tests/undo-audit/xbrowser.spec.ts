@@ -155,6 +155,9 @@ test.describe('undo audit: cross-browser', () => {
     await typeAtEnd(page, 'one', 'X');
     await wait(page, CAPTURE);
     await page.locator('[data-blok-database-add-card][data-option-id="opt-todo"]').click();
+    // The new card opens with its title field focused. Leave it, so the press is not in a field.
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-blok-database-card-title-input]')).toHaveCount(0);
     await wait(page, CAPTURE);
     expect((await texts(page, 'b2')).length).toBe(4);
 
@@ -163,6 +166,23 @@ test.describe('undo audit: cross-browser', () => {
 
     expect(await texts(page, 'b1')).toEqual(['paragraph:oneX']);
     expect((await texts(page, 'b2')).length).toBe(3);
+  });
+
+  // XBR-1b. A text field keeps its native undo. With nothing to undo, Chromium undoes the
+  // page's last native edit instead, which was typed in the other editor.
+  test('XBR-1b: Cmd+Z in an empty field of one editor leaves the other editor alone', async ({ page }) => {
+    await mountTwo(page, [P('a', 'one')], BOARD);
+    await typeAtEnd(page, 'one', 'X');
+    await wait(page, CAPTURE);
+    await page.locator('[data-blok-database-add-card][data-option-id="opt-todo"]').click();
+    await expect(page.locator('[data-blok-database-card-title-input]')).toBeFocused();
+    await wait(page, CAPTURE);
+
+    await page.keyboard.press(UNDO);
+    await wait(page, CAPTURE);
+
+    expect(await texts(page, 'b1')).toEqual(['paragraph:oneX']);
+    expect((await texts(page, 'b2')).length).toBe(4);
   });
 
   // XBR-2. Source: undo-redo.spec.ts "undo after block split rejoins blocks (single undo)".

@@ -171,6 +171,25 @@ describe('undo audit — entry points', () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
+  // The browser's undo stack is page-wide. An empty field in editor B has nothing to undo,
+  // so the browser undoes the last native edit, typed in editor A.
+  it('a historyUndo beforeinput in one editor while focus is in another editor runs neither history', () => {
+    const a = mountEditor();
+    const b = mountEditor();
+    const field = document.createElement('input');
+
+    b.redactor.appendChild(field);
+    field.focus();
+
+    const event = new InputEvent('beforeinput', { inputType: 'historyUndo', bubbles: true, cancelable: true });
+
+    a.redactor.dispatchEvent(event);
+
+    expect(a.undo).not.toHaveBeenCalled();
+    expect(b.undo).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(true);
+  });
+
   it('ENT-5: history.undo() does nothing while the editor is read-only', () => {
     const moduleConfig: ModuleConfig = { config: {}, eventsDispatcher: new EventsDispatcher<BlokEventMap>() };
     const api = new HistoryAPI(moduleConfig);

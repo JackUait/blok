@@ -1166,6 +1166,13 @@ export class KeyboardController extends Controller {
 
     event.preventDefault();
 
+    // The browser's undo stack is page-wide: Cmd+Z in another editor's empty field lands here.
+    const focusedEditor = document.activeElement?.closest('[data-blok-testid="blok-editor"]') ?? null;
+
+    if (focusedEditor !== null && focusedEditor !== this.wrapperElement) {
+      return;
+    }
+
     if (this.Blok.DragManager.isDragging) {
       return;
     }

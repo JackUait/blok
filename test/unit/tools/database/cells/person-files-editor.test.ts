@@ -96,14 +96,26 @@ describe('person cell editor', () => {
     expect(ctx.onClose).not.toHaveBeenCalled();
   });
 
-  it('Enter on a highlighted person who is already chosen does not remove them', () => {
-    const ctx = open([{ id: 'me' }]);
+  // notion-spec-2 §18.4: an added person becomes a chip, leaves the list, and the highlight moves to the next row.
+  it('an added person leaves the list and the highlight moves on, so a second Enter adds the next one', () => {
+    const ctx = open([]);
     const search = q<HTMLInputElement>('[data-blok-database-person-search]');
 
     press(search, 'ArrowDown');
     press(search, 'Enter');
 
-    expect(ctx.onCommit).not.toHaveBeenCalled();
+    expect(rows()).toEqual(['u1', 'u2']);
+    expect(q('[data-blok-database-person-chip="me"]')).toBeTruthy();
+    expect(q('[data-blok-database-person-option][data-active]').getAttribute('data-blok-database-person-option')).toBe('u1');
+
+    press(search, 'Enter');
+    expect(lastCommit(ctx)).toEqual([{ id: 'me' }, { id: 'u1' }]);
+  });
+
+  it('lists only the people not chosen yet', () => {
+    open([{ id: 'u1' }]);
+
+    expect(rows()).toEqual(['me', 'u2']);
   });
 
   it('filters by name as you type and picks the highlighted person with Enter', () => {

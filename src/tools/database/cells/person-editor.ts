@@ -106,10 +106,11 @@ class PersonEditor implements CellEditorHandle {
     this.ctx.onClose?.();
   }
 
+  /** notion-spec-2 §18.4: a chosen person is a chip in the top field, not a row. */
   private filtered(): DatabasePerson[] {
     const needle = this.query.trim().toLowerCase();
 
-    return needle === '' ? this.people : this.people.filter((p) => p.name.toLowerCase().includes(needle));
+    return this.people.filter((p) => !this.selected.includes(p.id) && (needle === '' || p.name.toLowerCase().includes(needle)));
   }
 
   private commit(): void {
@@ -157,8 +158,7 @@ class PersonEditor implements CellEditorHandle {
       event.preventDefault();
       const person = rows[this.activeIndex];
 
-      // Enter only adds; the chip's × removes.
-      if (person !== undefined && !this.selected.includes(person.id)) this.toggle(person.id);
+      if (person !== undefined) this.toggle(person.id);
     } else if (event.key === 'Backspace' && this.search.value === '' && this.selected.length > 0) {
       event.preventDefault();
       this.toggle(this.selected[this.selected.length - 1]);
@@ -194,6 +194,8 @@ class PersonEditor implements CellEditorHandle {
   private renderList(): void {
     const rows = this.filtered();
 
+    // The added row leaves, so the same index is now the next row.
+    this.activeIndex = Math.min(this.activeIndex, rows.length - 1);
     this.search.removeAttribute('aria-activedescendant');
 
     this.list.replaceChildren(...rows.map((person, index) => {

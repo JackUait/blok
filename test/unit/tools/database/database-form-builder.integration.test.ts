@@ -396,8 +396,8 @@ describe('local form question builder', () => {
     });
     expect(requireElement<HTMLInputElement>('[id="blok-form-form-title"]').value).toBe('Response');
     requireElement<HTMLButtonElement>('[id="blok-form-form-people"]').click();
-    await vi.waitFor(() => expect(q('[data-blok-database-person-option="ada"]')).not.toBeNull());
-    expect(requireElement('[data-blok-database-person-option="ada"]').getAttribute('aria-selected')).toBe('true');
+    await vi.waitFor(() => expect(q('[data-blok-database-person-chip="ada"]')).not.toBeNull());
+    expect(q('[data-blok-database-person-option="ada"]')).toBeNull();
     expect(requireElement('[data-blok-database-person-option="grace"]').getAttribute('aria-selected')).toBe('false');
     dismiss();
     staleSubmit.click();

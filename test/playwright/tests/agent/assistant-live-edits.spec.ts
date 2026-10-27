@@ -137,9 +137,12 @@ const waitInPage = (page: Page, ms: number): Promise<void> => page.evaluate((tim
   window.setTimeout(resolve, timeout);
 }), ms);
 
+// Subtree: typing folds the actions row, and the bar's height (so every gap under it) eases for ~400ms.
+// Endless animations (shine, rose) never finish; a cancelled one rejects.
 const settledBar = async (page: Page): Promise<void> => {
-  await page.getByRole('dialog', { name: 'Ask AI' })
-    .evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished)));
+  await page.getByRole('dialog', { name: 'Ask AI' }).evaluate((element) => Promise.all(element.getAnimations({ subtree: true })
+    .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+    .map((animation) => animation.finished.catch(() => undefined))));
 };
 
 test.describe('Ask AI live edits', () => {

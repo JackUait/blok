@@ -1,0 +1,559 @@
+// Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/**
+ * Top-level presentation builder — assembles all parsed components
+ * (themes, masters, layouts, slides) into a single PresentationData structure.
+ */
+
+import {
+  findMatchingLayoutPlaceholder,
+  findMatchingMasterPlaceholder,
+  getPlaceholderInfo,
+} from './placeholderMatching';
+import { PptxFiles } from '../parser/ZipParser';
+import type { MediaResolver } from '../utils/media';
+import { parseXml, SafeXmlNode } from '../parser/XmlParser';
+import { parseRels, RelEntry, resolveRelTarget } from '../parser/RelParser';
+import { emuToPx } from '../parser/units';
+import { ThemeData, parseTheme } from './Theme';
+import { MasterData, parseMaster } from './Master';
+import { LayoutData, parseLayout, PlaceholderEntry } from './Layout';
+import { SlideData, SlideNode, createLazySlide, materializeSlideData, parseSlide } from './Slide';
+import { BaseNodeData, PlaceholderInfo, Position, Size, findXfrm } from './nodes/BaseNode';
+import type { GroupNodeData } from './nodes/GroupNode';
+
+export interface PresentationData {
+  width: number;
+  height: number;
+  /** Presentation slide-number offset. Library-built models always set this; older manual models may omit it. */
+  firstSlideNum?: number;
+  slides: SlideData[];
+  layouts: Map<string, LayoutData>;
+  masters: Map<string, MasterData>;
+  themes: Map<string, ThemeData>;
+  slideToLayout: Map<number, string>;
+  layoutToMaster: Map<string, string>;
+  masterToTheme: Map<string, string>;
+  media: Map<string, Uint8Array>;
+  mediaResolver?: MediaResolver;
+  tableStyles?: SafeXmlNode;
+  /** Presentation-wide default text style from ppt/presentation.xml. */
+  defaultTextStyle?: SafeXmlNode;
+  charts: Map<string, SafeXmlNode>;
+  /** SmartArt fallback drawing parts keyed by part path (ppt/diagrams/drawing*.xml). */
+  diagramDrawings?: Map<string, string>;
+  /** Chart-local theme overrides keyed by chart part path. */
+  chartThemes?: Map<string, ThemeData>;
+  /** Chart style parts keyed by chart part path. */
+  chartStyles?: Map<string, SafeXmlNode>;
+  /** Chart color style parts keyed by chart part path. */
+  chartColorStyles?: Map<string, SafeXmlNode>;
+  isWps: boolean;
+}
+
+
+export interface BuildPresentationOptions {
+  /**
+   * Defer per-slide shape/table/chart node parsing until a slide is rendered,
+   * searched, serialized, or explicitly materialized.
+   */
+  lazySlides?: boolean;
+}
+
+/**
+ * Derive the base directory from a file path.
+ * E.g., "ppt/slides/slide1.xml" → "ppt/slides"
+ */
+function basePath(filePath: string): string {
+  const idx = filePath.lastIndexOf('/');
+  return idx >= 0 ? filePath.substring(0, idx) : '';
+}
+
+/**
+ * For a given XML file path, find its corresponding .rels file path.
+ * E.g., "ppt/slides/slide1.xml" → "ppt/slides/_rels/slide1.xml.rels"
+ */
+function relsPathFor(filePath: string): string {
+  const dir = basePath(filePath);
+  const fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
+  return `${dir}/_rels/${fileName}.rels`;
+}
+
+/**
+ * Extract ordered slide rId list from presentation.xml.
+ * Reads `p:sldIdLst > p:sldId` elements and returns their r:id attributes in order.
+ */
+function _getSlideOrder(presRoot: SafeXmlNode): string[] {
+  const sldIdLst = presRoot.child('sldIdLst');
+  const rIds: string[] = [];
+  for (const sldId of sldIdLst.children('sldId')) {
+    const rId = sldId.attr('id') ?? sldId.attr('r:id');
+    if (rId) rIds.push(rId);
+  }
+  return rIds;
+}
+
+/**
+ * Detect WPS (Kingsoft Office / WPS Office) by checking for known markers
+ * in the presentation XML string.
+ */
+function detectWps(presentationXml: string): boolean {
+  // WPS adds its own namespace or processing instructions
+  return (
+    presentationXml.includes('wps') ||
+    presentationXml.includes('kso') ||
+    presentationXml.includes('Kingsoft') ||
+    presentationXml.includes('WPS')
+  );
+}
+
+/**
+ * Find a rels entry by type substring match.
+ */
+function findRelByType(rels: Map<string, RelEntry>, typeSubstring: string): RelEntry | undefined {
+  for (const [, entry] of rels) {
+    if (entry.type.includes(typeSubstring)) {
+      return entry;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Find ALL rels entries matching a type substring, returning [rId, entry] pairs.
+ */
+function findRelsByType(rels: Map<string, RelEntry>, typeSubstring: string): [string, RelEntry][] {
+  const results: [string, RelEntry][] = [];
+  for (const [rId, entry] of rels) {
+    if (entry.type.includes(typeSubstring)) {
+      results.push([rId, entry]);
+    }
+  }
+  return results;
+}
+
+
+/**
+ * Build the complete PresentationData from extracted PPTX files.
+ *
+ * This is the main factory function that wires together all parsed components:
+ * 1. Parses presentation.xml for slide ordering and size
+ * 2. Resolves the full relationship chain: slide → layout → master → theme
+ * 3. Parses each component and assembles the final structure
+ */
+export function buildPresentation(
+  files: PptxFiles,
+  options: BuildPresentationOptions = {},
+): PresentationData {
+  // --- Parse presentation root ---
+  const presRoot = parseXml(files.presentation);
+  const presRels = parseRels(files.presentationRels);
+
+  // --- Slide size ---
+  const sldSz = presRoot.child('sldSz');
+  const width = emuToPx(sldSz.numAttr('cx') ?? 9144000); // default 10 inches
+  const height = emuToPx(sldSz.numAttr('cy') ?? 6858000); // default 7.5 inches
+  const firstSlideNum = presRoot.numAttr('firstSlideNum') ?? 1;
+
+  // --- WPS detection ---
+  const isWps = detectWps(files.presentation);
+
+  // --- Presentation default text style ---
+  const defaultTextStyle = presRoot.child('defaultTextStyle');
+
+  // --- Parse themes ---
+  const themes = new Map<string, ThemeData>();
+  for (const [themePath, themeXml] of files.themes) {
+    const themeRoot = parseXml(themeXml);
+    themes.set(themePath, parseTheme(themeRoot));
+  }
+
+  // --- Parse slide masters and build master→theme mapping ---
+  const masters = new Map<string, MasterData>();
+  const masterToTheme = new Map<string, string>();
+
+  for (const [masterPath, masterXml] of files.slideMasters) {
+    const masterRoot = parseXml(masterXml);
+    const masterData = parseMaster(masterRoot);
+
+    // Find theme relationship for this master
+    const masterRelsPath = relsPathFor(masterPath);
+    const masterRelsXml = files.slideMasterRels.get(masterRelsPath);
+    if (masterRelsXml) {
+      const masterRels = parseRels(masterRelsXml);
+      masterData.rels = masterRels;
+      const themeRel = findRelByType(masterRels, 'theme');
+      if (themeRel) {
+        const themePath = resolveRelTarget(basePath(masterPath), themeRel.target);
+        masterToTheme.set(masterPath, themePath);
+      }
+    }
+    masters.set(masterPath, masterData);
+  }
+
+  // --- Parse slide layouts and build layout→master mapping ---
+  const layouts = new Map<string, LayoutData>();
+  const layoutToMaster = new Map<string, string>();
+
+  for (const [layoutPath, layoutXml] of files.slideLayouts) {
+    const layoutRoot = parseXml(layoutXml);
+    const layoutData = parseLayout(layoutRoot);
+
+    // Find master relationship for this layout
+    const layoutRelsPath = relsPathFor(layoutPath);
+    const layoutRelsXml = files.slideLayoutRels.get(layoutRelsPath);
+    if (layoutRelsXml) {
+      const layoutRels = parseRels(layoutRelsXml);
+      layoutData.rels = layoutRels;
+      const masterRel = findRelByType(layoutRels, 'slideMaster');
+      if (masterRel) {
+        const masterPath = resolveRelTarget(basePath(layoutPath), masterRel.target);
+        layoutToMaster.set(layoutPath, masterPath);
+      }
+    }
+    layouts.set(layoutPath, layoutData);
+  }
+
+  // --- Parse charts ---
+  const charts = new Map<string, SafeXmlNode>();
+  const chartThemes = new Map<string, ThemeData>();
+  const chartStyles = new Map<string, SafeXmlNode>();
+  const chartColorStyles = new Map<string, SafeXmlNode>();
+  for (const [chartPath, chartXml] of files.charts) {
+    const chartRoot = parseXml(chartXml);
+    if (chartRoot.exists()) {
+      charts.set(chartPath, chartRoot);
+    }
+
+    const chartRelsPath = relsPathFor(chartPath);
+    const chartRelsXml = files.chartRels?.get(chartRelsPath);
+    if (!chartRelsXml) continue;
+    const chartRels = parseRels(chartRelsXml);
+
+    const chartStyleRel = findRelByType(chartRels, 'chartStyle');
+    if (chartStyleRel) {
+      const chartStylePath = resolveRelTarget(basePath(chartPath), chartStyleRel.target);
+      const chartStyleXml = files.chartStyles?.get(chartStylePath);
+      if (chartStyleXml) {
+        const chartStyleRoot = parseXml(chartStyleXml);
+        if (chartStyleRoot.exists()) chartStyles.set(chartPath, chartStyleRoot);
+      }
+    }
+
+    const chartColorStyleRel = findRelByType(chartRels, 'chartColorStyle');
+    if (chartColorStyleRel) {
+      const chartColorStylePath = resolveRelTarget(basePath(chartPath), chartColorStyleRel.target);
+      const chartColorStyleXml = files.chartColors?.get(chartColorStylePath);
+      if (chartColorStyleXml) {
+        const chartColorStyleRoot = parseXml(chartColorStyleXml);
+        if (chartColorStyleRoot.exists()) chartColorStyles.set(chartPath, chartColorStyleRoot);
+      }
+    }
+
+    const themeOverrideRel = findRelByType(chartRels, 'themeOverride');
+    if (!themeOverrideRel) continue;
+    const themeOverridePath = resolveRelTarget(basePath(chartPath), themeOverrideRel.target);
+    const themeOverrideXml =
+      files.themeOverrides?.get(themeOverridePath) ?? files.themes.get(themeOverridePath);
+    if (!themeOverrideXml) continue;
+    const themeOverrideRoot = parseXml(themeOverrideXml);
+    if (themeOverrideRoot.exists()) {
+      chartThemes.set(chartPath, parseTheme(themeOverrideRoot));
+    }
+  }
+
+  // --- Determine slide ordering ---
+  // The sldIdLst contains sldId elements with r:id attributes that reference
+  // presentation.xml.rels. We need to handle the fact that the attr might be
+  // stored as 'r:id' in the original XML but SafeXmlNode.attr() uses localName.
+  const sldIdLst = presRoot.child('sldIdLst');
+  const orderedSlideTargets: string[] = [];
+
+  for (const sldId of sldIdLst.children('sldId')) {
+    // Try multiple attribute name patterns
+    const rId = sldId.attr('r:id') ?? sldId.attr('id');
+    if (rId) {
+      const relEntry = presRels.get(rId);
+      if (relEntry) {
+        const slidePath = resolveRelTarget('ppt', relEntry.target);
+        orderedSlideTargets.push(slidePath);
+      }
+    }
+  }
+
+  // Fallback: if sldIdLst parsing didn't yield results, use presRels directly
+  if (orderedSlideTargets.length === 0) {
+    const slideRels = findRelsByType(presRels, 'slide');
+    // Sort by rId number to maintain order
+    slideRels.sort((a, b) => {
+      const numA = parseInt(a[0].replace(/\D/g, ''), 10) || 0;
+      const numB = parseInt(b[0].replace(/\D/g, ''), 10) || 0;
+      return numA - numB;
+    });
+    for (const [, entry] of slideRels) {
+      // Only include direct slide relationships, not slideLayout or slideMaster
+      if (
+        entry.type.includes('/slide') &&
+        !entry.type.includes('slideLayout') &&
+        !entry.type.includes('slideMaster')
+      ) {
+        const slidePath = resolveRelTarget('ppt', entry.target);
+        orderedSlideTargets.push(slidePath);
+      }
+    }
+  }
+
+  // --- Parse slides ---
+  const slides: SlideData[] = [];
+  const slideToLayout = new Map<number, string>();
+
+  for (let i = 0; i < orderedSlideTargets.length; i++) {
+    const slidePath = orderedSlideTargets[i];
+    const slideXml = files.slides.get(slidePath);
+    if (!slideXml) continue;
+
+    // Parse slide rels
+    const slideRelsPath = relsPathFor(slidePath);
+    const slideRelsXml = files.slideRels.get(slideRelsPath);
+    const slideRels = slideRelsXml ? parseRels(slideRelsXml) : new Map<string, RelEntry>();
+
+    const slideData = options.lazySlides
+      ? createLazySlide(slideXml, i, slideRels, slidePath)
+      : parseSlide(parseXml(slideXml), i, slideRels, slidePath, files.diagramDrawings);
+
+    // Resolve layout path from the slide's layout relationship target
+    if (slideData.layoutIndex) {
+      const layoutPath = resolveRelTarget(basePath(slidePath), slideData.layoutIndex);
+      slideData.layoutIndex = layoutPath;
+      slideToLayout.set(i, layoutPath);
+    }
+
+    slides.push(slideData);
+  }
+
+  // --- Table styles ---
+  let tableStyles: SafeXmlNode | undefined;
+  if (files.tableStyles) {
+    const tsRoot = parseXml(files.tableStyles);
+    if (tsRoot.exists()) {
+      tableStyles = tsRoot;
+    }
+  }
+
+  const result: PresentationData = {
+    width,
+    height,
+    firstSlideNum,
+    slides,
+    layouts,
+    masters,
+    themes,
+    slideToLayout,
+    layoutToMaster,
+    masterToTheme,
+    media: files.media,
+    mediaResolver: files.mediaResolver,
+    tableStyles,
+    defaultTextStyle: defaultTextStyle.exists() ? defaultTextStyle : undefined,
+    charts,
+    diagramDrawings: files.diagramDrawings,
+    chartThemes,
+    chartStyles,
+    chartColorStyles,
+    isWps,
+  };
+
+  // --- Resolve placeholder position inheritance ---
+  if (!options.lazySlides) {
+    resolvePlaceholderInheritance(result);
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Placeholder Position Inheritance
+// ---------------------------------------------------------------------------
+
+/**
+ * Extract xfrm position/size from a raw placeholder XML node.
+ */
+function getPhXfrm(phNode: SafeXmlNode): { position: Position; size: Size } | undefined {
+  // Try spPr > xfrm first (most shapes), then direct xfrm (graphic frames).
+  const spPrXfrm = phNode.child('spPr').child('xfrm');
+  const xfrm = spPrXfrm.exists() ? spPrXfrm : phNode.child('xfrm');
+  if (xfrm.exists()) {
+    const off = xfrm.child('off');
+    const ext = xfrm.child('ext');
+    const x = off.numAttr('x');
+    const cx = ext.numAttr('cx');
+    if (x !== undefined && cx !== undefined) {
+      return {
+        position: { x: emuToPx(off.numAttr('x') ?? 0), y: emuToPx(off.numAttr('y') ?? 0) },
+        size: { w: emuToPx(ext.numAttr('cx') ?? 0), h: emuToPx(ext.numAttr('cy') ?? 0) },
+      };
+    }
+  }
+  return undefined;
+}
+
+function getMasterPlaceholderEntries(master: MasterData): PlaceholderEntry[] {
+  return master.placeholderEntries ?? master.placeholders.map((node) => ({ node }));
+}
+
+/**
+ * Walk through all slide nodes (including group children recursively)
+ * and fill in missing position/size from layout/master placeholders.
+ */
+function resolvePlaceholderInheritance(pres: PresentationData): void {
+  for (let i = 0; i < pres.slides.length; i++) {
+    resolveSlidePlaceholderInheritance(pres, pres.slides[i]);
+  }
+}
+
+function resolveSlidePlaceholderInheritance(pres: PresentationData, slide: SlideData): void {
+  if (slide.placeholderInheritanceResolved) return;
+
+  const layoutPath = pres.slideToLayout.get(slide.index) || slide.layoutIndex;
+  const layout = layoutPath ? pres.layouts.get(layoutPath) : undefined;
+  const masterPath = layoutPath ? pres.layoutToMaster.get(layoutPath) : undefined;
+  const master = masterPath ? pres.masters.get(masterPath) : undefined;
+
+  resolveNodesPlaceholders(slide.nodes, layout, master);
+  slide.placeholderInheritanceResolved = true;
+}
+
+export function materializeSlideNodes(pres: PresentationData, slide: SlideData): void {
+  materializeSlideData(slide, pres.diagramDrawings);
+  resolveSlidePlaceholderInheritance(pres, slide);
+}
+
+export function materializeAllSlideNodes(pres: PresentationData): void {
+  for (const slide of pres.slides) {
+    materializeSlideNodes(pres, slide);
+  }
+}
+
+/** Extract bodyPr from a placeholder shape node (layout or master). */
+function getPhBodyPr(phNode: SafeXmlNode): SafeXmlNode | undefined {
+  const txBody = phNode.child('txBody');
+  if (!txBody.exists()) return undefined;
+  const bodyPr = txBody.child('bodyPr');
+  return bodyPr.exists() ? bodyPr : undefined;
+}
+
+function inheritPlaceholderType(target: PlaceholderInfo, sourceNode: SafeXmlNode): void {
+  if (target.type) return;
+
+  const source = getPlaceholderInfo(sourceNode);
+  if (source.type) {
+    target.type = source.type;
+  }
+}
+
+interface PlaceholderInheritanceOptions {
+  /**
+   * Parent group for lazy-parsed group children. Layout/master placeholders are
+   * stored in slide coordinates, while group children render in the group's
+   * child coordinate space, so inherited xfrm must be inverted before remap.
+   */
+  parentGroup?: GroupNodeData;
+}
+
+function toGroupChildXfrm(
+  xfrm: { position: Position; size: Size },
+  group: GroupNodeData,
+): { position: Position; size: Size } {
+  const scaleX = group.childExtent.w > 0 ? group.size.w / group.childExtent.w : 1;
+  const scaleY = group.childExtent.h > 0 ? group.size.h / group.childExtent.h : 1;
+  if (scaleX === 0 || scaleY === 0) return xfrm;
+
+  return {
+    position: {
+      x: group.childOffset.x + (xfrm.position.x - group.position.x) / scaleX,
+      y: group.childOffset.y + (xfrm.position.y - group.position.y) / scaleY,
+    },
+    size: {
+      w: xfrm.size.w / scaleX,
+      h: xfrm.size.h / scaleY,
+    },
+  };
+}
+
+function resolveInheritedXfrm(
+  xfrm: { position: Position; size: Size },
+  options: PlaceholderInheritanceOptions,
+): { position: Position; size: Size } {
+  return options.parentGroup ? toGroupChildXfrm(xfrm, options.parentGroup) : xfrm;
+}
+
+export function resolveNodePlaceholderInheritance(
+  node: SlideNode | BaseNodeData,
+  layout: LayoutData | undefined,
+  master: MasterData | undefined,
+  options: PlaceholderInheritanceOptions = {},
+): void {
+  if (!node.placeholder) return;
+
+  const layoutMatch = layout
+    ? findMatchingLayoutPlaceholder(layout.placeholders, node.placeholder, (entry) =>
+        getPlaceholderInfo(entry.node),
+      )
+    : undefined;
+  if (layoutMatch) inheritPlaceholderType(node.placeholder, layoutMatch.node);
+  // Layout -> master uses type, never idx: master idx values may collide with unrelated types.
+  const masterMatch = master
+    ? findMatchingMasterPlaceholder(
+        getMasterPlaceholderEntries(master),
+        layoutMatch ? getPlaceholderInfo(layoutMatch.node).type : node.placeholder?.type,
+        (entry) => getPlaceholderInfo(entry.node),
+      )
+    : undefined;
+
+  const ownXfrm = findXfrm(node.source);
+  const ownOff = ownXfrm.child('off');
+  const ownExt = ownXfrm.child('ext');
+  const inherited = [layoutMatch, masterMatch]
+    .map((entry) => entry && (entry.absoluteXfrm ?? getPhXfrm(entry.node)))
+    .find((xfrm) => xfrm !== undefined);
+  if (inherited) {
+    const xfrm = resolveInheritedXfrm(inherited, options);
+    // Presence, not numeric value, decides inheritance. Zero positions/extents are explicit.
+    if (ownOff.attr('x') === undefined) node.position.x = xfrm.position.x;
+    if (ownOff.attr('y') === undefined) node.position.y = xfrm.position.y;
+    if (ownExt.attr('cx') === undefined) node.size.w = xfrm.size.w;
+    if (ownExt.attr('cy') === undefined) node.size.h = xfrm.size.h;
+  }
+
+  if ('textBody' in node && node.textBody) {
+    const layoutBodyPr = layoutMatch && getPhBodyPr(layoutMatch.node);
+    const masterBodyPr = masterMatch && getPhBodyPr(masterMatch.node);
+    if (layoutBodyPr && masterBodyPr) {
+      // Placeholder attributes inherit independently through empty/partial layout bodyPr.
+      // Keep child-mode behavior unchanged; this evidence covers anchor and insets only.
+      const merged = layoutBodyPr.element!.cloneNode(true) as Element;
+      for (const attr of ['anchor', 'lIns', 'tIns', 'rIns', 'bIns']) {
+        const value = masterBodyPr.attr(attr);
+        if (!merged.hasAttribute(attr) && value !== undefined) merged.setAttribute(attr, value);
+      }
+      node.textBody.layoutBodyProperties = new SafeXmlNode(merged);
+    } else {
+      node.textBody.layoutBodyProperties = layoutBodyPr ?? masterBodyPr;
+    }
+  }
+}
+
+function resolveNodesPlaceholders(
+  nodes: SlideNode[],
+  layout: LayoutData | undefined,
+  master: MasterData | undefined,
+): void {
+  for (const node of nodes) {
+    // Recursively handle group children
+    if (node.nodeType === 'group' && 'children' in node) {
+      // Group children are raw SafeXmlNode, not parsed yet — skip
+      // (they get parsed during rendering in GroupRenderer)
+    }
+
+    resolveNodePlaceholderInheritance(node, layout, master);
+  }
+}

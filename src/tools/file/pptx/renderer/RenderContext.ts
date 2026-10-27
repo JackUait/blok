@@ -1,0 +1,111 @@
+// Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+/**
+ * Render context — provides resolved theme/master/layout chain for a given slide.
+ */
+
+import { PresentationData } from '../model/Presentation';
+import { SlideData } from '../model/Slide';
+import { ThemeData } from '../model/Theme';
+import { MasterData } from '../model/Master';
+import { LayoutData } from '../model/Layout';
+import { SafeXmlNode } from '../parser/XmlParser';
+import type { AffineMatrix } from './coordinateTransform';
+
+export interface RenderContext {
+  presentation: PresentationData;
+  slide: SlideData;
+  /** Current parent DOM coordinates mapped into slide coordinates (2D groups). */
+  parentToSlide?: AffineMatrix;
+  theme: ThemeData;
+  master: MasterData;
+  layout: LayoutData;
+  /** Current OOXML part path used for resolving relationships while rendering this context. */
+  partPath?: string;
+  /** Resolved slide layout part path for the current slide. */
+  layoutPath?: string;
+  /** Resolved slide master part path for the current slide. */
+  masterPath?: string;
+  mediaUrlCache: Map<string, string>; // path -> blob URL
+  colorCache: Map<string, { color: string; alpha: number }>;
+  /** Async media/rendering work that callers may await before screenshot/export. */
+  asyncTasks?: Promise<void>[];
+  /** Aborted when the owning slide is disposed; async renderers must stop late writes. */
+  signal?: AbortSignal;
+  /** Fill node from parent group's grpSpPr, used to resolve `a:grpFill` in children. */
+  groupFillNode?: SafeXmlNode;
+  /** Template provenance and group depth keep narrowly verified renderer lanes from overclaiming. */
+  nodeOrigin?: 'slide' | 'layout' | 'master';
+  groupDepth?: number;
+  /** Scale from the current group child's OOXML coordinate space into rendered slide pixels. */
+  groupChildScale?: { x: number; y: number };
+  /** True when any ancestor group rotates or flips this node's rendered coordinate space. */
+  groupTransformHasRotationOrFlip?: boolean;
+  /** True when an ancestor group declares a 3D scene, whether supported or kept flat. */
+  groupAncestorHas3dScene?: boolean;
+  /** Connected root used for hidden text measurement while slide nodes are still detached. */
+  measurementRoot?: HTMLElement;
+  /** Template rendering skips placeholder descendants inside groups as well as top-level shapes. */
+  skipPlaceholderChildren?: boolean;
+  /**
+   * Navigation callback for shape-level hyperlink actions (action buttons, clickable shapes).
+   * Called with target slide index (0-based) for supported internal slide actions,
+   * or with a URL string for external links.
+   */
+  onNavigate?: (target: { slideIndex?: number; url?: string }) => void;
+}
+
+export function createRenderContext(
+  presentation: PresentationData,
+  slide: SlideData,
+  mediaUrlCache?: Map<string, string>,
+  signal?: AbortSignal,
+): RenderContext {
+  // Resolve the chain: slide -> layout -> master -> theme
+  const layoutPath = presentation.slideToLayout.get(slide.index) || '';
+  const masterPath = presentation.layoutToMaster.get(layoutPath) || '';
+  const themePath = presentation.masterToTheme.get(masterPath) || '';
+
+  const layout: LayoutData = presentation.layouts.get(layoutPath) || {
+    placeholders: [],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    spTree: {} as any,
+    rels: new Map(),
+    showMasterSp: true,
+  };
+
+  const master: MasterData = presentation.masters.get(masterPath) || {
+    colorMap: new Map(),
+    textStyles: {},
+    placeholders: [],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    spTree: {} as any,
+    rels: new Map(),
+  };
+
+  const theme: ThemeData = presentation.themes.get(themePath) || {
+    colorScheme: new Map(),
+    majorFont: { latin: 'Calibri', ea: '', cs: '' },
+    minorFont: { latin: 'Calibri', ea: '', cs: '' },
+    fillStyles: [],
+    bgFillStyles: [],
+    lineStyles: [],
+    effectStyles: [],
+  };
+
+  return {
+    presentation,
+    slide,
+    theme,
+    master,
+    layout,
+    partPath: slide.slidePath,
+    layoutPath,
+    masterPath,
+    mediaUrlCache: mediaUrlCache ?? new Map(),
+    colorCache: new Map(),
+    nodeOrigin: 'slide',
+    groupDepth: 0,
+    groupAncestorHas3dScene: false,
+    signal,
+  };
+}

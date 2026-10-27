@@ -220,7 +220,7 @@ describe('what the model is told about form answers is true', () => {
       const result = await session.execute({ commands: [{ name: 'database.submitForm', args: { id: 'db', viewId: 'f1', answers: { t: 'Ask' } } }] });
 
       expect(result.ok ? null : { code: result.error.code, reason: result.error.details?.reason }).toEqual({ code: 'COMMAND_UNAVAILABLE', reason: 'runtime' });
-      expect((await session.read({ ids: ['db'], detail: 'full' })).blocks[0]?.children ?? []).toEqual([]);
+      expect((await session.read({ detail: 'full' })).blocks.filter(block => block.type === 'database-row')).toEqual([]);
     } finally {
       await session.close();
     }

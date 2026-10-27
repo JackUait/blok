@@ -58,6 +58,12 @@ describe('dist override wrappers', () => {
             resolveId: (id: string) => (id === 'probe' ? id : null),
             load: (id: string) =>
               id === 'probe' ? `import { version } from '${join(dist, importFrom)}'; console.log(version);` : null,
+            // Lazy chunks (mermaid and friends) are not what a static import
+            // retains, and following them bundles ~33 MB per probe and times out.
+            // The wrapper and runtime import impl statically, so this hides none
+            // of their cost.
+            resolveDynamicImport: (specifier: unknown) =>
+              typeof specifier === 'string' ? { id: specifier, external: true } : null,
           },
         ],
         onwarn: () => undefined,

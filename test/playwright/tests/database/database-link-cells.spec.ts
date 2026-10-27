@@ -36,7 +36,12 @@ const ROWS = [
   { id: 'r2', properties: { 'p-title': 'Beta', 'p-points': 5 } },
 ];
 
-const TABLE_VIEW = { id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] };
+// Wide link columns: at the default 200px a wider OS font (Linux CI) runs the value up to the hover pill,
+// and clickBlank finds no blank part to click.
+const TABLE_VIEW = {
+  id: 'v1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [],
+  properties: SCHEMA.map((p) => ({ id: p.id, visible: true, ...(['p-link', 'p-mail', 'p-tel'].includes(p.id) ? { width: 300 } : {}) })),
+};
 
 const blocks = (view: Record<string, unknown> = TABLE_VIEW): OutputBlockData[] => [
   {

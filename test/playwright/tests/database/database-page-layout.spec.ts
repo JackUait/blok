@@ -898,7 +898,13 @@ test.describe('row page layout', () => {
       // The entrance scales the box; measure after it lands.
       await confirm.evaluate((box) => Promise.all(box.getAnimations({ subtree: true }).map((animation) => animation.finished)));
 
-      expect(await confirm.evaluate((el) => [el.getBoundingClientRect().width, el.getBoundingClientRect().height])).toEqual([300, 226]);
+      // 226 tall with a one-line title. A wider OS font (Linux CI) wraps the title, so the title's own height is left out.
+      expect(await confirm.evaluate((el) => {
+        const box = el.getBoundingClientRect();
+        const title = el.querySelector('[data-blok-database-confirm-title]')?.getBoundingClientRect().height ?? 0;
+
+        return [box.width, box.height - title];
+      })).toEqual([300, 204]);
       expect(await read(confirm.locator('[data-blok-database-confirm-title]'), ['font-weight', 'font-size'])).toEqual(['600', '17px']);
       expect(await read(confirm.getByRole('button', { name: 'Close' }), ['width', 'height'])).toEqual(['22px', '22px']);
       await expect(confirm.locator('[data-blok-database-confirm-art] svg')).toBeVisible();

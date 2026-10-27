@@ -238,6 +238,8 @@ export class DatabasePropertyMenu {
   private pickedRow: string | null = null;
   /** Hints for rows of the menu being drawn, bound once its rows exist. */
   private rowHints: Array<() => void> = [];
+  /** Lists whose tint already follows the pointer. */
+  private readonly tintFollowers = new WeakSet<Element>();
 
   constructor(private readonly options: PropertyMenuOptions) {}
 
@@ -1037,6 +1039,26 @@ export class DatabasePropertyMenu {
     onHover(row, text, { placement: getElementDirection(row) === 'rtl' ? 'left' : 'right', gap: 6 });
   }
 
+  /**
+   * §17.10: a list opens with its current row in the hover tint, and the tint
+   * moves to the row the pointer moves onto. `pointermove`, not `mouseover`:
+   * a list opening under a resting pointer must keep the current row.
+   */
+  private focusCurrentRow(name: string): void {
+    this.popover?.focusItemByName(name);
+    const list = this.popover?.getElement().querySelector(`[${DATA_ATTR.itemName}="${name}"]`)?.closest(`[${DATA_ATTR.popoverItems}]`);
+
+    if (list === null || list === undefined || this.tintFollowers.has(list)) return;
+    this.tintFollowers.add(list);
+    list.addEventListener('pointermove', (event) => {
+      const row = event.target instanceof Element ? event.target.closest(`[${DATA_ATTR.itemName}]`) : null;
+      const name = row?.getAttribute(DATA_ATTR.itemName);
+
+      if (row === null || row === undefined || name === null || name === undefined || row.closest(`[${DATA_ATTR.popoverItems}]`) !== list) return;
+      if (row.getAttribute(DATA_ATTR.focused) !== 'true') this.popover?.focusItemByName(name);
+    });
+  }
+
   /** Binds hints to rows drawn now. Each draw makes new rows, so it runs again on every open. */
   private bindRowHints(): void {
     this.rowHints.forEach((bind) => bind());
@@ -1146,7 +1168,7 @@ export class DatabasePropertyMenu {
           width: '200px',
           // §17.10: the row holding the current calculation, a group row too, opens highlighted. After show: the list is not drawn yet.
           onOpen: () => queueMicrotask(() => {
-            this.popover?.focusItemByName(calculateRow(settings.function));
+            this.focusCurrentRow(calculateRow(settings.function));
             this.showUniqueHint();
           }),
           items: this.calculateItems(target === undefined ? ROLLUP_FUNCTIONS : rollupFunctionsFor(target), settings.function, setFunction),
@@ -1187,7 +1209,7 @@ export class DatabasePropertyMenu {
         children: {
           class: PANEL_LIST_CLASS,
           width: '250px',
-          ...(members.includes(current) ? { onOpen: () => queueMicrotask(() => this.popover?.focusItemByName(`rollupFunction-${current}`)) } : {}),
+          ...(members.includes(current) ? { onOpen: () => queueMicrotask(() => this.focusCurrentRow(`rollupFunction-${current}`)) } : {}),
           items: members.map(leaf),
         },
       })),

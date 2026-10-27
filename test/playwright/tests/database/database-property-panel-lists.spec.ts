@@ -266,3 +266,19 @@ test('the Show unique values hint is 156 wide', async ({ page }) => {
 
   expect(rect?.width).toBe(156);
 });
+
+// §17.10: the tint starts on the current calculation and moves to the hovered row.
+test('in Calculate the tint leaves the current row for the hovered one', async ({ page }) => {
+  await openPanel(page);
+  await page.locator('[data-blok-item-name="rollupFunction"]').click();
+  const current = page.locator('[data-blok-item-name="rollupFunction-show_original"]');
+
+  await expect(current).toHaveCSS('background-color', 'rgba(33, 27, 23, 0.05)');
+  await page.locator('[data-blok-item-name="rollupFunction-show_unique"]').hover();
+  await expect(current).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(page.locator('[data-blok-item-name="rollupFunction-show_unique"]')).toHaveCSS('background-color', 'rgba(33, 27, 23, 0.05)');
+  // A group row still opens on hover.
+  await page.locator('[data-blok-item-name="rollupFunctionGroup-calcCount"]').hover();
+  await expect(page.locator('[data-blok-item-name="rollupFunction-count"]')).toBeVisible();
+  await expect(current).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+});

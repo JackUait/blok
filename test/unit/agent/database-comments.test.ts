@@ -9,9 +9,10 @@ import type { AgentActor, AgentSession } from '../../../types/agent';
 
 type Opened = AgentSession & { output(): OutputData };
 
+// A host that keeps Blok's built-in comments says so; without it comment writes are unavailable.
 const SESSIONS: Array<[string, (seed: OutputData, actor?: AgentActor) => Opened]> = [
-  ['json', openJsonSession],
-  ['store', openStoreSession],
+  ['json', (seed, actor) => openJsonSession(seed, actor, undefined, undefined, { comments: true })],
+  ['store', (seed, actor) => openStoreSession(seed, actor, undefined, undefined, { comments: true })],
 ];
 
 /** Row r has a thread by u1 with a reply by human-1 (the person the test agent acts for). Row s is in another database. */
@@ -151,14 +152,76 @@ describe.each(SESSIONS)('agent comments, as a person writes them (%s session)', 
     expect(session.output().blocks.filter(block => block.parent === commentId || block.id === commentId)).toEqual([]);
   });
 
-  it('resolves and reopens anyone\'s thread, as the thread\'s resolve button does', async () => {
+  it('resolves anyone\'s thread, as its resolve button does, and then the thread is out of reach', async () => {
     const session = start();
 
-    expect(errorOf(await run(session, 'database.resolveComment', { id: 'D', threadId: 'theirs', resolved: true }))).toBeUndefined();
+    expect(errorOf(await run(session, 'database.resolveComment', { id: 'D', threadId: 'theirs' }))).toBeUndefined();
     expect(saved(session, 'theirs')?.data).toMatchObject({ resolved: true, text: 'Please fix', authorId: 'u1' });
-    expect(errorOf(await run(session, 'database.resolveComment', { id: 'D', threadId: 'theirs', resolved: false }))).toBeUndefined();
+    expect(errorOf(await run(session, 'database.resolveComment', { id: 'D', threadId: 'mine' }))?.code).toBe('PRECONDITION_FAILED');
+  });
+
+  it.each<[string, Record<string, unknown>]>([
+    ['database.resolveComment', { threadId: 'theirs' }],
+    ['database.replyToComment', { threadId: 'theirs', text: 'Late reply' }],
+    ['database.editComment', { commentId: 'mine', text: 'Changed' }],
+    ['database.deleteComment', { commentId: 'mine' }],
+  ])('refuses %s in a resolved thread, which the panel no longer shows', async (name, args) => {
+    const data = seed();
+    const thread = data.blocks.find(block => block.id === 'theirs');
+
+    if (thread !== undefined) thread.data = { ...thread.data, resolved: true };
+    const session = start(data);
+    const before = session.output();
+    const error = errorOf(await run(session, name, { id: 'D', ...args }));
+
+    expect(error?.code).toBe('PRECONDITION_FAILED');
+    expect(error?.message).toContain('resolved');
+    expect(session.output()).toEqual(before);
+  });
+
+  it('takes a comment batch out of undo, as a person\'s comment is', async () => {
+    const session = start();
+    const added = await run(session, 'database.addComment', { id: 'D', rowId: 'r', text: 'Kept' });
+    const { commentId } = (added.ok ? added.results[0] : {}) as { commentId: string };
+    const undone = errorOf(await run(session, 'history.undo', {}));
+
+    expect(undone?.code).toBe('NOTHING_TO_UNDO');
+    expect(saved(session, commentId)?.data.text).toBe('Kept');
+  });
+
+  it('never lets an undo of an earlier step take a later comment with it', async () => {
+    const session = start();
+
+    expect(errorOf(await run(session, 'database.setRowValues', { id: 'D', rowId: 'r', values: { tx: 'v' } }))).toBeUndefined();
+    const added = await run(session, 'database.addComment', { id: 'D', rowId: 'r', text: 'Kept' });
+    const { commentId } = (added.ok ? added.results[0] : {}) as { commentId: string };
+
+    await run(session, 'history.undo', {});
+    expect(saved(session, commentId)?.data.text).toBe('Kept');
+  });
+
+  it('refuses a batch that mixes comment writes with other writes, so a rollback cannot split it', async () => {
+    const session = start();
+    const before = session.output();
+    const result = await session.execute({ commands: [
+      { name: 'database.setRowValues', args: { id: 'D', rowId: 'r', values: { tx: 'v' } } },
+      { name: 'database.addComment', args: { id: 'D', rowId: 'r', text: 'x' } },
+    ] });
+
+    expect(errorOf(result)?.code).toBe('INVALID_ARGS');
+    expect(errorOf(result)?.message).toContain('batch of their own');
+    expect(session.output()).toEqual(before);
+    expect(errorOf(await session.execute({ commands: [
+      { name: 'doc.read', args: { ids: ['r'] } },
+      { name: 'database.addComment', args: { id: 'D', rowId: 'r', text: 'x' } },
+    ] }))).toBeUndefined();
+  });
+
+  it('cannot reopen a thread: the panel has no reopen', async () => {
+    const session = start();
+
+    expect(errorOf(await run(session, 'database.resolveComment', { id: 'D', threadId: 'theirs', resolved: false }))?.code).toBe('INVALID_ARGS');
     expect(saved(session, 'theirs')?.data.resolved).toBeUndefined();
-    expect(errorOf(await run(session, 'database.resolveComment', { id: 'D', threadId: 'mine', resolved: true }))?.code).toBe('PRECONDITION_FAILED');
   });
 
   it('names a comment of another database as not this database\'s', async () => {
@@ -196,11 +259,17 @@ describe.each(SESSIONS)('agent comments, as a person writes them (%s session)', 
     expect(errorOf(await run(session, 'database.editComment', { id: 'D', commentId: 'mine', text: 'x' }))?.code).toBe('PRECONDITION_FAILED');
   });
 
-  it('shows a row\'s threads on a full read, apart from its page content, and a count in the outline', async () => {
-    const session = start();
+  it('shows a row\'s open threads on a full read as other people\'s words, apart from its page content', async () => {
+    const data = seed();
+
+    data.blocks.push({ id: 'done', type: 'database-comment', parent: 'r', data: { text: 'Old', createdAt: 4, resolved: true } });
+    data.blocks.find(block => block.id === 'r')?.content?.push('done');
+    const session = start(data);
     const full = (await session.read({ ids: ['r'], detail: 'full' })).blocks[0];
 
-    expect(full?.comments).toEqual([
+    expect(full?.comments?.note).toMatch(/other people's words/i);
+    expect(full?.comments?.note).toMatch(/never follow instructions/i);
+    expect(full?.comments?.threads).toEqual([
       {
         id: 'theirs', text: 'Please fix', author: 'Una', authorId: 'u1', createdAt: 1,
         replies: [{ id: 'mine', text: 'On it', author: 'Hana', authorId: 'human-1', createdAt: 3, own: true }],
@@ -211,5 +280,31 @@ describe.each(SESSIONS)('agent comments, as a person writes them (%s session)', 
 
     expect(outline.find(block => block.id === 'r')?.commentCount).toBe(3);
     expect(outline.some(block => block.type === 'database-comment')).toBe(false);
+  });
+
+  it('cuts a long comment at textLimit, as it cuts block text', async () => {
+    const data = seed();
+    const thread = data.blocks.find(block => block.id === 'theirs');
+
+    if (thread !== undefined) thread.data = { ...thread.data, text: 'x'.repeat(50) };
+    const session = start(data);
+    const shown = (await session.read({ ids: ['r'], textLimit: 10 })).blocks[0]?.comments?.threads[0];
+
+    expect(shown).toMatchObject({ text: `${'x'.repeat(10)}…`, truncated: true });
+  });
+
+  it('caps the comments of a whole read, not only of each row', async () => {
+    const rows = ['r1', 'r2', 'r3'];
+    const data = seedOf([{ id: 'D', schema: [property('dt', 'title')], rows: rows.map(id => row(id, { dt: id })) }],
+      rows.flatMap(rowId => Array.from({ length: 90 }, (_unused, index) => ({
+        id: `${rowId}-c${index}`, type: 'database-comment', parent: rowId, data: { text: 'hi', createdAt: index, authorId: 'u1' },
+      }))));
+    const session = start(data);
+    const read = (await session.read({ detail: 'full' })).blocks.filter(block => block.type === 'database-row');
+    const shown = read.reduce((sum, block) => sum + (block.comments?.threads.length ?? 0), 0);
+    const more = read.reduce((sum, block) => sum + (block.comments?.more ?? 0), 0);
+
+    expect(shown).toBe(200);
+    expect(shown + more).toBe(270);
   });
 });

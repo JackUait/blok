@@ -30,6 +30,9 @@ import { unconvertibleTools } from '../../utils/tools';
 const originOf = (block: PlannedBlock, filled: ReadonlySet<string>): BlockOrigin =>
   (block.children.length > 0 || filled.has(block.id) ? 'paste' : 'api');
 
+/** What the comment panel changes on a comment: its text, when, and resolved (DatabaseCommentTool.updateComment). */
+const COMMENT_FIELDS: ReadonlySet<string> = new Set(['text', 'editedAt', 'resolved']);
+
 const rollbackRefused = (error: unknown): Error => {
   const cause = error instanceof AgentFailure ? error.error : undefined;
   const reason = cause?.message ?? (error instanceof Error ? error.message : String(error));
@@ -241,6 +244,11 @@ export class EditorApplier implements AgentApplier {
     if (plan.edits.length === 0) {
       return;
     }
+    if (plan.commentsOnly === true) {
+      await this.applyComments(plan);
+
+      return;
+    }
     const { BlockManager, YjsManager } = this.Blok;
     const tag = { actorId: this.options.actor.id, sessionId: this.options.sessionId };
     const previous = YjsManager.topUndoToken();
@@ -318,6 +326,60 @@ export class EditorApplier implements AgentApplier {
     if (missing.length > 0) {
       throw failure('CONVERSION_UNSUPPORTED', `Conversion from "${block.name}" to "${type}" is not possible: ${missing.join(' and ')} cannot convert here.`, { details: { missing } });
     }
+  }
+
+  /**
+   * Comment writes the way the person's comment panel makes them (database-comments-store.ts):
+   * outside undo, so neither history.undo nor the person's Cmd+Z takes one back, or strips a
+   * thread someone else has replied under.
+   */
+  private async applyComments(plan: Plan): Promise<void> {
+    const { BlockManager } = this.Blok;
+    const release = BlockManager.attributeTo({
+      ids: plan.touched, actor: this.options.actor, turnId: this.options.turnId,
+      stampLastEditedBy: this.options.attributeLastEditedBy !== false,
+    });
+
+    try {
+      for (const edit of plan.edits) {
+        this.refuseReadOnlyTarget(edit);
+        this.applyComment(edit);
+      }
+    } finally {
+      release();
+    }
+    await this.settle();
+  }
+
+  private applyComment(edit: Edit): void {
+    const { YjsManager } = this.Blok;
+    const blocks = this.Blok.API.methods.blocks;
+
+    if (edit.op === 'insert' && edit.parentId !== null && edit.block.children.length === 0) {
+      const { block, parentId } = edit;
+
+      YjsManager.transactWithoutCapture(() => {
+        blocks.insertAt(block.type, this.Blok.BlocksAPI.hostDataForTool(block.type, block.data), { parentId, position: 'end', id: block.id });
+      });
+
+      return;
+    }
+    if (edit.op === 'setData' && Object.entries(edit.patch).every(([key, value]) => COMMENT_FIELDS.has(key) && value !== null)) {
+      const block = blocks.getById(edit.id);
+
+      block?.call('updateComment', edit.patch);
+      block?.dispatchChange({ derived: true });
+
+      return;
+    }
+    const index = edit.op === 'remove' ? blocks.getBlockIndex(edit.id) : undefined;
+
+    if (index === undefined) {
+      throw failure('PRECONDITION_FAILED', 'This is not a comment write a person can make. Nothing more was changed.');
+    }
+    YjsManager.transactWithoutCapture(() => {
+      void blocks.delete(index, false);
+    });
   }
 
   /** The comment block an edit writes, or undefined when it writes page content. */

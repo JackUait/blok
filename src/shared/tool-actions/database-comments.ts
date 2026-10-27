@@ -24,7 +24,10 @@ const requireRow = (ctx: ToolActionContext, databaseId: string, rowId: unknown):
   }
 };
 
-/** A thread sits straight under a row of this database; a reply sits under a thread. */
+/**
+ * A thread sits straight under a row of this database; a reply sits under a thread.
+ * A resolved thread is out of reach: the panel hides it, with no way to reopen it.
+ */
 const commentOf = (ctx: ToolActionContext, databaseId: string, id: string): Comment => {
   const block = ctx.read(id);
 
@@ -37,6 +40,11 @@ const commentOf = (ctx: ToolActionContext, databaseId: string, id: string): Comm
 
   if (!rowsOf(ctx, databaseId).some(row => row.id === rowId)) {
     ctx.fail('PRECONDITION_FAILED', `Comment ${id} is not on a row of this database.`);
+  }
+  const threadData = thread ? block.data : parent.data;
+
+  if (isRecord(threadData) && threadData.resolved === true) {
+    ctx.fail('PRECONDITION_FAILED', `Comment ${id} is in a resolved thread. People no longer see it, and nothing can reopen it.`);
   }
 
   return { id, data: isRecord(block.data) ? block.data : {}, children: block.children, thread };
@@ -114,15 +122,12 @@ const editComment: AnnotationActionImpl<{ commentId: string; text: string }, voi
   },
 };
 
-const resolveComment: AnnotationActionImpl<{ threadId: string; resolved: boolean }, void> = {
+const resolveComment: AnnotationActionImpl<{ threadId: string }, void> = {
   reachesAnnotations: true,
   run: (ctx, args) => {
     const thread = requireThread(ctx, databaseTarget(ctx).id, args.threadId);
 
-    if ((thread.data.resolved === true) !== args.resolved) {
-      // The tool keeps resolved only when true, so reopening removes the key.
-      ctx.update(thread.id, { resolved: args.resolved ? true : null });
-    }
+    ctx.update(thread.id, { resolved: true });
   },
 };
 

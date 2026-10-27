@@ -107,6 +107,8 @@ export interface Plan {
   lastRange?: TextRangeRef;
   warnings: AgentWarning[];
   touched: Set<string>;
+  /** Every write is a comment command: appliers keep it out of undo, as a person's comment is. */
+  commentsOnly?: true;
 }
 
 export type { AgentBatch };

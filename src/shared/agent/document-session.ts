@@ -158,7 +158,12 @@ export const createDocumentAgentSession = (input: {
     },
     ...(createPage !== undefined && { prepareInsert: pagePrepareInsert(createPage, input.actor) }),
     apply: (plan, draft) => {
-      past.push(state.current);
+      // Undo here restores a whole earlier document, which would take the comments with it.
+      if (plan.commentsOnly === true) {
+        past.length = 0;
+      } else {
+        past.push(state.current);
+      }
       future.length = 0;
       state.current = draft;
       applied.edits = plan.edits;

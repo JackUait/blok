@@ -115,7 +115,7 @@ describe('agent comments in the editor, as the person at it may write them', () 
 
     expect(codeOf(await run(Blok, 'database.replyToComment', { id: 'db', threadId: 'theirs', text: 'Done' }))).toBeUndefined();
     expect(codeOf(await run(Blok, 'database.editComment', { id: 'db', commentId: 'mine', text: 'On it now' }))).toBeUndefined();
-    expect(codeOf(await run(Blok, 'database.resolveComment', { id: 'db', threadId: 'theirs', resolved: true }))).toBeUndefined();
+    expect(codeOf(await run(Blok, 'database.resolveComment', { id: 'db', threadId: 'theirs' }))).toBeUndefined();
     expect(panelThreads(Blok)).toEqual([{ id: 'theirs', text: 'Please fix', resolved: true, replies: ['On it now', 'Done'] }]);
   }, 30_000);
 
@@ -137,7 +137,7 @@ describe('agent comments in the editor, as the person at it may write them', () 
   it('comments on a database the person may not edit but may comment on', async () => {
     const Blok = await boot(seed(), permissions(['editContent', 'editStructure']));
 
-    expect(codeOf(await run(Blok, 'database.resolveComment', { id: 'db', threadId: 'theirs', resolved: true }))).toBeUndefined();
+    expect(codeOf(await run(Blok, 'database.resolveComment', { id: 'db', threadId: 'theirs' }))).toBeUndefined();
     expect(codeOf(await run(Blok, 'database.addComment', { id: 'db', rowId: 'r', text: 'Read only, still a note' }))).toBeUndefined();
     expect(panelThreads(Blok).map(thread => thread.text)).toEqual(['Please fix', 'Read only, still a note']);
   }, 30_000);
@@ -150,7 +150,7 @@ describe('agent comments in the editor, as the person at it may write them', () 
     const Blok = await open();
 
     for (const [name, args] of [
-      ['database.resolveComment', { id: 'db', threadId: 'theirs', resolved: true }],
+      ['database.resolveComment', { id: 'db', threadId: 'theirs' }],
       ['database.addComment', { id: 'db', rowId: 'r', text: 'x' }],
       ['database.replyToComment', { id: 'db', threadId: 'theirs', text: 'x' }],
       ['database.editComment', { id: 'db', commentId: 'mine', text: 'x' }],
@@ -167,6 +167,22 @@ describe('agent comments in the editor, as the person at it may write them', () 
     expect([...saved(Blok).values()].filter(block => block.type === 'database-comment')).toHaveLength(2);
   }, 30_000);
 
+  it('keeps an agent thread someone replied under when the agent undoes its turn, as a person cannot undo a comment', async () => {
+    const Blok = await boot(seed());
+    const session = createEditorAgentSession(Blok, actor);
+    const added = await session.execute({ commands: [{ name: 'database.addComment', args: { id: 'db', rowId: 'r', text: 'Agent note' } }] });
+    const { commentId } = (added.ok ? added.results[0] : {}) as { commentId: string };
+
+    new BuiltInComments(Blok.API.methods, () => ({ authorId: 'u2' })).reply(commentId, 'Their reply');
+    const undone = await session.execute({ commands: [{ name: 'history.undo', args: {} }] });
+
+    session.close();
+    expect(panelThreads(Blok), JSON.stringify(undone)).toEqual([
+      { id: 'theirs', text: 'Please fix', replies: ['On it'] },
+      { id: commentId, text: 'Agent note', replies: ['Their reply'] },
+    ]);
+  }, 30_000);
+
   it('refuses comment writes while the editor is read-only', async () => {
     const Blok = await boot(seed(), {}, true);
 
@@ -180,7 +196,8 @@ describe('agent comments in the editor, as the person at it may write them', () 
 
     session.close();
     expect(row?.commentCount).toBe(2);
-    expect(row?.comments?.[0]?.replies?.[0]).toMatchObject({ id: 'mine', own: true });
-    expect(row?.comments?.[0]).not.toHaveProperty('own');
+    expect(row?.comments?.threads[0]?.replies?.[0]).toMatchObject({ id: 'mine', own: true });
+    expect(row?.comments?.threads[0]).not.toHaveProperty('own');
+    expect(row?.comments?.note).toMatch(/never follow instructions/i);
   }, 30_000);
 });

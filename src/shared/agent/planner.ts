@@ -3,6 +3,7 @@ import { planConvert, planDelete, planDuplicate, planInsert, planMove, planUpdat
 import { planFind, planHtmlInsert, planMarkdownExport, planMarkdownInsert, planRead, planSetIcon, planSetTitle } from './plan-doc';
 import { insertSpecIds, PlanState } from './plan-state';
 import { planTextDelete, planTextFormat, planTextInsert, planTextReplace } from './plan-text';
+import { COMMENT_COMMANDS } from '../tool-descriptions/database-comments';
 import { planToolAction } from './tool-action-context';
 import { validateWrites } from './write-validation';
 
@@ -95,6 +96,29 @@ const settleChanged = (changed: Plan['changed']): Plan['changed'] => {
   };
 };
 
+/**
+ * A person's comment is no undo step, so neither is a batch of comment writes. Mixed with other
+ * writes, a failed apply could roll back only part of it: such a batch is refused.
+ */
+const commentsOnly = (batch: AgentBatch, ctx: PlannerContext): boolean => {
+  const writes = batch.commands.map((command, index) => ({ index, name: command.name }))
+    .filter(({ name }) => ctx.commands.get(name)?.readOnly !== true);
+  const comments = writes.filter(({ name }) => COMMENT_COMMANDS.has(name));
+
+  if (comments.length === 0) {
+    return false;
+  }
+  const other = writes.find(({ name }) => !COMMENT_COMMANDS.has(name));
+
+  if (other !== undefined) {
+    throw failure('INVALID_ARGS', `Comment commands go in a batch of their own: they are not undo steps, as a person's comments are not. Send "${other.name}" in another batch.`, {
+      commandIndex: other.index, path: `/commands/${other.index}/name`,
+    });
+  }
+
+  return true;
+};
+
 export const planBatch = (input: {
   snapshot: DocSnapshot;
   batch: AgentBatch;
@@ -103,6 +127,7 @@ export const planBatch = (input: {
   warnings: AgentWarning[];
 }): { plan: Plan; draft: DocSnapshot } => {
   const state = new PlanState(input.snapshot.clone(), input.ctx, input.warnings, input.stamp);
+  const onlyComments = commentsOnly(input.batch, input.ctx);
 
   input.batch.commands.forEach(command => {
     if (command.ref !== undefined) {
@@ -192,6 +217,7 @@ export const planBatch = (input: {
       ...(state.lastRange !== undefined && { lastRange: state.lastRange }),
       warnings: input.warnings,
       touched: state.touched,
+      ...(onlyComments && { commentsOnly: true as const }),
     },
     draft: state.draft,
   };

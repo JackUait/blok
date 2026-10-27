@@ -94,6 +94,9 @@ export class StoreApplier implements AgentApplier {
   }
 
   public apply(plan: Plan, _draft: DocSnapshot): Promise<void> {
+    if (plan.commentsOnly === true) {
+      return this.applyComments(plan);
+    }
     const step: Step = { item: null, ids: new Set(), placedOnly: new Set(), parents: new Set(), shape: '' };
     const before = this.store.toJSON();
     const stacked = this.undoManager.undoStack.length;
@@ -140,6 +143,31 @@ export class StoreApplier implements AgentApplier {
       if (at >= 0) {
         this.undoManager.undoStack.splice(at, 1);
       }
+    }
+
+    return Promise.resolve();
+  }
+
+  /** As a person's comment (database-comments-store.ts): written outside undo, so no step and no undo of it. */
+  private applyComments(plan: Plan): Promise<void> {
+    const at = Date.now();
+    const scratch: Step = { item: null, ids: new Set(), placedOnly: new Set(), parents: new Set(), shape: '' };
+
+    try {
+      this.store.transactWithoutCapture(() => {
+        for (const edit of plan.edits) {
+          this.applyOne(edit, at, scratch);
+        }
+        for (const id of plan.touched) {
+          if (this.store.getBlockById(id) !== undefined) {
+            this.store.updateBlockMetadata(id, at, this.options.attribution.by ?? null, this.options.attribution.with);
+          }
+        }
+      });
+    } catch (error) {
+      this.broken = true;
+
+      return Promise.reject(error);
     }
 
     return Promise.resolve();

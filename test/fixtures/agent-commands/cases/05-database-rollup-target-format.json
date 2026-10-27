@@ -1,0 +1,101 @@
+{
+  "name": "05-database-rollup-target-format",
+  "seed": {
+    "blocks": [
+      {
+        "id": "db1",
+        "type": "database",
+        "data": {
+          "title": "Tasks",
+          "schema": [
+            {
+              "id": "p1",
+              "name": "Name",
+              "type": "title",
+              "position": "a0"
+            },
+            {
+              "id": "p2",
+              "name": "Amount",
+              "type": "number",
+              "position": "a1",
+              "number": {
+                "format": "euro",
+                "showAs": "ring",
+                "color": "green",
+                "divideBy": 100
+              }
+            },
+            {
+              "id": "p3",
+              "name": "Link",
+              "type": "relation",
+              "position": "a2",
+              "relation": {
+                "targetDatabaseId": "db1"
+              }
+            },
+            {
+              "id": "p4",
+              "name": "Roll",
+              "type": "rollup",
+              "position": "a3"
+            }
+          ],
+          "views": [
+            {
+              "id": "v1",
+              "name": "Table",
+              "type": "table",
+              "position": "a0",
+              "sorts": [],
+              "filters": [],
+              "visibleProperties": []
+            }
+          ],
+          "activeViewId": "v1"
+        },
+        "content": [
+          "r1"
+        ]
+      },
+      {
+        "id": "r1",
+        "type": "database-row",
+        "parent": "db1",
+        "data": {
+          "position": "a0",
+          "properties": {
+            "p1": "One",
+            "p2": 50,
+            "p3": [
+              {
+                "id": "r1"
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "batches": [
+    {
+      "commands": [
+        {
+          "name": "database.updateProperty",
+          "args": {
+            "id": "db1",
+            "propertyId": "p4",
+            "settings": {
+              "rollup": {
+                "relationPropertyId": "p3",
+                "targetPropertyId": "p2",
+                "function": "show_original"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -10,6 +10,7 @@ import { newRowValues, prefillFilters, THIS_PAGE_FILTER_VALUE } from '../databas
 import { lastRowKey, pinnedRowOrders, rowOrderKey, UNORDERED_VIEW_TYPES } from '../database/row-order';
 import { descendantsOf, relationPair } from '../database/sub-item-tree';
 import { typeConversion } from '../database/property-conversion';
+import { inheritedRollupFormat } from '../database/rollup';
 import {
   createDefaultSchema,
   createDefaultStatusOptions,
@@ -1591,6 +1592,23 @@ const twoWayPairing = (
   return { relation: { ...input, syncedPropertyId: mirror.id }, target, mirror };
 };
 
+/** As the property menu's target pick: a rollup given a new target takes a Number target's format. */
+const withTargetFormat = (ctx: ToolActionContext, block: TargetBlock, schema: PropertyDefinition[], before: PropertyDefinition | undefined, after: PropertyDefinition): PropertyDefinition => {
+  const targetId = after.rollup?.targetPropertyId;
+
+  if (after.type !== 'rollup' || targetId === undefined || targetId === before?.rollup?.targetPropertyId) {
+    return after;
+  }
+  const relation = schema.find(property => property.id === after.rollup?.relationPropertyId)?.relation;
+
+  if (relation === undefined || relation.targetDocumentId !== undefined) {
+    return after;
+  }
+  const source = relation.targetDatabaseId === block.id ? schema : schemaOf(ctx, relation.targetDatabaseId);
+
+  return { ...after, ...inheritedRollupFormat(after, source?.find(property => property.id === targetId)) };
+};
+
 /** As DatabaseModel.updateProperty: a key given as null is removed, any other value replaces it. */
 const updateProperty: ToolActionImpl<{ propertyId: string; name?: string; settings?: Record<string, unknown> }> = {
   run: (ctx, args) => {
@@ -1623,13 +1641,17 @@ const updateProperty: ToolActionImpl<{ propertyId: string; name?: string; settin
       ? twoWayPairing(ctx, block, property, args.settings.relation)
       : undefined;
     const settings = pairing === undefined ? given : given.map(([key, value]): [string, unknown] => [key, key === 'relation' ? pairing.relation : value]);
-    const schema = state.schema.map((property, i) => (i !== index
+    const updated = state.schema.map((property, i) => (i !== index
       ? property
       : {
         ...Object.fromEntries(Object.entries(property).filter(([key]) => !settings.some(([changed, value]) => changed === key && value === null))),
         ...Object.fromEntries(settings.filter(([, value]) => value !== null)),
         ...(name === undefined ? {} : { name }),
       } as PropertyDefinition));
+    // A number cleared in the same update stays cleared.
+    const schema = args.settings?.number === null
+      ? updated
+      : updated.map((each, i) => (i === index ? withTargetFormat(ctx, block, updated, property, each) : each));
     const mirror = pairing?.mirror;
 
     if (mirror === undefined || pairing === undefined) {

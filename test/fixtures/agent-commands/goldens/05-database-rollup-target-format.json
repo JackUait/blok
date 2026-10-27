@@ -1,0 +1,92 @@
+{
+  "reviewed": "Claude",
+  "document": {
+    "blocks": [
+      {
+        "lastEditedAt": 0,
+        "lastEditedBy": "human-1",
+        "lastEditedWith": "agent-test",
+        "id": "db1",
+        "type": "database",
+        "data": {
+          "title": "Tasks",
+          "schema": [
+            {
+              "id": "dbid1",
+              "name": "Name",
+              "type": "title",
+              "position": "pos:0"
+            },
+            {
+              "id": "dbid2",
+              "name": "Amount",
+              "type": "number",
+              "position": "pos:1",
+              "number": {
+                "format": "euro",
+                "showAs": "ring",
+                "color": "green",
+                "divideBy": 100
+              }
+            },
+            {
+              "id": "dbid3",
+              "name": "Link",
+              "type": "relation",
+              "position": "pos:2",
+              "relation": {
+                "targetDatabaseId": "db1"
+              }
+            },
+            {
+              "id": "dbid4",
+              "name": "Roll",
+              "type": "rollup",
+              "position": "pos:3",
+              "rollup": {
+                "relationPropertyId": "dbid3",
+                "targetPropertyId": "dbid2",
+                "function": "show_original"
+              },
+              "number": {
+                "format": "euro"
+              }
+            }
+          ],
+          "views": [
+            {
+              "id": "dbid5",
+              "name": "Table",
+              "type": "table",
+              "position": "pos:0",
+              "sorts": [],
+              "filters": [],
+              "visibleProperties": []
+            }
+          ],
+          "activeViewId": "dbid5"
+        },
+        "content": [
+          "r1"
+        ]
+      },
+      {
+        "id": "r1",
+        "type": "database-row",
+        "data": {
+          "position": "pos:0",
+          "properties": {
+            "dbid1": "One",
+            "dbid2": 50,
+            "dbid3": [
+              {
+                "id": "r1"
+              }
+            ]
+          }
+        },
+        "parent": "db1"
+      }
+    ]
+  }
+}

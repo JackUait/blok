@@ -14,6 +14,17 @@ export const ROLLUP_FUNCTIONS: readonly RollupFunction[] = [
   'count_per_group', 'percent_per_group',
 ];
 
+/**
+ * notion-spec-2 §14.10: picking a rollup's target copies a Number target's
+ * format, never its Show as. A format the rollup already has wins. The
+ * property menu and the agent's updateProperty both call this.
+ */
+export const inheritedRollupFormat = (rollup: Pick<PropertyDefinition, 'number'>, target: PropertyDefinition | undefined): Pick<PropertyDefinition, 'number'> => {
+  const format = target?.type === 'number' ? target.number?.format : undefined;
+
+  return format === undefined || rollup.number?.format !== undefined ? {} : { number: { ...rollup.number, format } };
+};
+
 /** The property a rollup's value displays, sorts and filters as. */
 export type RollupShape = Pick<PropertyDefinition, 'type'> & Partial<Pick<PropertyDefinition, 'config' | 'number' | 'date' | 'status' | 'relation'>>;
 

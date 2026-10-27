@@ -10,7 +10,7 @@ import { EmojiPicker } from '../callout/emoji-picker';
 import { NUMBER_FORMATS, MAX_DECIMALS } from './cells/number-format';
 import { OPTION_COLORS, optionColorLabelKey, optionSwatch } from './cells/option-colors';
 import { addablePropertyTypes, propertyTypeMeta } from './database-property-types';
-import { ROLLUP_FUNCTIONS, isNumberList, rollupFunctionsFor, rollupHasFormat, rollupResultType } from './rollup';
+import { ROLLUP_FUNCTIONS, inheritedRollupFormat, isNumberList, rollupFunctionsFor, rollupHasFormat, rollupResultType } from './rollup';
 import { buttonEditItems } from './database-button-menu';
 import { createOptionsEditor } from './cells/options-editor';
 import { offersAutofill } from './database-autofill-setup';
@@ -167,13 +167,6 @@ const PERSON_NOTIFICATIONS = [
   ['usersOnly', 'tools.database.personNotificationsUsersOnly'],
   ['none', 'tools.database.personNotificationsNone'],
 ] as const;
-
-/** notion-spec-2 §14.10: a rollup picks up its Number target's format, not its Show as. A format already saved wins. */
-const inheritedFormat = (rollup: PropertyDefinition, target: PropertyDefinition): Pick<PropertySettingsV2, 'number'> => {
-  const format = target.type === 'number' ? target.number?.format : undefined;
-
-  return format === undefined || rollup.number?.format !== undefined ? {} : { number: { ...rollup.number, format } };
-};
 
 /** A copy of the settings with one key left out. */
 const without = <T extends NumberDisplay | DateDisplay, K extends keyof T>(value: T, key: K): Omit<T, K> =>
@@ -850,7 +843,7 @@ export class DatabasePropertyMenu {
             title: p.name,
             isActive: p.id === settings.targetPropertyId,
             closeOnActivate: true,
-            onActivate: () => update({ rollup: { ...settings, targetPropertyId: p.id }, ...inheritedFormat(property, p) }),
+            onActivate: () => update({ rollup: { ...settings, targetPropertyId: p.id }, ...inheritedRollupFormat(property, p) }),
           })),
         },
       },

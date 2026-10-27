@@ -208,7 +208,7 @@ describe('cell editor CSS', () => {
     const FOOTER = `${STATUS} [data-blok-database-select-edit-property]`;
 
     it('gives the head a 38.5px row with the current pill 12px in', () => {
-      expect(declared(`${STATUS} [data-blok-database-select-chips]`, 'padding')).toEqual(['9.25px var(--blok-space-3)']);
+      expect(declared(`${STATUS} [data-blok-database-select-chips]`, 'padding')).toEqual(['var(--blok-database-picker-head-padding-block) var(--blok-space-3)']);
     });
 
     it('puts each pill 8px into its row, under its group label, with no handle and no check mark', () => {
@@ -247,7 +247,7 @@ describe('cell editor CSS', () => {
     });
 
     it('gives the head a 38.5px row with the search 12px in', () => {
-      expect(declared(`${PERSON} [data-blok-database-select-chips]`, 'padding')).toEqual(['9.25px var(--blok-space-3)']);
+      expect(declared(`${PERSON} [data-blok-database-select-chips]`, 'padding')).toEqual(['var(--blok-database-picker-head-padding-block) var(--blok-space-3)']);
     });
 
     it('puts the hint 12px in, its rows 24px under it', () => {
@@ -258,7 +258,7 @@ describe('cell editor CSS', () => {
 
     it('lists 232px rows 4px in, 1px apart, avatar then name 8px after', () => {
       expect(declared(`${PERSON} [role="listbox"]`, 'padding')).toEqual(['0 var(--blok-space-1) var(--blok-space-1)']);
-      expect(declared(`${PERSON} [role="listbox"]`, 'gap')).toEqual(['1px']);
+      expect(declared(`${PERSON} [role="listbox"]`, 'gap')).toEqual(['var(--blok-space-0-25)']);
       expect(declared(`${PERSON} [data-blok-database-person-option]`, 'padding')).toEqual(['0 var(--blok-space-2)']);
       expect(declared(`${PERSON} [data-blok-database-person-option]`, 'gap')).toEqual(['var(--blok-space-2)']);
     });
@@ -284,7 +284,7 @@ describe('cell editor CSS', () => {
       const LIST = `${REL} [data-blok-database-relation-head] ~ [role="listbox"]`;
 
       expect(declared(LIST, 'padding')).toEqual(['0 var(--blok-space-2) var(--blok-space-2)']);
-      expect(declared(LIST, 'gap')).toEqual(['1px']);
+      expect(declared(LIST, 'gap')).toEqual(['var(--blok-space-0-25)']);
       expect(declared(`${LIST} [data-blok-database-relation-option]`, 'min-height')).toEqual(['32px']);
       expect(declared(`${LIST} [data-blok-database-relation-option]`, 'font-weight')).toEqual(['500']);
     });

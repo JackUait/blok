@@ -1225,6 +1225,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_RELATION_PICKER_BYTES = 1_019;
     // database.css: a lone file chip fills its table cell (notion-spec-2 §18.1).
     const DATABASE_FILE_CHIP_FILL_BYTES = 423;
+    // database.css: the picker head's 9.25px as one token, and the 1px row gaps as the space token.
+    const DATABASE_PICKER_LENGTH_TOKENS_BYTES = 275;
     // fonts.css: the inlined woff2 from the 04519541 dependency refresh is 148 bytes larger.
     const FONT_REFRESH_BYTES = 148;
     // database.css: the formula warning mark, inline in the secondary ink at 16px (db0d20e6, 2deaa2a2).
@@ -1493,7 +1495,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_STATUS_PICKER_TABLE_BYTES
       + DATABASE_PERSON_PICKER_BYTES
       + DATABASE_RELATION_PICKER_BYTES
-      + DATABASE_FILE_CHIP_FILL_BYTES;
+      + DATABASE_FILE_CHIP_FILL_BYTES
+      + DATABASE_PICKER_LENGTH_TOKENS_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

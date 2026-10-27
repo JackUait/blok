@@ -10,6 +10,8 @@
      nearest passing step on the same hue: 125,122,117 is 4.27:1 and 161,158,153 is 2.67:1 on white,
      so both light text inks are 114,111,106 (4.53:1 on the hover fill). Audit: plans 34. */
   --blok-database-ink: rgb(44, 44, 43);
+  /* notion-spec-2 §18.3: the status and person pickers' 38.5px head (4 + 5.25 around a 20px line). */
+  --blok-database-picker-head-padding-block: 9.25px;
   --blok-database-ink-secondary: rgb(114, 111, 106);
   --blok-database-ink-tertiary: rgb(114, 111, 106);
   /* Search match tint: Notion's, measured (findings V22). */
@@ -7253,7 +7255,7 @@ textarea[data-blok-database-cell-input] {
  * The row page rules above are more specific and keep their own measurements.
  */
 [data-blok-database-select-editor="status"] [data-blok-database-select-chips] {
-  padding: 9.25px var(--blok-space-3);
+  padding: var(--blok-database-picker-head-padding-block) var(--blok-space-3);
 }
 
 /* No handle and no check mark: the head pill names the current one. */
@@ -7308,7 +7310,7 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-person-editor] [data-blok-database-select-chips] {
-  padding: 9.25px var(--blok-space-3);
+  padding: var(--blok-database-picker-head-padding-block) var(--blok-space-3);
 }
 
 [data-blok-database-person-editor] [data-blok-database-select-hint] {
@@ -7320,7 +7322,7 @@ textarea[data-blok-database-cell-input] {
 [data-blok-database-person-editor] [role="listbox"] {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: var(--blok-space-0-25);
   padding: 0 var(--blok-space-1) var(--blok-space-1);
 }
 
@@ -12636,7 +12638,7 @@ textarea[data-blok-database-cell-input] {
 
 /* Rows 544x32, 8px in, 1px apart; the title 30px into the row, 14/16.8 weight 500. */
 [data-blok-database-relation-editor] [data-blok-database-relation-head] ~ [role="listbox"] {
-  gap: 1px;
+  gap: var(--blok-space-0-25);
   padding: 0 var(--blok-space-2) var(--blok-space-2);
 }
 

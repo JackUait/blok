@@ -7,8 +7,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
-import JSZip from 'jszip';
-
+import { createZip } from './lib/zip-writer.mjs';
 import { isReleaseVersion } from './release-version.mjs';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -209,21 +208,7 @@ function createTar(name, contents) {
  */
 export async function createArchive(target, executable) {
   if (target.archive.endsWith('.zip')) {
-    const zip = new JSZip();
-
-    zip.file(target.binary, executable, {
-      binary: true,
-      date: new Date(Date.UTC(1980, 0, 1)),
-      unixPermissions: 0o100755,
-    });
-
-    return zip.generateAsync({
-      type: 'nodebuffer',
-      compression: 'DEFLATE',
-      compressionOptions: { level: 9 },
-      platform: 'UNIX',
-      streamFiles: false,
-    });
+    return createZip([{ name: target.binary, data: executable, mode: 0o100755 }]);
   }
 
   return gzipSync(createTar(target.binary, executable), {

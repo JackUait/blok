@@ -1,11 +1,10 @@
 // @vitest-environment node
 import { gunzipSync } from 'node:zlib';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-import JSZip from 'jszip';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -53,6 +52,14 @@ function tarEntries(archive: Buffer): Array<{ name: string; mode: string; uid: s
   }
 
   return entries;
+}
+
+function unzipText(args: string[]): string {
+  const result = spawnSync('unzip', args, { encoding: 'utf8' });
+
+  expect(result.status, result.stderr).toBe(0);
+
+  return result.stdout;
 }
 
 describe('publish-server', () => {
@@ -183,11 +190,13 @@ describe('publish-server', () => {
     const archive = await createArchive(target, executable);
 
     if (target.archive.endsWith('.zip')) {
-      const zip = await JSZip.loadAsync(archive);
-      const files = Object.values(zip.files).filter((entry) => !entry.dir);
+      const path = join(temporaryDirectory, target.archive);
 
-      expect(files.map((entry) => entry.name)).toEqual([target.binary]);
-      await expect(files[0]?.async('nodebuffer')).resolves.toEqual(executable);
+      writeFileSync(path, archive);
+
+      expect(unzipText(['-Z1', path]).trim().split('\n')).toEqual([target.binary]);
+      expect(unzipText(['-Z', '-l', path])).toMatch(new RegExp(`^-rwxr-xr-x .* ${target.binary.replace('.', '\\.')}$`, 'm'));
+      expect(spawnSync('unzip', ['-p', path, target.binary]).stdout).toEqual(executable);
 
       return;
     }

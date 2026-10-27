@@ -2045,8 +2045,7 @@
                     "type": "object",
                     "required": [
                       "id",
-                      "threadId",
-                      "resolved"
+                      "threadId"
                     ],
                     "additionalProperties": false,
                     "properties": {
@@ -2054,9 +2053,6 @@
                         "type": "string",
                         "minLength": 1,
                         "description": "Id of a thread: a comment straight under a row, from the row's comments in a full read."
-                      },
-                      "resolved": {
-                        "type": "boolean"
                       },
                       "id": {
                         "type": "string",

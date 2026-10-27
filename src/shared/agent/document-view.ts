@@ -187,17 +187,19 @@ const viewThreads = (snap: DocSnapshot, rowId: string, viewer: string | undefine
     return undefined;
   }
   const total = all.reduce((sum, { replies }) => sum + 1 + replies.length, 0);
-  const threads = all.flatMap(({ thread, replies }): ViewComment[] => {
+  const threads: ViewComment[] = [];
+
+  for (const { thread, replies } of all) {
     if (budget.take(1) === 0) {
-      return [];
+      break;
     }
     const shown = replies.slice(0, budget.take(replies.length));
 
-    return [{
+    threads.push({
       ...viewComment(thread, viewer, textLimit),
       ...(shown.length > 0 && { replies: shown.map(reply => viewComment(reply, viewer, textLimit)) }),
-    }];
-  });
+    });
+  }
   const listed = threads.reduce((sum, thread) => sum + 1 + (thread.replies?.length ?? 0), 0);
 
   return { note: COMMENTS_NOTE, threads, ...(total > listed && { more: total - listed }) };

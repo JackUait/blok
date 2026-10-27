@@ -847,6 +847,19 @@ const VIEW_CHANGES = {
     .map(([key, setting]) => [key, REQUIRED_VIEW_SETTINGS.has(key) || MERGED_VIEW_SETTINGS.has(key) ? setting : { anyOf: [setting, { type: 'null' }] }])),
 };
 
+/** updateProperty's relation: the saved keys, plus the name a new two-way mirror gets, which is not saved. */
+const RELATION_INPUT = {
+  ...PROPERTY_SETTINGS.relation,
+  properties: {
+    ...PROPERTY_SETTINGS.relation.properties,
+    syncedPropertyName: {
+      type: 'string',
+      minLength: 1,
+      description: 'With twoWay true and no mirror yet: the name of the mirror made on the target database (the Related property name field). Absent: "Related to <this database>". A taken name gets a number. Not saved. To rename a mirror that exists, call updateProperty with name on the target database.',
+    },
+  },
+};
+
 /** The title property's row page layout fields, settable through updateProperty. */
 const PAGE_LAYOUT_SETTINGS = Object.fromEntries(Object.entries(DATABASE_DATA.properties.schema.items.properties)
   .filter(([key]) => key.startsWith('pageLayout')));
@@ -1089,8 +1102,8 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
   },
   {
     name: 'updateProperty',
-    summary: 'Rename a property or change its settings (description, icon, page visibility, number, date, status, ID, formula, relation, rollup, button, dependency, autofill), or the row page layout on the title property.',
-    guidance: 'settings keys follow schema; null removes one. The type cannot change here. relation with twoWay true and no syncedPropertyId does what the Two-way toggle does: it adds the other side on the target database, links the pair and fills it from this side; twoWay false leaves that side as a one-way relation. The pageLayout* keys go on the title property only; pageLayoutTabsId names a tabs child block of this database that you make with block.insert.',
+    summary: 'Rename a property or change its settings (description, icon, page visibility, number, date, status, option sort, ID, formula, relation, rollup, button, dependency, autofill), or the row page layout on the title property.',
+    guidance: 'settings keys follow schema; null removes one. The type cannot change here. relation with twoWay true and no syncedPropertyId does what the Two-way toggle does: it adds the other side on the target database (named by syncedPropertyName when given), links the pair and fills it from this side; rename that side later with updateProperty name on the target database; twoWay false leaves that side as a one-way relation. The pageLayout* keys go on the title property only; pageLayoutTabsId names a tabs child block of this database that you make with block.insert.',
     target: 'block',
     preconditions: ['The new name is not the name of another property (exact match, case-sensitive).'],
     args: closed({
@@ -1099,7 +1112,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
       settings: {
         type: 'object',
         additionalProperties: false,
-        properties: Object.fromEntries(Object.entries({ ...PROPERTY_SETTINGS, ...PAGE_LAYOUT_SETTINGS }).map(([key, setting]) => [key, { anyOf: [setting, { type: 'null' }] }])),
+        properties: Object.fromEntries(Object.entries({ ...PROPERTY_SETTINGS, relation: RELATION_INPUT, ...PAGE_LAYOUT_SETTINGS }).map(([key, setting]) => [key, { anyOf: [setting, { type: 'null' }] }])),
       },
     }, ['propertyId']),
     mirrors: [],

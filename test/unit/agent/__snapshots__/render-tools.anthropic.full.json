@@ -2813,6 +2813,11 @@
                                       "blocking"
                                     ],
                                     "description": "A self-relation that drives sub-items (parentItem/subItems) or dependencies (blockedBy/blocking)."
+                                  },
+                                  "syncedPropertyName": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "description": "With twoWay true and no mirror yet: the name of the mirror made on the target database (the Related property name field). Absent: \"Related to <this database>\". A taken name gets a number. Not saved. To rename a mirror that exists, call updateProperty with name on the target database."
                                   }
                                 }
                               },

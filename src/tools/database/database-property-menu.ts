@@ -104,8 +104,12 @@ export interface ComputedMenuHost {
   valueProperty?: (property: PropertyDefinition) => PropertyDefinition;
   /** A property of a database in this document as its result type: a rollup of a number formula reads like one of a Number. */
   targetValueProperty?: (databaseId: string, property: PropertyDefinition) => PropertyDefinition;
-  /** Turns a relation's mirroring property on the target database on or off. */
-  onSetTwoWay: (propertyId: string, twoWay: boolean) => void;
+  /** Turns a relation's mirroring property on the target database on or off. `name` names a new mirror. */
+  onSetTwoWay: (propertyId: string, twoWay: boolean, name?: string) => void;
+  /** The mirror's name, or the name a new one would get. */
+  twoWayName?: (propertyId: string) => string;
+  /** Renames a two-way relation's mirror. */
+  onRenameMirror?: (propertyId: string, name: string) => void;
   /** The host set `config.buttons.onAction`: buttons may call it. */
   hasHostActions?: boolean;
   /** The host set `config.buttons.onNotify`: buttons may send notifications. */
@@ -226,6 +230,8 @@ export class DatabasePropertyMenu {
   private anchor: HTMLElement | null = null;
   /** Saves the open menu's description field if it changed. */
   private saveDescription: (() => void) | null = null;
+  /** Saves a mirror name typed but not yet committed. */
+  private saveMirrorName: (() => void) | null = null;
   /** The row whose list the next number pick comes from: it keeps the highlight after the redraw (notion-spec-2 §8). */
   private pickedRow: string | null = null;
   /** Hints for rows of the menu being drawn, bound once its rows exist. */
@@ -604,6 +610,8 @@ export class DatabasePropertyMenu {
 
     this.popover = null;
     if (popover !== null) this.flushDescription();
+    this.saveMirrorName?.();
+    this.saveMirrorName = null;
     popover?.destroy();
     if (popover !== null) this.options.onClose?.();
   }
@@ -846,7 +854,6 @@ export class DatabasePropertyMenu {
 
   /** "Related to", "Limit" and the two-way toggle of research/08's "New relation" panel. */
   private relationItems(property: PropertyDefinition, update: (patch: Partial<PropertySettingsV2>) => void): PopoverItemParams[] {
-    const host = this.options.computed;
     const settings = property.relation ?? { targetDatabaseId: '' };
     const limit = settings.limit === 1 ? 'one' : 'none';
     const twoWay = settings.twoWay === true;
@@ -868,23 +875,91 @@ export class DatabasePropertyMenu {
           })),
         },
       },
-      {
-        name: 'twoWay',
-        title: this.t('tools.database.relationTwoWay'),
-        titleEl: this.twoWayLabel(),
-        valueLabel: this.t(twoWay ? 'tools.database.settingsOn' : 'tools.database.settingsOff'),
-        children: {
-          ...VALUE_LIST,
-          items: [this.switchItem('twoWay-enable', 'tools.database.relationTwoWayEnable', twoWay, (on) => {
-            host?.onSetTwoWay(property.id, on);
-            // The menu is not redrawn after a two-way change, so the row's value follows the switch here.
+      this.twoWayItem(property.id, twoWay),
+    ];
+  }
+
+  /** notion-spec-2 §17.1: the Enable switch, then the name of the mirror in the related database. */
+  private twoWayItem(propertyId: string, twoWay: boolean): PopoverItemParams {
+    const host = this.options.computed;
+    // The dialog is not redrawn after a two-way change, so it keeps the switch's state itself.
+    const state = { on: twoWay };
+    const shownName = (): string => host?.twoWayName?.(propertyId) ?? '';
+    const name = this.mirrorNameField(shownName(), (typed) => {
+      if (!state.on) return true;
+      host?.onRenameMirror?.(propertyId, typed);
+
+      return false;
+    }, shownName);
+
+    return {
+      name: 'twoWay',
+      title: this.t('tools.database.relationTwoWay'),
+      titleEl: this.twoWayLabel(),
+      valueLabel: this.t(twoWay ? 'tools.database.settingsOn' : 'tools.database.settingsOff'),
+      children: {
+        ...VALUE_LIST,
+        // A rename made from the related database shows on the next open.
+        onOpen: () => name.refresh(),
+        items: [
+          this.switchItem('twoWay-enable', 'tools.database.relationTwoWayEnable', twoWay, (on) => {
+            state.on = on;
+            host?.onSetTwoWay(propertyId, on, ...(on ? [name.value()] : []));
+            name.refresh();
             const value = this.popover?.getElement().querySelector(`[${DATA_ATTR.itemName}="twoWay"] [${DATA_ATTR.popoverItemValue}]`);
 
             if (value !== null && value !== undefined) value.textContent = this.t(on ? 'tools.database.settingsOn' : 'tools.database.settingsOff');
-          })],
-        },
+          }),
+          { type: PopoverItemType.Html, element: name.element, name: 'twoWay-name' },
+        ],
       },
-    ];
+    };
+  }
+
+  /**
+   * The "Related property name" field. `save` gets a trimmed, non-empty name and
+   * returns whether the field keeps it; otherwise it shows `saved()` again.
+   */
+  private mirrorNameField(initial: string, save: (name: string) => boolean, saved: () => string): { element: HTMLElement; value: () => string; refresh: () => void } {
+    const label = document.createElement('label');
+    const input = document.createElement('input');
+    const kept = { value: initial, dirty: false };
+    const commit = (): void => {
+      const typed = input.value.trim();
+
+      this.saveMirrorName = null;
+      kept.dirty = false;
+      if (typed !== '' && save(typed)) {
+        kept.value = typed;
+        input.value = typed;
+
+        return;
+      }
+      input.value = typed === '' ? kept.value : saved();
+      if (typed !== '') kept.value = input.value;
+    };
+
+    label.setAttribute('data-blok-database-property-menu-mirror-name', '');
+    label.append(this.t('tools.database.layoutRelatedPropertyName'));
+    input.type = 'text';
+    input.setAttribute('data-blok-field', 'text');
+    input.value = initial;
+    input.addEventListener('input', () => {
+      kept.dirty = true;
+      this.saveMirrorName = commit;
+    });
+    input.addEventListener('change', commit);
+    label.appendChild(input);
+
+    return {
+      element: label,
+      value: () => input.value.trim() === '' ? kept.value : input.value.trim(),
+      refresh: () => {
+        if (kept.dirty) return;
+        kept.value = saved();
+        input.value = kept.value;
+      },
+    };
   }
 
   /** A relation with no database yet picks one here. */

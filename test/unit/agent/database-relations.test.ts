@@ -88,6 +88,34 @@ describe.each(SESSIONS)('database relations (%s session)', (_label, open) => {
     await session.close();
   });
 
+  // notion-spec-2 §17.1: "Related property name" names the mirror. It is not saved on this side.
+  it('turning two-way on with syncedPropertyName gives the mirror that name, clear of the names there', async () => {
+    const session = open(oneWay());
+
+    expect(errorOf(await run(session, 'database.updateProperty', {
+      id: 'A', propertyId: 'rel', settings: { relation: { targetDatabaseId: 'B', twoWay: true, syncedPropertyName: 'bt' } },
+    }))).toBeUndefined();
+
+    const a = (await dataOf(session, 'A'))?.schema as Array<Record<string, unknown>>;
+    const mirror = ((await dataOf(session, 'B'))?.schema as Array<Record<string, unknown>>).find(each => each.type === 'relation');
+
+    expect(mirror?.name).toBe('bt 1');
+    expect(a.find(each => each.id === 'rel')?.relation).toEqual({ targetDatabaseId: 'B', twoWay: true, syncedPropertyId: mirror?.id });
+    await session.close();
+  });
+
+  it('syncedPropertyName is never saved, and a live mirror is renamed by name on its own database', async () => {
+    const session = open(twoWay());
+    const result = await run(session, 'database.updateProperty', {
+      id: 'A', propertyId: 'rel', settings: { relation: { targetDatabaseId: 'B', twoWay: true, syncedPropertyName: 'Owners' } },
+    });
+
+    expect(errorOf(result)).toMatchObject({ code: 'PRECONDITION_FAILED' });
+    await run(session, 'database.updateProperty', { id: 'A', propertyId: 'rel', settings: { relation: { targetDatabaseId: 'B', twoWay: false, syncedPropertyName: 'X' } } });
+    expect(((await dataOf(session, 'A'))?.schema as Array<Record<string, unknown>>).find(each => each.id === 'rel')?.relation).toEqual({ targetDatabaseId: 'B' });
+    await session.close();
+  });
+
   it('turning two-way on a relation to its own database adds the mirror there', async () => {
     const session = open(seedOf([{
       id: 'S',

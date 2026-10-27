@@ -113,6 +113,8 @@ const computed = () => ({
   targetSchema: (databaseId: string) => (databaseId === 'db-tasks' ? taskSchema : []),
   onEditFormula: vi.fn(),
   onSetTwoWay: vi.fn(),
+  twoWayName: vi.fn((_propertyId: string) => 'Related to Projects'),
+  onRenameMirror: vi.fn(),
 });
 
 const openMenu = (property: PropertyDefinition) => {
@@ -209,7 +211,79 @@ describe('property menu — computed types', () => {
     byName(byName(edit, 'twoWay').children?.items ?? [], 'twoWay-enable').element?.click();
 
     expect(cb.onUpdate).toHaveBeenCalledWith('p', { relation: { targetDatabaseId: 'db', limit: 1 } });
-    expect(extras.onSetTwoWay).toHaveBeenCalledWith('p', true);
+    expect(extras.onSetTwoWay).toHaveBeenCalledWith('p', true, 'Related to Projects');
+  });
+
+  describe('relation: Add related property names the mirror (notion-spec-2 §17.1)', () => {
+    const dialog = (relation: PropertyDefinition['relation']): { items: CapturedItem[]; extras: ReturnType<typeof computed>; menu: InstanceType<typeof DatabasePropertyMenu> } => {
+      const extras = computed();
+      const menu = new DatabasePropertyMenu({ ...callbacks(), i18n, hasPeople: false, computed: extras });
+
+      menu.open(prop('relation', { relation }), document.createElement('button'));
+
+      return { items: byName(byName(lastItems(), 'editProperty').children?.items ?? [], 'twoWay').children?.items ?? [], extras, menu };
+    };
+    const nameInput = (items: CapturedItem[]): HTMLInputElement => {
+      const input = byName(items, 'twoWay-name').element?.querySelector('input');
+
+      if (input === null || input === undefined) throw new Error('no name field');
+
+      return input;
+    };
+    const type = (input: HTMLInputElement, value: string): void => {
+      Object.assign(input, { value });
+      input.dispatchEvent(new Event('input'));
+      input.dispatchEvent(new Event('change'));
+    };
+
+    it('holds Enable, then a Related property name field filled with the name the mirror has or would get', () => {
+      const { items, extras } = dialog({ targetDatabaseId: 'db' });
+
+      expect(items.map((item) => item.name)).toEqual(['twoWay-enable', 'twoWay-name']);
+      expect(byName(items, 'twoWay-name').element?.textContent).toContain('tools.database.layoutRelatedPropertyName');
+      expect(nameInput(items).value).toBe('Related to Projects');
+      expect(extras.twoWayName).toHaveBeenCalledWith('p');
+    });
+
+    it('while off, a typed name is the one Enable gives the new mirror', () => {
+      const { items, extras } = dialog({ targetDatabaseId: 'db' });
+
+      type(nameInput(items), '  Owners  ');
+      byName(items, 'twoWay-enable').element?.click();
+
+      expect(extras.onRenameMirror).not.toHaveBeenCalled();
+      expect(extras.onSetTwoWay).toHaveBeenCalledWith('p', true, 'Owners');
+    });
+
+    it('while on, a new name renames the mirror and the field shows the name it got', () => {
+      const { items, extras } = dialog({ targetDatabaseId: 'db', twoWay: true, syncedPropertyId: 'm' });
+
+      extras.twoWayName.mockReturnValue('Owners');
+      type(nameInput(items), 'Owners');
+
+      expect(extras.onRenameMirror).toHaveBeenCalledWith('p', 'Owners');
+      expect(nameInput(items).value).toBe('Owners');
+    });
+
+    it('an empty name renames nothing and brings the name back', () => {
+      const { items, extras } = dialog({ targetDatabaseId: 'db', twoWay: true, syncedPropertyId: 'm' });
+
+      type(nameInput(items), '   ');
+
+      expect(extras.onRenameMirror).not.toHaveBeenCalled();
+      expect(nameInput(items).value).toBe('Related to Projects');
+    });
+
+    it('a name typed and not yet saved is saved when the menu closes', () => {
+      const { items, extras, menu } = dialog({ targetDatabaseId: 'db', twoWay: true, syncedPropertyId: 'm' });
+      const input = nameInput(items);
+
+      Object.assign(input, { value: 'Owners' });
+      input.dispatchEvent(new Event('input'));
+      menu.close();
+
+      expect(extras.onRenameMirror).toHaveBeenCalledWith('p', 'Owners');
+    });
   });
 
   it('relation: with no database yet, Related to picks one', () => {

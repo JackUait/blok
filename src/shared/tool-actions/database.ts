@@ -1720,8 +1720,10 @@ const checkPageLayout = (ctx: ToolActionContext, block: TargetBlock, state: Data
  * side; the mirror stays as a one-way relation.
  */
 const twoWayPairing = (
-  ctx: ToolActionContext, block: TargetBlock, property: PropertyDefinition, input: Record<string, unknown>
+  ctx: ToolActionContext, block: TargetBlock, property: PropertyDefinition, given: Record<string, unknown>
 ): { relation: Record<string, unknown>; target: string; mirror?: PropertyDefinition } => {
+  // The mirror's name is input only: it never lands in the saved relation.
+  const { syncedPropertyName, ...input } = given;
   const target = typeof input.targetDatabaseId === 'string' ? input.targetDatabaseId : property.relation?.targetDatabaseId ?? block.id;
 
   if (input.twoWay !== true) {
@@ -1739,14 +1741,18 @@ const twoWayPairing = (
   const held = property.relation?.syncedPropertyId;
   const live = held === undefined ? undefined : syncedMirror(ctx, block.id, { ...property, relation: { ...(input as unknown as RelationSettings), syncedPropertyId: held } });
 
+  if (live !== undefined && typeof syncedPropertyName === 'string') {
+    return ctx.fail('PRECONDITION_FAILED', `The mirror exists already: rename it with updateProperty name, propertyId ${live} on database ${target}.`);
+  }
   if (live !== undefined) {
     return { relation: { ...input, syncedPropertyId: live }, target };
   }
   const title = typeof block.data.title === 'string' && block.data.title !== '' ? block.data.title : property.name;
   const names = (target === block.id ? readDatabase(block).schema : targetSchema).map(each => each.name);
+  const wanted = typeof syncedPropertyName === 'string' ? syncedPropertyName.trim() : '';
   const mirror: PropertyDefinition = {
     id: ctx.newId(),
-    name: freePropertyName(names, DATABASE_DEFAULT_TEXT.relationReverseName.replace('{name}', title)),
+    name: freePropertyName(names, wanted === '' ? DATABASE_DEFAULT_TEXT.relationReverseName.replace('{name}', title) : wanted),
     type: 'relation',
     position: positionAround(ctx, target === block.id ? readDatabase(block).schema : targetSchema),
     relation: { targetDatabaseId: block.id, twoWay: true, syncedPropertyId: property.id },

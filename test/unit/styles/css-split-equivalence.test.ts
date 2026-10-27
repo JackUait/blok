@@ -1203,6 +1203,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_CARD_LIST_ITEM_BYTES = 181;
     // database.css: lists off the Edit property panel pad 4px, open on the current row in the hover tint, keep a checked row unfilled; the type list's "Type" line.
     const DATABASE_PANEL_LIST_BYTES = 2_428;
+    // database.css: the Related property name field of Add related property (notion-spec-2 §17.1).
+    const DATABASE_MIRROR_NAME_FIELD_BYTES = 863;
     // fonts.css: the inlined woff2 from the 04519541 dependency refresh is 148 bytes larger.
     const FONT_REFRESH_BYTES = 148;
     // database.css: the formula warning mark, inline in the secondary ink at 16px (db0d20e6, 2deaa2a2).
@@ -1457,7 +1459,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_CARD_LIST_ITEM_BYTES
       + DATABASE_PANEL_LIST_BYTES
       + FONT_REFRESH_BYTES
-      + DATABASE_FORMULA_ERROR_MARK_BYTES;
+      + DATABASE_FORMULA_ERROR_MARK_BYTES
+      + DATABASE_MIRROR_NAME_FIELD_BYTES
+      + FONT_REFRESH_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

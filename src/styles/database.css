@@ -6387,6 +6387,32 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   background-color: var(--blok-database-name-field-bg);
 }
 
+/* notion-spec-2 §17.1: the Add related property dialog is 250x119 (4 + 28 Enable + 83 + 4), the input 218x28.
+   The label and the gaps inside the 83 were not measured. */
+[data-blok-database-property-menu-mirror-name] {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--blok-space-1-5);
+  box-sizing: border-box;
+  block-size: 83px;
+  padding-inline: var(--blok-space-3);
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--blok-database-ink-secondary);
+}
+
+[data-blok-database-property-menu-mirror-name] > input {
+  height: 28px;
+  padding-block: var(--blok-space-0-75);
+  padding-inline: var(--blok-space-1-5);
+  border-color: var(--blok-database-name-field-ring);
+  border-radius: var(--blok-radius-control);
+  background-color: var(--blok-database-name-field-bg);
+  font-size: 14px;
+  color: var(--blok-database-ink);
+}
+
 [data-blok-database-property-menu-name-error] {
   flex-basis: 100%;
   padding-inline-start: calc(28px + var(--blok-space-1-5));

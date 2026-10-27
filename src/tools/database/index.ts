@@ -71,6 +71,7 @@ import type { GalleryGroup } from './database-gallery-view';
 import { DatabaseCalendarView } from './database-calendar-view';
 import { addDays, eventSpan } from './calendar-dates';
 import { formatDateValue } from '../../shared/database/date-value';
+import { freePropertyName } from '../../shared/database/schema-ops';
 import { OPTION_GROUP_TYPES, layoutChange } from '../../shared/database/view-changes';
 import { DatabaseTimelineView, timelineZoomLabelKey } from './database-timeline-view';
 import type { TimelineGroup } from './database-timeline-view';
@@ -11266,7 +11267,7 @@ export class DatabaseTool implements BlockTool {
    * undo step. Off: the mirror stays as a one-way relation, as Notion leaves
    * the other property in place.
    */
-  setRelationTwoWay(propertyId: string, twoWay: boolean, context?: NativeWidgetContext): void {
+  setRelationTwoWay(propertyId: string, twoWay: boolean, context?: NativeWidgetContext, name?: string): void {
     const property = this.model.getProperty(propertyId);
     const settings = property?.relation;
 
@@ -11280,7 +11281,8 @@ export class DatabaseTool implements BlockTool {
     }
     const target = settings.targetDatabaseId;
     const write = (): void => {
-      const reverseName = this.api.i18n.t('tools.database.relationReverseName', { name: this.title === '' ? property.name : this.title });
+      const targetNames = (target === this.dataId ? this.model.getSchema() : this.readDatabaseSource(target)?.schema ?? []).map((p) => p.name);
+      const reverseName = freePropertyName(targetNames, name ?? this.defaultMirrorName(property));
       const reverseRelation = { targetDatabaseId: this.dataId, twoWay: true, syncedPropertyId: propertyId };
       const reverseId = target === this.dataId
         ? this.addOwnRelation(reverseName, reverseRelation, context)
@@ -11303,6 +11305,43 @@ export class DatabaseTool implements BlockTool {
     this.syncRowsFromBlocks();
     void this.sync.syncUpdateProperty({ propertyId, changes: { relation: this.model.getProperty(propertyId)?.relation } });
     this.commitSchema();
+  }
+
+  private defaultMirrorName(property: PropertyDefinition): string {
+    return this.api.i18n.t('tools.database.relationReverseName', { name: this.title === '' ? property.name : this.title });
+  }
+
+  /** The two-way mirror's name, or the name a new mirror would get. */
+  relationMirrorName(propertyId: string): string {
+    const property = this.model.getProperty(propertyId);
+
+    if (property === undefined) return '';
+    const mirrorId = this.syncedMirror(property);
+    const target = property.relation?.targetDatabaseId;
+    const schema = target === this.dataId ? this.model.getSchema() : this.readDatabaseSource(target ?? '')?.schema;
+    const mirror = mirrorId === undefined ? undefined : schema?.find((p) => p.id === mirrorId);
+
+    return mirror?.name ?? this.defaultMirrorName(property);
+  }
+
+  /** Renames a two-way relation's mirror, here or in the related database. */
+  renameRelationMirror(propertyId: string, name: string): void {
+    const property = this.model.getProperty(propertyId);
+    const mirrorId = property === undefined ? undefined : this.syncedMirror(property);
+    const target = property?.relation?.targetDatabaseId;
+
+    if (this.readOnly || mirrorId === undefined || target === undefined) return;
+    if (target === this.dataId) {
+      this.renameProperty(mirrorId, name);
+
+      return;
+    }
+    this.api.blocks.getById(target)?.call('renameMirrorProperty', { propertyId: mirrorId, name });
+  }
+
+  /** Called by a database renaming its two-way relation's mirror, which lives here. */
+  renameMirrorProperty(param: { propertyId: string; name: string }): void {
+    this.renameProperty(param.propertyId, param.name);
   }
 
   /** "Related to": the databases of this document, this one first. Picking one retargets the relation. */
@@ -11435,7 +11474,10 @@ export class DatabaseTool implements BlockTool {
         onEditFormula: (id) => { if (parentWritable()) this.openFormulaEditor(id, anchor); },
         valueProperty: (p) => this.computedValues.valueProperty(p),
         targetValueProperty: (databaseId, p) => (databaseId === this.dataId ? this.computedValues.valueProperty(p) : this.readDatabaseSource(databaseId)?.valueProperty?.(p) ?? p),
-        onSetTwoWay: (id, twoWay) => { if (parentWritable()) this.setRelationTwoWay(id, twoWay, context); },
+        onSetTwoWay: (id, twoWay, name) => { if (parentWritable()) this.setRelationTwoWay(id, twoWay, context, name); },
+        twoWayName: (id) => this.relationMirrorName(id),
+        // writable, not parentWritable: a name typed before the menu closed is saved as it closes.
+        onRenameMirror: (id, name) => { if (writable()) this.renameRelationMirror(id, name); },
         hasHostActions: this.config.buttons?.onAction !== undefined,
         hasNotify: this.config.buttons?.onNotify !== undefined,
         databaseId: this.dataId,

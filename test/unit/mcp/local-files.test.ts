@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, linkSync, mkdirSync, mkdtempSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -90,6 +90,48 @@ describe('createLocalFileReader keeps reads inside its root', () => {
     expect((await refusal(read('pics/none.png', 100)))?.error?.code).toBe('PRECONDITION_FAILED');
     expect((await refusal(read('', 100)))?.error?.code).toBe('INVALID_ARGS');
     expect((await refusal(read('pics/cat.png\0.txt', 100)))?.error?.code).toBe('INVALID_ARGS');
+  });
+
+  it('refuses a hard link to a file outside the root', async () => {
+    linkSync(join(state.base, 'secret.png'), join(state.root, 'linked.png'));
+    const read = createLocalFileReader(state.root);
+
+    expect((await refusal(read('linked.png', 100)))?.error?.code).toBe('PRECONDITION_FAILED');
+  });
+
+  it('refuses a read whose parent folder is swapped for a symlink out of the root after the check', async () => {
+    mkdirSync(join(state.base, 'outside'));
+    writeFileSync(join(state.base, 'outside', 'cat.png'), 'outside-bytes');
+    const swap = (): void => {
+      renameSync(join(state.root, 'pics'), join(state.base, 'pics-moved'));
+      symlinkSync(join(state.base, 'outside'), join(state.root, 'pics'));
+    };
+    const read = createLocalFileReader(state.root, { afterResolve: async () => swap() });
+    const answer = await refusal(read('pics/cat.png', 100));
+
+    expect(answer?.error?.code).toBe('PRECONDITION_FAILED');
+  });
+
+  it('gives one answer for a missing file and a file outside the root, so it tells nothing about the disk', async () => {
+    const read = createLocalFileReader(state.root);
+    const outside = await refusal(read('../secret.png', 100));
+    const missing = await refusal(read('../nothing-here.png', 100));
+    const inside = await refusal(read('pics/none.png', 100));
+
+    expect(outside?.error?.message.replace('../secret.png', 'X')).toBe(missing?.error?.message.replace('../nothing-here.png', 'X'));
+    expect(inside?.error?.message.replace('pics/none.png', 'X')).toBe(missing?.error?.message.replace('../nothing-here.png', 'X'));
+  });
+
+  it('reads under a root given in another letter case on a case-insensitive disk', async () => {
+    const upper = state.root.replace(/root$/, 'ROOT');
+
+    // A case-sensitive disk has no such folder, so there is nothing to check.
+    if (!existsSync(upper)) {
+      return;
+    }
+    const read = createLocalFileReader(upper);
+
+    expect((await read('pics/cat.png', 100)).name).toBe('cat.png');
   });
 
   it('refuses a root that is not a folder', () => {

@@ -154,5 +154,18 @@ describe('checkOptionSafety and uploads', () => {
 
     expect(() => checkOptionSafety({ ...stdio, uploads: { uploader, limits: { image: { maxSize: 0 } } } })).toThrow(McpConfigError);
     expect(() => checkOptionSafety({ ...stdio, uploads: { uploader, limits: { image: { maxSize: 1.5 } } } })).toThrow(McpConfigError);
+    expect(() => checkOptionSafety({ ...stdio, uploads: { uploader, limits: { image: { maxSize: Number.NaN } } } })).toThrow(McpConfigError);
+  });
+
+  it('refuses limits of the wrong shape', () => {
+    const stdio: BlokMcpOptions = { transport: { kind: 'stdio' }, auth: { kind: 'none' } };
+    const bad = (limits: unknown): BlokMcpOptions => ({ ...stdio, uploads: { uploader, limits: limits as never } });
+
+    expect(() => checkOptionSafety(bad({ pdf: { maxSize: 10 } }))).toThrow(McpConfigError);
+    expect(() => checkOptionSafety(bad({ image: { types: 'image/*' } }))).toThrow(McpConfigError);
+    expect(() => checkOptionSafety(bad({ image: { types: [1] } }))).toThrow(McpConfigError);
+    expect(() => checkOptionSafety(bad({ image: null }))).toThrow(McpConfigError);
+    expect(() => checkOptionSafety(bad([]))).toThrow(McpConfigError);
+    expect(() => checkOptionSafety(bad({ image: { types: ['image/png'], maxSize: 10 } }))).not.toThrow();
   });
 });

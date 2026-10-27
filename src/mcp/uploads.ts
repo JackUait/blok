@@ -13,6 +13,12 @@ export const createUploaderService = (uploads: McpUploads): FileUploaderService 
     uploadByFile: (file, ctx) => uploader.uploadByFile(file, ctx),
     ...(uploadByUrl !== undefined && { uploadByUrl: (url, ctx) => uploadByUrl.call(uploader, url, ctx) }),
     limits: (kind: AssetKind) => uploads.limits?.[kind],
+    // Native decoding: the shared one goes a character at a time and would hold the event loop.
+    decodeBase64: data => {
+      const decoded = Buffer.from(data, 'base64');
+
+      return new Uint8Array(decoded.buffer.slice(decoded.byteOffset, decoded.byteOffset + decoded.byteLength));
+    },
     ...(uploads.root !== undefined && { readLocal: createLocalFileReader(uploads.root) }),
   };
 };

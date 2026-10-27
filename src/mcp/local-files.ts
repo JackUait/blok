@@ -1,5 +1,5 @@
 import { constants, realpathSync, statSync } from 'node:fs';
-import { open, realpath, stat } from 'node:fs/promises';
+import { lstat, open, realpath, stat } from 'node:fs/promises';
 import type { FileHandle } from 'node:fs/promises';
 import { basename, resolve, sep } from 'node:path';
 
@@ -26,15 +26,25 @@ const fill = async (handle: FileHandle, buffer: Uint8Array, from: number): Promi
   return bytesRead === 0 ? from : fill(handle, buffer, from + bytesRead);
 };
 
+/** Test seam: runs between resolving the path and opening it, where a swap would land. */
+export interface LocalFileReaderHooks {
+  afterResolve?(): Promise<void>;
+}
+
 /**
- * Reads files under one folder for uploads. The root is resolved once, so a path that resolves
- * (through `..` or a symlink) outside it is refused. Only regular files are read: opening a FIFO
- * or a device could block or never end.
+ * Reads files under one folder for uploads. A path that resolves (through `..`, a symlink or a
+ * parent swapped during the read) outside it is refused, and so is a hard-linked file, whose
+ * other name may be outside. Only regular files are read: a FIFO or a device could block or never end.
  */
-export const createLocalFileReader = (root: string): ((path: string, maxBytes: number) => Promise<{ bytes: Uint8Array<ArrayBuffer>; name: string }>) => {
+export const createLocalFileReader = (
+  root: string,
+  hooks: LocalFileReaderHooks = {}
+): ((path: string, maxBytes: number) => Promise<{ bytes: Uint8Array<ArrayBuffer>; name: string }>) => {
+  // .native, like fs/promises realpath: the JS one keeps the given letter case, so a root in
+  // another case would never prefix the on-disk paths the reads resolve to.
   const realRoot = (() => {
     try {
-      const real = realpathSync(root);
+      const real = realpathSync.native(root);
 
       return statSync(real).isDirectory() ? real : null;
     } catch {
@@ -44,17 +54,22 @@ export const createLocalFileReader = (root: string): ((path: string, maxBytes: n
     throw new McpConfigError(`The upload root "${root}" is not a folder`);
   })();
   const inside = (real: string): boolean => real === realRoot || real.startsWith(realRoot.endsWith(sep) ? realRoot : realRoot + sep);
+  // One answer for missing and outside, so a refusal tells nothing about the rest of the disk.
+  const notHere = (path: string): never => refuse(`"${path}" is not a file under the upload folder.`);
+  const resolveInside = async (path: string): Promise<string> => {
+    const real = await realpath(resolve(realRoot, path)).catch(() => notHere(path));
+
+    return inside(real) ? real : notHere(path);
+  };
 
   return async (path, maxBytes) => {
     if (path === '' || path.length > MAX_PATH || path.includes('\0')) {
       throw failure('INVALID_ARGS', `path must be 1 to ${MAX_PATH} characters with no NUL byte.`, { path: '/path' });
     }
-    const real = await realpath(resolve(realRoot, path)).catch(() => refuse(`There is no file "${path}" under the upload folder.`));
+    const real = await resolveInside(path);
 
-    if (!inside(real)) {
-      refuse(`"${path}" is outside the upload folder. Only files under it can be uploaded.`);
-    }
-    const before = await stat(real);
+    await hooks.afterResolve?.();
+    const before = await stat(real).catch(() => notHere(path));
 
     if (!before.isFile()) {
       refuse(`"${path}" is not a regular file.`);
@@ -62,14 +77,22 @@ export const createLocalFileReader = (root: string): ((path: string, maxBytes: n
     if (before.size > maxBytes) {
       tooLarge(before.size, maxBytes);
     }
-    // NOFOLLOW and NONBLOCK: a swap to a symlink or a FIFO after the checks fails here instead of following or hanging.
+    // NOFOLLOW only guards the last part of the path, so the open fd is checked again below.
     const handle = await open(real, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0))
       .catch(() => refuse(`"${path}" could not be opened.`));
 
     try {
       const opened = await handle.stat();
 
-      if (!opened.isFile() || opened.ino !== before.ino || opened.dev !== before.dev) {
+      if (!opened.isFile() || opened.nlink !== 1) {
+        refuse(`"${path}" is not a regular file with one name.`);
+      }
+      // The open file must be the one the path names now, from inside the root. With one link,
+      // that inside name is its only name.
+      const again = await resolveInside(path);
+      const named = await lstat(again).catch(() => notHere(path));
+
+      if (named.ino !== opened.ino || named.dev !== opened.dev) {
         refuse(`"${path}" changed while it was being read.`);
       }
       // One byte past the cap tells a file that grew meanwhile from one that fits.
@@ -80,7 +103,7 @@ export const createLocalFileReader = (root: string): ((path: string, maxBytes: n
         tooLarge(total, maxBytes);
       }
 
-      return { bytes: buffer.slice(0, total), name: basename(real) };
+      return { bytes: buffer.slice(0, total), name: basename(again) };
     } finally {
       await handle.close();
     }

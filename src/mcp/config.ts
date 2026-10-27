@@ -225,6 +225,26 @@ const hostOf = (listen: string): string => listen.startsWith('[')
   ? listen.slice(0, listen.indexOf(']') + 1)
   : listen.slice(0, listen.lastIndexOf(':'));
 
+const UPLOAD_KINDS = new Set(['image', 'video', 'audio', 'file']);
+
+const checkUploadLimit = (kind: string, limit: unknown): void => {
+  if (!UPLOAD_KINDS.has(kind)) {
+    throw new McpConfigError(`uploads.limits.${kind} is not a kind: use image, video, audio or file`);
+  }
+  if (typeof limit !== 'object' || limit === null || Array.isArray(limit)) {
+    throw new McpConfigError(`uploads.limits.${kind} must be an object with types and maxSize`);
+  }
+  const types: unknown = Reflect.get(limit, 'types');
+  const maxSize: unknown = Reflect.get(limit, 'maxSize');
+
+  if (types !== undefined && !(Array.isArray(types) && types.every(type => typeof type === 'string'))) {
+    throw new McpConfigError(`uploads.limits.${kind}.types must be a list of MIME types`);
+  }
+  if (maxSize !== undefined && !(typeof maxSize === 'number' && Number.isSafeInteger(maxSize) && maxSize > 0)) {
+    throw new McpConfigError(`uploads.limits.${kind}.maxSize must be a positive whole number of bytes`);
+  }
+};
+
 const checkUploads = (options: BlokMcpOptions): void => {
   const uploads = options.uploads;
 
@@ -234,10 +254,13 @@ const checkUploads = (options: BlokMcpOptions): void => {
   if (typeof uploads.uploader?.uploadByFile !== 'function') {
     throw new McpConfigError('uploads.uploader needs an uploadByFile function');
   }
-  for (const [kind, limit] of Object.entries(uploads.limits ?? {})) {
-    if (limit?.maxSize !== undefined && (!Number.isInteger(limit.maxSize) || limit.maxSize < 1)) {
-      throw new McpConfigError(`uploads.limits.${kind}.maxSize must be a positive whole number of bytes`);
-    }
+  const limits: unknown = uploads.limits;
+
+  if (limits !== undefined && (typeof limits !== 'object' || limits === null || Array.isArray(limits))) {
+    throw new McpConfigError('uploads.limits must be an object keyed by image, video, audio or file');
+  }
+  for (const [kind, limit] of Object.entries(limits ?? {})) {
+    checkUploadLimit(kind, limit);
   }
   // Over HTTP the caller is remote, and a path would read this machine's disk for them.
   if (uploads.root !== undefined && options.transport.kind === 'http') {

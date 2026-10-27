@@ -7724,7 +7724,6 @@ textarea[data-blok-database-cell-input] {
   height: 1.2em;
 }
 
-/* A formula that errors or hits a limit: a muted mark, the reason in its hover hint. */
 [data-blok-database-formula-error] {
   display: inline-flex;
   vertical-align: middle;

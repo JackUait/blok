@@ -2,6 +2,8 @@
 import { createHash } from 'node:crypto';
 import {
   chmodSync,
+  constants,
+  copyFileSync,
   existsSync,
   linkSync,
   mkdirSync,
@@ -74,6 +76,18 @@ function releaseFetch(target: ReturnType<typeof requiredTarget>, archive: Buffer
   });
 }
 
+// A hard link is free, but the temp dir may sit on another filesystem than node (EXDEV).
+function placeNodeBinary(binary: string): void {
+  try {
+    linkSync(process.execPath, binary);
+  } catch (error) {
+    if (!(error instanceof Error && 'code' in error && error.code === 'EXDEV')) {
+      throw error;
+    }
+    copyFileSync(process.execPath, binary, constants.COPYFILE_FICLONE);
+  }
+}
+
 function cacheNodeBinary(
   cacheDirectory: string,
   version: string,
@@ -83,7 +97,7 @@ function cacheNodeBinary(
   const binary = join(versionDirectory, target.binary);
 
   mkdirSync(versionDirectory, { recursive: true });
-  linkSync(process.execPath, binary);
+  placeNodeBinary(binary);
   chmodSync(binary, 0o755);
 
   return binary;
@@ -98,7 +112,7 @@ function cacheUnpartitionedNodeBinary(
   const binary = join(versionDirectory, target.binary);
 
   mkdirSync(versionDirectory, { recursive: true });
-  linkSync(process.execPath, binary);
+  placeNodeBinary(binary);
   chmodSync(binary, 0o755);
 
   return binary;

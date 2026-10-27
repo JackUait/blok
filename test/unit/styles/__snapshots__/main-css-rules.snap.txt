@@ -10254,14 +10254,19 @@ textarea[data-blok-database-cell-input] {
 }
 
 [data-blok-database-select-option-handle], [data-blok-database-select-option-menu] {
-  width: 20px;
-  height: 20px;
   color: var(--blok-database-ink-secondary);
   opacity: 0;
   transition: opacity 0.1s ease;
 }
 
+[data-blok-database-select-option-menu] {
+  width: 24px;
+  height: 24px;
+}
+
 [data-blok-database-select-option-handle] {
+  width: 20px;
+  height: 20px;
   cursor: grab;
   touch-action: none;
 }
@@ -10307,8 +10312,13 @@ textarea[data-blok-database-cell-input] {
   margin-block-start: var(--blok-space-2-25);
 }
 
-[data-blok-database-select-editor="status"] [data-blok-database-select-chips] {
+[data-blok-database-select-editor] [data-blok-database-select-chips] {
   padding: var(--blok-database-picker-head-padding-block) var(--blok-space-3);
+}
+
+[data-blok-database-select-editor] [data-blok-database-select-hint] {
+  font-weight: 500;
+  line-height: 14.4px;
 }
 
 [data-blok-database-select-editor="status"] [data-blok-database-select-option-handle], [data-blok-database-select-editor="status"] [data-blok-database-select-option-check] {

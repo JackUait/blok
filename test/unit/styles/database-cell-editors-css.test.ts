@@ -201,15 +201,30 @@ describe('cell editor CSS', () => {
     expect(declared(`${CHIP} > [data-blok-database-cell-link]`, 'min-width')).toEqual(['0']);
   });
 
+  // research/08 (cell editor popovers) and research/22 §4: the select head is 39 tall, its hint 12/14.4 weight 500,
+  // the option "⋯" 24x24. The status head (notion-spec-2 §18.3) is the same 38.5px field.
+  describe('select, multi-select and status pickers', () => {
+    it('give the head a 38.5px row, its content 12px in', () => {
+      expect(declared('[data-blok-database-select-editor] [data-blok-database-select-chips]', 'padding')).toEqual(['var(--blok-database-picker-head-padding-block) var(--blok-space-3)']);
+    });
+
+    it('draw the hint at 12/14.4 weight 500', () => {
+      expect(declared('[data-blok-database-select-editor] [data-blok-database-select-hint]', 'font-weight')).toEqual(['500']);
+      expect(declared('[data-blok-database-select-editor] [data-blok-database-select-hint]', 'line-height')).toEqual(['14.4px']);
+    });
+
+    it('draw the option "⋯" 24x24', () => {
+      expect(declared('[data-blok-database-select-option-menu]', 'width')).toEqual(['24px']);
+      expect(declared('[data-blok-database-select-option-menu]', 'height')).toEqual(['24px']);
+    });
+  });
+
   // notion-spec-2 §18.3 (b1-status-dlg.txt): the table status picker is 240x289 with three groups.
   describe('status picker in a table cell', () => {
     const STATUS = '[data-blok-database-select-editor="status"]';
     const HEADING = `${STATUS} [data-blok-database-select-list] > [data-blok-database-status-group-heading]`;
     const FOOTER = `${STATUS} [data-blok-database-select-edit-property]`;
 
-    it('gives the head a 38.5px row with the current pill 12px in', () => {
-      expect(declared(`${STATUS} [data-blok-database-select-chips]`, 'padding')).toEqual(['var(--blok-database-picker-head-padding-block) var(--blok-space-3)']);
-    });
 
     it('puts each pill 8px into its row, under its group label, with no handle and no check mark', () => {
       expect(declared(`${STATUS} [data-blok-database-select-option]`, 'padding-inline')).toEqual(['var(--blok-space-2)']);

@@ -7189,14 +7189,20 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-select-option-handle],
 [data-blok-database-select-option-menu] {
-  width: 20px;
-  height: 20px;
   color: var(--blok-database-ink-secondary);
   opacity: 0;
   transition: opacity 0.1s ease;
 }
 
+/* research/08: the option "⋯" is 24x24. */
+[data-blok-database-select-option-menu] {
+  width: 24px;
+  height: 24px;
+}
+
 [data-blok-database-select-option-handle] {
+  width: 20px;
+  height: 20px;
   cursor: grab;
   touch-action: none;
 }
@@ -7254,8 +7260,14 @@ textarea[data-blok-database-cell-input] {
  * group labels and pills 12px in, groups 74px apart, dividers 12px short of both sides.
  * The row page rules above are more specific and keep their own measurements.
  */
-[data-blok-database-select-editor="status"] [data-blok-database-select-chips] {
+[data-blok-database-select-editor] [data-blok-database-select-chips] {
   padding: var(--blok-database-picker-head-padding-block) var(--blok-space-3);
+}
+
+/* research/08: the select hint is 12/14.4 weight 500. */
+[data-blok-database-select-editor] [data-blok-database-select-hint] {
+  font-weight: 500;
+  line-height: 14.4px;
 }
 
 /* No handle and no check mark: the head pill names the current one. */

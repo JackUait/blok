@@ -192,6 +192,43 @@ describe('cell editor CSS', () => {
     });
   });
 
+  // notion-spec-2 §18.3 (b1-status-dlg.txt): the table status picker is 240x289 with three groups.
+  describe('status picker in a table cell', () => {
+    const STATUS = '[data-blok-database-select-editor="status"]';
+    const HEADING = `${STATUS} [data-blok-database-select-list] > [data-blok-database-status-group-heading]`;
+    const FOOTER = `${STATUS} [data-blok-database-select-edit-property]`;
+
+    it('gives the head a 38.5px row with the current pill 12px in', () => {
+      expect(declared(`${STATUS} [data-blok-database-select-chips]`, 'padding')).toEqual(['9.25px var(--blok-space-3)']);
+    });
+
+    it('puts each pill 8px into its row, under its group label, with no handle and no check mark', () => {
+      expect(declared(`${STATUS} [data-blok-database-select-option]`, 'padding-inline')).toEqual(['var(--blok-space-2)']);
+      expect(declared(`${STATUS} [data-blok-database-select-option-handle]`, 'display')).toEqual(['none']);
+      expect(declared(`${STATUS} [data-blok-database-select-option-check]`, 'display')).toEqual(['none']);
+    });
+
+    it('spaces the groups 74px apart with 216px dividers 12px in', () => {
+      expect(declared(HEADING, 'padding')).toEqual(['var(--blok-space-2-5) 0 9.5px']);
+      expect(declared(HEADING, 'margin-inline')).toEqual(['var(--blok-space-2)']);
+      expect(declared(HEADING, 'font-weight')).toEqual(['500']);
+      expect(declared(HEADING, 'line-height')).toEqual(['14.4px']);
+      expect(declared(`${HEADING}:not(:first-child)`, 'margin-top')).toEqual(['var(--blok-space-2-25)']);
+      expect(declared(`${HEADING}:not(:first-child)`, 'padding-top')).toEqual(['var(--blok-space-3)']);
+      expect(declared(`${HEADING}:not(:first-child)`, 'border-top')).toEqual(['1px solid var(--blok-database-table-border)']);
+    });
+
+    it('ends with an "Edit property" row like the options: 28px, 4px in, primary ink, its own inset divider', () => {
+      expect(declared(FOOTER, 'width')).toEqual(['calc(100% - var(--blok-space-2))']);
+      expect(declared(FOOTER, 'margin')).toEqual(['var(--blok-space-1-25) var(--blok-space-1) var(--blok-space-1)']);
+      expect(declared(FOOTER, 'border-radius')).toEqual(['var(--blok-radius-control)']);
+      expect(declared(FOOTER, 'color')).toEqual(['var(--blok-database-ink)']);
+      expect(declared(`${FOOTER}::before`, 'inset-inline')).toEqual(['var(--blok-space-2)']);
+      // The label starts 40px into the box: 4 + 8 + a 20px icon + 8.
+      expect(declared(`${FOOTER} svg`, 'width')).toEqual(['20px']);
+    });
+  });
+
   // notion-spec §7, scratchpad n/11-status.png and n/12-select.png: text, pills and headings start 12px into the box.
   describe('select and status pickers over a row page value', () => {
     const VALUE = "[data-blok-popover-custom-class~='blok-database-value-editor']";
@@ -212,13 +249,6 @@ describe('cell editor CSS', () => {
     it('shows a select option\'s handle at rest, 8px before its pill', () => {
       expect(declared(`${VALUE} [data-blok-database-select-option-handle]`, 'opacity')).toEqual(['1']);
       expect(declared(`${VALUE} [data-blok-database-select-option-handle]`, 'margin-inline-end')).toEqual(['var(--blok-space-1)']);
-    });
-
-    it('draws a status option without a handle or a check mark', () => {
-      const STATUS = `${VALUE} [data-blok-database-select-editor="status"]`;
-
-      expect(declared(`${STATUS} [data-blok-database-select-option-handle]`, 'display')).toEqual(['none']);
-      expect(declared(`${STATUS} [data-blok-database-select-option-check]`, 'display')).toEqual(['none']);
     });
 
     // n/11-status.png: groups 73px apart, each divider 12px short of both sides.

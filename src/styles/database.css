@@ -7218,12 +7218,6 @@ textarea[data-blok-database-cell-input] {
   margin-inline-end: var(--blok-space-1);
 }
 
-/* Notion's status rows have no handle and no check mark; the head pill names the current one. */
-[data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-select-editor="status"] [data-blok-database-select-option-handle],
-[data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-select-editor="status"] [data-blok-database-select-option-check] {
-  display: none;
-}
-
 /* n/18-status-hover.png: Notion's status rows have no "…"; options are edited in Edit property. */
 [data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-select-editor="status"] [data-blok-database-select-option-menu] {
   display: none;
@@ -7239,6 +7233,61 @@ textarea[data-blok-database-cell-input] {
 [data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-select-editor="status"] [data-blok-database-select-list] > [data-blok-database-status-group-heading]:not(:first-child) {
   padding-block-start: var(--blok-space-2-75);
   margin-block-start: var(--blok-space-2-25);
+}
+
+/*
+ * notion-spec-2 §18.3 (b1-status-dlg.txt), table status picker 240x289: a 38.5px head,
+ * group labels and pills 12px in, groups 74px apart, dividers 12px short of both sides.
+ * The row page rules above are more specific and keep their own measurements.
+ */
+[data-blok-database-select-editor="status"] [data-blok-database-select-chips] {
+  padding: 9.25px var(--blok-space-3);
+}
+
+/* No handle and no check mark: the head pill names the current one. */
+[data-blok-database-select-editor="status"] [data-blok-database-select-option-handle],
+[data-blok-database-select-editor="status"] [data-blok-database-select-option-check] {
+  display: none;
+}
+
+[data-blok-database-select-editor="status"] [data-blok-database-select-option] {
+  padding-inline: var(--blok-space-2);
+}
+
+[data-blok-database-select-editor="status"] [data-blok-database-select-list] > [data-blok-database-status-group-heading] {
+  padding: var(--blok-space-2-5) 0 9.5px;
+  margin-inline: var(--blok-space-2);
+  font-weight: 500;
+  line-height: 14.4px;
+}
+
+[data-blok-database-select-editor="status"] [data-blok-database-select-list] > [data-blok-database-status-group-heading]:not(:first-child) {
+  margin-top: var(--blok-space-2-25);
+  padding-top: var(--blok-space-3);
+  border-top: 1px solid var(--blok-database-table-border);
+}
+
+[data-blok-database-select-editor="status"] [data-blok-database-select-edit-property] {
+  position: relative;
+  width: calc(100% - var(--blok-space-2));
+  margin: var(--blok-space-1-25) var(--blok-space-1) var(--blok-space-1);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  color: var(--blok-database-ink);
+}
+
+[data-blok-database-select-editor="status"] [data-blok-database-select-edit-property] svg {
+  width: 20px;
+  height: 20px;
+}
+
+[data-blok-database-select-editor="status"] [data-blok-database-select-edit-property]::before {
+  content: '';
+  position: absolute;
+  top: calc(-1 * var(--blok-space-1-25));
+  inset-inline: var(--blok-space-2);
+  height: 1px;
+  background-color: var(--blok-database-table-border);
 }
 
 [data-blok-database-select-option][data-dragging] {

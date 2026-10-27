@@ -10280,10 +10280,6 @@ textarea[data-blok-database-cell-input] {
   margin-inline-end: var(--blok-space-1);
 }
 
-[data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-select-editor="status"] [data-blok-database-select-option-handle], [data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-select-editor="status"] [data-blok-database-select-option-check] {
-  display: none;
-}
-
 [data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-select-editor="status"] [data-blok-database-select-option-menu] {
   display: none;
 }
@@ -10297,6 +10293,54 @@ textarea[data-blok-database-cell-input] {
 [data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-select-editor="status"] [data-blok-database-select-list] > [data-blok-database-status-group-heading]:not(:first-child) {
   padding-block-start: var(--blok-space-2-75);
   margin-block-start: var(--blok-space-2-25);
+}
+
+[data-blok-database-select-editor="status"] [data-blok-database-select-chips] {
+  padding: 9.25px var(--blok-space-3);
+}
+
+[data-blok-database-select-editor="status"] [data-blok-database-select-option-handle], [data-blok-database-select-editor="status"] [data-blok-database-select-option-check] {
+  display: none;
+}
+
+[data-blok-database-select-editor="status"] [data-blok-database-select-option] {
+  padding-inline: var(--blok-space-2);
+}
+
+[data-blok-database-select-editor="status"] [data-blok-database-select-list] > [data-blok-database-status-group-heading] {
+  padding: var(--blok-space-2-5) 0 9.5px;
+  margin-inline: var(--blok-space-2);
+  font-weight: 500;
+  line-height: 14.4px;
+}
+
+[data-blok-database-select-editor="status"] [data-blok-database-select-list] > [data-blok-database-status-group-heading]:not(:first-child) {
+  margin-top: var(--blok-space-2-25);
+  padding-top: var(--blok-space-3);
+  border-top: 1px solid var(--blok-database-table-border);
+}
+
+[data-blok-database-select-editor="status"] [data-blok-database-select-edit-property] {
+  position: relative;
+  width: calc(100% - var(--blok-space-2));
+  margin: var(--blok-space-1-25) var(--blok-space-1) var(--blok-space-1);
+  border: none;
+  border-radius: var(--blok-radius-control);
+  color: var(--blok-database-ink);
+}
+
+[data-blok-database-select-editor="status"] [data-blok-database-select-edit-property] svg {
+  width: 20px;
+  height: 20px;
+}
+
+[data-blok-database-select-editor="status"] [data-blok-database-select-edit-property]::before {
+  content: '';
+  position: absolute;
+  top: calc(-1 * var(--blok-space-1-25));
+  inset-inline: var(--blok-space-2);
+  height: 1px;
+  background-color: var(--blok-database-table-border);
 }
 
 [data-blok-database-select-option][data-dragging] {

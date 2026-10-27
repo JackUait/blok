@@ -4,7 +4,7 @@ import { openFilterPill, openViewSettings } from '../../../../src/tools/database
 import type { ViewSettingsContext, ViewSettingsStart } from '../../../../src/tools/database/database-view-settings-panel';
 import type { DatabasePanel } from '../../../../src/tools/database/database-panel';
 import type { DatabaseViewConfig, PropertyDefinition } from '../../../../src/tools/database/types';
-import { IconBoard, IconTable } from '../../../../src/components/icons';
+import { IconTable, IconViewBoard } from '../../../../src/components/icons';
 import { PopoverItemType } from '../../../../src/components/utils/popover/components/popover-item';
 
 const schema: PropertyDefinition[] = [
@@ -122,7 +122,7 @@ describe('view settings panel', () => {
     const layoutIcon = (): string | undefined => document.querySelector('[data-blok-testid="database-settings-layout"] [data-blok-database-panel-icon]')?.innerHTML;
     const html = (svg: string): string => Object.assign(document.createElement('span'), { innerHTML: svg }).innerHTML;
 
-    expect(layoutIcon()).toBe(html(IconBoard));
+    expect(layoutIcon()).toBe(html(IconViewBoard));
     click('database-settings-layout');
     click('database-layout-table');
     click('database-panel-back');

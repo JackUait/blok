@@ -24,7 +24,7 @@ interface CapturedItem {
 
 interface CapturedPopover { items: CapturedItem[]; destroyed: boolean; params: Record<string, unknown>; activated: string[]; focused: string[]; closed?: () => void; hide: () => void; transitionAtShow?: string }
 
-const captured = vi.hoisted((): { popovers: CapturedPopover[] } => ({ popovers: [] }));
+const captured = vi.hoisted((): { popovers: CapturedPopover[]; instances: Array<{ closeSubmenuOnEscape: () => boolean }> } => ({ popovers: [], instances: [] }));
 
 vi.mock('../../../../src/components/utils/popover', () => ({
   PopoverDesktop: class {
@@ -35,6 +35,7 @@ vi.mock('../../../../src/components/utils/popover', () => ({
       this.record = { items: params.items, destroyed: false, params, activated: [], focused: [], hide: () => this.hide() };
       this.element.appendChild(document.createElement('div')).setAttribute('data-blok-popover-container', '');
       captured.popovers.push(this.record);
+      captured.instances.push(this);
     }
 
     getElement(): HTMLElement {
@@ -134,6 +135,7 @@ describe('DatabasePropertyMenu', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     captured.popovers.length = 0;
+    captured.instances.length = 0;
   });
 
   it('the title menu has no description row and does not end on a separator', () => {
@@ -1070,6 +1072,7 @@ describe('property menu rename to a taken name', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     captured.popovers.length = 0;
+    captured.instances.length = 0;
   });
 
   afterEach(() => {
@@ -1158,6 +1161,7 @@ describe('row page property menu', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     captured.popovers.length = 0;
+    captured.instances.length = 0;
   });
 
   afterEach(() => {
@@ -1292,6 +1296,89 @@ describe('row page property menu', () => {
     expect(type.valueLabel).toBe('tools.database.propertyTypeNumber');
     expect(type.icon).toBe(IconReplace);
     menu.destroy();
+  });
+
+  // notion-spec-2 §16.1: Type swaps the panel's content for the type list; one Escape lands on the label menu.
+  describe('Type swaps the panel for the type list', () => {
+    const openTypes = (onComment?: () => void): { cb: ReturnType<typeof callbacks>; menu: InstanceType<typeof DatabasePropertyMenu>; onClose: ReturnType<typeof vi.fn> } => {
+      const onClose = vi.fn();
+      const cb = callbacks();
+      const menu = new DatabasePropertyMenu({ i18n: { t: (key: string) => key, getLocale: () => 'en' } as never, hasPeople: false, ...cb, onClose, onCustomizeLayout: vi.fn() });
+
+      menu.openRowPage(prop('number'), document.createElement('div'), onComment === undefined ? {} : { onComment });
+      const edit = byName(lastItems(), 'editProperty');
+
+      edit.onActivate?.(edit);
+      const type = byName(lastItems(), 'changeType');
+
+      type.onActivate?.(type);
+
+      return { cb, menu, onClose };
+    };
+
+    it('keeps the Type row\'s chevron with no submenu', () => {
+      const { menu, items } = editPanel(prop('number'));
+      const type = byName(items, 'changeType') as CapturedItem & { chevron?: boolean };
+
+      expect(type.children).toBeUndefined();
+      expect(type.chevron).toBe(true);
+      menu.destroy();
+    });
+
+    it('a click draws the type list in the panel\'s place, 290 wide, without closing', () => {
+      const { menu, onClose } = openTypes();
+
+      expect(captured.popovers).toHaveLength(3);
+      expect(captured.popovers[1]?.destroyed).toBe(true);
+      expect(onClose).not.toHaveBeenCalled();
+      expect(menu.isOpen).toBe(true);
+      expect(String(captured.popovers[2]?.params.class).split(' ')).toContain('blok-database-property-panel');
+      expect(captured.popovers[2]?.params.minWidth).toBe('290px');
+      expect(lastItems().map((i) => i.name)).toEqual(expect.arrayContaining(['type-text', 'type-select']));
+      expect(lastItems().map((i) => i.name)).not.toContain('type-number');
+      menu.destroy();
+    });
+
+    // notion-spec-2 §16.1: the panel grows and moves up to fit (y 132, 290x574, bottom 706 of 717).
+    it('the type list sits on the panel\'s corner and slides up to fit the window', () => {
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 834, y: 279, width: 290, height: 441 }));
+      const { menu } = openTypes();
+      const params = captured.popovers[2]?.params;
+
+      expect(params).toMatchObject({ cover: true, viewportMargin: 11 });
+      expect(params?.positionContext).toBeInstanceOf(HTMLElement);
+      expect(params?.position).toMatchObject({ x: 834, y: 279 });
+      menu.destroy();
+    });
+
+    it('picking a type changes it', () => {
+      const { cb, menu } = openTypes();
+      const text = byName(lastItems(), 'type-text');
+
+      text.onActivate?.(text);
+
+      expect(cb.onChangeType).toHaveBeenCalledWith('p', 'text');
+      expect(text.closeOnActivate).toBe(true);
+      menu.destroy();
+    });
+
+    it('one Escape swaps the type list for the property label menu, Comment kept', () => {
+      const { menu, onClose } = openTypes(vi.fn());
+      const escape = captured.instances[2]?.closeSubmenuOnEscape();
+
+      expect(escape).toBe(true);
+      expect(captured.popovers[2]?.destroyed).toBe(true);
+      expect(onClose).not.toHaveBeenCalled();
+      expect(names()).toEqual(['rename', 'editProperty', 'comment', 'visibility', 'duplicate', 'delete', 'customize-layout']);
+      menu.destroy();
+    });
+
+    it('Escape on the panel itself still closes it', () => {
+      const { menu } = editPanel(prop('number'));
+
+      expect(captured.instances[captured.instances.length - 1]?.closeSubmenuOnEscape()).toBe(false);
+      menu.destroy();
+    });
   });
 
   it('keeps "Change type" in the table header menu', () => {
@@ -1456,6 +1543,7 @@ describe('row page menu hints', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     captured.popovers.length = 0;
+    captured.instances.length = 0;
     destroyTooltip();
     vi.useFakeTimers();
   });

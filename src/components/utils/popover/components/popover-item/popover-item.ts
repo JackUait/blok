@@ -188,6 +188,17 @@ export abstract class PopoverItem {
   }
 
   /**
+   * Returns the custom class for children popover, if specified
+   */
+  public get childrenClass(): string | undefined {
+    if (this.params === undefined || !('children' in this.params)) {
+      return undefined;
+    }
+
+    return this.params.children?.class;
+  }
+
+  /**
    * Returns the width for children popover, if specified
    */
   public get childrenWidth(): string | undefined {

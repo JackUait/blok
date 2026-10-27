@@ -80,6 +80,12 @@ export interface PopoverItemChildren {
   width?: string;
 
   /**
+   * Custom class of the nested popover, stamped as `data-blok-popover-custom-class`
+   * like the root popover's `class`, so a host can style one submenu on its own.
+   */
+  class?: string;
+
+  /**
    * Minimum width of the nested popover when auto-sizing.
    * Has no effect when `width` is set to an explicit value.
    */

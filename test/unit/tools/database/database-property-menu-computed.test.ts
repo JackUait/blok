@@ -16,7 +16,7 @@ interface CapturedItem {
   element?: HTMLElement;
   onActivate?: (item: CapturedItem) => void;
   confirmation?: { onActivate: (item: CapturedItem) => void; title?: string };
-  children?: { items: CapturedItem[]; searchable?: boolean; clickOnly?: boolean; placement?: string; width?: string; onOpen?: () => void };
+  children?: { items: CapturedItem[]; searchable?: boolean; clickOnly?: boolean; placement?: string; width?: string; class?: string; onOpen?: () => void };
 }
 
 const hint = vi.hoisted(() => ({ hide: vi.fn() }));
@@ -514,8 +514,9 @@ describe('property menu — click-only lists (notion-spec-2 §16.1)', () => {
     expect(byName(panel(sum), name).children).toMatchObject({ clickOnly: true, placement: 'under' });
   });
 
-  it('Type opens on a click only', () => {
-    expect(byName(panel(sum), 'changeType').children?.clickOnly).toBe(true);
+  // notion-spec-2 §16.1: a click swaps the panel for the type list, so the row has no submenu.
+  it('Type opens no submenu', () => {
+    expect(byName(panel(sum), 'changeType').children).toBeUndefined();
   });
 
   it('the Number property\'s own Number format and Decimal places open on a click only', () => {
@@ -543,6 +544,15 @@ describe('property menu — click-only lists (notion-spec-2 §16.1)', () => {
 
   it('Calculate is 200 wide', () => {
     expect(byName(panel(sum), 'rollupFunction').children?.width).toBe('200px');
+  });
+
+  // notion-spec-2 §16.1: its own look (4px inset, 28px rows), not the panel's.
+  it('Calculate carries the panel list class', () => {
+    expect(byName(panel(sum), 'rollupFunction').children?.class).toBe('blok-database-panel-list');
+  });
+
+  it('Number format is 192 wide, in the same look', () => {
+    expect(byName(panel(sum), 'numberFormat').children).toMatchObject({ width: '192px', class: 'blok-database-panel-list' });
   });
 
   const calculate = (targetPropertyId: string): CapturedItem[] =>

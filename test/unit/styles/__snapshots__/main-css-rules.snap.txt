@@ -9897,6 +9897,18 @@ textarea[data-blok-database-cell-input] {
   padding-block: var(--blok-space-2);
 }
 
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-panel-list'] > [data-blok-popover-container] {
+  padding-inline: var(--blok-space-1);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-panel-list'] > [data-blok-popover-container] [data-blok-popover-items] {
+  padding-block: var(--blok-space-1-5);
+}
+
+[data-blok-popover][data-blok-popover-custom-class~='blok-database-panel-list'] > [data-blok-popover-container] [data-blok-popover-item] {
+  margin-block-end: 0;
+}
+
 [data-blok-popover][data-blok-popover-custom-class~='blok-database-property-panel'] [data-blok-database-show-as] {
   padding-inline: var(--blok-space-3);
 }

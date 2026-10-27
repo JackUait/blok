@@ -1618,6 +1618,7 @@ export class PopoverDesktop extends PopoverAbstract {
       onNavigateBack: this.arrowLeftClosesSubmenu ? this.destroyNestedPopoverIfExists.bind(this) : undefined,
       width: item.childrenWidth,
       minWidth: item.childrenMinWidth,
+      class: item.childrenClass,
       handleContentEditableNavigation: handleContentEditable,
       autoFocusFirstItem: this.params.autoFocusFirstItem,
     });

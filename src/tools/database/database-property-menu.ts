@@ -4,6 +4,7 @@ import { PopoverDesktop } from '../../components/utils/popover';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import type { PopoverItemParams } from '../../../types/utils/popover/popover-item';
+import type { PopoverParams } from '../../../types/utils/popover/popover';
 import { PopoverEvent } from '../../../types/utils/popover/popover-event';
 import type { I18n } from '../../../types';
 import { EmojiPicker } from '../callout/emoji-picker';
@@ -148,6 +149,17 @@ const PROPERTY_PANEL_CLASS = `${ROW_PAGE_MENU_CLASS} blok-database-property-pane
 
 /** notion-spec-2 §16.1: Number format, Decimal places and Calculate open on a click only, under their row. */
 const CLICK_ONLY_UNDER = { clickOnly: true, placement: 'under' } as const;
+/** notion-spec-2 §16.1: Calculate and Number format pad 4px, not the panel's 8, with 28px rows. */
+const PANEL_LIST_CLASS = 'blok-database-panel-list';
+
+/** The type list's gap to the window edges (notion-spec-2 §16.1: y 132 + 574 = 706 in a 717 window). */
+const TYPE_LIST_MARGIN = 11;
+
+/** A menu laid over a spot (its start corner there), kept inside the window. */
+interface PlaceOver { cover: true; viewportMargin: number; position: DOMRect; positionContext: HTMLElement }
+
+/** What the row page label menu needs back when the type list returns to it. */
+interface RowPageExtras { onComment?: () => void; edit?: boolean }
 
 /** The Calculate menu's groups (notion-spec-2 §14.4, §15.2). */
 const CALCULATE_GROUPS: ReadonlyArray<readonly [string, readonly RollupFunction[]]> = [
@@ -243,7 +255,7 @@ export class DatabasePropertyMenu {
       // research/08: the title has no description.
       { type: PopoverItemType.Html, element: name, name: 'name' },
       { type: PopoverItemType.Separator },
-      ...head.map((entry) => this.entry(entry, property, false, update)),
+      ...head.map((entry) => this.entry(entry, property, update)),
       ...lead,
       ...this.autofillItem(property),
       ...(rest.length > 0 ? [{ type: PopoverItemType.Separator } as const, ...rest, ...(tail.length > 0 ? [{ type: PopoverItemType.Separator } as const] : [])] : []),
@@ -293,17 +305,23 @@ export class DatabasePropertyMenu {
    * Rename, Edit property, Comment, Property visibility, Duplicate, Delete, Customize layout.
    * No view rows: the row page is no column.
    */
-  openRowPage(property: PropertyDefinition, anchor: HTMLElement, extras: { onComment?: () => void; edit?: boolean } = {}): void {
+  openRowPage(property: PropertyDefinition, anchor: HTMLElement, extras: RowPageExtras = {}): void {
     this.close();
     this.shown = property;
     if (extras.edit === true) {
-      this.openRowPageEdit(property, anchor);
+      this.openRowPageEdit(property, anchor, extras);
 
       return;
     }
+    this.drawRowPageMenu(property, anchor, extras);
+  }
+
+  /** The row page label menu, in place of what is open. */
+  private drawRowPageMenu(property: PropertyDefinition, anchor: HTMLElement, extras: RowPageExtras): void {
+    this.swap();
     const has = (entry: PropertyMenuEntry): boolean => propertyMenuEntries(property).includes(entry);
     // Notion: Rename and Edit property both open the Edit property panel.
-    const edit = (): void => this.openRowPageEdit(property, anchor);
+    const edit = (): void => this.openRowPageEdit(property, anchor, extras);
     const onComment = extras.onComment;
     const items: PopoverItemParams[] = [
       { name: 'rename', title: this.t('tools.database.renameView'), icon: IconPencil, onActivate: edit },
@@ -357,18 +375,21 @@ export class DatabasePropertyMenu {
 
   /** The row page's Edit property panel, in place of its menu, with the name selected (Notion). */
   /** `typed`: a redraw's unsaved name, kept in the field, which then keeps no focus. */
-  private openRowPageEdit(property: PropertyDefinition, anchor: HTMLElement, typed?: string): void {
+  private openRowPageEdit(property: PropertyDefinition, anchor: HTMLElement, extras: RowPageExtras, typed?: string): void {
     this.swap();
     const entries = propertyMenuEntries(property);
     const has = (entry: PropertyMenuEntry): boolean => entries.includes(entry);
     const name = this.nameField(property, property.type !== 'title');
-    const update = this.showAsUpdate(property, name, (patch, kept) => this.openRowPageEdit({ ...property, ...patch }, anchor, kept));
+    const update = this.showAsUpdate(property, name, (patch, kept) => this.openRowPageEdit({ ...property, ...patch }, anchor, extras, kept));
     const settings: PopoverItemParams[] = [];
 
     if (EDITABLE_SETTINGS.has(property.type)) {
       settings.push(...(property.type === 'formula' && !this.isNumberFormula(property) ? [this.editFormulaItem(property.id, 'editFormula')] : this.editItems(property, update)));
     }
-    const typeItems = (['changeType', 'displayAs'] as const).filter(has).map((entry) => this.entry(entry, property, true));
+    const typeItems = [
+      ...(has('changeType') ? [this.typeRow(property, anchor, extras)] : []),
+      ...(has('displayAs') ? [this.entry('displayAs', property)] : []),
+    ];
     const tail = (['duplicate', 'delete'] as const).filter(has).map((entry) => this.entry(entry, property));
     const separator = { type: PopoverItemType.Separator } as const;
     // 08-rename.png, notion-spec-2 §3, §6: number, rollup and formula rows sit under Type with no rule.
@@ -394,14 +415,70 @@ export class DatabasePropertyMenu {
     input?.select();
   }
 
+  /** The panel's Type row (research/10 L16): the current type on the right. */
+  private typeRow(property: PropertyDefinition, anchor: HTMLElement, extras: RowPageExtras): PopoverItemParams {
+    return {
+      name: 'changeType',
+      title: this.t('tools.database.propertyTypeListHeading'),
+      icon: IconReplace,
+      valueLabel: this.t(propertyTypeMeta(property.type).labelKey),
+      chevron: true,
+      onActivate: () => this.openTypeList(property, anchor, extras),
+    };
+  }
+
+  /**
+   * notion-spec-2 §16.1: a click on Type swaps the panel for the type list.
+   * One Escape there lands on the label menu, not back on the panel.
+   */
+  private openTypeList(property: PropertyDefinition, anchor: HTMLElement, extras: RowPageExtras): void {
+    const panel = this.popover?.getElement().querySelector('[data-blok-popover-container]')?.getBoundingClientRect();
+
+    this.swap();
+    // On the panel's corner, moved up as far as it must to fit (Notion: y 132, bottom 706 of 717).
+    const place: PlaceOver | undefined = panel === undefined ? undefined : { cover: true, viewportMargin: TYPE_LIST_MARGIN, position: DOMRect.fromRect({ x: panel.left, y: panel.top, width: panel.width, height: 0 }), positionContext: anchor };
+
+    this.show(this.typeChoices(property), anchor, '290px', PROPERTY_PANEL_CLASS, false, place);
+    const popover = this.popover;
+
+    if (popover === null) return;
+    // The popover registry asks this first on Escape; true stops it closing the menu.
+    popover.closeSubmenuOnEscape = (): boolean => {
+      this.drawRowPageMenu(property, anchor, extras);
+
+      return true;
+    };
+  }
+
+  private typeChoices(property: PropertyDefinition): PopoverItemParams[] {
+    return addablePropertyTypes(this.options.hasPeople)
+      .filter((type) => type !== property.type)
+      .map((type) => ({
+        name: `type-${type}`,
+        title: this.t(propertyTypeMeta(type).labelKey),
+        icon: propertyTypeMeta(type).icon,
+        closeOnActivate: true,
+        onActivate: () => this.options.onChangeType(property.id, type),
+      }));
+  }
+
   /** `redraw`: stands in for the open menu, so it shows with no entrance. */
-  private show(items: PopoverItemParams[], anchor: HTMLElement, minWidth: string, className = DATABASE_HEADER_MENU_CLASS, redraw = false): void {
+  /** `place`: a spot of its own in place of under `anchor`. */
+  private show(
+    items: PopoverItemParams[],
+    anchor: HTMLElement,
+    minWidth: string,
+    className = DATABASE_HEADER_MENU_CLASS,
+    redraw = false,
+    place?: PlaceOver,
+  ): void {
     const rowPage = className.startsWith(ROW_PAGE_MENU_CLASS);
-    const popover = new PopoverDesktop({
+    const params: PopoverParams = {
       class: className, animateClose: true, items, trigger: anchor, width: 'auto', minWidth, flippable: true, autoFocusFirstItem: false,
       // Notion opens the row page menu 1px under the label.
       ...(rowPage ? { offset: 1 } : {}),
-    });
+    };
+    const popover = new PopoverDesktop(place === undefined ? params : { ...params, ...place });
 
     // research/27 §7: Escape closes the Edit property submenu only; a second Escape closes the menu.
     popover.escapeClosesSubmenuFirst = true;
@@ -621,11 +698,9 @@ export class DatabasePropertyMenu {
     void this.emojiPicker.open(anchor, undefined, handlers);
   }
 
-  /** `panel`: the row page's Edit property panel, whose type row reads "Type" (research/10 L16); the header menu keeps "Change type". */
   private entry(
     entry: PropertyMenuEntry,
     property: PropertyDefinition,
-    panel = false,
     update: (patch: Partial<PropertySettingsV2>) => void = (patch) => this.options.onUpdate(property.id, patch),
   ): PopoverItemParams {
     const id = property.id;
@@ -666,22 +741,9 @@ export class DatabasePropertyMenu {
       case 'changeType':
         return {
           name: entry,
-          ...(panel
-            ? { title: this.t('tools.database.propertyTypeListHeading'), icon: IconReplace, valueLabel: this.t(propertyTypeMeta(property.type).labelKey) }
-            : { title: this.t('tools.database.changeType'), icon: propertyTypeMeta(property.type).icon }),
-          children: {
-            // notion-spec-2 §16.1: the panel's Type opens on a click only.
-            ...(panel ? { clickOnly: true } : {}),
-            items: addablePropertyTypes(this.options.hasPeople)
-              .filter((type) => type !== property.type)
-              .map((type) => ({
-                name: `type-${type}`,
-                title: this.t(propertyTypeMeta(type).labelKey),
-                icon: propertyTypeMeta(type).icon,
-                closeOnActivate: true,
-                onActivate: () => this.options.onChangeType(id, type),
-              })),
-          },
+          title: this.t('tools.database.changeType'),
+          icon: propertyTypeMeta(property.type).icon,
+          children: { items: this.typeChoices(property) },
         };
       case 'visibility': {
         const current = property.pageVisibility ?? 'always';
@@ -853,6 +915,7 @@ export class DatabasePropertyMenu {
         valueLabel: this.t(`tools.database.rollupFn.${settings.function}`),
         children: {
           ...CLICK_ONLY_UNDER,
+          class: PANEL_LIST_CLASS,
           width: '200px',
           items: this.calculateItems(target === undefined ? ROLLUP_FUNCTIONS : rollupFunctionsFor(target), settings.function, setFunction),
         },
@@ -1084,6 +1147,8 @@ export class DatabasePropertyMenu {
         valueLabel: this.t(`tools.database.numberFormat.${number.format ?? 'number'}`),
         children: {
           ...CLICK_ONLY_UNDER,
+          class: PANEL_LIST_CLASS,
+          width: '192px',
           searchable: true,
           items: NUMBER_FORMATS.map((format) => ({
             name: `format-${format}`,

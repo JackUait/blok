@@ -1,4 +1,5 @@
 import { IconCross } from '../../../components/icons';
+import { safeImageSrc } from '../../../components/utils/sanitize-url';
 import type { DatabasePerson, PersonValue, PropertyDefinition, PropertyValue } from '../types';
 import { personIdsOf } from '../property-values';
 import { CellPopover, coverMinWidth } from './cell-popover';
@@ -191,6 +192,27 @@ class PersonEditor implements CellEditorHandle {
     }
   }
 
+  /** The cell's avatar: the photo, or the name's first letter in a circle. */
+  private avatar(person: DatabasePerson): HTMLElement {
+    const src = person.avatarUrl === undefined ? null : safeImageSrc(person.avatarUrl);
+
+    if (src !== null) {
+      const img = document.createElement('img');
+
+      img.src = src;
+      img.alt = '';
+      img.setAttribute('data-blok-database-person-avatar', '');
+
+      return img;
+    }
+    const initial = document.createElement('span');
+
+    initial.setAttribute('data-blok-database-person-initial', [...person.name][0] ?? '');
+    initial.setAttribute('aria-hidden', 'true');
+
+    return initial;
+  }
+
   private renderList(): void {
     const rows = this.filtered();
 
@@ -206,9 +228,9 @@ class PersonEditor implements CellEditorHandle {
       row.setAttribute('data-blok-database-person-option', person.id);
       row.setAttribute('role', 'option');
       row.setAttribute('aria-selected', chosen ? 'true' : 'false');
-      row.textContent = person.id === this.ctx.me
+      row.append(this.avatar(person), person.id === this.ctx.me
         ? this.ctx.i18n.t('tools.database.personYou').replace('{name}', person.name)
-        : person.name;
+        : person.name);
       if (index === this.activeIndex) {
         row.setAttribute('data-active', '');
         this.search.setAttribute('aria-activedescendant', row.id);

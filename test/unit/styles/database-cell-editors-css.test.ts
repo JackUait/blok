@@ -229,6 +229,32 @@ describe('cell editor CSS', () => {
     });
   });
 
+  // notion-spec-2 §18.3 (b2-person-dlg.txt): 240x162 with three people.
+  describe('person picker', () => {
+    const PERSON = '[data-blok-database-person-editor]';
+
+    it('keeps to 240 wide: the search input does not push the box wider', () => {
+      expect(declared('[data-blok-database-person-search]', 'width')).toEqual(['0']);
+    });
+
+    it('gives the head a 38.5px row with the search 12px in', () => {
+      expect(declared(`${PERSON} [data-blok-database-select-chips]`, 'padding')).toEqual(['9.25px var(--blok-space-3)']);
+    });
+
+    it('puts the hint 12px in, its rows 24px under it', () => {
+      expect(declared(`${PERSON} [data-blok-database-select-hint]`, 'padding')).toEqual(['var(--blok-space-2-5) var(--blok-space-3) 9.5px']);
+      expect(declared(`${PERSON} [data-blok-database-select-hint]`, 'font-weight')).toEqual(['500']);
+      expect(declared(`${PERSON} [data-blok-database-select-hint]`, 'line-height')).toEqual(['14.4px']);
+    });
+
+    it('lists 232px rows 4px in, 1px apart, avatar then name 8px after', () => {
+      expect(declared(`${PERSON} [role="listbox"]`, 'padding')).toEqual(['0 var(--blok-space-1) var(--blok-space-1)']);
+      expect(declared(`${PERSON} [role="listbox"]`, 'gap')).toEqual(['1px']);
+      expect(declared(`${PERSON} [data-blok-database-person-option]`, 'padding')).toEqual(['0 var(--blok-space-2)']);
+      expect(declared(`${PERSON} [data-blok-database-person-option]`, 'gap')).toEqual(['var(--blok-space-2)']);
+    });
+  });
+
   // notion-spec §7, scratchpad n/11-status.png and n/12-select.png: text, pills and headings start 12px into the box.
   describe('select and status pickers over a row page value', () => {
     const VALUE = "[data-blok-popover-custom-class~='blok-database-value-editor']";

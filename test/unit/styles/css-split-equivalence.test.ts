@@ -1219,6 +1219,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_HEADER_PICKER_GRID_BYTES = 418;
     // database.css: the table status picker takes Notion's 240x289 layout (notion-spec-2 §18.3).
     const DATABASE_STATUS_PICKER_TABLE_BYTES = 1_620;
+    // database.css: the person picker takes Notion's 240-wide layout (notion-spec-2 §18.3).
+    const DATABASE_PERSON_PICKER_BYTES = 759;
     // fonts.css: the inlined woff2 from the 04519541 dependency refresh is 148 bytes larger.
     const FONT_REFRESH_BYTES = 148;
     // database.css: the formula warning mark, inline in the secondary ink at 16px (db0d20e6, 2deaa2a2).
@@ -1484,7 +1486,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_PLACE_ROW_HIGHLIGHT_BYTES
       + DATABASE_ADD_PROPERTY_SEARCH_BYTES
       + DATABASE_HEADER_PICKER_GRID_BYTES
-      + DATABASE_STATUS_PICKER_TABLE_BYTES;
+      + DATABASE_STATUS_PICKER_TABLE_BYTES
+      + DATABASE_PERSON_PICKER_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

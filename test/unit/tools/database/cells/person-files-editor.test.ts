@@ -50,6 +50,16 @@ describe('person cell editor', () => {
   const rows = (): string[] =>
     [...(editorRoot()?.querySelectorAll('[data-blok-database-person-option]') ?? [])].map((r) => r.getAttribute('data-blok-database-person-option') ?? '');
 
+  // notion-spec-2 §18.3: each row is a 20px avatar, then the name.
+  it('draws each row as an avatar, then the name', () => {
+    open([]);
+
+    const first = q('[data-blok-database-person-option="u1"]');
+
+    expect(first.querySelector('[data-blok-database-person-initial="A"]')).not.toBeNull();
+    expect(first.textContent).toBe('Ada Lovelace');
+  });
+
   it('lists the current user first, then everyone else', () => {
     open([]);
 

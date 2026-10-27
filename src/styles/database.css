@@ -7290,6 +7290,33 @@ textarea[data-blok-database-cell-input] {
   background-color: var(--blok-database-table-border);
 }
 
+/* notion-spec-2 §18.3 (b2-person-dlg.txt): 240 wide, a 38.5px head, the hint and rows like the status picker. */
+[data-blok-database-person-search] {
+  width: 0;
+}
+
+[data-blok-database-person-editor] [data-blok-database-select-chips] {
+  padding: 9.25px var(--blok-space-3);
+}
+
+[data-blok-database-person-editor] [data-blok-database-select-hint] {
+  padding: var(--blok-space-2-5) var(--blok-space-3) 9.5px;
+  font-weight: 500;
+  line-height: 14.4px;
+}
+
+[data-blok-database-person-editor] [role="listbox"] {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0 var(--blok-space-1) var(--blok-space-1);
+}
+
+[data-blok-database-person-editor] [data-blok-database-person-option] {
+  padding: 0 var(--blok-space-2);
+  gap: var(--blok-space-2);
+}
+
 [data-blok-database-select-option][data-dragging] {
   opacity: 0.5;
 }

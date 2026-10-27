@@ -2547,7 +2547,8 @@ describe('DatabaseCardDrawer', () => {
     try {
       expect(holder.querySelector('[data-blok-editor]')).toBeNull();
       await vi.dynamicImportSettled();
-      await vi.waitFor(() => { expect(holder.querySelector('[data-blok-editor]')).not.toBeNull(); });
+      // The first import of the real editor takes over 1s on CI with coverage on.
+      await vi.waitFor(() => { expect(holder.querySelector('[data-blok-editor]')).not.toBeNull(); }, { timeout: 15000 });
 
       expect(holder.querySelectorAll('[data-blok-editor]')).toHaveLength(1);
     } finally {

@@ -4,7 +4,7 @@
 //   node scripts/gen-office-fixtures.mjs
 //
 // All three are assembled by hand as minimal deflated OOXML ZIPs — just enough
-// parts for the xlsx preview, Blok's docx renderer and @aiden0z/pptx-renderer to
+// parts for the xlsx preview, Blok's docx renderer and the in-house pptx engine to
 // render one visible sheet/page/slide.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';

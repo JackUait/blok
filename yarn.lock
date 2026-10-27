@@ -12,22 +12,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aiden0z/pptx-renderer@npm:1.3.0":
-  version: 1.3.0
-  resolution: "@aiden0z/pptx-renderer@npm:1.3.0"
-  dependencies:
-    echarts: "npm:^6.0.0"
-    jszip: "npm:^3.10.1"
-    mtx-decompressor: "npm:^1.4.2"
-  peerDependencies:
-    pdfjs-dist: ">=5 <7"
-  peerDependenciesMeta:
-    pdfjs-dist:
-      optional: true
-  checksum: 10c0/0febd90f622e9c340ecd7a65134ad62e51e89571a16dd796edb9b79cb43e684360e37da187fe49f6ea01edd4ab92cbce91b27bd39ced2fb6fcb8d4f82cd9afd1
-  languageName: node
-  linkType: hard
-
 "@ampproject/remapping@npm:2.3.0, @ampproject/remapping@npm:^2.3.0":
   version: 2.3.0
   resolution: "@ampproject/remapping@npm:2.3.0"
@@ -1246,7 +1230,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@bloklabs/core@workspace:."
   dependencies:
-    "@aiden0z/pptx-renderer": "npm:1.3.0"
     "@analogjs/vite-plugin-angular": "npm:2.9.2"
     "@angular/build": "npm:22.2.4"
     "@angular/common": "npm:22.2.3"
@@ -8062,16 +8045,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"echarts@npm:^6.0.0":
-  version: 6.1.0
-  resolution: "echarts@npm:6.1.0"
-  dependencies:
-    tslib: "npm:2.3.0"
-    zrender: "npm:6.1.0"
-  checksum: 10c0/a0911a9d75969ff946d0bce998e95e1924cdec7f5ca6be13ded376e2a47067c70b264ee8d04ba84345aa7895363e202f54c87d2bae114859bd154d565babc09c
-  languageName: node
-  linkType: hard
-
 "editorconfig@npm:^3.0.2":
   version: 3.0.2
   resolution: "editorconfig@npm:3.0.2"
@@ -10486,12 +10459,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jszip@portal:./shims/jszip::locator=%40bloklabs%2Fcore%40workspace%3A.":
-  version: 0.0.0-use.local
-  resolution: "jszip@portal:./shims/jszip::locator=%40bloklabs%2Fcore%40workspace%3A."
-  languageName: node
-  linkType: soft
-
 "katex@npm:0.18.10":
   version: 0.18.10
   resolution: "katex@npm:0.18.10"
@@ -11449,13 +11416,6 @@ __metadata:
     msgpackr-extract:
       optional: true
   checksum: 10c0/145a6477ff46ad3154b999ad9f1d80070f50b01f5a12975aad683455fa8968f3e12503d8397a8828bc15fd297da9694fc7b8ae9f21d3df64f559caa10a3a4731
-  languageName: node
-  linkType: hard
-
-"mtx-decompressor@npm:^1.4.2":
-  version: 1.8.0
-  resolution: "mtx-decompressor@npm:1.8.0"
-  checksum: 10c0/4e97ccf698fd3cc96ea367476e50a411a5315a2c4b570cb5bc4e097a8b98a18035fe619cbe6e2a36ffa5be58b31f231c8aee4fdf6addf7fe3f2dd26f1a19f724
   languageName: node
   linkType: hard
 
@@ -14714,13 +14674,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tslib@npm:2.3.0":
-  version: 2.3.0
-  resolution: "tslib@npm:2.3.0"
-  checksum: 10c0/a845aed84e7e7dbb4c774582da60d7030ea39d67307250442d35c4c5dd77e4b44007098c37dd079e100029c76055f2a362734b8442ba828f8cc934f15ed9be61
-  languageName: node
-  linkType: hard
-
 "tslib@npm:2.8.1, tslib@npm:^2.0.0, tslib@npm:^2.0.1, tslib@npm:^2.1.0, tslib@npm:^2.3.0, tslib@npm:^2.4.0, tslib@npm:^2.8.1, tslib@npm:~2.8.0":
   version: 2.8.1
   resolution: "tslib@npm:2.8.1"
@@ -15671,14 +15624,5 @@ __metadata:
   version: 0.16.3
   resolution: "zone.js@npm:0.16.3"
   checksum: 10c0/8fd5626650126be4db1b5a4ee030d864e7c103bc90de5bd3836517be7b04c63f9232f8d06ada9aa85279f7fab7ca695eb7e18b91cb160baee24a739808b4efc5
-  languageName: node
-  linkType: hard
-
-"zrender@npm:6.1.0":
-  version: 6.1.0
-  resolution: "zrender@npm:6.1.0"
-  dependencies:
-    tslib: "npm:2.3.0"
-  checksum: 10c0/bfdb5e2ccd70893a9e2c7f33959749a6a1abc8912c2b1af301a05593d677a2f6f6087cdc4f0bf73883b99eea2f2d11d1922c71c3bf0bd4e9e5b362fd32129bce
   languageName: node
   linkType: hard

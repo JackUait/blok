@@ -487,7 +487,7 @@ describe('history.restore', () => {
       const agent = createDocumentAgentSession({
         document: { blocks: [formDb(now)] }, tools: setup.tools, contract: setup.contract, actor, ports: setup.ports,
         // databaseFormsHost: what the editor sets when the database tool has config.forms.
-        services: { versionHistory: history, ...(formsHost && { databaseFormsHost: true }) } as never,
+        services: { versionHistory: history, ...(formsHost && { databaseFormsHost: true }) },
       });
 
       return { history, agent };

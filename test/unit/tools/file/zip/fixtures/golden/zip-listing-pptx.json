@@ -1,0 +1,186 @@
+[
+ {
+  "name": "[Content_Types].xml",
+  "size": 1763,
+  "bytes": {
+   "sha256": "b2acaa5a285b5840f2df1c3a9982abafa82f8f4f27eb21e5f72f672818ca0d6a",
+   "length": 1763
+  }
+ },
+ {
+  "name": "_rels/.rels",
+  "size": 303,
+  "bytes": {
+   "sha256": "d6f1dc8994e75883b1f18780e909ecf37d28b2c9584b8e9034d0954a903f97d6",
+   "length": 303
+  }
+ },
+ {
+  "name": "ppt/presentation.xml",
+  "size": 702,
+  "bytes": {
+   "sha256": "a32ce2bbe62026db22596cc791ef34f688b6e218698563f535fba90ca2805081",
+   "length": 702
+  }
+ },
+ {
+  "name": "ppt/_rels/presentation.xml.rels",
+  "size": 1374,
+  "bytes": {
+   "sha256": "e97b453249185ab98e5cb680e7297dcf7cac953448bc26efe360af8e1a079e9f",
+   "length": 1374
+  }
+ },
+ {
+  "name": "ppt/slides/slide1.xml",
+  "size": 2513,
+  "bytes": {
+   "sha256": "a2d55eb48e530885e32b87f08368678faa144be44b568613f9a9868d1e2e719a",
+   "length": 2513
+  }
+ },
+ {
+  "name": "ppt/slides/_rels/slide1.xml.rels",
+  "size": 312,
+  "bytes": {
+   "sha256": "5b3867b9e4e3642ae8a59fb4b7d662b7a18bbaf91bf351ce6cccb02e61df84d7",
+   "length": 312
+  }
+ },
+ {
+  "name": "ppt/slides/slide2.xml",
+  "size": 2281,
+  "bytes": {
+   "sha256": "139a9febe7624ba64c77c5e8ed0da693a8ee112fff1d591c4140482822a8fb57",
+   "length": 2281
+  }
+ },
+ {
+  "name": "ppt/slides/_rels/slide2.xml.rels",
+  "size": 312,
+  "bytes": {
+   "sha256": "5b3867b9e4e3642ae8a59fb4b7d662b7a18bbaf91bf351ce6cccb02e61df84d7",
+   "length": 312
+  }
+ },
+ {
+  "name": "ppt/slides/slide3.xml",
+  "size": 3291,
+  "bytes": {
+   "sha256": "0243f78803cc0f30e2ebfaba348234e850dcc47bf8dad531a57b086fa8dde59f",
+   "length": 3291
+  }
+ },
+ {
+  "name": "ppt/slides/_rels/slide3.xml.rels",
+  "size": 312,
+  "bytes": {
+   "sha256": "5b3867b9e4e3642ae8a59fb4b7d662b7a18bbaf91bf351ce6cccb02e61df84d7",
+   "length": 312
+  }
+ },
+ {
+  "name": "ppt/slides/slide4.xml",
+  "size": 3347,
+  "bytes": {
+   "sha256": "19af06e4f1109d1bef5f0e9a4580997a62bd78ff77b0e159099f51bcfc5b1ee2",
+   "length": 3347
+  }
+ },
+ {
+  "name": "ppt/slides/_rels/slide4.xml.rels",
+  "size": 312,
+  "bytes": {
+   "sha256": "5b3867b9e4e3642ae8a59fb4b7d662b7a18bbaf91bf351ce6cccb02e61df84d7",
+   "length": 312
+  }
+ },
+ {
+  "name": "ppt/slides/slide5.xml",
+  "size": 3910,
+  "bytes": {
+   "sha256": "89e1e1406c958cdef48dfd9b6bb4d079bd842c69d98d33b84182b4cda457be7c",
+   "length": 3910
+  }
+ },
+ {
+  "name": "ppt/slides/_rels/slide5.xml.rels",
+  "size": 312,
+  "bytes": {
+   "sha256": "5b3867b9e4e3642ae8a59fb4b7d662b7a18bbaf91bf351ce6cccb02e61df84d7",
+   "length": 312
+  }
+ },
+ {
+  "name": "ppt/slides/slide6.xml",
+  "size": 3278,
+  "bytes": {
+   "sha256": "79f3ca215aa9ce9c71e28d2be3c99cfb705f92105689006b2ef40644f83883e7",
+   "length": 3278
+  }
+ },
+ {
+  "name": "ppt/slides/_rels/slide6.xml.rels",
+  "size": 312,
+  "bytes": {
+   "sha256": "5b3867b9e4e3642ae8a59fb4b7d662b7a18bbaf91bf351ce6cccb02e61df84d7",
+   "length": 312
+  }
+ },
+ {
+  "name": "ppt/slides/slide7.xml",
+  "size": 2290,
+  "bytes": {
+   "sha256": "4959a4497055faf368f510d1b1004ada8d887ab4ee562278e3d80915c917dc09",
+   "length": 2290
+  }
+ },
+ {
+  "name": "ppt/slides/_rels/slide7.xml.rels",
+  "size": 312,
+  "bytes": {
+   "sha256": "5b3867b9e4e3642ae8a59fb4b7d662b7a18bbaf91bf351ce6cccb02e61df84d7",
+   "length": 312
+  }
+ },
+ {
+  "name": "ppt/slideLayouts/slideLayout1.xml",
+  "size": 499,
+  "bytes": {
+   "sha256": "b77b0b29650ec8c8845095cc441a1bcfe3c2c1ef4c3e966a15eb736b9dc392af",
+   "length": 499
+  }
+ },
+ {
+  "name": "ppt/slideLayouts/_rels/slideLayout1.xml.rels",
+  "size": 312,
+  "bytes": {
+   "sha256": "3359f7a2caacff28ae2a987d867774335a415ffb7f7e84bcd313e625ce8b5c02",
+   "length": 312
+  }
+ },
+ {
+  "name": "ppt/slideMasters/slideMaster1.xml",
+  "size": 698,
+  "bytes": {
+   "sha256": "b6489aa5fc4e455ab3e42262e2057f394cd82cdaebf9f6bc24b672a4a3f93604",
+   "length": 698
+  }
+ },
+ {
+  "name": "ppt/slideMasters/_rels/slideMaster1.xml.rels",
+  "size": 448,
+  "bytes": {
+   "sha256": "988722a344c05a5b806fcf5eb8f229ced905a6f5b134827feb719019f5206249",
+   "length": 448
+  }
+ },
+ {
+  "name": "ppt/theme/theme1.xml",
+  "size": 1878,
+  "bytes": {
+   "sha256": "ab35061e6e654717789ac6da8bc763db5ee7ad9a4577ea8b9acfe3914dcc4045",
+   "length": 1878
+  }
+ }
+]

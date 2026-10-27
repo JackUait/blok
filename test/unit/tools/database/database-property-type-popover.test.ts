@@ -208,6 +208,53 @@ describe('DatabasePropertyTypePopover', () => {
       flow.destroy();
     });
 
+    // notion-spec-2 §18.5: arrows highlight a type, Enter makes it at once.
+    it('walks the shown types with the arrows and makes the highlighted one on Enter', () => {
+      const named = vi.fn<(type: PropertyType, name: string) => void>();
+      const flow = new DatabasePropertyTypePopover({ onSelect: named, withNameField: true });
+
+      flow.open(anchor);
+      const field = document.querySelector<HTMLInputElement>('[data-blok-database-property-name-input]');
+      const key = (k: string): void => {
+        document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+      };
+      const active = (): string[] => [...document.querySelectorAll('[data-blok-database-property-type-option-active]')]
+        .map((el) => el.getAttribute('data-blok-database-property-type-option') ?? '');
+
+      if (field === null) throw new Error('no name field');
+      field.value = 'Cost';
+      key('ArrowDown');
+      expect(active()).toEqual(['text']);
+      key('ArrowDown');
+      key('ArrowDown');
+      key('ArrowUp');
+      expect(active()).toEqual(['number']);
+      key('Enter');
+
+      expect(named).toHaveBeenCalledTimes(1);
+      expect(named).toHaveBeenCalledWith('number', 'Cost');
+      expect(flow.isOpen).toBe(false);
+      flow.destroy();
+    });
+
+    it('skips types the search hid', () => {
+      const named = vi.fn<(type: PropertyType, name: string) => void>();
+      const flow = new DatabasePropertyTypePopover({ onSelect: named, withNameField: true, i18n: { t: (k: string) => k.replace('tools.database.propertyType', ''), has: () => true } as unknown as I18n });
+
+      flow.open(anchor);
+      document.querySelector<HTMLElement>('[data-blok-database-property-type-search]')?.click();
+      const search = document.querySelector<HTMLInputElement>('[data-blok-database-property-type-search-input]');
+
+      if (search === null) throw new Error('no search field');
+      search.value = 'phone';
+      search.dispatchEvent(new Event('input'));
+      search.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+
+      expect(named).toHaveBeenCalledWith('phone', '');
+      flow.destroy();
+    });
+
     // feel/findings-table T12: Notion's name field heads the menu; the types sit in a grid that scrolls under it.
     it('puts the name field in a header and the types in one scrolling grid', () => {
       const flow = new DatabasePropertyTypePopover({ onSelect: vi.fn(), withNameField: true });

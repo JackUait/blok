@@ -8237,7 +8237,7 @@ button[data-blok-database-layout-group-name], button[data-blok-database-layout-p
   user-select: none;
 }
 
-[data-blok-database-property-type-option]:hover {
+[data-blok-database-property-type-option]:hover, [data-blok-database-property-type-option-active] {
   background-color: var(--blok-database-popover-hover);
 }
 

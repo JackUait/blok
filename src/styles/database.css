@@ -5009,7 +5009,8 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   user-select: none;
 }
 
-[data-blok-database-property-type-option]:hover {
+[data-blok-database-property-type-option]:hover,
+[data-blok-database-property-type-option-active] {
   background-color: var(--blok-database-popover-hover);
 }
 

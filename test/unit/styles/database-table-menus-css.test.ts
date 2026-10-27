@@ -52,6 +52,11 @@ describe('add property menu (T12)', () => {
     expect(declared('[data-blok-database-property-type-heading]', 'font-size')).toEqual(['12px']);
   });
 
+  // notion-spec-2 §18.5: the row the arrows are on takes the hover fill, never blue.
+  it('fills the arrow-highlighted type like a hovered one', () => {
+    expect(declared('[data-blok-database-property-type-option-active]', 'background-color')).toEqual(['var(--blok-database-popover-hover)']);
+  });
+
   // notion-spec-2 §18.5, research/08 Motion: opacity and scale 0.96 → 1 over 200ms ease, from the top-left corner.
   it('opens like Notion\'s menus', () => {
     // The second is the reduced-motion `none`.

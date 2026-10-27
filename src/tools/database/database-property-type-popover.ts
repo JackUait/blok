@@ -14,6 +14,8 @@ import {
 
 /** Top margin; it matches the CSS max-height margin. Notion's is unmeasured. */
 const VIEWPORT_MARGIN = 12;
+/** The type row the arrows are on. */
+const OPTION_ACTIVE = 'data-blok-database-property-type-option-active';
 /** notion-spec-2 §18.5 measured these two. */
 const VIEWPORT_BOTTOM_MARGIN = 11;
 const ABOVE_GAP = 1;
@@ -89,15 +91,6 @@ export class DatabasePropertyTypePopover {
       nameField.setAttribute('data-blok-field', 'text');
       nameField.placeholder = this.i18n?.t('tools.database.propertyName') ?? 'tools.database.propertyName';
       nameField.setAttribute('aria-label', this.i18n?.t('tools.database.propertyName') ?? 'tools.database.propertyName');
-      // notion-spec-2 §18.5: a name then Enter makes a Text property. Enter on an empty field is unmeasured, so it does nothing.
-      nameField.addEventListener('keydown', (e) => {
-        const name = nameField.value.trim();
-
-        if (e.key !== 'Enter' || e.isComposing || name === '') return;
-        e.preventDefault();
-        this.onSelect('text', name);
-        this.close();
-      });
       header.appendChild(nameField);
       popover.appendChild(header);
     }
@@ -143,6 +136,8 @@ export class DatabasePropertyTypePopover {
       grid.appendChild(item);
     }
 
+    popover.addEventListener('keydown', (e) => this.onKey(e, grid, nameField));
+
     // Inside a top-layer panel (a peek, the layout builder): on body the panel covers the menu, and a modal's focus trap takes the name field.
     overlayMountFor(anchor).appendChild(popover);
     const reposition = (): void => {
@@ -181,10 +176,40 @@ export class DatabasePropertyTypePopover {
     nameField?.focus();
   }
 
+  /**
+   * notion-spec-2 §18.5: arrows highlight a shown type and Enter makes it at once.
+   * With none highlighted, a typed name then Enter makes a Text property; on an empty name it is unmeasured, so it does nothing.
+   */
+  private onKey(e: KeyboardEvent, grid: HTMLElement, nameField: HTMLInputElement | null): void {
+    if (e.isComposing) return;
+    const shown = [...grid.querySelectorAll<HTMLElement>('[data-blok-database-property-type-option]')].filter((option) => !option.hidden);
+    const current = shown.findIndex((option) => option.hasAttribute(OPTION_ACTIVE));
+    const name = nameField?.value.trim() ?? '';
+
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      shown[current]?.removeAttribute(OPTION_ACTIVE);
+      const next = shown[e.key === 'ArrowDown' ? Math.min(current + 1, shown.length - 1) : Math.max(current - 1, 0)];
+
+      next?.setAttribute(OPTION_ACTIVE, '');
+      next?.scrollIntoView({ block: 'nearest' });
+
+      return;
+    }
+    if (e.key !== 'Enter') return;
+    const type = shown[current]?.getAttribute('data-blok-database-property-type-option') as PropertyType | undefined;
+
+    if (type === undefined && (e.target !== nameField || name === '')) return;
+    e.preventDefault();
+    this.onSelect(type ?? 'text', name);
+    this.close();
+  }
+
   private typeListHeading(grid: HTMLElement): HTMLElement {
     return typeSearchHeading((key) => this.i18n?.t(key) ?? key, (query) => {
       for (const option of grid.querySelectorAll<HTMLElement>('[data-blok-database-property-type-option]')) {
         option.hidden = !(option.textContent ?? '').toLowerCase().includes(query);
+        option.removeAttribute(OPTION_ACTIVE);
       }
     }, true);
   }

@@ -255,6 +255,32 @@ describe('cell editor CSS', () => {
     });
   });
 
+  // notion-spec-2 §18.3 (b4-rel-dlg.txt): head 33 tall, "Select a page" 16px in, rows 544x32 one pixel apart.
+  describe('relation picker in a table cell', () => {
+    const REL = '[data-blok-database-relation-editor]';
+
+    it('draws the head as a 33px tinted bar with a line under it', () => {
+      expect(declared('[data-blok-database-relation-search-bar]', 'padding')).toEqual(['var(--blok-space-1-5) 10px']);
+      expect(declared('[data-blok-database-relation-search-bar]', 'background-color')).toEqual(['var(--blok-database-panel-input-bg)']);
+      expect(declared('[data-blok-database-relation-search-bar]', 'box-shadow')).toEqual(['var(--blok-database-table-control-border) 0 1px 0 0']);
+      expect(declared(`${REL} [data-blok-database-relation-search-bar] [data-blok-database-relation-search]`, 'padding')).toEqual(['0']);
+    });
+
+    it('puts "Select a page" 16px in, the first row 43px under the head', () => {
+      expect(declared('[data-blok-database-relation-heading]', 'padding')).toEqual(['var(--blok-space-4) var(--blok-space-4) 12.6px']);
+      expect(declared('[data-blok-database-relation-heading]', 'line-height')).toEqual(['14.4px']);
+    });
+
+    it('lists 32px rows 8px in, 1px apart, titles at weight 500', () => {
+      const LIST = `${REL} [data-blok-database-relation-head] ~ [role="listbox"]`;
+
+      expect(declared(LIST, 'padding')).toEqual(['0 var(--blok-space-2) var(--blok-space-2)']);
+      expect(declared(LIST, 'gap')).toEqual(['1px']);
+      expect(declared(`${LIST} [data-blok-database-relation-option]`, 'min-height')).toEqual(['32px']);
+      expect(declared(`${LIST} [data-blok-database-relation-option]`, 'font-weight')).toEqual(['500']);
+    });
+  });
+
   // notion-spec §7, scratchpad n/11-status.png and n/12-select.png: text, pills and headings start 12px into the box.
   describe('select and status pickers over a row page value', () => {
     const VALUE = "[data-blok-popover-custom-class~='blok-database-value-editor']";

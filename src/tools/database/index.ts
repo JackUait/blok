@@ -10878,6 +10878,7 @@ export class DatabaseTool implements BlockTool {
       formulaProblem: (property, rowId) => this.computedValues.problem(rowId, property),
       relationTitle: (property, rowId) => this.relatedTitle(property, rowId),
       relationCandidates: (property) => this.relationCandidates(property),
+      relationScope: (property) => this.relatedDatabaseName(property),
       openRelated: (property, rowId) => this.openRelated(property, rowId),
       ...this.mapCellContext(),
       ...(this.config.helpLinks !== undefined ? { helpLinks: this.config.helpLinks } : {}),

@@ -36,7 +36,7 @@ describe('relation editor', () => {
   it('lists the target rows by title and marks the related ones', () => {
     openCellEditor(relation(), [{ id: 'r2' }], makeAnchor(), makeEditorContext({ relationCandidates: () => candidates }));
 
-    expect(options().map((o) => o.textContent)).toEqual(['Alpha', 'Bravo', 'tools.database.relationUntitled']);
+    expect(options().map((o) => o.textContent?.trim())).toEqual(['Alpha', 'Bravo', 'tools.database.relationUntitled']);
     expect(options().map((o) => o.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false']);
   });
 
@@ -95,9 +95,45 @@ describe('relation editor', () => {
     search().value = 'bra';
     search().dispatchEvent(new Event('input'));
 
-    expect(options().map((o) => o.textContent)).toEqual(['Bravo']);
+    expect(options().map((o) => o.textContent?.trim())).toEqual(['Bravo']);
     press(search(), 'Enter');
     expect(onCommit).toHaveBeenLastCalledWith([{ id: 'r2' }]);
+  });
+
+  // notion-spec-2 §18.3 (b4-rel-dlg.txt): the table picker is 560 wide, "In <database>" in its head, "Select a page" over 32px page rows.
+  describe('in a table cell', () => {
+    const openInTable = (): void => {
+      openCellEditor(relation(), [], makeAnchor(), makeEditorContext({ relationCandidates: () => candidates, relationScope: () => 'Tasks', coverCell: true }));
+    };
+
+    it('opens 560 wide', () => {
+      openInTable();
+
+      expect(search().closest<HTMLElement>('[data-blok-popover]')?.style.getPropertyValue('--width')).toBe('560px');
+    });
+
+    it('names the related database in the head and labels the list "Select a page"', () => {
+      openInTable();
+
+      expect(document.querySelector('[data-blok-database-relation-scope] strong')?.textContent).toBe('Tasks');
+      expect(document.querySelector('[data-blok-database-relation-heading]')?.textContent).toBe('tools.database.formRelationHeading');
+      expect(document.querySelector('[data-blok-database-select-hint]')).toBeNull();
+      expect(search().placeholder).toBe('tools.database.relationSearchPlaceholder');
+    });
+
+    it('draws a page glyph before each title', () => {
+      openInTable();
+
+      expect(options()[0].querySelector('[data-blok-database-page-icon-placeholder] svg')).not.toBeNull();
+      expect(options()[0].textContent?.trim()).toBe('Alpha');
+    });
+  });
+
+  it('keeps the search and hint over a row page value', () => {
+    openCellEditor(relation(), [], makeAnchor(), makeEditorContext({ relationCandidates: () => candidates, relationScope: () => 'Tasks', coverCell: 'value' }));
+
+    expect(document.querySelector('[data-blok-database-relation-scope]')).toBeNull();
+    expect(document.querySelector('[data-blok-database-select-hint]')).not.toBeNull();
   });
 
   it('opens nothing without candidates from the host', () => {

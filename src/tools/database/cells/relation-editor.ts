@@ -1,5 +1,6 @@
 import type { PropertyDefinition, PropertyValue, RelationValue } from '../types';
 import { relationIdsOf } from '../relation-values';
+import { pagePlaceholderIcon } from '../page-icon';
 import { CellPopover, coverMinWidth } from './cell-popover';
 import type { CellEditorContext, CellEditorHandle } from './types';
 
@@ -52,7 +53,8 @@ class RelationEditor implements CellEditorHandle {
     this.list.setAttribute('role', 'listbox');
     this.list.setAttribute('aria-multiselectable', property.relation?.limit === 1 ? 'false' : 'true');
     this.list.setAttribute('aria-label', property.name);
-    const scope = ctx.relationScope?.(property);
+    // The row page keeps the plain search and hint; a table cell and a form name the database.
+    const scope = ctx.coverCell === 'value' ? undefined : ctx.relationScope?.(property);
 
     if (scope === undefined) {
       this.root.append(this.search, hint, this.list);
@@ -76,7 +78,8 @@ class RelationEditor implements CellEditorHandle {
       anchor,
       cover: ctx.coverCell,
       content: this.root,
-      minWidth: coverMinWidth(anchor, ctx.coverCell, 300),
+      // notion-spec-2 §18.3: 560 wide over a table cell.
+      minWidth: coverMinWidth(anchor, ctx.coverCell, ctx.coverCell === true ? 560 : 300),
       onEscape: () => this.finish(true),
       onDismiss: () => this.finish(false),
     });
@@ -95,7 +98,10 @@ class RelationEditor implements CellEditorHandle {
     const heading = document.createElement('div');
     const [before, after = ''] = this.ctx.i18n.t('tools.database.formRelationScope').split('{database}');
 
-    this.search.placeholder = this.ctx.i18n.t('tools.database.formRelationSearch');
+    if (this.ctx.coverCell !== true) {
+      this.search.placeholder = this.ctx.i18n.t('tools.database.formRelationSearch');
+    }
+    header.setAttribute('data-blok-database-relation-head', '');
     bar.setAttribute('data-blok-database-relation-search-bar', '');
     chip.setAttribute('data-blok-database-relation-scope', '');
     name.textContent = scope;
@@ -179,7 +185,7 @@ class RelationEditor implements CellEditorHandle {
       row.setAttribute('data-blok-database-relation-option', candidate.id);
       row.setAttribute('role', 'option');
       row.setAttribute('aria-selected', chosen ? 'true' : 'false');
-      row.textContent = this.titleOf(candidate);
+      row.append(pagePlaceholderIcon(), this.titleOf(candidate));
       if (index === this.activeIndex) {
         row.setAttribute('data-active', '');
         this.search.setAttribute('aria-activedescendant', row.id);

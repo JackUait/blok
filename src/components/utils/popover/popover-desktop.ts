@@ -1614,7 +1614,7 @@ export class PopoverDesktop extends PopoverAbstract {
       items: item.children,
       nestingLevel: this.nestingLevel + 1,
       flippable: item.isChildrenFlippable,
-      messages: this.messages,
+      messages: item.childrenSearchPlaceholder === undefined ? this.messages : { ...this.messages, search: item.childrenSearchPlaceholder },
       onNavigateBack: this.arrowLeftClosesSubmenu ? this.destroyNestedPopoverIfExists.bind(this) : undefined,
       width: item.childrenWidth,
       minWidth: item.childrenMinWidth,

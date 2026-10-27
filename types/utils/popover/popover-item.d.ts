@@ -13,6 +13,11 @@ export interface PopoverItemChildren {
   searchable?: boolean;
 
   /**
+   * Placeholder of the children's search field. Defaults to the menu's own.
+   */
+  searchPlaceholder?: string;
+
+  /**
    * True if popover with children should be displayed instantly and not after item click/hover.
    * False by default.
    * Now is used only in the inline popover.

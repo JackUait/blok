@@ -199,6 +199,17 @@ export abstract class PopoverItem {
   }
 
   /**
+   * Returns the placeholder of the children's search field, if specified
+   */
+  public get childrenSearchPlaceholder(): string | undefined {
+    if (this.params === undefined || !('children' in this.params)) {
+      return undefined;
+    }
+
+    return this.params.children?.searchPlaceholder;
+  }
+
+  /**
    * Returns the width for children popover, if specified
    */
   public get childrenWidth(): string | undefined {

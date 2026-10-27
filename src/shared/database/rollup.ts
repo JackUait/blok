@@ -23,7 +23,7 @@ const GENERIC: readonly RollupFunction[] = [
 const NUMBER_FNS: readonly RollupFunction[] = ['sum', 'average', 'median', 'min', 'max', 'range'];
 const DATE_FNS: readonly RollupFunction[] = ['earliest_date', 'latest_date', 'date_range'];
 /** notion-spec-2 §15.2: a Checkbox target offers only these. */
-const CHECKBOX_MENU: RollupFunction[] = ['show_original', 'count', 'checked', 'unchecked', 'percent_checked', 'percent_unchecked'];
+const CHECKBOX_MENU: readonly RollupFunction[] = ['show_original', 'count', 'checked', 'unchecked', 'percent_checked', 'percent_unchecked'];
 const GROUP_FNS: readonly RollupFunction[] = ['count_per_group', 'percent_per_group'];
 
 const PERCENT_FNS: ReadonlySet<RollupFunction> = new Set<RollupFunction>(['percent_empty', 'percent_not_empty', 'percent_checked', 'percent_unchecked']);
@@ -43,7 +43,7 @@ const isOptionType = (target: PropertyDefinition): boolean =>
  * and date-only functions; per-group comes only from the API enum, so where
  * it shows is unverified.
  */
-export const rollupFunctionsFor = (target: PropertyDefinition): RollupFunction[] => (target.type === 'checkbox' ? CHECKBOX_MENU : [
+export const rollupFunctionsFor = (target: PropertyDefinition): RollupFunction[] => (target.type === 'checkbox' ? [...CHECKBOX_MENU] : [
   ...GENERIC,
   ...(target.type === 'number' ? NUMBER_FNS : []),
   ...(isDateType(target) ? DATE_FNS : []),

@@ -404,6 +404,9 @@ describe('draft view tabs between peers', { timeout: 60000 }, () => {
 
     expect(tabNames(b)).toEqual(['Content', 'Applied']);
     await click(wrapperOf(b).querySelector('[data-blok-database-drawer-close]'));
+    // Both peers share one document here, and a page holds one peek: b's peek closed a's builder.
+    await pump([a, b]);
+    await draftViewTab(a, 'Draft A', false);
     await applyAndClose(a);
     await pump([a, b]);
 

@@ -192,6 +192,15 @@ describe('cell editor CSS', () => {
     });
   });
 
+  // notion-spec-2 §18.1: a table cell's one file chip fills the cell (184 of 200) and its name ends in "…".
+  it('stretches a lone file chip across a table cell and cuts its name with an ellipsis', () => {
+    const CHIP = '[data-blok-database-table-cell][data-type="files"] [data-blok-database-file-chip]:only-child';
+
+    expect(declared(CHIP, 'flex')).toEqual(['1 1 auto']);
+    expect(declared(`${CHIP} > [data-blok-database-cell-link]`, 'text-overflow')).toEqual(['ellipsis']);
+    expect(declared(`${CHIP} > [data-blok-database-cell-link]`, 'min-width')).toEqual(['0']);
+  });
+
   // notion-spec-2 §18.3 (b1-status-dlg.txt): the table status picker is 240x289 with three groups.
   describe('status picker in a table cell', () => {
     const STATUS = '[data-blok-database-select-editor="status"]';

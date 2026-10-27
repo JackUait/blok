@@ -103,7 +103,27 @@ export function autoValueAxis(input: ScaleInput): AxisScale {
     return { min, max, major: fixedMajor };
   }
 
+  if (input.min !== undefined && input.max !== undefined) {
+    // A fixed range gets about five steps, as the reference renders oracle 0022.
+    return { min, max, major: niceAxisInterval(max, min, 5) };
+  }
+
   return { min, max, major: explicit ? niceAxisInterval(max, min, desiredTicks) : interval };
+}
+
+/** Area charts ask for eight ticks; a stacked area gets a full step above its top. */
+export function areaValueAxis(input: ScaleInput): AxisScale {
+  const finite = input.values.filter((v) => Number.isFinite(v));
+  const dataMax = finite.length > 0 ? Math.max(...finite) : 1;
+  const dataMin = finite.length > 0 ? Math.min(...finite) : 0;
+  const auto = autoValueAxis({ ...input, desiredTicks: 8, stacked: true });
+
+  if (!input.stacked || input.max !== undefined || input.major !== undefined || dataMax <= 0) {
+    return auto;
+  }
+  const major = niceAxisInterval(dataMax, dataMin, 8);
+
+  return { ...auto, max: Math.ceil(dataMax / major) * major + major, major };
 }
 
 /**

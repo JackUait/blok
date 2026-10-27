@@ -160,7 +160,7 @@ describe('readChart', () => {
 
     expect(model.series[0].xValues).toEqual([1, 2]);
     expect(model.series[0].noLine).toBe(true);
-    expect(model.series[1]).toMatchObject({ noLine: false, smooth: true });
+    expect(model.series[1]).toMatchObject({ noLine: false, smooth: true, lineWidth: 3 });
   });
 
   it('reads doughnut hole size, first slice angle and explosion', () => {

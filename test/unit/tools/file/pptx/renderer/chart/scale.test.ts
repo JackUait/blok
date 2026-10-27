@@ -1,6 +1,7 @@
 // Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import {
+  areaValueAxis,
   autoValueAxis,
   desiredTickCount,
   niceAxisInterval,
@@ -59,6 +60,15 @@ describe('chart value axis scale', () => {
     expect(autoValueAxis({ values: [5, 50], desiredTicks: 8, min: 0, max: 100, major: 25 }))
       .toEqual({ min: 0, max: 100, major: 25 });
     expect(autoValueAxis({ values: [5, 50], desiredTicks: 10, max: 200 })).toMatchObject({ min: 0, max: 200 });
+  });
+
+  it('picks a coarser major unit when the axis fixes both ends (oracle 0022)', () => {
+    expect(autoValueAxis({ values: [-3, 5], desiredTicks: 10, min: -4, max: 6 })).toEqual({ min: -4, max: 6, major: 2 });
+  });
+
+  it('gives area charts eight ticks and a full step of headroom when stacked (oracle 0014, 0015)', () => {
+    expect(areaValueAxis({ values: [90, 105, 110, 115], desiredTicks: 3, stacked: true })).toEqual({ min: 0, max: 140, major: 20 });
+    expect(areaValueAxis({ values: [80, 95, 110, 125, 148, 60, 91], desiredTicks: 3 })).toEqual({ min: 0, max: 160, major: 20 });
   });
 
   it('never returns a zero or negative span', () => {

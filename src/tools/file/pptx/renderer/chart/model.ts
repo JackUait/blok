@@ -47,6 +47,7 @@ export interface ChartSeries {
   pointColors: string[];
   lineWidth: number;
   noLine: boolean;
+  invertIfNegative: boolean;
   marker?: { symbol: string; size: number };
   smooth: boolean;
   explosion: number[];
@@ -307,8 +308,10 @@ function readSeries(ser: SafeXmlNode, index: number, sc: SeriesContext): ChartSe
     formatCode: extractFormatCode(valNode),
     color,
     pointColors: readPointColors(ser, values.length, pointFallback, ctx),
-    lineWidth: widthEmu !== undefined && widthEmu > 0 ? Math.max(1, widthEmu / 9525) : 2,
+    lineWidth: widthEmu !== undefined && widthEmu > 0 ? Math.max(1, widthEmu / 9525) : 3,
     noLine: ln.child('noFill').exists(),
+    // Absent means invert, as the reference renderer draws it.
+    invertIfNegative: bool(ser.child('invertIfNegative'), true),
     marker: readMarker(ser, index, sc.plot, sc.kind),
     smooth: bool(ser.child('smooth'), false),
     explosion: readExplosion(ser, values.length),

@@ -1105,7 +1105,7 @@ const aimedAt = (ctx: ToolActionContext, databaseId: string | undefined): ToolAc
   const found = ctx.read(databaseId);
 
   if (found?.type !== 'database') {
-    return ctx.fail('PRECONDITION_FAILED', `The button names database ${databaseId}, which is not in this document.`);
+    return ctx.fail('PRECONDITION_FAILED', `The button names database ${databaseId}, which is not one here.`);
   }
 
   return { ...ctx, block: { id: found.id, type: found.type, data: isRecord(found.data) ? found.data : {}, children: found.children } };

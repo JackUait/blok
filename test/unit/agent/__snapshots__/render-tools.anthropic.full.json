@@ -1855,6 +1855,46 @@
                 "type": "object",
                 "properties": {
                   "name": {
+                    "const": "database.pressButton"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "rowId",
+                      "propertyId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "rowId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Id of a database-row child block."
+                      },
+                      "propertyId": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
                     "const": "database.recolorOption"
                   },
                   "args": {
@@ -2309,6 +2349,46 @@
                             "type": "null"
                           }
                         ]
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Id of the block to act on."
+                      }
+                    }
+                  },
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "args"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "const": "database.submitForm"
+                  },
+                  "args": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "viewId",
+                      "answers"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "viewId": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "answers": {
+                        "type": "object",
+                        "additionalProperties": true,
+                        "description": "Values keyed by property id, in the shapes schema describes."
                       },
                       "id": {
                         "type": "string",

@@ -217,6 +217,7 @@ const REVIEW_ROWS: Record<CapabilityId, Coverage> = {
   'paste:menu/plain': cmd('text.format'),
 
   // feature — tool features a listener in a big file calls (HAND_FEATURES)
+  'feature:database/button-press': cmd('database.pressButton'),
   'feature:database/csv-export': exempt('view-only', 'Exports the rows as a CSV file; the document does not change. Agents read rows with doc.read.'),
   'feature:database/csv-paste': cmds(['database.addRow', 'database.setRowValues'], 'A table of text pasted into the grid fills cells and adds rows.'),
   'feature:database/csv-import': cmds(['database.create', 'database.addProperty', 'database.addRow'], 'Importing a CSV makes a database; an agent makes it, its typed properties and rows itself.'),

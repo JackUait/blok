@@ -1023,7 +1023,7 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
     target: 'block',
     runtime: 'editor',
     args: closed({ rowId: ROW_ID, propertyId: { type: 'string', minLength: 1 } }, ['rowId', 'propertyId']),
-    mirrors: ['feature:database/button-press'],
+    mirrors: [],
   },
   {
     name: 'submitForm',

@@ -258,17 +258,17 @@ const matchDate = (value: PropertyValue | undefined, operator: string, target: P
   if (operator === 'is_empty') return parsed === null;
   if (operator === 'is_not_empty') return parsed !== null;
 
-  const window = relativeWindow(operator, target, now);
-  const t = window === undefined ? resolveDay(target, now) : undefined;
+  const range = relativeWindow(operator, target, now);
+  const t = range === undefined ? resolveDay(target, now) : undefined;
 
-  if (window === undefined && t === undefined) return undefined;
+  if (range === undefined && t === undefined) return undefined;
   if (parsed === null) return false;
 
   const first = parsed.start.slice(0, 10);
   const last = (parsed.end ?? parsed.start).slice(0, 10);
 
-  if (window !== undefined) {
-    return first <= window.to && last >= window.from;
+  if (range !== undefined) {
+    return first <= range.to && last >= range.from;
   }
   if (t === undefined) return undefined;
 

@@ -7194,10 +7194,15 @@ textarea[data-blok-database-cell-input] {
   transition: opacity 0.1s ease;
 }
 
-/* research/08: the option "⋯" is 24x24. */
-[data-blok-database-select-option-menu] {
+/* research/08: the option "⋯" is 24x24 in a table cell picker. */
+[data-blok-popover-custom-class~='blok-database-cell-editor']:not([data-blok-popover-custom-class~='blok-database-value-editor']) [data-blok-database-select-option-menu] {
   width: 24px;
   height: 24px;
+}
+
+[data-blok-database-select-option-menu] {
+  width: 20px;
+  height: 20px;
 }
 
 [data-blok-database-select-option-handle] {
@@ -7258,14 +7263,14 @@ textarea[data-blok-database-cell-input] {
 /*
  * notion-spec-2 §18.3 (b1-status-dlg.txt), table status picker 240x289: a 38.5px head,
  * group labels and pills 12px in, groups 74px apart, dividers 12px short of both sides.
- * The row page rules above are more specific and keep their own measurements.
+ * Scoped off the row page, which keeps its own measurements (notion-spec §7, n/11).
  */
-[data-blok-database-select-editor] [data-blok-database-select-chips] {
+[data-blok-popover-custom-class~='blok-database-cell-editor']:not([data-blok-popover-custom-class~='blok-database-value-editor']) [data-blok-database-select-editor] [data-blok-database-select-chips] {
   padding: var(--blok-database-picker-head-padding-block) var(--blok-space-3);
 }
 
 /* research/08: the select hint is 12/14.4 weight 500. */
-[data-blok-database-select-editor] [data-blok-database-select-hint] {
+[data-blok-popover-custom-class~='blok-database-cell-editor']:not([data-blok-popover-custom-class~='blok-database-value-editor']) [data-blok-database-select-editor] [data-blok-database-select-hint] {
   font-weight: 500;
   line-height: 14.4px;
 }
@@ -7276,24 +7281,24 @@ textarea[data-blok-database-cell-input] {
   display: none;
 }
 
-[data-blok-database-select-editor="status"] [data-blok-database-select-option] {
+[data-blok-popover-custom-class~='blok-database-cell-editor']:not([data-blok-popover-custom-class~='blok-database-value-editor']) [data-blok-database-select-editor="status"] [data-blok-database-select-option] {
   padding-inline: var(--blok-space-2);
 }
 
-[data-blok-database-select-editor="status"] [data-blok-database-select-list] > [data-blok-database-status-group-heading] {
+[data-blok-popover-custom-class~='blok-database-cell-editor']:not([data-blok-popover-custom-class~='blok-database-value-editor']) [data-blok-database-select-editor="status"] [data-blok-database-select-list] > [data-blok-database-status-group-heading] {
   padding: var(--blok-space-2-5) 0 9.5px;
   margin-inline: var(--blok-space-2);
   font-weight: 500;
   line-height: 14.4px;
 }
 
-[data-blok-database-select-editor="status"] [data-blok-database-select-list] > [data-blok-database-status-group-heading]:not(:first-child) {
+[data-blok-popover-custom-class~='blok-database-cell-editor']:not([data-blok-popover-custom-class~='blok-database-value-editor']) [data-blok-database-select-editor="status"] [data-blok-database-select-list] > [data-blok-database-status-group-heading]:not(:first-child) {
   margin-top: var(--blok-space-2-25);
   padding-top: var(--blok-space-3);
   border-top: 1px solid var(--blok-database-table-border);
 }
 
-[data-blok-database-select-editor="status"] [data-blok-database-select-edit-property] {
+[data-blok-popover-custom-class~='blok-database-cell-editor']:not([data-blok-popover-custom-class~='blok-database-value-editor']) [data-blok-database-select-editor="status"] [data-blok-database-select-edit-property] {
   position: relative;
   width: calc(100% - var(--blok-space-2));
   margin: var(--blok-space-1-25) var(--blok-space-1) var(--blok-space-1);
@@ -7302,12 +7307,12 @@ textarea[data-blok-database-cell-input] {
   color: var(--blok-database-ink);
 }
 
-[data-blok-database-select-editor="status"] [data-blok-database-select-edit-property] svg {
+[data-blok-popover-custom-class~='blok-database-cell-editor']:not([data-blok-popover-custom-class~='blok-database-value-editor']) [data-blok-database-select-editor="status"] [data-blok-database-select-edit-property] svg {
   width: 20px;
   height: 20px;
 }
 
-[data-blok-database-select-editor="status"] [data-blok-database-select-edit-property]::before {
+[data-blok-popover-custom-class~='blok-database-cell-editor']:not([data-blok-popover-custom-class~='blok-database-value-editor']) [data-blok-database-select-editor="status"] [data-blok-database-select-edit-property]::before {
   content: '';
   position: absolute;
   top: calc(-1 * var(--blok-space-1-25));
@@ -7321,24 +7326,24 @@ textarea[data-blok-database-cell-input] {
   width: 0;
 }
 
-[data-blok-database-person-editor] [data-blok-database-select-chips] {
+[data-blok-popover-custom-class~='blok-database-cell-editor']:not([data-blok-popover-custom-class~='blok-database-value-editor']) [data-blok-database-person-editor] [data-blok-database-select-chips] {
   padding: var(--blok-database-picker-head-padding-block) var(--blok-space-3);
 }
 
-[data-blok-database-person-editor] [data-blok-database-select-hint] {
+[data-blok-popover-custom-class~='blok-database-cell-editor']:not([data-blok-popover-custom-class~='blok-database-value-editor']) [data-blok-database-person-editor] [data-blok-database-select-hint] {
   padding: var(--blok-space-2-5) var(--blok-space-3) 9.5px;
   font-weight: 500;
   line-height: 14.4px;
 }
 
-[data-blok-database-person-editor] [role="listbox"] {
+[data-blok-popover-custom-class~='blok-database-cell-editor']:not([data-blok-popover-custom-class~='blok-database-value-editor']) [data-blok-database-person-editor] [role="listbox"] {
   display: flex;
   flex-direction: column;
   gap: var(--blok-space-0-25);
   padding: 0 var(--blok-space-1) var(--blok-space-1);
 }
 
-[data-blok-database-person-editor] [data-blok-database-person-option] {
+[data-blok-popover-custom-class~='blok-database-cell-editor']:not([data-blok-popover-custom-class~='blok-database-value-editor']) [data-blok-database-person-editor] [data-blok-database-person-option] {
   padding: 0 var(--blok-space-2);
   gap: var(--blok-space-2);
 }

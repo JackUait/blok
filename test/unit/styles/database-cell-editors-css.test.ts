@@ -10,6 +10,9 @@ const strip = (css: string): string => css.replace(/\/\*[\s\S]*?\*\//g, '').repl
 const database = strip(readFileSync(resolve(__dirname, '../../../src/styles/database.css'), 'utf8'));
 const colors = strip(readFileSync(resolve(__dirname, '../../../src/styles/colors.css'), 'utf8'));
 
+/** Table cell and form pickers; the row page's value editor keeps its own measurements. */
+const TABLE = "[data-blok-popover-custom-class~='blok-database-cell-editor']:not([data-blok-popover-custom-class~='blok-database-value-editor'])";
+
 const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** Every declaration of `name` in top-level rules whose selector list holds exactly `selector`. */
@@ -205,31 +208,31 @@ describe('cell editor CSS', () => {
   // the option "⋯" 24x24. The status head (notion-spec-2 §18.3) is the same 38.5px field.
   describe('select, multi-select and status pickers', () => {
     it('give the head a 38.5px row, its content 12px in', () => {
-      expect(declared('[data-blok-database-select-editor] [data-blok-database-select-chips]', 'padding')).toEqual(['var(--blok-database-picker-head-padding-block) var(--blok-space-3)']);
+      expect(declared(`${TABLE} [data-blok-database-select-editor] [data-blok-database-select-chips]`, 'padding')).toEqual(['var(--blok-database-picker-head-padding-block) var(--blok-space-3)']);
     });
 
     it('draw the hint at 12/14.4 weight 500', () => {
-      expect(declared('[data-blok-database-select-editor] [data-blok-database-select-hint]', 'font-weight')).toEqual(['500']);
-      expect(declared('[data-blok-database-select-editor] [data-blok-database-select-hint]', 'line-height')).toEqual(['14.4px']);
+      expect(declared(`${TABLE} [data-blok-database-select-editor] [data-blok-database-select-hint]`, 'font-weight')).toEqual(['500']);
+      expect(declared(`${TABLE} [data-blok-database-select-editor] [data-blok-database-select-hint]`, 'line-height')).toEqual(['14.4px']);
     });
 
     it('draw the option "⋯" 24x24', () => {
-      expect(declared('[data-blok-database-select-option-menu]', 'width')).toEqual(['24px']);
-      expect(declared('[data-blok-database-select-option-menu]', 'height')).toEqual(['24px']);
+      expect(declared(`${TABLE} [data-blok-database-select-option-menu]`, 'width')).toEqual(['24px']);
+      expect(declared(`${TABLE} [data-blok-database-select-option-menu]`, 'height')).toEqual(['24px']);
     });
   });
 
   // notion-spec-2 §18.3 (b1-status-dlg.txt): the table status picker is 240x289 with three groups.
   describe('status picker in a table cell', () => {
-    const STATUS = '[data-blok-database-select-editor="status"]';
+    const STATUS = `${TABLE} [data-blok-database-select-editor="status"]`;
     const HEADING = `${STATUS} [data-blok-database-select-list] > [data-blok-database-status-group-heading]`;
     const FOOTER = `${STATUS} [data-blok-database-select-edit-property]`;
 
 
     it('puts each pill 8px into its row, under its group label, with no handle and no check mark', () => {
       expect(declared(`${STATUS} [data-blok-database-select-option]`, 'padding-inline')).toEqual(['var(--blok-space-2)']);
-      expect(declared(`${STATUS} [data-blok-database-select-option-handle]`, 'display')).toEqual(['none']);
-      expect(declared(`${STATUS} [data-blok-database-select-option-check]`, 'display')).toEqual(['none']);
+      expect(declared('[data-blok-database-select-editor="status"] [data-blok-database-select-option-handle]', 'display')).toEqual(['none']);
+      expect(declared('[data-blok-database-select-editor="status"] [data-blok-database-select-option-check]', 'display')).toEqual(['none']);
     });
 
     it('spaces the groups 74px apart with 216px dividers 12px in', () => {
@@ -255,7 +258,7 @@ describe('cell editor CSS', () => {
 
   // notion-spec-2 §18.3 (b2-person-dlg.txt): 240x162 with three people.
   describe('person picker', () => {
-    const PERSON = '[data-blok-database-person-editor]';
+    const PERSON = `${TABLE} [data-blok-database-person-editor]`;
 
     it('keeps to 240 wide: the search input does not push the box wider', () => {
       expect(declared('[data-blok-database-person-search]', 'width')).toEqual(['0']);

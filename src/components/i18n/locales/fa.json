@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "ارسال پیام به عامل",
   "tools.database.buttonAgentBusy": "هوش مصنوعی مشغول است. وقتی تمام شد دوباره امتحان کنید.",
   "tools.database.buttonAgentFailed": "هوش مصنوعی نتوانست پیام این دکمه را اجرا کند.",
+  "tools.database.buttonAgentConfirm": "این درخواست به هوش مصنوعی ارسال شود؟ هوش مصنوعی می‌تواند سند را از طرف شما ویرایش کند.",
   "tools.database.buttonDataSource": "انتخاب منبع داده",
   "tools.database.buttonPageAddedTo": "به {name}",
   "tools.database.buttonAllPages": "همه صفحه‌ها",

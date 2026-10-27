@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "ለወኪሉ መልዕክት ላክ",
   "tools.database.buttonAgentBusy": "AI ሥራ ላይ ነው። ሲጨርስ እንደገና ይሞክሩ።",
   "tools.database.buttonAgentFailed": "AI የዚህን አዝራር መልዕክት ማስኬድ አልቻለም።",
+  "tools.database.buttonAgentConfirm": "ይህን ጥያቄ ለAI ይላኩ? AI ሰነዱን በእርስዎ ስም ማስተካከል ይችላል።",
   "tools.database.buttonDataSource": "የውሂብ ምንጭ ምረጥ",
   "tools.database.buttonPageAddedTo": "ወደ {name}",
   "tools.database.buttonAllPages": "ሁሉም ገጾች",

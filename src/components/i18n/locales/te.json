@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "ఏజెంట్‌కు సందేశం పంపు",
   "tools.database.buttonAgentBusy": "AI బిజీగా ఉంది. అది పూర్తయ్యాక మళ్లీ ప్రయత్నించండి.",
   "tools.database.buttonAgentFailed": "ఈ బటన్ సందేశాన్ని AI అమలు చేయలేకపోయింది.",
+  "tools.database.buttonAgentConfirm": "ఈ అభ్యర్థనను AIకి పంపాలా? AI మీ తరఫున పత్రాన్ని సవరించగలదు.",
   "tools.database.buttonDataSource": "డేటా సోర్స్‌ను ఎంచుకోండి",
   "tools.database.buttonPageAddedTo": "{name}కు",
   "tools.database.buttonAllPages": "అన్ని పేజీలు",

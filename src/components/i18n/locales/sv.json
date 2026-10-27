@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "Skicka meddelande till agent",
   "tools.database.buttonAgentBusy": "AI är upptagen. Försök igen när den är klar.",
   "tools.database.buttonAgentFailed": "AI kunde inte köra den här knappens meddelande.",
+  "tools.database.buttonAgentConfirm": "Skicka den här begäran till AI? AI kan redigera dokumentet i ditt namn.",
   "tools.database.buttonDataSource": "Välj datakälla",
   "tools.database.buttonPageAddedTo": "i {name}",
   "tools.database.buttonAllPages": "Alla sidor",

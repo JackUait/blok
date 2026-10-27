@@ -1211,6 +1211,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const FONT_REFRESH_BYTES = 148;
     // database.css: the formula warning mark, inline in the secondary ink at 16px (db0d20e6, 2deaa2a2).
     const DATABASE_FORMULA_ERROR_MARK_BYTES = 212;
+    // database.css: the confirm dialog scrolls, so a button's long agent message can be read to its end.
+    const DATABASE_CONFIRM_SCROLL_BYTES = 219;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1463,7 +1465,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + FONT_REFRESH_BYTES
       + DATABASE_FORMULA_ERROR_MARK_BYTES
       + DATABASE_MIRROR_NAME_FIELD_BYTES
-      + DATABASE_PANEL_LIST_CAP_SEARCH_BYTES;
+      + DATABASE_PANEL_LIST_CAP_SEARCH_BYTES
+      + DATABASE_CONFIRM_SCROLL_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

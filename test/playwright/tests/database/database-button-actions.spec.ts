@@ -325,6 +325,19 @@ const hasAgentParagraph = async (page: Page): Promise<boolean> =>
 
 const agentStatus = (page: Page): Promise<string | undefined> => page.evaluate(() => window.blokInstance?.agent.state.status);
 
+const AGENT_QUESTION = 'Send this request to AI? AI can edit the document as you.';
+
+const agentQuestion = (page: Page): ReturnType<Page['getByRole']> => page.getByRole('alertdialog', { name: AGENT_QUESTION });
+
+const withMessage = (message: string): OutputBlockData[] => {
+  const input = agentBlocks();
+  const schema = (input[0].data as { schema: Array<{ button?: { label?: string; buttonActions: unknown[] } }> }).schema;
+
+  schema[2].button = { label: 'Summarize', buttonActions: [{ id: 'm', type: 'sendAgentMessage', message }] };
+
+  return input;
+};
+
 test.describe('button property: Send message to agent', () => {
   test('is offered only when the editor has an assistant', async ({ page }) => {
     const open = async (): Promise<string[]> => {
@@ -362,6 +375,12 @@ test.describe('button property: Send message to agent', () => {
     await mount(page, agentBlocks(), { script: [insertCall, endTurn] });
 
     await summarize(page).click();
+    const question = agentQuestion(page);
+
+    await expect(question).toContainText('Write a one-line summary');
+    expect((await propertiesOf(page, 'r1'))['p-done']).toBe(false);
+    expect(await page.evaluate(() => window.agentPrompts?.length)).toBe(0);
+    await question.getByRole('button', { name: 'Continue' }).click();
 
     await expect.poll(() => hasAgentParagraph(page)).toBe(true);
     expect((await propertiesOf(page, 'r1'))['p-done']).toBe(true);
@@ -386,12 +405,71 @@ test.describe('button property: Send message to agent', () => {
     await mount(page, agentBlocks(), { script: [endTurn], hold: true });
 
     await summarize(page).click();
+    await agentQuestion(page).getByRole('button', { name: 'Continue' }).click();
     await expect.poll(() => agentStatus(page)).toBe('working');
     await summarize(page).click();
 
     await expect(page.getByTestId('notification-message-text')).toHaveText('AI is busy. Try again when it finishes.');
+    await expect(agentQuestion(page)).toHaveCount(0);
     await page.evaluate(() => window.agentRelease?.());
     await expect.poll(() => agentStatus(page)).toBe('idle');
     expect(await page.evaluate(() => window.agentPrompts?.length)).toBe(1);
+  });
+});
+
+test.describe('button property: Send message to agent, asked first', () => {
+  test('Cancel sends nothing and writes nothing', async ({ page }) => {
+    await mount(page, agentBlocks(), { script: [endTurn] });
+    await summarize(page).click();
+    await agentQuestion(page).getByRole('button', { name: 'Cancel' }).click();
+
+    await expect(agentQuestion(page)).toHaveCount(0);
+    expect((await propertiesOf(page, 'r1'))['p-done']).toBe(false);
+    expect(await page.evaluate(() => window.agentPrompts?.length)).toBe(0);
+  });
+
+  test('Enter pressed twice on the button lands on Cancel: nothing is sent', async ({ page }) => {
+    await mount(page, agentBlocks(), { script: [endTurn] });
+    await summarize(page).focus();
+    await page.keyboard.press('Enter');
+    await expect(agentQuestion(page)).toBeVisible();
+    await page.keyboard.press('Enter');
+
+    await expect(agentQuestion(page)).toHaveCount(0);
+    expect(await page.evaluate(() => window.agentPrompts?.length)).toBe(0);
+    expect((await propertiesOf(page, 'r1'))['p-done']).toBe(false);
+  });
+
+  test('a double click sends nothing', async ({ page }) => {
+    await mount(page, agentBlocks(), { script: [endTurn] });
+    await summarize(page).dblclick();
+
+    await expect.poll(async () => page.getByRole('alertdialog').count()).toBeLessThanOrEqual(1);
+    expect(await page.evaluate(() => window.agentPrompts?.length)).toBe(0);
+    expect(await agentStatus(page)).toBe('idle');
+  });
+
+  test('a long message can be read to its last word and still sent', async ({ page }) => {
+    const message = `${'Rewrite every paragraph of this page in a calmer tone. '.repeat(60)}Then delete the LAST-WORDS section.`;
+
+    await page.setViewportSize({ width: 800, height: 500 });
+    await mount(page, withMessage(message), { script: [endTurn] });
+    await summarize(page).click();
+    const question = agentQuestion(page);
+
+    await expect(question).toBeVisible();
+    await expect(question.locator('[data-blok-database-confirm-description]')).toHaveText(message);
+    const tail = await question.evaluate((panel) => {
+      const scroller = panel.querySelector<HTMLElement>('[data-blok-database-confirm-dialog]') ?? panel;
+
+      scroller.scrollTop = scroller.scrollHeight;
+      const text = scroller.querySelector('[data-blok-database-confirm-description]')?.getBoundingClientRect();
+
+      return { bottom: text?.bottom ?? Infinity, viewport: window.innerHeight };
+    });
+
+    expect(tail.bottom).toBeLessThanOrEqual(tail.viewport);
+    await question.getByRole('button', { name: 'Continue' }).click();
+    await expect.poll(() => page.evaluate(() => window.agentPrompts?.length)).toBe(1);
   });
 });

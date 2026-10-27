@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "އޭޖެންޓަށް މެސެޖް ފޮނުވާ",
   "tools.database.buttonAgentBusy": "AI މަޝްޣޫލު. ނިމުމުން އަލުން މަސައްކަތްކުރޭ.",
   "tools.database.buttonAgentFailed": "މި ބަޓަންގެ މެސެޖް AI އަށް ހިންގޭކަށް ނުވި.",
+  "tools.database.buttonAgentConfirm": "މި އެދުން AI އަށް ފޮނުވަންތަ؟ AI އަށް ތިބާގެ ނަމުގައި ޑޮކިއުމެންޓް އެޑިޓް ކުރެވޭނެ.",
   "tools.database.buttonDataSource": "ޑޭޓާ ސޯސް ހޮވާ",
   "tools.database.buttonPageAddedTo": "{name} އަށް",
   "tools.database.buttonAllPages": "ހުރިހާ ޞަފްޙާއެއް",

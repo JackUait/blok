@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "एजेंट को संदेश भेजें",
   "tools.database.buttonAgentBusy": "AI व्यस्त है। इसके पूरा होने पर फिर से कोशिश करें।",
   "tools.database.buttonAgentFailed": "AI इस बटन का संदेश नहीं चला सका।",
+  "tools.database.buttonAgentConfirm": "यह अनुरोध AI को भेजें? AI आपकी ओर से दस्तावेज़ संपादित कर सकता है।",
   "tools.database.buttonDataSource": "डेटा स्रोत चुनें",
   "tools.database.buttonPageAddedTo": "{name} में",
   "tools.database.buttonAllPages": "सभी पृष्ठ",

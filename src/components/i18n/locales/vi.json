@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "Gửi tin nhắn cho tác tử",
   "tools.database.buttonAgentBusy": "AI đang bận. Hãy thử lại khi xong.",
   "tools.database.buttonAgentFailed": "AI không thể chạy tin nhắn của nút này.",
+  "tools.database.buttonAgentConfirm": "Gửi yêu cầu này cho AI? AI có thể chỉnh sửa tài liệu thay bạn.",
   "tools.database.buttonDataSource": "Chọn nguồn dữ liệu",
   "tools.database.buttonPageAddedTo": "vào {name}",
   "tools.database.buttonAllPages": "Tất cả trang",

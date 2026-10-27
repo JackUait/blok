@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "Испрати порака до агентот",
   "tools.database.buttonAgentBusy": "ВИ е зафатена. Обидете се повторно кога ќе заврши.",
   "tools.database.buttonAgentFailed": "ВИ не можеше да ја изврши пораката на ова копче.",
+  "tools.database.buttonAgentConfirm": "Да се испрати ли ова барање до ВИ? ВИ може да го уредува документот во ваше име.",
   "tools.database.buttonDataSource": "Избери извор на податоци",
   "tools.database.buttonPageAddedTo": "во {name}",
   "tools.database.buttonAllPages": "Сите страници",

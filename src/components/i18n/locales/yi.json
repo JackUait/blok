@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "שיקן אַ מעלדונג צום אַגענט",
   "tools.database.buttonAgentBusy": "דער AI איז פֿאַרנומען. פּרוּווט ווידער ווען ער ענדיקט.",
   "tools.database.buttonAgentFailed": "דער AI האָט נישט געקענט אויספֿירן די מעלדונג פֿון דעם קנעפּל.",
+  "tools.database.buttonAgentConfirm": "שיקן די בקשה צום AI? דער AI קען רעדאַקטירן דעם דאָקומענט אין אײַער נאָמען.",
   "tools.database.buttonDataSource": "אויסקלײַבן דאַטן־מקור",
   "tools.database.buttonPageAddedTo": "צו {name}",
   "tools.database.buttonAllPages": "אַלע בלעטער",

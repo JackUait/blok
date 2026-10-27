@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "এজেন্টকে বার্তা পাঠান",
   "tools.database.buttonAgentBusy": "AI ব্যস্ত। শেষ হলে আবার চেষ্টা করুন।",
   "tools.database.buttonAgentFailed": "AI এই বোতামের বার্তা চালাতে পারেনি।",
+  "tools.database.buttonAgentConfirm": "এই অনুরোধটি AI-কে পাঠাবেন? AI আপনার হয়ে নথিটি সম্পাদনা করতে পারে।",
   "tools.database.buttonDataSource": "ডেটা উৎস নির্বাচন করুন",
   "tools.database.buttonPageAddedTo": "{name}-এ",
   "tools.database.buttonAllPages": "সব পৃষ্ঠা",

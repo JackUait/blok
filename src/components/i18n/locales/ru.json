@@ -1898,6 +1898,7 @@
   "tools.database.buttonActionSendAgentMessage": "Отправить сообщение агенту",
   "tools.database.buttonAgentBusy": "ИИ занят. Повторите, когда он закончит.",
   "tools.database.buttonAgentFailed": "ИИ не смог выполнить сообщение этой кнопки.",
+  "tools.database.buttonAgentConfirm": "Отправить этот запрос ИИ? ИИ сможет редактировать документ от вашего имени.",
   "tools.database.buttonDataSource": "Выбрать источник данных",
   "tools.database.buttonPageAddedTo": "в {name}",
   "tools.database.buttonAllPages": "Все страницы",

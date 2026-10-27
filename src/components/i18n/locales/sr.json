@@ -1896,6 +1896,7 @@
   "tools.database.buttonActionSendAgentMessage": "Пошаљи поруку агенту",
   "tools.database.buttonAgentBusy": "ВИ је заузета. Покушајте поново када заврши.",
   "tools.database.buttonAgentFailed": "ВИ није могла да изврши поруку овог дугмета.",
+  "tools.database.buttonAgentConfirm": "Послати овај захтев ВИ? ВИ може да уређује документ у ваше име.",
   "tools.database.buttonDataSource": "Изабери извор података",
   "tools.database.buttonPageAddedTo": "у {name}",
   "tools.database.buttonAllPages": "Све странице",

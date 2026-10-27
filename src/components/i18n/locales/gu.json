@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "એજન્ટને સંદેશ મોકલો",
   "tools.database.buttonAgentBusy": "AI વ્યસ્ત છે. તે પૂરું થાય ત્યારે ફરી પ્રયાસ કરો.",
   "tools.database.buttonAgentFailed": "AI આ બટનનો સંદેશ ચલાવી શક્યું નહીં.",
+  "tools.database.buttonAgentConfirm": "આ વિનંતી AIને મોકલવી છે? AI તમારા વતી દસ્તાવેજ સંપાદિત કરી શકે છે.",
   "tools.database.buttonDataSource": "ડેટા સ્રોત પસંદ કરો",
   "tools.database.buttonPageAddedTo": "{name} માં",
   "tools.database.buttonAllPages": "બધા પૃષ્ઠો",

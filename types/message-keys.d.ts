@@ -548,6 +548,7 @@ export type BlokMessageKey =
   | 'tools.database.buttonActionUnknown'
   | 'tools.database.buttonAddAction'
   | 'tools.database.buttonAgentBusy'
+  | 'tools.database.buttonAgentConfirm'
   | 'tools.database.buttonAgentFailed'
   | 'tools.database.buttonAllPages'
   | 'tools.database.buttonBlockText'

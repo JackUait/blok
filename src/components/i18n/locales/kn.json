@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "ಏಜೆಂಟ್‌ಗೆ ಸಂದೇಶ ಕಳುಹಿಸಿ",
   "tools.database.buttonAgentBusy": "AI ಕಾರ್ಯನಿರತವಾಗಿದೆ. ಅದು ಮುಗಿದಾಗ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
   "tools.database.buttonAgentFailed": "AI ಈ ಬಟನ್‌ನ ಸಂದೇಶವನ್ನು ಚಲಾಯಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+  "tools.database.buttonAgentConfirm": "ಈ ವಿನಂತಿಯನ್ನು AI ಗೆ ಕಳುಹಿಸಬೇಕೇ? AI ನಿಮ್ಮ ಪರವಾಗಿ ಡಾಕ್ಯುಮೆಂಟ್ ಅನ್ನು ಸಂಪಾದಿಸಬಹುದು.",
   "tools.database.buttonDataSource": "ಡೇಟಾ ಮೂಲ ಆಯ್ಕೆಮಾಡಿ",
   "tools.database.buttonPageAddedTo": "{name} ಗೆ",
   "tools.database.buttonAllPages": "ಎಲ್ಲಾ ಪುಟಗಳು",

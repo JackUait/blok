@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "Αποστολή μηνύματος στον πράκτορα",
   "tools.database.buttonAgentBusy": "Η ΤΝ είναι απασχολημένη. Δοκιμάστε ξανά όταν τελειώσει.",
   "tools.database.buttonAgentFailed": "Η ΤΝ δεν μπόρεσε να εκτελέσει το μήνυμα αυτού του κουμπιού.",
+  "tools.database.buttonAgentConfirm": "Αποστολή αυτού του αιτήματος στην ΤΝ; Η ΤΝ μπορεί να επεξεργαστεί το έγγραφο εκ μέρους σας.",
   "tools.database.buttonDataSource": "Επιλογή πηγής δεδομένων",
   "tools.database.buttonPageAddedTo": "σε {name}",
   "tools.database.buttonAllPages": "Όλες οι σελίδες",

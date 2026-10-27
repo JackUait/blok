@@ -1898,6 +1898,7 @@
   "tools.database.buttonActionSendAgentMessage": "Siųsti žinutę agentui",
   "tools.database.buttonAgentBusy": "DI užimtas. Bandykite dar kartą, kai baigs.",
   "tools.database.buttonAgentFailed": "DI nepavyko įvykdyti šio mygtuko žinutės.",
+  "tools.database.buttonAgentConfirm": "Siųsti šią užklausą DI? DI gali redaguoti dokumentą jūsų vardu.",
   "tools.database.buttonDataSource": "Pasirinkti duomenų šaltinį",
   "tools.database.buttonPageAddedTo": "į {name}",
   "tools.database.buttonAllPages": "Visi puslapiai",

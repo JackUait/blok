@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "Ուղարկել հաղորդագրություն գործակալին",
   "tools.database.buttonAgentBusy": "ԱԲ-ն զբաղված է։ Կրկին փորձեք, երբ ավարտի։",
   "tools.database.buttonAgentFailed": "ԱԲ-ն չկարողացավ կատարել այս կոճակի հաղորդագրությունը։",
+  "tools.database.buttonAgentConfirm": "Ուղարկե՞լ այս հարցումը ԱԲ-ին։ ԱԲ-ն կարող է խմբագրել փաստաթուղթը ձեր անունից։",
   "tools.database.buttonDataSource": "Ընտրել տվյալների աղբյուր",
   "tools.database.buttonPageAddedTo": "դեպի {name}",
   "tools.database.buttonAllPages": "Բոլոր էջերը",

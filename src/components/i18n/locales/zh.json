@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "发送消息给智能体",
   "tools.database.buttonAgentBusy": "AI 正忙。请在完成后重试。",
   "tools.database.buttonAgentFailed": "AI 无法执行此按钮的消息。",
+  "tools.database.buttonAgentConfirm": "要将此请求发送给 AI 吗？AI 可以代表你编辑文档。",
   "tools.database.buttonDataSource": "选择数据源",
   "tools.database.buttonPageAddedTo": "到 {name}",
   "tools.database.buttonAllPages": "所有页面",

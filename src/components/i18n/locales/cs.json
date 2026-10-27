@@ -1898,6 +1898,7 @@
   "tools.database.buttonActionSendAgentMessage": "Odeslat zprávu agentovi",
   "tools.database.buttonAgentBusy": "AI je zaneprázdněná. Zkuste to znovu, až skončí.",
   "tools.database.buttonAgentFailed": "AI nemohla zpracovat zprávu tohoto tlačítka.",
+  "tools.database.buttonAgentConfirm": "Odeslat tento požadavek AI? AI může upravovat dokument vaším jménem.",
   "tools.database.buttonDataSource": "Vyberte zdroj dat",
   "tools.database.buttonPageAddedTo": "do {name}",
   "tools.database.buttonAllPages": "Všechny stránky",

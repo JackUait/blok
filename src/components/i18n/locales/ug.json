@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "ۋاكالەتچىگە ئۇچۇر يوللاش",
   "tools.database.buttonAgentBusy": "AI ئالدىراش. تۈگىگەندە قايتا سىناڭ.",
   "tools.database.buttonAgentFailed": "AI بۇ كۇنۇپكىنىڭ ئۇچۇرىنى ئىجرا قىلالمىدى.",
+  "tools.database.buttonAgentConfirm": "بۇ تەلەپنى AI غا يوللامسىز؟ AI سىزنىڭ نامىڭىزدا ھۆججەتنى تەھرىرلىيەلەيدۇ.",
   "tools.database.buttonDataSource": "سانلىق مەلۇمات مەنبەسىنى تاللاش",
   "tools.database.buttonPageAddedTo": "{name} غا",
   "tools.database.buttonAllPages": "بارلىق بەتلەر",

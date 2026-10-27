@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "ਏਜੰਟ ਨੂੰ ਸੁਨੇਹਾ ਭੇਜੋ",
   "tools.database.buttonAgentBusy": "AI ਰੁੱਝਿਆ ਹੋਇਆ ਹੈ। ਇਸਦੇ ਪੂਰਾ ਹੋਣ 'ਤੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
   "tools.database.buttonAgentFailed": "AI ਇਸ ਬਟਨ ਦਾ ਸੁਨੇਹਾ ਨਹੀਂ ਚਲਾ ਸਕਿਆ।",
+  "tools.database.buttonAgentConfirm": "ਇਹ ਬੇਨਤੀ AI ਨੂੰ ਭੇਜਣੀ ਹੈ? AI ਤੁਹਾਡੇ ਵੱਲੋਂ ਦਸਤਾਵੇਜ਼ ਸੰਪਾਦਿਤ ਕਰ ਸਕਦਾ ਹੈ।",
   "tools.database.buttonDataSource": "ਡਾਟਾ ਸਰੋਤ ਚੁਣੋ",
   "tools.database.buttonPageAddedTo": "{name} ਵਿੱਚ",
   "tools.database.buttonAllPages": "ਸਾਰੇ ਪੰਨੇ",

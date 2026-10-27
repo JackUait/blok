@@ -1898,6 +1898,7 @@
   "tools.database.buttonActionSendAgentMessage": "Wyślij wiadomość do agenta",
   "tools.database.buttonAgentBusy": "AI jest zajęta. Spróbuj ponownie, gdy skończy.",
   "tools.database.buttonAgentFailed": "AI nie mogła wykonać wiadomości tego przycisku.",
+  "tools.database.buttonAgentConfirm": "Wysłać tę prośbę do AI? AI może edytować dokument w Twoim imieniu.",
   "tools.database.buttonDataSource": "Wybierz źródło danych",
   "tools.database.buttonPageAddedTo": "do {name}",
   "tools.database.buttonAllPages": "Wszystkie strony",

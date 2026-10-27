@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "Saada agendile sõnum",
   "tools.database.buttonAgentBusy": "Tehisintellekt on hõivatud. Proovi uuesti, kui see lõpetab.",
   "tools.database.buttonAgentFailed": "Tehisintellekt ei saanud selle nupu sõnumit käivitada.",
+  "tools.database.buttonAgentConfirm": "Kas saata see päring tehisintellektile? Tehisintellekt saab dokumenti sinu nimel muuta.",
   "tools.database.buttonDataSource": "Vali andmeallikas",
   "tools.database.buttonPageAddedTo": "andmebaasi {name}",
   "tools.database.buttonAllPages": "Kõik lehed",

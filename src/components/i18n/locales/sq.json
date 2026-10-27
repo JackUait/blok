@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "Dërgo mesazh te agjenti",
   "tools.database.buttonAgentBusy": "AI është i zënë. Provo përsëri kur të mbarojë.",
   "tools.database.buttonAgentFailed": "AI nuk mundi të ekzekutonte mesazhin e këtij butoni.",
+  "tools.database.buttonAgentConfirm": "Ta dërgoj këtë kërkesë te AI? AI mund ta redaktojë dokumentin në emrin tënd.",
   "tools.database.buttonDataSource": "Zgjidh burimin e të dhënave",
   "tools.database.buttonPageAddedTo": "te {name}",
   "tools.database.buttonAllPages": "Të gjitha faqet",

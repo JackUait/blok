@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "Kirim pesan ke agen",
   "tools.database.buttonAgentBusy": "AI sedang sibuk. Coba lagi setelah selesai.",
   "tools.database.buttonAgentFailed": "AI tidak dapat menjalankan pesan tombol ini.",
+  "tools.database.buttonAgentConfirm": "Kirim permintaan ini ke AI? AI dapat mengedit dokumen atas nama Anda.",
   "tools.database.buttonDataSource": "Pilih sumber data",
   "tools.database.buttonPageAddedTo": "ke {name}",
   "tools.database.buttonAllPages": "Semua halaman",

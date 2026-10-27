@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "傳送訊息給代理",
   "tools.database.buttonAgentBusy": "AI 忙碌中。請在完成後再試一次。",
   "tools.database.buttonAgentFailed": "AI 無法執行此按鈕的訊息。",
+  "tools.database.buttonAgentConfirm": "要將此要求傳送給 AI 嗎？AI 可以代表你編輯文件。",
   "tools.database.buttonDataSource": "選擇資料來源",
   "tools.database.buttonPageAddedTo": "至 {name}",
   "tools.database.buttonAllPages": "所有頁面",

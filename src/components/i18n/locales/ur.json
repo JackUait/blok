@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "ایجنٹ کو پیغام بھیجیں",
   "tools.database.buttonAgentBusy": "AI مصروف ہے۔ مکمل ہونے پر دوبارہ کوشش کریں۔",
   "tools.database.buttonAgentFailed": "AI اس بٹن کا پیغام نہیں چلا سکا۔",
+  "tools.database.buttonAgentConfirm": "یہ درخواست AI کو بھیجیں؟ AI آپ کی جانب سے دستاویز میں ترمیم کر سکتا ہے۔",
   "tools.database.buttonDataSource": "ڈیٹا سورس منتخب کریں",
   "tools.database.buttonPageAddedTo": "{name} میں",
   "tools.database.buttonAllPages": "تمام صفحات",

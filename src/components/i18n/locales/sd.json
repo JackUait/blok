@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "ايجنٽ کي پيغام موڪليو",
   "tools.database.buttonAgentBusy": "AI مصروف آهي. جڏهن ختم ٿئي ته ٻيهر ڪوشش ڪريو.",
   "tools.database.buttonAgentFailed": "AI هن بٽڻ جو پيغام هلائي نه سگهيو.",
+  "tools.database.buttonAgentConfirm": "هي درخواست AI ڏانهن موڪليو؟ AI توهان جي طرفان دستاويز ۾ ترميم ڪري سگهي ٿو.",
   "tools.database.buttonDataSource": "ڊيٽا جو ذريعو چونڊيو",
   "tools.database.buttonPageAddedTo": "{name} ۾",
   "tools.database.buttonAllPages": "سڀ صفحا",

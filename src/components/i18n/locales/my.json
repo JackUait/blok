@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "အေးဂျင့်ထံ မက်ဆေ့ချ် ပို့ရန်",
   "tools.database.buttonAgentBusy": "AI အလုပ်များနေသည်။ ပြီးဆုံးသောအခါ ထပ်ကြိုးစားပါ။",
   "tools.database.buttonAgentFailed": "AI သည် ဤခလုတ်၏ မက်ဆေ့ချ်ကို မလုပ်ဆောင်နိုင်ပါ။",
+  "tools.database.buttonAgentConfirm": "ဤတောင်းဆိုချက်ကို AI ထံ ပို့မလား။ AI သည် သင့်ကိုယ်စား စာရွက်စာတမ်းကို တည်းဖြတ်နိုင်သည်။",
   "tools.database.buttonDataSource": "ဒေတာရင်းမြစ် ရွေးရန်",
   "tools.database.buttonPageAddedTo": "{name} သို့",
   "tools.database.buttonAllPages": "စာမျက်နှာအားလုံး",

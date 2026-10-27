@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "ส่งข้อความถึงเอเจนต์",
   "tools.database.buttonAgentBusy": "AI กำลังทำงานอยู่ ลองอีกครั้งเมื่อเสร็จแล้ว",
   "tools.database.buttonAgentFailed": "AI ไม่สามารถเรียกใช้ข้อความของปุ่มนี้ได้",
+  "tools.database.buttonAgentConfirm": "ส่งคำขอนี้ไปยัง AI ไหม AI สามารถแก้ไขเอกสารในนามของคุณได้",
   "tools.database.buttonDataSource": "เลือกแหล่งข้อมูล",
   "tools.database.buttonPageAddedTo": "ไปยัง {name}",
   "tools.database.buttonAllPages": "หน้าทั้งหมด",

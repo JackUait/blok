@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "Send besked til agent",
   "tools.database.buttonAgentBusy": "AI er optaget. Prøv igen, når den er færdig.",
   "tools.database.buttonAgentFailed": "AI kunne ikke køre denne knaps besked.",
+  "tools.database.buttonAgentConfirm": "Send denne anmodning til AI? AI kan redigere dokumentet på dine vegne.",
   "tools.database.buttonDataSource": "Vælg datakilde",
   "tools.database.buttonPageAddedTo": "til {name}",
   "tools.database.buttonAllPages": "Alle sider",

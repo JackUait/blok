@@ -1896,6 +1896,7 @@
   "tools.database.buttonActionSendAgentMessage": "Enviar mensagem ao agente",
   "tools.database.buttonAgentBusy": "A IA está ocupada. Tente novamente quando ela terminar.",
   "tools.database.buttonAgentFailed": "A IA não conseguiu executar a mensagem deste botão.",
+  "tools.database.buttonAgentConfirm": "Enviar esta solicitação à IA? A IA pode editar o documento em seu nome.",
   "tools.database.buttonDataSource": "Selecionar fonte de dados",
   "tools.database.buttonPageAddedTo": "em {name}",
   "tools.database.buttonAllPages": "Todas as páginas",

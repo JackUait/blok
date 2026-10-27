@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "Hantar mesej kepada ejen",
   "tools.database.buttonAgentBusy": "AI sedang sibuk. Cuba lagi apabila ia selesai.",
   "tools.database.buttonAgentFailed": "AI tidak dapat menjalankan mesej butang ini.",
+  "tools.database.buttonAgentConfirm": "Hantar permintaan ini kepada AI? AI boleh mengedit dokumen bagi pihak anda.",
   "tools.database.buttonDataSource": "Pilih sumber data",
   "tools.database.buttonPageAddedTo": "ke {name}",
   "tools.database.buttonAllPages": "Semua halaman",

@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "エージェントにメッセージを送信",
   "tools.database.buttonAgentBusy": "AIは処理中です。完了してからもう一度お試しください。",
   "tools.database.buttonAgentFailed": "AIはこのボタンのメッセージを実行できませんでした。",
+  "tools.database.buttonAgentConfirm": "このリクエストをAIに送信しますか？AIはあなたとしてドキュメントを編集できます。",
   "tools.database.buttonDataSource": "データソースを選択",
   "tools.database.buttonPageAddedTo": "追加先: {name}",
   "tools.database.buttonAllPages": "すべてのページ",

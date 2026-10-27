@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "ສົ່ງຂໍ້ຄວາມໄປຫາຕົວແທນ",
   "tools.database.buttonAgentBusy": "AI ກຳລັງເຮັດວຽກ. ລອງໃໝ່ເມື່ອມັນສຳເລັດ.",
   "tools.database.buttonAgentFailed": "AI ບໍ່ສາມາດດຳເນີນຂໍ້ຄວາມຂອງປຸ່ມນີ້ໄດ້.",
+  "tools.database.buttonAgentConfirm": "ສົ່ງຄຳຂໍນີ້ໄປຫາ AI ບໍ? AI ສາມາດແກ້ໄຂເອກະສານແທນທ່ານໄດ້.",
   "tools.database.buttonDataSource": "ເລືອກແຫຼ່ງຂໍ້ມູນ",
   "tools.database.buttonPageAddedTo": "ໄປທີ່ {name}",
   "tools.database.buttonAllPages": "ໜ້າທັງໝົດ",

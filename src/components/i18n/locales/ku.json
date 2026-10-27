@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "ناردنی پەیام بۆ بریکار",
   "tools.database.buttonAgentBusy": "AI سەرقاڵە. کاتێک تەواو بوو دووبارە هەوڵ بدەرەوە.",
   "tools.database.buttonAgentFailed": "AI نەیتوانی پەیامی ئەم دوگمەیە جێبەجێ بکات.",
+  "tools.database.buttonAgentConfirm": "ئەم داواکارییە بنێردرێت بۆ AI؟ AI دەتوانێت لە جیاتی تۆ بەڵگەنامەکە دەستکاری بکات.",
   "tools.database.buttonDataSource": "هەڵبژاردنی سەرچاوەی داتا",
   "tools.database.buttonPageAddedTo": "بۆ {name}",
   "tools.database.buttonAllPages": "هەموو پەڕەکان",

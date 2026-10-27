@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "Ajana mesaj gönder",
   "tools.database.buttonAgentBusy": "Yapay zekâ meşgul. Bitince yeniden deneyin.",
   "tools.database.buttonAgentFailed": "Yapay zekâ bu düğmenin mesajını çalıştıramadı.",
+  "tools.database.buttonAgentConfirm": "Bu istek yapay zekâya gönderilsin mi? Yapay zekâ belgeyi sizin adınıza düzenleyebilir.",
   "tools.database.buttonDataSource": "Veri kaynağı seç",
   "tools.database.buttonPageAddedTo": "{name} hedefine",
   "tools.database.buttonAllPages": "Tüm sayfalar",

@@ -121,9 +121,9 @@ const runAfter = (action: ButtonAction, rowId: string, host: ButtonHost, added: 
 
     if (to.length > 0) host.notify(action, to, action.message ?? '');
   } else if (action.type === 'sendAgentMessage') {
-    const message = (action.message ?? '').trim();
+    const message = agentMessageOf([action]);
 
-    if (message !== '') host.askAgent(message);
+    if (message !== null) host.askAgent(message);
   }
 };
 
@@ -144,6 +144,13 @@ export const runButtonActions = (actions: readonly ButtonAction[], rowId: string
     host.oneStep(() => writes.forEach((action) => runWrite(action, rowId, host, ctx, added)));
   }
   actions.forEach((action) => runAfter(action, rowId, host, added));
+};
+
+/** The message a click sends the agent, trimmed, as the presser is shown it. Null: none. */
+export const agentMessageOf = (actions: readonly ButtonAction[]): string | null => {
+  const message = actions.find((action) => action.type === 'sendAgentMessage' && (action.message ?? '').trim() !== '');
+
+  return message?.type === 'sendAgentMessage' ? (message.message ?? '').trim() : null;
 };
 
 export const needsConfirmation = (actions: readonly ButtonAction[]): boolean =>

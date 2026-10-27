@@ -5159,6 +5159,9 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
   box-sizing: border-box;
   width: 324px;
   max-width: calc(100vw - 32px);
+  /* A long description (a button's agent message) scrolls, so its last words and the buttons stay reachable. */
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
   padding: 20px;
   border-radius: var(--blok-radius-dialog);
   background-color: var(--blok-database-confirm-bg);
@@ -5211,6 +5214,8 @@ button[data-blok-database-layout-pin-name]:focus-visible:where(:root:not([data-b
 /* research/33 §3.10 read 12px; its line height was not. */
 [data-blok-database-confirm-description] {
   margin-top: var(--blok-space-1);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   font-size: 12px;
   line-height: 16px;
   font-weight: 400;

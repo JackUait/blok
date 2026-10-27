@@ -1896,6 +1896,7 @@
   "tools.database.buttonActionSendAgentMessage": "Trimite mesaj agentului",
   "tools.database.buttonAgentBusy": "AI este ocupat. Încearcă din nou când termină.",
   "tools.database.buttonAgentFailed": "AI nu a putut rula mesajul acestui buton.",
+  "tools.database.buttonAgentConfirm": "Trimiți această solicitare către AI? AI poate edita documentul în numele tău.",
   "tools.database.buttonDataSource": "Selectează sursa de date",
   "tools.database.buttonPageAddedTo": "în {name}",
   "tools.database.buttonAllPages": "Toate paginile",

@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "შეტყობინების გაგზავნა აგენტთან",
   "tools.database.buttonAgentBusy": "AI დაკავებულია. სცადეთ ხელახლა, როცა დაასრულებს.",
   "tools.database.buttonAgentFailed": "AI-მ ვერ შეასრულა ამ ღილაკის შეტყობინება.",
+  "tools.database.buttonAgentConfirm": "გავუგზავნოთ ეს მოთხოვნა AI-ს? AI-ს შეუძლია დოკუმენტის რედაქტირება თქვენი სახელით.",
   "tools.database.buttonDataSource": "მონაცემთა წყაროს არჩევა",
   "tools.database.buttonPageAddedTo": "{name}-ში",
   "tools.database.buttonAllPages": "ყველა გვერდი",

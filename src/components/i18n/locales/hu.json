@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "Üzenet küldése az ügynöknek",
   "tools.database.buttonAgentBusy": "Az MI foglalt. Próbáld újra, ha végzett.",
   "tools.database.buttonAgentFailed": "Az MI nem tudta futtatni ennek a gombnak az üzenetét.",
+  "tools.database.buttonAgentConfirm": "Elküldöd ezt a kérést az MI-nek? Az MI a nevedben szerkesztheti a dokumentumot.",
   "tools.database.buttonDataSource": "Adatforrás kiválasztása",
   "tools.database.buttonPageAddedTo": "ide: {name}",
   "tools.database.buttonAllPages": "Összes oldal",

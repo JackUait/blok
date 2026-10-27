@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "Bericht naar agent sturen",
   "tools.database.buttonAgentBusy": "AI is bezig. Probeer het opnieuw als het klaar is.",
   "tools.database.buttonAgentFailed": "AI kon het bericht van deze knop niet uitvoeren.",
+  "tools.database.buttonAgentConfirm": "Dit verzoek naar AI sturen? AI kan het document namens jou bewerken.",
   "tools.database.buttonDataSource": "Gegevensbron selecteren",
   "tools.database.buttonPageAddedTo": "aan {name}",
   "tools.database.buttonAllPages": "Alle pagina's",

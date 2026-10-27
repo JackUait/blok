@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "اجنټ ته پیغام ولېږئ",
   "tools.database.buttonAgentBusy": "AI بوخت دی. کله چې پای ته ورسېږي بیا هڅه وکړئ.",
   "tools.database.buttonAgentFailed": "AI ونه شو کولی د دې تڼۍ پیغام پلی کړي.",
+  "tools.database.buttonAgentConfirm": "دا غوښتنه AI ته ولېږئ؟ AI کولی شي ستاسو په استازیتوب سند سم کړي.",
   "tools.database.buttonDataSource": "د معلوماتو سرچینه وټاکئ",
   "tools.database.buttonPageAddedTo": "{name} ته",
   "tools.database.buttonAllPages": "ټولې پاڼې",

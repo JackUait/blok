@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "Send melding til agent",
   "tools.database.buttonAgentBusy": "KI er opptatt. Prøv igjen når den er ferdig.",
   "tools.database.buttonAgentFailed": "KI kunne ikke kjøre meldingen til denne knappen.",
+  "tools.database.buttonAgentConfirm": "Sende denne forespørselen til KI? KI kan redigere dokumentet på dine vegne.",
   "tools.database.buttonDataSource": "Velg datakilde",
   "tools.database.buttonPageAddedTo": "i {name}",
   "tools.database.buttonAllPages": "Alle sider",

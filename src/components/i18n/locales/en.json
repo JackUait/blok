@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "Send message to agent",
   "tools.database.buttonAgentBusy": "AI is busy. Try again when it finishes.",
   "tools.database.buttonAgentFailed": "AI could not run this button's message.",
+  "tools.database.buttonAgentConfirm": "Send this request to AI? AI can edit the document as you.",
   "tools.database.buttonDataSource": "Select data source",
   "tools.database.buttonPageAddedTo": "to {name}",
   "tools.database.buttonAllPages": "All pages",

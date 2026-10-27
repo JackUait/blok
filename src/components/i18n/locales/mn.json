@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "Агент руу мессеж илгээх",
   "tools.database.buttonAgentBusy": "AI завгүй байна. Дуусахад нь дахин оролдоно уу.",
   "tools.database.buttonAgentFailed": "AI энэ товчны мессежийг гүйцэтгэж чадсангүй.",
+  "tools.database.buttonAgentConfirm": "Энэ хүсэлтийг AI руу илгээх үү? AI таны өмнөөс баримтыг засах боломжтой.",
   "tools.database.buttonDataSource": "Өгөгдлийн эх сурвалж сонгох",
   "tools.database.buttonPageAddedTo": "{name} руу",
   "tools.database.buttonAllPages": "Бүх хуудас",

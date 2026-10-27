@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "Tuma ujumbe kwa wakala",
   "tools.database.buttonAgentBusy": "AI ina shughuli. Jaribu tena itakapomaliza.",
   "tools.database.buttonAgentFailed": "AI haikuweza kutekeleza ujumbe wa kitufe hiki.",
+  "tools.database.buttonAgentConfirm": "Tuma ombi hili kwa AI? AI inaweza kuhariri hati kwa niaba yako.",
   "tools.database.buttonDataSource": "Chagua chanzo cha data",
   "tools.database.buttonPageAddedTo": "kwenye {name}",
   "tools.database.buttonAllPages": "Kurasa zote",

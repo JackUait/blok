@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "Agentə mesaj göndər",
   "tools.database.buttonAgentBusy": "Süni intellekt məşğuldur. Bitirəndə yenidən cəhd edin.",
   "tools.database.buttonAgentFailed": "Süni intellekt bu düymənin mesajını icra edə bilmədi.",
+  "tools.database.buttonAgentConfirm": "Bu sorğu süni intellektə göndərilsin? Süni intellekt sənədi sizin adınızdan redaktə edə bilər.",
   "tools.database.buttonDataSource": "Məlumat mənbəyini seç",
   "tools.database.buttonPageAddedTo": "{name} daxilinə",
   "tools.database.buttonAllPages": "Bütün səhifələr",

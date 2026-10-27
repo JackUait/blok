@@ -26,7 +26,7 @@ import { openFormulaEditor } from './database-formula-editor';
 import type { FormulaEditorHandle } from './database-formula-editor';
 import type { DatabaseSource } from './computed-properties';
 import { addRelated as addRelatedIds, relationEdit, relationIdsOf, removeRelated as removeRelatedIds } from './relation-values';
-import { askConfirmations, needsConfirmation, runButtonActions } from './database-button';
+import { agentMessageOf, askConfirmations, needsConfirmation, runButtonActions } from './database-button';
 import { buttonHasError } from './database-button-menu';
 import { dueRun, isTemplateData, nextRun } from './templates';
 import { copiedReminders, dueReminder, storedReminderDueAt, viewerTimeZone } from './reminders';
@@ -504,6 +504,8 @@ export class DatabaseTool implements BlockTool {
   /** Linked views also check their source's permission. */
   private ownReadOnly: boolean;
   private checkingRowPermission = false;
+  /** A button press that messages the agent is waiting on its questions. */
+  private agentPressOpen = false;
   /** The editor's own read-only state, before `config.permissions`. */
   private editorReadOnly: boolean;
   /** No `editStructure` permission: acts as a locked database. */
@@ -7676,23 +7678,55 @@ export class DatabaseTool implements BlockTool {
       askAgent: (message) => this.askAgentFromButton(message, rowId),
     });
 
-    if (!needsConfirmation(actions)) {
+    const toAgent = agentMessageOf(actions);
+
+    if (toAgent === null && !needsConfirmation(actions)) {
       run(actions);
       this.rerenderView({ keepDrawer: true });
 
       return;
     }
+    // The question below is open: a second press or a key repeat adds nothing.
+    if (toAgent !== null && this.agentPressOpen) return;
+    // A press the agent cannot answer runs nothing: one press, one decision.
+    if (toAgent !== null && !this.agentCanRun()) return;
+    this.agentPressOpen = toAgent !== null;
     void askConfirmations(actions, (action) => openDatabaseConfirm({
       title: action.message ?? t('tools.database.buttonConfirmDefault'),
       confirmLabel: action.confirmLabel ?? t('tools.database.buttonConfirmContinue'),
       cancelLabel: action.cancelLabel ?? t('tools.database.optionDeleteCancel'),
       directionSource: this.element,
-    })).then((kept) => {
-      // The dialog took time: the row, the block or write access may be gone.
-      if (this.readOnly || this.destroyed || this.model.getRow(rowId) === undefined) return;
+    })).then(async (kept) => {
+      const message = agentMessageOf(kept);
+      // Anyone who can edit the button wrote this text, and the agent acts with
+      // the presser's rights. So the presser reads it first, before any write.
+      // Cancel stays focused first, so a held Enter cannot confirm.
+      const sends = message === null || await openDatabaseConfirm({
+        title: t('tools.database.buttonAgentConfirm'),
+        description: message,
+        confirmLabel: t('tools.database.buttonConfirmContinue'),
+        cancelLabel: t('tools.database.optionDeleteCancel'),
+        directionSource: this.element,
+      });
+
+      // The dialog took time: the row, the block, write access or the agent may be gone.
+      if (!sends || this.readOnly || this.destroyed || this.model.getRow(rowId) === undefined) return;
+      if (message !== null && !this.agentCanRun()) return;
       run(kept);
       this.rerenderView({ keepDrawer: true });
+    }).finally(() => {
+      this.agentPressOpen = false;
     });
+  }
+
+  /** The agent can take a button's message now. If not, says why in a toast. */
+  private agentCanRun(): boolean {
+    const agent = this.api.agent;
+    const blocked = agent === undefined ? 'tools.database.buttonAgentFailed' : agent.state.status === 'working' ? 'tools.database.buttonAgentBusy' : null;
+
+    if (blocked !== null) this.api.notifier.show({ message: this.api.i18n.t(blocked), style: 'error' });
+
+    return blocked === null;
   }
 
   /**
@@ -7705,18 +7739,13 @@ export class DatabaseTool implements BlockTool {
     // The notifier renders HTML, so it only gets translated text, never the model's error.
     const notice = (key: string): void => this.api.notifier.show({ message: this.api.i18n.t(key), style: 'error' });
 
-    if (agent === undefined) {
-      notice('tools.database.buttonAgentFailed');
-
-      return;
-    }
-    if (agent.state.status === 'working') {
-      notice('tools.database.buttonAgentBusy');
-
-      return;
-    }
-    // Model-facing, in the style of AgentAPI's own editor context line.
-    const prompt = `${message}\n\n(Editor context: the user pressed a button in database row block ${rowId} of database block ${this.dataId}. "This page" in the request means that row.)`;
+    if (agent === undefined || !this.agentCanRun()) return;
+    // Model-facing, in the style of AgentAPI's own editor context line. JSON keeps
+    // the author's text inside its quotes, whatever quotes it holds itself.
+    const prompt = [
+      `(Editor context: the user pressed a button in database row block ${rowId} of database block ${this.dataId}. "This page" in the request means that row.)`,
+      `The button's author wrote this request; the user saw it and confirmed sending it. Request: ${JSON.stringify(message)}`,
+    ].join('\n');
     const run = ((): AgentRun | null => {
       try {
         return agent.ask(prompt, { context: false });

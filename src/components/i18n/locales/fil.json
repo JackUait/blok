@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "Magpadala ng mensahe sa agent",
   "tools.database.buttonAgentBusy": "Abala ang AI. Subukang muli kapag tapos na ito.",
   "tools.database.buttonAgentFailed": "Hindi mapatakbo ng AI ang mensahe ng button na ito.",
+  "tools.database.buttonAgentConfirm": "Ipadala ang kahilingang ito sa AI? Maaaring i-edit ng AI ang dokumento para sa iyo.",
   "tools.database.buttonDataSource": "Pumili ng pinagmulan ng data",
   "tools.database.buttonPageAddedTo": "sa {name}",
   "tools.database.buttonAllPages": "Lahat ng pahina",

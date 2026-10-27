@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "ផ្ញើសារទៅភ្នាក់ងារ",
   "tools.database.buttonAgentBusy": "AI កំពុងរវល់។ សូមព្យាយាមម្តងទៀតពេលវាបញ្ចប់។",
   "tools.database.buttonAgentFailed": "AI មិនអាចដំណើរការសាររបស់ប៊ូតុងនេះបានទេ។",
+  "tools.database.buttonAgentConfirm": "ផ្ញើសំណើនេះទៅ AI? AI អាចកែសម្រួលឯកសារជំនួសអ្នក។",
   "tools.database.buttonDataSource": "ជ្រើសរើសប្រភពទិន្នន័យ",
   "tools.database.buttonPageAddedTo": "ទៅ {name}",
   "tools.database.buttonAllPages": "ទំព័រទាំងអស់",

@@ -1896,6 +1896,7 @@
   "tools.database.buttonActionSendAgentMessage": "Pošalji poruku agentu",
   "tools.database.buttonAgentBusy": "AI je zauzet. Pokušajte ponovo kad završi.",
   "tools.database.buttonAgentFailed": "AI nije mogao izvršiti poruku ovog dugmeta.",
+  "tools.database.buttonAgentConfirm": "Poslati ovaj zahtjev AI-ju? AI može uređivati dokument u vaše ime.",
   "tools.database.buttonDataSource": "Odaberi izvor podataka",
   "tools.database.buttonPageAddedTo": "u {name}",
   "tools.database.buttonAllPages": "Sve stranice",

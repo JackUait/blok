@@ -1902,6 +1902,7 @@
   "tools.database.buttonActionSendAgentMessage": "إرسال رسالة إلى الوكيل",
   "tools.database.buttonAgentBusy": "الذكاء الاصطناعي مشغول. حاول مرة أخرى عند انتهائه.",
   "tools.database.buttonAgentFailed": "تعذّر على الذكاء الاصطناعي تنفيذ رسالة هذا الزر.",
+  "tools.database.buttonAgentConfirm": "هل تريد إرسال هذا الطلب إلى الذكاء الاصطناعي؟ يمكنه تعديل المستند باسمك.",
   "tools.database.buttonDataSource": "اختيار مصدر البيانات",
   "tools.database.buttonPageAddedTo": "إلى {name}",
   "tools.database.buttonAllPages": "كل الصفحات",

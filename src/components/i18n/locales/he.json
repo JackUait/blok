@@ -1896,6 +1896,7 @@
   "tools.database.buttonActionSendAgentMessage": "שליחת הודעה לסוכן",
   "tools.database.buttonAgentBusy": "ה-AI עסוק. נסו שוב כשיסיים.",
   "tools.database.buttonAgentFailed": "ה-AI לא הצליח להריץ את ההודעה של הכפתור הזה.",
+  "tools.database.buttonAgentConfirm": "לשלוח את הבקשה הזו ל-AI? ה-AI יכול לערוך את המסמך בשמך.",
   "tools.database.buttonDataSource": "בחר מקור נתונים",
   "tools.database.buttonPageAddedTo": "אל {name}",
   "tools.database.buttonAllPages": "כל הדפים",

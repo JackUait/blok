@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "முகவருக்குச் செய்தி அனுப்பு",
   "tools.database.buttonAgentBusy": "AI பணியில் உள்ளது. அது முடிந்ததும் மீண்டும் முயலவும்.",
   "tools.database.buttonAgentFailed": "இந்தப் பொத்தானின் செய்தியை AI ஆல் இயக்க முடியவில்லை.",
+  "tools.database.buttonAgentConfirm": "இந்தக் கோரிக்கையை AI-க்கு அனுப்பவா? AI உங்கள் சார்பாக ஆவணத்தைத் திருத்தலாம்.",
   "tools.database.buttonDataSource": "தரவு மூலத்தைத் தேர்ந்தெடு",
   "tools.database.buttonPageAddedTo": "{name} இல்",
   "tools.database.buttonAllPages": "அனைத்துப் பக்கங்களும்",

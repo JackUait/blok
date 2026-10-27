@@ -1894,6 +1894,7 @@
   "tools.database.buttonActionSendAgentMessage": "Lähetä viesti agentille",
   "tools.database.buttonAgentBusy": "Tekoäly on varattu. Yritä uudelleen, kun se on valmis.",
   "tools.database.buttonAgentFailed": "Tekoäly ei voinut suorittaa tämän painikkeen viestiä.",
+  "tools.database.buttonAgentConfirm": "Lähetetäänkö tämä pyyntö tekoälylle? Tekoäly voi muokata asiakirjaa puolestasi.",
   "tools.database.buttonDataSource": "Valitse tietolähde",
   "tools.database.buttonPageAddedTo": "kohteeseen {name}",
   "tools.database.buttonAllPages": "Kaikki sivut",

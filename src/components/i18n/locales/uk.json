@@ -1898,6 +1898,7 @@
   "tools.database.buttonActionSendAgentMessage": "Надіслати повідомлення агенту",
   "tools.database.buttonAgentBusy": "ШІ зайнятий. Спробуйте ще раз, коли він закінчить.",
   "tools.database.buttonAgentFailed": "ШІ не зміг виконати повідомлення цієї кнопки.",
+  "tools.database.buttonAgentConfirm": "Надіслати цей запит ШІ? ШІ зможе редагувати документ від вашого імені.",
   "tools.database.buttonDataSource": "Вибрати джерело даних",
   "tools.database.buttonPageAddedTo": "до {name}",
   "tools.database.buttonAllPages": "Усі сторінки",

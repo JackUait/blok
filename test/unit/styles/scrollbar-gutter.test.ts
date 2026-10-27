@@ -37,6 +37,14 @@ const SCROLLABLE_SELECTORS = [
   '.blok-file-preview-office',
 ];
 
+/**
+ * Scrollers that set a standard value on purpose, so Chromium skips the
+ * webkit styling. Each one needs the reason.
+ */
+const STANDARD_SCROLLBAR_EXEMPT: Record<string, string> = {
+  '[data-blok-database-peek-scrollbar]': 'The peek pan bar has no ::-webkit-scrollbar rules of its own; the shared ones leave no visible thumb, so it takes the native thin bar.',
+};
+
 const escapeForRegex = (selector: string): string =>
   selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -137,6 +145,13 @@ describe('Scrollbar gutter reservation (flattened src/styles/main.css)', () => {
       // standard scrollbar styling path, so they can live anywhere. Only the
       // active styling values (thin + colors) trigger Chromium's fallback.
       if (/^(?:initial|inherit|unset|revert|auto|none)\b/.test(value.replace(/\s*!important$/, ''))) {
+        continue;
+      }
+
+      const ruleStart = css.lastIndexOf('{', match.index);
+      const selector = css.slice(css.lastIndexOf('}', ruleStart) + 1, ruleStart);
+
+      if (Object.keys(STANDARD_SCROLLBAR_EXEMPT).some((exempt) => selector.includes(exempt))) {
         continue;
       }
 

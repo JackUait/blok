@@ -561,6 +561,10 @@ for (const gesture of ['shift', 'non-text'] as const) {
         expect(inGutter).toBeNull();
 
         await page.mouse.move(wheelX, pointer.y, { steps: 4 });
+        // A wheel with Shift held does not scroll down on Linux CI. Shift only counts at the press.
+        if (gesture === 'shift') {
+          await page.keyboard.up('Shift');
+        }
         await page.mouse.wheel(0, 400);
         await expect.poll(() => rowAt(page, pointer.y)).toBeGreaterThan(8);
 

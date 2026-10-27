@@ -1195,6 +1195,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const DATABASE_ROLLUP_LIST_COLOR_BUTTON_BYTES = 3_239;
     // database.css: a card's lone gauge (full bar, 18px ring), the gallery's 11px inset, the peek's Comments heading.
     const DATABASE_CARD_GAUGE_COMMENTS_HEADING_BYTES = 1_818;
+    // database.css: a numeric rollup at the table cell's end in tabular figures.
+    const DATABASE_ROLLUP_NUMERIC_CELL_BYTES = 355;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -1439,7 +1441,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + DATABASE_SWITCH_OFF_TRACK_BYTES
       + DATABASE_MENU_FOLLOWUPS_BYTES
       + DATABASE_ROLLUP_LIST_COLOR_BUTTON_BYTES
-      + DATABASE_CARD_GAUGE_COMMENTS_HEADING_BYTES;
+      + DATABASE_CARD_GAUGE_COMMENTS_HEADING_BYTES
+      + DATABASE_ROLLUP_NUMERIC_CELL_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

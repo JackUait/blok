@@ -11012,6 +11012,12 @@ textarea[data-blok-database-cell-input] {
   justify-content: flex-end;
 }
 
+[data-blok-database-table-cell][data-type="rollup"] > [data-blok-database-cell][data-result-type="number"] {
+  justify-content: flex-end;
+  text-align: end;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
 [data-blok-database-table-cell][data-frozen], [data-blok-database-table-column-header][data-frozen], [data-blok-database-table-calc][data-frozen] {
   position: sticky;
   z-index: 1;

@@ -38,6 +38,9 @@ const SCHEMA = [
   { id: 'p-quiet-ring', name: 'Quiet ring', type: 'number', position: 'b1', number: { showAs: 'ring', color: 'yellow', divideBy: 100, showNumber: false } },
   { id: 'p-quiet-fx', name: 'Quiet formula', type: 'formula', position: 'b2', formula: { expression: '{{property:p-bar}} * 2' }, number: { showAs: 'ring', divideBy: 100, showNumber: false } },
   { id: 'p-quiet-sum', name: 'Quiet sum', type: 'rollup', position: 'b3', rollup: { relationPropertyId: 'p-link', targetPropertyId: 'p-bar', function: 'sum' }, number: { showAs: 'bar', divideBy: 100, showNumber: false } },
+  { id: 'p-total', name: 'Total', type: 'rollup', position: 'b4', rollup: { relationPropertyId: 'p-link', targetPropertyId: 'p-num', function: 'sum' }, number: { format: 'euro' } },
+  { id: 'p-filled', name: 'Filled', type: 'rollup', position: 'b5', rollup: { relationPropertyId: 'p-link', targetPropertyId: 'p-num', function: 'percent_not_empty' } },
+  { id: 'p-list', name: 'List', type: 'rollup', position: 'b6', rollup: { relationPropertyId: 'p-link', targetPropertyId: 'p-bar', function: 'show_original' }, number: { showAs: 'bar', color: 'green' } },
 ];
 
 const QUIET = [ 'p-quiet-bar', 'p-quiet-ring', 'p-quiet-fx', 'p-quiet-sum' ];
@@ -165,6 +168,54 @@ test.afterEach(async ({ page }) => {
   await page.emulateMedia({ colorScheme: null });
 });
 
+/** Where the cell's text sits in its container's content box, and its numeral style. */
+const textPlace = async (value: Locator, container: string): Promise<{ fromStart: number; toEnd: number; numeric: string }> => {
+  await expect(value).toBeVisible();
+
+  return value.evaluate((el, selector) => {
+    const range = document.createRange();
+
+    range.selectNodeContents(el);
+    const text = range.getBoundingClientRect();
+    const box = el.closest(selector);
+
+    if (box === null) throw new Error('no container');
+    const style = getComputedStyle(box);
+    const outer = box.getBoundingClientRect();
+    const round = (n: number): number => Math.round(n * 10) / 10;
+
+    return {
+      fromStart: round(text.left - outer.left - parseFloat(style.paddingLeft) - parseFloat(style.borderLeftWidth)),
+      toEnd: round(outer.right - parseFloat(style.paddingRight) - parseFloat(style.borderRightWidth) - text.right),
+      numeric: getComputedStyle(el).fontVariantNumeric,
+    };
+  }, container);
+};
+
+// notion-spec-2 §14.9: a numeric rollup sits at the table cell's end in tabular figures, and at the start of the side peek in plain ones.
+test('a numeric rollup is right aligned with tabular figures in the table, left aligned in the side peek', async ({ page }) => {
+  await mount(page, blocks({ type: 'table' }, [ 'p-total', 'p-filled' ]));
+  const row = page.locator('[data-blok-database-table-row][data-row-id="r1"]');
+
+  for (const id of [ 'p-total', 'p-filled' ]) {
+    const cell = row.locator(`[data-blok-database-table-cell][data-property-id="${id}"]`).locator('[data-blok-database-cell]').first();
+    const place = await textPlace(cell, '[data-blok-database-table-cell]');
+
+    expect(Math.abs(place.toEnd)).toBeLessThanOrEqual(0.5);
+    expect(place.numeric).toBe('lining-nums tabular-nums');
+  }
+  await expect(row.locator('[data-blok-database-table-cell][data-property-id="p-total"]')).toHaveText('€2,469.00');
+  await expect(row.locator('[data-blok-database-table-cell][data-property-id="p-filled"]')).toHaveText('100%');
+  const drawer = await openPeek(page);
+
+  for (const id of [ 'p-total', 'p-filled' ]) {
+    const place = await textPlace(peekValue(drawer, id).locator('[data-blok-database-cell]'), '[data-blok-database-drawer-prop-value]');
+
+    expect(Math.abs(place.fromStart)).toBeLessThanOrEqual(0.5);
+    expect(place.numeric).toBe('normal');
+  }
+});
+
 for (const theme of THEMES) {
   test.describe(`number gauge, ${theme.name}`, () => {
     test.beforeEach(async ({ page }) => {
@@ -209,6 +260,14 @@ for (const theme of THEMES) {
       expect(ring).toMatchObject({ width: 21, height: 21, gap: 8 });
       expect(Math.abs(bar.fromStart)).toBeLessThanOrEqual(0.5);
       expect(Math.abs(ring.fromStart)).toBeLessThanOrEqual(0.5);
+    });
+
+    // notion-spec-2 §15.4: a rollup list's bars keep the Number track, rgba(255,255,235,0.1) in dark.
+    test('a rollup list draws its bars on the Number track', async ({ page }) => {
+      await mount(page, blocks({ type: 'table' }, [ 'p-list' ]));
+      const row = page.locator('[data-blok-database-table-row][data-row-id="r1"]');
+
+      expect(await colours(row.locator(`[data-blok-database-table-cell][data-property-id="p-list"] ${BAR}`))).toEqual({ fill: GREEN, track: theme.track });
     });
 
     test('a number formula and a number rollup draw their gauge in the table and the row page', async ({ page }) => {

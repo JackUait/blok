@@ -7998,6 +7998,13 @@ textarea[data-blok-database-cell-input] {
   justify-content: flex-end;
 }
 
+/* notion-spec-2 §14.9, §15.2: a numeric rollup sits at the cell's end in tabular figures. No `display`: it would beat the gauge row above. */
+[data-blok-database-table-cell][data-type="rollup"] > [data-blok-database-cell][data-result-type="number"] {
+  justify-content: flex-end;
+  text-align: end;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
 [data-blok-database-table-cell][data-frozen],
 [data-blok-database-table-column-header][data-frozen],
 [data-blok-database-table-calc][data-frozen] {

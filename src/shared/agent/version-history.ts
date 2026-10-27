@@ -1,7 +1,7 @@
 import { diffOutput } from '../output-diff';
 import { outputBlocksToSegments } from '../rich-text/block-data';
 import { buildDocumentView, viewRows } from './document-view';
-import { approvalKey, approveRequests, approveStep, restoreShares, restoreTouchesLocked, shareRequest } from './approval';
+import { approvalKey, approveRequests, approveStep, checkShareReachable, restoreShares, restoreTouchesLocked, shareRequest } from './approval';
 import { AgentFailure, failure } from './errors';
 import { DocSnapshot } from './snapshot';
 
@@ -219,7 +219,10 @@ export const runRestore = async (
 
   await approveStep(approved, now, approve, checkCancel, 'database.restore');
   // A version can bring back a public form: who can see or fill out a view is the person's too.
-  const shared = restoreShares(now, target).map(step => shareRequest(step, now));
+  const sharedSteps = restoreShares(now, target);
+
+  checkShareReachable(sharedSteps, ctx.services);
+  const shared = sharedSteps.map(step => shareRequest(step, now));
 
   await approveRequests(shared, approve, checkCancel);
   // The person answered about the document as it was; a lock that landed meanwhile was never asked about.

@@ -814,11 +814,11 @@ const VIEW_SETTING_ARGS: Record<string, unknown> = {
       + `${ASKS} public: true opens a closed form, and closed: true ends a public one.`,
     properties: {
       closed: nullable({ type: 'boolean', description: `Who can fill out: no one. ${ASKS}` }),
-      public: nullable({ type: 'boolean', description: `Who can fill out: anyone on the web with the link; false or null is workspace members only. ${ASKS}` }),
-      anonymous: nullable({ type: 'boolean', description: `Answers carry no respondent. ${ASKS}` }),
+      public: nullable({ type: 'boolean', description: `Who can fill out: anyone on the web with the link; false or null is workspace members only. Only where the host shares forms. ${ASKS}` }),
+      anonymous: nullable({ type: 'boolean', description: `Answers carry no respondent. Only where the host shares forms. ${ASKS}` }),
       submissionAccess: nullable({
         type: 'string', enum: ['none', 'view', 'comment', 'edit', 'full'],
-        description: `What a respondent may do with the page their answer becomes. Default none. ${ASKS}`,
+        description: `What a respondent may do with the page their answer becomes. Default none. Only where the host shares forms. ${ASKS}`,
       }),
       submitLabel: nullable({ type: 'string' }),
       confirmation: nullable({ type: 'string' }),
@@ -826,7 +826,7 @@ const VIEW_SETTING_ARGS: Record<string, unknown> = {
   },
   calendarSync: {
     ...VIEW_PROPERTIES.calendarSync,
-    description: `Calendar sync, for the host: it sends this view's rows to an outside calendar. ${ASKS} calendarId must be one plain line.`,
+    description: 'Calendar sync slot, for the host. No person can change it in Blok, so a change is refused (PRECONDITION_FAILED).',
   },
 };
 
@@ -926,7 +926,8 @@ export const DATABASE_ACTIONS: ToolActionDeclaration[] = [
     summary: 'Change a view\'s saved settings: filters, sorts, grouping, calculations, columns, card, calendar, timeline, chart, map, form texts and form sharing. It applies for everyone.',
     guidance: 'Only the keys in changes change. Each key replaces its whole value, so read the view first: to hide one column, send the full properties list with that entry visible false. form is the exception: its keys merge into the saved form. null removes a key (not form). '
       + 'Grouping by another property resets groupSettings (subGroupBy: subGroupSettings) to that type\'s defaults unless changes also sets them. A filter or sort without an id gets one. '
-      + 'Change the layout type with database.setLayout. A change to who can see or fill out a view (form closed, public, anonymous, submissionAccess, calendarSync) asks the person first, '
+      + 'Change the layout type with database.setLayout. A change to who can fill out a form (form closed, public, anonymous, submissionAccess) asks the person first, '
+      + 'and public, anonymous and submissionAccess work only where the host shares forms (else COMMAND_UNAVAILABLE, reason host); calendarSync is not writable. '
       + 'naming each change; on APPROVAL_REQUIRED nothing in the batch was applied: send the rest without it and do not ask again unless the person asks.',
     target: 'block',
     preconditions: ['The database is not locked.', 'Every property a setting names exists, and has a type that setting can use.'],

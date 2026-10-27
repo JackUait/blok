@@ -6,6 +6,7 @@ import { COMMANDS } from '../../../shared/agent/commands';
 import { plannerContextFrom } from '../../../shared/agent/context';
 import { describeContract } from '../../../shared/agent/describe';
 import { buildDocumentView } from '../../../shared/agent/document-view';
+import { FORMS_HOST_SERVICE } from '../../../shared/agent/approval';
 import { checkEnvelope } from '../../../shared/agent/envelope';
 import { runBatch } from '../../../shared/agent/executor';
 import { canRestore } from '../../../shared/agent/version-history';
@@ -24,6 +25,14 @@ export interface ContractSource {
   contract(): AgentContract;
   runtimes(contract: AgentContract): ToolRuntimeRegistry;
 }
+
+/** The Share panel's host: the database tool's config.forms. Without it the agent gets no more than the panel offers. */
+const withFormsHost = (editor: BlokModules, services: Partial<Record<HostService, unknown>>): Partial<Record<string, unknown>> => {
+  const settings: unknown = editor.Tools.blockTools.get('database')?.settings;
+  const host = typeof settings === 'object' && settings !== null && 'forms' in settings && settings.forms !== undefined;
+
+  return host ? { ...services, [FORMS_HOST_SERVICE]: true } : services;
+};
 
 export const liveContractSource = (
   Blok: BlokModules,
@@ -88,7 +97,7 @@ export const createEditorAgentSession = (
       state.cached = { revision: contract.revision, runtimes: source.runtimes(contract) };
     }
 
-    return plannerContextFrom(contract, state.cached.runtimes, ports, validateAgainst, services);
+    return plannerContextFrom(contract, state.cached.runtimes, ports, validateAgainst, withFormsHost(editor, services));
   };
 
   return {

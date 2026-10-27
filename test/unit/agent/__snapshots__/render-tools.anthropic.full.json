@@ -4477,7 +4477,7 @@
                                 "anyOf": [
                                   {
                                     "type": "boolean",
-                                    "description": "Who can fill out: anyone on the web with the link; false or null is workspace members only. Changing it asks the person first (APPROVAL_REQUIRED when they say no or cannot be asked)."
+                                    "description": "Who can fill out: anyone on the web with the link; false or null is workspace members only. Only where the host shares forms. Changing it asks the person first (APPROVAL_REQUIRED when they say no or cannot be asked)."
                                   },
                                   {
                                     "type": "null"
@@ -4488,7 +4488,7 @@
                                 "anyOf": [
                                   {
                                     "type": "boolean",
-                                    "description": "Answers carry no respondent. Changing it asks the person first (APPROVAL_REQUIRED when they say no or cannot be asked)."
+                                    "description": "Answers carry no respondent. Only where the host shares forms. Changing it asks the person first (APPROVAL_REQUIRED when they say no or cannot be asked)."
                                   },
                                   {
                                     "type": "null"
@@ -4506,7 +4506,7 @@
                                       "edit",
                                       "full"
                                     ],
-                                    "description": "What a respondent may do with the page their answer becomes. Default none. Changing it asks the person first (APPROVAL_REQUIRED when they say no or cannot be asked)."
+                                    "description": "What a respondent may do with the page their answer becomes. Default none. Only where the host shares forms. Changing it asks the person first (APPROVAL_REQUIRED when they say no or cannot be asked)."
                                   },
                                   {
                                     "type": "null"
@@ -4578,7 +4578,7 @@
                             "anyOf": [
                               {
                                 "type": "object",
-                                "description": "Calendar sync, for the host: it sends this view's rows to an outside calendar. Changing it asks the person first (APPROVAL_REQUIRED when they say no or cannot be asked). calendarId must be one plain line.",
+                                "description": "Calendar sync slot, for the host. No person can change it in Blok, so a change is refused (PRECONDITION_FAILED).",
                                 "additionalProperties": false,
                                 "properties": {
                                   "enabled": {

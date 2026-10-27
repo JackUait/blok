@@ -1501,7 +1501,7 @@ describe('agent turn merge through real Core modules', () => {
       const formOf = (): unknown => (editor.YjsManager.toJSON().find(block => block.id === 'db')?.data.views as Array<{ form?: unknown }>)[0]?.form;
       const asked = vi.fn<AgentApprover>(() => Promise.resolve(false));
 
-      expect(await run(session, [{ name: 'database.updateView', args: { id: 'db', viewId: 'v', changes: { form: { public: true } } } }], () => Promise.resolve(true)))
+      expect(await run(session, [{ name: 'database.updateView', args: { id: 'db', viewId: 'v', changes: { form: { closed: true } } } }], () => Promise.resolve(true)))
         .toMatchObject({ ok: true });
       await settle(editor);
       await nextTask();
@@ -1516,7 +1516,7 @@ describe('agent turn merge through real Core modules', () => {
       expect(asked.mock.calls[0]?.[0]).toEqual({
         kind: 'database.share', blockId: 'db', title: 'Tasks', viewId: 'v', view: 'Signup', changes: [{ setting: 'access', to: 'workspace' }],
       });
-      expect(formOf()).toEqual({ public: true });
+      expect(formOf()).toEqual({ closed: true });
     }, 60_000);
 
     it('a redo approved for one step, after the person changed the top step, is STALE', async () => {

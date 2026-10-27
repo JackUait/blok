@@ -243,7 +243,8 @@ describe.each(ERAS)('MCP asks the person through elicitation before a sharing ch
       },
     }],
   });
-  const PUBLISH = { commands: [{ name: 'database.updateView', args: { id: 'db', viewId: 'v', changes: { form: { public: true } } } }] };
+  // MCP knows no forms host, so only what the Share panel offers without one: closing the form.
+  const PUBLISH = { commands: [{ name: 'database.updateView', args: { id: 'db', viewId: 'v', changes: { form: { closed: true } } } }] };
   const formOf = async (session: AgentSession): Promise<unknown> => {
     const read = await session.read({ ids: ['db'], detail: 'full' });
     const views = read.blocks[0]?.data?.views;
@@ -261,9 +262,24 @@ describe.each(ERAS)('MCP asks the person through elicitation before a sharing ch
       expect(result.isError).not.toBe(true);
     });
     expect(elicit.mock.calls[0]?.[0]).toBe('Desktop\'s agent wants to change who can see or fill out the view "Signup" (id "v") of the database "Payroll" (id "db"). '
-      + 'After the change: Who can fill out: anyone on the web with the link. Allow it?');
+      + 'After the change: Who can fill out: no one (the form is closed). Allow it?');
     expect(elicit.mock.calls[0]?.[0]).not.toMatch(/unlock/i);
-    expect(await formOf(session)).toEqual({ public: true });
+    expect(await formOf(session)).toEqual({ closed: true });
+  });
+
+  it('never asks about making a form public: with no forms host it is unavailable, as in the Share panel', async () => {
+    const session = openJsonSession(formSeed());
+    const elicit = vi.fn<Elicit>(() => ({ action: 'accept', content: { share: true } }));
+
+    await withClient(era, sessionDispatch(session), elicit, async client => {
+      const result = await client.callTool({ name: 'blok_execute', arguments: { handle: 'h', commands: [
+        { name: 'database.updateView', args: { id: 'db', viewId: 'v', changes: { form: { public: true } } } },
+      ] } }, REQUEST);
+
+      expect(errorCode(result)).toBe('COMMAND_UNAVAILABLE');
+    });
+    expect(elicit).not.toHaveBeenCalled();
+    expect(await formOf(session)).toEqual({});
   });
 
   it.each([

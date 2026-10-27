@@ -39,13 +39,40 @@ public sealed class JintDatabaseUnlockTests
           "schema":[{"id":"t","name":"Name","type":"title","position":"a0"}]}}]}
       """;
 
-  // Who can fill out a form is the person's to change, and the server has no person to ask.
+  // Closing a form is the person's to approve, and the server has no person to ask.
+  [Fact]
+  public async Task ClosingAFormIsRefusedBecauseNoPersonCanBeAsked()
+  {
+    var error = await ShareErrorAsync("""{"form":{"closed":true}}""");
+
+    Assert.Equal("APPROVAL_REQUIRED", error["code"]?.GetValue<string>());
+    Assert.Equal("no-channel", error["details"]?["reason"]?.GetValue<string>());
+    Assert.Equal("database.share", error["details"]?["approval"]?["kind"]?.GetValue<string>());
+  }
+
+  // The server knows no forms host, so as in the Share panel without one these are not offered at all.
   [Theory]
   [InlineData("""{"form":{"public":true}}""")]
   [InlineData("""{"form":{"anonymous":true}}""")]
   [InlineData("""{"form":{"submissionAccess":"edit"}}""")]
-  [InlineData("""{"calendarSync":{"enabled":true,"calendarId":"team"}}""")]
-  public async Task ASharingChangeIsRefusedBecauseNoPersonCanBeAsked(string changes)
+  public async Task AHostOnlySharingChangeIsUnavailable(string changes)
+  {
+    var error = await ShareErrorAsync(changes);
+
+    Assert.Equal("COMMAND_UNAVAILABLE", error["code"]?.GetValue<string>());
+    Assert.Equal("host", error["details"]?["reason"]?.GetValue<string>());
+  }
+
+  // No person can change calendar sync in Blok.
+  [Fact]
+  public async Task CalendarSyncIsRefused()
+  {
+    var error = await ShareErrorAsync("""{"calendarSync":{"enabled":true,"calendarId":"team"}}""");
+
+    Assert.Equal("PRECONDITION_FAILED", error["code"]?.GetValue<string>());
+  }
+
+  private static async Task<JsonObject> ShareErrorAsync(string changes)
   {
     IBlokAgentExecutor executor = BlokDocuments.CreateAgentExecutor(poolSize: 1);
 
@@ -53,9 +80,7 @@ public sealed class JintDatabaseUnlockTests
         FormDocument, $$$"""{"commands":[{"name":"database.updateView","args":{"id":"db","viewId":"v1","changes":{{{changes}}}}}]}""", Actor);
 
     Assert.Null(execution.DocumentJson);
-    var error = Assert.IsType<JsonObject>(JsonNode.Parse(execution.ResultJson)!["error"]);
-    Assert.Equal("APPROVAL_REQUIRED", error["code"]?.GetValue<string>());
-    Assert.Equal("no-channel", error["details"]?["reason"]?.GetValue<string>());
-    Assert.Equal("database.share", error["details"]?["approval"]?["kind"]?.GetValue<string>());
+
+    return Assert.IsType<JsonObject>(JsonNode.Parse(execution.ResultJson)!["error"]);
   }
 }

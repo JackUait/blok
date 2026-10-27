@@ -477,7 +477,7 @@ describe('history.restore', () => {
         activeViewId: 'v',
       },
     });
-    const withForm = (now: Record<string, unknown>, then: Record<string, unknown>) => {
+    const withForm = (now: Record<string, unknown>, then: Record<string, unknown>, formsHost = true) => {
       const history = {
         list: vi.fn(async () => VERSIONS),
         read: vi.fn(async (version: string) => (version === 'L:1' ? { blocks: [formDb(then)] } : null)),
@@ -485,7 +485,9 @@ describe('history.restore', () => {
       };
       const setup = createHeadlessAgentSetup({ services: ['versionHistory'], runtime: 'node', restores: true });
       const agent = createDocumentAgentSession({
-        document: { blocks: [formDb(now)] }, tools: setup.tools, contract: setup.contract, actor, ports: setup.ports, services: { versionHistory: history },
+        document: { blocks: [formDb(now)] }, tools: setup.tools, contract: setup.contract, actor, ports: setup.ports,
+        // databaseFormsHost: what the editor sets when the database tool has config.forms.
+        services: { versionHistory: history, ...(formsHost && { databaseFormsHost: true }) } as never,
       });
 
       return { history, agent };
@@ -501,6 +503,16 @@ describe('history.restore', () => {
         kind: 'database.share', blockId: 'db', title: 'Roadmap', viewId: 'v', view: 'Signup', changes: [{ setting: 'access', to: 'public' }],
       }]]);
       expect(!result.ok && result.error.details?.reason).toBe('denied');
+      expect(history.restore).not.toHaveBeenCalled();
+    });
+
+    it('without the host\'s form sharing, a restore that makes a form public is unavailable, even with a yes ready', async () => {
+      const { history, agent } = withForm({}, { public: true }, false);
+      const approve = vi.fn(async () => true);
+      const result = await agent.execute(RESTORE, { approve });
+
+      expect(!result.ok && [result.error.code, result.error.details?.reason]).toEqual(['COMMAND_UNAVAILABLE', 'host']);
+      expect(approve).not.toHaveBeenCalled();
       expect(history.restore).not.toHaveBeenCalled();
     });
 

@@ -6,9 +6,12 @@ import type { AgentApprovalRequest, AgentBatch, AgentResult, AgentSession, Outpu
 
 type Approve = (request: AgentApprovalRequest) => Promise<boolean>;
 
-const sessions: Array<[string, (seed: OutputData) => AgentSession]> = [
-  ['json', seed => openJsonSession(seed)],
-  ['store', seed => openStoreSession(seed)],
+// The editor sets this when the database tool has config.forms, as the Share panel needs.
+const FORMS_HOST = { names: [], impl: { databaseFormsHost: true } } as unknown as Parameters<typeof openJsonSession>[2];
+
+const sessions: Array<[string, (seed: OutputData) => AgentSession, (seed: OutputData) => AgentSession]> = [
+  ['json', seed => openJsonSession(seed, undefined, FORMS_HOST), seed => openJsonSession(seed)],
+  ['store', seed => openStoreSession(seed, undefined, FORMS_HOST), seed => openStoreSession(seed)],
 ];
 
 const formView = (id: string, form: Record<string, unknown> = {}, name = 'Signup'): Record<string, unknown> => ({
@@ -45,7 +48,7 @@ const codeOf = (result: AgentResult): string | undefined => (result.ok ? undefin
 
 const makePublic = update({ form: { public: true } });
 
-describe.each(sessions)('changing who can see or fill out a view, on a %s session', (_name, open) => {
+describe.each(sessions)('changing who can see or fill out a view, on a %s session', (_name, open, openWithoutHost) => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -220,18 +223,65 @@ describe.each(sessions)('changing who can see or fill out a view, on a %s sessio
     }
   });
 
-  it('calendar sync is a sharing setting: it asks, naming the calendar', async () => {
+  it('calendar sync has no setting a person can change in Blok, so it is refused without asking, approval or not', async () => {
     const session = open(seed([{ ...formView('v1'), type: 'calendar' }]));
     const approve = vi.fn<Approve>(() => Promise.resolve(true));
 
     try {
-      await run(session, [update({ calendarSync: { enabled: true, calendarId: 'team@example.com' } })], approve);
+      const result = await run(session, [update({ calendarSync: { enabled: true, calendarId: 'team@example.com' } })], approve);
 
-      expect(approve.mock.calls[0]?.[0]).toMatchObject({ changes: [{ setting: 'calendarSync', to: { enabled: true, calendarId: 'team@example.com' } }] });
-      expect((await viewOf(session)).calendarSync).toEqual({ enabled: true, calendarId: 'team@example.com' });
+      expect(codeOf(result)).toBe('PRECONDITION_FAILED');
+      expect(approve).not.toHaveBeenCalled();
+      expect((await viewOf(session)).calendarSync).toBeUndefined();
     } finally {
       session.close();
     }
+  });
+
+  describe('without the host\'s form sharing (no database config.forms), as the Share panel', () => {
+    it.each([
+      [{ form: { public: true } }],
+      [{ form: { anonymous: true } }],
+      [{ form: { submissionAccess: 'edit' } }],
+    ])('refuses %j as unavailable here, even with a yes ready', async (changes) => {
+      const session = openWithoutHost(seed());
+      const approve = vi.fn<Approve>(() => Promise.resolve(true));
+
+      try {
+        const result = await run(session, [update(changes)], approve);
+
+        expect(codeOf(result)).toBe('COMMAND_UNAVAILABLE');
+        expect(result.ok ? undefined : result.error.details?.reason).toBe('host');
+        expect(approve).not.toHaveBeenCalled();
+        expect((await viewOf(session)).form).toEqual({});
+      } finally {
+        session.close();
+      }
+    });
+
+    it('still lets the person approve closing the form, which the panel offers', async () => {
+      const session = openWithoutHost(seed());
+      const approve = vi.fn<Approve>(() => Promise.resolve(true));
+
+      try {
+        expect(codeOf(await run(session, [update({ form: { closed: true } })], approve))).toBeUndefined();
+        expect(approve).toHaveBeenCalledTimes(1);
+        expect((await viewOf(session)).form).toEqual({ closed: true });
+      } finally {
+        session.close();
+      }
+    });
+
+    it('a duplicate of a public form is refused too', async () => {
+      const session = openWithoutHost(seed([formView('v1', { public: true })]));
+
+      try {
+        expect(codeOf(await run(session, [{ name: 'database.duplicateView', args: { id: 'db', viewId: 'v1' } }], () => Promise.resolve(true))))
+          .toBe('COMMAND_UNAVAILABLE');
+      } finally {
+        session.close();
+      }
+    });
   });
 
   it('refuses a calendar id with hidden characters: the person must see exactly what it is', async () => {

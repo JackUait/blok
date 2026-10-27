@@ -44,7 +44,7 @@ const scripted = (...responses: AgentModelResponse[]): AgentModel & { requests: 
   }, { requests });
 };
 
-const createEditor = async (model: AgentModel, viewName = 'Signup'): Promise<TestEditor> => {
+const createEditor = async (model: AgentModel, viewName = 'Signup', formsHost = true): Promise<TestEditor> => {
   const holder = document.createElement('div');
 
   document.body.appendChild(holder);
@@ -52,7 +52,12 @@ const createEditor = async (model: AgentModel, viewName = 'Signup'): Promise<Tes
     holder,
     user: { id: 'human-1' },
     dataModel: 'hierarchical',
-    tools: { paragraph: Paragraph, database: Database, 'database-row': DatabaseRow },
+    tools: {
+      paragraph: Paragraph,
+      // config.forms is the Share panel's host: without it the panel offers no public link, anonymous answers or access.
+      database: formsHost ? { class: Database, config: { forms: { onSubmit: () => undefined } } } : Database,
+      'database-row': DatabaseRow,
+    },
     data: {
       blocks: [{
         id: 'db', type: 'database', content: [],
@@ -141,5 +146,17 @@ describe('Ask AI asks the person before it changes who can fill out a form', () 
     const asked = await within(bar()).findByRole('group', { name: QUESTION.replace('"Signup"', '"Signup now"') });
 
     fireEvent.click(within(asked).getByRole('button', { name: 'Keep as is' }));
+  });
+
+  it('without the host\'s form sharing it never asks, and the model learns the change is unavailable here', async () => {
+    const model = scripted(publishCall, answer('Could not.'));
+    const editor = await createEditor(model, 'Signup', false);
+
+    editor.agent.openAssistant();
+    submit('Make the form public');
+    await waitFor(() => expect(within(bar()).getByText('Could not.')).toBeVisible());
+    expect(within(bar()).queryByRole('group', { name: QUESTION })).toBeNull();
+    expect(await formOf(editor)).toEqual({});
+    expect(JSON.stringify(model.requests.at(-1)?.messages)).toMatch(/COMMAND_UNAVAILABLE/);
   });
 });

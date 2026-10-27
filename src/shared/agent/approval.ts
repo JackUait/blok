@@ -445,3 +445,27 @@ export const joinShares = (first: readonly ShareStep[], last: readonly ShareStep
 
   return [...joined.values()];
 };
+
+/** Set in ctx.services by the editor when the database tool has config.forms, the Share panel's host. */
+export const FORMS_HOST_SERVICE = 'databaseFormsHost';
+
+/**
+ * Never more than a person can do. The Share panel offers anyone-with-the-link, anonymous answers and
+ * access to submission only with the host's form sharing, and Blok has no control for calendar sync at all.
+ */
+export const checkShareReachable = (steps: readonly ShareStep[], services: Partial<Record<string, unknown>>): void => {
+  const host = services[FORMS_HOST_SERVICE] === true;
+  const changes = steps.flatMap(step => step.changes);
+
+  if (changes.some(change => change.setting === 'calendarSync')) {
+    throw failure('PRECONDITION_FAILED', 'Calendar sync has no setting a person can change in Blok, so an agent cannot change it either. Nothing was written.');
+  }
+  const hostOnly = host ? undefined : changes.find(change => change.setting === 'anonymous' || change.setting === 'submissionAccess'
+    || (change.setting === 'access' && change.to === 'public'));
+
+  if (hostOnly !== undefined) {
+    throw failure('COMMAND_UNAVAILABLE', `${describeShareChange(hostOnly)}: the Share panel offers this only when the host shares forms (database config.forms), and this editor has none. Nothing was written.`, {
+      details: { reason: 'host' },
+    });
+  }
+};

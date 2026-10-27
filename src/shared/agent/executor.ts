@@ -1,6 +1,6 @@
 import { isRichText } from '../rich-text/guards';
 import {
-  approvalKey, approvalNeeded, approveRequests, approveStep, lockedDatabases, planWithApprovals, savedTitle, sharedBetween, shareRequest, unlockedBetween,
+  approvalKey, approvalNeeded, approveRequests, approveStep, checkShareReachable, lockedDatabases, planWithApprovals, savedTitle, sharedBetween, shareRequest, unlockedBetween,
 } from './approval';
 import type { ShareStep } from './approval';
 import { agentAttribution } from './attribution';
@@ -284,6 +284,7 @@ const approveHistoryStep = async (input: BatchInput, name: 'history.undo' | 'his
   if (unlocks.length === 0 && shares.length === 0) {
     return;
   }
+  checkShareReachable(shares, input.ctx.services);
   const before = input.applier.snapshot();
   const asked = shares.map(step => shareRequest(step, before));
 
@@ -434,8 +435,11 @@ const stepShares = (before: DocSnapshot, after: DocSnapshot): StepUnlocks['share
  * Any command that changes who can see or fill out a view (not only updateView: a duplicate, an insert)
  * needs the person's yes for exactly that change, named from the document before the batch.
  */
-const requireShareApprovals = (snapshot: DocSnapshot, draft: DocSnapshot, approved: ReadonlySet<string>): void => {
-  for (const step of sharedBetween(snapshot, draft)) {
+const requireShareApprovals = (snapshot: DocSnapshot, draft: DocSnapshot, approved: ReadonlySet<string>, services: Partial<Record<string, unknown>>): void => {
+  const steps = sharedBetween(snapshot, draft);
+
+  checkShareReachable(steps, services);
+  for (const step of steps) {
     const request = shareRequest(step, snapshot);
 
     if (!approved.has(approvalKey(request))) {
@@ -469,7 +473,7 @@ const pendingPlan = (
     snapshot, batch, ctx: { ...input.ctx, prepared: pending, approved, committedTitle: id => savedTitle(snapshot.get(id)?.data) }, stamp, warnings,
   });
 
-  requireShareApprovals(snapshot, draft, approved);
+  requireShareApprovals(snapshot, draft, approved, input.ctx.services);
 
   return { plan, snapshot, stamp };
 };
@@ -697,7 +701,7 @@ export const runBatch = async (input: BatchInput): Promise<AgentResult> => {
         snapshot, batch, ctx: { ...input.ctx, prepared, approved, committedTitle: id => savedTitle(snapshot.get(id)?.data) }, stamp, warnings,
       });
 
-      requireShareApprovals(snapshot, planned.draft, approved);
+      requireShareApprovals(snapshot, planned.draft, approved, input.ctx.services);
 
       return planned;
     }, batch, current, snapshot, input.ctx);

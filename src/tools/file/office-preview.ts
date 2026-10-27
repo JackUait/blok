@@ -140,9 +140,9 @@ async function renderInto(buf: ArrayBuffer, container: HTMLElement, kind: Office
     return null;
   }
   const pptx = await loadPptxRenderer();
-  await pptx.open(buf, container);
+  const deck = await pptx.open(buf, container);
 
-  return null;
+  return () => deck.destroy();
 }
 
 /**

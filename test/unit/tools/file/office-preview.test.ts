@@ -24,7 +24,7 @@ describe('fillOfficeBody', () => {
   it('renders a download fallback when the fetch fails', async () => {
     vi.mocked(loadBinaryPreview).mockResolvedValue({ ok: false, reason: 'fetch-error' });
     const body = document.createElement('div');
-    await fillOfficeBody(body, { ...OPTS, url: 'https://x.com/a.docx' }, 'docx', () => false);
+    await fillOfficeBody(body, { ...OPTS, url: 'https://x.com/a.docx' }, 'docx', () => false, () => undefined);
     expect(body.querySelector('[data-role="file-preview-error"]')).not.toBeNull();
     expect(body.querySelector('[data-action="preview-download"]')).not.toBeNull();
   });
@@ -32,7 +32,7 @@ describe('fillOfficeBody', () => {
   it('does nothing when the modal is already closed', async () => {
     vi.mocked(loadBinaryPreview).mockResolvedValue({ ok: true, buf: new ArrayBuffer(4) });
     const body = document.createElement('div');
-    await fillOfficeBody(body, OPTS, 'docx', () => true);
+    await fillOfficeBody(body, OPTS, 'docx', () => true, () => undefined);
     expect(loadDocxRenderer).not.toHaveBeenCalled();
     expect(body.childElementCount).toBe(0);
   });
@@ -43,7 +43,7 @@ describe('fillOfficeBody', () => {
     const render = vi.fn().mockResolvedValue(undefined);
     vi.mocked(loadDocxRenderer).mockResolvedValue(render);
     const body = document.createElement('div');
-    await fillOfficeBody(body, OPTS, 'docx', () => false);
+    await fillOfficeBody(body, OPTS, 'docx', () => false, () => undefined);
     expect(render).toHaveBeenCalledWith(buf, expect.any(HTMLElement));
     expect(body.querySelector('[data-role="file-preview-docx"]')).not.toBeNull();
   });
@@ -52,8 +52,45 @@ describe('fillOfficeBody', () => {
     vi.mocked(loadBinaryPreview).mockResolvedValue({ ok: true, buf: new ArrayBuffer(4) });
     vi.mocked(loadPptxRenderer).mockResolvedValue({ open: vi.fn().mockRejectedValue(new Error('bad')) });
     const body = document.createElement('div');
-    await fillOfficeBody(body, { ...OPTS, fileName: 'a.pptx', url: 'https://x.com/a.pptx' }, 'pptx', () => false);
+    await fillOfficeBody(body, { ...OPTS, fileName: 'a.pptx', url: 'https://x.com/a.pptx' }, 'pptx', () => false, () => undefined);
     expect(body.querySelector('[data-role="file-preview-error"]')).not.toBeNull();
+  });
+});
+
+describe('fillOfficeBody pptx lifecycle', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  const PPTX = { ...OPTS, fileName: 'a.pptx', url: 'https://x.com/a.pptx' };
+
+  it('destroys the deck when the modal closes', async () => {
+    vi.mocked(loadBinaryPreview).mockResolvedValue({ ok: true, buf: new ArrayBuffer(4) });
+    const destroy = vi.fn();
+    vi.mocked(loadPptxRenderer).mockResolvedValue({ open: vi.fn().mockResolvedValue({ destroy }) });
+    const teardowns: Array<() => void> = [];
+
+    await fillOfficeBody(document.createElement('div'), PPTX, 'pptx', () => false, (fn) => teardowns.push(fn));
+    expect(destroy).not.toHaveBeenCalled();
+    teardowns.forEach((fn) => fn());
+
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('destroys a deck that finished opening after the modal closed', async () => {
+    vi.mocked(loadBinaryPreview).mockResolvedValue({ ok: true, buf: new ArrayBuffer(4) });
+    const destroy = vi.fn();
+    const state = { closed: false };
+    vi.mocked(loadPptxRenderer).mockResolvedValue({
+      open: vi.fn().mockImplementation(() => {
+        state.closed = true;
+
+        return Promise.resolve({ destroy });
+      }),
+    });
+
+    await fillOfficeBody(document.createElement('div'), PPTX, 'pptx', () => state.closed, () => undefined);
+
+    expect(destroy).toHaveBeenCalledTimes(1);
   });
 });
 

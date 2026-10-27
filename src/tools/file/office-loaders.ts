@@ -1,4 +1,4 @@
-import type { PptxViewer } from '@aiden0z/pptx-renderer';
+import type { DeckView } from './pptx/viewer';
 import type { readZip } from './zip/read-zip';
 
 /**
@@ -24,21 +24,11 @@ export async function loadZipReader(): Promise<typeof readZip> {
   return (await import('./zip/read-zip')).readZip;
 }
 
-/** Dynamic-import pptx-renderer's viewer + recommended zip limits. */
+/** Dynamic-import the in-house pptx viewer (code-split out of the main bundle). */
 export async function loadPptxRenderer(): Promise<{
-  open: (buf: ArrayBuffer, container: HTMLElement) => Promise<PptxViewer>;
+  open: (buf: ArrayBuffer, container: HTMLElement) => Promise<DeckView>;
 }> {
-  const mod = await import('@aiden0z/pptx-renderer');
+  const mod = await import('./pptx/viewer');
 
-  return {
-    open: (buf, container) =>
-      mod.PptxViewer.open(buf, container, {
-        // Scale every slide to the container width and re-fit on resize; without
-        // it the renderer lays slides out at their intrinsic 960×720, which the
-        // modal's scroll container then clips down to the title band.
-        fitMode: 'contain',
-        zipLimits: mod.RECOMMENDED_ZIP_LIMITS,
-        pdfjs: false,
-      }),
-  };
+  return { open: mod.openDeck };
 }

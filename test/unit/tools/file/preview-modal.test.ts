@@ -302,6 +302,21 @@ describe('openFilePreview — text kinds', () => {
     teardown();
   });
 
+  it('releases what an office renderer registered once the modal closes', () => {
+    const release = vi.fn();
+    vi.mocked(fillOfficeBody).mockImplementationOnce((_body, _opts, _kind, _isClosed, onTeardown) => {
+      onTeardown(release);
+
+      return Promise.resolve();
+    });
+
+    const teardown = openFilePreview({ url: 'blob:x', fileName: 'a.pptx', labels: LABELS });
+    expect(release).not.toHaveBeenCalled();
+    teardown();
+
+    expect(release).toHaveBeenCalledTimes(1);
+  });
+
   it('does not route pdf files to fillOfficeBody', () => {
     const teardown = openFilePreview({ url: 'blob:x', fileName: 'a.pdf', labels: LABELS });
     expect(fillOfficeBody).not.toHaveBeenCalled();

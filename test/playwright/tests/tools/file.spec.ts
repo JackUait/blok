@@ -1,7 +1,9 @@
 // test/playwright/tests/tools/file.spec.ts
 
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Page } from '@playwright/test';
+import JSZip from 'jszip';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
@@ -279,7 +281,10 @@ test('Markdown file preview toggles between rendered and raw views', async ({ pa
 // ---------------------------------------------------------------------------
 
 /** Inserts an empty File block and uploads the given fixture file by path. */
-const uploadFixture = async (page: Page, fixture: string): Promise<void> => {
+const uploadFixture = async (
+  page: Page,
+  fixture: string | { name: string; mimeType: string; buffer: Buffer }
+): Promise<void> => {
   await createBlokWithFile(page);
 
   const defaultParagraph = page.locator(
@@ -295,7 +300,9 @@ const uploadFixture = async (page: Page, fixture: string): Promise<void> => {
   const fileBlock = page.locator(FILE_BLOCK_SELECTOR);
   await expect(fileBlock).toBeVisible();
 
-  await fileBlock.getByTestId('file-input').setInputFiles(join(OFFICE_FIXTURES, fixture));
+  await fileBlock.getByTestId('file-input').setInputFiles(
+    typeof fixture === 'string' ? join(OFFICE_FIXTURES, fixture) : fixture
+  );
 };
 
 test('docx file renders an inline preview', async ({ page }) => {
@@ -335,4 +342,49 @@ test('pptx file renders an inline slide preview', async ({ page }) => {
   // fallback). pptx-renderer paints slides asynchronously into this container.
   const preview = dialog.locator('[data-role="file-preview-pptx"]');
   await expect(preview).toBeVisible();
+  await expect(preview).toContainText('Blok pptx preview fixture');
 });
+
+const EXTERNAL_MEDIA_HOST = 'http://pptx-external-media.test';
+
+/** sample.pptx plus a picture whose image lives on another host. */
+const deckWithExternalPicture = async (): Promise<Buffer> => {
+  const zip = await JSZip.loadAsync(readFileSync(join(OFFICE_FIXTURES, 'sample.pptx')));
+  const slidePath = 'ppt/slides/slide1.xml';
+  const relsPath = 'ppt/slides/_rels/slide1.xml.rels';
+  const slide = await zip.file(slidePath)?.async('string') ?? '';
+  const rels = await zip.file(relsPath)?.async('string') ?? '';
+  const picture = '<p:pic><p:nvPicPr><p:cNvPr id="9" name="Remote"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr>'
+    + '<p:blipFill><a:blip r:link="rIdRemote"/><a:stretch><a:fillRect/></a:stretch></p:blipFill>'
+    + '<p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm>'
+    + '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>';
+  const relationship = '<Relationship Id="rIdRemote" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"'
+    + ` Target="${EXTERNAL_MEDIA_HOST}/pixel.png" TargetMode="External"/>`;
+
+  zip.file(slidePath, slide.replace('</p:spTree>', `${picture}</p:spTree>`));
+  zip.file(relsPath, rels.replace('</Relationships>', `${relationship}</Relationships>`));
+
+  return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+};
+
+test('pptx preview never fetches a picture the deck links from another host', async ({ page }) => {
+  const remoteRequests: string[] = [];
+
+  await page.route(`${EXTERNAL_MEDIA_HOST}/**`, async (route) => {
+    remoteRequests.push(route.request().url());
+    await route.fulfill({ status: 404, body: '' });
+  });
+
+  await uploadFixture(page, {
+    name: 'remote.pptx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    buffer: await deckWithExternalPicture(),
+  });
+  await page.getByRole('button', { name: /remote\.pptx/i }).click();
+
+  const preview = page.getByRole('dialog').locator('[data-role="file-preview-pptx"]');
+
+  await expect(preview).toContainText('Blok pptx preview fixture');
+  expect(remoteRequests).toEqual([]);
+});
+

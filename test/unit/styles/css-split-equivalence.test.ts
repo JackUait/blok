@@ -1463,7 +1463,6 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + FONT_REFRESH_BYTES
       + DATABASE_FORMULA_ERROR_MARK_BYTES
       + DATABASE_MIRROR_NAME_FIELD_BYTES
-      + FONT_REFRESH_BYTES
       + DATABASE_PANEL_LIST_CAP_SEARCH_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 

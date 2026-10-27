@@ -1,0 +1,83 @@
+// Derived from @aiden0z/pptx-renderer 1.4.0 (Apache-2.0); modified for Blok. See NOTICE.
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
+import {
+  excelSerialToDateString,
+  extractFormatCode,
+  extractNumericValues,
+  extractNumericValuesWithBlanks,
+  extractStringValues,
+  formatValue,
+} from '../../../../../../../src/tools/file/pptx/renderer/chart/format';
+import { parseXml } from '../../../../../../../src/tools/file/pptx/parser/XmlParser';
+
+const C = 'xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"';
+
+describe('chart format helpers', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it('extracts sparse string cache values by idx and preserves declared gaps', () => {
+    const node = parseXml(`<c:cat ${C}><c:strRef><c:strCache><c:ptCount val="3"/>
+      <c:pt idx="2"><c:v>Gamma</c:v></c:pt><c:pt idx="0"><c:v>Alpha</c:v></c:pt>
+      </c:strCache></c:strRef></c:cat>`);
+
+    expect(extractStringValues(node)).toEqual(['Alpha', '', 'Gamma']);
+  });
+
+  it('falls back to numeric cache values as category strings and formats date serials', () => {
+    const node = parseXml(`<c:cat ${C}><c:numRef><c:numCache><c:formatCode>m/d/yyyy</c:formatCode>
+      <c:ptCount val="2"/><c:pt idx="0"><c:v>61</c:v></c:pt><c:pt idx="1"><c:v>62</c:v></c:pt>
+      </c:numCache></c:numRef></c:cat>`);
+
+    expect(extractStringValues(node)).toEqual(['1900/3/1', '1900/3/2']);
+  });
+
+  it('extracts numeric values and format codes from numRef caches', () => {
+    const node = parseXml(`<c:val ${C}><c:numRef><c:numCache><c:formatCode>0.0%</c:formatCode>
+      <c:ptCount val="2"/><c:pt idx="0"><c:v>0.125</c:v></c:pt><c:pt idx="1"><c:v>not-a-number</c:v></c:pt>
+      </c:numCache></c:numRef></c:val>`);
+
+    expect(extractFormatCode(node)).toBe('0.0%');
+    expect(extractNumericValues(node)).toEqual([0.125, 0]);
+    expect(extractNumericValuesWithBlanks(node).blankIndices).toEqual(new Set([1]));
+    expect(formatValue(0.125, extractFormatCode(node))).toBe('12.5%');
+  });
+
+  it('reads literal numbers when there is no cache', () => {
+    const node = parseXml(`<c:val ${C}><c:numLit><c:ptCount val="2"/>
+      <c:pt idx="0"><c:v>-4</c:v></c:pt><c:pt idx="1"><c:v>7</c:v></c:pt></c:numLit></c:val>`);
+
+    expect(extractNumericValues(node)).toEqual([-4, 7]);
+  });
+
+  it('ignores a point count beyond the safety limit', () => {
+    const node = parseXml(`<c:val ${C}><c:numRef><c:numCache><c:ptCount val="99999999"/>
+      <c:pt idx="1"><c:v>3</c:v></c:pt></c:numCache></c:numRef></c:val>`);
+
+    expect(extractNumericValues(node)).toEqual([0, 3]);
+  });
+
+  it('uses stable UTC Excel serial conversion', () => {
+    expect(excelSerialToDateString(59)).toBe('1900/2/28');
+    expect(excelSerialToDateString(61)).toBe('1900/3/1');
+  });
+
+  it('preserves Office thousands separators in whole-number chart formats', () => {
+    expect(formatValue(1234567, '#,##0')).toBe('1,234,567');
+    expect(formatValue(-1234567, '#,##0')).toBe('-1,234,567');
+  });
+
+  it('uses the negative format section for parenthesized Office number formats', () => {
+    const officeFormat = '#,##0_);[Red]\\(#,##0\\)';
+
+    expect(formatValue(1234567, officeFormat)).toBe('1,234,567');
+    expect(formatValue(-1234567, officeFormat)).toBe('(1,234,567)');
+  });
+
+  it('formats General as integers or two decimals', () => {
+    expect(formatValue(40, 'General')).toBe('40');
+    expect(formatValue(0.3333, undefined)).toBe('0.33');
+    expect(formatValue(0.5, '0%')).toBe('50%');
+    expect(formatValue(2.5, '0.00')).toBe('2.5');
+  });
+});

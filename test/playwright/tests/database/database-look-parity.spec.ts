@@ -234,7 +234,9 @@ test('side peek: measured shadow with its ring, a 160x34 label hover cell, no va
   expect(box?.height).toBe(34);
 
   // The hover box is the click target. findings-rowpage R09: on hover the glyph's place holds the ⋮⋮, and a click on it opens the property menu.
-  await expect(head.locator('[data-blok-database-drawer-prop-icon]')).toBeHidden();
+  // The glyph fades out under the ⋮⋮ rather than leaving the layout, so it stays "visible" to toBeHidden.
+  await expect(head.locator('[data-blok-database-drawer-prop-icon]')).toHaveCSS('opacity', '0');
+  await expect(head.locator('[data-blok-database-drawer-prop-handle]')).toHaveCSS('opacity', '1');
   const handle = await head.locator('[data-blok-database-drawer-prop-handle]').boundingBox();
 
   expect(handle).not.toBeNull();

@@ -7,6 +7,9 @@ import { Paragraph } from '../../../../src/tools/paragraph';
 import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import type {
+  DatabaseAdapter,
+  DatabaseRow,
+  DatabaseViewConfig,
   DatabaseAutomationContext,
   DatabaseAutomationTrigger,
   DatabaseSavedAutomation,
@@ -81,9 +84,30 @@ interface Spies {
   triggers: DatabaseAutomationTrigger[];
 }
 
+/** A host backend that logs every row call. Its database is the seed's, so loading changes nothing. */
+const spyAdapter = (seed: OutputBlockData[], calls: string[]): DatabaseAdapter => {
+  const data = seed[0].data as { schema: PropertyDefinition[]; views: DatabaseViewConfig[] };
+  const row = (id: string): DatabaseRow => ({ id, position: 'a0', properties: {} });
+
+  return {
+    loadDatabase: () => Promise.resolve({ schema: structuredClone(data.schema), views: structuredClone(data.views) }),
+    createRow: (params) => { calls.push(`createRow:${params.id}`); return Promise.resolve(row(params.id)); },
+    updateRow: (params) => { calls.push(`updateRow:${params.rowId}`); return Promise.resolve(row(params.rowId)); },
+    moveRow: (params) => { calls.push(`moveRow:${params.rowId}:${params.position}`); return Promise.resolve(row(params.rowId)); },
+    deleteRow: (params) => { calls.push(`deleteRow:${params.rowId}`); return Promise.resolve(); },
+    createProperty: (params) => Promise.resolve({ ...params } as PropertyDefinition),
+    updateProperty: (params) => Promise.resolve({ id: params.propertyId } as PropertyDefinition),
+    deleteProperty: () => Promise.resolve(),
+    createView: (params) => Promise.resolve({ ...params } as DatabaseViewConfig),
+    updateView: (params) => { calls.push(`updateView:${params.viewId}:${Object.keys(params.changes).join(',')}`); return Promise.resolve({ id: params.viewId } as DatabaseViewConfig); },
+    deleteView: () => Promise.resolve(),
+  };
+};
+
 const boot = async (
   seed: OutputBlockData[],
   onTrigger?: (trigger: DatabaseAutomationTrigger, ctx: DatabaseAutomationContext) => void,
+  options: { adapter?: boolean } = {},
 ): Promise<{ instance: Core; spies: Spies }> => {
   const spies: Spies = { calls: [], triggers: [] };
 
@@ -96,6 +120,7 @@ const boot = async (
       database: {
         class: DatabaseTool,
         config: {
+          ...(options.adapter === true ? { adapter: spyAdapter(seed, spies.calls) } : {}),
           automations: {
             onTrigger: (trigger: DatabaseAutomationTrigger, ctx: DatabaseAutomationContext) => {
               spies.calls.push(`onTrigger:${trigger.type}`);
@@ -465,3 +490,144 @@ describe('agent row edits fire automations as a person\'s do', { timeout: 30_000
     expect(spies.triggers.map((trigger) => trigger.type).sort()).toEqual(['pageAdded', 'propertyEdited']);
   });
 });
+
+describe('agent row deletes and moves reach the host adapter as a person\'s do', { timeout: 60_000 }, () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(async () => {
+    await teardown();
+    vi.restoreAllMocks();
+  });
+
+  const twoRows = (rowOrder?: Record<string, string>): OutputBlockData[] => {
+    const [database, r1] = blocks([]);
+    const data = database.data as { views: Array<Record<string, unknown>> };
+
+    if (rowOrder !== undefined) data.views[0].rowOrder = rowOrder;
+
+    return [
+      { ...database, content: ['r1', 'r2'] },
+      r1,
+      { id: 'r2', type: 'database-row', parent: 'db', data: { position: 'a1', title: 'Two', properties: { t: 'Two', c: false } } },
+    ];
+  };
+
+  const withSecondDatabase = (): OutputBlockData[] => [
+    ...twoRows(),
+    {
+      id: 'db2', type: 'database', content: [],
+      data: {
+        title: 'Other',
+        schema: [{ id: 't2', name: 'Name', type: 'title', position: 'a0' }],
+        views: [{ id: 'w1', name: 'Table', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+        activeViewId: 'w1',
+        automations: { version: 1, definitions: [] },
+      },
+    },
+  ];
+
+  const rowCalls = (calls: string[]): string[] => calls.filter((call) => !call.startsWith('updateRow:'));
+
+  it('agent deleteRow deletes the row from the backend once, and its undo creates it once', async () => {
+    const { instance, spies } = await boot(twoRows(), undefined, { adapter: true });
+    const turn = openTurn(instance);
+
+    try {
+      expect(await outcome(turn, { commands: [{ name: 'database.deleteRow', args: { id: 'db', rowId: 'r1' } }] })).toBeNull();
+      await settled();
+      expect(rowCalls(spies.calls)).toEqual(['deleteRow:r1']);
+      expect(await outcome(turn, { commands: [{ name: 'history.undo', args: {} }] })).toBeNull();
+      await settled();
+    } finally {
+      turn.end();
+    }
+
+    expect(rowCalls(spies.calls)).toEqual(['deleteRow:r1', 'createRow:r1']);
+  });
+
+  it('agent addRow creates the row once, and its undo deletes it once', async () => {
+    const { instance, spies } = await boot(twoRows(), undefined, { adapter: true });
+    const turn = openTurn(instance);
+
+    try {
+      expect(await outcome(turn, { commands: [{ name: 'database.addRow', args: { id: 'db', values: { t: 'Three' } } }] })).toBeNull();
+      await settled();
+      expect(await outcome(turn, { commands: [{ name: 'history.undo', args: {} }] })).toBeNull();
+      await settled();
+    } finally {
+      turn.end();
+    }
+    const added = spies.calls.find((call) => call.startsWith('createRow:'))?.slice('createRow:'.length) ?? '';
+
+    expect(rowCalls(spies.calls).filter((call) => !call.startsWith('onTrigger'))).toEqual([`createRow:${added}`, `deleteRow:${added}`]);
+  });
+
+  it('agent moveRow on the shared order sends moveRow with the row\'s new position', async () => {
+    const { instance, spies } = await boot(twoRows(), undefined, { adapter: true });
+
+    expect(await runAgent(instance, { commands: [{ name: 'database.moveRow', args: { id: 'db', rowId: 'r1', after: 'r2' } }] })).toBeNull();
+    await settled();
+    const position = (await instance.moduleInstances.Saver.save())?.blocks.find((block) => block.id === 'r1')?.data.position as string;
+
+    expect(position > 'a1').toBe(true);
+    expect(rowCalls(spies.calls)).toEqual([`moveRow:r1:${position}`]);
+  });
+
+  it('agent moveRow in a view with its own order sends that view\'s rowOrder', async () => {
+    const { instance, spies } = await boot(twoRows({ r1: 'a0', r2: 'a1' }), undefined, { adapter: true });
+
+    expect(await runAgent(instance, { commands: [{ name: 'database.moveRow', args: { id: 'db', rowId: 'r1', after: 'r2' } }] })).toBeNull();
+    await settled();
+
+    expect(rowCalls(spies.calls)).toEqual(['updateView:v1:rowOrder']);
+  });
+
+  it('agent moveRowTo another database sends what the person\'s Move to sends', async () => {
+    const person = await boot(withSecondDatabase(), undefined, { adapter: true });
+    const block = person.instance.moduleInstances.BlockManager.getBlockById('db');
+
+    block?.call('moveRowTo', { rowId: 'r1', databaseId: 'db2' });
+    await settled();
+    const personCalls = rowCalls(person.spies.calls);
+
+    await teardown();
+    const { instance, spies } = await boot(withSecondDatabase(), undefined, { adapter: true });
+
+    expect(await runAgent(instance, { commands: [{ name: 'database.moveRowTo', args: { id: 'db', rowId: 'r1', databaseId: 'db2' } }] })).toBeNull();
+    await settled();
+
+    expect(personCalls).toEqual(['deleteRow:r1', 'createRow:r1', 'onTrigger:pageAdded']);
+    expect(rowCalls(spies.calls)).toEqual(personCalls);
+  });
+
+  it('undoing an agent moveRowTo sends what undoing the person\'s Move to sends', async () => {
+    const person = await boot(withSecondDatabase(), undefined, { adapter: true });
+
+    person.instance.moduleInstances.BlockManager.getBlockById('db')?.call('moveRowTo', { rowId: 'r1', databaseId: 'db2' });
+    await settled();
+    person.spies.calls.length = 0;
+    person.instance.moduleInstances.YjsManager.undo();
+    await settled();
+    const personCalls = rowCalls(person.spies.calls);
+
+    await teardown();
+    const { instance, spies } = await boot(withSecondDatabase(), undefined, { adapter: true });
+    const turn = openTurn(instance);
+
+    try {
+      expect(await outcome(turn, { commands: [{ name: 'database.moveRowTo', args: { id: 'db', rowId: 'r1', databaseId: 'db2' } }] })).toBeNull();
+      await settled();
+      spies.calls.length = 0;
+      expect(await outcome(turn, { commands: [{ name: 'history.undo', args: {} }] })).toBeNull();
+      await settled();
+    } finally {
+      turn.end();
+    }
+
+    expect(personCalls).toContain('createRow:r1');
+    expect(rowCalls(spies.calls)).toEqual(personCalls);
+  });
+});
+

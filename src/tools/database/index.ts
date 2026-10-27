@@ -230,6 +230,16 @@ interface ChangedBlock {
   parentId?: unknown;
 }
 
+/** What an agent's block event carries (BlockMutationEventDetail and BlockMovedEventDetail). */
+interface AgentChangeDetail {
+  origin?: unknown;
+  replaySource?: unknown;
+  agent?: unknown;
+  target?: ChangedBlock;
+  parentId?: string | null;
+  oldParentId?: string | null;
+}
+
 /** The block a 'block changed' payload is about, if the payload carries one. */
 const changedBlock = (payload: unknown): ChangedBlock | undefined =>
   (payload as { event?: { detail?: { target?: ChangedBlock } } } | undefined)?.event?.detail?.target;
@@ -758,26 +768,41 @@ export class DatabaseTool implements BlockTool {
    * linked view shows the same rows and would fire them twice.
    */
   private readonly handleAgentRowWrite = (payload: unknown): void => {
-    const event = (payload as { event?: { type?: unknown; detail?: { origin?: unknown; replaySource?: unknown; agent?: unknown; target?: ChangedBlock } } } | undefined)?.event;
-    const target = event?.detail?.target;
+    const event = (payload as { event?: { type?: unknown; detail?: AgentChangeDetail } } | undefined)?.event;
+    const detail = event?.detail;
+    const target = detail?.target;
 
-    if (this.source !== undefined || event?.detail?.agent === undefined
-      || event.detail.origin !== 'local' || event.detail.replaySource !== undefined
-      || target?.name !== 'database-row' || typeof target.id !== 'string') return;
-    const rowId = target.id;
-
-    if (event.type === 'block-changed' && target.parentId === this.dataId) {
-      // Read now: the model still holds the values from before this write.
-      const before = this.model.getRow(rowId)?.properties ?? this.templates.find((template) => template.id === rowId)?.properties ?? {};
-      const data = this.liveRowData(rowId);
-      const changes = Object.fromEntries(Object.entries(data?.properties ?? {})
-        .filter(([propertyId, value]) => JSON.stringify(value) !== JSON.stringify(before[propertyId] ?? null)));
-
-      if (!this.destroyed && !this.readOnly && Object.keys(changes).length > 0) this.sync.syncUpdateRow({ rowId, properties: changes });
+    if (this.source !== undefined || detail?.agent === undefined || detail.origin !== 'local' || detail.replaySource !== undefined
+      || typeof target?.id !== 'string') return;
+    if (target.name === 'database' && target.id === this.block.id && event?.type === 'block-changed') {
+      this.syncAgentRowOrders();
 
       return;
     }
-    if (event.type !== 'block-added') return;
+    if (target.name !== 'database-row') return;
+    const rowId = target.id;
+
+    if (event?.type === 'block-moved') {
+      this.syncAgentRelocation(rowId, detail.oldParentId, detail.parentId);
+
+      return;
+    }
+    if (event?.type === 'block-changed' && target.parentId === this.dataId) {
+      // Read now: the model still holds the values from before this write.
+      const before = this.model.getRow(rowId) ?? this.templates.find((template) => template.id === rowId);
+      const data = this.liveRowData(rowId);
+      const changes = Object.fromEntries(Object.entries(data?.properties ?? {})
+        .filter(([propertyId, value]) => JSON.stringify(value) !== JSON.stringify(before?.properties[propertyId] ?? null)));
+
+      if (this.destroyed || this.readOnly) return;
+      if (Object.keys(changes).length > 0) this.sync.syncUpdateRow({ rowId, properties: changes });
+      if (before !== undefined && typeof data?.position === 'string' && data.position !== before.position) {
+        void this.sync.syncMoveRow({ rowId, position: data.position });
+      }
+
+      return;
+    }
+    if (event?.type !== 'block-added') return;
     // An insert sets the parent after its event.
     queueMicrotask(() => {
       const data = this.liveRowData(rowId);
@@ -786,6 +811,30 @@ export class DatabaseTool implements BlockTool {
       void this.sync.syncCreateRow({ id: rowId, properties: { ...data.properties }, position: data.position, ...(isTemplateData(data) ? { template: true } : {}) });
     });
   };
+
+  /** A view's own row order the agent changed goes to the backend, as placeRow sends it. */
+  private syncAgentRowOrders(): void {
+    if (this.destroyed || this.readOnly) return;
+    const views = (this.block.preservedData as Partial<DatabaseData> | undefined)?.views ?? [];
+
+    views.forEach((view) => {
+      const before = this.model.getView(view.id);
+
+      if (before === undefined || view.rowOrder === undefined || JSON.stringify(view.rowOrder) === JSON.stringify(before.rowOrder)) return;
+      void this.sync.syncUpdateView({ viewId: view.id, changes: { rowOrder: structuredClone(view.rowOrder) } });
+    });
+  }
+
+  /** As moveRowTo: the old database deletes the row from its backend, the new one adopts it. */
+  private syncAgentRelocation(rowId: string, from: string | null | undefined, to: string | null | undefined): void {
+    if (this.destroyed || this.readOnly || from === to) return;
+    if (from === this.dataId) {
+      void this.sync.syncDeleteRow({ rowId }, true);
+
+      return;
+    }
+    if (to === this.dataId) queueMicrotask(() => this.adoptMovedRow({ rowId }));
+  }
 
   private liveRowData(rowId: string): DatabaseRowData | undefined {
     const row = this.api.blocks.getById(rowId);

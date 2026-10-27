@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { DatabaseData, PropertyDefinition } from '../../../../src/tools/database/types';
 import { buildDatabase, makeDoc, rowSeed } from './structure-harness';
+import { generateNKeysBetween } from '../../../../src/shared/database/fractional-index';
 
 vi.mock('../../../../src/blok', () => ({
   Blok: class MockBlok {
@@ -154,6 +155,45 @@ describe('DatabaseTool — sub-items', () => {
     expect(doc.childrenOf(copyC).map((id) => doc.blocks.get(id)?.data)).toEqual([{ text: 'deep' }]);
     // The originals keep their tree.
     expect(doc.row('a').properties.subs).toEqual([{ id: 'b' }]);
+  });
+
+  describe('duplicating a parent with many sub-items keeps the copies\' keys short', () => {
+    const kids = Array.from({ length: 40 }, (_, i) => `k${i}`);
+    const kidKeys = generateNKeysBetween('a2', null, kids.length);
+    const wide = (): ReturnType<typeof makeDoc> => makeDoc([
+      { id: 'db', name: 'database', parentId: null, data: {} },
+      rowSeed('top', 'db', { properties: { title: 'Top', subs: kids.map((id) => ({ id })) }, position: 'a1' }),
+      rowSeed('next', 'db', { properties: { title: 'Next' }, position: 'a2' }),
+      ...kids.map((id, i) => rowSeed(id, 'db', { properties: { title: id, parent: [{ id: 'top' }] }, position: kidKeys[i] })),
+    ]);
+    const copiesOf = (doc: ReturnType<typeof makeDoc>): string[] =>
+      doc.childrenOf('db').filter((id) => !['top', 'next', ...kids].includes(id));
+
+    it('in the shared order', () => {
+      const doc = wide();
+      const { tool } = buildDatabase(doc, 'db', data());
+
+      (tool as unknown as { duplicateTableRow: (id: string) => void }).duplicateTableRow('top');
+      const keys = copiesOf(doc).map((id) => String(doc.row(id).position));
+
+      expect(keys).toHaveLength(41);
+      expect(keys.every((key) => key > 'a1' && key < 'a2')).toBe(true);
+      expect(Math.max(...keys.map((key) => key.length))).toBeLessThanOrEqual(9);
+    });
+
+    it('in a view with its own order', () => {
+      const doc = wide();
+      const withOrder: DatabaseData = { ...data(), views: data().views.map((view) => ({ ...view, rowOrder: { top: 'a1', next: 'a2' } })) };
+      const { tool } = buildDatabase(doc, 'db', withOrder);
+
+      (tool as unknown as { duplicateTableRow: (id: string) => void }).duplicateTableRow('top');
+      const order = (tool as unknown as { model: { getViews: () => Array<{ rowOrder?: Record<string, string> }> } }).model.getViews()[0].rowOrder ?? {};
+      const keys = copiesOf(doc).map((id) => order[id]);
+
+      expect(keys).toHaveLength(41);
+      expect(keys.every((key) => key !== undefined && key > 'a1' && key < 'a2')).toBe(true);
+      expect(Math.max(...keys.map((key) => key?.length ?? 0))).toBeLessThanOrEqual(9);
+    });
   });
 
   it('duplicating a sub-item lists the copy under the same parent', () => {

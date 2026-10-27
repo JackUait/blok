@@ -1,5 +1,5 @@
 import { DATABASE_DEFAULT_TEXT } from '../database/default-text';
-import { comparePositions, positionBetween } from '../database/positions';
+import { comparePositions, positionBetween, positionsBetween } from '../database/positions';
 import { isAnnotationType } from '../annotation-blocks';
 import { resolveDynamicProperties } from '../database/dynamic-values';
 import { addRelated, relationEdit, relationIdsOf, removeRelated } from '../database/relation-values';
@@ -1568,7 +1568,7 @@ const duplicateRow: ToolActionImpl<{ rowId: string }, undefined, { rowId: string
     const copies = new Map(family.map(id => [id, ctx.newId()]));
     const remap = (value: unknown): Array<{ id: string }> =>
       relationIdsOf(value).flatMap(id => (copies.has(id) ? [{ id: copies.get(id) ?? id }] : []));
-    const cursor = { after: source.position };
+    const positions = positionsBetween(source.position, next, family.length);
     const view = source.template ? undefined : state.views.find(each => each.id === state.activeViewId);
     const order = view?.rowOrder;
 
@@ -1578,19 +1578,16 @@ const duplicateRow: ToolActionImpl<{ rowId: string }, undefined, { rowId: string
       const manual = [...rowsOf(ctx, dataId)].sort((a, b) => comparePositions(keyOf(a), keyOf(b)));
       const after = manual[manual.findIndex(each => each.id === source.id) + 1];
       const keys = { ...order };
+      const viewKeys = positionsBetween(keyOf(source), after === undefined ? null : keyOf(after), family.length);
 
-      family.reduce((previous, sourceId) => {
-        const key = positionBetween(previous, after === undefined ? null : keyOf(after));
-
-        keys[copies.get(sourceId) ?? sourceId] = key;
-
-        return key;
-      }, keyOf(source));
+      family.forEach((sourceId, index) => {
+        keys[copies.get(sourceId) ?? sourceId] = viewKeys[index];
+      });
       // Before the inserts: in the editor an insert opens a sync window that reads a later database write as an echo.
       ctx.update(block.id, { views: state.views.map(each => (each.id === view.id ? { ...each, rowOrder: keys } : each)) });
     }
 
-    for (const sourceId of family) {
+    for (const [index, sourceId] of family.entries()) {
       const original = siblings.find(each => each.id === sourceId);
       const id = copies.get(sourceId);
 
@@ -1603,9 +1600,8 @@ const duplicateRow: ToolActionImpl<{ rowId: string }, undefined, { rowId: string
         ...(sourceId === source.id ? {} : { [pair.forward]: remap(original.properties[pair.forward]) }),
       };
       const properties = { ...withEmptyLists(state, jsonCopy(original.properties)), ...links };
-      const position = positionBetween(cursor.after, next);
+      const position = positions[index];
 
-      cursor.after = position;
       ctx.insert({
         type: 'database-row',
         id,

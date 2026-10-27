@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { generateNKeysBetween } from '../../../src/shared/database/fractional-index';
 import { dataOf, errorOf, idsOf, property, row, run, seedOf, SESSIONS, valuesOf } from './database-seed';
 
 import type { AgentResult, AgentSession, OutputData } from '../../../types';
@@ -128,6 +129,30 @@ describe.each(SESSIONS)('database row copy and move (%s session)', (_label, open
     const order = ((await dataOf(session, 'S'))?.views as Array<{ rowOrder: Record<string, string> }>)[0].rowOrder;
 
     expect(Object.keys(order).sort((a, b) => (order[a] < order[b] ? -1 : 1))).toEqual(['z', 'top', 'p', copy, child, 'c']);
+    await session.close();
+  });
+
+  it('database.duplicateRow keeps the keys of a row with many sub-items short, between the original and the next row', async () => {
+    const kids = Array.from({ length: 40 }, (_, i) => `k${i}`);
+    const kidKeys = generateNKeysBetween('a2', null, kids.length);
+    const session = open(seedOf([{
+      id: 'S',
+      schema: [property('st', 'title'), ...PAIR],
+      rows: [
+        row('top', { st: 'top', par: [], sub: kids.map(id => ({ id })) }, { position: 'a1' }),
+        row('next', { st: 'next', par: [], sub: [] }, { position: 'a2' }),
+        ...kids.map((id, i) => row(id, { st: id, par: [{ id: 'top' }], sub: [] }, { position: kidKeys[i] })),
+      ],
+    }]));
+    const before = await idsOf(session);
+    const result = await run(session, 'database.duplicateRow', { id: 'S', rowId: 'top' });
+
+    expect(errorOf(result)).toBeUndefined();
+    const copies = await Promise.all((await newIds(session, before)).map(async id => String((await dataOf(session, id))?.position)));
+
+    expect(copies).toHaveLength(41);
+    expect(copies.every(key => key > 'a1' && key < 'a2')).toBe(true);
+    expect(Math.max(...copies.map(key => key.length))).toBeLessThanOrEqual(9);
     await session.close();
   });
 

@@ -31,7 +31,7 @@ import { buttonHasError } from './database-button-menu';
 import { dueRun, isTemplateData, nextRun } from './templates';
 import { copiedReminders, dueReminder, storedReminderDueAt, viewerTimeZone } from './reminders';
 import { descendantsOf, nestRows, parentMap, relationPair, resolveSubItemsDisplay } from './sub-items';
-import { comparePositions } from './positions';
+import { comparePositions, positionsBetween } from './positions';
 import { mapRowValues } from './row-move';
 import { dependencyArrows, shiftDependents } from './dependencies';
 import { templateMenuItems, templateRepeatItems, templateRepeatSummary } from './database-template-menu';
@@ -7547,9 +7547,10 @@ export class DatabaseTool implements BlockTool {
     const remap = (value: PropertyValue | undefined): PropertyValue =>
       relationIdsOf(value).filter((id) => copies.has(id)).map((id) => ({ id: copies.get(id) ?? id }));
     const created: Array<{ id: string; properties: Record<string, PropertyValue>; position: string }> = [];
-    const cursor = { after: row.position };
+    const nextKey = ordered[ordered.findIndex((r) => r.id === rowId) + 1]?.position ?? null;
+    const positions = positionsBetween(row.position, nextKey, subItems.length + 1);
 
-    const write = (): void => [rowId, ...subItems].forEach((sourceId) => {
+    const write = (): void => [rowId, ...subItems].forEach((sourceId, index) => {
       const source = this.model.getRow(sourceId);
       const id = copies.get(sourceId);
 
@@ -7560,13 +7561,11 @@ export class DatabaseTool implements BlockTool {
         properties[pair.backward] = remap(source.properties[pair.backward]);
         if (sourceId !== rowId) properties[pair.forward] = remap(source.properties[pair.forward]);
       }
-      const next = ordered[ordered.findIndex((r) => r.id === rowId) + 1]?.position ?? null;
-      const position = DatabaseModel.positionBetween(cursor.after, next);
+      const position = positions[index];
       const title = properties[titlePropId];
 
       const reminders = copiedReminders(source.reminders, properties);
 
-      cursor.after = position;
       this.api.blocks.insertAt(
         'database-row',
         {
@@ -7594,14 +7593,11 @@ export class DatabaseTool implements BlockTool {
       const at = manual.findIndex((r) => r.id === rowId);
       const next = manual[at + 1];
       const keys: Record<string, string> = { ...viewOrder };
+      const viewKeys = positionsBetween(rowOrderKey(row, viewOrder), next === undefined ? null : rowOrderKey(next, viewOrder), subItems.length + 1);
 
-      [rowId, ...subItems].reduce((after, sourceId) => {
-        const key = DatabaseModel.positionBetween(after, next === undefined ? null : rowOrderKey(next, viewOrder));
-
-        keys[copies.get(sourceId) ?? sourceId] = key;
-
-        return key;
-      }, rowOrderKey(row, viewOrder));
+      [rowId, ...subItems].forEach((sourceId, index) => {
+        keys[copies.get(sourceId) ?? sourceId] = viewKeys[index];
+      });
 
       return keys;
     })();

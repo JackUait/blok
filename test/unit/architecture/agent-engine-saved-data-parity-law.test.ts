@@ -254,6 +254,8 @@ const runEditor = async (commands: CorpusCommand[], data: OutputData = SEED): Pr
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Each engine mints row keys with a random tail; one fixed value lets the saved keys compare.
+  vi.spyOn(Math, 'random').mockReturnValue(0.5);
   holder = document.createElement('div');
   document.body.appendChild(holder);
 });

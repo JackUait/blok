@@ -311,6 +311,16 @@ describe('createLivePreview', () => {
     expect(state.layer.querySelector('b')).toBeNull();
   });
 
+  it('shows escaped markup as literal text, never as an element', () => {
+    const preview = make();
+
+    preview.update('c1', execute({ name: 'block.insert', args: { position: { after: 'b1' }, type: 'paragraph', data: { text: '&lt;img src=x onerror=alert(1)&gt; <<b>script>' } } }));
+    vi.advanceTimersByTime(35 * 10);
+
+    expect(words(state.layer)).toEqual(['<img', 'src=x', 'onerror=alert(1)>', 'script>']);
+    expect(state.layer.querySelector('img, script, b')).toBeNull();
+  });
+
   it('draws nothing for a command whose name is still cut off', () => {
     const preview = make();
 

@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid';
 
-import { IconCheck, IconCross, IconDotsHorizontal, IconMenu, IconSliders } from '../../../components/icons';
+import { IconCross, IconDotsHorizontal, IconMenu, IconSliders } from '../../../components/icons';
 import { onHover } from '../../../components/utils/tooltip';
 import { DatabaseModel } from '../database-model';
 import { orderedStatusOptions, personIdsOf, statusGroupOf, statusGroupsOf } from '../property-values';
@@ -459,15 +459,6 @@ class SelectEditor {
     pillSlot.setAttribute('data-blok-database-select-option-label', '');
     pillSlot.appendChild(this.pill(option));
     row.appendChild(pillSlot);
-
-    if (selected) {
-      const check = document.createElement('span');
-
-      check.setAttribute('data-blok-database-select-option-check', '');
-      check.setAttribute('aria-hidden', 'true');
-      check.innerHTML = IconCheck;
-      row.appendChild(check);
-    }
 
     if (this.canEditOptions) {
       const menu = iconButton('data-blok-database-select-option-menu', IconDotsHorizontal, this.t('tools.database.optionMenu'));

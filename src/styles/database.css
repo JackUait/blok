@@ -7135,7 +7135,7 @@ textarea[data-blok-database-cell-input] {
   overflow-y: auto;
 }
 
-/* A selected option shows a check mark only: no fill, primary ink (no blue selected states). */
+/* A selected option has no fill and keeps primary ink (no blue selected states). */
 [data-blok-database-select-option],
 [data-blok-database-person-option],
 [data-blok-database-relation-option],
@@ -7218,7 +7218,8 @@ textarea[data-blok-database-cell-input] {
   opacity: 1;
 }
 
-/* Notion's multi-select popover shows every handle at rest (feel/findings-table T18). Status shows none. */
+/* Select and Multi-select show every handle at rest (feel/findings-table T18, notion-spec-2 §19.14). Status shows none. */
+[data-blok-database-select-editor="select"] [data-blok-database-select-option-handle],
 [data-blok-database-select-editor="multiSelect"] [data-blok-database-select-option-handle] {
   opacity: 1;
 }
@@ -7241,11 +7242,6 @@ textarea[data-blok-database-cell-input] {
 [data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-select-option-handle] {
   opacity: 1;
   margin-inline-end: var(--blok-space-1);
-}
-
-/* n/18-status-hover.png: Notion's status rows have no "…"; options are edited in Edit property. */
-[data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-select-editor="status"] [data-blok-database-select-option-menu] {
-  display: none;
 }
 
 /* n/11-status.png: groups 73px apart. Dividers stop 12px short of both sides, so headings carry no inline padding. */
@@ -7275,9 +7271,9 @@ textarea[data-blok-database-cell-input] {
   line-height: 14.4px;
 }
 
-/* No handle and no check mark: the head pill names the current one. */
+/* n/18-status-hover.png, notion-spec-2 §19.14: no handle and no "⋯"; options are edited in Edit property. */
 [data-blok-database-select-editor="status"] [data-blok-database-select-option-handle],
-[data-blok-database-select-editor="status"] [data-blok-database-select-option-check] {
+[data-blok-database-select-editor="status"] [data-blok-database-select-option-menu] {
   display: none;
 }
 

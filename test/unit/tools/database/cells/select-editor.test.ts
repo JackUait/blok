@@ -84,14 +84,14 @@ describe('select cell editor', () => {
     expect(rowIds()).toEqual(order);
   });
 
-  it('lists options in position order and marks the selected one with a check', () => {
+  // notion-spec-2 §19.14: the current value shows only as the pill in the top field, never as a check.
+  it('lists options in position order and draws no check mark on the selected one', () => {
     openSelect('o2');
 
+    expect(row('o2').querySelector('[data-blok-database-select-option-check]')).toBeNull();
     expect(rowIds()).toEqual(['o1', 'o2', 'o3']);
     expect(row('o2').getAttribute('aria-selected')).toBe('true');
-    expect(row('o2').querySelector('[data-blok-database-select-option-check]')).not.toBeNull();
     expect(row('o1').getAttribute('aria-selected')).toBe('false');
-    expect(row('o1').querySelector('[data-blok-database-select-option-check]')).toBeNull();
   });
 
   it('shows the current value as a chip beside the search field', () => {
@@ -516,11 +516,12 @@ describe('status cell editor', () => {
     expect(editorRoot()?.querySelector('[data-blok-database-select-hint]')).toBeNull();
   });
 
-  it('draws every option as a status pill and keeps the check on the current one', () => {
+  // notion-spec-2 §19.14: the current status has no mark in the list.
+  it('draws every option as a status pill and no check on the current one', () => {
     openStatus('ip');
 
+    expect(row('ip').querySelector('[data-blok-database-select-option-check]')).toBeNull();
     expect(row('dn').querySelector('[data-blok-database-option-pill]')?.getAttribute('data-status-group')).toBe('complete');
-    expect(row('ip').querySelector('[data-blok-database-select-option-check]')).not.toBeNull();
   });
 
   // notion-spec-2 §18.4: no highlight on open; ArrowDown highlights the first option and Enter picks it and closes.

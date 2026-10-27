@@ -229,10 +229,17 @@ describe('cell editor CSS', () => {
     const FOOTER = `${STATUS} [data-blok-database-select-edit-property]`;
 
 
-    it('puts each pill 8px into its row, under its group label, with no handle and no check mark', () => {
+    // notion-spec-2 §19.14: a hovered status row shows only its fill: no handle, no "⋯".
+    it('puts each pill 8px into its row, under its group label, with no handle and no "⋯"', () => {
+      expect(declared('[data-blok-database-select-editor="status"] [data-blok-database-select-option-menu]', 'display')).toEqual(['none']);
       expect(declared(`${STATUS} [data-blok-database-select-option]`, 'padding-inline')).toEqual(['var(--blok-space-2)']);
       expect(declared('[data-blok-database-select-editor="status"] [data-blok-database-select-option-handle]', 'display')).toEqual(['none']);
-      expect(declared('[data-blok-database-select-editor="status"] [data-blok-database-select-option-check]', 'display')).toEqual(['none']);
+    });
+
+    // notion-spec-2 §19.14: every Select row shows its drag handle at rest, as Multi-select's do.
+    it('shows the Select and Multi-select drag handles at rest', () => {
+      expect(declared('[data-blok-database-select-editor="select"] [data-blok-database-select-option-handle]', 'opacity')).toEqual(['1']);
+      expect(declared('[data-blok-database-select-editor="multiSelect"] [data-blok-database-select-option-handle]', 'opacity')).toEqual(['1']);
     });
 
     it('spaces the groups 74px apart with 216px dividers 12px in', () => {
@@ -345,7 +352,7 @@ describe('cell editor CSS', () => {
 
     // n/18-status-hover.png: a hovered status row shows only its fill. Options are edited in Edit property.
     it('gives a status row no edit button', () => {
-      expect(declared(`${VALUE} [data-blok-database-select-editor="status"] [data-blok-database-select-option-menu]`, 'display')).toEqual(['none']);
+      expect(declared('[data-blok-database-select-editor="status"] [data-blok-database-select-option-menu]', 'display')).toEqual(['none']);
     });
   });
 

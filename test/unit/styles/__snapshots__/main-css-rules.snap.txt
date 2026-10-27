@@ -10280,7 +10280,7 @@ textarea[data-blok-database-cell-input] {
   opacity: 1;
 }
 
-[data-blok-database-select-editor="multiSelect"] [data-blok-database-select-option-handle] {
+[data-blok-database-select-editor="select"] [data-blok-database-select-option-handle], [data-blok-database-select-editor="multiSelect"] [data-blok-database-select-option-handle] {
   opacity: 1;
 }
 
@@ -10300,10 +10300,6 @@ textarea[data-blok-database-cell-input] {
 [data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-select-option-handle] {
   opacity: 1;
   margin-inline-end: var(--blok-space-1);
-}
-
-[data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-select-editor="status"] [data-blok-database-select-option-menu] {
-  display: none;
 }
 
 [data-blok-popover-custom-class~='blok-database-value-editor'] [data-blok-database-select-editor="status"] [data-blok-database-select-list] > [data-blok-database-status-group-heading] {
@@ -10326,7 +10322,7 @@ textarea[data-blok-database-cell-input] {
   line-height: 14.4px;
 }
 
-[data-blok-database-select-editor="status"] [data-blok-database-select-option-handle], [data-blok-database-select-editor="status"] [data-blok-database-select-option-check] {
+[data-blok-database-select-editor="status"] [data-blok-database-select-option-handle], [data-blok-database-select-editor="status"] [data-blok-database-select-option-menu] {
   display: none;
 }
 

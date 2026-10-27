@@ -1198,7 +1198,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // database.css: a numeric rollup at the table cell's end in tabular figures.
     const DATABASE_ROLLUP_NUMERIC_CELL_BYTES = 355;
     // database.css: the side peek's wrapped rollup list (6px lines, 21px items), a card Number's bar across the line.
-    const DATABASE_PEEK_LIST_CARD_BAR_BYTES = 382;
+    const DATABASE_PEEK_LIST_CARD_BAR_BYTES = 490;
     // database.css: a card's rollup list items never grow, even when the list wraps.
     const DATABASE_CARD_LIST_ITEM_BYTES = 181;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952

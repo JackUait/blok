@@ -557,7 +557,7 @@ const PEEK_LIST_SCHEMA = [
   { id: 'p-rings', name: 'Rings', type: 'rollup', position: 'a4', rollup: { relationPropertyId: 'p-link', targetPropertyId: 'p-num', function: 'show_original' }, number: { showAs: 'ring', color: 'green', divideBy: 5000, format: 'dollar' } },
 ];
 
-const peekListBlocks = (values: number[]): OutputBlockData[] => {
+const peekListBlocks = (values: number[], title: Record<string, unknown> = {}): OutputBlockData[] => {
   const ids = values.map((_, i) => `r${i + 1}`);
 
   return [
@@ -565,7 +565,7 @@ const peekListBlocks = (values: number[]): OutputBlockData[] => {
       id: 'db-1',
       type: 'database',
       data: {
-        schema: PEEK_LIST_SCHEMA,
+        schema: PEEK_LIST_SCHEMA.map((property) => (property.type === 'title' ? { ...property, ...title } : property)),
         views: [ { id: 'v1', name: 'View', position: 'a0', sorts: [], filters: [], visibleProperties: [ 'p-num' ], type: 'table' } ],
         activeViewId: 'v1',
       },
@@ -682,6 +682,14 @@ for (const theme of THEMES) {
       expect(last).toHaveLength(1);
       expect(Math.abs(last[0].right - rowRight)).toBeLessThanOrEqual(0.5);
       expect(last[0].gauge.width).toBe(160);
+    });
+
+    test('a list pinned in the heading keeps the 30px pin value', async ({ page }) => {
+      await mount(page, peekListBlocks([ 100 ], { pageLayoutPlacements: [ { id: 'p-bars', place: 'heading' } ] }));
+      const pin = (await openPeekOf(page, 'r1')).locator('[data-blok-database-drawer-pin][data-property-id="p-bars"]');
+
+      await expect(pin.locator('[data-blok-database-number-item]').first()).toBeVisible();
+      expect(Math.round((await pin.locator('[data-blok-database-drawer-prop-value]').boundingBox())?.height ?? 0)).toBe(30);
     });
 
     test('rings stay 21px, 8px after the text, and wrap 6px apart', async ({ page }) => {

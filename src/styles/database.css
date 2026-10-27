@@ -6222,7 +6222,8 @@ td[data-blok-database-csv-preview-cell] > [data-blok-database-csv-icon] {
   row-gap: var(--blok-space-1-5);
 }
 
-[data-blok-database-drawer-prop-value]:has(> [data-blok-database-number-list]) {
+/* A pin keeps its 30px row. */
+[data-blok-database-drawer-prop-row]:not([data-blok-database-drawer-pin]) > [data-blok-database-drawer-prop-value]:has(> [data-blok-database-number-list]) {
   padding-block: var(--blok-space-1-5);
 }
 

@@ -208,6 +208,71 @@ public sealed class BlokAgentPageCreateTests
     Assert.Equal([Actor], pages.Actors);
   }
 
+  private const string TwoPages = """{"commands":[{"name":"block.insert","args":{"type":"page","id":"a"}},{"name":"block.insert","args":{"type":"page","id":"b"}}]}""";
+
+  public static TheoryData<string> Failures => new() { "cancel", "error" };
+
+  [Fact]
+  public async Task AHostErrorPartwayListsThePagesAlreadyMade()
+  {
+    var pages = new Creator(throwAfter: 1);
+    var executor = new BlokAgentExecutor(Runtime.Value);
+
+    var execution = await executor.ExecuteAsync(Empty, TwoPages, Actor, Options(pages));
+
+    AssertOrphaned(execution, "APPLY_FAILED");
+  }
+
+  [Theory]
+  [MemberData(nameof(Failures))]
+  public async Task AStoredRunThatStopsAfterTheHostMadePagesListsThem(string failure)
+  {
+    var pages = new Creator();
+    var executor = new BlokAgentExecutor(new FailingExecute(Runtime.Value, failure));
+
+    var execution = await executor.ExecuteAsync(Empty, InsertPage, Actor, Options(pages));
+
+    Assert.Equal(["host-1"], pages.Created);
+    AssertOrphaned(execution, failure == "cancel" ? "CANCELLED" : "APPLY_FAILED");
+  }
+
+  [Theory]
+  [MemberData(nameof(Failures))]
+  public async Task ARoomRunThatStopsAfterTheHostMadePagesListsThem(string failure)
+  {
+    var endpoint = new FakeDocEndpoint();
+    endpoint.HoldsDocument(RoomId, JsonNode.Parse(Empty)!.AsObject());
+    var time = new ManualTimeProvider();
+    var converter = new CollabDocConverter(time, RichTextRuntime.Reader);
+    var rooms = new CollabRoomManager(new FakeWorkingSetStore(), endpoint, converter, new CollabRoomOptions(), time, _ => { }, new FakeCollabOperationStore());
+    var executor = new BlokAgentExecutor(new FailingExecute(Runtime.Value, failure), rooms, converter);
+    var pages = new Creator();
+
+    var execution = await executor.ExecuteInRoomAsync(RoomId, InsertPage, Actor, Options(pages));
+
+    Assert.Equal(["host-1"], pages.Created);
+    AssertOrphaned(execution, failure == "cancel" ? "CANCELLED" : "APPLY_FAILED");
+    Assert.Empty(JsonNode.Parse((await rooms.StateAsync(RoomId)).Json)!["blocks"]!.AsArray());
+  }
+
+  private static void AssertOrphaned(BlokAgentExecution execution, string cause)
+  {
+    var error = Error(execution);
+    Assert.Equal("ORPHANED_SIDE_EFFECT", error["code"]!.GetValue<string>());
+    Assert.Equal(cause, error["details"]!["cause"]!["code"]!.GetValue<string>());
+    Assert.Contains("host-1", error["details"]!["orphaned"]!.ToJsonString(), StringComparison.Ordinal);
+    Assert.Null(execution.DocumentJson);
+  }
+
+  /// <summary>Lets the page count run, then fails the batch run itself.</summary>
+  private sealed class FailingExecute(IBlokRuntime inner, string failure) : IBlokRuntime
+  {
+    public ValueTask<string> InvokeAsync(string operation, string inputJson, TimeSpan? timeout = null, CancellationToken cancellationToken = default) =>
+        operation != "agentExecute" ? inner.InvokeAsync(operation, inputJson, timeout, cancellationToken)
+        : failure == "cancel" ? throw new OperationCanceledException()
+        : throw new InvalidOperationException("The engine broke.");
+  }
+
   private static BlokAgentOptions Options(IBlokPageTarget pages) => new() { PageTitles = true, PageTarget = pages };
 
   private static bool Ok(BlokAgentExecution execution) => JsonNode.Parse(execution.ResultJson)!["ok"]!.GetValue<bool>();
@@ -230,7 +295,7 @@ public sealed class BlokAgentPageCreateTests
         ValueTask.FromResult<BlokPageLocation?>(null);
   }
 
-  private sealed class Creator(int refuseAfter = int.MaxValue) : IBlokPageCreator
+  private sealed class Creator(int refuseAfter = int.MaxValue, int throwAfter = int.MaxValue) : IBlokPageCreator
   {
     internal List<string> Created { get; } = [];
     internal List<BlokAgentActor> Actors { get; } = [];
@@ -239,6 +304,10 @@ public sealed class BlokAgentPageCreateTests
     public ValueTask<string?> CreateAsync(BlokAgentActor actor, CancellationToken cancellationToken = default)
     {
       Actors.Add(actor);
+      if (Created.Count >= throwAfter)
+      {
+        throw new InvalidOperationException("The host's page store is down.");
+      }
       if (Created.Count >= refuseAfter)
       {
         return ValueTask.FromResult<string?>(null);

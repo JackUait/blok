@@ -64,7 +64,9 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
           : WroteAnotherDocument(history));
     }
 
-    if (await CreatePagesAsync(input, options, actor, cancellationToken) is { Refusal: { } refusal })
+    var (made, refusal) = await CreatePagesAsync(input, options, actor, cancellationToken);
+
+    if (refusal is not null)
     {
       return (refusal, history);
     }
@@ -74,9 +76,18 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
       input["history"] = history.DeepClone();
     }
 
-    var output = JsonNode.Parse(await runtime.InvokeAsync(
-        "agentExecute", input.ToJsonString(), cancellationToken: cancellationToken))
-        ?? throw new InvalidOperationException("The Blok runtime returned no agent execution.");
+    JsonNode output;
+
+    try
+    {
+      output = JsonNode.Parse(await runtime.InvokeAsync(
+          "agentExecute", input.ToJsonString(), cancellationToken: cancellationToken))
+          ?? throw new InvalidOperationException("The Blok runtime returned no agent execution.");
+    }
+    catch (Exception error) when (made is { Count: > 0 })
+    {
+      return (StoppedAfterCreating(error, made), history);
+    }
     var result = output["result"]
         ?? throw new InvalidOperationException("The Blok runtime returned no agent result.");
     var ok = result["ok"]?.GetValue<bool>() == true;
@@ -144,10 +155,9 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
         cancellationToken.ThrowIfCancellationRequested();
         pageId = await creator.CreateAsync(actor, cancellationToken);
       }
-      catch (OperationCanceledException) when (created.Count > 0)
+      catch (Exception error) when (created.Count > 0)
       {
-        return (null, Failure("CANCELLED", "The batch was cancelled after the host created pages for it. Clean up the listed pages.", false,
-            new JsonObject { ["orphaned"] = Orphaned(created) }));
+        return (null, StoppedAfterCreating(error, created));
       }
 
       if (string.IsNullOrEmpty(pageId))
@@ -163,6 +173,14 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
 
     return (created, null);
   }
+
+  /// <summary>
+  /// The host made pages, then the batch stopped on a cancel or an error, so nothing was written.
+  /// The host is told which pages to clean up; the error itself is not passed on.
+  /// </summary>
+  private static BlokAgentExecution StoppedAfterCreating(Exception error, JsonArray created) => Stranded(error is OperationCanceledException
+      ? Failure("CANCELLED", "The batch was cancelled. Nothing was written.", false, null)
+      : Failure("APPLY_FAILED", "The batch stopped on a server error. Nothing was written.", true, null), created);
 
   private static JsonArray Orphaned(JsonArray created) =>
       [.. created.Select(pageId => (JsonNode)new JsonObject
@@ -475,6 +493,8 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
     CollabPageMaps? beforeMaps = null;
     var wrote = false;
     RoomAgentHistory.Step? recorded = null;
+    // Set once the room has written the edit: a later throw must not report the pages as orphans.
+    var committed = false;
     var operationId = Guid.NewGuid().ToString("N");
     var digest = System.Security.Cryptography.SHA256.HashData(
         System.Text.Encoding.UTF8.GetBytes($"agent\n{actor.Id}\n{batchJson}"));
@@ -518,6 +538,7 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
         return ops;
       }, operationId, digest, actor.Id, expect, async (doc, token) =>
       {
+        committed = true;
         if (wrote && before is not null && beforeMaps is not null
             && await converter.ExportAsync(doc, token) is JsonObject after)
         {
@@ -530,6 +551,10 @@ internal sealed class BlokAgentExecutor(IBlokRuntime runtime) : IBlokAgentExecut
     {
       // A refusal, or a read with no journal head. Jint's content hash means nothing in a room.
       return WithHead(new BlokAgentExecution(planned.ToJsonString(), null, string.Empty), string.Empty);
+    }
+    catch (Exception error) when (created is { Count: > 0 } && !committed && error is not NoRoomWriteException)
+    {
+      return StoppedAfterCreating(error, created);
     }
 
     var head = edit.Receipt is { } receipt ? $"{receipt.Tag.Lineage}:{receipt.ServerSequence}" : string.Empty;

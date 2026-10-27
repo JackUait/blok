@@ -5456,6 +5456,9 @@ describe('ShapeRenderer', () => {
     expect(path?.getAttribute('fill')).toBe(`url(#${pattern?.getAttribute('id')})`);
     expect(path?.getAttribute('stroke-dasharray')).toBeTruthy();
     expect(el.style.background).toBe('');
+    // jsdom 29 does not reflect longhands into `background`, so check them too.
+    expect(el.style.backgroundColor).toBe('');
+    expect(el.style.backgroundImage).toBe('');
   });
 
   it('renders connector shape (cxnSp) as straightConnector1', () => {

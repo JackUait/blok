@@ -448,6 +448,9 @@ describe('TextRenderer — renderTextBody', () => {
 
       expect(span.style.color).toBe('rgb(255, 255, 255)');
       expect(span.style.background).toBe('');
+      // jsdom 29 does not reflect longhands into `background`, so check them too.
+      expect(span.style.backgroundColor).toBe('');
+      expect(span.style.backgroundImage).toBe('');
     });
 
     it('applies letter spacing from rPr spc', () => {

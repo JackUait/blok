@@ -119,8 +119,9 @@ const placeSearch = (ctx: CellEditorContext, pick: (place: PlaceValue) => void):
 
           return;
         }
-        // Enter on the row nobody moved to is unmeasured: it keeps storing the typed text.
-        if (event.key === 'Enter' && keys.moved && rows()[keys.index] !== undefined) {
+        // notion-spec-2 §19.18: Enter on an empty search picks the highlighted "Current Location".
+        // Enter after typing on a row nobody moved to is unmeasured: it keeps storing the typed text.
+        if (event.key === 'Enter' && (keys.moved || field.value.trim() === '') && rows()[keys.index] !== undefined) {
           event.preventDefault();
           event.stopImmediatePropagation();
           rows()[keys.index].click();

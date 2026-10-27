@@ -347,6 +347,21 @@ describe('Place editor: "Search for a location..." with the host geocoder (resea
       expect(active()).toEqual(['tools.database.placeCurrentLocation']);
     });
 
+    it('Enter on open picks "Current Location" and stays open on the place (notion-spec-2 §19.18)', async () => {
+      const onCommit = vi.fn();
+      const currentLocation = vi.fn().mockResolvedValue(EIFFEL);
+      const handle = openCellEditor(makeProperty('place'), null, makeAnchor(), makeEditorContext({ geocode: vi.fn().mockResolvedValue([]), currentLocation, onCommit }));
+      const enter = press(field(), 'Enter');
+
+      await settle();
+
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      expect(onCommit).toHaveBeenCalledWith(EIFFEL);
+      expect(enter.defaultPrevented).toBe(true);
+      expect(handle.isOpen).toBe(true);
+      expect(document.querySelector('[data-blok-database-place-view] [data-blok-database-place-name]')?.textContent).toBe('Eiffel Tower');
+    });
+
     it('ArrowDown then Enter picks the first result and saves it at once', async () => {
       const onCommit = vi.fn();
       const geocode = vi.fn().mockResolvedValue([EIFFEL, { name: 'Paris', address: 'Paris, France', lat: 1, lon: 2 }]);

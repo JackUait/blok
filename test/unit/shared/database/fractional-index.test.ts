@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { generateKeyBetween } from '../../../../src/shared/database/fractional-index';
+import { generateKeyBetween, generateNKeysBetween } from '../../../../src/shared/database/fractional-index';
 import oracle from './fixtures/fractional-indexing-4.0.0.json';
 
 /*
@@ -98,5 +98,23 @@ describe('generateKeyBetween', () => {
       keys.splice(at, 0, key);
     });
     expect([...keys].sort()).toEqual(keys);
+  });
+});
+
+describe('generateNKeysBetween', () => {
+  it.each(oracle.nKeys)('matches fractional-indexing 4.0.0 for (%s, %s, %i)', (a, b, n, expected) => {
+    expect(outcome(() => generateNKeysBetween(a, b, n).join(' '))).toBe(expected === null ? null : expected.join(' '));
+  });
+
+  // The guard landed upstream after 4.0.0: without it a negative n returns one key or recurses forever.
+  it.each([[null, null], ['a0', null], [null, 'a1'], ['a0', 'a5']] as const)('throws for a negative n between %s and %s', (a, b) => {
+    expect(() => generateNKeysBetween(a, b, -1)).toThrow('n must be >= 0: -1');
+  });
+
+  it('keeps 200 keys in one gap short and in order', () => {
+    const keys = generateNKeysBetween('a0', 'a1', 200);
+
+    expect(Math.max(...keys.map(key => key.length))).toBeLessThanOrEqual(4);
+    expect(['a0', ...keys, 'a1']).toEqual([...new Set(['a0', ...keys, 'a1'])].sort());
   });
 });

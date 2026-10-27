@@ -1,8 +1,9 @@
 /**
- * `generateKeyBetween` from fractional-indexing 4.0.0 (CC0-1.0, no rights reserved),
- * ported for the default alphabets only. Shared code cannot import npm packages (the
- * headless and Jint bundles scan this closure), so the database actions use this copy.
- * test/unit/shared/database/fractional-index.test.ts pins it to the package's output.
+ * `generateKeyBetween` and `generateNKeysBetween` from fractional-indexing 4.0.0
+ * (CC0-1.0, no rights reserved), default alphabets only. Shared code cannot import
+ * npm packages (the headless and Jint bundles scan this closure). Shipped clients
+ * minted keys with 4.0.0, so test/unit/shared/database/fractional-index.test.ts
+ * pins this port to that version's recorded output.
  */
 
 const BASE_62_DIGITS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
@@ -165,4 +166,37 @@ export const generateKeyBetween = (low: string | null, high: string | null): str
   }
 
   return next < b ? next : ia + midpoint(fa, null);
+};
+
+/**
+ * `n` keys between `low` and `high`, in order. Against an open end they step
+ * like repeated `generateKeyBetween`; inside a gap they bisect it, so the keys
+ * stay short where a chain of single calls grows one character every few keys.
+ */
+export const generateNKeysBetween = (low: string | null, high: string | null, n: number): string[] => {
+  if (n < 0) {
+    throw new Error(`n must be >= 0: ${n}`);
+  }
+  if (n === 0) {
+    return [];
+  }
+  if (n === 1) {
+    return [generateKeyBetween(low, high)];
+  }
+  if (high === null) {
+    return Array.from({ length: n - 1 }).reduce<string[]>(
+      keys => [...keys, generateKeyBetween(keys.at(-1) ?? null, null)],
+      [generateKeyBetween(low, null)]
+    );
+  }
+  if (low === null) {
+    return Array.from({ length: n - 1 }).reduce<string[]>(
+      keys => [generateKeyBetween(null, keys[0] ?? null), ...keys],
+      [generateKeyBetween(null, high)]
+    );
+  }
+  const half = Math.floor(n / 2);
+  const middle = generateKeyBetween(low, high);
+
+  return [...generateNKeysBetween(low, middle, half), middle, ...generateNKeysBetween(middle, high, n - half - 1)];
 };

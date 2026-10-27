@@ -8049,6 +8049,12 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-table-cell][data-type="number"] {
   text-align: end;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* research/35 §17: tabular figures in the table only (notion-spec-2 §14.9). */
+[data-blok-database-table-cell][data-type="formula"] {
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 [data-blok-database-table-cell][data-type="select"],

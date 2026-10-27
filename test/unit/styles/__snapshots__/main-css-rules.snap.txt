@@ -11048,6 +11048,11 @@ textarea[data-blok-database-cell-input] {
 
 [data-blok-database-table-cell][data-type="number"] {
   text-align: end;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+[data-blok-database-table-cell][data-type="formula"] {
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 [data-blok-database-table-cell][data-type="select"], [data-blok-database-table-cell][data-type="multiSelect"], [data-blok-database-table-cell][data-type="person"] {

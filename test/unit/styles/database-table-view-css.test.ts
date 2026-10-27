@@ -157,3 +157,10 @@ describe('database table view styles', () => {
     expect(ruleBody('[data-blok-database-table-cell] > [data-blok-database-subitem-toggle]')).toMatch(/float:\s*inline-start/);
   });
 });
+
+describe('database table number figures', () => {
+  // research/35 §17: Notion's table Number and Formula cells use lining, tabular figures.
+  it.each(['number', 'formula'])('a %s table cell draws lining, tabular figures', (type) => {
+    expect(ruleBody(`[data-blok-database-table-cell][data-type="${type}"]`)).toContain('font-variant-numeric: lining-nums tabular-nums');
+  });
+});
